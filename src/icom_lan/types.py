@@ -7,6 +7,7 @@ __all__ = [
     "PacketType",
     "Mode",
     "PacketHeader",
+    "CivFrame",
     "HEADER_SIZE",
     "bcd_encode",
     "bcd_decode",
@@ -66,6 +67,25 @@ class PacketHeader:
     seq: int
     sender_id: int
     receiver_id: int
+
+
+@dataclass(frozen=True, slots=True)
+class CivFrame:
+    """Parsed CI-V frame.
+
+    Attributes:
+        to_addr: Destination CI-V address.
+        from_addr: Source CI-V address.
+        command: CI-V command byte.
+        sub: Optional sub-command byte.
+        data: Payload data (excluding command and sub bytes).
+    """
+
+    to_addr: int
+    from_addr: int
+    command: int
+    sub: int | None = None
+    data: bytes = b""
 
 
 def bcd_encode(freq_hz: int) -> bytes:
