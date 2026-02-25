@@ -13,10 +13,6 @@
         <link rel="canonical" href="https://morozsm.github.io/icom-lan/ROADMAP/">
       
       
-        <link rel="prev" href="../internals/contributing/">
-      
-      
-        <link rel="next" href="../CHANGELOG/">
       
       
         
@@ -304,12 +300,10 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
+      <li class="md-tabs__item">
         <a href="../internals/architecture/" class="md-tabs__link">
           
   
@@ -829,6 +823,90 @@
   
   
     <li class="md-nav__item">
+      <a href="../api/sync/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sync API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/audio/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audio
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/radios/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Radio Models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../api/transport/" class="md-nav__link">
         
   
@@ -973,31 +1051,28 @@
       
   
   
-    
   
   
-  
     
     
     
     
-      
-        
-        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
         
           
-          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
             
   
   
@@ -1015,7 +1090,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1105,563 +1180,6 @@
   
 
       </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-    
-  
-  
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Roadmap
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Roadmap
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#current-state-v020-python" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Current State: v0.2.0 (Python)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#phase-3-audio-streaming-python" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Phase 3 — Audio Streaming (Python)
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Phase 3 — Audio Streaming (Python)">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#tasks" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Tasks
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#api-design" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        API Design
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#dependencies" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Dependencies
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#phase-4-polish-publish-python" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Phase 4 — Polish &amp; Publish (Python)
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Phase 4 — Polish &amp; Publish (Python)">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#tasks_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Tasks
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#sync-api-design" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Sync API Design
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#phase-5-rust-core" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Phase 5 — Rust Core 🦀
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Phase 5 — Rust Core 🦀">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Мотивация
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Архитектура
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#crates-rust" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Crates (зависимости Rust)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#_3" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Поэтапный план
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Поэтапный план">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#phase-51-rust-core-transport-protocol" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Phase 5.1 — Rust Core (transport + protocol)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#phase-52-cli-standalone-binary" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Phase 5.2 — CLI (standalone binary)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#phase-53-python-bindings-pyo3" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Phase 5.3 — Python bindings (PyO3)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#phase-54-audio-rust-native-opus" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Phase 5.4 — Audio (Rust-native Opus)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#phase-55-wasm-browser-control" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Phase 5.5 — WASM (browser control)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#phase-56-c-ffi" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Phase 5.6 — C FFI
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#_4" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Оценка трудозатрат
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#rust" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Структура репозитория (Rust)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#open-questions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Open Questions
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#phase-6-spectrum-waterfall" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Phase 6 — Spectrum &amp; Waterfall
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Phase 6 — Spectrum &amp; Waterfall">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#_5" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Контекст
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#wfview" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Ключевые ссылки в wfview
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#tasks_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Tasks
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#api-design_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        API Design
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#data-structure" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Data Structure
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#phase-7-web-ui" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Phase 7 — Web UI 🌐
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Phase 7 — Web UI 🌐">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#_6" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Зачем
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#_7" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Архитектура
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#features" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Features
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Features">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#mvp-phase-71" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        MVP (Phase 7.1)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#waterfall-phase-72" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Waterfall (Phase 7.2)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#audio-phase-73" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Audio (Phase 7.3)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#advanced-phase-74" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Advanced (Phase 7.4)
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#tech-stack" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Tech Stack (предварительно)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#_8" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Вдохновение
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#_9" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Оценка
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#the-grand-vision" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The Grand Vision 🔭
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
