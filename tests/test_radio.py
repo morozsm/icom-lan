@@ -136,9 +136,11 @@ class MockTransport:
         self.disconnected = False
         self.sent_packets: list[bytes] = []
         self._responses: asyncio.Queue[bytes] = asyncio.Queue()
+        self._packet_queue: asyncio.Queue[bytes] = asyncio.Queue()
         self.my_id: int = 0x00010001
         self.remote_id: int = 0xDEADBEEF
         self.send_seq: int = 0
+        self.ping_seq: int = 0
 
     async def connect(self, host: str, port: int) -> None:
         self.connected = True

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "icom-lan"
-version = "0.2.0"
+version = "0.3.0"
 description = "Python library for controlling Icom transceivers over LAN (UDP) — no wfview/hamlib required"
 readme = "README.md"
 license = "MIT"
@@ -23,12 +23,18 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
 ]
 
+[project.urls]
+Homepage = "https://github.com/morozsm/icom-lan"
+Documentation = "https://morozsm.github.io/icom-lan/"
+Repository = "https://github.com/morozsm/icom-lan"
+Issues = "https://github.com/morozsm/icom-lan/issues"
+
 [project.scripts]
 icom-lan = "icom_lan.cli:main"
 
 [project.optional-dependencies]
 audio = ["opuslib"]
-dev = ["pytest", "pytest-asyncio"]
+dev = ["pytest", "pytest-asyncio", "pytest-cov", "ruff"]
 
 [dependency-groups]
 dev = [

@@ -37,3 +37,4 @@ ROADMAP.md
 .env
 .env.*
 .coverage
+dist/

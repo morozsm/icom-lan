@@ -110,6 +110,10 @@ class IcomRadio:
         timeout: float = 5.0,
         audio_codec: AudioCodec | int = AudioCodec.PCM_1CH_16BIT,
         audio_sample_rate: int = 48000,
+        auto_reconnect: bool = False,
+        reconnect_delay: float = 2.0,
+        reconnect_max_delay: float = 60.0,
+        watchdog_timeout: float = 30.0,
     ) -> None:
         self._host = host
         self._port = port
@@ -131,6 +135,13 @@ class IcomRadio:
         self._audio_port: int = 0
         self._civ_send_seq: int = 0
         self._token_task: asyncio.Task | None = None
+        self._auto_reconnect = auto_reconnect
+        self._reconnect_delay = reconnect_delay
+        self._reconnect_max_delay = reconnect_max_delay
+        self._watchdog_timeout = watchdog_timeout
+        self._watchdog_task: asyncio.Task | None = None
+        self._reconnect_task: asyncio.Task | None = None
+        self._intentional_disconnect = False
 
     @property
     def connected(self) -> bool:
@@ -228,8 +239,11 @@ class IcomRadio:
         await self._flush_queue(self._civ_transport)
 
         self._connected = True
+        self._intentional_disconnect = False
         self._ctrl_transport.state = ConnectionState.CONNECTED
         self._start_token_renewal()
+        if self._auto_reconnect:
+            self._start_watchdog()
         logger.info(
             "Connected to %s (control=%d, civ=%d)",
             self._host,
@@ -241,6 +255,9 @@ class IcomRadio:
         """Cleanly disconnect from the radio."""
         if self._connected:
             self._connected = False
+            self._intentional_disconnect = True
+            self._stop_watchdog()
+            self._stop_reconnect()
             self._stop_token_renewal()
             # Stop audio streams
             if self._audio_stream is not None:
@@ -443,6 +460,117 @@ class IcomRadio:
         struct.pack_into(">H", pkt, 0x24, 0x0798)  # resetcap
         struct.pack_into("<I", pkt, 0x1C, self._token)
         await self._ctrl_transport.send_tracked(bytes(pkt))
+
+    # ------------------------------------------------------------------
+    # Watchdog & Auto-reconnect
+    # ------------------------------------------------------------------
+
+    WATCHDOG_CHECK_INTERVAL = 0.5  # seconds (wfview: WATCHDOG_PERIOD = 500ms)
+
+    def _start_watchdog(self) -> None:
+        """Start connection watchdog task."""
+        if self._watchdog_task is None or self._watchdog_task.done():
+            self._watchdog_task = asyncio.create_task(self._watchdog_loop())
+
+    def _stop_watchdog(self) -> None:
+        """Stop watchdog task."""
+        if self._watchdog_task is not None and not self._watchdog_task.done():
+            self._watchdog_task.cancel()
+            self._watchdog_task = None
+
+    def _stop_reconnect(self) -> None:
+        """Cancel any pending reconnect task."""
+        if self._reconnect_task is not None and not self._reconnect_task.done():
+            self._reconnect_task.cancel()
+            self._reconnect_task = None
+
+    async def _watchdog_loop(self) -> None:
+        """Monitor connection health via transport packet queue activity.
+
+        If no packets are received for ``watchdog_timeout`` seconds,
+        triggers a reconnect attempt.
+
+        Reference: wfview icomudpaudio.cpp watchdog() — 30s timeout.
+        """
+        import time as _time
+
+        last_activity = _time.monotonic()
+        try:
+            while self._connected:
+                await asyncio.sleep(self.WATCHDOG_CHECK_INTERVAL)
+                if not self._connected:
+                    break
+
+                # Check if control transport has received anything recently
+                # by looking at packet queue activity
+                if self._ctrl_transport._packet_queue.qsize() > 0:
+                    last_activity = _time.monotonic()
+                elif self._civ_transport and self._civ_transport._packet_queue.qsize() > 0:
+                    last_activity = _time.monotonic()
+                elif self._ctrl_transport.ping_seq > 0:
+                    # Ping responses reset activity implicitly via packet queue
+                    pass
+
+                idle = _time.monotonic() - last_activity
+                if idle > self._watchdog_timeout:
+                    logger.warning(
+                        "Watchdog: no activity for %.1fs, triggering reconnect",
+                        idle,
+                    )
+                    self._connected = False
+                    self._reconnect_task = asyncio.create_task(self._reconnect_loop())
+                    return
+        except asyncio.CancelledError:
+            pass
+
+    async def _reconnect_loop(self) -> None:
+        """Attempt to reconnect with exponential backoff."""
+        delay = self._reconnect_delay
+        attempt = 0
+        try:
+            while not self._intentional_disconnect:
+                attempt += 1
+                logger.info(
+                    "Reconnect attempt %d (delay=%.1fs)", attempt, delay
+                )
+                try:
+                    # Clean up old transports
+                    self._stop_token_renewal()
+                    if self._audio_stream is not None:
+                        try:
+                            await self._audio_stream.stop_rx()
+                            await self._audio_stream.stop_tx()
+                        except Exception:
+                            pass
+                        self._audio_stream = None
+                    if self._audio_transport is not None:
+                        try:
+                            await self._audio_transport.disconnect()
+                        except Exception:
+                            pass
+                        self._audio_transport = None
+                    if self._civ_transport is not None:
+                        try:
+                            await self._civ_transport.disconnect()
+                        except Exception:
+                            pass
+                        self._civ_transport = None
+                    try:
+                        await self._ctrl_transport.disconnect()
+                    except Exception:
+                        pass
+
+                    # Re-initialize transport
+                    self._ctrl_transport = IcomTransport()
+                    await self.connect()
+                    logger.info("Reconnected successfully after %d attempts", attempt)
+                    return
+                except Exception as exc:
+                    logger.warning("Reconnect attempt %d failed: %s", attempt, exc)
+                    await asyncio.sleep(delay)
+                    delay = min(delay * 2, self._reconnect_max_delay)
+        except asyncio.CancelledError:
+            logger.info("Reconnect cancelled")
 
     # ------------------------------------------------------------------
     # Internal connection helpers
