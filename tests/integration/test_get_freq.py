@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
 from icom_lan.auth import encode_credentials
 from icom_lan.commands import get_frequency, parse_civ_frame, parse_frequency_response
 
-RADIO_IP = "192.168.1.100"
+RADIO_IP = os.environ.get("ICOM_HOST", "192.168.1.100")
 RADIO_PORT = 50001
 CONTROL_SIZE = 0x10
 LOGIN_SIZE = 0x80

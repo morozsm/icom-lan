@@ -27,6 +27,12 @@ references/wfview/
 AGENTS.md
 CLAUDE.md
 
+# Internal development docs (plans, strategy, project notes)
+docs/PROJECT.md
+docs/STRATEGY.md
+docs/ROADMAP.md
+ROADMAP.md
+
 # Environment files
 .env
 .env.*

@@ -1,9 +1,10 @@
 """Diagnostic: send 'Are You There' and capture radio's response."""
 
 import asyncio
+import os
 import struct
 
-RADIO_IP = "192.168.1.100"
+RADIO_IP = os.environ.get("ICOM_HOST", "192.168.1.100")
 RADIO_PORT = 50001
 CONTROL_SIZE = 0x10
 
