@@ -51,17 +51,23 @@ class Proto(asyncio.DatagramProtocol):
     def login_pkt(self):
         pkt = bytearray(LOGIN_SIZE)
         struct.pack_into("<I", pkt, 0x00, LOGIN_SIZE)
-        struct.pack_into("<H", pkt, 0x06, self.seq); self.seq += 1
+        struct.pack_into("<H", pkt, 0x06, self.seq)
+        self.seq += 1
         struct.pack_into("<I", pkt, 0x08, self.my_id)
         struct.pack_into("<I", pkt, 0x0C, self.remote_id)
         struct.pack_into(">I", pkt, 0x10, LOGIN_SIZE - 0x10)
-        pkt[0x14] = 0x01; pkt[0x15] = 0x00
-        struct.pack_into(">H", pkt, 0x16, self.auth_seq); self.auth_seq += 1
+        pkt[0x14] = 0x01
+        pkt[0x15] = 0x00
+        struct.pack_into(">H", pkt, 0x16, self.auth_seq)
+        self.auth_seq += 1
         tok = random.randint(0, 0xFFFF)
         struct.pack_into("<H", pkt, 0x1A, tok)
-        ue = encode_credentials(USERNAME); pkt[0x40:0x40+len(ue)] = ue
-        pe = encode_credentials(PASSWORD); pkt[0x50:0x50+len(pe)] = pe
-        nm = b"icom-lan"; pkt[0x60:0x60+len(nm)] = nm
+        ue = encode_credentials(USERNAME)
+        pkt[0x40:0x40+len(ue)] = ue
+        pe = encode_credentials(PASSWORD)
+        pkt[0x50:0x50+len(pe)] = pe
+        nm = b"icom-lan"
+        pkt[0x60:0x60+len(nm)] = nm
         return bytes(pkt), tok
 
 

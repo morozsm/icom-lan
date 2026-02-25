@@ -2,7 +2,6 @@
 
 import asyncio
 import struct
-import sys
 
 RADIO_IP = "192.168.1.100"
 RADIO_PORT = 50001

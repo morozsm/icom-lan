@@ -30,3 +30,4 @@ CLAUDE.md
 # Environment files
 .env
 .env.*
+.coverage

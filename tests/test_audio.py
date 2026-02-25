@@ -2,7 +2,7 @@
 
 import asyncio
 import struct
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -10,7 +10,6 @@ from icom_lan.audio import (
     AUDIO_HEADER_SIZE,
     TX_IDENT,
     RX_IDENT_0xA0,
-    AudioPacket,
     AudioState,
     AudioStream,
     build_audio_packet,

@@ -34,4 +34,6 @@ dev = ["pytest", "pytest-asyncio"]
 dev = [
     "mkdocs-material>=9.7.3",
     "mkdocstrings[python]>=1.0.3",
+    "pytest-cov>=7.0.0",
+    "ruff>=0.15.2",
 ]

@@ -65,7 +65,7 @@ from .exceptions import (
 )
 from .audio import AudioPacket, AudioStream
 from .transport import ConnectionState, IcomTransport
-from .types import CivFrame, Mode, PacketType
+from .types import CivFrame, Mode
 
 __all__ = ["IcomRadio"]
 
@@ -720,13 +720,13 @@ class IcomRadio:
         """Copy VFO A to VFO B (A=B)."""
         self._check_connected()
         civ = vfo_a_equals_b(to_addr=self._radio_addr)
-        resp = await self._send_civ_raw(civ)
+        await self._send_civ_raw(civ)
 
     async def vfo_exchange(self) -> None:
         """Swap VFO A and B."""
         self._check_connected()
         civ = vfo_swap(to_addr=self._radio_addr)
-        resp = await self._send_civ_raw(civ)
+        await self._send_civ_raw(civ)
 
     async def set_split_mode(self, on: bool) -> None:
         """Enable or disable split mode."""
@@ -742,12 +742,18 @@ class IcomRadio:
         self._check_connected()
         civ = set_attenuator(on, to_addr=self._radio_addr)
         resp = await self._send_civ_raw(civ)
+        ack = parse_ack_nak(resp)
+        if ack is False:
+            raise CommandError(f"Radio rejected attenuator {'on' if on else 'off'}")
 
     async def set_preamp(self, level: int = 1) -> None:
         """Set preamp level (0=off, 1=PREAMP1, 2=PREAMP2)."""
         self._check_connected()
         civ = set_preamp(level, to_addr=self._radio_addr)
         resp = await self._send_civ_raw(civ)
+        ack = parse_ack_nak(resp)
+        if ack is False:
+            raise CommandError(f"Radio rejected preamp level {level}")
 
     # ------------------------------------------------------------------
     # CW keying
@@ -767,13 +773,13 @@ class IcomRadio:
             resp = await self._send_civ_raw(frame)
             ack = parse_ack_nak(resp)
             if ack is False:
-                raise CommandError(f"Radio rejected CW text")
+                raise CommandError("Radio rejected CW text")
 
     async def stop_cw_text(self) -> None:
         """Stop CW sending."""
         self._check_connected()
         civ = stop_cw(to_addr=self._radio_addr)
-        resp = await self._send_civ_raw(civ)
+        await self._send_civ_raw(civ)
         # Stop CW may not return ACK, just ignore
 
     async def power_control(self, on: bool) -> None:

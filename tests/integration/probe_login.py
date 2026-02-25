@@ -115,12 +115,12 @@ async def main():
         for i in range(3):
             resp = await proto.recv(timeout=2.0)
             if resp is None:
-                print(f"  ⏱️ No response")
+                print("  ⏱️ No response")
                 break
             ptype = struct.unpack_from("<H", resp, 4)[0]
             print(f"  ← {describe_packet(resp)}")
             if ptype == 0x06:
-                print(f"  ✅ 'I Am Ready'")
+                print("  ✅ 'I Am Ready'")
                 break
 
         # Step 3: Login
@@ -132,7 +132,7 @@ async def main():
         for i in range(10):
             resp = await proto.recv(timeout=3.0)
             if resp is None:
-                print(f"  ⏱️ No more responses")
+                print("  ⏱️ No more responses")
                 break
             
             print(f"\n  ← Response #{i+1}: {describe_packet(resp)}")
@@ -146,9 +146,9 @@ async def main():
                 print(f"       tokrequest=0x{tokresp:04X} (sent 0x{tok_request:04X})")
                 print(f"       connection='{connection}'")
                 if error == 0xFEFFFFFF:
-                    print(f"     ❌ Invalid username/password!")
+                    print("     ❌ Invalid username/password!")
                 elif tokresp == tok_request:
-                    print(f"     ✅ Login successful!")
+                    print("     ✅ Login successful!")
                     
             elif len(resp) == STATUS_SIZE:
                 error = struct.unpack_from("<I", resp, 0x30)[0]
