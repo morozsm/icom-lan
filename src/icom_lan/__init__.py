@@ -22,6 +22,7 @@ from .protocol import identify_packet_type, parse_header, serialize_header
 from .audio import AUDIO_HEADER_SIZE, AudioPacket, AudioState, AudioStream, JitterBuffer
 from .transport import ConnectionState, IcomTransport
 from .radio import IcomRadio
+from .radios import RADIOS, RadioModel, get_civ_addr
 from .commands import (
     CONTROLLER_ADDR,
     IC_7610_ADDR,
@@ -58,6 +59,10 @@ __all__ = [
     "__version__",
     # Radio
     "IcomRadio",
+    # Radio models
+    "RADIOS",
+    "RadioModel",
+    "get_civ_addr",
     # Exceptions
     "IcomLanError",
     "ConnectionError",

@@ -1,0 +1,238 @@
+"""Synchronous (blocking) wrapper around :class:`~icom_lan.radio.IcomRadio`.
+
+Provides the same API as the async version but runs an internal event loop
+so callers don't need ``async/await``.
+
+Example::
+
+    from icom_lan.sync import IcomRadio
+
+    with IcomRadio("192.168.1.100", username="u", password="p") as radio:
+        print(radio.get_frequency())
+        radio.set_frequency(14_074_000)
+"""
+
+import asyncio
+from typing import Callable
+
+from .audio import AudioPacket
+from .radio import IcomRadio as _AsyncIcomRadio
+from .types import AudioCodec, Mode
+
+__all__ = ["IcomRadio"]
+
+
+class IcomRadio:
+    """Synchronous (blocking) wrapper for Icom radio LAN control.
+
+    Wraps the async :class:`~icom_lan.radio.IcomRadio` with a dedicated
+    event loop. All methods block until the operation completes.
+
+    Args:
+        host: Radio IP address or hostname.
+        port: Control port (default 50001).
+        username: Authentication username.
+        password: Authentication password.
+        radio_addr: CI-V address of the radio (default IC-7610 = 0x98).
+        timeout: Operation timeout in seconds.
+        audio_codec: Audio codec (default PCM 1ch 16-bit).
+        audio_sample_rate: Audio sample rate in Hz.
+    """
+
+    def __init__(
+        self,
+        host: str,
+        port: int = 50001,
+        username: str = "",
+        password: str = "",
+        radio_addr: int = 0x98,
+        timeout: float = 5.0,
+        audio_codec: AudioCodec | int = AudioCodec.PCM_1CH_16BIT,
+        audio_sample_rate: int = 48000,
+    ) -> None:
+        self._loop = asyncio.new_event_loop()
+        self._radio = _AsyncIcomRadio(
+            host,
+            port=port,
+            username=username,
+            password=password,
+            radio_addr=radio_addr,
+            timeout=timeout,
+            audio_codec=audio_codec,
+            audio_sample_rate=audio_sample_rate,
+        )
+
+    def _run(self, coro):  # type: ignore[no-untyped-def]
+        """Run a coroutine on the internal event loop."""
+        return self._loop.run_until_complete(coro)
+
+    # ------------------------------------------------------------------
+    # Connection
+    # ------------------------------------------------------------------
+
+    def connect(self) -> None:
+        """Connect to the radio (blocking)."""
+        self._run(self._radio.connect())
+
+    def disconnect(self) -> None:
+        """Disconnect from the radio (blocking)."""
+        self._run(self._radio.disconnect())
+
+    @property
+    def connected(self) -> bool:
+        """Whether the radio is currently connected."""
+        return self._radio.connected
+
+    def __enter__(self) -> "IcomRadio":
+        self.connect()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:  # type: ignore[no-untyped-def]
+        self.disconnect()
+        self._loop.close()
+
+    # ------------------------------------------------------------------
+    # Frequency
+    # ------------------------------------------------------------------
+
+    def get_frequency(self) -> int:
+        """Get the current operating frequency in Hz."""
+        return self._run(self._radio.get_frequency())
+
+    def set_frequency(self, freq_hz: int) -> None:
+        """Set the operating frequency in Hz."""
+        self._run(self._radio.set_frequency(freq_hz))
+
+    # ------------------------------------------------------------------
+    # Mode
+    # ------------------------------------------------------------------
+
+    def get_mode(self) -> Mode:
+        """Get the current operating mode."""
+        return self._run(self._radio.get_mode())
+
+    def set_mode(self, mode: str | Mode, filter_width: int | None = None) -> None:
+        """Set the operating mode."""
+        self._run(self._radio.set_mode(mode, filter_width))
+
+    # ------------------------------------------------------------------
+    # Power
+    # ------------------------------------------------------------------
+
+    def get_power(self) -> int:
+        """Get the RF power level (0-255)."""
+        return self._run(self._radio.get_power())
+
+    def set_power(self, level: int) -> None:
+        """Set the RF power level (0-255)."""
+        self._run(self._radio.set_power(level))
+
+    # ------------------------------------------------------------------
+    # Meters
+    # ------------------------------------------------------------------
+
+    def get_s_meter(self) -> int:
+        """Read the S-meter value (0-255)."""
+        return self._run(self._radio.get_s_meter())
+
+    def get_swr(self) -> int:
+        """Read the SWR meter (0-255)."""
+        return self._run(self._radio.get_swr())
+
+    def get_alc(self) -> int:
+        """Read the ALC meter (0-255)."""
+        return self._run(self._radio.get_alc())
+
+    # ------------------------------------------------------------------
+    # PTT
+    # ------------------------------------------------------------------
+
+    def set_ptt(self, on: bool) -> None:
+        """Enable or disable PTT."""
+        self._run(self._radio.set_ptt(on))
+
+    # ------------------------------------------------------------------
+    # VFO / Split
+    # ------------------------------------------------------------------
+
+    def select_vfo(self, vfo: str = "A") -> None:
+        """Select VFO (A, B, MAIN, SUB)."""
+        self._run(self._radio.select_vfo(vfo))
+
+    def vfo_equalize(self) -> None:
+        """Copy VFO A to VFO B."""
+        self._run(self._radio.vfo_equalize())
+
+    def vfo_exchange(self) -> None:
+        """Swap VFO A and B."""
+        self._run(self._radio.vfo_exchange())
+
+    def set_split_mode(self, on: bool) -> None:
+        """Enable or disable split mode."""
+        self._run(self._radio.set_split_mode(on))
+
+    # ------------------------------------------------------------------
+    # Attenuator / Preamp
+    # ------------------------------------------------------------------
+
+    def set_attenuator(self, on: bool) -> None:
+        """Enable or disable the attenuator."""
+        self._run(self._radio.set_attenuator(on))
+
+    def set_preamp(self, level: int = 1) -> None:
+        """Set preamp level (0=off, 1=PREAMP1, 2=PREAMP2)."""
+        self._run(self._radio.set_preamp(level))
+
+    # ------------------------------------------------------------------
+    # CW
+    # ------------------------------------------------------------------
+
+    def send_cw_text(self, text: str) -> None:
+        """Send CW text."""
+        self._run(self._radio.send_cw_text(text))
+
+    def stop_cw_text(self) -> None:
+        """Stop CW sending."""
+        self._run(self._radio.stop_cw_text())
+
+    # ------------------------------------------------------------------
+    # Power control
+    # ------------------------------------------------------------------
+
+    def power_control(self, on: bool) -> None:
+        """Power on/off the radio."""
+        self._run(self._radio.power_control(on))
+
+    # ------------------------------------------------------------------
+    # Audio
+    # ------------------------------------------------------------------
+
+    def start_audio_rx(self, callback: Callable[[AudioPacket], None]) -> None:
+        """Start receiving audio from the radio (blocking setup)."""
+        self._run(self._radio.start_audio_rx(callback))
+
+    def stop_audio_rx(self) -> None:
+        """Stop receiving audio."""
+        self._run(self._radio.stop_audio_rx())
+
+    def start_audio_tx(self) -> None:
+        """Start transmitting audio."""
+        self._run(self._radio.start_audio_tx())
+
+    def push_audio_tx(self, opus_data: bytes) -> None:
+        """Send an audio frame to the radio."""
+        self._run(self._radio.push_audio_tx(opus_data))
+
+    def stop_audio_tx(self) -> None:
+        """Stop transmitting audio."""
+        self._run(self._radio.stop_audio_tx())
+
+    @property
+    def audio_codec(self) -> AudioCodec:
+        """Configured audio codec."""
+        return self._radio.audio_codec
+
+    @property
+    def audio_sample_rate(self) -> int:
+        """Configured audio sample rate."""
+        return self._radio.audio_sample_rate

@@ -130,6 +130,7 @@ class IcomRadio:
         self._civ_port: int = 0
         self._audio_port: int = 0
         self._civ_send_seq: int = 0
+        self._token_task: asyncio.Task | None = None
 
     @property
     def connected(self) -> bool:
@@ -228,6 +229,7 @@ class IcomRadio:
 
         self._connected = True
         self._ctrl_transport.state = ConnectionState.CONNECTED
+        self._start_token_renewal()
         logger.info(
             "Connected to %s (control=%d, civ=%d)",
             self._host,
@@ -239,6 +241,7 @@ class IcomRadio:
         """Cleanly disconnect from the radio."""
         if self._connected:
             self._connected = False
+            self._stop_token_renewal()
             # Stop audio streams
             if self._audio_stream is not None:
                 await self._audio_stream.stop_rx()
@@ -384,6 +387,62 @@ class IcomRadio:
         self._audio_transport.start_retransmit_loop()
         self._audio_stream = AudioStream(self._audio_transport)
         logger.info("Audio transport connected on port %d", self._audio_port)
+
+    # ------------------------------------------------------------------
+    # Token renewal
+    # ------------------------------------------------------------------
+
+    TOKEN_RENEWAL_INTERVAL = 60.0  # seconds (wfview: TOKEN_RENEWAL = 60000ms)
+    TOKEN_PACKET_SIZE = 0x40
+
+    def _start_token_renewal(self) -> None:
+        """Start periodic token renewal task."""
+        if self._token_task is None or self._token_task.done():
+            self._token_task = asyncio.create_task(self._token_renewal_loop())
+
+    def _stop_token_renewal(self) -> None:
+        """Cancel token renewal task."""
+        if self._token_task is not None and not self._token_task.done():
+            self._token_task.cancel()
+            self._token_task = None
+
+    async def _token_renewal_loop(self) -> None:
+        """Background task: send token renewal every TOKEN_RENEWAL_INTERVAL."""
+        try:
+            while self._connected:
+                await asyncio.sleep(self.TOKEN_RENEWAL_INTERVAL)
+                if not self._connected:
+                    break
+                try:
+                    await self._send_token(0x05)  # renewal magic
+                    logger.debug("Token renewal sent")
+                except Exception as exc:
+                    logger.warning("Token renewal failed: %s", exc)
+        except asyncio.CancelledError:
+            pass
+
+    async def _send_token(self, magic: int) -> None:
+        """Send a token packet (renewal=0x05, ack=0x02, remove=0x01).
+
+        Reference: wfview icomudphandler.cpp sendToken().
+
+        Args:
+            magic: Token request type (0x01=remove, 0x02=ack, 0x05=renewal).
+        """
+        pkt = bytearray(self.TOKEN_PACKET_SIZE)
+        struct.pack_into("<I", pkt, 0x00, self.TOKEN_PACKET_SIZE)
+        struct.pack_into("<H", pkt, 0x04, 0x00)  # type = data
+        struct.pack_into("<I", pkt, 0x08, self._ctrl_transport.my_id)
+        struct.pack_into("<I", pkt, 0x0C, self._ctrl_transport.remote_id)
+        struct.pack_into(">I", pkt, 0x10, self.TOKEN_PACKET_SIZE - 0x10)
+        pkt[0x14] = 0x01  # requestreply
+        pkt[0x15] = magic  # requesttype
+        struct.pack_into(">H", pkt, 0x16, self._auth_seq)
+        self._auth_seq += 1
+        struct.pack_into("<H", pkt, 0x1A, self._tok_request)
+        struct.pack_into(">H", pkt, 0x24, 0x0798)  # resetcap
+        struct.pack_into("<I", pkt, 0x1C, self._token)
+        await self._ctrl_transport.send_tracked(bytes(pkt))
 
     # ------------------------------------------------------------------
     # Internal connection helpers

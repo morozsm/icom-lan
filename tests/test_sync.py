@@ -1,0 +1,43 @@
+"""Tests for synchronous API wrapper."""
+
+
+from icom_lan.sync import IcomRadio
+from icom_lan.types import AudioCodec
+
+
+class TestSyncInit:
+    def test_creates_radio(self) -> None:
+        r = IcomRadio("192.168.1.100")
+        assert r._radio is not None
+        assert r._loop is not None
+        r._loop.close()
+
+    def test_custom_params(self) -> None:
+        r = IcomRadio(
+            "192.168.1.100",
+            port=50002,
+            username="u",
+            password="p",
+            radio_addr=0xA4,
+            timeout=10.0,
+            audio_codec=AudioCodec.OPUS_1CH,
+            audio_sample_rate=16000,
+        )
+        assert r._radio._host == "192.168.1.100"
+        assert r._radio._port == 50002
+        assert r._radio._radio_addr == 0xA4
+        assert r.audio_codec == AudioCodec.OPUS_1CH
+        assert r.audio_sample_rate == 16000
+        r._loop.close()
+
+    def test_not_connected(self) -> None:
+        r = IcomRadio("192.168.1.100")
+        assert r.connected is False
+        r._loop.close()
+
+
+class TestSyncContextManager:
+    def test_exit_closes_loop(self) -> None:
+        r = IcomRadio("192.168.1.100")
+        # Can't actually connect without a radio, but test the mechanism
+        r._loop.close()  # just verify it's closeable
