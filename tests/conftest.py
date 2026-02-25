@@ -39,3 +39,90 @@ def data_packet_with_civ() -> bytes:
         0x02,
     )
     return header + inner + civ_payload
+
+
+class FakeRadio:
+    """Mock Icom radio that responds to UDP packets.
+
+    Simulates the radio side of the protocol for testing handshake
+    and packet exchange without real hardware.
+    """
+
+    def __init__(self, radio_id: int = 0xDEADBEEF) -> None:
+        self.radio_id = radio_id
+        self.received: list[bytes] = []
+        self.token: int = 0x12345678
+        self.tok_request: int = 0
+
+    def handle(self, data: bytes) -> bytes | None:
+        """Process an incoming packet and return a response (or None).
+
+        Args:
+            data: Raw packet bytes from the client.
+
+        Returns:
+            Response bytes or None if no response needed.
+        """
+        self.received.append(data)
+        if len(data) < HEADER_SIZE:
+            return None
+
+        ptype = struct.unpack_from("<H", data, 4)[0]
+        sender_id = struct.unpack_from("<I", data, 8)[0]
+
+        # "Are you there" (type=0x03) -> respond with "I am here" (type=0x04)
+        if len(data) == 0x10 and ptype == 0x03:
+            return self._control_response(sender_id, ptype=0x04)
+
+        # "Are you ready" (type=0x06) -> respond with "I am ready" (type=0x06)
+        if len(data) == 0x10 and ptype == 0x06:
+            return self._control_response(sender_id, ptype=0x06)
+
+        # Login packet (0x80 bytes)
+        if len(data) == 0x80:
+            return self._login_response(data, sender_id)
+
+        # Ping -> respond with ping reply
+        if len(data) == 0x15 and ptype == 0x07:
+            return self._ping_response(data, sender_id)
+
+        return None
+
+    def _control_response(self, client_id: int, *, ptype: int) -> bytes:
+        pkt = bytearray(0x10)
+        struct.pack_into("<I", pkt, 0, 0x10)
+        struct.pack_into("<H", pkt, 4, ptype)
+        struct.pack_into("<I", pkt, 8, self.radio_id)
+        struct.pack_into("<I", pkt, 0x0C, client_id)
+        return bytes(pkt)
+
+    def _ping_response(self, data: bytes, client_id: int) -> bytes:
+        pkt = bytearray(0x15)
+        struct.pack_into("<I", pkt, 0, 0x15)
+        struct.pack_into("<H", pkt, 4, PacketType.PING)
+        seq = struct.unpack_from("<H", data, 6)[0]
+        struct.pack_into("<H", pkt, 6, seq)
+        struct.pack_into("<I", pkt, 8, self.radio_id)
+        struct.pack_into("<I", pkt, 0x0C, client_id)
+        pkt[0x10] = 0x01  # reply
+        pkt[0x11:0x15] = data[0x11:0x15]  # echo time
+        return bytes(pkt)
+
+    def _login_response(self, data: bytes, client_id: int) -> bytes:
+        self.tok_request = struct.unpack_from("<H", data, 0x1A)[0]
+        pkt = bytearray(0x60)
+        struct.pack_into("<I", pkt, 0, 0x60)
+        struct.pack_into("<I", pkt, 8, self.radio_id)
+        struct.pack_into("<I", pkt, 0x0C, client_id)
+        struct.pack_into("<H", pkt, 0x1A, self.tok_request)
+        struct.pack_into("<I", pkt, 0x1C, self.token)
+        # error = 0 (success)
+        conn = b"FTTH"
+        pkt[0x40 : 0x40 + len(conn)] = conn
+        return bytes(pkt)
+
+
+@pytest.fixture
+def fake_radio() -> FakeRadio:
+    """Create a FakeRadio instance for testing."""
+    return FakeRadio()

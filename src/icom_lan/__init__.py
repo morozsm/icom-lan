@@ -2,6 +2,15 @@
 
 __version__ = "0.1.0"
 
+from .auth import (
+    AuthResponse,
+    StatusResponse,
+    build_conninfo_packet,
+    build_login_packet,
+    encode_credentials,
+    parse_auth_response,
+    parse_status_response,
+)
 from .exceptions import (
     AuthenticationError,
     CommandError,
@@ -10,6 +19,7 @@ from .exceptions import (
     TimeoutError,
 )
 from .protocol import identify_packet_type, parse_header, serialize_header
+from .transport import ConnectionState, IcomTransport
 from .types import (
     HEADER_SIZE,
     Mode,
@@ -38,4 +48,15 @@ __all__ = [
     "parse_header",
     "serialize_header",
     "identify_packet_type",
+    # Auth
+    "AuthResponse",
+    "StatusResponse",
+    "encode_credentials",
+    "build_login_packet",
+    "build_conninfo_packet",
+    "parse_auth_response",
+    "parse_status_response",
+    # Transport
+    "ConnectionState",
+    "IcomTransport",
 ]
