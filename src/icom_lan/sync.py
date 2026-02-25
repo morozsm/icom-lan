@@ -187,9 +187,17 @@ class IcomRadio:
     # Attenuator / Preamp
     # ------------------------------------------------------------------
 
+    def get_attenuator_level(self) -> int:
+        """Read attenuator level in dB."""
+        return self._run(self._radio.get_attenuator_level())
+
     def get_attenuator(self) -> bool:
         """Read attenuator state."""
         return self._run(self._radio.get_attenuator())
+
+    def set_attenuator_level(self, db: int) -> None:
+        """Set attenuator level in dB."""
+        self._run(self._radio.set_attenuator_level(db))
 
     def set_attenuator(self, on: bool) -> None:
         """Enable or disable the attenuator."""
@@ -202,6 +210,14 @@ class IcomRadio:
     def set_preamp(self, level: int = 1) -> None:
         """Set preamp level (0=off, 1=PREAMP1, 2=PREAMP2)."""
         self._run(self._radio.set_preamp(level))
+
+    def get_digisel(self) -> bool:
+        """Read DIGI-SEL status."""
+        return self._run(self._radio.get_digisel())
+
+    def set_digisel(self, on: bool) -> None:
+        """Set DIGI-SEL status."""
+        self._run(self._radio.set_digisel(on))
 
     # ------------------------------------------------------------------
     # State snapshot/restore

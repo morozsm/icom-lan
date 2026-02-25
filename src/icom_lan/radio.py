@@ -29,12 +29,16 @@ from .auth import (
 from .commands import (
     CONTROLLER_ADDR,
     IC_7610_ADDR,
+    RECEIVER_MAIN,
     _level_bcd_decode,
     build_civ_frame,
     get_alc,
+    get_attenuator as get_attenuator_cmd,
     get_frequency,
     get_mode,
     get_power,
+    get_digisel,
+    get_preamp as get_preamp_cmd,
     get_s_meter,
     get_swr,
     parse_ack_nak,
@@ -49,6 +53,8 @@ from .commands import (
     select_vfo as _select_vfo_cmd,
     send_cw,
     set_attenuator,
+    set_attenuator_level,
+    set_digisel,
     set_frequency,
     set_mode,
     set_power,
@@ -1124,42 +1130,67 @@ class IcomRadio:
             raise CommandError(f"Radio rejected split {'on' if on else 'off'}")
         self._last_split = on
 
-    async def get_attenuator(self) -> bool:
-        """Read attenuator state.
+    async def get_attenuator_level(self, receiver: int = RECEIVER_MAIN) -> int:
+        """Read attenuator level in dB (Command29-aware).
 
-        Returns:
-            True if attenuator is enabled.
+        Args:
+            receiver: RECEIVER_MAIN (0) or RECEIVER_SUB (1).
         """
         self._check_connected()
-        civ = build_civ_frame(self._radio_addr, CONTROLLER_ADDR, 0x11)
+        civ = get_attenuator_cmd(to_addr=self._radio_addr, receiver=receiver)
         try:
             resp = await self._send_civ_raw(civ)
             if resp.data:
                 raw = resp.data[0]
                 val = ((raw >> 4) & 0x0F) * 10 + (raw & 0x0F)
                 self._attenuator_state = val != 0
-                return self._attenuator_state
+                return val
         except TimeoutError:
             pass
 
         if self._attenuator_state is not None:
-            return self._attenuator_state
+            return 18 if self._attenuator_state else 0
         raise CommandError("Radio returned empty attenuator response")
 
-    async def set_attenuator(self, on: bool) -> None:
-        """Enable or disable attenuator."""
+    async def get_attenuator(self) -> bool:
+        """Read attenuator state (compat wrapper)."""
+        return (await self.get_attenuator_level()) > 0
+
+    async def set_attenuator_level(self, db: int, receiver: int = RECEIVER_MAIN) -> None:
+        """Set attenuator level in dB (Command29-aware).
+
+        Args:
+            db: Attenuation in dB (0..45 in 3 dB steps).
+            receiver: RECEIVER_MAIN (0) or RECEIVER_SUB (1).
+        """
         self._check_connected()
-        civ = set_attenuator(on, to_addr=self._radio_addr)
+        if db < 0 or db > 45 or db % 3 != 0:
+            raise ValueError(f"Attenuator level must be 0..45 in 3 dB steps, got {db}")
+        civ = set_attenuator_level(db, to_addr=self._radio_addr, receiver=receiver)
+        resp = await self._send_civ_raw(civ)
+        ack = parse_ack_nak(resp)
+        if ack is False:
+            raise CommandError(f"Radio rejected attenuator level {db}")
+        self._attenuator_state = db > 0
+
+    async def set_attenuator(self, on: bool, receiver: int = RECEIVER_MAIN) -> None:
+        """Enable or disable attenuator (compat wrapper, Command29-aware)."""
+        self._check_connected()
+        civ = set_attenuator(on, to_addr=self._radio_addr, receiver=receiver)
         resp = await self._send_civ_raw(civ)
         ack = parse_ack_nak(resp)
         if ack is False:
             raise CommandError(f"Radio rejected attenuator {'on' if on else 'off'}")
         self._attenuator_state = on
 
-    async def get_preamp(self) -> int:
-        """Read preamp level (0=off, 1=PREAMP1, 2=PREAMP2)."""
+    async def get_preamp(self, receiver: int = RECEIVER_MAIN) -> int:
+        """Read preamp level (0=off, 1=PREAMP1, 2=PREAMP2) (Command29-aware).
+
+        Args:
+            receiver: RECEIVER_MAIN (0) or RECEIVER_SUB (1).
+        """
         self._check_connected()
-        civ = build_civ_frame(self._radio_addr, CONTROLLER_ADDR, 0x16)
+        civ = get_preamp_cmd(to_addr=self._radio_addr, receiver=receiver)
         try:
             resp = await self._send_civ_raw(civ)
             if resp.data:
@@ -1173,15 +1204,54 @@ class IcomRadio:
             return self._preamp_level
         raise CommandError("Radio returned empty preamp response")
 
-    async def set_preamp(self, level: int = 1) -> None:
-        """Set preamp level (0=off, 1=PREAMP1, 2=PREAMP2)."""
+    async def set_preamp(self, level: int = 1, receiver: int = RECEIVER_MAIN) -> None:
+        """Set preamp level (0=off, 1=PREAMP1, 2=PREAMP2) (Command29-aware).
+
+        Args:
+            level: 0=off, 1=PREAMP1, 2=PREAMP2.
+            receiver: RECEIVER_MAIN (0) or RECEIVER_SUB (1).
+
+        Raises:
+            CommandError: If the radio rejects the command. On IC-7610 this
+                commonly happens when DIGI-SEL (IP+) is enabled — preamp and
+                DIGI-SEL are mutually exclusive in hardware.
+        """
         self._check_connected()
-        civ = set_preamp(level, to_addr=self._radio_addr)
+        civ = set_preamp(level, to_addr=self._radio_addr, receiver=receiver)
         resp = await self._send_civ_raw(civ)
         ack = parse_ack_nak(resp)
         if ack is False:
-            raise CommandError(f"Radio rejected preamp level {level}")
+            # Check if DIGI-SEL is blocking (IC-7610 mutual exclusion)
+            hint = ""
+            if level > 0:
+                try:
+                    digisel = await self.get_digisel()
+                    if digisel:
+                        hint = " (DIGI-SEL/IP+ is ON — disable it first, they are mutually exclusive)"
+                except Exception:
+                    pass
+            raise CommandError(f"Radio rejected preamp level {level}{hint}")
         self._preamp_level = level
+
+    async def get_digisel(self) -> bool:
+        """Read DIGI-SEL status (IC-7610 frontend selector)."""
+        self._check_connected()
+        civ = get_digisel(to_addr=self._radio_addr)
+        resp = await self._send_civ_raw(civ)
+        if not resp.data:
+            raise CommandError("Radio returned empty DIGI-SEL response")
+        raw = resp.data[0]
+        val = ((raw >> 4) & 0x0F) * 10 + (raw & 0x0F)
+        return bool(val)
+
+    async def set_digisel(self, on: bool) -> None:
+        """Set DIGI-SEL status."""
+        self._check_connected()
+        civ = set_digisel(on, to_addr=self._radio_addr)
+        resp = await self._send_civ_raw(civ)
+        ack = parse_ack_nak(resp)
+        if ack is False:
+            raise CommandError(f"Radio rejected DIGI-SEL {'on' if on else 'off'}")
 
     async def snapshot_state(self) -> dict[str, object]:
         """Best-effort snapshot of core rig state for safe restore."""

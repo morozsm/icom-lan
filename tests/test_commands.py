@@ -301,3 +301,82 @@ class TestEdgeCases:
             to_addr=0x98, from_addr=0xE0, command=0x15, sub=0x02, data=b"\x01\x20"
         )
         assert f.sub == 0x02
+
+
+class TestCommand29:
+    """Test Command29 framing for dual-receiver radios (IC-7610)."""
+
+    def test_build_cmd29_frame_basic(self) -> None:
+        from icom_lan.commands import build_cmd29_frame, RECEIVER_MAIN
+        frame = build_cmd29_frame(0x98, 0xE0, 0x16, sub=0x02, receiver=RECEIVER_MAIN)
+        # FE FE 98 E0 29 00 16 02 FD
+        assert frame == bytes.fromhex("fefe98e0 29 00 16 02 fd".replace(" ", ""))
+
+    def test_cmd29_with_data(self) -> None:
+        from icom_lan.commands import build_cmd29_frame, RECEIVER_MAIN
+        frame = build_cmd29_frame(0x98, 0xE0, 0x16, sub=0x02, data=b"\x01", receiver=RECEIVER_MAIN)
+        assert frame == bytes.fromhex("fefe98e0 29 00 16 02 01 fd".replace(" ", ""))
+
+    def test_cmd29_sub_receiver(self) -> None:
+        from icom_lan.commands import build_cmd29_frame, RECEIVER_SUB
+        frame = build_cmd29_frame(0x98, 0xE0, 0x16, sub=0x02, data=b"\x02", receiver=RECEIVER_SUB)
+        assert frame == bytes.fromhex("fefe98e0 29 01 16 02 02 fd".replace(" ", ""))
+
+    def test_cmd29_no_sub(self) -> None:
+        from icom_lan.commands import build_cmd29_frame, RECEIVER_MAIN
+        # ATT command has no sub-byte
+        frame = build_cmd29_frame(0x98, 0xE0, 0x11, receiver=RECEIVER_MAIN)
+        assert frame == bytes.fromhex("fefe98e0 29 00 11 fd".replace(" ", ""))
+
+    def test_cmd29_att_with_data(self) -> None:
+        from icom_lan.commands import build_cmd29_frame, RECEIVER_MAIN
+        frame = build_cmd29_frame(0x98, 0xE0, 0x11, data=b"\x18", receiver=RECEIVER_MAIN)
+        assert frame == bytes.fromhex("fefe98e0 29 00 11 18 fd".replace(" ", ""))
+
+    def test_parse_cmd29_response_preamp(self) -> None:
+        # Radio response: FE FE E0 98 29 00 16 02 01 FD
+        data = bytes.fromhex("fefee098 29 00 16 02 01 fd".replace(" ", ""))
+        parsed = parse_civ_frame(data)
+        assert parsed.command == 0x16  # Unwrapped to real command
+        assert parsed.sub == 0x02
+        assert parsed.data == b"\x01"  # Preamp level 1
+
+    def test_parse_cmd29_response_att(self) -> None:
+        # Radio response: FE FE E0 98 29 00 11 18 FD
+        data = bytes.fromhex("fefee098 29 00 11 18 fd".replace(" ", ""))
+        parsed = parse_civ_frame(data)
+        assert parsed.command == 0x11
+        assert parsed.sub is None
+        assert parsed.data == b"\x18"
+
+    def test_get_preamp_uses_cmd29(self) -> None:
+        from icom_lan.commands import get_preamp
+        frame = get_preamp()
+        assert frame[4] == 0x29  # Command byte is 0x29
+        assert frame[5] == 0x00  # MAIN receiver
+        assert frame[6] == 0x16  # Original preamp command
+        assert frame[7] == 0x02  # Preamp status sub
+
+    def test_set_preamp_uses_cmd29(self) -> None:
+        from icom_lan.commands import set_preamp
+        frame = set_preamp(1)
+        assert frame[4] == 0x29
+        assert frame[5] == 0x00
+        assert frame[6] == 0x16
+        assert frame[7] == 0x02
+        assert frame[8] == 0x01  # Level 1 in BCD
+
+    def test_get_attenuator_uses_cmd29(self) -> None:
+        from icom_lan.commands import get_attenuator
+        frame = get_attenuator()
+        assert frame[4] == 0x29
+        assert frame[5] == 0x00
+        assert frame[6] == 0x11
+
+    def test_set_attenuator_level_uses_cmd29(self) -> None:
+        from icom_lan.commands import set_attenuator_level
+        frame = set_attenuator_level(18)
+        assert frame[4] == 0x29
+        assert frame[5] == 0x00
+        assert frame[6] == 0x11
+        assert frame[7] == 0x18  # 18 in BCD

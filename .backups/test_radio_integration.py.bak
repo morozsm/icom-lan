@@ -1,0 +1,251 @@
+"""Integration tests for IcomRadio high-level API.
+
+These tests run against a real Icom transceiver on the network.
+Set environment variables to enable:
+
+    export ICOM_HOST=192.168.55.40
+    export ICOM_USER=your_username
+    export ICOM_PASS=your_password
+
+Run with: pytest -m integration
+Skip with: pytest -m "not integration"
+"""
+
+from __future__ import annotations
+
+import pytest
+
+from icom_lan import IcomRadio
+from icom_lan.types import Mode
+
+
+pytestmark = pytest.mark.integration
+
+
+class TestConnection:
+    """Connection and disconnection tests."""
+
+    async def test_connect_disconnect(self, radio_config: dict) -> None:
+        """Basic connect/disconnect cycle."""
+        radio = IcomRadio(**radio_config)
+        assert not radio.connected
+
+        await radio.connect()
+        assert radio.connected
+
+        await radio.disconnect()
+        assert not radio.connected
+
+    async def test_context_manager(self, radio_config: dict) -> None:
+        """Context manager automatically handles connection."""
+        async with IcomRadio(**radio_config) as radio:
+            assert radio.connected
+
+
+class TestFrequency:
+    """Frequency read/write tests."""
+
+    async def test_get_frequency(self, radio: IcomRadio) -> None:
+        """Read current frequency."""
+        freq = await radio.get_frequency()
+        assert isinstance(freq, int)
+        assert 1_800_000 <= freq <= 470_000_000  # Valid HF range
+        print(f"Frequency: {freq:,} Hz ({freq/1e6:.3f} MHz)")
+
+    async def test_set_frequency_roundtrip(self, radio: IcomRadio) -> None:
+        """Set frequency and restore original."""
+        # Save original
+        original = await radio.get_frequency()
+
+        try:
+            # Set to 20m FT8
+            new_freq = 14_074_000
+            await radio.set_frequency(new_freq)
+
+            # Verify
+            actual = await radio.get_frequency()
+            assert actual == new_freq, f"Expected {new_freq}, got {actual}"
+            print(f"Set frequency: {actual:,} Hz ✓")
+
+        finally:
+            # Restore original
+            await radio.set_frequency(original)
+            restored = await radio.get_frequency()
+            assert restored == original
+            print(f"Restored: {restored:,} Hz ✓")
+
+
+class TestMode:
+    """Mode read/write tests."""
+
+    async def test_get_mode(self, radio: IcomRadio) -> None:
+        """Read current mode."""
+        mode = await radio.get_mode()
+        assert isinstance(mode, Mode)
+        print(f"Mode: {mode.name} ✓")
+
+    async def test_set_mode_roundtrip(self, radio: IcomRadio) -> None:
+        """Set mode and restore original."""
+        original = await radio.get_mode()
+
+        try:
+            # Set to USB
+            await radio.set_mode(Mode.USB)
+
+            actual = await radio.get_mode()
+            assert actual == Mode.USB
+            print(f"Set mode: {actual.name} ✓")
+
+            # Try another mode
+            await radio.set_mode(Mode.CW)
+            actual = await radio.get_mode()
+            assert actual == Mode.CW
+            print(f"Set mode: {actual.name} ✓")
+
+        finally:
+            await radio.set_mode(original)
+            restored = await radio.get_mode()
+            assert restored == original
+            print(f"Restored: {restored.name} ✓")
+
+
+class TestMeters:
+    """Meter reading tests (read-only).
+
+    Note: All meters return 0-255 scale, not physical units.
+    """
+
+    async def test_get_s_meter(self, radio: IcomRadio) -> None:
+        """Read S-meter value."""
+        s = await radio.get_s_meter()
+        assert isinstance(s, int)
+        assert 0 <= s <= 255
+        print(f"S-meter: {s} ✓")
+
+    async def test_get_swr(self, radio: IcomRadio) -> None:
+        """Read SWR meter value (0-255)."""
+        swr = await radio.get_swr()
+        assert isinstance(swr, int)
+        assert 0 <= swr <= 255
+        print(f"SWR meter: {swr} ✓")
+
+    async def test_get_alc(self, radio: IcomRadio) -> None:
+        """Read ALC value."""
+        alc = await radio.get_alc()
+        assert isinstance(alc, int)
+        assert 0 <= alc <= 255
+        print(f"ALC: {alc} ✓")
+
+    async def test_get_power(self, radio: IcomRadio) -> None:
+        """Read TX power setting (0-255, where 255 = 100%)."""
+        power = await radio.get_power()
+        assert isinstance(power, int)
+        assert 0 <= power <= 255
+        print(f"Power setting: {power}/255 ({power*100/255:.0f}%) ✓")
+
+
+class TestPowerControl:
+    """TX power control tests.
+
+    Power is 0-255 scale where 255 = 100W (max).
+    """
+
+    async def test_set_power_roundtrip(self, radio: IcomRadio) -> None:
+        """Set TX power and restore original."""
+        original = await radio.get_power()
+
+        try:
+            # Set to ~50% power (128 = ~50W)
+            await radio.set_power(128)
+            actual = await radio.get_power()
+            # Allow some tolerance due to radio calibration
+            assert 100 <= actual <= 150, f"Expected ~128, got {actual}"
+            print(f"Set power: {actual}/255 ({actual*100/255:.0f}%) ✓")
+
+        finally:
+            await radio.set_power(original)
+            print(f"Restored power: {original}/255 ✓")
+
+
+class TestPTT:
+    """PTT control tests (no actual transmission)."""
+
+    async def test_ptt_on_off(self, radio: IcomRadio) -> None:
+        """Toggle PTT on and off."""
+        # PTT on
+        await radio.set_ptt(True)
+        await radio.set_ptt(False)
+        print("PTT on/off ✓")
+
+
+class TestVFO:
+    """VFO operations tests."""
+
+    async def test_select_vfo(self, radio: IcomRadio) -> None:
+        """Select MAIN/SUB VFO."""
+        # Select MAIN
+        await radio.select_vfo("MAIN")
+        print("VFO MAIN ✓")
+
+        # Select SUB (if supported)
+        try:
+            await radio.select_vfo("SUB")
+            print("VFO SUB ✓")
+            # Back to MAIN
+            await radio.select_vfo("MAIN")
+        except Exception as e:
+            print(f"VFO SUB not supported: {e}")
+
+
+class TestSplit:
+    """Split mode tests."""
+
+    async def test_split_mode_roundtrip(self, radio: IcomRadio) -> None:
+        """Enable/disable split mode."""
+        # Try enabling split
+        try:
+            await radio.set_split_mode(True)
+            print("Split ON ✓")
+
+            await radio.set_split_mode(False)
+            print("Split OFF ✓")
+        except Exception as e:
+            # Split might not be supported on all radios
+            pytest.skip(f"Split mode not supported: {e}")
+
+
+class TestCW:
+    """CW keying tests (optional, requires antenna/dummy load)."""
+
+    @pytest.mark.skip(reason="CW requires antenna - enable manually if needed")
+    async def test_send_cw_text(self, radio: IcomRadio) -> None:
+        """Send CW text (requires antenna!)."""
+        # Short test message
+        await radio.send_cw_text("TEST")
+        print("CW: TEST ✓")
+
+
+class TestStatus:
+    """Status and info tests."""
+
+    async def test_get_status(self, radio: IcomRadio) -> None:
+        """Get comprehensive radio status."""
+        freq = await radio.get_frequency()
+        mode = await radio.get_mode()
+        s = await radio.get_s_meter()
+        swr = await radio.get_swr()
+        power = await radio.get_power()
+
+        print("\n── Radio Status ──")
+        print(f"  Frequency: {freq/1e6:.3f} MHz")
+        print(f"  Mode: {mode.name}")
+        print(f"  S-meter: {s}/255")
+        print(f"  SWR meter: {swr}/255")
+        print(f"  Power: {power}/255 ({power*100/255:.0f}%)")
+
+        # Basic sanity checks
+        assert freq > 0
+        assert mode in Mode
+        assert 0 <= s <= 255
+        assert 0 <= swr <= 255
+        assert 0 <= power <= 255

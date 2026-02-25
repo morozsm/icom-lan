@@ -56,6 +56,7 @@ The CI-V and audio ports are **negotiated during the handshake** — the library
 | `ICOM_ALLOW_POWER_CONTROL=1` | Enable guarded power off/on integration test |
 | `ICOM_SOAK_SECONDS=<N>` | Run soak integration for N seconds |
 | `ICOM_CIV_MIN_INTERVAL_MS=<ms>` | Tune CI-V pacing interval in commander |
+| `ICOM_STRICT_FRONTEND=1` | Enable strict ATT/PREAMP integration profile (fail instead of skip) |
 
 ## Environment Variable Setup
 

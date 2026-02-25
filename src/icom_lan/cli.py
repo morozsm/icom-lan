@@ -6,6 +6,8 @@ Usage:
     icom-lan mode [VALUE] [--host HOST] [--user USER] [--pass PASS]
     icom-lan power [VALUE] [--host HOST] [--user USER] [--pass PASS]
     icom-lan meter [--host HOST] [--user USER] [--pass PASS]
+    icom-lan att [VALUE] [--host HOST] [--user USER] [--pass PASS]
+    icom-lan preamp [VALUE] [--host HOST] [--user USER] [--pass PASS]
     icom-lan ptt {on,off} [--host HOST] [--user USER] [--pass PASS]
     icom-lan discover
 """
@@ -15,6 +17,7 @@ import asyncio
 import os
 import sys
 
+from . import __version__
 from .radio import IcomRadio
 from .types import Mode
 
@@ -27,6 +30,12 @@ def _build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="icom-lan",
         description="Control Icom transceivers over LAN",
+    )
+    p.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {__version__}",
+        help="Show version and exit",
     )
     p.add_argument(
         "--host",
@@ -116,6 +125,26 @@ def _build_parser() -> argparse.ArgumentParser:
     sub.add_parser("power-on", help="Power on the radio")
     sub.add_parser("power-off", help="Power off the radio")
 
+    # att
+    att_p = sub.add_parser("att", help="Get or set attenuator level")
+    _add_json(att_p)
+    att_p.add_argument(
+        "value",
+        nargs="?",
+        type=str,
+        help="Attenuation in dB (0, 3, 6, ..., 45) or 'on'/'off'",
+    )
+
+    # preamp
+    preamp_p = sub.add_parser("preamp", help="Get or set preamp level")
+    _add_json(preamp_p)
+    preamp_p.add_argument(
+        "value",
+        nargs="?",
+        type=str,
+        help="Preamp level: 0 (off), 1 (PRE1), 2 (PRE2), or 'off'",
+    )
+
     # discover
     sub.add_parser("discover", help="Discover radios on the network")
 
@@ -160,6 +189,10 @@ async def _run(args: argparse.Namespace) -> int:
                 return await _cmd_ptt(radio, args)
             elif args.command == "cw":
                 return await _cmd_cw(radio, args)
+            elif args.command == "att":
+                return await _cmd_att(radio, args)
+            elif args.command == "preamp":
+                return await _cmd_preamp(radio, args)
             elif args.command == "power-on":
                 await radio.power_control(True)
                 print("Power ON")
@@ -285,6 +318,56 @@ async def _cmd_ptt(radio: IcomRadio, args: argparse.Namespace) -> int:
 async def _cmd_cw(radio: IcomRadio, args: argparse.Namespace) -> int:
     await radio.send_cw_text(args.text)
     print(f"CW: {args.text}")
+    return 0
+
+
+async def _cmd_att(radio: IcomRadio, args: argparse.Namespace) -> int:
+    if args.value is not None:
+        val = args.value.strip().lower()
+        if val == "on":
+            await radio.set_attenuator(True)
+            print("Attenuator: ON (18 dB)")
+        elif val == "off":
+            await radio.set_attenuator_level(0)
+            print("Attenuator: OFF (0 dB)")
+        else:
+            db = int(val)
+            await radio.set_attenuator_level(db)
+            print(f"Attenuator: {db} dB")
+    else:
+        db = await radio.get_attenuator_level()
+        if args.json:
+            import json
+
+            print(json.dumps({"attenuator_db": db, "attenuator_on": db > 0}))
+        else:
+            if db == 0:
+                print("Attenuator: OFF (0 dB)")
+            else:
+                print(f"Attenuator: {db} dB")
+    return 0
+
+
+_PREAMP_NAMES = {0: "OFF", 1: "PRE1", 2: "PRE2"}
+
+
+async def _cmd_preamp(radio: IcomRadio, args: argparse.Namespace) -> int:
+    if args.value is not None:
+        val = args.value.strip().lower()
+        if val == "off":
+            level = 0
+        else:
+            level = int(val)
+        await radio.set_preamp(level)
+        print(f"Preamp: {_PREAMP_NAMES.get(level, str(level))}")
+    else:
+        level = await radio.get_preamp()
+        if args.json:
+            import json
+
+            print(json.dumps({"preamp_level": level, "preamp_name": _PREAMP_NAMES.get(level, str(level))}))
+        else:
+            print(f"Preamp: {_PREAMP_NAMES.get(level, str(level))}")
     return 0
 
 

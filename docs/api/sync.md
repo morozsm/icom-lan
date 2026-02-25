@@ -25,8 +25,11 @@ with IcomRadio("192.168.1.100", username="u", password="p") as radio:
 ```python
 mode, filt = radio.get_mode_info()
 radio.set_filter(2)
-att = radio.get_attenuator()
-pre = radio.get_preamp()
+att_db = radio.get_attenuator_level()   # dB (0–45)
+att_on = radio.get_attenuator()         # bool
+pre = radio.get_preamp()                # 0, 1, or 2
+radio.set_attenuator_level(18)          # 18 dB
+radio.set_preamp(1)                     # PREAMP 1
 state = radio.snapshot_state()
 radio.restore_state(state)
 ```

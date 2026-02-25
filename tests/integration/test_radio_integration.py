@@ -24,6 +24,8 @@ from icom_lan import IcomRadio
 from icom_lan.exceptions import TimeoutError as IcomTimeoutError
 from icom_lan.types import Mode
 
+from logging_utils import log_event, timed_call
+
 
 pytestmark = pytest.mark.integration
 
@@ -318,8 +320,36 @@ class TestSplit:
 class TestFrontEnd:
     """Attenuator / preamp API tests."""
 
+    @staticmethod
+    def _strict_enabled() -> bool:
+        return os.environ.get("ICOM_STRICT_FRONTEND", "0") == "1"
+
+    @staticmethod
+    async def _prepare_strict_frontend_state(radio: IcomRadio) -> None:
+        """Apply deterministic preconditions for strict ATT/PREAMP validation."""
+        await radio.set_split_mode(False)
+        await radio.select_vfo("MAIN")
+        await radio.set_mode(Mode.USB)
+        # On IC-7610 PREAMP and DIGI-SEL are mutually exclusive.
+        await radio.set_digisel(False)
+        ds = await radio.get_digisel()
+        assert ds is False, "Expected DIGI-SEL OFF before strict PREAMP tests"
+        await asyncio.sleep(0.15)
+
     async def test_attenuator_roundtrip(self, radio: IcomRadio) -> None:
         """Toggle attenuator and restore original state."""
+        strict = self._strict_enabled()
+
+        if strict:
+            await self._prepare_strict_frontend_state(radio)
+            # Strict deterministic sequence for IC-7610 attenuator levels.
+            for db in (0, 18, 0):
+                await radio.set_attenuator_level(db)
+                got = await radio.get_attenuator_level()
+                assert got == db, f"Expected ATT {db} dB, got {got}"
+            print("ATT strict sequence 0->18->0 dB ✓")
+            return
+
         try:
             original = await radio.get_attenuator()
         except Exception as e:
@@ -341,6 +371,18 @@ class TestFrontEnd:
 
     async def test_preamp_roundtrip(self, radio: IcomRadio) -> None:
         """Set preamp and restore original level."""
+        strict = self._strict_enabled()
+
+        if strict:
+            await self._prepare_strict_frontend_state(radio)
+            # Strict sequence validates command acceptance (some rigs may clamp).
+            for lvl in (0, 1, 2, 0):
+                await radio.set_preamp(lvl)
+            got = await radio.get_preamp()
+            assert got in (0, 1, 2), f"Unexpected PREAMP readback: {got}"
+            print(f"PREAMP strict command sequence 0->1->2->0 ✓ (readback={got})")
+            return
+
         try:
             original = await radio.get_preamp()
         except Exception as e:
@@ -503,11 +545,26 @@ class TestReconnect:
         async def connect_with_retry(radio: IcomRadio, label: str, retries: int = 4) -> None:
             for attempt in range(1, retries + 2):
                 try:
-                    await radio.connect()
-                    print(f"{label} connect ✓ (attempt={attempt})")
+                    _, dt = await timed_call("connect", radio.connect)
+                    log_event(
+                        test="reconnect",
+                        step=f"{label}_connect",
+                        cmd="connect",
+                        attempt=attempt,
+                        timeout=False,
+                        recovered=(attempt > 1),
+                        duration_ms=dt,
+                    )
                     return
                 except IcomTimeoutError:
-                    print(f"{label} connect timeout (attempt={attempt})")
+                    log_event(
+                        test="reconnect",
+                        step=f"{label}_connect",
+                        cmd="connect",
+                        attempt=attempt,
+                        timeout=True,
+                        recovered=(attempt <= retries),
+                    )
                     if attempt > retries:
                         raise
                     await asyncio.sleep(1.0 + 0.5 * attempt)
@@ -573,7 +630,7 @@ class TestSoak:
         async def recover_connection() -> None:
             nonlocal stats, r
             stats["recover_reconnects"] += 1
-            print(json.dumps({"ev": "recover", "action": "reconnect_start"}))
+            log_event(test="soak", step="recover_start", cmd="connect")
             try:
                 await r.disconnect()
             except Exception:
@@ -582,36 +639,55 @@ class TestSoak:
             for i in range(1, 6):
                 try:
                     await asyncio.sleep(0.6 * i)
-                    await r.connect()
-                    print(json.dumps({"ev": "recover", "action": "reconnect_ok", "attempt": i}))
+                    _, dt = await timed_call("connect", r.connect)
+                    log_event(
+                        test="soak",
+                        step="recover_connect",
+                        cmd="connect",
+                        attempt=i,
+                        timeout=False,
+                        recovered=True,
+                        duration_ms=dt,
+                    )
                     return
                 except IcomTimeoutError:
-                    print(json.dumps({"ev": "recover", "action": "reconnect_timeout", "attempt": i}))
+                    log_event(
+                        test="soak",
+                        step="recover_connect",
+                        cmd="connect",
+                        attempt=i,
+                        timeout=True,
+                        recovered=(i < 5),
+                    )
             raise IcomTimeoutError("Reconnect recovery failed")
 
         async def op(name: str, fn, retries: int = 2):
             nonlocal stats
             for attempt in range(1, retries + 2):
-                t0 = time.monotonic()
                 try:
-                    out = await fn()
+                    out, dt = await timed_call(name, fn)
                     stats["ops"] += 1
-                    print(json.dumps({
-                        "ev": "ok",
-                        "op": name,
-                        "attempt": attempt,
-                        "ms": int((time.monotonic() - t0) * 1000),
-                    }))
+                    log_event(
+                        test="soak",
+                        step="op",
+                        cmd=name,
+                        attempt=attempt,
+                        timeout=False,
+                        recovered=(attempt > 1),
+                        duration_ms=dt,
+                    )
                     return out
                 except IcomTimeoutError:
                     stats["timeouts"] += 1
                     recovered = attempt <= retries
-                    print(json.dumps({
-                        "ev": "timeout",
-                        "op": name,
-                        "attempt": attempt,
-                        "recovered": recovered,
-                    }))
+                    log_event(
+                        test="soak",
+                        step="op",
+                        cmd=name,
+                        attempt=attempt,
+                        timeout=True,
+                        recovered=recovered,
+                    )
                     if recovered:
                         stats["timeouts_recovered"] += 1
                         await asyncio.sleep(0.15)
@@ -620,14 +696,18 @@ class TestSoak:
                     # Last retry failed: try one reconnect recovery path.
                     try:
                         await recover_connection()
-                        out = await fn()
+                        out, dt = await timed_call(name, fn)
                         stats["ops"] += 1
                         stats["timeouts_recovered"] += 1
-                        print(json.dumps({
-                            "ev": "ok_after_recover",
-                            "op": name,
-                            "attempt": attempt,
-                        }))
+                        log_event(
+                            test="soak",
+                            step="op_after_recover",
+                            cmd=name,
+                            attempt=attempt,
+                            timeout=False,
+                            recovered=True,
+                            duration_ms=dt,
+                        )
                         return out
                     except Exception:
                         stats["timeouts_unrecovered"] += 1
@@ -681,6 +761,79 @@ class TestSoak:
         assert stats["timeouts_unrecovered"] == 0, (
             f"Unrecovered timeouts: {stats['timeouts_unrecovered']}"
         )
+
+
+class TestFaultInjection:
+    """Fault-injection recovery scenarios."""
+
+    async def test_civ_drop_recover_via_reconnect(self, radio_config: dict) -> None:
+        """Simulate CI-V path loss and verify reconnect recovery."""
+        r = IcomRadio(**radio_config, timeout=8.0)
+        await r.connect()
+        try:
+            base = await r.get_frequency()
+            assert base > 0
+            log_event(test="fault", step="baseline", cmd="get_frequency", timeout=False)
+
+            # Inject fault: drop CI-V transport socket.
+            if r._civ_transport is None:  # type: ignore[attr-defined]
+                pytest.skip("CI-V transport unavailable for fault injection")
+            await r._civ_transport.disconnect()  # type: ignore[attr-defined]
+            log_event(test="fault", step="inject", cmd="civ_disconnect", recovered=False)
+
+            # Next CI-V command should fail (timeout/connection error).
+            failed = False
+            try:
+                await r.get_frequency()
+            except Exception:
+                failed = True
+            assert failed, "Expected CI-V command failure after injected drop"
+            log_event(test="fault", step="post_inject_failure", cmd="get_frequency", timeout=True)
+        finally:
+            try:
+                await r.disconnect()
+            except Exception:
+                pass
+
+        # Recovery path: full reconnect with retries
+        r2 = IcomRadio(**radio_config, timeout=10.0)
+        try:
+            recovered = False
+            for attempt in range(1, 6):
+                try:
+                    await r2.connect()
+                    freq2 = await r2.get_frequency()
+                    assert freq2 > 0
+                    log_event(
+                        test="fault",
+                        step="recover",
+                        cmd="reconnect+get_frequency",
+                        attempt=attempt,
+                        timeout=False,
+                        recovered=(attempt > 1),
+                    )
+                    recovered = True
+                    break
+                except Exception:
+                    log_event(
+                        test="fault",
+                        step="recover",
+                        cmd="reconnect+get_frequency",
+                        attempt=attempt,
+                        timeout=True,
+                        recovered=(attempt < 5),
+                    )
+                    try:
+                        await r2.disconnect()
+                    except Exception:
+                        pass
+                    await asyncio.sleep(0.7 * attempt)
+            assert recovered, "Failed to recover after injected CI-V drop"
+        finally:
+            try:
+                await r2.disconnect()
+            except Exception:
+                pass
 
 
 class TestCommanderStress:

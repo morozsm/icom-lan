@@ -98,12 +98,29 @@ vfo_swap(to_addr=0x98) -> bytes
 set_split(on: bool, to_addr=0x98) -> bytes
 ```
 
-### RF Controls
+### RF Controls (Command29-aware)
+
+All RF control commands use `build_cmd29_frame()` for dual-receiver compatibility.
 
 ```python
-set_attenuator(on: bool, to_addr=0x98) -> bytes
-set_preamp(level: int = 1, to_addr=0x98) -> bytes
+# Frame builder for Command29-wrapped commands
+build_cmd29_frame(to_addr, from_addr, command, sub=None, data=None, receiver=RECEIVER_MAIN) -> bytes
+
+# Attenuator
+get_attenuator(to_addr=0x98, receiver=RECEIVER_MAIN) -> bytes
+set_attenuator_level(db: int, to_addr=0x98, receiver=RECEIVER_MAIN) -> bytes
+set_attenuator(on: bool, to_addr=0x98, receiver=RECEIVER_MAIN) -> bytes  # compat
+
+# Preamp
+get_preamp(to_addr=0x98, receiver=RECEIVER_MAIN) -> bytes
+set_preamp(level: int = 1, to_addr=0x98, receiver=RECEIVER_MAIN) -> bytes
+
+# DIGI-SEL
+get_digisel(to_addr=0x98, receiver=RECEIVER_MAIN) -> bytes
+set_digisel(on: bool, to_addr=0x98, receiver=RECEIVER_MAIN) -> bytes
 ```
+
+Constants: `RECEIVER_MAIN = 0x00`, `RECEIVER_SUB = 0x01`
 
 ### CW
 

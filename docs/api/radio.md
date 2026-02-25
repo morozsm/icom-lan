@@ -303,20 +303,55 @@ Enable or disable split mode (TX on VFO B, RX on VFO A).
 
 ## Attenuator & Preamp
 
-### `get_attenuator()` / `set_attenuator()`
+All attenuator and preamp methods use **Command29 framing** for dual-receiver
+radio compatibility (IC-7610). The `receiver` parameter defaults to `RECEIVER_MAIN` (0).
+
+### `get_attenuator_level()`
+
+```python
+async def get_attenuator_level(self, receiver: int = RECEIVER_MAIN) -> int
+```
+
+Read attenuator level in dB (0, 3, 6, ..., 45).
+
+### `get_attenuator()`
 
 ```python
 async def get_attenuator(self) -> bool
-async def set_attenuator(self, on: bool) -> None
 ```
 
-Read or set attenuator state.
+Read attenuator state as boolean (compatibility wrapper).
 
-### `get_preamp()` / `set_preamp()`
+### `set_attenuator_level()`
 
 ```python
-async def get_preamp(self) -> int
-async def set_preamp(self, level: int = 1) -> None
+async def set_attenuator_level(self, db: int, receiver: int = RECEIVER_MAIN) -> None
+```
+
+Set attenuator level in dB. IC-7610 supports 0–45 in 3 dB steps.
+
+**Raises:** `ValueError` if `db` is not a valid step.
+
+### `set_attenuator()`
+
+```python
+async def set_attenuator(self, on: bool, receiver: int = RECEIVER_MAIN) -> None
+```
+
+Toggle attenuator (compatibility wrapper: on=18 dB, off=0 dB).
+
+### `get_preamp()`
+
+```python
+async def get_preamp(self, receiver: int = RECEIVER_MAIN) -> int
+```
+
+Read preamp level.
+
+### `set_preamp()`
+
+```python
+async def set_preamp(self, level: int = 1, receiver: int = RECEIVER_MAIN) -> None
 ```
 
 Set the preamp level.
@@ -326,6 +361,11 @@ Set the preamp level.
 | `0` | Off |
 | `1` | PREAMP 1 |
 | `2` | PREAMP 2 |
+
+| Receiver | Constant | Value |
+|----------|----------|-------|
+| Main | `RECEIVER_MAIN` | `0x00` |
+| Sub | `RECEIVER_SUB` | `0x01` |
 
 ---
 

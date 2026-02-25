@@ -118,6 +118,70 @@ ALC      n/a
 !!! info
     SWR and ALC are only available during TX. They show `n/a` when receiving.
 
+### `att`
+
+Get or set the attenuator level.
+
+```bash
+# Get current attenuation
+icom-lan att
+icom-lan att --json
+
+# Set level in dB (0–45, 3 dB steps)
+icom-lan att 18
+icom-lan att 0
+
+# Toggle shortcuts
+icom-lan att on     # Sets 18 dB
+icom-lan att off    # Sets 0 dB
+```
+
+```
+Attenuator: 18 dB
+```
+
+JSON output:
+
+```json
+{
+  "attenuator_db": 18,
+  "attenuator_on": true
+}
+```
+
+!!! note "IC-7610 Levels"
+    The IC-7610 supports 0, 3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36, 39, 42, 45 dB.
+    Values not on 3 dB boundaries will be rejected.
+
+### `preamp`
+
+Get or set the preamplifier level.
+
+```bash
+# Get current preamp level
+icom-lan preamp
+icom-lan preamp --json
+
+# Set level
+icom-lan preamp 0     # Off
+icom-lan preamp 1     # PREAMP 1
+icom-lan preamp 2     # PREAMP 2
+icom-lan preamp off   # Same as 0
+```
+
+```
+Preamp: PRE1
+```
+
+JSON output:
+
+```json
+{
+  "preamp_level": 1,
+  "preamp_name": "PRE1"
+}
+```
+
 ### `ptt`
 
 Toggle Push-To-Talk.
@@ -182,6 +246,9 @@ watch -n 1 icom-lan freq --json
 
 # Quick band change
 icom-lan freq 7.074m && icom-lan mode USB
+
+# Check RF chain setup
+icom-lan att && icom-lan preamp
 
 # Script-friendly JSON output
 FREQ=$(icom-lan freq --json | jq -r '.frequency_hz')

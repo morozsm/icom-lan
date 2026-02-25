@@ -2,6 +2,10 @@
 
 CI-V frame format: FE FE <to> <from> <cmd> [<sub>] [<data>...] FD
 
+For dual-receiver radios (IC-7610), commands marked Command29=true use:
+  FE FE <to> <from> 29 <receiver> <cmd> [<sub>] [<data>...] FD
+where receiver = 0x00 (MAIN) or 0x01 (SUB).
+
 Reference: wfview icomcommander.cpp, IC-7610.rig
 """
 
@@ -10,7 +14,10 @@ from .types import CivFrame, Mode, bcd_decode, bcd_encode
 __all__ = [
     "IC_7610_ADDR",
     "CONTROLLER_ADDR",
+    "RECEIVER_MAIN",
+    "RECEIVER_SUB",
     "build_civ_frame",
+    "build_cmd29_frame",
     "parse_civ_frame",
     "get_frequency",
     "set_frequency",
@@ -31,11 +38,23 @@ __all__ = [
     "stop_cw",
     "power_on",
     "power_off",
+    "get_attenuator",
+    "set_attenuator",
+    "set_attenuator_level",
+    "get_preamp",
+    "set_preamp",
+    "get_digisel",
+    "set_digisel",
 ]
 
 # CI-V addresses
 IC_7610_ADDR = 0x98
 CONTROLLER_ADDR = 0xE0
+
+# Receiver IDs for Command29 (dual-receiver radios)
+RECEIVER_MAIN = 0x00
+RECEIVER_SUB = 0x01
+_CMD_RECEIVER_PREFIX = 0x29
 
 # CI-V command codes
 _CMD_FREQ_GET = 0x03
@@ -94,6 +113,45 @@ def build_civ_frame(
     return bytes(frame)
 
 
+def build_cmd29_frame(
+    to_addr: int,
+    from_addr: int,
+    command: int,
+    sub: int | None = None,
+    data: bytes | None = None,
+    receiver: int = RECEIVER_MAIN,
+) -> bytes:
+    """Build a Command29-wrapped CI-V frame for dual-receiver radios.
+
+    For commands marked Command29=true in IC-7610.rig, the frame format is:
+      FE FE <to> <from> 29 <receiver> <cmd> [<sub>] [<data>...] FD
+
+    The 0x29 prefix tells the radio which receiver (MAIN/SUB) the command
+    targets, without requiring a VFO select first.
+
+    Args:
+        to_addr: Destination CI-V address.
+        from_addr: Source CI-V address.
+        command: Original CI-V command byte (e.g. 0x11 for ATT, 0x16 for PREAMP).
+        sub: Optional sub-command byte.
+        data: Optional payload data.
+        receiver: RECEIVER_MAIN (0x00) or RECEIVER_SUB (0x01).
+
+    Returns:
+        Complete CI-V frame bytes with Command29 prefix.
+    """
+    inner = bytearray()
+    inner.append(command)
+    if sub is not None:
+        inner.append(sub)
+    if data:
+        inner.extend(data)
+    return build_civ_frame(
+        to_addr, from_addr, _CMD_RECEIVER_PREFIX,
+        data=bytes([receiver]) + bytes(inner),
+    )
+
+
 def parse_civ_frame(data: bytes) -> CivFrame:
     """Parse a CI-V frame into a CivFrame.
 
@@ -117,6 +175,37 @@ def parse_civ_frame(data: bytes) -> CivFrame:
     from_addr = data[3]
     command = data[4]
     payload = data[5:-1]
+
+    # Handle Command29 prefix (dual-receiver): unwrap 0x29 <receiver> <real_cmd> ...
+    if command == _CMD_RECEIVER_PREFIX and len(payload) >= 2:
+        _receiver = payload[0]
+        real_command = payload[1]
+        inner_payload = payload[2:]
+        # Check if real command uses sub-commands
+        if real_command in _COMMANDS_WITH_SUB and len(inner_payload) >= 1:
+            return CivFrame(
+                to_addr=to_addr,
+                from_addr=from_addr,
+                command=real_command,
+                sub=inner_payload[0],
+                data=bytes(inner_payload[1:]),
+            )
+        # PREAMP (0x16) uses sub-commands too
+        if real_command == _CMD_PREAMP and len(inner_payload) >= 1:
+            return CivFrame(
+                to_addr=to_addr,
+                from_addr=from_addr,
+                command=real_command,
+                sub=inner_payload[0],
+                data=bytes(inner_payload[1:]),
+            )
+        return CivFrame(
+            to_addr=to_addr,
+            from_addr=from_addr,
+            command=real_command,
+            sub=None,
+            data=bytes(inner_payload),
+        )
 
     # Determine if first payload byte is a sub-command
     if command in _COMMANDS_WITH_SUB and len(payload) >= 1:
@@ -351,6 +440,8 @@ _CMD_VFO_EQUAL = 0x07
 _CMD_SPLIT = 0x0F
 _CMD_ATT = 0x11
 _CMD_PREAMP = 0x16
+_SUB_PREAMP_STATUS = 0x02
+_SUB_DIGISEL_STATUS = 0x4E
 
 
 def select_vfo(
@@ -395,14 +486,61 @@ def set_split(
     )
 
 
+def _bcd_byte(value: int) -> int:
+    """Encode 0-99 integer into one BCD byte."""
+    if not 0 <= value <= 99:
+        raise ValueError(f"BCD byte value must be 0-99, got {value}")
+    return ((value // 10) << 4) | (value % 10)
+
+
+def get_attenuator(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+) -> bytes:
+    """Build CI-V command to read attenuator level (Command29-aware)."""
+    return build_cmd29_frame(to_addr, from_addr, _CMD_ATT, receiver=receiver)
+
+
+def set_attenuator_level(
+    db: int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+) -> bytes:
+    """Set attenuator level in dB (IC-7610 supports 0..45 in 3 dB steps).
+
+    Uses Command29 framing for dual-receiver compatibility.
+    """
+    return build_cmd29_frame(
+        to_addr, from_addr, _CMD_ATT, data=bytes([_bcd_byte(db)]), receiver=receiver,
+    )
+
+
 def set_attenuator(
     on: bool,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
 ) -> bytes:
-    """Enable or disable attenuator (ATT)."""
-    return build_civ_frame(
-        to_addr, from_addr, _CMD_ATT, data=b"\x20" if on else b"\x00"
+    """Compatibility wrapper for attenuator toggle.
+
+    Maps False->0 dB and True->18 dB (conservative default).
+    Prefer set_attenuator_level() for deterministic control.
+    """
+    return set_attenuator_level(
+        18 if on else 0, to_addr=to_addr, from_addr=from_addr, receiver=receiver,
+    )
+
+
+def get_preamp(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+) -> bytes:
+    """Build CI-V command to read preamp status (Command29-aware)."""
+    return build_cmd29_frame(
+        to_addr, from_addr, _CMD_PREAMP, sub=_SUB_PREAMP_STATUS, receiver=receiver,
     )
 
 
@@ -410,10 +548,39 @@ def set_preamp(
     level: int = 1,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
 ) -> bytes:
-    """Set preamp level (0=off, 1=PREAMP1, 2=PREAMP2)."""
-    return build_civ_frame(
-        to_addr, from_addr, _CMD_PREAMP, data=bytes([level])
+    """Set preamp level (0=off, 1=PREAMP1, 2=PREAMP2).
+
+    Uses Command29 framing for dual-receiver compatibility.
+    """
+    return build_cmd29_frame(
+        to_addr, from_addr, _CMD_PREAMP, sub=_SUB_PREAMP_STATUS,
+        data=bytes([_bcd_byte(level)]), receiver=receiver,
+    )
+
+
+def get_digisel(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+) -> bytes:
+    """Build CI-V command to read DIGI-SEL status (0/1) (Command29-aware)."""
+    return build_cmd29_frame(
+        to_addr, from_addr, _CMD_PREAMP, sub=_SUB_DIGISEL_STATUS, receiver=receiver,
+    )
+
+
+def set_digisel(
+    on: bool,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+) -> bytes:
+    """Set DIGI-SEL status (0/1) (Command29-aware)."""
+    return build_cmd29_frame(
+        to_addr, from_addr, _CMD_PREAMP, sub=_SUB_DIGISEL_STATUS,
+        data=bytes([_bcd_byte(1 if on else 0)]), receiver=receiver,
     )
 
 

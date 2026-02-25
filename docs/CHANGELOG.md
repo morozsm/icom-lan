@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Command29 support** for dual-receiver radios (IC-7610):
+    - `build_cmd29_frame()` — builds CI-V frames with `0x29 <receiver>` prefix.
+    - `RECEIVER_MAIN` (0x00) / `RECEIVER_SUB` (0x01) constants.
+    - `parse_civ_frame()` now transparently unwraps Command29 responses.
+- **Attenuator CLI** (`icom-lan att [VALUE]`):
+    - Get current attenuation level (`icom-lan att`)
+    - Set level in dB: `icom-lan att 18` (0–45 in 3 dB steps)
+    - Toggle: `icom-lan att on`, `icom-lan att off`
+    - JSON output: `icom-lan att --json`
+- **Preamp CLI** (`icom-lan preamp [VALUE]`):
+    - Get current preamp level (`icom-lan preamp`)
+    - Set level: `icom-lan preamp 0` (off), `1` (PRE1), `2` (PRE2)
+    - JSON output: `icom-lan preamp --json`
+- `get_attenuator()` command builder (was missing — only set existed).
+
+### Changed
+
+- **ATT/PREAMP/DIGI-SEL commands now use Command29 framing** by default:
+    - `get_preamp()`, `set_preamp()`, `get_attenuator()`, `set_attenuator_level()`,
+      `set_attenuator()`, `get_digisel()`, `set_digisel()` all accept `receiver=` parameter.
+    - Fixes "Radio rejected preamp level 1" on IC-7610 (the radio requires
+      Command29 receiver context for these commands).
+- Radio API methods (`IcomRadio.get_preamp()`, `.set_preamp()`, `.get_attenuator_level()`,
+  `.set_attenuator_level()`, `.set_attenuator()`) now accept `receiver=` parameter.
+
 ## [0.4.0] — 2026-02-25
 
 ### Changed

@@ -120,6 +120,19 @@ The library works over VPN tunnels if UDP traffic is forwarded:
 - Increase timeout for high-latency links
 - Discovery (broadcast) won't work over VPN — specify the radio's IP directly
 
+## Retry / Fail-Fast Policy
+
+Recommended policy for real-radio automation:
+
+- **Retry allowed (soft-fail):** idempotent reads (`get_*`) and non-critical telemetry.
+- **Retry with recovery:** command timeout after all retries -> one reconnect recovery path -> retry command once.
+- **Fail-fast (no blind retries):** safety-critical toggles (`PTT`, `power_control`, CW stop/start transactions) when state uncertainty is dangerous.
+- **Always log on timeout:** command name, attempt, timeout flag, recovered flag, duration.
+
+In integration soak, use structured JSON logs with canonical fields:
+
+- `test`, `step`, `cmd`, `attempt`, `timeout`, `recovered`, `duration_ms`
+
 ## Soak / Integration Diagnostics
 
 Use soak mode to capture rare timeout behavior with structured logs:

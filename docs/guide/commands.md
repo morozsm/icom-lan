@@ -142,18 +142,51 @@ await radio.set_split_mode(False)
 
 ## Attenuator & Preamp
 
-```python
-# Attenuator
-att = await radio.get_attenuator()
-await radio.set_attenuator(True)   # ATT on
-await radio.set_attenuator(False)  # ATT off
+These commands use **Command29 framing** for dual-receiver radios (IC-7610).
+By default, they target the MAIN receiver.
 
-# Preamp
-pre = await radio.get_preamp()
+```python
+from icom_lan import RECEIVER_MAIN, RECEIVER_SUB
+
+# --- Attenuator ---
+# Get attenuation level in dB
+db = await radio.get_attenuator_level()  # Returns 0, 3, 6, ..., 45
+print(f"ATT: {db} dB")
+
+# Set attenuation level (0–45 in 3 dB steps)
+await radio.set_attenuator_level(18)  # 18 dB
+await radio.set_attenuator_level(0)   # Off
+
+# Simple toggle (compat — maps on=18dB, off=0dB)
+await radio.set_attenuator(True)
+await radio.set_attenuator(False)
+
+# Boolean check
+is_on = await radio.get_attenuator()  # True/False
+
+# --- Preamp ---
+# Get preamp level
+level = await radio.get_preamp()  # Returns 0, 1, or 2
+print(f"Preamp: {level}")
+
+# Set preamp level
 await radio.set_preamp(0)  # Off
 await radio.set_preamp(1)  # PREAMP 1
 await radio.set_preamp(2)  # PREAMP 2
+
+# --- Target SUB receiver (IC-7610) ---
+await radio.set_preamp(1, receiver=RECEIVER_SUB)
+db = await radio.get_attenuator_level(receiver=RECEIVER_SUB)
 ```
+
+!!! note "Command29 — Dual-Receiver Radios"
+    The IC-7610 has two independent receivers (MAIN and SUB). Commands like
+    attenuator and preamp are per-receiver. The library automatically wraps
+    them with the `0x29 <receiver>` CI-V prefix that tells the radio which
+    receiver to target, without changing the selected VFO.
+
+    Single-receiver radios (IC-7300) don't use Command29 — the receiver
+    parameter is ignored.
 
 ## CW Keying
 

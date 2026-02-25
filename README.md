@@ -107,6 +107,12 @@ icom-lan cw "CQ CQ DE KN4KYD K"
 icom-lan ptt on
 icom-lan ptt off
 
+# Attenuator & Preamp (Command29-aware for IC-7610)
+icom-lan att              # Get attenuation level
+icom-lan att 18           # Set 18 dB
+icom-lan preamp           # Get preamp level
+icom-lan preamp 1         # Set PREAMP 1
+
 # Discover radios on network
 icom-lan discover
 ```
@@ -131,8 +137,10 @@ icom-lan discover
 | `set_ptt(on)` | Push-to-talk on/off |
 | `select_vfo(vfo)` | Select VFO (A/B/MAIN/SUB) |
 | `set_split_mode(on)` | Split on/off |
-| `get_attenuator()` / `set_attenuator(on)` | Read/set attenuator |
-| `get_preamp()` / `set_preamp(level)` | Read/set preamp (0/1/2) |
+| `get_attenuator_level(receiver)` → `int` | Read attenuator in dB (Command29) |
+| `set_attenuator_level(db, receiver)` | Set attenuator dB (0–45, 3 dB steps) |
+| `get_preamp(receiver)` → `int` | Read preamp level (Command29) |
+| `set_preamp(level, receiver)` | Set preamp (0=off, 1=PRE1, 2=PRE2) |
 | `send_cw_text(text)` / `stop_cw_text()` | Send/stop CW via built-in keyer |
 | `power_control(on)` | Remote power on/off |
 | `snapshot_state()` / `restore_state(state)` | Best-effort state save/restore |
