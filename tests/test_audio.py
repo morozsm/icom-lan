@@ -374,12 +374,15 @@ class TestAudioStreamTx:
         assert stream.state == AudioState.IDLE
 
     @pytest.mark.asyncio
-    async def test_cannot_start_tx_while_rx(self):
+    async def test_full_duplex_tx_while_rx(self):
+        """TX can start while RX is active (full-duplex)."""
         t = _mock_transport()
         stream = AudioStream(t)
         await stream.start_rx(MagicMock())
-        with pytest.raises(RuntimeError):
-            await stream.start_tx()
+        await stream.start_tx()  # should succeed (full-duplex)
+        assert stream.state == AudioState.TRANSMITTING
+        await stream.stop_tx()
+        assert stream.state == AudioState.RECEIVING
         await stream.stop_rx()
 
     @pytest.mark.asyncio

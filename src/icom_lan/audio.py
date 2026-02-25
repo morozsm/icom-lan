@@ -19,6 +19,7 @@ __all__ = [
     "AudioStream",
     "AudioPacket",
     "AudioState",
+    "JitterBuffer",
     "AUDIO_HEADER_SIZE",
     "TX_IDENT",
     "RX_IDENT_0xA0",
@@ -59,6 +60,151 @@ class AudioState(StrEnum):
     TRANSMITTING = "transmitting"
 
 
+class JitterBuffer:
+    """Reorder-and-delay buffer for incoming audio packets.
+
+    Collects packets and delivers them in sequence-number order after
+    a configurable depth of buffering. Handles out-of-order packets,
+    duplicates, and gaps (delivering ``None`` for missing packets).
+
+    Args:
+        depth: Number of packets to buffer before delivery (default 5,
+               which is ~100 ms at 20 ms/packet).
+
+    Example::
+
+        jb = JitterBuffer(depth=5)
+        for pkt in jb.push(audio_packet):
+            if pkt is None:
+                # gap — insert silence
+                ...
+            else:
+                play(pkt.data)
+    """
+
+    def __init__(self, depth: int = 5) -> None:
+        if depth < 1:
+            raise ValueError(f"Jitter buffer depth must be >= 1, got {depth}")
+        self._depth = depth
+        self._buffer: dict[int, AudioPacket] = {}
+        self._next_seq: int | None = None
+        self._max_held = depth * 4  # hard cap to prevent memory leak
+
+    @property
+    def depth(self) -> int:
+        """Configured buffer depth (number of packets)."""
+        return self._depth
+
+    @property
+    def pending(self) -> int:
+        """Number of packets currently held in the buffer."""
+        return len(self._buffer)
+
+    def push(self, packet: AudioPacket) -> list[AudioPacket | None]:
+        """Insert a packet and return any packets ready for delivery.
+
+        Packets are delivered in order. If a gap is detected (missing
+        sequence number), ``None`` is yielded in its place.
+
+        Args:
+            packet: Incoming audio packet.
+
+        Returns:
+            List of packets (or None for gaps) ready for playback.
+            May be empty if more buffering is needed.
+        """
+        seq = packet.send_seq
+
+        # Initialize on first packet
+        if self._next_seq is None:
+            self._next_seq = seq
+
+        # Ignore duplicates and very old packets
+        if seq in self._buffer:
+            return []
+        # Detect wrap-around: if seq is far behind _next_seq, it's old
+        diff = (seq - self._next_seq) & 0xFFFF
+        if diff > 0x8000:
+            # seq is behind _next_seq (wrapped), ignore
+            return []
+
+        self._buffer[seq] = packet
+
+        # Overflow protection
+        if len(self._buffer) > self._max_held:
+            return self._flush_all()
+
+        # Only deliver when we have enough buffered
+        if len(self._buffer) < self._depth:
+            return []
+
+        return self._deliver()
+
+    def flush(self) -> list[AudioPacket | None]:
+        """Flush all buffered packets in order (for stream end).
+
+        Returns:
+            Remaining packets in order (None for gaps).
+        """
+        return self._flush_all()
+
+    def _deliver(self) -> list[AudioPacket | None]:
+        """Deliver packets starting from _next_seq.
+
+        Delivers as long as the buffer contains enough packets ahead
+        of _next_seq to maintain the jitter depth, or the next expected
+        packet is available.
+        """
+        result: list[AudioPacket | None] = []
+        assert self._next_seq is not None
+
+        while self._buffer:
+            seq = self._next_seq
+
+            if seq in self._buffer:
+                result.append(self._buffer.pop(seq))
+                self._next_seq = (seq + 1) & 0xFFFF
+            else:
+                # seq is missing — is it a gap or should we wait?
+                # Count how many packets we hold that are ahead of seq
+                ahead_count = sum(
+                    1 for s in self._buffer
+                    if 0 < ((s - seq) & 0xFFFF) < 0x8000
+                )
+                if ahead_count >= self._depth:
+                    # Enough evidence that seq is lost → gap
+                    result.append(None)
+                    self._next_seq = (seq + 1) & 0xFFFF
+                else:
+                    # Not enough buffered ahead, wait for more packets
+                    break
+
+        return result
+
+    def _flush_all(self) -> list[AudioPacket | None]:
+        """Flush everything, filling gaps with None."""
+        result: list[AudioPacket | None] = []
+        if not self._buffer:
+            return result
+
+        assert self._next_seq is not None
+        max_seq = max(self._buffer)
+        # Handle wrap: deliver up to max_seq
+        while self._next_seq != ((max_seq + 1) & 0xFFFF):
+            seq = self._next_seq
+            if seq in self._buffer:
+                result.append(self._buffer.pop(seq))
+            else:
+                result.append(None)
+            self._next_seq = (self._next_seq + 1) & 0xFFFF
+            # Safety: prevent infinite loop
+            if len(result) > self._max_held + self._depth:
+                break
+
+        self._buffer.clear()
+        return result
+
+
 class AudioStream:
     """Manages audio RX/TX on the Icom audio UDP port.
 
@@ -77,12 +223,16 @@ class AudioStream:
         await stream.stop_rx()
     """
 
-    def __init__(self, transport: IcomTransport) -> None:
+    def __init__(
+        self, transport: IcomTransport, jitter_depth: int = 5
+    ) -> None:
         self._transport = transport
         self._state: AudioState = AudioState.IDLE
         self._rx_callback: Callable[[AudioPacket], None] | None = None
         self._rx_task: asyncio.Task[None] | None = None
         self._tx_seq: int = 0
+        self._jitter_depth = jitter_depth
+        self._jitter_buffer: JitterBuffer | None = None
 
     @property
     def state(self) -> AudioState:
@@ -99,12 +249,19 @@ class AudioStream:
     # ------------------------------------------------------------------
 
     async def start_rx(
-        self, callback: Callable[[AudioPacket], None]
+        self,
+        callback: Callable[[AudioPacket], None],
+        *,
+        jitter_depth: int | None = None,
     ) -> None:
         """Start receiving audio from the radio.
 
         Args:
             callback: Called with each decoded :class:`AudioPacket`.
+                When jitter buffering is enabled, ``None`` may be passed
+                for gap placeholders (missing packets).
+            jitter_depth: Override jitter buffer depth (0 to disable).
+                Defaults to the value set at construction time.
 
         Raises:
             RuntimeError: If already receiving or transmitting.
@@ -112,13 +269,15 @@ class AudioStream:
         if self._state != AudioState.IDLE:
             raise RuntimeError(f"Cannot start RX in state {self._state}")
 
+        depth = jitter_depth if jitter_depth is not None else self._jitter_depth
+        self._jitter_buffer = JitterBuffer(depth) if depth > 0 else None
         self._rx_callback = callback
         self._state = AudioState.RECEIVING
         self._rx_task = asyncio.create_task(self._rx_loop())
-        logger.info("Audio RX started")
+        logger.info("Audio RX started (jitter_depth=%d)", depth)
 
     async def stop_rx(self) -> None:
-        """Stop receiving audio."""
+        """Stop receiving audio and flush remaining buffered packets."""
         if self._state != AudioState.RECEIVING:
             return
         self._state = AudioState.IDLE
@@ -129,12 +288,17 @@ class AudioStream:
             except asyncio.CancelledError:
                 pass
             self._rx_task = None
+        # Flush remaining jitter buffer
+        if self._jitter_buffer is not None and self._rx_callback is not None:
+            for pkt in self._jitter_buffer.flush():
+                self._rx_callback(pkt)
+        self._jitter_buffer = None
         self._rx_callback = None
         logger.info("Audio RX stopped")
 
     async def _rx_loop(self) -> None:
         """Background loop that reads audio packets from transport."""
-        while self._state == AudioState.RECEIVING:
+        while self._state in (AudioState.RECEIVING, AudioState.TRANSMITTING):
             try:
                 data = await self._transport.receive_packet(timeout=1.0)
             except asyncio.TimeoutError:
@@ -147,7 +311,11 @@ class AudioStream:
 
             pkt = parse_audio_packet(data)
             if pkt is not None and self._rx_callback is not None:
-                self._rx_callback(pkt)
+                if self._jitter_buffer is not None:
+                    for ready in self._jitter_buffer.push(pkt):
+                        self._rx_callback(ready)
+                else:
+                    self._rx_callback(pkt)
 
     # ------------------------------------------------------------------
     # TX
@@ -156,11 +324,13 @@ class AudioStream:
     async def start_tx(self) -> None:
         """Start transmitting audio to the radio.
 
+        Can be called while already receiving (full-duplex).
+
         Raises:
-            RuntimeError: If already receiving or transmitting.
+            RuntimeError: If already transmitting.
         """
-        if self._state != AudioState.IDLE:
-            raise RuntimeError(f"Cannot start TX in state {self._state}")
+        if self._state == AudioState.TRANSMITTING:
+            raise RuntimeError("Already transmitting")
         self._state = AudioState.TRANSMITTING
         self._tx_seq = 0
         logger.info("Audio TX started")
@@ -187,10 +357,17 @@ class AudioStream:
         self._tx_seq = (self._tx_seq + 1) & 0xFFFF
 
     async def stop_tx(self) -> None:
-        """Stop transmitting audio."""
+        """Stop transmitting audio.
+
+        If RX is still active, state reverts to RECEIVING.
+        """
         if self._state != AudioState.TRANSMITTING:
             return
-        self._state = AudioState.IDLE
+        # If RX loop is still running, go back to RECEIVING
+        if self._rx_task is not None and not self._rx_task.done():
+            self._state = AudioState.RECEIVING
+        else:
+            self._state = AudioState.IDLE
         logger.info("Audio TX stopped")
 
 

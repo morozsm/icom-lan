@@ -6,6 +6,7 @@ from enum import IntEnum
 __all__ = [
     "PacketType",
     "Mode",
+    "AudioCodec",
     "PacketHeader",
     "CivFrame",
     "HEADER_SIZE",
@@ -35,6 +36,26 @@ class PacketType(IntEnum):
     DISCONNECT = 0x05
     ARE_YOU_READY = 0x06
     PING = 0x07
+
+
+class AudioCodec(IntEnum):
+    """Audio codec identifiers used in conninfo packets.
+
+    Values match the codec byte at offsets 0x72 (rxcodec) and 0x73 (txcodec)
+    in the conninfo packet. Opus codecs (0x40/0x41) are only available
+    when the radio reports connection_type == "WFVIEW".
+
+    Reference: wfview audioconverter.h lines 123-133.
+    """
+
+    ULAW_1CH = 0x01
+    PCM_1CH_8BIT = 0x02
+    PCM_1CH_16BIT = 0x04
+    PCM_2CH_8BIT = 0x08
+    PCM_2CH_16BIT = 0x10
+    ULAW_2CH = 0x20
+    OPUS_1CH = 0x40
+    OPUS_2CH = 0x41
 
 
 class Mode(IntEnum):

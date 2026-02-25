@@ -65,9 +65,9 @@ from .exceptions import (
 )
 from .audio import AudioPacket, AudioStream
 from .transport import ConnectionState, IcomTransport
-from .types import CivFrame, Mode
+from .types import AudioCodec, CivFrame, Mode
 
-__all__ = ["IcomRadio"]
+__all__ = ["IcomRadio", "AudioCodec"]
 
 logger = logging.getLogger(__name__)
 
@@ -108,6 +108,8 @@ class IcomRadio:
         password: str = "",
         radio_addr: int = IC_7610_ADDR,
         timeout: float = 5.0,
+        audio_codec: AudioCodec | int = AudioCodec.PCM_1CH_16BIT,
+        audio_sample_rate: int = 48000,
     ) -> None:
         self._host = host
         self._port = port
@@ -115,6 +117,8 @@ class IcomRadio:
         self._password = password
         self._radio_addr = radio_addr
         self._timeout = timeout
+        self._audio_codec = AudioCodec(audio_codec)
+        self._audio_sample_rate = audio_sample_rate
         self._ctrl_transport = IcomTransport()
         self._civ_transport: IcomTransport | None = None
         self._audio_transport: IcomTransport | None = None
@@ -321,6 +325,44 @@ class IcomRadio:
         if self._audio_stream is not None:
             await self._audio_stream.stop_tx()
 
+    async def start_audio(
+        self,
+        rx_callback: "Callable[[AudioPacket], None]",
+        *,
+        tx_enabled: bool = True,
+    ) -> None:
+        """Start full-duplex audio (RX + optional TX).
+
+        Convenience method that starts both RX and TX audio streams
+        on the same transport.
+
+        Args:
+            rx_callback: Called with each :class:`AudioPacket` (or None for gaps).
+            tx_enabled: Whether to also enable TX (default True).
+
+        Raises:
+            ConnectionError: If not connected or audio port unavailable.
+        """
+        await self.start_audio_rx(rx_callback)
+        if tx_enabled:
+            assert self._audio_stream is not None
+            await self._audio_stream.start_tx()
+
+    async def stop_audio(self) -> None:
+        """Stop all audio streams (RX and TX)."""
+        await self.stop_audio_tx()
+        await self.stop_audio_rx()
+
+    @property
+    def audio_codec(self) -> "AudioCodec":
+        """Configured audio codec."""
+        return self._audio_codec
+
+    @property
+    def audio_sample_rate(self) -> int:
+        """Configured audio sample rate in Hz."""
+        return self._audio_sample_rate
+
     async def _ensure_audio_transport(self) -> None:
         """Connect the audio transport if not already connected."""
         if self._audio_stream is not None:
@@ -397,6 +439,10 @@ class IcomRadio:
             mac_address=b"\x00" * 6,
             auth_seq=self._auth_seq,
             guid=guid,
+            rx_codec=int(self._audio_codec),
+            tx_codec=int(self._audio_codec),
+            rx_sample_rate=self._audio_sample_rate,
+            tx_sample_rate=self._audio_sample_rate,
         )
         self._auth_seq += 1
         await self._ctrl_transport.send_tracked(conninfo)

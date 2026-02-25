@@ -19,7 +19,7 @@ from .exceptions import (
     TimeoutError,
 )
 from .protocol import identify_packet_type, parse_header, serialize_header
-from .audio import AUDIO_HEADER_SIZE, AudioPacket, AudioState, AudioStream
+from .audio import AUDIO_HEADER_SIZE, AudioPacket, AudioState, AudioStream, JitterBuffer
 from .transport import ConnectionState, IcomTransport
 from .radio import IcomRadio
 from .commands import (
@@ -45,6 +45,7 @@ from .commands import (
 )
 from .types import (
     HEADER_SIZE,
+    AudioCodec,
     CivFrame,
     Mode,
     PacketHeader,
@@ -66,6 +67,7 @@ __all__ = [
     # Types
     "PacketType",
     "Mode",
+    "AudioCodec",
     "PacketHeader",
     "CivFrame",
     "HEADER_SIZE",
@@ -110,5 +112,6 @@ __all__ = [
     "AudioPacket",
     "AudioState",
     "AudioStream",
+    "JitterBuffer",
     "AUDIO_HEADER_SIZE",
 ]
