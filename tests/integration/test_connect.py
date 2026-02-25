@@ -5,7 +5,7 @@ import sys
 import os
 
 # Add project to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
 from icom_lan.radio import IcomRadio
 
@@ -20,7 +20,7 @@ async def step_connect():
     except Exception as e:
         print(f"[1] ❌ Failed: {type(e).__name__}: {e}")
         return False
-    
+
     print("[1] Disconnecting ...")
     try:
         await radio.disconnect()
@@ -28,7 +28,7 @@ async def step_connect():
     except Exception as e:
         print(f"[1] ❌ Disconnect failed: {type(e).__name__}: {e}")
         return False
-    
+
     return True
 
 

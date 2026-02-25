@@ -250,8 +250,13 @@ class TestRunErrorHandling:
     @pytest.mark.asyncio
     async def test_run_exception(self, capsys) -> None:
         args = Namespace(
-            host="192.168.1.100", port=50001, user="", password="",
-            timeout=0.1, command="status", json=False,
+            host="192.168.1.100",
+            port=50001,
+            user="",
+            password="",
+            timeout=0.1,
+            command="status",
+            json=False,
         )
         # _run will try to connect and fail — it catches and prints
         rc = await _run(args)
@@ -277,5 +282,8 @@ class TestMain:
         # Just verify it doesn't crash on import/parse
         with patch("sys.argv", ["icom-lan", "discover"]):
             # Discover will try UDP broadcast — mock socket
-            with patch("icom_lan.cli._cmd_discover", new_callable=lambda: lambda: AsyncMock(return_value=0)):
+            with patch(
+                "icom_lan.cli._cmd_discover",
+                new_callable=lambda: lambda: AsyncMock(return_value=0),
+            ):
                 pass  # We just test parsing works

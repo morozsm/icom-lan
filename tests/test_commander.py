@@ -93,8 +93,12 @@ async def test_dedupe_returns_existing_future() -> None:
     c = IcomCommander(execute, min_interval=0.0)
     c.start()
     try:
-        t1 = asyncio.create_task(c.send(b"poll", priority=Priority.BACKGROUND, key="meter", dedupe=True))
-        t2 = asyncio.create_task(c.send(b"poll", priority=Priority.BACKGROUND, key="meter", dedupe=True))
+        t1 = asyncio.create_task(
+            c.send(b"poll", priority=Priority.BACKGROUND, key="meter", dedupe=True)
+        )
+        t2 = asyncio.create_task(
+            c.send(b"poll", priority=Priority.BACKGROUND, key="meter", dedupe=True)
+        )
         await asyncio.gather(t1, t2)
     finally:
         await c.stop()
@@ -103,7 +107,9 @@ async def test_dedupe_returns_existing_future() -> None:
 
 
 @pytest.mark.asyncio
-@pytest.mark.xfail(reason="Flaky under OpenClaw exec (intermittent SIGTERM)", strict=False)
+@pytest.mark.xfail(
+    reason="Flaky under OpenClaw exec (intermittent SIGTERM)", strict=False
+)
 async def test_stop_fails_pending() -> None:
     async def execute(cmd: bytes) -> CivFrame:
         await asyncio.sleep(1)

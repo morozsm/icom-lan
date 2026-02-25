@@ -308,29 +308,40 @@ class TestCommand29:
 
     def test_build_cmd29_frame_basic(self) -> None:
         from icom_lan.commands import build_cmd29_frame, RECEIVER_MAIN
+
         frame = build_cmd29_frame(0x98, 0xE0, 0x16, sub=0x02, receiver=RECEIVER_MAIN)
         # FE FE 98 E0 29 00 16 02 FD
         assert frame == bytes.fromhex("fefe98e0 29 00 16 02 fd".replace(" ", ""))
 
     def test_cmd29_with_data(self) -> None:
         from icom_lan.commands import build_cmd29_frame, RECEIVER_MAIN
-        frame = build_cmd29_frame(0x98, 0xE0, 0x16, sub=0x02, data=b"\x01", receiver=RECEIVER_MAIN)
+
+        frame = build_cmd29_frame(
+            0x98, 0xE0, 0x16, sub=0x02, data=b"\x01", receiver=RECEIVER_MAIN
+        )
         assert frame == bytes.fromhex("fefe98e0 29 00 16 02 01 fd".replace(" ", ""))
 
     def test_cmd29_sub_receiver(self) -> None:
         from icom_lan.commands import build_cmd29_frame, RECEIVER_SUB
-        frame = build_cmd29_frame(0x98, 0xE0, 0x16, sub=0x02, data=b"\x02", receiver=RECEIVER_SUB)
+
+        frame = build_cmd29_frame(
+            0x98, 0xE0, 0x16, sub=0x02, data=b"\x02", receiver=RECEIVER_SUB
+        )
         assert frame == bytes.fromhex("fefe98e0 29 01 16 02 02 fd".replace(" ", ""))
 
     def test_cmd29_no_sub(self) -> None:
         from icom_lan.commands import build_cmd29_frame, RECEIVER_MAIN
+
         # ATT command has no sub-byte
         frame = build_cmd29_frame(0x98, 0xE0, 0x11, receiver=RECEIVER_MAIN)
         assert frame == bytes.fromhex("fefe98e0 29 00 11 fd".replace(" ", ""))
 
     def test_cmd29_att_with_data(self) -> None:
         from icom_lan.commands import build_cmd29_frame, RECEIVER_MAIN
-        frame = build_cmd29_frame(0x98, 0xE0, 0x11, data=b"\x18", receiver=RECEIVER_MAIN)
+
+        frame = build_cmd29_frame(
+            0x98, 0xE0, 0x11, data=b"\x18", receiver=RECEIVER_MAIN
+        )
         assert frame == bytes.fromhex("fefe98e0 29 00 11 18 fd".replace(" ", ""))
 
     def test_parse_cmd29_response_preamp(self) -> None:
@@ -351,6 +362,7 @@ class TestCommand29:
 
     def test_get_preamp_uses_cmd29(self) -> None:
         from icom_lan.commands import get_preamp
+
         frame = get_preamp()
         assert frame[4] == 0x29  # Command byte is 0x29
         assert frame[5] == 0x00  # MAIN receiver
@@ -359,6 +371,7 @@ class TestCommand29:
 
     def test_set_preamp_uses_cmd29(self) -> None:
         from icom_lan.commands import set_preamp
+
         frame = set_preamp(1)
         assert frame[4] == 0x29
         assert frame[5] == 0x00
@@ -368,6 +381,7 @@ class TestCommand29:
 
     def test_get_attenuator_uses_cmd29(self) -> None:
         from icom_lan.commands import get_attenuator
+
         frame = get_attenuator()
         assert frame[4] == 0x29
         assert frame[5] == 0x00
@@ -375,6 +389,7 @@ class TestCommand29:
 
     def test_set_attenuator_level_uses_cmd29(self) -> None:
         from icom_lan.commands import set_attenuator_level
+
         frame = set_attenuator_level(18)
         assert frame[4] == 0x29
         assert frame[5] == 0x00

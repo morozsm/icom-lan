@@ -125,9 +125,7 @@ class IcomTransport:
         # Phase 2: Are You Ready
         await self._ready_handshake()
 
-        logger.info(
-            "Discovery complete, remote_id=0x%08X", self.remote_id
-        )
+        logger.info("Discovery complete, remote_id=0x%08X", self.remote_id)
 
     async def _discover(self) -> None:
         """Send 'Are You There' and wait for 'I Am Here' to learn remote_id.
@@ -136,9 +134,7 @@ class IcomTransport:
             TimeoutError: If radio does not respond after retries.
         """
         for attempt in range(DISCOVERY_RETRIES):
-            pkt = self._build_control(
-                ptype=PacketType.ARE_YOU_THERE, seq=0
-            )
+            pkt = self._build_control(ptype=PacketType.ARE_YOU_THERE, seq=0)
             self._raw_send(pkt)
             try:
                 resp = await asyncio.wait_for(
@@ -163,8 +159,7 @@ class IcomTransport:
                     return
 
         raise _TimeoutError(
-            f"Radio did not respond to discovery after "
-            f"{DISCOVERY_RETRIES} attempts"
+            f"Radio did not respond to discovery after {DISCOVERY_RETRIES} attempts"
         )
 
     async def _ready_handshake(self) -> None:
@@ -173,9 +168,7 @@ class IcomTransport:
         Raises:
             TimeoutError: If radio does not respond.
         """
-        pkt = self._build_control(
-            ptype=PacketType.ARE_YOU_READY, seq=0
-        )
+        pkt = self._build_control(ptype=PacketType.ARE_YOU_READY, seq=0)
         self._raw_send(pkt)
 
         # Radio may send multiple packets; look for ARE_YOU_READY echo

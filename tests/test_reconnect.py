@@ -54,7 +54,9 @@ class TestWatchdog:
         radio._stop_watchdog()
 
     @pytest.mark.asyncio
-    async def test_watchdog_does_not_trigger_with_activity(self, radio: IcomRadio) -> None:
+    async def test_watchdog_does_not_trigger_with_activity(
+        self, radio: IcomRadio
+    ) -> None:
         """Watchdog should not trigger if there's queue activity."""
         radio._start_watchdog()
         # Simulate activity by putting something in the queue
@@ -75,7 +77,9 @@ class TestReconnect:
         r._stop_reconnect()  # should not raise
 
     @pytest.mark.asyncio
-    async def test_intentional_disconnect_stops_reconnect(self, radio: IcomRadio) -> None:
+    async def test_intentional_disconnect_stops_reconnect(
+        self, radio: IcomRadio
+    ) -> None:
         """Setting intentional_disconnect should prevent reconnect."""
         radio._intentional_disconnect = True
         radio._reconnect_task = asyncio.create_task(radio._reconnect_loop())

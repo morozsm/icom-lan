@@ -121,10 +121,14 @@ def pytest_configure(config: pytest.Config) -> None:
     )
 
 
-def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+def pytest_collection_modifyitems(
+    config: pytest.Config, items: list[pytest.Item]
+) -> None:
     """Skip integration tests if radio not configured."""
     if not has_radio_config():
-        skip = pytest.mark.skip(reason="Radio not configured (set ICOM_HOST, ICOM_USER, ICOM_PASS)")
+        skip = pytest.mark.skip(
+            reason="Radio not configured (set ICOM_HOST, ICOM_USER, ICOM_PASS)"
+        )
         for item in items:
             if "integration" in item.keywords:
                 item.add_marker(skip)

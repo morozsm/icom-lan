@@ -28,7 +28,9 @@ class TestAudioRx:
     """Audio receive tests (safe, no transmission)."""
 
     @staticmethod
-    async def _run_rx_window(radio: IcomRadio, seconds: float = 2.0) -> list[AudioPacket]:
+    async def _run_rx_window(
+        radio: IcomRadio, seconds: float = 2.0
+    ) -> list[AudioPacket]:
         packets: List[AudioPacket] = []
 
         def on_audio(pkt: AudioPacket) -> None:

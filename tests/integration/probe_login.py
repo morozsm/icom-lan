@@ -6,7 +6,7 @@ import struct
 import sys
 import os
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 from icom_lan.auth import encode_credentials
 
 RADIO_IP = os.environ.get("ICOM_HOST", "192.168.1.100")
@@ -50,7 +50,9 @@ class HandshakeProtocol(asyncio.DatagramProtocol):
             return None
 
     def build_control(self, ptype: int, seq: int = 0) -> bytes:
-        return struct.pack("<IHHII", CONTROL_SIZE, ptype, seq, self.my_id, self.remote_id)
+        return struct.pack(
+            "<IHHII", CONTROL_SIZE, ptype, seq, self.my_id, self.remote_id
+        )
 
     def build_login(self) -> tuple[bytes, int]:
         pkt = bytearray(LOGIN_SIZE)
@@ -67,11 +69,11 @@ class HandshakeProtocol(asyncio.DatagramProtocol):
         tok_request = random.randint(0, 0xFFFF)
         struct.pack_into("<H", pkt, 0x1A, tok_request)
         user_enc = encode_credentials(USERNAME)
-        pkt[0x40:0x40+len(user_enc)] = user_enc
+        pkt[0x40 : 0x40 + len(user_enc)] = user_enc
         pass_enc = encode_credentials(PASSWORD)
-        pkt[0x50:0x50+len(pass_enc)] = pass_enc
+        pkt[0x50 : 0x50 + len(pass_enc)] = pass_enc
         name = b"icom-lan"
-        pkt[0x60:0x60+len(name)] = name
+        pkt[0x60 : 0x60 + len(name)] = name
         return bytes(pkt), tok_request
 
 
@@ -104,7 +106,7 @@ async def main():
                     print(f"  ✅ 'I Am Here', remote_id=0x{proto.remote_id:08X}")
                     break
             else:
-                print(f"  attempt {attempt+1}/5 — no response, retrying...")
+                print(f"  attempt {attempt + 1}/5 — no response, retrying...")
         else:
             print("  ❌ Radio not responding")
             return
@@ -134,14 +136,16 @@ async def main():
             if resp is None:
                 print("  ⏱️ No more responses")
                 break
-            
-            print(f"\n  ← Response #{i+1}: {describe_packet(resp)}")
-            
+
+            print(f"\n  ← Response #{i + 1}: {describe_packet(resp)}")
+
             if len(resp) == LOGIN_RESPONSE_SIZE:
                 error = struct.unpack_from("<I", resp, 0x30)[0]
                 token = struct.unpack_from("<I", resp, 0x1C)[0]
                 tokresp = struct.unpack_from("<H", resp, 0x1A)[0]
-                connection = resp[0x40:0x50].rstrip(b'\x00').decode('ascii', errors='replace')
+                connection = (
+                    resp[0x40:0x50].rstrip(b"\x00").decode("ascii", errors="replace")
+                )
                 print(f"     → LOGIN RESPONSE: error=0x{error:08X} token=0x{token:08X}")
                 print(f"       tokrequest=0x{tokresp:04X} (sent 0x{tok_request:04X})")
                 print(f"       connection='{connection}'")
@@ -149,12 +153,14 @@ async def main():
                     print("     ❌ Invalid username/password!")
                 elif tokresp == tok_request:
                     print("     ✅ Login successful!")
-                    
+
             elif len(resp) == STATUS_SIZE:
                 error = struct.unpack_from("<I", resp, 0x30)[0]
                 civport = struct.unpack_from(">H", resp, 0x42)[0]
                 audioport = struct.unpack_from(">H", resp, 0x46)[0]
-                print(f"     → STATUS: error=0x{error:08X} civport={civport} audioport={audioport}")
+                print(
+                    f"     → STATUS: error=0x{error:08X} civport={civport} audioport={audioport}"
+                )
 
     finally:
         transport.close()

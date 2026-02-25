@@ -147,7 +147,9 @@ def build_cmd29_frame(
     if data:
         inner.extend(data)
     return build_civ_frame(
-        to_addr, from_addr, _CMD_RECEIVER_PREFIX,
+        to_addr,
+        from_addr,
+        _CMD_RECEIVER_PREFIX,
         data=bytes([receiver]) + bytes(inner),
     )
 
@@ -468,9 +470,7 @@ def vfo_a_equals_b(
     return build_civ_frame(to_addr, from_addr, _CMD_VFO_EQUAL, data=b"\xa0")
 
 
-def vfo_swap(
-    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
-) -> bytes:
+def vfo_swap(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR) -> bytes:
     """Swap VFO A and B."""
     return build_civ_frame(to_addr, from_addr, _CMD_VFO_EQUAL, data=b"\xb0")
 
@@ -513,7 +513,11 @@ def set_attenuator_level(
     Uses Command29 framing for dual-receiver compatibility.
     """
     return build_cmd29_frame(
-        to_addr, from_addr, _CMD_ATT, data=bytes([_bcd_byte(db)]), receiver=receiver,
+        to_addr,
+        from_addr,
+        _CMD_ATT,
+        data=bytes([_bcd_byte(db)]),
+        receiver=receiver,
     )
 
 
@@ -529,7 +533,10 @@ def set_attenuator(
     Prefer set_attenuator_level() for deterministic control.
     """
     return set_attenuator_level(
-        18 if on else 0, to_addr=to_addr, from_addr=from_addr, receiver=receiver,
+        18 if on else 0,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
     )
 
 
@@ -540,7 +547,11 @@ def get_preamp(
 ) -> bytes:
     """Build CI-V command to read preamp status (Command29-aware)."""
     return build_cmd29_frame(
-        to_addr, from_addr, _CMD_PREAMP, sub=_SUB_PREAMP_STATUS, receiver=receiver,
+        to_addr,
+        from_addr,
+        _CMD_PREAMP,
+        sub=_SUB_PREAMP_STATUS,
+        receiver=receiver,
     )
 
 
@@ -555,8 +566,12 @@ def set_preamp(
     Uses Command29 framing for dual-receiver compatibility.
     """
     return build_cmd29_frame(
-        to_addr, from_addr, _CMD_PREAMP, sub=_SUB_PREAMP_STATUS,
-        data=bytes([_bcd_byte(level)]), receiver=receiver,
+        to_addr,
+        from_addr,
+        _CMD_PREAMP,
+        sub=_SUB_PREAMP_STATUS,
+        data=bytes([_bcd_byte(level)]),
+        receiver=receiver,
     )
 
 
@@ -567,7 +582,11 @@ def get_digisel(
 ) -> bytes:
     """Build CI-V command to read DIGI-SEL status (0/1) (Command29-aware)."""
     return build_cmd29_frame(
-        to_addr, from_addr, _CMD_PREAMP, sub=_SUB_DIGISEL_STATUS, receiver=receiver,
+        to_addr,
+        from_addr,
+        _CMD_PREAMP,
+        sub=_SUB_DIGISEL_STATUS,
+        receiver=receiver,
     )
 
 
@@ -579,8 +598,12 @@ def set_digisel(
 ) -> bytes:
     """Set DIGI-SEL status (0/1) (Command29-aware)."""
     return build_cmd29_frame(
-        to_addr, from_addr, _CMD_PREAMP, sub=_SUB_DIGISEL_STATUS,
-        data=bytes([_bcd_byte(1 if on else 0)]), receiver=receiver,
+        to_addr,
+        from_addr,
+        _CMD_PREAMP,
+        sub=_SUB_DIGISEL_STATUS,
+        data=bytes([_bcd_byte(1 if on else 0)]),
+        receiver=receiver,
     )
 
 
@@ -612,15 +635,11 @@ def send_cw(
     for i in range(0, len(text), 30):
         chunk = text[i : i + 30]
         data = chunk.encode("ascii")
-        frames.append(
-            build_civ_frame(to_addr, from_addr, _CMD_SEND_CW, data=data)
-        )
+        frames.append(build_civ_frame(to_addr, from_addr, _CMD_SEND_CW, data=data))
     return frames
 
 
-def stop_cw(
-    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
-) -> bytes:
+def stop_cw(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR) -> bytes:
     """Build CI-V frame to stop CW sending."""
     return build_civ_frame(to_addr, from_addr, _CMD_SEND_CW, data=b"\xff")
 
@@ -630,16 +649,12 @@ def stop_cw(
 _CMD_POWER_CTRL = 0x18
 
 
-def power_on(
-    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
-) -> bytes:
+def power_on(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR) -> bytes:
     """Build CI-V frame to power on the radio."""
     return build_civ_frame(to_addr, from_addr, _CMD_POWER_CTRL, data=b"\x01")
 
 
-def power_off(
-    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
-) -> bytes:
+def power_off(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR) -> bytes:
     """Build CI-V frame to power off the radio."""
     return build_civ_frame(to_addr, from_addr, _CMD_POWER_CTRL, data=b"\x00")
 

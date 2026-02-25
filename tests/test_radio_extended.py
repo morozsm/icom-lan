@@ -6,6 +6,7 @@ from icom_lan.commands import (
     CONTROLLER_ADDR,
     IC_7610_ADDR,
     build_civ_frame,
+    RECEIVER_MAIN,
 )
 from icom_lan.exceptions import ConnectionError, CommandError
 from icom_lan.radio import IcomRadio
@@ -15,7 +16,20 @@ from test_radio import (
     MockTransport,
     _ack_response,
     _nak_response,
+    _wrap_civ_in_udp,
 )
+
+
+def _digisel_off_response() -> bytes:
+    """DIGI-SEL response: OFF (0x00) — Command29-wrapped."""
+    # Radio responds: FE FE E0 98 29 00 16 4E 00 FD
+    civ = build_civ_frame(
+        CONTROLLER_ADDR,
+        IC_7610_ADDR,
+        0x29,
+        data=bytes([RECEIVER_MAIN, 0x16, 0x4E, 0x00]),
+    )
+    return _wrap_civ_in_udp(civ)
 
 
 # ---------------------------------------------------------------------------
@@ -44,35 +58,47 @@ def radio(mock_transport: MockTransport) -> IcomRadio:
 
 class TestVFO:
     @pytest.mark.asyncio
-    async def test_select_vfo_a(self, radio: IcomRadio, mock_transport: MockTransport) -> None:
+    async def test_select_vfo_a(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
         mock_transport.queue_response(_ack_response())
         await radio.select_vfo("A")
         assert len(mock_transport.sent_packets) > 0
 
     @pytest.mark.asyncio
-    async def test_select_vfo_b(self, radio: IcomRadio, mock_transport: MockTransport) -> None:
+    async def test_select_vfo_b(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
         mock_transport.queue_response(_ack_response())
         await radio.select_vfo("B")
 
     @pytest.mark.asyncio
-    async def test_select_vfo_main(self, radio: IcomRadio, mock_transport: MockTransport) -> None:
+    async def test_select_vfo_main(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
         mock_transport.queue_response(_ack_response())
         await radio.select_vfo("MAIN")
 
     @pytest.mark.asyncio
-    async def test_select_vfo_nak(self, radio: IcomRadio, mock_transport: MockTransport) -> None:
+    async def test_select_vfo_nak(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
         mock_transport.queue_response(_nak_response())
         with pytest.raises(CommandError):
             await radio.select_vfo("A")
 
     @pytest.mark.asyncio
-    async def test_vfo_equalize(self, radio: IcomRadio, mock_transport: MockTransport) -> None:
+    async def test_vfo_equalize(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
         mock_transport.queue_response(_ack_response())
         await radio.vfo_equalize()
         assert len(mock_transport.sent_packets) > 0
 
     @pytest.mark.asyncio
-    async def test_vfo_exchange(self, radio: IcomRadio, mock_transport: MockTransport) -> None:
+    async def test_vfo_exchange(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
         mock_transport.queue_response(_ack_response())
         await radio.vfo_exchange()
         assert len(mock_transport.sent_packets) > 0
@@ -103,17 +129,23 @@ class TestVFO:
 
 class TestSplitMode:
     @pytest.mark.asyncio
-    async def test_split_on(self, radio: IcomRadio, mock_transport: MockTransport) -> None:
+    async def test_split_on(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
         mock_transport.queue_response(_ack_response())
         await radio.set_split_mode(True)
 
     @pytest.mark.asyncio
-    async def test_split_off(self, radio: IcomRadio, mock_transport: MockTransport) -> None:
+    async def test_split_off(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
         mock_transport.queue_response(_ack_response())
         await radio.set_split_mode(False)
 
     @pytest.mark.asyncio
-    async def test_split_nak(self, radio: IcomRadio, mock_transport: MockTransport) -> None:
+    async def test_split_nak(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
         mock_transport.queue_response(_nak_response())
         with pytest.raises(CommandError):
             await radio.set_split_mode(True)
@@ -132,17 +164,23 @@ class TestSplitMode:
 
 class TestAttenuator:
     @pytest.mark.asyncio
-    async def test_att_on(self, radio: IcomRadio, mock_transport: MockTransport) -> None:
+    async def test_att_on(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
         mock_transport.queue_response(_ack_response())
         await radio.set_attenuator(True)
 
     @pytest.mark.asyncio
-    async def test_att_off(self, radio: IcomRadio, mock_transport: MockTransport) -> None:
+    async def test_att_off(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
         mock_transport.queue_response(_ack_response())
         await radio.set_attenuator(False)
 
     @pytest.mark.asyncio
-    async def test_att_nak(self, radio: IcomRadio, mock_transport: MockTransport) -> None:
+    async def test_att_nak(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
         mock_transport.queue_response(_nak_response())
         with pytest.raises(CommandError):
             await radio.set_attenuator(True)
@@ -161,22 +199,40 @@ class TestAttenuator:
 
 class TestPreamp:
     @pytest.mark.asyncio
-    async def test_preamp_on(self, radio: IcomRadio, mock_transport: MockTransport) -> None:
+    async def test_preamp_on(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        mock_transport.queue_response(
+            _digisel_off_response()
+        )  # pre-flight DIGI-SEL check
         mock_transport.queue_response(_ack_response())
         await radio.set_preamp(1)
 
     @pytest.mark.asyncio
-    async def test_preamp_level2(self, radio: IcomRadio, mock_transport: MockTransport) -> None:
+    async def test_preamp_level2(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        mock_transport.queue_response(
+            _digisel_off_response()
+        )  # pre-flight DIGI-SEL check
         mock_transport.queue_response(_ack_response())
         await radio.set_preamp(2)
 
     @pytest.mark.asyncio
-    async def test_preamp_off(self, radio: IcomRadio, mock_transport: MockTransport) -> None:
+    async def test_preamp_off(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        # level=0 skips DIGI-SEL check
         mock_transport.queue_response(_ack_response())
         await radio.set_preamp(0)
 
     @pytest.mark.asyncio
-    async def test_preamp_nak(self, radio: IcomRadio, mock_transport: MockTransport) -> None:
+    async def test_preamp_nak(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        mock_transport.queue_response(
+            _digisel_off_response()
+        )  # pre-flight DIGI-SEL check
         mock_transport.queue_response(_nak_response())
         with pytest.raises(CommandError):
             await radio.set_preamp(1)
@@ -195,13 +251,17 @@ class TestPreamp:
 
 class TestCW:
     @pytest.mark.asyncio
-    async def test_send_cw_text(self, radio: IcomRadio, mock_transport: MockTransport) -> None:
+    async def test_send_cw_text(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
         mock_transport.queue_response(_ack_response())
         await radio.send_cw_text("CQ")
         assert len(mock_transport.sent_packets) > 0
 
     @pytest.mark.asyncio
-    async def test_send_cw_long_text(self, radio: IcomRadio, mock_transport: MockTransport) -> None:
+    async def test_send_cw_long_text(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
         """Text longer than 30 chars should produce multiple frames."""
         text = "A" * 60  # 2 chunks
         mock_transport.queue_response(_ack_response())
@@ -210,13 +270,17 @@ class TestCW:
         assert len(mock_transport.sent_packets) == 2
 
     @pytest.mark.asyncio
-    async def test_send_cw_nak(self, radio: IcomRadio, mock_transport: MockTransport) -> None:
+    async def test_send_cw_nak(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
         mock_transport.queue_response(_nak_response())
         with pytest.raises(CommandError):
             await radio.send_cw_text("CQ")
 
     @pytest.mark.asyncio
-    async def test_stop_cw(self, radio: IcomRadio, mock_transport: MockTransport) -> None:
+    async def test_stop_cw(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
         mock_transport.queue_response(_ack_response())
         await radio.stop_cw_text()
 
@@ -240,17 +304,23 @@ class TestCW:
 
 class TestPowerControl:
     @pytest.mark.asyncio
-    async def test_power_on(self, radio: IcomRadio, mock_transport: MockTransport) -> None:
+    async def test_power_on(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
         mock_transport.queue_response(_ack_response())
         await radio.power_control(True)
 
     @pytest.mark.asyncio
-    async def test_power_off(self, radio: IcomRadio, mock_transport: MockTransport) -> None:
+    async def test_power_off(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
         mock_transport.queue_response(_ack_response())
         await radio.power_control(False)
 
     @pytest.mark.asyncio
-    async def test_power_nak(self, radio: IcomRadio, mock_transport: MockTransport) -> None:
+    async def test_power_nak(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
         mock_transport.queue_response(_nak_response())
         with pytest.raises(CommandError):
             await radio.power_control(True)
@@ -319,7 +389,9 @@ class TestPttDisconnected:
             await r.set_ptt(True)
 
     @pytest.mark.asyncio
-    async def test_ptt_nak(self, radio: IcomRadio, mock_transport: MockTransport) -> None:
+    async def test_ptt_nak(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
         mock_transport.queue_response(_nak_response())
         with pytest.raises(CommandError):
             await radio.set_ptt(True)
@@ -343,12 +415,16 @@ class TestInternals:
         assert pkt[0x10] == 0xC1
 
     @pytest.mark.asyncio
-    async def test_flush_queue_empty(self, radio: IcomRadio, mock_transport: MockTransport) -> None:
+    async def test_flush_queue_empty(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
         count = await IcomRadio._flush_queue(mock_transport)
         assert count == 0
 
     @pytest.mark.asyncio
-    async def test_flush_queue_with_data(self, radio: IcomRadio, mock_transport: MockTransport) -> None:
+    async def test_flush_queue_with_data(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
         mock_transport.queue_response(b"\x00" * 16)
         mock_transport.queue_response(b"\x00" * 16)
         count = await IcomRadio._flush_queue(mock_transport)
@@ -369,7 +445,14 @@ class TestConstructor:
         assert r._timeout == 5.0
 
     def test_custom_params(self) -> None:
-        r = IcomRadio("10.0.0.2", port=50002, username="u", password="p", radio_addr=0x94, timeout=10.0)
+        r = IcomRadio(
+            "10.0.0.2",
+            port=50002,
+            username="u",
+            password="p",
+            radio_addr=0x94,
+            timeout=10.0,
+        )
         assert r._host == "10.0.0.2"
         assert r._port == 50002
         assert r._username == "u"

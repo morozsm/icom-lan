@@ -210,9 +210,7 @@ class TestContextManager:
         assert mock_transport.disconnected
 
     @pytest.mark.asyncio
-    async def test_context_manager_exit(
-        self, mock_transport: MockTransport
-    ) -> None:
+    async def test_context_manager_exit(self, mock_transport: MockTransport) -> None:
         radio = IcomRadio("192.168.1.100")
         radio._ctrl_transport = mock_transport
         radio._civ_transport = mock_transport

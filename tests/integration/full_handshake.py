@@ -6,7 +6,7 @@ import struct
 import sys
 import os
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 from icom_lan.auth import encode_credentials
 
 RADIO_IP = os.environ.get("ICOM_HOST", "192.168.1.100")
@@ -46,7 +46,9 @@ class Proto(asyncio.DatagramProtocol):
             return None
 
     def control(self, ptype, seq=0):
-        return struct.pack("<IHHII", CONTROL_SIZE, ptype, seq, self.my_id, self.remote_id)
+        return struct.pack(
+            "<IHHII", CONTROL_SIZE, ptype, seq, self.my_id, self.remote_id
+        )
 
     def login_pkt(self):
         pkt = bytearray(LOGIN_SIZE)
@@ -63,17 +65,19 @@ class Proto(asyncio.DatagramProtocol):
         tok = random.randint(0, 0xFFFF)
         struct.pack_into("<H", pkt, 0x1A, tok)
         ue = encode_credentials(USERNAME)
-        pkt[0x40:0x40+len(ue)] = ue
+        pkt[0x40 : 0x40 + len(ue)] = ue
         pe = encode_credentials(PASSWORD)
-        pkt[0x50:0x50+len(pe)] = pe
+        pkt[0x50 : 0x50 + len(pe)] = pe
         nm = b"icom-lan"
-        pkt[0x60:0x60+len(nm)] = nm
+        pkt[0x60 : 0x60 + len(nm)] = nm
         return bytes(pkt), tok
 
 
 async def main():
     loop = asyncio.get_event_loop()
-    tr, p = await loop.create_datagram_endpoint(Proto, remote_addr=(RADIO_IP, RADIO_PORT))
+    tr, p = await loop.create_datagram_endpoint(
+        Proto, remote_addr=(RADIO_IP, RADIO_PORT)
+    )
 
     print(f"my_id=0x{p.my_id:08X}")
 
@@ -88,12 +92,14 @@ async def main():
                 sid = struct.unpack_from("<I", r, 8)[0]
                 if pt == 0x04:
                     p.remote_id = sid
-                    print(f"✅ I Am Here, remote_id=0x{p.remote_id:08X} (attempt {att+1})")
+                    print(
+                        f"✅ I Am Here, remote_id=0x{p.remote_id:08X} (attempt {att + 1})"
+                    )
                     break
                 print(f"  got type=0x{pt:04X}")
             else:
                 if att % 3 == 2:
-                    print(f"  retrying... ({att+1})")
+                    print(f"  retrying... ({att + 1})")
         else:
             print("❌ Radio not responding after 10 attempts")
             return
@@ -129,8 +135,10 @@ async def main():
                 error = struct.unpack_from("<I", r, 0x30)[0]
                 token = struct.unpack_from("<I", r, 0x1C)[0]
                 tr_resp = struct.unpack_from("<H", r, 0x1A)[0]
-                conn = r[0x40:0x50].rstrip(b'\x00').decode('ascii', errors='replace')
-                print(f"  LOGIN RESPONSE: error=0x{error:08X} token=0x{token:08X} conn='{conn}'")
+                conn = r[0x40:0x50].rstrip(b"\x00").decode("ascii", errors="replace")
+                print(
+                    f"  LOGIN RESPONSE: error=0x{error:08X} token=0x{token:08X} conn='{conn}'"
+                )
                 if error == 0xFEFFFFFF:
                     print("  ❌ Invalid username/password!")
                 elif tr_resp == tok:

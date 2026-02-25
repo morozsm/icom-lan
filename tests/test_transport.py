@@ -19,8 +19,9 @@ from icom_lan.types import HEADER_SIZE, PacketType
 # ---------------------------------------------------------------------------
 
 
-def _build_control(ptype: int, seq: int = 0, sender_id: int = 0xAABBCCDD,
-                   receiver_id: int = 0) -> bytes:
+def _build_control(
+    ptype: int, seq: int = 0, sender_id: int = 0xAABBCCDD, receiver_id: int = 0
+) -> bytes:
     """Build a 0x10-byte control packet."""
     pkt = bytearray(CONTROL_SIZE)
     struct.pack_into("<I", pkt, 0, CONTROL_SIZE)
@@ -31,8 +32,9 @@ def _build_control(ptype: int, seq: int = 0, sender_id: int = 0xAABBCCDD,
     return bytes(pkt)
 
 
-def _build_ping(seq: int = 0, sender_id: int = 0xAABBCCDD,
-                receiver_id: int = 0, reply: int = 0) -> bytes:
+def _build_ping(
+    seq: int = 0, sender_id: int = 0xAABBCCDD, receiver_id: int = 0, reply: int = 0
+) -> bytes:
     """Build a 0x15-byte ping packet."""
     pkt = bytearray(PING_SIZE)
     struct.pack_into("<I", pkt, 0, PING_SIZE)
@@ -45,8 +47,9 @@ def _build_ping(seq: int = 0, sender_id: int = 0xAABBCCDD,
     return bytes(pkt)
 
 
-def _build_data_packet(seq: int = 1, sender_id: int = 0xAABBCCDD,
-                       payload: bytes = b"\x00" * 8) -> bytes:
+def _build_data_packet(
+    seq: int = 1, sender_id: int = 0xAABBCCDD, payload: bytes = b"\x00" * 8
+) -> bytes:
     """Build a data packet (type=0x00) with payload."""
     total = CONTROL_SIZE + len(payload)
     pkt = bytearray(total)
@@ -150,6 +153,7 @@ class TestTrackSent:
 
     def test_track_evicts_oldest(self, transport: IcomTransport) -> None:
         from icom_lan.transport import BUFSIZE
+
         for i in range(BUFSIZE + 10):
             transport._track_sent(i, f"pkt{i}".encode())
         assert len(transport.tx_buffer) <= BUFSIZE
@@ -203,6 +207,7 @@ class TestRxSequence:
 
     def test_large_gap_resets(self, transport: IcomTransport) -> None:
         from icom_lan.transport import MAX_MISSING
+
         transport._record_rx_seq(1)
         transport._record_rx_seq(1 + MAX_MISSING + 10)
         assert len(transport.rx_missing) == 0
@@ -351,7 +356,9 @@ class TestReceivePacket:
 
 class TestDisconnect:
     @pytest.mark.asyncio
-    async def test_disconnect_sends_disconnect_pkt(self, transport: IcomTransport) -> None:
+    async def test_disconnect_sends_disconnect_pkt(
+        self, transport: IcomTransport
+    ) -> None:
         sent = []
         transport._raw_send = lambda data: sent.append(data)
         transport.state = ConnectionState.CONNECTED
@@ -377,6 +384,7 @@ class TestDisconnect:
         # Create fake tasks
         async def never_end():
             await asyncio.sleep(999)
+
         transport._ping_task = asyncio.create_task(never_end())
         transport._retransmit_task = asyncio.create_task(never_end())
 
@@ -420,7 +428,9 @@ class TestRetransmitLoop:
         sent = []
         transport._raw_send = lambda data: sent.append(data)
         transport.state = ConnectionState.CONNECTED
-        transport.rx_missing[10] = 3  # already at retry 3, next loop will bump to 4 and delete
+        transport.rx_missing[10] = (
+            3  # already at retry 3, next loop will bump to 4 and delete
+        )
         transport.start_retransmit_loop()
         await asyncio.sleep(0.25)
         transport.state = ConnectionState.DISCONNECTED

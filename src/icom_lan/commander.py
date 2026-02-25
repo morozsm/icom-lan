@@ -146,7 +146,10 @@ class IcomCommander:
                     if not item.future.done():
                         item.future.set_exception(exc)
                 finally:
-                    if item.key is not None and self._pending_by_key.get(item.key) is item.future:
+                    if (
+                        item.key is not None
+                        and self._pending_by_key.get(item.key) is item.future
+                    ):
                         self._pending_by_key.pop(item.key, None)
                     self._queue.task_done()
         except asyncio.CancelledError:

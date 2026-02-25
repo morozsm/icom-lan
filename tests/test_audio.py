@@ -68,7 +68,7 @@ class TestParseAudioPacket:
         assert pkt.data == opus
 
     def test_parse_tx_ident(self):
-        opus = b"\xFF" * 160
+        opus = b"\xff" * 160
         raw = _make_audio_bytes(opus, ident=TX_IDENT, send_seq=1000)
         pkt = parse_audio_packet(raw)
         assert pkt is not None
@@ -77,7 +77,7 @@ class TestParseAudioPacket:
         assert len(pkt.data) == 160
 
     def test_parse_0xa0_length_ident(self):
-        opus = b"\xAA" * 0xA0
+        opus = b"\xaa" * 0xA0
         raw = _make_audio_bytes(opus, ident=RX_IDENT_0xA0, send_seq=5)
         pkt = parse_audio_packet(raw)
         assert pkt is not None
@@ -101,7 +101,7 @@ class TestParseAudioPacket:
         assert parse_audio_packet(b"\x00" * 10) is None
 
     def test_parse_large_frame(self):
-        opus = b"\xBB" * 1364  # max opus frame in wfview
+        opus = b"\xbb" * 1364  # max opus frame in wfview
         raw = _make_audio_bytes(opus, send_seq=0xFFFF)
         pkt = parse_audio_packet(raw)
         assert pkt is not None
@@ -160,17 +160,13 @@ class TestBuildAudioPacket:
         assert ident == RX_IDENT_0xA0
 
     def test_build_empty_opus(self):
-        pkt = build_audio_packet(
-            b"", sender_id=1, receiver_id=2, send_seq=0
-        )
+        pkt = build_audio_packet(b"", sender_id=1, receiver_id=2, send_seq=0)
         assert len(pkt) == AUDIO_HEADER_SIZE
         datalen = struct.unpack_from(">H", pkt, 0x16)[0]
         assert datalen == 0
 
     def test_build_seq_wraps(self):
-        pkt = build_audio_packet(
-            b"\x00", sender_id=1, receiver_id=2, send_seq=0xFFFF
-        )
+        pkt = build_audio_packet(b"\x00", sender_id=1, receiver_id=2, send_seq=0xFFFF)
         send_seq = struct.unpack_from(">H", pkt, 0x12)[0]
         assert send_seq == 0xFFFF
 
@@ -184,7 +180,7 @@ class TestRoundtrip:
     """Parse(build(data)) should recover the original data."""
 
     def test_roundtrip_small(self):
-        opus = b"\xDE\xAD\xBE\xEF"
+        opus = b"\xde\xad\xbe\xef"
         raw = build_audio_packet(
             opus, sender_id=SENDER_ID, receiver_id=RECEIVER_ID, send_seq=99
         )
@@ -196,9 +192,7 @@ class TestRoundtrip:
 
     def test_roundtrip_large(self):
         opus = bytes(range(256)) * 5  # 1280 bytes
-        raw = build_audio_packet(
-            opus, sender_id=1, receiver_id=2, send_seq=1234
-        )
+        raw = build_audio_packet(opus, sender_id=1, receiver_id=2, send_seq=1234)
         pkt = parse_audio_packet(raw)
         assert pkt is not None
         assert pkt.data == opus
@@ -319,13 +313,13 @@ class TestAudioStreamTx:
         stream = AudioStream(t)
         await stream.start_tx()
 
-        await stream.push_tx(b"\xAA\xBB")
+        await stream.push_tx(b"\xaa\xbb")
         t.send_tracked.assert_called_once()
 
         sent = t.send_tracked.call_args[0][0]
         pkt = parse_audio_packet(sent)
         assert pkt is not None
-        assert pkt.data == b"\xAA\xBB"
+        assert pkt.data == b"\xaa\xbb"
         assert pkt.send_seq == 0
         assert pkt.ident == TX_IDENT
 

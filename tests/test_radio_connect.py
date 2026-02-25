@@ -64,7 +64,7 @@ def _build_conninfo() -> bytes:
     pkt = bytearray(CONNINFO_SIZE)
     struct.pack_into("<I", pkt, 0, CONNINFO_SIZE)
     # GUID area
-    pkt[0x20:0x30] = b"\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0A\x0B\x0C\x0D\x0E\x0F\x10"
+    pkt[0x20:0x30] = b"\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10"
     return bytes(pkt)
 
 
@@ -225,9 +225,9 @@ class TestWaitForPacket:
         mt = ConnectMockTransport()
         for _ in range(5):
             mt.queue_response(b"\x00" * 0x10)
-        mt.queue_response(b"\xFF" * 0x60)
+        mt.queue_response(b"\xff" * 0x60)
         result = await radio._wait_for_packet(mt, size=0x60, label="test")
-        assert result == b"\xFF" * 0x60
+        assert result == b"\xff" * 0x60
 
 
 class TestFlushQueue:

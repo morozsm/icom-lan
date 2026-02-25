@@ -168,8 +168,7 @@ class JitterBuffer:
                 # seq is missing — is it a gap or should we wait?
                 # Count how many packets we hold that are ahead of seq
                 ahead_count = sum(
-                    1 for s in self._buffer
-                    if 0 < ((s - seq) & 0xFFFF) < 0x8000
+                    1 for s in self._buffer if 0 < ((s - seq) & 0xFFFF) < 0x8000
                 )
                 if ahead_count >= self._depth:
                     # Enough evidence that seq is lost → gap
@@ -223,9 +222,7 @@ class AudioStream:
         await stream.stop_rx()
     """
 
-    def __init__(
-        self, transport: IcomTransport, jitter_depth: int = 5
-    ) -> None:
+    def __init__(self, transport: IcomTransport, jitter_depth: int = 5) -> None:
         self._transport = transport
         self._state: AudioState = AudioState.IDLE
         self._rx_callback: Callable[[AudioPacket], None] | None = None
@@ -424,15 +421,15 @@ def build_audio_packet(
     total_len = AUDIO_HEADER_SIZE + len(opus_data)
     pkt = bytearray(total_len)
 
-    struct.pack_into("<I", pkt, 0x00, total_len)           # len (LE)
-    struct.pack_into("<H", pkt, 0x04, PacketType.DATA)     # type (LE)
+    struct.pack_into("<I", pkt, 0x00, total_len)  # len (LE)
+    struct.pack_into("<H", pkt, 0x04, PacketType.DATA)  # type (LE)
     # seq at 0x06 left as 0 — transport will fill it
-    struct.pack_into("<I", pkt, 0x08, sender_id)           # sentid (LE)
-    struct.pack_into("<I", pkt, 0x0C, receiver_id)         # rcvdid (LE)
-    struct.pack_into("<H", pkt, 0x10, ident)               # ident (LE)
-    struct.pack_into(">H", pkt, 0x12, send_seq)            # sendseq (BE)
+    struct.pack_into("<I", pkt, 0x08, sender_id)  # sentid (LE)
+    struct.pack_into("<I", pkt, 0x0C, receiver_id)  # rcvdid (LE)
+    struct.pack_into("<H", pkt, 0x10, ident)  # ident (LE)
+    struct.pack_into(">H", pkt, 0x12, send_seq)  # sendseq (BE)
     # 0x14: unused (stays 0)
-    struct.pack_into(">H", pkt, 0x16, len(opus_data))      # datalen (BE)
+    struct.pack_into(">H", pkt, 0x16, len(opus_data))  # datalen (BE)
 
     pkt[AUDIO_HEADER_SIZE:] = opus_data
     return bytes(pkt)

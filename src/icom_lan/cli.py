@@ -246,7 +246,11 @@ async def _cmd_freq(radio: IcomRadio, args: argparse.Namespace) -> int:
         if args.json:
             import json
 
-            print(json.dumps({"frequency_hz": freq, "frequency_mhz": round(freq / 1e6, 6)}))
+            print(
+                json.dumps(
+                    {"frequency_hz": freq, "frequency_mhz": round(freq / 1e6, 6)}
+                )
+            )
         else:
             print(f"{freq:,} Hz ({freq / 1e6:.6f} MHz)")
     return 0
@@ -365,7 +369,14 @@ async def _cmd_preamp(radio: IcomRadio, args: argparse.Namespace) -> int:
         if args.json:
             import json
 
-            print(json.dumps({"preamp_level": level, "preamp_name": _PREAMP_NAMES.get(level, str(level))}))
+            print(
+                json.dumps(
+                    {
+                        "preamp_level": level,
+                        "preamp_name": _PREAMP_NAMES.get(level, str(level)),
+                    }
+                )
+            )
         else:
             print(f"Preamp: {_PREAMP_NAMES.get(level, str(level))}")
     return 0

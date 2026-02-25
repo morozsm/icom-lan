@@ -6,7 +6,7 @@ import struct
 import sys
 import os
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 from icom_lan.auth import encode_credentials
 from icom_lan.commands import get_frequency, parse_civ_frame, parse_frequency_response
 
@@ -56,7 +56,7 @@ class Proto(asyncio.DatagramProtocol):
                     reply[0x11:0x15] = data[0x11:0x15]
                     self.tr.sendto(bytes(reply))
                     return  # don't queue it
-        
+
         # Queue all other packets
         self.q.put_nowait(data)
 
@@ -70,7 +70,9 @@ class Proto(asyncio.DatagramProtocol):
             return None
 
     def control(self, ptype, seq=0):
-        return struct.pack("<IHHII", CONTROL_SIZE, ptype, seq, self.my_id, self.remote_id)
+        return struct.pack(
+            "<IHHII", CONTROL_SIZE, ptype, seq, self.my_id, self.remote_id
+        )
 
     def login_pkt(self):
         pkt = bytearray(LOGIN_SIZE)
@@ -87,11 +89,11 @@ class Proto(asyncio.DatagramProtocol):
         tok = random.randint(0, 0xFFFF)
         struct.pack_into("<H", pkt, 0x1A, tok)
         ue = encode_credentials(USERNAME)
-        pkt[0x40:0x40+len(ue)] = ue
+        pkt[0x40 : 0x40 + len(ue)] = ue
         pe = encode_credentials(PASSWORD)
-        pkt[0x50:0x50+len(pe)] = pe
+        pkt[0x50 : 0x50 + len(pe)] = pe
         nm = b"icom-lan"
-        pkt[0x60:0x60+len(nm)] = nm
+        pkt[0x60 : 0x60 + len(nm)] = nm
         return bytes(pkt), tok
 
     def token_pkt(self, magic=0x02):
@@ -166,14 +168,16 @@ async def do_handshake(p):
             print(f"[hs] ✅ Login OK, token=0x{p.token:08X}")
             p.send(p.token_pkt(0x02))
             return True
-    
+
     print("[hs] ❌ No login response")
     return False
 
 
 async def main():
     loop = asyncio.get_event_loop()
-    tr, p = await loop.create_datagram_endpoint(Proto, remote_addr=(RADIO_IP, RADIO_PORT))
+    tr, p = await loop.create_datagram_endpoint(
+        Proto, remote_addr=(RADIO_IP, RADIO_PORT)
+    )
 
     try:
         if not await do_handshake(p):
@@ -181,7 +185,7 @@ async def main():
 
         # Wait a moment for capabilities packet
         await asyncio.sleep(0.5)
-        
+
         # Flush queue
         count = 0
         while True:
@@ -195,7 +199,7 @@ async def main():
         print("\n── Get Frequency ──")
         civ_frame = get_frequency(to_addr=0x98)
         print(f"CIV: {civ_frame.hex()}")
-        
+
         udp_pkt = p.wrap_civ(civ_frame)
         p.send(udp_pkt)
 
@@ -205,23 +209,25 @@ async def main():
             if r is None:
                 print("⏱️ Timeout")
                 break
-            
+
             pt = struct.unpack_from("<H", r, 4)[0] if len(r) >= 6 else -1
-            
+
             # Skip non-data packets
             if pt != 0x00:
                 continue
-            
+
             # Check for CIV payload
             if len(r) > CIV_HEADER_SIZE:
                 civ_data = r[CIV_HEADER_SIZE:]
                 if len(civ_data) >= 4 and civ_data[0] == 0xFE and civ_data[1] == 0xFE:
                     frame = parse_civ_frame(civ_data)
-                    print(f"  CIV frame: cmd=0x{frame.command:02X} from=0x{frame.from_addr:02X} to=0x{frame.to_addr:02X}")
-                    
+                    print(
+                        f"  CIV frame: cmd=0x{frame.command:02X} from=0x{frame.from_addr:02X} to=0x{frame.to_addr:02X}"
+                    )
+
                     if frame.command == 0x03 and frame.data:
                         freq = parse_frequency_response(frame)
-                        print(f"\n✅ Frequency: {freq:,} Hz ({freq/1e6:.3f} MHz)")
+                        print(f"\n✅ Frequency: {freq:,} Hz ({freq / 1e6:.3f} MHz)")
                         break
                     elif frame.command == 0xFB:
                         print("  ACK")

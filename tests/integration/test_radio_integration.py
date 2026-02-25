@@ -58,7 +58,7 @@ class TestFrequency:
         freq = await radio.get_frequency()
         assert isinstance(freq, int)
         assert 1_800_000 <= freq <= 470_000_000  # Valid HF range
-        print(f"Frequency: {freq:,} Hz ({freq/1e6:.3f} MHz)")
+        print(f"Frequency: {freq:,} Hz ({freq / 1e6:.3f} MHz)")
 
     async def test_set_frequency_roundtrip(self, radio: IcomRadio) -> None:
         """Set frequency and restore original."""
@@ -181,7 +181,7 @@ class TestMeters:
         power = await radio.get_power()
         assert isinstance(power, int)
         assert 0 <= power <= 255
-        print(f"Power setting: {power}/255 ({power*100/255:.0f}%) ✓")
+        print(f"Power setting: {power}/255 ({power * 100 / 255:.0f}%) ✓")
 
 
 class TestPowerControl:
@@ -200,7 +200,7 @@ class TestPowerControl:
             actual = await radio.get_power()
             # Allow some tolerance due to radio calibration
             assert 100 <= actual <= 150, f"Expected ~128, got {actual}"
-            print(f"Set power: {actual}/255 ({actual*100/255:.0f}%) ✓")
+            print(f"Set power: {actual}/255 ({actual * 100 / 255:.0f}%) ✓")
 
         finally:
             await radio.set_power(original)
@@ -431,7 +431,7 @@ class TestCW:
             await radio.set_mode(Mode.USB)
             await radio.set_frequency(original_freq)
             print(
-                f"CW restore: {original_freq/1e6:.3f} MHz, "
+                f"CW restore: {original_freq / 1e6:.3f} MHz, "
                 f"USB, {original_power}/255 ✓"
             )
 
@@ -473,7 +473,7 @@ class TestCW:
             await radio.set_mode(Mode.USB)
             await radio.set_frequency(original_freq)
             print(
-                f"CW restore: {original_freq/1e6:.3f} MHz, "
+                f"CW restore: {original_freq / 1e6:.3f} MHz, "
                 f"USB, {original_power}/255 ✓"
             )
 
@@ -534,7 +534,9 @@ class TestPowerHardware:
 class TestReconnect:
     """Reconnect and recovery scenarios on real hardware."""
 
-    async def test_manual_reconnect_and_audio_recovery(self, radio_config: dict) -> None:
+    async def test_manual_reconnect_and_audio_recovery(
+        self, radio_config: dict
+    ) -> None:
         """Disconnect/connect cycle should recover CI-V and audio RX."""
         packets: list = []
 
@@ -542,7 +544,9 @@ class TestReconnect:
             if pkt is not None:
                 packets.append(pkt)
 
-        async def connect_with_retry(radio: IcomRadio, label: str, retries: int = 4) -> None:
+        async def connect_with_retry(
+            radio: IcomRadio, label: str, retries: int = 4
+        ) -> None:
             for attempt in range(1, retries + 2):
                 try:
                     _, dt = await timed_call("connect", radio.connect)
@@ -732,8 +736,13 @@ class TestSoak:
                 await op("get_alc", r.get_alc)
 
                 if cycle % 5 == 0:
-                    await op("set_frequency_offset", lambda: r.set_frequency(base_freq + 1000))
-                    await op("set_frequency_restore", lambda: r.set_frequency(base_freq))
+                    await op(
+                        "set_frequency_offset",
+                        lambda: r.set_frequency(base_freq + 1000),
+                    )
+                    await op(
+                        "set_frequency_restore", lambda: r.set_frequency(base_freq)
+                    )
 
                 if cycle % 6 == 0:
                     stats["audio_windows"] += 1
@@ -779,7 +788,9 @@ class TestFaultInjection:
             if r._civ_transport is None:  # type: ignore[attr-defined]
                 pytest.skip("CI-V transport unavailable for fault injection")
             await r._civ_transport.disconnect()  # type: ignore[attr-defined]
-            log_event(test="fault", step="inject", cmd="civ_disconnect", recovered=False)
+            log_event(
+                test="fault", step="inject", cmd="civ_disconnect", recovered=False
+            )
 
             # Next CI-V command should fail (timeout/connection error).
             failed = False
@@ -788,7 +799,12 @@ class TestFaultInjection:
             except Exception:
                 failed = True
             assert failed, "Expected CI-V command failure after injected drop"
-            log_event(test="fault", step="post_inject_failure", cmd="get_frequency", timeout=True)
+            log_event(
+                test="fault",
+                step="post_inject_failure",
+                cmd="get_frequency",
+                timeout=True,
+            )
         finally:
             try:
                 await r.disconnect()
@@ -863,6 +879,7 @@ class TestCommanderStress:
         offsets = [1000, 2000, 3000, 0]
 
         try:
+
             async def step(delta: int):
                 await radio.set_frequency(base + delta)
                 return await radio.get_frequency()
@@ -886,11 +903,11 @@ class TestStatus:
         power = await radio.get_power()
 
         print("\n── Radio Status ──")
-        print(f"  Frequency: {freq/1e6:.3f} MHz")
+        print(f"  Frequency: {freq / 1e6:.3f} MHz")
         print(f"  Mode: {mode.name}")
         print(f"  S-meter: {s}/255")
         print(f"  SWR meter: {swr}/255")
-        print(f"  Power: {power}/255 ({power*100/255:.0f}%)")
+        print(f"  Power: {power}/255 ({power * 100 / 255:.0f}%)")
 
         # Basic sanity checks
         assert freq > 0

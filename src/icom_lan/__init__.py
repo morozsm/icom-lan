@@ -1,6 +1,6 @@
 """icom-lan: Python library for controlling Icom transceivers over LAN."""
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 
 from .auth import (
     AuthResponse,
@@ -92,7 +92,10 @@ __all__ = [
     # Commands
     "IC_7610_ADDR",
     "CONTROLLER_ADDR",
+    "RECEIVER_MAIN",
+    "RECEIVER_SUB",
     "build_civ_frame",
+    "build_cmd29_frame",
     "parse_civ_frame",
     "get_frequency",
     "set_frequency",
@@ -103,6 +106,11 @@ __all__ = [
     "get_s_meter",
     "get_swr",
     "get_alc",
+    "get_attenuator",
+    "set_attenuator",
+    "set_attenuator_level",
+    "get_preamp",
+    "set_preamp",
     "ptt_on",
     "ptt_off",
     "parse_frequency_response",

@@ -27,7 +27,9 @@ def radio(mock_transport: MockTransport) -> IcomRadio:
 
 class TestFullDuplex:
     @pytest.mark.asyncio
-    async def test_start_audio(self, radio: IcomRadio, mock_transport: MockTransport) -> None:
+    async def test_start_audio(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
         """start_audio should enable both RX and TX."""
         radio._audio_port = 50003
         radio._audio_transport = mock_transport
@@ -38,7 +40,9 @@ class TestFullDuplex:
         await radio.stop_audio()
 
     @pytest.mark.asyncio
-    async def test_start_audio_rx_only(self, radio: IcomRadio, mock_transport: MockTransport) -> None:
+    async def test_start_audio_rx_only(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
         radio._audio_port = 50003
         radio._audio_transport = mock_transport
         radio._audio_stream = AudioStream(mock_transport)
@@ -69,7 +73,7 @@ class TestAudioStreamJitter:
         stream = AudioStream(mock_transport, jitter_depth=2)
         received = []
 
-        def _build_audio_pkt(seq: int, data: bytes = b"\xAA\xBB") -> bytes:
+        def _build_audio_pkt(seq: int, data: bytes = b"\xaa\xbb") -> bytes:
             total = AUDIO_HEADER_SIZE + len(data)
             pkt = bytearray(total)
             struct.pack_into("<I", pkt, 0, total)
@@ -108,7 +112,7 @@ class TestAudioStreamJitter:
         received = []
 
         def _build_audio_pkt(seq: int) -> bytes:
-            data = b"\xAA"
+            data = b"\xaa"
             total = AUDIO_HEADER_SIZE + len(data)
             pkt = bytearray(total)
             struct.pack_into("<I", pkt, 0, total)

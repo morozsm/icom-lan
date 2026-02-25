@@ -145,9 +145,9 @@ class IcomRadio:
         self._audio_send_seq: int = 0
         self._civ_lock = asyncio.Lock()
         self._last_civ_send_monotonic: float = 0.0
-        self._civ_min_interval: float = float(
-            os.environ.get("ICOM_CIV_MIN_INTERVAL_MS", "35")
-        ) / 1000.0
+        self._civ_min_interval: float = (
+            float(os.environ.get("ICOM_CIV_MIN_INTERVAL_MS", "35")) / 1000.0
+        )
         self._commander: IcomCommander | None = None
         self._filter_width: int | None = None
         self._attenuator_state: bool | None = None
@@ -323,9 +323,7 @@ class IcomRadio:
     # Audio streaming
     # ------------------------------------------------------------------
 
-    async def start_audio_rx(
-        self, callback: "Callable[[AudioPacket], None]"
-    ) -> None:
+    async def start_audio_rx(self, callback: "Callable[[AudioPacket], None]") -> None:
         """Start receiving audio from the radio.
 
         Connects the audio transport if not already connected,
@@ -564,7 +562,10 @@ class IcomRadio:
                 # by looking at packet queue activity
                 if self._ctrl_transport._packet_queue.qsize() > 0:
                     last_activity = _time.monotonic()
-                elif self._civ_transport and self._civ_transport._packet_queue.qsize() > 0:
+                elif (
+                    self._civ_transport
+                    and self._civ_transport._packet_queue.qsize() > 0
+                ):
                     last_activity = _time.monotonic()
                 elif self._ctrl_transport.ping_seq > 0:
                     # Ping responses reset activity implicitly via packet queue
@@ -589,9 +590,7 @@ class IcomRadio:
         try:
             while not self._intentional_disconnect:
                 attempt += 1
-                logger.info(
-                    "Reconnect attempt %d (delay=%.1fs)", attempt, delay
-                )
+                logger.info("Reconnect attempt %d (delay=%.1fs)", attempt, delay)
                 try:
                     # Clean up old transports
                     self._stop_token_renewal()
@@ -1156,7 +1155,9 @@ class IcomRadio:
         """Read attenuator state (compat wrapper)."""
         return (await self.get_attenuator_level()) > 0
 
-    async def set_attenuator_level(self, db: int, receiver: int = RECEIVER_MAIN) -> None:
+    async def set_attenuator_level(
+        self, db: int, receiver: int = RECEIVER_MAIN
+    ) -> None:
         """Set attenuator level in dB (Command29-aware).
 
         Args:
@@ -1225,10 +1226,12 @@ class IcomRadio:
                         f"Cannot set preamp level {level}: DIGI-SEL (IP+) is ON. "
                         "PREAMP and DIGI-SEL are mutually exclusive — disable DIGI-SEL first."
                     )
-            except CommandError:
-                raise
+            except CommandError as exc:
+                if "DIGI-SEL" in str(exc) and "mutually exclusive" in str(exc):
+                    raise  # Our own error — propagate
+                # get_digisel() failed (radio doesn't support it, timeout, etc.) — ignore
             except Exception:
-                pass  # Radio may not support DIGI-SEL — proceed anyway
+                pass  # Unexpected error — proceed anyway
 
         civ = set_preamp(level, to_addr=self._radio_addr, receiver=receiver)
         resp = await self._send_civ_raw(civ)
@@ -1321,7 +1324,9 @@ class IcomRadio:
         filt = state.get("filter")
         if isinstance(mode, Mode):
             try:
-                await self.set_mode(mode, filter_width=int(filt) if isinstance(filt, int) else None)
+                await self.set_mode(
+                    mode, filter_width=int(filt) if isinstance(filt, int) else None
+                )
             except Exception:
                 pass
 
@@ -1410,6 +1415,4 @@ class IcomRadio:
         resp = await self._send_civ_raw(civ)
         ack = parse_ack_nak(resp)
         if ack is False:
-            raise CommandError(
-                f"Radio rejected power {'on' if on else 'off'}"
-            )
+            raise CommandError(f"Radio rejected power {'on' if on else 'off'}")

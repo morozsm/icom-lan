@@ -78,8 +78,9 @@ class TestAttenuator:
     def test_att_on(self):
         frame = set_attenuator(True)
         parsed = parse_civ_frame(frame)
+        # Command29-wrapped: real command is 0x11, data is BCD 18
         assert parsed.command == 0x11
-        assert parsed.data == b"\x20"
+        assert parsed.data == b"\x18"
 
     def test_att_off(self):
         frame = set_attenuator(False)

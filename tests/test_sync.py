@@ -1,6 +1,5 @@
 """Tests for synchronous API wrapper."""
 
-
 from icom_lan.sync import IcomRadio
 from icom_lan.types import AudioCodec
 
