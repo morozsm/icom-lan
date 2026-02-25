@@ -1212,25 +1212,29 @@ class IcomRadio:
             receiver: RECEIVER_MAIN (0) or RECEIVER_SUB (1).
 
         Raises:
-            CommandError: If the radio rejects the command. On IC-7610 this
-                commonly happens when DIGI-SEL (IP+) is enabled — preamp and
-                DIGI-SEL are mutually exclusive in hardware.
+            CommandError: If DIGI-SEL (IP+) is enabled. On IC-7610, PREAMP and
+                DIGI-SEL are mutually exclusive — disable DIGI-SEL first.
         """
         self._check_connected()
+
+        # Pre-flight: check DIGI-SEL / PREAMP mutual exclusion
+        if level > 0:
+            try:
+                if await self.get_digisel():
+                    raise CommandError(
+                        f"Cannot set preamp level {level}: DIGI-SEL (IP+) is ON. "
+                        "PREAMP and DIGI-SEL are mutually exclusive — disable DIGI-SEL first."
+                    )
+            except CommandError:
+                raise
+            except Exception:
+                pass  # Radio may not support DIGI-SEL — proceed anyway
+
         civ = set_preamp(level, to_addr=self._radio_addr, receiver=receiver)
         resp = await self._send_civ_raw(civ)
         ack = parse_ack_nak(resp)
         if ack is False:
-            # Check if DIGI-SEL is blocking (IC-7610 mutual exclusion)
-            hint = ""
-            if level > 0:
-                try:
-                    digisel = await self.get_digisel()
-                    if digisel:
-                        hint = " (DIGI-SEL/IP+ is ON — disable it first, they are mutually exclusive)"
-                except Exception:
-                    pass
-            raise CommandError(f"Radio rejected preamp level {level}{hint}")
+            raise CommandError(f"Radio rejected preamp level {level}")
         self._preamp_level = level
 
     async def get_digisel(self) -> bool:
