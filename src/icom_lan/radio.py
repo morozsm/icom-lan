@@ -179,7 +179,7 @@ class IcomRadio:
         civ_port = await self._receive_civ_port()
         if civ_port == 0:
             civ_port = self._port + 1  # Fallback: assume control+1
-            logger.warning("CI-V port not in status, falling back to %d", civ_port)
+            logger.debug("CI-V port not in status, using default %d", civ_port)
         self._civ_port = civ_port
 
         # --- Phase 2: CI-V port ---
@@ -293,21 +293,25 @@ class IcomRadio:
 
     async def _receive_civ_port(self) -> int:
         """Wait for the status packet with CI-V and audio ports."""
-        await asyncio.sleep(0.3)
-        for _ in range(50):
+        deadline = time.monotonic() + self._timeout
+        while time.monotonic() < deadline:
             try:
-                d = await self._ctrl_transport.receive_packet(timeout=0.1)
+                remaining = max(0.1, deadline - time.monotonic())
+                d = await self._ctrl_transport.receive_packet(
+                    timeout=min(remaining, 0.3)
+                )
                 if len(d) == STATUS_SIZE:
                     civ_port = struct.unpack_from(">H", d, 0x42)[0]
                     audio_port = struct.unpack_from(">H", d, 0x46)[0]
-                    logger.info(
-                        "Status: civ_port=%d, audio_port=%d",
-                        civ_port,
-                        audio_port,
-                    )
-                    return civ_port
+                    if civ_port > 0:
+                        logger.info(
+                            "Status: civ_port=%d, audio_port=%d",
+                            civ_port,
+                            audio_port,
+                        )
+                        return civ_port
             except asyncio.TimeoutError:
-                break
+                continue
         return 0
 
     async def _send_open_close(self, *, open_stream: bool) -> None:

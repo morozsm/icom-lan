@@ -23,6 +23,9 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
 ]
 
+[project.scripts]
+icom-lan = "icom_lan.cli:main"
+
 [project.optional-dependencies]
 audio = ["opuslib"]
 dev = ["pytest", "pytest-asyncio"]
