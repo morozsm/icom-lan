@@ -9,10 +9,16 @@ Usage::
         await radio.set_mode("USB")
 """
 
+from __future__ import annotations
+
 import asyncio
 import logging
 import struct
 import time
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing import Callable
 
 from .auth import (
     build_conninfo_packet,
@@ -57,6 +63,7 @@ from .exceptions import (
     ConnectionError,
     TimeoutError,
 )
+from .audio import AudioPacket, AudioStream
 from .transport import ConnectionState, IcomTransport
 from .types import CivFrame, Mode, PacketType
 
@@ -110,11 +117,14 @@ class IcomRadio:
         self._timeout = timeout
         self._ctrl_transport = IcomTransport()
         self._civ_transport: IcomTransport | None = None
+        self._audio_transport: IcomTransport | None = None
+        self._audio_stream: AudioStream | None = None
         self._connected = False
         self._token: int = 0
         self._tok_request: int = 0
         self._auth_seq: int = 0
         self._civ_port: int = 0
+        self._audio_port: int = 0
         self._civ_send_seq: int = 0
 
     @property
@@ -225,6 +235,14 @@ class IcomRadio:
         """Cleanly disconnect from the radio."""
         if self._connected:
             self._connected = False
+            # Stop audio streams
+            if self._audio_stream is not None:
+                await self._audio_stream.stop_rx()
+                await self._audio_stream.stop_tx()
+                self._audio_stream = None
+            if self._audio_transport is not None:
+                await self._audio_transport.disconnect()
+                self._audio_transport = None
             if self._civ_transport:
                 try:
                     await self._send_open_close(open_stream=False)
@@ -241,6 +259,89 @@ class IcomRadio:
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:  # type: ignore[no-untyped-def]
         await self.disconnect()
+
+    # ------------------------------------------------------------------
+    # Audio streaming
+    # ------------------------------------------------------------------
+
+    async def start_audio_rx(
+        self, callback: "Callable[[AudioPacket], None]"
+    ) -> None:
+        """Start receiving audio from the radio.
+
+        Connects the audio transport if not already connected,
+        then begins streaming RX audio to the callback.
+
+        Args:
+            callback: Called with each :class:`AudioPacket`.
+
+        Raises:
+            ConnectionError: If not connected or audio port unavailable.
+        """
+        self._check_connected()
+        await self._ensure_audio_transport()
+        assert self._audio_stream is not None
+        await self._audio_stream.start_rx(callback)
+
+    async def stop_audio_rx(self) -> None:
+        """Stop receiving audio from the radio."""
+        if self._audio_stream is not None:
+            await self._audio_stream.stop_rx()
+
+    async def start_audio_tx(self) -> None:
+        """Start transmitting audio to the radio.
+
+        Connects the audio transport if not already connected.
+
+        Raises:
+            ConnectionError: If not connected or audio port unavailable.
+        """
+        self._check_connected()
+        await self._ensure_audio_transport()
+        assert self._audio_stream is not None
+        await self._audio_stream.start_tx()
+
+    async def push_audio_tx(self, opus_data: bytes) -> None:
+        """Send an Opus-encoded audio frame to the radio.
+
+        Args:
+            opus_data: Opus-encoded audio data.
+
+        Raises:
+            ConnectionError: If not connected.
+            RuntimeError: If audio TX not started.
+        """
+        self._check_connected()
+        if self._audio_stream is None:
+            raise RuntimeError("Audio TX not started")
+        await self._audio_stream.push_tx(opus_data)
+
+    async def stop_audio_tx(self) -> None:
+        """Stop transmitting audio to the radio."""
+        if self._audio_stream is not None:
+            await self._audio_stream.stop_tx()
+
+    async def _ensure_audio_transport(self) -> None:
+        """Connect the audio transport if not already connected."""
+        if self._audio_stream is not None:
+            return
+
+        if self._audio_port == 0:
+            raise ConnectionError("Audio port not available")
+
+        self._audio_transport = IcomTransport()
+        try:
+            await self._audio_transport.connect(self._host, self._audio_port)
+        except OSError as exc:
+            self._audio_transport = None
+            raise ConnectionError(
+                f"Failed to connect audio port {self._audio_port}: {exc}"
+            ) from exc
+
+        self._audio_transport.start_ping_loop()
+        self._audio_transport.start_retransmit_loop()
+        self._audio_stream = AudioStream(self._audio_transport)
+        logger.info("Audio transport connected on port %d", self._audio_port)
 
     # ------------------------------------------------------------------
     # Internal connection helpers
@@ -319,6 +420,7 @@ class IcomRadio:
                             civ_port,
                             audio_port,
                         )
+                        self._audio_port = audio_port
                         return civ_port
             except asyncio.TimeoutError:
                 continue

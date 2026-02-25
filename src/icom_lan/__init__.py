@@ -19,6 +19,7 @@ from .exceptions import (
     TimeoutError,
 )
 from .protocol import identify_packet_type, parse_header, serialize_header
+from .audio import AudioPacket, AudioState, AudioStream, AUDIO_HEADER_SIZE as _AUDIO_HEADER_SIZE
 from .transport import ConnectionState, IcomTransport
 from .radio import IcomRadio
 from .commands import (
@@ -105,4 +106,8 @@ __all__ = [
     # Transport
     "ConnectionState",
     "IcomTransport",
+    # Audio
+    "AudioPacket",
+    "AudioState",
+    "AudioStream",
 ]

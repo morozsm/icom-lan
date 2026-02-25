@@ -9,12 +9,16 @@ __all__ = [
     "PacketHeader",
     "CivFrame",
     "HEADER_SIZE",
+    "AUDIO_HEADER_SIZE",
     "bcd_encode",
     "bcd_decode",
 ]
 
 # Fixed header size: 4 (len) + 2 (type) + 2 (seq) + 4 (sentid) + 4 (rcvdid) = 16 bytes
 HEADER_SIZE = 0x10
+
+# Audio packet header: standard 16-byte header + 8 bytes audio sub-header
+AUDIO_HEADER_SIZE = 0x18
 
 
 class PacketType(IntEnum):
