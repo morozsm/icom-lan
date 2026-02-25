@@ -61,13 +61,18 @@ class TestParseCivFrame:
 
     def test_parse_minimal(self) -> None:
         result = parse_civ_frame(b"\xfe\xfe\x98\xe0\x03\xfd")
-        assert result == CivFrame(to_addr=0x98, from_addr=0xE0, command=0x03, sub=None, data=b"")
+        assert result == CivFrame(
+            to_addr=0x98, from_addr=0xE0, command=0x03, sub=None, data=b""
+        )
 
     def test_parse_with_data(self) -> None:
         result = parse_civ_frame(b"\xfe\xfe\xe0\x98\x03\x00\x40\x07\x14\x00\xfd")
         assert result == CivFrame(
-            to_addr=0xE0, from_addr=0x98, command=0x03,
-            sub=None, data=b"\x00\x40\x07\x14\x00",
+            to_addr=0xE0,
+            from_addr=0x98,
+            command=0x03,
+            sub=None,
+            data=b"\x00\x40\x07\x14\x00",
         )
 
     def test_parse_ack(self) -> None:
@@ -130,7 +135,9 @@ class TestFrequencyCommands:
         assert freq == 14_074_000
 
     def test_parse_frequency_response_wrong_cmd(self) -> None:
-        resp = CivFrame(to_addr=0xE0, from_addr=0x98, command=0x04, sub=None, data=b"\x00" * 5)
+        resp = CivFrame(
+            to_addr=0xE0, from_addr=0x98, command=0x04, sub=None, data=b"\x00" * 5
+        )
         with pytest.raises(ValueError, match="frequency"):
             parse_frequency_response(resp)
 
@@ -151,19 +158,25 @@ class TestModeCommands:
         assert frame == b"\xfe\xfe\x98\xe0\x06\x03\x02\xfd"
 
     def test_parse_mode_response(self) -> None:
-        resp = CivFrame(to_addr=0xE0, from_addr=0x98, command=0x04, sub=None, data=b"\x01")
+        resp = CivFrame(
+            to_addr=0xE0, from_addr=0x98, command=0x04, sub=None, data=b"\x01"
+        )
         mode, filt = parse_mode_response(resp)
         assert mode == Mode.USB
         assert filt is None
 
     def test_parse_mode_response_with_filter(self) -> None:
-        resp = CivFrame(to_addr=0xE0, from_addr=0x98, command=0x04, sub=None, data=b"\x03\x02")
+        resp = CivFrame(
+            to_addr=0xE0, from_addr=0x98, command=0x04, sub=None, data=b"\x03\x02"
+        )
         mode, filt = parse_mode_response(resp)
         assert mode == Mode.CW
         assert filt == 2
 
     def test_parse_mode_response_wrong_cmd(self) -> None:
-        resp = CivFrame(to_addr=0xE0, from_addr=0x98, command=0x03, sub=None, data=b"\x01")
+        resp = CivFrame(
+            to_addr=0xE0, from_addr=0x98, command=0x03, sub=None, data=b"\x01"
+        )
         with pytest.raises(ValueError, match="mode"):
             parse_mode_response(resp)
 
@@ -212,17 +225,23 @@ class TestMeterCommands:
 
     def test_parse_meter_response(self) -> None:
         # Meter values are 2-byte BCD: 0x01 0x20 = 120
-        resp = CivFrame(to_addr=0xE0, from_addr=0x98, command=0x15, sub=0x02, data=b"\x01\x20")
+        resp = CivFrame(
+            to_addr=0xE0, from_addr=0x98, command=0x15, sub=0x02, data=b"\x01\x20"
+        )
         value = parse_meter_response(resp)
         assert value == 120
 
     def test_parse_meter_response_zero(self) -> None:
-        resp = CivFrame(to_addr=0xE0, from_addr=0x98, command=0x15, sub=0x02, data=b"\x00\x00")
+        resp = CivFrame(
+            to_addr=0xE0, from_addr=0x98, command=0x15, sub=0x02, data=b"\x00\x00"
+        )
         value = parse_meter_response(resp)
         assert value == 0
 
     def test_parse_meter_response_max(self) -> None:
-        resp = CivFrame(to_addr=0xE0, from_addr=0x98, command=0x15, sub=0x02, data=b"\x02\x55")
+        resp = CivFrame(
+            to_addr=0xE0, from_addr=0x98, command=0x15, sub=0x02, data=b"\x02\x55"
+        )
         value = parse_meter_response(resp)
         assert value == 255
 
@@ -251,7 +270,9 @@ class TestAckNak:
         assert parse_ack_nak(resp) is False
 
     def test_not_ack_nak(self) -> None:
-        resp = CivFrame(to_addr=0xE0, from_addr=0x98, command=0x03, sub=None, data=b"\x00" * 5)
+        resp = CivFrame(
+            to_addr=0xE0, from_addr=0x98, command=0x03, sub=None, data=b"\x00" * 5
+        )
         assert parse_ack_nak(resp) is None
 
 
@@ -276,5 +297,7 @@ class TestEdgeCases:
         assert a == b
 
     def test_civframe_with_sub(self) -> None:
-        f = CivFrame(to_addr=0x98, from_addr=0xE0, command=0x15, sub=0x02, data=b"\x01\x20")
+        f = CivFrame(
+            to_addr=0x98, from_addr=0xE0, command=0x15, sub=0x02, data=b"\x01\x20"
+        )
         assert f.sub == 0x02

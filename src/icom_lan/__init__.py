@@ -20,6 +20,7 @@ from .exceptions import (
 )
 from .protocol import identify_packet_type, parse_header, serialize_header
 from .transport import ConnectionState, IcomTransport
+from .radio import IcomRadio
 from .commands import (
     CONTROLLER_ADDR,
     IC_7610_ADDR,
@@ -53,6 +54,8 @@ from .types import (
 
 __all__ = [
     "__version__",
+    # Radio
+    "IcomRadio",
     # Exceptions
     "IcomLanError",
     "ConnectionError",

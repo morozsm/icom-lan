@@ -189,9 +189,7 @@ def parse_frequency_response(frame: CivFrame) -> int:
 # --- Mode commands ---
 
 
-def get_mode(
-    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
-) -> bytes:
+def get_mode(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR) -> bytes:
     """Build a 'get mode' CI-V command."""
     return build_civ_frame(to_addr, from_addr, _CMD_MODE_GET)
 
@@ -269,9 +267,7 @@ def _level_bcd_decode(data: bytes) -> int:
     return d0 * 1000 + d1 * 100 + d2 * 10 + d3
 
 
-def get_power(
-    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
-) -> bytes:
+def get_power(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR) -> bytes:
     """Build a 'get RF power' CI-V command."""
     return build_civ_frame(to_addr, from_addr, _CMD_LEVEL, sub=_SUB_RF_POWER)
 
@@ -299,23 +295,17 @@ def set_power(
 # --- Meter commands ---
 
 
-def get_s_meter(
-    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
-) -> bytes:
+def get_s_meter(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR) -> bytes:
     """Build a 'read S-meter' CI-V command."""
     return build_civ_frame(to_addr, from_addr, _CMD_METER, sub=_SUB_S_METER)
 
 
-def get_swr(
-    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
-) -> bytes:
+def get_swr(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR) -> bytes:
     """Build a 'read SWR meter' CI-V command."""
     return build_civ_frame(to_addr, from_addr, _CMD_METER, sub=_SUB_SWR_METER)
 
 
-def get_alc(
-    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
-) -> bytes:
+def get_alc(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR) -> bytes:
     """Build a 'read ALC meter' CI-V command."""
     return build_civ_frame(to_addr, from_addr, _CMD_METER, sub=_SUB_ALC_METER)
 
@@ -340,16 +330,12 @@ def parse_meter_response(frame: CivFrame) -> int:
 # --- PTT commands ---
 
 
-def ptt_on(
-    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
-) -> bytes:
+def ptt_on(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR) -> bytes:
     """Build a PTT-on CI-V command."""
     return build_civ_frame(to_addr, from_addr, _CMD_PTT, sub=_SUB_PTT, data=b"\x01")
 
 
-def ptt_off(
-    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
-) -> bytes:
+def ptt_off(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR) -> bytes:
     """Build a PTT-off CI-V command."""
     return build_civ_frame(to_addr, from_addr, _CMD_PTT, sub=_SUB_PTT, data=b"\x00")
 

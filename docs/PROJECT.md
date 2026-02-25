@@ -90,11 +90,11 @@ Icom использует проприетарный UDP-протокол для
 ### Фаза 1 — Transport (MVP)
 **Цель:** Установить UDP-соединение с радио, пройти аутентификацию, поддерживать keep-alive.
 
-- [ ] Разобрать формат пакетов из `packettypes.h`
-- [ ] Реализовать UDP transport (asyncio)
-- [ ] Login + auth handshake
-- [ ] Keep-alive loop
-- [ ] Корректный disconnect
+- [x] Разобрать формат пакетов из `packettypes.h`
+- [x] Реализовать UDP transport (asyncio)
+- [x] Login + auth handshake
+- [x] Keep-alive loop
+- [x] Корректный disconnect
 - [ ] Тест: подключиться к IC-7610 на 192.168.1.100
 
 **Результат:** `radio.connect()` / `radio.disconnect()` работают.
