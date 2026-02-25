@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] — 2026-02-25
+
+### Added
+
+- **Audio streaming** (Phase 3):
+    - `AudioCodec` enum: uLaw, PCM 8/16-bit, Opus 1ch/2ch
+    - `JitterBuffer`: reorder out-of-order packets, gap detection, overflow protection
+    - Full-duplex audio: simultaneous RX + TX
+    - `start_audio()` / `stop_audio()` convenience API
+    - Configurable `audio_codec` and `audio_sample_rate` on `IcomRadio`
+- **Synchronous API** (`icom_lan.sync`):
+    - Blocking `IcomRadio` wrapper with context manager
+    - Full API parity with async version
+- **Radio model presets** (`icom_lan.radios`):
+    - IC-7610 (0x98), IC-7300 (0x94), IC-705 (0xA4), IC-9700 (0xA2), IC-R8600 (0x96), IC-7851 (0x8E)
+    - `get_civ_addr()` helper function
+- **Token renewal**: background task every 60s (matches wfview protocol)
+- **Auto-reconnect**: watchdog + exponential backoff reconnect (opt-in)
+    - `auto_reconnect`, `reconnect_delay`, `reconnect_max_delay`, `watchdog_timeout` params
+
+### Improved
+
+- **Test suite**: 180 → 401 tests, coverage 63% → 88%
+- **Code quality**: all ruff errors fixed, ack/nak checks added
+- ACK/NAK verification for attenuator and preamp commands
+
+### Security
+
+- Removed private IP addresses from all source and git history
+- Internal development docs excluded from public repository
+
 ## [0.2.0] — 2026-02-25
 
 ### Added
@@ -50,5 +81,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Waterfall/echo filtering in CI-V response handling
 - GUID echo in conninfo exchange (required for CI-V port discovery)
 
+[0.3.0]: https://github.com/morozsm/icom-lan/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/morozsm/icom-lan/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/morozsm/icom-lan/releases/tag/v0.1.0

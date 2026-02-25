@@ -78,6 +78,9 @@ nav:
       - Troubleshooting: guide/troubleshooting.md
   - API Reference:
       - IcomRadio: api/radio.md
+      - Sync API: api/sync.md
+      - Audio: api/audio.md
+      - Radio Models: api/radios.md
       - Transport: api/transport.md
       - Commands: api/commands.md
       - Types & Enums: api/types.md
@@ -87,7 +90,6 @@ nav:
       - Architecture: internals/architecture.md
       - Protocol Deep Dive: internals/protocol.md
       - Contributing: internals/contributing.md
-      - Roadmap: ROADMAP.md
       - Changelog: CHANGELOG.md
       - Security: SECURITY.md
 

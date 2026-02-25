@@ -32,13 +32,13 @@ pip install -e ".[dev]"
 
 ## Optional: Audio Support
 
-For audio streaming (Phase 3 — coming soon):
+For Opus codec audio streaming:
 
 ```bash
 pip install icom-lan[audio]
 ```
 
-This installs `opuslib` for Opus codec support.
+This installs `opuslib` for Opus codec support. Not required for PCM/uLaw audio.
 
 ## Verify Installation
 

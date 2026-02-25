@@ -46,6 +46,17 @@ radio = IcomRadio("192.168.1.101", radio_addr=0xA4, timeout=10.0)
 - **Connectivity:** Ethernet (built-in)
 - **Notes:** Receiver only — PTT/TX commands will be rejected.
 
+## Using Presets
+
+Instead of remembering CI-V addresses, use the built-in presets:
+
+```python
+from icom_lan import IcomRadio, get_civ_addr
+
+# Look up by model name
+radio = IcomRadio("192.168.1.100", radio_addr=get_civ_addr("IC-705"))
+```
+
 ## Custom CI-V Address
 
 If you've changed your radio's CI-V address in the menu, specify it explicitly:

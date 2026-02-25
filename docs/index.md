@@ -48,11 +48,15 @@ Direct connection to your radio — no wfview, hamlib, or RS-BA1 required.
 
 - :white_check_mark: **Direct UDP connection** — no intermediate software
 - :white_check_mark: **Full CI-V command set** — frequency, mode, power, meters, PTT, CW keying, VFO, split
+- :white_check_mark: **Audio streaming** — RX/TX with jitter buffer and full-duplex support
 - :white_check_mark: **Network discovery** — find radios on your LAN automatically
 - :white_check_mark: **CLI tool** — `icom-lan status`, `icom-lan freq 14.074m`
-- :white_check_mark: **Async API** — built on asyncio for seamless integration
+- :white_check_mark: **Async + Sync API** — async by default, blocking wrapper available
+- :white_check_mark: **Auto-reconnect** — watchdog + exponential backoff (opt-in)
+- :white_check_mark: **Multi-radio presets** — IC-7610, IC-705, IC-7300, IC-9700 and more
 - :white_check_mark: **Zero dependencies** — pure Python, stdlib only
 - :white_check_mark: **Type-annotated** — full `py.typed` support for IDE autocompletion
+- :white_check_mark: **401 tests** — 88% code coverage
 
 ## Supported Radios
 
