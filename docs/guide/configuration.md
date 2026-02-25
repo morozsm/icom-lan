@@ -45,9 +45,17 @@ The Icom LAN protocol uses three UDP ports:
 |------|---------|---------|
 | Control | 50001 | Authentication, session management, keep-alive |
 | CI-V | 50002 | CI-V command exchange (frequency, mode, etc.) |
-| Audio | 50003 | Opus audio streaming (not yet implemented) |
+| Audio | 50003 | RX/TX audio streaming |
 
 The CI-V and audio ports are **negotiated during the handshake** — the library discovers them automatically from the radio's status packet. You only need to specify the control port.
+
+## Integration/Test Environment Flags
+
+| Env Var | Purpose |
+|---------|---------|
+| `ICOM_ALLOW_POWER_CONTROL=1` | Enable guarded power off/on integration test |
+| `ICOM_SOAK_SECONDS=<N>` | Run soak integration for N seconds |
+| `ICOM_CIV_MIN_INTERVAL_MS=<ms>` | Tune CI-V pacing interval in commander |
 
 ## Environment Variable Setup
 

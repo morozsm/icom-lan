@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Commander layer** (`icom_lan.commander`):
+    - priority CI-V queue (`IMMEDIATE/NORMAL/BACKGROUND`)
+    - command pacing (`ICOM_CIV_MIN_INTERVAL_MS`)
+    - dedupe keys for background polling
+    - transaction helper (`snapshot -> body -> restore`)
+- **New radio APIs**:
+    - `get_mode_info()`, `get_filter()`, `set_filter()`
+    - `get_attenuator()`, `get_preamp()`
+    - `snapshot_state()`, `restore_state()`, `run_state_transaction()`
+- **Integration coverage expansion**:
+    - CW stop interrupt test
+    - VFO exchange/equalize integration scenarios
+    - full-duplex audio orchestration test
+    - TX audio payload test
+    - guarded power off/on cycle test (`ICOM_ALLOW_POWER_CONTROL=1`)
+    - reconnect + audio recovery test
+    - soak test with JSON timeout/recovery logging (`ICOM_SOAK_SECONDS`)
+
+### Improved
+
+- CI-V reliability on real hardware via serialized command execution and pacing.
+- Audio stream bring-up reliability (including audio OpenClose behavior).
+- Integration guardrails to restore safe baseline state after risky tests.
+
 ## [0.3.0] — 2026-02-25
 
 ### Added

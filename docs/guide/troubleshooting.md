@@ -46,6 +46,7 @@ icom-lan discover
 1. **CI-V port negotiation failed** — this usually means the conninfo exchange didn't complete properly
 2. **Radio busy** — another application may be holding the CI-V stream
 3. **Network congestion** — try increasing the timeout
+4. **Command pacing too aggressive for current link/rig state** — increase `ICOM_CIV_MIN_INTERVAL_MS` (e.g., 50-80)
 
 **Debug:**
 
@@ -118,6 +119,21 @@ The library works over VPN tunnels if UDP traffic is forwarded:
 - Allow ports 50001–50003
 - Increase timeout for high-latency links
 - Discovery (broadcast) won't work over VPN — specify the radio's IP directly
+
+## Soak / Integration Diagnostics
+
+Use soak mode to capture rare timeout behavior with structured logs:
+
+```bash
+export ICOM_SOAK_SECONDS=120
+pytest -m integration tests/integration/test_radio_integration.py::TestSoak::test_soak_retries_and_logging -q -s
+```
+
+Look for:
+
+- `{"ev":"timeout", ...}` — timeout event
+- `{"ev":"recover", ...}` — reconnect recovery attempts
+- `SOAK_SUMMARY {...}` — final counters (`timeouts`, `timeouts_unrecovered`, etc.)
 
 ## Getting Help
 

@@ -13,12 +13,13 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import struct
 import time
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import Callable
+    from typing import Awaitable, Callable
 
 from .auth import (
     build_conninfo_packet,
@@ -64,6 +65,7 @@ from .exceptions import (
     TimeoutError,
 )
 from .audio import AudioPacket, AudioStream
+from .commander import IcomCommander, Priority
 from .transport import ConnectionState, IcomTransport
 from .types import AudioCodec, CivFrame, Mode
 
@@ -134,6 +136,21 @@ class IcomRadio:
         self._civ_port: int = 0
         self._audio_port: int = 0
         self._civ_send_seq: int = 0
+        self._audio_send_seq: int = 0
+        self._civ_lock = asyncio.Lock()
+        self._last_civ_send_monotonic: float = 0.0
+        self._civ_min_interval: float = float(
+            os.environ.get("ICOM_CIV_MIN_INTERVAL_MS", "35")
+        ) / 1000.0
+        self._commander: IcomCommander | None = None
+        self._filter_width: int | None = None
+        self._attenuator_state: bool | None = None
+        self._preamp_level: int | None = None
+        self._last_freq_hz: int | None = None
+        self._last_mode: Mode | None = None
+        self._last_power: int | None = None
+        self._last_split: bool | None = None
+        self._last_vfo: str | None = None
         self._token_task: asyncio.Task | None = None
         self._auto_reconnect = auto_reconnect
         self._reconnect_delay = reconnect_delay
@@ -218,6 +235,12 @@ class IcomRadio:
             logger.debug("CI-V port not in status, using default %d", civ_port)
         self._civ_port = civ_port
 
+        # wfview/protocol defaults: audio is typically control+2 (50003).
+        # Keep this as a fallback if status didn't carry audio_port.
+        if self._audio_port == 0:
+            self._audio_port = self._port + 2
+            logger.debug("Audio port not in status, using default %d", self._audio_port)
+
         # --- Phase 2: CI-V port ---
         self._civ_transport = IcomTransport()
         try:
@@ -241,6 +264,7 @@ class IcomRadio:
         self._connected = True
         self._intentional_disconnect = False
         self._ctrl_transport.state = ConnectionState.CONNECTED
+        self._start_civ_worker()
         self._start_token_renewal()
         if self._auto_reconnect:
             self._start_watchdog()
@@ -265,6 +289,10 @@ class IcomRadio:
                 await self._audio_stream.stop_tx()
                 self._audio_stream = None
             if self._audio_transport is not None:
+                try:
+                    await self._send_audio_open_close(open_stream=False)
+                except Exception:
+                    pass
                 await self._audio_transport.disconnect()
                 self._audio_transport = None
             if self._civ_transport:
@@ -272,6 +300,7 @@ class IcomRadio:
                     await self._send_open_close(open_stream=False)
                 except Exception:
                     pass
+                await self._stop_civ_worker()
                 await self._civ_transport.disconnect()
                 self._civ_transport = None
             await self._ctrl_transport.disconnect()
@@ -402,8 +431,30 @@ class IcomRadio:
 
         self._audio_transport.start_ping_loop()
         self._audio_transport.start_retransmit_loop()
+
+        # Per wfview, audio stream also uses OpenClose on its own UDP channel.
+        await self._send_audio_open_close(open_stream=True)
+
         self._audio_stream = AudioStream(self._audio_transport)
         logger.info("Audio transport connected on port %d", self._audio_port)
+
+    # ------------------------------------------------------------------
+    # CI-V command queue
+    # ------------------------------------------------------------------
+
+    def _start_civ_worker(self) -> None:
+        """Start serialized CI-V commander (wfview-like queueing)."""
+        if self._commander is None:
+            self._commander = IcomCommander(
+                self._execute_civ_raw,
+                min_interval=self._civ_min_interval,
+            )
+        self._commander.start()
+
+    async def _stop_civ_worker(self) -> None:
+        """Stop CI-V commander and fail pending commands."""
+        if self._commander is not None:
+            await self._commander.stop()
 
     # ------------------------------------------------------------------
     # Token renewal
@@ -636,31 +687,80 @@ class IcomRadio:
         logger.debug("Conninfo sent")
 
     async def _receive_civ_port(self) -> int:
-        """Wait for the status packet with CI-V and audio ports."""
+        """Wait for status packets and extract CI-V/audio ports.
+
+        wfview can receive multiple status packets; CI-V may appear before audio.
+        Collect both when possible instead of returning on the first CI-V-only packet.
+        """
         deadline = time.monotonic() + self._timeout
+        civ_port = 0
+        audio_port = 0
+
         while time.monotonic() < deadline:
             try:
                 remaining = max(0.1, deadline - time.monotonic())
                 d = await self._ctrl_transport.receive_packet(
                     timeout=min(remaining, 0.3)
                 )
-                if len(d) == STATUS_SIZE:
-                    civ_port = struct.unpack_from(">H", d, 0x42)[0]
-                    audio_port = struct.unpack_from(">H", d, 0x46)[0]
-                    if civ_port > 0:
-                        logger.info(
-                            "Status: civ_port=%d, audio_port=%d",
-                            civ_port,
-                            audio_port,
-                        )
-                        self._audio_port = audio_port
-                        return civ_port
+                if len(d) != STATUS_SIZE:
+                    continue
+
+                got_civ = struct.unpack_from(">H", d, 0x42)[0]
+                got_audio = struct.unpack_from(">H", d, 0x46)[0]
+
+                if got_civ > 0:
+                    civ_port = got_civ
+                if got_audio > 0:
+                    audio_port = got_audio
+
+                logger.info(
+                    "Status: civ_port=%d, audio_port=%d",
+                    got_civ,
+                    got_audio,
+                )
+
+                # Best case: both ports discovered.
+                if civ_port > 0 and audio_port > 0:
+                    self._audio_port = audio_port
+                    return civ_port
             except asyncio.TimeoutError:
                 continue
-        return 0
+
+        # Timed out: keep whatever we managed to learn.
+        if audio_port > 0:
+            self._audio_port = audio_port
+        return civ_port
 
     async def _send_open_close(self, *, open_stream: bool) -> None:
-        """Send OpenClose packet on the CI-V port.
+        """Send OpenClose packet on the CI-V port."""
+        if self._civ_transport is None:
+            return
+        await self._send_open_close_on_transport(
+            self._civ_transport,
+            send_seq=self._civ_send_seq,
+            open_stream=open_stream,
+        )
+        self._civ_send_seq += 1
+
+    async def _send_audio_open_close(self, *, open_stream: bool) -> None:
+        """Send OpenClose packet on the audio port (wfview behavior)."""
+        if self._audio_transport is None:
+            return
+        await self._send_open_close_on_transport(
+            self._audio_transport,
+            send_seq=self._audio_send_seq,
+            open_stream=open_stream,
+        )
+        self._audio_send_seq += 1
+
+    async def _send_open_close_on_transport(
+        self,
+        transport: IcomTransport,
+        *,
+        send_seq: int,
+        open_stream: bool,
+    ) -> None:
+        """Build/send OpenClose packet on a specific transport.
 
         Layout per wfview packettypes.h (0x16 bytes):
         0x00 len(4) 0x04 type(2) 0x06 seq(2)
@@ -668,18 +768,14 @@ class IcomRadio:
         0x10 data(2)=0x01C0  0x12 unused(1)
         0x13 sendseq(2,BE)   0x15 magic(1)
         """
-        if self._civ_transport is None:
-            return
         pkt = bytearray(OPENCLOSE_SIZE)
         struct.pack_into("<I", pkt, 0x00, OPENCLOSE_SIZE)
-        struct.pack_into("<I", pkt, 0x08, self._civ_transport.my_id)
-        struct.pack_into("<I", pkt, 0x0C, self._civ_transport.remote_id)
+        struct.pack_into("<I", pkt, 0x08, transport.my_id)
+        struct.pack_into("<I", pkt, 0x0C, transport.remote_id)
         struct.pack_into("<H", pkt, 0x10, 0x01C0)  # data
-        # 0x12 = unused (stays 0x00)
-        struct.pack_into(">H", pkt, 0x13, self._civ_send_seq)  # sendseq BE
+        struct.pack_into(">H", pkt, 0x13, send_seq)  # sendseq BE
         pkt[0x15] = 0x04 if open_stream else 0x00  # magic
-        self._civ_send_seq += 1
-        await self._civ_transport.send_tracked(bytes(pkt))
+        await transport.send_tracked(bytes(pkt))
         logger.debug("OpenClose(%s) sent", "open" if open_stream else "close")
 
     async def _wait_for_packet(
@@ -738,70 +834,103 @@ class IcomRadio:
         pkt[CIV_HEADER_SIZE:] = civ_frame
         return bytes(pkt)
 
-    async def _send_civ_raw(self, civ_frame: bytes) -> CivFrame:
-        """Send a CI-V frame and wait for the response.
-
-        Filters through incoming packets (waterfall, echoes, idle) to find
-        the actual CI-V response from the radio.
-
-        Args:
-            civ_frame: Raw CI-V frame bytes.
-
-        Returns:
-            Parsed response CivFrame.
-
-        Raises:
-            TimeoutError: If no response within timeout.
-        """
+    async def _send_civ_raw(
+        self,
+        civ_frame: bytes,
+        *,
+        priority: Priority = Priority.NORMAL,
+        key: str | None = None,
+        dedupe: bool = False,
+    ) -> CivFrame:
+        """Enqueue a CI-V command and wait for its response."""
         assert self._civ_transport is not None
-        pkt = self._wrap_civ(civ_frame)
-        await self._civ_transport.send_tracked(pkt)
+
+        if self._commander is None:
+            # Fallback path (e.g. during tests/mocks before queue init).
+            return await self._execute_civ_raw(civ_frame)
+
+        return await self._commander.send(
+            civ_frame,
+            priority=priority,
+            key=key,
+            dedupe=dedupe,
+        )
+
+    async def _execute_civ_raw(self, civ_frame: bytes) -> CivFrame:
+        """Execute one CI-V command on transport (serialized by worker)."""
+        assert self._civ_transport is not None
 
         # Extract our command byte for matching the response
         # Frame: FE FE <to> <from> <cmd> [sub] [data] FD
         our_cmd = civ_frame[4] if len(civ_frame) > 4 else 0xFF
 
-        deadline = time.monotonic() + self._timeout
-        while True:
-            remaining = deadline - time.monotonic()
-            if remaining <= 0:
-                raise TimeoutError("CI-V response timed out")
-            try:
-                resp = await self._civ_transport.receive_packet(
-                    timeout=remaining
+        attempts = 3
+        for attempt in range(1, attempts + 1):
+            # Rate-limit CI-V commands slightly (wfview-like pacing).
+            now = time.monotonic()
+            delta = now - self._last_civ_send_monotonic
+            if delta < self._civ_min_interval:
+                await asyncio.sleep(self._civ_min_interval - delta)
+
+            pkt = self._wrap_civ(civ_frame)
+            await self._civ_transport.send_tracked(pkt)
+            self._last_civ_send_monotonic = time.monotonic()
+
+            deadline = time.monotonic() + self._timeout
+            timed_out = False
+
+            while True:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    timed_out = True
+                    break
+                try:
+                    resp = await self._civ_transport.receive_packet(timeout=remaining)
+                except asyncio.TimeoutError:
+                    timed_out = True
+                    break
+
+                if len(resp) <= CIV_HEADER_SIZE:
+                    continue  # idle/control packet
+
+                payload = resp[CIV_HEADER_SIZE:]
+
+                # Scan payload for CI-V frames (there may be waterfall data too)
+                idx = 0
+                while idx < len(payload) - 4:
+                    if payload[idx] == 0xFE and payload[idx + 1] == 0xFE:
+                        fd_pos = payload.find(b"\xfd", idx + 4)
+                        if fd_pos < 0:
+                            break
+                        frame_bytes = payload[idx : fd_pos + 1]
+                        to_addr = frame_bytes[2]
+                        from_addr = frame_bytes[3]
+                        cmd = frame_bytes[4]
+
+                        # Skip echoes (our command reflected back) and waterfall
+                        if (
+                            from_addr == self._radio_addr
+                            and to_addr == CONTROLLER_ADDR
+                            and cmd != 0x27
+                            and (cmd == our_cmd or cmd in (0xFB, 0xFA))
+                        ):
+                            return parse_civ_frame(frame_bytes)
+
+                        idx = fd_pos + 1
+                    else:
+                        idx += 1
+
+            if timed_out and attempt < attempts:
+                logger.debug(
+                    "CI-V command 0x%02X timed out (attempt %d/%d), retrying",
+                    our_cmd,
+                    attempt,
+                    attempts,
                 )
-            except asyncio.TimeoutError:
-                raise TimeoutError("CI-V response timed out")
+                await self._flush_queue(self._civ_transport, max_pkts=50)
+                continue
 
-            if len(resp) <= CIV_HEADER_SIZE:
-                continue  # idle/control packet
-
-            payload = resp[CIV_HEADER_SIZE:]
-
-            # Scan payload for CI-V frames (there may be waterfall data too)
-            idx = 0
-            while idx < len(payload) - 4:
-                if payload[idx] == 0xFE and payload[idx + 1] == 0xFE:
-                    fd_pos = payload.find(b"\xfd", idx + 4)
-                    if fd_pos < 0:
-                        break
-                    frame_bytes = payload[idx : fd_pos + 1]
-                    to_addr = frame_bytes[2]
-                    from_addr = frame_bytes[3]
-                    cmd = frame_bytes[4]
-
-                    # Skip echoes (our command reflected back) and waterfall
-                    if (
-                        from_addr == self._radio_addr
-                        and to_addr == CONTROLLER_ADDR
-                        and cmd != 0x27  # not waterfall
-                        and (cmd == our_cmd or cmd in (0xFB, 0xFA))
-                    ):
-                        return parse_civ_frame(frame_bytes)
-
-                    idx = fd_pos + 1
-                else:
-                    idx += 1
+        raise TimeoutError("CI-V response timed out")
 
     # ------------------------------------------------------------------
     # Public CI-V API
@@ -834,8 +963,10 @@ class IcomRadio:
         """Get the current operating frequency in Hz."""
         self._check_connected()
         civ = get_frequency(to_addr=self._radio_addr)
-        resp = await self._send_civ_raw(civ)
-        return parse_frequency_response(resp)
+        resp = await self._send_civ_raw(civ, key="get_frequency", dedupe=True)
+        freq = parse_frequency_response(resp)
+        self._last_freq_hz = freq
+        return freq
 
     async def set_frequency(self, freq_hz: int) -> None:
         """Set the operating frequency.
@@ -849,36 +980,63 @@ class IcomRadio:
         ack = parse_ack_nak(resp)
         if ack is False:
             raise CommandError(f"Radio rejected set_frequency({freq_hz})")
+        self._last_freq_hz = freq_hz
 
     async def get_mode(self) -> Mode:
         """Get the current operating mode."""
+        mode, _ = await self.get_mode_info()
+        return mode
+
+    async def get_mode_info(self) -> tuple[Mode, int | None]:
+        """Get current mode and filter number (if reported by radio)."""
         self._check_connected()
         civ = get_mode(to_addr=self._radio_addr)
         resp = await self._send_civ_raw(civ)
-        mode, _ = parse_mode_response(resp)
-        return mode
+        mode, filt = parse_mode_response(resp)
+        self._last_mode = mode
+        if filt is not None:
+            self._filter_width = filt
+        return mode, filt
 
-    async def set_mode(self, mode: Mode | str) -> None:
+    async def get_filter(self) -> int | None:
+        """Get current mode filter number (1-3) when available."""
+        _, filt = await self.get_mode_info()
+        return filt if filt is not None else self._filter_width
+
+    async def set_filter(self, filter_width: int) -> None:
+        """Set filter number (1-3) while keeping current mode unchanged."""
+        mode = await self.get_mode()
+        await self.set_mode(mode, filter_width=filter_width)
+
+    async def set_mode(self, mode: Mode | str, filter_width: int | None = None) -> None:
         """Set the operating mode.
 
         Args:
             mode: Mode enum or string name (e.g. "USB", "LSB").
+            filter_width: Optional filter number (1-3).
         """
         self._check_connected()
         if isinstance(mode, str):
             mode = Mode[mode]
-        civ = set_mode(mode, to_addr=self._radio_addr)
+        civ = set_mode(mode, filter_width=filter_width, to_addr=self._radio_addr)
         resp = await self._send_civ_raw(civ)
         ack = parse_ack_nak(resp)
         if ack is False:
-            raise CommandError(f"Radio rejected set_mode({mode})")
+            raise CommandError(
+                f"Radio rejected set_mode({mode}, filter_width={filter_width})"
+            )
+        self._last_mode = mode
+        if filter_width is not None:
+            self._filter_width = filter_width
 
     async def get_power(self) -> int:
         """Get the RF power level (0-255)."""
         self._check_connected()
         civ = get_power(to_addr=self._radio_addr)
-        resp = await self._send_civ_raw(civ)
-        return _level_bcd_decode(resp.data)
+        resp = await self._send_civ_raw(civ, key="get_power", dedupe=True)
+        level = _level_bcd_decode(resp.data)
+        self._last_power = level
+        return level
 
     async def set_power(self, level: int) -> None:
         """Set the RF power level (0-255).
@@ -892,6 +1050,7 @@ class IcomRadio:
         ack = parse_ack_nak(resp)
         if ack is False:
             raise CommandError(f"Radio rejected set_power({level})")
+        self._last_power = level
 
     async def get_s_meter(self) -> int:
         """Read the S-meter value (0-255)."""
@@ -926,7 +1085,7 @@ class IcomRadio:
             if on
             else ptt_off(to_addr=self._radio_addr)
         )
-        resp = await self._send_civ_raw(civ)
+        resp = await self._send_civ_raw(civ, priority=Priority.IMMEDIATE)
         ack = parse_ack_nak(resp)
         if ack is False:
             raise CommandError(f"Radio rejected PTT {'on' if on else 'off'}")
@@ -948,6 +1107,7 @@ class IcomRadio:
         ack = parse_ack_nak(resp)
         if ack is False:
             raise CommandError(f"Radio rejected VFO select {vfo}")
+        self._last_vfo = vfo.upper()
 
     async def vfo_equalize(self) -> None:
         """Copy VFO A to VFO B (A=B)."""
@@ -969,6 +1129,29 @@ class IcomRadio:
         ack = parse_ack_nak(resp)
         if ack is False:
             raise CommandError(f"Radio rejected split {'on' if on else 'off'}")
+        self._last_split = on
+
+    async def get_attenuator(self) -> bool:
+        """Read attenuator state.
+
+        Returns:
+            True if attenuator is enabled.
+        """
+        self._check_connected()
+        civ = build_civ_frame(self._radio_addr, CONTROLLER_ADDR, 0x11)
+        try:
+            resp = await self._send_civ_raw(civ)
+            if resp.data:
+                raw = resp.data[0]
+                val = ((raw >> 4) & 0x0F) * 10 + (raw & 0x0F)
+                self._attenuator_state = val != 0
+                return self._attenuator_state
+        except TimeoutError:
+            pass
+
+        if self._attenuator_state is not None:
+            return self._attenuator_state
+        raise CommandError("Radio returned empty attenuator response")
 
     async def set_attenuator(self, on: bool) -> None:
         """Enable or disable attenuator."""
@@ -978,6 +1161,24 @@ class IcomRadio:
         ack = parse_ack_nak(resp)
         if ack is False:
             raise CommandError(f"Radio rejected attenuator {'on' if on else 'off'}")
+        self._attenuator_state = on
+
+    async def get_preamp(self) -> int:
+        """Read preamp level (0=off, 1=PREAMP1, 2=PREAMP2)."""
+        self._check_connected()
+        civ = build_civ_frame(self._radio_addr, CONTROLLER_ADDR, 0x16)
+        try:
+            resp = await self._send_civ_raw(civ)
+            if resp.data:
+                raw = resp.data[0]
+                self._preamp_level = ((raw >> 4) & 0x0F) * 10 + (raw & 0x0F)
+                return self._preamp_level
+        except TimeoutError:
+            pass
+
+        if self._preamp_level is not None:
+            return self._preamp_level
+        raise CommandError("Radio returned empty preamp response")
 
     async def set_preamp(self, level: int = 1) -> None:
         """Set preamp level (0=off, 1=PREAMP1, 2=PREAMP2)."""
@@ -987,6 +1188,118 @@ class IcomRadio:
         ack = parse_ack_nak(resp)
         if ack is False:
             raise CommandError(f"Radio rejected preamp level {level}")
+        self._preamp_level = level
+
+    async def snapshot_state(self) -> dict[str, object]:
+        """Best-effort snapshot of core rig state for safe restore."""
+        self._check_connected()
+        state: dict[str, object] = {}
+
+        try:
+            state["frequency"] = await self.get_frequency()
+        except Exception:
+            if self._last_freq_hz is not None:
+                state["frequency"] = self._last_freq_hz
+
+        try:
+            mode, filt = await self.get_mode_info()
+            state["mode"] = mode
+            if filt is not None:
+                state["filter"] = filt
+        except Exception:
+            if self._last_mode is not None:
+                state["mode"] = self._last_mode
+            if self._filter_width is not None:
+                state["filter"] = self._filter_width
+
+        try:
+            state["power"] = await self.get_power()
+        except Exception:
+            if self._last_power is not None:
+                state["power"] = self._last_power
+
+        if self._last_split is not None:
+            state["split"] = self._last_split
+        if self._last_vfo is not None:
+            state["vfo"] = self._last_vfo
+        if self._attenuator_state is not None:
+            state["attenuator"] = self._attenuator_state
+        if self._preamp_level is not None:
+            state["preamp"] = self._preamp_level
+
+        return state
+
+    async def restore_state(self, state: dict[str, object]) -> None:
+        """Best-effort restore of state produced by snapshot_state()."""
+        self._check_connected()
+
+        if "split" in state:
+            try:
+                await self.set_split_mode(bool(state["split"]))
+            except Exception:
+                pass
+        if "vfo" in state:
+            try:
+                await self.select_vfo(str(state["vfo"]))
+            except Exception:
+                pass
+
+        if "power" in state:
+            try:
+                await self.set_power(int(state["power"]))
+            except Exception:
+                pass
+
+        mode = state.get("mode")
+        filt = state.get("filter")
+        if isinstance(mode, Mode):
+            try:
+                await self.set_mode(mode, filter_width=int(filt) if isinstance(filt, int) else None)
+            except Exception:
+                pass
+
+        if "frequency" in state:
+            try:
+                await self.set_frequency(int(state["frequency"]))
+            except Exception:
+                pass
+
+        if "attenuator" in state:
+            try:
+                await self.set_attenuator(bool(state["attenuator"]))
+            except Exception:
+                pass
+
+        if "preamp" in state:
+            try:
+                await self.set_preamp(int(state["preamp"]))
+            except Exception:
+                pass
+
+    async def run_state_transaction(
+        self,
+        body: "Callable[[], Awaitable[None]]",
+    ) -> None:
+        """Run operation with snapshot/restore guard (wfview-style safety pattern)."""
+        self._check_connected()
+
+        async def _body() -> dict[str, object]:
+            await body()
+            return {}
+
+        if self._commander is None:
+            snapshot = await self.snapshot_state()
+            try:
+                await body()
+            finally:
+                await self.restore_state(snapshot)
+            return
+
+        await self._commander.transaction(
+            snapshot=self.snapshot_state,
+            restore=self.restore_state,
+            body=_body,
+        )
 
     # ------------------------------------------------------------------
     # CW keying
@@ -1012,7 +1325,7 @@ class IcomRadio:
         """Stop CW sending."""
         self._check_connected()
         civ = stop_cw(to_addr=self._radio_addr)
-        await self._send_civ_raw(civ)
+        await self._send_civ_raw(civ, priority=Priority.IMMEDIATE)
         # Stop CW may not return ACK, just ignore
 
     async def power_control(self, on: bool) -> None:

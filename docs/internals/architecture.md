@@ -20,6 +20,10 @@
 │            │   │Transport │  │Transport │     │      │
 │            │   │ (:50001) │  │ (:50002) │     │      │
 │            │   └────┬─────┘  └────┬─────┘     │      │
+│            │        ┌──────────────────────┐   │      │
+│            │        │ IcomCommander queue  │   │      │
+│            │        │ priorities/pacing    │   │      │
+│            │        └──────────────────────┘   │      │
 │            └────────┼─────────────┼───────────┘      │
 │                     │             │                   │
 └─────────────────────┼─────────────┼───────────────────┘
@@ -40,9 +44,20 @@ The central orchestrator. `IcomRadio` manages:
 
 - **Two transport instances**: one for control (port 50001), one for CI-V (port 50002)
 - **Full handshake sequence**: discovery → login → token → conninfo → CI-V open
+- **Commander integration**: enqueues CI-V operations with priorities and pacing
 - **CI-V command wrapping**: takes raw CI-V frames, wraps them in UDP data packets
 - **Response filtering**: skips echoes, waterfall data, and control packets to find CI-V responses
+- **State guardrails**: snapshot/restore helpers for safe test transactions
 - **Public API methods**: `get_frequency()`, `set_mode()`, etc.
+
+### `commander.py` — CI-V Command Queue
+
+Serialized command execution layer inspired by wfview:
+
+- **Priority queue** (`IMMEDIATE` / `NORMAL` / `BACKGROUND`)
+- **Pacing/throttling** between commands (`ICOM_CIV_MIN_INTERVAL_MS`)
+- **Dedupe** for background polling keys
+- **Transaction helper** (`snapshot -> body -> restore`)
 
 ### `transport.py` — UDP Transport
 
@@ -95,6 +110,7 @@ Argparse-based CLI that wraps the async API with `asyncio.run()`.
 ```
 radio.get_frequency()
     → get_frequency() builds CI-V frame: FE FE 98 E0 03 FD
+    → IcomCommander.enqueue(priority=normal, key=get_frequency)
     → _wrap_civ() adds UDP header (0x15-byte prefix)
     → _civ_transport.send_tracked() assigns sequence number
     → UDP packet sent to radio:50002

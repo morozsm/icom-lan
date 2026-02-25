@@ -85,6 +85,8 @@ The library opens a **second UDP connection** to the CI-V port (50002) and sends
 
 Once open, CI-V commands flow through port 50002 (not the control port 50001).
 
+CI-V calls are then serialized through an internal commander queue (wfview-style), with pacing and retry logic to reduce real-hardware flakiness.
+
 ## Keep-Alive
 
 Both ports maintain keep-alive with **ping packets** every 500ms. If the radio doesn't receive pings, it drops the connection after a timeout.

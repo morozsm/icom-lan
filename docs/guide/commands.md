@@ -27,10 +27,17 @@ from icom_lan import Mode
 mode = await radio.get_mode()
 print(mode.name)  # "USB"
 
+# Get mode + filter number (if reported)
+mode, filt = await radio.get_mode_info()
+
 # Set mode (string or enum)
 await radio.set_mode("USB")
 await radio.set_mode("CW")
 await radio.set_mode(Mode.LSB)
+
+# Set/read filter number
+await radio.set_filter(2)
+f = await radio.get_filter()
 ```
 
 Available modes:
@@ -122,7 +129,7 @@ await radio.select_vfo("B")     # VFO B
 await radio.select_vfo("MAIN")  # Main receiver (IC-7610)
 await radio.select_vfo("SUB")   # Sub receiver (IC-7610)
 
-# Copy VFO A to VFO B
+# A=B command (semantics can vary on MAIN/SUB radios; use with care)
 await radio.vfo_equalize()
 
 # Swap VFO A and B
@@ -137,10 +144,12 @@ await radio.set_split_mode(False)
 
 ```python
 # Attenuator
+att = await radio.get_attenuator()
 await radio.set_attenuator(True)   # ATT on
 await radio.set_attenuator(False)  # ATT off
 
 # Preamp
+pre = await radio.get_preamp()
 await radio.set_preamp(0)  # Off
 await radio.set_preamp(1)  # PREAMP 1
 await radio.set_preamp(2)  # PREAMP 2

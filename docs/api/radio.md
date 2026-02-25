@@ -18,6 +18,12 @@ IcomRadio(
     password: str = "",
     radio_addr: int = 0x98,
     timeout: float = 5.0,
+    audio_codec: AudioCodec | int = AudioCodec.PCM_1CH_16BIT,
+    audio_sample_rate: int = 48000,
+    auto_reconnect: bool = False,
+    reconnect_delay: float = 2.0,
+    reconnect_max_delay: float = 60.0,
+    watchdog_timeout: float = 30.0,
 )
 ```
 
@@ -29,6 +35,11 @@ IcomRadio(
 | `password` | `str` | `""` | Authentication password |
 | `radio_addr` | `int` | `0x98` | CI-V address of the radio |
 | `timeout` | `float` | `5.0` | Default timeout for all operations (seconds) |
+
+Additional optional parameters:
+
+- `audio_codec`, `audio_sample_rate` — audio stream configuration
+- `auto_reconnect`, `reconnect_delay`, `reconnect_max_delay`, `watchdog_timeout` — reconnect/watchdog behavior
 
 ### Context Manager
 
@@ -140,10 +151,27 @@ Get the current operating mode.
 
 **Returns:** `Mode` enum value (e.g., `Mode.USB`)
 
+### `get_mode_info()`
+
+```python
+async def get_mode_info(self) -> tuple[Mode, int | None]
+```
+
+Get current mode and filter number (if radio reports filter in response).
+
+### `get_filter()` / `set_filter()`
+
+```python
+async def get_filter(self) -> int | None
+async def set_filter(self, filter_width: int) -> None
+```
+
+Read/set current filter number (1-3) while preserving mode.
+
 ### `set_mode()`
 
 ```python
-async def set_mode(self, mode: Mode | str) -> None
+async def set_mode(self, mode: Mode | str, filter_width: int | None = None) -> None
 ```
 
 Set the operating mode.
@@ -253,7 +281,7 @@ Select the active VFO.
 async def vfo_equalize(self) -> None
 ```
 
-Copy VFO A settings to VFO B (A=B).
+Send the CI-V A=B command. On MAIN/SUB radios (e.g. IC-7610), practical semantics can differ from a literal MAIN→SUB copy depending on rig state.
 
 ### `vfo_exchange()`
 
@@ -275,17 +303,19 @@ Enable or disable split mode (TX on VFO B, RX on VFO A).
 
 ## Attenuator & Preamp
 
-### `set_attenuator()`
+### `get_attenuator()` / `set_attenuator()`
 
 ```python
+async def get_attenuator(self) -> bool
 async def set_attenuator(self, on: bool) -> None
 ```
 
-Enable or disable the attenuator.
+Read or set attenuator state.
 
-### `set_preamp()`
+### `get_preamp()` / `set_preamp()`
 
 ```python
+async def get_preamp(self) -> int
 async def set_preamp(self, level: int = 1) -> None
 ```
 
@@ -330,6 +360,25 @@ async def power_control(self, on: bool) -> None
 Remote power on/off. Requires the radio to maintain network connectivity in standby.
 
 ---
+
+## State Guardrails
+
+### `snapshot_state()` / `restore_state()`
+
+```python
+async def snapshot_state(self) -> dict[str, object]
+async def restore_state(self, state: dict[str, object]) -> None
+```
+
+Best-effort helpers for preserving and restoring rig state in integration workflows.
+
+### `run_state_transaction()`
+
+```python
+async def run_state_transaction(self, body: Callable[[], Awaitable[None]]) -> None
+```
+
+Run an operation with automatic snapshot/restore guard.
 
 ## Raw CI-V
 

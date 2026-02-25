@@ -111,6 +111,18 @@ class IcomRadio:
         """Get the current operating mode."""
         return self._run(self._radio.get_mode())
 
+    def get_mode_info(self) -> tuple[Mode, int | None]:
+        """Get current mode and filter number (if reported)."""
+        return self._run(self._radio.get_mode_info())
+
+    def get_filter(self) -> int | None:
+        """Get current filter number (1-3) when available."""
+        return self._run(self._radio.get_filter())
+
+    def set_filter(self, filter_width: int) -> None:
+        """Set filter number (1-3) while keeping current mode."""
+        self._run(self._radio.set_filter(filter_width))
+
     def set_mode(self, mode: str | Mode, filter_width: int | None = None) -> None:
         """Set the operating mode."""
         self._run(self._radio.set_mode(mode, filter_width))
@@ -175,13 +187,33 @@ class IcomRadio:
     # Attenuator / Preamp
     # ------------------------------------------------------------------
 
+    def get_attenuator(self) -> bool:
+        """Read attenuator state."""
+        return self._run(self._radio.get_attenuator())
+
     def set_attenuator(self, on: bool) -> None:
         """Enable or disable the attenuator."""
         self._run(self._radio.set_attenuator(on))
 
+    def get_preamp(self) -> int:
+        """Read preamp level (0=off, 1=PREAMP1, 2=PREAMP2)."""
+        return self._run(self._radio.get_preamp())
+
     def set_preamp(self, level: int = 1) -> None:
         """Set preamp level (0=off, 1=PREAMP1, 2=PREAMP2)."""
         self._run(self._radio.set_preamp(level))
+
+    # ------------------------------------------------------------------
+    # State snapshot/restore
+    # ------------------------------------------------------------------
+
+    def snapshot_state(self) -> dict[str, object]:
+        """Best-effort snapshot of core rig state."""
+        return self._run(self._radio.snapshot_state())
+
+    def restore_state(self, state: dict[str, object]) -> None:
+        """Best-effort restore of snapshot_state()."""
+        self._run(self._radio.restore_state(state))
 
     # ------------------------------------------------------------------
     # CW

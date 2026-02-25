@@ -1,6 +1,6 @@
 """icom-lan: Python library for controlling Icom transceivers over LAN."""
 
-__version__ = "0.2.0"
+__version__ = "0.3.1"
 
 from .auth import (
     AuthResponse,
@@ -21,6 +21,7 @@ from .exceptions import (
 from .protocol import identify_packet_type, parse_header, serialize_header
 from .audio import AUDIO_HEADER_SIZE, AudioPacket, AudioState, AudioStream, JitterBuffer
 from .transport import ConnectionState, IcomTransport
+from .commander import IcomCommander, Priority
 from .radio import IcomRadio
 from .radios import RADIOS, RadioModel, get_civ_addr
 from .commands import (
@@ -59,6 +60,8 @@ __all__ = [
     "__version__",
     # Radio
     "IcomRadio",
+    "IcomCommander",
+    "Priority",
     # Radio models
     "RADIOS",
     "RadioModel",

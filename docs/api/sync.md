@@ -20,6 +20,17 @@ with IcomRadio("192.168.1.100", username="u", password="p") as radio:
     print(f"SWR: {radio.get_swr()}")
 ```
 
+### Common sync helpers
+
+```python
+mode, filt = radio.get_mode_info()
+radio.set_filter(2)
+att = radio.get_attenuator()
+pre = radio.get_preamp()
+state = radio.snapshot_state()
+radio.restore_state(state)
+```
+
 !!! tip "When to use sync vs async"
     Use the **sync API** for simple scripts, CLI tools, and Jupyter notebooks.
     Use the **async API** for applications that need concurrent operations,

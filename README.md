@@ -2,7 +2,7 @@
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-151%20passed-brightgreen.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-416%20passed-brightgreen.svg)](#testing)
 
 **Python library for controlling Icom transceivers over LAN (UDP).**
 
@@ -11,10 +11,11 @@ Direct connection to your radio — no wfview, hamlib, or RS-BA1 required.
 ## Features
 
 - 📡 **Direct UDP connection** — no intermediate software needed
-- 🎛️ **Full CI-V command set** — frequency, mode, power, meters, PTT, CW keying, VFO, split
+- 🎛️ **Full CI-V command set** — frequency, mode, filter, power, meters, PTT, CW keying, VFO, split, ATT, PREAMP
 - 🔍 **Network discovery** — find radios on your LAN automatically
 - 💻 **CLI tool** — `icom-lan status`, `icom-lan freq 14.074m`
 - ⚡ **Async API** — built on asyncio for seamless integration
+- 🧠 **Commander queue** — wfview-style serialized command execution with pacing, retries, and dedupe
 - 🔒 **Zero dependencies** — pure Python, stdlib only
 - 📝 **Type-annotated** — full `py.typed` support
 
@@ -118,7 +119,9 @@ icom-lan discover
 | `get_frequency()` → `int` | Current frequency in Hz |
 | `set_frequency(hz)` | Set frequency |
 | `get_mode()` → `Mode` | Current mode |
-| `set_mode(mode)` | Set mode (enum or string) |
+| `get_mode_info()` → `(Mode, filter)` | Current mode + filter number (if reported) |
+| `set_mode(mode, filter_width=None)` | Set mode (optionally with filter 1-3) |
+| `get_filter()` / `set_filter(n)` | Read/set filter number |
 | `get_power()` → `int` | RF power level (0–255) |
 | `set_power(level)` | Set RF power |
 | `get_s_meter()` → `int` | S-meter (0–255) |
@@ -127,10 +130,11 @@ icom-lan discover
 | `set_ptt(on)` | Push-to-talk on/off |
 | `select_vfo(vfo)` | Select VFO (A/B/MAIN/SUB) |
 | `set_split_mode(on)` | Split on/off |
-| `set_attenuator(on)` | Attenuator on/off |
-| `set_preamp(level)` | Preamp (0/1/2) |
-| `send_cw_text(text)` | Send CW via built-in keyer |
+| `get_attenuator()` / `set_attenuator(on)` | Read/set attenuator |
+| `get_preamp()` / `set_preamp(level)` | Read/set preamp (0/1/2) |
+| `send_cw_text(text)` / `stop_cw_text()` | Send/stop CW via built-in keyer |
 | `power_control(on)` | Remote power on/off |
+| `snapshot_state()` / `restore_state(state)` | Best-effort state save/restore |
 | `send_civ(cmd, sub, data)` | Send raw CI-V command |
 
 ### Configuration
@@ -150,7 +154,7 @@ The library implements the Icom proprietary LAN protocol:
 
 1. **Control port** (50001) — UDP handshake, authentication, session management
 2. **CI-V port** (50002) — CI-V command exchange
-3. **Audio port** (50003) — Opus audio streaming *(coming soon)*
+3. **Audio port** (50003) — RX/TX audio streaming (including full-duplex orchestration)
 
 ```
 Discovery → Login → Token → Conninfo → CI-V Open → Commands
@@ -161,11 +165,22 @@ See the [protocol documentation](https://morozsm.github.io/icom-lan/internals/pr
 ## Testing
 
 ```bash
-# Run all 151 unit tests (no radio required)
+# Unit tests (no radio required)
 pytest tests/test_*.py
 
-# Or with uv
-uv run pytest tests/test_*.py
+# Integration tests (real radio required)
+export ICOM_HOST=192.168.55.40
+export ICOM_USER=your_username
+export ICOM_PASS=your_password
+pytest -m integration tests/integration
+
+# Guarded power-cycle test (will actually power off/on radio)
+export ICOM_ALLOW_POWER_CONTROL=1
+pytest -m integration tests/integration/test_radio_integration.py::TestPowerHardware::test_power_cycle_roundtrip -q -s
+
+# Soak test (seconds)
+export ICOM_SOAK_SECONDS=120
+pytest -m integration tests/integration/test_radio_integration.py::TestSoak::test_soak_retries_and_logging -q -s
 ```
 
 ## Documentation
