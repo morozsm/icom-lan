@@ -422,9 +422,7 @@ class IcomRadio:
             return
 
         if self._audio_port == 0:
-            # Lazy fallback for non-audio connect flows (e.g. CLI status).
-            self._audio_port = self._port + 2
-            logger.debug("Audio port unresolved, using default %d", self._audio_port)
+            raise ConnectionError("Audio port not available")
 
         self._audio_transport = IcomTransport()
         try:
