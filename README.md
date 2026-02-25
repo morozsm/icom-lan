@@ -195,6 +195,10 @@ Protocol knowledge based on [wfview](https://wfview.org/) (GPLv3) reverse engine
 - The [wfview](https://wfview.org/) project for their extensive reverse engineering of the Icom LAN protocol
 - The amateur radio community for testing and feedback
 
+## Trademark Notice
+
+Icom™ and the Icom logo are registered trademarks of [Icom Incorporated](https://www.icomjapan.com/). This project is not affiliated with, endorsed by, or sponsored by Icom. Product names are used solely for identification and compatibility purposes (nominative fair use).
+
 ---
 
 73 de KN4KYD 🏗️

@@ -86,3 +86,6 @@ asyncio.run(main())
 MIT — see [LICENSE](https://github.com/morozsm/icom-lan/blob/main/LICENSE).
 
 Protocol knowledge derived from the [wfview](https://wfview.org/) project's reverse engineering work. This is an independent clean-room implementation.
+
+!!! note "Trademark Notice"
+    Icom™ and the Icom logo are registered trademarks of [Icom Incorporated](https://www.icomjapan.com/). This project is not affiliated with, endorsed by, or sponsored by Icom. Product names are used solely for identification and compatibility purposes (nominative fair use).
