@@ -137,30 +137,15 @@ class IcomCommander:
             while True:
                 _, _, item = await self._queue.get()
                 try:
-                    # Skip execution if the caller already cancelled their future
-                    # (e.g. TCP client disconnected before we got to this item).
-                    if item.future.cancelled():
-                        continue
-
                     now = asyncio.get_running_loop().time()
                     delta = now - self._last_send
                     if delta < self._min_interval:
                         await asyncio.sleep(self._min_interval - delta)
 
-                    # Shield _execute from caller cancellation so that the CI-V
-                    # pipeline stays intact even when asyncio.wait_for() in the
-                    # server layer cancels a pending send() future.
-                    resp = await asyncio.shield(
-                        self._execute(item.payload, item.wait_response)
-                    )
+                    resp = await self._execute(item.payload, item.wait_response)
                     self._last_send = asyncio.get_running_loop().time()
                     if not item.future.done():
                         item.future.set_result(resp)
-                except asyncio.CancelledError:
-                    # The caller's future was cancelled (e.g. client disconnect)
-                    # but _execute completed or was shielded.  Don't kill the loop.
-                    if not item.future.done():
-                        item.future.cancel()
                 except Exception as exc:
                     if not item.future.done():
                         item.future.set_exception(exc)

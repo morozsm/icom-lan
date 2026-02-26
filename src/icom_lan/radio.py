@@ -888,18 +888,8 @@ class IcomRadio:
         self._ensure_civ_runtime()
         self._start_civ_rx_pump()
         if self._commander is None:
-            # Single attempt per command in the queue to avoid blocking the
-            # pipeline for 3× timeout when the radio is slow/unresponsive.
-            # The server/caller can retry at a higher level if needed.
-            async def _commander_execute(
-                payload: bytes, wait_response: bool = True
-            ) -> CivFrame | None:
-                return await self._execute_civ_raw(
-                    payload, wait_response, max_attempts=1
-                )
-
             self._commander = IcomCommander(
-                _commander_execute,
+                self._execute_civ_raw,
                 min_interval=self._civ_min_interval,
             )
         self._commander.start()
@@ -1333,19 +1323,8 @@ class IcomRadio:
         if dropped:
             logger.debug("Dropped %d stale ACK sink waiter(s) before blocking command", dropped)
 
-    async def _execute_civ_raw(
-        self,
-        civ_frame: bytes,
-        wait_response: bool = True,
-        *,
-        max_attempts: int | None = None,
-    ) -> CivFrame | None:
-        """Execute one CI-V command via request tracker (serialized by worker).
-
-        Args:
-            max_attempts: Override default retry count (3). Use 1 when called
-                from the Commander queue to avoid blocking the pipeline.
-        """
+    async def _execute_civ_raw(self, civ_frame: bytes, wait_response: bool = True) -> CivFrame | None:
+        """Execute one CI-V command via request tracker (serialized by worker)."""
         assert self._civ_transport is not None
         self._ensure_civ_runtime()
 
@@ -1353,7 +1332,7 @@ class IcomRadio:
         request_key = request_key_from_frame(parsed_frame)
         expects_response = self._civ_expects_response(parsed_frame)
 
-        attempts = max_attempts if max_attempts is not None else 3
+        attempts = 3
         for attempt in range(1, attempts + 1):
             if not wait_response:
                 ack_sink_token: int | None = None

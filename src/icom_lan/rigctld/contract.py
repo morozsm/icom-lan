@@ -214,6 +214,6 @@ class RigctldConfig:
     read_only: bool = False
     max_clients: int = 10
     client_timeout: float = 300.0       # seconds before idle disconnect
-    command_timeout: float = 5.0        # seconds per CI-V command
+    command_timeout: float = 2.0        # seconds per CI-V command
     cache_ttl: float = 0.2             # seconds for frequency/mode cache
     max_line_length: int = 1024        # max bytes per command line (OOM guard)
