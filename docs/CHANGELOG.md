@@ -16,8 +16,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Audio low-level API names are now explicit with `_opus` suffix:
+  `start_audio_rx_opus()`, `stop_audio_rx_opus()`, `start_audio_tx_opus()`,
+  `push_audio_tx_opus()`, `stop_audio_tx_opus()`, plus full-duplex
+  `start_audio_opus()` / `stop_audio_opus()`.
 - Added internal `IcomRadio` PCM hook methods that use the transcoder without
   changing current low-level Opus streaming APIs.
+
+### Deprecated
+
+- Ambiguous audio aliases are deprecated (still functional during a two-minor-release window):
+  `start_audio_rx()`, `stop_audio_rx()`, `start_audio_tx()`, `push_audio_tx()`,
+  `stop_audio_tx()`, `start_audio()`, `stop_audio()`.
+- Synchronous wrapper aliases are likewise deprecated in favor of
+  `icom_lan.sync.IcomRadio.*_opus()` names.
 
 ## [0.6.0] — 2026-02-25
 

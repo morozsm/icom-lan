@@ -16,6 +16,7 @@ import logging
 import os
 import struct
 import time
+import warnings
 from typing import TYPE_CHECKING, AsyncGenerator
 
 if TYPE_CHECKING:
@@ -349,14 +350,31 @@ class IcomRadio:
     # Audio streaming
     # ------------------------------------------------------------------
 
-    async def start_audio_rx(self, callback: "Callable[[AudioPacket], None]") -> None:
-        """Start receiving audio from the radio.
+    @staticmethod
+    def _warn_audio_alias(old_name: str, replacement: str) -> None:
+        warnings.warn(
+            (
+                f"IcomRadio.{old_name}() is deprecated and will be removed after two "
+                f"minor releases; use IcomRadio.{replacement}() instead."
+            ),
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
+    async def start_audio_rx_opus(
+        self,
+        callback: "Callable[[AudioPacket], None]",
+        *,
+        jitter_depth: int = 5,
+    ) -> None:
+        """Start receiving Opus audio from the radio.
 
         Connects the audio transport if not already connected,
         then begins streaming RX audio to the callback.
 
         Args:
             callback: Called with each :class:`AudioPacket`.
+            jitter_depth: Jitter buffer depth (0 to disable, default 5).
 
         Raises:
             ConnectionError: If not connected or audio port unavailable.
@@ -364,15 +382,15 @@ class IcomRadio:
         self._check_connected()
         await self._ensure_audio_transport()
         assert self._audio_stream is not None
-        await self._audio_stream.start_rx(callback)
+        await self._audio_stream.start_rx(callback, jitter_depth=jitter_depth)
 
-    async def stop_audio_rx(self) -> None:
-        """Stop receiving audio from the radio."""
+    async def stop_audio_rx_opus(self) -> None:
+        """Stop receiving Opus audio from the radio."""
         if self._audio_stream is not None:
             await self._audio_stream.stop_rx()
 
-    async def start_audio_tx(self) -> None:
-        """Start transmitting audio to the radio.
+    async def start_audio_tx_opus(self) -> None:
+        """Start transmitting Opus audio to the radio.
 
         Connects the audio transport if not already connected.
 
@@ -384,7 +402,7 @@ class IcomRadio:
         assert self._audio_stream is not None
         await self._audio_stream.start_tx()
 
-    async def push_audio_tx(self, opus_data: bytes) -> None:
+    async def push_audio_tx_opus(self, opus_data: bytes) -> None:
         """Send an Opus-encoded audio frame to the radio.
 
         Args:
@@ -399,18 +417,19 @@ class IcomRadio:
             raise RuntimeError("Audio TX not started")
         await self._audio_stream.push_tx(opus_data)
 
-    async def stop_audio_tx(self) -> None:
-        """Stop transmitting audio to the radio."""
+    async def stop_audio_tx_opus(self) -> None:
+        """Stop transmitting Opus audio to the radio."""
         if self._audio_stream is not None:
             await self._audio_stream.stop_tx()
 
-    async def start_audio(
+    async def start_audio_opus(
         self,
         rx_callback: "Callable[[AudioPacket], None]",
         *,
         tx_enabled: bool = True,
+        jitter_depth: int = 5,
     ) -> None:
-        """Start full-duplex audio (RX + optional TX).
+        """Start full-duplex Opus audio (RX + optional TX).
 
         Convenience method that starts both RX and TX audio streams
         on the same transport.
@@ -418,19 +437,60 @@ class IcomRadio:
         Args:
             rx_callback: Called with each :class:`AudioPacket` (or None for gaps).
             tx_enabled: Whether to also enable TX (default True).
+            jitter_depth: Jitter buffer depth (0 to disable, default 5).
 
         Raises:
             ConnectionError: If not connected or audio port unavailable.
         """
-        await self.start_audio_rx(rx_callback)
+        await self.start_audio_rx_opus(rx_callback, jitter_depth=jitter_depth)
         if tx_enabled:
             assert self._audio_stream is not None
             await self._audio_stream.start_tx()
 
+    async def stop_audio_opus(self) -> None:
+        """Stop all Opus audio streams (RX and TX)."""
+        await self.stop_audio_tx_opus()
+        await self.stop_audio_rx_opus()
+
+    async def start_audio_rx(self, callback: "Callable[[AudioPacket], None]") -> None:
+        """Deprecated alias for :meth:`start_audio_rx_opus`."""
+        self._warn_audio_alias("start_audio_rx", "start_audio_rx_opus")
+        await self.start_audio_rx_opus(callback)
+
+    async def stop_audio_rx(self) -> None:
+        """Deprecated alias for :meth:`stop_audio_rx_opus`."""
+        self._warn_audio_alias("stop_audio_rx", "stop_audio_rx_opus")
+        await self.stop_audio_rx_opus()
+
+    async def start_audio_tx(self) -> None:
+        """Deprecated alias for :meth:`start_audio_tx_opus`."""
+        self._warn_audio_alias("start_audio_tx", "start_audio_tx_opus")
+        await self.start_audio_tx_opus()
+
+    async def push_audio_tx(self, opus_data: bytes) -> None:
+        """Deprecated alias for :meth:`push_audio_tx_opus`."""
+        self._warn_audio_alias("push_audio_tx", "push_audio_tx_opus")
+        await self.push_audio_tx_opus(opus_data)
+
+    async def stop_audio_tx(self) -> None:
+        """Deprecated alias for :meth:`stop_audio_tx_opus`."""
+        self._warn_audio_alias("stop_audio_tx", "stop_audio_tx_opus")
+        await self.stop_audio_tx_opus()
+
+    async def start_audio(
+        self,
+        rx_callback: "Callable[[AudioPacket], None]",
+        *,
+        tx_enabled: bool = True,
+    ) -> None:
+        """Deprecated alias for :meth:`start_audio_opus`."""
+        self._warn_audio_alias("start_audio", "start_audio_opus")
+        await self.start_audio_opus(rx_callback, tx_enabled=tx_enabled)
+
     async def stop_audio(self) -> None:
-        """Stop all audio streams (RX and TX)."""
-        await self.stop_audio_tx()
-        await self.stop_audio_rx()
+        """Deprecated alias for :meth:`stop_audio_opus`."""
+        self._warn_audio_alias("stop_audio", "stop_audio_opus")
+        await self.stop_audio_opus()
 
     def _get_pcm_transcoder(
         self,
