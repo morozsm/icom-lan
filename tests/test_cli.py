@@ -135,6 +135,70 @@ class TestBuildParser:
         assert args.command is None
 
 
+class TestServeSubcommand:
+    def test_serve_registered(self):
+        p = _build_parser()
+        args = p.parse_args(["serve"])
+        assert args.command == "serve"
+
+    def test_serve_default_host(self):
+        p = _build_parser()
+        args = p.parse_args(["serve"])
+        assert args.serve_host == "0.0.0.0"
+
+    def test_serve_default_port(self):
+        p = _build_parser()
+        args = p.parse_args(["serve"])
+        assert args.serve_port == 4532
+
+    def test_serve_host_override(self):
+        p = _build_parser()
+        args = p.parse_args(["serve", "--host", "127.0.0.1"])
+        assert args.serve_host == "127.0.0.1"
+
+    def test_serve_port_override(self):
+        p = _build_parser()
+        args = p.parse_args(["serve", "--port", "14532"])
+        assert args.serve_port == 14532
+
+    def test_serve_read_only_default(self):
+        p = _build_parser()
+        args = p.parse_args(["serve"])
+        assert args.read_only is False
+
+    def test_serve_read_only_flag(self):
+        p = _build_parser()
+        args = p.parse_args(["serve", "--read-only"])
+        assert args.read_only is True
+
+    def test_serve_max_clients(self):
+        p = _build_parser()
+        args = p.parse_args(["serve", "--max-clients", "5"])
+        assert args.max_clients == 5
+
+    def test_serve_max_clients_default(self):
+        p = _build_parser()
+        args = p.parse_args(["serve"])
+        assert args.max_clients == 10
+
+    def test_serve_cache_ttl(self):
+        p = _build_parser()
+        args = p.parse_args(["serve", "--cache-ttl", "1.0"])
+        assert args.cache_ttl == 1.0
+
+    def test_serve_cache_ttl_default(self):
+        p = _build_parser()
+        args = p.parse_args(["serve"])
+        assert args.cache_ttl == 0.2
+
+    def test_serve_radio_host_unaffected(self):
+        """Radio --host is independent of serve --host."""
+        p = _build_parser()
+        args = p.parse_args(["--host", "192.168.1.200", "serve"])
+        assert args.host == "192.168.1.200"
+        assert args.serve_host == "0.0.0.0"
+
+
 class TestMainEntryPoint:
     def test_no_args_prints_help(self):
         with patch("sys.argv", ["icom-lan"]):

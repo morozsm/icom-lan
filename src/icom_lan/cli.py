@@ -148,6 +148,42 @@ def _build_parser() -> argparse.ArgumentParser:
     # discover
     sub.add_parser("discover", help="Discover radios on the network")
 
+    # serve
+    serve_p = sub.add_parser("serve", help="Start rigctld-compatible TCP server")
+    serve_p.add_argument(
+        "--host",
+        dest="serve_host",
+        default="0.0.0.0",
+        help="Server listen address (default: 0.0.0.0)",
+    )
+    serve_p.add_argument(
+        "--port",
+        dest="serve_port",
+        type=int,
+        default=4532,
+        help="Server TCP port (default: 4532)",
+    )
+    serve_p.add_argument(
+        "--read-only",
+        action="store_true",
+        default=False,
+        help="Disallow set commands (read-only mode)",
+    )
+    serve_p.add_argument(
+        "--max-clients",
+        dest="max_clients",
+        type=int,
+        default=10,
+        help="Maximum concurrent clients (default: 10)",
+    )
+    serve_p.add_argument(
+        "--cache-ttl",
+        dest="cache_ttl",
+        type=float,
+        default=0.2,
+        help="Cache TTL in seconds (default: 0.2)",
+    )
+
     # scope
     scope_p = sub.add_parser("scope", help="Capture scope/waterfall and render image")
     scope_p.add_argument(
@@ -239,6 +275,8 @@ async def _run(args: argparse.Namespace) -> int:
                 return await _cmd_preamp(radio, args)
             elif args.command == "scope":
                 return await _cmd_scope(radio, args)
+            elif args.command == "serve":
+                return await _cmd_serve(radio, args)
             elif args.command == "power-on":
                 await radio.power_control(True)
                 print("Power ON")
@@ -510,6 +548,26 @@ async def _cmd_scope(radio: IcomRadio, args: argparse.Namespace) -> int:
         except Exception:
             pass
 
+    return 0
+
+
+async def _cmd_serve(radio: IcomRadio, args: argparse.Namespace) -> int:
+    from .rigctld.contract import RigctldConfig
+    from .rigctld.server import RigctldServer
+
+    config = RigctldConfig(
+        host=args.serve_host,
+        port=args.serve_port,
+        read_only=args.read_only,
+        max_clients=args.max_clients,
+        cache_ttl=args.cache_ttl,
+    )
+    ro_str = "yes" if args.read_only else "no"
+    print(f"Listening on {args.serve_host}:{args.serve_port} (read-only: {ro_str})")
+    try:
+        await RigctldServer(radio, config).serve_forever()
+    except asyncio.CancelledError:
+        pass
     return 0
 
 

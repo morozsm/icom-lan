@@ -2,7 +2,7 @@
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-469%20passed-brightgreen.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-656%20passed-brightgreen.svg)](#testing)
 
 **Python library for controlling Icom transceivers over LAN (UDP).**
 
@@ -18,6 +18,7 @@ Direct connection to your radio — no wfview, hamlib, or RS-BA1 required.
 - 🚀 **Fast non-audio connect path** — CLI/status calls don't block on audio-port negotiation
 - 🧠 **Commander queue** — wfview-style serialized command execution with pacing, retries, and dedupe
 - 📊 **Scope/waterfall** — real-time spectrum data with callback API
+- 🔌 **Hamlib NET rigctld server** — drop-in replacement for `rigctld`, works with WSJT-X, JS8Call, fldigi
 - 🔒 **Zero dependencies** — pure Python, stdlib only
 - 📝 **Type-annotated** — full `py.typed` support
 
@@ -131,6 +132,14 @@ icom-lan scope --json               # Raw data as JSON (no Pillow needed)
 
 # Discover radios on network
 icom-lan discover
+
+# Hamlib NET rigctld-compatible server (use with WSJT-X, JS8Call, fldigi)
+icom-lan serve                          # Listen on 0.0.0.0:4532
+icom-lan serve --port 4532 --read-only  # Read-only mode (no TX control)
+icom-lan serve --max-clients 5          # Limit concurrent clients
+
+# Then in WSJT-X: Rig → Hamlib NET rigctl, Address: localhost, Port: 4532
+# Or test with: rigctl -m 2 -r localhost:4532 f
 ```
 
 ## API Reference
@@ -193,7 +202,7 @@ See the [protocol documentation](https://morozsm.github.io/icom-lan/internals/pr
 ## Testing
 
 ```bash
-# Unit tests (no radio required) — 469 tests
+# Unit tests (no radio required) — 656 tests
 pytest tests/test_*.py
 
 # Mock integration tests (full UDP protocol, no radio required)
