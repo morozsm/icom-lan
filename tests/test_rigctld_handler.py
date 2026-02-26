@@ -213,16 +213,18 @@ async def test_set_mode_invalid_mode(handler: RigctldHandler, mock_radio: AsyncM
 
 
 @pytest.mark.asyncio
-async def test_set_mode_invalidates_cache(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+async def test_set_mode_refreshes_cache_immediately(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
     mock_radio.get_mode_info.return_value = (Mode.USB, 1)
-    await handler.execute(get_cmd("get_mode"))  # populate
+    await handler.execute(get_cmd("get_mode"))  # populate from radio
 
-    mock_radio.get_mode_info.return_value = (Mode.LSB, 1)
-    await handler.execute(set_cmd("set_mode", "LSB"))  # invalidate
+    await handler.execute(set_cmd("set_mode", "LSB"))  # updates cache directly
 
     resp = await handler.execute(get_cmd("get_mode"))
     assert resp.values[0] == "LSB"
-    assert mock_radio.get_mode_info.await_count == 2
+    # No extra radio read needed after set_mode.
+    assert mock_radio.get_mode_info.await_count == 1
 
 
 # ---------------------------------------------------------------------------

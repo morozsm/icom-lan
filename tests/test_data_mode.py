@@ -314,17 +314,18 @@ class TestHandlerGetModeCacheDataMode:
         mock_radio.get_mode_info.assert_awaited_once()
 
     @pytest.mark.asyncio
-    async def test_set_mode_invalidates_data_mode_cache(
+    async def test_set_mode_packet_updates_data_mode_cache(
         self, handler: RigctldHandler, mock_radio: AsyncMock
     ) -> None:
-        """After set_mode the data_mode cache is also invalidated."""
+        """After set_mode(PKT*), data_mode cache is refreshed to True."""
         mock_radio.get_mode_info.return_value = (Mode.USB, 1)
         mock_radio.get_data_mode.return_value = False
         await handler.execute(get_cmd("get_mode"))  # populate cache
-        handler._cache.update_data_mode(False)       # mark as fresh
+        handler._cache.update_data_mode(False)
 
         await handler.execute(set_cmd("set_mode", "PKTUSB"))
-        assert handler._cache.data_mode_ts == 0.0    # invalidated
+        assert handler._cache.data_mode is True
+        assert handler._cache.data_mode_ts > 0.0
 
 
 # ---------------------------------------------------------------------------

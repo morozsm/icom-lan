@@ -13,6 +13,7 @@ TCP or wire format.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import TYPE_CHECKING, Any
 
@@ -249,8 +250,35 @@ class RigctldHandler:
         if mode_str in packet_modes:
             await self._radio.set_data_mode(True)
 
-        self._cache.invalidate_mode()
-        self._cache.invalidate_data_mode()
+            # Read-back sync: keep next get_mode deterministic for CAT clients.
+            # Some radios acknowledge set-data quickly but reflect packet mode
+            # with a short delay. We wait briefly to reduce client-side stalls.
+            synced = False
+            for _ in range(5):
+                try:
+                    read_mode, _ = await self._radio.get_mode_info()
+                    read_data = await self._radio.get_data_mode()
+                    if read_mode == mode and read_data:
+                        synced = True
+                        break
+                except Exception:
+                    pass
+                await asyncio.sleep(0.05)
+
+            # Cache optimistic final state even if read-back lagged.
+            base_mode = CIV_TO_HAMLIB_MODE.get(mode.value, "USB")
+            self._cache.update_mode(base_mode, filter_width)
+            self._cache.update_data_mode(True)
+            if not synced:
+                logger.debug(
+                    "set_mode(%s): packet read-back not fully synced yet; cached optimistic state",
+                    mode_str,
+                )
+        else:
+            # For non-packet mode changes update mode cache, but preserve DATA
+            # state (no forced DATA off side-effect).
+            self._cache.update_mode(mode_str, filter_width)
+
         return _ok()
 
     # ------------------------------------------------------------------
