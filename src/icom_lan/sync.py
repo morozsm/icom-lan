@@ -13,6 +13,7 @@ Example::
 """
 
 import asyncio
+import warnings
 from typing import Callable
 
 from .audio import AudioPacket
@@ -65,6 +66,17 @@ class IcomRadio:
     def _run(self, coro):  # type: ignore[no-untyped-def]
         """Run a coroutine on the internal event loop."""
         return self._loop.run_until_complete(coro)
+
+    @staticmethod
+    def _warn_audio_alias(old_name: str, replacement: str) -> None:
+        warnings.warn(
+            (
+                f"icom_lan.sync.IcomRadio.{old_name}() is deprecated and will be "
+                f"removed after two minor releases; use {replacement}() instead."
+            ),
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
     # ------------------------------------------------------------------
     # Connection
@@ -255,25 +267,55 @@ class IcomRadio:
     # Audio
     # ------------------------------------------------------------------
 
+    def start_audio_rx_opus(
+        self,
+        callback: Callable[[AudioPacket], None],
+        *,
+        jitter_depth: int = 5,
+    ) -> None:
+        """Start receiving Opus audio from the radio (blocking setup)."""
+        self._run(self._radio.start_audio_rx_opus(callback, jitter_depth=jitter_depth))
+
+    def stop_audio_rx_opus(self) -> None:
+        """Stop Opus RX audio."""
+        self._run(self._radio.stop_audio_rx_opus())
+
+    def start_audio_tx_opus(self) -> None:
+        """Start Opus TX audio."""
+        self._run(self._radio.start_audio_tx_opus())
+
+    def push_audio_tx_opus(self, opus_data: bytes) -> None:
+        """Send an Opus audio frame to the radio."""
+        self._run(self._radio.push_audio_tx_opus(opus_data))
+
+    def stop_audio_tx_opus(self) -> None:
+        """Stop Opus TX audio."""
+        self._run(self._radio.stop_audio_tx_opus())
+
     def start_audio_rx(self, callback: Callable[[AudioPacket], None]) -> None:
-        """Start receiving audio from the radio (blocking setup)."""
-        self._run(self._radio.start_audio_rx(callback))
+        """Deprecated alias for :meth:`start_audio_rx_opus`."""
+        self._warn_audio_alias("start_audio_rx", "start_audio_rx_opus")
+        self.start_audio_rx_opus(callback)
 
     def stop_audio_rx(self) -> None:
-        """Stop receiving audio."""
-        self._run(self._radio.stop_audio_rx())
+        """Deprecated alias for :meth:`stop_audio_rx_opus`."""
+        self._warn_audio_alias("stop_audio_rx", "stop_audio_rx_opus")
+        self.stop_audio_rx_opus()
 
     def start_audio_tx(self) -> None:
-        """Start transmitting audio."""
-        self._run(self._radio.start_audio_tx())
+        """Deprecated alias for :meth:`start_audio_tx_opus`."""
+        self._warn_audio_alias("start_audio_tx", "start_audio_tx_opus")
+        self.start_audio_tx_opus()
 
     def push_audio_tx(self, opus_data: bytes) -> None:
-        """Send an audio frame to the radio."""
-        self._run(self._radio.push_audio_tx(opus_data))
+        """Deprecated alias for :meth:`push_audio_tx_opus`."""
+        self._warn_audio_alias("push_audio_tx", "push_audio_tx_opus")
+        self.push_audio_tx_opus(opus_data)
 
     def stop_audio_tx(self) -> None:
-        """Stop transmitting audio."""
-        self._run(self._radio.stop_audio_tx())
+        """Deprecated alias for :meth:`stop_audio_tx_opus`."""
+        self._warn_audio_alias("stop_audio_tx", "stop_audio_tx_opus")
+        self.stop_audio_tx_opus()
 
     @property
     def audio_codec(self) -> AudioCodec:
