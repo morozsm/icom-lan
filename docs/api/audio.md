@@ -5,12 +5,12 @@ Audio RX/TX via the Icom audio UDP port (default 50003).
 ## Naming Map
 
 Low-level Opus methods are now explicitly suffixed with `_opus`.
-High-level PCM RX is available via `start_audio_rx_pcm()` / `stop_audio_rx_pcm()`.
+High-level PCM APIs are available for both RX and TX.
 
 | Scope | Preferred method names |
 |------|-------------------------|
 | Low-level Opus (current) | `start_audio_rx_opus`, `stop_audio_rx_opus`, `start_audio_tx_opus`, `push_audio_tx_opus`, `stop_audio_tx_opus`, `start_audio_opus`, `stop_audio_opus` |
-| High-level PCM | `start_audio_rx_pcm`, `stop_audio_rx_pcm` |
+| High-level PCM | `start_audio_rx_pcm`, `stop_audio_rx_pcm`, `start_audio_tx_pcm`, `push_audio_tx_pcm`, `stop_audio_tx_pcm` |
 
 Deprecated aliases still work during the deprecation window (two minor releases):
 `start_audio_rx`, `stop_audio_rx`, `start_audio_tx`, `push_audio_tx`, `stop_audio_tx`, `start_audio`, `stop_audio`.
@@ -96,6 +96,15 @@ async with IcomRadio("192.168.1.100", username="u", password="p") as radio:
     await radio.stop_audio_tx_opus()
 ```
 
+### TX Audio (high-level PCM)
+
+```python
+async with IcomRadio("192.168.1.100", username="u", password="p") as radio:
+    await radio.start_audio_tx_pcm(sample_rate=48000, channels=1, frame_ms=20)
+    await radio.push_audio_tx_pcm(pcm_frame)  # one 20ms PCM frame (1920 bytes)
+    await radio.stop_audio_tx_pcm()
+```
+
 ### Full-Duplex
 
 ```python
@@ -160,3 +169,8 @@ For RX PCM, migrate callback-side decoding to the built-in API:
 
 - Before: `start_audio_rx_opus()` + manual Opus decode in callback.
 - Now: `start_audio_rx_pcm()` and receive `bytes | None` directly.
+
+For TX PCM, migrate manual Opus encoding to the built-in API:
+
+- Before: encode PCM to Opus yourself, then `push_audio_tx_opus()`.
+- Now: `start_audio_tx_pcm()` and `push_audio_tx_pcm()` with fixed-size PCM frames.
