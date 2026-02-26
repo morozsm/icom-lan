@@ -509,6 +509,8 @@ class TestGracefulShutdown:
 
         assert srv._client_count == 2
         await srv.stop()
+        # Allow done callbacks to fire after task cancellation
+        await asyncio.sleep(0.05)
         assert srv._client_count == 0
 
         for r, w in readers_writers:
