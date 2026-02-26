@@ -122,3 +122,22 @@ async def test_stop_fails_pending() -> None:
     await c.stop()
     with pytest.raises(ConnectionError):
         await asyncio.wait_for(task, timeout=0.1)
+
+
+@pytest.mark.asyncio
+async def test_stop_fails_inflight_command() -> None:
+    started = asyncio.Event()
+
+    async def execute(cmd: bytes, wait_response: bool = True) -> CivFrame | None:
+        started.set()
+        await asyncio.sleep(10)
+        return CivFrame(to_addr=0xE0, from_addr=0x98, command=0xFB, sub=None, data=b"")
+
+    c = IcomCommander(execute, min_interval=0.0)
+    c.start()
+    task = asyncio.create_task(c.send(b"slow"))
+    await asyncio.wait_for(started.wait(), timeout=1.0)
+    await c.stop()
+
+    with pytest.raises(ConnectionError):
+        await asyncio.wait_for(task, timeout=0.2)
