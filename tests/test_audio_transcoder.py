@@ -121,7 +121,7 @@ class TestRadioPcmHooks:
     @pytest.mark.asyncio
     async def test_push_audio_tx_pcm_internal_uses_transcoder(self) -> None:
         radio = IcomRadio("192.168.1.100")
-        radio.push_audio_tx = AsyncMock()  # type: ignore[method-assign]
+        radio.push_audio_tx_opus = AsyncMock()  # type: ignore[method-assign]
 
         class _DummyTranscoder:
             def pcm_to_opus(self, pcm: bytes) -> bytes:
@@ -131,7 +131,7 @@ class TestRadioPcmHooks:
         radio._pcm_transcoder_fmt = (48000, 1, 20)
 
         await radio._push_audio_tx_pcm_internal(b"\x01\x02" * 960)
-        radio.push_audio_tx.assert_awaited_once_with(b"opus:\x01\x02")
+        radio.push_audio_tx_opus.assert_awaited_once_with(b"opus:\x01\x02")
 
     def test_decode_audio_packet_to_pcm_and_callback_adapter(self) -> None:
         radio = IcomRadio("192.168.1.100")
@@ -226,3 +226,120 @@ class TestRadioPcmRxApi:
         radio = IcomRadio("192.168.1.100")
         with pytest.raises(ConnectionError, match="Not connected to radio"):
             await radio.start_audio_rx_pcm(lambda _: None)
+
+
+class TestRadioPcmTxApi:
+    @pytest.mark.asyncio
+    async def test_start_audio_tx_pcm_starts_opus_and_tracks_format(self) -> None:
+        radio = IcomRadio("192.168.1.100")
+        radio._connected = True
+        radio._civ_transport = MagicMock()
+        radio._audio_stream = MagicMock()
+        radio._audio_stream.start_tx = AsyncMock()
+        radio._pcm_transcoder = object()  # type: ignore[assignment]
+        radio._pcm_transcoder_fmt = (48000, 1, 20)
+
+        await radio.start_audio_tx_pcm(sample_rate=48000, channels=1, frame_ms=20)
+
+        radio._audio_stream.start_tx.assert_awaited_once()
+        assert radio._pcm_tx_fmt == (48000, 1, 20)
+
+    @pytest.mark.asyncio
+    async def test_push_audio_tx_pcm_encodes_and_sends(self) -> None:
+        radio = IcomRadio("192.168.1.100")
+        radio._connected = True
+        radio._civ_transport = MagicMock()
+        radio._pcm_tx_fmt = (48000, 1, 20)
+        radio.push_audio_tx_opus = AsyncMock()  # type: ignore[method-assign]
+
+        class _DummyTranscoder:
+            def pcm_to_opus(self, pcm: bytes | bytearray | memoryview) -> bytes:
+                return b"opus:" + bytes(pcm)[:2]
+
+        radio._pcm_transcoder = _DummyTranscoder()  # type: ignore[assignment]
+        radio._pcm_transcoder_fmt = (48000, 1, 20)
+
+        await radio.push_audio_tx_pcm(b"\x01\x02" * 960)
+        radio.push_audio_tx_opus.assert_awaited_once_with(b"opus:\x01\x02")
+
+    @pytest.mark.asyncio
+    async def test_push_audio_tx_pcm_not_started(self) -> None:
+        radio = IcomRadio("192.168.1.100")
+        radio._connected = True
+        radio._civ_transport = MagicMock()
+
+        with pytest.raises(RuntimeError, match="start_audio_tx_pcm"):
+            await radio.push_audio_tx_pcm(b"\x00" * 1920)
+
+    @pytest.mark.asyncio
+    async def test_start_audio_tx_pcm_invalid_types(self) -> None:
+        radio = IcomRadio("192.168.1.100")
+        with pytest.raises(TypeError, match="sample_rate must be an int"):
+            await radio.start_audio_tx_pcm(sample_rate=True)  # type: ignore[arg-type]
+        with pytest.raises(TypeError, match="channels must be an int"):
+            await radio.start_audio_tx_pcm(channels=1.5)  # type: ignore[arg-type]
+        with pytest.raises(TypeError, match="frame_ms must be an int"):
+            await radio.start_audio_tx_pcm(frame_ms="20")  # type: ignore[arg-type]
+
+    @pytest.mark.asyncio
+    async def test_start_audio_tx_pcm_invalid_format(self) -> None:
+        radio = IcomRadio("192.168.1.100")
+        radio._connected = True
+        radio._civ_transport = MagicMock()
+
+        with pytest.raises(AudioFormatError, match="Unsupported sample_rate"):
+            await radio.start_audio_tx_pcm(sample_rate=44100)
+
+    @pytest.mark.asyncio
+    async def test_start_audio_tx_pcm_backend_error_is_actionable(self) -> None:
+        radio = IcomRadio("192.168.1.100")
+        radio._connected = True
+        radio._civ_transport = MagicMock()
+        radio._audio_stream = MagicMock()
+        radio._audio_stream.start_tx = AsyncMock()
+        radio._get_pcm_transcoder = MagicMock(  # type: ignore[method-assign]
+            side_effect=AudioCodecBackendError(
+                "Audio codec backend unavailable; install icom-lan[audio]."
+            )
+        )
+
+        with pytest.raises(AudioCodecBackendError, match="install icom-lan\\[audio\\]"):
+            await radio.start_audio_tx_pcm()
+        radio._audio_stream.start_tx.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_push_audio_tx_pcm_frame_size_error(self) -> None:
+        radio = IcomRadio("192.168.1.100")
+        radio._connected = True
+        radio._civ_transport = MagicMock()
+        radio._pcm_tx_fmt = (48000, 1, 20)
+
+        class _DummyTranscoder:
+            def pcm_to_opus(self, pcm: bytes | bytearray | memoryview) -> bytes:
+                _ = pcm
+                raise AudioFormatError(
+                    "PCM frame size mismatch: expected 1920 bytes, got 1919."
+                )
+
+        radio._pcm_transcoder = _DummyTranscoder()  # type: ignore[assignment]
+        radio._pcm_transcoder_fmt = (48000, 1, 20)
+
+        with pytest.raises(AudioFormatError, match="expected 1920 bytes"):
+            await radio.push_audio_tx_pcm(b"\x00" * 1919)
+
+    @pytest.mark.asyncio
+    async def test_stop_audio_tx_pcm_delegates_and_clears_state(self) -> None:
+        radio = IcomRadio("192.168.1.100")
+        radio._audio_stream = MagicMock()
+        radio._audio_stream.stop_tx = AsyncMock()
+        radio._pcm_tx_fmt = (48000, 1, 20)
+
+        await radio.stop_audio_tx_pcm()
+        radio._audio_stream.stop_tx.assert_awaited_once()
+        assert radio._pcm_tx_fmt is None
+
+    @pytest.mark.asyncio
+    async def test_start_audio_tx_pcm_disconnected(self) -> None:
+        radio = IcomRadio("192.168.1.100")
+        with pytest.raises(ConnectionError, match="Not connected to radio"):
+            await radio.start_audio_tx_pcm()

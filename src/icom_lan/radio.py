@@ -159,6 +159,7 @@ class IcomRadio:
         self._audio_stream: AudioStream | None = None
         self._pcm_transcoder: PcmOpusTranscoder | None = None
         self._pcm_transcoder_fmt: tuple[int, int, int] | None = None
+        self._pcm_tx_fmt: tuple[int, int, int] | None = None
         self._connected = False
         self._token: int = 0
         self._tok_request: int = 0
@@ -330,6 +331,7 @@ class IcomRadio:
                 await self._audio_stream.stop_rx()
                 await self._audio_stream.stop_tx()
                 self._audio_stream = None
+            self._pcm_tx_fmt = None
             if self._audio_transport is not None:
                 try:
                     await self._send_audio_open_close(open_stream=False)
@@ -477,6 +479,48 @@ class IcomRadio:
         assert self._audio_stream is not None
         await self._audio_stream.start_tx()
 
+    async def start_audio_tx_pcm(
+        self,
+        *,
+        sample_rate: int = 48000,
+        channels: int = 1,
+        frame_ms: int = 20,
+    ) -> None:
+        """Start transmitting PCM audio to the radio.
+
+        This high-level API validates PCM format settings, initializes
+        the Opus transcoder backend, and starts the underlying Opus TX stream.
+
+        Args:
+            sample_rate: PCM sample rate in Hz (Opus-supported values only).
+            channels: PCM channels (1 or 2).
+            frame_ms: Frame duration in ms (10/20/40/60).
+
+        Raises:
+            ConnectionError: If not connected or audio port unavailable.
+            TypeError: If numeric args are not ints.
+            AudioCodecBackendError: If Opus backend is unavailable.
+            AudioFormatError: If PCM format is unsupported.
+        """
+        for name, value in (
+            ("sample_rate", sample_rate),
+            ("channels", channels),
+            ("frame_ms", frame_ms),
+        ):
+            if isinstance(value, bool) or not isinstance(value, int):
+                raise TypeError(f"{name} must be an int, got {type(value).__name__}.")
+
+        self._check_connected()
+
+        # Validate codec/backend and PCM format before stream startup.
+        self._get_pcm_transcoder(
+            sample_rate=sample_rate,
+            channels=channels,
+            frame_ms=frame_ms,
+        )
+        await self.start_audio_tx_opus()
+        self._pcm_tx_fmt = (sample_rate, channels, frame_ms)
+
     async def push_audio_tx_opus(self, opus_data: bytes) -> None:
         """Send an Opus-encoded audio frame to the radio.
 
@@ -492,10 +536,43 @@ class IcomRadio:
             raise RuntimeError("Audio TX not started")
         await self._audio_stream.push_tx(opus_data)
 
+    async def push_audio_tx_pcm(
+        self,
+        pcm_bytes: bytes | bytearray | memoryview,
+    ) -> None:
+        """Encode and send one PCM audio frame to the radio.
+
+        Args:
+            pcm_bytes: One fixed-size PCM frame (s16le, interleaved).
+
+        Raises:
+            ConnectionError: If not connected.
+            RuntimeError: If PCM TX not started with :meth:`start_audio_tx_pcm`.
+            AudioFormatError: If frame type/size is invalid.
+            AudioTranscodeError: If encode operation fails.
+        """
+        self._check_connected()
+        if self._pcm_tx_fmt is None:
+            raise RuntimeError(
+                "PCM TX not started; call start_audio_tx_pcm() before push_audio_tx_pcm()."
+            )
+        sample_rate, channels, frame_ms = self._pcm_tx_fmt
+        await self._push_audio_tx_pcm_internal(
+            pcm_bytes,
+            sample_rate=sample_rate,
+            channels=channels,
+            frame_ms=frame_ms,
+        )
+
+    async def stop_audio_tx_pcm(self) -> None:
+        """Stop transmitting PCM audio to the radio."""
+        await self.stop_audio_tx_opus()
+
     async def stop_audio_tx_opus(self) -> None:
         """Stop transmitting Opus audio to the radio."""
         if self._audio_stream is not None:
             await self._audio_stream.stop_tx()
+        self._pcm_tx_fmt = None
 
     async def start_audio_opus(
         self,
@@ -628,7 +705,7 @@ class IcomRadio:
 
     async def _push_audio_tx_pcm_internal(
         self,
-        pcm_data: bytes,
+        pcm_data: bytes | bytearray | memoryview,
         *,
         sample_rate: int = 48000,
         channels: int = 1,
@@ -641,7 +718,7 @@ class IcomRadio:
             frame_ms=frame_ms,
         )
         opus_data = transcoder.pcm_to_opus(pcm_data)
-        await self.push_audio_tx(opus_data)
+        await self.push_audio_tx_opus(opus_data)
 
     @property
     def audio_codec(self) -> "AudioCodec":
