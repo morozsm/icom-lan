@@ -12,6 +12,10 @@ from .auth import (
     parse_status_response,
 )
 from .exceptions import (
+    AudioCodecBackendError,
+    AudioError,
+    AudioFormatError,
+    AudioTranscodeError,
     AuthenticationError,
     CommandError,
     ConnectionError,
@@ -19,7 +23,14 @@ from .exceptions import (
     TimeoutError,
 )
 from .protocol import identify_packet_type, parse_header, serialize_header
-from .audio import AUDIO_HEADER_SIZE, AudioPacket, AudioState, AudioStream, JitterBuffer
+from .audio import (
+    AUDIO_HEADER_SIZE,
+    AudioPacket,
+    AudioState,
+    AudioStats,
+    AudioStream,
+    JitterBuffer,
+)
 from .transport import ConnectionState, IcomTransport
 from .commander import IcomCommander, Priority
 from .radio import IcomRadio
@@ -75,6 +86,7 @@ except ImportError:
     _SCOPE_RENDER_AVAILABLE = False
 from .types import (
     HEADER_SIZE,
+    AudioCapabilities,
     AudioCodec,
     CivFrame,
     Mode,
@@ -83,6 +95,7 @@ from .types import (
     ScopeCompletionPolicy,
     bcd_decode,
     bcd_encode,
+    get_audio_capabilities,
 )
 
 __all__ = [
@@ -101,16 +114,22 @@ __all__ = [
     "AuthenticationError",
     "CommandError",
     "TimeoutError",
+    "AudioError",
+    "AudioCodecBackendError",
+    "AudioFormatError",
+    "AudioTranscodeError",
     # Types
     "PacketType",
     "Mode",
     "AudioCodec",
+    "AudioCapabilities",
     "ScopeCompletionPolicy",
     "PacketHeader",
     "CivFrame",
     "HEADER_SIZE",
     "bcd_encode",
     "bcd_decode",
+    "get_audio_capabilities",
     # Commands
     "IC_7610_ADDR",
     "CONTROLLER_ADDR",
@@ -172,6 +191,7 @@ __all__ = [
     # Audio
     "AudioPacket",
     "AudioState",
+    "AudioStats",
     "AudioStream",
     "JitterBuffer",
     "AUDIO_HEADER_SIZE",

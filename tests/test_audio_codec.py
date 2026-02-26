@@ -2,7 +2,7 @@
 
 import pytest
 
-from icom_lan.types import AudioCodec
+from icom_lan.types import AudioCapabilities, AudioCodec, get_audio_capabilities
 from icom_lan.radio import IcomRadio
 
 
@@ -51,3 +51,37 @@ class TestRadioAudioConfig:
     def test_codec_ulaw(self) -> None:
         r = IcomRadio("192.168.1.100", audio_codec=AudioCodec.ULAW_1CH)
         assert r.audio_codec == AudioCodec.ULAW_1CH
+
+
+class TestAudioCapabilities:
+    def test_capabilities_shape(self) -> None:
+        caps = get_audio_capabilities()
+        assert isinstance(caps, AudioCapabilities)
+        assert caps.supported_codecs
+        assert caps.supported_sample_rates_hz
+        assert caps.supported_channels
+
+    def test_default_selection_is_deterministic(self) -> None:
+        caps = get_audio_capabilities()
+        assert caps.default_codec == AudioCodec.PCM_1CH_16BIT
+        assert caps.default_sample_rate_hz == 48000
+        assert caps.default_channels == 1
+
+    def test_default_values_are_supported(self) -> None:
+        caps = get_audio_capabilities()
+        assert caps.default_codec in caps.supported_codecs
+        assert caps.default_sample_rate_hz in caps.supported_sample_rates_hz
+        assert caps.default_channels in caps.supported_channels
+
+    def test_radio_exposes_audio_capabilities(self) -> None:
+        caps = IcomRadio.audio_capabilities()
+        assert caps == get_audio_capabilities()
+
+    def test_to_dict_json_shape(self) -> None:
+        data = get_audio_capabilities().to_dict()
+        assert "supported_codecs" in data
+        assert "supported_sample_rates_hz" in data
+        assert "supported_channels" in data
+        assert data["default_codec"] == {"name": "PCM_1CH_16BIT", "value": 0x04}
+        assert data["default_sample_rate_hz"] == 48000
+        assert data["default_channels"] == 1

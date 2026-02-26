@@ -12,7 +12,7 @@ export ICOM_PASS=YOUR_PASS
 ```
 
 ```bash
-pip install icom-lan
+pip install "icom-lan[audio]"
 ```
 
 ---
@@ -48,9 +48,9 @@ async def main() -> None:
         frames.append(pkt.data)
 
     async with radio:
-        await radio.start_audio_rx(on_audio)
+        await radio.start_audio_rx_opus(on_audio)
         await asyncio.sleep(SECONDS)
-        await radio.stop_audio_rx()
+        await radio.stop_audio_rx_opus()
 
     with wave.open("rx.wav", "wb") as wf:
         wf.setnchannels(CHANNELS)
@@ -64,7 +64,7 @@ asyncio.run(main())
 
 ---
 
-## 2) WAV file -> TX
+## 2) WAV file -> TX (high-level PCM API)
 
 Читает `tx.wav` (16-bit mono 48kHz PCM) и отправляет на TX.
 
@@ -97,16 +97,20 @@ async def main() -> None:
         pcm = wf.readframes(wf.getnframes())
 
     async with radio:
-        await radio.start_audio_tx()
+        await radio.start_audio_tx_pcm(
+            sample_rate=SAMPLE_RATE,
+            channels=CHANNELS,
+            frame_ms=FRAME_MS,
+        )
         try:
             for i in range(0, len(pcm), BYTES_PER_FRAME):
                 chunk = pcm[i : i + BYTES_PER_FRAME]
                 if not chunk:
                     break
-                await radio.push_audio_tx(chunk)
+                await radio.push_audio_tx_pcm(chunk)
                 await asyncio.sleep(FRAME_MS / 1000)
         finally:
-            await radio.stop_audio_tx()
+            await radio.stop_audio_tx_pcm()
 
 
 asyncio.run(main())
@@ -163,18 +167,22 @@ async def main() -> None:
         rx_packets += 1
 
     async with radio:
-        await radio.start_audio_rx(on_audio)
-        await radio.start_audio_tx()
+        await radio.start_audio_rx_opus(on_audio)
+        await radio.start_audio_tx_pcm(
+            sample_rate=SAMPLE_RATE,
+            channels=CHANNELS,
+            frame_ms=FRAME_MS,
+        )
 
         phase = 0.0
         frames = int(SECONDS * 1000 / FRAME_MS)
         for _ in range(frames):
             chunk, phase = make_tone_frame(phase)
-            await radio.push_audio_tx(chunk)
+            await radio.push_audio_tx_pcm(chunk)
             await asyncio.sleep(FRAME_MS / 1000)
 
-        await radio.stop_audio_tx()
-        await radio.stop_audio_rx()
+        await radio.stop_audio_tx_pcm()
+        await radio.stop_audio_rx_opus()
 
     print({"rx_packets": rx_packets})
 

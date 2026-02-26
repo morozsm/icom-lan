@@ -77,6 +77,41 @@ Whether the radio is currently connected and ready for commands.
 
 ---
 
+## Audio Capabilities
+
+### `audio_capabilities()`
+
+```python
+@staticmethod
+def audio_capabilities() -> AudioCapabilities
+```
+
+Return the stable icom-lan audio capability structure:
+
+- `supported_codecs`
+- `supported_sample_rates_hz`
+- `supported_channels`
+- `default_codec`
+- `default_sample_rate_hz`
+- `default_channels`
+
+Default values are deterministic:
+
+1. Codec: first supported codec in icom-lan preference order.
+2. Sample rate: highest supported sample rate.
+3. Channels: implied by default codec (fallback to minimum supported channels).
+
+### `get_audio_stats()`
+
+```python
+def get_audio_stats(self) -> dict[str, bool | int | float | str]
+```
+
+Return runtime audio quality stats for the active audio stream as a JSON-friendly
+dictionary. If no audio stream is active, returns a zeroed idle snapshot.
+
+---
+
 ## Connection Methods
 
 ### `connect()`

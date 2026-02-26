@@ -7,6 +7,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Internal PCM<->Opus transcoder foundation (`icom_lan._audio_transcoder`) for
+  upcoming high-level PCM audio APIs.
+- Typed audio exceptions for actionable codec/format failures:
+  `AudioCodecBackendError`, `AudioFormatError`, `AudioTranscodeError`.
+- High-level async PCM audio APIs on `IcomRadio`:
+  - RX: `start_audio_rx_pcm()` / `stop_audio_rx_pcm()`
+  - TX: `start_audio_tx_pcm()` / `push_audio_tx_pcm()` / `stop_audio_tx_pcm()`
+  RX callbacks receive decoded PCM frame bytes (or `None` gap placeholders).
+- Audio capability introspection API:
+  - `IcomRadio.audio_capabilities()` (async and sync wrappers)
+  - `get_audio_capabilities()` and `AudioCapabilities` export
+- CLI command: `icom-lan audio caps` with optional `--json` output.
+- Runtime audio stats API:
+  - `AudioStream.get_audio_stats()` and `IcomRadio.get_audio_stats()`
+  - JSON-friendly metrics for packet loss, jitter, underrun/overrun, and latency.
+- CLI `--stats` support for audio capabilities output:
+  - `icom-lan audio caps --stats` (and `--json --stats`) performs a short RX probe
+    and includes runtime audio stats.
+- CLI audio subcommands:
+  - `icom-lan audio rx --out rx.wav --seconds 10`
+  - `icom-lan audio tx --in tx.wav`
+  - `icom-lan audio loopback --seconds 10`
+  with shared `--sample-rate`, `--channels`, `--json`, and `--stats` flags.
+
+### Changed
+
+- Audio low-level API names are now explicit with `_opus` suffix:
+  `start_audio_rx_opus()`, `stop_audio_rx_opus()`, `start_audio_tx_opus()`,
+  `push_audio_tx_opus()`, `stop_audio_tx_opus()`, plus full-duplex
+  `start_audio_opus()` / `stop_audio_opus()`.
+- Added parameter validation for high-level PCM TX startup and clearer runtime
+  errors when PCM TX is pushed before startup.
+- Added parameter validation for high-level PCM RX startup
+  (`sample_rate`, `channels`, `frame_ms`, `jitter_depth`, callback).
+- Audio defaults now come from deterministic capability rules:
+  codec preference order, highest sample rate, and channels implied by codec.
+
+### Deprecated
+
+- Ambiguous audio aliases are deprecated (still functional during a two-minor-release window):
+  `start_audio_rx()`, `stop_audio_rx()`, `start_audio_tx()`, `push_audio_tx()`,
+  `stop_audio_tx()`, `start_audio()`, `stop_audio()`.
+- Synchronous wrapper aliases are likewise deprecated in favor of
+  `icom_lan.sync.IcomRadio.*_opus()` names.
+
 ## [0.6.0] — 2026-02-25
 
 ### Added

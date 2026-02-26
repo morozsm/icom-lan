@@ -1,12 +1,17 @@
 """Tests for CLI async command handlers using mocked IcomRadio."""
 
 import json
+import wave
 from argparse import Namespace
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from icom_lan.cli import (
+    _cmd_audio_caps,
+    _cmd_audio_loopback,
+    _cmd_audio_rx,
+    _cmd_audio_tx,
     _cmd_cw,
     _cmd_freq,
     _cmd_meter,
@@ -19,7 +24,7 @@ from icom_lan.cli import (
     main,
 )
 from icom_lan.exceptions import TimeoutError as IcomTimeout
-from icom_lan.types import Mode
+from icom_lan.types import Mode, get_audio_capabilities
 
 
 # ---------------------------------------------------------------------------
@@ -45,6 +50,11 @@ def mock_radio():
     radio.capture_scope_frame = AsyncMock()
     radio.capture_scope_frames = AsyncMock()
     radio.disable_scope = AsyncMock()
+    radio.start_audio_rx_pcm = AsyncMock()
+    radio.stop_audio_rx_pcm = AsyncMock()
+    radio.start_audio_tx_pcm = AsyncMock()
+    radio.stop_audio_tx_pcm = AsyncMock()
+    radio.push_audio_tx_pcm = AsyncMock()
     return radio
 
 
@@ -73,6 +83,186 @@ class TestCmdStatus:
         assert data["mode"] == "USB"
         assert data["s_meter"] == 120
         assert data["power"] == 128
+
+
+# ---------------------------------------------------------------------------
+# _cmd_audio_caps
+# ---------------------------------------------------------------------------
+
+
+class TestCmdAudioCaps:
+    @pytest.mark.asyncio
+    async def test_audio_caps_text(self, capsys) -> None:
+        args = Namespace(json=False)
+        rc = await _cmd_audio_caps(args)
+        assert rc == 0
+        out = capsys.readouterr().out
+        assert "Supported codecs:" in out
+        assert "Defaults:" in out
+        assert "PCM_1CH_16BIT" in out
+        assert "48000" in out
+
+    @pytest.mark.asyncio
+    async def test_audio_caps_json(self, capsys) -> None:
+        args = Namespace(json=True)
+        rc = await _cmd_audio_caps(args)
+        assert rc == 0
+        data = json.loads(capsys.readouterr().out)
+        assert data["default_codec"]["name"] == "PCM_1CH_16BIT"
+        assert data["default_sample_rate_hz"] == 48000
+        assert data["default_channels"] == 1
+        assert any(c["name"] == "OPUS_1CH" for c in data["supported_codecs"])
+
+    @pytest.mark.asyncio
+    async def test_audio_caps_json_with_stats(self, capsys) -> None:
+        args = Namespace(json=True, stats=True)
+        runtime_stats = {
+            "active": False,
+            "state": "idle",
+            "rx_packets_received": 4,
+            "rx_packets_delivered": 3,
+            "tx_packets_sent": 0,
+            "packets_lost": 1,
+            "packet_loss_percent": 25.0,
+            "jitter_ms": 8.0,
+            "jitter_max_ms": 20.0,
+            "underrun_count": 1,
+            "overrun_count": 0,
+            "estimated_latency_ms": 0.0,
+            "jitter_buffer_depth_packets": 5,
+            "jitter_buffer_pending_packets": 0,
+            "duplicates_dropped": 0,
+            "stale_packets_dropped": 0,
+            "out_of_order_packets": 2,
+        }
+        rc = await _cmd_audio_caps(args, runtime_stats=runtime_stats)
+        assert rc == 0
+        data = json.loads(capsys.readouterr().out)
+        assert data["runtime_stats"]["packets_lost"] == 1
+        assert data["runtime_stats"]["packet_loss_percent"] == 25.0
+
+    @pytest.mark.asyncio
+    async def test_audio_caps_text_with_stats(self, capsys) -> None:
+        args = Namespace(json=False, stats=True)
+        runtime_stats = {
+            "active": True,
+            "state": "receiving",
+            "rx_packets_received": 10,
+            "rx_packets_delivered": 9,
+            "tx_packets_sent": 0,
+            "packets_lost": 1,
+            "packet_loss_percent": 10.0,
+            "jitter_ms": 2.5,
+            "jitter_max_ms": 20.0,
+            "underrun_count": 1,
+            "overrun_count": 0,
+            "estimated_latency_ms": 100.0,
+            "jitter_buffer_depth_packets": 5,
+            "jitter_buffer_pending_packets": 1,
+            "duplicates_dropped": 0,
+            "stale_packets_dropped": 0,
+            "out_of_order_packets": 1,
+        }
+        rc = await _cmd_audio_caps(args, runtime_stats=runtime_stats)
+        assert rc == 0
+        out = capsys.readouterr().out
+        assert "Runtime stats:" in out
+        assert "packet_loss_percent: 10.000" in out
+
+
+# ---------------------------------------------------------------------------
+# _cmd_audio_rx / _cmd_audio_tx / _cmd_audio_loopback
+# ---------------------------------------------------------------------------
+
+
+class TestCmdAudioCli:
+    @pytest.mark.asyncio
+    async def test_audio_rx_smoke(self, mock_radio, tmp_path, capsys) -> None:
+        frame = b"\x01\x02" * 960
+
+        async def _start_rx(cb, **_kwargs) -> None:
+            cb(frame)
+            cb(None)
+
+        mock_radio.start_audio_rx_pcm = AsyncMock(side_effect=_start_rx)
+
+        out_file = tmp_path / "rx.wav"
+        args = Namespace(
+            output_file=str(out_file),
+            seconds=0.01,
+            sample_rate=48000,
+            channels=1,
+            json=True,
+            stats=False,
+        )
+        rc = await _cmd_audio_rx(mock_radio, args)
+
+        assert rc == 0
+        mock_radio.start_audio_rx_pcm.assert_awaited_once()
+        mock_radio.stop_audio_rx_pcm.assert_awaited_once()
+        with wave.open(str(out_file), "rb") as wf:
+            assert wf.getframerate() == 48000
+            assert wf.getnchannels() == 1
+            assert wf.getsampwidth() == 2
+            assert wf.getnframes() > 0
+        data = json.loads(capsys.readouterr().out)
+        assert data["command"] == "audio-rx"
+        assert data["bytes_written"] > 0
+
+    @pytest.mark.asyncio
+    async def test_audio_tx_smoke(self, mock_radio, tmp_path, capsys) -> None:
+        in_file = tmp_path / "tx.wav"
+        with wave.open(str(in_file), "wb") as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)
+            wf.setframerate(48000)
+            wf.writeframes(b"\x01\x02" * 960)
+
+        args = Namespace(
+            input_file=str(in_file),
+            sample_rate=48000,
+            channels=1,
+            json=True,
+            stats=False,
+        )
+        rc = await _cmd_audio_tx(mock_radio, args)
+
+        assert rc == 0
+        mock_radio.start_audio_tx_pcm.assert_awaited_once()
+        mock_radio.stop_audio_tx_pcm.assert_awaited_once()
+        assert mock_radio.push_audio_tx_pcm.await_count >= 1
+        data = json.loads(capsys.readouterr().out)
+        assert data["command"] == "audio-tx"
+        assert data["tx_frames"] >= 1
+
+    @pytest.mark.asyncio
+    async def test_audio_loopback_smoke(self, mock_radio, capsys) -> None:
+        frame = b"\x03\x04" * 960
+
+        async def _start_rx(cb, **_kwargs) -> None:
+            cb(frame)
+            cb(None)
+
+        mock_radio.start_audio_rx_pcm = AsyncMock(side_effect=_start_rx)
+
+        args = Namespace(
+            seconds=0.05,
+            sample_rate=48000,
+            channels=1,
+            json=True,
+            stats=False,
+        )
+        rc = await _cmd_audio_loopback(mock_radio, args)
+
+        assert rc == 0
+        mock_radio.start_audio_rx_pcm.assert_awaited_once()
+        mock_radio.stop_audio_rx_pcm.assert_awaited_once()
+        mock_radio.start_audio_tx_pcm.assert_awaited_once()
+        mock_radio.stop_audio_tx_pcm.assert_awaited_once()
+        assert mock_radio.push_audio_tx_pcm.await_count >= 1
+        data = json.loads(capsys.readouterr().out)
+        assert data["command"] == "audio-loopback"
+        assert data["tx_frames"] >= 1
 
 
 # ---------------------------------------------------------------------------
@@ -252,6 +442,76 @@ class TestCmdCw:
 
 class TestRunErrorHandling:
     @pytest.mark.asyncio
+    async def test_run_audio_caps_does_not_connect(self, capsys) -> None:
+        args = Namespace(
+            host="192.168.1.100",
+            port=50001,
+            user="",
+            password="",
+            timeout=5.0,
+            command="audio",
+            audio_command="caps",
+            json=True,
+        )
+        with patch("icom_lan.cli.IcomRadio") as radio_cls:
+            radio_cls.audio_capabilities.return_value = get_audio_capabilities()
+            rc = await _run(args)
+        assert rc == 0
+        radio_cls.assert_not_called()
+        data = json.loads(capsys.readouterr().out)
+        assert data["default_channels"] == 1
+
+    @pytest.mark.asyncio
+    async def test_run_audio_caps_with_stats_connects(self, capsys) -> None:
+        args = Namespace(
+            host="192.168.1.100",
+            port=50001,
+            user="",
+            password="",
+            timeout=5.0,
+            command="audio",
+            audio_command="caps",
+            json=True,
+            stats=True,
+        )
+        runtime_stats = {
+            "active": False,
+            "state": "idle",
+            "rx_packets_received": 2,
+            "rx_packets_delivered": 2,
+            "tx_packets_sent": 0,
+            "packets_lost": 0,
+            "packet_loss_percent": 0.0,
+            "jitter_ms": 0.0,
+            "jitter_max_ms": 0.0,
+            "underrun_count": 0,
+            "overrun_count": 0,
+            "estimated_latency_ms": 0.0,
+            "jitter_buffer_depth_packets": 5,
+            "jitter_buffer_pending_packets": 0,
+            "duplicates_dropped": 0,
+            "stale_packets_dropped": 0,
+            "out_of_order_packets": 0,
+        }
+        with patch("icom_lan.cli.IcomRadio") as radio_cls:
+            radio = AsyncMock()
+            radio.__aenter__.return_value = radio
+            radio.__aexit__.return_value = None
+            radio.start_audio_rx_opus = AsyncMock()
+            radio.stop_audio_rx_opus = AsyncMock()
+            radio.get_audio_stats = MagicMock(return_value=runtime_stats)
+            radio_cls.return_value = radio
+            radio_cls.audio_capabilities.return_value = get_audio_capabilities()
+            with patch("icom_lan.cli.asyncio.sleep", new=AsyncMock()):
+                rc = await _run(args)
+        assert rc == 0
+        radio_cls.assert_called_once()
+        radio.start_audio_rx_opus.assert_awaited_once()
+        radio.stop_audio_rx_opus.assert_awaited_once()
+        data = json.loads(capsys.readouterr().out)
+        assert data["runtime_stats"]["rx_packets_received"] == 2
+
+    @pytest.mark.asyncio
     async def test_run_exception(self, capsys) -> None:
         args = Namespace(
             host="192.168.1.100",
@@ -267,6 +527,91 @@ class TestRunErrorHandling:
         assert rc == 1
         err = capsys.readouterr().err
         assert "Error" in err
+
+    @pytest.mark.asyncio
+    async def test_run_audio_rx_routes_to_handler(self) -> None:
+        args = Namespace(
+            host="192.168.1.100",
+            port=50001,
+            user="",
+            password="",
+            timeout=5.0,
+            command="audio",
+            audio_command="rx",
+            output_file="rx.wav",
+            seconds=1.0,
+            sample_rate=48000,
+            channels=1,
+            json=False,
+            stats=False,
+        )
+        with patch("icom_lan.cli.IcomRadio") as radio_cls:
+            radio = AsyncMock()
+            radio.__aenter__.return_value = radio
+            radio.__aexit__.return_value = None
+            radio_cls.return_value = radio
+            with patch("icom_lan.cli._cmd_audio_rx", new_callable=AsyncMock) as cmd:
+                cmd.return_value = 0
+                rc = await _run(args)
+        assert rc == 0
+        cmd.assert_awaited_once_with(radio, args)
+
+    @pytest.mark.asyncio
+    async def test_run_audio_tx_routes_to_handler(self) -> None:
+        args = Namespace(
+            host="192.168.1.100",
+            port=50001,
+            user="",
+            password="",
+            timeout=5.0,
+            command="audio",
+            audio_command="tx",
+            input_file="tx.wav",
+            sample_rate=48000,
+            channels=1,
+            json=False,
+            stats=False,
+        )
+        with patch("icom_lan.cli.IcomRadio") as radio_cls:
+            radio = AsyncMock()
+            radio.__aenter__.return_value = radio
+            radio.__aexit__.return_value = None
+            radio_cls.return_value = radio
+            with patch("icom_lan.cli._cmd_audio_tx", new_callable=AsyncMock) as cmd:
+                cmd.return_value = 0
+                rc = await _run(args)
+        assert rc == 0
+        cmd.assert_awaited_once_with(radio, args)
+
+    @pytest.mark.asyncio
+    async def test_run_audio_loopback_routes_to_handler(self) -> None:
+        args = Namespace(
+            host="192.168.1.100",
+            port=50001,
+            user="",
+            password="",
+            timeout=5.0,
+            command="audio",
+            audio_command="loopback",
+            seconds=1.0,
+            sample_rate=48000,
+            channels=1,
+            json=False,
+            stats=False,
+        )
+        with patch("icom_lan.cli.IcomRadio") as radio_cls:
+            radio = AsyncMock()
+            radio.__aenter__.return_value = radio
+            radio.__aexit__.return_value = None
+            radio_cls.return_value = radio
+            with patch(
+                "icom_lan.cli._cmd_audio_loopback",
+                new_callable=AsyncMock,
+            ) as cmd:
+                cmd.return_value = 0
+                rc = await _run(args)
+        assert rc == 0
+        cmd.assert_awaited_once_with(radio, args)
 
 
 # ---------------------------------------------------------------------------

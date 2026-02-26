@@ -7,6 +7,8 @@ __all__ = [
     "PacketType",
     "Mode",
     "AudioCodec",
+    "AudioCapabilities",
+    "get_audio_capabilities",
     "ScopeCompletionPolicy",
     "PacketHeader",
     "CivFrame",
@@ -83,6 +85,99 @@ class ScopeCompletionPolicy(StrEnum):
     STRICT = "strict"  # Wait for a CI-V ACK response
     FAST = "fast"      # Fire-and-forget, do not wait for ACK
     VERIFY = "verify"  # Fire-and-forget, but await actual scope data activity
+
+
+@dataclass(frozen=True, slots=True)
+class AudioCapabilities:
+    """Static icom-lan audio capability matrix and defaults."""
+
+    supported_codecs: tuple[AudioCodec, ...]
+    supported_sample_rates_hz: tuple[int, ...]
+    supported_channels: tuple[int, ...]
+    default_codec: AudioCodec
+    default_sample_rate_hz: int
+    default_channels: int
+
+    def to_dict(self) -> dict[str, object]:
+        """Return a JSON-friendly representation with stable key ordering."""
+        return {
+            "supported_codecs": [
+                {"name": codec.name, "value": int(codec)}
+                for codec in self.supported_codecs
+            ],
+            "supported_sample_rates_hz": list(self.supported_sample_rates_hz),
+            "supported_channels": list(self.supported_channels),
+            "default_codec": {
+                "name": self.default_codec.name,
+                "value": int(self.default_codec),
+            },
+            "default_sample_rate_hz": self.default_sample_rate_hz,
+            "default_channels": self.default_channels,
+        }
+
+
+_SUPPORTED_AUDIO_CODECS: tuple[AudioCodec, ...] = tuple(AudioCodec)
+_SUPPORTED_AUDIO_SAMPLE_RATES_HZ: tuple[int, ...] = (8000, 16000, 24000, 48000)
+_AUDIO_CODEC_CHANNELS: dict[AudioCodec, int] = {
+    AudioCodec.ULAW_1CH: 1,
+    AudioCodec.PCM_1CH_8BIT: 1,
+    AudioCodec.PCM_1CH_16BIT: 1,
+    AudioCodec.PCM_2CH_8BIT: 2,
+    AudioCodec.PCM_2CH_16BIT: 2,
+    AudioCodec.ULAW_2CH: 2,
+    AudioCodec.OPUS_1CH: 1,
+    AudioCodec.OPUS_2CH: 2,
+}
+_DEFAULT_CODEC_PREFERENCE: tuple[AudioCodec, ...] = (
+    AudioCodec.PCM_1CH_16BIT,
+    AudioCodec.PCM_2CH_16BIT,
+    AudioCodec.ULAW_1CH,
+    AudioCodec.ULAW_2CH,
+    AudioCodec.PCM_1CH_8BIT,
+    AudioCodec.PCM_2CH_8BIT,
+    AudioCodec.OPUS_1CH,
+    AudioCodec.OPUS_2CH,
+)
+
+
+def _build_audio_capabilities() -> AudioCapabilities:
+    supported_channels = tuple(
+        sorted({_AUDIO_CODEC_CHANNELS[codec] for codec in _SUPPORTED_AUDIO_CODECS})
+    )
+    default_codec = next(
+        codec
+        for codec in _DEFAULT_CODEC_PREFERENCE
+        if codec in _SUPPORTED_AUDIO_CODECS
+    )
+    implied_default_channels = _AUDIO_CODEC_CHANNELS[default_codec]
+    default_channels = (
+        implied_default_channels
+        if implied_default_channels in supported_channels
+        else supported_channels[0]
+    )
+    default_sample_rate_hz = max(_SUPPORTED_AUDIO_SAMPLE_RATES_HZ)
+    return AudioCapabilities(
+        supported_codecs=_SUPPORTED_AUDIO_CODECS,
+        supported_sample_rates_hz=_SUPPORTED_AUDIO_SAMPLE_RATES_HZ,
+        supported_channels=supported_channels,
+        default_codec=default_codec,
+        default_sample_rate_hz=default_sample_rate_hz,
+        default_channels=default_channels,
+    )
+
+
+_AUDIO_CAPABILITIES = _build_audio_capabilities()
+
+
+def get_audio_capabilities() -> AudioCapabilities:
+    """Return icom-lan audio capabilities with deterministic defaults.
+
+    Default selection rules:
+    1. Codec: first supported codec from ``_DEFAULT_CODEC_PREFERENCE``.
+    2. Sample rate: highest supported sample rate.
+    3. Channels: channel-count implied by default codec (fallback to minimum).
+    """
+    return _AUDIO_CAPABILITIES
 
 
 
