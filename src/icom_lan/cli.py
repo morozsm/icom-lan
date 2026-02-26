@@ -1184,7 +1184,12 @@ def main() -> None:
         parser.print_help()
         sys.exit(0)
     else:
-        sys.exit(asyncio.run(_run(args)))
+        try:
+            sys.exit(asyncio.run(_run(args)))
+        except KeyboardInterrupt:
+            # Graceful Ctrl-C path (radio/session cleanup happens in async context).
+            print("Interrupted, shutting down...", file=sys.stderr)
+            sys.exit(130)
 
 
 if __name__ == "__main__":

@@ -124,8 +124,8 @@ class RigctldServer:
         addr = self._server.sockets[0].getsockname()
         logger.info("rigctld listening on %s:%d", addr[0], addr[1])
 
-        if self._poller is not None:
-            await self._poller.start()
+        # Poller starts lazily on first client connection to avoid idle
+        # CI-V traffic/noise when no CAT clients are connected.
 
     async def stop(self) -> None:
         """Close the listener and cancel all active client tasks."""
@@ -190,11 +190,26 @@ class RigctldServer:
         task = loop.create_task(self._handle_client(reader, writer))
         self._client_tasks.add(task)
         self._client_count += 1
+
+        # Start poller when the first client connects.
+        if self._poller is not None and self._client_count == 1:
+            loop.create_task(self._poller.start())
+
         task.add_done_callback(self._on_client_done)
 
     def _on_client_done(self, task: asyncio.Task[None]) -> None:
         self._client_tasks.discard(task)
         self._client_count -= 1
+
+        # Stop poller when no clients remain.
+        if self._poller is not None and self._client_count <= 0:
+            self._client_count = 0
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(self._poller.stop())
+            except RuntimeError:
+                # Loop already closed during shutdown.
+                pass
 
     # ------------------------------------------------------------------
     # Per-client coroutine
@@ -300,10 +315,13 @@ class RigctldServer:
                 finally:
                     if poller_hold:
                         # Packet mode transitions can make CI-V briefly unresponsive.
-                        # Keep poller paused for a short settle window to avoid
+                        # Keep poller paused for a settle window to avoid
                         # immediate get_frequency storms.
                         if _is_packet_mode_set(cmd):
-                            await asyncio.sleep(0.45)
+                            try:
+                                self._poller.hold_for(3.0)
+                            except Exception:
+                                pass
                         self._poller.write_busy = False
 
                 # ── send response ────────────────────────────────────

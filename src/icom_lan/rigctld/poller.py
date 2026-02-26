@@ -67,6 +67,9 @@ class RadioPoller:
         self.write_busy: bool = False
         # Initialise to now so the first log fires after a full interval.
         self._last_stats_log: float = time.monotonic()
+        # Optional temporary suppression window for known transition periods
+        # (e.g. USB->PKT DATA mode switching).
+        self._hold_until: float = 0.0
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -102,10 +105,23 @@ class RadioPoller:
     # Internal loop
     # ------------------------------------------------------------------
 
+    def hold_for(self, seconds: float) -> None:
+        """Pause polling for a short transition window."""
+        if seconds <= 0:
+            return
+        until = time.monotonic() + seconds
+        if until > self._hold_until:
+            self._hold_until = until
+
     async def _run(self) -> None:
         """Main poll loop — runs until cancelled."""
         while True:
             await asyncio.sleep(self._config.poll_interval)
+
+            if time.monotonic() < self._hold_until:
+                logger.debug("RadioPoller: in hold window, skipping cycle")
+                continue
+
             if self.write_busy:
                 logger.debug("RadioPoller: write command in progress, skipping cycle")
                 continue
