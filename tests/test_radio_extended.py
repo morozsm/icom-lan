@@ -403,6 +403,17 @@ class TestAudio:
             await radio.push_audio_tx_opus(b"\x00" * 100)
 
     @pytest.mark.asyncio
+    async def test_start_tx_pcm_disconnected(self) -> None:
+        r = IcomRadio("192.168.1.100")
+        with pytest.raises(ConnectionError):
+            await r.start_audio_tx_pcm()
+
+    @pytest.mark.asyncio
+    async def test_push_tx_pcm_not_started(self, radio: IcomRadio) -> None:
+        with pytest.raises(RuntimeError, match="start_audio_tx_pcm"):
+            await radio.push_audio_tx_pcm(b"\x00" * 1920)
+
+    @pytest.mark.asyncio
     async def test_no_audio_port(self, radio: IcomRadio) -> None:
         radio._audio_port = 0
         with pytest.raises(ConnectionError, match="Audio port not available"):
@@ -415,6 +426,10 @@ class TestAudio:
     @pytest.mark.asyncio
     async def test_stop_tx_noop_when_no_stream(self, radio: IcomRadio) -> None:
         await radio.stop_audio_tx_opus()  # should not raise
+
+    @pytest.mark.asyncio
+    async def test_stop_tx_pcm_noop_when_no_stream(self, radio: IcomRadio) -> None:
+        await radio.stop_audio_tx_pcm()  # should not raise
 
 
 # ---------------------------------------------------------------------------
