@@ -1159,8 +1159,24 @@ async def _cmd_discover(_radio: IcomRadio, _args: argparse.Namespace) -> int:
 
 
 def main() -> None:
+    import logging
+
     parser = _build_parser()
     args = parser.parse_args()
+
+    # Enable debug logging with ICOM_DEBUG=1 or any truthy value
+    if os.environ.get("ICOM_DEBUG", "").strip() not in ("", "0", "false", "no"):
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format="%(asctime)s %(name)s %(levelname)s %(message)s",
+            datefmt="%H:%M:%S",
+        )
+    else:
+        logging.basicConfig(
+            level=logging.INFO,
+            format="%(asctime)s %(levelname)s %(message)s",
+            datefmt="%H:%M:%S",
+        )
 
     if args.command == "discover":
         sys.exit(asyncio.run(_cmd_discover(None, args)))  # type: ignore[arg-type]

@@ -35,6 +35,7 @@ from .commands import (
     build_civ_frame,
     get_alc,
     get_attenuator as get_attenuator_cmd,
+    get_data_mode as get_data_mode_cmd,
     get_frequency,
     get_mode,
     get_power,
@@ -44,6 +45,7 @@ from .commands import (
     get_swr,
     parse_ack_nak,
     parse_civ_frame,
+    parse_data_mode_response,
     parse_frequency_response,
     parse_meter_response,
     parse_mode_response,
@@ -57,6 +59,7 @@ from .commands import (
     send_cw,
     set_attenuator,
     set_attenuator_level,
+    set_data_mode as set_data_mode_cmd,
     set_digisel,
     set_frequency,
     set_mode,
@@ -1558,6 +1561,30 @@ class IcomRadio:
         self._last_mode = mode
         if filter_width is not None:
             self._filter_width = filter_width
+
+    async def get_data_mode(self) -> bool:
+        """Get the IC-7610 DATA mode state (command 0x1A 0x06).
+
+        Returns:
+            True if DATA mode is active (DATA1/2/3), False if off.
+        """
+        self._check_connected()
+        civ = get_data_mode_cmd(to_addr=self._radio_addr)
+        resp = await self._send_civ_raw(civ)
+        return parse_data_mode_response(resp)
+
+    async def set_data_mode(self, on: bool) -> None:
+        """Set the IC-7610 DATA mode (command 0x1A 0x06).
+
+        Args:
+            on: True to enable DATA1 mode, False to disable.
+        """
+        self._check_connected()
+        civ = set_data_mode_cmd(on, to_addr=self._radio_addr)
+        resp = await self._send_civ_raw(civ)
+        ack = parse_ack_nak(resp)
+        if ack is False:
+            raise CommandError(f"Radio rejected set_data_mode({on})")
 
     async def get_power(self) -> int:
         """Get the RF power level (0-255)."""

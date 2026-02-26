@@ -198,11 +198,28 @@ class RigctldHandler:
         if self._cache.is_fresh("mode", self._config.cache_ttl):
             mode_str = self._cache.mode
             passband = _filter_to_passband(self._cache.filter_width)
+            data_mode = self._cache.data_mode
         else:
             mode, filt = await self._radio.get_mode_info()
             mode_str = CIV_TO_HAMLIB_MODE.get(mode.value, "USB")
             self._cache.update_mode(mode_str, filt)
             passband = _filter_to_passband(filt)
+            # Fetch data mode alongside mode to keep them in sync.
+            try:
+                data_mode = await self._radio.get_data_mode()
+                self._cache.update_data_mode(data_mode)
+            except Exception:
+                data_mode = self._cache.data_mode
+
+        # Map DATA overlays to packet modes where hamlib expects them.
+        if data_mode:
+            if mode_str == "USB":
+                mode_str = "PKTUSB"
+            elif mode_str == "LSB":
+                mode_str = "PKTLSB"
+            elif mode_str == "RTTY":
+                mode_str = "PKTRTTY"
+
         return RigctldResponse(values=[mode_str, str(passband)])
 
     async def _cmd_set_mode(self, cmd: RigctldCommand) -> RigctldResponse:
@@ -223,8 +240,17 @@ class RigctldHandler:
             except ValueError:
                 return _err(HamlibError.EINVAL)
         filter_width = _passband_to_filter(passband_hz)
+        packet_modes = {"PKTUSB", "PKTLSB", "PKTRTTY"}
+
         await self._radio.set_mode(mode, filter_width=filter_width)
+
+        # Only set DATA mode explicitly for packet modes.
+        # For non-packet modes, avoid hidden side-effects (do not force DATA off).
+        if mode_str in packet_modes:
+            await self._radio.set_data_mode(True)
+
         self._cache.invalidate_mode()
+        self._cache.invalidate_data_mode()
         return _ok()
 
     # ------------------------------------------------------------------

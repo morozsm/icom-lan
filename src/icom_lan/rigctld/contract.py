@@ -61,6 +61,7 @@ HAMLIB_MODE_MAP: dict[str, int] = {
     "WFM":    0x06,
     "PKTUSB": 0x01,   # mapped to USB (DATA mode handled separately)
     "PKTLSB": 0x00,   # mapped to LSB
+    "PKTRTTY": 0x04,  # mapped to RTTY
 }
 
 # Reverse: CI-V mode int → hamlib string

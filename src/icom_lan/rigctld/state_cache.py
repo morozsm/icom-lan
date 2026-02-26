@@ -17,7 +17,7 @@ from typing import Literal
 __all__ = ["StateCache"]
 
 # Literal union of all cacheable field names (used for is_fresh).
-CacheField = Literal["freq", "mode", "vfo", "ptt", "s_meter", "rf_power"]
+CacheField = Literal["freq", "mode", "vfo", "ptt", "s_meter", "rf_power", "data_mode"]
 
 
 @dataclass(slots=True)
@@ -42,6 +42,8 @@ class StateCache:
         s_meter_ts: Monotonic timestamp of the last S-meter update.
         rf_power: Last-known normalised RF power (0.0–1.0) or ``None``.
         rf_power_ts: Monotonic timestamp of the last RF-power update.
+        data_mode: Last-known IC-7610 DATA mode state (True = DATA1 active).
+        data_mode_ts: Monotonic timestamp of the last data_mode update.
     """
 
     # Frequency
@@ -68,6 +70,10 @@ class StateCache:
     # RF power (normalised 0.0–1.0)
     rf_power: float | None = None
     rf_power_ts: float = 0.0
+
+    # DATA mode (IC-7610 0x1A 0x06)
+    data_mode: bool = False
+    data_mode_ts: float = 0.0
 
     # ------------------------------------------------------------------
     # Freshness check
@@ -98,6 +104,8 @@ class StateCache:
                 ts = self.s_meter_ts
             case "rf_power":
                 ts = self.rf_power_ts
+            case "data_mode":
+                ts = self.data_mode_ts
             case _:  # pragma: no cover
                 return False
         if ts == 0.0:
@@ -147,6 +155,15 @@ class StateCache:
         self.rf_power = value
         self.rf_power_ts = time.monotonic()
 
+    def update_data_mode(self, on: bool) -> None:
+        """Store a new DATA mode state and record the current timestamp."""
+        self.data_mode = on
+        self.data_mode_ts = time.monotonic()
+
+    def invalidate_data_mode(self) -> None:
+        """Mark DATA mode as stale (forces the next read to hit radio)."""
+        self.data_mode_ts = 0.0
+
     # ------------------------------------------------------------------
     # Snapshot
     # ------------------------------------------------------------------
@@ -180,4 +197,6 @@ class StateCache:
             "s_meter_age": _age(self.s_meter_ts),
             "rf_power": self.rf_power,
             "rf_power_age": _age(self.rf_power_ts),
+            "data_mode": self.data_mode,
+            "data_mode_age": _age(self.data_mode_ts),
         }

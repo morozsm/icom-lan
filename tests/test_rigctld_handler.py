@@ -33,6 +33,7 @@ def config() -> RigctldConfig:
 @pytest.fixture
 def mock_radio() -> AsyncMock:
     radio = AsyncMock()
+    radio.get_data_mode.return_value = False
     return radio
 
 
@@ -177,12 +178,31 @@ async def test_set_mode_without_passband_uses_none_filter(
 
 
 @pytest.mark.asyncio
+async def test_set_mode_non_packet_does_not_force_data_change(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    resp = await handler.execute(set_cmd("set_mode", "LSB"))
+    assert resp.ok
+    mock_radio.set_data_mode.assert_not_awaited()
+
+
+@pytest.mark.asyncio
 async def test_set_mode_passband_zero_uses_none_filter(
     handler: RigctldHandler, mock_radio: AsyncMock
 ) -> None:
     resp = await handler.execute(set_cmd("set_mode", "FM", "0"))
     assert resp.ok
     mock_radio.set_mode.assert_awaited_once_with(Mode.FM, filter_width=None)
+
+
+@pytest.mark.asyncio
+async def test_set_mode_pktrtty_maps_to_rtty_and_sets_data(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    resp = await handler.execute(set_cmd("set_mode", "PKTRTTY"))
+    assert resp.ok
+    mock_radio.set_mode.assert_awaited_once_with(Mode.RTTY, filter_width=None)
+    mock_radio.set_data_mode.assert_awaited_once_with(True)
 
 
 @pytest.mark.asyncio

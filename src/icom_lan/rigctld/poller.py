@@ -157,6 +157,19 @@ class RadioPoller:
         except Exception as exc:  # pragma: no cover — unexpected
             logger.warning("RadioPoller: get_mode_info unexpected error: %s", exc)
 
+        # Bail out early if a write started while we were awaiting.
+        if self.write_busy:
+            return
+
+        # --- data mode --------------------------------------------------
+        try:
+            data_mode = await self._radio.get_data_mode()
+            self._cache.update_data_mode(data_mode)
+        except (IcomTimeoutError, IcomConnectionError) as exc:
+            logger.warning("RadioPoller: get_data_mode failed: %s", exc)
+        except Exception as exc:  # pragma: no cover — unexpected
+            logger.warning("RadioPoller: get_data_mode unexpected error: %s", exc)
+
     # ------------------------------------------------------------------
     # Monitoring
     # ------------------------------------------------------------------
