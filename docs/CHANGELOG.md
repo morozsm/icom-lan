@@ -7,12 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Audio capability introspection API:
+  - `IcomRadio.audio_capabilities()` (async and sync wrappers)
+  - `get_audio_capabilities()` and `AudioCapabilities` export
+- CLI command: `icom-lan audio caps` with optional `--json` output.
+
 ### Changed
 
 - Audio low-level API names are now explicit with `_opus` suffix:
   `start_audio_rx_opus()`, `stop_audio_rx_opus()`, `start_audio_tx_opus()`,
   `push_audio_tx_opus()`, `stop_audio_tx_opus()`, plus full-duplex
   `start_audio_opus()` / `stop_audio_opus()`.
+- Audio defaults now come from deterministic capability rules:
+  codec preference order, highest sample rate, and channels implied by codec.
 
 ### Deprecated
 

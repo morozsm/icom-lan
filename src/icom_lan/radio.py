@@ -84,7 +84,14 @@ from .civ import (
 )
 from .scope import ScopeAssembler, ScopeFrame
 from .transport import ConnectionState, IcomTransport
-from .types import AudioCodec, CivFrame, Mode, ScopeCompletionPolicy
+from .types import (
+    AudioCapabilities,
+    AudioCodec,
+    CivFrame,
+    Mode,
+    ScopeCompletionPolicy,
+    get_audio_capabilities,
+)
 
 __all__ = ["IcomRadio", "AudioCodec", "ScopeFrame", "ScopeCompletionPolicy"]
 
@@ -95,6 +102,9 @@ OPENCLOSE_SIZE = 0x16  # per wfview packettypes.h
 TOKEN_ACK_SIZE = 0x40
 CONNINFO_SIZE = 0x90
 STATUS_SIZE = 0x50
+_AUDIO_CAPABILITIES = get_audio_capabilities()
+_DEFAULT_AUDIO_CODEC = _AUDIO_CAPABILITIES.default_codec
+_DEFAULT_AUDIO_SAMPLE_RATE = _AUDIO_CAPABILITIES.default_sample_rate_hz
 
 
 class IcomRadio:
@@ -127,8 +137,8 @@ class IcomRadio:
         password: str = "",
         radio_addr: int = IC_7610_ADDR,
         timeout: float = 5.0,
-        audio_codec: AudioCodec | int = AudioCodec.PCM_1CH_16BIT,
-        audio_sample_rate: int = 48000,
+        audio_codec: AudioCodec | int = _DEFAULT_AUDIO_CODEC,
+        audio_sample_rate: int = _DEFAULT_AUDIO_SAMPLE_RATE,
         auto_reconnect: bool = False,
         reconnect_delay: float = 2.0,
         reconnect_max_delay: float = 60.0,
@@ -498,6 +508,11 @@ class IcomRadio:
     def audio_sample_rate(self) -> int:
         """Configured audio sample rate in Hz."""
         return self._audio_sample_rate
+
+    @staticmethod
+    def audio_capabilities() -> AudioCapabilities:
+        """Return icom-lan audio capabilities and deterministic defaults."""
+        return get_audio_capabilities()
 
     async def _ensure_audio_transport(self) -> None:
         """Connect the audio transport if not already connected."""
