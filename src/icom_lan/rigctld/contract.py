@@ -217,3 +217,4 @@ class RigctldConfig:
     command_timeout: float = 2.0        # seconds per CI-V command
     cache_ttl: float = 0.2             # seconds for frequency/mode cache
     max_line_length: int = 1024        # max bytes per command line (OOM guard)
+    poll_interval: float = 0.2         # seconds between autonomous poll cycles

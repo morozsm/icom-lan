@@ -45,6 +45,7 @@ class RigctldServer:
         *,
         _protocol: Any = None,
         _handler: Any = None,
+        _poller: Any = None,
     ) -> None:
         self._radio = radio
         self._config = config or RigctldConfig()
@@ -55,6 +56,7 @@ class RigctldServer:
         # Injected for testing; populated lazily in start() if None.
         self._protocol: Any = _protocol
         self._rig_handler: Any = _handler
+        self._poller: Any = _poller
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -68,9 +70,14 @@ class RigctldServer:
 
         if self._rig_handler is None:
             from . import handler as _handler_mod  # noqa: PLC0415
+            from .state_cache import StateCache  # noqa: PLC0415
+            from .poller import RadioPoller  # noqa: PLC0415
+            cache = StateCache()
             self._rig_handler = _handler_mod.RigctldHandler(
-                self._radio, self._config
+                self._radio, self._config, cache=cache
             )
+            if self._poller is None:
+                self._poller = RadioPoller(self._radio, cache, self._config)
 
         self._server = await asyncio.start_server(
             self._accept_client,
@@ -80,8 +87,15 @@ class RigctldServer:
         addr = self._server.sockets[0].getsockname()
         logger.info("rigctld listening on %s:%d", addr[0], addr[1])
 
+        if self._poller is not None:
+            await self._poller.start()
+
     async def stop(self) -> None:
         """Close the listener and cancel all active client tasks."""
+        if self._poller is not None:
+            await self._poller.stop()
+            self._poller = None
+
         if self._server is not None:
             self._server.close()
             await self._server.wait_closed()

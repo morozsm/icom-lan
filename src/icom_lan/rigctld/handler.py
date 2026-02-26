@@ -3,7 +3,7 @@
 Responsibilities:
 - Command dispatch table (long_cmd → async handler method)
 - Read-only gate (reject set commands with RPRT -22)
-- Frequency/mode cache with configurable TTL
+- Frequency/mode cache with configurable TTL (via StateCache)
 - Error translation (icom-lan exceptions → Hamlib error codes)
 
 This module receives RigctldCommand from protocol.py and returns
@@ -14,7 +14,6 @@ TCP or wire format.
 from __future__ import annotations
 
 import logging
-import time
 from typing import TYPE_CHECKING, Any
 
 from ..exceptions import ConnectionError, TimeoutError
@@ -27,6 +26,7 @@ from .contract import (
     RigctldConfig,
     RigctldResponse,
 )
+from .state_cache import StateCache
 
 if TYPE_CHECKING:
     from ..radio import IcomRadio
@@ -116,16 +116,19 @@ class RigctldHandler:
     Args:
         radio: Connected IcomRadio instance.
         config: Server configuration (read_only, cache_ttl, etc.).
+        cache: Shared state cache; a fresh private one is created if omitted.
     """
 
-    def __init__(self, radio: "IcomRadio", config: RigctldConfig) -> None:
+    def __init__(
+        self,
+        radio: "IcomRadio",
+        config: RigctldConfig,
+        cache: StateCache | None = None,
+    ) -> None:
         self._radio = radio
         self._config = config
         self._ptt_state: bool = False
-        # Cache entries: (value, monotonic_timestamp)
-        self._freq_cache: tuple[int, float] | None = None
-        # mode_cache: (Mode, filter_or_None, timestamp)
-        self._mode_cache: tuple[Mode, int | None, float] | None = None
+        self._cache: StateCache = cache if cache is not None else StateCache()
 
     # ------------------------------------------------------------------
     # Public entry point
@@ -166,29 +169,14 @@ class RigctldHandler:
             return _err(HamlibError.EINTERNAL)
 
     # ------------------------------------------------------------------
-    # Cache helpers
-    # ------------------------------------------------------------------
-
-    def _freq_cache_valid(self) -> bool:
-        if self._freq_cache is None:
-            return False
-        return (time.monotonic() - self._freq_cache[1]) < self._config.cache_ttl
-
-    def _mode_cache_valid(self) -> bool:
-        if self._mode_cache is None:
-            return False
-        return (time.monotonic() - self._mode_cache[2]) < self._config.cache_ttl
-
-    # ------------------------------------------------------------------
     # Frequency commands
     # ------------------------------------------------------------------
 
     async def _cmd_get_freq(self, cmd: RigctldCommand) -> RigctldResponse:
-        if self._freq_cache_valid():
-            assert self._freq_cache is not None
-            return RigctldResponse(values=[str(self._freq_cache[0])])
+        if self._cache.is_fresh("freq", self._config.cache_ttl):
+            return RigctldResponse(values=[str(self._cache.freq)])
         freq = await self._radio.get_frequency()
-        self._freq_cache = (freq, time.monotonic())
+        self._cache.update_freq(freq)
         return RigctldResponse(values=[str(freq)])
 
     async def _cmd_set_freq(self, cmd: RigctldCommand) -> RigctldResponse:
@@ -199,7 +187,7 @@ class RigctldHandler:
         except ValueError:
             return _err(HamlibError.EINVAL)
         await self._radio.set_frequency(freq)
-        self._freq_cache = None  # invalidate
+        self._cache.invalidate_freq()
         return _ok()
 
     # ------------------------------------------------------------------
@@ -207,14 +195,14 @@ class RigctldHandler:
     # ------------------------------------------------------------------
 
     async def _cmd_get_mode(self, cmd: RigctldCommand) -> RigctldResponse:
-        if self._mode_cache_valid():
-            assert self._mode_cache is not None
-            mode, filt, _ = self._mode_cache
+        if self._cache.is_fresh("mode", self._config.cache_ttl):
+            mode_str = self._cache.mode
+            passband = _filter_to_passband(self._cache.filter_width)
         else:
             mode, filt = await self._radio.get_mode_info()
-            self._mode_cache = (mode, filt, time.monotonic())
-        mode_str = CIV_TO_HAMLIB_MODE.get(mode.value, "USB")
-        passband = _filter_to_passband(filt)
+            mode_str = CIV_TO_HAMLIB_MODE.get(mode.value, "USB")
+            self._cache.update_mode(mode_str, filt)
+            passband = _filter_to_passband(filt)
         return RigctldResponse(values=[mode_str, str(passband)])
 
     async def _cmd_set_mode(self, cmd: RigctldCommand) -> RigctldResponse:
@@ -236,7 +224,7 @@ class RigctldHandler:
                 return _err(HamlibError.EINVAL)
         filter_width = _passband_to_filter(passband_hz)
         await self._radio.set_mode(mode, filter_width=filter_width)
-        self._mode_cache = None  # invalidate
+        self._cache.invalidate_mode()
         return _ok()
 
     # ------------------------------------------------------------------
