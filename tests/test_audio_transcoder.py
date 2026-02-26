@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -10,6 +10,7 @@ from icom_lan._audio_transcoder import PcmAudioFormat, PcmOpusTranscoder
 from icom_lan.audio import AudioPacket
 from icom_lan.exceptions import (
     AudioCodecBackendError,
+    ConnectionError,
     AudioFormatError,
     AudioTranscodeError,
 )
@@ -152,3 +153,76 @@ class TestRadioPcmHooks:
         adapter(packet)
 
         assert received == [None, b"pcm:\xAA\xBB"]
+
+
+class TestRadioPcmRxApi:
+    @pytest.mark.asyncio
+    async def test_start_audio_rx_pcm_decodes_and_forwards_gaps(self) -> None:
+        radio = IcomRadio("192.168.1.100")
+        radio._connected = True
+        radio._civ_transport = MagicMock()
+        radio._audio_stream = MagicMock()
+        radio._audio_stream.start_rx = AsyncMock()
+
+        class _DummyTranscoder:
+            def opus_to_pcm(self, opus: bytes) -> bytes:
+                return b"pcm:" + opus
+
+        radio._pcm_transcoder = _DummyTranscoder()  # type: ignore[assignment]
+        radio._pcm_transcoder_fmt = (48000, 1, 20)
+
+        received: list[bytes | None] = []
+        await radio.start_audio_rx_pcm(
+            lambda frame: received.append(frame),
+            jitter_depth=7,
+        )
+
+        radio._audio_stream.start_rx.assert_awaited_once()
+        rx_callback = radio._audio_stream.start_rx.await_args.args[0]
+        assert radio._audio_stream.start_rx.await_args.kwargs["jitter_depth"] == 7
+
+        rx_callback(AudioPacket(ident=0x0080, send_seq=10, data=b"\x01\x02"))
+        rx_callback(None)
+
+        assert received == [b"pcm:\x01\x02", None]
+
+    @pytest.mark.asyncio
+    async def test_stop_audio_rx_pcm_delegates(self) -> None:
+        radio = IcomRadio("192.168.1.100")
+        radio._audio_stream = MagicMock()
+        radio._audio_stream.stop_rx = AsyncMock()
+
+        await radio.stop_audio_rx_pcm()
+        radio._audio_stream.stop_rx.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_start_audio_rx_pcm_invalid_callback(self) -> None:
+        radio = IcomRadio("192.168.1.100")
+        with pytest.raises(TypeError, match="callback must be callable"):
+            await radio.start_audio_rx_pcm(None)  # type: ignore[arg-type]
+
+    @pytest.mark.asyncio
+    async def test_start_audio_rx_pcm_invalid_jitter_depth_type(self) -> None:
+        radio = IcomRadio("192.168.1.100")
+        with pytest.raises(TypeError, match="jitter_depth must be an int"):
+            await radio.start_audio_rx_pcm(lambda _: None, jitter_depth=1.5)  # type: ignore[arg-type]
+
+    @pytest.mark.asyncio
+    async def test_start_audio_rx_pcm_invalid_jitter_depth_value(self) -> None:
+        radio = IcomRadio("192.168.1.100")
+        with pytest.raises(ValueError, match="jitter_depth must be >= 0"):
+            await radio.start_audio_rx_pcm(lambda _: None, jitter_depth=-1)
+
+    @pytest.mark.asyncio
+    async def test_start_audio_rx_pcm_invalid_format(self) -> None:
+        radio = IcomRadio("192.168.1.100")
+        radio._connected = True
+        radio._civ_transport = MagicMock()
+        with pytest.raises(AudioFormatError, match="Unsupported sample_rate"):
+            await radio.start_audio_rx_pcm(lambda _: None, sample_rate=44100)
+
+    @pytest.mark.asyncio
+    async def test_start_audio_rx_pcm_disconnected(self) -> None:
+        radio = IcomRadio("192.168.1.100")
+        with pytest.raises(ConnectionError, match="Not connected to radio"):
+            await radio.start_audio_rx_pcm(lambda _: None)
