@@ -18,6 +18,7 @@ import asyncio
 import logging
 from typing import TYPE_CHECKING, Any
 
+from .circuit_breaker import CircuitBreaker, CircuitState
 from .contract import ClientSession, HamlibError, RigctldConfig
 
 if TYPE_CHECKING:
@@ -36,6 +37,8 @@ class RigctldServer:
         config: Server configuration; defaults to RigctldConfig().
         _protocol: Override the protocol module (for testing).
         _handler: Override the handler instance (for testing).
+        _poller: Override the poller instance (for testing).
+        _circuit_breaker: Override the circuit breaker (for testing).
     """
 
     def __init__(
@@ -46,6 +49,7 @@ class RigctldServer:
         _protocol: Any = None,
         _handler: Any = None,
         _poller: Any = None,
+        _circuit_breaker: Any = None,
     ) -> None:
         self._radio = radio
         self._config = config or RigctldConfig()
@@ -57,6 +61,18 @@ class RigctldServer:
         self._protocol: Any = _protocol
         self._rig_handler: Any = _handler
         self._poller: Any = _poller
+        self._circuit_breaker: CircuitBreaker | None = _circuit_breaker
+
+    # ------------------------------------------------------------------
+    # Diagnostics
+    # ------------------------------------------------------------------
+
+    @property
+    def circuit_breaker_state(self) -> CircuitState | None:
+        """Current circuit breaker state, or ``None`` if not yet initialised."""
+        if self._circuit_breaker is None:
+            return None
+        return self._circuit_breaker.state
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -77,7 +93,12 @@ class RigctldServer:
                 self._radio, self._config, cache=cache
             )
             if self._poller is None:
-                self._poller = RadioPoller(self._radio, cache, self._config)
+                if self._circuit_breaker is None:
+                    self._circuit_breaker = CircuitBreaker()
+                self._poller = RadioPoller(
+                    self._radio, cache, self._config,
+                    circuit_breaker=self._circuit_breaker,
+                )
 
         self._server = await asyncio.start_server(
             self._accept_client,
