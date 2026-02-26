@@ -1,6 +1,6 @@
 """Tests for synchronous API wrapper."""
 
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -71,3 +71,12 @@ class TestSyncAudioNaming:
         assert caps.default_codec.name == "PCM_1CH_16BIT"
         assert caps.default_sample_rate_hz == 48000
         assert caps.default_channels == 1
+
+    def test_get_audio_stats_delegates(self) -> None:
+        r = IcomRadio("192.168.1.100")
+        r._radio.get_audio_stats = MagicMock(return_value={"active": False, "state": "idle"})
+
+        stats = r.get_audio_stats()
+
+        assert stats["state"] == "idle"
+        r._loop.close()

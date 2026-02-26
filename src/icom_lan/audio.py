@@ -18,6 +18,7 @@ from .types import PacketType
 __all__ = [
     "AudioStream",
     "AudioPacket",
+    "AudioStats",
     "AudioState",
     "JitterBuffer",
     "AUDIO_HEADER_SIZE",
@@ -60,6 +61,81 @@ class AudioState(StrEnum):
     TRANSMITTING = "transmitting"
 
 
+AudioStatsValue = bool | int | float | str
+
+
+@dataclass(frozen=True, slots=True)
+class AudioStats:
+    """Runtime stream statistics snapshot.
+
+    All metrics are JSON-safe primitives and can be serialized directly via
+    :meth:`to_dict`.
+    """
+
+    active: bool
+    state: str
+    rx_packets_received: int
+    rx_packets_delivered: int
+    tx_packets_sent: int
+    packets_lost: int
+    packet_loss_percent: float
+    jitter_ms: float
+    jitter_max_ms: float
+    underrun_count: int
+    overrun_count: int
+    estimated_latency_ms: float
+    jitter_buffer_depth_packets: int
+    jitter_buffer_pending_packets: int
+    duplicates_dropped: int
+    stale_packets_dropped: int
+    out_of_order_packets: int
+
+    @classmethod
+    def inactive(cls) -> "AudioStats":
+        """Build a zeroed, idle stats snapshot."""
+        return cls(
+            active=False,
+            state=AudioState.IDLE,
+            rx_packets_received=0,
+            rx_packets_delivered=0,
+            tx_packets_sent=0,
+            packets_lost=0,
+            packet_loss_percent=0.0,
+            jitter_ms=0.0,
+            jitter_max_ms=0.0,
+            underrun_count=0,
+            overrun_count=0,
+            estimated_latency_ms=0.0,
+            jitter_buffer_depth_packets=0,
+            jitter_buffer_pending_packets=0,
+            duplicates_dropped=0,
+            stale_packets_dropped=0,
+            out_of_order_packets=0,
+        )
+
+    def to_dict(self) -> dict[str, AudioStatsValue]:
+        """Return a JSON-friendly dictionary representation."""
+        return {
+            "active": self.active,
+            "state": self.state,
+            "rx_packets_received": self.rx_packets_received,
+            "rx_packets_delivered": self.rx_packets_delivered,
+            "tx_packets_sent": self.tx_packets_sent,
+            "packets_lost": self.packets_lost,
+            "packet_loss_percent": self.packet_loss_percent,
+            "jitter_ms": self.jitter_ms,
+            "jitter_max_ms": self.jitter_max_ms,
+            "underrun_count": self.underrun_count,
+            "overrun_count": self.overrun_count,
+            "estimated_latency_ms": self.estimated_latency_ms,
+            "jitter_buffer_depth_packets": self.jitter_buffer_depth_packets,
+            "jitter_buffer_pending_packets": self.jitter_buffer_pending_packets,
+            "duplicates_dropped": self.duplicates_dropped,
+            "stale_packets_dropped": self.stale_packets_dropped,
+            "out_of_order_packets": self.out_of_order_packets,
+        }
+
+
 class JitterBuffer:
     """Reorder-and-delay buffer for incoming audio packets.
 
@@ -89,6 +165,11 @@ class JitterBuffer:
         self._buffer: dict[int, AudioPacket] = {}
         self._next_seq: int | None = None
         self._max_held = depth * 4  # hard cap to prevent memory leak
+        self._duplicates_dropped = 0
+        self._stale_packets_dropped = 0
+        self._gap_count = 0
+        self._underrun_count = 0
+        self._overrun_count = 0
 
     @property
     def depth(self) -> int:
@@ -99,6 +180,31 @@ class JitterBuffer:
     def pending(self) -> int:
         """Number of packets currently held in the buffer."""
         return len(self._buffer)
+
+    @property
+    def duplicate_count(self) -> int:
+        """Count of duplicate packets dropped."""
+        return self._duplicates_dropped
+
+    @property
+    def stale_count(self) -> int:
+        """Count of stale/old packets dropped."""
+        return self._stale_packets_dropped
+
+    @property
+    def gap_count(self) -> int:
+        """Count of inferred missing packets (gap placeholders)."""
+        return self._gap_count
+
+    @property
+    def underrun_count(self) -> int:
+        """Count of jitter-buffer underrun events."""
+        return self._underrun_count
+
+    @property
+    def overrun_count(self) -> int:
+        """Count of jitter-buffer overrun events."""
+        return self._overrun_count
 
     def push(self, packet: AudioPacket) -> list[AudioPacket | None]:
         """Insert a packet and return any packets ready for delivery.
@@ -121,17 +227,20 @@ class JitterBuffer:
 
         # Ignore duplicates and very old packets
         if seq in self._buffer:
+            self._duplicates_dropped += 1
             return []
         # Detect wrap-around: if seq is far behind _next_seq, it's old
         diff = (seq - self._next_seq) & 0xFFFF
         if diff > 0x8000:
             # seq is behind _next_seq (wrapped), ignore
+            self._stale_packets_dropped += 1
             return []
 
         self._buffer[seq] = packet
 
         # Overflow protection
         if len(self._buffer) > self._max_held:
+            self._overrun_count += 1
             return self._flush_all()
 
         # Only deliver when we have enough buffered
@@ -173,9 +282,11 @@ class JitterBuffer:
                 if ahead_count >= self._depth:
                     # Enough evidence that seq is lost → gap
                     result.append(None)
+                    self._gap_count += 1
                     self._next_seq = (seq + 1) & 0xFFFF
                 else:
                     # Not enough buffered ahead, wait for more packets
+                    self._underrun_count += 1
                     break
 
         return result
@@ -195,6 +306,7 @@ class JitterBuffer:
                 result.append(self._buffer.pop(seq))
             else:
                 result.append(None)
+                self._gap_count += 1
             self._next_seq = (self._next_seq + 1) & 0xFFFF
             # Safety: prevent infinite loop
             if len(result) > self._max_held + self._depth:
@@ -225,11 +337,37 @@ class AudioStream:
     def __init__(self, transport: IcomTransport, jitter_depth: int = 5) -> None:
         self._transport = transport
         self._state: AudioState = AudioState.IDLE
-        self._rx_callback: Callable[[AudioPacket], None] | None = None
+        self._rx_callback: Callable[[AudioPacket | None], None] | None = None
         self._rx_task: asyncio.Task[None] | None = None
         self._tx_seq: int = 0
         self._jitter_depth = jitter_depth
         self._jitter_buffer: JitterBuffer | None = None
+        self._packet_duration_ms = 20.0
+        self._rx_packets_received = 0
+        self._rx_packets_delivered = 0
+        self._rx_packets_lost = 0
+        self._tx_packets_sent = 0
+        self._rx_jitter_ema_packets = 0.0
+        self._rx_jitter_max_packets = 0
+        self._rx_underruns = 0
+        self._rx_overruns = 0
+        self._rx_duplicates_dropped = 0
+        self._rx_stale_packets_dropped = 0
+        self._rx_out_of_order_packets = 0
+        self._rx_last_seq: int | None = None
+
+    def _reset_rx_stats(self) -> None:
+        self._rx_packets_received = 0
+        self._rx_packets_delivered = 0
+        self._rx_packets_lost = 0
+        self._rx_jitter_ema_packets = 0.0
+        self._rx_jitter_max_packets = 0
+        self._rx_underruns = 0
+        self._rx_overruns = 0
+        self._rx_duplicates_dropped = 0
+        self._rx_stale_packets_dropped = 0
+        self._rx_out_of_order_packets = 0
+        self._rx_last_seq = None
 
     @property
     def state(self) -> AudioState:
@@ -241,13 +379,98 @@ class AudioStream:
         """Underlying transport."""
         return self._transport
 
+    def _update_rx_order_stats(self, send_seq: int) -> None:
+        if self._rx_last_seq is None:
+            self._rx_last_seq = send_seq
+            return
+
+        step = (send_seq - self._rx_last_seq) & 0xFFFF
+        if step == 0:
+            return
+
+        if step < 0x8000:
+            deviation = abs(step - 1)
+            self._rx_jitter_ema_packets = (
+                self._rx_jitter_ema_packets * 0.875 + deviation * 0.125
+            )
+            if deviation > self._rx_jitter_max_packets:
+                self._rx_jitter_max_packets = deviation
+            if step != 1:
+                self._rx_out_of_order_packets += 1
+            if self._jitter_buffer is None and step > 1:
+                self._rx_packets_lost += step - 1
+                self._rx_underruns += step - 1
+            self._rx_last_seq = send_seq
+            return
+
+        # Packet appears behind the last seen sequence (likely stale/reordered).
+        self._rx_out_of_order_packets += 1
+
+    def _sync_jitter_stats(self) -> None:
+        if self._jitter_buffer is None:
+            return
+        self._rx_packets_lost = self._jitter_buffer.gap_count
+        self._rx_underruns = self._jitter_buffer.underrun_count
+        self._rx_overruns = self._jitter_buffer.overrun_count
+        self._rx_duplicates_dropped = self._jitter_buffer.duplicate_count
+        self._rx_stale_packets_dropped = self._jitter_buffer.stale_count
+
+    def _build_audio_stats(self) -> AudioStats:
+        self._sync_jitter_stats()
+        depth = self._jitter_buffer.depth if self._jitter_buffer is not None else 0
+        pending = self._jitter_buffer.pending if self._jitter_buffer is not None else 0
+        expected_rx = self._rx_packets_delivered + self._rx_packets_lost
+        packet_loss_percent = (
+            (self._rx_packets_lost / expected_rx) * 100.0 if expected_rx > 0 else 0.0
+        )
+        estimated_latency_ms = (
+            float(max(depth, pending) * self._packet_duration_ms) if depth > 0 else 0.0
+        )
+
+        return AudioStats(
+            active=self._state != AudioState.IDLE,
+            state=self._state,
+            rx_packets_received=self._rx_packets_received,
+            rx_packets_delivered=self._rx_packets_delivered,
+            tx_packets_sent=self._tx_packets_sent,
+            packets_lost=self._rx_packets_lost,
+            packet_loss_percent=packet_loss_percent,
+            jitter_ms=self._rx_jitter_ema_packets * self._packet_duration_ms,
+            jitter_max_ms=self._rx_jitter_max_packets * self._packet_duration_ms,
+            underrun_count=self._rx_underruns,
+            overrun_count=self._rx_overruns,
+            estimated_latency_ms=estimated_latency_ms,
+            jitter_buffer_depth_packets=depth,
+            jitter_buffer_pending_packets=pending,
+            duplicates_dropped=self._rx_duplicates_dropped,
+            stale_packets_dropped=self._rx_stale_packets_dropped,
+            out_of_order_packets=self._rx_out_of_order_packets,
+        )
+
+    def get_audio_stats(self) -> dict[str, AudioStatsValue]:
+        """Return runtime audio stats for the current stream.
+
+        Metrics and units:
+
+        - ``rx_packets_received`` / ``rx_packets_delivered`` / ``tx_packets_sent``:
+          packet counters (>= 0).
+        - ``packets_lost``: inferred missing RX packets (>= 0).
+        - ``packet_loss_percent``: percentage in [0.0, 100.0].
+        - ``jitter_ms`` / ``jitter_max_ms``: sequence-jitter estimates in ms (>= 0.0).
+        - ``underrun_count`` / ``overrun_count``: jitter-buffer event counters (>= 0).
+        - ``estimated_latency_ms``: current buffering latency estimate in ms (>= 0.0).
+        - ``jitter_buffer_depth_packets`` / ``jitter_buffer_pending_packets``:
+          packet counts (>= 0).
+        """
+        return self._build_audio_stats().to_dict()
+
     # ------------------------------------------------------------------
     # RX
     # ------------------------------------------------------------------
 
     async def start_rx(
         self,
-        callback: Callable[[AudioPacket], None],
+        callback: Callable[[AudioPacket | None], None],
         *,
         jitter_depth: int | None = None,
     ) -> None:
@@ -267,6 +490,7 @@ class AudioStream:
             raise RuntimeError(f"Cannot start RX in state {self._state}")
 
         depth = jitter_depth if jitter_depth is not None else self._jitter_depth
+        self._reset_rx_stats()
         self._jitter_buffer = JitterBuffer(depth) if depth > 0 else None
         self._rx_callback = callback
         self._state = AudioState.RECEIVING
@@ -288,7 +512,10 @@ class AudioStream:
         # Flush remaining jitter buffer
         if self._jitter_buffer is not None and self._rx_callback is not None:
             for pkt in self._jitter_buffer.flush():
+                if pkt is not None:
+                    self._rx_packets_delivered += 1
                 self._rx_callback(pkt)
+        self._sync_jitter_stats()
         self._jitter_buffer = None
         self._rx_callback = None
         logger.info("Audio RX stopped")
@@ -308,10 +535,16 @@ class AudioStream:
 
             pkt = parse_audio_packet(data)
             if pkt is not None and self._rx_callback is not None:
+                self._rx_packets_received += 1
+                self._update_rx_order_stats(pkt.send_seq)
                 if self._jitter_buffer is not None:
                     for ready in self._jitter_buffer.push(pkt):
+                        if ready is not None:
+                            self._rx_packets_delivered += 1
                         self._rx_callback(ready)
+                    self._sync_jitter_stats()
                 else:
+                    self._rx_packets_delivered += 1
                     self._rx_callback(pkt)
 
     # ------------------------------------------------------------------
@@ -330,6 +563,7 @@ class AudioStream:
             raise RuntimeError("Already transmitting")
         self._state = AudioState.TRANSMITTING
         self._tx_seq = 0
+        self._tx_packets_sent = 0
         logger.info("Audio TX started")
 
     async def push_tx(self, opus_data: bytes) -> None:
@@ -352,6 +586,7 @@ class AudioStream:
         )
         await self._transport.send_tracked(pkt)
         self._tx_seq = (self._tx_seq + 1) & 0xFFFF
+        self._tx_packets_sent += 1
 
     async def stop_tx(self) -> None:
         """Stop transmitting audio.

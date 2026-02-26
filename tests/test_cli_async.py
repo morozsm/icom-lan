@@ -2,7 +2,7 @@
 
 import json
 from argparse import Namespace
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -103,6 +103,62 @@ class TestCmdAudioCaps:
         assert data["default_sample_rate_hz"] == 48000
         assert data["default_channels"] == 1
         assert any(c["name"] == "OPUS_1CH" for c in data["supported_codecs"])
+
+    @pytest.mark.asyncio
+    async def test_audio_caps_json_with_stats(self, capsys) -> None:
+        args = Namespace(json=True, stats=True)
+        runtime_stats = {
+            "active": False,
+            "state": "idle",
+            "rx_packets_received": 4,
+            "rx_packets_delivered": 3,
+            "tx_packets_sent": 0,
+            "packets_lost": 1,
+            "packet_loss_percent": 25.0,
+            "jitter_ms": 8.0,
+            "jitter_max_ms": 20.0,
+            "underrun_count": 1,
+            "overrun_count": 0,
+            "estimated_latency_ms": 0.0,
+            "jitter_buffer_depth_packets": 5,
+            "jitter_buffer_pending_packets": 0,
+            "duplicates_dropped": 0,
+            "stale_packets_dropped": 0,
+            "out_of_order_packets": 2,
+        }
+        rc = await _cmd_audio_caps(args, runtime_stats=runtime_stats)
+        assert rc == 0
+        data = json.loads(capsys.readouterr().out)
+        assert data["runtime_stats"]["packets_lost"] == 1
+        assert data["runtime_stats"]["packet_loss_percent"] == 25.0
+
+    @pytest.mark.asyncio
+    async def test_audio_caps_text_with_stats(self, capsys) -> None:
+        args = Namespace(json=False, stats=True)
+        runtime_stats = {
+            "active": True,
+            "state": "receiving",
+            "rx_packets_received": 10,
+            "rx_packets_delivered": 9,
+            "tx_packets_sent": 0,
+            "packets_lost": 1,
+            "packet_loss_percent": 10.0,
+            "jitter_ms": 2.5,
+            "jitter_max_ms": 20.0,
+            "underrun_count": 1,
+            "overrun_count": 0,
+            "estimated_latency_ms": 100.0,
+            "jitter_buffer_depth_packets": 5,
+            "jitter_buffer_pending_packets": 1,
+            "duplicates_dropped": 0,
+            "stale_packets_dropped": 0,
+            "out_of_order_packets": 1,
+        }
+        rc = await _cmd_audio_caps(args, runtime_stats=runtime_stats)
+        assert rc == 0
+        out = capsys.readouterr().out
+        assert "Runtime stats:" in out
+        assert "packet_loss_percent: 10.000" in out
 
 
 # ---------------------------------------------------------------------------
@@ -300,6 +356,56 @@ class TestRunErrorHandling:
         radio_cls.assert_not_called()
         data = json.loads(capsys.readouterr().out)
         assert data["default_channels"] == 1
+
+    @pytest.mark.asyncio
+    async def test_run_audio_caps_with_stats_connects(self, capsys) -> None:
+        args = Namespace(
+            host="192.168.1.100",
+            port=50001,
+            user="",
+            password="",
+            timeout=5.0,
+            command="audio",
+            audio_command="caps",
+            json=True,
+            stats=True,
+        )
+        runtime_stats = {
+            "active": False,
+            "state": "idle",
+            "rx_packets_received": 2,
+            "rx_packets_delivered": 2,
+            "tx_packets_sent": 0,
+            "packets_lost": 0,
+            "packet_loss_percent": 0.0,
+            "jitter_ms": 0.0,
+            "jitter_max_ms": 0.0,
+            "underrun_count": 0,
+            "overrun_count": 0,
+            "estimated_latency_ms": 0.0,
+            "jitter_buffer_depth_packets": 5,
+            "jitter_buffer_pending_packets": 0,
+            "duplicates_dropped": 0,
+            "stale_packets_dropped": 0,
+            "out_of_order_packets": 0,
+        }
+        with patch("icom_lan.cli.IcomRadio") as radio_cls:
+            radio = AsyncMock()
+            radio.__aenter__.return_value = radio
+            radio.__aexit__.return_value = None
+            radio.start_audio_rx_opus = AsyncMock()
+            radio.stop_audio_rx_opus = AsyncMock()
+            radio.get_audio_stats = MagicMock(return_value=runtime_stats)
+            radio_cls.return_value = radio
+            radio_cls.audio_capabilities.return_value = get_audio_capabilities()
+            with patch("icom_lan.cli.asyncio.sleep", new=AsyncMock()):
+                rc = await _run(args)
+        assert rc == 0
+        radio_cls.assert_called_once()
+        radio.start_audio_rx_opus.assert_awaited_once()
+        radio.stop_audio_rx_opus.assert_awaited_once()
+        data = json.loads(capsys.readouterr().out)
+        assert data["runtime_stats"]["rx_packets_received"] == 2
 
     @pytest.mark.asyncio
     async def test_run_exception(self, capsys) -> None:

@@ -125,6 +125,8 @@ Show icom-lan audio capability metadata and deterministic defaults.
 ```bash
 icom-lan audio caps
 icom-lan audio caps --json
+icom-lan audio caps --stats
+icom-lan audio caps --json --stats
 ```
 
 Text output includes:
@@ -134,6 +136,7 @@ Text output includes:
 - supported channels
 - default codec/rate/channels
 - deterministic selection rules used for defaults
+- with `--stats`: a 1-second RX probe and runtime audio quality stats snapshot
 
 JSON output example:
 
@@ -147,7 +150,13 @@ JSON output example:
   "supported_channels": [1, 2],
   "default_codec": {"name": "PCM_1CH_16BIT", "value": 4},
   "default_sample_rate_hz": 48000,
-  "default_channels": 1
+  "default_channels": 1,
+  "runtime_stats": {
+    "active": false,
+    "state": "idle",
+    "packet_loss_percent": 0.0,
+    "jitter_ms": 0.0
+  }
 }
 ```
 

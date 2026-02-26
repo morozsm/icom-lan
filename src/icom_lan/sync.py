@@ -269,7 +269,7 @@ class IcomRadio:
 
     def start_audio_rx_opus(
         self,
-        callback: Callable[[AudioPacket], None],
+        callback: Callable[[AudioPacket | None], None],
         *,
         jitter_depth: int = 5,
     ) -> None:
@@ -292,7 +292,7 @@ class IcomRadio:
         """Stop Opus TX audio."""
         self._run(self._radio.stop_audio_tx_opus())
 
-    def start_audio_rx(self, callback: Callable[[AudioPacket], None]) -> None:
+    def start_audio_rx(self, callback: Callable[[AudioPacket | None], None]) -> None:
         """Deprecated alias for :meth:`start_audio_rx_opus`."""
         self._warn_audio_alias("start_audio_rx", "start_audio_rx_opus")
         self.start_audio_rx_opus(callback)
@@ -316,6 +316,10 @@ class IcomRadio:
         """Deprecated alias for :meth:`stop_audio_tx_opus`."""
         self._warn_audio_alias("stop_audio_tx", "stop_audio_tx_opus")
         self.stop_audio_tx_opus()
+
+    def get_audio_stats(self) -> dict[str, bool | int | float | str]:
+        """Return runtime audio stats for the active stream."""
+        return self._radio.get_audio_stats()
 
     @property
     def audio_codec(self) -> AudioCodec:

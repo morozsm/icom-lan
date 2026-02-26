@@ -113,6 +113,7 @@ class TestJitterBufferDuplicates:
         result = jb.push(_pkt(0))  # duplicate
         assert result == []
         assert jb.pending == 1  # not 2
+        assert jb.duplicate_count == 1
 
 
 class TestJitterBufferWrap:
@@ -138,6 +139,7 @@ class TestJitterBufferWrap:
         # Now next_seq should be ~101, so seq 50 is old
         result = jb.push(_pkt(50))
         assert result == []
+        assert jb.stale_count == 1
 
 
 class TestJitterBufferFlush:
@@ -183,6 +185,23 @@ class TestJitterBufferOverflow:
         seqs = [p.send_seq for p in results if p is not None]
         for i in range(1, len(seqs)):
             assert seqs[i] > seqs[i - 1]
+
+    def test_overrun_counter(self) -> None:
+        jb = JitterBuffer(depth=2)
+        jb._max_held = 1  # force overrun path quickly
+        jb.push(_pkt(10))
+        jb.push(_pkt(11))
+        assert jb.overrun_count == 1
+
+
+class TestJitterBufferStats:
+    def test_gap_and_underrun_counters(self) -> None:
+        jb = JitterBuffer(depth=2)
+        jb.push(_pkt(0))
+        jb.push(_pkt(2))
+        jb.push(_pkt(3))
+        assert jb.gap_count == 1
+        assert jb.underrun_count >= 1
 
 
 class TestJitterBufferLargeDepth:

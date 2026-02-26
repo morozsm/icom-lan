@@ -6,7 +6,7 @@ Usage:
     icom-lan mode [VALUE] [--host HOST] [--user USER] [--pass PASS]
     icom-lan power [VALUE] [--host HOST] [--user USER] [--pass PASS]
     icom-lan meter [--host HOST] [--user USER] [--pass PASS]
-    icom-lan audio caps [--json]
+    icom-lan audio caps [--json] [--stats]
     icom-lan att [VALUE] [--host HOST] [--user USER] [--pass PASS]
     icom-lan preamp [VALUE] [--host HOST] [--user USER] [--pass PASS]
     icom-lan ptt {on,off} [--host HOST] [--user USER] [--pass PASS]
@@ -19,6 +19,7 @@ import os
 import sys
 
 from . import __version__
+from .audio import AudioStats
 from .radio import IcomRadio
 from .types import Mode
 
@@ -71,6 +72,13 @@ def _build_parser() -> argparse.ArgumentParser:
     def _add_json(sp: argparse.ArgumentParser) -> None:
         sp.add_argument("--json", action="store_true", help="Output as JSON")
 
+    def _add_stats(sp: argparse.ArgumentParser) -> None:
+        sp.add_argument(
+            "--stats",
+            action="store_true",
+            help="Probe runtime audio stream stats (1 second RX sample)",
+        )
+
     # status
     status_p = sub.add_parser("status", help="Show radio status (freq, mode, meters)")
     _add_json(status_p)
@@ -119,6 +127,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Show icom-lan audio capabilities and defaults",
     )
     _add_json(audio_caps_p)
+    _add_stats(audio_caps_p)
 
     # ptt
     ptt_p = sub.add_parser("ptt", help="PTT control")
@@ -220,11 +229,15 @@ def _parse_frequency(value: str) -> int:
 
 
 async def _run(args: argparse.Namespace) -> int:
+    wants_stats = bool(getattr(args, "stats", False))
     if args.command == "audio":
-        if args.audio_command == "caps":
+        if args.audio_command == "caps" and not wants_stats:
             return await _cmd_audio_caps(args)
-        print("Error: unknown audio command", file=sys.stderr)
-        return 1
+        if args.audio_command != "caps":
+            print("Error: unknown audio command", file=sys.stderr)
+            return 1
+    elif args.command == "discover":
+        return await _cmd_discover(None, args)  # type: ignore[arg-type]
 
     radio = IcomRadio(
         args.host,
@@ -236,7 +249,18 @@ async def _run(args: argparse.Namespace) -> int:
 
     try:
         async with radio:
-            if args.command == "status":
+            if args.command == "audio" and args.audio_command == "caps":
+                runtime_stats: dict[str, bool | int | float | str] = (
+                    AudioStats.inactive().to_dict()
+                )
+                await radio.start_audio_rx_opus(lambda _pkt: None)
+                try:
+                    await asyncio.sleep(1.0)
+                    runtime_stats = radio.get_audio_stats()
+                finally:
+                    await radio.stop_audio_rx_opus()
+                return await _cmd_audio_caps(args, runtime_stats=runtime_stats)
+            elif args.command == "status":
                 return await _cmd_status(radio, args)
             elif args.command == "freq":
                 return await _cmd_freq(radio, args)
@@ -271,6 +295,33 @@ async def _run(args: argparse.Namespace) -> int:
         return 1
 
 
+def _print_audio_stats(stats: dict[str, bool | int | float | str]) -> None:
+    print("Runtime stats:")
+    print(f"  active: {stats['active']}")
+    print(f"  state: {stats['state']}")
+    print(f"  rx_packets_received: {stats['rx_packets_received']}")
+    print(f"  rx_packets_delivered: {stats['rx_packets_delivered']}")
+    print(f"  tx_packets_sent: {stats['tx_packets_sent']}")
+    print(f"  packets_lost: {stats['packets_lost']}")
+    print(f"  packet_loss_percent: {float(stats['packet_loss_percent']):.3f}")
+    print(f"  jitter_ms: {float(stats['jitter_ms']):.3f}")
+    print(f"  jitter_max_ms: {float(stats['jitter_max_ms']):.3f}")
+    print(f"  underrun_count: {stats['underrun_count']}")
+    print(f"  overrun_count: {stats['overrun_count']}")
+    print(f"  estimated_latency_ms: {float(stats['estimated_latency_ms']):.3f}")
+    print(
+        "  jitter_buffer_depth_packets: "
+        f"{stats['jitter_buffer_depth_packets']}"
+    )
+    print(
+        "  jitter_buffer_pending_packets: "
+        f"{stats['jitter_buffer_pending_packets']}"
+    )
+    print(f"  duplicates_dropped: {stats['duplicates_dropped']}")
+    print(f"  stale_packets_dropped: {stats['stale_packets_dropped']}")
+    print(f"  out_of_order_packets: {stats['out_of_order_packets']}")
+
+
 async def _cmd_status(radio: IcomRadio, args: argparse.Namespace) -> int:
     freq = await radio.get_frequency()
     mode = await radio.get_mode()
@@ -299,13 +350,23 @@ async def _cmd_status(radio: IcomRadio, args: argparse.Namespace) -> int:
     return 0
 
 
-async def _cmd_audio_caps(args: argparse.Namespace) -> int:
+async def _cmd_audio_caps(
+    args: argparse.Namespace,
+    *,
+    runtime_stats: dict[str, bool | int | float | str] | None = None,
+) -> int:
     caps = IcomRadio.audio_capabilities()
+    wants_stats = bool(getattr(args, "stats", False))
 
     if args.json:
         import json
 
-        print(json.dumps(caps.to_dict()))
+        payload = caps.to_dict()
+        if wants_stats:
+            payload["runtime_stats"] = (
+                runtime_stats if runtime_stats is not None else AudioStats.inactive().to_dict()
+            )
+        print(json.dumps(payload))
     else:
         print("Supported codecs:")
         for codec in caps.supported_codecs:
@@ -329,6 +390,10 @@ async def _cmd_audio_caps(args: argparse.Namespace) -> int:
         print("  codec: first supported codec in preference order")
         print("  sample_rate_hz: highest supported rate")
         print("  channels: from default codec (fallback to minimum)")
+        if wants_stats:
+            _print_audio_stats(
+                runtime_stats if runtime_stats is not None else AudioStats.inactive().to_dict()
+            )
     return 0
 
 
