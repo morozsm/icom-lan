@@ -24,6 +24,7 @@ from icom_lan.rigctld.contract import (
     RigctldResponse,
 )
 from icom_lan.rigctld.server import RigctldServer, run_rigctld_server
+from icom_lan.types import Mode
 
 
 # ---------------------------------------------------------------------------
@@ -611,3 +612,45 @@ class TestRunRigctldServer:
                 pass
         finally:
             server_mod.RigctldServer = orig_cls  # type: ignore[assignment]
+
+
+# ---------------------------------------------------------------------------
+# WSJT-X compatibility prewarm
+# ---------------------------------------------------------------------------
+
+class TestWsjtxCompatPrewarm:
+    async def test_prewarm_enables_data_when_usb_and_data_off(self, mock_radio: MagicMock) -> None:
+        cfg = RigctldConfig(wsjtx_compat=True)
+        srv = RigctldServer(mock_radio, cfg, _protocol=MagicMock(), _handler=MagicMock())
+
+        mock_radio.get_mode_info = AsyncMock(return_value=(Mode.USB, 2))
+        mock_radio.get_data_mode = AsyncMock(return_value=False)
+        mock_radio.set_data_mode = AsyncMock(return_value=None)
+
+        await srv._wsjtx_compat_prewarm()
+
+        mock_radio.set_data_mode.assert_awaited_once_with(True)
+
+    async def test_prewarm_skips_when_data_already_on(self, mock_radio: MagicMock) -> None:
+        cfg = RigctldConfig(wsjtx_compat=True)
+        srv = RigctldServer(mock_radio, cfg, _protocol=MagicMock(), _handler=MagicMock())
+
+        mock_radio.get_mode_info = AsyncMock(return_value=(Mode.USB, 2))
+        mock_radio.get_data_mode = AsyncMock(return_value=True)
+        mock_radio.set_data_mode = AsyncMock(return_value=None)
+
+        await srv._wsjtx_compat_prewarm()
+
+        mock_radio.set_data_mode.assert_not_called()
+
+    async def test_prewarm_skips_for_non_ssb_modes(self, mock_radio: MagicMock) -> None:
+        cfg = RigctldConfig(wsjtx_compat=True)
+        srv = RigctldServer(mock_radio, cfg, _protocol=MagicMock(), _handler=MagicMock())
+
+        mock_radio.get_mode_info = AsyncMock(return_value=(Mode.CW, None))
+        mock_radio.get_data_mode = AsyncMock(return_value=False)
+        mock_radio.set_data_mode = AsyncMock(return_value=None)
+
+        await srv._wsjtx_compat_prewarm()
+
+        mock_radio.set_data_mode.assert_not_called()

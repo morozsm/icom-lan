@@ -195,6 +195,12 @@ class RigctldServer:
         if self._poller is not None and self._client_count == 1:
             loop.create_task(self._poller.start())
 
+        # Optional WSJT-X compatibility pre-warm for first client:
+        # if radio is in USB/LSB/RTTY with DATA off, enable DATA mode upfront
+        # to avoid long CAT/PTT latency on first TX sequence.
+        if self._client_count == 1 and self._config.wsjtx_compat:
+            loop.create_task(self._wsjtx_compat_prewarm())
+
         task.add_done_callback(self._on_client_done)
 
     def _on_client_done(self, task: asyncio.Task[None]) -> None:
@@ -210,6 +216,29 @@ class RigctldServer:
             except RuntimeError:
                 # Loop already closed during shutdown.
                 pass
+
+    async def _wsjtx_compat_prewarm(self) -> None:
+        """Best-effort DATA-mode prewarm for WSJT-X compatibility mode."""
+        poller = self._poller
+        if poller is not None:
+            poller.write_busy = True
+        try:
+            mode, _ = await self._radio.get_mode_info()
+            data_on = await self._radio.get_data_mode()
+            mode_name = getattr(mode, "name", str(mode)).upper()
+            if not data_on and mode_name in {"USB", "LSB", "RTTY"}:
+                await self._radio.set_data_mode(True)
+                if poller is not None:
+                    poller.hold_for(1.5)
+                logger.info(
+                    "WSJT-X compat prewarm: DATA mode enabled (base mode=%s)",
+                    mode_name,
+                )
+        except Exception as exc:
+            logger.debug("WSJT-X compat prewarm skipped/failed: %s", exc)
+        finally:
+            if poller is not None:
+                poller.write_busy = False
 
     # ------------------------------------------------------------------
     # Per-client coroutine
