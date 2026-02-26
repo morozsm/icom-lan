@@ -384,6 +384,71 @@ class IcomRadio:
         assert self._audio_stream is not None
         await self._audio_stream.start_rx(callback, jitter_depth=jitter_depth)
 
+    async def start_audio_rx_pcm(
+        self,
+        callback: "Callable[[bytes | None], None]",
+        *,
+        sample_rate: int = 48000,
+        channels: int = 1,
+        frame_ms: int = 20,
+        jitter_depth: int = 5,
+    ) -> None:
+        """Start receiving decoded PCM audio from the radio.
+
+        This high-level API decodes incoming Opus RX frames to fixed-size
+        PCM frames and delivers them to ``callback``. Gap placeholders are
+        passed through as ``None`` when jitter buffering detects loss.
+
+        Args:
+            callback: Called with decoded PCM frame bytes, or ``None`` for gaps.
+            sample_rate: PCM sample rate in Hz (Opus-supported values only).
+            channels: PCM channels (1 or 2).
+            frame_ms: Frame duration in ms (10/20/40/60).
+            jitter_depth: Jitter buffer depth (0 to disable, default 5).
+
+        Raises:
+            ConnectionError: If not connected or audio port unavailable.
+            TypeError: If callback is not callable or numeric args are not ints.
+            ValueError: If ``jitter_depth`` is negative.
+            AudioCodecBackendError: If Opus backend is unavailable.
+            AudioFormatError: If PCM format is unsupported.
+        """
+        if not callable(callback):
+            raise TypeError("callback must be callable and accept bytes | None.")
+
+        for name, value in (
+            ("sample_rate", sample_rate),
+            ("channels", channels),
+            ("frame_ms", frame_ms),
+            ("jitter_depth", jitter_depth),
+        ):
+            if isinstance(value, bool) or not isinstance(value, int):
+                raise TypeError(f"{name} must be an int, got {type(value).__name__}.")
+        if jitter_depth < 0:
+            raise ValueError(f"jitter_depth must be >= 0, got {jitter_depth}.")
+
+        self._check_connected()
+
+        # Validate codec/backend and PCM format before stream startup.
+        self._get_pcm_transcoder(
+            sample_rate=sample_rate,
+            channels=channels,
+            frame_ms=frame_ms,
+        )
+        await self.start_audio_rx_opus(
+            self._build_pcm_rx_callback(
+                callback,
+                sample_rate=sample_rate,
+                channels=channels,
+                frame_ms=frame_ms,
+            ),
+            jitter_depth=jitter_depth,
+        )
+
+    async def stop_audio_rx_pcm(self) -> None:
+        """Stop receiving decoded PCM audio from the radio."""
+        await self.stop_audio_rx_opus()
+
     async def stop_audio_rx_opus(self) -> None:
         """Stop receiving Opus audio from the radio."""
         if self._audio_stream is not None:
