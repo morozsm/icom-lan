@@ -213,6 +213,15 @@ class IcomRadio:
         """Whether the radio is currently connected."""
         return self._connected
 
+    def civ_stats(self) -> dict[str, int]:
+        """Return CI-V request tracker statistics for monitoring.
+
+        Returns:
+            Dict with keys ``active_waiters``, ``stale_cleaned``,
+            ``timeouts``, and ``generation``.
+        """
+        return self._civ_request_tracker.snapshot_stats()
+
     # ------------------------------------------------------------------
     # Connection lifecycle
     # ------------------------------------------------------------------

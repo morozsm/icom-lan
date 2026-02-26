@@ -11,6 +11,7 @@ from icom_lan.exceptions import (
     ConnectionError as IcomConnectionError,
     TimeoutError as IcomTimeoutError,
 )
+from icom_lan.rigctld.circuit_breaker import CircuitBreaker, CircuitState
 from icom_lan.rigctld.contract import RigctldConfig
 from icom_lan.rigctld.poller import RadioPoller
 from icom_lan.rigctld.state_cache import StateCache
@@ -297,3 +298,162 @@ async def test_poll_interval_is_respected(
     # Expect 2 or 3 calls (timing-dependent but bounded).
     count = mock_radio.get_frequency.await_count
     assert 1 <= count <= 4, f"unexpected call count: {count}"
+
+
+# ---------------------------------------------------------------------------
+# Circuit breaker integration
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def cb() -> CircuitBreaker:
+    return CircuitBreaker(failure_threshold=3, recovery_timeout=5.0)
+
+
+async def test_poller_skips_poll_when_circuit_open(
+    mock_radio: AsyncMock,
+    cache: StateCache,
+    config: RigctldConfig,
+    cb: CircuitBreaker,
+) -> None:
+    """When circuit is OPEN, poller must not call the radio."""
+    # Pre-open the circuit by recording three failures.
+    cb.record_failure()
+    cb.record_failure()
+    cb.record_failure()
+    assert cb.state == CircuitState.OPEN
+
+    p = RadioPoller(mock_radio, cache, config, circuit_breaker=cb)
+    await p.start()
+    await asyncio.sleep(0.05)
+    await p.stop()
+
+    mock_radio.get_frequency.assert_not_awaited()
+
+
+async def test_poller_records_success_on_successful_poll(
+    mock_radio: AsyncMock,
+    cache: StateCache,
+    config: RigctldConfig,
+    cb: CircuitBreaker,
+) -> None:
+    """Successful get_frequency should keep/close the circuit."""
+    mock_radio.get_frequency.return_value = 14_074_000
+    p = RadioPoller(mock_radio, cache, config, circuit_breaker=cb)
+    await p.start()
+    await asyncio.sleep(0.05)
+    await p.stop()
+
+    assert cb.state == CircuitState.CLOSED
+    assert cb.consecutive_failures == 0
+
+
+async def test_poller_records_failure_on_timeout(
+    mock_radio: AsyncMock,
+    cache: StateCache,
+    config: RigctldConfig,
+) -> None:
+    """Consecutive timeouts should open the circuit."""
+    cb = CircuitBreaker(failure_threshold=2, recovery_timeout=5.0)
+    mock_radio.get_frequency.side_effect = IcomTimeoutError("timeout")
+
+    p = RadioPoller(mock_radio, cache, config, circuit_breaker=cb)
+    await p.start()
+    await asyncio.sleep(0.05)
+    await p.stop()
+
+    # After two+ consecutive failures the circuit must be OPEN.
+    assert cb.state == CircuitState.OPEN
+
+
+async def test_poller_probe_on_half_open_success(
+    mock_radio: AsyncMock,
+    cache: StateCache,
+    config: RigctldConfig,
+    cb: CircuitBreaker,
+) -> None:
+    """When circuit is HALF_OPEN, a successful get_freq probe closes it."""
+    # Force HALF_OPEN by pre-opening and patching time.
+    cb.record_failure()
+    cb.record_failure()
+    cb.record_failure()
+    assert cb.state == CircuitState.OPEN
+
+    import time as _time
+
+    future_now = _time.monotonic() + 10.0
+    mock_radio.get_frequency.return_value = 14_074_000
+
+    p = RadioPoller(mock_radio, cache, config, circuit_breaker=cb)
+
+    with patch("icom_lan.rigctld.circuit_breaker.time.monotonic", return_value=future_now):
+        # The state property now sees elapsed time → HALF_OPEN.
+        assert cb.state == CircuitState.HALF_OPEN
+        await p._poll_once()
+
+    assert cb.state == CircuitState.CLOSED
+
+
+async def test_poller_probe_on_half_open_failure_reopens(
+    mock_radio: AsyncMock,
+    cache: StateCache,
+    config: RigctldConfig,
+    cb: CircuitBreaker,
+) -> None:
+    """When circuit is HALF_OPEN, a failing get_freq probe re-opens it."""
+    cb.record_failure()
+    cb.record_failure()
+    cb.record_failure()
+
+    import time as _time
+
+    future_now = _time.monotonic() + 10.0
+    mock_radio.get_frequency.side_effect = IcomTimeoutError("timeout")
+
+    p = RadioPoller(mock_radio, cache, config, circuit_breaker=cb)
+
+    with patch("icom_lan.rigctld.circuit_breaker.time.monotonic", return_value=future_now):
+        assert cb.state == CircuitState.HALF_OPEN
+        await p._poll_once()
+
+    assert cb._state == CircuitState.OPEN
+
+
+async def test_poller_probe_does_not_poll_mode(
+    mock_radio: AsyncMock,
+    cache: StateCache,
+    config: RigctldConfig,
+    cb: CircuitBreaker,
+) -> None:
+    """HALF_OPEN probe must NOT call get_mode_info (only get_freq)."""
+    cb.record_failure()
+    cb.record_failure()
+    cb.record_failure()
+
+    import time as _time
+
+    future_now = _time.monotonic() + 10.0
+    mock_radio.get_frequency.return_value = 14_074_000
+
+    p = RadioPoller(mock_radio, cache, config, circuit_breaker=cb)
+
+    with patch("icom_lan.rigctld.circuit_breaker.time.monotonic", return_value=future_now):
+        assert cb.state == CircuitState.HALF_OPEN
+        await p._poll_once()
+
+    mock_radio.get_mode_info.assert_not_awaited()
+
+
+async def test_poller_without_circuit_breaker_still_works(
+    mock_radio: AsyncMock,
+    cache: StateCache,
+    config: RigctldConfig,
+) -> None:
+    """Poller with no circuit breaker should behave exactly as before."""
+    mock_radio.get_frequency.return_value = 7_000_000
+    p = RadioPoller(mock_radio, cache, config)  # no circuit_breaker
+    await p.start()
+    await asyncio.sleep(0.05)
+    await p.stop()
+
+    assert cache.freq == 7_000_000
+    assert cache.is_fresh("freq", 1.0) is True
