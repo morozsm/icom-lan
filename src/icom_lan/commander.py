@@ -146,6 +146,10 @@ class IcomCommander:
                     self._last_send = asyncio.get_running_loop().time()
                     if not item.future.done():
                         item.future.set_result(resp)
+                except asyncio.CancelledError:
+                    if not item.future.done():
+                        item.future.set_exception(ConnectionError("Commander stopped"))
+                    raise
                 except Exception as exc:
                     if not item.future.done():
                         item.future.set_exception(exc)

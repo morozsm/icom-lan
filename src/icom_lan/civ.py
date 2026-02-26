@@ -53,12 +53,15 @@ class _AckWaiter:
     future: asyncio.Future[CivFrame] | None
     token: int
     created_monotonic: float
+    generation: int
 
 
 @dataclass(slots=True)
 class _PendingRequest:
     key: CivRequestKey
     future: asyncio.Future[CivFrame]
+    created_monotonic: float
+    generation: int
 
 
 def request_key_from_frame(frame: CivFrame) -> CivRequestKey:
@@ -87,10 +90,14 @@ def iter_civ_frames(payload: bytes) -> Iterator[bytes]:
 class CivRequestTracker:
     """Tracks pending requests and resolves matching CI-V responses."""
 
-    def __init__(self) -> None:
+    def __init__(self, *, stale_ttl: float = 10.0) -> None:
         self._ack_waiters: list[_AckWaiter] = []
         self._response_waiters: list[_PendingRequest] = []
         self._next_ack_token = 1
+        self._generation = 0
+        self._stale_ttl = stale_ttl
+        self._stale_cleaned_total = 0
+        self._timeout_count = 0
 
     @property
     def pending_count(self) -> int:
@@ -101,6 +108,34 @@ class CivRequestTracker:
     def ack_sink_count(self) -> int:
         """Number of fire-and-forget ACK sink waiters currently tracked."""
         return sum(1 for w in self._ack_waiters if w.future is None)
+
+    @property
+    def generation(self) -> int:
+        """Current generation for CI-V request lifecycle."""
+        return self._generation
+
+    @property
+    def stale_cleaned_total(self) -> int:
+        """Number of stale waiters removed by tracker GC."""
+        return self._stale_cleaned_total
+
+    @property
+    def timeout_count(self) -> int:
+        """Total timeout count observed by tracker/request flow."""
+        return self._timeout_count
+
+    def note_timeout(self) -> None:
+        """Record one timeout in tracker statistics."""
+        self._timeout_count += 1
+
+    def snapshot_stats(self) -> dict[str, int]:
+        """Return tracker counters for monitoring."""
+        return {
+            "active_waiters": self.pending_count,
+            "stale_cleaned": self._stale_cleaned_total,
+            "timeouts": self._timeout_count,
+            "generation": self._generation,
+        }
 
     def register_ack(self, wait: bool = True) -> asyncio.Future[CivFrame] | int:
         """Register a pending request that expects an ACK/NAK.
@@ -116,19 +151,37 @@ class CivRequestTracker:
         if wait:
             future: asyncio.Future[CivFrame] = asyncio.get_running_loop().create_future()
             self._ack_waiters.append(
-                _AckWaiter(future=future, token=token, created_monotonic=created)
+                _AckWaiter(
+                    future=future,
+                    token=token,
+                    created_monotonic=created,
+                    generation=self._generation,
+                )
             )
             return future
 
         self._ack_waiters.append(
-            _AckWaiter(future=None, token=token, created_monotonic=created)
+            _AckWaiter(
+                future=None,
+                token=token,
+                created_monotonic=created,
+                generation=self._generation,
+            )
         )
         return token
 
     def register_response(self, key: CivRequestKey) -> asyncio.Future[CivFrame]:
         """Register a pending request that expects a specific data response."""
+        created = time.monotonic()
         future: asyncio.Future[CivFrame] = asyncio.get_running_loop().create_future()
-        self._response_waiters.append(_PendingRequest(key=key, future=future))
+        self._response_waiters.append(
+            _PendingRequest(
+                key=key,
+                future=future,
+                created_monotonic=created,
+                generation=self._generation,
+            )
+        )
         return future
 
     def unregister(self, future: asyncio.Future[CivFrame]) -> None:
@@ -156,8 +209,54 @@ class CivRequestTracker:
         self._ack_waiters = [w for w in self._ack_waiters if w.future is not None]
         return before - len(self._ack_waiters)
 
-    def resolve(self, event: CivEvent) -> bool:
+    def cleanup_stale(self, *, now_monotonic: float | None = None) -> int:
+        """Drop stale waiters that exceeded the TTL budget."""
+        now = now_monotonic if now_monotonic is not None else time.monotonic()
+        cutoff = now - self._stale_ttl
+        cleaned = 0
+
+        fresh_ack: list[_AckWaiter] = []
+        for waiter in self._ack_waiters:
+            if waiter.created_monotonic > cutoff:
+                fresh_ack.append(waiter)
+                continue
+            cleaned += 1
+            if waiter.future is not None and not waiter.future.done():
+                waiter.future.set_exception(
+                    asyncio.TimeoutError("CI-V ACK waiter expired")
+                )
+                self._timeout_count += 1
+        self._ack_waiters = fresh_ack
+
+        fresh_response: list[_PendingRequest] = []
+        for pending in self._response_waiters:
+            if pending.created_monotonic > cutoff:
+                fresh_response.append(pending)
+                continue
+            cleaned += 1
+            if not pending.future.done():
+                pending.future.set_exception(
+                    asyncio.TimeoutError("CI-V response waiter expired")
+                )
+                self._timeout_count += 1
+        self._response_waiters = fresh_response
+
+        self._stale_cleaned_total += cleaned
+        return cleaned
+
+    def advance_generation(self, exc: Exception | None = None) -> int:
+        """Advance generation and fail all pending waiters."""
+        if exc is None:
+            exc = RuntimeError("CI-V tracker generation advanced")
+        self.fail_all(exc)
+        self._generation += 1
+        return self._generation
+
+    def resolve(self, event: CivEvent, *, generation: int | None = None) -> bool:
         """Resolve a pending request from an incoming event."""
+        if generation is not None and generation != self._generation:
+            return False
+
         frame = event.frame
         if frame is None:
             return False
@@ -165,6 +264,8 @@ class CivRequestTracker:
         if event.type in (CivEventType.ACK, CivEventType.NAK):
             while self._ack_waiters:
                 waiter = self._ack_waiters.pop(0)
+                if waiter.generation != self._generation:
+                    continue
                 if waiter.future is not None and not waiter.future.done():
                     waiter.future.set_result(frame)
                     return True
@@ -174,12 +275,18 @@ class CivRequestTracker:
             return False
 
         if event.type == CivEventType.RESPONSE:
-            for i, pending in enumerate(self._response_waiters):
+            i = 0
+            while i < len(self._response_waiters):
+                pending = self._response_waiters[i]
+                if pending.generation != self._generation:
+                    self._response_waiters.pop(i)
+                    continue
                 if self._matches(pending.key, frame):
                     self._response_waiters.pop(i)
                     if not pending.future.done():
                         pending.future.set_result(frame)
                     return True
+                i += 1
             return False
 
         return False
