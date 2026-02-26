@@ -35,9 +35,9 @@ class TestFullDuplex:
         radio._audio_transport = mock_transport
         radio._audio_stream = AudioStream(mock_transport)
         received = []
-        await radio.start_audio(lambda pkt: received.append(pkt), tx_enabled=True)
+        await radio.start_audio_opus(lambda pkt: received.append(pkt), tx_enabled=True)
         assert radio._audio_stream.state == AudioState.TRANSMITTING
-        await radio.stop_audio()
+        await radio.stop_audio_opus()
 
     @pytest.mark.asyncio
     async def test_start_audio_rx_only(
@@ -47,19 +47,19 @@ class TestFullDuplex:
         radio._audio_transport = mock_transport
         radio._audio_stream = AudioStream(mock_transport)
         received = []
-        await radio.start_audio(lambda pkt: received.append(pkt), tx_enabled=False)
+        await radio.start_audio_opus(lambda pkt: received.append(pkt), tx_enabled=False)
         assert radio._audio_stream.state == AudioState.RECEIVING
-        await radio.stop_audio()
+        await radio.stop_audio_opus()
 
     @pytest.mark.asyncio
     async def test_start_audio_disconnected(self) -> None:
         r = IcomRadio("192.168.1.100")
         with pytest.raises(ConnectionError):
-            await r.start_audio(lambda pkt: None)
+            await r.start_audio_opus(lambda pkt: None)
 
     @pytest.mark.asyncio
     async def test_stop_audio_noop(self, radio: IcomRadio) -> None:
-        await radio.stop_audio()  # should not raise
+        await radio.stop_audio_opus()  # should not raise
 
 
 class TestAudioStreamJitter:

@@ -1,5 +1,9 @@
 """Tests for synchronous API wrapper."""
 
+from unittest.mock import AsyncMock
+
+import pytest
+
 from icom_lan.sync import IcomRadio
 from icom_lan.types import AudioCodec
 
@@ -40,3 +44,24 @@ class TestSyncContextManager:
         r = IcomRadio("192.168.1.100")
         # Can't actually connect without a radio, but test the mechanism
         r._loop.close()  # just verify it's closeable
+
+
+class TestSyncAudioNaming:
+    def test_start_audio_rx_alias_warns_and_calls_opus(self) -> None:
+        r = IcomRadio("192.168.1.100")
+        r._radio.start_audio_rx_opus = AsyncMock()
+
+        with pytest.warns(DeprecationWarning, match="start_audio_rx_opus"):
+            r.start_audio_rx(lambda pkt: None)
+
+        r._radio.start_audio_rx_opus.assert_awaited_once()
+        r._loop.close()
+
+    def test_new_opus_method_calls_async_impl(self) -> None:
+        r = IcomRadio("192.168.1.100")
+        r._radio.push_audio_tx_opus = AsyncMock()
+
+        r.push_audio_tx_opus(b"\x01\x02")
+
+        r._radio.push_audio_tx_opus.assert_awaited_once_with(b"\x01\x02")
+        r._loop.close()
