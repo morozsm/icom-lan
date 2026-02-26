@@ -84,6 +84,26 @@ radio = IcomRadio(
 )
 ```
 
+### Capability Introspection
+
+Use the capability API to inspect negotiated client-side audio options and defaults:
+
+```python
+from icom_lan import IcomRadio
+
+caps = IcomRadio.audio_capabilities()
+print(caps.supported_codecs)
+print(caps.supported_sample_rates_hz)
+print(caps.supported_channels)
+print(caps.default_codec, caps.default_sample_rate_hz, caps.default_channels)
+```
+
+Deterministic default selection rules:
+
+1. Codec: first supported codec in icom-lan preference order.
+2. Sample rate: highest supported sample rate.
+3. Channels: the channel count implied by default codec (fallback: minimum supported channels).
+
 !!! note "Opus codecs"
     `OPUS_1CH` (0x40) and `OPUS_2CH` (0x41) are only supported when
     the radio reports `connection_type == "WFVIEW"`. Standard connections

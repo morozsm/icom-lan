@@ -6,6 +6,7 @@ Usage:
     icom-lan mode [VALUE] [--host HOST] [--user USER] [--pass PASS]
     icom-lan power [VALUE] [--host HOST] [--user USER] [--pass PASS]
     icom-lan meter [--host HOST] [--user USER] [--pass PASS]
+    icom-lan audio caps [--json]
     icom-lan att [VALUE] [--host HOST] [--user USER] [--pass PASS]
     icom-lan preamp [VALUE] [--host HOST] [--user USER] [--pass PASS]
     icom-lan ptt {on,off} [--host HOST] [--user USER] [--pass PASS]
@@ -109,6 +110,16 @@ def _build_parser() -> argparse.ArgumentParser:
     meter_p = sub.add_parser("meter", help="Read all meters")
     _add_json(meter_p)
 
+    # audio
+    audio_p = sub.add_parser("audio", help="Audio helper commands")
+    audio_sub = audio_p.add_subparsers(dest="audio_command", help="Audio command")
+    audio_sub.required = True
+    audio_caps_p = audio_sub.add_parser(
+        "caps",
+        help="Show icom-lan audio capabilities and defaults",
+    )
+    _add_json(audio_caps_p)
+
     # ptt
     ptt_p = sub.add_parser("ptt", help="PTT control")
     ptt_p.add_argument(
@@ -209,6 +220,12 @@ def _parse_frequency(value: str) -> int:
 
 
 async def _run(args: argparse.Namespace) -> int:
+    if args.command == "audio":
+        if args.audio_command == "caps":
+            return await _cmd_audio_caps(args)
+        print("Error: unknown audio command", file=sys.stderr)
+        return 1
+
     radio = IcomRadio(
         args.host,
         port=args.port,
@@ -279,6 +296,39 @@ async def _cmd_status(radio: IcomRadio, args: argparse.Namespace) -> int:
         print(f"Mode:      {mode.name}")
         print(f"S-meter:   {s_meter}")
         print(f"Power:     {power}")
+    return 0
+
+
+async def _cmd_audio_caps(args: argparse.Namespace) -> int:
+    caps = IcomRadio.audio_capabilities()
+
+    if args.json:
+        import json
+
+        print(json.dumps(caps.to_dict()))
+    else:
+        print("Supported codecs:")
+        for codec in caps.supported_codecs:
+            print(f"  - {codec.name} (0x{int(codec):02X})")
+        print(
+            "Supported sample rates (Hz): "
+            + ", ".join(str(rate) for rate in caps.supported_sample_rates_hz)
+        )
+        print(
+            "Supported channels: "
+            + ", ".join(str(channels) for channels in caps.supported_channels)
+        )
+        print("Defaults:")
+        print(
+            f"  codec: {caps.default_codec.name} "
+            f"(0x{int(caps.default_codec):02X})"
+        )
+        print(f"  sample_rate_hz: {caps.default_sample_rate_hz}")
+        print(f"  channels: {caps.default_channels}")
+        print("Selection rules:")
+        print("  codec: first supported codec in preference order")
+        print("  sample_rate_hz: highest supported rate")
+        print("  channels: from default codec (fallback to minimum)")
     return 0
 
 

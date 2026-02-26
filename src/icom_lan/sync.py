@@ -18,7 +18,7 @@ from typing import Callable
 
 from .audio import AudioPacket
 from .radio import IcomRadio as _AsyncIcomRadio
-from .types import AudioCodec, Mode
+from .types import AudioCapabilities, AudioCodec, Mode
 
 __all__ = ["IcomRadio"]
 
@@ -326,3 +326,8 @@ class IcomRadio:
     def audio_sample_rate(self) -> int:
         """Configured audio sample rate."""
         return self._radio.audio_sample_rate
+
+    @staticmethod
+    def audio_capabilities() -> AudioCapabilities:
+        """Return icom-lan audio capabilities and deterministic defaults."""
+        return _AsyncIcomRadio.audio_capabilities()

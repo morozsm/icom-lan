@@ -75,6 +75,7 @@ except ImportError:
     _SCOPE_RENDER_AVAILABLE = False
 from .types import (
     HEADER_SIZE,
+    AudioCapabilities,
     AudioCodec,
     CivFrame,
     Mode,
@@ -83,6 +84,7 @@ from .types import (
     ScopeCompletionPolicy,
     bcd_decode,
     bcd_encode,
+    get_audio_capabilities,
 )
 
 __all__ = [
@@ -105,12 +107,14 @@ __all__ = [
     "PacketType",
     "Mode",
     "AudioCodec",
+    "AudioCapabilities",
     "ScopeCompletionPolicy",
     "PacketHeader",
     "CivFrame",
     "HEADER_SIZE",
     "bcd_encode",
     "bcd_decode",
+    "get_audio_capabilities",
     # Commands
     "IC_7610_ADDR",
     "CONTROLLER_ADDR",

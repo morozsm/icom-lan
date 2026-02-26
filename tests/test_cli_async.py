@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from icom_lan.cli import (
+    _cmd_audio_caps,
     _cmd_cw,
     _cmd_freq,
     _cmd_meter,
@@ -19,7 +20,7 @@ from icom_lan.cli import (
     main,
 )
 from icom_lan.exceptions import TimeoutError as IcomTimeout
-from icom_lan.types import Mode
+from icom_lan.types import Mode, get_audio_capabilities
 
 
 # ---------------------------------------------------------------------------
@@ -73,6 +74,35 @@ class TestCmdStatus:
         assert data["mode"] == "USB"
         assert data["s_meter"] == 120
         assert data["power"] == 128
+
+
+# ---------------------------------------------------------------------------
+# _cmd_audio_caps
+# ---------------------------------------------------------------------------
+
+
+class TestCmdAudioCaps:
+    @pytest.mark.asyncio
+    async def test_audio_caps_text(self, capsys) -> None:
+        args = Namespace(json=False)
+        rc = await _cmd_audio_caps(args)
+        assert rc == 0
+        out = capsys.readouterr().out
+        assert "Supported codecs:" in out
+        assert "Defaults:" in out
+        assert "PCM_1CH_16BIT" in out
+        assert "48000" in out
+
+    @pytest.mark.asyncio
+    async def test_audio_caps_json(self, capsys) -> None:
+        args = Namespace(json=True)
+        rc = await _cmd_audio_caps(args)
+        assert rc == 0
+        data = json.loads(capsys.readouterr().out)
+        assert data["default_codec"]["name"] == "PCM_1CH_16BIT"
+        assert data["default_sample_rate_hz"] == 48000
+        assert data["default_channels"] == 1
+        assert any(c["name"] == "OPUS_1CH" for c in data["supported_codecs"])
 
 
 # ---------------------------------------------------------------------------
@@ -251,6 +281,26 @@ class TestCmdCw:
 
 
 class TestRunErrorHandling:
+    @pytest.mark.asyncio
+    async def test_run_audio_caps_does_not_connect(self, capsys) -> None:
+        args = Namespace(
+            host="192.168.1.100",
+            port=50001,
+            user="",
+            password="",
+            timeout=5.0,
+            command="audio",
+            audio_command="caps",
+            json=True,
+        )
+        with patch("icom_lan.cli.IcomRadio") as radio_cls:
+            radio_cls.audio_capabilities.return_value = get_audio_capabilities()
+            rc = await _run(args)
+        assert rc == 0
+        radio_cls.assert_not_called()
+        data = json.loads(capsys.readouterr().out)
+        assert data["default_channels"] == 1
+
     @pytest.mark.asyncio
     async def test_run_exception(self, capsys) -> None:
         args = Namespace(
