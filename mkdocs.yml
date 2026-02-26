@@ -73,6 +73,7 @@ nav:
       - Configuration: guide/configuration.md
   - User Guide:
       - Connection Lifecycle: guide/connection.md
+      - Audio Recipes: guide/audio-recipes.md
       - CI-V Commands: guide/commands.md
       - Supported Radios: guide/radios.md
       - Troubleshooting: guide/troubleshooting.md
