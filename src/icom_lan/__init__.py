@@ -1,6 +1,6 @@
 """icom-lan: Python library for controlling Icom transceivers over LAN."""
 
-__version__ = "0.5.1"
+__version__ = "0.6.0"
 
 from .auth import (
     AuthResponse,

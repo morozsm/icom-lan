@@ -126,6 +126,9 @@ icom-lan scope --spectrum-only      # Spectrum only (1 frame)
 icom-lan scope --theme grayscale    # Grayscale theme
 icom-lan scope --json               # Raw data as JSON (no Pillow needed)
 
+# Example output
+![Scope + waterfall example](docs/assets/scope-example.png)
+
 # Discover radios on network
 icom-lan discover
 ```
