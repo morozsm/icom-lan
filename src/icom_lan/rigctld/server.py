@@ -29,6 +29,22 @@ logger = logging.getLogger(__name__)
 __all__ = ["RigctldServer", "run_rigctld_server"]
 
 
+def _is_packet_mode_set(cmd: Any) -> bool:
+    """Return True for set_mode PKT* commands.
+
+    Used to hold poller writes a bit longer while radio applies DATA-mode
+    transitions (USB/LSB/RTTY -> PKT*).
+    """
+    try:
+        return (
+            getattr(cmd, "long_cmd", "") == "set_mode"
+            and bool(getattr(cmd, "args", ()))
+            and str(cmd.args[0]).upper().startswith("PKT")
+        )
+    except Exception:
+        return False
+
+
 class RigctldServer:
     """Asyncio TCP server implementing the hamlib NET rigctld protocol.
 
@@ -257,6 +273,9 @@ class RigctldServer:
                     break
 
                 # ── execute with command timeout ─────────────────────
+                poller_hold = bool(cmd.is_set and self._poller is not None)
+                if poller_hold:
+                    self._poller.write_busy = True
                 try:
                     resp = await asyncio.wait_for(
                         rig_handler.execute(cmd),
@@ -278,6 +297,14 @@ class RigctldServer:
                     writer.write(proto.format_error(HamlibError.EIO))
                     await writer.drain()
                     continue
+                finally:
+                    if poller_hold:
+                        # Packet mode transitions can make CI-V briefly unresponsive.
+                        # Keep poller paused for a short settle window to avoid
+                        # immediate get_frequency storms.
+                        if _is_packet_mode_set(cmd):
+                            await asyncio.sleep(0.45)
+                        self._poller.write_busy = False
 
                 # ── send response ────────────────────────────────────
                 out = proto.format_response(cmd, resp, session)
