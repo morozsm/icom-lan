@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   upcoming high-level PCM audio APIs.
 - Typed audio exceptions for actionable codec/format failures:
   `AudioCodecBackendError`, `AudioFormatError`, `AudioTranscodeError`.
+- High-level async PCM RX API on `IcomRadio`:
+  `start_audio_rx_pcm()` and `stop_audio_rx_pcm()`.
+  The callback receives decoded PCM frame bytes (or `None` gap placeholders).
 
 ### Changed
 
@@ -22,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `start_audio_opus()` / `stop_audio_opus()`.
 - Added internal `IcomRadio` PCM hook methods that use the transcoder without
   changing current low-level Opus streaming APIs.
+- Added parameter validation for high-level PCM RX startup
+  (`sample_rate`, `channels`, `frame_ms`, `jitter_depth`, callback).
 
 ### Deprecated
 
