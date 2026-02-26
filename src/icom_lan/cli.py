@@ -292,6 +292,12 @@ def _build_parser() -> argparse.ArgumentParser:
         default=0.2,
         help="Cache TTL in seconds (default: 0.2)",
     )
+    serve_p.add_argument(
+        "--wsjtx-compat",
+        action="store_true",
+        default=False,
+        help="Enable WSJT-X compatibility pre-warm (auto-enable DATA mode on first client)",
+    )
 
     # scope
     scope_p = sub.add_parser("scope", help="Capture scope/waterfall and render image")
@@ -1105,9 +1111,14 @@ async def _cmd_serve(radio: IcomRadio, args: argparse.Namespace) -> int:
         read_only=args.read_only,
         max_clients=args.max_clients,
         cache_ttl=args.cache_ttl,
+        wsjtx_compat=args.wsjtx_compat,
     )
     ro_str = "yes" if args.read_only else "no"
-    print(f"Listening on {args.serve_host}:{args.serve_port} (read-only: {ro_str})")
+    compat_str = "on" if args.wsjtx_compat else "off"
+    print(
+        f"Listening on {args.serve_host}:{args.serve_port} "
+        f"(read-only: {ro_str}, wsjtx-compat: {compat_str})"
+    )
     try:
         await RigctldServer(radio, config).serve_forever()
     except asyncio.CancelledError:
