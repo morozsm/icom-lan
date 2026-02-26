@@ -114,9 +114,18 @@ class IcomCommander:
 
         await self._queue.put((item.priority, item.seq, item))
 
-        if timeout is not None:
-            return await asyncio.wait_for(fut, timeout=timeout)
-        return await fut
+        try:
+            if timeout is not None:
+                return await asyncio.wait_for(fut, timeout=timeout)
+            return await fut
+        except asyncio.CancelledError:
+            # Caller went away (e.g. rigctld command timeout/client disconnect).
+            # Cancel queued/inflight future so worker can skip abandoned work.
+            if not fut.done():
+                fut.cancel()
+            if key is not None and self._pending_by_key.get(key) is fut:
+                self._pending_by_key.pop(key, None)
+            raise
 
     async def transaction(
         self,
@@ -137,15 +146,27 @@ class IcomCommander:
             while True:
                 _, _, item = await self._queue.get()
                 try:
+                    # Skip abandoned requests (caller cancelled/timed out).
+                    if item.future.done():
+                        continue
+
                     now = asyncio.get_running_loop().time()
                     delta = now - self._last_send
                     if delta < self._min_interval:
                         await asyncio.sleep(self._min_interval - delta)
 
+                    # Could be cancelled during pacing sleep.
+                    if item.future.done():
+                        continue
+
                     resp = await self._execute(item.payload, item.wait_response)
                     self._last_send = asyncio.get_running_loop().time()
                     if not item.future.done():
                         item.future.set_result(resp)
+                except asyncio.CancelledError:
+                    if not item.future.done():
+                        item.future.set_exception(ConnectionError("Commander stopped"))
+                    raise
                 except Exception as exc:
                     if not item.future.done():
                         item.future.set_exception(exc)

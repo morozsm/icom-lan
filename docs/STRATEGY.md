@@ -99,13 +99,46 @@ If we grow into a full platform (web UI, waterfall), consider:
 - Web UI could be **`icom-lan-web`** or a separate project name
 - Don't over-brand early. Let the product speak.
 
+## Future: Universal Radio Bridge (RPi)
+
+**Idea:** Raspberry Pi appliance that connects to any transceiver via USB (serial CAT)
+and exposes a unified network control interface — turning USB-only radios into
+LAN-controllable ones.
+
+**Why:**
+- Most radios (Yaesu FTX-1, Xiegu X6200, Lab599 TX-500, IC-7300) only have USB/serial CAT
+- IC-7610's LAN protocol is the exception, not the rule
+- An RPi bridge would make `icom-lan`'s server layer (rigctld, future REST/WebSocket)
+  available to *any* radio, not just Icom LAN models
+
+**Architecture (conceptual):**
+```
+  Transceiver ──USB/Serial──▶ RPi Bridge ──LAN──▶ Clients (WSJT-X, Web UI, etc.)
+                               │
+                           RadioDriver (per-brand: CI-V, Yaesu CAT, Kenwood IF, Elecraft)
+                               │
+                           StateCache + Poller
+                               │
+                           rigctld / REST / WebSocket server
+```
+
+**When:** After v1.0 and proven stability with IC-7610. Extract `RadioDriver` Protocol
+from real differences between at least 2 implementations (e.g., IC-7610 LAN + IC-7300 USB).
+
+**Council verdict (2026-02-26, 5 models):** Don't abstract prematurely. StateCache + Poller
+is already the right layer. Build the Protocol trait when the second radio driver exists,
+not before. "Rule of Three" applies.
+
+**Available hardware:** IC-7610 (LAN), IC-7300 (USB), Yaesu FTX-1 (USB),
+Xiegu X6200 (USB), Lab599 TX-500 (USB).
+
 ## Long-term Vision
 
 ```
 Year 1:  The go-to library for Icom LAN control
 Year 2:  The platform (lib + CLI + web + audio)
-Year 3:  Community-driven, multi-vendor? (Yaesu, Kenwood LAN?)
-         ↑ But this is dreaming. Focus on Year 1.
+Year 3:  Universal Radio Bridge (RPi) + multi-vendor drivers
+         Extract RadioDriver Protocol from real implementations
 ```
 
 ---

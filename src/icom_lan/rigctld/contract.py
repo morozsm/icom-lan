@@ -61,6 +61,7 @@ HAMLIB_MODE_MAP: dict[str, int] = {
     "WFM":    0x06,
     "PKTUSB": 0x01,   # mapped to USB (DATA mode handled separately)
     "PKTLSB": 0x00,   # mapped to LSB
+    "PKTRTTY": 0x04,  # mapped to RTTY
 }
 
 # Reverse: CI-V mode int → hamlib string
@@ -217,3 +218,5 @@ class RigctldConfig:
     command_timeout: float = 2.0        # seconds per CI-V command
     cache_ttl: float = 0.2             # seconds for frequency/mode cache
     max_line_length: int = 1024        # max bytes per command line (OOM guard)
+    poll_interval: float = 0.2         # seconds between autonomous poll cycles
+    wsjtx_compat: bool = False         # pre-warm DATA mode for WSJT-X-style CAT/PTT flow
