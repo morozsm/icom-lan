@@ -81,6 +81,26 @@ Parsed CI-V frame.
 
 ---
 
+### `AudioCapabilities`
+
+```python
+from icom_lan import AudioCapabilities
+```
+
+Stable audio capability structure returned by `get_audio_capabilities()` and
+`IcomRadio.audio_capabilities()`.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `supported_codecs` | `tuple[AudioCodec, ...]` | Supported codecs in stable order |
+| `supported_sample_rates_hz` | `tuple[int, ...]` | Supported sample rates |
+| `supported_channels` | `tuple[int, ...]` | Supported channel counts |
+| `default_codec` | `AudioCodec` | Deterministic default codec |
+| `default_sample_rate_hz` | `int` | Deterministic default sample rate |
+| `default_channels` | `int` | Deterministic default channel count |
+
+---
+
 ## Helper Functions
 
 ### `bcd_encode()`
@@ -110,6 +130,14 @@ Decode 5-byte BCD to frequency in Hz.
 >>> bcd_decode(bytes.fromhex('0040071400'))
 14074000
 ```
+
+### `get_audio_capabilities()`
+
+```python
+from icom_lan import get_audio_capabilities
+```
+
+Return the static icom-lan audio capability matrix and deterministic defaults.
 
 ---
 

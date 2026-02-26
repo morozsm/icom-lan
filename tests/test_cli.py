@@ -82,6 +82,19 @@ class TestBuildParser:
         args = p.parse_args(["meter"])
         assert args.command == "meter"
 
+    def test_audio_caps(self):
+        p = _build_parser()
+        args = p.parse_args(["audio", "caps"])
+        assert args.command == "audio"
+        assert args.audio_command == "caps"
+
+    def test_audio_caps_json(self):
+        p = _build_parser()
+        args = p.parse_args(["audio", "caps", "--json"])
+        assert args.command == "audio"
+        assert args.audio_command == "caps"
+        assert args.json is True
+
     def test_ptt_on(self):
         p = _build_parser()
         args = p.parse_args(["ptt", "on"])
