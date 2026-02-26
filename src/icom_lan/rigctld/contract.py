@@ -176,6 +176,14 @@ _register(
                description="Get power status"),
     CommandDef("1", "dump_caps",      is_set=False,
                description="Dump capabilities (alias)"),
+
+    # Power conversion (WSJT-X uses these)
+    CommandDef("\\power2mW", "power2mW", is_set=False, min_args=1, max_args=3,
+               description="Convert normalized power to milliwatts"),
+    CommandDef("\\mW2power", "mW2power", is_set=False, min_args=1, max_args=3,
+               description="Convert milliwatts to normalized power"),
+    CommandDef("\\get_lock_mode", "get_lock_mode", is_set=False,
+               description="Get lock mode (always 0)"),
 )
 
 

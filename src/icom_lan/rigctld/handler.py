@@ -332,6 +332,44 @@ class RigctldHandler:
         return RigctldResponse(values=[], error=HamlibError.OK, cmd_echo="quit")
 
     # ------------------------------------------------------------------
+    # Power conversion (WSJT-X needs these)
+    # ------------------------------------------------------------------
+
+    _MAX_POWER_W: int = 100  # IC-7610 max power
+
+    async def _cmd_power2mw(self, cmd: RigctldCommand) -> RigctldResponse:
+        """Convert normalized power (0.0-1.0) to milliwatts.
+
+        Args from rigctl: power_float freq mode (freq/mode ignored).
+        """
+        if not cmd.args:
+            return _err(HamlibError.EINVAL)
+        try:
+            power = float(cmd.args[0])
+        except ValueError:
+            return _err(HamlibError.EINVAL)
+        mw = int(power * self._MAX_POWER_W * 1000)
+        return RigctldResponse(values=[str(mw)])
+
+    async def _cmd_mw2power(self, cmd: RigctldCommand) -> RigctldResponse:
+        """Convert milliwatts to normalized power (0.0-1.0).
+
+        Args from rigctl: mw freq mode (freq/mode ignored).
+        """
+        if not cmd.args:
+            return _err(HamlibError.EINVAL)
+        try:
+            mw = float(cmd.args[0])
+        except ValueError:
+            return _err(HamlibError.EINVAL)
+        power = mw / (self._MAX_POWER_W * 1000)
+        return RigctldResponse(values=[f"{power:.6f}"])
+
+    async def _cmd_get_lock_mode(self, cmd: RigctldCommand) -> RigctldResponse:
+        """Get lock mode — always unlocked."""
+        return RigctldResponse(values=["0"])
+
+    # ------------------------------------------------------------------
     # Dispatch table (populated after method definitions)
     # ------------------------------------------------------------------
 
@@ -358,4 +396,7 @@ RigctldHandler._DISPATCH = {
     "chk_vfo":        RigctldHandler._cmd_chk_vfo,
     "get_powerstat":  RigctldHandler._cmd_get_powerstat,
     "quit":           RigctldHandler._cmd_quit,
+    "power2mW":       RigctldHandler._cmd_power2mw,
+    "mW2power":       RigctldHandler._cmd_mw2power,
+    "get_lock_mode":  RigctldHandler._cmd_get_lock_mode,
 }
