@@ -73,6 +73,7 @@ from .exceptions import (
     ConnectionError,
     TimeoutError,
 )
+from ._audio_transcoder import PcmOpusTranscoder, create_pcm_opus_transcoder
 from .audio import AudioPacket, AudioStream
 from .commander import IcomCommander, Priority
 from .civ import (
@@ -146,6 +147,8 @@ class IcomRadio:
         self._civ_transport: IcomTransport | None = None
         self._audio_transport: IcomTransport | None = None
         self._audio_stream: AudioStream | None = None
+        self._pcm_transcoder: PcmOpusTranscoder | None = None
+        self._pcm_transcoder_fmt: tuple[int, int, int] | None = None
         self._connected = False
         self._token: int = 0
         self._tok_request: int = 0
@@ -488,6 +491,82 @@ class IcomRadio:
         """Deprecated alias for :meth:`stop_audio_opus`."""
         self._warn_audio_alias("stop_audio", "stop_audio_opus")
         await self.stop_audio_opus()
+
+    def _get_pcm_transcoder(
+        self,
+        *,
+        sample_rate: int = 48000,
+        channels: int = 1,
+        frame_ms: int = 20,
+    ) -> PcmOpusTranscoder:
+        """Get/create cached PCM<->Opus transcoder for internal PCM hooks."""
+        key = (sample_rate, channels, frame_ms)
+        if self._pcm_transcoder is not None and self._pcm_transcoder_fmt == key:
+            return self._pcm_transcoder
+        self._pcm_transcoder = create_pcm_opus_transcoder(
+            sample_rate=sample_rate,
+            channels=channels,
+            frame_ms=frame_ms,
+        )
+        self._pcm_transcoder_fmt = key
+        return self._pcm_transcoder
+
+    def _build_pcm_rx_callback(
+        self,
+        callback: "Callable[[bytes | None], None]",
+        *,
+        sample_rate: int = 48000,
+        channels: int = 1,
+        frame_ms: int = 20,
+    ) -> "Callable[[AudioPacket | None], None]":
+        """Internal adapter: AudioPacket callback -> PCM callback."""
+
+        def _on_audio_packet(packet: AudioPacket | None) -> None:
+            if packet is None:
+                callback(None)
+                return
+            pcm_frame = self._decode_audio_packet_to_pcm(
+                packet,
+                sample_rate=sample_rate,
+                channels=channels,
+                frame_ms=frame_ms,
+            )
+            callback(pcm_frame)
+
+        return _on_audio_packet
+
+    def _decode_audio_packet_to_pcm(
+        self,
+        packet: AudioPacket,
+        *,
+        sample_rate: int = 48000,
+        channels: int = 1,
+        frame_ms: int = 20,
+    ) -> bytes:
+        """Internal helper for future high-level RX PCM APIs."""
+        transcoder = self._get_pcm_transcoder(
+            sample_rate=sample_rate,
+            channels=channels,
+            frame_ms=frame_ms,
+        )
+        return transcoder.opus_to_pcm(packet.data)
+
+    async def _push_audio_tx_pcm_internal(
+        self,
+        pcm_data: bytes,
+        *,
+        sample_rate: int = 48000,
+        channels: int = 1,
+        frame_ms: int = 20,
+    ) -> None:
+        """Internal helper for future high-level TX PCM APIs."""
+        transcoder = self._get_pcm_transcoder(
+            sample_rate=sample_rate,
+            channels=channels,
+            frame_ms=frame_ms,
+        )
+        opus_data = transcoder.pcm_to_opus(pcm_data)
+        await self.push_audio_tx(opus_data)
 
     @property
     def audio_codec(self) -> "AudioCodec":
