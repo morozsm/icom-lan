@@ -141,3 +141,38 @@ async def test_stop_fails_inflight_command() -> None:
 
     with pytest.raises(ConnectionError):
         await asyncio.wait_for(task, timeout=0.2)
+
+
+@pytest.mark.asyncio
+async def test_cancelled_queued_request_is_not_executed() -> None:
+    started = asyncio.Event()
+    release = asyncio.Event()
+    seen: list[bytes] = []
+
+    async def execute(cmd: bytes, wait_response: bool = True) -> CivFrame | None:
+        seen.append(cmd)
+        if cmd == b"block":
+            started.set()
+            await release.wait()
+        return CivFrame(to_addr=0xE0, from_addr=0x98, command=0xFB, sub=None, data=b"")
+
+    c = IcomCommander(execute, min_interval=0.0)
+    c.start()
+    try:
+        t1 = asyncio.create_task(c.send(b"block"))
+        await asyncio.wait_for(started.wait(), timeout=1.0)
+
+        t2 = asyncio.create_task(c.send(b"abandoned"))
+        await asyncio.sleep(0.01)  # let request enqueue
+        t2.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await t2
+
+        release.set()
+        await asyncio.wait_for(t1, timeout=0.5)
+
+        # Worker must skip cancelled queued request.
+        await asyncio.sleep(0.05)
+        assert seen == [b"block"]
+    finally:
+        await c.stop()
