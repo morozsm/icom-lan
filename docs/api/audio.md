@@ -5,12 +5,12 @@ Audio RX/TX via the Icom audio UDP port (default 50003).
 ## Naming Map
 
 Low-level Opus methods are now explicitly suffixed with `_opus`.
-High-level PCM names are reserved for upcoming APIs.
+High-level PCM RX is available via `start_audio_rx_pcm()` / `stop_audio_rx_pcm()`.
 
 | Scope | Preferred method names |
 |------|-------------------------|
 | Low-level Opus (current) | `start_audio_rx_opus`, `stop_audio_rx_opus`, `start_audio_tx_opus`, `push_audio_tx_opus`, `stop_audio_tx_opus`, `start_audio_opus`, `stop_audio_opus` |
-| High-level PCM (planned) | `start_audio_rx_pcm`, `stop_audio_rx_pcm`, `start_audio_tx_pcm`, `push_audio_tx_pcm`, `stop_audio_tx_pcm` |
+| High-level PCM | `start_audio_rx_pcm`, `stop_audio_rx_pcm` |
 
 Deprecated aliases still work during the deprecation window (two minor releases):
 `start_audio_rx`, `stop_audio_rx`, `start_audio_tx`, `push_audio_tx`, `stop_audio_tx`, `start_audio`, `stop_audio`.
@@ -66,6 +66,27 @@ async with IcomRadio("192.168.1.100", username="u", password="p") as radio:
     await radio.stop_audio_rx_opus()
 ```
 
+### RX Audio (high-level PCM)
+
+```python
+async with IcomRadio("192.168.1.100", username="u", password="p") as radio:
+    def on_pcm(frame: bytes | None) -> None:
+        if frame is None:
+            return  # gap placeholder from jitter buffer
+        # frame is 16-bit little-endian PCM for configured format
+        process_pcm(frame)
+
+    await radio.start_audio_rx_pcm(
+        on_pcm,
+        sample_rate=48000,
+        channels=1,
+        frame_ms=20,
+        jitter_depth=5,
+    )
+    await asyncio.sleep(10)
+    await radio.stop_audio_rx_pcm()
+```
+
 ### TX Audio (push-based)
 
 ```python
@@ -114,3 +135,8 @@ Use the explicit `_opus` methods now:
 | `stop_audio_tx` | `stop_audio_tx_opus` |
 | `start_audio` | `start_audio_opus` |
 | `stop_audio` | `stop_audio_opus` |
+
+For RX PCM, migrate callback-side decoding to the built-in API:
+
+- Before: `start_audio_rx_opus()` + manual Opus decode in callback.
+- Now: `start_audio_rx_pcm()` and receive `bytes | None` directly.
