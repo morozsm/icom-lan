@@ -18,6 +18,7 @@ import asyncio
 import logging
 from typing import TYPE_CHECKING, Any
 
+from .circuit_breaker import CircuitBreaker, CircuitState
 from .contract import ClientSession, HamlibError, RigctldConfig
 
 if TYPE_CHECKING:
@@ -28,6 +29,22 @@ logger = logging.getLogger(__name__)
 __all__ = ["RigctldServer", "run_rigctld_server"]
 
 
+def _is_packet_mode_set(cmd: Any) -> bool:
+    """Return True for set_mode PKT* commands.
+
+    Used to hold poller writes a bit longer while radio applies DATA-mode
+    transitions (USB/LSB/RTTY -> PKT*).
+    """
+    try:
+        return (
+            getattr(cmd, "long_cmd", "") == "set_mode"
+            and bool(getattr(cmd, "args", ()))
+            and str(cmd.args[0]).upper().startswith("PKT")
+        )
+    except Exception:
+        return False
+
+
 class RigctldServer:
     """Asyncio TCP server implementing the hamlib NET rigctld protocol.
 
@@ -36,6 +53,8 @@ class RigctldServer:
         config: Server configuration; defaults to RigctldConfig().
         _protocol: Override the protocol module (for testing).
         _handler: Override the handler instance (for testing).
+        _poller: Override the poller instance (for testing).
+        _circuit_breaker: Override the circuit breaker (for testing).
     """
 
     def __init__(
@@ -45,6 +64,8 @@ class RigctldServer:
         *,
         _protocol: Any = None,
         _handler: Any = None,
+        _poller: Any = None,
+        _circuit_breaker: Any = None,
     ) -> None:
         self._radio = radio
         self._config = config or RigctldConfig()
@@ -55,6 +76,19 @@ class RigctldServer:
         # Injected for testing; populated lazily in start() if None.
         self._protocol: Any = _protocol
         self._rig_handler: Any = _handler
+        self._poller: Any = _poller
+        self._circuit_breaker: CircuitBreaker | None = _circuit_breaker
+
+    # ------------------------------------------------------------------
+    # Diagnostics
+    # ------------------------------------------------------------------
+
+    @property
+    def circuit_breaker_state(self) -> CircuitState | None:
+        """Current circuit breaker state, or ``None`` if not yet initialised."""
+        if self._circuit_breaker is None:
+            return None
+        return self._circuit_breaker.state
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -68,9 +102,19 @@ class RigctldServer:
 
         if self._rig_handler is None:
             from . import handler as _handler_mod  # noqa: PLC0415
+            from .state_cache import StateCache  # noqa: PLC0415
+            from .poller import RadioPoller  # noqa: PLC0415
+            cache = StateCache()
             self._rig_handler = _handler_mod.RigctldHandler(
-                self._radio, self._config
+                self._radio, self._config, cache=cache
             )
+            if self._poller is None:
+                if self._circuit_breaker is None:
+                    self._circuit_breaker = CircuitBreaker()
+                self._poller = RadioPoller(
+                    self._radio, cache, self._config,
+                    circuit_breaker=self._circuit_breaker,
+                )
 
         self._server = await asyncio.start_server(
             self._accept_client,
@@ -80,8 +124,15 @@ class RigctldServer:
         addr = self._server.sockets[0].getsockname()
         logger.info("rigctld listening on %s:%d", addr[0], addr[1])
 
+        # Poller starts lazily on first client connection to avoid idle
+        # CI-V traffic/noise when no CAT clients are connected.
+
     async def stop(self) -> None:
         """Close the listener and cancel all active client tasks."""
+        if self._poller is not None:
+            await self._poller.stop()
+            self._poller = None
+
         if self._server is not None:
             self._server.close()
             await self._server.wait_closed()
@@ -139,11 +190,55 @@ class RigctldServer:
         task = loop.create_task(self._handle_client(reader, writer))
         self._client_tasks.add(task)
         self._client_count += 1
+
+        # Start poller when the first client connects.
+        if self._poller is not None and self._client_count == 1:
+            loop.create_task(self._poller.start())
+
+        # Optional WSJT-X compatibility pre-warm for first client:
+        # if radio is in USB/LSB/RTTY with DATA off, enable DATA mode upfront
+        # to avoid long CAT/PTT latency on first TX sequence.
+        if self._client_count == 1 and self._config.wsjtx_compat:
+            loop.create_task(self._wsjtx_compat_prewarm())
+
         task.add_done_callback(self._on_client_done)
 
     def _on_client_done(self, task: asyncio.Task[None]) -> None:
         self._client_tasks.discard(task)
         self._client_count -= 1
+
+        # Stop poller when no clients remain.
+        if self._poller is not None and self._client_count <= 0:
+            self._client_count = 0
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(self._poller.stop())
+            except RuntimeError:
+                # Loop already closed during shutdown.
+                pass
+
+    async def _wsjtx_compat_prewarm(self) -> None:
+        """Best-effort DATA-mode prewarm for WSJT-X compatibility mode."""
+        poller = self._poller
+        if poller is not None:
+            poller.write_busy = True
+        try:
+            mode, _ = await self._radio.get_mode_info()
+            data_on = await self._radio.get_data_mode()
+            mode_name = getattr(mode, "name", str(mode)).upper()
+            if not data_on and mode_name in {"USB", "LSB", "RTTY"}:
+                await self._radio.set_data_mode(True)
+                if poller is not None:
+                    poller.hold_for(1.5)
+                logger.info(
+                    "WSJT-X compat prewarm: DATA mode enabled (base mode=%s)",
+                    mode_name,
+                )
+        except Exception as exc:
+            logger.debug("WSJT-X compat prewarm skipped/failed: %s", exc)
+        finally:
+            if poller is not None:
+                poller.write_busy = False
 
     # ------------------------------------------------------------------
     # Per-client coroutine
@@ -222,6 +317,9 @@ class RigctldServer:
                     break
 
                 # ── execute with command timeout ─────────────────────
+                poller_hold = bool(cmd.is_set and self._poller is not None)
+                if poller_hold:
+                    self._poller.write_busy = True
                 try:
                     resp = await asyncio.wait_for(
                         rig_handler.execute(cmd),
@@ -243,6 +341,17 @@ class RigctldServer:
                     writer.write(proto.format_error(HamlibError.EIO))
                     await writer.drain()
                     continue
+                finally:
+                    if poller_hold:
+                        # Packet mode transitions can make CI-V briefly unresponsive.
+                        # Keep poller paused for a settle window to avoid
+                        # immediate get_frequency storms.
+                        if _is_packet_mode_set(cmd):
+                            try:
+                                self._poller.hold_for(3.0)
+                            except Exception:
+                                pass
+                        self._poller.write_busy = False
 
                 # ── send response ────────────────────────────────────
                 out = proto.format_response(cmd, resp, session)

@@ -35,6 +35,7 @@ from .commands import (
     build_civ_frame,
     get_alc,
     get_attenuator as get_attenuator_cmd,
+    get_data_mode as get_data_mode_cmd,
     get_frequency,
     get_mode,
     get_power,
@@ -44,6 +45,7 @@ from .commands import (
     get_swr,
     parse_ack_nak,
     parse_civ_frame,
+    parse_data_mode_response,
     parse_frequency_response,
     parse_meter_response,
     parse_mode_response,
@@ -57,6 +59,7 @@ from .commands import (
     send_cw,
     set_attenuator,
     set_attenuator_level,
+    set_data_mode as set_data_mode_cmd,
     set_digisel,
     set_frequency,
     set_mode,
@@ -194,6 +197,7 @@ class IcomRadio:
         self._scope_callback: Callable[[ScopeFrame], Any] | None = None
         self._civ_rx_task: asyncio.Task[None] | None = None
         self._civ_request_tracker = CivRequestTracker()
+        self._civ_epoch = self._civ_request_tracker.generation
         self._scope_frame_queue: asyncio.Queue[ScopeFrame] = asyncio.Queue(maxsize=64)
         self._scope_activity_counter: int = 0
         self._scope_activity_event = asyncio.Event()
@@ -201,11 +205,25 @@ class IcomRadio:
         self._civ_ack_sink_grace: float = (
             float(os.environ.get("ICOM_CIV_ACK_SINK_GRACE_MS", "120")) / 1000.0
         )
+        self._civ_waiter_ttl_gc_interval: float = 1.0
+        self._civ_last_waiter_gc_monotonic: float = time.monotonic()
+        self._civ_retry_slice_timeout: float = (
+            float(os.environ.get("ICOM_CIV_RETRY_SLICE_MS", "150")) / 1000.0
+        )
 
     @property
     def connected(self) -> bool:
         """Whether the radio is currently connected."""
         return self._connected
+
+    def civ_stats(self) -> dict[str, int]:
+        """Return CI-V request tracker statistics for monitoring.
+
+        Returns:
+            Dict with keys ``active_waiters``, ``stale_cleaned``,
+            ``timeouts``, and ``generation``.
+        """
+        return self._civ_request_tracker.snapshot_stats()
 
     # ------------------------------------------------------------------
     # Connection lifecycle
@@ -303,6 +321,8 @@ class IcomRadio:
         await asyncio.sleep(0.3)
         await self._flush_queue(self._civ_transport)
 
+        self._advance_civ_generation("connect")
+        self._civ_last_waiter_gc_monotonic = time.monotonic()
         self._start_civ_rx_pump()
         self._connected = True
         self._intentional_disconnect = False
@@ -323,6 +343,7 @@ class IcomRadio:
         if self._connected:
             self._connected = False
             self._intentional_disconnect = True
+            self._advance_civ_generation("disconnect")
             self._stop_watchdog()
             self._stop_reconnect()
             self._stop_token_renewal()
@@ -777,10 +798,29 @@ class IcomRadio:
     # CI-V RX + command queue
     # ------------------------------------------------------------------
 
+    def _advance_civ_generation(self, reason: str) -> None:
+        """Advance CI-V request generation and fail stale waiters."""
+        self._civ_epoch = self._civ_request_tracker.advance_generation(
+            ConnectionError(f"CI-V generation advanced: {reason}")
+        )
+
+    def _cleanup_stale_civ_waiters(self) -> None:
+        """Run periodic stale waiter GC on request tracker."""
+        now = time.monotonic()
+        if (
+            now - self._civ_last_waiter_gc_monotonic
+            < self._civ_waiter_ttl_gc_interval
+        ):
+            return
+        cleaned = self._civ_request_tracker.cleanup_stale(now_monotonic=now)
+        self._civ_last_waiter_gc_monotonic = now
+        if cleaned:
+            logger.debug("Cleaned %d stale CI-V waiter(s)", cleaned)
+
     def _start_civ_rx_pump(self) -> None:
         """Start always-on CI-V receive pump."""
         if self._civ_rx_task is None or self._civ_rx_task.done():
-            self._civ_rx_task = asyncio.create_task(self._civ_rx_loop())
+            self._civ_rx_task = asyncio.create_task(self._civ_rx_loop(self._civ_epoch))
 
     async def _stop_civ_rx_pump(self) -> None:
         """Stop CI-V receive pump and fail pending request futures."""
@@ -803,7 +843,7 @@ class IcomRadio:
         if self._civ_transport is None:
             raise ConnectionError("Not connected to radio")
 
-    async def _civ_rx_loop(self) -> None:
+    async def _civ_rx_loop(self, generation: int) -> None:
         """Continuously consume CI-V transport packets and route events."""
         assert self._civ_transport is not None
         try:
@@ -811,8 +851,10 @@ class IcomRadio:
                 try:
                     packet = await self._civ_transport.receive_packet(timeout=0.2)
                 except asyncio.TimeoutError:
+                    self._cleanup_stale_civ_waiters()
                     continue
                 if len(packet) <= CIV_HEADER_SIZE:
+                    self._cleanup_stale_civ_waiters()
                     continue
                 payload = packet[CIV_HEADER_SIZE:]
                 for frame_bytes in iter_civ_frames(payload):
@@ -821,13 +863,14 @@ class IcomRadio:
                     except ValueError:
                         continue
                     try:
-                        await self._route_civ_frame(frame)
+                        await self._route_civ_frame(frame, generation=generation)
                     except Exception:
                         logger.exception("Unhandled exception while routing CI-V frame")
+                self._cleanup_stale_civ_waiters()
         except asyncio.CancelledError:
             pass
 
-    async def _route_civ_frame(self, frame: CivFrame) -> None:
+    async def _route_civ_frame(self, frame: CivFrame, *, generation: int) -> None:
         """Route one parsed CI-V frame into command/scope event paths."""
         if frame.from_addr != self._radio_addr or frame.to_addr != CONTROLLER_ADDR:
             return
@@ -856,7 +899,7 @@ class IcomRadio:
             event = CivEvent(type=CivEventType.RESPONSE, frame=frame)
 
         self._publish_civ_event(event)
-        self._civ_request_tracker.resolve(event)
+        self._civ_request_tracker.resolve(event, generation=generation)
 
     def _publish_scope_frame(self, frame: ScopeFrame) -> None:
         """Publish a complete scope frame to callback and bounded queue."""
@@ -1015,6 +1058,7 @@ class IcomRadio:
                         idle,
                     )
                     self._connected = False
+                    self._advance_civ_generation("watchdog-timeout")
                     self._reconnect_task = asyncio.create_task(self._reconnect_loop())
                     return
         except asyncio.CancelledError:
@@ -1029,6 +1073,7 @@ class IcomRadio:
                 attempt += 1
                 logger.info("Reconnect attempt %d (delay=%.1fs)", attempt, delay)
                 try:
+                    self._advance_civ_generation("reconnect-attempt")
                     # Clean up old transports
                     self._stop_token_renewal()
                     if self._audio_stream is not None:
@@ -1323,7 +1368,12 @@ class IcomRadio:
         if dropped:
             logger.debug("Dropped %d stale ACK sink waiter(s) before blocking command", dropped)
 
-    async def _execute_civ_raw(self, civ_frame: bytes, wait_response: bool = True) -> CivFrame | None:
+    async def _execute_civ_raw(
+        self,
+        civ_frame: bytes,
+        wait_response: bool = True,
+        deadline_monotonic: float | None = None,
+    ) -> CivFrame | None:
         """Execute one CI-V command via request tracker (serialized by worker)."""
         assert self._civ_transport is not None
         self._ensure_civ_runtime()
@@ -1331,89 +1381,89 @@ class IcomRadio:
         parsed_frame = parse_civ_frame(civ_frame)
         request_key = request_key_from_frame(parsed_frame)
         expects_response = self._civ_expects_response(parsed_frame)
+        if deadline_monotonic is None:
+            deadline_monotonic = time.monotonic() + self._timeout
 
-        attempts = 3
-        for attempt in range(1, attempts + 1):
-            if not wait_response:
-                ack_sink_token: int | None = None
+        self._cleanup_stale_civ_waiters()
 
-                # Fire-and-forget: sink the ACK so it doesn't shift the queue.
-                if not expects_response:
-                    token_or_future = self._civ_request_tracker.register_ack(wait=False)
-                    if isinstance(token_or_future, int):
-                        ack_sink_token = token_or_future
+        if not wait_response:
+            ack_sink_token: int | None = None
 
-                # Ensure RX pump is running for event routing.
-                self._start_civ_rx_pump()
-
-                # Rate limit applies to fire-and-forget as well
-                now = time.monotonic()
-                delta = now - self._last_civ_send_monotonic
-                if delta < self._civ_min_interval:
-                    await asyncio.sleep(self._civ_min_interval - delta)
-
-                pkt = self._wrap_civ(civ_frame)
-                try:
-                    await self._civ_transport.send_tracked(pkt)
-                except Exception:
-                    if ack_sink_token is not None:
-                        self._civ_request_tracker.unregister_ack_sink(ack_sink_token)
-                    raise
-
-                self._last_civ_send_monotonic = time.monotonic()
-                return None
-
-            await self._drain_ack_sinks_before_blocking()
-
-            # Register future BEFORE starting RX pump / sending.
-            if expects_response:
-                pending = self._civ_request_tracker.register_response(request_key)
-            else:
-                pending_or_token = self._civ_request_tracker.register_ack(wait=True)
-                if isinstance(pending_or_token, int):
-                    raise RuntimeError("ACK waiter registration returned sink token")
-                pending = pending_or_token
+            # Fire-and-forget: sink the ACK so it doesn't shift the queue.
+            if not expects_response:
+                token_or_future = self._civ_request_tracker.register_ack(wait=False)
+                if isinstance(token_or_future, int):
+                    ack_sink_token = token_or_future
 
             # Ensure RX pump is running for event routing.
             self._start_civ_rx_pump()
 
-            # Rate-limit CI-V commands slightly (wfview-like pacing).
+            # Rate limit applies to fire-and-forget as well
             now = time.monotonic()
             delta = now - self._last_civ_send_monotonic
             if delta < self._civ_min_interval:
                 await asyncio.sleep(self._civ_min_interval - delta)
 
             pkt = self._wrap_civ(civ_frame)
-
             try:
+                await self._civ_transport.send_tracked(pkt)
+            except Exception:
+                if ack_sink_token is not None:
+                    self._civ_request_tracker.unregister_ack_sink(ack_sink_token)
+                raise
+
+            self._last_civ_send_monotonic = time.monotonic()
+            return None
+
+        await self._drain_ack_sinks_before_blocking()
+
+        attempt = 0
+        while True:
+            remaining_total = deadline_monotonic - time.monotonic()
+            if remaining_total <= 0:
+                raise TimeoutError("CI-V response timed out")
+            attempt += 1
+            pending: asyncio.Future[CivFrame] | None = None
+            attempt_timeout = min(
+                remaining_total,
+                max(0.05, self._civ_retry_slice_timeout),
+            )
+            try:
+                # Register future BEFORE starting RX pump / sending.
+                if expects_response:
+                    pending = self._civ_request_tracker.register_response(request_key)
+                else:
+                    pending_or_token = self._civ_request_tracker.register_ack(wait=True)
+                    if isinstance(pending_or_token, int):
+                        raise RuntimeError("ACK waiter registration returned sink token")
+                    pending = pending_or_token
+
+                # Ensure RX pump is running for event routing.
+                self._start_civ_rx_pump()
+
+                # Rate-limit CI-V commands slightly (wfview-like pacing).
+                now = time.monotonic()
+                delta = now - self._last_civ_send_monotonic
+                if delta < self._civ_min_interval:
+                    await asyncio.sleep(self._civ_min_interval - delta)
+
+                pkt = self._wrap_civ(civ_frame)
                 await self._civ_transport.send_tracked(pkt)
                 self._last_civ_send_monotonic = time.monotonic()
                 assert pending is not None
-                return await asyncio.wait_for(pending, timeout=self._timeout)
+                return await asyncio.wait_for(pending, timeout=attempt_timeout)
             except asyncio.TimeoutError:
-                self._civ_request_tracker.unregister(pending)
-                if attempt < attempts:
-                    logger.debug(
-                        "CI-V command 0x%02X timed out (attempt %d/%d), retrying",
-                        request_key.command,
-                        attempt,
-                        attempts,
-                    )
-                    continue
-            except Exception:
-                self._civ_request_tracker.unregister(pending)
-                raise
-
-            if attempt < attempts:
+                self._civ_request_tracker.note_timeout()
                 logger.debug(
-                    "CI-V command 0x%02X timed out (attempt %d/%d), retrying",
+                    "CI-V command 0x%02X timed out (attempt %d, %.3fs left)",
                     request_key.command,
                     attempt,
-                    attempts,
+                    max(0.0, deadline_monotonic - time.monotonic()),
                 )
                 continue
-
-        raise TimeoutError("CI-V response timed out")
+            finally:
+                if pending is not None:
+                    self._civ_request_tracker.unregister(pending)
 
     # ------------------------------------------------------------------
     # Public CI-V API
@@ -1511,6 +1561,30 @@ class IcomRadio:
         self._last_mode = mode
         if filter_width is not None:
             self._filter_width = filter_width
+
+    async def get_data_mode(self) -> bool:
+        """Get the IC-7610 DATA mode state (command 0x1A 0x06).
+
+        Returns:
+            True if DATA mode is active (DATA1/2/3), False if off.
+        """
+        self._check_connected()
+        civ = get_data_mode_cmd(to_addr=self._radio_addr)
+        resp = await self._send_civ_raw(civ)
+        return parse_data_mode_response(resp)
+
+    async def set_data_mode(self, on: bool) -> None:
+        """Set the IC-7610 DATA mode (command 0x1A 0x06).
+
+        Args:
+            on: True to enable DATA1 mode, False to disable.
+        """
+        self._check_connected()
+        civ = set_data_mode_cmd(on, to_addr=self._radio_addr)
+        resp = await self._send_civ_raw(civ)
+        ack = parse_ack_nak(resp)
+        if ack is False:
+            raise CommandError(f"Radio rejected set_data_mode({on})")
 
     async def get_power(self) -> int:
         """Get the RF power level (0-255)."""

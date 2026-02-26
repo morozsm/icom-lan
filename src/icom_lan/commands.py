@@ -45,6 +45,9 @@ __all__ = [
     "set_preamp",
     "get_digisel",
     "set_digisel",
+    "get_data_mode",
+    "set_data_mode",
+    "parse_data_mode_response",
     "scope_on",
     "scope_off",
     "scope_data_output",
@@ -79,6 +82,7 @@ _CMD_MODE_SET = 0x06
 _CMD_LEVEL = 0x14  # Levels (RF power, etc.)
 _CMD_METER = 0x15  # Meter readings
 _CMD_PTT = 0x1C  # Transceiver status / PTT
+_CMD_CTL_MEM = 0x1A  # Memory / configuration command
 _CMD_ACK = 0xFB
 _CMD_NAK = 0xFA
 
@@ -88,13 +92,14 @@ _SUB_S_METER = 0x02
 _SUB_SWR_METER = 0x12
 _SUB_ALC_METER = 0x13
 _SUB_PTT = 0x00
+_SUB_DATA_MODE = 0x06  # DATA mode sub-command for 0x1A
 
 # CI-V frame markers
 _PREAMBLE = b"\xfe\xfe"
 _TERMINATOR = b"\xfd"
 
 # Commands that use sub-commands (for parse disambiguation)
-_COMMANDS_WITH_SUB: set[int] = {_CMD_LEVEL, _CMD_METER, _CMD_PTT, 0x27}
+_COMMANDS_WITH_SUB: set[int] = {_CMD_LEVEL, _CMD_METER, _CMD_PTT, _CMD_CTL_MEM, 0x27}
 
 
 def build_civ_frame(
@@ -623,6 +628,62 @@ def set_digisel(
         data=bytes([_bcd_byte(1 if on else 0)]),
         receiver=receiver,
     )
+
+
+# --- DATA mode commands (CI-V 0x1A 0x06) ---
+
+
+def get_data_mode(
+    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
+) -> bytes:
+    """Build a 'get DATA mode' CI-V command (0x1A 0x06).
+
+    Returns:
+        CI-V frame bytes.
+    """
+    return build_civ_frame(to_addr, from_addr, _CMD_CTL_MEM, sub=_SUB_DATA_MODE)
+
+
+def set_data_mode(
+    on: bool,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a 'set DATA mode' CI-V command (0x1A 0x06 <0x00|0x01>).
+
+    Args:
+        on: True to enable DATA1 mode, False to disable.
+        to_addr: Radio CI-V address.
+        from_addr: Controller CI-V address.
+
+    Returns:
+        CI-V frame bytes.
+    """
+    return build_civ_frame(
+        to_addr, from_addr, _CMD_CTL_MEM, sub=_SUB_DATA_MODE,
+        data=b"\x01" if on else b"\x00",
+    )
+
+
+def parse_data_mode_response(frame: CivFrame) -> bool:
+    """Parse a DATA mode response frame.
+
+    Args:
+        frame: Parsed CivFrame (command 0x1A, sub 0x06, data byte).
+
+    Returns:
+        True if DATA mode is active (data[0] != 0x00), False otherwise.
+
+    Raises:
+        ValueError: If frame is not a DATA mode response.
+    """
+    if frame.command != _CMD_CTL_MEM or frame.sub != _SUB_DATA_MODE:
+        raise ValueError(
+            f"Not a DATA mode response: cmd=0x{frame.command:02x} sub=0x{frame.sub if frame.sub is not None else 0:02x}"
+        )
+    if not frame.data:
+        raise ValueError("DATA mode response has no data byte")
+    return frame.data[0] != 0x00
 
 
 # --- Scope / Waterfall commands (CI-V 0x27) ---

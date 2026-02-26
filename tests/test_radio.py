@@ -369,6 +369,21 @@ class TestTimeout:
         with pytest.raises(TimeoutError):
             await radio.get_frequency()
 
+    @pytest.mark.asyncio
+    async def test_deadline_timeout_does_not_always_send_three_attempts(
+        self, mock_transport: MockTransport
+    ) -> None:
+        radio = IcomRadio("192.168.1.100", timeout=0.2)
+        radio._ctrl_transport = mock_transport
+        radio._civ_transport = mock_transport
+        radio._connected = True
+
+        with pytest.raises(TimeoutError):
+            await radio.get_frequency()
+
+        # Deadline-based retries should stop when overall deadline is exhausted.
+        assert len(mock_transport.sent_packets) < 3
+
 
 class TestDisconnected:
     """Test that operations raise when disconnected."""
@@ -442,6 +457,20 @@ class TestAckSinkRobustness:
         ff = build_civ_frame(IC_7610_ADDR, CONTROLLER_ADDR, 0x27, sub=0x10, data=b"\x01")
         with pytest.raises(OSError):
             await radio._execute_civ_raw(ff, wait_response=False)
+
+        assert radio._civ_request_tracker.pending_count == 0
+
+    @pytest.mark.asyncio
+    async def test_cancelled_execute_cleans_pending_waiter(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        cmd = build_civ_frame(IC_7610_ADDR, CONTROLLER_ADDR, 0x03)
+        task = asyncio.create_task(radio._execute_civ_raw(cmd))
+        await asyncio.sleep(0.01)
+        task.cancel()
+
+        with pytest.raises(asyncio.CancelledError):
+            await task
 
         assert radio._civ_request_tracker.pending_count == 0
 

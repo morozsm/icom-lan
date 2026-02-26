@@ -137,9 +137,12 @@ icom-lan discover
 icom-lan serve                          # Listen on 0.0.0.0:4532
 icom-lan serve --port 4532 --read-only  # Read-only mode (no TX control)
 icom-lan serve --max-clients 5          # Limit concurrent clients
+icom-lan serve --wsjtx-compat           # Pre-warm DATA mode for WSJT-X CAT/PTT flow
 
 # Then in WSJT-X: Rig → Hamlib NET rigctl, Address: localhost, Port: 4532
 # Or test with: rigctl -m 2 -r localhost:4532 f
+# Note: --wsjtx-compat enables DATA mode automatically on first client
+# when radio is in USB/LSB/RTTY with DATA off (opt-in behavior).
 ```
 
 ## API Reference
