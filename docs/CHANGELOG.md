@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - High-level async PCM RX API on `IcomRadio`:
   `start_audio_rx_pcm()` and `stop_audio_rx_pcm()`.
   The callback receives decoded PCM frame bytes (or `None` gap placeholders).
+- Audio capability introspection API:
+  - `IcomRadio.audio_capabilities()` (async and sync wrappers)
+  - `get_audio_capabilities()` and `AudioCapabilities` export
+- CLI command: `icom-lan audio caps` with optional `--json` output.
 
 ### Changed
 
@@ -27,6 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   changing current low-level Opus streaming APIs.
 - Added parameter validation for high-level PCM RX startup
   (`sample_rate`, `channels`, `frame_ms`, `jitter_depth`, callback).
+- Audio defaults now come from deterministic capability rules:
+  codec preference order, highest sample rate, and channels implied by codec.
 
 ### Deprecated
 

@@ -118,6 +118,39 @@ ALC      n/a
 !!! info
     SWR and ALC are only available during TX. They show `n/a` when receiving.
 
+### `audio caps`
+
+Show icom-lan audio capability metadata and deterministic defaults.
+
+```bash
+icom-lan audio caps
+icom-lan audio caps --json
+```
+
+Text output includes:
+
+- supported codecs
+- supported sample rates
+- supported channels
+- default codec/rate/channels
+- deterministic selection rules used for defaults
+
+JSON output example:
+
+```json
+{
+  "supported_codecs": [
+    {"name": "ULAW_1CH", "value": 1},
+    {"name": "PCM_1CH_8BIT", "value": 2}
+  ],
+  "supported_sample_rates_hz": [8000, 16000, 24000, 48000],
+  "supported_channels": [1, 2],
+  "default_codec": {"name": "PCM_1CH_16BIT", "value": 4},
+  "default_sample_rate_hz": 48000,
+  "default_channels": 1
+}
+```
+
 ### `att`
 
 Get or set the attenuator level.
