@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Internal PCM<->Opus transcoder foundation (`icom_lan._audio_transcoder`) for
+  upcoming high-level PCM audio APIs.
+- Typed audio exceptions for actionable codec/format failures:
+  `AudioCodecBackendError`, `AudioFormatError`, `AudioTranscodeError`.
+
+### Changed
+
+- Added internal `IcomRadio` PCM hook methods that use the transcoder without
+  changing current low-level Opus streaming APIs.
+
 ## [0.6.0] — 2026-02-25
 
 ### Added

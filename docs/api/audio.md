@@ -24,6 +24,18 @@ Audio RX/TX via the Icom audio UDP port (default 50003).
 
 ::: icom_lan.audio.build_audio_packet
 
+## Internal Transcoder Layer
+
+`icom_lan` now includes an internal PCM<->Opus transcoder foundation used for
+future high-level PCM APIs.
+
+- Module: `icom_lan._audio_transcoder` (internal, no stability guarantee yet)
+- Backend: optional `opuslib` (`pip install icom-lan[audio]`)
+- Typed failures:
+  - `AudioCodecBackendError` for missing backend
+  - `AudioFormatError` for invalid PCM/Opus frame formats
+  - `AudioTranscodeError` for codec encode/decode failures
+
 ## Usage
 
 ### RX Audio (callback-based)
