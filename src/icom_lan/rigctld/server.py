@@ -396,9 +396,7 @@ class RigctldServer:
             # EOF arrived before a newline (abrupt disconnect).
             return None
         except asyncio.LimitOverrunError:
-            raise ValueError(
-                f"command line exceeds StreamReader buffer limit"
-            )
+            raise ValueError("command line exceeds StreamReader buffer limit")
 
         if not line:
             return None  # clean EOF
