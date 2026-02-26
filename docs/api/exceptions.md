@@ -9,7 +9,11 @@ IcomLanError
 ├── ConnectionError
 ├── AuthenticationError
 ├── CommandError
-└── TimeoutError
+├── TimeoutError
+└── AudioError
+    ├── AudioCodecBackendError
+    ├── AudioFormatError
+    └── AudioTranscodeError
 ```
 
 ## Classes
@@ -83,6 +87,48 @@ Raised when an operation doesn't complete within the timeout period.
 
 !!! note
     This is `icom_lan.TimeoutError`, not the built-in `builtins.TimeoutError`. Import explicitly to avoid shadowing.
+
+### `AudioError`
+
+```python
+from icom_lan import AudioError
+```
+
+Base class for audio codec/transcoding failures.
+
+### `AudioCodecBackendError`
+
+```python
+from icom_lan import AudioCodecBackendError
+```
+
+Raised when no Opus backend is available for PCM/Opus conversion.
+
+- `opuslib` not installed
+- backend failed initialization
+
+Typical actionable message:
+`Audio codec backend unavailable; install icom-lan[audio].`
+
+### `AudioFormatError`
+
+```python
+from icom_lan import AudioFormatError
+```
+
+Raised when provided audio frame format is invalid.
+
+- Unsupported sample rate/channel/frame duration
+- Wrong PCM frame byte length
+- Empty/invalid Opus frame input
+
+### `AudioTranscodeError`
+
+```python
+from icom_lan import AudioTranscodeError
+```
+
+Raised when encode/decode fails in the codec backend.
 
 ## Usage Patterns
 

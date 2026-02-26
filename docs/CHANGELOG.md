@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Internal PCM<->Opus transcoder foundation (`icom_lan._audio_transcoder`) for
+  upcoming high-level PCM audio APIs.
+- Typed audio exceptions for actionable codec/format failures:
+  `AudioCodecBackendError`, `AudioFormatError`, `AudioTranscodeError`.
 - Audio capability introspection API:
   - `IcomRadio.audio_capabilities()` (async and sync wrappers)
   - `get_audio_capabilities()` and `AudioCapabilities` export
@@ -20,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `start_audio_rx_opus()`, `stop_audio_rx_opus()`, `start_audio_tx_opus()`,
   `push_audio_tx_opus()`, `stop_audio_tx_opus()`, plus full-duplex
   `start_audio_opus()` / `stop_audio_opus()`.
+- Added internal `IcomRadio` PCM hook methods that use the transcoder without
+  changing current low-level Opus streaming APIs.
 - Audio defaults now come from deterministic capability rules:
   codec preference order, highest sample rate, and channels implied by codec.
 
