@@ -431,6 +431,19 @@ class TestAudio:
     async def test_stop_tx_pcm_noop_when_no_stream(self, radio: IcomRadio) -> None:
         await radio.stop_audio_tx_pcm()  # should not raise
 
+    def test_get_audio_stats_idle_without_stream(self, radio: IcomRadio) -> None:
+        stats = radio.get_audio_stats()
+        assert stats["active"] is False
+        assert stats["state"] == "idle"
+        assert stats["packet_loss_percent"] == 0.0
+
+    def test_get_audio_stats_delegates_to_audio_stream(self, radio: IcomRadio) -> None:
+        expected = {"active": True, "state": "receiving", "rx_packets_received": 5}
+        radio._audio_stream = MagicMock()
+        radio._audio_stream.get_audio_stats.return_value = expected
+
+        assert radio.get_audio_stats() == expected
+
 
 # ---------------------------------------------------------------------------
 # PTT disconnected

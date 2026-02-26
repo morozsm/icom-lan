@@ -74,7 +74,7 @@ from .exceptions import (
     TimeoutError,
 )
 from ._audio_transcoder import PcmOpusTranscoder, create_pcm_opus_transcoder
-from .audio import AudioPacket, AudioStream
+from .audio import AudioPacket, AudioStats, AudioStream
 from .commander import IcomCommander, Priority
 from .civ import (
     CivEvent,
@@ -375,7 +375,7 @@ class IcomRadio:
 
     async def start_audio_rx_opus(
         self,
-        callback: "Callable[[AudioPacket], None]",
+        callback: "Callable[[AudioPacket | None], None]",
         *,
         jitter_depth: int = 5,
     ) -> None:
@@ -576,7 +576,7 @@ class IcomRadio:
 
     async def start_audio_opus(
         self,
-        rx_callback: "Callable[[AudioPacket], None]",
+        rx_callback: "Callable[[AudioPacket | None], None]",
         *,
         tx_enabled: bool = True,
         jitter_depth: int = 5,
@@ -604,7 +604,9 @@ class IcomRadio:
         await self.stop_audio_tx_opus()
         await self.stop_audio_rx_opus()
 
-    async def start_audio_rx(self, callback: "Callable[[AudioPacket], None]") -> None:
+    async def start_audio_rx(
+        self, callback: "Callable[[AudioPacket | None], None]"
+    ) -> None:
         """Deprecated alias for :meth:`start_audio_rx_opus`."""
         self._warn_audio_alias("start_audio_rx", "start_audio_rx_opus")
         await self.start_audio_rx_opus(callback)
@@ -631,13 +633,23 @@ class IcomRadio:
 
     async def start_audio(
         self,
-        rx_callback: "Callable[[AudioPacket], None]",
+        rx_callback: "Callable[[AudioPacket | None], None]",
         *,
         tx_enabled: bool = True,
     ) -> None:
         """Deprecated alias for :meth:`start_audio_opus`."""
         self._warn_audio_alias("start_audio", "start_audio_opus")
         await self.start_audio_opus(rx_callback, tx_enabled=tx_enabled)
+
+    def get_audio_stats(self) -> dict[str, bool | int | float | str]:
+        """Return runtime audio stats for the active stream.
+
+        Returns a JSON-friendly dictionary with packet/loss/jitter/buffer/latency
+        metrics. If no audio stream is active, returns a zeroed idle snapshot.
+        """
+        if self._audio_stream is None:
+            return AudioStats.inactive().to_dict()
+        return self._audio_stream.get_audio_stats()
 
     async def stop_audio(self) -> None:
         """Deprecated alias for :meth:`stop_audio_opus`."""

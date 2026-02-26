@@ -95,6 +95,13 @@ class TestBuildParser:
         assert args.audio_command == "caps"
         assert args.json is True
 
+    def test_audio_caps_stats(self):
+        p = _build_parser()
+        args = p.parse_args(["audio", "caps", "--stats"])
+        assert args.command == "audio"
+        assert args.audio_command == "caps"
+        assert args.stats is True
+
     def test_audio_rx(self):
         p = _build_parser()
         args = p.parse_args(["audio", "rx", "--out", "rx.wav", "--seconds", "10"])
