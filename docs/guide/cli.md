@@ -160,6 +160,43 @@ JSON output example:
 }
 ```
 
+### `audio rx`
+
+Capture RX audio to a 16-bit PCM WAV file.
+
+```bash
+icom-lan audio rx --out rx.wav --seconds 10
+icom-lan audio rx --out rx.wav --seconds 10 --sample-rate 48000 --channels 1
+icom-lan audio rx --out rx.wav --json
+```
+
+### `audio tx`
+
+Transmit a WAV file (`16-bit PCM`, matching sample rate/channels).
+
+```bash
+icom-lan audio tx --in tx.wav
+icom-lan audio tx --in tx.wav --sample-rate 48000 --channels 1
+icom-lan audio tx --in tx.wav --json
+```
+
+### `audio loopback`
+
+Run a quick RX-to-TX PCM loopback window.
+
+```bash
+icom-lan audio loopback --seconds 10
+icom-lan audio loopback --seconds 10 --sample-rate 48000 --channels 1
+icom-lan audio loopback --json
+```
+
+### Shared audio flags (`rx`/`tx`/`loopback`)
+
+- `--sample-rate` — PCM sample rate in Hz (must be supported by `icom-lan`)
+- `--channels` — PCM channel count (must be supported by `icom-lan`)
+- `--json` — machine-readable JSON output
+- `--stats` — print transfer counters/metrics (human-readable mode)
+
 ### `att`
 
 Get or set the attenuator level.

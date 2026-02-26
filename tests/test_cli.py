@@ -102,6 +102,49 @@ class TestBuildParser:
         assert args.audio_command == "caps"
         assert args.stats is True
 
+    def test_audio_rx(self):
+        p = _build_parser()
+        args = p.parse_args(["audio", "rx", "--out", "rx.wav", "--seconds", "10"])
+        assert args.command == "audio"
+        assert args.audio_command == "rx"
+        assert args.output_file == "rx.wav"
+        assert args.seconds == 10.0
+
+    def test_audio_rx_common_flags(self):
+        p = _build_parser()
+        args = p.parse_args(
+            [
+                "audio",
+                "rx",
+                "--out",
+                "rx.wav",
+                "--sample-rate",
+                "24000",
+                "--channels",
+                "2",
+                "--json",
+                "--stats",
+            ]
+        )
+        assert args.sample_rate == 24000
+        assert args.channels == 2
+        assert args.json is True
+        assert args.stats is True
+
+    def test_audio_tx(self):
+        p = _build_parser()
+        args = p.parse_args(["audio", "tx", "--in", "tx.wav"])
+        assert args.command == "audio"
+        assert args.audio_command == "tx"
+        assert args.input_file == "tx.wav"
+
+    def test_audio_loopback(self):
+        p = _build_parser()
+        args = p.parse_args(["audio", "loopback", "--seconds", "3"])
+        assert args.command == "audio"
+        assert args.audio_command == "loopback"
+        assert args.seconds == 3.0
+
     def test_ptt_on(self):
         p = _build_parser()
         args = p.parse_args(["ptt", "on"])
