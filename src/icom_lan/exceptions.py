@@ -6,6 +6,10 @@ __all__ = [
     "AuthenticationError",
     "CommandError",
     "TimeoutError",
+    "AudioError",
+    "AudioCodecBackendError",
+    "AudioFormatError",
+    "AudioTranscodeError",
 ]
 
 
@@ -27,3 +31,19 @@ class CommandError(IcomLanError):
 
 class TimeoutError(IcomLanError):
     """Raised when an operation times out."""
+
+
+class AudioError(IcomLanError):
+    """Base exception for audio codec/transcoding failures."""
+
+
+class AudioCodecBackendError(AudioError):
+    """Raised when the Opus backend is unavailable."""
+
+
+class AudioFormatError(AudioError):
+    """Raised when PCM/Opus input format is invalid or unsupported."""
+
+
+class AudioTranscodeError(AudioError):
+    """Raised when PCM/Opus encode/decode operation fails."""

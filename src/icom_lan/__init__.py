@@ -12,6 +12,10 @@ from .auth import (
     parse_status_response,
 )
 from .exceptions import (
+    AudioCodecBackendError,
+    AudioError,
+    AudioFormatError,
+    AudioTranscodeError,
     AuthenticationError,
     CommandError,
     ConnectionError,
@@ -101,6 +105,10 @@ __all__ = [
     "AuthenticationError",
     "CommandError",
     "TimeoutError",
+    "AudioError",
+    "AudioCodecBackendError",
+    "AudioFormatError",
+    "AudioTranscodeError",
     # Types
     "PacketType",
     "Mode",
