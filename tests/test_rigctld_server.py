@@ -252,17 +252,18 @@ class TestQuit:
 # ---------------------------------------------------------------------------
 
 class TestErrorHandling:
-    async def test_parse_error_sends_eproto(self, server: RigctldServer, proto: MagicMock) -> None:
+    async def test_parse_error_sends_enimpl(self, server: RigctldServer, proto: MagicMock) -> None:
+        """Unknown commands (ValueError) return ENIMPL, not EPROTO."""
         proto.parse_line.side_effect = ValueError("unknown command")
-        proto.format_error.return_value = b"RPRT -8\n"
+        proto.format_error.return_value = b"RPRT -4\n"
 
         r, w = await _connect(server)
         w.write(b"garbage\n")
         await w.drain()
 
         data = await asyncio.wait_for(r.read(4096), timeout=1.0)
-        assert data == b"RPRT -8\n"
-        proto.format_error.assert_called_with(HamlibError.EPROTO)
+        assert data == b"RPRT -4\n"
+        proto.format_error.assert_called_with(HamlibError.ENIMPL)
         await _close(w)
 
     async def test_parse_error_connection_stays_open(self, server: RigctldServer, proto: MagicMock) -> None:

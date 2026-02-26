@@ -199,6 +199,15 @@ class RigctldServer:
                 # ── parse ────────────────────────────────────────────
                 try:
                     cmd = proto.parse_line(raw)
+                except ValueError as exc:
+                    # Unknown command or bad args → ENIMPL, not EPROTO
+                    # (WSJT-X sends commands we don't support yet)
+                    logger.debug(
+                        "client #%d unknown/bad command: %s", client_id, exc
+                    )
+                    writer.write(proto.format_error(HamlibError.ENIMPL))
+                    await writer.drain()
+                    continue
                 except Exception as exc:
                     logger.warning(
                         "client #%d parse error: %s", client_id, exc
