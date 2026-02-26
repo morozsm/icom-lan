@@ -32,6 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `icom-lan audio tx --in tx.wav`
   - `icom-lan audio loopback --seconds 10`
   with shared `--sample-rate`, `--channels`, `--json`, and `--stats` flags.
+- Rigctld WSJT-X compatibility option: `icom-lan serve --wsjtx-compat`
+  (optional DATA pre-warm on first client when base mode is USB/LSB/RTTY).
 
 ### Changed
 
@@ -45,6 +47,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`sample_rate`, `channels`, `frame_ms`, `jitter_depth`, callback).
 - Audio defaults now come from deterministic capability rules:
   codec preference order, highest sample rate, and channels implied by codec.
+- Rigctld mode mapping now includes `PKTRTTY` and packet-mode semantics no longer
+  force DATA-off for unrelated mode changes.
+- Rigctld server/poller reliability improvements for CAT clients:
+  lazy poller lifecycle, packet transition hold window, and cancellation-aware
+  command queue behavior.
+
+### Fixed
+
+- Reduced first-TX latency spikes in WSJT-X-like CAT/PTT workflows when
+  transitioning from plain USB/LSB into packet DATA mode.
+- Prevented abandoned timed-out/cancelled rigctld requests from continuing
+  to execute in the background command queue.
 
 ### Deprecated
 

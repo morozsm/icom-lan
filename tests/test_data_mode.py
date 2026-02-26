@@ -15,18 +15,12 @@ from unittest.mock import AsyncMock
 import pytest
 
 from icom_lan.commands import (
-    IC_7610_ADDR,
-    CONTROLLER_ADDR,
     get_data_mode,
     parse_data_mode_response,
     parse_civ_frame,
     set_data_mode,
 )
-from icom_lan.rigctld.contract import (
-    HamlibError,
-    RigctldCommand,
-    RigctldConfig,
-)
+from icom_lan.rigctld.contract import RigctldCommand, RigctldConfig
 from icom_lan.rigctld.handler import RigctldHandler
 from icom_lan.rigctld.poller import RadioPoller
 from icom_lan.rigctld.state_cache import StateCache

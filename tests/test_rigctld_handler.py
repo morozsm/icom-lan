@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-import time
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -11,12 +10,7 @@ from icom_lan.exceptions import (
     ConnectionError as IcomConnectionError,
     TimeoutError as IcomTimeoutError,
 )
-from icom_lan.rigctld.contract import (
-    HamlibError,
-    RigctldCommand,
-    RigctldConfig,
-    RigctldResponse,
-)
+from icom_lan.rigctld.contract import HamlibError, RigctldCommand, RigctldConfig
 from icom_lan.rigctld.handler import RigctldHandler
 from icom_lan.types import Mode
 
