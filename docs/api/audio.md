@@ -19,6 +19,38 @@ Deprecated aliases still work during the deprecation window (two minor releases)
 
 ::: icom_lan.audio.AudioStream
 
+## Runtime Audio Stats (`get_audio_stats`)
+
+Use `get_audio_stats()` on `AudioStream` or `IcomRadio` to retrieve a JSON-friendly
+snapshot of live stream quality metrics.
+
+```python
+stats = radio.get_audio_stats()
+print(stats["packet_loss_percent"], stats["jitter_ms"])
+```
+
+### Metrics, Units, Bounds
+
+| Field | Unit | Bounds | Notes |
+|------|------|--------|-------|
+| `active` | boolean | `true/false` | Whether stream state is not `idle` |
+| `state` | string | `idle` / `receiving` / `transmitting` | Current stream state |
+| `rx_packets_received` | packets | `>= 0` | Parsed RX audio packets |
+| `rx_packets_delivered` | packets | `>= 0` | RX packets delivered to callback |
+| `tx_packets_sent` | packets | `>= 0` | TX packets sent |
+| `packets_lost` | packets | `>= 0` | Inferred missing RX packets |
+| `packet_loss_percent` | percent | `0.0..100.0` | `packets_lost / (delivered + lost)` |
+| `jitter_ms` | milliseconds | `>= 0.0` | Smoothed sequence-jitter estimate |
+| `jitter_max_ms` | milliseconds | `>= 0.0` | Peak observed jitter estimate |
+| `underrun_count` | events | `>= 0` | Jitter-buffer underrun events |
+| `overrun_count` | events | `>= 0` | Jitter-buffer overrun events |
+| `estimated_latency_ms` | milliseconds | `>= 0.0` | Estimated buffering delay |
+| `jitter_buffer_depth_packets` | packets | `>= 0` | Configured jitter depth (`0` when disabled) |
+| `jitter_buffer_pending_packets` | packets | `>= 0` | Currently buffered packets |
+| `duplicates_dropped` | packets | `>= 0` | Duplicate RX packets dropped |
+| `stale_packets_dropped` | packets | `>= 0` | Stale/old RX packets dropped |
+| `out_of_order_packets` | packets | `>= 0` | RX packets observed out of sequence |
+
 ## AudioPacket
 
 ::: icom_lan.audio.AudioPacket

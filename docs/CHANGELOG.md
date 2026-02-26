@@ -21,6 +21,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `IcomRadio.audio_capabilities()` (async and sync wrappers)
   - `get_audio_capabilities()` and `AudioCapabilities` export
 - CLI command: `icom-lan audio caps` with optional `--json` output.
+- Runtime audio stats API:
+  - `AudioStream.get_audio_stats()` and `IcomRadio.get_audio_stats()`
+  - JSON-friendly metrics for packet loss, jitter, underrun/overrun, and latency.
+- CLI `--stats` support for audio capabilities output:
+  - `icom-lan audio caps --stats` (and `--json --stats`) performs a short RX probe
+    and includes runtime audio stats.
 - CLI audio subcommands:
   - `icom-lan audio rx --out rx.wav --seconds 10`
   - `icom-lan audio tx --in tx.wav`

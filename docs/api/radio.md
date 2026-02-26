@@ -101,6 +101,15 @@ Default values are deterministic:
 2. Sample rate: highest supported sample rate.
 3. Channels: implied by default codec (fallback to minimum supported channels).
 
+### `get_audio_stats()`
+
+```python
+def get_audio_stats(self) -> dict[str, bool | int | float | str]
+```
+
+Return runtime audio quality stats for the active audio stream as a JSON-friendly
+dictionary. If no audio stream is active, returns a zeroed idle snapshot.
+
 ---
 
 ## Connection Methods

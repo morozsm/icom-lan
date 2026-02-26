@@ -411,3 +411,48 @@ class TestAudioStreamSeqWrap:
         assert pkt2.send_seq == 0
 
         await stream.stop_tx()
+
+
+class TestAudioStreamStats:
+    @pytest.mark.asyncio
+    async def test_get_audio_stats_idle(self):
+        t = _mock_transport()
+        stream = AudioStream(t)
+        stats = stream.get_audio_stats()
+
+        assert stats["active"] is False
+        assert stats["state"] == AudioState.IDLE
+        assert stats["packet_loss_percent"] == 0.0
+        assert stats["estimated_latency_ms"] == 0.0
+        assert stats["underrun_count"] == 0
+        assert stats["overrun_count"] == 0
+
+    @pytest.mark.asyncio
+    async def test_get_audio_stats_with_gaps_and_jitter(self):
+        raw0 = _make_audio_bytes(b"\x00", send_seq=0)
+        raw2 = _make_audio_bytes(b"\x02", send_seq=2)
+        raw3 = _make_audio_bytes(b"\x03", send_seq=3)
+
+        t = _mock_transport()
+        t.receive_packet = AsyncMock(
+            side_effect=[raw0, raw2, raw3, asyncio.TimeoutError, asyncio.CancelledError]
+        )
+
+        stream = AudioStream(t)
+        received = []
+        await stream.start_rx(lambda pkt: received.append(pkt), jitter_depth=2)
+        await asyncio.sleep(0.05)
+
+        stats = stream.get_audio_stats()
+        assert stats["active"] is True
+        assert stats["state"] == AudioState.RECEIVING
+        assert stats["packets_lost"] == 1
+        assert stats["packet_loss_percent"] == 25.0
+        assert stats["jitter_ms"] >= 0.0
+        assert stats["jitter_max_ms"] >= 0.0
+        assert stats["underrun_count"] >= 1
+        assert stats["estimated_latency_ms"] >= 40.0
+
+        await stream.stop_rx()
+
+        assert any(pkt is None for pkt in received)
