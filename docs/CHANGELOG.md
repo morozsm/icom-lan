@@ -21,6 +21,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `IcomRadio.audio_capabilities()` (async and sync wrappers)
   - `get_audio_capabilities()` and `AudioCapabilities` export
 - CLI command: `icom-lan audio caps` with optional `--json` output.
+- CLI audio subcommands:
+  - `icom-lan audio rx --out rx.wav --seconds 10`
+  - `icom-lan audio tx --in tx.wav`
+  - `icom-lan audio loopback --seconds 10`
+  with shared `--sample-rate`, `--channels`, `--json`, and `--stats` flags.
 
 ### Changed
 
