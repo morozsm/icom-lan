@@ -639,15 +639,19 @@ class AudioHandler:
         """Start receiving audio from the radio."""
         if not self._radio:
             return
-        # Stop any existing RX stream first
-        if self._rx_active:
-            await self._stop_rx()
+        # Always stop first — previous handler may have left stream active
+        try:
+            await self._radio.stop_audio_rx_opus()
+        except Exception:
+            pass
         self._rx_active = True
         logger.info("audio: starting RX stream")
 
         def _on_packet(pkt: Any) -> None:
             if pkt is None:
                 return
+            if self._seq < 3 or self._seq % 500 == 0:
+                logger.info("audio: rx packet #%d, data=%d bytes", self._seq, len(pkt.data))
             frame = encode_audio_frame(
                 MSG_TYPE_AUDIO_RX,
                 AUDIO_CODEC_OPUS,
@@ -703,6 +707,7 @@ class AudioHandler:
 
     async def _sender_loop(self) -> None:
         """Send queued audio frames to the WebSocket client."""
+        sent = 0
         try:
             while not self._done.is_set():
                 try:
@@ -710,7 +715,10 @@ class AudioHandler:
                         self._frame_queue.get(), timeout=0.5,
                     )
                     await self._ws.send_binary(frame)
+                    sent += 1
+                    if sent <= 3 or sent % 500 == 0:
+                        logger.info("audio: sent frame #%d (%d bytes)", sent, len(frame))
                 except TimeoutError:
                     continue
-        except (EOFError, OSError):
-            pass
+        except (EOFError, OSError) as exc:
+            logger.info("audio: sender stopped after %d frames: %s", sent, exc)
