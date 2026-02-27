@@ -246,18 +246,20 @@ Offset  Size  Field        Description
 
 | ID | Meter | Range | Notes |
 |----|-------|-------|-------|
-| 0x01 | S-meter | 0-255 | RX signal strength |
-| 0x02 | Power | 0-255 | TX output power |
-| 0x03 | SWR | 0-255 | TX SWR (only valid during TX) |
-| 0x04 | ALC | 0-255 | TX ALC (only valid during TX) |
-| 0x05 | Comp | 0-255 | Compressor level |
-| 0x06 | VD | 0-255 | Drain voltage |
-| 0x07 | ID | 0-255 | Drain current |
+| 0x01 | S-meter (Main) | 0-255 | RX signal strength, main receiver |
+| 0x02 | S-meter (Sub) | 0-255 | RX signal strength, sub receiver (IC-7610, IC-9700) |
+| 0x03 | Power (Po) | 0-255 | TX output power |
+| 0x04 | SWR | 0-255 | TX SWR (only valid during TX) |
+| 0x05 | ALC | 0-255 | TX ALC (only valid during TX) |
+| 0x06 | COMP | 0-255 | Speech compressor level |
+| 0x07 | Id | 0-255 | PA drain current |
+| 0x08 | Vd | 0-255 | PA drain voltage |
+| 0x09 | TEMP | 0-255 | PA temperature |
 
 ### Bandwidth
 
-4 meters × 3 bytes + 4 bytes header = **16 bytes/frame**.
-At 20fps: **320 bytes/sec** — negligible.
+9 meters × 3 bytes + 4 bytes header = **31 bytes/frame**.
+At 20fps: **620 bytes/sec** — negligible.
 
 ### Control (JSON text frames on meters WS)
 
