@@ -650,6 +650,62 @@
   
   
     <li class="md-nav__item">
+      <a href="../guide/wsjtx-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WSJT-X / Digital Modes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/audio-recipes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audio Recipes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../guide/commands/" class="md-nav__link">
         
   
@@ -1431,10 +1487,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#3-audio-streaming" class="md-nav__link">
+  <a href="#3-audio-streaming-complete" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Фаза 3 — Audio Streaming
+        Фаза 3 — Audio Streaming ✅ COMPLETE
       
     </span>
   </a>
@@ -1442,10 +1498,43 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#4-polish-publish" class="md-nav__link">
+  <a href="#4-polish-publish-complete" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Фаза 4 — Polish &amp; Publish
+        Фаза 4 — Polish &amp; Publish ✅ COMPLETE
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-hamlib-net-rigctld-complete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Фаза 5 — Hamlib NET rigctld ✅ COMPLETE
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-scopewaterfall-complete-v060" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Фаза 6 — Scope/Waterfall ✅ COMPLETE (v0.6.0)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Текущий статус
       
     </span>
   </a>
@@ -1458,7 +1547,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_9" class="md-nav__link">
+  <a href="#_10" class="md-nav__link">
     <span class="md-ellipsis">
       
         Тестовое оборудование
@@ -1469,7 +1558,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_10" class="md-nav__link">
+  <a href="#_11" class="md-nav__link">
     <span class="md-ellipsis">
       
         Лицензионные заметки
@@ -1513,7 +1602,6 @@
 <h3 id="-">Не-цели (пока)<a class="headerlink" href="#-" title="Permanent link">&para;</a></h3>
 <ul>
 <li>GUI</li>
-<li>Waterfall/спектр</li>
 <li>Полная замена wfview</li>
 <li>Поддержка USB/serial (для этого есть hamlib)</li>
 </ul>
@@ -1528,17 +1616,22 @@
 <a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>│        │             │             │        │
 <a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>│  ┌─────┴─────────────┴─────────────┴─────┐  │
 <a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>│  │         IcomRadio (public API)        │  │
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>│  └───────────────────────────────────────┘  │
-<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>└─────────────────────────────────────────────┘
-<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>                     │ UDP
-<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>                     ▼
-<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>            ┌─────────────────┐
-<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>            │   Icom Radio    │
-<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>            │  192.168.x.x    │
-<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>            │  :50001 control │
-<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>            │  :50002 ci-v    │
-<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>            │  :50003 audio   │
-<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>            └─────────────────┘
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>│  └──────────────────┬────────────────────┘  │
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>│                     │                       │
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>│  ┌──────────────────┴────────────────────┐  │
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>│  │    rigctld TCP Server (:4532)         │  │
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>│  │    (Hamlib NET rigctl compatible)     │  │
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>│  └───────────────────────────────────────┘  │
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>└─────────────────────────────────────────────┘
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>                     │ UDP
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>                     ▼
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>            ┌─────────────────┐
+<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>            │   Icom Radio    │
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>            │  192.168.x.x    │
+<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>            │  :50001 control │
+<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>            │  :50002 ci-v    │
+<a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>            │  :50003 audio   │
+<a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>            └─────────────────┘
 </code></pre></div>
 <h2 id="icom-lan-wfview">Протокол Icom LAN (по материалам wfview)<a class="headerlink" href="#icom-lan-wfview" title="Permanent link">&para;</a></h2>
 <h3 id="_4">Обзор<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
@@ -1664,32 +1757,52 @@
 <li>[x] Тест: считать и установить частоту IC-7610</li>
 </ul>
 <p><strong>Результат:</strong> <code>radio.get_frequency()</code>, <code>radio.get_mode()</code>, <code>radio.get_s_meter()</code> работают. ✅</p>
-<h3 id="3-audio-streaming">Фаза 3 — Audio Streaming<a class="headerlink" href="#3-audio-streaming" title="Permanent link">&para;</a></h3>
+<h3 id="3-audio-streaming-complete">Фаза 3 — Audio Streaming ✅ COMPLETE<a class="headerlink" href="#3-audio-streaming-complete" title="Permanent link">&para;</a></h3>
 <p><strong>Цель:</strong> Принимать и передавать аудио.</p>
 <ul>
-<li>[ ] Opus decode (приём аудио с радио)</li>
-<li>[ ] Opus encode (передача аудио на радио)</li>
-<li>[ ] Callback API для аудио</li>
-<li>[ ] Буферизация и управление потоком</li>
+<li>[x] Opus decode/encode (RX/TX)</li>
+<li>[x] PCM transcoder layer (high-level API)</li>
+<li>[x] Callback API для аудио</li>
+<li>[x] Буферизация (JitterBuffer) и управление потоком</li>
+<li>[x] Full-duplex audio</li>
+<li>[x] Audio auto-recovery после reconnect</li>
+<li>[x] Runtime audio stats API</li>
+<li>[x] Audio capability negotiation</li>
+<li>[x] CLI: <code>icom-lan audio rx/tx/loopback</code></li>
 </ul>
-<p><strong>Результат:</strong> <code>radio.audio.start_rx(callback)</code>, <code>radio.audio.tx(data)</code> работают.</p>
-<h3 id="4-polish-publish">Фаза 4 — Polish &amp; Publish<a class="headerlink" href="#4-polish-publish" title="Permanent link">&para;</a></h3>
+<p><strong>Результат:</strong> Полный аудио-стек — Opus и PCM API, CLI, stats, auto-recovery. ✅</p>
+<h3 id="4-polish-publish-complete">Фаза 4 — Polish &amp; Publish ✅ COMPLETE<a class="headerlink" href="#4-polish-publish-complete" title="Permanent link">&para;</a></h3>
 <p><strong>Цель:</strong> Готовая библиотека для PyPI.</p>
 <ul>
-<li>[ ] Sync + async API</li>
-<li>[ ] Autodiscovery радио в сети</li>
-<li>[ ] Поддержка нескольких моделей (IC-7610, IC-705, IC-7300, IC-9700)</li>
-<li>[ ] CLI-утилита (<code>icom-lan status</code>, <code>icom-lan freq 14074000</code>)</li>
-<li>[ ] Документация, примеры</li>
-<li>[ ] PyPI публикация</li>
+<li>[x] Sync + async API</li>
+<li>[x] Autodiscovery радио в сети</li>
+<li>[x] Поддержка нескольких моделей (IC-7610, IC-705, IC-7300, IC-9700)</li>
+<li>[x] CLI-утилита (<code>icom-lan status</code>, <code>icom-lan freq 14074000</code>)</li>
+<li>[x] Документация + MkDocs site</li>
+<li>[x] PyPI публикация (v0.6.6)</li>
 </ul>
-<h2 id="_9">Тестовое оборудование<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h2>
+<h3 id="5-hamlib-net-rigctld-complete">Фаза 5 — Hamlib NET rigctld ✅ COMPLETE<a class="headerlink" href="#5-hamlib-net-rigctld-complete" title="Permanent link">&para;</a></h3>
+<p><strong>Цель:</strong> Drop-in замена rigctld для WSJT-X, JS8Call, fldigi.</p>
+<ul>
+<li>[x] TCP server skeleton (asyncio)</li>
+<li>[x] MVP command set (f/F/m/M/t/T/v/V/s/S/l/q)</li>
+<li>[x] Read-only safety mode</li>
+<li>[x] Structured logging + guardrails</li>
+<li>[x] Golden protocol response suite (45 fixtures)</li>
+<li>[x] WSJT-X compatibility (--wsjtx-compat)</li>
+<li>[x] DATA mode semantics fix</li>
+<li>[x] CI-V desync fix + circuit breaker</li>
+</ul>
+<h3 id="6-scopewaterfall-complete-v060">Фаза 6 — Scope/Waterfall ✅ COMPLETE (v0.6.0)<a class="headerlink" href="#6-scopewaterfall-complete-v060" title="Permanent link">&para;</a></h3>
+<h3 id="_9">Текущий статус<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h3>
+<p><strong>Все 32 issues закрыты. 1040 тестов. Готов к релизу v0.7.0.</strong></p>
+<h2 id="_10">Тестовое оборудование<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Icom IC-7610</strong> на <code>192.168.55.40</code></li>
 <li>Порты: 50001 (control), 50002 (serial), 50003 (audio)</li>
 <li>Mac mini M4 Pro в той же LAN (<code>192.168.55.152</code>)</li>
 </ul>
-<h2 id="_10">Лицензионные заметки<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h2>
+<h2 id="_11">Лицензионные заметки<a class="headerlink" href="#_11" title="Permanent link">&para;</a></h2>
 <ul>
 <li>wfview: <strong>GPLv3</strong> — используем только как reference для понимания протокола</li>
 <li>Наш код: <strong>MIT</strong> — чистая независимая реализация, не copy-paste</li>

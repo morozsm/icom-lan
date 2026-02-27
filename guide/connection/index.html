@@ -16,7 +16,7 @@
         <link rel="prev" href="../configuration/">
       
       
-        <link rel="next" href="../commands/">
+        <link rel="next" href="../wsjtx-setup/">
       
       
         
@@ -793,6 +793,62 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../wsjtx-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WSJT-X / Digital Modes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../audio-recipes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audio Recipes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -1616,6 +1672,7 @@
 <li><strong>CI-V port</strong> number (usually 50002)</li>
 <li><strong>Audio port</strong> number (usually 50003)</li>
 </ul>
+<p>For fast non-audio operations, the library proceeds as soon as CI-V is resolved. Audio port resolution is finalized lazily on first audio use.</p>
 <div class="admonition important">
 <p class="admonition-title">GUID is Required</p>
 <p>If the client doesn't echo the radio's GUID, the status packet will report CI-V port = 0, and commands won't work.</p>
@@ -1623,6 +1680,7 @@
 <h2 id="phase-4-ci-v-data-stream">Phase 4: CI-V Data Stream<a class="headerlink" href="#phase-4-ci-v-data-stream" title="Permanent link">&para;</a></h2>
 <p>The library opens a <strong>second UDP connection</strong> to the CI-V port (50002) and sends an <strong>OpenClose</strong> packet to start the CI-V data stream.</p>
 <p>Once open, CI-V commands flow through port 50002 (not the control port 50001).</p>
+<p>CI-V calls are then serialized through an internal commander queue (wfview-style), with pacing and retry logic to reduce real-hardware flakiness.</p>
 <h2 id="keep-alive">Keep-Alive<a class="headerlink" href="#keep-alive" title="Permanent link">&para;</a></h2>
 <p>Both ports maintain keep-alive with <strong>ping packets</strong> every 500ms. If the radio doesn't receive pings, it drops the connection after a timeout.</p>
 <p>The library also handles:</p>

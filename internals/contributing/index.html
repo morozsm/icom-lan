@@ -656,6 +656,62 @@
   
   
     <li class="md-nav__item">
+      <a href="../../guide/wsjtx-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WSJT-X / Digital Modes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/audio-recipes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audio Recipes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../guide/commands/" class="md-nav__link">
         
   
@@ -1264,6 +1320,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Test Structure">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#golden-protocol-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Golden Protocol Tests
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
       </ul>
@@ -1467,6 +1540,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Test Structure">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#golden-protocol-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Golden Protocol Tests
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
       </ul>
@@ -1585,17 +1675,34 @@
 </code></pre></div>
 <h3 id="test-structure">Test Structure<a class="headerlink" href="#test-structure" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>tests/
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>├── conftest.py          # Shared fixtures (FakeRadio, packet builders)
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>├── test_auth.py         # Credential encoding, login/conninfo packets
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>├── test_commands.py     # CI-V frame building and parsing
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>├── test_protocol.py     # Header parsing/serialization
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>├── test_radio.py        # IcomRadio high-level API (mocked transport)
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>├── test_transport.py    # IcomTransport (mocked UDP)
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>└── integration/         # Real hardware tests (require a radio)
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>    ├── test_connect.py
-<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>    └── test_get_freq.py
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>├── conftest.py                # Shared fixtures (FakeRadio, packet builders)
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>├── test_auth.py               # Credential encoding, login/conninfo packets
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>├── test_commands.py           # CI-V frame building and parsing
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>├── test_protocol.py           # Header parsing/serialization
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>├── test_radio.py              # IcomRadio high-level API (mocked transport)
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>├── test_transport.py          # IcomTransport (mocked UDP)
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>├── test_rigctld_handler.py    # Rigctld command handler unit tests
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>├── test_rigctld_protocol.py   # Rigctld wire protocol parsing/formatting
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>├── test_rigctld_server.py     # Rigctld server lifecycle tests
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>├── test_golden_protocol.py    # Golden fixture runner (parse → execute → format)
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>├── test_server_wire.py        # TCP wire integration tests (real server, mock radio)
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>├── test_data_mode.py          # DATA/packet mode semantics
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>├── golden/
+<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>│   └── protocol_golden.json   # 45 golden response fixtures (all commands + errors)
+<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a>└── integration/               # Real hardware tests (require a radio)
+<a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a>    ├── test_connect.py
+<a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a>    └── test_get_freq.py
 </code></pre></div>
 <p>Unit tests use mocked transports — <strong>no radio required</strong>. Integration tests are in <code>tests/integration/</code> and require actual hardware.</p>
+<h4 id="golden-protocol-tests">Golden Protocol Tests<a class="headerlink" href="#golden-protocol-tests" title="Permanent link">&para;</a></h4>
+<p>The <code>tests/golden/</code> directory contains JSON fixtures that define the exact wire-level
+input/output contract for the rigctld protocol. Each fixture specifies a command input,
+mock radio state, and the expected byte-exact response in both normal and extended mode.</p>
+<p>To run only golden tests:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>pytest<span class="w"> </span>tests/test_golden_protocol.py<span class="w"> </span>tests/test_server_wire.py<span class="w"> </span>-v
+</code></pre></div>
+<p>When adding a new rigctld command, add corresponding fixtures to <code>protocol_golden.json</code>
+to lock down the wire format.</p>
 <h2 id="code-style">Code Style<a class="headerlink" href="#code-style" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Type annotations</strong> on all public functions</li>
@@ -1605,19 +1712,19 @@
 </ul>
 <h2 id="commit-messages">Commit Messages<a class="headerlink" href="#commit-messages" title="Permanent link">&para;</a></h2>
 <p>We use <a href="https://www.conventionalcommits.org/">Conventional Commits</a>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>feat: add AGC level control
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>fix: handle timeout during conninfo exchange
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>docs: add IC-705 setup instructions
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>test: add VFO swap command test
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>chore: bump version to 0.3.0
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>feat: add AGC level control
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>fix: handle timeout during conninfo exchange
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>docs: add IC-705 setup instructions
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>test: add VFO swap command test
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>chore: bump version to 0.3.0
 </code></pre></div>
 <h2 id="adding-a-new-ci-v-command">Adding a New CI-V Command<a class="headerlink" href="#adding-a-new-ci-v-command" title="Permanent link">&para;</a></h2>
 <ol>
 <li>
 <p><strong>Add the command builder</strong> in <code>commands.py</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_agc</span><span class="p">(</span><span class="n">to_addr</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">IC_7610_ADDR</span><span class="p">,</span> <span class="n">from_addr</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">CONTROLLER_ADDR</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Build a &#39;get AGC&#39; CI-V command.&quot;&quot;&quot;</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>    <span class="k">return</span> <span class="n">build_civ_frame</span><span class="p">(</span><span class="n">to_addr</span><span class="p">,</span> <span class="n">from_addr</span><span class="p">,</span> <span class="mh">0x16</span><span class="p">,</span> <span class="n">sub</span><span class="o">=</span><span class="mh">0x12</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_agc</span><span class="p">(</span><span class="n">to_addr</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">IC_7610_ADDR</span><span class="p">,</span> <span class="n">from_addr</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">CONTROLLER_ADDR</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Build a &#39;get AGC&#39; CI-V command.&quot;&quot;&quot;</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>    <span class="k">return</span> <span class="n">build_civ_frame</span><span class="p">(</span><span class="n">to_addr</span><span class="p">,</span> <span class="n">from_addr</span><span class="p">,</span> <span class="mh">0x16</span><span class="p">,</span> <span class="n">sub</span><span class="o">=</span><span class="mh">0x12</span><span class="p">)</span>
 </code></pre></div>
 </li>
 <li>
@@ -1625,12 +1732,12 @@
 </li>
 <li>
 <p><strong>Add the high-level method</strong> in <code>radio.py</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_agc</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the AGC level.&quot;&quot;&quot;</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">_check_connected</span><span class="p">()</span>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>    <span class="n">civ</span> <span class="o">=</span> <span class="n">get_agc</span><span class="p">(</span><span class="n">to_addr</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_radio_addr</span><span class="p">)</span>
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>    <span class="n">resp</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_send_civ_raw</span><span class="p">(</span><span class="n">civ</span><span class="p">)</span>
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>    <span class="k">return</span> <span class="n">parse_level_response</span><span class="p">(</span><span class="n">resp</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_agc</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the AGC level.&quot;&quot;&quot;</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">_check_connected</span><span class="p">()</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>    <span class="n">civ</span> <span class="o">=</span> <span class="n">get_agc</span><span class="p">(</span><span class="n">to_addr</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_radio_addr</span><span class="p">)</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>    <span class="n">resp</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_send_civ_raw</span><span class="p">(</span><span class="n">civ</span><span class="p">)</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>    <span class="k">return</span> <span class="n">parse_level_response</span><span class="p">(</span><span class="n">resp</span><span class="p">)</span>
 </code></pre></div>
 </li>
 <li>

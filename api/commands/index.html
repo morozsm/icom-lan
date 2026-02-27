@@ -656,6 +656,62 @@
   
   
     <li class="md-nav__item">
+      <a href="../../guide/wsjtx-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WSJT-X / Digital Modes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/audio-recipes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audio Recipes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../guide/commands/" class="md-nav__link">
         
   
@@ -1143,10 +1199,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#rf-controls" class="md-nav__link">
+  <a href="#rf-controls-command29-aware" class="md-nav__link">
     <span class="md-ellipsis">
       
-        RF Controls
+        RF Controls (Command29-aware)
       
     </span>
   </a>
@@ -1719,10 +1775,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#rf-controls" class="md-nav__link">
+  <a href="#rf-controls-command29-aware" class="md-nav__link">
     <span class="md-ellipsis">
       
-        RF Controls
+        RF Controls (Command29-aware)
       
     </span>
   </a>
@@ -1912,10 +1968,25 @@
 <a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="n">vfo_swap</span><span class="p">(</span><span class="n">to_addr</span><span class="o">=</span><span class="mh">0x98</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span>
 <a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="n">set_split</span><span class="p">(</span><span class="n">on</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">to_addr</span><span class="o">=</span><span class="mh">0x98</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span>
 </code></pre></div>
-<h3 id="rf-controls">RF Controls<a class="headerlink" href="#rf-controls" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="n">set_attenuator</span><span class="p">(</span><span class="n">on</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">to_addr</span><span class="o">=</span><span class="mh">0x98</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span>
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="n">set_preamp</span><span class="p">(</span><span class="n">level</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="n">to_addr</span><span class="o">=</span><span class="mh">0x98</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span>
+<h3 id="rf-controls-command29-aware">RF Controls (Command29-aware)<a class="headerlink" href="#rf-controls-command29-aware" title="Permanent link">&para;</a></h3>
+<p>All RF control commands use <code>build_cmd29_frame()</code> for dual-receiver compatibility.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># Frame builder for Command29-wrapped commands</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="n">build_cmd29_frame</span><span class="p">(</span><span class="n">to_addr</span><span class="p">,</span> <span class="n">from_addr</span><span class="p">,</span> <span class="n">command</span><span class="p">,</span> <span class="n">sub</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">receiver</span><span class="o">=</span><span class="n">RECEIVER_MAIN</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="c1"># Attenuator</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="n">get_attenuator</span><span class="p">(</span><span class="n">to_addr</span><span class="o">=</span><span class="mh">0x98</span><span class="p">,</span> <span class="n">receiver</span><span class="o">=</span><span class="n">RECEIVER_MAIN</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="n">set_attenuator_level</span><span class="p">(</span><span class="n">db</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">to_addr</span><span class="o">=</span><span class="mh">0x98</span><span class="p">,</span> <span class="n">receiver</span><span class="o">=</span><span class="n">RECEIVER_MAIN</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="n">set_attenuator</span><span class="p">(</span><span class="n">on</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">to_addr</span><span class="o">=</span><span class="mh">0x98</span><span class="p">,</span> <span class="n">receiver</span><span class="o">=</span><span class="n">RECEIVER_MAIN</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span>  <span class="c1"># compat</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="c1"># Preamp</span>
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="n">get_preamp</span><span class="p">(</span><span class="n">to_addr</span><span class="o">=</span><span class="mh">0x98</span><span class="p">,</span> <span class="n">receiver</span><span class="o">=</span><span class="n">RECEIVER_MAIN</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span>
+<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="n">set_preamp</span><span class="p">(</span><span class="n">level</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="n">to_addr</span><span class="o">=</span><span class="mh">0x98</span><span class="p">,</span> <span class="n">receiver</span><span class="o">=</span><span class="n">RECEIVER_MAIN</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span>
+<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a>
+<a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a><span class="c1"># DIGI-SEL</span>
+<a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a><span class="n">get_digisel</span><span class="p">(</span><span class="n">to_addr</span><span class="o">=</span><span class="mh">0x98</span><span class="p">,</span> <span class="n">receiver</span><span class="o">=</span><span class="n">RECEIVER_MAIN</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span>
+<a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a><span class="n">set_digisel</span><span class="p">(</span><span class="n">on</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">to_addr</span><span class="o">=</span><span class="mh">0x98</span><span class="p">,</span> <span class="n">receiver</span><span class="o">=</span><span class="n">RECEIVER_MAIN</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span>
 </code></pre></div>
+<p>Constants: <code>RECEIVER_MAIN = 0x00</code>, <code>RECEIVER_SUB = 0x01</code></p>
 <h3 id="cw">CW<a class="headerlink" href="#cw" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">send_cw</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">to_addr</span><span class="o">=</span><span class="mh">0x98</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">bytes</span><span class="p">]</span>  <span class="c1"># Returns multiple frames</span>
 <a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="n">stop_cw</span><span class="p">(</span><span class="n">to_addr</span><span class="o">=</span><span class="mh">0x98</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span>
@@ -1997,6 +2068,10 @@
 <tr>
 <td><code>0x18</code></td>
 <td>Power on/off</td>
+</tr>
+<tr>
+<td><code>0x27</code></td>
+<td>Scope/waterfall</td>
 </tr>
 <tr>
 <td><code>0x1C</code></td>

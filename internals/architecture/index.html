@@ -656,6 +656,62 @@
   
   
     <li class="md-nav__item">
+      <a href="../../guide/wsjtx-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WSJT-X / Digital Modes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/audio-recipes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audio Recipes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../guide/commands/" class="md-nav__link">
         
   
@@ -1211,6 +1267,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#commanderpy-ci-v-command-queue" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        commander.py — CI-V Command Queue
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#transportpy-udp-transport" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1592,6 +1659,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#commanderpy-ci-v-command-queue" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        commander.py — CI-V Command Queue
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#transportpy-udp-transport" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1823,16 +1901,20 @@
 <a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>│            │   │Transport │  │Transport │     │      │
 <a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>│            │   │ (:50001) │  │ (:50002) │     │      │
 <a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>│            │   └────┬─────┘  └────┬─────┘     │      │
-<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>│            └────────┼─────────────┼───────────┘      │
-<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>│                     │             │                   │
-<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>└─────────────────────┼─────────────┼───────────────────┘
-<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>                      │   UDP       │   UDP
-<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>                      ▼             ▼
-<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>              ┌───────────────────────────┐
-<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>              │       Icom Radio          │
-<a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>              │   Control  CI-V   Audio   │
-<a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>              │   :50001  :50002  :50003  │
-<a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>              └───────────────────────────┘
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>│            │        ┌──────────────────────┐   │      │
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>│            │        │ IcomCommander queue  │   │      │
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>│            │        │ priorities/pacing    │   │      │
+<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>│            │        └──────────────────────┘   │      │
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>│            └────────┼─────────────┼───────────┘      │
+<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>│                     │             │                   │
+<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>└─────────────────────┼─────────────┼───────────────────┘
+<a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>                      │   UDP       │   UDP
+<a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>                      ▼             ▼
+<a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>              ┌───────────────────────────┐
+<a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>              │       Icom Radio          │
+<a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>              │   Control  CI-V   Audio   │
+<a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>              │   :50001  :50002  :50003  │
+<a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>              └───────────────────────────┘
 </code></pre></div>
 <h2 id="module-responsibilities">Module Responsibilities<a class="headerlink" href="#module-responsibilities" title="Permanent link">&para;</a></h2>
 <h3 id="radiopy-high-level-api"><code>radio.py</code> — High-Level API<a class="headerlink" href="#radiopy-high-level-api" title="Permanent link">&para;</a></h3>
@@ -1840,9 +1922,20 @@
 <ul>
 <li><strong>Two transport instances</strong>: one for control (port 50001), one for CI-V (port 50002)</li>
 <li><strong>Full handshake sequence</strong>: discovery → login → token → conninfo → CI-V open</li>
+<li><strong>Commander integration</strong>: enqueues CI-V operations with priorities and pacing</li>
+<li><strong>Lazy audio init</strong>: non-audio flows do not block on audio-port negotiation</li>
 <li><strong>CI-V command wrapping</strong>: takes raw CI-V frames, wraps them in UDP data packets</li>
 <li><strong>Response filtering</strong>: skips echoes, waterfall data, and control packets to find CI-V responses</li>
+<li><strong>State guardrails</strong>: snapshot/restore helpers for safe test transactions</li>
 <li><strong>Public API methods</strong>: <code>get_frequency()</code>, <code>set_mode()</code>, etc.</li>
+</ul>
+<h3 id="commanderpy-ci-v-command-queue"><code>commander.py</code> — CI-V Command Queue<a class="headerlink" href="#commanderpy-ci-v-command-queue" title="Permanent link">&para;</a></h3>
+<p>Serialized command execution layer inspired by wfview:</p>
+<ul>
+<li><strong>Priority queue</strong> (<code>IMMEDIATE</code> / <code>NORMAL</code> / <code>BACKGROUND</code>)</li>
+<li><strong>Pacing/throttling</strong> between commands (<code>ICOM_CIV_MIN_INTERVAL_MS</code>)</li>
+<li><strong>Dedupe</strong> for background polling keys</li>
+<li><strong>Transaction helper</strong> (<code>snapshot -&gt; body -&gt; restore</code>)</li>
 </ul>
 <h3 id="transportpy-udp-transport"><code>transport.py</code> — UDP Transport<a class="headerlink" href="#transportpy-udp-transport" title="Permanent link">&para;</a></h3>
 <p>Low-level asyncio UDP handler. Each <code>IcomTransport</code> instance manages:</p>
@@ -1881,9 +1974,10 @@
 <h3 id="sending-a-command">Sending a Command<a class="headerlink" href="#sending-a-command" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>radio.get_frequency()
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    → get_frequency() builds CI-V frame: FE FE 98 E0 03 FD
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    → _wrap_civ() adds UDP header (0x15-byte prefix)
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    → _civ_transport.send_tracked() assigns sequence number
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    → UDP packet sent to radio:50002
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    → IcomCommander.enqueue(priority=normal, key=get_frequency)
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    → _wrap_civ() adds UDP header (0x15-byte prefix)
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    → _civ_transport.send_tracked() assigns sequence number
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    → UDP packet sent to radio:50002
 </code></pre></div>
 <h3 id="receiving-a-response">Receiving a Response<a class="headerlink" href="#receiving-a-response" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>UDP packet arrives on :50002

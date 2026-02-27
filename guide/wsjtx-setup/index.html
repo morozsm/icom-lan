@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://morozsm.github.io/icom-lan/internals/protocol/">
+        <link rel="canonical" href="https://morozsm.github.io/icom-lan/guide/wsjtx-setup/">
       
       
-        <link rel="prev" href="../architecture/">
+        <link rel="prev" href="../connection/">
       
       
-        <link rel="next" href="../contributing/">
+        <link rel="next" href="../audio-recipes/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Protocol Deep Dive - icom-lan</title>
+        <title>WSJT-X / Digital Modes - icom-lan</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#protocol-deep-dive" class="md-skip">
+        <a href="#wsjt-x-jtdx-js8call-setup-guide" class="md-skip">
           Skip to content
         </a>
       
@@ -114,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Protocol Deep Dive
+              WSJT-X / Digital Modes
             
           </span>
         </div>
@@ -248,7 +248,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../guide/installation/" class="md-tabs__link">
+        <a href="../installation/" class="md-tabs__link">
           
   
   
@@ -264,11 +264,13 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="../../guide/connection/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../connection/" class="md-tabs__link">
           
   
   
@@ -304,13 +306,11 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
-        <a href="../architecture/" class="md-tabs__link">
+      <li class="md-tabs__item">
+        <a href="../../internals/architecture/" class="md-tabs__link">
           
   
   
@@ -455,7 +455,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/installation/" class="md-nav__link">
+      <a href="../installation/" class="md-nav__link">
         
   
   
@@ -483,7 +483,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/quickstart/" class="md-nav__link">
+      <a href="../quickstart/" class="md-nav__link">
         
   
   
@@ -511,7 +511,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/cli/" class="md-nav__link">
+      <a href="../cli/" class="md-nav__link">
         
   
   
@@ -539,7 +539,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/configuration/" class="md-nav__link">
+      <a href="../configuration/" class="md-nav__link">
         
   
   
@@ -571,28 +571,31 @@
       
   
   
+    
   
   
+  
     
     
     
     
+      
+        
+        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
-        
-          
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
             
   
   
@@ -610,7 +613,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -628,7 +631,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/connection/" class="md-nav__link">
+      <a href="../connection/" class="md-nav__link">
         
   
   
@@ -653,10 +656,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../guide/wsjtx-setup/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WSJT-X / Digital Modes
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -672,6 +702,226 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#quick-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Start
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Quick Start">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-start-the-rigctld-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Start the rigctld server
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-configure-wsjt-x" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Configure WSJT-X
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-wsjtx-compat-flag" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The --wsjtx-compat Flag
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The --wsjtx-compat Flag">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-it-does" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What it does
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#when-to-use-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When to use it
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-it-changes-on-the-radio" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What it changes on the radio
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#known-behavior" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Known Behavior
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Known Behavior">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#usb-pktusb-first-tx-delay" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        USB → PKTUSB first-TX delay
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#after-closing-wsjt-x" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        After closing WSJT-X
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#test-cat-fails-button-stays-red" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test CAT fails (button stays red)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#test-ptt-fails-or-has-long-delay" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test PTT fails or has long delay
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#radio-becomes-unresponsive-after-disconnect" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Radio becomes unresponsive after disconnect
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mode-shows-usb-instead-of-pktusb" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mode shows USB instead of PKTUSB
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#compatible-applications" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Compatible Applications
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -684,7 +934,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/audio-recipes/" class="md-nav__link">
+      <a href="../audio-recipes/" class="md-nav__link">
         
   
   
@@ -712,7 +962,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/commands/" class="md-nav__link">
+      <a href="../commands/" class="md-nav__link">
         
   
   
@@ -740,7 +990,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/radios/" class="md-nav__link">
+      <a href="../radios/" class="md-nav__link">
         
   
   
@@ -768,7 +1018,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/troubleshooting/" class="md-nav__link">
+      <a href="../troubleshooting/" class="md-nav__link">
         
   
   
@@ -1113,31 +1363,28 @@
       
   
   
-    
   
   
-  
     
     
     
     
-      
-        
-        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
         
           
-          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
             
   
   
@@ -1155,7 +1402,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1173,7 +1420,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../architecture/" class="md-nav__link">
+      <a href="../../internals/architecture/" class="md-nav__link">
         
   
   
@@ -1198,37 +1445,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Protocol Deep Dive
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../internals/protocol/" class="md-nav__link">
         
   
   
@@ -1244,298 +1464,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#packet-structure" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Packet Structure
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#packet-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Packet Types
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#port-architecture" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Port Architecture
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#discovery" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Discovery
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#authentication" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Authentication
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Authentication">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#login-packet-0x80-bytes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Login Packet (0x80 bytes)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#credential-encoding" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Credential Encoding
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#auth-response-0x60-bytes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Auth Response (0x60 bytes)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#token-ack-0x40-bytes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Token Ack (0x40 bytes)
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#conninfo-exchange" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Conninfo Exchange
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Conninfo Exchange">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#conninfo-packet-0x90-bytes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Conninfo Packet (0x90 bytes)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#status-packet-0x50-bytes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Status Packet (0x50 bytes)
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#ci-v-over-udp" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        CI-V Over UDP
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="CI-V Over UDP">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#ci-v-data-packet" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        CI-V Data Packet
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#openclose-packet-0x16-bytes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        OpenClose Packet (0x16 bytes)
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#keep-alive" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Keep-Alive
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Keep-Alive">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#ping-packet-0x15-bytes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Ping Packet (0x15 bytes)
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#retransmit" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Retransmit
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#ci-v-frame-format" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        CI-V Frame Format
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="CI-V Frame Format">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#bcd-frequency-encoding" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        BCD Frequency Encoding
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#references" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        References
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#legal-note" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Legal Note
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1548,7 +1476,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../contributing/" class="md-nav__link">
+      <a href="../../internals/contributing/" class="md-nav__link">
         
   
   
@@ -1659,66 +1587,22 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#packet-structure" class="md-nav__link">
+  <a href="#quick-start" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Packet Structure
+        Quick Start
       
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#packet-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Packet Types
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#port-architecture" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Port Architecture
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#discovery" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Discovery
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#authentication" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Authentication
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Authentication">
+    <nav class="md-nav" aria-label="Quick Start">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#login-packet-0x80-bytes" class="md-nav__link">
+  <a href="#1-start-the-rigctld-server" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Login Packet (0x80 bytes)
+        1. Start the rigctld server
       
     </span>
   </a>
@@ -1726,32 +1610,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#credential-encoding" class="md-nav__link">
+  <a href="#2-configure-wsjt-x" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Credential Encoding
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#auth-response-0x60-bytes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Auth Response (0x60 bytes)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#token-ack-0x40-bytes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Token Ack (0x40 bytes)
+        2. Configure WSJT-X
       
     </span>
   </a>
@@ -1764,22 +1626,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#conninfo-exchange" class="md-nav__link">
+  <a href="#the-wsjtx-compat-flag" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Conninfo Exchange
+        The --wsjtx-compat Flag
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Conninfo Exchange">
+    <nav class="md-nav" aria-label="The --wsjtx-compat Flag">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#conninfo-packet-0x90-bytes" class="md-nav__link">
+  <a href="#what-it-does" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Conninfo Packet (0x90 bytes)
+        What it does
       
     </span>
   </a>
@@ -1787,10 +1649,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#status-packet-0x50-bytes" class="md-nav__link">
+  <a href="#when-to-use-it" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Status Packet (0x50 bytes)
+        When to use it
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-it-changes-on-the-radio" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What it changes on the radio
       
     </span>
   </a>
@@ -1803,22 +1676,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#ci-v-over-udp" class="md-nav__link">
+  <a href="#known-behavior" class="md-nav__link">
     <span class="md-ellipsis">
       
-        CI-V Over UDP
+        Known Behavior
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="CI-V Over UDP">
+    <nav class="md-nav" aria-label="Known Behavior">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#ci-v-data-packet" class="md-nav__link">
+  <a href="#usb-pktusb-first-tx-delay" class="md-nav__link">
     <span class="md-ellipsis">
       
-        CI-V Data Packet
+        USB → PKTUSB first-TX delay
       
     </span>
   </a>
@@ -1826,10 +1699,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#openclose-packet-0x16-bytes" class="md-nav__link">
+  <a href="#after-closing-wsjt-x" class="md-nav__link">
     <span class="md-ellipsis">
       
-        OpenClose Packet (0x16 bytes)
+        After closing WSJT-X
       
     </span>
   </a>
@@ -1842,22 +1715,55 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#keep-alive" class="md-nav__link">
+  <a href="#troubleshooting" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Keep-Alive
+        Troubleshooting
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Keep-Alive">
+    <nav class="md-nav" aria-label="Troubleshooting">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#ping-packet-0x15-bytes" class="md-nav__link">
+  <a href="#test-cat-fails-button-stays-red" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Ping Packet (0x15 bytes)
+        Test CAT fails (button stays red)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#test-ptt-fails-or-has-long-delay" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test PTT fails or has long delay
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#radio-becomes-unresponsive-after-disconnect" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Radio becomes unresponsive after disconnect
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mode-shows-usb-instead-of-pktusb" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mode shows USB instead of PKTUSB
       
     </span>
   </a>
@@ -1870,60 +1776,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#retransmit" class="md-nav__link">
+  <a href="#compatible-applications" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Retransmit
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#ci-v-frame-format" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        CI-V Frame Format
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="CI-V Frame Format">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#bcd-frequency-encoding" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        BCD Frequency Encoding
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#references" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        References
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#legal-note" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Legal Note
+        Compatible Applications
       
     </span>
   </a>
@@ -1950,256 +1806,130 @@
   
 
 
-<h1 id="protocol-deep-dive">Protocol Deep Dive<a class="headerlink" href="#protocol-deep-dive" title="Permanent link">&para;</a></h1>
-<p>The Icom LAN protocol is a proprietary UDP-based protocol used by Icom transceivers for remote control over Ethernet/WiFi. It was reverse-engineered by the <a href="https://wfview.org/">wfview</a> project.</p>
-<h2 id="packet-structure">Packet Structure<a class="headerlink" href="#packet-structure" title="Permanent link">&para;</a></h2>
-<p>Every UDP packet starts with a fixed 16-byte header:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Offset  Size  Endian  Field
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>0x00    4     LE      Packet length (total, including header)
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>0x04    2     LE      Packet type
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>0x06    2     LE      Sequence number
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>0x08    4     LE      Sender ID
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>0x0C    4     LE      Receiver ID
+<h1 id="wsjt-x-jtdx-js8call-setup-guide">WSJT-X / JTDX / JS8Call Setup Guide<a class="headerlink" href="#wsjt-x-jtdx-js8call-setup-guide" title="Permanent link">&para;</a></h1>
+<p>This guide covers configuring WSJT-X (and compatible apps like JTDX, JS8Call)
+to work with <code>icom-lan serve</code> as a Hamlib NET rigctld replacement.</p>
+<h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
+<h3 id="1-start-the-rigctld-server">1. Start the rigctld server<a class="headerlink" href="#1-start-the-rigctld-server" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Basic</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>icom-lan<span class="w"> </span>--host<span class="w"> </span>&lt;RADIO_IP&gt;<span class="w"> </span>--user<span class="w"> </span>&lt;USER&gt;<span class="w"> </span>--pass<span class="w"> </span>&lt;PASS&gt;<span class="w"> </span>serve
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Recommended for WSJT-X (pre-warms DATA mode on first client)</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>icom-lan<span class="w"> </span>--host<span class="w"> </span>&lt;RADIO_IP&gt;<span class="w"> </span>--user<span class="w"> </span>&lt;USER&gt;<span class="w"> </span>--pass<span class="w"> </span>&lt;PASS&gt;<span class="w"> </span>serve<span class="w"> </span>--wsjtx-compat
 </code></pre></div>
-<h2 id="packet-types">Packet Types<a class="headerlink" href="#packet-types" title="Permanent link">&para;</a></h2>
+<h3 id="2-configure-wsjt-x">2. Configure WSJT-X<a class="headerlink" href="#2-configure-wsjt-x" title="Permanent link">&para;</a></h3>
+<p>In <strong>Settings → Radio</strong>:</p>
 <table>
 <thead>
 <tr>
-<th>Type</th>
-<th>Name</th>
-<th>Size</th>
-<th>Description</th>
+<th>Setting</th>
+<th>Value</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>0x00</code></td>
-<td>DATA</td>
-<td>Variable</td>
-<td>Carries CI-V commands, audio, etc.</td>
+<td><strong>Rig</strong></td>
+<td><code>Hamlib NET rigctl</code></td>
 </tr>
 <tr>
-<td><code>0x01</code></td>
-<td>CONTROL</td>
-<td>0x10+</td>
-<td>Retransmit requests</td>
+<td><strong>Network Server</strong></td>
+<td><code>127.0.0.1:4532</code></td>
 </tr>
 <tr>
-<td><code>0x03</code></td>
-<td>ARE_YOU_THERE</td>
-<td>0x10</td>
-<td>Discovery request (broadcast)</td>
+<td><strong>PTT Method</strong></td>
+<td><code>CAT</code></td>
 </tr>
 <tr>
-<td><code>0x04</code></td>
-<td>I_AM_HERE</td>
-<td>0x10</td>
-<td>Discovery response</td>
+<td><strong>Mode</strong></td>
+<td><code>Data/Pkt</code></td>
 </tr>
 <tr>
-<td><code>0x05</code></td>
-<td>DISCONNECT</td>
-<td>0x10</td>
-<td>Disconnect notification</td>
-</tr>
-<tr>
-<td><code>0x06</code></td>
-<td>ARE_YOU_READY</td>
-<td>0x10</td>
-<td>Ready handshake</td>
-</tr>
-<tr>
-<td><code>0x07</code></td>
-<td>PING</td>
-<td>0x15</td>
-<td>Keep-alive ping/pong</td>
+<td><strong>Split Operation</strong></td>
+<td><code>Fake It</code></td>
 </tr>
 </tbody>
 </table>
-<h2 id="port-architecture">Port Architecture<a class="headerlink" href="#port-architecture" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Port</th>
-<th>Name</th>
-<th>Purpose</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>50001</td>
-<td>Control</td>
-<td>Authentication, session management, keep-alive</td>
-</tr>
-<tr>
-<td>50002</td>
-<td>CI-V</td>
-<td>CI-V serial command exchange</td>
-</tr>
-<tr>
-<td>50003</td>
-<td>Audio</td>
-<td>Opus audio streaming</td>
-</tr>
-</tbody>
-</table>
-<p>The CI-V and audio port numbers are <strong>negotiated</strong> — they're reported in the status packet (0x50 bytes) after the conninfo exchange. However, in practice they are almost always control_port+1 and control_port+2.</p>
-<h2 id="discovery">Discovery<a class="headerlink" href="#discovery" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Client → Radio:  ARE_YOU_THERE (0x03), 16 bytes
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>Radio → Client:  I_AM_HERE (0x04), 16 bytes, includes radio&#39;s sender_id
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>Client → Radio:  ARE_YOU_READY (0x06), 16 bytes
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>Radio → Client:  ARE_YOU_READY (0x06), 16 bytes (echo/ack)
-</code></pre></div>
-<p>This can also be broadcast (UDP broadcast to port 50001) for autodiscovery.</p>
-<h2 id="authentication">Authentication<a class="headerlink" href="#authentication" title="Permanent link">&para;</a></h2>
-<h3 id="login-packet-0x80-bytes">Login Packet (0x80 bytes)<a class="headerlink" href="#login-packet-0x80-bytes" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>Offset  Size  Field
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>0x00    4     Packet length (0x80)
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>0x04    2     Type (0x00 = DATA)
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>0x06    2     Sequence
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>0x08    4     Sender ID
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>0x0C    4     Receiver ID
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>0x10    4     Payload size (0x70, big-endian)
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>0x14    1     Request/reply (0x01)
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>0x15    1     Request type (0x00 = login)
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>0x16    2     Inner sequence (big-endian)
-<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>0x1A    2     Token request ID
-<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>0x40    16    Encoded username
-<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>0x50    16    Encoded password
-<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>0x60    16    Computer name (ASCII)
-</code></pre></div>
-<h3 id="credential-encoding">Credential Encoding<a class="headerlink" href="#credential-encoding" title="Permanent link">&para;</a></h3>
-<p>Icom uses a position-dependent substitution cipher:</p>
+<p>Press <strong>Test CAT</strong> — the button should turn green.
+Press <strong>Test PTT</strong> — the radio should key up briefly.</p>
+<h2 id="the-wsjtx-compat-flag">The <code>--wsjtx-compat</code> Flag<a class="headerlink" href="#the-wsjtx-compat-flag" title="Permanent link">&para;</a></h2>
+<h3 id="what-it-does">What it does<a class="headerlink" href="#what-it-does" title="Permanent link">&para;</a></h3>
+<p>When a CAT client connects for the first time:</p>
+<ul>
+<li>If the radio is in USB, LSB, or RTTY <strong>with DATA mode OFF</strong>,
+  the server automatically enables DATA mode.</li>
+<li>This eliminates a known first-TX latency when WSJT-X switches
+  from plain SSB to packet mode (PKTUSB).</li>
+</ul>
+<h3 id="when-to-use-it">When to use it<a class="headerlink" href="#when-to-use-it" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Use</strong> <code>--wsjtx-compat</code> if you run WSJT-X, JTDX, or JS8Call
+  and want instant TX on the first transmission.</li>
+<li><strong>Don't use</strong> if you need the radio to stay in the exact mode
+  you set manually (e.g., SSB voice operation alongside CAT control).</li>
+</ul>
+<h3 id="what-it-changes-on-the-radio">What it changes on the radio<a class="headerlink" href="#what-it-changes-on-the-radio" title="Permanent link">&para;</a></h3>
+<p>Only the DATA mode flag (CI-V <code>0x1A 0x06</code>). It does <strong>not</strong> change
+frequency, power, filter, or any other setting.</p>
+<h2 id="known-behavior">Known Behavior<a class="headerlink" href="#known-behavior" title="Permanent link">&para;</a></h2>
+<h3 id="usb-pktusb-first-tx-delay">USB → PKTUSB first-TX delay<a class="headerlink" href="#usb-pktusb-first-tx-delay" title="Permanent link">&para;</a></h3>
+<p>When WSJT-X connects to a radio in plain USB (DATA off), it sends
+<code>M PKTUSB -1</code> to switch to packet mode. This involves two radio changes:</p>
 <ol>
-<li>For each character at position <code>i</code>: compute index = <code>ord(char) + i</code></li>
-<li>If index &gt; 126: index = <code>32 + (index % 127)</code></li>
-<li>Look up in the substitution table (128-byte constant)</li>
+<li>Verify/set USB mode</li>
+<li>Enable DATA mode</li>
 </ol>
-<p>This is <strong>obfuscation, not encryption</strong>. The substitution table is publicly known.</p>
-<h3 id="auth-response-0x60-bytes">Auth Response (0x60 bytes)<a class="headerlink" href="#auth-response-0x60-bytes" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>Offset  Size  Field
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>0x1A    2     Token request ID (echoed)
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>0x1C    4     Session token
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>0x30    4     Error code (0 = success, 0xFEFFFFFF/0xFFFFFFFF = failure)
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>0x40    16    Connection type string
-</code></pre></div>
-<h3 id="token-ack-0x40-bytes">Token Ack (0x40 bytes)<a class="headerlink" href="#token-ack-0x40-bytes" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>Offset  Size  Endian  Field
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>0x10    4     BE      Payload size
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>0x14    1             Request/reply (0x01)
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>0x15    1             Request type (0x02 = token ack)
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>0x16    2     BE      Inner sequence
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>0x1A    2     LE      Token request ID
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>0x1C    4     LE      Token
-<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>0x24    2     BE      Reset capability (0x0798)
-</code></pre></div>
-<h2 id="conninfo-exchange">Conninfo Exchange<a class="headerlink" href="#conninfo-exchange" title="Permanent link">&para;</a></h2>
-<h3 id="conninfo-packet-0x90-bytes">Conninfo Packet (0x90 bytes)<a class="headerlink" href="#conninfo-packet-0x90-bytes" title="Permanent link">&para;</a></h3>
-<p>Sent by both radio and client. Contains:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>Offset  Size  Field
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>0x15    1     Request type (0x03 = conninfo)
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>0x1C    4     Token
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>0x20    16    GUID / MAC area
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>0x40    32    Device name
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>0x60    16    Encoded username
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>0x70    1     RX enable
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>0x71    1     TX enable
-<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>0x72    1     RX codec
-<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>0x73    1     TX codec
-<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>0x74    4     RX sample rate (BE)
-<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>0x78    4     TX sample rate (BE)
-<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>0x7C    4     CI-V local port (BE)
-<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>0x80    4     Audio local port (BE)
-<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>0x84    4     TX buffer latency ms (BE)
-</code></pre></div>
-<p><strong>Critical:</strong> The client must echo the radio's GUID (0x20–0x2F from the radio's conninfo) in its own conninfo. Otherwise, the status packet will report CI-V port = 0.</p>
-<h3 id="status-packet-0x50-bytes">Status Packet (0x50 bytes)<a class="headerlink" href="#status-packet-0x50-bytes" title="Permanent link">&para;</a></h3>
-<p>Sent by the radio after receiving the client's conninfo:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>Offset  Size  Endian  Field
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>0x30    4     LE      Error code
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>0x40    1             Disconnect flag
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>0x42    2     BE      CI-V port
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>0x46    2     BE      Audio port
-</code></pre></div>
-<h2 id="ci-v-over-udp">CI-V Over UDP<a class="headerlink" href="#ci-v-over-udp" title="Permanent link">&para;</a></h2>
-<h3 id="ci-v-data-packet">CI-V Data Packet<a class="headerlink" href="#ci-v-data-packet" title="Permanent link">&para;</a></h3>
-<p>CI-V frames are wrapped in UDP data packets on port 50002:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>Offset  Size  Field
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>0x00    4     Total packet length
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>0x04    2     Type (0x00 = DATA)
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>0x06    2     Sequence
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>0x08    4     Sender ID
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>0x0C    4     Receiver ID
-<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>0x10    1     Reply marker (0xC1 for CI-V data)
-<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>0x11    2     CI-V frame length (LE)
-<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>0x13    2     Send sequence (BE)
-<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>0x15    ...   CI-V frame data
-</code></pre></div>
-<p>The CI-V header is 0x15 bytes (not 0x10 — there's a 5-byte sub-header after the standard packet header).</p>
-<h3 id="openclose-packet-0x16-bytes">OpenClose Packet (0x16 bytes)<a class="headerlink" href="#openclose-packet-0x16-bytes" title="Permanent link">&para;</a></h3>
-<p>Sent to start/stop the CI-V data stream:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>Offset  Size  Field
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>0x10    2     Data (0x01C0)
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>0x13    2     Send sequence (BE)
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>0x15    1     Magic (0x04 = open, 0x00 = close)
-</code></pre></div>
-<h2 id="keep-alive">Keep-Alive<a class="headerlink" href="#keep-alive" title="Permanent link">&para;</a></h2>
-<h3 id="ping-packet-0x15-bytes">Ping Packet (0x15 bytes)<a class="headerlink" href="#ping-packet-0x15-bytes" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>Offset  Size  Field
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>0x00    4     Length (0x15)
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>0x04    2     Type (0x07 = PING)
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>0x06    2     Ping sequence
-<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>0x08    4     Sender ID
-<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>0x0C    4     Receiver ID
-<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>0x10    1     Flag (0x00 = request, 0x01 = reply)
-<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>0x11    4     Timestamp (LE, milliseconds)
-</code></pre></div>
-<p>Pings are sent every 500ms. The radio drops connections that stop pinging.</p>
-<h2 id="retransmit">Retransmit<a class="headerlink" href="#retransmit" title="Permanent link">&para;</a></h2>
-<p>If a sequence gap is detected, the receiver sends a retransmit request:</p>
+<p>Some CAT client stacks (including WSJT-X and wfview's rigctld) introduce
+a ~15–20 second delay before the first PTT after this transition.
+<strong>This is not an icom-lan bug</strong> — the same behavior occurs with wfview's
+built-in rigctld emulation.</p>
+<p><strong>Workarounds:</strong></p>
 <ul>
-<li><strong>Single missing:</strong> 0x10-byte control packet with type=0x01 and the missing seq in the seq field</li>
-<li><strong>Multiple missing:</strong> 0x10+ byte packet with type=0x01, followed by pairs of (seq, seq) for each missing packet</li>
+<li>Use <code>--wsjtx-compat</code> (recommended) — pre-warms DATA on connect.</li>
+<li>Manually set the radio to USB-D1 before starting WSJT-X.</li>
+<li>Once DATA mode is active, subsequent TX cycles work without delay.</li>
 </ul>
-<h2 id="ci-v-frame-format">CI-V Frame Format<a class="headerlink" href="#ci-v-frame-format" title="Permanent link">&para;</a></h2>
-<p>Standard Icom CI-V serial protocol, encapsulated in UDP:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>FE FE &lt;to&gt; &lt;from&gt; &lt;cmd&gt; [&lt;sub&gt;] [&lt;data&gt;...] FD
-</code></pre></div>
+<h3 id="after-closing-wsjt-x">After closing WSJT-X<a class="headerlink" href="#after-closing-wsjt-x" title="Permanent link">&para;</a></h3>
+<p>The server gracefully handles client disconnect:</p>
 <ul>
-<li><code>FE FE</code> — preamble</li>
-<li><code>&lt;to&gt;</code> — destination address (radio = 0x98 for IC-7610)</li>
-<li><code>&lt;from&gt;</code> — source address (controller = 0xE0)</li>
-<li><code>&lt;cmd&gt;</code> — command byte</li>
-<li><code>&lt;sub&gt;</code> — sub-command (optional, depends on command)</li>
-<li><code>&lt;data&gt;</code> — payload (variable length)</li>
-<li><code>FD</code> — terminator</li>
+<li>Abandoned commands are cancelled (no background CI-V spam).</li>
+<li>The poller stops when the last client disconnects.</li>
+<li>Reconnecting a new WSJT-X session works immediately.</li>
 </ul>
-<h3 id="bcd-frequency-encoding">BCD Frequency Encoding<a class="headerlink" href="#bcd-frequency-encoding" title="Permanent link">&para;</a></h3>
-<p>Frequencies are encoded as 5-byte little-endian BCD:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>14,074,000 Hz → 00 40 07 14 00
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>
-<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>Byte 0: 00 → digits 0,0 (1 Hz, 10 Hz)
-<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>Byte 1: 40 → digits 4,0 (100 Hz, 1 kHz)
-<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>Byte 2: 07 → digits 0,7 (10 kHz, 100 kHz)
-<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>Byte 3: 14 → digits 1,4 (1 MHz, 10 MHz)
-<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>Byte 4: 00 → digits 0,0 (100 MHz, 1 GHz)
-</code></pre></div>
-<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
+<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
+<h3 id="test-cat-fails-button-stays-red">Test CAT fails (button stays red)<a class="headerlink" href="#test-cat-fails-button-stays-red" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Verify the server is running: <code>rigctl -m 2 -r localhost:4532 f</code></li>
+<li>Check the server log for connection/auth errors.</li>
+<li>Ensure no other application is using port 4532.</li>
+</ol>
+<h3 id="test-ptt-fails-or-has-long-delay">Test PTT fails or has long delay<a class="headerlink" href="#test-ptt-fails-or-has-long-delay" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Confirm PTT Method is set to <strong>CAT</strong> (not VOX or hardware).</li>
+<li>If starting from plain USB, use <code>--wsjtx-compat</code> or pre-set DATA mode.</li>
+<li>Check server logs for CI-V timeout patterns.</li>
+</ol>
+<h3 id="radio-becomes-unresponsive-after-disconnect">Radio becomes unresponsive after disconnect<a class="headerlink" href="#radio-becomes-unresponsive-after-disconnect" title="Permanent link">&para;</a></h3>
+<ol>
+<li>The circuit breaker may have tripped. Wait ~6 seconds for auto-recovery.</li>
+<li>Restart the server if needed: Ctrl-C and re-launch.</li>
+<li>Check if another application (wfview, flrig) is also controlling the radio.</li>
+</ol>
+<h3 id="mode-shows-usb-instead-of-pktusb">Mode shows USB instead of PKTUSB<a class="headerlink" href="#mode-shows-usb-instead-of-pktusb" title="Permanent link">&para;</a></h3>
 <ul>
-<li><a href="https://wfview.org/">wfview</a> — open-source Icom remote control software (GPLv3)</li>
-<li><code>packettypes.h</code> — packet structure definitions</li>
-<li><code>icomudpbase.cpp</code> — base UDP handling</li>
-<li><code>icomudphandler.cpp</code> — authentication and handshake</li>
-<li><code>icomudpcivdata.cpp</code> — CI-V data flow</li>
-<li><code>icomcommander.cpp</code> — CI-V command encoding</li>
+<li>Ensure WSJT-X Mode is set to <strong>Data/Pkt</strong> (not None or USB).</li>
+<li>With <code>--wsjtx-compat</code>, DATA mode should already be active on connect.</li>
 </ul>
-<h2 id="legal-note">Legal Note<a class="headerlink" href="#legal-note" title="Permanent link">&para;</a></h2>
-<p>Protocol reverse engineering for interoperability is protected by:</p>
+<h2 id="compatible-applications">Compatible Applications<a class="headerlink" href="#compatible-applications" title="Permanent link">&para;</a></h2>
+<p>Tested with:</p>
 <ul>
-<li><strong>EU Directive 2009/24/EC</strong> (Software Directive, Article 6)</li>
-<li><strong>US DMCA</strong> interoperability exception (17 U.S.C. § 1201(f))</li>
+<li><strong>WSJT-X</strong> 2.7+ (FT8, FT4, JT65, etc.)</li>
+<li><strong>JTDX</strong> (FT8/FT4 variant)</li>
+<li><strong>JS8Call</strong> (JS8 mode)</li>
+<li><strong>fldigi</strong> (various digital modes)</li>
+<li><strong>Log4OM 2</strong> (logging + CAT)</li>
+<li><strong>MacLoggerDX</strong> (macOS logging)</li>
 </ul>
-<p>This library is a clean-room implementation based on protocol understanding, not a derivative of wfview's GPLv3 code.</p>
+<p>Any application that supports <code>Hamlib NET rigctl</code> should work.</p>
 
 
 

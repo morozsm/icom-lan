@@ -652,6 +652,83 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#audio-caps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        audio caps
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#audio-rx" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        audio rx
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#audio-tx" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        audio tx
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#audio-loopback" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        audio loopback
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#shared-audio-flags-rxtxloopback" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shared audio flags (rx/tx/loopback)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#att" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        att
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#preamp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        preamp
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#ptt" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -697,6 +774,17 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scope-waterfall" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scope / Waterfall
+      
+    </span>
+  </a>
   
 </li>
       
@@ -835,6 +923,62 @@
     
   
     Connection Lifecycle
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../wsjtx-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WSJT-X / Digital Modes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../audio-recipes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audio Recipes
   
 
     
@@ -1558,6 +1702,83 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#audio-caps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        audio caps
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#audio-rx" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        audio rx
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#audio-tx" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        audio tx
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#audio-loopback" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        audio loopback
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#shared-audio-flags-rxtxloopback" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shared audio flags (rx/tx/loopback)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#att" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        att
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#preamp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        preamp
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#ptt" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1603,6 +1824,17 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scope-waterfall" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scope / Waterfall
+      
+    </span>
+  </a>
   
 </li>
       
@@ -1770,10 +2002,117 @@
 <p class="admonition-title">Info</p>
 <p>SWR and ALC are only available during TX. They show <code>n/a</code> when receiving.</p>
 </div>
+<h3 id="audio-caps"><code>audio caps</code><a class="headerlink" href="#audio-caps" title="Permanent link">&para;</a></h3>
+<p>Show icom-lan audio capability metadata and deterministic defaults.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>icom-lan<span class="w"> </span>audio<span class="w"> </span>caps
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>icom-lan<span class="w"> </span>audio<span class="w"> </span>caps<span class="w"> </span>--json
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>icom-lan<span class="w"> </span>audio<span class="w"> </span>caps<span class="w"> </span>--stats
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>icom-lan<span class="w"> </span>audio<span class="w"> </span>caps<span class="w"> </span>--json<span class="w"> </span>--stats
+</code></pre></div>
+<p>Text output includes:</p>
+<ul>
+<li>supported codecs</li>
+<li>supported sample rates</li>
+<li>supported channels</li>
+<li>default codec/rate/channels</li>
+<li>deterministic selection rules used for defaults</li>
+<li>with <code>--stats</code>: a 1-second RX probe and runtime audio quality stats snapshot</li>
+</ul>
+<p>JSON output example:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="p">{</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span><span class="nt">&quot;supported_codecs&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">    </span><span class="p">{</span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ULAW_1CH&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;value&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">},</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">    </span><span class="p">{</span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;PCM_1CH_8BIT&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;value&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">}</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">  </span><span class="p">],</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">  </span><span class="nt">&quot;supported_sample_rates_hz&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">8000</span><span class="p">,</span><span class="w"> </span><span class="mi">16000</span><span class="p">,</span><span class="w"> </span><span class="mi">24000</span><span class="p">,</span><span class="w"> </span><span class="mi">48000</span><span class="p">],</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="w">  </span><span class="nt">&quot;supported_channels&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">],</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="w">  </span><span class="nt">&quot;default_codec&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;PCM_1CH_16BIT&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;value&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">},</span>
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="w">  </span><span class="nt">&quot;default_sample_rate_hz&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">48000</span><span class="p">,</span>
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="w">  </span><span class="nt">&quot;default_channels&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="w">  </span><span class="nt">&quot;runtime_stats&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a><span class="w">    </span><span class="nt">&quot;active&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a><span class="w">    </span><span class="nt">&quot;state&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;idle&quot;</span><span class="p">,</span>
+<a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a><span class="w">    </span><span class="nt">&quot;packet_loss_percent&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span>
+<a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a><span class="w">    </span><span class="nt">&quot;jitter_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span>
+<a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a><span class="w">  </span><span class="p">}</span>
+<a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a><span class="p">}</span>
+</code></pre></div>
+<h3 id="audio-rx"><code>audio rx</code><a class="headerlink" href="#audio-rx" title="Permanent link">&para;</a></h3>
+<p>Capture RX audio to a 16-bit PCM WAV file.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>icom-lan<span class="w"> </span>audio<span class="w"> </span>rx<span class="w"> </span>--out<span class="w"> </span>rx.wav<span class="w"> </span>--seconds<span class="w"> </span><span class="m">10</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>icom-lan<span class="w"> </span>audio<span class="w"> </span>rx<span class="w"> </span>--out<span class="w"> </span>rx.wav<span class="w"> </span>--seconds<span class="w"> </span><span class="m">10</span><span class="w"> </span>--sample-rate<span class="w"> </span><span class="m">48000</span><span class="w"> </span>--channels<span class="w"> </span><span class="m">1</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>icom-lan<span class="w"> </span>audio<span class="w"> </span>rx<span class="w"> </span>--out<span class="w"> </span>rx.wav<span class="w"> </span>--json
+</code></pre></div>
+<h3 id="audio-tx"><code>audio tx</code><a class="headerlink" href="#audio-tx" title="Permanent link">&para;</a></h3>
+<p>Transmit a WAV file (<code>16-bit PCM</code>, matching sample rate/channels).</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>icom-lan<span class="w"> </span>audio<span class="w"> </span>tx<span class="w"> </span>--in<span class="w"> </span>tx.wav
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>icom-lan<span class="w"> </span>audio<span class="w"> </span>tx<span class="w"> </span>--in<span class="w"> </span>tx.wav<span class="w"> </span>--sample-rate<span class="w"> </span><span class="m">48000</span><span class="w"> </span>--channels<span class="w"> </span><span class="m">1</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>icom-lan<span class="w"> </span>audio<span class="w"> </span>tx<span class="w"> </span>--in<span class="w"> </span>tx.wav<span class="w"> </span>--json
+</code></pre></div>
+<h3 id="audio-loopback"><code>audio loopback</code><a class="headerlink" href="#audio-loopback" title="Permanent link">&para;</a></h3>
+<p>Run a quick RX-to-TX PCM loopback window.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>icom-lan<span class="w"> </span>audio<span class="w"> </span>loopback<span class="w"> </span>--seconds<span class="w"> </span><span class="m">10</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>icom-lan<span class="w"> </span>audio<span class="w"> </span>loopback<span class="w"> </span>--seconds<span class="w"> </span><span class="m">10</span><span class="w"> </span>--sample-rate<span class="w"> </span><span class="m">48000</span><span class="w"> </span>--channels<span class="w"> </span><span class="m">1</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>icom-lan<span class="w"> </span>audio<span class="w"> </span>loopback<span class="w"> </span>--json
+</code></pre></div>
+<h3 id="shared-audio-flags-rxtxloopback">Shared audio flags (<code>rx</code>/<code>tx</code>/<code>loopback</code>)<a class="headerlink" href="#shared-audio-flags-rxtxloopback" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>--sample-rate</code> — PCM sample rate in Hz (must be supported by <code>icom-lan</code>)</li>
+<li><code>--channels</code> — PCM channel count (must be supported by <code>icom-lan</code>)</li>
+<li><code>--json</code> — machine-readable JSON output</li>
+<li><code>--stats</code> — print transfer counters/metrics (human-readable mode)</li>
+</ul>
+<h3 id="att"><code>att</code><a class="headerlink" href="#att" title="Permanent link">&para;</a></h3>
+<p>Get or set the attenuator level.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># Get current attenuation</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>icom-lan<span class="w"> </span>att
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>icom-lan<span class="w"> </span>att<span class="w"> </span>--json
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="c1"># Set level in dB (0–45, 3 dB steps)</span>
+<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>icom-lan<span class="w"> </span>att<span class="w"> </span><span class="m">18</span>
+<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a>icom-lan<span class="w"> </span>att<span class="w"> </span><span class="m">0</span>
+<a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a>
+<a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a><span class="c1"># Toggle shortcuts</span>
+<a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a>icom-lan<span class="w"> </span>att<span class="w"> </span>on<span class="w">     </span><span class="c1"># Sets 18 dB</span>
+<a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a>icom-lan<span class="w"> </span>att<span class="w"> </span>off<span class="w">    </span><span class="c1"># Sets 0 dB</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>Attenuator: 18 dB
+</code></pre></div>
+<p>JSON output:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="p">{</span>
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">  </span><span class="nt">&quot;attenuator_db&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">18</span><span class="p">,</span>
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">  </span><span class="nt">&quot;attenuator_on&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="p">}</span>
+</code></pre></div>
+<div class="admonition note">
+<p class="admonition-title">IC-7610 Levels</p>
+<p>The IC-7610 supports 0, 3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36, 39, 42, 45 dB.
+Values not on 3 dB boundaries will be rejected.</p>
+</div>
+<h3 id="preamp"><code>preamp</code><a class="headerlink" href="#preamp" title="Permanent link">&para;</a></h3>
+<p>Get or set the preamplifier level.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="c1"># Get current preamp level</span>
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>icom-lan<span class="w"> </span>preamp
+<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>icom-lan<span class="w"> </span>preamp<span class="w"> </span>--json
+<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a>
+<a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="c1"># Set level</span>
+<a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a>icom-lan<span class="w"> </span>preamp<span class="w"> </span><span class="m">0</span><span class="w">     </span><span class="c1"># Off</span>
+<a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a>icom-lan<span class="w"> </span>preamp<span class="w"> </span><span class="m">1</span><span class="w">     </span><span class="c1"># PREAMP 1</span>
+<a id="__codelineno-17-8" name="__codelineno-17-8" href="#__codelineno-17-8"></a>icom-lan<span class="w"> </span>preamp<span class="w"> </span><span class="m">2</span><span class="w">     </span><span class="c1"># PREAMP 2</span>
+<a id="__codelineno-17-9" name="__codelineno-17-9" href="#__codelineno-17-9"></a>icom-lan<span class="w"> </span>preamp<span class="w"> </span>off<span class="w">   </span><span class="c1"># Same as 0</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>Preamp: PRE1
+</code></pre></div>
+<p>JSON output:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="p">{</span>
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="w">  </span><span class="nt">&quot;preamp_level&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="w">  </span><span class="nt">&quot;preamp_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;PRE1&quot;</span>
+<a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="p">}</span>
+</code></pre></div>
 <h3 id="ptt"><code>ptt</code><a class="headerlink" href="#ptt" title="Permanent link">&para;</a></h3>
 <p>Toggle Push-To-Talk.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>icom-lan<span class="w"> </span>ptt<span class="w"> </span>on
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>icom-lan<span class="w"> </span>ptt<span class="w"> </span>off
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>icom-lan<span class="w"> </span>ptt<span class="w"> </span>on
+<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>icom-lan<span class="w"> </span>ptt<span class="w"> </span>off
 </code></pre></div>
 <div class="admonition danger">
 <p class="admonition-title">Caution</p>
@@ -1781,13 +2120,13 @@
 </div>
 <h3 id="cw"><code>cw</code><a class="headerlink" href="#cw" title="Permanent link">&para;</a></h3>
 <p>Send CW text via the radio's built-in keyer.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>icom-lan<span class="w"> </span>cw<span class="w"> </span><span class="s2">&quot;CQ CQ DE KN4KYD K&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>icom-lan<span class="w"> </span>cw<span class="w"> </span><span class="s2">&quot;CQ CQ DE KN4KYD K&quot;</span>
 </code></pre></div>
 <p>The text is sent in chunks of up to 30 characters. Supports A–Z, 0–9, and standard prosigns.</p>
 <h3 id="power-on-power-off"><code>power-on</code> / <code>power-off</code><a class="headerlink" href="#power-on-power-off" title="Permanent link">&para;</a></h3>
 <p>Remote power control.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>icom-lan<span class="w"> </span>power-on
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>icom-lan<span class="w"> </span>power-off
+<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>icom-lan<span class="w"> </span>power-on
+<a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>icom-lan<span class="w"> </span>power-off
 </code></pre></div>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
@@ -1795,13 +2134,84 @@
 </div>
 <h3 id="discover"><code>discover</code><a class="headerlink" href="#discover" title="Permanent link">&para;</a></h3>
 <p>Discover Icom radios on the local network via UDP broadcast.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>icom-lan<span class="w"> </span>discover
+<div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>icom-lan<span class="w"> </span>discover
 </code></pre></div>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>Scanning for Icom radios (3 seconds)...
-<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>  Found: 192.168.1.100:50001  id=0xDEADBEEF
-<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>
-<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>1 radio(s) found.
+<div class="highlight"><pre><span></span><code><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>Scanning for Icom radios (3 seconds)...
+<a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a>  Found: 192.168.1.100:50001  id=0xDEADBEEF
+<a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a>
+<a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a>1 radio(s) found.
 </code></pre></div>
+<h2 id="scope-waterfall">Scope / Waterfall<a class="headerlink" href="#scope-waterfall" title="Permanent link">&para;</a></h2>
+<p>Capture spectrum and waterfall data from the radio's scope display and render as PNG.</p>
+<p>Requires optional dependency: <code>pip install icom-lan[scope]</code></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="c1"># Combined spectrum + waterfall (50 frames, ~3 seconds)</span>
+<a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>icom-lan<span class="w"> </span>scope
+<a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>
+<a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a><span class="c1"># Spectrum only (1 frame, fast)</span>
+<a id="__codelineno-25-5" name="__codelineno-25-5" href="#__codelineno-25-5"></a>icom-lan<span class="w"> </span>scope<span class="w"> </span>--spectrum-only
+<a id="__codelineno-25-6" name="__codelineno-25-6" href="#__codelineno-25-6"></a>
+<a id="__codelineno-25-7" name="__codelineno-25-7" href="#__codelineno-25-7"></a><span class="c1"># Custom output and frame count</span>
+<a id="__codelineno-25-8" name="__codelineno-25-8" href="#__codelineno-25-8"></a>icom-lan<span class="w"> </span>scope<span class="w"> </span>--output<span class="w"> </span>waterfall.png<span class="w"> </span>--frames<span class="w"> </span><span class="m">100</span>
+<a id="__codelineno-25-9" name="__codelineno-25-9" href="#__codelineno-25-9"></a>
+<a id="__codelineno-25-10" name="__codelineno-25-10" href="#__codelineno-25-10"></a><span class="c1"># Grayscale theme</span>
+<a id="__codelineno-25-11" name="__codelineno-25-11" href="#__codelineno-25-11"></a>icom-lan<span class="w"> </span>scope<span class="w"> </span>--theme<span class="w"> </span>grayscale
+<a id="__codelineno-25-12" name="__codelineno-25-12" href="#__codelineno-25-12"></a>
+<a id="__codelineno-25-13" name="__codelineno-25-13" href="#__codelineno-25-13"></a><span class="c1"># Wider image</span>
+<a id="__codelineno-25-14" name="__codelineno-25-14" href="#__codelineno-25-14"></a>icom-lan<span class="w"> </span>scope<span class="w"> </span>--width<span class="w"> </span><span class="m">1200</span>
+<a id="__codelineno-25-15" name="__codelineno-25-15" href="#__codelineno-25-15"></a>
+<a id="__codelineno-25-16" name="__codelineno-25-16" href="#__codelineno-25-16"></a><span class="c1"># Raw JSON data (no Pillow needed)</span>
+<a id="__codelineno-25-17" name="__codelineno-25-17" href="#__codelineno-25-17"></a>icom-lan<span class="w"> </span>scope<span class="w"> </span>--json
+<a id="__codelineno-25-18" name="__codelineno-25-18" href="#__codelineno-25-18"></a>icom-lan<span class="w"> </span>scope<span class="w"> </span>--spectrum-only<span class="w"> </span>--json
+<a id="__codelineno-25-19" name="__codelineno-25-19" href="#__codelineno-25-19"></a>
+<a id="__codelineno-25-20" name="__codelineno-25-20" href="#__codelineno-25-20"></a><span class="c1"># Custom capture timeout</span>
+<a id="__codelineno-25-21" name="__codelineno-25-21" href="#__codelineno-25-21"></a>icom-lan<span class="w"> </span>scope<span class="w"> </span>--capture-timeout<span class="w"> </span><span class="m">20</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--output</code>, <code>-o</code></td>
+<td><code>scope.png</code></td>
+<td>Output file path</td>
+</tr>
+<tr>
+<td><code>--frames</code>, <code>-n</code></td>
+<td><code>50</code></td>
+<td>Number of frames for waterfall</td>
+</tr>
+<tr>
+<td><code>--theme</code></td>
+<td><code>classic</code></td>
+<td>Color theme (<code>classic</code> or <code>grayscale</code>)</td>
+</tr>
+<tr>
+<td><code>--spectrum-only</code></td>
+<td>—</td>
+<td>Capture 1 frame, render spectrum only</td>
+</tr>
+<tr>
+<td><code>--width</code></td>
+<td><code>800</code></td>
+<td>Image width in pixels</td>
+</tr>
+<tr>
+<td><code>--json</code></td>
+<td>—</td>
+<td>Output raw frame data as JSON</td>
+</tr>
+<tr>
+<td><code>--capture-timeout</code></td>
+<td><code>10</code>/<code>15</code></td>
+<td>Capture timeout in seconds</td>
+</tr>
+</tbody>
+</table>
 <h2 id="exit-codes">Exit Codes<a class="headerlink" href="#exit-codes" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -1822,15 +2232,18 @@
 </tbody>
 </table>
 <h2 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># Monitor frequency in a loop</span>
-<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>watch<span class="w"> </span>-n<span class="w"> </span><span class="m">1</span><span class="w"> </span>icom-lan<span class="w"> </span>freq<span class="w"> </span>--json
-<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>
-<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="c1"># Quick band change</span>
-<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>icom-lan<span class="w"> </span>freq<span class="w"> </span><span class="m">7</span>.074m<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>icom-lan<span class="w"> </span>mode<span class="w"> </span>USB
-<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>
-<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="c1"># Script-friendly JSON output</span>
-<a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a><span class="nv">FREQ</span><span class="o">=</span><span class="k">$(</span>icom-lan<span class="w"> </span>freq<span class="w"> </span>--json<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>-r<span class="w"> </span><span class="s1">&#39;.frequency_hz&#39;</span><span class="k">)</span>
-<a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Currently on </span><span class="nv">$FREQ</span><span class="s2"> Hz&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="c1"># Monitor frequency in a loop</span>
+<a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>watch<span class="w"> </span>-n<span class="w"> </span><span class="m">1</span><span class="w"> </span>icom-lan<span class="w"> </span>freq<span class="w"> </span>--json
+<a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a>
+<a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a><span class="c1"># Quick band change</span>
+<a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a>icom-lan<span class="w"> </span>freq<span class="w"> </span><span class="m">7</span>.074m<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>icom-lan<span class="w"> </span>mode<span class="w"> </span>USB
+<a id="__codelineno-26-6" name="__codelineno-26-6" href="#__codelineno-26-6"></a>
+<a id="__codelineno-26-7" name="__codelineno-26-7" href="#__codelineno-26-7"></a><span class="c1"># Check RF chain setup</span>
+<a id="__codelineno-26-8" name="__codelineno-26-8" href="#__codelineno-26-8"></a>icom-lan<span class="w"> </span>att<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>icom-lan<span class="w"> </span>preamp
+<a id="__codelineno-26-9" name="__codelineno-26-9" href="#__codelineno-26-9"></a>
+<a id="__codelineno-26-10" name="__codelineno-26-10" href="#__codelineno-26-10"></a><span class="c1"># Script-friendly JSON output</span>
+<a id="__codelineno-26-11" name="__codelineno-26-11" href="#__codelineno-26-11"></a><span class="nv">FREQ</span><span class="o">=</span><span class="k">$(</span>icom-lan<span class="w"> </span>freq<span class="w"> </span>--json<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>-r<span class="w"> </span><span class="s1">&#39;.frequency_hz&#39;</span><span class="k">)</span>
+<a id="__codelineno-26-12" name="__codelineno-26-12" href="#__codelineno-26-12"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Currently on </span><span class="nv">$FREQ</span><span class="s2"> Hz&quot;</span>
 </code></pre></div>
 
 

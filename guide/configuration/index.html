@@ -635,6 +635,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#integrationtest-environment-flags" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Integration/Test Environment Flags
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#environment-variable-setup" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -791,6 +802,62 @@
     
   
     Connection Lifecycle
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../wsjtx-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WSJT-X / Digital Modes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../audio-recipes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audio Recipes
   
 
     
@@ -1469,6 +1536,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#integrationtest-environment-flags" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Integration/Test Environment Flags
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#environment-variable-setup" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1695,11 +1773,38 @@
 <tr>
 <td>Audio</td>
 <td>50003</td>
-<td>Opus audio streaming (not yet implemented)</td>
+<td>RX/TX audio streaming</td>
 </tr>
 </tbody>
 </table>
 <p>The CI-V and audio ports are <strong>negotiated during the handshake</strong> — the library discovers them automatically from the radio's status packet. You only need to specify the control port.</p>
+<h2 id="integrationtest-environment-flags">Integration/Test Environment Flags<a class="headerlink" href="#integrationtest-environment-flags" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Env Var</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ICOM_ALLOW_POWER_CONTROL=1</code></td>
+<td>Enable guarded power off/on integration test</td>
+</tr>
+<tr>
+<td><code>ICOM_SOAK_SECONDS=&lt;N&gt;</code></td>
+<td>Run soak integration for N seconds</td>
+</tr>
+<tr>
+<td><code>ICOM_CIV_MIN_INTERVAL_MS=&lt;ms&gt;</code></td>
+<td>Tune CI-V pacing interval in commander</td>
+</tr>
+<tr>
+<td><code>ICOM_STRICT_FRONTEND=1</code></td>
+<td>Enable strict ATT/PREAMP integration profile (fail instead of skip)</td>
+</tr>
+</tbody>
+</table>
 <h2 id="environment-variable-setup">Environment Variable Setup<a class="headerlink" href="#environment-variable-setup" title="Permanent link">&para;</a></h2>
 <h3 id="bash-zsh">Bash / Zsh<a class="headerlink" href="#bash-zsh" title="Permanent link">&para;</a></h3>
 <p>Add to <code>~/.bashrc</code>, <code>~/.zshrc</code>, or <code>~/.profile</code>:</p>

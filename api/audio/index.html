@@ -656,6 +656,62 @@
   
   
     <li class="md-nav__item">
+      <a href="../../guide/wsjtx-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WSJT-X / Digital Modes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/audio-recipes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audio Recipes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../guide/commands/" class="md-nav__link">
         
   
@@ -920,6 +976,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#naming-map" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Naming Map
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#audiostream" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -959,6 +1026,17 @@
     <span class="md-ellipsis">
       
         transport
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#icom_lan.audio.AudioStream.get_audio_stats" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_audio_stats
       
     </span>
   </a>
@@ -1022,6 +1100,34 @@
         
       </ul>
     </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#runtime-audio-stats-get_audio_stats" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Runtime Audio Stats (get_audio_stats)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Runtime Audio Stats (get_audio_stats)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#metrics-units-bounds" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Metrics, Units, Bounds
+      
+    </span>
+  </a>
   
 </li>
         
@@ -1122,10 +1228,65 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#icom_lan.audio.JitterBuffer.duplicate_count" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        duplicate_count
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#icom_lan.audio.JitterBuffer.gap_count" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gap_count
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#icom_lan.audio.JitterBuffer.overrun_count" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        overrun_count
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#icom_lan.audio.JitterBuffer.pending" class="md-nav__link">
     <span class="md-ellipsis">
       
         pending
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#icom_lan.audio.JitterBuffer.stale_count" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        stale_count
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#icom_lan.audio.JitterBuffer.underrun_count" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        underrun_count
       
     </span>
   </a>
@@ -1204,6 +1365,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#internal-transcoder-layer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Internal Transcoder Layer
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#usage" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1227,10 +1399,32 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#rx-audio-high-level-pcm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RX Audio (high-level PCM)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#tx-audio-push-based" class="md-nav__link">
     <span class="md-ellipsis">
       
         TX Audio (push-based)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tx-audio-high-level-pcm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TX Audio (high-level PCM)
       
     </span>
   </a>
@@ -1259,8 +1453,30 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#capability-introspection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Capability Introspection
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#migration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Migration
+      
+    </span>
+  </a>
   
 </li>
       
@@ -1676,6 +1892,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#naming-map" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Naming Map
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#audiostream" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1715,6 +1942,17 @@
     <span class="md-ellipsis">
       
         transport
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#icom_lan.audio.AudioStream.get_audio_stats" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_audio_stats
       
     </span>
   </a>
@@ -1778,6 +2016,34 @@
         
       </ul>
     </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#runtime-audio-stats-get_audio_stats" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Runtime Audio Stats (get_audio_stats)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Runtime Audio Stats (get_audio_stats)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#metrics-units-bounds" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Metrics, Units, Bounds
+      
+    </span>
+  </a>
   
 </li>
         
@@ -1878,10 +2144,65 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#icom_lan.audio.JitterBuffer.duplicate_count" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        duplicate_count
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#icom_lan.audio.JitterBuffer.gap_count" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gap_count
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#icom_lan.audio.JitterBuffer.overrun_count" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        overrun_count
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#icom_lan.audio.JitterBuffer.pending" class="md-nav__link">
     <span class="md-ellipsis">
       
         pending
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#icom_lan.audio.JitterBuffer.stale_count" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        stale_count
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#icom_lan.audio.JitterBuffer.underrun_count" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        underrun_count
       
     </span>
   </a>
@@ -1960,6 +2281,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#internal-transcoder-layer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Internal Transcoder Layer
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#usage" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1983,10 +2315,32 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#rx-audio-high-level-pcm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RX Audio (high-level PCM)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#tx-audio-push-based" class="md-nav__link">
     <span class="md-ellipsis">
       
         TX Audio (push-based)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tx-audio-high-level-pcm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TX Audio (high-level PCM)
       
     </span>
   </a>
@@ -2015,8 +2369,30 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#capability-introspection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Capability Introspection
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#migration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Migration
+      
+    </span>
+  </a>
   
 </li>
       
@@ -2042,6 +2418,29 @@
 
 <h1 id="audio-streaming">Audio Streaming<a class="headerlink" href="#audio-streaming" title="Permanent link">&para;</a></h1>
 <p>Audio RX/TX via the Icom audio UDP port (default 50003).</p>
+<h2 id="naming-map">Naming Map<a class="headerlink" href="#naming-map" title="Permanent link">&para;</a></h2>
+<p>Low-level Opus methods are now explicitly suffixed with <code>_opus</code>.
+High-level PCM APIs are available for both RX and TX.</p>
+<table>
+<thead>
+<tr>
+<th>Scope</th>
+<th>Preferred method names</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Low-level Opus (current)</td>
+<td><code>start_audio_rx_opus</code>, <code>stop_audio_rx_opus</code>, <code>start_audio_tx_opus</code>, <code>push_audio_tx_opus</code>, <code>stop_audio_tx_opus</code>, <code>start_audio_opus</code>, <code>stop_audio_opus</code></td>
+</tr>
+<tr>
+<td>High-level PCM</td>
+<td><code>start_audio_rx_pcm</code>, <code>stop_audio_rx_pcm</code>, <code>start_audio_tx_pcm</code>, <code>push_audio_tx_pcm</code>, <code>stop_audio_tx_pcm</code></td>
+</tr>
+</tbody>
+</table>
+<p>Deprecated aliases still work during the deprecation window (two minor releases):
+<code>start_audio_rx</code>, <code>stop_audio_rx</code>, <code>start_audio_tx</code>, <code>push_audio_tx</code>, <code>stop_audio_tx</code>, <code>start_audio</code>, <code>stop_audio</code>.</p>
 <h2 id="audiostream">AudioStream<a class="headerlink" href="#audiostream" title="Permanent link">&para;</a></h2>
 
 
@@ -2170,6 +2569,36 @@ await stream.stop_rx()
 <div class="doc doc-object doc-function">
 
 
+<h4 id="icom_lan.audio.AudioStream.get_audio_stats" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">get_audio_stats</span><span class="p">()</span></code>
+
+<a href="#icom_lan.audio.AudioStream.get_audio_stats" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Return runtime audio stats for the current stream.</p>
+<p>Metrics and units:</p>
+<ul>
+<li><code>rx_packets_received</code> / <code>rx_packets_delivered</code> / <code>tx_packets_sent</code>:
+  packet counters (&gt;= 0).</li>
+<li><code>packets_lost</code>: inferred missing RX packets (&gt;= 0).</li>
+<li><code>packet_loss_percent</code>: percentage in [0.0, 100.0].</li>
+<li><code>jitter_ms</code> / <code>jitter_max_ms</code>: sequence-jitter estimates in ms (&gt;= 0.0).</li>
+<li><code>underrun_count</code> / <code>overrun_count</code>: jitter-buffer event counters (&gt;= 0).</li>
+<li><code>estimated_latency_ms</code>: current buffering latency estimate in ms (&gt;= 0.0).</li>
+<li><code>jitter_buffer_depth_packets</code> / <code>jitter_buffer_pending_packets</code>:
+  packet counts (&gt;= 0).</li>
+</ul>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
 <h4 id="icom_lan.audio.AudioStream.push_tx" class="doc doc-heading">
             <code class="highlight language-python"><span class="n">push_tx</span><span class="p">(</span><span class="n">opus_data</span><span class="p">)</span></code>
 
@@ -2282,7 +2711,7 @@ await stream.stop_rx()
 
   
       dataclass
-  " href="#icom_lan.audio.AudioPacket">AudioPacket</a>], None]</code>
+  " href="#icom_lan.audio.AudioPacket">AudioPacket</a> | None], None]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -2440,7 +2869,128 @@ Defaults to the value set at construction time.</p>
 
     </div>
 
-</div><h2 id="audiopacket">AudioPacket<a class="headerlink" href="#audiopacket" title="Permanent link">&para;</a></h2>
+</div><h2 id="runtime-audio-stats-get_audio_stats">Runtime Audio Stats (<code>get_audio_stats</code>)<a class="headerlink" href="#runtime-audio-stats-get_audio_stats" title="Permanent link">&para;</a></h2>
+<p>Use <code>get_audio_stats()</code> on <code>AudioStream</code> or <code>IcomRadio</code> to retrieve a JSON-friendly
+snapshot of live stream quality metrics.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">stats</span> <span class="o">=</span> <span class="n">radio</span><span class="o">.</span><span class="n">get_audio_stats</span><span class="p">()</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">print</span><span class="p">(</span><span class="n">stats</span><span class="p">[</span><span class="s2">&quot;packet_loss_percent&quot;</span><span class="p">],</span> <span class="n">stats</span><span class="p">[</span><span class="s2">&quot;jitter_ms&quot;</span><span class="p">])</span>
+</code></pre></div>
+<h3 id="metrics-units-bounds">Metrics, Units, Bounds<a class="headerlink" href="#metrics-units-bounds" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Unit</th>
+<th>Bounds</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>active</code></td>
+<td>boolean</td>
+<td><code>true/false</code></td>
+<td>Whether stream state is not <code>idle</code></td>
+</tr>
+<tr>
+<td><code>state</code></td>
+<td>string</td>
+<td><code>idle</code> / <code>receiving</code> / <code>transmitting</code></td>
+<td>Current stream state</td>
+</tr>
+<tr>
+<td><code>rx_packets_received</code></td>
+<td>packets</td>
+<td><code>&gt;= 0</code></td>
+<td>Parsed RX audio packets</td>
+</tr>
+<tr>
+<td><code>rx_packets_delivered</code></td>
+<td>packets</td>
+<td><code>&gt;= 0</code></td>
+<td>RX packets delivered to callback</td>
+</tr>
+<tr>
+<td><code>tx_packets_sent</code></td>
+<td>packets</td>
+<td><code>&gt;= 0</code></td>
+<td>TX packets sent</td>
+</tr>
+<tr>
+<td><code>packets_lost</code></td>
+<td>packets</td>
+<td><code>&gt;= 0</code></td>
+<td>Inferred missing RX packets</td>
+</tr>
+<tr>
+<td><code>packet_loss_percent</code></td>
+<td>percent</td>
+<td><code>0.0..100.0</code></td>
+<td><code>packets_lost / (delivered + lost)</code></td>
+</tr>
+<tr>
+<td><code>jitter_ms</code></td>
+<td>milliseconds</td>
+<td><code>&gt;= 0.0</code></td>
+<td>Smoothed sequence-jitter estimate</td>
+</tr>
+<tr>
+<td><code>jitter_max_ms</code></td>
+<td>milliseconds</td>
+<td><code>&gt;= 0.0</code></td>
+<td>Peak observed jitter estimate</td>
+</tr>
+<tr>
+<td><code>underrun_count</code></td>
+<td>events</td>
+<td><code>&gt;= 0</code></td>
+<td>Jitter-buffer underrun events</td>
+</tr>
+<tr>
+<td><code>overrun_count</code></td>
+<td>events</td>
+<td><code>&gt;= 0</code></td>
+<td>Jitter-buffer overrun events</td>
+</tr>
+<tr>
+<td><code>estimated_latency_ms</code></td>
+<td>milliseconds</td>
+<td><code>&gt;= 0.0</code></td>
+<td>Estimated buffering delay</td>
+</tr>
+<tr>
+<td><code>jitter_buffer_depth_packets</code></td>
+<td>packets</td>
+<td><code>&gt;= 0</code></td>
+<td>Configured jitter depth (<code>0</code> when disabled)</td>
+</tr>
+<tr>
+<td><code>jitter_buffer_pending_packets</code></td>
+<td>packets</td>
+<td><code>&gt;= 0</code></td>
+<td>Currently buffered packets</td>
+</tr>
+<tr>
+<td><code>duplicates_dropped</code></td>
+<td>packets</td>
+<td><code>&gt;= 0</code></td>
+<td>Duplicate RX packets dropped</td>
+</tr>
+<tr>
+<td><code>stale_packets_dropped</code></td>
+<td>packets</td>
+<td><code>&gt;= 0</code></td>
+<td>Stale/old RX packets dropped</td>
+</tr>
+<tr>
+<td><code>out_of_order_packets</code></td>
+<td>packets</td>
+<td><code>&gt;= 0</code></td>
+<td>RX packets observed out of sequence</td>
+</tr>
+</tbody>
+</table>
+<h2 id="audiopacket">AudioPacket<a class="headerlink" href="#audiopacket" title="Permanent link">&para;</a></h2>
 
 
 <div class="doc doc-object doc-class">
@@ -2695,6 +3245,72 @@ for pkt in jb.push(audio_packet):
 
 
 
+<h4 id="icom_lan.audio.JitterBuffer.duplicate_count" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">duplicate_count</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#icom_lan.audio.JitterBuffer.duplicate_count" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Count of duplicate packets dropped.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="icom_lan.audio.JitterBuffer.gap_count" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">gap_count</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#icom_lan.audio.JitterBuffer.gap_count" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Count of inferred missing packets (gap placeholders).</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="icom_lan.audio.JitterBuffer.overrun_count" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">overrun_count</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#icom_lan.audio.JitterBuffer.overrun_count" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Count of jitter-buffer overrun events.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
 <h4 id="icom_lan.audio.JitterBuffer.pending" class="doc doc-heading">
             <code class="highlight language-python"><span class="n">pending</span></code>
 
@@ -2708,6 +3324,50 @@ for pkt in jb.push(audio_packet):
     <div class="doc doc-contents ">
 
         <p>Number of packets currently held in the buffer.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="icom_lan.audio.JitterBuffer.stale_count" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">stale_count</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#icom_lan.audio.JitterBuffer.stale_count" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Count of stale/old packets dropped.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="icom_lan.audio.JitterBuffer.underrun_count" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">underrun_count</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#icom_lan.audio.JitterBuffer.underrun_count" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Count of jitter-buffer underrun events.</p>
 
     </div>
 
@@ -3096,46 +3756,147 @@ sequence number), <code>None</code> is yielded in its place.</p>
 
     </div>
 
-</div><h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h2>
+</div><h2 id="internal-transcoder-layer">Internal Transcoder Layer<a class="headerlink" href="#internal-transcoder-layer" title="Permanent link">&para;</a></h2>
+<p><code>icom_lan</code> now includes an internal PCM&lt;-&gt;Opus transcoder foundation used for
+future high-level PCM APIs.</p>
+<ul>
+<li>Module: <code>icom_lan._audio_transcoder</code> (internal, no stability guarantee yet)</li>
+<li>Backend: optional <code>opuslib</code> (<code>pip install icom-lan[audio]</code>)</li>
+<li>Typed failures:</li>
+<li><code>AudioCodecBackendError</code> for missing backend</li>
+<li><code>AudioFormatError</code> for invalid PCM/Opus frame formats</li>
+<li><code>AudioTranscodeError</code> for codec encode/decode failures</li>
+</ul>
+<h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h2>
 <h3 id="rx-audio-callback-based">RX Audio (callback-based)<a class="headerlink" href="#rx-audio-callback-based" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">async</span> <span class="k">with</span> <span class="n">IcomRadio</span><span class="p">(</span><span class="s2">&quot;192.168.1.100&quot;</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="s2">&quot;u&quot;</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="s2">&quot;p&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">radio</span><span class="p">:</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">received</span> <span class="o">=</span> <span class="p">[]</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">on_audio</span><span class="p">(</span><span class="n">pkt</span><span class="p">):</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>        <span class="k">if</span> <span class="n">pkt</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># None = gap (missing packet)</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>            <span class="n">received</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pkt</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="k">await</span> <span class="n">radio</span><span class="o">.</span><span class="n">start_audio_rx</span><span class="p">(</span><span class="n">on_audio</span><span class="p">)</span>
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="k">await</span> <span class="n">radio</span><span class="o">.</span><span class="n">stop_audio_rx</span><span class="p">()</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">async</span> <span class="k">with</span> <span class="n">IcomRadio</span><span class="p">(</span><span class="s2">&quot;192.168.1.100&quot;</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="s2">&quot;u&quot;</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="s2">&quot;p&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">radio</span><span class="p">:</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    <span class="n">received</span> <span class="o">=</span> <span class="p">[]</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">on_audio</span><span class="p">(</span><span class="n">pkt</span><span class="p">):</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>        <span class="k">if</span> <span class="n">pkt</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># None = gap (missing packet)</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>            <span class="n">received</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pkt</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>    <span class="k">await</span> <span class="n">radio</span><span class="o">.</span><span class="n">start_audio_rx_opus</span><span class="p">(</span><span class="n">on_audio</span><span class="p">)</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>    <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>    <span class="k">await</span> <span class="n">radio</span><span class="o">.</span><span class="n">stop_audio_rx_opus</span><span class="p">()</span>
+</code></pre></div>
+<h3 id="rx-audio-high-level-pcm">RX Audio (high-level PCM)<a class="headerlink" href="#rx-audio-high-level-pcm" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">async</span> <span class="k">with</span> <span class="n">IcomRadio</span><span class="p">(</span><span class="s2">&quot;192.168.1.100&quot;</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="s2">&quot;u&quot;</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="s2">&quot;p&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">radio</span><span class="p">:</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">on_pcm</span><span class="p">(</span><span class="n">frame</span><span class="p">:</span> <span class="nb">bytes</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>        <span class="k">if</span> <span class="n">frame</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>            <span class="k">return</span>  <span class="c1"># gap placeholder from jitter buffer</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>        <span class="c1"># frame is 16-bit little-endian PCM for configured format</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>        <span class="n">process_pcm</span><span class="p">(</span><span class="n">frame</span><span class="p">)</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="k">await</span> <span class="n">radio</span><span class="o">.</span><span class="n">start_audio_rx_pcm</span><span class="p">(</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>        <span class="n">on_pcm</span><span class="p">,</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>        <span class="n">sample_rate</span><span class="o">=</span><span class="mi">48000</span><span class="p">,</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>        <span class="n">channels</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>        <span class="n">frame_ms</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>        <span class="n">jitter_depth</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>    <span class="p">)</span>
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>    <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>    <span class="k">await</span> <span class="n">radio</span><span class="o">.</span><span class="n">stop_audio_rx_pcm</span><span class="p">()</span>
 </code></pre></div>
 <h3 id="tx-audio-push-based">TX Audio (push-based)<a class="headerlink" href="#tx-audio-push-based" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">async</span> <span class="k">with</span> <span class="n">IcomRadio</span><span class="p">(</span><span class="s2">&quot;192.168.1.100&quot;</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="s2">&quot;u&quot;</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="s2">&quot;p&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">radio</span><span class="p">:</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    <span class="k">await</span> <span class="n">radio</span><span class="o">.</span><span class="n">start_audio_tx</span><span class="p">()</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    <span class="k">await</span> <span class="n">radio</span><span class="o">.</span><span class="n">push_audio_tx</span><span class="p">(</span><span class="n">opus_frame</span><span class="p">)</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="k">await</span> <span class="n">radio</span><span class="o">.</span><span class="n">stop_audio_tx</span><span class="p">()</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">async</span> <span class="k">with</span> <span class="n">IcomRadio</span><span class="p">(</span><span class="s2">&quot;192.168.1.100&quot;</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="s2">&quot;u&quot;</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="s2">&quot;p&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">radio</span><span class="p">:</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="k">await</span> <span class="n">radio</span><span class="o">.</span><span class="n">start_audio_tx_opus</span><span class="p">()</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    <span class="k">await</span> <span class="n">radio</span><span class="o">.</span><span class="n">push_audio_tx_opus</span><span class="p">(</span><span class="n">opus_frame</span><span class="p">)</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="k">await</span> <span class="n">radio</span><span class="o">.</span><span class="n">stop_audio_tx_opus</span><span class="p">()</span>
+</code></pre></div>
+<h3 id="tx-audio-high-level-pcm">TX Audio (high-level PCM)<a class="headerlink" href="#tx-audio-high-level-pcm" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">async</span> <span class="k">with</span> <span class="n">IcomRadio</span><span class="p">(</span><span class="s2">&quot;192.168.1.100&quot;</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="s2">&quot;u&quot;</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="s2">&quot;p&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">radio</span><span class="p">:</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="k">await</span> <span class="n">radio</span><span class="o">.</span><span class="n">start_audio_tx_pcm</span><span class="p">(</span><span class="n">sample_rate</span><span class="o">=</span><span class="mi">48000</span><span class="p">,</span> <span class="n">channels</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">frame_ms</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>    <span class="k">await</span> <span class="n">radio</span><span class="o">.</span><span class="n">push_audio_tx_pcm</span><span class="p">(</span><span class="n">pcm_frame</span><span class="p">)</span>  <span class="c1"># one 20ms PCM frame (1920 bytes)</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="k">await</span> <span class="n">radio</span><span class="o">.</span><span class="n">stop_audio_tx_pcm</span><span class="p">()</span>
 </code></pre></div>
 <h3 id="full-duplex">Full-Duplex<a class="headerlink" href="#full-duplex" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">async</span> <span class="k">with</span> <span class="n">IcomRadio</span><span class="p">(</span><span class="s2">&quot;192.168.1.100&quot;</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="s2">&quot;u&quot;</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="s2">&quot;p&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">radio</span><span class="p">:</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    <span class="k">await</span> <span class="n">radio</span><span class="o">.</span><span class="n">start_audio</span><span class="p">(</span><span class="n">rx_callback</span><span class="o">=</span><span class="n">on_audio</span><span class="p">,</span> <span class="n">tx_enabled</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    <span class="c1"># ... push TX frames, receive RX via callback ...</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="k">await</span> <span class="n">radio</span><span class="o">.</span><span class="n">stop_audio</span><span class="p">()</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">async</span> <span class="k">with</span> <span class="n">IcomRadio</span><span class="p">(</span><span class="s2">&quot;192.168.1.100&quot;</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="s2">&quot;u&quot;</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="s2">&quot;p&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">radio</span><span class="p">:</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>    <span class="k">await</span> <span class="n">radio</span><span class="o">.</span><span class="n">start_audio_opus</span><span class="p">(</span><span class="n">rx_callback</span><span class="o">=</span><span class="n">on_audio</span><span class="p">,</span> <span class="n">tx_enabled</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>    <span class="c1"># ... push TX frames, receive RX via callback ...</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    <span class="k">await</span> <span class="n">radio</span><span class="o">.</span><span class="n">stop_audio_opus</span><span class="p">()</span>
 </code></pre></div>
 <h3 id="codec-selection">Codec Selection<a class="headerlink" href="#codec-selection" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan</span><span class="w"> </span><span class="kn">import</span> <span class="n">IcomRadio</span><span class="p">,</span> <span class="n">AudioCodec</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">radio</span> <span class="o">=</span> <span class="n">IcomRadio</span><span class="p">(</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="s2">&quot;192.168.1.100&quot;</span><span class="p">,</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="n">audio_codec</span><span class="o">=</span><span class="n">AudioCodec</span><span class="o">.</span><span class="n">PCM_1CH_16BIT</span><span class="p">,</span>  <span class="c1"># default</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="n">audio_sample_rate</span><span class="o">=</span><span class="mi">48000</span><span class="p">,</span>
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan</span><span class="w"> </span><span class="kn">import</span> <span class="n">IcomRadio</span><span class="p">,</span> <span class="n">AudioCodec</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">radio</span> <span class="o">=</span> <span class="n">IcomRadio</span><span class="p">(</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>    <span class="s2">&quot;192.168.1.100&quot;</span><span class="p">,</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>    <span class="n">audio_codec</span><span class="o">=</span><span class="n">AudioCodec</span><span class="o">.</span><span class="n">PCM_1CH_16BIT</span><span class="p">,</span>  <span class="c1"># default</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>    <span class="n">audio_sample_rate</span><span class="o">=</span><span class="mi">48000</span><span class="p">,</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="p">)</span>
 </code></pre></div>
+<h3 id="capability-introspection">Capability Introspection<a class="headerlink" href="#capability-introspection" title="Permanent link">&para;</a></h3>
+<p>Use the capability API to inspect negotiated client-side audio options and defaults:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan</span><span class="w"> </span><span class="kn">import</span> <span class="n">IcomRadio</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="n">caps</span> <span class="o">=</span> <span class="n">IcomRadio</span><span class="o">.</span><span class="n">audio_capabilities</span><span class="p">()</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="nb">print</span><span class="p">(</span><span class="n">caps</span><span class="o">.</span><span class="n">supported_codecs</span><span class="p">)</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="nb">print</span><span class="p">(</span><span class="n">caps</span><span class="o">.</span><span class="n">supported_sample_rates_hz</span><span class="p">)</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="nb">print</span><span class="p">(</span><span class="n">caps</span><span class="o">.</span><span class="n">supported_channels</span><span class="p">)</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="nb">print</span><span class="p">(</span><span class="n">caps</span><span class="o">.</span><span class="n">default_codec</span><span class="p">,</span> <span class="n">caps</span><span class="o">.</span><span class="n">default_sample_rate_hz</span><span class="p">,</span> <span class="n">caps</span><span class="o">.</span><span class="n">default_channels</span><span class="p">)</span>
+</code></pre></div>
+<p>Deterministic default selection rules:</p>
+<ol>
+<li>Codec: first supported codec in icom-lan preference order.</li>
+<li>Sample rate: highest supported sample rate.</li>
+<li>Channels: the channel count implied by default codec (fallback: minimum supported channels).</li>
+</ol>
 <div class="admonition note">
 <p class="admonition-title">Opus codecs</p>
 <p><code>OPUS_1CH</code> (0x40) and <code>OPUS_2CH</code> (0x41) are only supported when
 the radio reports <code>connection_type == "WFVIEW"</code>. Standard connections
 use LPCM16 (0x04).</p>
 </div>
+<h2 id="migration">Migration<a class="headerlink" href="#migration" title="Permanent link">&para;</a></h2>
+<p>Use the explicit <code>_opus</code> methods now:</p>
+<table>
+<thead>
+<tr>
+<th>Deprecated alias</th>
+<th>Replacement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>start_audio_rx</code></td>
+<td><code>start_audio_rx_opus</code></td>
+</tr>
+<tr>
+<td><code>stop_audio_rx</code></td>
+<td><code>stop_audio_rx_opus</code></td>
+</tr>
+<tr>
+<td><code>start_audio_tx</code></td>
+<td><code>start_audio_tx_opus</code></td>
+</tr>
+<tr>
+<td><code>push_audio_tx</code></td>
+<td><code>push_audio_tx_opus</code></td>
+</tr>
+<tr>
+<td><code>stop_audio_tx</code></td>
+<td><code>stop_audio_tx_opus</code></td>
+</tr>
+<tr>
+<td><code>start_audio</code></td>
+<td><code>start_audio_opus</code></td>
+</tr>
+<tr>
+<td><code>stop_audio</code></td>
+<td><code>stop_audio_opus</code></td>
+</tr>
+</tbody>
+</table>
+<p>For RX PCM, migrate callback-side decoding to the built-in API:</p>
+<ul>
+<li>Before: <code>start_audio_rx_opus()</code> + manual Opus decode in callback.</li>
+<li>Now: <code>start_audio_rx_pcm()</code> and receive <code>bytes | None</code> directly.</li>
+</ul>
+<p>For TX PCM, migrate manual Opus encoding to the built-in API:</p>
+<ul>
+<li>Before: encode PCM to Opus yourself, then <code>push_audio_tx_opus()</code>.</li>
+<li>Now: <code>start_audio_tx_pcm()</code> and <code>push_audio_tx_pcm()</code> with fixed-size PCM frames.</li>
+</ul>
 
 
 

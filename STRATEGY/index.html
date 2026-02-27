@@ -650,6 +650,62 @@
   
   
     <li class="md-nav__item">
+      <a href="../guide/wsjtx-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WSJT-X / Digital Modes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/audio-recipes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audio Recipes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../guide/commands/" class="md-nav__link">
         
   
@@ -1308,22 +1364,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#velocity-plan" class="md-nav__link">
+  <a href="#velocity-plan-updated-after-v060" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Velocity Plan
+        Velocity Plan (updated after v0.6.0)
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Velocity Plan">
+    <nav class="md-nav" aria-label="Velocity Plan (updated after v0.6.0)">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#sprint-1-audio-pypi-1-2-weeks" class="md-nav__link">
+  <a href="#done-all-32-issues-closed-1040-tests" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Sprint 1: Audio + PyPI (1-2 weeks)
+        Done (all 32 issues closed, 1040 tests)
       
     </span>
   </a>
@@ -1331,10 +1387,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#sprint-2-rust-cli-second-radio-2-3-weeks" class="md-nav__link">
+  <a href="#next-v070-release-community-launch" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Sprint 2: Rust CLI + second radio (2-3 weeks)
+        Next: v0.7.0 release + community launch
       
     </span>
   </a>
@@ -1342,10 +1398,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#sprint-3-spectrum-web-mvp-3-4-weeks" class="md-nav__link">
+  <a href="#after-v070-client-hardening-web-ui" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Sprint 3: Spectrum + Web MVP (3-4 weeks)
+        After v0.7.0: client hardening + Web UI
       
     </span>
   </a>
@@ -1353,10 +1409,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#sprint-4-full-web-ui-audio-4-6-weeks" class="md-nav__link">
+  <a href="#parallel-spike-optional" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Sprint 4: Full Web UI + Audio (4-6 weeks)
+        Parallel spike (optional)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#deferred-separate-discussion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deferred (separate discussion)
       
     </span>
   </a>
@@ -1423,6 +1490,17 @@
     <span class="md-ellipsis">
       
         Naming &amp; Branding
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#future-universal-radio-bridge-rpi" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Future: Universal Radio Bridge (RPi)
       
     </span>
   </a>
@@ -1521,41 +1599,45 @@
 </tr>
 </tbody>
 </table>
-<h2 id="velocity-plan">Velocity Plan<a class="headerlink" href="#velocity-plan" title="Permanent link">&para;</a></h2>
-<h3 id="sprint-1-audio-pypi-1-2-weeks">Sprint 1: Audio + PyPI (1-2 weeks)<a class="headerlink" href="#sprint-1-audio-pypi-1-2-weeks" title="Permanent link">&para;</a></h3>
-<p><strong>Goal:</strong> <code>pip install icom-lan</code> with audio support.</p>
+<h2 id="velocity-plan-updated-after-v060">Velocity Plan (updated after v0.6.0)<a class="headerlink" href="#velocity-plan-updated-after-v060" title="Permanent link">&para;</a></h2>
+<h3 id="done-all-32-issues-closed-1040-tests">Done (all 32 issues closed, 1040 tests)<a class="headerlink" href="#done-all-32-issues-closed-1040-tests" title="Permanent link">&para;</a></h3>
 <ul>
-<li>[ ] Phase 3: Opus RX/TX</li>
-<li>[ ] Phase 4: PyPI publish</li>
-<li>[ ] GitHub topics + description optimized for search</li>
-<li>[ ] First community post (Reddit /r/amateurradio)</li>
+<li>[x] Phase 3: Opus audio RX/TX API (Python)</li>
+<li>[x] Phase 3b: High-level PCM API + CLI audio subcommands + auto-recovery</li>
+<li>[x] Phase 4: Polish + PyPI publish + GitHub releases (v0.6.6)</li>
+<li>[x] Phase 6: Spectrum/waterfall parsing + CLI capture + rendering</li>
+<li>[x] <strong>Phase 7: Hamlib NET rigctld server</strong> — drop-in replacement for <code>rigctld</code></li>
+<li>TCP server with multi-client, backpressure, caching</li>
+<li>Golden protocol response suite (45 fixtures) + TCP wire tests</li>
+<li>WSJT-X compat mode, DATA mode semantics, CI-V desync fix</li>
+<li>1040 tests, 0 regressions</li>
 </ul>
-<h3 id="sprint-2-rust-cli-second-radio-2-3-weeks">Sprint 2: Rust CLI + second radio (2-3 weeks)<a class="headerlink" href="#sprint-2-rust-cli-second-radio-2-3-weeks" title="Permanent link">&para;</a></h3>
-<p><strong>Goal:</strong> Download one binary, control your radio. IC-705 tested.</p>
+<h3 id="next-v070-release-community-launch">Next: v0.7.0 release + community launch<a class="headerlink" href="#next-v070-release-community-launch" title="Permanent link">&para;</a></h3>
+<p><strong>Goal:</strong> Ship v0.7.0, announce to community, start collecting feedback.</p>
 <ul>
-<li>[ ] Phase 5.1: Rust core (transport + CI-V)</li>
-<li>[ ] Phase 5.2: CLI binary (cross-compiled)</li>
-<li>[ ] Test with IC-705 (find a tester in community)</li>
-<li>[ ] Homebrew formula</li>
-<li>[ ] HackerNews post</li>
+<li>[ ] Release v0.7.0 (version bump, CHANGELOG, PyPI)</li>
+<li>[ ] Reddit /r/amateurradio + /r/hamradio announcement</li>
+<li>[ ] QRZ.com forum post</li>
+<li>[ ] Enable GitHub Discussions</li>
 </ul>
-<h3 id="sprint-3-spectrum-web-mvp-3-4-weeks">Sprint 3: Spectrum + Web MVP (3-4 weeks)<a class="headerlink" href="#sprint-3-spectrum-web-mvp-3-4-weeks" title="Permanent link">&para;</a></h3>
-<p><strong>Goal:</strong> Waterfall in the browser. The "holy shit" demo.</p>
+<h3 id="after-v070-client-hardening-web-ui">After v0.7.0: client hardening + Web UI<a class="headerlink" href="#after-v070-client-hardening-web-ui" title="Permanent link">&para;</a></h3>
 <ul>
-<li>[ ] Phase 6: Spectrum data parsing</li>
-<li>[ ] Phase 7.1: Minimal web UI (freq + mode + S-meter)</li>
-<li>[ ] Phase 7.2: Canvas waterfall</li>
-<li>[ ] Record demo GIF/video</li>
-<li>[ ] QRZ forums, Twitter/X, YouTube demo</li>
+<li>[ ] Test rigctld with WSJT-X, JS8Call, fldigi (real-world validation)</li>
+<li>[ ] Web backend bridge (safe API surface for freq/mode/meter/scope snapshot)</li>
+<li>[ ] Minimal UI: frequency, mode, S-meter, basic controls</li>
+<li>[ ] Scope snapshot panel (reuse existing <code>scope</code> pipeline)</li>
 </ul>
-<h3 id="sprint-4-full-web-ui-audio-4-6-weeks">Sprint 4: Full Web UI + Audio (4-6 weeks)<a class="headerlink" href="#sprint-4-full-web-ui-audio-4-6-weeks" title="Permanent link">&para;</a></h3>
-<p><strong>Goal:</strong> Complete RS-BA1 replacement.</p>
+<h3 id="parallel-spike-optional">Parallel spike (optional)<a class="headerlink" href="#parallel-spike-optional" title="Permanent link">&para;</a></h3>
+<p><strong>Goal:</strong> проверить стоимость входа в Rust core (Phase 5.1), без миграции всего проекта.</p>
 <ul>
-<li>[ ] Phase 7.3: Web audio (RX/TX)</li>
-<li>[ ] Phase 7.4: Band stack, memories, click-to-tune</li>
-<li>[ ] Phase 5.3: PyO3 bindings (Rust speed, Python API)</li>
-<li>[ ] Multi-radio testing (IC-7300, IC-9700)</li>
-<li>[ ] v1.0 release</li>
+<li>[ ] Create minimal Rust transport prototype (connect + one CI-V command)</li>
+<li>[ ] Measure complexity/latency vs current Python implementation</li>
+<li>[ ] Decide go/no-go for full Rust migration</li>
+</ul>
+<h3 id="deferred-separate-discussion">Deferred (separate discussion)<a class="headerlink" href="#deferred-separate-discussion" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Community outreach/posts/channels</li>
+<li>Positioning/marketing tasks</li>
 </ul>
 <h2 id="community-building">Community Building<a class="headerlink" href="#community-building" title="Permanent link">&para;</a></h2>
 <h3 id="where-hams-live">Where hams live<a class="headerlink" href="#where-hams-live" title="Permanent link">&para;</a></h3>
@@ -1630,15 +1712,41 @@
 - <strong><code>icom-lan</code></strong> stays as the core library name
 - Web UI could be <strong><code>icom-lan-web</code></strong> or a separate project name
 - Don't over-brand early. Let the product speak.</p>
+<h2 id="future-universal-radio-bridge-rpi">Future: Universal Radio Bridge (RPi)<a class="headerlink" href="#future-universal-radio-bridge-rpi" title="Permanent link">&para;</a></h2>
+<p><strong>Idea:</strong> Raspberry Pi appliance that connects to any transceiver via USB (serial CAT)
+and exposes a unified network control interface — turning USB-only radios into
+LAN-controllable ones.</p>
+<p><strong>Why:</strong>
+- Most radios (Yaesu FTX-1, Xiegu X6200, Lab599 TX-500, IC-7300) only have USB/serial CAT
+- IC-7610's LAN protocol is the exception, not the rule
+- An RPi bridge would make <code>icom-lan</code>'s server layer (rigctld, future REST/WebSocket)
+  available to <em>any</em> radio, not just Icom LAN models</p>
+<p><strong>Architecture (conceptual):</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>  Transceiver ──USB/Serial──▶ RPi Bridge ──LAN──▶ Clients (WSJT-X, Web UI, etc.)
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>                               │
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>                           RadioDriver (per-brand: CI-V, Yaesu CAT, Kenwood IF, Elecraft)
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>                               │
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>                           StateCache + Poller
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>                               │
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>                           rigctld / REST / WebSocket server
+</code></pre></div></p>
+<p><strong>When:</strong> After v1.0 and proven stability with IC-7610. Extract <code>RadioDriver</code> Protocol
+from real differences between at least 2 implementations (e.g., IC-7610 LAN + IC-7300 USB).</p>
+<p><strong>Council verdict (2026-02-26, 5 models):</strong> Don't abstract prematurely. StateCache + Poller
+is already the right layer. Build the Protocol trait when the second radio driver exists,
+not before. "Rule of Three" applies.</p>
+<p><strong>Available hardware:</strong> IC-7610 (LAN), IC-7300 (USB), Yaesu FTX-1 (USB),
+Xiegu X6200 (USB), Lab599 TX-500 (USB).</p>
 <h2 id="long-term-vision">Long-term Vision<a class="headerlink" href="#long-term-vision" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Year 1:  The go-to library for Icom LAN control
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>Year 2:  The platform (lib + CLI + web + audio)
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>Year 3:  Community-driven, multi-vendor? (Yaesu, Kenwood LAN?)
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>         ↑ But this is dreaming. Focus on Year 1.
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Year 1:  The go-to library for Icom LAN control
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>Year 2:  The platform (lib + CLI + web + audio)
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>Year 3:  Universal Radio Bridge (RPi) + multi-vendor drivers
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>         Extract RadioDriver Protocol from real implementations
 </code></pre></div>
 <hr />
 <p><em>"Move fast. Ship often. Let the community tell you what's next."</em></p>
-<p><em>Created: 2026-02-25</em></p>
+<p><em>Created: 2026-02-25</em>
+<em>Last updated: 2026-02-26</em></p>
 
 
 

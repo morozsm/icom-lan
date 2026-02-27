@@ -659,6 +659,62 @@
   
   
     <li class="md-nav__item">
+      <a href="../wsjtx-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WSJT-X / Digital Modes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../audio-recipes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audio Recipes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../commands/" class="md-nav__link">
         
   
@@ -932,6 +988,28 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#retry-fail-fast-policy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Retry / Fail-Fast Policy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#soak-integration-diagnostics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Soak / Integration Diagnostics
+      
+    </span>
+  </a>
   
 </li>
       
@@ -1664,6 +1742,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#retry-fail-fast-policy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Retry / Fail-Fast Policy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#soak-integration-diagnostics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Soak / Integration Diagnostics
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#getting-help" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1731,6 +1831,7 @@
 <li><strong>CI-V port negotiation failed</strong> — this usually means the conninfo exchange didn't complete properly</li>
 <li><strong>Radio busy</strong> — another application may be holding the CI-V stream</li>
 <li><strong>Network congestion</strong> — try increasing the timeout</li>
+<li><strong>Command pacing too aggressive for current link/rig state</strong> — increase <code>ICOM_CIV_MIN_INTERVAL_MS</code> (e.g., 50-80)</li>
 </ol>
 <p><strong>Debug:</strong></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
@@ -1788,6 +1889,29 @@
 <li>Allow ports 50001–50003</li>
 <li>Increase timeout for high-latency links</li>
 <li>Discovery (broadcast) won't work over VPN — specify the radio's IP directly</li>
+</ul>
+<h2 id="retry-fail-fast-policy">Retry / Fail-Fast Policy<a class="headerlink" href="#retry-fail-fast-policy" title="Permanent link">&para;</a></h2>
+<p>Recommended policy for real-radio automation:</p>
+<ul>
+<li><strong>Retry allowed (soft-fail):</strong> idempotent reads (<code>get_*</code>) and non-critical telemetry.</li>
+<li><strong>Retry with recovery:</strong> command timeout after all retries -&gt; one reconnect recovery path -&gt; retry command once.</li>
+<li><strong>Fail-fast (no blind retries):</strong> safety-critical toggles (<code>PTT</code>, <code>power_control</code>, CW stop/start transactions) when state uncertainty is dangerous.</li>
+<li><strong>Always log on timeout:</strong> command name, attempt, timeout flag, recovered flag, duration.</li>
+</ul>
+<p>In integration soak, use structured JSON logs with canonical fields:</p>
+<ul>
+<li><code>test</code>, <code>step</code>, <code>cmd</code>, <code>attempt</code>, <code>timeout</code>, <code>recovered</code>, <code>duration_ms</code></li>
+</ul>
+<h2 id="soak-integration-diagnostics">Soak / Integration Diagnostics<a class="headerlink" href="#soak-integration-diagnostics" title="Permanent link">&para;</a></h2>
+<p>Use soak mode to capture rare timeout behavior with structured logs:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">ICOM_SOAK_SECONDS</span><span class="o">=</span><span class="m">120</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>pytest<span class="w"> </span>-m<span class="w"> </span>integration<span class="w"> </span>tests/integration/test_radio_integration.py::TestSoak::test_soak_retries_and_logging<span class="w"> </span>-q<span class="w"> </span>-s
+</code></pre></div>
+<p>Look for:</p>
+<ul>
+<li><code>{"ev":"timeout", ...}</code> — timeout event</li>
+<li><code>{"ev":"recover", ...}</code> — reconnect recovery attempts</li>
+<li><code>SOAK_SUMMARY {...}</code> — final counters (<code>timeouts</code>, <code>timeouts_unrecovered</code>, etc.)</li>
 </ul>
 <h2 id="getting-help">Getting Help<a class="headerlink" href="#getting-help" title="Permanent link">&para;</a></h2>
 <ol>

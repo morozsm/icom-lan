@@ -650,6 +650,62 @@
   
   
     <li class="md-nav__item">
+      <a href="../guide/wsjtx-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WSJT-X / Digital Modes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/audio-recipes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audio Recipes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../guide/commands/" class="md-nav__link">
         
   
@@ -1275,10 +1331,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#current-state-v020-python" class="md-nav__link">
+  <a href="#current-state-v060-python" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Current State: v0.2.0 (Python)
+        Current State: v0.6.0 (Python)
       
     </span>
   </a>
@@ -1777,19 +1833,21 @@
 
 
 <h1 id="roadmap">Roadmap<a class="headerlink" href="#roadmap" title="Permanent link">&para;</a></h1>
-<h2 id="current-state-v020-python">Current State: v0.2.0 (Python)<a class="headerlink" href="#current-state-v020-python" title="Permanent link">&para;</a></h2>
+<h2 id="current-state-v060-python">Current State: v0.6.0 (Python)<a class="headerlink" href="#current-state-v060-python" title="Permanent link">&para;</a></h2>
 <ul>
 <li>✅ Phase 1 — Transport (UDP, auth, keep-alive, dual-port)</li>
 <li>✅ Phase 2 — CI-V Commands (frequency, mode, power, meters, PTT, CW, VFO, split)</li>
-<li>⬜ Phase 3 — Audio Streaming</li>
-<li>⬜ Phase 4 — Polish &amp; Publish</li>
+<li>✅ Phase 3 — Audio Streaming</li>
+<li>✅ Phase 4 — Polish &amp; Publish (PyPI + releases + docs)</li>
 <li>⬜ Phase 5 — Rust Core</li>
-<li>⬜ Phase 6 — Spectrum &amp; Waterfall</li>
+<li>✅ Phase 6 — Spectrum &amp; Waterfall (API + CLI + rendering)</li>
 <li>⬜ Phase 7 — Web UI (full wfview/RS-BA1 replacement)</li>
 </ul>
+<p><strong>Next focus:</strong> Phase 7.1 (Web UI MVP) with optional parallel spike for Phase 5.1 (Rust core).</p>
 <hr />
 <h2 id="phase-3-audio-streaming-python">Phase 3 — Audio Streaming (Python)<a class="headerlink" href="#phase-3-audio-streaming-python" title="Permanent link">&para;</a></h2>
 <p><strong>Goal:</strong> RX/TX audio через Opus codec на порту 50003.</p>
+<p><strong>Status:</strong> ✅ Implemented (core RX/TX/full-duplex API available in current releases).</p>
 <h3 id="tasks">Tasks<a class="headerlink" href="#tasks" title="Permanent link">&para;</a></h3>
 <ul>
 <li>[ ] Изучить <code>icomudpaudio.cpp</code> — формат аудио-пакетов, заголовки, sequence</li>
@@ -1827,6 +1885,7 @@
 <hr />
 <h2 id="phase-4-polish-publish-python">Phase 4 — Polish &amp; Publish (Python)<a class="headerlink" href="#phase-4-polish-publish-python" title="Permanent link">&para;</a></h2>
 <p><strong>Goal:</strong> Production-ready библиотека на PyPI.</p>
+<p><strong>Status:</strong> ✅ Implemented (sync API, reconnect/token renewal, docs, GitHub releases, PyPI).</p>
 <h3 id="tasks_1">Tasks<a class="headerlink" href="#tasks_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li>[ ] Sync API wrapper (для тех кто не хочет async)</li>
@@ -2062,7 +2121,8 @@
 </ul>
 <hr />
 <h2 id="phase-6-spectrum-waterfall">Phase 6 — Spectrum &amp; Waterfall<a class="headerlink" href="#phase-6-spectrum-waterfall" title="Permanent link">&para;</a></h2>
-<p><strong>Goal:</strong> Парсинг waterfall/spectrum данных, которые радио уже отправляет (cmd <code>0x27</code>). Сейчас мы их выбрасываем в <code>_send_civ_raw</code> — пора начать использовать.</p>
+<p><strong>Goal:</strong> Парсинг waterfall/spectrum данных, которые радио уже отправляет (cmd <code>0x27</code>).</p>
+<p><strong>Status:</strong> ✅ Implemented in v0.6.0 (scope parsing/assembly, callbacks, CLI capture, PNG rendering).</p>
 <h3 id="_5">Контекст<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
 <p>IC-7610 непрерывно шлёт spectrum-данные через CI-V порт (50002) — это те самые пакеты с <code>cmd=0x27</code>, которые мы фильтруем. Они содержат:
 - Scope данные (амплитуды FFT-бинов)
@@ -2268,11 +2328,11 @@
 <hr />
 <h2 id="the-grand-vision">The Grand Vision 🔭<a class="headerlink" href="#the-grand-vision" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>Phase 1-2:  Python CLI + API          ✅ Done
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>Phase 3:    Audio streaming            ← next
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>Phase 4:    PyPI, polish
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>Phase 5:    Rust core + bindings
-<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>Phase 6:    Spectrum/waterfall data
-<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>Phase 7:    Web UI — the full package
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>Phase 3:    Audio streaming            ✅ Done
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>Phase 4:    PyPI, polish               ✅ Done
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>Phase 5:    Rust core + bindings       ⬜ Planned
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>Phase 6:    Spectrum/waterfall data    ✅ Done
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>Phase 7:    Web UI — the full package  ← next
 <a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>            ─────────────────────────
 <a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>            Open-source RS-BA1 killer
 <a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>            In your browser

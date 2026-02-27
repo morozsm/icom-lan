@@ -656,6 +656,62 @@
   
   
     <li class="md-nav__item">
+      <a href="../../guide/wsjtx-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WSJT-X / Digital Modes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/audio-recipes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audio Recipes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../guide/commands/" class="md-nav__link">
         
   
@@ -1104,6 +1160,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#audiocapabilities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AudioCapabilities
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1137,6 +1204,17 @@
     <span class="md-ellipsis">
       
         bcd_decode()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get_audio_capabilities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_audio_capabilities()
       
     </span>
   </a>
@@ -1548,6 +1626,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#audiocapabilities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AudioCapabilities
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1581,6 +1670,17 @@
     <span class="md-ellipsis">
       
         bcd_decode()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get_audio_capabilities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_audio_capabilities()
       
     </span>
   </a>
@@ -1841,27 +1941,78 @@
 </tbody>
 </table>
 <hr />
+<h3 id="audiocapabilities"><code>AudioCapabilities</code><a class="headerlink" href="#audiocapabilities" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan</span><span class="w"> </span><span class="kn">import</span> <span class="n">AudioCapabilities</span>
+</code></pre></div>
+<p>Stable audio capability structure returned by <code>get_audio_capabilities()</code> and
+<code>IcomRadio.audio_capabilities()</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>supported_codecs</code></td>
+<td><code>tuple[AudioCodec, ...]</code></td>
+<td>Supported codecs in stable order</td>
+</tr>
+<tr>
+<td><code>supported_sample_rates_hz</code></td>
+<td><code>tuple[int, ...]</code></td>
+<td>Supported sample rates</td>
+</tr>
+<tr>
+<td><code>supported_channels</code></td>
+<td><code>tuple[int, ...]</code></td>
+<td>Supported channel counts</td>
+</tr>
+<tr>
+<td><code>default_codec</code></td>
+<td><code>AudioCodec</code></td>
+<td>Deterministic default codec</td>
+</tr>
+<tr>
+<td><code>default_sample_rate_hz</code></td>
+<td><code>int</code></td>
+<td>Deterministic default sample rate</td>
+</tr>
+<tr>
+<td><code>default_channels</code></td>
+<td><code>int</code></td>
+<td>Deterministic default channel count</td>
+</tr>
+</tbody>
+</table>
+<hr />
 <h2 id="helper-functions">Helper Functions<a class="headerlink" href="#helper-functions" title="Permanent link">&para;</a></h2>
 <h3 id="bcd_encode"><code>bcd_encode()</code><a class="headerlink" href="#bcd_encode" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">bcd_encode</span><span class="p">(</span><span class="n">freq_hz</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">bcd_encode</span><span class="p">(</span><span class="n">freq_hz</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span>
 </code></pre></div>
 <p>Encode a frequency (Hz) to Icom's 5-byte BCD format (little-endian BCD).</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="o">&gt;&gt;&gt;</span> <span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan</span><span class="w"> </span><span class="kn">import</span> <span class="n">bcd_encode</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">bcd_encode</span><span class="p">(</span><span class="mi">14074000</span><span class="p">)</span><span class="o">.</span><span class="n">hex</span><span class="p">()</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="s1">&#39;0040071400&#39;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="o">&gt;&gt;&gt;</span> <span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan</span><span class="w"> </span><span class="kn">import</span> <span class="n">bcd_encode</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">bcd_encode</span><span class="p">(</span><span class="mi">14074000</span><span class="p">)</span><span class="o">.</span><span class="n">hex</span><span class="p">()</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="s1">&#39;0040071400&#39;</span>
 </code></pre></div>
 <h3 id="bcd_decode"><code>bcd_decode()</code><a class="headerlink" href="#bcd_decode" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">bcd_decode</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">bcd_decode</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span>
 </code></pre></div>
 <p>Decode 5-byte BCD to frequency in Hz.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="o">&gt;&gt;&gt;</span> <span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan</span><span class="w"> </span><span class="kn">import</span> <span class="n">bcd_decode</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">bcd_decode</span><span class="p">(</span><span class="nb">bytes</span><span class="o">.</span><span class="n">fromhex</span><span class="p">(</span><span class="s1">&#39;0040071400&#39;</span><span class="p">))</span>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="mi">14074000</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="o">&gt;&gt;&gt;</span> <span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan</span><span class="w"> </span><span class="kn">import</span> <span class="n">bcd_decode</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">bcd_decode</span><span class="p">(</span><span class="nb">bytes</span><span class="o">.</span><span class="n">fromhex</span><span class="p">(</span><span class="s1">&#39;0040071400&#39;</span><span class="p">))</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="mi">14074000</span>
 </code></pre></div>
+<h3 id="get_audio_capabilities"><code>get_audio_capabilities()</code><a class="headerlink" href="#get_audio_capabilities" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_audio_capabilities</span>
+</code></pre></div>
+<p>Return the static icom-lan audio capability matrix and deterministic defaults.</p>
 <hr />
 <h2 id="constants">Constants<a class="headerlink" href="#constants" title="Permanent link">&para;</a></h2>
 <h3 id="header_size"><code>HEADER_SIZE</code><a class="headerlink" href="#header_size" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan</span><span class="w"> </span><span class="kn">import</span> <span class="n">HEADER_SIZE</span>  <span class="c1"># 16 (0x10)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan</span><span class="w"> </span><span class="kn">import</span> <span class="n">HEADER_SIZE</span>  <span class="c1"># 16 (0x10)</span>
 </code></pre></div>
 <p>Size of the fixed packet header in bytes.</p>
 

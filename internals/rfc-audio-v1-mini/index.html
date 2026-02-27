@@ -10,13 +10,9 @@
       
       
       
-        <link rel="canonical" href="https://morozsm.github.io/icom-lan/internals/protocol/">
+        <link rel="canonical" href="https://morozsm.github.io/icom-lan/internals/rfc-audio-v1-mini/">
       
       
-        <link rel="prev" href="../architecture/">
-      
-      
-        <link rel="next" href="../contributing/">
       
       
         
@@ -27,7 +23,7 @@
     
     
       
-        <title>Protocol Deep Dive - icom-lan</title>
+        <title>Mini RFC: Audio API v1 (PCM-first + explicit low-level API) - icom-lan</title>
       
     
     
@@ -80,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#protocol-deep-dive" class="md-skip">
+        <a href="#mini-rfc-audio-api-v1-pcm-first-explicit-low-level-api" class="md-skip">
           Skip to content
         </a>
       
@@ -114,7 +110,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Protocol Deep Dive
+              Mini RFC: Audio API v1 (PCM-first + explicit low-level API)
             
           </span>
         </div>
@@ -304,12 +300,10 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
+      <li class="md-tabs__item">
         <a href="../architecture/" class="md-tabs__link">
           
   
@@ -1113,31 +1107,28 @@
       
   
   
-    
   
   
-  
     
     
     
     
-      
-        
-        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
         
           
-          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
             
   
   
@@ -1155,7 +1146,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1198,37 +1189,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Protocol Deep Dive
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../protocol/" class="md-nav__link">
         
   
   
@@ -1244,298 +1208,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#packet-structure" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Packet Structure
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#packet-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Packet Types
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#port-architecture" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Port Architecture
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#discovery" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Discovery
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#authentication" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Authentication
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Authentication">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#login-packet-0x80-bytes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Login Packet (0x80 bytes)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#credential-encoding" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Credential Encoding
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#auth-response-0x60-bytes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Auth Response (0x60 bytes)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#token-ack-0x40-bytes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Token Ack (0x40 bytes)
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#conninfo-exchange" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Conninfo Exchange
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Conninfo Exchange">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#conninfo-packet-0x90-bytes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Conninfo Packet (0x90 bytes)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#status-packet-0x50-bytes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Status Packet (0x50 bytes)
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#ci-v-over-udp" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        CI-V Over UDP
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="CI-V Over UDP">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#ci-v-data-packet" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        CI-V Data Packet
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#openclose-packet-0x16-bytes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        OpenClose Packet (0x16 bytes)
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#keep-alive" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Keep-Alive
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Keep-Alive">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#ping-packet-0x15-bytes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Ping Packet (0x15 bytes)
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#retransmit" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Retransmit
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#ci-v-frame-format" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        CI-V Frame Format
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="CI-V Frame Format">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#bcd-frequency-encoding" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        BCD Frequency Encoding
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#references" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        References
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#legal-note" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Legal Note
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1659,10 +1331,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#packet-structure" class="md-nav__link">
+  <a href="#1-problem" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Packet Structure
+        1) Problem
       
     </span>
   </a>
@@ -1670,10 +1342,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#packet-types" class="md-nav__link">
+  <a href="#2-goals" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Packet Types
+        2) Goals
       
     </span>
   </a>
@@ -1681,10 +1353,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#port-architecture" class="md-nav__link">
+  <a href="#3-non-goals" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Port Architecture
+        3) Non-goals
       
     </span>
   </a>
@@ -1692,33 +1364,34 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#discovery" class="md-nav__link">
+  <a href="#4-decisions" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Discovery
+        4) Decisions
       
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#authentication" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Authentication
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Authentication">
+    <nav class="md-nav" aria-label="4) Decisions">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#login-packet-0x80-bytes" class="md-nav__link">
+  <a href="#d1-api-split-explicit-low-level-vs-high-level" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Login Packet (0x80 bytes)
+        D1. API split: explicit low-level vs high-level
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="D1. API split: explicit low-level vs high-level">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#low-level-opus-explicit-naming" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Low-level (Opus, explicit naming)
       
     </span>
   </a>
@@ -1726,10 +1399,26 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#credential-encoding" class="md-nav__link">
+  <a href="#high-level-pcm" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Credential Encoding
+        High-level (PCM)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#d2-backward-compatibility-deprecation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        D2. Backward compatibility + deprecation
       
     </span>
   </a>
@@ -1737,10 +1426,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#auth-response-0x60-bytes" class="md-nav__link">
+  <a href="#d3-internal-transcoder-layer" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Auth Response (0x60 bytes)
+        D3. Internal transcoder layer
       
     </span>
   </a>
@@ -1748,10 +1437,43 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#token-ack-0x40-bytes" class="md-nav__link">
+  <a href="#d4-capabilities-model-deterministic-defaults" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Token Ack (0x40 bytes)
+        D4. Capabilities model + deterministic defaults
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#d5-runtime-stats-contract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        D5. Runtime stats contract
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#d6-recovery-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        D6. Recovery model
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#d7-cli-scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        D7. CLI scope
       
     </span>
   </a>
@@ -1764,33 +1486,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#conninfo-exchange" class="md-nav__link">
+  <a href="#5-delivery-plan-by-issue-dependency" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Conninfo Exchange
+        5) Delivery plan (by issue dependency)
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Conninfo Exchange">
+    <nav class="md-nav" aria-label="5) Delivery plan (by issue dependency)">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#conninfo-packet-0x90-bytes" class="md-nav__link">
+  <a href="#phase-a-foundation" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Conninfo Packet (0x90 bytes)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#status-packet-0x50-bytes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Status Packet (0x50 bytes)
+        Phase A (foundation)
       
     </span>
   </a>
@@ -1799,134 +1510,6 @@
         
       </ul>
     </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#ci-v-over-udp" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        CI-V Over UDP
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="CI-V Over UDP">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#ci-v-data-packet" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        CI-V Data Packet
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#openclose-packet-0x16-bytes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        OpenClose Packet (0x16 bytes)
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#keep-alive" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Keep-Alive
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Keep-Alive">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#ping-packet-0x15-bytes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Ping Packet (0x15 bytes)
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#retransmit" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Retransmit
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#ci-v-frame-format" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        CI-V Frame Format
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="CI-V Frame Format">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#bcd-frequency-encoding" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        BCD Frequency Encoding
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#references" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        References
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#legal-note" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Legal Note
-      
-    </span>
-  </a>
   
 </li>
       
@@ -1950,256 +1533,185 @@
   
 
 
-<h1 id="protocol-deep-dive">Protocol Deep Dive<a class="headerlink" href="#protocol-deep-dive" title="Permanent link">&para;</a></h1>
-<p>The Icom LAN protocol is a proprietary UDP-based protocol used by Icom transceivers for remote control over Ethernet/WiFi. It was reverse-engineered by the <a href="https://wfview.org/">wfview</a> project.</p>
-<h2 id="packet-structure">Packet Structure<a class="headerlink" href="#packet-structure" title="Permanent link">&para;</a></h2>
-<p>Every UDP packet starts with a fixed 16-byte header:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Offset  Size  Endian  Field
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>0x00    4     LE      Packet length (total, including header)
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>0x04    2     LE      Packet type
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>0x06    2     LE      Sequence number
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>0x08    4     LE      Sender ID
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>0x0C    4     LE      Receiver ID
-</code></pre></div>
-<h2 id="packet-types">Packet Types<a class="headerlink" href="#packet-types" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Type</th>
-<th>Name</th>
-<th>Size</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>0x00</code></td>
-<td>DATA</td>
-<td>Variable</td>
-<td>Carries CI-V commands, audio, etc.</td>
-</tr>
-<tr>
-<td><code>0x01</code></td>
-<td>CONTROL</td>
-<td>0x10+</td>
-<td>Retransmit requests</td>
-</tr>
-<tr>
-<td><code>0x03</code></td>
-<td>ARE_YOU_THERE</td>
-<td>0x10</td>
-<td>Discovery request (broadcast)</td>
-</tr>
-<tr>
-<td><code>0x04</code></td>
-<td>I_AM_HERE</td>
-<td>0x10</td>
-<td>Discovery response</td>
-</tr>
-<tr>
-<td><code>0x05</code></td>
-<td>DISCONNECT</td>
-<td>0x10</td>
-<td>Disconnect notification</td>
-</tr>
-<tr>
-<td><code>0x06</code></td>
-<td>ARE_YOU_READY</td>
-<td>0x10</td>
-<td>Ready handshake</td>
-</tr>
-<tr>
-<td><code>0x07</code></td>
-<td>PING</td>
-<td>0x15</td>
-<td>Keep-alive ping/pong</td>
-</tr>
-</tbody>
-</table>
-<h2 id="port-architecture">Port Architecture<a class="headerlink" href="#port-architecture" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Port</th>
-<th>Name</th>
-<th>Purpose</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>50001</td>
-<td>Control</td>
-<td>Authentication, session management, keep-alive</td>
-</tr>
-<tr>
-<td>50002</td>
-<td>CI-V</td>
-<td>CI-V serial command exchange</td>
-</tr>
-<tr>
-<td>50003</td>
-<td>Audio</td>
-<td>Opus audio streaming</td>
-</tr>
-</tbody>
-</table>
-<p>The CI-V and audio port numbers are <strong>negotiated</strong> — they're reported in the status packet (0x50 bytes) after the conninfo exchange. However, in practice they are almost always control_port+1 and control_port+2.</p>
-<h2 id="discovery">Discovery<a class="headerlink" href="#discovery" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Client → Radio:  ARE_YOU_THERE (0x03), 16 bytes
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>Radio → Client:  I_AM_HERE (0x04), 16 bytes, includes radio&#39;s sender_id
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>Client → Radio:  ARE_YOU_READY (0x06), 16 bytes
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>Radio → Client:  ARE_YOU_READY (0x06), 16 bytes (echo/ack)
-</code></pre></div>
-<p>This can also be broadcast (UDP broadcast to port 50001) for autodiscovery.</p>
-<h2 id="authentication">Authentication<a class="headerlink" href="#authentication" title="Permanent link">&para;</a></h2>
-<h3 id="login-packet-0x80-bytes">Login Packet (0x80 bytes)<a class="headerlink" href="#login-packet-0x80-bytes" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>Offset  Size  Field
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>0x00    4     Packet length (0x80)
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>0x04    2     Type (0x00 = DATA)
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>0x06    2     Sequence
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>0x08    4     Sender ID
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>0x0C    4     Receiver ID
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>0x10    4     Payload size (0x70, big-endian)
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>0x14    1     Request/reply (0x01)
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>0x15    1     Request type (0x00 = login)
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>0x16    2     Inner sequence (big-endian)
-<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>0x1A    2     Token request ID
-<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>0x40    16    Encoded username
-<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>0x50    16    Encoded password
-<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>0x60    16    Computer name (ASCII)
-</code></pre></div>
-<h3 id="credential-encoding">Credential Encoding<a class="headerlink" href="#credential-encoding" title="Permanent link">&para;</a></h3>
-<p>Icom uses a position-dependent substitution cipher:</p>
+<h1 id="mini-rfc-audio-api-v1-pcm-first-explicit-low-level-api">Mini RFC: Audio API v1 (PCM-first + explicit low-level API)<a class="headerlink" href="#mini-rfc-audio-api-v1-pcm-first-explicit-low-level-api" title="Permanent link">&para;</a></h1>
+<p>Status: Draft (for approval)</p>
+<p>Related issues: #1, #2, #3, #4, #5, #6, #7, #8, #10<br />
+Already in progress: #9 via PR #11</p>
+<h2 id="1-problem">1) Problem<a class="headerlink" href="#1-problem" title="Permanent link">&para;</a></h2>
+<p>Current audio surface mixes low-level Opus-oriented operations and user-facing PCM workflows.
+This makes API naming ambiguous, CLI scope unclear, and recovery/testing behavior under-specified.</p>
+<h2 id="2-goals">2) Goals<a class="headerlink" href="#2-goals" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Provide a <strong>PCM-first high-level API</strong> for common workflows.</li>
+<li>Keep a clear <strong>explicit low-level Opus API</strong> for advanced users.</li>
+<li>Define deterministic defaults and capability introspection.</li>
+<li>Add runtime stats and predictable recovery semantics.</li>
+<li>Preserve backward compatibility with a deprecation window.</li>
+</ul>
+<h2 id="3-non-goals">3) Non-goals<a class="headerlink" href="#3-non-goals" title="Permanent link">&para;</a></h2>
+<ul>
+<li>No protocol redesign.</li>
+<li>No breaking changes in one release.</li>
+<li>No broad refactor outside audio/CLI/test/doc scope.</li>
+</ul>
+<h2 id="4-decisions">4) Decisions<a class="headerlink" href="#4-decisions" title="Permanent link">&para;</a></h2>
+<h3 id="d1-api-split-explicit-low-level-vs-high-level">D1. API split: explicit low-level vs high-level<a class="headerlink" href="#d1-api-split-explicit-low-level-vs-high-level" title="Permanent link">&para;</a></h3>
+<h4 id="low-level-opus-explicit-naming">Low-level (Opus, explicit naming)<a class="headerlink" href="#low-level-opus-explicit-naming" title="Permanent link">&para;</a></h4>
+<ul>
+<li><code>start_audio_rx_opus(callback, *, jitter_depth=5)</code></li>
+<li><code>stop_audio_rx_opus()</code></li>
+<li><code>start_audio_tx_opus()</code></li>
+<li><code>push_audio_tx_opus(opus_bytes)</code></li>
+<li><code>stop_audio_tx_opus()</code></li>
+</ul>
+<h4 id="high-level-pcm">High-level (PCM)<a class="headerlink" href="#high-level-pcm" title="Permanent link">&para;</a></h4>
+<ul>
+<li><code>start_audio_rx_pcm(callback, *, sample_rate=48000, channels=1, frame_ms=20)</code></li>
+<li><code>stop_audio_rx_pcm()</code></li>
+<li><code>start_audio_tx_pcm(*, sample_rate=48000, channels=1, frame_ms=20)</code></li>
+<li><code>push_audio_tx_pcm(pcm_bytes)</code></li>
+<li><code>stop_audio_tx_pcm()</code></li>
+</ul>
+<h3 id="d2-backward-compatibility-deprecation">D2. Backward compatibility + deprecation<a class="headerlink" href="#d2-backward-compatibility-deprecation" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Keep current methods (<code>start_audio_rx</code>, <code>start_audio_tx</code>, <code>push_audio_tx</code>, etc.) as aliases to low-level behavior.</li>
+<li>Emit <code>DeprecationWarning</code> with replacement hints.</li>
+<li>Deprecation window: two minor releases.</li>
+<li>Remove ambiguous aliases at next major.</li>
+</ul>
+<h3 id="d3-internal-transcoder-layer">D3. Internal transcoder layer<a class="headerlink" href="#d3-internal-transcoder-layer" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Add internal PCM&lt;-&gt;Opus transcoder abstraction.</li>
+<li>Use <code>opuslib</code> when available (<code>pip install icom-lan[audio]</code>).</li>
+<li>If missing, high-level PCM APIs raise actionable error:
+  <code>Audio codec backend unavailable; install icom-lan[audio]</code>.</li>
+</ul>
+<h3 id="d4-capabilities-model-deterministic-defaults">D4. Capabilities model + deterministic defaults<a class="headerlink" href="#d4-capabilities-model-deterministic-defaults" title="Permanent link">&para;</a></h3>
+<p>Add <code>AudioCaps</code> model and API:
+- <code>get_audio_caps()</code> returns:
+  - supported codecs
+  - supported sample rates
+  - supported channel counts
+  - default codec/rate/channels</p>
+<p>CLI:
+- <code>icom-lan audio caps [--json]</code></p>
+<p>Default selection (deterministic):
+1. Prefer Opus mono 48k
+2. Else Opus stereo 48k
+3. Else best PCM mode
+4. If no valid combo -&gt; clear validation error</p>
+<h3 id="d5-runtime-stats-contract">D5. Runtime stats contract<a class="headerlink" href="#d5-runtime-stats-contract" title="Permanent link">&para;</a></h3>
+<p>Add <code>get_audio_stats()</code> shape (JSON-friendly):
+- <code>packet_loss_pct</code> (0..100)
+- <code>jitter_ms</code>
+- <code>underruns</code>
+- <code>overruns</code>
+- <code>est_latency_ms</code>
+- <code>rx_packets</code>, <code>tx_packets</code></p>
+<p>Stats availability: during active stream and for a short terminal window after stop.</p>
+<h3 id="d6-recovery-model">D6. Recovery model<a class="headerlink" href="#d6-recovery-model" title="Permanent link">&para;</a></h3>
+<p>Optional auto-recover after reconnect:
+- config: <code>auto_recover=True</code>, <code>recover_max_attempts=5</code>
+- state events: <code>recovering</code>, <code>recovered</code>, <code>failed</code>
+- single active stream invariant (no duplicate RX/TX tasks)</p>
+<h3 id="d7-cli-scope">D7. CLI scope<a class="headerlink" href="#d7-cli-scope" title="Permanent link">&para;</a></h3>
+<p>Add <code>icom-lan audio</code> command group:
+- <code>audio rx --out rx.wav --seconds 10</code>
+- <code>audio tx --in tx.wav</code>
+- <code>audio loopback --seconds 10</code>
+- <code>audio caps</code></p>
+<p>Common flags:
+- <code>--sample-rate</code>, <code>--channels</code>, <code>--json</code>, <code>--stats</code></p>
+<h2 id="5-delivery-plan-by-issue-dependency">5) Delivery plan (by issue dependency)<a class="headerlink" href="#5-delivery-plan-by-issue-dependency" title="Permanent link">&para;</a></h2>
+<h3 id="phase-a-foundation">Phase A (foundation)<a class="headerlink" href="#phase-a-foundation" title="Permanent link">&para;</a></h3>
+<ul>
+<li>
+<h1 id="1-transcoder-layer">1 Transcoder layer<a class="headerlink" href="#1-transcoder-layer" title="Permanent link">&para;</a></h1>
+</li>
+<li>
+<h1 id="10-naming-deprecation-map">10 Naming + deprecation map<a class="headerlink" href="#10-naming-deprecation-map" title="Permanent link">&para;</a></h1>
+</li>
+</ul>
+<h3 id="phase-b-public-apis">Phase B (public APIs)<a class="headerlink" href="#phase-b-public-apis" title="Permanent link">&para;</a></h3>
+<ul>
+<li>
+<h1 id="2-rx-high-level-pcm-api">2 RX high-level PCM API<a class="headerlink" href="#2-rx-high-level-pcm-api" title="Permanent link">&para;</a></h1>
+</li>
+<li>
+<h1 id="3-tx-high-level-pcm-api">3 TX high-level PCM API<a class="headerlink" href="#3-tx-high-level-pcm-api" title="Permanent link">&para;</a></h1>
+</li>
+<li>
+<h1 id="8-capability-introspection-defaults">8 Capability introspection + defaults<a class="headerlink" href="#8-capability-introspection-defaults" title="Permanent link">&para;</a></h1>
+</li>
+</ul>
+<h3 id="phase-c-cli-observability">Phase C (CLI + observability)<a class="headerlink" href="#phase-c-cli-observability" title="Permanent link">&para;</a></h3>
+<ul>
+<li>
+<h1 id="4-cli-audio-subcommands">4 CLI audio subcommands<a class="headerlink" href="#4-cli-audio-subcommands" title="Permanent link">&para;</a></h1>
+</li>
+<li>
+<h1 id="6-runtime-stats-api-stats">6 Runtime stats API + <code>--stats</code><a class="headerlink" href="#6-runtime-stats-api-stats" title="Permanent link">&para;</a></h1>
+</li>
+</ul>
+<h3 id="phase-d-resilience-ci">Phase D (resilience + CI)<a class="headerlink" href="#phase-d-resilience-ci" title="Permanent link">&para;</a></h3>
+<ul>
+<li>
+<h1 id="7-auto-recover-behavior">7 Auto-recover behavior<a class="headerlink" href="#7-auto-recover-behavior" title="Permanent link">&para;</a></h1>
+</li>
+<li>
+<h1 id="5-e2e-ci-stabilization">5 E2E + CI stabilization<a class="headerlink" href="#5-e2e-ci-stabilization" title="Permanent link">&para;</a></h1>
+</li>
+</ul>
+<h2 id="6-test-strategy">6) Test strategy<a class="headerlink" href="#6-test-strategy" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Unit tests for transcoder adapters and validation.</li>
+<li>Integration tests for RX/TX/loopback (normal + reconnect).</li>
+<li>CLI smoke tests for all new subcommands.</li>
+<li>CI split:</li>
+<li>Fast smoke on each PR</li>
+<li>Heavier integration profile on schedule/manual</li>
+</ul>
+<h2 id="7-risks">7) Risks<a class="headerlink" href="#7-risks" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Opus backend differences across platforms.</li>
+<li>Reconnect race conditions in async tasks.</li>
+<li>Stats drift if metric units are not fixed in docs/tests.</li>
+</ul>
+<p>Mitigation:
+- strict typed errors,
+- state machine invariants,
+- unit-tested metric contract and fixtures.</p>
+<h2 id="8-acceptance-mapping">8) Acceptance mapping<a class="headerlink" href="#8-acceptance-mapping" title="Permanent link">&para;</a></h2>
+<ul>
+<li>
+<h1 id="123-high-level-pcm-apis-operational-and-tested">1/#2/#3: high-level PCM APIs operational and tested<a class="headerlink" href="#123-high-level-pcm-apis-operational-and-tested" title="Permanent link">&para;</a></h1>
+</li>
+<li>
+<h1 id="4-cli-audio-workflow-commands-work-end-to-end">4: CLI audio workflow commands work end-to-end<a class="headerlink" href="#4-cli-audio-workflow-commands-work-end-to-end" title="Permanent link">&para;</a></h1>
+</li>
+<li>
+<h1 id="5-ci-smokeintegration-split-stable">5: CI smoke/integration split stable<a class="headerlink" href="#5-ci-smokeintegration-split-stable" title="Permanent link">&para;</a></h1>
+</li>
+<li>
+<h1 id="6-get_audio_stats-cli-stats-output">6: <code>get_audio_stats()</code> + CLI stats output<a class="headerlink" href="#6-get_audio_stats-cli-stats-output" title="Permanent link">&para;</a></h1>
+</li>
+<li>
+<h1 id="7-reconnect-recovery-behavior-deterministic">7: reconnect recovery behavior deterministic<a class="headerlink" href="#7-reconnect-recovery-behavior-deterministic" title="Permanent link">&para;</a></h1>
+</li>
+<li>
+<h1 id="8-audio-caps-safe-defaults">8: <code>audio caps</code> + safe defaults<a class="headerlink" href="#8-audio-caps-safe-defaults" title="Permanent link">&para;</a></h1>
+</li>
+<li>
+<h1 id="10-naming-map-deprecation-warnings-migration-notes">10: naming map + deprecation warnings + migration notes<a class="headerlink" href="#10-naming-map-deprecation-warnings-migration-notes" title="Permanent link">&para;</a></h1>
+</li>
+</ul>
+<h2 id="9-open-questions-for-maintainer-approval">9) Open questions for maintainer approval<a class="headerlink" href="#9-open-questions-for-maintainer-approval" title="Permanent link">&para;</a></h2>
 <ol>
-<li>For each character at position <code>i</code>: compute index = <code>ord(char) + i</code></li>
-<li>If index &gt; 126: index = <code>32 + (index % 127)</code></li>
-<li>Look up in the substitution table (128-byte constant)</li>
+<li>Deprecation window length: exactly 2 minor releases OK?</li>
+<li>Keep current ambiguous names as low-level aliases or add hard warnings immediately?</li>
+<li>Should <code>--stats</code> print periodic stream stats (live) or end-of-run summary by default?</li>
+<li>Is <code>opuslib</code> optional dependency acceptable as the default high-level backend?</li>
 </ol>
-<p>This is <strong>obfuscation, not encryption</strong>. The substitution table is publicly known.</p>
-<h3 id="auth-response-0x60-bytes">Auth Response (0x60 bytes)<a class="headerlink" href="#auth-response-0x60-bytes" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>Offset  Size  Field
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>0x1A    2     Token request ID (echoed)
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>0x1C    4     Session token
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>0x30    4     Error code (0 = success, 0xFEFFFFFF/0xFFFFFFFF = failure)
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>0x40    16    Connection type string
-</code></pre></div>
-<h3 id="token-ack-0x40-bytes">Token Ack (0x40 bytes)<a class="headerlink" href="#token-ack-0x40-bytes" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>Offset  Size  Endian  Field
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>0x10    4     BE      Payload size
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>0x14    1             Request/reply (0x01)
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>0x15    1             Request type (0x02 = token ack)
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>0x16    2     BE      Inner sequence
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>0x1A    2     LE      Token request ID
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>0x1C    4     LE      Token
-<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>0x24    2     BE      Reset capability (0x0798)
-</code></pre></div>
-<h2 id="conninfo-exchange">Conninfo Exchange<a class="headerlink" href="#conninfo-exchange" title="Permanent link">&para;</a></h2>
-<h3 id="conninfo-packet-0x90-bytes">Conninfo Packet (0x90 bytes)<a class="headerlink" href="#conninfo-packet-0x90-bytes" title="Permanent link">&para;</a></h3>
-<p>Sent by both radio and client. Contains:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>Offset  Size  Field
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>0x15    1     Request type (0x03 = conninfo)
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>0x1C    4     Token
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>0x20    16    GUID / MAC area
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>0x40    32    Device name
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>0x60    16    Encoded username
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>0x70    1     RX enable
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>0x71    1     TX enable
-<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>0x72    1     RX codec
-<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>0x73    1     TX codec
-<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>0x74    4     RX sample rate (BE)
-<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>0x78    4     TX sample rate (BE)
-<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>0x7C    4     CI-V local port (BE)
-<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>0x80    4     Audio local port (BE)
-<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>0x84    4     TX buffer latency ms (BE)
-</code></pre></div>
-<p><strong>Critical:</strong> The client must echo the radio's GUID (0x20–0x2F from the radio's conninfo) in its own conninfo. Otherwise, the status packet will report CI-V port = 0.</p>
-<h3 id="status-packet-0x50-bytes">Status Packet (0x50 bytes)<a class="headerlink" href="#status-packet-0x50-bytes" title="Permanent link">&para;</a></h3>
-<p>Sent by the radio after receiving the client's conninfo:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>Offset  Size  Endian  Field
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>0x30    4     LE      Error code
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>0x40    1             Disconnect flag
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>0x42    2     BE      CI-V port
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>0x46    2     BE      Audio port
-</code></pre></div>
-<h2 id="ci-v-over-udp">CI-V Over UDP<a class="headerlink" href="#ci-v-over-udp" title="Permanent link">&para;</a></h2>
-<h3 id="ci-v-data-packet">CI-V Data Packet<a class="headerlink" href="#ci-v-data-packet" title="Permanent link">&para;</a></h3>
-<p>CI-V frames are wrapped in UDP data packets on port 50002:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>Offset  Size  Field
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>0x00    4     Total packet length
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>0x04    2     Type (0x00 = DATA)
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>0x06    2     Sequence
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>0x08    4     Sender ID
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>0x0C    4     Receiver ID
-<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>0x10    1     Reply marker (0xC1 for CI-V data)
-<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>0x11    2     CI-V frame length (LE)
-<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>0x13    2     Send sequence (BE)
-<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>0x15    ...   CI-V frame data
-</code></pre></div>
-<p>The CI-V header is 0x15 bytes (not 0x10 — there's a 5-byte sub-header after the standard packet header).</p>
-<h3 id="openclose-packet-0x16-bytes">OpenClose Packet (0x16 bytes)<a class="headerlink" href="#openclose-packet-0x16-bytes" title="Permanent link">&para;</a></h3>
-<p>Sent to start/stop the CI-V data stream:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>Offset  Size  Field
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>0x10    2     Data (0x01C0)
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>0x13    2     Send sequence (BE)
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>0x15    1     Magic (0x04 = open, 0x00 = close)
-</code></pre></div>
-<h2 id="keep-alive">Keep-Alive<a class="headerlink" href="#keep-alive" title="Permanent link">&para;</a></h2>
-<h3 id="ping-packet-0x15-bytes">Ping Packet (0x15 bytes)<a class="headerlink" href="#ping-packet-0x15-bytes" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>Offset  Size  Field
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>0x00    4     Length (0x15)
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>0x04    2     Type (0x07 = PING)
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>0x06    2     Ping sequence
-<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>0x08    4     Sender ID
-<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>0x0C    4     Receiver ID
-<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>0x10    1     Flag (0x00 = request, 0x01 = reply)
-<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>0x11    4     Timestamp (LE, milliseconds)
-</code></pre></div>
-<p>Pings are sent every 500ms. The radio drops connections that stop pinging.</p>
-<h2 id="retransmit">Retransmit<a class="headerlink" href="#retransmit" title="Permanent link">&para;</a></h2>
-<p>If a sequence gap is detected, the receiver sends a retransmit request:</p>
-<ul>
-<li><strong>Single missing:</strong> 0x10-byte control packet with type=0x01 and the missing seq in the seq field</li>
-<li><strong>Multiple missing:</strong> 0x10+ byte packet with type=0x01, followed by pairs of (seq, seq) for each missing packet</li>
-</ul>
-<h2 id="ci-v-frame-format">CI-V Frame Format<a class="headerlink" href="#ci-v-frame-format" title="Permanent link">&para;</a></h2>
-<p>Standard Icom CI-V serial protocol, encapsulated in UDP:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>FE FE &lt;to&gt; &lt;from&gt; &lt;cmd&gt; [&lt;sub&gt;] [&lt;data&gt;...] FD
-</code></pre></div>
-<ul>
-<li><code>FE FE</code> — preamble</li>
-<li><code>&lt;to&gt;</code> — destination address (radio = 0x98 for IC-7610)</li>
-<li><code>&lt;from&gt;</code> — source address (controller = 0xE0)</li>
-<li><code>&lt;cmd&gt;</code> — command byte</li>
-<li><code>&lt;sub&gt;</code> — sub-command (optional, depends on command)</li>
-<li><code>&lt;data&gt;</code> — payload (variable length)</li>
-<li><code>FD</code> — terminator</li>
-</ul>
-<h3 id="bcd-frequency-encoding">BCD Frequency Encoding<a class="headerlink" href="#bcd-frequency-encoding" title="Permanent link">&para;</a></h3>
-<p>Frequencies are encoded as 5-byte little-endian BCD:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>14,074,000 Hz → 00 40 07 14 00
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>
-<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>Byte 0: 00 → digits 0,0 (1 Hz, 10 Hz)
-<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>Byte 1: 40 → digits 4,0 (100 Hz, 1 kHz)
-<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>Byte 2: 07 → digits 0,7 (10 kHz, 100 kHz)
-<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>Byte 3: 14 → digits 1,4 (1 MHz, 10 MHz)
-<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>Byte 4: 00 → digits 0,0 (100 MHz, 1 GHz)
-</code></pre></div>
-<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
-<ul>
-<li><a href="https://wfview.org/">wfview</a> — open-source Icom remote control software (GPLv3)</li>
-<li><code>packettypes.h</code> — packet structure definitions</li>
-<li><code>icomudpbase.cpp</code> — base UDP handling</li>
-<li><code>icomudphandler.cpp</code> — authentication and handshake</li>
-<li><code>icomudpcivdata.cpp</code> — CI-V data flow</li>
-<li><code>icomcommander.cpp</code> — CI-V command encoding</li>
-</ul>
-<h2 id="legal-note">Legal Note<a class="headerlink" href="#legal-note" title="Permanent link">&para;</a></h2>
-<p>Protocol reverse engineering for interoperability is protected by:</p>
-<ul>
-<li><strong>EU Directive 2009/24/EC</strong> (Software Directive, Article 6)</li>
-<li><strong>US DMCA</strong> interoperability exception (17 U.S.C. § 1201(f))</li>
-</ul>
-<p>This library is a clean-room implementation based on protocol understanding, not a derivative of wfview's GPLv3 code.</p>
 
 
 
