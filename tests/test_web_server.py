@@ -870,6 +870,62 @@ class TestBackpressure:
 # ---------------------------------------------------------------------------
 
 
+class TestAudioFrameFormat:
+    def test_audio_frame_header_size(self) -> None:
+        from icom_lan.web.protocol import AUDIO_HEADER_SIZE, encode_audio_frame
+        frame = encode_audio_frame(0x10, 0x01, 0, 480, 1, 20, b"")
+        assert len(frame) == AUDIO_HEADER_SIZE
+
+    def test_audio_rx_msg_type(self) -> None:
+        from icom_lan.web.protocol import encode_audio_frame
+        frame = encode_audio_frame(0x10, 0x01, 42, 480, 1, 20, b"\x00" * 100)
+        assert frame[0] == 0x10
+
+    def test_audio_tx_msg_type(self) -> None:
+        from icom_lan.web.protocol import encode_audio_frame
+        frame = encode_audio_frame(0x11, 0x01, 0, 480, 1, 20, b"\x00" * 50)
+        assert frame[0] == 0x11
+
+    def test_audio_codec_byte(self) -> None:
+        from icom_lan.web.protocol import AUDIO_CODEC_OPUS, encode_audio_frame
+        frame = encode_audio_frame(0x10, AUDIO_CODEC_OPUS, 0, 480, 1, 20, b"\x01")
+        assert frame[1] == AUDIO_CODEC_OPUS
+
+    def test_audio_sequence_le(self) -> None:
+        import struct
+        from icom_lan.web.protocol import encode_audio_frame
+        frame = encode_audio_frame(0x10, 0x01, 0x1234, 480, 1, 20, b"")
+        seq = struct.unpack_from("<H", frame, 2)[0]
+        assert seq == 0x1234
+
+    def test_audio_sample_rate_le(self) -> None:
+        import struct
+        from icom_lan.web.protocol import encode_audio_frame
+        frame = encode_audio_frame(0x10, 0x01, 0, 480, 1, 20, b"")
+        sr = struct.unpack_from("<H", frame, 4)[0]
+        assert sr == 480
+
+    def test_audio_channels_and_frame_ms(self) -> None:
+        from icom_lan.web.protocol import encode_audio_frame
+        frame = encode_audio_frame(0x10, 0x01, 0, 480, 1, 20, b"")
+        assert frame[6] == 1  # mono
+        assert frame[7] == 20  # 20ms
+
+    def test_audio_payload_appended(self) -> None:
+        from icom_lan.web.protocol import AUDIO_HEADER_SIZE, encode_audio_frame
+        payload = b"\xaa\xbb\xcc\xdd"
+        frame = encode_audio_frame(0x10, 0x01, 0, 480, 1, 20, payload)
+        assert frame[AUDIO_HEADER_SIZE:] == payload
+        assert len(frame) == AUDIO_HEADER_SIZE + len(payload)
+
+    def test_audio_sequence_wraps(self) -> None:
+        import struct
+        from icom_lan.web.protocol import encode_audio_frame
+        frame = encode_audio_frame(0x10, 0x01, 0x10000, 480, 1, 20, b"")
+        seq = struct.unpack_from("<H", frame, 2)[0]
+        assert seq == 0  # wrapped
+
+
 class TestServerConfig:
     async def test_port_zero_assigns_ephemeral(self) -> None:
         config = WebConfig(host="127.0.0.1", port=0)

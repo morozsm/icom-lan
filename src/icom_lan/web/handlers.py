@@ -15,16 +15,20 @@ from typing import TYPE_CHECKING, Any
 
 from ..scope import ScopeFrame
 from .protocol import (
+    AUDIO_CODEC_OPUS,
+    AUDIO_HEADER_SIZE,
     METER_ALC,
     METER_POWER,
     METER_SMETER_MAIN,
     METER_SWR,
+    MSG_TYPE_AUDIO_RX,
     decode_json,
+    encode_audio_frame,
     encode_json,
     encode_meter_frame,
     encode_scope_frame,
 )
-from .websocket import WS_OP_TEXT, WebSocketConnection
+from .websocket import WS_OP_BINARY, WS_OP_TEXT, WebSocketConnection
 
 if TYPE_CHECKING:
     from ..radio import IcomRadio
@@ -543,16 +547,22 @@ class MetersHandler:
 
 
 class AudioHandler:
-    """Placeholder handler for the /api/v1/audio WebSocket channel.
+    """Handler for the /api/v1/audio WebSocket channel.
 
-    Audio streaming is not yet implemented. This handler accepts the
-    WebSocket connection, reads audio_start/stop control messages,
-    and closes gracefully.
+    Streams RX audio from the radio to the browser as binary Opus frames,
+    and accepts TX audio frames from the browser to push to the radio.
+
+    Control flow:
+        Client sends JSON text: ``audio_start`` / ``audio_stop``
+        Server sends binary Opus frames continuously while RX is active.
+        Client sends binary Opus frames while TX is active (after PTT on).
 
     Args:
         ws: Established WebSocket connection.
         radio: IcomRadio instance (may be None).
     """
+
+    HIGH_WATERMARK: int = 10  # max queued audio frames before dropping
 
     def __init__(
         self,
@@ -561,18 +571,132 @@ class AudioHandler:
     ) -> None:
         self._ws = ws
         self._radio = radio
+        self._rx_active = False
+        self._tx_active = False
+        self._seq: int = 0
+        self._frame_queue: asyncio.Queue[bytes] = asyncio.Queue(
+            maxsize=self.HIGH_WATERMARK,
+        )
+        self._done = asyncio.Event()
 
     async def run(self) -> None:
-        """Run the audio channel lifecycle (placeholder)."""
+        """Run the audio channel lifecycle."""
+        sender = asyncio.create_task(self._sender_loop())
+        try:
+            await self._reader_loop()
+        finally:
+            self._done.set()
+            sender.cancel()
+            await self._stop_rx()
+
+    async def _reader_loop(self) -> None:
+        """Read control messages and TX audio from client."""
         try:
             while True:
                 opcode, payload = await self._ws.recv()
                 if opcode == WS_OP_TEXT:
                     try:
                         msg = decode_json(payload.decode("utf-8"))
-                        logger.debug("audio: control message: %r", msg.get("type"))
                     except ValueError:
-                        pass
-                # Binary audio frames from client are ignored for now
+                        continue
+                    await self._handle_control(msg)
+                elif opcode == WS_OP_BINARY:
+                    # TX audio frame from browser
+                    await self._handle_tx_audio(payload)
         except EOFError:
+            pass
+
+    async def _handle_control(self, msg: dict[str, Any]) -> None:
+        """Handle audio_start / audio_stop messages."""
+        msg_type = msg.get("type", "")
+        direction = msg.get("direction", "rx")
+
+        if msg_type == "audio_start":
+            if direction == "rx":
+                await self._start_rx()
+            elif direction == "tx":
+                self._tx_active = True
+                logger.info("audio: TX active")
+        elif msg_type == "audio_stop":
+            if direction == "rx":
+                await self._stop_rx()
+            elif direction == "tx":
+                self._tx_active = False
+                logger.info("audio: TX stopped")
+
+    async def _start_rx(self) -> None:
+        """Start receiving audio from the radio."""
+        if self._rx_active or not self._radio:
+            return
+        self._rx_active = True
+        logger.info("audio: starting RX stream")
+
+        def _on_packet(pkt: Any) -> None:
+            if pkt is None:
+                return
+            frame = encode_audio_frame(
+                MSG_TYPE_AUDIO_RX,
+                AUDIO_CODEC_OPUS,
+                self._seq,
+                480,  # 48000 / 100
+                1,    # mono
+                20,   # 20ms frames
+                pkt.data,
+            )
+            self._seq = (self._seq + 1) & 0xFFFF
+            try:
+                self._frame_queue.put_nowait(frame)
+            except asyncio.QueueFull:
+                # Drop oldest, enqueue newest (backpressure)
+                try:
+                    self._frame_queue.get_nowait()
+                except asyncio.QueueEmpty:
+                    pass
+                try:
+                    self._frame_queue.put_nowait(frame)
+                except asyncio.QueueFull:
+                    pass
+
+        try:
+            await self._radio.start_audio_rx_opus(_on_packet)
+        except Exception:
+            logger.exception("audio: failed to start RX")
+            self._rx_active = False
+
+    async def _stop_rx(self) -> None:
+        """Stop receiving audio from the radio."""
+        if not self._rx_active or not self._radio:
+            return
+        self._rx_active = False
+        try:
+            await self._radio.stop_audio_rx_opus()
+        except Exception:
+            logger.debug("audio: stop RX error (ignored)", exc_info=True)
+
+    async def _handle_tx_audio(self, payload: bytes) -> None:
+        """Forward TX audio from browser to radio."""
+        if not self._tx_active or not self._radio:
+            return
+        if len(payload) < AUDIO_HEADER_SIZE:
+            return
+        # Extract opus data after 8-byte header
+        opus_data = payload[AUDIO_HEADER_SIZE:]
+        if opus_data:
+            try:
+                await self._radio.push_audio_tx_opus(opus_data)
+            except Exception:
+                logger.debug("audio: push TX error", exc_info=True)
+
+    async def _sender_loop(self) -> None:
+        """Send queued audio frames to the WebSocket client."""
+        try:
+            while not self._done.is_set():
+                try:
+                    frame = await asyncio.wait_for(
+                        self._frame_queue.get(), timeout=0.5,
+                    )
+                    await self._ws.send_binary(frame)
+                except TimeoutError:
+                    continue
+        except (EOFError, OSError):
             pass

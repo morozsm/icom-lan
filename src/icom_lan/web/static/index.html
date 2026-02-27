@@ -136,6 +136,18 @@ body {
 #freq-input:focus { border-color: #58a6ff; }
 #freq-modal-hint { color: #8b949e; font-size: 11px; margin-top: 8px; }
 
+/* === Audio Controls === */
+.audio-btn {
+  padding: 4px 12px; border: 1px solid #30363d; border-radius: 3px;
+  background: #21262d; color: #c9d1d9; cursor: pointer; font-family: inherit; font-size: 12px;
+  transition: all 0.15s;
+}
+.audio-btn:hover { background: #30363d; }
+.audio-btn.active { background: #238636; color: #fff; border-color: #238636; }
+.audio-btn.active:hover { background: #2ea043; }
+#audio-vol { width: 80px; accent-color: #58a6ff; vertical-align: middle; }
+#audio-status { font-size: 10px; color: #8b949e; }
+
 /* === Tooltip === */
 #tooltip {
   position: absolute; background: rgba(22,27,34,0.92); color: #c9d1d9;
@@ -200,6 +212,12 @@ body {
       <button class="att-btn" data-pre="0" onclick="setPreamp(0)">OFF</button>
       <button class="att-btn" data-pre="1" onclick="setPreamp(1)">1</button>
       <button class="att-btn" data-pre="2" onclick="setPreamp(2)">2</button>
+    </div>
+    <div class="ctrl-group">
+      <label>Audio</label>
+      <button class="audio-btn" id="rx-btn" onclick="toggleRxAudio()">🔊 RX</button>
+      <input type="range" id="audio-vol" min="0" max="100" value="80" oninput="setAudioVolume(this.value)">
+      <span id="audio-status"></span>
     </div>
     <button id="ptt-btn" onmousedown="setPtt(true)" onmouseup="setPtt(false)" onmouseleave="setPtt(false)">PTT</button>
   </div>
@@ -596,6 +614,215 @@ wfCv.parentElement.addEventListener('mousemove', e=>{
   tooltip.style.display='block';
 });
 wfCv.parentElement.addEventListener('mouseleave', ()=>{tooltip.style.display='none'});
+
+// ===== Audio =====
+const AUDIO_MSG_RX = 0x10;
+const AUDIO_MSG_TX = 0x11;
+const AUDIO_CODEC_OPUS = 0x01;
+const AUDIO_HEADER = 8;
+
+let audioWs = null, audioBackoff = WS_RECONNECT_MIN;
+let audioCtx = null, gainNode = null;
+let rxActive = false, txActive = false;
+let audioDecoder = null;
+let txStream = null, txProcessor = null;
+
+const rxBtn = $('rx-btn');
+const audioVolSlider = $('audio-vol');
+const audioStatusEl = $('audio-status');
+
+function initAudioCtx() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 48000 });
+  gainNode = audioCtx.createGain();
+  gainNode.gain.value = audioVolSlider.value / 100;
+  gainNode.connect(audioCtx.destination);
+}
+
+function setAudioVolume(v) {
+  if (gainNode) gainNode.gain.value = v / 100;
+}
+window.setAudioVolume = setAudioVolume;
+
+function connectAudioWs() {
+  audioWs = new WebSocket(wsBase() + '/api/v1/audio');
+  audioWs.binaryType = 'arraybuffer';
+  audioWs.onopen = () => {
+    audioBackoff = WS_RECONNECT_MIN;
+    if (rxActive) audioWs.send(JSON.stringify({ type: 'audio_start', direction: 'rx', codec: 'opus', sample_rate: 48000 }));
+  };
+  audioWs.onmessage = ev => {
+    if (ev.data instanceof ArrayBuffer && rxActive) handleRxAudioFrame(ev.data);
+  };
+  audioWs.onclose = () => {
+    if (rxActive) { setTimeout(connectAudioWs, audioBackoff); audioBackoff = Math.min(audioBackoff * 2, WS_RECONNECT_MAX); }
+  };
+  audioWs.onerror = () => audioWs.close();
+}
+
+function handleRxAudioFrame(buf) {
+  if (buf.byteLength < AUDIO_HEADER) return;
+  const dv = new DataView(buf);
+  const msgType = dv.getUint8(0);
+  if (msgType !== AUDIO_MSG_RX) return;
+  const codec = dv.getUint8(1);
+  const opusData = new Uint8Array(buf, AUDIO_HEADER);
+
+  if (codec === AUDIO_CODEC_OPUS && opusData.length > 0) {
+    decodeAndPlayOpus(opusData);
+  }
+}
+
+// Use WebCodecs AudioDecoder if available, fallback to raw PCM assumption
+function decodeAndPlayOpus(opusData) {
+  if (typeof AudioDecoder !== 'undefined') {
+    if (!audioDecoder) {
+      audioDecoder = new AudioDecoder({
+        output: (audioData) => {
+          // AudioData → Float32Array → AudioBuffer → play
+          const samples = new Float32Array(audioData.numberOfFrames);
+          audioData.copyTo(samples, { planeIndex: 0 });
+          const abuf = audioCtx.createBuffer(1, samples.length, audioData.sampleRate);
+          abuf.copyToChannel(samples, 0);
+          const src = audioCtx.createBufferSource();
+          src.buffer = abuf;
+          src.connect(gainNode);
+          src.start(0);
+          audioData.close();
+        },
+        error: (e) => { console.warn('AudioDecoder error:', e); }
+      });
+      audioDecoder.configure({ codec: 'opus', sampleRate: 48000, numberOfChannels: 1 });
+    }
+    try {
+      audioDecoder.decode(new EncodedAudioChunk({ type: 'key', timestamp: 0, data: opusData }));
+    } catch (e) { /* decoder may be closed */ }
+  }
+  // If AudioDecoder not available, audio won't play (browser too old)
+}
+
+function toggleRxAudio() {
+  if (!rxActive) {
+    initAudioCtx();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    rxActive = true;
+    rxBtn.classList.add('active');
+    rxBtn.textContent = '🔊 RX ON';
+    audioStatusEl.textContent = 'Streaming...';
+    if (!audioWs || audioWs.readyState > 1) {
+      connectAudioWs();
+    } else {
+      audioWs.send(JSON.stringify({ type: 'audio_start', direction: 'rx', codec: 'opus', sample_rate: 48000 }));
+    }
+  } else {
+    rxActive = false;
+    rxBtn.classList.remove('active');
+    rxBtn.textContent = '🔊 RX';
+    audioStatusEl.textContent = '';
+    if (audioWs && audioWs.readyState === 1) {
+      audioWs.send(JSON.stringify({ type: 'audio_stop', direction: 'rx' }));
+    }
+    if (audioDecoder) {
+      try { audioDecoder.close(); } catch(e) {}
+      audioDecoder = null;
+    }
+  }
+}
+window.toggleRxAudio = toggleRxAudio;
+
+// ===== TX Audio (mic capture) =====
+async function startTxAudio() {
+  if (txActive) return;
+  initAudioCtx();
+  if (audioCtx.state === 'suspended') await audioCtx.resume();
+
+  try {
+    txStream = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 48000, channelCount: 1, echoCancellation: true, noiseSuppression: true } });
+  } catch(e) { console.warn('Mic access denied:', e); return; }
+
+  txActive = true;
+  if (!audioWs || audioWs.readyState > 1) connectAudioWs();
+
+  // Need to encode to Opus — use AudioEncoder if available
+  if (typeof AudioEncoder !== 'undefined') {
+    const source = audioCtx.createMediaStreamSource(txStream);
+    // Use MediaStreamTrackProcessor for raw PCM → AudioEncoder → Opus
+    if (typeof MediaStreamTrackProcessor !== 'undefined') {
+      const track = txStream.getAudioTracks()[0];
+      const processor = new MediaStreamTrackProcessor({ track });
+      const reader = processor.readable.getReader();
+
+      const encoder = new AudioEncoder({
+        output: (chunk) => {
+          const data = new Uint8Array(chunk.byteLength);
+          chunk.copyTo(data);
+          // Build wire frame: 8-byte header + opus data
+          const frame = new ArrayBuffer(AUDIO_HEADER + data.length);
+          const dv = new DataView(frame);
+          dv.setUint8(0, AUDIO_MSG_TX);
+          dv.setUint8(1, AUDIO_CODEC_OPUS);
+          dv.setUint16(2, 0, true); // seq (server doesn't use it)
+          dv.setUint16(4, 480, true); // 48000/100
+          dv.setUint8(6, 1); // mono
+          dv.setUint8(7, 20); // 20ms
+          new Uint8Array(frame, AUDIO_HEADER).set(data);
+          if (audioWs && audioWs.readyState === 1) audioWs.send(frame);
+        },
+        error: (e) => console.warn('AudioEncoder error:', e)
+      });
+      encoder.configure({ codec: 'opus', sampleRate: 48000, numberOfChannels: 1, bitrate: 32000 });
+
+      txProcessor = { reader, encoder, source };
+
+      // Read loop
+      (async () => {
+        try {
+          while (txActive) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            encoder.encode(value);
+            value.close();
+          }
+        } catch(e) { /* stream ended */ }
+      })();
+
+      // Tell server TX is starting
+      if (audioWs && audioWs.readyState === 1) {
+        audioWs.send(JSON.stringify({ type: 'audio_start', direction: 'tx', codec: 'opus', sample_rate: 48000 }));
+      }
+    }
+  }
+}
+
+function stopTxAudio() {
+  if (!txActive) return;
+  txActive = false;
+  if (txProcessor) {
+    try { txProcessor.reader.cancel(); } catch(e) {}
+    try { txProcessor.encoder.close(); } catch(e) {}
+    try { txProcessor.source.disconnect(); } catch(e) {}
+    txProcessor = null;
+  }
+  if (txStream) {
+    txStream.getTracks().forEach(t => t.stop());
+    txStream = null;
+  }
+  if (audioWs && audioWs.readyState === 1) {
+    audioWs.send(JSON.stringify({ type: 'audio_stop', direction: 'tx' }));
+  }
+}
+
+// Hook TX audio into PTT — update setPtt:
+const _origSetPtt = setPtt;
+setPtt = function(state) {
+  if (state === pttState) return;
+  pttState = state;
+  pttBtn.classList.toggle('active', state);
+  sendCmd('ptt', { state });
+  if (state) startTxAudio();
+  else stopTxAudio();
+};
+window.setPtt = setPtt;
 
 // ===== Init =====
 resize();

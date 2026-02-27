@@ -46,6 +46,10 @@ __all__ = [
     "METER_HEADER_SIZE",
     "encode_scope_frame",
     "encode_meter_frame",
+    "encode_audio_frame",
+    "AUDIO_HEADER_SIZE",
+    "AUDIO_CODEC_OPUS",
+    "AUDIO_CODEC_PCM16",
     "encode_json",
     "decode_json",
 ]
@@ -121,6 +125,46 @@ def encode_meter_frame(meters: list[tuple[int, int]], sequence: int) -> bytes:
         for meter_id, value in meters
     )
     return header + data
+
+
+def encode_audio_frame(
+    msg_type: int,
+    codec: int,
+    sequence: int,
+    sample_rate: int,
+    channels: int,
+    frame_ms: int,
+    payload: bytes,
+) -> bytes:
+    """Serialize an audio frame to binary wire format (RFC).
+
+    Args:
+        msg_type: 0x10 for RX, 0x11 for TX.
+        codec: 0x01 = Opus, 0x02 = PCM16.
+        sequence: Wrapping sequence counter (uint16).
+        sample_rate: Sample rate / 100 as uint16 (e.g. 480 for 48000).
+        channels: 1 = mono, 2 = stereo.
+        frame_ms: Frame duration in ms (typically 20).
+        payload: Codec-specific audio data.
+
+    Returns:
+        8-byte header + payload bytes.
+    """
+    header = struct.pack(
+        "<BBHHBB",
+        msg_type,
+        codec,
+        sequence & 0xFFFF,
+        sample_rate,
+        channels,
+        frame_ms,
+    )
+    return header + payload
+
+
+AUDIO_HEADER_SIZE: int = 8
+AUDIO_CODEC_OPUS: int = 0x01
+AUDIO_CODEC_PCM16: int = 0x02
 
 
 def encode_json(msg: dict[str, Any]) -> str:
