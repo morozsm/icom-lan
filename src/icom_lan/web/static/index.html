@@ -154,6 +154,61 @@ body {
   padding: 3px 8px; border-radius: 4px; font-size: 12px; pointer-events: none;
   display: none; z-index: 10; border: 1px solid #30363d;
 }
+
+/* === Toast notifications === */
+#toast {
+  position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+  background: #f85149; color: #fff; padding: 8px 20px; border-radius: 6px;
+  font-size: 13px; z-index: 200; opacity: 0; transition: opacity 0.3s;
+  pointer-events: none; max-width: 90vw; text-align: center;
+}
+#toast.show { opacity: 1; }
+#toast.warn { background: #d29922; }
+#toast.info { background: #1f6feb; }
+
+/* === Theme toggle === */
+#theme-btn {
+  background: none; border: none; color: #8b949e; cursor: pointer;
+  font-size: 16px; padding: 2px 6px; border-radius: 3px;
+}
+#theme-btn:hover { background: #21262d; }
+
+/* === Light theme === */
+body.light { background: #f6f8fa; color: #1f2328; }
+body.light #status-bar, body.light #controls, body.light #meters,
+body.light #freq-axis, body.light #freq-modal-box { background: #fff; border-color: #d0d7de; }
+body.light .ctrl-group, body.light #spectrum-wrap { background: #f6f8fa; border-color: #d0d7de; }
+body.light #waterfall-wrap { border-color: #d0d7de; }
+body.light .ctrl-group select, body.light .ctrl-group input[type="number"] { background: #fff; color: #1f2328; border-color: #d0d7de; }
+body.light .vfo-btn, body.light .att-btn, body.light .audio-btn { background: #f6f8fa; color: #1f2328; border-color: #d0d7de; }
+body.light .meter-bar-wrap { background: #f6f8fa; border-color: #d0d7de; }
+body.light .meter-label, body.light .meter-value, body.light #radio-model,
+body.light .ctrl-group label, body.light #audio-status { color: #656d76; }
+body.light #freq-display { color: #1a7f37; }
+body.light #tooltip { background: rgba(255,255,255,0.95); color: #1f2328; border-color: #d0d7de; }
+body.light #freq-input { background: #fff; color: #1a7f37; border-color: #d0d7de; }
+body.light #toast { }
+
+/* === Responsive: tablet/mobile === */
+@media (max-width: 768px) {
+  #status-bar { padding: 4px 8px; gap: 6px; flex-wrap: wrap; }
+  #freq-display { font-size: 18px; margin-left: 0; flex-basis: 100%; text-align: right; order: 10; }
+  #spectrum-wrap { height: 120px; }
+  #controls { gap: 4px; padding: 4px; }
+  .ctrl-group { padding: 3px 5px; gap: 4px; }
+  .ctrl-group label { font-size: 10px; }
+  #meters { gap: 4px; padding: 4px; }
+  .meter { min-width: 80px; }
+}
+@media (max-width: 480px) {
+  body { font-size: 12px; }
+  #status-bar h1 { font-size: 13px; }
+  #freq-display { font-size: 16px; }
+  #spectrum-wrap { height: 90px; }
+  #controls { flex-direction: column; }
+  .ctrl-group { flex-wrap: wrap; }
+  #ptt-btn { width: 100%; padding: 10px; font-size: 16px; }
+}
 </style>
 </head>
 <body>
@@ -163,8 +218,10 @@ body {
   <div class="status-dot" id="status-dot"></div>
   <span id="conn-text">Disconnected</span>
   <span id="radio-model"></span>
+  <button id="theme-btn" onclick="toggleTheme()" title="Toggle light/dark theme">🌙</button>
   <span id="freq-display" title="Click to enter frequency">—</span>
 </div>
+<div id="toast"></div>
 
 <div id="main">
   <div id="spectrum-wrap"><canvas id="spectrum"></canvas></div>
@@ -531,11 +588,11 @@ freqModal.addEventListener('click', e=>{if(e.target===freqModal) freqModal.class
 function connectControl(){
   controlWs=new WebSocket(wsBase()+'/api/v1/ws');
   setStatus('reconnecting','Connecting...');
-  controlWs.onopen=()=>{controlBackoff=WS_RECONNECT_MIN; setStatus('connected','Connected')};
+  controlWs.onopen=()=>{controlBackoff=WS_RECONNECT_MIN; setStatus('connected','Connected'); showToast('Connected','info',2000)};
   controlWs.onmessage=ev=>{
     try{handleCtrlMsg(JSON.parse(ev.data))}catch(e){console.warn('ctrl parse:',e)}
   };
-  controlWs.onclose=()=>{setStatus('reconnecting','Reconnecting...');setTimeout(connectControl,controlBackoff);controlBackoff=Math.min(controlBackoff*2,WS_RECONNECT_MAX)};
+  controlWs.onclose=()=>{setStatus('reconnecting','Reconnecting...');showToast('Connection lost. Reconnecting...','warn',5000);setTimeout(connectControl,controlBackoff);controlBackoff=Math.min(controlBackoff*2,WS_RECONNECT_MAX)};
   controlWs.onerror=()=>controlWs.close();
 }
 function handleCtrlMsg(m){
@@ -555,7 +612,7 @@ function handleCtrlMsg(m){
       else if(m.name==='ptt'&&m.data){pttState=m.data.state;pttBtn.classList.toggle('active',pttState)}
       else if(m.name==='scope_meta'&&m.data){startFreq=m.data.start_freq||startFreq;endFreq=m.data.end_freq||endFreq;drawFreqAxis()}
       break;
-    case 'response': if(!m.ok) console.warn('cmd err:',m.error,m.message); break;
+    case 'response': if(!m.ok){console.warn('cmd err:',m.error,m.message);showToast(m.message||m.error||'Command failed')} break;
   }
 }
 
@@ -614,6 +671,56 @@ wfCv.parentElement.addEventListener('mousemove', e=>{
   tooltip.style.display='block';
 });
 wfCv.parentElement.addEventListener('mouseleave', ()=>{tooltip.style.display='none'});
+
+// ===== Toast Notifications =====
+const toastEl = $('toast');
+let toastTimer = null;
+function showToast(msg, type='error', duration=3000) {
+  toastEl.textContent = msg;
+  toastEl.className = 'show' + (type !== 'error' ? ' ' + type : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { toastEl.className = ''; }, duration);
+}
+
+// ===== Theme Toggle =====
+const themeBtn = $('theme-btn');
+function toggleTheme() {
+  const isLight = document.body.classList.toggle('light');
+  themeBtn.textContent = isLight ? '☀️' : '🌙';
+  try { localStorage.setItem('icom-lan-theme', isLight ? 'light' : 'dark'); } catch(e) {}
+}
+window.toggleTheme = toggleTheme;
+// Restore saved theme
+try {
+  if (localStorage.getItem('icom-lan-theme') === 'light') {
+    document.body.classList.add('light');
+    themeBtn.textContent = '☀️';
+  }
+} catch(e) {}
+
+// ===== Keyboard Shortcuts =====
+document.addEventListener('keydown', e => {
+  // Don't handle when typing in input
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+
+  switch(e.key.toLowerCase()) {
+    case ' ':  // Space = PTT (hold)
+      e.preventDefault();
+      if (!pttState) setPtt(true);
+      break;
+    case 'a': selectVfo('A'); break;
+    case 'b': selectVfo('B'); break;
+    case 'r': toggleRxAudio(); break;
+    case 'f': // F = frequency entry
+      e.preventDefault();
+      freqDisplayEl.click();
+      break;
+    case 't': toggleTheme(); break;
+  }
+});
+document.addEventListener('keyup', e => {
+  if (e.key === ' ' && pttState) setPtt(false);
+});
 
 // ===== Audio =====
 const AUDIO_MSG_RX = 0x10;
