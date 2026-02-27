@@ -315,12 +315,17 @@ class ScopeHandler:
     async def run(self) -> None:
         """Run the scope channel lifecycle.
 
-        Registers a scope callback on the radio, then pumps frames from the
-        queue to the WebSocket until the connection closes.
+        Enables scope on the radio, registers a callback, then pumps frames
+        from the queue to the WebSocket until the connection closes.
         """
         self._running = True
         if self._radio is not None:
             self._radio.on_scope_data(self._on_scope_frame)
+            try:
+                await self._radio.enable_scope()
+                logger.info("scope: enabled on radio")
+            except Exception:
+                logger.warning("scope: failed to enable", exc_info=True)
         try:
             sender_task = asyncio.create_task(self._sender())
             try:
@@ -626,8 +631,11 @@ class AudioHandler:
 
     async def _start_rx(self) -> None:
         """Start receiving audio from the radio."""
-        if self._rx_active or not self._radio:
+        if not self._radio:
             return
+        # Stop any existing RX stream first
+        if self._rx_active:
+            await self._stop_rx()
         self._rx_active = True
         logger.info("audio: starting RX stream")
 
