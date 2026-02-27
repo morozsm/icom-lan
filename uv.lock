@@ -254,7 +254,7 @@ wheels = [
 
 [[package]]
 name = "icom-lan"
-version = "0.6.5"
+version = "0.6.6"
 source = { editable = "." }
 
 [package.optional-dependencies]

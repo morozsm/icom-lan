@@ -298,6 +298,28 @@ def _build_parser() -> argparse.ArgumentParser:
         default=False,
         help="Enable WSJT-X compatibility pre-warm (auto-enable DATA mode on first client)",
     )
+    serve_p.add_argument(
+        "--log-level",
+        dest="log_level",
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        help="Logging level for the rigctld server (default: INFO)",
+    )
+    serve_p.add_argument(
+        "--audit-log",
+        dest="audit_log",
+        default=None,
+        metavar="PATH",
+        help="Path to write JSON audit log (one line per command; default: disabled)",
+    )
+    serve_p.add_argument(
+        "--rate-limit",
+        dest="rate_limit",
+        type=float,
+        default=None,
+        metavar="N",
+        help="Max commands per second per client (default: unlimited)",
+    )
 
     # scope
     scope_p = sub.add_parser("scope", help="Capture scope/waterfall and render image")
@@ -1102,8 +1124,25 @@ async def _cmd_scope(radio: IcomRadio, args: argparse.Namespace) -> int:
 
 
 async def _cmd_serve(radio: IcomRadio, args: argparse.Namespace) -> int:
+    import logging as _logging
+
+    from .rigctld.audit import AUDIT_LOGGER_NAME, RigctldAuditFormatter
     from .rigctld.contract import RigctldConfig
     from .rigctld.server import RigctldServer
+
+    # Apply requested log level to the icom_lan logger hierarchy.
+    log_level = getattr(args, "log_level", "INFO")
+    _logging.getLogger("icom_lan").setLevel(getattr(_logging, log_level))
+
+    # Configure JSON audit log if a path was provided.
+    audit_log_path: str | None = getattr(args, "audit_log", None)
+    if audit_log_path:
+        fh = _logging.FileHandler(audit_log_path)
+        fh.setFormatter(RigctldAuditFormatter())
+        audit_logger = _logging.getLogger(AUDIT_LOGGER_NAME)
+        audit_logger.addHandler(fh)
+        audit_logger.setLevel(_logging.INFO)
+        audit_logger.propagate = False
 
     config = RigctldConfig(
         host=args.serve_host,
@@ -1112,6 +1151,7 @@ async def _cmd_serve(radio: IcomRadio, args: argparse.Namespace) -> int:
         max_clients=args.max_clients,
         cache_ttl=args.cache_ttl,
         wsjtx_compat=args.wsjtx_compat,
+        command_rate_limit=getattr(args, "rate_limit", None),
     )
     ro_str = "yes" if args.read_only else "no"
     compat_str = "on" if args.wsjtx_compat else "off"

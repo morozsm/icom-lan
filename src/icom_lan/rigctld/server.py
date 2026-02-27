@@ -15,9 +15,12 @@ and command execution to handler.py.
 from __future__ import annotations
 
 import asyncio
+import datetime
 import logging
+import time
 from typing import TYPE_CHECKING, Any
 
+from . import audit as _audit
 from .circuit_breaker import CircuitBreaker, CircuitState
 from .contract import ClientSession, HamlibError, RigctldConfig
 
@@ -78,6 +81,8 @@ class RigctldServer:
         self._rig_handler: Any = _handler
         self._poller: Any = _poller
         self._circuit_breaker: CircuitBreaker | None = _circuit_breaker
+        # Per-client sliding window for rate limiting: client_id → timestamps
+        self._rate_windows: dict[int, list[float]] = {}
 
     # ------------------------------------------------------------------
     # Diagnostics
@@ -161,6 +166,29 @@ class RigctldServer:
 
     async def __aexit__(self, *args: object) -> None:
         await self.stop()
+
+    # ------------------------------------------------------------------
+    # Rate limiting
+    # ------------------------------------------------------------------
+
+    def _check_rate_limit(self, client_id: int) -> bool:
+        """Return True if the command is allowed, False if the rate limit is exceeded.
+
+        Uses a 1-second sliding window per client.  Only allowed commands
+        consume a slot; rejected commands are not counted.
+        """
+        limit = self._config.command_rate_limit
+        if limit is None:
+            return True
+        now = time.monotonic()
+        window = self._rate_windows.setdefault(client_id, [])
+        cutoff = now - 1.0
+        while window and window[0] <= cutoff:
+            window.pop(0)
+        if len(window) >= limit:
+            return False
+        window.append(now)
+        return True
 
     # ------------------------------------------------------------------
     # Connection management
@@ -316,10 +344,22 @@ class RigctldServer:
                     logger.info("client #%d quit", client_id)
                     break
 
+                # ── rate limit ───────────────────────────────────────
+                if not self._check_rate_limit(client_id):
+                    logger.warning(
+                        "client #%d rate limited (limit=%.1f cmds/sec)",
+                        client_id,
+                        self._config.command_rate_limit,
+                    )
+                    writer.write(proto.format_error(HamlibError.EIO))
+                    await writer.drain()
+                    continue
+
                 # ── execute with command timeout ─────────────────────
                 poller_hold = bool(cmd.is_set and self._poller is not None)
                 if poller_hold:
                     self._poller.write_busy = True
+                t_start = time.monotonic()
                 try:
                     resp = await asyncio.wait_for(
                         rig_handler.execute(cmd),
@@ -355,9 +395,27 @@ class RigctldServer:
 
                 # ── send response ────────────────────────────────────
                 out = proto.format_response(cmd, resp, session)
+                duration_ms = round((time.monotonic() - t_start) * 1000, 3)
                 logger.debug("client #%d ← %r", client_id, out)
                 writer.write(out)
                 await writer.drain()
+
+                # ── audit ────────────────────────────────────────────
+                _audit.log_command(
+                    _audit.AuditRecord(
+                        timestamp=datetime.datetime.now(
+                            datetime.timezone.utc
+                        ).isoformat(),
+                        client_id=client_id,
+                        peername=session.peername,
+                        cmd=cmd.short_cmd,
+                        long_cmd=cmd.long_cmd,
+                        args=cmd.args,
+                        duration_ms=duration_ms,
+                        rprt=resp.error,
+                        is_set=cmd.is_set,
+                    )
+                )
 
         except asyncio.CancelledError:
             logger.info("client #%d cancelled (server shutdown)", client_id)
@@ -368,6 +426,7 @@ class RigctldServer:
                 "client #%d unexpected error: %s", client_id, exc, exc_info=True
             )
         finally:
+            self._rate_windows.pop(client_id, None)
             try:
                 writer.close()
                 await writer.wait_closed()
