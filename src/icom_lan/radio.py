@@ -12,6 +12,8 @@ Usage::
 from __future__ import annotations
 
 import asyncio
+import dataclasses
+import enum
 import logging
 import os
 import struct
@@ -77,7 +79,7 @@ from .exceptions import (
     TimeoutError,
 )
 from ._audio_transcoder import PcmOpusTranscoder, create_pcm_opus_transcoder
-from .audio import AudioPacket, AudioStats, AudioStream
+from .audio import AudioPacket, AudioState, AudioStats, AudioStream
 from .commander import IcomCommander, Priority
 from .civ import (
     CivEvent,
@@ -97,7 +99,34 @@ from .types import (
     get_audio_capabilities,
 )
 
-__all__ = ["IcomRadio", "AudioCodec", "ScopeFrame", "ScopeCompletionPolicy"]
+__all__ = [
+    "AudioRecoveryState",
+    "IcomRadio",
+    "AudioCodec",
+    "ScopeFrame",
+    "ScopeCompletionPolicy",
+]
+
+
+class AudioRecoveryState(enum.Enum):
+    """State emitted by the ``on_audio_recovery`` callback."""
+
+    RECOVERING = "recovering"
+    RECOVERED = "recovered"
+    FAILED = "failed"
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class _AudioSnapshot:
+    """Captured audio state before disconnect for auto-recovery."""
+
+    rx_active: bool
+    tx_active: bool
+    pcm_mode: bool
+    pcm_rx_callback: "Callable[[bytes | None], None] | None"
+    opus_rx_callback: "Callable[[AudioPacket | None], None] | None"
+    pcm_params: tuple[int, int, int] | None
+    jitter_depth: int
 
 logger = logging.getLogger(__name__)
 
@@ -147,6 +176,8 @@ class IcomRadio:
         reconnect_delay: float = 2.0,
         reconnect_max_delay: float = 60.0,
         watchdog_timeout: float = 30.0,
+        auto_recover_audio: bool = True,
+        on_audio_recovery: "Callable[[AudioRecoveryState], None] | None" = None,
     ) -> None:
         self._host = host
         self._port = port
@@ -193,6 +224,12 @@ class IcomRadio:
         self._watchdog_task: asyncio.Task | None = None
         self._reconnect_task: asyncio.Task | None = None
         self._intentional_disconnect = False
+        self._auto_recover_audio = auto_recover_audio
+        self._on_audio_recovery = on_audio_recovery
+        self._pcm_rx_user_callback: Callable[[bytes | None], None] | None = None
+        self._pcm_rx_jitter_depth: int = 5
+        self._opus_rx_user_callback: Callable[[AudioPacket | None], None] | None = None
+        self._opus_rx_jitter_depth: int = 5
         self._scope_assembler: ScopeAssembler = ScopeAssembler()
         self._scope_callback: Callable[[ScopeFrame], Any] | None = None
         self._civ_rx_task: asyncio.Task[None] | None = None
@@ -353,6 +390,8 @@ class IcomRadio:
                 await self._audio_stream.stop_tx()
                 self._audio_stream = None
             self._pcm_tx_fmt = None
+            self._pcm_rx_user_callback = None
+            self._opus_rx_user_callback = None
             if self._audio_transport is not None:
                 try:
                     await self._send_audio_open_close(open_stream=False)
@@ -415,6 +454,8 @@ class IcomRadio:
         self._check_connected()
         await self._ensure_audio_transport()
         assert self._audio_stream is not None
+        self._opus_rx_user_callback = callback
+        self._opus_rx_jitter_depth = jitter_depth
         await self._audio_stream.start_rx(callback, jitter_depth=jitter_depth)
 
     async def start_audio_rx_pcm(
@@ -468,6 +509,8 @@ class IcomRadio:
             channels=channels,
             frame_ms=frame_ms,
         )
+        self._pcm_rx_user_callback = callback
+        self._pcm_rx_jitter_depth = jitter_depth
         await self.start_audio_rx_opus(
             self._build_pcm_rx_callback(
                 callback,
@@ -480,10 +523,12 @@ class IcomRadio:
 
     async def stop_audio_rx_pcm(self) -> None:
         """Stop receiving decoded PCM audio from the radio."""
+        self._pcm_rx_user_callback = None
         await self.stop_audio_rx_opus()
 
     async def stop_audio_rx_opus(self) -> None:
         """Stop receiving Opus audio from the radio."""
+        self._opus_rx_user_callback = None
         if self._audio_stream is not None:
             await self._audio_stream.stop_rx()
 
@@ -767,6 +812,93 @@ class IcomRadio:
     def audio_capabilities() -> AudioCapabilities:
         """Return icom-lan audio capabilities and deterministic defaults."""
         return get_audio_capabilities()
+
+    # ------------------------------------------------------------------
+    # Audio auto-recovery helpers
+    # ------------------------------------------------------------------
+
+    def _capture_audio_snapshot(self) -> _AudioSnapshot | None:
+        """Capture current audio state for recovery after reconnect.
+
+        Returns ``None`` if no audio stream is active.
+        """
+        if self._audio_stream is None:
+            return None
+
+        state = self._audio_stream.state
+        if state == AudioState.IDLE:
+            return None
+
+        rx_active = state in (AudioState.RECEIVING, AudioState.TRANSMITTING) and (
+            self._pcm_rx_user_callback is not None
+            or self._opus_rx_user_callback is not None
+        )
+        tx_active = state == AudioState.TRANSMITTING or self._pcm_tx_fmt is not None
+        pcm_mode = self._pcm_rx_user_callback is not None or self._pcm_tx_fmt is not None
+
+        # Determine PCM params from TX format or transcoder format.
+        pcm_params = self._pcm_tx_fmt or self._pcm_transcoder_fmt
+
+        jitter_depth = (
+            self._pcm_rx_jitter_depth
+            if self._pcm_rx_user_callback is not None
+            else self._opus_rx_jitter_depth
+        )
+
+        return _AudioSnapshot(
+            rx_active=rx_active,
+            tx_active=tx_active,
+            pcm_mode=pcm_mode,
+            pcm_rx_callback=self._pcm_rx_user_callback,
+            opus_rx_callback=self._opus_rx_user_callback,
+            pcm_params=pcm_params,
+            jitter_depth=jitter_depth,
+        )
+
+    async def _recover_audio(self, snapshot: _AudioSnapshot) -> None:
+        """Attempt to restart audio streams from a pre-disconnect snapshot.
+
+        Recovery failure is logged but does not raise.
+        """
+        if self._on_audio_recovery is not None:
+            self._on_audio_recovery(AudioRecoveryState.RECOVERING)
+
+        try:
+            if snapshot.rx_active:
+                if snapshot.pcm_mode and snapshot.pcm_rx_callback is not None:
+                    sr, ch, fms = snapshot.pcm_params or (48000, 1, 20)
+                    await self.start_audio_rx_pcm(
+                        snapshot.pcm_rx_callback,
+                        sample_rate=sr,
+                        channels=ch,
+                        frame_ms=fms,
+                        jitter_depth=snapshot.jitter_depth,
+                    )
+                elif snapshot.opus_rx_callback is not None:
+                    await self.start_audio_rx_opus(
+                        snapshot.opus_rx_callback,
+                        jitter_depth=snapshot.jitter_depth,
+                    )
+
+            if snapshot.tx_active:
+                if snapshot.pcm_mode and snapshot.pcm_params is not None:
+                    sr, ch, fms = snapshot.pcm_params
+                    await self.start_audio_tx_pcm(
+                        sample_rate=sr,
+                        channels=ch,
+                        frame_ms=fms,
+                    )
+                else:
+                    await self.start_audio_tx_opus()
+
+        except Exception as exc:
+            logger.warning("Audio auto-recovery failed: %s", exc)
+            if self._on_audio_recovery is not None:
+                self._on_audio_recovery(AudioRecoveryState.FAILED)
+            return
+
+        if self._on_audio_recovery is not None:
+            self._on_audio_recovery(AudioRecoveryState.RECOVERED)
 
     async def _ensure_audio_transport(self) -> None:
         """Connect the audio transport if not already connected."""
@@ -1074,6 +1206,8 @@ class IcomRadio:
                 logger.info("Reconnect attempt %d (delay=%.1fs)", attempt, delay)
                 try:
                     self._advance_civ_generation("reconnect-attempt")
+                    # Capture audio state for auto-recovery.
+                    audio_snapshot = self._capture_audio_snapshot()
                     # Clean up old transports
                     self._stop_token_renewal()
                     if self._audio_stream is not None:
@@ -1104,6 +1238,8 @@ class IcomRadio:
                     self._ctrl_transport = IcomTransport()
                     await self.connect()
                     logger.info("Reconnected successfully after %d attempts", attempt)
+                    if self._auto_recover_audio and audio_snapshot is not None:
+                        await self._recover_audio(audio_snapshot)
                     return
                 except Exception as exc:
                     logger.warning("Reconnect attempt %d failed: %s", attempt, exc)
