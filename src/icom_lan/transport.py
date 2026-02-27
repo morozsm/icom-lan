@@ -86,6 +86,7 @@ class IcomTransport:
         self._retransmit_task: asyncio.Task | None = None
         self._packet_queue: asyncio.Queue[bytes] = asyncio.Queue()
         self._raw_send = self._default_raw_send
+        self.rx_packet_count: int = 0  # total packets received (incl. pings)
 
     def _default_raw_send(self, data: bytes) -> None:
         """Send raw bytes via UDP transport."""
@@ -345,6 +346,7 @@ class IcomTransport:
         """Process an incoming UDP packet."""
         if len(data) < HEADER_SIZE:
             return
+        self.rx_packet_count += 1
 
         length = struct.unpack_from("<I", data, 0)[0]
         ptype = struct.unpack_from("<H", data, 4)[0]
