@@ -1802,6 +1802,128 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#phase-8-virtual-audio-bridge" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 8 — Virtual Audio Bridge 🎧
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 8 — Virtual Audio Bridge 🎧">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#why_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#architecture_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#platform-specific-virtual-audio" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Platform-specific virtual audio
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cli" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CLI
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phases
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phases">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#phase-81-linux-pipewirepulseaudio" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 8.1 — Linux (PipeWire/PulseAudio)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-82-macos-blackhole-coreaudio" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 8.2 — macOS (BlackHole / CoreAudio)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-83-windows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 8.3 — Windows
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#effort-estimate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Effort Estimate
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#the-grand-vision" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1842,6 +1964,7 @@
 <li>⬜ Phase 5 — Rust Core</li>
 <li>✅ Phase 6 — Spectrum &amp; Waterfall (API + CLI + rendering)</li>
 <li>⬜ Phase 7 — Web UI (full wfview/RS-BA1 replacement)</li>
+<li>⬜ Phase 8 — Virtual Audio Bridge (network audio for WSJT-X / digital modes)</li>
 </ul>
 <p><strong>Next focus:</strong> Phase 7.1 (Web UI MVP) with optional parallel spike for Phase 5.1 (Rust core).</p>
 <hr />
@@ -2326,19 +2449,132 @@
 </tbody>
 </table>
 <hr />
+<h2 id="phase-8-virtual-audio-bridge">Phase 8 — Virtual Audio Bridge 🎧<a class="headerlink" href="#phase-8-virtual-audio-bridge" title="Permanent link">&para;</a></h2>
+<p><strong>Goal:</strong> Create a virtual soundcard that bridges WSJT-X (and other digital mode software) audio to the radio over LAN — no USB cable, no physical sound card needed. Full remote operation: CAT via rigctld + audio via virtual device.</p>
+<h3 id="why_1">Why<a class="headerlink" href="#why_1" title="Permanent link">&para;</a></h3>
+<p>Currently, <code>icom-lan serve</code> provides rigctld-compatible CAT control over the network. But WSJT-X, JS8Call, and fldigi still need a <strong>sound card</strong> for audio. This means you need either:</p>
+<ul>
+<li>A USB cable to the radio (defeats the purpose of LAN control)</li>
+<li>RS-BA1 + virtual audio cable (paid, Windows-only, painful)</li>
+<li>wfview's audio passthrough (GPL, heavy)</li>
+</ul>
+<p>With a virtual audio bridge, the setup becomes:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>WSJT-X                          IC-7610
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>  ├── CAT ──► rigctld ──► icom-lan ──► UDP :50001-2
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>  └── Audio ► Virtual Soundcard ──► icom-lan ──► UDP :50003
+</code></pre></div>
+<p><strong>Zero cables. Zero extra software. Full remote.</strong></p>
+<h3 id="architecture_2">Architecture<a class="headerlink" href="#architecture_2" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>┌─────────────────────────────────────────────┐
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>│  icom-lan audio bridge                       │
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>│                                              │
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>│  ┌──────────────┐      ┌──────────────────┐  │
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>│  │ Virtual      │ PCM  │  icom-lan        │  │
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>│  │ Soundcard    │◄────►│  AudioStream     │  │
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>│  │ (OS-level)   │      │  (Opus ↔ PCM)    │  │
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>│  └──────┬───────┘      └────────┬─────────┘  │
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>│         │                       │ UDP         │
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>└─────────┼───────────────────────┼─────────────┘
+<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>          │                       │
+<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a>     WSJT-X / JS8Call        Icom Radio
+<a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a>     sees &quot;icom-lan&quot;         192.168.x.x
+<a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a>     as sound device         :50003 audio
+</code></pre></div>
+<h3 id="platform-specific-virtual-audio">Platform-specific virtual audio<a class="headerlink" href="#platform-specific-virtual-audio" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Platform</th>
+<th>Approach</th>
+<th>Complexity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Linux</strong></td>
+<td>PipeWire / PulseAudio virtual sink/source</td>
+<td>Low — <code>pw-loopback</code> or module-pipe-sink</td>
+</tr>
+<tr>
+<td><strong>macOS</strong></td>
+<td>BlackHole / CoreAudio HAL plugin</td>
+<td>Medium — BlackHole as dependency, or custom HAL plugin</td>
+</tr>
+<tr>
+<td><strong>Windows</strong></td>
+<td>Virtual Audio Cable / WASAPI loopback</td>
+<td>Medium — may need a signed driver</td>
+</tr>
+</tbody>
+</table>
+<h3 id="cli">CLI<a class="headerlink" href="#cli" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># Start the audio bridge (creates virtual soundcard + connects to radio)</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>icom-lan<span class="w"> </span>audio<span class="w"> </span>bridge<span class="w"> </span>--device<span class="w"> </span><span class="s2">&quot;icom-lan Audio&quot;</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="c1"># Combined: rigctld + audio bridge (full remote setup)</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>icom-lan<span class="w"> </span>serve<span class="w"> </span>--audio-bridge
+</code></pre></div>
+<h3 id="phases">Phases<a class="headerlink" href="#phases" title="Permanent link">&para;</a></h3>
+<h4 id="phase-81-linux-pipewirepulseaudio">Phase 8.1 — Linux (PipeWire/PulseAudio)<a class="headerlink" href="#phase-81-linux-pipewirepulseaudio" title="Permanent link">&para;</a></h4>
+<ul>
+<li>[ ] Virtual sink/source via PipeWire (<code>pw-loopback</code> or pipe module)</li>
+<li>[ ] PCM ↔ icom-lan AudioStream bridge</li>
+<li>[ ] Tested with WSJT-X on Linux</li>
+</ul>
+<h4 id="phase-82-macos-blackhole-coreaudio">Phase 8.2 — macOS (BlackHole / CoreAudio)<a class="headerlink" href="#phase-82-macos-blackhole-coreaudio" title="Permanent link">&para;</a></h4>
+<ul>
+<li>[ ] BlackHole integration (or custom CoreAudio HAL plugin)</li>
+<li>[ ] PCM routing to/from icom-lan</li>
+<li>[ ] Tested with WSJT-X on macOS</li>
+</ul>
+<h4 id="phase-83-windows">Phase 8.3 — Windows<a class="headerlink" href="#phase-83-windows" title="Permanent link">&para;</a></h4>
+<ul>
+<li>[ ] Virtual Audio Cable or custom WASAPI loopback</li>
+<li>[ ] Tested with WSJT-X on Windows</li>
+</ul>
+<h3 id="effort-estimate">Effort Estimate<a class="headerlink" href="#effort-estimate" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Complexity</th>
+<th>Time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>8.1 Linux</td>
+<td>Low–Medium</td>
+<td>3–5 days</td>
+</tr>
+<tr>
+<td>8.2 macOS</td>
+<td>Medium</td>
+<td>1 week</td>
+</tr>
+<tr>
+<td>8.3 Windows</td>
+<td>Medium–High</td>
+<td>1–2 weeks</td>
+</tr>
+</tbody>
+</table>
+<hr />
 <h2 id="the-grand-vision">The Grand Vision 🔭<a class="headerlink" href="#the-grand-vision" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>Phase 1-2:  Python CLI + API          ✅ Done
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>Phase 3:    Audio streaming            ✅ Done
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>Phase 4:    PyPI, polish               ✅ Done
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>Phase 5:    Rust core + bindings       ⬜ Planned
-<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>Phase 6:    Spectrum/waterfall data    ✅ Done
-<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>Phase 7:    Web UI — the full package  ← next
-<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>            ─────────────────────────
-<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>            Open-source RS-BA1 killer
-<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>            In your browser
-<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a>            From your phone
-<a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a>            MIT licensed
-<a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a>            73 de KN4KYD
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>Phase 1-2:  Python CLI + API          ✅ Done
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>Phase 3:    Audio streaming            ✅ Done
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>Phase 4:    PyPI, polish               ✅ Done
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>Phase 5:    Rust core + bindings       ⬜ Planned
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>Phase 6:    Spectrum/waterfall data    ✅ Done
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>Phase 7:    Web UI — the full package  ⬜ Planned
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>Phase 8:    Virtual Audio Bridge       ⬜ Planned  ← killer feature
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>            ─────────────────────────
+<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>            Open-source RS-BA1 killer
+<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a>            In your browser
+<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a>            From your phone
+<a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a>            Zero cables, zero extra software
+<a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a>            MIT licensed
+<a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a>            73 de KN4KYD
 </code></pre></div>
 <hr />
 <p><em>Created: 2026-02-25</em>
