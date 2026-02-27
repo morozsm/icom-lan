@@ -250,8 +250,10 @@ class ControlHandler:
             return {"mode": mode}
 
         if name == "set_filter":
-            # Filter selection not exposed in the current radio API; accept and ignore.
-            return {"filter": params.get("filter", "FIL1")}
+            fil_str = str(params.get("filter", "FIL1"))
+            fil_num = int(fil_str[-1]) if fil_str[-1].isdigit() else 1
+            await radio.set_filter(fil_num)
+            return {"filter": fil_str}
 
         if name == "ptt":
             state = bool(params["state"])
