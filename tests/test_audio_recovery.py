@@ -13,8 +13,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from icom_lan.audio import AudioPacket, AudioState, AudioStream
-from icom_lan.radio import AudioRecoveryState, IcomRadio, _AudioSnapshot
+from icom_lan.audio import AudioState, AudioStream
+from icom_lan.radio import AudioRecoveryState, IcomRadio
 
 
 # ---------------------------------------------------------------------------
@@ -406,7 +406,7 @@ class TestCallbackStorageAtStart:
     async def test_start_audio_rx_pcm_stores_callback(self) -> None:
         """start_audio_rx_pcm should store the user callback on the radio."""
         radio = _make_radio()
-        stream = _install_audio_stream(radio)
+        _install_audio_stream(radio)
         radio._pcm_transcoder = _DummyTranscoder()  # type: ignore[assignment]
         radio._pcm_transcoder_fmt = (48000, 1, 20)
 
@@ -420,7 +420,7 @@ class TestCallbackStorageAtStart:
     async def test_stop_audio_rx_pcm_clears_callback(self) -> None:
         """stop_audio_rx_pcm should clear the stored callback."""
         radio = _make_radio()
-        stream = _install_audio_stream(radio)
+        _install_audio_stream(radio)
         radio._pcm_rx_user_callback = MagicMock()
 
         await radio.stop_audio_rx_pcm()
@@ -431,7 +431,7 @@ class TestCallbackStorageAtStart:
     async def test_start_audio_rx_opus_stores_callback(self) -> None:
         """start_audio_rx_opus should store the callback on the radio."""
         radio = _make_radio()
-        stream = _install_audio_stream(radio)
+        _install_audio_stream(radio)
 
         cb = MagicMock()
         await radio.start_audio_rx_opus(cb, jitter_depth=3)
@@ -443,7 +443,7 @@ class TestCallbackStorageAtStart:
     async def test_stop_audio_rx_opus_clears_callback(self) -> None:
         """stop_audio_rx_opus should clear the stored callback."""
         radio = _make_radio()
-        stream = _install_audio_stream(radio)
+        _install_audio_stream(radio)
         radio._opus_rx_user_callback = MagicMock()
 
         await radio.stop_audio_rx_opus()

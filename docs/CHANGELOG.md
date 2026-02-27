@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] — 2026-02-26
+
 ### Added
 
 - Internal PCM<->Opus transcoder foundation (`icom_lan._audio_transcoder`) for
@@ -264,7 +266,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Waterfall/echo filtering in CI-V response handling
 - GUID echo in conninfo exchange (required for CI-V port discovery)
 
-[Unreleased]: https://github.com/morozsm/icom-lan/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/morozsm/icom-lan/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/morozsm/icom-lan/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/morozsm/icom-lan/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/morozsm/icom-lan/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/morozsm/icom-lan/compare/v0.4.0...v0.5.0
