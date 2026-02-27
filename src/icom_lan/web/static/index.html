@@ -42,6 +42,7 @@ body {
 /* === Waterfall === */
 #waterfall-wrap { position: relative; flex: 1; min-height: 100px; background: #000; border: 1px solid #21262d; border-radius: 4px; cursor: crosshair; overflow: hidden; }
 #waterfall { width: 100%; height: 100%; display: block; }
+#wf-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
 
 /* === Freq Axis === */
 #freq-axis { height: 22px; flex-shrink: 0; background: #161b22; border: 1px solid #21262d; border-radius: 4px; overflow: hidden; }
@@ -225,7 +226,7 @@ body.light #toast { }
 
 <div id="main">
   <div id="spectrum-wrap"><canvas id="spectrum"></canvas></div>
-  <div id="waterfall-wrap"><canvas id="waterfall"></canvas><div id="tooltip"></div></div>
+  <div id="waterfall-wrap"><canvas id="waterfall"></canvas><canvas id="wf-overlay"></canvas><div id="tooltip"></div></div>
   <div id="freq-axis"><canvas id="freq-axis-cv"></canvas></div>
 
   <!-- Controls -->
@@ -377,6 +378,7 @@ const statusDot=$('status-dot'), connText=$('conn-text'), radioModelEl=$('radio-
 const freqDisplayEl=$('freq-display'), tooltip=$('tooltip');
 const specCv=$('spectrum'), specCtx=specCv.getContext('2d');
 const wfCv=$('waterfall'), wfCtx=wfCv.getContext('2d');
+const wfOvCv=$('wf-overlay'), wfOvCtx=wfOvCv.getContext('2d');
 const faCv=$('freq-axis-cv'), faCtx=faCv.getContext('2d');
 const modeSel=$('mode-sel'), filterSel=$('filter-sel'), powerInput=$('power-input');
 const pttBtn=$('ptt-btn'), freqModal=$('freq-modal'), freqInput=$('freq-input');
@@ -442,6 +444,7 @@ function resize(){
   // Waterfall (1:1 for putImageData)
   const ww=wfCv.parentElement.clientWidth, wh=wfCv.parentElement.clientHeight;
   wfCv.width=ww; wfCv.height=wh; wfH=wh;
+  wfOvCv.width=ww; wfOvCv.height=wh;
   wfLineImg=wfCtx.createImageData(ww,1); wfLine32=new Uint32Array(wfLineImg.data.buffer);
   wfMeta=new Array(wh).fill(null);
   // Freq axis
@@ -473,6 +476,8 @@ function drawSpectrum(px){
   specCtx.beginPath();
   for(let i=0;i<n;i++){const x=i*sx,y=h-px[i]*sy;i?specCtx.lineTo(x,y):specCtx.moveTo(x,y)}
   specCtx.strokeStyle='#58a6ff'; specCtx.lineWidth=1.2; specCtx.stroke();
+  // Frequency marker + filter passband
+  drawPassband(specCtx, w, h, false);
 }
 
 // ===== Waterfall =====
@@ -487,6 +492,8 @@ function drawWfLine(px){
   }
   wfCtx.putImageData(wfLineImg,0,0);
   wfMeta.pop(); wfMeta.unshift({s:startFreq,e:endFreq});
+  // Redraw passband overlay (separate canvas — doesn't affect waterfall history)
+  drawPassband(wfOvCtx, wfOvCv.width, wfOvCv.height, true);
 }
 
 // ===== Freq Axis =====
@@ -503,6 +510,62 @@ function drawFreqAxis(){
     const x=(f-startFreq)/span*w, m=f/1e6;
     faCtx.fillStyle='#30363d'; faCtx.fillRect(x-0.5,0,1,4);
     faCtx.fillStyle='#8b949e'; faCtx.fillText(m>=100?m.toFixed(1):m.toFixed(3),x,h-4);
+  }
+}
+
+// ===== Passband Overlay =====
+// Offsets in Hz [low, high] relative to center frequency (carrier).
+// SSB: 300-Nk Hz above (USB) or below (LSB) carrier.
+// CW: centered on ~700 Hz pitch; FIL1=±250, FIL2=±125, FIL3=±50 Hz.
+// AM/FM: symmetric.
+const FILTER_WIDTHS = {
+  'USB':    { FIL1: [300, 3000],   FIL2: [300, 2400],   FIL3: [300, 1800] },
+  'LSB':    { FIL1: [-3000, -300], FIL2: [-2400, -300], FIL3: [-1800, -300] },
+  'CW':     { FIL1: [450, 950],    FIL2: [575, 825],    FIL3: [650, 750] },
+  'CW-R':   { FIL1: [-950, -450],  FIL2: [-825, -575],  FIL3: [-750, -650] },
+  'AM':     { FIL1: [-3000, 3000], FIL2: [-2400, 2400], FIL3: [-1800, 1800] },
+  'FM':     { FIL1: [-7500, 7500], FIL2: [-7500, 7500], FIL3: [-7500, 7500] },
+  'RTTY':   { FIL1: [300, 3000],   FIL2: [300, 2400],   FIL3: [300, 1800] },
+  'RTTY-R': { FIL1: [-3000, -300], FIL2: [-2400, -300], FIL3: [-1800, -300] },
+  'PSK':    { FIL1: [300, 3000],   FIL2: [300, 2400],   FIL3: [300, 1800] },
+  'PSK-R':  { FIL1: [-3000, -300], FIL2: [-2400, -300], FIL3: [-1800, -300] },
+};
+
+function drawPassband(ctx, w, h, isWaterfall) {
+  const freq = activeVfo === 'A' ? currentFreqA : currentFreqB;
+  if (!freq || startFreq >= endFreq) return;
+  const span = endFreq - startFreq;
+  const cx = (freq - startFreq) / span * w;
+
+  const mode = modeSel.value;
+  const filter = filterSel.value;
+  const offsets = (FILTER_WIDTHS[mode] || FILTER_WIDTHS['USB'])[filter] || [300, 3000];
+  const pbLo = freq + offsets[0];
+  const pbHi = freq + offsets[1];
+  const rx1 = (pbLo - startFreq) / span * w;
+  const rx2 = (pbHi - startFreq) / span * w;
+  const xLeft  = Math.max(0, Math.min(rx1, rx2));
+  const xRight = Math.min(w, Math.max(rx1, rx2));
+  const pbW = xRight - xLeft;
+
+  if (isWaterfall) ctx.clearRect(0, 0, w, h);
+
+  // Passband fill
+  if (pbW > 0) {
+    ctx.fillStyle = isWaterfall ? 'rgba(255,140,0,0.10)' : 'rgba(255,140,0,0.15)';
+    ctx.fillRect(xLeft, 0, pbW, h);
+    // Passband edge lines
+    ctx.strokeStyle = isWaterfall ? 'rgba(255,140,0,0.35)' : 'rgba(255,140,0,0.50)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(xLeft,  0); ctx.lineTo(xLeft,  h); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(xRight, 0); ctx.lineTo(xRight, h); ctx.stroke();
+  }
+
+  // Center frequency marker
+  if (cx >= 0 && cx <= w) {
+    ctx.strokeStyle = isWaterfall ? 'rgba(255,60,0,0.65)' : 'rgba(255,60,0,0.75)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, h); ctx.stroke();
   }
 }
 
