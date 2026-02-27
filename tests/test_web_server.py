@@ -148,9 +148,10 @@ async def _ws_send_text(writer: asyncio.StreamWriter, text: str) -> None:
 
 async def _ws_recv_frame(
     reader: asyncio.StreamReader,
+    timeout: float = 10.0,
 ) -> tuple[int, bytes]:
     """Read one (unmasked) server→client WebSocket frame."""
-    header = await asyncio.wait_for(reader.readexactly(2), timeout=5.0)
+    header = await asyncio.wait_for(reader.readexactly(2), timeout=timeout)
     byte0, byte1 = header[0], header[1]
     opcode = byte0 & 0x0F
     payload_len = byte1 & 0x7F

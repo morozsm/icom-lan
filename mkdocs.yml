@@ -75,6 +75,7 @@ nav:
       - Connection Lifecycle: guide/connection.md
       - WSJT-X / Digital Modes: guide/wsjtx-setup.md
       - Audio Recipes: guide/audio-recipes.md
+      - Web UI: guide/web-ui.md
       - CI-V Commands: guide/commands.md
       - Supported Radios: guide/radios.md
       - Troubleshooting: guide/troubleshooting.md
@@ -91,6 +92,7 @@ nav:
   - Internals:
       - Architecture: internals/architecture.md
       - Protocol Deep Dive: internals/protocol.md
+      - Web UI RFC: internals/rfc-web-ui-v1.md
       - Contributing: internals/contributing.md
       - Changelog: CHANGELOG.md
       - Security: SECURITY.md

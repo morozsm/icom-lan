@@ -18,6 +18,7 @@ Direct connection to your radio — no wfview, hamlib, or RS-BA1 required.
 - 🚀 **Fast non-audio connect path** — CLI/status calls don't block on audio-port negotiation
 - 🧠 **Commander queue** — wfview-style serialized command execution with pacing, retries, and dedupe
 - 📊 **Scope/waterfall** — real-time spectrum data with callback API
+- 🌐 **Built-in Web UI** — spectrum, waterfall, controls, meters, and audio in your browser (`icom-lan web`)
 - 🔌 **Hamlib NET rigctld server** — drop-in replacement for `rigctld`, works with WSJT-X, JS8Call, fldigi
 - 🔒 **Zero dependencies** — pure Python, stdlib only
 - 📝 **Type-annotated** — full `py.typed` support
@@ -132,6 +133,11 @@ icom-lan scope --json               # Raw data as JSON (no Pillow needed)
 
 # Discover radios on network
 icom-lan discover
+
+# Built-in Web UI (spectrum, waterfall, controls, audio)
+icom-lan web                            # Start on 0.0.0.0:8080
+icom-lan web --port 9090                # Custom port
+# Then open http://your-ip:8080 in a browser
 
 # Hamlib NET rigctld-compatible server (use with WSJT-X, JS8Call, fldigi)
 icom-lan serve                          # Listen on 0.0.0.0:4532

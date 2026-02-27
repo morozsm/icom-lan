@@ -8,10 +8,10 @@
 - ✅ Phase 4 — Polish & Publish (PyPI + releases + docs)
 - ⬜ Phase 5 — Rust Core
 - ✅ Phase 6 — Spectrum & Waterfall (API + CLI + rendering)
-- ⬜ Phase 7 — Web UI (full wfview/RS-BA1 replacement)
+- ✅ Phase 7 — Web UI v1 (spectrum, waterfall, controls, meters, audio)
 - ⬜ Phase 8 — Virtual Audio Bridge (network audio for WSJT-X / digital modes)
 
-**Next focus:** Phase 7.1 (Web UI MVP) with optional parallel spike for Phase 5.1 (Rust core).
+**Next focus:** Phase 7.4 (Web UI advanced features) and Phase 5.1 (Rust core spike).
 
 ---
 
@@ -342,13 +342,13 @@ class SpectrumFrame:
 ### Architecture
 
 ```
-┌──────────────┐     WebSocket      ┌──────────────────┐
-│   Browser    │◄──────────────────►│   icom-lan       │
-│              │                    │   server          │
-│  ┌────────┐  │                    │  ┌────────────┐   │     UDP
-│  │ React/ │  │                    │  │ WebSocket  │   │◄──────────►  Radio
-│  │ Canvas │  │                    │  │ ↔ UDP      │   │   50001-3
-│  │ WebGL  │  │                    │  │ proxy      │   │
+┌──────────────┐    4 WebSockets    ┌──────────────────┐
+│   Browser    │◄──────────────────►│   icom-lan web   │
+│              │  /ws (control)     │   (asyncio)       │
+│  ┌────────┐  │  /scope (binary)  │  ┌────────────┐   │     UDP
+│  │ Vanilla│  │  /meters (binary) │  │ WebSocket  │   │◄──────────►  Radio
+│  │ JS +   │  │  /audio (Opus)    │  │ ↔ UDP      │   │   50001-3
+│  │ Canvas │  │                    │  │ bridge     │   │
 │  └────────┘  │                    │  └────────────┘   │
 └──────────────┘                    └──────────────────┘
 ```
@@ -368,30 +368,39 @@ Or with WASM (Phase 5.5):
 
 ### Features
 
-#### MVP (Phase 7.1)
+#### MVP (Phase 7.1) ✅ Completed
 
-- [ ] Frequency display + tuning (click/drag/scroll/keyboard)
-- [ ] Mode selector (USB/LSB/CW/AM/FM)
-- [ ] S-meter bar (real-time)
-- [ ] PTT button (with safety confirm)
-- [ ] Power/SWR/ALC meters
-- [ ] VFO A/B switch, split indicator
-- [ ] Mobile-responsive layout
+- [x] Frequency display + tuning (click-to-edit MHz modal)
+- [x] Mode selector (USB/LSB/CW/CW-R/AM/FM/RTTY/RTTY-R/PSK/PSK-R)
+- [x] S-meter bar (real-time, S0-S9/S9+dB)
+- [x] PTT button (press-hold, Space key)
+- [x] Power/SWR/ALC/COMP/Id/Vd/TEMP meters (8 total)
+- [x] VFO A/B switch, swap (A↔B), equalize (A=B)
+- [x] Mobile-responsive layout (tablet + phone breakpoints)
+- [x] Filter selector (FIL1/FIL2/FIL3)
+- [x] Attenuator (OFF/6/12/18 dB) and preamp (OFF/1/2)
+- [x] Power level control
+- [x] Dark/light theme toggle with persistence
+- [x] Keyboard shortcuts (Space/A/B/R/F/T)
+- [x] Toast notifications (connect/disconnect/errors)
 
-#### Waterfall (Phase 7.2)
+#### Waterfall (Phase 7.2) ✅ Completed
 
-- [ ] Real-time spectrum display (Canvas 2D or WebGL)
-- [ ] Waterfall (scrolling history)
-- [ ] Click-to-tune on waterfall
+- [x] Real-time spectrum display (Canvas2D, gradient fill)
+- [x] Waterfall (scrolling history, color LUT)
+- [x] Click-to-tune on waterfall (per-line freq metadata)
+- [x] Hover tooltip with frequency readout
+- [x] Frequency axis labels (auto-scaling MHz ticks)
 - [ ] Frequency zoom/pan
 - [ ] Color schemes (classic, viridis, plasma)
 - [ ] Dual waterfall for IC-7610 (Main + Sub)
 - [ ] FPS control (10/20/30 fps)
 
-#### Audio (Phase 7.3)
+#### Audio (Phase 7.3) ✅ Completed
 
-- [ ] RX audio via Web Audio API (Opus → PCM → speakers)
-- [ ] TX audio via getUserMedia() (mic → Opus → radio)
+- [x] RX audio via WebCodecs AudioDecoder (Opus → AudioBuffer → speakers)
+- [x] TX audio via getUserMedia() + AudioEncoder (mic → Opus → radio)
+- [x] Volume control slider
 - [ ] VOX mode (auto PTT on audio)
 - [ ] Audio level meters (RX/TX)
 - [ ] Noise reduction (Web Audio filters)
