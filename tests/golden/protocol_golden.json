@@ -1,0 +1,375 @@
+[
+  {
+    "id": "get_freq_short",
+    "description": "Get frequency via short command 'f'",
+    "input": "f",
+    "mock": {"get_frequency": 14074000, "get_data_mode": false},
+    "expected_output": "14074000\n",
+    "extended_output": "get_freq:\n14074000\nRPRT 0\n"
+  },
+  {
+    "id": "get_freq_long",
+    "description": "Get frequency via long command '\\get_freq'",
+    "input": "\\get_freq",
+    "mock": {"get_frequency": 7050000, "get_data_mode": false},
+    "expected_output": "7050000\n",
+    "extended_output": "get_freq:\n7050000\nRPRT 0\n"
+  },
+  {
+    "id": "set_freq_short",
+    "description": "Set frequency via short command 'F'",
+    "input": "F 14074000",
+    "mock": {"get_data_mode": false},
+    "expected_output": "RPRT 0\n",
+    "extended_output": "set_freq:\nRPRT 0\n"
+  },
+  {
+    "id": "set_freq_long",
+    "description": "Set frequency via long command '\\set_freq'",
+    "input": "\\set_freq 7050000",
+    "mock": {"get_data_mode": false},
+    "expected_output": "RPRT 0\n",
+    "extended_output": "set_freq:\nRPRT 0\n"
+  },
+  {
+    "id": "get_mode_usb",
+    "description": "Get mode USB with filter 2 (2400 Hz passband)",
+    "input": "m",
+    "mock": {"get_mode_info": [1, 2], "get_data_mode": false},
+    "expected_output": "USB\n2400\n",
+    "extended_output": "get_mode:\nUSB\n2400\nRPRT 0\n"
+  },
+  {
+    "id": "get_mode_lsb",
+    "description": "Get mode LSB with filter 1 (3000 Hz passband)",
+    "input": "m",
+    "mock": {"get_mode_info": [0, 1], "get_data_mode": false},
+    "expected_output": "LSB\n3000\n",
+    "extended_output": "get_mode:\nLSB\n3000\nRPRT 0\n"
+  },
+  {
+    "id": "get_mode_cw",
+    "description": "Get mode CW with no filter (0 Hz passband)",
+    "input": "m",
+    "mock": {"get_mode_info": [3, null], "get_data_mode": false},
+    "expected_output": "CW\n0\n",
+    "extended_output": "get_mode:\nCW\n0\nRPRT 0\n"
+  },
+  {
+    "id": "get_mode_pktusb",
+    "description": "Get mode PKTUSB (USB + data mode on) with filter 2",
+    "input": "m",
+    "mock": {"get_mode_info": [1, 2], "get_data_mode": true},
+    "expected_output": "PKTUSB\n2400\n",
+    "extended_output": "get_mode:\nPKTUSB\n2400\nRPRT 0\n"
+  },
+  {
+    "id": "get_mode_pktlsb",
+    "description": "Get mode PKTLSB (LSB + data mode on) with filter 1",
+    "input": "m",
+    "mock": {"get_mode_info": [0, 1], "get_data_mode": true},
+    "expected_output": "PKTLSB\n3000\n",
+    "extended_output": "get_mode:\nPKTLSB\n3000\nRPRT 0\n"
+  },
+  {
+    "id": "get_mode_pktrtty",
+    "description": "Get mode PKTRTTY (RTTY + data mode on) with no filter",
+    "input": "m",
+    "mock": {"get_mode_info": [4, null], "get_data_mode": true},
+    "expected_output": "PKTRTTY\n0\n",
+    "extended_output": "get_mode:\nPKTRTTY\n0\nRPRT 0\n"
+  },
+  {
+    "id": "set_mode_usb",
+    "description": "Set mode to USB with 2400 Hz passband",
+    "input": "M USB 2400",
+    "mock": {"get_data_mode": false},
+    "expected_output": "RPRT 0\n",
+    "extended_output": "set_mode:\nRPRT 0\n"
+  },
+  {
+    "id": "set_mode_lsb",
+    "description": "Set mode to LSB (no passband arg)",
+    "input": "M LSB",
+    "mock": {"get_data_mode": false},
+    "expected_output": "RPRT 0\n",
+    "extended_output": "set_mode:\nRPRT 0\n"
+  },
+  {
+    "id": "set_mode_pktusb",
+    "description": "Set mode to PKTUSB (USB + data), sync loop confirms via get_mode_info",
+    "input": "M PKTUSB",
+    "mock": {"get_mode_info": [1, 2], "get_data_mode": true},
+    "expected_output": "RPRT 0\n",
+    "extended_output": "set_mode:\nRPRT 0\n"
+  },
+  {
+    "id": "set_mode_pktlsb",
+    "description": "Set mode to PKTLSB (LSB + data), sync loop confirms via get_mode_info",
+    "input": "M PKTLSB",
+    "mock": {"get_mode_info": [0, 1], "get_data_mode": true},
+    "expected_output": "RPRT 0\n",
+    "extended_output": "set_mode:\nRPRT 0\n"
+  },
+  {
+    "id": "set_mode_pktrtty",
+    "description": "Set mode to PKTRTTY (RTTY + data), sync loop confirms via get_mode_info",
+    "input": "M PKTRTTY",
+    "mock": {"get_mode_info": [4, null], "get_data_mode": true},
+    "expected_output": "RPRT 0\n",
+    "extended_output": "set_mode:\nRPRT 0\n"
+  },
+  {
+    "id": "get_ptt",
+    "description": "Get PTT — defaults to off (0) when no set_ptt has been issued",
+    "input": "t",
+    "mock": {},
+    "expected_output": "0\n",
+    "extended_output": "get_ptt:\n0\nRPRT 0\n"
+  },
+  {
+    "id": "set_ptt_on",
+    "description": "Set PTT on (1)",
+    "input": "T 1",
+    "mock": {},
+    "expected_output": "RPRT 0\n",
+    "extended_output": "set_ptt:\nRPRT 0\n"
+  },
+  {
+    "id": "set_ptt_off",
+    "description": "Set PTT off (0)",
+    "input": "T 0",
+    "mock": {},
+    "expected_output": "RPRT 0\n",
+    "extended_output": "set_ptt:\nRPRT 0\n"
+  },
+  {
+    "id": "get_vfo",
+    "description": "Get VFO — always returns VFOA",
+    "input": "v",
+    "mock": {},
+    "expected_output": "VFOA\n",
+    "extended_output": "get_vfo:\nVFOA\nRPRT 0\n"
+  },
+  {
+    "id": "set_vfo",
+    "description": "Set VFO to VFOA",
+    "input": "V VFOA",
+    "mock": {},
+    "expected_output": "RPRT 0\n",
+    "extended_output": "set_vfo:\nRPRT 0\n"
+  },
+  {
+    "id": "get_level_strength",
+    "description": "Get STRENGTH level — raw S-meter 120 ≈ S9 → 3 dB",
+    "input": "l STRENGTH",
+    "mock": {"get_s_meter": 120},
+    "expected_output": "3\n",
+    "extended_output": "get_level:\n3\nRPRT 0\n"
+  },
+  {
+    "id": "get_level_rfpower",
+    "description": "Get RFPOWER level — raw 255 → 1.000000 normalized",
+    "input": "l RFPOWER",
+    "mock": {"get_power": 255},
+    "expected_output": "1.000000\n",
+    "extended_output": "get_level:\n1.000000\nRPRT 0\n"
+  },
+  {
+    "id": "get_level_swr",
+    "description": "Get SWR level — raw 0 → 1.000000 (perfect match)",
+    "input": "l SWR",
+    "mock": {"get_swr": 0},
+    "expected_output": "1.000000\n",
+    "extended_output": "get_level:\n1.000000\nRPRT 0\n"
+  },
+  {
+    "id": "get_split_vfo",
+    "description": "Get split VFO — always returns 0 VFOA",
+    "input": "s",
+    "mock": {},
+    "expected_output": "0\nVFOA\n",
+    "extended_output": "get_split_vfo:\n0\nVFOA\nRPRT 0\n"
+  },
+  {
+    "id": "set_split_vfo",
+    "description": "Set split VFO",
+    "input": "S 0 VFOA",
+    "mock": {},
+    "expected_output": "RPRT 0\n",
+    "extended_output": "set_split_vfo:\nRPRT 0\n"
+  },
+  {
+    "id": "get_rit",
+    "description": "Get RIT offset — always returns 0",
+    "input": "j",
+    "mock": {},
+    "expected_output": "0\n",
+    "extended_output": "get_rit:\n0\nRPRT 0\n"
+  },
+  {
+    "id": "quit",
+    "description": "Quit command — returns empty body in normal mode",
+    "input": "q",
+    "mock": {},
+    "expected_output": "",
+    "extended_output": "quit:\nRPRT 0\n"
+  },
+  {
+    "id": "dump_state",
+    "description": "dump_state — full IC-7610 capability block",
+    "input": "\\dump_state",
+    "mock": {},
+    "expected_output": "0\n3078\n1\n100000.000000 60000000.000000 0x1ff -1 -1 0x3 0xf\n0 0 0 0 0 0 0\n1800000.000000 60000000.000000 0x1ff 5000 100000 0x3 0xf\n0 0 0 0 0 0 0\n0x1ff 1\n0 0\n0x1ff 3000\n0x1ff 2400\n0x1ff 1800\n0 0\n0\n0\n0\n0\n12 20 0\n6 12 18 0\n0\n0\n0x54001000\n0x00001000\n0\n0\n",
+    "extended_output": "dump_state:\n0\n3078\n1\n100000.000000 60000000.000000 0x1ff -1 -1 0x3 0xf\n0 0 0 0 0 0 0\n1800000.000000 60000000.000000 0x1ff 5000 100000 0x3 0xf\n0 0 0 0 0 0 0\n0x1ff 1\n0 0\n0x1ff 3000\n0x1ff 2400\n0x1ff 1800\n0 0\n0\n0\n0\n0\n12 20 0\n6 12 18 0\n0\n0\n0x54001000\n0x00001000\n0\n0\nRPRT 0\n"
+  },
+  {
+    "id": "dump_caps",
+    "description": "dump_caps (alias '1') — same output as dump_state",
+    "input": "1",
+    "mock": {},
+    "expected_output": "0\n3078\n1\n100000.000000 60000000.000000 0x1ff -1 -1 0x3 0xf\n0 0 0 0 0 0 0\n1800000.000000 60000000.000000 0x1ff 5000 100000 0x3 0xf\n0 0 0 0 0 0 0\n0x1ff 1\n0 0\n0x1ff 3000\n0x1ff 2400\n0x1ff 1800\n0 0\n0\n0\n0\n0\n12 20 0\n6 12 18 0\n0\n0\n0x54001000\n0x00001000\n0\n0\n",
+    "extended_output": "dump_caps:\n0\n3078\n1\n100000.000000 60000000.000000 0x1ff -1 -1 0x3 0xf\n0 0 0 0 0 0 0\n1800000.000000 60000000.000000 0x1ff 5000 100000 0x3 0xf\n0 0 0 0 0 0 0\n0x1ff 1\n0 0\n0x1ff 3000\n0x1ff 2400\n0x1ff 1800\n0 0\n0\n0\n0\n0\n12 20 0\n6 12 18 0\n0\n0\n0x54001000\n0x00001000\n0\n0\nRPRT 0\n"
+  },
+  {
+    "id": "get_info",
+    "description": "get_info — returns IC-7610 description string",
+    "input": "\\get_info",
+    "mock": {},
+    "expected_output": "Icom IC-7610 (icom-lan)\n",
+    "extended_output": "get_info:\nIcom IC-7610 (icom-lan)\nRPRT 0\n"
+  },
+  {
+    "id": "chk_vfo",
+    "description": "chk_vfo — always returns 0 (VFO mode disabled)",
+    "input": "\\chk_vfo",
+    "mock": {},
+    "expected_output": "0\n",
+    "extended_output": "chk_vfo:\n0\nRPRT 0\n"
+  },
+  {
+    "id": "get_powerstat",
+    "description": "get_powerstat — always returns 1 (rig on)",
+    "input": "\\get_powerstat",
+    "mock": {},
+    "expected_output": "1\n",
+    "extended_output": "get_powerstat:\n1\nRPRT 0\n"
+  },
+  {
+    "id": "power2mw",
+    "description": "power2mW: convert 1.0 normalized → 100000 mW (100 W max)",
+    "input": "\\power2mW 1.0 14074000 USB",
+    "mock": {},
+    "expected_output": "100000\n",
+    "extended_output": "power2mW:\n100000\nRPRT 0\n"
+  },
+  {
+    "id": "mw2power",
+    "description": "mW2power: convert 100000 mW → 1.000000 normalized",
+    "input": "\\mW2power 100000 14074000 USB",
+    "mock": {},
+    "expected_output": "1.000000\n",
+    "extended_output": "mW2power:\n1.000000\nRPRT 0\n"
+  },
+  {
+    "id": "get_lock_mode",
+    "description": "get_lock_mode — always returns 0 (unlocked)",
+    "input": "\\get_lock_mode",
+    "mock": {},
+    "expected_output": "0\n",
+    "extended_output": "get_lock_mode:\n0\nRPRT 0\n"
+  },
+  {
+    "id": "unknown_command",
+    "description": "Unknown command 'garbage' raises parse error → RPRT -4 (ENIMPL)",
+    "input": "garbage",
+    "expect_parse_error": true,
+    "mock": {},
+    "expected_output": "RPRT -4\n"
+  },
+  {
+    "id": "unknown_short_command",
+    "description": "Unknown single-char command 'z' raises parse error → RPRT -4",
+    "input": "z",
+    "expect_parse_error": true,
+    "mock": {},
+    "expected_output": "RPRT -4\n"
+  },
+  {
+    "id": "set_freq_no_args",
+    "description": "set_freq with no args (handler level) → RPRT -1 (EINVAL)",
+    "cmd": {"short_cmd": "F", "long_cmd": "set_freq", "args": [], "is_set": true},
+    "mock": {},
+    "expected_output": "RPRT -1\n",
+    "extended_output": "set_freq:\nRPRT -1\n"
+  },
+  {
+    "id": "set_mode_invalid",
+    "description": "set_mode with invalid mode name → RPRT -1 (EINVAL)",
+    "input": "M INVALID",
+    "mock": {},
+    "expected_output": "RPRT -1\n",
+    "extended_output": "set_mode:\nRPRT -1\n"
+  },
+  {
+    "id": "set_freq_read_only",
+    "description": "set_freq in read-only mode → RPRT -22 (EACCESS)",
+    "input": "F 14074000",
+    "read_only": true,
+    "mock": {},
+    "expected_output": "RPRT -22\n",
+    "extended_output": "set_freq:\nRPRT -22\n"
+  },
+  {
+    "id": "set_mode_read_only",
+    "description": "set_mode in read-only mode → RPRT -22 (EACCESS)",
+    "input": "M USB",
+    "read_only": true,
+    "mock": {},
+    "expected_output": "RPRT -22\n",
+    "extended_output": "set_mode:\nRPRT -22\n"
+  },
+  {
+    "id": "set_ptt_read_only",
+    "description": "set_ptt in read-only mode → RPRT -22 (EACCESS)",
+    "input": "T 1",
+    "read_only": true,
+    "mock": {},
+    "expected_output": "RPRT -22\n",
+    "extended_output": "set_ptt:\nRPRT -22\n"
+  },
+  {
+    "id": "set_vfo_read_only",
+    "description": "set_vfo in read-only mode → RPRT -22 (EACCESS)",
+    "input": "V VFOA",
+    "read_only": true,
+    "mock": {},
+    "expected_output": "RPRT -22\n",
+    "extended_output": "set_vfo:\nRPRT -22\n"
+  },
+  {
+    "id": "set_split_vfo_read_only",
+    "description": "set_split_vfo in read-only mode → RPRT -22 (EACCESS)",
+    "input": "S 0 VFOA",
+    "read_only": true,
+    "mock": {},
+    "expected_output": "RPRT -22\n",
+    "extended_output": "set_split_vfo:\nRPRT -22\n"
+  },
+  {
+    "id": "connection_error_get_freq",
+    "description": "Radio ConnectionError on get_freq → RPRT -6 (EIO)",
+    "input": "f",
+    "mock": {"get_frequency__exc": "ConnectionError"},
+    "expected_output": "RPRT -6\n",
+    "extended_output": "get_freq:\nRPRT -6\n"
+  },
+  {
+    "id": "timeout_error_get_freq",
+    "description": "Radio TimeoutError on get_freq → RPRT -5 (ETIMEOUT)",
+    "input": "f",
+    "mock": {"get_frequency__exc": "TimeoutError"},
+    "expected_output": "RPRT -5\n",
+    "extended_output": "get_freq:\nRPRT -5\n"
+  }
+]

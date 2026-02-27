@@ -34,6 +34,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   with shared `--sample-rate`, `--channels`, `--json`, and `--stats` flags.
 - Rigctld WSJT-X compatibility option: `icom-lan serve --wsjtx-compat`
   (optional DATA pre-warm on first client when base mode is USB/LSB/RTTY).
+- Golden protocol response test suite (`tests/golden/protocol_golden.json`):
+  45 parametrized fixtures covering every rigctld command, both normal and
+  extended wire format, plus all error paths (EINVAL, ENIMPL, EACCESS,
+  EIO, ETIMEOUT).
+- TCP server wire integration tests (`tests/test_server_wire.py`): asyncio-based
+  end-to-end tests exercising real `RigctldServer` over TCP sockets — get/set
+  roundtrips, multi-command sequences, quit, read-only rejection, CRLF tolerance,
+  level queries, and power conversions.
 
 ### Changed
 

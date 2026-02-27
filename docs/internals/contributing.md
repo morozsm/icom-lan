@@ -36,18 +36,41 @@ pytest tests/test_commands.py::test_get_frequency_builds_correct_frame
 
 ```
 tests/
-├── conftest.py          # Shared fixtures (FakeRadio, packet builders)
-├── test_auth.py         # Credential encoding, login/conninfo packets
-├── test_commands.py     # CI-V frame building and parsing
-├── test_protocol.py     # Header parsing/serialization
-├── test_radio.py        # IcomRadio high-level API (mocked transport)
-├── test_transport.py    # IcomTransport (mocked UDP)
-└── integration/         # Real hardware tests (require a radio)
+├── conftest.py                # Shared fixtures (FakeRadio, packet builders)
+├── test_auth.py               # Credential encoding, login/conninfo packets
+├── test_commands.py           # CI-V frame building and parsing
+├── test_protocol.py           # Header parsing/serialization
+├── test_radio.py              # IcomRadio high-level API (mocked transport)
+├── test_transport.py          # IcomTransport (mocked UDP)
+├── test_rigctld_handler.py    # Rigctld command handler unit tests
+├── test_rigctld_protocol.py   # Rigctld wire protocol parsing/formatting
+├── test_rigctld_server.py     # Rigctld server lifecycle tests
+├── test_golden_protocol.py    # Golden fixture runner (parse → execute → format)
+├── test_server_wire.py        # TCP wire integration tests (real server, mock radio)
+├── test_data_mode.py          # DATA/packet mode semantics
+├── golden/
+│   └── protocol_golden.json   # 45 golden response fixtures (all commands + errors)
+└── integration/               # Real hardware tests (require a radio)
     ├── test_connect.py
     └── test_get_freq.py
 ```
 
 Unit tests use mocked transports — **no radio required**. Integration tests are in `tests/integration/` and require actual hardware.
+
+#### Golden Protocol Tests
+
+The `tests/golden/` directory contains JSON fixtures that define the exact wire-level
+input/output contract for the rigctld protocol. Each fixture specifies a command input,
+mock radio state, and the expected byte-exact response in both normal and extended mode.
+
+To run only golden tests:
+
+```bash
+pytest tests/test_golden_protocol.py tests/test_server_wire.py -v
+```
+
+When adding a new rigctld command, add corresponding fixtures to `protocol_golden.json`
+to lock down the wire format.
 
 ## Code Style
 
