@@ -105,6 +105,10 @@
          <lastmod>2026-02-27</lastmod>
     </url>
     <url>
+         <loc>https://morozsm.github.io/icom-lan/guide/web-ui/</loc>
+         <lastmod>2026-02-27</lastmod>
+    </url>
+    <url>
          <loc>https://morozsm.github.io/icom-lan/guide/wsjtx-setup/</loc>
          <lastmod>2026-02-27</lastmod>
     </url>
@@ -122,6 +126,10 @@
     </url>
     <url>
          <loc>https://morozsm.github.io/icom-lan/internals/rfc-audio-v1-mini/</loc>
+         <lastmod>2026-02-27</lastmod>
+    </url>
+    <url>
+         <loc>https://morozsm.github.io/icom-lan/internals/rfc-web-ui-v1/</loc>
          <lastmod>2026-02-27</lastmod>
     </url>
 </urlset>

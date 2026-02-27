@@ -10,9 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://morozsm.github.io/icom-lan/internals/rfc-audio-v1-mini/">
+        <link rel="canonical" href="https://morozsm.github.io/icom-lan/guide/web-ui/">
       
       
+        <link rel="prev" href="../audio-recipes/">
+      
+      
+        <link rel="next" href="../commands/">
       
       
         
@@ -23,7 +27,7 @@
     
     
       
-        <title>Mini RFC: Audio API v1 (PCM-first + explicit low-level API) - icom-lan</title>
+        <title>Web UI - icom-lan</title>
       
     
     
@@ -76,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#mini-rfc-audio-api-v1-pcm-first-explicit-low-level-api" class="md-skip">
+        <a href="#web-ui" class="md-skip">
           Skip to content
         </a>
       
@@ -110,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Mini RFC: Audio API v1 (PCM-first + explicit low-level API)
+              Web UI
             
           </span>
         </div>
@@ -244,7 +248,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../guide/installation/" class="md-tabs__link">
+        <a href="../installation/" class="md-tabs__link">
           
   
   
@@ -260,11 +264,13 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="../../guide/connection/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../connection/" class="md-tabs__link">
           
   
   
@@ -304,7 +310,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../architecture/" class="md-tabs__link">
+        <a href="../../internals/architecture/" class="md-tabs__link">
           
   
   
@@ -449,7 +455,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/installation/" class="md-nav__link">
+      <a href="../installation/" class="md-nav__link">
         
   
   
@@ -477,7 +483,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/quickstart/" class="md-nav__link">
+      <a href="../quickstart/" class="md-nav__link">
         
   
   
@@ -505,7 +511,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/cli/" class="md-nav__link">
+      <a href="../cli/" class="md-nav__link">
         
   
   
@@ -533,7 +539,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/configuration/" class="md-nav__link">
+      <a href="../configuration/" class="md-nav__link">
         
   
   
@@ -565,28 +571,31 @@
       
   
   
+    
   
   
+  
     
     
     
     
+      
+        
+        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
-        
-          
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
             
   
   
@@ -604,7 +613,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -622,7 +631,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/connection/" class="md-nav__link">
+      <a href="../connection/" class="md-nav__link">
         
   
   
@@ -650,7 +659,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/wsjtx-setup/" class="md-nav__link">
+      <a href="../wsjtx-setup/" class="md-nav__link">
         
   
   
@@ -678,7 +687,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/audio-recipes/" class="md-nav__link">
+      <a href="../audio-recipes/" class="md-nav__link">
         
   
   
@@ -703,10 +712,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../guide/web-ui/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Web UI
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -722,6 +758,192 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#quick-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Start
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Features
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Features">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#spectrum-waterfall-display" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Spectrum &amp; Waterfall Display
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#radio-controls" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Radio Controls
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#real-time-meters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Real-Time Meters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#audio-streaming" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Audio Streaming
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#keyboard-shortcuts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Keyboard Shortcuts
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#theme-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Theme Support
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Architecture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#http-endpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HTTP Endpoints
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#design-principles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Design Principles
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#custom-static-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom Static Files
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations-v1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limitations (v1)
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -734,7 +956,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/commands/" class="md-nav__link">
+      <a href="../commands/" class="md-nav__link">
         
   
   
@@ -762,7 +984,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/radios/" class="md-nav__link">
+      <a href="../radios/" class="md-nav__link">
         
   
   
@@ -790,7 +1012,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/troubleshooting/" class="md-nav__link">
+      <a href="../troubleshooting/" class="md-nav__link">
         
   
   
@@ -1192,7 +1414,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../architecture/" class="md-nav__link">
+      <a href="../../internals/architecture/" class="md-nav__link">
         
   
   
@@ -1220,7 +1442,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../protocol/" class="md-nav__link">
+      <a href="../../internals/protocol/" class="md-nav__link">
         
   
   
@@ -1248,7 +1470,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rfc-web-ui-v1/" class="md-nav__link">
+      <a href="../../internals/rfc-web-ui-v1/" class="md-nav__link">
         
   
   
@@ -1276,7 +1498,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../contributing/" class="md-nav__link">
+      <a href="../../internals/contributing/" class="md-nav__link">
         
   
   
@@ -1387,10 +1609,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#1-problem" class="md-nav__link">
+  <a href="#quick-start" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1) Problem
+        Quick Start
       
     </span>
   </a>
@@ -1398,56 +1620,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#2-goals" class="md-nav__link">
+  <a href="#features" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2) Goals
+        Features
       
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#3-non-goals" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        3) Non-goals
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#4-decisions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4) Decisions
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="4) Decisions">
+    <nav class="md-nav" aria-label="Features">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#d1-api-split-explicit-low-level-vs-high-level" class="md-nav__link">
+  <a href="#spectrum-waterfall-display" class="md-nav__link">
     <span class="md-ellipsis">
       
-        D1. API split: explicit low-level vs high-level
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="D1. API split: explicit low-level vs high-level">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#low-level-opus-explicit-naming" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Low-level (Opus, explicit naming)
+        Spectrum &amp; Waterfall Display
       
     </span>
   </a>
@@ -1455,26 +1643,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#high-level-pcm" class="md-nav__link">
+  <a href="#radio-controls" class="md-nav__link">
     <span class="md-ellipsis">
       
-        High-level (PCM)
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#d2-backward-compatibility-deprecation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        D2. Backward compatibility + deprecation
+        Radio Controls
       
     </span>
   </a>
@@ -1482,10 +1654,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#d3-internal-transcoder-layer" class="md-nav__link">
+  <a href="#real-time-meters" class="md-nav__link">
     <span class="md-ellipsis">
       
-        D3. Internal transcoder layer
+        Real-Time Meters
       
     </span>
   </a>
@@ -1493,10 +1665,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#d4-capabilities-model-deterministic-defaults" class="md-nav__link">
+  <a href="#audio-streaming" class="md-nav__link">
     <span class="md-ellipsis">
       
-        D4. Capabilities model + deterministic defaults
+        Audio Streaming
       
     </span>
   </a>
@@ -1504,10 +1676,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#d5-runtime-stats-contract" class="md-nav__link">
+  <a href="#keyboard-shortcuts" class="md-nav__link">
     <span class="md-ellipsis">
       
-        D5. Runtime stats contract
+        Keyboard Shortcuts
       
     </span>
   </a>
@@ -1515,21 +1687,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#d6-recovery-model" class="md-nav__link">
+  <a href="#theme-support" class="md-nav__link">
     <span class="md-ellipsis">
       
-        D6. Recovery model
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#d7-cli-scope" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        D7. CLI scope
+        Theme Support
       
     </span>
   </a>
@@ -1542,22 +1703,33 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#5-delivery-plan-by-issue-dependency" class="md-nav__link">
+  <a href="#architecture" class="md-nav__link">
     <span class="md-ellipsis">
       
-        5) Delivery plan (by issue dependency)
+        Architecture
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="5) Delivery plan (by issue dependency)">
+    <nav class="md-nav" aria-label="Architecture">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#phase-a-foundation" class="md-nav__link">
+  <a href="#http-endpoints" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Phase A (foundation)
+        HTTP Endpoints
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#design-principles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Design Principles
       
     </span>
   </a>
@@ -1566,6 +1738,39 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#custom-static-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom Static Files
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations-v1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limitations (v1)
+      
+    </span>
+  </a>
   
 </li>
       
@@ -1589,185 +1794,234 @@
   
 
 
-<h1 id="mini-rfc-audio-api-v1-pcm-first-explicit-low-level-api">Mini RFC: Audio API v1 (PCM-first + explicit low-level API)<a class="headerlink" href="#mini-rfc-audio-api-v1-pcm-first-explicit-low-level-api" title="Permanent link">&para;</a></h1>
-<p>Status: Draft (for approval)</p>
-<p>Related issues: #1, #2, #3, #4, #5, #6, #7, #8, #10<br />
-Already in progress: #9 via PR #11</p>
-<h2 id="1-problem">1) Problem<a class="headerlink" href="#1-problem" title="Permanent link">&para;</a></h2>
-<p>Current audio surface mixes low-level Opus-oriented operations and user-facing PCM workflows.
-This makes API naming ambiguous, CLI scope unclear, and recovery/testing behavior under-specified.</p>
-<h2 id="2-goals">2) Goals<a class="headerlink" href="#2-goals" title="Permanent link">&para;</a></h2>
+<h1 id="web-ui">Web UI<a class="headerlink" href="#web-ui" title="Permanent link">&para;</a></h1>
+<p>icom-lan includes a built-in web interface that provides real-time spectrum/waterfall display,
+radio control, audio streaming, and meter readouts — accessible from any browser on your local network.</p>
+<h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Connect to your radio and start the web server</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>icom-lan<span class="w"> </span>web<span class="w"> </span>--port<span class="w"> </span><span class="m">8080</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Or specify a custom host/port</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>icom-lan<span class="w"> </span>web<span class="w"> </span>--host<span class="w"> </span><span class="m">0</span>.0.0.0<span class="w"> </span>--port<span class="w"> </span><span class="m">9090</span>
+</code></pre></div>
+<p>Then open <code>http://your-ip:8080</code> in a browser.</p>
+<h2 id="features">Features<a class="headerlink" href="#features" title="Permanent link">&para;</a></h2>
+<h3 id="spectrum-waterfall-display">Spectrum &amp; Waterfall Display<a class="headerlink" href="#spectrum-waterfall-display" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Provide a <strong>PCM-first high-level API</strong> for common workflows.</li>
-<li>Keep a clear <strong>explicit low-level Opus API</strong> for advanced users.</li>
-<li>Define deterministic defaults and capability introspection.</li>
-<li>Add runtime stats and predictable recovery semantics.</li>
-<li>Preserve backward compatibility with a deprecation window.</li>
+<li><strong>Real-time spectrum graph</strong> — amplitude vs. frequency with gradient fill</li>
+<li><strong>Scrolling waterfall</strong> — color-mapped signal history (dark blue → cyan → yellow → red → white)</li>
+<li><strong>Click-to-tune</strong> — click anywhere on the waterfall to set the VFO frequency</li>
+<li><strong>Hover tooltip</strong> — shows frequency at cursor position</li>
+<li><strong>Frequency axis</strong> — auto-scaling MHz labels</li>
 </ul>
-<h2 id="3-non-goals">3) Non-goals<a class="headerlink" href="#3-non-goals" title="Permanent link">&para;</a></h2>
+<h3 id="radio-controls">Radio Controls<a class="headerlink" href="#radio-controls" title="Permanent link">&para;</a></h3>
 <ul>
-<li>No protocol redesign.</li>
-<li>No breaking changes in one release.</li>
-<li>No broad refactor outside audio/CLI/test/doc scope.</li>
+<li><strong>VFO A/B</strong> — select, swap (A↔B), equalize (A=B)</li>
+<li><strong>Frequency entry</strong> — click the frequency display to type a frequency in MHz</li>
+<li><strong>Mode selector</strong> — USB, LSB, CW, CW-R, AM, FM, RTTY, RTTY-R, PSK, PSK-R</li>
+<li><strong>Filter selector</strong> — FIL1, FIL2, FIL3</li>
+<li><strong>Power level</strong> — adjustable TX power</li>
+<li><strong>Attenuator</strong> — OFF, 6, 12, 18 dB</li>
+<li><strong>Preamp</strong> — OFF, 1, 2</li>
+<li><strong>PTT</strong> — press-and-hold button (or hold Space bar)</li>
 </ul>
-<h2 id="4-decisions">4) Decisions<a class="headerlink" href="#4-decisions" title="Permanent link">&para;</a></h2>
-<h3 id="d1-api-split-explicit-low-level-vs-high-level">D1. API split: explicit low-level vs high-level<a class="headerlink" href="#d1-api-split-explicit-low-level-vs-high-level" title="Permanent link">&para;</a></h3>
-<h4 id="low-level-opus-explicit-naming">Low-level (Opus, explicit naming)<a class="headerlink" href="#low-level-opus-explicit-naming" title="Permanent link">&para;</a></h4>
+<h3 id="real-time-meters">Real-Time Meters<a class="headerlink" href="#real-time-meters" title="Permanent link">&para;</a></h3>
+<p>Eight meter bars with live updates at up to 20 fps:</p>
+<table>
+<thead>
+<tr>
+<th>Meter</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>S-Meter</td>
+<td>Signal strength (S0–S9, S9+dB)</td>
+</tr>
+<tr>
+<td>Power</td>
+<td>TX output power</td>
+</tr>
+<tr>
+<td>SWR</td>
+<td>Standing wave ratio (TX only)</td>
+</tr>
+<tr>
+<td>ALC</td>
+<td>Automatic level control (TX only)</td>
+</tr>
+<tr>
+<td>COMP</td>
+<td>Speech compressor level</td>
+</tr>
+<tr>
+<td>Id</td>
+<td>PA drain current</td>
+</tr>
+<tr>
+<td>Vd</td>
+<td>PA drain voltage</td>
+</tr>
+<tr>
+<td>TEMP</td>
+<td>PA temperature</td>
+</tr>
+</tbody>
+</table>
+<h3 id="audio-streaming">Audio Streaming<a class="headerlink" href="#audio-streaming" title="Permanent link">&para;</a></h3>
 <ul>
-<li><code>start_audio_rx_opus(callback, *, jitter_depth=5)</code></li>
-<li><code>stop_audio_rx_opus()</code></li>
-<li><code>start_audio_tx_opus()</code></li>
-<li><code>push_audio_tx_opus(opus_bytes)</code></li>
-<li><code>stop_audio_tx_opus()</code></li>
+<li><strong>RX audio</strong> — listen to the radio in your browser (Opus codec via WebCodecs API)</li>
+<li><strong>TX audio</strong> — transmit from your microphone (requires browser permission)</li>
+<li><strong>Volume control</strong> — adjustable RX volume slider</li>
+<li>PTT automatically starts/stops TX audio capture</li>
 </ul>
-<h4 id="high-level-pcm">High-level (PCM)<a class="headerlink" href="#high-level-pcm" title="Permanent link">&para;</a></h4>
+<div class="admonition note">
+<p class="admonition-title">Browser Requirements</p>
+<p>Audio features require a modern browser with WebCodecs API support:
+Chrome 94+, Edge 94+, Firefox 130+, Safari 17.4+.</p>
+</div>
+<h3 id="keyboard-shortcuts">Keyboard Shortcuts<a class="headerlink" href="#keyboard-shortcuts" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Space</code></td>
+<td>PTT (hold to transmit)</td>
+</tr>
+<tr>
+<td><code>A</code></td>
+<td>Select VFO A</td>
+</tr>
+<tr>
+<td><code>B</code></td>
+<td>Select VFO B</td>
+</tr>
+<tr>
+<td><code>R</code></td>
+<td>Toggle RX audio</td>
+</tr>
+<tr>
+<td><code>F</code></td>
+<td>Open frequency entry</td>
+</tr>
+<tr>
+<td><code>T</code></td>
+<td>Toggle light/dark theme</td>
+</tr>
+</tbody>
+</table>
+<h3 id="theme-support">Theme Support<a class="headerlink" href="#theme-support" title="Permanent link">&para;</a></h3>
 <ul>
-<li><code>start_audio_rx_pcm(callback, *, sample_rate=48000, channels=1, frame_ms=20)</code></li>
-<li><code>stop_audio_rx_pcm()</code></li>
-<li><code>start_audio_tx_pcm(*, sample_rate=48000, channels=1, frame_ms=20)</code></li>
-<li><code>push_audio_tx_pcm(pcm_bytes)</code></li>
-<li><code>stop_audio_tx_pcm()</code></li>
+<li><strong>Dark theme</strong> (default) — easy on the eyes for nighttime operation</li>
+<li><strong>Light theme</strong> — toggle with the 🌙/☀️ button or press <code>T</code></li>
+<li>Theme preference is saved in localStorage</li>
 </ul>
-<h3 id="d2-backward-compatibility-deprecation">D2. Backward compatibility + deprecation<a class="headerlink" href="#d2-backward-compatibility-deprecation" title="Permanent link">&para;</a></h3>
+<h2 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h2>
+<p>The web UI uses a multi-channel WebSocket architecture for optimal performance:</p>
+<table>
+<thead>
+<tr>
+<th>Channel</th>
+<th>Endpoint</th>
+<th>Format</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Control</td>
+<td><code>/api/v1/ws</code></td>
+<td>JSON text</td>
+<td>Commands, events, state sync</td>
+</tr>
+<tr>
+<td>Scope</td>
+<td><code>/api/v1/scope</code></td>
+<td>Binary</td>
+<td>Spectrum/waterfall data (15-30 fps)</td>
+</tr>
+<tr>
+<td>Meters</td>
+<td><code>/api/v1/meters</code></td>
+<td>Binary</td>
+<td>Meter readings (10-20 fps)</td>
+</tr>
+<tr>
+<td>Audio</td>
+<td><code>/api/v1/audio</code></td>
+<td>Binary</td>
+<td>Opus RX/TX audio</td>
+</tr>
+</tbody>
+</table>
+<h3 id="http-endpoints">HTTP Endpoints<a class="headerlink" href="#http-endpoints" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET</code></td>
+<td><code>/</code></td>
+<td>Web UI (single HTML file)</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/v1/info</code></td>
+<td>Server version, radio model, protocol version</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/v1/capabilities</code></td>
+<td>Radio capabilities</td>
+</tr>
+</tbody>
+</table>
+<h3 id="design-principles">Design Principles<a class="headerlink" href="#design-principles" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Keep current methods (<code>start_audio_rx</code>, <code>start_audio_tx</code>, <code>push_audio_tx</code>, etc.) as aliases to low-level behavior.</li>
-<li>Emit <code>DeprecationWarning</code> with replacement hints.</li>
-<li>Deprecation window: two minor releases.</li>
-<li>Remove ambiguous aliases at next major.</li>
+<li><strong>Single HTML file</strong> — no build step, no framework, no external dependencies</li>
+<li><strong>Zero npm/pip dependencies</strong> — pure asyncio server, vanilla JavaScript frontend</li>
+<li><strong>Binary protocol</strong> — efficient scope and meter data (&lt; 15 KB/s for dual waterfall)</li>
+<li><strong>Backpressure</strong> — server drops frames when client can't keep up, never drops commands</li>
+<li><strong>Auto-reconnect</strong> — exponential backoff (1s → 30s max) on connection loss</li>
 </ul>
-<h3 id="d3-internal-transcoder-layer">D3. Internal transcoder layer<a class="headerlink" href="#d3-internal-transcoder-layer" title="Permanent link">&para;</a></h3>
+<h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># CLI options</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>icom-lan<span class="w"> </span>web<span class="w"> </span>--host<span class="w"> </span><span class="m">0</span>.0.0.0<span class="w">     </span><span class="c1"># Listen address (default: 0.0.0.0)</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>icom-lan<span class="w"> </span>web<span class="w"> </span>--port<span class="w"> </span><span class="m">8080</span><span class="w">         </span><span class="c1"># HTTP/WebSocket port (default: 8080)</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>icom-lan<span class="w"> </span>web<span class="w"> </span>--static-dir<span class="w"> </span>./ui<span class="w">   </span><span class="c1"># Custom static files directory</span>
+</code></pre></div>
+<h2 id="custom-static-files">Custom Static Files<a class="headerlink" href="#custom-static-files" title="Permanent link">&para;</a></h2>
+<p>To serve a modified or completely custom UI:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Extract the built-in index.html</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="s2">from importlib.resources import files</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="s2">html = files(&#39;icom_lan.web.static&#39;).joinpath(&#39;index.html&#39;).read_text()</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="s2">open(&#39;my-ui/index.html&#39;, &#39;w&#39;).write(html)</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="s2">&quot;</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="c1"># Edit my-ui/index.html to your liking, then serve it</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>icom-lan<span class="w"> </span>web<span class="w"> </span>--static-dir<span class="w"> </span>./my-ui
+</code></pre></div>
+<p>The WebSocket protocol is documented in the <a href="../../internals/rfc-web-ui-v1/">RFC</a> and is
+designed to survive backend rewrites — you can build any frontend you want.</p>
+<h2 id="limitations-v1">Limitations (v1)<a class="headerlink" href="#limitations-v1" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Add internal PCM&lt;-&gt;Opus transcoder abstraction.</li>
-<li>Use <code>opuslib</code> when available (<code>pip install icom-lan[audio]</code>).</li>
-<li>If missing, high-level PCM APIs raise actionable error:
-  <code>Audio codec backend unavailable; install icom-lan[audio]</code>.</li>
+<li><strong>LAN only</strong> — no authentication, not safe for internet exposure</li>
+<li><strong>Single user</strong> — multiple browsers can connect but may conflict on PTT</li>
+<li><strong>No WebRTC</strong> — audio latency is higher than native; for low-latency remote use, consider VPN + native client</li>
+<li><strong>Canvas2D</strong> — sufficient for 475px scope at 30fps; WebGL deferred to v2</li>
 </ul>
-<h3 id="d4-capabilities-model-deterministic-defaults">D4. Capabilities model + deterministic defaults<a class="headerlink" href="#d4-capabilities-model-deterministic-defaults" title="Permanent link">&para;</a></h3>
-<p>Add <code>AudioCaps</code> model and API:
-- <code>get_audio_caps()</code> returns:
-  - supported codecs
-  - supported sample rates
-  - supported channel counts
-  - default codec/rate/channels</p>
-<p>CLI:
-- <code>icom-lan audio caps [--json]</code></p>
-<p>Default selection (deterministic):
-1. Prefer Opus mono 48k
-2. Else Opus stereo 48k
-3. Else best PCM mode
-4. If no valid combo -&gt; clear validation error</p>
-<h3 id="d5-runtime-stats-contract">D5. Runtime stats contract<a class="headerlink" href="#d5-runtime-stats-contract" title="Permanent link">&para;</a></h3>
-<p>Add <code>get_audio_stats()</code> shape (JSON-friendly):
-- <code>packet_loss_pct</code> (0..100)
-- <code>jitter_ms</code>
-- <code>underruns</code>
-- <code>overruns</code>
-- <code>est_latency_ms</code>
-- <code>rx_packets</code>, <code>tx_packets</code></p>
-<p>Stats availability: during active stream and for a short terminal window after stop.</p>
-<h3 id="d6-recovery-model">D6. Recovery model<a class="headerlink" href="#d6-recovery-model" title="Permanent link">&para;</a></h3>
-<p>Optional auto-recover after reconnect:
-- config: <code>auto_recover=True</code>, <code>recover_max_attempts=5</code>
-- state events: <code>recovering</code>, <code>recovered</code>, <code>failed</code>
-- single active stream invariant (no duplicate RX/TX tasks)</p>
-<h3 id="d7-cli-scope">D7. CLI scope<a class="headerlink" href="#d7-cli-scope" title="Permanent link">&para;</a></h3>
-<p>Add <code>icom-lan audio</code> command group:
-- <code>audio rx --out rx.wav --seconds 10</code>
-- <code>audio tx --in tx.wav</code>
-- <code>audio loopback --seconds 10</code>
-- <code>audio caps</code></p>
-<p>Common flags:
-- <code>--sample-rate</code>, <code>--channels</code>, <code>--json</code>, <code>--stats</code></p>
-<h2 id="5-delivery-plan-by-issue-dependency">5) Delivery plan (by issue dependency)<a class="headerlink" href="#5-delivery-plan-by-issue-dependency" title="Permanent link">&para;</a></h2>
-<h3 id="phase-a-foundation">Phase A (foundation)<a class="headerlink" href="#phase-a-foundation" title="Permanent link">&para;</a></h3>
-<ul>
-<li>
-<h1 id="1-transcoder-layer">1 Transcoder layer<a class="headerlink" href="#1-transcoder-layer" title="Permanent link">&para;</a></h1>
-</li>
-<li>
-<h1 id="10-naming-deprecation-map">10 Naming + deprecation map<a class="headerlink" href="#10-naming-deprecation-map" title="Permanent link">&para;</a></h1>
-</li>
-</ul>
-<h3 id="phase-b-public-apis">Phase B (public APIs)<a class="headerlink" href="#phase-b-public-apis" title="Permanent link">&para;</a></h3>
-<ul>
-<li>
-<h1 id="2-rx-high-level-pcm-api">2 RX high-level PCM API<a class="headerlink" href="#2-rx-high-level-pcm-api" title="Permanent link">&para;</a></h1>
-</li>
-<li>
-<h1 id="3-tx-high-level-pcm-api">3 TX high-level PCM API<a class="headerlink" href="#3-tx-high-level-pcm-api" title="Permanent link">&para;</a></h1>
-</li>
-<li>
-<h1 id="8-capability-introspection-defaults">8 Capability introspection + defaults<a class="headerlink" href="#8-capability-introspection-defaults" title="Permanent link">&para;</a></h1>
-</li>
-</ul>
-<h3 id="phase-c-cli-observability">Phase C (CLI + observability)<a class="headerlink" href="#phase-c-cli-observability" title="Permanent link">&para;</a></h3>
-<ul>
-<li>
-<h1 id="4-cli-audio-subcommands">4 CLI audio subcommands<a class="headerlink" href="#4-cli-audio-subcommands" title="Permanent link">&para;</a></h1>
-</li>
-<li>
-<h1 id="6-runtime-stats-api-stats">6 Runtime stats API + <code>--stats</code><a class="headerlink" href="#6-runtime-stats-api-stats" title="Permanent link">&para;</a></h1>
-</li>
-</ul>
-<h3 id="phase-d-resilience-ci">Phase D (resilience + CI)<a class="headerlink" href="#phase-d-resilience-ci" title="Permanent link">&para;</a></h3>
-<ul>
-<li>
-<h1 id="7-auto-recover-behavior">7 Auto-recover behavior<a class="headerlink" href="#7-auto-recover-behavior" title="Permanent link">&para;</a></h1>
-</li>
-<li>
-<h1 id="5-e2e-ci-stabilization">5 E2E + CI stabilization<a class="headerlink" href="#5-e2e-ci-stabilization" title="Permanent link">&para;</a></h1>
-</li>
-</ul>
-<h2 id="6-test-strategy">6) Test strategy<a class="headerlink" href="#6-test-strategy" title="Permanent link">&para;</a></h2>
-<ul>
-<li>Unit tests for transcoder adapters and validation.</li>
-<li>Integration tests for RX/TX/loopback (normal + reconnect).</li>
-<li>CLI smoke tests for all new subcommands.</li>
-<li>CI split:</li>
-<li>Fast smoke on each PR</li>
-<li>Heavier integration profile on schedule/manual</li>
-</ul>
-<h2 id="7-risks">7) Risks<a class="headerlink" href="#7-risks" title="Permanent link">&para;</a></h2>
-<ul>
-<li>Opus backend differences across platforms.</li>
-<li>Reconnect race conditions in async tasks.</li>
-<li>Stats drift if metric units are not fixed in docs/tests.</li>
-</ul>
-<p>Mitigation:
-- strict typed errors,
-- state machine invariants,
-- unit-tested metric contract and fixtures.</p>
-<h2 id="8-acceptance-mapping">8) Acceptance mapping<a class="headerlink" href="#8-acceptance-mapping" title="Permanent link">&para;</a></h2>
-<ul>
-<li>
-<h1 id="123-high-level-pcm-apis-operational-and-tested">1/#2/#3: high-level PCM APIs operational and tested<a class="headerlink" href="#123-high-level-pcm-apis-operational-and-tested" title="Permanent link">&para;</a></h1>
-</li>
-<li>
-<h1 id="4-cli-audio-workflow-commands-work-end-to-end">4: CLI audio workflow commands work end-to-end<a class="headerlink" href="#4-cli-audio-workflow-commands-work-end-to-end" title="Permanent link">&para;</a></h1>
-</li>
-<li>
-<h1 id="5-ci-smokeintegration-split-stable">5: CI smoke/integration split stable<a class="headerlink" href="#5-ci-smokeintegration-split-stable" title="Permanent link">&para;</a></h1>
-</li>
-<li>
-<h1 id="6-get_audio_stats-cli-stats-output">6: <code>get_audio_stats()</code> + CLI stats output<a class="headerlink" href="#6-get_audio_stats-cli-stats-output" title="Permanent link">&para;</a></h1>
-</li>
-<li>
-<h1 id="7-reconnect-recovery-behavior-deterministic">7: reconnect recovery behavior deterministic<a class="headerlink" href="#7-reconnect-recovery-behavior-deterministic" title="Permanent link">&para;</a></h1>
-</li>
-<li>
-<h1 id="8-audio-caps-safe-defaults">8: <code>audio caps</code> + safe defaults<a class="headerlink" href="#8-audio-caps-safe-defaults" title="Permanent link">&para;</a></h1>
-</li>
-<li>
-<h1 id="10-naming-map-deprecation-warnings-migration-notes">10: naming map + deprecation warnings + migration notes<a class="headerlink" href="#10-naming-map-deprecation-warnings-migration-notes" title="Permanent link">&para;</a></h1>
-</li>
-</ul>
-<h2 id="9-open-questions-for-maintainer-approval">9) Open questions for maintainer approval<a class="headerlink" href="#9-open-questions-for-maintainer-approval" title="Permanent link">&para;</a></h2>
-<ol>
-<li>Deprecation window length: exactly 2 minor releases OK?</li>
-<li>Keep current ambiguous names as low-level aliases or add hard warnings immediately?</li>
-<li>Should <code>--stats</code> print periodic stream stats (live) or end-of-run summary by default?</li>
-<li>Is <code>opuslib</code> optional dependency acceptable as the default high-level backend?</li>
-</ol>
 
 
 

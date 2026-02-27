@@ -706,6 +706,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../guide/web-ui/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Web UI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../guide/commands/" class="md-nav__link">
         
   
@@ -1200,6 +1228,34 @@
     
   
     Protocol Deep Dive
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../internals/rfc-web-ui-v1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Web UI RFC
   
 
     
@@ -1715,10 +1771,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#mvp-phase-71" class="md-nav__link">
+  <a href="#mvp-phase-71-completed" class="md-nav__link">
     <span class="md-ellipsis">
       
-        MVP (Phase 7.1)
+        MVP (Phase 7.1) ✅ Completed
       
     </span>
   </a>
@@ -1726,10 +1782,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#waterfall-phase-72" class="md-nav__link">
+  <a href="#waterfall-phase-72-completed" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Waterfall (Phase 7.2)
+        Waterfall (Phase 7.2) ✅ Completed
       
     </span>
   </a>
@@ -1737,10 +1793,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#audio-phase-73" class="md-nav__link">
+  <a href="#audio-phase-73-completed" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Audio (Phase 7.3)
+        Audio (Phase 7.3) ✅ Completed
       
     </span>
   </a>
@@ -1963,10 +2019,10 @@
 <li>✅ Phase 4 — Polish &amp; Publish (PyPI + releases + docs)</li>
 <li>⬜ Phase 5 — Rust Core</li>
 <li>✅ Phase 6 — Spectrum &amp; Waterfall (API + CLI + rendering)</li>
-<li>⬜ Phase 7 — Web UI (full wfview/RS-BA1 replacement)</li>
+<li>✅ Phase 7 — Web UI v1 (spectrum, waterfall, controls, meters, audio)</li>
 <li>⬜ Phase 8 — Virtual Audio Bridge (network audio for WSJT-X / digital modes)</li>
 </ul>
-<p><strong>Next focus:</strong> Phase 7.1 (Web UI MVP) with optional parallel spike for Phase 5.1 (Rust core).</p>
+<p><strong>Next focus:</strong> Phase 7.4 (Web UI advanced features) and Phase 5.1 (Rust core spike).</p>
 <hr />
 <h2 id="phase-3-audio-streaming-python">Phase 3 — Audio Streaming (Python)<a class="headerlink" href="#phase-3-audio-streaming-python" title="Permanent link">&para;</a></h2>
 <p><strong>Goal:</strong> RX/TX audio via Opus codec on port 50003.</p>
@@ -2310,13 +2366,13 @@
 <li><strong>icom-lan Web UI</strong> — MIT, in the browser, zero install, works from your phone</li>
 </ul>
 <h3 id="architecture_1">Architecture<a class="headerlink" href="#architecture_1" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>┌──────────────┐     WebSocket      ┌──────────────────┐
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>│   Browser    │◄──────────────────►│   icom-lan       │
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>│              │                    │   server          │
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>│  ┌────────┐  │                    │  ┌────────────┐   │     UDP
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>│  │ React/ │  │                    │  │ WebSocket  │   │◄──────────►  Radio
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>│  │ Canvas │  │                    │  │ ↔ UDP      │   │   50001-3
-<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>│  │ WebGL  │  │                    │  │ proxy      │   │
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>┌──────────────┐    4 WebSockets    ┌──────────────────┐
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>│   Browser    │◄──────────────────►│   icom-lan web   │
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>│              │  /ws (control)     │   (asyncio)       │
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>│  ┌────────┐  │  /scope (binary)  │  ┌────────────┐   │     UDP
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>│  │ Vanilla│  │  /meters (binary) │  │ WebSocket  │   │◄──────────►  Radio
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>│  │ JS +   │  │  /audio (Opus)    │  │ ↔ UDP      │   │   50001-3
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>│  │ Canvas │  │                    │  │ bridge     │   │
 <a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>│  └────────┘  │                    │  └────────────┘   │
 <a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>└──────────────┘                    └──────────────────┘
 </code></pre></div>
@@ -2331,30 +2387,39 @@
 <a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>└────────────────────────────────────┘
 </code></pre></div>
 <h3 id="features">Features<a class="headerlink" href="#features" title="Permanent link">&para;</a></h3>
-<h4 id="mvp-phase-71">MVP (Phase 7.1)<a class="headerlink" href="#mvp-phase-71" title="Permanent link">&para;</a></h4>
+<h4 id="mvp-phase-71-completed">MVP (Phase 7.1) ✅ Completed<a class="headerlink" href="#mvp-phase-71-completed" title="Permanent link">&para;</a></h4>
 <ul>
-<li>[ ] Frequency display + tuning (click/drag/scroll/keyboard)</li>
-<li>[ ] Mode selector (USB/LSB/CW/AM/FM)</li>
-<li>[ ] S-meter bar (real-time)</li>
-<li>[ ] PTT button (with safety confirm)</li>
-<li>[ ] Power/SWR/ALC meters</li>
-<li>[ ] VFO A/B switch, split indicator</li>
-<li>[ ] Mobile-responsive layout</li>
+<li>[x] Frequency display + tuning (click-to-edit MHz modal)</li>
+<li>[x] Mode selector (USB/LSB/CW/CW-R/AM/FM/RTTY/RTTY-R/PSK/PSK-R)</li>
+<li>[x] S-meter bar (real-time, S0-S9/S9+dB)</li>
+<li>[x] PTT button (press-hold, Space key)</li>
+<li>[x] Power/SWR/ALC/COMP/Id/Vd/TEMP meters (8 total)</li>
+<li>[x] VFO A/B switch, swap (A↔B), equalize (A=B)</li>
+<li>[x] Mobile-responsive layout (tablet + phone breakpoints)</li>
+<li>[x] Filter selector (FIL1/FIL2/FIL3)</li>
+<li>[x] Attenuator (OFF/6/12/18 dB) and preamp (OFF/1/2)</li>
+<li>[x] Power level control</li>
+<li>[x] Dark/light theme toggle with persistence</li>
+<li>[x] Keyboard shortcuts (Space/A/B/R/F/T)</li>
+<li>[x] Toast notifications (connect/disconnect/errors)</li>
 </ul>
-<h4 id="waterfall-phase-72">Waterfall (Phase 7.2)<a class="headerlink" href="#waterfall-phase-72" title="Permanent link">&para;</a></h4>
+<h4 id="waterfall-phase-72-completed">Waterfall (Phase 7.2) ✅ Completed<a class="headerlink" href="#waterfall-phase-72-completed" title="Permanent link">&para;</a></h4>
 <ul>
-<li>[ ] Real-time spectrum display (Canvas 2D or WebGL)</li>
-<li>[ ] Waterfall (scrolling history)</li>
-<li>[ ] Click-to-tune on waterfall</li>
+<li>[x] Real-time spectrum display (Canvas2D, gradient fill)</li>
+<li>[x] Waterfall (scrolling history, color LUT)</li>
+<li>[x] Click-to-tune on waterfall (per-line freq metadata)</li>
+<li>[x] Hover tooltip with frequency readout</li>
+<li>[x] Frequency axis labels (auto-scaling MHz ticks)</li>
 <li>[ ] Frequency zoom/pan</li>
 <li>[ ] Color schemes (classic, viridis, plasma)</li>
 <li>[ ] Dual waterfall for IC-7610 (Main + Sub)</li>
 <li>[ ] FPS control (10/20/30 fps)</li>
 </ul>
-<h4 id="audio-phase-73">Audio (Phase 7.3)<a class="headerlink" href="#audio-phase-73" title="Permanent link">&para;</a></h4>
+<h4 id="audio-phase-73-completed">Audio (Phase 7.3) ✅ Completed<a class="headerlink" href="#audio-phase-73-completed" title="Permanent link">&para;</a></h4>
 <ul>
-<li>[ ] RX audio via Web Audio API (Opus → PCM → speakers)</li>
-<li>[ ] TX audio via getUserMedia() (mic → Opus → radio)</li>
+<li>[x] RX audio via WebCodecs AudioDecoder (Opus → AudioBuffer → speakers)</li>
+<li>[x] TX audio via getUserMedia() + AudioEncoder (mic → Opus → radio)</li>
+<li>[x] Volume control slider</li>
 <li>[ ] VOX mode (auto PTT on audio)</li>
 <li>[ ] Audio level meters (RX/TX)</li>
 <li>[ ] Noise reduction (Web Audio filters)</li>
