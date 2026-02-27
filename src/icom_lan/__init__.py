@@ -33,7 +33,7 @@ from .audio import (
 )
 from .transport import ConnectionState, IcomTransport
 from .commander import IcomCommander, Priority
-from .radio import IcomRadio
+from .radio import AudioRecoveryState, IcomRadio
 from .radios import RADIOS, RadioModel, get_civ_addr
 from .commands import (
     CONTROLLER_ADDR,
@@ -101,6 +101,7 @@ from .types import (
 __all__ = [
     "__version__",
     # Radio
+    "AudioRecoveryState",
     "IcomRadio",
     "IcomCommander",
     "Priority",
