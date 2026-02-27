@@ -704,7 +704,7 @@ function setModeDefaultStep(mode) {
 function tuneByStep(delta) {
   const current = activeVfo === 'A' ? currentFreqA : currentFreqB;
   if (!current) return;
-  const hz = current + delta;
+  const hz = Math.max(30000, Math.min(60000000, current + delta));
   sendCmd('set_freq', { vfo: activeVfo, freq: hz });
   freqDisplayEl.textContent = fmtFreq(hz);
   if (activeVfo === 'A') currentFreqA = hz; else currentFreqB = hz;
