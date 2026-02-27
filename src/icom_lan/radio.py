@@ -1691,12 +1691,10 @@ class IcomRadio:
         if isinstance(mode, str):
             mode = Mode[mode]
         civ = set_mode(mode, filter_width=filter_width, to_addr=self._radio_addr)
-        resp = await self._send_civ_raw(civ)
-        ack = parse_ack_nak(resp)
-        if ack is False:
-            raise CommandError(
-                f"Radio rejected set_mode({mode}, filter_width={filter_width})"
-            )
+        # IC-7610 sometimes does not send ACK for set_mode (known issue with
+        # wfview/rigctld as well).  Use fire-and-forget to avoid CI-V timeout
+        # that would poison subsequent commands.
+        await self._send_civ_raw(civ, wait_response=False)
         self._last_mode = mode
         if filter_width is not None:
             self._filter_width = filter_width

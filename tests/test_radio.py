@@ -142,6 +142,7 @@ class MockTransport:
         self.remote_id: int = 0xDEADBEEF
         self.send_seq: int = 0
         self.ping_seq: int = 0
+        self.rx_packet_count: int = 0
 
     async def connect(self, host: str, port: int) -> None:
         self.connected = True

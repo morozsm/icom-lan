@@ -406,6 +406,7 @@ class MockTransport:
         self.sent_packets: list[bytes] = []
         self.my_id: int = 0x00010001
         self.remote_id: int = 0xDEADBEEF
+        self.rx_packet_count: int = 0
 
     async def connect(self, host: str, port: int) -> None:
         pass
