@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>icom-lan Web UI</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #111;
+      color: #ccc;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+    #header {
+      padding: 8px 16px;
+      background: #1a1a1a;
+      border-bottom: 1px solid #333;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    #header h1 { font-size: 16px; color: #7af; }
+    #status {
+      margin-left: auto;
+      font-size: 12px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: #333;
+    }
+    #status.connected { background: #1a3a1a; color: #4f4; }
+    #status.disconnected { background: #3a1a1a; color: #f44; }
+    #app {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+    #controls {
+      width: 220px;
+      background: #161616;
+      border-right: 1px solid #333;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow-y: auto;
+    }
+    .control-group label {
+      display: block;
+      font-size: 11px;
+      color: #888;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    #freq-display {
+      font-size: 22px;
+      color: #7af;
+      letter-spacing: 0.1em;
+      padding: 6px 0;
+    }
+    select, input[type=number] {
+      width: 100%;
+      background: #222;
+      color: #ccc;
+      border: 1px solid #444;
+      border-radius: 3px;
+      padding: 4px 6px;
+      font-family: inherit;
+      font-size: 13px;
+    }
+    button {
+      width: 100%;
+      background: #2a3a4a;
+      color: #ccc;
+      border: 1px solid #4a6a8a;
+      border-radius: 3px;
+      padding: 6px 0;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 13px;
+    }
+    button:hover { background: #3a4a5a; }
+    #ptt-btn { background: #3a1a1a; border-color: #8a3a3a; }
+    #ptt-btn.active { background: #7a1a1a; border-color: #fa3a3a; color: #faa; }
+    #scope-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 8px;
+      gap: 8px;
+    }
+    canvas {
+      background: #000;
+      border: 1px solid #333;
+      width: 100%;
+    }
+    #scope-canvas { flex: 0 0 120px; }
+    #wf-canvas { flex: 1; }
+    #meters {
+      display: flex;
+      gap: 8px;
+      padding: 4px 8px;
+      background: #161616;
+      border-top: 1px solid #333;
+    }
+    .meter-bar-wrap { flex: 1; }
+    .meter-bar-wrap label { font-size: 10px; color: #888; display: block; }
+    .meter-bar {
+      height: 8px;
+      background: #333;
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 2px;
+    }
+    .meter-fill { height: 100%; width: 0%; background: #4af; transition: width 0.05s; }
+    #smeter-fill { background: #4af; }
+    #swr-fill { background: #fa4; }
+    #alc-fill { background: #f44; }
+    #power-fill { background: #4f4; }
+  </style>
+</head>
+<body>
+  <div id="header">
+    <h1>icom-lan</h1>
+    <span id="radio-model">—</span>
+    <div id="status" class="disconnected">disconnected</div>
+  </div>
+  <div id="app">
+    <div id="controls">
+      <div class="control-group">
+        <label>Frequency (VFO A)</label>
+        <div id="freq-display">—</div>
+      </div>
+      <div class="control-group">
+        <label>Mode</label>
+        <select id="mode-sel">
+          <option>USB</option><option>LSB</option><option>CW</option>
+          <option>AM</option><option>FM</option><option>RTTY</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <button id="ptt-btn">PTT OFF</button>
+      </div>
+      <div class="control-group">
+        <label>Version</label>
+        <span id="version-info">—</span>
+      </div>
+    </div>
+    <div id="scope-panel">
+      <canvas id="scope-canvas" height="120"></canvas>
+      <canvas id="wf-canvas" height="200"></canvas>
+    </div>
+  </div>
+  <div id="meters">
+    <div class="meter-bar-wrap">
+      <label>S-meter</label>
+      <div class="meter-bar"><div class="meter-fill" id="smeter-fill"></div></div>
+    </div>
+    <div class="meter-bar-wrap">
+      <label>SWR</label>
+      <div class="meter-bar"><div class="meter-fill" id="swr-fill"></div></div>
+    </div>
+    <div class="meter-bar-wrap">
+      <label>ALC</label>
+      <div class="meter-bar"><div class="meter-fill" id="alc-fill"></div></div>
+    </div>
+    <div class="meter-bar-wrap">
+      <label>Power</label>
+      <div class="meter-bar"><div class="meter-fill" id="power-fill"></div></div>
+    </div>
+  </div>
+
+  <script>
+  (function() {
+    'use strict';
+
+    // --- State ---
+    const state = { freq_a: 0, mode: 'USB', ptt: false, connected: false };
+    let ctrlWs = null, scopeWs = null, meterWs = null;
+    let scopeSeq = -1, meterSeq = -1;
+    let reconnectDelay = 1000;
+
+    // --- Elements ---
+    const statusEl = document.getElementById('status');
+    const freqEl = document.getElementById('freq-display');
+    const modeEl = document.getElementById('mode-sel');
+    const pttBtn = document.getElementById('ptt-btn');
+    const radioModelEl = document.getElementById('radio-model');
+    const versionEl = document.getElementById('version-info');
+    const scopeCanvas = document.getElementById('scope-canvas');
+    const wfCanvas = document.getElementById('wf-canvas');
+    const scopeCtx = scopeCanvas.getContext('2d');
+    const wfCtx = wfCanvas.getContext('2d');
+
+    // Meter fills
+    const smeterFill = document.getElementById('smeter-fill');
+    const swrFill = document.getElementById('swr-fill');
+    const alcFill = document.getElementById('alc-fill');
+    const powerFill = document.getElementById('power-fill');
+
+    // --- Waterfall color LUT ---
+    const COLOR_LUT = new Uint32Array(161);
+    (function buildLut() {
+      for (let i = 0; i <= 160; i++) {
+        const t = i / 160;
+        let r, g, b;
+        if (t < 0.25) { r = 0; g = 0; b = Math.round(128 + t * 4 * 127); }
+        else if (t < 0.5) { r = 0; g = Math.round((t - 0.25) * 4 * 255); b = 255; }
+        else if (t < 0.75) { r = Math.round((t - 0.5) * 4 * 255); g = 255; b = Math.round(255 - (t - 0.5) * 4 * 255); }
+        else { r = 255; g = Math.round(255 - (t - 0.75) * 4 * 255); b = 0; }
+        COLOR_LUT[i] = 0xFF000000 | (b << 16) | (g << 8) | r;
+      }
+    })();
+
+    let wfLineImg = null;
+    let wfBuf32 = null;
+
+    function resizeCanvases() {
+      const panel = document.getElementById('scope-panel');
+      const w = panel.clientWidth - 18;
+      if (scopeCanvas.width !== w) { scopeCanvas.width = w; scopeCanvas.height = 120; }
+      if (wfCanvas.width !== w) {
+        wfCanvas.width = w;
+        wfCanvas.height = 200;
+        wfLineImg = wfCtx.createImageData(w, 1);
+        wfBuf32 = new Uint32Array(wfLineImg.data.buffer);
+      }
+    }
+
+    window.addEventListener('resize', resizeCanvases);
+    resizeCanvases();
+
+    // --- WebSocket helpers ---
+    function wsUrl(path) {
+      const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+      return `${proto}://${location.host}${path}`;
+    }
+
+    function setStatus(connected) {
+      state.connected = connected;
+      statusEl.textContent = connected ? 'connected' : 'disconnected';
+      statusEl.className = connected ? 'connected' : 'disconnected';
+    }
+
+    // --- Control WebSocket ---
+    function connectControl() {
+      ctrlWs = new WebSocket(wsUrl('/api/v1/ws'));
+      ctrlWs.onopen = () => {
+        reconnectDelay = 1000;
+        ctrlWs.send(JSON.stringify({ type: 'subscribe', streams: ['scope', 'meters'] }));
+      };
+      ctrlWs.onmessage = (ev) => handleControlMsg(JSON.parse(ev.data));
+      ctrlWs.onclose = () => {
+        setStatus(false);
+        setTimeout(connectControl, reconnectDelay);
+        reconnectDelay = Math.min(reconnectDelay * 2, 30000);
+      };
+      ctrlWs.onerror = () => {};
+    }
+
+    function handleControlMsg(msg) {
+      if (msg.type === 'hello') {
+        setStatus(true);
+        radioModelEl.textContent = msg.radio || '';
+        versionEl.textContent = `v${msg.version || '?'}`;
+      } else if (msg.type === 'state') {
+        const d = msg.data || {};
+        if (d.freq_a) { state.freq_a = d.freq_a; freqEl.textContent = fmtFreq(d.freq_a); }
+        if (d.mode) { state.mode = d.mode; modeEl.value = d.mode; }
+        if (typeof d.ptt === 'boolean') updatePtt(d.ptt);
+      } else if (msg.type === 'event') {
+        if (msg.name === 'freq_changed' && msg.data?.freq) {
+          state.freq_a = msg.data.freq;
+          freqEl.textContent = fmtFreq(msg.data.freq);
+        } else if (msg.name === 'ptt') {
+          updatePtt(msg.data?.state ?? false);
+        }
+      }
+    }
+
+    function fmtFreq(hz) {
+      return (hz / 1e6).toFixed(6) + ' MHz';
+    }
+
+    function sendCmd(name, params) {
+      if (ctrlWs && ctrlWs.readyState === WebSocket.OPEN) {
+        ctrlWs.send(JSON.stringify({ type: 'cmd', id: Math.random().toString(36).slice(2), name, params }));
+      }
+    }
+
+    // --- Scope WebSocket ---
+    function connectScope() {
+      scopeWs = new WebSocket(wsUrl('/api/v1/scope'));
+      scopeWs.binaryType = 'arraybuffer';
+      scopeWs.onmessage = (ev) => handleScopeFrame(ev.data);
+      scopeWs.onclose = () => setTimeout(connectScope, 2000);
+      scopeWs.onerror = () => {};
+    }
+
+    function handleScopeFrame(buf) {
+      const dv = new DataView(buf);
+      if (buf.byteLength < 16) return;
+      const msgType = dv.getUint8(0);
+      if (msgType !== 0x01) return;
+      const seq = dv.getUint16(11, true);
+      if (scopeSeq >= 0 && seq !== ((scopeSeq + 1) & 0xFFFF)) {
+        // Gap detected — don't interpolate
+      }
+      scopeSeq = seq;
+      const pixelCount = dv.getUint16(14, true);
+      const pixels = new Uint8Array(buf, 16, pixelCount);
+      drawSpectrum(pixels);
+      renderWaterfallLine(pixels);
+    }
+
+    function drawSpectrum(pixels) {
+      const w = scopeCanvas.width, h = scopeCanvas.height;
+      scopeCtx.clearRect(0, 0, w, h);
+      scopeCtx.fillStyle = '#000';
+      scopeCtx.fillRect(0, 0, w, h);
+      if (!pixels.length) return;
+      scopeCtx.beginPath();
+      scopeCtx.strokeStyle = '#4af';
+      scopeCtx.lineWidth = 1;
+      for (let i = 0; i < pixels.length; i++) {
+        const x = (i / pixels.length) * w;
+        const y = h - (pixels[i] / 160) * h;
+        i === 0 ? scopeCtx.moveTo(x, y) : scopeCtx.lineTo(x, y);
+      }
+      scopeCtx.stroke();
+    }
+
+    function renderWaterfallLine(pixels) {
+      if (!wfBuf32) return;
+      const w = wfCanvas.width;
+      // Scroll down
+      wfCtx.drawImage(wfCanvas, 0, 1);
+      // Draw top line
+      for (let i = 0; i < Math.min(pixels.length, w); i++) {
+        wfBuf32[i] = COLOR_LUT[Math.min(pixels[i], 160)];
+      }
+      wfCtx.putImageData(wfLineImg, 0, 0);
+    }
+
+    // --- Meter WebSocket ---
+    function connectMeters() {
+      meterWs = new WebSocket(wsUrl('/api/v1/meters'));
+      meterWs.binaryType = 'arraybuffer';
+      meterWs.onopen = () => {
+        meterWs.send(JSON.stringify({ type: 'meters_start', meters: ['smeter', 'power', 'swr', 'alc'], fps: 20 }));
+      };
+      meterWs.onmessage = (ev) => handleMeterFrame(ev.data);
+      meterWs.onclose = () => setTimeout(connectMeters, 2000);
+      meterWs.onerror = () => {};
+    }
+
+    function handleMeterFrame(buf) {
+      const dv = new DataView(buf);
+      if (buf.byteLength < 4) return;
+      if (dv.getUint8(0) !== 0x20) return;
+      const count = dv.getUint8(3);
+      for (let i = 0; i < count; i++) {
+        const off = 4 + i * 3;
+        if (off + 3 > buf.byteLength) break;
+        const id = dv.getUint8(off);
+        const val = dv.getUint8(off + 1) | (dv.getUint8(off + 2) << 8);
+        const pct = Math.min(100, (val / 255) * 100).toFixed(0) + '%';
+        if (id === 0x01) smeterFill.style.width = pct;
+        else if (id === 0x03) powerFill.style.width = pct;
+        else if (id === 0x04) swrFill.style.width = pct;
+        else if (id === 0x05) alcFill.style.width = pct;
+      }
+    }
+
+    // --- PTT ---
+    function updatePtt(on) {
+      state.ptt = on;
+      pttBtn.textContent = on ? 'PTT ON' : 'PTT OFF';
+      pttBtn.className = on ? 'active' : '';
+    }
+
+    pttBtn.addEventListener('click', () => sendCmd('ptt', { state: !state.ptt }));
+
+    modeEl.addEventListener('change', () => sendCmd('set_mode', { mode: modeEl.value }));
+
+    // --- Click-to-tune ---
+    wfCanvas.addEventListener('click', (e) => {
+      // TODO: use per-line freq metadata when available
+    });
+
+    // --- Start ---
+    connectControl();
+    connectScope();
+    connectMeters();
+  })();
+  </script>
+</body>
+</html>

@@ -321,6 +321,29 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Max commands per second per client (default: unlimited)",
     )
 
+    # web
+    web_p = sub.add_parser("web", help="Start built-in HTTP + WebSocket web UI server")
+    web_p.add_argument(
+        "--host",
+        dest="web_host",
+        default="0.0.0.0",
+        help="Server listen address (default: 0.0.0.0)",
+    )
+    web_p.add_argument(
+        "--port",
+        dest="web_port",
+        type=int,
+        default=8080,
+        help="Server HTTP/WS port (default: 8080)",
+    )
+    web_p.add_argument(
+        "--static-dir",
+        dest="web_static_dir",
+        default=None,
+        metavar="PATH",
+        help="Directory to serve static files from (default: built-in)",
+    )
+
     # scope
     scope_p = sub.add_parser("scope", help="Capture scope/waterfall and render image")
     scope_p.add_argument(
@@ -425,6 +448,8 @@ async def _run(args: argparse.Namespace) -> int:
                 return await _cmd_att(radio, args)
             elif args.command == "preamp":
                 return await _cmd_preamp(radio, args)
+            elif args.command == "web":
+                return await _cmd_web(radio, args)
             elif args.command == "scope":
                 return await _cmd_scope(radio, args)
             elif args.command == "serve":
@@ -1161,6 +1186,30 @@ async def _cmd_serve(radio: IcomRadio, args: argparse.Namespace) -> int:
     )
     try:
         await RigctldServer(radio, config).serve_forever()
+    except asyncio.CancelledError:
+        pass
+    return 0
+
+
+async def _cmd_web(radio: IcomRadio, args: argparse.Namespace) -> int:
+    import pathlib
+
+    from .web.server import WebConfig, WebServer
+
+    static_dir = (
+        pathlib.Path(args.web_static_dir) if args.web_static_dir else None
+    )
+    config_kwargs: dict[str, Any] = {
+        "host": args.web_host,
+        "port": args.web_port,
+    }
+    if static_dir is not None:
+        config_kwargs["static_dir"] = static_dir
+
+    config = WebConfig(**config_kwargs)
+    print(f"Web UI listening on http://{args.web_host}:{args.web_port}/")
+    try:
+        await WebServer(radio, config).serve_forever()
     except asyncio.CancelledError:
         pass
     return 0

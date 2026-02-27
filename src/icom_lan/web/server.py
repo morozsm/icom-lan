@@ -1,0 +1,419 @@
+"""WebSocket + HTTP server for the icom-lan Web UI.
+
+Implements:
+- Minimal asyncio HTTP server (no external deps)
+- RFC 6455 WebSocket upgrade
+- HTTP endpoints: GET /, GET /api/v1/info, GET /api/v1/capabilities
+- WebSocket channels: /api/v1/ws, /api/v1/scope, /api/v1/meters, /api/v1/audio
+
+Architecture
+------------
+Single asyncio.start_server accepts raw TCP. For each connection:
+1. Read HTTP request line + headers
+2. If Upgrade: websocket → perform RFC 6455 handshake, route to WS handler
+3. Else → serve HTTP response (static file or JSON API)
+
+The server holds a reference to an IcomRadio instance (optional) and uses
+it for command dispatch and scope/meter data delivery.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import json
+import logging
+import mimetypes
+import pathlib
+import urllib.parse
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any
+
+from .. import __version__
+from .handlers import AudioHandler, ControlHandler, MetersHandler, ScopeHandler
+from .websocket import WebSocketConnection, make_accept_key
+
+if TYPE_CHECKING:
+    from ..radio import IcomRadio
+
+__all__ = ["WebConfig", "WebServer", "run_web_server"]
+
+logger = logging.getLogger(__name__)
+
+_DEFAULT_STATIC_DIR = pathlib.Path(__file__).parent / "static"
+_RADIO_MODEL = "IC-7610"
+
+
+@dataclass
+class WebConfig:
+    """Configuration for :class:`WebServer`.
+
+    Attributes:
+        host: Bind address (default: 0.0.0.0).
+        port: HTTP/WS port (default: 8080).
+        static_dir: Directory to serve static files from.
+        radio_model: Radio model string for the hello/info response.
+        max_clients: Maximum concurrent WebSocket clients.
+    """
+
+    host: str = "0.0.0.0"
+    port: int = 8080
+    static_dir: pathlib.Path = field(default_factory=lambda: _DEFAULT_STATIC_DIR)
+    radio_model: str = _RADIO_MODEL
+    max_clients: int = 20
+
+
+class WebServer:
+    """Asyncio HTTP + WebSocket server for the icom-lan Web UI.
+
+    Args:
+        radio: Connected IcomRadio instance (optional; needed for live data).
+        config: Server configuration (defaults to WebConfig()).
+    """
+
+    def __init__(
+        self,
+        radio: "IcomRadio | None" = None,
+        config: WebConfig | None = None,
+    ) -> None:
+        self._radio = radio
+        self._config = config or WebConfig()
+        self._server: asyncio.Server | None = None
+        self._client_tasks: set[asyncio.Task[None]] = set()
+
+    # ------------------------------------------------------------------
+    # Lifecycle
+    # ------------------------------------------------------------------
+
+    async def start(self) -> None:
+        """Start the HTTP/WS listener."""
+        self._server = await asyncio.start_server(
+            self._accept_client,
+            host=self._config.host,
+            port=self._config.port,
+        )
+        addr = self._server.sockets[0].getsockname()
+        logger.info("web server listening on %s:%d", addr[0], addr[1])
+
+    async def stop(self) -> None:
+        """Close the listener and cancel all active client tasks."""
+        if self._server is not None:
+            self._server.close()
+            await self._server.wait_closed()
+            self._server = None
+
+        tasks = list(self._client_tasks)
+        for task in tasks:
+            task.cancel()
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
+        logger.info("web server stopped")
+
+    async def serve_forever(self) -> None:
+        """Start and block until cancelled."""
+        await self.start()
+        assert self._server is not None
+        try:
+            await self._server.serve_forever()
+        finally:
+            await self.stop()
+
+    async def __aenter__(self) -> WebServer:
+        await self.start()
+        return self
+
+    async def __aexit__(self, *args: object) -> None:
+        await self.stop()
+
+    @property
+    def port(self) -> int:
+        """Actual bound port (useful when config.port == 0)."""
+        if self._server is None:
+            return self._config.port
+        return self._server.sockets[0].getsockname()[1]
+
+    # ------------------------------------------------------------------
+    # Connection acceptance
+    # ------------------------------------------------------------------
+
+    def _accept_client(
+        self,
+        reader: asyncio.StreamReader,
+        writer: asyncio.StreamWriter,
+    ) -> None:
+        if len(self._client_tasks) >= self._config.max_clients:
+            writer.close()
+            return
+        loop = asyncio.get_running_loop()
+        task = loop.create_task(self._handle_connection(reader, writer))
+        self._client_tasks.add(task)
+        task.add_done_callback(self._client_tasks.discard)
+
+    # ------------------------------------------------------------------
+    # HTTP request parsing
+    # ------------------------------------------------------------------
+
+    async def _read_request(
+        self, reader: asyncio.StreamReader
+    ) -> tuple[str, str, dict[str, str]] | None:
+        """Read and parse an HTTP request line + headers.
+
+        Returns:
+            Tuple of (method, path, headers_dict) or None on EOF/error.
+        """
+        try:
+            request_line = await asyncio.wait_for(
+                reader.readline(), timeout=10.0
+            )
+        except asyncio.TimeoutError:
+            return None
+        if not request_line:
+            return None
+
+        parts = request_line.decode("ascii", errors="replace").strip().split(" ", 2)
+        if len(parts) < 2:
+            return None
+        method, raw_path = parts[0], parts[1]
+
+        # Decode path (strip query string)
+        parsed = urllib.parse.urlparse(raw_path)
+        path = urllib.parse.unquote(parsed.path)
+
+        headers: dict[str, str] = {}
+        while True:
+            try:
+                line = await asyncio.wait_for(reader.readline(), timeout=5.0)
+            except asyncio.TimeoutError:
+                break
+            stripped = line.strip()
+            if not stripped:
+                break
+            if b":" in stripped:
+                key, _, value = stripped.partition(b":")
+                headers[key.decode("ascii", errors="replace").strip().lower()] = (
+                    value.decode("ascii", errors="replace").strip()
+                )
+
+        return method, path, headers
+
+    # ------------------------------------------------------------------
+    # Main connection handler
+    # ------------------------------------------------------------------
+
+    async def _handle_connection(
+        self,
+        reader: asyncio.StreamReader,
+        writer: asyncio.StreamWriter,
+    ) -> None:
+        peer = writer.get_extra_info("peername", ("?", 0))
+        try:
+            result = await self._read_request(reader)
+            if result is None:
+                return
+            method, path, headers = result
+
+            logger.debug("request: %s %s from %s:%s", method, path, peer[0], peer[1])
+
+            # WebSocket upgrade?
+            if (
+                headers.get("upgrade", "").lower() == "websocket"
+                and headers.get("connection", "").lower().find("upgrade") >= 0
+            ):
+                await self._handle_websocket(reader, writer, path, headers)
+            else:
+                await self._handle_http(writer, method, path)
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            logger.debug("connection error from %s:%s: %s", peer[0], peer[1], exc)
+        finally:
+            try:
+                writer.close()
+                await writer.wait_closed()
+            except Exception:
+                pass
+
+    # ------------------------------------------------------------------
+    # HTTP handlers
+    # ------------------------------------------------------------------
+
+    async def _handle_http(
+        self,
+        writer: asyncio.StreamWriter,
+        method: str,
+        path: str,
+    ) -> None:
+        if method not in ("GET", "HEAD"):
+            await _send_response(writer, 405, "Method Not Allowed", b"", {})
+            return
+
+        if path == "/api/v1/info":
+            await self._serve_info(writer)
+        elif path == "/api/v1/capabilities":
+            await self._serve_capabilities(writer)
+        elif path == "/" or path == "/index.html":
+            await self._serve_static(writer, "index.html")
+        elif path.startswith("/"):
+            # Try to serve as static file
+            rel = path.lstrip("/") or "index.html"
+            await self._serve_static(writer, rel)
+        else:
+            await _send_response(writer, 404, "Not Found", b"404 Not Found", {})
+
+    async def _serve_info(self, writer: asyncio.StreamWriter) -> None:
+        body = json.dumps(
+            {
+                "server": "icom-lan",
+                "version": __version__,
+                "proto": 1,
+                "radio": self._config.radio_model,
+            },
+            separators=(",", ":"),
+        ).encode()
+        await _send_response(
+            writer, 200, "OK", body, {"Content-Type": "application/json"}
+        )
+
+    async def _serve_capabilities(self, writer: asyncio.StreamWriter) -> None:
+        body = json.dumps(
+            {
+                "scope": True,
+                "audio": True,
+                "tx": True,
+                "freq_ranges": [
+                    {"start": 30000, "end": 60000000, "label": "HF"},
+                    {"start": 50000000, "end": 54000000, "label": "6m"},
+                ],
+                "modes": ["USB", "LSB", "CW", "AM", "FM", "RTTY", "CWR"],
+                "filters": ["FIL1", "FIL2", "FIL3"],
+            },
+            separators=(",", ":"),
+        ).encode()
+        await _send_response(
+            writer, 200, "OK", body, {"Content-Type": "application/json"}
+        )
+
+    async def _serve_static(
+        self, writer: asyncio.StreamWriter, filename: str
+    ) -> None:
+        # Prevent path traversal
+        static_dir = self._config.static_dir.resolve()
+        target = (static_dir / filename).resolve()
+        if not str(target).startswith(str(static_dir)):
+            await _send_response(writer, 403, "Forbidden", b"Forbidden", {})
+            return
+
+        if not target.exists() or not target.is_file():
+            await _send_response(writer, 404, "Not Found", b"Not Found", {})
+            return
+
+        try:
+            body = target.read_bytes()
+        except OSError:
+            await _send_response(
+                writer, 500, "Internal Server Error", b"Read error", {}
+            )
+            return
+
+        mime, _ = mimetypes.guess_type(str(target))
+        ct = mime or "application/octet-stream"
+        await _send_response(writer, 200, "OK", body, {"Content-Type": ct})
+
+    # ------------------------------------------------------------------
+    # WebSocket upgrade + routing
+    # ------------------------------------------------------------------
+
+    async def _handle_websocket(
+        self,
+        reader: asyncio.StreamReader,
+        writer: asyncio.StreamWriter,
+        path: str,
+        headers: dict[str, str],
+    ) -> None:
+        ws_key = headers.get("sec-websocket-key", "")
+        if not ws_key:
+            await _send_response(writer, 400, "Bad Request", b"Missing key", {})
+            return
+
+        accept = make_accept_key(ws_key)
+        response = (
+            "HTTP/1.1 101 Switching Protocols\r\n"
+            "Upgrade: websocket\r\n"
+            "Connection: Upgrade\r\n"
+            f"Sec-WebSocket-Accept: {accept}\r\n"
+            "\r\n"
+        )
+        writer.write(response.encode("ascii"))
+        await writer.drain()
+
+        ws = WebSocketConnection(reader, writer)
+
+        if path == "/api/v1/ws":
+            handler: Any = ControlHandler(
+                ws, self._radio, __version__, self._config.radio_model
+            )
+        elif path == "/api/v1/scope":
+            handler = ScopeHandler(ws, self._radio)
+        elif path == "/api/v1/meters":
+            handler = MetersHandler(ws, self._radio)
+        elif path == "/api/v1/audio":
+            handler = AudioHandler(ws, self._radio)
+        else:
+            await ws.close(1008, "unknown channel")
+            return
+
+        peer = writer.get_extra_info("peername", ("?", 0))
+        logger.info("ws connect: %s %s:%s", path, peer[0], peer[1])
+        try:
+            await handler.run()
+        except Exception as exc:
+            logger.debug("ws handler error on %s: %s", path, exc)
+        finally:
+            logger.info("ws disconnect: %s %s:%s", path, peer[0], peer[1])
+
+
+# ------------------------------------------------------------------
+# HTTP response helper
+# ------------------------------------------------------------------
+
+
+async def _send_response(
+    writer: asyncio.StreamWriter,
+    status: int,
+    reason: str,
+    body: bytes,
+    extra_headers: dict[str, str],
+) -> None:
+    headers = {
+        "Content-Length": str(len(body)),
+        "Connection": "close",
+        **extra_headers,
+    }
+    header_lines = "".join(f"{k}: {v}\r\n" for k, v in headers.items())
+    response = (
+        f"HTTP/1.1 {status} {reason}\r\n"
+        f"{header_lines}"
+        "\r\n"
+    ).encode("ascii") + body
+    writer.write(response)
+    await writer.drain()
+
+
+# ------------------------------------------------------------------
+# Convenience entry point
+# ------------------------------------------------------------------
+
+
+async def run_web_server(
+    radio: "IcomRadio | None" = None, **kwargs: Any
+) -> None:
+    """Create a :class:`WebServer` from *kwargs* and run it forever.
+
+    Keyword arguments are forwarded to :class:`WebConfig`.
+
+    Example::
+
+        await run_web_server(radio, host="0.0.0.0", port=8080)
+    """
+    config = WebConfig(**kwargs)  # type: ignore[arg-type]
+    server = WebServer(radio, config)
+    await server.serve_forever()
