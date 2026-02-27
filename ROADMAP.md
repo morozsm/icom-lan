@@ -1,75 +1,64 @@
 # Roadmap
 
-## Testing
+## Completed ✅
 
-- [ ] **Mock Radio Server** — UDP-сервер, эмулирующий протокол IC-7610 (discovery, auth, CI-V).
-  Позволит покрыть интеграционными тестами `radio.py` connect/disconnect handshake,
-  `transport.py` connect/discover, и `cli.py` discover (broadcast).
-  Текущее покрытие: 88%. С mock-сервером — цель 95%+.
+### Audio API (issues #1-#10)
+- [x] PCM transcoder layer
+- [x] RX high-level API (`start_audio_rx_pcm`)
+- [x] TX high-level API (`start_audio_tx_pcm`, `push_audio_tx_pcm`)
+- [x] CLI audio subcommands (`rx`, `tx`, `loopback`)
+- [x] E2E tests for PCM API and CLI
+- [x] Runtime audio stats (`get_audio_stats`)
+- [x] Auto-recover audio streams after reconnect (#7)
+- [x] Capability negotiation UX + `icom-lan audio caps`
+- [x] Task-oriented docs/recipes
+- [x] API naming consistency + deprecation plan
 
-## Features
+### Hamlib NET rigctld (issues #16-#22, #27, #32)
+- [x] TCP server skeleton (`asyncio.start_server`)
+- [x] MVP command set (f/F/m/M/t/T/v/V/s/S/l/q + long-form)
+- [x] Read-only safety mode (`--read-only`, RPRT -22)
+- [x] Structured logging + guardrails (max clients, idle timeout, OOM guard)
+- [x] Golden protocol response suite (45 fixtures)
+- [x] TCP wire integration tests
+- [x] WSJT-X/rigctl setup docs
+- [x] `--wsjtx-compat` DATA mode pre-warm
+- [x] DATA mode semantics fix (PKT*, RTTY/PKTRTTY)
+- [x] CI-V desync fix + state cache + circuit breaker (#27)
 
-- [ ] Async event/notification stream (S-meter polling, band changes)
-- [ ] Support for IC-705, IC-7300 (different CI-V addresses, feature sets)
-- [ ] PyPI publication
+## Next: v0.7.0 Release
 
-## Hamlib NET rigctl compatibility (rigctld 1:1)
+### Release checklist
+- [ ] Verify `ruff check` clean
+- [ ] Verify `mkdocs build` clean
+- [ ] Move CHANGELOG [Unreleased] → [0.7.0]
+- [ ] Version bump: 0.6.6 → 0.7.0
+- [ ] GitHub release + PyPI publish
+- [ ] Community announcement (Reddit, QRZ)
 
-Цель: обеспечить совместимость с клиентами Hamlib/WSJT-X через TCP endpoint
-`127.0.0.1:4532`, повторяя поведение `rigctld` на уровне протокола и кодов ответов.
+## Future
 
-### Phase 0 — RFC + protocol contract ✅
-
-- [x] Контракт в `src/icom_lan/rigctld/contract.py`:
-  - `RigctldCommand`, `RigctldResponse` dataclasses
-  - `COMMAND_TABLE` с определениями всех команд
-  - `HamlibError` enum (коды `-1..-22`)
-  - `HAMLIB_MODE_MAP` / `CIV_TO_HAMLIB_MODE` маппинги
-  - `RigctldConfig`, `ClientSession`
-- [x] Read-only mode: deny set-команд с `RPRT -22` (`EACCESS`).
-
-### Phase 1 — MVP command set ✅
-
-- [x] TCP server на конфигурируемом host/port (`asyncio.start_server`)
-- [x] Команды: `f/F`, `m/M`, `t/T`, `v/V`, `s/S`, `l` (STRENGTH/RFPOWER/SWR), `q`
-- [x] Служебные: `\dump_state`, `\get_info`, `\chk_vfo`, `\get_powerstat`, `\dump_caps`
-- [x] Long-form команды (`\get_freq`, `\set_freq`, etc.)
-- [x] Формат ответов: `RPRT <code>\n` для set, value lines для get
-- [x] `dump_state` в точном позиционном формате hamlib netrigctl.c (protocol v0)
-- [x] Float frequency parsing (`F 7074000.000000`)
-
-### Phase 2 — Safety + observability ✅
-
-- [x] `--read-only` mode через CLI и RigctldConfig
-- [x] Structured logging: client connect/disconnect/errors с peername
-- [x] Max client limit (`--max-clients`)
-- [x] Per-client idle timeout
-- [x] Per-command timeout (`asyncio.wait_for`)
-- [x] Frequency/mode cache с TTL (default 200ms) — защита от CI-V bus saturation
-- [x] OOM guard: max line length 1024 bytes
-- [x] TCP backpressure (`writer.drain()`)
-- [x] CLI: `icom-lan serve --port 4532 --read-only --max-clients 10`
-
-### Phase 3 — Client compatibility hardening (in progress)
-
-- [x] Smoke-тест с `rigctl -m 2`: `f`, `F`, `m`, `M`, `l STRENGTH/RFPOWER/SWR` — OK
+### Client compatibility hardening
 - [ ] Полный тест с WSJT-X (Hamlib NET rigctl, localhost:4532)
 - [ ] Тест с JS8Call, fldigi
-- [ ] Golden tests: Wireshark-дампы от реального rigctld vs наши ответы
 - [ ] Extended response protocol (per-session `extended_mode`)
-- [ ] Fallback policy для unsupported команд (`RPRT -4` / `RPRT -11`)
 
-### Phase 4 — Protocol completeness (после Phase 3)
+### Features
+- [ ] Web UI MVP (freq/mode/meter/scope snapshot)
+- [ ] Async event/notification stream (S-meter polling, band changes)
+- [ ] Mock Radio Server — UDP-эмулятор для CI интеграции
+- [ ] Support for IC-705, IC-7300 (different CI-V, feature sets)
 
+### Protocol completeness (rigctld)
 - [ ] `\set_level` (RFPOWER)
 - [ ] RIT/XIT (`J`/`Z`)
 - [ ] Tuner control
-- [ ] `\dump_state` protocol v1 (key=value pairs, `done` terminator)
-- [ ] Документировать compatibility matrix
+- [ ] `\dump_state` protocol v1
 
-### README / Docs updates ✅
+### Long-term
+- [ ] Universal Radio Bridge (RPi) — USB radios → LAN control
+- [ ] Rust core prototype (performance spike)
 
-- [x] README: CLI примеры для `icom-lan serve`
-- [x] README: WSJT-X quick start (Rig: Hamlib NET rigctl, localhost:4532)
-- [x] README: примеры `rigctl -m 2`
-- [ ] Отдельный troubleshooting: port in use, unsupported command, read-only denied
+---
+
+*Updated: 2026-02-26*
