@@ -20,103 +20,127 @@ body {
 
 /* === Status Bar === */
 #status-bar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 6px 16px;
-  background: #161b22;
-  border-bottom: 1px solid #30363d;
-  flex-shrink: 0;
+  display: flex; align-items: center; gap: 12px;
+  padding: 6px 16px; background: #161b22; border-bottom: 1px solid #30363d; flex-shrink: 0;
 }
 #status-bar h1 { font-size: 15px; color: #58a6ff; font-weight: 600; }
-.status-dot {
-  width: 10px; height: 10px;
-  border-radius: 50%;
-  background: #f85149;
-  flex-shrink: 0;
-}
+.status-dot { width: 10px; height: 10px; border-radius: 50%; background: #f85149; flex-shrink: 0; }
 .status-dot.connected { background: #3fb950; }
 .status-dot.reconnecting { background: #d29922; animation: pulse 1s infinite; }
-@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 #radio-model { color: #8b949e; }
-#freq-display {
-  margin-left: auto;
-  font-size: 20px;
-  color: #3fb950;
-  letter-spacing: 1px;
-  font-weight: 700;
-}
+#freq-display { margin-left: auto; font-size: 22px; color: #3fb950; letter-spacing: 1px; font-weight: 700; cursor: pointer; }
+#freq-display:hover { color: #56d364; }
 
-/* === Main Area === */
-#main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  padding: 4px;
-  gap: 2px;
-}
+/* === Main Layout === */
+#main { flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 4px; gap: 2px; }
 
 /* === Spectrum === */
-#spectrum-wrap {
-  position: relative;
-  height: 180px;
-  flex-shrink: 0;
-  background: #0d1117;
-  border: 1px solid #21262d;
-  border-radius: 4px;
-}
+#spectrum-wrap { position: relative; height: 160px; flex-shrink: 0; background: #0d1117; border: 1px solid #21262d; border-radius: 4px; }
 #spectrum { width: 100%; height: 100%; display: block; }
 
 /* === Waterfall === */
-#waterfall-wrap {
-  position: relative;
-  flex: 1;
-  min-height: 120px;
-  background: #000;
-  border: 1px solid #21262d;
-  border-radius: 4px;
-  cursor: crosshair;
-  overflow: hidden;
-}
+#waterfall-wrap { position: relative; flex: 1; min-height: 100px; background: #000; border: 1px solid #21262d; border-radius: 4px; cursor: crosshair; overflow: hidden; }
 #waterfall { width: 100%; height: 100%; display: block; }
 
 /* === Freq Axis === */
-#freq-axis {
-  height: 24px;
-  flex-shrink: 0;
-  position: relative;
-  background: #161b22;
-  border: 1px solid #21262d;
-  border-radius: 4px;
-  overflow: hidden;
-}
+#freq-axis { height: 22px; flex-shrink: 0; background: #161b22; border: 1px solid #21262d; border-radius: 4px; overflow: hidden; }
 #freq-axis canvas { width: 100%; height: 100%; display: block; }
 
-/* === Controls Placeholder === */
-#controls-placeholder {
-  flex-shrink: 0;
-  padding: 8px 16px;
-  background: #161b22;
-  border: 1px solid #21262d;
-  border-radius: 4px;
-  color: #484f58;
-  text-align: center;
-  font-size: 12px;
+/* === Controls Panel === */
+#controls {
+  flex-shrink: 0; display: flex; gap: 8px; padding: 8px;
+  background: #161b22; border: 1px solid #21262d; border-radius: 4px;
+  flex-wrap: wrap; align-items: center;
 }
+.ctrl-group {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 8px; background: #0d1117; border-radius: 4px; border: 1px solid #21262d;
+}
+.ctrl-group label { color: #8b949e; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+.ctrl-group select, .ctrl-group input[type="number"] {
+  background: #161b22; color: #c9d1d9; border: 1px solid #30363d; border-radius: 3px;
+  padding: 3px 6px; font-family: inherit; font-size: 13px; outline: none;
+}
+.ctrl-group select:focus, .ctrl-group input:focus { border-color: #58a6ff; }
+.ctrl-group select { cursor: pointer; }
 
-/* === Hover Tooltip === */
+/* VFO buttons */
+.vfo-btn {
+  padding: 4px 10px; border: 1px solid #30363d; border-radius: 3px;
+  background: #21262d; color: #c9d1d9; cursor: pointer; font-family: inherit; font-size: 12px;
+}
+.vfo-btn:hover { background: #30363d; }
+.vfo-btn.active { background: #1f6feb; color: #fff; border-color: #1f6feb; }
+
+/* PTT button */
+#ptt-btn {
+  padding: 6px 16px; border: 2px solid #f85149; border-radius: 4px;
+  background: #21262d; color: #f85149; cursor: pointer; font-family: inherit;
+  font-size: 13px; font-weight: 700; text-transform: uppercase; transition: all 0.15s;
+}
+#ptt-btn:hover { background: #f8514920; }
+#ptt-btn.active { background: #f85149; color: #fff; }
+
+/* ATT/Preamp */
+.att-btn {
+  padding: 3px 8px; border: 1px solid #30363d; border-radius: 3px;
+  background: #21262d; color: #8b949e; cursor: pointer; font-family: inherit; font-size: 11px;
+}
+.att-btn:hover { background: #30363d; }
+.att-btn.active { background: #1f6feb30; color: #58a6ff; border-color: #1f6feb; }
+
+/* === Meters Panel === */
+#meters {
+  flex-shrink: 0; display: flex; gap: 8px; padding: 6px 8px;
+  background: #161b22; border: 1px solid #21262d; border-radius: 4px; flex-wrap: wrap;
+}
+.meter {
+  flex: 1; min-width: 100px; max-width: 200px;
+}
+.meter-label { font-size: 10px; color: #8b949e; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
+.meter-bar-wrap {
+  height: 14px; background: #0d1117; border-radius: 2px; border: 1px solid #21262d; overflow: hidden; position: relative;
+}
+.meter-bar {
+  height: 100%; border-radius: 1px; transition: width 0.08s linear;
+  min-width: 0;
+}
+.meter-value {
+  position: absolute; right: 4px; top: 0; line-height: 14px; font-size: 10px; color: #8b949e;
+}
+.meter-bar.s-meter { background: linear-gradient(90deg, #3fb950, #3fb950 70%, #f0883e 70%, #f85149); }
+.meter-bar.power { background: #58a6ff; }
+.meter-bar.swr { background: linear-gradient(90deg, #3fb950, #3fb950 50%, #f0883e 50%, #f85149); }
+.meter-bar.alc { background: linear-gradient(90deg, #3fb950, #3fb950 60%, #f0883e 60%, #f85149); }
+.meter-bar.comp { background: #d2a8ff; }
+.meter-bar.id { background: #f0883e; }
+.meter-bar.vd { background: #79c0ff; }
+.meter-bar.temp { background: linear-gradient(90deg, #3fb950, #f0883e, #f85149); }
+
+/* === Freq Edit Modal === */
+#freq-modal {
+  display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.6); z-index: 100; align-items: center; justify-content: center;
+}
+#freq-modal.open { display: flex; }
+#freq-modal-box {
+  background: #161b22; border: 1px solid #30363d; border-radius: 8px;
+  padding: 16px 24px; text-align: center;
+}
+#freq-input {
+  background: #0d1117; color: #3fb950; border: 2px solid #30363d; border-radius: 4px;
+  padding: 8px 12px; font-family: inherit; font-size: 24px; font-weight: 700;
+  text-align: center; width: 260px; outline: none;
+}
+#freq-input:focus { border-color: #58a6ff; }
+#freq-modal-hint { color: #8b949e; font-size: 11px; margin-top: 8px; }
+
+/* === Tooltip === */
 #tooltip {
-  position: absolute;
-  background: rgba(22,27,34,0.92);
-  color: #c9d1d9;
-  padding: 3px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  pointer-events: none;
-  display: none;
-  z-index: 10;
-  border: 1px solid #30363d;
+  position: absolute; background: rgba(22,27,34,0.92); color: #c9d1d9;
+  padding: 3px 8px; border-radius: 4px; font-size: 12px; pointer-events: none;
+  display: none; z-index: 10; border: 1px solid #30363d;
 }
 </style>
 </head>
@@ -127,427 +151,454 @@ body {
   <div class="status-dot" id="status-dot"></div>
   <span id="conn-text">Disconnected</span>
   <span id="radio-model"></span>
-  <span id="freq-display">—</span>
+  <span id="freq-display" title="Click to enter frequency">—</span>
 </div>
 
 <div id="main">
-  <div id="spectrum-wrap">
-    <canvas id="spectrum"></canvas>
-  </div>
-  <div id="waterfall-wrap">
-    <canvas id="waterfall"></canvas>
-    <div id="tooltip"></div>
-  </div>
+  <div id="spectrum-wrap"><canvas id="spectrum"></canvas></div>
+  <div id="waterfall-wrap"><canvas id="waterfall"></canvas><div id="tooltip"></div></div>
   <div id="freq-axis"><canvas id="freq-axis-cv"></canvas></div>
-  <div id="controls-placeholder">Controls &amp; Meters — Sprint 3</div>
+
+  <!-- Controls -->
+  <div id="controls">
+    <div class="ctrl-group">
+      <label>VFO</label>
+      <button class="vfo-btn active" id="vfo-a" onclick="selectVfo('A')">A</button>
+      <button class="vfo-btn" id="vfo-b" onclick="selectVfo('B')">B</button>
+      <button class="vfo-btn" onclick="sendCmd('vfo_swap')" title="Swap A↔B">A↔B</button>
+      <button class="vfo-btn" onclick="sendCmd('vfo_equalize')" title="A=B">A=B</button>
+    </div>
+    <div class="ctrl-group">
+      <label>Mode</label>
+      <select id="mode-sel" onchange="sendCmd('set_mode',{mode:this.value})">
+        <option>USB</option><option>LSB</option><option>CW</option><option>CW-R</option>
+        <option>AM</option><option>FM</option><option>RTTY</option><option>RTTY-R</option>
+        <option>PSK</option><option>PSK-R</option>
+      </select>
+    </div>
+    <div class="ctrl-group">
+      <label>Filter</label>
+      <select id="filter-sel" onchange="sendCmd('set_filter',{filter:this.value})">
+        <option>FIL1</option><option>FIL2</option><option>FIL3</option>
+      </select>
+    </div>
+    <div class="ctrl-group">
+      <label>Power</label>
+      <input type="number" id="power-input" min="0" max="100" value="100" style="width:56px"
+             onchange="sendCmd('set_power',{level:+this.value})">
+      <span style="color:#8b949e;font-size:11px">W</span>
+    </div>
+    <div class="ctrl-group">
+      <label>ATT</label>
+      <button class="att-btn" data-att="0" onclick="setAtt(0)">OFF</button>
+      <button class="att-btn" data-att="6" onclick="setAtt(6)">6</button>
+      <button class="att-btn" data-att="12" onclick="setAtt(12)">12</button>
+      <button class="att-btn" data-att="18" onclick="setAtt(18)">18</button>
+    </div>
+    <div class="ctrl-group">
+      <label>Pre</label>
+      <button class="att-btn" data-pre="0" onclick="setPreamp(0)">OFF</button>
+      <button class="att-btn" data-pre="1" onclick="setPreamp(1)">1</button>
+      <button class="att-btn" data-pre="2" onclick="setPreamp(2)">2</button>
+    </div>
+    <button id="ptt-btn" onmousedown="setPtt(true)" onmouseup="setPtt(false)" onmouseleave="setPtt(false)">PTT</button>
+  </div>
+
+  <!-- Meters -->
+  <div id="meters">
+    <div class="meter" id="m-smeter">
+      <div class="meter-label">S-Meter</div>
+      <div class="meter-bar-wrap"><div class="meter-bar s-meter" style="width:0%"></div><span class="meter-value">—</span></div>
+    </div>
+    <div class="meter" id="m-power">
+      <div class="meter-label">Power</div>
+      <div class="meter-bar-wrap"><div class="meter-bar power" style="width:0%"></div><span class="meter-value">—</span></div>
+    </div>
+    <div class="meter" id="m-swr">
+      <div class="meter-label">SWR</div>
+      <div class="meter-bar-wrap"><div class="meter-bar swr" style="width:0%"></div><span class="meter-value">—</span></div>
+    </div>
+    <div class="meter" id="m-alc">
+      <div class="meter-label">ALC</div>
+      <div class="meter-bar-wrap"><div class="meter-bar alc" style="width:0%"></div><span class="meter-value">—</span></div>
+    </div>
+    <div class="meter" id="m-comp">
+      <div class="meter-label">COMP</div>
+      <div class="meter-bar-wrap"><div class="meter-bar comp" style="width:0%"></div><span class="meter-value">—</span></div>
+    </div>
+    <div class="meter" id="m-id">
+      <div class="meter-label">Id</div>
+      <div class="meter-bar-wrap"><div class="meter-bar id" style="width:0%"></div><span class="meter-value">—</span></div>
+    </div>
+    <div class="meter" id="m-vd">
+      <div class="meter-label">Vd</div>
+      <div class="meter-bar-wrap"><div class="meter-bar vd" style="width:0%"></div><span class="meter-value">—</span></div>
+    </div>
+    <div class="meter" id="m-temp">
+      <div class="meter-label">TEMP</div>
+      <div class="meter-bar-wrap"><div class="meter-bar temp" style="width:0%"></div><span class="meter-value">—</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- Frequency edit modal -->
+<div id="freq-modal">
+  <div id="freq-modal-box">
+    <input type="text" id="freq-input" placeholder="14.074000">
+    <div id="freq-modal-hint">Enter frequency in MHz · Press Enter to tune · Esc to cancel</div>
+  </div>
 </div>
 
 <script>
 'use strict';
 
-// ===== Configuration =====
+// ===== Constants =====
 const WS_RECONNECT_MIN = 1000;
 const WS_RECONNECT_MAX = 30000;
 const SCOPE_MSG_TYPE = 0x01;
-const HEADER_SIZE = 16;
+const METER_MSG_TYPE = 0x20;
+const SCOPE_HEADER = 16;
 
-// ===== Color LUT for waterfall (0-160 → ABGR for Uint32Array on LE) =====
+// Meter IDs (per RFC)
+const MID = { SMETER_MAIN:1, SMETER_SUB:2, POWER:3, SWR:4, ALC:5, COMP:6, ID:7, VD:8, TEMP:9 };
+const METER_MAP = {
+  [MID.SMETER_MAIN]: 'm-smeter', [MID.POWER]: 'm-power', [MID.SWR]: 'm-swr',
+  [MID.ALC]: 'm-alc', [MID.COMP]: 'm-comp', [MID.ID]: 'm-id', [MID.VD]: 'm-vd', [MID.TEMP]: 'm-temp'
+};
+
+// ===== Color LUT =====
 const COLOR_LUT = new Uint32Array(161);
-(function buildLUT() {
-  // 0-40: black → dark blue
-  // 40-80: dark blue → cyan
-  // 80-120: cyan → yellow
-  // 120-150: yellow → red
-  // 150-160: red → white
-  function lerp(a, b, t) { return a + (b - a) * t; }
-  function rgba(r, g, b) { return (255 << 24) | (b << 16) | (g << 8) | r; } // ABGR LE
-
-  for (let i = 0; i <= 160; i++) {
-    let r, g, b;
-    if (i <= 40) {
-      const t = i / 40;
-      r = 0; g = 0; b = lerp(10, 80, t);
-    } else if (i <= 80) {
-      const t = (i - 40) / 40;
-      r = 0; g = lerp(0, 220, t); b = lerp(80, 200, t);
-    } else if (i <= 120) {
-      const t = (i - 80) / 40;
-      r = lerp(0, 255, t); g = lerp(220, 255, t); b = lerp(200, 0, t);
-    } else if (i <= 150) {
-      const t = (i - 120) / 30;
-      r = 255; g = lerp(255, 40, t); b = 0;
-    } else {
-      const t = (i - 150) / 10;
-      r = 255; g = lerp(40, 255, t); b = lerp(0, 255, t);
-    }
-    COLOR_LUT[i] = rgba(Math.round(r), Math.round(g), Math.round(b));
+(function() {
+  function lerp(a,b,t){return a+(b-a)*t}
+  function rgba(r,g,b){return (255<<24)|(b<<16)|(g<<8)|r}
+  for(let i=0;i<=160;i++){
+    let r,g,b;
+    if(i<=40){const t=i/40;r=0;g=0;b=lerp(10,80,t)}
+    else if(i<=80){const t=(i-40)/40;r=0;g=lerp(0,220,t);b=lerp(80,200,t)}
+    else if(i<=120){const t=(i-80)/40;r=lerp(0,255,t);g=lerp(220,255,t);b=lerp(200,0,t)}
+    else if(i<=150){const t=(i-120)/30;r=255;g=lerp(255,40,t);b=0}
+    else{const t=(i-150)/10;r=255;g=lerp(40,255,t);b=lerp(0,255,t)}
+    COLOR_LUT[i]=rgba(Math.round(r),Math.round(g),Math.round(b));
   }
 })();
 
-// ===== DOM =====
-const statusDot = document.getElementById('status-dot');
-const connText = document.getElementById('conn-text');
-const radioModel = document.getElementById('radio-model');
-const freqDisplay = document.getElementById('freq-display');
-const tooltip = document.getElementById('tooltip');
-
-const spectrumCanvas = document.getElementById('spectrum');
-const spectrumCtx = spectrumCanvas.getContext('2d');
-
-const wfCanvas = document.getElementById('waterfall');
-const wfCtx = wfCanvas.getContext('2d');
-
-const freqAxisCanvas = document.getElementById('freq-axis-cv');
-const freqAxisCtx = freqAxisCanvas.getContext('2d');
+// ===== DOM refs =====
+const $ = id => document.getElementById(id);
+const statusDot=$('status-dot'), connText=$('conn-text'), radioModelEl=$('radio-model');
+const freqDisplayEl=$('freq-display'), tooltip=$('tooltip');
+const specCv=$('spectrum'), specCtx=specCv.getContext('2d');
+const wfCv=$('waterfall'), wfCtx=wfCv.getContext('2d');
+const faCv=$('freq-axis-cv'), faCtx=faCv.getContext('2d');
+const modeSel=$('mode-sel'), filterSel=$('filter-sel'), powerInput=$('power-input');
+const pttBtn=$('ptt-btn'), freqModal=$('freq-modal'), freqInput=$('freq-input');
 
 // ===== State =====
-let controlWs = null;
-let scopeWs = null;
-let controlBackoff = WS_RECONNECT_MIN;
-let scopeBackoff = WS_RECONNECT_MIN;
-let currentStartFreq = 14000000;
-let currentEndFreq = 14350000;
-let currentPixels = null;
-let wfLineImageData = null;
-let wfLineBuf32 = null;
-let wfMeta = []; // per-line {startFreq, endFreq}
-let wfHeight = 0;
+let controlWs=null, scopeWs=null, metersWs=null;
+let controlBackoff=WS_RECONNECT_MIN, scopeBackoff=WS_RECONNECT_MIN, metersBackoff=WS_RECONNECT_MIN;
+let startFreq=14000000, endFreq=14350000;
+let currentFreqA=0, currentFreqB=0, activeVfo='A';
+let currentPixels=null, pttState=false;
+let wfLineImg=null, wfLine32=null, wfMeta=[], wfH=0;
+let cmdCounter=0;
 
 // ===== Helpers =====
-function formatFreq(hz) {
-  const mhz = hz / 1e6;
-  return mhz.toFixed(mhz >= 100 ? 3 : mhz >= 10 ? 4 : 6) + ' MHz';
+function fmtFreq(hz){
+  const m=hz/1e6;
+  if(m>=100) return m.toFixed(3)+' MHz';
+  if(m>=10) return m.toFixed(4)+' MHz';
+  return m.toFixed(6)+' MHz';
 }
+function wsBase(){return (location.protocol==='https:'?'wss:':'ws:')+'//'+location.host}
+function setStatus(s,t){statusDot.className='status-dot '+s;connText.textContent=t}
+function nextId(){return 'c'+(++cmdCounter)}
 
-function getWsBase() {
-  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  return proto + '//' + location.host;
-}
-
-function setStatus(state, text) {
-  statusDot.className = 'status-dot ' + state;
-  connText.textContent = text;
-}
-
-// ===== Canvas Sizing =====
-function resizeCanvases() {
-  const dpr = window.devicePixelRatio || 1;
-
+// ===== Resize =====
+function resize(){
+  const dpr=devicePixelRatio||1;
   // Spectrum
-  const sw = spectrumCanvas.parentElement.clientWidth;
-  const sh = spectrumCanvas.parentElement.clientHeight;
-  spectrumCanvas.width = sw * dpr;
-  spectrumCanvas.height = sh * dpr;
-  spectrumCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-  // Waterfall
-  const ww = wfCanvas.parentElement.clientWidth;
-  const wh = wfCanvas.parentElement.clientHeight;
-  wfCanvas.width = ww; // 1:1 for putImageData
-  wfCanvas.height = wh;
-  wfHeight = wh;
-  wfLineImageData = wfCtx.createImageData(ww, 1);
-  wfLineBuf32 = new Uint32Array(wfLineImageData.data.buffer);
-  wfMeta = new Array(wh).fill(null);
-
+  const sw=specCv.parentElement.clientWidth, sh=specCv.parentElement.clientHeight;
+  specCv.width=sw*dpr; specCv.height=sh*dpr; specCtx.setTransform(dpr,0,0,dpr,0,0);
+  // Waterfall (1:1 for putImageData)
+  const ww=wfCv.parentElement.clientWidth, wh=wfCv.parentElement.clientHeight;
+  wfCv.width=ww; wfCv.height=wh; wfH=wh;
+  wfLineImg=wfCtx.createImageData(ww,1); wfLine32=new Uint32Array(wfLineImg.data.buffer);
+  wfMeta=new Array(wh).fill(null);
   // Freq axis
-  const fw = freqAxisCanvas.parentElement.clientWidth;
-  const fh = freqAxisCanvas.parentElement.clientHeight;
-  freqAxisCanvas.width = fw * dpr;
-  freqAxisCanvas.height = fh * dpr;
-  freqAxisCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
+  const fw=faCv.parentElement.clientWidth, fh=faCv.parentElement.clientHeight;
+  faCv.width=fw*dpr; faCv.height=fh*dpr; faCtx.setTransform(dpr,0,0,dpr,0,0);
   drawFreqAxis();
-  if (currentPixels) drawSpectrum(currentPixels);
+  if(currentPixels) drawSpectrum(currentPixels);
 }
+addEventListener('resize', resize);
 
-window.addEventListener('resize', resizeCanvases);
-
-// ===== Spectrum Renderer =====
-function drawSpectrum(pixels) {
-  const w = spectrumCanvas.parentElement.clientWidth;
-  const h = spectrumCanvas.parentElement.clientHeight;
-  const ctx = spectrumCtx;
-  const n = pixels.length;
-  if (n === 0) return;
-
-  ctx.clearRect(0, 0, w, h);
-
+// ===== Spectrum =====
+function drawSpectrum(px){
+  const w=specCv.parentElement.clientWidth, h=specCv.parentElement.clientHeight;
+  const n=px.length; if(!n) return;
+  specCtx.clearRect(0,0,w,h);
   // Grid
-  ctx.strokeStyle = '#21262d';
-  ctx.lineWidth = 0.5;
-  for (let y = 0; y < h; y += h / 5) {
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
-  }
-  for (let x = 0; x < w; x += w / 10) {
-    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
-  }
-
-  // Signal curve
-  const scaleX = w / n;
-  const scaleY = h / 160;
-
-  // Fill gradient under curve
-  ctx.beginPath();
-  ctx.moveTo(0, h);
-  for (let i = 0; i < n; i++) {
-    const x = i * scaleX;
-    const y = h - pixels[i] * scaleY;
-    if (i === 0) ctx.lineTo(x, y);
-    else ctx.lineTo(x, y);
-  }
-  ctx.lineTo(w, h);
-  ctx.closePath();
-  const grad = ctx.createLinearGradient(0, 0, 0, h);
-  grad.addColorStop(0, 'rgba(88, 166, 255, 0.3)');
-  grad.addColorStop(1, 'rgba(88, 166, 255, 0.02)');
-  ctx.fillStyle = grad;
-  ctx.fill();
-
+  specCtx.strokeStyle='#21262d'; specCtx.lineWidth=0.5;
+  for(let y=0;y<h;y+=h/5){specCtx.beginPath();specCtx.moveTo(0,y);specCtx.lineTo(w,y);specCtx.stroke()}
+  for(let x=0;x<w;x+=w/10){specCtx.beginPath();specCtx.moveTo(x,0);specCtx.lineTo(x,h);specCtx.stroke()}
+  const sx=w/n, sy=h/160;
+  // Fill
+  specCtx.beginPath(); specCtx.moveTo(0,h);
+  for(let i=0;i<n;i++) specCtx.lineTo(i*sx, h-px[i]*sy);
+  specCtx.lineTo(w,h); specCtx.closePath();
+  const g=specCtx.createLinearGradient(0,0,0,h);
+  g.addColorStop(0,'rgba(88,166,255,0.3)'); g.addColorStop(1,'rgba(88,166,255,0.02)');
+  specCtx.fillStyle=g; specCtx.fill();
   // Line
-  ctx.beginPath();
-  for (let i = 0; i < n; i++) {
-    const x = i * scaleX;
-    const y = h - pixels[i] * scaleY;
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  }
-  ctx.strokeStyle = '#58a6ff';
-  ctx.lineWidth = 1.2;
-  ctx.stroke();
+  specCtx.beginPath();
+  for(let i=0;i<n;i++){const x=i*sx,y=h-px[i]*sy;i?specCtx.lineTo(x,y):specCtx.moveTo(x,y)}
+  specCtx.strokeStyle='#58a6ff'; specCtx.lineWidth=1.2; specCtx.stroke();
 }
 
-// ===== Waterfall Renderer =====
-function drawWaterfallLine(pixels) {
-  const w = wfCanvas.width;
-  const n = pixels.length;
-  if (n === 0 || !wfLineBuf32) return;
-
-  // Scroll down
-  wfCtx.drawImage(wfCanvas, 0, 0, w, wfCanvas.height - 1, 0, 1, w, wfCanvas.height - 1);
-
-  // Draw new top line
-  const imgW = wfLineImageData.width;
-  for (let i = 0; i < imgW; i++) {
-    const pi = Math.min(Math.floor(i * n / imgW), n - 1);
-    const val = Math.min(pixels[pi], 160);
-    wfLineBuf32[i] = COLOR_LUT[val];
+// ===== Waterfall =====
+function drawWfLine(px){
+  const w=wfCv.width, n=px.length;
+  if(!n||!wfLine32) return;
+  wfCtx.drawImage(wfCv,0,0,w,wfCv.height-1,0,1,w,wfCv.height-1);
+  const iw=wfLineImg.width;
+  for(let i=0;i<iw;i++){
+    const pi=Math.min((i*n/iw)|0,n-1);
+    wfLine32[i]=COLOR_LUT[Math.min(px[pi],160)];
   }
-  wfCtx.putImageData(wfLineImageData, 0, 0);
-
-  // Store metadata
-  wfMeta.pop();
-  wfMeta.unshift({ startFreq: currentStartFreq, endFreq: currentEndFreq });
+  wfCtx.putImageData(wfLineImg,0,0);
+  wfMeta.pop(); wfMeta.unshift({s:startFreq,e:endFreq});
 }
 
-// ===== Frequency Axis =====
-function drawFreqAxis() {
-  const w = freqAxisCanvas.parentElement.clientWidth;
-  const h = freqAxisCanvas.parentElement.clientHeight;
-  const ctx = freqAxisCtx;
-  ctx.clearRect(0, 0, w, h);
-  ctx.fillStyle = '#8b949e';
-  ctx.font = '10px monospace';
-  ctx.textAlign = 'center';
-
-  const span = currentEndFreq - currentStartFreq;
-  if (span <= 0) return;
-
-  // Choose nice tick interval
-  const targetTicks = Math.max(4, Math.min(12, Math.floor(w / 80)));
-  let step = span / targetTicks;
-  // Round to nice number
-  const mag = Math.pow(10, Math.floor(Math.log10(step)));
-  const norm = step / mag;
-  if (norm < 2) step = 2 * mag;
-  else if (norm < 5) step = 5 * mag;
-  else step = 10 * mag;
-
-  const first = Math.ceil(currentStartFreq / step) * step;
-  for (let f = first; f <= currentEndFreq; f += step) {
-    const x = (f - currentStartFreq) / span * w;
-    const mhz = f / 1e6;
-    ctx.fillText(mhz.toFixed(mhz >= 100 ? 1 : 3), x, h - 4);
-    ctx.fillStyle = '#30363d';
-    ctx.fillRect(x - 0.5, 0, 1, 4);
-    ctx.fillStyle = '#8b949e';
+// ===== Freq Axis =====
+function drawFreqAxis(){
+  const w=faCv.parentElement.clientWidth, h=faCv.parentElement.clientHeight;
+  faCtx.clearRect(0,0,w,h); faCtx.fillStyle='#8b949e'; faCtx.font='10px monospace'; faCtx.textAlign='center';
+  const span=endFreq-startFreq; if(span<=0) return;
+  const tgt=Math.max(4,Math.min(12,(w/80)|0));
+  let step=span/tgt;
+  const mag=Math.pow(10,Math.floor(Math.log10(step)));
+  const nm=step/mag;
+  step=nm<2?2*mag:nm<5?5*mag:10*mag;
+  for(let f=Math.ceil(startFreq/step)*step;f<=endFreq;f+=step){
+    const x=(f-startFreq)/span*w, m=f/1e6;
+    faCtx.fillStyle='#30363d'; faCtx.fillRect(x-0.5,0,1,4);
+    faCtx.fillStyle='#8b949e'; faCtx.fillText(m>=100?m.toFixed(1):m.toFixed(3),x,h-4);
   }
 }
 
-// ===== Binary Frame Parser =====
-function parseScopeFrame(buf) {
-  const dv = new DataView(buf);
-  if (dv.byteLength < HEADER_SIZE) return null;
-  const msgType = dv.getUint8(0);
-  if (msgType !== SCOPE_MSG_TYPE) return null;
-
-  const receiver = dv.getUint8(1);
-  const mode = dv.getUint8(2);
-  const startFreq = dv.getUint32(3, true);
-  const endFreq = dv.getUint32(7, true);
-  const sequence = dv.getUint16(11, true);
-  const flags = dv.getUint8(13);
-  const pixelCount = dv.getUint16(14, true);
-
-  if (dv.byteLength < HEADER_SIZE + pixelCount) return null;
-  const pixels = new Uint8Array(buf, HEADER_SIZE, pixelCount);
-
-  return { receiver, mode, startFreq, endFreq, sequence, flags, pixelCount, pixels };
+// ===== Binary Parsers =====
+function parseScopeFrame(buf){
+  const dv=new DataView(buf);
+  if(dv.byteLength<SCOPE_HEADER||dv.getUint8(0)!==SCOPE_MSG_TYPE) return null;
+  const pc=dv.getUint16(14,true);
+  if(dv.byteLength<SCOPE_HEADER+pc) return null;
+  return {
+    receiver:dv.getUint8(1), mode:dv.getUint8(2),
+    startFreq:dv.getUint32(3,true), endFreq:dv.getUint32(7,true),
+    seq:dv.getUint16(11,true), flags:dv.getUint8(13), pixelCount:pc,
+    pixels:new Uint8Array(buf,SCOPE_HEADER,pc)
+  };
 }
+
+function parseMeterFrame(buf){
+  const dv=new DataView(buf);
+  if(dv.byteLength<4||dv.getUint8(0)!==METER_MSG_TYPE) return null;
+  const count=dv.getUint8(3), meters=[];
+  for(let i=0;i<count&&4+i*3+2<dv.byteLength;i++){
+    const off=4+i*3;
+    meters.push({id:dv.getUint8(off), value:dv.getUint8(off+1)|(dv.getUint8(off+2)<<8)});
+  }
+  return {seq:dv.getUint16(1,true), meters};
+}
+
+// ===== Meter Display =====
+function updateMeter(meterId, value){
+  const elId=METER_MAP[meterId]; if(!elId) return;
+  const el=$(elId); if(!el) return;
+  const bar=el.querySelector('.meter-bar');
+  const valEl=el.querySelector('.meter-value');
+  const pct=Math.min(100, value/255*100);
+  bar.style.width=pct+'%';
+
+  // Format display value
+  if(meterId===MID.SMETER_MAIN||meterId===MID.SMETER_SUB){
+    // 0-120=S0-S9, 120-255=S9+
+    if(value<=120){const s=(value/120*9)|0; valEl.textContent='S'+s}
+    else{const db=((value-120)/135*60)|0; valEl.textContent='S9+'+db}
+  } else if(meterId===MID.SWR){
+    // 0=1.0, 255=∞ (approximate: 0-48≈1.0-1.5, 48-80≈1.5-2.0, 80-120≈2.0-3.0)
+    const swr=value<5?1.0:1.0+value/255*9;
+    valEl.textContent=swr.toFixed(1);
+  } else {
+    valEl.textContent=((value/255*100)|0)+'%';
+  }
+}
+
+// ===== UI State Updates =====
+function updateStateFromServer(data){
+  if(data.freq_a){currentFreqA=data.freq_a; if(activeVfo==='A') freqDisplayEl.textContent=fmtFreq(data.freq_a)}
+  if(data.freq_b){currentFreqB=data.freq_b; if(activeVfo==='B') freqDisplayEl.textContent=fmtFreq(data.freq_b)}
+  if(data.mode) modeSel.value=data.mode;
+  if(data.filter) filterSel.value=data.filter;
+  if(data.power!=null) powerInput.value=data.power;
+  if(data.ptt!=null){pttState=data.ptt; pttBtn.classList.toggle('active',pttState)}
+  if(data.scope){
+    startFreq=data.scope.start_freq||startFreq;
+    endFreq=data.scope.end_freq||endFreq;
+    drawFreqAxis();
+  }
+}
+
+// ===== Commands =====
+function sendControl(obj){
+  if(controlWs&&controlWs.readyState===1) controlWs.send(JSON.stringify(obj));
+}
+function sendCmd(name, params){
+  sendControl({type:'cmd',id:nextId(),name,params:params||{}});
+}
+// Expose to onclick
+window.sendCmd = sendCmd;
+
+function selectVfo(v){
+  activeVfo=v;
+  $('vfo-a').classList.toggle('active',v==='A');
+  $('vfo-b').classList.toggle('active',v==='B');
+  freqDisplayEl.textContent=fmtFreq(v==='A'?currentFreqA:currentFreqB);
+}
+window.selectVfo = selectVfo;
+
+function setAtt(db){
+  sendCmd('set_att',{db});
+  document.querySelectorAll('[data-att]').forEach(b=>b.classList.toggle('active',+b.dataset.att===db));
+}
+window.setAtt = setAtt;
+
+function setPreamp(level){
+  sendCmd('set_preamp',{level});
+  document.querySelectorAll('[data-pre]').forEach(b=>b.classList.toggle('active',+b.dataset.pre===level));
+}
+window.setPreamp = setPreamp;
+
+function setPtt(state){
+  if(state===pttState) return;
+  pttState=state;
+  pttBtn.classList.toggle('active',state);
+  sendCmd('ptt',{state});
+}
+window.setPtt = setPtt;
+
+// ===== Freq Edit Modal =====
+freqDisplayEl.addEventListener('click', ()=>{
+  const hz=activeVfo==='A'?currentFreqA:currentFreqB;
+  freqInput.value=hz?(hz/1e6).toFixed(6):'';
+  freqModal.classList.add('open');
+  freqInput.select(); freqInput.focus();
+});
+freqInput.addEventListener('keydown', e=>{
+  if(e.key==='Enter'){
+    const mhz=parseFloat(freqInput.value);
+    if(!isNaN(mhz)&&mhz>0){
+      const hz=Math.round(mhz*1e6);
+      sendCmd('set_freq',{vfo:activeVfo,freq:hz});
+      freqDisplayEl.textContent=fmtFreq(hz);
+      if(activeVfo==='A') currentFreqA=hz; else currentFreqB=hz;
+    }
+    freqModal.classList.remove('open');
+  } else if(e.key==='Escape'){
+    freqModal.classList.remove('open');
+  }
+});
+freqModal.addEventListener('click', e=>{if(e.target===freqModal) freqModal.classList.remove('open')});
 
 // ===== Control WebSocket =====
-function connectControl() {
-  const url = getWsBase() + '/api/v1/ws';
-  controlWs = new WebSocket(url);
-  setStatus('reconnecting', 'Connecting...');
-
-  controlWs.onopen = () => {
-    controlBackoff = WS_RECONNECT_MIN;
-    setStatus('connected', 'Connected');
-    // hello will arrive from server, then we subscribe
+function connectControl(){
+  controlWs=new WebSocket(wsBase()+'/api/v1/ws');
+  setStatus('reconnecting','Connecting...');
+  controlWs.onopen=()=>{controlBackoff=WS_RECONNECT_MIN; setStatus('connected','Connected')};
+  controlWs.onmessage=ev=>{
+    try{handleCtrlMsg(JSON.parse(ev.data))}catch(e){console.warn('ctrl parse:',e)}
   };
-
-  controlWs.onmessage = (ev) => {
-    try {
-      const msg = JSON.parse(ev.data);
-      handleControlMessage(msg);
-    } catch (e) {
-      console.warn('Control WS parse error:', e);
-    }
-  };
-
-  controlWs.onclose = () => {
-    setStatus('reconnecting', 'Reconnecting...');
-    setTimeout(connectControl, controlBackoff);
-    controlBackoff = Math.min(controlBackoff * 2, WS_RECONNECT_MAX);
-  };
-
-  controlWs.onerror = () => { controlWs.close(); };
+  controlWs.onclose=()=>{setStatus('reconnecting','Reconnecting...');setTimeout(connectControl,controlBackoff);controlBackoff=Math.min(controlBackoff*2,WS_RECONNECT_MAX)};
+  controlWs.onerror=()=>controlWs.close();
 }
-
-function handleControlMessage(msg) {
-  switch (msg.type) {
+function handleCtrlMsg(m){
+  switch(m.type){
     case 'hello':
-      radioModel.textContent = msg.radio || '';
-      // Subscribe to scope
-      sendControl({ type: 'subscribe', id: 's1', streams: ['scope', 'meters'] });
-      // Connect scope WS after hello
-      if (!scopeWs || scopeWs.readyState > 1) connectScope();
+      radioModelEl.textContent=m.radio||'';
+      sendControl({type:'subscribe',id:'s1',streams:['scope','meters']});
+      if(!scopeWs||scopeWs.readyState>1) connectScope();
+      if(!metersWs||metersWs.readyState>1) connectMeters();
       break;
-    case 'state':
-      if (msg.data) {
-        if (msg.data.freq_a) freqDisplay.textContent = formatFreq(msg.data.freq_a);
-        if (msg.data.scope) {
-          currentStartFreq = msg.data.scope.start_freq || currentStartFreq;
-          currentEndFreq = msg.data.scope.end_freq || currentEndFreq;
-          drawFreqAxis();
-        }
-      }
-      break;
+    case 'state': if(m.data) updateStateFromServer(m.data); break;
     case 'event':
-      if (msg.name === 'freq_changed' && msg.data) {
-        freqDisplay.textContent = formatFreq(msg.data.freq);
-      } else if (msg.name === 'scope_meta' && msg.data) {
-        currentStartFreq = msg.data.start_freq || currentStartFreq;
-        currentEndFreq = msg.data.end_freq || currentEndFreq;
-        drawFreqAxis();
-      }
+      if(m.name==='freq_changed'&&m.data){
+        if(m.data.vfo==='A'||!m.data.vfo){currentFreqA=m.data.freq;if(activeVfo==='A')freqDisplayEl.textContent=fmtFreq(m.data.freq)}
+        else{currentFreqB=m.data.freq;if(activeVfo==='B')freqDisplayEl.textContent=fmtFreq(m.data.freq)}
+      } else if(m.name==='mode_changed'&&m.data) modeSel.value=m.data.mode;
+      else if(m.name==='ptt'&&m.data){pttState=m.data.state;pttBtn.classList.toggle('active',pttState)}
+      else if(m.name==='scope_meta'&&m.data){startFreq=m.data.start_freq||startFreq;endFreq=m.data.end_freq||endFreq;drawFreqAxis()}
       break;
-    case 'response':
-      // Command responses — log for now
-      if (!msg.ok) console.warn('Command error:', msg.error, msg.message);
-      break;
-  }
-}
-
-function sendControl(obj) {
-  if (controlWs && controlWs.readyState === WebSocket.OPEN) {
-    controlWs.send(JSON.stringify(obj));
+    case 'response': if(!m.ok) console.warn('cmd err:',m.error,m.message); break;
   }
 }
 
 // ===== Scope WebSocket =====
-function connectScope() {
-  const url = getWsBase() + '/api/v1/scope';
-  scopeWs = new WebSocket(url);
-  scopeWs.binaryType = 'arraybuffer';
-
-  scopeWs.onopen = () => {
-    scopeBackoff = WS_RECONNECT_MIN;
+function connectScope(){
+  scopeWs=new WebSocket(wsBase()+'/api/v1/scope');
+  scopeWs.binaryType='arraybuffer';
+  scopeWs.onopen=()=>{scopeBackoff=WS_RECONNECT_MIN};
+  scopeWs.onmessage=ev=>{
+    if(!(ev.data instanceof ArrayBuffer)) return;
+    const f=parseScopeFrame(ev.data); if(!f) return;
+    if(f.startFreq!==startFreq||f.endFreq!==endFreq){startFreq=f.startFreq;endFreq=f.endFreq;drawFreqAxis()}
+    currentPixels=f.pixels; drawSpectrum(f.pixels); drawWfLine(f.pixels);
   };
+  scopeWs.onclose=()=>{setTimeout(connectScope,scopeBackoff);scopeBackoff=Math.min(scopeBackoff*2,WS_RECONNECT_MAX)};
+  scopeWs.onerror=()=>scopeWs.close();
+}
 
-  scopeWs.onmessage = (ev) => {
-    if (ev.data instanceof ArrayBuffer) {
-      const frame = parseScopeFrame(ev.data);
-      if (!frame) return;
-
-      // Update freq range if changed
-      if (frame.startFreq !== currentStartFreq || frame.endFreq !== currentEndFreq) {
-        currentStartFreq = frame.startFreq;
-        currentEndFreq = frame.endFreq;
-        drawFreqAxis();
-      }
-
-      currentPixels = frame.pixels;
-      drawSpectrum(frame.pixels);
-      drawWaterfallLine(frame.pixels);
+// ===== Meters WebSocket =====
+function connectMeters(){
+  metersWs=new WebSocket(wsBase()+'/api/v1/meters');
+  metersWs.binaryType='arraybuffer';
+  metersWs.onopen=()=>{
+    metersBackoff=WS_RECONNECT_MIN;
+    // Request all meters
+    metersWs.send(JSON.stringify({type:'meters_start',meters:['smeter','power','swr','alc','comp','id','vd','temp'],fps:10}));
+  };
+  metersWs.onmessage=ev=>{
+    if(ev.data instanceof ArrayBuffer){
+      const f=parseMeterFrame(ev.data); if(!f) return;
+      f.meters.forEach(m=>updateMeter(m.id, m.value));
     }
   };
-
-  scopeWs.onclose = () => {
-    setTimeout(connectScope, scopeBackoff);
-    scopeBackoff = Math.min(scopeBackoff * 2, WS_RECONNECT_MAX);
-  };
-
-  scopeWs.onerror = () => { scopeWs.close(); };
+  metersWs.onclose=()=>{setTimeout(connectMeters,metersBackoff);metersBackoff=Math.min(metersBackoff*2,WS_RECONNECT_MAX)};
+  metersWs.onerror=()=>metersWs.close();
 }
 
 // ===== Click-to-Tune =====
-wfCanvas.parentElement.addEventListener('click', (e) => {
-  const rect = wfCanvas.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
-  const row = Math.floor(y);
-
-  // Use per-line metadata if available
-  let sf = currentStartFreq, ef = currentEndFreq;
-  if (row >= 0 && row < wfMeta.length && wfMeta[row]) {
-    sf = wfMeta[row].startFreq;
-    ef = wfMeta[row].endFreq;
-  }
-
-  const ratio = x / rect.width;
-  const freq = Math.round(sf + ratio * (ef - sf));
-  freqDisplay.textContent = formatFreq(freq);
-  sendControl({ type: 'cmd', id: 'tune-' + Date.now(), name: 'set_freq', params: { vfo: 'A', freq: freq } });
+wfCv.parentElement.addEventListener('click', e=>{
+  const r=wfCv.getBoundingClientRect(), x=e.clientX-r.left, row=(e.clientY-r.top)|0;
+  let sf=startFreq,ef=endFreq;
+  if(row>=0&&row<wfMeta.length&&wfMeta[row]){sf=wfMeta[row].s;ef=wfMeta[row].e}
+  const freq=Math.round(sf+(x/r.width)*(ef-sf));
+  freqDisplayEl.textContent=fmtFreq(freq);
+  if(activeVfo==='A') currentFreqA=freq; else currentFreqB=freq;
+  sendCmd('set_freq',{vfo:activeVfo,freq});
 });
 
-// ===== Hover tooltip on waterfall =====
-wfCanvas.parentElement.addEventListener('mousemove', (e) => {
-  const rect = wfCanvas.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const row = Math.floor(e.clientY - rect.top);
-
-  let sf = currentStartFreq, ef = currentEndFreq;
-  if (row >= 0 && row < wfMeta.length && wfMeta[row]) {
-    sf = wfMeta[row].startFreq;
-    ef = wfMeta[row].endFreq;
-  }
-
-  const ratio = x / rect.width;
-  const freq = sf + ratio * (ef - sf);
-  tooltip.textContent = formatFreq(Math.round(freq));
-  tooltip.style.left = (e.clientX - rect.left + 12) + 'px';
-  tooltip.style.top = (e.clientY - rect.top - 24) + 'px';
-  tooltip.style.display = 'block';
+// ===== Waterfall tooltip =====
+wfCv.parentElement.addEventListener('mousemove', e=>{
+  const r=wfCv.getBoundingClientRect(), x=e.clientX-r.left, row=(e.clientY-r.top)|0;
+  let sf=startFreq,ef=endFreq;
+  if(row>=0&&row<wfMeta.length&&wfMeta[row]){sf=wfMeta[row].s;ef=wfMeta[row].e}
+  tooltip.textContent=fmtFreq(Math.round(sf+(x/r.width)*(ef-sf)));
+  tooltip.style.left=(x+12)+'px'; tooltip.style.top=(e.clientY-r.top-24)+'px';
+  tooltip.style.display='block';
 });
-
-wfCanvas.parentElement.addEventListener('mouseleave', () => {
-  tooltip.style.display = 'none';
-});
+wfCv.parentElement.addEventListener('mouseleave', ()=>{tooltip.style.display='none'});
 
 // ===== Init =====
-resizeCanvases();
+resize();
 connectControl();
 </script>
 </body>
