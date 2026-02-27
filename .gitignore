@@ -39,3 +39,6 @@ ROADMAP_TESTING.md
 .env.*
 .coverage
 dist/
+
+# MkDocs build output
+site/
