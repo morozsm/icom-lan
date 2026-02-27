@@ -89,7 +89,7 @@ class WebServer:
     def register_scope_handler(self, handler: "ScopeHandler") -> None:
         """Register a scope handler for broadcast."""
         self._scope_handlers.add(handler)
-        if not self._scope_enabled and self._radio is not None:
+        if self._radio is not None:
             self._radio.on_scope_data(self._broadcast_scope)
 
     def unregister_scope_handler(self, handler: "ScopeHandler") -> None:
