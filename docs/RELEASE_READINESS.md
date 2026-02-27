@@ -1,62 +1,18 @@
-# Release Readiness (post-PR #31)
+# Release Readiness
 
-Date: 2026-02-26
-Scope: CI-V desync fix train + DATA/WSJT-X compatibility hardening
+## v0.6.6 — Released 2026-02-26 ✅
 
-## Current decision
+All gates passed:
+- Full test suite: 869 passed, 78 skipped, 1 xpassed
+- Lint: ruff check clean
+- Docs build: mkdocs OK
+- CI: all matrix jobs green (3.11/3.12/3.13)
+- Real-radio validation (IC-7610): CAT + PTT stable
+- Manual QA: WSJT-X with --wsjtx-compat confirmed working
+- Published: GitHub release + PyPI
 
-- **Merge:** done ✅
-- **Release now:** **no** (per plan)
-- **Readiness status:** **almost ready** (needs final manual QA + release notes pass)
-
-## Included changes (high-level)
-
-- CI-V pipeline hardening for reconnect/desync scenarios.
-- Rigctld state cache + autonomous poller + circuit breaker.
-- DATA mode semantics refinements:
-  - `PKTUSB`, `PKTLSB`, `PKTRTTY` handling.
-  - no forced DATA-off side effect for unrelated mode changes.
-- Commander cancellation safety:
-  - cancelled/timed-out client requests no longer execute in background.
-- Rigctld reliability updates:
-  - poller pause on writes,
-  - packet-mode transition hold window,
-  - lazy poller lifecycle (start on first client, stop on last).
-- WSJT-X compatibility mode (opt-in):
-  - `icom-lan serve --wsjtx-compat` pre-warms DATA mode on first client
-    when base mode is USB/LSB/RTTY and DATA is off.
-
-## Verification performed
-
-### Automated checks
-
-- Full suite: `869 passed, 78 skipped, 1 xpassed` ✅
-- Targeted radio-control suites: `184 passed, 1 xpassed` ✅
-- Lint: `ruff check .` ✅
-- Docs build: `mkdocs build` ✅ (build succeeds; upstream warning about MkDocs/Material roadmap)
-
-### Real-radio validation (IC-7610)
-
-- CAT stable in USB and DATA modes.
-- SSB → PKTUSB transition now deterministic in rigctld tests.
-- WSJT-X first-TX latency issue mitigated by `--wsjtx-compat`.
-- With DATA already enabled, WSJT-X CAT/PTT path works reliably.
-
-## Remaining pre-release checklist
-
-1. **Manual regression pass** (one final run):
-   - WSJT-X: Test CAT/Test PTT from USB (DATA off) with `--wsjtx-compat` ON/OFF.
-   - JTDX/JS8Call sanity (connect, freq/mode/PTT toggle).
-2. **Docs polish**:
-   - add short “Known behavior” note: USB→PKT may incur first-TX delay in some client stacks; use `--wsjtx-compat`.
-   - add recommended WSJT-X profile block (Rig/PTT/Mode/Split).
-3. **Changelog final pass**:
-   - verify Unreleased bullets are grouped and concise.
-4. **Versioning/release prep (when approved)**:
-   - tag plan, release notes draft, and rollback note.
-
-## Risk notes
-
-- `--wsjtx-compat` intentionally changes radio state (enables DATA) but is **opt-in**.
-- No default behavior changes for users who do not pass the flag.
-- One `xpassed` test remains in commander suite (non-blocking, known flaky category).
+## Post-release TODO
+- [x] Close completed issues (#16, #17, #18, #32)
+- [x] Update open issue status (#19, #20, #21, #22)
+- [x] Add WSJT-X setup guide (docs/guide/wsjtx-setup.md)
+- [ ] Golden protocol response suite (#20) — next sprint
