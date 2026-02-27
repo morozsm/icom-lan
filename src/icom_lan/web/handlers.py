@@ -338,12 +338,15 @@ class ScopeHandler:
         # Register with server for scope broadcast
         if self._server is not None:
             self._server.register_scope_handler(self)
-        if self._radio is not None:
+        if self._radio is not None and self._server is not None and not self._server._scope_enabled:
             try:
                 await self._radio.enable_scope()
+                self._server._scope_enabled = True
                 logger.info("scope: enabled on radio")
             except Exception:
                 logger.warning("scope: failed to enable", exc_info=True)
+        elif self._server is not None and self._server._scope_enabled:
+            logger.debug("scope: already enabled, skipping")
         try:
             sender_task = asyncio.create_task(self._sender())
             try:
