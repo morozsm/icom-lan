@@ -1135,6 +1135,7 @@ class IcomRadio:
     # ------------------------------------------------------------------
 
     WATCHDOG_CHECK_INTERVAL = 0.5  # seconds (wfview: WATCHDOG_PERIOD = 500ms)
+    _WATCHDOG_HEALTH_LOG_INTERVAL = 30.0  # seconds
 
     def _start_watchdog(self) -> None:
         """Start connection watchdog task."""
@@ -1164,6 +1165,7 @@ class IcomRadio:
         import time as _time
 
         last_activity = _time.monotonic()
+        last_health_log = _time.monotonic()
         last_rx_count = self._ctrl_transport.rx_packet_count
         last_civ_count = (
             self._civ_transport.rx_packet_count if self._civ_transport else 0
@@ -1186,7 +1188,19 @@ class IcomRadio:
                     last_rx_count = ctrl_count
                     last_civ_count = civ_count
 
-                idle = _time.monotonic() - last_activity
+                now = _time.monotonic()
+                idle = now - last_activity
+
+                # Periodic health status log
+                if now - last_health_log >= self._WATCHDOG_HEALTH_LOG_INTERVAL:
+                    logger.info(
+                        "Transport health: ctrl_rx=%d civ_rx=%d idle=%.1fs",
+                        ctrl_count,
+                        civ_count,
+                        idle,
+                    )
+                    last_health_log = now
+
                 if idle > self._watchdog_timeout:
                     logger.warning(
                         "Watchdog: no activity for %.1fs, triggering reconnect",
@@ -1461,6 +1475,7 @@ class IcomRadio:
         key: str | None = None,
         dedupe: bool = False,
         wait_response: bool = True,
+        timeout: float | None = None,
     ) -> CivFrame | None:
         """Enqueue a CI-V command and wait for its response."""
         assert self._civ_transport is not None
@@ -1468,7 +1483,10 @@ class IcomRadio:
 
         if self._commander is None:
             # Fallback path (e.g. during tests/mocks before queue init).
-            return await self._execute_civ_raw(civ_frame, wait_response=wait_response)
+            coro = self._execute_civ_raw(civ_frame, wait_response=wait_response)
+            if timeout is not None:
+                return await asyncio.wait_for(coro, timeout=timeout)
+            return await coro
 
         return await self._commander.send(
             civ_frame,
@@ -1476,6 +1494,7 @@ class IcomRadio:
             key=key,
             dedupe=dedupe,
             wait_response=wait_response,
+            timeout=timeout,
         )
 
     @staticmethod
@@ -1680,6 +1699,11 @@ class IcomRadio:
         mode = await self.get_mode()
         await self.set_mode(mode, filter_width=filter_width)
 
+    # IC-7610 sometimes does not ACK set_mode (known quirk, also seen in
+    # wfview/rigctld). Use a short timeout to avoid blocking the CI-V queue
+    # for the full default timeout. The error is swallowed and logged.
+    _SET_MODE_ACK_TIMEOUT = 2.0  # seconds
+
     async def set_mode(self, mode: Mode | str, filter_width: int | None = None) -> None:
         """Set the operating mode.
 
@@ -1691,10 +1715,14 @@ class IcomRadio:
         if isinstance(mode, str):
             mode = Mode[mode]
         civ = set_mode(mode, filter_width=filter_width, to_addr=self._radio_addr)
-        # IC-7610 sometimes does not send ACK for set_mode (known issue with
-        # wfview/rigctld as well).  Use fire-and-forget to avoid CI-V timeout
-        # that would poison subsequent commands.
-        await self._send_civ_raw(civ, wait_response=False)
+        try:
+            await self._send_civ_raw(civ, timeout=self._SET_MODE_ACK_TIMEOUT)
+        except (TimeoutError, asyncio.TimeoutError):
+            logger.warning(
+                "set_mode(%s): ACK not received within %.1fs (known IC-7610 quirk)",
+                mode.name,
+                self._SET_MODE_ACK_TIMEOUT,
+            )
         self._last_mode = mode
         if filter_width is not None:
             self._filter_width = filter_width

@@ -30,7 +30,7 @@ from typing import TYPE_CHECKING, Any
 
 from .. import __version__
 from .handlers import AudioHandler, ControlHandler, MetersHandler, ScopeHandler
-from .websocket import WebSocketConnection, make_accept_key
+from .websocket import WS_KEEPALIVE_INTERVAL, WebSocketConnection, make_accept_key
 
 if TYPE_CHECKING:
     from ..radio import IcomRadio
@@ -97,6 +97,20 @@ class WebServer:
         self._scope_handlers.discard(handler)
         if not self._scope_handlers and self._radio is not None:
             self._radio.on_scope_data(None)
+            if self._scope_enabled:
+                loop = asyncio.get_event_loop()
+                loop.create_task(self._disable_scope_async())
+
+    async def _disable_scope_async(self) -> None:
+        """Disable scope on the radio when no more handlers are connected."""
+        if self._radio is None:
+            return
+        try:
+            await self._radio.disable_scope()
+            self._scope_enabled = False
+            logger.info("scope: disabled on radio (no active handlers)")
+        except Exception:
+            logger.warning("scope: failed to disable on radio", exc_info=True)
 
     def _broadcast_scope(self, frame: Any) -> None:
         """Broadcast scope frame to all registered handlers."""
@@ -339,7 +353,16 @@ class WebServer:
 
         mime, _ = mimetypes.guess_type(str(target))
         ct = mime or "application/octet-stream"
-        await _send_response(writer, 200, "OK", body, {"Content-Type": ct})
+        await _send_response(
+            writer,
+            200,
+            "OK",
+            body,
+            {
+                "Content-Type": ct,
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+            },
+        )
 
     # ------------------------------------------------------------------
     # WebSocket upgrade + routing
@@ -385,13 +408,25 @@ class WebServer:
             return
 
         peer = writer.get_extra_info("peername", ("?", 0))
-        logger.info("ws connect: %s %s:%s", path, peer[0], peer[1])
+        logger.info(
+            "ws connect: %s %s:%s (active=%d)",
+            path, peer[0], peer[1], len(self._client_tasks),
+        )
+        keepalive = asyncio.create_task(ws.keepalive_loop(WS_KEEPALIVE_INTERVAL))
         try:
             await handler.run()
         except Exception as exc:
             logger.debug("ws handler error on %s: %s", path, exc)
         finally:
-            logger.info("ws disconnect: %s %s:%s", path, peer[0], peer[1])
+            keepalive.cancel()
+            try:
+                await keepalive
+            except asyncio.CancelledError:
+                pass
+            logger.info(
+                "ws disconnect: %s %s:%s (active=%d)",
+                path, peer[0], peer[1], len(self._client_tasks) - 1,
+            )
 
 
 # ------------------------------------------------------------------

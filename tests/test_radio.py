@@ -2,6 +2,7 @@
 
 import asyncio
 import struct
+from unittest.mock import patch
 
 import pytest
 
@@ -524,3 +525,67 @@ class TestScopeCallbackSafety:
         # RX pump should continue to route subsequent ACK traffic.
         mock_transport.queue_response(_ack_response())
         await radio.set_frequency(7_074_000)
+
+
+# ---------------------------------------------------------------------------
+# set_mode timeout resilience
+# ---------------------------------------------------------------------------
+
+
+class TestSetModeTimeout:
+    """set_mode must swallow TimeoutError (known IC-7610 ACK quirk)."""
+
+    @pytest.mark.asyncio
+    async def test_set_mode_swallows_icom_timeout(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        """When _send_civ_raw raises our TimeoutError, set_mode must not re-raise."""
+        with patch.object(
+            radio, "_send_civ_raw", side_effect=TimeoutError("no ACK")
+        ):
+            await radio.set_mode(Mode.USB)  # must not raise
+        assert radio._last_mode == Mode.USB
+
+    @pytest.mark.asyncio
+    async def test_set_mode_swallows_asyncio_timeout(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        """When _send_civ_raw raises asyncio.TimeoutError, set_mode must not re-raise."""
+        with patch.object(
+            radio, "_send_civ_raw", side_effect=asyncio.TimeoutError()
+        ):
+            await radio.set_mode(Mode.CW)  # must not raise
+        assert radio._last_mode == Mode.CW
+
+    @pytest.mark.asyncio
+    async def test_set_mode_ack_received_succeeds(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        """When ACK arrives, set_mode completes normally and updates _last_mode."""
+        mock_transport.queue_response(_ack_response())
+        await radio.set_mode(Mode.LSB)
+        assert radio._last_mode == Mode.LSB
+
+    @pytest.mark.asyncio
+    async def test_set_mode_string_timeout_swallowed(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        """String mode variant also swallows timeout."""
+        with patch.object(
+            radio, "_send_civ_raw", side_effect=TimeoutError("no ACK")
+        ):
+            await radio.set_mode("USB")
+        assert radio._last_mode == Mode.USB
+
+    @pytest.mark.asyncio
+    async def test_set_mode_does_not_swallow_command_error(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        """CommandError (NAK from radio) must still propagate."""
+        from icom_lan.exceptions import CommandError
+
+        with patch.object(
+            radio, "_send_civ_raw", side_effect=CommandError("NAK")
+        ):
+            with pytest.raises(CommandError):
+                await radio.set_mode(Mode.USB)

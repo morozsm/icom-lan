@@ -39,7 +39,9 @@ from icom_lan.web.server import WebConfig, WebServer
 from icom_lan.web.websocket import (
     WS_MAGIC,
     WS_OP_BINARY,
+    WS_OP_PING,
     WS_OP_TEXT,
+    WebSocketConnection,
     make_accept_key,
     make_frame,
 )
@@ -150,21 +152,25 @@ async def _ws_recv_frame(
     reader: asyncio.StreamReader,
     timeout: float = 10.0,
 ) -> tuple[int, bytes]:
-    """Read one (unmasked) server→client WebSocket frame."""
-    header = await asyncio.wait_for(reader.readexactly(2), timeout=timeout)
-    byte0, byte1 = header[0], header[1]
-    opcode = byte0 & 0x0F
-    payload_len = byte1 & 0x7F
+    """Read one (unmasked) server→client WebSocket frame, skipping ping/pong."""
+    while True:
+        header = await asyncio.wait_for(reader.readexactly(2), timeout=timeout)
+        byte0, byte1 = header[0], header[1]
+        opcode = byte0 & 0x0F
+        payload_len = byte1 & 0x7F
 
-    if payload_len == 126:
-        ext = await reader.readexactly(2)
-        payload_len = struct.unpack("!H", ext)[0]
-    elif payload_len == 127:
-        ext = await reader.readexactly(8)
-        payload_len = struct.unpack("!Q", ext)[0]
+        if payload_len == 126:
+            ext = await reader.readexactly(2)
+            payload_len = struct.unpack("!H", ext)[0]
+        elif payload_len == 127:
+            ext = await reader.readexactly(8)
+            payload_len = struct.unpack("!Q", ext)[0]
 
-    payload = await reader.readexactly(payload_len)
-    return opcode, payload
+        payload = await reader.readexactly(payload_len)
+        # Skip control frames (ping=0x9, pong=0xA)
+        if opcode in (0x9, 0xA):
+            continue
+        return opcode, payload
 
 
 async def _close_ws(writer: asyncio.StreamWriter) -> None:
@@ -1122,7 +1128,7 @@ class TestServerConfig:
         cfg = WebConfig()
         assert cfg.host == "0.0.0.0"
         assert cfg.port == 8080
-        assert cfg.max_clients == 20
+        assert cfg.max_clients == 100
 
 
 # ---------------------------------------------------------------------------
@@ -1210,3 +1216,186 @@ class TestAudioHandlerCodecDetection:
         # Pass a non-AudioCodec value (e.g. MagicMock) — must default to PCM16
         frame = await self._start_rx_and_capture(MagicMock(), 48000)
         assert frame[1] == AUDIO_CODEC_PCM16
+
+
+# ---------------------------------------------------------------------------
+# WebSocket keepalive (server-initiated pings)
+# ---------------------------------------------------------------------------
+
+
+class TestWsKeepalive:
+    """WebSocketConnection.keepalive_loop() sends RFC 6455 ping frames."""
+
+    async def test_keepalive_sends_ping_frame(self) -> None:
+        """keepalive_loop writes a WS PING frame after the interval elapses."""
+        written: list[bytes] = []
+
+        reader = asyncio.StreamReader()
+        writer = MagicMock(spec=asyncio.StreamWriter)
+        writer.is_closing.return_value = False
+        writer.write.side_effect = written.append
+        writer.drain = AsyncMock()
+
+        ws = WebSocketConnection(reader, writer)
+        task = asyncio.create_task(ws.keepalive_loop(interval=0.05))
+        try:
+            # Wait slightly longer than the interval so at least one ping fires.
+            await asyncio.sleep(0.12)
+        finally:
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+
+        assert written, "keepalive_loop must write at least one frame"
+        # Ping frame: FIN|PING (0x89), payload len 2 ("ka")
+        all_bytes = b"".join(written)
+        ping_frame = make_frame(WS_OP_PING, b"ka")
+        assert ping_frame in all_bytes, (
+            f"Expected ping frame {ping_frame!r} in written data {all_bytes!r}"
+        )
+
+    async def test_keepalive_cancels_cleanly(self) -> None:
+        """Cancelling keepalive_loop raises no unhandled exceptions."""
+        reader = asyncio.StreamReader()
+        writer = MagicMock(spec=asyncio.StreamWriter)
+        writer.is_closing.return_value = False
+        writer.write = MagicMock()
+        writer.drain = AsyncMock()
+
+        ws = WebSocketConnection(reader, writer)
+        task = asyncio.create_task(ws.keepalive_loop(interval=60.0))
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass  # expected
+
+    async def test_keepalive_exits_when_connection_closed(self) -> None:
+        """keepalive_loop stops without error if ws.close() is called first."""
+        reader = asyncio.StreamReader()
+        writer = MagicMock(spec=asyncio.StreamWriter)
+        writer.is_closing.return_value = False
+        writer.write = MagicMock()
+        writer.drain = AsyncMock()
+
+        ws = WebSocketConnection(reader, writer)
+        ws._closed = True  # Mark as closed before starting loop
+
+        task = asyncio.create_task(ws.keepalive_loop(interval=0.01))
+        # Should complete quickly since _closed is True
+        await asyncio.wait_for(task, timeout=1.0)
+
+
+# ---------------------------------------------------------------------------
+# Scope enable/disable lifecycle
+# ---------------------------------------------------------------------------
+
+
+class TestScopeLifecycle:
+    """Scope is disabled on the radio when the last handler disconnects."""
+
+    async def test_scope_not_disabled_while_handlers_remain(self) -> None:
+        radio = MagicMock()
+        radio.on_scope_data = MagicMock()
+        radio.disable_scope = AsyncMock()
+
+        server = WebServer(radio)
+        server._scope_enabled = True
+
+        h1 = MagicMock()
+        h2 = MagicMock()
+        server._scope_handlers.add(h1)
+        server._scope_handlers.add(h2)
+
+        server.unregister_scope_handler(h1)
+        await asyncio.sleep(0.05)  # let task scheduler run
+
+        radio.disable_scope.assert_not_awaited()
+        assert server._scope_enabled  # still True
+
+    async def test_scope_disabled_when_last_handler_disconnects(self) -> None:
+        radio = MagicMock()
+        radio.on_scope_data = MagicMock()
+        radio.disable_scope = AsyncMock()
+
+        server = WebServer(radio)
+        server._scope_enabled = True
+
+        h = MagicMock()
+        server._scope_handlers.add(h)
+
+        server.unregister_scope_handler(h)
+        await asyncio.sleep(0.05)  # let async task complete
+
+        radio.disable_scope.assert_awaited_once()
+        assert not server._scope_enabled
+
+    async def test_scope_flag_reset_on_disable(self) -> None:
+        """_scope_enabled is reset to False after successful disable."""
+        radio = MagicMock()
+        radio.on_scope_data = MagicMock()
+        radio.disable_scope = AsyncMock()
+
+        server = WebServer(radio)
+        server._scope_enabled = True
+
+        h = MagicMock()
+        server._scope_handlers.add(h)
+        server.unregister_scope_handler(h)
+        await asyncio.sleep(0.05)
+
+        assert not server._scope_enabled
+
+    async def test_scope_not_disabled_if_never_enabled(self) -> None:
+        """disable_scope is NOT called if _scope_enabled is False."""
+        radio = MagicMock()
+        radio.on_scope_data = MagicMock()
+        radio.disable_scope = AsyncMock()
+
+        server = WebServer(radio)
+        server._scope_enabled = False  # was never enabled
+
+        h = MagicMock()
+        server._scope_handlers.add(h)
+        server.unregister_scope_handler(h)
+        await asyncio.sleep(0.05)
+
+        radio.disable_scope.assert_not_awaited()
+
+
+# ---------------------------------------------------------------------------
+# Cache-Control header for static files
+# ---------------------------------------------------------------------------
+
+
+class TestCacheControl:
+    """Static file responses must include Cache-Control: no-cache."""
+
+    async def test_static_index_has_cache_control(
+        self, server: WebServer
+    ) -> None:
+        host, port = _addr(server)
+        status, headers, _ = await _http_get(host, port, "/")
+        assert status == 200
+        cc = headers.get("cache-control", "")
+        assert "no-cache" in cc, f"Expected no-cache in Cache-Control, got: {cc!r}"
+
+    async def test_static_file_not_found_no_cache_control(
+        self, server: WebServer
+    ) -> None:
+        """404 responses do not need Cache-Control (not a static file)."""
+        host, port = _addr(server)
+        status, headers, _ = await _http_get(host, port, "/nonexistent-file.xyz")
+        assert status == 404
+
+    async def test_api_info_no_cache_control_required(
+        self, server: WebServer
+    ) -> None:
+        """JSON API endpoints are not required to have Cache-Control."""
+        host, port = _addr(server)
+        status, _, body = await _http_get(host, port, "/api/v1/info")
+        assert status == 200
+        data = json.loads(body)
+        assert data["server"] == "icom-lan"

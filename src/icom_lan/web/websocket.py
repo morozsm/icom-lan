@@ -22,11 +22,14 @@ __all__ = [
     "WS_OP_CLOSE",
     "WS_OP_PING",
     "WS_OP_PONG",
+    "WS_KEEPALIVE_INTERVAL",
     "WebSocketError",
     "make_accept_key",
     "make_frame",
     "WebSocketConnection",
 ]
+
+WS_KEEPALIVE_INTERVAL = 20.0  # seconds between server-initiated pings
 
 WS_MAGIC = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
@@ -249,6 +252,26 @@ class WebSocketConnection:
     def closed(self) -> bool:
         """True if the connection has been closed."""
         return self._closed
+
+    async def keepalive_loop(self, interval: float = 20.0) -> None:
+        """Send periodic WebSocket ping frames to detect dead connections.
+
+        Runs until cancelled or the connection is closed. If the underlying
+        TCP connection is gone, the write will fail and the exception will
+        propagate, causing the task to exit silently.
+
+        Args:
+            interval: Seconds between pings (default 20s).
+        """
+        try:
+            while not self._closed:
+                await asyncio.sleep(interval)
+                if not self._closed:
+                    await self._send_raw(make_frame(WS_OP_PING, b"ka"))
+        except asyncio.CancelledError:
+            pass
+        except Exception:
+            pass  # Connection gone; exit quietly
 
     async def _send_raw(self, data: bytes) -> None:
         self._writer.write(data)
