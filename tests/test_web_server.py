@@ -1123,3 +1123,90 @@ class TestServerConfig:
         assert cfg.host == "0.0.0.0"
         assert cfg.port == 8080
         assert cfg.max_clients == 20
+
+
+# ---------------------------------------------------------------------------
+# AudioHandler codec detection
+# ---------------------------------------------------------------------------
+
+
+class TestAudioHandlerCodecDetection:
+    """AudioHandler must tag web frames with the correct codec type.
+
+    The radio sends PCM by default (PCM_1CH_16BIT = 0x04).  The web frame
+    must carry AUDIO_CODEC_PCM16 (0x02) so the browser can play it as raw
+    PCM instead of trying to Opus-decode it.  When the radio is configured
+    for Opus (OPUS_1CH = 0x40), the web frame must carry AUDIO_CODEC_OPUS.
+    """
+
+    async def _start_rx_and_capture(self, audio_codec: object, sample_rate: int) -> bytes:
+        """Start RX on an AudioHandler with given codec/rate and return first queued frame."""
+        import struct
+
+        from icom_lan.types import AudioCodec
+        from icom_lan.web.handlers import AudioHandler
+        from icom_lan.web.websocket import WebSocketConnection
+
+        mock_ws = MagicMock(spec=WebSocketConnection)
+        mock_radio = MagicMock()
+        mock_radio.audio_codec = audio_codec
+        mock_radio.audio_sample_rate = sample_rate
+        mock_radio.stop_audio_rx_opus = AsyncMock()
+
+        captured_callback: list = []
+
+        async def fake_start_rx_opus(cb: object) -> None:
+            captured_callback.append(cb)
+
+        mock_radio.start_audio_rx_opus = fake_start_rx_opus
+
+        handler = AudioHandler(mock_ws, mock_radio)
+        await handler._start_rx()
+
+        assert len(captured_callback) == 1, "start_audio_rx_opus must be called once"
+        cb = captured_callback[0]
+
+        # Inject a fake AudioPacket
+        mock_pkt = MagicMock()
+        mock_pkt.data = b"\x00\x01" * 50  # 100 bytes of fake audio
+        cb(mock_pkt)
+
+        # Retrieve the encoded web frame from the queue
+        frame = handler._frame_queue.get_nowait()
+        return frame
+
+    async def test_pcm_codec_produces_pcm16_web_frame(self) -> None:
+        from icom_lan.types import AudioCodec
+        from icom_lan.web.protocol import AUDIO_CODEC_PCM16
+
+        frame = await self._start_rx_and_capture(AudioCodec.PCM_1CH_16BIT, 48000)
+        assert frame[1] == AUDIO_CODEC_PCM16, (
+            f"Expected AUDIO_CODEC_PCM16 (0x{AUDIO_CODEC_PCM16:02x}) "
+            f"but got 0x{frame[1]:02x}"
+        )
+
+    async def test_opus_codec_produces_opus_web_frame(self) -> None:
+        from icom_lan.types import AudioCodec
+        from icom_lan.web.protocol import AUDIO_CODEC_OPUS
+
+        frame = await self._start_rx_and_capture(AudioCodec.OPUS_1CH, 48000)
+        assert frame[1] == AUDIO_CODEC_OPUS, (
+            f"Expected AUDIO_CODEC_OPUS (0x{AUDIO_CODEC_OPUS:02x}) "
+            f"but got 0x{frame[1]:02x}"
+        )
+
+    async def test_sample_rate_encoded_correctly(self) -> None:
+        import struct
+
+        from icom_lan.types import AudioCodec
+
+        frame = await self._start_rx_and_capture(AudioCodec.PCM_1CH_16BIT, 48000)
+        sr_field = struct.unpack_from("<H", frame, 4)[0]
+        assert sr_field == 480, f"Expected 480 (48000//100) but got {sr_field}"
+
+    async def test_unknown_codec_falls_back_to_pcm16(self) -> None:
+        from icom_lan.web.protocol import AUDIO_CODEC_PCM16
+
+        # Pass a non-AudioCodec value (e.g. MagicMock) — must default to PCM16
+        frame = await self._start_rx_and_capture(MagicMock(), 48000)
+        assert frame[1] == AUDIO_CODEC_PCM16
