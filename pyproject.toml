@@ -52,6 +52,7 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 markers = [
     "integration: tests requiring real radio hardware (skip if not configured)",
+    "e2e: end-to-end tests for PCM API and CLI audio workflows",
 ]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
