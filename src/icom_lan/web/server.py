@@ -59,7 +59,7 @@ class WebConfig:
     port: int = 8080
     static_dir: pathlib.Path = field(default_factory=lambda: _DEFAULT_STATIC_DIR)
     radio_model: str = _RADIO_MODEL
-    max_clients: int = 20
+    max_clients: int = 100
 
 
 class WebServer:
@@ -160,6 +160,10 @@ class WebServer:
         writer: asyncio.StreamWriter,
     ) -> None:
         if len(self._client_tasks) >= self._config.max_clients:
+            logger.warning(
+                "max_clients reached (%d), rejecting connection",
+                self._config.max_clients,
+            )
             writer.close()
             return
         loop = asyncio.get_running_loop()
