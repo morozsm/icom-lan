@@ -86,11 +86,22 @@ class WebServer:
     # Lifecycle
     # ------------------------------------------------------------------
 
-    def register_scope_handler(self, handler: "ScopeHandler") -> None:
-        """Register a scope handler for broadcast."""
+    async def ensure_scope_enabled(self, handler: "ScopeHandler") -> None:
+        """Register a scope handler and enable scope on radio if needed.
+
+        This is the single entry point for scope lifecycle — handlers must
+        not call enable_scope() directly.
+        """
         self._scope_handlers.add(handler)
         if self._radio is not None:
             self._radio.on_scope_data(self._broadcast_scope)
+        if not self._scope_enabled and self._radio is not None:
+            try:
+                await self._radio.enable_scope()
+                self._scope_enabled = True
+                logger.info("scope: enabled on radio")
+            except Exception:
+                logger.warning("scope: failed to enable", exc_info=True)
 
     def unregister_scope_handler(self, handler: "ScopeHandler") -> None:
         """Unregister a scope handler."""
@@ -98,6 +109,7 @@ class WebServer:
         if not self._scope_handlers and self._radio is not None:
             self._radio.on_scope_data(None)
             if self._scope_enabled:
+                self._scope_enabled = False
                 loop = asyncio.get_event_loop()
                 loop.create_task(self._disable_scope_async())
 
@@ -107,7 +119,6 @@ class WebServer:
             return
         try:
             await self._radio.disable_scope()
-            self._scope_enabled = False
             logger.info("scope: disabled on radio (no active handlers)")
         except Exception:
             logger.warning("scope: failed to disable on radio", exc_info=True)
