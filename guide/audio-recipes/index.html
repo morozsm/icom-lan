@@ -761,7 +761,7 @@
   <a href="#1-rx-wav-file-10-seconds" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1) RX -&gt; WAV file (10 seconds)
+        1) RX → WAV file (10 seconds)
       
     </span>
   </a>
@@ -772,7 +772,7 @@
   <a href="#2-wav-file-tx-high-level-pcm-api" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2) WAV file -&gt; TX (high-level PCM API)
+        2) WAV file → TX (high-level PCM API)
       
     </span>
   </a>
@@ -1456,7 +1456,7 @@
   <a href="#1-rx-wav-file-10-seconds" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1) RX -&gt; WAV file (10 seconds)
+        1) RX → WAV file (10 seconds)
       
     </span>
   </a>
@@ -1467,7 +1467,7 @@
   <a href="#2-wav-file-tx-high-level-pcm-api" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2) WAV file -&gt; TX (high-level PCM API)
+        2) WAV file → TX (high-level PCM API)
       
     </span>
   </a>
@@ -1517,8 +1517,8 @@
 
 
 <h1 id="audio-recipes-copypaste">Audio Recipes (copy/paste)<a class="headerlink" href="#audio-recipes-copypaste" title="Permanent link">&para;</a></h1>
-<p>Ниже — практические сценарии для текущего API <code>icom-lan</code>.
-Все примеры используют <strong>PCM 16-bit mono 48kHz</strong> (<code>AudioCodec.PCM_1CH_16BIT</code>), чтобы избежать внешних кодеков.</p>
+<p>Practical scenarios for the current <code>icom-lan</code> audio API.
+All examples use <strong>PCM 16-bit mono 48 kHz</strong> (<code>AudioCodec.PCM_1CH_16BIT</code>) to avoid external codec dependencies.</p>
 <h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">ICOM_HOST</span><span class="o">=</span><span class="m">192</span>.168.1.100
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">ICOM_USER</span><span class="o">=</span>YOUR_USER
@@ -1527,8 +1527,8 @@
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;icom-lan[audio]&quot;</span>
 </code></pre></div>
 <hr />
-<h2 id="1-rx-wav-file-10-seconds">1) RX -&gt; WAV file (10 seconds)<a class="headerlink" href="#1-rx-wav-file-10-seconds" title="Permanent link">&para;</a></h2>
-<p>Сохраняет входящий аудиопоток с радио в <code>rx.wav</code>.</p>
+<h2 id="1-rx-wav-file-10-seconds">1) RX → WAV file (10 seconds)<a class="headerlink" href="#1-rx-wav-file-10-seconds" title="Permanent link">&para;</a></h2>
+<p>Saves the incoming audio stream from the radio to <code>rx.wav</code>.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">wave</span>
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
@@ -1569,8 +1569,8 @@
 <a id="__codelineno-2-38" name="__codelineno-2-38" href="#__codelineno-2-38"></a><span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">main</span><span class="p">())</span>
 </code></pre></div>
 <hr />
-<h2 id="2-wav-file-tx-high-level-pcm-api">2) WAV file -&gt; TX (high-level PCM API)<a class="headerlink" href="#2-wav-file-tx-high-level-pcm-api" title="Permanent link">&para;</a></h2>
-<p>Читает <code>tx.wav</code> (16-bit mono 48kHz PCM) и отправляет на TX.</p>
+<h2 id="2-wav-file-tx-high-level-pcm-api">2) WAV file → TX (high-level PCM API)<a class="headerlink" href="#2-wav-file-tx-high-level-pcm-api" title="Permanent link">&para;</a></h2>
+<p>Reads <code>tx.wav</code> (16-bit mono 48 kHz PCM) and transmits it.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">wave</span>
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
@@ -1619,9 +1619,9 @@
 </code></pre></div>
 <hr />
 <h2 id="3-full-duplex-loopback-test-dry-run-style">3) Full-duplex loopback test (dry-run style)<a class="headerlink" href="#3-full-duplex-loopback-test-dry-run-style" title="Permanent link">&para;</a></h2>
-<p>Одновременно:
-- запускает RX и считает входящие пакеты,
-- отправляет 10 секунд тестового тона в TX.</p>
+<p>Simultaneously:
+- starts RX and counts incoming packets,
+- sends a 10-second test tone on TX.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="kn">import</span><span class="w"> </span><span class="nn">struct</span>
@@ -1688,14 +1688,14 @@
 </code></pre></div>
 <hr />
 <h2 id="troubleshooting-audio">Troubleshooting (audio)<a class="headerlink" href="#troubleshooting-audio" title="Permanent link">&para;</a></h2>
-<p>См. отдельный плейбук:</p>
+<p>See the dedicated playbook:</p>
 <ul>
 <li><a href="../troubleshooting/">Troubleshooting</a></li>
 </ul>
-<p>Особенно полезные разделы:
-- handshake/port negotiation (CI-V/audio port = 0),
-- timeout/retry/reconnect recovery,
-- structured logging для интеграционных тестов.</p>
+<p>Especially useful sections:
+- Handshake / port negotiation (CI-V/audio port = 0)
+- Timeout / retry / reconnect recovery
+- Structured logging for integration tests</p>
 
 
 

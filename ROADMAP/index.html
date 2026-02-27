@@ -1443,10 +1443,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#_1" class="md-nav__link">
+  <a href="#motivation" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Мотивация
+        Motivation
       
     </span>
   </a>
@@ -1454,10 +1454,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#_2" class="md-nav__link">
+  <a href="#architecture" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Архитектура
+        Architecture
       
     </span>
   </a>
@@ -1465,10 +1465,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#crates-rust" class="md-nav__link">
+  <a href="#crates-rust-dependencies" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Crates (зависимости Rust)
+        Crates (Rust dependencies)
       
     </span>
   </a>
@@ -1476,15 +1476,15 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#_3" class="md-nav__link">
+  <a href="#phased-plan" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Поэтапный план
+        Phased Plan
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Поэтапный план">
+    <nav class="md-nav" aria-label="Phased Plan">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1559,10 +1559,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#_4" class="md-nav__link">
+  <a href="#effort-estimates" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Оценка трудозатрат
+        Effort Estimates
       
     </span>
   </a>
@@ -1570,10 +1570,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#rust" class="md-nav__link">
+  <a href="#repository-structure-rust" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Структура репозитория (Rust)
+        Repository Structure (Rust)
       
     </span>
   </a>
@@ -1609,10 +1609,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#_5" class="md-nav__link">
+  <a href="#context" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Контекст
+        Context
       
     </span>
   </a>
@@ -1620,10 +1620,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#wfview" class="md-nav__link">
+  <a href="#key-wfview-references" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Ключевые ссылки в wfview
+        Key wfview References
       
     </span>
   </a>
@@ -1681,10 +1681,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#_6" class="md-nav__link">
+  <a href="#why" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Зачем
+        Why
       
     </span>
   </a>
@@ -1692,10 +1692,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#_7" class="md-nav__link">
+  <a href="#architecture_1" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Архитектура
+        Architecture
       
     </span>
   </a>
@@ -1764,10 +1764,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#tech-stack" class="md-nav__link">
+  <a href="#tech-stack-preliminary" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Tech Stack (предварительно)
+        Tech Stack (preliminary)
       
     </span>
   </a>
@@ -1775,10 +1775,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#_8" class="md-nav__link">
+  <a href="#inspiration" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Вдохновение
+        Inspiration
       
     </span>
   </a>
@@ -1786,10 +1786,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#_9" class="md-nav__link">
+  <a href="#estimates" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Оценка
+        Estimates
       
     </span>
   </a>
@@ -1846,17 +1846,17 @@
 <p><strong>Next focus:</strong> Phase 7.1 (Web UI MVP) with optional parallel spike for Phase 5.1 (Rust core).</p>
 <hr />
 <h2 id="phase-3-audio-streaming-python">Phase 3 — Audio Streaming (Python)<a class="headerlink" href="#phase-3-audio-streaming-python" title="Permanent link">&para;</a></h2>
-<p><strong>Goal:</strong> RX/TX audio через Opus codec на порту 50003.</p>
+<p><strong>Goal:</strong> RX/TX audio via Opus codec on port 50003.</p>
 <p><strong>Status:</strong> ✅ Implemented (core RX/TX/full-duplex API available in current releases).</p>
 <h3 id="tasks">Tasks<a class="headerlink" href="#tasks" title="Permanent link">&para;</a></h3>
 <ul>
-<li>[ ] Изучить <code>icomudpaudio.cpp</code> — формат аудио-пакетов, заголовки, sequence</li>
-<li>[ ] Открытие аудио-потока (OpenClose на audio port, аналогично CI-V)</li>
-<li>[ ] RX: приём Opus-пакетов → декодирование → callback API</li>
-<li>[ ] TX: PCM input → Opus encode → отправка на радио</li>
-<li>[ ] Буферизация и jitter buffer (компенсация неравномерности UDP)</li>
-<li>[ ] Sample rate negotiation (8/16/24/48 kHz — задаётся в conninfo)</li>
-<li>[ ] Тесты с реальным радио</li>
+<li>[ ] Study <code>icomudpaudio.cpp</code> — audio packet format, headers, sequence</li>
+<li>[ ] Open audio stream (OpenClose on audio port, similar to CI-V)</li>
+<li>[ ] RX: receive Opus packets → decode → callback API</li>
+<li>[ ] TX: PCM input → Opus encode → send to radio</li>
+<li>[ ] Buffering and jitter buffer (compensate for UDP delivery irregularity)</li>
+<li>[ ] Sample rate negotiation (8/16/24/48 kHz — set in conninfo)</li>
+<li>[ ] Tests with real radio</li>
 </ul>
 <h3 id="api-design">API Design<a class="headerlink" href="#api-design" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># RX — callback-based</span>
@@ -1884,18 +1884,18 @@
 </ul>
 <hr />
 <h2 id="phase-4-polish-publish-python">Phase 4 — Polish &amp; Publish (Python)<a class="headerlink" href="#phase-4-polish-publish-python" title="Permanent link">&para;</a></h2>
-<p><strong>Goal:</strong> Production-ready библиотека на PyPI.</p>
+<p><strong>Goal:</strong> Production-ready library on PyPI.</p>
 <p><strong>Status:</strong> ✅ Implemented (sync API, reconnect/token renewal, docs, GitHub releases, PyPI).</p>
 <h3 id="tasks_1">Tasks<a class="headerlink" href="#tasks_1" title="Permanent link">&para;</a></h3>
 <ul>
-<li>[ ] Sync API wrapper (для тех кто не хочет async)</li>
-<li>[ ] Autodiscovery улучшение (multicast, timeout config)</li>
-<li>[ ] Multi-model support (CI-V address presets для IC-705, IC-7300, IC-9700)</li>
+<li>[ ] Sync API wrapper (for those who don't want async)</li>
+<li>[ ] Autodiscovery improvement (multicast, timeout config)</li>
+<li>[ ] Multi-model support (CI-V address presets for IC-705, IC-7300, IC-9700)</li>
 <li>[ ] Token renewal timer (wfview: TOKEN_RENEWAL = 60s, sends <code>sendToken(0x05)</code>)</li>
-<li>[ ] Reconnect logic (auto-reconnect при потере связи)</li>
+<li>[ ] Reconnect logic (auto-reconnect on connection loss)</li>
 <li>[ ] Proper integration test suite (<code>@pytest.mark.integration</code>)</li>
-<li>[ ] PyPI публикация (<code>uv publish</code> / <code>twine upload</code>)</li>
-<li>[ ] GitHub Release с changelog</li>
+<li>[ ] PyPI publication (<code>uv publish</code> / <code>twine upload</code>)</li>
+<li>[ ] GitHub Release with changelog</li>
 <li>[ ] MkDocs documentation site (GitHub Pages) — ✅ done</li>
 <li>[ ] Badges: PyPI version, downloads, CI status</li>
 </ul>
@@ -1909,47 +1909,47 @@
 </code></pre></div>
 <hr />
 <h2 id="phase-5-rust-core">Phase 5 — Rust Core 🦀<a class="headerlink" href="#phase-5-rust-core" title="Permanent link">&para;</a></h2>
-<p><strong>Goal:</strong> Переписать ядро на Rust. Python API остаётся, но внутри — нативный код. Плюс standalone CLI и WASM.</p>
-<h3 id="_1">Мотивация<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h3>
+<p><strong>Goal:</strong> Rewrite the core in Rust. Python API remains, but internally — native code. Plus standalone CLI and WASM.</p>
+<h3 id="motivation">Motivation<a class="headerlink" href="#motivation" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
 <tr>
-<th>Фича</th>
-<th>Почему Rust</th>
+<th>Feature</th>
+<th>Why Rust</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><strong>Audio latency</strong></td>
-<td>Нет GIL, нет GC pauses → предсказуемый real-time audio</td>
+<td>No GIL, no GC pauses → predictable real-time audio</td>
 </tr>
 <tr>
-<td><strong>Один бинарник</strong></td>
-<td>Скачал → запустил. Без Python, pip, venv</td>
+<td><strong>Single binary</strong></td>
+<td>Download → run. No Python, pip, venv</td>
 </tr>
 <tr>
 <td><strong>Memory safety</strong></td>
-<td>Парсинг бинарных UDP-пакетов с гарантией компилятора</td>
+<td>Binary UDP packet parsing with compiler guarantees</td>
 </tr>
 <tr>
 <td><strong>Multi-platform FFI</strong></td>
-<td>Один codebase → Python, Node.js, C/C++, Swift, WASM</td>
+<td>One codebase → Python, Node.js, C/C++, Swift, WASM</td>
 </tr>
 <tr>
 <td><strong>Tokio async</strong></td>
-<td>3 порта + pings + retransmit + audio — эффективнее asyncio</td>
+<td>3 ports + pings + retransmit + audio — more efficient than asyncio</td>
 </tr>
 <tr>
 <td><strong>WASM</strong></td>
-<td>Управление радио из браузера (!)</td>
+<td>Control the radio from a browser (!)</td>
 </tr>
 <tr>
 <td><strong>Embedded</strong></td>
-<td>Raspberry Pi, embedded Linux без Python runtime</td>
+<td>Raspberry Pi, embedded Linux without Python runtime</td>
 </tr>
 </tbody>
 </table>
-<h3 id="_2">Архитектура<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h3>
+<h3 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>┌──────────────────────────────────────────────────┐
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>│              icom-lan-core (Rust)                 │
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>│                                                   │
@@ -1971,7 +1971,7 @@
 <a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a>   │        │ │        │ │ pack) │ │ gen)   │
 <a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a>   └────────┘ └────────┘ └───────┘ └────────┘
 </code></pre></div>
-<h3 id="crates-rust">Crates (зависимости Rust)<a class="headerlink" href="#crates-rust" title="Permanent link">&para;</a></h3>
+<h3 id="crates-rust-dependencies">Crates (Rust dependencies)<a class="headerlink" href="#crates-rust-dependencies" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">[dependencies]</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">tokio</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">version</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;1&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">features</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;full&quot;</span><span class="p">]</span><span class="w"> </span><span class="p">}</span><span class="w">       </span><span class="c1"># async runtime</span>
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">bytes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;1&quot;</span><span class="w">                                            </span><span class="c1"># efficient byte buffers</span>
@@ -1990,103 +1990,103 @@
 <a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="n">cli</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;clap&quot;</span><span class="p">]</span>
 <a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a><span class="n">ffi</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[]</span>
 </code></pre></div>
-<h3 id="_3">Поэтапный план<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h3>
+<h3 id="phased-plan">Phased Plan<a class="headerlink" href="#phased-plan" title="Permanent link">&para;</a></h3>
 <h4 id="phase-51-rust-core-transport-protocol">Phase 5.1 — Rust Core (transport + protocol)<a class="headerlink" href="#phase-51-rust-core-transport-protocol" title="Permanent link">&para;</a></h4>
 <ul>
 <li>[ ] Cargo workspace setup (<code>icom-lan-core</code>, <code>icom-lan-cli</code>, <code>icom-lan-py</code>)</li>
-<li>[ ] UDP transport на tokio (connect, ping, retransmit, sequence tracking)</li>
+<li>[ ] UDP transport on tokio (connect, ping, retransmit, sequence tracking)</li>
 <li>[ ] Discovery handshake (Are You There → I Am Here → Are You Ready)</li>
 <li>[ ] Authentication (credential encoding, login, token, conninfo)</li>
 <li>[ ] CI-V command encoding/decoding (BCD, frame builder/parser)</li>
-<li>[ ] IcomRadio struct с async API</li>
+<li>[ ] IcomRadio struct with async API</li>
 <li>[ ] Unit tests (tokio::test)</li>
-<li>[ ] Integration test с IC-7610</li>
+<li>[ ] Integration test with IC-7610</li>
 </ul>
 <h4 id="phase-52-cli-standalone-binary">Phase 5.2 — CLI (standalone binary)<a class="headerlink" href="#phase-52-cli-standalone-binary" title="Permanent link">&para;</a></h4>
 <ul>
-<li>[ ] <code>clap</code> CLI с теми же командами что Python CLI</li>
+<li>[ ] <code>clap</code> CLI with the same commands as Python CLI</li>
 <li>[ ] <code>icom-lan status / freq / mode / meter / ptt / cw / discover</code></li>
 <li>[ ] Cross-compile: macOS (arm64, x86_64), Linux (arm64, x86_64), Windows</li>
-<li>[ ] GitHub Releases с бинарниками</li>
+<li>[ ] GitHub Releases with binaries</li>
 <li>[ ] Homebrew formula: <code>brew install morozsm/tap/icom-lan</code></li>
 </ul>
 <h4 id="phase-53-python-bindings-pyo3">Phase 5.3 — Python bindings (PyO3)<a class="headerlink" href="#phase-53-python-bindings-pyo3" title="Permanent link">&para;</a></h4>
 <ul>
 <li>[ ] PyO3 + maturin setup</li>
-<li>[ ] <code>IcomRadio</code> class с async support (pyo3-asyncio)</li>
-<li>[ ] Drop-in замена Python-версии: тот же API, тот же <code>from icom_lan import IcomRadio</code></li>
-<li>[ ] PyPI publish как native wheel (<code>pip install icom-lan</code> → Rust binary внутри)</li>
-<li>[ ] Бенчмарки: Python-pure vs Rust+PyO3</li>
+<li>[ ] <code>IcomRadio</code> class with async support (pyo3-asyncio)</li>
+<li>[ ] Drop-in replacement for Python version: same API, same <code>from icom_lan import IcomRadio</code></li>
+<li>[ ] PyPI publish as native wheel (<code>pip install icom-lan</code> → Rust binary inside)</li>
+<li>[ ] Benchmarks: Python-pure vs Rust+PyO3</li>
 </ul>
 <h4 id="phase-54-audio-rust-native-opus">Phase 5.4 — Audio (Rust-native Opus)<a class="headerlink" href="#phase-54-audio-rust-native-opus" title="Permanent link">&para;</a></h4>
 <ul>
-<li>[ ] Opus decode/encode через <code>opus</code> crate (или <code>audiopus</code>)</li>
-<li>[ ] Audio port (50003) handling в transport</li>
+<li>[ ] Opus decode/encode via <code>opus</code> crate (or <code>audiopus</code>)</li>
+<li>[ ] Audio port (50003) handling in transport</li>
 <li>[ ] Jitter buffer</li>
-<li>[ ] Callback API для RX, push API для TX</li>
+<li>[ ] Callback API for RX, push API for TX</li>
 <li>[ ] Full-duplex audio</li>
 <li>[ ] Latency benchmark vs Python+opuslib</li>
 </ul>
 <h4 id="phase-55-wasm-browser-control">Phase 5.5 — WASM (browser control)<a class="headerlink" href="#phase-55-wasm-browser-control" title="Permanent link">&para;</a></h4>
 <ul>
 <li>[ ] <code>wasm-bindgen</code> + <code>wasm-pack</code> build</li>
-<li>[ ] WebSocket → UDP proxy (WASM не может UDP напрямую)</li>
-<li>[ ] Minimal web UI: частота, режим, S-meter, waterfall (?)</li>
+<li>[ ] WebSocket → UDP proxy (WASM cannot do UDP directly)</li>
+<li>[ ] Minimal web UI: frequency, mode, S-meter, waterfall (?)</li>
 <li>[ ] npm package: <code>@icom-lan/web</code></li>
 </ul>
 <h4 id="phase-56-c-ffi">Phase 5.6 — C FFI<a class="headerlink" href="#phase-56-c-ffi" title="Permanent link">&para;</a></h4>
 <ul>
-<li>[ ] <code>cbindgen</code> для генерации C header</li>
+<li>[ ] <code>cbindgen</code> for C header generation</li>
 <li>[ ] Shared library (.so / .dylib / .dll)</li>
-<li>[ ] Пример интеграции с GNU Radio</li>
-<li>[ ] Пример интеграции с SDR++</li>
+<li>[ ] Example integration with GNU Radio</li>
+<li>[ ] Example integration with SDR++</li>
 </ul>
-<h3 id="_4">Оценка трудозатрат<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
+<h3 id="effort-estimates">Effort Estimates<a class="headerlink" href="#effort-estimates" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
 <tr>
-<th>Этап</th>
-<th>Сложность</th>
-<th>Время (ориентир)</th>
+<th>Phase</th>
+<th>Complexity</th>
+<th>Time (estimate)</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>5.1 Core</td>
-<td>Средняя</td>
-<td>2–3 недели</td>
+<td>Medium</td>
+<td>2–3 weeks</td>
 </tr>
 <tr>
 <td>5.2 CLI</td>
-<td>Лёгкая</td>
-<td>2–3 дня</td>
+<td>Easy</td>
+<td>2–3 days</td>
 </tr>
 <tr>
 <td>5.3 PyO3</td>
-<td>Средняя</td>
-<td>1 неделя</td>
+<td>Medium</td>
+<td>1 week</td>
 </tr>
 <tr>
 <td>5.4 Audio</td>
-<td>Высокая</td>
-<td>2–3 недели</td>
+<td>High</td>
+<td>2–3 weeks</td>
 </tr>
 <tr>
 <td>5.5 WASM</td>
-<td>Высокая</td>
-<td>2 недели</td>
+<td>High</td>
+<td>2 weeks</td>
 </tr>
 <tr>
 <td>5.6 C FFI</td>
-<td>Средняя</td>
-<td>3–5 дней</td>
+<td>Medium</td>
+<td>3–5 days</td>
 </tr>
 </tbody>
 </table>
-<h3 id="rust">Структура репозитория (Rust)<a class="headerlink" href="#rust" title="Permanent link">&para;</a></h3>
+<h3 id="repository-structure-rust">Repository Structure (Rust)<a class="headerlink" href="#repository-structure-rust" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>icom-lan/
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>├── crates/
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>│   ├── icom-lan-core/        # Ядро: transport, protocol, commands, audio
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>│   ├── icom-lan-core/        # Core: transport, protocol, commands, audio
 <a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>│   │   ├── src/
 <a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>│   │   │   ├── lib.rs
 <a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>│   │   │   ├── transport.rs
@@ -2108,44 +2108,44 @@
 <a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a>│       └── Cargo.toml
 <a id="__codelineno-4-23" name="__codelineno-4-23" href="#__codelineno-4-23"></a>├── Cargo.toml                # workspace
 <a id="__codelineno-4-24" name="__codelineno-4-24" href="#__codelineno-4-24"></a>├── Cargo.lock
-<a id="__codelineno-4-25" name="__codelineno-4-25" href="#__codelineno-4-25"></a>├── docs/                     # общая документация (текущая)
+<a id="__codelineno-4-25" name="__codelineno-4-25" href="#__codelineno-4-25"></a>├── docs/                     # shared documentation (current)
 <a id="__codelineno-4-26" name="__codelineno-4-26" href="#__codelineno-4-26"></a>├── tests/                    # integration tests
 <a id="__codelineno-4-27" name="__codelineno-4-27" href="#__codelineno-4-27"></a>└── README.md
 </code></pre></div>
 <h3 id="open-questions">Open Questions<a class="headerlink" href="#open-questions" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Mono-repo или separate repo?</strong> Вариант: <code>icom-lan</code> (Python, текущий) + <code>icom-lan-rs</code> (Rust). Или mono-repo с Python в <code>python/</code> subdir.</li>
-<li><strong>Minimum Rust version (MSRV)?</strong> Предлагаю 1.75+ (async fn in traits стабилизирован).</li>
-<li><strong>Async runtime:</strong> tokio (стандарт де-факто) или async-std? → tokio.</li>
-<li><strong>Opus crate:</strong> <code>opus</code> (C bindings) или <code>opus-rs</code> или pure-Rust <code>symphonia</code>? → C bindings (<code>opus</code>) для совместимости с libopus.</li>
+<li><strong>Mono-repo or separate repo?</strong> Option: <code>icom-lan</code> (Python, current) + <code>icom-lan-rs</code> (Rust). Or mono-repo with Python in <code>python/</code> subdir.</li>
+<li><strong>Minimum Rust version (MSRV)?</strong> Suggesting 1.75+ (async fn in traits stabilized).</li>
+<li><strong>Async runtime:</strong> tokio (de facto standard) or async-std? → tokio.</li>
+<li><strong>Opus crate:</strong> <code>opus</code> (C bindings) or <code>opus-rs</code> or pure-Rust <code>symphonia</code>? → C bindings (<code>opus</code>) for libopus compatibility.</li>
 </ul>
 <hr />
 <h2 id="phase-6-spectrum-waterfall">Phase 6 — Spectrum &amp; Waterfall<a class="headerlink" href="#phase-6-spectrum-waterfall" title="Permanent link">&para;</a></h2>
-<p><strong>Goal:</strong> Парсинг waterfall/spectrum данных, которые радио уже отправляет (cmd <code>0x27</code>).</p>
+<p><strong>Goal:</strong> Parse waterfall/spectrum data that the radio already sends (cmd <code>0x27</code>).</p>
 <p><strong>Status:</strong> ✅ Implemented in v0.6.0 (scope parsing/assembly, callbacks, CLI capture, PNG rendering).</p>
-<h3 id="_5">Контекст<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
-<p>IC-7610 непрерывно шлёт spectrum-данные через CI-V порт (50002) — это те самые пакеты с <code>cmd=0x27</code>, которые мы фильтруем. Они содержат:
-- Scope данные (амплитуды FFT-бинов)
-- Центральная частота, span
-- Метаданные отображения (ref level, edge frequencies)
-- Два scope — Main и Sub (у IC-7610 два независимых приёмника)</p>
-<h3 id="wfview">Ключевые ссылки в wfview<a class="headerlink" href="#wfview" title="Permanent link">&para;</a></h3>
+<h3 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h3>
+<p>The IC-7610 continuously sends spectrum data through the CI-V port (50002) — these are the packets with <code>cmd=0x27</code> that we filter. They contain:
+- Scope data (FFT bin amplitudes)
+- Center frequency, span
+- Display metadata (ref level, edge frequencies)
+- Two scopes — Main and Sub (the IC-7610 has two independent receivers)</p>
+<h3 id="key-wfview-references">Key wfview References<a class="headerlink" href="#key-wfview-references" title="Permanent link">&para;</a></h3>
 <ul>
-<li><code>rigcommander.cpp</code> → <code>parseSpectrum()</code> — парсинг spectrum-пакетов</li>
+<li><code>rigcommander.cpp</code> → <code>parseSpectrum()</code> — spectrum packet parsing</li>
 <li>CI-V cmd <code>0x27</code>, sub <code>0x00</code> — scope data</li>
 <li>CI-V cmd <code>0x27</code>, sub <code>0x10</code>/<code>0x11</code> — scope on/off</li>
-<li>Формат: заголовок (division, center freq, span) + массив байтов (амплитуды 0-200)</li>
+<li>Format: header (division, center freq, span) + byte array (amplitudes 0-200)</li>
 </ul>
 <h3 id="tasks_2">Tasks<a class="headerlink" href="#tasks_2" title="Permanent link">&para;</a></h3>
 <ul>
-<li>[ ] Изучить формат spectrum-пакетов в <code>rigcommander.cpp</code> → <code>parseSpectrum()</code></li>
+<li>[ ] Study spectrum packet format in <code>rigcommander.cpp</code> → <code>parseSpectrum()</code></li>
 <li>[ ] Reverse-engineer <code>0x27</code> sub-commands (scope enable/disable, mode, speed)</li>
-<li>[ ] Парсер spectrum data → структура <code>SpectrumFrame(center_freq, span, data: list[int])</code></li>
+<li>[ ] Spectrum data parser → <code>SpectrumFrame(center_freq, span, data: list[int])</code> structure</li>
 <li>[ ] Callback API: <code>radio.on_spectrum(callback)</code> — continuous stream</li>
 <li>[ ] Scope control: <code>radio.set_scope(enabled=True, mode="center", span=100_000)</code></li>
-<li>[ ] Dual scope support (Main + Sub для IC-7610)</li>
-<li>[ ] Ring buffer для последних N фреймов (для waterfall отображения)</li>
-<li>[ ] Бенчмарк: сколько spectrum-пакетов в секунду шлёт IC-7610</li>
+<li>[ ] Dual scope support (Main + Sub for IC-7610)</li>
+<li>[ ] Ring buffer for last N frames (for waterfall display)</li>
+<li>[ ] Benchmark: how many spectrum packets per second does the IC-7610 send</li>
 </ul>
 <h3 id="api-design_1">API Design<a class="headerlink" href="#api-design_1" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan</span><span class="w"> </span><span class="kn">import</span> <span class="n">IcomRadio</span><span class="p">,</span> <span class="n">SpectrumFrame</span>
@@ -2179,14 +2179,14 @@
 </code></pre></div>
 <hr />
 <h2 id="phase-7-web-ui">Phase 7 — Web UI 🌐<a class="headerlink" href="#phase-7-web-ui" title="Permanent link">&para;</a></h2>
-<p><strong>Goal:</strong> Полноценный web-интерфейс для управления радио. Замена RS-BA1 / wfview — open source, в браузере.</p>
-<h3 id="_6">Зачем<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h3>
+<p><strong>Goal:</strong> Full-featured web interface for radio control. Replacement for RS-BA1 / wfview — open source, in the browser.</p>
+<h3 id="why">Why<a class="headerlink" href="#why" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>RS-BA1</strong> — платный ($100+), Windows only, закрытый</li>
-<li><strong>wfview</strong> — GPLv3, Qt desktop app, тяжёлый</li>
-<li><strong>icom-lan Web UI</strong> — MIT, в браузере, zero install, работает с телефона</li>
+<li><strong>RS-BA1</strong> — paid ($100+), Windows only, closed source</li>
+<li><strong>wfview</strong> — GPLv3, Qt desktop app, heavyweight</li>
+<li><strong>icom-lan Web UI</strong> — MIT, in the browser, zero install, works from your phone</li>
 </ul>
-<h3 id="_7">Архитектура<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h3>
+<h3 id="architecture_1">Architecture<a class="headerlink" href="#architecture_1" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>┌──────────────┐     WebSocket      ┌──────────────────┐
 <a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>│   Browser    │◄──────────────────►│   icom-lan       │
 <a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>│              │                    │   server          │
@@ -2197,15 +2197,15 @@
 <a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>│  └────────┘  │                    │  └────────────┘   │
 <a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>└──────────────┘                    └──────────────────┘
 </code></pre></div>
-<p>Или с WASM (Phase 5.5):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>┌────────────────────────────────┐
+<p>Or with WASM (Phase 5.5):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>┌────────────────────────────────────┐
 <a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>│          Browser               │
 <a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>│  ┌──────────┐  ┌────────────┐  │     WebSocket→UDP
 <a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>│  │ WASM     │  │ UI         │  │◄────────────────►  Radio
 <a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>│  │ icom-lan │  │ (React/    │  │     (proxy)
 <a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>│  │ core     │  │  Canvas)   │  │
 <a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>│  └──────────┘  └────────────┘  │
-<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>└────────────────────────────────┘
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>└────────────────────────────────────┘
 </code></pre></div>
 <h3 id="features">Features<a class="headerlink" href="#features" title="Permanent link">&para;</a></h3>
 <h4 id="mvp-phase-71">MVP (Phase 7.1)<a class="headerlink" href="#mvp-phase-71" title="Permanent link">&para;</a></h4>
@@ -2220,44 +2220,44 @@
 </ul>
 <h4 id="waterfall-phase-72">Waterfall (Phase 7.2)<a class="headerlink" href="#waterfall-phase-72" title="Permanent link">&para;</a></h4>
 <ul>
-<li>[ ] Real-time spectrum display (Canvas 2D или WebGL)</li>
+<li>[ ] Real-time spectrum display (Canvas 2D or WebGL)</li>
 <li>[ ] Waterfall (scrolling history)</li>
-<li>[ ] Click-to-tune на waterfall</li>
-<li>[ ] Zoom/pan по частоте</li>
+<li>[ ] Click-to-tune on waterfall</li>
+<li>[ ] Frequency zoom/pan</li>
 <li>[ ] Color schemes (classic, viridis, plasma)</li>
-<li>[ ] Dual waterfall для IC-7610 (Main + Sub)</li>
+<li>[ ] Dual waterfall for IC-7610 (Main + Sub)</li>
 <li>[ ] FPS control (10/20/30 fps)</li>
 </ul>
 <h4 id="audio-phase-73">Audio (Phase 7.3)<a class="headerlink" href="#audio-phase-73" title="Permanent link">&para;</a></h4>
 <ul>
-<li>[ ] RX audio через Web Audio API (Opus → PCM → speakers)</li>
-<li>[ ] TX audio через getUserMedia() (mic → Opus → radio)</li>
-<li>[ ] VOX mode (auto PTT по аудио)</li>
+<li>[ ] RX audio via Web Audio API (Opus → PCM → speakers)</li>
+<li>[ ] TX audio via getUserMedia() (mic → Opus → radio)</li>
+<li>[ ] VOX mode (auto PTT on audio)</li>
 <li>[ ] Audio level meters (RX/TX)</li>
 <li>[ ] Noise reduction (Web Audio filters)</li>
 </ul>
 <h4 id="advanced-phase-74">Advanced (Phase 7.4)<a class="headerlink" href="#advanced-phase-74" title="Permanent link">&para;</a></h4>
 <ul>
-<li>[ ] Band stack (быстрое переключение диапазонов с запоминанием)</li>
-<li>[ ] Memory channels (список сохранённых частот)</li>
+<li>[ ] Band stack (quick band switching with memory)</li>
+<li>[ ] Memory channels (saved frequency list)</li>
 <li>[ ] Logbook integration (ADIF export)</li>
-<li>[ ] DX cluster overlay на waterfall</li>
-<li>[ ] Multi-user (несколько браузеров к одному серверу)</li>
+<li>[ ] DX cluster overlay on waterfall</li>
+<li>[ ] Multi-user (multiple browsers to one server)</li>
 <li>[ ] PWA (installable, offline capable)</li>
 <li>[ ] Dark/light theme</li>
 </ul>
-<h3 id="tech-stack">Tech Stack (предварительно)<a class="headerlink" href="#tech-stack" title="Permanent link">&para;</a></h3>
+<h3 id="tech-stack-preliminary">Tech Stack (preliminary)<a class="headerlink" href="#tech-stack-preliminary" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
 <tr>
-<th>Компонент</th>
-<th>Технология</th>
+<th>Component</th>
+<th>Technology</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>Frontend</td>
-<td>React + TypeScript (или Svelte)</td>
+<td>React + TypeScript (or Svelte)</td>
 </tr>
 <tr>
 <td>Waterfall</td>
@@ -2265,7 +2265,7 @@
 </tr>
 <tr>
 <td>Audio</td>
-<td>Web Audio API + Opus.js (или WASM decoder)</td>
+<td>Web Audio API + Opus.js (or WASM decoder)</td>
 </tr>
 <tr>
 <td>Transport</td>
@@ -2273,7 +2273,7 @@
 </tr>
 <tr>
 <td>Server</td>
-<td>Rust (axum) или Python (FastAPI + websockets)</td>
+<td>Rust (axum) or Python (FastAPI + websockets)</td>
 </tr>
 <tr>
 <td>State</td>
@@ -2285,42 +2285,42 @@
 </tr>
 </tbody>
 </table>
-<h3 id="_8">Вдохновение<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h3>
+<h3 id="inspiration">Inspiration<a class="headerlink" href="#inspiration" title="Permanent link">&para;</a></h3>
 <ul>
-<li><a href="https://www.openwebrx.de/">OpenWebRX</a> — web SDR с waterfall (отличный UX)</li>
+<li><a href="https://www.openwebrx.de/">OpenWebRX</a> — web SDR with waterfall (excellent UX)</li>
 <li><a href="http://www.websdr.org/">WebSDR</a> — pioneer web-based radio</li>
 <li><a href="http://kiwisdr.com/">KiwiSDR</a> — browser-based SDR receiver</li>
 <li><a href="https://wfview.org/">wfview</a> — desktop reference (feature set)</li>
 <li><a href="https://www.icomjapan.com/lineup/products/RS-BA1/">RS-BA1</a> — Icom's official (UX anti-pattern 😅)</li>
 </ul>
-<h3 id="_9">Оценка<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h3>
+<h3 id="estimates">Estimates<a class="headerlink" href="#estimates" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
 <tr>
-<th>Этап</th>
-<th>Сложность</th>
-<th>Время</th>
+<th>Phase</th>
+<th>Complexity</th>
+<th>Time</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>7.1 MVP (controls)</td>
-<td>Средняя</td>
-<td>1–2 недели</td>
+<td>Medium</td>
+<td>1–2 weeks</td>
 </tr>
 <tr>
 <td>7.2 Waterfall</td>
-<td>Высокая</td>
-<td>2–3 недели</td>
+<td>High</td>
+<td>2–3 weeks</td>
 </tr>
 <tr>
 <td>7.3 Audio</td>
-<td>Высокая</td>
-<td>2–3 недели</td>
+<td>High</td>
+<td>2–3 weeks</td>
 </tr>
 <tr>
 <td>7.4 Advanced</td>
-<td>Очень высокая</td>
+<td>Very high</td>
 <td>ongoing</td>
 </tr>
 </tbody>
