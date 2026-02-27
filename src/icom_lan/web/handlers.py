@@ -303,24 +303,40 @@ class ScopeHandler:
         self,
         ws: WebSocketConnection,
         radio: "IcomRadio | None",
+        server: Any = None,
     ) -> None:
         self._ws = ws
         self._radio = radio
+        self._server = server
         self._seq: int = 0
         self._frame_queue: asyncio.Queue[bytes] = asyncio.Queue(
             maxsize=HIGH_WATERMARK * 2
         )
         self._running = False
 
-    async def run(self) -> None:
-        """Run the scope channel lifecycle.
+    def enqueue_frame(self, frame: "ScopeFrame") -> None:
+        """Enqueue a scope frame (called by server broadcast)."""
+        if not self._running:
+            return
+        encoded = encode_scope_frame(frame, self._seq)
+        self._seq = (self._seq + 1) & 0xFFFF
+        if self._frame_queue.full():
+            try:
+                self._frame_queue.get_nowait()
+            except asyncio.QueueEmpty:
+                pass
+        try:
+            self._frame_queue.put_nowait(encoded)
+        except asyncio.QueueFull:
+            pass
 
-        Enables scope on the radio, registers a callback, then pumps frames
-        from the queue to the WebSocket until the connection closes.
-        """
+    async def run(self) -> None:
+        """Run the scope channel lifecycle."""
         self._running = True
+        # Register with server for scope broadcast
+        if self._server is not None:
+            self._server.register_scope_handler(self)
         if self._radio is not None:
-            self._radio.on_scope_data(self._on_scope_frame)
             try:
                 await self._radio.enable_scope()
                 logger.info("scope: enabled on radio")
@@ -329,7 +345,6 @@ class ScopeHandler:
         try:
             sender_task = asyncio.create_task(self._sender())
             try:
-                # Read loop: handle control messages (meters_start, etc.) and close
                 while True:
                     opcode, payload = await self._ws.recv()
                     if opcode == WS_OP_TEXT:
@@ -344,8 +359,8 @@ class ScopeHandler:
                     pass
         finally:
             self._running = False
-            if self._radio is not None:
-                self._radio.on_scope_data(None)
+            if self._server is not None:
+                self._server.unregister_scope_handler(self)
 
     def _handle_control(self, text: str) -> None:
         """Handle optional JSON control messages on the scope channel."""
@@ -355,33 +370,24 @@ class ScopeHandler:
         except ValueError:
             pass
 
-    def _on_scope_frame(self, frame: ScopeFrame) -> None:
-        """Called from the radio's scope callback (may be in any context)."""
-        if not self._running:
-            return
-        encoded = encode_scope_frame(frame, self._seq)
-        self._seq = (self._seq + 1) & 0xFFFF
-        # Backpressure: drop oldest if queue is full
-        if self._frame_queue.full():
-            try:
-                self._frame_queue.get_nowait()
-            except asyncio.QueueEmpty:
-                pass
-        try:
-            self._frame_queue.put_nowait(encoded)
-        except asyncio.QueueFull:
-            pass  # Still full after drain; drop this frame
-
     async def _sender(self) -> None:
         """Continuously dequeues and sends scope frames."""
+        sent = 0
         while True:
             try:
                 data = await asyncio.wait_for(
-                    self._frame_queue.get(), timeout=1.0
+                    self._frame_queue.get(), timeout=1.0,
                 )
                 await self._ws.send_binary(data)
-            except asyncio.TimeoutError:
-                pass
+                sent += 1
+                if sent <= 3 or sent % 300 == 0:
+                    logger.debug("scope: sent frame #%d (%d bytes)", sent, len(data))
+            except TimeoutError:
+                if sent == 0:
+                    logger.debug("scope: sender timeout, no frames yet, qsize=%d", self._frame_queue.qsize())
+            except Exception as exc:
+                logger.warning("scope: sender error: %s", exc)
+                break
 
     def push_frame(self, frame: ScopeFrame) -> None:
         """Push a scope frame directly (used by server for testing/injection).
