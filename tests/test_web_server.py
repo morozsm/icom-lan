@@ -926,6 +926,175 @@ class TestAudioFrameFormat:
         assert seq == 0  # wrapped
 
 
+class TestProtocolConformance:
+    """RFC-level protocol conformance tests."""
+
+    # --- Scope frame edge cases ---
+
+    def test_scope_empty_pixels(self) -> None:
+        frame = ScopeFrame(0, 0, 7_000_000, 7_300_000, b"", False)
+        data = encode_scope_frame(frame, 0)
+        assert len(data) == SCOPE_HEADER_SIZE
+        count = struct.unpack_from("<H", data, 14)[0]
+        assert count == 0
+
+    def test_scope_max_amplitude_values(self) -> None:
+        """Pixel values 0-160 are valid per RFC."""
+        pixels = bytes([0, 80, 160, 160, 0])
+        frame = ScopeFrame(0, 0, 14_000_000, 14_350_000, pixels, False)
+        data = encode_scope_frame(frame, 0)
+        assert data[SCOPE_HEADER_SIZE:] == pixels
+
+    def test_scope_all_receiver_modes(self) -> None:
+        """receiver: 0=Main, 1=Sub; mode: 0-3."""
+        for recv in (0, 1):
+            for mode in (0, 1, 2, 3):
+                frame = ScopeFrame(recv, mode, 14_000_000, 14_350_000, b"\x50", False)
+                data = encode_scope_frame(frame, 0)
+                assert data[1] == recv
+                assert data[2] == mode
+
+    def test_scope_dual_receiver_frames(self) -> None:
+        """IC-7610 sends Main+Sub scope frames."""
+        main = ScopeFrame(0, 1, 14_000_000, 14_350_000, bytes(475), False)
+        sub = ScopeFrame(1, 1, 7_000_000, 7_300_000, bytes(475), False)
+        d0 = encode_scope_frame(main, 0)
+        d1 = encode_scope_frame(sub, 1)
+        assert d0[1] == 0 and d1[1] == 1
+        assert struct.unpack_from("<I", d0, 3)[0] == 14_000_000
+        assert struct.unpack_from("<I", d1, 3)[0] == 7_000_000
+
+    def test_scope_freq_range_boundaries(self) -> None:
+        """Test with real HF/VHF frequency values."""
+        for sf, ef in [(1_800_000, 2_000_000), (50_000_000, 54_000_000),
+                       (144_000_000, 148_000_000), (430_000_000, 440_000_000)]:
+            frame = ScopeFrame(0, 0, sf, ef, b"\x00", False)
+            data = encode_scope_frame(frame, 0)
+            assert struct.unpack_from("<I", data, 3)[0] == sf
+            assert struct.unpack_from("<I", data, 7)[0] == ef
+
+    # --- Meter frame edge cases ---
+
+    def test_meter_all_9_ids(self) -> None:
+        """All 9 meter IDs from RFC."""
+        from icom_lan.web.protocol import (
+            METER_ALC, METER_COMP, METER_ID_DRAIN, METER_POWER,
+            METER_SMETER_MAIN, METER_SMETER_SUB, METER_SWR, METER_TEMP, METER_VD,
+        )
+        all_ids = [METER_SMETER_MAIN, METER_SMETER_SUB, METER_POWER, METER_SWR,
+                   METER_ALC, METER_COMP, METER_ID_DRAIN, METER_VD, METER_TEMP]
+        meters = [(mid, 128) for mid in all_ids]
+        data = encode_meter_frame(meters, 0)
+        assert data[3] == 9  # count
+        assert len(data) == 4 + 9 * 3  # 31 bytes per RFC
+
+    def test_meter_value_range_uint16(self) -> None:
+        """Meter values are uint16 (lo + hi bytes)."""
+        meters = [(0x01, 0), (0x03, 255), (0x04, 256), (0x05, 65535)]
+        data = encode_meter_frame(meters, 0)
+        # Check value 256 = 0x0100 → lo=0x00, hi=0x01
+        off = 4 + 2 * 3  # third meter (0x04, 256)
+        assert data[off] == 0x04  # meter_id
+        assert data[off + 1] == 0x00  # lo
+        assert data[off + 2] == 0x01  # hi
+        # Check value 65535 = 0xFFFF → lo=0xFF, hi=0xFF
+        off = 4 + 3 * 3
+        assert data[off + 1] == 0xFF
+        assert data[off + 2] == 0xFF
+
+    def test_meter_bandwidth_calculation(self) -> None:
+        """9 meters × 3 bytes + 4 header = 31 bytes. At 20fps = 620 B/s."""
+        meters = [(i, 100) for i in range(1, 10)]
+        data = encode_meter_frame(meters, 0)
+        assert len(data) == 31
+        # 620 bytes/sec at 20fps
+        assert len(data) * 20 == 620
+
+    # --- Audio frame edge cases ---
+
+    def test_audio_opus_typical_frame(self) -> None:
+        """Typical Opus frame: 48kHz, mono, 20ms, ~80-120 bytes payload."""
+        from icom_lan.web.protocol import (
+            AUDIO_CODEC_OPUS, AUDIO_HEADER_SIZE, MSG_TYPE_AUDIO_RX, encode_audio_frame,
+        )
+        payload = bytes(range(100))  # ~100 bytes typical Opus
+        frame = encode_audio_frame(MSG_TYPE_AUDIO_RX, AUDIO_CODEC_OPUS, 42, 480, 1, 20, payload)
+        assert len(frame) == AUDIO_HEADER_SIZE + 100
+        assert frame[0] == MSG_TYPE_AUDIO_RX
+        assert frame[1] == AUDIO_CODEC_OPUS
+        assert frame[AUDIO_HEADER_SIZE:] == payload
+
+    # --- JSON message conformance ---
+
+    def test_hello_message_schema(self) -> None:
+        """hello message must have all required fields per RFC."""
+        msg = json.loads(encode_json({
+            "type": "hello", "proto": 1, "server": "icom-lan",
+            "version": "0.8.0", "radio": "IC-7610",
+            "capabilities": ["scope", "audio", "tx"],
+        }))
+        assert msg["type"] == "hello"
+        assert isinstance(msg["proto"], int)
+        assert isinstance(msg["capabilities"], list)
+
+    def test_state_message_schema(self) -> None:
+        msg = {"type": "state", "data": {
+            "freq_a": 14074000, "freq_b": 7074000,
+            "mode": "USB", "filter": "FIL1", "ptt": False,
+        }}
+        text = encode_json(msg)
+        parsed = json.loads(text)
+        assert parsed["type"] == "state"
+        assert isinstance(parsed["data"]["freq_a"], int)
+        assert isinstance(parsed["data"]["ptt"], bool)
+
+    def test_event_message_schema(self) -> None:
+        msg = {"type": "event", "name": "freq_changed", "data": {"vfo": "A", "freq": 14074500}}
+        text = encode_json(msg)
+        parsed = json.loads(text)
+        assert parsed["name"] == "freq_changed"
+
+    def test_command_message_schema(self) -> None:
+        msg = {"type": "cmd", "id": "a1b2", "name": "set_freq", "params": {"vfo": "A", "freq": 14074000}}
+        text = encode_json(msg)
+        parsed = json.loads(text)
+        assert parsed["id"] == "a1b2"
+        assert parsed["name"] == "set_freq"
+
+    def test_response_ok_schema(self) -> None:
+        msg = {"type": "response", "id": "a1b2", "ok": True, "result": {"freq": 14074000}}
+        parsed = json.loads(encode_json(msg))
+        assert parsed["ok"] is True
+
+    def test_response_error_schema(self) -> None:
+        msg = {"type": "response", "id": "a1b3", "ok": False,
+               "error": "invalid_param", "message": "Frequency out of range"}
+        parsed = json.loads(encode_json(msg))
+        assert parsed["ok"] is False
+        assert "error" in parsed
+        assert "message" in parsed
+
+    def test_subscribe_message_schema(self) -> None:
+        msg = {"type": "subscribe", "id": "s1", "streams": ["scope", "meters"],
+               "scope_fps": 30, "scope_receiver": 0}
+        parsed = json.loads(encode_json(msg))
+        assert isinstance(parsed["streams"], list)
+        assert "scope" in parsed["streams"]
+
+    def test_encode_json_compact(self) -> None:
+        """encode_json must produce compact JSON (no extra spaces)."""
+        text = encode_json({"type": "hello", "proto": 1})
+        assert " " not in text  # no spaces in compact JSON
+
+    def test_decode_json_rejects_array(self) -> None:
+        with pytest.raises(ValueError, match="expected a JSON object"):
+            decode_json("[1,2,3]")
+
+    def test_decode_json_rejects_invalid(self) -> None:
+        with pytest.raises(ValueError, match="invalid JSON"):
+            decode_json("not json")
+
+
 class TestServerConfig:
     async def test_port_zero_assigns_ephemeral(self) -> None:
         config = WebConfig(host="127.0.0.1", port=0)
