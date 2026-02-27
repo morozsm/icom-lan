@@ -701,14 +701,26 @@ function setModeDefaultStep(mode) {
   setStep(MODE_STEP[mode] || 500);
 }
 
+// Throttled tuning: accumulate deltas locally, send command at most every 50ms
+let _tunePending = 0;
+let _tuneTimer = null;
 function tuneByStep(delta) {
   const current = activeVfo === 'A' ? currentFreqA : currentFreqB;
   if (!current) return;
-  const hz = Math.max(30000, Math.min(60000000, current + delta));
-  sendCmd('set_freq', { vfo: activeVfo, freq: hz });
+  _tunePending += delta;
+  const hz = Math.max(30000, Math.min(60000000, current + _tunePending));
+  // Update display immediately for responsiveness
   freqDisplayEl.textContent = fmtFreq(hz);
   if (activeVfo === 'A') currentFreqA = hz; else currentFreqB = hz;
   updateActiveBand(hz);
+  if (!_tuneTimer) {
+    _tuneTimer = setTimeout(() => {
+      _tuneTimer = null;
+      const f = activeVfo === 'A' ? currentFreqA : currentFreqB;
+      _tunePending = 0;
+      sendCmd('set_freq', { vfo: activeVfo, freq: f });
+    }, 50);
+  }
 }
 
 // ===== Freq Edit Modal =====
