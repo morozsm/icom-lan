@@ -14,8 +14,10 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 from ..scope import ScopeFrame
+from ..types import AudioCodec
 from .protocol import (
     AUDIO_CODEC_OPUS,
+    AUDIO_CODEC_PCM16,
     AUDIO_HEADER_SIZE,
     METER_ALC,
     METER_POWER,
@@ -647,18 +649,45 @@ class AudioHandler:
         self._rx_active = True
         logger.info("audio: starting RX stream")
 
+        # Determine web-frame codec and format from the radio's audio configuration.
+        # Default to PCM16 mono at 48 kHz — the radio's default codec.
+        _web_codec: int = AUDIO_CODEC_PCM16
+        _sample_rate: int = 48000
+        _channels: int = 1
+        _codec = getattr(self._radio, "audio_codec", None)
+        if isinstance(_codec, AudioCodec):
+            if _codec in (AudioCodec.OPUS_1CH, AudioCodec.OPUS_2CH):
+                _web_codec = AUDIO_CODEC_OPUS
+            if _codec in (
+                AudioCodec.PCM_2CH_8BIT,
+                AudioCodec.PCM_2CH_16BIT,
+                AudioCodec.ULAW_2CH,
+                AudioCodec.OPUS_2CH,
+            ):
+                _channels = 2
+        _sr = getattr(self._radio, "audio_sample_rate", None)
+        if isinstance(_sr, int) and not isinstance(_sr, bool) and _sr > 0:
+            _sample_rate = _sr
+        logger.info(
+            "audio: RX codec=0x%02x sample_rate=%d channels=%d",
+            _web_codec, _sample_rate, _channels,
+        )
+
         def _on_packet(pkt: Any) -> None:
             if pkt is None:
                 return
             if self._seq < 3 or self._seq % 500 == 0:
-                logger.info("audio: rx packet #%d, data=%d bytes", self._seq, len(pkt.data))
+                logger.info(
+                    "audio: rx packet #%d, web_codec=0x%02x, data=%d bytes",
+                    self._seq, _web_codec, len(pkt.data),
+                )
             frame = encode_audio_frame(
                 MSG_TYPE_AUDIO_RX,
-                AUDIO_CODEC_OPUS,
+                _web_codec,
                 self._seq,
-                480,  # 48000 / 100
-                1,    # mono
-                20,   # 20ms frames
+                _sample_rate // 100,
+                _channels,
+                20,   # advisory frame_ms for header
                 pkt.data,
             )
             self._seq = (self._seq + 1) & 0xFFFF

@@ -726,6 +726,7 @@ document.addEventListener('keyup', e => {
 const AUDIO_MSG_RX = 0x10;
 const AUDIO_MSG_TX = 0x11;
 const AUDIO_CODEC_OPUS = 0x01;
+const AUDIO_CODEC_PCM16 = 0x02;
 const AUDIO_HEADER = 8;
 
 let audioWs = null, audioBackoff = WS_RECONNECT_MIN;
@@ -733,6 +734,8 @@ let audioCtx = null, gainNode = null;
 let rxActive = false, txActive = false;
 let audioDecoder = null;
 let txStream = null, txProcessor = null;
+let nextPlayTime = 0;   // monotonic scheduler: when to start the next audio buffer
+let opusTimestamp = 0;  // microsecond timestamp fed to AudioDecoder (must increase)
 
 const rxBtn = $('rx-btn');
 const audioVolSlider = $('audio-vol');
@@ -773,39 +776,76 @@ function handleRxAudioFrame(buf) {
   const msgType = dv.getUint8(0);
   if (msgType !== AUDIO_MSG_RX) return;
   const codec = dv.getUint8(1);
-  const opusData = new Uint8Array(buf, AUDIO_HEADER);
+  // bytes 4-5 (LE uint16): sample_rate / 100  e.g. 480 → 48000 Hz
+  const sampleRate = dv.getUint16(4, true) * 100 || 48000;
+  const audioData = new Uint8Array(buf, AUDIO_HEADER);
+  if (audioData.length === 0) return;
 
-  if (codec === AUDIO_CODEC_OPUS && opusData.length > 0) {
-    decodeAndPlayOpus(opusData);
+  if (codec === AUDIO_CODEC_PCM16) {
+    playPcmAudio(audioData, sampleRate);
+  } else if (codec === AUDIO_CODEC_OPUS) {
+    decodeAndPlayOpus(audioData);
   }
 }
 
-// Use WebCodecs AudioDecoder if available, fallback to raw PCM assumption
+// Play raw PCM s16le mono audio directly via Web Audio API.
+// No decoder needed — convert Int16 samples to Float32 and schedule the buffer.
+function playPcmAudio(pcmBytes, sampleRate) {
+  if (!audioCtx || !rxActive) return;
+  const numSamples = pcmBytes.byteLength >> 1; // 2 bytes per s16le sample
+  if (numSamples === 0) return;
+
+  // Interpret raw bytes as signed 16-bit little-endian samples
+  const int16 = new Int16Array(pcmBytes.buffer, pcmBytes.byteOffset, numSamples);
+  const float32 = new Float32Array(numSamples);
+  for (let i = 0; i < numSamples; i++) float32[i] = int16[i] / 32768.0;
+
+  const abuf = audioCtx.createBuffer(1, numSamples, sampleRate);
+  abuf.copyToChannel(float32, 0);
+
+  const src = audioCtx.createBufferSource();
+  src.buffer = abuf;
+  src.connect(gainNode);
+
+  // Keep nextPlayTime at least a small amount ahead to absorb network jitter.
+  const now = audioCtx.currentTime;
+  if (nextPlayTime < now + 0.01) nextPlayTime = now + 0.05; // 50 ms pre-roll
+  src.start(nextPlayTime);
+  nextPlayTime += abuf.duration;
+}
+
+// Decode an Opus frame and schedule playback.
+// Timestamps must be monotonically increasing (microseconds, 20 ms = 20000 µs).
+// Each decoded buffer is scheduled at nextPlayTime instead of time 0.
 function decodeAndPlayOpus(opusData) {
-  if (typeof AudioDecoder !== 'undefined') {
-    if (!audioDecoder) {
-      audioDecoder = new AudioDecoder({
-        output: (audioData) => {
-          // AudioData → Float32Array → AudioBuffer → play
-          const samples = new Float32Array(audioData.numberOfFrames);
-          audioData.copyTo(samples, { planeIndex: 0 });
-          const abuf = audioCtx.createBuffer(1, samples.length, audioData.sampleRate);
-          abuf.copyToChannel(samples, 0);
-          const src = audioCtx.createBufferSource();
-          src.buffer = abuf;
-          src.connect(gainNode);
-          src.start(0);
-          audioData.close();
-        },
-        error: (e) => { console.warn('AudioDecoder error:', e); }
-      });
-      audioDecoder.configure({ codec: 'opus', sampleRate: 48000, numberOfChannels: 1 });
-    }
-    try {
-      audioDecoder.decode(new EncodedAudioChunk({ type: 'key', timestamp: 0, data: opusData }));
-    } catch (e) { /* decoder may be closed */ }
+  if (typeof AudioDecoder === 'undefined') return;
+  if (!audioDecoder) {
+    opusTimestamp = 0;
+    audioDecoder = new AudioDecoder({
+      output: (audioData) => {
+        const nch = audioData.numberOfChannels;
+        const nf = audioData.numberOfFrames;
+        const samples = new Float32Array(nf);
+        audioData.copyTo(samples, { planeIndex: 0 });
+        const abuf = audioCtx.createBuffer(1, nf, audioData.sampleRate);
+        abuf.copyToChannel(samples, 0);
+        const src = audioCtx.createBufferSource();
+        src.buffer = abuf;
+        src.connect(gainNode);
+        const now = audioCtx.currentTime;
+        if (nextPlayTime < now + 0.01) nextPlayTime = now + 0.05;
+        src.start(nextPlayTime);
+        nextPlayTime += abuf.duration;
+        audioData.close();
+      },
+      error: (e) => { console.warn('AudioDecoder error:', e); audioDecoder = null; }
+    });
+    audioDecoder.configure({ codec: 'opus', sampleRate: 48000, numberOfChannels: 1 });
   }
-  // If AudioDecoder not available, audio won't play (browser too old)
+  try {
+    audioDecoder.decode(new EncodedAudioChunk({ type: 'key', timestamp: opusTimestamp, data: opusData }));
+    opusTimestamp += 20000; // 20 ms per frame in microseconds
+  } catch (e) { /* decoder may be flushing */ }
 }
 
 function toggleRxAudio() {
@@ -813,6 +853,8 @@ function toggleRxAudio() {
     initAudioCtx();
     if (audioCtx.state === 'suspended') audioCtx.resume();
     rxActive = true;
+    nextPlayTime = 0;
+    opusTimestamp = 0;
     rxBtn.classList.add('active');
     rxBtn.textContent = '🔊 RX ON';
     audioStatusEl.textContent = 'Streaming...';
@@ -823,6 +865,8 @@ function toggleRxAudio() {
     }
   } else {
     rxActive = false;
+    nextPlayTime = 0;
+    opusTimestamp = 0;
     rxBtn.classList.remove('active');
     rxBtn.textContent = '🔊 RX';
     audioStatusEl.textContent = '';
