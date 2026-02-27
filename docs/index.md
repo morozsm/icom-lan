@@ -56,7 +56,7 @@ Direct connection to your radio — no wfview, hamlib, or RS-BA1 required.
 - :white_check_mark: **Multi-radio presets** — IC-7610, IC-705, IC-7300, IC-9700 and more
 - :white_check_mark: **Zero dependencies** — pure Python, stdlib only
 - :white_check_mark: **Type-annotated** — full `py.typed` support for IDE autocompletion
-- :white_check_mark: **950+ tests** — high coverage with golden protocol fixtures, TCP wire tests, and real-radio integration suite
+- :white_check_mark: **1040+ tests** — high coverage with golden protocol fixtures, TCP wire tests, and real-radio integration suite
 
 ## Supported Radios
 

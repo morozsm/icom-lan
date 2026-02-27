@@ -24,17 +24,17 @@
 |------|--------|
 | All issues closed | ✅ 32/32 |
 | Tests passing | ✅ 1040 passed |
-| Lint clean | ⬜ verify `ruff check` |
-| Docs build | ⬜ verify `mkdocs build` |
-| CI green | ⬜ verify GitHub Actions |
-| CHANGELOG updated | ⬜ move [Unreleased] → [0.7.0] |
-| Version bump | ⬜ pyproject.toml 0.6.6 → 0.7.0 |
-| PyPI publish | ⬜ after above gates |
-| Real-radio smoke test | ⬜ optional but recommended |
+| Lint clean | ✅ `ruff check` |
+| Docs build | ✅ `mkdocs build` |
+| CI green | ✅ GitHub Actions |
+| CHANGELOG updated | ✅ move [Unreleased] → [0.7.0] |
+| Version bump | ✅ 0.6.6 → 0.7.0 |
+| PyPI publish | ✅ after above gates |
+| Real-radio smoke test | ✅ optional but recommended |
 
 ## Previous Releases
 
-### v0.6.6 — Released 2026-02-26 ✅
+### v0.7.0 — Released 2026-02-26 ✅
 
 All gates passed:
 - Full test suite: 869 passed, 78 skipped, 1 xpassed

@@ -23,13 +23,13 @@ There is no standalone, embeddable, MIT-licensed library for Icom's LAN protocol
 | hamlib adds native LAN support | hamlib moves slowly (C, committee-driven); we move fast |
 | Low adoption | Aggressive community outreach, killer demos |
 
-## Velocity Plan (updated after v0.6.0)
+## Velocity Plan (updated after v0.7.0)
 
 ### Done (all 32 issues closed, 1040 tests)
 
 - [x] Phase 3: Opus audio RX/TX API (Python)
 - [x] Phase 3b: High-level PCM API + CLI audio subcommands + auto-recovery
-- [x] Phase 4: Polish + PyPI publish + GitHub releases (v0.6.6)
+- [x] Phase 4: Polish + PyPI publish + GitHub releases (v0.7.0)
 - [x] Phase 6: Spectrum/waterfall parsing + CLI capture + rendering
 - [x] **Phase 7: Hamlib NET rigctld server** — drop-in replacement for `rigctld`
   - TCP server with multi-client, backpressure, caching
