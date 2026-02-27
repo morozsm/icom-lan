@@ -23,13 +23,13 @@
 
 ### Tasks
 
-- [ ] Study `icomudpaudio.cpp` — audio packet format, headers, sequence
-- [ ] Open audio stream (OpenClose on audio port, similar to CI-V)
-- [ ] RX: receive Opus packets → decode → callback API
-- [ ] TX: PCM input → Opus encode → send to radio
-- [ ] Buffering and jitter buffer (compensate for UDP delivery irregularity)
-- [ ] Sample rate negotiation (8/16/24/48 kHz — set in conninfo)
-- [ ] Tests with real radio
+- [x] Study `icomudpaudio.cpp` — audio packet format, headers, sequence
+- [x] Open audio stream (OpenClose on audio port, similar to CI-V)
+- [x] RX: receive Opus packets → decode → callback API
+- [x] TX: PCM input → Opus encode → send to radio
+- [x] Buffering and jitter buffer (compensate for UDP delivery irregularity)
+- [x] Sample rate negotiation (8/16/24/48 kHz — set in conninfo)
+- [x] Tests with real radio
 
 ### API Design
 
@@ -68,16 +68,16 @@ async with IcomRadio(...) as radio:
 
 ### Tasks
 
-- [ ] Sync API wrapper (for those who don't want async)
-- [ ] Autodiscovery improvement (multicast, timeout config)
-- [ ] Multi-model support (CI-V address presets for IC-705, IC-7300, IC-9700)
-- [ ] Token renewal timer (wfview: TOKEN_RENEWAL = 60s, sends `sendToken(0x05)`)
-- [ ] Reconnect logic (auto-reconnect on connection loss)
-- [ ] Proper integration test suite (`@pytest.mark.integration`)
-- [ ] PyPI publication (`uv publish` / `twine upload`)
-- [ ] GitHub Release with changelog
-- [ ] MkDocs documentation site (GitHub Pages) — ✅ done
-- [ ] Badges: PyPI version, downloads, CI status
+- [x] Sync API wrapper (for those who don't want async)
+- [x] Autodiscovery improvement (multicast, timeout config)
+- [x] Multi-model support (CI-V address presets for IC-705, IC-7300, IC-9700)
+- [x] Token renewal timer (wfview: TOKEN_RENEWAL = 60s, sends `sendToken(0x05)`)
+- [x] Reconnect logic (auto-reconnect on connection loss)
+- [x] Proper integration test suite (`@pytest.mark.integration`)
+- [x] PyPI publication (`uv publish` / `twine upload`)
+- [x] GitHub Release with changelog
+- [x] MkDocs documentation site (GitHub Pages)
+- [x] Badges: PyPI version, downloads, CI status
 
 ### Sync API Design
 
@@ -282,14 +282,14 @@ The IC-7610 continuously sends spectrum data through the CI-V port (50002) — t
 
 ### Tasks
 
-- [ ] Study spectrum packet format in `rigcommander.cpp` → `parseSpectrum()`
-- [ ] Reverse-engineer `0x27` sub-commands (scope enable/disable, mode, speed)
-- [ ] Spectrum data parser → `SpectrumFrame(center_freq, span, data: list[int])` structure
-- [ ] Callback API: `radio.on_spectrum(callback)` — continuous stream
-- [ ] Scope control: `radio.set_scope(enabled=True, mode="center", span=100_000)`
-- [ ] Dual scope support (Main + Sub for IC-7610)
-- [ ] Ring buffer for last N frames (for waterfall display)
-- [ ] Benchmark: how many spectrum packets per second does the IC-7610 send
+- [x] Study spectrum packet format in `rigcommander.cpp` → `parseSpectrum()`
+- [x] Reverse-engineer `0x27` sub-commands (scope enable/disable, mode, speed)
+- [x] Spectrum data parser → `SpectrumFrame(center_freq, span, data: list[int])` structure
+- [x] Callback API: `radio.on_spectrum(callback)` — continuous stream
+- [x] Scope control: `radio.set_scope(enabled=True, mode="center", span=100_000)`
+- [x] Dual scope support (Main + Sub for IC-7610)
+- [x] Ring buffer for last N frames (for waterfall display)
+- [x] Benchmark: how many spectrum packets per second does the IC-7610 send
 
 ### API Design
 
