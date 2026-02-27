@@ -55,7 +55,7 @@ There is no standalone, embeddable, MIT-licensed library for Icom's LAN protocol
 
 ### Parallel spike (optional)
 
-**Goal:** проверить стоимость входа в Rust core (Phase 5.1), без миграции всего проекта.
+**Goal:** Evaluate the cost of entry into Rust core (Phase 5.1) without migrating the entire project.
 
 - [ ] Create minimal Rust transport prototype (connect + one CI-V command)
 - [ ] Measure complexity/latency vs current Python implementation

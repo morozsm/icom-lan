@@ -1,7 +1,7 @@
 # Audio Recipes (copy/paste)
 
-Ниже — практические сценарии для текущего API `icom-lan`.
-Все примеры используют **PCM 16-bit mono 48kHz** (`AudioCodec.PCM_1CH_16BIT`), чтобы избежать внешних кодеков.
+Practical scenarios for the current `icom-lan` audio API.
+All examples use **PCM 16-bit mono 48 kHz** (`AudioCodec.PCM_1CH_16BIT`) to avoid external codec dependencies.
 
 ## Prerequisites
 
@@ -17,9 +17,9 @@ pip install "icom-lan[audio]"
 
 ---
 
-## 1) RX -> WAV file (10 seconds)
+## 1) RX → WAV file (10 seconds)
 
-Сохраняет входящий аудиопоток с радио в `rx.wav`.
+Saves the incoming audio stream from the radio to `rx.wav`.
 
 ```python
 import asyncio
@@ -64,9 +64,9 @@ asyncio.run(main())
 
 ---
 
-## 2) WAV file -> TX (high-level PCM API)
+## 2) WAV file → TX (high-level PCM API)
 
-Читает `tx.wav` (16-bit mono 48kHz PCM) и отправляет на TX.
+Reads `tx.wav` (16-bit mono 48 kHz PCM) and transmits it.
 
 ```python
 import asyncio
@@ -120,9 +120,9 @@ asyncio.run(main())
 
 ## 3) Full-duplex loopback test (dry-run style)
 
-Одновременно:
-- запускает RX и считает входящие пакеты,
-- отправляет 10 секунд тестового тона в TX.
+Simultaneously:
+- starts RX and counts incoming packets,
+- sends a 10-second test tone on TX.
 
 ```python
 import asyncio
@@ -194,11 +194,11 @@ asyncio.run(main())
 
 ## Troubleshooting (audio)
 
-См. отдельный плейбук:
+See the dedicated playbook:
 
 - [Troubleshooting](troubleshooting.md)
 
-Особенно полезные разделы:
-- handshake/port negotiation (CI-V/audio port = 0),
-- timeout/retry/reconnect recovery,
-- structured logging для интеграционных тестов.
+Especially useful sections:
+- Handshake / port negotiation (CI-V/audio port = 0)
+- Timeout / retry / reconnect recovery
+- Structured logging for integration tests

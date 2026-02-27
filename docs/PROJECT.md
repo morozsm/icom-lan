@@ -1,22 +1,22 @@
-# icom-lan — Документация проекта
+# icom-lan — Project Documentation
 
-## Цель
+## Goal
 
-Создать Python-библиотеку для прямого управления трансиверами Icom по LAN (UDP), без промежуточного ПО (wfview, RS-BA1, hamlib).
+Create a Python library for direct control of Icom transceivers over LAN (UDP), without intermediary software (wfview, RS-BA1, hamlib).
 
-### Задачи
-- Подключение к Icom по сети (аутентификация, keep-alive)
-- Отправка/приём CI-V команд (частота, режим, мощность, метры)
-- Приём/передача аудиопотока (Opus)
-- Простой Pythonic API (sync + async)
-- Поддержка IC-7610, IC-705, IC-7300, IC-9700
+### Objectives
+- Connect to Icom over network (authentication, keep-alive)
+- Send/receive CI-V commands (frequency, mode, power, meters)
+- Receive/transmit audio stream (Opus)
+- Simple Pythonic API (sync + async)
+- Support for IC-7610, IC-705, IC-7300, IC-9700
 
-### Не-цели (пока)
+### Non-goals (for now)
 - GUI
-- Полная замена wfview
-- Поддержка USB/serial (для этого есть hamlib)
+- Full wfview replacement
+- USB/serial support (hamlib handles that)
 
-## Архитектура
+## Architecture
 
 ```
 ┌─────────────────────────────────────────────┐
@@ -47,106 +47,106 @@
             └─────────────────┘
 ```
 
-## Протокол Icom LAN (по материалам wfview)
+## Icom LAN Protocol (based on wfview research)
 
-### Обзор
-Icom использует проприетарный UDP-протокол для LAN-подключения. Не документирован официально. Полностью реверс-инжиниринг выполнен командой wfview.
+### Overview
+Icom uses a proprietary UDP protocol for LAN connectivity. Not officially documented. Fully reverse-engineered by the wfview team.
 
-### Порты
-| Порт | Назначение |
-|------|-----------|
-| 50001 | Control — аутентификация, управление соединением |
-| 50002 | CI-V Serial — проброс CI-V команд |
-| 50003 | Audio — двунаправленный аудиопоток (Opus) |
+### Ports
+| Port | Purpose |
+|------|---------|
+| 50001 | Control — authentication, connection management |
+| 50002 | CI-V Serial — CI-V command passthrough |
+| 50003 | Audio — bidirectional audio stream (Opus) |
 
-### Фазы соединения
-1. **Discovery** — опционально, поиск радио в сети
-2. **Login** — отправка credentials (username/password)
-3. **Auth** — получение токена/подтверждения
-4. **Keep-alive** — периодический пинг (~500ms), иначе радио дропает соединение
-5. **CI-V** — отправка/приём CI-V команд через UDP-обёртку
-6. **Audio** — стриминг аудио (Opus кодек, 8/16/24 kHz)
-7. **Disconnect** — корректное закрытие
+### Connection Phases
+1. **Discovery** — optional, searching for radios on the network
+2. **Login** — sending credentials (username/password)
+3. **Auth** — receiving token/confirmation
+4. **Keep-alive** — periodic ping (~500ms), otherwise the radio drops the connection
+5. **CI-V** — sending/receiving CI-V commands via UDP wrapper
+6. **Audio** — audio streaming (Opus codec, 8/16/24 kHz)
+7. **Disconnect** — graceful shutdown
 
-### Структура пакета
-Каждый UDP-пакет имеет заголовок фиксированного формата (см. `packettypes.h` в wfview):
-- Длина пакета (2 байта, LE)
-- Тип пакета (2 байта)
-- Sequence number (2 байта)
-- Sender ID (4 байта)
-- Receiver ID (4 байта)
-- Payload (переменная длина)
+### Packet Structure
+Each UDP packet has a fixed-format header (see `packettypes.h` in wfview):
+- Packet length (2 bytes, LE)
+- Packet type (2 bytes)
+- Sequence number (2 bytes)
+- Sender ID (4 bytes)
+- Receiver ID (4 bytes)
+- Payload (variable length)
 
-### Ключевые исходники wfview (reference)
-| Файл | Строк | Описание |
-|------|-------|----------|
-| `include/packettypes.h` | 684 | Структуры пакетов, константы типов |
-| `src/radio/icomudpbase.cpp` | 585 | Базовый UDP: подключение, keep-alive, retransmit |
-| `src/radio/icomudphandler.cpp` | 690 | Основной хендлер: login, auth, маршрутизация |
-| `src/radio/icomudpcivdata.cpp` | 248 | CI-V данные через UDP |
-| `src/radio/icomudpaudio.cpp` | 303 | Аудио-стриминг |
-| `src/radio/icomcommander.cpp` | 3533 | CI-V команды (частота, режим, метры и т.д.) |
-| `src/rigcommander.cpp` | 256 | Высокоуровневый интерфейс к радио |
-| **Итого** | **~6300** | |
+### Key wfview Source Files (reference)
+| File | Lines | Description |
+|------|-------|-------------|
+| `include/packettypes.h` | 684 | Packet structures, type constants |
+| `src/radio/icomudpbase.cpp` | 585 | Base UDP: connection, keep-alive, retransmit |
+| `src/radio/icomudphandler.cpp` | 690 | Main handler: login, auth, routing |
+| `src/radio/icomudpcivdata.cpp` | 248 | CI-V data over UDP |
+| `src/radio/icomudpaudio.cpp` | 303 | Audio streaming |
+| `src/radio/icomcommander.cpp` | 3533 | CI-V commands (frequency, mode, meters, etc.) |
+| `src/rigcommander.cpp` | 256 | High-level radio interface |
+| **Total** | **~6300** | |
 
-## Этапы разработки
+## Development Phases
 
-### Фаза 1 — Transport (MVP) ✅ COMPLETE
-**Цель:** Установить UDP-соединение с радио, пройти аутентификацию, поддерживать keep-alive.
+### Phase 1 — Transport (MVP) ✅ COMPLETE
+**Goal:** Establish UDP connection with the radio, complete authentication, maintain keep-alive.
 
-- [x] Разобрать формат пакетов из `packettypes.h`
-- [x] Реализовать UDP transport (asyncio)
+- [x] Parse packet format from `packettypes.h`
+- [x] Implement UDP transport (asyncio)
 - [x] Discovery handshake (Are You There → I Am Here → Are You Ready)
 - [x] Login + auth handshake
 - [x] Token acknowledgement
-- [x] Conninfo exchange (получить CI-V/audio ports)
+- [x] Conninfo exchange (obtain CI-V/audio ports)
 - [x] Dual-port architecture (control port 50001 + CI-V port 50002)
 - [x] Keep-alive loop (ping + retransmit)
-- [x] Корректный disconnect
-- [x] Тест: подключиться к IC-7610 на 192.168.55.40
+- [x] Graceful disconnect
+- [x] Test: connect to IC-7610 at 192.168.55.40
 
-**Результат:** `radio.connect()` / `radio.disconnect()` работают. ✅
+**Result:** `radio.connect()` / `radio.disconnect()` work. ✅
 
-### Фаза 2 — CI-V Commands ✅ COMPLETE
-**Цель:** Отправлять и принимать CI-V команды через сетевое соединение.
+### Phase 2 — CI-V Commands ✅ COMPLETE
+**Goal:** Send and receive CI-V commands over the network connection.
 
-- [x] Обёртка CI-V в UDP-пакеты (по `icomudpcivdata.cpp`)
-- [x] Открытие CI-V data stream (OpenClose packet)
-- [x] Фильтрация waterfall/echo packets
-- [x] Базовые команды: get/set frequency, mode, power
-- [x] Чтение метров: S-meter, SWR, ALC, power
+- [x] Wrap CI-V in UDP packets (per `icomudpcivdata.cpp`)
+- [x] Open CI-V data stream (OpenClose packet)
+- [x] Filter waterfall/echo packets
+- [x] Basic commands: get/set frequency, mode, power
+- [x] Read meters: S-meter, SWR, ALC, power
 - [x] PTT on/off
-- [x] Тест: считать и установить частоту IC-7610
+- [x] Test: read and set frequency on IC-7610
 
-**Результат:** `radio.get_frequency()`, `radio.get_mode()`, `radio.get_s_meter()` работают. ✅
+**Result:** `radio.get_frequency()`, `radio.get_mode()`, `radio.get_s_meter()` work. ✅
 
-### Фаза 3 — Audio Streaming ✅ COMPLETE
-**Цель:** Принимать и передавать аудио.
+### Phase 3 — Audio Streaming ✅ COMPLETE
+**Goal:** Receive and transmit audio.
 
 - [x] Opus decode/encode (RX/TX)
 - [x] PCM transcoder layer (high-level API)
-- [x] Callback API для аудио
-- [x] Буферизация (JitterBuffer) и управление потоком
+- [x] Callback API for audio
+- [x] Buffering (JitterBuffer) and flow control
 - [x] Full-duplex audio
-- [x] Audio auto-recovery после reconnect
+- [x] Audio auto-recovery after reconnect
 - [x] Runtime audio stats API
 - [x] Audio capability negotiation
 - [x] CLI: `icom-lan audio rx/tx/loopback`
 
-**Результат:** Полный аудио-стек — Opus и PCM API, CLI, stats, auto-recovery. ✅
+**Result:** Full audio stack — Opus and PCM API, CLI, stats, auto-recovery. ✅
 
-### Фаза 4 — Polish & Publish ✅ COMPLETE
-**Цель:** Готовая библиотека для PyPI.
+### Phase 4 — Polish & Publish ✅ COMPLETE
+**Goal:** Production-ready library for PyPI.
 
 - [x] Sync + async API
-- [x] Autodiscovery радио в сети
-- [x] Поддержка нескольких моделей (IC-7610, IC-705, IC-7300, IC-9700)
-- [x] CLI-утилита (`icom-lan status`, `icom-lan freq 14074000`)
-- [x] Документация + MkDocs site
-- [x] PyPI публикация (v0.6.6)
+- [x] Autodiscovery of radios on the network
+- [x] Multi-model support (IC-7610, IC-705, IC-7300, IC-9700)
+- [x] CLI utility (`icom-lan status`, `icom-lan freq 14074000`)
+- [x] Documentation + MkDocs site
+- [x] PyPI publication (v0.6.6)
 
-### Фаза 5 — Hamlib NET rigctld ✅ COMPLETE
-**Цель:** Drop-in замена rigctld для WSJT-X, JS8Call, fldigi.
+### Phase 5 — Hamlib NET rigctld ✅ COMPLETE
+**Goal:** Drop-in rigctld replacement for WSJT-X, JS8Call, fldigi.
 
 - [x] TCP server skeleton (asyncio)
 - [x] MVP command set (f/F/m/M/t/T/v/V/s/S/l/q)
@@ -157,20 +157,20 @@ Icom использует проприетарный UDP-протокол для
 - [x] DATA mode semantics fix
 - [x] CI-V desync fix + circuit breaker
 
-### Фаза 6 — Scope/Waterfall ✅ COMPLETE (v0.6.0)
+### Phase 6 — Scope/Waterfall ✅ COMPLETE (v0.6.0)
 
-### Текущий статус
-**Все 32 issues закрыты. 1040 тестов. Готов к релизу v0.7.0.**
+### Current Status
+**All 32 issues closed. 1040 tests. Ready for v0.7.0 release.**
 
-## Тестовое оборудование
+## Test Equipment
 
-- **Icom IC-7610** на `192.168.55.40`
-- Порты: 50001 (control), 50002 (serial), 50003 (audio)
-- Mac mini M4 Pro в той же LAN (`192.168.55.152`)
+- **Icom IC-7610** at `192.168.55.40`
+- Ports: 50001 (control), 50002 (serial), 50003 (audio)
+- Mac mini M4 Pro on the same LAN (`192.168.55.152`)
 
-## Лицензионные заметки
+## License Notes
 
-- wfview: **GPLv3** — используем только как reference для понимания протокола
-- Наш код: **MIT** — чистая независимая реализация, не copy-paste
-- Не копируем код wfview, только изучаем формат пакетов и логику протокола
-- Это легально: реверс-инжиниринг протокола для совместимости защищён законом (EU Directive 2009/24/EC, US DMCA interoperability exception)
+- wfview: **GPLv3** — used only as reference for understanding the protocol
+- Our code: **MIT** — clean independent implementation, not copy-paste
+- We don't copy wfview code, only study the packet format and protocol logic
+- This is legal: protocol reverse engineering for interoperability is protected by law (EU Directive 2009/24/EC, US DMCA interoperability exception)
