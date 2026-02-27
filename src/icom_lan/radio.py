@@ -1164,24 +1164,27 @@ class IcomRadio:
         import time as _time
 
         last_activity = _time.monotonic()
+        last_rx_count = self._ctrl_transport.rx_packet_count
+        last_civ_count = (
+            self._civ_transport.rx_packet_count if self._civ_transport else 0
+        )
         try:
             while self._connected:
                 await asyncio.sleep(self.WATCHDOG_CHECK_INTERVAL)
                 if not self._connected:
                     break
 
-                # Check if control transport has received anything recently
-                # by looking at packet queue activity
-                if self._ctrl_transport._packet_queue.qsize() > 0:
+                # Check if any transport has received new packets since last check
+                ctrl_count = self._ctrl_transport.rx_packet_count
+                civ_count = (
+                    self._civ_transport.rx_packet_count
+                    if self._civ_transport
+                    else 0
+                )
+                if ctrl_count != last_rx_count or civ_count != last_civ_count:
                     last_activity = _time.monotonic()
-                elif (
-                    self._civ_transport
-                    and self._civ_transport._packet_queue.qsize() > 0
-                ):
-                    last_activity = _time.monotonic()
-                elif self._ctrl_transport.ping_seq > 0:
-                    # Ping responses reset activity implicitly via packet queue
-                    pass
+                    last_rx_count = ctrl_count
+                    last_civ_count = civ_count
 
                 idle = _time.monotonic() - last_activity
                 if idle > self._watchdog_timeout:
