@@ -659,6 +659,8 @@ function selectVfo(v){
   $('vfo-a').classList.toggle('active',v==='A');
   $('vfo-b').classList.toggle('active',v==='B');
   freqDisplayEl.textContent=fmtFreq(v==='A'?currentFreqA:currentFreqB);
+  updateActiveBand(v==='A'?currentFreqA:currentFreqB);
+  sendCmd('select_vfo',{vfo:v});
 }
 window.selectVfo = selectVfo;
 

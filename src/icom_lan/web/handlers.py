@@ -71,6 +71,7 @@ class ControlHandler:
             "set_power",
             "set_att",
             "set_preamp",
+            "select_vfo",
             "vfo_swap",
             "vfo_equalize",
         ]
@@ -274,6 +275,11 @@ class ControlHandler:
             level = int(params["level"])
             await radio.set_preamp(level)
             return {"level": level}
+
+        if name == "select_vfo":
+            vfo = str(params.get("vfo", "A"))
+            await radio.select_vfo(vfo)
+            return {"vfo": vfo}
 
         if name == "vfo_swap":
             await radio.vfo_swap()
