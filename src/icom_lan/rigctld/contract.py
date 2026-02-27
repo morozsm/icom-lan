@@ -219,3 +219,4 @@ class RigctldConfig:
     max_line_length: int = 1024        # max bytes per command line (OOM guard)
     poll_interval: float = 0.2         # seconds between autonomous poll cycles
     wsjtx_compat: bool = False         # pre-warm DATA mode for WSJT-X-style CAT/PTT flow
+    command_rate_limit: float | None = None  # max cmds/sec per client, None=unlimited
