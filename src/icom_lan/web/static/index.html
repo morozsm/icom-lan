@@ -254,7 +254,7 @@ body.light #toast { }
     </div>
     <div class="ctrl-group">
       <label>Mode</label>
-      <select id="mode-sel" onchange="sendCmd('set_mode',{mode:this.value})">
+      <select id="mode-sel" onchange="sendCmd('set_mode',{mode:this.value}); setModeDefaultStep(this.value)">
         <option>USB</option><option>LSB</option><option>CW</option><option>CW-R</option>
         <option>AM</option><option>FM</option><option>RTTY</option><option>RTTY-R</option>
         <option>PSK</option><option>PSK-R</option>
@@ -265,6 +265,17 @@ body.light #toast { }
       <select id="filter-sel" onchange="sendCmd('set_filter',{filter:this.value})">
         <option>FIL1</option><option>FIL2</option><option>FIL3</option>
       </select>
+    </div>
+    <div class="ctrl-group" id="step-group">
+      <label>Step</label>
+      <button class="att-btn" data-step="10"    onclick="setStep(10)">10</button>
+      <button class="att-btn" data-step="50"    onclick="setStep(50)">50</button>
+      <button class="att-btn" data-step="100"   onclick="setStep(100)">100</button>
+      <button class="att-btn" data-step="500"   onclick="setStep(500)">500</button>
+      <button class="att-btn" data-step="1000"  onclick="setStep(1000)">1k</button>
+      <button class="att-btn" data-step="5000"  onclick="setStep(5000)">5k</button>
+      <button class="att-btn" data-step="10000" onclick="setStep(10000)">10k</button>
+      <button class="att-btn" data-step="25000" onclick="setStep(25000)">25k</button>
     </div>
     <div class="ctrl-group">
       <label>Power</label>
@@ -389,6 +400,7 @@ let controlBackoff=WS_RECONNECT_MIN, scopeBackoff=WS_RECONNECT_MIN, metersBackof
 let startFreq=14000000, endFreq=14350000;
 let currentFreqA=0, currentFreqB=0, activeVfo='A';
 let currentPixels=null, pttState=false;
+let tuningStep=500; // Hz
 let wfLineImg=null, wfLine32=null, wfMeta=[], wfH=0;
 let cmdCounter=0;
 
@@ -670,6 +682,35 @@ function setPtt(state){
 }
 window.setPtt = setPtt;
 
+// ===== Tuning Step =====
+const MODE_STEP = {
+  'USB': 500, 'LSB': 500,
+  'CW': 100, 'CW-R': 100,
+  'AM': 1000,
+  'FM': 5000,
+  'RTTY': 100, 'RTTY-R': 100, 'PSK': 100, 'PSK-R': 100,
+};
+
+function setStep(hz) {
+  tuningStep = hz;
+  document.querySelectorAll('[data-step]').forEach(b => b.classList.toggle('active', +b.dataset.step === hz));
+}
+window.setStep = setStep;
+
+function setModeDefaultStep(mode) {
+  setStep(MODE_STEP[mode] || 500);
+}
+
+function tuneByStep(delta) {
+  const current = activeVfo === 'A' ? currentFreqA : currentFreqB;
+  if (!current) return;
+  const hz = current + delta;
+  sendCmd('set_freq', { vfo: activeVfo, freq: hz });
+  freqDisplayEl.textContent = fmtFreq(hz);
+  if (activeVfo === 'A') currentFreqA = hz; else currentFreqB = hz;
+  updateActiveBand(hz);
+}
+
 // ===== Freq Edit Modal =====
 freqDisplayEl.addEventListener('click', ()=>{
   const hz=activeVfo==='A'?currentFreqA:currentFreqB;
@@ -765,7 +806,8 @@ wfCv.parentElement.addEventListener('click', e=>{
   const r=wfCv.getBoundingClientRect(), x=e.clientX-r.left, row=(e.clientY-r.top)|0;
   let sf=startFreq,ef=endFreq;
   if(row>=0&&row<wfMeta.length&&wfMeta[row]){sf=wfMeta[row].s;ef=wfMeta[row].e}
-  const freq=Math.round(sf+(x/r.width)*(ef-sf));
+  const rawFreq=Math.round(sf+(x/r.width)*(ef-sf));
+  const freq=Math.round(rawFreq/tuningStep)*tuningStep;
   freqDisplayEl.textContent=fmtFreq(freq);
   if(activeVfo==='A') currentFreqA=freq; else currentFreqB=freq;
   sendCmd('set_freq',{vfo:activeVfo,freq});
@@ -782,6 +824,14 @@ wfCv.parentElement.addEventListener('mousemove', e=>{
   tooltip.style.display='block';
 });
 wfCv.parentElement.addEventListener('mouseleave', ()=>{tooltip.style.display='none'});
+
+// ===== Mouse Wheel Tuning =====
+function onWheelTune(e) {
+  e.preventDefault();
+  tuneByStep(e.deltaY < 0 ? tuningStep : -tuningStep);
+}
+wfCv.parentElement.addEventListener('wheel', onWheelTune, { passive: false });
+specCv.parentElement.addEventListener('wheel', onWheelTune, { passive: false });
 
 // ===== Toast Notifications =====
 const toastEl = $('toast');
@@ -838,6 +888,14 @@ document.addEventListener('keydown', e => {
     case '8': tuneBand(7); break;
     case '9': tuneBand(8); break;
     case '0': tuneBand(9); break;
+    case 'arrowleft':
+      e.preventDefault();
+      tuneByStep(e.shiftKey ? -tuningStep * 10 : -tuningStep);
+      break;
+    case 'arrowright':
+      e.preventDefault();
+      tuneByStep(e.shiftKey ? tuningStep * 10 : tuningStep);
+      break;
   }
 });
 document.addEventListener('keyup', e => {
@@ -1099,6 +1157,7 @@ window.setPtt = setPtt;
 
 // ===== Init =====
 resize();
+setStep(tuningStep); // highlight default step button
 connectControl();
 </script>
 </body>
