@@ -79,10 +79,29 @@ class WebServer:
         self._config = config or WebConfig()
         self._server: asyncio.Server | None = None
         self._client_tasks: set[asyncio.Task[None]] = set()
+        self._scope_handlers: set["ScopeHandler"] = set()
+        self._scope_enabled = False
 
     # ------------------------------------------------------------------
     # Lifecycle
     # ------------------------------------------------------------------
+
+    def register_scope_handler(self, handler: "ScopeHandler") -> None:
+        """Register a scope handler for broadcast."""
+        self._scope_handlers.add(handler)
+        if not self._scope_enabled and self._radio is not None:
+            self._radio.on_scope_data(self._broadcast_scope)
+
+    def unregister_scope_handler(self, handler: "ScopeHandler") -> None:
+        """Unregister a scope handler."""
+        self._scope_handlers.discard(handler)
+        if not self._scope_handlers and self._radio is not None:
+            self._radio.on_scope_data(None)
+
+    def _broadcast_scope(self, frame: Any) -> None:
+        """Broadcast scope frame to all registered handlers."""
+        for h in list(self._scope_handlers):
+            h.enqueue_frame(frame)
 
     async def start(self) -> None:
         """Start the HTTP/WS listener."""
@@ -352,7 +371,7 @@ class WebServer:
                 ws, self._radio, __version__, self._config.radio_model
             )
         elif path == "/api/v1/scope":
-            handler = ScopeHandler(ws, self._radio)
+            handler = ScopeHandler(ws, self._radio, server=self)
         elif path == "/api/v1/meters":
             handler = MetersHandler(ws, self._radio)
         elif path == "/api/v1/audio":
