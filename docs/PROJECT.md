@@ -120,25 +120,47 @@ Icom использует проприетарный UDP-протокол для
 
 **Результат:** `radio.get_frequency()`, `radio.get_mode()`, `radio.get_s_meter()` работают. ✅
 
-### Фаза 3 — Audio Streaming
+### Фаза 3 — Audio Streaming ✅ COMPLETE
 **Цель:** Принимать и передавать аудио.
 
-- [ ] Opus decode (приём аудио с радио)
-- [ ] Opus encode (передача аудио на радио)
-- [ ] Callback API для аудио
-- [ ] Буферизация и управление потоком
+- [x] Opus decode/encode (RX/TX)
+- [x] PCM transcoder layer (high-level API)
+- [x] Callback API для аудио
+- [x] Буферизация (JitterBuffer) и управление потоком
+- [x] Full-duplex audio
+- [x] Audio auto-recovery после reconnect
+- [x] Runtime audio stats API
+- [x] Audio capability negotiation
+- [x] CLI: `icom-lan audio rx/tx/loopback`
 
-**Результат:** `radio.audio.start_rx(callback)`, `radio.audio.tx(data)` работают.
+**Результат:** Полный аудио-стек — Opus и PCM API, CLI, stats, auto-recovery. ✅
 
-### Фаза 4 — Polish & Publish
+### Фаза 4 — Polish & Publish ✅ COMPLETE
 **Цель:** Готовая библиотека для PyPI.
 
-- [ ] Sync + async API
-- [ ] Autodiscovery радио в сети
-- [ ] Поддержка нескольких моделей (IC-7610, IC-705, IC-7300, IC-9700)
-- [ ] CLI-утилита (`icom-lan status`, `icom-lan freq 14074000`)
-- [ ] Документация, примеры
-- [ ] PyPI публикация
+- [x] Sync + async API
+- [x] Autodiscovery радио в сети
+- [x] Поддержка нескольких моделей (IC-7610, IC-705, IC-7300, IC-9700)
+- [x] CLI-утилита (`icom-lan status`, `icom-lan freq 14074000`)
+- [x] Документация + MkDocs site
+- [x] PyPI публикация (v0.6.6)
+
+### Фаза 5 — Hamlib NET rigctld ✅ COMPLETE
+**Цель:** Drop-in замена rigctld для WSJT-X, JS8Call, fldigi.
+
+- [x] TCP server skeleton (asyncio)
+- [x] MVP command set (f/F/m/M/t/T/v/V/s/S/l/q)
+- [x] Read-only safety mode
+- [x] Structured logging + guardrails
+- [x] Golden protocol response suite (45 fixtures)
+- [x] WSJT-X compatibility (--wsjtx-compat)
+- [x] DATA mode semantics fix
+- [x] CI-V desync fix + circuit breaker
+
+### Фаза 6 — Scope/Waterfall ✅ COMPLETE (v0.6.0)
+
+### Текущий статус
+**Все 32 issues закрыты. 1040 тестов. Готов к релизу v0.7.0.**
 
 ## Тестовое оборудование
 

@@ -25,28 +25,33 @@ There is no standalone, embeddable, MIT-licensed library for Icom's LAN protocol
 
 ## Velocity Plan (updated after v0.6.0)
 
-### Done
+### Done (all 32 issues closed, 1040 tests)
 
 - [x] Phase 3: Opus audio RX/TX API (Python)
-- [x] Phase 4: Polish + PyPI publish + GitHub releases
+- [x] Phase 3b: High-level PCM API + CLI audio subcommands + auto-recovery
+- [x] Phase 4: Polish + PyPI publish + GitHub releases (v0.6.6)
 - [x] Phase 6: Spectrum/waterfall parsing + CLI capture + rendering
 - [x] **Phase 7: Hamlib NET rigctld server** — drop-in replacement for `rigctld`
   - TCP server with multi-client, backpressure, caching
-  - Verified with `rigctl -m 2`: freq, mode, PTT, S-meter, power, SWR
-  - CLI: `icom-lan serve --port 4532`
-  - 656 tests, 0 regressions
+  - Golden protocol response suite (45 fixtures) + TCP wire tests
+  - WSJT-X compat mode, DATA mode semantics, CI-V desync fix
+  - 1040 tests, 0 regressions
 
-### Next technical sprint (current)
+### Next: v0.7.0 release + community launch
 
-**Goal:** rigctld client hardening + Web UI MVP.
+**Goal:** Ship v0.7.0, announce to community, start collecting feedback.
 
-- [ ] Test rigctld with WSJT-X, JS8Call, fldigi (Phase 3 completion)
-- [ ] Golden tests: Wireshark captures vs our responses
+- [ ] Release v0.7.0 (version bump, CHANGELOG, PyPI)
+- [ ] Reddit /r/amateurradio + /r/hamradio announcement
+- [ ] QRZ.com forum post
+- [ ] Enable GitHub Discussions
+
+### After v0.7.0: client hardening + Web UI
+
+- [ ] Test rigctld with WSJT-X, JS8Call, fldigi (real-world validation)
 - [ ] Web backend bridge (safe API surface for freq/mode/meter/scope snapshot)
 - [ ] Minimal UI: frequency, mode, S-meter, basic controls
 - [ ] Scope snapshot panel (reuse existing `scope` pipeline)
-- [ ] Auth/session model for LAN radio access
-- [ ] Smoke tests for end-to-end control path
 
 ### Parallel spike (optional)
 
