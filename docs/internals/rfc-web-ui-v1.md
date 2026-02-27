@@ -24,13 +24,18 @@ Browser                              icom-lan server
 │  Single HTML     │   HTTP GET /   │  Static file server      │
 │  + vanilla JS    │◄──────────────►│  (index.html)            │
 │                  │                │                          │
-│  Control panel   │   WS /api/v1/ │  WebSocket handler       │
-│  (freq/mode/PTT) │◄─────────────►│  (JSON commands +        │
-│                  │   ws           │   binary scope frames)   │
-│  Canvas2D scope  │                │                          │
-│  Canvas2D wfall  │   WS /api/v1/ │  Audio WebSocket handler │
+│  Control panel   │   WS /api/v1/ │  Control handler         │
+│  (freq/mode/PTT) │◄─────────────►│  (JSON cmd/response)     │
+│                  │   ws           │                          │
+│  Canvas2D scope  │   WS /api/v1/ │  Scope handler           │
+│  Canvas2D wfall  │◄─────────────►│  (binary scope frames)   │
+│                  │   scope        │                          │
+│  S/SWR/ALC bars  │   WS /api/v1/ │  Meters handler          │
+│                  │◄─────────────►│  (binary meter frames)   │
+│                  │   meters       │                          │
+│  Web Audio API   │   WS /api/v1/ │  Audio handler           │
 │                  │◄─────────────►│  (binary Opus/PCM)       │
-│  Web Audio API   │   audio       │                          │
+│                  │   audio        │                          │
 └──────────────────┘                └──────────┬───────────────┘
                                                │
                                                │ UDP :50001-3
@@ -39,6 +44,15 @@ Browser                              icom-lan server
                                     │   Icom Radio     │
                                     └──────────────────┘
 ```
+
+### WebSocket Channels
+
+| Endpoint | Purpose | Data format | Update rate |
+|----------|---------|-------------|-------------|
+| `/api/v1/ws` | Commands, events, state | JSON text | On-demand |
+| `/api/v1/scope` | Spectrum & waterfall | Binary frames | 15-30 fps |
+| `/api/v1/meters` | S-meter, SWR, ALC, Power | Binary frames | 10-20 fps |
+| `/api/v1/audio` | RX/TX audio | Binary Opus/PCM | Continuous |
 
 ## HTTP Endpoints
 
@@ -50,7 +64,9 @@ Browser                              icom-lan server
 
 These are cacheable, stateless endpoints. No authentication in v1 (LAN-only).
 
-## WebSocket Protocol: `/api/v1/ws`
+## Control WebSocket: `/api/v1/ws`
+
+JSON-only channel for commands, responses, events, and state synchronization.
 
 ### Connection Lifecycle
 
@@ -161,7 +177,11 @@ Available commands (v1):
 - `vfo_swap` — no params
 - `vfo_equalize` — no params
 
-### Binary Messages (Scope Frames)
+## Scope WebSocket: `/api/v1/scope`
+
+Dedicated channel for high-frequency spectrum/waterfall data (binary only).
+
+### Binary Scope Frames
 
 Fixed-size header + variable-length pixel data.
 
@@ -200,6 +220,57 @@ The server MUST implement frame dropping:
 - On reconnect: re-send `subscribe` message
 - Server does NOT persist subscriptions across connections
 - State snapshot is always sent after subscribe
+
+## Meters WebSocket: `/api/v1/meters`
+
+Dedicated channel for real-time meter data (S-meter, SWR, ALC, Power, etc.).
+
+Separate from scope and control to keep each channel focused and allow independent
+subscription and rate control.
+
+### Binary Meter Frames
+
+```
+Offset  Size  Field        Description
+──────  ────  ───────────  ─────────────────────────────────
+0       1     msg_type     0x20 = meter_frame
+1       2     sequence     uint16 LE, wrapping counter
+3       1     count        number of meters in this frame
+4       N×3   meters[]     array of meter readings:
+                             [0] meter_id  (uint8)
+                             [1] value_lo  (uint8, low byte)
+                             [2] value_hi  (uint8, high byte)
+```
+
+### Meter IDs
+
+| ID | Meter | Range | Notes |
+|----|-------|-------|-------|
+| 0x01 | S-meter | 0-255 | RX signal strength |
+| 0x02 | Power | 0-255 | TX output power |
+| 0x03 | SWR | 0-255 | TX SWR (only valid during TX) |
+| 0x04 | ALC | 0-255 | TX ALC (only valid during TX) |
+| 0x05 | Comp | 0-255 | Compressor level |
+| 0x06 | VD | 0-255 | Drain voltage |
+| 0x07 | ID | 0-255 | Drain current |
+
+### Bandwidth
+
+4 meters × 3 bytes + 4 bytes header = **16 bytes/frame**.
+At 20fps: **320 bytes/sec** — negligible.
+
+### Control (JSON text frames on meters WS)
+
+```json
+{"type": "meters_start", "meters": ["smeter", "power", "swr", "alc"], "fps": 20}
+{"type": "meters_stop"}
+```
+
+Server sends meter frames only after `meters_start`. Client can request subset of meters
+and desired update rate. Server may send at a lower rate if the radio doesn't provide
+data that fast.
+
+---
 
 ## Audio WebSocket: `/api/v1/audio`
 
