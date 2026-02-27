@@ -237,6 +237,20 @@ body.light #toast { }
       <button class="vfo-btn" onclick="sendCmd('vfo_swap')" title="Swap A↔B">A↔B</button>
       <button class="vfo-btn" onclick="sendCmd('vfo_equalize')" title="A=B">A=B</button>
     </div>
+    <div class="ctrl-group" id="band-group">
+      <label>Band</label>
+      <button class="vfo-btn" data-band="0" onclick="tuneBand(0)" title="160m · 1.840 MHz [1]">160m</button>
+      <button class="vfo-btn" data-band="1" onclick="tuneBand(1)" title="80m · 3.573 MHz [2]">80m</button>
+      <button class="vfo-btn" data-band="2" onclick="tuneBand(2)" title="60m · 5.357 MHz [3]">60m</button>
+      <button class="vfo-btn" data-band="3" onclick="tuneBand(3)" title="40m · 7.074 MHz [4]">40m</button>
+      <button class="vfo-btn" data-band="4" onclick="tuneBand(4)" title="30m · 10.136 MHz [5]">30m</button>
+      <button class="vfo-btn" data-band="5" onclick="tuneBand(5)" title="20m · 14.074 MHz [6]">20m</button>
+      <button class="vfo-btn" data-band="6" onclick="tuneBand(6)" title="17m · 18.100 MHz [7]">17m</button>
+      <button class="vfo-btn" data-band="7" onclick="tuneBand(7)" title="15m · 21.074 MHz [8]">15m</button>
+      <button class="vfo-btn" data-band="8" onclick="tuneBand(8)" title="12m · 24.915 MHz [9]">12m</button>
+      <button class="vfo-btn" data-band="9" onclick="tuneBand(9)" title="10m · 28.074 MHz [0]">10m</button>
+      <button class="vfo-btn" data-band="10" onclick="tuneBand(10)" title="6m · 50.313 MHz">6m</button>
+    </div>
     <div class="ctrl-group">
       <label>Mode</label>
       <select id="mode-sel" onchange="sendCmd('set_mode',{mode:this.value})">
@@ -376,6 +390,38 @@ let currentPixels=null, pttState=false;
 let wfLineImg=null, wfLine32=null, wfMeta=[], wfH=0;
 let cmdCounter=0;
 
+// ===== Band Plan (HF + 6m, FT8 defaults) =====
+const BANDS = [
+  { name:'160m', freq:  1840000, lo:  1800000, hi:  2000000 },
+  { name: '80m', freq:  3573000, lo:  3500000, hi:  4000000 },
+  { name: '60m', freq:  5357000, lo:  5330000, hi:  5410000 },
+  { name: '40m', freq:  7074000, lo:  7000000, hi:  7300000 },
+  { name: '30m', freq: 10136000, lo: 10100000, hi: 10150000 },
+  { name: '20m', freq: 14074000, lo: 14000000, hi: 14350000 },
+  { name: '17m', freq: 18100000, lo: 18068000, hi: 18168000 },
+  { name: '15m', freq: 21074000, lo: 21000000, hi: 21450000 },
+  { name: '12m', freq: 24915000, lo: 24890000, hi: 24990000 },
+  { name: '10m', freq: 28074000, lo: 28000000, hi: 29700000 },
+  { name:  '6m', freq: 50313000, lo: 50000000, hi: 54000000 },
+];
+
+function tuneBand(idx) {
+  const band = BANDS[idx];
+  const hz = band.freq;
+  sendCmd('set_freq', { vfo: activeVfo, freq: hz });
+  freqDisplayEl.textContent = fmtFreq(hz);
+  if (activeVfo === 'A') currentFreqA = hz; else currentFreqB = hz;
+  updateActiveBand(hz);
+}
+window.tuneBand = tuneBand;
+
+function updateActiveBand(hz) {
+  document.querySelectorAll('[data-band]').forEach(btn => {
+    const b = BANDS[+btn.dataset.band];
+    btn.classList.toggle('active', hz >= b.lo && hz <= b.hi);
+  });
+}
+
 // ===== Helpers =====
 function fmtFreq(hz){
   const m=hz/1e6;
@@ -510,8 +556,8 @@ function updateMeter(meterId, value){
 
 // ===== UI State Updates =====
 function updateStateFromServer(data){
-  if(data.freq_a){currentFreqA=data.freq_a; if(activeVfo==='A') freqDisplayEl.textContent=fmtFreq(data.freq_a)}
-  if(data.freq_b){currentFreqB=data.freq_b; if(activeVfo==='B') freqDisplayEl.textContent=fmtFreq(data.freq_b)}
+  if(data.freq_a){currentFreqA=data.freq_a; if(activeVfo==='A'){freqDisplayEl.textContent=fmtFreq(data.freq_a);updateActiveBand(data.freq_a);}}
+  if(data.freq_b){currentFreqB=data.freq_b; if(activeVfo==='B'){freqDisplayEl.textContent=fmtFreq(data.freq_b);updateActiveBand(data.freq_b);}}
   if(data.mode) modeSel.value=data.mode;
   if(data.filter) filterSel.value=data.filter;
   if(data.power!=null) powerInput.value=data.power;
@@ -576,6 +622,7 @@ freqInput.addEventListener('keydown', e=>{
       sendCmd('set_freq',{vfo:activeVfo,freq:hz});
       freqDisplayEl.textContent=fmtFreq(hz);
       if(activeVfo==='A') currentFreqA=hz; else currentFreqB=hz;
+      updateActiveBand(hz);
     }
     freqModal.classList.remove('open');
   } else if(e.key==='Escape'){
@@ -606,8 +653,8 @@ function handleCtrlMsg(m){
     case 'state': if(m.data) updateStateFromServer(m.data); break;
     case 'event':
       if(m.name==='freq_changed'&&m.data){
-        if(m.data.vfo==='A'||!m.data.vfo){currentFreqA=m.data.freq;if(activeVfo==='A')freqDisplayEl.textContent=fmtFreq(m.data.freq)}
-        else{currentFreqB=m.data.freq;if(activeVfo==='B')freqDisplayEl.textContent=fmtFreq(m.data.freq)}
+        if(m.data.vfo==='A'||!m.data.vfo){currentFreqA=m.data.freq;if(activeVfo==='A'){freqDisplayEl.textContent=fmtFreq(m.data.freq);updateActiveBand(m.data.freq);}}
+        else{currentFreqB=m.data.freq;if(activeVfo==='B'){freqDisplayEl.textContent=fmtFreq(m.data.freq);updateActiveBand(m.data.freq);}}
       } else if(m.name==='mode_changed'&&m.data) modeSel.value=m.data.mode;
       else if(m.name==='ptt'&&m.data){pttState=m.data.state;pttBtn.classList.toggle('active',pttState)}
       else if(m.name==='scope_meta'&&m.data){startFreq=m.data.start_freq||startFreq;endFreq=m.data.end_freq||endFreq;drawFreqAxis()}
@@ -659,6 +706,7 @@ wfCv.parentElement.addEventListener('click', e=>{
   freqDisplayEl.textContent=fmtFreq(freq);
   if(activeVfo==='A') currentFreqA=freq; else currentFreqB=freq;
   sendCmd('set_freq',{vfo:activeVfo,freq});
+  updateActiveBand(freq);
 });
 
 // ===== Waterfall tooltip =====
@@ -716,6 +764,17 @@ document.addEventListener('keydown', e => {
       freqDisplayEl.click();
       break;
     case 't': toggleTheme(); break;
+    // Band shortcuts: 1-9 = 160m…12m, 0 = 10m
+    case '1': tuneBand(0); break;
+    case '2': tuneBand(1); break;
+    case '3': tuneBand(2); break;
+    case '4': tuneBand(3); break;
+    case '5': tuneBand(4); break;
+    case '6': tuneBand(5); break;
+    case '7': tuneBand(6); break;
+    case '8': tuneBand(7); break;
+    case '9': tuneBand(8); break;
+    case '0': tuneBand(9); break;
   }
 });
 document.addEventListener('keyup', e => {
