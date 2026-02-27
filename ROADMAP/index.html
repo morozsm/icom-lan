@@ -1973,13 +1973,13 @@
 <p><strong>Status:</strong> ✅ Implemented (core RX/TX/full-duplex API available in current releases).</p>
 <h3 id="tasks">Tasks<a class="headerlink" href="#tasks" title="Permanent link">&para;</a></h3>
 <ul>
-<li>[ ] Study <code>icomudpaudio.cpp</code> — audio packet format, headers, sequence</li>
-<li>[ ] Open audio stream (OpenClose on audio port, similar to CI-V)</li>
-<li>[ ] RX: receive Opus packets → decode → callback API</li>
-<li>[ ] TX: PCM input → Opus encode → send to radio</li>
-<li>[ ] Buffering and jitter buffer (compensate for UDP delivery irregularity)</li>
-<li>[ ] Sample rate negotiation (8/16/24/48 kHz — set in conninfo)</li>
-<li>[ ] Tests with real radio</li>
+<li>[x] Study <code>icomudpaudio.cpp</code> — audio packet format, headers, sequence</li>
+<li>[x] Open audio stream (OpenClose on audio port, similar to CI-V)</li>
+<li>[x] RX: receive Opus packets → decode → callback API</li>
+<li>[x] TX: PCM input → Opus encode → send to radio</li>
+<li>[x] Buffering and jitter buffer (compensate for UDP delivery irregularity)</li>
+<li>[x] Sample rate negotiation (8/16/24/48 kHz — set in conninfo)</li>
+<li>[x] Tests with real radio</li>
 </ul>
 <h3 id="api-design">API Design<a class="headerlink" href="#api-design" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># RX — callback-based</span>
@@ -2011,16 +2011,16 @@
 <p><strong>Status:</strong> ✅ Implemented (sync API, reconnect/token renewal, docs, GitHub releases, PyPI).</p>
 <h3 id="tasks_1">Tasks<a class="headerlink" href="#tasks_1" title="Permanent link">&para;</a></h3>
 <ul>
-<li>[ ] Sync API wrapper (for those who don't want async)</li>
-<li>[ ] Autodiscovery improvement (multicast, timeout config)</li>
-<li>[ ] Multi-model support (CI-V address presets for IC-705, IC-7300, IC-9700)</li>
-<li>[ ] Token renewal timer (wfview: TOKEN_RENEWAL = 60s, sends <code>sendToken(0x05)</code>)</li>
-<li>[ ] Reconnect logic (auto-reconnect on connection loss)</li>
-<li>[ ] Proper integration test suite (<code>@pytest.mark.integration</code>)</li>
-<li>[ ] PyPI publication (<code>uv publish</code> / <code>twine upload</code>)</li>
-<li>[ ] GitHub Release with changelog</li>
-<li>[ ] MkDocs documentation site (GitHub Pages) — ✅ done</li>
-<li>[ ] Badges: PyPI version, downloads, CI status</li>
+<li>[x] Sync API wrapper (for those who don't want async)</li>
+<li>[x] Autodiscovery improvement (multicast, timeout config)</li>
+<li>[x] Multi-model support (CI-V address presets for IC-705, IC-7300, IC-9700)</li>
+<li>[x] Token renewal timer (wfview: TOKEN_RENEWAL = 60s, sends <code>sendToken(0x05)</code>)</li>
+<li>[x] Reconnect logic (auto-reconnect on connection loss)</li>
+<li>[x] Proper integration test suite (<code>@pytest.mark.integration</code>)</li>
+<li>[x] PyPI publication (<code>uv publish</code> / <code>twine upload</code>)</li>
+<li>[x] GitHub Release with changelog</li>
+<li>[x] MkDocs documentation site (GitHub Pages)</li>
+<li>[x] Badges: PyPI version, downloads, CI status</li>
 </ul>
 <h3 id="sync-api-design">Sync API Design<a class="headerlink" href="#sync-api-design" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan.sync</span><span class="w"> </span><span class="kn">import</span> <span class="n">IcomRadio</span>
@@ -2261,14 +2261,14 @@
 </ul>
 <h3 id="tasks_2">Tasks<a class="headerlink" href="#tasks_2" title="Permanent link">&para;</a></h3>
 <ul>
-<li>[ ] Study spectrum packet format in <code>rigcommander.cpp</code> → <code>parseSpectrum()</code></li>
-<li>[ ] Reverse-engineer <code>0x27</code> sub-commands (scope enable/disable, mode, speed)</li>
-<li>[ ] Spectrum data parser → <code>SpectrumFrame(center_freq, span, data: list[int])</code> structure</li>
-<li>[ ] Callback API: <code>radio.on_spectrum(callback)</code> — continuous stream</li>
-<li>[ ] Scope control: <code>radio.set_scope(enabled=True, mode="center", span=100_000)</code></li>
-<li>[ ] Dual scope support (Main + Sub for IC-7610)</li>
-<li>[ ] Ring buffer for last N frames (for waterfall display)</li>
-<li>[ ] Benchmark: how many spectrum packets per second does the IC-7610 send</li>
+<li>[x] Study spectrum packet format in <code>rigcommander.cpp</code> → <code>parseSpectrum()</code></li>
+<li>[x] Reverse-engineer <code>0x27</code> sub-commands (scope enable/disable, mode, speed)</li>
+<li>[x] Spectrum data parser → <code>SpectrumFrame(center_freq, span, data: list[int])</code> structure</li>
+<li>[x] Callback API: <code>radio.on_spectrum(callback)</code> — continuous stream</li>
+<li>[x] Scope control: <code>radio.set_scope(enabled=True, mode="center", span=100_000)</code></li>
+<li>[x] Dual scope support (Main + Sub for IC-7610)</li>
+<li>[x] Ring buffer for last N frames (for waterfall display)</li>
+<li>[x] Benchmark: how many spectrum packets per second does the IC-7610 send</li>
 </ul>
 <h3 id="api-design_1">API Design<a class="headerlink" href="#api-design_1" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan</span><span class="w"> </span><span class="kn">import</span> <span class="n">IcomRadio</span><span class="p">,</span> <span class="n">SpectrumFrame</span>
