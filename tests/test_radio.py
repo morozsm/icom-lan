@@ -252,20 +252,17 @@ class TestFrequency:
     async def test_set_frequency(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
-        # Fire-and-forget: no ACK response needed
+        mock_transport.queue_response(_ack_response())
         await radio.set_frequency(7_074_000)
         assert len(mock_transport.sent_packets) > 0
 
     @pytest.mark.asyncio
-    async def test_set_frequency_fire_and_forget(
+    async def test_set_frequency_nak(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
-        """set_frequency is fire-and-forget: no ACK/NAK wait, completes fast."""
-        # No response queued — must complete without blocking.
-        await radio.set_frequency(14_074_000)
-        assert len(mock_transport.sent_packets) > 0
-        # Optimistic cache update.
-        assert radio._state_cache.get("freq") == 14_074_000
+        mock_transport.queue_response(_nak_response())
+        with pytest.raises(CommandError):
+            await radio.set_frequency(999_999_999)
 
 
 class TestMode:
@@ -283,7 +280,7 @@ class TestMode:
     async def test_set_mode(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
-        # Fire-and-forget: no ACK response needed
+        mock_transport.queue_response(_ack_response())
         await radio.set_mode(Mode.LSB)
         assert len(mock_transport.sent_packets) > 0
 
@@ -291,7 +288,7 @@ class TestMode:
     async def test_set_mode_from_string(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
-        # Fire-and-forget: no ACK response needed
+        mock_transport.queue_response(_ack_response())
         await radio.set_mode("USB")
         assert len(mock_transport.sent_packets) > 0
 
@@ -339,7 +336,7 @@ class TestPower:
     async def test_set_power(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
-        # Fire-and-forget: no ACK response needed
+        mock_transport.queue_response(_ack_response())
         await radio.set_power(200)
         assert len(mock_transport.sent_packets) > 0
 
@@ -351,17 +348,15 @@ class TestPtt:
     async def test_set_ptt_on(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
-        # Fire-and-forget: no ACK response needed
+        mock_transport.queue_response(_ack_response())
         await radio.set_ptt(True)
-        assert radio._state_cache.get("ptt") is True
 
     @pytest.mark.asyncio
     async def test_set_ptt_off(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
-        # Fire-and-forget: no ACK response needed
+        mock_transport.queue_response(_ack_response())
         await radio.set_ptt(False)
-        assert radio._state_cache.get("ptt") is False
 
 
 class TestTimeout:
@@ -438,17 +433,16 @@ class TestAckSinkRobustness:
     """Regression tests for fire-and-forget ACK sink behavior."""
 
     @pytest.mark.asyncio
-    async def test_fire_and_forget_multiple_sinks_do_not_stack(
+    async def test_fire_and_forget_missing_ack_does_not_poison_next_ack(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
-        """Multiple fire-and-forget commands must all complete without exception."""
-        # scope enable: fire-and-forget (ACK intentionally missing)
+        # Fire-and-forget scope enable (ACK intentionally missing)
         ff = build_civ_frame(IC_7610_ADDR, CONTROLLER_ADDR, 0x27, sub=0x10, data=b"\x01")
         await radio._execute_civ_raw(ff, wait_response=False)
 
-        # set_frequency: also fire-and-forget — must not block waiting for ACK
+        # Next ACK should satisfy this set command, not a stale sink.
+        mock_transport.queue_response_on_send(2, _ack_response())
         await radio.set_frequency(7_074_000)
-        assert radio._state_cache.get("freq") == 7_074_000
 
     @pytest.mark.asyncio
     async def test_fire_and_forget_send_failure_rolls_back_sink(self) -> None:
@@ -528,9 +522,9 @@ class TestScopeCallbackSafety:
         assert resp is not None
         assert resp.command == _CMD_ACK
 
-        # set_frequency is now fire-and-forget: no ACK response needed.
+        # RX pump should continue to route subsequent ACK traffic.
+        mock_transport.queue_response(_ack_response())
         await radio.set_frequency(7_074_000)
-        assert radio._state_cache.get("freq") == 7_074_000
 
 
 # ---------------------------------------------------------------------------
@@ -539,41 +533,55 @@ class TestScopeCallbackSafety:
 
 
 class TestSetModeTimeout:
-    """set_mode is now fire-and-forget — no ACK wait, no timeout to swallow."""
+    """set_mode must swallow TimeoutError (known IC-7610 ACK quirk)."""
 
     @pytest.mark.asyncio
-    async def test_set_mode_completes_without_ack(
+    async def test_set_mode_swallows_icom_timeout(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
-        """set_mode completes immediately without queuing any response."""
-        # No response queued — fire-and-forget must complete without blocking.
-        await radio.set_mode(Mode.USB)
+        """When _send_civ_raw raises our TimeoutError, set_mode must not re-raise."""
+        with patch.object(
+            radio, "_send_civ_raw", side_effect=TimeoutError("no ACK")
+        ):
+            await radio.set_mode(Mode.USB)  # must not raise
         assert radio._last_mode == Mode.USB
-        assert radio._state_cache.get("mode") == Mode.USB
 
     @pytest.mark.asyncio
-    async def test_set_mode_string_completes_without_ack(
+    async def test_set_mode_swallows_asyncio_timeout(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
-        """String mode variant also completes fire-and-forget."""
-        await radio.set_mode("CW")
+        """When _send_civ_raw raises asyncio.TimeoutError, set_mode must not re-raise."""
+        with patch.object(
+            radio, "_send_civ_raw", side_effect=asyncio.TimeoutError()
+        ):
+            await radio.set_mode(Mode.CW)  # must not raise
         assert radio._last_mode == Mode.CW
 
     @pytest.mark.asyncio
-    async def test_set_mode_with_filter_updates_cache(
+    async def test_set_mode_ack_received_succeeds(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
-        """set_mode with filter_width updates state cache optimistically."""
-        await radio.set_mode(Mode.LSB, filter_width=2)
+        """When ACK arrives, set_mode completes normally and updates _last_mode."""
+        mock_transport.queue_response(_ack_response())
+        await radio.set_mode(Mode.LSB)
         assert radio._last_mode == Mode.LSB
-        assert radio._state_cache.get("mode") == Mode.LSB
-        assert radio._state_cache.get("filter") == 2
 
     @pytest.mark.asyncio
-    async def test_set_mode_does_not_swallow_transport_error(
+    async def test_set_mode_string_timeout_swallowed(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
-        """Transport-layer errors (not ACK timeout) still propagate."""
+        """String mode variant also swallows timeout."""
+        with patch.object(
+            radio, "_send_civ_raw", side_effect=TimeoutError("no ACK")
+        ):
+            await radio.set_mode("USB")
+        assert radio._last_mode == Mode.USB
+
+    @pytest.mark.asyncio
+    async def test_set_mode_does_not_swallow_command_error(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        """CommandError (NAK from radio) must still propagate."""
         from icom_lan.exceptions import CommandError
 
         with patch.object(
@@ -651,268 +659,6 @@ class TestCivTimeoutIsolation:
 
         assert radio._civ_request_tracker.pending_count == 0
 
-        # set_frequency is now fire-and-forget — no ACK needed, must not raise
-        await radio.set_frequency(14_074_000)
-
-
-# ---------------------------------------------------------------------------
-# New tests: fire-and-forget, cache fallback, dedupe, unsolicited frames
-# ---------------------------------------------------------------------------
-
-
-class TestFireAndForget:
-    """SET commands complete in <50ms and update state cache optimistically."""
-
-    @pytest.mark.asyncio
-    async def test_set_frequency_no_response_needed(
-        self, radio: IcomRadio, mock_transport: MockTransport
-    ) -> None:
-        """set_frequency returns without queuing any response."""
-        import time
-
-        t0 = time.monotonic()
-        await radio.set_frequency(14_200_000)
-        elapsed = time.monotonic() - t0
-
-        assert elapsed < 0.05, f"set_frequency took {elapsed:.3f}s (>50ms)"
-        assert len(mock_transport.sent_packets) > 0
-        assert radio._state_cache.get("freq") == 14_200_000
-        assert radio._last_freq_hz == 14_200_000
-
-    @pytest.mark.asyncio
-    async def test_set_power_no_response_needed(
-        self, radio: IcomRadio, mock_transport: MockTransport
-    ) -> None:
-        """set_power returns without waiting for ACK."""
-        await radio.set_power(128)
-        assert radio._state_cache.get("power") == 128
-        assert radio._last_power == 128
-
-    @pytest.mark.asyncio
-    async def test_set_ptt_updates_cache(
-        self, radio: IcomRadio, mock_transport: MockTransport
-    ) -> None:
-        """set_ptt updates state cache optimistically."""
-        await radio.set_ptt(True)
-        assert radio._state_cache.get("ptt") is True
-        await radio.set_ptt(False)
-        assert radio._state_cache.get("ptt") is False
-
-    @pytest.mark.asyncio
-    async def test_set_mode_updates_cache(
-        self, radio: IcomRadio, mock_transport: MockTransport
-    ) -> None:
-        """set_mode updates mode and filter in state cache."""
-        await radio.set_mode(Mode.CW, filter_width=2)
-        assert radio._state_cache.get("mode") == Mode.CW
-        assert radio._state_cache.get("filter") == 2
-
-    @pytest.mark.asyncio
-    async def test_set_frequency_packet_sent(
-        self, radio: IcomRadio, mock_transport: MockTransport
-    ) -> None:
-        """set_frequency sends the CI-V packet."""
-        await radio.set_frequency(7_074_000)
-        assert len(mock_transport.sent_packets) == 1
-
-
-class TestStateCache:
-    """State cache is updated from both SET commands and unsolicited frames."""
-
-    @pytest.mark.asyncio
-    async def test_get_frequency_falls_back_to_cache_on_timeout(
-        self, mock_transport: MockTransport
-    ) -> None:
-        """get_frequency returns cached value when radio doesn't respond."""
-        radio = IcomRadio("192.168.1.100", timeout=0.1)
-        radio._ctrl_transport = mock_transport
-        radio._civ_transport = mock_transport
-        radio._connected = True
-        radio._state_cache["freq"] = 14_074_000
-
-        # No response queued → times out → returns cached value
-        freq = await radio.get_frequency()
-        assert freq == 14_074_000
-
-    @pytest.mark.asyncio
-    async def test_get_mode_falls_back_to_cache_on_timeout(
-        self, mock_transport: MockTransport
-    ) -> None:
-        """get_mode_info returns cached mode when radio doesn't respond."""
-        radio = IcomRadio("192.168.1.100", timeout=0.1)
-        radio._ctrl_transport = mock_transport
-        radio._civ_transport = mock_transport
-        radio._connected = True
-        radio._state_cache["mode"] = Mode.USB
-        radio._state_cache["filter"] = 2
-
-        mode, filt = await radio.get_mode_info()
-        assert mode == Mode.USB
-        assert filt == 2
-
-    @pytest.mark.asyncio
-    async def test_get_power_falls_back_to_cache_on_timeout(
-        self, mock_transport: MockTransport
-    ) -> None:
-        """get_power returns cached power when radio doesn't respond."""
-        radio = IcomRadio("192.168.1.100", timeout=0.1)
-        radio._ctrl_transport = mock_transport
-        radio._civ_transport = mock_transport
-        radio._connected = True
-        radio._state_cache["power"] = 200
-
-        power = await radio.get_power()
-        assert power == 200
-
-    @pytest.mark.asyncio
-    async def test_get_frequency_raises_when_cache_empty(
-        self, mock_transport: MockTransport
-    ) -> None:
-        """get_frequency raises TimeoutError when cache is empty too."""
-        radio = IcomRadio("192.168.1.100", timeout=0.1)
-        radio._ctrl_transport = mock_transport
-        radio._civ_transport = mock_transport
-        radio._connected = True
-        # Empty cache
-
-        with pytest.raises(TimeoutError):
-            await radio.get_frequency()
-
-    @pytest.mark.asyncio
-    async def test_unsolicited_frequency_frame_updates_cache(
-        self, radio: IcomRadio, mock_transport: MockTransport
-    ) -> None:
-        """Unsolicited CI-V frame (radio knob turn) updates state cache.
-
-        Strategy: first do a blocking get_frequency to start the RX pump,
-        then queue an unsolicited 0x00 frame and yield control so the RX
-        loop can process it.
-        """
-        # Seed cache via a real frequency query
-        mock_transport.queue_response(_freq_response(14_074_000))
-        await radio._execute_civ_raw(
-            build_civ_frame(IC_7610_ADDR, CONTROLLER_ADDR, 0x03)
-        )
-        assert radio._state_cache.get("freq") == 14_074_000
-
-        # Now queue an unsolicited 0x00 frame (knob turn → new freq)
-        freq_data = bcd_encode(14_250_000)
-        unsol = build_civ_frame(CONTROLLER_ADDR, IC_7610_ADDR, 0x00, data=freq_data)
-        mock_transport.queue_response(_wrap_civ_in_udp(unsol))
-
-        # Yield control so the RX loop can consume the queued packet
-        await asyncio.sleep(0.05)
-
-        assert radio._state_cache.get("freq") == 14_250_000
-
-    @pytest.mark.asyncio
-    async def test_unsolicited_mode_frame_updates_cache(
-        self, radio: IcomRadio, mock_transport: MockTransport
-    ) -> None:
-        """Unsolicited mode CI-V frame (radio knob turn) updates mode in cache."""
-        # Seed cache via a real mode query first
-        mock_transport.queue_response(_mode_response(Mode.USB, filt=1))
-        await radio._execute_civ_raw(
-            build_civ_frame(IC_7610_ADDR, CONTROLLER_ADDR, 0x04)
-        )
-        assert radio._state_cache.get("mode") == Mode.USB
-
-        # Queue unsolicited 0x01 mode update frame
-        unsol = build_civ_frame(
-            CONTROLLER_ADDR, IC_7610_ADDR, 0x01, data=bytes([Mode.CW, 0x01])
-        )
-        mock_transport.queue_response(_wrap_civ_in_udp(unsol))
-        await asyncio.sleep(0.05)
-
-        assert radio._state_cache.get("mode") == Mode.CW
-
-    @pytest.mark.asyncio
-    async def test_state_cache_property_returns_copy(
-        self, radio: IcomRadio, mock_transport: MockTransport
-    ) -> None:
-        """state_cache property returns a snapshot copy, not a live reference."""
-        radio._state_cache["freq"] = 14_000_000
-        cache1 = radio.state_cache
-        radio._state_cache["freq"] = 7_000_000
-        cache2 = radio.state_cache
-
-        assert cache1["freq"] == 14_000_000
-        assert cache2["freq"] == 7_000_000
-
-
-class TestRapidDedupe:
-    """Rapid SET commands: latest value wins via commander replace mechanism."""
-
-    @pytest.mark.asyncio
-    async def test_rapid_set_frequency_latest_wins(self) -> None:
-        """When many set_frequency calls arrive rapidly, only the latest is sent."""
-        sent: list[bytes] = []
-        pause = asyncio.Event()
-
-        async def execute(cmd: bytes, wait_response: bool = True) -> None:
-            sent.append(cmd)
-            await pause.wait()  # stall so queue builds up
-            return None  # type: ignore[return-value]
-
-        from icom_lan.commander import IcomCommander, Priority
-
-        c = IcomCommander(execute, min_interval=0.0)
-        c.start()
-        try:
-            # First call blocks the worker (paused)
-            t1 = asyncio.create_task(c.send(b"freq1", wait_response=False, key="set_freq", replace=True))
-            await asyncio.sleep(0.005)  # let worker start on freq1
-
-            # Rapid subsequent calls — each replaces the previous in queue
-            t2 = asyncio.create_task(c.send(b"freq2", wait_response=False, key="set_freq", replace=True))
-            t3 = asyncio.create_task(c.send(b"freq3", wait_response=False, key="set_freq", replace=True))
-            t4 = asyncio.create_task(c.send(b"freq4", wait_response=False, key="set_freq", replace=True))
-
-            # t2, t3 get replaced by later calls → their futures resolve immediately
-            await asyncio.sleep(0.01)
-            pause.set()  # unblock worker
-
-            await asyncio.gather(t1, t2, t3, t4, return_exceptions=True)
-        finally:
-            await c.stop()
-
-        # freq1 was already being executed when freq2 arrived
-        # freq2 and freq3 were replaced by freq3 and freq4 respectively
-        # So we expect freq1 (in flight) + freq4 (latest queued)
-        assert b"freq1" in sent
-        assert b"freq4" in sent
-        # freq2 and freq3 should NOT have been sent (replaced)
-        assert b"freq2" not in sent
-        assert b"freq3" not in sent
-
-    @pytest.mark.asyncio
-    async def test_replace_resolves_old_future_with_none(self) -> None:
-        """When a command is replaced, the old future resolves to None (no error)."""
-        pause = asyncio.Event()
-
-        async def execute(cmd: bytes, wait_response: bool = True) -> None:
-            await pause.wait()
-            return None  # type: ignore[return-value]
-
-        from icom_lan.commander import IcomCommander
-
-        c = IcomCommander(execute, min_interval=0.0)
-        c.start()
-        try:
-            t1 = asyncio.create_task(c.send(b"old", wait_response=False, key="k", replace=True))
-            await asyncio.sleep(0.005)  # queue t1
-
-            # t2 replaces t1 in the queue; t1's future resolves with None
-            t2 = asyncio.create_task(c.send(b"new", wait_response=False, key="k", replace=True))
-            await asyncio.sleep(0.005)
-
-            pause.set()
-            result1 = await asyncio.wait_for(t1, timeout=0.5)
-            result2 = await asyncio.wait_for(t2, timeout=0.5)
-
-            # t1 was replaced → resolved with None (no exception)
-            assert result1 is None
-            # t2 was executed → also None (fire-and-forget)
-            assert result2 is None
-        finally:
-            await c.stop()
+        # set_frequency (expects ACK) should succeed
+        mock_transport.queue_response(_ack_response())
+        await radio.set_frequency(14_074_000)  # must not raise

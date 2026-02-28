@@ -216,8 +216,6 @@ class IcomRadio:
         self._last_power: int | None = None
         self._last_split: bool | None = None
         self._last_vfo: str | None = None
-        # Unified state cache: updated optimistically on SET and from unsolicited frames.
-        self._state_cache: dict[str, "Any"] = {}
         self._token_task: asyncio.Task | None = None
         self._auto_reconnect = auto_reconnect
         self._reconnect_delay = reconnect_delay
@@ -254,19 +252,6 @@ class IcomRadio:
     def connected(self) -> bool:
         """Whether the radio is currently connected."""
         return self._connected
-
-    @property
-    def state_cache(self) -> "dict[str, Any]":
-        """Last known rig state, updated from SET commands and unsolicited frames.
-
-        Keys present when data has been observed:
-        - ``"freq"`` (int): Frequency in Hz.
-        - ``"mode"`` (Mode): Operating mode.
-        - ``"filter"`` (int): Filter number (1-3).
-        - ``"power"`` (int): RF power level (0-255).
-        - ``"ptt"`` (bool): PTT state.
-        """
-        return dict(self._state_cache)
 
     def civ_stats(self) -> dict[str, int]:
         """Return CI-V request tracker statistics for monitoring.
@@ -1018,11 +1003,7 @@ class IcomRadio:
             pass
 
     async def _route_civ_frame(self, frame: CivFrame, *, generation: int) -> None:
-        """Route one parsed CI-V frame into command/scope event paths.
-
-        Unsolicited state frames (radio knob turns) are parsed and used to
-        update ``_state_cache`` without blocking any waiter.
-        """
+        """Route one parsed CI-V frame into command/scope event paths."""
         if frame.from_addr != self._radio_addr or frame.to_addr != CONTROLLER_ADDR:
             return
 
@@ -1045,47 +1026,12 @@ class IcomRadio:
         if frame.command == 0xFB:
             event = CivEvent(type=CivEventType.ACK, frame=frame)
         elif frame.command == 0xFA:
-            # NAK from radio — log asynchronously (fire-and-forget SETs don't
-            # block on this, but we still want visibility into rejections).
-            logger.warning(
-                "CI-V NAK received (radio rejected a command) — frame: %s",
-                frame,
-            )
             event = CivEvent(type=CivEventType.NAK, frame=frame)
         else:
-            # Unsolicited state frame: update cache from radio-initiated pushes
-            # (knob turns, VOX, etc.) so GET fallback has fresh data.
-            self._update_state_cache_from_frame(frame)
             event = CivEvent(type=CivEventType.RESPONSE, frame=frame)
 
         self._publish_civ_event(event)
         self._civ_request_tracker.resolve(event, generation=generation)
-
-    def _update_state_cache_from_frame(self, frame: CivFrame) -> None:
-        """Parse an unsolicited CI-V response frame and update ``_state_cache``.
-
-        Called for every non-ACK/NAK frame received from the radio so that
-        the cache stays current even when the user turns a knob.
-        """
-        try:
-            # Frequency: commands 0x00, 0x03, 0x05 carry BCD freq data.
-            if frame.command in (0x00, 0x03, 0x05) and frame.data:
-                freq = parse_frequency_response(frame)
-                self._state_cache["freq"] = freq
-                self._last_freq_hz = freq
-                return
-            # Mode: commands 0x01, 0x04, 0x06 carry mode+filter data.
-            if frame.command in (0x01, 0x04, 0x06) and frame.data:
-                mode, filt = parse_mode_response(frame)
-                self._state_cache["mode"] = mode
-                self._last_mode = mode
-                if filt is not None:
-                    self._state_cache["filter"] = filt
-                    self._filter_width = filt
-                return
-        except (ValueError, IndexError):
-            # Frame does not match expected format — ignore.
-            pass
 
     def _publish_scope_frame(self, frame: ScopeFrame) -> None:
         """Publish a complete scope frame to callback and bounded queue."""
@@ -1528,23 +1474,10 @@ class IcomRadio:
         priority: Priority = Priority.NORMAL,
         key: str | None = None,
         dedupe: bool = False,
-        replace: bool = False,
         wait_response: bool = True,
         timeout: float | None = None,
     ) -> CivFrame | None:
-        """Enqueue a CI-V command and optionally wait for its response.
-
-        Args:
-            civ_frame: Raw CI-V frame bytes.
-            priority: Queue priority.
-            key: Optional deduplication/replacement key.
-            dedupe: If True, share an existing pending future with the same key.
-            replace: If True, cancel the old pending item with the same key
-                (latest-wins); used for rapid fire-and-forget SET commands.
-            wait_response: False = fire-and-forget (returns ``None`` immediately
-                after the packet is sent, no ACK/response wait).
-            timeout: Optional per-call timeout in seconds.
-        """
+        """Enqueue a CI-V command and wait for its response."""
         assert self._civ_transport is not None
         self._ensure_civ_runtime()
 
@@ -1560,7 +1493,6 @@ class IcomRadio:
             priority=priority,
             key=key,
             dedupe=dedupe,
-            replace=replace,
             wait_response=wait_response,
             timeout=timeout,
         )
@@ -1594,31 +1526,13 @@ class IcomRadio:
         if dropped:
             logger.debug("Dropped %d stale ACK sink waiter(s) before blocking command", dropped)
 
-    # Maximum timeout for a single GET response attempt (seconds).
-    # Shorter than the old 5 s default to avoid queue stalls during scope flood.
-    _GET_TIMEOUT = 2.0
-
     async def _execute_civ_raw(
         self,
         civ_frame: bytes,
         wait_response: bool = True,
         deadline_monotonic: float | None = None,
     ) -> CivFrame | None:
-        """Execute one CI-V command via request tracker (serialized by worker).
-
-        For fire-and-forget (``wait_response=False``) commands the method
-        returns ``None`` immediately after the packet is sent.
-
-        For GET commands (``wait_response=True``) a single attempt is made
-        with a timeout capped at ``_GET_TIMEOUT`` (2 s).  On timeout the
-        exception propagates; callers should fall back to ``_state_cache``.
-
-        Args:
-            civ_frame: Raw CI-V bytes (already built by a command helper).
-            wait_response: False = fire-and-forget.
-            deadline_monotonic: Absolute monotonic deadline.  Defaults to
-                ``time.monotonic() + self._timeout``.
-        """
+        """Execute one CI-V command via request tracker (serialized by worker)."""
         assert self._civ_transport is not None
         self._ensure_civ_runtime()
 
@@ -1661,52 +1575,53 @@ class IcomRadio:
 
         await self._drain_ack_sinks_before_blocking()
 
-        remaining_total = deadline_monotonic - time.monotonic()
-        if remaining_total <= 0:
-            raise TimeoutError("CI-V response timed out")
-
-        # Single attempt — no retry loop.  Timeout capped at _GET_TIMEOUT so
-        # a scope-flooded CI-V port does not stall the queue for 5 s.
-        attempt_timeout = min(remaining_total, self._GET_TIMEOUT)
-        pending: asyncio.Future[CivFrame] | None = None
-        try:
-            # Register future BEFORE starting RX pump / sending.
-            if expects_response:
-                pending = self._civ_request_tracker.register_response(request_key)
-            else:
-                pending_or_token = self._civ_request_tracker.register_ack(wait=True)
-                if isinstance(pending_or_token, int):
-                    raise RuntimeError("ACK waiter registration returned sink token")
-                pending = pending_or_token
-
-            # Ensure RX pump is running for event routing.
-            self._start_civ_rx_pump()
-
-            # Rate-limit CI-V commands slightly (wfview-like pacing).
-            now = time.monotonic()
-            delta = now - self._last_civ_send_monotonic
-            if delta < self._civ_min_interval:
-                await asyncio.sleep(self._civ_min_interval - delta)
-
-            pkt = self._wrap_civ(civ_frame)
-            await self._civ_transport.send_tracked(pkt)
-            self._last_civ_send_monotonic = time.monotonic()
-            assert pending is not None
-            return await asyncio.wait_for(pending, timeout=attempt_timeout)
-        except asyncio.TimeoutError:
-            self._civ_request_tracker.note_timeout()
-            logger.debug(
-                "CI-V command 0x%02X timed out after %.2fs",
-                request_key.command,
-                attempt_timeout,
+        attempt = 0
+        while True:
+            remaining_total = deadline_monotonic - time.monotonic()
+            if remaining_total <= 0:
+                raise TimeoutError("CI-V response timed out")
+            attempt += 1
+            pending: asyncio.Future[CivFrame] | None = None
+            attempt_timeout = min(
+                remaining_total,
+                max(0.05, self._civ_retry_slice_timeout),
             )
-            raise TimeoutError(
-                f"CI-V command 0x{request_key.command:02X} timed out "
-                f"(no response within {attempt_timeout:.2f}s)"
-            )
-        finally:
-            if pending is not None:
-                self._civ_request_tracker.unregister(pending)
+            try:
+                # Register future BEFORE starting RX pump / sending.
+                if expects_response:
+                    pending = self._civ_request_tracker.register_response(request_key)
+                else:
+                    pending_or_token = self._civ_request_tracker.register_ack(wait=True)
+                    if isinstance(pending_or_token, int):
+                        raise RuntimeError("ACK waiter registration returned sink token")
+                    pending = pending_or_token
+
+                # Ensure RX pump is running for event routing.
+                self._start_civ_rx_pump()
+
+                # Rate-limit CI-V commands slightly (wfview-like pacing).
+                now = time.monotonic()
+                delta = now - self._last_civ_send_monotonic
+                if delta < self._civ_min_interval:
+                    await asyncio.sleep(self._civ_min_interval - delta)
+
+                pkt = self._wrap_civ(civ_frame)
+                await self._civ_transport.send_tracked(pkt)
+                self._last_civ_send_monotonic = time.monotonic()
+                assert pending is not None
+                return await asyncio.wait_for(pending, timeout=attempt_timeout)
+            except asyncio.TimeoutError:
+                self._civ_request_tracker.note_timeout()
+                logger.debug(
+                    "CI-V command 0x%02X timed out (attempt %d, %.3fs left)",
+                    request_key.command,
+                    attempt,
+                    max(0.0, deadline_monotonic - time.monotonic()),
+                )
+                continue
+            finally:
+                if pending is not None:
+                    self._civ_request_tracker.unregister(pending)
 
     # ------------------------------------------------------------------
     # Public CI-V API
@@ -1736,46 +1651,26 @@ class IcomRadio:
         return await self._send_civ_raw(frame)
 
     async def get_frequency(self) -> int:
-        """Get the current operating frequency in Hz.
-
-        On timeout falls back to the last cached frequency.  Raises
-        ``TimeoutError`` only when the cache is also empty.
-        """
+        """Get the current operating frequency in Hz."""
         self._check_connected()
         civ = get_frequency(to_addr=self._radio_addr)
-        try:
-            resp = await self._send_civ_raw(civ, key="get_frequency", dedupe=True)
-            freq = parse_frequency_response(resp)
-        except TimeoutError:
-            cached = self._state_cache.get("freq")
-            if cached is not None:
-                logger.debug("get_frequency: timed out, returning cached %d Hz", cached)
-                return int(cached)
-            raise
-        self._state_cache["freq"] = freq
+        resp = await self._send_civ_raw(civ, key="get_frequency", dedupe=True)
+        freq = parse_frequency_response(resp)
         self._last_freq_hz = freq
         return freq
 
     async def set_frequency(self, freq_hz: int) -> None:
         """Set the operating frequency.
 
-        Fire-and-forget: the command is sent immediately without waiting for
-        ACK.  Rapid calls with the same key replace earlier queued commands
-        (latest-wins).  NAK frames are logged asynchronously.
-
         Args:
             freq_hz: Frequency in Hz.
         """
         self._check_connected()
         civ = set_frequency(freq_hz, to_addr=self._radio_addr)
-        await self._send_civ_raw(
-            civ,
-            wait_response=False,
-            key="set_freq",
-            replace=True,
-        )
-        # Optimistic cache update — state_cache is the single source of truth.
-        self._state_cache["freq"] = freq_hz
+        resp = await self._send_civ_raw(civ)
+        ack = parse_ack_nak(resp)
+        if ack is False:
+            raise CommandError(f"Radio rejected set_frequency({freq_hz})")
         self._last_freq_hz = freq_hz
 
     async def get_mode(self) -> Mode:
@@ -1784,31 +1679,13 @@ class IcomRadio:
         return mode
 
     async def get_mode_info(self) -> tuple[Mode, int | None]:
-        """Get current mode and filter number (if reported by radio).
-
-        On timeout falls back to the state cache.  Raises ``TimeoutError``
-        only when the cache has no mode entry.
-        """
+        """Get current mode and filter number (if reported by radio)."""
         self._check_connected()
         civ = get_mode(to_addr=self._radio_addr)
-        try:
-            resp = await self._send_civ_raw(civ)
-            mode, filt = parse_mode_response(resp)
-        except TimeoutError:
-            cached_mode = self._state_cache.get("mode")
-            if cached_mode is not None:
-                cached_filt = self._state_cache.get("filter")
-                logger.debug(
-                    "get_mode_info: timed out, returning cached mode=%s filter=%s",
-                    cached_mode,
-                    cached_filt,
-                )
-                return cached_mode, cached_filt
-            raise
-        self._state_cache["mode"] = mode
+        resp = await self._send_civ_raw(civ)
+        mode, filt = parse_mode_response(resp)
         self._last_mode = mode
         if filt is not None:
-            self._state_cache["filter"] = filt
             self._filter_width = filt
         return mode, filt
 
@@ -1822,13 +1699,13 @@ class IcomRadio:
         mode = await self.get_mode()
         await self.set_mode(mode, filter_width=filter_width)
 
+    # IC-7610 sometimes does not ACK set_mode (known quirk, also seen in
+    # wfview/rigctld). Use a short timeout to avoid blocking the CI-V queue
+    # for the full default timeout. The error is swallowed and logged.
+    _SET_MODE_ACK_TIMEOUT = 2.0  # seconds
+
     async def set_mode(self, mode: Mode | str, filter_width: int | None = None) -> None:
         """Set the operating mode.
-
-        Fire-and-forget: the command is sent without waiting for ACK.  The
-        IC-7610 sometimes does not ACK set_mode — with fire-and-forget this
-        quirk no longer causes a queue stall.  Rapid calls replace earlier
-        queued commands (latest-wins).
 
         Args:
             mode: Mode enum or string name (e.g. "USB", "LSB").
@@ -1838,16 +1715,14 @@ class IcomRadio:
         if isinstance(mode, str):
             mode = Mode[mode]
         civ = set_mode(mode, filter_width=filter_width, to_addr=self._radio_addr)
-        await self._send_civ_raw(
-            civ,
-            wait_response=False,
-            key="set_mode",
-            replace=True,
-        )
-        # Optimistic cache update.
-        self._state_cache["mode"] = mode
-        if filter_width is not None:
-            self._state_cache["filter"] = filter_width
+        try:
+            await self._send_civ_raw(civ, timeout=self._SET_MODE_ACK_TIMEOUT)
+        except (TimeoutError, asyncio.TimeoutError):
+            logger.warning(
+                "set_mode(%s): ACK not received within %.1fs (known IC-7610 quirk)",
+                mode.name,
+                self._SET_MODE_ACK_TIMEOUT,
+            )
         self._last_mode = mode
         if filter_width is not None:
             self._filter_width = filter_width
@@ -1877,43 +1752,26 @@ class IcomRadio:
             raise CommandError(f"Radio rejected set_data_mode({on})")
 
     async def get_power(self) -> int:
-        """Get the RF power level (0-255).
-
-        On timeout falls back to the state cache.  Raises ``TimeoutError``
-        only when the cache has no power entry.
-        """
+        """Get the RF power level (0-255)."""
         self._check_connected()
         civ = get_power(to_addr=self._radio_addr)
-        try:
-            resp = await self._send_civ_raw(civ, key="get_power", dedupe=True)
-            level = _level_bcd_decode(resp.data)
-        except TimeoutError:
-            cached = self._state_cache.get("power")
-            if cached is not None:
-                logger.debug("get_power: timed out, returning cached %d", cached)
-                return int(cached)
-            raise
-        self._state_cache["power"] = level
+        resp = await self._send_civ_raw(civ, key="get_power", dedupe=True)
+        level = _level_bcd_decode(resp.data)
         self._last_power = level
         return level
 
     async def set_power(self, level: int) -> None:
         """Set the RF power level (0-255).
 
-        Fire-and-forget: sent without waiting for ACK.
-
         Args:
             level: Power level 0-255.
         """
         self._check_connected()
         civ = set_power(level, to_addr=self._radio_addr)
-        await self._send_civ_raw(
-            civ,
-            wait_response=False,
-            key="set_power",
-            replace=True,
-        )
-        self._state_cache["power"] = level
+        resp = await self._send_civ_raw(civ)
+        ack = parse_ack_nak(resp)
+        if ack is False:
+            raise CommandError(f"Radio rejected set_power({level})")
         self._last_power = level
 
     async def get_s_meter(self) -> int:
@@ -1940,9 +1798,6 @@ class IcomRadio:
     async def set_ptt(self, on: bool) -> None:
         """Toggle PTT (Push-To-Talk).
 
-        Fire-and-forget: sent at IMMEDIATE priority without waiting for ACK.
-        Rapid calls replace earlier queued commands (latest-wins).
-
         Args:
             on: True for TX, False for RX.
         """
@@ -1952,14 +1807,10 @@ class IcomRadio:
             if on
             else ptt_off(to_addr=self._radio_addr)
         )
-        await self._send_civ_raw(
-            civ,
-            priority=Priority.IMMEDIATE,
-            wait_response=False,
-            key="set_ptt",
-            replace=True,
-        )
-        self._state_cache["ptt"] = on
+        resp = await self._send_civ_raw(civ, priority=Priority.IMMEDIATE)
+        ack = parse_ack_nak(resp)
+        if ack is False:
+            raise CommandError(f"Radio rejected PTT {'on' if on else 'off'}")
 
     # ------------------------------------------------------------------
     # VFO / Split
@@ -2033,8 +1884,6 @@ class IcomRadio:
     ) -> None:
         """Set attenuator level in dB (Command29-aware).
 
-        Fire-and-forget: sent without waiting for ACK.
-
         Args:
             db: Attenuation in dB (0..45 in 3 dB steps).
             receiver: RECEIVER_MAIN (0) or RECEIVER_SUB (1).
@@ -2043,27 +1892,20 @@ class IcomRadio:
         if db < 0 or db > 45 or db % 3 != 0:
             raise ValueError(f"Attenuator level must be 0..45 in 3 dB steps, got {db}")
         civ = set_attenuator_level(db, to_addr=self._radio_addr, receiver=receiver)
-        await self._send_civ_raw(
-            civ,
-            wait_response=False,
-            key="set_attenuator",
-            replace=True,
-        )
+        resp = await self._send_civ_raw(civ)
+        ack = parse_ack_nak(resp)
+        if ack is False:
+            raise CommandError(f"Radio rejected attenuator level {db}")
         self._attenuator_state = db > 0
 
     async def set_attenuator(self, on: bool, receiver: int = RECEIVER_MAIN) -> None:
-        """Enable or disable attenuator (compat wrapper, Command29-aware).
-
-        Fire-and-forget: sent without waiting for ACK.
-        """
+        """Enable or disable attenuator (compat wrapper, Command29-aware)."""
         self._check_connected()
         civ = set_attenuator(on, to_addr=self._radio_addr, receiver=receiver)
-        await self._send_civ_raw(
-            civ,
-            wait_response=False,
-            key="set_attenuator",
-            replace=True,
-        )
+        resp = await self._send_civ_raw(civ)
+        ack = parse_ack_nak(resp)
+        if ack is False:
+            raise CommandError(f"Radio rejected attenuator {'on' if on else 'off'}")
         self._attenuator_state = on
 
     async def get_preamp(self, receiver: int = RECEIVER_MAIN) -> int:
@@ -2116,12 +1958,10 @@ class IcomRadio:
                 pass  # Unexpected error — proceed anyway
 
         civ = set_preamp(level, to_addr=self._radio_addr, receiver=receiver)
-        await self._send_civ_raw(
-            civ,
-            wait_response=False,
-            key="set_preamp",
-            replace=True,
-        )
+        resp = await self._send_civ_raw(civ)
+        ack = parse_ack_nak(resp)
+        if ack is False:
+            raise CommandError(f"Radio rejected preamp level {level}")
         self._preamp_level = level
 
     async def get_digisel(self) -> bool:

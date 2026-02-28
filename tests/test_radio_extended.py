@@ -176,8 +176,9 @@ class TestAttenuator:
     async def test_att_nak(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
-        # set_attenuator is fire-and-forget: NAK is logged but not raised
-        await radio.set_attenuator(True)  # must not raise
+        mock_transport.queue_response(_nak_response())
+        with pytest.raises(CommandError):
+            await radio.set_attenuator(True)
 
     @pytest.mark.asyncio
     async def test_att_disconnected(self) -> None:
@@ -199,7 +200,9 @@ class TestPreamp:
         mock_transport.queue_response(
             _digisel_off_response()
         )  # pre-flight DIGI-SEL check (send #1)
-        # set_preamp is fire-and-forget: no ACK response needed for send #2
+        mock_transport.queue_response_on_send(
+            2, _ack_response()
+        )  # set_preamp ACK (send #2)
         await radio.set_preamp(1)
 
     @pytest.mark.asyncio
@@ -209,7 +212,9 @@ class TestPreamp:
         mock_transport.queue_response(
             _digisel_off_response()
         )  # pre-flight DIGI-SEL check (send #1)
-        # set_preamp is fire-and-forget: no ACK response needed for send #2
+        mock_transport.queue_response_on_send(
+            2, _ack_response()
+        )  # set_preamp ACK (send #2)
         await radio.set_preamp(2)
 
     @pytest.mark.asyncio
@@ -227,8 +232,11 @@ class TestPreamp:
         mock_transport.queue_response(
             _digisel_off_response()
         )  # pre-flight DIGI-SEL check (send #1)
-        # set_preamp is fire-and-forget: NAK is logged but not raised
-        await radio.set_preamp(1)  # must not raise
+        mock_transport.queue_response_on_send(
+            2, _nak_response()
+        )  # set_preamp NAK (send #2)
+        with pytest.raises(CommandError):
+            await radio.set_preamp(1)
 
     @pytest.mark.asyncio
     async def test_preamp_disconnected(self) -> None:
@@ -453,8 +461,9 @@ class TestPttDisconnected:
     async def test_ptt_nak(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
-        # set_ptt is fire-and-forget: NAK is logged but not raised
-        await radio.set_ptt(True)  # must not raise
+        mock_transport.queue_response(_nak_response())
+        with pytest.raises(CommandError):
+            await radio.set_ptt(True)
 
 
 # ---------------------------------------------------------------------------

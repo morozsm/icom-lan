@@ -149,12 +149,6 @@ class ControlHandler:
                 self._subscribed_streams.discard(str(s))
 
     async def _send_state_snapshot(self) -> None:
-        """Send a state snapshot to the client.
-
-        Reads from the radio's state cache (no network round-trips) so the
-        snapshot is instant even when scope is flooding the CI-V port.  Cache
-        values are populated from SET commands and unsolicited radio frames.
-        """
         data: dict[str, Any] = {
             "freq_a": 0,
             "freq_b": 0,
@@ -172,18 +166,15 @@ class ControlHandler:
             },
         }
         if self._radio is not None:
-            cache = self._radio.state_cache
-            if "freq" in cache:
-                data["freq_a"] = cache["freq"]
-            if "mode" in cache:
-                mode = cache["mode"]
-                data["mode"] = mode.name if hasattr(mode, "name") else str(mode)
-            if "filter" in cache:
-                data["filter"] = f"FIL{cache['filter']}"
-            if "power" in cache:
-                data["power"] = cache["power"]
-            if "ptt" in cache:
-                data["ptt"] = cache["ptt"]
+            try:
+                data["freq_a"] = await self._radio.get_frequency()
+                data["mode"] = (await self._radio.get_mode()).name
+                data["power"] = await self._radio.get_power()
+                fil = await self._radio.get_filter()
+                if fil is not None:
+                    data["filter"] = f"FIL{fil}"
+            except Exception as exc:
+                logger.debug("control: state snapshot partial failure: %s", exc)
         msg = {"type": "state", "data": data}
         await self._ws.send_text(encode_json(msg))
 
