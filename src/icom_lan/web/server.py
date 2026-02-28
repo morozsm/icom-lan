@@ -102,12 +102,25 @@ class WebServer:
             if self._radio is not None:
                 self._radio.on_scope_data(self._broadcast_scope)
             if not self._scope_enabled and self._radio is not None:
-                try:
-                    await self._radio.enable_scope(policy="fast")
-                    self._scope_enabled = True
-                    logger.info("scope: enabled on radio")
-                except Exception:
-                    logger.warning("scope: failed to enable", exc_info=True)
+                for attempt in range(3):
+                    try:
+                        await self._radio.enable_scope(
+                            policy="verify", timeout=3.0,
+                        )
+                        self._scope_enabled = True
+                        logger.info("scope: enabled on radio")
+                        break
+                    except Exception:
+                        if attempt < 2:
+                            logger.info(
+                                "scope: enable attempt %d failed, retrying",
+                                attempt + 1,
+                            )
+                        else:
+                            logger.warning(
+                                "scope: failed to enable after 3 attempts",
+                                exc_info=True,
+                            )
 
     def unregister_scope_handler(self, handler: "ScopeHandler") -> None:
         """Unregister a scope handler."""
