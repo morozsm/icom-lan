@@ -57,8 +57,13 @@ class _ControlPhaseMixin:
         self._conn_state = RadioConnectionState.CONNECTING  # type: ignore[attr-defined]
 
         # --- Phase 1: Control port ---
+        # On reconnect, skip discovery — reuse cached remote_id.
+        _reconnect = getattr(self, "_has_connected_once", False)
         try:
-            await self._ctrl_transport.connect(self._host, self._port)  # type: ignore[attr-defined]
+            if _reconnect:
+                await self._ctrl_transport.reconnect(self._host, self._port)  # type: ignore[attr-defined]
+            else:
+                await self._ctrl_transport.connect(self._host, self._port)  # type: ignore[attr-defined]
         except OSError as exc:
             raise ConnectionError(
                 f"Failed to connect to {self._host}:{self._port}: {exc}"  # type: ignore[attr-defined]
@@ -171,6 +176,7 @@ class _ControlPhaseMixin:
         self._start_token_renewal()
         if self._auto_reconnect:  # type: ignore[attr-defined]
             self._start_watchdog()
+        self._has_connected_once = True  # type: ignore[attr-defined]
         logger.info(
             "Connected to %s (control=%d, civ=%d)",
             self._host,  # type: ignore[attr-defined]

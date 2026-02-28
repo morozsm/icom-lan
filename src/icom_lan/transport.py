@@ -128,6 +128,41 @@ class IcomTransport:
 
         logger.info("Discovery complete, remote_id=0x%08X", self.remote_id)
 
+    async def reconnect(self, host: str, port: int) -> None:
+        """Reconnect to a known radio, skipping discovery.
+
+        Reuses the previously learned ``remote_id`` and skips the
+        Are-You-There/I-Am-Here exchange.  Falls back to full discovery
+        if no ``remote_id`` is cached.
+        """
+        if self.remote_id == 0:
+            # No cached remote_id — do full connect
+            await self.connect(host, port)
+            return
+
+        saved_remote_id = self.remote_id
+        self.state = ConnectionState.CONNECTING
+        loop = asyncio.get_event_loop()
+        await loop.create_datagram_endpoint(
+            lambda: _UdpProtocol(self),
+            remote_addr=(host, port),
+        )
+        if self._udp_transport is not None:
+            info = self._udp_transport.get_extra_info("sockname")
+            if info:
+                lport = info[1] if isinstance(info, tuple) else 0
+                self.my_id = (lport & 0xFFFF) | 0x10000
+        logger.info(
+            "UDP reconnect to %s:%d, my_id=0x%08X (reusing remote_id=0x%08X)",
+            host, port, self.my_id, saved_remote_id,
+        )
+        self.remote_id = saved_remote_id
+
+        # Skip discovery, go straight to ready handshake
+        await self._ready_handshake()
+
+        logger.info("Reconnect complete, remote_id=0x%08X", self.remote_id)
+
     async def _discover(self) -> None:
         """Send 'Are You There' and wait for 'I Am Here' to learn remote_id.
 
