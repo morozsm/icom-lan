@@ -1,6 +1,7 @@
 """Tests for IcomRadio connect/disconnect lifecycle and internal helpers."""
 
 import struct
+import time
 
 import pytest
 
@@ -172,6 +173,22 @@ class TestReceiveCivPort:
         mt.queue_response(_build_status(50004))
         port = await radio._receive_civ_port()
         assert port == 50004
+
+    @pytest.mark.asyncio
+    async def test_two_zero_status_packets_return_quickly(self) -> None:
+        radio = IcomRadio("192.168.1.100", timeout=5.0)
+        mt = ConnectMockTransport()
+        radio._ctrl_transport = mt
+        mt.queue_response(_build_status(0, 50003))
+        mt.queue_response(_build_status(0, 50003))
+
+        start = time.monotonic()
+        port = await radio._receive_civ_port()
+        elapsed = time.monotonic() - start
+
+        assert port == 0
+        assert radio._audio_port == 50003
+        assert elapsed < 1.0
 
 
 class TestSendOpenClose:
