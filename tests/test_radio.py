@@ -589,3 +589,76 @@ class TestSetModeTimeout:
         ):
             with pytest.raises(CommandError):
                 await radio.set_mode(Mode.USB)
+
+
+# ---------------------------------------------------------------------------
+# #48 regression: CI-V timeout isolation
+# ---------------------------------------------------------------------------
+
+
+class TestCivTimeoutIsolation:
+    """A CI-V timeout must not corrupt state for subsequent commands (#48)."""
+
+    @pytest.mark.asyncio
+    async def test_timeout_does_not_affect_subsequent_command(
+        self, mock_transport: MockTransport
+    ) -> None:
+        """After a CI-V timeout, the next command must succeed independently."""
+        radio = IcomRadio("192.168.1.100", timeout=0.1)
+        radio._ctrl_transport = mock_transport
+        radio._civ_transport = mock_transport
+        radio._connected = True
+
+        # First command: no response → times out
+        with pytest.raises(TimeoutError):
+            await radio.get_frequency()
+
+        # Tracker must be clean — no stale waiters
+        assert radio._civ_request_tracker.pending_count == 0
+
+        # Second command: queue response before calling
+        mock_transport.queue_response(_freq_response(7_074_000))
+        freq = await radio.get_frequency()
+        assert freq == 7_074_000
+
+    @pytest.mark.asyncio
+    async def test_multiple_timeouts_followed_by_success(
+        self, mock_transport: MockTransport
+    ) -> None:
+        """Multiple consecutive timeouts do not corrupt tracker state."""
+        radio = IcomRadio("192.168.1.100", timeout=0.1)
+        radio._ctrl_transport = mock_transport
+        radio._civ_transport = mock_transport
+        radio._connected = True
+
+        # Two timeouts in a row
+        for _ in range(2):
+            with pytest.raises(TimeoutError):
+                await radio.get_frequency()
+
+        assert radio._civ_request_tracker.pending_count == 0
+
+        # Then a successful command
+        mock_transport.queue_response(_freq_response(14_074_000))
+        freq = await radio.get_frequency()
+        assert freq == 14_074_000
+
+    @pytest.mark.asyncio
+    async def test_timeout_then_different_command_succeeds(
+        self, mock_transport: MockTransport
+    ) -> None:
+        """A timeout on get_frequency does not block a subsequent set_frequency."""
+        radio = IcomRadio("192.168.1.100", timeout=0.1)
+        radio._ctrl_transport = mock_transport
+        radio._civ_transport = mock_transport
+        radio._connected = True
+
+        # get_frequency times out
+        with pytest.raises(TimeoutError):
+            await radio.get_frequency()
+
+        assert radio._civ_request_tracker.pending_count == 0
+
+        # set_frequency (expects ACK) should succeed
+        mock_transport.queue_response(_ack_response())
+        await radio.set_frequency(14_074_000)  # must not raise

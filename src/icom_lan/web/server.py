@@ -53,6 +53,8 @@ class WebConfig:
         static_dir: Directory to serve static files from.
         radio_model: Radio model string for the hello/info response.
         max_clients: Maximum concurrent WebSocket clients.
+        keepalive_interval: Seconds between WebSocket keepalive pings.
+            Set to a very large value (e.g. 9999) to disable during tests.
     """
 
     host: str = "0.0.0.0"
@@ -60,6 +62,7 @@ class WebConfig:
     static_dir: pathlib.Path = field(default_factory=lambda: _DEFAULT_STATIC_DIR)
     radio_model: str = _RADIO_MODEL
     max_clients: int = 100
+    keepalive_interval: float = WS_KEEPALIVE_INTERVAL
 
 
 class WebServer:
@@ -81,6 +84,7 @@ class WebServer:
         self._client_tasks: set[asyncio.Task[None]] = set()
         self._scope_handlers: set["ScopeHandler"] = set()
         self._scope_enabled = False
+        self._scope_enable_lock: asyncio.Lock = asyncio.Lock()
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -90,18 +94,20 @@ class WebServer:
         """Register a scope handler and enable scope on radio if needed.
 
         This is the single entry point for scope lifecycle — handlers must
-        not call enable_scope() directly.
+        not call enable_scope() directly. Uses a lock to guarantee that
+        enable_scope() is called at most once regardless of concurrent callers.
         """
-        self._scope_handlers.add(handler)
-        if self._radio is not None:
-            self._radio.on_scope_data(self._broadcast_scope)
-        if not self._scope_enabled and self._radio is not None:
-            try:
-                await self._radio.enable_scope()
-                self._scope_enabled = True
-                logger.info("scope: enabled on radio")
-            except Exception:
-                logger.warning("scope: failed to enable", exc_info=True)
+        async with self._scope_enable_lock:
+            self._scope_handlers.add(handler)
+            if self._radio is not None:
+                self._radio.on_scope_data(self._broadcast_scope)
+            if not self._scope_enabled and self._radio is not None:
+                try:
+                    await self._radio.enable_scope()
+                    self._scope_enabled = True
+                    logger.info("scope: enabled on radio")
+                except Exception:
+                    logger.warning("scope: failed to enable", exc_info=True)
 
     def unregister_scope_handler(self, handler: "ScopeHandler") -> None:
         """Unregister a scope handler."""
@@ -109,7 +115,9 @@ class WebServer:
         if not self._scope_handlers and self._radio is not None:
             self._radio.on_scope_data(None)
             if self._scope_enabled:
-                self._scope_enabled = False
+                # Do NOT reset _scope_enabled here — let the async task do it
+                # after disable_scope() succeeds, so a reconnecting handler
+                # sees the correct state and skips a redundant enable_scope().
                 loop = asyncio.get_event_loop()
                 loop.create_task(self._disable_scope_async())
 
@@ -117,9 +125,20 @@ class WebServer:
         """Disable scope on the radio when no more handlers are connected."""
         if self._radio is None:
             return
+        # A new handler may have connected while this task was scheduled.
+        if self._scope_handlers:
+            logger.debug("scope: disable task aborted — new handler connected")
+            return
         try:
             await self._radio.disable_scope()
-            logger.info("scope: disabled on radio (no active handlers)")
+            # Double-check: another handler may have connected during the await.
+            if not self._scope_handlers:
+                self._scope_enabled = False
+                logger.info("scope: disabled on radio (no active handlers)")
+            else:
+                logger.debug("scope: disable succeeded but new handler present — re-enabling")
+                # Re-register broadcast so the new handler gets data.
+                self._radio.on_scope_data(self._broadcast_scope)
         except Exception:
             logger.warning("scope: failed to disable on radio", exc_info=True)
 
@@ -423,7 +442,7 @@ class WebServer:
             "ws connect: %s %s:%s (active=%d)",
             path, peer[0], peer[1], len(self._client_tasks),
         )
-        keepalive = asyncio.create_task(ws.keepalive_loop(WS_KEEPALIVE_INTERVAL))
+        keepalive = asyncio.create_task(ws.keepalive_loop(self._config.keepalive_interval))
         try:
             await handler.run()
         except Exception as exc:

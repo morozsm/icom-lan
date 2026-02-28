@@ -170,6 +170,9 @@ class ControlHandler:
                 data["freq_a"] = await self._radio.get_frequency()
                 data["mode"] = (await self._radio.get_mode()).name
                 data["power"] = await self._radio.get_power()
+                fil = await self._radio.get_filter()
+                if fil is not None:
+                    data["filter"] = f"FIL{fil}"
             except Exception as exc:
                 logger.debug("control: state snapshot partial failure: %s", exc)
         msg = {"type": "state", "data": data}
@@ -399,7 +402,7 @@ class ScopeHandler:
         Args:
             frame: Scope frame to forward to the client.
         """
-        self._on_scope_frame(frame)
+        self.enqueue_frame(frame)
 
 
 class MetersHandler:

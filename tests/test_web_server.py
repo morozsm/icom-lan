@@ -217,7 +217,9 @@ def mock_radio() -> MagicMock:
 
 @pytest.fixture
 async def server(mock_radio: MagicMock) -> WebServer:
-    config = WebConfig(host="127.0.0.1", port=0)
+    # keepalive_interval=9999 disables keepalive pings during tests to prevent
+    # spurious ping frames from interfering with test assertions. (#45)
+    config = WebConfig(host="127.0.0.1", port=0, keepalive_interval=9999.0)
     srv = WebServer(mock_radio, config)
     await srv.start()
     yield srv
@@ -226,7 +228,7 @@ async def server(mock_radio: MagicMock) -> WebServer:
 
 @pytest.fixture
 async def server_no_radio() -> WebServer:
-    config = WebConfig(host="127.0.0.1", port=0)
+    config = WebConfig(host="127.0.0.1", port=0, keepalive_interval=9999.0)
     srv = WebServer(None, config)
     await srv.start()
     yield srv
@@ -1399,3 +1401,294 @@ class TestCacheControl:
         assert status == 200
         data = json.loads(body)
         assert data["server"] == "icom-lan"
+
+
+# ---------------------------------------------------------------------------
+# #44 regression: ScopeHandler.push_frame must call enqueue_frame
+# ---------------------------------------------------------------------------
+
+
+class TestScopeHandlerPushFrame:
+    """push_frame() must enqueue frames without AttributeError (#44)."""
+
+    def test_push_frame_does_not_raise(self) -> None:
+        """push_frame() was calling self._on_scope_frame which doesn't exist."""
+        from icom_lan.web.handlers import ScopeHandler
+        from icom_lan.web.websocket import WebSocketConnection
+
+        mock_ws = MagicMock(spec=WebSocketConnection)
+        handler = ScopeHandler(mock_ws, None)
+        handler._running = True
+
+        frame = ScopeFrame(0, 0, 14_000_000, 14_350_000, bytes(10), False)
+        handler.push_frame(frame)  # must not raise AttributeError
+        assert handler._frame_queue.qsize() == 1
+
+    def test_push_frame_not_running_is_noop(self) -> None:
+        """push_frame() when not running must be a no-op."""
+        from icom_lan.web.handlers import ScopeHandler
+        from icom_lan.web.websocket import WebSocketConnection
+
+        mock_ws = MagicMock(spec=WebSocketConnection)
+        handler = ScopeHandler(mock_ws, None)
+        handler._running = False
+
+        frame = ScopeFrame(0, 0, 14_000_000, 14_350_000, bytes(10), False)
+        handler.push_frame(frame)
+        assert handler._frame_queue.qsize() == 0
+
+    def test_push_frame_increments_sequence(self) -> None:
+        from icom_lan.web.handlers import ScopeHandler
+        from icom_lan.web.websocket import WebSocketConnection
+
+        mock_ws = MagicMock(spec=WebSocketConnection)
+        handler = ScopeHandler(mock_ws, None)
+        handler._running = True
+
+        frame = ScopeFrame(0, 0, 14_000_000, 14_350_000, bytes(5), False)
+        handler.push_frame(frame)
+        handler.push_frame(frame)
+        assert handler._seq == 2
+
+
+# ---------------------------------------------------------------------------
+# #45 regression: Configurable keepalive interval
+# ---------------------------------------------------------------------------
+
+
+class TestConfigurableKeepalive:
+    """WebConfig.keepalive_interval is honoured by the server (#45)."""
+
+    def test_webconfig_has_keepalive_interval(self) -> None:
+        from icom_lan.web.websocket import WS_KEEPALIVE_INTERVAL
+
+        cfg = WebConfig()
+        assert hasattr(cfg, "keepalive_interval")
+        assert cfg.keepalive_interval == WS_KEEPALIVE_INTERVAL
+
+    def test_webconfig_custom_interval(self) -> None:
+        cfg = WebConfig(keepalive_interval=5.0)
+        assert cfg.keepalive_interval == 5.0
+
+    async def test_large_interval_no_pings_during_short_test(self) -> None:
+        """With keepalive_interval=9999, no ping frames arrive in a short test."""
+        config = WebConfig(host="127.0.0.1", port=0, keepalive_interval=9999.0)
+        async with WebServer(None, config) as srv:
+            host, port = _addr(srv)
+            reader, writer, _ = await _ws_connect(host, port, "/api/v1/ws")
+            try:
+                # Collect frames for 100ms — should get hello but no pings
+                frames = []
+                try:
+                    while True:
+                        opcode, payload = await asyncio.wait_for(
+                            _ws_recv_frame(reader), timeout=0.1
+                        )
+                        frames.append((opcode, payload))
+                except asyncio.TimeoutError:
+                    pass
+                # Should have received exactly the hello text frame
+                assert len(frames) >= 1
+                assert frames[0][0] == WS_OP_TEXT
+                msg = json.loads(frames[0][1])
+                assert msg["type"] == "hello"
+            finally:
+                await _close_ws(writer)
+
+
+# ---------------------------------------------------------------------------
+# #46 regression: Atomic scope enable (asyncio.Lock prevents duplicate calls)
+# ---------------------------------------------------------------------------
+
+
+class TestScopeEnableAtomic:
+    """ensure_scope_enabled() must call enable_scope() exactly once even when
+    multiple handlers connect concurrently (#46)."""
+
+    async def test_enable_scope_called_once_for_concurrent_handlers(self) -> None:
+        radio = MagicMock()
+        radio.on_scope_data = MagicMock()
+        radio.enable_scope = AsyncMock()
+        radio.disable_scope = AsyncMock()
+
+        server = WebServer(radio)
+        handlers = [MagicMock() for _ in range(5)]
+
+        # Call ensure_scope_enabled for all 5 handlers concurrently
+        await asyncio.gather(*[server.ensure_scope_enabled(h) for h in handlers])
+
+        radio.enable_scope.assert_awaited_once()
+        assert len(server._scope_handlers) == 5
+
+    async def test_all_handlers_registered_after_concurrent_enables(self) -> None:
+        radio = MagicMock()
+        radio.on_scope_data = MagicMock()
+        radio.enable_scope = AsyncMock()
+        radio.disable_scope = AsyncMock()
+
+        server = WebServer(radio)
+        handlers = [MagicMock() for _ in range(5)]
+
+        await asyncio.gather(*[server.ensure_scope_enabled(h) for h in handlers])
+
+        for h in handlers:
+            assert h in server._scope_handlers
+
+    async def test_server_responsive_after_connect_disconnect_cycles(self) -> None:
+        """HTTP endpoint must return 200 after several WS connect/disconnect cycles."""
+        config = WebConfig(host="127.0.0.1", port=0, keepalive_interval=9999.0)
+        radio = MagicMock()
+        radio.on_scope_data = MagicMock()
+        radio.enable_scope = AsyncMock()
+        radio.disable_scope = AsyncMock()
+
+        async with WebServer(radio, config) as srv:
+            host, port = _addr(srv)
+
+            for _ in range(3):
+                reader, writer, _ = await _ws_connect(host, port, "/api/v1/scope")
+                await _close_ws(writer)
+                await asyncio.sleep(0.02)
+
+            status, _, _ = await _http_get(host, port, "/api/v1/info")
+            assert status == 200
+
+    async def test_enable_scope_called_once_when_first_of_many_registers(
+        self,
+    ) -> None:
+        """Sequential registrations only enable scope once too."""
+        radio = MagicMock()
+        radio.on_scope_data = MagicMock()
+        radio.enable_scope = AsyncMock()
+        radio.disable_scope = AsyncMock()
+
+        server = WebServer(radio)
+
+        h1, h2, h3 = MagicMock(), MagicMock(), MagicMock()
+        await server.ensure_scope_enabled(h1)
+        await server.ensure_scope_enabled(h2)
+        await server.ensure_scope_enabled(h3)
+
+        radio.enable_scope.assert_awaited_once()
+
+
+# ---------------------------------------------------------------------------
+# #47 regression: Scope re-enable after full disconnect/reconnect
+# ---------------------------------------------------------------------------
+
+
+class TestScopeReconnect:
+    """After all handlers disconnect and a new one connects, scope must flow (#47)."""
+
+    async def test_scope_enabled_not_reset_eagerly(self) -> None:
+        """_scope_enabled must remain True immediately after last handler disconnects,
+        until disable_scope() actually completes."""
+        radio = MagicMock()
+        radio.on_scope_data = MagicMock()
+        radio.enable_scope = AsyncMock()
+
+        disable_started = asyncio.Event()
+        disable_done = asyncio.Event()
+
+        async def slow_disable() -> None:
+            disable_started.set()
+            await disable_done.wait()
+
+        radio.disable_scope = AsyncMock(side_effect=slow_disable)
+
+        server = WebServer(radio)
+        h = MagicMock()
+        await server.ensure_scope_enabled(h)
+        assert server._scope_enabled
+
+        server.unregister_scope_handler(h)
+
+        # Give the disable task a chance to start
+        await asyncio.wait_for(disable_started.wait(), timeout=1.0)
+
+        # _scope_enabled must still be True while disable is in-flight
+        assert server._scope_enabled, "_scope_enabled must not reset before disable completes"
+
+        # Unblock disable_scope
+        disable_done.set()
+        await asyncio.sleep(0.05)
+        assert not server._scope_enabled
+
+    async def test_enable_scope_called_again_after_full_disconnect(self) -> None:
+        """After last handler disconnects and disable completes, a new handler
+        must trigger enable_scope() again."""
+        radio = MagicMock()
+        radio.on_scope_data = MagicMock()
+        radio.enable_scope = AsyncMock()
+        radio.disable_scope = AsyncMock()
+
+        server = WebServer(radio)
+
+        # First connect
+        h1 = MagicMock()
+        await server.ensure_scope_enabled(h1)
+        assert radio.enable_scope.await_count == 1
+
+        # Disconnect — wait for disable to complete
+        server.unregister_scope_handler(h1)
+        await asyncio.sleep(0.05)
+        assert not server._scope_enabled
+        assert radio.disable_scope.await_count == 1
+
+        # Reconnect — must call enable_scope again
+        h2 = MagicMock()
+        await server.ensure_scope_enabled(h2)
+        assert radio.enable_scope.await_count == 2
+
+    async def test_disable_task_aborts_if_new_handler_reconnects(self) -> None:
+        """If a new handler connects before the disable task runs,
+        disable_scope() must NOT be called."""
+        radio = MagicMock()
+        radio.on_scope_data = MagicMock()
+        radio.enable_scope = AsyncMock()
+        radio.disable_scope = AsyncMock()
+
+        server = WebServer(radio)
+
+        h1 = MagicMock()
+        await server.ensure_scope_enabled(h1)
+
+        # Unregister h1 — schedules disable task but doesn't await it yet
+        server.unregister_scope_handler(h1)
+
+        # Register h2 before the event loop runs the disable task
+        h2 = MagicMock()
+        await server.ensure_scope_enabled(h2)
+
+        # Now let the event loop run the disable task
+        await asyncio.sleep(0.05)
+
+        # disable_scope must NOT have been called — h2 is still connected
+        radio.disable_scope.assert_not_awaited()
+        assert server._scope_enabled
+
+    async def test_broadcast_scope_reaches_new_handler_after_reconnect(
+        self,
+    ) -> None:
+        """Frames broadcast after reconnect must reach the new handler."""
+        radio = MagicMock()
+        radio.on_scope_data = MagicMock()
+        radio.enable_scope = AsyncMock()
+        radio.disable_scope = AsyncMock()
+
+        server = WebServer(radio)
+
+        h1 = MagicMock()
+        await server.ensure_scope_enabled(h1)
+        server.unregister_scope_handler(h1)
+        await asyncio.sleep(0.05)
+
+        h2 = MagicMock()
+        h2._running = True
+        await server.ensure_scope_enabled(h2)
+
+        frame = ScopeFrame(0, 0, 14_000_000, 14_350_000, bytes(10), False)
+        server._broadcast_scope(frame)
+
+        h2.enqueue_frame.assert_called_once_with(frame)
+        h1.enqueue_frame.assert_not_called()
