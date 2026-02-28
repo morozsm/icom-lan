@@ -9,6 +9,7 @@ from icom_lan.commands import (
     IC_7610_ADDR,
     build_civ_frame,
 )
+from icom_lan.commander import Priority
 from icom_lan.exceptions import ConnectionError, CommandError
 from icom_lan.radio import IcomRadio
 
@@ -452,11 +453,18 @@ class TestPttDisconnected:
             await r.set_ptt(True)
 
     @pytest.mark.asyncio
-    async def test_ptt_no_response_needed(
+    async def test_ptt_waits_for_response(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
-        """set_ptt is fire-and-forget — completes without a radio response."""
-        await radio.set_ptt(True)  # must not raise
+        send_mock = AsyncMock()
+        radio._send_civ_raw = send_mock  # type: ignore[method-assign]
+
+        await radio.set_ptt(True)
+
+        send_mock.assert_awaited_once()
+        _, kwargs = send_mock.await_args
+        assert kwargs["priority"] == Priority.IMMEDIATE
+        assert kwargs["wait_response"] is True
 
 
 # ---------------------------------------------------------------------------
