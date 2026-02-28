@@ -302,7 +302,7 @@ body.light #toast { }
       <input type="range" id="audio-vol" min="0" max="100" value="80" oninput="setAudioVolume(this.value)">
       <span id="audio-status"></span>
     </div>
-    <button id="ptt-btn" onmousedown="setPtt(true)" onmouseup="setPtt(false)" onmouseleave="setPtt(false)">PTT</button>
+    <button id="ptt-btn">PTT</button>
   </div>
 
   <!-- Meters -->
@@ -403,6 +403,12 @@ let currentPixels=null, pttState=false;
 let tuningStep=500; // Hz
 let wfLineImg=null, wfLine32=null, wfMeta=[], wfH=0;
 let cmdCounter=0;
+const PTT_HOLD_THRESHOLD_MS = 300;
+let pttDownTime = 0;
+let pttPressStartState = false;
+let pttPressActive = false;
+let pttHoldTimer = null;
+let ignoreMouseUntil = 0;
 
 // ===== Band Plan (HF + 6m, FT8 defaults) =====
 const BANDS = [
@@ -683,6 +689,82 @@ function setPtt(state){
   sendCmd('ptt',{state});
 }
 window.setPtt = setPtt;
+
+function updatePttButtonLabel() {
+  pttBtn.textContent = pttBtn.classList.contains('active') ? '● PTT' : 'PTT';
+}
+function pttPressStart() {
+  pttDownTime = Date.now();
+  pttPressStartState = pttState;
+  pttPressActive = true;
+  if (pttHoldTimer) clearTimeout(pttHoldTimer);
+  pttHoldTimer = setTimeout(() => {
+    pttHoldTimer = null;
+  }, PTT_HOLD_THRESHOLD_MS);
+  setPtt(true);
+}
+function pttPressEnd() {
+  if (!pttPressActive) return;
+  const elapsed = Date.now() - pttDownTime;
+  pttPressActive = false;
+  if (pttHoldTimer) {
+    clearTimeout(pttHoldTimer);
+    pttHoldTimer = null;
+  }
+  if (elapsed < PTT_HOLD_THRESHOLD_MS) {
+    setPtt(!pttPressStartState);
+  } else {
+    setPtt(false);
+  }
+}
+function pttPressLeave() {
+  if (!pttPressActive) return;
+  const elapsed = Date.now() - pttDownTime;
+  if (elapsed >= PTT_HOLD_THRESHOLD_MS) {
+    pttPressActive = false;
+    if (pttHoldTimer) {
+      clearTimeout(pttHoldTimer);
+      pttHoldTimer = null;
+    }
+    setPtt(false);
+  }
+}
+pttBtn.addEventListener('mousedown', () => {
+  if (Date.now() < ignoreMouseUntil) return;
+  pttPressStart();
+});
+pttBtn.addEventListener('mouseup', () => {
+  if (Date.now() < ignoreMouseUntil) return;
+  pttPressEnd();
+});
+pttBtn.addEventListener('mouseleave', () => {
+  if (Date.now() < ignoreMouseUntil) return;
+  pttPressLeave();
+});
+pttBtn.addEventListener('touchstart', e => {
+  ignoreMouseUntil = Date.now() + 700;
+  e.preventDefault();
+  pttPressStart();
+}, { passive: false });
+pttBtn.addEventListener('touchend', e => {
+  ignoreMouseUntil = Date.now() + 700;
+  e.preventDefault();
+  pttPressEnd();
+}, { passive: false });
+pttBtn.addEventListener('touchcancel', e => {
+  ignoreMouseUntil = Date.now() + 700;
+  e.preventDefault();
+  if (pttPressActive) {
+    pttPressActive = false;
+    if (pttHoldTimer) {
+      clearTimeout(pttHoldTimer);
+      pttHoldTimer = null;
+    }
+    setPtt(false);
+  }
+}, { passive: false });
+new MutationObserver(updatePttButtonLabel).observe(pttBtn, { attributes: true, attributeFilter: ['class'] });
+updatePttButtonLabel();
 
 // ===== Tuning Step =====
 const MODE_STEP = {
