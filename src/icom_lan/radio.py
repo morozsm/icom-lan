@@ -93,6 +93,7 @@ from .types import (
 )
 
 # Import split modules
+from ._connection_state import RadioConnectionState
 from ._audio_recovery import AudioRecoveryState, _AudioSnapshot, _AudioRecoveryMixin
 from ._civ_rx import CIV_HEADER_SIZE, _CivRxMixin
 from ._control_phase import (
@@ -107,6 +108,7 @@ __all__ = [
     "AudioRecoveryState",
     "IcomRadio",
     "AudioCodec",
+    "RadioConnectionState",
     "ScopeFrame",
     "ScopeCompletionPolicy",
 ]
@@ -176,7 +178,7 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         self._pcm_transcoder: PcmOpusTranscoder | None = None
         self._pcm_transcoder_fmt: tuple[int, int, int] | None = None
         self._pcm_tx_fmt: tuple[int, int, int] | None = None
-        self._connected = False
+        self._conn_state = RadioConnectionState.DISCONNECTED
         self._token: int = 0
         self._tok_request: int = 0
         self._auth_seq: int = 0
@@ -205,7 +207,6 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         self._watchdog_timeout = watchdog_timeout
         self._watchdog_task: asyncio.Task | None = None
         self._reconnect_task: asyncio.Task | None = None
-        self._intentional_disconnect = False
         self._auto_recover_audio = auto_recover_audio
         self._on_audio_recovery = on_audio_recovery
         self._pcm_rx_user_callback: Callable[[bytes | None], None] | None = None
@@ -239,9 +240,42 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         self._civ_get_timeout: float = min(timeout, 2.0)
 
     @property
+    def conn_state(self) -> RadioConnectionState:
+        """Current connection state."""
+        return self._conn_state
+
+    @property
     def connected(self) -> bool:
         """Whether the radio is currently connected."""
-        return self._connected
+        return self._conn_state == RadioConnectionState.CONNECTED
+
+    # ------------------------------------------------------------------
+    # Backwards-compatible property shims for _connected / _intentional_disconnect
+    # (used by tests and internal loops — keep in sync with _conn_state)
+    # ------------------------------------------------------------------
+
+    @property
+    def _connected(self) -> bool:
+        return self._conn_state == RadioConnectionState.CONNECTED
+
+    @_connected.setter
+    def _connected(self, value: bool) -> None:
+        if value:
+            self._conn_state = RadioConnectionState.CONNECTED
+        elif self._conn_state == RadioConnectionState.CONNECTED:
+            self._conn_state = RadioConnectionState.DISCONNECTED
+
+    @property
+    def _intentional_disconnect(self) -> bool:
+        return self._conn_state == RadioConnectionState.DISCONNECTED
+
+    @_intentional_disconnect.setter
+    def _intentional_disconnect(self, value: bool) -> None:
+        if value:
+            self._conn_state = RadioConnectionState.DISCONNECTED
+        elif self._conn_state == RadioConnectionState.DISCONNECTED:
+            # Clearing intentional disconnect means reconnect is allowed.
+            self._conn_state = RadioConnectionState.RECONNECTING
 
     @property
     def state_cache(self) -> StateCache:
@@ -271,9 +305,8 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
 
     async def disconnect(self) -> None:
         """Cleanly disconnect from the radio."""
-        if self._connected:
-            self._connected = False
-            self._intentional_disconnect = True
+        if self._conn_state == RadioConnectionState.CONNECTED:
+            self._conn_state = RadioConnectionState.DISCONNECTING
             self._advance_civ_generation("disconnect")
             self._stop_watchdog()
             self._stop_reconnect()
@@ -303,6 +336,7 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
                 await self._civ_transport.disconnect()
                 self._civ_transport = None
             await self._ctrl_transport.disconnect()
+            self._conn_state = RadioConnectionState.DISCONNECTED
             logger.info("Disconnected from %s:%d", self._host, self._port)
 
     # ------------------------------------------------------------------
@@ -359,7 +393,7 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
                         "Watchdog: no activity for %.1fs, triggering reconnect",
                         idle,
                     )
-                    self._connected = False
+                    self._conn_state = RadioConnectionState.RECONNECTING
                     self._advance_civ_generation("watchdog-timeout")
                     self._reconnect_task = asyncio.create_task(self._reconnect_loop())
                     return
@@ -371,7 +405,7 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         delay = self._reconnect_delay
         attempt = 0
         try:
-            while not self._intentional_disconnect:
+            while self._conn_state != RadioConnectionState.DISCONNECTED:
                 attempt += 1
                 logger.info("Reconnect attempt %d (delay=%.1fs)", attempt, delay)
                 try:
@@ -414,6 +448,7 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
                         await self._recover_audio(audio_snapshot)
                     return
                 except Exception as exc:
+                    self._conn_state = RadioConnectionState.RECONNECTING
                     logger.warning("Reconnect attempt %d failed: %s", attempt, exc)
                     await asyncio.sleep(delay)
                     delay = min(delay * 2, self._reconnect_max_delay)
