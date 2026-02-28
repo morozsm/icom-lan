@@ -1039,6 +1039,18 @@ function setAudioVolume(v) {
 }
 window.setAudioVolume = setAudioVolume;
 
+// Resume AudioContext + reconnect WebSocket after Safari iOS background suspend
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume().then(() => { nextPlayTime = 0; });
+    }
+    if (rxActive && (!audioWs || audioWs.readyState > 1)) {
+      connectAudioWs();
+    }
+  }
+});
+
 function connectAudioWs() {
   if(audioWs&&audioWs.readyState<=1) return;
   if(audioWs){audioWs.onclose=null;audioWs.onerror=null;audioWs.close();}
@@ -1096,7 +1108,7 @@ function playPcmAudio(pcmBytes, sampleRate) {
 
   // Keep nextPlayTime at least a small amount ahead to absorb network jitter.
   const now = audioCtx.currentTime;
-  if (nextPlayTime < now + 0.01) nextPlayTime = now + 0.05; // 50 ms pre-roll
+  if (nextPlayTime < now + 0.01) nextPlayTime = now + 0.20; // 200 ms pre-roll for mobile/VPN
   src.start(nextPlayTime);
   nextPlayTime += abuf.duration;
 }
