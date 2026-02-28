@@ -148,6 +148,8 @@ body {
 .audio-btn.active:hover { background: #2ea043; }
 #audio-vol { width: 80px; accent-color: #58a6ff; vertical-align: middle; }
 #audio-status { font-size: 10px; color: #8b949e; }
+#radio-conn-btn { font-size: 11px; padding: 2px 8px; margin-left: 6px; }
+#radio-conn-btn.active { background: #da3633; border-color: #da3633; }
 
 /* === Tooltip === */
 #tooltip {
@@ -218,6 +220,7 @@ body.light #toast { }
   <h1>icom-lan</h1>
   <div class="status-dot" id="status-dot"></div>
   <span id="conn-text">Disconnected</span>
+  <button class="audio-btn" id="radio-conn-btn" onclick="toggleRadioConnection()" title="Connect/Disconnect radio">⚡ Connect</button>
   <span id="radio-model"></span>
   <button id="theme-btn" onclick="toggleTheme()" title="Toggle light/dark theme">🌙</button>
   <span id="freq-display" title="Click to enter frequency">—</span>
@@ -848,12 +851,14 @@ function handleCtrlMsg(m){
   switch(m.type){
     case 'hello':
       radioModelEl.textContent=m.radio||'';
+      if('connected' in m) updateRadioConnBtn(m.connected);
       sendControl({type:'subscribe',id:'s1',streams:['scope','meters']});
       connectScope();
       connectMeters();
       break;
     case 'state': if(m.data) updateStateFromServer(m.data); break;
     case 'event':
+      if(m.event==='connection_state'){updateRadioConnBtn(m.connected);if(m.connected){setStatus('connected','Connected');showToast('Radio connected','info',2000)}else{setStatus('','Radio disconnected');showToast('Radio disconnected','warn',3000)}break}
       if(m.name==='freq_changed'&&m.data){
         if(m.data.vfo==='A'||!m.data.vfo){currentFreqA=m.data.freq;if(activeVfo==='A'){freqDisplayEl.textContent=fmtFreq(m.data.freq);updateActiveBand(m.data.freq);}}
         else{currentFreqB=m.data.freq;if(activeVfo==='B'){freqDisplayEl.textContent=fmtFreq(m.data.freq);updateActiveBand(m.data.freq);}}
@@ -862,7 +867,7 @@ function handleCtrlMsg(m){
       else if(m.name==='scope_meta'&&m.data){startFreq=m.data.start_freq||startFreq;endFreq=m.data.end_freq||endFreq;drawFreqAxis()}
       break;
     case 'response':
-      if(!m.ok){console.warn('cmd err:',m.error,m.message);showToast(m.message||m.error||'Command failed')}
+      if(!m.ok){console.warn('cmd err:',m.error,m.message);showToast(m.message||m.error||'Command failed');if(m.id&&(m.id.startsWith('cn-')||m.id.startsWith('dc-')))updateRadioConnBtn(radioConnected)}
       else if(m.result) updateStateFromServer(m.result);
       break;
   }
@@ -1006,6 +1011,36 @@ document.addEventListener('keydown', e => {
 document.addEventListener('keyup', e => {
   if (e.key === ' ' && pttState) setPtt(false);
 });
+
+// ===== Radio Connection =====
+let radioConnected = false;
+
+function toggleRadioConnection() {
+  const btn = $('radio-conn-btn');
+  if (radioConnected) {
+    btn.disabled = true;
+    btn.textContent = '⏳ Disconnecting...';
+    sendControl({ type: 'radio_disconnect', id: 'dc-' + Date.now() });
+  } else {
+    btn.disabled = true;
+    btn.textContent = '⏳ Connecting...';
+    sendControl({ type: 'radio_connect', id: 'cn-' + Date.now() });
+  }
+}
+window.toggleRadioConnection = toggleRadioConnection;
+
+function updateRadioConnBtn(connected) {
+  const btn = $('radio-conn-btn');
+  radioConnected = connected;
+  btn.disabled = false;
+  if (connected) {
+    btn.textContent = '⏹ Disconnect';
+    btn.classList.add('active');
+  } else {
+    btn.textContent = '⚡ Connect';
+    btn.classList.remove('active');
+  }
+}
 
 // ===== Audio =====
 const AUDIO_MSG_RX = 0x10;
