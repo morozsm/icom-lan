@@ -8,11 +8,17 @@ Reference: wfview icomcommander.cpp parseSpectrum() line 1921.
 
 from __future__ import annotations
 
+import logging
+import time
 from dataclasses import dataclass
 
 from .types import bcd_decode
 
 __all__ = ["ScopeFrame", "ScopeAssembler"]
+
+_log = logging.getLogger(__name__)
+
+_DEFAULT_ASSEMBLY_TIMEOUT: float = 5.0
 
 
 @dataclass
@@ -51,14 +57,20 @@ def _bcd_byte_decode(b: int) -> int:
 class _ReceiverState:
     """Assembly state for one receiver channel (main or sub)."""
 
-    __slots__ = ("_mode", "_start_freq", "_end_freq", "_oor", "_chunks")
+    __slots__ = ("_mode", "_start_freq", "_end_freq", "_oor", "_chunks", "_timeout", "_start_time")
 
-    def __init__(self) -> None:
+    def __init__(self, timeout: float = _DEFAULT_ASSEMBLY_TIMEOUT) -> None:
         self._mode: int = 0
         self._start_freq: int = 0
         self._end_freq: int = 0
         self._oor: bool = False
         self._chunks: list[bytes] = []
+        self._timeout: float = timeout
+        self._start_time: float | None = None
+
+    def _reset(self) -> None:
+        self._chunks = []
+        self._start_time = None
 
     def feed(self, raw_payload: bytes, receiver: int) -> ScopeFrame | None:
         """Process one sequence packet.
@@ -78,11 +90,28 @@ class _ReceiverState:
         seq = _bcd_byte_decode(raw_payload[0])
         seq_max = _bcd_byte_decode(raw_payload[1])
 
+        # Discard stale partial assembly if it has exceeded the timeout.
+        if self._start_time is not None and seq != 1:
+            elapsed = time.monotonic() - self._start_time
+            if elapsed > self._timeout:
+                _log.warning(
+                    "Scope assembly timeout (%.1fs > %.1fs) for receiver %d"
+                    " — discarding %d partial chunk(s)",
+                    elapsed,
+                    self._timeout,
+                    receiver,
+                    len(self._chunks),
+                )
+                self._reset()
+                return None
+
         if seq == 1:
-            self._chunks = []
+            self._reset()
+            self._start_time = time.monotonic()
             # Sequence 1 carries metadata: mode, start/end freq, OOR flag.
             # Minimum: 2 (seq/seqMax) + 1 (mode) + 5 (start) + 5 (end) + 1 (oor) = 14
             if len(raw_payload) < 14:
+                self._start_time = None
                 return None
 
             self._mode = raw_payload[2]
@@ -91,6 +120,7 @@ class _ReceiverState:
             self._oor = bool(raw_payload[13])
 
             if self._oor:
+                self._start_time = None
                 return ScopeFrame(
                     receiver=receiver,
                     mode=self._mode,
@@ -128,7 +158,7 @@ class _ReceiverState:
         return None
 
     def _build_frame(self, receiver: int) -> ScopeFrame:
-        return ScopeFrame(
+        frame = ScopeFrame(
             receiver=receiver,
             mode=self._mode,
             start_freq_hz=self._start_freq,
@@ -136,6 +166,8 @@ class _ReceiverState:
             pixels=b"".join(self._chunks),
             out_of_range=self._oor,
         )
+        self._reset()
+        return frame
 
 
 class ScopeAssembler:
@@ -157,9 +189,15 @@ class ScopeAssembler:
             process_frame(frame)
     """
 
-    def __init__(self) -> None:
-        self._main = _ReceiverState()
-        self._sub = _ReceiverState()
+    def __init__(self, assembly_timeout: float = _DEFAULT_ASSEMBLY_TIMEOUT) -> None:
+        """Create a ScopeAssembler.
+
+        Args:
+            assembly_timeout: Seconds before an incomplete frame is discarded.
+                Defaults to 5.0 seconds.
+        """
+        self._main = _ReceiverState(timeout=assembly_timeout)
+        self._sub = _ReceiverState(timeout=assembly_timeout)
 
     def feed(self, raw_payload: bytes, receiver: int) -> ScopeFrame | None:
         """Feed one scope sequence packet.
