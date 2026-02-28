@@ -119,13 +119,11 @@ async def _ws_connect(
     writer.write(request.encode())
     await writer.drain()
 
-    # Read upgrade response
-    resp = b""
-    while b"\r\n\r\n" not in resp:
-        chunk = await asyncio.wait_for(reader.read(4096), timeout=5.0)
-        if not chunk:
-            break
-        resp += chunk
+    # Read exactly up to the end of the HTTP headers.  Using readuntil() instead
+    # of read(N) ensures that any WebSocket frames the server sends immediately
+    # after the 101 (e.g. the "hello" message) stay in the reader buffer and are
+    # not accidentally consumed here.
+    resp = await asyncio.wait_for(reader.readuntil(b"\r\n\r\n"), timeout=5.0)
 
     assert b"101" in resp, f"Expected 101, got: {resp[:200]}"
     accept = make_accept_key(key)
