@@ -101,30 +101,68 @@ class _CivRxMixin:
     # ------------------------------------------------------------------
 
     async def _civ_rx_loop(self, generation: int) -> None:
-        """Continuously consume CI-V transport packets and route events."""
+        """Continuously consume CI-V transport packets and route events.
+
+        Drains ALL pending packets from the transport queue each iteration
+        (wfview-style) to prevent scope flood from starving CI-V command
+        responses.  See issue #66.
+        """
         assert self._civ_transport is not None  # type: ignore[attr-defined]
         try:
             while self._civ_transport is not None:  # type: ignore[attr-defined]
+                # Wait for at least one packet.
                 try:
                     packet = await self._civ_transport.receive_packet(timeout=0.2)  # type: ignore[attr-defined]
                 except asyncio.TimeoutError:
                     self._cleanup_stale_civ_waiters()
                     continue
-                if len(packet) <= CIV_HEADER_SIZE:
-                    self._cleanup_stale_civ_waiters()
-                    continue
-                payload = packet[CIV_HEADER_SIZE:]
-                for frame_bytes in iter_civ_frames(payload):
-                    try:
-                        frame = parse_civ_frame(frame_bytes)
-                    except ValueError:
+
+                # Drain ALL pending packets from the queue (non-blocking).
+                # This is critical: scope floods ~225 pkt/sec on the CI-V port.
+                # Processing one-at-a-time causes ACK/response packets to wait
+                # behind hundreds of scope packets, causing GET timeouts.
+                packets = [packet]
+                queue = getattr(self._civ_transport, "_packet_queue", None)  # type: ignore[attr-defined]
+                if queue is not None:
+                    while not queue.empty():
+                        try:
+                            packets.append(queue.get_nowait())
+                        except asyncio.QueueEmpty:
+                            break
+
+                # Process all collected packets.
+                scope_count = 0
+                non_scope_count = 0
+                for pkt in packets:
+                    if len(pkt) <= CIV_HEADER_SIZE:
                         continue
-                    try:
-                        await self._route_civ_frame(frame, generation=generation)
-                    except Exception:
-                        logger.exception(
-                            "Unhandled exception while routing CI-V frame"
-                        )
+                    payload = pkt[CIV_HEADER_SIZE:]
+                    for frame_bytes in iter_civ_frames(payload):
+                        try:
+                            frame = parse_civ_frame(frame_bytes)
+                        except ValueError:
+                            continue
+                        if frame.command == 0x27:
+                            scope_count += 1
+                        else:
+                            non_scope_count += 1
+                            logger.info(
+                                "CIV RX non-scope: cmd=0x%02X sub=0x%02X data=%s",
+                                frame.command,
+                                frame.sub or 0,
+                                frame.data[:12].hex() if frame.data else "empty",
+                            )
+                        try:
+                            await self._route_civ_frame(frame, generation=generation)
+                        except Exception:
+                            logger.exception(
+                                "Unhandled exception while routing CI-V frame"
+                            )
+                if non_scope_count or (scope_count and scope_count % 100 == 0):
+                    logger.debug(
+                        "RX batch: %d packets, %d scope, %d non-scope",
+                        len(packets), scope_count, non_scope_count,
+                    )
                 self._cleanup_stale_civ_waiters()
         except asyncio.CancelledError:
             pass
