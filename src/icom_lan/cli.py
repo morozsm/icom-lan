@@ -38,6 +38,23 @@ def _get_env(name: str, default: str = "") -> str:
     return os.environ.get(name, default)
 
 
+class _DeprecatedPortAction(argparse.Action):
+    """Deprecated --port alias — prints a warning and stores to control_port."""
+
+    def __call__(
+        self,
+        parser: argparse.ArgumentParser,
+        namespace: argparse.Namespace,
+        values: Any,
+        option_string: str | None = None,
+    ) -> None:
+        print(
+            "Warning: --port is deprecated, use --control-port instead",
+            file=sys.stderr,
+        )
+        setattr(namespace, self.dest, values)
+
+
 def _build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="icom-lan",
@@ -55,10 +72,19 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Radio IP (default: $ICOM_HOST or 192.168.1.100)",
     )
     p.add_argument(
-        "--port",
+        "--control-port",
         type=int,
         default=int(_get_env("ICOM_PORT", "50001")),
-        help="Control port (default: 50001)",
+        dest="control_port",
+        help="Radio control port (default: $ICOM_PORT or 50001)",
+    )
+    p.add_argument(
+        "--port",
+        type=int,
+        dest="control_port",
+        default=argparse.SUPPRESS,
+        action=_DeprecatedPortAction,
+        help="Deprecated: use --control-port instead",
     )
     p.add_argument(
         "--user",
@@ -411,7 +437,7 @@ async def _run(args: argparse.Namespace) -> int:
 
     radio = IcomRadio(
         args.host,
-        port=args.port,
+        port=args.control_port,
         username=args.user,
         password=args.password,
         timeout=args.timeout,

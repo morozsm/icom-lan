@@ -1,6 +1,7 @@
 """Tests for CLI module — parser, frequency parsing, main entry."""
 
 import argparse
+import io
 from unittest.mock import patch
 
 import pytest
@@ -181,6 +182,29 @@ class TestBuildParser:
         p = _build_parser()
         args = p.parse_args(["status", "--json"])
         assert args.json is True
+
+    def test_control_port_default(self):
+        p = _build_parser()
+        args = p.parse_args(["status"])
+        assert args.control_port == 50001
+
+    def test_control_port_override(self):
+        p = _build_parser()
+        args = p.parse_args(["--control-port", "50002", "status"])
+        assert args.control_port == 50002
+
+    def test_deprecated_port_sets_control_port(self):
+        p = _build_parser()
+        with patch("sys.stderr", new_callable=io.StringIO) as mock_stderr:
+            args = p.parse_args(["--port", "9999", "status"])
+        assert args.control_port == 9999
+        assert "deprecated" in mock_stderr.getvalue().lower()
+
+    def test_deprecated_port_prints_warning(self):
+        p = _build_parser()
+        with patch("sys.stderr", new_callable=io.StringIO) as mock_stderr:
+            p.parse_args(["--port", "9999", "status"])
+        assert "--control-port" in mock_stderr.getvalue()
 
     def test_host_override(self):
         p = _build_parser()

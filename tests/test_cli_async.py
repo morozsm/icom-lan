@@ -445,7 +445,7 @@ class TestRunErrorHandling:
     async def test_run_audio_caps_does_not_connect(self, capsys) -> None:
         args = Namespace(
             host="192.168.1.100",
-            port=50001,
+            control_port=50001,
             user="",
             password="",
             timeout=5.0,
@@ -465,7 +465,7 @@ class TestRunErrorHandling:
     async def test_run_audio_caps_with_stats_connects(self, capsys) -> None:
         args = Namespace(
             host="192.168.1.100",
-            port=50001,
+            control_port=50001,
             user="",
             password="",
             timeout=5.0,
@@ -515,7 +515,7 @@ class TestRunErrorHandling:
     async def test_run_exception(self, capsys) -> None:
         args = Namespace(
             host="192.168.1.100",
-            port=50001,
+            control_port=50001,
             user="",
             password="",
             timeout=0.1,
@@ -532,7 +532,7 @@ class TestRunErrorHandling:
     async def test_run_audio_rx_routes_to_handler(self) -> None:
         args = Namespace(
             host="192.168.1.100",
-            port=50001,
+            control_port=50001,
             user="",
             password="",
             timeout=5.0,
@@ -560,7 +560,7 @@ class TestRunErrorHandling:
     async def test_run_audio_tx_routes_to_handler(self) -> None:
         args = Namespace(
             host="192.168.1.100",
-            port=50001,
+            control_port=50001,
             user="",
             password="",
             timeout=5.0,
@@ -587,7 +587,7 @@ class TestRunErrorHandling:
     async def test_run_audio_loopback_routes_to_handler(self) -> None:
         args = Namespace(
             host="192.168.1.100",
-            port=50001,
+            control_port=50001,
             user="",
             password="",
             timeout=5.0,
