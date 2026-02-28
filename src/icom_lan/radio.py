@@ -339,6 +339,85 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
             self._conn_state = RadioConnectionState.DISCONNECTED
             logger.info("Disconnected from %s:%d", self._host, self._port)
 
+    async def soft_disconnect(self) -> None:
+        """Disconnect CI-V and audio but keep control transport alive.
+
+        This allows fast reconnect without re-authentication — the radio
+        keeps the session open on the control port.
+        """
+        if self._conn_state != RadioConnectionState.CONNECTED:
+            return
+        self._conn_state = RadioConnectionState.DISCONNECTING
+        self._advance_civ_generation("soft_disconnect")
+
+        # Stop audio
+        if self._audio_stream is not None:
+            await self._audio_stream.stop_rx()
+            await self._audio_stream.stop_tx()
+            self._audio_stream = None
+        self._pcm_tx_fmt = None
+        self._pcm_rx_user_callback = None
+        self._opus_rx_user_callback = None
+        if self._audio_transport is not None:
+            try:
+                await self._send_audio_open_close(open_stream=False)
+            except Exception:
+                pass
+            await self._audio_transport.disconnect()
+            self._audio_transport = None
+
+        # Stop CI-V
+        if self._civ_transport:
+            try:
+                await self._send_open_close(open_stream=False)
+            except Exception:
+                pass
+            await self._stop_civ_worker()
+            await self._stop_civ_rx_pump()
+            await self._civ_transport.disconnect()
+            self._civ_transport = None
+
+        self._conn_state = RadioConnectionState.DISCONNECTED
+        logger.info("Soft disconnect from %s:%d (control kept alive)", self._host, self._port)
+
+    async def soft_reconnect(self) -> None:
+        """Reconnect CI-V transport using existing control session.
+
+        Skips discovery and authentication — reuses the existing control
+        transport and token. Only re-opens the CI-V data stream.
+        """
+        if self._civ_transport is not None:
+            logger.warning("soft_reconnect: CI-V transport already open")
+            return
+        if not self._ctrl_transport or not self._ctrl_transport._udp_transport:
+            # Control transport dead — need full connect
+            logger.info("soft_reconnect: control transport gone, doing full connect")
+            await self.connect()
+            return
+
+        self._conn_state = RadioConnectionState.CONNECTING
+
+        # Re-open CI-V transport (reuse known port)
+        from .transport import IcomTransport
+        self._civ_transport = IcomTransport()
+        try:
+            await self._civ_transport.connect(self._host, self._civ_port)
+        except OSError as exc:
+            self._civ_transport = None
+            self._conn_state = RadioConnectionState.DISCONNECTED
+            raise ConnectionError(f"Failed to reconnect CI-V: {exc}") from exc
+
+        self._civ_transport.start_ping_loop()
+        self._civ_transport.start_retransmit_loop()
+        await self._send_open_close(open_stream=True)
+
+        self._advance_civ_generation("soft_reconnect")
+        self._civ_last_waiter_gc_monotonic = __import__("time").monotonic()
+        self._start_civ_rx_pump()
+        self._conn_state = RadioConnectionState.CONNECTED
+        self._start_civ_worker()
+        logger.info("Soft reconnect to %s (civ=%d)", self._host, self._civ_port)
+
     # ------------------------------------------------------------------
     # Watchdog & reconnect loops
     # ------------------------------------------------------------------

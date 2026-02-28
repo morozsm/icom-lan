@@ -147,11 +147,16 @@ class IcomTransport:
             lambda: _UdpProtocol(self),
             remote_addr=(host, port),
         )
+        saved_my_id = self.my_id
         if self._udp_transport is not None:
             info = self._udp_transport.get_extra_info("sockname")
             if info:
                 lport = info[1] if isinstance(info, tuple) else 0
                 self.my_id = (lport & 0xFFFF) | 0x10000
+        # Prefer reusing old my_id — radio may reject login from a new sender_id
+        # while previous session is still cached.
+        if saved_my_id != 0:
+            self.my_id = saved_my_id
         logger.info(
             "UDP reconnect to %s:%d, my_id=0x%08X (reusing remote_id=0x%08X)",
             host, port, self.my_id, saved_remote_id,

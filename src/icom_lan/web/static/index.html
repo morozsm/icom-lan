@@ -858,7 +858,7 @@ function handleCtrlMsg(m){
       break;
     case 'state': if(m.data) updateStateFromServer(m.data); break;
     case 'event':
-      if(m.event==='connection_state'){updateRadioConnBtn(m.connected);if(m.connected){setStatus('connected','Connected');showToast('Radio connected','info',2000)}else{setStatus('','Radio disconnected');showToast('Radio disconnected','warn',3000)}break}
+      if(m.event==='connection_state'){updateRadioConnBtn(m.connected);if(m.connected){setStatus('connected','Connected');showToast('Radio connected','info',2000);if(rxActive){rxActive=false;toggleRxAudio()}}else{setStatus('','Radio disconnected');showToast('Radio disconnected','warn',3000)}break}
       if(m.name==='freq_changed'&&m.data){
         if(m.data.vfo==='A'||!m.data.vfo){currentFreqA=m.data.freq;if(activeVfo==='A'){freqDisplayEl.textContent=fmtFreq(m.data.freq);updateActiveBand(m.data.freq);}}
         else{currentFreqB=m.data.freq;if(activeVfo==='B'){freqDisplayEl.textContent=fmtFreq(m.data.freq);updateActiveBand(m.data.freq);}}

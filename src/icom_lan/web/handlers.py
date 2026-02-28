@@ -153,7 +153,16 @@ class ControlHandler:
                 await self._send_json({"type": "response", "id": msg_id, "ok": True,
                                        "result": {"status": "already_connected"}})
                 return
-            await self._radio.connect()
+            # Try soft reconnect (CI-V only) if control transport alive,
+            # otherwise full connect.
+            if hasattr(self._radio, 'soft_reconnect'):
+                try:
+                    await self._radio.soft_reconnect()
+                except Exception:
+                    logger.info("soft_reconnect failed, trying full connect")
+                    await self._radio.connect()
+            else:
+                await self._radio.connect()
             await self._send_json({"type": "response", "id": msg_id, "ok": True,
                                    "result": {"status": "connected"}})
             # Broadcast state to all clients
@@ -176,7 +185,7 @@ class ControlHandler:
                 await self._send_json({"type": "response", "id": msg_id, "ok": True,
                                        "result": {"status": "already_disconnected"}})
                 return
-            await self._radio.disconnect()
+            await self._radio.soft_disconnect()
             await self._send_json({"type": "response", "id": msg_id, "ok": True,
                                    "result": {"status": "disconnected"}})
             await self._broadcast_connection_state(False)
