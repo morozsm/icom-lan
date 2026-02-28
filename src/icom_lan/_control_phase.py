@@ -115,33 +115,29 @@ class _ControlPhaseMixin:
             _audio_local_port,
         )
 
-        # Send our conninfo → triggers status packet with CI-V port.
-        # Retry up to 3 times if radio returns civ_port=0 (common after
-        # rapid reconnects — the radio needs a moment to recover).
-        civ_port = 0
-        for attempt in range(3):
-            await self._send_conninfo(guid, _civ_local_port, _audio_local_port)
-            civ_port = await self._receive_civ_port()
-            if civ_port > 0:
-                break
-            if attempt < 2:
-                logger.info(
-                    "civ_port=0 in status (attempt %d/3), retrying in 3s...",
-                    attempt + 1,
-                )
-                await asyncio.sleep(3)
-        if civ_port == 0:
-            civ_port = self._port + 1  # type: ignore[attr-defined]  # Fallback: assume control+1
-            logger.warning(
-                "CI-V port not in status after 3 attempts, using default %d",
-                civ_port,
-            )
-        self._civ_port = civ_port  # type: ignore[attr-defined]
+        # Use default ports (control+1, control+2) optimistically — this is
+        # correct for all known Icom radios.  Send conninfo and try to read
+        # the status packet in the background; if the radio reports different
+        # ports we'll log a warning (future: reconnect).
+        self._civ_port = self._port + 1  # type: ignore[attr-defined]
+        self._audio_port = self._port + 2  # type: ignore[attr-defined]
 
-        # wfview/protocol defaults: audio is typically control+2 (50003).
-        # Keep this as a fallback if status didn't carry audio_port.
-        if self._audio_port == 0:  # type: ignore[attr-defined]
-            self._audio_port = self._port + 2  # type: ignore[attr-defined]
+        await self._send_conninfo(guid, _civ_local_port, _audio_local_port)
+
+        # Non-blocking: try to read status once (short timeout).
+        # If radio responds with real ports, verify they match defaults.
+        try:
+            civ_port = await self._receive_civ_port()
+            if civ_port > 0 and civ_port != self._civ_port:
+                logger.warning(
+                    "Radio reported non-default civ_port=%d (expected %d), using radio value",
+                    civ_port, self._civ_port,
+                )
+                self._civ_port = civ_port
+            elif civ_port == 0:
+                logger.debug("Status returned civ_port=0, using default %d", self._civ_port)
+        except asyncio.TimeoutError:
+            logger.debug("No status packet received, using default ports")
             logger.warning(
                 "Audio port not in status, using default %d", self._audio_port  # type: ignore[attr-defined]
             )
@@ -262,7 +258,7 @@ class _ControlPhaseMixin:
         Audio port is optional at connect-time and can be resolved lazily on first
         audio use. This keeps non-audio CLI/API calls fast.
         """
-        deadline = time.monotonic() + self._timeout  # type: ignore[attr-defined]
+        deadline = time.monotonic() + 2.0  # Short timeout — default ports used anyway
         civ_port = 0
         status_packets_seen = 0
 
@@ -350,7 +346,7 @@ class _ControlPhaseMixin:
         self, transport: IcomTransport, *, size: int, label: str
     ) -> bytes:
         """Wait for a packet of a specific size, skipping others."""
-        deadline = time.monotonic() + self._timeout  # type: ignore[attr-defined]
+        deadline = time.monotonic() + 2.0  # Short timeout — default ports used anyway
         while True:
             remaining = deadline - time.monotonic()
             if remaining <= 0:
