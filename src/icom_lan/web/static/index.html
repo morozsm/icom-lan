@@ -751,6 +751,8 @@ freqModal.addEventListener('click', e=>{if(e.target===freqModal) freqModal.class
 
 // ===== Control WebSocket =====
 function connectControl(){
+  if(controlWs&&controlWs.readyState<=1) return;
+  if(controlWs){controlWs.onclose=null;controlWs.onerror=null;controlWs.close();}
   controlWs=new WebSocket(wsBase()+'/api/v1/ws');
   setStatus('reconnecting','Connecting...');
   controlWs.onopen=()=>{controlBackoff=WS_RECONNECT_MIN; setStatus('connected','Connected'); showToast('Connected','info',2000)};
@@ -765,8 +767,8 @@ function handleCtrlMsg(m){
     case 'hello':
       radioModelEl.textContent=m.radio||'';
       sendControl({type:'subscribe',id:'s1',streams:['scope','meters']});
-      if(!scopeWs||scopeWs.readyState>1) connectScope();
-      if(!metersWs||metersWs.readyState>1) connectMeters();
+      connectScope();
+      connectMeters();
       break;
     case 'state': if(m.data) updateStateFromServer(m.data); break;
     case 'event':
@@ -783,6 +785,8 @@ function handleCtrlMsg(m){
 
 // ===== Scope WebSocket =====
 function connectScope(){
+  if(scopeWs&&scopeWs.readyState<=1) return;
+  if(scopeWs){scopeWs.onclose=null;scopeWs.onerror=null;scopeWs.close();}
   scopeWs=new WebSocket(wsBase()+'/api/v1/scope');
   scopeWs.binaryType='arraybuffer';
   scopeWs.onopen=()=>{scopeBackoff=WS_RECONNECT_MIN};
@@ -798,6 +802,8 @@ function connectScope(){
 
 // ===== Meters WebSocket =====
 function connectMeters(){
+  if(metersWs&&metersWs.readyState<=1) return;
+  if(metersWs){metersWs.onclose=null;metersWs.onerror=null;metersWs.close();}
   metersWs=new WebSocket(wsBase()+'/api/v1/meters');
   metersWs.binaryType='arraybuffer';
   metersWs.onopen=()=>{
@@ -949,6 +955,8 @@ function setAudioVolume(v) {
 window.setAudioVolume = setAudioVolume;
 
 function connectAudioWs() {
+  if(audioWs&&audioWs.readyState<=1) return;
+  if(audioWs){audioWs.onclose=null;audioWs.onerror=null;audioWs.close();}
   audioWs = new WebSocket(wsBase() + '/api/v1/audio');
   audioWs.binaryType = 'arraybuffer';
   audioWs.onopen = () => {
