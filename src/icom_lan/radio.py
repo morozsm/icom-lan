@@ -1789,7 +1789,7 @@ class IcomRadio:
             if on
             else ptt_off(to_addr=self._radio_addr)
         )
-        await self._send_civ_raw(civ, priority=Priority.IMMEDIATE, wait_response=False)
+        await self._send_civ_raw(civ, priority=Priority.IMMEDIATE, wait_response=True)
 
     # ------------------------------------------------------------------
     # VFO / Split

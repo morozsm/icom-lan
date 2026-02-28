@@ -352,12 +352,14 @@ class TestPtt:
     async def test_set_ptt_on(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
+        mock_transport.queue_response(_ack_response())
         await radio.set_ptt(True)
 
     @pytest.mark.asyncio
     async def test_set_ptt_off(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
+        mock_transport.queue_response(_ack_response())
         await radio.set_ptt(False)
 
 
