@@ -166,15 +166,35 @@ class ControlHandler:
             },
         }
         if self._radio is not None:
+            # Read from state cache first — non-blocking, always fast.
+            cache_hit_freq = False
+            cache_hit_mode = False
             try:
-                data["freq_a"] = await self._radio.get_frequency()
-                data["mode"] = (await self._radio.get_mode()).name
-                data["power"] = await self._radio.get_power()
-                fil = await self._radio.get_filter()
-                if fil is not None:
-                    data["filter"] = f"FIL{fil}"
+                cache = self._radio.state_cache
+                if cache.freq_ts > 0.0:
+                    data["freq_a"] = cache.freq
+                    cache_hit_freq = True
+                if cache.mode_ts > 0.0:
+                    data["mode"] = cache.mode
+                    if cache.filter_width is not None:
+                        data["filter"] = f"FIL{cache.filter_width}"
+                    cache_hit_mode = True
+                data["ptt"] = cache.ptt
             except Exception as exc:
-                logger.debug("control: state snapshot partial failure: %s", exc)
+                logger.debug("control: state cache read failed: %s", exc)
+
+            # Supplement with live queries for fields not yet in cache.
+            if not cache_hit_freq or not cache_hit_mode:
+                try:
+                    if not cache_hit_freq:
+                        data["freq_a"] = await self._radio.get_frequency()
+                    if not cache_hit_mode:
+                        data["mode"] = (await self._radio.get_mode()).name
+                        fil = await self._radio.get_filter()
+                        if fil is not None:
+                            data["filter"] = f"FIL{fil}"
+                except Exception as exc:
+                    logger.debug("control: state snapshot partial failure: %s", exc)
         msg = {"type": "state", "data": data}
         await self._ws.send_text(encode_json(msg))
 

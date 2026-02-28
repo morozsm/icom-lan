@@ -81,6 +81,7 @@ from .exceptions import (
 from ._audio_transcoder import PcmOpusTranscoder, create_pcm_opus_transcoder
 from .audio import AudioPacket, AudioState, AudioStats, AudioStream
 from .commander import IcomCommander, Priority
+from .rigctld.state_cache import StateCache
 from .civ import (
     CivEvent,
     CivEventType,
@@ -247,11 +248,25 @@ class IcomRadio:
         self._civ_retry_slice_timeout: float = (
             float(os.environ.get("ICOM_CIV_RETRY_SLICE_MS", "150")) / 1000.0
         )
+        self._state_cache: StateCache = StateCache()
+        # GET commands use a shorter timeout than the general connection timeout.
+        # wfview-style: send once, short deadline, fall back to cache.
+        self._civ_get_timeout: float = min(timeout, 2.0)
 
     @property
     def connected(self) -> bool:
         """Whether the radio is currently connected."""
         return self._connected
+
+    @property
+    def state_cache(self) -> StateCache:
+        """Last-known radio state cache (frequency, mode, PTT, meters).
+
+        Updated from both explicit GET responses and unsolicited CI-V frames
+        (e.g. VFO knob turns).  Callers can read this directly for a
+        non-blocking snapshot of recent state.
+        """
+        return self._state_cache
 
     def civ_stats(self) -> dict[str, int]:
         """Return CI-V request tracker statistics for monitoring.
@@ -1029,9 +1044,34 @@ class IcomRadio:
             event = CivEvent(type=CivEventType.NAK, frame=frame)
         else:
             event = CivEvent(type=CivEventType.RESPONSE, frame=frame)
+            # Update state cache for all RESPONSE frames (solicited and unsolicited).
+            self._update_state_cache_from_frame(frame)
 
         self._publish_civ_event(event)
         self._civ_request_tracker.resolve(event, generation=generation)
+
+    def _update_state_cache_from_frame(self, frame: CivFrame) -> None:
+        """Best-effort update of state cache from an incoming CI-V frame.
+
+        Called for every RESPONSE event (both solicited query responses and
+        unsolicited frames sent by the radio on knob turns).
+        """
+        try:
+            if frame.command in (0x03, 0x00):  # frequency
+                freq = parse_frequency_response(frame)
+                self._last_freq_hz = freq
+                self._state_cache.update_freq(freq)
+            elif frame.command in (0x04, 0x01):  # mode
+                mode, filt = parse_mode_response(frame)
+                self._last_mode = mode
+                if filt is not None:
+                    self._filter_width = filt
+                self._state_cache.update_mode(mode.name, filt)
+            elif frame.command == 0x1C and frame.sub == 0x00:  # PTT
+                if frame.data:
+                    self._state_cache.update_ptt(bool(frame.data[0]))
+        except Exception:
+            pass  # Best-effort; never let cache update break the RX loop
 
     def _publish_scope_frame(self, frame: ScopeFrame) -> None:
         """Publish a complete scope frame to callback and bounded queue."""
@@ -1547,7 +1587,7 @@ class IcomRadio:
         request_key = request_key_from_frame(parsed_frame)
         expects_response = self._civ_expects_response(parsed_frame)
         if deadline_monotonic is None:
-            deadline_monotonic = time.monotonic() + self._timeout
+            deadline_monotonic = time.monotonic() + self._civ_get_timeout
 
         self._cleanup_stale_civ_waiters()
 
@@ -1582,53 +1622,49 @@ class IcomRadio:
 
         await self._drain_ack_sinks_before_blocking()
 
-        attempt = 0
-        while True:
-            remaining_total = deadline_monotonic - time.monotonic()
-            if remaining_total <= 0:
+        remaining_total = deadline_monotonic - time.monotonic()
+        if remaining_total <= 0:
+            raise TimeoutError("CI-V response timed out")
+
+        pending: asyncio.Future[CivFrame] | None = None
+        try:
+            # Register future BEFORE starting RX pump / sending.
+            if expects_response:
+                pending = self._civ_request_tracker.register_response(request_key)
+            else:
+                pending_or_token = self._civ_request_tracker.register_ack(wait=True)
+                if isinstance(pending_or_token, int):
+                    raise RuntimeError("ACK waiter registration returned sink token")
+                pending = pending_or_token
+
+            # Ensure RX pump is running for event routing.
+            self._start_civ_rx_pump()
+
+            # Rate-limit CI-V commands slightly (wfview-like pacing).
+            now = time.monotonic()
+            delta = now - self._last_civ_send_monotonic
+            if delta < self._civ_min_interval:
+                await asyncio.sleep(self._civ_min_interval - delta)
+
+            pkt = self._wrap_civ(civ_frame)
+            await self._civ_transport.send_tracked(pkt)
+            self._last_civ_send_monotonic = time.monotonic()
+            assert pending is not None
+            remaining = deadline_monotonic - time.monotonic()
+            if remaining <= 0:
                 raise TimeoutError("CI-V response timed out")
-            attempt += 1
-            pending: asyncio.Future[CivFrame] | None = None
-            attempt_timeout = min(
-                remaining_total,
-                max(0.05, self._civ_retry_slice_timeout),
-            )
             try:
-                # Register future BEFORE starting RX pump / sending.
-                if expects_response:
-                    pending = self._civ_request_tracker.register_response(request_key)
-                else:
-                    pending_or_token = self._civ_request_tracker.register_ack(wait=True)
-                    if isinstance(pending_or_token, int):
-                        raise RuntimeError("ACK waiter registration returned sink token")
-                    pending = pending_or_token
-
-                # Ensure RX pump is running for event routing.
-                self._start_civ_rx_pump()
-
-                # Rate-limit CI-V commands slightly (wfview-like pacing).
-                now = time.monotonic()
-                delta = now - self._last_civ_send_monotonic
-                if delta < self._civ_min_interval:
-                    await asyncio.sleep(self._civ_min_interval - delta)
-
-                pkt = self._wrap_civ(civ_frame)
-                await self._civ_transport.send_tracked(pkt)
-                self._last_civ_send_monotonic = time.monotonic()
-                assert pending is not None
-                return await asyncio.wait_for(pending, timeout=attempt_timeout)
+                return await asyncio.wait_for(pending, timeout=remaining)
             except asyncio.TimeoutError:
                 self._civ_request_tracker.note_timeout()
                 logger.debug(
-                    "CI-V command 0x%02X timed out (attempt %d, %.3fs left)",
+                    "CI-V command 0x%02X timed out",
                     request_key.command,
-                    attempt,
-                    max(0.0, deadline_monotonic - time.monotonic()),
                 )
-                continue
-            finally:
-                if pending is not None:
-                    self._civ_request_tracker.unregister(pending)
+                raise TimeoutError("CI-V response timed out")
+        finally:
+            if pending is not None:
+                self._civ_request_tracker.unregister(pending)
 
     # ------------------------------------------------------------------
     # Public CI-V API
@@ -1658,13 +1694,28 @@ class IcomRadio:
         return await self._send_civ_raw(frame)
 
     async def get_frequency(self) -> int:
-        """Get the current operating frequency in Hz."""
+        """Get the current operating frequency in Hz.
+
+        On timeout falls back to the state cache (if populated) rather than
+        raising immediately, allowing callers to remain responsive while the
+        radio is busy streaming scope data.
+        """
         self._check_connected()
         civ = get_frequency(to_addr=self._radio_addr)
-        resp = await self._send_civ_raw(civ, key="get_frequency", dedupe=True)
-        freq = parse_frequency_response(resp)
-        self._last_freq_hz = freq
-        return freq
+        try:
+            resp = await self._send_civ_raw(civ, key="get_frequency", dedupe=True)
+            freq = parse_frequency_response(resp)
+            self._last_freq_hz = freq
+            self._state_cache.update_freq(freq)
+            return freq
+        except TimeoutError:
+            if self._state_cache.freq_ts > 0.0:
+                logger.debug(
+                    "get_frequency: timeout, returning cached %d Hz",
+                    self._state_cache.freq,
+                )
+                return self._state_cache.freq
+            raise
 
     async def set_frequency(self, freq_hz: int) -> None:
         """Set the operating frequency.
@@ -1676,6 +1727,7 @@ class IcomRadio:
         civ = set_frequency(freq_hz, to_addr=self._radio_addr)
         await self._send_civ_raw(civ, wait_response=False)
         self._last_freq_hz = freq_hz
+        self._state_cache.update_freq(freq_hz)
 
     async def get_mode(self) -> Mode:
         """Get the current operating mode."""
@@ -1683,15 +1735,28 @@ class IcomRadio:
         return mode
 
     async def get_mode_info(self) -> tuple[Mode, int | None]:
-        """Get current mode and filter number (if reported by radio)."""
+        """Get current mode and filter number (if reported by radio).
+
+        On timeout falls back to the state cache when populated.
+        """
         self._check_connected()
         civ = get_mode(to_addr=self._radio_addr)
-        resp = await self._send_civ_raw(civ)
-        mode, filt = parse_mode_response(resp)
-        self._last_mode = mode
-        if filt is not None:
-            self._filter_width = filt
-        return mode, filt
+        try:
+            resp = await self._send_civ_raw(civ)
+            mode, filt = parse_mode_response(resp)
+            self._last_mode = mode
+            if filt is not None:
+                self._filter_width = filt
+            self._state_cache.update_mode(mode.name, filt)
+            return mode, filt
+        except TimeoutError:
+            if self._state_cache.mode_ts > 0.0:
+                logger.debug(
+                    "get_mode_info: timeout, returning cached %s",
+                    self._state_cache.mode,
+                )
+                return Mode[self._state_cache.mode], self._state_cache.filter_width
+            raise
 
     async def get_filter(self) -> int | None:
         """Get current mode filter number (1-3) when available."""
@@ -1718,6 +1783,8 @@ class IcomRadio:
         self._last_mode = mode
         if filter_width is not None:
             self._filter_width = filter_width
+        cached_filter = filter_width if filter_width is not None else self._filter_width
+        self._state_cache.update_mode(mode.name, cached_filter)
 
     async def get_data_mode(self) -> bool:
         """Get the IC-7610 DATA mode state (command 0x1A 0x06).
@@ -1744,13 +1811,26 @@ class IcomRadio:
             raise CommandError(f"Radio rejected set_data_mode({on})")
 
     async def get_power(self) -> int:
-        """Get the RF power level (0-255)."""
+        """Get the RF power level (0-255).
+
+        On timeout falls back to the state cache if populated.
+        """
         self._check_connected()
         civ = get_power(to_addr=self._radio_addr)
-        resp = await self._send_civ_raw(civ, key="get_power", dedupe=True)
-        level = _level_bcd_decode(resp.data)
-        self._last_power = level
-        return level
+        try:
+            resp = await self._send_civ_raw(civ, key="get_power", dedupe=True)
+            level = _level_bcd_decode(resp.data)
+            self._last_power = level
+            self._state_cache.update_rf_power(level / 255.0)
+            return level
+        except TimeoutError:
+            if self._state_cache.rf_power_ts > 0.0 and self._state_cache.rf_power is not None:
+                cached_level = round(self._state_cache.rf_power * 255)
+                logger.debug(
+                    "get_power: timeout, returning cached %d", cached_level
+                )
+                return cached_level
+            raise
 
     async def set_power(self, level: int) -> None:
         """Set the RF power level (0-255).
@@ -1787,6 +1867,9 @@ class IcomRadio:
     async def set_ptt(self, on: bool) -> None:
         """Toggle PTT (Push-To-Talk).
 
+        Fire-and-forget: the command is sent at IMMEDIATE priority without
+        blocking for an ACK.  The state cache is updated optimistically.
+
         Args:
             on: True for TX, False for RX.
         """
@@ -1796,7 +1879,9 @@ class IcomRadio:
             if on
             else ptt_off(to_addr=self._radio_addr)
         )
-        await self._send_civ_raw(civ, priority=Priority.IMMEDIATE, wait_response=True)
+        await self._send_civ_raw(civ, priority=Priority.IMMEDIATE, wait_response=False)
+        self._state_cache.update_ptt(on)
+        logger.debug("set_ptt(%s) sent (fire-and-forget)", on)
 
     # ------------------------------------------------------------------
     # VFO / Split
@@ -1870,6 +1955,9 @@ class IcomRadio:
     ) -> None:
         """Set attenuator level in dB (Command29-aware).
 
+        Fire-and-forget: the command is sent without waiting for an ACK.
+        The attenuator state is updated optimistically.
+
         Args:
             db: Attenuation in dB (0..45 in 3 dB steps).
             receiver: RECEIVER_MAIN (0) or RECEIVER_SUB (1).
@@ -1878,11 +1966,9 @@ class IcomRadio:
         if db < 0 or db > 45 or db % 3 != 0:
             raise ValueError(f"Attenuator level must be 0..45 in 3 dB steps, got {db}")
         civ = set_attenuator_level(db, to_addr=self._radio_addr, receiver=receiver)
-        resp = await self._send_civ_raw(civ)
-        ack = parse_ack_nak(resp)
-        if ack is False:
-            raise CommandError(f"Radio rejected attenuator level {db}")
+        await self._send_civ_raw(civ, wait_response=False)
         self._attenuator_state = db > 0
+        logger.debug("set_attenuator(%d dB) sent (fire-and-forget)", db)
 
     async def set_attenuator(self, on: bool, receiver: int = RECEIVER_MAIN) -> None:
         """Enable or disable attenuator (compat wrapper, Command29-aware)."""

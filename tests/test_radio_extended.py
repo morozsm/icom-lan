@@ -453,9 +453,10 @@ class TestPttDisconnected:
             await r.set_ptt(True)
 
     @pytest.mark.asyncio
-    async def test_ptt_waits_for_response(
+    async def test_ptt_is_fire_and_forget(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
+        """set_ptt is fire-and-forget: IMMEDIATE priority, no ACK wait."""
         send_mock = AsyncMock()
         radio._send_civ_raw = send_mock  # type: ignore[method-assign]
 
@@ -464,7 +465,7 @@ class TestPttDisconnected:
         send_mock.assert_awaited_once()
         _, kwargs = send_mock.await_args
         assert kwargs["priority"] == Priority.IMMEDIATE
-        assert kwargs["wait_response"] is True
+        assert kwargs["wait_response"] is False
 
 
 # ---------------------------------------------------------------------------

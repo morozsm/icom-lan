@@ -24,7 +24,7 @@ from icom_lan.commands import (
 )
 from icom_lan.exceptions import ConnectionError, TimeoutError, CommandError
 from icom_lan.radio import IcomRadio
-from icom_lan.types import Mode, PacketType, bcd_encode
+from icom_lan.types import CivFrame, Mode, PacketType, bcd_encode
 
 
 # ---------------------------------------------------------------------------
@@ -352,15 +352,29 @@ class TestPtt:
     async def test_set_ptt_on(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
-        mock_transport.queue_response(_ack_response())
+        """set_ptt is fire-and-forget — no ACK response needed."""
         await radio.set_ptt(True)
+        assert len(mock_transport.sent_packets) > 0
 
     @pytest.mark.asyncio
     async def test_set_ptt_off(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
-        mock_transport.queue_response(_ack_response())
+        """set_ptt is fire-and-forget — no ACK response needed."""
         await radio.set_ptt(False)
+        assert len(mock_transport.sent_packets) > 0
+
+    @pytest.mark.asyncio
+    async def test_set_ptt_updates_state_cache(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        """set_ptt updates the state cache optimistically."""
+        await radio.set_ptt(True)
+        assert radio.state_cache.ptt is True
+        assert radio.state_cache.ptt_ts > 0.0
+
+        await radio.set_ptt(False)
+        assert radio.state_cache.ptt is False
 
 
 class TestTimeout:
@@ -643,3 +657,189 @@ class TestCivTimeoutIsolation:
 
         # set_frequency is fire-and-forget — succeeds without a response
         await radio.set_frequency(14_074_000)  # must not raise
+
+
+# ---------------------------------------------------------------------------
+# Issue #56: state cache populated from unsolicited CI-V frames
+# ---------------------------------------------------------------------------
+
+
+class TestStateCacheFromUnsolicitedFrames:
+    """_update_state_cache_from_frame populates cache from radio-pushed frames."""
+
+    def _make_radio(self) -> IcomRadio:
+        radio = IcomRadio("192.168.1.100")
+        radio._connected = True
+        return radio
+
+    def test_freq_frame_updates_cache(self) -> None:
+        """A frequency frame (cmd 0x03) updates the freq cache."""
+        radio = self._make_radio()
+        assert radio.state_cache.freq_ts == 0.0
+        frame = CivFrame(
+            to_addr=CONTROLLER_ADDR,
+            from_addr=IC_7610_ADDR,
+            command=0x03,
+            data=bcd_encode(14_200_000),
+        )
+        radio._update_state_cache_from_frame(frame)
+        assert radio.state_cache.freq == 14_200_000
+        assert radio.state_cache.freq_ts > 0.0
+
+    def test_mode_frame_updates_cache(self) -> None:
+        """A mode frame (cmd 0x04) updates the mode cache."""
+        radio = self._make_radio()
+        assert radio.state_cache.mode_ts == 0.0
+        # cmd 0x04: data = [mode_byte, filter_byte]; mode 0x00=LSB, filter 0x01=FIL1
+        frame = CivFrame(
+            to_addr=CONTROLLER_ADDR,
+            from_addr=IC_7610_ADDR,
+            command=0x04,
+            data=bytes([0x00, 0x01]),
+        )
+        radio._update_state_cache_from_frame(frame)
+        assert radio.state_cache.mode == "LSB"
+        assert radio.state_cache.filter_width == 1
+        assert radio.state_cache.mode_ts > 0.0
+
+    def test_ptt_frame_updates_cache(self) -> None:
+        """A PTT frame (cmd 0x1C sub 0x00, data=0x01) updates ptt cache."""
+        radio = self._make_radio()
+        assert radio.state_cache.ptt_ts == 0.0
+        frame = CivFrame(
+            to_addr=CONTROLLER_ADDR,
+            from_addr=IC_7610_ADDR,
+            command=0x1C,
+            sub=0x00,
+            data=bytes([0x01]),
+        )
+        radio._update_state_cache_from_frame(frame)
+        assert radio.state_cache.ptt is True
+        assert radio.state_cache.ptt_ts > 0.0
+
+    def test_ptt_off_frame_updates_cache(self) -> None:
+        """A PTT frame with data=0x00 clears the ptt cache."""
+        radio = self._make_radio()
+        radio.state_cache.update_ptt(True)
+        frame = CivFrame(
+            to_addr=CONTROLLER_ADDR,
+            from_addr=IC_7610_ADDR,
+            command=0x1C,
+            sub=0x00,
+            data=bytes([0x00]),
+        )
+        radio._update_state_cache_from_frame(frame)
+        assert radio.state_cache.ptt is False
+
+    def test_unknown_frame_is_ignored_safely(self) -> None:
+        """Frames with unrecognised commands are silently ignored."""
+        radio = self._make_radio()
+        frame = CivFrame(
+            to_addr=CONTROLLER_ADDR,
+            from_addr=IC_7610_ADDR,
+            command=0xFF,
+            data=b"\x01\x02",
+        )
+        radio._update_state_cache_from_frame(frame)  # must not raise
+        assert radio.state_cache.freq_ts == 0.0
+
+
+# ---------------------------------------------------------------------------
+# Issue #56: GET commands fall back to cache on timeout
+# ---------------------------------------------------------------------------
+
+
+class TestGetFallbackToCache:
+    """GET commands return cached values instead of raising on timeout."""
+
+    @pytest.mark.asyncio
+    async def test_get_frequency_returns_cache_on_timeout(
+        self, mock_transport: MockTransport
+    ) -> None:
+        """get_frequency returns cached freq when radio is silent."""
+        radio = IcomRadio("192.168.1.100", timeout=0.05)
+        radio._ctrl_transport = mock_transport
+        radio._civ_transport = mock_transport
+        radio._connected = True
+        radio.state_cache.update_freq(7_200_000)
+
+        freq = await radio.get_frequency()
+        assert freq == 7_200_000
+
+    @pytest.mark.asyncio
+    async def test_get_frequency_raises_when_cache_empty(
+        self, mock_transport: MockTransport
+    ) -> None:
+        """get_frequency raises TimeoutError when cache is empty and radio is silent."""
+        radio = IcomRadio("192.168.1.100", timeout=0.05)
+        radio._ctrl_transport = mock_transport
+        radio._civ_transport = mock_transport
+        radio._connected = True
+
+        with pytest.raises(TimeoutError):
+            await radio.get_frequency()
+
+    @pytest.mark.asyncio
+    async def test_get_mode_info_returns_cache_on_timeout(
+        self, mock_transport: MockTransport
+    ) -> None:
+        """get_mode_info returns cached mode/filter when radio is silent."""
+        radio = IcomRadio("192.168.1.100", timeout=0.05)
+        radio._ctrl_transport = mock_transport
+        radio._civ_transport = mock_transport
+        radio._connected = True
+        radio.state_cache.update_mode("CW", 2)
+
+        mode, filt = await radio.get_mode_info()
+        assert mode == Mode.CW
+        assert filt == 2
+
+    @pytest.mark.asyncio
+    async def test_get_mode_info_raises_when_cache_empty(
+        self, mock_transport: MockTransport
+    ) -> None:
+        """get_mode_info raises TimeoutError when cache is empty and radio is silent."""
+        radio = IcomRadio("192.168.1.100", timeout=0.05)
+        radio._ctrl_transport = mock_transport
+        radio._civ_transport = mock_transport
+        radio._connected = True
+
+        with pytest.raises(TimeoutError):
+            await radio.get_mode_info()
+
+
+# ---------------------------------------------------------------------------
+# Issue #56: SET commands update the state cache optimistically
+# ---------------------------------------------------------------------------
+
+
+class TestSetCommandsUpdateCache:
+    """SET commands update the state cache without waiting for ACK."""
+
+    @pytest.mark.asyncio
+    async def test_set_frequency_updates_state_cache(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        """set_frequency updates the frequency cache immediately."""
+        await radio.set_frequency(21_074_000)
+        assert radio.state_cache.freq == 21_074_000
+        assert radio.state_cache.freq_ts > 0.0
+
+    @pytest.mark.asyncio
+    async def test_set_mode_updates_state_cache(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        """set_mode updates the mode cache immediately."""
+        await radio.set_mode(Mode.CW)
+        assert radio.state_cache.mode == "CW"
+        assert radio.state_cache.mode_ts > 0.0
+
+    @pytest.mark.asyncio
+    async def test_rapid_set_frequency_does_not_block(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        """Rapid consecutive set_frequency calls are all fire-and-forget."""
+        for freq in [7_000_000, 7_100_000, 7_200_000]:
+            await radio.set_frequency(freq)
+        # Cache holds the last value sent.
+        assert radio.state_cache.freq == 7_200_000

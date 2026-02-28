@@ -21,6 +21,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from icom_lan.rigctld.state_cache import StateCache
 from icom_lan.scope import ScopeFrame
 from icom_lan.web.protocol import (
     METER_ALC,
@@ -213,6 +214,8 @@ def mock_radio() -> MagicMock:
     radio.vfo_a_equals_b = AsyncMock()
     # on_scope_data is a synchronous setter
     radio.on_scope_data = MagicMock()
+    # Empty state cache: handlers will fall back to live queries (existing behaviour).
+    radio.state_cache = StateCache()
     return radio
 
 
