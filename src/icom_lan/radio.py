@@ -1667,10 +1667,7 @@ class IcomRadio:
         """
         self._check_connected()
         civ = set_frequency(freq_hz, to_addr=self._radio_addr)
-        resp = await self._send_civ_raw(civ)
-        ack = parse_ack_nak(resp)
-        if ack is False:
-            raise CommandError(f"Radio rejected set_frequency({freq_hz})")
+        await self._send_civ_raw(civ, wait_response=False)
         self._last_freq_hz = freq_hz
 
     async def get_mode(self) -> Mode:
@@ -1699,11 +1696,6 @@ class IcomRadio:
         mode = await self.get_mode()
         await self.set_mode(mode, filter_width=filter_width)
 
-    # IC-7610 sometimes does not ACK set_mode (known quirk, also seen in
-    # wfview/rigctld). Use a short timeout to avoid blocking the CI-V queue
-    # for the full default timeout. The error is swallowed and logged.
-    _SET_MODE_ACK_TIMEOUT = 2.0  # seconds
-
     async def set_mode(self, mode: Mode | str, filter_width: int | None = None) -> None:
         """Set the operating mode.
 
@@ -1715,14 +1707,7 @@ class IcomRadio:
         if isinstance(mode, str):
             mode = Mode[mode]
         civ = set_mode(mode, filter_width=filter_width, to_addr=self._radio_addr)
-        try:
-            await self._send_civ_raw(civ, timeout=self._SET_MODE_ACK_TIMEOUT)
-        except (TimeoutError, asyncio.TimeoutError):
-            logger.warning(
-                "set_mode(%s): ACK not received within %.1fs (known IC-7610 quirk)",
-                mode.name,
-                self._SET_MODE_ACK_TIMEOUT,
-            )
+        await self._send_civ_raw(civ, wait_response=False)
         self._last_mode = mode
         if filter_width is not None:
             self._filter_width = filter_width
@@ -1768,10 +1753,7 @@ class IcomRadio:
         """
         self._check_connected()
         civ = set_power(level, to_addr=self._radio_addr)
-        resp = await self._send_civ_raw(civ)
-        ack = parse_ack_nak(resp)
-        if ack is False:
-            raise CommandError(f"Radio rejected set_power({level})")
+        await self._send_civ_raw(civ, wait_response=False)
         self._last_power = level
 
     async def get_s_meter(self) -> int:
@@ -1807,10 +1789,7 @@ class IcomRadio:
             if on
             else ptt_off(to_addr=self._radio_addr)
         )
-        resp = await self._send_civ_raw(civ, priority=Priority.IMMEDIATE)
-        ack = parse_ack_nak(resp)
-        if ack is False:
-            raise CommandError(f"Radio rejected PTT {'on' if on else 'off'}")
+        await self._send_civ_raw(civ, priority=Priority.IMMEDIATE, wait_response=False)
 
     # ------------------------------------------------------------------
     # VFO / Split
@@ -1902,10 +1881,7 @@ class IcomRadio:
         """Enable or disable attenuator (compat wrapper, Command29-aware)."""
         self._check_connected()
         civ = set_attenuator(on, to_addr=self._radio_addr, receiver=receiver)
-        resp = await self._send_civ_raw(civ)
-        ack = parse_ack_nak(resp)
-        if ack is False:
-            raise CommandError(f"Radio rejected attenuator {'on' if on else 'off'}")
+        await self._send_civ_raw(civ, wait_response=False)
         self._attenuator_state = on
 
     async def get_preamp(self, receiver: int = RECEIVER_MAIN) -> int:
@@ -1958,10 +1934,7 @@ class IcomRadio:
                 pass  # Unexpected error — proceed anyway
 
         civ = set_preamp(level, to_addr=self._radio_addr, receiver=receiver)
-        resp = await self._send_civ_raw(civ)
-        ack = parse_ack_nak(resp)
-        if ack is False:
-            raise CommandError(f"Radio rejected preamp level {level}")
+        await self._send_civ_raw(civ, wait_response=False)
         self._preamp_level = level
 
     async def get_digisel(self) -> bool:

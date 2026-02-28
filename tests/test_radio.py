@@ -252,17 +252,16 @@ class TestFrequency:
     async def test_set_frequency(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
-        mock_transport.queue_response(_ack_response())
         await radio.set_frequency(7_074_000)
         assert len(mock_transport.sent_packets) > 0
 
     @pytest.mark.asyncio
-    async def test_set_frequency_nak(
+    async def test_set_frequency_no_response_needed(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
-        mock_transport.queue_response(_nak_response())
-        with pytest.raises(CommandError):
-            await radio.set_frequency(999_999_999)
+        """set_frequency is fire-and-forget — completes without any radio response."""
+        await radio.set_frequency(14_074_000)
+        assert radio._last_freq_hz == 14_074_000
 
 
 class TestMode:
@@ -280,15 +279,21 @@ class TestMode:
     async def test_set_mode(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
-        mock_transport.queue_response(_ack_response())
         await radio.set_mode(Mode.LSB)
         assert len(mock_transport.sent_packets) > 0
+
+    @pytest.mark.asyncio
+    async def test_set_mode_no_response_needed(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        """set_mode is fire-and-forget — completes without any radio response."""
+        await radio.set_mode(Mode.USB)
+        assert radio._last_mode == Mode.USB
 
     @pytest.mark.asyncio
     async def test_set_mode_from_string(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
-        mock_transport.queue_response(_ack_response())
         await radio.set_mode("USB")
         assert len(mock_transport.sent_packets) > 0
 
@@ -336,7 +341,6 @@ class TestPower:
     async def test_set_power(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
-        mock_transport.queue_response(_ack_response())
         await radio.set_power(200)
         assert len(mock_transport.sent_packets) > 0
 
@@ -348,14 +352,12 @@ class TestPtt:
     async def test_set_ptt_on(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
-        mock_transport.queue_response(_ack_response())
         await radio.set_ptt(True)
 
     @pytest.mark.asyncio
     async def test_set_ptt_off(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
-        mock_transport.queue_response(_ack_response())
         await radio.set_ptt(False)
 
 
@@ -440,8 +442,7 @@ class TestAckSinkRobustness:
         ff = build_civ_frame(IC_7610_ADDR, CONTROLLER_ADDR, 0x27, sub=0x10, data=b"\x01")
         await radio._execute_civ_raw(ff, wait_response=False)
 
-        # Next ACK should satisfy this set command, not a stale sink.
-        mock_transport.queue_response_on_send(2, _ack_response())
+        # set_frequency is fire-and-forget — completes without any response.
         await radio.set_frequency(7_074_000)
 
     @pytest.mark.asyncio
@@ -522,72 +523,51 @@ class TestScopeCallbackSafety:
         assert resp is not None
         assert resp.command == _CMD_ACK
 
-        # RX pump should continue to route subsequent ACK traffic.
-        mock_transport.queue_response(_ack_response())
+        # set_frequency is fire-and-forget — RX pump unaffected.
         await radio.set_frequency(7_074_000)
 
 
 # ---------------------------------------------------------------------------
-# set_mode timeout resilience
+# set_mode fire-and-forget (IC-7610 ACK quirk fix)
 # ---------------------------------------------------------------------------
 
 
-class TestSetModeTimeout:
-    """set_mode must swallow TimeoutError (known IC-7610 ACK quirk)."""
+class TestSetModeFireAndForget:
+    """set_mode is fire-and-forget — no ACK required, no timeout to swallow."""
 
     @pytest.mark.asyncio
-    async def test_set_mode_swallows_icom_timeout(
+    async def test_set_mode_no_ack_needed(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
-        """When _send_civ_raw raises our TimeoutError, set_mode must not re-raise."""
-        with patch.object(
-            radio, "_send_civ_raw", side_effect=TimeoutError("no ACK")
-        ):
-            await radio.set_mode(Mode.USB)  # must not raise
+        """set_mode completes without queuing any radio response."""
+        await radio.set_mode(Mode.USB)  # must not raise
         assert radio._last_mode == Mode.USB
 
     @pytest.mark.asyncio
-    async def test_set_mode_swallows_asyncio_timeout(
+    async def test_set_mode_string_no_ack_needed(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
-        """When _send_civ_raw raises asyncio.TimeoutError, set_mode must not re-raise."""
-        with patch.object(
-            radio, "_send_civ_raw", side_effect=asyncio.TimeoutError()
-        ):
-            await radio.set_mode(Mode.CW)  # must not raise
-        assert radio._last_mode == Mode.CW
+        """String mode variant also completes without a response."""
+        await radio.set_mode("USB")
+        assert radio._last_mode == Mode.USB
 
     @pytest.mark.asyncio
-    async def test_set_mode_ack_received_succeeds(
+    async def test_set_mode_updates_last_mode(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
-        """When ACK arrives, set_mode completes normally and updates _last_mode."""
-        mock_transport.queue_response(_ack_response())
+        """set_mode updates _last_mode regardless of radio response."""
         await radio.set_mode(Mode.LSB)
         assert radio._last_mode == Mode.LSB
 
     @pytest.mark.asyncio
-    async def test_set_mode_string_timeout_swallowed(
+    async def test_set_mode_send_failure_propagates(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
-        """String mode variant also swallows timeout."""
+        """A send-level error (e.g. OSError) still propagates from set_mode."""
         with patch.object(
-            radio, "_send_civ_raw", side_effect=TimeoutError("no ACK")
+            radio, "_send_civ_raw", side_effect=OSError("send failed")
         ):
-            await radio.set_mode("USB")
-        assert radio._last_mode == Mode.USB
-
-    @pytest.mark.asyncio
-    async def test_set_mode_does_not_swallow_command_error(
-        self, radio: IcomRadio, mock_transport: MockTransport
-    ) -> None:
-        """CommandError (NAK from radio) must still propagate."""
-        from icom_lan.exceptions import CommandError
-
-        with patch.object(
-            radio, "_send_civ_raw", side_effect=CommandError("NAK")
-        ):
-            with pytest.raises(CommandError):
+            with pytest.raises(OSError):
                 await radio.set_mode(Mode.USB)
 
 
@@ -659,6 +639,5 @@ class TestCivTimeoutIsolation:
 
         assert radio._civ_request_tracker.pending_count == 0
 
-        # set_frequency (expects ACK) should succeed
-        mock_transport.queue_response(_ack_response())
+        # set_frequency is fire-and-forget — succeeds without a response
         await radio.set_frequency(14_074_000)  # must not raise

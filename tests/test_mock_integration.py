@@ -94,6 +94,7 @@ class TestFrequency:
         self, connected_radio: IcomRadio, mock_radio: MockIcomRadio
     ) -> None:
         await connected_radio.set_frequency(7_074_000)
+        await asyncio.sleep(0)  # fire-and-forget: yield so mock can process the packet
         assert mock_radio._frequency == 7_074_000
         freq = await connected_radio.get_frequency()
         assert freq == 7_074_000
@@ -253,6 +254,7 @@ class TestAttPreamp:
         """set_preamp should succeed when DIGI-SEL is off (default)."""
         mock_radio.set_digisel(False)
         await connected_radio.set_preamp(1)  # must not raise
+        await asyncio.sleep(0)  # fire-and-forget: yield so mock can process the packet
         assert mock_radio._preamp == 1
 
 

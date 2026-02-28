@@ -162,23 +162,22 @@ class TestAttenuator:
     async def test_att_on(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
-        mock_transport.queue_response(_ack_response())
         await radio.set_attenuator(True)
+        assert radio._attenuator_state is True
 
     @pytest.mark.asyncio
     async def test_att_off(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
-        mock_transport.queue_response(_ack_response())
         await radio.set_attenuator(False)
+        assert radio._attenuator_state is False
 
     @pytest.mark.asyncio
-    async def test_att_nak(
+    async def test_att_no_response_needed(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
-        mock_transport.queue_response(_nak_response())
-        with pytest.raises(CommandError):
-            await radio.set_attenuator(True)
+        """set_attenuator is fire-and-forget — completes without a radio response."""
+        await radio.set_attenuator(True)  # must not raise
 
     @pytest.mark.asyncio
     async def test_att_disconnected(self) -> None:
@@ -200,10 +199,9 @@ class TestPreamp:
         mock_transport.queue_response(
             _digisel_off_response()
         )  # pre-flight DIGI-SEL check (send #1)
-        mock_transport.queue_response_on_send(
-            2, _ack_response()
-        )  # set_preamp ACK (send #2)
+        # set_preamp is fire-and-forget — no ACK needed
         await radio.set_preamp(1)
+        assert radio._preamp_level == 1
 
     @pytest.mark.asyncio
     async def test_preamp_level2(
@@ -212,31 +210,27 @@ class TestPreamp:
         mock_transport.queue_response(
             _digisel_off_response()
         )  # pre-flight DIGI-SEL check (send #1)
-        mock_transport.queue_response_on_send(
-            2, _ack_response()
-        )  # set_preamp ACK (send #2)
+        # set_preamp is fire-and-forget — no ACK needed
         await radio.set_preamp(2)
+        assert radio._preamp_level == 2
 
     @pytest.mark.asyncio
     async def test_preamp_off(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
-        # level=0 skips DIGI-SEL check
-        mock_transport.queue_response(_ack_response())
+        # level=0 skips DIGI-SEL check; fire-and-forget, no response needed
         await radio.set_preamp(0)
+        assert radio._preamp_level == 0
 
     @pytest.mark.asyncio
-    async def test_preamp_nak(
+    async def test_preamp_no_response_needed(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
+        """set_preamp is fire-and-forget — completes without a radio response."""
         mock_transport.queue_response(
             _digisel_off_response()
-        )  # pre-flight DIGI-SEL check (send #1)
-        mock_transport.queue_response_on_send(
-            2, _nak_response()
-        )  # set_preamp NAK (send #2)
-        with pytest.raises(CommandError):
-            await radio.set_preamp(1)
+        )  # pre-flight DIGI-SEL check still awaits response
+        await radio.set_preamp(1)  # must not raise
 
     @pytest.mark.asyncio
     async def test_preamp_disconnected(self) -> None:
@@ -458,12 +452,11 @@ class TestPttDisconnected:
             await r.set_ptt(True)
 
     @pytest.mark.asyncio
-    async def test_ptt_nak(
+    async def test_ptt_no_response_needed(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
-        mock_transport.queue_response(_nak_response())
-        with pytest.raises(CommandError):
-            await radio.set_ptt(True)
+        """set_ptt is fire-and-forget — completes without a radio response."""
+        await radio.set_ptt(True)  # must not raise
 
 
 # ---------------------------------------------------------------------------
