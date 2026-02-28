@@ -32,6 +32,7 @@ from .audio import (
     JitterBuffer,
 )
 from .transport import ConnectionState, IcomTransport
+from ._connection_state import RadioConnectionState
 from .commander import IcomCommander, Priority
 from .radio import AudioRecoveryState, IcomRadio
 from .radios import RADIOS, RadioModel, get_civ_addr

@@ -13,6 +13,7 @@ from .auth import (
     build_login_packet,
     parse_auth_response,
 )
+from ._connection_state import RadioConnectionState
 from .exceptions import AuthenticationError, ConnectionError, TimeoutError
 from .transport import ConnectionState, IcomTransport
 
@@ -53,6 +54,8 @@ class _ControlPhaseMixin:
             AuthenticationError: If login is rejected.
             TimeoutError: If the radio doesn't respond.
         """
+        self._conn_state = RadioConnectionState.CONNECTING  # type: ignore[attr-defined]
+
         # --- Phase 1: Control port ---
         try:
             await self._ctrl_transport.connect(self._host, self._port)  # type: ignore[attr-defined]
@@ -152,8 +155,7 @@ class _ControlPhaseMixin:
         self._advance_civ_generation("connect")  # type: ignore[attr-defined]
         self._civ_last_waiter_gc_monotonic = time.monotonic()  # type: ignore[attr-defined]
         self._start_civ_rx_pump()  # type: ignore[attr-defined]
-        self._connected = True  # type: ignore[attr-defined]
-        self._intentional_disconnect = False  # type: ignore[attr-defined]
+        self._conn_state = RadioConnectionState.CONNECTED  # type: ignore[attr-defined]
         self._ctrl_transport.state = ConnectionState.CONNECTED  # type: ignore[attr-defined]
         self._start_civ_worker()  # type: ignore[attr-defined]
         self._start_token_renewal()
@@ -385,9 +387,9 @@ class _ControlPhaseMixin:
     async def _token_renewal_loop(self) -> None:
         """Background task: send token renewal every TOKEN_RENEWAL_INTERVAL."""
         try:
-            while self._connected:  # type: ignore[attr-defined]
+            while self._conn_state == RadioConnectionState.CONNECTED:  # type: ignore[attr-defined]
                 await asyncio.sleep(self.TOKEN_RENEWAL_INTERVAL)
-                if not self._connected:  # type: ignore[attr-defined]
+                if self._conn_state != RadioConnectionState.CONNECTED:  # type: ignore[attr-defined]
                     break
                 try:
                     await self._send_token(0x05)  # renewal magic
