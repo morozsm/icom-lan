@@ -861,7 +861,10 @@ function handleCtrlMsg(m){
       else if(m.name==='ptt'&&m.data){pttState=m.data.state;pttBtn.classList.toggle('active',pttState)}
       else if(m.name==='scope_meta'&&m.data){startFreq=m.data.start_freq||startFreq;endFreq=m.data.end_freq||endFreq;drawFreqAxis()}
       break;
-    case 'response': if(!m.ok){console.warn('cmd err:',m.error,m.message);showToast(m.message||m.error||'Command failed')} break;
+    case 'response':
+      if(!m.ok){console.warn('cmd err:',m.error,m.message);showToast(m.message||m.error||'Command failed')}
+      else if(m.result) updateStateFromServer(m.result);
+      break;
   }
 }
 

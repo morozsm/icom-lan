@@ -246,7 +246,15 @@ class ControlHandler:
         if name == "set_freq":
             freq = int(params["freq"])
             await radio.set_frequency(freq)
-            return {"freq": freq}
+            result: dict[str, Any] = {"freq": freq}
+            try:
+                fil = await radio.get_filter()
+            except Exception as exc:
+                logger.debug("control: set_freq filter read failed: %s", exc)
+            else:
+                if fil is not None:
+                    result["filter"] = f"FIL{fil}"
+            return result
 
         if name == "set_mode":
             mode = str(params["mode"])
