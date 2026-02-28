@@ -113,6 +113,7 @@ class ControlHandler:
             "server": "icom-lan",
             "version": self._version,
             "radio": self._radio_model,
+            "connected": self._radio.connected if self._radio else False,
             "capabilities": ["scope", "audio", "tx"],
         }
         await self._ws.send_text(encode_json(msg))
@@ -132,8 +133,64 @@ class ControlHandler:
             await self._handle_unsubscribe(msg)
         elif msg_type == "cmd":
             await self._handle_command(msg)
+        elif msg_type == "radio_connect":
+            await self._handle_radio_connect(msg)
+        elif msg_type == "radio_disconnect":
+            await self._handle_radio_disconnect(msg)
         else:
             logger.debug("control: unknown message type: %r", msg_type)
+
+    async def _handle_radio_connect(self, msg: dict[str, Any]) -> None:
+        """Handle radio_connect request — reconnect the radio."""
+        msg_id = msg.get("id", "")
+        if self._radio is None:
+            await self._send_json({"type": "response", "id": msg_id, "ok": False,
+                                   "error": "no_radio", "message": "no radio instance"})
+            return
+        try:
+            if self._radio.connected:
+                await self._send_json({"type": "response", "id": msg_id, "ok": True,
+                                       "result": {"status": "already_connected"}})
+                return
+            await self._radio.connect()
+            await self._send_json({"type": "response", "id": msg_id, "ok": True,
+                                   "result": {"status": "connected"}})
+            # Broadcast state to all clients
+            await self._broadcast_connection_state(True)
+        except Exception as exc:
+            logger.warning("radio_connect failed: %s", exc)
+            await self._send_json({"type": "response", "id": msg_id, "ok": False,
+                                   "error": "connect_failed", "message": str(exc)})
+
+    async def _handle_radio_disconnect(self, msg: dict[str, Any]) -> None:
+        """Handle radio_disconnect request — disconnect the radio."""
+        msg_id = msg.get("id", "")
+        if self._radio is None:
+            await self._send_json({"type": "response", "id": msg_id, "ok": False,
+                                   "error": "no_radio", "message": "no radio instance"})
+            return
+        try:
+            if not self._radio.connected:
+                await self._send_json({"type": "response", "id": msg_id, "ok": True,
+                                       "result": {"status": "already_disconnected"}})
+                return
+            await self._radio.disconnect()
+            await self._send_json({"type": "response", "id": msg_id, "ok": True,
+                                   "result": {"status": "disconnected"}})
+            await self._broadcast_connection_state(False)
+        except Exception as exc:
+            logger.warning("radio_disconnect failed: %s", exc)
+            await self._send_json({"type": "response", "id": msg_id, "ok": False,
+                                   "error": "disconnect_failed", "message": str(exc)})
+
+    async def _broadcast_connection_state(self, connected: bool) -> None:
+        """Broadcast connection state change to this client."""
+        await self._send_json({"type": "event", "event": "connection_state",
+                               "connected": connected})
+
+    async def _send_json(self, obj: dict[str, Any]) -> None:
+        """Send a JSON message to the WebSocket client."""
+        await self._ws.send_text(encode_json(obj))
 
     async def _handle_subscribe(self, msg: dict[str, Any]) -> None:
         streams = msg.get("streams", [])
