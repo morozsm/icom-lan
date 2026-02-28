@@ -329,14 +329,14 @@ class IcomRadio:
         civ_port = await self._receive_civ_port()
         if civ_port == 0:
             civ_port = self._port + 1  # Fallback: assume control+1
-            logger.debug("CI-V port not in status, using default %d", civ_port)
+            logger.warning("CI-V port not in status, using default %d", civ_port)
         self._civ_port = civ_port
 
         # wfview/protocol defaults: audio is typically control+2 (50003).
         # Keep this as a fallback if status didn't carry audio_port.
         if self._audio_port == 0:
             self._audio_port = self._port + 2
-            logger.debug("Audio port not in status, using default %d", self._audio_port)
+            logger.warning("Audio port not in status, using default %d", self._audio_port)
 
         # --- Phase 2: CI-V port ---
         self._civ_transport = IcomTransport()
@@ -1336,6 +1336,7 @@ class IcomRadio:
         """
         deadline = time.monotonic() + self._timeout
         civ_port = 0
+        status_packets_seen = 0
 
         while time.monotonic() < deadline:
             try:
@@ -1348,6 +1349,7 @@ class IcomRadio:
 
                 got_civ = struct.unpack_from(">H", d, 0x42)[0]
                 got_audio = struct.unpack_from(">H", d, 0x46)[0]
+                status_packets_seen += 1
                 logger.info(
                     "Status: civ_port=%d, audio_port=%d",
                     got_civ,
@@ -1359,6 +1361,11 @@ class IcomRadio:
                 if got_civ > 0:
                     civ_port = got_civ
                     return civ_port
+                if status_packets_seen >= 2:
+                    logger.warning(
+                        "Status packet has civ_port=0, falling back to default"
+                    )
+                    break
             except asyncio.TimeoutError:
                 continue
 
