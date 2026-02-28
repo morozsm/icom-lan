@@ -115,13 +115,27 @@ class _ControlPhaseMixin:
             _audio_local_port,
         )
 
-        # Send our conninfo → triggers status packet with CI-V port
-        await self._send_conninfo(guid, _civ_local_port, _audio_local_port)
-
-        civ_port = await self._receive_civ_port()
+        # Send our conninfo → triggers status packet with CI-V port.
+        # Retry up to 3 times if radio returns civ_port=0 (common after
+        # rapid reconnects — the radio needs a moment to recover).
+        civ_port = 0
+        for attempt in range(3):
+            await self._send_conninfo(guid, _civ_local_port, _audio_local_port)
+            civ_port = await self._receive_civ_port()
+            if civ_port > 0:
+                break
+            if attempt < 2:
+                logger.info(
+                    "civ_port=0 in status (attempt %d/3), retrying in 3s...",
+                    attempt + 1,
+                )
+                await asyncio.sleep(3)
         if civ_port == 0:
             civ_port = self._port + 1  # type: ignore[attr-defined]  # Fallback: assume control+1
-            logger.warning("CI-V port not in status, using default %d", civ_port)
+            logger.warning(
+                "CI-V port not in status after 3 attempts, using default %d",
+                civ_port,
+            )
         self._civ_port = civ_port  # type: ignore[attr-defined]
 
         # wfview/protocol defaults: audio is typically control+2 (50003).

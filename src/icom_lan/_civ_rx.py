@@ -131,8 +131,6 @@ class _CivRxMixin:
                             break
 
                 # Process all collected packets.
-                scope_count = 0
-                non_scope_count = 0
                 for pkt in packets:
                     if len(pkt) <= CIV_HEADER_SIZE:
                         continue
@@ -142,27 +140,12 @@ class _CivRxMixin:
                             frame = parse_civ_frame(frame_bytes)
                         except ValueError:
                             continue
-                        if frame.command == 0x27:
-                            scope_count += 1
-                        else:
-                            non_scope_count += 1
-                            logger.info(
-                                "CIV RX non-scope: cmd=0x%02X sub=0x%02X data=%s",
-                                frame.command,
-                                frame.sub or 0,
-                                frame.data[:12].hex() if frame.data else "empty",
-                            )
                         try:
                             await self._route_civ_frame(frame, generation=generation)
                         except Exception:
                             logger.exception(
                                 "Unhandled exception while routing CI-V frame"
                             )
-                if non_scope_count or (scope_count and scope_count % 100 == 0):
-                    logger.debug(
-                        "RX batch: %d packets, %d scope, %d non-scope",
-                        len(packets), scope_count, non_scope_count,
-                    )
                 self._cleanup_stale_civ_waiters()
         except asyncio.CancelledError:
             pass
