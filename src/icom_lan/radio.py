@@ -12,11 +12,8 @@ Usage::
 from __future__ import annotations
 
 import asyncio
-import dataclasses
-import enum
 import logging
 import os
-import struct
 import time
 import warnings
 from typing import TYPE_CHECKING, AsyncGenerator
@@ -24,11 +21,6 @@ from typing import TYPE_CHECKING, AsyncGenerator
 if TYPE_CHECKING:
     from typing import Any, Awaitable, Callable
 
-from .auth import (
-    build_conninfo_packet,
-    build_login_packet,
-    parse_auth_response,
-)
 from .commands import (
     CONTROLLER_ADDR,
     IC_7610_ADDR,
@@ -100,6 +92,17 @@ from .types import (
     get_audio_capabilities,
 )
 
+# Import split modules
+from ._audio_recovery import AudioRecoveryState, _AudioSnapshot, _AudioRecoveryMixin
+from ._civ_rx import CIV_HEADER_SIZE, _CivRxMixin
+from ._control_phase import (
+    CONNINFO_SIZE,
+    OPENCLOSE_SIZE,
+    STATUS_SIZE,
+    TOKEN_ACK_SIZE,
+    _ControlPhaseMixin,
+)
+
 __all__ = [
     "AudioRecoveryState",
     "IcomRadio",
@@ -109,33 +112,8 @@ __all__ = [
 ]
 
 
-class AudioRecoveryState(enum.Enum):
-    """State emitted by the ``on_audio_recovery`` callback."""
-
-    RECOVERING = "recovering"
-    RECOVERED = "recovered"
-    FAILED = "failed"
-
-
-@dataclasses.dataclass(frozen=True, slots=True)
-class _AudioSnapshot:
-    """Captured audio state before disconnect for auto-recovery."""
-
-    rx_active: bool
-    tx_active: bool
-    pcm_mode: bool
-    pcm_rx_callback: "Callable[[bytes | None], None] | None"
-    opus_rx_callback: "Callable[[AudioPacket | None], None] | None"
-    pcm_params: tuple[int, int, int] | None
-    jitter_depth: int
-
 logger = logging.getLogger(__name__)
 
-CIV_HEADER_SIZE = 0x15
-OPENCLOSE_SIZE = 0x16  # per wfview packettypes.h
-TOKEN_ACK_SIZE = 0x40
-CONNINFO_SIZE = 0x90
-STATUS_SIZE = 0x50
 _AUDIO_CAPABILITIES = get_audio_capabilities()
 _DEFAULT_AUDIO_CODEC = _AUDIO_CAPABILITIES.default_codec
 _DEFAULT_AUDIO_SAMPLE_RATE = _AUDIO_CAPABILITIES.default_sample_rate_hz
@@ -143,7 +121,7 @@ _DEFAULT_AUDIO_SAMPLE_RATE = _AUDIO_CAPABILITIES.default_sample_rate_hz
 _DEFAULT_CACHE_TTL: dict[str, float] = {"freq": 10.0, "mode": 10.0, "rf_power": 30.0}
 
 
-class IcomRadio:
+class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
     """High-level async interface for controlling an Icom transceiver over LAN.
 
     Manages two UDP connections:
@@ -284,130 +262,12 @@ class IcomRadio:
         """
         return self._civ_request_tracker.snapshot_stats()
 
-    # ------------------------------------------------------------------
-    # Connection lifecycle
-    # ------------------------------------------------------------------
+    async def __aenter__(self) -> "IcomRadio":
+        await self.connect()
+        return self
 
-    async def connect(self) -> None:
-        """Open connection to the radio and authenticate.
-
-        Performs the full handshake sequence:
-        1. Discovery on control port (Are You There → I Am Here).
-        2. Login with credentials.
-        3. Token acknowledgement.
-        4. Conninfo exchange to learn CI-V port.
-        5. Open CI-V connection and start CI-V data stream.
-
-        Raises:
-            ConnectionError: If UDP connection fails.
-            AuthenticationError: If login is rejected.
-            TimeoutError: If the radio doesn't respond.
-        """
-        # --- Phase 1: Control port ---
-        try:
-            await self._ctrl_transport.connect(self._host, self._port)
-        except OSError as exc:
-            raise ConnectionError(
-                f"Failed to connect to {self._host}:{self._port}: {exc}"
-            ) from exc
-
-        self._ctrl_transport.start_ping_loop()
-        self._ctrl_transport.start_retransmit_loop()
-
-        # Login
-        login_pkt = build_login_packet(
-            self._username,
-            self._password,
-            sender_id=self._ctrl_transport.my_id,
-            receiver_id=self._ctrl_transport.remote_id,
-        )
-        await self._ctrl_transport.send_tracked(login_pkt)
-        resp_data = await self._wait_for_packet(
-            self._ctrl_transport, size=0x60, label="login response"
-        )
-        auth = parse_auth_response(resp_data)
-        if not auth.success:
-            raise AuthenticationError(
-                f"Authentication failed (error=0x{auth.error:08X})"
-            )
-        self._token = auth.token
-        self._tok_request = auth.tok_request
-        logger.info(
-            "Authenticated with %s:%d, token=0x%08X",
-            self._host,
-            self._port,
-            self._token,
-        )
-
-        # Token ack
-        await self._send_token_ack()
-
-        # Get GUID from radio's conninfo
-        guid = await self._receive_guid()
-
-        # Reserve local UDP ports for CI-V and audio (wfview-style).
-        import socket as _socket
-        _civ_sock = _socket.socket(_socket.AF_INET, _socket.SOCK_DGRAM)
-        _civ_sock.bind(("", 0))
-        _civ_local_port = _civ_sock.getsockname()[1]
-        _civ_sock.close()
-        _audio_sock = _socket.socket(_socket.AF_INET, _socket.SOCK_DGRAM)
-        _audio_sock.bind(("", 0))
-        _audio_local_port = _audio_sock.getsockname()[1]
-        _audio_sock.close()
-        logger.debug("Reserved local ports: civ=%d, audio=%d", _civ_local_port, _audio_local_port)
-
-        # Send our conninfo → triggers status packet with CI-V port
-        await self._send_conninfo(guid, _civ_local_port, _audio_local_port)
-
-        civ_port = await self._receive_civ_port()
-        if civ_port == 0:
-            civ_port = self._port + 1  # Fallback: assume control+1
-            logger.warning("CI-V port not in status, using default %d", civ_port)
-        self._civ_port = civ_port
-
-        # wfview/protocol defaults: audio is typically control+2 (50003).
-        # Keep this as a fallback if status didn't carry audio_port.
-        if self._audio_port == 0:
-            self._audio_port = self._port + 2
-            logger.warning("Audio port not in status, using default %d", self._audio_port)
-
-        # --- Phase 2: CI-V port ---
-        self._civ_transport = IcomTransport()
-        try:
-            await self._civ_transport.connect(self._host, self._civ_port)
-        except OSError as exc:
-            await self._ctrl_transport.disconnect()
-            raise ConnectionError(
-                f"Failed to connect CI-V port {self._civ_port}: {exc}"
-            ) from exc
-
-        self._civ_transport.start_ping_loop()
-        self._civ_transport.start_retransmit_loop()
-
-        # Open CI-V data stream
-        await self._send_open_close(open_stream=True)
-
-        # Flush initial waterfall/status data
-        await asyncio.sleep(0.3)
-        await self._flush_queue(self._civ_transport)
-
-        self._advance_civ_generation("connect")
-        self._civ_last_waiter_gc_monotonic = time.monotonic()
-        self._start_civ_rx_pump()
-        self._connected = True
-        self._intentional_disconnect = False
-        self._ctrl_transport.state = ConnectionState.CONNECTED
-        self._start_civ_worker()
-        self._start_token_renewal()
-        if self._auto_reconnect:
-            self._start_watchdog()
-        logger.info(
-            "Connected to %s (control=%d, civ=%d)",
-            self._host,
-            self._port,
-            self._civ_port,
-        )
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:  # type: ignore[no-untyped-def]
+        await self.disconnect()
 
     async def disconnect(self) -> None:
         """Cleanly disconnect from the radio."""
@@ -445,12 +305,120 @@ class IcomRadio:
             await self._ctrl_transport.disconnect()
             logger.info("Disconnected from %s:%d", self._host, self._port)
 
-    async def __aenter__(self) -> "IcomRadio":
-        await self.connect()
-        return self
+    # ------------------------------------------------------------------
+    # Watchdog & reconnect loops
+    # ------------------------------------------------------------------
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:  # type: ignore[no-untyped-def]
-        await self.disconnect()
+    async def _watchdog_loop(self) -> None:
+        """Monitor connection health via transport packet queue activity.
+
+        If no packets are received for ``watchdog_timeout`` seconds,
+        triggers a reconnect attempt.
+
+        Reference: wfview icomudpaudio.cpp watchdog() — 30s timeout.
+        """
+        last_activity = time.monotonic()
+        last_health_log = time.monotonic()
+        last_rx_count = self._ctrl_transport.rx_packet_count
+        last_civ_count = (
+            self._civ_transport.rx_packet_count if self._civ_transport else 0
+        )
+        try:
+            while self._connected:
+                await asyncio.sleep(self.WATCHDOG_CHECK_INTERVAL)
+                if not self._connected:
+                    break
+
+                # Check if any transport has received new packets since last check
+                ctrl_count = self._ctrl_transport.rx_packet_count
+                civ_count = (
+                    self._civ_transport.rx_packet_count
+                    if self._civ_transport
+                    else 0
+                )
+                if ctrl_count != last_rx_count or civ_count != last_civ_count:
+                    last_activity = time.monotonic()
+                    last_rx_count = ctrl_count
+                    last_civ_count = civ_count
+
+                now = time.monotonic()
+                idle = now - last_activity
+
+                # Periodic health status log
+                if now - last_health_log >= self._WATCHDOG_HEALTH_LOG_INTERVAL:
+                    logger.info(
+                        "Transport health: ctrl_rx=%d civ_rx=%d idle=%.1fs",
+                        ctrl_count,
+                        civ_count,
+                        idle,
+                    )
+                    last_health_log = now
+
+                if idle > self._watchdog_timeout:
+                    logger.warning(
+                        "Watchdog: no activity for %.1fs, triggering reconnect",
+                        idle,
+                    )
+                    self._connected = False
+                    self._advance_civ_generation("watchdog-timeout")
+                    self._reconnect_task = asyncio.create_task(self._reconnect_loop())
+                    return
+        except asyncio.CancelledError:
+            pass
+
+    async def _reconnect_loop(self) -> None:
+        """Attempt to reconnect with exponential backoff."""
+        delay = self._reconnect_delay
+        attempt = 0
+        try:
+            while not self._intentional_disconnect:
+                attempt += 1
+                logger.info("Reconnect attempt %d (delay=%.1fs)", attempt, delay)
+                try:
+                    self._advance_civ_generation("reconnect-attempt")
+                    # Capture audio state for auto-recovery.
+                    audio_snapshot = self._capture_audio_snapshot()
+                    # Clean up old transports
+                    self._stop_token_renewal()
+                    if self._audio_stream is not None:
+                        try:
+                            await self._audio_stream.stop_rx()
+                            await self._audio_stream.stop_tx()
+                        except Exception:
+                            pass
+                        self._audio_stream = None
+                    if self._audio_transport is not None:
+                        try:
+                            await self._audio_transport.disconnect()
+                        except Exception:
+                            pass
+                        self._audio_transport = None
+                    if self._civ_transport is not None:
+                        try:
+                            await self._civ_transport.disconnect()
+                        except Exception:
+                            pass
+                        self._civ_transport = None
+                    try:
+                        await self._ctrl_transport.disconnect()
+                    except Exception:
+                        pass
+
+                    # Re-initialize transport
+                    self._ctrl_transport = IcomTransport()
+                    await self.connect()
+                    logger.info(
+                        "Reconnected successfully after %d attempts", attempt
+                    )
+                    if self._auto_recover_audio and audio_snapshot is not None:
+                        await self._recover_audio(audio_snapshot)
+                    return
+                except Exception as exc:
+                    logger.warning("Reconnect attempt %d failed: %s", attempt, exc)
+                    await asyncio.sleep(delay)
+                    delay = min(delay * 2, self._reconnect_max_delay)
+        except asyncio.CancelledError:
+            logger.info("Reconnect cancelled")
 
     # ------------------------------------------------------------------
     # Audio streaming
@@ -847,93 +815,6 @@ class IcomRadio:
         """Return icom-lan audio capabilities and deterministic defaults."""
         return get_audio_capabilities()
 
-    # ------------------------------------------------------------------
-    # Audio auto-recovery helpers
-    # ------------------------------------------------------------------
-
-    def _capture_audio_snapshot(self) -> _AudioSnapshot | None:
-        """Capture current audio state for recovery after reconnect.
-
-        Returns ``None`` if no audio stream is active.
-        """
-        if self._audio_stream is None:
-            return None
-
-        state = self._audio_stream.state
-        if state == AudioState.IDLE:
-            return None
-
-        rx_active = state in (AudioState.RECEIVING, AudioState.TRANSMITTING) and (
-            self._pcm_rx_user_callback is not None
-            or self._opus_rx_user_callback is not None
-        )
-        tx_active = state == AudioState.TRANSMITTING or self._pcm_tx_fmt is not None
-        pcm_mode = self._pcm_rx_user_callback is not None or self._pcm_tx_fmt is not None
-
-        # Determine PCM params from TX format or transcoder format.
-        pcm_params = self._pcm_tx_fmt or self._pcm_transcoder_fmt
-
-        jitter_depth = (
-            self._pcm_rx_jitter_depth
-            if self._pcm_rx_user_callback is not None
-            else self._opus_rx_jitter_depth
-        )
-
-        return _AudioSnapshot(
-            rx_active=rx_active,
-            tx_active=tx_active,
-            pcm_mode=pcm_mode,
-            pcm_rx_callback=self._pcm_rx_user_callback,
-            opus_rx_callback=self._opus_rx_user_callback,
-            pcm_params=pcm_params,
-            jitter_depth=jitter_depth,
-        )
-
-    async def _recover_audio(self, snapshot: _AudioSnapshot) -> None:
-        """Attempt to restart audio streams from a pre-disconnect snapshot.
-
-        Recovery failure is logged but does not raise.
-        """
-        if self._on_audio_recovery is not None:
-            self._on_audio_recovery(AudioRecoveryState.RECOVERING)
-
-        try:
-            if snapshot.rx_active:
-                if snapshot.pcm_mode and snapshot.pcm_rx_callback is not None:
-                    sr, ch, fms = snapshot.pcm_params or (48000, 1, 20)
-                    await self.start_audio_rx_pcm(
-                        snapshot.pcm_rx_callback,
-                        sample_rate=sr,
-                        channels=ch,
-                        frame_ms=fms,
-                        jitter_depth=snapshot.jitter_depth,
-                    )
-                elif snapshot.opus_rx_callback is not None:
-                    await self.start_audio_rx_opus(
-                        snapshot.opus_rx_callback,
-                        jitter_depth=snapshot.jitter_depth,
-                    )
-
-            if snapshot.tx_active:
-                if snapshot.pcm_mode and snapshot.pcm_params is not None:
-                    sr, ch, fms = snapshot.pcm_params
-                    await self.start_audio_tx_pcm(
-                        sample_rate=sr,
-                        channels=ch,
-                        frame_ms=fms,
-                    )
-                else:
-                    await self.start_audio_tx_opus()
-
-        except Exception as exc:
-            logger.warning("Audio auto-recovery failed: %s", exc)
-            if self._on_audio_recovery is not None:
-                self._on_audio_recovery(AudioRecoveryState.FAILED)
-            return
-
-        if self._on_audio_recovery is not None:
-            self._on_audio_recovery(AudioRecoveryState.RECOVERED)
-
     async def _ensure_audio_transport(self) -> None:
         """Connect the audio transport if not already connected."""
         if self._audio_stream is not None:
@@ -959,738 +840,6 @@ class IcomRadio:
 
         self._audio_stream = AudioStream(self._audio_transport)
         logger.info("Audio transport connected on port %d", self._audio_port)
-
-    # ------------------------------------------------------------------
-    # CI-V RX + command queue
-    # ------------------------------------------------------------------
-
-    def _advance_civ_generation(self, reason: str) -> None:
-        """Advance CI-V request generation and fail stale waiters."""
-        self._civ_epoch = self._civ_request_tracker.advance_generation(
-            ConnectionError(f"CI-V generation advanced: {reason}")
-        )
-
-    def _cleanup_stale_civ_waiters(self) -> None:
-        """Run periodic stale waiter GC on request tracker."""
-        now = time.monotonic()
-        if (
-            now - self._civ_last_waiter_gc_monotonic
-            < self._civ_waiter_ttl_gc_interval
-        ):
-            return
-        cleaned = self._civ_request_tracker.cleanup_stale(now_monotonic=now)
-        self._civ_last_waiter_gc_monotonic = now
-        if cleaned:
-            logger.debug("Cleaned %d stale CI-V waiter(s)", cleaned)
-
-    def _start_civ_rx_pump(self) -> None:
-        """Start always-on CI-V receive pump."""
-        if self._civ_rx_task is None or self._civ_rx_task.done():
-            self._civ_rx_task = asyncio.create_task(self._civ_rx_loop(self._civ_epoch))
-
-    async def _stop_civ_rx_pump(self) -> None:
-        """Stop CI-V receive pump and fail pending request futures."""
-        self._civ_request_tracker.fail_all(ConnectionError("CI-V RX pump stopped"))
-        if self._civ_rx_task is not None and not self._civ_rx_task.done():
-            self._civ_rx_task.cancel()
-            try:
-                await self._civ_rx_task
-            except asyncio.CancelledError:
-                pass
-        self._civ_rx_task = None
-
-    def _ensure_civ_runtime(self) -> None:
-        """Ensure CI-V transport exists (tests may bypass connect()).
-
-        Note: we intentionally do NOT start the CI-V RX pump here.
-        The RX pump should be started explicitly (connect() or right before
-        sending) to avoid races with tests that pre-queue mock packets.
-        """
-        if self._civ_transport is None:
-            raise ConnectionError("Not connected to radio")
-
-    async def _civ_rx_loop(self, generation: int) -> None:
-        """Continuously consume CI-V transport packets and route events."""
-        assert self._civ_transport is not None
-        try:
-            while self._civ_transport is not None:
-                try:
-                    packet = await self._civ_transport.receive_packet(timeout=0.2)
-                except asyncio.TimeoutError:
-                    self._cleanup_stale_civ_waiters()
-                    continue
-                if len(packet) <= CIV_HEADER_SIZE:
-                    self._cleanup_stale_civ_waiters()
-                    continue
-                payload = packet[CIV_HEADER_SIZE:]
-                for frame_bytes in iter_civ_frames(payload):
-                    try:
-                        frame = parse_civ_frame(frame_bytes)
-                    except ValueError:
-                        continue
-                    try:
-                        await self._route_civ_frame(frame, generation=generation)
-                    except Exception:
-                        logger.exception("Unhandled exception while routing CI-V frame")
-                self._cleanup_stale_civ_waiters()
-        except asyncio.CancelledError:
-            pass
-
-    async def _route_civ_frame(self, frame: CivFrame, *, generation: int) -> None:
-        """Route one parsed CI-V frame into command/scope event paths."""
-        if frame.from_addr != self._radio_addr or frame.to_addr != CONTROLLER_ADDR:
-            return
-
-        if frame.command == 0x27 and frame.sub == 0x00 and len(frame.data) >= 3:
-            receiver = frame.data[0]
-            self._scope_activity_counter += 1
-            self._scope_activity_event.set()
-            self._publish_civ_event(
-                CivEvent(
-                    type=CivEventType.SCOPE_CHUNK,
-                    frame=frame,
-                    receiver=receiver,
-                )
-            )
-            scope_frame = self._scope_assembler.feed(frame.data[1:], receiver)
-            if scope_frame is not None:
-                self._publish_scope_frame(scope_frame)
-            return
-
-        if frame.command == 0xFB:
-            event = CivEvent(type=CivEventType.ACK, frame=frame)
-        elif frame.command == 0xFA:
-            event = CivEvent(type=CivEventType.NAK, frame=frame)
-        else:
-            event = CivEvent(type=CivEventType.RESPONSE, frame=frame)
-            # Update state cache for all RESPONSE frames (solicited and unsolicited).
-            self._update_state_cache_from_frame(frame)
-
-        self._publish_civ_event(event)
-        self._civ_request_tracker.resolve(event, generation=generation)
-
-    def _update_state_cache_from_frame(self, frame: CivFrame) -> None:
-        """Best-effort update of state cache from an incoming CI-V frame.
-
-        Called for every RESPONSE event (both solicited query responses and
-        unsolicited frames sent by the radio on knob turns).
-        """
-        try:
-            if frame.command in (0x03, 0x00):  # frequency
-                freq = parse_frequency_response(frame)
-                self._last_freq_hz = freq
-                self._state_cache.update_freq(freq)
-            elif frame.command in (0x04, 0x01):  # mode
-                mode, filt = parse_mode_response(frame)
-                self._last_mode = mode
-                if filt is not None:
-                    self._filter_width = filt
-                self._state_cache.update_mode(mode.name, filt)
-            elif frame.command == 0x1C and frame.sub == 0x00:  # PTT
-                if frame.data:
-                    self._state_cache.update_ptt(bool(frame.data[0]))
-        except Exception:
-            pass  # Best-effort; never let cache update break the RX loop
-
-    def _publish_scope_frame(self, frame: ScopeFrame) -> None:
-        """Publish a complete scope frame to callback and bounded queue."""
-        self._publish_civ_event(CivEvent(type=CivEventType.SCOPE_FRAME))
-        if self._scope_frame_queue.full():
-            try:
-                self._scope_frame_queue.get_nowait()
-            except asyncio.QueueEmpty:
-                pass
-        self._scope_frame_queue.put_nowait(frame)
-        callback = self._scope_callback
-        if callback is not None:
-            try:
-                callback(frame)
-            except Exception:
-                logger.exception("Scope callback raised an exception")
-
-    def _publish_civ_event(self, event: CivEvent) -> None:
-        """Publish CI-V event to internal event queue (best effort)."""
-        if self._civ_event_queue.full():
-            try:
-                self._civ_event_queue.get_nowait()
-            except asyncio.QueueEmpty:
-                pass
-        self._civ_event_queue.put_nowait(event)
-
-    def _start_civ_worker(self) -> None:
-        """Start serialized CI-V commander (wfview-like queueing)."""
-        self._ensure_civ_runtime()
-        self._start_civ_rx_pump()
-        if self._commander is None:
-            self._commander = IcomCommander(
-                self._execute_civ_raw,
-                min_interval=self._civ_min_interval,
-            )
-        self._commander.start()
-
-    async def _stop_civ_worker(self) -> None:
-        """Stop CI-V commander and fail pending commands."""
-        if self._commander is not None:
-            await self._commander.stop()
-
-    # ------------------------------------------------------------------
-    # Token renewal
-    # ------------------------------------------------------------------
-
-    TOKEN_RENEWAL_INTERVAL = 60.0  # seconds (wfview: TOKEN_RENEWAL = 60000ms)
-    TOKEN_PACKET_SIZE = 0x40
-
-    def _start_token_renewal(self) -> None:
-        """Start periodic token renewal task."""
-        if self._token_task is None or self._token_task.done():
-            self._token_task = asyncio.create_task(self._token_renewal_loop())
-
-    def _stop_token_renewal(self) -> None:
-        """Cancel token renewal task."""
-        if self._token_task is not None and not self._token_task.done():
-            self._token_task.cancel()
-            self._token_task = None
-
-    async def _token_renewal_loop(self) -> None:
-        """Background task: send token renewal every TOKEN_RENEWAL_INTERVAL."""
-        try:
-            while self._connected:
-                await asyncio.sleep(self.TOKEN_RENEWAL_INTERVAL)
-                if not self._connected:
-                    break
-                try:
-                    await self._send_token(0x05)  # renewal magic
-                    logger.debug("Token renewal sent")
-                except Exception as exc:
-                    logger.warning("Token renewal failed: %s", exc)
-        except asyncio.CancelledError:
-            pass
-
-    async def _send_token(self, magic: int) -> None:
-        """Send a token packet (renewal=0x05, ack=0x02, remove=0x01).
-
-        Reference: wfview icomudphandler.cpp sendToken().
-
-        Args:
-            magic: Token request type (0x01=remove, 0x02=ack, 0x05=renewal).
-        """
-        pkt = bytearray(self.TOKEN_PACKET_SIZE)
-        struct.pack_into("<I", pkt, 0x00, self.TOKEN_PACKET_SIZE)
-        struct.pack_into("<H", pkt, 0x04, 0x00)  # type = data
-        struct.pack_into("<I", pkt, 0x08, self._ctrl_transport.my_id)
-        struct.pack_into("<I", pkt, 0x0C, self._ctrl_transport.remote_id)
-        struct.pack_into(">I", pkt, 0x10, self.TOKEN_PACKET_SIZE - 0x10)
-        pkt[0x14] = 0x01  # requestreply
-        pkt[0x15] = magic  # requesttype
-        struct.pack_into(">H", pkt, 0x16, self._auth_seq)
-        self._auth_seq += 1
-        struct.pack_into("<H", pkt, 0x1A, self._tok_request)
-        struct.pack_into(">H", pkt, 0x24, 0x0798)  # resetcap
-        struct.pack_into("<I", pkt, 0x1C, self._token)
-        await self._ctrl_transport.send_tracked(bytes(pkt))
-
-    # ------------------------------------------------------------------
-    # Watchdog & Auto-reconnect
-    # ------------------------------------------------------------------
-
-    WATCHDOG_CHECK_INTERVAL = 0.5  # seconds (wfview: WATCHDOG_PERIOD = 500ms)
-    _WATCHDOG_HEALTH_LOG_INTERVAL = 30.0  # seconds
-
-    def _start_watchdog(self) -> None:
-        """Start connection watchdog task."""
-        if self._watchdog_task is None or self._watchdog_task.done():
-            self._watchdog_task = asyncio.create_task(self._watchdog_loop())
-
-    def _stop_watchdog(self) -> None:
-        """Stop watchdog task."""
-        if self._watchdog_task is not None and not self._watchdog_task.done():
-            self._watchdog_task.cancel()
-            self._watchdog_task = None
-
-    def _stop_reconnect(self) -> None:
-        """Cancel any pending reconnect task."""
-        if self._reconnect_task is not None and not self._reconnect_task.done():
-            self._reconnect_task.cancel()
-            self._reconnect_task = None
-
-    async def _watchdog_loop(self) -> None:
-        """Monitor connection health via transport packet queue activity.
-
-        If no packets are received for ``watchdog_timeout`` seconds,
-        triggers a reconnect attempt.
-
-        Reference: wfview icomudpaudio.cpp watchdog() — 30s timeout.
-        """
-        import time as _time
-
-        last_activity = _time.monotonic()
-        last_health_log = _time.monotonic()
-        last_rx_count = self._ctrl_transport.rx_packet_count
-        last_civ_count = (
-            self._civ_transport.rx_packet_count if self._civ_transport else 0
-        )
-        try:
-            while self._connected:
-                await asyncio.sleep(self.WATCHDOG_CHECK_INTERVAL)
-                if not self._connected:
-                    break
-
-                # Check if any transport has received new packets since last check
-                ctrl_count = self._ctrl_transport.rx_packet_count
-                civ_count = (
-                    self._civ_transport.rx_packet_count
-                    if self._civ_transport
-                    else 0
-                )
-                if ctrl_count != last_rx_count or civ_count != last_civ_count:
-                    last_activity = _time.monotonic()
-                    last_rx_count = ctrl_count
-                    last_civ_count = civ_count
-
-                now = _time.monotonic()
-                idle = now - last_activity
-
-                # Periodic health status log
-                if now - last_health_log >= self._WATCHDOG_HEALTH_LOG_INTERVAL:
-                    logger.info(
-                        "Transport health: ctrl_rx=%d civ_rx=%d idle=%.1fs",
-                        ctrl_count,
-                        civ_count,
-                        idle,
-                    )
-                    last_health_log = now
-
-                if idle > self._watchdog_timeout:
-                    logger.warning(
-                        "Watchdog: no activity for %.1fs, triggering reconnect",
-                        idle,
-                    )
-                    self._connected = False
-                    self._advance_civ_generation("watchdog-timeout")
-                    self._reconnect_task = asyncio.create_task(self._reconnect_loop())
-                    return
-        except asyncio.CancelledError:
-            pass
-
-    async def _reconnect_loop(self) -> None:
-        """Attempt to reconnect with exponential backoff."""
-        delay = self._reconnect_delay
-        attempt = 0
-        try:
-            while not self._intentional_disconnect:
-                attempt += 1
-                logger.info("Reconnect attempt %d (delay=%.1fs)", attempt, delay)
-                try:
-                    self._advance_civ_generation("reconnect-attempt")
-                    # Capture audio state for auto-recovery.
-                    audio_snapshot = self._capture_audio_snapshot()
-                    # Clean up old transports
-                    self._stop_token_renewal()
-                    if self._audio_stream is not None:
-                        try:
-                            await self._audio_stream.stop_rx()
-                            await self._audio_stream.stop_tx()
-                        except Exception:
-                            pass
-                        self._audio_stream = None
-                    if self._audio_transport is not None:
-                        try:
-                            await self._audio_transport.disconnect()
-                        except Exception:
-                            pass
-                        self._audio_transport = None
-                    if self._civ_transport is not None:
-                        try:
-                            await self._civ_transport.disconnect()
-                        except Exception:
-                            pass
-                        self._civ_transport = None
-                    try:
-                        await self._ctrl_transport.disconnect()
-                    except Exception:
-                        pass
-
-                    # Re-initialize transport
-                    self._ctrl_transport = IcomTransport()
-                    await self.connect()
-                    logger.info("Reconnected successfully after %d attempts", attempt)
-                    if self._auto_recover_audio and audio_snapshot is not None:
-                        await self._recover_audio(audio_snapshot)
-                    return
-                except Exception as exc:
-                    logger.warning("Reconnect attempt %d failed: %s", attempt, exc)
-                    await asyncio.sleep(delay)
-                    delay = min(delay * 2, self._reconnect_max_delay)
-        except asyncio.CancelledError:
-            logger.info("Reconnect cancelled")
-
-    # ------------------------------------------------------------------
-    # Internal connection helpers
-    # ------------------------------------------------------------------
-
-    async def _send_token_ack(self) -> None:
-        """Send token acknowledgement (0x40-byte token packet).
-
-        Layout per wfview packettypes.h (token_packet):
-        0x10 payloadsize(4,BE)  0x14 requestreply(1)=0x01
-        0x15 requesttype(1)=magic  0x16 innerseq(2,BE)
-        0x1A tokrequest(2)  0x1C token(4)
-        0x24 resetcap(2,BE)=0x0798
-        """
-        pkt = bytearray(TOKEN_ACK_SIZE)
-        struct.pack_into("<I", pkt, 0x00, TOKEN_ACK_SIZE)
-        struct.pack_into("<I", pkt, 0x08, self._ctrl_transport.my_id)
-        struct.pack_into("<I", pkt, 0x0C, self._ctrl_transport.remote_id)
-        struct.pack_into(">I", pkt, 0x10, TOKEN_ACK_SIZE - 0x10)  # payloadsize BE
-        pkt[0x14] = 0x01  # requestreply
-        pkt[0x15] = 0x02  # requesttype = token ack (magic=0x02)
-        struct.pack_into(">H", pkt, 0x16, self._auth_seq)  # innerseq BE
-        self._auth_seq += 1
-        struct.pack_into("<H", pkt, 0x1A, self._tok_request)  # tokrequest
-        struct.pack_into("<I", pkt, 0x1C, self._token)  # token
-        struct.pack_into(">H", pkt, 0x24, 0x0798)  # resetcap
-        await self._ctrl_transport.send_tracked(bytes(pkt))
-        logger.debug("Token ack sent (token=0x%08X)", self._token)
-
-    async def _receive_guid(self) -> bytes | None:
-        """Receive the radio's conninfo and extract GUID/MAC area."""
-        await asyncio.sleep(0.3)
-        guid = None
-        for _ in range(30):
-            try:
-                d = await self._ctrl_transport.receive_packet(timeout=0.1)
-                if len(d) == CONNINFO_SIZE:
-                    guid = d[0x20:0x30]
-                    logger.debug("Got radio GUID: %s", guid.hex())
-            except asyncio.TimeoutError:
-                break
-        return guid
-
-    async def _send_conninfo(
-        self,
-        guid: bytes | None,
-        civ_local_port: int = 0,
-        audio_local_port: int = 0,
-    ) -> None:
-        """Send our conninfo to the radio."""
-        conninfo = build_conninfo_packet(
-            sender_id=self._ctrl_transport.my_id,
-            receiver_id=self._ctrl_transport.remote_id,
-            username=self._username,
-            token=self._token,
-            tok_request=self._tok_request,
-            radio_name="IC-7610",
-            mac_address=b"\x00" * 6,
-            auth_seq=self._auth_seq,
-            guid=guid,
-            rx_codec=int(self._audio_codec),
-            tx_codec=int(self._audio_codec),
-            rx_sample_rate=self._audio_sample_rate,
-            tx_sample_rate=self._audio_sample_rate,
-            civ_local_port=civ_local_port,
-            audio_local_port=audio_local_port,
-        )
-        self._auth_seq += 1
-        await self._ctrl_transport.send_tracked(conninfo)
-        logger.debug("Conninfo sent (civ_local=%d, audio_local=%d)", civ_local_port, audio_local_port)
-
-    async def _receive_civ_port(self) -> int:
-        """Wait for status packet and extract CI-V port quickly.
-
-        Audio port is optional at connect-time and can be resolved lazily on first
-        audio use. This keeps non-audio CLI/API calls fast.
-        """
-        deadline = time.monotonic() + self._timeout
-        civ_port = 0
-        status_packets_seen = 0
-
-        while time.monotonic() < deadline:
-            try:
-                remaining = max(0.1, deadline - time.monotonic())
-                d = await self._ctrl_transport.receive_packet(
-                    timeout=min(remaining, 0.3)
-                )
-                if len(d) != STATUS_SIZE:
-                    continue
-
-                got_civ = struct.unpack_from(">H", d, 0x42)[0]
-                got_audio = struct.unpack_from(">H", d, 0x46)[0]
-                status_packets_seen += 1
-                logger.info(
-                    "Status: civ_port=%d, audio_port=%d",
-                    got_civ,
-                    got_audio,
-                )
-
-                if got_audio > 0:
-                    self._audio_port = got_audio
-                if got_civ > 0:
-                    civ_port = got_civ
-                    return civ_port
-                if status_packets_seen >= 2:
-                    logger.warning(
-                        "Status packet has civ_port=0, falling back to default"
-                    )
-                    break
-            except asyncio.TimeoutError:
-                continue
-
-        return civ_port
-
-    async def _send_open_close(self, *, open_stream: bool) -> None:
-        """Send OpenClose packet on the CI-V port."""
-        if self._civ_transport is None:
-            return
-        await self._send_open_close_on_transport(
-            self._civ_transport,
-            send_seq=self._civ_send_seq,
-            open_stream=open_stream,
-        )
-        self._civ_send_seq += 1
-
-    async def _send_audio_open_close(self, *, open_stream: bool) -> None:
-        """Send OpenClose packet on the audio port (wfview behavior)."""
-        if self._audio_transport is None:
-            return
-        await self._send_open_close_on_transport(
-            self._audio_transport,
-            send_seq=self._audio_send_seq,
-            open_stream=open_stream,
-        )
-        self._audio_send_seq += 1
-
-    async def _send_open_close_on_transport(
-        self,
-        transport: IcomTransport,
-        *,
-        send_seq: int,
-        open_stream: bool,
-    ) -> None:
-        """Build/send OpenClose packet on a specific transport.
-
-        Layout per wfview packettypes.h (0x16 bytes):
-        0x00 len(4) 0x04 type(2) 0x06 seq(2)
-        0x08 sentid(4) 0x0C rcvdid(4)
-        0x10 data(2)=0x01C0  0x12 unused(1)
-        0x13 sendseq(2,BE)   0x15 magic(1)
-        """
-        pkt = bytearray(OPENCLOSE_SIZE)
-        struct.pack_into("<I", pkt, 0x00, OPENCLOSE_SIZE)
-        struct.pack_into("<I", pkt, 0x08, transport.my_id)
-        struct.pack_into("<I", pkt, 0x0C, transport.remote_id)
-        struct.pack_into("<H", pkt, 0x10, 0x01C0)  # data
-        struct.pack_into(">H", pkt, 0x13, send_seq)  # sendseq BE
-        pkt[0x15] = 0x04 if open_stream else 0x00  # magic
-        await transport.send_tracked(bytes(pkt))
-        logger.debug("OpenClose(%s) sent", "open" if open_stream else "close")
-
-    async def _wait_for_packet(
-        self, transport: IcomTransport, *, size: int, label: str
-    ) -> bytes:
-        """Wait for a packet of a specific size, skipping others."""
-        deadline = time.monotonic() + self._timeout
-        while True:
-            remaining = deadline - time.monotonic()
-            if remaining <= 0:
-                raise TimeoutError(f"{label} timed out")
-            try:
-                data = await transport.receive_packet(timeout=remaining)
-            except asyncio.TimeoutError:
-                raise TimeoutError(f"{label} timed out")
-            if len(data) == size:
-                return data
-            logger.debug(
-                "Skipping packet (len=%d) while waiting for %s", len(data), label
-            )
-
-    @staticmethod
-    async def _flush_queue(transport: IcomTransport, max_pkts: int = 200) -> int:
-        """Drain pending packets from a transport queue."""
-        count = 0
-        for _ in range(max_pkts):
-            try:
-                await transport.receive_packet(timeout=0.01)
-                count += 1
-            except asyncio.TimeoutError:
-                break
-        return count
-
-    # ------------------------------------------------------------------
-    # CI-V command infrastructure
-    # ------------------------------------------------------------------
-
-    def _check_connected(self) -> None:
-        """Raise ConnectionError if not connected."""
-        if not self._connected or self._civ_transport is None:
-            raise ConnectionError("Not connected to radio")
-
-    def _wrap_civ(self, civ_frame: bytes) -> bytes:
-        """Wrap a CI-V frame in a UDP data packet for the CI-V port."""
-        assert self._civ_transport is not None
-        total_len = CIV_HEADER_SIZE + len(civ_frame)
-        pkt = bytearray(total_len)
-        struct.pack_into("<I", pkt, 0, total_len)
-        struct.pack_into("<H", pkt, 4, 0x00)  # type = DATA
-        struct.pack_into("<I", pkt, 8, self._civ_transport.my_id)
-        struct.pack_into("<I", pkt, 0x0C, self._civ_transport.remote_id)
-        pkt[0x10] = 0xC1  # reply marker for CI-V data
-        struct.pack_into("<H", pkt, 0x11, len(civ_frame))
-        struct.pack_into(">H", pkt, 0x13, self._civ_send_seq)
-        self._civ_send_seq += 1
-        pkt[CIV_HEADER_SIZE:] = civ_frame
-        return bytes(pkt)
-
-    async def _send_civ_raw(
-        self,
-        civ_frame: bytes,
-        *,
-        priority: Priority = Priority.NORMAL,
-        key: str | None = None,
-        dedupe: bool = False,
-        wait_response: bool = True,
-        timeout: float | None = None,
-    ) -> CivFrame | None:
-        """Enqueue a CI-V command and wait for its response."""
-        assert self._civ_transport is not None
-        self._ensure_civ_runtime()
-
-        if self._commander is None:
-            # Fallback path (e.g. during tests/mocks before queue init).
-            coro = self._execute_civ_raw(civ_frame, wait_response=wait_response)
-            if timeout is not None:
-                return await asyncio.wait_for(coro, timeout=timeout)
-            return await coro
-
-        return await self._commander.send(
-            civ_frame,
-            priority=priority,
-            key=key,
-            dedupe=dedupe,
-            wait_response=wait_response,
-            timeout=timeout,
-        )
-
-    @staticmethod
-    def _civ_expects_response(frame: CivFrame) -> bool:
-        """Determine if a CI-V frame expects a data RESPONSE or just an ACK/NAK."""
-        if frame.command in (0x03, 0x04):
-            return True
-        if frame.command == 0x17:
-            return False
-        if frame.command == 0x27:
-            return False
-        # If no further payload beyond command/sub is included, it's typically a GET
-        return len(frame.data) == 0
-
-    async def _drain_ack_sinks_before_blocking(self) -> None:
-        """Give fire-and-forget ACK sinks a short chance to drain, then clear stale ones.
-
-        This prevents a missing ACK from poisoning the ACK waiter queue for the
-        next blocking command.
-        """
-        if self._civ_request_tracker.ack_sink_count == 0:
-            return
-
-        deadline = time.monotonic() + self._civ_ack_sink_grace
-        while self._civ_request_tracker.ack_sink_count > 0 and time.monotonic() < deadline:
-            await asyncio.sleep(0.005)
-
-        dropped = self._civ_request_tracker.drop_ack_sinks()
-        if dropped:
-            logger.debug("Dropped %d stale ACK sink waiter(s) before blocking command", dropped)
-
-    async def _execute_civ_raw(
-        self,
-        civ_frame: bytes,
-        wait_response: bool = True,
-        deadline_monotonic: float | None = None,
-    ) -> CivFrame | None:
-        """Execute one CI-V command via request tracker (serialized by worker)."""
-        assert self._civ_transport is not None
-        self._ensure_civ_runtime()
-
-        parsed_frame = parse_civ_frame(civ_frame)
-        request_key = request_key_from_frame(parsed_frame)
-        expects_response = self._civ_expects_response(parsed_frame)
-        if deadline_monotonic is None:
-            deadline_monotonic = time.monotonic() + self._civ_get_timeout
-
-        self._cleanup_stale_civ_waiters()
-
-        if not wait_response:
-            ack_sink_token: int | None = None
-
-            # Fire-and-forget: sink the ACK so it doesn't shift the queue.
-            if not expects_response:
-                token_or_future = self._civ_request_tracker.register_ack(wait=False)
-                if isinstance(token_or_future, int):
-                    ack_sink_token = token_or_future
-
-            # Ensure RX pump is running for event routing.
-            self._start_civ_rx_pump()
-
-            # Rate limit applies to fire-and-forget as well
-            now = time.monotonic()
-            delta = now - self._last_civ_send_monotonic
-            if delta < self._civ_min_interval:
-                await asyncio.sleep(self._civ_min_interval - delta)
-
-            pkt = self._wrap_civ(civ_frame)
-            try:
-                await self._civ_transport.send_tracked(pkt)
-            except Exception:
-                if ack_sink_token is not None:
-                    self._civ_request_tracker.unregister_ack_sink(ack_sink_token)
-                raise
-
-            self._last_civ_send_monotonic = time.monotonic()
-            return None
-
-        await self._drain_ack_sinks_before_blocking()
-
-        remaining_total = deadline_monotonic - time.monotonic()
-        if remaining_total <= 0:
-            raise TimeoutError("CI-V response timed out")
-
-        pending: asyncio.Future[CivFrame] | None = None
-        try:
-            # Register future BEFORE starting RX pump / sending.
-            if expects_response:
-                pending = self._civ_request_tracker.register_response(request_key)
-            else:
-                pending_or_token = self._civ_request_tracker.register_ack(wait=True)
-                if isinstance(pending_or_token, int):
-                    raise RuntimeError("ACK waiter registration returned sink token")
-                pending = pending_or_token
-
-            # Ensure RX pump is running for event routing.
-            self._start_civ_rx_pump()
-
-            # Rate-limit CI-V commands slightly (wfview-like pacing).
-            now = time.monotonic()
-            delta = now - self._last_civ_send_monotonic
-            if delta < self._civ_min_interval:
-                await asyncio.sleep(self._civ_min_interval - delta)
-
-            pkt = self._wrap_civ(civ_frame)
-            await self._civ_transport.send_tracked(pkt)
-            self._last_civ_send_monotonic = time.monotonic()
-            assert pending is not None
-            remaining = deadline_monotonic - time.monotonic()
-            if remaining <= 0:
-                raise TimeoutError("CI-V response timed out")
-            try:
-                return await asyncio.wait_for(pending, timeout=remaining)
-            except asyncio.TimeoutError:
-                self._civ_request_tracker.note_timeout()
-                logger.debug(
-                    "CI-V command 0x%02X timed out",
-                    request_key.command,
-                )
-                raise TimeoutError("CI-V response timed out")
-        finally:
-            if pending is not None:
-                self._civ_request_tracker.unregister(pending)
 
     # ------------------------------------------------------------------
     # Public CI-V API
@@ -1850,7 +999,10 @@ class IcomRadio:
             self._state_cache.update_rf_power(level / 255.0)
             return level
         except TimeoutError:
-            if self._state_cache.is_fresh("rf_power", self._cache_ttl_rf_power) and self._state_cache.rf_power is not None:
+            if (
+                self._state_cache.is_fresh("rf_power", self._cache_ttl_rf_power)
+                and self._state_cache.rf_power is not None
+            ):
                 cached_level = round(self._state_cache.rf_power * 255)
                 logger.debug(
                     "get_power: timeout, returning cached %d", cached_level
@@ -2308,7 +1460,9 @@ class IcomRadio:
 
         if pol == ScopeCompletionPolicy.VERIFY:
             try:
-                await asyncio.wait_for(self._scope_activity_event.wait(), timeout=timeout)
+                await asyncio.wait_for(
+                    self._scope_activity_event.wait(), timeout=timeout
+                )
             except asyncio.TimeoutError:
                 raise TimeoutError("Scope enable verification timed out (no data seen)")
 
