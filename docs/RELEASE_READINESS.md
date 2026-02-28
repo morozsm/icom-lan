@@ -18,7 +18,7 @@
 | **Rigctld Server** | #16-#22, #32 | TCP skeleton, MVP commands, read-only mode, structured logging, golden protocol suite, WSJT-X docs, DATA mode fix, epic complete |
 | **Reliability** | #27 | CI-V desync fix, state cache, circuit breaker |
 
-### Release Gates for v0.7.0
+### Release Gates for v0.8.0
 
 | Gate | Status |
 |------|--------|
@@ -27,14 +27,14 @@
 | Lint clean | ✅ `ruff check` |
 | Docs build | ✅ `mkdocs build` |
 | CI green | ✅ GitHub Actions |
-| CHANGELOG updated | ✅ move [Unreleased] → [0.7.0] |
-| Version bump | ✅ 0.6.6 → 0.7.0 |
+| CHANGELOG updated | ✅ move [Unreleased] → [0.8.0] |
+| Version bump | ✅ 0.6.6 → 0.8.0 |
 | PyPI publish | ✅ after above gates |
 | Real-radio smoke test | ✅ optional but recommended |
 
 ## Previous Releases
 
-### v0.7.0 — Released 2026-02-26 ✅
+### v0.8.0 — Released 2026-02-26 ✅
 
 All gates passed:
 - Full test suite: 869 passed, 78 skipped, 1 xpassed

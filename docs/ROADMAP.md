@@ -1,6 +1,6 @@
 # Roadmap
 
-## Current State: v0.7.0 (Python)
+## Current State: v0.8.0 (Python)
 
 - ✅ Phase 1 — Transport (UDP, auth, keep-alive, dual-port)
 - ✅ Phase 2 — CI-V Commands (frequency, mode, power, meters, PTT, CW, VFO, split)

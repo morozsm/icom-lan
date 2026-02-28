@@ -3,172 +3,214 @@
 ## Overview
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                     icom-lan                         │
-│                                                      │
-│  ┌─────────┐   ┌──────────┐   ┌──────────────────┐  │
-│  │  CLI    │   │  Public  │   │  Raw CI-V        │  │
-│  │ (cli.py)│   │   API    │   │  (commands.py)   │  │
-│  └────┬────┘   │(radio.py)│   └────────┬─────────┘  │
-│       │        └────┬─────┘            │             │
-│       └─────────────┤                  │             │
-│                     │                  │             │
-│            ┌────────┴──────────────────┴──────┐      │
-│            │           IcomRadio               │      │
-│            │   ┌──────────┐  ┌──────────┐     │      │
-│            │   │  Control │  │   CI-V   │     │      │
-│            │   │Transport │  │Transport │     │      │
-│            │   │ (:50001) │  │ (:50002) │     │      │
-│            │   └────┬─────┘  └────┬─────┘     │      │
-│            │        ┌──────────────────────┐   │      │
-│            │        │ IcomCommander queue  │   │      │
-│            │        │ priorities/pacing    │   │      │
-│            │        └──────────────────────┘   │      │
-│            └────────┼─────────────┼───────────┘      │
-│                     │             │                   │
-└─────────────────────┼─────────────┼───────────────────┘
-                      │   UDP       │   UDP
-                      ▼             ▼
-              ┌───────────────────────────┐
-              │       Icom Radio          │
-              │   Control  CI-V   Audio   │
-              │   :50001  :50002  :50003  │
-              └───────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│                        icom-lan                          │
+│                                                          │
+│  ┌─────────┐   ┌──────────┐   ┌────────────────────┐    │
+│  │   CLI   │   │  Web UI  │   │  Rigctld Server    │    │
+│  │(cli.py) │   │(web/)    │   │  (rigctld.py)      │    │
+│  └────┬────┘   └────┬─────┘   └────────┬───────────┘    │
+│       └──────────────┼──────────────────┘                │
+│                      │                                   │
+│            ┌─────────┴──────────┐                        │
+│            │     IcomRadio      │  ← Public API           │
+│            │    (radio.py)      │     Unchanged surface   │
+│            ├────────────────────┤                        │
+│            │  Mixins:           │                        │
+│            │  ┌───────────────┐ │                        │
+│            │  │ControlPhase  │ │  _control_phase.py     │
+│            │  │ (auth/connect)│ │  Auth → Token → Ports  │
+│            │  ├───────────────┤ │                        │
+│            │  │  CivRx       │ │  _civ_rx.py            │
+│            │  │ (RX pump)    │ │  Drain-all + dispatch   │
+│            │  ├───────────────┤ │                        │
+│            │  │AudioRecovery │ │  _audio_recovery.py    │
+│            │  │ (snapshot)   │ │  Snapshot/resume        │
+│            │  └───────────────┘ │                        │
+│            ├────────────────────┤                        │
+│            │  ConnectionState   │  _connection_state.py  │
+│            │  (FSM enum)        │                        │
+│            ├────────────────────┤                        │
+│            │  IcomCommander     │  commander.py          │
+│            │  (priority queue)  │  IMMEDIATE/NORMAL/BG   │
+│            ├────────────────────┤                        │
+│            │  State Cache       │  Configurable TTL      │
+│            │  (GET fallbacks)   │  10s freq, 30s power   │
+│            └────────┬──────────┘                        │
+│                     │                                   │
+│         ┌───────────┼───────────────┐                   │
+│         │           │               │                   │
+│    ┌────┴─────┐ ┌───┴────┐  ┌──────┴──────┐            │
+│    │ Control  │ │  CI-V  │  │   Audio     │            │
+│    │Transport │ │Transport│  │ Transport   │            │
+│    │ (:50001) │ │(:50002)│  │  (:50003)   │            │
+│    └────┬─────┘ └───┬────┘  └──────┬──────┘            │
+└─────────┼───────────┼──────────────┼────────────────────┘
+          │   UDP     │   UDP        │   UDP
+          ▼           ▼              ▼
+  ┌─────────────────────────────────────────┐
+  │            Icom Radio (IC-7610)          │
+  │   Control    CI-V      Audio             │
+  │   :50001    :50002    :50003             │
+  └─────────────────────────────────────────┘
 ```
 
 ## Module Responsibilities
 
-### `radio.py` — High-Level API
+### `radio.py` — High-Level Public API (1549 lines)
 
-The central orchestrator. `IcomRadio` manages:
+The central orchestrator. `IcomRadio` inherits from three mixins and manages:
 
-- **Two transport instances**: one for control (port 50001), one for CI-V (port 50002)
-- **Full handshake sequence**: discovery → login → token → conninfo → CI-V open
+- **Three transport instances**: control (50001), CI-V (50002), audio (50003, lazy)
 - **Commander integration**: enqueues CI-V operations with priorities and pacing
-- **Lazy audio init**: non-audio flows do not block on audio-port negotiation
-- **CI-V command wrapping**: takes raw CI-V frames, wraps them in UDP data packets
-- **Response filtering**: skips echoes, waterfall data, and control packets to find CI-V responses
-- **State guardrails**: snapshot/restore helpers for safe test transactions
-- **Public API methods**: `get_frequency()`, `set_mode()`, etc.
+- **State cache**: GET command results cached with TTL, returned on timeout
+- **Public API methods**: `get_frequency()`, `set_mode()`, etc. — all unchanged
+
+### `_control_phase.py` — Connection Setup (452 lines)
+
+`ControlPhaseMixin` handles the full handshake sequence:
+
+- Discovery → Login → Token ACK → GUID extraction → Conninfo → Status
+- **Optimistic ports**: uses default ports (control+1, control+2) immediately
+- **Background status check**: reads status packet with 2s timeout; uses radio-reported
+  ports if they differ from defaults
+- **Local port reservation**: `socket.bind(("", 0))` for CI-V and audio (wfview-style)
+- Token renewal (60s background task)
+
+### `_civ_rx.py` — CI-V Receive Pump (418 lines)
+
+`CivRxMixin` handles all incoming CI-V traffic:
+
+- **Drain-all pattern**: processes ALL queued packets per iteration (not one-at-a-time)
+- **Frame dispatch**: parses CI-V frames, routes to waiters or callbacks
+- **Scope assembly**: reassembles multi-sequence 0x27 bursts into `ScopeFrame`
+- **Stale waiter cleanup**: drops abandoned waiters to prevent resource leaks
+
+### `_audio_recovery.py` — Audio Resilience (132 lines)
+
+`AudioRecoveryMixin` handles audio stream lifecycle:
+
+- Snapshot active audio state before disconnect
+- Resume audio streams after reconnect
+- Lazy audio transport initialization
+
+### `_connection_state.py` — Connection FSM
+
+`RadioConnectionState` enum: `DISCONNECTED` → `CONNECTING` → `AUTHENTICATING` →
+`CONNECTED` → `DISCONNECTING`. Used for guard clauses and state assertions.
 
 ### `commander.py` — CI-V Command Queue
 
-Serialized command execution layer inspired by wfview:
+Serialized command execution layer:
 
-- **Priority queue** (`IMMEDIATE` / `NORMAL` / `BACKGROUND`)
-- **Pacing/throttling** between commands (`ICOM_CIV_MIN_INTERVAL_MS`)
-- **Dedupe** for background polling keys
-- **Transaction helper** (`snapshot -> body -> restore`)
+- **Priority queue**: `IMMEDIATE` / `NORMAL` / `BACKGROUND`
+- **Fire-and-forget**: SET commands don't wait for ACK (wfview-style)
+- **GET timeout**: 2s with cache fallback
+- **Pacing**: configurable inter-command delay (`ICOM_CIV_MIN_INTERVAL_MS`)
+- **Dedupe**: background polling keys prevent duplicate requests
 
 ### `transport.py` — UDP Transport
 
 Low-level asyncio UDP handler. Each `IcomTransport` instance manages:
 
-- **UDP socket** via `asyncio.DatagramProtocol`
-- **Discovery handshake** (Are You There → I Am Here → Are You Ready)
-- **Keep-alive pings** (500ms interval)
-- **Sequence tracking** with gap detection
-- **Retransmit requests** for missing packets
-- **Packet queue** for consumers
+- UDP socket via `asyncio.DatagramProtocol`
+- Discovery handshake (Are You There → I Am Here → Are You Ready)
+- Keep-alive pings (500ms interval)
+- Sequence tracking with gap detection and retransmit requests
+- Packet queue (`asyncio.Queue[bytes]`) for consumers
+
+### `web/` — Built-in Web UI
+
+WebSocket-based browser interface:
+
+- `server.py` — aiohttp web server, WebSocket handler management
+- `handlers.py` — scope, meters, audio, and control WebSocket handlers
+- `static/index.html` — single-page app with Canvas2D rendering
+- Audio: PCM16 binary frames over WebSocket, Web Audio API playback
 
 ### `commands.py` — CI-V Encoding/Decoding
 
-Pure functions for building and parsing CI-V frames:
-
-- Frame construction with BCD frequency encoding
-- Response parsing (frequency, mode, meters, ACK/NAK)
-- No state, no I/O — purely data transformation
+Pure functions for building and parsing CI-V frames. No state, no I/O.
 
 ### `auth.py` — Authentication
 
-Handles Icom's proprietary credential encoding and packet construction:
-
-- `encode_credentials()` — substitution-table obfuscation
-- `build_login_packet()` — 0x80-byte login packet
-- `build_conninfo_packet()` — 0x90-byte connection info
-- Response parsers for auth and status packets
-
-### `protocol.py` — Packet Parsing
-
-Header serialization/deserialization and packet type identification.
-
-### `types.py` — Data Types
-
-Enums (`PacketType`, `Mode`), dataclasses (`PacketHeader`, `CivFrame`), and BCD helpers.
-
-### `exceptions.py` — Error Hierarchy
-
-Custom exception classes for structured error handling.
-
-### `cli.py` — Command Line Interface
-
-Argparse-based CLI that wraps the async API with `asyncio.run()`.
+Icom credential encoding, login/conninfo packet construction.
 
 ## Data Flow
 
-### Sending a Command
+### CI-V Command (GET)
 
 ```
 radio.get_frequency()
-    → get_frequency() builds CI-V frame: FE FE 98 E0 03 FD
-    → IcomCommander.enqueue(priority=normal, key=get_frequency)
-    → _wrap_civ() adds UDP header (0x15-byte prefix)
-    → _civ_transport.send_tracked() assigns sequence number
-    → UDP packet sent to radio:50002
+  → commander.enqueue(priority=NORMAL)
+  → build CI-V frame: FE FE 98 E0 03 FD
+  → _civ_transport.send_tracked()
+  → UDP → radio:50002
+  → response arrives in _packet_queue
+  → _civ_rx_loop drains queue → parse → match waiter → return
+  → (on timeout: return cached value if available)
 ```
 
-### Receiving a Response
+### CI-V Command (SET, fire-and-forget)
 
 ```
-UDP packet arrives on :50002
-    → _UdpProtocol.datagram_received()
-    → IcomTransport._handle_packet()
-        → Check: retransmit request? ping? → handle internally
-        → Otherwise: queue for consumer
-    → IcomRadio._send_civ_raw() picks up from queue
-        → Skip packets that are too small (control)
-        → Scan payload for CI-V frames (FE FE ... FD)
-        → Filter: skip echoes (from_addr == CONTROLLER), waterfall (cmd 0x27)
-        → Match: response from radio with correct command byte
-    → parse_frequency_response() extracts Hz from BCD data
+radio.set_frequency(14_074_000)
+  → commander.enqueue(priority=NORMAL)
+  → build CI-V frame: FE FE 98 E0 05 ... FD
+  → _civ_transport.send_tracked()
+  → UDP → radio:50002
+  → (no wait for ACK — fire and forget)
+```
+
+### Scope Streaming
+
+```
+radio:50002 sends ~225 scope packets/sec
+  → _civ_rx_loop drains ALL from queue each iteration
+  → scope frames (cmd 0x27) → ScopeAssembler → callback
+  → non-scope frames → routed to command waiters
+  → (drain-all prevents scope flood from starving GET responses)
 ```
 
 ## Key Design Decisions
 
-### Dual-Port Architecture
+### Drain-All RX Pattern (#66)
 
-CI-V commands **must** go through port 50002, not 50001. The control port (50001) is only for authentication and session management. This was discovered by tracing that the radio never responds to CI-V on the control port.
+The CI-V port receives mixed traffic: scope data (~225 pkt/sec), command responses,
+unsolicited status updates. Processing one packet per iteration caused GET commands
+to time out because responses waited behind hundreds of scope packets. The drain-all
+pattern processes every queued packet each iteration, matching wfview's synchronous
+`dataReceived()` approach.
 
-### GUID Echo
+### Optimistic Port Connection
 
-The radio won't report CI-V/audio ports in its status packet unless the client echoes the radio's GUID (bytes 0x20–0x2F from its conninfo) in the client's own conninfo. Without this, `civ_port` comes back as 0.
+Icom radios use fixed port offsets (control+1 for CI-V, control+2 for audio).
+Instead of blocking on the status packet (which returns `civ_port=0` after rapid
+reconnects), we connect immediately to default ports and verify asynchronously.
 
-### Response Filtering
+### Fire-and-Forget SET Commands (#56)
 
-The CI-V port receives various traffic: our command echoes, waterfall data (cmd 0x27), and actual responses. `_send_civ_raw()` filters through all of this to find the matching response from the radio.
+SET commands (frequency, mode, power, PTT) don't need ACK confirmation for
+normal operation. Waiting for ACK under scope flood caused cascading timeouts.
+GET commands still wait (with cache fallback), matching wfview's behavior.
 
-### Sequence Number Management
+### Mixin Pattern (#60)
 
-- `send_seq` — tracked data packets on each transport
-- `ping_seq` — keep-alive pings (separate counter)
-- `_auth_seq` — authentication sequence in radio.py
-- `_civ_send_seq` — CI-V and OpenClose packets (separate from transport seq)
+`radio.py` was split using Python mixins to keep the public API surface unchanged
+while separating concerns. `IcomRadio` inherits from `ControlPhaseMixin`,
+`CivRxMixin`, and `AudioRecoveryMixin`. Cross-mixin access uses
+`self._xxx  # type: ignore[attr-defined]` — accepted trade-off for zero API breakage.
 
 ## Dependencies
 
 ```
 icom-lan (runtime)
 └── Python 3.11+ stdlib only
-    ├── asyncio
-    ├── struct
-    ├── socket
-    ├── logging
-    └── dataclasses
+    ├── asyncio, struct, socket, logging, dataclasses
 
-icom-lan[dev] (testing)
-├── pytest
-└── pytest-asyncio
+icom-lan[dev]
+├── pytest, pytest-asyncio
 
-icom-lan[audio] (future)
-└── opuslib
+icom-lan[scope]
+└── Pillow (for scope image rendering)
 ```

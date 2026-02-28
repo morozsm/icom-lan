@@ -23,30 +23,30 @@ There is no standalone, embeddable, MIT-licensed library for Icom's LAN protocol
 | hamlib adds native LAN support | hamlib moves slowly (C, committee-driven); we move fast |
 | Low adoption | Aggressive community outreach, killer demos |
 
-## Velocity Plan (updated after v0.7.0)
+## Velocity Plan (updated after v0.8.0)
 
-### Done (all 32 issues closed, 1040 tests)
+### Done (all 32 issues closed, 1202 tests)
 
 - [x] Phase 3: Opus audio RX/TX API (Python)
 - [x] Phase 3b: High-level PCM API + CLI audio subcommands + auto-recovery
-- [x] Phase 4: Polish + PyPI publish + GitHub releases (v0.7.0)
+- [x] Phase 4: Polish + PyPI publish + GitHub releases (v0.8.0)
 - [x] Phase 6: Spectrum/waterfall parsing + CLI capture + rendering
 - [x] **Phase 7: Hamlib NET rigctld server** — drop-in replacement for `rigctld`
   - TCP server with multi-client, backpressure, caching
   - Golden protocol response suite (45 fixtures) + TCP wire tests
   - WSJT-X compat mode, DATA mode semantics, CI-V desync fix
-  - 1040 tests, 0 regressions
+  - 1202 tests, 0 regressions
 
-### Next: v0.7.0 release + community launch
+### Next: v0.8.0 release + community launch
 
-**Goal:** Ship v0.7.0, announce to community, start collecting feedback.
+**Goal:** Ship v0.8.0, announce to community, start collecting feedback.
 
-- [ ] Release v0.7.0 (version bump, CHANGELOG, PyPI)
+- [ ] Release v0.8.0 (version bump, CHANGELOG, PyPI)
 - [ ] Reddit /r/amateurradio + /r/hamradio announcement
 - [ ] QRZ.com forum post
 - [ ] Enable GitHub Discussions
 
-### After v0.7.0: client hardening + Web UI
+### After v0.8.0: client hardening + Web UI
 
 - [ ] Test rigctld with WSJT-X, JS8Call, fldigi (real-world validation)
 - [ ] Web backend bridge (safe API surface for freq/mode/meter/scope snapshot)

@@ -157,3 +157,45 @@ Look for:
     - OS
     - Debug log output
     - Steps to reproduce
+
+## CI-V Commands Timeout During Scope/Waterfall
+
+**Symptom:** `get_frequency()`, `get_power()` etc. return cached values or raise
+`TimeoutError` while scope/waterfall is active.
+
+**Cause:** Fixed in v0.8.0. In earlier versions, the RX pump processed one packet
+at a time. Scope data (~225 packets/sec) would queue ahead of command responses.
+
+**Solution:** Upgrade to v0.8.0+. The drain-all RX pattern processes all queued
+packets each iteration.
+
+## Connection Fails With `civ_port=0`
+
+**Symptom:** Log shows `Status: civ_port=0, audio_port=0` repeatedly.
+
+**Cause:** The radio needs time to recover between connections. Rapid reconnects
+(especially during development/testing) cause this.
+
+**Solutions:**
+1. Wait 30–60 seconds before reconnecting
+2. v0.8.0+ uses optimistic default ports — connects instantly even with `civ_port=0`
+3. If persistent: power-cycle the radio's network (Menu → Set → Network → LAN → Off/On)
+
+## Audio Cuts Out on Mobile (Safari iOS)
+
+**Symptom:** Audio stops when Safari goes to background, doesn't resume on return.
+
+**Cause:** iOS suspends WebSocket connections and AudioContext in background tabs.
+
+**Solution:** v0.8.0+ adds `visibilitychange` listener that resumes AudioContext
+and reconnects the audio WebSocket when the tab returns to foreground. Audio
+may stutter briefly during reconnection.
+
+## Audio Stutters Over VPN/Tailscale
+
+**Symptom:** Audio playback has gaps or stutters when accessing the Web UI remotely.
+
+**Cause:** Network jitter from VPN tunneling.
+
+**Solution:** v0.8.0+ uses a 200ms jitter buffer (up from 50ms). For very high
+latency connections, this may still be insufficient — consider a local deployment.

@@ -143,7 +143,7 @@ Each UDP packet has a fixed-format header (see `packettypes.h` in wfview):
 - [x] Multi-model support (IC-7610, IC-705, IC-7300, IC-9700)
 - [x] CLI utility (`icom-lan status`, `icom-lan freq 14074000`)
 - [x] Documentation + MkDocs site
-- [x] PyPI publication (v0.7.0)
+- [x] PyPI publication (v0.8.0)
 
 ### Phase 5 — Hamlib NET rigctld ✅ COMPLETE
 **Goal:** Drop-in rigctld replacement for WSJT-X, JS8Call, fldigi.
@@ -160,7 +160,7 @@ Each UDP packet has a fixed-format header (see `packettypes.h` in wfview):
 ### Phase 6 — Scope/Waterfall ✅ COMPLETE (v0.6.0)
 
 ### Current Status
-**All 32 issues closed. 1040 tests. v0.7.0 released on PyPI.**
+**All 32 issues closed. 1202 tests. v0.8.0 released on PyPI.**
 
 ## Test Equipment
 
