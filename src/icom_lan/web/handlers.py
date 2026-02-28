@@ -142,6 +142,7 @@ class ControlHandler:
 
     async def _handle_radio_connect(self, msg: dict[str, Any]) -> None:
         """Handle radio_connect request — reconnect the radio."""
+        logger.info("radio_connect requested")
         msg_id = msg.get("id", "")
         if self._radio is None:
             await self._send_json({"type": "response", "id": msg_id, "ok": False,
@@ -164,6 +165,7 @@ class ControlHandler:
 
     async def _handle_radio_disconnect(self, msg: dict[str, Any]) -> None:
         """Handle radio_disconnect request — disconnect the radio."""
+        logger.info("radio_disconnect requested")
         msg_id = msg.get("id", "")
         if self._radio is None:
             await self._send_json({"type": "response", "id": msg_id, "ok": False,
