@@ -2,6 +2,10 @@
 
 Core data types used throughout the library.
 
+## StateCache
+
+::: icom_lan.rigctld.state_cache.StateCache
+
 ## Enums
 
 ### `PacketType`

@@ -2,6 +2,8 @@
 
 Low-level CI-V command encoding and decoding. Most users should use the high-level [`IcomRadio`](radio.md) API.
 
+::: icom_lan.commands
+
 ## CI-V Frame Format
 
 ```

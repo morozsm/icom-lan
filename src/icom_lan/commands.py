@@ -1,10 +1,14 @@
 """CI-V command encoding and decoding for Icom transceivers.
 
-CI-V frame format: FE FE <to> <from> <cmd> [<sub>] [<data>...] FD
+CI-V frame format::
 
-For dual-receiver radios (IC-7610), commands marked Command29=true use:
-  FE FE <to> <from> 29 <receiver> <cmd> [<sub>] [<data>...] FD
-where receiver = 0x00 (MAIN) or 0x01 (SUB).
+    FE FE <to> <from> <cmd> [<sub>] [<data>...] FD
+
+For dual-receiver radios (IC-7610), commands marked Command29=true use::
+
+    FE FE <to> <from> 29 <receiver> <cmd> [<sub>] [<data>...] FD
+
+where ``receiver`` = ``0x00`` (MAIN) or ``0x01`` (SUB).
 
 Reference: wfview icomcommander.cpp, IC-7610.rig
 """
@@ -143,8 +147,9 @@ def build_cmd29_frame(
 ) -> bytes:
     """Build a Command29-wrapped CI-V frame for dual-receiver radios.
 
-    For commands marked Command29=true in IC-7610.rig, the frame format is:
-      FE FE <to> <from> 29 <receiver> <cmd> [<sub>] [<data>...] FD
+    For commands marked Command29=true in IC-7610.rig, the frame format is::
+
+        FE FE <to> <from> 29 <receiver> <cmd> [<sub>] [<data>...] FD
 
     The 0x29 prefix tells the radio which receiver (MAIN/SUB) the command
     targets, without requiring a VFO select first.
@@ -276,8 +281,13 @@ def set_frequency(
 ) -> bytes:
     """Build a 'set frequency' CI-V command.
 
+    Note:
+        BCD encoding uses 5 bytes (10 decimal digits), so the maximum
+        representable frequency is 9,999,999,999 Hz (~10 GHz).  Frequencies
+        outside this range will raise ``ValueError`` from :func:`bcd_encode`.
+
     Args:
-        freq_hz: Frequency in Hz.
+        freq_hz: Frequency in Hz (0 – 9,999,999,999).
         to_addr: Radio CI-V address.
         from_addr: Controller CI-V address.
 
