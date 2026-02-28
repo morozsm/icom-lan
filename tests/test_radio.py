@@ -809,6 +809,115 @@ class TestGetFallbackToCache:
 
 
 # ---------------------------------------------------------------------------
+# Issue #63: GET fallbacks respect cache TTL
+# ---------------------------------------------------------------------------
+
+
+class TestGetFallbackCacheTTL:
+    """GET commands raise TimeoutError when cache is stale (exceeds TTL)."""
+
+    @pytest.mark.asyncio
+    async def test_get_frequency_raises_when_cache_stale(
+        self, mock_transport: MockTransport
+    ) -> None:
+        """get_frequency raises TimeoutError when cached value is older than TTL."""
+        radio = IcomRadio("192.168.1.100", timeout=0.05, cache_ttl_s={"freq": 10.0})
+        radio._ctrl_transport = mock_transport
+        radio._civ_transport = mock_transport
+        radio._connected = True
+        radio.state_cache.update_freq(7_200_000)
+        # Back-date to make it stale
+        radio.state_cache.freq_ts = radio.state_cache.freq_ts - 20.0
+
+        with pytest.raises(TimeoutError):
+            await radio.get_frequency()
+
+    @pytest.mark.asyncio
+    async def test_get_frequency_returns_cache_within_ttl(
+        self, mock_transport: MockTransport
+    ) -> None:
+        """get_frequency returns cached value when it is within TTL."""
+        radio = IcomRadio("192.168.1.100", timeout=0.05, cache_ttl_s={"freq": 10.0})
+        radio._ctrl_transport = mock_transport
+        radio._civ_transport = mock_transport
+        radio._connected = True
+        radio.state_cache.update_freq(7_200_000)
+
+        freq = await radio.get_frequency()
+        assert freq == 7_200_000
+
+    @pytest.mark.asyncio
+    async def test_get_mode_info_raises_when_cache_stale(
+        self, mock_transport: MockTransport
+    ) -> None:
+        """get_mode_info raises TimeoutError when cached value is older than TTL."""
+        radio = IcomRadio("192.168.1.100", timeout=0.05, cache_ttl_s={"mode": 10.0})
+        radio._ctrl_transport = mock_transport
+        radio._civ_transport = mock_transport
+        radio._connected = True
+        radio.state_cache.update_mode("CW", 2)
+        radio.state_cache.mode_ts = radio.state_cache.mode_ts - 20.0
+
+        with pytest.raises(TimeoutError):
+            await radio.get_mode_info()
+
+    @pytest.mark.asyncio
+    async def test_get_mode_info_returns_cache_within_ttl(
+        self, mock_transport: MockTransport
+    ) -> None:
+        """get_mode_info returns cached value when it is within TTL."""
+        radio = IcomRadio("192.168.1.100", timeout=0.05, cache_ttl_s={"mode": 10.0})
+        radio._ctrl_transport = mock_transport
+        radio._civ_transport = mock_transport
+        radio._connected = True
+        radio.state_cache.update_mode("CW", 2)
+
+        mode, filt = await radio.get_mode_info()
+        assert mode == Mode.CW
+        assert filt == 2
+
+    @pytest.mark.asyncio
+    async def test_get_power_raises_when_cache_stale(
+        self, mock_transport: MockTransport
+    ) -> None:
+        """get_power raises TimeoutError when cached value is older than TTL."""
+        radio = IcomRadio("192.168.1.100", timeout=0.05, cache_ttl_s={"rf_power": 30.0})
+        radio._ctrl_transport = mock_transport
+        radio._civ_transport = mock_transport
+        radio._connected = True
+        radio.state_cache.update_rf_power(128 / 255.0)
+        radio.state_cache.rf_power_ts = radio.state_cache.rf_power_ts - 60.0
+
+        with pytest.raises(TimeoutError):
+            await radio.get_power()
+
+    @pytest.mark.asyncio
+    async def test_get_power_returns_cache_within_ttl(
+        self, mock_transport: MockTransport
+    ) -> None:
+        """get_power returns cached value when it is within TTL."""
+        radio = IcomRadio("192.168.1.100", timeout=0.05, cache_ttl_s={"rf_power": 30.0})
+        radio._ctrl_transport = mock_transport
+        radio._civ_transport = mock_transport
+        radio._connected = True
+        radio.state_cache.update_rf_power(128 / 255.0)
+
+        level = await radio.get_power()
+        assert level == 128
+
+    @pytest.mark.asyncio
+    async def test_cache_ttl_s_overrides_default_per_field(
+        self, mock_transport: MockTransport
+    ) -> None:
+        """cache_ttl_s merges with defaults, overriding individual fields."""
+        # Only override freq TTL; mode/rf_power keep defaults.
+        radio = IcomRadio("192.168.1.100", timeout=0.05, cache_ttl_s={"freq": 1.0})
+        assert radio._cache_ttl_freq == 1.0
+        assert radio._cache_ttl_mode == 10.0
+        assert radio._cache_ttl_rf_power == 30.0
+
+
+# ---------------------------------------------------------------------------
 # Issue #56: SET commands update the state cache optimistically
 # ---------------------------------------------------------------------------
 
