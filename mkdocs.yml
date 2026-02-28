@@ -85,6 +85,7 @@ nav:
       - Audio: api/audio.md
       - Radio Models: api/radios.md
       - Transport: api/transport.md
+      - Commander: api/commander.md
       - Commands: api/commands.md
       - Types & Enums: api/types.md
       - Authentication: api/auth.md

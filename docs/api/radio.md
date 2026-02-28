@@ -2,7 +2,11 @@
 
 The main entry point for controlling an Icom transceiver over LAN.
 
-## Class: `IcomRadio`
+::: icom_lan.radio.IcomRadio
+
+## Reference
+
+### Class: `IcomRadio`
 
 ```python
 from icom_lan import IcomRadio
