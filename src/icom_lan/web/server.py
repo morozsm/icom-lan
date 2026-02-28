@@ -103,7 +103,7 @@ class WebServer:
                 self._radio.on_scope_data(self._broadcast_scope)
             if not self._scope_enabled and self._radio is not None:
                 try:
-                    await self._radio.enable_scope(policy="fast")
+                    await self._radio.enable_scope()
                     self._scope_enabled = True
                     logger.info("scope: enabled on radio")
                 except Exception:
