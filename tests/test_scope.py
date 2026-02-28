@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import struct
+from unittest.mock import patch
 
 import pytest
 
@@ -301,6 +302,109 @@ class TestScopeAssemblerReceiverIsolation:
         result = asm.feed(seq2_main, 0)
         assert result is not None
         assert result.out_of_range is False
+
+
+class TestScopeAssemblerTimeout:
+    """Incomplete frame assembly is discarded after the configured timeout."""
+
+    def test_timeout_discards_partial_frame(self) -> None:
+        """seq>1 arriving after timeout returns None and logs a warning."""
+        asm = ScopeAssembler(assembly_timeout=5.0)
+
+        seq1 = _seq1_payload(
+            receiver=0, seq=1, seq_max=3,
+            mode=1, start_hz=14_000_000, end_hz=14_350_000, oor=False,
+        )
+
+        t0 = 1000.0
+        with patch("icom_lan.scope.time.monotonic", return_value=t0):
+            result = asm.feed(seq1, 0)
+        assert result is None
+
+        # Feed a middle packet well past the timeout.
+        import logging
+        t_expired = t0 + 6.0
+        with patch("icom_lan.scope.time.monotonic", return_value=t_expired), \
+             patch.object(logging.getLogger("icom_lan.scope"), "warning") as mock_warn:
+            seq2 = _seq_n_payload(2, 3, bytes(range(10)))
+            result2 = asm.feed(seq2, 0)
+
+        assert result2 is None
+        assert mock_warn.called
+        call_args = mock_warn.call_args[0]
+        assert "6.0" in call_args[0] % call_args[1:]
+        assert "5.0" in call_args[0] % call_args[1:]
+
+    def test_timeout_new_frame_starts_fresh(self) -> None:
+        """After a timeout discard, seq=1 starts a new assembly normally."""
+        asm = ScopeAssembler(assembly_timeout=5.0)
+
+        seq1_old = _seq1_payload(
+            receiver=0, seq=1, seq_max=3,
+            mode=1, start_hz=14_000_000, end_hz=14_350_000, oor=False,
+        )
+        t0 = 1000.0
+        with patch("icom_lan.scope.time.monotonic", return_value=t0):
+            asm.feed(seq1_old, 0)
+
+        # Trigger timeout by sending a middle packet late.
+        t_expired = t0 + 10.0
+        seq2_old = _seq_n_payload(2, 3, bytes([0xAA] * 5))
+        with patch("icom_lan.scope.time.monotonic", return_value=t_expired):
+            asm.feed(seq2_old, 0)  # discarded by timeout
+
+        # New single-packet frame should assemble correctly.
+        pixels = bytes([0x11, 0x22, 0x33])
+        seq1_new = _seq1_payload(
+            receiver=0, seq=1, seq_max=1,
+            mode=1, start_hz=7_000_000, end_hz=7_300_000, oor=False,
+            extra_pixels=pixels,
+        )
+        with patch("icom_lan.scope.time.monotonic", return_value=t_expired + 0.1):
+            result = asm.feed(seq1_new, 0)
+
+        assert result is not None
+        assert result.start_freq_hz == 7_000_000
+        assert result.pixels == pixels
+
+    def test_custom_timeout_respected(self) -> None:
+        """assembly_timeout parameter is used instead of default."""
+        asm = ScopeAssembler(assembly_timeout=1.0)
+
+        seq1 = _seq1_payload(
+            receiver=0, seq=1, seq_max=2,
+            mode=1, start_hz=14_000_000, end_hz=14_350_000, oor=False,
+        )
+        t0 = 0.0
+        with patch("icom_lan.scope.time.monotonic", return_value=t0):
+            asm.feed(seq1, 0)
+
+        # 1.5s > 1.0s timeout → discard.
+        seq2 = _seq_n_payload(2, 2, bytes([0x10] * 3))
+        with patch("icom_lan.scope.time.monotonic", return_value=t0 + 1.5):
+            result = asm.feed(seq2, 0)
+        assert result is None
+
+    def test_within_timeout_completes_normally(self) -> None:
+        """Packets arriving before the timeout assemble into a complete frame."""
+        asm = ScopeAssembler(assembly_timeout=5.0)
+
+        seq1 = _seq1_payload(
+            receiver=0, seq=1, seq_max=2,
+            mode=1, start_hz=14_000_000, end_hz=14_350_000, oor=False,
+        )
+        t0 = 1000.0
+        with patch("icom_lan.scope.time.monotonic", return_value=t0):
+            asm.feed(seq1, 0)
+
+        pixels = bytes([0x10, 0x20, 0x30])
+        seq2 = _seq_n_payload(2, 2, pixels)
+        # 4.9s < 5.0s timeout → should complete.
+        with patch("icom_lan.scope.time.monotonic", return_value=t0 + 4.9):
+            result = asm.feed(seq2, 0)
+
+        assert result is not None
+        assert result.pixels == pixels
 
 
 class TestScopeAssemblerReset:
