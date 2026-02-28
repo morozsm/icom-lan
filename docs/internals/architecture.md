@@ -182,6 +182,20 @@ to time out because responses waited behind hundreds of scope packets. The drain
 pattern processes every queued packet each iteration, matching wfview's synchronous
 `dataReceived()` approach.
 
+### Soft Reconnect
+
+The Web UI's Connect/Disconnect button uses a two-tier reconnect strategy:
+
+1. **Soft disconnect** (`soft_disconnect()`) — closes CI-V and audio transports but
+   keeps the control transport alive (pings continue). The radio maintains the session.
+2. **Soft reconnect** (`soft_reconnect()`) — re-opens only the CI-V transport using
+   the existing control session. No discovery, no login, no conninfo — just CI-V open.
+   Takes ~1 second vs 30-60s for a full reconnect.
+3. **Fallback** — if the control transport died, falls back to full `connect()`.
+
+This mirrors how wfview handles temporary CI-V interruptions without tearing down
+the entire session.
+
 ### Optimistic Port Connection
 
 Icom radios use fixed port offsets (control+1 for CI-V, control+2 for audio).

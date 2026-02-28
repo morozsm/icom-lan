@@ -169,6 +169,19 @@ at a time. Scope data (~225 packets/sec) would queue ahead of command responses.
 **Solution:** Upgrade to v0.8.0+. The drain-all RX pattern processes all queued
 packets each iteration.
 
+## Reconnect After Disconnect Takes Too Long
+
+**Symptom:** After clicking Disconnect then Connect, the radio doesn't respond
+for 30-60 seconds.
+
+**Cause:** Fixed in v0.8.0. Earlier versions did a full disconnect (including
+the control transport) and then a full reconnect with discovery. IC-7610 doesn't
+respond to discovery for ~60s after a recent session.
+
+**Solution:** v0.8.0 uses soft disconnect/reconnect — only the CI-V data stream
+is closed. The control transport stays alive, so reconnect skips discovery and
+authentication entirely. Reconnect takes ~1 second.
+
 ## Connection Fails With `civ_port=0`
 
 **Symptom:** Log shows `Status: civ_port=0, audio_port=0` repeatedly.

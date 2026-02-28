@@ -21,6 +21,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - RX audio playback and TX audio capture in the browser (WebSocket binary)
     - Responsive layout, light/dark theme toggle, keyboard shortcuts
     - WebSocket pub/sub for scope, meters, audio, and control channels
+- **Connect/Disconnect button** in Web UI — toggle radio connection without restarting server
+- **Soft reconnect** — disconnect closes only CI-V/audio, keeps control transport alive.
+  Reconnect re-opens CI-V instantly (~1s) without discovery or re-authentication.
+  Audio auto-restarts after reconnect.
+- **Skip discovery on reconnect** — `transport.reconnect()` reuses cached `remote_id`,
+  eliminating the 30-60s discovery timeout on IC-7610.
 - **Connection state machine** — `RadioConnectionState` enum formalizing connect lifecycle (#61)
 - **State cache with TTL** — cached GET fallback values with configurable TTL
   (10s freq/mode, 30s power) via `cache_ttl_s` parameter (#63)
