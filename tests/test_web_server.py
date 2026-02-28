@@ -199,6 +199,7 @@ def mock_radio() -> MagicMock:
     radio.get_mode = AsyncMock(return_value=MagicMock(name="USB"))
     radio.get_mode.return_value.name = "USB"
     radio.get_power = AsyncMock(return_value=100)
+    radio.get_filter = AsyncMock(return_value=1)  # FIL1 default
     radio.get_s_meter = AsyncMock(return_value=42)
     radio.get_swr = AsyncMock(return_value=10)
     radio.get_alc = AsyncMock(return_value=5)
@@ -210,8 +211,14 @@ def mock_radio() -> MagicMock:
     radio.set_preamp = AsyncMock()
     radio.vfo_swap = AsyncMock()
     radio.vfo_a_equals_b = AsyncMock()
+    radio.enable_scope = AsyncMock()
+    radio.disable_scope = AsyncMock()
+    radio.select_vfo = AsyncMock()
+    radio.set_filter = AsyncMock()
     # on_scope_data is a synchronous setter
     radio.on_scope_data = MagicMock()
+    # state_cache is read by _send_state_snapshot (no network round-trips)
+    radio.state_cache = {}
     return radio
 
 
@@ -1471,27 +1478,28 @@ class TestConfigurableKeepalive:
         assert cfg.keepalive_interval == 5.0
 
     async def test_large_interval_no_pings_during_short_test(self) -> None:
-        """With keepalive_interval=9999, no ping frames arrive in a short test."""
+        """With keepalive_interval=9999, the server sends hello but no ping frames."""
         config = WebConfig(host="127.0.0.1", port=0, keepalive_interval=9999.0)
         async with WebServer(None, config) as srv:
             host, port = _addr(srv)
             reader, writer, _ = await _ws_connect(host, port, "/api/v1/ws")
             try:
-                # Collect frames for 100ms — should get hello but no pings
-                frames = []
+                # Receive the hello frame (generous timeout to avoid timing flakiness)
+                opcode, payload = await _ws_recv_frame(reader, timeout=5.0)
+                assert opcode == WS_OP_TEXT
+                msg = json.loads(payload)
+                assert msg["type"] == "hello"
+                # Verify no extra frames (e.g. pings) arrive in the next 50ms
+                extra_frames = []
                 try:
                     while True:
-                        opcode, payload = await asyncio.wait_for(
-                            _ws_recv_frame(reader), timeout=0.1
+                        op, pl = await asyncio.wait_for(
+                            _ws_recv_frame(reader), timeout=0.05
                         )
-                        frames.append((opcode, payload))
+                        extra_frames.append(op)
                 except asyncio.TimeoutError:
                     pass
-                # Should have received exactly the hello text frame
-                assert len(frames) >= 1
-                assert frames[0][0] == WS_OP_TEXT
-                msg = json.loads(frames[0][1])
-                assert msg["type"] == "hello"
+                assert extra_frames == [], f"Unexpected extra frames: {extra_frames}"
             finally:
                 await _close_ws(writer)
 

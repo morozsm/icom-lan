@@ -89,9 +89,28 @@ class IcomCommander:
         priority: Priority = Priority.NORMAL,
         key: str | None = None,
         dedupe: bool = False,
+        replace: bool = False,
         timeout: float | None = None,
         wait_response: bool = True,
     ) -> CivFrame | None:
+        """Enqueue a CI-V command for serialized execution.
+
+        Args:
+            payload: Raw CI-V frame bytes.
+            priority: Execution priority (IMMEDIATE < NORMAL < BACKGROUND).
+            key: Optional key for deduplication/replacement tracking.
+            dedupe: If True and a pending future with ``key`` exists, return
+                that same future instead of queuing a new item.
+            replace: If True and a pending future with ``key`` exists, resolve
+                the old future immediately with ``None`` (worker will skip the
+                old queued item) and queue a new item.  Implements
+                "latest-wins" for rapid fire-and-forget SET commands.
+            timeout: Optional per-call timeout in seconds.
+            wait_response: Passed through to the executor; False = fire-and-forget.
+
+        Returns:
+            Response ``CivFrame``, or ``None`` for fire-and-forget calls.
+        """
         if self._queue is None or self._worker is None:
             raise ConnectionError("Commander is not started")
 
@@ -110,6 +129,12 @@ class IcomCommander:
         )
 
         if key is not None:
+            if replace:
+                old = self._pending_by_key.get(key)
+                if old is not None and not old.done():
+                    # Resolve the old future with None so the old queued item
+                    # is skipped by the worker (it checks future.done()).
+                    old.set_result(None)
             self._pending_by_key[key] = fut
 
         await self._queue.put((item.priority, item.seq, item))
