@@ -199,6 +199,7 @@ def mock_radio() -> MagicMock:
     radio.get_mode = AsyncMock(return_value=MagicMock(name="USB"))
     radio.get_mode.return_value.name = "USB"
     radio.get_power = AsyncMock(return_value=100)
+    radio.get_filter = AsyncMock(return_value=1)
     radio.get_s_meter = AsyncMock(return_value=42)
     radio.get_swr = AsyncMock(return_value=10)
     radio.get_alc = AsyncMock(return_value=5)
@@ -559,6 +560,7 @@ class TestControlChannel:
         reader, writer, _ = await _ws_connect(host, port, "/api/v1/ws")
         try:
             await _ws_recv_frame(reader)  # hello
+            mock_radio.get_filter.return_value = 2
             cmd = {
                 "type": "cmd",
                 "id": "test-1",
@@ -572,7 +574,9 @@ class TestControlChannel:
             assert resp["type"] == "response"
             assert resp["id"] == "test-1"
             assert resp["ok"] is True
+            assert resp["result"] == {"freq": 14_074_000, "filter": "FIL2"}
             mock_radio.set_frequency.assert_awaited_once_with(14_074_000)
+            mock_radio.get_filter.assert_awaited_once()
         finally:
             await _close_ws(writer)
 
