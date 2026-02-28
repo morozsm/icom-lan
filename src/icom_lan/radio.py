@@ -345,8 +345,20 @@ class IcomRadio:
         # Get GUID from radio's conninfo
         guid = await self._receive_guid()
 
+        # Reserve local UDP ports for CI-V and audio (wfview-style).
+        import socket as _socket
+        _civ_sock = _socket.socket(_socket.AF_INET, _socket.SOCK_DGRAM)
+        _civ_sock.bind(("", 0))
+        _civ_local_port = _civ_sock.getsockname()[1]
+        _civ_sock.close()
+        _audio_sock = _socket.socket(_socket.AF_INET, _socket.SOCK_DGRAM)
+        _audio_sock.bind(("", 0))
+        _audio_local_port = _audio_sock.getsockname()[1]
+        _audio_sock.close()
+        logger.debug("Reserved local ports: civ=%d, audio=%d", _civ_local_port, _audio_local_port)
+
         # Send our conninfo → triggers status packet with CI-V port
-        await self._send_conninfo(guid)
+        await self._send_conninfo(guid, _civ_local_port, _audio_local_port)
 
         civ_port = await self._receive_civ_port()
         if civ_port == 0:
@@ -1354,7 +1366,12 @@ class IcomRadio:
                 break
         return guid
 
-    async def _send_conninfo(self, guid: bytes | None) -> None:
+    async def _send_conninfo(
+        self,
+        guid: bytes | None,
+        civ_local_port: int = 0,
+        audio_local_port: int = 0,
+    ) -> None:
         """Send our conninfo to the radio."""
         conninfo = build_conninfo_packet(
             sender_id=self._ctrl_transport.my_id,
@@ -1370,10 +1387,12 @@ class IcomRadio:
             tx_codec=int(self._audio_codec),
             rx_sample_rate=self._audio_sample_rate,
             tx_sample_rate=self._audio_sample_rate,
+            civ_local_port=civ_local_port,
+            audio_local_port=audio_local_port,
         )
         self._auth_seq += 1
         await self._ctrl_transport.send_tracked(conninfo)
-        logger.debug("Conninfo sent")
+        logger.debug("Conninfo sent (civ_local=%d, audio_local=%d)", civ_local_port, audio_local_port)
 
     async def _receive_civ_port(self) -> int:
         """Wait for status packet and extract CI-V port quickly.
