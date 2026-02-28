@@ -139,6 +139,8 @@ STATUS_SIZE = 0x50
 _AUDIO_CAPABILITIES = get_audio_capabilities()
 _DEFAULT_AUDIO_CODEC = _AUDIO_CAPABILITIES.default_codec
 _DEFAULT_AUDIO_SAMPLE_RATE = _AUDIO_CAPABILITIES.default_sample_rate_hz
+# Default TTLs (seconds) for the GET-command cache fallback paths.
+_DEFAULT_CACHE_TTL: dict[str, float] = {"freq": 10.0, "mode": 10.0, "rf_power": 30.0}
 
 
 class IcomRadio:
@@ -179,6 +181,7 @@ class IcomRadio:
         watchdog_timeout: float = 30.0,
         auto_recover_audio: bool = True,
         on_audio_recovery: "Callable[[AudioRecoveryState], None] | None" = None,
+        cache_ttl_s: "dict[str, float] | None" = None,
     ) -> None:
         self._host = host
         self._port = port
@@ -249,6 +252,10 @@ class IcomRadio:
             float(os.environ.get("ICOM_CIV_RETRY_SLICE_MS", "150")) / 1000.0
         )
         self._state_cache: StateCache = StateCache()
+        _ttl = {**_DEFAULT_CACHE_TTL, **(cache_ttl_s or {})}
+        self._cache_ttl_freq: float = _ttl["freq"]
+        self._cache_ttl_mode: float = _ttl["mode"]
+        self._cache_ttl_rf_power: float = _ttl["rf_power"]
         # GET commands use a shorter timeout than the general connection timeout.
         # wfview-style: send once, short deadline, fall back to cache.
         self._civ_get_timeout: float = min(timeout, 2.0)
@@ -1709,7 +1716,7 @@ class IcomRadio:
             self._state_cache.update_freq(freq)
             return freq
         except TimeoutError:
-            if self._state_cache.freq_ts > 0.0:
+            if self._state_cache.is_fresh("freq", self._cache_ttl_freq):
                 logger.debug(
                     "get_frequency: timeout, returning cached %d Hz",
                     self._state_cache.freq,
@@ -1750,7 +1757,7 @@ class IcomRadio:
             self._state_cache.update_mode(mode.name, filt)
             return mode, filt
         except TimeoutError:
-            if self._state_cache.mode_ts > 0.0:
+            if self._state_cache.is_fresh("mode", self._cache_ttl_mode):
                 logger.debug(
                     "get_mode_info: timeout, returning cached %s",
                     self._state_cache.mode,
@@ -1824,7 +1831,7 @@ class IcomRadio:
             self._state_cache.update_rf_power(level / 255.0)
             return level
         except TimeoutError:
-            if self._state_cache.rf_power_ts > 0.0 and self._state_cache.rf_power is not None:
+            if self._state_cache.is_fresh("rf_power", self._cache_ttl_rf_power) and self._state_cache.rf_power is not None:
                 cached_level = round(self._state_cache.rf_power * 255)
                 logger.debug(
                     "get_power: timeout, returning cached %d", cached_level
