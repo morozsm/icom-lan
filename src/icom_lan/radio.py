@@ -986,8 +986,11 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         )
         return await self._send_civ_raw(frame)
 
-    async def get_frequency(self) -> int:
+    async def get_frequency(self, *, bypass_cache: bool = False) -> int:
         """Get the current operating frequency in Hz.
+
+        Args:
+            bypass_cache: Skip dedupe and cache fallback (used by RadioPoller).
 
         On timeout falls back to the state cache (if populated) rather than
         raising immediately, allowing callers to remain responsive while the
@@ -996,7 +999,9 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         self._check_connected()
         civ = get_frequency(to_addr=self._radio_addr)
         try:
-            resp = await self._send_civ_raw(civ, key="get_frequency", dedupe=True)
+            resp = await self._send_civ_raw(
+                civ, key="get_frequency", dedupe=not bypass_cache,
+            )
             freq = parse_frequency_response(resp)
             self._last_freq_hz = freq
             self._state_cache.update_freq(freq)

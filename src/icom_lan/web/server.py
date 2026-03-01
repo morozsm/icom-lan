@@ -230,10 +230,18 @@ class WebServer:
             self._radio_poller.start()
 
     async def stop(self) -> None:
-        """Close the listener, stop RadioPoller, and cancel all client tasks."""
+        """Close the listener, stop RadioPoller, disconnect radio, cancel tasks."""
         if self._radio_poller is not None:
             self._radio_poller.stop()
             self._radio_poller = None
+
+        # Graceful radio disconnect — frees LAN slots immediately
+        if self._radio is not None:
+            try:
+                await asyncio.wait_for(self._radio.soft_disconnect(), timeout=3.0)
+                logger.info("radio: graceful disconnect")
+            except Exception:
+                logger.warning("radio: disconnect failed", exc_info=True)
 
         if self._server is not None:
             self._server.close()
@@ -248,11 +256,24 @@ class WebServer:
         logger.info("web server stopped")
 
     async def serve_forever(self) -> None:
-        """Start and block until cancelled."""
+        """Start and block until cancelled.  Handles SIGTERM/SIGINT gracefully."""
+        import signal as _signal
+
         await self.start()
         assert self._server is not None
+
+        loop = asyncio.get_running_loop()
+        stop_event = asyncio.Event()
+
+        def _on_signal() -> None:
+            logger.info("received shutdown signal")
+            stop_event.set()
+
+        for sig in (_signal.SIGTERM, _signal.SIGINT):
+            loop.add_signal_handler(sig, _on_signal)
+
         try:
-            await self._server.serve_forever()
+            await stop_event.wait()
         finally:
             await self.stop()
 
