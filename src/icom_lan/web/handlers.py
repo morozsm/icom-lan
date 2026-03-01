@@ -19,16 +19,27 @@ from .protocol import (
     AUDIO_CODEC_OPUS,
     AUDIO_CODEC_PCM16,
     AUDIO_HEADER_SIZE,
-    METER_ALC,
-    METER_POWER,
-    METER_SMETER_MAIN,
-    METER_SWR,
     MSG_TYPE_AUDIO_RX,
     decode_json,
     encode_audio_frame,
     encode_json,
     encode_meter_frame,
     encode_scope_frame,
+)
+from .radio_poller import (
+    PttOff,
+    PttOn,
+    SelectVfo,
+    SetAfLevel,
+    SetAttenuator,
+    SetFilter,
+    SetFreq,
+    SetMode,
+    SetPower,
+    SetPreamp,
+    SetRfGain,
+    VfoEqualize,
+    VfoSwap,
 )
 from .websocket import WS_OP_BINARY, WS_OP_TEXT, WebSocketConnection
 
@@ -51,15 +62,16 @@ HIGH_WATERMARK = 5  # Max queued scope/meter frames before dropping
 class ControlHandler:
     """Handles the /api/v1/ws control WebSocket channel.
 
-    Receives JSON commands from the client and dispatches them to the radio.
-    Sends hello on connect, state snapshot after subscribe, and events
-    for state changes.
+    Receives JSON commands from the client and enqueues them via the
+    server's CommandQueue.  Receives broadcast events from RadioPoller
+    via an asyncio.Queue and forwards them to the WebSocket.
 
     Args:
         ws: Established WebSocket connection.
         radio: IcomRadio instance (may be None in standalone mode).
         server_version: Version string for the hello message.
         radio_model: Radio model string for the hello message.
+        server: WebServer instance for command_queue and event broadcast.
     """
 
     _COMMANDS = frozenset(
@@ -85,17 +97,26 @@ class ControlHandler:
         radio: "IcomRadio | None",
         server_version: str,
         radio_model: str,
+        server: Any = None,
     ) -> None:
         self._ws = ws
         self._radio = radio
         self._version = server_version
         self._radio_model = radio_model
+        self._server = server
         self._subscribed_streams: set[str] = set()
+        self._event_queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue(
+            maxsize=100,
+        )
 
     async def run(self) -> None:
         """Run the control channel lifecycle."""
         await self._send_hello()
-        state_task: asyncio.Task[None] = asyncio.create_task(self._state_poll_loop())
+        if self._server is not None:
+            self._server.register_control_event_queue(self._event_queue)
+        event_task: asyncio.Task[None] = asyncio.create_task(
+            self._event_sender_loop()
+        )
         try:
             while True:
                 opcode, payload = await self._ws.recv()
@@ -104,47 +125,21 @@ class ControlHandler:
         except EOFError:
             pass
         finally:
-            state_task.cancel()
+            event_task.cancel()
             try:
-                await state_task
+                await event_task
             except asyncio.CancelledError:
                 pass
+            if self._server is not None:
+                self._server.unregister_control_event_queue(self._event_queue)
 
-    async def _state_poll_loop(self) -> None:
-        """Poll state_cache every 300ms and push freq/mode/ptt changes."""
-        prev_freq: int = 0
-        prev_mode: str = ""
-        prev_filter: str = ""
-        prev_ptt: bool = False
+    async def _event_sender_loop(self) -> None:
+        """Drain event queue and forward events to WebSocket."""
         try:
             while True:
-                await asyncio.sleep(0.3)
-                if self._radio is None or "state" not in self._subscribed_streams:
-                    continue
-                try:
-                    cache = self._radio.state_cache
-                    events: list[dict[str, Any]] = []
-                    freq = cache.freq if cache.freq_ts > 0 else 0
-                    if freq and freq != prev_freq:
-                        prev_freq = freq
-                        events.append({"type": "event", "name": "freq_changed",
-                            "data": {"freq": freq, "vfo": "A"}})
-                    mode = cache.mode if cache.mode_ts > 0 else ""
-                    filt = f"FIL{cache.filter_width}" if cache.filter_width else ""
-                    if mode and (mode != prev_mode or filt != prev_filter):
-                        prev_mode = mode
-                        prev_filter = filt
-                        events.append({"type": "event", "name": "mode_changed",
-                            "data": {"mode": mode, "filter": filt}})
-                    ptt = cache.ptt
-                    if ptt != prev_ptt:
-                        prev_ptt = ptt
-                        events.append({"type": "event", "name": "ptt",
-                            "data": {"state": ptt}})
-                    for ev in events:
-                        await self._send_json(ev)
-                except Exception as exc:
-                    logger.debug("state poll error: %s", exc)
+                event = await self._event_queue.get()
+                if "state" in self._subscribed_streams:
+                    await self._send_json(event)
         except asyncio.CancelledError:
             pass
 
@@ -195,8 +190,6 @@ class ControlHandler:
                 await self._send_json({"type": "response", "id": msg_id, "ok": True,
                                        "result": {"status": "already_connected"}})
                 return
-            # Try soft reconnect (CI-V only) if control transport alive,
-            # otherwise full connect.
             if hasattr(self._radio, 'soft_reconnect'):
                 try:
                     await self._radio.soft_reconnect()
@@ -207,7 +200,6 @@ class ControlHandler:
                 await self._radio.connect()
             await self._send_json({"type": "response", "id": msg_id, "ok": True,
                                    "result": {"status": "connected"}})
-            # Broadcast state to all clients
             await self._broadcast_connection_state(True)
         except Exception as exc:
             logger.warning("radio_connect failed: %s", exc)
@@ -249,7 +241,6 @@ class ControlHandler:
         streams = msg.get("streams", [])
         if isinstance(streams, list):
             self._subscribed_streams.update(str(s) for s in streams)
-        # Send state snapshot after subscribe
         await self._send_state_snapshot()
 
     async def _handle_unsubscribe(self, msg: dict[str, Any]) -> None:
@@ -275,38 +266,27 @@ class ControlHandler:
                 "receiver": 0,
             },
         }
-        if self._radio is not None:
-            # Read from state cache first — non-blocking, always fast.
-            cache_hit_freq = False
-            cache_hit_mode = False
+        # Read from state cache — zero CI-V.
+        cache = (
+            self._server.state_cache
+            if self._server is not None
+            else None
+        )
+        if cache is None and self._radio is not None:
+            cache = self._radio.state_cache
+        if cache is not None:
             try:
-                cache = self._radio.state_cache
                 if cache.freq_ts > 0.0:
                     data["freq_a"] = cache.freq
-                    cache_hit_freq = True
                 if cache.mode_ts > 0.0:
                     data["mode"] = cache.mode
                     if cache.filter_width is not None:
                         data["filter"] = f"FIL{cache.filter_width}"
-                    cache_hit_mode = True
                 data["ptt"] = cache.ptt
             except Exception as exc:
                 logger.debug("control: state cache read failed: %s", exc)
-
-            # Supplement with live queries for fields not yet in cache.
-            if not cache_hit_freq or not cache_hit_mode:
-                try:
-                    if not cache_hit_freq:
-                        data["freq_a"] = await self._radio.get_frequency()
-                    if not cache_hit_mode:
-                        data["mode"] = (await self._radio.get_mode()).name
-                        fil = await self._radio.get_filter()
-                        if fil is not None:
-                            data["filter"] = f"FIL{fil}"
-                except Exception as exc:
-                    logger.debug("control: state snapshot partial failure: %s", exc)
-        msg = {"type": "state", "data": data}
-        await self._ws.send_text(encode_json(msg))
+        msg_out = {"type": "state", "data": data}
+        await self._ws.send_text(encode_json(msg_out))
 
     async def _handle_command(self, msg: dict[str, Any]) -> None:
         cmd_id = msg.get("id", "")
@@ -327,7 +307,7 @@ class ControlHandler:
             )
             return
 
-        if self._radio is None:
+        if self._radio is None and self._server is None:
             await self._ws.send_text(
                 encode_json(
                     {
@@ -342,7 +322,7 @@ class ControlHandler:
             return
 
         try:
-            result = await self._dispatch_command(name, params)
+            result = self._enqueue_command(name, params)
             await self._ws.send_text(
                 encode_json(
                     {
@@ -367,80 +347,64 @@ class ControlHandler:
                 )
             )
 
-    async def _dispatch_command(
+    def _enqueue_command(
         self, name: str, params: dict[str, Any]
     ) -> dict[str, Any]:
-        radio = self._radio
-        assert radio is not None
+        """Build a Command dataclass, enqueue it, and return the ack result."""
+        q = self._server.command_queue if self._server is not None else None
+        if q is None:
+            raise RuntimeError("no command queue available")
 
-        if name == "set_freq":
-            freq = int(params["freq"])
-            await radio.set_frequency(freq)
-            result: dict[str, Any] = {"freq": freq}
-            try:
-                fil = await radio.get_filter()
-            except Exception as exc:
-                logger.debug("control: set_freq filter read failed: %s", exc)
-            else:
-                if fil is not None:
-                    result["filter"] = f"FIL{fil}"
-            return result
-
-        if name == "set_mode":
-            mode = str(params["mode"])
-            await radio.set_mode(mode)
-            return {"mode": mode}
-
-        if name == "set_filter":
-            fil_str = str(params.get("filter", "FIL1"))
-            fil_num = int(fil_str[-1]) if fil_str[-1].isdigit() else 1
-            await radio.set_filter(fil_num)
-            return {"filter": fil_str}
-
-        if name == "ptt":
-            state = bool(params["state"])
-            await radio.set_ptt(state)
-            return {"state": state}
-
-        if name == "set_power":
-            level = int(params["level"])
-            await radio.set_power(level)
-            return {"level": level}
-
-        if name == "set_rf_gain":
-            level = int(params["level"])
-            await radio.set_rf_gain(level)
-            return {"level": level}
-
-        if name == "set_af_level":
-            level = int(params["level"])
-            await radio.set_af_level(level)
-            return {"level": level}
-
-        if name == "set_att":
-            db = int(params["db"])
-            await radio.set_attenuator_level(db)
-            return {"db": db}
-
-        if name == "set_preamp":
-            level = int(params["level"])
-            await radio.set_preamp(level)
-            return {"level": level}
-
-        if name == "select_vfo":
-            vfo = str(params.get("vfo", "A"))
-            await radio.select_vfo(vfo)
-            return {"vfo": vfo}
-
-        if name == "vfo_swap":
-            await radio.vfo_swap()
-            return {}
-
-        if name == "vfo_equalize":
-            await radio.vfo_a_equals_b()
-            return {}
-
-        raise ValueError(f"unhandled command: {name!r}")
+        match name:
+            case "set_freq":
+                freq = int(params["freq"])
+                q.put(SetFreq(freq))
+                return {"freq": freq}
+            case "set_mode":
+                mode = str(params["mode"])
+                q.put(SetMode(mode))
+                return {"mode": mode}
+            case "set_filter":
+                fil_str = str(params.get("filter", "FIL1"))
+                fil_num = int(fil_str[-1]) if fil_str[-1].isdigit() else 1
+                q.put(SetFilter(fil_num))
+                return {"filter": fil_str}
+            case "ptt":
+                on = bool(params["state"])
+                q.put(PttOn() if on else PttOff())
+                return {"state": on}
+            case "set_power":
+                level = int(params["level"])
+                q.put(SetPower(level))
+                return {"level": level}
+            case "set_rf_gain":
+                level = int(params["level"])
+                q.put(SetRfGain(level))
+                return {"level": level}
+            case "set_af_level":
+                level = int(params["level"])
+                q.put(SetAfLevel(level))
+                return {"level": level}
+            case "set_att":
+                db = int(params["db"])
+                q.put(SetAttenuator(db))
+                return {"db": db}
+            case "set_preamp":
+                level = int(params["level"])
+                q.put(SetPreamp(level))
+                return {"level": level}
+            case "select_vfo":
+                vfo = str(params.get("vfo", "A"))
+                q.put(SelectVfo(vfo))
+                return {"vfo": vfo}
+            case "vfo_swap":
+                q.put(VfoSwap())
+                return {}
+            case "vfo_equalize":
+                q.put(VfoEqualize())
+                return {}
+            case _:
+                raise ValueError(f"unhandled command: {name!r}")
 
     @property
     def subscribed_streams(self) -> frozenset[str]:
@@ -556,51 +520,36 @@ class ScopeHandler:
 class MetersHandler:
     """Handles the /api/v1/meters binary WebSocket channel.
 
-    Receives meter frames from the server's shared MeterPoller and forwards
-    them to the client. Implements backpressure: drops frames when queue
-    exceeds HIGH_WATERMARK.
+    Receives meter frames broadcast by RadioPoller (via server) and
+    forwards them to the client.  Implements backpressure: drops frames
+    when queue exceeds HIGH_WATERMARK.
 
     Args:
         ws: Established WebSocket connection.
         radio: IcomRadio instance (may be None).
-        poll_interval: Hint for server poll rate (default 0.1 = 10fps).
-        server: WebServer instance for shared polling (optional).
+        server: WebServer instance for meter broadcast registration.
     """
 
     def __init__(
         self,
         ws: WebSocketConnection,
         radio: "IcomRadio | None",
-        poll_interval: float = 0.1,
         server: Any = None,
     ) -> None:
         self._ws = ws
         self._radio = radio
-        self._poll_interval = poll_interval
         self._server = server
         self._seq: int = 0
         self._active = False
-        self._requested_meters: list[str] = []
         self._frame_queue: asyncio.Queue[bytes] = asyncio.Queue(
             maxsize=HIGH_WATERMARK * 2
         )
 
-    @property
-    def poll_interval(self) -> float:
-        """Requested poll interval in seconds."""
-        return self._poll_interval
-
-    @property
-    def requested_meters(self) -> list[str]:
-        """Meter names requested by the client."""
-        return list(self._requested_meters)
-
     async def run(self) -> None:
         """Run the meters channel lifecycle.
 
-        Reads JSON control messages (meters_start/stop). On meters_start,
-        registers with the server's shared MeterPoller so CI-V is polled
-        once for all connected clients.
+        Reads JSON control messages (meters_start/stop).  On meters_start,
+        registers with the server for meter broadcasts from RadioPoller.
         """
         sender_task: asyncio.Task[None] = asyncio.create_task(self._sender())
         try:
@@ -615,12 +564,9 @@ class MetersHandler:
 
                 msg_type = msg.get("type")
                 if msg_type == "meters_start":
-                    self._requested_meters = msg.get("meters", [])
-                    fps = float(msg.get("fps", 10))
-                    self._poll_interval = max(0.02, 1.0 / fps) if fps > 0 else 0.1
                     self._active = True
                     if self._server is not None:
-                        await self._server.ensure_meters_enabled(self)
+                        self._server.register_meter_handler(self)
                 elif msg_type == "meters_stop":
                     self._active = False
                     if self._server is not None:

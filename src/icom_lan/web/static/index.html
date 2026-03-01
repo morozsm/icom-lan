@@ -777,8 +777,29 @@ input[type=range]::-webkit-slider-thumb {
         drawWaterfallOverlay();
         return;
       }
+      if (eventName === 'mode_changed' && msg.data) {
+        if (typeof msg.data.mode === 'string' && msg.data.mode) {
+          state.mode = msg.data.mode;
+        }
+        if (typeof msg.data.filter === 'string' && msg.data.filter) {
+          state.filter = msg.data.filter;
+        }
+        updateModeDisplays();
+        return;
+      }
       if (eventName === 'ptt' && msg.data && typeof msg.data.state === 'boolean') {
         updatePttUi(msg.data.state);
+        return;
+      }
+      if (eventName === 'att_changed' && msg.data && typeof msg.data.db === 'number') {
+        state.att = msg.data.db;
+        updateAttButtons();
+        return;
+      }
+      if (eventName === 'preamp_changed' && msg.data && typeof msg.data.level === 'number') {
+        state.preamp = msg.data.level;
+        updatePreButtons();
+        return;
       }
       return;
     }

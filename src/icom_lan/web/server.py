@@ -29,8 +29,9 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from .. import __version__
+from ..rigctld.state_cache import StateCache
 from .handlers import AudioHandler, ControlHandler, MetersHandler, ScopeHandler
-from .protocol import METER_ALC, METER_POWER, METER_SMETER_MAIN, METER_SWR
+from .radio_poller import CommandQueue, RadioPoller
 from .websocket import WS_KEEPALIVE_INTERVAL, WebSocketConnection, make_accept_key
 
 if TYPE_CHECKING:
@@ -87,10 +88,17 @@ class WebServer:
         self._scope_enabled = False
         self._scope_enable_lock: asyncio.Lock = asyncio.Lock()
         self._scope_disable_grace: float = 2.0
+        # RadioPoller: single CI-V serialiser
+        self._state_cache: StateCache = (
+            radio.state_cache if radio is not None else StateCache()
+        )
+        self._command_queue: CommandQueue = CommandQueue()
+        self._radio_poller: RadioPoller | None = None
+        # Meter broadcast
         self._meter_handlers: set["MetersHandler"] = set()
-        self._meter_poller_task: asyncio.Task[None] | None = None
-        self._meter_lock: asyncio.Lock = asyncio.Lock()
         self._meter_cache: list[tuple[int, int]] | None = None
+        # Control handler event queues
+        self._control_event_queues: set[asyncio.Queue[dict[str, Any]]] = set()
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -153,98 +161,66 @@ class WebServer:
             h.enqueue_frame(frame)
 
     # ------------------------------------------------------------------
-    # Meter poller lifecycle
+    # RadioPoller integration
     # ------------------------------------------------------------------
 
-    async def ensure_meters_enabled(self, handler: "MetersHandler") -> None:
-        """Register a meter handler and start the shared poller if needed.
+    @property
+    def state_cache(self) -> StateCache:
+        """Shared state cache (populated by RadioPoller)."""
+        return self._state_cache
 
-        This is the single entry point for meter polling — handlers must not
-        poll CI-V directly. Uses a lock to guarantee that the poller task is
-        created at most once regardless of concurrent callers.
+    @property
+    def command_queue(self) -> CommandQueue:
+        """Command queue consumed by RadioPoller."""
+        return self._command_queue
 
-        New clients immediately receive the cached meter readings (if any)
-        without waiting for the next poll cycle.
-        """
-        async with self._meter_lock:
-            self._meter_handlers.add(handler)
-            # Deliver cached readings to the new handler immediately.
-            if self._meter_cache is not None:
-                handler.enqueue_frame(self._meter_cache)
-            # Start the shared poller if not already running.
-            if (
-                self._meter_poller_task is None
-                or self._meter_poller_task.done()
-            ):
-                loop = asyncio.get_running_loop()
-                self._meter_poller_task = loop.create_task(self._meter_poll_loop())
-                logger.info("meters: poller started")
+    def register_control_event_queue(self, q: asyncio.Queue[dict[str, Any]]) -> None:
+        """Register a ControlHandler event queue for broadcast."""
+        self._control_event_queues.add(q)
+
+    def unregister_control_event_queue(self, q: asyncio.Queue[dict[str, Any]]) -> None:
+        """Unregister a ControlHandler event queue."""
+        self._control_event_queues.discard(q)
+
+    def broadcast_event(self, name: str, data: dict[str, Any]) -> None:
+        """Push an event to all ControlHandler event queues."""
+        event = {"type": "event", "name": name, "data": data}
+        for q in list(self._control_event_queues):
+            try:
+                q.put_nowait(event)
+            except asyncio.QueueFull:
+                pass
+
+    # ------------------------------------------------------------------
+    # Meter handler registration (no poller — RadioPoller broadcasts)
+    # ------------------------------------------------------------------
+
+    def register_meter_handler(self, handler: "MetersHandler") -> None:
+        """Register a meter handler for broadcast."""
+        self._meter_handlers.add(handler)
+        if self._meter_cache is not None:
+            handler.enqueue_frame(self._meter_cache)
 
     def unregister_meter_handler(self, handler: "MetersHandler") -> None:
-        """Unregister a meter handler and stop the poller when no handlers remain."""
+        """Unregister a meter handler."""
         self._meter_handlers.discard(handler)
-        if not self._meter_handlers:
-            if self._meter_poller_task is not None:
-                self._meter_poller_task.cancel()
-                self._meter_poller_task = None
-                logger.info("meters: poller stopped (no active handlers)")
-            self._meter_cache = None
-
-    async def _meter_poll_loop(self) -> None:
-        """Poll CI-V meters at the fastest requested rate and broadcast to all handlers."""
-        try:
-            while True:
-                if not self._meter_handlers:
-                    break
-                interval = min(
-                    (h.poll_interval for h in list(self._meter_handlers)),
-                    default=0.1,
-                )
-                if self._radio is not None:
-                    try:
-                        readings = await self._poll_meters()
-                        if readings:
-                            self._meter_cache = readings
-                            self._broadcast_meters(readings)
-                    except Exception:
-                        logger.debug("meters: poll error", exc_info=True)
-                await asyncio.sleep(interval)
-        except asyncio.CancelledError:
-            pass
-
-    async def _poll_meters(self) -> list[tuple[int, int]]:
-        """Read meter values from the radio using the union of all handlers' requests."""
-        assert self._radio is not None
-        wanted: set[str] = set()
-        for h in list(self._meter_handlers):
-            wanted.update(h.requested_meters)
-        if not wanted:
-            wanted = {"smeter", "power", "swr", "alc"}
-
-        meter_map = [
-            ("smeter", METER_SMETER_MAIN, self._radio.get_s_meter),
-            ("power", METER_POWER, self._radio.get_power),
-            ("swr", METER_SWR, self._radio.get_swr),
-            ("alc", METER_ALC, self._radio.get_alc),
-        ]
-        readings: list[tuple[int, int]] = []
-        for meter_name, meter_id, getter in meter_map:
-            if meter_name not in wanted:
-                continue
-            try:
-                value = await getter()
-                readings.append((meter_id, int(value)))
-            except Exception:
-                pass
-        return readings
 
     def _broadcast_meters(self, readings: list[tuple[int, int]]) -> None:
         """Broadcast meter readings to all registered handlers."""
+        self._meter_cache = readings
         for h in list(self._meter_handlers):
             h.enqueue_frame(readings)
 
+    def _on_poller_state_event(self, name: str, data: dict[str, Any]) -> None:
+        """Callback from RadioPoller when a polled value changes."""
+        self.broadcast_event(name, data)
+
+    def _on_poller_meter_readings(self, readings: list[tuple[int, int]]) -> None:
+        """Callback from RadioPoller when meter values are polled."""
+        self._broadcast_meters(readings)
+
     async def start(self) -> None:
-        """Start the HTTP/WS listener."""
+        """Start the HTTP/WS listener and RadioPoller (if radio is connected)."""
         self._server = await asyncio.start_server(
             self._accept_client,
             host=self._config.host,
@@ -252,9 +228,22 @@ class WebServer:
         )
         addr = self._server.sockets[0].getsockname()
         logger.info("web server listening on %s:%d", addr[0], addr[1])
+        if self._radio is not None:
+            self._radio_poller = RadioPoller(
+                self._radio,
+                self._state_cache,
+                self._command_queue,
+                on_state_event=self._on_poller_state_event,
+                on_meter_readings=self._on_poller_meter_readings,
+            )
+            self._radio_poller.start()
 
     async def stop(self) -> None:
-        """Close the listener and cancel all active client tasks."""
+        """Close the listener, stop RadioPoller, and cancel all client tasks."""
+        if self._radio_poller is not None:
+            self._radio_poller.stop()
+            self._radio_poller = None
+
         if self._server is not None:
             self._server.close()
             await self._server.wait_closed()
@@ -521,7 +510,8 @@ class WebServer:
 
         if path == "/api/v1/ws":
             handler: Any = ControlHandler(
-                ws, self._radio, __version__, self._config.radio_model
+                ws, self._radio, __version__, self._config.radio_model,
+                server=self,
             )
         elif path == "/api/v1/scope":
             handler = ScopeHandler(ws, self._radio, server=self)

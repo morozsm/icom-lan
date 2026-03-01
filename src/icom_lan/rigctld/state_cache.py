@@ -17,7 +17,10 @@ from typing import Literal
 __all__ = ["StateCache"]
 
 # Literal union of all cacheable field names (used for is_fresh).
-CacheField = Literal["freq", "mode", "vfo", "ptt", "s_meter", "rf_power", "data_mode"]
+CacheField = Literal[
+    "freq", "mode", "vfo", "ptt", "s_meter", "rf_power", "data_mode",
+    "swr", "alc", "rf_gain", "af_level", "attenuator", "preamp",
+]
 
 
 @dataclass(slots=True)
@@ -75,6 +78,30 @@ class StateCache:
     data_mode: bool = False
     data_mode_ts: float = 0.0
 
+    # SWR (raw 0–255)
+    swr: float | None = None
+    swr_ts: float = 0.0
+
+    # ALC (raw 0–255)
+    alc: float | None = None
+    alc_ts: float = 0.0
+
+    # RF gain (0–255)
+    rf_gain: float | None = None
+    rf_gain_ts: float = 0.0
+
+    # AF level (0–255)
+    af_level: float | None = None
+    af_level_ts: float = 0.0
+
+    # Attenuator (dB: 0, 3, 6, … 45)
+    attenuator: int | None = None
+    attenuator_ts: float = 0.0
+
+    # Preamp (0=off, 1=PREAMP1, 2=PREAMP2)
+    preamp: int | None = None
+    preamp_ts: float = 0.0
+
     # ------------------------------------------------------------------
     # Freshness check
     # ------------------------------------------------------------------
@@ -106,6 +133,18 @@ class StateCache:
                 ts = self.rf_power_ts
             case "data_mode":
                 ts = self.data_mode_ts
+            case "swr":
+                ts = self.swr_ts
+            case "alc":
+                ts = self.alc_ts
+            case "rf_gain":
+                ts = self.rf_gain_ts
+            case "af_level":
+                ts = self.af_level_ts
+            case "attenuator":
+                ts = self.attenuator_ts
+            case "preamp":
+                ts = self.preamp_ts
             case _:  # pragma: no cover
                 return False
         if ts == 0.0:
@@ -164,6 +203,36 @@ class StateCache:
         """Mark DATA mode as stale (forces the next read to hit radio)."""
         self.data_mode_ts = 0.0
 
+    def update_swr(self, value: float) -> None:
+        """Store a new SWR meter value and record the current timestamp."""
+        self.swr = value
+        self.swr_ts = time.monotonic()
+
+    def update_alc(self, value: float) -> None:
+        """Store a new ALC meter value and record the current timestamp."""
+        self.alc = value
+        self.alc_ts = time.monotonic()
+
+    def update_rf_gain(self, value: float) -> None:
+        """Store a new RF gain value and record the current timestamp."""
+        self.rf_gain = value
+        self.rf_gain_ts = time.monotonic()
+
+    def update_af_level(self, value: float) -> None:
+        """Store a new AF level value and record the current timestamp."""
+        self.af_level = value
+        self.af_level_ts = time.monotonic()
+
+    def update_attenuator(self, value: int) -> None:
+        """Store a new attenuator dB value and record the current timestamp."""
+        self.attenuator = value
+        self.attenuator_ts = time.monotonic()
+
+    def update_preamp(self, value: int) -> None:
+        """Store a new preamp level and record the current timestamp."""
+        self.preamp = value
+        self.preamp_ts = time.monotonic()
+
     # ------------------------------------------------------------------
     # Snapshot
     # ------------------------------------------------------------------
@@ -199,4 +268,16 @@ class StateCache:
             "rf_power_age": _age(self.rf_power_ts),
             "data_mode": self.data_mode,
             "data_mode_age": _age(self.data_mode_ts),
+            "swr": self.swr,
+            "swr_age": _age(self.swr_ts),
+            "alc": self.alc,
+            "alc_age": _age(self.alc_ts),
+            "rf_gain": self.rf_gain,
+            "rf_gain_age": _age(self.rf_gain_ts),
+            "af_level": self.af_level,
+            "af_level_age": _age(self.af_level_ts),
+            "attenuator": self.attenuator,
+            "attenuator_age": _age(self.attenuator_ts),
+            "preamp": self.preamp,
+            "preamp_age": _age(self.preamp_ts),
         }
