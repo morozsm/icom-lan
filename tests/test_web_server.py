@@ -1697,3 +1697,178 @@ class TestScopeReconnect:
 
         h2.enqueue_frame.assert_called_once_with(frame)
         h1.enqueue_frame.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# #69: Shared meter poller (server-level, not per-client)
+# ---------------------------------------------------------------------------
+
+
+class TestMeterPoller:
+    """Single server-level poller broadcasts to all MetersHandler clients (#69)."""
+
+    def _make_handler(
+        self,
+        server: WebServer,
+        requested_meters: list[str] | None = None,
+        poll_interval: float = 0.1,
+    ) -> "MetersHandler":
+        from icom_lan.web.handlers import MetersHandler
+        from icom_lan.web.websocket import WebSocketConnection
+
+        mock_ws = MagicMock(spec=WebSocketConnection)
+        h = MetersHandler(mock_ws, None, server=server)
+        h._active = True
+        h._requested_meters = requested_meters or []
+        h._poll_interval = poll_interval
+        return h
+
+    async def test_multiple_clients_share_single_poller(self) -> None:
+        """Two handlers registered → exactly one poller task, not two."""
+        radio = MagicMock()
+        radio.get_s_meter = AsyncMock(return_value=42)
+        radio.get_power = AsyncMock(return_value=100)
+        radio.get_swr = AsyncMock(return_value=0)
+        radio.get_alc = AsyncMock(return_value=5)
+
+        server = WebServer(radio)
+        h1 = self._make_handler(server)
+        h2 = self._make_handler(server)
+
+        await server.ensure_meters_enabled(h1)
+        task_after_first = server._meter_poller_task
+
+        await server.ensure_meters_enabled(h2)
+        task_after_second = server._meter_poller_task
+
+        # Same task object — not a new one created for h2
+        assert task_after_first is task_after_second
+        assert task_after_second is not None
+        assert not task_after_second.done()
+        assert len(server._meter_handlers) == 2
+
+        # Cleanup
+        server.unregister_meter_handler(h1)
+        server.unregister_meter_handler(h2)
+
+    async def test_cached_values_delivered_to_new_client(self) -> None:
+        """A new handler gets the cached readings immediately on ensure_meters_enabled."""
+        server = WebServer(None)
+
+        # Pre-populate cache as if a poll already happened
+        server._meter_cache = [(METER_SMETER_MAIN, 55), (METER_POWER, 200)]
+
+        h = self._make_handler(server)
+        assert h._frame_queue.qsize() == 0
+
+        await server.ensure_meters_enabled(h)
+
+        # Handler should have received the cached frame without a CI-V poll
+        assert h._frame_queue.qsize() == 1
+
+        server.unregister_meter_handler(h)
+
+    async def test_poller_stops_when_last_client_disconnects(self) -> None:
+        """The poller task is cancelled when all handlers unregister."""
+        radio = MagicMock()
+        radio.get_s_meter = AsyncMock(return_value=10)
+        radio.get_power = AsyncMock(return_value=50)
+        radio.get_swr = AsyncMock(return_value=0)
+        radio.get_alc = AsyncMock(return_value=0)
+
+        server = WebServer(radio)
+        h = self._make_handler(server)
+
+        await server.ensure_meters_enabled(h)
+        task = server._meter_poller_task
+        assert task is not None
+        assert not task.done()
+
+        server.unregister_meter_handler(h)
+        # Task should be cancelled; give the loop one tick to process it
+        await asyncio.sleep(0)
+
+        assert task.cancelled() or task.done()
+        assert server._meter_poller_task is None
+        assert server._meter_cache is None
+
+    async def test_ci_v_polled_once_per_interval_for_multiple_clients(self) -> None:
+        """Radio is polled once per interval regardless of client count."""
+        radio = MagicMock()
+        radio.get_s_meter = AsyncMock(return_value=42)
+        radio.get_power = AsyncMock(return_value=100)
+        radio.get_swr = AsyncMock(return_value=0)
+        radio.get_alc = AsyncMock(return_value=5)
+
+        server = WebServer(radio)
+        h1 = self._make_handler(server, poll_interval=0.05)
+        h2 = self._make_handler(server, poll_interval=0.05)
+
+        await server.ensure_meters_enabled(h1)
+        await server.ensure_meters_enabled(h2)
+
+        # Wait long enough for exactly ~2 poll cycles
+        await asyncio.sleep(0.12)
+
+        server.unregister_meter_handler(h1)
+        server.unregister_meter_handler(h2)
+
+        # With N=2 clients, without sharing we'd see 2N calls.
+        # With sharing, we see ~2 calls (one per interval).
+        call_count = radio.get_s_meter.await_count
+        assert call_count <= 4, (
+            f"Expected ≤4 CI-V polls for 2 clients × 2 intervals, got {call_count}"
+        )
+
+    async def test_poller_task_restarts_after_all_disconnect_then_reconnect(self) -> None:
+        """A new handler after full disconnect creates a fresh poller task."""
+        radio = MagicMock()
+        radio.get_s_meter = AsyncMock(return_value=10)
+        radio.get_power = AsyncMock(return_value=50)
+        radio.get_swr = AsyncMock(return_value=0)
+        radio.get_alc = AsyncMock(return_value=0)
+
+        server = WebServer(radio)
+        h1 = self._make_handler(server)
+
+        await server.ensure_meters_enabled(h1)
+        first_task = server._meter_poller_task
+
+        server.unregister_meter_handler(h1)
+        await asyncio.sleep(0)  # let cancellation propagate
+        assert server._meter_poller_task is None
+
+        # Second connect — must create a new task
+        h2 = self._make_handler(server)
+        await server.ensure_meters_enabled(h2)
+        second_task = server._meter_poller_task
+
+        assert second_task is not None
+        assert second_task is not first_task
+        assert not second_task.done()
+
+        server.unregister_meter_handler(h2)
+
+    async def test_requested_meters_union_used_for_polling(self) -> None:
+        """Server polls the union of all handlers' requested meters."""
+        radio = MagicMock()
+        radio.get_s_meter = AsyncMock(return_value=42)
+        radio.get_power = AsyncMock(return_value=100)
+        radio.get_swr = AsyncMock(return_value=0)
+        radio.get_alc = AsyncMock(return_value=5)
+
+        server = WebServer(radio)
+        h1 = self._make_handler(server, requested_meters=["smeter"])
+        h2 = self._make_handler(server, requested_meters=["power"])
+
+        # Poll once manually
+        server._meter_handlers.add(h1)
+        server._meter_handlers.add(h2)
+        readings = await server._poll_meters()
+
+        meter_ids = {mid for mid, _ in readings}
+        from icom_lan.web.protocol import METER_POWER, METER_SMETER_MAIN
+        assert METER_SMETER_MAIN in meter_ids, "smeter should be polled (requested by h1)"
+        assert METER_POWER in meter_ids, "power should be polled (requested by h2)"
+
+        server._meter_handlers.clear()

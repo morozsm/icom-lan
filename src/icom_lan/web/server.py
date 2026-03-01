@@ -30,6 +30,7 @@ from typing import TYPE_CHECKING, Any
 
 from .. import __version__
 from .handlers import AudioHandler, ControlHandler, MetersHandler, ScopeHandler
+from .protocol import METER_ALC, METER_POWER, METER_SMETER_MAIN, METER_SWR
 from .websocket import WS_KEEPALIVE_INTERVAL, WebSocketConnection, make_accept_key
 
 if TYPE_CHECKING:
@@ -85,6 +86,10 @@ class WebServer:
         self._scope_handlers: set["ScopeHandler"] = set()
         self._scope_enabled = False
         self._scope_enable_lock: asyncio.Lock = asyncio.Lock()
+        self._meter_handlers: set["MetersHandler"] = set()
+        self._meter_poller_task: asyncio.Task[None] | None = None
+        self._meter_lock: asyncio.Lock = asyncio.Lock()
+        self._meter_cache: list[tuple[int, int]] | None = None
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -146,6 +151,97 @@ class WebServer:
         """Broadcast scope frame to all registered handlers."""
         for h in list(self._scope_handlers):
             h.enqueue_frame(frame)
+
+    # ------------------------------------------------------------------
+    # Meter poller lifecycle
+    # ------------------------------------------------------------------
+
+    async def ensure_meters_enabled(self, handler: "MetersHandler") -> None:
+        """Register a meter handler and start the shared poller if needed.
+
+        This is the single entry point for meter polling — handlers must not
+        poll CI-V directly. Uses a lock to guarantee that the poller task is
+        created at most once regardless of concurrent callers.
+
+        New clients immediately receive the cached meter readings (if any)
+        without waiting for the next poll cycle.
+        """
+        async with self._meter_lock:
+            self._meter_handlers.add(handler)
+            # Deliver cached readings to the new handler immediately.
+            if self._meter_cache is not None:
+                handler.enqueue_frame(self._meter_cache)
+            # Start the shared poller if not already running.
+            if (
+                self._meter_poller_task is None
+                or self._meter_poller_task.done()
+            ):
+                loop = asyncio.get_running_loop()
+                self._meter_poller_task = loop.create_task(self._meter_poll_loop())
+                logger.info("meters: poller started")
+
+    def unregister_meter_handler(self, handler: "MetersHandler") -> None:
+        """Unregister a meter handler and stop the poller when no handlers remain."""
+        self._meter_handlers.discard(handler)
+        if not self._meter_handlers:
+            if self._meter_poller_task is not None:
+                self._meter_poller_task.cancel()
+                self._meter_poller_task = None
+                logger.info("meters: poller stopped (no active handlers)")
+            self._meter_cache = None
+
+    async def _meter_poll_loop(self) -> None:
+        """Poll CI-V meters at the fastest requested rate and broadcast to all handlers."""
+        try:
+            while True:
+                if not self._meter_handlers:
+                    break
+                interval = min(
+                    (h.poll_interval for h in list(self._meter_handlers)),
+                    default=0.1,
+                )
+                if self._radio is not None:
+                    try:
+                        readings = await self._poll_meters()
+                        if readings:
+                            self._meter_cache = readings
+                            self._broadcast_meters(readings)
+                    except Exception:
+                        logger.debug("meters: poll error", exc_info=True)
+                await asyncio.sleep(interval)
+        except asyncio.CancelledError:
+            pass
+
+    async def _poll_meters(self) -> list[tuple[int, int]]:
+        """Read meter values from the radio using the union of all handlers' requests."""
+        assert self._radio is not None
+        wanted: set[str] = set()
+        for h in list(self._meter_handlers):
+            wanted.update(h.requested_meters)
+        if not wanted:
+            wanted = {"smeter", "power", "swr", "alc"}
+
+        meter_map = [
+            ("smeter", METER_SMETER_MAIN, self._radio.get_s_meter),
+            ("power", METER_POWER, self._radio.get_power),
+            ("swr", METER_SWR, self._radio.get_swr),
+            ("alc", METER_ALC, self._radio.get_alc),
+        ]
+        readings: list[tuple[int, int]] = []
+        for meter_name, meter_id, getter in meter_map:
+            if meter_name not in wanted:
+                continue
+            try:
+                value = await getter()
+                readings.append((meter_id, int(value)))
+            except Exception:
+                pass
+        return readings
+
+    def _broadcast_meters(self, readings: list[tuple[int, int]]) -> None:
+        """Broadcast meter readings to all registered handlers."""
+        for h in list(self._meter_handlers):
+            h.enqueue_frame(readings)
 
     async def start(self) -> None:
         """Start the HTTP/WS listener."""
@@ -430,7 +526,7 @@ class WebServer:
         elif path == "/api/v1/scope":
             handler = ScopeHandler(ws, self._radio, server=self)
         elif path == "/api/v1/meters":
-            handler = MetersHandler(ws, self._radio)
+            handler = MetersHandler(ws, self._radio, server=self)
         elif path == "/api/v1/audio":
             handler = AudioHandler(ws, self._radio)
         else:
