@@ -504,24 +504,28 @@ class ScopeHandler:
 class MetersHandler:
     """Handles the /api/v1/meters binary WebSocket channel.
 
-    Polls the radio for meter values and sends binary meter frames.
-    Implements backpressure: drops frames when queue exceeds HIGH_WATERMARK.
+    Receives meter frames from the server's shared MeterPoller and forwards
+    them to the client. Implements backpressure: drops frames when queue
+    exceeds HIGH_WATERMARK.
 
     Args:
         ws: Established WebSocket connection.
         radio: IcomRadio instance (may be None).
-        poll_interval: Seconds between meter polls (default 0.05 = 20fps).
+        poll_interval: Hint for server poll rate (default 0.1 = 10fps).
+        server: WebServer instance for shared polling (optional).
     """
 
     def __init__(
         self,
         ws: WebSocketConnection,
         radio: "IcomRadio | None",
-        poll_interval: float = 0.05,
+        poll_interval: float = 0.1,
+        server: Any = None,
     ) -> None:
         self._ws = ws
         self._radio = radio
         self._poll_interval = poll_interval
+        self._server = server
         self._seq: int = 0
         self._active = False
         self._requested_meters: list[str] = []
@@ -529,12 +533,23 @@ class MetersHandler:
             maxsize=HIGH_WATERMARK * 2
         )
 
+    @property
+    def poll_interval(self) -> float:
+        """Requested poll interval in seconds."""
+        return self._poll_interval
+
+    @property
+    def requested_meters(self) -> list[str]:
+        """Meter names requested by the client."""
+        return list(self._requested_meters)
+
     async def run(self) -> None:
         """Run the meters channel lifecycle.
 
-        Reads JSON control messages (meters_start/stop) and polls the radio.
+        Reads JSON control messages (meters_start/stop). On meters_start,
+        registers with the server's shared MeterPoller so CI-V is polled
+        once for all connected clients.
         """
-        poller_task: asyncio.Task[None] | None = None
         sender_task: asyncio.Task[None] = asyncio.create_task(self._sender())
         try:
             while True:
@@ -549,86 +564,46 @@ class MetersHandler:
                 msg_type = msg.get("type")
                 if msg_type == "meters_start":
                     self._requested_meters = msg.get("meters", [])
-                    fps = float(msg.get("fps", 20))
-                    self._poll_interval = max(0.02, 1.0 / fps) if fps > 0 else 0.05
+                    fps = float(msg.get("fps", 10))
+                    self._poll_interval = max(0.02, 1.0 / fps) if fps > 0 else 0.1
                     self._active = True
-                    if poller_task is None or poller_task.done():
-                        poller_task = asyncio.create_task(self._poller())
+                    if self._server is not None:
+                        await self._server.ensure_meters_enabled(self)
                 elif msg_type == "meters_stop":
                     self._active = False
-                    if poller_task is not None:
-                        poller_task.cancel()
-                        try:
-                            await poller_task
-                        except asyncio.CancelledError:
-                            pass
-                        poller_task = None
+                    if self._server is not None:
+                        self._server.unregister_meter_handler(self)
         except EOFError:
             pass
         finally:
             self._active = False
-            if poller_task is not None:
-                poller_task.cancel()
-                try:
-                    await poller_task
-                except asyncio.CancelledError:
-                    pass
+            if self._server is not None:
+                self._server.unregister_meter_handler(self)
             sender_task.cancel()
             try:
                 await sender_task
             except asyncio.CancelledError:
                 pass
 
-    async def _poller(self) -> None:
-        """Periodically poll meters and enqueue frames."""
-        while self._active:
-            try:
-                readings = await self._poll_meters()
-                if readings:
-                    encoded = encode_meter_frame(readings, self._seq)
-                    self._seq = (self._seq + 1) & 0xFFFF
-                    if self._frame_queue.full():
-                        try:
-                            self._frame_queue.get_nowait()
-                        except asyncio.QueueEmpty:
-                            pass
-                    try:
-                        self._frame_queue.put_nowait(encoded)
-                    except asyncio.QueueFull:
-                        pass
-            except Exception as exc:
-                logger.debug("meters: poll error: %s", exc)
-            await asyncio.sleep(self._poll_interval)
+    def enqueue_frame(self, readings: list[tuple[int, int]]) -> None:
+        """Enqueue meter readings broadcast by the server's MeterPoller.
 
-    async def _poll_meters(self) -> list[tuple[int, int]]:
-        """Read meter values from the radio.
-
-        Returns:
-            List of (meter_id, value) pairs.
+        Args:
+            readings: List of (meter_id, value) pairs.
         """
-        if self._radio is None:
-            return []
-
-        readings: list[tuple[int, int]] = []
-        wanted = set(self._requested_meters) or {"smeter", "power", "swr", "alc"}
-
-        meter_map = [
-            ("smeter", METER_SMETER_MAIN, self._radio.get_s_meter),
-            ("power", METER_POWER, self._radio.get_power),
-            ("swr", METER_SWR, self._radio.get_swr),
-            ("alc", METER_ALC, self._radio.get_alc),
-        ]
-
-        for meter_name, meter_id, getter in meter_map:
-            if meter_name not in wanted:
-                continue
+        if not self._active:
+            return
+        encoded = encode_meter_frame(readings, self._seq)
+        self._seq = (self._seq + 1) & 0xFFFF
+        if self._frame_queue.full():
             try:
-                value = await getter()
-                readings.append((meter_id, int(value)))
-            except Exception:
+                self._frame_queue.get_nowait()
+            except asyncio.QueueEmpty:
                 pass
-
-        return readings
+        try:
+            self._frame_queue.put_nowait(encoded)
+        except asyncio.QueueFull:
+            pass
 
     async def _sender(self) -> None:
         """Continuously dequeues and sends meter frames."""
