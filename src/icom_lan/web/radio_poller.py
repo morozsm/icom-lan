@@ -254,6 +254,7 @@ class RadioPoller:
                         await asyncio.sleep(_GAP)
 
                 # 2. Poll next parameter
+                param_idx = self._poll_index
                 try:
                     await asyncio.wait_for(self._poll_next(), _CIV_TIMEOUT)
                 except asyncio.TimeoutError:
@@ -339,12 +340,13 @@ class RadioPoller:
 
         match param:
             case "freq":
-                val = await radio.get_frequency()
+                val = await radio.get_frequency(bypass_cache=True)
                 if val != cache.freq:
                     cache.update_freq(val)
                     self._emit("freq_changed", {"freq": val, "vfo": "A"})
 
             case "mode_info":
+                cache.invalidate_mode()
                 mode_obj, fw = await radio.get_mode_info()
                 mode_name = mode_obj.name
                 filt = f"FIL{fw}" if fw else ""
@@ -395,6 +397,7 @@ class RadioPoller:
                     self._emit("preamp_changed", {"level": val})
 
             case "data_mode":
+                cache.invalidate_data_mode()
                 val = await radio.get_data_mode()
                 if val != cache.data_mode:
                     cache.update_data_mode(val)
