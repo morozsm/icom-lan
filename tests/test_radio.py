@@ -345,6 +345,56 @@ class TestPower:
         assert len(mock_transport.sent_packets) > 0
 
 
+class TestRfGainAfLevel:
+    """Test RF Gain and AF Level get/set."""
+
+    @pytest.mark.asyncio
+    async def test_set_rf_gain(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        await radio.set_rf_gain(200)
+        assert len(mock_transport.sent_packets) > 0
+
+    @pytest.mark.asyncio
+    async def test_set_rf_gain_zero(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        await radio.set_rf_gain(0)
+        assert len(mock_transport.sent_packets) > 0
+
+    @pytest.mark.asyncio
+    async def test_set_rf_gain_out_of_range(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        with pytest.raises(ValueError):
+            await radio.set_rf_gain(256)
+        with pytest.raises(ValueError):
+            await radio.set_rf_gain(-1)
+
+    @pytest.mark.asyncio
+    async def test_set_af_level(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        await radio.set_af_level(128)
+        assert len(mock_transport.sent_packets) > 0
+
+    @pytest.mark.asyncio
+    async def test_set_af_level_zero(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        await radio.set_af_level(0)
+        assert len(mock_transport.sent_packets) > 0
+
+    @pytest.mark.asyncio
+    async def test_set_af_level_out_of_range(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        with pytest.raises(ValueError):
+            await radio.set_af_level(256)
+        with pytest.raises(ValueError):
+            await radio.set_af_level(-1)
+
+
 class TestPtt:
     """Test PTT toggle."""
 

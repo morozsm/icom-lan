@@ -69,6 +69,10 @@ from .commands import (
     set_frequency,
     set_mode,
     set_power,
+    get_rf_gain,
+    set_rf_gain,
+    get_af_level,
+    set_af_level,
     set_preamp,
 )
 from .scope import ScopeAssembler, ScopeFrame
@@ -146,6 +150,10 @@ __all__ = [
     "set_mode",
     "get_power",
     "set_power",
+    "get_rf_gain",
+    "set_rf_gain",
+    "get_af_level",
+    "set_af_level",
     "get_s_meter",
     "get_swr",
     "get_alc",

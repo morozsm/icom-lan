@@ -58,6 +58,10 @@ from .commands import (
     set_frequency,
     set_mode,
     set_power,
+    get_rf_gain,
+    set_rf_gain,
+    get_af_level,
+    set_af_level,
     set_preamp,
     set_split,
     stop_cw,
@@ -1134,6 +1138,42 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         civ = set_power(level, to_addr=self._radio_addr)
         await self._send_civ_raw(civ, wait_response=False)
         self._last_power = level
+
+    async def get_rf_gain(self) -> int:
+        """Read the current RF gain level (0-255)."""
+        self._check_connected()
+        civ = get_rf_gain(to_addr=self._radio_addr)
+        try:
+            resp = await self._send_civ_raw(civ, key="get_rf_gain", dedupe=True)
+            return self._parse_level(resp)
+        except TimeoutError:
+            raise
+
+    async def set_rf_gain(self, level: int) -> None:
+        """Set RF gain level (0-255)."""
+        if not 0 <= level <= 255:
+            raise ValueError(f"RF gain must be 0-255, got {level}")
+        self._check_connected()
+        civ = set_rf_gain(level, to_addr=self._radio_addr)
+        await self._send_civ_raw(civ, wait_response=False)
+
+    async def get_af_level(self) -> int:
+        """Read the current AF output level (0-255)."""
+        self._check_connected()
+        civ = get_af_level(to_addr=self._radio_addr)
+        try:
+            resp = await self._send_civ_raw(civ, key="get_af_level", dedupe=True)
+            return self._parse_level(resp)
+        except TimeoutError:
+            raise
+
+    async def set_af_level(self, level: int) -> None:
+        """Set AF output level (0-255)."""
+        if not 0 <= level <= 255:
+            raise ValueError(f"AF level must be 0-255, got {level}")
+        self._check_connected()
+        civ = set_af_level(level, to_addr=self._radio_addr)
+        await self._send_civ_raw(civ, wait_response=False)
 
     async def get_s_meter(self) -> int:
         """Read the S-meter value (0-255)."""

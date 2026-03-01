@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>icom-lan Web UI v2.0</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #0a0e1a; --panel: #101425; --border: #1a2040; --text: #c8d0e0; --dim: #4a5570;
+  --main-freq: #ffffff; --sub-freq: #e8842c; --accent: #3080d0;
+  --green: #30c060; --red: #e04040;
+  --meter-bg: #0c1020; --meter-green: #30c060; --meter-red: #e04040;
+}
+body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+
+/* Header */
+.header { display: flex; align-items: center; padding: 4px 16px; background: var(--panel); border-bottom: 1px solid var(--border); gap: 12px; flex-shrink: 0; height: 32px; }
+.logo { font-weight: 700; font-size: 15px; color: #5090d0; }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); }
+.status-text { font-size: 11px; color: var(--dim); }
+.conn-btn { font-size: 11px; padding: 3px 10px; background: linear-gradient(180deg,#2a3050,#1a2040); border: 1px solid #3a4060; color: #8090b0; border-radius: 4px; cursor: pointer; }
+.radio-model { font-size: 12px; color: var(--dim); margin-left: auto; font-weight: 600; }
+
+/* TOP: VFO + Meters */
+.top-section { display: flex; background: var(--bg); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+
+/* VFO Panel */
+.vfo-panel { flex: 0 0 620px; display: flex; flex-direction: column; border-right: 1px solid var(--border); }
+.vfo { padding: 12px 20px; display: flex; align-items: center; gap: 10px; position: relative; }
+.vfo + .vfo { border-top: 1px solid var(--border); }
+.vfo-indicator { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
+.vfo.active .vfo-indicator { background: var(--accent); }
+.vfo-label { font-size: 16px; font-weight: 700; padding: 4px 14px; border-radius: 3px; }
+.vfo.active .vfo-label { background: var(--accent); color: #fff; }
+.vfo.inactive .vfo-label { background: #2a3050; color: #6a7a9a; }
+.vfo-freq { font-family: 'Share Tech Mono', monospace; letter-spacing: 2px; }
+.vfo.active .vfo-freq { font-size: 52px; color: var(--main-freq); text-shadow: 0 0 8px rgba(255,255,255,0.15); }
+.vfo.inactive .vfo-freq { font-size: 38px; color: var(--sub-freq); text-shadow: 0 0 6px rgba(232,132,44,0.15); }
+.vfo-mode { font-size: 16px; font-weight: 700; padding: 5px 14px; border-radius: 3px; }
+.vfo.active .vfo-mode { background: #2050a0; color: #fff; }
+.vfo.inactive .vfo-mode { background: #3a3020; color: var(--sub-freq); }
+.vfo-filter { font-size: 13px; color: var(--dim); }
+
+/* Info badges — PRE, ATT, IP+, DIGI-SEL */
+.vfo-badges { display: flex; gap: 4px; margin-left: auto; flex-wrap: wrap; }
+.badge { font-size: 12px; font-weight: 700; padding: 3px 8px; border-radius: 3px; font-family: 'Share Tech Mono', monospace; }
+.badge.off { background: #151a2a; color: #3a4560; border: 1px solid #1a2040; }
+.badge.on { background: #1a3a20; color: var(--green); border: 1px solid #2a5a30; }
+.badge.warn { background: #3a2a10; color: #d09020; border: 1px solid #5a4020; }
+
+/* VFO buttons */
+.vfo-btns-row { display: flex; gap: 5px; padding: 2px 16px 4px; justify-content: flex-start; }
+.vfo-btns-row button { font-size: 11px; padding: 3px 8px; background: linear-gradient(180deg,#1a2540,#101830); border: 1px solid #2a3555; color: #6a7a9a; border-radius: 3px; cursor: pointer; }
+
+/* Meters — edgewise */
+.meters-panel { flex: 1; display: flex; flex-direction: column; padding: 10px 20px; background: var(--bg); gap: 4px; justify-content: center; }
+.meter-row { display: flex; gap: 12px; align-items: center; }
+.meter-row + .meter-row { margin-top: 2px; }
+.meter-row-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; min-width: 40px; }
+.meter-row.main .meter-row-label { color: var(--accent); }
+.meter-row.sub .meter-row-label { color: #7a5a30; }
+.smeter-edge { min-width: 240px; }
+.smeter-scale { display: flex; justify-content: space-between; padding: 0 2px; margin-bottom: 1px; }
+.smeter-scale span { font-size: 11px; font-family: 'Share Tech Mono', monospace; }
+.smeter-scale .s-norm { color: #7a8a9a; }
+.smeter-scale .s-over { color: var(--meter-red); }
+.smeter-bar { height: 16px; background: var(--meter-bg); border-radius: 2px; overflow: hidden; border: 1px solid #1a2035; }
+.smeter-fill { height: 100%; display: inline-block; }
+.smeter-fill.green { background: linear-gradient(90deg, #1a5a2a, var(--meter-green)); box-shadow: inset 0 0 6px rgba(48,192,96,0.3); }
+.smeter-val { font-size: 16px; font-weight: 700; font-family: 'Share Tech Mono', monospace; min-width: 30px; text-align: right; }
+.meter-row.main .smeter-val { color: var(--meter-green); }
+.meter-row.sub .smeter-val { color: var(--sub-freq); }
+.bar-meters { display: flex; gap: 10px; flex: 1; }
+.bm { flex: 1; min-width: 55px; }
+.bm-top { display: flex; justify-content: space-between; margin-bottom: 2px; }
+.bm-name { font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+.bm-val { font-size: 13px; color: #8090b0; font-family: 'Share Tech Mono', monospace; }
+.bm-bar { height: 10px; background: var(--meter-bg); border-radius: 2px; overflow: hidden; border: 1px solid #1a2035; }
+.bm-fill { height: 100%; border-radius: 1px; }
+.bm-fill.green { background: linear-gradient(90deg, #1a5a2a, var(--meter-green)); }
+.bm-fill.swr { background: linear-gradient(90deg, var(--meter-green) 0%, var(--meter-green) 35%, #d09020 60%, var(--meter-red) 100%); }
+.bm-fill.yellow { background: linear-gradient(90deg, #6a5a1a, #d09020); }
+
+/* RX/TX indicator on meters */
+.rxtx-badge { font-size: 12px; font-weight: 800; padding: 3px 10px; border-radius: 3px; letter-spacing: 1px; }
+.rxtx-badge.rx { background: #1a3a20; color: var(--green); border: 1px solid #2a5a30; }
+.rxtx-badge.tx { background: #3a1a1a; color: var(--red); border: 1px solid #5a2a2a; }
+
+/* Display */
+.display { flex: 1 1 300px; position: relative; display: flex; flex-direction: column; min-height: 150px; max-height: 350px; overflow: hidden; }
+.spectrum { flex: 0 0 120px; background: #080c16; overflow: hidden; }
+.spectrum canvas { width: 100%; height: 100%; }
+.freq-axis { height: 24px; background: #0a0e18; display: flex; justify-content: space-between; padding: 0 6px; font-size: 12px; color: #4a5570; font-family: 'Share Tech Mono', monospace; border-bottom: 1px solid var(--border); flex-shrink: 0; align-items: center; }
+.waterfall { flex: 1; background: #000; position: relative; min-height: 0; max-height: 200px; overflow: hidden; }
+.waterfall canvas { width: 100%; height: 100%; }
+.center-marker { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: rgba(224,64,64,0.5); pointer-events: none; z-index: 2; }
+.passband { position: absolute; left: calc(50% - 18px); top: 0; bottom: 0; width: 36px; background: rgba(48,128,208,0.08); border-left: 1px dashed rgba(48,128,208,0.3); border-right: 1px dashed rgba(48,128,208,0.3); pointer-events: none; z-index: 1; }
+
+/* Control Panel — blocks */
+.panel { background: linear-gradient(180deg, #141830, #0e1225); border-top: 1px solid var(--border); padding: 14px 20px; flex-shrink: 0; overflow-x: auto; overflow-y: hidden; }
+.panel-grid { display: grid; grid-template-columns: 148px 115px 175px 248px 190px 155px; gap: 12px; min-width: 1090px; align-items: stretch; }
+.block { background: linear-gradient(180deg, rgba(20,24,48,0.8), rgba(14,18,37,0.9)); border: 1px solid #1e2545; border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.block-title { font-size: 10px; color: #5a6580; text-transform: uppercase; letter-spacing: 3px; font-weight: 700; text-align: center; margin-bottom: 2px; }
+.block-row { display: flex; gap: 6px; justify-content: center; }
+.ibtn { font-size: 14px; padding: 11px 4px; width: 100%; background: linear-gradient(180deg, #1e2340, #161a32); border: 1px solid #2a3055; color: #7888a8; border-radius: 8px; cursor: pointer; font-weight: 600; text-align: center; box-shadow: 0 3px 6px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04); transition: all 0.12s; white-space: nowrap; }
+.ibtn:hover { background: linear-gradient(180deg, #282d50, #1e2340); color: #a0b0d0; border-color: #354068; }
+.ibtn:active { background: linear-gradient(180deg, #151a30, #101528); box-shadow: inset 0 2px 6px rgba(0,0,0,0.5); }
+.ibtn.active { background: linear-gradient(180deg, #1e4a90, #163878); border-color: #2a60b0; color: #fff; box-shadow: 0 3px 8px rgba(30,74,144,0.4), inset 0 1px 0 rgba(255,255,255,0.08); }
+.ibtn.green-active { background: linear-gradient(180deg, #1a4a28, #124020); border-color: #2a6a38; color: #40d060; box-shadow: 0 3px 6px rgba(48,192,96,0.15); }
+.iseg { display: flex; gap: 0; width: 100%; }
+.iseg .ibtn { border-radius: 0; border-right-width: 0; width: auto; flex: 1; }
+.iseg .ibtn:first-child { border-radius: 8px 0 0 8px; }
+.iseg .ibtn:last-child { border-radius: 0 8px 8px 0; border-right-width: 1px; }
+
+.slider-grp { display: flex; align-items: center; gap: 8px; }
+.slider-grp label { font-size: 11px; color: var(--dim); font-weight: 600; text-transform: uppercase; min-width: 32px; }
+.irange { -webkit-appearance: none; width: 120px; height: 8px; background: #1a2040; border-radius: 4px; outline: none; }
+.irange::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; background: linear-gradient(180deg, #405078, #303868); border: 1px solid #506088; border-radius: 50%; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.4); }
+.slider-val { font-size: 15px; color: #8090b0; font-family: 'Share Tech Mono', monospace; min-width: 40px; }
+.rx-btn { font-size: 16px; padding: 14px 24px; background: linear-gradient(180deg, #28a745, #1e7e34); border: 1px solid #34d058; color: #fff; border-radius: 8px; cursor: pointer; font-weight: 700; box-shadow: 0 0 8px rgba(52,208,88,0.2); white-space: nowrap; }
+.ptt-btn { font-size: 20px; font-weight: 800; padding: 16px 40px; background: linear-gradient(180deg, #252a45, #1a1f38); border: 2px solid var(--meter-red); color: var(--meter-red); border-radius: 10px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.4); letter-spacing: 3px; white-space: nowrap; }
+.ptt-btn:hover { background: linear-gradient(180deg, #a03030, #802525); color: #fff; box-shadow: 0 0 14px rgba(224,64,64,0.4); }
+.audio-block { display: flex; flex-direction: column; gap: 8px; align-items: center; justify-content: center; }
+.tx-block { display: flex; flex-direction: column; gap: 8px; align-items: center; justify-content: center; margin-left: auto; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <span class="logo">icom-lan</span>
+  <span class="status-dot"></span>
+  <span class="status-text">Connected</span>
+  <button class="conn-btn">⏹ Disconnect</button>
+  <span class="radio-model">IC-7610</span>
+</div>
+
+<div class="top-section">
+  <div class="vfo-panel">
+    <!-- VFO A -->
+    <div class="vfo active">
+      <div class="vfo-indicator"></div>
+      <span class="vfo-label">A</span>
+      <span class="vfo-freq">14.074.000</span>
+      <span class="vfo-mode">USB</span>
+      <span class="vfo-filter">FIL1</span>
+      <div class="vfo-badges">
+        <span class="badge on">PRE 1</span>
+        <span class="badge off">ATT</span>
+        <span class="badge on">IP+</span>
+        <span class="badge off">DIGI-SEL</span>
+      </div>
+    </div>
+    <!-- VFO B -->
+    <div class="vfo inactive">
+      <div class="vfo-indicator"></div>
+      <span class="vfo-label">B</span>
+      <span class="vfo-freq">7.074.000</span>
+      <span class="vfo-mode">LSB</span>
+      <span class="vfo-filter">FIL2</span>
+      <div class="vfo-badges">
+        <span class="badge off">PRE</span>
+        <span class="badge off">ATT</span>
+        <span class="badge off">IP+</span>
+        <span class="badge off">DIGI-SEL</span>
+      </div>
+    </div>
+    <div class="vfo-btns-row">
+      <button>A↔B</button><button>A=B</button><button>SPLIT</button>
+    </div>
+  </div>
+
+  <div class="meters-panel">
+    <!-- MAIN meters — RX mode -->
+    <div class="meter-row main">
+      <span class="meter-row-label">Main</span>
+      <span class="rxtx-badge rx">RX</span>
+      <div class="smeter-edge">
+        <div class="smeter-scale"><span class="s-norm">S1</span><span class="s-norm">3</span><span class="s-norm">5</span><span class="s-norm">7</span><span class="s-norm">9</span><span class="s-over">+20</span><span class="s-over">+40</span><span class="s-over">+60</span></div>
+        <div class="smeter-bar"><div class="smeter-fill green" style="width:56%"></div></div>
+      </div>
+      <span class="smeter-val">S7</span>
+      <!-- RX: show Id, Vd, TEMP -->
+      <div class="bar-meters" id="mainMeters">
+        <div class="bm"><div class="bm-top"><span class="bm-name">Id</span><span class="bm-val">8.2A</span></div><div class="bm-bar"><div class="bm-fill green" style="width:40%"></div></div></div>
+        <div class="bm"><div class="bm-top"><span class="bm-name">Vd</span><span class="bm-val">50V</span></div><div class="bm-bar"><div class="bm-fill green" style="width:60%"></div></div></div>
+        <div class="bm"><div class="bm-top"><span class="bm-name">TEMP</span><span class="bm-val">42°</span></div><div class="bm-bar"><div class="bm-fill green" style="width:35%"></div></div></div>
+      </div>
+    </div>
+    <!-- SUB meters -->
+    <div class="meter-row sub">
+      <span class="meter-row-label">Sub</span>
+      <span class="rxtx-badge rx">RX</span>
+      <div class="smeter-edge">
+        <div class="smeter-scale"><span class="s-norm">S1</span><span class="s-norm">3</span><span class="s-norm">5</span><span class="s-norm">7</span><span class="s-norm">9</span><span class="s-over">+20</span><span class="s-over">+40</span><span class="s-over">+60</span></div>
+        <div class="smeter-bar"><div class="smeter-fill green" style="width:25%"></div></div>
+      </div>
+      <span class="smeter-val" style="color:var(--sub-freq)">S3</span>
+      <div class="bar-meters">
+        <div class="bm"><div class="bm-top"><span class="bm-name">Id</span><span class="bm-val">—</span></div><div class="bm-bar"><div class="bm-fill green" style="width:0"></div></div></div>
+        <div class="bm"><div class="bm-top"><span class="bm-name">Vd</span><span class="bm-val">—</span></div><div class="bm-bar"><div class="bm-fill green" style="width:0"></div></div></div>
+        <div class="bm"><div class="bm-top"><span class="bm-name">TEMP</span><span class="bm-val">—</span></div><div class="bm-bar"><div class="bm-fill green" style="width:0"></div></div></div>
+      </div>
+    </div>
+
+    <!-- TX meters — hidden in RX, shown in TX -->
+    <div class="meter-row main" id="txMetersRow" style="display:none; margin-top:4px; padding-top:4px; border-top:1px solid var(--border);">
+      <span class="meter-row-label" style="color:var(--red)">TX</span>
+      <span class="rxtx-badge tx">TX</span>
+      <div class="bar-meters">
+        <div class="bm"><div class="bm-top"><span class="bm-name">PWR</span><span class="bm-val">50W</span></div><div class="bm-bar"><div class="bm-fill green" style="width:50%"></div></div></div>
+        <div class="bm"><div class="bm-top"><span class="bm-name">SWR</span><span class="bm-val">1.5</span></div><div class="bm-bar"><div class="bm-fill swr" style="width:25%"></div></div></div>
+        <div class="bm"><div class="bm-top"><span class="bm-name">ALC</span><span class="bm-val">30%</span></div><div class="bm-bar"><div class="bm-fill yellow" style="width:30%"></div></div></div>
+        <div class="bm"><div class="bm-top"><span class="bm-name">COMP</span><span class="bm-val">5dB</span></div><div class="bm-bar"><div class="bm-fill green" style="width:25%"></div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="display">
+  <div class="spectrum"><canvas id="specCanvas"></canvas></div>
+  <div class="freq-axis" id="freqAxis"></div>
+  <div class="waterfall">
+    <canvas id="wfCanvas"></canvas>
+    <div class="center-marker"></div>
+    <div class="passband"></div>
+  </div>
+</div>
+
+<!-- CONTROLS — fixed layout like hardware front panel -->
+<div class="panel">
+<div class="panel-grid">
+  <!-- BAND -->
+  <div class="block">
+    <div class="block-title">Band</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+      <button class="ibtn">160</button><button class="ibtn">80</button><button class="ibtn">60</button>
+      <button class="ibtn">40</button><button class="ibtn">30</button><button class="ibtn active">20</button>
+      <button class="ibtn">17</button><button class="ibtn">15</button><button class="ibtn">12</button>
+      <button class="ibtn">10</button><button class="ibtn">6</button><button class="ibtn" style="visibility:hidden"></button>
+    </div>
+  </div>
+
+  <!-- MODE -->
+  <div class="block b-mode">
+    <div class="block-title">Mode</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <button class="ibtn active">USB</button><button class="ibtn">LSB</button>
+      <button class="ibtn">CW</button><button class="ibtn">AM</button>
+      <button class="ibtn">FM</button><button class="ibtn">RTTY</button>
+    </div>
+  </div>
+
+  <!-- FILTER -->
+  <div class="block b-filter">
+    <div class="block-title">Filter</div>
+    <div class="block-row">
+      <div class="iseg"><button class="ibtn active">FIL1</button><button class="ibtn">FIL2</button><button class="ibtn">FIL3</button></div>
+    </div>
+  </div>
+
+  <!-- RF — ATT, PRE, IP+, DIGI-SEL -->
+  <div class="block b-rf">
+    <div class="block-title">RF</div>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <span style="font-size:11px;color:#5a6580;font-weight:700;min-width:30px;">ATT</span>
+      <div class="iseg"><button class="ibtn">OFF</button><button class="ibtn">6</button><button class="ibtn">12</button><button class="ibtn">18</button></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <span style="font-size:11px;color:#5a6580;font-weight:700;min-width:30px;">PRE</span>
+      <div class="iseg"><button class="ibtn green-active">OFF</button><button class="ibtn active">1</button><button class="ibtn">2</button></div>
+    </div>
+    <div class="block-row">
+      <button class="ibtn green-active" style="flex:1">IP+</button>
+      <button class="ibtn" style="flex:1">DIGI-SEL</button>
+    </div>
+  </div>
+
+  <!-- RX / AUDIO -->
+  <div class="block audio-block b-rx">
+    <div class="block-title">RX / Audio</div>
+    <div class="slider-grp"><label>VOL</label><input type="range" class="irange" min="0" max="100" value="80"><span class="slider-val">80%</span></div>
+    <div class="slider-grp"><label>RF</label><input type="range" class="irange" min="0" max="100" value="100"><span class="slider-val">100%</span></div>
+    <button class="rx-btn">🔊 RX Audio</button>
+  </div>
+
+  <!-- TX / POWER -->
+  <div class="block b-tx">
+    <div class="block-title">TX</div>
+    <div class="slider-grp"><label>PWR</label><input type="range" class="irange" min="0" max="100" value="50"><span class="slider-val">50W</span></div>
+    <button class="ptt-btn" id="pttBtn">PTT</button>
+    <span style="font-size:10px;color:var(--dim);text-align:center">Click to toggle TX view</span>
+  </div>
+</div>
+</div>
+</div>
+
+<script>
+// Spectrum — blue
+function drawSpectrum() {
+  const c = document.getElementById('specCanvas');
+  const W = c.width = c.offsetWidth * 2, H = c.height = c.offsetHeight * 2;
+  const ctx = c.getContext('2d'); ctx.scale(2,2);
+  const w=W/2, h=H/2;
+  ctx.strokeStyle='#141830'; ctx.lineWidth=0.5;
+  for(let y=0;y<h;y+=h/5){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke()}
+  for(let x=0;x<w;x+=w/10){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke()}
+  const sigs=[{p:.12,w:6,h:.4},{p:.2,w:4,h:.3},{p:.24,w:5,h:.35},{p:.33,w:3,h:.2},{p:.4,w:8,h:.55},{p:.44,w:5,h:.4},{p:.5,w:10,h:.7},{p:.58,w:4,h:.25},{p:.65,w:6,h:.45},{p:.72,w:5,h:.3},{p:.8,w:7,h:.5},{p:.9,w:3,h:.18}];
+  const noise=[];
+  for(let i=0;i<w;i++){let v=h*.82+Math.random()*h*.08;for(const s of sigs){const d=Math.abs(i/w-s.p)*w;if(d<s.w*3)v-=h*s.h*Math.exp(-(d*d)/(2*s.w*s.w))}noise.push(v)}
+  const grad=ctx.createLinearGradient(0,0,0,h);grad.addColorStop(0,'rgba(88,166,255,0.35)');grad.addColorStop(1,'rgba(88,166,255,0.01)');
+  ctx.fillStyle=grad;ctx.beginPath();ctx.moveTo(0,h);noise.forEach((v,i)=>ctx.lineTo(i,v));ctx.lineTo(w,h);ctx.fill();
+  ctx.strokeStyle='#58a6ff';ctx.lineWidth=1;ctx.beginPath();noise.forEach((v,i)=>i===0?ctx.moveTo(i,v):ctx.lineTo(i,v));ctx.stroke();
+}
+function drawWaterfall(){
+  const c=document.getElementById('wfCanvas');const W=c.width=c.offsetWidth,H=c.height=c.offsetHeight;const ctx=c.getContext('2d');
+  const img=ctx.createImageData(W,H);const sigs=[.12,.2,.24,.33,.4,.44,.5,.58,.65,.72,.8,.9];
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=(y*W+x)*4;let v=Math.random()*15;for(const s of sigs){const d=Math.abs(x/W-s)*W;if(d<18)v+=160*Math.exp(-(d*d)/70)*(0.7+Math.random()*0.5)}v=Math.min(255,v);
+  if(v<50){img.data[i]=0;img.data[i+1]=0;img.data[i+2]=Math.floor(v*2.5)}else if(v<100){img.data[i]=0;img.data[i+1]=Math.floor((v-50)*4);img.data[i+2]=Math.floor(125-(v-50)*2)}else if(v<160){img.data[i]=(v-100)*3;img.data[i+1]=200;img.data[i+2]=0}else if(v<220){img.data[i]=255;img.data[i+1]=Math.floor(200-(v-160)*3);img.data[i+2]=0}else{img.data[i]=255;img.data[i+1]=Math.floor(v-120);img.data[i+2]=Math.floor(v-120)}img.data[i+3]=255}
+  ctx.putImageData(img,0,0);
+}
+function drawFreqAxis(){const a=document.getElementById('freqAxis');a.innerHTML='';for(let f=13.9;f<=14.35;f+=.05){const s=document.createElement('span');s.textContent=f.toFixed(3);a.appendChild(s)}}
+
+// Toggle RX/TX meters demo
+let isTx = false;
+document.getElementById('pttBtn').addEventListener('click', () => {
+  isTx = !isTx;
+  const txRow = document.getElementById('txMetersRow');
+  const mainMeters = document.getElementById('mainMeters');
+  if (isTx) {
+    txRow.style.display = 'flex';
+    // Switch main bar meters to TX: PWR/SWR/ALC/COMP
+    mainMeters.innerHTML = `
+      <div class="bm"><div class="bm-top"><span class="bm-name">PWR</span><span class="bm-val">50W</span></div><div class="bm-bar"><div class="bm-fill green" style="width:50%"></div></div></div>
+      <div class="bm"><div class="bm-top"><span class="bm-name">SWR</span><span class="bm-val">1.5</span></div><div class="bm-bar"><div class="bm-fill swr" style="width:25%"></div></div></div>
+      <div class="bm"><div class="bm-top"><span class="bm-name">ALC</span><span class="bm-val">30%</span></div><div class="bm-bar"><div class="bm-fill yellow" style="width:30%"></div></div></div>
+    `;
+    document.querySelector('.meter-row.main .rxtx-badge').className = 'rxtx-badge tx';
+    document.querySelector('.meter-row.main .rxtx-badge').textContent = 'TX';
+  } else {
+    txRow.style.display = 'none';
+    mainMeters.innerHTML = `
+      <div class="bm"><div class="bm-top"><span class="bm-name">Id</span><span class="bm-val">8.2A</span></div><div class="bm-bar"><div class="bm-fill green" style="width:40%"></div></div></div>
+      <div class="bm"><div class="bm-top"><span class="bm-name">Vd</span><span class="bm-val">50V</span></div><div class="bm-bar"><div class="bm-fill green" style="width:60%"></div></div></div>
+      <div class="bm"><div class="bm-top"><span class="bm-name">TEMP</span><span class="bm-val">42°</span></div><div class="bm-bar"><div class="bm-fill green" style="width:35%"></div></div></div>
+    `;
+    document.querySelector('.meter-row.main .rxtx-badge').className = 'rxtx-badge rx';
+    document.querySelector('.meter-row.main .rxtx-badge').textContent = 'RX';
+  }
+});
+
+function redraw() {
+  // Reset canvas sizes to match container before drawing
+  const sc = document.getElementById('specCanvas');
+  sc.width = 0; sc.height = 0;  // force reset
+  const wc = document.getElementById('wfCanvas');
+  wc.width = 0; wc.height = 0;
+  requestAnimationFrame(() => {
+    drawSpectrum();
+    drawWaterfall();
+    drawFreqAxis();
+  });
+}
+redraw();
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(redraw, 150);
+});
+</script>
+</body>
+</html>

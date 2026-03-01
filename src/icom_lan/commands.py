@@ -91,6 +91,8 @@ _CMD_ACK = 0xFB
 _CMD_NAK = 0xFA
 
 # Sub-commands
+_SUB_AF_LEVEL = 0x01  # AF output level (0x14 0x01)
+_SUB_RF_GAIN = 0x02   # RF Gain level (0x14 0x02)
 _SUB_RF_POWER = 0x0A
 _SUB_S_METER = 0x02
 _SUB_SWR_METER = 0x12
@@ -417,6 +419,46 @@ def set_power(
     """
     return build_civ_frame(
         to_addr, from_addr, _CMD_LEVEL, sub=_SUB_RF_POWER, data=_level_bcd_encode(level)
+    )
+
+
+def get_rf_gain(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR) -> bytes:
+    """Build a 'read RF gain' CI-V command (0x14 0x02)."""
+    return build_civ_frame(to_addr, from_addr, _CMD_LEVEL, sub=_SUB_RF_GAIN)
+
+
+def set_rf_gain(
+    level: int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a 'set RF gain' CI-V command.
+
+    Args:
+        level: Gain level 0-255 (0=min, 255=max).
+    """
+    return build_civ_frame(
+        to_addr, from_addr, _CMD_LEVEL, sub=_SUB_RF_GAIN, data=_level_bcd_encode(level)
+    )
+
+
+def get_af_level(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR) -> bytes:
+    """Build a 'read AF output level' CI-V command (0x14 0x01)."""
+    return build_civ_frame(to_addr, from_addr, _CMD_LEVEL, sub=_SUB_AF_LEVEL)
+
+
+def set_af_level(
+    level: int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a 'set AF output level' CI-V command.
+
+    Args:
+        level: AF level 0-255 (0=min, 255=max).
+    """
+    return build_civ_frame(
+        to_addr, from_addr, _CMD_LEVEL, sub=_SUB_AF_LEVEL, data=_level_bcd_encode(level)
     )
 
 
