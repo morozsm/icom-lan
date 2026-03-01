@@ -1,18 +1,35 @@
-"""Single CI-V serialiser — all radio reads and writes go through here.
+"""RadioPoller — fire-and-forget CI-V serialiser.
 
-RadioPoller runs one asyncio task that:
-1. Drains the command queue (set_freq, ptt, etc.) — writes first.
-2. Polls the next parameter in round-robin order — reads second.
+## ARCHITECTURE PRINCIPLE: FIRE-AND-FORGET ONLY
 
-This guarantees that only ONE CI-V exchange is in flight at a time,
-preventing the half-duplex protocol from getting confused.
+All CI-V communication MUST be fire-and-forget.  Never await a CI-V response.
+
+Why: The IC-7610 scope streams ~225 CI-V packets/sec on port 50002.  When
+a request-response command waits for a specific reply, the response packet
+gets lost among scope frames, causing 2-second timeouts that cascade and
+freeze the entire poller.
+
+wfview (the reference implementation) works the same way: commands go out,
+responses are parsed from the incoming stream — nobody waits for a specific
+reply.
+
+How it works:
+1. RadioPoller sends fire-and-forget CI-V queries (get_freq, get_mode, etc.)
+2. The CI-V RX loop (_civ_rx.py) receives ALL packets and calls
+   _update_state_cache_from_frame() for every data frame.
+3. StateCache is the single source of truth.
+4. Clients read from the cache; broadcast events notify on changes.
+
+DO NOT add request-response (await get_frequency, await get_mode, etc.)
+to this module.  If you need new data, add parsing to
+_update_state_cache_from_frame() in _civ_rx.py instead.
 """
 
 from __future__ import annotations
 
 import asyncio
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Callable
 
 from ..rigctld.state_cache import StateCache
@@ -25,29 +42,9 @@ __all__ = ["RadioPoller", "CommandQueue", "EnableScope", "DisableScope"]
 
 logger = logging.getLogger(__name__)
 
-# Inter-command gap (seconds).  Small enough to keep latency low,
-# large enough to let the radio digest the previous command.
 _GAP: float = 0.012
-
-# Per-command CI-V timeout (seconds).  If a single CI-V exchange takes
-# longer than this, we skip it and move on — prevents the entire poller
-# from stalling when the radio stops responding.
-_CIV_TIMEOUT: float = 2.0
-
-# Parameters polled in round-robin order.
-_POLL_PARAMS: list[str] = [
-    "freq",
-    "mode_info",
-    "s_meter",
-    "power",
-    "swr",
-    "alc",
-    "rf_gain",
-    "af_level",
-    "attenuator",
-    "preamp",
-    "data_mode",
-]
+_SEND_TIMEOUT: float = 1.0
+_QUERY_INTERVAL: float = 0.15
 
 
 # ------------------------------------------------------------------
@@ -107,23 +104,15 @@ class VfoSwap:
 class VfoEqualize:
     pass
 
-
 @dataclass(frozen=True, slots=True)
 class EnableScope:
     policy: str = "fast"
-
 
 @dataclass(frozen=True, slots=True)
 class DisableScope:
     pass
 
-# Commands that are deduplicated (last-write-wins)
-_DEDUP_TYPES = (
-    SetFreq, SetMode, SetFilter, SetPower, SetRfGain, SetAfLevel,
-    SetAttenuator, SetPreamp, SelectVfo, VfoSwap, VfoEqualize,
-)
 
-# Union type for all commands
 Command = (
     SetFreq | SetMode | SetFilter | SetPower | SetRfGain | SetAfLevel
     | SetAttenuator | SetPreamp | PttOn | PttOff | SelectVfo
@@ -132,23 +121,16 @@ Command = (
 
 
 # ------------------------------------------------------------------
-# CommandQueue: dedup + ordered drain
+# CommandQueue
 # ------------------------------------------------------------------
 
 class CommandQueue:
-    """Thread-safe command queue with last-write-wins dedup.
-
-    PTT commands are never deduped — every PttOn/PttOff must execute.
-    All other command types keep only the latest value.
-    """
-
     def __init__(self) -> None:
         self._dedup: dict[type, Command] = {}
         self._ptt: list[PttOn | PttOff] = []
         self._notify: asyncio.Event = asyncio.Event()
 
     def put(self, cmd: Command) -> None:
-        """Enqueue a command."""
         if isinstance(cmd, (PttOn, PttOff)):
             self._ptt.append(cmd)
         else:
@@ -156,7 +138,6 @@ class CommandQueue:
         self._notify.set()
 
     def drain(self) -> list[Command]:
-        """Return all queued commands in order: PTT first, then deduped."""
         self._notify.clear()
         cmds: list[Command] = []
         cmds.extend(self._ptt)
@@ -170,7 +151,6 @@ class CommandQueue:
         return bool(self._ptt or self._dedup)
 
     async def wait(self, timeout: float | None = None) -> None:
-        """Wait until at least one command is available or timeout expires."""
         try:
             await asyncio.wait_for(self._notify.wait(), timeout=timeout)
         except (TimeoutError, asyncio.TimeoutError):
@@ -182,16 +162,10 @@ class CommandQueue:
 # ------------------------------------------------------------------
 
 class RadioPoller:
-    """Single-task CI-V serialiser.
+    """Fire-and-forget CI-V poller.
 
-    Args:
-        radio: Connected IcomRadio instance.
-        state_cache: Shared state cache to update with poll results.
-        command_queue: Queue of outbound commands.
-        on_state_event: Callback ``(event_name, data_dict)`` called when
-            a polled value changes.
-        on_meter_readings: Callback ``(readings)`` called when meter
-            values are polled.  ``readings`` is ``list[tuple[int, int]]``.
+    State is updated from CI-V RX stream (_civ_rx._update_state_cache_from_frame),
+    NOT from polling responses.
     """
 
     def __init__(
@@ -211,12 +185,7 @@ class RadioPoller:
         self._poll_index: int = 0
         self._task: asyncio.Task[None] | None = None
 
-    # ------------------------------------------------------------------
-    # Lifecycle
-    # ------------------------------------------------------------------
-
     def start(self) -> None:
-        """Start the poller loop.  Idempotent."""
         if self._task is not None and not self._task.done():
             return
         self._task = asyncio.get_running_loop().create_task(
@@ -225,7 +194,6 @@ class RadioPoller:
         logger.info("radio-poller: started")
 
     def stop(self) -> None:
-        """Cancel the poller task."""
         if self._task is not None:
             self._task.cancel()
             self._task = None
@@ -235,85 +203,53 @@ class RadioPoller:
     def running(self) -> bool:
         return self._task is not None and not self._task.done()
 
-    # ------------------------------------------------------------------
-    # Main loop
-    # ------------------------------------------------------------------
-
     async def _run(self) -> None:
         try:
             while True:
-                # 1. Drain command queue
+                # 1. Drain command queue (fire-and-forget writes)
                 if self._queue.has_commands:
                     for cmd in self._queue.drain():
                         try:
-                            await asyncio.wait_for(self._execute(cmd), _CIV_TIMEOUT)
-                        except asyncio.TimeoutError:
-                            logger.warning("radio-poller: cmd timeout: %s", type(cmd).__name__)
+                            await self._execute(cmd)
                         except Exception:
-                            logger.debug("radio-poller: cmd error", exc_info=True)
+                            logger.debug("radio-poller: cmd error: %s",
+                                         type(cmd).__name__, exc_info=True)
                         await asyncio.sleep(_GAP)
 
-                # 2. Poll next parameter
-                param_idx = self._poll_index
+                # 2. Send one fire-and-forget CI-V query
                 try:
-                    await asyncio.wait_for(self._poll_next(), _CIV_TIMEOUT)
-                except asyncio.TimeoutError:
-                    logger.warning("radio-poller: poll timeout (param #%d)", self._poll_index)
+                    await self._send_query()
                 except Exception:
-                    logger.debug("radio-poller: poll error", exc_info=True)
+                    logger.debug("radio-poller: query error", exc_info=True)
 
-                # 3. Wait for next cycle — either a command arrives or timeout
-                await self._queue.wait(timeout=_GAP)
+                # 3. Wait for next cycle
+                await self._queue.wait(timeout=_QUERY_INTERVAL)
         except asyncio.CancelledError:
             pass
-
-    # ------------------------------------------------------------------
-    # Command execution
-    # ------------------------------------------------------------------
 
     async def _execute(self, cmd: Command) -> None:
         radio = self._radio
         match cmd:
             case SetFreq(freq=freq):
                 await radio.set_frequency(freq)
-                self._cache.update_freq(freq)
-                self._emit("freq_changed", {"freq": freq, "vfo": "A"})
             case SetMode(mode=mode, filter_width=fw):
                 await radio.set_mode(mode, fw)
-                self._cache.update_mode(mode, fw)
-                filt = f"FIL{fw}" if fw else ""
-                self._emit("mode_changed", {"mode": mode, "filter": filt})
             case SetFilter(filter_num=fn):
                 await radio.set_filter(fn)
-                self._cache.update_mode(self._cache.mode, fn)
-                self._emit("mode_changed", {
-                    "mode": self._cache.mode,
-                    "filter": f"FIL{fn}",
-                })
             case PttOn():
                 await radio.set_ptt(True)
-                self._cache.update_ptt(True)
-                self._emit("ptt", {"state": True})
             case PttOff():
                 await radio.set_ptt(False)
-                self._cache.update_ptt(False)
-                self._emit("ptt", {"state": False})
             case SetPower(level=level):
                 await radio.set_power(level)
             case SetRfGain(level=level):
                 await radio.set_rf_gain(level)
-                self._cache.update_rf_gain(float(level))
             case SetAfLevel(level=level):
                 await radio.set_af_level(level)
-                self._cache.update_af_level(float(level))
             case SetAttenuator(db=db):
                 await radio.set_attenuator_level(db)
-                self._cache.update_attenuator(db)
-                self._emit("att_changed", {"db": db})
             case SetPreamp(level=level):
                 await radio.set_preamp(level)
-                self._cache.update_preamp(level)
-                self._emit("preamp_changed", {"level": level})
             case SelectVfo(vfo=vfo):
                 await radio.select_vfo(vfo)
             case VfoSwap():
@@ -327,91 +263,32 @@ class RadioPoller:
                 await radio.disable_scope()
                 logger.info("radio-poller: scope disabled")
 
-    # ------------------------------------------------------------------
-    # Round-robin polling
-    # ------------------------------------------------------------------
+    # CI-V query commands (fire-and-forget; responses parsed by RX loop)
+    _QUERY_CMDS: list[tuple[int, int | None]] = [
+        (0x03, None),   # frequency
+        (0x04, None),   # mode
+        (0x15, 0x02),   # S-meter
+        (0x15, 0x11),   # RF power
+        (0x15, 0x12),   # SWR
+        (0x15, 0x13),   # ALC
+        (0x14, 0x02),   # RF gain
+        (0x14, 0x01),   # AF level
+        (0x11, None),   # attenuator
+        (0x16, 0x02),   # preamp
+    ]
 
-    async def _poll_next(self) -> None:
-        param = _POLL_PARAMS[self._poll_index]
-        self._poll_index = (self._poll_index + 1) % len(_POLL_PARAMS)
-
-        radio = self._radio
-        cache = self._cache
-
-        match param:
-            case "freq":
-                val = await radio.get_frequency(bypass_cache=True)
-                if val != cache.freq:
-                    cache.update_freq(val)
-                    self._emit("freq_changed", {"freq": val, "vfo": "A"})
-
-            case "mode_info":
-                cache.invalidate_mode()
-                mode_obj, fw = await radio.get_mode_info()
-                mode_name = mode_obj.name
-                filt = f"FIL{fw}" if fw else ""
-                if mode_name != cache.mode or fw != cache.filter_width:
-                    cache.update_mode(mode_name, fw)
-                    self._emit("mode_changed", {"mode": mode_name, "filter": filt})
-
-            case "s_meter":
-                val = await radio.get_s_meter()
-                cache.update_s_meter(val)
-                self._emit_meters(METER_SMETER_MAIN, val)
-
-            case "power":
-                val = await radio.get_power()
-                cache.update_rf_power(val / 255.0)
-                self._emit_meters(METER_POWER, val)
-
-            case "swr":
-                val = await radio.get_swr()
-                cache.update_swr(float(val))
-                self._emit_meters(METER_SWR, val)
-
-            case "alc":
-                val = await radio.get_alc()
-                cache.update_alc(float(val))
-                self._emit_meters(METER_ALC, val)
-
-            case "rf_gain":
-                val = await radio.get_rf_gain()
-                if cache.rf_gain is None or val != int(cache.rf_gain):
-                    cache.update_rf_gain(float(val))
-
-            case "af_level":
-                val = await radio.get_af_level()
-                if cache.af_level is None or val != int(cache.af_level):
-                    cache.update_af_level(float(val))
-
-            case "attenuator":
-                val = await radio.get_attenuator_level()
-                if val != cache.attenuator:
-                    cache.update_attenuator(val)
-                    self._emit("att_changed", {"db": val})
-
-            case "preamp":
-                val = await radio.get_preamp()
-                if val != cache.preamp:
-                    cache.update_preamp(val)
-                    self._emit("preamp_changed", {"level": val})
-
-            case "data_mode":
-                cache.invalidate_data_mode()
-                val = await radio.get_data_mode()
-                if val != cache.data_mode:
-                    cache.update_data_mode(val)
-                    self._emit("data_mode_changed", {"on": val})
-
-    # ------------------------------------------------------------------
-    # Event helpers
-    # ------------------------------------------------------------------
+    async def _send_query(self) -> None:
+        idx = self._poll_index
+        self._poll_index = (idx + 1) % len(self._QUERY_CMDS)
+        cmd_byte, sub_byte = self._QUERY_CMDS[idx]
+        await self._radio.send_civ(
+            cmd_byte, sub=sub_byte, data=b"", wait_response=False,
+        )
 
     def _emit(self, name: str, data: dict[str, Any]) -> None:
         if self._on_state_event is not None:
             self._on_state_event(name, data)
 
     def _emit_meters(self, meter_id: int, value: int) -> None:
-        """Accumulate meter readings; emit after all meter polls in a cycle."""
         if self._on_meter_readings is not None:
             self._on_meter_readings([(meter_id, int(value))])

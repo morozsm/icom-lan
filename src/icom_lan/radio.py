@@ -235,6 +235,7 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
             float(os.environ.get("ICOM_CIV_RETRY_SLICE_MS", "150")) / 1000.0
         )
         self._state_cache: StateCache = StateCache()
+        self._on_state_change: Callable | None = None  # set by server
         _ttl = {**_DEFAULT_CACHE_TTL, **(cache_ttl_s or {})}
         self._cache_ttl_freq: float = _ttl["freq"]
         self._cache_ttl_mode: float = _ttl["mode"]
@@ -964,27 +965,29 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
     # ------------------------------------------------------------------
 
     async def send_civ(
-        self, command: int, sub: int | None = None, data: bytes | None = None
+        self,
+        command: int,
+        sub: int | None = None,
+        data: bytes | None = None,
+        *,
+        wait_response: bool = True,
     ) -> CivFrame | None:
-        """Send a CI-V command and return the response.
+        """Send a CI-V command.
 
         Args:
             command: CI-V command byte.
             sub: Optional sub-command byte.
             data: Optional payload data.
+            wait_response: If False, fire-and-forget (no response wait).
 
         Returns:
-            Parsed response CivFrame.
-
-        Raises:
-            ConnectionError: If not connected.
-            TimeoutError: If no response.
+            Parsed response CivFrame, or None if wait_response=False.
         """
         self._check_connected()
         frame = build_civ_frame(
             self._radio_addr, CONTROLLER_ADDR, command, sub=sub, data=data
         )
-        return await self._send_civ_raw(frame)
+        return await self._send_civ_raw(frame, wait_response=wait_response)
 
     async def get_frequency(self, *, bypass_cache: bool = False) -> int:
         """Get the current operating frequency in Hz.

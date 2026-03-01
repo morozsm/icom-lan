@@ -147,7 +147,11 @@ class WebServer:
                 self._radio.on_scope_data(self._broadcast_scope)
 
     def _broadcast_scope(self, frame: Any) -> None:
-        """Broadcast scope frame to all registered handlers."""
+        """Broadcast scope frame to all registered handlers.
+        
+        Also extract VFO frequency from scope center mode frames
+        and update state cache — bypasses CI-V polling for freq.
+        """
         for h in list(self._scope_handlers):
             h.enqueue_frame(frame)
 
@@ -202,8 +206,29 @@ class WebServer:
         for h in list(self._meter_handlers):
             h.enqueue_frame(readings)
 
+    def _on_radio_state_change(self, name: str, data: dict[str, Any]) -> None:
+        """Callback from CI-V RX stream (_update_state_cache_from_frame).
+
+        This is the PRIMARY update path.  Called whenever the radio sends
+        a CI-V frame (solicited response or unsolicited change).
+        """
+        self.broadcast_event(name, data)
+        # Also broadcast meter readings to MetersHandler clients
+        if name == "meter":
+            from .protocol import METER_SMETER_MAIN, METER_POWER, METER_SWR, METER_ALC
+            meter_map = {
+                "smeter": METER_SMETER_MAIN,
+                "power": METER_POWER,
+                "swr": METER_SWR,
+                "alc": METER_ALC,
+            }
+            meter_type = data.get("type")
+            meter_id = meter_map.get(meter_type)
+            if meter_id is not None:
+                self._broadcast_meters([(meter_id, data.get("value", 0))])
+
     def _on_poller_state_event(self, name: str, data: dict[str, Any]) -> None:
-        """Callback from RadioPoller when a polled value changes."""
+        """Callback from RadioPoller (legacy, kept for compatibility)."""
         self.broadcast_event(name, data)
 
     def _on_poller_meter_readings(self, readings: list[tuple[int, int]]) -> None:
@@ -220,6 +245,9 @@ class WebServer:
         addr = self._server.sockets[0].getsockname()
         logger.info("web server listening on %s:%d", addr[0], addr[1])
         if self._radio is not None:
+            # Register callback so CI-V RX stream can notify us of state changes.
+            # This is the primary path for freq/mode/meter updates (fire-and-forget).
+            self._radio._on_state_change = self._on_radio_state_change
             self._radio_poller = RadioPoller(
                 self._radio,
                 self._state_cache,

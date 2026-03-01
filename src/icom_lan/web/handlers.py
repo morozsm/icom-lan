@@ -354,6 +354,7 @@ class ControlHandler:
         q = self._server.command_queue if self._server is not None else None
         if q is None:
             raise RuntimeError("no command queue available")
+        logger.info("enqueue_command: %s params=%s", name, params)
 
         match name:
             case "set_freq":

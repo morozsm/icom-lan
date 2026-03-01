@@ -152,11 +152,16 @@ class _CivRxMixin:
 
     async def _route_civ_frame(self, frame: CivFrame, *, generation: int) -> None:
         """Route one parsed CI-V frame into command/scope event paths."""
-        if (
-            frame.from_addr != self._radio_addr  # type: ignore[attr-defined]
-            or frame.to_addr != CONTROLLER_ADDR
-        ):
+        if frame.from_addr != self._radio_addr:  # type: ignore[attr-defined]
             return
+        # Accept frames addressed to us (0xE0) OR broadcast (0x00).
+        # Unsolicited changes (knob turns) go to 0x00.
+        if frame.to_addr not in (CONTROLLER_ADDR, 0x00):
+            return
+        # Log non-scope frames for debugging
+        if frame.command != 0x27:
+            logger.info("civ-rx: frame cmd=0x%02X sub=0x%02X to=0x%02X data=%d",
+                        frame.command, frame.sub or 0, frame.to_addr, len(frame.data))
 
         if frame.command == 0x27 and frame.sub == 0x00 and len(frame.data) >= 3:
             receiver = frame.data[0]
@@ -189,25 +194,86 @@ class _CivRxMixin:
     def _update_state_cache_from_frame(self, frame: CivFrame) -> None:
         """Best-effort update of state cache from an incoming CI-V frame.
 
-        Called for every RESPONSE event (both solicited query responses and
-        unsolicited frames sent by the radio on knob turns).
+        Called for every data RESPONSE event (both solicited query responses
+        and unsolicited frames sent by the radio on knob turns, mode changes,
+        etc.).  This is the ONLY place state gets updated from the radio.
+
+        The _on_state_change callback notifies the server so it can broadcast
+        events to WebSocket clients.
         """
+        cache = self._state_cache  # type: ignore[attr-defined]
         try:
-            if frame.command in (0x03, 0x00):  # frequency
+            if frame.command in (0x03, 0x00):  # frequency (response / unsolicited)
                 freq = parse_frequency_response(frame)
+                old = cache.freq
+                logger.info("civ-rx: freq=%d (cmd=0x%02X to=0x%02X) old=%d", freq, frame.command, frame.to_addr, old)
                 self._last_freq_hz = freq  # type: ignore[attr-defined]
-                self._state_cache.update_freq(freq)  # type: ignore[attr-defined]
-            elif frame.command in (0x04, 0x01):  # mode
+                cache.update_freq(freq)
+                if freq != old:
+                    self._notify_change("freq_changed", {"freq": freq, "vfo": "A"})
+            elif frame.command in (0x04, 0x01):  # mode (response / unsolicited)
                 mode, filt = parse_mode_response(frame)
+                old_mode, old_filt = cache.mode, cache.filter_width
                 self._last_mode = mode  # type: ignore[attr-defined]
                 if filt is not None:
                     self._filter_width = filt  # type: ignore[attr-defined]
-                self._state_cache.update_mode(mode.name, filt)  # type: ignore[attr-defined]
+                cache.update_mode(mode.name, filt)
+                if mode.name != old_mode or filt != old_filt:
+                    filt_str = f"FIL{filt}" if filt else ""
+                    self._notify_change("mode_changed", {"mode": mode.name, "filter": filt_str})
+            elif frame.command == 0x15:  # meter readings
+                if len(frame.data) >= 2:
+                    sub = frame.sub
+                    raw = int.from_bytes(frame.data[:2], "big")
+                    if sub == 0x02:  # S-meter
+                        cache.update_s_meter(raw)
+                        self._notify_change("meter", {"type": "smeter", "value": raw})
+                    elif sub == 0x11:  # RF power
+                        cache.update_rf_power(raw / 255.0)
+                        self._notify_change("meter", {"type": "power", "value": raw})
+                    elif sub == 0x12:  # SWR
+                        cache.update_swr(float(raw))
+                        self._notify_change("meter", {"type": "swr", "value": raw})
+                    elif sub == 0x13:  # ALC
+                        cache.update_alc(float(raw))
+                        self._notify_change("meter", {"type": "alc", "value": raw})
+            elif frame.command == 0x14:  # levels
+                if len(frame.data) >= 2:
+                    raw = int.from_bytes(frame.data[:2], "big")
+                    if frame.sub == 0x02:  # RF gain
+                        cache.update_rf_gain(float(raw))
+                    elif frame.sub == 0x01:  # AF level
+                        cache.update_af_level(float(raw))
+            elif frame.command == 0x11:  # attenuator
+                if frame.data:
+                    val = frame.data[0]
+                    old = cache.attenuator
+                    cache.update_attenuator(val)
+                    if val != old:
+                        self._notify_change("att_changed", {"db": val})
+            elif frame.command == 0x16 and frame.sub == 0x02:  # preamp
+                if frame.data:
+                    val = frame.data[0]
+                    old = cache.preamp
+                    cache.update_preamp(val)
+                    if val != old:
+                        self._notify_change("preamp_changed", {"level": val})
             elif frame.command == 0x1C and frame.sub == 0x00:  # PTT
                 if frame.data:
-                    self._state_cache.update_ptt(bool(frame.data[0]))  # type: ignore[attr-defined]
+                    val = bool(frame.data[0])
+                    cache.update_ptt(val)
+                    self._notify_change("ptt", {"state": val})
         except Exception:
             pass  # Best-effort; never let cache update break the RX loop
+
+    def _notify_change(self, event_name: str, data: dict) -> None:
+        """Notify server of state change (best-effort)."""
+        cb = getattr(self, "_on_state_change", None)
+        if cb is not None:
+            try:
+                cb(event_name, data)
+            except Exception:
+                pass
 
     def _publish_scope_frame(self, frame: ScopeFrame) -> None:
         """Publish a complete scope frame to callback and bounded queue."""
