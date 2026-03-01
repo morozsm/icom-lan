@@ -190,6 +190,15 @@ input[type=range]::-webkit-slider-thumb {
         <button class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded text-xs font-bold transition" data-mode="FM">FM</button>
         <button class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded text-xs font-bold transition" data-mode="RTTY">RTTY</button>
       </div>
+      <h3 class="text-[10px] text-slate-500 uppercase tracking-widest mt-3 mb-1.5 font-bold">Step</h3>
+      <div class="relative">
+        <div class="flex items-center gap-0" id="stepControl">
+          <button class="px-2 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-l text-xs font-bold transition" id="stepDown">◀</button>
+          <button class="flex-1 py-1.5 bg-slate-900 hover:bg-slate-800 text-vfo-a text-xs font-bold text-center transition cursor-pointer" id="stepValue">1 kHz</button>
+          <button class="px-2 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-r text-xs font-bold transition" id="stepUp">▶</button>
+        </div>
+        <div class="hidden absolute z-50 left-0 right-0 mt-1 bg-slate-900 border border-slate-700 rounded-lg shadow-lg max-h-48 overflow-y-auto" id="stepDropdown"></div>
+      </div>
     </div>
 
     <div class="glass-panel p-3 rounded-xl col-span-2 flex flex-col gap-2.5">
@@ -363,6 +372,10 @@ input[type=range]::-webkit-slider-thumb {
     specCanvas: $('specCanvas'),
     wfCanvas: $('wfCanvas'),
     wfOverlayCanvas: $('wfOverlayCanvas'),
+    stepDown: $('stepDown'),
+    stepUp: $('stepUp'),
+    stepValue: $('stepValue'),
+    stepDropdown: $('stepDropdown'),
     spectrumContainer: $('spectrumContainer'),
     waterfallContainer: $('waterfallContainer'),
     preBadgeA: $('preBadgeA'),
@@ -377,6 +390,8 @@ input[type=range]::-webkit-slider-thumb {
     activeVfo: 'A',
     freqA: 14074000,
     freqB: 7074000,
+    tuningStep: 1000,
+    tuningStepIndex: 6,
     mode: 'USB',
     filter: 'FIL1',
     ptt: false,
@@ -1083,6 +1098,86 @@ input[type=range]::-webkit-slider-thumb {
     };
   }
 
+
+  // ===== Tuning Step =====
+  const TUNING_STEPS = [
+    { hz: 1,     label: '1 Hz' },
+    { hz: 10,    label: '10 Hz' },
+    { hz: 50,    label: '50 Hz' },
+    { hz: 100,   label: '100 Hz' },
+    { hz: 500,   label: '500 Hz' },
+    { hz: 1000,  label: '1 kHz' },
+    { hz: 2500,  label: '2.5 kHz' },
+    { hz: 5000,  label: '5 kHz' },
+    { hz: 6250,  label: '6.25 kHz' },
+    { hz: 8330,  label: '8.33 kHz' },
+    { hz: 9000,  label: '9 kHz' },
+    { hz: 10000, label: '10 kHz' },
+    { hz: 12500, label: '12.5 kHz' },
+    { hz: 15000, label: '15 kHz' },
+    { hz: 20000, label: '20 kHz' },
+    { hz: 25000, label: '25 kHz' },
+  ];
+
+  const MODE_DEFAULT_STEP = {
+    'USB': 1000, 'LSB': 1000,
+    'CW': 10, 'CWR': 10,
+    'AM': 1000,
+    'FM': 12500,
+    'RTTY': 10,
+  };
+
+  function setTuningStep(hz) {
+    const idx = TUNING_STEPS.findIndex(function (s) { return s.hz === hz; });
+    if (idx < 0) return;
+    state.tuningStep = hz;
+    state.tuningStepIndex = idx;
+    dom.stepValue.textContent = TUNING_STEPS[idx].label;
+  }
+
+  function stepDown() {
+    if (state.tuningStepIndex > 0) {
+      setTuningStep(TUNING_STEPS[state.tuningStepIndex - 1].hz);
+    }
+  }
+
+  function stepUp() {
+    if (state.tuningStepIndex < TUNING_STEPS.length - 1) {
+      setTuningStep(TUNING_STEPS[state.tuningStepIndex + 1].hz);
+    }
+  }
+
+  function showStepDropdown() {
+    const dd = dom.stepDropdown;
+    dd.innerHTML = '';
+    TUNING_STEPS.forEach(function (s) {
+      const opt = document.createElement('button');
+      opt.className = 'w-full px-3 py-1.5 text-left text-xs hover:bg-slate-700 transition ' +
+        (s.hz === state.tuningStep ? 'text-vfo-a font-bold' : 'text-slate-300');
+      opt.textContent = s.label;
+      opt.onclick = function () { setTuningStep(s.hz); dd.classList.add('hidden'); };
+      dd.appendChild(opt);
+    });
+    dd.classList.remove('hidden');
+    // Scroll active into view
+    const active = dd.querySelector('.text-vfo-a');
+    if (active) active.scrollIntoView({ block: 'nearest' });
+    // Close on outside click
+    setTimeout(function () {
+      document.addEventListener('click', function closeDD(e) {
+        if (!dd.contains(e.target) && e.target !== dom.stepValue) {
+          dd.classList.add('hidden');
+          document.removeEventListener('click', closeDD);
+        }
+      });
+    }, 0);
+  }
+
+  function applyModeDefaultStep(mode) {
+    var hz = MODE_DEFAULT_STEP[mode] || 1000;
+    setTuningStep(hz);
+  }
+
   function spectrumXForFreq(freq, width) {
     const span = state.scope.endFreq - state.scope.startFreq;
     if (span <= 0) {
@@ -1092,16 +1187,19 @@ input[type=range]::-webkit-slider-thumb {
   }
 
   function passbandCoords(width) {
+    // IC-7610 scope is always centered on VFO frequency.
+    // Marker stays at center; passband offsets are relative to center.
     const mode = PASSBAND[state.mode] ? state.mode : 'USB';
     const filter = state.filter in PASSBAND[mode] ? state.filter : 'FIL1';
     const offsets = PASSBAND[mode][filter];
-    const freq = state.activeVfo === 'A' ? state.freqA : state.freqB;
-    const xCenter = spectrumXForFreq(freq, width);
-    const x1 = spectrumXForFreq(freq + offsets[0], width);
-    const x2 = spectrumXForFreq(freq + offsets[1], width);
-    if (xCenter == null || x1 == null || x2 == null) {
+    const span = state.scope.endFreq - state.scope.startFreq;
+    if (span <= 0) {
       return null;
     }
+    const xCenter = width / 2;
+    const pxPerHz = width / span;
+    const x1 = xCenter + offsets[0] * pxPerHz;
+    const x2 = xCenter + offsets[1] * pxPerHz;
     return {
       xCenter: xCenter,
       left: Math.min(x1, x2),
@@ -1679,6 +1777,40 @@ input[type=range]::-webkit-slider-thumb {
   function bindEvents() {
     dom.connBtn.addEventListener('click', toggleRadioConnection);
 
+    // Tuning step controls
+    dom.stepDown.addEventListener('click', stepDown);
+    dom.stepUp.addEventListener('click', stepUp);
+    dom.stepValue.addEventListener('click', showStepDropdown);
+
+    // Keyboard tuning: arrows = freq, shift+arrows = step change
+    document.addEventListener('keydown', function (ev) {
+      // Don't capture when typing in inputs
+      if (ev.target.tagName === 'INPUT' || ev.target.tagName === 'TEXTAREA') return;
+      if (ev.key === 'ArrowUp' || ev.key === 'ArrowRight') {
+        ev.preventDefault();
+        if (state.activeVfo === 'A') {
+          state.freqA = clamp(state.freqA + state.tuningStep, 30000, 60000000);
+          sendCommand('set_freq', { freq: state.freqA });
+        } else {
+          state.freqB = clamp(state.freqB + state.tuningStep, 30000, 60000000);
+          sendCommand('set_freq', { freq: state.freqB });
+        }
+        updateFreqDisplays();
+        drawWaterfallOverlay();
+      } else if (ev.key === 'ArrowDown' || ev.key === 'ArrowLeft') {
+        ev.preventDefault();
+        if (state.activeVfo === 'A') {
+          state.freqA = clamp(state.freqA - state.tuningStep, 30000, 60000000);
+          sendCommand('set_freq', { freq: state.freqA });
+        } else {
+          state.freqB = clamp(state.freqB - state.tuningStep, 30000, 60000000);
+          sendCommand('set_freq', { freq: state.freqB });
+        }
+        updateFreqDisplays();
+        drawWaterfallOverlay();
+      }
+    });
+
     dom.vfoASelect.addEventListener('click', function () {
       setActiveVfo('A', true);
     });
@@ -1717,6 +1849,7 @@ input[type=range]::-webkit-slider-thumb {
       state.mode = btn.dataset.mode;
       updateModeDisplays();
       sendCommand('set_mode', { mode: state.mode });
+      applyModeDefaultStep(state.mode);
     });
 
     dom.filterGrid.addEventListener('click', function (ev) {
@@ -1828,8 +1961,7 @@ input[type=range]::-webkit-slider-thumb {
 
       container.addEventListener('wheel', function (ev) {
         ev.preventDefault();
-        const step = ev.shiftKey ? 1000 : 100;
-        const delta = ev.deltaY < 0 ? step : -step;
+        const delta = ev.deltaY < 0 ? state.tuningStep : -state.tuningStep;
         if (state.activeVfo === 'A') {
           state.freqA = clamp(state.freqA + delta, 30000, 60000000);
           sendCommand('set_freq', { freq: state.freqA });
