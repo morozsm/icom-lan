@@ -93,19 +93,59 @@ class ControlHandler:
         self._subscribed_streams: set[str] = set()
 
     async def run(self) -> None:
-        """Run the control channel lifecycle.
-
-        Sends the hello message, then processes incoming JSON frames until
-        the connection is closed.
-        """
+        """Run the control channel lifecycle."""
         await self._send_hello()
+        state_task: asyncio.Task[None] = asyncio.create_task(self._state_poll_loop())
         try:
             while True:
                 opcode, payload = await self._ws.recv()
                 if opcode == WS_OP_TEXT:
                     await self._handle_text(payload.decode("utf-8"))
-                # Ignore binary frames on control channel
         except EOFError:
+            pass
+        finally:
+            state_task.cancel()
+            try:
+                await state_task
+            except asyncio.CancelledError:
+                pass
+
+    async def _state_poll_loop(self) -> None:
+        """Poll state_cache every 300ms and push freq/mode/ptt changes."""
+        prev_freq: int = 0
+        prev_mode: str = ""
+        prev_filter: str = ""
+        prev_ptt: bool = False
+        try:
+            while True:
+                await asyncio.sleep(0.3)
+                if self._radio is None or "state" not in self._subscribed_streams:
+                    continue
+                try:
+                    cache = self._radio.state_cache
+                    events: list[dict[str, Any]] = []
+                    freq = cache.freq if cache.freq_ts > 0 else 0
+                    if freq and freq != prev_freq:
+                        prev_freq = freq
+                        events.append({"type": "event", "name": "freq_changed",
+                            "data": {"freq": freq, "vfo": "A"}})
+                    mode = cache.mode if cache.mode_ts > 0 else ""
+                    filt = f"FIL{cache.filter_width}" if cache.filter_width else ""
+                    if mode and (mode != prev_mode or filt != prev_filter):
+                        prev_mode = mode
+                        prev_filter = filt
+                        events.append({"type": "event", "name": "mode_changed",
+                            "data": {"mode": mode, "filter": filt}})
+                    ptt = cache.ptt
+                    if ptt != prev_ptt:
+                        prev_ptt = ptt
+                        events.append({"type": "event", "name": "ptt",
+                            "data": {"state": ptt}})
+                    for ev in events:
+                        await self._send_json(ev)
+                except Exception as exc:
+                    logger.debug("state poll error: %s", exc)
+        except asyncio.CancelledError:
             pass
 
     async def _send_hello(self) -> None:

@@ -86,6 +86,7 @@ class WebServer:
         self._scope_handlers: set["ScopeHandler"] = set()
         self._scope_enabled = False
         self._scope_enable_lock: asyncio.Lock = asyncio.Lock()
+        self._scope_disable_grace: float = 2.0
         self._meter_handlers: set["MetersHandler"] = set()
         self._meter_poller_task: asyncio.Task[None] | None = None
         self._meter_lock: asyncio.Lock = asyncio.Lock()
@@ -106,7 +107,7 @@ class WebServer:
             self._scope_handlers.add(handler)
             if self._radio is not None:
                 self._radio.on_scope_data(self._broadcast_scope)
-            if not self._scope_enabled and self._radio is not None:
+            if self._radio is not None:
                 try:
                     await self._radio.enable_scope(policy="fast")
                     self._scope_enabled = True
@@ -120,9 +121,6 @@ class WebServer:
         if not self._scope_handlers and self._radio is not None:
             self._radio.on_scope_data(None)
             if self._scope_enabled:
-                # Do NOT reset _scope_enabled here — let the async task do it
-                # after disable_scope() succeeds, so a reconnecting handler
-                # sees the correct state and skips a redundant enable_scope().
                 loop = asyncio.get_event_loop()
                 loop.create_task(self._disable_scope_async())
 
@@ -130,9 +128,11 @@ class WebServer:
         """Disable scope on the radio when no more handlers are connected."""
         if self._radio is None:
             return
-        # A new handler may have connected while this task was scheduled.
+        await asyncio.sleep(self._scope_disable_grace)
         if self._scope_handlers:
-            logger.debug("scope: disable task aborted — new handler connected")
+            logger.debug("scope: disable task aborted — handler reconnected")
+            if self._radio is not None:
+                self._radio.on_scope_data(self._broadcast_scope)
             return
         try:
             await self._radio.disable_scope()

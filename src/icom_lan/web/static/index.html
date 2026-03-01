@@ -814,6 +814,13 @@ input[type=range]::-webkit-slider-thumb {
       state.reconnecting = false;
       state.backoff.control = BACKOFF_MIN;
       setStatusVisual();
+      // Keepalive ping every 15s to prevent idle WS timeout
+      if (state._keepaliveTimer) clearInterval(state._keepaliveTimer);
+      state._keepaliveTimer = setInterval(function () {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'ping' }));
+        }
+      }, 15000);
     };
 
     ws.onmessage = function (ev) {
@@ -830,14 +837,9 @@ input[type=range]::-webkit-slider-thumb {
 
     ws.onclose = function () {
       state.controlConnected = false;
-      state.radioConnected = false;
       state.reconnecting = true;
       setStatusVisual();
-      closeSocket('scope');
-      closeSocket('meters');
-      if (!state.audio.rxEnabled && !state.audio.txEnabled) {
-        closeSocket('audio');
-      }
+      // Scope/meters/audio have their own reconnect — don't cascade-kill.
       const delay = state.backoff.control;
       state.backoff.control = Math.min(Math.floor(state.backoff.control * 1.7), BACKOFF_MAX);
       window.setTimeout(connectControl, delay);
