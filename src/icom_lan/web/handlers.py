@@ -69,6 +69,8 @@ class ControlHandler:
             "set_filter",
             "ptt",
             "set_power",
+            "set_rf_gain",
+            "set_af_level",
             "set_att",
             "set_preamp",
             "select_vfo",
@@ -363,6 +365,16 @@ class ControlHandler:
         if name == "set_power":
             level = int(params["level"])
             await radio.set_power(level)
+            return {"level": level}
+
+        if name == "set_rf_gain":
+            level = int(params["level"])
+            await radio.set_rf_gain(level)
+            return {"level": level}
+
+        if name == "set_af_level":
+            level = int(params["level"])
+            await radio.set_af_level(level)
             return {"level": level}
 
         if name == "set_att":

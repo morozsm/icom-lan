@@ -1,1318 +1,1924 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>icom-lan Web UI</title>
-<style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body {
-  background: #0d1117;
-  color: #c9d1d9;
-  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
-  font-size: 13px;
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  overflow: hidden;
-  user-select: none;
-}
-
-/* === Status Bar === */
-#status-bar {
-  display: flex; align-items: center; gap: 12px;
-  padding: 6px 16px; background: #161b22; border-bottom: 1px solid #30363d; flex-shrink: 0;
-}
-#status-bar h1 { font-size: 15px; color: #58a6ff; font-weight: 600; }
-.status-dot { width: 10px; height: 10px; border-radius: 50%; background: #f85149; flex-shrink: 0; }
-.status-dot.connected { background: #3fb950; }
-.status-dot.reconnecting { background: #d29922; animation: pulse 1s infinite; }
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-#radio-model { color: #8b949e; }
-#freq-display { margin-left: auto; font-size: 22px; color: #3fb950; letter-spacing: 1px; font-weight: 700; cursor: pointer; }
-#freq-display:hover { color: #56d364; }
-
-/* === Main Layout === */
-#main { flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 4px; gap: 2px; }
-
-/* === Spectrum === */
-#spectrum-wrap { position: relative; height: 160px; flex-shrink: 0; background: #0d1117; border: 1px solid #21262d; border-radius: 4px; }
-#spectrum { width: 100%; height: 100%; display: block; }
-
-/* === Waterfall === */
-#waterfall-wrap { position: relative; flex: 1; min-height: 100px; background: #000; border: 1px solid #21262d; border-radius: 4px; cursor: crosshair; overflow: hidden; }
-#waterfall { width: 100%; height: 100%; display: block; }
-#wf-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
-
-/* === Freq Axis === */
-#freq-axis { height: 22px; flex-shrink: 0; background: #161b22; border: 1px solid #21262d; border-radius: 4px; overflow: hidden; }
-#freq-axis canvas { width: 100%; height: 100%; display: block; }
-
-/* === Controls Panel === */
-#controls {
-  flex-shrink: 0; display: flex; gap: 8px; padding: 8px;
-  background: #161b22; border: 1px solid #21262d; border-radius: 4px;
-  flex-wrap: wrap; align-items: center;
-}
-.ctrl-group {
-  display: flex; align-items: center; gap: 6px;
-  padding: 4px 8px; background: #0d1117; border-radius: 4px; border: 1px solid #21262d;
-}
-.ctrl-group label { color: #8b949e; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
-.ctrl-group select, .ctrl-group input[type="number"] {
-  background: #161b22; color: #c9d1d9; border: 1px solid #30363d; border-radius: 3px;
-  padding: 3px 6px; font-family: inherit; font-size: 13px; outline: none;
-}
-.ctrl-group select:focus, .ctrl-group input:focus { border-color: #58a6ff; }
-.ctrl-group select { cursor: pointer; }
-
-/* VFO buttons */
-.vfo-btn {
-  padding: 4px 10px; border: 1px solid #30363d; border-radius: 3px;
-  background: #21262d; color: #c9d1d9; cursor: pointer; font-family: inherit; font-size: 12px;
-}
-.vfo-btn:hover { background: #30363d; }
-.vfo-btn.active { background: #1f6feb; color: #fff; border-color: #1f6feb; }
-
-/* PTT button */
-#ptt-btn {
-  padding: 6px 16px; border: 2px solid #f85149; border-radius: 4px;
-  background: #21262d; color: #f85149; cursor: pointer; font-family: inherit;
-  font-size: 13px; font-weight: 700; text-transform: uppercase; transition: all 0.15s;
-}
-#ptt-btn:hover { background: #f8514920; }
-#ptt-btn.active { background: #f85149; color: #fff; }
-
-/* ATT/Preamp */
-.att-btn {
-  padding: 3px 8px; border: 1px solid #30363d; border-radius: 3px;
-  background: #21262d; color: #8b949e; cursor: pointer; font-family: inherit; font-size: 11px;
-}
-.att-btn:hover { background: #30363d; }
-.att-btn.active { background: #1f6feb30; color: #58a6ff; border-color: #1f6feb; }
-
-/* === Meters Panel === */
-#meters {
-  flex-shrink: 0; display: flex; gap: 8px; padding: 6px 8px;
-  background: #161b22; border: 1px solid #21262d; border-radius: 4px; flex-wrap: wrap;
-}
-.meter {
-  flex: 1; min-width: 100px; max-width: 200px;
-}
-.meter-label { font-size: 10px; color: #8b949e; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
-.meter-bar-wrap {
-  height: 14px; background: #0d1117; border-radius: 2px; border: 1px solid #21262d; overflow: hidden; position: relative;
-}
-.meter-bar {
-  height: 100%; border-radius: 1px; transition: width 0.08s linear;
-  min-width: 0;
-}
-.meter-value {
-  position: absolute; right: 4px; top: 0; line-height: 14px; font-size: 10px; color: #8b949e;
-}
-.meter-bar.s-meter { background: linear-gradient(90deg, #3fb950, #3fb950 70%, #f0883e 70%, #f85149); }
-.meter-bar.power { background: #58a6ff; }
-.meter-bar.swr { background: linear-gradient(90deg, #3fb950, #3fb950 50%, #f0883e 50%, #f85149); }
-.meter-bar.alc { background: linear-gradient(90deg, #3fb950, #3fb950 60%, #f0883e 60%, #f85149); }
-.meter-bar.comp { background: #d2a8ff; }
-.meter-bar.id { background: #f0883e; }
-.meter-bar.vd { background: #79c0ff; }
-.meter-bar.temp { background: linear-gradient(90deg, #3fb950, #f0883e, #f85149); }
-
-/* === Freq Edit Modal === */
-#freq-modal {
-  display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.6); z-index: 100; align-items: center; justify-content: center;
-}
-#freq-modal.open { display: flex; }
-#freq-modal-box {
-  background: #161b22; border: 1px solid #30363d; border-radius: 8px;
-  padding: 16px 24px; text-align: center;
-}
-#freq-input {
-  background: #0d1117; color: #3fb950; border: 2px solid #30363d; border-radius: 4px;
-  padding: 8px 12px; font-family: inherit; font-size: 24px; font-weight: 700;
-  text-align: center; width: 260px; outline: none;
-}
-#freq-input:focus { border-color: #58a6ff; }
-#freq-modal-hint { color: #8b949e; font-size: 11px; margin-top: 8px; }
-
-/* === Audio Controls === */
-.audio-btn {
-  padding: 4px 12px; border: 1px solid #30363d; border-radius: 3px;
-  background: #21262d; color: #c9d1d9; cursor: pointer; font-family: inherit; font-size: 12px;
-  transition: all 0.15s;
-}
-.audio-btn:hover { background: #30363d; }
-.audio-btn.active { background: #238636; color: #fff; border-color: #238636; }
-.audio-btn.active:hover { background: #2ea043; }
-#audio-vol { width: 80px; accent-color: #58a6ff; vertical-align: middle; }
-#audio-status { font-size: 10px; color: #8b949e; }
-#radio-conn-btn { font-size: 11px; padding: 2px 8px; margin-left: 6px; }
-#radio-conn-btn.active { background: #da3633; border-color: #da3633; }
-
-/* === Tooltip === */
-#tooltip {
-  position: absolute; background: rgba(22,27,34,0.92); color: #c9d1d9;
-  padding: 3px 8px; border-radius: 4px; font-size: 12px; pointer-events: none;
-  display: none; z-index: 10; border: 1px solid #30363d;
-}
-
-/* === Toast notifications === */
-#toast {
-  position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
-  background: #f85149; color: #fff; padding: 8px 20px; border-radius: 6px;
-  font-size: 13px; z-index: 200; opacity: 0; transition: opacity 0.3s;
-  pointer-events: none; max-width: 90vw; text-align: center;
-}
-#toast.show { opacity: 1; }
-#toast.warn { background: #d29922; }
-#toast.info { background: #1f6feb; }
-
-/* === Theme toggle === */
-#theme-btn {
-  background: none; border: none; color: #8b949e; cursor: pointer;
-  font-size: 16px; padding: 2px 6px; border-radius: 3px;
-}
-#theme-btn:hover { background: #21262d; }
-
-/* === Light theme === */
-body.light { background: #f6f8fa; color: #1f2328; }
-body.light #status-bar, body.light #controls, body.light #meters,
-body.light #freq-axis, body.light #freq-modal-box { background: #fff; border-color: #d0d7de; }
-body.light .ctrl-group, body.light #spectrum-wrap { background: #f6f8fa; border-color: #d0d7de; }
-body.light #waterfall-wrap { border-color: #d0d7de; }
-body.light .ctrl-group select, body.light .ctrl-group input[type="number"] { background: #fff; color: #1f2328; border-color: #d0d7de; }
-body.light .vfo-btn, body.light .att-btn, body.light .audio-btn { background: #f6f8fa; color: #1f2328; border-color: #d0d7de; }
-body.light .meter-bar-wrap { background: #f6f8fa; border-color: #d0d7de; }
-body.light .meter-label, body.light .meter-value, body.light #radio-model,
-body.light .ctrl-group label, body.light #audio-status { color: #656d76; }
-body.light #freq-display { color: #1a7f37; }
-body.light #tooltip { background: rgba(255,255,255,0.95); color: #1f2328; border-color: #d0d7de; }
-body.light #freq-input { background: #fff; color: #1a7f37; border-color: #d0d7de; }
-body.light #toast { }
-
-/* === Responsive: tablet/mobile === */
-@media (max-width: 768px) {
-  #status-bar { padding: 4px 8px; gap: 6px; flex-wrap: wrap; }
-  #freq-display { font-size: 18px; margin-left: 0; flex-basis: 100%; text-align: right; order: 10; }
-  #spectrum-wrap { height: 120px; }
-  #controls { gap: 4px; padding: 4px; }
-  .ctrl-group { padding: 3px 5px; gap: 4px; }
-  .ctrl-group label { font-size: 10px; }
-  #meters { gap: 4px; padding: 4px; }
-  .meter { min-width: 80px; }
-}
-@media (max-width: 480px) {
-  body { font-size: 12px; }
-  #status-bar h1 { font-size: 13px; }
-  #freq-display { font-size: 16px; }
-  #spectrum-wrap { height: 90px; }
-  #controls { flex-direction: column; }
-  .ctrl-group { flex-wrap: wrap; }
-  #ptt-btn { width: 100%; padding: 10px; font-size: 16px; }
-}
-</style>
-</head>
-<body>
-
-<div id="status-bar">
-  <h1>icom-lan</h1>
-  <div class="status-dot" id="status-dot"></div>
-  <span id="conn-text">Disconnected</span>
-  <button class="audio-btn" id="radio-conn-btn" onclick="toggleRadioConnection()" title="Connect/Disconnect radio">⚡ Connect</button>
-  <span id="radio-model"></span>
-  <button id="theme-btn" onclick="toggleTheme()" title="Toggle light/dark theme">🌙</button>
-  <span id="freq-display" title="Click to enter frequency">—</span>
-</div>
-<div id="toast"></div>
-
-<div id="main">
-  <div id="spectrum-wrap"><canvas id="spectrum"></canvas></div>
-  <div id="waterfall-wrap"><canvas id="waterfall"></canvas><canvas id="wf-overlay"></canvas><div id="tooltip"></div></div>
-  <div id="freq-axis"><canvas id="freq-axis-cv"></canvas></div>
-
-  <!-- Controls -->
-  <div id="controls">
-    <div class="ctrl-group">
-      <label>VFO</label>
-      <button class="vfo-btn active" id="vfo-a" onclick="selectVfo('A')">A</button>
-      <button class="vfo-btn" id="vfo-b" onclick="selectVfo('B')">B</button>
-      <button class="vfo-btn" onclick="sendCmd('vfo_swap')" title="Swap A↔B">A↔B</button>
-      <button class="vfo-btn" onclick="sendCmd('vfo_equalize')" title="A=B">A=B</button>
-    </div>
-    <div class="ctrl-group" id="band-group">
-      <label>Band</label>
-      <button class="vfo-btn" data-band="0" onclick="tuneBand(0)" title="160m · 1.840 MHz [1]">160m</button>
-      <button class="vfo-btn" data-band="1" onclick="tuneBand(1)" title="80m · 3.573 MHz [2]">80m</button>
-      <button class="vfo-btn" data-band="2" onclick="tuneBand(2)" title="60m · 5.357 MHz [3]">60m</button>
-      <button class="vfo-btn" data-band="3" onclick="tuneBand(3)" title="40m · 7.074 MHz [4]">40m</button>
-      <button class="vfo-btn" data-band="4" onclick="tuneBand(4)" title="30m · 10.136 MHz [5]">30m</button>
-      <button class="vfo-btn" data-band="5" onclick="tuneBand(5)" title="20m · 14.074 MHz [6]">20m</button>
-      <button class="vfo-btn" data-band="6" onclick="tuneBand(6)" title="17m · 18.100 MHz [7]">17m</button>
-      <button class="vfo-btn" data-band="7" onclick="tuneBand(7)" title="15m · 21.074 MHz [8]">15m</button>
-      <button class="vfo-btn" data-band="8" onclick="tuneBand(8)" title="12m · 24.915 MHz [9]">12m</button>
-      <button class="vfo-btn" data-band="9" onclick="tuneBand(9)" title="10m · 28.074 MHz [0]">10m</button>
-      <button class="vfo-btn" data-band="10" onclick="tuneBand(10)" title="6m · 50.313 MHz">6m</button>
-    </div>
-    <div class="ctrl-group">
-      <label>Mode</label>
-      <select id="mode-sel" onchange="sendCmd('set_mode',{mode:this.value}); setModeDefaultStep(this.value)">
-        <option>USB</option><option>LSB</option><option>CW</option><option>CW-R</option>
-        <option>AM</option><option>FM</option><option>RTTY</option><option>RTTY-R</option>
-        <option>PSK</option><option>PSK-R</option>
-      </select>
-    </div>
-    <div class="ctrl-group">
-      <label>Filter</label>
-      <select id="filter-sel" onchange="sendCmd('set_filter',{filter:this.value})">
-        <option>FIL1</option><option>FIL2</option><option>FIL3</option>
-      </select>
-    </div>
-    <div class="ctrl-group" id="step-group">
-      <label>Step</label>
-      <button class="att-btn" data-step="10"    onclick="setStep(10)">10</button>
-      <button class="att-btn" data-step="50"    onclick="setStep(50)">50</button>
-      <button class="att-btn" data-step="100"   onclick="setStep(100)">100</button>
-      <button class="att-btn" data-step="500"   onclick="setStep(500)">500</button>
-      <button class="att-btn" data-step="1000"  onclick="setStep(1000)">1k</button>
-      <button class="att-btn" data-step="5000"  onclick="setStep(5000)">5k</button>
-      <button class="att-btn" data-step="10000" onclick="setStep(10000)">10k</button>
-      <button class="att-btn" data-step="25000" onclick="setStep(25000)">25k</button>
-    </div>
-    <div class="ctrl-group">
-      <label>Power</label>
-      <input type="number" id="power-input" min="0" max="100" value="100" style="width:56px"
-             onchange="sendCmd('set_power',{level:+this.value})">
-      <span style="color:#8b949e;font-size:11px">W</span>
-    </div>
-    <div class="ctrl-group">
-      <label>ATT</label>
-      <button class="att-btn" data-att="0" onclick="setAtt(0)">OFF</button>
-      <button class="att-btn" data-att="6" onclick="setAtt(6)">6</button>
-      <button class="att-btn" data-att="12" onclick="setAtt(12)">12</button>
-      <button class="att-btn" data-att="18" onclick="setAtt(18)">18</button>
-    </div>
-    <div class="ctrl-group">
-      <label>Pre</label>
-      <button class="att-btn" data-pre="0" onclick="setPreamp(0)">OFF</button>
-      <button class="att-btn" data-pre="1" onclick="setPreamp(1)">1</button>
-      <button class="att-btn" data-pre="2" onclick="setPreamp(2)">2</button>
-    </div>
-    <div class="ctrl-group">
-      <label>Audio</label>
-      <button class="audio-btn" id="rx-btn" onclick="toggleRxAudio()">🔊 RX</button>
-      <input type="range" id="audio-vol" min="0" max="100" value="80" oninput="setAudioVolume(this.value)">
-      <span id="audio-status"></span>
-    </div>
-    <button id="ptt-btn">PTT</button>
-  </div>
-
-  <!-- Meters -->
-  <div id="meters">
-    <div class="meter" id="m-smeter">
-      <div class="meter-label">S-Meter</div>
-      <div class="meter-bar-wrap"><div class="meter-bar s-meter" style="width:0%"></div><span class="meter-value">—</span></div>
-    </div>
-    <div class="meter" id="m-power">
-      <div class="meter-label">Power</div>
-      <div class="meter-bar-wrap"><div class="meter-bar power" style="width:0%"></div><span class="meter-value">—</span></div>
-    </div>
-    <div class="meter" id="m-swr">
-      <div class="meter-label">SWR</div>
-      <div class="meter-bar-wrap"><div class="meter-bar swr" style="width:0%"></div><span class="meter-value">—</span></div>
-    </div>
-    <div class="meter" id="m-alc">
-      <div class="meter-label">ALC</div>
-      <div class="meter-bar-wrap"><div class="meter-bar alc" style="width:0%"></div><span class="meter-value">—</span></div>
-    </div>
-    <div class="meter" id="m-comp">
-      <div class="meter-label">COMP</div>
-      <div class="meter-bar-wrap"><div class="meter-bar comp" style="width:0%"></div><span class="meter-value">—</span></div>
-    </div>
-    <div class="meter" id="m-id">
-      <div class="meter-label">Id</div>
-      <div class="meter-bar-wrap"><div class="meter-bar id" style="width:0%"></div><span class="meter-value">—</span></div>
-    </div>
-    <div class="meter" id="m-vd">
-      <div class="meter-label">Vd</div>
-      <div class="meter-bar-wrap"><div class="meter-bar vd" style="width:0%"></div><span class="meter-value">—</span></div>
-    </div>
-    <div class="meter" id="m-temp">
-      <div class="meter-label">TEMP</div>
-      <div class="meter-bar-wrap"><div class="meter-bar temp" style="width:0%"></div><span class="meter-value">—</span></div>
-    </div>
-  </div>
-</div>
-
-<!-- Frequency edit modal -->
-<div id="freq-modal">
-  <div id="freq-modal-box">
-    <input type="text" id="freq-input" placeholder="14.074000">
-    <div id="freq-modal-hint">Enter frequency in MHz · Press Enter to tune · Esc to cancel</div>
-  </div>
-</div>
-
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>IC-7610 Remote Control Interface</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <script>
-'use strict';
-
-// ===== Constants =====
-const WS_RECONNECT_MIN = 1000;
-const WS_RECONNECT_MAX = 30000;
-const SCOPE_MSG_TYPE = 0x01;
-const METER_MSG_TYPE = 0x20;
-const SCOPE_HEADER = 16;
-
-// Meter IDs (per RFC)
-const MID = { SMETER_MAIN:1, SMETER_SUB:2, POWER:3, SWR:4, ALC:5, COMP:6, ID:7, VD:8, TEMP:9 };
-const METER_MAP = {
-  [MID.SMETER_MAIN]: 'm-smeter', [MID.POWER]: 'm-power', [MID.SWR]: 'm-swr',
-  [MID.ALC]: 'm-alc', [MID.COMP]: 'm-comp', [MID.ID]: 'm-id', [MID.VD]: 'm-vd', [MID.TEMP]: 'm-temp'
-};
-
-// ===== Color LUT =====
-const COLOR_LUT = new Uint32Array(161);
-(function() {
-  function lerp(a,b,t){return a+(b-a)*t}
-  function rgba(r,g,b){return (255<<24)|(b<<16)|(g<<8)|r}
-  for(let i=0;i<=160;i++){
-    let r,g,b;
-    if(i<=40){const t=i/40;r=0;g=0;b=lerp(10,80,t)}
-    else if(i<=80){const t=(i-40)/40;r=0;g=lerp(0,220,t);b=lerp(80,200,t)}
-    else if(i<=120){const t=(i-80)/40;r=lerp(0,255,t);g=lerp(220,255,t);b=lerp(200,0,t)}
-    else if(i<=150){const t=(i-120)/30;r=255;g=lerp(255,40,t);b=0}
-    else{const t=(i-150)/10;r=255;g=lerp(40,255,t);b=lerp(0,255,t)}
-    COLOR_LUT[i]=rgba(Math.round(r),Math.round(g),Math.round(b));
-  }
-})();
-
-// ===== DOM refs =====
-const $ = id => document.getElementById(id);
-const statusDot=$('status-dot'), connText=$('conn-text'), radioModelEl=$('radio-model');
-const freqDisplayEl=$('freq-display'), tooltip=$('tooltip');
-const specCv=$('spectrum'), specCtx=specCv.getContext('2d');
-const wfCv=$('waterfall'), wfCtx=wfCv.getContext('2d');
-const wfOvCv=$('wf-overlay'), wfOvCtx=wfOvCv.getContext('2d');
-const faCv=$('freq-axis-cv'), faCtx=faCv.getContext('2d');
-const modeSel=$('mode-sel'), filterSel=$('filter-sel'), powerInput=$('power-input');
-const pttBtn=$('ptt-btn'), freqModal=$('freq-modal'), freqInput=$('freq-input');
-
-// ===== State =====
-let controlWs=null, scopeWs=null, metersWs=null;
-let controlBackoff=WS_RECONNECT_MIN, scopeBackoff=WS_RECONNECT_MIN, metersBackoff=WS_RECONNECT_MIN;
-let startFreq=14000000, endFreq=14350000;
-let currentFreqA=0, currentFreqB=0, activeVfo='A';
-let currentPixels=null, pttState=false;
-let tuningStep=500; // Hz
-let wfLineImg=null, wfLine32=null, wfMeta=[], wfH=0;
-let cmdCounter=0;
-const PTT_HOLD_THRESHOLD_MS = 300;
-let pttDownTime = 0;
-let pttPressStartState = false;
-let pttPressActive = false;
-let pttHoldTimer = null;
-let ignoreMouseUntil = 0;
-
-// ===== Band Plan (HF + 6m, FT8 defaults) =====
-const BANDS = [
-  { name:'160m', freq:  1840000, lo:  1800000, hi:  2000000 },
-  { name: '80m', freq:  3573000, lo:  3500000, hi:  4000000 },
-  { name: '60m', freq:  5357000, lo:  5330000, hi:  5410000 },
-  { name: '40m', freq:  7074000, lo:  7000000, hi:  7300000 },
-  { name: '30m', freq: 10136000, lo: 10100000, hi: 10150000 },
-  { name: '20m', freq: 14074000, lo: 14000000, hi: 14350000 },
-  { name: '17m', freq: 18100000, lo: 18068000, hi: 18168000 },
-  { name: '15m', freq: 21074000, lo: 21000000, hi: 21450000 },
-  { name: '12m', freq: 24915000, lo: 24890000, hi: 24990000 },
-  { name: '10m', freq: 28074000, lo: 28000000, hi: 29700000 },
-  { name:  '6m', freq: 50313000, lo: 50000000, hi: 54000000 },
-];
-
-function tuneBand(idx) {
-  const band = BANDS[idx];
-  const hz = band.freq;
-  sendCmd('set_freq', { vfo: activeVfo, freq: hz });
-  freqDisplayEl.textContent = fmtFreq(hz);
-  if (activeVfo === 'A') currentFreqA = hz; else currentFreqB = hz;
-  updateActiveBand(hz);
-}
-window.tuneBand = tuneBand;
-
-function updateActiveBand(hz) {
-  document.querySelectorAll('[data-band]').forEach(btn => {
-    const b = BANDS[+btn.dataset.band];
-    btn.classList.toggle('active', hz >= b.lo && hz <= b.hi);
-  });
-}
-
-// ===== Helpers =====
-function fmtFreq(hz){
-  const m=hz/1e6;
-  if(m>=100) return m.toFixed(3)+' MHz';
-  if(m>=10) return m.toFixed(4)+' MHz';
-  return m.toFixed(6)+' MHz';
-}
-function wsBase(){return (location.protocol==='https:'?'wss:':'ws:')+'//'+location.host}
-function setStatus(s,t){statusDot.className='status-dot '+s;connText.textContent=t}
-function nextId(){return 'c'+(++cmdCounter)}
-
-// ===== Resize =====
-function resize(){
-  const dpr=devicePixelRatio||1;
-  // Spectrum
-  const sw=specCv.parentElement.clientWidth, sh=specCv.parentElement.clientHeight;
-  specCv.width=sw*dpr; specCv.height=sh*dpr; specCtx.setTransform(dpr,0,0,dpr,0,0);
-  // Waterfall (1:1 for putImageData)
-  const ww=wfCv.parentElement.clientWidth, wh=wfCv.parentElement.clientHeight;
-  wfCv.width=ww; wfCv.height=wh; wfH=wh;
-  wfOvCv.width=ww; wfOvCv.height=wh;
-  wfLineImg=wfCtx.createImageData(ww,1); wfLine32=new Uint32Array(wfLineImg.data.buffer);
-  wfMeta=new Array(wh).fill(null);
-  // Freq axis
-  const fw=faCv.parentElement.clientWidth, fh=faCv.parentElement.clientHeight;
-  faCv.width=fw*dpr; faCv.height=fh*dpr; faCtx.setTransform(dpr,0,0,dpr,0,0);
-  drawFreqAxis();
-  if(currentPixels) drawSpectrum(currentPixels);
-}
-addEventListener('resize', resize);
-
-// ===== Spectrum =====
-function drawSpectrum(px){
-  const w=specCv.parentElement.clientWidth, h=specCv.parentElement.clientHeight;
-  const n=px.length; if(!n) return;
-  specCtx.clearRect(0,0,w,h);
-  // Grid
-  specCtx.strokeStyle='#21262d'; specCtx.lineWidth=0.5;
-  for(let y=0;y<h;y+=h/5){specCtx.beginPath();specCtx.moveTo(0,y);specCtx.lineTo(w,y);specCtx.stroke()}
-  for(let x=0;x<w;x+=w/10){specCtx.beginPath();specCtx.moveTo(x,0);specCtx.lineTo(x,h);specCtx.stroke()}
-  const sx=w/n, sy=h/160;
-  // Fill
-  specCtx.beginPath(); specCtx.moveTo(0,h);
-  for(let i=0;i<n;i++) specCtx.lineTo(i*sx, h-px[i]*sy);
-  specCtx.lineTo(w,h); specCtx.closePath();
-  const g=specCtx.createLinearGradient(0,0,0,h);
-  g.addColorStop(0,'rgba(88,166,255,0.3)'); g.addColorStop(1,'rgba(88,166,255,0.02)');
-  specCtx.fillStyle=g; specCtx.fill();
-  // Line
-  specCtx.beginPath();
-  for(let i=0;i<n;i++){const x=i*sx,y=h-px[i]*sy;i?specCtx.lineTo(x,y):specCtx.moveTo(x,y)}
-  specCtx.strokeStyle='#58a6ff'; specCtx.lineWidth=1.2; specCtx.stroke();
-  // Frequency marker + filter passband
-  drawPassband(specCtx, w, h, false);
-}
-
-// ===== Waterfall =====
-function drawWfLine(px){
-  const w=wfCv.width, n=px.length;
-  if(!n||!wfLine32) return;
-  wfCtx.drawImage(wfCv,0,0,w,wfCv.height-1,0,1,w,wfCv.height-1);
-  const iw=wfLineImg.width;
-  for(let i=0;i<iw;i++){
-    const pi=Math.min((i*n/iw)|0,n-1);
-    wfLine32[i]=COLOR_LUT[Math.min(px[pi],160)];
-  }
-  wfCtx.putImageData(wfLineImg,0,0);
-  wfMeta.pop(); wfMeta.unshift({s:startFreq,e:endFreq});
-  // Redraw passband overlay (separate canvas — doesn't affect waterfall history)
-  drawPassband(wfOvCtx, wfOvCv.width, wfOvCv.height, true);
-}
-
-// ===== Freq Axis =====
-function drawFreqAxis(){
-  const w=faCv.parentElement.clientWidth, h=faCv.parentElement.clientHeight;
-  faCtx.clearRect(0,0,w,h); faCtx.fillStyle='#8b949e'; faCtx.font='10px monospace'; faCtx.textAlign='center';
-  const span=endFreq-startFreq; if(span<=0) return;
-  const tgt=Math.max(4,Math.min(12,(w/80)|0));
-  let step=span/tgt;
-  const mag=Math.pow(10,Math.floor(Math.log10(step)));
-  const nm=step/mag;
-  step=nm<2?2*mag:nm<5?5*mag:10*mag;
-  for(let f=Math.ceil(startFreq/step)*step;f<=endFreq;f+=step){
-    const x=(f-startFreq)/span*w, m=f/1e6;
-    faCtx.fillStyle='#30363d'; faCtx.fillRect(x-0.5,0,1,4);
-    faCtx.fillStyle='#8b949e'; faCtx.fillText(m>=100?m.toFixed(1):m.toFixed(3),x,h-4);
-  }
-}
-
-// ===== Passband Overlay =====
-// Offsets in Hz [low, high] relative to center frequency (carrier).
-// SSB: 300-Nk Hz above (USB) or below (LSB) carrier.
-// CW: centered on ~700 Hz pitch; FIL1=±250, FIL2=±125, FIL3=±50 Hz.
-// AM/FM: symmetric.
-const FILTER_WIDTHS = {
-  'USB':    { FIL1: [300, 3000],   FIL2: [300, 2400],   FIL3: [300, 1800] },
-  'LSB':    { FIL1: [-3000, -300], FIL2: [-2400, -300], FIL3: [-1800, -300] },
-  'CW':     { FIL1: [450, 950],    FIL2: [575, 825],    FIL3: [650, 750] },
-  'CW-R':   { FIL1: [-950, -450],  FIL2: [-825, -575],  FIL3: [-750, -650] },
-  'AM':     { FIL1: [-3000, 3000], FIL2: [-2400, 2400], FIL3: [-1800, 1800] },
-  'FM':     { FIL1: [-7500, 7500], FIL2: [-7500, 7500], FIL3: [-7500, 7500] },
-  'RTTY':   { FIL1: [300, 3000],   FIL2: [300, 2400],   FIL3: [300, 1800] },
-  'RTTY-R': { FIL1: [-3000, -300], FIL2: [-2400, -300], FIL3: [-1800, -300] },
-  'PSK':    { FIL1: [300, 3000],   FIL2: [300, 2400],   FIL3: [300, 1800] },
-  'PSK-R':  { FIL1: [-3000, -300], FIL2: [-2400, -300], FIL3: [-1800, -300] },
-};
-
-function drawPassband(ctx, w, h, isWaterfall) {
-  const freq = activeVfo === 'A' ? currentFreqA : currentFreqB;
-  if (!freq || startFreq >= endFreq) return;
-  const span = endFreq - startFreq;
-  const cx = (freq - startFreq) / span * w;
-
-  const mode = modeSel.value;
-  const filter = filterSel.value;
-  const offsets = (FILTER_WIDTHS[mode] || FILTER_WIDTHS['USB'])[filter] || [300, 3000];
-  const pbLo = freq + offsets[0];
-  const pbHi = freq + offsets[1];
-  const rx1 = (pbLo - startFreq) / span * w;
-  const rx2 = (pbHi - startFreq) / span * w;
-  const xLeft  = Math.max(0, Math.min(rx1, rx2));
-  const xRight = Math.min(w, Math.max(rx1, rx2));
-  const pbW = xRight - xLeft;
-
-  if (isWaterfall) ctx.clearRect(0, 0, w, h);
-
-  // Passband fill
-  if (pbW > 0) {
-    ctx.fillStyle = isWaterfall ? 'rgba(255,140,0,0.10)' : 'rgba(255,140,0,0.15)';
-    ctx.fillRect(xLeft, 0, pbW, h);
-    // Passband edge lines
-    ctx.strokeStyle = isWaterfall ? 'rgba(255,140,0,0.35)' : 'rgba(255,140,0,0.50)';
-    ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(xLeft,  0); ctx.lineTo(xLeft,  h); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(xRight, 0); ctx.lineTo(xRight, h); ctx.stroke();
-  }
-
-  // Center frequency marker
-  if (cx >= 0 && cx <= w) {
-    ctx.strokeStyle = isWaterfall ? 'rgba(255,60,0,0.65)' : 'rgba(255,60,0,0.75)';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, h); ctx.stroke();
-  }
-}
-
-// ===== Binary Parsers =====
-function parseScopeFrame(buf){
-  const dv=new DataView(buf);
-  if(dv.byteLength<SCOPE_HEADER||dv.getUint8(0)!==SCOPE_MSG_TYPE) return null;
-  const pc=dv.getUint16(14,true);
-  if(dv.byteLength<SCOPE_HEADER+pc) return null;
-  return {
-    receiver:dv.getUint8(1), mode:dv.getUint8(2),
-    startFreq:dv.getUint32(3,true), endFreq:dv.getUint32(7,true),
-    seq:dv.getUint16(11,true), flags:dv.getUint8(13), pixelCount:pc,
-    pixels:new Uint8Array(buf,SCOPE_HEADER,pc)
-  };
-}
-
-function parseMeterFrame(buf){
-  const dv=new DataView(buf);
-  if(dv.byteLength<4||dv.getUint8(0)!==METER_MSG_TYPE) return null;
-  const count=dv.getUint8(3), meters=[];
-  for(let i=0;i<count&&4+i*3+2<dv.byteLength;i++){
-    const off=4+i*3;
-    meters.push({id:dv.getUint8(off), value:dv.getUint8(off+1)|(dv.getUint8(off+2)<<8)});
-  }
-  return {seq:dv.getUint16(1,true), meters};
-}
-
-// ===== Meter Display =====
-function updateMeter(meterId, value){
-  const elId=METER_MAP[meterId]; if(!elId) return;
-  const el=$(elId); if(!el) return;
-  const bar=el.querySelector('.meter-bar');
-  const valEl=el.querySelector('.meter-value');
-  const pct=Math.min(100, value/255*100);
-  bar.style.width=pct+'%';
-
-  // Format display value
-  if(meterId===MID.SMETER_MAIN||meterId===MID.SMETER_SUB){
-    // 0-120=S0-S9, 120-255=S9+
-    if(value<=120){const s=(value/120*9)|0; valEl.textContent='S'+s}
-    else{const db=((value-120)/135*60)|0; valEl.textContent='S9+'+db}
-  } else if(meterId===MID.SWR){
-    // 0=1.0, 255=∞ (approximate: 0-48≈1.0-1.5, 48-80≈1.5-2.0, 80-120≈2.0-3.0)
-    const swr=value<5?1.0:1.0+value/255*9;
-    valEl.textContent=swr.toFixed(1);
-  } else {
-    valEl.textContent=((value/255*100)|0)+'%';
-  }
-}
-
-// ===== UI State Updates =====
-function updateStateFromServer(data){
-  if(data.freq_a){currentFreqA=data.freq_a; if(activeVfo==='A'){freqDisplayEl.textContent=fmtFreq(data.freq_a);updateActiveBand(data.freq_a);}}
-  if(data.freq_b){currentFreqB=data.freq_b; if(activeVfo==='B'){freqDisplayEl.textContent=fmtFreq(data.freq_b);updateActiveBand(data.freq_b);}}
-  if(data.mode) modeSel.value=data.mode;
-  if(data.filter) filterSel.value=data.filter;
-  if(data.power!=null) powerInput.value=data.power;
-  if(data.ptt!=null){pttState=data.ptt; pttBtn.classList.toggle('active',pttState)}
-  if(data.scope){
-    startFreq=data.scope.start_freq||startFreq;
-    endFreq=data.scope.end_freq||endFreq;
-    drawFreqAxis();
-  }
-}
-
-// ===== Commands =====
-function sendControl(obj){
-  if(controlWs&&controlWs.readyState===1) controlWs.send(JSON.stringify(obj));
-}
-function sendCmd(name, params){
-  sendControl({type:'cmd',id:nextId(),name,params:params||{}});
-}
-// Expose to onclick
-window.sendCmd = sendCmd;
-
-function selectVfo(v){
-  activeVfo=v;
-  $('vfo-a').classList.toggle('active',v==='A');
-  $('vfo-b').classList.toggle('active',v==='B');
-  freqDisplayEl.textContent=fmtFreq(v==='A'?currentFreqA:currentFreqB);
-  updateActiveBand(v==='A'?currentFreqA:currentFreqB);
-  sendCmd('select_vfo',{vfo:v});
-}
-window.selectVfo = selectVfo;
-
-function setAtt(db){
-  sendCmd('set_att',{db});
-  document.querySelectorAll('[data-att]').forEach(b=>b.classList.toggle('active',+b.dataset.att===db));
-}
-window.setAtt = setAtt;
-
-function setPreamp(level){
-  sendCmd('set_preamp',{level});
-  document.querySelectorAll('[data-pre]').forEach(b=>b.classList.toggle('active',+b.dataset.pre===level));
-}
-window.setPreamp = setPreamp;
-
-function setPtt(state){
-  if(state===pttState) return;
-  pttState=state;
-  pttBtn.classList.toggle('active',state);
-  sendCmd('ptt',{state});
-}
-window.setPtt = setPtt;
-
-function updatePttButtonLabel() {
-  pttBtn.textContent = pttBtn.classList.contains('active') ? '● PTT' : 'PTT';
-}
-function pttPressStart() {
-  pttDownTime = Date.now();
-  pttPressStartState = pttState;
-  pttPressActive = true;
-  if (pttHoldTimer) clearTimeout(pttHoldTimer);
-  pttHoldTimer = setTimeout(() => {
-    pttHoldTimer = null;
-  }, PTT_HOLD_THRESHOLD_MS);
-  setPtt(true);
-}
-function pttPressEnd() {
-  if (!pttPressActive) return;
-  const elapsed = Date.now() - pttDownTime;
-  pttPressActive = false;
-  if (pttHoldTimer) {
-    clearTimeout(pttHoldTimer);
-    pttHoldTimer = null;
-  }
-  if (elapsed < PTT_HOLD_THRESHOLD_MS) {
-    setPtt(!pttPressStartState);
-  } else {
-    setPtt(false);
-  }
-}
-function pttPressLeave() {
-  if (!pttPressActive) return;
-  const elapsed = Date.now() - pttDownTime;
-  if (elapsed >= PTT_HOLD_THRESHOLD_MS) {
-    pttPressActive = false;
-    if (pttHoldTimer) {
-      clearTimeout(pttHoldTimer);
-      pttHoldTimer = null;
-    }
-    setPtt(false);
-  }
-}
-pttBtn.addEventListener('mousedown', () => {
-  if (Date.now() < ignoreMouseUntil) return;
-  pttPressStart();
-});
-pttBtn.addEventListener('mouseup', () => {
-  if (Date.now() < ignoreMouseUntil) return;
-  pttPressEnd();
-});
-pttBtn.addEventListener('mouseleave', () => {
-  if (Date.now() < ignoreMouseUntil) return;
-  pttPressLeave();
-});
-pttBtn.addEventListener('touchstart', e => {
-  ignoreMouseUntil = Date.now() + 700;
-  e.preventDefault();
-  pttPressStart();
-}, { passive: false });
-pttBtn.addEventListener('touchend', e => {
-  ignoreMouseUntil = Date.now() + 700;
-  e.preventDefault();
-  pttPressEnd();
-}, { passive: false });
-pttBtn.addEventListener('touchcancel', e => {
-  ignoreMouseUntil = Date.now() + 700;
-  e.preventDefault();
-  if (pttPressActive) {
-    pttPressActive = false;
-    if (pttHoldTimer) {
-      clearTimeout(pttHoldTimer);
-      pttHoldTimer = null;
-    }
-    setPtt(false);
-  }
-}, { passive: false });
-new MutationObserver(updatePttButtonLabel).observe(pttBtn, { attributes: true, attributeFilter: ['class'] });
-updatePttButtonLabel();
-
-// ===== Tuning Step =====
-const MODE_STEP = {
-  'USB': 500, 'LSB': 500,
-  'CW': 100, 'CW-R': 100,
-  'AM': 1000,
-  'FM': 5000,
-  'RTTY': 100, 'RTTY-R': 100, 'PSK': 100, 'PSK-R': 100,
-};
-
-function setStep(hz) {
-  tuningStep = hz;
-  document.querySelectorAll('[data-step]').forEach(b => b.classList.toggle('active', +b.dataset.step === hz));
-}
-window.setStep = setStep;
-
-function setModeDefaultStep(mode) {
-  setStep(MODE_STEP[mode] || 500);
-}
-
-// Throttled tuning: accumulate deltas locally, send command at most every 50ms
-let _tunePending = 0;
-let _tuneTimer = null;
-function tuneByStep(delta) {
-  const current = activeVfo === 'A' ? currentFreqA : currentFreqB;
-  if (!current) return;
-  _tunePending += delta;
-  const hz = Math.max(30000, Math.min(60000000, current + _tunePending));
-  // Update display immediately for responsiveness
-  freqDisplayEl.textContent = fmtFreq(hz);
-  if (activeVfo === 'A') currentFreqA = hz; else currentFreqB = hz;
-  updateActiveBand(hz);
-  if (!_tuneTimer) {
-    _tuneTimer = setTimeout(() => {
-      _tuneTimer = null;
-      const f = activeVfo === 'A' ? currentFreqA : currentFreqB;
-      _tunePending = 0;
-      sendCmd('set_freq', { vfo: activeVfo, freq: f });
-    }, 50);
-  }
-}
-
-// ===== Freq Edit Modal =====
-freqDisplayEl.addEventListener('click', ()=>{
-  const hz=activeVfo==='A'?currentFreqA:currentFreqB;
-  freqInput.value=hz?(hz/1e6).toFixed(6):'';
-  freqModal.classList.add('open');
-  freqInput.select(); freqInput.focus();
-});
-freqInput.addEventListener('keydown', e=>{
-  if(e.key==='Enter'){
-    const mhz=parseFloat(freqInput.value);
-    if(!isNaN(mhz)&&mhz>0){
-      const hz=Math.round(mhz*1e6);
-      sendCmd('set_freq',{vfo:activeVfo,freq:hz});
-      freqDisplayEl.textContent=fmtFreq(hz);
-      if(activeVfo==='A') currentFreqA=hz; else currentFreqB=hz;
-      updateActiveBand(hz);
-    }
-    freqModal.classList.remove('open');
-  } else if(e.key==='Escape'){
-    freqModal.classList.remove('open');
-  }
-});
-freqModal.addEventListener('click', e=>{if(e.target===freqModal) freqModal.classList.remove('open')});
-
-// ===== Control WebSocket =====
-function connectControl(){
-  if(controlWs&&controlWs.readyState<=1) return;
-  if(controlWs){controlWs.onclose=null;controlWs.onerror=null;controlWs.close();}
-  controlWs=new WebSocket(wsBase()+'/api/v1/ws');
-  setStatus('reconnecting','Connecting...');
-  controlWs.onopen=()=>{controlBackoff=WS_RECONNECT_MIN; setStatus('connected','Connected'); showToast('Connected','info',2000)};
-  controlWs.onmessage=ev=>{
-    try{handleCtrlMsg(JSON.parse(ev.data))}catch(e){console.warn('ctrl parse:',e)}
-  };
-  controlWs.onclose=()=>{setStatus('reconnecting','Reconnecting...');showToast('Connection lost. Reconnecting...','warn',5000);setTimeout(connectControl,controlBackoff);controlBackoff=Math.min(controlBackoff*2,WS_RECONNECT_MAX)};
-  controlWs.onerror=()=>controlWs.close();
-}
-function handleCtrlMsg(m){
-  switch(m.type){
-    case 'hello':
-      radioModelEl.textContent=m.radio||'';
-      if('connected' in m) updateRadioConnBtn(m.connected);
-      sendControl({type:'subscribe',id:'s1',streams:['scope','meters']});
-      connectScope();
-      connectMeters();
-      break;
-    case 'state': if(m.data) updateStateFromServer(m.data); break;
-    case 'event':
-      if(m.event==='connection_state'){updateRadioConnBtn(m.connected);if(m.connected){setStatus('connected','Connected');showToast('Radio connected','info',2000);if(rxActive){rxActive=false;toggleRxAudio()}}else{setStatus('','Radio disconnected');showToast('Radio disconnected','warn',3000)}break}
-      if(m.name==='freq_changed'&&m.data){
-        if(m.data.vfo==='A'||!m.data.vfo){currentFreqA=m.data.freq;if(activeVfo==='A'){freqDisplayEl.textContent=fmtFreq(m.data.freq);updateActiveBand(m.data.freq);}}
-        else{currentFreqB=m.data.freq;if(activeVfo==='B'){freqDisplayEl.textContent=fmtFreq(m.data.freq);updateActiveBand(m.data.freq);}}
-      } else if(m.name==='mode_changed'&&m.data) modeSel.value=m.data.mode;
-      else if(m.name==='ptt'&&m.data){pttState=m.data.state;pttBtn.classList.toggle('active',pttState)}
-      else if(m.name==='scope_meta'&&m.data){startFreq=m.data.start_freq||startFreq;endFreq=m.data.end_freq||endFreq;drawFreqAxis()}
-      break;
-    case 'response':
-      if(!m.ok){console.warn('cmd err:',m.error,m.message);showToast(m.message||m.error||'Command failed');if(m.id&&(m.id.startsWith('cn-')||m.id.startsWith('dc-')))updateRadioConnBtn(radioConnected)}
-      else if(m.result) updateStateFromServer(m.result);
-      break;
-  }
-}
-
-// ===== Scope WebSocket =====
-function connectScope(){
-  if(scopeWs&&scopeWs.readyState<=1) return;
-  if(scopeWs){scopeWs.onclose=null;scopeWs.onerror=null;scopeWs.close();}
-  scopeWs=new WebSocket(wsBase()+'/api/v1/scope');
-  scopeWs.binaryType='arraybuffer';
-  scopeWs.onopen=()=>{scopeBackoff=WS_RECONNECT_MIN};
-  scopeWs.onmessage=ev=>{
-    if(!(ev.data instanceof ArrayBuffer)) return;
-    const f=parseScopeFrame(ev.data); if(!f) return;
-    if(f.startFreq!==startFreq||f.endFreq!==endFreq){startFreq=f.startFreq;endFreq=f.endFreq;drawFreqAxis()}
-    currentPixels=f.pixels; drawSpectrum(f.pixels); drawWfLine(f.pixels);
-  };
-  scopeWs.onclose=()=>{setTimeout(connectScope,scopeBackoff);scopeBackoff=Math.min(scopeBackoff*2,WS_RECONNECT_MAX)};
-  scopeWs.onerror=()=>scopeWs.close();
-}
-
-// ===== Meters WebSocket =====
-function connectMeters(){
-  if(metersWs&&metersWs.readyState<=1) return;
-  if(metersWs){metersWs.onclose=null;metersWs.onerror=null;metersWs.close();}
-  metersWs=new WebSocket(wsBase()+'/api/v1/meters');
-  metersWs.binaryType='arraybuffer';
-  metersWs.onopen=()=>{
-    metersBackoff=WS_RECONNECT_MIN;
-    // Request all meters
-    metersWs.send(JSON.stringify({type:'meters_start',meters:['smeter','power','swr','alc','comp','id','vd','temp'],fps:10}));
-  };
-  metersWs.onmessage=ev=>{
-    if(ev.data instanceof ArrayBuffer){
-      const f=parseMeterFrame(ev.data); if(!f) return;
-      f.meters.forEach(m=>updateMeter(m.id, m.value));
-    }
-  };
-  metersWs.onclose=()=>{setTimeout(connectMeters,metersBackoff);metersBackoff=Math.min(metersBackoff*2,WS_RECONNECT_MAX)};
-  metersWs.onerror=()=>metersWs.close();
-}
-
-// ===== Click-to-Tune =====
-wfCv.parentElement.addEventListener('click', e=>{
-  const r=wfCv.getBoundingClientRect(), x=e.clientX-r.left, row=(e.clientY-r.top)|0;
-  let sf=startFreq,ef=endFreq;
-  if(row>=0&&row<wfMeta.length&&wfMeta[row]){sf=wfMeta[row].s;ef=wfMeta[row].e}
-  const rawFreq=Math.round(sf+(x/r.width)*(ef-sf));
-  const freq=Math.round(rawFreq/tuningStep)*tuningStep;
-  freqDisplayEl.textContent=fmtFreq(freq);
-  if(activeVfo==='A') currentFreqA=freq; else currentFreqB=freq;
-  sendCmd('set_freq',{vfo:activeVfo,freq});
-  updateActiveBand(freq);
-});
-
-// ===== Waterfall tooltip =====
-wfCv.parentElement.addEventListener('mousemove', e=>{
-  const r=wfCv.getBoundingClientRect(), x=e.clientX-r.left, row=(e.clientY-r.top)|0;
-  let sf=startFreq,ef=endFreq;
-  if(row>=0&&row<wfMeta.length&&wfMeta[row]){sf=wfMeta[row].s;ef=wfMeta[row].e}
-  tooltip.textContent=fmtFreq(Math.round(sf+(x/r.width)*(ef-sf)));
-  tooltip.style.left=(x+12)+'px'; tooltip.style.top=(e.clientY-r.top-24)+'px';
-  tooltip.style.display='block';
-});
-wfCv.parentElement.addEventListener('mouseleave', ()=>{tooltip.style.display='none'});
-
-// ===== Mouse Wheel Tuning =====
-function onWheelTune(e) {
-  e.preventDefault();
-  tuneByStep(e.deltaY < 0 ? tuningStep : -tuningStep);
-}
-wfCv.parentElement.addEventListener('wheel', onWheelTune, { passive: false });
-specCv.parentElement.addEventListener('wheel', onWheelTune, { passive: false });
-
-// ===== Toast Notifications =====
-const toastEl = $('toast');
-let toastTimer = null;
-function showToast(msg, type='error', duration=3000) {
-  toastEl.textContent = msg;
-  toastEl.className = 'show' + (type !== 'error' ? ' ' + type : '');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { toastEl.className = ''; }, duration);
-}
-
-// ===== Theme Toggle =====
-const themeBtn = $('theme-btn');
-function toggleTheme() {
-  const isLight = document.body.classList.toggle('light');
-  themeBtn.textContent = isLight ? '☀️' : '🌙';
-  try { localStorage.setItem('icom-lan-theme', isLight ? 'light' : 'dark'); } catch(e) {}
-}
-window.toggleTheme = toggleTheme;
-// Restore saved theme
-try {
-  if (localStorage.getItem('icom-lan-theme') === 'light') {
-    document.body.classList.add('light');
-    themeBtn.textContent = '☀️';
-  }
-} catch(e) {}
-
-// ===== Keyboard Shortcuts =====
-document.addEventListener('keydown', e => {
-  // Don't handle when typing in input
-  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
-
-  switch(e.key.toLowerCase()) {
-    case ' ':  // Space = PTT (hold)
-      e.preventDefault();
-      if (!pttState) setPtt(true);
-      break;
-    case 'a': selectVfo('A'); break;
-    case 'b': selectVfo('B'); break;
-    case 'r': toggleRxAudio(); break;
-    case 'f': // F = frequency entry
-      e.preventDefault();
-      freqDisplayEl.click();
-      break;
-    case 't': toggleTheme(); break;
-    // Band shortcuts: 1-9 = 160m…12m, 0 = 10m
-    case '1': tuneBand(0); break;
-    case '2': tuneBand(1); break;
-    case '3': tuneBand(2); break;
-    case '4': tuneBand(3); break;
-    case '5': tuneBand(4); break;
-    case '6': tuneBand(5); break;
-    case '7': tuneBand(6); break;
-    case '8': tuneBand(7); break;
-    case '9': tuneBand(8); break;
-    case '0': tuneBand(9); break;
-    case 'arrowleft':
-      e.preventDefault();
-      tuneByStep(e.shiftKey ? -tuningStep * 10 : -tuningStep);
-      break;
-    case 'arrowright':
-      e.preventDefault();
-      tuneByStep(e.shiftKey ? tuningStep * 10 : tuningStep);
-      break;
-  }
-});
-document.addEventListener('keyup', e => {
-  if (e.key === ' ' && pttState) setPtt(false);
-});
-
-// ===== Radio Connection =====
-let radioConnected = false;
-
-function toggleRadioConnection() {
-  const btn = $('radio-conn-btn');
-  if (radioConnected) {
-    btn.disabled = true;
-    btn.textContent = '⏳ Disconnecting...';
-    sendControl({ type: 'radio_disconnect', id: 'dc-' + Date.now() });
-  } else {
-    btn.disabled = true;
-    btn.textContent = '⏳ Connecting...';
-    sendControl({ type: 'radio_connect', id: 'cn-' + Date.now() });
-  }
-}
-window.toggleRadioConnection = toggleRadioConnection;
-
-function updateRadioConnBtn(connected) {
-  const btn = $('radio-conn-btn');
-  radioConnected = connected;
-  btn.disabled = false;
-  if (connected) {
-    btn.textContent = '⏹ Disconnect';
-    btn.classList.add('active');
-  } else {
-    btn.textContent = '⚡ Connect';
-    btn.classList.remove('active');
-  }
-}
-
-// ===== Audio =====
-const AUDIO_MSG_RX = 0x10;
-const AUDIO_MSG_TX = 0x11;
-const AUDIO_CODEC_OPUS = 0x01;
-const AUDIO_CODEC_PCM16 = 0x02;
-const AUDIO_HEADER = 8;
-
-let audioWs = null, audioBackoff = WS_RECONNECT_MIN;
-let audioCtx = null, gainNode = null;
-let rxActive = false, txActive = false;
-let audioDecoder = null;
-let txStream = null, txProcessor = null;
-let nextPlayTime = 0;   // monotonic scheduler: when to start the next audio buffer
-let opusTimestamp = 0;  // microsecond timestamp fed to AudioDecoder (must increase)
-
-const rxBtn = $('rx-btn');
-const audioVolSlider = $('audio-vol');
-const audioStatusEl = $('audio-status');
-
-function initAudioCtx() {
-  if (audioCtx) return;
-  audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 48000 });
-  gainNode = audioCtx.createGain();
-  gainNode.gain.value = audioVolSlider.value / 100;
-  gainNode.connect(audioCtx.destination);
-}
-
-function setAudioVolume(v) {
-  if (gainNode) gainNode.gain.value = v / 100;
-}
-window.setAudioVolume = setAudioVolume;
-
-// Resume AudioContext + reconnect WebSocket after Safari iOS background suspend
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') {
-    if (audioCtx && audioCtx.state === 'suspended') {
-      audioCtx.resume().then(() => { nextPlayTime = 0; });
-    }
-    if (rxActive && (!audioWs || audioWs.readyState > 1)) {
-      connectAudioWs();
-    }
-  }
-});
-
-function connectAudioWs() {
-  if(audioWs&&audioWs.readyState<=1) return;
-  if(audioWs){audioWs.onclose=null;audioWs.onerror=null;audioWs.close();}
-  audioWs = new WebSocket(wsBase() + '/api/v1/audio');
-  audioWs.binaryType = 'arraybuffer';
-  audioWs.onopen = () => {
-    audioBackoff = WS_RECONNECT_MIN;
-    if (rxActive) audioWs.send(JSON.stringify({ type: 'audio_start', direction: 'rx', codec: 'opus', sample_rate: 48000 }));
-  };
-  audioWs.onmessage = ev => {
-    if (ev.data instanceof ArrayBuffer && rxActive) handleRxAudioFrame(ev.data);
-  };
-  audioWs.onclose = () => {
-    if (rxActive) { setTimeout(connectAudioWs, audioBackoff); audioBackoff = Math.min(audioBackoff * 2, WS_RECONNECT_MAX); }
-  };
-  audioWs.onerror = () => audioWs.close();
-}
-
-function handleRxAudioFrame(buf) {
-  if (buf.byteLength < AUDIO_HEADER) return;
-  const dv = new DataView(buf);
-  const msgType = dv.getUint8(0);
-  if (msgType !== AUDIO_MSG_RX) return;
-  const codec = dv.getUint8(1);
-  // bytes 4-5 (LE uint16): sample_rate / 100  e.g. 480 → 48000 Hz
-  const sampleRate = dv.getUint16(4, true) * 100 || 48000;
-  const audioData = new Uint8Array(buf, AUDIO_HEADER);
-  if (audioData.length === 0) return;
-
-  if (codec === AUDIO_CODEC_PCM16) {
-    playPcmAudio(audioData, sampleRate);
-  } else if (codec === AUDIO_CODEC_OPUS) {
-    decodeAndPlayOpus(audioData);
-  }
-}
-
-// Play raw PCM s16le mono audio directly via Web Audio API.
-// No decoder needed — convert Int16 samples to Float32 and schedule the buffer.
-function playPcmAudio(pcmBytes, sampleRate) {
-  if (!audioCtx || !rxActive) return;
-  const numSamples = pcmBytes.byteLength >> 1; // 2 bytes per s16le sample
-  if (numSamples === 0) return;
-
-  // Interpret raw bytes as signed 16-bit little-endian samples
-  const int16 = new Int16Array(pcmBytes.buffer, pcmBytes.byteOffset, numSamples);
-  const float32 = new Float32Array(numSamples);
-  for (let i = 0; i < numSamples; i++) float32[i] = int16[i] / 32768.0;
-
-  const abuf = audioCtx.createBuffer(1, numSamples, sampleRate);
-  abuf.copyToChannel(float32, 0);
-
-  const src = audioCtx.createBufferSource();
-  src.buffer = abuf;
-  src.connect(gainNode);
-
-  // Keep nextPlayTime at least a small amount ahead to absorb network jitter.
-  const now = audioCtx.currentTime;
-  if (nextPlayTime < now + 0.01) nextPlayTime = now + 0.20; // 200 ms pre-roll for mobile/VPN
-  src.start(nextPlayTime);
-  nextPlayTime += abuf.duration;
-}
-
-// Decode an Opus frame and schedule playback.
-// Timestamps must be monotonically increasing (microseconds, 20 ms = 20000 µs).
-// Each decoded buffer is scheduled at nextPlayTime instead of time 0.
-function decodeAndPlayOpus(opusData) {
-  if (typeof AudioDecoder === 'undefined') return;
-  if (!audioDecoder) {
-    opusTimestamp = 0;
-    audioDecoder = new AudioDecoder({
-      output: (audioData) => {
-        const nch = audioData.numberOfChannels;
-        const nf = audioData.numberOfFrames;
-        const samples = new Float32Array(nf);
-        audioData.copyTo(samples, { planeIndex: 0 });
-        const abuf = audioCtx.createBuffer(1, nf, audioData.sampleRate);
-        abuf.copyToChannel(samples, 0);
-        const src = audioCtx.createBufferSource();
-        src.buffer = abuf;
-        src.connect(gainNode);
-        const now = audioCtx.currentTime;
-        if (nextPlayTime < now + 0.01) nextPlayTime = now + 0.05;
-        src.start(nextPlayTime);
-        nextPlayTime += abuf.duration;
-        audioData.close();
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        'icom-dark': '#0a0c14',
+        'icom-panel': '#121620',
+        'vfo-a': '#00f2ff',
+        'vfo-b': '#ff9f00',
+        'meter-green': '#4ade80',
+        'meter-red': '#ef4444',
       },
-      error: (e) => { console.warn('AudioDecoder error:', e); audioDecoder = null; }
-    });
-    audioDecoder.configure({ codec: 'opus', sampleRate: 48000, numberOfChannels: 1 });
-  }
-  try {
-    audioDecoder.decode(new EncodedAudioChunk({ type: 'key', timestamp: opusTimestamp, data: opusData }));
-    opusTimestamp += 20000; // 20 ms per frame in microseconds
-  } catch (e) { /* decoder may be flushing */ }
-}
-
-function toggleRxAudio() {
-  if (!rxActive) {
-    initAudioCtx();
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-    rxActive = true;
-    nextPlayTime = 0;
-    opusTimestamp = 0;
-    rxBtn.classList.add('active');
-    rxBtn.textContent = '🔊 RX ON';
-    audioStatusEl.textContent = 'Streaming...';
-    if (!audioWs || audioWs.readyState > 1) {
-      connectAudioWs();
-    } else {
-      audioWs.send(JSON.stringify({ type: 'audio_start', direction: 'rx', codec: 'opus', sample_rate: 48000 }));
-    }
-  } else {
-    rxActive = false;
-    nextPlayTime = 0;
-    opusTimestamp = 0;
-    rxBtn.classList.remove('active');
-    rxBtn.textContent = '🔊 RX';
-    audioStatusEl.textContent = '';
-    if (audioWs && audioWs.readyState === 1) {
-      audioWs.send(JSON.stringify({ type: 'audio_stop', direction: 'rx' }));
-    }
-    if (audioDecoder) {
-      try { audioDecoder.close(); } catch(e) {}
-      audioDecoder = null;
-    }
-  }
-}
-window.toggleRxAudio = toggleRxAudio;
-
-// ===== TX Audio (mic capture) =====
-async function startTxAudio() {
-  if (txActive) return;
-  initAudioCtx();
-  if (audioCtx.state === 'suspended') await audioCtx.resume();
-
-  try {
-    txStream = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 48000, channelCount: 1, echoCancellation: true, noiseSuppression: true } });
-  } catch(e) { console.warn('Mic access denied:', e); return; }
-
-  txActive = true;
-  if (!audioWs || audioWs.readyState > 1) connectAudioWs();
-
-  // Need to encode to Opus — use AudioEncoder if available
-  if (typeof AudioEncoder !== 'undefined') {
-    const source = audioCtx.createMediaStreamSource(txStream);
-    // Use MediaStreamTrackProcessor for raw PCM → AudioEncoder → Opus
-    if (typeof MediaStreamTrackProcessor !== 'undefined') {
-      const track = txStream.getAudioTracks()[0];
-      const processor = new MediaStreamTrackProcessor({ track });
-      const reader = processor.readable.getReader();
-
-      const encoder = new AudioEncoder({
-        output: (chunk) => {
-          const data = new Uint8Array(chunk.byteLength);
-          chunk.copyTo(data);
-          // Build wire frame: 8-byte header + opus data
-          const frame = new ArrayBuffer(AUDIO_HEADER + data.length);
-          const dv = new DataView(frame);
-          dv.setUint8(0, AUDIO_MSG_TX);
-          dv.setUint8(1, AUDIO_CODEC_OPUS);
-          dv.setUint16(2, 0, true); // seq (server doesn't use it)
-          dv.setUint16(4, 480, true); // 48000/100
-          dv.setUint8(6, 1); // mono
-          dv.setUint8(7, 20); // 20ms
-          new Uint8Array(frame, AUDIO_HEADER).set(data);
-          if (audioWs && audioWs.readyState === 1) audioWs.send(frame);
-        },
-        error: (e) => console.warn('AudioEncoder error:', e)
-      });
-      encoder.configure({ codec: 'opus', sampleRate: 48000, numberOfChannels: 1, bitrate: 32000 });
-
-      txProcessor = { reader, encoder, source };
-
-      // Read loop
-      (async () => {
-        try {
-          while (txActive) {
-            const { value, done } = await reader.read();
-            if (done) break;
-            encoder.encode(value);
-            value.close();
-          }
-        } catch(e) { /* stream ended */ }
-      })();
-
-      // Tell server TX is starting
-      if (audioWs && audioWs.readyState === 1) {
-        audioWs.send(JSON.stringify({ type: 'audio_start', direction: 'tx', codec: 'opus', sample_rate: 48000 }));
+      fontFamily: {
+        'digital': ['"Share Tech Mono"', 'Courier New', 'monospace'],
       }
     }
   }
 }
-
-function stopTxAudio() {
-  if (!txActive) return;
-  txActive = false;
-  if (txProcessor) {
-    try { txProcessor.reader.cancel(); } catch(e) {}
-    try { txProcessor.encoder.close(); } catch(e) {}
-    try { txProcessor.source.disconnect(); } catch(e) {}
-    txProcessor = null;
-  }
-  if (txStream) {
-    txStream.getTracks().forEach(t => t.stop());
-    txStream = null;
-  }
-  if (audioWs && audioWs.readyState === 1) {
-    audioWs.send(JSON.stringify({ type: 'audio_stop', direction: 'tx' }));
-  }
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet"/>
+<style>
+.glow-cyan { text-shadow: 0 0 10px rgba(0, 242, 255, 0.5); }
+.glow-amber { text-shadow: 0 0 10px rgba(255, 159, 0, 0.5); }
+.glass-panel {
+  background: rgba(18, 22, 32, 0.8);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.05);
 }
+.active-toggle {
+  background: linear-gradient(180deg, #1e3a8a 0%, #1e40af 100%);
+  box-shadow: 0 0 15px rgba(30, 64, 175, 0.4);
+}
+input[type=range] {
+  -webkit-appearance: none;
+  background: #1e293b;
+  height: 4px;
+  border-radius: 2px;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+  background: #94a3b8;
+  cursor: pointer;
+  box-shadow: 0 0 5px rgba(0,0,0,0.5);
+}
+#specCanvas, #wfCanvas, #wfOverlayCanvas { display: block; width: 100%; height: 100%; }
+#wfOverlayCanvas { position: absolute; inset: 0; pointer-events: none; }
+@media (max-width: 1024px) {
+  main { overflow-y: auto; }
+}
+</style>
+</head>
+<body class="bg-icom-dark text-slate-300 font-sans h-screen overflow-hidden flex flex-col select-none">
+<header class="h-12 border-b border-slate-800 flex items-center justify-between px-6 bg-icom-panel/50">
+  <div class="flex items-center gap-4">
+    <span class="font-bold tracking-tighter text-slate-100">ICOM <span class="text-vfo-a" id="radioModel">IC-7610</span></span>
+    <div class="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900 border border-slate-700 text-xs">
+      <div class="w-2 h-2 rounded-full bg-red-500" id="connDot"></div>
+      <span class="text-slate-400" id="connText">DISCONNECTED</span>
+    </div>
+    <button class="text-[10px] px-3 py-1 bg-slate-800 border border-slate-700 text-slate-400 rounded hover:bg-slate-700 transition" id="connBtn">Connect</button>
+  </div>
+  <div class="flex items-center gap-8 text-sm font-digital">
+    <div><span class="text-slate-500 mr-2">UTC</span><span class="text-slate-100" id="clock">00:00</span></div>
+    <div class="flex items-center gap-2"><span class="text-slate-500">ANT</span><span class="px-2 bg-slate-800 rounded text-vfo-a">1</span></div>
+  </div>
+</header>
 
-// Hook TX audio into PTT — update setPtt:
-const _origSetPtt = setPtt;
-setPtt = function(state) {
-  if (state === pttState) return;
-  pttState = state;
-  pttBtn.classList.toggle('active', state);
-  sendCmd('ptt', { state });
-  if (state) startTxAudio();
-  else stopTxAudio();
-};
-window.setPtt = setPtt;
+<main class="flex-1 p-4 grid grid-cols-12 gap-4 min-h-0">
+  <section class="col-span-12 grid grid-cols-12 gap-4 h-44">
+    <div class="col-span-5 glass-panel rounded-xl p-4 flex flex-col justify-between border-l-4 border-l-vfo-a" id="vfoAPanel">
+      <div class="flex justify-between items-start">
+        <div class="flex items-center gap-2">
+          <button class="bg-vfo-a text-icom-dark px-2 py-0.5 rounded text-xs font-bold" id="vfoASelect">VFO A</button>
+          <span class="text-slate-400 text-xs font-bold uppercase tracking-widest" id="vfoAmode">USB · FIL1</span>
+        </div>
+        <div class="flex gap-1" id="vfoAbadges">
+          <span class="text-[10px] px-1.5 py-0.5 bg-green-900/30 text-green-400 border border-green-800 rounded" id="preBadgeA">PRE 1</span>
+          <span class="text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded" id="attBadgeA">ATT</span>
+          <span class="text-[10px] px-1.5 py-0.5 bg-green-900/30 text-green-400 border border-green-800 rounded">IP+</span>
+          <span class="text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded">NB</span>
+          <span class="text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded">NR</span>
+        </div>
+      </div>
+      <div class="text-6xl font-digital text-vfo-a glow-cyan tracking-tighter" id="vfoAfreq">14.074.000</div>
+      <div class="w-full flex items-center gap-2">
+        <span class="text-[10px] text-slate-500 w-4 font-bold">S</span>
+        <div class="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden flex">
+          <div class="bg-meter-green transition-all duration-150" id="smeterA" style="width:0%"></div>
+          <div class="bg-meter-red opacity-70 transition-all duration-150" id="smeterAred" style="width:0%"></div>
+        </div>
+        <span class="text-[10px] text-meter-green font-bold font-digital" id="smeterAval">S0</span>
+      </div>
+      <div class="flex justify-between text-[7px] text-slate-600 px-4 -mt-0.5">
+        <span>1</span><span>3</span><span>5</span><span>7</span><span>9</span><span class="text-red-900">+20</span><span class="text-red-900">+40</span><span class="text-red-900">+60</span>
+      </div>
+    </div>
 
-// ===== Init =====
-resize();
-setStep(tuningStep); // highlight default step button
-connectControl();
+    <div class="col-span-2 glass-panel rounded-xl p-4 flex flex-col justify-between text-[10px] uppercase font-bold tracking-tighter">
+      <div class="text-center mb-2"><span class="text-[10px] px-2 py-0.5 bg-green-900/20 text-green-400 border border-green-800 rounded tracking-widest" id="rxtxBadge">RX</span></div>
+      <div class="space-y-2.5 flex-1">
+        <div><div class="flex justify-between mb-0.5"><span class="text-slate-500">ALC</span><span class="text-slate-300" id="alcVal">0%</span></div><div class="h-1.5 bg-slate-800 rounded-full"><div class="h-full bg-yellow-500 rounded-full transition-all duration-150" id="alcBar" style="width:0%"></div></div></div>
+        <div><div class="flex justify-between mb-0.5"><span class="text-slate-500">SWR</span><span class="text-slate-300" id="swrVal">1.0</span></div><div class="h-1.5 bg-slate-800 rounded-full"><div class="h-full bg-green-400 rounded-full transition-all duration-150" id="swrBar" style="width:0%"></div></div></div>
+        <div><div class="flex justify-between mb-0.5"><span class="text-slate-500">PWR</span><span class="text-slate-300" id="pwrVal">0W</span></div><div class="h-1.5 bg-slate-800 rounded-full"><div class="h-full bg-green-400 rounded-full transition-all duration-150" id="pwrBar" style="width:0%"></div></div></div>
+        <div><div class="flex justify-between mb-0.5"><span class="text-slate-500">Id</span><span class="text-slate-300" id="idVal">0.0A</span></div><div class="h-1.5 bg-slate-800 rounded-full"><div class="h-full bg-orange-400 rounded-full transition-all duration-150" id="idBar" style="width:0%"></div></div></div>
+        <div><div class="flex justify-between mb-0.5"><span class="text-slate-500">TEMP</span><span class="text-slate-300" id="tempVal">0°</span></div><div class="h-1.5 bg-slate-800 rounded-full"><div class="h-full bg-green-400 rounded-full transition-all duration-150" id="tempBar" style="width:0%"></div></div></div>
+      </div>
+    </div>
+
+    <div class="col-span-5 glass-panel rounded-xl p-4 flex flex-col justify-between border-r-4 border-r-vfo-b" id="vfoBPanel">
+      <div class="flex justify-between items-start">
+        <div class="flex gap-1" id="vfoBbadges">
+          <span class="text-[10px] px-1.5 py-0.5 bg-green-900/30 text-green-400 border border-green-800 rounded" id="preBadgeB">PRE 1</span>
+          <span class="text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded" id="attBadgeB">ATT</span>
+          <span class="text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded">IP+</span>
+          <span class="text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded">NB</span>
+          <span class="text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded">NR</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-slate-400 text-xs font-bold uppercase tracking-widest" id="vfoBmode">USB · FIL1</span>
+          <button class="bg-vfo-b text-icom-dark px-2 py-0.5 rounded text-xs font-bold" id="vfoBSelect">VFO B</button>
+        </div>
+      </div>
+      <div class="text-5xl font-digital text-vfo-b glow-amber tracking-tighter text-right" id="vfoBfreq">7.074.000</div>
+      <div class="w-full flex items-center gap-2">
+        <span class="text-[10px] text-slate-500 w-4 font-bold text-right">S</span>
+        <div class="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden flex">
+          <div class="bg-meter-green transition-all duration-150" id="smeterB" style="width:0%"></div>
+          <div class="bg-meter-red opacity-70 transition-all duration-150" id="smeterBred" style="width:0%"></div>
+        </div>
+        <span class="text-[10px] font-bold font-digital text-meter-green" id="smeterBval">S0</span>
+      </div>
+      <div class="flex justify-between text-[7px] text-slate-600 px-4 -mt-0.5">
+        <span>1</span><span>3</span><span>5</span><span>7</span><span>9</span><span class="text-red-900">+20</span><span class="text-red-900">+40</span><span class="text-red-900">+60</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="col-span-12 flex flex-col gap-0 min-h-0 flex-1">
+    <div class="glass-panel rounded-t-xl overflow-hidden relative" style="height:155px;" id="spectrumContainer">
+      <canvas id="specCanvas"></canvas>
+      <div class="absolute left-0 top-0 bottom-0 w-8 flex flex-col justify-between py-1 pointer-events-none">
+        <span class="text-[8px] font-digital text-slate-600 pl-1">0</span>
+        <span class="text-[8px] font-digital text-slate-600 pl-1">-20</span>
+        <span class="text-[8px] font-digital text-slate-600 pl-1">-40</span>
+        <span class="text-[8px] font-digital text-slate-600 pl-1">-60</span>
+        <span class="text-[8px] font-digital text-slate-600 pl-1">-80</span>
+        <span class="text-[8px] font-digital text-slate-600 pl-1">-100</span>
+      </div>
+    </div>
+    <div class="flex justify-between px-2 py-0.5 bg-icom-panel text-[10px] font-digital text-slate-600" id="freqAxis"></div>
+    <div class="glass-panel rounded-b-xl overflow-hidden relative flex-1" id="waterfallContainer" style="min-height:80px;max-height:200px;">
+      <canvas id="wfCanvas"></canvas>
+      <canvas id="wfOverlayCanvas"></canvas>
+    </div>
+  </section>
+
+  <section class="col-span-12 grid grid-cols-12 gap-4 items-start">
+    <div class="glass-panel p-3 rounded-xl col-span-2">
+      <h3 class="text-[10px] text-slate-500 uppercase tracking-widest mb-3 font-bold">Band</h3>
+      <div class="grid grid-cols-3 gap-1.5" id="bandGrid">
+        <button class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded text-xs font-bold transition" data-band="1840000">160m</button>
+        <button class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded text-xs font-bold transition" data-band="3573000">80m</button>
+        <button class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded text-xs font-bold transition" data-band="7074000">40m</button>
+        <button class="bg-vfo-a/20 border border-vfo-a/50 text-vfo-a py-2.5 rounded text-xs font-bold" data-band="14074000">20m</button>
+        <button class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded text-xs font-bold transition" data-band="21074000">15m</button>
+        <button class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded text-xs font-bold transition" data-band="28074000">10m</button>
+        <button class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded text-xs font-bold transition col-span-3" data-band="50313000">6m</button>
+      </div>
+    </div>
+
+    <div class="glass-panel p-3 rounded-xl col-span-2">
+      <h3 class="text-[10px] text-slate-500 uppercase tracking-widest mb-3 font-bold">Mode</h3>
+      <div class="grid grid-cols-2 gap-1.5" id="modeGrid">
+        <button class="active-toggle text-white py-2.5 rounded text-xs font-bold" data-mode="USB">USB</button>
+        <button class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded text-xs font-bold transition" data-mode="LSB">LSB</button>
+        <button class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded text-xs font-bold transition" data-mode="CW">CW</button>
+        <button class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded text-xs font-bold transition" data-mode="CWR">CWR</button>
+        <button class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded text-xs font-bold transition" data-mode="AM">AM</button>
+        <button class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded text-xs font-bold transition" data-mode="FM">FM</button>
+        <button class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded text-xs font-bold transition" data-mode="RTTY">RTTY</button>
+      </div>
+    </div>
+
+    <div class="glass-panel p-3 rounded-xl col-span-2 flex flex-col gap-2.5">
+      <div>
+        <h3 class="text-[10px] text-slate-500 uppercase tracking-widest mb-1.5 font-bold">Filter</h3>
+        <div class="flex gap-1.5" id="filterGrid">
+          <button class="flex-1 bg-vfo-a/20 text-vfo-a border border-vfo-a/50 py-1.5 rounded text-xs font-bold" data-filter="FIL1">FIL1</button>
+          <button class="flex-1 bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-xs font-bold transition" data-filter="FIL2">FIL2</button>
+          <button class="flex-1 bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-xs font-bold transition" data-filter="FIL3">FIL3</button>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-1.5">
+        <button class="bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-xs font-bold transition">NB</button>
+        <button class="bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-xs font-bold transition">NR</button>
+      </div>
+      <div>
+        <h3 class="text-[10px] text-slate-500 uppercase tracking-widest mb-1.5 font-bold">ATT</h3>
+        <div class="flex gap-1" id="attGrid">
+          <button class="flex-1 bg-vfo-a/20 text-vfo-a border border-vfo-a/50 py-1.5 rounded text-[10px] font-bold" data-att="0">OFF</button>
+          <button class="flex-1 bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-[10px] font-bold transition" data-att="6">6</button>
+          <button class="flex-1 bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-[10px] font-bold transition" data-att="12">12</button>
+          <button class="flex-1 bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-[10px] font-bold transition" data-att="18">18</button>
+        </div>
+      </div>
+      <div>
+        <h3 class="text-[10px] text-slate-500 uppercase tracking-widest mb-1.5 font-bold">PRE</h3>
+        <div class="flex gap-1" id="preGrid">
+          <button class="flex-1 bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-[10px] font-bold transition" data-pre="0">OFF</button>
+          <button class="flex-1 bg-vfo-a/20 text-vfo-a border border-vfo-a/50 py-1.5 rounded text-[10px] font-bold" data-pre="1">1</button>
+          <button class="flex-1 bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-[10px] font-bold transition" data-pre="2">2</button>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-1.5">
+        <button class="bg-green-900/30 text-green-400 border border-green-800 py-1.5 rounded text-xs font-bold">IP+</button>
+        <button class="bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-xs font-bold transition" id="vfoSwapBtn">A↔B</button>
+      </div>
+    </div>
+
+    <div class="glass-panel p-3 rounded-xl col-span-3">
+      <h3 class="text-[10px] text-slate-500 uppercase tracking-widest mb-3 font-bold">Audio / RF</h3>
+      <div class="space-y-2.5">
+        <div>
+          <div class="flex justify-between text-[10px] mb-1 font-bold"><span class="text-slate-500">AF GAIN</span><span class="text-vfo-a" id="afVal">80%</span></div>
+          <input class="w-full" type="range" min="0" max="255" value="204" id="afSlider"/>
+        </div>
+        <div>
+          <div class="flex justify-between text-[10px] mb-1 font-bold"><span class="text-slate-500">RF GAIN</span><span class="text-vfo-a" id="rfVal">100%</span></div>
+          <input class="w-full" type="range" min="0" max="255" value="255" id="rfSlider"/>
+        </div>
+        <div>
+          <div class="flex justify-between text-[10px] mb-1 font-bold"><span class="text-slate-500">SQUELCH</span><span class="text-vfo-a" id="sqlVal">0%</span></div>
+          <input class="w-full" type="range" min="0" max="100" value="0" id="sqlSlider"/>
+        </div>
+      </div>
+      <div class="flex gap-2 mt-3">
+        <button class="flex-1 px-4 py-2.5 rounded-lg bg-green-900/30 border border-green-700 text-green-400 font-bold text-xs hover:bg-green-900/50 transition" id="rxAudioBtn">RX AUDIO</button>
+        <button class="px-4 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold transition" id="moniBtn">TX MIC</button>
+      </div>
+    </div>
+
+    <div class="glass-panel p-3 rounded-xl col-span-3">
+      <h3 class="text-[10px] text-slate-500 uppercase tracking-widest mb-2 font-bold">TX Power</h3>
+      <div class="flex items-center gap-3 mb-3">
+        <div class="text-2xl font-digital text-slate-100" id="txPwrVal">128<span class="text-xs ml-1">/255</span></div>
+        <input class="flex-1" type="range" min="0" max="255" value="128" id="txPwrSlider"/>
+      </div>
+      <button class="w-full py-5 rounded-xl border-2 border-red-500/30 bg-red-950/20 text-red-500 font-bold text-xl uppercase tracking-[0.2em] shadow-[0_0_20px_rgba(239,68,68,0.1)] active:scale-95 transition-all" id="pttBtn">PTT</button>
+    </div>
+  </section>
+</main>
+
+<footer class="h-8 border-t border-slate-800 flex items-center justify-between px-6 bg-icom-panel/30 text-[10px] font-bold text-slate-500">
+  <div class="flex gap-4">
+    <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-slate-600 inline-block" id="lanDot"></span> LAN</span>
+    <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-slate-600 inline-block" id="civDot"></span> CI-V</span>
+    <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-slate-600 inline-block" id="audioDot"></span> AUDIO</span>
+    <span id="tempStatus">TEMP: --</span>
+  </div>
+  <div class="flex gap-4">
+    <span class="text-vfo-a" id="rxAudioStatus">RX AUDIO: OFF</span>
+  </div>
+</footer>
+
+<script>
+(function () {
+  'use strict';
+
+  const CONTROL_PATH = '/api/v1/ws';
+  const SCOPE_PATH = '/api/v1/scope';
+  const METERS_PATH = '/api/v1/meters';
+  const AUDIO_PATH = '/api/v1/audio';
+
+  const BACKOFF_MIN = 1000;
+  const BACKOFF_MAX = 30000;
+  const METER_IDS = {
+    SMETER_MAIN: 0x01,
+    SMETER_SUB: 0x02,
+    POWER: 0x03,
+    SWR: 0x04,
+    ALC: 0x05,
+    COMP: 0x06,
+    ID_DRAIN: 0x07,
+    VD: 0x08,
+    TEMP: 0x09,
+  };
+
+  const PASSBAND = {
+    USB: { FIL1: [300, 3000], FIL2: [300, 2400], FIL3: [300, 1800] },
+    LSB: { FIL1: [-3000, -300], FIL2: [-2400, -300], FIL3: [-1800, -300] },
+    CW: { FIL1: [450, 950], FIL2: [575, 825], FIL3: [650, 750] },
+    CWR: { FIL1: [-950, -450], FIL2: [-825, -575], FIL3: [-750, -650] },
+    AM: { FIL1: [-3000, 3000], FIL2: [-2400, 2400], FIL3: [-1800, 1800] },
+    FM: { FIL1: [-7500, 7500], FIL2: [-7500, 7500], FIL3: [-7500, 7500] },
+    RTTY: { FIL1: [300, 3000], FIL2: [300, 2400], FIL3: [300, 1800] },
+  };
+
+  const $ = (id) => document.getElementById(id);
+  const dom = {
+    connDot: $('connDot'),
+    connText: $('connText'),
+    connBtn: $('connBtn'),
+    radioModel: $('radioModel'),
+    lanDot: $('lanDot'),
+    civDot: $('civDot'),
+    audioDot: $('audioDot'),
+    clock: $('clock'),
+    vfoAfreq: $('vfoAfreq'),
+    vfoBfreq: $('vfoBfreq'),
+    vfoAmode: $('vfoAmode'),
+    vfoBmode: $('vfoBmode'),
+    vfoASelect: $('vfoASelect'),
+    vfoBSelect: $('vfoBSelect'),
+    vfoAPanel: $('vfoAPanel'),
+    vfoBPanel: $('vfoBPanel'),
+    smeterA: $('smeterA'),
+    smeterAred: $('smeterAred'),
+    smeterAval: $('smeterAval'),
+    smeterB: $('smeterB'),
+    smeterBred: $('smeterBred'),
+    smeterBval: $('smeterBval'),
+    alcBar: $('alcBar'),
+    alcVal: $('alcVal'),
+    swrBar: $('swrBar'),
+    swrVal: $('swrVal'),
+    pwrBar: $('pwrBar'),
+    pwrVal: $('pwrVal'),
+    idBar: $('idBar'),
+    idVal: $('idVal'),
+    tempBar: $('tempBar'),
+    tempVal: $('tempVal'),
+    tempStatus: $('tempStatus'),
+    rxtxBadge: $('rxtxBadge'),
+    bandGrid: $('bandGrid'),
+    modeGrid: $('modeGrid'),
+    filterGrid: $('filterGrid'),
+    attGrid: $('attGrid'),
+    preGrid: $('preGrid'),
+    afSlider: $('afSlider'),
+    afVal: $('afVal'),
+    rfSlider: $('rfSlider'),
+    rfVal: $('rfVal'),
+    sqlSlider: $('sqlSlider'),
+    sqlVal: $('sqlVal'),
+    txPwrSlider: $('txPwrSlider'),
+    txPwrVal: $('txPwrVal'),
+    pttBtn: $('pttBtn'),
+    rxAudioBtn: $('rxAudioBtn'),
+    moniBtn: $('moniBtn'),
+    rxAudioStatus: $('rxAudioStatus'),
+    freqAxis: $('freqAxis'),
+    specCanvas: $('specCanvas'),
+    wfCanvas: $('wfCanvas'),
+    wfOverlayCanvas: $('wfOverlayCanvas'),
+    spectrumContainer: $('spectrumContainer'),
+    waterfallContainer: $('waterfallContainer'),
+    preBadgeA: $('preBadgeA'),
+    preBadgeB: $('preBadgeB'),
+    attBadgeA: $('attBadgeA'),
+    attBadgeB: $('attBadgeB'),
+    vfoSwapBtn: $('vfoSwapBtn'),
+  };
+
+  const state = {
+    cmdSeq: 0,
+    activeVfo: 'A',
+    freqA: 14074000,
+    freqB: 7074000,
+    mode: 'USB',
+    filter: 'FIL1',
+    ptt: false,
+    power: 128,
+    att: 0,
+    preamp: 1,
+    controlConnected: false,
+    radioConnected: false,
+    reconnecting: false,
+    ws: {
+      control: null,
+      scope: null,
+      meters: null,
+      audio: null,
+    },
+    backoff: {
+      control: BACKOFF_MIN,
+      scope: BACKOFF_MIN,
+      meters: BACKOFF_MIN,
+      audio: BACKOFF_MIN,
+    },
+    scope: {
+      startFreq: 13900000,
+      endFreq: 14350000,
+      lastBuffer: null,
+      specCtx: null,
+      specWidth: 0,
+      specHeight: 0,
+      specDpr: 1,
+      wfCtx: null,
+      wfOverlayCtx: null,
+      wfWidth: 0,
+      wfHeight: 0,
+      wfLine: null,
+      wfLineData: null,
+      axisDirty: true,
+    },
+    sliderDebounce: new Map(),
+    audio: {
+      rxEnabled: false,
+      txEnabled: false,
+      context: null,
+      gain: null,
+      decoder: null,
+      nextPlayTime: 0,
+      opusTsUs: 0,
+      txSeq: 0,
+      txStream: null,
+      txReader: null,
+      txEncoder: null,
+    },
+    touchPttActive: false,
+  };
+
+  const WF_LUT = new Uint8Array(256 * 3);
+  for (let v = 0; v < 256; v += 1) {
+    let r = 0;
+    let g = 0;
+    let b = 0;
+    if (v < 50) {
+      b = Math.floor(v * 2.5);
+    } else if (v < 100) {
+      g = Math.floor((v - 50) * 4);
+      b = Math.floor(125 - (v - 50) * 2);
+    } else if (v < 160) {
+      r = Math.floor((v - 100) * 3);
+      g = 200;
+    } else if (v < 220) {
+      r = 255;
+      g = Math.floor(200 - (v - 160) * 3);
+    } else {
+      r = 255;
+      g = Math.floor(v - 120);
+      b = Math.floor(v - 120);
+    }
+    const idx = v * 3;
+    WF_LUT[idx] = r;
+    WF_LUT[idx + 1] = g;
+    WF_LUT[idx + 2] = b;
+  }
+
+  function wsUrl(path) {
+    const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    return proto + '://' + window.location.host + path;
+  }
+
+  function clamp(num, lo, hi) {
+    return Math.max(lo, Math.min(hi, num));
+  }
+
+  function formatFreq(hz) {
+    const value = Math.max(0, Math.round(Number(hz) || 0));
+    return String(value).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  }
+
+  function updateClock() {
+    dom.clock.textContent = new Date().toUTCString().slice(17, 22);
+  }
+
+  function nextCmdId(prefix) {
+    state.cmdSeq += 1;
+    return (prefix || 'cmd') + '-' + state.cmdSeq;
+  }
+
+  function sendControl(payload) {
+    const ws = state.ws.control;
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify(payload));
+      return true;
+    }
+    return false;
+  }
+
+  function sendCommand(name, params) {
+    return sendControl({ type: 'cmd', id: nextCmdId('cmd'), name: name, params: params || {} });
+  }
+
+  function setStatusVisual() {
+    const dot = dom.connDot;
+    dot.classList.remove('bg-green-500', 'bg-red-500', 'bg-yellow-400', 'animate-pulse');
+
+    if (state.reconnecting) {
+      dot.classList.add('bg-yellow-400', 'animate-pulse');
+      dom.connText.textContent = 'RECONNECTING...';
+    } else if (state.radioConnected) {
+      dot.classList.add('bg-green-500', 'animate-pulse');
+      dom.connText.textContent = 'CONNECTED: LAN ' + window.location.hostname;
+    } else {
+      dot.classList.add('bg-red-500');
+      dom.connText.textContent = 'DISCONNECTED';
+    }
+
+    dom.connBtn.textContent = state.radioConnected ? 'Disconnect' : 'Connect';
+    dom.lanDot.classList.toggle('bg-green-500', state.controlConnected);
+    dom.lanDot.classList.toggle('bg-slate-600', !state.controlConnected);
+    dom.civDot.classList.toggle('bg-green-500', state.radioConnected);
+    dom.civDot.classList.toggle('bg-slate-600', !state.radioConnected);
+  }
+
+  function setActiveVfo(vfo, dispatch) {
+    const shouldDispatch = dispatch !== false;
+    state.activeVfo = vfo === 'B' ? 'B' : 'A';
+    dom.vfoASelect.className = state.activeVfo === 'A'
+      ? 'bg-vfo-a text-icom-dark px-2 py-0.5 rounded text-xs font-bold ring-1 ring-vfo-a'
+      : 'bg-vfo-a/70 text-icom-dark px-2 py-0.5 rounded text-xs font-bold';
+    dom.vfoBSelect.className = state.activeVfo === 'B'
+      ? 'bg-vfo-b text-icom-dark px-2 py-0.5 rounded text-xs font-bold ring-1 ring-vfo-b'
+      : 'bg-vfo-b/70 text-icom-dark px-2 py-0.5 rounded text-xs font-bold';
+    if (shouldDispatch) {
+      sendCommand('select_vfo', { vfo: state.activeVfo });
+    }
+  }
+
+  function updateFreqDisplays() {
+    dom.vfoAfreq.textContent = formatFreq(state.freqA);
+    dom.vfoBfreq.textContent = formatFreq(state.freqB);
+    updateBandButtons();
+  }
+
+  function updateModeDisplays() {
+    const modeText = state.mode + ' · ' + state.filter;
+    dom.vfoAmode.textContent = modeText;
+    dom.vfoBmode.textContent = modeText;
+
+    dom.modeGrid.querySelectorAll('[data-mode]').forEach(function (btn) {
+      if (btn.dataset.mode === state.mode) {
+        btn.className = 'active-toggle text-white py-2.5 rounded text-xs font-bold';
+      } else {
+        btn.className = 'bg-slate-800 hover:bg-slate-700 py-2.5 rounded text-xs font-bold transition';
+      }
+    });
+
+    dom.filterGrid.querySelectorAll('[data-filter]').forEach(function (btn) {
+      if (btn.dataset.filter === state.filter) {
+        btn.className = 'flex-1 bg-vfo-a/20 text-vfo-a border border-vfo-a/50 py-1.5 rounded text-xs font-bold';
+      } else {
+        btn.className = 'flex-1 bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-xs font-bold transition';
+      }
+    });
+
+    state.scope.axisDirty = true;
+    drawWaterfallOverlay();
+  }
+
+  function updateBandButtons() {
+    const hz = state.activeVfo === 'A' ? state.freqA : state.freqB;
+    const mhz = Math.floor(hz / 1000000);
+    dom.bandGrid.querySelectorAll('[data-band]').forEach(function (btn) {
+      const btnMhz = Math.floor(Number(btn.dataset.band) / 1000000);
+      if (btnMhz === mhz) {
+        btn.className = 'bg-vfo-a/20 border border-vfo-a/50 text-vfo-a py-2.5 rounded text-xs font-bold';
+      } else {
+        btn.className = 'bg-slate-800 hover:bg-slate-700 py-2.5 rounded text-xs font-bold transition';
+      }
+    });
+  }
+
+  function updateAttButtons() {
+    dom.attGrid.querySelectorAll('[data-att]').forEach(function (btn) {
+      if (Number(btn.dataset.att) === state.att) {
+        btn.className = 'flex-1 bg-vfo-a/20 text-vfo-a border border-vfo-a/50 py-1.5 rounded text-[10px] font-bold';
+      } else {
+        btn.className = 'flex-1 bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-[10px] font-bold transition';
+      }
+    });
+    const attOn = state.att > 0;
+    const badgeClassOn = 'text-[10px] px-1.5 py-0.5 bg-green-900/30 text-green-400 border border-green-800 rounded';
+    const badgeClassOff = 'text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded';
+    dom.attBadgeA.className = attOn ? badgeClassOn : badgeClassOff;
+    dom.attBadgeB.className = attOn ? badgeClassOn : badgeClassOff;
+    dom.attBadgeA.textContent = attOn ? 'ATT ' + state.att : 'ATT';
+    dom.attBadgeB.textContent = attOn ? 'ATT ' + state.att : 'ATT';
+  }
+
+  function updatePreButtons() {
+    dom.preGrid.querySelectorAll('[data-pre]').forEach(function (btn) {
+      if (Number(btn.dataset.pre) === state.preamp) {
+        btn.className = 'flex-1 bg-vfo-a/20 text-vfo-a border border-vfo-a/50 py-1.5 rounded text-[10px] font-bold';
+      } else {
+        btn.className = 'flex-1 bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-[10px] font-bold transition';
+      }
+    });
+    const preOn = state.preamp > 0;
+    const badgeClassOn = 'text-[10px] px-1.5 py-0.5 bg-green-900/30 text-green-400 border border-green-800 rounded';
+    const badgeClassOff = 'text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded';
+    dom.preBadgeA.className = preOn ? badgeClassOn : badgeClassOff;
+    dom.preBadgeB.className = preOn ? badgeClassOn : badgeClassOff;
+    dom.preBadgeA.textContent = preOn ? 'PRE ' + state.preamp : 'PRE';
+    dom.preBadgeB.textContent = preOn ? 'PRE ' + state.preamp : 'PRE';
+  }
+
+  function updatePttUi(pttOn) {
+    state.ptt = !!pttOn;
+    if (state.ptt) {
+      dom.pttBtn.classList.remove('bg-red-950/20', 'text-red-500');
+      dom.pttBtn.classList.add('bg-red-600', 'text-white', 'shadow-[0_0_30px_rgba(239,68,68,0.5)]');
+      dom.rxtxBadge.textContent = 'TX';
+      dom.rxtxBadge.classList.remove('bg-green-900/20', 'text-green-400', 'border-green-800');
+      dom.rxtxBadge.classList.add('bg-red-900/20', 'text-red-400', 'border-red-800');
+    } else {
+      dom.pttBtn.classList.add('bg-red-950/20', 'text-red-500');
+      dom.pttBtn.classList.remove('bg-red-600', 'text-white', 'shadow-[0_0_30px_rgba(239,68,68,0.5)]');
+      dom.rxtxBadge.textContent = 'RX';
+      dom.rxtxBadge.classList.add('bg-green-900/20', 'text-green-400', 'border-green-800');
+      dom.rxtxBadge.classList.remove('bg-red-900/20', 'text-red-400', 'border-red-800');
+    }
+  }
+
+  function scaleToPct(level) {
+    return Math.round((Number(level) / 255) * 100);
+  }
+
+  function updateSliderLabels() {
+    dom.afVal.textContent = scaleToPct(dom.afSlider.value) + '%';
+    dom.rfVal.textContent = scaleToPct(dom.rfSlider.value) + '%';
+    dom.sqlVal.textContent = dom.sqlSlider.value + '%';
+    dom.txPwrVal.innerHTML = String(dom.txPwrSlider.value) + '<span class="text-xs ml-1">/255</span>';
+  }
+
+  function scheduleSliderCommand(key, cmdName, value) {
+    const existing = state.sliderDebounce.get(key);
+    if (existing) {
+      clearTimeout(existing.timer);
+    }
+    const timer = setTimeout(function () {
+      sendCommand(cmdName, { level: value });
+      state.sliderDebounce.delete(key);
+    }, 100);
+    state.sliderDebounce.set(key, { timer: timer });
+  }
+
+  function applyStateSnapshot(data) {
+    if (!data || typeof data !== 'object') {
+      return;
+    }
+
+    if (typeof data.freq_a === 'number' && data.freq_a > 0) {
+      state.freqA = data.freq_a;
+    }
+    if (typeof data.freq_b === 'number' && data.freq_b > 0) {
+      state.freqB = data.freq_b;
+    }
+    if (typeof data.mode === 'string' && data.mode) {
+      state.mode = data.mode;
+    }
+    if (typeof data.filter === 'string' && data.filter) {
+      state.filter = data.filter;
+    }
+    if (typeof data.ptt === 'boolean') {
+      updatePttUi(data.ptt);
+    }
+    if (typeof data.power === 'number') {
+      state.power = clamp(Math.round(data.power), 0, 255);
+      dom.txPwrSlider.value = String(state.power);
+    }
+
+    if (data.scope && typeof data.scope === 'object') {
+      if (typeof data.scope.start_freq === 'number' && data.scope.start_freq > 0) {
+        state.scope.startFreq = data.scope.start_freq;
+      }
+      if (typeof data.scope.end_freq === 'number' && data.scope.end_freq > 0) {
+        state.scope.endFreq = data.scope.end_freq;
+      }
+      state.scope.axisDirty = true;
+    }
+
+    updateFreqDisplays();
+    updateModeDisplays();
+    updateSliderLabels();
+  }
+
+  function applyResponseResult(result) {
+    if (!result || typeof result !== 'object') {
+      return;
+    }
+    if (typeof result.freq === 'number') {
+      if (state.activeVfo === 'A') {
+        state.freqA = result.freq;
+      } else {
+        state.freqB = result.freq;
+      }
+      updateFreqDisplays();
+      drawWaterfallOverlay();
+    }
+    if (typeof result.mode === 'string') {
+      state.mode = result.mode;
+      updateModeDisplays();
+    }
+    if (typeof result.filter === 'string') {
+      state.filter = result.filter;
+      updateModeDisplays();
+    }
+    if (typeof result.db === 'number') {
+      state.att = result.db;
+      updateAttButtons();
+    }
+    if (result.vfo === 'A' || result.vfo === 'B') {
+      setActiveVfo(result.vfo, false);
+    }
+  }
+
+  function handleControlMessage(msg) {
+    if (!msg || typeof msg !== 'object') {
+      return;
+    }
+
+    if (msg.type === 'hello') {
+      if (typeof msg.radio === 'string' && msg.radio) {
+        dom.radioModel.textContent = msg.radio;
+      }
+      state.radioConnected = !!msg.connected;
+      state.reconnecting = false;
+      setStatusVisual();
+      sendControl({ type: 'subscribe', streams: ['state', 'events'] });
+      connectMeters();
+      connectScope();
+      if (state.audio.rxEnabled || state.audio.txEnabled) {
+        connectAudio();
+      }
+      return;
+    }
+
+    if (msg.type === 'state') {
+      applyStateSnapshot(msg.data);
+      return;
+    }
+
+    if (msg.type === 'event') {
+      const eventName = msg.event || msg.name;
+      if (eventName === 'connection_state') {
+        state.radioConnected = !!msg.connected;
+        setStatusVisual();
+        return;
+      }
+      if (eventName === 'freq_changed' && msg.data && typeof msg.data.freq === 'number') {
+        const changedVfo = msg.data.vfo === 'B' ? 'B' : 'A';
+        if (changedVfo === 'A') {
+          state.freqA = msg.data.freq;
+        } else {
+          state.freqB = msg.data.freq;
+        }
+        updateFreqDisplays();
+        drawWaterfallOverlay();
+        return;
+      }
+      if (eventName === 'ptt' && msg.data && typeof msg.data.state === 'boolean') {
+        updatePttUi(msg.data.state);
+      }
+      return;
+    }
+
+    if (msg.type === 'response') {
+      if (!msg.ok) {
+        console.warn('command failed', msg.error, msg.message);
+        if (msg.id && String(msg.id).startsWith('radio-')) {
+          setStatusVisual();
+        }
+        return;
+      }
+      applyResponseResult(msg.result);
+    }
+  }
+
+  function closeSocket(name) {
+    const ws = state.ws[name];
+    if (!ws) {
+      return;
+    }
+    ws.onopen = null;
+    ws.onmessage = null;
+    ws.onclose = null;
+    ws.onerror = null;
+    try {
+      ws.close();
+    } catch (err) {
+      console.debug('closeSocket', name, err);
+    }
+    state.ws[name] = null;
+  }
+
+  function connectControl() {
+    if (state.ws.control && state.ws.control.readyState <= WebSocket.OPEN) {
+      return;
+    }
+
+    closeSocket('control');
+    state.reconnecting = true;
+    setStatusVisual();
+
+    const ws = new WebSocket(wsUrl(CONTROL_PATH));
+    state.ws.control = ws;
+
+    ws.onopen = function () {
+      state.controlConnected = true;
+      state.reconnecting = false;
+      state.backoff.control = BACKOFF_MIN;
+      setStatusVisual();
+    };
+
+    ws.onmessage = function (ev) {
+      try {
+        handleControlMessage(JSON.parse(ev.data));
+      } catch (err) {
+        console.warn('control parse error', err);
+      }
+    };
+
+    ws.onerror = function () {
+      ws.close();
+    };
+
+    ws.onclose = function () {
+      state.controlConnected = false;
+      state.radioConnected = false;
+      state.reconnecting = true;
+      setStatusVisual();
+      closeSocket('scope');
+      closeSocket('meters');
+      if (!state.audio.rxEnabled && !state.audio.txEnabled) {
+        closeSocket('audio');
+      }
+      const delay = state.backoff.control;
+      state.backoff.control = Math.min(Math.floor(state.backoff.control * 1.7), BACKOFF_MAX);
+      window.setTimeout(connectControl, delay);
+    };
+  }
+
+  function connectMeters() {
+    if (state.ws.meters && state.ws.meters.readyState <= WebSocket.OPEN) {
+      return;
+    }
+
+    closeSocket('meters');
+    const ws = new WebSocket(wsUrl(METERS_PATH));
+    ws.binaryType = 'arraybuffer';
+    state.ws.meters = ws;
+
+    ws.onopen = function () {
+      state.backoff.meters = BACKOFF_MIN;
+      ws.send(JSON.stringify({
+        type: 'meters_start',
+        meters: ['smeter', 'power', 'swr', 'alc'],
+        fps: 10,
+      }));
+    };
+
+    ws.onmessage = function (ev) {
+      if (!(ev.data instanceof ArrayBuffer)) {
+        return;
+      }
+      parseMeterFrame(ev.data);
+    };
+
+    ws.onerror = function () {
+      ws.close();
+    };
+
+    ws.onclose = function () {
+      state.ws.meters = null;
+      if (!state.controlConnected && !state.reconnecting) {
+        return;
+      }
+      const delay = state.backoff.meters;
+      state.backoff.meters = Math.min(Math.floor(state.backoff.meters * 1.7), BACKOFF_MAX);
+      window.setTimeout(connectMeters, delay);
+    };
+  }
+
+  function parseMeterFrame(buffer) {
+    const view = new DataView(buffer);
+    if (view.byteLength < 4 || view.getUint8(0) !== 0x20) {
+      return;
+    }
+    const count = view.getUint8(3);
+    for (let i = 0; i < count; i += 1) {
+      const offset = 4 + i * 3;
+      if (offset + 2 >= view.byteLength) {
+        break;
+      }
+      const meterId = view.getUint8(offset);
+      const value = view.getUint8(offset + 1) | (view.getUint8(offset + 2) << 8);
+      handleMeter(meterId, value);
+    }
+  }
+
+  function handleMeter(id, value) {
+    const raw = clamp(value, 0, 255);
+    if (id === METER_IDS.SMETER_MAIN) {
+      updateSmeter('A', raw);
+      return;
+    }
+    if (id === METER_IDS.SMETER_SUB) {
+      updateSmeter('B', raw);
+      return;
+    }
+    if (id === METER_IDS.POWER) {
+      dom.pwrBar.style.width = Math.round((raw / 255) * 100) + '%';
+      dom.pwrVal.textContent = Math.round((raw / 255) * 100) + 'W';
+      return;
+    }
+    if (id === METER_IDS.SWR) {
+      const swr = raw < 3 ? 1.0 : (1 + raw / 64);
+      dom.swrBar.style.width = Math.round((raw / 255) * 100) + '%';
+      dom.swrVal.textContent = swr.toFixed(1);
+      dom.swrBar.classList.remove('bg-green-400', 'bg-yellow-500', 'bg-red-500');
+      dom.swrBar.classList.add(swr < 2.0 ? 'bg-green-400' : (swr < 3.0 ? 'bg-yellow-500' : 'bg-red-500'));
+      return;
+    }
+    if (id === METER_IDS.ALC) {
+      dom.alcBar.style.width = Math.round((raw / 255) * 100) + '%';
+      dom.alcVal.textContent = Math.round((raw / 255) * 100) + '%';
+      return;
+    }
+    if (id === METER_IDS.ID_DRAIN) {
+      dom.idBar.style.width = Math.round((raw / 255) * 100) + '%';
+      dom.idVal.textContent = ((raw / 255) * 25).toFixed(1) + 'A';
+      return;
+    }
+    if (id === METER_IDS.TEMP) {
+      dom.tempBar.style.width = Math.round((raw / 255) * 100) + '%';
+      dom.tempVal.textContent = Math.round((raw / 255) * 100) + '°';
+      dom.tempStatus.textContent = 'TEMP: ' + dom.tempVal.textContent;
+    }
+  }
+
+  function updateSmeter(vfo, raw) {
+    const threshold = 120;
+    const max = 255;
+    const greenPct = Math.round((Math.min(raw, threshold) / threshold) * 60);
+    const redPct = raw > threshold
+      ? Math.round(((raw - threshold) / (max - threshold)) * 40)
+      : 0;
+    const sLabel = raw <= threshold
+      ? 'S' + String(clamp(Math.round((raw / threshold) * 9), 0, 9))
+      : 'S9+' + String(Math.round(((raw - threshold) / (max - threshold)) * 60 / 10) * 10);
+
+    if (vfo === 'A') {
+      dom.smeterA.style.width = greenPct + '%';
+      dom.smeterAred.style.width = redPct + '%';
+      dom.smeterAval.textContent = sLabel;
+      dom.smeterAval.className = raw > threshold
+        ? 'text-[10px] text-meter-red font-bold font-digital'
+        : 'text-[10px] text-meter-green font-bold font-digital';
+    } else {
+      dom.smeterB.style.width = greenPct + '%';
+      dom.smeterBred.style.width = redPct + '%';
+      if (raw > threshold) {
+        dom.smeterBval.innerHTML = '<span class="text-meter-green">S9</span><span class="text-meter-red">+' + String(Math.round(((raw - threshold) / (max - threshold)) * 60 / 10) * 10) + '</span>';
+      } else {
+        dom.smeterBval.textContent = sLabel;
+        dom.smeterBval.className = 'text-[10px] font-bold font-digital text-meter-green';
+      }
+    }
+  }
+
+  function connectScope() {
+    if (state.ws.scope && state.ws.scope.readyState <= WebSocket.OPEN) {
+      return;
+    }
+
+    closeSocket('scope');
+    const ws = new WebSocket(wsUrl(SCOPE_PATH));
+    ws.binaryType = 'arraybuffer';
+    state.ws.scope = ws;
+
+    ws.onopen = function () {
+      state.backoff.scope = BACKOFF_MIN;
+    };
+
+    ws.onmessage = function (ev) {
+      if (ev.data instanceof ArrayBuffer) {
+        state.scope.lastBuffer = ev.data;
+      }
+    };
+
+    ws.onerror = function () {
+      ws.close();
+    };
+
+    ws.onclose = function () {
+      state.ws.scope = null;
+      if (!state.controlConnected && !state.reconnecting) {
+        return;
+      }
+      const delay = state.backoff.scope;
+      state.backoff.scope = Math.min(Math.floor(state.backoff.scope * 1.7), BACKOFF_MAX);
+      window.setTimeout(connectScope, delay);
+    };
+  }
+
+  function resizeScopeCanvases() {
+    const specCanvas = dom.specCanvas;
+    const wfCanvas = dom.wfCanvas;
+    const wfOverlay = dom.wfOverlayCanvas;
+    const specRect = specCanvas.getBoundingClientRect();
+    const wfRect = wfCanvas.getBoundingClientRect();
+
+    state.scope.specDpr = window.devicePixelRatio || 1;
+    state.scope.specWidth = Math.max(1, Math.floor(specRect.width));
+    state.scope.specHeight = Math.max(1, Math.floor(specRect.height));
+    specCanvas.width = Math.floor(state.scope.specWidth * state.scope.specDpr);
+    specCanvas.height = Math.floor(state.scope.specHeight * state.scope.specDpr);
+    state.scope.specCtx = specCanvas.getContext('2d');
+
+    state.scope.wfWidth = Math.max(1, Math.floor(wfRect.width));
+    state.scope.wfHeight = Math.max(1, Math.floor(wfRect.height));
+    wfCanvas.width = state.scope.wfWidth;
+    wfCanvas.height = state.scope.wfHeight;
+    wfOverlay.width = state.scope.wfWidth;
+    wfOverlay.height = state.scope.wfHeight;
+    state.scope.wfCtx = wfCanvas.getContext('2d');
+    state.scope.wfOverlayCtx = wfOverlay.getContext('2d');
+
+    state.scope.wfLine = state.scope.wfCtx.createImageData(state.scope.wfWidth, 1);
+    state.scope.wfLineData = state.scope.wfLine.data;
+    state.scope.wfCtx.fillStyle = '#000';
+    state.scope.wfCtx.fillRect(0, 0, state.scope.wfWidth, state.scope.wfHeight);
+    state.scope.axisDirty = true;
+    updateFreqAxis();
+    drawWaterfallOverlay();
+  }
+
+  function updateFreqAxis() {
+    const start = state.scope.startFreq;
+    const end = state.scope.endFreq;
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) {
+      return;
+    }
+
+    dom.freqAxis.innerHTML = '';
+    const span = end - start;
+    const steps = 8;
+    for (let i = 0; i <= steps; i += 1) {
+      const hz = start + Math.round((i / steps) * span);
+      const label = document.createElement('span');
+      label.textContent = (hz / 1000000).toFixed(3);
+      dom.freqAxis.appendChild(label);
+    }
+    state.scope.axisDirty = false;
+  }
+
+  function parseScopeBuffer(buffer) {
+    const view = new DataView(buffer);
+    if (view.byteLength < 16 || view.getUint8(0) !== 0x01) {
+      return null;
+    }
+
+    const receiver = view.getUint8(1);
+    const startFreq = view.getUint32(3, true);
+    const endFreq = view.getUint32(7, true);
+    const pixelCount = view.getUint16(14, true);
+
+    if (16 + pixelCount > view.byteLength) {
+      return null;
+    }
+
+    return {
+      receiver: receiver,
+      startFreq: startFreq,
+      endFreq: endFreq,
+      pixels: new Uint8Array(buffer, 16, pixelCount),
+    };
+  }
+
+  function spectrumXForFreq(freq, width) {
+    const span = state.scope.endFreq - state.scope.startFreq;
+    if (span <= 0) {
+      return null;
+    }
+    return ((freq - state.scope.startFreq) / span) * width;
+  }
+
+  function passbandCoords(width) {
+    const mode = PASSBAND[state.mode] ? state.mode : 'USB';
+    const filter = state.filter in PASSBAND[mode] ? state.filter : 'FIL1';
+    const offsets = PASSBAND[mode][filter];
+    const freq = state.activeVfo === 'A' ? state.freqA : state.freqB;
+    const xCenter = spectrumXForFreq(freq, width);
+    const x1 = spectrumXForFreq(freq + offsets[0], width);
+    const x2 = spectrumXForFreq(freq + offsets[1], width);
+    if (xCenter == null || x1 == null || x2 == null) {
+      return null;
+    }
+    return {
+      xCenter: xCenter,
+      left: Math.min(x1, x2),
+      right: Math.max(x1, x2),
+    };
+  }
+
+  function drawSpectrum(pixels) {
+    const ctx = state.scope.specCtx;
+    if (!ctx) {
+      return;
+    }
+
+    const w = state.scope.specWidth;
+    const h = state.scope.specHeight;
+    const dpr = state.scope.specDpr;
+    const n = pixels.length;
+    if (!n || w <= 0 || h <= 0) {
+      return;
+    }
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    ctx.lineWidth = 0.6;
+    for (let i = 0; i <= 5; i += 1) {
+      const y = (i / 5) * h;
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(w, y);
+      ctx.stroke();
+    }
+    for (let i = 0; i <= 10; i += 1) {
+      const x = (i / 10) * w;
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, h);
+      ctx.stroke();
+    }
+
+    const yPoints = new Float32Array(w);
+    for (let x = 0; x < w; x += 1) {
+      const idx = Math.min(n - 1, Math.floor((x / w) * n));
+      const amp = clamp(pixels[idx], 0, 160) / 160;
+      yPoints[x] = h * (1 - amp);
+    }
+
+    const grad = ctx.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, 'rgba(30,58,138,0.30)');
+    grad.addColorStop(1, 'rgba(30,58,138,0.02)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(0, h);
+    for (let x = 0; x < w; x += 1) {
+      ctx.lineTo(x, yPoints[x]);
+    }
+    ctx.lineTo(w, h);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(210,220,230,0.85)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    for (let x = 0; x < w; x += 1) {
+      if (x === 0) {
+        ctx.moveTo(0, yPoints[x]);
+      } else {
+        ctx.lineTo(x, yPoints[x]);
+      }
+    }
+    ctx.stroke();
+
+    const overlay = passbandCoords(w);
+    if (overlay) {
+      const left = clamp(overlay.left, 0, w);
+      const right = clamp(overlay.right, 0, w);
+      const width = Math.max(0, right - left);
+
+      ctx.fillStyle = 'rgba(0, 242, 255, 0.06)';
+      ctx.fillRect(left, 0, width, h);
+
+      ctx.strokeStyle = 'rgba(0, 242, 255, 0.28)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 3]);
+      ctx.beginPath();
+      ctx.moveTo(left, 0);
+      ctx.lineTo(left, h);
+      ctx.moveTo(right, 0);
+      ctx.lineTo(right, h);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      const cx = clamp(overlay.xCenter, 0, w);
+      ctx.strokeStyle = 'rgba(239, 68, 68, 0.75)';
+      ctx.beginPath();
+      ctx.moveTo(cx, 0);
+      ctx.lineTo(cx, h);
+      ctx.stroke();
+    }
+  }
+
+  function drawWaterfallLine(pixels) {
+    const ctx = state.scope.wfCtx;
+    if (!ctx || !state.scope.wfLine || !state.scope.wfLineData) {
+      return;
+    }
+
+    const w = state.scope.wfWidth;
+    const h = state.scope.wfHeight;
+    const n = pixels.length;
+    if (!n || w <= 0 || h <= 0) {
+      return;
+    }
+
+    ctx.drawImage(dom.wfCanvas, 0, 0, w, h - 1, 0, 1, w, h - 1);
+
+    const data = state.scope.wfLineData;
+    for (let x = 0; x < w; x += 1) {
+      const p = pixels[Math.min(n - 1, Math.floor((x / w) * n))];
+      const v = Math.min(255, Math.floor((clamp(p, 0, 160) / 160) * 255));
+      const lut = v * 3;
+      const idx = x * 4;
+      data[idx] = WF_LUT[lut];
+      data[idx + 1] = WF_LUT[lut + 1];
+      data[idx + 2] = WF_LUT[lut + 2];
+      data[idx + 3] = 255;
+    }
+    ctx.putImageData(state.scope.wfLine, 0, 0);
+  }
+
+  function drawWaterfallOverlay() {
+    const ctx = state.scope.wfOverlayCtx;
+    if (!ctx) {
+      return;
+    }
+
+    const w = state.scope.wfWidth;
+    const h = state.scope.wfHeight;
+    ctx.clearRect(0, 0, w, h);
+
+    const overlay = passbandCoords(w);
+    if (!overlay) {
+      return;
+    }
+
+    const left = clamp(overlay.left, 0, w);
+    const right = clamp(overlay.right, 0, w);
+    const width = Math.max(0, right - left);
+
+    ctx.fillStyle = 'rgba(0, 242, 255, 0.07)';
+    ctx.fillRect(left, 0, width, h);
+
+    ctx.strokeStyle = 'rgba(0, 242, 255, 0.22)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 3]);
+    ctx.beginPath();
+    ctx.moveTo(left, 0);
+    ctx.lineTo(left, h);
+    ctx.moveTo(right, 0);
+    ctx.lineTo(right, h);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    const cx = clamp(overlay.xCenter, 0, w);
+    ctx.strokeStyle = 'rgba(239, 68, 68, 0.45)';
+    ctx.beginPath();
+    ctx.moveTo(cx, 0);
+    ctx.lineTo(cx, h);
+    ctx.stroke();
+  }
+
+  function connectAudio() {
+    if (!(state.audio.rxEnabled || state.audio.txEnabled)) {
+      return;
+    }
+
+    if (state.ws.audio && state.ws.audio.readyState <= WebSocket.OPEN) {
+      return;
+    }
+
+    closeSocket('audio');
+    const ws = new WebSocket(wsUrl(AUDIO_PATH));
+    ws.binaryType = 'arraybuffer';
+    state.ws.audio = ws;
+
+    ws.onopen = function () {
+      state.backoff.audio = BACKOFF_MIN;
+      if (state.audio.rxEnabled) {
+        ws.send(JSON.stringify({ type: 'audio_start', direction: 'rx' }));
+      }
+      if (state.audio.txEnabled) {
+        ws.send(JSON.stringify({ type: 'audio_start', direction: 'tx' }));
+      }
+      updateAudioUi();
+    };
+
+    ws.onmessage = function (ev) {
+      if (ev.data instanceof ArrayBuffer) {
+        handleAudioFrame(ev.data);
+      }
+    };
+
+    ws.onerror = function () {
+      ws.close();
+    };
+
+    ws.onclose = function () {
+      state.ws.audio = null;
+      updateAudioUi();
+      if (!(state.audio.rxEnabled || state.audio.txEnabled)) {
+        return;
+      }
+      const delay = state.backoff.audio;
+      state.backoff.audio = Math.min(Math.floor(state.backoff.audio * 1.7), BACKOFF_MAX);
+      window.setTimeout(connectAudio, delay);
+    };
+  }
+
+  function ensureAudioContext() {
+    if (state.audio.context) {
+      return state.audio.context;
+    }
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) {
+      return null;
+    }
+    const ctx = new Ctx({ sampleRate: 48000 });
+    const gain = ctx.createGain();
+    gain.gain.value = 1.0;
+    gain.connect(ctx.destination);
+    state.audio.context = ctx;
+    state.audio.gain = gain;
+    return ctx;
+  }
+
+  function scheduleAudioBuffer(buffer) {
+    const ctx = state.audio.context;
+    if (!ctx || !state.audio.gain) {
+      return;
+    }
+
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(state.audio.gain);
+
+    const now = ctx.currentTime;
+    if (state.audio.nextPlayTime < now + 0.01) {
+      state.audio.nextPlayTime = now + 0.08;
+    }
+    source.start(state.audio.nextPlayTime);
+    state.audio.nextPlayTime += buffer.duration;
+  }
+
+  function playPcm16(payload, sampleRate, channels) {
+    const ctx = ensureAudioContext();
+    if (!ctx || !state.audio.rxEnabled) {
+      return;
+    }
+
+    const ch = channels === 2 ? 2 : 1;
+    const frameCount = Math.floor(payload.byteLength / (2 * ch));
+    if (frameCount <= 0) {
+      return;
+    }
+
+    const int16 = new Int16Array(payload.buffer, payload.byteOffset, frameCount * ch);
+    const audioBuffer = ctx.createBuffer(ch, frameCount, sampleRate > 0 ? sampleRate : 48000);
+    for (let c = 0; c < ch; c += 1) {
+      const channel = audioBuffer.getChannelData(c);
+      for (let i = 0; i < frameCount; i += 1) {
+        channel[i] = int16[i * ch + c] / 32768.0;
+      }
+    }
+    scheduleAudioBuffer(audioBuffer);
+  }
+
+  function ensureOpusDecoder(sampleRate, channels) {
+    if (state.audio.decoder || typeof AudioDecoder === 'undefined') {
+      return state.audio.decoder;
+    }
+    const ctx = ensureAudioContext();
+    if (!ctx) {
+      return null;
+    }
+
+    state.audio.opusTsUs = 0;
+    state.audio.decoder = new AudioDecoder({
+      output: function (audioData) {
+        const ch = audioData.numberOfChannels;
+        const frames = audioData.numberOfFrames;
+        const audioBuffer = ctx.createBuffer(ch, frames, audioData.sampleRate);
+        for (let c = 0; c < ch; c += 1) {
+          const channel = audioBuffer.getChannelData(c);
+          audioData.copyTo(channel, { planeIndex: c, format: 'f32-planar' });
+        }
+        scheduleAudioBuffer(audioBuffer);
+        audioData.close();
+      },
+      error: function (err) {
+        console.warn('AudioDecoder', err);
+      },
+    });
+
+    state.audio.decoder.configure({
+      codec: 'opus',
+      sampleRate: sampleRate > 0 ? sampleRate : 48000,
+      numberOfChannels: channels === 2 ? 2 : 1,
+    });
+
+    return state.audio.decoder;
+  }
+
+  function decodeOpus(payload, sampleRate, channels) {
+    if (!state.audio.rxEnabled) {
+      return;
+    }
+    const decoder = ensureOpusDecoder(sampleRate, channels);
+    if (!decoder) {
+      dom.rxAudioStatus.textContent = 'RX AUDIO: Opus unsupported';
+      return;
+    }
+
+    try {
+      decoder.decode(new EncodedAudioChunk({
+        type: 'key',
+        timestamp: state.audio.opusTsUs,
+        data: payload,
+      }));
+      state.audio.opusTsUs += 20000;
+    } catch (err) {
+      console.warn('decodeOpus', err);
+    }
+  }
+
+  function handleAudioFrame(buffer) {
+    const view = new DataView(buffer);
+    if (view.byteLength < 8) {
+      return;
+    }
+    const msgType = view.getUint8(0);
+    if (msgType !== 0x10) {
+      return;
+    }
+
+    const codec = view.getUint8(1);
+    const sampleRate = view.getUint16(4, true) * 100;
+    const channels = view.getUint8(6);
+    const payload = new Uint8Array(buffer, 8);
+
+    if (codec === 0x02) {
+      playPcm16(payload, sampleRate, channels);
+    } else if (codec === 0x01) {
+      decodeOpus(payload, sampleRate, channels);
+    }
+  }
+
+  function stopAudioWsIfIdle() {
+    if (state.audio.rxEnabled || state.audio.txEnabled) {
+      return;
+    }
+    closeSocket('audio');
+    if (state.audio.decoder) {
+      try {
+        state.audio.decoder.close();
+      } catch (err) {
+        console.debug('audio decoder close', err);
+      }
+      state.audio.decoder = null;
+    }
+    state.audio.nextPlayTime = 0;
+    state.audio.opusTsUs = 0;
+  }
+
+  function updateAudioUi() {
+    const wsOpen = state.ws.audio && state.ws.audio.readyState === WebSocket.OPEN;
+    const active = state.audio.rxEnabled || state.audio.txEnabled;
+    dom.audioDot.classList.toggle('bg-green-500', wsOpen && active);
+    dom.audioDot.classList.toggle('bg-slate-600', !(wsOpen && active));
+
+    dom.rxAudioBtn.className = state.audio.rxEnabled
+      ? 'flex-1 px-4 py-2.5 rounded-lg bg-green-700 border border-green-500 text-white font-bold text-xs transition'
+      : 'flex-1 px-4 py-2.5 rounded-lg bg-green-900/30 border border-green-700 text-green-400 font-bold text-xs hover:bg-green-900/50 transition';
+    dom.rxAudioBtn.textContent = state.audio.rxEnabled ? 'RX AUDIO ON' : 'RX AUDIO';
+
+    dom.moniBtn.className = state.audio.txEnabled
+      ? 'px-4 py-2.5 rounded-lg bg-amber-700 text-white text-xs font-bold transition'
+      : 'px-4 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold transition';
+    dom.moniBtn.textContent = state.audio.txEnabled ? 'TX MIC ON' : 'TX MIC';
+
+    if (!state.audio.rxEnabled) {
+      dom.rxAudioStatus.textContent = 'RX AUDIO: OFF';
+    } else if (wsOpen) {
+      dom.rxAudioStatus.textContent = 'RX AUDIO: STREAMING';
+    } else {
+      dom.rxAudioStatus.textContent = 'RX AUDIO: CONNECTING';
+    }
+  }
+
+  async function toggleRxAudio() {
+    if (!state.audio.rxEnabled) {
+      const ctx = ensureAudioContext();
+      if (!ctx) {
+        dom.rxAudioStatus.textContent = 'RX AUDIO: UNSUPPORTED';
+        return;
+      }
+      if (ctx.state === 'suspended') {
+        await ctx.resume();
+      }
+      state.audio.rxEnabled = true;
+      connectAudio();
+      if (state.ws.audio && state.ws.audio.readyState === WebSocket.OPEN) {
+        state.ws.audio.send(JSON.stringify({ type: 'audio_start', direction: 'rx' }));
+      }
+    } else {
+      state.audio.rxEnabled = false;
+      if (state.ws.audio && state.ws.audio.readyState === WebSocket.OPEN) {
+        state.ws.audio.send(JSON.stringify({ type: 'audio_stop', direction: 'rx' }));
+      }
+      stopAudioWsIfIdle();
+    }
+    updateAudioUi();
+  }
+
+  async function startTxMic() {
+    if (state.audio.txEnabled) {
+      return;
+    }
+    if (typeof AudioEncoder === 'undefined' || typeof MediaStreamTrackProcessor === 'undefined') {
+      dom.rxAudioStatus.textContent = 'TX MIC: WebCodecs required';
+      return;
+    }
+    try {
+      state.audio.txStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          channelCount: 1,
+          sampleRate: 48000,
+          echoCancellation: true,
+          noiseSuppression: true,
+        },
+      });
+    } catch (err) {
+      console.warn('getUserMedia', err);
+      dom.rxAudioStatus.textContent = 'TX MIC: permission denied';
+      return;
+    }
+
+    state.audio.txEnabled = true;
+    connectAudio();
+
+    const track = state.audio.txStream.getAudioTracks()[0];
+    const processor = new MediaStreamTrackProcessor({ track: track });
+    state.audio.txReader = processor.readable.getReader();
+    state.audio.txEncoder = new AudioEncoder({
+      output: function (chunk) {
+        const payload = new Uint8Array(chunk.byteLength);
+        chunk.copyTo(payload);
+
+        const frame = new Uint8Array(8 + payload.length);
+        const view = new DataView(frame.buffer);
+        view.setUint8(0, 0x11);
+        view.setUint8(1, 0x01);
+        view.setUint16(2, state.audio.txSeq & 0xFFFF, true);
+        view.setUint16(4, 480, true);
+        view.setUint8(6, 1);
+        view.setUint8(7, 20);
+        frame.set(payload, 8);
+
+        state.audio.txSeq = (state.audio.txSeq + 1) & 0xFFFF;
+        if (state.ws.audio && state.ws.audio.readyState === WebSocket.OPEN) {
+          state.ws.audio.send(frame);
+        }
+      },
+      error: function (err) {
+        console.warn('AudioEncoder', err);
+      },
+    });
+    state.audio.txEncoder.configure({
+      codec: 'opus',
+      sampleRate: 48000,
+      numberOfChannels: 1,
+      bitrate: 32000,
+    });
+
+    if (state.ws.audio && state.ws.audio.readyState === WebSocket.OPEN) {
+      state.ws.audio.send(JSON.stringify({ type: 'audio_start', direction: 'tx' }));
+    }
+
+    (async function () {
+      while (state.audio.txEnabled && state.audio.txReader) {
+        let result;
+        try {
+          result = await state.audio.txReader.read();
+        } catch (err) {
+          break;
+        }
+        if (!result || result.done) {
+          break;
+        }
+        if (state.audio.txEncoder) {
+          state.audio.txEncoder.encode(result.value);
+        }
+        result.value.close();
+      }
+    }());
+
+    updateAudioUi();
+  }
+
+  function stopTxMic() {
+    if (!state.audio.txEnabled) {
+      return;
+    }
+
+    state.audio.txEnabled = false;
+
+    if (state.ws.audio && state.ws.audio.readyState === WebSocket.OPEN) {
+      state.ws.audio.send(JSON.stringify({ type: 'audio_stop', direction: 'tx' }));
+    }
+
+    if (state.audio.txReader) {
+      try {
+        state.audio.txReader.cancel();
+      } catch (err) {
+        console.debug('txReader cancel', err);
+      }
+      state.audio.txReader = null;
+    }
+
+    if (state.audio.txEncoder) {
+      try {
+        state.audio.txEncoder.close();
+      } catch (err) {
+        console.debug('txEncoder close', err);
+      }
+      state.audio.txEncoder = null;
+    }
+
+    if (state.audio.txStream) {
+      state.audio.txStream.getTracks().forEach(function (track) {
+        track.stop();
+      });
+      state.audio.txStream = null;
+    }
+
+    stopAudioWsIfIdle();
+    updateAudioUi();
+  }
+
+  async function toggleTxMic() {
+    if (state.audio.txEnabled) {
+      stopTxMic();
+    } else {
+      await startTxMic();
+    }
+  }
+
+  function toggleRadioConnection() {
+    if (!state.controlConnected) {
+      connectControl();
+      return;
+    }
+    if (state.radioConnected) {
+      sendControl({ type: 'radio_disconnect', id: nextCmdId('radio') });
+    } else {
+      sendControl({ type: 'radio_connect', id: nextCmdId('radio') });
+    }
+  }
+
+  function sendPtt(stateOn) {
+    updatePttUi(stateOn);
+    sendCommand('ptt', { state: stateOn });
+  }
+
+  function bindEvents() {
+    dom.connBtn.addEventListener('click', toggleRadioConnection);
+
+    dom.vfoASelect.addEventListener('click', function () {
+      setActiveVfo('A', true);
+    });
+    dom.vfoBSelect.addEventListener('click', function () {
+      setActiveVfo('B', true);
+    });
+
+    dom.vfoSwapBtn.addEventListener('click', function () {
+      sendCommand('vfo_swap', {});
+    });
+
+    dom.bandGrid.addEventListener('click', function (ev) {
+      const btn = ev.target.closest('[data-band]');
+      if (!btn) {
+        return;
+      }
+      const freq = Number(btn.dataset.band);
+      if (!Number.isFinite(freq)) {
+        return;
+      }
+      sendCommand('set_freq', { freq: Math.round(freq) });
+      if (state.activeVfo === 'A') {
+        state.freqA = Math.round(freq);
+      } else {
+        state.freqB = Math.round(freq);
+      }
+      updateFreqDisplays();
+      drawWaterfallOverlay();
+    });
+
+    dom.modeGrid.addEventListener('click', function (ev) {
+      const btn = ev.target.closest('[data-mode]');
+      if (!btn) {
+        return;
+      }
+      state.mode = btn.dataset.mode;
+      updateModeDisplays();
+      sendCommand('set_mode', { mode: state.mode });
+    });
+
+    dom.filterGrid.addEventListener('click', function (ev) {
+      const btn = ev.target.closest('[data-filter]');
+      if (!btn) {
+        return;
+      }
+      state.filter = btn.dataset.filter;
+      updateModeDisplays();
+      sendCommand('set_filter', { filter: state.filter });
+    });
+
+    dom.attGrid.addEventListener('click', function (ev) {
+      const btn = ev.target.closest('[data-att]');
+      if (!btn) {
+        return;
+      }
+      state.att = Number(btn.dataset.att);
+      updateAttButtons();
+      sendCommand('set_att', { db: state.att });
+    });
+
+    dom.preGrid.addEventListener('click', function (ev) {
+      const btn = ev.target.closest('[data-pre]');
+      if (!btn) {
+        return;
+      }
+      state.preamp = Number(btn.dataset.pre);
+      updatePreButtons();
+      sendCommand('set_preamp', { level: state.preamp });
+    });
+
+    dom.afSlider.addEventListener('input', function () {
+      updateSliderLabels();
+      scheduleSliderCommand('af', 'set_af_level', Number(dom.afSlider.value));
+    });
+    dom.rfSlider.addEventListener('input', function () {
+      updateSliderLabels();
+      scheduleSliderCommand('rf', 'set_rf_gain', Number(dom.rfSlider.value));
+    });
+    dom.txPwrSlider.addEventListener('input', function () {
+      updateSliderLabels();
+      scheduleSliderCommand('pwr', 'set_power', Number(dom.txPwrSlider.value));
+    });
+    dom.sqlSlider.addEventListener('input', function () {
+      updateSliderLabels();
+    });
+
+    dom.afSlider.addEventListener('change', function () {
+      sendCommand('set_af_level', { level: Number(dom.afSlider.value) });
+    });
+    dom.rfSlider.addEventListener('change', function () {
+      sendCommand('set_rf_gain', { level: Number(dom.rfSlider.value) });
+    });
+    dom.txPwrSlider.addEventListener('change', function () {
+      sendCommand('set_power', { level: Number(dom.txPwrSlider.value) });
+    });
+
+    dom.pttBtn.addEventListener('mousedown', function () {
+      sendPtt(true);
+    });
+    window.addEventListener('mouseup', function () {
+      if (state.ptt) {
+        sendPtt(false);
+      }
+    });
+
+    dom.pttBtn.addEventListener('touchstart', function (ev) {
+      ev.preventDefault();
+      state.touchPttActive = true;
+      sendPtt(true);
+    }, { passive: false });
+
+    window.addEventListener('touchend', function () {
+      if (state.touchPttActive || state.ptt) {
+        state.touchPttActive = false;
+        sendPtt(false);
+      }
+    });
+
+    dom.rxAudioBtn.addEventListener('click', function () {
+      toggleRxAudio();
+    });
+
+    dom.moniBtn.addEventListener('click', function () {
+      toggleTxMic();
+    });
+
+    [dom.spectrumContainer, dom.waterfallContainer].forEach(function (container) {
+      container.addEventListener('click', function (ev) {
+        const start = state.scope.startFreq;
+        const end = state.scope.endFreq;
+        const span = end - start;
+        if (span <= 0) {
+          return;
+        }
+        const rect = container.getBoundingClientRect();
+        const ratio = clamp((ev.clientX - rect.left) / rect.width, 0, 1);
+        const hz = Math.round((start + ratio * span) / 100) * 100;
+        sendCommand('set_freq', { freq: hz });
+        if (state.activeVfo === 'A') {
+          state.freqA = hz;
+        } else {
+          state.freqB = hz;
+        }
+        updateFreqDisplays();
+        drawWaterfallOverlay();
+      });
+
+      container.addEventListener('wheel', function (ev) {
+        ev.preventDefault();
+        const step = ev.shiftKey ? 1000 : 100;
+        const delta = ev.deltaY < 0 ? step : -step;
+        if (state.activeVfo === 'A') {
+          state.freqA = clamp(state.freqA + delta, 30000, 60000000);
+          sendCommand('set_freq', { freq: state.freqA });
+        } else {
+          state.freqB = clamp(state.freqB + delta, 30000, 60000000);
+          sendCommand('set_freq', { freq: state.freqB });
+        }
+        updateFreqDisplays();
+        drawWaterfallOverlay();
+      }, { passive: false });
+    });
+
+    let resizeTimer = null;
+    window.addEventListener('resize', function () {
+      if (resizeTimer) {
+        clearTimeout(resizeTimer);
+      }
+      resizeTimer = setTimeout(function () {
+        resizeScopeCanvases();
+      }, 120);
+    });
+
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState !== 'visible') {
+        return;
+      }
+      if (state.audio.context && state.audio.context.state === 'suspended') {
+        state.audio.context.resume();
+      }
+      if ((state.audio.rxEnabled || state.audio.txEnabled) && (!state.ws.audio || state.ws.audio.readyState > WebSocket.OPEN)) {
+        connectAudio();
+      }
+    });
+  }
+
+  let lastFrameMs = 0;
+  function renderLoop(ts) {
+    window.requestAnimationFrame(renderLoop);
+    if (ts - lastFrameMs < 33) {
+      return;
+    }
+    lastFrameMs = ts;
+
+    const buffer = state.scope.lastBuffer;
+    if (!buffer) {
+      return;
+    }
+
+    state.scope.lastBuffer = null;
+    const frame = parseScopeBuffer(buffer);
+    if (!frame || frame.receiver !== 0) {
+      return;
+    }
+
+    if (frame.startFreq !== state.scope.startFreq || frame.endFreq !== state.scope.endFreq) {
+      state.scope.startFreq = frame.startFreq;
+      state.scope.endFreq = frame.endFreq;
+      state.scope.axisDirty = true;
+    }
+
+    if (state.scope.axisDirty) {
+      updateFreqAxis();
+    }
+
+    drawSpectrum(frame.pixels);
+    drawWaterfallLine(frame.pixels);
+    drawWaterfallOverlay();
+  }
+
+  function bootstrap() {
+    updateClock();
+    window.setInterval(updateClock, 10000);
+
+    updateFreqDisplays();
+    updateModeDisplays();
+    updateAttButtons();
+    updatePreButtons();
+    updatePttUi(false);
+    updateSliderLabels();
+    setActiveVfo('A', false);
+    setStatusVisual();
+    updateAudioUi();
+
+    resizeScopeCanvases();
+    bindEvents();
+    connectControl();
+    window.requestAnimationFrame(renderLoop);
+  }
+
+  bootstrap();
+}());
 </script>
 </body>
 </html>
