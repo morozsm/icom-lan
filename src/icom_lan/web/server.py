@@ -31,7 +31,7 @@ from typing import TYPE_CHECKING, Any
 from .. import __version__
 from ..rigctld.state_cache import StateCache
 from .handlers import AudioHandler, ControlHandler, MetersHandler, ScopeHandler
-from .radio_poller import CommandQueue, RadioPoller
+from .radio_poller import CommandQueue, DisableScope, EnableScope, RadioPoller
 from .websocket import WS_KEEPALIVE_INTERVAL, WebSocketConnection, make_accept_key
 
 if TYPE_CHECKING:
@@ -107,21 +107,16 @@ class WebServer:
     async def ensure_scope_enabled(self, handler: "ScopeHandler") -> None:
         """Register a scope handler and enable scope on radio if needed.
 
-        This is the single entry point for scope lifecycle — handlers must
-        not call enable_scope() directly. Uses a lock to guarantee that
-        enable_scope() is called at most once regardless of concurrent callers.
+        Scope enable goes through the RadioPoller command queue to avoid
+        concurrent CI-V access.
         """
         async with self._scope_enable_lock:
             self._scope_handlers.add(handler)
             if self._radio is not None:
                 self._radio.on_scope_data(self._broadcast_scope)
-            if self._radio is not None:
-                try:
-                    await self._radio.enable_scope(policy="fast")
-                    self._scope_enabled = True
-                    logger.info("scope: enabled on radio")
-                except Exception:
-                    logger.warning("scope: failed to enable", exc_info=True)
+                self._command_queue.put(EnableScope())
+                self._scope_enabled = True
+                logger.info("scope: enable queued")
 
     def unregister_scope_handler(self, handler: "ScopeHandler") -> None:
         """Unregister a scope handler."""
@@ -142,18 +137,14 @@ class WebServer:
             if self._radio is not None:
                 self._radio.on_scope_data(self._broadcast_scope)
             return
-        try:
-            await self._radio.disable_scope()
-            # Double-check: another handler may have connected during the await.
-            if not self._scope_handlers:
-                self._scope_enabled = False
-                logger.info("scope: disabled on radio (no active handlers)")
-            else:
-                logger.debug("scope: disable succeeded but new handler present — re-enabling")
-                # Re-register broadcast so the new handler gets data.
+        self._command_queue.put(DisableScope())
+        if not self._scope_handlers:
+            self._scope_enabled = False
+            logger.info("scope: disable queued (no active handlers)")
+        else:
+            logger.debug("scope: disable queued but new handler present — will re-enable")
+            if self._radio is not None:
                 self._radio.on_scope_data(self._broadcast_scope)
-        except Exception:
-            logger.warning("scope: failed to disable on radio", exc_info=True)
 
     def _broadcast_scope(self, frame: Any) -> None:
         """Broadcast scope frame to all registered handlers."""

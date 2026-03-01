@@ -1350,7 +1350,10 @@ class TestScopeLifecycle:
         server.unregister_scope_handler(h)
         await asyncio.sleep(0.05)  # let async task complete
 
-        radio.disable_scope.assert_awaited_once()
+        # DisableScope goes through command queue, not direct radio call
+        from icom_lan.web.radio_poller import DisableScope
+        cmds = server._command_queue.drain()
+        assert any(isinstance(c, DisableScope) for c in cmds), "DisableScope should be in queue"
         assert not server._scope_enabled
 
     async def test_scope_flag_reset_on_disable(self) -> None:
@@ -1537,7 +1540,11 @@ class TestScopeEnableAtomic:
         # Call ensure_scope_enabled for all 5 handlers concurrently
         await asyncio.gather(*[server.ensure_scope_enabled(h) for h in handlers])
 
-        assert radio.enable_scope.await_count >= 1  # idempotent re-enable
+        # EnableScope goes through command queue
+        from icom_lan.web.radio_poller import EnableScope
+        cmds = server._command_queue.drain()
+        enable_cmds = [c for c in cmds if isinstance(c, EnableScope)]
+        assert len(enable_cmds) >= 1, "At least one EnableScope should be queued"
         assert len(server._scope_handlers) == 5
 
     async def test_all_handlers_registered_after_concurrent_enables(self) -> None:
@@ -1589,7 +1596,11 @@ class TestScopeEnableAtomic:
         await server.ensure_scope_enabled(h2)
         await server.ensure_scope_enabled(h3)
 
-        assert radio.enable_scope.await_count >= 1  # idempotent re-enable
+        # EnableScope goes through command queue
+        from icom_lan.web.radio_poller import EnableScope
+        cmds = server._command_queue.drain()
+        enable_cmds = [c for c in cmds if isinstance(c, EnableScope)]
+        assert len(enable_cmds) >= 1, "At least one EnableScope should be queued"
 
 
 # ---------------------------------------------------------------------------
@@ -1600,21 +1611,12 @@ class TestScopeEnableAtomic:
 class TestScopeReconnect:
     """After all handlers disconnect and a new one connects, scope must flow (#47)."""
 
-    async def test_scope_enabled_not_reset_eagerly(self) -> None:
-        """_scope_enabled must remain True immediately after last handler disconnects,
-        until disable_scope() actually completes."""
+    async def test_scope_disabled_via_queue_after_grace(self) -> None:
+        """After grace period, DisableScope is queued and flag resets."""
         radio = MagicMock()
         radio.on_scope_data = MagicMock()
         radio.enable_scope = AsyncMock()
-
-        disable_started = asyncio.Event()
-        disable_done = asyncio.Event()
-
-        async def slow_disable() -> None:
-            disable_started.set()
-            await disable_done.wait()
-
-        radio.disable_scope = AsyncMock(side_effect=slow_disable)
+        radio.disable_scope = AsyncMock()
 
         server = WebServer(radio)
         server._scope_disable_grace = 0
@@ -1623,21 +1625,15 @@ class TestScopeReconnect:
         assert server._scope_enabled
 
         server.unregister_scope_handler(h)
-
-        # Give the disable task a chance to start
-        await asyncio.wait_for(disable_started.wait(), timeout=1.0)
-
-        # _scope_enabled must still be True while disable is in-flight
-        assert server._scope_enabled, "_scope_enabled must not reset before disable completes"
-
-        # Unblock disable_scope
-        disable_done.set()
         await asyncio.sleep(0.05)
+
+        from icom_lan.web.radio_poller import DisableScope
+        cmds = server._command_queue.drain()
+        assert any(isinstance(c, DisableScope) for c in cmds)
         assert not server._scope_enabled
 
-    async def test_enable_scope_called_again_after_full_disconnect(self) -> None:
-        """After last handler disconnects and disable completes, a new handler
-        must trigger enable_scope() again."""
+    async def test_enable_scope_queued_again_after_full_disconnect(self) -> None:
+        """After last handler disconnects, a new handler must queue EnableScope again."""
         radio = MagicMock()
         radio.on_scope_data = MagicMock()
         radio.enable_scope = AsyncMock()
@@ -1646,21 +1642,25 @@ class TestScopeReconnect:
         server = WebServer(radio)
         server._scope_disable_grace = 0
 
+        from icom_lan.web.radio_poller import EnableScope, DisableScope
+
         # First connect
         h1 = MagicMock()
         await server.ensure_scope_enabled(h1)
-        assert radio.enable_scope.await_count == 1
 
-        # Disconnect — wait for disable to complete
+        # Disconnect
         server.unregister_scope_handler(h1)
         await asyncio.sleep(0.05)
         assert not server._scope_enabled
-        assert radio.disable_scope.await_count == 1
 
-        # Reconnect — must call enable_scope again
+        # Drain queue
+        server._command_queue.drain()
+
+        # Reconnect — must queue EnableScope again
         h2 = MagicMock()
         await server.ensure_scope_enabled(h2)
-        assert radio.enable_scope.await_count == 2
+        cmds = server._command_queue.drain()
+        assert any(isinstance(c, EnableScope) for c in cmds)
 
     async def test_disable_task_aborts_if_new_handler_reconnects(self) -> None:
         """If a new handler connects before the disable task runs,

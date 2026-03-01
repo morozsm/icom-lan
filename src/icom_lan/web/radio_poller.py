@@ -21,13 +21,18 @@ from .protocol import METER_ALC, METER_POWER, METER_SMETER_MAIN, METER_SWR
 if TYPE_CHECKING:
     from ..radio import IcomRadio
 
-__all__ = ["RadioPoller", "CommandQueue"]
+__all__ = ["RadioPoller", "CommandQueue", "EnableScope", "DisableScope"]
 
 logger = logging.getLogger(__name__)
 
 # Inter-command gap (seconds).  Small enough to keep latency low,
 # large enough to let the radio digest the previous command.
 _GAP: float = 0.012
+
+# Per-command CI-V timeout (seconds).  If a single CI-V exchange takes
+# longer than this, we skip it and move on — prevents the entire poller
+# from stalling when the radio stops responding.
+_CIV_TIMEOUT: float = 2.0
 
 # Parameters polled in round-robin order.
 _POLL_PARAMS: list[str] = [
@@ -100,6 +105,16 @@ class VfoSwap:
 
 @dataclass(frozen=True, slots=True)
 class VfoEqualize:
+    pass
+
+
+@dataclass(frozen=True, slots=True)
+class EnableScope:
+    policy: str = "fast"
+
+
+@dataclass(frozen=True, slots=True)
+class DisableScope:
     pass
 
 # Commands that are deduplicated (last-write-wins)
@@ -231,14 +246,18 @@ class RadioPoller:
                 if self._queue.has_commands:
                     for cmd in self._queue.drain():
                         try:
-                            await self._execute(cmd)
+                            await asyncio.wait_for(self._execute(cmd), _CIV_TIMEOUT)
+                        except asyncio.TimeoutError:
+                            logger.warning("radio-poller: cmd timeout: %s", type(cmd).__name__)
                         except Exception:
                             logger.debug("radio-poller: cmd error", exc_info=True)
                         await asyncio.sleep(_GAP)
 
                 # 2. Poll next parameter
                 try:
-                    await self._poll_next()
+                    await asyncio.wait_for(self._poll_next(), _CIV_TIMEOUT)
+                except asyncio.TimeoutError:
+                    logger.warning("radio-poller: poll timeout (param #%d)", self._poll_index)
                 except Exception:
                     logger.debug("radio-poller: poll error", exc_info=True)
 
@@ -300,6 +319,12 @@ class RadioPoller:
                 await radio.vfo_swap()
             case VfoEqualize():
                 await radio.vfo_a_equals_b()
+            case EnableScope(policy=policy):
+                await radio.enable_scope(policy=policy)
+                logger.info("radio-poller: scope enabled")
+            case DisableScope():
+                await radio.disable_scope()
+                logger.info("radio-poller: scope disabled")
 
     # ------------------------------------------------------------------
     # Round-robin polling
