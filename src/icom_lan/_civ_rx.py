@@ -564,7 +564,10 @@ class _CivRxMixin:
             elif cmd == 0x1A:
                 sub = frame.sub
                 if sub == 0x03 and frame.data:
-                    rx.filter = frame.data[0]
+                    # IC-7610: 1A 03 returns IF filter width code (e.g. 0x34),
+                    # NOT filter selector (1/2/3). Filter selector comes from
+                    # mode response (0x04/0x26). Do NOT update rx.filter here.
+                    pass
                 elif sub == 0x06 and frame.data:
                     rx.data_mode = bool(frame.data[0])
 

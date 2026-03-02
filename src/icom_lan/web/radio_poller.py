@@ -275,6 +275,8 @@ class RadioPoller:
                 await self._queue.wait(timeout=_FAST_INTERVAL)
         except asyncio.CancelledError:
             pass
+        except Exception:
+            logger.exception("radio-poller: FATAL — task crashed, commands will stop working")
 
     async def _execute(self, cmd: Command) -> None:
         radio = self._radio
@@ -320,7 +322,20 @@ class RadioPoller:
             case SetBand(band=band):
                 await radio.send_civ(0x07, data=bytes([band]), wait_response=False)
             case SelectVfo(vfo=vfo):
-                await radio.select_vfo(vfo)
+                # Fire-and-forget VFO select (0x07): don't block poller waiting ACK
+                vfo_upper = vfo.upper()
+                codes = {"A": 0x00, "B": 0x01, "MAIN": 0xD0, "SUB": 0xD1}
+                vfo_code = codes.get(vfo_upper, 0x00)
+                await radio.send_civ(0x07, data=bytes([vfo_code]), wait_response=False)
+                # Update RadioState.active so HTTP poll reflects the change
+                rs = getattr(self._radio, "_radio_state", None)
+                if rs is not None:
+                    if vfo_upper in ("MAIN", "SUB"):
+                        rs.active = vfo_upper
+                    elif vfo_upper in ("A", "B"):
+                        rs.active = "MAIN" if vfo_upper == "A" else "SUB"
+                # NOTE: SUB scope requires Dual Watch + dual scope mode on IC-7610.
+                # For now, always show MAIN scope — SUB scope switching is unstable.
                 if self._on_state_event:
                     self._on_state_event("vfo_changed", {"vfo": vfo})
             case VfoSwap():
@@ -376,8 +391,9 @@ class RadioPoller:
         (0x16, 0x4E, 0x01),   # DIGI-SEL SUB
         (0x16, 0x65, 0x00),   # IP+ MAIN
         (0x16, 0x65, 0x01),   # IP+ SUB
-        (0x1A, 0x03, 0x00),   # Filter MAIN
-        (0x1A, 0x03, 0x01),   # Filter SUB
+        # NOTE: 0x1A 0x03 returns IF filter width code on IC-7610, not
+        # filter selector (1/2/3). Filter comes from mode response (0x26).
+        # Polling 0x1A 0x03 removed to avoid misparsing and UI flicker.
         (0x1C, 0x00, None),   # PTT (global)
         (0x14, 0x0A, None),   # Power level (global)
         (0x0F, None, None),   # Split (global)

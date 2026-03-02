@@ -269,6 +269,10 @@ class WebServer:
                 await asyncio.sleep(self._scope_health_interval)
                 if not self._scope_handlers or self._radio is None:
                     continue
+                # Don't re-enable scope while radio is disconnected
+                if not getattr(self._radio, "connected", True):
+                    self._scope_last_nonzero = time.monotonic()  # reset timer
+                    continue
                 now = time.monotonic()
                 if self._scope_last_nonzero == 0.0:
                     # Never seen non-zero — might be starting up
