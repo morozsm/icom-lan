@@ -796,20 +796,20 @@ input[type=range]::-webkit-slider-thumb {
       updateToggleBtn(dom.ipPlusBtn, state.ipplus, 'IP+');
     }
 
-    // Sliders (AF, RF, SQL) — only update if not being dragged
-    if (!prevActiveRx || prevActiveRx.af_level !== activeRx.af_level) {
+    // Sliders (AF, RF, SQL) — only update if not being dragged and delta > 3
+    if (!prevActiveRx || Math.abs(prevActiveRx.af_level - activeRx.af_level) > 3) {
       if (!state.sliderDebounce.has('af')) {
         dom.afSlider.value = activeRx.af_level;
         dom.afVal.textContent = scaleToPct(activeRx.af_level) + '%';
       }
     }
-    if (!prevActiveRx || prevActiveRx.rf_gain !== activeRx.rf_gain) {
+    if (!prevActiveRx || Math.abs(prevActiveRx.rf_gain - activeRx.rf_gain) > 3) {
       if (!state.sliderDebounce.has('rf')) {
         dom.rfSlider.value = activeRx.rf_gain;
         dom.rfVal.textContent = scaleToPct(activeRx.rf_gain) + '%';
       }
     }
-    if (!prevActiveRx || prevActiveRx.squelch !== activeRx.squelch) {
+    if (!prevActiveRx || Math.abs(prevActiveRx.squelch - activeRx.squelch) > 3) {
       if (!state.sliderDebounce.has('sql')) {
         var sqlPct = Math.round(activeRx.squelch / 255 * 100);
         dom.sqlSlider.value = sqlPct;
