@@ -314,7 +314,8 @@ class RadioPoller:
         (0x15, 0x11),   # RF power
         (0x15, 0x12),   # SWR
         (0x15, 0x13),   # ALC
-        (0x15, 0x15),   # Id (PA drain current)
+        (0x15, 0x15),   # VD (voltage)
+        (0x15, 0x16),   # Id (PA drain current)
     ]
 
     # Slow: levels and settings (freq/mode come unsolicited via CI-V transceive)
