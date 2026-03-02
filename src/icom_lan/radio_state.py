@@ -46,6 +46,7 @@ class RadioState:
     ptt: bool = False
     power_level: int = 0    # TX power 0-255
     split: bool = False
+    dual_watch: bool = False
 
     def to_dict(self) -> dict:
         """Return a JSON-serialisable dict of the current radio state."""
@@ -54,6 +55,7 @@ class RadioState:
             "ptt": self.ptt,
             "power_level": self.power_level,
             "split": self.split,
+            "dual_watch": self.dual_watch,
             "main": asdict(self.main),
             "sub": asdict(self.sub),
         }

@@ -58,6 +58,7 @@ def test_radio_state_defaults() -> None:
     assert rs.ptt is False
     assert rs.power_level == 0
     assert rs.split is False
+    assert rs.dual_watch is False
     assert isinstance(rs.main, ReceiverState)
     assert isinstance(rs.sub, ReceiverState)
 
@@ -103,11 +104,12 @@ def test_receiver_unknown_falls_back_to_sub() -> None:
 def test_to_dict_structure() -> None:
     rs = RadioState()
     d = rs.to_dict()
-    assert set(d.keys()) == {"active", "ptt", "power_level", "split", "main", "sub"}
+    assert set(d.keys()) == {"active", "ptt", "power_level", "split", "dual_watch", "main", "sub"}
     assert d["active"] == "MAIN"
     assert d["ptt"] is False
     assert d["power_level"] == 0
     assert d["split"] is False
+    assert d["dual_watch"] is False
 
 
 def test_to_dict_main_keys() -> None:
