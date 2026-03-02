@@ -96,6 +96,10 @@ class PttOff:
     pass
 
 @dataclass(frozen=True, slots=True)
+class SetBand:
+    band: int  # CI-V band code: 0x00=160m, 0x01=80m, ... 0x09=6m
+
+@dataclass(frozen=True, slots=True)
 class SelectVfo:
     vfo: str
 
@@ -118,7 +122,7 @@ class DisableScope:
 
 Command = (
     SetFreq | SetMode | SetFilter | SetPower | SetRfGain | SetAfLevel
-    | SetAttenuator | SetPreamp | PttOn | PttOff | SelectVfo
+    | SetAttenuator | SetPreamp | PttOn | PttOff | SetBand | SelectVfo
     | VfoSwap | VfoEqualize
 )
 
@@ -288,6 +292,8 @@ class RadioPoller:
                 await radio.set_attenuator_level(db)
             case SetPreamp(level=level):
                 await radio.set_preamp(level)
+            case SetBand(band=band):
+                await radio.send_civ(0x07, data=bytes([band]), wait_response=False)
             case SelectVfo(vfo=vfo):
                 await radio.select_vfo(vfo)
             case VfoSwap():
