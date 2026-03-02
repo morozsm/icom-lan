@@ -807,10 +807,11 @@ input[type=range]::-webkit-slider-thumb {
       }
       if (eventName === 'power_level' && msg.data) {
         // Set power level — show in PWR meter when not transmitting
-        state.powerLevel = msg.data.pct;
+        state.powerLevelWatts = msg.data.watts;
+        state.powerLevelRaw = msg.data.raw;
         if (!state.ptt) {
-          dom.pwrVal.textContent = msg.data.pct + '%';
-          dom.pwrBar.style.width = msg.data.pct + '%';
+          dom.pwrVal.textContent = msg.data.watts + 'W';
+          dom.pwrBar.style.width = Math.round((msg.data.raw / 255) * 100) + '%';
         }
         return;
       }
@@ -818,7 +819,7 @@ input[type=range]::-webkit-slider-thumb {
         // Calibrated meter values from backend
         var mt = msg.data.type;
         var val = msg.data.value;
-        if (mt === 'power') { dom.pwrVal.textContent = val > 0 ? Math.round(val) + 'W' : (state.powerLevel || 0) + '%'; }
+        if (mt === 'power' && val > 0) { dom.pwrVal.textContent = Math.round(val) + 'W'; }
         else if (mt === 'swr') { dom.swrVal.textContent = val.toFixed(1); }
         else if (mt === 'alc') { dom.alcVal.textContent = val >= 100 ? 'OVER' : ''; }
         else if (mt === 'id') { dom.idVal.textContent = val.toFixed(1) + 'A'; }
@@ -971,7 +972,13 @@ input[type=range]::-webkit-slider-thumb {
     var pct = Math.round((raw / 255) * 100) + '%';
     if (id === METER_IDS.SMETER_MAIN) { updateSmeter('A', raw); }
     else if (id === METER_IDS.SMETER_SUB) { updateSmeter('B', raw); }
-    else if (id === METER_IDS.POWER) { dom.pwrBar.style.width = pct; }
+    else if (id === METER_IDS.POWER) {
+      if (raw > 0) {
+        // TX: show actual measured power
+        dom.pwrBar.style.width = pct;
+      }
+      // RX (raw=0): don't touch bar — power_level event handles it
+    }
     else if (id === METER_IDS.SWR) {
       dom.swrBar.style.width = pct;
       // SWR bar color from raw threshold
