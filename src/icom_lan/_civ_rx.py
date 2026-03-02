@@ -423,6 +423,18 @@ class _CivRxMixin:
                     cache.update_preamp(val)
                     if val != old:
                         self._notify_change("preamp_changed", {"level": val})
+            elif frame.command == 0x16 and frame.sub == 0x22:  # NB
+                if frame.data:
+                    val = bool(frame.data[0])
+                    self._notify_change("nb_changed", {"on": val})
+            elif frame.command == 0x16 and frame.sub == 0x40:  # NR
+                if frame.data:
+                    val = bool(frame.data[0])
+                    self._notify_change("nr_changed", {"on": val})
+            elif frame.command == 0x16 and frame.sub == 0x4E:  # DIGI-SEL
+                if frame.data:
+                    val = bool(frame.data[0])
+                    self._notify_change("digisel_changed", {"on": val})
             elif frame.command == 0x1C and frame.sub == 0x00:  # PTT
                 if frame.data:
                     val = bool(frame.data[0])
