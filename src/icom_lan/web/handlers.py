@@ -39,6 +39,7 @@ from .radio_poller import (
     SetPower,
     SetPreamp,
     SetRfGain,
+    SetSquelch,
     VfoEqualize,
     VfoSwap,
 )
@@ -85,6 +86,7 @@ class ControlHandler:
             "set_power",
             "set_rf_gain",
             "set_af_level",
+            "set_sql",
             "set_att",
             "set_preamp",
             "select_vfo",
@@ -391,6 +393,10 @@ class ControlHandler:
             case "set_af_level":
                 level = int(params["level"])
                 q.put(SetAfLevel(level))
+                return {"level": level}
+            case "set_sql":
+                level = int(params["level"])
+                q.put(SetSquelch(level))
                 return {"level": level}
             case "set_att":
                 db = int(params["db"])

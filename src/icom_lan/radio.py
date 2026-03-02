@@ -1197,6 +1197,15 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         civ = set_af_level(level, to_addr=self._radio_addr)
         await self._send_civ_raw(civ, wait_response=False)
 
+    async def set_squelch(self, level: int) -> None:
+        """Set squelch level (0-255, 0=open)."""
+        if not 0 <= level <= 255:
+            raise ValueError(f"Squelch level must be 0-255, got {level}")
+        self._check_connected()
+        from .commands import set_squelch as _set_squelch
+        civ = _set_squelch(level, to_addr=self._radio_addr)
+        await self._send_civ_raw(civ, wait_response=False)
+
     async def get_s_meter(self) -> int:
         """Read the S-meter value (0-255)."""
         self._check_connected()

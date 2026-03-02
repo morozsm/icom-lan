@@ -80,6 +80,10 @@ class SetAfLevel:
     level: int
 
 @dataclass(frozen=True, slots=True)
+class SetSquelch:
+    level: int
+
+@dataclass(frozen=True, slots=True)
 class SetAttenuator:
     db: int
 
@@ -121,7 +125,7 @@ class DisableScope:
 
 
 Command = (
-    SetFreq | SetMode | SetFilter | SetPower | SetRfGain | SetAfLevel
+    SetFreq | SetMode | SetFilter | SetPower | SetRfGain | SetAfLevel | SetSquelch
     | SetAttenuator | SetPreamp | PttOn | PttOff | SetBand | SelectVfo
     | VfoSwap | VfoEqualize
 )
@@ -288,6 +292,8 @@ class RadioPoller:
                 await radio.set_rf_gain(level)
             case SetAfLevel(level=level):
                 await radio.set_af_level(level)
+            case SetSquelch(level=level):
+                await radio.set_squelch(level)
             case SetAttenuator(db=db):
                 await radio.set_attenuator_level(db)
             case SetPreamp(level=level):
