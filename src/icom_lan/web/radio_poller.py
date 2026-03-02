@@ -39,7 +39,7 @@ from ..rigctld.state_cache import StateCache
 if TYPE_CHECKING:
     from ..radio import IcomRadio
 
-__all__ = ["RadioPoller", "CommandQueue", "EnableScope", "DisableScope"]
+__all__ = ["RadioPoller", "CommandQueue", "EnableScope", "DisableScope", "SwitchScopeReceiver"]
 
 logger = logging.getLogger(__name__)
 
@@ -138,11 +138,15 @@ class EnableScope:
 class DisableScope:
     pass
 
+@dataclass(frozen=True, slots=True)
+class SwitchScopeReceiver:
+    receiver: int  # 0=MAIN, 1=SUB
+
 
 Command = (
     SetFreq | SetMode | SetFilter | SetPower | SetRfGain | SetAfLevel | SetSquelch | SetNB | SetNR | SetDigiSel | SetIpPlus
     | SetAttenuator | SetPreamp | PttOn | PttOff | SetBand | SelectVfo
-    | VfoSwap | VfoEqualize
+    | VfoSwap | VfoEqualize | SwitchScopeReceiver
 )
 
 
@@ -334,8 +338,10 @@ class RadioPoller:
                         rs.active = vfo_upper
                     elif vfo_upper in ("A", "B"):
                         rs.active = "MAIN" if vfo_upper == "A" else "SUB"
-                # NOTE: SUB scope requires Dual Watch + dual scope mode on IC-7610.
-                # For now, always show MAIN scope — SUB scope switching is unstable.
+                # Switch scope receiver to match VFO after a short delay to avoid CI-V flooding
+                receiver = 1 if vfo_upper in ("SUB", "B") else 0
+                await asyncio.sleep(0.025)
+                self._queue.put(SwitchScopeReceiver(receiver))
                 if self._on_state_event:
                     self._on_state_event("vfo_changed", {"vfo": vfo})
             case VfoSwap():
@@ -351,6 +357,12 @@ class RadioPoller:
             case DisableScope():
                 await radio.disable_scope()
                 logger.info("radio-poller: scope disabled")
+            case SwitchScopeReceiver(receiver=receiver):
+                # Fire-and-forget scope receiver select (0x27 0x12)
+                await radio.send_civ(
+                    0x27, sub=0x12, data=bytes([receiver & 0x01]), wait_response=False,
+                )
+                logger.info("radio-poller: scope receiver → %s", "SUB" if receiver else "MAIN")
 
     # Fast: meters (polled on even cycles)
     # wfview: Priority=Highest, queue interval 25ms for LAN (HasFDComms)

@@ -152,6 +152,9 @@ input[type=range]::-webkit-slider-thumb {
   <section class="col-span-12 flex flex-col gap-0 min-h-0 flex-1">
     <div class="glass-panel rounded-t-xl overflow-hidden relative" style="height:155px;" id="spectrumContainer">
       <canvas id="specCanvas"></canvas>
+      <div class="absolute right-2 top-1 pointer-events-none z-10">
+        <span class="text-[9px] px-1.5 py-0.5 rounded font-digital font-bold bg-cyan-900/60 text-vfo-a border border-cyan-700/50" id="scopeRxBadge">MAIN</span>
+      </div>
       <div class="absolute left-0 top-0 bottom-0 w-8 flex flex-col justify-between py-1 pointer-events-none">
         <span class="text-[8px] font-digital text-slate-400 pl-1">0</span>
         <span class="text-[8px] font-digital text-slate-400 pl-1">-20</span>
@@ -388,6 +391,7 @@ input[type=range]::-webkit-slider-thumb {
     stepDropdown: $('stepDropdown'),
     spectrumContainer: $('spectrumContainer'),
     waterfallContainer: $('waterfallContainer'),
+    scopeRxBadge: $('scopeRxBadge'),
     preBadgeA: $('preBadgeA'),
     preBadgeB: $('preBadgeB'),
     attBadgeA: $('attBadgeA'),
@@ -454,6 +458,8 @@ input[type=range]::-webkit-slider-thumb {
       wfLine: null,
       wfLineData: null,
       axisDirty: true,
+      activeReceiver: 0,       // 0=MAIN, 1=SUB
+      subZeroFrameCount: 0,    // consecutive all-zero SUB frames (fallback detection)
     },
     sliderDebounce: new Map(),
     tuneDebounceTimer: null,
@@ -814,6 +820,15 @@ input[type=range]::-webkit-slider-thumb {
     var activeChanged = !prev || prev.active !== next.active;
     if (activeChanged) {
       setActiveVfo(next.active === 'SUB' ? 'B' : 'A', false);
+      // Update scope receiver to follow active VFO; clear waterfall on switch
+      var newReceiver = next.active === 'SUB' ? 1 : 0;
+      if (newReceiver !== state.scope.activeReceiver) {
+        state.scope.activeReceiver = newReceiver;
+        state.scope.subZeroFrameCount = 0;
+        state.scope.axisDirty = true;
+        clearWaterfallCanvas();
+        updateScopeReceiverBadge();
+      }
     }
 
     // Mode (active receiver)
@@ -1238,6 +1253,34 @@ input[type=range]::-webkit-slider-thumb {
       state.backoff.scope = Math.min(Math.floor(state.backoff.scope * 1.7), BACKOFF_MAX);
       window.setTimeout(connectScope, delay);
     };
+  }
+
+  function clearWaterfallCanvas() {
+    if (state.scope.wfCtx && state.scope.wfWidth > 0 && state.scope.wfHeight > 0) {
+      state.scope.wfCtx.fillStyle = '#000';
+      state.scope.wfCtx.fillRect(0, 0, state.scope.wfWidth, state.scope.wfHeight);
+    }
+  }
+
+  function updateScopeReceiverBadge() {
+    if (!dom.scopeRxBadge) return;
+    var label = state.scope.activeReceiver === 1 ? 'SUB' : 'MAIN';
+    dom.scopeRxBadge.textContent = label;
+    if (state.scope.activeReceiver === 1) {
+      dom.scopeRxBadge.className = 'text-[9px] px-1.5 py-0.5 rounded font-digital font-bold bg-amber-900/60 text-vfo-b border border-amber-700/50';
+    } else {
+      dom.scopeRxBadge.className = 'text-[9px] px-1.5 py-0.5 rounded font-digital font-bold bg-cyan-900/60 text-vfo-a border border-cyan-700/50';
+    }
+  }
+
+  function showToast(msg) {
+    var toast = document.createElement('div');
+    toast.textContent = msg;
+    toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);' +
+      'background:rgba(30,22,32,0.92);color:#fbbf24;border:1px solid #b45309;' +
+      'padding:6px 18px;border-radius:8px;font-size:12px;z-index:9999;pointer-events:none;';
+    document.body.appendChild(toast);
+    setTimeout(function() { toast.remove(); }, 3000);
   }
 
   function resizeScopeCanvases() {
@@ -2252,10 +2295,30 @@ input[type=range]::-webkit-slider-thumb {
 
     state.scope.lastBuffer = null;
     const frame = parseScopeBuffer(buffer);
-    // IC-7610: always show MAIN scope (receiver=0).
-    // SUB scope requires Dual Watch + dual scope mode; unstable via CI-V.
-    if (!frame || frame.receiver !== 0) {
+    // Only render frames matching the active receiver (MAIN=0, SUB=1)
+    if (!frame || frame.receiver !== state.scope.activeReceiver) {
       return;
+    }
+
+    // SUB scope fallback: if Dual Watch is off, radio sends all-zero SUB frames.
+    // After ~3 seconds (~45 frames at 15fps), fall back to MAIN scope.
+    if (state.scope.activeReceiver === 1) {
+      var allZero = frame.pixels.every(function(b) { return b === 0; });
+      if (allZero) {
+        state.scope.subZeroFrameCount++;
+        if (state.scope.subZeroFrameCount >= 45) {
+          state.scope.subZeroFrameCount = 0;
+          state.scope.activeReceiver = 0;
+          state.scope.axisDirty = true;
+          clearWaterfallCanvas();
+          updateScopeReceiverBadge();
+          sendCommand('switch_scope_receiver', { receiver: 0 });
+          showToast('SUB scope requires Dual Watch');
+        }
+        return;
+      } else {
+        state.scope.subZeroFrameCount = 0;
+      }
     }
 
     if (frame.startFreq !== state.scope.startFreq || frame.endFreq !== state.scope.endFreq) {

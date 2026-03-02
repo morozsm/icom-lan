@@ -44,6 +44,7 @@ from .radio_poller import (
     SetNR,
     SetDigiSel,
     SetIpPlus,
+    SwitchScopeReceiver,
     VfoEqualize,
     VfoSwap,
 )
@@ -100,6 +101,7 @@ class ControlHandler:
             "select_vfo",
             "vfo_swap",
             "vfo_equalize",
+            "switch_scope_receiver",
         ]
     )
 
@@ -443,6 +445,10 @@ class ControlHandler:
             case "vfo_equalize":
                 q.put(VfoEqualize())
                 return {}
+            case "switch_scope_receiver":
+                receiver = int(params.get("receiver", 0))
+                q.put(SwitchScopeReceiver(receiver))
+                return {"receiver": receiver}
             case _:
                 raise ValueError(f"unhandled command: {name!r}")
 

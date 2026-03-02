@@ -1858,3 +1858,235 @@ class TestRadioPoller:
 
         assert task1 is task2
         poller.stop()
+
+
+# ---------------------------------------------------------------------------
+# #92: SUB scope receiver switching
+# ---------------------------------------------------------------------------
+
+
+class TestSwitchScopeReceiver:
+    """SwitchScopeReceiver command sends scope_main_sub CI-V frame."""
+
+    def _make_radio(self) -> MagicMock:
+        radio = MagicMock()
+        radio.send_civ = AsyncMock()
+        radio.state_cache = StateCache()
+        radio.enable_scope = AsyncMock()
+        radio.disable_scope = AsyncMock()
+        radio.set_frequency = AsyncMock()
+        radio.set_mode = AsyncMock()
+        radio.set_ptt = AsyncMock()
+        radio.set_power = AsyncMock()
+        radio.set_rf_gain = AsyncMock()
+        radio.set_af_level = AsyncMock()
+        radio.set_attenuator_level = AsyncMock()
+        radio.set_preamp = AsyncMock()
+        radio.set_squelch = AsyncMock()
+        radio.set_nb = AsyncMock()
+        radio.set_nr = AsyncMock()
+        radio.set_digisel = AsyncMock()
+        radio.set_ip_plus = AsyncMock()
+        radio.vfo_exchange = AsyncMock()
+        radio.vfo_equalize = AsyncMock()
+        return radio
+
+    async def test_switch_scope_receiver_main_sends_civ(self) -> None:
+        """SwitchScopeReceiver(0) sends 0x27/0x12/0x00 CI-V command."""
+        from icom_lan.web.radio_poller import (
+            CommandQueue, RadioPoller, SwitchScopeReceiver,
+        )
+
+        radio = self._make_radio()
+        queue = CommandQueue()
+        poller = RadioPoller(radio, StateCache(), queue)
+
+        poller.start()
+        queue.put(SwitchScopeReceiver(0))
+        await asyncio.sleep(0.15)
+        poller.stop()
+
+        scope_calls = [
+            c for c in radio.send_civ.call_args_list
+            if c[0][0] == 0x27
+        ]
+        assert any(
+            c.kwargs.get("sub") == 0x12 and c.kwargs.get("data") == bytes([0x00])
+            for c in scope_calls
+        ), "Expected CI-V 0x27/0x12/0x00 for MAIN scope"
+
+    async def test_switch_scope_receiver_sub_sends_civ(self) -> None:
+        """SwitchScopeReceiver(1) sends 0x27/0x12/0x01 CI-V command."""
+        from icom_lan.web.radio_poller import (
+            CommandQueue, RadioPoller, SwitchScopeReceiver,
+        )
+
+        radio = self._make_radio()
+        queue = CommandQueue()
+        poller = RadioPoller(radio, StateCache(), queue)
+
+        poller.start()
+        queue.put(SwitchScopeReceiver(1))
+        await asyncio.sleep(0.15)
+        poller.stop()
+
+        scope_calls = [
+            c for c in radio.send_civ.call_args_list
+            if c[0][0] == 0x27
+        ]
+        assert any(
+            c.kwargs.get("sub") == 0x12 and c.kwargs.get("data") == bytes([0x01])
+            for c in scope_calls
+        ), "Expected CI-V 0x27/0x12/0x01 for SUB scope"
+
+    async def test_switch_scope_receiver_clamped_to_1bit(self) -> None:
+        """receiver value is masked to 1 bit (only 0 or 1)."""
+        from icom_lan.web.radio_poller import (
+            CommandQueue, RadioPoller, SwitchScopeReceiver,
+        )
+
+        radio = self._make_radio()
+        queue = CommandQueue()
+        poller = RadioPoller(radio, StateCache(), queue)
+
+        poller.start()
+        queue.put(SwitchScopeReceiver(0xFF))  # should be clamped to 1
+        await asyncio.sleep(0.15)
+        poller.stop()
+
+        scope_calls = [
+            c for c in radio.send_civ.call_args_list
+            if c[0][0] == 0x27
+        ]
+        assert any(
+            c.kwargs.get("sub") == 0x12 and c.kwargs.get("data") == bytes([0x01])
+            for c in scope_calls
+        ), "Expected receiver masked to 0x01"
+
+    async def test_select_vfo_enqueues_scope_switch(self) -> None:
+        """SelectVfo enqueues a SwitchScopeReceiver after the VFO command."""
+        from icom_lan.web.radio_poller import (
+            CommandQueue, RadioPoller, SelectVfo, SwitchScopeReceiver,
+        )
+
+        radio = self._make_radio()
+        queue = CommandQueue()
+        poller = RadioPoller(radio, StateCache(), queue)
+
+        poller.start()
+        queue.put(SelectVfo("SUB"))
+        # SelectVfo does a 25ms sleep then enqueues SwitchScopeReceiver;
+        # allow enough time for both to execute.
+        await asyncio.sleep(0.3)
+        poller.stop()
+
+        # After VFO→SUB the scope receiver switch CI-V should have been sent
+        scope_calls = [
+            c for c in radio.send_civ.call_args_list
+            if c[0][0] == 0x27
+        ]
+        assert any(
+            c.kwargs.get("sub") == 0x12 and c.kwargs.get("data") == bytes([0x01])
+            for c in scope_calls
+        ), "Expected scope receiver switch to SUB after VFO switch"
+
+    async def test_select_vfo_main_enqueues_scope_main(self) -> None:
+        """SelectVfo to MAIN enqueues SwitchScopeReceiver(0)."""
+        from icom_lan.web.radio_poller import (
+            CommandQueue, RadioPoller, SelectVfo,
+        )
+
+        radio = self._make_radio()
+        queue = CommandQueue()
+        poller = RadioPoller(radio, StateCache(), queue)
+
+        poller.start()
+        queue.put(SelectVfo("MAIN"))
+        await asyncio.sleep(0.3)
+        poller.stop()
+
+        scope_calls = [
+            c for c in radio.send_civ.call_args_list
+            if c[0][0] == 0x27
+        ]
+        assert any(
+            c.kwargs.get("sub") == 0x12 and c.kwargs.get("data") == bytes([0x00])
+            for c in scope_calls
+        ), "Expected scope receiver switch to MAIN after VFO→MAIN"
+
+
+class TestSwitchScopeReceiverCommand:
+    """ControlHandler handles 'switch_scope_receiver' command."""
+
+    async def test_switch_scope_receiver_command_ok(
+        self, server: WebServer, mock_radio: MagicMock
+    ) -> None:
+        """switch_scope_receiver command sends CI-V 0x27/0x12/0x01 for SUB."""
+        host, port = _addr(server)
+        reader, writer, _ = await _ws_connect(host, port, "/api/v1/ws")
+        try:
+            # skip hello
+            await _ws_recv_frame(reader)
+
+            cmd = json.dumps({
+                "type": "cmd",
+                "id": "ssr1",
+                "name": "switch_scope_receiver",
+                "params": {"receiver": 1},
+            })
+            await _ws_send_text(writer, cmd)
+            _, resp_bytes = await _ws_recv_frame(reader)
+            resp = json.loads(resp_bytes)
+
+            assert resp["ok"] is True
+            assert resp["result"]["receiver"] == 1
+
+            # Allow poller to execute the queued command
+            await asyncio.sleep(0.15)
+
+            scope_calls = [
+                c for c in mock_radio.send_civ.call_args_list
+                if c[0][0] == 0x27
+            ]
+            assert any(
+                c.kwargs.get("sub") == 0x12 and c.kwargs.get("data") == bytes([0x01])
+                for c in scope_calls
+            ), "Expected CI-V 0x27/0x12/0x01 for SUB scope"
+        finally:
+            await _close_ws(writer)
+
+    async def test_switch_scope_receiver_command_main(
+        self, server: WebServer, mock_radio: MagicMock
+    ) -> None:
+        """switch_scope_receiver with receiver=0 sends CI-V 0x27/0x12/0x00."""
+        host, port = _addr(server)
+        reader, writer, _ = await _ws_connect(host, port, "/api/v1/ws")
+        try:
+            await _ws_recv_frame(reader)
+
+            cmd = json.dumps({
+                "type": "cmd",
+                "id": "ssr2",
+                "name": "switch_scope_receiver",
+                "params": {"receiver": 0},
+            })
+            await _ws_send_text(writer, cmd)
+            _, resp_bytes = await _ws_recv_frame(reader)
+            resp = json.loads(resp_bytes)
+
+            assert resp["ok"] is True
+            assert resp["result"]["receiver"] == 0
+
+            # Allow poller to execute the queued command
+            await asyncio.sleep(0.15)
+
+            scope_calls = [
+                c for c in mock_radio.send_civ.call_args_list
+                if c[0][0] == 0x27
+            ]
+            assert any(
+                c.kwargs.get("sub") == 0x12 and c.kwargs.get("data") == bytes([0x00])
+                for c in scope_calls
+            ), "Expected CI-V 0x27/0x12/0x00 for MAIN scope"
+        finally:
+            await _close_ws(writer)
