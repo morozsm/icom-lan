@@ -380,12 +380,10 @@ class _CivRxMixin:
                     elif sub == 0x13:  # ALC
                         cache.update_alc(float(raw))
                         self._notify_change("meter", {"type": "alc", "value": raw})
-                    elif sub == 0x15:  # Id (PA drain current)
-                        self._notify_change("meter", {"type": "id", "value": raw})
-                    elif sub == 0x16:  # VD (voltage)
+                    elif sub == 0x15:  # VD (voltage) — wfview: \x15\x15
                         self._notify_change("meter", {"type": "vd", "value": raw})
-                    elif sub == 0x17:  # Temp
-                        self._notify_change("meter", {"type": "temp", "value": raw})
+                    elif sub == 0x16:  # Id (PA drain current) — wfview: \x15\x16
+                        self._notify_change("meter", {"type": "id", "value": raw})
             elif frame.command == 0x14:  # levels
                 if len(frame.data) >= 2:
                     raw = int.from_bytes(frame.data[:2], "big")
