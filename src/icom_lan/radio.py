@@ -38,7 +38,6 @@ from .commands import (
     get_s_meter,
     get_swr,
     parse_ack_nak,
-    parse_civ_frame,
     parse_data_mode_response,
     parse_frequency_response,
     parse_meter_response,
@@ -55,6 +54,12 @@ from .commands import (
     set_attenuator_level,
     set_data_mode as set_data_mode_cmd,
     set_digisel,
+    set_nb,
+    set_nr,
+    get_nb,
+    get_nr,
+    get_ip_plus,
+    set_ip_plus,
     set_frequency,
     set_mode,
     set_power,
@@ -69,24 +74,20 @@ from .commands import (
     vfo_swap,
 )
 from .exceptions import (
-    AuthenticationError,
     CommandError,
     ConnectionError,
     TimeoutError,
 )
 from ._audio_transcoder import PcmOpusTranscoder, create_pcm_opus_transcoder
-from .audio import AudioPacket, AudioState, AudioStats, AudioStream
+from .audio import AudioPacket, AudioStats, AudioStream
 from .commander import IcomCommander, Priority
 from .rigctld.state_cache import StateCache
 from .civ import (
     CivEvent,
-    CivEventType,
     CivRequestTracker,
-    iter_civ_frames,
-    request_key_from_frame,
 )
 from .scope import ScopeAssembler, ScopeFrame
-from .transport import ConnectionState, IcomTransport
+from .transport import IcomTransport
 from .types import (
     AudioCapabilities,
     AudioCodec,
@@ -98,13 +99,13 @@ from .types import (
 
 # Import split modules
 from ._connection_state import RadioConnectionState
-from ._audio_recovery import AudioRecoveryState, _AudioSnapshot, _AudioRecoveryMixin
-from ._civ_rx import CIV_HEADER_SIZE, _CivRxMixin
+from ._audio_recovery import AudioRecoveryState, _AudioRecoveryMixin
+from ._civ_rx import _CivRxMixin
 from ._control_phase import (
-    CONNINFO_SIZE,
-    OPENCLOSE_SIZE,
-    STATUS_SIZE,
-    TOKEN_ACK_SIZE,
+    CONNINFO_SIZE,  # noqa: F401 (re-export for tests)
+    OPENCLOSE_SIZE,  # noqa: F401 (re-export for tests)
+    STATUS_SIZE,  # noqa: F401 (re-export for tests)
+    TOKEN_ACK_SIZE,  # noqa: F401 (re-export for tests)
     _ControlPhaseMixin,
 )
 
@@ -235,6 +236,7 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
             float(os.environ.get("ICOM_CIV_RETRY_SLICE_MS", "150")) / 1000.0
         )
         self._state_cache: StateCache = StateCache()
+        self._on_state_change: Callable | None = None  # set by server
         _ttl = {**_DEFAULT_CACHE_TTL, **(cache_ttl_s or {})}
         self._cache_ttl_freq: float = _ttl["freq"]
         self._cache_ttl_mode: float = _ttl["mode"]
@@ -335,6 +337,7 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
                     await self._send_open_close(open_stream=False)
                 except Exception:
                     pass
+                await self._stop_civ_data_watchdog()
                 await self._stop_civ_worker()
                 await self._stop_civ_rx_pump()
                 await self._civ_transport.disconnect()
@@ -376,6 +379,7 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
                 await self._send_open_close(open_stream=False)
             except Exception:
                 pass
+            await self._stop_civ_data_watchdog()
             await self._stop_civ_worker()
             await self._stop_civ_rx_pump()
             await self._civ_transport.disconnect()
@@ -405,7 +409,10 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         from .transport import IcomTransport
         self._civ_transport = IcomTransport()
         try:
-            await self._civ_transport.connect(self._host, self._civ_port)
+            await self._civ_transport.connect(
+                self._host, self._civ_port,
+                local_port=getattr(self, "_civ_local_port", 0),
+            )
         except OSError as exc:
             self._civ_transport = None
             self._conn_state = RadioConnectionState.DISCONNECTED
@@ -417,9 +424,14 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
 
         self._advance_civ_generation("soft_reconnect")
         self._civ_last_waiter_gc_monotonic = __import__("time").monotonic()
+        # Force-restart rx pump (old task may be lingering)
+        await self._stop_civ_rx_pump()
         self._start_civ_rx_pump()
         self._conn_state = RadioConnectionState.CONNECTED
+        # Reset watchdog timestamp so it doesn't immediately trigger
+        self._last_civ_data_received = __import__("time").monotonic()
         self._start_civ_worker()
+        self._start_civ_data_watchdog()
         logger.info("Soft reconnect to %s (civ=%d)", self._host, self._civ_port)
 
     # ------------------------------------------------------------------
@@ -943,7 +955,10 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
 
         self._audio_transport = IcomTransport()
         try:
-            await self._audio_transport.connect(self._host, self._audio_port)
+            await self._audio_transport.connect(
+                self._host, self._audio_port,
+                local_port=getattr(self, "_audio_local_port", 0),
+            )
         except OSError as exc:
             self._audio_transport = None
             raise ConnectionError(
@@ -952,6 +967,7 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
 
         self._audio_transport.start_ping_loop()
         self._audio_transport.start_retransmit_loop()
+        self._audio_transport.start_idle_loop()
 
         # Per wfview, audio stream also uses OpenClose on its own UDP channel.
         await self._send_audio_open_close(open_stream=True)
@@ -964,30 +980,35 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
     # ------------------------------------------------------------------
 
     async def send_civ(
-        self, command: int, sub: int | None = None, data: bytes | None = None
+        self,
+        command: int,
+        sub: int | None = None,
+        data: bytes | None = None,
+        *,
+        wait_response: bool = True,
     ) -> CivFrame | None:
-        """Send a CI-V command and return the response.
+        """Send a CI-V command.
 
         Args:
             command: CI-V command byte.
             sub: Optional sub-command byte.
             data: Optional payload data.
+            wait_response: If False, fire-and-forget (no response wait).
 
         Returns:
-            Parsed response CivFrame.
-
-        Raises:
-            ConnectionError: If not connected.
-            TimeoutError: If no response.
+            Parsed response CivFrame, or None if wait_response=False.
         """
         self._check_connected()
         frame = build_civ_frame(
             self._radio_addr, CONTROLLER_ADDR, command, sub=sub, data=data
         )
-        return await self._send_civ_raw(frame)
+        return await self._send_civ_raw(frame, wait_response=wait_response)
 
-    async def get_frequency(self) -> int:
+    async def get_frequency(self, *, bypass_cache: bool = False) -> int:
         """Get the current operating frequency in Hz.
+
+        Args:
+            bypass_cache: Skip dedupe and cache fallback (used by RadioPoller).
 
         On timeout falls back to the state cache (if populated) rather than
         raising immediately, allowing callers to remain responsive while the
@@ -996,7 +1017,9 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         self._check_connected()
         civ = get_frequency(to_addr=self._radio_addr)
         try:
-            resp = await self._send_civ_raw(civ, key="get_frequency", dedupe=True)
+            resp = await self._send_civ_raw(
+                civ, key="get_frequency", dedupe=not bypass_cache,
+            )
             freq = parse_frequency_response(resp)
             self._last_freq_hz = freq
             self._state_cache.update_freq(freq)
@@ -1173,6 +1196,15 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
             raise ValueError(f"AF level must be 0-255, got {level}")
         self._check_connected()
         civ = set_af_level(level, to_addr=self._radio_addr)
+        await self._send_civ_raw(civ, wait_response=False)
+
+    async def set_squelch(self, level: int) -> None:
+        """Set squelch level (0-255, 0=open)."""
+        if not 0 <= level <= 255:
+            raise ValueError(f"Squelch level must be 0-255, got {level}")
+        self._check_connected()
+        from .commands import set_squelch as _set_squelch
+        civ = _set_squelch(level, to_addr=self._radio_addr)
         await self._send_civ_raw(civ, wait_response=False)
 
     async def get_s_meter(self) -> int:
@@ -1381,6 +1413,48 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         ack = parse_ack_nak(resp)
         if ack is False:
             raise CommandError(f"Radio rejected DIGI-SEL {'on' if on else 'off'}")
+
+
+    async def get_nb(self) -> bool:
+        """Read Noise Blanker status."""
+        self._check_connected()
+        civ = get_nb(to_addr=self._radio_addr)
+        resp = await self._send_civ_raw(civ)
+        return resp.data[0] == 0x01 if resp.data else False
+
+    async def set_nb(self, on: bool) -> None:
+        """Set Noise Blanker on/off."""
+        self._check_connected()
+        civ = set_nb(on, to_addr=self._radio_addr)
+        await self._send_civ_raw(civ, wait_response=False)
+
+    async def get_nr(self) -> bool:
+        """Read Noise Reduction status."""
+        self._check_connected()
+        civ = get_nr(to_addr=self._radio_addr)
+        resp = await self._send_civ_raw(civ)
+        return resp.data[0] == 0x01 if resp.data else False
+
+    async def set_nr(self, on: bool) -> None:
+        """Set Noise Reduction on/off."""
+        self._check_connected()
+        civ = set_nr(on, to_addr=self._radio_addr)
+        await self._send_civ_raw(civ, wait_response=False)
+
+
+
+    async def get_ip_plus(self) -> bool:
+        """Read IP+ status."""
+        self._check_connected()
+        civ = get_ip_plus(to_addr=self._radio_addr)
+        resp = await self._send_civ_raw(civ)
+        return resp.data[0] == 0x01 if resp.data else False
+
+    async def set_ip_plus(self, on: bool) -> None:
+        """Set IP+ on/off."""
+        self._check_connected()
+        civ = set_ip_plus(on, to_addr=self._radio_addr)
+        await self._send_civ_raw(civ, wait_response=False)
 
     async def snapshot_state(self) -> dict[str, object]:
         """Best-effort snapshot of core rig state for safe restore."""

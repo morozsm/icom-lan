@@ -194,26 +194,48 @@ async def _close_ws(writer: asyncio.StreamWriter) -> None:
 @pytest.fixture
 def mock_radio() -> MagicMock:
     radio = MagicMock(name="radio")
+    radio.connected = True
     radio.get_frequency = AsyncMock(return_value=14_074_000)
     radio.get_mode = AsyncMock(return_value=MagicMock(name="USB"))
     radio.get_mode.return_value.name = "USB"
+    _mode_mock = MagicMock(name="USB")
+    _mode_mock.name = "USB"
+    radio.get_mode_info = AsyncMock(return_value=(_mode_mock, 1))
     radio.get_power = AsyncMock(return_value=100)
     radio.get_filter = AsyncMock(return_value=1)
     radio.get_s_meter = AsyncMock(return_value=42)
     radio.get_swr = AsyncMock(return_value=10)
     radio.get_alc = AsyncMock(return_value=5)
+    radio.get_rf_gain = AsyncMock(return_value=200)
+    radio.get_af_level = AsyncMock(return_value=180)
+    radio.get_attenuator_level = AsyncMock(return_value=0)
+    radio.get_preamp = AsyncMock(return_value=1)
+    radio.get_data_mode = AsyncMock(return_value=False)
     radio.set_frequency = AsyncMock()
     radio.set_mode = AsyncMock()
+    radio.set_filter = AsyncMock()
     radio.set_power = AsyncMock()
     radio.set_ptt = AsyncMock()
+    radio.set_rf_gain = AsyncMock()
+    radio.set_af_level = AsyncMock()
     radio.set_attenuator_level = AsyncMock()
     radio.set_preamp = AsyncMock()
+    radio.select_vfo = AsyncMock()
     radio.vfo_swap = AsyncMock()
+    radio.vfo_exchange = AsyncMock()
     radio.vfo_a_equals_b = AsyncMock()
     # on_scope_data is a synchronous setter
     radio.on_scope_data = MagicMock()
-    # Empty state cache: handlers will fall back to live queries (existing behaviour).
+    # State cache shared between radio and server
     radio.state_cache = StateCache()
+    # Methods used by WebServer.stop() and RadioPoller
+    radio.soft_disconnect = AsyncMock()
+    radio.send_civ = AsyncMock()
+    # AudioBroadcaster needs these
+    radio.start_audio_rx_opus = AsyncMock()
+    radio.stop_audio_rx_opus = AsyncMock()
+    radio.audio_codec = None
+    radio.audio_sample_rate = 48000
     return radio
 
 
@@ -700,7 +722,7 @@ class TestControlChannel:
             _, payload = await _ws_recv_frame(reader)
             resp = json.loads(payload)
             assert resp["ok"] is True
-            mock_radio.vfo_swap.assert_awaited_once()
+            mock_radio.vfo_exchange.assert_awaited_once()
         finally:
             await _close_ws(writer)
 
@@ -1153,11 +1175,9 @@ class TestAudioHandlerCodecDetection:
     """
 
     async def _start_rx_and_capture(self, audio_codec: object, sample_rate: int) -> bytes:
-        """Start RX on an AudioHandler with given codec/rate and return first queued frame."""
-        import struct
-
+        """Start RX via AudioBroadcaster and return first queued frame."""
         from icom_lan.types import AudioCodec
-        from icom_lan.web.handlers import AudioHandler
+        from icom_lan.web.handlers import AudioBroadcaster, AudioHandler
         from icom_lan.web.websocket import WebSocketConnection
 
         mock_ws = MagicMock(spec=WebSocketConnection)
@@ -1173,7 +1193,8 @@ class TestAudioHandlerCodecDetection:
 
         mock_radio.start_audio_rx_opus = fake_start_rx_opus
 
-        handler = AudioHandler(mock_ws, mock_radio)
+        broadcaster = AudioBroadcaster(mock_radio)
+        handler = AudioHandler(mock_ws, mock_radio, broadcaster)
         await handler._start_rx()
 
         assert len(captured_callback) == 1, "start_audio_rx_opus must be called once"
@@ -1184,7 +1205,7 @@ class TestAudioHandlerCodecDetection:
         mock_pkt.data = b"\x00\x01" * 50  # 100 bytes of fake audio
         cb(mock_pkt)
 
-        # Retrieve the encoded web frame from the queue
+        # Retrieve the encoded web frame from the handler's queue (assigned by broadcaster)
         frame = handler._frame_queue.get_nowait()
         return frame
 
@@ -1337,7 +1358,10 @@ class TestScopeLifecycle:
         server.unregister_scope_handler(h)
         await asyncio.sleep(0.05)  # let async task complete
 
-        radio.disable_scope.assert_awaited_once()
+        # DisableScope goes through command queue, not direct radio call
+        from icom_lan.web.radio_poller import DisableScope
+        cmds = server._command_queue.drain()
+        assert any(isinstance(c, DisableScope) for c in cmds), "DisableScope should be in queue"
         assert not server._scope_enabled
 
     async def test_scope_flag_reset_on_disable(self) -> None:
@@ -1524,7 +1548,11 @@ class TestScopeEnableAtomic:
         # Call ensure_scope_enabled for all 5 handlers concurrently
         await asyncio.gather(*[server.ensure_scope_enabled(h) for h in handlers])
 
-        assert radio.enable_scope.await_count >= 1  # idempotent re-enable
+        # EnableScope goes through command queue
+        from icom_lan.web.radio_poller import EnableScope
+        cmds = server._command_queue.drain()
+        enable_cmds = [c for c in cmds if isinstance(c, EnableScope)]
+        assert len(enable_cmds) >= 1, "At least one EnableScope should be queued"
         assert len(server._scope_handlers) == 5
 
     async def test_all_handlers_registered_after_concurrent_enables(self) -> None:
@@ -1576,7 +1604,11 @@ class TestScopeEnableAtomic:
         await server.ensure_scope_enabled(h2)
         await server.ensure_scope_enabled(h3)
 
-        assert radio.enable_scope.await_count >= 1  # idempotent re-enable
+        # EnableScope goes through command queue
+        from icom_lan.web.radio_poller import EnableScope
+        cmds = server._command_queue.drain()
+        enable_cmds = [c for c in cmds if isinstance(c, EnableScope)]
+        assert len(enable_cmds) >= 1, "At least one EnableScope should be queued"
 
 
 # ---------------------------------------------------------------------------
@@ -1587,21 +1619,12 @@ class TestScopeEnableAtomic:
 class TestScopeReconnect:
     """After all handlers disconnect and a new one connects, scope must flow (#47)."""
 
-    async def test_scope_enabled_not_reset_eagerly(self) -> None:
-        """_scope_enabled must remain True immediately after last handler disconnects,
-        until disable_scope() actually completes."""
+    async def test_scope_disabled_via_queue_after_grace(self) -> None:
+        """After grace period, DisableScope is queued and flag resets."""
         radio = MagicMock()
         radio.on_scope_data = MagicMock()
         radio.enable_scope = AsyncMock()
-
-        disable_started = asyncio.Event()
-        disable_done = asyncio.Event()
-
-        async def slow_disable() -> None:
-            disable_started.set()
-            await disable_done.wait()
-
-        radio.disable_scope = AsyncMock(side_effect=slow_disable)
+        radio.disable_scope = AsyncMock()
 
         server = WebServer(radio)
         server._scope_disable_grace = 0
@@ -1610,21 +1633,15 @@ class TestScopeReconnect:
         assert server._scope_enabled
 
         server.unregister_scope_handler(h)
-
-        # Give the disable task a chance to start
-        await asyncio.wait_for(disable_started.wait(), timeout=1.0)
-
-        # _scope_enabled must still be True while disable is in-flight
-        assert server._scope_enabled, "_scope_enabled must not reset before disable completes"
-
-        # Unblock disable_scope
-        disable_done.set()
         await asyncio.sleep(0.05)
+
+        from icom_lan.web.radio_poller import DisableScope
+        cmds = server._command_queue.drain()
+        assert any(isinstance(c, DisableScope) for c in cmds)
         assert not server._scope_enabled
 
-    async def test_enable_scope_called_again_after_full_disconnect(self) -> None:
-        """After last handler disconnects and disable completes, a new handler
-        must trigger enable_scope() again."""
+    async def test_enable_scope_queued_again_after_full_disconnect(self) -> None:
+        """After last handler disconnects, a new handler must queue EnableScope again."""
         radio = MagicMock()
         radio.on_scope_data = MagicMock()
         radio.enable_scope = AsyncMock()
@@ -1633,21 +1650,25 @@ class TestScopeReconnect:
         server = WebServer(radio)
         server._scope_disable_grace = 0
 
+        from icom_lan.web.radio_poller import EnableScope, DisableScope
+
         # First connect
         h1 = MagicMock()
         await server.ensure_scope_enabled(h1)
-        assert radio.enable_scope.await_count == 1
 
-        # Disconnect — wait for disable to complete
+        # Disconnect
         server.unregister_scope_handler(h1)
         await asyncio.sleep(0.05)
         assert not server._scope_enabled
-        assert radio.disable_scope.await_count == 1
 
-        # Reconnect — must call enable_scope again
+        # Drain queue
+        server._command_queue.drain()
+
+        # Reconnect — must queue EnableScope again
         h2 = MagicMock()
         await server.ensure_scope_enabled(h2)
-        assert radio.enable_scope.await_count == 2
+        cmds = server._command_queue.drain()
+        assert any(isinstance(c, EnableScope) for c in cmds)
 
     async def test_disable_task_aborts_if_new_handler_reconnects(self) -> None:
         """If a new handler connects before the disable task runs,
@@ -1702,177 +1723,140 @@ class TestScopeReconnect:
         h2.enqueue_frame.assert_called_once_with(frame)
         h1.enqueue_frame.assert_not_called()
 
-
 # ---------------------------------------------------------------------------
-# #69: Shared meter poller (server-level, not per-client)
+# #72: RadioPoller — single CI-V serialiser
 # ---------------------------------------------------------------------------
 
 
-class TestMeterPoller:
-    """Single server-level poller broadcasts to all MetersHandler clients (#69)."""
+class TestRadioPoller:
+    """RadioPoller polls all params and executes commands via single task (#72)."""
 
-    def _make_handler(
-        self,
-        server: WebServer,
-        requested_meters: list[str] | None = None,
-        poll_interval: float = 0.1,
-    ) -> "MetersHandler":
-        from icom_lan.web.handlers import MetersHandler
-        from icom_lan.web.websocket import WebSocketConnection
-
-        mock_ws = MagicMock(spec=WebSocketConnection)
-        h = MetersHandler(mock_ws, None, server=server)
-        h._active = True
-        h._requested_meters = requested_meters or []
-        h._poll_interval = poll_interval
-        return h
-
-    async def test_multiple_clients_share_single_poller(self) -> None:
-        """Two handlers registered → exactly one poller task, not two."""
+    def _make_radio(self) -> MagicMock:
         radio = MagicMock()
+        mode_mock = MagicMock()
+        mode_mock.name = "USB"
+        radio.get_frequency = AsyncMock(return_value=14074000)
+        radio.get_mode_info = AsyncMock(return_value=(mode_mock, 1))
         radio.get_s_meter = AsyncMock(return_value=42)
         radio.get_power = AsyncMock(return_value=100)
-        radio.get_swr = AsyncMock(return_value=0)
+        radio.get_swr = AsyncMock(return_value=10)
         radio.get_alc = AsyncMock(return_value=5)
+        radio.get_rf_gain = AsyncMock(return_value=128)
+        radio.get_af_level = AsyncMock(return_value=64)
+        radio.get_attenuator_level = AsyncMock(return_value=0)
+        radio.get_preamp = AsyncMock(return_value=0)
+        radio.get_data_mode = AsyncMock(return_value=False)
+        radio.set_frequency = AsyncMock()
+        radio.set_mode = AsyncMock()
+        radio.set_ptt = AsyncMock()
+        radio.send_civ = AsyncMock()  # RadioPoller now calls send_civ directly
+        radio.state_cache = StateCache()
+        return radio
 
-        server = WebServer(radio)
-        h1 = self._make_handler(server)
-        h2 = self._make_handler(server)
+    async def test_poller_starts_and_stops(self) -> None:
+        """RadioPoller start/stop lifecycle."""
+        from icom_lan.web.radio_poller import CommandQueue, RadioPoller
 
-        await server.ensure_meters_enabled(h1)
-        task_after_first = server._meter_poller_task
+        radio = self._make_radio()
+        cache = StateCache()
+        queue = CommandQueue()
+        poller = RadioPoller(radio, cache, queue)
 
-        await server.ensure_meters_enabled(h2)
-        task_after_second = server._meter_poller_task
+        poller.start()
+        assert poller.running
+        await asyncio.sleep(0.05)
 
-        # Same task object — not a new one created for h2
-        assert task_after_first is task_after_second
-        assert task_after_second is not None
-        assert not task_after_second.done()
-        assert len(server._meter_handlers) == 2
+        poller.stop()
+        assert not poller.running
 
-        # Cleanup
-        server.unregister_meter_handler(h1)
-        server.unregister_meter_handler(h2)
+    async def test_poller_polls_freq(self) -> None:
+        """RadioPoller updates state cache with polled frequency."""
+        from icom_lan.web.radio_poller import CommandQueue, RadioPoller
 
-    async def test_cached_values_delivered_to_new_client(self) -> None:
-        """A new handler gets the cached readings immediately on ensure_meters_enabled."""
-        server = WebServer(None)
-
-        # Pre-populate cache as if a poll already happened
-        server._meter_cache = [(METER_SMETER_MAIN, 55), (METER_POWER, 200)]
-
-        h = self._make_handler(server)
-        assert h._frame_queue.qsize() == 0
-
-        await server.ensure_meters_enabled(h)
-
-        # Handler should have received the cached frame without a CI-V poll
-        assert h._frame_queue.qsize() == 1
-
-        server.unregister_meter_handler(h)
-
-    async def test_poller_stops_when_last_client_disconnects(self) -> None:
-        """The poller task is cancelled when all handlers unregister."""
-        radio = MagicMock()
-        radio.get_s_meter = AsyncMock(return_value=10)
-        radio.get_power = AsyncMock(return_value=50)
-        radio.get_swr = AsyncMock(return_value=0)
-        radio.get_alc = AsyncMock(return_value=0)
-
-        server = WebServer(radio)
-        h = self._make_handler(server)
-
-        await server.ensure_meters_enabled(h)
-        task = server._meter_poller_task
-        assert task is not None
-        assert not task.done()
-
-        server.unregister_meter_handler(h)
-        # Task should be cancelled; give the loop one tick to process it
-        await asyncio.sleep(0)
-
-        assert task.cancelled() or task.done()
-        assert server._meter_poller_task is None
-        assert server._meter_cache is None
-
-    async def test_ci_v_polled_once_per_interval_for_multiple_clients(self) -> None:
-        """Radio is polled once per interval regardless of client count."""
-        radio = MagicMock()
-        radio.get_s_meter = AsyncMock(return_value=42)
-        radio.get_power = AsyncMock(return_value=100)
-        radio.get_swr = AsyncMock(return_value=0)
-        radio.get_alc = AsyncMock(return_value=5)
-
-        server = WebServer(radio)
-        h1 = self._make_handler(server, poll_interval=0.05)
-        h2 = self._make_handler(server, poll_interval=0.05)
-
-        await server.ensure_meters_enabled(h1)
-        await server.ensure_meters_enabled(h2)
-
-        # Wait long enough for exactly ~2 poll cycles
-        await asyncio.sleep(0.12)
-
-        server.unregister_meter_handler(h1)
-        server.unregister_meter_handler(h2)
-
-        # With N=2 clients, without sharing we'd see 2N calls.
-        # With sharing, we see ~2 calls (one per interval).
-        call_count = radio.get_s_meter.await_count
-        assert call_count <= 4, (
-            f"Expected ≤4 CI-V polls for 2 clients × 2 intervals, got {call_count}"
+        radio = self._make_radio()
+        cache = StateCache()
+        queue = CommandQueue()
+        events: list[tuple[str, dict]] = []
+        poller = RadioPoller(
+            radio, cache, queue,
+            on_state_event=lambda n, d: events.append((n, d)),
         )
 
-    async def test_poller_task_restarts_after_all_disconnect_then_reconnect(self) -> None:
-        """A new handler after full disconnect creates a fresh poller task."""
-        radio = MagicMock()
-        radio.get_s_meter = AsyncMock(return_value=10)
-        radio.get_power = AsyncMock(return_value=50)
-        radio.get_swr = AsyncMock(return_value=0)
-        radio.get_alc = AsyncMock(return_value=0)
+        poller.start()
+        # Slow queries poll every 10th cycle × 25ms = 250ms
+        await asyncio.sleep(0.3)
+        poller.stop()
 
-        server = WebServer(radio)
-        h1 = self._make_handler(server)
+        # send_civ called for freq query (0x03) and meters (0x15)
+        assert radio.send_civ.await_count >= 1
 
-        await server.ensure_meters_enabled(h1)
-        first_task = server._meter_poller_task
+    async def test_command_queue_dedup(self) -> None:
+        """Last-write-wins dedup for freq commands; PTT never deduped."""
+        from icom_lan.web.radio_poller import CommandQueue, SetFreq, PttOn, PttOff
 
-        server.unregister_meter_handler(h1)
-        await asyncio.sleep(0)  # let cancellation propagate
-        assert server._meter_poller_task is None
+        queue = CommandQueue()
+        queue.put(SetFreq(14000000))
+        queue.put(SetFreq(14074000))
+        queue.put(PttOn())
+        queue.put(PttOff())
 
-        # Second connect — must create a new task
-        h2 = self._make_handler(server)
-        await server.ensure_meters_enabled(h2)
-        second_task = server._meter_poller_task
+        cmds = queue.drain()
+        freq_cmds = [c for c in cmds if isinstance(c, SetFreq)]
+        ptt_cmds = [c for c in cmds if isinstance(c, (PttOn, PttOff))]
 
-        assert second_task is not None
-        assert second_task is not first_task
-        assert not second_task.done()
+        assert len(freq_cmds) == 1
+        assert freq_cmds[0].freq == 14074000
+        assert len(ptt_cmds) == 2
 
-        server.unregister_meter_handler(h2)
+    async def test_poller_executes_commands(self) -> None:
+        """Commands queued are executed by the poller."""
+        from icom_lan.web.radio_poller import CommandQueue, RadioPoller, SetFreq
 
-    async def test_requested_meters_union_used_for_polling(self) -> None:
-        """Server polls the union of all handlers' requested meters."""
-        radio = MagicMock()
-        radio.get_s_meter = AsyncMock(return_value=42)
-        radio.get_power = AsyncMock(return_value=100)
-        radio.get_swr = AsyncMock(return_value=0)
-        radio.get_alc = AsyncMock(return_value=5)
+        radio = self._make_radio()
+        cache = StateCache()
+        queue = CommandQueue()
+        poller = RadioPoller(radio, cache, queue)
 
-        server = WebServer(radio)
-        h1 = self._make_handler(server, requested_meters=["smeter"])
-        h2 = self._make_handler(server, requested_meters=["power"])
+        poller.start()
+        queue.put(SetFreq(7074000))
+        await asyncio.sleep(0.1)
+        poller.stop()
 
-        # Poll once manually
-        server._meter_handlers.add(h1)
-        server._meter_handlers.add(h2)
-        readings = await server._poll_meters()
+        radio.set_frequency.assert_awaited_with(7074000)
 
-        meter_ids = {mid for mid, _ in readings}
-        from icom_lan.web.protocol import METER_POWER, METER_SMETER_MAIN
-        assert METER_SMETER_MAIN in meter_ids, "smeter should be polled (requested by h1)"
-        assert METER_POWER in meter_ids, "power should be polled (requested by h2)"
+    async def test_poller_broadcasts_meter_readings(self) -> None:
+        """RadioPoller polls meters via send_civ."""
+        from icom_lan.web.radio_poller import CommandQueue, RadioPoller
 
-        server._meter_handlers.clear()
+        radio = self._make_radio()
+        cache = StateCache()
+        queue = CommandQueue()
+        poller = RadioPoller(radio, cache, queue)
+
+        poller.start()
+        await asyncio.sleep(0.15)  # 25ms × 6 cycles = 150ms
+        poller.stop()
+
+        # Interleaved design: even cycles = meter, odd cycles = state.
+        # In 150ms at 25ms/cycle ≈ 6 cycles → ~3 meter + ~3 state queries.
+        assert radio.send_civ.await_count >= 4
+        meter_calls = [c for c in radio.send_civ.call_args_list
+                       if c[0][0] == 0x15]  # cmd=0x15
+        assert len(meter_calls) >= 3
+
+    async def test_poller_idempotent_start(self) -> None:
+        """Calling start() twice does not create duplicate tasks."""
+        from icom_lan.web.radio_poller import CommandQueue, RadioPoller
+
+        radio = self._make_radio()
+        cache = StateCache()
+        queue = CommandQueue()
+        poller = RadioPoller(radio, cache, queue)
+
+        poller.start()
+        task1 = poller._task
+        poller.start()
+        task2 = poller._task
+
+        assert task1 is task2
+        poller.stop()

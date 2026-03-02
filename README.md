@@ -2,7 +2,7 @@
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-1202%20passed-brightgreen.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-1265%20passed-brightgreen.svg)](#testing)
 
 **Python library for controlling Icom transceivers over LAN (UDP).**
 
@@ -18,8 +18,17 @@ Direct connection to your radio — no wfview, hamlib, or RS-BA1 required.
 - 🚀 **Fast non-audio connect path** — CLI/status calls don't block on audio-port negotiation
 - 🧠 **Commander queue** — wfview-style serialized command execution with pacing, retries, and dedupe
 - 📊 **Scope/waterfall** — real-time spectrum data with callback API
-- 🌐 **Built-in Web UI** — spectrum, waterfall, controls, meters, and audio in your browser (`icom-lan web`)
+- 🌐 **Built-in Web UI** — spectrum, waterfall, controls, meters, and audio in your browser (`icom-lan web`):
+  - 🎛️ **Dual-receiver display** — MAIN and SUB receiver state (IC-7610)
+  - 📻 **Band selector** — one-click band buttons (160m–10m)
+  - 🔊 **Browser audio TX** — transmit from your microphone via Opus codec
+  - 🎚️ **Full control panel** — AF/RF/Squelch sliders, NB/NR/DIGI-SEL/IP+ toggles, ATT/Preamp, VFO A/B
+  - 📊 **Meters** — S-meter, SWR (color-coded), ALC, Power, Vd, Id
+  - 🔄 **Live state sync** — HTTP polling at 200ms, no page refresh needed
 - 🔌 **Hamlib NET rigctld server** — drop-in replacement for `rigctld`, works with WSJT-X, JS8Call, fldigi
+- 🎛️ **Dual-receiver support** — MAIN/SUB via Command29 (IC-7610)
+- 🎤 **Browser audio TX** — transmit from browser microphone
+- 📡 **UDP relay proxy** — remote access via VPN/Tailscale
 - 🔒 **Zero dependencies** — pure Python, stdlib only
 - 📝 **Type-annotated** — full `py.typed` support
 
@@ -131,6 +140,13 @@ icom-lan scope --json               # Raw data as JSON (no Pillow needed)
 # Example output
 ![Scope + waterfall example](docs/assets/scope-example.png)
 
+# Remote power on/off
+icom-lan power-on
+icom-lan power-off
+
+# UDP relay proxy (for VPN/Tailscale remote access)
+icom-lan proxy --remote-host 192.168.55.40 --listen-port 50001
+
 # Discover radios on network
 icom-lan discover
 
@@ -182,6 +198,25 @@ icom-lan serve --wsjtx-compat           # Pre-warm DATA mode for WSJT-X CAT/PTT 
 | `power_control(on)` | Remote power on/off |
 | `snapshot_state()` / `restore_state(state)` | Best-effort state save/restore |
 | `send_civ(cmd, sub, data)` | Send raw CI-V command |
+| `get_nb(receiver)` / `set_nb(on, receiver)` | Noise Blanker on/off (Command29) |
+| `get_nr(receiver)` / `set_nr(on, receiver)` | Noise Reduction on/off (Command29) |
+| `get_digisel(receiver)` / `set_digisel(on, receiver)` | DIGI-SEL on/off (Command29) |
+| `get_ip_plus(receiver)` / `set_ip_plus(on, receiver)` | IP+ on/off (Command29) |
+| `get_data_mode()` / `set_data_mode(on)` | DATA mode on/off |
+| `get_af_level(receiver)` / `set_af_level(level, receiver)` | AF gain level (0-255, Command29) |
+| `get_rf_gain(receiver)` / `set_rf_gain(level, receiver)` | RF gain level (0-255, Command29) |
+| `set_squelch(level, receiver)` | Squelch level (0-255, Command29) |
+| `start_audio_rx()` / `stop_audio_rx()` | Start/stop RX audio stream |
+| `start_audio_tx()` / `stop_audio_tx()` | Start/stop TX audio stream |
+| `push_audio_tx_opus(data)` | Push Opus audio frames for TX |
+| `vfo_exchange()` | Exchange VFO A↔B frequencies |
+| `vfo_equalize()` | Copy active VFO to inactive |
+
+### HTTP Endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/v1/state` | HTTP endpoint: dual-receiver state JSON (MAIN+SUB) |
 
 ### Configuration
 
@@ -211,7 +246,7 @@ See the [protocol documentation](https://morozsm.github.io/icom-lan/internals/pr
 ## Testing
 
 ```bash
-# Unit tests (no radio required) — 1202 tests
+# Unit tests (no radio required) — 1265 tests
 pytest tests/test_*.py
 
 # Mock integration tests (full UDP protocol, no radio required)

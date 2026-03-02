@@ -93,6 +93,7 @@ _CMD_NAK = 0xFA
 # Sub-commands
 _SUB_AF_LEVEL = 0x01  # AF output level (0x14 0x01)
 _SUB_RF_GAIN = 0x02   # RF Gain level (0x14 0x02)
+_SUB_SQL = 0x03       # Squelch level (0x14 0x03)
 _SUB_RF_POWER = 0x0A
 _SUB_S_METER = 0x02
 _SUB_SWR_METER = 0x12
@@ -462,6 +463,21 @@ def set_af_level(
     )
 
 
+def set_squelch(
+    level: int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a 'set squelch level' CI-V command.
+
+    Args:
+        level: Squelch level 0-255 (0=open, 255=closed).
+    """
+    return build_civ_frame(
+        to_addr, from_addr, _CMD_LEVEL, sub=_SUB_SQL, data=_level_bcd_encode(level)
+    )
+
+
 # --- Meter commands ---
 
 
@@ -519,6 +535,9 @@ _CMD_ATT = 0x11
 _CMD_PREAMP = 0x16
 _SUB_PREAMP_STATUS = 0x02
 _SUB_DIGISEL_STATUS = 0x4E
+_SUB_NB = 0x22        # Noise Blanker on/off (0x16 0x22)
+_SUB_NR = 0x40        # Noise Reduction on/off (0x16 0x40)
+_SUB_IP_PLUS = 0x65   # IP+ on/off (0x16 0x65)
 
 
 def select_vfo(
@@ -684,6 +703,63 @@ def set_digisel(
 
 # --- DATA mode commands (CI-V 0x1A 0x06) ---
 
+
+
+def get_nb(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build CI-V command to read NB status (0/1)."""
+    return build_civ_frame(to_addr, from_addr, _CMD_PREAMP, sub=_SUB_NB)
+
+
+def set_nb(
+    on: bool,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Set Noise Blanker on/off."""
+    return build_civ_frame(
+        to_addr, from_addr, _CMD_PREAMP, sub=_SUB_NB, data=bytes([0x01 if on else 0x00])
+    )
+
+
+def get_nr(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build CI-V command to read NR status (0/1)."""
+    return build_civ_frame(to_addr, from_addr, _CMD_PREAMP, sub=_SUB_NR)
+
+
+def set_nr(
+    on: bool,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Set Noise Reduction on/off."""
+    return build_civ_frame(
+        to_addr, from_addr, _CMD_PREAMP, sub=_SUB_NR, data=bytes([0x01 if on else 0x00])
+    )
+
+
+def get_ip_plus(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build CI-V command to read IP+ status (0/1)."""
+    return build_civ_frame(to_addr, from_addr, _CMD_PREAMP, sub=_SUB_IP_PLUS)
+
+
+def set_ip_plus(
+    on: bool,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Set IP+ on/off."""
+    return build_civ_frame(
+        to_addr, from_addr, _CMD_PREAMP, sub=_SUB_IP_PLUS, data=bytes([0x01 if on else 0x00])
+    )
 
 def get_data_mode(
     to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR

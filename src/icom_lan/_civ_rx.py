@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
 import time
 from typing import TYPE_CHECKING
 
@@ -26,11 +25,16 @@ from .scope import ScopeFrame
 from .types import CivFrame
 
 if TYPE_CHECKING:
-    pass
+    from .radio_state import RadioState
 
 logger = logging.getLogger(__name__)
 
 CIV_HEADER_SIZE = 0x15
+
+# CI-V data watchdog (wfview icomudpcivdata::watchdog)
+# If no CI-V data for this long, send open_close to restart the stream.
+_CIV_DATA_WATCHDOG_TIMEOUT = 2.0  # seconds (wfview: 2000ms)
+_CIV_DATA_WATCHDOG_RETRY = 0.1    # retry interval (wfview: 100ms via startCivDataTimer)
 
 
 class _CivRxMixin:
@@ -86,6 +90,138 @@ class _CivRxMixin:
                 pass
         self._civ_rx_task = None  # type: ignore[attr-defined]
 
+    # ------------------------------------------------------------------
+    # CI-V data watchdog (wfview icomudpcivdata::watchdog)
+    # ------------------------------------------------------------------
+
+    def _start_civ_data_watchdog(self) -> None:
+        """Start CI-V data watchdog task.
+
+        Monitors incoming CI-V data. If no data arrives for
+        _CIV_DATA_WATCHDOG_TIMEOUT seconds, sends sendOpenClose(open)
+        repeatedly to restart the CI-V data stream from the radio.
+
+        Reference: wfview icomudpcivdata.cpp watchdog() — checks
+        lastReceived every WATCHDOG_PERIOD, starts startCivDataTimer
+        (100ms) which calls sendOpenClose(false=open) until data resumes.
+        """
+        if (
+            getattr(self, "_civ_data_watchdog_task", None) is not None
+            and not self._civ_data_watchdog_task.done()  # type: ignore[attr-defined]
+        ):
+            return
+        self._civ_data_watchdog_task = asyncio.create_task(  # type: ignore[attr-defined]
+            self._civ_data_watchdog_loop(), name="civ-data-watchdog"
+        )
+        logger.info("civ-data-watchdog: started")
+
+    async def _stop_civ_data_watchdog(self) -> None:
+        """Stop CI-V data watchdog."""
+        task = getattr(self, "_civ_data_watchdog_task", None)
+        if task is not None and not task.done():
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+        self._civ_data_watchdog_task = None  # type: ignore[attr-defined]
+
+    async def _civ_data_watchdog_loop(self) -> None:
+        """Monitor CI-V data flow; recover with open_close then soft_reconnect.
+
+        Phase 1 (wfview-style): if no CI-V data for 2s, send OpenClose(open)
+        every 100ms for up to 5 seconds to restart the stream.
+
+        Phase 2: if OpenClose doesn't help after 5s, do a full
+        soft_reconnect (tear down CI-V transport and reconnect).
+        """
+        _OPENCLOSE_DEADLINE = 5.0  # seconds of open_close attempts before reconnect
+        _MAX_RECONNECTS = 3       # max soft_reconnect attempts before giving up
+        _RECONNECT_PAUSE = 15.0   # seconds between reconnect attempts (let radio release slot)
+        recovering = False
+        recovery_start: float = 0.0
+        reconnect_count = 0
+        try:
+            while True:
+                await asyncio.sleep(
+                    _CIV_DATA_WATCHDOG_RETRY if recovering
+                    else _CIV_DATA_WATCHDOG_TIMEOUT / 2
+                )
+
+                last = getattr(self, "_last_civ_data_received", None)
+                if last is None:
+                    continue
+
+                idle = time.monotonic() - last
+                if idle > _CIV_DATA_WATCHDOG_TIMEOUT:
+                    if not recovering:
+                        civ_t = getattr(self, "_civ_transport", None)
+                        rx_count = civ_t.rx_packet_count if civ_t else -1
+                        q_size = civ_t._packet_queue.qsize() if civ_t else -1
+                        logger.warning(
+                            "civ-data-watchdog: no CI-V data for %.1fs, "
+                            "requesting data start "
+                            "(transport rx_count=%d, queue=%d)",
+                            idle, rx_count, q_size,
+                        )
+                        recovering = True
+                        recovery_start = time.monotonic()
+
+                    elapsed_recovery = time.monotonic() - recovery_start
+
+                    if elapsed_recovery < _OPENCLOSE_DEADLINE:
+                        # Phase 1: try OpenClose
+                        try:
+                            await self._send_open_close(open_stream=True)  # type: ignore[attr-defined]
+                        except Exception:
+                            logger.debug(
+                                "civ-data-watchdog: open_close failed",
+                                exc_info=True,
+                            )
+                    else:
+                        # Phase 2: OpenClose didn't help — soft_reconnect
+                        reconnect_count += 1
+                        if reconnect_count > _MAX_RECONNECTS:
+                            # Phase 3: soft reconnects exhausted — full reconnect
+                            logger.warning(
+                                "civ-data-watchdog: %d soft reconnects failed, "
+                                "attempting full reconnect",
+                                reconnect_count - 1,
+                            )
+                            try:
+                                await self._stop_civ_data_watchdog()
+                                await self.disconnect()  # type: ignore[attr-defined]
+                                await asyncio.sleep(_RECONNECT_PAUSE * 2)
+                                await self.connect()  # type: ignore[attr-defined]
+                            except Exception:
+                                logger.error(
+                                    "civ-data-watchdog: full reconnect failed",
+                                    exc_info=True,
+                                )
+                            return  # watchdog restarted by connect
+                        logger.warning(
+                            "civ-data-watchdog: OpenClose failed for %.1fs, "
+                            "triggering soft_reconnect (%d/%d)",
+                            elapsed_recovery, reconnect_count, _MAX_RECONNECTS,
+                        )
+                        try:
+                            await self._stop_civ_data_watchdog()  # stop ourselves
+                            await self.soft_disconnect()  # type: ignore[attr-defined]
+                            await asyncio.sleep(_RECONNECT_PAUSE)  # let radio release slot
+                            await self.soft_reconnect()  # type: ignore[attr-defined]
+                        except Exception:
+                            logger.error(
+                                "civ-data-watchdog: soft_reconnect failed",
+                                exc_info=True,
+                            )
+                        return  # watchdog restarted by soft_reconnect
+                else:
+                    if recovering:
+                        logger.info("civ-data-watchdog: CI-V data resumed")
+                        recovering = False
+        except asyncio.CancelledError:
+            pass
+
     def _ensure_civ_runtime(self) -> None:
         """Ensure CI-V transport exists (tests may bypass connect()).
 
@@ -108,6 +244,7 @@ class _CivRxMixin:
         responses.  See issue #66.
         """
         assert self._civ_transport is not None  # type: ignore[attr-defined]
+        self._last_civ_data_received = time.monotonic()  # type: ignore[attr-defined]
         try:
             while self._civ_transport is not None:  # type: ignore[attr-defined]
                 # Wait for at least one packet.
@@ -129,6 +266,9 @@ class _CivRxMixin:
                             packets.append(queue.get_nowait())
                         except asyncio.QueueEmpty:
                             break
+
+                # Mark that we received CI-V data (for watchdog)
+                self._last_civ_data_received = time.monotonic()  # type: ignore[attr-defined]
 
                 # Process all collected packets.
                 for pkt in packets:
@@ -152,11 +292,19 @@ class _CivRxMixin:
 
     async def _route_civ_frame(self, frame: CivFrame, *, generation: int) -> None:
         """Route one parsed CI-V frame into command/scope event paths."""
-        if (
-            frame.from_addr != self._radio_addr  # type: ignore[attr-defined]
-            or frame.to_addr != CONTROLLER_ADDR
-        ):
+        if frame.from_addr != self._radio_addr:  # type: ignore[attr-defined]
             return
+        # Accept frames addressed to us (0xE0) OR broadcast (0x00).
+        # Unsolicited changes (knob turns) go to 0x00.
+        if frame.to_addr not in (CONTROLLER_ADDR, 0x00):
+            return
+        # Log all non-scope frames at DEBUG level
+        if frame.command != 0x27:
+            logger.debug(
+                "civ-rx: cmd=0x%02X sub=0x%02X to=0x%02X data=%s",
+                frame.command, frame.sub or 0, frame.to_addr,
+                frame.data.hex() if frame.data else "",
+            )
 
         if frame.command == 0x27 and frame.sub == 0x00 and len(frame.data) >= 3:
             receiver = frame.data[0]
@@ -189,25 +337,261 @@ class _CivRxMixin:
     def _update_state_cache_from_frame(self, frame: CivFrame) -> None:
         """Best-effort update of state cache from an incoming CI-V frame.
 
-        Called for every RESPONSE event (both solicited query responses and
-        unsolicited frames sent by the radio on knob turns).
+        Called for every data RESPONSE event (both solicited query responses
+        and unsolicited frames sent by the radio on knob turns, mode changes,
+        etc.).  This is the ONLY place state gets updated from the radio.
+
+        The _on_state_change callback notifies the server so it can broadcast
+        events to WebSocket clients.
         """
+        cache = self._state_cache  # type: ignore[attr-defined]
         try:
-            if frame.command in (0x03, 0x00):  # frequency
+            if frame.command in (0x03, 0x00):  # frequency (response / unsolicited)
                 freq = parse_frequency_response(frame)
+                old = cache.freq
+                logger.debug("civ-rx: freq=%d (cmd=0x%02X to=0x%02X) old=%d", freq, frame.command, frame.to_addr, old)
                 self._last_freq_hz = freq  # type: ignore[attr-defined]
-                self._state_cache.update_freq(freq)  # type: ignore[attr-defined]
-            elif frame.command in (0x04, 0x01):  # mode
+                cache.update_freq(freq)
+                # Always notify — cache may already be updated by set_frequency()
+                vfo = getattr(self, "_last_vfo", None) or "A"
+                self._notify_change("freq_changed", {"freq": freq, "vfo": vfo})
+            elif frame.command in (0x04, 0x01):  # mode (response / unsolicited)
                 mode, filt = parse_mode_response(frame)
+                # (previous mode/filter unused after refactor)
                 self._last_mode = mode  # type: ignore[attr-defined]
                 if filt is not None:
                     self._filter_width = filt  # type: ignore[attr-defined]
-                self._state_cache.update_mode(mode.name, filt)  # type: ignore[attr-defined]
+                cache.update_mode(mode.name, filt)
+                # Always notify — cache may already be updated by set_mode()
+                filt_str = f"FIL{filt}" if filt else ""
+                self._notify_change("mode_changed", {"mode": mode.name, "filter": filt_str})
+            elif frame.command == 0x15:  # meter readings
+                if len(frame.data) >= 2:
+                    sub = frame.sub
+                    # IC-7610 meters are BCD-encoded (0x0137 = 137, not 311)
+                    b0, b1 = frame.data[0], frame.data[1]
+                    raw = (b0 >> 4) * 1000 + (b0 & 0x0F) * 100 + (b1 >> 4) * 10 + (b1 & 0x0F)
+                    from .meter_cal import calibrate
+                    _METER_SUB = {
+                        0x02: "smeter", 0x11: "power", 0x12: "swr",
+                        0x13: "alc", 0x14: "comp",
+                        0x15: "vd", 0x16: "id",
+                    }
+                    meter_type = _METER_SUB.get(sub)
+                    if meter_type:
+                        cal = calibrate(meter_type, raw)
+                        self._notify_change("meter", {
+                            "type": meter_type, "raw": raw, "value": round(cal, 2),
+                        })
+                        # Update state cache for legacy API
+                        if sub == 0x02:
+                            cache.update_s_meter(raw)
+                        elif sub == 0x11:
+                            cache.update_rf_power(raw / 255.0)
+                        elif sub == 0x12:
+                            cache.update_swr(float(raw))
+                        elif sub == 0x13:
+                            cache.update_alc(float(raw))
+            elif frame.command == 0x14:  # levels (BCD-encoded, same as meters)
+                if len(frame.data) >= 2:
+                    b0, b1 = frame.data[0], frame.data[1]
+                    raw = (b0 >> 4) * 1000 + (b0 & 0x0F) * 100 + (b1 >> 4) * 10 + (b1 & 0x0F)
+                    if frame.sub == 0x0A:  # RF power level (set value)
+                        # 0-255 BCD = 0-100W linear for IC-7610
+                        watts = round(raw / 255 * 100)
+                        self._notify_change("power_level", {"raw": raw, "watts": watts})
+                    elif frame.sub == 0x02:  # RF gain
+                        cache.update_rf_gain(float(raw))
+                        self._notify_change("rf_gain", {"raw": raw})
+                    elif frame.sub == 0x01:  # AF level
+                        cache.update_af_level(float(raw))
+                        self._notify_change("af_level", {"raw": raw})
+                    elif frame.sub == 0x03:  # squelch
+                        self._notify_change("squelch", {"raw": raw})
+            elif frame.command == 0x11:  # attenuator
+                if frame.data:
+                    val = frame.data[0]
+                    old = cache.attenuator
+                    cache.update_attenuator(val)
+                    if val != old:
+                        self._notify_change("att_changed", {"db": val})
+            elif frame.command == 0x16:  # function settings (preamp/NB/NR/DIGI-SEL)
+                # IC-7610 responds with sub=0x00 or None, real sub-code in data[0], value in data[1]
+                sub = frame.sub or 0
+                data = frame.data
+                if sub == 0 and len(data) >= 2:
+                    sub = data[0]
+                    data = data[1:]
+                if data:
+                    val = data[0]
+                    if sub == 0x02:  # preamp
+                        old_pre = cache.preamp
+                        cache.update_preamp(val)
+                        if val != old_pre:
+                            self._notify_change("preamp_changed", {"level": val})
+                    elif sub == 0x22:  # NB
+                        self._notify_change("nb_changed", {"on": bool(val)})
+                    elif sub == 0x40:  # NR
+                        self._notify_change("nr_changed", {"on": bool(val)})
+                    elif sub == 0x4E:  # DIGI-SEL
+                        self._notify_change("digisel_changed", {"on": bool(val)})
+                    elif sub == 0x65:  # IP+
+                        self._notify_change("ipplus_changed", {"on": bool(val)})
             elif frame.command == 0x1C and frame.sub == 0x00:  # PTT
                 if frame.data:
-                    self._state_cache.update_ptt(bool(frame.data[0]))  # type: ignore[attr-defined]
+                    val = bool(frame.data[0])
+                    cache.update_ptt(val)
+                    self._notify_change("ptt", {"state": val})
         except Exception:
             pass  # Best-effort; never let cache update break the RX loop
+        # Also update RadioState (additive, does not replace StateCache)
+        self._update_radio_state_from_frame(frame)
+
+    def _update_radio_state_from_frame(self, frame: CivFrame) -> None:
+        """Update RadioState from a CI-V frame (additive alongside StateCache).
+
+        Called for every data RESPONSE frame.  Only runs when the radio has
+        ``_radio_state`` set (done by WebServer.start()).
+        """
+        rs: RadioState | None = getattr(self, "_radio_state", None)
+        if rs is None:
+            return
+        try:
+            # Determine which receiver to update.
+            # frame.receiver is set by parse_civ_frame for cmd29-wrapped frames.
+            if frame.receiver is not None:
+                rx_name = "MAIN" if frame.receiver == 0x00 else "SUB"
+            else:
+                rx_name = rs.active
+            rx = rs.receiver(rx_name)
+
+            cmd = frame.command
+
+            if cmd in (0x03, 0x00):
+                # Frequency response / unsolicited transceive
+                rx.freq = parse_frequency_response(frame)
+
+            elif cmd in (0x04, 0x01):
+                # Mode response / unsolicited transceive
+                from .types import Mode
+                mode_val, filt = parse_mode_response(frame)
+                rx.mode = mode_val.name
+                if filt is not None:
+                    rx.filter = filt
+
+            elif cmd == 0x25:
+                # RX Frequency for dual-receiver
+                # Format: FE FE to from 25 receiver bcd[5] FD
+                # data[0] = receiver (0x00=MAIN, 0x01=SUB)
+                # data[1:6] = frequency in BCD (5 bytes, LE)
+                if len(frame.data) >= 6:
+                    from .types import bcd_decode
+                    rcvr_byte = frame.data[0]
+                    which = "MAIN" if rcvr_byte == 0x00 else "SUB"
+                    rs.receiver(which).freq = bcd_decode(frame.data[1:6])
+
+            elif cmd == 0x26:
+                # RX Mode for dual-receiver
+                # Format: FE FE to from 26 receiver mode [data_mode] [filter] FD
+                # data[0] = receiver (0x00=MAIN, 0x01=SUB)
+                # data[1] = mode, data[2] = data_mode (optional), data[3] = filter (optional)
+                if len(frame.data) >= 2:
+                    from .types import Mode
+                    rcvr_byte = frame.data[0]
+                    which = "MAIN" if rcvr_byte == 0x00 else "SUB"
+                    tgt = rs.receiver(which)
+                    tgt.mode = Mode(frame.data[1]).name
+                    if len(frame.data) >= 3:
+                        tgt.data_mode = bool(frame.data[2])
+                    if len(frame.data) >= 4:
+                        tgt.filter = frame.data[3]
+
+            elif cmd == 0x15:
+                # Meter readings — update s_meter on active receiver
+                if frame.sub == 0x02 and len(frame.data) >= 2:
+                    b0, b1 = frame.data[0], frame.data[1]
+                    raw = (
+                        (b0 >> 4) * 1000 + (b0 & 0x0F) * 100
+                        + (b1 >> 4) * 10 + (b1 & 0x0F)
+                    )
+                    rs.receiver(rs.active).s_meter = raw
+
+            elif cmd == 0x14:
+                # Level values (AF, RF gain, SQL, power) — BCD-encoded 2-byte
+                if len(frame.data) >= 2:
+                    b0, b1 = frame.data[0], frame.data[1]
+                    raw = (
+                        (b0 >> 4) * 1000 + (b0 & 0x0F) * 100
+                        + (b1 >> 4) * 10 + (b1 & 0x0F)
+                    )
+                    sub = frame.sub
+                    if sub == 0x01:
+                        rx.af_level = raw
+                    elif sub == 0x02:
+                        rx.rf_gain = raw
+                    elif sub == 0x03:
+                        rx.squelch = raw
+                    elif sub == 0x0A:
+                        rs.power_level = raw
+
+            elif cmd == 0x11:
+                # Attenuator (BCD-encoded single byte: 0x18 = 18 dB)
+                if frame.data:
+                    val = frame.data[0]
+                    rx.att = ((val >> 4) & 0x0F) * 10 + (val & 0x0F)
+
+            elif cmd == 0x16:
+                # Function settings (preamp, NB, NR, DIGI-SEL, IP+)
+                # IC-7610 may respond with sub=0x00/None, real sub in data[0]
+                sub = frame.sub or 0
+                data = frame.data
+                if sub == 0 and len(data) >= 2:
+                    sub = data[0]
+                    data = data[1:]
+                if data:
+                    val = data[0]
+                    if sub == 0x02:
+                        rx.preamp = val
+                    elif sub == 0x22:
+                        rx.nb = bool(val)
+                    elif sub == 0x40:
+                        rx.nr = bool(val)
+                    elif sub == 0x4E:
+                        rx.digisel = bool(val)
+                    elif sub == 0x65:
+                        rx.ipplus = bool(val)
+
+            elif cmd == 0x1A:
+                sub = frame.sub
+                if sub == 0x03 and frame.data:
+                    rx.filter = frame.data[0]
+                elif sub == 0x06 and frame.data:
+                    rx.data_mode = bool(frame.data[0])
+
+            elif cmd == 0x1C and frame.sub == 0x00:
+                # PTT (global)
+                if frame.data:
+                    rs.ptt = bool(frame.data[0])
+
+            elif cmd == 0x0F:
+                # Split (global)
+                if frame.data:
+                    rs.split = bool(frame.data[0])
+
+        except Exception:
+            pass  # Best-effort; never break the RX loop
+
+    def _notify_change(self, event_name: str, data: dict) -> None:
+        """Notify server of state change (best-effort)."""
+        cb = getattr(self, "_on_state_change", None)
+        if cb is not None:
+            logger.debug("civ-rx: notify %s %s", event_name, data)
+            try:
+                cb(event_name, data)
+            except Exception:
+                logger.warning("civ-rx: notify failed", exc_info=True)
+        else:
+            logger.debug("civ-rx: no callback for %s", event_name)
 
     def _publish_scope_frame(self, frame: ScopeFrame) -> None:
         """Publish a complete scope frame to callback and bounded queue."""

@@ -83,17 +83,19 @@ class IcomTransport:
         self.rx_missing: dict[int, int] = {}  # seq -> retry count
         self._udp_transport: asyncio.DatagramTransport | None = None
         self._ping_task: asyncio.Task | None = None
+        self._idle_task: asyncio.Task | None = None
         self._retransmit_task: asyncio.Task | None = None
         self._packet_queue: asyncio.Queue[bytes] = asyncio.Queue()
         self._raw_send = self._default_raw_send
         self.rx_packet_count: int = 0  # total packets received (incl. pings)
+        self._last_tracked_send: float = 0.0  # monotonic time of last tracked send
 
     def _default_raw_send(self, data: bytes) -> None:
         """Send raw bytes via UDP transport."""
         if self._udp_transport is not None:
             self._udp_transport.sendto(data)
 
-    async def connect(self, host: str, port: int) -> None:
+    async def connect(self, host: str, port: int, *, local_port: int = 0) -> None:
         """Open UDP connection and perform discovery handshake.
 
         Sends "Are You There" until the radio replies with "I Am Here",
@@ -102,15 +104,20 @@ class IcomTransport:
         Args:
             host: Radio IP address or hostname.
             port: Radio control port.
+            local_port: Local UDP port to bind to (0 = random).
+                wfview binds CI-V/audio sockets to the same port sent in
+                conninfo so the radio knows where to send data.
 
         Raises:
             TimeoutError: If the radio does not respond to discovery.
         """
         self.state = ConnectionState.CONNECTING
         loop = asyncio.get_event_loop()
+        local_addr = ("0.0.0.0", local_port) if local_port else None
         await loop.create_datagram_endpoint(
             lambda: _UdpProtocol(self),
             remote_addr=(host, port),
+            local_addr=local_addr,
         )
         # Generate local ID from local address info
         if self._udp_transport is not None:
@@ -234,6 +241,8 @@ class IcomTransport:
         """Close the UDP connection and stop background tasks."""
         if self._ping_task and not self._ping_task.done():
             self._ping_task.cancel()
+        if self._idle_task and not self._idle_task.done():
+            self._idle_task.cancel()
         if self._retransmit_task and not self._retransmit_task.done():
             self._retransmit_task.cancel()
 
@@ -252,6 +261,16 @@ class IcomTransport:
         """Start the periodic ping task."""
         if self._ping_task is None or self._ping_task.done():
             self._ping_task = asyncio.create_task(self._ping_loop())
+
+    def start_idle_loop(self) -> None:
+        """Start periodic idle keepalive task (wfview-style).
+
+        Sends a tracked control packet every IDLE_PERIOD when no other
+        tracked packet has been sent recently.  This keeps the radio's
+        CI-V/audio session alive.  wfview: idleTimer -> sendControl(true, 0, 0).
+        """
+        if self._idle_task is None or self._idle_task.done():
+            self._idle_task = asyncio.create_task(self._idle_loop())
 
     def start_retransmit_loop(self) -> None:
         """Start the periodic retransmit request task."""
@@ -273,6 +292,7 @@ class IcomTransport:
         pkt = bytes(pkt)
         self._track_sent(seq, pkt)
         self._raw_send(pkt)
+        self._last_tracked_send = time.monotonic()
 
     async def receive_packet(self, timeout: float = 5.0) -> bytes:
         """Wait for the next incoming packet.
@@ -445,6 +465,31 @@ class IcomTransport:
             while self.state != ConnectionState.DISCONNECTED:
                 self._send_ping()
                 await asyncio.sleep(PING_PERIOD)
+        except asyncio.CancelledError:
+            pass
+
+    async def _idle_loop(self) -> None:
+        """Background task: send idle keepalive when no tracked packet sent recently.
+
+        Reference: wfview icomudpbase.cpp — idleTimer fires every IDLE_PERIOD (100ms).
+        If triggered, sends sendControl(tracked=true, type=0, seq=0) to keep the
+        radio session alive.  The timer is reset each time sendTrackedPacket() runs.
+        """
+        idle_count = 0
+        try:
+            while self.state != ConnectionState.DISCONNECTED:
+                await asyncio.sleep(IDLE_PERIOD)
+                elapsed = time.monotonic() - self._last_tracked_send
+                if elapsed >= IDLE_PERIOD:
+                    # Send tracked idle control packet (type=0x00)
+                    pkt = self._build_control(ptype=0x00, seq=0)
+                    await self.send_tracked(pkt)
+                    idle_count += 1
+                    if idle_count % 100 == 1:
+                        logger.debug(
+                            "idle-keepalive: sent #%d (send_seq=%d, rx_count=%d)",
+                            idle_count, self.send_seq, self.rx_packet_count,
+                        )
         except asyncio.CancelledError:
             pass
 

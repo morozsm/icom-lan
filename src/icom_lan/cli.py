@@ -370,6 +370,25 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Directory to serve static files from (default: built-in)",
     )
 
+    # proxy
+    proxy_p = sub.add_parser("proxy", help="Transparent UDP relay for remote access via VPN")
+    proxy_p.add_argument(
+        "--radio",
+        required=True,
+        help="Radio IP address (e.g. 192.168.55.40)",
+    )
+    proxy_p.add_argument(
+        "--listen",
+        default="0.0.0.0",
+        help="Listen address (default: 0.0.0.0)",
+    )
+    proxy_p.add_argument(
+        "--port",
+        type=int,
+        default=50001,
+        help="Base port (default: 50001, uses +0/+1/+2)",
+    )
+
     # scope
     scope_p = sub.add_parser("scope", help="Capture scope/waterfall and render image")
     scope_p.add_argument(
@@ -1306,6 +1325,10 @@ def main() -> None:
 
     if args.command == "discover":
         sys.exit(asyncio.run(_cmd_discover(None, args)))  # type: ignore[arg-type]
+    elif args.command == "proxy":
+        from .proxy import run_proxy
+        asyncio.run(run_proxy(args.radio, args.listen, args.port))
+        sys.exit(0)
     elif args.command is None:
         parser.print_help()
         sys.exit(0)

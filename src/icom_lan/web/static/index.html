@@ -88,16 +88,17 @@ input[type=range]::-webkit-slider-thumb {
           <span class="text-[10px] px-1.5 py-0.5 bg-green-900/30 text-green-400 border border-green-800 rounded" id="preBadgeA">PRE 1</span>
           <span class="text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded" id="attBadgeA">ATT</span>
           <span class="text-[10px] px-1.5 py-0.5 bg-green-900/30 text-green-400 border border-green-800 rounded">IP+</span>
-          <span class="text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded">NB</span>
-          <span class="text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded">NR</span>
+          <span class="text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded" id="nbBadgeA">NB</span>
+          <span class="text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded" id="nrBadgeA">NR</span>
         </div>
       </div>
       <div class="text-6xl font-digital text-vfo-a glow-cyan tracking-tighter" id="vfoAfreq">14.074.000</div>
       <div class="w-full flex items-center gap-2">
         <span class="text-[10px] text-slate-500 w-4 font-bold">S</span>
-        <div class="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden flex">
+        <div class="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden flex relative">
           <div class="bg-meter-green transition-all duration-150" id="smeterA" style="width:0%"></div>
           <div class="bg-meter-red opacity-70 transition-all duration-150" id="smeterAred" style="width:0%"></div>
+          <div class="absolute top-0 h-full w-px bg-white/70" id="sqlMarker" style="left:0%"></div>
         </div>
         <span class="text-[10px] text-meter-green font-bold font-digital" id="smeterAval">S0</span>
       </div>
@@ -111,9 +112,9 @@ input[type=range]::-webkit-slider-thumb {
       <div class="space-y-2.5 flex-1">
         <div><div class="flex justify-between mb-0.5"><span class="text-slate-500">ALC</span><span class="text-slate-300" id="alcVal">0%</span></div><div class="h-1.5 bg-slate-800 rounded-full"><div class="h-full bg-yellow-500 rounded-full transition-all duration-150" id="alcBar" style="width:0%"></div></div></div>
         <div><div class="flex justify-between mb-0.5"><span class="text-slate-500">SWR</span><span class="text-slate-300" id="swrVal">1.0</span></div><div class="h-1.5 bg-slate-800 rounded-full"><div class="h-full bg-green-400 rounded-full transition-all duration-150" id="swrBar" style="width:0%"></div></div></div>
-        <div><div class="flex justify-between mb-0.5"><span class="text-slate-500">PWR</span><span class="text-slate-300" id="pwrVal">0W</span></div><div class="h-1.5 bg-slate-800 rounded-full"><div class="h-full bg-green-400 rounded-full transition-all duration-150" id="pwrBar" style="width:0%"></div></div></div>
+        <div><div class="flex justify-between mb-0.5"><span class="text-slate-500">PWR</span><span class="text-slate-300" id="pwrVal">0W</span></div><div class="h-1.5 bg-slate-800 rounded-full cursor-pointer" id="pwrBarBg"><div class="h-full bg-green-400 rounded-full transition-all duration-150 pointer-events-none" id="pwrBar" style="width:0%"></div></div></div>
         <div><div class="flex justify-between mb-0.5"><span class="text-slate-500">Id</span><span class="text-slate-300" id="idVal">0.0A</span></div><div class="h-1.5 bg-slate-800 rounded-full"><div class="h-full bg-orange-400 rounded-full transition-all duration-150" id="idBar" style="width:0%"></div></div></div>
-        <div><div class="flex justify-between mb-0.5"><span class="text-slate-500">TEMP</span><span class="text-slate-300" id="tempVal">0°</span></div><div class="h-1.5 bg-slate-800 rounded-full"><div class="h-full bg-green-400 rounded-full transition-all duration-150" id="tempBar" style="width:0%"></div></div></div>
+        <div><div class="flex justify-between mb-0.5"><span class="text-slate-500">Vd</span><span class="text-slate-300" id="vdVal">0V</span></div><div class="h-1.5 bg-slate-800 rounded-full"><div class="h-full bg-cyan-400 rounded-full transition-all duration-150" id="vdBar" style="width:0%"></div></div></div>
       </div>
     </div>
 
@@ -123,8 +124,8 @@ input[type=range]::-webkit-slider-thumb {
           <span class="text-[10px] px-1.5 py-0.5 bg-green-900/30 text-green-400 border border-green-800 rounded" id="preBadgeB">PRE 1</span>
           <span class="text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded" id="attBadgeB">ATT</span>
           <span class="text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded">IP+</span>
-          <span class="text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded">NB</span>
-          <span class="text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded">NR</span>
+          <span class="text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded" id="nbBadgeB">NB</span>
+          <span class="text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded" id="nrBadgeB">NR</span>
         </div>
         <div class="flex items-center gap-2">
           <span class="text-slate-400 text-xs font-bold uppercase tracking-widest" id="vfoBmode">USB · FIL1</span>
@@ -170,12 +171,16 @@ input[type=range]::-webkit-slider-thumb {
       <h3 class="text-[10px] text-slate-500 uppercase tracking-widest mb-3 font-bold">Band</h3>
       <div class="grid grid-cols-3 gap-1.5" id="bandGrid">
         <button class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded text-xs font-bold transition" data-band="1840000">160m</button>
-        <button class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded text-xs font-bold transition" data-band="3573000">80m</button>
-        <button class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded text-xs font-bold transition" data-band="7074000">40m</button>
-        <button class="bg-vfo-a/20 border border-vfo-a/50 text-vfo-a py-2.5 rounded text-xs font-bold" data-band="14074000">20m</button>
-        <button class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded text-xs font-bold transition" data-band="21074000">15m</button>
-        <button class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded text-xs font-bold transition" data-band="28074000">10m</button>
-        <button class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded text-xs font-bold transition col-span-3" data-band="50313000">6m</button>
+        <button class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded text-xs font-bold transition" data-band="3600000">80m</button>
+        <button class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded text-xs font-bold transition" data-band="5330500">60m</button>
+        <button class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded text-xs font-bold transition" data-band="7100000">40m</button>
+        <button class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded text-xs font-bold transition" data-band="10125000">30m</button>
+        <button class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded text-xs font-bold transition" data-band="14150000">20m</button>
+        <button class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded text-xs font-bold transition" data-band="18118000">17m</button>
+        <button class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded text-xs font-bold transition" data-band="21200000">15m</button>
+        <button class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded text-xs font-bold transition" data-band="24940000">12m</button>
+        <button class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded text-xs font-bold transition" data-band="28300000">10m</button>
+        <button class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded text-xs font-bold transition" data-band="50100000">6m</button>
       </div>
     </div>
 
@@ -211,8 +216,8 @@ input[type=range]::-webkit-slider-thumb {
         </div>
       </div>
       <div class="grid grid-cols-2 gap-1.5">
-        <button class="bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-xs font-bold transition">NB</button>
-        <button class="bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-xs font-bold transition">NR</button>
+        <button class="bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-xs font-bold transition" id="nbBtn">NB</button>
+        <button class="bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-xs font-bold transition" id="nrBtn">NR</button>
       </div>
       <div>
         <h3 class="text-[10px] text-slate-500 uppercase tracking-widest mb-1.5 font-bold">ATT</h3>
@@ -231,9 +236,10 @@ input[type=range]::-webkit-slider-thumb {
           <button class="flex-1 bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-[10px] font-bold transition" data-pre="2">2</button>
         </div>
       </div>
-      <div class="grid grid-cols-2 gap-1.5">
-        <button class="bg-green-900/30 text-green-400 border border-green-800 py-1.5 rounded text-xs font-bold">IP+</button>
-        <button class="bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-xs font-bold transition" id="vfoSwapBtn">A↔B</button>
+      <div class="grid grid-cols-3 gap-1.5">
+        <button class="bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-[10px] font-bold transition" id="ipPlusBtn">IP+</button>
+        <button class="bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-[10px] font-bold transition" id="dselBtn">DSEL</button>
+        <button class="bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-[10px] font-bold transition" id="vfoSwapBtn">A↔B</button>
       </div>
     </div>
 
@@ -262,7 +268,7 @@ input[type=range]::-webkit-slider-thumb {
     <div class="glass-panel p-3 rounded-xl col-span-3">
       <h3 class="text-[10px] text-slate-500 uppercase tracking-widest mb-2 font-bold">TX Power</h3>
       <div class="flex items-center gap-3 mb-3">
-        <div class="text-2xl font-digital text-slate-100" id="txPwrVal">128<span class="text-xs ml-1">/255</span></div>
+        <div class="text-2xl font-digital text-slate-100" id="txPwrVal">50<span class="text-xs ml-1">W</span></div>
         <input class="flex-1" type="range" min="0" max="255" value="128" id="txPwrSlider"/>
       </div>
       <button class="w-full py-5 rounded-xl border-2 border-red-500/30 bg-red-950/20 text-red-500 font-bold text-xl uppercase tracking-[0.2em] shadow-[0_0_20px_rgba(239,68,68,0.1)] active:scale-95 transition-all" id="pttBtn">PTT</button>
@@ -275,7 +281,6 @@ input[type=range]::-webkit-slider-thumb {
     <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-slate-600 inline-block" id="lanDot"></span> LAN</span>
     <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-slate-600 inline-block" id="civDot"></span> CI-V</span>
     <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-slate-600 inline-block" id="audioDot"></span> AUDIO</span>
-    <span id="tempStatus">TEMP: --</span>
   </div>
   <div class="flex gap-4">
     <span class="text-vfo-a" id="rxAudioStatus">RX AUDIO: OFF</span>
@@ -334,6 +339,7 @@ input[type=range]::-webkit-slider-thumb {
     vfoAPanel: $('vfoAPanel'),
     vfoBPanel: $('vfoBPanel'),
     smeterA: $('smeterA'),
+    sqlMarker: $('sqlMarker'),
     smeterAred: $('smeterAred'),
     smeterAval: $('smeterAval'),
     smeterB: $('smeterB'),
@@ -344,12 +350,13 @@ input[type=range]::-webkit-slider-thumb {
     swrBar: $('swrBar'),
     swrVal: $('swrVal'),
     pwrBar: $('pwrBar'),
+    pwrBarBg: $('pwrBarBg'),
     pwrVal: $('pwrVal'),
     idBar: $('idBar'),
     idVal: $('idVal'),
-    tempBar: $('tempBar'),
-    tempVal: $('tempVal'),
-    tempStatus: $('tempStatus'),
+    vdBar: $('vdBar'),
+    vdVal: $('vdVal'),
+    
     rxtxBadge: $('rxtxBadge'),
     bandGrid: $('bandGrid'),
     modeGrid: $('modeGrid'),
@@ -383,6 +390,14 @@ input[type=range]::-webkit-slider-thumb {
     attBadgeA: $('attBadgeA'),
     attBadgeB: $('attBadgeB'),
     vfoSwapBtn: $('vfoSwapBtn'),
+    ipPlusBtn: $('ipPlusBtn'),
+    dselBtn: $('dselBtn'),
+    nbBtn: $('nbBtn'),
+    nrBtn: $('nrBtn'),
+    nbBadgeA: $('nbBadgeA'),
+    nrBadgeA: $('nrBadgeA'),
+    nbBadgeB: $('nbBadgeB'),
+    nrBadgeB: $('nrBadgeB'),
   };
 
   const state = {
@@ -399,6 +414,10 @@ input[type=range]::-webkit-slider-thumb {
     att: 0,
     preamp: 1,
     controlConnected: false,
+    nb: false,
+    nr: false,
+    digisel: false,
+    ipplus: false,
     radioConnected: false,
     reconnecting: false,
     ws: {
@@ -545,6 +564,21 @@ input[type=range]::-webkit-slider-thumb {
     }
   }
 
+  function updateToggleBtn(btn, on, label) {
+    btn.className = on
+      ? 'bg-green-900/30 text-green-400 border border-green-800 py-1.5 rounded text-[10px] font-bold'
+      : 'bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-[10px] font-bold transition';
+    btn.textContent = label;
+  }
+
+  function showToast(text) {
+    var el = document.createElement('div');
+    el.textContent = text;
+    el.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#dc2626;color:#fff;padding:8px 16px;border-radius:8px;font-size:13px;z-index:9999;opacity:0.95;';
+    document.body.appendChild(el);
+    setTimeout(function () { el.remove(); }, 4000);
+  }
+
   function updateFreqDisplays() {
     dom.vfoAfreq.textContent = formatFreq(state.freqA);
     dom.vfoBfreq.textContent = formatFreq(state.freqB);
@@ -648,7 +682,7 @@ input[type=range]::-webkit-slider-thumb {
     dom.afVal.textContent = scaleToPct(dom.afSlider.value) + '%';
     dom.rfVal.textContent = scaleToPct(dom.rfSlider.value) + '%';
     dom.sqlVal.textContent = dom.sqlSlider.value + '%';
-    dom.txPwrVal.innerHTML = String(dom.txPwrSlider.value) + '<span class="text-xs ml-1">/255</span>';
+    dom.txPwrVal.innerHTML = Math.round(Number(dom.txPwrSlider.value) / 255 * 100) + '<span class="text-xs ml-1">W</span>';
   }
 
   function scheduleSliderCommand(key, cmdName, value) {
@@ -663,41 +697,145 @@ input[type=range]::-webkit-slider-thumb {
     state.sliderDebounce.set(key, { timer: timer });
   }
 
+  // === HTTP STATE POLL (dual-receiver) ===
+  var _prevState = null;
+
+  function startStatePoll() {
+    setInterval(async function() {
+      try {
+        var r = await fetch('/api/v1/state');
+        if (!r.ok) return;
+        var s = await r.json();
+        applyStateDiff(_prevState, s);
+        _prevState = s;
+      } catch(e) { /* network error, ignore */ }
+    }, 200);
+  }
+
+  function applyStateDiff(prev, next) {
+    if (!next) return;
+    var m = next.main || {};
+    var s = next.sub || {};
+
+    // Freq
+    if (!prev || prev.main.freq !== m.freq) {
+      state.freqA = m.freq;
+      updateFreqDisplays();
+      drawWaterfallOverlay();
+    }
+    if (!prev || prev.sub.freq !== s.freq) {
+      state.freqB = s.freq;
+      updateFreqDisplays();
+    }
+
+    // Mode (active receiver)
+    var activeRx = next.active === 'SUB' ? s : m;
+    var prevActiveRx = prev ? (prev.active === 'SUB' ? prev.sub : prev.main) : null;
+    if (!prevActiveRx || prevActiveRx.mode !== activeRx.mode) {
+      state.mode = activeRx.mode;
+      updateModeDisplays();
+    }
+    if (!prevActiveRx || prevActiveRx.filter !== activeRx.filter) {
+      state.filter = 'FIL' + (activeRx.filter || 1);
+      updateModeDisplays();
+    }
+
+    // PTT
+    if (!prev || prev.ptt !== next.ptt) {
+      updatePttUi(next.ptt);
+    }
+
+    // Power level
+    if (!prev || prev.power_level !== next.power_level) {
+      state.powerLevelRaw = next.power_level;
+      dom.txPwrSlider.value = next.power_level;
+      if (!state.ptt) {
+        dom.pwrBar.style.width = Math.round((next.power_level / 255) * 100) + '%';
+      }
+    }
+
+    // ATT (active receiver)
+    if (!prevActiveRx || prevActiveRx.att !== activeRx.att) {
+      state.att = activeRx.att;
+      updateAttButtons();
+    }
+
+    // Preamp (active receiver)
+    if (!prevActiveRx || prevActiveRx.preamp !== activeRx.preamp) {
+      state.preamp = activeRx.preamp;
+      updatePreButtons();
+    }
+
+    // NB
+    if (!prevActiveRx || prevActiveRx.nb !== activeRx.nb) {
+      state.nb = activeRx.nb;
+      updateToggleBtn(dom.nbBtn, state.nb, 'NB');
+      var nbCls = state.nb ? 'text-[10px] px-1.5 py-0.5 bg-green-900/30 text-green-400 border border-green-800 rounded' : 'text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded';
+      dom.nbBadgeA.className = nbCls;
+      dom.nbBadgeB.className = nbCls;
+    }
+
+    // NR
+    if (!prevActiveRx || prevActiveRx.nr !== activeRx.nr) {
+      state.nr = activeRx.nr;
+      updateToggleBtn(dom.nrBtn, state.nr, 'NR');
+      var nrCls = state.nr ? 'text-[10px] px-1.5 py-0.5 bg-green-900/30 text-green-400 border border-green-800 rounded' : 'text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded';
+      dom.nrBadgeA.className = nrCls;
+      dom.nrBadgeB.className = nrCls;
+    }
+
+    // DIGI-SEL
+    if (!prevActiveRx || prevActiveRx.digisel !== activeRx.digisel) {
+      state.digisel = activeRx.digisel;
+      updateToggleBtn(dom.dselBtn, state.digisel, 'DSEL');
+    }
+
+    // IP+
+    if (!prevActiveRx || prevActiveRx.ipplus !== activeRx.ipplus) {
+      state.ipplus = activeRx.ipplus;
+      updateToggleBtn(dom.ipPlusBtn, state.ipplus, 'IP+');
+    }
+
+    // Sliders (AF, RF, SQL) — only update if not being dragged and delta > 3
+    if (!prevActiveRx || Math.abs(prevActiveRx.af_level - activeRx.af_level) > 3) {
+      if (!state.sliderDebounce.has('af')) {
+        dom.afSlider.value = activeRx.af_level;
+        dom.afVal.textContent = scaleToPct(activeRx.af_level) + '%';
+      }
+    }
+    if (!prevActiveRx || Math.abs(prevActiveRx.rf_gain - activeRx.rf_gain) > 3) {
+      if (!state.sliderDebounce.has('rf')) {
+        dom.rfSlider.value = activeRx.rf_gain;
+        dom.rfVal.textContent = scaleToPct(activeRx.rf_gain) + '%';
+      }
+    }
+    if (!prevActiveRx || Math.abs(prevActiveRx.squelch - activeRx.squelch) > 3) {
+      if (!state.sliderDebounce.has('sql')) {
+        var sqlPct = Math.round(activeRx.squelch / 255 * 100);
+        dom.sqlSlider.value = sqlPct;
+        dom.sqlVal.textContent = sqlPct + '%';
+        dom.sqlMarker.style.left = sqlPct + '%';
+        dom.sqlMarker.style.display = activeRx.squelch > 0 ? '' : 'none';
+      }
+    }
+
+    // S-meter (from poll, updates between binary meter frames)
+    // Skip — binary WS meters are higher frequency
+  }
+
+  // Legacy WS snapshot (still used for initial hello state)
   function applyStateSnapshot(data) {
-    if (!data || typeof data !== 'object') {
-      return;
-    }
-
-    if (typeof data.freq_a === 'number' && data.freq_a > 0) {
-      state.freqA = data.freq_a;
-    }
-    if (typeof data.freq_b === 'number' && data.freq_b > 0) {
-      state.freqB = data.freq_b;
-    }
-    if (typeof data.mode === 'string' && data.mode) {
-      state.mode = data.mode;
-    }
-    if (typeof data.filter === 'string' && data.filter) {
-      state.filter = data.filter;
-    }
-    if (typeof data.ptt === 'boolean') {
-      updatePttUi(data.ptt);
-    }
-    if (typeof data.power === 'number') {
-      state.power = clamp(Math.round(data.power), 0, 255);
-      dom.txPwrSlider.value = String(state.power);
-    }
-
+    if (!data || typeof data !== 'object') return;
+    if (typeof data.freq_a === 'number' && data.freq_a > 0) state.freqA = data.freq_a;
+    if (typeof data.freq_b === 'number' && data.freq_b > 0) state.freqB = data.freq_b;
+    if (typeof data.mode === 'string' && data.mode) state.mode = data.mode;
+    if (typeof data.filter === 'string' && data.filter) state.filter = data.filter;
+    if (typeof data.ptt === 'boolean') updatePttUi(data.ptt);
     if (data.scope && typeof data.scope === 'object') {
-      if (typeof data.scope.start_freq === 'number' && data.scope.start_freq > 0) {
-        state.scope.startFreq = data.scope.start_freq;
-      }
-      if (typeof data.scope.end_freq === 'number' && data.scope.end_freq > 0) {
-        state.scope.endFreq = data.scope.end_freq;
-      }
+      if (typeof data.scope.start_freq === 'number' && data.scope.start_freq > 0) state.scope.startFreq = data.scope.start_freq;
+      if (typeof data.scope.end_freq === 'number' && data.scope.end_freq > 0) state.scope.endFreq = data.scope.end_freq;
       state.scope.axisDirty = true;
     }
-
     updateFreqDisplays();
     updateModeDisplays();
     updateSliderLabels();
@@ -748,6 +886,7 @@ input[type=range]::-webkit-slider-thumb {
       sendControl({ type: 'subscribe', streams: ['state', 'events'] });
       connectMeters();
       connectScope();
+      startStatePoll();
       if (state.audio.rxEnabled || state.audio.txEnabled) {
         connectAudio();
       }
@@ -766,19 +905,65 @@ input[type=range]::-webkit-slider-thumb {
         setStatusVisual();
         return;
       }
-      if (eventName === 'freq_changed' && msg.data && typeof msg.data.freq === 'number') {
-        const changedVfo = msg.data.vfo === 'B' ? 'B' : 'A';
-        if (changedVfo === 'A') {
-          state.freqA = msg.data.freq;
-        } else {
-          state.freqB = msg.data.freq;
-        }
-        updateFreqDisplays();
-        drawWaterfallOverlay();
+      // Command error handling
+      if (msg.type === 'response' && msg.ok === false && msg.message) {
+        showToast(msg.message);
         return;
       }
-      if (eventName === 'ptt' && msg.data && typeof msg.data.state === 'boolean') {
-        updatePttUi(msg.data.state);
+      // [nb_changed] → handled by HTTP state poll
+      // [nr_changed] → handled by HTTP state poll
+      // [digisel_changed] → handled by HTTP state poll
+      // [ipplus_changed] → handled by HTTP state poll
+      // [af_level] → handled by HTTP state poll
+      // [rf_gain] → handled by HTTP state poll
+      // [squelch] → handled by HTTP state poll
+      if (eventName === 'vfo_changed' && msg.data) {
+        setActiveVfo(msg.data.vfo, false);
+        return;
+      }
+      if (eventName === 'vfo_swapped') {
+        // Exchange displayed frequencies
+        var tmpFreq = state.freqA;
+        state.freqA = state.freqB;
+        state.freqB = tmpFreq;
+        updateFreqDisplays();
+        return;
+      }
+      // [freq_changed] → handled by HTTP state poll
+      // [mode_changed] → handled by HTTP state poll
+      // [ptt] → handled by HTTP state poll
+      // [att_changed] → handled by HTTP state poll
+      // [preamp_changed] → handled by HTTP state poll
+      if (eventName === 'power_level' && msg.data) {
+        // Set power level — show in PWR meter when not transmitting
+        state.powerLevelWatts = msg.data.watts;
+        state.powerLevelRaw = msg.data.raw;
+        dom.txPwrSlider.value = msg.data.raw;
+        dom.txPwrVal.innerHTML = msg.data.watts + '<span class="text-xs ml-1">W</span>';
+        if (!state.ptt) {
+          dom.pwrVal.textContent = msg.data.watts + 'W';
+          dom.pwrBar.style.width = Math.round((msg.data.raw / 255) * 100) + '%';
+        }
+        return;
+      }
+      if (eventName === 'meter' && msg.data) {
+        // Calibrated meter values from backend
+        var mt = msg.data.type;
+        var val = msg.data.value;
+        if (mt === 'power' && val > 0) { dom.pwrVal.textContent = Math.round(val) + 'W'; }
+        else if (mt === 'swr') {
+          dom.swrVal.textContent = '1:' + val.toFixed(1);
+          dom.swrBar.classList.remove('bg-green-400', 'bg-yellow-500', 'bg-red-500');
+          dom.swrBar.classList.add(val < 2.0 ? 'bg-green-400' : (val < 3.0 ? 'bg-yellow-500' : 'bg-red-500'));
+        }
+        else if (mt === 'alc') {
+          dom.alcVal.textContent = val >= 100 ? 'OVER' : Math.round(val) + '%';
+          dom.alcBar.classList.remove('bg-yellow-500', 'bg-red-500');
+          dom.alcBar.classList.add(val >= 100 ? 'bg-red-500' : 'bg-yellow-500');
+        }
+        else if (mt === 'id') { dom.idVal.textContent = val.toFixed(1) + 'A'; }
+        else if (mt === 'vd') { dom.vdVal.textContent = val.toFixed(1) + 'V'; }
+        return;
       }
       return;
     }
@@ -920,43 +1105,30 @@ input[type=range]::-webkit-slider-thumb {
   }
 
   function handleMeter(id, value) {
-    const raw = clamp(value, 0, 255);
-    if (id === METER_IDS.SMETER_MAIN) {
-      updateSmeter('A', raw);
-      return;
+    // Binary protocol: raw values for bar widths only.
+    // Calibrated text values come via JSON 'meter' events.
+    var raw = clamp(value, 0, 255);
+    var pct = Math.round((raw / 255) * 100) + '%';
+    if (id === METER_IDS.SMETER_MAIN) { updateSmeter('A', raw); }
+    else if (id === METER_IDS.SMETER_SUB) { updateSmeter('B', raw); }
+    else if (id === METER_IDS.POWER) {
+      if (raw > 0) {
+        // TX: show actual measured power
+        dom.pwrBar.style.width = pct;
+      }
+      // RX (raw=0): don't touch bar — power_level event handles it
     }
-    if (id === METER_IDS.SMETER_SUB) {
-      updateSmeter('B', raw);
-      return;
+    else if (id === METER_IDS.SWR) {
+      dom.swrBar.style.width = pct;
+      // SWR bar color from raw threshold
+      // SWR color set by JSON meter event
     }
-    if (id === METER_IDS.POWER) {
-      dom.pwrBar.style.width = Math.round((raw / 255) * 100) + '%';
-      dom.pwrVal.textContent = Math.round((raw / 255) * 100) + 'W';
-      return;
+    else if (id === METER_IDS.ALC) {
+      dom.alcBar.style.width = pct;
+      // ALC color set by JSON meter event
     }
-    if (id === METER_IDS.SWR) {
-      const swr = raw < 3 ? 1.0 : (1 + raw / 64);
-      dom.swrBar.style.width = Math.round((raw / 255) * 100) + '%';
-      dom.swrVal.textContent = swr.toFixed(1);
-      dom.swrBar.classList.remove('bg-green-400', 'bg-yellow-500', 'bg-red-500');
-      dom.swrBar.classList.add(swr < 2.0 ? 'bg-green-400' : (swr < 3.0 ? 'bg-yellow-500' : 'bg-red-500'));
-      return;
-    }
-    if (id === METER_IDS.ALC) {
-      dom.alcBar.style.width = Math.round((raw / 255) * 100) + '%';
-      dom.alcVal.textContent = Math.round((raw / 255) * 100) + '%';
-      return;
-    }
-    if (id === METER_IDS.ID_DRAIN) {
-      dom.idBar.style.width = Math.round((raw / 255) * 100) + '%';
-      dom.idVal.textContent = ((raw / 255) * 25).toFixed(1) + 'A';
-      return;
-    }
-    if (id === METER_IDS.TEMP) {
-      dom.tempBar.style.width = Math.round((raw / 255) * 100) + '%';
-      dom.tempVal.textContent = Math.round((raw / 255) * 100) + '°';
-      dom.tempStatus.textContent = 'TEMP: ' + dom.tempVal.textContent;
-    }
+    else if (id === METER_IDS.ID_DRAIN) { dom.idBar.style.width = pct; }
+    else if (id === METER_IDS.VD) { dom.vdBar.style.width = pct; }
   }
 
   function updateSmeter(vfo, raw) {
@@ -1069,7 +1241,7 @@ input[type=range]::-webkit-slider-thumb {
     for (let i = 0; i <= steps; i += 1) {
       const hz = start + Math.round((i / steps) * span);
       const label = document.createElement('span');
-      label.textContent = (hz / 1000000).toFixed(3);
+      label.textContent = (hz / 1e6).toFixed(3);
       dom.freqAxis.appendChild(label);
     }
     state.scope.axisDirty = false;
@@ -1436,6 +1608,13 @@ input[type=range]::-webkit-slider-thumb {
     return ctx;
   }
 
+  function flushAudioPipeline() {
+    // Reset the scheduled play time so the next buffer plays immediately
+    // instead of queuing behind seconds of stale audio.
+    // We don't close AudioContext (that breaks everything) — just reset timing.
+    state.audio.nextPlayTime = 0;
+  }
+
   function scheduleAudioBuffer(buffer) {
     const ctx = state.audio.context;
     if (!ctx || !state.audio.gain) {
@@ -1447,8 +1626,14 @@ input[type=range]::-webkit-slider-thumb {
     source.connect(state.audio.gain);
 
     const now = ctx.currentTime;
+    // If we've fallen behind or just started, play almost immediately
     if (state.audio.nextPlayTime < now + 0.01) {
-      state.audio.nextPlayTime = now + 0.08;
+      state.audio.nextPlayTime = now + 0.02;
+    }
+    // If buffer is scheduled too far ahead (>150ms), drop to catch up.
+    // This keeps audio latency under ~150ms vs waterfall.
+    if (state.audio.nextPlayTime > now + 0.15) {
+      return; // drop this buffer — we're too far ahead
     }
     source.start(state.audio.nextPlayTime);
     state.audio.nextPlayTime += buffer.duration;
@@ -1616,6 +1801,7 @@ input[type=range]::-webkit-slider-thumb {
       }
     } else {
       state.audio.rxEnabled = false;
+      flushAudioPipeline();
       if (state.ws.audio && state.ws.audio.readyState === WebSocket.OPEN) {
         state.ws.audio.send(JSON.stringify({ type: 'audio_stop', direction: 'rx' }));
       }
@@ -1818,8 +2004,41 @@ input[type=range]::-webkit-slider-thumb {
       setActiveVfo('B', true);
     });
 
+    dom.ipPlusBtn.addEventListener('click', function () {
+      state.ipplus = !state.ipplus;
+      sendCommand('set_ipplus', { on: state.ipplus });
+      updateToggleBtn(dom.ipPlusBtn, state.ipplus, 'IP+');
+    });
+    dom.dselBtn.addEventListener('click', function () {
+      state.digisel = !state.digisel;
+      sendCommand('set_digisel', { on: state.digisel });
+      updateToggleBtn(dom.dselBtn, state.digisel, 'DSEL');
+    });
+    dom.nbBtn.addEventListener('click', function () {
+      state.nb = !state.nb;
+      sendCommand('set_nb', { on: state.nb });
+      updateToggleBtn(dom.nbBtn, state.nb, 'NB');
+    });
+    dom.nrBtn.addEventListener('click', function () {
+      state.nr = !state.nr;
+      sendCommand('set_nr', { on: state.nr });
+      updateToggleBtn(dom.nrBtn, state.nr, 'NR');
+    });
     dom.vfoSwapBtn.addEventListener('click', function () {
       sendCommand('vfo_swap', {});
+    });
+
+    // Click on PWR bar to set power level
+    dom.pwrBarBg.addEventListener('click', function (ev) {
+      var rect = dom.pwrBarBg.getBoundingClientRect();
+      var pct = Math.max(0, Math.min(100, Math.round((ev.clientX - rect.left) / rect.width * 100)));
+      var watts = pct; // 0-100% = 0-100W
+      var rawLevel = Math.round(pct / 100 * 255);
+      sendCommand('set_power', { level: rawLevel });
+      dom.pwrVal.textContent = watts + 'W';
+      dom.pwrBar.style.width = pct + '%';
+      dom.txPwrSlider.value = rawLevel;
+      dom.txPwrVal.innerHTML = watts + '<span class="text-xs ml-1">W</span>';
     });
 
     dom.bandGrid.addEventListener('click', function (ev) {
@@ -1831,7 +2050,7 @@ input[type=range]::-webkit-slider-thumb {
       if (!Number.isFinite(freq)) {
         return;
       }
-      sendCommand('set_freq', { freq: Math.round(freq) });
+      flushAudioPipeline(); sendCommand('set_freq', { freq: Math.round(freq) });
       if (state.activeVfo === 'A') {
         state.freqA = Math.round(freq);
       } else {
@@ -1896,6 +2115,10 @@ input[type=range]::-webkit-slider-thumb {
     });
     dom.sqlSlider.addEventListener('input', function () {
       updateSliderLabels();
+      var sqlPctVal = Number(dom.sqlSlider.value);
+      dom.sqlMarker.style.left = sqlPctVal + '%';
+      dom.sqlMarker.style.display = sqlPctVal > 0 ? '' : 'none';
+      scheduleSliderCommand('sql', 'set_sql', Math.round(sqlPctVal / 100 * 255));
     });
 
     dom.afSlider.addEventListener('change', function () {
@@ -1904,30 +2127,16 @@ input[type=range]::-webkit-slider-thumb {
     dom.rfSlider.addEventListener('change', function () {
       sendCommand('set_rf_gain', { level: Number(dom.rfSlider.value) });
     });
+    dom.sqlSlider.addEventListener('change', function () {
+      sendCommand('set_sql', { level: Math.round(Number(dom.sqlSlider.value) / 100 * 255) });
+    });
     dom.txPwrSlider.addEventListener('change', function () {
       sendCommand('set_power', { level: Number(dom.txPwrSlider.value) });
     });
 
-    dom.pttBtn.addEventListener('mousedown', function () {
-      sendPtt(true);
-    });
-    window.addEventListener('mouseup', function () {
-      if (state.ptt) {
-        sendPtt(false);
-      }
-    });
-
-    dom.pttBtn.addEventListener('touchstart', function (ev) {
-      ev.preventDefault();
-      state.touchPttActive = true;
-      sendPtt(true);
-    }, { passive: false });
-
-    window.addEventListener('touchend', function () {
-      if (state.touchPttActive || state.ptt) {
-        state.touchPttActive = false;
-        sendPtt(false);
-      }
+    // PTT toggle (click to TX, click again to RX)
+    dom.pttBtn.addEventListener('click', function () {
+      sendPtt(!state.ptt);
     });
 
     dom.rxAudioBtn.addEventListener('click', function () {
@@ -1948,8 +2157,8 @@ input[type=range]::-webkit-slider-thumb {
         }
         const rect = container.getBoundingClientRect();
         const ratio = clamp((ev.clientX - rect.left) / rect.width, 0, 1);
-        const hz = Math.round((start + ratio * span) / 100) * 100;
-        sendCommand('set_freq', { freq: hz });
+        const hz = Math.round((start + ratio * span) / state.tuningStep) * state.tuningStep;
+        flushAudioPipeline(); sendCommand('set_freq', { freq: hz });
         if (state.activeVfo === 'A') {
           state.freqA = hz;
         } else {
