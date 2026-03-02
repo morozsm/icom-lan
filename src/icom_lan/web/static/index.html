@@ -1457,6 +1457,24 @@ input[type=range]::-webkit-slider-thumb {
     return ctx;
   }
 
+  function flushAudioPipeline() {
+    // Close and recreate AudioContext to instantly stop all scheduled buffers.
+    // Simple close+recreate is the only reliable way to cancel
+    // buffers queued via source.start(futureTime).
+    const old = state.audio.context;
+    if (old) {
+      old.close().catch(function () {});
+    }
+    state.audio.context = null;
+    state.audio.gain = null;
+    state.audio.nextPlayTime = 0;
+    // Close Opus decoder if active
+    if (state.audio.decoder) {
+      try { state.audio.decoder.close(); } catch (e) {}
+      state.audio.decoder = null;
+    }
+  }
+
   function scheduleAudioBuffer(buffer) {
     const ctx = state.audio.context;
     if (!ctx || !state.audio.gain) {
@@ -1637,6 +1655,7 @@ input[type=range]::-webkit-slider-thumb {
       }
     } else {
       state.audio.rxEnabled = false;
+      flushAudioPipeline();
       if (state.ws.audio && state.ws.audio.readyState === WebSocket.OPEN) {
         state.ws.audio.send(JSON.stringify({ type: 'audio_stop', direction: 'rx' }));
       }
@@ -1852,7 +1871,7 @@ input[type=range]::-webkit-slider-thumb {
       if (!Number.isFinite(freq)) {
         return;
       }
-      sendCommand('set_freq', { freq: Math.round(freq) });
+      flushAudioPipeline(); sendCommand('set_freq', { freq: Math.round(freq) });
       if (state.activeVfo === 'A') {
         state.freqA = Math.round(freq);
       } else {
@@ -1970,7 +1989,7 @@ input[type=range]::-webkit-slider-thumb {
         const rect = container.getBoundingClientRect();
         const ratio = clamp((ev.clientX - rect.left) / rect.width, 0, 1);
         const hz = Math.round((start + ratio * span) / state.tuningStep) * state.tuningStep;
-        sendCommand('set_freq', { freq: hz });
+        flushAudioPipeline(); sendCommand('set_freq', { freq: hz });
         if (state.activeVfo === 'A') {
           state.freqA = hz;
         } else {

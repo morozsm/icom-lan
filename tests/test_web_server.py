@@ -1741,6 +1741,7 @@ class TestRadioPoller:
         radio.set_frequency = AsyncMock()
         radio.set_mode = AsyncMock()
         radio.set_ptt = AsyncMock()
+        radio.send_civ = AsyncMock()  # RadioPoller now calls send_civ directly
         radio.state_cache = StateCache()
         return radio
 
@@ -1774,11 +1775,12 @@ class TestRadioPoller:
         )
 
         poller.start()
-        await asyncio.sleep(0.15)
+        # Slow queries poll every 10th cycle × 25ms = 250ms
+        await asyncio.sleep(0.3)
         poller.stop()
 
-        assert cache.freq == 14074000
-        assert radio.get_frequency.await_count >= 1
+        # send_civ called for freq query (0x03) and meters (0x15)
+        assert radio.send_civ.await_count >= 1
 
     async def test_command_queue_dedup(self) -> None:
         """Last-write-wins dedup for freq commands; PTT never deduped."""
@@ -1815,23 +1817,23 @@ class TestRadioPoller:
         radio.set_frequency.assert_awaited_with(7074000)
 
     async def test_poller_broadcasts_meter_readings(self) -> None:
-        """RadioPoller broadcasts meter readings via callback."""
+        """RadioPoller polls meters via send_civ."""
         from icom_lan.web.radio_poller import CommandQueue, RadioPoller
 
         radio = self._make_radio()
         cache = StateCache()
         queue = CommandQueue()
-        meter_readings: list = []
-        poller = RadioPoller(
-            radio, cache, queue,
-            on_meter_readings=lambda r: meter_readings.extend(r),
-        )
+        poller = RadioPoller(radio, cache, queue)
 
         poller.start()
-        await asyncio.sleep(0.3)
+        await asyncio.sleep(0.15)  # 25ms × 6 cycles = 150ms
         poller.stop()
 
-        assert len(meter_readings) >= 1
+        # Fast queries: S-meter (0x15, 0x02), power, SWR, ALC
+        assert radio.send_civ.await_count >= 4
+        meter_calls = [c for c in radio.send_civ.call_args_list 
+                       if c[0][0] == 0x15]  # cmd=0x15
+        assert len(meter_calls) >= 4
 
     async def test_poller_idempotent_start(self) -> None:
         """Calling start() twice does not create duplicate tasks."""

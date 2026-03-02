@@ -44,7 +44,8 @@ logger = logging.getLogger(__name__)
 
 _GAP: float = 0.012
 _SEND_TIMEOUT: float = 1.0
-_QUERY_INTERVAL: float = 0.25  # slow poll — meters come via auto-information
+_FAST_INTERVAL: float = 0.025  # meters — wfview queue interval for LAN (25ms)
+_SLOW_INTERVAL: float = 0.25   # levels/settings — rarely change
 
 
 # ------------------------------------------------------------------
@@ -216,14 +217,26 @@ class RadioPoller:
                                          type(cmd).__name__, exc_info=True)
                         await asyncio.sleep(_GAP)
 
-                # 2. Send one fire-and-forget CI-V query
+                # 2. Send fast meter query
                 try:
                     await self._send_query()
                 except Exception:
                     logger.debug("radio-poller: query error", exc_info=True)
 
-                # 3. Wait for next cycle
-                await self._queue.wait(timeout=_QUERY_INTERVAL)
+                # 3. Every 10th cycle, also send one slow query
+                if self._poll_index % 10 == 0:
+                    slow_idx = (self._poll_index // 10) % len(self._SLOW_CMDS)
+                    cmd_byte, sub_byte = self._SLOW_CMDS[slow_idx]
+                    await asyncio.sleep(_GAP)
+                    try:
+                        await self._radio.send_civ(
+                            cmd_byte, sub=sub_byte, data=b"", wait_response=False,
+                        )
+                    except Exception:
+                        pass
+
+                # 4. Wait for next cycle
+                await self._queue.wait(timeout=_FAST_INTERVAL)
         except asyncio.CancelledError:
             pass
 
@@ -263,36 +276,33 @@ class RadioPoller:
                 await radio.disable_scope()
                 logger.info("radio-poller: scope disabled")
 
-    # All polled parameters — meters included until auto-information (#75)
-    # is implemented.  Keep the list lean to avoid CI-V bus saturation.
-    _QUERY_CMDS: list[tuple[int, int | None]] = [
-        (0x15, 0x02),   # S-meter
-        (0x03, None),   # frequency
-        (0x15, 0x02),   # S-meter (again — highest priority)
-        (0x04, None),   # mode
+    # Fast: meters (polled every 25ms = ~10 updates/sec per meter)
+    # wfview: Priority=Highest, queue interval 25ms for LAN (HasFDComms)
+    _FAST_CMDS: list[tuple[int, int | None]] = [
         (0x15, 0x02),   # S-meter
         (0x15, 0x11),   # RF power
-        (0x15, 0x02),   # S-meter
         (0x15, 0x12),   # SWR
-        (0x15, 0x02),   # S-meter
         (0x15, 0x13),   # ALC
-        (0x15, 0x02),   # S-meter
+    ]
+
+    # Slow: levels and settings (freq/mode come unsolicited via CI-V transceive)
+    _SLOW_CMDS: list[tuple[int, int | None]] = [
+        (0x03, None),   # frequency (backup)
+        (0x04, None),   # mode (backup)
         (0x14, 0x02),   # RF gain
-        (0x15, 0x02),   # S-meter
         (0x14, 0x01),   # AF level
-        (0x15, 0x02),   # S-meter
         (0x11, None),   # attenuator
-        (0x15, 0x02),   # S-meter
         (0x16, 0x02),   # preamp
     ]
 
     async def _send_query(self) -> None:
-        idx = self._poll_index
-        self._poll_index = (idx + 1) % len(self._QUERY_CMDS)
-        cmd_byte, sub_byte = self._QUERY_CMDS[idx]
+        # Fast meter query every cycle
+        fast_idx = self._poll_index % len(self._FAST_CMDS)
+        cmd_byte, sub_byte = self._FAST_CMDS[fast_idx]
         await self._radio.send_civ(
             cmd_byte, sub=sub_byte, data=b"", wait_response=False,
         )
+        self._poll_index += 1
 
     def _emit(self, name: str, data: dict[str, Any]) -> None:
         if self._on_state_event is not None:
