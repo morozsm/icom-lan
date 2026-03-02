@@ -214,6 +214,7 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         self._reconnect_task: asyncio.Task | None = None
         self._auto_recover_audio = auto_recover_audio
         self._on_audio_recovery = on_audio_recovery
+        self._on_reconnect: Callable[[], None] | None = None
         self._pcm_rx_user_callback: Callable[[bytes | None], None] | None = None
         self._pcm_rx_jitter_depth: int = 5
         self._opus_rx_user_callback: Callable[[AudioPacket | None], None] | None = None
@@ -420,6 +421,8 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
 
         self._civ_transport.start_ping_loop()
         self._civ_transport.start_retransmit_loop()
+        # ⚠️ DO NOT REMOVE — see _control_phase.py comment (2026-03-02)
+        self._civ_transport.start_idle_loop()
         await self._send_open_close(open_stream=True)
 
         self._advance_civ_generation("soft_reconnect")
@@ -433,6 +436,12 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         self._start_civ_worker()
         self._start_civ_data_watchdog()
         logger.info("Soft reconnect to %s (civ=%d)", self._host, self._civ_port)
+        # Notify server to re-enable scope/audio after CI-V stream reset
+        if self._on_reconnect is not None:
+            try:
+                self._on_reconnect()
+            except Exception:
+                logger.debug("soft_reconnect: _on_reconnect callback failed", exc_info=True)
 
     # ------------------------------------------------------------------
     # Watchdog & reconnect loops

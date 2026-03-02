@@ -102,6 +102,10 @@ class WebServer:
         self._meter_cache: list[tuple[int, int]] | None = None
         # Control handler event queues
         self._control_event_queues: set[asyncio.Queue[dict[str, Any]]] = set()
+        # Scope health monitor
+        self._scope_last_nonzero: float = 0.0
+        self._scope_health_task: asyncio.Task[None] | None = None
+        self._scope_health_interval: float = 10.0  # seconds of zero frames before re-enable
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -157,6 +161,8 @@ class WebServer:
         """
         for h in list(self._scope_handlers):
             h.enqueue_frame(frame)
+        # Scope health: track whether frames carry real data
+        self._scope_health_check(frame)
 
     # ------------------------------------------------------------------
     # RadioPoller integration
@@ -237,6 +243,48 @@ class WebServer:
                 # Binary protocol uses raw for bar width
                 self._broadcast_meters([(meter_id, data.get("raw", 0))])
 
+    def _on_radio_reconnect(self) -> None:
+        """Called after soft_reconnect — re-enable scope if clients are connected."""
+        if self._scope_handlers and self._radio is not None:
+            self._radio.on_scope_data(self._broadcast_scope)
+            self._command_queue.put(EnableScope())
+            logger.info("scope: re-enable queued after reconnect (%d handlers)", len(self._scope_handlers))
+
+    def _scope_health_check(self, frame: Any) -> None:
+        """Track whether scope frames contain real data (non-zero pixels)."""
+        import time
+        try:
+            # ScopeFrame has .pixels (bytes-like)
+            pixels = getattr(frame, "pixels", None) or b""
+            if any(b != 0 for b in pixels):
+                self._scope_last_nonzero = time.monotonic()
+        except Exception:
+            pass
+
+    async def _scope_health_monitor(self) -> None:
+        """Background task: re-enable scope if frames are all-zero for too long."""
+        import time
+        try:
+            while True:
+                await asyncio.sleep(self._scope_health_interval)
+                if not self._scope_handlers or self._radio is None:
+                    continue
+                now = time.monotonic()
+                if self._scope_last_nonzero == 0.0:
+                    # Never seen non-zero — might be starting up
+                    self._scope_last_nonzero = now
+                    continue
+                elapsed = now - self._scope_last_nonzero
+                if elapsed > self._scope_health_interval:
+                    self._command_queue.put(EnableScope())
+                    self._scope_last_nonzero = now  # reset to avoid spam
+                    logger.warning(
+                        "scope-health: all-zero frames for %.0fs, re-enabling scope",
+                        elapsed,
+                    )
+        except asyncio.CancelledError:
+            pass
+
     def _on_poller_state_event(self, name: str, data: dict[str, Any]) -> None:
         """Callback from RadioPoller (legacy, kept for compatibility)."""
         self.broadcast_event(name, data)
@@ -260,6 +308,8 @@ class WebServer:
             self._radio._on_state_change = self._on_radio_state_change
             # Pass RadioState to the CI-V RX mixin for dual-receiver state tracking.
             self._radio._radio_state = self._radio_state
+            # Re-enable scope after soft_reconnect (CI-V stream reset loses scope state)
+            self._radio._on_reconnect = self._on_radio_reconnect
             self._radio_poller = RadioPoller(
                 self._radio,
                 self._state_cache,
@@ -268,9 +318,15 @@ class WebServer:
                 on_meter_readings=self._on_poller_meter_readings,
             )
             self._radio_poller.start()
+            self._scope_health_task = asyncio.get_running_loop().create_task(
+                self._scope_health_monitor(), name="scope-health"
+            )
 
     async def stop(self) -> None:
         """Close the listener, stop RadioPoller, disconnect radio, cancel tasks."""
+        if self._scope_health_task is not None:
+            self._scope_health_task.cancel()
+            self._scope_health_task = None
         if self._radio_poller is not None:
             self._radio_poller.stop()
             self._radio_poller = None

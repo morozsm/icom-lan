@@ -298,6 +298,7 @@ input[type=range]::-webkit-slider-thumb {
 
   const BACKOFF_MIN = 1000;
   const BACKOFF_MAX = 30000;
+  const TUNE_DEBOUNCE_MS = 40;
   const METER_IDS = {
     SMETER_MAIN: 0x01,
     SMETER_SUB: 0x02,
@@ -449,6 +450,8 @@ input[type=range]::-webkit-slider-thumb {
       axisDirty: true,
     },
     sliderDebounce: new Map(),
+    tuneDebounceTimer: null,
+    pendingTuneFreq: null,
     audio: {
       rxEnabled: false,
       txEnabled: false,
@@ -583,6 +586,44 @@ input[type=range]::-webkit-slider-thumb {
     dom.vfoAfreq.textContent = formatFreq(state.freqA);
     dom.vfoBfreq.textContent = formatFreq(state.freqB);
     updateBandButtons();
+  }
+
+  function clearPendingTuneCommand() {
+    if (state.tuneDebounceTimer) {
+      clearTimeout(state.tuneDebounceTimer);
+      state.tuneDebounceTimer = null;
+    }
+    state.pendingTuneFreq = null;
+  }
+
+  function flushTuneCommand() {
+    if (state.pendingTuneFreq == null) {
+      return;
+    }
+    const freq = state.pendingTuneFreq;
+    state.pendingTuneFreq = null;
+    flushAudioPipeline();
+    sendCommand('set_freq', { freq: freq });
+  }
+
+  function queueTuneCommand(freq) {
+    const rounded = clamp(Math.round(Number(freq) || 0), 30000, 60000000);
+    if (state.activeVfo === 'A') {
+      state.freqA = rounded;
+    } else {
+      state.freqB = rounded;
+    }
+    updateFreqDisplays();
+    drawWaterfallOverlay();
+
+    state.pendingTuneFreq = rounded;
+    if (state.tuneDebounceTimer) {
+      return;
+    }
+    state.tuneDebounceTimer = setTimeout(function () {
+      state.tuneDebounceTimer = null;
+      flushTuneCommand();
+    }, TUNE_DEBOUNCE_MS);
   }
 
   function updateModeDisplays() {
@@ -1974,26 +2015,12 @@ input[type=range]::-webkit-slider-thumb {
       if (ev.target.tagName === 'INPUT' || ev.target.tagName === 'TEXTAREA') return;
       if (ev.key === 'ArrowUp' || ev.key === 'ArrowRight') {
         ev.preventDefault();
-        if (state.activeVfo === 'A') {
-          state.freqA = clamp(state.freqA + state.tuningStep, 30000, 60000000);
-          sendCommand('set_freq', { freq: state.freqA });
-        } else {
-          state.freqB = clamp(state.freqB + state.tuningStep, 30000, 60000000);
-          sendCommand('set_freq', { freq: state.freqB });
-        }
-        updateFreqDisplays();
-        drawWaterfallOverlay();
+        const base = state.activeVfo === 'A' ? state.freqA : state.freqB;
+        queueTuneCommand(base + state.tuningStep);
       } else if (ev.key === 'ArrowDown' || ev.key === 'ArrowLeft') {
         ev.preventDefault();
-        if (state.activeVfo === 'A') {
-          state.freqA = clamp(state.freqA - state.tuningStep, 30000, 60000000);
-          sendCommand('set_freq', { freq: state.freqA });
-        } else {
-          state.freqB = clamp(state.freqB - state.tuningStep, 30000, 60000000);
-          sendCommand('set_freq', { freq: state.freqB });
-        }
-        updateFreqDisplays();
-        drawWaterfallOverlay();
+        const base = state.activeVfo === 'A' ? state.freqA : state.freqB;
+        queueTuneCommand(base - state.tuningStep);
       }
     });
 
@@ -2050,6 +2077,7 @@ input[type=range]::-webkit-slider-thumb {
       if (!Number.isFinite(freq)) {
         return;
       }
+      clearPendingTuneCommand();
       flushAudioPipeline(); sendCommand('set_freq', { freq: Math.round(freq) });
       if (state.activeVfo === 'A') {
         state.freqA = Math.round(freq);
@@ -2158,6 +2186,7 @@ input[type=range]::-webkit-slider-thumb {
         const rect = container.getBoundingClientRect();
         const ratio = clamp((ev.clientX - rect.left) / rect.width, 0, 1);
         const hz = Math.round((start + ratio * span) / state.tuningStep) * state.tuningStep;
+        clearPendingTuneCommand();
         flushAudioPipeline(); sendCommand('set_freq', { freq: hz });
         if (state.activeVfo === 'A') {
           state.freqA = hz;
@@ -2171,15 +2200,8 @@ input[type=range]::-webkit-slider-thumb {
       container.addEventListener('wheel', function (ev) {
         ev.preventDefault();
         const delta = ev.deltaY < 0 ? state.tuningStep : -state.tuningStep;
-        if (state.activeVfo === 'A') {
-          state.freqA = clamp(state.freqA + delta, 30000, 60000000);
-          sendCommand('set_freq', { freq: state.freqA });
-        } else {
-          state.freqB = clamp(state.freqB + delta, 30000, 60000000);
-          sendCommand('set_freq', { freq: state.freqB });
-        }
-        updateFreqDisplays();
-        drawWaterfallOverlay();
+        const base = state.activeVfo === 'A' ? state.freqA : state.freqB;
+        queueTuneCommand(base + delta);
       }, { passive: false });
     });
 
