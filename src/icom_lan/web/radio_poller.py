@@ -421,6 +421,8 @@ class RadioPoller:
         (0x1C, 0x00, None),   # PTT (global)
         (0x14, 0x0A, None),   # Power level (global)
         (0x0F, None, None),   # Split (global)
+        (0x07, 0xD2, None),   # Active receiver: 0x00=MAIN, 0x01=SUB
+        (0x07, 0xC2, None),   # Dual Watch status: 0x00=off, 0x01=on
     ]
 
     async def _send_query(self) -> None:

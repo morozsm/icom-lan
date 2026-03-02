@@ -152,7 +152,8 @@ input[type=range]::-webkit-slider-thumb {
   <section class="col-span-12 flex flex-col gap-0 min-h-0 flex-1">
     <div class="glass-panel rounded-t-xl overflow-hidden relative" style="height:155px;" id="spectrumContainer">
       <canvas id="specCanvas"></canvas>
-      <div class="absolute right-2 top-1 pointer-events-none z-10">
+      <div class="absolute right-2 top-1 pointer-events-none z-10 flex gap-1">
+        <span class="text-[9px] px-1.5 py-0.5 rounded font-digital font-bold bg-slate-800 text-slate-600" id="dwBadge">DW</span>
         <span class="text-[9px] px-1.5 py-0.5 rounded font-digital font-bold bg-cyan-900/60 text-vfo-a border border-cyan-700/50" id="scopeRxBadge">MAIN</span>
       </div>
       <div class="absolute left-0 top-0 bottom-0 w-8 flex flex-col justify-between py-1 pointer-events-none">
@@ -392,6 +393,7 @@ input[type=range]::-webkit-slider-thumb {
     spectrumContainer: $('spectrumContainer'),
     waterfallContainer: $('waterfallContainer'),
     scopeRxBadge: $('scopeRxBadge'),
+    dwBadge: $('dwBadge'),
     preBadgeA: $('preBadgeA'),
     preBadgeB: $('preBadgeB'),
     attBadgeA: $('attBadgeA'),
@@ -433,6 +435,7 @@ input[type=range]::-webkit-slider-thumb {
     nr: false,
     digisel: false,
     ipplus: false,
+    dualWatch: false,
     radioConnected: false,
     reconnecting: false,
     ws: {
@@ -866,6 +869,12 @@ input[type=range]::-webkit-slider-thumb {
       updateModeDisplays();
     }
 
+    // Dual Watch
+    if (!prev || prev.dual_watch !== next.dual_watch) {
+      state.dualWatch = next.dual_watch;
+      updateDualWatchBadge();
+    }
+
     // PTT
     if (!prev || prev.ptt !== next.ptt) {
       updatePttUi(next.ptt);
@@ -1293,6 +1302,15 @@ input[type=range]::-webkit-slider-thumb {
       dom.scopeRxBadge.className = 'text-[9px] px-1.5 py-0.5 rounded font-digital font-bold bg-amber-900/60 text-vfo-b border border-amber-700/50';
     } else {
       dom.scopeRxBadge.className = 'text-[9px] px-1.5 py-0.5 rounded font-digital font-bold bg-cyan-900/60 text-vfo-a border border-cyan-700/50';
+    }
+  }
+
+  function updateDualWatchBadge() {
+    if (!dom.dwBadge) return;
+    if (state.dualWatch) {
+      dom.dwBadge.className = 'text-[9px] px-1.5 py-0.5 rounded font-digital font-bold bg-green-900/60 text-green-400 border border-green-700/50';
+    } else {
+      dom.dwBadge.className = 'text-[9px] px-1.5 py-0.5 rounded font-digital font-bold bg-slate-800 text-slate-600';
     }
   }
 
