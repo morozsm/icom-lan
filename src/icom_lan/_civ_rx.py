@@ -26,7 +26,7 @@ from .scope import ScopeFrame
 from .types import CivFrame
 
 if TYPE_CHECKING:
-    pass
+    from .radio_state import RadioState, ReceiverState
 
 logger = logging.getLogger(__name__)
 
@@ -445,6 +445,136 @@ class _CivRxMixin:
                     self._notify_change("ptt", {"state": val})
         except Exception:
             pass  # Best-effort; never let cache update break the RX loop
+        # Also update RadioState (additive, does not replace StateCache)
+        self._update_radio_state_from_frame(frame)
+
+    def _update_radio_state_from_frame(self, frame: CivFrame) -> None:
+        """Update RadioState from a CI-V frame (additive alongside StateCache).
+
+        Called for every data RESPONSE frame.  Only runs when the radio has
+        ``_radio_state`` set (done by WebServer.start()).
+        """
+        rs: RadioState | None = getattr(self, "_radio_state", None)
+        if rs is None:
+            return
+        try:
+            # Determine which receiver to update.
+            # frame.receiver is set by parse_civ_frame for cmd29-wrapped frames.
+            if frame.receiver is not None:
+                rx_name = "MAIN" if frame.receiver == 0x00 else "SUB"
+            else:
+                rx_name = rs.active
+            rx = rs.receiver(rx_name)
+
+            cmd = frame.command
+
+            if cmd in (0x03, 0x00):
+                # Frequency response / unsolicited transceive
+                rx.freq = parse_frequency_response(frame)
+
+            elif cmd in (0x04, 0x01):
+                # Mode response / unsolicited transceive
+                from .types import Mode
+                mode_val, filt = parse_mode_response(frame)
+                rx.mode = mode_val.name
+                if filt is not None:
+                    rx.filter = filt
+
+            elif cmd == 0x25:
+                # RX Frequency for dual-receiver (last byte = receiver, rest = BCD)
+                # Format: FE FE to from 25 bcd[5] receiver FD
+                if len(frame.data) >= 6:
+                    from .types import bcd_decode
+                    rcvr_byte = frame.data[5]
+                    which = "MAIN" if rcvr_byte == 0x00 else "SUB"
+                    rs.receiver(which).freq = bcd_decode(frame.data[:5])
+
+            elif cmd == 0x26:
+                # RX Mode for dual-receiver (first byte = receiver)
+                # Format: FE FE to from 26 receiver mode [filter] FD
+                if len(frame.data) >= 2:
+                    from .types import Mode
+                    rcvr_byte = frame.data[0]
+                    which = "MAIN" if rcvr_byte == 0x00 else "SUB"
+                    tgt = rs.receiver(which)
+                    tgt.mode = Mode(frame.data[1]).name
+                    if len(frame.data) >= 3:
+                        tgt.filter = frame.data[2]
+
+            elif cmd == 0x15:
+                # Meter readings — update s_meter on active receiver
+                if frame.sub == 0x02 and len(frame.data) >= 2:
+                    b0, b1 = frame.data[0], frame.data[1]
+                    raw = (
+                        (b0 >> 4) * 1000 + (b0 & 0x0F) * 100
+                        + (b1 >> 4) * 10 + (b1 & 0x0F)
+                    )
+                    rs.receiver(rs.active).s_meter = raw
+
+            elif cmd == 0x14:
+                # Level values (AF, RF gain, SQL, power) — BCD-encoded 2-byte
+                if len(frame.data) >= 2:
+                    b0, b1 = frame.data[0], frame.data[1]
+                    raw = (
+                        (b0 >> 4) * 1000 + (b0 & 0x0F) * 100
+                        + (b1 >> 4) * 10 + (b1 & 0x0F)
+                    )
+                    sub = frame.sub
+                    if sub == 0x01:
+                        rx.af_level = raw
+                    elif sub == 0x02:
+                        rx.rf_gain = raw
+                    elif sub == 0x03:
+                        rx.squelch = raw
+                    elif sub == 0x0A:
+                        rs.power_level = raw
+
+            elif cmd == 0x11:
+                # Attenuator (BCD-encoded single byte: 0x18 = 18 dB)
+                if frame.data:
+                    val = frame.data[0]
+                    rx.att = ((val >> 4) & 0x0F) * 10 + (val & 0x0F)
+
+            elif cmd == 0x16:
+                # Function settings (preamp, NB, NR, DIGI-SEL, IP+)
+                # IC-7610 may respond with sub=0x00/None, real sub in data[0]
+                sub = frame.sub or 0
+                data = frame.data
+                if sub == 0 and len(data) >= 2:
+                    sub = data[0]
+                    data = data[1:]
+                if data:
+                    val = data[0]
+                    if sub == 0x02:
+                        rx.preamp = val
+                    elif sub == 0x22:
+                        rx.nb = bool(val)
+                    elif sub == 0x40:
+                        rx.nr = bool(val)
+                    elif sub == 0x4E:
+                        rx.digisel = bool(val)
+                    elif sub == 0x65:
+                        rx.ipplus = bool(val)
+
+            elif cmd == 0x1A:
+                sub = frame.sub
+                if sub == 0x03 and frame.data:
+                    rx.filter = frame.data[0]
+                elif sub == 0x06 and frame.data:
+                    rx.data_mode = bool(frame.data[0])
+
+            elif cmd == 0x1C and frame.sub == 0x00:
+                # PTT (global)
+                if frame.data:
+                    rs.ptt = bool(frame.data[0])
+
+            elif cmd == 0x0F:
+                # Split (global)
+                if frame.data:
+                    rs.split = bool(frame.data[0])
+
+        except Exception:
+            pass  # Best-effort; never break the RX loop
 
     def _notify_change(self, event_name: str, data: dict) -> None:
         """Notify server of state change (best-effort)."""

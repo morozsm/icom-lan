@@ -1837,11 +1837,12 @@ class TestRadioPoller:
         await asyncio.sleep(0.15)  # 25ms × 6 cycles = 150ms
         poller.stop()
 
-        # Fast queries: S-meter (0x15, 0x02), power, SWR, ALC
+        # Interleaved design: even cycles = meter, odd cycles = state.
+        # In 150ms at 25ms/cycle ≈ 6 cycles → ~3 meter + ~3 state queries.
         assert radio.send_civ.await_count >= 4
-        meter_calls = [c for c in radio.send_civ.call_args_list 
+        meter_calls = [c for c in radio.send_civ.call_args_list
                        if c[0][0] == 0x15]  # cmd=0x15
-        assert len(meter_calls) >= 4
+        assert len(meter_calls) >= 3
 
     async def test_poller_idempotent_start(self) -> None:
         """Calling start() twice does not create duplicate tasks."""
