@@ -436,6 +436,8 @@ class _CivRxMixin:
                         self._notify_change("nr_changed", {"on": bool(val)})
                     elif sub == 0x4E:  # DIGI-SEL
                         self._notify_change("digisel_changed", {"on": bool(val)})
+                    elif sub == 0x65:  # IP+
+                        self._notify_change("ipplus_changed", {"on": bool(val)})
             elif frame.command == 0x1C and frame.sub == 0x00:  # PTT
                 if frame.data:
                     val = bool(frame.data[0])

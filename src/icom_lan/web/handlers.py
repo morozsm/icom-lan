@@ -43,6 +43,7 @@ from .radio_poller import (
     SetNB,
     SetNR,
     SetDigiSel,
+    SetIpPlus,
     VfoEqualize,
     VfoSwap,
 )
@@ -93,6 +94,7 @@ class ControlHandler:
             "set_nb",
             "set_nr",
             "set_digisel",
+            "set_ipplus",
             "set_att",
             "set_preamp",
             "select_vfo",
@@ -415,6 +417,10 @@ class ControlHandler:
             case "set_digisel":
                 on = bool(params.get("on", False))
                 q.put(SetDigiSel(on))
+                return {"on": on}
+            case "set_ipplus":
+                on = bool(params.get("on", False))
+                q.put(SetIpPlus(on))
                 return {"on": on}
             case "set_att":
                 db = int(params["db"])

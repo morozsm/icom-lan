@@ -537,6 +537,7 @@ _SUB_PREAMP_STATUS = 0x02
 _SUB_DIGISEL_STATUS = 0x4E
 _SUB_NB = 0x22        # Noise Blanker on/off (0x16 0x22)
 _SUB_NR = 0x40        # Noise Reduction on/off (0x16 0x40)
+_SUB_IP_PLUS = 0x65   # IP+ on/off (0x16 0x65)
 
 
 def select_vfo(
@@ -739,6 +740,25 @@ def set_nr(
     """Set Noise Reduction on/off."""
     return build_civ_frame(
         to_addr, from_addr, _CMD_PREAMP, sub=_SUB_NR, data=bytes([0x01 if on else 0x00])
+    )
+
+
+def get_ip_plus(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build CI-V command to read IP+ status (0/1)."""
+    return build_civ_frame(to_addr, from_addr, _CMD_PREAMP, sub=_SUB_IP_PLUS)
+
+
+def set_ip_plus(
+    on: bool,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Set IP+ on/off."""
+    return build_civ_frame(
+        to_addr, from_addr, _CMD_PREAMP, sub=_SUB_IP_PLUS, data=bytes([0x01 if on else 0x00])
     )
 
 def get_data_mode(
