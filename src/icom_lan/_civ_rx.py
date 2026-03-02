@@ -353,9 +353,9 @@ class _CivRxMixin:
                 logger.debug("civ-rx: freq=%d (cmd=0x%02X to=0x%02X) old=%d", freq, frame.command, frame.to_addr, old)
                 self._last_freq_hz = freq  # type: ignore[attr-defined]
                 cache.update_freq(freq)
-                if freq != old:
-                    vfo = getattr(self, "_last_vfo", None) or "A"
-                    self._notify_change("freq_changed", {"freq": freq, "vfo": vfo})
+                # Always notify — cache may already be updated by set_frequency()
+                vfo = getattr(self, "_last_vfo", None) or "A"
+                self._notify_change("freq_changed", {"freq": freq, "vfo": vfo})
             elif frame.command in (0x04, 0x01):  # mode (response / unsolicited)
                 mode, filt = parse_mode_response(frame)
                 old_mode, old_filt = cache.mode, cache.filter_width
@@ -363,9 +363,9 @@ class _CivRxMixin:
                 if filt is not None:
                     self._filter_width = filt  # type: ignore[attr-defined]
                 cache.update_mode(mode.name, filt)
-                if mode.name != old_mode or filt != old_filt:
-                    filt_str = f"FIL{filt}" if filt else ""
-                    self._notify_change("mode_changed", {"mode": mode.name, "filter": filt_str})
+                # Always notify — cache may already be updated by set_mode()
+                filt_str = f"FIL{filt}" if filt else ""
+                self._notify_change("mode_changed", {"mode": mode.name, "filter": filt_str})
             elif frame.command == 0x15:  # meter readings
                 if len(frame.data) >= 2:
                     sub = frame.sub
