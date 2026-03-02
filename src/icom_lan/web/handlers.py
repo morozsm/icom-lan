@@ -319,7 +319,7 @@ class ControlHandler:
             )
             return
 
-        if self._radio is None and self._server is None:
+        if self._radio is None:
             await self._ws.send_text(
                 encode_json(
                     {

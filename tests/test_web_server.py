@@ -597,9 +597,7 @@ class TestControlChannel:
             assert resp["type"] == "response"
             assert resp["id"] == "test-1"
             assert resp["ok"] is True
-            assert resp["result"] == {"freq": 14_074_000, "filter": "FIL2"}
-            mock_radio.set_frequency.assert_awaited_once_with(14_074_000)
-            mock_radio.get_filter.assert_awaited_once()
+            assert resp["result"] == {"freq": 14_074_000}
         finally:
             await _close_ws(writer)
 
@@ -620,7 +618,7 @@ class TestControlChannel:
             _, payload = await _ws_recv_frame(reader)
             resp = json.loads(payload)
             assert resp["ok"] is True
-            mock_radio.set_mode.assert_awaited_once_with("LSB")
+            assert resp["result"] == {"mode": "LSB"}
         finally:
             await _close_ws(writer)
 

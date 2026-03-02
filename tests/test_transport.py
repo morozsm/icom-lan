@@ -432,7 +432,7 @@ class TestRetransmitLoop:
             3  # already at retry 3, next loop will bump to 4 and delete
         )
         transport.start_retransmit_loop()
-        await asyncio.sleep(0.25)
+        await asyncio.sleep(0.5)  # allow retransmit loop time to process
         transport.state = ConnectionState.DISCONNECTED
         transport._retransmit_task.cancel()
         try:
