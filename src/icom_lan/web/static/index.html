@@ -236,8 +236,9 @@ input[type=range]::-webkit-slider-thumb {
           <button class="flex-1 bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-[10px] font-bold transition" data-pre="2">2</button>
         </div>
       </div>
-      <div class="grid grid-cols-4 gap-1.5">
+      <div class="grid grid-cols-5 gap-1">
         <button class="bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-[10px] font-bold transition" id="ipPlusBtn">IP+</button>
+        <button class="bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-[10px] font-bold transition" id="dselBtn">DSEL</button>
         <button class="bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-[10px] font-bold transition" id="nbBtn">NB</button>
         <button class="bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-[10px] font-bold transition" id="nrBtn">NR</button>
         <button class="bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-[10px] font-bold transition" id="vfoSwapBtn">A↔B</button>
@@ -392,6 +393,7 @@ input[type=range]::-webkit-slider-thumb {
     attBadgeB: $('attBadgeB'),
     vfoSwapBtn: $('vfoSwapBtn'),
     ipPlusBtn: $('ipPlusBtn'),
+    dselBtn: $('dselBtn'),
     nbBtn: $('nbBtn'),
     nrBtn: $('nrBtn'),
   };
@@ -413,6 +415,7 @@ input[type=range]::-webkit-slider-thumb {
     nb: false,
     nr: false,
     digisel: false,
+    ipplus: false,
     radioConnected: false,
     reconnecting: false,
     ws: {
@@ -812,7 +815,12 @@ input[type=range]::-webkit-slider-thumb {
       }
       if (eventName === 'digisel_changed' && msg.data) {
         state.digisel = !!msg.data.on;
-        updateToggleBtn(dom.ipPlusBtn, state.digisel, 'IP+');
+        updateToggleBtn(dom.dselBtn, state.digisel, 'DSEL');
+        return;
+      }
+      if (eventName === 'ipplus_changed' && msg.data) {
+        state.ipplus = !!msg.data.on;
+        updateToggleBtn(dom.ipPlusBtn, state.ipplus, 'IP+');
         return;
       }
       if (eventName === 'af_level' && msg.data) {
@@ -1951,9 +1959,14 @@ input[type=range]::-webkit-slider-thumb {
     });
 
     dom.ipPlusBtn.addEventListener('click', function () {
+      state.ipplus = !state.ipplus;
+      sendCommand('set_ipplus', { on: state.ipplus });
+      updateToggleBtn(dom.ipPlusBtn, state.ipplus, 'IP+');
+    });
+    dom.dselBtn.addEventListener('click', function () {
       state.digisel = !state.digisel;
       sendCommand('set_digisel', { on: state.digisel });
-      updateToggleBtn(dom.ipPlusBtn, state.digisel, 'IP+');
+      updateToggleBtn(dom.dselBtn, state.digisel, 'DSEL');
     });
     dom.nbBtn.addEventListener('click', function () {
       state.nb = !state.nb;

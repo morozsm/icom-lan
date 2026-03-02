@@ -96,6 +96,10 @@ class SetDigiSel:
     on: bool
 
 @dataclass(frozen=True, slots=True)
+class SetIpPlus:
+    on: bool
+
+@dataclass(frozen=True, slots=True)
 class SetAttenuator:
     db: int
 
@@ -137,7 +141,7 @@ class DisableScope:
 
 
 Command = (
-    SetFreq | SetMode | SetFilter | SetPower | SetRfGain | SetAfLevel | SetSquelch | SetNB | SetNR | SetDigiSel
+    SetFreq | SetMode | SetFilter | SetPower | SetRfGain | SetAfLevel | SetSquelch | SetNB | SetNR | SetDigiSel | SetIpPlus
     | SetAttenuator | SetPreamp | PttOn | PttOff | SetBand | SelectVfo
     | VfoSwap | VfoEqualize
 )
@@ -318,6 +322,10 @@ class RadioPoller:
                 await radio.set_digisel(on)
                 if self._on_state_event:
                     self._on_state_event("digisel_changed", {"on": on})
+            case SetIpPlus(on=on):
+                await radio.set_ip_plus(on)
+                if self._on_state_event:
+                    self._on_state_event("ipplus_changed", {"on": on})
             case SetAttenuator(db=db):
                 await radio.set_attenuator_level(db)
             case SetPreamp(level=level):
@@ -365,6 +373,7 @@ class RadioPoller:
         (0x16, 0x22),   # NB on/off
         (0x16, 0x40),   # NR on/off
         (0x16, 0x4E),   # DIGI-SEL on/off
+        (0x16, 0x65),   # IP+ on/off
     ]
 
     async def _send_query(self) -> None:
