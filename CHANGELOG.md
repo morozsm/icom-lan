@@ -2,7 +2,7 @@
 
 All notable changes to [icom-lan](https://github.com/morozsm/icom-lan) are documented here.
 
-## [0.8.1] — 2026-03-02
+## [0.9.0] — 2026-03-02
 
 Major release: complete Web UI rewrite, dual-receiver support, CI-V reliability overhaul, and architecture refactor. **100+ commits** since v0.7.0.
 
