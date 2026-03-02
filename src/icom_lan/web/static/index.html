@@ -266,7 +266,7 @@ input[type=range]::-webkit-slider-thumb {
     <div class="glass-panel p-3 rounded-xl col-span-3">
       <h3 class="text-[10px] text-slate-500 uppercase tracking-widest mb-2 font-bold">TX Power</h3>
       <div class="flex items-center gap-3 mb-3">
-        <div class="text-2xl font-digital text-slate-100" id="txPwrVal">128<span class="text-xs ml-1">/255</span></div>
+        <div class="text-2xl font-digital text-slate-100" id="txPwrVal">50<span class="text-xs ml-1">W</span></div>
         <input class="flex-1" type="range" min="0" max="255" value="128" id="txPwrSlider"/>
       </div>
       <button class="w-full py-5 rounded-xl border-2 border-red-500/30 bg-red-950/20 text-red-500 font-bold text-xl uppercase tracking-[0.2em] shadow-[0_0_20px_rgba(239,68,68,0.1)] active:scale-95 transition-all" id="pttBtn">PTT</button>
@@ -279,7 +279,6 @@ input[type=range]::-webkit-slider-thumb {
     <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-slate-600 inline-block" id="lanDot"></span> LAN</span>
     <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-slate-600 inline-block" id="civDot"></span> CI-V</span>
     <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-slate-600 inline-block" id="audioDot"></span> AUDIO</span>
-    <span id="tempStatus">TEMP: --</span>
   </div>
   <div class="flex gap-4">
     <span class="text-vfo-a" id="rxAudioStatus">RX AUDIO: OFF</span>
@@ -653,7 +652,7 @@ input[type=range]::-webkit-slider-thumb {
     dom.afVal.textContent = scaleToPct(dom.afSlider.value) + '%';
     dom.rfVal.textContent = scaleToPct(dom.rfSlider.value) + '%';
     dom.sqlVal.textContent = dom.sqlSlider.value + '%';
-    dom.txPwrVal.innerHTML = String(dom.txPwrSlider.value) + '<span class="text-xs ml-1">/255</span>';
+    dom.txPwrVal.innerHTML = Math.round(Number(dom.txPwrSlider.value) / 255 * 100) + '<span class="text-xs ml-1">W</span>';
   }
 
   function scheduleSliderCommand(key, cmdName, value) {
@@ -810,6 +809,8 @@ input[type=range]::-webkit-slider-thumb {
         // Set power level — show in PWR meter when not transmitting
         state.powerLevelWatts = msg.data.watts;
         state.powerLevelRaw = msg.data.raw;
+        dom.txPwrSlider.value = msg.data.raw;
+        dom.txPwrVal.innerHTML = msg.data.watts + '<span class="text-xs ml-1">W</span>';
         if (!state.ptt) {
           dom.pwrVal.textContent = msg.data.watts + 'W';
           dom.pwrBar.style.width = Math.round((msg.data.raw / 255) * 100) + '%';
@@ -1877,9 +1878,12 @@ input[type=range]::-webkit-slider-thumb {
       var rect = dom.pwrBarBg.getBoundingClientRect();
       var pct = Math.max(0, Math.min(100, Math.round((ev.clientX - rect.left) / rect.width * 100)));
       var watts = pct; // 0-100% = 0-100W
-      sendCommand('set_power', { level: Math.round(pct / 100 * 255) });
+      var rawLevel = Math.round(pct / 100 * 255);
+      sendCommand('set_power', { level: rawLevel });
       dom.pwrVal.textContent = watts + 'W';
       dom.pwrBar.style.width = pct + '%';
+      dom.txPwrSlider.value = rawLevel;
+      dom.txPwrVal.innerHTML = watts + '<span class="text-xs ml-1">W</span>';
     });
 
     dom.bandGrid.addEventListener('click', function (ev) {
