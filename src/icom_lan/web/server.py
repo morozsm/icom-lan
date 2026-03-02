@@ -30,7 +30,7 @@ from typing import TYPE_CHECKING, Any
 
 from .. import __version__
 from ..rigctld.state_cache import StateCache
-from .handlers import AudioHandler, ControlHandler, MetersHandler, ScopeHandler
+from .handlers import AudioBroadcaster, AudioHandler, ControlHandler, MetersHandler, ScopeHandler
 from .radio_poller import CommandQueue, DisableScope, EnableScope, RadioPoller
 from .websocket import WS_KEEPALIVE_INTERVAL, WebSocketConnection, make_accept_key
 
@@ -81,6 +81,7 @@ class WebServer:
         config: WebConfig | None = None,
     ) -> None:
         self._radio = radio
+        self._audio_broadcaster = AudioBroadcaster(radio)
         self._config = config or WebConfig()
         self._server: asyncio.Server | None = None
         self._client_tasks: set[asyncio.Task[None]] = set()
@@ -558,7 +559,7 @@ class WebServer:
         elif path == "/api/v1/meters":
             handler = MetersHandler(ws, self._radio, server=self)
         elif path == "/api/v1/audio":
-            handler = AudioHandler(ws, self._radio)
+            handler = AudioHandler(ws, self._radio, self._audio_broadcaster)
         else:
             await ws.close(1008, "unknown channel")
             return

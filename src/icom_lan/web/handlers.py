@@ -634,6 +634,113 @@ class MetersHandler:
             pass
 
 
+
+
+class AudioBroadcaster:
+    """Single-instance RX audio broadcaster shared by all AudioHandler clients.
+
+    Calls start_audio_rx_opus() once when the first client subscribes,
+    broadcasts frames to all registered queues, and calls stop only
+    when the last client unsubscribes.  Fixes #70.
+    """
+
+    HIGH_WATERMARK: int = 10
+
+    def __init__(self, radio: "IcomRadio | None") -> None:
+        self._radio = radio
+        self._clients: dict[int, asyncio.Queue[bytes]] = {}
+        self._rx_active = False
+        self._seq: int = 0
+        self._web_codec: int = AUDIO_CODEC_PCM16
+        self._sample_rate: int = 48000
+        self._channels: int = 1
+        self._lock = asyncio.Lock()
+
+    async def subscribe(self) -> asyncio.Queue[bytes]:
+        """Register a new client and start RX if first."""
+        queue: asyncio.Queue[bytes] = asyncio.Queue(maxsize=self.HIGH_WATERMARK)
+        client_id = id(queue)
+        async with self._lock:
+            self._clients[client_id] = queue
+            if not self._rx_active and self._radio:
+                await self._start_rx()
+        logger.info("audio-broadcaster: client added (total=%d)", len(self._clients))
+        return queue
+
+    async def unsubscribe(self, queue: asyncio.Queue[bytes]) -> None:
+        """Unregister a client and stop RX if last."""
+        client_id = id(queue)
+        async with self._lock:
+            self._clients.pop(client_id, None)
+            if not self._clients and self._rx_active:
+                await self._stop_rx()
+        logger.info("audio-broadcaster: client removed (total=%d)", len(self._clients))
+
+    async def _start_rx(self) -> None:
+        if not self._radio:
+            return
+        self._rx_active = True
+
+        _codec = getattr(self._radio, "audio_codec", None)
+        if isinstance(_codec, AudioCodec):
+            if _codec in (AudioCodec.OPUS_1CH, AudioCodec.OPUS_2CH):
+                self._web_codec = AUDIO_CODEC_OPUS
+            if _codec in (
+                AudioCodec.PCM_2CH_8BIT, AudioCodec.PCM_2CH_16BIT,
+                AudioCodec.ULAW_2CH, AudioCodec.OPUS_2CH,
+            ):
+                self._channels = 2
+        _sr = getattr(self._radio, "audio_sample_rate", None)
+        if isinstance(_sr, int) and not isinstance(_sr, bool) and _sr > 0:
+            self._sample_rate = _sr
+        logger.info(
+            "audio-broadcaster: starting RX codec=0x%02x sr=%d ch=%d",
+            self._web_codec, self._sample_rate, self._channels,
+        )
+
+        def _on_packet(pkt):
+            if pkt is None:
+                return
+            if self._seq < 3 or self._seq % 500 == 0:
+                logger.info(
+                    "audio: rx packet #%d, web_codec=0x%02x, data=%d bytes",
+                    self._seq, self._web_codec, len(pkt.data),
+                )
+            frame = encode_audio_frame(
+                MSG_TYPE_AUDIO_RX, self._web_codec, self._seq,
+                self._sample_rate // 100, self._channels, 20, pkt.data,
+            )
+            self._seq = (self._seq + 1) & 0xFFFF
+            for q in list(self._clients.values()):
+                try:
+                    q.put_nowait(frame)
+                except asyncio.QueueFull:
+                    try:
+                        q.get_nowait()
+                    except asyncio.QueueEmpty:
+                        pass
+                    try:
+                        q.put_nowait(frame)
+                    except asyncio.QueueFull:
+                        pass
+
+        try:
+            await self._radio.start_audio_rx_opus(_on_packet)
+        except Exception:
+            logger.exception("audio-broadcaster: failed to start RX")
+            self._rx_active = False
+
+    async def _stop_rx(self) -> None:
+        if not self._rx_active or not self._radio:
+            return
+        self._rx_active = False
+        try:
+            await self._radio.stop_audio_rx_opus()
+        except Exception:
+            logger.debug("audio-broadcaster: stop RX error", exc_info=True)
+        logger.info("audio-broadcaster: RX stopped")
+
+
 class AudioHandler:
     """Handler for the /api/v1/audio WebSocket channel.
 
@@ -656,9 +763,11 @@ class AudioHandler:
         self,
         ws: WebSocketConnection,
         radio: "IcomRadio | None",
+        broadcaster: "AudioBroadcaster | None" = None,
     ) -> None:
         self._ws = ws
         self._radio = radio
+        self._broadcaster = broadcaster
         self._rx_active = False
         self._tx_active = False
         self._seq: int = 0
@@ -713,87 +822,20 @@ class AudioHandler:
                 logger.info("audio: TX stopped")
 
     async def _start_rx(self) -> None:
-        """Start receiving audio from the radio."""
-        if not self._radio:
+        """Subscribe to audio broadcaster for RX frames."""
+        if not self._broadcaster:
             return
-        # Always stop first — previous handler may have left stream active
-        try:
-            await self._radio.stop_audio_rx_opus()
-        except Exception:
-            pass
         self._rx_active = True
-        logger.info("audio: starting RX stream")
-
-        # Determine web-frame codec and format from the radio's audio configuration.
-        # Default to PCM16 mono at 48 kHz — the radio's default codec.
-        _web_codec: int = AUDIO_CODEC_PCM16
-        _sample_rate: int = 48000
-        _channels: int = 1
-        _codec = getattr(self._radio, "audio_codec", None)
-        if isinstance(_codec, AudioCodec):
-            if _codec in (AudioCodec.OPUS_1CH, AudioCodec.OPUS_2CH):
-                _web_codec = AUDIO_CODEC_OPUS
-            if _codec in (
-                AudioCodec.PCM_2CH_8BIT,
-                AudioCodec.PCM_2CH_16BIT,
-                AudioCodec.ULAW_2CH,
-                AudioCodec.OPUS_2CH,
-            ):
-                _channels = 2
-        _sr = getattr(self._radio, "audio_sample_rate", None)
-        if isinstance(_sr, int) and not isinstance(_sr, bool) and _sr > 0:
-            _sample_rate = _sr
-        logger.info(
-            "audio: RX codec=0x%02x sample_rate=%d channels=%d",
-            _web_codec, _sample_rate, _channels,
-        )
-
-        def _on_packet(pkt: Any) -> None:
-            if pkt is None:
-                return
-            if self._seq < 3 or self._seq % 500 == 0:
-                logger.info(
-                    "audio: rx packet #%d, web_codec=0x%02x, data=%d bytes",
-                    self._seq, _web_codec, len(pkt.data),
-                )
-            frame = encode_audio_frame(
-                MSG_TYPE_AUDIO_RX,
-                _web_codec,
-                self._seq,
-                _sample_rate // 100,
-                _channels,
-                20,   # advisory frame_ms for header
-                pkt.data,
-            )
-            self._seq = (self._seq + 1) & 0xFFFF
-            try:
-                self._frame_queue.put_nowait(frame)
-            except asyncio.QueueFull:
-                # Drop oldest, enqueue newest (backpressure)
-                try:
-                    self._frame_queue.get_nowait()
-                except asyncio.QueueEmpty:
-                    pass
-                try:
-                    self._frame_queue.put_nowait(frame)
-                except asyncio.QueueFull:
-                    pass
-
-        try:
-            await self._radio.start_audio_rx_opus(_on_packet)
-        except Exception:
-            logger.exception("audio: failed to start RX")
-            self._rx_active = False
+        self._frame_queue = await self._broadcaster.subscribe()
+        logger.info("audio: subscribed to RX broadcast")
 
     async def _stop_rx(self) -> None:
-        """Stop receiving audio from the radio."""
-        if not self._rx_active or not self._radio:
+        """Unsubscribe from audio broadcaster."""
+        if not self._rx_active or not self._broadcaster:
             return
         self._rx_active = False
-        try:
-            await self._radio.stop_audio_rx_opus()
-        except Exception:
-            logger.debug("audio: stop RX error (ignored)", exc_info=True)
+        await self._broadcaster.unsubscribe(self._frame_queue)
+        logger.info("audio: unsubscribed from RX broadcast")
 
     async def _handle_tx_audio(self, payload: bytes) -> None:
         """Forward TX audio from browser to radio."""
