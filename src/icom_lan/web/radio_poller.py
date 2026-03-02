@@ -84,6 +84,18 @@ class SetSquelch:
     level: int
 
 @dataclass(frozen=True, slots=True)
+class SetNB:
+    on: bool
+
+@dataclass(frozen=True, slots=True)
+class SetNR:
+    on: bool
+
+@dataclass(frozen=True, slots=True)
+class SetDigiSel:
+    on: bool
+
+@dataclass(frozen=True, slots=True)
 class SetAttenuator:
     db: int
 
@@ -125,7 +137,7 @@ class DisableScope:
 
 
 Command = (
-    SetFreq | SetMode | SetFilter | SetPower | SetRfGain | SetAfLevel | SetSquelch
+    SetFreq | SetMode | SetFilter | SetPower | SetRfGain | SetAfLevel | SetSquelch | SetNB | SetNR | SetDigiSel
     | SetAttenuator | SetPreamp | PttOn | PttOff | SetBand | SelectVfo
     | VfoSwap | VfoEqualize
 )
@@ -294,6 +306,18 @@ class RadioPoller:
                 await radio.set_af_level(level)
             case SetSquelch(level=level):
                 await radio.set_squelch(level)
+            case SetNB(on=on):
+                await radio.set_nb(on)
+                if self._on_state_event:
+                    self._on_state_event("nb_changed", {"on": on})
+            case SetNR(on=on):
+                await radio.set_nr(on)
+                if self._on_state_event:
+                    self._on_state_event("nr_changed", {"on": on})
+            case SetDigiSel(on=on):
+                await radio.set_digisel(on)
+                if self._on_state_event:
+                    self._on_state_event("digisel_changed", {"on": on})
             case SetAttenuator(db=db):
                 await radio.set_attenuator_level(db)
             case SetPreamp(level=level):
@@ -338,6 +362,9 @@ class RadioPoller:
         (0x14, 0x01),   # AF level
         (0x11, None),   # attenuator
         (0x16, 0x02),   # preamp
+        (0x16, 0x22),   # NB on/off
+        (0x16, 0x40),   # NR on/off
+        (0x16, 0x4E),   # DIGI-SEL on/off
     ]
 
     async def _send_query(self) -> None:

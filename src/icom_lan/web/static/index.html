@@ -95,9 +95,10 @@ input[type=range]::-webkit-slider-thumb {
       <div class="text-6xl font-digital text-vfo-a glow-cyan tracking-tighter" id="vfoAfreq">14.074.000</div>
       <div class="w-full flex items-center gap-2">
         <span class="text-[10px] text-slate-500 w-4 font-bold">S</span>
-        <div class="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden flex">
+        <div class="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden flex relative">
           <div class="bg-meter-green transition-all duration-150" id="smeterA" style="width:0%"></div>
           <div class="bg-meter-red opacity-70 transition-all duration-150" id="smeterAred" style="width:0%"></div>
+          <div class="absolute top-0 h-full w-px bg-white/70" id="sqlMarker" style="left:0%"></div>
         </div>
         <span class="text-[10px] text-meter-green font-bold font-digital" id="smeterAval">S0</span>
       </div>
@@ -235,9 +236,11 @@ input[type=range]::-webkit-slider-thumb {
           <button class="flex-1 bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-[10px] font-bold transition" data-pre="2">2</button>
         </div>
       </div>
-      <div class="grid grid-cols-2 gap-1.5">
-        <button class="bg-green-900/30 text-green-400 border border-green-800 py-1.5 rounded text-xs font-bold">IP+</button>
-        <button class="bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-xs font-bold transition" id="vfoSwapBtn">A↔B</button>
+      <div class="grid grid-cols-4 gap-1.5">
+        <button class="bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-[10px] font-bold transition" id="ipPlusBtn">IP+</button>
+        <button class="bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-[10px] font-bold transition" id="nbBtn">NB</button>
+        <button class="bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-[10px] font-bold transition" id="nrBtn">NR</button>
+        <button class="bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-[10px] font-bold transition" id="vfoSwapBtn">A↔B</button>
       </div>
     </div>
 
@@ -337,6 +340,7 @@ input[type=range]::-webkit-slider-thumb {
     vfoAPanel: $('vfoAPanel'),
     vfoBPanel: $('vfoBPanel'),
     smeterA: $('smeterA'),
+    sqlMarker: $('sqlMarker'),
     smeterAred: $('smeterAred'),
     smeterAval: $('smeterAval'),
     smeterB: $('smeterB'),
@@ -387,6 +391,9 @@ input[type=range]::-webkit-slider-thumb {
     attBadgeA: $('attBadgeA'),
     attBadgeB: $('attBadgeB'),
     vfoSwapBtn: $('vfoSwapBtn'),
+    ipPlusBtn: $('ipPlusBtn'),
+    nbBtn: $('nbBtn'),
+    nrBtn: $('nrBtn'),
   };
 
   const state = {
@@ -403,6 +410,9 @@ input[type=range]::-webkit-slider-thumb {
     att: 0,
     preamp: 1,
     controlConnected: false,
+    nb: false,
+    nr: false,
+    digisel: false,
     radioConnected: false,
     reconnecting: false,
     ws: {
@@ -547,6 +557,13 @@ input[type=range]::-webkit-slider-thumb {
     if (shouldDispatch) {
       sendCommand('select_vfo', { vfo: state.activeVfo });
     }
+  }
+
+  function updateToggleBtn(btn, on, label) {
+    btn.className = on
+      ? 'bg-green-900/30 text-green-400 border border-green-800 py-1.5 rounded text-[10px] font-bold'
+      : 'bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-[10px] font-bold transition';
+    btn.textContent = label;
   }
 
   function showToast(text) {
@@ -783,6 +800,21 @@ input[type=range]::-webkit-slider-thumb {
         showToast(msg.message);
         return;
       }
+      if (eventName === 'nb_changed' && msg.data) {
+        state.nb = !!msg.data.on;
+        updateToggleBtn(dom.nbBtn, state.nb, 'NB');
+        return;
+      }
+      if (eventName === 'nr_changed' && msg.data) {
+        state.nr = !!msg.data.on;
+        updateToggleBtn(dom.nrBtn, state.nr, 'NR');
+        return;
+      }
+      if (eventName === 'digisel_changed' && msg.data) {
+        state.digisel = !!msg.data.on;
+        updateToggleBtn(dom.ipPlusBtn, state.digisel, 'IP+');
+        return;
+      }
       if (eventName === 'af_level' && msg.data) {
         dom.afSlider.value = msg.data.raw;
         dom.afVal.textContent = scaleToPct(msg.data.raw) + '%';
@@ -794,8 +826,11 @@ input[type=range]::-webkit-slider-thumb {
         return;
       }
       if (eventName === 'squelch' && msg.data) {
-        dom.sqlSlider.value = Math.round(msg.data.raw / 255 * 100);
-        dom.sqlVal.textContent = dom.sqlSlider.value + '%';
+        var sqlPct = Math.round(msg.data.raw / 255 * 100);
+        dom.sqlSlider.value = sqlPct;
+        dom.sqlVal.textContent = sqlPct + '%';
+        dom.sqlMarker.style.left = sqlPct + '%';
+        dom.sqlMarker.style.display = msg.data.raw > 0 ? '' : 'none';
         return;
       }
       if (eventName === 'vfo_changed' && msg.data) {
@@ -1915,6 +1950,21 @@ input[type=range]::-webkit-slider-thumb {
       setActiveVfo('B', true);
     });
 
+    dom.ipPlusBtn.addEventListener('click', function () {
+      state.digisel = !state.digisel;
+      sendCommand('set_digisel', { on: state.digisel });
+      updateToggleBtn(dom.ipPlusBtn, state.digisel, 'IP+');
+    });
+    dom.nbBtn.addEventListener('click', function () {
+      state.nb = !state.nb;
+      sendCommand('set_nb', { on: state.nb });
+      updateToggleBtn(dom.nbBtn, state.nb, 'NB');
+    });
+    dom.nrBtn.addEventListener('click', function () {
+      state.nr = !state.nr;
+      sendCommand('set_nr', { on: state.nr });
+      updateToggleBtn(dom.nrBtn, state.nr, 'NR');
+    });
     dom.vfoSwapBtn.addEventListener('click', function () {
       sendCommand('vfo_swap', {});
     });
@@ -2006,7 +2056,10 @@ input[type=range]::-webkit-slider-thumb {
     });
     dom.sqlSlider.addEventListener('input', function () {
       updateSliderLabels();
-      scheduleSliderCommand('sql', 'set_sql', Math.round(Number(dom.sqlSlider.value) / 100 * 255));
+      var sqlPctVal = Number(dom.sqlSlider.value);
+      dom.sqlMarker.style.left = sqlPctVal + '%';
+      dom.sqlMarker.style.display = sqlPctVal > 0 ? '' : 'none';
+      scheduleSliderCommand('sql', 'set_sql', Math.round(sqlPctVal / 100 * 255));
     });
 
     dom.afSlider.addEventListener('change', function () {

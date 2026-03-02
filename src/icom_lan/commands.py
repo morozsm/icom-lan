@@ -535,6 +535,8 @@ _CMD_ATT = 0x11
 _CMD_PREAMP = 0x16
 _SUB_PREAMP_STATUS = 0x02
 _SUB_DIGISEL_STATUS = 0x4E
+_SUB_NB = 0x22        # Noise Blanker on/off (0x16 0x22)
+_SUB_NR = 0x40        # Noise Reduction on/off (0x16 0x40)
 
 
 def select_vfo(
@@ -700,6 +702,44 @@ def set_digisel(
 
 # --- DATA mode commands (CI-V 0x1A 0x06) ---
 
+
+
+def get_nb(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build CI-V command to read NB status (0/1)."""
+    return build_civ_frame(to_addr, from_addr, _CMD_PREAMP, sub=_SUB_NB)
+
+
+def set_nb(
+    on: bool,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Set Noise Blanker on/off."""
+    return build_civ_frame(
+        to_addr, from_addr, _CMD_PREAMP, sub=_SUB_NB, data=bytes([0x01 if on else 0x00])
+    )
+
+
+def get_nr(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build CI-V command to read NR status (0/1)."""
+    return build_civ_frame(to_addr, from_addr, _CMD_PREAMP, sub=_SUB_NR)
+
+
+def set_nr(
+    on: bool,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Set Noise Reduction on/off."""
+    return build_civ_frame(
+        to_addr, from_addr, _CMD_PREAMP, sub=_SUB_NR, data=bytes([0x01 if on else 0x00])
+    )
 
 def get_data_mode(
     to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR

@@ -55,6 +55,10 @@ from .commands import (
     set_attenuator_level,
     set_data_mode as set_data_mode_cmd,
     set_digisel,
+    set_nb,
+    set_nr,
+    get_nb,
+    get_nr,
     set_frequency,
     set_mode,
     set_power,
@@ -1412,6 +1416,34 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         ack = parse_ack_nak(resp)
         if ack is False:
             raise CommandError(f"Radio rejected DIGI-SEL {'on' if on else 'off'}")
+
+
+    async def get_nb(self) -> bool:
+        """Read Noise Blanker status."""
+        self._check_connected()
+        civ = get_nb(to_addr=self._radio_addr)
+        resp = await self._send_civ_raw(civ)
+        return resp.data[0] == 0x01 if resp.data else False
+
+    async def set_nb(self, on: bool) -> None:
+        """Set Noise Blanker on/off."""
+        self._check_connected()
+        civ = set_nb(on, to_addr=self._radio_addr)
+        await self._send_civ_raw(civ, wait_response=False)
+
+    async def get_nr(self) -> bool:
+        """Read Noise Reduction status."""
+        self._check_connected()
+        civ = get_nr(to_addr=self._radio_addr)
+        resp = await self._send_civ_raw(civ)
+        return resp.data[0] == 0x01 if resp.data else False
+
+    async def set_nr(self, on: bool) -> None:
+        """Set Noise Reduction on/off."""
+        self._check_connected()
+        civ = set_nr(on, to_addr=self._radio_addr)
+        await self._send_civ_raw(civ, wait_response=False)
+
 
     async def snapshot_state(self) -> dict[str, object]:
         """Best-effort snapshot of core rig state for safe restore."""
