@@ -1475,8 +1475,14 @@ input[type=range]::-webkit-slider-thumb {
     source.connect(state.audio.gain);
 
     const now = ctx.currentTime;
+    // If we've fallen behind or just started, play almost immediately
     if (state.audio.nextPlayTime < now + 0.01) {
-      state.audio.nextPlayTime = now + 0.08;
+      state.audio.nextPlayTime = now + 0.02;
+    }
+    // If buffer is scheduled too far ahead (>150ms), drop to catch up.
+    // This keeps audio latency under ~150ms vs waterfall.
+    if (state.audio.nextPlayTime > now + 0.15) {
+      return; // drop this buffer — we're too far ahead
     }
     source.start(state.audio.nextPlayTime);
     state.audio.nextPlayTime += buffer.duration;
