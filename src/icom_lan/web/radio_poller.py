@@ -272,19 +272,7 @@ class RadioPoller:
                 except Exception:
                     logger.debug("radio-poller: query error", exc_info=True)
 
-                # 3. Every 10th cycle, also send one slow query
-                if self._poll_index % 10 == 0:
-                    slow_idx = (self._poll_index // 10) % len(self._SLOW_CMDS)
-                    cmd_byte, sub_byte = self._SLOW_CMDS[slow_idx]
-                    await asyncio.sleep(_GAP)
-                    try:
-                        await self._radio.send_civ(
-                            cmd_byte, sub=sub_byte, data=b"", wait_response=False,
-                        )
-                    except Exception:
-                        pass
-
-                # 4. Wait for next cycle
+                # 3. Wait for next cycle
                 await self._queue.wait(timeout=_FAST_INTERVAL)
         except asyncio.CancelledError:
             pass
@@ -350,7 +338,7 @@ class RadioPoller:
                 await radio.disable_scope()
                 logger.info("radio-poller: scope disabled")
 
-    # Fast: meters (polled every 25ms = ~10 updates/sec per meter)
+    # Fast: meters (polled on even cycles)
     # wfview: Priority=Highest, queue interval 25ms for LAN (HasFDComms)
     _FAST_CMDS: list[tuple[int, int | None]] = [
         (0x15, 0x02),   # S-meter
@@ -361,28 +349,69 @@ class RadioPoller:
         (0x15, 0x16),   # Id (PA drain current)
     ]
 
-    # Slow: levels and settings (freq/mode come unsolicited via CI-V transceive)
-    _SLOW_CMDS: list[tuple[int, int | None]] = [
-        (0x03, None),   # frequency (backup)
-        (0x04, None),   # mode (backup)
-        (0x14, 0x0A),   # RF power level (set value)
-        (0x14, 0x02),   # RF gain
-        (0x14, 0x01),   # AF level
-        (0x11, None),   # attenuator
-        (0x16, 0x02),   # preamp
-        (0x16, 0x22),   # NB on/off
-        (0x16, 0x40),   # NR on/off
-        (0x16, 0x4E),   # DIGI-SEL on/off
-        (0x16, 0x65),   # IP+ on/off
+    # State queries interleaved on odd cycles.
+    # Tuple: (cmd, sub, receiver) where receiver=None means global (no cmd29).
+    # Per-receiver queries use cmd29 framing (0x29 prefix).
+    # receiver: 0x00=MAIN, 0x01=SUB, None=global
+    # For 0x25/0x26: receiver byte goes in data payload (not cmd29 prefix)
+    _STATE_QUERIES: list[tuple[int, int | None, int | None]] = [
+        (0x25, None, 0x00),   # RX Freq MAIN (built-in receiver byte)
+        (0x25, None, 0x01),   # RX Freq SUB
+        (0x26, None, 0x00),   # RX Mode MAIN (built-in receiver byte)
+        (0x26, None, 0x01),   # RX Mode SUB
+        (0x11, None, 0x00),   # ATT MAIN
+        (0x11, None, 0x01),   # ATT SUB
+        (0x14, 0x01, 0x00),   # AF MAIN
+        (0x14, 0x01, 0x01),   # AF SUB
+        (0x14, 0x02, 0x00),   # RF gain MAIN
+        (0x14, 0x02, 0x01),   # RF gain SUB
+        (0x14, 0x03, 0x00),   # Squelch MAIN
+        (0x14, 0x03, 0x01),   # Squelch SUB
+        (0x16, 0x02, 0x00),   # Preamp MAIN
+        (0x16, 0x02, 0x01),   # Preamp SUB
+        (0x16, 0x22, 0x00),   # NB MAIN
+        (0x16, 0x22, 0x01),   # NB SUB
+        (0x16, 0x40, 0x00),   # NR MAIN
+        (0x16, 0x40, 0x01),   # NR SUB
+        (0x16, 0x4E, 0x00),   # DIGI-SEL MAIN
+        (0x16, 0x4E, 0x01),   # DIGI-SEL SUB
+        (0x16, 0x65, 0x00),   # IP+ MAIN
+        (0x16, 0x65, 0x01),   # IP+ SUB
+        (0x1A, 0x03, 0x00),   # Filter MAIN
+        (0x1A, 0x03, 0x01),   # Filter SUB
+        (0x1C, 0x00, None),   # PTT (global)
+        (0x14, 0x0A, None),   # Power level (global)
+        (0x0F, None, None),   # Split (global)
     ]
 
     async def _send_query(self) -> None:
-        # Fast meter query every cycle
-        fast_idx = self._poll_index % len(self._FAST_CMDS)
-        cmd_byte, sub_byte = self._FAST_CMDS[fast_idx]
-        await self._radio.send_civ(
-            cmd_byte, sub=sub_byte, data=b"", wait_response=False,
-        )
+        # Even cycles → meter query; odd cycles → state query.
+        if self._poll_index % 2 == 0:
+            fast_idx = (self._poll_index // 2) % len(self._FAST_CMDS)
+            cmd_byte, sub_byte = self._FAST_CMDS[fast_idx]
+            await self._radio.send_civ(
+                cmd_byte, sub=sub_byte, data=b"", wait_response=False,
+            )
+        else:
+            state_idx = (self._poll_index // 2) % len(self._STATE_QUERIES)
+            cmd_byte, sub_byte, receiver = self._STATE_QUERIES[state_idx]
+            if receiver is not None:
+                if cmd_byte in (0x25, 0x26):
+                    # RX Freq / RX Mode: receiver byte in data payload
+                    await self._radio.send_civ(
+                        cmd_byte, data=bytes([receiver]), wait_response=False,
+                    )
+                else:
+                    # cmd29 framing: FE FE to from 29 rcvr cmd [sub] FD
+                    inner = bytes([receiver, cmd_byte])
+                    if sub_byte is not None:
+                        inner += bytes([sub_byte])
+                    await self._radio.send_civ(0x29, data=inner, wait_response=False)
+            else:
+                # Global: plain CI-V query
+                await self._radio.send_civ(
+                    cmd_byte, sub=sub_byte, data=b"", wait_response=False,
+                )
         self._poll_index += 1
 
     def _emit(self, name: str, data: dict[str, Any]) -> None:

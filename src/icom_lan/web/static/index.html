@@ -697,41 +697,145 @@ input[type=range]::-webkit-slider-thumb {
     state.sliderDebounce.set(key, { timer: timer });
   }
 
+  // === HTTP STATE POLL (dual-receiver) ===
+  var _prevState = null;
+
+  function startStatePoll() {
+    setInterval(async function() {
+      try {
+        var r = await fetch('/api/v1/state');
+        if (!r.ok) return;
+        var s = await r.json();
+        applyStateDiff(_prevState, s);
+        _prevState = s;
+      } catch(e) { /* network error, ignore */ }
+    }, 200);
+  }
+
+  function applyStateDiff(prev, next) {
+    if (!next) return;
+    var m = next.main || {};
+    var s = next.sub || {};
+
+    // Freq
+    if (!prev || prev.main.freq !== m.freq) {
+      state.freqA = m.freq;
+      updateFreqDisplays();
+      drawWaterfallOverlay();
+    }
+    if (!prev || prev.sub.freq !== s.freq) {
+      state.freqB = s.freq;
+      updateFreqDisplays();
+    }
+
+    // Mode (active receiver)
+    var activeRx = next.active === 'SUB' ? s : m;
+    var prevActiveRx = prev ? (prev.active === 'SUB' ? prev.sub : prev.main) : null;
+    if (!prevActiveRx || prevActiveRx.mode !== activeRx.mode) {
+      state.mode = activeRx.mode;
+      updateModeDisplays();
+    }
+    if (!prevActiveRx || prevActiveRx.filter !== activeRx.filter) {
+      state.filter = 'FIL' + (activeRx.filter || 1);
+      updateModeDisplays();
+    }
+
+    // PTT
+    if (!prev || prev.ptt !== next.ptt) {
+      updatePttUi(next.ptt);
+    }
+
+    // Power level
+    if (!prev || prev.power_level !== next.power_level) {
+      state.powerLevelRaw = next.power_level;
+      dom.txPwrSlider.value = next.power_level;
+      if (!state.ptt) {
+        dom.pwrBar.style.width = Math.round((next.power_level / 255) * 100) + '%';
+      }
+    }
+
+    // ATT (active receiver)
+    if (!prevActiveRx || prevActiveRx.att !== activeRx.att) {
+      state.att = activeRx.att;
+      updateAttButtons();
+    }
+
+    // Preamp (active receiver)
+    if (!prevActiveRx || prevActiveRx.preamp !== activeRx.preamp) {
+      state.preamp = activeRx.preamp;
+      updatePreButtons();
+    }
+
+    // NB
+    if (!prevActiveRx || prevActiveRx.nb !== activeRx.nb) {
+      state.nb = activeRx.nb;
+      updateToggleBtn(dom.nbBtn, state.nb, 'NB');
+      var nbCls = state.nb ? 'text-[10px] px-1.5 py-0.5 bg-green-900/30 text-green-400 border border-green-800 rounded' : 'text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded';
+      dom.nbBadgeA.className = nbCls;
+      dom.nbBadgeB.className = nbCls;
+    }
+
+    // NR
+    if (!prevActiveRx || prevActiveRx.nr !== activeRx.nr) {
+      state.nr = activeRx.nr;
+      updateToggleBtn(dom.nrBtn, state.nr, 'NR');
+      var nrCls = state.nr ? 'text-[10px] px-1.5 py-0.5 bg-green-900/30 text-green-400 border border-green-800 rounded' : 'text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded';
+      dom.nrBadgeA.className = nrCls;
+      dom.nrBadgeB.className = nrCls;
+    }
+
+    // DIGI-SEL
+    if (!prevActiveRx || prevActiveRx.digisel !== activeRx.digisel) {
+      state.digisel = activeRx.digisel;
+      updateToggleBtn(dom.dselBtn, state.digisel, 'DSEL');
+    }
+
+    // IP+
+    if (!prevActiveRx || prevActiveRx.ipplus !== activeRx.ipplus) {
+      state.ipplus = activeRx.ipplus;
+      updateToggleBtn(dom.ipPlusBtn, state.ipplus, 'IP+');
+    }
+
+    // Sliders (AF, RF, SQL) — only update if not being dragged and delta > 3
+    if (!prevActiveRx || Math.abs(prevActiveRx.af_level - activeRx.af_level) > 3) {
+      if (!state.sliderDebounce.has('af')) {
+        dom.afSlider.value = activeRx.af_level;
+        dom.afVal.textContent = scaleToPct(activeRx.af_level) + '%';
+      }
+    }
+    if (!prevActiveRx || Math.abs(prevActiveRx.rf_gain - activeRx.rf_gain) > 3) {
+      if (!state.sliderDebounce.has('rf')) {
+        dom.rfSlider.value = activeRx.rf_gain;
+        dom.rfVal.textContent = scaleToPct(activeRx.rf_gain) + '%';
+      }
+    }
+    if (!prevActiveRx || Math.abs(prevActiveRx.squelch - activeRx.squelch) > 3) {
+      if (!state.sliderDebounce.has('sql')) {
+        var sqlPct = Math.round(activeRx.squelch / 255 * 100);
+        dom.sqlSlider.value = sqlPct;
+        dom.sqlVal.textContent = sqlPct + '%';
+        dom.sqlMarker.style.left = sqlPct + '%';
+        dom.sqlMarker.style.display = activeRx.squelch > 0 ? '' : 'none';
+      }
+    }
+
+    // S-meter (from poll, updates between binary meter frames)
+    // Skip — binary WS meters are higher frequency
+  }
+
+  // Legacy WS snapshot (still used for initial hello state)
   function applyStateSnapshot(data) {
-    if (!data || typeof data !== 'object') {
-      return;
-    }
-
-    if (typeof data.freq_a === 'number' && data.freq_a > 0) {
-      state.freqA = data.freq_a;
-    }
-    if (typeof data.freq_b === 'number' && data.freq_b > 0) {
-      state.freqB = data.freq_b;
-    }
-    if (typeof data.mode === 'string' && data.mode) {
-      state.mode = data.mode;
-    }
-    if (typeof data.filter === 'string' && data.filter) {
-      state.filter = data.filter;
-    }
-    if (typeof data.ptt === 'boolean') {
-      updatePttUi(data.ptt);
-    }
-    if (typeof data.power === 'number') {
-      state.power = clamp(Math.round(data.power), 0, 255);
-      dom.txPwrSlider.value = String(state.power);
-    }
-
+    if (!data || typeof data !== 'object') return;
+    if (typeof data.freq_a === 'number' && data.freq_a > 0) state.freqA = data.freq_a;
+    if (typeof data.freq_b === 'number' && data.freq_b > 0) state.freqB = data.freq_b;
+    if (typeof data.mode === 'string' && data.mode) state.mode = data.mode;
+    if (typeof data.filter === 'string' && data.filter) state.filter = data.filter;
+    if (typeof data.ptt === 'boolean') updatePttUi(data.ptt);
     if (data.scope && typeof data.scope === 'object') {
-      if (typeof data.scope.start_freq === 'number' && data.scope.start_freq > 0) {
-        state.scope.startFreq = data.scope.start_freq;
-      }
-      if (typeof data.scope.end_freq === 'number' && data.scope.end_freq > 0) {
-        state.scope.endFreq = data.scope.end_freq;
-      }
+      if (typeof data.scope.start_freq === 'number' && data.scope.start_freq > 0) state.scope.startFreq = data.scope.start_freq;
+      if (typeof data.scope.end_freq === 'number' && data.scope.end_freq > 0) state.scope.endFreq = data.scope.end_freq;
       state.scope.axisDirty = true;
     }
-
     updateFreqDisplays();
     updateModeDisplays();
     updateSliderLabels();
@@ -782,6 +886,7 @@ input[type=range]::-webkit-slider-thumb {
       sendControl({ type: 'subscribe', streams: ['state', 'events'] });
       connectMeters();
       connectScope();
+      startStatePoll();
       if (state.audio.rxEnabled || state.audio.txEnabled) {
         connectAudio();
       }
@@ -805,48 +910,13 @@ input[type=range]::-webkit-slider-thumb {
         showToast(msg.message);
         return;
       }
-      if (eventName === 'nb_changed' && msg.data) {
-        state.nb = !!msg.data.on;
-        updateToggleBtn(dom.nbBtn, state.nb, 'NB');
-        dom.nbBadgeA.className = state.nb ? 'text-[10px] px-1.5 py-0.5 bg-green-900/30 text-green-400 border border-green-800 rounded' : 'text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded';
-        dom.nbBadgeB.className = state.nb ? 'text-[10px] px-1.5 py-0.5 bg-green-900/30 text-green-400 border border-green-800 rounded' : 'text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded';
-        return;
-      }
-      if (eventName === 'nr_changed' && msg.data) {
-        state.nr = !!msg.data.on;
-        updateToggleBtn(dom.nrBtn, state.nr, 'NR');
-        dom.nrBadgeA.className = state.nr ? 'text-[10px] px-1.5 py-0.5 bg-green-900/30 text-green-400 border border-green-800 rounded' : 'text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded';
-        dom.nrBadgeB.className = state.nr ? 'text-[10px] px-1.5 py-0.5 bg-green-900/30 text-green-400 border border-green-800 rounded' : 'text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded';
-        return;
-      }
-      if (eventName === 'digisel_changed' && msg.data) {
-        state.digisel = !!msg.data.on;
-        updateToggleBtn(dom.dselBtn, state.digisel, 'DSEL');
-        return;
-      }
-      if (eventName === 'ipplus_changed' && msg.data) {
-        state.ipplus = !!msg.data.on;
-        updateToggleBtn(dom.ipPlusBtn, state.ipplus, 'IP+');
-        return;
-      }
-      if (eventName === 'af_level' && msg.data) {
-        dom.afSlider.value = msg.data.raw;
-        dom.afVal.textContent = scaleToPct(msg.data.raw) + '%';
-        return;
-      }
-      if (eventName === 'rf_gain' && msg.data) {
-        dom.rfSlider.value = msg.data.raw;
-        dom.rfVal.textContent = scaleToPct(msg.data.raw) + '%';
-        return;
-      }
-      if (eventName === 'squelch' && msg.data) {
-        var sqlPct = Math.round(msg.data.raw / 255 * 100);
-        dom.sqlSlider.value = sqlPct;
-        dom.sqlVal.textContent = sqlPct + '%';
-        dom.sqlMarker.style.left = sqlPct + '%';
-        dom.sqlMarker.style.display = msg.data.raw > 0 ? '' : 'none';
-        return;
-      }
+      // [nb_changed] → handled by HTTP state poll
+      // [nr_changed] → handled by HTTP state poll
+      // [digisel_changed] → handled by HTTP state poll
+      // [ipplus_changed] → handled by HTTP state poll
+      // [af_level] → handled by HTTP state poll
+      // [rf_gain] → handled by HTTP state poll
+      // [squelch] → handled by HTTP state poll
       if (eventName === 'vfo_changed' && msg.data) {
         setActiveVfo(msg.data.vfo, false);
         return;
@@ -859,41 +929,11 @@ input[type=range]::-webkit-slider-thumb {
         updateFreqDisplays();
         return;
       }
-      if (eventName === 'freq_changed' && msg.data && typeof msg.data.freq === 'number') {
-        const changedVfo = msg.data.vfo === 'B' ? 'B' : 'A';
-        if (changedVfo === 'A') {
-          state.freqA = msg.data.freq;
-        } else {
-          state.freqB = msg.data.freq;
-        }
-        updateFreqDisplays();
-        drawWaterfallOverlay();
-        return;
-      }
-      if (eventName === 'mode_changed' && msg.data) {
-        if (typeof msg.data.mode === 'string' && msg.data.mode) {
-          state.mode = msg.data.mode;
-        }
-        if (typeof msg.data.filter === 'string' && msg.data.filter) {
-          state.filter = msg.data.filter;
-        }
-        updateModeDisplays();
-        return;
-      }
-      if (eventName === 'ptt' && msg.data && typeof msg.data.state === 'boolean') {
-        updatePttUi(msg.data.state);
-        return;
-      }
-      if (eventName === 'att_changed' && msg.data && typeof msg.data.db === 'number') {
-        state.att = msg.data.db;
-        updateAttButtons();
-        return;
-      }
-      if (eventName === 'preamp_changed' && msg.data && typeof msg.data.level === 'number') {
-        state.preamp = msg.data.level;
-        updatePreButtons();
-        return;
-      }
+      // [freq_changed] → handled by HTTP state poll
+      // [mode_changed] → handled by HTTP state poll
+      // [ptt] → handled by HTTP state poll
+      // [att_changed] → handled by HTTP state poll
+      // [preamp_changed] → handled by HTTP state poll
       if (eventName === 'power_level' && msg.data) {
         // Set power level — show in PWR meter when not transmitting
         state.powerLevelWatts = msg.data.watts;

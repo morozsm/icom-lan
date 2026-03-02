@@ -29,6 +29,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from .. import __version__
+from ..radio_state import RadioState
 from ..rigctld.state_cache import StateCache
 from .handlers import AudioBroadcaster, AudioHandler, ControlHandler, MetersHandler, ScopeHandler
 from .radio_poller import CommandQueue, DisableScope, EnableScope, RadioPoller
@@ -93,6 +94,7 @@ class WebServer:
         self._state_cache: StateCache = (
             radio.state_cache if radio is not None else StateCache()
         )
+        self._radio_state: RadioState = RadioState()
         self._command_queue: CommandQueue = CommandQueue()
         self._radio_poller: RadioPoller | None = None
         # Meter broadcast
@@ -256,6 +258,8 @@ class WebServer:
             # Register callback so CI-V RX stream can notify us of state changes.
             # This is the primary path for freq/mode/meter updates (fire-and-forget).
             self._radio._on_state_change = self._on_radio_state_change
+            # Pass RadioState to the CI-V RX mixin for dual-receiver state tracking.
+            self._radio._radio_state = self._radio_state
             self._radio_poller = RadioPoller(
                 self._radio,
                 self._state_cache,
@@ -448,6 +452,8 @@ class WebServer:
 
         if path == "/api/v1/info":
             await self._serve_info(writer)
+        elif path == "/api/v1/state":
+            await self._serve_state(writer)
         elif path == "/api/v1/capabilities":
             await self._serve_capabilities(writer)
         elif path == "/" or path == "/index.html":
@@ -469,6 +475,12 @@ class WebServer:
             },
             separators=(",", ":"),
         ).encode()
+        await _send_response(
+            writer, 200, "OK", body, {"Content-Type": "application/json"}
+        )
+
+    async def _serve_state(self, writer: asyncio.StreamWriter) -> None:
+        body = json.dumps(self._radio_state.to_dict(), separators=(",", ":")).encode()
         await _send_response(
             writer, 200, "OK", body, {"Content-Type": "application/json"}
         )
