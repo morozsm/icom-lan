@@ -1458,21 +1458,10 @@ input[type=range]::-webkit-slider-thumb {
   }
 
   function flushAudioPipeline() {
-    // Close and recreate AudioContext to instantly stop all scheduled buffers.
-    // Simple close+recreate is the only reliable way to cancel
-    // buffers queued via source.start(futureTime).
-    const old = state.audio.context;
-    if (old) {
-      old.close().catch(function () {});
-    }
-    state.audio.context = null;
-    state.audio.gain = null;
+    // Reset the scheduled play time so the next buffer plays immediately
+    // instead of queuing behind seconds of stale audio.
+    // We don't close AudioContext (that breaks everything) — just reset timing.
     state.audio.nextPlayTime = 0;
-    // Close Opus decoder if active
-    if (state.audio.decoder) {
-      try { state.audio.decoder.close(); } catch (e) {}
-      state.audio.decoder = null;
-    }
   }
 
   function scheduleAudioBuffer(buffer) {
