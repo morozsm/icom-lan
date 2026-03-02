@@ -216,12 +216,18 @@ class WebServer:
         self.broadcast_event(name, data)
         # Also broadcast meter readings to MetersHandler clients
         if name == "meter":
-            from .protocol import METER_SMETER_MAIN, METER_POWER, METER_SWR, METER_ALC
+            from .protocol import (
+                METER_SMETER_MAIN, METER_POWER, METER_SWR, METER_ALC,
+                METER_ID_DRAIN, METER_VD, METER_TEMP,
+            )
             meter_map = {
                 "smeter": METER_SMETER_MAIN,
                 "power": METER_POWER,
                 "swr": METER_SWR,
                 "alc": METER_ALC,
+                "id": METER_ID_DRAIN,
+                "vd": METER_VD,
+                "temp": METER_TEMP,
             }
             meter_type = data.get("type")
             meter_id = meter_map.get(meter_type)
