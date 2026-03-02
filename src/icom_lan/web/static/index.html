@@ -77,8 +77,8 @@ input[type=range]::-webkit-slider-thumb {
 </header>
 
 <main class="flex-1 p-4 grid grid-cols-12 gap-4 min-h-0">
-  <section class="col-span-12 grid grid-cols-12 gap-4 h-44">
-    <div class="col-span-5 glass-panel rounded-xl p-4 flex flex-col justify-between border-l-4 border-l-vfo-a" id="vfoAPanel">
+  <section class="col-span-12 grid grid-cols-12 gap-4 h-48 shrink-0">
+    <div class="col-span-5 glass-panel rounded-xl p-4 flex flex-col justify-between border-l-4 border-l-vfo-a cursor-pointer" id="vfoAPanel">
       <div class="flex justify-between items-start">
         <div class="flex items-center gap-2">
           <button class="bg-vfo-a text-icom-dark px-2 py-0.5 rounded text-xs font-bold" id="vfoASelect">VFO A</button>
@@ -87,7 +87,8 @@ input[type=range]::-webkit-slider-thumb {
         <div class="flex gap-1" id="vfoAbadges">
           <span class="text-[10px] px-1.5 py-0.5 bg-green-900/30 text-green-400 border border-green-800 rounded" id="preBadgeA">PRE 1</span>
           <span class="text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded" id="attBadgeA">ATT</span>
-          <span class="text-[10px] px-1.5 py-0.5 bg-green-900/30 text-green-400 border border-green-800 rounded">IP+</span>
+          <span class="text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded" id="dselBadgeA">DSEL</span>
+          <span class="text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded" id="ipBadgeA">IP+</span>
           <span class="text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded" id="nbBadgeA">NB</span>
           <span class="text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded" id="nrBadgeA">NR</span>
         </div>
@@ -102,8 +103,8 @@ input[type=range]::-webkit-slider-thumb {
         </div>
         <span class="text-[10px] text-meter-green font-bold font-digital" id="smeterAval">S0</span>
       </div>
-      <div class="flex justify-between text-[7px] text-slate-600 px-4 -mt-0.5">
-        <span>1</span><span>3</span><span>5</span><span>7</span><span>9</span><span class="text-red-900">+20</span><span class="text-red-900">+40</span><span class="text-red-900">+60</span>
+      <div class="flex justify-between text-[7px] text-slate-400 px-4 -mt-0.5">
+        <span>1</span><span>3</span><span>5</span><span>7</span><span>9</span><span class="text-red-400">+20</span><span class="text-red-400">+40</span><span class="text-red-400">+60</span>
       </div>
     </div>
 
@@ -118,12 +119,13 @@ input[type=range]::-webkit-slider-thumb {
       </div>
     </div>
 
-    <div class="col-span-5 glass-panel rounded-xl p-4 flex flex-col justify-between border-r-4 border-r-vfo-b" id="vfoBPanel">
+    <div class="col-span-5 glass-panel rounded-xl p-4 flex flex-col justify-between border-r-4 border-r-vfo-b cursor-pointer" id="vfoBPanel">
       <div class="flex justify-between items-start">
         <div class="flex gap-1" id="vfoBbadges">
           <span class="text-[10px] px-1.5 py-0.5 bg-green-900/30 text-green-400 border border-green-800 rounded" id="preBadgeB">PRE 1</span>
           <span class="text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded" id="attBadgeB">ATT</span>
-          <span class="text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded">IP+</span>
+          <span class="text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded" id="dselBadgeB">DSEL</span>
+          <span class="text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded" id="ipBadgeB">IP+</span>
           <span class="text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded" id="nbBadgeB">NB</span>
           <span class="text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded" id="nrBadgeB">NR</span>
         </div>
@@ -141,8 +143,8 @@ input[type=range]::-webkit-slider-thumb {
         </div>
         <span class="text-[10px] font-bold font-digital text-meter-green" id="smeterBval">S0</span>
       </div>
-      <div class="flex justify-between text-[7px] text-slate-600 px-4 -mt-0.5">
-        <span>1</span><span>3</span><span>5</span><span>7</span><span>9</span><span class="text-red-900">+20</span><span class="text-red-900">+40</span><span class="text-red-900">+60</span>
+      <div class="flex justify-between text-[7px] text-slate-400 px-4 -mt-0.5">
+        <span>1</span><span>3</span><span>5</span><span>7</span><span>9</span><span class="text-red-400">+20</span><span class="text-red-400">+40</span><span class="text-red-400">+60</span>
       </div>
     </div>
   </section>
@@ -151,15 +153,15 @@ input[type=range]::-webkit-slider-thumb {
     <div class="glass-panel rounded-t-xl overflow-hidden relative" style="height:155px;" id="spectrumContainer">
       <canvas id="specCanvas"></canvas>
       <div class="absolute left-0 top-0 bottom-0 w-8 flex flex-col justify-between py-1 pointer-events-none">
-        <span class="text-[8px] font-digital text-slate-600 pl-1">0</span>
-        <span class="text-[8px] font-digital text-slate-600 pl-1">-20</span>
-        <span class="text-[8px] font-digital text-slate-600 pl-1">-40</span>
-        <span class="text-[8px] font-digital text-slate-600 pl-1">-60</span>
-        <span class="text-[8px] font-digital text-slate-600 pl-1">-80</span>
-        <span class="text-[8px] font-digital text-slate-600 pl-1">-100</span>
+        <span class="text-[8px] font-digital text-slate-400 pl-1">0</span>
+        <span class="text-[8px] font-digital text-slate-400 pl-1">-20</span>
+        <span class="text-[8px] font-digital text-slate-400 pl-1">-40</span>
+        <span class="text-[8px] font-digital text-slate-400 pl-1">-60</span>
+        <span class="text-[8px] font-digital text-slate-400 pl-1">-80</span>
+        <span class="text-[8px] font-digital text-slate-400 pl-1">-100</span>
       </div>
     </div>
-    <div class="flex justify-between px-2 py-0.5 bg-icom-panel text-[10px] font-digital text-slate-600" id="freqAxis"></div>
+    <div class="flex justify-between px-2 py-0.5 bg-icom-panel text-[10px] font-digital text-slate-400" id="freqAxis"></div>
     <div class="glass-panel rounded-b-xl overflow-hidden relative flex-1" id="waterfallContainer" style="min-height:80px;max-height:200px;">
       <canvas id="wfCanvas"></canvas>
       <canvas id="wfOverlayCanvas"></canvas>
@@ -395,6 +397,10 @@ input[type=range]::-webkit-slider-thumb {
     dselBtn: $('dselBtn'),
     nbBtn: $('nbBtn'),
     nrBtn: $('nrBtn'),
+    dselBadgeA: $('dselBadgeA'),
+    dselBadgeB: $('dselBadgeB'),
+    ipBadgeA: $('ipBadgeA'),
+    ipBadgeB: $('ipBadgeB'),
     nbBadgeA: $('nbBadgeA'),
     nrBadgeA: $('nrBadgeA'),
     nbBadgeB: $('nbBadgeB'),
@@ -556,14 +562,29 @@ input[type=range]::-webkit-slider-thumb {
   function setActiveVfo(vfo, dispatch) {
     const shouldDispatch = dispatch !== false;
     state.activeVfo = vfo === 'B' ? 'B' : 'A';
-    dom.vfoASelect.className = state.activeVfo === 'A'
+    var aActive = state.activeVfo === 'A';
+    // VFO button highlight
+    dom.vfoASelect.className = aActive
       ? 'bg-vfo-a text-icom-dark px-2 py-0.5 rounded text-xs font-bold ring-1 ring-vfo-a'
       : 'bg-vfo-a/70 text-icom-dark px-2 py-0.5 rounded text-xs font-bold';
-    dom.vfoBSelect.className = state.activeVfo === 'B'
+    dom.vfoBSelect.className = !aActive
       ? 'bg-vfo-b text-icom-dark px-2 py-0.5 rounded text-xs font-bold ring-1 ring-vfo-b'
       : 'bg-vfo-b/70 text-icom-dark px-2 py-0.5 rounded text-xs font-bold';
+    // Freq display: active = large + bright, inactive = smaller + dim
+    dom.vfoAfreq.className = aActive
+      ? 'text-6xl font-digital text-vfo-a glow-cyan tracking-tighter'
+      : 'text-5xl font-digital text-vfo-a/50 tracking-tighter';
+    dom.vfoBfreq.className = !aActive
+      ? 'text-6xl font-digital text-vfo-b glow-amber tracking-tighter text-right'
+      : 'text-5xl font-digital text-vfo-b/50 tracking-tighter text-right';
+    // Panel border emphasis
+    dom.vfoAPanel.classList.toggle('border-l-vfo-a', aActive);
+    dom.vfoAPanel.classList.toggle('border-l-slate-700', !aActive);
+    dom.vfoBPanel.classList.toggle('border-r-vfo-b', !aActive);
+    dom.vfoBPanel.classList.toggle('border-r-slate-700', aActive);
     if (shouldDispatch) {
-      sendCommand('select_vfo', { vfo: state.activeVfo });
+      // IC-7610 dual-receiver: MAIN/SUB (0xD0/0xD1), not A/B (0x00/0x01)
+      sendCommand('select_vfo', { vfo: state.activeVfo === 'A' ? 'MAIN' : 'SUB' });
     }
   }
 
@@ -664,6 +685,10 @@ input[type=range]::-webkit-slider-thumb {
     });
   }
 
+  // Badge helper: on/off class for VFO area badges
+  var _badgeOn = 'text-[10px] px-1.5 py-0.5 bg-green-900/30 text-green-400 border border-green-800 rounded';
+  var _badgeOff = 'text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded';
+
   function updateAttButtons() {
     dom.attGrid.querySelectorAll('[data-att]').forEach(function (btn) {
       if (Number(btn.dataset.att) === state.att) {
@@ -672,13 +697,7 @@ input[type=range]::-webkit-slider-thumb {
         btn.className = 'flex-1 bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-[10px] font-bold transition';
       }
     });
-    const attOn = state.att > 0;
-    const badgeClassOn = 'text-[10px] px-1.5 py-0.5 bg-green-900/30 text-green-400 border border-green-800 rounded';
-    const badgeClassOff = 'text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded';
-    dom.attBadgeA.className = attOn ? badgeClassOn : badgeClassOff;
-    dom.attBadgeB.className = attOn ? badgeClassOn : badgeClassOff;
-    dom.attBadgeA.textContent = attOn ? 'ATT ' + state.att : 'ATT';
-    dom.attBadgeB.textContent = attOn ? 'ATT ' + state.att : 'ATT';
+    // Badges updated separately in updateReceiverBadges()
   }
 
   function updatePreButtons() {
@@ -689,13 +708,35 @@ input[type=range]::-webkit-slider-thumb {
         btn.className = 'flex-1 bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-[10px] font-bold transition';
       }
     });
-    const preOn = state.preamp > 0;
-    const badgeClassOn = 'text-[10px] px-1.5 py-0.5 bg-green-900/30 text-green-400 border border-green-800 rounded';
-    const badgeClassOff = 'text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded';
-    dom.preBadgeA.className = preOn ? badgeClassOn : badgeClassOff;
-    dom.preBadgeB.className = preOn ? badgeClassOn : badgeClassOff;
-    dom.preBadgeA.textContent = preOn ? 'PRE ' + state.preamp : 'PRE';
-    dom.preBadgeB.textContent = preOn ? 'PRE ' + state.preamp : 'PRE';
+    // Badges updated separately in updateReceiverBadges()
+  }
+
+  // Update VFO area badges per-receiver: A=MAIN, B=SUB
+  function updateReceiverBadges(mainRx, subRx) {
+    // ATT
+    var mAtt = mainRx.att || 0, sAtt = subRx.att || 0;
+    dom.attBadgeA.className = mAtt > 0 ? _badgeOn : _badgeOff;
+    dom.attBadgeA.textContent = mAtt > 0 ? 'ATT ' + mAtt : 'ATT';
+    dom.attBadgeB.className = sAtt > 0 ? _badgeOn : _badgeOff;
+    dom.attBadgeB.textContent = sAtt > 0 ? 'ATT ' + sAtt : 'ATT';
+    // PRE
+    var mPre = mainRx.preamp || 0, sPre = subRx.preamp || 0;
+    dom.preBadgeA.className = mPre > 0 ? _badgeOn : _badgeOff;
+    dom.preBadgeA.textContent = mPre > 0 ? 'PRE ' + mPre : 'PRE';
+    dom.preBadgeB.className = sPre > 0 ? _badgeOn : _badgeOff;
+    dom.preBadgeB.textContent = sPre > 0 ? 'PRE ' + sPre : 'PRE';
+    // NB
+    dom.nbBadgeA.className = mainRx.nb ? _badgeOn : _badgeOff;
+    dom.nbBadgeB.className = subRx.nb ? _badgeOn : _badgeOff;
+    // NR
+    dom.nrBadgeA.className = mainRx.nr ? _badgeOn : _badgeOff;
+    dom.nrBadgeB.className = subRx.nr ? _badgeOn : _badgeOff;
+    // DIGI-SEL
+    dom.dselBadgeA.className = mainRx.digisel ? _badgeOn : _badgeOff;
+    dom.dselBadgeB.className = subRx.digisel ? _badgeOn : _badgeOff;
+    // IP+
+    dom.ipBadgeA.className = mainRx.ipplus ? _badgeOn : _badgeOff;
+    dom.ipBadgeB.className = subRx.ipplus ? _badgeOn : _badgeOff;
   }
 
   function updatePttUi(pttOn) {
@@ -769,14 +810,20 @@ input[type=range]::-webkit-slider-thumb {
       updateFreqDisplays();
     }
 
+    // Active VFO
+    var activeChanged = !prev || prev.active !== next.active;
+    if (activeChanged) {
+      setActiveVfo(next.active === 'SUB' ? 'B' : 'A', false);
+    }
+
     // Mode (active receiver)
     var activeRx = next.active === 'SUB' ? s : m;
     var prevActiveRx = prev ? (prev.active === 'SUB' ? prev.sub : prev.main) : null;
-    if (!prevActiveRx || prevActiveRx.mode !== activeRx.mode) {
+    if (activeChanged || !prevActiveRx || prevActiveRx.mode !== activeRx.mode) {
       state.mode = activeRx.mode;
       updateModeDisplays();
     }
-    if (!prevActiveRx || prevActiveRx.filter !== activeRx.filter) {
+    if (activeChanged || !prevActiveRx || prevActiveRx.filter !== activeRx.filter) {
       state.filter = 'FIL' + (activeRx.filter || 1);
       updateModeDisplays();
     }
@@ -795,62 +842,49 @@ input[type=range]::-webkit-slider-thumb {
       }
     }
 
-    // ATT (active receiver)
-    if (!prevActiveRx || prevActiveRx.att !== activeRx.att) {
+    // Per-receiver badges (A=MAIN, B=SUB — independent)
+    updateReceiverBadges(m, s);
+
+    // Control buttons reflect active receiver (force-update on VFO switch)
+    if (activeChanged || !prevActiveRx || prevActiveRx.att !== activeRx.att) {
       state.att = activeRx.att;
       updateAttButtons();
     }
-
-    // Preamp (active receiver)
-    if (!prevActiveRx || prevActiveRx.preamp !== activeRx.preamp) {
+    if (activeChanged || !prevActiveRx || prevActiveRx.preamp !== activeRx.preamp) {
       state.preamp = activeRx.preamp;
       updatePreButtons();
     }
-
-    // NB
-    if (!prevActiveRx || prevActiveRx.nb !== activeRx.nb) {
+    if (activeChanged || !prevActiveRx || prevActiveRx.nb !== activeRx.nb) {
       state.nb = activeRx.nb;
       updateToggleBtn(dom.nbBtn, state.nb, 'NB');
-      var nbCls = state.nb ? 'text-[10px] px-1.5 py-0.5 bg-green-900/30 text-green-400 border border-green-800 rounded' : 'text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded';
-      dom.nbBadgeA.className = nbCls;
-      dom.nbBadgeB.className = nbCls;
     }
-
-    // NR
-    if (!prevActiveRx || prevActiveRx.nr !== activeRx.nr) {
+    if (activeChanged || !prevActiveRx || prevActiveRx.nr !== activeRx.nr) {
       state.nr = activeRx.nr;
       updateToggleBtn(dom.nrBtn, state.nr, 'NR');
-      var nrCls = state.nr ? 'text-[10px] px-1.5 py-0.5 bg-green-900/30 text-green-400 border border-green-800 rounded' : 'text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded';
-      dom.nrBadgeA.className = nrCls;
-      dom.nrBadgeB.className = nrCls;
     }
-
-    // DIGI-SEL
-    if (!prevActiveRx || prevActiveRx.digisel !== activeRx.digisel) {
+    if (activeChanged || !prevActiveRx || prevActiveRx.digisel !== activeRx.digisel) {
       state.digisel = activeRx.digisel;
       updateToggleBtn(dom.dselBtn, state.digisel, 'DSEL');
     }
-
-    // IP+
-    if (!prevActiveRx || prevActiveRx.ipplus !== activeRx.ipplus) {
+    if (activeChanged || !prevActiveRx || prevActiveRx.ipplus !== activeRx.ipplus) {
       state.ipplus = activeRx.ipplus;
       updateToggleBtn(dom.ipPlusBtn, state.ipplus, 'IP+');
     }
 
-    // Sliders (AF, RF, SQL) — only update if not being dragged and delta > 3
-    if (!prevActiveRx || Math.abs(prevActiveRx.af_level - activeRx.af_level) > 3) {
+    // Sliders (AF, RF, SQL) — force-update on VFO switch, otherwise delta > 3
+    if (activeChanged || !prevActiveRx || Math.abs(prevActiveRx.af_level - activeRx.af_level) > 3) {
       if (!state.sliderDebounce.has('af')) {
         dom.afSlider.value = activeRx.af_level;
         dom.afVal.textContent = scaleToPct(activeRx.af_level) + '%';
       }
     }
-    if (!prevActiveRx || Math.abs(prevActiveRx.rf_gain - activeRx.rf_gain) > 3) {
+    if (activeChanged || !prevActiveRx || Math.abs(prevActiveRx.rf_gain - activeRx.rf_gain) > 3) {
       if (!state.sliderDebounce.has('rf')) {
         dom.rfSlider.value = activeRx.rf_gain;
         dom.rfVal.textContent = scaleToPct(activeRx.rf_gain) + '%';
       }
     }
-    if (!prevActiveRx || Math.abs(prevActiveRx.squelch - activeRx.squelch) > 3) {
+    if (activeChanged || !prevActiveRx || Math.abs(prevActiveRx.squelch - activeRx.squelch) > 3) {
       if (!state.sliderDebounce.has('sql')) {
         var sqlPct = Math.round(activeRx.squelch / 255 * 100);
         dom.sqlSlider.value = sqlPct;
@@ -951,42 +985,11 @@ input[type=range]::-webkit-slider-thumb {
         showToast(msg.message);
         return;
       }
-      // [nb_changed] → handled by HTTP state poll
-      // [nr_changed] → handled by HTTP state poll
-      // [digisel_changed] → handled by HTTP state poll
-      // [ipplus_changed] → handled by HTTP state poll
-      // [af_level] → handled by HTTP state poll
-      // [rf_gain] → handled by HTTP state poll
-      // [squelch] → handled by HTTP state poll
-      if (eventName === 'vfo_changed' && msg.data) {
-        setActiveVfo(msg.data.vfo, false);
-        return;
-      }
-      if (eventName === 'vfo_swapped') {
-        // Exchange displayed frequencies
-        var tmpFreq = state.freqA;
-        state.freqA = state.freqB;
-        state.freqB = tmpFreq;
-        updateFreqDisplays();
-        return;
-      }
-      // [freq_changed] → handled by HTTP state poll
-      // [mode_changed] → handled by HTTP state poll
-      // [ptt] → handled by HTTP state poll
-      // [att_changed] → handled by HTTP state poll
-      // [preamp_changed] → handled by HTTP state poll
-      if (eventName === 'power_level' && msg.data) {
-        // Set power level — show in PWR meter when not transmitting
-        state.powerLevelWatts = msg.data.watts;
-        state.powerLevelRaw = msg.data.raw;
-        dom.txPwrSlider.value = msg.data.raw;
-        dom.txPwrVal.innerHTML = msg.data.watts + '<span class="text-xs ml-1">W</span>';
-        if (!state.ptt) {
-          dom.pwrVal.textContent = msg.data.watts + 'W';
-          dom.pwrBar.style.width = Math.round((msg.data.raw / 255) * 100) + '%';
-        }
-        return;
-      }
+      // All state data handled by HTTP poll (/api/v1/state):
+      // nb_changed, nr_changed, digisel_changed, ipplus_changed,
+      // af_level, rf_gain, squelch, vfo_changed, vfo_swapped,
+      // freq_changed, mode_changed, ptt, att_changed, preamp_changed,
+      // power_level
       if (eventName === 'meter' && msg.data) {
         // Calibrated meter values from backend
         var mt = msg.data.type;
@@ -1437,7 +1440,7 @@ input[type=range]::-webkit-slider-thumb {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
 
-    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
     ctx.lineWidth = 0.6;
     for (let i = 0; i <= 5; i += 1) {
       const y = (i / 5) * h;
@@ -2030,6 +2033,12 @@ input[type=range]::-webkit-slider-thumb {
     dom.vfoBSelect.addEventListener('click', function () {
       setActiveVfo('B', true);
     });
+    dom.vfoAPanel.addEventListener('click', function (e) {
+      if (!e.target.closest('button')) setActiveVfo('A', true);
+    });
+    dom.vfoBPanel.addEventListener('click', function (e) {
+      if (!e.target.closest('button')) setActiveVfo('B', true);
+    });
 
     dom.ipPlusBtn.addEventListener('click', function () {
       state.ipplus = !state.ipplus;
@@ -2243,6 +2252,8 @@ input[type=range]::-webkit-slider-thumb {
 
     state.scope.lastBuffer = null;
     const frame = parseScopeBuffer(buffer);
+    // IC-7610: always show MAIN scope (receiver=0).
+    // SUB scope requires Dual Watch + dual scope mode; unstable via CI-V.
     if (!frame || frame.receiver !== 0) {
       return;
     }
