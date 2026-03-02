@@ -389,11 +389,12 @@ class _CivRxMixin:
                             cache.update_swr(float(raw))
                         elif sub == 0x13:
                             cache.update_alc(float(raw))
-            elif frame.command == 0x14:  # levels
+            elif frame.command == 0x14:  # levels (BCD-encoded, same as meters)
                 if len(frame.data) >= 2:
-                    raw = int.from_bytes(frame.data[:2], "big")
+                    b0, b1 = frame.data[0], frame.data[1]
+                    raw = (b0 >> 4) * 1000 + (b0 & 0x0F) * 100 + (b1 >> 4) * 10 + (b1 & 0x0F)
                     if frame.sub == 0x0A:  # RF power level (set value)
-                        # 0-255 maps to 0-100% power
+                        # BCD 0-255 = 0-100% power
                         pct = round(raw / 255 * 100)
                         self._notify_change("power_level", {"raw": raw, "pct": pct})
                     elif frame.sub == 0x02:  # RF gain
