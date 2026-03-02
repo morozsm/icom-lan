@@ -423,6 +423,8 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
 
         self._advance_civ_generation("soft_reconnect")
         self._civ_last_waiter_gc_monotonic = __import__("time").monotonic()
+        # Force-restart rx pump (old task may be lingering)
+        await self._stop_civ_rx_pump()
         self._start_civ_rx_pump()
         self._conn_state = RadioConnectionState.CONNECTED
         self._start_civ_worker()
