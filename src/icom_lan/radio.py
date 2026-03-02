@@ -427,6 +427,8 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         await self._stop_civ_rx_pump()
         self._start_civ_rx_pump()
         self._conn_state = RadioConnectionState.CONNECTED
+        # Reset watchdog timestamp so it doesn't immediately trigger
+        self._last_civ_data_received = __import__("time").monotonic()
         self._start_civ_worker()
         self._start_civ_data_watchdog()
         logger.info("Soft reconnect to %s (civ=%d)", self._host, self._civ_port)
