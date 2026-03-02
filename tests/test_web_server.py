@@ -227,6 +227,14 @@ def mock_radio() -> MagicMock:
     radio.on_scope_data = MagicMock()
     # State cache shared between radio and server
     radio.state_cache = StateCache()
+    # Methods used by WebServer.stop() and RadioPoller
+    radio.soft_disconnect = AsyncMock()
+    radio.send_civ = AsyncMock()
+    # AudioBroadcaster needs these
+    radio.start_audio_rx_opus = AsyncMock()
+    radio.stop_audio_rx_opus = AsyncMock()
+    radio.audio_codec = None
+    radio.audio_sample_rate = 48000
     return radio
 
 
@@ -1166,11 +1174,9 @@ class TestAudioHandlerCodecDetection:
     """
 
     async def _start_rx_and_capture(self, audio_codec: object, sample_rate: int) -> bytes:
-        """Start RX on an AudioHandler with given codec/rate and return first queued frame."""
-        import struct
-
+        """Start RX via AudioBroadcaster and return first queued frame."""
         from icom_lan.types import AudioCodec
-        from icom_lan.web.handlers import AudioHandler
+        from icom_lan.web.handlers import AudioBroadcaster, AudioHandler
         from icom_lan.web.websocket import WebSocketConnection
 
         mock_ws = MagicMock(spec=WebSocketConnection)
@@ -1186,7 +1192,8 @@ class TestAudioHandlerCodecDetection:
 
         mock_radio.start_audio_rx_opus = fake_start_rx_opus
 
-        handler = AudioHandler(mock_ws, mock_radio)
+        broadcaster = AudioBroadcaster(mock_radio)
+        handler = AudioHandler(mock_ws, mock_radio, broadcaster)
         await handler._start_rx()
 
         assert len(captured_callback) == 1, "start_audio_rx_opus must be called once"
@@ -1197,7 +1204,7 @@ class TestAudioHandlerCodecDetection:
         mock_pkt.data = b"\x00\x01" * 50  # 100 bytes of fake audio
         cb(mock_pkt)
 
-        # Retrieve the encoded web frame from the queue
+        # Retrieve the encoded web frame from the handler's queue (assigned by broadcaster)
         frame = handler._frame_queue.get_nowait()
         return frame
 

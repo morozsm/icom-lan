@@ -205,6 +205,8 @@ class RadioPoller:
         return self._task is not None and not self._task.done()
 
     async def _run(self) -> None:
+        _backoff = 0.0
+        _MAX_BACKOFF = 5.0  # max pause when radio is disconnected
         try:
             while True:
                 # 1. Drain command queue (fire-and-forget writes)
@@ -212,14 +214,35 @@ class RadioPoller:
                     for cmd in self._queue.drain():
                         try:
                             await self._execute(cmd)
+                            _backoff = 0.0
+                        except ConnectionError:
+                            _backoff = min(_backoff + 0.5, _MAX_BACKOFF)
                         except Exception:
                             logger.debug("radio-poller: cmd error: %s",
                                          type(cmd).__name__, exc_info=True)
                         await asyncio.sleep(_GAP)
 
+                # If disconnected, back off to avoid log spam
+                if _backoff > 0:
+                    await asyncio.sleep(_backoff)
+                    # Still try one query to detect reconnection
+                    try:
+                        await self._send_query()
+                        _backoff = 0.0
+                        logger.info("radio-poller: connection restored")
+                    except ConnectionError:
+                        _backoff = min(_backoff + 0.5, _MAX_BACKOFF)
+                        continue
+                    except Exception:
+                        continue
+
                 # 2. Send fast meter query
                 try:
                     await self._send_query()
+                except ConnectionError:
+                    _backoff = min(_backoff + 0.5, _MAX_BACKOFF)
+                    logger.info("radio-poller: radio disconnected, backing off %.1fs", _backoff)
+                    continue
                 except Exception:
                     logger.debug("radio-poller: query error", exc_info=True)
 
