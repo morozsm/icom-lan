@@ -35,7 +35,6 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Callable
 
 from ..rigctld.state_cache import StateCache
-from .protocol import METER_ALC, METER_POWER, METER_SMETER_MAIN, METER_SWR
 
 if TYPE_CHECKING:
     from ..radio import IcomRadio

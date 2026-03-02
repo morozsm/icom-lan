@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
 import time
 from typing import TYPE_CHECKING
 
@@ -26,7 +25,7 @@ from .scope import ScopeFrame
 from .types import CivFrame
 
 if TYPE_CHECKING:
-    from .radio_state import RadioState, ReceiverState
+    from .radio_state import RadioState
 
 logger = logging.getLogger(__name__)
 
@@ -358,7 +357,7 @@ class _CivRxMixin:
                 self._notify_change("freq_changed", {"freq": freq, "vfo": vfo})
             elif frame.command in (0x04, 0x01):  # mode (response / unsolicited)
                 mode, filt = parse_mode_response(frame)
-                old_mode, old_filt = cache.mode, cache.filter_width
+                # (previous mode/filter unused after refactor)
                 self._last_mode = mode  # type: ignore[attr-defined]
                 if filt is not None:
                     self._filter_width = filt  # type: ignore[attr-defined]

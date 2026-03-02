@@ -38,7 +38,6 @@ from .commands import (
     get_s_meter,
     get_swr,
     parse_ack_nak,
-    parse_civ_frame,
     parse_data_mode_response,
     parse_frequency_response,
     parse_meter_response,
@@ -75,24 +74,20 @@ from .commands import (
     vfo_swap,
 )
 from .exceptions import (
-    AuthenticationError,
     CommandError,
     ConnectionError,
     TimeoutError,
 )
 from ._audio_transcoder import PcmOpusTranscoder, create_pcm_opus_transcoder
-from .audio import AudioPacket, AudioState, AudioStats, AudioStream
+from .audio import AudioPacket, AudioStats, AudioStream
 from .commander import IcomCommander, Priority
 from .rigctld.state_cache import StateCache
 from .civ import (
     CivEvent,
-    CivEventType,
     CivRequestTracker,
-    iter_civ_frames,
-    request_key_from_frame,
 )
 from .scope import ScopeAssembler, ScopeFrame
-from .transport import ConnectionState, IcomTransport
+from .transport import IcomTransport
 from .types import (
     AudioCapabilities,
     AudioCodec,
@@ -104,13 +99,13 @@ from .types import (
 
 # Import split modules
 from ._connection_state import RadioConnectionState
-from ._audio_recovery import AudioRecoveryState, _AudioSnapshot, _AudioRecoveryMixin
-from ._civ_rx import CIV_HEADER_SIZE, _CivRxMixin
+from ._audio_recovery import AudioRecoveryState, _AudioRecoveryMixin
+from ._civ_rx import _CivRxMixin
 from ._control_phase import (
-    CONNINFO_SIZE,
-    OPENCLOSE_SIZE,
-    STATUS_SIZE,
-    TOKEN_ACK_SIZE,
+    CONNINFO_SIZE,  # noqa: F401 (re-export for tests)
+    OPENCLOSE_SIZE,  # noqa: F401 (re-export for tests)
+    STATUS_SIZE,  # noqa: F401 (re-export for tests)
+    TOKEN_ACK_SIZE,  # noqa: F401 (re-export for tests)
     _ControlPhaseMixin,
 )
 
