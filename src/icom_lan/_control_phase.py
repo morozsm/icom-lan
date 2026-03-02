@@ -164,6 +164,10 @@ class _ControlPhaseMixin:
 
         self._civ_transport.start_ping_loop()  # type: ignore[attr-defined]
         self._civ_transport.start_retransmit_loop()  # type: ignore[attr-defined]
+        # ⚠️ DO NOT REMOVE idle_loop! The IC-7610 kills CI-V sessions after ~40s
+        # without tracked control packets. CI-V payload commands do NOT substitute
+        # for transport-level keepalive. This was learned the hard way (2026-03-02).
+        self._civ_transport.start_idle_loop()  # type: ignore[attr-defined]
         # NOTE: no idle_loop on CI-V — fire-and-forget CI-V commands already
         # keep the session alive; idle tracked packets flood tx_buffer.
 
