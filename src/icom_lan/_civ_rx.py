@@ -183,12 +183,23 @@ class _CivRxMixin:
                         # Phase 2: OpenClose didn't help — soft_reconnect
                         reconnect_count += 1
                         if reconnect_count > _MAX_RECONNECTS:
-                            logger.error(
-                                "civ-data-watchdog: %d reconnect attempts failed, "
-                                "giving up (radio may need reboot)",
+                            # Phase 3: soft reconnects exhausted — full reconnect
+                            logger.warning(
+                                "civ-data-watchdog: %d soft reconnects failed, "
+                                "attempting full reconnect",
                                 reconnect_count - 1,
                             )
-                            return
+                            try:
+                                await self._stop_civ_data_watchdog()
+                                await self.disconnect()  # type: ignore[attr-defined]
+                                await asyncio.sleep(_RECONNECT_PAUSE * 2)
+                                await self.connect()  # type: ignore[attr-defined]
+                            except Exception:
+                                logger.error(
+                                    "civ-data-watchdog: full reconnect failed",
+                                    exc_info=True,
+                                )
+                            return  # watchdog restarted by connect
                         logger.warning(
                             "civ-data-watchdog: OpenClose failed for %.1fs, "
                             "triggering soft_reconnect (%d/%d)",
