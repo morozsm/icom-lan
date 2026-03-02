@@ -127,6 +127,8 @@ class _ControlPhaseMixin:
         self._civ_port = self._port + 1  # type: ignore[attr-defined]
         self._audio_port = self._port + 2  # type: ignore[attr-defined]
 
+        self._civ_local_port = _civ_local_port  # type: ignore[attr-defined]
+        self._audio_local_port = _audio_local_port  # type: ignore[attr-defined]
         await self._send_conninfo(guid, _civ_local_port, _audio_local_port)
 
         # Non-blocking: try to read status once (short timeout).
@@ -150,7 +152,10 @@ class _ControlPhaseMixin:
         # --- Phase 2: CI-V port ---
         self._civ_transport = IcomTransport()  # type: ignore[attr-defined]
         try:
-            await self._civ_transport.connect(self._host, self._civ_port)  # type: ignore[attr-defined]
+            await self._civ_transport.connect(  # type: ignore[attr-defined]
+                self._host, self._civ_port,
+                local_port=self._civ_local_port,  # type: ignore[attr-defined]
+            )
         except OSError as exc:
             await self._ctrl_transport.disconnect()  # type: ignore[attr-defined]
             raise ConnectionError(
@@ -159,6 +164,8 @@ class _ControlPhaseMixin:
 
         self._civ_transport.start_ping_loop()  # type: ignore[attr-defined]
         self._civ_transport.start_retransmit_loop()  # type: ignore[attr-defined]
+        # NOTE: no idle_loop on CI-V — fire-and-forget CI-V commands already
+        # keep the session alive; idle tracked packets flood tx_buffer.
 
         # Open CI-V data stream
         await self._send_open_close(open_stream=True)
@@ -170,6 +177,7 @@ class _ControlPhaseMixin:
         self._advance_civ_generation("connect")  # type: ignore[attr-defined]
         self._civ_last_waiter_gc_monotonic = time.monotonic()  # type: ignore[attr-defined]
         self._start_civ_rx_pump()  # type: ignore[attr-defined]
+        self._start_civ_data_watchdog()  # type: ignore[attr-defined]
         self._conn_state = RadioConnectionState.CONNECTED  # type: ignore[attr-defined]
         self._ctrl_transport.state = ConnectionState.CONNECTED  # type: ignore[attr-defined]
         self._start_civ_worker()  # type: ignore[attr-defined]

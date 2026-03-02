@@ -336,6 +336,7 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
                     await self._send_open_close(open_stream=False)
                 except Exception:
                     pass
+                await self._stop_civ_data_watchdog()
                 await self._stop_civ_worker()
                 await self._stop_civ_rx_pump()
                 await self._civ_transport.disconnect()
@@ -377,6 +378,7 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
                 await self._send_open_close(open_stream=False)
             except Exception:
                 pass
+            await self._stop_civ_data_watchdog()
             await self._stop_civ_worker()
             await self._stop_civ_rx_pump()
             await self._civ_transport.disconnect()
@@ -406,7 +408,10 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         from .transport import IcomTransport
         self._civ_transport = IcomTransport()
         try:
-            await self._civ_transport.connect(self._host, self._civ_port)
+            await self._civ_transport.connect(
+                self._host, self._civ_port,
+                local_port=getattr(self, "_civ_local_port", 0),
+            )
         except OSError as exc:
             self._civ_transport = None
             self._conn_state = RadioConnectionState.DISCONNECTED
@@ -421,6 +426,7 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         self._start_civ_rx_pump()
         self._conn_state = RadioConnectionState.CONNECTED
         self._start_civ_worker()
+        self._start_civ_data_watchdog()
         logger.info("Soft reconnect to %s (civ=%d)", self._host, self._civ_port)
 
     # ------------------------------------------------------------------
@@ -944,7 +950,10 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
 
         self._audio_transport = IcomTransport()
         try:
-            await self._audio_transport.connect(self._host, self._audio_port)
+            await self._audio_transport.connect(
+                self._host, self._audio_port,
+                local_port=getattr(self, "_audio_local_port", 0),
+            )
         except OSError as exc:
             self._audio_transport = None
             raise ConnectionError(
@@ -953,6 +962,7 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
 
         self._audio_transport.start_ping_loop()
         self._audio_transport.start_retransmit_loop()
+        self._audio_transport.start_idle_loop()
 
         # Per wfview, audio stream also uses OpenClose on its own UDP channel.
         await self._send_audio_open_close(open_stream=True)

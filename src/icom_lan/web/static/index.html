@@ -1969,7 +1969,7 @@ input[type=range]::-webkit-slider-thumb {
         }
         const rect = container.getBoundingClientRect();
         const ratio = clamp((ev.clientX - rect.left) / rect.width, 0, 1);
-        const hz = Math.round((start + ratio * span) / 100) * 100;
+        const hz = Math.round((start + ratio * span) / state.tuningStep) * state.tuningStep;
         sendCommand('set_freq', { freq: hz });
         if (state.activeVfo === 'A') {
           state.freqA = hz;

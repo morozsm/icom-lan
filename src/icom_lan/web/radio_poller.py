@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 
 _GAP: float = 0.012
 _SEND_TIMEOUT: float = 1.0
-_QUERY_INTERVAL: float = 0.15
+_QUERY_INTERVAL: float = 0.25  # slow poll — meters come via auto-information
 
 
 # ------------------------------------------------------------------
@@ -263,17 +263,26 @@ class RadioPoller:
                 await radio.disable_scope()
                 logger.info("radio-poller: scope disabled")
 
-    # CI-V query commands (fire-and-forget; responses parsed by RX loop)
+    # All polled parameters — meters included until auto-information (#75)
+    # is implemented.  Keep the list lean to avoid CI-V bus saturation.
     _QUERY_CMDS: list[tuple[int, int | None]] = [
+        (0x15, 0x02),   # S-meter
         (0x03, None),   # frequency
+        (0x15, 0x02),   # S-meter (again — highest priority)
         (0x04, None),   # mode
         (0x15, 0x02),   # S-meter
         (0x15, 0x11),   # RF power
+        (0x15, 0x02),   # S-meter
         (0x15, 0x12),   # SWR
+        (0x15, 0x02),   # S-meter
         (0x15, 0x13),   # ALC
+        (0x15, 0x02),   # S-meter
         (0x14, 0x02),   # RF gain
+        (0x15, 0x02),   # S-meter
         (0x14, 0x01),   # AF level
+        (0x15, 0x02),   # S-meter
         (0x11, None),   # attenuator
+        (0x15, 0x02),   # S-meter
         (0x16, 0x02),   # preamp
     ]
 

@@ -32,6 +32,11 @@ logger = logging.getLogger(__name__)
 
 CIV_HEADER_SIZE = 0x15
 
+# CI-V data watchdog (wfview icomudpcivdata::watchdog)
+# If no CI-V data for this long, send open_close to restart the stream.
+_CIV_DATA_WATCHDOG_TIMEOUT = 2.0  # seconds (wfview: 2000ms)
+_CIV_DATA_WATCHDOG_RETRY = 0.1    # retry interval (wfview: 100ms via startCivDataTimer)
+
 
 class _CivRxMixin:
     """Mixin providing CI-V receive pump and command dispatch for IcomRadio."""
@@ -86,6 +91,127 @@ class _CivRxMixin:
                 pass
         self._civ_rx_task = None  # type: ignore[attr-defined]
 
+    # ------------------------------------------------------------------
+    # CI-V data watchdog (wfview icomudpcivdata::watchdog)
+    # ------------------------------------------------------------------
+
+    def _start_civ_data_watchdog(self) -> None:
+        """Start CI-V data watchdog task.
+
+        Monitors incoming CI-V data. If no data arrives for
+        _CIV_DATA_WATCHDOG_TIMEOUT seconds, sends sendOpenClose(open)
+        repeatedly to restart the CI-V data stream from the radio.
+
+        Reference: wfview icomudpcivdata.cpp watchdog() — checks
+        lastReceived every WATCHDOG_PERIOD, starts startCivDataTimer
+        (100ms) which calls sendOpenClose(false=open) until data resumes.
+        """
+        if (
+            getattr(self, "_civ_data_watchdog_task", None) is not None
+            and not self._civ_data_watchdog_task.done()  # type: ignore[attr-defined]
+        ):
+            return
+        self._civ_data_watchdog_task = asyncio.create_task(  # type: ignore[attr-defined]
+            self._civ_data_watchdog_loop(), name="civ-data-watchdog"
+        )
+        logger.info("civ-data-watchdog: started")
+
+    async def _stop_civ_data_watchdog(self) -> None:
+        """Stop CI-V data watchdog."""
+        task = getattr(self, "_civ_data_watchdog_task", None)
+        if task is not None and not task.done():
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+        self._civ_data_watchdog_task = None  # type: ignore[attr-defined]
+
+    async def _civ_data_watchdog_loop(self) -> None:
+        """Monitor CI-V data flow; recover with open_close then soft_reconnect.
+
+        Phase 1 (wfview-style): if no CI-V data for 2s, send OpenClose(open)
+        every 100ms for up to 5 seconds to restart the stream.
+
+        Phase 2: if OpenClose doesn't help after 5s, do a full
+        soft_reconnect (tear down CI-V transport and reconnect).
+        """
+        _OPENCLOSE_DEADLINE = 5.0  # seconds of open_close attempts before reconnect
+        _MAX_RECONNECTS = 3       # max soft_reconnect attempts before giving up
+        _RECONNECT_PAUSE = 15.0   # seconds between reconnect attempts (let radio release slot)
+        recovering = False
+        recovery_start: float = 0.0
+        reconnect_count = 0
+        try:
+            while True:
+                await asyncio.sleep(
+                    _CIV_DATA_WATCHDOG_RETRY if recovering
+                    else _CIV_DATA_WATCHDOG_TIMEOUT / 2
+                )
+
+                last = getattr(self, "_last_civ_data_received", None)
+                if last is None:
+                    continue
+
+                idle = time.monotonic() - last
+                if idle > _CIV_DATA_WATCHDOG_TIMEOUT:
+                    if not recovering:
+                        civ_t = getattr(self, "_civ_transport", None)
+                        rx_count = civ_t.rx_packet_count if civ_t else -1
+                        q_size = civ_t._packet_queue.qsize() if civ_t else -1
+                        logger.warning(
+                            "civ-data-watchdog: no CI-V data for %.1fs, "
+                            "requesting data start "
+                            "(transport rx_count=%d, queue=%d)",
+                            idle, rx_count, q_size,
+                        )
+                        recovering = True
+                        recovery_start = time.monotonic()
+
+                    elapsed_recovery = time.monotonic() - recovery_start
+
+                    if elapsed_recovery < _OPENCLOSE_DEADLINE:
+                        # Phase 1: try OpenClose
+                        try:
+                            await self._send_open_close(open_stream=True)  # type: ignore[attr-defined]
+                        except Exception:
+                            logger.debug(
+                                "civ-data-watchdog: open_close failed",
+                                exc_info=True,
+                            )
+                    else:
+                        # Phase 2: OpenClose didn't help — soft_reconnect
+                        reconnect_count += 1
+                        if reconnect_count > _MAX_RECONNECTS:
+                            logger.error(
+                                "civ-data-watchdog: %d reconnect attempts failed, "
+                                "giving up (radio may need reboot)",
+                                reconnect_count - 1,
+                            )
+                            return
+                        logger.warning(
+                            "civ-data-watchdog: OpenClose failed for %.1fs, "
+                            "triggering soft_reconnect (%d/%d)",
+                            elapsed_recovery, reconnect_count, _MAX_RECONNECTS,
+                        )
+                        try:
+                            await self._stop_civ_data_watchdog()  # stop ourselves
+                            await self.soft_disconnect()  # type: ignore[attr-defined]
+                            await asyncio.sleep(_RECONNECT_PAUSE)  # let radio release slot
+                            await self.soft_reconnect()  # type: ignore[attr-defined]
+                        except Exception:
+                            logger.error(
+                                "civ-data-watchdog: soft_reconnect failed",
+                                exc_info=True,
+                            )
+                        return  # watchdog restarted by soft_reconnect
+                else:
+                    if recovering:
+                        logger.info("civ-data-watchdog: CI-V data resumed")
+                        recovering = False
+        except asyncio.CancelledError:
+            pass
+
     def _ensure_civ_runtime(self) -> None:
         """Ensure CI-V transport exists (tests may bypass connect()).
 
@@ -108,6 +234,7 @@ class _CivRxMixin:
         responses.  See issue #66.
         """
         assert self._civ_transport is not None  # type: ignore[attr-defined]
+        self._last_civ_data_received = time.monotonic()  # type: ignore[attr-defined]
         try:
             while self._civ_transport is not None:  # type: ignore[attr-defined]
                 # Wait for at least one packet.
@@ -129,6 +256,9 @@ class _CivRxMixin:
                             packets.append(queue.get_nowait())
                         except asyncio.QueueEmpty:
                             break
+
+                # Mark that we received CI-V data (for watchdog)
+                self._last_civ_data_received = time.monotonic()  # type: ignore[attr-defined]
 
                 # Process all collected packets.
                 for pkt in packets:
@@ -224,7 +354,9 @@ class _CivRxMixin:
             elif frame.command == 0x15:  # meter readings
                 if len(frame.data) >= 2:
                     sub = frame.sub
-                    raw = int.from_bytes(frame.data[:2], "big")
+                    # IC-7610 meters are BCD-encoded (0x0137 = 137, not 311)
+                    b0, b1 = frame.data[0], frame.data[1]
+                    raw = (b0 >> 4) * 1000 + (b0 & 0x0F) * 100 + (b1 >> 4) * 10 + (b1 & 0x0F)
                     if sub == 0x02:  # S-meter
                         cache.update_s_meter(raw)
                         self._notify_change("meter", {"type": "smeter", "value": raw})
@@ -270,10 +402,13 @@ class _CivRxMixin:
         """Notify server of state change (best-effort)."""
         cb = getattr(self, "_on_state_change", None)
         if cb is not None:
+            logger.info("civ-rx: notify %s %s", event_name, data)
             try:
                 cb(event_name, data)
             except Exception:
-                pass
+                logger.warning("civ-rx: notify failed", exc_info=True)
+        else:
+            logger.debug("civ-rx: no callback for %s", event_name)
 
     def _publish_scope_frame(self, frame: ScopeFrame) -> None:
         """Publish a complete scope frame to callback and bounded queue."""
