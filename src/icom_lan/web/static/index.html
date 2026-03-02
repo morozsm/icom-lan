@@ -88,8 +88,8 @@ input[type=range]::-webkit-slider-thumb {
           <span class="text-[10px] px-1.5 py-0.5 bg-green-900/30 text-green-400 border border-green-800 rounded" id="preBadgeA">PRE 1</span>
           <span class="text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded" id="attBadgeA">ATT</span>
           <span class="text-[10px] px-1.5 py-0.5 bg-green-900/30 text-green-400 border border-green-800 rounded">IP+</span>
-          <span class="text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded">NB</span>
-          <span class="text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded">NR</span>
+          <span class="text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded" id="nbBadgeA">NB</span>
+          <span class="text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded" id="nrBadgeA">NR</span>
         </div>
       </div>
       <div class="text-6xl font-digital text-vfo-a glow-cyan tracking-tighter" id="vfoAfreq">14.074.000</div>
@@ -124,8 +124,8 @@ input[type=range]::-webkit-slider-thumb {
           <span class="text-[10px] px-1.5 py-0.5 bg-green-900/30 text-green-400 border border-green-800 rounded" id="preBadgeB">PRE 1</span>
           <span class="text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded" id="attBadgeB">ATT</span>
           <span class="text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded">IP+</span>
-          <span class="text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded">NB</span>
-          <span class="text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded">NR</span>
+          <span class="text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded" id="nbBadgeB">NB</span>
+          <span class="text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded" id="nrBadgeB">NR</span>
         </div>
         <div class="flex items-center gap-2">
           <span class="text-slate-400 text-xs font-bold uppercase tracking-widest" id="vfoBmode">USB · FIL1</span>
@@ -216,8 +216,8 @@ input[type=range]::-webkit-slider-thumb {
         </div>
       </div>
       <div class="grid grid-cols-2 gap-1.5">
-        <button class="bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-xs font-bold transition">NB</button>
-        <button class="bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-xs font-bold transition">NR</button>
+        <button class="bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-xs font-bold transition" id="nbBtn">NB</button>
+        <button class="bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-xs font-bold transition" id="nrBtn">NR</button>
       </div>
       <div>
         <h3 class="text-[10px] text-slate-500 uppercase tracking-widest mb-1.5 font-bold">ATT</h3>
@@ -236,11 +236,9 @@ input[type=range]::-webkit-slider-thumb {
           <button class="flex-1 bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-[10px] font-bold transition" data-pre="2">2</button>
         </div>
       </div>
-      <div class="grid grid-cols-5 gap-1">
+      <div class="grid grid-cols-3 gap-1.5">
         <button class="bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-[10px] font-bold transition" id="ipPlusBtn">IP+</button>
         <button class="bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-[10px] font-bold transition" id="dselBtn">DSEL</button>
-        <button class="bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-[10px] font-bold transition" id="nbBtn">NB</button>
-        <button class="bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-[10px] font-bold transition" id="nrBtn">NR</button>
         <button class="bg-slate-800 hover:bg-slate-700 py-1.5 rounded text-[10px] font-bold transition" id="vfoSwapBtn">A↔B</button>
       </div>
     </div>
@@ -396,6 +394,10 @@ input[type=range]::-webkit-slider-thumb {
     dselBtn: $('dselBtn'),
     nbBtn: $('nbBtn'),
     nrBtn: $('nrBtn'),
+    nbBadgeA: $('nbBadgeA'),
+    nrBadgeA: $('nrBadgeA'),
+    nbBadgeB: $('nbBadgeB'),
+    nrBadgeB: $('nrBadgeB'),
   };
 
   const state = {
@@ -806,11 +808,15 @@ input[type=range]::-webkit-slider-thumb {
       if (eventName === 'nb_changed' && msg.data) {
         state.nb = !!msg.data.on;
         updateToggleBtn(dom.nbBtn, state.nb, 'NB');
+        dom.nbBadgeA.className = state.nb ? 'text-[10px] px-1.5 py-0.5 bg-green-900/30 text-green-400 border border-green-800 rounded' : 'text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded';
+        dom.nbBadgeB.className = state.nb ? 'text-[10px] px-1.5 py-0.5 bg-green-900/30 text-green-400 border border-green-800 rounded' : 'text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded';
         return;
       }
       if (eventName === 'nr_changed' && msg.data) {
         state.nr = !!msg.data.on;
         updateToggleBtn(dom.nrBtn, state.nr, 'NR');
+        dom.nrBadgeA.className = state.nr ? 'text-[10px] px-1.5 py-0.5 bg-green-900/30 text-green-400 border border-green-800 rounded' : 'text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded';
+        dom.nrBadgeB.className = state.nr ? 'text-[10px] px-1.5 py-0.5 bg-green-900/30 text-green-400 border border-green-800 rounded' : 'text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-500 border border-slate-700 rounded';
         return;
       }
       if (eventName === 'digisel_changed' && msg.data) {
