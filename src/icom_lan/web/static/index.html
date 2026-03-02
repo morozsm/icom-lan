@@ -111,7 +111,7 @@ input[type=range]::-webkit-slider-thumb {
       <div class="space-y-2.5 flex-1">
         <div><div class="flex justify-between mb-0.5"><span class="text-slate-500">ALC</span><span class="text-slate-300" id="alcVal">0%</span></div><div class="h-1.5 bg-slate-800 rounded-full"><div class="h-full bg-yellow-500 rounded-full transition-all duration-150" id="alcBar" style="width:0%"></div></div></div>
         <div><div class="flex justify-between mb-0.5"><span class="text-slate-500">SWR</span><span class="text-slate-300" id="swrVal">1.0</span></div><div class="h-1.5 bg-slate-800 rounded-full"><div class="h-full bg-green-400 rounded-full transition-all duration-150" id="swrBar" style="width:0%"></div></div></div>
-        <div><div class="flex justify-between mb-0.5"><span class="text-slate-500">PWR</span><span class="text-slate-300" id="pwrVal">0W</span></div><div class="h-1.5 bg-slate-800 rounded-full"><div class="h-full bg-green-400 rounded-full transition-all duration-150" id="pwrBar" style="width:0%"></div></div></div>
+        <div><div class="flex justify-between mb-0.5"><span class="text-slate-500">PWR</span><span class="text-slate-300" id="pwrVal">0W</span></div><div class="h-3 bg-slate-800 rounded-full cursor-pointer" id="pwrBarBg"><div class="h-full bg-green-400 rounded-full transition-all duration-150 pointer-events-none" id="pwrBar" style="width:0%"></div></div></div>
         <div><div class="flex justify-between mb-0.5"><span class="text-slate-500">Id</span><span class="text-slate-300" id="idVal">0.0A</span></div><div class="h-1.5 bg-slate-800 rounded-full"><div class="h-full bg-orange-400 rounded-full transition-all duration-150" id="idBar" style="width:0%"></div></div></div>
         <div><div class="flex justify-between mb-0.5"><span class="text-slate-500">Vd</span><span class="text-slate-300" id="vdVal">0V</span></div><div class="h-1.5 bg-slate-800 rounded-full"><div class="h-full bg-cyan-400 rounded-full transition-all duration-150" id="vdBar" style="width:0%"></div></div></div>
       </div>
@@ -348,6 +348,7 @@ input[type=range]::-webkit-slider-thumb {
     swrBar: $('swrBar'),
     swrVal: $('swrVal'),
     pwrBar: $('pwrBar'),
+    pwrBarBg: $('pwrBarBg'),
     pwrVal: $('pwrVal'),
     idBar: $('idBar'),
     idVal: $('idVal'),
@@ -1869,6 +1870,16 @@ input[type=range]::-webkit-slider-thumb {
 
     dom.vfoSwapBtn.addEventListener('click', function () {
       sendCommand('vfo_swap', {});
+    });
+
+    // Click on PWR bar to set power level
+    dom.pwrBarBg.addEventListener('click', function (ev) {
+      var rect = dom.pwrBarBg.getBoundingClientRect();
+      var pct = Math.max(0, Math.min(100, Math.round((ev.clientX - rect.left) / rect.width * 100)));
+      var watts = pct; // 0-100% = 0-100W
+      sendCommand('set_power', { level: Math.round(pct / 100 * 255) });
+      dom.pwrVal.textContent = watts + 'W';
+      dom.pwrBar.style.width = pct + '%';
     });
 
     dom.bandGrid.addEventListener('click', function (ev) {
