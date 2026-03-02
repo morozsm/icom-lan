@@ -805,11 +805,20 @@ input[type=range]::-webkit-slider-thumb {
         updatePreButtons();
         return;
       }
+      if (eventName === 'power_level' && msg.data) {
+        // Set power level — show in PWR meter when not transmitting
+        state.powerLevel = msg.data.pct;
+        if (!state.ptt) {
+          dom.pwrVal.textContent = msg.data.pct + '%';
+          dom.pwrBar.style.width = msg.data.pct + '%';
+        }
+        return;
+      }
       if (eventName === 'meter' && msg.data) {
         // Calibrated meter values from backend
         var mt = msg.data.type;
         var val = msg.data.value;
-        if (mt === 'power') { dom.pwrVal.textContent = Math.round(val) + 'W'; }
+        if (mt === 'power') { dom.pwrVal.textContent = val > 0 ? Math.round(val) + 'W' : (state.powerLevel || 0) + '%'; }
         else if (mt === 'swr') { dom.swrVal.textContent = val.toFixed(1); }
         else if (mt === 'alc') { dom.alcVal.textContent = val >= 100 ? 'OVER' : ''; }
         else if (mt === 'id') { dom.idVal.textContent = val.toFixed(1) + 'A'; }

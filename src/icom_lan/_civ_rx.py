@@ -392,7 +392,11 @@ class _CivRxMixin:
             elif frame.command == 0x14:  # levels
                 if len(frame.data) >= 2:
                     raw = int.from_bytes(frame.data[:2], "big")
-                    if frame.sub == 0x02:  # RF gain
+                    if frame.sub == 0x0A:  # RF power level (set value)
+                        # 0-255 maps to 0-100% power
+                        pct = round(raw / 255 * 100)
+                        self._notify_change("power_level", {"raw": raw, "pct": pct})
+                    elif frame.sub == 0x02:  # RF gain
                         cache.update_rf_gain(float(raw))
                     elif frame.sub == 0x01:  # AF level
                         cache.update_af_level(float(raw))

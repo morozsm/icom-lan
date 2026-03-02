@@ -322,6 +322,7 @@ class RadioPoller:
     _SLOW_CMDS: list[tuple[int, int | None]] = [
         (0x03, None),   # frequency (backup)
         (0x04, None),   # mode (backup)
+        (0x14, 0x0A),   # RF power level (set value)
         (0x14, 0x02),   # RF gain
         (0x14, 0x01),   # AF level
         (0x11, None),   # attenuator
