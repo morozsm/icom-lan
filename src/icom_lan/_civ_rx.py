@@ -299,10 +299,13 @@ class _CivRxMixin:
         # Unsolicited changes (knob turns) go to 0x00.
         if frame.to_addr not in (CONTROLLER_ADDR, 0x00):
             return
-        # Log non-scope frames for debugging
+        # Log all non-scope frames at DEBUG level
         if frame.command != 0x27:
-            logger.info("civ-rx: frame cmd=0x%02X sub=0x%02X to=0x%02X data=%d",
-                        frame.command, frame.sub or 0, frame.to_addr, len(frame.data))
+            logger.debug(
+                "civ-rx: cmd=0x%02X sub=0x%02X to=0x%02X data=%s",
+                frame.command, frame.sub or 0, frame.to_addr,
+                frame.data.hex() if frame.data else "",
+            )
 
         if frame.command == 0x27 and frame.sub == 0x00 and len(frame.data) >= 3:
             receiver = frame.data[0]
@@ -347,7 +350,7 @@ class _CivRxMixin:
             if frame.command in (0x03, 0x00):  # frequency (response / unsolicited)
                 freq = parse_frequency_response(frame)
                 old = cache.freq
-                logger.info("civ-rx: freq=%d (cmd=0x%02X to=0x%02X) old=%d", freq, frame.command, frame.to_addr, old)
+                logger.debug("civ-rx: freq=%d (cmd=0x%02X to=0x%02X) old=%d", freq, frame.command, frame.to_addr, old)
                 self._last_freq_hz = freq  # type: ignore[attr-defined]
                 cache.update_freq(freq)
                 if freq != old:
@@ -427,7 +430,7 @@ class _CivRxMixin:
         """Notify server of state change (best-effort)."""
         cb = getattr(self, "_on_state_change", None)
         if cb is not None:
-            logger.info("civ-rx: notify %s %s", event_name, data)
+            logger.debug("civ-rx: notify %s %s", event_name, data)
             try:
                 cb(event_name, data)
             except Exception:
