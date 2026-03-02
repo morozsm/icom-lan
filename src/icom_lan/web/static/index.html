@@ -1960,6 +1960,7 @@ input[type=range]::-webkit-slider-thumb {
     });
     dom.sqlSlider.addEventListener('input', function () {
       updateSliderLabels();
+      scheduleSliderCommand('sql', 'set_sql', Math.round(Number(dom.sqlSlider.value) / 100 * 255));
     });
 
     dom.afSlider.addEventListener('change', function () {
@@ -1967,6 +1968,9 @@ input[type=range]::-webkit-slider-thumb {
     });
     dom.rfSlider.addEventListener('change', function () {
       sendCommand('set_rf_gain', { level: Number(dom.rfSlider.value) });
+    });
+    dom.sqlSlider.addEventListener('change', function () {
+      sendCommand('set_sql', { level: Math.round(Number(dom.sqlSlider.value) / 100 * 255) });
     });
     dom.txPwrSlider.addEventListener('change', function () {
       sendCommand('set_power', { level: Number(dom.txPwrSlider.value) });

@@ -93,6 +93,7 @@ _CMD_NAK = 0xFA
 # Sub-commands
 _SUB_AF_LEVEL = 0x01  # AF output level (0x14 0x01)
 _SUB_RF_GAIN = 0x02   # RF Gain level (0x14 0x02)
+_SUB_SQL = 0x03       # Squelch level (0x14 0x03)
 _SUB_RF_POWER = 0x0A
 _SUB_S_METER = 0x02
 _SUB_SWR_METER = 0x12
@@ -459,6 +460,21 @@ def set_af_level(
     """
     return build_civ_frame(
         to_addr, from_addr, _CMD_LEVEL, sub=_SUB_AF_LEVEL, data=_level_bcd_encode(level)
+    )
+
+
+def set_squelch(
+    level: int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a 'set squelch level' CI-V command.
+
+    Args:
+        level: Squelch level 0-255 (0=open, 255=closed).
+    """
+    return build_civ_frame(
+        to_addr, from_addr, _CMD_LEVEL, sub=_SUB_SQL, data=_level_bcd_encode(level)
     )
 
 
