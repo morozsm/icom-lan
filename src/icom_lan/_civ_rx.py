@@ -416,25 +416,26 @@ class _CivRxMixin:
                     cache.update_attenuator(val)
                     if val != old:
                         self._notify_change("att_changed", {"db": val})
-            elif frame.command == 0x16 and frame.sub == 0x02:  # preamp
-                if frame.data:
-                    val = frame.data[0]
-                    old = cache.preamp
-                    cache.update_preamp(val)
-                    if val != old:
-                        self._notify_change("preamp_changed", {"level": val})
-            elif frame.command == 0x16 and frame.sub == 0x22:  # NB
-                if frame.data:
-                    val = bool(frame.data[0])
-                    self._notify_change("nb_changed", {"on": val})
-            elif frame.command == 0x16 and frame.sub == 0x40:  # NR
-                if frame.data:
-                    val = bool(frame.data[0])
-                    self._notify_change("nr_changed", {"on": val})
-            elif frame.command == 0x16 and frame.sub == 0x4E:  # DIGI-SEL
-                if frame.data:
-                    val = bool(frame.data[0])
-                    self._notify_change("digisel_changed", {"on": val})
+            elif frame.command == 0x16:  # function settings (preamp/NB/NR/DIGI-SEL)
+                # IC-7610 responds with sub=0x00 or None, real sub-code in data[0], value in data[1]
+                sub = frame.sub or 0
+                data = frame.data
+                if sub == 0 and len(data) >= 2:
+                    sub = data[0]
+                    data = data[1:]
+                if data:
+                    val = data[0]
+                    if sub == 0x02:  # preamp
+                        old_pre = cache.preamp
+                        cache.update_preamp(val)
+                        if val != old_pre:
+                            self._notify_change("preamp_changed", {"level": val})
+                    elif sub == 0x22:  # NB
+                        self._notify_change("nb_changed", {"on": bool(val)})
+                    elif sub == 0x40:  # NR
+                        self._notify_change("nr_changed", {"on": bool(val)})
+                    elif sub == 0x4E:  # DIGI-SEL
+                        self._notify_change("digisel_changed", {"on": bool(val)})
             elif frame.command == 0x1C and frame.sub == 0x00:  # PTT
                 if frame.data:
                     val = bool(frame.data[0])
