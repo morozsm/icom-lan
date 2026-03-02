@@ -549,6 +549,14 @@ input[type=range]::-webkit-slider-thumb {
     }
   }
 
+  function showToast(text) {
+    var el = document.createElement('div');
+    el.textContent = text;
+    el.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#dc2626;color:#fff;padding:8px 16px;border-radius:8px;font-size:13px;z-index:9999;opacity:0.95;';
+    document.body.appendChild(el);
+    setTimeout(function () { el.remove(); }, 4000);
+  }
+
   function updateFreqDisplays() {
     dom.vfoAfreq.textContent = formatFreq(state.freqA);
     dom.vfoBfreq.textContent = formatFreq(state.freqB);
@@ -768,6 +776,26 @@ input[type=range]::-webkit-slider-thumb {
       if (eventName === 'connection_state') {
         state.radioConnected = !!msg.connected;
         setStatusVisual();
+        return;
+      }
+      // Command error handling
+      if (msg.type === 'response' && msg.ok === false && msg.message) {
+        showToast(msg.message);
+        return;
+      }
+      if (eventName === 'af_level' && msg.data) {
+        dom.afSlider.value = msg.data.raw;
+        dom.afVal.textContent = scaleToPct(msg.data.raw) + '%';
+        return;
+      }
+      if (eventName === 'rf_gain' && msg.data) {
+        dom.rfSlider.value = msg.data.raw;
+        dom.rfVal.textContent = scaleToPct(msg.data.raw) + '%';
+        return;
+      }
+      if (eventName === 'squelch' && msg.data) {
+        dom.sqlSlider.value = Math.round(msg.data.raw / 255 * 100);
+        dom.sqlVal.textContent = dom.sqlSlider.value + '%';
         return;
       }
       if (eventName === 'vfo_changed' && msg.data) {
@@ -1988,26 +2016,9 @@ input[type=range]::-webkit-slider-thumb {
       sendCommand('set_power', { level: Number(dom.txPwrSlider.value) });
     });
 
-    dom.pttBtn.addEventListener('mousedown', function () {
-      sendPtt(true);
-    });
-    window.addEventListener('mouseup', function () {
-      if (state.ptt) {
-        sendPtt(false);
-      }
-    });
-
-    dom.pttBtn.addEventListener('touchstart', function (ev) {
-      ev.preventDefault();
-      state.touchPttActive = true;
-      sendPtt(true);
-    }, { passive: false });
-
-    window.addEventListener('touchend', function () {
-      if (state.touchPttActive || state.ptt) {
-        state.touchPttActive = false;
-        sendPtt(false);
-      }
+    // PTT toggle (click to TX, click again to RX)
+    dom.pttBtn.addEventListener('click', function () {
+      sendPtt(!state.ptt);
     });
 
     dom.rxAudioBtn.addEventListener('click', function () {

@@ -403,8 +403,12 @@ class _CivRxMixin:
                         self._notify_change("power_level", {"raw": raw, "watts": watts})
                     elif frame.sub == 0x02:  # RF gain
                         cache.update_rf_gain(float(raw))
+                        self._notify_change("rf_gain", {"raw": raw})
                     elif frame.sub == 0x01:  # AF level
                         cache.update_af_level(float(raw))
+                        self._notify_change("af_level", {"raw": raw})
+                    elif frame.sub == 0x03:  # squelch
+                        self._notify_change("squelch", {"raw": raw})
             elif frame.command == 0x11:  # attenuator
                 if frame.data:
                     val = frame.data[0]
