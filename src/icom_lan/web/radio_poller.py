@@ -302,10 +302,15 @@ class RadioPoller:
                 await radio.send_civ(0x07, data=bytes([band]), wait_response=False)
             case SelectVfo(vfo=vfo):
                 await radio.select_vfo(vfo)
+                if self._on_state_event:
+                    self._on_state_event("vfo_changed", {"vfo": vfo})
             case VfoSwap():
-                await radio.vfo_swap()
+                await radio.vfo_exchange()
+                # After swap, active VFO stays same but freqs are exchanged
+                if self._on_state_event:
+                    self._on_state_event("vfo_swapped", {})
             case VfoEqualize():
-                await radio.vfo_a_equals_b()
+                await radio.vfo_equalize()
             case EnableScope(policy=policy):
                 await radio.enable_scope(policy=policy)
                 logger.info("radio-poller: scope enabled")

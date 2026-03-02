@@ -770,6 +770,18 @@ input[type=range]::-webkit-slider-thumb {
         setStatusVisual();
         return;
       }
+      if (eventName === 'vfo_changed' && msg.data) {
+        setActiveVfo(msg.data.vfo, false);
+        return;
+      }
+      if (eventName === 'vfo_swapped') {
+        // Exchange displayed frequencies
+        var tmpFreq = state.freqA;
+        state.freqA = state.freqB;
+        state.freqB = tmpFreq;
+        updateFreqDisplays();
+        return;
+      }
       if (eventName === 'freq_changed' && msg.data && typeof msg.data.freq === 'number') {
         const changedVfo = msg.data.vfo === 'B' ? 'B' : 'A';
         if (changedVfo === 'A') {

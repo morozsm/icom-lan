@@ -222,6 +222,7 @@ def mock_radio() -> MagicMock:
     radio.set_preamp = AsyncMock()
     radio.select_vfo = AsyncMock()
     radio.vfo_swap = AsyncMock()
+    radio.vfo_exchange = AsyncMock()
     radio.vfo_a_equals_b = AsyncMock()
     # on_scope_data is a synchronous setter
     radio.on_scope_data = MagicMock()
@@ -721,7 +722,7 @@ class TestControlChannel:
             _, payload = await _ws_recv_frame(reader)
             resp = json.loads(payload)
             assert resp["ok"] is True
-            mock_radio.vfo_swap.assert_awaited_once()
+            mock_radio.vfo_exchange.assert_awaited_once()
         finally:
             await _close_ws(writer)
 

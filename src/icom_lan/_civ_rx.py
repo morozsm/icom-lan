@@ -354,7 +354,8 @@ class _CivRxMixin:
                 self._last_freq_hz = freq  # type: ignore[attr-defined]
                 cache.update_freq(freq)
                 if freq != old:
-                    self._notify_change("freq_changed", {"freq": freq, "vfo": "A"})
+                    vfo = getattr(self, "_last_vfo", None) or "A"
+                    self._notify_change("freq_changed", {"freq": freq, "vfo": vfo})
             elif frame.command in (0x04, 0x01):  # mode (response / unsolicited)
                 mode, filt = parse_mode_response(frame)
                 old_mode, old_filt = cache.mode, cache.filter_width
