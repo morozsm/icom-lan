@@ -380,17 +380,20 @@ class ControlHandler:
                 return {"band": band}
             case "set_freq":
                 freq = int(params["freq"])
-                q.put(SetFreq(freq))
-                return {"freq": freq}
+                rx = int(params.get("receiver", 0))
+                q.put(SetFreq(freq, receiver=rx))
+                return {"freq": freq, "receiver": rx}
             case "set_mode":
                 mode = str(params["mode"])
-                q.put(SetMode(mode))
-                return {"mode": mode}
+                rx = int(params.get("receiver", 0))
+                q.put(SetMode(mode, receiver=rx))
+                return {"mode": mode, "receiver": rx}
             case "set_filter":
                 fil_str = str(params.get("filter", "FIL1"))
                 fil_num = int(fil_str[-1]) if fil_str[-1].isdigit() else 1
-                q.put(SetFilter(fil_num))
-                return {"filter": fil_str}
+                rx = int(params.get("receiver", 0))
+                q.put(SetFilter(fil_num, receiver=rx))
+                return {"filter": fil_str, "receiver": rx}
             case "ptt":
                 on = bool(params["state"])
                 q.put(PttOn() if on else PttOff())
@@ -401,40 +404,49 @@ class ControlHandler:
                 return {"level": level}
             case "set_rf_gain":
                 level = int(params["level"])
-                q.put(SetRfGain(level))
-                return {"level": level}
+                rx = int(params.get("receiver", 0))
+                q.put(SetRfGain(level, receiver=rx))
+                return {"level": level, "receiver": rx}
             case "set_af_level":
                 level = int(params["level"])
-                q.put(SetAfLevel(level))
-                return {"level": level}
+                rx = int(params.get("receiver", 0))
+                q.put(SetAfLevel(level, receiver=rx))
+                return {"level": level, "receiver": rx}
             case "set_sql":
                 level = int(params["level"])
-                q.put(SetSquelch(level))
-                return {"level": level}
+                rx = int(params.get("receiver", 0))
+                q.put(SetSquelch(level, receiver=rx))
+                return {"level": level, "receiver": rx}
             case "set_nb":
                 on = bool(params.get("on", False))
-                q.put(SetNB(on))
-                return {"on": on}
+                rx = int(params.get("receiver", 0))
+                q.put(SetNB(on, receiver=rx))
+                return {"on": on, "receiver": rx}
             case "set_nr":
                 on = bool(params.get("on", False))
-                q.put(SetNR(on))
-                return {"on": on}
+                rx = int(params.get("receiver", 0))
+                q.put(SetNR(on, receiver=rx))
+                return {"on": on, "receiver": rx}
             case "set_digisel":
                 on = bool(params.get("on", False))
-                q.put(SetDigiSel(on))
-                return {"on": on}
+                rx = int(params.get("receiver", 0))
+                q.put(SetDigiSel(on, receiver=rx))
+                return {"on": on, "receiver": rx}
             case "set_ipplus":
                 on = bool(params.get("on", False))
-                q.put(SetIpPlus(on))
-                return {"on": on}
+                rx = int(params.get("receiver", 0))
+                q.put(SetIpPlus(on, receiver=rx))
+                return {"on": on, "receiver": rx}
             case "set_att":
                 db = int(params["db"])
-                q.put(SetAttenuator(db))
-                return {"db": db}
+                rx = int(params.get("receiver", 0))
+                q.put(SetAttenuator(db, receiver=rx))
+                return {"db": db, "receiver": rx}
             case "set_preamp":
                 level = int(params["level"])
-                q.put(SetPreamp(level))
-                return {"level": level}
+                rx = int(params.get("receiver", 0))
+                q.put(SetPreamp(level, receiver=rx))
+                return {"level": level, "receiver": rx}
             case "select_vfo":
                 vfo = str(params.get("vfo", "A"))
                 q.put(SelectVfo(vfo))

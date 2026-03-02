@@ -597,7 +597,7 @@ class TestControlChannel:
             assert resp["type"] == "response"
             assert resp["id"] == "test-1"
             assert resp["ok"] is True
-            assert resp["result"] == {"freq": 14_074_000}
+            assert resp["result"]["freq"] == 14_074_000
         finally:
             await _close_ws(writer)
 
@@ -618,7 +618,7 @@ class TestControlChannel:
             _, payload = await _ws_recv_frame(reader)
             resp = json.loads(payload)
             assert resp["ok"] is True
-            assert resp["result"] == {"mode": "LSB"}
+            assert resp["result"]["mode"] == "LSB"
         finally:
             await _close_ws(writer)
 
@@ -1820,7 +1820,7 @@ class TestRadioPoller:
         await asyncio.sleep(0.1)
         poller.stop()
 
-        radio.set_frequency.assert_awaited_with(7074000)
+        radio.set_frequency.assert_awaited_with(7074000, receiver=0)
 
     async def test_poller_broadcasts_meter_readings(self) -> None:
         """RadioPoller polls meters via send_civ."""

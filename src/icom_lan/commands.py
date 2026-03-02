@@ -281,6 +281,7 @@ def set_frequency(
     freq_hz: int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
 ) -> bytes:
     """Build a 'set frequency' CI-V command.
 
@@ -293,11 +294,15 @@ def set_frequency(
         freq_hz: Frequency in Hz (0 – 9,999,999,999).
         to_addr: Radio CI-V address.
         from_addr: Controller CI-V address.
+        receiver: RECEIVER_MAIN (0x00) or RECEIVER_SUB (0x01).
 
     Returns:
         CI-V frame bytes.
     """
-    return build_civ_frame(to_addr, from_addr, _CMD_FREQ_SET, data=bcd_encode(freq_hz))
+    bcd = bcd_encode(freq_hz)
+    if receiver != RECEIVER_MAIN:
+        return build_cmd29_frame(to_addr, from_addr, _CMD_FREQ_SET, data=bcd, receiver=receiver)
+    return build_civ_frame(to_addr, from_addr, _CMD_FREQ_SET, data=bcd)
 
 
 def parse_frequency_response(frame: CivFrame) -> int:
@@ -330,6 +335,7 @@ def set_mode(
     filter_width: int | None = None,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
 ) -> bytes:
     """Build a 'set mode' CI-V command.
 
@@ -338,6 +344,7 @@ def set_mode(
         filter_width: Optional filter number (1-3).
         to_addr: Radio CI-V address.
         from_addr: Controller CI-V address.
+        receiver: RECEIVER_MAIN (0x00) or RECEIVER_SUB (0x01).
 
     Returns:
         CI-V frame bytes.
@@ -345,6 +352,8 @@ def set_mode(
     data = bytes([mode])
     if filter_width is not None:
         data += bytes([filter_width])
+    if receiver != RECEIVER_MAIN:
+        return build_cmd29_frame(to_addr, from_addr, _CMD_MODE_SET, data=data, receiver=receiver)
     return build_civ_frame(to_addr, from_addr, _CMD_MODE_SET, data=data)
 
 
@@ -432,15 +441,18 @@ def set_rf_gain(
     level: int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
 ) -> bytes:
     """Build a 'set RF gain' CI-V command.
 
     Args:
         level: Gain level 0-255 (0=min, 255=max).
+        receiver: RECEIVER_MAIN (0x00) or RECEIVER_SUB (0x01).
     """
-    return build_civ_frame(
-        to_addr, from_addr, _CMD_LEVEL, sub=_SUB_RF_GAIN, data=_level_bcd_encode(level)
-    )
+    bcd = _level_bcd_encode(level)
+    if receiver != RECEIVER_MAIN:
+        return build_cmd29_frame(to_addr, from_addr, _CMD_LEVEL, sub=_SUB_RF_GAIN, data=bcd, receiver=receiver)
+    return build_civ_frame(to_addr, from_addr, _CMD_LEVEL, sub=_SUB_RF_GAIN, data=bcd)
 
 
 def get_af_level(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR) -> bytes:
@@ -452,30 +464,36 @@ def set_af_level(
     level: int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
 ) -> bytes:
     """Build a 'set AF output level' CI-V command.
 
     Args:
         level: AF level 0-255 (0=min, 255=max).
+        receiver: RECEIVER_MAIN (0x00) or RECEIVER_SUB (0x01).
     """
-    return build_civ_frame(
-        to_addr, from_addr, _CMD_LEVEL, sub=_SUB_AF_LEVEL, data=_level_bcd_encode(level)
-    )
+    bcd = _level_bcd_encode(level)
+    if receiver != RECEIVER_MAIN:
+        return build_cmd29_frame(to_addr, from_addr, _CMD_LEVEL, sub=_SUB_AF_LEVEL, data=bcd, receiver=receiver)
+    return build_civ_frame(to_addr, from_addr, _CMD_LEVEL, sub=_SUB_AF_LEVEL, data=bcd)
 
 
 def set_squelch(
     level: int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
 ) -> bytes:
     """Build a 'set squelch level' CI-V command.
 
     Args:
         level: Squelch level 0-255 (0=open, 255=closed).
+        receiver: RECEIVER_MAIN (0x00) or RECEIVER_SUB (0x01).
     """
-    return build_civ_frame(
-        to_addr, from_addr, _CMD_LEVEL, sub=_SUB_SQL, data=_level_bcd_encode(level)
-    )
+    bcd = _level_bcd_encode(level)
+    if receiver != RECEIVER_MAIN:
+        return build_cmd29_frame(to_addr, from_addr, _CMD_LEVEL, sub=_SUB_SQL, data=bcd, receiver=receiver)
+    return build_civ_frame(to_addr, from_addr, _CMD_LEVEL, sub=_SUB_SQL, data=bcd)
 
 
 # --- Meter commands ---
@@ -717,11 +735,13 @@ def set_nb(
     on: bool,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
 ) -> bytes:
     """Set Noise Blanker on/off."""
-    return build_civ_frame(
-        to_addr, from_addr, _CMD_PREAMP, sub=_SUB_NB, data=bytes([0x01 if on else 0x00])
-    )
+    data = bytes([0x01 if on else 0x00])
+    if receiver != RECEIVER_MAIN:
+        return build_cmd29_frame(to_addr, from_addr, _CMD_PREAMP, sub=_SUB_NB, data=data, receiver=receiver)
+    return build_civ_frame(to_addr, from_addr, _CMD_PREAMP, sub=_SUB_NB, data=data)
 
 
 def get_nr(
@@ -736,11 +756,13 @@ def set_nr(
     on: bool,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
 ) -> bytes:
     """Set Noise Reduction on/off."""
-    return build_civ_frame(
-        to_addr, from_addr, _CMD_PREAMP, sub=_SUB_NR, data=bytes([0x01 if on else 0x00])
-    )
+    data = bytes([0x01 if on else 0x00])
+    if receiver != RECEIVER_MAIN:
+        return build_cmd29_frame(to_addr, from_addr, _CMD_PREAMP, sub=_SUB_NR, data=data, receiver=receiver)
+    return build_civ_frame(to_addr, from_addr, _CMD_PREAMP, sub=_SUB_NR, data=data)
 
 
 def get_ip_plus(
@@ -755,11 +777,13 @@ def set_ip_plus(
     on: bool,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
 ) -> bytes:
     """Set IP+ on/off."""
-    return build_civ_frame(
-        to_addr, from_addr, _CMD_PREAMP, sub=_SUB_IP_PLUS, data=bytes([0x01 if on else 0x00])
-    )
+    data = bytes([0x01 if on else 0x00])
+    if receiver != RECEIVER_MAIN:
+        return build_cmd29_frame(to_addr, from_addr, _CMD_PREAMP, sub=_SUB_IP_PLUS, data=data, receiver=receiver)
+    return build_civ_frame(to_addr, from_addr, _CMD_PREAMP, sub=_SUB_IP_PLUS, data=data)
 
 def get_data_mode(
     to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR

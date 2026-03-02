@@ -56,15 +56,18 @@ _SLOW_INTERVAL: float = 0.25   # levels/settings — rarely change
 @dataclass(frozen=True, slots=True)
 class SetFreq:
     freq: int
+    receiver: int = 0
 
 @dataclass(frozen=True, slots=True)
 class SetMode:
     mode: str
     filter_width: int | None = None
+    receiver: int = 0
 
 @dataclass(frozen=True, slots=True)
 class SetFilter:
     filter_num: int
+    receiver: int = 0
 
 @dataclass(frozen=True, slots=True)
 class SetPower:
@@ -73,38 +76,47 @@ class SetPower:
 @dataclass(frozen=True, slots=True)
 class SetRfGain:
     level: int
+    receiver: int = 0
 
 @dataclass(frozen=True, slots=True)
 class SetAfLevel:
     level: int
+    receiver: int = 0
 
 @dataclass(frozen=True, slots=True)
 class SetSquelch:
     level: int
+    receiver: int = 0
 
 @dataclass(frozen=True, slots=True)
 class SetNB:
     on: bool
+    receiver: int = 0
 
 @dataclass(frozen=True, slots=True)
 class SetNR:
     on: bool
+    receiver: int = 0
 
 @dataclass(frozen=True, slots=True)
 class SetDigiSel:
     on: bool
+    receiver: int = 0
 
 @dataclass(frozen=True, slots=True)
 class SetIpPlus:
     on: bool
+    receiver: int = 0
 
 @dataclass(frozen=True, slots=True)
 class SetAttenuator:
     db: int
+    receiver: int = 0
 
 @dataclass(frozen=True, slots=True)
 class SetPreamp:
     level: int
+    receiver: int = 0
 
 @dataclass(frozen=True, slots=True)
 class PttOn:
@@ -285,44 +297,44 @@ class RadioPoller:
     async def _execute(self, cmd: Command) -> None:
         radio = self._radio
         match cmd:
-            case SetFreq(freq=freq):
-                await radio.set_frequency(freq)
-            case SetMode(mode=mode, filter_width=fw):
-                await radio.set_mode(mode, fw)
-            case SetFilter(filter_num=fn):
-                await radio.set_filter(fn)
+            case SetFreq(freq=freq, receiver=rx):
+                await radio.set_frequency(freq, receiver=rx)
+            case SetMode(mode=mode, filter_width=fw, receiver=rx):
+                await radio.set_mode(mode, fw, receiver=rx)
+            case SetFilter(filter_num=fn, receiver=rx):
+                await radio.set_filter(fn, receiver=rx)
             case PttOn():
                 await radio.set_ptt(True)
             case PttOff():
                 await radio.set_ptt(False)
             case SetPower(level=level):
                 await radio.set_power(level)
-            case SetRfGain(level=level):
-                await radio.set_rf_gain(level)
-            case SetAfLevel(level=level):
-                await radio.set_af_level(level)
-            case SetSquelch(level=level):
-                await radio.set_squelch(level)
-            case SetNB(on=on):
-                await radio.set_nb(on)
+            case SetRfGain(level=level, receiver=rx):
+                await radio.set_rf_gain(level, receiver=rx)
+            case SetAfLevel(level=level, receiver=rx):
+                await radio.set_af_level(level, receiver=rx)
+            case SetSquelch(level=level, receiver=rx):
+                await radio.set_squelch(level, receiver=rx)
+            case SetNB(on=on, receiver=rx):
+                await radio.set_nb(on, receiver=rx)
                 if self._on_state_event:
                     self._on_state_event("nb_changed", {"on": on})
-            case SetNR(on=on):
-                await radio.set_nr(on)
+            case SetNR(on=on, receiver=rx):
+                await radio.set_nr(on, receiver=rx)
                 if self._on_state_event:
                     self._on_state_event("nr_changed", {"on": on})
-            case SetDigiSel(on=on):
-                await radio.set_digisel(on)
+            case SetDigiSel(on=on, receiver=rx):
+                await radio.set_digisel(on, receiver=rx)
                 if self._on_state_event:
                     self._on_state_event("digisel_changed", {"on": on})
-            case SetIpPlus(on=on):
-                await radio.set_ip_plus(on)
+            case SetIpPlus(on=on, receiver=rx):
+                await radio.set_ip_plus(on, receiver=rx)
                 if self._on_state_event:
                     self._on_state_event("ipplus_changed", {"on": on})
-            case SetAttenuator(db=db):
-                await radio.set_attenuator_level(db)
-            case SetPreamp(level=level):
-                await radio.set_preamp(level)
+            case SetAttenuator(db=db, receiver=rx):
+                await radio.set_attenuator_level(db, receiver=rx)
+            case SetPreamp(level=level, receiver=rx):
+                await radio.set_preamp(level, receiver=rx)
             case SetBand(band=band):
                 await radio.send_civ(0x07, data=bytes([band]), wait_response=False)
             case SelectVfo(vfo=vfo):
