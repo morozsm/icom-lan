@@ -420,6 +420,10 @@ input[type=range]::-webkit-slider-thumb {
     tuningStepIndex: 6,
     mode: 'USB',
     filter: 'FIL1',
+    modeA: 'USB',
+    filterA: 'FIL1',
+    modeB: 'USB',
+    filterB: 'FIL1',
     ptt: false,
     power: 128,
     att: 0,
@@ -543,6 +547,10 @@ input[type=range]::-webkit-slider-thumb {
     return sendControl({ type: 'cmd', id: nextCmdId('cmd'), name: name, params: params || {} });
   }
 
+  function activeReceiver() {
+    return state.activeVfo === 'B' ? 1 : 0;
+  }
+
   function setStatusVisual() {
     const dot = dom.connDot;
     dot.classList.remove('bg-green-500', 'bg-red-500', 'bg-yellow-400', 'animate-pulse');
@@ -630,7 +638,7 @@ input[type=range]::-webkit-slider-thumb {
     const freq = state.pendingTuneFreq;
     state.pendingTuneFreq = null;
     flushAudioPipeline();
-    sendCommand('set_freq', { freq: freq });
+    sendCommand('set_freq', { freq: freq, receiver: activeReceiver() });
   }
 
   function queueTuneCommand(freq) {
@@ -654,9 +662,8 @@ input[type=range]::-webkit-slider-thumb {
   }
 
   function updateModeDisplays() {
-    const modeText = state.mode + ' · ' + state.filter;
-    dom.vfoAmode.textContent = modeText;
-    dom.vfoBmode.textContent = modeText;
+    dom.vfoAmode.textContent = state.modeA + ' · ' + state.filterA;
+    dom.vfoBmode.textContent = state.modeB + ' · ' + state.filterB;
 
     dom.modeGrid.querySelectorAll('[data-mode]').forEach(function (btn) {
       if (btn.dataset.mode === state.mode) {
@@ -773,13 +780,15 @@ input[type=range]::-webkit-slider-thumb {
     dom.txPwrVal.innerHTML = Math.round(Number(dom.txPwrSlider.value) / 255 * 100) + '<span class="text-xs ml-1">W</span>';
   }
 
-  function scheduleSliderCommand(key, cmdName, value) {
+  function scheduleSliderCommand(key, cmdName, value, rx) {
     const existing = state.sliderDebounce.get(key);
     if (existing) {
       clearTimeout(existing.timer);
     }
     const timer = setTimeout(function () {
-      sendCommand(cmdName, { level: value });
+      var params = { level: value };
+      if (rx !== undefined) params.receiver = rx;
+      sendCommand(cmdName, params);
       state.sliderDebounce.delete(key);
     }, 100);
     state.sliderDebounce.set(key, { timer: timer });
@@ -831,15 +840,29 @@ input[type=range]::-webkit-slider-thumb {
       }
     }
 
-    // Mode (active receiver)
+    // Mode (active receiver + per-receiver labels)
     var activeRx = next.active === 'SUB' ? s : m;
     var prevActiveRx = prev ? (prev.active === 'SUB' ? prev.sub : prev.main) : null;
+    var modeDisplayDirty = false;
+    if (!prev || prev.main.mode !== m.mode || prev.main.filter !== m.filter) {
+      state.modeA = m.mode || 'USB';
+      state.filterA = 'FIL' + (m.filter || 1);
+      modeDisplayDirty = true;
+    }
+    if (!prev || prev.sub.mode !== s.mode || prev.sub.filter !== s.filter) {
+      state.modeB = s.mode || 'USB';
+      state.filterB = 'FIL' + (s.filter || 1);
+      modeDisplayDirty = true;
+    }
     if (activeChanged || !prevActiveRx || prevActiveRx.mode !== activeRx.mode) {
       state.mode = activeRx.mode;
-      updateModeDisplays();
+      modeDisplayDirty = true;
     }
     if (activeChanged || !prevActiveRx || prevActiveRx.filter !== activeRx.filter) {
       state.filter = 'FIL' + (activeRx.filter || 1);
+      modeDisplayDirty = true;
+    }
+    if (modeDisplayDirty) {
       updateModeDisplays();
     }
 
@@ -2085,22 +2108,22 @@ input[type=range]::-webkit-slider-thumb {
 
     dom.ipPlusBtn.addEventListener('click', function () {
       state.ipplus = !state.ipplus;
-      sendCommand('set_ipplus', { on: state.ipplus });
+      sendCommand('set_ipplus', { on: state.ipplus, receiver: activeReceiver() });
       updateToggleBtn(dom.ipPlusBtn, state.ipplus, 'IP+');
     });
     dom.dselBtn.addEventListener('click', function () {
       state.digisel = !state.digisel;
-      sendCommand('set_digisel', { on: state.digisel });
+      sendCommand('set_digisel', { on: state.digisel, receiver: activeReceiver() });
       updateToggleBtn(dom.dselBtn, state.digisel, 'DSEL');
     });
     dom.nbBtn.addEventListener('click', function () {
       state.nb = !state.nb;
-      sendCommand('set_nb', { on: state.nb });
+      sendCommand('set_nb', { on: state.nb, receiver: activeReceiver() });
       updateToggleBtn(dom.nbBtn, state.nb, 'NB');
     });
     dom.nrBtn.addEventListener('click', function () {
       state.nr = !state.nr;
-      sendCommand('set_nr', { on: state.nr });
+      sendCommand('set_nr', { on: state.nr, receiver: activeReceiver() });
       updateToggleBtn(dom.nrBtn, state.nr, 'NR');
     });
     dom.vfoSwapBtn.addEventListener('click', function () {
@@ -2130,7 +2153,7 @@ input[type=range]::-webkit-slider-thumb {
         return;
       }
       clearPendingTuneCommand();
-      flushAudioPipeline(); sendCommand('set_freq', { freq: Math.round(freq) });
+      flushAudioPipeline(); sendCommand('set_freq', { freq: Math.round(freq), receiver: activeReceiver() });
       if (state.activeVfo === 'A') {
         state.freqA = Math.round(freq);
       } else {
@@ -2146,8 +2169,10 @@ input[type=range]::-webkit-slider-thumb {
         return;
       }
       state.mode = btn.dataset.mode;
+      if (state.activeVfo === 'A') state.modeA = state.mode;
+      else state.modeB = state.mode;
       updateModeDisplays();
-      sendCommand('set_mode', { mode: state.mode });
+      sendCommand('set_mode', { mode: state.mode, receiver: activeReceiver() });
       applyModeDefaultStep(state.mode);
     });
 
@@ -2157,8 +2182,10 @@ input[type=range]::-webkit-slider-thumb {
         return;
       }
       state.filter = btn.dataset.filter;
+      if (state.activeVfo === 'A') state.filterA = state.filter;
+      else state.filterB = state.filter;
       updateModeDisplays();
-      sendCommand('set_filter', { filter: state.filter });
+      sendCommand('set_filter', { filter: state.filter, receiver: activeReceiver() });
     });
 
     dom.attGrid.addEventListener('click', function (ev) {
@@ -2168,7 +2195,7 @@ input[type=range]::-webkit-slider-thumb {
       }
       state.att = Number(btn.dataset.att);
       updateAttButtons();
-      sendCommand('set_att', { db: state.att });
+      sendCommand('set_att', { db: state.att, receiver: activeReceiver() });
     });
 
     dom.preGrid.addEventListener('click', function (ev) {
@@ -2178,16 +2205,16 @@ input[type=range]::-webkit-slider-thumb {
       }
       state.preamp = Number(btn.dataset.pre);
       updatePreButtons();
-      sendCommand('set_preamp', { level: state.preamp });
+      sendCommand('set_preamp', { level: state.preamp, receiver: activeReceiver() });
     });
 
     dom.afSlider.addEventListener('input', function () {
       updateSliderLabels();
-      scheduleSliderCommand('af', 'set_af_level', Number(dom.afSlider.value));
+      scheduleSliderCommand('af', 'set_af_level', Number(dom.afSlider.value), activeReceiver());
     });
     dom.rfSlider.addEventListener('input', function () {
       updateSliderLabels();
-      scheduleSliderCommand('rf', 'set_rf_gain', Number(dom.rfSlider.value));
+      scheduleSliderCommand('rf', 'set_rf_gain', Number(dom.rfSlider.value), activeReceiver());
     });
     dom.txPwrSlider.addEventListener('input', function () {
       updateSliderLabels();
@@ -2198,17 +2225,17 @@ input[type=range]::-webkit-slider-thumb {
       var sqlPctVal = Number(dom.sqlSlider.value);
       dom.sqlMarker.style.left = sqlPctVal + '%';
       dom.sqlMarker.style.display = sqlPctVal > 0 ? '' : 'none';
-      scheduleSliderCommand('sql', 'set_sql', Math.round(sqlPctVal / 100 * 255));
+      scheduleSliderCommand('sql', 'set_sql', Math.round(sqlPctVal / 100 * 255), activeReceiver());
     });
 
     dom.afSlider.addEventListener('change', function () {
-      sendCommand('set_af_level', { level: Number(dom.afSlider.value) });
+      sendCommand('set_af_level', { level: Number(dom.afSlider.value), receiver: activeReceiver() });
     });
     dom.rfSlider.addEventListener('change', function () {
-      sendCommand('set_rf_gain', { level: Number(dom.rfSlider.value) });
+      sendCommand('set_rf_gain', { level: Number(dom.rfSlider.value), receiver: activeReceiver() });
     });
     dom.sqlSlider.addEventListener('change', function () {
-      sendCommand('set_sql', { level: Math.round(Number(dom.sqlSlider.value) / 100 * 255) });
+      sendCommand('set_sql', { level: Math.round(Number(dom.sqlSlider.value) / 100 * 255), receiver: activeReceiver() });
     });
     dom.txPwrSlider.addEventListener('change', function () {
       sendCommand('set_power', { level: Number(dom.txPwrSlider.value) });
@@ -2239,7 +2266,7 @@ input[type=range]::-webkit-slider-thumb {
         const ratio = clamp((ev.clientX - rect.left) / rect.width, 0, 1);
         const hz = Math.round((start + ratio * span) / state.tuningStep) * state.tuningStep;
         clearPendingTuneCommand();
-        flushAudioPipeline(); sendCommand('set_freq', { freq: hz });
+        flushAudioPipeline(); sendCommand('set_freq', { freq: hz, receiver: activeReceiver() });
         if (state.activeVfo === 'A') {
           state.freqA = hz;
         } else {
