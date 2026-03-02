@@ -481,17 +481,21 @@ class _CivRxMixin:
                     rx.filter = filt
 
             elif cmd == 0x25:
-                # RX Frequency for dual-receiver (last byte = receiver, rest = BCD)
-                # Format: FE FE to from 25 bcd[5] receiver FD
+                # RX Frequency for dual-receiver
+                # Format: FE FE to from 25 receiver bcd[5] FD
+                # data[0] = receiver (0x00=MAIN, 0x01=SUB)
+                # data[1:6] = frequency in BCD (5 bytes, LE)
                 if len(frame.data) >= 6:
                     from .types import bcd_decode
-                    rcvr_byte = frame.data[5]
+                    rcvr_byte = frame.data[0]
                     which = "MAIN" if rcvr_byte == 0x00 else "SUB"
-                    rs.receiver(which).freq = bcd_decode(frame.data[:5])
+                    rs.receiver(which).freq = bcd_decode(frame.data[1:6])
 
             elif cmd == 0x26:
-                # RX Mode for dual-receiver (first byte = receiver)
-                # Format: FE FE to from 26 receiver mode [filter] FD
+                # RX Mode for dual-receiver
+                # Format: FE FE to from 26 receiver mode [data_mode] [filter] FD
+                # data[0] = receiver (0x00=MAIN, 0x01=SUB)
+                # data[1] = mode, data[2] = data_mode (optional), data[3] = filter (optional)
                 if len(frame.data) >= 2:
                     from .types import Mode
                     rcvr_byte = frame.data[0]
@@ -499,7 +503,9 @@ class _CivRxMixin:
                     tgt = rs.receiver(which)
                     tgt.mode = Mode(frame.data[1]).name
                     if len(frame.data) >= 3:
-                        tgt.filter = frame.data[2]
+                        tgt.data_mode = bool(frame.data[2])
+                    if len(frame.data) >= 4:
+                        tgt.filter = frame.data[3]
 
             elif cmd == 0x15:
                 # Meter readings — update s_meter on active receiver

@@ -352,7 +352,13 @@ class RadioPoller:
     # State queries interleaved on odd cycles.
     # Tuple: (cmd, sub, receiver) where receiver=None means global (no cmd29).
     # Per-receiver queries use cmd29 framing (0x29 prefix).
+    # receiver: 0x00=MAIN, 0x01=SUB, None=global
+    # For 0x25/0x26: receiver byte goes in data payload (not cmd29 prefix)
     _STATE_QUERIES: list[tuple[int, int | None, int | None]] = [
+        (0x25, None, 0x00),   # RX Freq MAIN (built-in receiver byte)
+        (0x25, None, 0x01),   # RX Freq SUB
+        (0x26, None, 0x00),   # RX Mode MAIN (built-in receiver byte)
+        (0x26, None, 0x01),   # RX Mode SUB
         (0x11, None, 0x00),   # ATT MAIN
         (0x11, None, 0x01),   # ATT SUB
         (0x14, 0x01, 0x00),   # AF MAIN
@@ -390,11 +396,17 @@ class RadioPoller:
             state_idx = (self._poll_index // 2) % len(self._STATE_QUERIES)
             cmd_byte, sub_byte, receiver = self._STATE_QUERIES[state_idx]
             if receiver is not None:
-                # Per-receiver: use cmd29 framing (FE FE to from 29 rcvr cmd [sub] FD)
-                inner = bytes([receiver, cmd_byte])
-                if sub_byte is not None:
-                    inner += bytes([sub_byte])
-                await self._radio.send_civ(0x29, data=inner, wait_response=False)
+                if cmd_byte in (0x25, 0x26):
+                    # RX Freq / RX Mode: receiver byte in data payload
+                    await self._radio.send_civ(
+                        cmd_byte, data=bytes([receiver]), wait_response=False,
+                    )
+                else:
+                    # cmd29 framing: FE FE to from 29 rcvr cmd [sub] FD
+                    inner = bytes([receiver, cmd_byte])
+                    if sub_byte is not None:
+                        inner += bytes([sub_byte])
+                    await self._radio.send_civ(0x29, data=inner, wait_response=False)
             else:
                 # Global: plain CI-V query
                 await self._radio.send_civ(
