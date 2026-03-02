@@ -2,6 +2,32 @@
 
 All notable changes to [icom-lan](https://github.com/morozsm/icom-lan) are documented here.
 
+## [0.10.0] — 2026-03-02
+
+### 🌐 Web UI
+
+- **MAIN/SUB receiver controls**: click VFO A/B panels to switch active receiver; controls, sliders, mode/filter, and frequency update independently per receiver. Scope/waterfall remains on MAIN band (SUB scope planned in [#92](https://github.com/morozsm/icom-lan/issues/92))
+- **Per-receiver badges**: ATT, PRE, NB, NR, DSEL, IP+ show independent state for each VFO
+- **Force-update on VFO switch**: all controls refresh immediately when switching receivers
+- **Client-side tune debounce** (40ms): coalesces rapid frequency changes, prevents CI-V command flooding
+- **Scope cosmetics**: brighter S-meter labels, dB/freq axis text, more visible grid lines
+- **VFO section layout**: increased height with shrink-0 to prevent scope overlap
+
+### 🔧 Fixes
+
+- **CI-V idle keepalive** (critical): `start_idle_loop()` was missing on CI-V transport — radio killed sessions after ~40s of inactivity
+- **Scope recovery after reconnect**: re-enables scope after soft reconnect via `_on_reconnect` callback
+- **Scope health monitor**: detects all-zero frames and re-enables scope; skips re-enable when radio is disconnected (prevents reconnect storms)
+- **Filter flicker**: removed `1A 03` from CI-V RX parser — IC-7610 returns filter width code, not selector
+- **Poller crash guard**: catch-all exception handler prevents silent asyncio task death
+- **SelectVfo fire-and-forget**: VFO switch no longer blocks poller waiting for ACK
+- **no_radio guard**: properly rejects commands when radio is not connected
+
+### 🧪 Tests
+
+- Fixed 4 broken tests: set_freq response format, set_mode enqueue pattern, no_radio guard logic, flaky retransmit timing
+- **1268 passed, 0 failures**
+
 ## [0.9.0] — 2026-03-02
 
 Major release: complete Web UI rewrite, dual-receiver support, CI-V reliability overhaul, and architecture refactor. **100+ commits** since v0.7.0.
