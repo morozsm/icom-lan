@@ -368,22 +368,27 @@ class _CivRxMixin:
                     # IC-7610 meters are BCD-encoded (0x0137 = 137, not 311)
                     b0, b1 = frame.data[0], frame.data[1]
                     raw = (b0 >> 4) * 1000 + (b0 & 0x0F) * 100 + (b1 >> 4) * 10 + (b1 & 0x0F)
-                    if sub == 0x02:  # S-meter
-                        cache.update_s_meter(raw)
-                        self._notify_change("meter", {"type": "smeter", "value": raw})
-                    elif sub == 0x11:  # RF power
-                        cache.update_rf_power(raw / 255.0)
-                        self._notify_change("meter", {"type": "power", "value": raw})
-                    elif sub == 0x12:  # SWR
-                        cache.update_swr(float(raw))
-                        self._notify_change("meter", {"type": "swr", "value": raw})
-                    elif sub == 0x13:  # ALC
-                        cache.update_alc(float(raw))
-                        self._notify_change("meter", {"type": "alc", "value": raw})
-                    elif sub == 0x15:  # VD (voltage) — wfview: \x15\x15
-                        self._notify_change("meter", {"type": "vd", "value": raw})
-                    elif sub == 0x16:  # Id (PA drain current) — wfview: \x15\x16
-                        self._notify_change("meter", {"type": "id", "value": raw})
+                    from .meter_cal import calibrate
+                    _METER_SUB = {
+                        0x02: "smeter", 0x11: "power", 0x12: "swr",
+                        0x13: "alc", 0x14: "comp",
+                        0x15: "vd", 0x16: "id",
+                    }
+                    meter_type = _METER_SUB.get(sub)
+                    if meter_type:
+                        cal = calibrate(meter_type, raw)
+                        self._notify_change("meter", {
+                            "type": meter_type, "raw": raw, "value": round(cal, 2),
+                        })
+                        # Update state cache for legacy API
+                        if sub == 0x02:
+                            cache.update_s_meter(raw)
+                        elif sub == 0x11:
+                            cache.update_rf_power(raw / 255.0)
+                        elif sub == 0x12:
+                            cache.update_swr(float(raw))
+                        elif sub == 0x13:
+                            cache.update_alc(float(raw))
             elif frame.command == 0x14:  # levels
                 if len(frame.data) >= 2:
                     raw = int.from_bytes(frame.data[:2], "big")

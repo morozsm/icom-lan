@@ -805,6 +805,17 @@ input[type=range]::-webkit-slider-thumb {
         updatePreButtons();
         return;
       }
+      if (eventName === 'meter' && msg.data) {
+        // Calibrated meter values from backend
+        var mt = msg.data.type;
+        var val = msg.data.value;
+        if (mt === 'power') { dom.pwrVal.textContent = Math.round(val) + 'W'; }
+        else if (mt === 'swr') { dom.swrVal.textContent = val.toFixed(1); }
+        else if (mt === 'alc') { dom.alcVal.textContent = val >= 100 ? 'OVER' : ''; }
+        else if (mt === 'id') { dom.idVal.textContent = val.toFixed(1) + 'A'; }
+        else if (mt === 'vd') { dom.vdVal.textContent = val.toFixed(1) + 'V'; }
+        return;
+      }
       return;
     }
 
@@ -944,73 +955,27 @@ input[type=range]::-webkit-slider-thumb {
     }
   }
 
-  // IC-7610 meter calibration tables from wfview IC-7610.rig
-  // Each entry: [rigVal, actualVal]  — linear interpolation between points
-  var _CAL = {
-    power:   [[0,0],[21,5],[43,10],[65,15],[83,20],[95,25],[105,30],[114,35],[124,40],[143,50],[183,75],[213,100],[255,120]],
-    swr:     [[0,1.0],[48,1.5],[80,2.0],[120,3.0],[255,6.0]],
-    alc:     [[0,0],[120,1],[255,2]],
-    current: [[0,0],[77,10],[165,20],[241,30]],
-    voltage: [[0,0],[151,10],[185,13.8],[211,16]],
-    smeter:  [[0,-54],[11,-48],[21,-42],[34,-36],[50,-30],[59,-24],[75,-18],[93,-12],[103,-6],[124,0],[145,10],[160,20],[183,30],[204,40],[222,50],[246,60]]
-  };
-
-  function _interp(table, raw) {
-    if (raw <= table[0][0]) return table[0][1];
-    for (var i = 1; i < table.length; i++) {
-      if (raw <= table[i][0]) {
-        var x0 = table[i-1][0], y0 = table[i-1][1];
-        var x1 = table[i][0],   y1 = table[i][1];
-        return y0 + (raw - x0) * (y1 - y0) / (x1 - x0);
-      }
-    }
-    return table[table.length-1][1];
-  }
-
   function handleMeter(id, value) {
+    // Binary protocol: raw values for bar widths only.
+    // Calibrated text values come via JSON 'meter' events.
     var raw = clamp(value, 0, 255);
-    if (id === METER_IDS.SMETER_MAIN) {
-      updateSmeter('A', raw);
-      return;
-    }
-    if (id === METER_IDS.SMETER_SUB) {
-      updateSmeter('B', raw);
-      return;
-    }
-    if (id === METER_IDS.POWER) {
-      var watts = _interp(_CAL.power, raw);
-      dom.pwrBar.style.width = Math.round((raw / 255) * 100) + '%';
-      dom.pwrVal.textContent = Math.round(watts) + 'W';
-      return;
-    }
-    if (id === METER_IDS.SWR) {
-      var swr = _interp(_CAL.swr, raw);
-      dom.swrBar.style.width = Math.round((raw / 255) * 100) + '%';
-      dom.swrVal.textContent = swr.toFixed(1);
+    var pct = Math.round((raw / 255) * 100) + '%';
+    if (id === METER_IDS.SMETER_MAIN) { updateSmeter('A', raw); }
+    else if (id === METER_IDS.SMETER_SUB) { updateSmeter('B', raw); }
+    else if (id === METER_IDS.POWER) { dom.pwrBar.style.width = pct; }
+    else if (id === METER_IDS.SWR) {
+      dom.swrBar.style.width = pct;
+      // SWR bar color from raw threshold
       dom.swrBar.classList.remove('bg-green-400', 'bg-yellow-500', 'bg-red-500');
-      dom.swrBar.classList.add(swr < 2.0 ? 'bg-green-400' : (swr < 3.0 ? 'bg-yellow-500' : 'bg-red-500'));
-      return;
+      dom.swrBar.classList.add(raw < 80 ? 'bg-green-400' : (raw < 120 ? 'bg-yellow-500' : 'bg-red-500'));
     }
-    if (id === METER_IDS.ALC) {
-      var alc = _interp(_CAL.alc, raw);
-      dom.alcBar.style.width = Math.round((raw / 255) * 100) + '%';
-      dom.alcVal.textContent = alc < 1 ? '' : 'OVER';
+    else if (id === METER_IDS.ALC) {
+      dom.alcBar.style.width = pct;
       dom.alcBar.classList.remove('bg-yellow-500', 'bg-red-500');
-      dom.alcBar.classList.add(alc >= 1 ? 'bg-red-500' : 'bg-yellow-500');
-      return;
+      dom.alcBar.classList.add(raw >= 120 ? 'bg-red-500' : 'bg-yellow-500');
     }
-    if (id === METER_IDS.ID_DRAIN) {
-      var amps = _interp(_CAL.current, raw);
-      dom.idBar.style.width = Math.round((raw / 255) * 100) + '%';
-      dom.idVal.textContent = amps.toFixed(1) + 'A';
-      return;
-    }
-    if (id === METER_IDS.VD) {
-      var volts = _interp(_CAL.voltage, raw);
-      dom.vdBar.style.width = Math.round((raw / 255) * 100) + '%';
-      dom.vdVal.textContent = volts.toFixed(1) + 'V';
-      return;
-    }
+    else if (id === METER_IDS.ID_DRAIN) { dom.idBar.style.width = pct; }
+    else if (id === METER_IDS.VD) { dom.vdBar.style.width = pct; }
   }
 
   function updateSmeter(vfo, raw) {

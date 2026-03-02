@@ -232,7 +232,8 @@ class WebServer:
             meter_type = data.get("type")
             meter_id = meter_map.get(meter_type)
             if meter_id is not None:
-                self._broadcast_meters([(meter_id, data.get("value", 0))])
+                # Binary protocol uses raw for bar width
+                self._broadcast_meters([(meter_id, data.get("raw", 0))])
 
     def _on_poller_state_event(self, name: str, data: dict[str, Any]) -> None:
         """Callback from RadioPoller (legacy, kept for compatibility)."""
