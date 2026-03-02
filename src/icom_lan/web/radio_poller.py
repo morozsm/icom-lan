@@ -29,6 +29,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
+
+from ..exceptions import ConnectionError as RadioConnectionError
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Callable
 
@@ -215,7 +217,7 @@ class RadioPoller:
                         try:
                             await self._execute(cmd)
                             _backoff = 0.0
-                        except ConnectionError:
+                        except (ConnectionError, RadioConnectionError):
                             _backoff = min(_backoff + 0.5, _MAX_BACKOFF)
                         except Exception:
                             logger.debug("radio-poller: cmd error: %s",
@@ -230,7 +232,7 @@ class RadioPoller:
                         await self._send_query()
                         _backoff = 0.0
                         logger.info("radio-poller: connection restored")
-                    except ConnectionError:
+                    except (ConnectionError, RadioConnectionError):
                         _backoff = min(_backoff + 0.5, _MAX_BACKOFF)
                         continue
                     except Exception:
@@ -239,7 +241,7 @@ class RadioPoller:
                 # 2. Send fast meter query
                 try:
                     await self._send_query()
-                except ConnectionError:
+                except (ConnectionError, RadioConnectionError):
                     _backoff = min(_backoff + 0.5, _MAX_BACKOFF)
                     logger.info("radio-poller: radio disconnected, backing off %.1fs", _backoff)
                     continue
