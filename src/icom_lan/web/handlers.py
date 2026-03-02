@@ -31,6 +31,7 @@ from .radio_poller import (
     PttOn,
     SelectVfo,
     SetAfLevel,
+    SetBand,
     SetAttenuator,
     SetFilter,
     SetFreq,
@@ -77,6 +78,7 @@ class ControlHandler:
     _COMMANDS = frozenset(
         [
             "set_freq",
+            "set_band",
             "set_mode",
             "set_filter",
             "ptt",
@@ -357,6 +359,10 @@ class ControlHandler:
         logger.info("enqueue_command: %s params=%s", name, params)
 
         match name:
+            case "set_band":
+                band = int(params["band"])
+                q.put(SetBand(band))
+                return {"band": band}
             case "set_freq":
                 freq = int(params["freq"])
                 q.put(SetFreq(freq))
