@@ -169,13 +169,13 @@ input[type=range]::-webkit-slider-thumb {
     <div class="glass-panel p-3 rounded-xl col-span-2">
       <h3 class="text-[10px] text-slate-500 uppercase tracking-widest mb-3 font-bold">Band</h3>
       <div class="grid grid-cols-3 gap-1.5" id="bandGrid">
-        <button class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded text-xs font-bold transition" data-band="0">160m</button>
-        <button class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded text-xs font-bold transition" data-band="1">80m</button>
-        <button class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded text-xs font-bold transition" data-band="2">40m</button>
-        <button class="bg-vfo-a/20 border border-vfo-a/50 text-vfo-a py-2.5 rounded text-xs font-bold" data-band="4">20m</button>
-        <button class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded text-xs font-bold transition" data-band="6">15m</button>
-        <button class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded text-xs font-bold transition" data-band="8">10m</button>
-        <button class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded text-xs font-bold transition col-span-3" data-band="9">6m</button>
+        <button class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded text-xs font-bold transition" data-band="1840000">160m</button>
+        <button class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded text-xs font-bold transition" data-band="3600000">80m</button>
+        <button class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded text-xs font-bold transition" data-band="7100000">40m</button>
+        <button class="bg-vfo-a/20 border border-vfo-a/50 text-vfo-a py-2.5 rounded text-xs font-bold" data-band="14150000">20m</button>
+        <button class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded text-xs font-bold transition" data-band="21200000">15m</button>
+        <button class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded text-xs font-bold transition" data-band="28300000">10m</button>
+        <button class="bg-slate-800 hover:bg-slate-700 py-2.5 rounded text-xs font-bold transition col-span-3" data-band="50100000">6m</button>
       </div>
     </div>
 
@@ -576,15 +576,12 @@ input[type=range]::-webkit-slider-thumb {
     drawWaterfallOverlay();
   }
 
-  // CI-V band code → MHz floor mapping
-  var _bandCodeToMhz = { 0:1, 1:3, 2:7, 3:10, 4:14, 5:18, 6:21, 7:24, 8:28, 9:50 };
-
   function updateBandButtons() {
     const hz = state.activeVfo === 'A' ? state.freqA : state.freqB;
     const mhz = Math.floor(hz / 1000000);
     dom.bandGrid.querySelectorAll('[data-band]').forEach(function (btn) {
-      const bandMhz = _bandCodeToMhz[Number(btn.dataset.band)];
-      if (bandMhz === mhz) {
+      const btnMhz = Math.floor(Number(btn.dataset.band) / 1000000);
+      if (btnMhz === mhz) {
         btn.className = 'bg-vfo-a/20 border border-vfo-a/50 text-vfo-a py-2.5 rounded text-xs font-bold';
       } else {
         btn.className = 'bg-slate-800 hover:bg-slate-700 py-2.5 rounded text-xs font-bold transition';
@@ -1865,14 +1862,16 @@ input[type=range]::-webkit-slider-thumb {
       if (!btn) {
         return;
       }
-      // Band buttons send CI-V band select (0x07) — radio picks freq from VFO memory.
-      // data-band holds band index: 0x01=160m .. 0x0D=6m (Icom CI-V band codes).
-      const bandCode = Number(btn.dataset.band);
-      if (!Number.isFinite(bandCode)) {
+      const freq = Number(btn.dataset.band);
+      if (!Number.isFinite(freq)) {
         return;
       }
-      flushAudioPipeline();
-      sendCommand('set_band', { band: bandCode });
+      flushAudioPipeline(); sendCommand('set_freq', { freq: Math.round(freq) });
+      if (state.activeVfo === 'A') {
+        state.freqA = Math.round(freq);
+      } else {
+        state.freqB = Math.round(freq);
+      }
       updateFreqDisplays();
       drawWaterfallOverlay();
     });
