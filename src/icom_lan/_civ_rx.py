@@ -190,6 +190,7 @@ class _CivRxMixin:
                             )
                             try:
                                 await self._stop_civ_data_watchdog()
+                                await self._force_cleanup_civ()  # type: ignore[attr-defined]
                                 await self.disconnect()  # type: ignore[attr-defined]
                                 await asyncio.sleep(_RECONNECT_PAUSE * 2)
                                 await self.connect()  # type: ignore[attr-defined]
@@ -206,15 +207,25 @@ class _CivRxMixin:
                         )
                         try:
                             await self._stop_civ_data_watchdog()  # stop ourselves
-                            await self.soft_disconnect()  # type: ignore[attr-defined]
+                            await self._force_cleanup_civ()  # type: ignore[attr-defined]
                             await asyncio.sleep(_RECONNECT_PAUSE)  # let radio release slot
                             await self.soft_reconnect()  # type: ignore[attr-defined]
                         except Exception:
                             logger.error(
-                                "civ-data-watchdog: soft_reconnect failed",
+                                "civ-data-watchdog: soft_reconnect failed, "
+                                "falling back to full reconnect",
                                 exc_info=True,
                             )
-                        return  # watchdog restarted by soft_reconnect
+                            try:
+                                await self.disconnect()  # type: ignore[attr-defined]
+                                await asyncio.sleep(_RECONNECT_PAUSE * 2)
+                                await self.connect()  # type: ignore[attr-defined]
+                            except Exception:
+                                logger.error(
+                                    "civ-data-watchdog: full reconnect also failed",
+                                    exc_info=True,
+                                )
+                        return  # watchdog restarted by reconnect
                 else:
                     if recovering:
                         logger.info("civ-data-watchdog: CI-V data resumed")

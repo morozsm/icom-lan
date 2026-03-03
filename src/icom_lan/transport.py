@@ -52,7 +52,12 @@ class _UdpProtocol(asyncio.DatagramProtocol):
         self._owner._handle_packet(data)
 
     def error_received(self, exc: Exception) -> None:
-        logger.error("UDP error: %s", exc)
+        owner = self._owner
+        owner._udp_error_count += 1
+        if owner._udp_error_count <= 3 or owner._udp_error_count % 100 == 0:
+            logger.error(
+                "UDP error (#%d): %s", owner._udp_error_count, exc,
+            )
 
     def connection_lost(self, exc: Exception | None) -> None:
         logger.info("UDP connection lost: %s", exc)
@@ -89,6 +94,7 @@ class IcomTransport:
         self._raw_send = self._default_raw_send
         self.rx_packet_count: int = 0  # total packets received (incl. pings)
         self._last_tracked_send: float = 0.0  # monotonic time of last tracked send
+        self._udp_error_count: int = 0  # consecutive UDP errors (Broken pipe etc.)
 
     def _default_raw_send(self, data: bytes) -> None:
         """Send raw bytes via UDP transport."""

@@ -389,6 +389,24 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         self._conn_state = RadioConnectionState.DISCONNECTED
         logger.info("Soft disconnect from %s:%d (control kept alive)", self._host, self._port)
 
+    async def _force_cleanup_civ(self) -> None:
+        """Unconditionally tear down CI-V transport regardless of state.
+
+        Used as a last resort before reconnect when normal soft_disconnect
+        fails or state is inconsistent (e.g. after struct overflow crash).
+        """
+        logger.info("force_cleanup_civ: tearing down CI-V unconditionally")
+        await self._stop_civ_data_watchdog()
+        await self._stop_civ_worker()
+        await self._stop_civ_rx_pump()
+        if self._civ_transport is not None:
+            try:
+                await self._civ_transport.disconnect()
+            except Exception:
+                logger.debug("force_cleanup_civ: transport disconnect failed", exc_info=True)
+            self._civ_transport = None
+        self._conn_state = RadioConnectionState.DISCONNECTED
+
     async def soft_reconnect(self) -> None:
         """Reconnect CI-V transport using existing control session.
 
