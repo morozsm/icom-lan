@@ -2,7 +2,8 @@
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-1265%20passed-brightgreen.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-1739%20passed-brightgreen.svg)](#testing)
+[![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen.svg)](#testing)
 
 **Python library for controlling Icom transceivers over LAN (UDP).**
 
@@ -243,10 +244,34 @@ Discovery → Login → Token → Conninfo → CI-V Open → Commands
 
 See the [protocol documentation](https://morozsm.github.io/icom-lan/internals/protocol/) for a deep dive.
 
+## Multi-Radio Architecture
+
+icom-lan uses an abstract **Radio Protocol** that enables support for multiple radio backends with a single Web UI and API.
+
+```
+┌──────────────────────────────────────────────┐
+│          Web UI  /  rigctld  /  CLI           │
+├──────────────────────────────────────────────┤
+│          Radio Protocol (core)                │
+│  ┌──────────────┬─────────────┬────────────┐ │
+│  │ AudioCapable │ ScopeCapable│ DualRxCap. │ │
+│  └──────────────┴─────────────┴────────────┘ │
+├────────┬──────────┬──────────┬───────────────┤
+│IcomLAN │IcomSerial│ YaesuCAT │  Future...    │
+└────────┴──────────┴──────────┴───────────────┘
+```
+
+- **`Radio`** — core protocol: freq, mode, PTT, meters, power, levels
+- **`AudioCapable`** — audio streaming (LAN or USB audio device)
+- **`ScopeCapable`** — spectrum/panadapter data
+- **`DualReceiverCapable`** — dual independent receivers (IC-7610 Main/Sub)
+
+📖 **Full protocol docs:** [Radio Protocol](docs/radio-protocol.md)
+
 ## Testing
 
 ```bash
-# Unit tests (no radio required) — 1265 tests
+# Unit tests (no radio required) — 1739 tests, 95% coverage
 pytest tests/test_*.py
 
 # Mock integration tests (full UDP protocol, no radio required)

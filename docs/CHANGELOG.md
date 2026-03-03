@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Abstract Radio Protocol** (`radio_protocol.py`) — vendor-neutral interface with `Radio`, `AudioCapable`, `ScopeCapable`, `DualReceiverCapable` protocols
+- `IcomRadio.model`, `.capabilities`, `.radio_state` properties
+- `set_state_change_callback()`, `set_reconnect_callback()` public methods
+- `control_connected` property for transport health status
+- `get_mode()` now returns Protocol-compatible `tuple[str, int | None]`
+- Graceful shutdown: SIGTERM handler ensures clean radio disconnect on kill
+- `_force_cleanup_civ()` for unconditional CI-V transport teardown
+- Retry mechanism for `civ_port=0` (radio session not ready): 3×10s retries
+- Connection indicators in Web UI update from `/api/v1/state` poll (200ms)
+- `/api/v1/capabilities` endpoint uses `radio.capabilities`
+
+### Fixed
+- **Sequence counter overflow** — `_civ_send_seq` / `_audio_send_seq` now wrap at uint16 (was unbounded, crashed after ~1.5h)
+- **Broken pipe recovery** — watchdog falls back to full reconnect when soft_reconnect fails
+- **CI-V indicator accuracy** — `connected` property checks actual transport health, not just state enum
+- UDP error logging rate-limited (first 3, then every 100th)
+- `0x16` added to `_COMMANDS_WITH_SUB` (NB/NR/DIGI-SEL sub-command parsing)
+- `server.stop()` uses full `disconnect()` instead of `soft_disconnect()` for complete session cleanup
+
+### Changed
+- All Web UI/rigctld consumers now use `Radio` Protocol type hints instead of `IcomRadio`
+- `isinstance(radio, AudioCapable)` guards instead of `hasattr`
+- Test coverage: 85% → 95% (1739 tests)
+
 ## [0.8.0] — 2026-02-28
 
 ### Added
