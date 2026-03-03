@@ -119,8 +119,8 @@ class IcomRadio:
     # Mode
     # ------------------------------------------------------------------
 
-    def get_mode(self) -> Mode:
-        """Get the current operating mode."""
+    def get_mode(self) -> tuple[str, int | None]:
+        """Get current mode as ``(name, filter)`` — Protocol-compatible."""
         return self._run(self._radio.get_mode())
 
     def get_mode_info(self) -> tuple[Mode, int | None]:

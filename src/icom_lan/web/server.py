@@ -113,8 +113,12 @@ class WebServer:
 
     def _set_scope_data_callback(self, callback: Any) -> None:
         """Set the scope data callback on the radio if it supports it."""
-        if self._radio is not None and hasattr(self._radio, "on_scope_data"):
-            self._radio.on_scope_data(callback)  # type: ignore[union-attr]
+        from ..radio_protocol import ScopeCapable
+        if self._radio is not None and isinstance(self._radio, ScopeCapable):
+            # on_scope_data is IcomRadio-specific but all ScopeCapable radios
+            # should provide it (or an equivalent) — add to ScopeCapable if needed.
+            if hasattr(self._radio, "on_scope_data"):
+                self._radio.on_scope_data(callback)  # type: ignore[union-attr]
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -319,14 +323,12 @@ class WebServer:
             # Register callback so CI-V RX stream can notify us of state changes.
             # This is the primary path for freq/mode/meter updates (fire-and-forget).
             # These are IcomRadio-specific attributes — guarded with hasattr.
-            if hasattr(self._radio, "_on_state_change"):
-                self._radio._on_state_change = self._on_radio_state_change  # type: ignore[union-attr]
+            self._radio.set_state_change_callback(self._on_radio_state_change)
             # Pass RadioState to the CI-V RX mixin for dual-receiver state tracking.
             if hasattr(self._radio, "_radio_state"):
                 self._radio._radio_state = self._radio_state  # type: ignore[union-attr]
             # Re-enable scope after soft_reconnect (CI-V stream reset loses scope state)
-            if hasattr(self._radio, "_on_reconnect"):
-                self._radio._on_reconnect = self._on_radio_reconnect  # type: ignore[union-attr]
+            self._radio.set_reconnect_callback(self._on_radio_reconnect)
             self._radio_poller = RadioPoller(
                 self._radio,
                 self._state_cache,
@@ -556,9 +558,9 @@ class WebServer:
     async def _serve_state(self, writer: asyncio.StreamWriter) -> None:
         d = self._radio_state.to_dict()
         d["connected"] = self._radio.connected if self._radio else False
-        _ctrl = getattr(self._radio, "_ctrl_transport", None) if self._radio else None
         d["control_connected"] = (
-            _ctrl is not None and getattr(_ctrl, "_udp_transport", None) is not None
+            getattr(self._radio, "control_connected", False)
+            if self._radio else False
         )
         body = json.dumps(d, separators=(",", ":")).encode()
         await _send_response(

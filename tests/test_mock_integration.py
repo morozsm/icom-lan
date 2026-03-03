@@ -114,18 +114,18 @@ class TestFrequency:
 
 class TestMode:
     async def test_get_mode_default(self, connected_radio: IcomRadio) -> None:
-        mode = await connected_radio.get_mode()
-        assert mode == Mode.USB
+        mode_name, _ = await connected_radio.get_mode()
+        assert mode_name == "USB"
 
     async def test_set_and_get_mode(self, connected_radio: IcomRadio) -> None:
         await connected_radio.set_mode(Mode.LSB)
-        mode = await connected_radio.get_mode()
-        assert mode == Mode.LSB
+        mode_name, _ = await connected_radio.get_mode()
+        assert mode_name == "LSB"
 
     async def test_set_mode_string(self, connected_radio: IcomRadio) -> None:
         await connected_radio.set_mode("AM")
-        mode = await connected_radio.get_mode()
-        assert mode == Mode.AM
+        mode_name, _ = await connected_radio.get_mode()
+        assert mode_name == "AM"
 
     async def test_get_mode_info_returns_filter(
         self, connected_radio: IcomRadio, mock_radio: MockIcomRadio

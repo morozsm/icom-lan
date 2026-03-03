@@ -81,8 +81,8 @@ async def test_start_and_stop_with_radio_sets_callbacks() -> None:
     ):
         await srv.start()
         assert srv.port == 4242
-        assert radio._on_state_change == srv._on_radio_state_change
-        assert radio._on_reconnect == srv._on_radio_reconnect
+        radio.set_state_change_callback.assert_called_once_with(srv._on_radio_state_change)
+        radio.set_reconnect_callback.assert_called_once_with(srv._on_radio_reconnect)
         fake_poller.start.assert_called_once()
         await srv.stop()
 

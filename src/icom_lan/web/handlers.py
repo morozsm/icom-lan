@@ -735,7 +735,8 @@ class AudioBroadcaster:
         logger.info("audio-broadcaster: client removed (total=%d)", len(self._clients))
 
     async def _start_rx(self) -> None:
-        if not self._radio or not hasattr(self._radio, "start_audio_rx_opus"):
+        from ..radio_protocol import AudioCapable
+        if not self._radio or not isinstance(self._radio, AudioCapable):
             return
         self._rx_active = True
 
@@ -899,7 +900,8 @@ class AudioHandler:
         """Forward TX audio from browser to radio."""
         if not self._tx_active or not self._radio:
             return
-        if not hasattr(self._radio, "push_audio_tx_opus"):
+        from ..radio_protocol import AudioCapable
+        if not isinstance(self._radio, AudioCapable):
             return
         if len(payload) < AUDIO_HEADER_SIZE:
             return

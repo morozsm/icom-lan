@@ -35,7 +35,7 @@ def test_connect_disconnect_and_context_manager() -> None:
 def test_sync_wrappers_delegate_and_return_values() -> None:
     r = _radio()
     r._radio.get_frequency = AsyncMock(return_value=7_100_000)
-    r._radio.get_mode = AsyncMock(return_value="USB")
+    r._radio.get_mode = AsyncMock(return_value=("USB", 2))
     r._radio.get_mode_info = AsyncMock(return_value=("USB", 2))
     r._radio.get_filter = AsyncMock(return_value=2)
     r._radio.get_power = AsyncMock(return_value=200)
@@ -67,7 +67,7 @@ def test_sync_wrappers_delegate_and_return_values() -> None:
     r._radio.power_control = AsyncMock()
 
     assert r.get_frequency() == 7_100_000
-    assert r.get_mode() == "USB"
+    assert r.get_mode() == ("USB", 2)
     assert r.get_mode_info() == ("USB", 2)
     assert r.get_filter() == 2
     assert r.get_power() == 200

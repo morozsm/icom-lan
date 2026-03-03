@@ -1617,7 +1617,7 @@ async def test_set_filter_reads_mode_then_sets(
     with patch.object(radio, "set_mode", new=AsyncMock()) as mock_set:
         await radio.set_filter(2)
 
-    mock_set.assert_awaited_once_with(Mode.USB, filter_width=2, receiver=0)
+    mock_set.assert_awaited_once_with("USB", filter_width=2, receiver=0)
 
 
 # ---------------------------------------------------------------------------

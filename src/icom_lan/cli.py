@@ -597,7 +597,7 @@ def _print_audio_stats(stats: dict[str, bool | int | float | str]) -> None:
 
 async def _cmd_status(radio: IcomRadio, args: argparse.Namespace) -> int:
     freq = await radio.get_frequency()
-    mode = await radio.get_mode()
+    mode_name, _filt = await radio.get_mode()
     s_meter = await radio.get_s_meter()
     power = await radio.get_power()
 
@@ -609,7 +609,7 @@ async def _cmd_status(radio: IcomRadio, args: argparse.Namespace) -> int:
                 {
                     "frequency_hz": freq,
                     "frequency_mhz": round(freq / 1e6, 6),
-                    "mode": mode.name,
+                    "mode": mode_name,
                     "s_meter": s_meter,
                     "power": power,
                 }
@@ -617,7 +617,7 @@ async def _cmd_status(radio: IcomRadio, args: argparse.Namespace) -> int:
         )
     else:
         print(f"Frequency: {freq:>12,} Hz  ({freq / 1e6:.6f} MHz)")
-        print(f"Mode:      {mode.name}")
+        print(f"Mode:      {mode_name}")
         print(f"S-meter:   {s_meter}")
         print(f"Power:     {power}")
     return 0
@@ -990,13 +990,13 @@ async def _cmd_mode(radio: IcomRadio, args: argparse.Namespace) -> int:
         await radio.set_mode(args.value)
         print(f"Set: {args.value}")
     else:
-        mode = await radio.get_mode()
+        mode_name, _ = await radio.get_mode()
         if args.json:
             import json
 
-            print(json.dumps({"mode": mode.name}))
+            print(json.dumps({"mode": mode_name}))
         else:
-            print(mode.name)
+            print(mode_name)
     return 0
 
 

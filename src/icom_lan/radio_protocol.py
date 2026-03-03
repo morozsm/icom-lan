@@ -79,6 +79,10 @@ class Radio(Protocol):
     @property
     def capabilities(self) -> set[str]: ...
 
+    # Callback registration (for server integration)
+    def set_state_change_callback(self, callback: Callable[..., Any] | None) -> None: ...
+    def set_reconnect_callback(self, callback: Callable[..., Any] | None) -> None: ...
+
 
 @runtime_checkable
 class AudioCapable(Protocol):
