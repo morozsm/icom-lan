@@ -353,7 +353,7 @@ class WebServer:
         # Graceful radio disconnect — frees LAN slots immediately
         if self._radio is not None:
             try:
-                _disconnect = getattr(self._radio, "soft_disconnect", None) or self._radio.disconnect
+                _disconnect = self._radio.disconnect
                 await asyncio.wait_for(_disconnect(), timeout=3.0)
                 logger.info("radio: graceful disconnect")
             except Exception:
