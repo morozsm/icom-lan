@@ -540,7 +540,13 @@ class WebServer:
         )
 
     async def _serve_state(self, writer: asyncio.StreamWriter) -> None:
-        body = json.dumps(self._radio_state.to_dict(), separators=(",", ":")).encode()
+        d = self._radio_state.to_dict()
+        d["connected"] = self._radio.connected if self._radio else False
+        d["control_connected"] = (
+            self._radio._ctrl_transport is not None
+            and self._radio._ctrl_transport._udp_transport is not None
+        ) if self._radio else False
+        body = json.dumps(d, separators=(",", ":")).encode()
         await _send_response(
             writer, 200, "OK", body, {"Content-Type": "application/json"}
         )
