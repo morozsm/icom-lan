@@ -330,14 +330,14 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
                 try:
                     await self._send_audio_open_close(open_stream=False)
                 except Exception:
-                    pass
+                    logger.debug("disconnect: audio open/close failed", exc_info=True)
                 await self._audio_transport.disconnect()
                 self._audio_transport = None
             if self._civ_transport:
                 try:
                     await self._send_open_close(open_stream=False)
                 except Exception:
-                    pass
+                    logger.debug("disconnect: civ open/close failed", exc_info=True)
                 await self._stop_civ_data_watchdog()
                 await self._stop_civ_worker()
                 await self._stop_civ_rx_pump()
@@ -370,7 +370,7 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
             try:
                 await self._send_audio_open_close(open_stream=False)
             except Exception:
-                pass
+                logger.debug("soft_disconnect: audio open/close failed", exc_info=True)
             await self._audio_transport.disconnect()
             self._audio_transport = None
 
@@ -379,7 +379,7 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
             try:
                 await self._send_open_close(open_stream=False)
             except Exception:
-                pass
+                logger.debug("soft_disconnect: civ open/close failed", exc_info=True)
             await self._stop_civ_data_watchdog()
             await self._stop_civ_worker()
             await self._stop_civ_rx_pump()
@@ -523,24 +523,24 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
                             await self._audio_stream.stop_rx()
                             await self._audio_stream.stop_tx()
                         except Exception:
-                            pass
+                            logger.debug("reconnect: audio_stream stop failed", exc_info=True)
                         self._audio_stream = None
                     if self._audio_transport is not None:
                         try:
                             await self._audio_transport.disconnect()
                         except Exception:
-                            pass
+                            logger.debug("reconnect: audio_transport disconnect failed", exc_info=True)
                         self._audio_transport = None
                     if self._civ_transport is not None:
                         try:
                             await self._civ_transport.disconnect()
                         except Exception:
-                            pass
+                            logger.debug("reconnect: civ_transport disconnect failed", exc_info=True)
                         self._civ_transport = None
                     try:
                         await self._ctrl_transport.disconnect()
                     except Exception:
-                        pass
+                        logger.debug("reconnect: ctrl_transport disconnect failed", exc_info=True)
 
                     # Re-initialize transport
                     self._ctrl_transport = IcomTransport()
@@ -1399,7 +1399,7 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
                     raise  # Our own error — propagate
                 # get_digisel() failed (radio doesn't support it, timeout, etc.) — ignore
             except Exception:
-                pass  # Unexpected error — proceed anyway
+                logger.debug("set_preamp: unexpected error checking DIGI-SEL, proceeding", exc_info=True)
 
         civ = set_preamp(level, to_addr=self._radio_addr, receiver=receiver)
         await self._send_civ_raw(civ, wait_response=False)
@@ -1475,6 +1475,7 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         try:
             state["frequency"] = await self.get_frequency()
         except Exception:
+            logger.debug("snapshot: get_frequency failed, using cache", exc_info=True)
             if self._last_freq_hz is not None:
                 state["frequency"] = self._last_freq_hz
 
@@ -1484,6 +1485,7 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
             if filt is not None:
                 state["filter"] = filt
         except Exception:
+            logger.debug("snapshot: get_mode_info failed, using cache", exc_info=True)
             if self._last_mode is not None:
                 state["mode"] = self._last_mode
             if self._filter_width is not None:
@@ -1492,6 +1494,7 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         try:
             state["power"] = await self.get_power()
         except Exception:
+            logger.debug("snapshot: get_power failed, using cache", exc_info=True)
             if self._last_power is not None:
                 state["power"] = self._last_power
 
@@ -1514,18 +1517,18 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
             try:
                 await self.set_split_mode(bool(state["split"]))
             except Exception:
-                pass
+                logger.debug("restore_state: set_split_mode failed", exc_info=True)
         if "vfo" in state:
             try:
                 await self.select_vfo(str(state["vfo"]))
             except Exception:
-                pass
+                logger.debug("restore_state: select_vfo failed", exc_info=True)
 
         if "power" in state:
             try:
                 await self.set_power(int(state["power"]))
             except Exception:
-                pass
+                logger.debug("restore_state: set_power failed", exc_info=True)
 
         mode = state.get("mode")
         filt = state.get("filter")
@@ -1535,25 +1538,25 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
                     mode, filter_width=int(filt) if isinstance(filt, int) else None
                 )
             except Exception:
-                pass
+                logger.debug("restore_state: set_mode failed", exc_info=True)
 
         if "frequency" in state:
             try:
                 await self.set_frequency(int(state["frequency"]))
             except Exception:
-                pass
+                logger.debug("restore_state: set_frequency failed", exc_info=True)
 
         if "attenuator" in state:
             try:
                 await self.set_attenuator(bool(state["attenuator"]))
             except Exception:
-                pass
+                logger.debug("restore_state: set_attenuator failed", exc_info=True)
 
         if "preamp" in state:
             try:
                 await self.set_preamp(int(state["preamp"]))
             except Exception:
-                pass
+                logger.debug("restore_state: set_preamp failed", exc_info=True)
 
     async def run_state_transaction(
         self,

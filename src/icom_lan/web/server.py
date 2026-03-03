@@ -258,8 +258,8 @@ class WebServer:
             pixels = getattr(frame, "pixels", None) or b""
             if any(b != 0 for b in pixels):
                 self._scope_last_nonzero = time.monotonic()
-        except Exception:
-            pass
+        except (AttributeError, TypeError):
+            logger.debug("scope health check: unexpected frame type", exc_info=True)
 
     async def _scope_health_monitor(self) -> None:
         """Background task: re-enable scope if frames are all-zero for too long."""
@@ -493,7 +493,7 @@ class WebServer:
             try:
                 writer.close()
                 await writer.wait_closed()
-            except Exception:
+            except OSError:
                 pass
 
     # ------------------------------------------------------------------

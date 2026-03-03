@@ -210,6 +210,7 @@ class RigctldHandler:
                 data_mode = await self._radio.get_data_mode()
                 self._cache.update_data_mode(data_mode)
             except Exception:
+                logger.debug("get_data_mode failed, using cache", exc_info=True)
                 data_mode = self._cache.data_mode
 
         # Map DATA overlays to packet modes where hamlib expects them.
@@ -262,7 +263,7 @@ class RigctldHandler:
                         synced = True
                         break
                 except Exception:
-                    pass
+                    logger.debug("rigctld: sync poll failed", exc_info=True)
                 await asyncio.sleep(0.05)
 
             # Cache optimistic final state even if read-back lagged.

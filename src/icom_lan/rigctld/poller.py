@@ -205,7 +205,7 @@ class RadioPoller:
             try:
                 tracker_stats = self._radio.civ_stats()
             except Exception:  # pragma: no cover
-                pass
+                logger.debug("civ_stats failed", exc_info=True)
 
         logger.info(
             "RadioPoller stats — circuit: %s, tracker: %s",

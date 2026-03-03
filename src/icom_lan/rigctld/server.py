@@ -390,7 +390,7 @@ class RigctldServer:
                             try:
                                 self._poller.hold_for(3.0)
                             except Exception:
-                                pass
+                                logger.debug("hold_for failed", exc_info=True)
                         self._poller.write_busy = False
 
                 # ── send response ────────────────────────────────────
@@ -430,7 +430,7 @@ class RigctldServer:
             try:
                 writer.close()
                 await writer.wait_closed()
-            except Exception:
+            except OSError:
                 pass
             logger.info("client #%d disconnected", client_id)
 
