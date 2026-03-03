@@ -581,6 +581,32 @@ class _CivRxMixin:
                 if frame.data:
                     rs.split = bool(frame.data[0])
 
+            elif cmd == 0x07:
+                # Active receiver / Dual Watch (global, sub encoded in data[0])
+                if len(frame.data) >= 2:
+                    sub07 = frame.data[0]
+                    val07 = frame.data[1]
+                    if sub07 == 0xD2:
+                        # Active receiver: 0x00=MAIN, 0x01=SUB
+                        new_active = "SUB" if val07 else "MAIN"
+                        if rs.active != new_active:
+                            rs.active = new_active
+                            logger.debug("civ-rx: active receiver → %s", new_active)
+                            self._notify_change(
+                                "active_receiver_changed", {"active": new_active}
+                            )
+                    elif sub07 == 0xC2:
+                        # Dual Watch: 0x00=off, 0x01=on
+                        new_dw = bool(val07)
+                        if rs.dual_watch != new_dw:
+                            rs.dual_watch = new_dw
+                            logger.debug(
+                                "civ-rx: dual watch → %s", "ON" if new_dw else "OFF"
+                            )
+                            self._notify_change(
+                                "dual_watch_changed", {"on": new_dw}
+                            )
+
         except Exception:
             pass  # Best-effort; never break the RX loop
 

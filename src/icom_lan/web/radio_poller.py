@@ -39,7 +39,7 @@ from ..rigctld.state_cache import StateCache
 if TYPE_CHECKING:
     from ..radio import IcomRadio
 
-__all__ = ["RadioPoller", "CommandQueue", "EnableScope", "DisableScope"]
+__all__ = ["RadioPoller", "CommandQueue", "EnableScope", "DisableScope", "SwitchScopeReceiver"]
 
 logger = logging.getLogger(__name__)
 
@@ -56,15 +56,18 @@ _SLOW_INTERVAL: float = 0.25   # levels/settings — rarely change
 @dataclass(frozen=True, slots=True)
 class SetFreq:
     freq: int
+    receiver: int = 0
 
 @dataclass(frozen=True, slots=True)
 class SetMode:
     mode: str
     filter_width: int | None = None
+    receiver: int = 0
 
 @dataclass(frozen=True, slots=True)
 class SetFilter:
     filter_num: int
+    receiver: int = 0
 
 @dataclass(frozen=True, slots=True)
 class SetPower:
@@ -73,38 +76,47 @@ class SetPower:
 @dataclass(frozen=True, slots=True)
 class SetRfGain:
     level: int
+    receiver: int = 0
 
 @dataclass(frozen=True, slots=True)
 class SetAfLevel:
     level: int
+    receiver: int = 0
 
 @dataclass(frozen=True, slots=True)
 class SetSquelch:
     level: int
+    receiver: int = 0
 
 @dataclass(frozen=True, slots=True)
 class SetNB:
     on: bool
+    receiver: int = 0
 
 @dataclass(frozen=True, slots=True)
 class SetNR:
     on: bool
+    receiver: int = 0
 
 @dataclass(frozen=True, slots=True)
 class SetDigiSel:
     on: bool
+    receiver: int = 0
 
 @dataclass(frozen=True, slots=True)
 class SetIpPlus:
     on: bool
+    receiver: int = 0
 
 @dataclass(frozen=True, slots=True)
 class SetAttenuator:
     db: int
+    receiver: int = 0
 
 @dataclass(frozen=True, slots=True)
 class SetPreamp:
     level: int
+    receiver: int = 0
 
 @dataclass(frozen=True, slots=True)
 class PttOn:
@@ -138,11 +150,15 @@ class EnableScope:
 class DisableScope:
     pass
 
+@dataclass(frozen=True, slots=True)
+class SwitchScopeReceiver:
+    receiver: int  # 0=MAIN, 1=SUB
+
 
 Command = (
     SetFreq | SetMode | SetFilter | SetPower | SetRfGain | SetAfLevel | SetSquelch | SetNB | SetNR | SetDigiSel | SetIpPlus
     | SetAttenuator | SetPreamp | PttOn | PttOff | SetBand | SelectVfo
-    | VfoSwap | VfoEqualize
+    | VfoSwap | VfoEqualize | SwitchScopeReceiver
 )
 
 
@@ -278,14 +294,49 @@ class RadioPoller:
         except Exception:
             logger.exception("radio-poller: FATAL — task crashed, commands will stop working")
 
+    def _current_active(self) -> str:
+        """Return current active receiver ('MAIN' or 'SUB') from RadioState."""
+        rs = getattr(self._radio, "_radio_state", None)
+        _active = getattr(rs, "active", None) if rs is not None else None
+        return _active if isinstance(_active, str) else "MAIN"
+
     async def _execute(self, cmd: Command) -> None:
         radio = self._radio
         match cmd:
-            case SetFreq(freq=freq):
-                await radio.set_frequency(freq)
-            case SetMode(mode=mode, filter_width=fw):
-                await radio.set_mode(mode, fw)
-            case SetFilter(filter_num=fn):
+            case SetFreq(freq=freq, receiver=rx):
+                # 0x05 does NOT support cmd29 on IC-7610.
+                # If targeting SUB, temporarily switch active VFO, send, switch back.
+                current = self._current_active()
+                if rx != 0:
+                    if current != "SUB":
+                        await radio.send_civ(0x07, data=bytes([0xD1]), wait_response=False)
+                        await asyncio.sleep(_GAP)
+                    await radio.set_frequency(freq)
+                    if current != "SUB":
+                        await asyncio.sleep(_GAP)
+                        await radio.send_civ(0x07, data=bytes([0xD0]), wait_response=False)
+                else:
+                    if current != "MAIN":
+                        await radio.send_civ(0x07, data=bytes([0xD0]), wait_response=False)
+                        await asyncio.sleep(_GAP)
+                    await radio.set_frequency(freq)
+                    if current != "MAIN":
+                        await asyncio.sleep(_GAP)
+                        await radio.send_civ(0x07, data=bytes([0xD1]), wait_response=False)
+            case SetMode(mode=mode, filter_width=fw, receiver=rx):
+                # 0x06 does NOT support cmd29 on IC-7610. Same VFO-switch pattern.
+                current = self._current_active()
+                if rx != 0:
+                    if current != "SUB":
+                        await radio.send_civ(0x07, data=bytes([0xD1]), wait_response=False)
+                        await asyncio.sleep(_GAP)
+                    await radio.set_mode(mode, fw)
+                    if current != "SUB":
+                        await asyncio.sleep(_GAP)
+                        await radio.send_civ(0x07, data=bytes([0xD0]), wait_response=False)
+                else:
+                    await radio.set_mode(mode, fw)
+            case SetFilter(filter_num=fn, receiver=rx):
                 await radio.set_filter(fn)
             case PttOn():
                 await radio.set_ptt(True)
@@ -293,49 +344,49 @@ class RadioPoller:
                 await radio.set_ptt(False)
             case SetPower(level=level):
                 await radio.set_power(level)
-            case SetRfGain(level=level):
-                await radio.set_rf_gain(level)
-            case SetAfLevel(level=level):
-                await radio.set_af_level(level)
-            case SetSquelch(level=level):
-                await radio.set_squelch(level)
-            case SetNB(on=on):
-                await radio.set_nb(on)
+            case SetRfGain(level=level, receiver=rx):
+                await radio.set_rf_gain(level, receiver=rx)
+            case SetAfLevel(level=level, receiver=rx):
+                await radio.set_af_level(level, receiver=rx)
+            case SetSquelch(level=level, receiver=rx):
+                await radio.set_squelch(level, receiver=rx)
+            case SetNB(on=on, receiver=rx):
+                await radio.set_nb(on, receiver=rx)
                 if self._on_state_event:
                     self._on_state_event("nb_changed", {"on": on})
-            case SetNR(on=on):
-                await radio.set_nr(on)
+            case SetNR(on=on, receiver=rx):
+                await radio.set_nr(on, receiver=rx)
                 if self._on_state_event:
                     self._on_state_event("nr_changed", {"on": on})
-            case SetDigiSel(on=on):
-                await radio.set_digisel(on)
+            case SetDigiSel(on=on, receiver=rx):
+                await radio.set_digisel(on, receiver=rx)
                 if self._on_state_event:
                     self._on_state_event("digisel_changed", {"on": on})
-            case SetIpPlus(on=on):
-                await radio.set_ip_plus(on)
+            case SetIpPlus(on=on, receiver=rx):
+                await radio.set_ip_plus(on, receiver=rx)
                 if self._on_state_event:
                     self._on_state_event("ipplus_changed", {"on": on})
-            case SetAttenuator(db=db):
-                await radio.set_attenuator_level(db)
-            case SetPreamp(level=level):
-                await radio.set_preamp(level)
+            case SetAttenuator(db=db, receiver=rx):
+                await radio.set_attenuator_level(db, receiver=rx)
+            case SetPreamp(level=level, receiver=rx):
+                await radio.set_preamp(level, receiver=rx)
             case SetBand(band=band):
                 await radio.send_civ(0x07, data=bytes([band]), wait_response=False)
             case SelectVfo(vfo=vfo):
-                # Fire-and-forget VFO select (0x07): don't block poller waiting ACK
+                # IC-7610 LAN audio is always from MAIN receiver (mono).
+                # To "switch" audio to SUB, we SWAP MAIN↔SUB (0x07 0xB0).
+                # This exchanges frequencies, modes, and all params between
+                # MAIN and SUB — audio, scope, everything follows MAIN.
                 vfo_upper = vfo.upper()
-                codes = {"A": 0x00, "B": 0x01, "MAIN": 0xD0, "SUB": 0xD1}
-                vfo_code = codes.get(vfo_upper, 0x00)
-                await radio.send_civ(0x07, data=bytes([vfo_code]), wait_response=False)
-                # Update RadioState.active so HTTP poll reflects the change
-                rs = getattr(self._radio, "_radio_state", None)
-                if rs is not None:
-                    if vfo_upper in ("MAIN", "SUB"):
-                        rs.active = vfo_upper
-                    elif vfo_upper in ("A", "B"):
-                        rs.active = "MAIN" if vfo_upper == "A" else "SUB"
-                # NOTE: SUB scope requires Dual Watch + dual scope mode on IC-7610.
-                # For now, always show MAIN scope — SUB scope switching is unstable.
+                is_sub = vfo_upper in ("SUB", "B")
+                current = self._current_active()
+                need_swap = (is_sub and current == "MAIN") or (not is_sub and current == "SUB")
+                if need_swap:
+                    await radio.send_civ(0x07, data=bytes([0xB0]), wait_response=False)
+                    logger.info("radio-poller: VFO swap (Main<>Sub)")
+                    rs = getattr(self._radio, "_radio_state", None)
+                    if rs is not None and hasattr(rs, "active"):
+                        rs.active = "SUB" if current == "MAIN" else "MAIN"
                 if self._on_state_event:
                     self._on_state_event("vfo_changed", {"vfo": vfo})
             case VfoSwap():
@@ -351,6 +402,12 @@ class RadioPoller:
             case DisableScope():
                 await radio.disable_scope()
                 logger.info("radio-poller: scope disabled")
+            case SwitchScopeReceiver(receiver=receiver):
+                # Fire-and-forget scope receiver select (0x27 0x12)
+                await radio.send_civ(
+                    0x27, sub=0x12, data=bytes([receiver & 0x01]), wait_response=False,
+                )
+                logger.info("radio-poller: scope receiver → %s", "SUB" if receiver else "MAIN")
 
     # Fast: meters (polled on even cycles)
     # wfview: Priority=Highest, queue interval 25ms for LAN (HasFDComms)
@@ -397,6 +454,8 @@ class RadioPoller:
         (0x1C, 0x00, None),   # PTT (global)
         (0x14, 0x0A, None),   # Power level (global)
         (0x0F, None, None),   # Split (global)
+        (0x07, 0xD2, None),   # Active receiver: 0x00=MAIN, 0x01=SUB
+        (0x07, 0xC2, None),   # Dual Watch status: 0x00=off, 0x01=on
     ]
 
     async def _send_query(self) -> None:

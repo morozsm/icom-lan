@@ -82,7 +82,6 @@ class WebServer:
         config: WebConfig | None = None,
     ) -> None:
         self._radio = radio
-        self._audio_broadcaster = AudioBroadcaster(radio)
         self._config = config or WebConfig()
         self._server: asyncio.Server | None = None
         self._client_tasks: set[asyncio.Task[None]] = set()
@@ -95,6 +94,7 @@ class WebServer:
             radio.state_cache if radio is not None else StateCache()
         )
         self._radio_state: RadioState = RadioState()
+        self._audio_broadcaster = AudioBroadcaster(radio)
         self._command_queue: CommandQueue = CommandQueue()
         self._radio_poller: RadioPoller | None = None
         # Meter broadcast

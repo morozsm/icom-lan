@@ -2,6 +2,27 @@
 
 All notable changes to [icom-lan](https://github.com/morozsm/icom-lan) are documented here.
 
+## [0.11.0] — 2026-03-03
+
+### 🎯 Full Dual-Receiver Support ([#92](https://github.com/morozsm/icom-lan/issues/92))
+
+- **VFO Swap (Main↔Sub)**: clicking VFO B sends CI-V `0x07 0xB0` — swaps frequencies, modes, audio, and scope between MAIN and SUB receivers. This is the only way to switch LAN audio on IC-7610 (mono audio is always from MAIN receiver)
+- **cmd29 receiver routing** ([#93](https://github.com/morozsm/icom-lan/issues/93)): `receiver` parameter added to 9 command builders and 10 radio methods for per-receiver SET commands (ATT, PRE, NB, NR, levels, features)
+- **Receiver-aware frontend** ([#94](https://github.com/morozsm/icom-lan/issues/94)): all 15 per-receiver `sendCommand()` calls include receiver, per-receiver mode/filter labels
+- **SUB scope switching** ([#95](https://github.com/morozsm/icom-lan/issues/95)): `SwitchScopeReceiver` command, MAIN/SUB badge on waterfall, zero-frame fallback auto-reverts to MAIN
+- **Bidirectional sync** ([#96](https://github.com/morozsm/icom-lan/issues/96)): polls active receiver (`0x07 0xD2`) and Dual Watch (`0x07 0xC2`) from radio, DW badge in UI
+- **Freq/mode on SUB via VFO-switch pattern**: IC-7610 `0x05`/`0x06` do not support cmd29 — temporarily switches active VFO, sends command, switches back
+
+### 🔧 Fixes
+
+- **LAN audio routing** ([#97](https://github.com/morozsm/icom-lan/issues/97)): discovered IC-7610 rejects stereo codecs through LAN; VFO Swap is the correct solution
+- **MagicMock `_radio_state` gotcha**: `getattr(mock, attr, None)` returns MagicMock, not None — added `isinstance(str)` guard in `_current_active()` helper
+
+### 🧪 Tests
+
+- 7 new tests for VFO swap, scope switching, bidirectional sync
+- **1302 passed, 0 failures**
+
 ## [0.10.0] — 2026-03-02
 
 ### 🌐 Web UI

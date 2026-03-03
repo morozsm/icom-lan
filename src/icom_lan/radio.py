@@ -1042,14 +1042,15 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
                 return self._state_cache.freq
             raise
 
-    async def set_frequency(self, freq_hz: int) -> None:
+    async def set_frequency(self, freq_hz: int, receiver: int = 0) -> None:
         """Set the operating frequency.
 
         Args:
             freq_hz: Frequency in Hz.
+            receiver: 0=MAIN, 1=SUB.
         """
         self._check_connected()
-        civ = set_frequency(freq_hz, to_addr=self._radio_addr)
+        civ = set_frequency(freq_hz, to_addr=self._radio_addr, receiver=receiver)
         await self._send_civ_raw(civ, wait_response=False)
         self._last_freq_hz = freq_hz
         self._state_cache.update_freq(freq_hz)
@@ -1088,22 +1089,23 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         _, filt = await self.get_mode_info()
         return filt if filt is not None else self._filter_width
 
-    async def set_filter(self, filter_width: int) -> None:
+    async def set_filter(self, filter_width: int, receiver: int = 0) -> None:
         """Set filter number (1-3) while keeping current mode unchanged."""
         mode = await self.get_mode()
-        await self.set_mode(mode, filter_width=filter_width)
+        await self.set_mode(mode, filter_width=filter_width, receiver=receiver)
 
-    async def set_mode(self, mode: Mode | str, filter_width: int | None = None) -> None:
+    async def set_mode(self, mode: Mode | str, filter_width: int | None = None, receiver: int = 0) -> None:
         """Set the operating mode.
 
         Args:
             mode: Mode enum or string name (e.g. "USB", "LSB").
             filter_width: Optional filter number (1-3).
+            receiver: 0=MAIN, 1=SUB.
         """
         self._check_connected()
         if isinstance(mode, str):
             mode = Mode[mode]
-        civ = set_mode(mode, filter_width=filter_width, to_addr=self._radio_addr)
+        civ = set_mode(mode, filter_width=filter_width, to_addr=self._radio_addr, receiver=receiver)
         await self._send_civ_raw(civ, wait_response=False)
         self._last_mode = mode
         if filter_width is not None:
@@ -1181,12 +1183,12 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         except TimeoutError:
             raise
 
-    async def set_rf_gain(self, level: int) -> None:
+    async def set_rf_gain(self, level: int, receiver: int = 0) -> None:
         """Set RF gain level (0-255)."""
         if not 0 <= level <= 255:
             raise ValueError(f"RF gain must be 0-255, got {level}")
         self._check_connected()
-        civ = set_rf_gain(level, to_addr=self._radio_addr)
+        civ = set_rf_gain(level, to_addr=self._radio_addr, receiver=receiver)
         await self._send_civ_raw(civ, wait_response=False)
 
     async def get_af_level(self) -> int:
@@ -1199,21 +1201,21 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         except TimeoutError:
             raise
 
-    async def set_af_level(self, level: int) -> None:
+    async def set_af_level(self, level: int, receiver: int = 0) -> None:
         """Set AF output level (0-255)."""
         if not 0 <= level <= 255:
             raise ValueError(f"AF level must be 0-255, got {level}")
         self._check_connected()
-        civ = set_af_level(level, to_addr=self._radio_addr)
+        civ = set_af_level(level, to_addr=self._radio_addr, receiver=receiver)
         await self._send_civ_raw(civ, wait_response=False)
 
-    async def set_squelch(self, level: int) -> None:
+    async def set_squelch(self, level: int, receiver: int = 0) -> None:
         """Set squelch level (0-255, 0=open)."""
         if not 0 <= level <= 255:
             raise ValueError(f"Squelch level must be 0-255, got {level}")
         self._check_connected()
         from .commands import set_squelch as _set_squelch
-        civ = _set_squelch(level, to_addr=self._radio_addr)
+        civ = _set_squelch(level, to_addr=self._radio_addr, receiver=receiver)
         await self._send_civ_raw(civ, wait_response=False)
 
     async def get_s_meter(self) -> int:
@@ -1414,10 +1416,10 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         val = ((raw >> 4) & 0x0F) * 10 + (raw & 0x0F)
         return bool(val)
 
-    async def set_digisel(self, on: bool) -> None:
+    async def set_digisel(self, on: bool, receiver: int = 0) -> None:
         """Set DIGI-SEL status."""
         self._check_connected()
-        civ = set_digisel(on, to_addr=self._radio_addr)
+        civ = set_digisel(on, to_addr=self._radio_addr, receiver=receiver)
         resp = await self._send_civ_raw(civ)
         ack = parse_ack_nak(resp)
         if ack is False:
@@ -1431,10 +1433,10 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         resp = await self._send_civ_raw(civ)
         return resp.data[0] == 0x01 if resp.data else False
 
-    async def set_nb(self, on: bool) -> None:
+    async def set_nb(self, on: bool, receiver: int = 0) -> None:
         """Set Noise Blanker on/off."""
         self._check_connected()
-        civ = set_nb(on, to_addr=self._radio_addr)
+        civ = set_nb(on, to_addr=self._radio_addr, receiver=receiver)
         await self._send_civ_raw(civ, wait_response=False)
 
     async def get_nr(self) -> bool:
@@ -1444,10 +1446,10 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         resp = await self._send_civ_raw(civ)
         return resp.data[0] == 0x01 if resp.data else False
 
-    async def set_nr(self, on: bool) -> None:
+    async def set_nr(self, on: bool, receiver: int = 0) -> None:
         """Set Noise Reduction on/off."""
         self._check_connected()
-        civ = set_nr(on, to_addr=self._radio_addr)
+        civ = set_nr(on, to_addr=self._radio_addr, receiver=receiver)
         await self._send_civ_raw(civ, wait_response=False)
 
 
@@ -1459,10 +1461,10 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         resp = await self._send_civ_raw(civ)
         return resp.data[0] == 0x01 if resp.data else False
 
-    async def set_ip_plus(self, on: bool) -> None:
+    async def set_ip_plus(self, on: bool, receiver: int = 0) -> None:
         """Set IP+ on/off."""
         self._check_connected()
-        civ = set_ip_plus(on, to_addr=self._radio_addr)
+        civ = set_ip_plus(on, to_addr=self._radio_addr, receiver=receiver)
         await self._send_civ_raw(civ, wait_response=False)
 
     async def snapshot_state(self) -> dict[str, object]:

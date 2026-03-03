@@ -395,3 +395,163 @@ class TestCommand29:
         assert frame[5] == 0x00
         assert frame[6] == 0x11
         assert frame[7] == 0x18  # 18 in BCD
+
+
+class TestCmd29ReceiverRouting:
+    """Test that per-receiver SET commands use cmd29 when receiver=SUB."""
+
+    def test_set_frequency_main_no_cmd29(self) -> None:
+        from icom_lan.commands import set_frequency, RECEIVER_MAIN
+
+        frame = set_frequency(14_074_000, receiver=RECEIVER_MAIN)
+        assert frame[4] == 0x05  # Direct freq set, no cmd29 prefix
+
+    def test_set_frequency_sub_uses_cmd29(self) -> None:
+        from icom_lan.commands import set_frequency, RECEIVER_SUB
+
+        frame = set_frequency(14_074_000, receiver=RECEIVER_SUB)
+        assert frame[4] == 0x29
+        assert frame[5] == 0x01  # SUB receiver
+        assert frame[6] == 0x05  # Freq set command
+
+    def test_set_mode_main_no_cmd29(self) -> None:
+        from icom_lan.commands import set_mode, RECEIVER_MAIN
+        from icom_lan.types import Mode
+
+        frame = set_mode(Mode.USB, receiver=RECEIVER_MAIN)
+        assert frame[4] == 0x06  # Direct mode set, no cmd29 prefix
+
+    def test_set_mode_sub_uses_cmd29(self) -> None:
+        from icom_lan.commands import set_mode, RECEIVER_SUB
+        from icom_lan.types import Mode
+
+        frame = set_mode(Mode.USB, receiver=RECEIVER_SUB)
+        assert frame[4] == 0x29
+        assert frame[5] == 0x01  # SUB receiver
+        assert frame[6] == 0x06  # Mode set command
+
+    def test_set_rf_gain_main_no_cmd29(self) -> None:
+        from icom_lan.commands import set_rf_gain, RECEIVER_MAIN
+
+        frame = set_rf_gain(128, receiver=RECEIVER_MAIN)
+        assert frame[4] == 0x14  # Direct level cmd, no cmd29 prefix
+        assert frame[5] == 0x02  # RF gain sub
+
+    def test_set_rf_gain_sub_uses_cmd29(self) -> None:
+        from icom_lan.commands import set_rf_gain, RECEIVER_SUB
+
+        frame = set_rf_gain(128, receiver=RECEIVER_SUB)
+        assert frame[4] == 0x29
+        assert frame[5] == 0x01  # SUB receiver
+        assert frame[6] == 0x14  # Level command
+        assert frame[7] == 0x02  # RF gain sub
+
+    def test_set_af_level_main_no_cmd29(self) -> None:
+        from icom_lan.commands import set_af_level, RECEIVER_MAIN
+
+        frame = set_af_level(200, receiver=RECEIVER_MAIN)
+        assert frame[4] == 0x14
+        assert frame[5] == 0x01  # AF level sub
+
+    def test_set_af_level_sub_uses_cmd29(self) -> None:
+        from icom_lan.commands import set_af_level, RECEIVER_SUB
+
+        frame = set_af_level(200, receiver=RECEIVER_SUB)
+        assert frame[4] == 0x29
+        assert frame[5] == 0x01
+        assert frame[6] == 0x14
+        assert frame[7] == 0x01  # AF level sub
+
+    def test_set_squelch_main_no_cmd29(self) -> None:
+        from icom_lan.commands import set_squelch, RECEIVER_MAIN
+
+        frame = set_squelch(100, receiver=RECEIVER_MAIN)
+        assert frame[4] == 0x14
+        assert frame[5] == 0x03  # SQL sub
+
+    def test_set_squelch_sub_uses_cmd29(self) -> None:
+        from icom_lan.commands import set_squelch, RECEIVER_SUB
+
+        frame = set_squelch(100, receiver=RECEIVER_SUB)
+        assert frame[4] == 0x29
+        assert frame[5] == 0x01
+        assert frame[6] == 0x14
+        assert frame[7] == 0x03  # SQL sub
+
+    def test_set_nb_main_no_cmd29(self) -> None:
+        from icom_lan.commands import set_nb, RECEIVER_MAIN
+
+        frame = set_nb(True, receiver=RECEIVER_MAIN)
+        assert frame[4] == 0x16  # Direct cmd, no cmd29
+        assert frame[5] == 0x22  # NB sub
+
+    def test_set_nb_sub_uses_cmd29(self) -> None:
+        from icom_lan.commands import set_nb, RECEIVER_SUB
+
+        frame = set_nb(True, receiver=RECEIVER_SUB)
+        assert frame[4] == 0x29
+        assert frame[5] == 0x01
+        assert frame[6] == 0x16
+        assert frame[7] == 0x22  # NB sub
+        assert frame[8] == 0x01  # on=True
+
+    def test_set_nr_main_no_cmd29(self) -> None:
+        from icom_lan.commands import set_nr, RECEIVER_MAIN
+
+        frame = set_nr(False, receiver=RECEIVER_MAIN)
+        assert frame[4] == 0x16
+        assert frame[5] == 0x40  # NR sub
+
+    def test_set_nr_sub_uses_cmd29(self) -> None:
+        from icom_lan.commands import set_nr, RECEIVER_SUB
+
+        frame = set_nr(False, receiver=RECEIVER_SUB)
+        assert frame[4] == 0x29
+        assert frame[5] == 0x01
+        assert frame[6] == 0x16
+        assert frame[7] == 0x40  # NR sub
+        assert frame[8] == 0x00  # on=False
+
+    def test_set_ip_plus_main_no_cmd29(self) -> None:
+        from icom_lan.commands import set_ip_plus, RECEIVER_MAIN
+
+        frame = set_ip_plus(True, receiver=RECEIVER_MAIN)
+        assert frame[4] == 0x16
+        assert frame[5] == 0x65  # IP+ sub
+
+    def test_set_ip_plus_sub_uses_cmd29(self) -> None:
+        from icom_lan.commands import set_ip_plus, RECEIVER_SUB
+
+        frame = set_ip_plus(True, receiver=RECEIVER_SUB)
+        assert frame[4] == 0x29
+        assert frame[5] == 0x01
+        assert frame[6] == 0x16
+        assert frame[7] == 0x65  # IP+ sub
+        assert frame[8] == 0x01  # on=True
+
+    def test_set_digisel_sub_uses_cmd29(self) -> None:
+        from icom_lan.commands import set_digisel, RECEIVER_SUB
+
+        frame = set_digisel(True, receiver=RECEIVER_SUB)
+        assert frame[4] == 0x29
+        assert frame[5] == 0x01
+        assert frame[6] == 0x16
+        assert frame[7] == 0x4E  # DIGI-SEL sub
+
+    def test_backward_compat_no_receiver_arg(self) -> None:
+        """All functions remain backward-compatible (no receiver arg = MAIN)."""
+        from icom_lan.commands import (
+            set_frequency, set_mode, set_rf_gain, set_af_level,
+            set_squelch, set_nb, set_nr, set_ip_plus,
+        )
+        from icom_lan.types import Mode
+
+        # None of these should use cmd29 when called without receiver
+        assert set_frequency(14_000_000)[4] == 0x05
+        assert set_mode(Mode.USB)[4] == 0x06
+        assert set_rf_gain(128)[4] == 0x14
+        assert set_af_level(200)[4] == 0x14
+        assert set_squelch(50)[4] == 0x14
+        assert set_nb(True)[4] == 0x16
+        assert set_nr(True)[4] == 0x16
+        assert set_ip_plus(True)[4] == 0x16

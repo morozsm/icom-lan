@@ -123,6 +123,15 @@ def _apply_frame(frame: CivFrame, rs: RadioState) -> None:
             if frame.data:
                 rs.split = bool(frame.data[0])
 
+        elif cmd == 0x07:
+            if len(frame.data) >= 2:
+                sub07 = frame.data[0]
+                val07 = frame.data[1]
+                if sub07 == 0xD2:
+                    rs.active = "SUB" if val07 else "MAIN"
+                elif sub07 == 0xC2:
+                    rs.dual_watch = bool(val07)
+
     except Exception:
         pass
 
@@ -369,3 +378,116 @@ def test_freq_without_receiver_updates_active_sub() -> None:
     _apply_frame(frame, rs)
     assert rs.sub.freq == 7_000_000
     assert rs.main.freq == 0
+
+
+# ---------------------------------------------------------------------------
+# parse_civ_frame: 0x07 active receiver / Dual Watch
+# ---------------------------------------------------------------------------
+
+
+def test_parse_0x07_D2_frame_main() -> None:
+    """0x07 0xD2 0x00 parses as command=0x07, data=[0xD2, 0x00]."""
+    frame_bytes = build_civ_frame(
+        CONTROLLER_ADDR, IC_7610_ADDR, 0x07, data=bytes([0xD2, 0x00])
+    )
+    frame = parse_civ_frame(frame_bytes)
+    assert frame.command == 0x07
+    assert frame.sub is None
+    assert frame.data == bytes([0xD2, 0x00])
+
+
+def test_parse_0x07_D2_frame_sub() -> None:
+    """0x07 0xD2 0x01 parses as command=0x07, data=[0xD2, 0x01]."""
+    frame_bytes = build_civ_frame(
+        CONTROLLER_ADDR, IC_7610_ADDR, 0x07, data=bytes([0xD2, 0x01])
+    )
+    frame = parse_civ_frame(frame_bytes)
+    assert frame.command == 0x07
+    assert frame.sub is None
+    assert frame.data == bytes([0xD2, 0x01])
+
+
+def test_parse_0x07_C2_frame_off() -> None:
+    """0x07 0xC2 0x00 parses as command=0x07, data=[0xC2, 0x00]."""
+    frame_bytes = build_civ_frame(
+        CONTROLLER_ADDR, IC_7610_ADDR, 0x07, data=bytes([0xC2, 0x00])
+    )
+    frame = parse_civ_frame(frame_bytes)
+    assert frame.command == 0x07
+    assert frame.sub is None
+    assert frame.data == bytes([0xC2, 0x00])
+
+
+def test_parse_0x07_C2_frame_on() -> None:
+    """0x07 0xC2 0x01 parses as command=0x07, data=[0xC2, 0x01]."""
+    frame_bytes = build_civ_frame(
+        CONTROLLER_ADDR, IC_7610_ADDR, 0x07, data=bytes([0xC2, 0x01])
+    )
+    frame = parse_civ_frame(frame_bytes)
+    assert frame.command == 0x07
+    assert frame.sub is None
+    assert frame.data == bytes([0xC2, 0x01])
+
+
+# ---------------------------------------------------------------------------
+# RadioState routing: active receiver (0x07 0xD2)
+# ---------------------------------------------------------------------------
+
+
+def test_active_receiver_main_from_0x07_D2() -> None:
+    rs = RadioState()
+    rs.active = "SUB"
+    frame_bytes = build_civ_frame(
+        CONTROLLER_ADDR, IC_7610_ADDR, 0x07, data=bytes([0xD2, 0x00])
+    )
+    frame = parse_civ_frame(frame_bytes)
+    _apply_frame(frame, rs)
+    assert rs.active == "MAIN"
+
+
+def test_active_receiver_sub_from_0x07_D2() -> None:
+    rs = RadioState()
+    rs.active = "MAIN"
+    frame_bytes = build_civ_frame(
+        CONTROLLER_ADDR, IC_7610_ADDR, 0x07, data=bytes([0xD2, 0x01])
+    )
+    frame = parse_civ_frame(frame_bytes)
+    _apply_frame(frame, rs)
+    assert rs.active == "SUB"
+
+
+# ---------------------------------------------------------------------------
+# RadioState routing: Dual Watch (0x07 0xC2)
+# ---------------------------------------------------------------------------
+
+
+def test_dual_watch_on_from_0x07_C2() -> None:
+    rs = RadioState()
+    assert rs.dual_watch is False
+    frame_bytes = build_civ_frame(
+        CONTROLLER_ADDR, IC_7610_ADDR, 0x07, data=bytes([0xC2, 0x01])
+    )
+    frame = parse_civ_frame(frame_bytes)
+    _apply_frame(frame, rs)
+    assert rs.dual_watch is True
+
+
+def test_dual_watch_off_from_0x07_C2() -> None:
+    rs = RadioState()
+    rs.dual_watch = True
+    frame_bytes = build_civ_frame(
+        CONTROLLER_ADDR, IC_7610_ADDR, 0x07, data=bytes([0xC2, 0x00])
+    )
+    frame = parse_civ_frame(frame_bytes)
+    _apply_frame(frame, rs)
+    assert rs.dual_watch is False
+
+
+def test_dual_watch_in_to_dict() -> None:
+    rs = RadioState()
+    rs.dual_watch = True
+    d = rs.to_dict()
+    assert d["dual_watch"] is True
+    rs.dual_watch = False
+    d = rs.to_dict()
+    assert d["dual_watch"] is False

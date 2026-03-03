@@ -152,6 +152,10 @@ input[type=range]::-webkit-slider-thumb {
   <section class="col-span-12 flex flex-col gap-0 min-h-0 flex-1">
     <div class="glass-panel rounded-t-xl overflow-hidden relative" style="height:155px;" id="spectrumContainer">
       <canvas id="specCanvas"></canvas>
+      <div class="absolute right-2 top-1 pointer-events-none z-10 flex gap-1">
+        <span class="text-[9px] px-1.5 py-0.5 rounded font-digital font-bold bg-slate-800 text-slate-600" id="dwBadge">DW</span>
+        <span class="text-[9px] px-1.5 py-0.5 rounded font-digital font-bold bg-cyan-900/60 text-vfo-a border border-cyan-700/50" id="scopeRxBadge">MAIN</span>
+      </div>
       <div class="absolute left-0 top-0 bottom-0 w-8 flex flex-col justify-between py-1 pointer-events-none">
         <span class="text-[8px] font-digital text-slate-400 pl-1">0</span>
         <span class="text-[8px] font-digital text-slate-400 pl-1">-20</span>
@@ -388,6 +392,8 @@ input[type=range]::-webkit-slider-thumb {
     stepDropdown: $('stepDropdown'),
     spectrumContainer: $('spectrumContainer'),
     waterfallContainer: $('waterfallContainer'),
+    scopeRxBadge: $('scopeRxBadge'),
+    dwBadge: $('dwBadge'),
     preBadgeA: $('preBadgeA'),
     preBadgeB: $('preBadgeB'),
     attBadgeA: $('attBadgeA'),
@@ -416,6 +422,10 @@ input[type=range]::-webkit-slider-thumb {
     tuningStepIndex: 6,
     mode: 'USB',
     filter: 'FIL1',
+    modeA: 'USB',
+    filterA: 'FIL1',
+    modeB: 'USB',
+    filterB: 'FIL1',
     ptt: false,
     power: 128,
     att: 0,
@@ -425,6 +435,7 @@ input[type=range]::-webkit-slider-thumb {
     nr: false,
     digisel: false,
     ipplus: false,
+    dualWatch: false,
     radioConnected: false,
     reconnecting: false,
     ws: {
@@ -454,6 +465,8 @@ input[type=range]::-webkit-slider-thumb {
       wfLine: null,
       wfLineData: null,
       axisDirty: true,
+      activeReceiver: 0,       // 0=MAIN, 1=SUB
+      subZeroFrameCount: 0,    // consecutive all-zero SUB frames (fallback detection)
     },
     sliderDebounce: new Map(),
     tuneDebounceTimer: null,
@@ -535,6 +548,10 @@ input[type=range]::-webkit-slider-thumb {
 
   function sendCommand(name, params) {
     return sendControl({ type: 'cmd', id: nextCmdId('cmd'), name: name, params: params || {} });
+  }
+
+  function activeReceiver() {
+    return state.activeVfo === 'B' ? 1 : 0;
   }
 
   function setStatusVisual() {
@@ -623,11 +640,14 @@ input[type=range]::-webkit-slider-thumb {
     }
     const freq = state.pendingTuneFreq;
     state.pendingTuneFreq = null;
+    var rx = activeReceiver();
+    console.log('[TUNE] flushTuneCommand freq=' + freq + ' receiver=' + rx + ' activeVfo=' + state.activeVfo);
     flushAudioPipeline();
-    sendCommand('set_freq', { freq: freq });
+    sendCommand('set_freq', { freq: freq, receiver: rx });
   }
 
   function queueTuneCommand(freq) {
+    console.log('[TUNE] queueTuneCommand freq=' + freq + ' activeVfo=' + state.activeVfo);
     const rounded = clamp(Math.round(Number(freq) || 0), 30000, 60000000);
     if (state.activeVfo === 'A') {
       state.freqA = rounded;
@@ -648,9 +668,8 @@ input[type=range]::-webkit-slider-thumb {
   }
 
   function updateModeDisplays() {
-    const modeText = state.mode + ' · ' + state.filter;
-    dom.vfoAmode.textContent = modeText;
-    dom.vfoBmode.textContent = modeText;
+    dom.vfoAmode.textContent = state.modeA + ' · ' + state.filterA;
+    dom.vfoBmode.textContent = state.modeB + ' · ' + state.filterB;
 
     dom.modeGrid.querySelectorAll('[data-mode]').forEach(function (btn) {
       if (btn.dataset.mode === state.mode) {
@@ -767,13 +786,15 @@ input[type=range]::-webkit-slider-thumb {
     dom.txPwrVal.innerHTML = Math.round(Number(dom.txPwrSlider.value) / 255 * 100) + '<span class="text-xs ml-1">W</span>';
   }
 
-  function scheduleSliderCommand(key, cmdName, value) {
+  function scheduleSliderCommand(key, cmdName, value, rx) {
     const existing = state.sliderDebounce.get(key);
     if (existing) {
       clearTimeout(existing.timer);
     }
     const timer = setTimeout(function () {
-      sendCommand(cmdName, { level: value });
+      var params = { level: value };
+      if (rx !== undefined) params.receiver = rx;
+      sendCommand(cmdName, params);
       state.sliderDebounce.delete(key);
     }, 100);
     state.sliderDebounce.set(key, { timer: timer });
@@ -814,18 +835,47 @@ input[type=range]::-webkit-slider-thumb {
     var activeChanged = !prev || prev.active !== next.active;
     if (activeChanged) {
       setActiveVfo(next.active === 'SUB' ? 'B' : 'A', false);
+      // Update scope receiver to follow active VFO; clear waterfall on switch
+      var newReceiver = next.active === 'SUB' ? 1 : 0;
+      if (newReceiver !== state.scope.activeReceiver) {
+        state.scope.activeReceiver = newReceiver;
+        state.scope.subZeroFrameCount = 0;
+        state.scope.axisDirty = true;
+        clearWaterfallCanvas();
+        updateScopeReceiverBadge();
+      }
     }
 
-    // Mode (active receiver)
+    // Mode (active receiver + per-receiver labels)
     var activeRx = next.active === 'SUB' ? s : m;
     var prevActiveRx = prev ? (prev.active === 'SUB' ? prev.sub : prev.main) : null;
+    var modeDisplayDirty = false;
+    if (!prev || prev.main.mode !== m.mode || prev.main.filter !== m.filter) {
+      state.modeA = m.mode || 'USB';
+      state.filterA = 'FIL' + (m.filter || 1);
+      modeDisplayDirty = true;
+    }
+    if (!prev || prev.sub.mode !== s.mode || prev.sub.filter !== s.filter) {
+      state.modeB = s.mode || 'USB';
+      state.filterB = 'FIL' + (s.filter || 1);
+      modeDisplayDirty = true;
+    }
     if (activeChanged || !prevActiveRx || prevActiveRx.mode !== activeRx.mode) {
       state.mode = activeRx.mode;
-      updateModeDisplays();
+      modeDisplayDirty = true;
     }
     if (activeChanged || !prevActiveRx || prevActiveRx.filter !== activeRx.filter) {
       state.filter = 'FIL' + (activeRx.filter || 1);
+      modeDisplayDirty = true;
+    }
+    if (modeDisplayDirty) {
       updateModeDisplays();
+    }
+
+    // Dual Watch
+    if (!prev || prev.dual_watch !== next.dual_watch) {
+      state.dualWatch = next.dual_watch;
+      updateDualWatchBadge();
     }
 
     // PTT
@@ -1238,6 +1288,43 @@ input[type=range]::-webkit-slider-thumb {
       state.backoff.scope = Math.min(Math.floor(state.backoff.scope * 1.7), BACKOFF_MAX);
       window.setTimeout(connectScope, delay);
     };
+  }
+
+  function clearWaterfallCanvas() {
+    if (state.scope.wfCtx && state.scope.wfWidth > 0 && state.scope.wfHeight > 0) {
+      state.scope.wfCtx.fillStyle = '#000';
+      state.scope.wfCtx.fillRect(0, 0, state.scope.wfWidth, state.scope.wfHeight);
+    }
+  }
+
+  function updateScopeReceiverBadge() {
+    if (!dom.scopeRxBadge) return;
+    var label = state.scope.activeReceiver === 1 ? 'SUB' : 'MAIN';
+    dom.scopeRxBadge.textContent = label;
+    if (state.scope.activeReceiver === 1) {
+      dom.scopeRxBadge.className = 'text-[9px] px-1.5 py-0.5 rounded font-digital font-bold bg-amber-900/60 text-vfo-b border border-amber-700/50';
+    } else {
+      dom.scopeRxBadge.className = 'text-[9px] px-1.5 py-0.5 rounded font-digital font-bold bg-cyan-900/60 text-vfo-a border border-cyan-700/50';
+    }
+  }
+
+  function updateDualWatchBadge() {
+    if (!dom.dwBadge) return;
+    if (state.dualWatch) {
+      dom.dwBadge.className = 'text-[9px] px-1.5 py-0.5 rounded font-digital font-bold bg-green-900/60 text-green-400 border border-green-700/50';
+    } else {
+      dom.dwBadge.className = 'text-[9px] px-1.5 py-0.5 rounded font-digital font-bold bg-slate-800 text-slate-600';
+    }
+  }
+
+  function showToast(msg) {
+    var toast = document.createElement('div');
+    toast.textContent = msg;
+    toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);' +
+      'background:rgba(30,22,32,0.92);color:#fbbf24;border:1px solid #b45309;' +
+      'padding:6px 18px;border-radius:8px;font-size:12px;z-index:9999;pointer-events:none;';
+    document.body.appendChild(toast);
+    setTimeout(function() { toast.remove(); }, 3000);
   }
 
   function resizeScopeCanvases() {
@@ -2042,22 +2129,22 @@ input[type=range]::-webkit-slider-thumb {
 
     dom.ipPlusBtn.addEventListener('click', function () {
       state.ipplus = !state.ipplus;
-      sendCommand('set_ipplus', { on: state.ipplus });
+      sendCommand('set_ipplus', { on: state.ipplus, receiver: activeReceiver() });
       updateToggleBtn(dom.ipPlusBtn, state.ipplus, 'IP+');
     });
     dom.dselBtn.addEventListener('click', function () {
       state.digisel = !state.digisel;
-      sendCommand('set_digisel', { on: state.digisel });
+      sendCommand('set_digisel', { on: state.digisel, receiver: activeReceiver() });
       updateToggleBtn(dom.dselBtn, state.digisel, 'DSEL');
     });
     dom.nbBtn.addEventListener('click', function () {
       state.nb = !state.nb;
-      sendCommand('set_nb', { on: state.nb });
+      sendCommand('set_nb', { on: state.nb, receiver: activeReceiver() });
       updateToggleBtn(dom.nbBtn, state.nb, 'NB');
     });
     dom.nrBtn.addEventListener('click', function () {
       state.nr = !state.nr;
-      sendCommand('set_nr', { on: state.nr });
+      sendCommand('set_nr', { on: state.nr, receiver: activeReceiver() });
       updateToggleBtn(dom.nrBtn, state.nr, 'NR');
     });
     dom.vfoSwapBtn.addEventListener('click', function () {
@@ -2087,7 +2174,7 @@ input[type=range]::-webkit-slider-thumb {
         return;
       }
       clearPendingTuneCommand();
-      flushAudioPipeline(); sendCommand('set_freq', { freq: Math.round(freq) });
+      flushAudioPipeline(); sendCommand('set_freq', { freq: Math.round(freq), receiver: activeReceiver() });
       if (state.activeVfo === 'A') {
         state.freqA = Math.round(freq);
       } else {
@@ -2103,8 +2190,10 @@ input[type=range]::-webkit-slider-thumb {
         return;
       }
       state.mode = btn.dataset.mode;
+      if (state.activeVfo === 'A') state.modeA = state.mode;
+      else state.modeB = state.mode;
       updateModeDisplays();
-      sendCommand('set_mode', { mode: state.mode });
+      sendCommand('set_mode', { mode: state.mode, receiver: activeReceiver() });
       applyModeDefaultStep(state.mode);
     });
 
@@ -2114,8 +2203,10 @@ input[type=range]::-webkit-slider-thumb {
         return;
       }
       state.filter = btn.dataset.filter;
+      if (state.activeVfo === 'A') state.filterA = state.filter;
+      else state.filterB = state.filter;
       updateModeDisplays();
-      sendCommand('set_filter', { filter: state.filter });
+      sendCommand('set_filter', { filter: state.filter, receiver: activeReceiver() });
     });
 
     dom.attGrid.addEventListener('click', function (ev) {
@@ -2125,7 +2216,7 @@ input[type=range]::-webkit-slider-thumb {
       }
       state.att = Number(btn.dataset.att);
       updateAttButtons();
-      sendCommand('set_att', { db: state.att });
+      sendCommand('set_att', { db: state.att, receiver: activeReceiver() });
     });
 
     dom.preGrid.addEventListener('click', function (ev) {
@@ -2135,16 +2226,16 @@ input[type=range]::-webkit-slider-thumb {
       }
       state.preamp = Number(btn.dataset.pre);
       updatePreButtons();
-      sendCommand('set_preamp', { level: state.preamp });
+      sendCommand('set_preamp', { level: state.preamp, receiver: activeReceiver() });
     });
 
     dom.afSlider.addEventListener('input', function () {
       updateSliderLabels();
-      scheduleSliderCommand('af', 'set_af_level', Number(dom.afSlider.value));
+      scheduleSliderCommand('af', 'set_af_level', Number(dom.afSlider.value), activeReceiver());
     });
     dom.rfSlider.addEventListener('input', function () {
       updateSliderLabels();
-      scheduleSliderCommand('rf', 'set_rf_gain', Number(dom.rfSlider.value));
+      scheduleSliderCommand('rf', 'set_rf_gain', Number(dom.rfSlider.value), activeReceiver());
     });
     dom.txPwrSlider.addEventListener('input', function () {
       updateSliderLabels();
@@ -2155,17 +2246,17 @@ input[type=range]::-webkit-slider-thumb {
       var sqlPctVal = Number(dom.sqlSlider.value);
       dom.sqlMarker.style.left = sqlPctVal + '%';
       dom.sqlMarker.style.display = sqlPctVal > 0 ? '' : 'none';
-      scheduleSliderCommand('sql', 'set_sql', Math.round(sqlPctVal / 100 * 255));
+      scheduleSliderCommand('sql', 'set_sql', Math.round(sqlPctVal / 100 * 255), activeReceiver());
     });
 
     dom.afSlider.addEventListener('change', function () {
-      sendCommand('set_af_level', { level: Number(dom.afSlider.value) });
+      sendCommand('set_af_level', { level: Number(dom.afSlider.value), receiver: activeReceiver() });
     });
     dom.rfSlider.addEventListener('change', function () {
-      sendCommand('set_rf_gain', { level: Number(dom.rfSlider.value) });
+      sendCommand('set_rf_gain', { level: Number(dom.rfSlider.value), receiver: activeReceiver() });
     });
     dom.sqlSlider.addEventListener('change', function () {
-      sendCommand('set_sql', { level: Math.round(Number(dom.sqlSlider.value) / 100 * 255) });
+      sendCommand('set_sql', { level: Math.round(Number(dom.sqlSlider.value) / 100 * 255), receiver: activeReceiver() });
     });
     dom.txPwrSlider.addEventListener('change', function () {
       sendCommand('set_power', { level: Number(dom.txPwrSlider.value) });
@@ -2196,7 +2287,7 @@ input[type=range]::-webkit-slider-thumb {
         const ratio = clamp((ev.clientX - rect.left) / rect.width, 0, 1);
         const hz = Math.round((start + ratio * span) / state.tuningStep) * state.tuningStep;
         clearPendingTuneCommand();
-        flushAudioPipeline(); sendCommand('set_freq', { freq: hz });
+        flushAudioPipeline(); sendCommand('set_freq', { freq: hz, receiver: activeReceiver() });
         if (state.activeVfo === 'A') {
           state.freqA = hz;
         } else {
@@ -2252,10 +2343,30 @@ input[type=range]::-webkit-slider-thumb {
 
     state.scope.lastBuffer = null;
     const frame = parseScopeBuffer(buffer);
-    // IC-7610: always show MAIN scope (receiver=0).
-    // SUB scope requires Dual Watch + dual scope mode; unstable via CI-V.
-    if (!frame || frame.receiver !== 0) {
+    // Only render frames matching the active receiver (MAIN=0, SUB=1)
+    if (!frame || frame.receiver !== state.scope.activeReceiver) {
       return;
+    }
+
+    // SUB scope fallback: if Dual Watch is off, radio sends all-zero SUB frames.
+    // After ~3 seconds (~45 frames at 15fps), fall back to MAIN scope.
+    if (state.scope.activeReceiver === 1) {
+      var allZero = frame.pixels.every(function(b) { return b === 0; });
+      if (allZero) {
+        state.scope.subZeroFrameCount++;
+        if (state.scope.subZeroFrameCount >= 45) {
+          state.scope.subZeroFrameCount = 0;
+          state.scope.activeReceiver = 0;
+          state.scope.axisDirty = true;
+          clearWaterfallCanvas();
+          updateScopeReceiverBadge();
+          sendCommand('switch_scope_receiver', { receiver: 0 });
+          showToast('SUB scope requires Dual Watch');
+        }
+        return;
+      } else {
+        state.scope.subZeroFrameCount = 0;
+      }
     }
 
     if (frame.startFreq !== state.scope.startFreq || frame.endFreq !== state.scope.endFreq) {
