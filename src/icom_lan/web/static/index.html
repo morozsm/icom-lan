@@ -640,11 +640,14 @@ input[type=range]::-webkit-slider-thumb {
     }
     const freq = state.pendingTuneFreq;
     state.pendingTuneFreq = null;
+    var rx = activeReceiver();
+    console.log('[TUNE] flushTuneCommand freq=' + freq + ' receiver=' + rx + ' activeVfo=' + state.activeVfo);
     flushAudioPipeline();
-    sendCommand('set_freq', { freq: freq, receiver: activeReceiver() });
+    sendCommand('set_freq', { freq: freq, receiver: rx });
   }
 
   function queueTuneCommand(freq) {
+    console.log('[TUNE] queueTuneCommand freq=' + freq + ' activeVfo=' + state.activeVfo);
     const rounded = clamp(Math.round(Number(freq) || 0), 30000, 60000000);
     if (state.activeVfo === 'A') {
       state.freqA = rounded;

@@ -369,7 +369,7 @@ class ControlHandler:
         if q is None:
             raise RuntimeError("no command queue available")
         if name == "set_freq":
-            logger.debug("enqueue_command: %s params=%s", name, params)
+            logger.info("enqueue_command: %s params=%s", name, params)
         else:
             logger.info("enqueue_command: %s params=%s", name, params)
 
