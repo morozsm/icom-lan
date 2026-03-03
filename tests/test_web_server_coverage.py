@@ -70,7 +70,7 @@ def _reader_with(data: bytes) -> asyncio.StreamReader:
 async def test_start_and_stop_with_radio_sets_callbacks() -> None:
     radio = MagicMock()
     radio.state_cache = MagicMock()
-    radio.soft_disconnect = AsyncMock()
+    radio.disconnect = AsyncMock()
     fake_server = _FakeAsyncServer()
     fake_poller = MagicMock()
 
@@ -87,14 +87,14 @@ async def test_start_and_stop_with_radio_sets_callbacks() -> None:
         await srv.stop()
 
     fake_poller.stop.assert_called_once()
-    radio.soft_disconnect.assert_awaited_once()
+    radio.disconnect.assert_awaited_once()
     assert fake_server.closed is True
 
 
 @pytest.mark.asyncio
 async def test_stop_handles_disconnect_failure_and_cancels_client_tasks() -> None:
     radio = MagicMock()
-    radio.soft_disconnect = AsyncMock(side_effect=RuntimeError("disconnect failed"))
+    radio.disconnect = AsyncMock(side_effect=RuntimeError("disconnect failed"))
     srv = WebServer(radio)
     srv._server = _FakeAsyncServer()
     srv._radio_poller = MagicMock()
