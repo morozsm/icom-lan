@@ -25,7 +25,7 @@ from .circuit_breaker import CircuitBreaker, CircuitState
 from .contract import ClientSession, HamlibError, RigctldConfig
 
 if TYPE_CHECKING:
-    from ..radio import IcomRadio
+    from ..radio_protocol import Radio
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +62,7 @@ class RigctldServer:
 
     def __init__(
         self,
-        radio: IcomRadio,
+        radio: "Radio",
         config: RigctldConfig | None = None,
         *,
         _protocol: Any = None,
@@ -474,7 +474,7 @@ class RigctldServer:
 # ---------------------------------------------------------------------------
 
 
-async def run_rigctld_server(radio: IcomRadio, **kwargs: Any) -> None:
+async def run_rigctld_server(radio: "Radio", **kwargs: Any) -> None:
     """Create a :class:`RigctldServer` from *kwargs* and run it forever.
 
     Keyword arguments are forwarded to :class:`RigctldConfig`.

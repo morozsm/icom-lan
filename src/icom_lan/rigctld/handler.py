@@ -31,6 +31,7 @@ from .state_cache import StateCache
 
 if TYPE_CHECKING:
     from ..radio import IcomRadio
+    from ..radio_protocol import Radio
 
 __all__ = ["RigctldHandler"]
 
@@ -122,7 +123,7 @@ class RigctldHandler:
 
     def __init__(
         self,
-        radio: "IcomRadio",
+        radio: "Radio",
         config: RigctldConfig,
         cache: StateCache | None = None,
     ) -> None:
@@ -201,7 +202,10 @@ class RigctldHandler:
             passband = _filter_to_passband(self._cache.filter_width)
             data_mode = self._cache.data_mode
         else:
-            mode, filt = await self._radio.get_mode_info()
+            _get_mode_info = getattr(self._radio, "get_mode_info", None)
+            if _get_mode_info is None:
+                return _err(HamlibError.ENIMPL)
+            mode, filt = await _get_mode_info()
             mode_str = CIV_TO_HAMLIB_MODE.get(mode.value, "USB")
             self._cache.update_mode(mode_str, filt)
             passband = _filter_to_passband(filt)
@@ -255,9 +259,12 @@ class RigctldHandler:
             # Some radios acknowledge set-data quickly but reflect packet mode
             # with a short delay. We wait briefly to reduce client-side stalls.
             synced = False
+            _get_mode_info = getattr(self._radio, "get_mode_info", None)
             for _ in range(5):
                 try:
-                    read_mode, _ = await self._radio.get_mode_info()
+                    if _get_mode_info is None:
+                        break
+                    read_mode, _ = await _get_mode_info()
                     read_data = await self._radio.get_data_mode()
                     if read_mode == mode and read_data:
                         synced = True

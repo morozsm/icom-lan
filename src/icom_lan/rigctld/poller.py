@@ -28,7 +28,7 @@ from .contract import CIV_TO_HAMLIB_MODE, RigctldConfig
 from .state_cache import StateCache
 
 if TYPE_CHECKING:
-    from ..radio import IcomRadio
+    from ..radio_protocol import Radio
 
 __all__ = ["RadioPoller"]
 
@@ -52,7 +52,7 @@ class RadioPoller:
 
     def __init__(
         self,
-        radio: "IcomRadio",
+        radio: "Radio",
         cache: StateCache,
         config: RigctldConfig,
         circuit_breaker: CircuitBreaker | None = None,
@@ -165,9 +165,11 @@ class RadioPoller:
 
         # --- mode -------------------------------------------------------
         try:
-            mode, filter_width = await self._radio.get_mode_info()
-            mode_str = CIV_TO_HAMLIB_MODE.get(mode.value, "USB")
-            self._cache.update_mode(mode_str, filter_width)
+            _get_mode_info = getattr(self._radio, "get_mode_info", None)
+            if _get_mode_info is not None:
+                mode, filter_width = await _get_mode_info()
+                mode_str = CIV_TO_HAMLIB_MODE.get(mode.value, "USB")
+                self._cache.update_mode(mode_str, filter_width)
         except (IcomTimeoutError, IcomConnectionError) as exc:
             logger.warning("RadioPoller: get_mode_info failed: %s", exc)
         except Exception as exc:  # pragma: no cover — unexpected

@@ -37,7 +37,7 @@ from typing import TYPE_CHECKING, Any, Callable
 from ..rigctld.state_cache import StateCache
 
 if TYPE_CHECKING:
-    from ..radio import IcomRadio
+    from ..radio_protocol import Radio
 
 __all__ = ["RadioPoller", "CommandQueue", "EnableScope", "DisableScope", "SwitchScopeReceiver"]
 
@@ -212,7 +212,7 @@ class RadioPoller:
 
     def __init__(
         self,
-        radio: "IcomRadio",
+        radio: "Radio",
         state_cache: StateCache,
         command_queue: CommandQueue,
         *,
@@ -294,6 +294,23 @@ class RadioPoller:
         except Exception:
             logger.exception("radio-poller: FATAL — task crashed, commands will stop working")
 
+    async def _civ(
+        self,
+        cmd: int,
+        *,
+        sub: int | None = None,
+        data: bytes = b"",
+        wait_response: bool = False,
+    ) -> None:
+        """Send a raw CI-V command if the radio supports it (IcomRadio-specific).
+
+        For non-Icom backends this is a no-op — scope/meter polling simply
+        won't happen, which is acceptable.
+        """
+        _send_civ = getattr(self._radio, "send_civ", None)
+        if _send_civ is not None:
+            await _send_civ(cmd, sub=sub, data=data, wait_response=wait_response)
+
     def _current_active(self) -> str:
         """Return current active receiver ('MAIN' or 'SUB') from RadioState."""
         rs = getattr(self._radio, "_radio_state", None)
@@ -309,31 +326,31 @@ class RadioPoller:
                 current = self._current_active()
                 if rx != 0:
                     if current != "SUB":
-                        await radio.send_civ(0x07, data=bytes([0xD1]), wait_response=False)
+                        await self._civ(0x07, data=bytes([0xD1]))
                         await asyncio.sleep(_GAP)
                     await radio.set_frequency(freq)
                     if current != "SUB":
                         await asyncio.sleep(_GAP)
-                        await radio.send_civ(0x07, data=bytes([0xD0]), wait_response=False)
+                        await self._civ(0x07, data=bytes([0xD0]))
                 else:
                     if current != "MAIN":
-                        await radio.send_civ(0x07, data=bytes([0xD0]), wait_response=False)
+                        await self._civ(0x07, data=bytes([0xD0]))
                         await asyncio.sleep(_GAP)
                     await radio.set_frequency(freq)
                     if current != "MAIN":
                         await asyncio.sleep(_GAP)
-                        await radio.send_civ(0x07, data=bytes([0xD1]), wait_response=False)
+                        await self._civ(0x07, data=bytes([0xD1]))
             case SetMode(mode=mode, filter_width=fw, receiver=rx):
                 # 0x06 does NOT support cmd29 on IC-7610. Same VFO-switch pattern.
                 current = self._current_active()
                 if rx != 0:
                     if current != "SUB":
-                        await radio.send_civ(0x07, data=bytes([0xD1]), wait_response=False)
+                        await self._civ(0x07, data=bytes([0xD1]))
                         await asyncio.sleep(_GAP)
                     await radio.set_mode(mode, fw)
                     if current != "SUB":
                         await asyncio.sleep(_GAP)
-                        await radio.send_civ(0x07, data=bytes([0xD0]), wait_response=False)
+                        await self._civ(0x07, data=bytes([0xD0]))
                 else:
                     await radio.set_mode(mode, fw)
             case SetFilter(filter_num=fn, receiver=rx):
@@ -371,7 +388,7 @@ class RadioPoller:
             case SetPreamp(level=level, receiver=rx):
                 await radio.set_preamp(level, receiver=rx)
             case SetBand(band=band):
-                await radio.send_civ(0x07, data=bytes([band]), wait_response=False)
+                await self._civ(0x07, data=bytes([band]))
             case SelectVfo(vfo=vfo):
                 # IC-7610 LAN audio is always from MAIN receiver (mono).
                 # To "switch" audio to SUB, we SWAP MAIN↔SUB (0x07 0xB0).
@@ -382,7 +399,7 @@ class RadioPoller:
                 current = self._current_active()
                 need_swap = (is_sub and current == "MAIN") or (not is_sub and current == "SUB")
                 if need_swap:
-                    await radio.send_civ(0x07, data=bytes([0xB0]), wait_response=False)
+                    await self._civ(0x07, data=bytes([0xB0]))
                     logger.info("radio-poller: VFO swap (Main<>Sub)")
                     rs = getattr(self._radio, "_radio_state", None)
                     if rs is not None and hasattr(rs, "active"):
@@ -404,9 +421,7 @@ class RadioPoller:
                 logger.info("radio-poller: scope disabled")
             case SwitchScopeReceiver(receiver=receiver):
                 # Fire-and-forget scope receiver select (0x27 0x12)
-                await radio.send_civ(
-                    0x27, sub=0x12, data=bytes([receiver & 0x01]), wait_response=False,
-                )
+                await self._civ(0x27, sub=0x12, data=bytes([receiver & 0x01]))
                 logger.info("radio-poller: scope receiver → %s", "SUB" if receiver else "MAIN")
 
     # Fast: meters (polled on even cycles)
@@ -463,29 +478,23 @@ class RadioPoller:
         if self._poll_index % 2 == 0:
             fast_idx = (self._poll_index // 2) % len(self._FAST_CMDS)
             cmd_byte, sub_byte = self._FAST_CMDS[fast_idx]
-            await self._radio.send_civ(
-                cmd_byte, sub=sub_byte, data=b"", wait_response=False,
-            )
+            await self._civ(cmd_byte, sub=sub_byte, data=b"")
         else:
             state_idx = (self._poll_index // 2) % len(self._STATE_QUERIES)
             cmd_byte, sub_byte, receiver = self._STATE_QUERIES[state_idx]
             if receiver is not None:
                 if cmd_byte in (0x25, 0x26):
                     # RX Freq / RX Mode: receiver byte in data payload
-                    await self._radio.send_civ(
-                        cmd_byte, data=bytes([receiver]), wait_response=False,
-                    )
+                    await self._civ(cmd_byte, data=bytes([receiver]))
                 else:
                     # cmd29 framing: FE FE to from 29 rcvr cmd [sub] FD
                     inner = bytes([receiver, cmd_byte])
                     if sub_byte is not None:
                         inner += bytes([sub_byte])
-                    await self._radio.send_civ(0x29, data=inner, wait_response=False)
+                    await self._civ(0x29, data=inner)
             else:
                 # Global: plain CI-V query
-                await self._radio.send_civ(
-                    cmd_byte, sub=sub_byte, data=b"", wait_response=False,
-                )
+                await self._civ(cmd_byte, sub=sub_byte, data=b"")
         self._poll_index += 1
 
     def _emit(self, name: str, data: dict[str, Any]) -> None:

@@ -52,6 +52,7 @@ from .websocket import WS_OP_BINARY, WS_OP_TEXT, WebSocketConnection
 
 if TYPE_CHECKING:
     from ..radio import IcomRadio
+    from ..radio_protocol import Radio, ScopeCapable
 
 __all__ = [
     "HIGH_WATERMARK",
@@ -108,7 +109,7 @@ class ControlHandler:
     def __init__(
         self,
         ws: WebSocketConnection,
-        radio: "IcomRadio | None",
+        radio: "Radio | None",
         server_version: str,
         radio_model: str,
         server: Any = None,
@@ -485,7 +486,7 @@ class ScopeHandler:
     def __init__(
         self,
         ws: WebSocketConnection,
-        radio: "IcomRadio | None",
+        radio: "Radio | None",
         server: Any = None,
     ) -> None:
         self._ws = ws
@@ -591,7 +592,7 @@ class MetersHandler:
     def __init__(
         self,
         ws: WebSocketConnection,
-        radio: "IcomRadio | None",
+        radio: "Radio | None",
         server: Any = None,
     ) -> None:
         self._ws = ws
@@ -703,7 +704,7 @@ class AudioBroadcaster:
 
     HIGH_WATERMARK: int = 10
 
-    def __init__(self, radio: "IcomRadio | None") -> None:
+    def __init__(self, radio: "Radio | None") -> None:
         self._radio = radio
         self._clients: dict[int, asyncio.Queue[bytes]] = {}
         self._rx_active = False
@@ -734,7 +735,7 @@ class AudioBroadcaster:
         logger.info("audio-broadcaster: client removed (total=%d)", len(self._clients))
 
     async def _start_rx(self) -> None:
-        if not self._radio:
+        if not self._radio or not hasattr(self._radio, "start_audio_rx_opus"):
             return
         self._rx_active = True
 
@@ -819,7 +820,7 @@ class AudioHandler:
     def __init__(
         self,
         ws: WebSocketConnection,
-        radio: "IcomRadio | None",
+        radio: "Radio | None",
         broadcaster: "AudioBroadcaster | None" = None,
     ) -> None:
         self._ws = ws
@@ -897,6 +898,8 @@ class AudioHandler:
     async def _handle_tx_audio(self, payload: bytes) -> None:
         """Forward TX audio from browser to radio."""
         if not self._tx_active or not self._radio:
+            return
+        if not hasattr(self._radio, "push_audio_tx_opus"):
             return
         if len(payload) < AUDIO_HEADER_SIZE:
             return

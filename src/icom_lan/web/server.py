@@ -36,7 +36,7 @@ from .radio_poller import CommandQueue, DisableScope, EnableScope, RadioPoller
 from .websocket import WS_KEEPALIVE_INTERVAL, WebSocketConnection, make_accept_key
 
 if TYPE_CHECKING:
-    from ..radio import IcomRadio
+    from ..radio_protocol import Radio
 
 __all__ = ["WebConfig", "WebServer", "run_web_server"]
 
@@ -78,7 +78,7 @@ class WebServer:
 
     def __init__(
         self,
-        radio: "IcomRadio | None" = None,
+        radio: "Radio | None" = None,
         config: WebConfig | None = None,
     ) -> None:
         self._radio = radio
@@ -108,6 +108,15 @@ class WebServer:
         self._scope_health_interval: float = 10.0  # seconds of zero frames before re-enable
 
     # ------------------------------------------------------------------
+    # Helpers for IcomRadio-specific operations (guarded with hasattr)
+    # ------------------------------------------------------------------
+
+    def _set_scope_data_callback(self, callback: Any) -> None:
+        """Set the scope data callback on the radio if it supports it."""
+        if self._radio is not None and hasattr(self._radio, "on_scope_data"):
+            self._radio.on_scope_data(callback)  # type: ignore[union-attr]
+
+    # ------------------------------------------------------------------
     # Lifecycle
     # ------------------------------------------------------------------
 
@@ -120,7 +129,7 @@ class WebServer:
         async with self._scope_enable_lock:
             self._scope_handlers.add(handler)
             if self._radio is not None:
-                self._radio.on_scope_data(self._broadcast_scope)
+                self._set_scope_data_callback(self._broadcast_scope)
                 self._command_queue.put(EnableScope())
                 self._scope_enabled = True
                 logger.info("scope: enable queued")
@@ -129,7 +138,7 @@ class WebServer:
         """Unregister a scope handler."""
         self._scope_handlers.discard(handler)
         if not self._scope_handlers and self._radio is not None:
-            self._radio.on_scope_data(None)
+            self._set_scope_data_callback(None)
             if self._scope_enabled:
                 loop = asyncio.get_event_loop()
                 loop.create_task(self._disable_scope_async())
@@ -142,7 +151,7 @@ class WebServer:
         if self._scope_handlers:
             logger.debug("scope: disable task aborted — handler reconnected")
             if self._radio is not None:
-                self._radio.on_scope_data(self._broadcast_scope)
+                self._set_scope_data_callback(self._broadcast_scope)
             return
         self._command_queue.put(DisableScope())
         if not self._scope_handlers:
@@ -151,7 +160,7 @@ class WebServer:
         else:
             logger.debug("scope: disable queued but new handler present — will re-enable")
             if self._radio is not None:
-                self._radio.on_scope_data(self._broadcast_scope)
+                self._set_scope_data_callback(self._broadcast_scope)
 
     def _broadcast_scope(self, frame: Any) -> None:
         """Broadcast scope frame to all registered handlers.
@@ -246,7 +255,7 @@ class WebServer:
     def _on_radio_reconnect(self) -> None:
         """Called after soft_reconnect — re-enable scope if clients are connected."""
         if self._scope_handlers and self._radio is not None:
-            self._radio.on_scope_data(self._broadcast_scope)
+            self._set_scope_data_callback(self._broadcast_scope)
             self._command_queue.put(EnableScope())
             logger.info("scope: re-enable queued after reconnect (%d handlers)", len(self._scope_handlers))
 
@@ -309,11 +318,15 @@ class WebServer:
         if self._radio is not None:
             # Register callback so CI-V RX stream can notify us of state changes.
             # This is the primary path for freq/mode/meter updates (fire-and-forget).
-            self._radio._on_state_change = self._on_radio_state_change
+            # These are IcomRadio-specific attributes — guarded with hasattr.
+            if hasattr(self._radio, "_on_state_change"):
+                self._radio._on_state_change = self._on_radio_state_change  # type: ignore[union-attr]
             # Pass RadioState to the CI-V RX mixin for dual-receiver state tracking.
-            self._radio._radio_state = self._radio_state
+            if hasattr(self._radio, "_radio_state"):
+                self._radio._radio_state = self._radio_state  # type: ignore[union-attr]
             # Re-enable scope after soft_reconnect (CI-V stream reset loses scope state)
-            self._radio._on_reconnect = self._on_radio_reconnect
+            if hasattr(self._radio, "_on_reconnect"):
+                self._radio._on_reconnect = self._on_radio_reconnect  # type: ignore[union-attr]
             self._radio_poller = RadioPoller(
                 self._radio,
                 self._state_cache,
@@ -338,7 +351,8 @@ class WebServer:
         # Graceful radio disconnect — frees LAN slots immediately
         if self._radio is not None:
             try:
-                await asyncio.wait_for(self._radio.soft_disconnect(), timeout=3.0)
+                _disconnect = getattr(self._radio, "soft_disconnect", None) or self._radio.disconnect
+                await asyncio.wait_for(_disconnect(), timeout=3.0)
                 logger.info("radio: graceful disconnect")
             except Exception:
                 logger.warning("radio: disconnect failed", exc_info=True)
@@ -542,21 +556,27 @@ class WebServer:
     async def _serve_state(self, writer: asyncio.StreamWriter) -> None:
         d = self._radio_state.to_dict()
         d["connected"] = self._radio.connected if self._radio else False
+        _ctrl = getattr(self._radio, "_ctrl_transport", None) if self._radio else None
         d["control_connected"] = (
-            self._radio._ctrl_transport is not None
-            and self._radio._ctrl_transport._udp_transport is not None
-        ) if self._radio else False
+            _ctrl is not None and getattr(_ctrl, "_udp_transport", None) is not None
+        )
         body = json.dumps(d, separators=(",", ":")).encode()
         await _send_response(
             writer, 200, "OK", body, {"Content-Type": "application/json"}
         )
 
     async def _serve_capabilities(self, writer: asyncio.StreamWriter) -> None:
+        _raw_caps = getattr(self._radio, "capabilities", None) if self._radio is not None else None
+        caps: set[str] = _raw_caps if isinstance(_raw_caps, set) else set()
+        _raw_model = getattr(self._radio, "model", None) if self._radio is not None else None
+        model: str = _raw_model if isinstance(_raw_model, str) else self._config.radio_model
         body = json.dumps(
             {
-                "scope": True,
-                "audio": True,
-                "tx": True,
+                "model": model,
+                "scope": "scope" in caps,
+                "audio": "audio" in caps,
+                "tx": "tx" in caps,
+                "capabilities": sorted(caps),
                 "freq_ranges": [
                     {"start": 30000, "end": 60000000, "label": "HF"},
                     {"start": 50000000, "end": 54000000, "label": "6m"},
@@ -704,7 +724,7 @@ async def _send_response(
 
 
 async def run_web_server(
-    radio: "IcomRadio | None" = None, **kwargs: Any
+    radio: "Radio | None" = None, **kwargs: Any
 ) -> None:
     """Create a :class:`WebServer` from *kwargs* and run it forever.
 
