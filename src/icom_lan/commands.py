@@ -106,7 +106,7 @@ _PREAMBLE = b"\xfe\xfe"
 _TERMINATOR = b"\xfd"
 
 # Commands that use sub-commands (for parse disambiguation)
-_COMMANDS_WITH_SUB: set[int] = {_CMD_LEVEL, _CMD_METER, _CMD_PTT, _CMD_CTL_MEM, 0x27}
+_COMMANDS_WITH_SUB: set[int] = {_CMD_LEVEL, _CMD_METER, _CMD_PTT, _CMD_CTL_MEM, 0x27, 0x16}
 
 
 def build_civ_frame(

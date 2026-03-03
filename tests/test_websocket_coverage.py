@@ -226,7 +226,7 @@ async def test_recv_fragmented_message_assembled() -> None:
     ws = WebSocketConnection(reader, writer)
     opcode, payload = await ws.recv()
     assert opcode == WS_OP_TEXT
-    assert payload == b"helo world"
+    assert payload == b"hello world"
 
 
 async def test_recv_two_fragment_message() -> None:

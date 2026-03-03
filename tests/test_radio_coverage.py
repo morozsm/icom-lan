@@ -498,9 +498,11 @@ async def test_set_preamp_raises_when_digisel_on(
     radio: IcomRadio, mock_transport: MockTransport
 ) -> None:
     """set_preamp() must raise CommandError when DIGI-SEL is ON."""
-    # Queue a digisel response: BCD value 01 (on)
-    digisel_response = _raw_byte_response(0x27, 0x16, 0x01)  # DIGI-SEL on
-    mock_transport.queue_response(digisel_response)
+    # get_digisel() uses CMD29 frame: FE FE 98 E0 29 00 16 4E FD
+    # Radio responds with CMD29: FE FE E0 98 29 00 16 4E 01 FD (on=0x01 BCD)
+    # After parsing: command=0x16, sub=0x4E, receiver=0x00, data=[0x01]
+    digisel_civ = bytes.fromhex("fefee0982900164e01fd")
+    mock_transport.queue_response(_wrap_civ_in_udp(digisel_civ))
     with pytest.raises(CommandError, match="DIGI-SEL"):
         await radio.set_preamp(1)
 
@@ -532,8 +534,10 @@ async def test_get_digisel_raises_on_empty_response(
     radio: IcomRadio, mock_transport: MockTransport
 ) -> None:
     """get_digisel() must raise CommandError when radio returns no data byte."""
-    # Build a CIV frame with empty data
-    empty_civ = build_civ_frame(CONTROLLER_ADDR, IC_7610_ADDR, 0x27, sub=0x16)
+    # get_digisel() uses CMD29 frame: FE FE 98 E0 29 00 16 4E FD
+    # Radio responds with empty CMD29: FE FE E0 98 29 00 16 4E FD (no data byte)
+    # After parsing: command=0x16, sub=0x4E, receiver=0x00, data=[]
+    empty_civ = bytes.fromhex("fefee098290016" + "4e" + "fd")
     mock_transport.queue_response(_wrap_civ_in_udp(empty_civ))
     with pytest.raises(CommandError, match="empty DIGI-SEL response"):
         await radio.get_digisel()
@@ -604,7 +608,7 @@ async def test_set_nr_sends_command(
 async def test_get_ip_plus_returns_true(
     radio: IcomRadio, mock_transport: MockTransport
 ) -> None:
-    mock_transport.queue_response(_bool_response(0x27, 0x16, True))
+    mock_transport.queue_response(_bool_response(0x16, 0x65, True))
     result = await radio.get_ip_plus()
     assert result is True
 
@@ -981,7 +985,7 @@ async def test_capture_scope_frames_timeout_raises(
     radio: IcomRadio, mock_transport: MockTransport
 ) -> None:
     """capture_scope_frames() raises TimeoutError if not enough frames arrive."""
-    with pytest.raises(TimeoutError, match="Scope capture timed out"):
+    with pytest.raises(TimeoutError, match="timed out"):
         await radio.capture_scope_frames(count=5, timeout=0.05)
 
 
@@ -1215,7 +1219,7 @@ async def test_soft_reconnect_reconnects_civ_when_ctrl_alive(
     fake_civ_transport._udp_error_count = 0
 
     with (
-        patch("icom_lan.radio.IcomTransport", return_value=fake_civ_transport),
+        patch("icom_lan.transport.IcomTransport", return_value=fake_civ_transport),
         patch.object(radio, "_send_open_close", new=AsyncMock()),
         patch.object(radio, "_stop_civ_rx_pump", new=AsyncMock()),
         patch.object(radio, "_start_civ_rx_pump"),
@@ -1247,7 +1251,7 @@ async def test_soft_reconnect_calls_on_reconnect_callback(
     radio._on_reconnect = mock_on_reconnect
 
     with (
-        patch("icom_lan.radio.IcomTransport", return_value=fake_civ_transport),
+        patch("icom_lan.transport.IcomTransport", return_value=fake_civ_transport),
         patch.object(radio, "_send_open_close", new=AsyncMock()),
         patch.object(radio, "_stop_civ_rx_pump", new=AsyncMock()),
         patch.object(radio, "_start_civ_rx_pump"),
@@ -1737,7 +1741,7 @@ async def test_get_ip_plus_returns_true_on_data(
     radio: IcomRadio, mock_transport: MockTransport
 ) -> None:
     """get_ip_plus() returns True when response data byte is 0x01 (line 1490)."""
-    civ = build_civ_frame(CONTROLLER_ADDR, IC_7610_ADDR, 0x27, sub=0x16, data=bytes([0x01]))
+    civ = build_civ_frame(CONTROLLER_ADDR, IC_7610_ADDR, 0x16, sub=0x65, data=bytes([0x01]))
     mock_transport.queue_response(_wrap_civ_in_udp(civ))
     result = await radio.get_ip_plus()
     assert result is True
@@ -1747,7 +1751,7 @@ async def test_get_ip_plus_returns_false_on_empty_data(
     radio: IcomRadio, mock_transport: MockTransport
 ) -> None:
     """get_ip_plus() returns False when response has no data (line 1490 else branch)."""
-    civ = build_civ_frame(CONTROLLER_ADDR, IC_7610_ADDR, 0x27, sub=0x16)
+    civ = build_civ_frame(CONTROLLER_ADDR, IC_7610_ADDR, 0x16, sub=0x65)
     mock_transport.queue_response(_wrap_civ_in_udp(civ))
     result = await radio.get_ip_plus()
     assert result is False

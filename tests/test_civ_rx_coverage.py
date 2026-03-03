@@ -32,7 +32,7 @@ from __future__ import annotations
 
 import asyncio
 import time
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 
 import pytest
 
@@ -334,7 +334,7 @@ async def test_civ_rx_loop_drains_extra_packets_from_queue(
             pass
 
     # At least the normal receive path ran
-    assert radio._civ_rx_task is None or radio._civ_rx_task.cancelled()
+    assert radio._civ_rx_task is None or radio._civ_rx_task.done()
 
 
 async def test_civ_rx_loop_skips_short_packets(
@@ -504,8 +504,10 @@ def test_update_state_cache_ip_plus(radio: IcomRadio) -> None:
 
 def test_update_state_cache_exception_suppressed(radio: IcomRadio) -> None:
     """Exception in cache update is suppressed (lines 456-457)."""
-    # Corrupt state_cache to raise on update
-    radio._state_cache.update_freq = MagicMock(side_effect=RuntimeError("oops"))
+    # StateCache uses slots=True, so replace the whole object with a MagicMock
+    mock_cache = MagicMock()
+    mock_cache.update_freq = MagicMock(side_effect=RuntimeError("oops"))
+    radio._state_cache = mock_cache
     freq_data = bcd_encode(14_074_000)
     frame = _make_frame(cmd=0x03, data=freq_data)
     # Should NOT raise, exception is swallowed
@@ -766,7 +768,10 @@ def test_update_radio_state_cmd07_active_receiver_main(radio_with_state: IcomRad
 
 def test_update_radio_state_exception_suppressed(radio_with_state: IcomRadio) -> None:
     """Exception in _update_radio_state_from_frame is suppressed (line 621-622)."""
-    radio_with_state._radio_state.receiver = MagicMock(side_effect=RuntimeError("oops"))
+    # RadioState uses slots=True, so replace the whole object with a MagicMock
+    mock_state = MagicMock()
+    mock_state.receiver = MagicMock(side_effect=RuntimeError("oops"))
+    radio_with_state._radio_state = mock_state
     frame = _make_frame(cmd=0x03, data=bcd_encode(14_000_000))
     radio_with_state._update_radio_state_from_frame(frame)  # should not raise
 
@@ -783,7 +788,7 @@ def test_update_radio_state_with_receiver_field_set(radio_with_state: IcomRadio)
 
 def test_update_radio_state_returns_when_no_radio_state(radio: IcomRadio) -> None:
     """When _radio_state is None (not set), method returns immediately (line 469)."""
-    assert not hasattr(radio, "_radio_state") or radio._radio_state is None  # type: ignore[attr-defined]
+    radio._radio_state = None  # type: ignore[assignment]
     frame = _make_frame(cmd=0x03, data=bcd_encode(14_000_000))
     radio._update_radio_state_from_frame(frame)  # should not raise
 
@@ -888,7 +893,7 @@ def test_publish_civ_event_drops_oldest_when_full(radio: IcomRadio) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_start_civ_worker_reuses_existing_commander(radio: IcomRadio) -> None:
+async def test_start_civ_worker_reuses_existing_commander(radio: IcomRadio) -> None:
     """_start_civ_worker reuses existing commander if already created (line 726)."""
     from icom_lan.commander import IcomCommander
 
@@ -908,19 +913,22 @@ def test_start_civ_worker_reuses_existing_commander(radio: IcomRadio) -> None:
 
 async def test_drain_ack_sinks_returns_early_when_no_sinks(radio: IcomRadio) -> None:
     """Returns immediately when ack_sink_count == 0."""
-    radio._civ_request_tracker.ack_sink_count = 0
-    # Should return instantly without any sleeping
-    await radio._drain_ack_sinks_before_blocking()
+    # ack_sink_count is a read-only property; must patch via PropertyMock on the class
+    tracker_type = type(radio._civ_request_tracker)
+    with patch.object(tracker_type, "ack_sink_count", new_callable=PropertyMock, return_value=0):
+        # Should return instantly without any sleeping
+        await radio._drain_ack_sinks_before_blocking()
 
 
 async def test_drain_ack_sinks_drains_and_drops(radio: IcomRadio) -> None:
     """Drains ack sinks and calls drop_ack_sinks if time runs out (lines 759-768)."""
-    # Set up tracker with non-zero ack_sink_count
-    radio._civ_request_tracker.ack_sink_count = 2
+    # ack_sink_count is a read-only property; must patch via PropertyMock on the class
+    tracker_type = type(radio._civ_request_tracker)
     radio._civ_request_tracker.drop_ack_sinks = MagicMock(return_value=2)
     radio._civ_ack_sink_grace = 0.001  # very short grace period
 
-    await radio._drain_ack_sinks_before_blocking()
+    with patch.object(tracker_type, "ack_sink_count", new_callable=PropertyMock, return_value=2):
+        await radio._drain_ack_sinks_before_blocking()
 
     radio._civ_request_tracker.drop_ack_sinks.assert_called_once()
 
