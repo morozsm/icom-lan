@@ -191,7 +191,7 @@ class WebSocketConnection:
                     try:
                         self._writer.write(make_frame(WS_OP_CLOSE, payload))
                         await self._writer.drain()
-                    except Exception:
+                    except OSError:
                         pass
                 raise EOFError("WebSocket closed")
 
@@ -244,7 +244,7 @@ class WebSocketConnection:
             payload = struct.pack("!H", code) + reason.encode("utf-8")
             try:
                 await self._send_raw(make_frame(WS_OP_CLOSE, payload))
-            except Exception:
+            except OSError:
                 pass
             self._closed = True
 

@@ -443,7 +443,7 @@ class _CivRxMixin:
                     cache.update_ptt(val)
                     self._notify_change("ptt", {"state": val})
         except Exception:
-            pass  # Best-effort; never let cache update break the RX loop
+            logger.debug("civ-rx: cache update failed", exc_info=True)  # Best-effort; never let cache update break the RX loop
         # Also update RadioState (additive, does not replace StateCache)
         self._update_radio_state_from_frame(frame)
 
@@ -608,7 +608,7 @@ class _CivRxMixin:
                             )
 
         except Exception:
-            pass  # Best-effort; never break the RX loop
+            logger.debug("civ-rx: state update failed", exc_info=True)  # Best-effort; never break the RX loop
 
     def _notify_change(self, event_name: str, data: dict) -> None:
         """Notify server of state change (best-effort)."""

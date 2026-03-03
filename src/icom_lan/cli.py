@@ -19,11 +19,14 @@ Usage:
 import argparse
 import asyncio
 import json
+import logging
 import os
 import sys
 import time
 import wave
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 from . import __version__
 from .audio import AudioStats
@@ -713,7 +716,7 @@ async def _cmd_audio_rx(radio: IcomRadio, args: argparse.Namespace) -> int:
             try:
                 await radio.stop_audio_rx_pcm()
             except Exception:
-                pass
+                logger.debug("audio-rx: stop_audio_rx_pcm failed", exc_info=True)
 
     pcm_bytes = b"".join(frames)
     try:
@@ -833,7 +836,7 @@ async def _cmd_audio_tx(radio: IcomRadio, args: argparse.Namespace) -> int:
             try:
                 await radio.stop_audio_tx_pcm()
             except Exception:
-                pass
+                logger.debug("audio-tx: stop_audio_tx_pcm failed", exc_info=True)
 
     elapsed = round(time.monotonic() - start_time, 3)
     payload = {
@@ -926,7 +929,7 @@ async def _cmd_audio_loopback(radio: IcomRadio, args: argparse.Namespace) -> int
             try:
                 await radio.stop_audio_rx_pcm()
             except Exception:
-                pass
+                logger.debug("audio-loopback: stop_audio_rx_pcm failed", exc_info=True)
         stop_event.set()
         if worker_task is not None:
             try:
@@ -937,7 +940,7 @@ async def _cmd_audio_loopback(radio: IcomRadio, args: argparse.Namespace) -> int
             try:
                 await radio.stop_audio_tx_pcm()
             except Exception:
-                pass
+                logger.debug("audio-loopback: stop_audio_tx_pcm failed", exc_info=True)
 
     if worker_error is not None:
         raise worker_error
@@ -1188,7 +1191,7 @@ async def _cmd_scope(radio: IcomRadio, args: argparse.Namespace) -> int:
         try:
             await radio.disable_scope()
         except Exception:
-            pass
+            logger.debug("scope: disable_scope failed", exc_info=True)
 
     return 0
 
