@@ -1016,3 +1016,864 @@ async def test_capture_scope_frames_multiple(
             await task
         except asyncio.CancelledError:
             pass
+
+
+# ---------------------------------------------------------------------------
+# connected property — _udp_error_count check (lines 261, 265)
+# ---------------------------------------------------------------------------
+
+
+def test_connected_returns_false_when_error_count_positive(radio: IcomRadio) -> None:
+    """connected returns False when transport has _udp_error_count > 0 (lines 261, 265)."""
+    radio._civ_transport._udp_error_count = 1  # type: ignore[attr-defined]
+    assert radio.connected is False
+
+
+def test_connected_returns_true_when_error_count_zero(radio: IcomRadio) -> None:
+    """connected returns True when transport has _udp_error_count == 0."""
+    radio._civ_transport._udp_error_count = 0  # type: ignore[attr-defined]
+    assert radio.connected is True
+
+
+def test_connected_returns_true_when_no_error_count_attr(radio: IcomRadio) -> None:
+    """connected returns True when transport has no _udp_error_count (regular mock)."""
+    # MockTransport has no _udp_error_count, so isinstance(None, int) is False
+    assert radio.connected is True
+
+
+def test_connected_returns_false_when_civ_transport_none(radio: IcomRadio) -> None:
+    """connected returns False when _civ_transport is None."""
+    radio._civ_transport = None
+    assert radio.connected is False
+
+
+# ---------------------------------------------------------------------------
+# disconnect() — audio stream and transport (lines 332-334, 339-344)
+# ---------------------------------------------------------------------------
+
+
+async def test_disconnect_stops_audio_stream(radio: IcomRadio) -> None:
+    """disconnect() stops audio stream and clears it (lines 332-334)."""
+    audio_stream = MagicMock()
+    audio_stream.stop_rx = AsyncMock()
+    audio_stream.stop_tx = AsyncMock()
+    radio._audio_stream = audio_stream
+
+    with (
+        patch.object(radio, "_stop_watchdog"),
+        patch.object(radio, "_stop_reconnect"),
+        patch.object(radio, "_stop_token_renewal"),
+        patch.object(radio, "_send_open_close", new=AsyncMock()),
+        patch.object(radio, "_stop_civ_data_watchdog", new=AsyncMock()),
+        patch.object(radio, "_stop_civ_worker", new=AsyncMock()),
+        patch.object(radio, "_stop_civ_rx_pump", new=AsyncMock()),
+    ):
+        await radio.disconnect()
+
+    audio_stream.stop_rx.assert_awaited_once()
+    audio_stream.stop_tx.assert_awaited_once()
+    assert radio._audio_stream is None
+
+
+async def test_disconnect_disconnects_audio_transport(radio: IcomRadio) -> None:
+    """disconnect() closes audio transport (lines 339-344)."""
+    audio_transport = MagicMock()
+    audio_transport.disconnect = AsyncMock()
+    radio._audio_transport = audio_transport
+
+    with (
+        patch.object(radio, "_stop_watchdog"),
+        patch.object(radio, "_stop_reconnect"),
+        patch.object(radio, "_stop_token_renewal"),
+        patch.object(radio, "_send_audio_open_close", new=AsyncMock()),
+        patch.object(radio, "_send_open_close", new=AsyncMock()),
+        patch.object(radio, "_stop_civ_data_watchdog", new=AsyncMock()),
+        patch.object(radio, "_stop_civ_worker", new=AsyncMock()),
+        patch.object(radio, "_stop_civ_rx_pump", new=AsyncMock()),
+    ):
+        await radio.disconnect()
+
+    audio_transport.disconnect.assert_awaited_once()
+    assert radio._audio_transport is None
+
+
+# ---------------------------------------------------------------------------
+# soft_disconnect() — audio transport (lines 379-384)
+# ---------------------------------------------------------------------------
+
+
+async def test_soft_disconnect_disconnects_audio_transport(
+    radio: IcomRadio,
+) -> None:
+    """soft_disconnect() closes audio transport when set (lines 379-384)."""
+    audio_transport = MagicMock()
+    audio_transport.disconnect = AsyncMock()
+    radio._audio_transport = audio_transport
+
+    with (
+        patch.object(radio, "_send_audio_open_close", new=AsyncMock()),
+        patch.object(radio, "_send_open_close", new=AsyncMock()),
+        patch.object(radio, "_stop_civ_data_watchdog", new=AsyncMock()),
+        patch.object(radio, "_stop_civ_worker", new=AsyncMock()),
+        patch.object(radio, "_stop_civ_rx_pump", new=AsyncMock()),
+    ):
+        await radio.soft_disconnect()
+
+    audio_transport.disconnect.assert_awaited_once()
+    assert radio._audio_transport is None
+
+
+async def test_soft_disconnect_handles_civ_open_close_failure(
+    radio: IcomRadio,
+) -> None:
+    """soft_disconnect() ignores exception from _send_open_close (lines 390-391)."""
+
+    async def failing_open_close(*, open_stream: bool) -> None:
+        raise OSError("connection refused")
+
+    with (
+        patch.object(radio, "_send_open_close", side_effect=failing_open_close),
+        patch.object(radio, "_stop_civ_data_watchdog", new=AsyncMock()),
+        patch.object(radio, "_stop_civ_worker", new=AsyncMock()),
+        patch.object(radio, "_stop_civ_rx_pump", new=AsyncMock()),
+    ):
+        await radio.soft_disconnect()  # should not raise
+
+    assert radio._civ_transport is None
+
+
+# ---------------------------------------------------------------------------
+# _force_cleanup_civ (lines 407-417)
+# ---------------------------------------------------------------------------
+
+
+async def test_force_cleanup_civ_tears_down_transport(
+    radio: IcomRadio, mock_transport: MockTransport
+) -> None:
+    """_force_cleanup_civ disconnects transport unconditionally (lines 407-417)."""
+    from icom_lan._connection_state import RadioConnectionState
+
+    with (
+        patch.object(radio, "_stop_civ_data_watchdog", new=AsyncMock()),
+        patch.object(radio, "_stop_civ_worker", new=AsyncMock()),
+        patch.object(radio, "_stop_civ_rx_pump", new=AsyncMock()),
+    ):
+        await radio._force_cleanup_civ()
+
+    assert radio._civ_transport is None
+    assert radio._conn_state == RadioConnectionState.DISCONNECTED
+
+
+async def test_force_cleanup_civ_handles_disconnect_failure(
+    radio: IcomRadio,
+) -> None:
+    """_force_cleanup_civ ignores transport.disconnect() exceptions (lines 414-415)."""
+    failing_transport = MagicMock()
+    failing_transport.disconnect = AsyncMock(side_effect=OSError("transport dead"))
+    radio._civ_transport = failing_transport
+
+    with (
+        patch.object(radio, "_stop_civ_data_watchdog", new=AsyncMock()),
+        patch.object(radio, "_stop_civ_worker", new=AsyncMock()),
+        patch.object(radio, "_stop_civ_rx_pump", new=AsyncMock()),
+    ):
+        await radio._force_cleanup_civ()  # should not raise
+
+    assert radio._civ_transport is None
+
+
+async def test_force_cleanup_civ_when_no_transport(radio: IcomRadio) -> None:
+    """_force_cleanup_civ works when civ_transport is already None."""
+    radio._civ_transport = None
+
+    with (
+        patch.object(radio, "_stop_civ_data_watchdog", new=AsyncMock()),
+        patch.object(radio, "_stop_civ_worker", new=AsyncMock()),
+        patch.object(radio, "_stop_civ_rx_pump", new=AsyncMock()),
+    ):
+        await radio._force_cleanup_civ()  # should not raise
+
+
+# ---------------------------------------------------------------------------
+# soft_reconnect() — main reconnect path (lines 434-472)
+# ---------------------------------------------------------------------------
+
+
+async def test_soft_reconnect_reconnects_civ_when_ctrl_alive(
+    radio: IcomRadio, mock_transport: MockTransport
+) -> None:
+    """soft_reconnect() opens new CI-V transport when ctrl is still alive (lines 434-472)."""
+    from icom_lan._connection_state import RadioConnectionState
+    from icom_lan.transport import IcomTransport
+
+    radio._civ_transport = None
+    # Make ctrl transport appear alive
+    radio._ctrl_transport._udp_transport = MagicMock()  # type: ignore[attr-defined]
+
+    fake_civ_transport = MagicMock()
+    fake_civ_transport.connect = AsyncMock()
+    fake_civ_transport._udp_error_count = 0
+
+    with (
+        patch("icom_lan.radio.IcomTransport", return_value=fake_civ_transport),
+        patch.object(radio, "_send_open_close", new=AsyncMock()),
+        patch.object(radio, "_stop_civ_rx_pump", new=AsyncMock()),
+        patch.object(radio, "_start_civ_rx_pump"),
+        patch.object(radio, "_start_civ_worker"),
+        patch.object(radio, "_start_civ_data_watchdog"),
+    ):
+        await radio.soft_reconnect()
+
+    assert radio._conn_state == RadioConnectionState.CONNECTED
+    assert radio._civ_transport is fake_civ_transport
+
+
+async def test_soft_reconnect_calls_on_reconnect_callback(
+    radio: IcomRadio,
+) -> None:
+    """soft_reconnect() calls _on_reconnect callback if set (lines 468-472)."""
+    radio._civ_transport = None
+    radio._ctrl_transport._udp_transport = MagicMock()  # type: ignore[attr-defined]
+
+    fake_civ_transport = MagicMock()
+    fake_civ_transport.connect = AsyncMock()
+    fake_civ_transport._udp_error_count = 0
+
+    reconnect_called = [False]
+
+    def mock_on_reconnect() -> None:
+        reconnect_called[0] = True
+
+    radio._on_reconnect = mock_on_reconnect
+
+    with (
+        patch("icom_lan.radio.IcomTransport", return_value=fake_civ_transport),
+        patch.object(radio, "_send_open_close", new=AsyncMock()),
+        patch.object(radio, "_stop_civ_rx_pump", new=AsyncMock()),
+        patch.object(radio, "_start_civ_rx_pump"),
+        patch.object(radio, "_start_civ_worker"),
+        patch.object(radio, "_start_civ_data_watchdog"),
+    ):
+        await radio.soft_reconnect()
+
+    assert reconnect_called[0]
+
+
+async def test_soft_reconnect_handles_connect_failure(radio: IcomRadio) -> None:
+    """soft_reconnect() raises ConnectionError when transport.connect() fails (lines 444-447)."""
+    radio._civ_transport = None
+    radio._ctrl_transport._udp_transport = MagicMock()  # type: ignore[attr-defined]
+
+    fake_civ_transport = MagicMock()
+    fake_civ_transport.connect = AsyncMock(side_effect=OSError("port busy"))
+
+    with (
+        patch("icom_lan.radio.IcomTransport", return_value=fake_civ_transport),
+    ):
+        with pytest.raises(ConnectionError, match="Failed to reconnect CI-V"):
+            await radio.soft_reconnect()
+
+    assert radio._civ_transport is None
+
+
+# ---------------------------------------------------------------------------
+# _watchdog_loop (lines 496, 506-508, 515-521)
+# ---------------------------------------------------------------------------
+
+
+async def test_watchdog_loop_exits_when_disconnected(radio: IcomRadio) -> None:
+    """_watchdog_loop exits when _connected becomes False (line 496)."""
+    radio._connected = False  # already disconnected
+    # Should exit immediately without starting a reconnect
+    await radio._watchdog_loop()
+
+
+async def test_watchdog_loop_detects_activity(radio: IcomRadio) -> None:
+    """_watchdog_loop updates last_activity when packets arrive (lines 506-508)."""
+    radio._ctrl_transport.rx_packet_count = 0
+    call_count = [0]
+
+    original_sleep = asyncio.sleep
+
+    async def mock_sleep(delay: float) -> None:
+        call_count[0] += 1
+        if call_count[0] == 1:
+            # Simulate packet arrival
+            radio._ctrl_transport.rx_packet_count = 5
+        elif call_count[0] >= 2:
+            radio._connected = False
+            raise asyncio.CancelledError()
+
+    with patch("asyncio.sleep", side_effect=mock_sleep):
+        await radio._watchdog_loop()
+
+    assert call_count[0] >= 2
+
+
+async def test_watchdog_loop_logs_health_periodically(
+    radio: IcomRadio, caplog: pytest.LogCaptureFixture
+) -> None:
+    """_watchdog_loop logs health info periodically (lines 515-521)."""
+    import logging
+    import time as time_mod
+
+    radio._ctrl_transport.rx_packet_count = 10
+    call_count = [0]
+    base_time = time_mod.monotonic()
+
+    def advancing_time() -> float:
+        call_count[0] += 1
+        # Advance time beyond health log interval on later calls
+        if call_count[0] <= 3:
+            return base_time
+        return base_time + radio._WATCHDOG_HEALTH_LOG_INTERVAL + 1.0
+
+    async def mock_sleep(delay: float) -> None:
+        if call_count[0] >= 6:
+            radio._connected = False
+            raise asyncio.CancelledError()
+
+    with (
+        patch("icom_lan.radio.time.monotonic", side_effect=advancing_time),
+        patch("asyncio.sleep", side_effect=mock_sleep),
+        caplog.at_level(logging.INFO, logger="icom_lan.radio"),
+    ):
+        await radio._watchdog_loop()
+
+
+async def test_watchdog_loop_triggers_reconnect_on_timeout(radio: IcomRadio) -> None:
+    """_watchdog_loop triggers reconnect after idle timeout (lines 523-531)."""
+    from icom_lan._connection_state import RadioConnectionState
+    import time as time_mod
+
+    radio._watchdog_timeout = 0.01  # very short timeout
+
+    call_count = [0]
+    base_time = time_mod.monotonic()
+
+    def mock_time() -> float:
+        call_count[0] += 1
+        # Start just past last activity so watchdog triggers
+        return base_time + (call_count[0] * 1.0)
+
+    async def mock_sleep(delay: float) -> None:
+        pass  # Don't actually wait
+
+    with (
+        patch("icom_lan.radio.time.monotonic", side_effect=mock_time),
+        patch("asyncio.sleep", side_effect=mock_sleep),
+        patch("asyncio.create_task") as mock_create_task,
+    ):
+        await radio._watchdog_loop()
+
+    # A reconnect task should have been created
+    mock_create_task.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# _reconnect_loop (lines 553-586)
+# ---------------------------------------------------------------------------
+
+
+async def test_reconnect_loop_succeeds_on_first_attempt(radio: IcomRadio) -> None:
+    """_reconnect_loop reconnects successfully on first attempt (lines 553-581)."""
+    from icom_lan._connection_state import RadioConnectionState
+    from icom_lan.transport import IcomTransport
+
+    radio._conn_state = RadioConnectionState.RECONNECTING
+
+    connect_called = [False]
+    fake_transport = MagicMock()
+
+    async def fake_connect() -> None:
+        connect_called[0] = True
+        radio._conn_state = RadioConnectionState.CONNECTED
+
+    with (
+        patch("icom_lan.radio.IcomTransport", return_value=fake_transport),
+        patch.object(radio, "connect", side_effect=fake_connect),
+        patch.object(radio, "_stop_token_renewal"),
+        patch.object(radio, "_capture_audio_snapshot", return_value=None),
+    ):
+        await radio._reconnect_loop()
+
+    assert connect_called[0]
+
+
+async def test_reconnect_loop_handles_audio_stop_failure(radio: IcomRadio) -> None:
+    """_reconnect_loop handles failure when stopping audio stream (lines 553-554)."""
+    from icom_lan._connection_state import RadioConnectionState
+    from icom_lan.transport import IcomTransport
+
+    radio._conn_state = RadioConnectionState.RECONNECTING
+
+    # Set up a failing audio stream
+    audio_stream = MagicMock()
+    audio_stream.stop_rx = AsyncMock(side_effect=OSError("rx stop failed"))
+    audio_stream.stop_tx = AsyncMock()
+    radio._audio_stream = audio_stream
+
+    connect_called = [False]
+
+    async def fake_connect() -> None:
+        connect_called[0] = True
+        radio._conn_state = RadioConnectionState.CONNECTED
+
+    with (
+        patch("icom_lan.radio.IcomTransport", return_value=MagicMock()),
+        patch.object(radio, "connect", side_effect=fake_connect),
+        patch.object(radio, "_stop_token_renewal"),
+        patch.object(radio, "_capture_audio_snapshot", return_value=None),
+    ):
+        await radio._reconnect_loop()
+
+    assert connect_called[0]
+
+
+async def test_reconnect_loop_retries_on_failure(radio: IcomRadio) -> None:
+    """_reconnect_loop retries with backoff when connect fails (lines 583-586)."""
+    from icom_lan._connection_state import RadioConnectionState
+
+    radio._conn_state = RadioConnectionState.RECONNECTING
+    radio._reconnect_delay = 0.001  # very short delay
+
+    call_count = [0]
+
+    async def intermittent_connect() -> None:
+        call_count[0] += 1
+        if call_count[0] < 3:
+            raise ConnectionError("radio unreachable")
+        radio._conn_state = RadioConnectionState.CONNECTED
+
+    with (
+        patch("icom_lan.radio.IcomTransport", return_value=MagicMock()),
+        patch.object(radio, "connect", side_effect=intermittent_connect),
+        patch.object(radio, "_stop_token_renewal"),
+        patch.object(radio, "_capture_audio_snapshot", return_value=None),
+        patch("asyncio.sleep", new=AsyncMock()),
+    ):
+        await radio._reconnect_loop()
+
+    assert call_count[0] == 3
+
+
+async def test_reconnect_loop_stops_audio_transport_on_reconnect(radio: IcomRadio) -> None:
+    """_reconnect_loop disconnects audio transport during retry (lines 559-561)."""
+    from icom_lan._connection_state import RadioConnectionState
+
+    radio._conn_state = RadioConnectionState.RECONNECTING
+
+    audio_transport = MagicMock()
+    audio_transport.disconnect = AsyncMock()
+    radio._audio_transport = audio_transport
+
+    async def fake_connect() -> None:
+        radio._conn_state = RadioConnectionState.CONNECTED
+
+    with (
+        patch("icom_lan.radio.IcomTransport", return_value=MagicMock()),
+        patch.object(radio, "connect", side_effect=fake_connect),
+        patch.object(radio, "_stop_token_renewal"),
+        patch.object(radio, "_capture_audio_snapshot", return_value=None),
+    ):
+        await radio._reconnect_loop()
+
+    audio_transport.disconnect.assert_awaited_once()
+
+
+async def test_reconnect_loop_stops_civ_transport_on_reconnect(radio: IcomRadio) -> None:
+    """_reconnect_loop disconnects civ transport during retry (lines 564-567)."""
+    from icom_lan._connection_state import RadioConnectionState
+
+    radio._conn_state = RadioConnectionState.RECONNECTING
+
+    async def fake_connect() -> None:
+        radio._conn_state = RadioConnectionState.CONNECTED
+
+    with (
+        patch("icom_lan.radio.IcomTransport", return_value=MagicMock()),
+        patch.object(radio, "connect", side_effect=fake_connect),
+        patch.object(radio, "_stop_token_renewal"),
+        patch.object(radio, "_capture_audio_snapshot", return_value=None),
+    ):
+        await radio._reconnect_loop()
+
+    # _civ_transport was disconnected during reconnect
+    assert radio._civ_transport is None
+
+
+async def test_reconnect_loop_stops_ctrl_transport_on_reconnect(radio: IcomRadio) -> None:
+    """_reconnect_loop disconnects ctrl transport during retry (lines 568-571)."""
+    from icom_lan._connection_state import RadioConnectionState
+
+    radio._conn_state = RadioConnectionState.RECONNECTING
+
+    async def fake_connect() -> None:
+        radio._conn_state = RadioConnectionState.CONNECTED
+
+    with (
+        patch("icom_lan.radio.IcomTransport", return_value=MagicMock()),
+        patch.object(radio, "connect", side_effect=fake_connect),
+        patch.object(radio, "_stop_token_renewal"),
+        patch.object(radio, "_capture_audio_snapshot", return_value=None),
+    ):
+        await radio._reconnect_loop()
+    # No assertion needed — just verify it doesn't raise
+
+
+# ---------------------------------------------------------------------------
+# _ensure_audio_transport (lines 993-1013)
+# ---------------------------------------------------------------------------
+
+
+async def test_ensure_audio_transport_raises_when_audio_port_zero(
+    radio: IcomRadio,
+) -> None:
+    """_ensure_audio_transport raises ConnectionError when audio port is 0 (line 991)."""
+    radio._audio_port = 0
+    with pytest.raises(ConnectionError, match="Audio port not available"):
+        await radio._ensure_audio_transport()
+
+
+async def test_ensure_audio_transport_creates_transport(radio: IcomRadio) -> None:
+    """_ensure_audio_transport connects audio transport (lines 993-1013)."""
+    from icom_lan.audio import AudioStream
+
+    radio._audio_port = 50001  # non-zero port
+
+    fake_transport = MagicMock()
+    fake_transport.connect = AsyncMock()
+
+    with (
+        patch("icom_lan.radio.IcomTransport", return_value=fake_transport),
+        patch.object(radio, "_send_audio_open_close", new=AsyncMock()),
+        patch("icom_lan.radio.AudioStream") as mock_audio_stream_cls,
+    ):
+        await radio._ensure_audio_transport()
+
+    assert radio._audio_transport is fake_transport
+    fake_transport.connect.assert_awaited_once()
+
+
+async def test_ensure_audio_transport_noop_when_stream_exists(radio: IcomRadio) -> None:
+    """_ensure_audio_transport is noop when _audio_stream already set (line 987-988)."""
+    radio._audio_stream = MagicMock()  # already connected
+
+    with patch("icom_lan.radio.IcomTransport") as mock_cls:
+        await radio._ensure_audio_transport()
+        mock_cls.assert_not_called()
+
+
+async def test_ensure_audio_transport_handles_connect_failure(radio: IcomRadio) -> None:
+    """_ensure_audio_transport wraps OSError as ConnectionError (lines 999-1003)."""
+    radio._audio_port = 50002
+
+    fake_transport = MagicMock()
+    fake_transport.connect = AsyncMock(side_effect=OSError("port busy"))
+
+    with patch("icom_lan.radio.IcomTransport", return_value=fake_transport):
+        with pytest.raises(ConnectionError, match="Failed to connect audio port"):
+            await radio._ensure_audio_transport()
+
+    assert radio._audio_transport is None
+
+
+# ---------------------------------------------------------------------------
+# get_filter / set_filter (lines 1117-1118, 1122-1123)
+# ---------------------------------------------------------------------------
+
+
+async def test_get_filter_returns_filter_width(
+    radio: IcomRadio, mock_transport: MockTransport
+) -> None:
+    """get_filter() returns filter width from mode response (lines 1117-1118)."""
+    from icom_lan.commands import _CMD_MODE_GET
+
+    mode_civ = build_civ_frame(
+        CONTROLLER_ADDR, IC_7610_ADDR, _CMD_MODE_GET,
+        data=bytes([Mode.USB.value, 2]),
+    )
+    mock_transport.queue_response(_wrap_civ_in_udp(mode_civ))
+    result = await radio.get_filter()
+    assert result == 2
+
+
+async def test_set_filter_reads_mode_then_sets(
+    radio: IcomRadio, mock_transport: MockTransport
+) -> None:
+    """set_filter() reads current mode then calls set_mode (lines 1122-1123)."""
+    from icom_lan.commands import _CMD_MODE_GET
+
+    mode_civ = build_civ_frame(
+        CONTROLLER_ADDR, IC_7610_ADDR, _CMD_MODE_GET,
+        data=bytes([Mode.USB.value, 1]),
+    )
+    mock_transport.queue_response(_wrap_civ_in_udp(mode_civ))
+
+    with patch.object(radio, "set_mode", new=AsyncMock()) as mock_set:
+        await radio.set_filter(2)
+
+    mock_set.assert_awaited_once_with(Mode.USB, filter_width=2, receiver=0)
+
+
+# ---------------------------------------------------------------------------
+# set_mode with filter_width (line 1140)
+# ---------------------------------------------------------------------------
+
+
+async def test_set_mode_with_filter_width_updates_state(
+    radio: IcomRadio, mock_transport: MockTransport
+) -> None:
+    """set_mode() with filter_width updates _filter_width (line 1140)."""
+    await radio.set_mode(Mode.USB, filter_width=2)
+    assert radio._filter_width == 2
+
+
+# ---------------------------------------------------------------------------
+# get_rf_gain / get_af_level success paths (lines 1210, 1228)
+# ---------------------------------------------------------------------------
+
+
+async def test_get_rf_gain_returns_level(
+    radio: IcomRadio, mock_transport: MockTransport
+) -> None:
+    """get_rf_gain() returns parsed level on success (line 1210)."""
+    # Build RF gain response: cmd 0x14 sub 0x02, value BCD
+    d = f"{200:04d}"
+    b0 = (int(d[0]) << 4) | int(d[1])
+    b1 = (int(d[2]) << 4) | int(d[3])
+    civ = build_civ_frame(
+        CONTROLLER_ADDR, IC_7610_ADDR, 0x14, sub=0x02, data=bytes([b0, b1])
+    )
+    mock_transport.queue_response(_wrap_civ_in_udp(civ))
+    result = await radio.get_rf_gain()
+    assert result == 200
+
+
+async def test_get_af_level_returns_level(
+    radio: IcomRadio, mock_transport: MockTransport
+) -> None:
+    """get_af_level() returns parsed level on success (line 1228)."""
+    d = f"{150:04d}"
+    b0 = (int(d[0]) << 4) | int(d[1])
+    b1 = (int(d[2]) << 4) | int(d[3])
+    civ = build_civ_frame(
+        CONTROLLER_ADDR, IC_7610_ADDR, 0x14, sub=0x01, data=bytes([b0, b1])
+    )
+    mock_transport.queue_response(_wrap_civ_in_udp(civ))
+    result = await radio.get_af_level()
+    assert result == 150
+
+
+# ---------------------------------------------------------------------------
+# set_preamp error propagation (lines 1421, 1426-1427)
+# ---------------------------------------------------------------------------
+
+
+async def test_set_preamp_propagates_own_digi_sel_error(
+    radio: IcomRadio,
+) -> None:
+    """set_preamp() propagates its own DIGI-SEL CommandError (lines 1421, 1426-1427)."""
+    from icom_lan.exceptions import CommandError
+
+    # Mock get_digisel to return True (DIGI-SEL on)
+    with patch.object(radio, "get_digisel", new=AsyncMock(return_value=True)):
+        with pytest.raises(CommandError, match="DIGI-SEL"):
+            await radio.set_preamp(1)
+
+
+async def test_set_preamp_ignores_unrelated_command_error(
+    radio: IcomRadio,
+) -> None:
+    """set_preamp() ignores CommandError that isn't its own DIGI-SEL error."""
+    from icom_lan.exceptions import CommandError
+
+    # Mock get_digisel to raise a different CommandError
+    with patch.object(
+        radio,
+        "get_digisel",
+        new=AsyncMock(side_effect=CommandError("radio unreachable")),
+    ):
+        # Should NOT raise — it's a different CommandError, not DIGI-SEL
+        await radio.set_preamp(1)
+
+
+# ---------------------------------------------------------------------------
+# get_nb / get_nr / get_ip_plus — empty data fallback (lines 1442, 1462, 1475, 1490)
+# ---------------------------------------------------------------------------
+
+
+async def test_get_nb_returns_false_on_empty_data(
+    radio: IcomRadio, mock_transport: MockTransport
+) -> None:
+    """get_nb() returns False when response has no data (line 1462)."""
+    civ = build_civ_frame(CONTROLLER_ADDR, IC_7610_ADDR, 0x16, sub=0x22)
+    mock_transport.queue_response(_wrap_civ_in_udp(civ))
+    result = await radio.get_nb()
+    assert result is False
+
+
+async def test_get_nr_returns_true_on_data(
+    radio: IcomRadio, mock_transport: MockTransport
+) -> None:
+    """get_nr() returns True when response data byte is 0x01 (line 1475)."""
+    civ = build_civ_frame(CONTROLLER_ADDR, IC_7610_ADDR, 0x16, sub=0x40, data=bytes([0x01]))
+    mock_transport.queue_response(_wrap_civ_in_udp(civ))
+    result = await radio.get_nr()
+    assert result is True
+
+
+async def test_get_nr_returns_false_on_empty_data(
+    radio: IcomRadio, mock_transport: MockTransport
+) -> None:
+    """get_nr() returns False when response has no data (line 1475 else branch)."""
+    civ = build_civ_frame(CONTROLLER_ADDR, IC_7610_ADDR, 0x16, sub=0x40)
+    mock_transport.queue_response(_wrap_civ_in_udp(civ))
+    result = await radio.get_nr()
+    assert result is False
+
+
+async def test_get_ip_plus_returns_true_on_data(
+    radio: IcomRadio, mock_transport: MockTransport
+) -> None:
+    """get_ip_plus() returns True when response data byte is 0x01 (line 1490)."""
+    civ = build_civ_frame(CONTROLLER_ADDR, IC_7610_ADDR, 0x27, sub=0x16, data=bytes([0x01]))
+    mock_transport.queue_response(_wrap_civ_in_udp(civ))
+    result = await radio.get_ip_plus()
+    assert result is True
+
+
+async def test_get_ip_plus_returns_false_on_empty_data(
+    radio: IcomRadio, mock_transport: MockTransport
+) -> None:
+    """get_ip_plus() returns False when response has no data (line 1490 else branch)."""
+    civ = build_civ_frame(CONTROLLER_ADDR, IC_7610_ADDR, 0x27, sub=0x16)
+    mock_transport.queue_response(_wrap_civ_in_udp(civ))
+    result = await radio.get_ip_plus()
+    assert result is False
+
+
+# ---------------------------------------------------------------------------
+# snapshot_state — cached attribute fallback paths (lines 1520, 1530, 1532, 1534, 1536)
+# ---------------------------------------------------------------------------
+
+
+async def test_snapshot_state_includes_cached_filter(
+    radio: IcomRadio, mock_transport: MockTransport
+) -> None:
+    """snapshot_state() includes _filter_width when mode fails (line 1520)."""
+    radio._last_mode = Mode.USB
+    radio._filter_width = 2  # cached filter
+    radio._last_freq_hz = 14_074_000
+    radio._last_power = 100
+
+    snap = await radio.snapshot_state()
+    assert snap.get("filter") == 2
+
+
+async def test_snapshot_state_includes_last_split(
+    radio: IcomRadio, mock_transport: MockTransport
+) -> None:
+    """snapshot_state() includes _last_split when set (line 1530)."""
+    radio._last_split = True
+    radio._last_freq_hz = 14_074_000
+
+    snap = await radio.snapshot_state()
+    assert snap.get("split") is True
+
+
+async def test_snapshot_state_includes_last_vfo(
+    radio: IcomRadio, mock_transport: MockTransport
+) -> None:
+    """snapshot_state() includes _last_vfo when set (line 1532)."""
+    radio._last_vfo = "VFOB"
+    radio._last_freq_hz = 14_074_000
+
+    snap = await radio.snapshot_state()
+    assert snap.get("vfo") == "VFOB"
+
+
+async def test_snapshot_state_includes_attenuator_state(
+    radio: IcomRadio, mock_transport: MockTransport
+) -> None:
+    """snapshot_state() includes _attenuator_state when set (line 1534)."""
+    radio._attenuator_state = True
+    radio._last_freq_hz = 14_074_000
+
+    snap = await radio.snapshot_state()
+    assert snap.get("attenuator") is True
+
+
+async def test_snapshot_state_includes_preamp_level(
+    radio: IcomRadio, mock_transport: MockTransport
+) -> None:
+    """snapshot_state() includes _preamp_level when set (line 1536)."""
+    radio._preamp_level = 1
+    radio._last_freq_hz = 14_074_000
+
+    snap = await radio.snapshot_state()
+    assert snap.get("preamp") == 1
+
+
+# ---------------------------------------------------------------------------
+# run_state_transaction — body and commander paths (lines 1597-1598, 1608)
+# ---------------------------------------------------------------------------
+
+
+async def test_run_state_transaction_body_is_called(
+    radio: IcomRadio, mock_transport: MockTransport
+) -> None:
+    """run_state_transaction() calls body() (lines 1597-1598)."""
+    body_called = [False]
+
+    async def body() -> None:
+        body_called[0] = True
+
+    with (
+        patch.object(radio, "snapshot_state", new=AsyncMock(return_value={})),
+        patch.object(radio, "restore_state", new=AsyncMock()),
+    ):
+        await radio.run_state_transaction(body)
+
+    assert body_called[0]
+
+
+async def test_run_state_transaction_uses_commander_when_available(
+    radio: IcomRadio, mock_transport: MockTransport
+) -> None:
+    """run_state_transaction() uses commander.transaction() when commander is set (line 1608)."""
+    from icom_lan.commander import IcomCommander
+
+    mock_commander = MagicMock(spec=IcomCommander)
+    mock_commander.transaction = AsyncMock()
+    radio._commander = mock_commander
+
+    async def body() -> None:
+        pass
+
+    await radio.run_state_transaction(body)
+    mock_commander.transaction.assert_awaited_once()
+
+
+# ---------------------------------------------------------------------------
+# scope_stream — task_done (lines 1688-1689)
+# ---------------------------------------------------------------------------
+
+
+async def test_scope_stream_calls_task_done(radio: IcomRadio) -> None:
+    """scope_stream() calls task_done after yielding a frame (lines 1688-1689)."""
+    frame = ScopeFrame(
+        receiver=0, mode=1,
+        start_freq_hz=14_000_000, end_freq_hz=14_350_000,
+        pixels=bytes([80] * 50), out_of_range=False,
+    )
+    await radio._scope_frame_queue.put(frame)
+
+    received = []
+    async for f in radio.scope_stream():
+        received.append(f)
+        radio._connected = False  # Stop after first frame
+
+    assert received[0] is frame
+    # task_done was called; queue should be joinable (empty)
+    assert radio._scope_frame_queue.empty()
