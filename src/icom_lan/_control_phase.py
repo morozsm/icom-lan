@@ -322,7 +322,7 @@ class _ControlPhaseMixin:
             send_seq=self._civ_send_seq,  # type: ignore[attr-defined]
             open_stream=open_stream,
         )
-        self._civ_send_seq += 1  # type: ignore[attr-defined]
+        self._civ_send_seq = (self._civ_send_seq + 1) & 0xFFFF  # type: ignore[attr-defined]
 
     async def _send_audio_open_close(self, *, open_stream: bool) -> None:
         """Send OpenClose packet on the audio port (wfview behavior)."""
@@ -333,7 +333,7 @@ class _ControlPhaseMixin:
             send_seq=self._audio_send_seq,  # type: ignore[attr-defined]
             open_stream=open_stream,
         )
-        self._audio_send_seq += 1  # type: ignore[attr-defined]
+        self._audio_send_seq = (self._audio_send_seq + 1) & 0xFFFF  # type: ignore[attr-defined]
 
     async def _send_open_close_on_transport(
         self,

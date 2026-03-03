@@ -690,7 +690,7 @@ class _CivRxMixin:
         pkt[0x10] = 0xC1  # reply marker for CI-V data
         struct.pack_into("<H", pkt, 0x11, len(civ_frame))
         struct.pack_into(">H", pkt, 0x13, self._civ_send_seq)  # type: ignore[attr-defined]
-        self._civ_send_seq += 1  # type: ignore[attr-defined]
+        self._civ_send_seq = (self._civ_send_seq + 1) & 0xFFFF  # type: ignore[attr-defined]
         pkt[CIV_HEADER_SIZE:] = civ_frame
         return bytes(pkt)
 
