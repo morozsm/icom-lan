@@ -1265,11 +1265,13 @@ async def test_soft_reconnect_calls_on_reconnect_callback(
 
 async def test_soft_reconnect_handles_connect_failure(radio: IcomRadio) -> None:
     """soft_reconnect() raises ConnectionError when transport.connect() fails (lines 444-447)."""
+    from icom_lan.exceptions import TimeoutError as IcomTimeout
+
     radio._civ_transport = None
     radio._ctrl_transport._udp_transport = MagicMock()  # type: ignore[attr-defined]
 
     fake_civ_transport = MagicMock()
-    fake_civ_transport.connect = AsyncMock(side_effect=OSError("port busy"))
+    fake_civ_transport.connect = AsyncMock(side_effect=IcomTimeout("discovery failed"))
 
     with (
         patch("icom_lan.radio.IcomTransport", return_value=fake_civ_transport),
