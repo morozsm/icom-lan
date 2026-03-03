@@ -466,23 +466,6 @@ async def _run(args: argparse.Namespace) -> int:
         timeout=args.timeout,
     )
 
-    # Register signal handlers for graceful shutdown — ensures the radio
-    # receives a disconnect packet so the LAN session is released immediately
-    # (otherwise the IC-7610 holds the slot for ~60s).
-    loop = asyncio.get_running_loop()
-    shutdown_event = asyncio.Event()
-
-    def _signal_handler() -> None:
-        logger.info("Signal received, shutting down gracefully...")
-        shutdown_event.set()
-        # Cancel all running tasks to unblock serve_forever / long-running commands
-        for task in asyncio.all_tasks(loop):
-            if task is not asyncio.current_task():
-                task.cancel()
-
-    for sig in (signal.SIGTERM, signal.SIGINT):
-        loop.add_signal_handler(sig, _signal_handler)
-
     try:
         async with radio:
             if args.command == "audio" and args.audio_command == "caps":
@@ -1354,10 +1337,15 @@ def main() -> None:
         parser.print_help()
         sys.exit(0)
     else:
+        # Convert SIGTERM to KeyboardInterrupt so asyncio.run() cleanup
+        # properly unwinds the async context manager (radio.disconnect()).
+        def _sigterm_handler(signum: int, frame: Any) -> None:
+            raise KeyboardInterrupt()
+        signal.signal(signal.SIGTERM, _sigterm_handler)
         try:
             sys.exit(asyncio.run(_run(args)))
         except KeyboardInterrupt:
-            # Graceful Ctrl-C path (radio/session cleanup happens in async context).
+            # Graceful Ctrl-C / SIGTERM path (radio/session cleanup happens in async context).
             print("Interrupted, shutting down...", file=sys.stderr)
             sys.exit(130)
 
