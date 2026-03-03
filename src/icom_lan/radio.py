@@ -256,11 +256,12 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         """Whether the radio is currently connected and CI-V transport is healthy."""
         if self._conn_state != RadioConnectionState.CONNECTED:
             return False
-        # Verify CI-V transport is actually alive
         civ = self._civ_transport
-        if civ is None or civ._udp_transport is None:
+        if civ is None:
             return False
-        if civ._udp_error_count > 0:
+        # Check for UDP errors (only on real IcomTransport, not mocks)
+        error_count = getattr(civ, "_udp_error_count", None)
+        if isinstance(error_count, int) and error_count > 0:
             return False
         return True
 

@@ -142,7 +142,29 @@ class _ControlPhaseMixin:
                 )
                 self._civ_port = civ_port
             elif civ_port == 0:
-                logger.debug("Status returned civ_port=0, using default %d", self._civ_port)
+                logger.warning(
+                    "Status returned civ_port=0 — radio session not ready. "
+                    "Retrying after pause (previous session may still be held)..."
+                )
+                # Radio returns port=0 when prior session hasn't been released.
+                # Wait and retry before falling back to default port.
+                for _retry in range(3):
+                    await asyncio.sleep(10)
+                    logger.info("Retrying conninfo (attempt %d/3)...", _retry + 1)
+                    await self._send_conninfo(guid, _civ_local_port, _audio_local_port)
+                    try:
+                        civ_port = await self._receive_civ_port()
+                        if civ_port > 0:
+                            logger.info("Radio now reports civ_port=%d", civ_port)
+                            self._civ_port = civ_port  # type: ignore[attr-defined]
+                            break
+                    except asyncio.TimeoutError:
+                        pass
+                else:
+                    logger.warning(
+                        "Radio still returns civ_port=0 after retries, using default %d",
+                        self._civ_port,  # type: ignore[attr-defined]
+                    )
         except asyncio.TimeoutError:
             logger.debug("No status packet received, using default ports")
             logger.warning(
