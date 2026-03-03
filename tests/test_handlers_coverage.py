@@ -588,6 +588,7 @@ async def test_audio_broadcaster_subscribe_unsubscribe_lifecycle() -> None:
         audio_sample_rate=48_000,
         start_audio_rx_opus=AsyncMock(side_effect=_start),
         stop_audio_rx_opus=AsyncMock(),
+        push_audio_tx_opus=AsyncMock(),
     )
     broadcaster = AudioBroadcaster(radio)
     q1 = await broadcaster.subscribe()
@@ -610,6 +611,7 @@ async def test_audio_broadcaster_codec_and_frame_metadata() -> None:
         audio_sample_rate=96_000,
         start_audio_rx_opus=AsyncMock(side_effect=_start),
         stop_audio_rx_opus=AsyncMock(),
+        push_audio_tx_opus=AsyncMock(),
     )
     broadcaster = AudioBroadcaster(radio)
     queue = await broadcaster.subscribe()
@@ -634,6 +636,7 @@ async def test_audio_broadcaster_queue_drop_and_start_stop_failures() -> None:
         audio_sample_rate=True,  # bool must not override sample rate
         start_audio_rx_opus=AsyncMock(side_effect=_start),
         stop_audio_rx_opus=AsyncMock(side_effect=RuntimeError("stop fail")),
+        push_audio_tx_opus=AsyncMock(),
     )
     broadcaster = AudioBroadcaster(radio)
     broadcaster.HIGH_WATERMARK = 1
@@ -654,6 +657,7 @@ async def test_audio_broadcaster_queue_drop_and_start_stop_failures() -> None:
         audio_sample_rate=48_000,
         start_audio_rx_opus=AsyncMock(side_effect=RuntimeError("start fail")),
         stop_audio_rx_opus=AsyncMock(),
+        push_audio_tx_opus=AsyncMock(),
     )
     bad = AudioBroadcaster(failing_radio)
     await bad._start_rx()
@@ -674,7 +678,11 @@ async def test_audio_handler_reader_control_tx_and_sender_paths(
         subscribe=AsyncMock(return_value=asyncio.Queue()),
         unsubscribe=AsyncMock(),
     )
-    radio = SimpleNamespace(push_audio_tx_opus=AsyncMock())
+    radio = SimpleNamespace(
+        push_audio_tx_opus=AsyncMock(),
+        start_audio_rx_opus=AsyncMock(),
+        stop_audio_rx_opus=AsyncMock(),
+    )
     ws = SimpleNamespace(
         recv=AsyncMock(
             side_effect=[
@@ -727,7 +735,11 @@ async def test_audio_handler_reader_control_tx_and_sender_paths(
 
 async def test_audio_handler_control_and_tx_guard_paths() -> None:
     ws = SimpleNamespace(send_binary=AsyncMock(), recv=AsyncMock())
-    radio = SimpleNamespace(push_audio_tx_opus=AsyncMock(side_effect=RuntimeError("boom")))
+    radio = SimpleNamespace(
+        push_audio_tx_opus=AsyncMock(side_effect=RuntimeError("boom")),
+        start_audio_rx_opus=AsyncMock(),
+        stop_audio_rx_opus=AsyncMock(),
+    )
     broadcaster = SimpleNamespace(
         subscribe=AsyncMock(return_value=asyncio.Queue()),
         unsubscribe=AsyncMock(),

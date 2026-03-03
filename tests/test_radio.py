@@ -272,8 +272,8 @@ class TestMode:
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
         mock_transport.queue_response(_mode_response(Mode.USB))
-        mode = await radio.get_mode()
-        assert mode == Mode.USB
+        mode_name, _filt = await radio.get_mode()
+        assert mode_name == "USB"
 
     @pytest.mark.asyncio
     async def test_set_mode(

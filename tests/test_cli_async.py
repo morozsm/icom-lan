@@ -37,7 +37,7 @@ def mock_radio():
     radio = AsyncMock()
     radio.get_frequency = AsyncMock(return_value=14_074_000)
     radio.set_frequency = AsyncMock()
-    radio.get_mode = AsyncMock(return_value=Mode.USB)
+    radio.get_mode = AsyncMock(return_value=("USB", None))
     radio.set_mode = AsyncMock()
     radio.get_power = AsyncMock(return_value=128)
     radio.set_power = AsyncMock()

@@ -267,6 +267,14 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
             return False
         return True
 
+    @property
+    def control_connected(self) -> bool:
+        """Whether the control transport is alive (LAN session active)."""
+        ctrl = self._ctrl_transport
+        if ctrl is None:
+            return False
+        return getattr(ctrl, "_udp_transport", None) is not None
+
     # ------------------------------------------------------------------
     # Backwards-compatible property shims for _connected / _intentional_disconnect
     # (used by tests and internal loops — keep in sync with _conn_state)
@@ -341,6 +349,14 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
             "nb",
             "nr",
         }
+
+    def set_state_change_callback(self, callback: Callable | None) -> None:
+        """Register callback for CI-V state change notifications."""
+        self._on_state_change = callback
+
+    def set_reconnect_callback(self, callback: Callable | None) -> None:
+        """Register callback invoked after successful soft reconnect."""
+        self._on_reconnect = callback
 
     def civ_stats(self) -> dict[str, int]:
         """Return CI-V request tracker statistics for monitoring.
@@ -1122,8 +1138,25 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         self._last_freq_hz = freq_hz
         self._state_cache.update_freq(freq_hz)
 
-    async def get_mode(self) -> Mode:
-        """Get the current operating mode."""
+    async def get_mode(self, receiver: int = 0) -> tuple[str, int | None]:  # type: ignore[override]
+        """Get current mode as (name, filter) — Protocol-compatible.
+
+        Returns a ``(mode_name, filter_number)`` tuple. For the Icom-specific
+        :class:`Mode` enum, use :meth:`get_mode_info` instead.
+
+        .. note:: The returned mode name is the Mode enum ``.name`` attribute
+           (e.g. ``"USB"``, ``"CW"``), which matches hamlib mode strings.
+        """
+        mode, filt = await self.get_mode_info()
+        return mode.name, filt
+
+    async def get_mode_enum(self) -> "Mode":
+        """Get the current operating mode as a :class:`Mode` enum (legacy).
+
+        .. deprecated:: 0.12
+           Use :meth:`get_mode` (returns ``tuple[str, int | None]``) or
+           :meth:`get_mode_info` (returns ``tuple[Mode, int | None]``).
+        """
         mode, _ = await self.get_mode_info()
         return mode
 
@@ -1158,8 +1191,8 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
 
     async def set_filter(self, filter_width: int, receiver: int = 0) -> None:
         """Set filter number (1-3) while keeping current mode unchanged."""
-        mode = await self.get_mode()
-        await self.set_mode(mode, filter_width=filter_width, receiver=receiver)
+        mode_name, _ = await self.get_mode()
+        await self.set_mode(mode_name, filter_width=filter_width, receiver=receiver)
 
     async def set_mode(self, mode: Mode | str, filter_width: int | None = None, receiver: int = 0) -> None:
         """Set the operating mode.
