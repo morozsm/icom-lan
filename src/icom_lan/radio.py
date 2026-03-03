@@ -86,6 +86,7 @@ from .civ import (
     CivEvent,
     CivRequestTracker,
 )
+from .radio_state import RadioState
 from .scope import ScopeAssembler, ScopeFrame
 from .transport import IcomTransport
 from .types import (
@@ -238,6 +239,7 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         )
         self._state_cache: StateCache = StateCache()
         self._on_state_change: Callable | None = None  # set by server
+        self._radio_state: RadioState = RadioState()  # may be replaced by WebServer
         _ttl = {**_DEFAULT_CACHE_TTL, **(cache_ttl_s or {})}
         self._cache_ttl_freq: float = _ttl["freq"]
         self._cache_ttl_mode: float = _ttl["mode"]
@@ -302,6 +304,43 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         non-blocking snapshot of recent state.
         """
         return self._state_cache
+
+    @property
+    def radio_state(self) -> RadioState:
+        """Dual-receiver state snapshot (MAIN + SUB receivers, PTT, etc.).
+
+        Populated by the CI-V RX stream.  May be replaced by
+        :class:`~icom_lan.web.server.WebServer` with a shared instance.
+        """
+        return self._radio_state
+
+    @property
+    def model(self) -> str:
+        """Human-readable radio model name."""
+        return "IC-7610"
+
+    @property
+    def capabilities(self) -> set[str]:
+        """Set of capability tags supported by this radio.
+
+        Standard tags: ``audio``, ``scope``, ``dual_rx``, ``meters``,
+        ``tx``, ``cw``.
+        """
+        return {
+            "audio",
+            "scope",
+            "dual_rx",
+            "meters",
+            "tx",
+            "cw",
+            "attenuator",
+            "preamp",
+            "rf_gain",
+            "af_level",
+            "squelch",
+            "nb",
+            "nr",
+        }
 
     def civ_stats(self) -> dict[str, int]:
         """Return CI-V request tracker statistics for monitoring.
@@ -1815,5 +1854,32 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
                 )
         finally:
             self.on_scope_data(old_callback)
-
         return collected[:count]
+
+
+# ---------------------------------------------------------------------------
+# Protocol compliance checks (not executed automatically — call explicitly)
+# ---------------------------------------------------------------------------
+
+def _check_protocol_compliance() -> None:
+    """Verify IcomRadio satisfies all Radio protocol variants.
+
+    Note: ``@runtime_checkable`` checks only method/attribute *existence*.
+    Some signatures differ slightly from the Protocol (e.g. ``get_mode``
+    returns :class:`~icom_lan.types.Mode` on IcomRadio rather than
+    ``tuple[str, int | None]`` — kept for backwards compatibility).
+    """
+    from .radio_protocol import AudioCapable, DualReceiverCapable, Radio, ScopeCapable
+
+    assert isinstance(IcomRadio(host=""), Radio), (
+        "IcomRadio does not satisfy Radio protocol"
+    )
+    assert isinstance(IcomRadio(host=""), AudioCapable), (
+        "IcomRadio does not satisfy AudioCapable protocol"
+    )
+    assert isinstance(IcomRadio(host=""), ScopeCapable), (
+        "IcomRadio does not satisfy ScopeCapable protocol"
+    )
+    assert isinstance(IcomRadio(host=""), DualReceiverCapable), (
+        "IcomRadio does not satisfy DualReceiverCapable protocol"
+    )
