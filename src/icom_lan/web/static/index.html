@@ -820,6 +820,21 @@ input[type=range]::-webkit-slider-thumb {
     var m = next.main || {};
     var s = next.sub || {};
 
+    // Connection state from server (ground truth)
+    if (typeof next.connected === 'boolean') {
+      var changed = state.radioConnected !== next.connected;
+      state.radioConnected = next.connected;
+      if (changed) setStatusVisual();
+    }
+    if (typeof next.control_connected === 'boolean') {
+      // Only override if WS is open (don't mark LAN green when WS is dead)
+      if (state.controlConnected) {
+        // nothing — WS open means control is live from our POV
+      } else {
+        state.controlConnected = next.control_connected;
+      }
+    }
+
     // Freq
     if (!prev || prev.main.freq !== m.freq) {
       state.freqA = m.freq;

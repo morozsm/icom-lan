@@ -253,8 +253,16 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
 
     @property
     def connected(self) -> bool:
-        """Whether the radio is currently connected."""
-        return self._conn_state == RadioConnectionState.CONNECTED
+        """Whether the radio is currently connected and CI-V transport is healthy."""
+        if self._conn_state != RadioConnectionState.CONNECTED:
+            return False
+        # Verify CI-V transport is actually alive
+        civ = self._civ_transport
+        if civ is None or civ._udp_transport is None:
+            return False
+        if civ._udp_error_count > 0:
+            return False
+        return True
 
     # ------------------------------------------------------------------
     # Backwards-compatible property shims for _connected / _intentional_disconnect
@@ -449,6 +457,7 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         await self._stop_civ_rx_pump()
         self._start_civ_rx_pump()
         self._conn_state = RadioConnectionState.CONNECTED
+        self._civ_transport._udp_error_count = 0  # reset error count after successful reconnect
         # Reset watchdog timestamp so it doesn't immediately trigger
         self._last_civ_data_received = __import__("time").monotonic()
         self._start_civ_worker()
