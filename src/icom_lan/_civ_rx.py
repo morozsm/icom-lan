@@ -583,9 +583,6 @@ class _CivRxMixin:
 
             elif cmd == 0x07:
                 # Active receiver / Dual Watch (global, sub encoded in data[0])
-                # Response: FE FE to from 07 <sub> <value> FD
-                # parse_civ_frame puts [sub, value] into frame.data for 0x07
-                # (0x07 is not in _COMMANDS_WITH_SUB, so no sub field is set)
                 if len(frame.data) >= 2:
                     sub07 = frame.data[0]
                     val07 = frame.data[1]

@@ -1820,7 +1820,7 @@ class TestRadioPoller:
         await asyncio.sleep(0.1)
         poller.stop()
 
-        radio.set_frequency.assert_awaited_with(7074000, receiver=0)
+        radio.set_frequency.assert_awaited_with(7074000)
 
     async def test_poller_broadcasts_meter_readings(self) -> None:
         """RadioPoller polls meters via send_civ."""
@@ -1963,10 +1963,10 @@ class TestSwitchScopeReceiver:
             for c in scope_calls
         ), "Expected receiver masked to 0x01"
 
-    async def test_select_vfo_enqueues_scope_switch(self) -> None:
-        """SelectVfo enqueues a SwitchScopeReceiver after the VFO command."""
+    async def test_select_vfo_sub_sends_swap(self) -> None:
+        """SelectVfo("SUB") sends VFO swap (0x07 0xB0) when active=MAIN."""
         from icom_lan.web.radio_poller import (
-            CommandQueue, RadioPoller, SelectVfo, SwitchScopeReceiver,
+            CommandQueue, RadioPoller, SelectVfo,
         )
 
         radio = self._make_radio()
@@ -1975,23 +1975,17 @@ class TestSwitchScopeReceiver:
 
         poller.start()
         queue.put(SelectVfo("SUB"))
-        # SelectVfo does a 25ms sleep then enqueues SwitchScopeReceiver;
-        # allow enough time for both to execute.
-        await asyncio.sleep(0.3)
+        await asyncio.sleep(0.15)
         poller.stop()
 
-        # After VFO→SUB the scope receiver switch CI-V should have been sent
-        scope_calls = [
+        swap_calls = [
             c for c in radio.send_civ.call_args_list
-            if c[0][0] == 0x27
+            if c[0][0] == 0x07 and c.kwargs.get("data") == bytes([0xB0])
         ]
-        assert any(
-            c.kwargs.get("sub") == 0x12 and c.kwargs.get("data") == bytes([0x01])
-            for c in scope_calls
-        ), "Expected scope receiver switch to SUB after VFO switch"
+        assert len(swap_calls) >= 1, "Expected VFO swap (0x07 0xB0) on SelectVfo SUB"
 
-    async def test_select_vfo_main_enqueues_scope_main(self) -> None:
-        """SelectVfo to MAIN enqueues SwitchScopeReceiver(0)."""
+    async def test_select_vfo_main_no_swap_when_already_main(self) -> None:
+        """SelectVfo("MAIN") does NOT swap when already on MAIN."""
         from icom_lan.web.radio_poller import (
             CommandQueue, RadioPoller, SelectVfo,
         )
@@ -2002,17 +1996,14 @@ class TestSwitchScopeReceiver:
 
         poller.start()
         queue.put(SelectVfo("MAIN"))
-        await asyncio.sleep(0.3)
+        await asyncio.sleep(0.15)
         poller.stop()
 
-        scope_calls = [
+        swap_calls = [
             c for c in radio.send_civ.call_args_list
-            if c[0][0] == 0x27
+            if c[0][0] == 0x07 and c.kwargs.get("data") == bytes([0xB0])
         ]
-        assert any(
-            c.kwargs.get("sub") == 0x12 and c.kwargs.get("data") == bytes([0x00])
-            for c in scope_calls
-        ), "Expected scope receiver switch to MAIN after VFO→MAIN"
+        assert len(swap_calls) == 0, "Should NOT swap when already on MAIN"
 
 
 class TestSwitchScopeReceiverCommand:

@@ -294,15 +294,50 @@ class RadioPoller:
         except Exception:
             logger.exception("radio-poller: FATAL — task crashed, commands will stop working")
 
+    def _current_active(self) -> str:
+        """Return current active receiver ('MAIN' or 'SUB') from RadioState."""
+        rs = getattr(self._radio, "_radio_state", None)
+        _active = getattr(rs, "active", None) if rs is not None else None
+        return _active if isinstance(_active, str) else "MAIN"
+
     async def _execute(self, cmd: Command) -> None:
         radio = self._radio
         match cmd:
             case SetFreq(freq=freq, receiver=rx):
-                await radio.set_frequency(freq, receiver=rx)
+                # 0x05 does NOT support cmd29 on IC-7610.
+                # If targeting SUB, temporarily switch active VFO, send, switch back.
+                current = self._current_active()
+                if rx != 0:
+                    if current != "SUB":
+                        await radio.send_civ(0x07, data=bytes([0xD1]), wait_response=False)
+                        await asyncio.sleep(_GAP)
+                    await radio.set_frequency(freq)
+                    if current != "SUB":
+                        await asyncio.sleep(_GAP)
+                        await radio.send_civ(0x07, data=bytes([0xD0]), wait_response=False)
+                else:
+                    if current != "MAIN":
+                        await radio.send_civ(0x07, data=bytes([0xD0]), wait_response=False)
+                        await asyncio.sleep(_GAP)
+                    await radio.set_frequency(freq)
+                    if current != "MAIN":
+                        await asyncio.sleep(_GAP)
+                        await radio.send_civ(0x07, data=bytes([0xD1]), wait_response=False)
             case SetMode(mode=mode, filter_width=fw, receiver=rx):
-                await radio.set_mode(mode, fw, receiver=rx)
+                # 0x06 does NOT support cmd29 on IC-7610. Same VFO-switch pattern.
+                current = self._current_active()
+                if rx != 0:
+                    if current != "SUB":
+                        await radio.send_civ(0x07, data=bytes([0xD1]), wait_response=False)
+                        await asyncio.sleep(_GAP)
+                    await radio.set_mode(mode, fw)
+                    if current != "SUB":
+                        await asyncio.sleep(_GAP)
+                        await radio.send_civ(0x07, data=bytes([0xD0]), wait_response=False)
+                else:
+                    await radio.set_mode(mode, fw)
             case SetFilter(filter_num=fn, receiver=rx):
-                await radio.set_filter(fn, receiver=rx)
+                await radio.set_filter(fn)
             case PttOn():
                 await radio.set_ptt(True)
             case PttOff():
@@ -338,22 +373,20 @@ class RadioPoller:
             case SetBand(band=band):
                 await radio.send_civ(0x07, data=bytes([band]), wait_response=False)
             case SelectVfo(vfo=vfo):
-                # Fire-and-forget VFO select (0x07): don't block poller waiting ACK
+                # IC-7610 LAN audio is always from MAIN receiver (mono).
+                # To "switch" audio to SUB, we SWAP MAIN↔SUB (0x07 0xB0).
+                # This exchanges frequencies, modes, and all params between
+                # MAIN and SUB — audio, scope, everything follows MAIN.
                 vfo_upper = vfo.upper()
-                codes = {"A": 0x00, "B": 0x01, "MAIN": 0xD0, "SUB": 0xD1}
-                vfo_code = codes.get(vfo_upper, 0x00)
-                await radio.send_civ(0x07, data=bytes([vfo_code]), wait_response=False)
-                # Update RadioState.active so HTTP poll reflects the change
-                rs = getattr(self._radio, "_radio_state", None)
-                if rs is not None:
-                    if vfo_upper in ("MAIN", "SUB"):
-                        rs.active = vfo_upper
-                    elif vfo_upper in ("A", "B"):
-                        rs.active = "MAIN" if vfo_upper == "A" else "SUB"
-                # Switch scope receiver to match VFO after a short delay to avoid CI-V flooding
-                receiver = 1 if vfo_upper in ("SUB", "B") else 0
-                await asyncio.sleep(0.025)
-                self._queue.put(SwitchScopeReceiver(receiver))
+                is_sub = vfo_upper in ("SUB", "B")
+                current = self._current_active()
+                need_swap = (is_sub and current == "MAIN") or (not is_sub and current == "SUB")
+                if need_swap:
+                    await radio.send_civ(0x07, data=bytes([0xB0]), wait_response=False)
+                    logger.info("radio-poller: VFO swap (Main<>Sub)")
+                    rs = getattr(self._radio, "_radio_state", None)
+                    if rs is not None and hasattr(rs, "active"):
+                        rs.active = "SUB" if current == "MAIN" else "MAIN"
                 if self._on_state_event:
                     self._on_state_event("vfo_changed", {"vfo": vfo})
             case VfoSwap():
