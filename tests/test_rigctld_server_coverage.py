@@ -153,9 +153,10 @@ class TestIsPacketModeSet:
         """Any exception during attribute access must be suppressed → False."""
         bad = MagicMock()
         bad.long_cmd = "set_mode"
-        bad.args = ("PKTUSB",)
-        # Make str(cmd.args[0]).upper() raise TypeError
-        bad.args.__getitem__ = MagicMock(side_effect=TypeError("boom"))
+        # Use MagicMock for args so we can set __getitem__ to raise
+        mock_args = MagicMock()
+        mock_args.__getitem__ = MagicMock(side_effect=TypeError("boom"))
+        bad.args = mock_args
         assert _is_packet_mode_set(bad) is False
 
 
@@ -172,15 +173,17 @@ class TestCircuitBreakerState:
     async def test_returns_state_after_start(
         self, mock_radio: MagicMock, cfg: RigctldConfig
     ) -> None:
+        from icom_lan.rigctld.circuit_breaker import CircuitBreaker
         proto = _make_proto()
         handler = _make_handler()
-        srv = RigctldServer(mock_radio, cfg, _protocol=proto, _handler=handler)
+        cb = CircuitBreaker()
+        srv = RigctldServer(mock_radio, cfg, _protocol=proto, _handler=handler, _circuit_breaker=cb)
         await srv.start()
         try:
-            # start() creates a CircuitBreaker; state should be CLOSED
+            # CircuitBreaker injected; state should be CLOSED
             state = srv.circuit_breaker_state
             assert state is not None
-            assert state.value == "closed"
+            assert state.value == "CLOSED"
         finally:
             await srv.stop()
 

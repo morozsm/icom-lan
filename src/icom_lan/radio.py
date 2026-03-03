@@ -1204,6 +1204,10 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         if ack is False:
             raise CommandError(f"Radio rejected set_data_mode({on})")
 
+    def _parse_level(self, resp: "CivFrame") -> int:
+        """Parse a level BCD response into an integer 0-255."""
+        return _level_bcd_decode(resp.data)
+
     async def get_power(self) -> int:
         """Get the RF power level (0-255).
 

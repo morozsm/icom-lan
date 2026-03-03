@@ -122,9 +122,11 @@ async def test_session_watchdog_clears_stale_client() -> None:
     relay.last_activity = time.monotonic() - 200.0
 
     # Run watchdog briefly: SESSION_TIMEOUT=60, sleep=30; we'll run one cycle
-    # by patching sleep so it doesn't actually wait
+    # by patching sleep so it doesn't actually wait but still yields to event loop
+    _real_sleep = asyncio.sleep
+
     async def instant_sleep(_: float) -> None:
-        pass  # don't actually sleep
+        await _real_sleep(0)  # yield to event loop without actually sleeping
 
     with pytest.MonkeyPatch().context() as mp:
         mp.setattr(asyncio, "sleep", instant_sleep)
