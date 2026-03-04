@@ -23,6 +23,7 @@ import logging
 import os
 import signal
 import sys
+from pathlib import Path
 import time
 import wave
 from typing import Any
@@ -1503,12 +1504,22 @@ def main() -> None:
         def _sigterm_handler(signum: int, frame: Any) -> None:
             raise KeyboardInterrupt()
         signal.signal(signal.SIGTERM, _sigterm_handler)
+
+        # Write PID file for clean stop/restart
+        pid_file = Path("/tmp/icom-lan.pid")
+        pid_file.write_text(str(os.getpid()))
+
         try:
             sys.exit(asyncio.run(_run(args)))
         except KeyboardInterrupt:
             # Graceful Ctrl-C / SIGTERM path (radio/session cleanup happens in async context).
             print("Interrupted, shutting down...", file=sys.stderr)
             sys.exit(130)
+        finally:
+            try:
+                pid_file.unlink(missing_ok=True)
+            except OSError:
+                pass
 
 
 if __name__ == "__main__":
