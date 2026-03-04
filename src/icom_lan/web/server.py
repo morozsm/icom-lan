@@ -350,12 +350,15 @@ class WebServer:
     async def start_audio_bridge(
         self,
         device_name: str | None = None,
+        tx_device_name: str | None = None,
         tx_enabled: bool = True,
     ) -> None:
         """Start the audio bridge to a virtual audio device.
 
         Args:
-            device_name: Device name (e.g. "BlackHole 2ch"). Auto-detects if None.
+            device_name: Device name for RX (e.g. "BlackHole 2ch"). Auto-detects if None.
+            tx_device_name: Separate device for TX (e.g. "BlackHole 16ch").
+                            Required for bidirectional audio to avoid feedback.
             tx_enabled: Whether to bridge TX (device → radio).
         """
         from ..audio_bridge import AudioBridge
@@ -369,6 +372,7 @@ class WebServer:
         self._audio_bridge = AudioBridge(
             self._radio,
             device_name=device_name,
+            tx_device_name=tx_device_name,
             tx_enabled=tx_enabled,
         )
         await self._audio_bridge.start()

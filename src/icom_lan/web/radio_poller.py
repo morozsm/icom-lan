@@ -356,8 +356,10 @@ class RadioPoller:
             case SetFilter(filter_num=fn, receiver=rx):
                 await radio.set_filter(fn)
             case PttOn():
+                logger.info("poller: PTT ON")
                 await radio.set_ptt(True)
             case PttOff():
+                logger.info("poller: PTT OFF")
                 await radio.set_ptt(False)
             case SetPower(level=level):
                 await radio.set_power(level)
