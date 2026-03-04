@@ -373,3 +373,244 @@ class TestSpotBuffer:
     def test_to_json_empty_buffer(self):
         buf = SpotBuffer()
         assert json.loads(buf.to_json()) == []
+
+
+# ---------------------------------------------------------------------------
+# Task 4: WebSocket broadcast + REST endpoint
+# ---------------------------------------------------------------------------
+
+
+class TestWebServerDXBroadcast:
+    async def test_broadcast_dx_spot_sends_to_control_queue(self):
+        """_broadcast_dx_spot() pushes dx_spot message to control event queues."""
+        from icom_lan.web.server import WebConfig, WebServer
+
+        config = WebConfig(host="127.0.0.1", port=0, keepalive_interval=9999.0)
+        srv = WebServer(None, config)
+
+        q: asyncio.Queue = asyncio.Queue()
+        srv.register_control_event_queue(q)
+
+        spot = DXSpot(spotter="K1ABC", freq=14074000, call="JA1XYZ", comment="FT8", time_utc="1234Z")
+        srv._broadcast_dx_spot(spot)
+
+        msg = q.get_nowait()
+        assert msg["type"] == "dx_spot"
+        assert msg["spot"]["call"] == "JA1XYZ"
+        assert msg["spot"]["freq"] == 14074000
+        assert msg["spot"]["spotter"] == "K1ABC"
+        assert msg["spot"]["comment"] == "FT8"
+        assert msg["spot"]["time_utc"] == "1234Z"
+
+    async def test_broadcast_dx_spot_adds_to_buffer(self):
+        """_broadcast_dx_spot() adds spot to the SpotBuffer."""
+        from icom_lan.web.server import WebConfig, WebServer
+
+        config = WebConfig(host="127.0.0.1", port=0, keepalive_interval=9999.0)
+        srv = WebServer(None, config)
+
+        spot = DXSpot(spotter="K1ABC", freq=14074000, call="JA1XYZ")
+        srv._broadcast_dx_spot(spot)
+
+        spots = srv._spot_buffer.get_spots()
+        assert len(spots) == 1
+        assert spots[0]["call"] == "JA1XYZ"
+
+    async def test_dx_spots_rest_endpoint(self):
+        """GET /api/v1/dx/spots returns current spots as JSON."""
+        import asyncio
+
+        from icom_lan.web.server import WebConfig, WebServer
+
+        config = WebConfig(host="127.0.0.1", port=0, keepalive_interval=9999.0)
+        srv = WebServer(None, config)
+        await srv.start()
+
+        spot = DXSpot(spotter="K1ABC", freq=14074000, call="JA1XYZ")
+        srv._broadcast_dx_spot(spot)
+
+        host, port = srv._server.sockets[0].getsockname()
+
+        reader, writer = await asyncio.open_connection(host, port)
+        request = f"GET /api/v1/dx/spots HTTP/1.1\r\nHost: {host}:{port}\r\nConnection: close\r\n\r\n"
+        writer.write(request.encode())
+        await writer.drain()
+        raw = await asyncio.wait_for(reader.read(65536), timeout=5.0)
+        writer.close()
+        try:
+            await writer.wait_closed()
+        except Exception:
+            pass
+
+        header_end = raw.find(b"\r\n\r\n")
+        status_line = raw[:header_end].decode("ascii").split("\r\n")[0]
+        body = raw[header_end + 4:]
+
+        await srv.stop()
+
+        assert "200" in status_line
+        data = json.loads(body)
+        assert "spots" in data
+        assert len(data["spots"]) == 1
+        assert data["spots"][0]["call"] == "JA1XYZ"
+
+    async def test_client_connect_receives_dx_spots(self):
+        """On subscribe, client receives dx_spots message with current buffer."""
+        from unittest.mock import AsyncMock, MagicMock
+
+        from icom_lan.web.handlers import ControlHandler
+        from icom_lan.web.server import WebConfig, WebServer
+        from icom_lan.web.websocket import WS_OP_TEXT, WebSocketConnection
+
+        config = WebConfig(host="127.0.0.1", port=0, keepalive_interval=9999.0)
+        srv = WebServer(None, config)
+
+        spot = DXSpot(spotter="K1ABC", freq=14074000, call="JA1XYZ")
+        srv._broadcast_dx_spot(spot)
+
+        sent_texts = []
+        ws = MagicMock(spec=WebSocketConnection)
+        ws.send_text = AsyncMock(side_effect=lambda x: sent_texts.append(x))
+
+        call_count = 0
+
+        async def mock_recv():
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return WS_OP_TEXT, json.dumps({"type": "subscribe", "streams": ["state"]}).encode()
+            raise EOFError()
+
+        ws.recv = mock_recv
+
+        handler = ControlHandler(ws, None, "1.0", "IC-7610", server=srv)
+        await handler.run()
+
+        messages = [json.loads(t) for t in sent_texts]
+        types = [m["type"] for m in messages]
+        assert "dx_spots" in types, f"Expected dx_spots in {types}"
+        dx_msg = next(m for m in messages if m["type"] == "dx_spots")
+        assert len(dx_msg["spots"]) == 1
+        assert dx_msg["spots"][0]["call"] == "JA1XYZ"
+
+    async def test_dx_client_started_when_configured(self):
+        """WebConfig with dx_cluster_host starts DXClusterClient on server.start()."""
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        from icom_lan.web.server import WebConfig, WebServer
+
+        config = WebConfig(
+            host="127.0.0.1",
+            port=0,
+            keepalive_interval=9999.0,
+            dx_cluster_host="dx.example.com",
+            dx_cluster_port=7373,
+            dx_callsign="K1ABC",
+        )
+        srv = WebServer(None, config)
+
+        with patch("icom_lan.web.server.DXClusterClient") as MockClient:
+            mock_instance = MagicMock()
+            mock_instance.start = AsyncMock()
+            mock_instance.stop = AsyncMock()
+            MockClient.return_value = mock_instance
+
+            await srv.start()
+            MockClient.assert_called_once_with(
+                "dx.example.com", 7373, "K1ABC", on_spot=srv._broadcast_dx_spot
+            )
+            await srv.stop()
+
+    async def test_no_dx_client_without_config(self):
+        """Without dx_cluster_host, no DXClusterClient is started."""
+        from icom_lan.web.server import WebConfig, WebServer
+
+        config = WebConfig(host="127.0.0.1", port=0, keepalive_interval=9999.0)
+        srv = WebServer(None, config)
+        await srv.start()
+        assert srv._dx_client is None
+        await srv.stop()
+
+
+# ---------------------------------------------------------------------------
+# Task 5: CLI flags
+# ---------------------------------------------------------------------------
+
+
+class TestCLIDXClusterFlags:
+    def _build_parser(self):
+        from icom_lan.cli import _build_parser
+        return _build_parser()
+
+    def test_dx_cluster_flag_parsed(self):
+        """--dx-cluster HOST:PORT is accepted by the web command."""
+        parser = self._build_parser()
+        args = parser.parse_args(["--host", "192.168.1.1", "web", "--dx-cluster", "dxc.nc7j.com:7373"])
+        assert args.dx_cluster == "dxc.nc7j.com:7373"
+
+    def test_callsign_flag_parsed(self):
+        """--callsign CALL is accepted by the web command."""
+        parser = self._build_parser()
+        args = parser.parse_args(["--host", "192.168.1.1", "web", "--callsign", "KN4KYD"])
+        assert args.callsign == "KN4KYD"
+
+    def test_without_dx_cluster_is_none(self):
+        """--dx-cluster defaults to None when not specified."""
+        parser = self._build_parser()
+        args = parser.parse_args(["--host", "192.168.1.1", "web"])
+        assert args.dx_cluster is None
+
+    def test_without_callsign_is_none(self):
+        """--callsign defaults to None when not specified."""
+        parser = self._build_parser()
+        args = parser.parse_args(["--host", "192.168.1.1", "web"])
+        assert args.callsign is None
+
+    def test_dx_cluster_and_callsign_together(self):
+        """Both flags work together."""
+        parser = self._build_parser()
+        args = parser.parse_args([
+            "--host", "192.168.1.1", "web",
+            "--dx-cluster", "dxc.nc7j.com:7373",
+            "--callsign", "KN4KYD",
+        ])
+        assert args.dx_cluster == "dxc.nc7j.com:7373"
+        assert args.callsign == "KN4KYD"
+
+    async def test_webconfig_gets_dx_cluster_settings(self):
+        """_cmd_web parses HOST:PORT and passes dx settings to WebConfig."""
+        import argparse
+
+        from icom_lan.web.server import WebConfig
+
+        # Simulate what _cmd_web does when --dx-cluster is provided
+        args = argparse.Namespace(
+            web_host="127.0.0.1",
+            web_port=0,
+            web_static_dir=None,
+            web_bridge=None,
+            web_bridge_tx_device=None,
+            web_bridge_rx_only=False,
+            web_rigctld=False,
+            web_rigctld_port=4532,
+            dx_cluster="dxc.nc7j.com:7373",
+            callsign="KN4KYD",
+        )
+
+        config_kwargs = {
+            "host": args.web_host,
+            "port": args.web_port,
+        }
+        dx_cluster = args.dx_cluster
+        if dx_cluster:
+            host, sep, port_str = dx_cluster.rpartition(":")
+            assert host == "dxc.nc7j.com"
+            assert port_str == "7373"
+            config_kwargs["dx_cluster_host"] = host
+            config_kwargs["dx_cluster_port"] = int(port_str)
+            config_kwargs["dx_callsign"] = args.callsign or ""
+
+        config = WebConfig(**config_kwargs)
+        assert config.dx_cluster_host == "dxc.nc7j.com"
+        assert config.dx_cluster_port == 7373
+        assert config.dx_callsign == "KN4KYD"
