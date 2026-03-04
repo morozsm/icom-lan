@@ -13,16 +13,21 @@ to work with `icom-lan serve` as a Hamlib NET rigctld replacement.
 # Install bridge dependencies
 pip install icom-lan[bridge]
 
-# Install BlackHole virtual audio device (macOS)
+# Install BlackHole virtual audio devices (macOS)
+# Two devices required: one for RX, one for TX (single device creates feedback loop)
 brew install blackhole-2ch
+brew install blackhole-16ch
 
-# Start all-in-one server
-icom-lan --host <RADIO_IP> --user <USER> --pass <PASS> web --bridge "BlackHole 2ch"
+# IMPORTANT: Reboot after installing BlackHole to activate the audio drivers!
+
+# Start all-in-one server with separate RX/TX devices
+icom-lan --host <RADIO_IP> --user <USER> --pass <PASS> web \
+  --bridge "BlackHole 2ch" --bridge-tx-device "BlackHole 16ch"
 ```
 
 This starts:
 - **Web UI** on `:8080`
-- **Audio bridge** routing radio RX/TX ↔ BlackHole virtual device
+- **Audio bridge** routing radio RX → BlackHole 2ch, BlackHole 16ch → radio TX
 - **Rigctld** on `:4532` (enabled by default)
 
 **Alternative: rigctld only** (no Web UI or audio bridge):
@@ -48,18 +53,38 @@ Press **Test PTT** — the radio should key up briefly.
 
 ### 3. Configure WSJT-X Audio (with BlackHole bridge)
 
-If using `--bridge "BlackHole 2ch"`, configure WSJT-X audio:
+Configure WSJT-X audio to use the BlackHole devices:
 
 In **Settings → Audio**:
 
-| Setting | Value |
-|---------|-------|
-| **Input** | `BlackHole 2ch` |
-| **Output** | `BlackHole 2ch` |
+| Setting | Value | Why |
+|---------|-------|-----|
+| **Input** | `BlackHole 2ch` | Receives RX audio from radio |
+| **Output** | `BlackHole 16ch` | Sends TX audio to radio |
+
+> ⚠️ **Why two devices?** BlackHole is a unidirectional loopback — if you use the
+> same device for both input and output, the bridge reads its own RX output as TX
+> input, creating a feedback loop. Two separate devices isolate the paths.
 
 The audio bridge routes:
-- **Radio RX → BlackHole → WSJT-X Input** (decode FT8/FT4)
-- **WSJT-X Output → BlackHole → Radio TX** (transmit FT8/FT4)
+- **Radio RX → icom-lan → BlackHole 2ch → WSJT-X Input** (decode FT8/FT4)
+- **WSJT-X Output → BlackHole 16ch → icom-lan → Radio TX** (transmit FT8/FT4)
+
+### Radio Settings (for TX audio)
+
+On the IC-7610 front panel, set:
+- **Menu → Connectors → MOD Input → LAN** (select `Data` or `USB`)
+- This tells the radio to accept modulation input from the LAN connection
+
+### Verifying Audio
+
+After starting, check the bridge status:
+```bash
+curl http://localhost:8080/api/v1/bridge
+# Should show: {"active": true, "rx_frames": ..., "rx_drops": 0, ...}
+```
+
+Zero `rx_drops` = healthy bridge. If you see drops, check CPU load.
 
 ## The `--wsjtx-compat` Flag
 
