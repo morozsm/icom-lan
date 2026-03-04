@@ -154,11 +154,15 @@ class DisableScope:
 class SwitchScopeReceiver:
     receiver: int  # 0=MAIN, 1=SUB
 
+@dataclass(frozen=True, slots=True)
+class SetPowerstat:
+    on: bool
+
 
 Command = (
     SetFreq | SetMode | SetFilter | SetPower | SetRfGain | SetAfLevel | SetSquelch | SetNB | SetNR | SetDigiSel | SetIpPlus
     | SetAttenuator | SetPreamp | PttOn | PttOff | SetBand | SelectVfo
-    | VfoSwap | VfoEqualize | SwitchScopeReceiver
+    | VfoSwap | VfoEqualize | SwitchScopeReceiver | SetPowerstat
 )
 
 
@@ -425,6 +429,10 @@ class RadioPoller:
                 # Fire-and-forget scope receiver select (0x27 0x12)
                 await self._civ(0x27, sub=0x12, data=bytes([receiver & 0x01]))
                 logger.info("radio-poller: scope receiver → %s", "SUB" if receiver else "MAIN")
+            case SetPowerstat(on=on):
+                # CI-V 0x18: 0x01 = power on, 0x00 = power off
+                await self._civ(0x18, data=b"\x01" if on else b"\x00")
+                logger.info("radio-poller: power %s", "ON" if on else "OFF")
 
     # Fast: meters (polled on even cycles)
     # wfview: Priority=Highest, queue interval 25ms for LAN (HasFDComms)

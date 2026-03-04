@@ -94,7 +94,7 @@ class TestFrequency:
         self, connected_radio: IcomRadio, mock_radio: MockIcomRadio
     ) -> None:
         await connected_radio.set_frequency(7_074_000)
-        await asyncio.sleep(0)  # fire-and-forget: yield so mock can process the packet
+        await asyncio.sleep(0.05)  # fire-and-forget: give mock time to receive and process UDP
         assert mock_radio._frequency == 7_074_000
         freq = await connected_radio.get_frequency()
         assert freq == 7_074_000
