@@ -427,6 +427,20 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Bridge RX only (no TX from virtual device to radio)",
     )
     web_p.add_argument(
+        "--dx-cluster",
+        dest="dx_cluster",
+        default=None,
+        metavar="HOST:PORT",
+        help="Connect to DX cluster server (e.g. dxc.nc7j.com:7373). Feature is opt-in.",
+    )
+    web_p.add_argument(
+        "--callsign",
+        dest="callsign",
+        default=None,
+        metavar="CALL",
+        help="Your callsign for DX cluster login (required with --dx-cluster)",
+    )
+    web_p.add_argument(
         "--no-rigctld",
         dest="web_rigctld",
         action="store_false",
@@ -1389,8 +1403,23 @@ async def _cmd_web(radio: IcomRadio, args: argparse.Namespace) -> int:
     if static_dir is not None:
         config_kwargs["static_dir"] = static_dir
 
+    dx_cluster = getattr(args, "dx_cluster", None)
+    if dx_cluster:
+        host_part, sep, port_str = dx_cluster.rpartition(":")
+        if not host_part or not sep or not port_str.isdigit():
+            print(
+                f"Error: --dx-cluster must be HOST:PORT (got {dx_cluster!r})",
+                file=sys.stderr,
+            )
+            return 1
+        config_kwargs["dx_cluster_host"] = host_part
+        config_kwargs["dx_cluster_port"] = int(port_str)
+        config_kwargs["dx_callsign"] = getattr(args, "callsign", None) or ""
+
     config = WebConfig(**config_kwargs)
     server = WebServer(radio, config)
+    if dx_cluster:
+        print(f"DX cluster: {dx_cluster} (callsign: {config_kwargs.get('dx_callsign', '')})")
     print(f"Web UI listening on http://{args.web_host}:{args.web_port}/")
 
     # Start audio bridge if requested
