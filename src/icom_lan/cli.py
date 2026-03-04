@@ -419,10 +419,11 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Bridge RX only (no TX from virtual device to radio)",
     )
     web_p.add_argument(
-        "--rigctld",
+        "--no-rigctld",
         dest="web_rigctld",
-        action="store_true",
-        help="Also start rigctld-compatible TCP server on port 4532",
+        action="store_false",
+        default=True,
+        help="Disable the rigctld-compatible TCP server (enabled by default)",
     )
     web_p.add_argument(
         "--rigctld-port",
