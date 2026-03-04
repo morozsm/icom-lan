@@ -34,6 +34,7 @@ icom-lan = "icom_lan.cli:main"
 
 [project.optional-dependencies]
 audio = ["opuslib"]
+bridge = ["opuslib", "sounddevice", "numpy"]
 scope = [
     "pillow>=10.0",
 ]

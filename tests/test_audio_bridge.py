@@ -1,0 +1,253 @@
+"""Tests for audio_bridge module."""
+
+from __future__ import annotations
+
+import asyncio
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+
+from icom_lan.audio_bridge import (
+    AudioBridge,
+    CHANNELS,
+    FRAME_BYTES,
+    FRAME_MS,
+    SAMPLE_RATE,
+    SAMPLES_PER_FRAME,
+    find_loopback_device,
+    list_audio_devices,
+)
+
+
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
+def test_constants():
+    assert SAMPLE_RATE == 48000
+    assert CHANNELS == 1
+    assert FRAME_MS == 20
+    assert SAMPLES_PER_FRAME == 960
+    assert FRAME_BYTES == 1920
+
+
+# ---------------------------------------------------------------------------
+# find_loopback_device
+# ---------------------------------------------------------------------------
+
+def test_find_loopback_device_no_sounddevice():
+    with patch.dict("sys.modules", {"sounddevice": None}):
+        with pytest.raises(ImportError, match="sounddevice"):
+            find_loopback_device("BlackHole")
+
+
+def test_find_loopback_device_found():
+    mock_sd = MagicMock()
+    mock_sd.query_devices.return_value = [
+        {"name": "Built-in Output", "index": 0},
+        {"name": "BlackHole 2ch", "index": 1},
+    ]
+    with patch.dict("sys.modules", {"sounddevice": mock_sd}):
+        dev = find_loopback_device("BlackHole")
+    assert dev is not None
+    assert dev["name"] == "BlackHole 2ch"
+
+
+def test_find_loopback_device_not_found():
+    mock_sd = MagicMock()
+    mock_sd.query_devices.return_value = [
+        {"name": "Built-in Output", "index": 0},
+        {"name": "Built-in Input", "index": 1},
+    ]
+    with patch.dict("sys.modules", {"sounddevice": mock_sd}):
+        dev = find_loopback_device("BlackHole")
+    assert dev is None
+
+
+def test_find_loopback_device_auto_detect():
+    mock_sd = MagicMock()
+    mock_sd.query_devices.return_value = [
+        {"name": "Built-in Output", "index": 0},
+        {"name": "Loopback Audio", "index": 1},
+    ]
+    with patch.dict("sys.modules", {"sounddevice": mock_sd}):
+        dev = find_loopback_device(None)
+    assert dev is not None
+    assert dev["name"] == "Loopback Audio"
+
+
+# ---------------------------------------------------------------------------
+# list_audio_devices
+# ---------------------------------------------------------------------------
+
+def test_list_audio_devices():
+    mock_sd = MagicMock()
+    devs = [{"name": "A", "index": 0}, {"name": "B", "index": 1}]
+    mock_sd.query_devices.return_value = devs
+    with patch.dict("sys.modules", {"sounddevice": mock_sd}):
+        result = list_audio_devices()
+    assert result == devs
+
+
+def test_list_audio_devices_no_sounddevice():
+    with patch.dict("sys.modules", {"sounddevice": None}):
+        with pytest.raises(ImportError, match="sounddevice"):
+            list_audio_devices()
+
+
+# ---------------------------------------------------------------------------
+# AudioBridge init
+# ---------------------------------------------------------------------------
+
+def test_bridge_init_defaults():
+    radio = MagicMock()
+    bridge = AudioBridge(radio)
+    assert not bridge.running
+    assert bridge.stats == {
+        "running": False,
+        "rx_frames": 0,
+        "tx_frames": 0,
+        "rx_drops": 0,
+    }
+
+
+def test_bridge_init_custom():
+    radio = MagicMock()
+    bridge = AudioBridge(
+        radio,
+        device_name="MyDevice",
+        sample_rate=8000,
+        channels=2,
+        frame_ms=40,
+        tx_enabled=False,
+    )
+    assert bridge._device_name == "MyDevice"
+    assert bridge._sample_rate == 8000
+    assert bridge._channels == 2
+    assert bridge._frame_ms == 40
+    assert bridge._tx_enabled is False
+
+
+# ---------------------------------------------------------------------------
+# AudioBridge start — device not found
+# ---------------------------------------------------------------------------
+
+async def test_bridge_start_no_device():
+    radio = MagicMock()
+    radio.start_audio_rx_pcm = AsyncMock()
+
+    mock_sd = MagicMock()
+    mock_sd.query_devices.return_value = [{"name": "Built-in", "index": 0}]
+
+    mock_np = MagicMock()
+
+    with (
+        patch.dict("sys.modules", {"sounddevice": mock_sd, "numpy": mock_np}),
+        pytest.raises(RuntimeError, match="Virtual audio device not found"),
+    ):
+        bridge = AudioBridge(radio, device_name="BlackHole")
+        await bridge.start()
+
+
+# ---------------------------------------------------------------------------
+# AudioBridge start + stop — happy path (mocked)
+# ---------------------------------------------------------------------------
+
+async def test_bridge_start_stop_rx_only():
+    radio = MagicMock()
+    radio.start_audio_rx_pcm = AsyncMock()
+    radio.stop_audio_rx_pcm = AsyncMock()
+
+    mock_output_stream = MagicMock()
+    mock_output_stream.active = True
+
+    mock_sd = MagicMock()
+    mock_sd.query_devices.return_value = [
+        {"name": "BlackHole 2ch", "index": 1},
+    ]
+    mock_sd.OutputStream.return_value = mock_output_stream
+
+    import numpy as np
+
+    with patch.dict("sys.modules", {"sounddevice": mock_sd}):
+        bridge = AudioBridge(radio, device_name="BlackHole", tx_enabled=False)
+        await bridge.start()
+
+        assert bridge._running
+        radio.start_audio_rx_pcm.assert_awaited_once()
+
+        await bridge.stop()
+        assert not bridge._running
+        radio.stop_audio_rx_pcm.assert_awaited_once()
+        mock_output_stream.stop.assert_called_once()
+        mock_output_stream.close.assert_called_once()
+
+
+async def test_bridge_start_already_running():
+    radio = MagicMock()
+    radio.start_audio_rx_pcm = AsyncMock()
+
+    mock_output_stream = MagicMock()
+    mock_output_stream.active = True
+
+    mock_sd = MagicMock()
+    mock_sd.query_devices.return_value = [
+        {"name": "BlackHole 2ch", "index": 1},
+    ]
+    mock_sd.OutputStream.return_value = mock_output_stream
+
+    with patch.dict("sys.modules", {"sounddevice": mock_sd}):
+        bridge = AudioBridge(radio, device_name="BlackHole", tx_enabled=False)
+        await bridge.start()
+        # Second start should be a no-op
+        await bridge.start()
+        assert radio.start_audio_rx_pcm.await_count == 1
+
+        await bridge.stop()
+
+
+async def test_bridge_stop_when_not_running():
+    radio = MagicMock()
+    bridge = AudioBridge(radio)
+    # Should be a no-op, no error
+    await bridge.stop()
+
+
+# ---------------------------------------------------------------------------
+# RX callback
+# ---------------------------------------------------------------------------
+
+async def test_bridge_rx_callback_writes_pcm():
+    """RX callback writes PCM data to the output stream."""
+    import numpy as np
+
+    radio = MagicMock()
+    radio.start_audio_rx_pcm = AsyncMock()
+    radio.stop_audio_rx_pcm = AsyncMock()
+
+    mock_output_stream = MagicMock()
+    mock_output_stream.active = True
+
+    mock_sd = MagicMock()
+    mock_sd.query_devices.return_value = [
+        {"name": "BlackHole 2ch", "index": 1},
+    ]
+    mock_sd.OutputStream.return_value = mock_output_stream
+
+    with patch.dict("sys.modules", {"sounddevice": mock_sd}):
+        bridge = AudioBridge(radio, device_name="BlackHole", tx_enabled=False)
+        await bridge.start()
+
+        # Grab the callback that was passed to start_audio_rx_pcm
+        rx_callback = radio.start_audio_rx_pcm.call_args[0][0]
+
+        # Feed PCM data
+        pcm = b"\x00\x01" * SAMPLES_PER_FRAME
+        rx_callback(pcm)
+        assert bridge._rx_frames == 1
+
+        # Feed None (gap)
+        rx_callback(None)
+        assert bridge._rx_drops == 1
+
+        await bridge.stop()
