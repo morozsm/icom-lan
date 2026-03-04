@@ -220,6 +220,8 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         self._pcm_rx_jitter_depth: int = 5
         self._opus_rx_user_callback: Callable[[AudioPacket | None], None] | None = None
         self._opus_rx_jitter_depth: int = 5
+        # AudioBus — lazy-initialized pub/sub for multi-consumer audio
+        self._audio_bus: Any = None
         self._scope_assembler: ScopeAssembler = ScopeAssembler()
         self._scope_callback: Callable[[ScopeFrame], Any] | None = None
         self._civ_rx_task: asyncio.Task[None] | None = None
@@ -321,6 +323,14 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         :class:`~icom_lan.web.server.WebServer` with a shared instance.
         """
         return self._radio_state
+
+    @property
+    def audio_bus(self) -> Any:
+        """Lazy-initialized AudioBus for pub/sub audio distribution."""
+        if self._audio_bus is None:
+            from .audio_bus import AudioBus
+            self._audio_bus = AudioBus(self)
+        return self._audio_bus
 
     @property
     def model(self) -> str:

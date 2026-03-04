@@ -124,11 +124,11 @@ class AudioBridge:
         self._running = False
         self._rx_stream = None  # sounddevice OutputStream (radio → device)
         self._tx_stream = None  # sounddevice InputStream (device → radio)
+        self._rx_task: asyncio.Task | None = None
         self._tx_task: asyncio.Task | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
-        self._opus_tap = None
         self._decoder = None
-        self._exclusive_pcm = False
+        self._subscription = None
         self._samples_per_frame = sample_rate * frame_ms // 1000
 
         # Stats
@@ -202,9 +202,7 @@ class AudioBridge:
             (samples_per_frame, self._channels), dtype=np.int16
         )
 
-        # --- Opus RX tap: decode and write PCM to virtual device ---
-        # We use a "tap" mechanism to receive opus packets in parallel with
-        # other consumers (e.g. AudioBroadcaster for WebSocket clients).
+        # --- RX: subscribe to AudioBus for opus packets ---
         try:
             import opuslib
         except ImportError:
@@ -214,57 +212,12 @@ class AudioBridge:
             ) from None
 
         self._decoder = opuslib.Decoder(self._sample_rate, self._channels)
-        self._samples_per_frame = samples_per_frame
 
-        def _on_opus_packet(packet: Any) -> None:
-            """Tap into opus RX stream — decode and write to virtual device."""
-            if not self._running:
-                return
-            if packet is None:
-                self._rx_drops += 1
-                if self._rx_stream and self._rx_stream.active:
-                    self._rx_stream.write(self._silence)
-                return
-
-            # packet is AudioPacket with .data attribute (opus bytes)
-            opus_data = getattr(packet, "data", None)
-            if opus_data is None:
-                return
-
-            try:
-                pcm_data = self._decoder.decode(opus_data, self._samples_per_frame)
-                self._rx_frames += 1
-                if self._rx_stream and self._rx_stream.active:
-                    frame = np.frombuffer(pcm_data, dtype=np.int16).reshape(
-                        -1, self._channels
-                    )
-                    self._rx_stream.write(frame)
-            except Exception:
-                self._rx_drops += 1
-
-        self._opus_tap = _on_opus_packet
-
-        # Ensure audio transport is connected, then register tap
-        if hasattr(self._radio, "_ensure_audio_transport"):
-            await self._radio._ensure_audio_transport()
-        # Start RX stream on the radio (needed so packets flow)
-        # Use a dummy callback if no other consumer started RX yet
-        if hasattr(self._radio, "_audio_stream") and self._radio._audio_stream is not None:
-            stream = self._radio._audio_stream
-            stream.add_rx_tap(self._opus_tap)
-            # If RX not yet active, start it
-            if not getattr(stream, "_rx_task", None):
-                await self._radio.start_audio_rx_opus(lambda _: None)
-        else:
-            # Fallback: start full PCM path (single consumer mode)
-            logger.warning("audio-bridge: falling back to exclusive PCM mode")
-            self._exclusive_pcm = True
-            await self._radio.start_audio_rx_pcm(
-                self._make_pcm_callback(np),
-                sample_rate=self._sample_rate,
-                channels=self._channels,
-                frame_ms=self._frame_ms,
-            )
+        from .audio_bus import AudioBus
+        bus = self._radio.audio_bus
+        self._subscription = bus.subscribe(name="audio-bridge")
+        await self._subscription.start()
+        self._rx_task = asyncio.create_task(self._rx_loop(np))
 
         # --- TX path: virtual device input → radio ---
         if self._tx_enabled:
@@ -297,23 +250,36 @@ class AudioBridge:
             self._frame_ms,
         )
 
-    def _make_pcm_callback(self, np: Any) -> "Callable[[bytes | None], None]":
-        """Create a PCM RX callback for exclusive (fallback) mode."""
-        def _on_rx_pcm(pcm_data: bytes | None) -> None:
-            if not self._running:
-                return
-            if pcm_data is None:
-                self._rx_drops += 1
-                if self._rx_stream and self._rx_stream.active:
-                    self._rx_stream.write(self._silence)
-                return
-            self._rx_frames += 1
-            if self._rx_stream and self._rx_stream.active:
-                frame = np.frombuffer(pcm_data, dtype=np.int16).reshape(
-                    -1, self._channels
-                )
-                self._rx_stream.write(frame)
-        return _on_rx_pcm
+    async def _rx_loop(self, np: Any) -> None:
+        """Read opus packets from AudioBus subscription, decode, write to device."""
+        try:
+            async for packet in self._subscription:
+                if not self._running:
+                    break
+                if packet is None:
+                    self._rx_drops += 1
+                    if self._rx_stream and self._rx_stream.active:
+                        self._rx_stream.write(self._silence)
+                    continue
+
+                opus_data = getattr(packet, "data", None)
+                if opus_data is None:
+                    continue
+
+                try:
+                    pcm_data = self._decoder.decode(opus_data, self._samples_per_frame)
+                    self._rx_frames += 1
+                    if self._rx_stream and self._rx_stream.active:
+                        frame = np.frombuffer(pcm_data, dtype=np.int16).reshape(
+                            -1, self._channels
+                        )
+                        self._rx_stream.write(frame)
+                except Exception:
+                    self._rx_drops += 1
+        except asyncio.CancelledError:
+            pass
+        except Exception:
+            logger.error("audio-bridge: RX loop error", exc_info=True)
 
     async def _tx_loop(self) -> None:
         """Read audio from the virtual device and push to the radio."""
@@ -359,6 +325,19 @@ class AudioBridge:
 
         self._running = False
 
+        # Stop RX subscription
+        if self._rx_task and not self._rx_task.done():
+            self._rx_task.cancel()
+            try:
+                await self._rx_task
+            except asyncio.CancelledError:
+                pass
+        self._rx_task = None
+
+        if self._subscription is not None:
+            self._subscription.stop()
+            self._subscription = None
+
         # Stop TX
         if self._tx_task and not self._tx_task.done():
             self._tx_task.cancel()
@@ -379,17 +358,8 @@ class AudioBridge:
             self._rx_stream.close()
             self._rx_stream = None
 
-        # Stop radio audio tap
-        if hasattr(self, "_opus_tap") and self._opus_tap is not None:
-            if hasattr(self._radio, "_audio_stream") and self._radio._audio_stream is not None:
-                self._radio._audio_stream.remove_rx_tap(self._opus_tap)
-            self._opus_tap = None
-
-        if getattr(self, "_exclusive_pcm", False):
-            try:
-                await self._radio.stop_audio_rx_pcm()
-            except Exception:
-                logger.debug("audio-bridge: stop RX error", exc_info=True)
+        # No need to stop radio RX — AudioBus handles that automatically
+        # when last subscriber disconnects
 
         if self._tx_enabled:
             try:

@@ -1173,7 +1173,8 @@ class TestAudioHandlerCodecDetection:
     """
 
     async def _start_rx_and_capture(self, audio_codec: object, sample_rate: int) -> bytes:
-        """Start RX via AudioBroadcaster and return first queued frame."""
+        """Start RX via AudioBroadcaster (using AudioBus) and return first queued frame."""
+        from icom_lan.audio_bus import AudioBus
         from icom_lan.types import AudioCodec
         from icom_lan.web.handlers import AudioBroadcaster, AudioHandler
         from icom_lan.web.websocket import WebSocketConnection
@@ -1182,26 +1183,25 @@ class TestAudioHandlerCodecDetection:
         mock_radio = MagicMock()
         mock_radio.audio_codec = audio_codec
         mock_radio.audio_sample_rate = sample_rate
+        mock_radio.start_audio_rx_opus = AsyncMock()
         mock_radio.stop_audio_rx_opus = AsyncMock()
 
-        captured_callback: list = []
-
-        async def fake_start_rx_opus(cb: object) -> None:
-            captured_callback.append(cb)
-
-        mock_radio.start_audio_rx_opus = fake_start_rx_opus
+        bus = AudioBus(mock_radio)
+        mock_radio.audio_bus = bus
 
         broadcaster = AudioBroadcaster(mock_radio)
         handler = AudioHandler(mock_ws, mock_radio, broadcaster)
         await handler._start_rx()
 
-        assert len(captured_callback) == 1, "start_audio_rx_opus must be called once"
-        cb = captured_callback[0]
+        mock_radio.start_audio_rx_opus.assert_awaited_once()
 
-        # Inject a fake AudioPacket
+        # Inject a fake AudioPacket through the bus
         mock_pkt = MagicMock()
         mock_pkt.data = b"\x00\x01" * 50  # 100 bytes of fake audio
-        cb(mock_pkt)
+        bus._on_opus_packet(mock_pkt)
+
+        # Give relay loop a chance to process
+        await asyncio.sleep(0.1)
 
         # Retrieve the encoded web frame from the handler's queue (assigned by broadcaster)
         frame = handler._frame_queue.get_nowait()

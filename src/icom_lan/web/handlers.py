@@ -697,9 +697,9 @@ class MetersHandler:
 class AudioBroadcaster:
     """Single-instance RX audio broadcaster shared by all AudioHandler clients.
 
-    Calls start_audio_rx_opus() once when the first client subscribes,
-    broadcasts frames to all registered queues, and calls stop only
-    when the last client unsubscribes.  Fixes #70.
+    Uses :class:`~icom_lan.audio_bus.AudioBus` to subscribe to the radio's
+    opus RX stream.  Multiple consumers (WebSocket clients, audio bridge,
+    recorders) can all share the same stream through the bus.
     """
 
     HIGH_WATERMARK: int = 10
@@ -707,7 +707,8 @@ class AudioBroadcaster:
     def __init__(self, radio: "Radio | None") -> None:
         self._radio = radio
         self._clients: dict[int, asyncio.Queue[bytes]] = {}
-        self._rx_active = False
+        self._subscription = None  # AudioSubscription
+        self._relay_task: asyncio.Task | None = None
         self._seq: int = 0
         self._web_codec: int = AUDIO_CODEC_PCM16
         self._sample_rate: int = 48000
@@ -715,30 +716,29 @@ class AudioBroadcaster:
         self._lock = asyncio.Lock()
 
     async def subscribe(self) -> asyncio.Queue[bytes]:
-        """Register a new client and start RX if first."""
+        """Register a new WebSocket client and start relaying if first."""
         queue: asyncio.Queue[bytes] = asyncio.Queue(maxsize=self.HIGH_WATERMARK)
         client_id = id(queue)
         async with self._lock:
             self._clients[client_id] = queue
-            if not self._rx_active and self._radio:
-                await self._start_rx()
+            if self._subscription is None and self._radio:
+                await self._start_relay()
         logger.info("audio-broadcaster: client added (total=%d)", len(self._clients))
         return queue
 
     async def unsubscribe(self, queue: asyncio.Queue[bytes]) -> None:
-        """Unregister a client and stop RX if last."""
+        """Unregister a client and stop relay if last."""
         client_id = id(queue)
         async with self._lock:
             self._clients.pop(client_id, None)
-            if not self._clients and self._rx_active:
-                await self._stop_rx()
+            if not self._clients and self._subscription is not None:
+                await self._stop_relay()
         logger.info("audio-broadcaster: client removed (total=%d)", len(self._clients))
 
-    async def _start_rx(self) -> None:
+    async def _start_relay(self) -> None:
         from ..radio_protocol import AudioCapable
         if not self._radio or not isinstance(self._radio, AudioCapable):
             return
-        self._rx_active = True
 
         _codec = getattr(self._radio, "audio_codec", None)
         if isinstance(_codec, AudioCodec):
@@ -753,51 +753,64 @@ class AudioBroadcaster:
         if isinstance(_sr, int) and not isinstance(_sr, bool) and _sr > 0:
             self._sample_rate = _sr
         logger.info(
-            "audio-broadcaster: starting RX codec=0x%02x sr=%d ch=%d",
+            "audio-broadcaster: starting relay codec=0x%02x sr=%d ch=%d",
             self._web_codec, self._sample_rate, self._channels,
         )
 
-        def _on_packet(pkt):
-            if pkt is None:
-                return
-            if self._seq < 3 or self._seq % 500 == 0:
-                logger.info(
-                    "audio: rx packet #%d, web_codec=0x%02x, data=%d bytes",
-                    self._seq, self._web_codec, len(pkt.data),
+        try:
+            bus = self._radio.audio_bus
+            self._subscription = bus.subscribe(name="web-audio")
+            await self._subscription.start()
+            self._relay_task = asyncio.create_task(self._relay_loop())
+        except Exception:
+            logger.exception("audio-broadcaster: failed to start relay")
+            self._subscription = None
+
+    async def _relay_loop(self) -> None:
+        """Read packets from AudioBus subscription and fan out to WS clients."""
+        try:
+            async for pkt in self._subscription:
+                if pkt is None:
+                    continue
+                if self._seq < 3 or self._seq % 500 == 0:
+                    logger.info(
+                        "audio: rx packet #%d, web_codec=0x%02x, data=%d bytes",
+                        self._seq, self._web_codec, len(pkt.data),
+                    )
+                frame = encode_audio_frame(
+                    MSG_TYPE_AUDIO_RX, self._web_codec, self._seq,
+                    self._sample_rate // 100, self._channels, 20, pkt.data,
                 )
-            frame = encode_audio_frame(
-                MSG_TYPE_AUDIO_RX, self._web_codec, self._seq,
-                self._sample_rate // 100, self._channels, 20, pkt.data,
-            )
-            self._seq = (self._seq + 1) & 0xFFFF
-            for q in list(self._clients.values()):
-                try:
-                    q.put_nowait(frame)
-                except asyncio.QueueFull:
-                    try:
-                        q.get_nowait()
-                    except asyncio.QueueEmpty:
-                        pass
+                self._seq = (self._seq + 1) & 0xFFFF
+                for q in list(self._clients.values()):
                     try:
                         q.put_nowait(frame)
                     except asyncio.QueueFull:
-                        pass
-
-        try:
-            await self._radio.start_audio_rx_opus(_on_packet)
+                        try:
+                            q.get_nowait()
+                        except asyncio.QueueEmpty:
+                            pass
+                        try:
+                            q.put_nowait(frame)
+                        except asyncio.QueueFull:
+                            pass
+        except asyncio.CancelledError:
+            pass
         except Exception:
-            logger.exception("audio-broadcaster: failed to start RX")
-            self._rx_active = False
+            logger.exception("audio-broadcaster: relay loop error")
 
-    async def _stop_rx(self) -> None:
-        if not self._rx_active or not self._radio:
-            return
-        self._rx_active = False
-        try:
-            await self._radio.stop_audio_rx_opus()
-        except Exception:
-            logger.debug("audio-broadcaster: stop RX error", exc_info=True)
-        logger.info("audio-broadcaster: RX stopped")
+    async def _stop_relay(self) -> None:
+        if self._relay_task is not None:
+            self._relay_task.cancel()
+            try:
+                await self._relay_task
+            except asyncio.CancelledError:
+                pass
+            self._relay_task = None
+        if self._subscription is not None:
+            self._subscription.stop()
+            self._subscription = None
+        logger.info("audio-broadcaster: relay stopped")
 
 
 class AudioHandler:

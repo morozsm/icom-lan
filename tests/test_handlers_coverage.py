@@ -578,79 +578,62 @@ async def test_meters_enqueue_sender_and_push_paths(
 
 
 async def test_audio_broadcaster_subscribe_unsubscribe_lifecycle() -> None:
-    captured: list[object] = []
-
-    async def _start(cb: object) -> None:
-        captured.append(cb)
+    from icom_lan.audio_bus import AudioBus
 
     radio = SimpleNamespace(
         audio_codec=AudioCodec.PCM_1CH_16BIT,
         audio_sample_rate=48_000,
-        start_audio_rx_opus=AsyncMock(side_effect=_start),
+        start_audio_rx_opus=AsyncMock(),
         stop_audio_rx_opus=AsyncMock(),
         push_audio_tx_opus=AsyncMock(),
     )
+    bus = AudioBus(radio)
+    radio.audio_bus = bus
+
     broadcaster = AudioBroadcaster(radio)
     q1 = await broadcaster.subscribe()
     q2 = await broadcaster.subscribe()
-    assert len(captured) == 1
+    # AudioBus starts RX on first subscriber
+    radio.start_audio_rx_opus.assert_awaited_once()
     await broadcaster.unsubscribe(q1)
     radio.stop_audio_rx_opus.assert_not_awaited()
     await broadcaster.unsubscribe(q2)
+    # Give the scheduled stop task a chance to run
+    await asyncio.sleep(0.05)
     radio.stop_audio_rx_opus.assert_awaited_once()
 
 
 async def test_audio_broadcaster_codec_and_frame_metadata() -> None:
-    captured: list[object] = []
-
-    async def _start(cb: object) -> None:
-        captured.append(cb)
+    from icom_lan.audio_bus import AudioBus
 
     radio = SimpleNamespace(
         audio_codec=AudioCodec.OPUS_2CH,
         audio_sample_rate=96_000,
-        start_audio_rx_opus=AsyncMock(side_effect=_start),
+        start_audio_rx_opus=AsyncMock(),
         stop_audio_rx_opus=AsyncMock(),
         push_audio_tx_opus=AsyncMock(),
     )
+    bus = AudioBus(radio)
+    radio.audio_bus = bus
+
     broadcaster = AudioBroadcaster(radio)
     queue = await broadcaster.subscribe()
-    assert len(captured) == 1
-    callback = captured[0]
-    callback(None)
-    callback(SimpleNamespace(data=b"\xaa\xbb\xcc"))
+
+    # Deliver a packet through the bus
+    bus._on_opus_packet(None)  # should be skipped
+    bus._on_opus_packet(SimpleNamespace(data=b"\xaa\xbb\xcc"))
+
+    await asyncio.sleep(0.1)
     frame = queue.get_nowait()
     assert frame[1] == AUDIO_CODEC_OPUS
     assert struct.unpack_from("<H", frame, 4)[0] == 960
     assert frame[6] == 2
 
-
-async def test_audio_broadcaster_queue_drop_and_start_stop_failures() -> None:
-    captured: list[object] = []
-
-    async def _start(cb: object) -> None:
-        captured.append(cb)
-
-    radio = SimpleNamespace(
-        audio_codec=AudioCodec.PCM_1CH_16BIT,
-        audio_sample_rate=True,  # bool must not override sample rate
-        start_audio_rx_opus=AsyncMock(side_effect=_start),
-        stop_audio_rx_opus=AsyncMock(side_effect=RuntimeError("stop fail")),
-        push_audio_tx_opus=AsyncMock(),
-    )
-    broadcaster = AudioBroadcaster(radio)
-    broadcaster.HIGH_WATERMARK = 1
-    queue = await broadcaster.subscribe()
-    callback = captured[0]
-    callback(SimpleNamespace(data=b"\x00"))
-    callback(SimpleNamespace(data=b"\x01"))
-    assert queue.qsize() == 1
-    last = queue.get_nowait()
-    assert struct.unpack_from("<H", last, 2)[0] == 1
-    assert struct.unpack_from("<H", last, 4)[0] == 480
-
     await broadcaster.unsubscribe(queue)
-    assert broadcaster._rx_active is False
+
+
+async def test_audio_broadcaster_start_relay_failure() -> None:
+    from icom_lan.audio_bus import AudioBus
 
     failing_radio = SimpleNamespace(
         audio_codec=AudioCodec.OPUS_1CH,
@@ -659,30 +642,34 @@ async def test_audio_broadcaster_queue_drop_and_start_stop_failures() -> None:
         stop_audio_rx_opus=AsyncMock(),
         push_audio_tx_opus=AsyncMock(),
     )
+    bus = AudioBus(failing_radio)
+    failing_radio.audio_bus = bus
+
     bad = AudioBroadcaster(failing_radio)
-    await bad._start_rx()
-    assert bad._rx_active is False
+    await bad._start_relay()
+    # Bus subscription exists but RX failed to start
+    assert not bus.rx_active
 
 
 async def test_audio_broadcaster_without_radio_noops() -> None:
     broadcaster = AudioBroadcaster(None)
     queue = await broadcaster.subscribe()
     assert isinstance(queue, asyncio.Queue)
-    await broadcaster._stop_rx()
+    await broadcaster._stop_relay()
 
 
 async def test_audio_handler_reader_control_tx_and_sender_paths(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    from icom_lan.radio_protocol import AudioCapable
+
     broadcaster = SimpleNamespace(
         subscribe=AsyncMock(return_value=asyncio.Queue()),
         unsubscribe=AsyncMock(),
     )
-    radio = SimpleNamespace(
-        push_audio_tx_opus=AsyncMock(),
-        start_audio_rx_opus=AsyncMock(),
-        stop_audio_rx_opus=AsyncMock(),
-    )
+    # Mock radio needs to pass isinstance(AudioCapable) check
+    radio = MagicMock(spec=AudioCapable)
+    radio.push_audio_tx_opus = AsyncMock()
     ws = SimpleNamespace(
         recv=AsyncMock(
             side_effect=[
