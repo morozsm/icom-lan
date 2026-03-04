@@ -6,11 +6,20 @@
 ┌──────────────────────────────────────────────────────────┐
 │                        icom-lan                          │
 │                                                          │
-│  ┌─────────┐   ┌──────────┐   ┌────────────────────┐    │
-│  │   CLI   │   │  Web UI  │   │  Rigctld Server    │    │
-│  │(cli.py) │   │(web/)    │   │  (rigctld.py)      │    │
-│  └────┬────┘   └────┬─────┘   └────────┬───────────┘    │
-│       └──────────────┼──────────────────┘                │
+│  ┌─────────┐   ┌──────────┐   ┌────────────┐            │
+│  │   CLI   │   │  Web UI  │   │  Rigctld   │            │
+│  │(cli.py) │   │(web/)    │   │(rigctld.py)│            │
+│  └────┬────┘   └────┬─────┘   └─────┬──────┘            │
+│       └──────────────┼───────────────┘                   │
+│                      │                                   │
+│       ┌──────────────┼──────────────────┐                │
+│       │         AudioBus                │                │
+│       │    (audio_bus.py)               │                │
+│       │  ┌──────────┐ ┌──────────────┐  │                │
+│       │  │Broadcaster│ │ AudioBridge  │  │                │
+│       │  │(handlers) │ │(bridge.py)  │  │                │
+│       │  └──────────┘ └──────────────┘  │                │
+│       └──────────────┬──────────────────┘                │
 │                      │                                   │
 │            ┌─────────┴──────────┐                        │
 │            │     IcomRadio      │  ← Public API           │
@@ -119,14 +128,40 @@ Low-level asyncio UDP handler. Each `IcomTransport` instance manages:
 - Sequence tracking with gap detection and retransmit requests
 - Packet queue (`asyncio.Queue[bytes]`) for consumers
 
+### `audio_bus.py` — Audio Pub/Sub Distribution
+
+Central audio distribution hub for multi-consumer audio streaming:
+
+- **AudioBus**: subscribes once to radio RX opus, fans out to all subscribers
+- **AudioSubscription**: async iterator with sliding-window queue (64 packets default)
+- Lifecycle: first subscriber triggers `start_audio_rx_opus()`, last unsubscribe stops it
+- Consumers: AudioBroadcaster (WebSocket), AudioBridge (virtual device), future recorders
+
+```
+Radio (opus RX) → AudioBus._on_opus_packet()
+                    → AudioSubscription("web-audio")   → WebSocket clients
+                    → AudioSubscription("audio-bridge") → BlackHole → WSJT-X
+                    → AudioSubscription("recorder")     → WAV file
+```
+
+### `audio_bridge.py` — Virtual Audio Device Bridge
+
+Bidirectional PCM bridge between radio and virtual audio devices:
+
+- RX: opus → decode → PCM → sounddevice OutputStream → BlackHole/Loopback
+- TX: sounddevice InputStream → noise gate → opus encode → radio
+- Uses AudioBus subscription (shares RX stream with other consumers)
+- Optional dependency: `pip install icom-lan[bridge]` (sounddevice + numpy + opuslib)
+
 ### `web/` — Built-in Web UI
 
 WebSocket-based browser interface:
 
-- `server.py` — aiohttp web server, WebSocket handler management
+- `server.py` — aiohttp web server, WebSocket handler management, audio bridge integration
 - `handlers.py` — scope, meters, audio, and control WebSocket handlers
 - `static/index.html` — single-page app with Canvas2D rendering
 - Audio: PCM16 binary frames over WebSocket, Web Audio API playback
+- AudioBroadcaster uses AudioBus subscription for RX audio distribution
 
 ### `commands.py` — CI-V Encoding/Decoding
 
@@ -227,4 +262,9 @@ icom-lan[dev]
 
 icom-lan[scope]
 └── Pillow (for scope image rendering)
+
+icom-lan[bridge]
+├── sounddevice (PortAudio bindings)
+├── numpy (PCM frame processing)
+└── opuslib (Opus codec for decode/encode)
 ```

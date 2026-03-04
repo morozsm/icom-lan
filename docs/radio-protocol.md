@@ -122,9 +122,33 @@ For radios that support audio streaming — either over LAN (Icom) or via USB au
 from icom_lan.radio_protocol import AudioCapable
 
 if isinstance(radio, AudioCapable):
+    # Direct callback API
     await radio.start_audio_rx_opus(callback)
     await radio.push_audio_tx_opus(opus_data)
     await radio.stop_audio_rx_opus()
+
+    # AudioBus pub/sub (recommended for multi-consumer)
+    bus = radio.audio_bus
+    async with bus.subscribe(name="my-consumer") as sub:
+        async for packet in sub:
+            process(packet.data)
+```
+
+#### AudioBus
+
+The `audio_bus` property provides a pub/sub distribution system for sharing audio RX streams across multiple consumers. First subscriber triggers RX start, last unsubscribe stops it.
+
+```python
+# Multiple consumers sharing the same stream
+web_sub = radio.audio_bus.subscribe(name="web-audio")
+bridge_sub = radio.audio_bus.subscribe(name="audio-bridge")
+
+await web_sub.start()
+await bridge_sub.start()
+
+# Both receive the same opus packets independently
+async for packet in web_sub:
+    send_to_browser(packet)
 ```
 
 ### `ScopeCapable`

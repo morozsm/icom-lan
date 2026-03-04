@@ -81,6 +81,49 @@ future high-level PCM APIs.
   - `AudioFormatError` for invalid PCM/Opus frame formats
   - `AudioTranscodeError` for codec encode/decode failures
 
+## AudioBus (pub/sub multi-consumer)
+
+::: icom_lan.audio_bus.AudioBus
+::: icom_lan.audio_bus.AudioSubscription
+
+The AudioBus provides pub/sub distribution for radio RX audio. Multiple consumers (WebSocket broadcaster, audio bridge, recorders) share a single radio RX stream.
+
+### Basic Usage
+
+```python
+async with IcomRadio("192.168.1.100", username="u", password="p") as radio:
+    # Subscribe to audio bus
+    async with radio.audio_bus.subscribe(name="my-app") as sub:
+        async for packet in sub:
+            if packet is not None:
+                process(packet.data)  # opus bytes
+```
+
+### Multiple Consumers
+
+```python
+bus = radio.audio_bus
+
+# Web UI gets audio
+web = bus.subscribe(name="web-audio")
+await web.start()
+
+# Bridge gets audio simultaneously
+bridge = bus.subscribe(name="audio-bridge")
+await bridge.start()
+
+# Both receive the same packets independently
+# First subscriber triggers radio.start_audio_rx_opus()
+# Last .stop() schedules radio.stop_audio_rx_opus()
+```
+
+### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `subscriber_count` | `int` | Number of active subscribers |
+| `rx_active` | `bool` | Whether radio RX is currently streaming |
+
 ## Usage
 
 ### RX Audio (callback-based)

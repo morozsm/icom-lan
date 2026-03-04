@@ -310,6 +310,67 @@ Scanning for Icom radios (3 seconds)...
 1 radio(s) found.
 ```
 
+### `web`
+
+Start the all-in-one server: Web UI + optional audio bridge + rigctld.
+
+```bash
+# Web UI only
+icom-lan web
+
+# Web UI + audio bridge + rigctld (recommended for WSJT-X)
+icom-lan web --bridge "BlackHole 2ch"
+
+# Web UI + bridge (RX only, no TX from virtual device)
+icom-lan web --bridge "BlackHole 2ch" --bridge-rx-only
+
+# Disable rigctld (enabled by default on :4532)
+icom-lan web --no-rigctld
+
+# Custom ports
+icom-lan web --port 9090 --rigctld-port 4533
+```
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--port` | `8080` | Web server port |
+| `--bridge DEVICE` | — | Start audio bridge with named virtual device |
+| `--bridge-rx-only` | — | Bridge receives only (no TX from virtual device) |
+| `--no-rigctld` | — | Disable built-in rigctld server |
+| `--rigctld-port` | `4532` | Rigctld listen port |
+
+### `audio bridge`
+
+Route radio audio to/from a virtual audio device (BlackHole, Loopback, VB-Audio).
+
+```bash
+# List available audio devices
+icom-lan audio bridge --list-devices
+
+# Start bridge
+icom-lan audio bridge --device "BlackHole 2ch"
+
+# RX only (no TX from virtual device)
+icom-lan audio bridge --device "BlackHole 2ch" --rx-only
+```
+
+!!! tip "macOS Setup"
+    Install BlackHole for virtual audio routing:
+    ```bash
+    brew install blackhole-2ch
+    ```
+    After install, reboot to load the audio driver. Then `BlackHole 2ch` appears as an audio device.
+
+!!! note "Dependencies"
+    Audio bridge requires optional dependencies:
+    ```bash
+    pip install icom-lan[bridge]
+    ```
+    On macOS with Homebrew, you may also need:
+    ```bash
+    export DYLD_LIBRARY_PATH=/opt/homebrew/lib
+    ```
+
 ## Scope / Waterfall
 
 Capture spectrum and waterfall data from the radio's scope display and render as PNG.

@@ -2,6 +2,37 @@
 
 All notable changes to [icom-lan](https://github.com/morozsm/icom-lan) are documented here.
 
+## [0.12.0] — 2026-03-03
+
+### 🔊 AudioBus Pub/Sub & Virtual Audio Bridge ([#106](https://github.com/morozsm/icom-lan/issues/106))
+
+- **AudioBus** (`audio_bus.py`): new pub/sub audio distribution system — multiple consumers share a single radio RX stream
+  - `radio.audio_bus.subscribe(name="...")` → `AudioSubscription` (async iterator + context manager)
+  - First subscriber triggers `start_audio_rx_opus()`, last unsubscribe schedules `stop_audio_rx_opus()`
+  - Sliding window queue: on overflow, oldest packet dropped (preserves real-time continuity)
+  - Default queue size: 64 packets
+- **Audio Bridge** (`audio_bridge.py`): bidirectional PCM bridge between radio and virtual audio devices (BlackHole, Loopback)
+  - CLI: `icom-lan audio bridge --device "BlackHole 2ch"` + `--list-devices` + `--rx-only`
+  - Auto-detects BlackHole/Loopback/VB-Audio virtual devices
+  - Opus decode → PCM → virtual device output; virtual device input → Opus encode → radio TX
+  - Noise gate on TX path, stats logging every 10s
+  - Optional dep: `pip install icom-lan[bridge]` (sounddevice + numpy + opuslib)
+- **Web server integration**: `icom-lan web --bridge "BlackHole 2ch"` runs bridge alongside web UI sharing the same radio connection
+  - REST API: `GET/POST/DELETE /api/v1/bridge`
+  - `--bridge-rx-only` for receive-only mode
+- **Rigctld default**: `icom-lan web` now starts rigctld on `:4532` by default; `--no-rigctld` to disable
+- **AudioBroadcaster refactored**: now uses AudioBus subscription instead of direct `start_audio_rx_opus` calls
+- **AudioCapable Protocol**: added `audio_bus` property
+
+### 🔧 Fixes
+
+- CI: `test_soft_reconnect_handles_connect_failure` mock changed from `OSError` to `IcomTimeout` (was timing out in CI due to 10 retry attempts)
+
+### 🧪 Tests
+
+- 19 new AudioBus tests, 14 AudioBridge tests, all handler tests updated
+- **1772 passed, 0 failures, 95% coverage**
+
 ## [0.11.0] — 2026-03-03
 
 ### 🎯 Full Dual-Receiver Support ([#92](https://github.com/morozsm/icom-lan/issues/92))

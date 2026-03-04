@@ -5,13 +5,29 @@ to work with `icom-lan serve` as a Hamlib NET rigctld replacement.
 
 ## Quick Start
 
-### 1. Start the rigctld server
+### 1. Start the server
+
+**Recommended: all-in-one** (Web UI + audio bridge + rigctld):
 
 ```bash
-# Basic
-icom-lan --host <RADIO_IP> --user <USER> --pass <PASS> serve
+# Install bridge dependencies
+pip install icom-lan[bridge]
 
-# Recommended for WSJT-X (pre-warms DATA mode on first client)
+# Install BlackHole virtual audio device (macOS)
+brew install blackhole-2ch
+
+# Start all-in-one server
+icom-lan --host <RADIO_IP> --user <USER> --pass <PASS> web --bridge "BlackHole 2ch"
+```
+
+This starts:
+- **Web UI** on `:8080`
+- **Audio bridge** routing radio RX/TX ↔ BlackHole virtual device
+- **Rigctld** on `:4532` (enabled by default)
+
+**Alternative: rigctld only** (no Web UI or audio bridge):
+
+```bash
 icom-lan --host <RADIO_IP> --user <USER> --pass <PASS> serve --wsjtx-compat
 ```
 
@@ -29,6 +45,21 @@ In **Settings → Radio**:
 
 Press **Test CAT** — the button should turn green.
 Press **Test PTT** — the radio should key up briefly.
+
+### 3. Configure WSJT-X Audio (with BlackHole bridge)
+
+If using `--bridge "BlackHole 2ch"`, configure WSJT-X audio:
+
+In **Settings → Audio**:
+
+| Setting | Value |
+|---------|-------|
+| **Input** | `BlackHole 2ch` |
+| **Output** | `BlackHole 2ch` |
+
+The audio bridge routes:
+- **Radio RX → BlackHole → WSJT-X Input** (decode FT8/FT4)
+- **WSJT-X Output → BlackHole → Radio TX** (transmit FT8/FT4)
 
 ## The `--wsjtx-compat` Flag
 

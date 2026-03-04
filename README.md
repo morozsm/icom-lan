@@ -2,7 +2,7 @@
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-1739%20passed-brightgreen.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-1772%20passed-brightgreen.svg)](#testing)
 [![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen.svg)](#testing)
 
 **Python library for controlling Icom transceivers over LAN (UDP).**
@@ -26,6 +26,7 @@ Direct connection to your radio — no wfview, hamlib, or RS-BA1 required.
   - 🎚️ **Full control panel** — AF/RF/Squelch sliders, NB/NR/DIGI-SEL/IP+ toggles, ATT/Preamp, VFO A/B
   - 📊 **Meters** — S-meter, SWR (color-coded), ALC, Power, Vd, Id
   - 🔄 **Live state sync** — HTTP polling at 200ms, no page refresh needed
+- 🔊 **Virtual audio bridge** — route radio audio to BlackHole/Loopback for WSJT-X, fldigi, JS8Call (`icom-lan web --bridge "BlackHole 2ch"`)
 - 🔌 **Hamlib NET rigctld server** — drop-in replacement for `rigctld`, works with WSJT-X, JS8Call, fldigi
 - 🎛️ **Dual-receiver support** — MAIN/SUB via Command29 (IC-7610)
 - 🎤 **Browser audio TX** — transmit from browser microphone
@@ -163,9 +164,17 @@ icom-lan serve --max-clients 5          # Limit concurrent clients
 icom-lan serve --wsjtx-compat           # Pre-warm DATA mode for WSJT-X CAT/PTT flow
 
 # Then in WSJT-X: Rig → Hamlib NET rigctl, Address: localhost, Port: 4532
-# Or test with: rigctl -m 2 -r localhost:4532 f
-# Note: --wsjtx-compat enables DATA mode automatically on first client
-# when radio is in USB/LSB/RTTY with DATA off (opt-in behavior).
+
+# All-in-one: Web UI + audio bridge + rigctld
+icom-lan web --bridge "BlackHole 2ch"
+# Now WSJT-X gets: CAT via rigctld (:4532) + audio via BlackHole
+
+# List available audio devices
+icom-lan audio bridge --list-devices
+
+# Audio bridge only (no web UI)
+icom-lan audio bridge --device "BlackHole 2ch"
+icom-lan audio bridge --device "BlackHole 2ch" --rx-only
 ```
 
 ## API Reference
@@ -210,6 +219,7 @@ icom-lan serve --wsjtx-compat           # Pre-warm DATA mode for WSJT-X CAT/PTT 
 | `start_audio_rx()` / `stop_audio_rx()` | Start/stop RX audio stream |
 | `start_audio_tx()` / `stop_audio_tx()` | Start/stop TX audio stream |
 | `push_audio_tx_opus(data)` | Push Opus audio frames for TX |
+| `audio_bus` | AudioBus pub/sub for multi-consumer audio distribution |
 | `vfo_exchange()` | Exchange VFO A↔B frequencies |
 | `vfo_equalize()` | Copy active VFO to inactive |
 
@@ -217,7 +227,10 @@ icom-lan serve --wsjtx-compat           # Pre-warm DATA mode for WSJT-X CAT/PTT 
 
 | Endpoint | Description |
 |----------|-------------|
-| `GET /api/v1/state` | HTTP endpoint: dual-receiver state JSON (MAIN+SUB) |
+| `GET /api/v1/state` | Dual-receiver state JSON (MAIN+SUB) |
+| `GET /api/v1/bridge` | Audio bridge status |
+| `POST /api/v1/bridge` | Start audio bridge |
+| `DELETE /api/v1/bridge` | Stop audio bridge |
 
 ### Configuration
 
@@ -271,7 +284,7 @@ icom-lan uses an abstract **Radio Protocol** that enables support for multiple r
 ## Testing
 
 ```bash
-# Unit tests (no radio required) — 1739 tests, 95% coverage
+# Unit tests (no radio required) — 1772 tests, 95% coverage
 pytest tests/test_*.py
 
 # Mock integration tests (full UDP protocol, no radio required)

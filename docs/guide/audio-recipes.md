@@ -192,6 +192,71 @@ asyncio.run(main())
 
 ---
 
+## 4) AudioBus — multi-consumer pub/sub
+
+Route the same RX audio to multiple consumers simultaneously.
+
+```python
+import asyncio
+from icom_lan import IcomRadio
+
+async def main() -> None:
+    radio = IcomRadio(
+        host="192.168.1.100",
+        username="YOUR_USER",
+        password="YOUR_PASS",
+    )
+
+    async with radio:
+        bus = radio.audio_bus
+
+        # Consumer 1: count packets
+        count = 0
+        async def consumer_1():
+            nonlocal count
+            async with bus.subscribe(name="counter") as sub:
+                async for pkt in sub:
+                    count += 1
+                    if count >= 100:
+                        break
+
+        # Consumer 2: save first 50 packets
+        packets = []
+        async def consumer_2():
+            async with bus.subscribe(name="saver") as sub:
+                async for pkt in sub:
+                    packets.append(pkt.data)
+                    if len(packets) >= 50:
+                        break
+
+        await asyncio.gather(consumer_1(), consumer_2())
+        print(f"Counted {count}, saved {len(packets)}")
+
+asyncio.run(main())
+```
+
+---
+
+## 5) WSJT-X all-in-one (CLI)
+
+Run Web UI + audio bridge + rigctld in a single command:
+
+```bash
+# Install dependencies
+pip install icom-lan[bridge]
+brew install blackhole-2ch  # macOS
+
+# Start everything
+icom-lan --host 192.168.1.100 --user USER --pass PASS \
+    web --bridge "BlackHole 2ch"
+
+# WSJT-X settings:
+#   Radio: Hamlib NET rigctl, localhost:4532
+#   Audio Input/Output: BlackHole 2ch
+```
+
+---
+
 ## Troubleshooting (audio)
 
 See the dedicated playbook:
