@@ -26,6 +26,13 @@ All notable changes to [icom-lan](https://github.com/morozsm/icom-lan) are docum
 
 ### 🔧 Fixes
 
+- **TX audio chunking**: IC-7610 silently drops audio UDP packets with payload > 1364 bytes; `push_tx()` now chunks large payloads matching wfview behavior (1920-byte PCM frame → 1364 + 556)
+- **Bridge PCM codec passthrough**: when radio uses PCM codec (0x04), bridge sends raw PCM directly instead of transcoding PCM→Opus→send; fixes zero-power TX
+- **Bridge codec auto-detection**: reads `radio.audio_codec` at startup — PCM data written directly to sounddevice, Opus decoded only when codec is `OPUS_1CH`/`OPUS_2CH`
+- **Separate TX device**: `--bridge-tx-device` CLI flag avoids feedback loop when using single BlackHole device for bidirectional audio
+- **AudioSubscription CancelledError**: `asyncio.CancelledError` in `__anext__` caught gracefully; timeout returns `None` (silence) instead of re-raising
+- **RX loop auto-restart**: on transient error, waits 1s then recreates task
+- **PID file**: `/tmp/icom-lan.pid` written on startup, removed on exit; `kill $(cat /tmp/icom-lan.pid)` for graceful shutdown
 - CI: `test_soft_reconnect_handles_connect_failure` mock changed from `OSError` to `IcomTimeout` (was timing out in CI due to 10 retry attempts)
 
 ### 🧪 Tests
