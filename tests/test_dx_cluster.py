@@ -16,7 +16,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from icom_lan.web.dx_cluster import DXClusterClient, DXSpot, parse_spot
+from icom_lan.web.dx_cluster import DXClusterClient, DXSpot, SpotBuffer, parse_spot
 
 
 # ---------------------------------------------------------------------------
@@ -277,3 +277,99 @@ class TestDXClusterClient:
             task.cancel()
             with pytest.raises(asyncio.CancelledError):
                 await task
+
+
+# ---------------------------------------------------------------------------
+# Task 3: SpotBuffer
+# ---------------------------------------------------------------------------
+
+
+def _make_spot(call: str, freq: int = 14074000, *, ts: float | None = None) -> DXSpot:
+    spot = DXSpot(spotter="K1ABC", freq=freq, call=call)
+    if ts is not None:
+        # dataclasses.replace works on frozen dataclasses
+        spot = dataclasses.replace(spot, timestamp=ts)
+    return spot
+
+
+class TestSpotBuffer:
+    def test_add_and_get_single_spot(self):
+        buf = SpotBuffer()
+        buf.add(_make_spot("JA1XYZ"))
+        spots = buf.get_spots()
+        assert len(spots) == 1
+        assert spots[0]["call"] == "JA1XYZ"
+
+    def test_max_len_drops_oldest(self):
+        buf = SpotBuffer(maxlen=3)
+        for i in range(5):
+            buf.add(_make_spot(f"W{i}ABC"))
+        spots = buf.get_spots()
+        # Only 3 most recent remain
+        assert len(spots) == 3
+        calls = [s["call"] for s in spots]
+        assert "W0ABC" not in calls
+        assert "W1ABC" not in calls
+        assert "W4ABC" in calls
+
+    def test_get_spots_returns_dicts(self):
+        buf = SpotBuffer()
+        buf.add(_make_spot("JA1XYZ", freq=14074000))
+        spot = buf.get_spots()[0]
+        assert spot["call"] == "JA1XYZ"
+        assert spot["freq"] == 14074000
+        assert spot["spotter"] == "K1ABC"
+        assert "comment" in spot
+        assert "time_utc" in spot
+        assert "timestamp" in spot
+
+    def test_get_spots_filter_by_band_20m(self):
+        buf = SpotBuffer()
+        buf.add(_make_spot("JA1XYZ", freq=14074000))   # 20m
+        buf.add(_make_spot("VK3ABC", freq=7074000))    # 40m
+        buf.add(_make_spot("W1ABC", freq=21074000))    # 15m
+        spots_20m = buf.get_spots(band="20m")
+        assert len(spots_20m) == 1
+        assert spots_20m[0]["call"] == "JA1XYZ"
+
+    def test_get_spots_filter_all_bands(self):
+        buf = SpotBuffer()
+        buf.add(_make_spot("JA1XYZ", freq=14074000))
+        buf.add(_make_spot("VK3ABC", freq=7074000))
+        assert len(buf.get_spots()) == 2
+
+    def test_get_spots_unknown_band_returns_empty(self):
+        buf = SpotBuffer()
+        buf.add(_make_spot("JA1XYZ", freq=14074000))
+        assert buf.get_spots(band="99m") == []
+
+    def test_expire_removes_old_spots(self):
+        buf = SpotBuffer()
+        now = time.monotonic()
+        old = _make_spot("OLD", ts=now - 3000)   # 50 min ago
+        fresh = _make_spot("FRESH", ts=now - 60)  # 1 min ago
+        buf.add(old)
+        buf.add(fresh)
+        assert len(buf.get_spots()) == 2
+
+        buf.expire(max_age_s=1800)  # 30 min threshold
+        spots = buf.get_spots()
+        assert len(spots) == 1
+        assert spots[0]["call"] == "FRESH"
+
+    def test_expire_empty_buffer_is_noop(self):
+        buf = SpotBuffer()
+        buf.expire(max_age_s=1800)
+        assert buf.get_spots() == []
+
+    def test_to_json_returns_valid_json(self):
+        buf = SpotBuffer()
+        buf.add(_make_spot("JA1XYZ", freq=14074000))
+        raw = buf.to_json()
+        parsed = json.loads(raw)
+        assert isinstance(parsed, list)
+        assert parsed[0]["call"] == "JA1XYZ"
+
+    def test_to_json_empty_buffer(self):
+        buf = SpotBuffer()
+        assert json.loads(buf.to_json()) == []

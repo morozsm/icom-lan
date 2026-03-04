@@ -133,3 +133,79 @@ class DXClusterClient:
         self._running = False
         if self._writer is not None and not self._writer.is_closing():
             self._writer.close()
+
+
+# ---------------------------------------------------------------------------
+# Task 3: SpotBuffer
+# ---------------------------------------------------------------------------
+
+# Amateur-radio band frequency ranges in Hz (ITU Region 2 / common ham bands).
+BAND_RANGES: dict[str, tuple[int, int]] = {
+    "160m": (1_800_000, 2_000_000),
+    "80m": (3_500_000, 4_000_000),
+    "60m": (5_330_500, 5_403_500),
+    "40m": (7_000_000, 7_300_000),
+    "30m": (10_100_000, 10_150_000),
+    "20m": (14_000_000, 14_350_000),
+    "17m": (18_068_000, 18_168_000),
+    "15m": (21_000_000, 21_450_000),
+    "12m": (24_890_000, 24_990_000),
+    "10m": (28_000_000, 29_700_000),
+    "6m": (50_000_000, 54_000_000),
+    "2m": (144_000_000, 148_000_000),
+    "70cm": (420_000_000, 450_000_000),
+}
+
+
+class SpotBuffer:
+    """Thread-safe(ish) ring buffer for DX cluster spots.
+
+    Oldest spots are dropped automatically when *maxlen* is reached.
+    Call :meth:`expire` periodically to remove spots older than a given age.
+    """
+
+    def __init__(self, maxlen: int = 200) -> None:
+        self._spots: deque[DXSpot] = deque(maxlen=maxlen)
+
+    def add(self, spot: DXSpot) -> None:
+        """Append a spot, evicting the oldest if at capacity."""
+        self._spots.append(spot)
+
+    def get_spots(self, band: str | None = None) -> list[dict]:
+        """Return spots as a list of plain dicts, optionally filtered by band.
+
+        If *band* is given (e.g. ``"20m"``) only spots whose frequency falls
+        within that band's range are returned.  An unrecognised band name
+        returns an empty list.
+        """
+        if band is not None:
+            if band not in BAND_RANGES:
+                return []
+            lo, hi = BAND_RANGES[band]
+            spots = [s for s in self._spots if lo <= s.freq <= hi]
+        else:
+            spots = list(self._spots)
+        return [
+            {
+                "spotter": s.spotter,
+                "freq": s.freq,
+                "call": s.call,
+                "comment": s.comment,
+                "time_utc": s.time_utc,
+                "timestamp": s.timestamp,
+            }
+            for s in spots
+        ]
+
+    def expire(self, max_age_s: float = 1800) -> None:
+        """Remove spots older than *max_age_s* seconds (using monotonic time)."""
+        cutoff = time.monotonic() - max_age_s
+        # deque doesn't support in-place filtering; rebuild it.
+        fresh = [s for s in self._spots if s.timestamp >= cutoff]
+        self._spots.clear()
+        self._spots.extend(fresh)
+
+    def to_json(self) -> str:
+        """Serialise the current spot list to a JSON string."""
+        import json as _json
+        return _json.dumps(self.get_spots())
