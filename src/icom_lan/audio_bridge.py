@@ -126,6 +126,10 @@ class AudioBridge:
         self._tx_stream = None  # sounddevice InputStream (device → radio)
         self._tx_task: asyncio.Task | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
+        self._opus_tap = None
+        self._decoder = None
+        self._exclusive_pcm = False
+        self._samples_per_frame = sample_rate * frame_ms // 1000
 
         # Stats
         self._rx_frames = 0
@@ -198,30 +202,69 @@ class AudioBridge:
             (samples_per_frame, self._channels), dtype=np.int16
         )
 
-        # Register PCM RX callback on the radio
-        def _on_rx_pcm(pcm_data: bytes | None) -> None:
+        # --- Opus RX tap: decode and write PCM to virtual device ---
+        # We use a "tap" mechanism to receive opus packets in parallel with
+        # other consumers (e.g. AudioBroadcaster for WebSocket clients).
+        try:
+            import opuslib
+        except ImportError:
+            raise ImportError(
+                "opuslib is required for audio bridge. "
+                "Install with: pip install icom-lan[bridge]"
+            ) from None
+
+        self._decoder = opuslib.Decoder(self._sample_rate, self._channels)
+        self._samples_per_frame = samples_per_frame
+
+        def _on_opus_packet(packet: Any) -> None:
+            """Tap into opus RX stream — decode and write to virtual device."""
             if not self._running:
                 return
-            if pcm_data is None:
-                # Gap / packet loss — write silence
+            if packet is None:
                 self._rx_drops += 1
                 if self._rx_stream and self._rx_stream.active:
                     self._rx_stream.write(self._silence)
                 return
 
-            self._rx_frames += 1
-            if self._rx_stream and self._rx_stream.active:
-                frame = np.frombuffer(pcm_data, dtype=np.int16).reshape(
-                    -1, self._channels
-                )
-                self._rx_stream.write(frame)
+            # packet is AudioPacket with .data attribute (opus bytes)
+            opus_data = getattr(packet, "data", None)
+            if opus_data is None:
+                return
 
-        await self._radio.start_audio_rx_pcm(
-            _on_rx_pcm,
-            sample_rate=self._sample_rate,
-            channels=self._channels,
-            frame_ms=self._frame_ms,
-        )
+            try:
+                pcm_data = self._decoder.decode(opus_data, self._samples_per_frame)
+                self._rx_frames += 1
+                if self._rx_stream and self._rx_stream.active:
+                    frame = np.frombuffer(pcm_data, dtype=np.int16).reshape(
+                        -1, self._channels
+                    )
+                    self._rx_stream.write(frame)
+            except Exception:
+                self._rx_drops += 1
+
+        self._opus_tap = _on_opus_packet
+
+        # Ensure audio transport is connected, then register tap
+        if hasattr(self._radio, "_ensure_audio_transport"):
+            await self._radio._ensure_audio_transport()
+        # Start RX stream on the radio (needed so packets flow)
+        # Use a dummy callback if no other consumer started RX yet
+        if hasattr(self._radio, "_audio_stream") and self._radio._audio_stream is not None:
+            stream = self._radio._audio_stream
+            stream.add_rx_tap(self._opus_tap)
+            # If RX not yet active, start it
+            if not getattr(stream, "_rx_task", None):
+                await self._radio.start_audio_rx_opus(lambda _: None)
+        else:
+            # Fallback: start full PCM path (single consumer mode)
+            logger.warning("audio-bridge: falling back to exclusive PCM mode")
+            self._exclusive_pcm = True
+            await self._radio.start_audio_rx_pcm(
+                self._make_pcm_callback(np),
+                sample_rate=self._sample_rate,
+                channels=self._channels,
+                frame_ms=self._frame_ms,
+            )
 
         # --- TX path: virtual device input → radio ---
         if self._tx_enabled:
@@ -253,6 +296,24 @@ class AudioBridge:
             self._channels,
             self._frame_ms,
         )
+
+    def _make_pcm_callback(self, np: Any) -> "Callable[[bytes | None], None]":
+        """Create a PCM RX callback for exclusive (fallback) mode."""
+        def _on_rx_pcm(pcm_data: bytes | None) -> None:
+            if not self._running:
+                return
+            if pcm_data is None:
+                self._rx_drops += 1
+                if self._rx_stream and self._rx_stream.active:
+                    self._rx_stream.write(self._silence)
+                return
+            self._rx_frames += 1
+            if self._rx_stream and self._rx_stream.active:
+                frame = np.frombuffer(pcm_data, dtype=np.int16).reshape(
+                    -1, self._channels
+                )
+                self._rx_stream.write(frame)
+        return _on_rx_pcm
 
     async def _tx_loop(self) -> None:
         """Read audio from the virtual device and push to the radio."""
@@ -318,11 +379,17 @@ class AudioBridge:
             self._rx_stream.close()
             self._rx_stream = None
 
-        # Stop radio audio
-        try:
-            await self._radio.stop_audio_rx_pcm()
-        except Exception:
-            logger.debug("audio-bridge: stop RX error", exc_info=True)
+        # Stop radio audio tap
+        if hasattr(self, "_opus_tap") and self._opus_tap is not None:
+            if hasattr(self._radio, "_audio_stream") and self._radio._audio_stream is not None:
+                self._radio._audio_stream.remove_rx_tap(self._opus_tap)
+            self._opus_tap = None
+
+        if getattr(self, "_exclusive_pcm", False):
+            try:
+                await self._radio.stop_audio_rx_pcm()
+            except Exception:
+                logger.debug("audio-bridge: stop RX error", exc_info=True)
 
         if self._tx_enabled:
             try:

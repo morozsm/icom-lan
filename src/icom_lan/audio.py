@@ -338,6 +338,7 @@ class AudioStream:
         self._transport = transport
         self._state: AudioState = AudioState.IDLE
         self._rx_callback: Callable[[AudioPacket | None], None] | None = None
+        self._rx_taps: list[Callable[[AudioPacket | None], None]] = []
         self._rx_task: asyncio.Task[None] | None = None
         self._tx_seq: int = 0
         self._jitter_depth = jitter_depth
@@ -468,6 +469,18 @@ class AudioStream:
     # RX
     # ------------------------------------------------------------------
 
+    def add_rx_tap(self, callback: Callable[["AudioPacket | None"], None]) -> None:
+        """Add an additional RX listener (tap) that receives all audio packets."""
+        if callback not in self._rx_taps:
+            self._rx_taps.append(callback)
+
+    def remove_rx_tap(self, callback: Callable[["AudioPacket | None"], None]) -> None:
+        """Remove an RX tap."""
+        try:
+            self._rx_taps.remove(callback)
+        except ValueError:
+            pass
+
     async def start_rx(
         self,
         callback: Callable[[AudioPacket | None], None],
@@ -534,18 +547,24 @@ class AudioStream:
                 continue  # Control/ping packet, not audio
 
             pkt = parse_audio_packet(data)
-            if pkt is not None and self._rx_callback is not None:
+            if pkt is not None and (self._rx_callback is not None or self._rx_taps):
                 self._rx_packets_received += 1
                 self._update_rx_order_stats(pkt.send_seq)
                 if self._jitter_buffer is not None:
                     for ready in self._jitter_buffer.push(pkt):
                         if ready is not None:
                             self._rx_packets_delivered += 1
-                        self._rx_callback(ready)
+                        if self._rx_callback is not None:
+                            self._rx_callback(ready)
+                        for tap in self._rx_taps:
+                            tap(ready)
                     self._sync_jitter_stats()
                 else:
                     self._rx_packets_delivered += 1
-                    self._rx_callback(pkt)
+                    if self._rx_callback is not None:
+                        self._rx_callback(pkt)
+                    for tap in self._rx_taps:
+                        tap(pkt)
 
     # ------------------------------------------------------------------
     # TX
