@@ -1028,7 +1028,7 @@ input[type=range]::-webkit-slider-thumb {
   function addDxSpot(spot) {
     if (!spot || !spot.call || !Number.isFinite(spot.freq)) { return; }
     var entry = { call: spot.call, freq: spot.freq, spotter: spot.spotter || '', comment: spot.comment || '', receivedAt: Date.now() };
-    var idx = state.dxSpots.findIndex(function (s) { return s.call === spot.call; });
+    var idx = state.dxSpots.findIndex(function (s) { return s.call === spot.call && s.freq === spot.freq; });
     if (idx >= 0) { state.dxSpots[idx] = entry; } else { state.dxSpots.push(entry); }
     expireDxSpots();
   }
@@ -1059,7 +1059,7 @@ input[type=range]::-webkit-slider-thumb {
   function toggleDxOverlay() {
     state.dxEnabled = !state.dxEnabled;
     updateDxBtn();
-    if (state.dxEnabled && !state.dxSpots.length) {
+    if (state.dxEnabled) {
       fetch('/api/v1/dx/spots').then(function (r) { return r.json(); }).then(function (d) {
         if (Array.isArray(d.spots)) {
           state.dxSpots = d.spots.map(function (s) {
