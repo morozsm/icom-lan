@@ -302,6 +302,10 @@ class ControlHandler:
                 logger.debug("control: state cache read failed: %s", exc)
         msg_out = {"type": "state", "data": data}
         await self._ws.send_text(encode_json(msg_out))
+        # Send current DX spots if available
+        if self._server is not None and hasattr(self._server, "_spot_buffer"):
+            spots = self._server._spot_buffer.get_spots()
+            await self._ws.send_text(encode_json({"type": "dx_spots", "spots": spots}))
 
     async def _handle_command(self, msg: dict[str, Any]) -> None:
         cmd_id = msg.get("id", "")
