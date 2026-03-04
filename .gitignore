@@ -42,3 +42,4 @@ dist/
 
 # MkDocs build output
 site/
+docs/issues-dump.md
