@@ -90,6 +90,7 @@ class ControlHandler:
             "set_filter",
             "ptt",
             "set_power",
+            "set_powerstat",
             "set_rf_gain",
             "set_af_level",
             "set_sql",
@@ -302,6 +303,10 @@ class ControlHandler:
                 logger.debug("control: state cache read failed: %s", exc)
         msg_out = {"type": "state", "data": data}
         await self._ws.send_text(encode_json(msg_out))
+        # Send current DX spots if available
+        if self._server is not None and hasattr(self._server, "_spot_buffer"):
+            spots = self._server._spot_buffer.get_spots()
+            await self._ws.send_text(encode_json({"type": "dx_spots", "spots": spots}))
 
     async def _handle_command(self, msg: dict[str, Any]) -> None:
         cmd_id = msg.get("id", "")
@@ -404,6 +409,10 @@ class ControlHandler:
                 level = int(params["level"])
                 q.put(SetPower(level))
                 return {"level": level}
+            case "set_powerstat":
+                on = bool(params.get("on", True))
+                await self._radio.set_powerstat(on)
+                return {"on": on}
             case "set_rf_gain":
                 level = int(params["level"])
                 rx = int(params.get("receiver", 0))
