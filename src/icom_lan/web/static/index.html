@@ -74,6 +74,7 @@ input[type=range]::-webkit-slider-thumb {
     <div><span class="text-slate-500 mr-2">UTC</span><span class="text-slate-100" id="clock">00:00</span></div>
     <div class="flex items-center gap-2"><span class="text-slate-500">ANT</span><span class="px-2 bg-slate-800 rounded text-vfo-a">1</span></div>
     <button class="text-[10px] px-3 py-1 bg-slate-800 border border-slate-700 text-slate-400 rounded hover:bg-slate-700 transition" id="dxBtn">DX</button>
+    <button class="text-[10px] px-3 py-1 bg-red-900/50 border border-red-700 text-red-400 rounded hover:bg-red-800/50 transition" id="powerBtn" title="Power On/Off">⏻ PWR</button>
   </div>
 </header>
 
@@ -1058,20 +1059,84 @@ input[type=range]::-webkit-slider-thumb {
   function toggleDxOverlay() {
     state.dxEnabled = !state.dxEnabled;
     updateDxBtn();
+    if (state.dxEnabled && !state.dxSpots.length) {
+      fetch('/api/v1/dx/spots').then(function (r) { return r.json(); }).then(function (d) {
+        if (Array.isArray(d.spots)) {
+          state.dxSpots = d.spots.map(function (s) {
+            return { call: s.call, freq: s.freq, spotter: s.spotter || '', comment: s.comment || '', receivedAt: Date.now() };
+          });
+        }
+        drawWaterfallOverlay();
+      }).catch(function () {});
+    }
     drawWaterfallOverlay();
   }
+
+  // DX spot badge (HTML overlay element)
+  // Modal overlay (blocks clicks to waterfall when badge is shown)
+  var dxOverlay = document.createElement('div');
+  dxOverlay.id = 'dxOverlay';
+  dxOverlay.style.cssText = 'display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:49;';
+  dxOverlay.addEventListener('click', function () {
+    state.dxSelectedCall = null;
+    hideDxBadge();
+    drawWaterfallOverlay();
+  });
+  document.body.appendChild(dxOverlay);
+
+  var dxBadge = document.createElement('div');
+  dxBadge.id = 'dxBadge';
+  dxBadge.style.cssText = 'display:none;position:absolute;z-index:50;' +
+    'background:rgba(0,0,0,0.92);border:1px solid rgba(0,242,255,0.7);border-radius:6px;' +
+    'padding:8px 12px;font-family:"Share Tech Mono",monospace;white-space:nowrap;cursor:pointer;' +
+    'box-shadow:0 4px 20px rgba(0,242,255,0.15);';
+  dxBadge.addEventListener('click', function (e) {
+    e.stopPropagation();
+    // Click on badge → tune to spot and close
+    if (state.dxSelectedCall) {
+      var spot = state.dxSpots.find(function (s) { return s.call === state.dxSelectedCall; });
+      if (spot) { sendCommand('set_freq', { freq: spot.freq, receiver: activeReceiver() }); }
+      state.dxSelectedCall = null;
+      hideDxBadge();
+      drawWaterfallOverlay();
+    }
+  });
+  document.body.appendChild(dxBadge);
+
+  function showDxBadge(spot, anchorEl, x) {
+    var rect = anchorEl.getBoundingClientRect();
+    dxBadge.innerHTML =
+      '<div style="font-size:18px;font-weight:bold;color:#00f2ff;letter-spacing:1px">' + spot.call + '</div>' +
+      '<div style="font-size:15px;color:#ccc;margin-top:2px">' + (spot.freq / 1e6).toFixed(3) + ' MHz</div>' +
+      (spot.comment ? '<div style="font-size:14px;color:#999;margin-top:2px">' + spot.comment + '</div>' : '') +
+      (spot.spotter ? '<div style="font-size:13px;color:#666;margin-top:2px">by ' + spot.spotter + '</div>' : '') +
+      '<div style="font-size:12px;color:#00f2ff;margin-top:4px;opacity:0.7">click again → tune</div>';
+    dxBadge.style.display = 'block';
+    dxOverlay.style.display = 'block';
+    // Position just above the triangle
+    var bw = dxBadge.offsetWidth;
+    var left = rect.left + x - bw / 2;
+    left = Math.max(4, Math.min(left, window.innerWidth - bw - 4));
+    dxBadge.style.left = left + 'px';
+    dxBadge.style.top = (rect.top - dxBadge.offsetHeight - 4) + 'px';
+  }
+
+  function hideDxBadge() {
+    dxBadge.style.display = 'none';
+    dxOverlay.style.display = 'none';
+  }
+
+  state.dxSelectedCall = null;
 
   function drawDxSpots(ctx, w, h) {
     if (!state.dxEnabled || !state.dxSpots.length) { return; }
     var span = state.scope.endFreq - state.scope.startFreq;
     if (span <= 0) { return; }
     var now = Date.now();
-    var TRI_H = 5;
-    var TRI_W = 5;
+    var TRI_H = 8;
+    var TRI_W = 6;
 
     ctx.save();
-    ctx.font = 'bold 8px "Share Tech Mono", Courier New, monospace';
-    ctx.textAlign = 'center';
 
     state.dxSpots.forEach(function (spot) {
       var age = now - spot.receivedAt;
@@ -1079,6 +1144,7 @@ input[type=range]::-webkit-slider-thumb {
       var x = ((spot.freq - state.scope.startFreq) / span) * w;
       if (x < 2 || x > w - 2) { return; }
 
+      var selected = (state.dxSelectedCall === spot.call);
       var color;
       if (age < DX_DIM_MS) {
         var t = age / DX_DIM_MS;
@@ -1090,21 +1156,63 @@ input[type=range]::-webkit-slider-thumb {
         color = '#555';
       }
 
-      // Downward triangle at bottom of spectrum
-      ctx.fillStyle = color;
+      // Vertical dashed line
+      ctx.strokeStyle = selected ? '#00f2ff' : color;
+      ctx.globalAlpha = selected ? 0.6 : 0.25;
+      ctx.setLineDash([3, 4]);
       ctx.beginPath();
-      ctx.moveTo(x - TRI_W, h - 2 - TRI_H);
-      ctx.lineTo(x + TRI_W, h - 2 - TRI_H);
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, h - 2 - TRI_H);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1.0;
+
+      // Triangle marker
+      var triW = selected ? 8 : TRI_W;
+      var triH = selected ? 10 : TRI_H;
+      ctx.fillStyle = selected ? '#00f2ff' : color;
+      ctx.beginPath();
+      ctx.moveTo(x - triW, h - 2 - triH);
+      ctx.lineTo(x + triW, h - 2 - triH);
       ctx.lineTo(x, h - 2);
       ctx.closePath();
       ctx.fill();
-
-      // Callsign above triangle
-      ctx.fillText(spot.call, x, h - 2 - TRI_H - 2);
     });
 
     ctx.restore();
   }
+
+  // Click on spectrum canvas → show badge / tune
+  (function () {
+    var specCanvas = document.getElementById('specCanvas');
+    if (!specCanvas) { return; }
+    specCanvas.addEventListener('click', function (e) {
+      if (!state.dxEnabled || !state.dxSpots.length) {
+        state.dxSelectedCall = null;
+        hideDxBadge();
+        return;
+      }
+      var rect = specCanvas.getBoundingClientRect();
+      var clickX = e.clientX - rect.left;
+      var nearest = findNearestDxSpot(clickX, 20);
+      if (nearest) {
+        if (state.dxSelectedCall === nearest.call) {
+          // Second click → tune
+          state.dxSelectedCall = null;
+          hideDxBadge();
+          sendCommand('set_freq', { freq: nearest.freq, receiver: activeReceiver() });
+        } else {
+          // First click → show badge
+          state.dxSelectedCall = nearest.call;
+          showDxBadge(nearest, specCanvas, clickX);
+        }
+      } else {
+        state.dxSelectedCall = null;
+        hideDxBadge();
+      }
+      drawWaterfallOverlay();
+    });
+  })();
 
   function handleControlMessage(msg) {
     if (!msg || typeof msg !== 'object') {
@@ -1173,12 +1281,12 @@ input[type=range]::-webkit-slider-thumb {
     }
 
     if (msg.type === 'dx_spot') {
-      if (state.dxEnabled && msg.spot) { addDxSpot(msg.spot); }
+      if (msg.spot) { addDxSpot(msg.spot); }
       return;
     }
 
     if (msg.type === 'dx_spots') {
-      if (state.dxEnabled && Array.isArray(msg.spots)) {
+      if (Array.isArray(msg.spots)) {
         state.dxSpots = msg.spots.map(function (s) {
           return { call: s.call, freq: s.freq, spotter: s.spotter || '', comment: s.comment || '', receivedAt: Date.now() };
         });
@@ -2403,6 +2511,37 @@ input[type=range]::-webkit-slider-thumb {
     });
 
     dom.dxBtn.addEventListener('click', toggleDxOverlay);
+
+    // Power On/Off button
+    dom.powerBtn = document.getElementById('powerBtn');
+    if (dom.powerBtn) {
+      dom.powerBtn.addEventListener('click', function () {
+        var isOn = state.radioConnected;
+        var action = isOn ? 'OFF' : 'ON';
+        if (!confirm('Power ' + action + ' the radio?')) { return; }
+        sendCommand('set_powerstat', { on: !isOn });
+        // Update button visual immediately
+        updatePowerBtn(!isOn);
+      });
+    }
+
+    function updatePowerBtn(on) {
+      if (!dom.powerBtn) { return; }
+      if (on) {
+        dom.powerBtn.className = 'text-[10px] px-3 py-1 bg-emerald-900/50 border border-emerald-600 text-emerald-400 rounded transition';
+        dom.powerBtn.innerHTML = '⏻ ON';
+      } else {
+        dom.powerBtn.className = 'text-[10px] px-3 py-1 bg-red-900/50 border border-red-700 text-red-400 rounded hover:bg-red-800/50 transition';
+        dom.powerBtn.innerHTML = '⏻ OFF';
+      }
+    }
+
+    // Update power button when radio state changes
+    var origSetStatus = setStatusVisual;
+    setStatusVisual = function () {
+      origSetStatus();
+      updatePowerBtn(state.radioConnected);
+    };
 
     [dom.spectrumContainer, dom.waterfallContainer].forEach(function (container) {
       container.addEventListener('click', function (ev) {
