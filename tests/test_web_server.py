@@ -1175,12 +1175,13 @@ class TestAudioHandlerCodecDetection:
     async def _start_rx_and_capture(self, audio_codec: object, sample_rate: int) -> bytes:
         """Start RX via AudioBroadcaster (using AudioBus) and return first queued frame."""
         from icom_lan.audio_bus import AudioBus
+        from icom_lan.radio_protocol import AudioCapable
         from icom_lan.types import AudioCodec
         from icom_lan.web.handlers import AudioBroadcaster, AudioHandler
         from icom_lan.web.websocket import WebSocketConnection
 
         mock_ws = MagicMock(spec=WebSocketConnection)
-        mock_radio = MagicMock()
+        mock_radio = MagicMock(spec=AudioCapable)
         mock_radio.audio_codec = audio_codec
         mock_radio.audio_sample_rate = sample_rate
         mock_radio.start_audio_rx_opus = AsyncMock()
