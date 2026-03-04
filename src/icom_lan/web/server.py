@@ -31,6 +31,7 @@ from typing import TYPE_CHECKING, Any
 from .. import __version__
 from ..radio_state import RadioState
 from ..rigctld.state_cache import StateCache
+from .dx_cluster import DXClusterClient, SpotBuffer
 from .handlers import AudioBroadcaster, AudioHandler, ControlHandler, MetersHandler, ScopeHandler
 from .radio_poller import CommandQueue, DisableScope, EnableScope, RadioPoller
 from .websocket import WS_KEEPALIVE_INTERVAL, WebSocketConnection, make_accept_key
@@ -66,6 +67,9 @@ class WebConfig:
     radio_model: str = _RADIO_MODEL
     max_clients: int = 100
     keepalive_interval: float = WS_KEEPALIVE_INTERVAL
+    dx_cluster_host: str = ""
+    dx_cluster_port: int = 0
+    dx_callsign: str = ""
 
 
 class WebServer:
@@ -108,6 +112,10 @@ class WebServer:
         self._scope_last_nonzero: float = 0.0
         self._scope_health_task: asyncio.Task[None] | None = None
         self._scope_health_interval: float = 10.0  # seconds of zero frames before re-enable
+        # DX cluster
+        self._spot_buffer: SpotBuffer = SpotBuffer()
+        self._dx_client: DXClusterClient | None = None
+        self._dx_client_task: asyncio.Task[None] | None = None
 
     # ------------------------------------------------------------------
     # Helpers for IcomRadio-specific operations (guarded with hasattr)
@@ -207,6 +215,26 @@ class WebServer:
         for q in list(self._control_event_queues):
             try:
                 q.put_nowait(event)
+            except asyncio.QueueFull:
+                pass
+
+    def _broadcast_dx_spot(self, spot: Any) -> None:
+        """Add DX spot to buffer and push dx_spot message to all control clients."""
+        self._spot_buffer.add(spot)
+        msg = {
+            "type": "dx_spot",
+            "spot": {
+                "spotter": spot.spotter,
+                "freq": spot.freq,
+                "call": spot.call,
+                "comment": spot.comment,
+                "time_utc": spot.time_utc,
+                "timestamp": spot.timestamp,
+            },
+        }
+        for q in list(self._control_event_queues):
+            try:
+                q.put_nowait(msg)
             except asyncio.QueueFull:
                 pass
 
@@ -342,6 +370,22 @@ class WebServer:
             self._scope_health_task = asyncio.get_running_loop().create_task(
                 self._scope_health_monitor(), name="scope-health"
             )
+        if self._config.dx_cluster_host:
+            self._dx_client = DXClusterClient(
+                self._config.dx_cluster_host,
+                self._config.dx_cluster_port,
+                self._config.dx_callsign,
+                on_spot=self._broadcast_dx_spot,
+            )
+            self._dx_client_task = asyncio.get_running_loop().create_task(
+                self._dx_client.start(), name="dx-cluster"
+            )
+            logger.info(
+                "dx-cluster: connecting to %s:%d as %s",
+                self._config.dx_cluster_host,
+                self._config.dx_cluster_port,
+                self._config.dx_callsign,
+            )
 
     # ------------------------------------------------------------------
     # Audio Bridge (virtual device integration)
@@ -392,6 +436,17 @@ class WebServer:
 
     async def stop(self) -> None:
         """Close the listener, stop RadioPoller, disconnect radio, cancel tasks."""
+        # Stop DX cluster client
+        if self._dx_client is not None:
+            await self._dx_client.stop()
+            self._dx_client = None
+        if self._dx_client_task is not None:
+            self._dx_client_task.cancel()
+            try:
+                await self._dx_client_task
+            except asyncio.CancelledError:
+                pass
+            self._dx_client_task = None
         # Stop audio bridge first
         if self._audio_bridge is not None:
             await self.stop_audio_bridge()
@@ -584,6 +639,8 @@ class WebServer:
             await self._serve_state(writer)
         elif path == "/api/v1/capabilities":
             await self._serve_capabilities(writer)
+        elif path == "/api/v1/dx/spots":
+            await self._serve_dx_spots(writer)
         elif path == "/api/v1/bridge":
             await self._handle_bridge(method, writer)
         elif path == "/" or path == "/index.html":
@@ -642,6 +699,13 @@ class WebServer:
             },
             separators=(",", ":"),
         ).encode()
+        await _send_response(
+            writer, 200, "OK", body, {"Content-Type": "application/json"}
+        )
+
+    async def _serve_dx_spots(self, writer: asyncio.StreamWriter) -> None:
+        spots = self._spot_buffer.get_spots()
+        body = json.dumps({"spots": spots}, separators=(",", ":")).encode()
         await _send_response(
             writer, 200, "OK", body, {"Content-Type": "application/json"}
         )

@@ -154,6 +154,10 @@ class Radio(Protocol):
         """Get TX power level (0-255 normalised scale)."""
         ...
 
+    async def set_powerstat(self, on: bool) -> None:
+        """Power the radio on or off."""
+        ...
+
     async def set_power(self, level: int) -> None:
         """Set TX power level (0-255 normalised scale)."""
         ...

@@ -395,6 +395,8 @@ icom-lan web --port 9090 --rigctld-port 4533
 | `--bridge-rx-only` | — | Bridge receives only (no TX from virtual device) |
 | `--no-rigctld` | — | Disable built-in rigctld server |
 | `--rigctld-port` | `4532` | Rigctld listen port |
+| `--dx-cluster HOST:PORT` | — | Connect to DX cluster server for real-time spot overlays (opt-in) |
+| `--callsign CALL` | — | Your callsign for DX cluster login (required with `--dx-cluster`) |
 
 ### `audio bridge`
 
@@ -562,6 +564,8 @@ icom-lan proxy --radio 192.168.1.100 --listen 10.8.0.1
 |------|---------|---------|-------------|
 | `--bridge-tx-device DEVICE` | `web` | *(none)* | Separate TX-only audio device for bidirectional bridge |
 | `--static-dir PATH` | `web` | *(built-in)* | Serve static web assets from a custom directory instead of the built-in UI |
+| `--dx-cluster HOST:PORT` | `web` | *(none)* | Connect to a DX cluster server for real-time spot overlays |
+| `--callsign CALL` | `web` | *(none)* | Your callsign for DX cluster login (required with `--dx-cluster`) |
 
 ```bash
 # Bidirectional bridge: RX from BlackHole 2ch, TX through BlackHole 16ch
@@ -569,6 +573,9 @@ icom-lan web --bridge "BlackHole 2ch" --bridge-tx-device "BlackHole 16ch"
 
 # Serve a custom-built web UI from a local directory
 icom-lan web --static-dir /opt/icom-ui/dist
+
+# Connect to a DX cluster and show spot overlays on the waterfall
+icom-lan web --dx-cluster dxc.nc7j.com:7373 --callsign KN4KYD
 ```
 
 ## Exit Codes
