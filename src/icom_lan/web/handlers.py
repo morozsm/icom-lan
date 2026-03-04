@@ -44,6 +44,7 @@ from .radio_poller import (
     SetNR,
     SetDigiSel,
     SetIpPlus,
+    SetPowerstat,
     SwitchScopeReceiver,
     VfoEqualize,
     VfoSwap,
@@ -411,7 +412,7 @@ class ControlHandler:
                 return {"level": level}
             case "set_powerstat":
                 on = bool(params.get("on", True))
-                await self._radio.set_powerstat(on)
+                q.put(SetPowerstat(on))
                 return {"on": on}
             case "set_rf_gain":
                 level = int(params["level"])
