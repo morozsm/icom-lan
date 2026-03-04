@@ -248,6 +248,36 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Loopback duration in seconds (default: 10)",
     )
 
+    # bridge
+    audio_bridge_p = audio_sub.add_parser(
+        "bridge",
+        help="Bridge radio audio to a virtual audio device (e.g. BlackHole)",
+        description=(
+            "Bidirectional PCM audio bridge between the radio and a system\n"
+            "audio device. Allows WSJT-X, fldigi, JS8Call etc. to use the\n"
+            "radio by selecting the virtual device as their sound card.\n\n"
+            "Requires: pip install icom-lan[bridge]\n"
+            "Virtual device: brew install blackhole-2ch\n\n"
+            "Example: icom-lan audio bridge --device 'BlackHole 2ch'"
+        ),
+    )
+    audio_bridge_p.add_argument(
+        "--device",
+        type=str,
+        default=None,
+        help="Audio device name (default: auto-detect BlackHole/Loopback)",
+    )
+    audio_bridge_p.add_argument(
+        "--rx-only",
+        action="store_true",
+        help="RX only (don't bridge TX from device to radio)",
+    )
+    audio_bridge_p.add_argument(
+        "--list-devices",
+        action="store_true",
+        help="List available audio devices and exit",
+    )
+
     # ptt
     ptt_p = sub.add_parser("ptt", help="PTT control")
     ptt_p.add_argument(
@@ -510,6 +540,8 @@ async def _run(args: argparse.Namespace) -> int:
                     return await _cmd_audio_tx(radio, args)
                 elif args.audio_command == "loopback":
                     return await _cmd_audio_loopback(radio, args)
+                elif args.audio_command == "bridge":
+                    return await _cmd_audio_bridge(radio, args)
                 print("Error: unknown audio command", file=sys.stderr)
                 return 1
             elif args.command == "power-on":
@@ -1193,6 +1225,71 @@ async def _cmd_scope(radio: IcomRadio, args: argparse.Namespace) -> int:
             await radio.disable_scope()
         except Exception:
             logger.debug("scope: disable_scope failed", exc_info=True)
+
+    return 0
+
+
+async def _cmd_audio_bridge(radio: IcomRadio, args: argparse.Namespace) -> int:
+    """Bridge radio audio to a virtual audio device."""
+    from .audio_bridge import AudioBridge, find_loopback_device, list_audio_devices
+
+    if args.list_devices:
+        try:
+            devices = list_audio_devices()
+        except ImportError as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            return 1
+        print("Available audio devices:")
+        for dev in devices:
+            marker = ""
+            name = dev.get("name", "?")
+            idx = dev.get("index", "?")
+            max_in = dev.get("max_input_channels", 0)
+            max_out = dev.get("max_output_channels", 0)
+            # Mark likely virtual devices
+            for hint in ("BlackHole", "Loopback", "VB-Audio", "Virtual"):
+                if hint.lower() in name.lower():
+                    marker = " ← virtual"
+                    break
+            print(f"  [{idx}] {name}  (in={max_in}, out={max_out}){marker}")
+        return 0
+
+    try:
+        bridge = AudioBridge(
+            radio,
+            device_name=args.device,
+            tx_enabled=not args.rx_only,
+        )
+        await bridge.start()
+    except ImportError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+    except RuntimeError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+
+    direction = "RX only" if args.rx_only else "RX+TX"
+    print(f"Audio bridge running ({direction}). Press Ctrl+C to stop.")
+
+    try:
+        while True:
+            await asyncio.sleep(10)
+            s = bridge.stats
+            logger.info(
+                "audio-bridge: rx=%d tx=%d drops=%d",
+                s["rx_frames"],
+                s["tx_frames"],
+                s["rx_drops"],
+            )
+    except asyncio.CancelledError:
+        pass
+    finally:
+        await bridge.stop()
+        s = bridge.stats
+        print(
+            f"\nBridge stopped. RX: {s['rx_frames']} frames, "
+            f"TX: {s['tx_frames']} frames, drops: {s['rx_drops']}"
+        )
 
     return 0
 
