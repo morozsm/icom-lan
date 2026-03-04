@@ -124,6 +124,35 @@ await bridge.start()
 | `subscriber_count` | `int` | Number of active subscribers |
 | `rx_active` | `bool` | Whether radio RX is currently streaming |
 
+## Module Constants
+
+### `MAX_AUDIO_PAYLOAD`
+
+```
+icom_lan.audio.MAX_AUDIO_PAYLOAD: int = 1364
+```
+
+Maximum audio payload in bytes per TX UDP packet.
+
+The IC-7610 silently drops TX audio UDP packets whose payload exceeds **1364 bytes**. This
+limit is undocumented but observed empirically and matches the wfview source:
+
+```cpp
+// wfview: audio.data.mid(len, 1364)
+```
+
+`push_tx()` (and the high-level `push_audio_tx_pcm()`) automatically chunk oversized payloads:
+
+```
+push_audio_tx_pcm(pcm_frame)  # 1920-byte 20ms PCM frame @ 48kHz/16-bit
+  → chunk 0: bytes [0 : 1364]    → 1364-byte UDP payload  ✓
+  → chunk 1: bytes [1364 : 1920] →  556-byte UDP payload  ✓
+```
+
+The two chunk sizes — 1364 and 556 bytes — correspond to the fixed audio payload sizes
+documented in wfview for the IC-7610. Callers do not need to pre-chunk frames; any frame size
+is accepted.
+
 ## Usage
 
 ### RX Audio (callback-based)

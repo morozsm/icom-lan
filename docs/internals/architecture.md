@@ -163,6 +163,68 @@ WebSocket-based browser interface:
 - Audio: PCM16 binary frames over WebSocket, Web Audio API playback
 - AudioBroadcaster uses AudioBus subscription for RX audio distribution
 
+#### `web/` Module Descriptions
+
+**`web/protocol.py`** — Binary frame codec for web UI data streams. Encodes scope frames
+(16-byte header + pixel data), meter frames (4-byte header + values), and audio frames
+(8-byte header + payload). Also provides JSON encode/decode helpers for control messages.
+
+**`web/radio_poller.py`** — CI-V command serialiser for the web UI. Deduplicates pending
+commands, drives rapid meter polling (25 ms interval), slower state polling, and scope
+enable/disable. Avoids request-response patterns to survive the IC-7610's 225-packet/sec
+scope flood.
+
+**`web/websocket.py`** — Pure-stdlib RFC 6455 WebSocket implementation (no aiohttp WebSocket
+dependency). HTTP Upgrade handshake key computation, frame serialisation/parsing, and
+`WebSocketConnection` class for full-duplex messaging with ping/pong support.
+
+### `rigctld/` — Hamlib NET rigctld Server
+
+TCP server that exposes the radio via the Hamlib `NET rigctld` protocol, enabling control
+from WSJT-X, fldigi, and any other Hamlib-aware software without needing a physical serial
+port.
+
+**`rigctld/server.py`** — asyncio TCP server (`asyncio.start_server`) implementing the hamlib
+NET rigctld protocol. Manages the TCP listener, per-client session lifecycle, connection
+timeout, configurable max-client cap, and per-client rate limiting.
+
+**`rigctld/handler.py`** — Command dispatcher bridging parsed rigctld commands to `IcomRadio`.
+Implements get/set operations for frequency, mode, PTT, VFO, RF/AF levels, split VFO, and
+RIT. Uses `StateCache` for reads to avoid CI-V round-trips; translates icom-lan exceptions
+to Hamlib error codes.
+
+**`rigctld/protocol.py`** — Stateless wire-protocol layer. Pure functions for parsing
+line-based rigctld commands and formatting normal and extended-protocol (`;`-separated)
+responses. No I/O, no state.
+
+**`rigctld/state_cache.py`** — Shared radio state cache with monotonic per-field timestamps.
+Allows read commands to be served from cache instead of waiting for CI-V round-trips. Provides
+freshness checks (configurable TTL) and an atomic snapshot for status dumps.
+
+**`rigctld/poller.py`** — Background task that periodically polls the radio and writes results
+into `StateCache`. Integrates with the circuit breaker: skips poll cycles when the circuit is
+OPEN, issues lightweight probe reads when HALF_OPEN.
+
+**`rigctld/circuit_breaker.py`** — Circuit breaker with three states (CLOSED → OPEN →
+HALF_OPEN). Fast-fails rigctld commands when the radio stops responding, preventing cascading
+timeouts from blocking connected clients.
+
+**`rigctld/audit.py`** — Structured per-command audit logging. Defines `AuditRecord` dataclass
+and `RigctldAuditFormatter`, emitting JSON-formatted records to a dedicated logger
+(`icom_lan.rigctld.audit`) for external log aggregation.
+
+**`rigctld/contract.py`** — Shared type definitions for the rigctld subpackage. Contains the
+Hamlib error code enum, hamlib mode-string mappings (USB, LSB, CW, …), and configuration
+dataclasses: `RigctldConfig`, `ClientSession`, `RigctldCommand`, `RigctldResponse`.
+
+### `proxy.py` — Transparent UDP Relay
+
+Forwards Icom LAN UDP traffic between a remote client and a local radio across all three
+ports (control :50001, CI-V :50002, audio :50003). Designed for VPN-based remote operation:
+the proxy runs on a machine on the same LAN as the radio, and the remote operator connects to
+the proxy address instead of the radio directly. No packet modification — pure relay with
+session timeout handling.
+
 ### `commands.py` — CI-V Encoding/Decoding
 
 Pure functions for building and parsing CI-V frames. No state, no I/O.
@@ -170,6 +232,171 @@ Pure functions for building and parsing CI-V frames. No state, no I/O.
 ### `auth.py` — Authentication
 
 Icom credential encoding, login/conninfo packet construction.
+
+### `types.py` — Protocol Primitives
+
+Shared enums, dataclasses, and BCD encode/decode helpers. Zero dependencies — no imports from other project files. Everything else in the library imports from here.
+
+- **`PacketType`** (IntEnum): wire type codes — `DATA=0x00`, `CONTROL=0x01`, `ARE_YOU_THERE=0x03`, `PING=0x07`, …
+- **`Mode`** (IntEnum): CI-V mode bytes — `LSB=0x00`, `USB=0x01`, `CW=0x03`, `FM=0x05`, …
+- **`AudioCodec`** (IntEnum): codec IDs for conninfo packets — `PCM_1CH_16BIT=0x04`, `OPUS_1CH=0x40`, …
+- **`CivFrame`**: frozen dataclass — parsed CI-V frame (`to_addr`, `from_addr`, `command`, `sub`, `data`, `receiver`)
+- **`PacketHeader`**: frozen dataclass — 16-byte UDP header fields
+- **`bcd_encode`** / **`bcd_decode`**: Icom 5-byte little-endian BCD frequency format (14_074_000 Hz ↔ `00 40 07 14 00`)
+- **`AudioCapabilities`** / **`get_audio_capabilities()`**: static codec/sample-rate capability matrix; default is `PCM_1CH_16BIT` at 48 kHz
+
+### `protocol.py` — Packet Header Parsing
+
+Low-level serialization and identification of the fixed 16-byte header present in every Icom LAN UDP packet. No state, no I/O — pure `struct` packing.
+
+- **`parse_header(data)`** → `PacketHeader`: unpacks `<IHHII` from first 16 bytes
+- **`serialize_header(header)`** → `bytes`: packs a `PacketHeader` back to wire format
+- **`identify_packet_type(data)`** → `PacketType | None`: peeks at offset 0x04 without full parse
+
+### `exceptions.py` — Exception Hierarchy
+
+All library exceptions derive from `IcomLanError`, allowing callers to catch either the base class or a specific subtype. Audio exceptions form a distinct sub-tree.
+
+```
+IcomLanError
+├── ConnectionError      — connection failed or lost
+├── AuthenticationError  — login rejected by radio
+├── CommandError         — CI-V NAK or unexpected response
+├── TimeoutError         — operation exceeded time budget
+└── AudioError
+    ├── AudioCodecBackendError  — opuslib not installed
+    ├── AudioFormatError        — invalid PCM/Opus input format
+    └── AudioTranscodeError     — encode/decode failure at runtime
+```
+
+### `audio.py` — Audio Streaming Engine
+
+Manages RX/TX audio on the Icom audio UDP port (50003). Codec-agnostic: passes raw payloads to callbacks regardless of whether the radio sends PCM or Opus. Includes a sequence-number-aware jitter buffer.
+
+- **`AudioStream`**: full-duplex RX/TX engine — `start_rx()`, `push_tx()`, `stop_rx()`, `stop_tx()`; supports multiple tap callbacks alongside the primary callback
+- **`JitterBuffer`**: reorder-and-delay buffer (configurable depth, gap-fill with `None`, duplicate/stale detection, overflow flush)
+- **`AudioPacket`**: frozen dataclass — `ident`, `send_seq`, `data` (raw payload bytes after the 24-byte header)
+- **`AudioStats`**: frozen dataclass — 17 fields (packet counts, jitter EMA, latency estimate, buffer depth); exposed via `AudioStream.get_audio_stats()`
+- **`build_audio_packet()`**: assembles wire-ready UDP packet; auto-chunks payloads larger than `MAX_AUDIO_PAYLOAD = 1364` bytes (IC-7610 hard limit)
+- **`parse_audio_packet()`**: strips 24-byte header, returns `AudioPacket` or `None` for control/ping packets
+
+### `_audio_transcoder.py` — PCM↔Opus Transcoder
+
+Internal (private) PCM↔Opus transcoding layer wrapping the optional `opuslib` dependency behind a `Protocol`-based backend interface, keeping the rest of the library decoupled from the native codec.
+
+- **`PcmAudioFormat`**: frozen dataclass — `sample_rate`, `channels`, `frame_ms`, `sample_width`; computes `frame_samples` and `frame_bytes`; validates supported values on construction
+- **`PcmOpusTranscoder`**: `pcm_to_opus(pcm_data)` and `opus_to_pcm(opus_data)` — strict frame-size validation; raises typed `AudioError` subclasses on failure
+- **`create_pcm_opus_transcoder()`**: factory used by audio internals; raises `AudioCodecBackendError` immediately if `opuslib` is absent
+- `_OpusBackend` (Protocol) / `_OpuslibBackend`: pluggable backend seam — testable without a real codec
+
+### `civ.py` — CI-V Request Tracking
+
+CI-V event classification, request-response matching, and frame scanning utilities. Pure logic (no I/O); consumed by `_civ_rx.py` to match incoming frames to pending waiters.
+
+- **`CivRequestTracker`**: tracks pending ACK/response waiters with generation-based invalidation, stale TTL GC (`cleanup_stale()`), and fire-and-forget sink support (`register_ack(wait=False)`)
+- **`CivEventType`** (StrEnum): `ACK`, `NAK`, `RESPONSE`, `SCOPE_CHUNK`, `SCOPE_FRAME`
+- **`CivRequestKey`**: match key — `(command, sub, receiver)` — correlates responses to requests
+- **`iter_civ_frames(payload)`**: yields raw `FE FE … FD` byte sequences from an arbitrary buffer (handles concatenated frames)
+- **`request_key_from_frame(frame)`**: derives a `CivRequestKey` from an outgoing `CivFrame`
+
+### `radio_protocol.py` — Abstract Radio Protocols
+
+Runtime-checkable `Protocol` interfaces for multi-backend radio control. Web UI, rigctld, and CLI program against these interfaces so any backend (Icom LAN, serial, Yaesu CAT) can be substituted without changing consumers.
+
+- **`Radio`**: core interface — lifecycle (`connect`/`disconnect`), frequency, mode, PTT, meters, power, levels, `radio_state`, `capabilities` set
+- **`AudioCapable`**: `audio_bus`, `start_audio_rx_opus`, `push_audio_tx_opus`
+- **`ScopeCapable`**: `enable_scope`, `disable_scope`
+- **`DualReceiverCapable`**: `vfo_exchange`, `vfo_equalize`
+
+```mermaid
+classDiagram
+    class Radio {
+        <<Protocol>>
+        +connect()
+        +disconnect()
+        +connected bool
+        +get_frequency()
+        +set_frequency()
+        +get_mode() / set_mode()
+        +set_ptt()
+        +radio_state RadioState
+        +capabilities set[str]
+    }
+    class AudioCapable {
+        <<Protocol>>
+        +audio_bus AudioBus
+        +start_audio_rx_opus()
+        +push_audio_tx_opus()
+    }
+    class ScopeCapable {
+        <<Protocol>>
+        +enable_scope()
+        +disable_scope()
+    }
+    class DualReceiverCapable {
+        <<Protocol>>
+        +vfo_exchange()
+        +vfo_equalize()
+    }
+    class IcomRadio {
+        +host str
+        +port int
+    }
+    Radio <|.. IcomRadio
+    AudioCapable <|.. IcomRadio
+    ScopeCapable <|.. IcomRadio
+    DualReceiverCapable <|.. IcomRadio
+```
+
+### `radio_state.py` — Live Radio State
+
+`RadioState` dataclass holds the complete live state for both receivers plus global parameters. Populated continuously by `CivRxMixin` from incoming CI-V frames; served by `GET /api/v1/state`. Runs alongside the existing `StateCache` without replacing it.
+
+- **`ReceiverState`**: per-receiver mutable state — `freq`, `mode`, `filter`, `data_mode`, `att`, `preamp`, `nb`, `nr`, `digisel`, `ipplus`, `af_level`, `rf_gain`, `squelch`, `s_meter`
+- **`RadioState`**: top-level container — `main` + `sub` (`ReceiverState`), `ptt`, `power_level`, `split`, `dual_watch`, `active` ("MAIN" | "SUB")
+- `to_dict()`: JSON-serializable snapshot (used by `/api/v1/state`)
+- `receiver(which)`: returns `main` or `sub` by name string
+
+### `radios.py` — Radio Model Registry
+
+Static registry of known Icom models with their CI-V addresses and hardware capabilities. Prevents hard-coding model-specific values in `IcomRadio` and `rigctld`.
+
+- **`RadioModel`**: frozen dataclass — `name`, `civ_addr`, `receivers`, `has_lan`, `has_wifi`
+- **`RADIOS`**: `{"IC-7610": 0x98, "IC-7300": 0x94, "IC-705": 0xA4, "IC-9700": 0xA2, "IC-R8600": 0x96, "IC-7851": 0x8E}`
+- **`get_civ_addr(model)`**: case-insensitive lookup; raises `KeyError` for unknown models
+
+### `meter_cal.py` — Meter Calibration Tables
+
+Converts raw BCD meter values (0–255) to calibrated engineering units using piecewise linear interpolation tables ported directly from wfview's `IC-7610.rig` file. No dependencies.
+
+- **`MeterType`** (str Enum): `SMETER`, `POWER`, `SWR`, `ALC`, `COMP`, `CURRENT`, `VOLTAGE`
+- **`calibrate(meter, raw)`** → `float`: linear interpolation through the matching table; returns `float(raw)` unchanged for unknown meter types
+- Calibrated ranges: S-meter (−54 to +60 dBm), power (0–120 W), SWR (1.0–6.0), supply voltage (0–16 V)
+
+### `scope.py` — Spectrum Scope Assembler
+
+Reassembles multi-sequence CI-V `0x27/0x00` bursts into complete `ScopeFrame` objects. The IC-7610 splits each frame across up to 15 UDP packets at ~225 frames/sec; `ScopeAssembler` accumulates chunks per receiver with timeout-based partial-frame discard.
+
+- **`ScopeAssembler`**: `feed(raw_payload, receiver)` → `ScopeFrame | None`; maintains independent state for main (0) and sub (1) receivers; center-mode frequency edge correction built in
+- **`ScopeFrame`**: dataclass — `receiver`, `mode`, `start_freq_hz`, `end_freq_hz`, `pixels` (bytes 0–160 amplitude), `out_of_range`
+- `_ReceiverState`: internal per-channel accumulator — resets on `seq=1`, emits on `seq=seqMax`, discards partials older than `assembly_timeout` (default 5 s)
+
+### `scope_render.py` — Scope Image Rendering
+
+Renders `ScopeFrame` data to PNG images using Pillow (optional `icom-lan[scope]`). Provides spectrum (amplitude vs. frequency line chart) and waterfall (time × frequency heatmap) views with configurable color themes.
+
+- **`render_spectrum(frame, width, height, theme)`** → PIL Image: frequency-labeled X axis, amplitude Y axis, filled line graph
+- **`render_waterfall(frames, width, height, theme)`** → PIL Image: newest row at top; uses direct pixel access (`img.load()`) for ~10× speedup over `draw.point`
+- **`render_scope_image(frames, …, output)`** → PIL Image: composite spectrum-on-top + waterfall-below; optionally saves PNG
+- **`THEMES`**: `"classic"` (dark-blue → cyan → yellow → red) and `"grayscale"`; `amplitude_to_color(value, theme)` for per-pixel use
+
+### `sync.py` — Synchronous API Wrapper
+
+Thin blocking wrapper around async `IcomRadio` for use in scripts and REPL sessions. Runs a dedicated `asyncio` event loop internally; exposes the full async API as synchronous methods with context-manager support.
+
+- **`IcomRadio`**: `with IcomRadio(host, …) as radio:` pattern — `__enter__` calls `connect()`, `__exit__` calls `disconnect()` and closes the event loop
+- Mirrors all async methods: frequency, mode, power, meters, PTT, VFO, attenuator, audio, CW, state snapshot/restore
+- Deprecated aliases (`start_audio_rx` → `start_audio_rx_opus`, etc.) emit `DeprecationWarning` with `stacklevel=2`
 
 ## Data Flow
 
@@ -205,6 +432,63 @@ radio:50002 sends ~225 scope packets/sec
   → scope frames (cmd 0x27) → ScopeAssembler → callback
   → non-scope frames → routed to command waiters
   → (drain-all prevents scope flood from starving GET responses)
+```
+
+### High-Level Data Flow
+
+```mermaid
+flowchart TD
+    subgraph Consumers
+        CLI[CLI\ncli.py]
+        WebUI[Web UI\nweb/]
+        Rigctld[rigctld]
+        Sync[sync.IcomRadio]
+    end
+
+    subgraph Core["IcomRadio (radio.py + mixins)"]
+        API[Public API]
+        Commander[IcomCommander\npriority queue]
+        CivRx[CivRxMixin\ndrain-all RX]
+        RadioStateObj[RadioState\nradio_state.py]
+        ScopeAsm[ScopeAssembler\nscope.py]
+    end
+
+    subgraph Transports
+        CtrlT[Control :50001]
+        CivT[CI-V :50002]
+        AudioT[Audio :50003]
+    end
+
+    subgraph AudioPipeline["Audio Pipeline"]
+        AudioStream[AudioStream\naudio.py]
+        AudioBus[AudioBus\naudio_bus.py]
+        WsAudio[WebSocket\nclients]
+        Bridge[AudioBridge\naudio_bridge.py]
+        BlackHole[BlackHole /\nLoopback]
+        WSJTX[WSJT-X /\nfldigi]
+    end
+
+    Radio[IC-7610]
+
+    Consumers --> API
+    API --> Commander
+    Commander --> CivT
+    CivT -- UDP --> Radio
+    Radio -- UDP --> CivT
+    CivT --> CivRx
+    CivRx --> RadioStateObj
+    CivRx --> ScopeAsm
+    ScopeAsm -->|scope frames| WebUI
+
+    CtrlT -- UDP keepalive --> Radio
+
+    Radio -- UDP audio --> AudioT
+    AudioT --> AudioStream
+    AudioStream --> AudioBus
+    AudioBus -->|Opus/PCM| WsAudio
+    AudioBus --> Bridge
+    Bridge --> BlackHole
+    BlackHole --> WSJTX
 ```
 
 ## Key Design Decisions
@@ -267,4 +551,354 @@ icom-lan[bridge]
 ├── sounddevice (PortAudio bindings)
 ├── numpy (PCM frame processing)
 └── opuslib (Opus codec for decode/encode)
+```
+
+## High-Level Flows
+
+### Control: CLI → Radio → CI-V → IC-7610
+
+```mermaid
+flowchart LR
+    subgraph Consumers
+        CLI[cli.py]
+        Web[web/]
+        Rigctld[rigctld/]
+        Sync[sync.py]
+    end
+    subgraph Core["IcomRadio (radio.py + mixins)"]
+        API[Public API]
+        Cmdr[IcomCommander\ncommander.py]
+        CivRxM[CivRxMixin\n_civ_rx.py]
+        RStat[RadioState\nradio_state.py]
+    end
+
+    Consumers --> API
+    API --> Cmdr
+    Cmdr -->|"FE FE 98 E0 xx FD\nCI-V frame"| CivT[CI-V Transport\n:50002]
+    CivT <-->|UDP| IC7610[IC-7610]
+    CivT --> CivRxM
+    CivRxM -->|response frames| Cmdr
+    CivRxM --> RStat
+```
+
+### Audio: IC-7610 → AudioBus → [WebSocket, Bridge → BlackHole → WSJT-X]
+
+```mermaid
+flowchart TD
+    IC7610[IC-7610\n:50003 UDP] -->|PCM/Opus frames| AudioT[Audio Transport\ntransport.py]
+    AudioT --> AStream[AudioStream\naudio.py + JitterBuffer]
+    AStream -->|AudioPacket callback| ABus[AudioBus\naudio_bus.py\npub/sub hub]
+    ABus -->|AudioSubscription| WsBcast[AudioBroadcaster\nweb/handlers.py]
+    ABus -->|AudioSubscription| Bridge[AudioBridge\naudio_bridge.py]
+    WsBcast -->|PCM16 binary frames| WsClients[Browser\nWeb Audio API]
+    Bridge -->|opus_to_pcm| Xcode[_audio_transcoder.py]
+    Xcode -->|s16le PCM| SndDev[sounddevice OutputStream]
+    SndDev --> BH[BlackHole / Loopback]
+    BH --> WSJTX[WSJT-X / fldigi]
+```
+
+### Scope: IC-7610 → ScopeAssembler → WebSocket
+
+```mermaid
+flowchart LR
+    IC7610[IC-7610] -->|"~225 pkt/s\n0x27/0x00 CI-V"| CivT[CI-V Transport\n:50002]
+    CivT --> CivRx[CivRxMixin\ndrain-all loop]
+    CivRx -->|"seq=1..N chunks\ncmd 0x27"| ScopeAsm[ScopeAssembler\nscope.py]
+    ScopeAsm -->|"ScopeFrame\nreceiver+pixels+freq"| ScopeH[ScopeHandler\nweb/handlers.py]
+    ScopeH -->|"binary frame\n16B hdr + pixels"| WSC[WebSocket clients\nbrowser Canvas2D]
+```
+
+## Module Data Flow Diagrams
+
+### `audio.py` — AudioStream State Machine
+
+```mermaid
+stateDiagram-v2
+    [*] --> IDLE
+    IDLE --> RECEIVING : start_rx(callback)
+    RECEIVING --> TRANSMITTING : start_tx()
+    TRANSMITTING --> RECEIVING : stop_tx() — RX still active
+    RECEIVING --> IDLE : stop_rx()
+    TRANSMITTING --> IDLE : stop_tx() — no active RX
+```
+
+RX data path through `JitterBuffer`:
+
+```mermaid
+flowchart LR
+    UDP[UDP datagram\nfrom :50003] --> Parse["parse_audio_packet()\nstrip 24-byte header"]
+    Parse -->|AudioPacket| JB{JitterBuffer\ndepth=5 pkts}
+    JB -->|"in-order, enough buffered"| CB[RX callback\n+ rx_taps]
+    JB -->|"gap detected → None placeholder"| CB
+    JB -->|buffer not yet full| Hold[hold — wait\nfor more packets]
+```
+
+### `_audio_transcoder.py` — Backend Abstraction
+
+```mermaid
+classDiagram
+    class _OpusBackend {
+        <<Protocol>>
+        +create_encoder(sample_rate, channels)
+        +create_decoder(sample_rate, channels)
+        +encode(encoder, pcm, frame_samples) bytes
+        +decode(decoder, opus, frame_samples) bytes
+    }
+    class _OpuslibBackend {
+        -_opuslib module
+        +create_encoder()
+        +create_decoder()
+        +encode()
+        +decode()
+    }
+    class PcmOpusTranscoder {
+        +fmt PcmAudioFormat
+        +pcm_to_opus(pcm) bytes
+        +opus_to_pcm(opus) bytes
+    }
+    class PcmAudioFormat {
+        +sample_rate int
+        +channels int
+        +frame_ms int
+        +frame_samples int
+        +frame_bytes int
+    }
+    _OpusBackend <|.. _OpuslibBackend : implements
+    PcmOpusTranscoder --> _OpusBackend : uses
+    PcmOpusTranscoder --> PcmAudioFormat
+```
+
+### `civ.py` — CI-V Request Lifecycle
+
+GET command (awaited future):
+
+```mermaid
+sequenceDiagram
+    participant Cmd as IcomCommander
+    participant Tracker as CivRequestTracker
+    participant Transport
+    participant RxLoop as CivRxMixin
+
+    Cmd->>Tracker: register_ack(wait=True) → Future
+    Cmd->>Transport: send_tracked(civ_frame)
+    Transport->>IC7610: UDP (FE FE 98 E0 .. FD)
+    IC7610-->>Transport: UDP response
+    Transport->>RxLoop: packet queued
+    RxLoop->>Tracker: resolve(event=ACK) → True
+    Tracker-->>Cmd: Future.set_result(frame)
+```
+
+SET command (fire-and-forget):
+
+```mermaid
+sequenceDiagram
+    participant Cmd as IcomCommander
+    participant Tracker as CivRequestTracker
+    participant Transport
+
+    Cmd->>Tracker: register_ack(wait=False) → sink token
+    Cmd->>Transport: send_tracked(civ_frame)
+    Transport->>IC7610: UDP
+    Note over Cmd: returns immediately — no await
+    IC7610-->>Transport: ACK consumed by sink
+```
+
+### `exceptions.py` — Exception Hierarchy
+
+```mermaid
+classDiagram
+    class IcomLanError
+    class ConnectionError
+    class AuthenticationError
+    class CommandError
+    class TimeoutError
+    class AudioError
+    class AudioCodecBackendError
+    class AudioFormatError
+    class AudioTranscodeError
+    IcomLanError <|-- ConnectionError
+    IcomLanError <|-- AuthenticationError
+    IcomLanError <|-- CommandError
+    IcomLanError <|-- TimeoutError
+    IcomLanError <|-- AudioError
+    AudioError <|-- AudioCodecBackendError
+    AudioError <|-- AudioFormatError
+    AudioError <|-- AudioTranscodeError
+```
+
+### `meter_cal.py` — Calibration Lookup
+
+```mermaid
+flowchart LR
+    Raw["raw value 0–255"] --> Cal["calibrate(meter, raw)"]
+    Cal --> Tbl{_TABLES lookup}
+    Tbl -->|table found| Interp["_interp()\npiecewise linear"]
+    Tbl -->|unknown type| Pass["return float(raw)"]
+    Interp --> Out["calibrated float\ne.g. dBm, watts, SWR"]
+    Pass --> Out
+```
+
+### `protocol.py` — Packet Header I/O
+
+```mermaid
+flowchart LR
+    Raw["raw bytes ≥16"] --> PH["parse_header()\nstruct '<IHHII'"]
+    PH --> Header["PacketHeader\nlength · type · seq\nsender_id · receiver_id"]
+    Header --> SH["serialize_header()\nstruct pack"]
+    SH --> Wire["16 bytes wire format"]
+    Raw --> IT["identify_packet_type()\npeek offset 0x04"]
+    IT --> PT["PacketType | None"]
+```
+
+### `proxy.py` — UDP Relay Flow
+
+```mermaid
+flowchart LR
+    subgraph Remote["Remote operator (via VPN)"]
+        Client[wfview / icom-lan\nclient]
+    end
+    subgraph Proxy["Proxy machine (on radio LAN)"]
+        C["_RelayProtocol\ncontrol :50001"]
+        V["_RelayProtocol\nCI-V :50002"]
+        A["_RelayProtocol\naudio :50003"]
+        W["Watchdog\nresets idle sessions\nafter 60 s"]
+    end
+    subgraph RadioLAN["Local LAN"]
+        Radio[IC-7610]
+    end
+
+    Client <-->|UDP| C
+    Client <-->|UDP| V
+    Client <-->|UDP| A
+    C <-->|UDP| Radio
+    V <-->|UDP| Radio
+    A <-->|UDP| Radio
+    W -. resets client_addr .-> C
+    W -. resets client_addr .-> V
+    W -. resets client_addr .-> A
+```
+
+### `radio_state.py` — Live State Model
+
+```mermaid
+classDiagram
+    class RadioState {
+        +main ReceiverState
+        +sub ReceiverState
+        +active "MAIN"|"SUB"
+        +ptt bool
+        +power_level int
+        +split bool
+        +dual_watch bool
+        +to_dict() dict
+        +receiver(which) ReceiverState
+    }
+    class ReceiverState {
+        +freq int
+        +mode str
+        +filter int|None
+        +data_mode bool
+        +att int
+        +preamp int
+        +nb bool
+        +nr bool
+        +digisel bool
+        +ipplus bool
+        +af_level int
+        +rf_gain int
+        +squelch int
+        +s_meter int
+    }
+    RadioState "1" --> "2" ReceiverState : main + sub
+```
+
+Update flow (CI-V frames → live state → consumers):
+
+```mermaid
+flowchart LR
+    CivRx[CivRxMixin\n_civ_rx.py] -->|"incoming frame\ne.g. cmd 0x03 freq"| Update[update RadioState fields]
+    Update --> RS[radio_state\nRadioState instance]
+    RS -->|GET /api/v1/state| HTTP[Web UI HTTP response]
+    RS -->|state_change_callback| WS[WebSocket push\nclientside update]
+```
+
+### `radios.py` — Model Registry
+
+```mermaid
+flowchart LR
+    Name["'IC-7610'"] --> GCA["get_civ_addr(model)"]
+    GCA --> Dict[(RADIOS dict)]
+    Dict --> Model["RadioModel\nciv_addr=0x98\nreceivers=2\nhas_lan=True"]
+    Model -->|civ_addr| Radio["IcomRadio\nconfiguration"]
+```
+
+### `scope.py` — Multi-Packet Assembly
+
+```mermaid
+sequenceDiagram
+    participant CivRx as CivRxMixin
+    participant Asm as ScopeAssembler
+    participant RS as _ReceiverState
+
+    CivRx->>Asm: feed(seq=1, mode+freq+OOR+pixels)
+    Asm->>RS: _reset() + store mode/freq metadata
+    CivRx->>Asm: feed(seq=2, pixel bytes)
+    Asm->>RS: append chunk
+    Note over RS: accumulating chunks…
+    CivRx->>Asm: feed(seq=N=seqMax, pixel bytes)
+    Asm->>RS: append final chunk
+    RS-->>Asm: _build_frame() → ScopeFrame
+    Asm-->>CivRx: ScopeFrame (complete)
+```
+
+Center-mode frequency correction (built into `_ReceiverState.feed`):
+
+```
+seq=1 payload → start_freq=center, end_freq=bandwidth
+→ corrected: start = center − bw, end = center + bw
+```
+
+### `scope_render.py` — Rendering Pipeline
+
+```mermaid
+flowchart TD
+    Frames["list[ScopeFrame]"] --> RSI["render_scope_image()"]
+    RSI --> RS["render_spectrum(frames[-1])\nfilled line graph\nfreq-labeled axes"]
+    RSI --> RW["render_waterfall(frames)\nheatmap rows\ncolormap lookup"]
+    RS --> Spec["PIL Image\nspectrum top"]
+    RW --> WF["PIL Image\nwaterfall bottom"]
+    Spec --> Comb["combined PIL Image\n(spectrum on top, waterfall below)"]
+    WF --> Comb
+    Comb -->|optional output| PNG[waterfall.png]
+```
+
+### `sync.py` — Synchronous Event-Loop Wrapper
+
+```mermaid
+flowchart LR
+    App["Script / REPL\nwith IcomRadio(...) as r:"] --> SR["sync.IcomRadio\n__enter__ → connect()"]
+    SR -->|"_run(coro)\nrun_until_complete"| Loop["asyncio event loop\ndedicated per instance"]
+    Loop --> AR["radio.IcomRadio\n(async)"]
+    AR -->|result| Loop
+    Loop -->|blocking return| SR
+    SR -->|result| App
+```
+
+### `types.py` — BCD Frequency Encoding
+
+```mermaid
+flowchart LR
+    Hz["14_074_000 Hz"] -->|bcd_encode| BCD["bytes: 00 40 07 14 00\n5-byte little-endian BCD"]
+    BCD -->|bcd_decode| Hz2["14_074_000 Hz"]
+```
+
+BCD byte layout for `14_074_000` Hz:
+
+```
+Decimal string: "0014074000"   (10 digits, most-significant first)
+byte[0] = 0x00  → units+tens          = 00
+byte[1] = 0x40  → hundreds+thousands  = 40  (0×10² + 4×10³ = 4000)
+byte[2] = 0x07  → 10k+100k           = 07  (0×10⁴ + 7×10⁵ = 70000)
+byte[3] = 0x14  → 1M+10M             = 14  (4×10⁶ + 1×10⁷ = 14000000)
+byte[4] = 0x00  → 100M+1G            = 00
 ```

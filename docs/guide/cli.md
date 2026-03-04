@@ -9,10 +9,11 @@ All commands accept these options:
 | Option | Env Var | Default | Description |
 |--------|---------|---------|-------------|
 | `--host` | `ICOM_HOST` | `192.168.1.100` | Radio IP address |
-| `--port` | `ICOM_PORT` | `50001` | Control port |
+| `--control-port` | `ICOM_PORT` | `50001` | Radio UDP control port (`--port` is a deprecated alias) |
 | `--user` | `ICOM_USER` | `""` | Username |
 | `--pass` | `ICOM_PASS` | `""` | Password |
 | `--timeout` | — | `5.0` | Timeout in seconds |
+| `--version` | — | — | Print version and exit |
 
 !!! tip "Use Environment Variables"
     Set `ICOM_HOST`, `ICOM_USER`, and `ICOM_PASS` in your shell profile to avoid typing them every time.
@@ -310,6 +311,60 @@ Scanning for Icom radios (3 seconds)...
 1 radio(s) found.
 ```
 
+### `serve`
+
+Start a rigctld-compatible TCP server so that logging and contesting software (WSJT-X, JS8Call, Ham Radio Deluxe, etc.) can control the radio without a full Hamlib installation.
+
+```bash
+# Basic rigctld server on default port 4532
+icom-lan serve
+
+# Custom port, read-only, max 5 clients
+icom-lan serve --port 4533 --read-only --max-clients 5
+
+# Write every command to an audit log
+icom-lan serve --audit-log /var/log/icom-audit.jsonl
+
+# Rate-limit to 10 commands/sec per client, verbose debug logs
+icom-lan serve --rate-limit 10 --log-level DEBUG
+
+# WSJT-X preset (enables DATA mode automatically on first connect)
+icom-lan serve --wsjtx-compat
+```
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--host` | `0.0.0.0` | Server listen address |
+| `--port` | `4532` | Server TCP port |
+| `--read-only` | off | Reject all set commands; allow only reads |
+| `--max-clients` | `10` | Maximum concurrent TCP clients |
+| `--cache-ttl` | `0.2` | How long (seconds) to cache radio state before re-querying |
+| `--wsjtx-compat` | off | Pre-warm for WSJT-X: auto-enable DATA mode on first client connect |
+| `--log-level` | `INFO` | Log verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`) |
+| `--audit-log PATH` | — | Append one JSON line per command to `PATH` (disabled by default) |
+| `--rate-limit N` | — | Max commands per second per client; excess commands are dropped (unlimited by default) |
+
+!!! note "rigctld compatibility"
+    The server speaks a subset of the Hamlib rigctld protocol over plain TCP. Tested with WSJT-X, JS8Call, and `rigctl` CLI.
+
+### `proxy`
+
+Transparent UDP relay that forwards all radio traffic between a remote client and the physical radio. Useful for accessing a shack radio over a VPN without exposing the radio's IP directly.
+
+```bash
+# Forward radio at 192.168.55.40 to all VPN clients
+icom-lan proxy --radio 192.168.55.40
+
+# Listen only on VPN interface, custom base port
+icom-lan proxy --radio 192.168.55.40 --listen 10.8.0.1 --port 50010
+```
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--radio` | *(required)* | Radio IP address to forward to |
+| `--listen` | `0.0.0.0` | Local address to listen on |
+| `--port` | `50001` | Base UDP port (proxy binds `port`, `port+1`, `port+2` for control/audio/data) |
+
 ### `web`
 
 Start the all-in-one server: Web UI + optional audio bridge + rigctld.
@@ -334,7 +389,9 @@ icom-lan web --port 9090 --rigctld-port 4533
 | Option | Default | Description |
 |--------|---------|-------------|
 | `--port` | `8080` | Web server port |
+| `--static-dir PATH` | — | Serve static files from a custom directory (default: built-in assets) |
 | `--bridge DEVICE` | — | Start audio bridge with named virtual device |
+| `--bridge-tx-device DEVICE` | — | Separate TX-only device for bidirectional bridge (e.g. `BlackHole 16ch`) |
 | `--bridge-rx-only` | — | Bridge receives only (no TX from virtual device) |
 | `--no-rigctld` | — | Disable built-in rigctld server |
 | `--rigctld-port` | `4532` | Rigctld listen port |
@@ -410,6 +467,109 @@ icom-lan scope --capture-timeout 20
 | `--width` | `800` | Image width in pixels |
 | `--json` | — | Output raw frame data as JSON |
 | `--capture-timeout` | `10`/`15` | Capture timeout in seconds |
+
+## PID File
+
+When any long-running command starts (e.g. `web`, `serve`, `audio bridge`), icom-lan writes its process ID to `/tmp/icom-lan.pid`. The file is removed automatically on clean exit or SIGTERM.
+
+```bash
+# Graceful shutdown
+kill $(cat /tmp/icom-lan.pid)
+
+# Check if icom-lan is running
+cat /tmp/icom-lan.pid && ps -p $(cat /tmp/icom-lan.pid)
+```
+
+This is equivalent to pressing Ctrl-C in the terminal — the radio session is disconnected cleanly before the process exits.
+
+!!! note
+    The PID file is not written for one-shot commands (`status`, `freq`, `discover`, `proxy`, etc.) that exit on their own.
+
+## Flag Reference
+
+Compact per-flag reference for all notable options, including which subcommand accepts them, the default value, and a minimal working example.
+
+### Global flags
+
+These flags apply to **every** command and must come before the subcommand name.
+
+| Flag | Command | Default | Description |
+|------|---------|---------|-------------|
+| `--version` | *(global)* | — | Print version and exit |
+| `--control-port PORT` | *(global)* | `50001` (`$ICOM_PORT`) | Radio UDP control port; `--port` is a deprecated alias |
+
+```bash
+# Print installed version
+icom-lan --version
+
+# Connect to a radio on a non-default port
+icom-lan --control-port 50002 status
+```
+
+### `serve` flags
+
+| Flag | Command | Default | Description |
+|------|---------|---------|-------------|
+| `--audit-log PATH` | `serve` | *(disabled)* | Append one JSON line per command to `PATH` |
+| `--cache-ttl N` | `serve` | `0.2` | Seconds to cache radio state before re-querying |
+| `--log-level LEVEL` | `serve` | `INFO` | Log verbosity: `DEBUG` `INFO` `WARNING` `ERROR` `CRITICAL` |
+| `--max-clients N` | `serve` | `10` | Maximum concurrent TCP clients |
+| `--rate-limit N` | `serve` | *(unlimited)* | Max commands per second per client; excess are dropped |
+| `--read-only` | `serve` | off | Reject all set (write) commands; allow reads only |
+| `--wsjtx-compat` | `serve` | off | Auto-enable DATA mode on first client connect (WSJT-X pre-warm) |
+
+```bash
+# Log every command to a JSONL audit trail
+icom-lan serve --audit-log /var/log/icom-audit.jsonl
+
+# Tighten cache for faster state sync
+icom-lan serve --cache-ttl 0.05
+
+# Verbose debug logging
+icom-lan serve --log-level DEBUG
+
+# Limit to 3 simultaneous clients
+icom-lan serve --max-clients 3
+
+# Drop commands faster than 10/sec per client
+icom-lan serve --rate-limit 10
+
+# Prevent accidental frequency/mode changes
+icom-lan serve --read-only
+
+# Enable WSJT-X compatibility preset
+icom-lan serve --wsjtx-compat
+```
+
+### `proxy` flags
+
+| Flag | Command | Default | Description |
+|------|---------|---------|-------------|
+| `--radio IP` | `proxy` | *(required)* | Radio IP address to forward all UDP traffic to |
+| `--listen ADDR` | `proxy` | `0.0.0.0` | Local interface address to bind on |
+
+```bash
+# Forward traffic to radio at 192.168.1.100 (listen on all interfaces)
+icom-lan proxy --radio 192.168.1.100
+
+# Bind only on the VPN interface
+icom-lan proxy --radio 192.168.1.100 --listen 10.8.0.1
+```
+
+### `web` flags
+
+| Flag | Command | Default | Description |
+|------|---------|---------|-------------|
+| `--bridge-tx-device DEVICE` | `web` | *(none)* | Separate TX-only audio device for bidirectional bridge |
+| `--static-dir PATH` | `web` | *(built-in)* | Serve static web assets from a custom directory instead of the built-in UI |
+
+```bash
+# Bidirectional bridge: RX from BlackHole 2ch, TX through BlackHole 16ch
+icom-lan web --bridge "BlackHole 2ch" --bridge-tx-device "BlackHole 16ch"
+
+# Serve a custom-built web UI from a local directory
+icom-lan web --static-dir /opt/icom-ui/dist
+```
 
 ## Exit Codes
 
