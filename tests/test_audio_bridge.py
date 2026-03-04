@@ -157,6 +157,14 @@ async def test_bridge_start_stop_rx_only():
     radio = MagicMock()
     radio.start_audio_rx_pcm = AsyncMock()
     radio.stop_audio_rx_pcm = AsyncMock()
+    radio._ensure_audio_transport = AsyncMock()
+    radio.start_audio_rx_opus = AsyncMock()
+
+    mock_audio_stream = MagicMock()
+    mock_audio_stream._rx_task = None
+    mock_audio_stream.add_rx_tap = MagicMock()
+    mock_audio_stream.remove_rx_tap = MagicMock()
+    radio._audio_stream = mock_audio_stream
 
     mock_output_stream = MagicMock()
     mock_output_stream.active = True
@@ -167,25 +175,36 @@ async def test_bridge_start_stop_rx_only():
     ]
     mock_sd.OutputStream.return_value = mock_output_stream
 
+    mock_opuslib = MagicMock()
+    mock_decoder = MagicMock()
+    mock_opuslib.Decoder.return_value = mock_decoder
+
     import numpy as np
 
-    with patch.dict("sys.modules", {"sounddevice": mock_sd}):
+    with patch.dict("sys.modules", {"sounddevice": mock_sd, "opuslib": mock_opuslib}):
         bridge = AudioBridge(radio, device_name="BlackHole", tx_enabled=False)
         await bridge.start()
 
         assert bridge._running
-        radio.start_audio_rx_pcm.assert_awaited_once()
+        mock_audio_stream.add_rx_tap.assert_called_once()
 
         await bridge.stop()
         assert not bridge._running
-        radio.stop_audio_rx_pcm.assert_awaited_once()
+        mock_audio_stream.remove_rx_tap.assert_called_once()
         mock_output_stream.stop.assert_called_once()
         mock_output_stream.close.assert_called_once()
 
 
 async def test_bridge_start_already_running():
     radio = MagicMock()
-    radio.start_audio_rx_pcm = AsyncMock()
+    radio._ensure_audio_transport = AsyncMock()
+    radio.start_audio_rx_opus = AsyncMock()
+
+    mock_audio_stream = MagicMock()
+    mock_audio_stream._rx_task = None
+    mock_audio_stream.add_rx_tap = MagicMock()
+    mock_audio_stream.remove_rx_tap = MagicMock()
+    radio._audio_stream = mock_audio_stream
 
     mock_output_stream = MagicMock()
     mock_output_stream.active = True
@@ -196,12 +215,14 @@ async def test_bridge_start_already_running():
     ]
     mock_sd.OutputStream.return_value = mock_output_stream
 
-    with patch.dict("sys.modules", {"sounddevice": mock_sd}):
+    mock_opuslib = MagicMock()
+
+    with patch.dict("sys.modules", {"sounddevice": mock_sd, "opuslib": mock_opuslib}):
         bridge = AudioBridge(radio, device_name="BlackHole", tx_enabled=False)
         await bridge.start()
         # Second start should be a no-op
         await bridge.start()
-        assert radio.start_audio_rx_pcm.await_count == 1
+        assert mock_audio_stream.add_rx_tap.call_count == 1
 
         await bridge.stop()
 
@@ -217,13 +238,19 @@ async def test_bridge_stop_when_not_running():
 # RX callback
 # ---------------------------------------------------------------------------
 
-async def test_bridge_rx_callback_writes_pcm():
-    """RX callback writes PCM data to the output stream."""
+async def test_bridge_rx_tap_writes_pcm():
+    """Opus RX tap decodes and writes PCM data to the output stream."""
     import numpy as np
 
     radio = MagicMock()
-    radio.start_audio_rx_pcm = AsyncMock()
-    radio.stop_audio_rx_pcm = AsyncMock()
+    radio._ensure_audio_transport = AsyncMock()
+    radio.start_audio_rx_opus = AsyncMock()
+
+    mock_audio_stream = MagicMock()
+    mock_audio_stream._rx_task = None
+    mock_audio_stream.add_rx_tap = MagicMock()
+    mock_audio_stream.remove_rx_tap = MagicMock()
+    radio._audio_stream = mock_audio_stream
 
     mock_output_stream = MagicMock()
     mock_output_stream.active = True
@@ -234,20 +261,29 @@ async def test_bridge_rx_callback_writes_pcm():
     ]
     mock_sd.OutputStream.return_value = mock_output_stream
 
-    with patch.dict("sys.modules", {"sounddevice": mock_sd}):
+    # Mock opuslib decoder
+    mock_opuslib = MagicMock()
+    fake_pcm = b"\x00\x01" * SAMPLES_PER_FRAME
+    mock_decoder = MagicMock()
+    mock_decoder.decode.return_value = fake_pcm
+    mock_opuslib.Decoder.return_value = mock_decoder
+
+    with patch.dict("sys.modules", {"sounddevice": mock_sd, "opuslib": mock_opuslib}):
         bridge = AudioBridge(radio, device_name="BlackHole", tx_enabled=False)
         await bridge.start()
 
-        # Grab the callback that was passed to start_audio_rx_pcm
-        rx_callback = radio.start_audio_rx_pcm.call_args[0][0]
+        # Grab the tap callback
+        tap_callback = mock_audio_stream.add_rx_tap.call_args[0][0]
 
-        # Feed PCM data
-        pcm = b"\x00\x01" * SAMPLES_PER_FRAME
-        rx_callback(pcm)
+        # Feed an AudioPacket-like object
+        packet = MagicMock()
+        packet.data = b"\x01\x02\x03"  # opus data
+        tap_callback(packet)
         assert bridge._rx_frames == 1
+        mock_decoder.decode.assert_called_once()
 
         # Feed None (gap)
-        rx_callback(None)
+        tap_callback(None)
         assert bridge._rx_drops == 1
 
         await bridge.stop()

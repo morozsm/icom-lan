@@ -756,6 +756,20 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         if self._audio_stream is not None:
             await self._audio_stream.stop_rx()
 
+    def _add_opus_rx_tap(
+        self, callback: "Callable[[AudioPacket | None], None]",
+    ) -> None:
+        """Add an additional opus RX listener (non-exclusive, parallel to main callback)."""
+        if self._audio_stream is not None:
+            self._audio_stream.add_rx_tap(callback)
+
+    def _remove_opus_rx_tap(
+        self, callback: "Callable[[AudioPacket | None], None]",
+    ) -> None:
+        """Remove an opus RX tap."""
+        if self._audio_stream is not None:
+            self._audio_stream.remove_rx_tap(callback)
+
     async def start_audio_tx_opus(self) -> None:
         """Start transmitting Opus audio to the radio.
 
