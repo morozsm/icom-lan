@@ -102,6 +102,8 @@ class WebServer:
         self._meter_cache: list[tuple[int, int]] | None = None
         # Control handler event queues
         self._control_event_queues: set[asyncio.Queue[dict[str, Any]]] = set()
+        # Audio bridge (virtual device integration)
+        self._audio_bridge: "AudioBridge | None" = None
         # Scope health monitor
         self._scope_last_nonzero: float = 0.0
         self._scope_health_task: asyncio.Task[None] | None = None
@@ -341,8 +343,54 @@ class WebServer:
                 self._scope_health_monitor(), name="scope-health"
             )
 
+    # ------------------------------------------------------------------
+    # Audio Bridge (virtual device integration)
+    # ------------------------------------------------------------------
+
+    async def start_audio_bridge(
+        self,
+        device_name: str | None = None,
+        tx_enabled: bool = True,
+    ) -> None:
+        """Start the audio bridge to a virtual audio device.
+
+        Args:
+            device_name: Device name (e.g. "BlackHole 2ch"). Auto-detects if None.
+            tx_enabled: Whether to bridge TX (device → radio).
+        """
+        from ..audio_bridge import AudioBridge
+
+        if self._audio_bridge is not None and self._audio_bridge.running:
+            logger.warning("audio-bridge: already running")
+            return
+        if self._radio is None:
+            raise RuntimeError("No radio connected")
+
+        self._audio_bridge = AudioBridge(
+            self._radio,
+            device_name=device_name,
+            tx_enabled=tx_enabled,
+        )
+        await self._audio_bridge.start()
+
+    async def stop_audio_bridge(self) -> None:
+        """Stop the audio bridge."""
+        if self._audio_bridge is not None:
+            await self._audio_bridge.stop()
+            self._audio_bridge = None
+
+    @property
+    def audio_bridge_stats(self) -> dict | None:
+        """Audio bridge stats, or None if not running."""
+        if self._audio_bridge is not None:
+            return self._audio_bridge.stats
+        return None
+
     async def stop(self) -> None:
         """Close the listener, stop RadioPoller, disconnect radio, cancel tasks."""
+        # Stop audio bridge first
+        if self._audio_bridge is not None:
+            await self.stop_audio_bridge()
         if self._scope_health_task is not None:
             self._scope_health_task.cancel()
             self._scope_health_task = None
@@ -532,6 +580,8 @@ class WebServer:
             await self._serve_state(writer)
         elif path == "/api/v1/capabilities":
             await self._serve_capabilities(writer)
+        elif path == "/api/v1/bridge":
+            await self._handle_bridge(method, writer)
         elif path == "/" or path == "/index.html":
             await self._serve_static(writer, "index.html")
         elif path.startswith("/"):
@@ -591,6 +641,43 @@ class WebServer:
         await _send_response(
             writer, 200, "OK", body, {"Content-Type": "application/json"}
         )
+
+    async def _handle_bridge(
+        self, method: str, writer: asyncio.StreamWriter,
+    ) -> None:
+        """Handle /api/v1/bridge — GET status, POST start, DELETE stop."""
+        if method == "GET":
+            stats = self.audio_bridge_stats
+            body = json.dumps(
+                {"running": stats is not None and stats.get("running", False),
+                 **(stats or {})},
+                separators=(",", ":"),
+            ).encode()
+            await _send_response(
+                writer, 200, "OK", body, {"Content-Type": "application/json"},
+            )
+        elif method == "POST":
+            try:
+                await self.start_audio_bridge()
+                body = json.dumps({"status": "started"}, separators=(",", ":")).encode()
+                await _send_response(
+                    writer, 200, "OK", body, {"Content-Type": "application/json"},
+                )
+            except Exception as exc:
+                body = json.dumps(
+                    {"error": str(exc)}, separators=(",", ":"),
+                ).encode()
+                await _send_response(
+                    writer, 500, "Error", body, {"Content-Type": "application/json"},
+                )
+        elif method == "DELETE":
+            await self.stop_audio_bridge()
+            body = json.dumps({"status": "stopped"}, separators=(",", ":")).encode()
+            await _send_response(
+                writer, 200, "OK", body, {"Content-Type": "application/json"},
+            )
+        else:
+            await _send_response(writer, 405, "Method Not Allowed", b"", {})
 
     async def _serve_static(
         self, writer: asyncio.StreamWriter, filename: str
