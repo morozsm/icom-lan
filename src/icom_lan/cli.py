@@ -403,6 +403,21 @@ def _build_parser() -> argparse.ArgumentParser:
         metavar="PATH",
         help="Directory to serve static files from (default: built-in)",
     )
+    web_p.add_argument(
+        "--bridge",
+        dest="web_bridge",
+        default=None,
+        nargs="?",
+        const="auto",
+        metavar="DEVICE",
+        help="Start audio bridge to virtual device (e.g. 'BlackHole 2ch', or omit for auto-detect)",
+    )
+    web_p.add_argument(
+        "--bridge-rx-only",
+        dest="web_bridge_rx_only",
+        action="store_true",
+        help="Bridge RX only (no TX from virtual device to radio)",
+    )
 
     # proxy
     proxy_p = sub.add_parser("proxy", help="Transparent UDP relay for remote access via VPN")
@@ -1353,9 +1368,26 @@ async def _cmd_web(radio: IcomRadio, args: argparse.Namespace) -> int:
         config_kwargs["static_dir"] = static_dir
 
     config = WebConfig(**config_kwargs)
+    server = WebServer(radio, config)
     print(f"Web UI listening on http://{args.web_host}:{args.web_port}/")
+
+    # Start audio bridge if requested
+    bridge_device = getattr(args, "web_bridge", None)
+    if bridge_device is not None:
+        device_name = None if bridge_device == "auto" else bridge_device
+        rx_only = getattr(args, "web_bridge_rx_only", False)
+        try:
+            await server.start_audio_bridge(
+                device_name=device_name,
+                tx_enabled=not rx_only,
+            )
+            direction = "RX only" if rx_only else "RX+TX"
+            print(f"Audio bridge active ({direction})")
+        except Exception as exc:
+            print(f"Warning: audio bridge failed: {exc}", file=sys.stderr)
+
     try:
-        await WebServer(radio, config).serve_forever()
+        await server.serve_forever()
     except asyncio.CancelledError:
         pass
     return 0
