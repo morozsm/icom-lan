@@ -27,6 +27,7 @@ Direct connection to your radio — no wfview, hamlib, or RS-BA1 required.
   - 📊 **Meters** — S-meter, SWR (color-coded), ALC, Power, Vd, Id
   - 🔄 **Live state sync** — HTTP polling at 200ms, no page refresh needed
 - 🔊 **Virtual audio bridge** — route radio audio to BlackHole/Loopback for WSJT-X, fldigi, JS8Call (`icom-lan web --bridge "BlackHole 2ch"`)
+- 📡 **DX cluster integration** — real-time spot overlays on the waterfall with click-to-tune (`icom-lan web --dx-cluster dxc.nc7j.com:7373 --callsign KN4KYD`)
 - 🔌 **Hamlib NET rigctld server** — drop-in replacement for `rigctld`, works with WSJT-X, JS8Call, fldigi
 - 🎛️ **Dual-receiver support** — MAIN/SUB via Command29 (IC-7610)
 - 🎤 **Browser audio TX** — transmit from browser microphone
