@@ -418,6 +418,19 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Bridge RX only (no TX from virtual device to radio)",
     )
+    web_p.add_argument(
+        "--rigctld",
+        dest="web_rigctld",
+        action="store_true",
+        help="Also start rigctld-compatible TCP server on port 4532",
+    )
+    web_p.add_argument(
+        "--rigctld-port",
+        dest="web_rigctld_port",
+        type=int,
+        default=4532,
+        help="rigctld TCP port (default: 4532)",
+    )
 
     # proxy
     proxy_p = sub.add_parser("proxy", help="Transparent UDP relay for remote access via VPN")
@@ -1386,10 +1399,28 @@ async def _cmd_web(radio: IcomRadio, args: argparse.Namespace) -> int:
         except Exception as exc:
             print(f"Warning: audio bridge failed: {exc}", file=sys.stderr)
 
+    # Start rigctld if requested
+    rigctld_server = None
+    if getattr(args, "web_rigctld", False):
+        from .rigctld.contract import RigctldConfig
+        from .rigctld.server import RigctldServer
+
+        rigctld_port = getattr(args, "web_rigctld_port", 4532)
+        rigctld_config = RigctldConfig(
+            host="0.0.0.0",
+            port=rigctld_port,
+        )
+        rigctld_server = RigctldServer(radio, rigctld_config)
+        await rigctld_server.start()
+        print(f"rigctld listening on 0.0.0.0:{rigctld_port}")
+
     try:
         await server.serve_forever()
     except asyncio.CancelledError:
         pass
+    finally:
+        if rigctld_server is not None:
+            await rigctld_server.stop()
     return 0
 
 
