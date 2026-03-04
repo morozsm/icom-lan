@@ -63,3 +63,73 @@ def parse_spot(line: str) -> DXSpot | None:
         comment=comment,
         time_utc=time_utc,
     )
+
+
+# ---------------------------------------------------------------------------
+# Task 2: DXClusterClient
+# ---------------------------------------------------------------------------
+
+
+class DXClusterClient:
+    """Asyncio telnet client for DX cluster servers.
+
+    Connects, sends callsign login, reads spot lines and calls ``on_spot``
+    for every successfully parsed DXSpot.  Auto-reconnects with exponential
+    backoff (2**attempt seconds, capped at 60 s) on connection failure.
+    """
+
+    def __init__(
+        self,
+        host: str,
+        port: int,
+        callsign: str,
+        on_spot: Callable[[DXSpot], None],
+    ) -> None:
+        self._host = host
+        self._port = port
+        self._callsign = callsign
+        self._on_spot = on_spot
+        self._running = False
+        self._writer: asyncio.StreamWriter | None = None
+
+    async def start(self) -> None:
+        """Connect and read spots in a loop.  Auto-reconnects.  Runs forever
+        until :meth:`stop` is called or the task is cancelled."""
+        self._running = True
+        attempt = 0
+        while self._running:
+            try:
+                reader, writer = await asyncio.open_connection(self._host, self._port)
+                self._writer = writer
+                try:
+                    writer.write(f"{self._callsign}\r\n".encode())
+                    await writer.drain()
+                    attempt = 0
+                    async for raw in reader:
+                        if not self._running:
+                            break
+                        line = raw.decode("ascii", errors="replace").rstrip("\r\n")
+                        spot = parse_spot(line)
+                        if spot is not None:
+                            self._on_spot(spot)
+                finally:
+                    self._writer = None
+                    if not writer.is_closing():
+                        writer.close()
+                    with contextlib.suppress(Exception):
+                        await writer.wait_closed()
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:
+                if not self._running:
+                    break
+                wait = min(2 ** attempt, 60)
+                attempt += 1
+                _log.warning("DX cluster disconnected (%s), retry in %ds", exc, wait)
+                await asyncio.sleep(wait)
+
+    async def stop(self) -> None:
+        """Signal the loop to stop and close the active connection."""
+        self._running = False
+        if self._writer is not None and not self._writer.is_closing():
+            self._writer.close()

@@ -8,6 +8,7 @@ Task 3: SpotBuffer
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import dataclasses
 import json
 import time
@@ -15,7 +16,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from icom_lan.web.dx_cluster import DXSpot, parse_spot
+from icom_lan.web.dx_cluster import DXClusterClient, DXSpot, parse_spot
 
 
 # ---------------------------------------------------------------------------
@@ -121,3 +122,158 @@ class TestParseSpot:
         after = time.monotonic()
         assert spot is not None
         assert before <= spot.timestamp <= after
+
+
+# ---------------------------------------------------------------------------
+# Task 2: DXClusterClient
+# ---------------------------------------------------------------------------
+
+_SPOT_LINE_1 = b"DX de K1ABC:  14074.0  JA1XYZ  FT8 +05dB  1234Z\r\n"
+_SPOT_LINE_2 = b"DX de W2DEF:  7074.0  VK3ABC  FT8 -10dB  0800Z\r\n"
+_NON_SPOT_LINE = b"Hello K1ABC-3 de dxspider 1.55\r\n"
+
+
+def _make_blocking_reader(*lines: bytes) -> asyncio.StreamReader:
+    """Feed lines but NO EOF — reader blocks after them, preventing reconnect loops."""
+    reader = asyncio.StreamReader()
+    for line in lines:
+        reader.feed_data(line)
+    return reader
+
+
+def _make_writer() -> MagicMock:
+    writer = MagicMock()
+    writer.write = MagicMock()
+    writer.drain = AsyncMock()
+    writer.is_closing = MagicMock(return_value=False)
+    writer.close = MagicMock()
+    writer.wait_closed = AsyncMock()
+    return writer
+
+
+async def _run_and_cancel(coro, *, delay: float = 0.05) -> None:
+    """Start a coroutine as a task, wait briefly, then cancel it."""
+    task = asyncio.create_task(coro)
+    await asyncio.sleep(delay)
+    task.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await task
+
+
+class TestDXClusterClient:
+    async def test_connects_and_sends_callsign(self):
+        """Client sends callsign immediately after connecting."""
+        reader = _make_blocking_reader()
+        writer = _make_writer()
+
+        with patch(
+            "icom_lan.web.dx_cluster.asyncio.open_connection",
+            new=AsyncMock(return_value=(reader, writer)),
+        ):
+            client = DXClusterClient("dx.example.com", 7300, "K1ABC", on_spot=MagicMock())
+            await _run_and_cancel(client.start())
+
+        writer.write.assert_called_once_with(b"K1ABC\r\n")
+
+    async def test_calls_on_spot_for_each_valid_line(self):
+        """on_spot callback is invoked once per valid spot line."""
+        reader = _make_blocking_reader(_SPOT_LINE_1, _SPOT_LINE_2)
+        writer = _make_writer()
+        spots: list[DXSpot] = []
+
+        with patch(
+            "icom_lan.web.dx_cluster.asyncio.open_connection",
+            new=AsyncMock(return_value=(reader, writer)),
+        ):
+            client = DXClusterClient("dx.example.com", 7300, "K1ABC", on_spot=spots.append)
+            await _run_and_cancel(client.start())
+
+        assert len(spots) == 2
+        assert spots[0].call == "JA1XYZ"
+        assert spots[1].call == "VK3ABC"
+
+    async def test_ignores_non_spot_lines(self):
+        """Non-spot lines do not trigger on_spot."""
+        reader = _make_blocking_reader(_NON_SPOT_LINE, _SPOT_LINE_1)
+        writer = _make_writer()
+        spots: list[DXSpot] = []
+
+        with patch(
+            "icom_lan.web.dx_cluster.asyncio.open_connection",
+            new=AsyncMock(return_value=(reader, writer)),
+        ):
+            client = DXClusterClient("dx.example.com", 7300, "K1ABC", on_spot=spots.append)
+            await _run_and_cancel(client.start())
+
+        assert len(spots) == 1
+        assert spots[0].call == "JA1XYZ"
+
+    async def test_reconnects_after_disconnect(self):
+        """Client retries once after a connection failure then reads spots."""
+        call_count = 0
+        spots: list[DXSpot] = []
+        # Event set when the second (successful) connection occurs.
+        connected = asyncio.Event()
+
+        async def fake_open(host, port):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                raise ConnectionRefusedError("refused")
+            reader = _make_blocking_reader(_SPOT_LINE_1)
+            connected.set()
+            return reader, _make_writer()
+
+        client = DXClusterClient("dx.example.com", 7300, "K1ABC", on_spot=spots.append)
+
+        with patch("icom_lan.web.dx_cluster.asyncio.open_connection", new=fake_open):
+            with patch("icom_lan.web.dx_cluster.asyncio.sleep", new=AsyncMock()):
+                task = asyncio.create_task(client.start())
+                # Wait for second connection (instant since sleep is mocked)
+                await asyncio.wait_for(connected.wait(), timeout=2.0)
+                await asyncio.sleep(0)  # let the spot be processed
+                task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await task
+
+        assert call_count >= 2
+        assert len(spots) >= 1
+
+    async def test_stop_sets_flag_and_closes_writer(self):
+        """stop() sets _running=False and closes the active writer."""
+        reader = _make_blocking_reader()
+        writer = _make_writer()
+
+        client = DXClusterClient("dx.example.com", 7300, "K1ABC", on_spot=MagicMock())
+
+        with patch(
+            "icom_lan.web.dx_cluster.asyncio.open_connection",
+            new=AsyncMock(return_value=(reader, writer)),
+        ):
+            task = asyncio.create_task(client.start())
+            await asyncio.sleep(0.05)  # let it connect
+
+            await client.stop()
+            assert not client._running
+            writer.close.assert_called()
+
+            task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await task
+
+    async def test_cancelled_error_propagates(self):
+        """CancelledError from external task cancellation is not swallowed."""
+        reader = _make_blocking_reader()
+        writer = _make_writer()
+
+        client = DXClusterClient("dx.example.com", 7300, "K1ABC", on_spot=MagicMock())
+
+        with patch(
+            "icom_lan.web.dx_cluster.asyncio.open_connection",
+            new=AsyncMock(return_value=(reader, writer)),
+        ):
+            task = asyncio.create_task(client.start())
+            await asyncio.sleep(0.05)
+            task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await task
