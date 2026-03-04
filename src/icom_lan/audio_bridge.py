@@ -361,7 +361,12 @@ class AudioBridge:
                     )
 
                 try:
-                    await self._radio.push_audio_tx_pcm(pcm_bytes)
+                    if self._is_opus:
+                        # PCM → Opus transcode, then send
+                        await self._radio.push_audio_tx_pcm(pcm_bytes)
+                    else:
+                        # PCM codec — send raw PCM directly (no transcode)
+                        await self._radio.push_audio_tx_opus(pcm_bytes)
                 except Exception:
                     if self._tx_frames <= 5:
                         logger.warning("audio-bridge: TX push error", exc_info=True)

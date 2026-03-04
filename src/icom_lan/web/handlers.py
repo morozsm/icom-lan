@@ -854,10 +854,13 @@ class AudioHandler:
         sender = asyncio.create_task(self._sender_loop())
         try:
             await self._reader_loop()
+        except Exception:
+            logger.exception("audio: handler error")
         finally:
             self._done.set()
             sender.cancel()
             await self._stop_rx()
+            logger.info("audio: handler finished")
 
     async def _reader_loop(self) -> None:
         """Read control messages and TX audio from client."""
@@ -878,6 +881,7 @@ class AudioHandler:
 
     async def _handle_control(self, msg: dict[str, Any]) -> None:
         """Handle audio_start / audio_stop messages."""
+        logger.info("audio: control msg: %s", msg)
         msg_type = msg.get("type", "")
         direction = msg.get("direction", "rx")
 
@@ -942,5 +946,9 @@ class AudioHandler:
                         logger.info("audio: sent frame #%d (%d bytes)", sent, len(frame))
                 except TimeoutError:
                     continue
+        except asyncio.CancelledError:
+            logger.info("audio: sender cancelled after %d frames", sent)
         except (EOFError, OSError) as exc:
             logger.info("audio: sender stopped after %d frames: %s", sent, exc)
+        except Exception:
+            logger.exception("audio: sender error after %d frames", sent)

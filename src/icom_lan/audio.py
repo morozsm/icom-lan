@@ -34,6 +34,10 @@ AUDIO_HEADER_SIZE = 0x18
 # TX audio ident value
 TX_IDENT = 0x0080
 
+#: Maximum audio payload per UDP packet (matches wfview chunking).
+#: IC-7610 silently drops packets with larger payloads.
+MAX_AUDIO_PAYLOAD = 1364
+
 # RX ident for 0xa0-length frames
 RX_IDENT_0xA0 = 0x9781
 
@@ -586,10 +590,14 @@ class AudioStream:
         logger.info("Audio TX started")
 
     async def push_tx(self, opus_data: bytes) -> None:
-        """Send an Opus-encoded audio frame to the radio.
+        """Send an audio frame to the radio.
+
+        Large payloads (e.g. raw PCM) are automatically chunked to fit the
+        IC-7610 maximum audio payload size (1364 bytes per UDP packet),
+        matching the wfview chunking behaviour.
 
         Args:
-            opus_data: Opus-encoded audio data.
+            opus_data: Audio data (Opus-encoded or raw PCM).
 
         Raises:
             RuntimeError: If not in transmitting state.
@@ -597,15 +605,20 @@ class AudioStream:
         if self._state != AudioState.TRANSMITTING:
             raise RuntimeError(f"Cannot push TX in state {self._state}")
 
-        pkt = build_audio_packet(
-            opus_data,
-            sender_id=self._transport.my_id,
-            receiver_id=self._transport.remote_id,
-            send_seq=self._tx_seq,
-        )
-        await self._transport.send_tracked(pkt)
-        self._tx_seq = (self._tx_seq + 1) & 0xFFFF
-        self._tx_packets_sent += 1
+        data = opus_data
+        offset = 0
+        while offset < len(data):
+            chunk = data[offset : offset + MAX_AUDIO_PAYLOAD]
+            pkt = build_audio_packet(
+                chunk,
+                sender_id=self._transport.my_id,
+                receiver_id=self._transport.remote_id,
+                send_seq=self._tx_seq,
+            )
+            await self._transport.send_tracked(pkt)
+            self._tx_seq = (self._tx_seq + 1) & 0xFFFF
+            self._tx_packets_sent += 1
+            offset += MAX_AUDIO_PAYLOAD
 
     async def stop_tx(self) -> None:
         """Stop transmitting audio.
