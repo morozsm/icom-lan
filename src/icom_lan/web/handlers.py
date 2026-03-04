@@ -90,6 +90,7 @@ class ControlHandler:
             "set_filter",
             "ptt",
             "set_power",
+            "set_powerstat",
             "set_rf_gain",
             "set_af_level",
             "set_sql",
@@ -408,6 +409,10 @@ class ControlHandler:
                 level = int(params["level"])
                 q.put(SetPower(level))
                 return {"level": level}
+            case "set_powerstat":
+                on = bool(params.get("on", True))
+                await self._radio.set_powerstat(on)
+                return {"on": on}
             case "set_rf_gain":
                 level = int(params["level"])
                 rx = int(params.get("receiver", 0))
