@@ -722,11 +722,15 @@ async def test_audio_handler_reader_control_tx_and_sender_paths(
 
 async def test_audio_handler_control_and_tx_guard_paths() -> None:
     ws = SimpleNamespace(send_binary=AsyncMock(), recv=AsyncMock())
-    radio = SimpleNamespace(
-        push_audio_tx_opus=AsyncMock(side_effect=RuntimeError("boom")),
-        start_audio_rx_opus=AsyncMock(),
-        stop_audio_rx_opus=AsyncMock(),
-    )
+    from icom_lan.radio_protocol import AudioCapable
+
+    class _FakeAudioRadio(AudioCapable):
+        push_audio_tx_opus = AsyncMock(side_effect=RuntimeError("boom"))
+        start_audio_rx_opus = AsyncMock()
+        stop_audio_rx_opus = AsyncMock()
+        audio_bus = None
+
+    radio = _FakeAudioRadio()
     broadcaster = SimpleNamespace(
         subscribe=AsyncMock(return_value=asyncio.Queue()),
         unsubscribe=AsyncMock(),
