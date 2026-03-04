@@ -397,6 +397,7 @@ class ControlHandler:
                 return {"filter": fil_str, "receiver": rx}
             case "ptt":
                 on = bool(params["state"])
+                logger.info("handler: PTT %s received", "ON" if on else "OFF")
                 q.put(PttOn() if on else PttOff())
                 return {"state": on}
             case "set_power":

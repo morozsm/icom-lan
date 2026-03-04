@@ -109,6 +109,7 @@ class AudioBridge:
         radio: Radio,
         *,
         device_name: str | None = None,
+        tx_device_name: str | None = None,
         sample_rate: int = SAMPLE_RATE,
         channels: int = CHANNELS,
         frame_ms: int = FRAME_MS,
@@ -116,6 +117,7 @@ class AudioBridge:
     ) -> None:
         self._radio = radio
         self._device_name = device_name
+        self._tx_device_name = tx_device_name  # separate TX device (if None, same as RX)
         self._sample_rate = sample_rate
         self._channels = channels
         self._frame_ms = frame_ms
@@ -202,16 +204,27 @@ class AudioBridge:
             (samples_per_frame, self._channels), dtype=np.int16
         )
 
-        # --- RX: subscribe to AudioBus for opus packets ---
-        try:
-            import opuslib
-        except ImportError:
-            raise ImportError(
-                "opuslib is required for audio bridge. "
-                "Install with: pip install icom-lan[bridge]"
-            ) from None
+        # --- RX: subscribe to AudioBus for audio packets ---
+        # Detect codec to decide if we need opus decoding
+        from .types import AudioCodec
+        _codec = getattr(self._radio, "audio_codec", None)
+        self._is_opus = isinstance(_codec, AudioCodec) and _codec in (
+            AudioCodec.OPUS_1CH, AudioCodec.OPUS_2CH,
+        )
 
-        self._decoder = opuslib.Decoder(self._sample_rate, self._channels)
+        if self._is_opus:
+            try:
+                import opuslib
+            except ImportError:
+                raise ImportError(
+                    "opuslib is required for audio bridge with Opus codec. "
+                    "Install with: pip install icom-lan[bridge]"
+                ) from None
+            self._decoder = opuslib.Decoder(self._sample_rate, self._channels)
+            logger.info("audio-bridge: using Opus decoder")
+        else:
+            self._decoder = None
+            logger.info("audio-bridge: PCM mode (no decode needed)")
 
         from .audio_bus import AudioBus
         bus = self._radio.audio_bus
@@ -227,12 +240,28 @@ class AudioBridge:
                 frame_ms=self._frame_ms,
             )
 
+            # Use separate TX device if specified, otherwise same as RX
+            tx_dev_index = dev_index
+            if self._tx_device_name:
+                tx_dev = find_loopback_device(self._tx_device_name)
+                if tx_dev is None:
+                    logger.warning(
+                        "audio-bridge: TX device %r not found, using RX device",
+                        self._tx_device_name,
+                    )
+                else:
+                    tx_dev_index = tx_dev["index"]
+                    logger.info(
+                        "audio-bridge: TX device %r (index %d)",
+                        tx_dev["name"], tx_dev_index,
+                    )
+
             # TX uses a blocking InputStream read in a thread
             self._tx_stream = sd.InputStream(
                 samplerate=self._sample_rate,
                 channels=self._channels,
                 dtype="int16",
-                device=dev_index,
+                device=tx_dev_index,
                 blocksize=samples_per_frame,
                 latency="low",
             )
@@ -258,6 +287,8 @@ class AudioBridge:
                     break
                 if packet is None:
                     self._rx_drops += 1
+                    if self._rx_drops <= 3:
+                        logger.debug("audio-bridge: None packet (gap) #%d", self._rx_drops)
                     if self._rx_stream and self._rx_stream.active:
                         self._rx_stream.write(self._silence)
                     continue
@@ -267,19 +298,33 @@ class AudioBridge:
                     continue
 
                 try:
-                    pcm_data = self._decoder.decode(opus_data, self._samples_per_frame)
+                    if self._is_opus:
+                        pcm_data = self._decoder.decode(opus_data, self._samples_per_frame)
+                    else:
+                        # PCM — data is already raw PCM bytes
+                        pcm_data = opus_data
                     self._rx_frames += 1
                     if self._rx_stream and self._rx_stream.active:
                         frame = np.frombuffer(pcm_data, dtype=np.int16).reshape(
                             -1, self._channels
                         )
                         self._rx_stream.write(frame)
-                except Exception:
+                except Exception as exc:
                     self._rx_drops += 1
+                    if self._rx_drops <= 5 or self._rx_drops % 1000 == 0:
+                        logger.warning(
+                            "audio-bridge: decode error #%d: %s (data=%d bytes)",
+                            self._rx_drops, exc, len(opus_data),
+                        )
         except asyncio.CancelledError:
             pass
         except Exception:
             logger.error("audio-bridge: RX loop error", exc_info=True)
+            # Try to restart after a brief pause
+            await asyncio.sleep(1.0)
+            if self._running and self._subscription:
+                logger.info("audio-bridge: restarting RX loop")
+                self._rx_task = asyncio.create_task(self._rx_loop(np))
 
     async def _tx_loop(self) -> None:
         """Read audio from the virtual device and push to the radio."""
@@ -308,10 +353,20 @@ class AudioBridge:
                 pcm_bytes = data.astype(np.int16).tobytes()
                 self._tx_frames += 1
 
+                if self._tx_frames <= 3 or self._tx_frames % 1000 == 0:
+                    peak = int(np.max(np.abs(data)))
+                    logger.info(
+                        "audio-bridge: TX frame #%d, %d bytes, peak=%d",
+                        self._tx_frames, len(pcm_bytes), peak,
+                    )
+
                 try:
                     await self._radio.push_audio_tx_pcm(pcm_bytes)
                 except Exception:
-                    logger.debug("audio-bridge: TX push error", exc_info=True)
+                    if self._tx_frames <= 5:
+                        logger.warning("audio-bridge: TX push error", exc_info=True)
+                    else:
+                        logger.debug("audio-bridge: TX push error", exc_info=True)
 
         except asyncio.CancelledError:
             pass

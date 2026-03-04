@@ -414,6 +414,13 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Start audio bridge to virtual device (e.g. 'BlackHole 2ch', or omit for auto-detect)",
     )
     web_p.add_argument(
+        "--bridge-tx-device",
+        dest="web_bridge_tx_device",
+        default=None,
+        metavar="DEVICE",
+        help="Separate TX device for bridge (e.g. 'BlackHole 16ch'). Required for bidirectional audio.",
+    )
+    web_p.add_argument(
         "--bridge-rx-only",
         dest="web_bridge_rx_only",
         action="store_true",
@@ -1390,10 +1397,12 @@ async def _cmd_web(radio: IcomRadio, args: argparse.Namespace) -> int:
     bridge_device = getattr(args, "web_bridge", None)
     if bridge_device is not None:
         device_name = None if bridge_device == "auto" else bridge_device
+        tx_device_name = getattr(args, "web_bridge_tx_device", None)
         rx_only = getattr(args, "web_bridge_rx_only", False)
         try:
             await server.start_audio_bridge(
                 device_name=device_name,
+                tx_device_name=tx_device_name,
                 tx_enabled=not rx_only,
             )
             direction = "RX only" if rx_only else "RX+TX"
