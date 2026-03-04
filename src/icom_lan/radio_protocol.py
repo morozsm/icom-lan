@@ -227,12 +227,33 @@ class AudioCapable(Protocol):
 
     Audio format is Opus-encoded.  For USB audio devices, the backend
     handles capture/playback internally and exposes the same interface.
+
+    Preferred consumer pattern: use :attr:`audio_bus` for pub/sub access
+    so multiple consumers can receive audio simultaneously::
+
+        async with radio.audio_bus.subscribe(name="recorder") as sub:
+            async for packet in sub:
+                save(packet)
     """
+
+    @property
+    def audio_bus(self) -> Any:
+        """AudioBus instance for pub/sub audio distribution.
+
+        Returns an :class:`~icom_lan.audio_bus.AudioBus` that manages
+        subscriptions and automatically starts/stops the radio's audio
+        stream based on subscriber count.
+        """
+        ...
 
     async def start_audio_rx_opus(
         self, callback: Callable[..., Awaitable[None]],
     ) -> None:
-        """Start receiving audio.  Decoded frames are passed to *callback*."""
+        """Start receiving audio.  Decoded frames are passed to *callback*.
+
+        Note: prefer :attr:`audio_bus` for multi-consumer scenarios.
+        Direct callback usage is single-consumer only.
+        """
         ...
 
     async def stop_audio_rx_opus(self) -> None:
