@@ -112,6 +112,7 @@ from ._control_phase import (
 
 __all__ = [
     "AudioRecoveryState",
+    "Icom7610CoreRadio",
     "IcomRadio",
     "AudioCodec",
     "RadioConnectionState",
@@ -129,7 +130,7 @@ _DEFAULT_AUDIO_SAMPLE_RATE = _AUDIO_CAPABILITIES.default_sample_rate_hz
 _DEFAULT_CACHE_TTL: dict[str, float] = {"freq": 10.0, "mode": 10.0, "rf_power": 30.0}
 
 
-class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
+class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
     """High-level async interface for controlling an Icom transceiver over LAN.
 
     Manages two UDP connections:
@@ -399,7 +400,7 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         """
         return self._civ_request_tracker.snapshot_stats()
 
-    async def __aenter__(self) -> "IcomRadio":
+    async def __aenter__(self) -> "Icom7610CoreRadio":
         await self.connect()
         return self
 
@@ -1976,6 +1977,12 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         finally:
             self.on_scope_data(old_callback)
         return collected[:count]
+
+
+class IcomRadio(Icom7610CoreRadio):
+    """LAN adapter for IC-7610 built on top of the shared executable core."""
+
+    pass
 
 
 # ---------------------------------------------------------------------------

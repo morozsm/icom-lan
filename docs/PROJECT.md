@@ -162,6 +162,7 @@ Each UDP packet has a fixed-format header (see `packettypes.h` in wfview):
 ### Current Status
 **v0.8.0 released on PyPI. Reliability integration backlog (items 1-13) completed on 2026-03-05.**
 **Latest full regression:** `1797 passed, 95 skipped`.
+- **M2 Platform Foundation (step #141):** extracted shared IC-7610 executable core (`Icom7610CoreRadio`) with LAN compatibility wrapper (`IcomRadio`) and no behavior changes.
 
 ### Reliability Test Expansion (2026-03-05)
 - Added extended integration coverage scaffolding for:
