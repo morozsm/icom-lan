@@ -16,6 +16,7 @@ class TestBackendConfigValidation:
         config = LanBackendConfig(host="192.168.55.40")
         assert config.backend == "lan"
         assert config.port == 50001
+        assert config.radio_addr is None
 
     def test_lan_backend_host_required(self) -> None:
         with pytest.raises(ValueError, match="host"):
@@ -31,6 +32,12 @@ class TestCreateRadioFactory:
         radio = create_radio(LanBackendConfig(host="192.168.55.40", username="u", password="p"))
         assert isinstance(radio, IcomRadio)
         assert radio.model == "IC-7610"
+
+    def test_create_radio_uses_profile_civ_addr_when_model_provided(self) -> None:
+        radio = create_radio(LanBackendConfig(host="192.168.55.40", model="IC-7300"))
+        assert isinstance(radio, IcomRadio)
+        assert radio.model == "IC-7300"
+        assert radio._radio_addr == 0x94
 
     def test_create_radio_serial_stub_is_actionable(self) -> None:
         with pytest.raises(NotImplementedError, match="Serial backend is not implemented yet"):

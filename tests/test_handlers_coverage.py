@@ -216,6 +216,16 @@ def test_enqueue_command_errors() -> None:
     with pytest.raises(ValueError, match="unhandled command"):
         handler._enqueue_command("definitely_unknown", {})
 
+    radio = SimpleNamespace(capabilities={"dual_rx", "scope"})
+    handler = _control_handler(
+        radio=radio,
+        server=SimpleNamespace(command_queue=queue),
+    )
+    with pytest.raises(ValueError, match="receiver=2"):
+        handler._enqueue_command("set_freq", {"freq": 7_074_000, "receiver": 2})
+    with pytest.raises(ValueError, match="receiver=-1"):
+        handler._enqueue_command("switch_scope_receiver", {"receiver": -1})
+
 
 async def test_control_run_registers_unregisters_and_sends_hello() -> None:
     ws = SimpleNamespace(

@@ -23,7 +23,6 @@ if TYPE_CHECKING:
 
 from .commands import (
     CONTROLLER_ADDR,
-    IC_7610_ADDR,
     RECEIVER_MAIN,
     _level_bcd_decode,
     build_civ_frame,
@@ -144,7 +143,8 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         port: Radio control port.
         username: Authentication username.
         password: Authentication password.
-        radio_addr: CI-V address of the radio (0x98 for IC-7610).
+        radio_addr: Optional CI-V address override. If omitted, uses
+            the resolved profile default.
         timeout: Default timeout for operations in seconds.
 
     Example::
@@ -160,7 +160,7 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         port: int = 50001,
         username: str = "",
         password: str = "",
-        radio_addr: int = IC_7610_ADDR,
+        radio_addr: int | None = None,
         timeout: float = 5.0,
         audio_codec: AudioCodec | int = _DEFAULT_AUDIO_CODEC,
         audio_sample_rate: int = _DEFAULT_AUDIO_SAMPLE_RATE,
@@ -178,7 +178,8 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         self._port = port
         self._username = username
         self._password = password
-        self._radio_addr = radio_addr
+        if radio_addr is not None and not (0 <= radio_addr <= 0xFF):
+            raise ValueError("radio_addr must be a single byte (0..255).")
         self._timeout = timeout
         self._audio_codec = AudioCodec(audio_codec)
         self._audio_sample_rate = audio_sample_rate
@@ -264,6 +265,9 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
             profile=profile,
             model=model,
             radio_addr=radio_addr,
+        )
+        self._radio_addr = (
+            self._profile.civ_addr if radio_addr is None else radio_addr
         )
         # GET commands use a shorter timeout than the general connection timeout.
         # wfview-style: send once, short deadline, fall back to cache.
