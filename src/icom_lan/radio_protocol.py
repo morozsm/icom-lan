@@ -50,6 +50,9 @@ __all__ = [
     "AudioCapable",
     "ScopeCapable",
     "DualReceiverCapable",
+    "StateCacheCapable",
+    "RecoverableConnection",
+    "AdvancedControlCapable",
 ]
 
 
@@ -169,15 +172,15 @@ class Radio(Protocol):
 
     # -- Levels ------------------------------------------------------------
 
-    async def set_af_level(self, level: int) -> None:
+    async def set_af_level(self, level: int, receiver: int = 0) -> None:
         """Set AF (audio) output level (0-255)."""
         ...
 
-    async def set_rf_gain(self, level: int) -> None:
+    async def set_rf_gain(self, level: int, receiver: int = 0) -> None:
         """Set RF gain level (0-255)."""
         ...
 
-    async def set_squelch(self, level: int) -> None:
+    async def set_squelch(self, level: int, receiver: int = 0) -> None:
         """Set squelch level (0-255)."""
         ...
 
@@ -289,6 +292,10 @@ class ScopeCapable(Protocol):
         """Disable the spectrum scope."""
         ...
 
+    def on_scope_data(self, callback: Callable[..., Any] | None) -> None:
+        """Register scope-frame callback; pass ``None`` to unregister."""
+        ...
+
 
 @runtime_checkable
 class DualReceiverCapable(Protocol):
@@ -300,4 +307,53 @@ class DualReceiverCapable(Protocol):
 
     async def vfo_equalize(self) -> None:
         """Set Sub VFO frequency equal to Main."""
+        ...
+
+
+@runtime_checkable
+class StateCacheCapable(Protocol):
+    """Radio exposes a shared state cache for server-side snapshots."""
+
+    @property
+    def state_cache(self) -> Any:
+        """Shared state cache object."""
+        ...
+
+
+@runtime_checkable
+class RecoverableConnection(Protocol):
+    """Radio supports soft reconnect/disconnect operations."""
+
+    async def soft_reconnect(self) -> None:
+        """Attempt in-place reconnect without full teardown."""
+        ...
+
+    async def soft_disconnect(self) -> None:
+        """Gracefully disconnect from the radio."""
+        ...
+
+
+@runtime_checkable
+class AdvancedControlCapable(Protocol):
+    """Radio supports extended control surface used by the web layer."""
+
+    async def set_filter(self, filter_num: int, receiver: int = 0) -> None:
+        ...
+
+    async def set_nb(self, on: bool, receiver: int = 0) -> None:
+        ...
+
+    async def set_nr(self, on: bool, receiver: int = 0) -> None:
+        ...
+
+    async def set_digisel(self, on: bool, receiver: int = 0) -> None:
+        ...
+
+    async def set_ip_plus(self, on: bool, receiver: int = 0) -> None:
+        ...
+
+    async def set_attenuator_level(self, db: int, receiver: int = 0) -> None:
+        ...
+
+    async def set_preamp(self, level: int, receiver: int = 0) -> None:
         ...

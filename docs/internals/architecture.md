@@ -178,6 +178,10 @@ scope flood.
 dependency). HTTP Upgrade handshake key computation, frame serialisation/parsing, and
 `WebSocketConnection` class for full-duplex messaging with ping/pong support.
 
+**Boundary rule (web layer):**
+- `src/icom_lan/web/` must depend on `radio_protocol` protocols (`Radio` + capability protocols), not on concrete `IcomRadio`.
+- Direct import of `icom_lan.radio.IcomRadio` in `web/` is forbidden and enforced by lint/CI.
+
 ### `rigctld/` — Hamlib NET rigctld Server
 
 TCP server that exposes the radio via the Hamlib `NET rigctld` protocol, enabling control

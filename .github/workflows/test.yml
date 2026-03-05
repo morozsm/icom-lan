@@ -31,5 +31,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
 
+      - name: Lint web boundary
+        run: ruff check src/icom_lan/web
+
+      - name: Type-check web boundary
+        run: mypy --strict src/icom_lan/web
+
       - name: Run tests
         run: pytest tests/test_*.py -v --tb=short --timeout=300 --timeout-method=thread

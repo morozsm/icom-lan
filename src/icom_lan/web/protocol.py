@@ -24,9 +24,7 @@ from __future__ import annotations
 
 import json
 import struct
-from typing import Any
-
-from ..scope import ScopeFrame
+from typing import Any, Protocol
 
 __all__ = [
     "MSG_TYPE_SCOPE",
@@ -76,7 +74,18 @@ SCOPE_HEADER_SIZE: int = 16
 METER_HEADER_SIZE: int = 4  # msg_type(1) + sequence(2) + count(1)
 
 
-def encode_scope_frame(frame: ScopeFrame, sequence: int) -> bytes:
+class ScopeFrameLike(Protocol):
+    """Structural scope frame required by the web binary encoder."""
+
+    receiver: int
+    mode: int
+    start_freq_hz: int
+    end_freq_hz: int
+    out_of_range: bool
+    pixels: bytes
+
+
+def encode_scope_frame(frame: ScopeFrameLike, sequence: int) -> bytes:
     """Serialize a scope frame to binary wire format (RFC).
 
     Args:

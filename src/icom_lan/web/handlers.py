@@ -11,7 +11,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import TYPE_CHECKING, Any
+from collections.abc import AsyncIterator
+from typing import TYPE_CHECKING, Any, Protocol, cast
 
 from ..scope import ScopeFrame
 from ..types import AudioCodec
@@ -52,8 +53,7 @@ from .radio_poller import (
 from .websocket import WS_OP_BINARY, WS_OP_TEXT, WebSocketConnection
 
 if TYPE_CHECKING:
-    from ..radio import IcomRadio
-    from ..radio_protocol import Radio, ScopeCapable
+    from ..radio_protocol import Radio
 
 __all__ = [
     "HIGH_WATERMARK",
@@ -77,7 +77,7 @@ class ControlHandler:
 
     Args:
         ws: Established WebSocket connection.
-        radio: IcomRadio instance (may be None in standalone mode).
+        radio: Radio protocol instance (may be None in standalone mode).
         server_version: Version string for the hello message.
         radio_model: Radio model string for the hello message.
         server: WebServer instance for command_queue and event broadcast.
@@ -244,9 +244,11 @@ class ControlHandler:
                 await self._send_json({"type": "response", "id": msg_id, "ok": True,
                                        "result": {"status": "already_connected"}})
                 return
-            if hasattr(self._radio, 'soft_reconnect'):
+            from ..radio_protocol import RecoverableConnection
+            if hasattr(self._radio, "soft_reconnect"):
+                recoverable = cast(RecoverableConnection, self._radio)
                 try:
-                    await self._radio.soft_reconnect()
+                    await recoverable.soft_reconnect()
                 except Exception:
                     logger.info("soft_reconnect failed, trying full connect")
                     await self._radio.connect()
@@ -273,7 +275,13 @@ class ControlHandler:
                 await self._send_json({"type": "response", "id": msg_id, "ok": True,
                                        "result": {"status": "already_disconnected"}})
                 return
-            await self._radio.soft_disconnect()
+            from ..radio_protocol import RecoverableConnection
+            if hasattr(self._radio, "soft_disconnect"):
+                await cast(RecoverableConnection, self._radio).soft_disconnect()
+            elif hasattr(self._radio, "disconnect"):
+                await self._radio.disconnect()
+            else:
+                raise RuntimeError("radio backend has no disconnect method")
             await self._send_json({"type": "response", "id": msg_id, "ok": True,
                                    "result": {"status": "disconnected"}})
             await self._broadcast_connection_state(False)
@@ -328,7 +336,9 @@ class ControlHandler:
             else None
         )
         if cache is None and self._radio is not None:
-            cache = self._radio.state_cache
+            from ..radio_protocol import StateCacheCapable
+            if isinstance(self._radio, StateCacheCapable):
+                cache = self._radio.state_cache
         if cache is not None:
             try:
                 if cache.freq_ts > 0.0:
@@ -529,7 +539,7 @@ class ScopeHandler:
 
     Args:
         ws: Established WebSocket connection.
-        radio: IcomRadio instance (may be None).
+        radio: Radio protocol instance (may be None).
     """
 
     def __init__(
@@ -634,7 +644,7 @@ class MetersHandler:
 
     Args:
         ws: Established WebSocket connection.
-        radio: IcomRadio instance (may be None).
+        radio: Radio protocol instance (may be None).
         server: WebServer instance for meter broadcast registration.
     """
 
@@ -756,8 +766,8 @@ class AudioBroadcaster:
     def __init__(self, radio: "Radio | None") -> None:
         self._radio = radio
         self._clients: dict[int, asyncio.Queue[bytes]] = {}
-        self._subscription = None  # AudioSubscription
-        self._relay_task: asyncio.Task | None = None
+        self._subscription: _AudioSubscription | None = None
+        self._relay_task: asyncio.Task[None] | None = None
         self._seq: int = 0
         self._web_codec: int = AUDIO_CODEC_PCM16
         self._sample_rate: int = 48000
@@ -808,7 +818,7 @@ class AudioBroadcaster:
 
         try:
             bus = self._radio.audio_bus
-            self._subscription = bus.subscribe(name="web-audio")
+            self._subscription = cast(_AudioBus, bus).subscribe(name="web-audio")
             await self._subscription.start()
             self._relay_task = asyncio.create_task(self._relay_loop())
         except Exception:
@@ -817,6 +827,8 @@ class AudioBroadcaster:
 
     async def _relay_loop(self) -> None:
         """Read packets from AudioBus subscription and fan out to WS clients."""
+        if self._subscription is None:
+            return
         try:
             async for pkt in self._subscription:
                 if pkt is None:
@@ -875,7 +887,7 @@ class AudioHandler:
 
     Args:
         ws: Established WebSocket connection.
-        radio: IcomRadio instance (may be None).
+        radio: Radio protocol instance (may be None).
     """
 
     HIGH_WATERMARK: int = 10  # max queued audio frames before dropping
@@ -1000,3 +1012,23 @@ class AudioHandler:
             logger.info("audio: sender stopped after %d frames: %s", sent, exc)
         except Exception:
             logger.exception("audio: sender error after %d frames", sent)
+
+
+class _AudioPacketLike(Protocol):
+    data: bytes
+
+
+class _AudioSubscription(Protocol):
+    async def start(self) -> None:
+        ...
+
+    def stop(self) -> None:
+        ...
+
+    def __aiter__(self) -> AsyncIterator[_AudioPacketLike | None]:
+        ...
+
+
+class _AudioBus(Protocol):
+    def subscribe(self, name: str = "") -> _AudioSubscription:
+        ...

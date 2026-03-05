@@ -32,7 +32,7 @@ import logging
 
 from ..exceptions import ConnectionError as RadioConnectionError
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, cast
 
 from ..rigctld.state_cache import StateCache
 
@@ -162,7 +162,7 @@ class SetPowerstat:
 Command = (
     SetFreq | SetMode | SetFilter | SetPower | SetRfGain | SetAfLevel | SetSquelch | SetNB | SetNR | SetDigiSel | SetIpPlus
     | SetAttenuator | SetPreamp | PttOn | PttOff | SetBand | SelectVfo
-    | VfoSwap | VfoEqualize | SwitchScopeReceiver | SetPowerstat
+    | VfoSwap | VfoEqualize | EnableScope | DisableScope | SwitchScopeReceiver | SetPowerstat
 )
 
 
@@ -306,7 +306,7 @@ class RadioPoller:
         data: bytes = b"",
         wait_response: bool = False,
     ) -> None:
-        """Send a raw CI-V command if the radio supports it (IcomRadio-specific).
+        """Send a raw CI-V command if the backend provides a CI-V transport.
 
         For non-Icom backends this is a no-op — scope/meter polling simply
         won't happen, which is acceptable.
@@ -323,6 +323,7 @@ class RadioPoller:
 
     async def _execute(self, cmd: Command) -> None:
         radio = self._radio
+        from ..radio_protocol import AdvancedControlCapable, DualReceiverCapable, ScopeCapable
         match cmd:
             case SetFreq(freq=freq, receiver=rx):
                 # 0x05 does NOT support cmd29 on IC-7610.
@@ -358,7 +359,8 @@ class RadioPoller:
                 else:
                     await radio.set_mode(mode, fw)
             case SetFilter(filter_num=fn, receiver=rx):
-                await radio.set_filter(fn)
+                if isinstance(radio, AdvancedControlCapable):
+                    await radio.set_filter(fn, receiver=rx)
             case PttOn():
                 logger.info("poller: PTT ON")
                 await radio.set_ptt(True)
@@ -374,25 +376,31 @@ class RadioPoller:
             case SetSquelch(level=level, receiver=rx):
                 await radio.set_squelch(level, receiver=rx)
             case SetNB(on=on, receiver=rx):
-                await radio.set_nb(on, receiver=rx)
+                if isinstance(radio, AdvancedControlCapable):
+                    await radio.set_nb(on, receiver=rx)
                 if self._on_state_event:
                     self._on_state_event("nb_changed", {"on": on})
             case SetNR(on=on, receiver=rx):
-                await radio.set_nr(on, receiver=rx)
+                if isinstance(radio, AdvancedControlCapable):
+                    await radio.set_nr(on, receiver=rx)
                 if self._on_state_event:
                     self._on_state_event("nr_changed", {"on": on})
             case SetDigiSel(on=on, receiver=rx):
-                await radio.set_digisel(on, receiver=rx)
+                if isinstance(radio, AdvancedControlCapable):
+                    await radio.set_digisel(on, receiver=rx)
                 if self._on_state_event:
                     self._on_state_event("digisel_changed", {"on": on})
             case SetIpPlus(on=on, receiver=rx):
-                await radio.set_ip_plus(on, receiver=rx)
+                if isinstance(radio, AdvancedControlCapable):
+                    await radio.set_ip_plus(on, receiver=rx)
                 if self._on_state_event:
                     self._on_state_event("ipplus_changed", {"on": on})
             case SetAttenuator(db=db, receiver=rx):
-                await radio.set_attenuator_level(db, receiver=rx)
+                if isinstance(radio, AdvancedControlCapable):
+                    await radio.set_attenuator_level(db, receiver=rx)
             case SetPreamp(level=level, receiver=rx):
-                await radio.set_preamp(level, receiver=rx)
+                if isinstance(radio, AdvancedControlCapable):
+                    await radio.set_preamp(level, receiver=rx)
             case SetBand(band=band):
                 await self._civ(0x07, data=bytes([band]))
             case SelectVfo(vfo=vfo):
@@ -413,18 +421,22 @@ class RadioPoller:
                 if self._on_state_event:
                     self._on_state_event("vfo_changed", {"vfo": vfo})
             case VfoSwap():
-                await radio.vfo_exchange()
+                if hasattr(radio, "vfo_exchange"):
+                    await cast(DualReceiverCapable, radio).vfo_exchange()
                 # After swap, active VFO stays same but freqs are exchanged
                 if self._on_state_event:
                     self._on_state_event("vfo_swapped", {})
             case VfoEqualize():
-                await radio.vfo_equalize()
+                if hasattr(radio, "vfo_equalize"):
+                    await cast(DualReceiverCapable, radio).vfo_equalize()
             case EnableScope(policy=policy):
-                await radio.enable_scope(policy=policy)
-                logger.info("radio-poller: scope enabled")
+                if hasattr(radio, "enable_scope"):
+                    await cast(ScopeCapable, radio).enable_scope(policy=policy)
+                    logger.info("radio-poller: scope enabled")
             case DisableScope():
-                await radio.disable_scope()
-                logger.info("radio-poller: scope disabled")
+                if hasattr(radio, "disable_scope"):
+                    await cast(ScopeCapable, radio).disable_scope()
+                    logger.info("radio-poller: scope disabled")
             case SwitchScopeReceiver(receiver=receiver):
                 # Fire-and-forget scope receiver select (0x27 0x12)
                 await self._civ(0x27, sub=0x12, data=bytes([receiver & 0x01]))

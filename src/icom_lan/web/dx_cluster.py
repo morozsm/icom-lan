@@ -171,7 +171,7 @@ class SpotBuffer:
         """Append a spot, evicting the oldest if at capacity."""
         self._spots.append(spot)
 
-    def get_spots(self, band: str | None = None) -> list[dict]:
+    def get_spots(self, band: str | None = None) -> list[dict[str, str | int | float]]:
         """Return spots as a list of plain dicts, optionally filtered by band.
 
         If *band* is given (e.g. ``"20m"``) only spots whose frequency falls

@@ -13,8 +13,8 @@ Single asyncio.start_server accepts raw TCP. For each connection:
 2. If Upgrade: websocket → perform RFC 6455 handshake, route to WS handler
 3. Else → serve HTTP response (static file or JSON API)
 
-The server holds a reference to an IcomRadio instance (optional) and uses
-it for command dispatch and scope/meter data delivery.
+The server holds an optional radio protocol instance and uses it for
+command dispatch and scope/meter data delivery.
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ import mimetypes
 import pathlib
 import urllib.parse
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from .. import __version__
 from ..radio_state import RadioState
@@ -37,6 +37,7 @@ from .radio_poller import CommandQueue, DisableScope, EnableScope, RadioPoller
 from .websocket import WS_KEEPALIVE_INTERVAL, WebSocketConnection, make_accept_key
 
 if TYPE_CHECKING:
+    from ..audio_bridge import AudioBridge
     from ..radio_protocol import Radio
 
 __all__ = ["WebConfig", "WebServer", "run_web_server"]
@@ -76,7 +77,7 @@ class WebServer:
     """Asyncio HTTP + WebSocket server for the icom-lan Web UI.
 
     Args:
-        radio: Connected IcomRadio instance (optional; needed for live data).
+        radio: Connected Radio protocol instance (optional; needed for live data).
         config: Server configuration (defaults to WebConfig()).
     """
 
@@ -94,9 +95,14 @@ class WebServer:
         self._scope_enable_lock: asyncio.Lock = asyncio.Lock()
         self._scope_disable_grace: float = 2.0
         # RadioPoller: single CI-V serialiser
-        self._state_cache: StateCache = (
-            radio.state_cache if radio is not None else StateCache()
-        )
+        if radio is not None:
+            from ..radio_protocol import StateCacheCapable
+            if isinstance(radio, StateCacheCapable):
+                self._state_cache: StateCache = cast(StateCache, radio.state_cache)
+            else:
+                self._state_cache = StateCache()
+        else:
+            self._state_cache = StateCache()
         self._radio_state: RadioState = RadioState()
         self._audio_broadcaster = AudioBroadcaster(radio)
         self._command_queue: CommandQueue = CommandQueue()
@@ -121,7 +127,7 @@ class WebServer:
         self._dx_client_task: asyncio.Task[None] | None = None
 
     # ------------------------------------------------------------------
-    # Helpers for IcomRadio-specific operations (guarded with hasattr)
+    # Helpers for scope callback operations
     # ------------------------------------------------------------------
 
     def _radio_ready(self) -> bool:
@@ -138,10 +144,7 @@ class WebServer:
         """Set the scope data callback on the radio if it supports it."""
         from ..radio_protocol import ScopeCapable
         if self._radio is not None and isinstance(self._radio, ScopeCapable):
-            # on_scope_data is IcomRadio-specific but all ScopeCapable radios
-            # should provide it (or an equivalent) — add to ScopeCapable if needed.
-            if hasattr(self._radio, "on_scope_data"):
-                self._radio.on_scope_data(callback)  # type: ignore[union-attr]
+            self._radio.on_scope_data(callback)
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -298,10 +301,12 @@ class WebServer:
                 "temp": METER_TEMP,
             }
             meter_type = data.get("type")
-            meter_id = meter_map.get(meter_type)
+            meter_id = meter_map.get(meter_type) if isinstance(meter_type, str) else None
             if meter_id is not None:
                 # Binary protocol uses raw for bar width
-                self._broadcast_meters([(meter_id, data.get("raw", 0))])
+                raw = data.get("raw", 0)
+                value = raw if isinstance(raw, int) else 0
+                self._broadcast_meters([(meter_id, value)])
 
     def _on_radio_reconnect(self) -> None:
         """Called after soft_reconnect — re-enable scope if clients are connected."""
@@ -420,11 +425,10 @@ class WebServer:
         if self._radio is not None:
             # Register callback so CI-V RX stream can notify us of state changes.
             # This is the primary path for freq/mode/meter updates (fire-and-forget).
-            # These are IcomRadio-specific attributes — guarded with hasattr.
             self._radio.set_state_change_callback(self._on_radio_state_change)
             # Pass RadioState to the CI-V RX mixin for dual-receiver state tracking.
             if hasattr(self._radio, "_radio_state"):
-                self._radio._radio_state = self._radio_state  # type: ignore[union-attr]
+                setattr(self._radio, "_radio_state", self._radio_state)
             # Re-enable scope after soft_reconnect (CI-V stream reset loses scope state)
             self._radio.set_reconnect_callback(self._on_radio_reconnect)
             self._radio_poller = RadioPoller(
@@ -496,10 +500,11 @@ class WebServer:
             self._audio_bridge = None
 
     @property
-    def audio_bridge_stats(self) -> dict | None:
+    def audio_bridge_stats(self) -> dict[str, Any] | None:
         """Audio bridge stats, or None if not running."""
         if self._audio_bridge is not None:
-            return self._audio_bridge.stats
+            stats = self._audio_bridge.stats
+            return stats if isinstance(stats, dict) else None
         return None
 
     async def stop(self) -> None:
@@ -583,7 +588,7 @@ class WebServer:
         """Actual bound port (useful when config.port == 0)."""
         if self._server is None:
             return self._config.port
-        return self._server.sockets[0].getsockname()[1]
+        return int(self._server.sockets[0].getsockname()[1])
 
     # ------------------------------------------------------------------
     # Connection acceptance
@@ -971,6 +976,6 @@ async def run_web_server(
 
         await run_web_server(radio, host="0.0.0.0", port=8080)
     """
-    config = WebConfig(**kwargs)  # type: ignore[arg-type]
+    config = WebConfig(**kwargs)
     server = WebServer(radio, config)
     await server.serve_forever()
