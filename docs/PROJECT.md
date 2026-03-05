@@ -177,6 +177,9 @@ Each UDP packet has a fixed-format header (see `packettypes.h` in wfview):
   - deterministic serial framing/stability unit tests (partial frames/timeouts/overflow),
   - USB audio stub unit tests (selection/lifecycle/error paths),
   - web/rigctld smoke tests on serial mock backend to guard against LAN-only assumptions.
+- Added production `SerialCivLink` driver for IC-7610 USB CI-V with robust FE FE ... FD framing
+  recovery, collision/abort handling, timeout/overflow guardrails, writer backpressure handling,
+  and optional dependency guard (`pip install icom-lan[serial]`).
 
 ## Test Equipment
 
