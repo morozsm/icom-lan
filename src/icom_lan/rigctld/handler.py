@@ -30,7 +30,6 @@ from .contract import (
 from .state_cache import StateCache
 
 if TYPE_CHECKING:
-    from ..radio import IcomRadio
     from ..radio_protocol import Radio
 
 __all__ = ["RigctldHandler"]
@@ -369,7 +368,9 @@ class RigctldHandler:
         return await self._cmd_dump_state(cmd)
 
     async def _cmd_get_info(self, cmd: RigctldCommand) -> RigctldResponse:
-        return RigctldResponse(values=["Icom IC-7610 (icom-lan)"])
+        raw_model = getattr(self._radio, "model", "IC-7610")
+        model = raw_model if isinstance(raw_model, str) and raw_model else "IC-7610"
+        return RigctldResponse(values=[f"Icom {model} (icom-lan)"])
 
     async def _cmd_chk_vfo(self, cmd: RigctldCommand) -> RigctldResponse:
         return RigctldResponse(values=["0"])

@@ -164,6 +164,7 @@ class ControlHandler:
         raw_connected = (
             getattr(self._radio, "connected", False) if self._radio else False
         )
+        caps = sorted(self._capabilities())
         msg = {
             "type": "hello",
             "proto": 1,
@@ -172,9 +173,55 @@ class ControlHandler:
             "radio": self._radio_model,
             "connected": raw_connected if isinstance(raw_connected, bool) else False,
             "radio_ready": self._radio_ready(),
-            "capabilities": ["scope", "audio", "tx"],
+            "capabilities": caps,
         }
         await self._ws.send_text(encode_json(msg))
+
+    def _capabilities(self) -> set[str]:
+        if self._radio is None:
+            return set()
+        raw_caps = getattr(self._radio, "capabilities", None)
+        if isinstance(raw_caps, set):
+            return set(raw_caps)
+        caps: set[str] = set()
+        if hasattr(self._radio, "enable_scope"):
+            caps.add("scope")
+        if hasattr(self._radio, "start_audio_rx_opus"):
+            caps.add("audio")
+        if hasattr(self._radio, "set_ptt"):
+            caps.add("tx")
+        if hasattr(self._radio, "set_rf_gain"):
+            caps.add("rf_gain")
+        if hasattr(self._radio, "set_af_level"):
+            caps.add("af_level")
+        if hasattr(self._radio, "set_squelch"):
+            caps.add("squelch")
+        if hasattr(self._radio, "vfo_exchange"):
+            caps.add("dual_rx")
+        return caps
+
+    def _ensure_receiver_supported(self, receiver: int) -> None:
+        if self._radio is None:
+            return
+        caps = self._capabilities()
+        if receiver == 0:
+            return
+        if "dual_rx" in caps:
+            return
+        raise ValueError(
+            f"receiver={receiver} is not supported by active profile "
+            "(missing capability: dual_rx)"
+        )
+
+    def _ensure_capability(self, capability: str, command_name: str) -> None:
+        if self._radio is None:
+            return
+        if capability in self._capabilities():
+            return
+        raise ValueError(
+            f"command {command_name!r} is not supported by active profile "
+            f"(missing capability: {capability})"
+        )
 
     def _radio_ready(self) -> bool:
         """Return backend radio readiness (CI-V healthy), with fallback."""
@@ -436,17 +483,20 @@ class ControlHandler:
             case "set_freq":
                 freq = int(params["freq"])
                 rx = int(params.get("receiver", 0))
+                self._ensure_receiver_supported(rx)
                 q.put(SetFreq(freq, receiver=rx))
                 return {"freq": freq, "receiver": rx}
             case "set_mode":
                 mode = str(params["mode"])
                 rx = int(params.get("receiver", 0))
+                self._ensure_receiver_supported(rx)
                 q.put(SetMode(mode, receiver=rx))
                 return {"mode": mode, "receiver": rx}
             case "set_filter":
                 fil_str = str(params.get("filter", "FIL1"))
                 fil_num = int(fil_str[-1]) if fil_str[-1].isdigit() else 1
                 rx = int(params.get("receiver", 0))
+                self._ensure_receiver_supported(rx)
                 q.put(SetFilter(fil_num, receiver=rx))
                 return {"filter": fil_str, "receiver": rx}
             case "ptt":
@@ -465,46 +515,64 @@ class ControlHandler:
             case "set_rf_gain":
                 level = int(params["level"])
                 rx = int(params.get("receiver", 0))
+                self._ensure_capability("rf_gain", "set_rf_gain")
+                self._ensure_receiver_supported(rx)
                 q.put(SetRfGain(level, receiver=rx))
                 return {"level": level, "receiver": rx}
             case "set_af_level":
                 level = int(params["level"])
                 rx = int(params.get("receiver", 0))
+                self._ensure_capability("af_level", "set_af_level")
+                self._ensure_receiver_supported(rx)
                 q.put(SetAfLevel(level, receiver=rx))
                 return {"level": level, "receiver": rx}
             case "set_sql":
                 level = int(params["level"])
                 rx = int(params.get("receiver", 0))
+                self._ensure_capability("squelch", "set_sql")
+                self._ensure_receiver_supported(rx)
                 q.put(SetSquelch(level, receiver=rx))
                 return {"level": level, "receiver": rx}
             case "set_nb":
                 on = bool(params.get("on", False))
                 rx = int(params.get("receiver", 0))
+                self._ensure_capability("nb", "set_nb")
+                self._ensure_receiver_supported(rx)
                 q.put(SetNB(on, receiver=rx))
                 return {"on": on, "receiver": rx}
             case "set_nr":
                 on = bool(params.get("on", False))
                 rx = int(params.get("receiver", 0))
+                self._ensure_capability("nr", "set_nr")
+                self._ensure_receiver_supported(rx)
                 q.put(SetNR(on, receiver=rx))
                 return {"on": on, "receiver": rx}
             case "set_digisel":
                 on = bool(params.get("on", False))
                 rx = int(params.get("receiver", 0))
+                self._ensure_capability("digisel", "set_digisel")
+                self._ensure_receiver_supported(rx)
                 q.put(SetDigiSel(on, receiver=rx))
                 return {"on": on, "receiver": rx}
             case "set_ipplus":
                 on = bool(params.get("on", False))
                 rx = int(params.get("receiver", 0))
+                self._ensure_capability("ip_plus", "set_ipplus")
+                self._ensure_receiver_supported(rx)
                 q.put(SetIpPlus(on, receiver=rx))
                 return {"on": on, "receiver": rx}
             case "set_att":
                 db = int(params["db"])
                 rx = int(params.get("receiver", 0))
+                self._ensure_capability("attenuator", "set_att")
+                self._ensure_receiver_supported(rx)
                 q.put(SetAttenuator(db, receiver=rx))
                 return {"db": db, "receiver": rx}
             case "set_preamp":
                 level = int(params["level"])
                 rx = int(params.get("receiver", 0))
+                self._ensure_capability("preamp", "set_preamp")
+                self._ensure_receiver_supported(rx)
                 q.put(SetPreamp(level, receiver=rx))
                 return {"level": level, "receiver": rx}
             case "select_vfo":
@@ -519,6 +587,8 @@ class ControlHandler:
                 return {}
             case "switch_scope_receiver":
                 receiver = int(params.get("receiver", 0))
+                self._ensure_capability("scope", "switch_scope_receiver")
+                self._ensure_receiver_supported(receiver)
                 q.put(SwitchScopeReceiver(receiver))
                 return {"receiver": receiver}
             case _:

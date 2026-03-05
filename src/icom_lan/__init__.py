@@ -37,6 +37,7 @@ from .commander import IcomCommander, Priority
 from .radio import AudioRecoveryState, IcomRadio
 from .radio_protocol import AudioCapable, DualReceiverCapable, Radio, ScopeCapable
 from .radio_state import RadioState
+from .profiles import RadioProfile, get_radio_profile, resolve_radio_profile
 from .radios import RADIOS, RadioModel, get_civ_addr
 from .backends import BackendConfig, LanBackendConfig, SerialBackendConfig, create_radio
 from .commands import (
@@ -121,6 +122,9 @@ __all__ = [
     "DualReceiverCapable",
     # State
     "RadioState",
+    "RadioProfile",
+    "get_radio_profile",
+    "resolve_radio_profile",
     # Radio models
     "RADIOS",
     "RadioModel",

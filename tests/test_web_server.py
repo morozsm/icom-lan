@@ -17,6 +17,7 @@ import base64
 import hashlib
 import json
 import struct
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -195,6 +196,24 @@ async def _close_ws(writer: asyncio.StreamWriter) -> None:
 def mock_radio() -> MagicMock:
     radio = MagicMock(name="radio")
     radio.connected = True
+    radio.model = "IC-7610"
+    radio.capabilities = {
+        "audio",
+        "scope",
+        "dual_rx",
+        "meters",
+        "tx",
+        "cw",
+        "attenuator",
+        "preamp",
+        "rf_gain",
+        "af_level",
+        "squelch",
+        "nb",
+        "nr",
+        "digisel",
+        "ip_plus",
+    }
     radio.get_frequency = AsyncMock(return_value=14_074_000)
     radio.get_mode = AsyncMock(return_value=MagicMock(name="USB"))
     radio.get_mode.return_value.name = "USB"
@@ -1757,7 +1776,14 @@ class TestRadioPoller:
     """RadioPoller polls all params and executes commands via single task (#72)."""
 
     def _make_radio(self) -> MagicMock:
+        from icom_lan.profiles import resolve_radio_profile
+
+        profile = resolve_radio_profile(model="IC-7610")
         radio = MagicMock()
+        radio.profile = profile
+        radio.model = profile.model
+        radio.capabilities = set(profile.capabilities)
+        radio._radio_state = SimpleNamespace(active="MAIN")
         mode_mock = MagicMock()
         mode_mock.name = "USB"
         radio.get_frequency = AsyncMock(return_value=14074000)
@@ -1896,7 +1922,14 @@ class TestSwitchScopeReceiver:
     """SwitchScopeReceiver command sends scope_main_sub CI-V frame."""
 
     def _make_radio(self) -> MagicMock:
+        from icom_lan.profiles import resolve_radio_profile
+
+        profile = resolve_radio_profile(model="IC-7610")
         radio = MagicMock()
+        radio.profile = profile
+        radio.model = profile.model
+        radio.capabilities = set(profile.capabilities)
+        radio._radio_state = SimpleNamespace(active="MAIN")
         radio.send_civ = AsyncMock()
         radio.state_cache = StateCache()
         radio.enable_scope = AsyncMock()

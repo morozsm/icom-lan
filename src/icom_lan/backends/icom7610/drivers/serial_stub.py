@@ -7,6 +7,8 @@ import time
 from dataclasses import dataclass
 from typing import Any
 
+from ....exceptions import CommandError
+from ....profiles import RadioProfile, resolve_radio_profile
 from ....radio_state import RadioState
 from ....rigctld.state_cache import StateCache
 from ....types import Mode
@@ -149,7 +151,13 @@ class _ReceiverState:
 class SerialMockRadio:
     """Deterministic serial-ready radio stub for consumer smoke/contract tests."""
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        *,
+        profile: RadioProfile | str | None = None,
+        model: str | None = None,
+    ) -> None:
+        self._profile = resolve_radio_profile(profile=profile, model=model)
         self._connected = False
         self._data_mode = False
         self._ptt = False
@@ -159,7 +167,10 @@ class SerialMockRadio:
         self._scope_callback: Any = None
         self._state_change_callback: Any = None
         self._reconnect_callback: Any = None
-        self._rx: dict[int, _ReceiverState] = {0: _ReceiverState(), 1: _ReceiverState()}
+        self._rx: dict[int, _ReceiverState] = {
+            receiver: _ReceiverState()
+            for receiver in range(self._profile.receiver_count)
+        }
 
     @property
     def connected(self) -> bool:
@@ -196,12 +207,24 @@ class SerialMockRadio:
         return self._radio_state
 
     @property
+    def profile(self) -> RadioProfile:
+        return self._profile
+
+    @property
     def model(self) -> str:
-        return "IC-7610"
+        return self._profile.model
 
     @property
     def capabilities(self) -> set[str]:
-        return {"tx", "meters", "rf_gain", "af_level", "squelch", "nb", "nr", "audio", "scope"}
+        return set(self._profile.capabilities)
+
+    def _receiver_state(self, receiver: int, *, operation: str) -> _ReceiverState:
+        if receiver in self._rx:
+            return self._rx[receiver]
+        raise CommandError(
+            f"{operation} does not support receiver={receiver} for profile "
+            f"{self._profile.model} (receivers={self._profile.receiver_count})"
+        )
 
     def set_state_change_callback(self, callback: Any | None) -> None:
         self._state_change_callback = callback
@@ -216,29 +239,30 @@ class SerialMockRadio:
         return None
 
     async def set_frequency(self, freq: int, receiver: int = 0) -> None:
-        self._rx[receiver].freq = freq
+        self._receiver_state(receiver, operation="set_frequency").freq = freq
         if receiver == 0:
             self._state_cache.update_freq(freq)
 
     async def get_frequency(self, receiver: int = 0) -> int:
-        return self._rx[receiver].freq
+        return self._receiver_state(receiver, operation="get_frequency").freq
 
     async def set_mode(
         self, mode: Mode | str, filter_width: int | None = None, receiver: int = 0
     ) -> None:
         parsed_mode = mode if isinstance(mode, Mode) else Mode[mode.upper()]
-        self._rx[receiver].mode = parsed_mode
+        receiver_state = self._receiver_state(receiver, operation="set_mode")
+        receiver_state.mode = parsed_mode
         if filter_width is not None:
-            self._rx[receiver].filter_width = filter_width
+            receiver_state.filter_width = filter_width
         if receiver == 0:
-            self._state_cache.update_mode(parsed_mode.name, self._rx[receiver].filter_width)
+            self._state_cache.update_mode(parsed_mode.name, receiver_state.filter_width)
 
     async def get_mode(self, receiver: int = 0) -> tuple[str, int | None]:
-        state = self._rx[receiver]
+        state = self._receiver_state(receiver, operation="get_mode")
         return state.mode.name, state.filter_width
 
     async def get_mode_info(self, receiver: int = 0) -> tuple[Mode, int | None]:
-        state = self._rx[receiver]
+        state = self._receiver_state(receiver, operation="get_mode_info")
         return state.mode, state.filter_width
 
     async def get_data_mode(self) -> bool:
@@ -269,51 +293,54 @@ class SerialMockRadio:
         return 80
 
     async def get_filter(self, receiver: int = 0) -> int | None:
-        return self._rx[receiver].filter_width
+        return self._receiver_state(receiver, operation="get_filter").filter_width
 
     async def set_filter(self, filter_num: int, receiver: int = 0) -> None:
-        self._rx[receiver].filter_width = filter_num
+        self._receiver_state(receiver, operation="set_filter").filter_width = filter_num
         if receiver == 0:
             self._state_cache.update_mode(self._rx[receiver].mode.name, filter_num)
 
     async def get_rf_gain(self, receiver: int = 0) -> int:
-        return self._rx[receiver].rf_gain
+        return self._receiver_state(receiver, operation="get_rf_gain").rf_gain
 
     async def set_rf_gain(self, level: int, receiver: int = 0) -> None:
-        self._rx[receiver].rf_gain = level
+        self._receiver_state(receiver, operation="set_rf_gain").rf_gain = level
 
     async def get_af_level(self, receiver: int = 0) -> int:
-        return self._rx[receiver].af_level
+        return self._receiver_state(receiver, operation="get_af_level").af_level
 
     async def set_af_level(self, level: int, receiver: int = 0) -> None:
-        self._rx[receiver].af_level = level
+        self._receiver_state(receiver, operation="set_af_level").af_level = level
 
     async def set_squelch(self, level: int, receiver: int = 0) -> None:
-        self._rx[receiver].squelch = level
+        self._receiver_state(receiver, operation="set_squelch").squelch = level
 
     async def get_attenuator_level(self, receiver: int = 0) -> int:
-        return self._rx[receiver].attenuator_db
+        return self._receiver_state(receiver, operation="get_attenuator_level").attenuator_db
 
     async def set_attenuator_level(self, db: int, receiver: int = 0) -> None:
-        self._rx[receiver].attenuator_db = db
+        self._receiver_state(receiver, operation="set_attenuator_level").attenuator_db = db
 
     async def get_preamp(self, receiver: int = 0) -> int:
-        return self._rx[receiver].preamp_level
+        return self._receiver_state(receiver, operation="get_preamp").preamp_level
 
     async def set_preamp(self, level: int, receiver: int = 0) -> None:
-        self._rx[receiver].preamp_level = level
+        self._receiver_state(receiver, operation="set_preamp").preamp_level = level
 
     async def set_nb(self, on: bool, receiver: int = 0) -> None:
-        self._rx[receiver].nb_on = on
+        self._receiver_state(receiver, operation="set_nb").nb_on = on
 
     async def set_nr(self, on: bool, receiver: int = 0) -> None:
-        self._rx[receiver].nr_on = on
+        self._receiver_state(receiver, operation="set_nr").nr_on = on
 
     async def set_digisel(self, on: bool, receiver: int = 0) -> None:
-        self._rx[receiver].digisel_on = on
+        self._receiver_state(receiver, operation="set_digisel").digisel_on = on
 
     async def set_ipplus(self, on: bool, receiver: int = 0) -> None:
-        self._rx[receiver].ip_plus_on = on
+        self._receiver_state(receiver, operation="set_ipplus").ip_plus_on = on
+
+    async def set_ip_plus(self, on: bool, receiver: int = 0) -> None:
+        await self.set_ipplus(on, receiver=receiver)
 
     async def select_vfo(self, vfo: str) -> None:
         return None

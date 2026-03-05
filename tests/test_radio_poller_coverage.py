@@ -9,6 +9,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from icom_lan.rigctld.state_cache import StateCache
+from icom_lan.profiles import resolve_radio_profile
 from icom_lan.web.radio_poller import (
     CommandQueue,
     DisableScope,
@@ -30,7 +31,11 @@ from icom_lan.web.radio_poller import (
 
 
 def _make_radio(active: str = "MAIN") -> MagicMock:
+    profile = resolve_radio_profile(model="IC-7610")
     radio = MagicMock()
+    radio.profile = profile
+    radio.model = profile.model
+    radio.capabilities = set(profile.capabilities)
     radio._radio_state = SimpleNamespace(active=active)
     radio.send_civ = AsyncMock()
     radio.set_frequency = AsyncMock()

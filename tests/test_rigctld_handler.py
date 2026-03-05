@@ -433,6 +433,16 @@ async def test_get_info(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
 
 
 @pytest.mark.asyncio
+async def test_get_info_uses_runtime_model(config: RigctldConfig) -> None:
+    radio = AsyncMock()
+    radio.model = "IC-9700"
+    h = RigctldHandler(radio, config)
+    resp = await h.execute(get_cmd("get_info"))
+    assert resp.ok
+    assert "IC-9700" in resp.values[0]
+
+
+@pytest.mark.asyncio
 async def test_chk_vfo(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
     resp = await handler.execute(get_cmd("chk_vfo"))
     assert resp.ok

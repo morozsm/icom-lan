@@ -78,6 +78,7 @@ from .exceptions import (
     ConnectionError,
     TimeoutError,
 )
+from .profiles import RadioProfile, resolve_radio_profile
 from ._audio_transcoder import PcmOpusTranscoder, create_pcm_opus_transcoder
 from .audio import AudioPacket, AudioStats, AudioStream
 from .commander import IcomCommander, Priority
@@ -114,6 +115,7 @@ __all__ = [
     "AudioRecoveryState",
     "Icom7610CoreRadio",
     "IcomRadio",
+    "RadioProfile",
     "AudioCodec",
     "RadioConnectionState",
     "ScopeFrame",
@@ -169,6 +171,8 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         auto_recover_audio: bool = True,
         on_audio_recovery: "Callable[[AudioRecoveryState], None] | None" = None,
         cache_ttl_s: "dict[str, float] | None" = None,
+        profile: RadioProfile | str | None = None,
+        model: str | None = None,
     ) -> None:
         self._host = host
         self._port = port
@@ -256,6 +260,11 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         self._cache_ttl_freq: float = _ttl["freq"]
         self._cache_ttl_mode: float = _ttl["mode"]
         self._cache_ttl_rf_power: float = _ttl["rf_power"]
+        self._profile = resolve_radio_profile(
+            profile=profile,
+            model=model,
+            radio_addr=radio_addr,
+        )
         # GET commands use a shorter timeout than the general connection timeout.
         # wfview-style: send once, short deadline, fall back to cache.
         self._civ_get_timeout: float = min(timeout, 2.0)
@@ -355,9 +364,14 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         return self._audio_bus
 
     @property
+    def profile(self) -> RadioProfile:
+        """Active runtime radio profile."""
+        return self._profile
+
+    @property
     def model(self) -> str:
         """Human-readable radio model name."""
-        return "IC-7610"
+        return self._profile.model
 
     @property
     def capabilities(self) -> set[str]:
@@ -366,21 +380,45 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         Standard tags: ``audio``, ``scope``, ``dual_rx``, ``meters``,
         ``tx``, ``cw``.
         """
-        return {
-            "audio",
-            "scope",
-            "dual_rx",
-            "meters",
-            "tx",
-            "cw",
-            "attenuator",
-            "preamp",
-            "rf_gain",
-            "af_level",
-            "squelch",
-            "nb",
-            "nr",
-        }
+        return set(self._profile.capabilities)
+
+    def _require_receiver(self, receiver: int, *, operation: str) -> None:
+        """Validate receiver index against active profile."""
+        if self._profile.supports_receiver(receiver):
+            return
+        raise CommandError(
+            f"{operation} does not support receiver={receiver} for profile "
+            f"{self._profile.model} (receivers={self._profile.receiver_count})"
+        )
+
+    def _require_capability(self, capability: str, *, operation: str) -> None:
+        """Ensure a profile capability exists before executing operation."""
+        if self._profile.supports_capability(capability):
+            return
+        raise CommandError(
+            f"{operation} is not supported by profile {self._profile.model} "
+            f"(missing capability: {capability})"
+        )
+
+    def _require_cmd29_route(
+        self,
+        command: int,
+        sub: int | None,
+        *,
+        receiver: int,
+        operation: str,
+    ) -> None:
+        """Require Command29 support for per-receiver command routing."""
+        if receiver == RECEIVER_MAIN:
+            return
+        if self._profile.supports_cmd29(command, sub):
+            return
+        raise CommandError(
+            f"{operation} receiver={receiver} is unsupported for profile "
+            f"{self._profile.model}: command 0x{command:02X}"
+            + (f"/0x{sub:02X}" if sub is not None else "")
+            + " has no cmd29 route"
+        )
 
     def set_state_change_callback(self, callback: Callable | None) -> None:
         """Register callback for CI-V state change notifications."""
@@ -1210,6 +1248,13 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
             receiver: 0=MAIN, 1=SUB.
         """
         self._check_connected()
+        self._require_receiver(receiver, operation="set_frequency")
+        self._require_cmd29_route(
+            0x05,
+            None,
+            receiver=receiver,
+            operation="set_frequency",
+        )
         civ = set_frequency(freq_hz, to_addr=self._radio_addr, receiver=receiver)
         await self._send_civ_raw(civ, wait_response=False)
         self._last_freq_hz = freq_hz
@@ -1280,6 +1325,13 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
             receiver: 0=MAIN, 1=SUB.
         """
         self._check_connected()
+        self._require_receiver(receiver, operation="set_mode")
+        self._require_cmd29_route(
+            0x06,
+            None,
+            receiver=receiver,
+            operation="set_mode",
+        )
         if isinstance(mode, str):
             raw_mode = mode
             mode_key = mode.strip().upper()
@@ -1377,6 +1429,14 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         if not 0 <= level <= 255:
             raise ValueError(f"RF gain must be 0-255, got {level}")
         self._check_connected()
+        self._require_capability("rf_gain", operation="set_rf_gain")
+        self._require_receiver(receiver, operation="set_rf_gain")
+        self._require_cmd29_route(
+            0x14,
+            0x02,
+            receiver=receiver,
+            operation="set_rf_gain",
+        )
         civ = set_rf_gain(level, to_addr=self._radio_addr, receiver=receiver)
         await self._send_civ_raw(civ, wait_response=False)
 
@@ -1395,6 +1455,14 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         if not 0 <= level <= 255:
             raise ValueError(f"AF level must be 0-255, got {level}")
         self._check_connected()
+        self._require_capability("af_level", operation="set_af_level")
+        self._require_receiver(receiver, operation="set_af_level")
+        self._require_cmd29_route(
+            0x14,
+            0x01,
+            receiver=receiver,
+            operation="set_af_level",
+        )
         civ = set_af_level(level, to_addr=self._radio_addr, receiver=receiver)
         await self._send_civ_raw(civ, wait_response=False)
 
@@ -1403,6 +1471,14 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         if not 0 <= level <= 255:
             raise ValueError(f"Squelch level must be 0-255, got {level}")
         self._check_connected()
+        self._require_capability("squelch", operation="set_squelch")
+        self._require_receiver(receiver, operation="set_squelch")
+        self._require_cmd29_route(
+            0x14,
+            0x03,
+            receiver=receiver,
+            operation="set_squelch",
+        )
         from .commands import set_squelch as _set_squelch
         civ = _set_squelch(level, to_addr=self._radio_addr, receiver=receiver)
         await self._send_civ_raw(civ, wait_response=False)
@@ -1495,6 +1571,13 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
             receiver: RECEIVER_MAIN (0) or RECEIVER_SUB (1).
         """
         self._check_connected()
+        self._require_capability("attenuator", operation="get_attenuator_level")
+        self._require_receiver(receiver, operation="get_attenuator_level")
+        if not self._profile.supports_cmd29(0x11):
+            raise CommandError(
+                f"get_attenuator_level is unsupported by profile {self._profile.model}: "
+                "no cmd29 route for command 0x11"
+            )
         civ = get_attenuator_cmd(to_addr=self._radio_addr, receiver=receiver)
         try:
             resp = await self._send_civ_raw(civ)
@@ -1527,6 +1610,13 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
             receiver: RECEIVER_MAIN (0) or RECEIVER_SUB (1).
         """
         self._check_connected()
+        self._require_capability("attenuator", operation="set_attenuator_level")
+        self._require_receiver(receiver, operation="set_attenuator_level")
+        if not self._profile.supports_cmd29(0x11):
+            raise CommandError(
+                f"set_attenuator_level is unsupported by profile {self._profile.model}: "
+                "no cmd29 route for command 0x11"
+            )
         if db < 0 or db > 45 or db % 3 != 0:
             raise ValueError(f"Attenuator level must be 0..45 in 3 dB steps, got {db}")
         civ = set_attenuator_level(db, to_addr=self._radio_addr, receiver=receiver)
@@ -1537,6 +1627,13 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
     async def set_attenuator(self, on: bool, receiver: int = RECEIVER_MAIN) -> None:
         """Enable or disable attenuator (compat wrapper, Command29-aware)."""
         self._check_connected()
+        self._require_capability("attenuator", operation="set_attenuator")
+        self._require_receiver(receiver, operation="set_attenuator")
+        if not self._profile.supports_cmd29(0x11):
+            raise CommandError(
+                f"set_attenuator is unsupported by profile {self._profile.model}: "
+                "no cmd29 route for command 0x11"
+            )
         civ = set_attenuator(on, to_addr=self._radio_addr, receiver=receiver)
         await self._send_civ_raw(civ, wait_response=False)
         self._attenuator_state = on
@@ -1548,6 +1645,13 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
             receiver: RECEIVER_MAIN (0) or RECEIVER_SUB (1).
         """
         self._check_connected()
+        self._require_capability("preamp", operation="get_preamp")
+        self._require_receiver(receiver, operation="get_preamp")
+        if not self._profile.supports_cmd29(0x16, 0x02):
+            raise CommandError(
+                f"get_preamp is unsupported by profile {self._profile.model}: "
+                "no cmd29 route for command 0x16/0x02"
+            )
         civ = get_preamp_cmd(to_addr=self._radio_addr, receiver=receiver)
         try:
             resp = await self._send_civ_raw(civ)
@@ -1574,6 +1678,14 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
                 DIGI-SEL are mutually exclusive — disable DIGI-SEL first.
         """
         self._check_connected()
+        self._require_capability("preamp", operation="set_preamp")
+        self._require_receiver(receiver, operation="set_preamp")
+        self._require_cmd29_route(
+            0x16,
+            0x02,
+            receiver=receiver,
+            operation="set_preamp",
+        )
 
         # Pre-flight: check DIGI-SEL / PREAMP mutual exclusion
         if level > 0:
@@ -1597,6 +1709,12 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
     async def get_digisel(self) -> bool:
         """Read DIGI-SEL status (IC-7610 frontend selector)."""
         self._check_connected()
+        self._require_capability("digisel", operation="get_digisel")
+        if not self._profile.supports_cmd29(0x16, 0x4E):
+            raise CommandError(
+                f"get_digisel is unsupported by profile {self._profile.model}: "
+                "no cmd29 route for command 0x16/0x4E"
+            )
         civ = get_digisel(to_addr=self._radio_addr)
         resp = await self._send_civ_raw(civ)
         if not resp.data:
@@ -1608,6 +1726,14 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
     async def set_digisel(self, on: bool, receiver: int = 0) -> None:
         """Set DIGI-SEL status."""
         self._check_connected()
+        self._require_capability("digisel", operation="set_digisel")
+        self._require_receiver(receiver, operation="set_digisel")
+        self._require_cmd29_route(
+            0x16,
+            0x4E,
+            receiver=receiver,
+            operation="set_digisel",
+        )
         civ = set_digisel(on, to_addr=self._radio_addr, receiver=receiver)
         resp = await self._send_civ_raw(civ)
         ack = parse_ack_nak(resp)
@@ -1625,6 +1751,14 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
     async def set_nb(self, on: bool, receiver: int = 0) -> None:
         """Set Noise Blanker on/off."""
         self._check_connected()
+        self._require_capability("nb", operation="set_nb")
+        self._require_receiver(receiver, operation="set_nb")
+        self._require_cmd29_route(
+            0x16,
+            0x22,
+            receiver=receiver,
+            operation="set_nb",
+        )
         civ = set_nb(on, to_addr=self._radio_addr, receiver=receiver)
         await self._send_civ_raw(civ, wait_response=False)
 
@@ -1638,6 +1772,14 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
     async def set_nr(self, on: bool, receiver: int = 0) -> None:
         """Set Noise Reduction on/off."""
         self._check_connected()
+        self._require_capability("nr", operation="set_nr")
+        self._require_receiver(receiver, operation="set_nr")
+        self._require_cmd29_route(
+            0x16,
+            0x40,
+            receiver=receiver,
+            operation="set_nr",
+        )
         civ = set_nr(on, to_addr=self._radio_addr, receiver=receiver)
         await self._send_civ_raw(civ, wait_response=False)
 
@@ -1653,6 +1795,14 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
     async def set_ip_plus(self, on: bool, receiver: int = 0) -> None:
         """Set IP+ on/off."""
         self._check_connected()
+        self._require_capability("ip_plus", operation="set_ip_plus")
+        self._require_receiver(receiver, operation="set_ip_plus")
+        self._require_cmd29_route(
+            0x16,
+            0x65,
+            receiver=receiver,
+            operation="set_ip_plus",
+        )
         civ = set_ip_plus(on, to_addr=self._radio_addr, receiver=receiver)
         await self._send_civ_raw(civ, wait_response=False)
 

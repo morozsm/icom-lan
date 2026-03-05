@@ -729,12 +729,18 @@ class WebServer:
             await _send_response(writer, 404, "Not Found", b"404 Not Found", {})
 
     async def _serve_info(self, writer: asyncio.StreamWriter) -> None:
+        raw_model = (
+            getattr(self._radio, "model", None)
+            if self._radio is not None
+            else None
+        )
+        model = raw_model if isinstance(raw_model, str) else self._config.radio_model
         body = json.dumps(
             {
                 "server": "icom-lan",
                 "version": __version__,
                 "proto": 1,
-                "radio": self._config.radio_model,
+                "radio": model,
             },
             separators=(",", ":"),
         ).encode()
@@ -765,7 +771,18 @@ class WebServer:
 
     async def _serve_capabilities(self, writer: asyncio.StreamWriter) -> None:
         _raw_caps = getattr(self._radio, "capabilities", None) if self._radio is not None else None
-        caps: set[str] = _raw_caps if isinstance(_raw_caps, set) else set()
+        caps: set[str]
+        if isinstance(_raw_caps, set):
+            caps = set(_raw_caps)
+        else:
+            caps = set()
+            if self._radio is not None:
+                if hasattr(self._radio, "enable_scope"):
+                    caps.add("scope")
+                if hasattr(self._radio, "start_audio_rx_opus"):
+                    caps.add("audio")
+                if hasattr(self._radio, "set_ptt"):
+                    caps.add("tx")
         _raw_model = getattr(self._radio, "model", None) if self._radio is not None else None
         model: str = _raw_model if isinstance(_raw_model, str) else self._config.radio_model
         body = json.dumps(
@@ -895,10 +912,16 @@ class WebServer:
         await writer.drain()
 
         ws = WebSocketConnection(reader, writer)
+        raw_model = (
+            getattr(self._radio, "model", None)
+            if self._radio is not None
+            else None
+        )
+        model = raw_model if isinstance(raw_model, str) else self._config.radio_model
 
         if path == "/api/v1/ws":
             handler: Any = ControlHandler(
-                ws, self._radio, __version__, self._config.radio_model,
+                ws, self._radio, __version__, model,
                 server=self,
             )
         elif path == "/api/v1/scope":

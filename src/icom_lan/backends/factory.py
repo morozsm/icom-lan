@@ -24,6 +24,8 @@ def create_radio(config: BackendConfig) -> IcomRadio:
             watchdog_timeout=config.watchdog_timeout,
             auto_recover_audio=config.auto_recover_audio,
             cache_ttl_s=config.cache_ttl_s,
+            profile=config.profile,
+            model=config.model,
         )
     if isinstance(config, SerialBackendConfig):
         raise NotImplementedError(

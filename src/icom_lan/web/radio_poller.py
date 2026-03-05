@@ -30,10 +30,11 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from ..exceptions import ConnectionError as RadioConnectionError
+from ..exceptions import CommandError, ConnectionError as RadioConnectionError
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Callable, cast
 
+from ..profiles import RadioProfile, resolve_radio_profile
 from ..rigctld.state_cache import StateCache
 
 if TYPE_CHECKING:
@@ -230,6 +231,9 @@ class RadioPoller:
         self._on_meter_readings = on_meter_readings
         self._poll_index: int = 0
         self._task: asyncio.Task[None] | None = None
+        self._caps: set[str] = self._radio_capabilities()
+        self._profile: RadioProfile = self._runtime_profile()
+        self._STATE_QUERIES = self._build_state_queries()
 
     def start(self) -> None:
         if self._task is not None and not self._task.done():
@@ -248,6 +252,72 @@ class RadioPoller:
     @property
     def running(self) -> bool:
         return self._task is not None and not self._task.done()
+
+    def _radio_capabilities(self) -> set[str]:
+        raw_caps = getattr(self._radio, "capabilities", None)
+        return set(raw_caps) if isinstance(raw_caps, set) else set()
+
+    def _runtime_profile(self) -> RadioProfile:
+        raw_profile = getattr(self._radio, "profile", None)
+        if isinstance(raw_profile, RadioProfile):
+            return raw_profile
+        raw_model = getattr(self._radio, "model", None)
+        try:
+            if isinstance(raw_model, str) and raw_model.strip():
+                return resolve_radio_profile(model=raw_model)
+        except KeyError:
+            pass
+        if "dual_rx" in self._caps:
+            return resolve_radio_profile(model="IC-7610")
+        return resolve_radio_profile(model="IC-7300")
+
+    def _supports_capability(self, capability: str) -> bool:
+        return capability in self._caps
+
+    def _ensure_receiver_supported(self, receiver: int, *, operation: str) -> None:
+        if self._profile.supports_receiver(receiver):
+            return
+        raise CommandError(
+            f"{operation} does not support receiver={receiver} for profile "
+            f"{self._profile.model} (receivers={self._profile.receiver_count})"
+        )
+
+    def _build_state_queries(self) -> list[tuple[int, int | None, int | None]]:
+        receivers = [0]
+        if self._profile.receiver_count > 1:
+            receivers.append(1)
+        queries: list[tuple[int, int | None, int | None]] = []
+        for receiver in receivers:
+            queries.append((0x25, None, receiver))
+            queries.append((0x26, None, receiver))
+            if self._supports_capability("attenuator") and self._profile.supports_cmd29(0x11):
+                queries.append((0x11, None, receiver))
+            if self._supports_capability("af_level") and self._profile.supports_cmd29(0x14, 0x01):
+                queries.append((0x14, 0x01, receiver))
+            if self._supports_capability("rf_gain") and self._profile.supports_cmd29(0x14, 0x02):
+                queries.append((0x14, 0x02, receiver))
+            if self._supports_capability("squelch") and self._profile.supports_cmd29(0x14, 0x03):
+                queries.append((0x14, 0x03, receiver))
+            if self._supports_capability("preamp") and self._profile.supports_cmd29(0x16, 0x02):
+                queries.append((0x16, 0x02, receiver))
+            if self._supports_capability("nb") and self._profile.supports_cmd29(0x16, 0x22):
+                queries.append((0x16, 0x22, receiver))
+            if self._supports_capability("nr") and self._profile.supports_cmd29(0x16, 0x40):
+                queries.append((0x16, 0x40, receiver))
+            if self._supports_capability("digisel") and self._profile.supports_cmd29(0x16, 0x4E):
+                queries.append((0x16, 0x4E, receiver))
+            if self._supports_capability("ip_plus") and self._profile.supports_cmd29(0x16, 0x65):
+                queries.append((0x16, 0x65, receiver))
+        queries.extend(
+            [
+                (0x1C, 0x00, None),   # PTT (global)
+                (0x14, 0x0A, None),   # Power level (global)
+                (0x0F, None, None),   # Split (global)
+                (0x07, 0xD2, None),   # Active receiver
+                (0x07, 0xC2, None),   # Dual Watch status
+            ]
+        )
+        return queries
 
     async def _run(self) -> None:
         _backoff = 0.0
@@ -326,40 +396,57 @@ class RadioPoller:
         from ..radio_protocol import AdvancedControlCapable, DualReceiverCapable, ScopeCapable
         match cmd:
             case SetFreq(freq=freq, receiver=rx):
-                # 0x05 does NOT support cmd29 on IC-7610.
-                # If targeting SUB, temporarily switch active VFO, send, switch back.
+                self._ensure_receiver_supported(rx, operation="set_freq")
                 current = self._current_active()
-                if rx != 0:
+                if rx != 0 and self._profile.supports_cmd29(0x05):
+                    await radio.set_frequency(freq, receiver=rx)
+                elif rx != 0:
+                    if self._profile.vfo_sub_code is None or self._profile.vfo_main_code is None:
+                        raise CommandError(
+                            f"set_freq receiver={rx} is unsupported by profile {self._profile.model}: "
+                            "no cmd29 route and no VFO switch codes"
+                        )
                     if current != "SUB":
-                        await self._civ(0x07, data=bytes([0xD1]))
+                        await self._civ(0x07, data=bytes([self._profile.vfo_sub_code]))
                         await asyncio.sleep(_GAP)
                     await radio.set_frequency(freq)
                     if current != "SUB":
                         await asyncio.sleep(_GAP)
-                        await self._civ(0x07, data=bytes([0xD0]))
+                        await self._civ(0x07, data=bytes([self._profile.vfo_main_code]))
                 else:
-                    if current != "MAIN":
-                        await self._civ(0x07, data=bytes([0xD0]))
+                    if current != "MAIN" and self._profile.vfo_main_code is not None:
+                        await self._civ(0x07, data=bytes([self._profile.vfo_main_code]))
                         await asyncio.sleep(_GAP)
                     await radio.set_frequency(freq)
-                    if current != "MAIN":
+                    if (
+                        current != "MAIN"
+                        and self._profile.vfo_sub_code is not None
+                    ):
                         await asyncio.sleep(_GAP)
-                        await self._civ(0x07, data=bytes([0xD1]))
+                        await self._civ(0x07, data=bytes([self._profile.vfo_sub_code]))
             case SetMode(mode=mode, filter_width=fw, receiver=rx):
-                # 0x06 does NOT support cmd29 on IC-7610. Same VFO-switch pattern.
+                self._ensure_receiver_supported(rx, operation="set_mode")
                 current = self._current_active()
-                if rx != 0:
+                if rx != 0 and self._profile.supports_cmd29(0x06):
+                    await radio.set_mode(mode, fw, receiver=rx)
+                elif rx != 0:
+                    if self._profile.vfo_sub_code is None or self._profile.vfo_main_code is None:
+                        raise CommandError(
+                            f"set_mode receiver={rx} is unsupported by profile {self._profile.model}: "
+                            "no cmd29 route and no VFO switch codes"
+                        )
                     if current != "SUB":
-                        await self._civ(0x07, data=bytes([0xD1]))
+                        await self._civ(0x07, data=bytes([self._profile.vfo_sub_code]))
                         await asyncio.sleep(_GAP)
                     await radio.set_mode(mode, fw)
                     if current != "SUB":
                         await asyncio.sleep(_GAP)
-                        await self._civ(0x07, data=bytes([0xD0]))
+                        await self._civ(0x07, data=bytes([self._profile.vfo_main_code]))
                 else:
                     await radio.set_mode(mode, fw)
             case SetFilter(filter_num=fn, receiver=rx):
                 if isinstance(radio, AdvancedControlCapable):
+                    self._ensure_receiver_supported(rx, operation="set_filter")
                     await radio.set_filter(fn, receiver=rx)
             case PttOn():
                 logger.info("poller: PTT ON")
@@ -370,36 +457,45 @@ class RadioPoller:
             case SetPower(level=level):
                 await radio.set_power(level)
             case SetRfGain(level=level, receiver=rx):
+                self._ensure_receiver_supported(rx, operation="set_rf_gain")
                 await radio.set_rf_gain(level, receiver=rx)
             case SetAfLevel(level=level, receiver=rx):
+                self._ensure_receiver_supported(rx, operation="set_af_level")
                 await radio.set_af_level(level, receiver=rx)
             case SetSquelch(level=level, receiver=rx):
+                self._ensure_receiver_supported(rx, operation="set_squelch")
                 await radio.set_squelch(level, receiver=rx)
             case SetNB(on=on, receiver=rx):
                 if isinstance(radio, AdvancedControlCapable):
+                    self._ensure_receiver_supported(rx, operation="set_nb")
                     await radio.set_nb(on, receiver=rx)
                 if self._on_state_event:
                     self._on_state_event("nb_changed", {"on": on})
             case SetNR(on=on, receiver=rx):
                 if isinstance(radio, AdvancedControlCapable):
+                    self._ensure_receiver_supported(rx, operation="set_nr")
                     await radio.set_nr(on, receiver=rx)
                 if self._on_state_event:
                     self._on_state_event("nr_changed", {"on": on})
             case SetDigiSel(on=on, receiver=rx):
                 if isinstance(radio, AdvancedControlCapable):
+                    self._ensure_receiver_supported(rx, operation="set_digisel")
                     await radio.set_digisel(on, receiver=rx)
                 if self._on_state_event:
                     self._on_state_event("digisel_changed", {"on": on})
             case SetIpPlus(on=on, receiver=rx):
                 if isinstance(radio, AdvancedControlCapable):
+                    self._ensure_receiver_supported(rx, operation="set_ipplus")
                     await radio.set_ip_plus(on, receiver=rx)
                 if self._on_state_event:
                     self._on_state_event("ipplus_changed", {"on": on})
             case SetAttenuator(db=db, receiver=rx):
                 if isinstance(radio, AdvancedControlCapable):
+                    self._ensure_receiver_supported(rx, operation="set_attenuator")
                     await radio.set_attenuator_level(db, receiver=rx)
             case SetPreamp(level=level, receiver=rx):
                 if isinstance(radio, AdvancedControlCapable):
+                    self._ensure_receiver_supported(rx, operation="set_preamp")
                     await radio.set_preamp(level, receiver=rx)
             case SetBand(band=band):
                 await self._civ(0x07, data=bytes([band]))
@@ -410,10 +506,17 @@ class RadioPoller:
                 # MAIN and SUB — audio, scope, everything follows MAIN.
                 vfo_upper = vfo.upper()
                 is_sub = vfo_upper in ("SUB", "B")
+                if is_sub:
+                    self._ensure_receiver_supported(1, operation="select_vfo")
                 current = self._current_active()
                 need_swap = (is_sub and current == "MAIN") or (not is_sub and current == "SUB")
                 if need_swap:
-                    await self._civ(0x07, data=bytes([0xB0]))
+                    if self._profile.vfo_swap_code is None:
+                        raise CommandError(
+                            f"select_vfo({vfo}) is unsupported by profile {self._profile.model}: "
+                            "no VFO swap code"
+                        )
+                    await self._civ(0x07, data=bytes([self._profile.vfo_swap_code]))
                     logger.info("radio-poller: VFO swap (Main<>Sub)")
                     rs = getattr(self._radio, "_radio_state", None)
                     if rs is not None and hasattr(rs, "active"):
@@ -439,8 +542,16 @@ class RadioPoller:
                     logger.info("radio-poller: scope disabled")
             case SwitchScopeReceiver(receiver=receiver):
                 # Fire-and-forget scope receiver select (0x27 0x12)
-                await self._civ(0x27, sub=0x12, data=bytes([receiver & 0x01]))
-                logger.info("radio-poller: scope receiver → %s", "SUB" if receiver else "MAIN")
+                receiver_masked = receiver & 0x01
+                self._ensure_receiver_supported(
+                    receiver_masked,
+                    operation="switch_scope_receiver",
+                )
+                await self._civ(0x27, sub=0x12, data=bytes([receiver_masked]))
+                logger.info(
+                    "radio-poller: scope receiver → %s",
+                    "SUB" if receiver_masked else "MAIN",
+                )
             case SetPowerstat(on=on):
                 # CI-V 0x18: 0x01 = power on, 0x00 = power off
                 await self._civ(0x18, data=b"\x01" if on else b"\x00")
@@ -458,42 +569,9 @@ class RadioPoller:
     ]
 
     # State queries interleaved on odd cycles.
-    # Tuple: (cmd, sub, receiver) where receiver=None means global (no cmd29).
-    # Per-receiver queries use cmd29 framing (0x29 prefix).
-    # receiver: 0x00=MAIN, 0x01=SUB, None=global
-    # For 0x25/0x26: receiver byte goes in data payload (not cmd29 prefix)
-    _STATE_QUERIES: list[tuple[int, int | None, int | None]] = [
-        (0x25, None, 0x00),   # RX Freq MAIN (built-in receiver byte)
-        (0x25, None, 0x01),   # RX Freq SUB
-        (0x26, None, 0x00),   # RX Mode MAIN (built-in receiver byte)
-        (0x26, None, 0x01),   # RX Mode SUB
-        (0x11, None, 0x00),   # ATT MAIN
-        (0x11, None, 0x01),   # ATT SUB
-        (0x14, 0x01, 0x00),   # AF MAIN
-        (0x14, 0x01, 0x01),   # AF SUB
-        (0x14, 0x02, 0x00),   # RF gain MAIN
-        (0x14, 0x02, 0x01),   # RF gain SUB
-        (0x14, 0x03, 0x00),   # Squelch MAIN
-        (0x14, 0x03, 0x01),   # Squelch SUB
-        (0x16, 0x02, 0x00),   # Preamp MAIN
-        (0x16, 0x02, 0x01),   # Preamp SUB
-        (0x16, 0x22, 0x00),   # NB MAIN
-        (0x16, 0x22, 0x01),   # NB SUB
-        (0x16, 0x40, 0x00),   # NR MAIN
-        (0x16, 0x40, 0x01),   # NR SUB
-        (0x16, 0x4E, 0x00),   # DIGI-SEL MAIN
-        (0x16, 0x4E, 0x01),   # DIGI-SEL SUB
-        (0x16, 0x65, 0x00),   # IP+ MAIN
-        (0x16, 0x65, 0x01),   # IP+ SUB
-        # NOTE: 0x1A 0x03 returns IF filter width code on IC-7610, not
-        # filter selector (1/2/3). Filter comes from mode response (0x26).
-        # Polling 0x1A 0x03 removed to avoid misparsing and UI flicker.
-        (0x1C, 0x00, None),   # PTT (global)
-        (0x14, 0x0A, None),   # Power level (global)
-        (0x0F, None, None),   # Split (global)
-        (0x07, 0xD2, None),   # Active receiver: 0x00=MAIN, 0x01=SUB
-        (0x07, 0xC2, None),   # Dual Watch status: 0x00=off, 0x01=on
-    ]
+    # Tuple: (cmd, sub, receiver) where receiver=None means global query.
+    # Populated per instance from runtime profile/capabilities.
+    _STATE_QUERIES: list[tuple[int, int | None, int | None]] = []
 
     async def _send_query(self) -> None:
         # Even cycles → meter query; odd cycles → state query.
@@ -502,6 +580,9 @@ class RadioPoller:
             cmd_byte, sub_byte = self._FAST_CMDS[fast_idx]
             await self._civ(cmd_byte, sub=sub_byte, data=b"")
         else:
+            if not self._STATE_QUERIES:
+                self._poll_index += 1
+                return
             state_idx = (self._poll_index // 2) % len(self._STATE_QUERIES)
             cmd_byte, sub_byte, receiver = self._STATE_QUERIES[state_idx]
             if receiver is not None:

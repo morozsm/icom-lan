@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 from ..commands import IC_7610_ADDR
+from ..profiles import RadioProfile
 from ..types import AudioCodec, get_audio_capabilities
 
 _AUDIO_CAPABILITIES = get_audio_capabilities()
@@ -32,6 +33,8 @@ class LanBackendConfig:
     watchdog_timeout: float = 30.0
     auto_recover_audio: bool = True
     cache_ttl_s: dict[str, float] | None = None
+    profile: RadioProfile | str | None = None
+    model: str | None = None
 
     def __post_init__(self) -> None:
         if not self.host.strip():
@@ -61,6 +64,8 @@ class SerialBackendConfig:
     baudrate: int = 19200
     radio_addr: int = IC_7610_ADDR
     timeout: float = 5.0
+    profile: RadioProfile | str | None = None
+    model: str | None = None
 
     def __post_init__(self) -> None:
         if not self.device.strip():
