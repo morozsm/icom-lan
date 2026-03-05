@@ -38,6 +38,7 @@ from .radio import AudioRecoveryState, IcomRadio
 from .radio_protocol import AudioCapable, DualReceiverCapable, Radio, ScopeCapable
 from .radio_state import RadioState
 from .radios import RADIOS, RadioModel, get_civ_addr
+from .backends import BackendConfig, LanBackendConfig, SerialBackendConfig, create_radio
 from .commands import (
     CONTROLLER_ADDR,
     IC_7610_ADDR,
@@ -124,6 +125,10 @@ __all__ = [
     "RADIOS",
     "RadioModel",
     "get_civ_addr",
+    "BackendConfig",
+    "LanBackendConfig",
+    "SerialBackendConfig",
+    "create_radio",
     # Exceptions
     "IcomLanError",
     "ConnectionError",
