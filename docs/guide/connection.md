@@ -126,6 +126,23 @@ ConnectionState.CONNECTING    # Handshake in progress
 ConnectionState.CONNECTED     # Ready for commands
 ```
 
+## Readiness and Recovery Contract
+
+The runtime exposes two different health signals:
+
+- `connected` — transport/session connected
+- `radio_ready` — CI-V stream healthy enough for client operations
+
+During CI-V recovery windows, partial connectivity is expected:
+`connected=True, radio_ready=False`.
+
+Recovery is backend-managed (watchdog + reconnect path). Client code should not
+try to force repeated reconnect attempts while backend recovery is in progress.
+
+Scope/control flows are readiness-gated in the backend. Scope re-enable may be
+deferred until `radio_ready=True`; if readiness does not return in time, re-enable
+is skipped for that attempt.
+
 ## Error Handling
 
 ```python
