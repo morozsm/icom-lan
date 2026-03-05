@@ -171,6 +171,11 @@ Each UDP packet has a fixed-format header (see `packettypes.h` in wfview):
   - control API roundtrips (DATA/RF/AF/squelch/NB/NR/IP+/state),
   - PCM audio path and scope lifecycle,
   - negative auth/connect paths and legacy script migration to pytest.
+- Added regression matrix gate for shared-core LAN + serial-ready architecture:
+  - backend-agnostic contract tests (LAN fixture + deterministic serial mock fixture),
+  - deterministic serial framing/stability unit tests (partial frames/timeouts/overflow),
+  - USB audio stub unit tests (selection/lifecycle/error paths),
+  - web/rigctld smoke tests on serial mock backend to guard against LAN-only assumptions.
 
 ## Test Equipment
 
