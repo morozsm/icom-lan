@@ -530,3 +530,13 @@ class TestConstructor:
         assert r._password == "p"
         assert r._radio_addr == 0x94
         assert r._timeout == 10.0
+
+    def test_model_sets_profile_default_radio_addr_when_not_overridden(self) -> None:
+        r = IcomRadio("10.0.0.3", model="IC-7300")
+        assert r.model == "IC-7300"
+        assert r._radio_addr == 0x94
+
+    def test_explicit_radio_addr_override_wins_over_profile_default(self) -> None:
+        r = IcomRadio("10.0.0.4", model="IC-7300", radio_addr=0x98)
+        assert r.model == "IC-7300"
+        assert r._radio_addr == 0x98

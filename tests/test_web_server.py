@@ -1999,8 +1999,8 @@ class TestSwitchScopeReceiver:
             for c in scope_calls
         ), "Expected CI-V 0x27/0x12/0x01 for SUB scope"
 
-    async def test_switch_scope_receiver_clamped_to_1bit(self) -> None:
-        """receiver value is masked to 1 bit (only 0 or 1)."""
+    async def test_switch_scope_receiver_rejects_out_of_range_receiver(self) -> None:
+        """Out-of-range receiver value must not be masked into a valid target."""
         from icom_lan.web.radio_poller import (
             CommandQueue, RadioPoller, SwitchScopeReceiver,
         )
@@ -2010,7 +2010,7 @@ class TestSwitchScopeReceiver:
         poller = RadioPoller(radio, StateCache(), queue)
 
         poller.start()
-        queue.put(SwitchScopeReceiver(0xFF))  # should be clamped to 1
+        queue.put(SwitchScopeReceiver(0xFF))
         await asyncio.sleep(0.15)
         poller.stop()
 
@@ -2018,10 +2018,9 @@ class TestSwitchScopeReceiver:
             c for c in radio.send_civ.call_args_list
             if c[0][0] == 0x27
         ]
-        assert any(
-            c.kwargs.get("sub") == 0x12 and c.kwargs.get("data") == bytes([0x01])
-            for c in scope_calls
-        ), "Expected receiver masked to 0x01"
+        assert not any(
+            c.kwargs.get("sub") == 0x12 for c in scope_calls
+        ), "Expected invalid receiver to be rejected without CI-V send"
 
     async def test_select_vfo_sub_sends_swap(self) -> None:
         """SelectVfo("SUB") sends VFO swap (0x07 0xB0) when active=MAIN."""

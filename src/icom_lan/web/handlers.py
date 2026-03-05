@@ -14,6 +14,7 @@ import logging
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any, Protocol, cast
 
+from ..profiles import RadioProfile
 from ..scope import ScopeFrame
 from ..types import AudioCodec
 from .protocol import (
@@ -203,14 +204,16 @@ class ControlHandler:
     def _ensure_receiver_supported(self, receiver: int) -> None:
         if self._radio is None:
             return
-        caps = self._capabilities()
-        if receiver == 0:
-            return
-        if "dual_rx" in caps:
+        raw_profile = getattr(self._radio, "profile", None)
+        if isinstance(raw_profile, RadioProfile):
+            receiver_count = raw_profile.receiver_count
+        else:
+            receiver_count = 2 if "dual_rx" in self._capabilities() else 1
+        if 0 <= receiver < receiver_count:
             return
         raise ValueError(
             f"receiver={receiver} is not supported by active profile "
-            "(missing capability: dual_rx)"
+            f"(receivers={receiver_count})"
         )
 
     def _ensure_capability(self, capability: str, command_name: str) -> None:

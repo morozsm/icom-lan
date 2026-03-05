@@ -5,7 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-from ..commands import IC_7610_ADDR
 from ..profiles import RadioProfile
 from ..types import AudioCodec, get_audio_capabilities
 
@@ -23,7 +22,7 @@ class LanBackendConfig:
     port: int = 50001
     username: str = ""
     password: str = ""
-    radio_addr: int = IC_7610_ADDR
+    radio_addr: int | None = None
     timeout: float = 5.0
     audio_codec: AudioCodec | int = _DEFAULT_AUDIO_CODEC
     audio_sample_rate: int = _DEFAULT_AUDIO_SAMPLE_RATE
@@ -41,7 +40,7 @@ class LanBackendConfig:
             raise ValueError("LAN backend requires non-empty host.")
         if not (1 <= self.port <= 65535):
             raise ValueError("LAN backend port must be in range 1..65535.")
-        if not (0 <= self.radio_addr <= 0xFF):
+        if self.radio_addr is not None and not (0 <= self.radio_addr <= 0xFF):
             raise ValueError("radio_addr must be a single byte (0..255).")
         if self.timeout <= 0:
             raise ValueError("timeout must be > 0.")
@@ -62,7 +61,7 @@ class SerialBackendConfig:
     backend: Literal["serial"] = "serial"
     device: str = ""
     baudrate: int = 19200
-    radio_addr: int = IC_7610_ADDR
+    radio_addr: int | None = None
     timeout: float = 5.0
     profile: RadioProfile | str | None = None
     model: str | None = None
@@ -72,7 +71,7 @@ class SerialBackendConfig:
             raise ValueError("Serial backend requires non-empty device path.")
         if self.baudrate <= 0:
             raise ValueError("baudrate must be > 0.")
-        if not (0 <= self.radio_addr <= 0xFF):
+        if self.radio_addr is not None and not (0 <= self.radio_addr <= 0xFF):
             raise ValueError("radio_addr must be a single byte (0..255).")
         if self.timeout <= 0:
             raise ValueError("timeout must be > 0.")

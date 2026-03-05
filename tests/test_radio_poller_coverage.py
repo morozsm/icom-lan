@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from icom_lan.exceptions import CommandError
 from icom_lan.rigctld.state_cache import StateCache
 from icom_lan.profiles import resolve_radio_profile
 from icom_lan.web.radio_poller import (
@@ -129,9 +130,11 @@ async def test_execute_event_emitting_commands_and_vfo_paths() -> None:
 
     await poller._execute(EnableScope(policy="fast"))  # noqa: SLF001
     await poller._execute(DisableScope())  # noqa: SLF001
-    await poller._execute(SwitchScopeReceiver(0xFF))  # noqa: SLF001
+    await poller._execute(SwitchScopeReceiver(1))  # noqa: SLF001
     radio.enable_scope.assert_awaited_once_with(policy="fast")
     radio.disable_scope.assert_awaited_once()
+    with pytest.raises(CommandError, match="receiver=2"):
+        await poller._execute(SwitchScopeReceiver(2))  # noqa: SLF001
 
 
 @pytest.mark.asyncio

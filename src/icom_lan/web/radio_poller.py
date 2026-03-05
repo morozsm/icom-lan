@@ -542,15 +542,14 @@ class RadioPoller:
                     logger.info("radio-poller: scope disabled")
             case SwitchScopeReceiver(receiver=receiver):
                 # Fire-and-forget scope receiver select (0x27 0x12)
-                receiver_masked = receiver & 0x01
                 self._ensure_receiver_supported(
-                    receiver_masked,
+                    receiver,
                     operation="switch_scope_receiver",
                 )
-                await self._civ(0x27, sub=0x12, data=bytes([receiver_masked]))
+                await self._civ(0x27, sub=0x12, data=bytes([receiver]))
                 logger.info(
                     "radio-poller: scope receiver → %s",
-                    "SUB" if receiver_masked else "MAIN",
+                    "SUB" if receiver else "MAIN",
                 )
             case SetPowerstat(on=on):
                 # CI-V 0x18: 0x01 = power on, 0x00 = power off
