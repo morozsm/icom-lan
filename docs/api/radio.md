@@ -77,7 +77,29 @@ finally:
 def connected(self) -> bool
 ```
 
-Whether the radio is currently connected and ready for commands.
+Whether the radio session is connected at transport level.
+
+`connected` does **not** guarantee CI-V stream freshness. Use `radio_ready` for
+operation readiness.
+
+### `radio_ready`
+
+```python
+@property
+def radio_ready(self) -> bool
+```
+
+Backend source of truth for CI-V readiness.
+
+`radio_ready` is `True` only when:
+
+- `connected` is `True`
+- CI-V stream is marked ready
+- backend is not in a recovery phase
+- last CI-V data timestamp is within the readiness idle timeout
+
+This is a backend-managed readiness contract: clients should treat
+`connected` vs `radio_ready` as distinct signals.
 
 ---
 

@@ -106,6 +106,18 @@ The web UI uses a multi-channel WebSocket architecture for optimal performance:
 - **Backpressure** — server drops frames when client can't keep up, never drops commands
 - **Auto-reconnect** — exponential backoff (1s → 30s max) on connection loss
 
+## Backend Readiness and Recovery
+
+For radio connectivity, backend state is authoritative.
+
+- `radio_ready` in control messages is the backend source of truth for CI-V readiness.
+- Backend manages reconnect/recovery. The UI should not spam manual reconnect while
+  recovery is active.
+- If a `radio_connect` request arrives during backend recovery, server responds with
+  `error: "backend_recovering"`.
+- Scope enable/re-enable is deferred until `radio_ready=True`; when readiness does not
+  recover in time, backend skips that re-enable attempt.
+
 ## Configuration
 
 ```bash
