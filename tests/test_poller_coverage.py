@@ -177,6 +177,7 @@ async def test_maybe_log_stats_emits_after_interval(
 
     # Back-date the last stats log so the interval has elapsed
     poller._last_stats_log = time.monotonic() - 100.0
+    mock_radio.civ_stats = MagicMock(return_value={"active_waiters": 0})
 
     with caplog.at_level(logging.INFO, logger="icom_lan.rigctld.poller"):
         poller._maybe_log_stats()
@@ -208,7 +209,9 @@ async def test_maybe_log_stats_with_civ_stats(
     """_maybe_log_stats() should include civ_stats if available."""
     import logging
 
-    mock_radio.civ_stats.return_value = {"active_waiters": 0, "stale_cleaned": 0}
+    mock_radio.civ_stats = MagicMock(
+        return_value={"active_waiters": 0, "stale_cleaned": 0}
+    )
     poller._last_stats_log = time.monotonic() - 100.0
 
     with caplog.at_level(logging.INFO, logger="icom_lan.rigctld.poller"):
@@ -230,6 +233,7 @@ async def test_maybe_log_stats_with_circuit_breaker(
     cb = CircuitBreaker()
     p = RadioPoller(mock_radio, cache, config, circuit_breaker=cb)
     p._last_stats_log = time.monotonic() - 100.0
+    mock_radio.civ_stats = MagicMock(return_value={"active_waiters": 0})
 
     with caplog.at_level(logging.INFO, logger="icom_lan.rigctld.poller"):
         p._maybe_log_stats()

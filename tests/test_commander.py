@@ -107,9 +107,6 @@ async def test_dedupe_returns_existing_future() -> None:
 
 
 @pytest.mark.asyncio
-@pytest.mark.xfail(
-    reason="Flaky under OpenClaw exec (intermittent SIGTERM)", strict=False
-)
 async def test_stop_fails_pending() -> None:
     async def execute(cmd: bytes, wait_response: bool = True) -> CivFrame | None:
         await asyncio.sleep(0.5)

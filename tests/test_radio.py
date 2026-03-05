@@ -618,6 +618,20 @@ class TestSetModeFireAndForget:
         assert radio._last_mode == Mode.USB
 
     @pytest.mark.asyncio
+    async def test_set_mode_string_case_insensitive(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        await radio.set_mode(" usb ")
+        assert radio._last_mode == Mode.USB
+
+    @pytest.mark.asyncio
+    async def test_set_mode_string_invalid_raises_value_error(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        with pytest.raises(ValueError, match="Unknown mode"):
+            await radio.set_mode("not-a-mode")
+
+    @pytest.mark.asyncio
     async def test_set_mode_updates_last_mode(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:

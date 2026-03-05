@@ -118,6 +118,30 @@ def test_conn_state_returns_current_state(radio: IcomRadio) -> None:
     assert radio.conn_state == RadioConnectionState.CONNECTED
 
 
+def test_radio_ready_true_when_connected_and_civ_stream_healthy(radio: IcomRadio) -> None:
+    radio._civ_stream_ready = True
+    radio._civ_recovering = False
+    radio._last_civ_data_received = 100.0
+    with patch("time.monotonic", return_value=101.0):
+        assert radio.radio_ready is True
+
+
+def test_radio_ready_false_when_civ_recovering(radio: IcomRadio) -> None:
+    radio._civ_stream_ready = True
+    radio._civ_recovering = True
+    radio._last_civ_data_received = 100.0
+    with patch("time.monotonic", return_value=101.0):
+        assert radio.radio_ready is False
+
+
+def test_radio_ready_false_when_civ_data_is_stale(radio: IcomRadio) -> None:
+    radio._civ_stream_ready = True
+    radio._civ_recovering = False
+    radio._last_civ_data_received = 100.0
+    with patch("time.monotonic", return_value=200.0):
+        assert radio.radio_ready is False
+
+
 # ---------------------------------------------------------------------------
 # _intentional_disconnect setter (line 277)
 # ---------------------------------------------------------------------------
@@ -240,7 +264,8 @@ async def test_stop_audio_rx_alias_calls_stop_audio_rx_opus(radio: IcomRadio) ->
         called = True
 
     with patch.object(radio, "stop_audio_rx_opus", side_effect=_stop):
-        await radio.stop_audio_rx()
+        with pytest.warns(DeprecationWarning, match="stop_audio_rx"):
+            await radio.stop_audio_rx()
 
     assert called
 
@@ -253,7 +278,8 @@ async def test_start_audio_tx_alias_calls_start_audio_tx_opus(radio: IcomRadio) 
         called = True
 
     with patch.object(radio, "start_audio_tx_opus", side_effect=_start):
-        await radio.start_audio_tx()
+        with pytest.warns(DeprecationWarning, match="start_audio_tx"):
+            await radio.start_audio_tx()
 
     assert called
 
@@ -266,7 +292,8 @@ async def test_stop_audio_tx_alias_calls_stop_audio_tx_opus(radio: IcomRadio) ->
         called = True
 
     with patch.object(radio, "stop_audio_tx_opus", side_effect=_stop):
-        await radio.stop_audio_tx()
+        with pytest.warns(DeprecationWarning, match="stop_audio_tx"):
+            await radio.stop_audio_tx()
 
     assert called
 
@@ -279,7 +306,8 @@ async def test_stop_audio_alias_calls_stop_audio_opus(radio: IcomRadio) -> None:
         called = True
 
     with patch.object(radio, "stop_audio_opus", side_effect=_stop):
-        await radio.stop_audio()
+        with pytest.warns(DeprecationWarning, match="stop_audio"):
+            await radio.stop_audio()
 
     assert called
 
@@ -293,7 +321,8 @@ async def test_start_audio_alias_calls_start_audio_opus(radio: IcomRadio) -> Non
 
     with patch.object(radio, "start_audio_opus", side_effect=_start):
         cb = MagicMock()
-        await radio.start_audio(cb)
+        with pytest.warns(DeprecationWarning, match="start_audio"):
+            await radio.start_audio(cb)
 
     assert called
 
@@ -306,7 +335,8 @@ async def test_push_audio_tx_alias_calls_push_audio_tx_opus(radio: IcomRadio) ->
         called = True
 
     with patch.object(radio, "push_audio_tx_opus", side_effect=_push):
-        await radio.push_audio_tx(b"\x00\x01")
+        with pytest.warns(DeprecationWarning, match="push_audio_tx"):
+            await radio.push_audio_tx(b"\x00\x01")
 
     assert called
 
@@ -1101,6 +1131,31 @@ async def test_disconnect_disconnects_audio_transport(radio: IcomRadio) -> None:
     assert radio._audio_transport is None
 
 
+async def test_disconnect_sends_token_remove_before_ctrl_close(
+    radio: IcomRadio,
+) -> None:
+    """disconnect() attempts token-remove (0x01) before closing control transport."""
+    radio._ctrl_transport = MagicMock()
+    radio._ctrl_transport.disconnect = AsyncMock()
+    radio._civ_transport = MagicMock()
+    radio._civ_transport.disconnect = AsyncMock()
+
+    with (
+        patch.object(radio, "_stop_watchdog"),
+        patch.object(radio, "_stop_reconnect"),
+        patch.object(radio, "_stop_token_renewal"),
+        patch.object(radio, "_send_open_close", new=AsyncMock()),
+        patch.object(radio, "_stop_civ_data_watchdog", new=AsyncMock()),
+        patch.object(radio, "_stop_civ_worker", new=AsyncMock()),
+        patch.object(radio, "_stop_civ_rx_pump", new=AsyncMock()),
+        patch.object(radio, "_send_token", new=AsyncMock()) as send_token,
+    ):
+        await radio.disconnect()
+
+    send_token.assert_awaited_once_with(0x01)
+    radio._ctrl_transport.disconnect.assert_awaited_once()
+
+
 # ---------------------------------------------------------------------------
 # soft_disconnect() — audio transport (lines 379-384)
 # ---------------------------------------------------------------------------
@@ -1365,15 +1420,26 @@ async def test_watchdog_loop_triggers_reconnect_on_timeout(radio: IcomRadio) -> 
     async def mock_sleep(delay: float) -> None:
         pass  # Don't actually wait
 
+    scheduled: list[str] = []
+
+    def _create_task(coro: object) -> MagicMock:
+        close = getattr(coro, "close", None)
+        if callable(close):
+            close()
+        task = MagicMock()
+        task.done.return_value = False
+        scheduled.append("reconnect")
+        return task
+
     with (
         patch("icom_lan.radio.time.monotonic", side_effect=mock_time),
         patch("asyncio.sleep", side_effect=mock_sleep),
-        patch("asyncio.create_task") as mock_create_task,
+        patch("asyncio.create_task", side_effect=_create_task),
     ):
         await radio._watchdog_loop()
 
     # A reconnect task should have been created
-    mock_create_task.assert_called_once()
+    assert scheduled == ["reconnect"]
 
 
 # ---------------------------------------------------------------------------
@@ -1525,6 +1591,33 @@ async def test_reconnect_loop_stops_ctrl_transport_on_reconnect(radio: IcomRadio
     ):
         await radio._reconnect_loop()
     # No assertion needed — just verify it doesn't raise
+
+
+async def test_reconnect_loop_attempts_token_remove(
+    radio: IcomRadio,
+) -> None:
+    """_reconnect_loop sends token-remove before ctrl transport disconnect."""
+    from icom_lan._connection_state import RadioConnectionState
+
+    radio._conn_state = RadioConnectionState.RECONNECTING
+    radio._audio_transport = None
+    radio._civ_transport = None
+    radio._ctrl_transport = MagicMock()
+    radio._ctrl_transport.disconnect = AsyncMock()
+
+    async def fake_connect() -> None:
+        radio._conn_state = RadioConnectionState.CONNECTED
+
+    with (
+        patch("icom_lan.radio.IcomTransport", return_value=MagicMock()),
+        patch.object(radio, "connect", side_effect=fake_connect),
+        patch.object(radio, "_stop_token_renewal"),
+        patch.object(radio, "_capture_audio_snapshot", return_value=None),
+        patch.object(radio, "_send_token", new=AsyncMock()) as send_token,
+    ):
+        await radio._reconnect_loop()
+
+    send_token.assert_awaited_once_with(0x01)
 
 
 # ---------------------------------------------------------------------------

@@ -39,6 +39,28 @@ def has_radio_config() -> bool:
     return bool(ICOM_HOST and ICOM_USER and ICOM_PASS)
 
 
+async def _connect_with_retries(radio: IcomRadio, attempts: int = 7) -> None:
+    """Connect with firmware-aware cooldown retries for real hardware."""
+    last_exc: Exception | None = None
+    for attempt in range(1, attempts + 1):
+        try:
+            await radio.connect()
+            return
+        except Exception as exc:
+            last_exc = exc
+            if attempt >= attempts:
+                break
+            text = str(exc).lower()
+            if "status error=0xffffffff" in text or "rejected session allocation" in text:
+                # IC-7610 can hold old session slot for tens of seconds.
+                pause = min(12 + attempt * 4, 40)
+            else:
+                pause = min(attempt * 2, 12)
+            await asyncio.sleep(float(pause))
+    assert last_exc is not None
+    raise last_exc
+
+
 @pytest.fixture
 def radio_config() -> dict:
     """Radio connection configuration."""
@@ -61,7 +83,7 @@ async def radio(radio_config: dict) -> AsyncGenerator[IcomRadio, None]:
         pytest.skip("Radio not configured (set ICOM_HOST, ICOM_USER, ICOM_PASS)")
 
     r = IcomRadio(**radio_config)
-    await r.connect()
+    await _connect_with_retries(r)
     assert r.connected, "Failed to connect to radio"
 
     # Wait for status packet with audio port mapping
@@ -70,11 +92,14 @@ async def radio(radio_config: dict) -> AsyncGenerator[IcomRadio, None]:
     # Per-test baseline (best effort).
     baseline_freq = None
     baseline_mode = None
+    baseline_filter = None
     baseline_power = None
+    baseline_digisel = None
     try:
         baseline_freq = await r.get_frequency()
-        baseline_mode = await r.get_mode()
+        baseline_mode, baseline_filter = await r.get_mode_info()
         baseline_power = await r.get_power()
+        baseline_digisel = await r.get_digisel()
     except Exception:
         # Don't fail fixture on baseline read issues.
         pass
@@ -100,7 +125,12 @@ async def radio(radio_config: dict) -> AsyncGenerator[IcomRadio, None]:
                 pass
         if baseline_mode is not None:
             try:
-                await r.set_mode(baseline_mode)
+                await r.set_mode(baseline_mode, filter_width=baseline_filter)
+            except Exception:
+                pass
+        if baseline_digisel is not None:
+            try:
+                await r.set_digisel(baseline_digisel)
             except Exception:
                 pass
         if baseline_freq is not None:

@@ -440,6 +440,7 @@ input[type=range]::-webkit-slider-thumb {
     ipplus: false,
     dualWatch: false,
     radioConnected: false,
+    radioReady: false,
     reconnecting: false,
     ws: {
       control: null,
@@ -562,11 +563,12 @@ input[type=range]::-webkit-slider-thumb {
   function setStatusVisual() {
     const dot = dom.connDot;
     dot.classList.remove('bg-green-500', 'bg-red-500', 'bg-yellow-400', 'animate-pulse');
+    const waitingForRadio = state.controlConnected && state.radioConnected && !state.radioReady;
 
-    if (state.reconnecting) {
+    if (state.reconnecting || waitingForRadio) {
       dot.classList.add('bg-yellow-400', 'animate-pulse');
       dom.connText.textContent = 'RECONNECTING...';
-    } else if (state.radioConnected) {
+    } else if (state.radioConnected && state.radioReady) {
       dot.classList.add('bg-green-500', 'animate-pulse');
       dom.connText.textContent = 'CONNECTED: LAN ' + window.location.hostname;
     } else {
@@ -577,8 +579,8 @@ input[type=range]::-webkit-slider-thumb {
     dom.connBtn.textContent = state.radioConnected ? 'Disconnect' : 'Connect';
     dom.lanDot.classList.toggle('bg-green-500', state.controlConnected);
     dom.lanDot.classList.toggle('bg-slate-600', !state.controlConnected);
-    dom.civDot.classList.toggle('bg-green-500', state.radioConnected);
-    dom.civDot.classList.toggle('bg-slate-600', !state.radioConnected);
+    dom.civDot.classList.toggle('bg-green-500', state.radioReady);
+    dom.civDot.classList.toggle('bg-slate-600', !state.radioReady);
   }
 
   function setActiveVfo(vfo, dispatch) {
@@ -830,6 +832,19 @@ input[type=range]::-webkit-slider-thumb {
       var changed = state.radioConnected !== next.connected;
       state.radioConnected = next.connected;
       if (changed) setStatusVisual();
+    }
+    if (typeof next.radio_ready === 'boolean') {
+      var readyChanged = state.radioReady !== next.radio_ready;
+      state.radioReady = next.radio_ready;
+      state.reconnecting = state.controlConnected && state.radioConnected && !state.radioReady;
+      if (readyChanged) {
+        if (state.radioReady) {
+          connectScope();
+        } else {
+          closeSocket('scope');
+        }
+        setStatusVisual();
+      }
     }
     if (typeof next.control_connected === 'boolean') {
       // Only override if WS is open (don't mark LAN green when WS is dead)
@@ -1224,11 +1239,14 @@ input[type=range]::-webkit-slider-thumb {
         dom.radioModel.textContent = msg.radio;
       }
       state.radioConnected = !!msg.connected;
-      state.reconnecting = false;
+      state.radioReady = typeof msg.radio_ready === 'boolean' ? !!msg.radio_ready : state.radioConnected;
+      state.reconnecting = state.controlConnected && state.radioConnected && !state.radioReady;
       setStatusVisual();
       sendControl({ type: 'subscribe', streams: ['state', 'events'] });
       connectMeters();
-      connectScope();
+      if (state.radioReady) {
+        connectScope();
+      }
       startStatePoll();
       if (state.audio.rxEnabled || state.audio.txEnabled) {
         connectAudio();
@@ -1245,6 +1263,15 @@ input[type=range]::-webkit-slider-thumb {
       const eventName = msg.event || msg.name;
       if (eventName === 'connection_state') {
         state.radioConnected = !!msg.connected;
+        if (typeof msg.radio_ready === 'boolean') {
+          state.radioReady = !!msg.radio_ready;
+        }
+        state.reconnecting = state.controlConnected && state.radioConnected && !state.radioReady;
+        if (state.radioReady) {
+          connectScope();
+        } else {
+          closeSocket('scope');
+        }
         setStatusVisual();
         return;
       }
@@ -1489,6 +1516,9 @@ input[type=range]::-webkit-slider-thumb {
   }
 
   function connectScope() {
+    if (!state.radioReady) {
+      return;
+    }
     if (state.ws.scope && state.ws.scope.readyState <= WebSocket.OPEN) {
       return;
     }
@@ -2317,7 +2347,8 @@ input[type=range]::-webkit-slider-thumb {
     if (state.radioConnected) {
       sendControl({ type: 'radio_disconnect', id: nextCmdId('radio') });
     } else {
-      sendControl({ type: 'radio_connect', id: nextCmdId('radio') });
+      showToast('Backend manages radio reconnect automatically');
+      setStatusVisual();
     }
   }
 

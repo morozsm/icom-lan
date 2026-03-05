@@ -254,7 +254,11 @@ class TestAttPreamp:
         """set_preamp should succeed when DIGI-SEL is off (default)."""
         mock_radio.set_digisel(False)
         await connected_radio.set_preamp(1)  # must not raise
-        await asyncio.sleep(0)  # fire-and-forget: yield so mock can process the packet
+        # fire-and-forget: allow background packet processing to settle
+        for _ in range(20):
+            if mock_radio._preamp == 1:
+                break
+            await asyncio.sleep(0.01)
         assert mock_radio._preamp == 1
 
 

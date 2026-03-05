@@ -222,7 +222,7 @@ async def test_control_run_registers_unregisters_and_sends_hello() -> None:
         send_text=AsyncMock(),
         recv=AsyncMock(side_effect=[(WS_OP_BINARY, b""), EOFError()]),
     )
-    radio = SimpleNamespace(connected=True)
+    radio = SimpleNamespace(connected=True, radio_ready=True)
     server = SimpleNamespace(
         register_control_event_queue=MagicMock(),
         unregister_control_event_queue=MagicMock(),
@@ -235,6 +235,7 @@ async def test_control_run_registers_unregisters_and_sends_hello() -> None:
     hello = decode_json(ws.send_text.await_args_list[0].args[0])
     assert hello["type"] == "hello"
     assert hello["connected"] is True
+    assert hello["radio_ready"] is True
 
 
 async def test_control_event_sender_loop_filters_by_subscription() -> None:
@@ -301,18 +302,24 @@ async def test_send_state_snapshot_uses_server_cache() -> None:
         filter_width=2,
         ptt=True,
     )
-    handler = _control_handler(ws=ws, server=SimpleNamespace(state_cache=cache))
+    handler = _control_handler(
+        ws=ws,
+        radio=SimpleNamespace(connected=True, radio_ready=True),
+        server=SimpleNamespace(state_cache=cache),
+    )
     await handler._send_state_snapshot()
     msg = decode_json(ws.send_text.await_args_list[-1].args[0])
     assert msg["type"] == "state"
     assert msg["data"]["freq_a"] == 14_074_000
     assert msg["data"]["filter"] == "FIL2"
     assert msg["data"]["ptt"] is True
+    assert msg["radio_ready"] is True
 
 
 async def test_send_state_snapshot_uses_radio_cache_when_server_cache_missing() -> None:
     ws = SimpleNamespace(send_text=AsyncMock())
     radio = SimpleNamespace(
+        radio_ready=False,
         state_cache=SimpleNamespace(
             freq_ts=1.0,
             freq=7_074_000,
@@ -332,6 +339,7 @@ async def test_send_state_snapshot_uses_radio_cache_when_server_cache_missing() 
     assert msg["data"]["freq_a"] == 7_074_000
     assert msg["data"]["mode"] == "LSB"
     assert msg["data"]["filter"] == "FIL1"
+    assert msg["radio_ready"] is False
 
 
 async def test_send_state_snapshot_cache_errors_are_ignored() -> None:
@@ -347,6 +355,7 @@ async def test_send_state_snapshot_cache_errors_are_ignored() -> None:
     msg = decode_json(ws.send_text.await_args_list[-1].args[0])
     assert msg["data"]["freq_a"] == 0
     assert msg["data"]["mode"] == "USB"
+    assert "radio_ready" in msg
 
 
 async def test_handle_command_response_paths() -> None:
@@ -421,6 +430,23 @@ async def test_radio_connect_paths() -> None:
     await h._handle_radio_connect({"id": "x5"})
     msg = decode_json(ws.send_text.await_args_list[-1].args[0])
     assert msg["ok"] is False and msg["error"] == "connect_failed"
+
+
+async def test_radio_connect_rejected_while_backend_recovering() -> None:
+    ws = SimpleNamespace(send_text=AsyncMock())
+    radio = SimpleNamespace(
+        connected=True,
+        radio_ready=False,
+        soft_reconnect=AsyncMock(),
+        connect=AsyncMock(),
+    )
+    h = _control_handler(ws=ws, radio=radio)
+    await h._handle_radio_connect({"id": "busy"})
+    msg = decode_json(ws.send_text.await_args_list[-1].args[0])
+    assert msg["ok"] is False
+    assert msg["error"] == "backend_recovering"
+    radio.soft_reconnect.assert_not_awaited()
+    radio.connect.assert_not_awaited()
 
 
 async def test_radio_disconnect_paths() -> None:

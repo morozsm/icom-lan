@@ -168,7 +168,13 @@ def test_start_civ_data_watchdog_creates_task_when_done(radio: IcomRadio) -> Non
     radio._civ_data_watchdog_task = mock_task
 
     fake_new_task = MagicMock()
-    with patch("asyncio.create_task", return_value=fake_new_task) as mock_create:
+    def _create_task(coro: object, *args: object, **kwargs: object) -> MagicMock:
+        close = getattr(coro, "close", None)
+        if callable(close):
+            close()
+        return fake_new_task
+
+    with patch("asyncio.create_task", side_effect=_create_task) as mock_create:
         radio._start_civ_data_watchdog()
         mock_create.assert_called_once()
 
@@ -275,6 +281,41 @@ async def test_watchdog_loop_phase1_open_close_exception_ignored(
         patch.object(radio, "_send_open_close", side_effect=failing_open_close),
     ):
         await radio._civ_data_watchdog_loop()  # should complete without raising
+
+
+async def test_watchdog_loop_phase2_uses_long_reconnect_cooldown(
+    radio: IcomRadio,
+) -> None:
+    """Phase 2 uses a long cooldown before reconnect to avoid reconnect churn."""
+    radio._last_civ_data_received = 0.0
+    radio._civ_recovering = False
+    radio._stop_civ_data_watchdog = AsyncMock()
+    radio._force_cleanup_civ = AsyncMock()
+    radio.soft_reconnect = AsyncMock()
+
+    delays: list[float] = []
+
+    async def fake_sleep(delay: float) -> None:
+        delays.append(delay)
+        if delay >= 10.0:
+            raise asyncio.CancelledError()
+
+    monotonic_values = iter([200.0, 200.0, 206.0, 206.1])
+
+    def _mono() -> float:
+        try:
+            return next(monotonic_values)
+        except StopIteration:
+            return 206.1
+
+    with (
+        patch("asyncio.sleep", side_effect=fake_sleep),
+        patch("time.monotonic", side_effect=_mono),
+        patch.object(radio, "_send_open_close", new=AsyncMock()),
+    ):
+        await radio._civ_data_watchdog_loop()
+
+    assert any(d >= 45.0 for d in delays)
 
 
 # ---------------------------------------------------------------------------

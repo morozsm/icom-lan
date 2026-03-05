@@ -461,6 +461,15 @@ class TestHttpEndpoints:
         assert "modes" in data
         assert isinstance(data["modes"], list)
 
+    async def test_state_endpoint_contains_radio_ready(
+        self, server: WebServer
+    ) -> None:
+        host, port = _addr(server)
+        _, _, body = await _http_get(host, port, "/api/v1/state")
+        data = json.loads(body)
+        assert "radio_ready" in data
+        assert isinstance(data["radio_ready"], bool)
+
     async def test_root_returns_html(self, server: WebServer) -> None:
         host, port = _addr(server)
         status, headers, body = await _http_get(host, port, "/")
@@ -527,6 +536,7 @@ class TestControlChannel:
             assert "version" in msg
             assert "radio" in msg
             assert "capabilities" in msg
+            assert "radio_ready" in msg
         finally:
             await _close_ws(writer)
 
@@ -1540,6 +1550,8 @@ class TestScopeEnableAtomic:
         radio.on_scope_data = MagicMock()
         radio.enable_scope = AsyncMock()
         radio.disable_scope = AsyncMock()
+        radio.connected = True
+        radio.radio_ready = True
 
         server = WebServer(radio)
         handlers = [MagicMock() for _ in range(5)]
@@ -1559,6 +1571,8 @@ class TestScopeEnableAtomic:
         radio.on_scope_data = MagicMock()
         radio.enable_scope = AsyncMock()
         radio.disable_scope = AsyncMock()
+        radio.connected = True
+        radio.radio_ready = True
 
         server = WebServer(radio)
         handlers = [MagicMock() for _ in range(5)]
@@ -1575,6 +1589,8 @@ class TestScopeEnableAtomic:
         radio.on_scope_data = MagicMock()
         radio.enable_scope = AsyncMock()
         radio.disable_scope = AsyncMock()
+        radio.connected = True
+        radio.radio_ready = True
 
         async with WebServer(radio, config) as srv:
             host, port = _addr(srv)
@@ -1595,6 +1611,8 @@ class TestScopeEnableAtomic:
         radio.on_scope_data = MagicMock()
         radio.enable_scope = AsyncMock()
         radio.disable_scope = AsyncMock()
+        radio.connected = True
+        radio.radio_ready = True
 
         server = WebServer(radio)
 
@@ -1624,6 +1642,8 @@ class TestScopeReconnect:
         radio.on_scope_data = MagicMock()
         radio.enable_scope = AsyncMock()
         radio.disable_scope = AsyncMock()
+        radio.connected = True
+        radio.radio_ready = True
 
         server = WebServer(radio)
         server._scope_disable_grace = 0
@@ -1645,6 +1665,8 @@ class TestScopeReconnect:
         radio.on_scope_data = MagicMock()
         radio.enable_scope = AsyncMock()
         radio.disable_scope = AsyncMock()
+        radio.connected = True
+        radio.radio_ready = True
 
         server = WebServer(radio)
         server._scope_disable_grace = 0
@@ -1676,6 +1698,8 @@ class TestScopeReconnect:
         radio.on_scope_data = MagicMock()
         radio.enable_scope = AsyncMock()
         radio.disable_scope = AsyncMock()
+        radio.connected = True
+        radio.radio_ready = True
 
         server = WebServer(radio)
 
@@ -1704,6 +1728,8 @@ class TestScopeReconnect:
         radio.on_scope_data = MagicMock()
         radio.enable_scope = AsyncMock()
         radio.disable_scope = AsyncMock()
+        radio.connected = True
+        radio.radio_ready = True
 
         server = WebServer(radio)
 

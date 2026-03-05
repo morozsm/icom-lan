@@ -82,6 +82,11 @@ class Radio(Protocol):
         """Whether the radio is currently connected and healthy."""
         ...
 
+    @property
+    def radio_ready(self) -> bool:
+        """Whether the backend considers the CI-V stream ready for clients."""
+        ...
+
     # -- Frequency ---------------------------------------------------------
 
     async def get_frequency(self, receiver: int = 0) -> int:

@@ -65,16 +65,43 @@ pytest tests/integration/test_radio_integration.py::TestFrequency::test_get_freq
 | `TestMode` | Read/write mode | ✅ Yes |
 | `TestMeters` | Read S-meter, SWR, ALC, power | ✅ Yes |
 | `TestPowerControl` | Set TX power | ✅ Yes |
-| `TestPTT` | Toggle PTT | ⚠️ No TX |
+| `TestPTT` | Toggle PTT | ⚠️ Gated (`ICOM_ALLOW_PTT=1`) |
 | `TestVFO` | VFO selection | ✅ Yes |
 | `TestSplit` | Split mode | ✅ Yes |
-| `TestCW` | CW keying | ❌ Requires antenna |
+| `TestCW` | CW keying | ❌ Gated (`ICOM_ALLOW_CW_TX=1`) |
+| `TestAudioTx` | Audio TX/full-duplex | ❌ Gated (`ICOM_ALLOW_AUDIO_TX=1`) |
 | `TestStatus` | Comprehensive status | ✅ Yes |
+| `TestReliabilityMatrix` | Wrap/ACK/longevity/contention/readiness | ⚠️ Partially gated |
+| `TestControlApiExtended` | DATA/RF/AF/squelch/NB/NR/IP+/state restore | ✅ Yes |
+| `TestAudioPcm` | PCM RX/TX path | ⚠️ PCM TX gated (`ICOM_ALLOW_AUDIO_TX=1`) |
+| `TestScopeIntegration` | Scope enable/capture/disable | ❌ Gated (`ICOM_ALLOW_SCOPE=1`) |
+| `TestNegativeAuthConnect` | Invalid auth / unreachable connect | ❌ Gated (`ICOM_ALLOW_NEGATIVE_TESTS=1`) |
 
-### CW Tests
+### TX Safety Gates
 
-CW tests are **disabled by default** because they require an antenna or dummy load.
-To enable, remove the `@pytest.mark.skip` decorator in `test_radio_integration.py`.
+TX-affecting tests are **disabled by default** and require explicit env flags:
+
+```bash
+export ICOM_ALLOW_PTT=1
+export ICOM_ALLOW_CW_TX=1
+export ICOM_ALLOW_AUDIO_TX=1
+```
+
+Power-cycle hardware test remains separately gated:
+
+```bash
+export ICOM_ALLOW_POWER_CONTROL=1
+```
+
+Additional reliability/media gates:
+
+```bash
+export ICOM_ALLOW_SESSION_CONTENTION=1   # two concurrent clients
+export ICOM_LONG_SOAK_SECONDS=600        # long-run reliability test
+export ICOM_ALLOW_SCOPE=1                # scope capture integration tests
+export ICOM_ALLOW_NEGATIVE_TESTS=1       # bad credentials/unreachable host tests
+export ICOM_PCM_REQUIRE_FRAMES=1         # set 0 for PCM smoke-only
+```
 
 ## CI/CD
 

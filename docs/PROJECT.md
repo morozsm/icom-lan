@@ -160,7 +160,16 @@ Each UDP packet has a fixed-format header (see `packettypes.h` in wfview):
 ### Phase 6 — Scope/Waterfall ✅ COMPLETE (v0.6.0)
 
 ### Current Status
-**All 32 issues closed. 1202 tests. v0.8.0 released on PyPI.**
+**v0.8.0 released on PyPI. Reliability integration backlog (items 1-13) completed on 2026-03-05.**
+**Latest full regression:** `1797 passed, 95 skipped`.
+
+### Reliability Test Expansion (2026-03-05)
+- Added extended integration coverage scaffolding for:
+  - transport sequence wrap-around and ACK mixed stress,
+  - session longevity/contention/readiness transitions,
+  - control API roundtrips (DATA/RF/AF/squelch/NB/NR/IP+/state),
+  - PCM audio path and scope lifecycle,
+  - negative auth/connect paths and legacy script migration to pytest.
 
 ## Test Equipment
 

@@ -43,6 +43,11 @@ class TestGetCivAddr:
     def test_case_insensitive(self) -> None:
         assert get_civ_addr("ic-7300") == 0x94
 
+    def test_flexible_normalization(self) -> None:
+        assert get_civ_addr("IC 7610") == 0x98
+        assert get_civ_addr("IC7610") == 0x98
+        assert get_civ_addr("ic_7610") == 0x98
+
     def test_unknown_raises(self) -> None:
         with pytest.raises(KeyError, match="Unknown radio"):
             get_civ_addr("IC-FAKE")

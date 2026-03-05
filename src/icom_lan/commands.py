@@ -371,6 +371,11 @@ def parse_mode_response(frame: CivFrame) -> tuple[Mode, int | None]:
     """
     if frame.command not in (_CMD_MODE_GET, 0x01):
         raise ValueError(f"Not a mode response: command 0x{frame.command:02x}")
+    if len(frame.data) < 1:
+        raise ValueError(
+            "Mode response payload too short: expected at least 1 byte, "
+            f"got {len(frame.data)}"
+        )
     mode = Mode(frame.data[0])
     filt = frame.data[1] if len(frame.data) > 1 else None
     return mode, filt
@@ -400,6 +405,10 @@ def _level_bcd_encode(value: int) -> bytes:
 
 def _level_bcd_decode(data: bytes) -> int:
     """Decode 2-byte BCD level to 0-255 int."""
+    if len(data) < 2:
+        raise ValueError(
+            f"Level payload too short: expected at least 2 bytes, got {len(data)}"
+        )
     d0 = (data[0] >> 4) & 0x0F
     d1 = data[0] & 0x0F
     d2 = (data[1] >> 4) & 0x0F
@@ -528,6 +537,11 @@ def parse_meter_response(frame: CivFrame) -> int:
     """
     if frame.command != _CMD_METER:
         raise ValueError(f"Not a meter response: command 0x{frame.command:02x}")
+    if len(frame.data) < 2:
+        raise ValueError(
+            "Meter response payload too short: expected at least 2 bytes, "
+            f"got {len(frame.data)}"
+        )
     return _level_bcd_decode(frame.data)
 
 

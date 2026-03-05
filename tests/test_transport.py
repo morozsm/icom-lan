@@ -160,6 +160,26 @@ class TestTrackSent:
         # Oldest should be evicted
         assert 0 not in transport.tx_buffer
 
+    def test_track_evicts_by_send_order_across_rollover(
+        self, transport: IcomTransport
+    ) -> None:
+        from icom_lan.transport import BUFSIZE
+
+        start = 0xFFF0
+        for i in range(BUFSIZE):
+            seq = (start + i) & 0xFFFF
+            transport._track_sent(seq, f"pkt{i}".encode())
+
+        # Ensure wrapped low keys exist in the buffer.
+        assert 0 in transport.tx_buffer
+
+        first_inserted = start
+        transport._track_sent((start + BUFSIZE) & 0xFFFF, b"new")
+
+        # FIFO eviction should remove the first inserted sequence, not min(seq).
+        assert first_inserted not in transport.tx_buffer
+        assert 0 in transport.tx_buffer
+
     @pytest.mark.asyncio
     async def test_send_tracked(self, transport: IcomTransport) -> None:
         sent = []
@@ -211,6 +231,23 @@ class TestRxSequence:
         transport._record_rx_seq(1)
         transport._record_rx_seq(1 + MAX_MISSING + 10)
         assert len(transport.rx_missing) == 0
+
+    def test_wraparound_progression(self, transport: IcomTransport) -> None:
+        for seq in (0xFFFE, 0xFFFF, 0x0000, 0x0001):
+            transport._record_rx_seq(seq)
+        assert transport.rx_last_seq == 1
+        assert len(transport.rx_missing) == 0
+
+    def test_wraparound_gap_detected(self, transport: IcomTransport) -> None:
+        transport._record_rx_seq(0xFFFE)
+        transport._record_rx_seq(0x0001)
+        assert transport.rx_last_seq == 1
+        assert set(transport.rx_missing.keys()) == {0xFFFF, 0x0000}
+
+    def test_old_packet_does_not_rewind_last_seq(self, transport: IcomTransport) -> None:
+        transport._record_rx_seq(2)
+        transport._record_rx_seq(1)  # old/out-of-order relative to last_seq=2
+        assert transport.rx_last_seq == 2
 
 
 # ---------------------------------------------------------------------------

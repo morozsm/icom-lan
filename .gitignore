@@ -26,6 +26,7 @@ references/wfview/
 # Workspace / AI agent files (not for public repo)
 AGENTS.md
 CLAUDE.md
+.claude/
 
 # Internal development docs (plans, strategy, project notes)
 docs/PROJECT.md

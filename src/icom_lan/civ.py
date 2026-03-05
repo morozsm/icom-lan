@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+from collections import deque
 from collections.abc import Iterator
 from dataclasses import dataclass
 from enum import StrEnum
@@ -64,6 +65,13 @@ class _PendingRequest:
     generation: int
 
 
+@dataclass(slots=True)
+class _AckBacklogEntry:
+    frame: CivFrame
+    created_monotonic: float
+    generation: int
+
+
 def request_key_from_frame(frame: CivFrame) -> CivRequestKey:
     """Build request key from an outgoing CI-V frame."""
     return CivRequestKey(
@@ -90,14 +98,26 @@ def iter_civ_frames(payload: bytes) -> Iterator[bytes]:
 class CivRequestTracker:
     """Tracks pending requests and resolves matching CI-V responses."""
 
-    def __init__(self, *, stale_ttl: float = 10.0) -> None:
+    def __init__(
+        self,
+        *,
+        stale_ttl: float = 10.0,
+        ack_backlog_size: int = 16,
+        ack_backlog_ttl: float = 1.0,
+    ) -> None:
         self._ack_waiters: list[_AckWaiter] = []
         self._response_waiters: list[_PendingRequest] = []
+        self._ack_backlog: deque[_AckBacklogEntry] = deque()
         self._next_ack_token = 1
         self._generation = 0
         self._stale_ttl = stale_ttl
+        self._ack_backlog_size = max(0, ack_backlog_size)
+        self._ack_backlog_ttl = max(0.0, ack_backlog_ttl)
         self._stale_cleaned_total = 0
         self._timeout_count = 0
+        self._ack_backlog_hits = 0
+        self._ack_backlog_drops = 0
+        self._ack_orphans = 0
 
     @property
     def pending_count(self) -> int:
@@ -135,6 +155,9 @@ class CivRequestTracker:
             "stale_cleaned": self._stale_cleaned_total,
             "timeouts": self._timeout_count,
             "generation": self._generation,
+            "ack_backlog_hits": self._ack_backlog_hits,
+            "ack_backlog_drops": self._ack_backlog_drops,
+            "ack_orphans": self._ack_orphans,
         }
 
     def register_ack(self, wait: bool = True) -> asyncio.Future[CivFrame] | int:
@@ -147,9 +170,15 @@ class CivRequestTracker:
         token = self._next_ack_token
         self._next_ack_token += 1
         created = time.monotonic()
+        self._prune_ack_backlog(now_monotonic=created)
 
         if wait:
             future: asyncio.Future[CivFrame] = asyncio.get_running_loop().create_future()
+            if self._ack_backlog:
+                cached = self._ack_backlog.popleft()
+                future.set_result(cached.frame)
+                self._ack_backlog_hits += 1
+                return future
             self._ack_waiters.append(
                 _AckWaiter(
                     future=future,
@@ -244,6 +273,24 @@ class CivRequestTracker:
         self._stale_cleaned_total += cleaned
         return cleaned
 
+    def _prune_ack_backlog(self, *, now_monotonic: float | None = None) -> None:
+        """Drop expired/backlevel ACK backlog entries."""
+        if not self._ack_backlog:
+            return
+
+        now = now_monotonic if now_monotonic is not None else time.monotonic()
+        cutoff = now - self._ack_backlog_ttl
+        while self._ack_backlog:
+            head = self._ack_backlog[0]
+            if head.generation != self._generation:
+                self._ack_backlog.popleft()
+                self._ack_backlog_drops += 1
+                continue
+            if self._ack_backlog_ttl > 0.0 and head.created_monotonic > cutoff:
+                break
+            self._ack_backlog.popleft()
+            self._ack_backlog_drops += 1
+
     def advance_generation(self, exc: Exception | None = None) -> int:
         """Advance generation and fail all pending waiters."""
         if exc is None:
@@ -262,6 +309,7 @@ class CivRequestTracker:
             return False
 
         if event.type in (CivEventType.ACK, CivEventType.NAK):
+            self._prune_ack_backlog()
             while self._ack_waiters:
                 waiter = self._ack_waiters.pop(0)
                 if waiter.generation != self._generation:
@@ -272,7 +320,24 @@ class CivRequestTracker:
                 elif waiter.future is None:
                     # Successfully sunk an ACK for a fire-and-forget request
                     return True
-            return False
+
+            # Keep short-lived orphan ACKs so strict waiters can consume them.
+            self._ack_orphans += 1
+            if self._ack_backlog_size <= 0:
+                self._ack_backlog_drops += 1
+                return False
+
+            if len(self._ack_backlog) >= self._ack_backlog_size:
+                self._ack_backlog.popleft()
+                self._ack_backlog_drops += 1
+            self._ack_backlog.append(
+                _AckBacklogEntry(
+                    frame=frame,
+                    created_monotonic=time.monotonic(),
+                    generation=self._generation,
+                )
+            )
+            return True
 
         if event.type == CivEventType.RESPONSE:
             i = 0
@@ -297,6 +362,7 @@ class CivRequestTracker:
             if w.future is not None and not w.future.done():
                 w.future.set_exception(exc)
         self._ack_waiters.clear()
+        self._ack_backlog.clear()
 
         for w in self._response_waiters:
             if not w.future.done():

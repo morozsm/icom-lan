@@ -137,7 +137,7 @@ class _CivRxMixin:
         """
         _OPENCLOSE_DEADLINE = 5.0  # seconds of open_close attempts before reconnect
         _MAX_RECONNECTS = 3       # max soft_reconnect attempts before giving up
-        _RECONNECT_PAUSE = 15.0   # seconds between reconnect attempts (let radio release slot)
+        _RECONNECT_BACKOFF = (45.0, 60.0, 60.0)  # IC-7610 session release cooldown
         recovering = False
         recovery_start: float = 0.0
         reconnect_count = 0
@@ -165,6 +165,8 @@ class _CivRxMixin:
                             idle, rx_count, q_size,
                         )
                         recovering = True
+                        self._civ_recovering = True  # type: ignore[attr-defined]
+                        self._civ_stream_ready = False  # type: ignore[attr-defined]
                         recovery_start = time.monotonic()
 
                     elapsed_recovery = time.monotonic() - recovery_start
@@ -181,6 +183,9 @@ class _CivRxMixin:
                     else:
                         # Phase 2: OpenClose didn't help — soft_reconnect
                         reconnect_count += 1
+                        reconnect_pause = _RECONNECT_BACKOFF[
+                            min(reconnect_count - 1, len(_RECONNECT_BACKOFF) - 1)
+                        ]
                         if reconnect_count > _MAX_RECONNECTS:
                             # Phase 3: soft reconnects exhausted — full reconnect
                             logger.warning(
@@ -192,7 +197,7 @@ class _CivRxMixin:
                                 await self._stop_civ_data_watchdog()
                                 await self._force_cleanup_civ()  # type: ignore[attr-defined]
                                 await self.disconnect()  # type: ignore[attr-defined]
-                                await asyncio.sleep(_RECONNECT_PAUSE * 2)
+                                await asyncio.sleep(reconnect_pause)
                                 await self.connect()  # type: ignore[attr-defined]
                             except Exception:
                                 logger.error(
@@ -202,13 +207,13 @@ class _CivRxMixin:
                             return  # watchdog restarted by connect
                         logger.warning(
                             "civ-data-watchdog: OpenClose failed for %.1fs, "
-                            "triggering soft_reconnect (%d/%d)",
-                            elapsed_recovery, reconnect_count, _MAX_RECONNECTS,
+                            "triggering soft_reconnect (%d/%d), cooldown=%.0fs",
+                            elapsed_recovery, reconnect_count, _MAX_RECONNECTS, reconnect_pause,
                         )
                         try:
                             await self._stop_civ_data_watchdog()  # stop ourselves
                             await self._force_cleanup_civ()  # type: ignore[attr-defined]
-                            await asyncio.sleep(_RECONNECT_PAUSE)  # let radio release slot
+                            await asyncio.sleep(reconnect_pause)  # let radio release slot
                             await self.soft_reconnect()  # type: ignore[attr-defined]
                         except Exception:
                             logger.error(
@@ -218,7 +223,7 @@ class _CivRxMixin:
                             )
                             try:
                                 await self.disconnect()  # type: ignore[attr-defined]
-                                await asyncio.sleep(_RECONNECT_PAUSE * 2)
+                                await asyncio.sleep(reconnect_pause)
                                 await self.connect()  # type: ignore[attr-defined]
                             except Exception:
                                 logger.error(
@@ -230,6 +235,8 @@ class _CivRxMixin:
                     if recovering:
                         logger.info("civ-data-watchdog: CI-V data resumed")
                         recovering = False
+                        self._civ_recovering = False  # type: ignore[attr-defined]
+                        self._civ_stream_ready = True  # type: ignore[attr-defined]
         except asyncio.CancelledError:
             pass
 
@@ -280,6 +287,8 @@ class _CivRxMixin:
 
                 # Mark that we received CI-V data (for watchdog)
                 self._last_civ_data_received = time.monotonic()  # type: ignore[attr-defined]
+                self._civ_stream_ready = True  # type: ignore[attr-defined]
+                self._civ_recovering = False  # type: ignore[attr-defined]
 
                 # Process all collected packets.
                 for pkt in packets:
@@ -684,8 +693,68 @@ class _CivRxMixin:
 
     def _check_connected(self) -> None:
         """Raise ConnectionError if not connected."""
+        ctrl = getattr(self, "_ctrl_transport", None)
+        ctrl_alive = bool(ctrl and getattr(ctrl, "_udp_transport", None) is not None)
+        recovering = bool(getattr(self, "_civ_recovering", False))
         if not self._connected or self._civ_transport is None:  # type: ignore[attr-defined]
+            # Allow API calls to enter recovery wait path when control
+            # session is still alive and CI-V is being re-established.
+            if ctrl_alive and recovering:
+                return
             raise ConnectionError("Not connected to radio")
+
+    async def _wait_for_civ_transport_recovery(
+        self, timeout: "float | None" = None
+    ) -> None:
+        """Wait for CI-V transport recovery or trigger a fast soft-reconnect.
+
+        When control transport remains alive but CI-V transport is temporarily
+        down (watchdog recovery window), avoid failing commands immediately.
+        """
+        wait_timeout = (
+            timeout
+            if timeout is not None
+            else getattr(self, "_civ_recovery_wait_timeout", 12.0)  # type: ignore[attr-defined]
+        )
+        deadline = time.monotonic() + max(0.5, float(wait_timeout))
+        fast_attempted = False
+
+        while time.monotonic() < deadline:
+            ctrl = getattr(self, "_ctrl_transport", None)
+            ctrl_alive = bool(ctrl and getattr(ctrl, "_udp_transport", None) is not None)
+            if not ctrl_alive:
+                raise ConnectionError("Not connected to radio")
+
+            civ_t = getattr(self, "_civ_transport", None)
+            if civ_t is not None and getattr(self, "_connected", False):
+                return
+
+            if civ_t is None and not fast_attempted:
+                fast_attempted = True
+                lock = getattr(self, "_civ_recovery_lock", None)
+                if isinstance(lock, asyncio.Lock):
+                    async with lock:
+                        civ_t2 = getattr(self, "_civ_transport", None)
+                        if civ_t2 is None and ctrl_alive:
+                            try:
+                                await self.soft_reconnect()  # type: ignore[attr-defined]
+                            except Exception:
+                                logger.debug(
+                                    "Fast CI-V soft_reconnect attempt failed",
+                                    exc_info=True,
+                                )
+                else:
+                    try:
+                        await self.soft_reconnect()  # type: ignore[attr-defined]
+                    except Exception:
+                        logger.debug(
+                            "Fast CI-V soft_reconnect attempt failed",
+                            exc_info=True,
+                        )
+
+            await asyncio.sleep(0.2)
+
+        raise TimeoutError("CI-V transport recovery timed out")
 
     def _wrap_civ(self, civ_frame: bytes) -> bytes:
         """Wrap a CI-V frame in a UDP data packet for the CI-V port."""
@@ -716,6 +785,8 @@ class _CivRxMixin:
         timeout: "float | None" = None,
     ) -> "CivFrame | None":
         """Enqueue a CI-V command and wait for its response."""
+        if self._civ_transport is None or not self._connected:  # type: ignore[attr-defined]
+            await self._wait_for_civ_transport_recovery(timeout=timeout)
         assert self._civ_transport is not None  # type: ignore[attr-defined]
         self._ensure_civ_runtime()
 

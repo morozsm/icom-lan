@@ -60,6 +60,16 @@ RADIOS: dict[str, RadioModel] = {
 }
 
 
+def _normalize_model_name(model: str) -> str:
+    """Normalize model names for flexible lookup."""
+    return "".join(ch for ch in model.upper() if ch.isalnum())
+
+
+_RADIOS_BY_NORMALIZED: dict[str, RadioModel] = {
+    _normalize_model_name(name): radio for name, radio in RADIOS.items()
+}
+
+
 def get_civ_addr(model: str) -> int:
     """Look up CI-V address by model name.
 
@@ -72,7 +82,7 @@ def get_civ_addr(model: str) -> int:
     Raises:
         KeyError: If model not found.
     """
-    key = model.upper().replace(" ", "")
-    if key in RADIOS:
-        return RADIOS[key].civ_addr
+    key = _normalize_model_name(model)
+    if key in _RADIOS_BY_NORMALIZED:
+        return _RADIOS_BY_NORMALIZED[key].civ_addr
     raise KeyError(f"Unknown radio model: {model}. Known: {', '.join(RADIOS)}")

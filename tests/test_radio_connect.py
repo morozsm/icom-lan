@@ -2,10 +2,12 @@
 
 import struct
 import time
+from unittest.mock import AsyncMock
 
 import pytest
 
 from icom_lan.exceptions import (
+    ConnectionError,
     TimeoutError,
 )
 from icom_lan.radio import (
@@ -69,10 +71,18 @@ def _build_conninfo() -> bytes:
     return bytes(pkt)
 
 
-def _build_status(civ_port: int = 50002, audio_port: int = 50003) -> bytes:
+def _build_status(
+    civ_port: int = 50002,
+    audio_port: int = 50003,
+    *,
+    error: int = 0,
+    disc: int = 0,
+) -> bytes:
     """Build a fake 0x50-byte status packet."""
     pkt = bytearray(STATUS_SIZE)
     struct.pack_into("<I", pkt, 0, STATUS_SIZE)
+    struct.pack_into("<I", pkt, 0x30, error)
+    pkt[0x40] = disc
     struct.pack_into(">H", pkt, 0x42, civ_port)
     struct.pack_into(">H", pkt, 0x46, audio_port)
     return bytes(pkt)
@@ -190,6 +200,23 @@ class TestReceiveCivPort:
         assert radio._audio_port == 50003
         assert elapsed < 1.0
 
+    @pytest.mark.asyncio
+    async def test_status_rejection_error_is_recorded(self) -> None:
+        radio = IcomRadio("192.168.1.100", timeout=1.0)
+        mt = ConnectMockTransport()
+        radio._ctrl_transport = mt
+        mt.queue_response(_build_status(0, 50003, error=0xFFFFFFFF))
+        port = await radio._receive_civ_port()
+        assert port == 0
+        assert getattr(radio, "_last_status_error", 0) == 0xFFFFFFFF
+
+    def test_status_retry_pause_uses_reject_cooldown(self) -> None:
+        radio = IcomRadio("192.168.1.100")
+        radio._last_status_error = 0xFFFFFFFF
+        assert radio._status_retry_pause() == radio._STATUS_REJECT_COOLDOWN
+        radio._last_status_error = 0
+        assert radio._status_retry_pause() == radio._STATUS_RETRY_PAUSE
+
 
 class TestSendOpenClose:
     @pytest.mark.asyncio
@@ -291,3 +318,28 @@ class TestDisconnect:
         radio._connected = True
         await radio.__aexit__(None, None, None)
         assert not radio.connected
+
+
+class TestConnectSessionRejection:
+    @pytest.mark.asyncio
+    async def test_connect_raises_on_status_rejection_after_retries(self) -> None:
+        radio = IcomRadio("192.168.1.100", username="u", password="p")
+        mt = ConnectMockTransport()
+        radio._ctrl_transport = mt
+        radio._status_retry_pause = lambda: 0.0  # type: ignore[method-assign]
+
+        radio._wait_for_packet = AsyncMock(return_value=_build_login_response())  # type: ignore[method-assign]
+        radio._send_token_ack = AsyncMock()  # type: ignore[method-assign]
+        radio._receive_guid = AsyncMock(return_value=b"\x00" * 16)  # type: ignore[method-assign]
+        radio._send_conninfo = AsyncMock()  # type: ignore[method-assign]
+
+        async def _reject_status() -> int:
+            radio._last_status_error = 0xFFFFFFFF
+            return 0
+
+        radio._receive_civ_port = AsyncMock(side_effect=_reject_status)  # type: ignore[method-assign]
+
+        with pytest.raises(ConnectionError, match="rejected session allocation"):
+            await radio.connect()
+
+        assert mt.disconnected is True

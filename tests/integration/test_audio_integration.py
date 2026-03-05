@@ -24,6 +24,10 @@ from icom_lan.audio import AudioPacket
 pytestmark = pytest.mark.integration
 
 
+def _flag_enabled(name: str) -> bool:
+    return os.environ.get(name, "0") == "1"
+
+
 class TestAudioRx:
     """Audio receive tests (safe, no transmission)."""
 
@@ -38,9 +42,9 @@ class TestAudioRx:
             if pkt is not None:
                 packets.append(pkt)
 
-        await radio.start_audio_rx(on_audio)
+        await radio.start_audio_rx_opus(on_audio)
         await asyncio.sleep(seconds)
-        await radio.stop_audio_rx()
+        await radio.stop_audio_rx_opus()
         return packets
 
     @staticmethod
@@ -85,7 +89,10 @@ class TestAudioTx:
 
     async def test_push_audio_tx(self, radio: IcomRadio) -> None:
         """Push several TX audio payload frames."""
-        await radio.start_audio_tx()
+        if not _flag_enabled("ICOM_ALLOW_AUDIO_TX"):
+            pytest.skip("Set ICOM_ALLOW_AUDIO_TX=1 to run audio TX integration tests")
+
+        await radio.start_audio_tx_opus()
         try:
             payloads = [
                 b"\xf8\xff\xfe",  # tiny synthetic opus-like payload
@@ -94,31 +101,34 @@ class TestAudioTx:
             ]
             sent = 0
             for p in payloads:
-                await radio.push_audio_tx(p)
+                await radio.push_audio_tx_opus(p)
                 sent += 1
                 await asyncio.sleep(0.03)
 
             print(f"Audio TX payloads sent: {sent} ✓")
         finally:
-            await radio.stop_audio_tx()
+            await radio.stop_audio_tx_opus()
 
     async def test_start_stop_audio_full_duplex(self, radio: IcomRadio) -> None:
         """Start/stop full-duplex audio orchestration API."""
+        if not _flag_enabled("ICOM_ALLOW_AUDIO_TX"):
+            pytest.skip("Set ICOM_ALLOW_AUDIO_TX=1 to run audio TX integration tests")
+
         packets: List[AudioPacket] = []
 
         def on_audio(pkt: AudioPacket) -> None:
             if pkt is not None:
                 packets.append(pkt)
 
-        await radio.start_audio(on_audio, tx_enabled=True)
+        await radio.start_audio_opus(on_audio, tx_enabled=True)
         try:
             # Push a few TX frames while RX is active.
             for p in (b"\xf8\x01\x02", b"\xf8\x03\x04\x05", b"\xf8\x06"):
-                await radio.push_audio_tx(p)
+                await radio.push_audio_tx_opus(p)
                 await asyncio.sleep(0.05)
             await asyncio.sleep(1.0)
         finally:
-            await radio.stop_audio()
+            await radio.stop_audio_opus()
 
         print(f"Full-duplex audio ✓ (rx_packets={len(packets)})")
 

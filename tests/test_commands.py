@@ -180,6 +180,13 @@ class TestModeCommands:
         with pytest.raises(ValueError, match="mode"):
             parse_mode_response(resp)
 
+    def test_parse_mode_response_empty_payload_raises(self) -> None:
+        resp = CivFrame(
+            to_addr=0xE0, from_addr=0x98, command=0x04, sub=None, data=b""
+        )
+        with pytest.raises(ValueError, match="payload too short"):
+            parse_mode_response(resp)
+
 
 class TestPowerCommands:
     """Test RF power get/set commands."""
@@ -244,6 +251,13 @@ class TestMeterCommands:
         )
         value = parse_meter_response(resp)
         assert value == 255
+
+    def test_parse_meter_response_short_payload_raises(self) -> None:
+        resp = CivFrame(
+            to_addr=0xE0, from_addr=0x98, command=0x15, sub=0x02, data=b"\x01"
+        )
+        with pytest.raises(ValueError, match="payload too short"):
+            parse_meter_response(resp)
 
 
 class TestPttCommands:

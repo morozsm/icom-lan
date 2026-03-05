@@ -112,6 +112,9 @@ class WebServer:
         self._scope_last_nonzero: float = 0.0
         self._scope_health_task: asyncio.Task[None] | None = None
         self._scope_health_interval: float = 10.0  # seconds of zero frames before re-enable
+        self._scope_reenable_task: asyncio.Task[None] | None = None
+        self._scope_reenable_poll_interval: float = 0.5
+        self._scope_reenable_timeout: float = 30.0
         # DX cluster
         self._spot_buffer: SpotBuffer = SpotBuffer()
         self._dx_client: DXClusterClient | None = None
@@ -120,6 +123,16 @@ class WebServer:
     # ------------------------------------------------------------------
     # Helpers for IcomRadio-specific operations (guarded with hasattr)
     # ------------------------------------------------------------------
+
+    def _radio_ready(self) -> bool:
+        """Backend view of radio readiness (CI-V healthy)."""
+        if self._radio is None:
+            return False
+        ready = getattr(self._radio, "radio_ready", None)
+        if isinstance(ready, bool):
+            return ready
+        connected = getattr(self._radio, "connected", False)
+        return connected if isinstance(connected, bool) else False
 
     def _set_scope_data_callback(self, callback: Any) -> None:
         """Set the scope data callback on the radio if it supports it."""
@@ -143,10 +156,14 @@ class WebServer:
         async with self._scope_enable_lock:
             self._scope_handlers.add(handler)
             if self._radio is not None:
-                self._set_scope_data_callback(self._broadcast_scope)
-                self._command_queue.put(EnableScope())
-                self._scope_enabled = True
-                logger.info("scope: enable queued")
+                if self._radio_ready():
+                    self._set_scope_data_callback(self._broadcast_scope)
+                    self._command_queue.put(EnableScope())
+                    self._scope_enabled = True
+                    logger.info("scope: enable queued")
+                else:
+                    self._schedule_scope_enable_when_ready(reason="handler_connect")
+                    logger.info("scope: defer enable until radio_ready")
 
     def unregister_scope_handler(self, handler: "ScopeHandler") -> None:
         """Unregister a scope handler."""
@@ -289,9 +306,60 @@ class WebServer:
     def _on_radio_reconnect(self) -> None:
         """Called after soft_reconnect — re-enable scope if clients are connected."""
         if self._scope_handlers and self._radio is not None:
-            self._set_scope_data_callback(self._broadcast_scope)
-            self._command_queue.put(EnableScope())
-            logger.info("scope: re-enable queued after reconnect (%d handlers)", len(self._scope_handlers))
+            if self._radio_ready():
+                self._set_scope_data_callback(self._broadcast_scope)
+                self._command_queue.put(EnableScope())
+                self._scope_enabled = True
+                logger.info(
+                    "scope: re-enable queued after reconnect (%d handlers)",
+                    len(self._scope_handlers),
+                )
+            else:
+                self._schedule_scope_enable_when_ready(reason="radio_reconnect")
+
+    def _schedule_scope_enable_when_ready(self, *, reason: str) -> None:
+        """Schedule delayed scope enable once radio becomes ready."""
+        if (
+            self._scope_reenable_task is not None
+            and not self._scope_reenable_task.done()
+        ):
+            return
+        loop = asyncio.get_running_loop()
+        self._scope_reenable_task = loop.create_task(
+            self._wait_and_enable_scope(reason=reason),
+            name="scope-reenable-when-ready",
+        )
+
+    async def _wait_and_enable_scope(self, *, reason: str) -> None:
+        """Wait until radio_ready before queuing EnableScope."""
+        import time
+        deadline = time.monotonic() + self._scope_reenable_timeout
+        try:
+            while True:
+                if not self._scope_handlers or self._radio is None:
+                    return
+                if self._radio_ready():
+                    self._set_scope_data_callback(self._broadcast_scope)
+                    self._command_queue.put(EnableScope())
+                    self._scope_enabled = True
+                    logger.info(
+                        "scope: enable queued after %s (%d handlers)",
+                        reason,
+                        len(self._scope_handlers),
+                    )
+                    return
+                if time.monotonic() >= deadline:
+                    logger.warning(
+                        "scope: radio not ready after %.0fs (%s), skipping re-enable",
+                        self._scope_reenable_timeout,
+                        reason,
+                    )
+                    return
+                await asyncio.sleep(self._scope_reenable_poll_interval)
+        except asyncio.CancelledError:
+            pass
+        finally:
+            self._scope_reenable_task = None
 
     def _scope_health_check(self, frame: Any) -> None:
         """Track whether scope frames contain real data (non-zero pixels)."""
@@ -313,7 +381,7 @@ class WebServer:
                 if not self._scope_handlers or self._radio is None:
                     continue
                 # Don't re-enable scope while radio is disconnected
-                if not getattr(self._radio, "connected", True):
+                if not self._radio_ready():
                     self._scope_last_nonzero = time.monotonic()  # reset timer
                     continue
                 now = time.monotonic()
@@ -453,6 +521,9 @@ class WebServer:
         if self._scope_health_task is not None:
             self._scope_health_task.cancel()
             self._scope_health_task = None
+        if self._scope_reenable_task is not None:
+            self._scope_reenable_task.cancel()
+            self._scope_reenable_task = None
         if self._radio_poller is not None:
             self._radio_poller.stop()
             self._radio_poller = None
@@ -668,10 +739,19 @@ class WebServer:
 
     async def _serve_state(self, writer: asyncio.StreamWriter) -> None:
         d = self._radio_state.to_dict()
-        d["connected"] = self._radio.connected if self._radio else False
-        d["control_connected"] = (
+        raw_connected = (
+            getattr(self._radio, "connected", False) if self._radio else False
+        )
+        d["connected"] = raw_connected if isinstance(raw_connected, bool) else False
+        d["radio_ready"] = self._radio_ready()
+        raw_control_connected = (
             getattr(self._radio, "control_connected", False)
             if self._radio else False
+        )
+        d["control_connected"] = (
+            raw_control_connected
+            if isinstance(raw_control_connected, bool)
+            else False
         )
         body = json.dumps(d, separators=(",", ":")).encode()
         await _send_response(

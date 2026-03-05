@@ -216,6 +216,15 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         self._auto_recover_audio = auto_recover_audio
         self._on_audio_recovery = on_audio_recovery
         self._on_reconnect: Callable[[], None] | None = None
+        self._civ_stream_ready: bool = False
+        self._civ_recovering: bool = False
+        self._civ_recovery_lock = asyncio.Lock()
+        self._civ_recovery_wait_timeout: float = float(
+            os.environ.get("ICOM_CIV_RECOVERY_WAIT_TIMEOUT_S", "12.0")
+        )
+        self._civ_ready_idle_timeout: float = float(
+            os.environ.get("ICOM_CIV_READY_IDLE_TIMEOUT_S", "5.0")
+        )
         self._pcm_rx_user_callback: Callable[[bytes | None], None] | None = None
         self._pcm_rx_jitter_depth: int = 5
         self._opus_rx_user_callback: Callable[[AudioPacket | None], None] | None = None
@@ -276,6 +285,18 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         if ctrl is None:
             return False
         return getattr(ctrl, "_udp_transport", None) is not None
+
+    @property
+    def radio_ready(self) -> bool:
+        """Whether CI-V stream is healthy enough for client operations."""
+        if not self.connected:
+            return False
+        if self._civ_recovering or not self._civ_stream_ready:
+            return False
+        last = getattr(self, "_last_civ_data_received", None)
+        if not isinstance(last, (int, float)):
+            return False
+        return (time.monotonic() - float(last)) <= self._civ_ready_idle_timeout
 
     # ------------------------------------------------------------------
     # Backwards-compatible property shims for _connected / _intentional_disconnect
@@ -373,7 +394,8 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
 
         Returns:
             Dict with keys ``active_waiters``, ``stale_cleaned``,
-            ``timeouts``, and ``generation``.
+            ``timeouts``, ``generation``, ``ack_backlog_hits``,
+            ``ack_backlog_drops``, and ``ack_orphans``.
         """
         return self._civ_request_tracker.snapshot_stats()
 
@@ -417,8 +439,14 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
                 await self._stop_civ_rx_pump()
                 await self._civ_transport.disconnect()
                 self._civ_transport = None
+            try:
+                await self._send_token(0x01)
+            except Exception:
+                logger.debug("disconnect: token remove failed", exc_info=True)
             await self._ctrl_transport.disconnect()
             self._conn_state = RadioConnectionState.DISCONNECTED
+            self._civ_stream_ready = False
+            self._civ_recovering = False
             logger.info("Disconnected from %s:%d", self._host, self._port)
 
     async def soft_disconnect(self) -> None:
@@ -461,6 +489,8 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
             self._civ_transport = None
 
         self._conn_state = RadioConnectionState.DISCONNECTED
+        self._civ_stream_ready = False
+        self._civ_recovering = False
         logger.info("Soft disconnect from %s:%d (control kept alive)", self._host, self._port)
 
     async def _force_cleanup_civ(self) -> None:
@@ -479,7 +509,17 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
             except Exception:
                 logger.debug("force_cleanup_civ: transport disconnect failed", exc_info=True)
             self._civ_transport = None
-        self._conn_state = RadioConnectionState.DISCONNECTED
+        ctrl_alive = bool(
+            self._ctrl_transport
+            and getattr(self._ctrl_transport, "_udp_transport", None) is not None
+        )
+        self._conn_state = (
+            RadioConnectionState.RECONNECTING
+            if ctrl_alive
+            else RadioConnectionState.DISCONNECTED
+        )
+        self._civ_stream_ready = False
+        self._civ_recovering = ctrl_alive
 
     async def soft_reconnect(self) -> None:
         """Reconnect CI-V transport using existing control session.
@@ -497,6 +537,8 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
             return
 
         self._conn_state = RadioConnectionState.CONNECTING
+        self._civ_stream_ready = False
+        self._civ_recovering = True
 
         # Re-open CI-V transport (reuse known port)
         from .transport import IcomTransport
@@ -508,7 +550,13 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
             )
         except OSError as exc:
             self._civ_transport = None
-            self._conn_state = RadioConnectionState.DISCONNECTED
+            self._conn_state = (
+                RadioConnectionState.RECONNECTING
+                if self.control_connected
+                else RadioConnectionState.DISCONNECTED
+            )
+            self._civ_stream_ready = False
+            self._civ_recovering = self.control_connected
             raise ConnectionError(f"Failed to reconnect CI-V: {exc}") from exc
 
         self._civ_transport.start_ping_loop()
@@ -630,6 +678,10 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
                         except Exception:
                             logger.debug("reconnect: civ_transport disconnect failed", exc_info=True)
                         self._civ_transport = None
+                    try:
+                        await self._send_token(0x01)
+                    except Exception:
+                        logger.debug("reconnect: token remove failed", exc_info=True)
                     try:
                         await self._ctrl_transport.disconnect()
                     except Exception:
@@ -1228,7 +1280,15 @@ class IcomRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         """
         self._check_connected()
         if isinstance(mode, str):
-            mode = Mode[mode]
+            raw_mode = mode
+            mode_key = mode.strip().upper()
+            try:
+                mode = Mode[mode_key]
+            except KeyError as exc:
+                supported = ", ".join(m.name for m in Mode)
+                raise ValueError(
+                    f"Unknown mode: {raw_mode!r}. Supported modes: {supported}"
+                ) from exc
         civ = set_mode(mode, filter_width=filter_width, to_addr=self._radio_addr, receiver=receiver)
         await self._send_civ_raw(civ, wait_response=False)
         self._last_mode = mode

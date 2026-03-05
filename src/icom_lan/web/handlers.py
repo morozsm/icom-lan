@@ -161,16 +161,42 @@ class ControlHandler:
             pass
 
     async def _send_hello(self) -> None:
+        raw_connected = (
+            getattr(self._radio, "connected", False) if self._radio else False
+        )
         msg = {
             "type": "hello",
             "proto": 1,
             "server": "icom-lan",
             "version": self._version,
             "radio": self._radio_model,
-            "connected": self._radio.connected if self._radio else False,
+            "connected": raw_connected if isinstance(raw_connected, bool) else False,
+            "radio_ready": self._radio_ready(),
             "capabilities": ["scope", "audio", "tx"],
         }
         await self._ws.send_text(encode_json(msg))
+
+    def _radio_ready(self) -> bool:
+        """Return backend radio readiness (CI-V healthy), with fallback."""
+        if self._radio is None:
+            return False
+        ready = getattr(self._radio, "radio_ready", None)
+        if isinstance(ready, bool):
+            return ready
+        connected = getattr(self._radio, "connected", False)
+        return connected if isinstance(connected, bool) else False
+
+    def _backend_recovering(self) -> bool:
+        """Whether backend is already managing a reconnect/recovery path."""
+        if self._radio is None:
+            return False
+        conn_state = getattr(self._radio, "conn_state", None)
+        state_value = getattr(conn_state, "value", conn_state)
+        if state_value in {"connecting", "reconnecting", "disconnecting"}:
+            return True
+        connected = getattr(self._radio, "connected", False)
+        connected_bool = connected if isinstance(connected, bool) else False
+        return bool(connected_bool and not self._radio_ready())
 
     async def _handle_text(self, text: str) -> None:
         try:
@@ -201,6 +227,17 @@ class ControlHandler:
         if self._radio is None:
             await self._send_json({"type": "response", "id": msg_id, "ok": False,
                                    "error": "no_radio", "message": "no radio instance"})
+            return
+        if self._backend_recovering():
+            await self._send_json(
+                {
+                    "type": "response",
+                    "id": msg_id,
+                    "ok": False,
+                    "error": "backend_recovering",
+                    "message": "backend is already managing radio recovery",
+                }
+            )
             return
         try:
             if self._radio.connected:
@@ -248,7 +285,8 @@ class ControlHandler:
     async def _broadcast_connection_state(self, connected: bool) -> None:
         """Broadcast connection state change to this client."""
         await self._send_json({"type": "event", "event": "connection_state",
-                               "connected": connected})
+                               "connected": connected,
+                               "radio_ready": self._radio_ready()})
 
     async def _send_json(self, obj: dict[str, Any]) -> None:
         """Send a JSON message to the WebSocket client."""
@@ -302,7 +340,7 @@ class ControlHandler:
                 data["ptt"] = cache.ptt
             except Exception as exc:
                 logger.debug("control: state cache read failed: %s", exc)
-        msg_out = {"type": "state", "data": data}
+        msg_out = {"type": "state", "data": data, "radio_ready": self._radio_ready()}
         await self._ws.send_text(encode_json(msg_out))
         # Send current DX spots if available
         if self._server is not None and hasattr(self._server, "_spot_buffer"):

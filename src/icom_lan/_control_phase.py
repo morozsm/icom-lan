@@ -12,6 +12,7 @@ from .auth import (
     build_conninfo_packet,
     build_login_packet,
     parse_auth_response,
+    parse_status_response,
 )
 from ._connection_state import RadioConnectionState
 from .exceptions import AuthenticationError, ConnectionError, TimeoutError
@@ -34,6 +35,8 @@ class _ControlPhaseMixin:
     TOKEN_PACKET_SIZE = 0x40
     WATCHDOG_CHECK_INTERVAL = 0.5  # seconds (wfview: WATCHDOG_PERIOD = 500ms)
     _WATCHDOG_HEALTH_LOG_INTERVAL = 30.0  # seconds
+    _STATUS_RETRY_PAUSE = 10.0
+    _STATUS_REJECT_COOLDOWN = 30.0
 
     # ------------------------------------------------------------------
     # Public lifecycle
@@ -55,6 +58,10 @@ class _ControlPhaseMixin:
             TimeoutError: If the radio doesn't respond.
         """
         self._conn_state = RadioConnectionState.CONNECTING  # type: ignore[attr-defined]
+        self._civ_stream_ready = False  # type: ignore[attr-defined]
+        self._civ_recovering = False  # type: ignore[attr-defined]
+        self._last_status_error = 0  # type: ignore[attr-defined]
+        self._last_status_disconnected = False  # type: ignore[attr-defined]
 
         # --- Phase 1: Control port ---
         # On reconnect, skip discovery — reuse cached remote_id.
@@ -142,14 +149,16 @@ class _ControlPhaseMixin:
                 )
                 self._civ_port = civ_port
             elif civ_port == 0:
+                retry_pause = self._status_retry_pause()
                 logger.warning(
                     "Status returned civ_port=0 — radio session not ready. "
-                    "Retrying after pause (previous session may still be held)..."
+                    "Retrying after %.0fs pause (previous session may still be held)...",
+                    retry_pause,
                 )
                 # Radio returns port=0 when prior session hasn't been released.
                 # Wait and retry before falling back to default port.
                 for _retry in range(3):
-                    await asyncio.sleep(10)
+                    await asyncio.sleep(retry_pause)
                     logger.info("Retrying conninfo (attempt %d/3)...", _retry + 1)
                     await self._send_conninfo(guid, _civ_local_port, _audio_local_port)
                     try:
@@ -161,6 +170,15 @@ class _ControlPhaseMixin:
                     except asyncio.TimeoutError:
                         pass
                 else:
+                    # Explicit session rejection must not continue with default
+                    # CI-V port, because this creates a false-positive connect
+                    # with a dead command path.
+                    if getattr(self, "_last_status_error", 0) == 0xFFFFFFFF:
+                        await self._ctrl_transport.disconnect()  # type: ignore[attr-defined]
+                        self._conn_state = RadioConnectionState.DISCONNECTED  # type: ignore[attr-defined]
+                        raise ConnectionError(
+                            "Radio rejected session allocation (status error=0xFFFFFFFF, civ_port=0)"
+                        )
                     logger.warning(
                         "Radio still returns civ_port=0 after retries, using default %d",
                         self._civ_port,  # type: ignore[attr-defined]
@@ -311,17 +329,29 @@ class _ControlPhaseMixin:
                 if len(d) != STATUS_SIZE:
                     continue
 
-                got_civ = struct.unpack_from(">H", d, 0x42)[0]
-                got_audio = struct.unpack_from(">H", d, 0x46)[0]
+                status = parse_status_response(d)
+                got_civ = status.civ_port
+                got_audio = status.audio_port
                 status_packets_seen += 1
+                self._last_status_error = status.error  # type: ignore[attr-defined]
+                self._last_status_disconnected = status.disconnected  # type: ignore[attr-defined]
                 logger.info(
-                    "Status: civ_port=%d, audio_port=%d",
+                    "Status: civ_port=%d, audio_port=%d, error=0x%08X, disconnected=%s",
                     got_civ,
                     got_audio,
+                    status.error,
+                    status.disconnected,
                 )
 
                 if got_audio > 0:
                     self._audio_port = got_audio  # type: ignore[attr-defined]
+                if status.error == 0xFFFFFFFF:
+                    logger.warning(
+                        "Status indicates session rejection (error=0x%08X); "
+                        "forcing retry/cooldown path",
+                        status.error,
+                    )
+                    return 0
                 if got_civ > 0:
                     civ_port = got_civ
                     return civ_port
@@ -334,6 +364,12 @@ class _ControlPhaseMixin:
                 continue
 
         return civ_port
+
+    def _status_retry_pause(self) -> float:
+        """Choose conninfo retry pause from the latest status error code."""
+        if getattr(self, "_last_status_error", 0) == 0xFFFFFFFF:
+            return self._STATUS_REJECT_COOLDOWN
+        return self._STATUS_RETRY_PAUSE
 
     async def _send_open_close(self, *, open_stream: bool) -> None:
         """Send OpenClose packet on the CI-V port."""
@@ -501,4 +537,3 @@ class _ControlPhaseMixin:
         ):
             self._reconnect_task.cancel()  # type: ignore[attr-defined]
             self._reconnect_task = None  # type: ignore[attr-defined]
-

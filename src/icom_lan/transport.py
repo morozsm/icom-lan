@@ -8,6 +8,7 @@ import asyncio
 import logging
 import struct
 import time
+from collections import OrderedDict
 from enum import StrEnum
 
 from .exceptions import TimeoutError as _TimeoutError
@@ -83,7 +84,7 @@ class IcomTransport:
         self.remote_id: int = 0
         self.send_seq: int = 0
         self.ping_seq: int = 0
-        self.tx_buffer: dict[int, bytes] = {}
+        self.tx_buffer: OrderedDict[int, bytes] = OrderedDict()
         self.rx_last_seq: int | None = None
         self.rx_missing: dict[int, int] = {}  # seq -> retry count
         self._udp_transport: asyncio.DatagramTransport | None = None
@@ -353,13 +354,20 @@ class IcomTransport:
 
     def _track_sent(self, seq: int, data: bytes) -> None:
         """Store a sent packet for potential retransmission."""
+        # Mirror wfview behavior: clear tracked TX buffer on sequence rollover.
+        if seq == 0:
+            self.tx_buffer.clear()
+
+        if seq in self.tx_buffer:
+            del self.tx_buffer[seq]
+
         if len(self.tx_buffer) >= BUFSIZE:
-            oldest = min(self.tx_buffer)
-            del self.tx_buffer[oldest]
+            self.tx_buffer.popitem(last=False)
         self.tx_buffer[seq] = data
 
     def _record_rx_seq(self, seq: int) -> None:
         """Record a received sequence number and detect gaps."""
+        seq &= 0xFFFF
         if seq in self.rx_missing:
             del self.rx_missing[seq]
 
@@ -367,20 +375,25 @@ class IcomTransport:
             self.rx_last_seq = seq
             return
 
-        if seq > self.rx_last_seq + 1:
-            # Gap detected
-            if seq - self.rx_last_seq > MAX_MISSING:
-                logger.warning(
-                    "Large seq gap: %d -> %d, resetting", self.rx_last_seq, seq
-                )
+        last_seq = self.rx_last_seq
+        delta = (seq - last_seq) & 0xFFFF
+
+        if delta == 0:
+            # Duplicate packet.
+            return
+
+        if 1 <= delta <= 0x7FFF:
+            # Forward progress in uint16 sequence space.
+            if delta > MAX_MISSING:
+                logger.warning("Large seq gap: %d -> %d, resetting", last_seq, seq)
                 self.rx_missing.clear()
                 self.rx_last_seq = seq
                 return
-            for missing in range(self.rx_last_seq + 1, seq):
+
+            for offset in range(1, delta):
+                missing = (last_seq + offset) & 0xFFFF
                 if missing not in self.rx_missing:
                     self.rx_missing[missing] = 0
-
-        if seq > self.rx_last_seq:
             self.rx_last_seq = seq
 
     def _build_retransmit_requests(self) -> list[bytes]:

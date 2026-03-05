@@ -280,6 +280,7 @@ async def test_handle_connection_none_http_ws_and_exception() -> None:
 async def test_scope_health_and_radio_state_event_paths() -> None:
     meter_handler = MagicMock()
     radio = MagicMock()
+    radio.radio_ready = True
     srv = WebServer(radio)
     srv._meter_handlers.add(meter_handler)
 
@@ -300,6 +301,39 @@ async def test_scope_health_and_radio_state_event_paths() -> None:
     srv._on_radio_reconnect()  # noqa: SLF001
     cmds = srv.command_queue.drain
     assert any(isinstance(c, EnableScope) for c in cmds())
+
+
+@pytest.mark.asyncio
+async def test_on_radio_reconnect_waits_until_radio_ready() -> None:
+    radio = MagicMock()
+    radio.radio_ready = False
+    srv = WebServer(radio)
+    srv._scope_handlers.add(MagicMock())
+    srv._scope_reenable_poll_interval = 0.01  # noqa: SLF001
+    srv._scope_reenable_timeout = 0.2  # noqa: SLF001
+
+    srv._on_radio_reconnect()  # noqa: SLF001
+    assert not any(isinstance(c, EnableScope) for c in srv.command_queue.drain())
+
+    radio.radio_ready = True
+    await asyncio.sleep(0.03)
+    assert any(isinstance(c, EnableScope) for c in srv.command_queue.drain())
+
+
+@pytest.mark.asyncio
+async def test_ensure_scope_enabled_defers_enable_when_radio_not_ready() -> None:
+    radio = MagicMock()
+    radio.radio_ready = False
+    srv = WebServer(radio)
+    srv._scope_reenable_poll_interval = 0.01  # noqa: SLF001
+    srv._scope_reenable_timeout = 0.2  # noqa: SLF001
+
+    await srv.ensure_scope_enabled(MagicMock())
+    assert not any(isinstance(c, EnableScope) for c in srv.command_queue.drain())
+
+    radio.radio_ready = True
+    await asyncio.sleep(0.03)
+    assert any(isinstance(c, EnableScope) for c in srv.command_queue.drain())
 
 
 @pytest.mark.asyncio
