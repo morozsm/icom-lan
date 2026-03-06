@@ -24,8 +24,8 @@ Frequency is always in **Hz** (integer). The radio internally uses BCD encoding 
 from icom_lan import Mode
 
 # Get current mode
-mode = await radio.get_mode()
-print(mode.name)  # "USB"
+mode_name, filt = await radio.get_mode()
+print(mode_name)  # "USB"
 
 # Get mode + filter number (if reported)
 mode, filt = await radio.get_mode_info()

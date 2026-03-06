@@ -77,9 +77,9 @@ async def main():
     async with IcomRadio("192.168.1.100", username="user", password="pass") as radio:
         # Read current state
         freq = await radio.get_frequency()
-        mode = await radio.get_mode()
+        mode, _ = await radio.get_mode()
         s = await radio.get_s_meter()
-        print(f"{freq/1e6:.3f} MHz  {mode.name}  S={s}")
+        print(f"{freq/1e6:.3f} MHz  {mode}  S={s}")
 
         # Tune to 20m FT8
         await radio.set_frequency(14_074_000)
@@ -151,7 +151,7 @@ icom-lan power-on
 icom-lan power-off
 
 # UDP relay proxy (for VPN/Tailscale remote access)
-icom-lan proxy --remote-host 192.168.55.40 --listen-port 50001
+icom-lan proxy --radio 192.168.55.40 --port 50001
 
 # Discover radios on network
 icom-lan discover
@@ -189,7 +189,7 @@ icom-lan audio bridge --device "BlackHole 2ch" --rx-only
 |--------|-------------|
 | `get_frequency()` → `int` | Current frequency in Hz |
 | `set_frequency(hz)` | Set frequency |
-| `get_mode()` → `Mode` | Current mode |
+| `get_mode()` → `(str, filter \| None)` | Current mode name + filter number (if reported) |
 | `get_mode_info()` → `(Mode, filter)` | Current mode + filter number (if reported) |
 | `set_mode(mode, filter_width=None)` | Set mode (optionally with filter 1-3) |
 | `get_filter()` / `set_filter(n)` | Read/set filter number |

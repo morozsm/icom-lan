@@ -213,12 +213,12 @@ Set the operating frequency.
 ### `get_mode()`
 
 ```python
-async def get_mode(self) -> Mode
+async def get_mode(self) -> tuple[str, int | None]
 ```
 
 Get the current operating mode.
 
-**Returns:** `Mode` enum value (e.g., `Mode.USB`)
+**Returns:** `(mode_name, filter_number_or_None)` such as `("USB", 2)`
 
 ### `get_mode_info()`
 

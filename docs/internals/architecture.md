@@ -135,11 +135,13 @@ icom-lan now uses a **shared-core backend-neutral architecture**. Consumers (CLI
 
 ### Backend-Neutral Boundary
 
-All consumer code (`web/`, `rigctld/`, `cli.py`) depends **only** on:
+Consumer runtime paths depend on the backend-neutral contract:
 - `radio_protocol.Radio` (core interface)
 - Optional capability protocols (`AudioCapable`, `ScopeCapable`, `DualReceiverCapable`)
 
-Direct imports of `IcomRadio` or `Icom7610SerialRadio` are **forbidden** in consumer layers and enforced by lint/CI.
+`web/` and `rigctld/` must not import concrete radio classes and are guarded by
+lint/CI. The CLI still keeps a narrow `IcomRadio` import for helper/static
+methods, but command execution routes through `create_radio(...)`.
 
 ### Backend Comparison: IC-7610 LAN vs Serial
 

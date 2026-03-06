@@ -47,10 +47,14 @@ This guide shows how to control the IC-7610 via **USB serial CI-V + USB audio de
 ```bash
 pip install icom-lan
 
-# For audio support (RX/TX from USB audio devices):
+# For serial CI-V control:
 pip install 'icom-lan[serial]'
 
-# This includes: pyserial, sounddevice, numpy, opuslib
+# For USB audio RX/TX and audio-device listing:
+pip install 'icom-lan[serial,bridge]'
+
+# serial: pyserial + pyserial-asyncio
+# bridge: sounddevice + numpy + opuslib
 ```
 
 ### 2. Connect the Radio
@@ -71,12 +75,8 @@ ls -l /dev/cu.usbserial-*
 
 The IC-7610 typically appears as `/dev/cu.usbserial-XXXXXX` where `XXXXXX` is the radio's serial number.
 
-Alternatively, use `icom-lan` to list devices:
-
-```bash
-# Coming soon: icom-lan serial list-devices
-# For now, use system commands
-```
+Use system tools for serial-device discovery; `icom-lan` does not yet expose a
+serial-device listing command.
 
 ### 4. Find USB Audio Devices
 
@@ -85,14 +85,20 @@ Alternatively, use `icom-lan` to list devices:
 icom-lan --list-audio-devices
 ```
 
+This command requires the optional bridge dependencies:
+
+```bash
+pip install 'icom-lan[bridge]'
+```
+
 Example output:
 
 ```
-Audio Devices:
-  [0] IC-7610 USB Audio (2 in, 2 out)  ← RX + TX
-  [1] Built-in Microphone (2 in, 0 out)
-  [2] Built-in Output (0 in, 2 out)
-  [3] BlackHole 2ch (2 in, 2 out)
+4 audio device(s):
+  [0] IC-7610 USB Audio  (in=2, out=2)
+  [1] Built-in Microphone  (in=2, out=0)
+  [2] Built-in Output  (in=0, out=2)
+  [3] BlackHole 2ch  (in=2, out=2)
 ```
 
 The IC-7610 USB audio device is typically named `IC-7610 USB Audio` or similar.
@@ -389,18 +395,12 @@ If you're currently using the LAN backend and want to switch to serial:
 
 4. **Audio device selection**: LAN uses Opus/PCM over UDP, serial uses USB audio devices (explicit device names or auto-detect)
 
-## Performance Notes
-
-- **CI-V command latency**: Serial is typically **faster** than LAN due to lower transport overhead
-- **Audio latency**: USB audio path has **lower jitter** than UDP, but introduces USB subsystem latency
-- **Scope data rate**: LAN can sustain higher scope frame rates; serial at 115200 baud handles most use cases but may show slightly lower throughput under heavy CI-V load
-
 ## Next Steps
 
-- **Web UI + Serial**: See [Web Server Guide](../guide/web-server.md)
-- **rigctld + Serial**: See [rigctld Guide](../guide/rigctld.md)
+- **Web UI + Serial**: See [Web UI Guide](web-ui.md)
+- **rigctld + Serial**: See [CLI Reference](cli.md)
 - **Python API**: See [API Reference](../api/radio.md)
-- **Troubleshooting**: See [Troubleshooting Guide](../guide/troubleshooting.md)
+- **Troubleshooting**: See [Troubleshooting Guide](troubleshooting.md)
 
 ---
 
