@@ -424,6 +424,150 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
             + " has no cmd29 route"
         )
 
+    def _active_receiver_name(self) -> str:
+        """Best-effort active receiver name for VFO-routing fallbacks."""
+        active = getattr(self._radio_state, "active", None)
+        if active in {"MAIN", "SUB"}:
+            return active
+        if self._last_vfo in {"SUB", "B"}:
+            return "SUB"
+        return "MAIN"
+
+    async def _run_with_receiver_vfo_fallback(
+        self,
+        *,
+        receiver: int,
+        operation: str,
+        action: "Callable[[], Awaitable[Any]]",
+    ) -> Any:
+        """Run an operation for a receiver using temporary MAIN/SUB VFO switching."""
+        target = "MAIN" if receiver == RECEIVER_MAIN else "SUB"
+        current = self._active_receiver_name()
+        switched = False
+
+        if current != target:
+            if target == "SUB" and self._profile.vfo_sub_code is None:
+                raise CommandError(
+                    f"{operation} receiver={receiver} is unsupported for profile "
+                    f"{self._profile.model}: no SUB VFO select code"
+                )
+            if target == "MAIN" and self._profile.vfo_main_code is None:
+                raise CommandError(
+                    f"{operation} receiver={receiver} is unsupported for profile "
+                    f"{self._profile.model}: no MAIN VFO select code"
+                )
+            await self.select_vfo(target)
+            self._radio_state.active = target
+            switched = True
+
+        try:
+            return await action()
+        finally:
+            if switched:
+                try:
+                    await self.select_vfo(current)
+                    self._radio_state.active = current
+                except Exception:
+                    logger.warning(
+                        "%s: failed to restore VFO receiver to %s",
+                        operation,
+                        current,
+                        exc_info=True,
+                    )
+
+    async def _get_frequency_main(
+        self, *, bypass_cache: bool = False, update_cache: bool = True
+    ) -> int:
+        """Read MAIN receiver frequency with optional cache updates."""
+        civ = get_frequency(to_addr=self._radio_addr)
+        try:
+            resp = await self._send_civ_raw(
+                civ, key="get_frequency", dedupe=not bypass_cache,
+            )
+            freq = parse_frequency_response(resp)
+            if update_cache:
+                self._last_freq_hz = freq
+                self._state_cache.update_freq(freq)
+            return freq
+        except TimeoutError:
+            if update_cache and self._state_cache.is_fresh("freq", self._cache_ttl_freq):
+                logger.debug(
+                    "get_frequency: timeout, returning cached %d Hz",
+                    self._state_cache.freq,
+                )
+                return self._state_cache.freq
+            raise
+
+    async def _set_frequency_main(self, freq_hz: int, *, update_cache: bool = True) -> None:
+        """Set MAIN receiver frequency with optional cache updates."""
+        civ = set_frequency(freq_hz, to_addr=self._radio_addr, receiver=RECEIVER_MAIN)
+        await self._send_civ_raw(civ, wait_response=False)
+        if update_cache:
+            self._last_freq_hz = freq_hz
+            self._state_cache.update_freq(freq_hz)
+
+    async def _get_mode_info_main(
+        self, *, update_cache: bool = True
+    ) -> tuple[Mode, int | None]:
+        """Read MAIN receiver mode/filter with optional cache updates."""
+        civ = get_mode(to_addr=self._radio_addr)
+        try:
+            resp = await self._send_civ_raw(civ)
+            mode, filt = parse_mode_response(resp)
+            if update_cache:
+                self._last_mode = mode
+                if filt is not None:
+                    self._filter_width = filt
+                self._state_cache.update_mode(mode.name, filt)
+            return mode, filt
+        except TimeoutError:
+            if update_cache and self._state_cache.is_fresh("mode", self._cache_ttl_mode):
+                logger.debug(
+                    "get_mode_info: timeout, returning cached %s",
+                    self._state_cache.mode,
+                )
+                return Mode[self._state_cache.mode], self._state_cache.filter_width
+            raise
+
+    async def _set_mode_main(
+        self,
+        mode: Mode,
+        *,
+        filter_width: int | None = None,
+        update_cache: bool = True,
+    ) -> None:
+        """Set MAIN receiver mode/filter with optional cache updates."""
+        civ = set_mode(
+            mode,
+            filter_width=filter_width,
+            to_addr=self._radio_addr,
+            receiver=RECEIVER_MAIN,
+        )
+        await self._send_civ_raw(civ, wait_response=False)
+        self._last_mode = mode
+        if update_cache:
+            if filter_width is not None:
+                self._filter_width = filter_width
+            cached_filter = (
+                filter_width if filter_width is not None else self._filter_width
+            )
+            self._state_cache.update_mode(mode.name, cached_filter)
+
+    @staticmethod
+    def _coerce_mode(mode: Mode | str) -> Mode:
+        """Normalize mode input and validate string names."""
+        if isinstance(mode, Mode):
+            return mode
+        raw_mode = mode
+        mode_key = mode.strip().upper()
+        try:
+            return Mode[mode_key]
+        except KeyError as exc:
+            supported = ", ".join(m.name for m in Mode)
+            raise ValueError(
+                f"Unknown mode: {raw_mode!r}. Supported modes: {supported}"
+            ) from exc
+
     def set_state_change_callback(self, callback: Callable | None) -> None:
         """Register callback for CI-V state change notifications."""
         self._on_state_change = callback
@@ -1215,10 +1359,13 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         )
         return await self._send_civ_raw(frame, wait_response=wait_response)
 
-    async def get_frequency(self, *, bypass_cache: bool = False) -> int:
+    async def get_frequency(
+        self, receiver: int = RECEIVER_MAIN, *, bypass_cache: bool = False
+    ) -> int:
         """Get the current operating frequency in Hz.
 
         Args:
+            receiver: 0=MAIN, 1=SUB.
             bypass_cache: Skip dedupe and cache fallback (used by RadioPoller).
 
         On timeout falls back to the state cache (if populated) rather than
@@ -1226,23 +1373,17 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         radio is busy streaming scope data.
         """
         self._check_connected()
-        civ = get_frequency(to_addr=self._radio_addr)
-        try:
-            resp = await self._send_civ_raw(
-                civ, key="get_frequency", dedupe=not bypass_cache,
-            )
-            freq = parse_frequency_response(resp)
-            self._last_freq_hz = freq
-            self._state_cache.update_freq(freq)
-            return freq
-        except TimeoutError:
-            if self._state_cache.is_fresh("freq", self._cache_ttl_freq):
-                logger.debug(
-                    "get_frequency: timeout, returning cached %d Hz",
-                    self._state_cache.freq,
-                )
-                return self._state_cache.freq
-            raise
+        self._require_receiver(receiver, operation="get_frequency")
+        if receiver == RECEIVER_MAIN:
+            return await self._get_frequency_main(bypass_cache=bypass_cache)
+
+        return await self._run_with_receiver_vfo_fallback(
+            receiver=receiver,
+            operation="get_frequency",
+            action=lambda: self._get_frequency_main(
+                bypass_cache=bypass_cache, update_cache=False
+            ),
+        )
 
     async def set_frequency(self, freq_hz: int, receiver: int = 0) -> None:
         """Set the operating frequency.
@@ -1253,16 +1394,21 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         """
         self._check_connected()
         self._require_receiver(receiver, operation="set_frequency")
-        self._require_cmd29_route(
-            0x05,
-            None,
-            receiver=receiver,
-            operation="set_frequency",
-        )
-        civ = set_frequency(freq_hz, to_addr=self._radio_addr, receiver=receiver)
-        await self._send_civ_raw(civ, wait_response=False)
-        self._last_freq_hz = freq_hz
-        self._state_cache.update_freq(freq_hz)
+        if receiver == RECEIVER_MAIN:
+            await self._set_frequency_main(freq_hz)
+            return
+
+        if self._profile.supports_cmd29(0x05):
+            civ = set_frequency(freq_hz, to_addr=self._radio_addr, receiver=receiver)
+            await self._send_civ_raw(civ, wait_response=False)
+        else:
+            await self._run_with_receiver_vfo_fallback(
+                receiver=receiver,
+                operation="set_frequency",
+                action=lambda: self._set_frequency_main(freq_hz, update_cache=False),
+            )
+
+        self._radio_state.receiver("SUB").freq = freq_hz
 
     async def get_mode(self, receiver: int = 0) -> tuple[str, int | None]:  # type: ignore[override]
         """Get current mode as (name, filter) — Protocol-compatible.
@@ -1273,7 +1419,7 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         .. note:: The returned mode name is the Mode enum ``.name`` attribute
            (e.g. ``"USB"``, ``"CW"``), which matches hamlib mode strings.
         """
-        mode, filt = await self.get_mode_info()
+        mode, filt = await self.get_mode_info(receiver=receiver)
         return mode.name, filt
 
     async def get_mode_enum(self) -> "Mode":
@@ -1286,29 +1432,23 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         mode, _ = await self.get_mode_info()
         return mode
 
-    async def get_mode_info(self) -> tuple[Mode, int | None]:
+    async def get_mode_info(
+        self, receiver: int = RECEIVER_MAIN
+    ) -> tuple[Mode, int | None]:
         """Get current mode and filter number (if reported by radio).
 
         On timeout falls back to the state cache when populated.
         """
         self._check_connected()
-        civ = get_mode(to_addr=self._radio_addr)
-        try:
-            resp = await self._send_civ_raw(civ)
-            mode, filt = parse_mode_response(resp)
-            self._last_mode = mode
-            if filt is not None:
-                self._filter_width = filt
-            self._state_cache.update_mode(mode.name, filt)
-            return mode, filt
-        except TimeoutError:
-            if self._state_cache.is_fresh("mode", self._cache_ttl_mode):
-                logger.debug(
-                    "get_mode_info: timeout, returning cached %s",
-                    self._state_cache.mode,
-                )
-                return Mode[self._state_cache.mode], self._state_cache.filter_width
-            raise
+        self._require_receiver(receiver, operation="get_mode_info")
+        if receiver == RECEIVER_MAIN:
+            return await self._get_mode_info_main(update_cache=True)
+
+        return await self._run_with_receiver_vfo_fallback(
+            receiver=receiver,
+            operation="get_mode_info",
+            action=lambda: self._get_mode_info_main(update_cache=False),
+        )
 
     async def get_filter(self) -> int | None:
         """Get current mode filter number (1-3) when available."""
@@ -1317,7 +1457,7 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
 
     async def set_filter(self, filter_width: int, receiver: int = 0) -> None:
         """Set filter number (1-3) while keeping current mode unchanged."""
-        mode_name, _ = await self.get_mode()
+        mode_name, _ = await self.get_mode(receiver=receiver)
         await self.set_mode(mode_name, filter_width=filter_width, receiver=receiver)
 
     async def set_mode(self, mode: Mode | str, filter_width: int | None = None, receiver: int = 0) -> None:
@@ -1330,29 +1470,33 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         """
         self._check_connected()
         self._require_receiver(receiver, operation="set_mode")
-        self._require_cmd29_route(
-            0x06,
-            None,
-            receiver=receiver,
-            operation="set_mode",
-        )
-        if isinstance(mode, str):
-            raw_mode = mode
-            mode_key = mode.strip().upper()
-            try:
-                mode = Mode[mode_key]
-            except KeyError as exc:
-                supported = ", ".join(m.name for m in Mode)
-                raise ValueError(
-                    f"Unknown mode: {raw_mode!r}. Supported modes: {supported}"
-                ) from exc
-        civ = set_mode(mode, filter_width=filter_width, to_addr=self._radio_addr, receiver=receiver)
-        await self._send_civ_raw(civ, wait_response=False)
-        self._last_mode = mode
+        parsed_mode = self._coerce_mode(mode)
+
+        if receiver == RECEIVER_MAIN:
+            await self._set_mode_main(parsed_mode, filter_width=filter_width)
+            return
+
+        if self._profile.supports_cmd29(0x06):
+            civ = set_mode(
+                parsed_mode,
+                filter_width=filter_width,
+                to_addr=self._radio_addr,
+                receiver=receiver,
+            )
+            await self._send_civ_raw(civ, wait_response=False)
+        else:
+            await self._run_with_receiver_vfo_fallback(
+                receiver=receiver,
+                operation="set_mode",
+                action=lambda: self._set_mode_main(
+                    parsed_mode, filter_width=filter_width, update_cache=False
+                ),
+            )
+
+        sub = self._radio_state.receiver("SUB")
+        sub.mode = parsed_mode.name
         if filter_width is not None:
-            self._filter_width = filter_width
-        cached_filter = filter_width if filter_width is not None else self._filter_width
-        self._state_cache.update_mode(mode.name, cached_filter)
+            sub.filter = filter_width
 
     async def get_data_mode(self) -> bool:
         """Get the IC-7610 DATA mode state (command 0x1A 0x06).
@@ -2147,9 +2291,7 @@ def _check_protocol_compliance() -> None:
     """Verify IcomRadio satisfies all Radio protocol variants.
 
     Note: ``@runtime_checkable`` checks only method/attribute *existence*.
-    Some signatures differ slightly from the Protocol (e.g. ``get_mode``
-    returns :class:`~icom_lan.types.Mode` on IcomRadio rather than
-    ``tuple[str, int | None]`` — kept for backwards compatibility).
+    It does not validate full runtime semantics.
     """
     from .radio_protocol import AudioCapable, DualReceiverCapable, Radio, ScopeCapable
 

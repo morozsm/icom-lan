@@ -443,7 +443,16 @@ class RadioPoller:
                         await asyncio.sleep(_GAP)
                         await self._civ(0x07, data=bytes([self._profile.vfo_main_code]))
                 else:
+                    if current != "MAIN" and self._profile.vfo_main_code is not None:
+                        await self._civ(0x07, data=bytes([self._profile.vfo_main_code]))
+                        await asyncio.sleep(_GAP)
                     await radio.set_mode(mode, fw)
+                    if (
+                        current != "MAIN"
+                        and self._profile.vfo_sub_code is not None
+                    ):
+                        await asyncio.sleep(_GAP)
+                        await self._civ(0x07, data=bytes([self._profile.vfo_sub_code]))
             case SetFilter(filter_num=fn, receiver=rx):
                 if isinstance(radio, AdvancedControlCapable):
                     self._ensure_receiver_supported(rx, operation="set_filter")

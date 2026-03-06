@@ -20,7 +20,7 @@ IcomRadio(
     port: int = 50001,
     username: str = "",
     password: str = "",
-    radio_addr: int = 0x98,
+    radio_addr: int | None = None,
     timeout: float = 5.0,
     audio_codec: AudioCodec | int = AudioCodec.PCM_1CH_16BIT,
     audio_sample_rate: int = 48000,
@@ -28,6 +28,11 @@ IcomRadio(
     reconnect_delay: float = 2.0,
     reconnect_max_delay: float = 60.0,
     watchdog_timeout: float = 30.0,
+    auto_recover_audio: bool = True,
+    on_audio_recovery: Callable[[AudioRecoveryState], None] | None = None,
+    cache_ttl_s: dict[str, float] | None = None,
+    profile: RadioProfile | str | None = None,
+    model: str | None = None,
 )
 ```
 
@@ -37,13 +42,16 @@ IcomRadio(
 | `port` | `int` | `50001` | Control port number |
 | `username` | `str` | `""` | Authentication username |
 | `password` | `str` | `""` | Authentication password |
-| `radio_addr` | `int` | `0x98` | CI-V address of the radio |
+| `radio_addr` | `int \| None` | `None` | Optional CI-V address override (uses profile default when omitted) |
 | `timeout` | `float` | `5.0` | Default timeout for all operations (seconds) |
 
 Additional optional parameters:
 
 - `audio_codec`, `audio_sample_rate` — audio stream configuration
 - `auto_reconnect`, `reconnect_delay`, `reconnect_max_delay`, `watchdog_timeout` — reconnect/watchdog behavior
+- `auto_recover_audio`, `on_audio_recovery` — audio recovery behavior
+- `cache_ttl_s` — per-field TTL overrides for fallback cache
+- `profile`, `model` — runtime profile/model selection for capability/routing behavior
 
 ### Context Manager
 

@@ -87,3 +87,18 @@ def test_control_handler_checks_capabilities_not_model_name() -> None:
 
     with pytest.raises(ValueError, match="missing capability: nb"):
         handler._enqueue_command("set_nb", {"on": True, "receiver": 0})
+
+
+@pytest.mark.asyncio
+async def test_dual_profile_poller_routes_main_mode_via_vfo_switch_when_active_sub() -> None:
+    radio = _dual_radio_mock()
+    radio._radio_state.active = "SUB"
+    poller = RadioPoller(radio, StateCache(), CommandQueue())
+
+    await poller._execute(SetMode("USB", receiver=0))  # noqa: SLF001
+
+    main_code = bytes([radio.profile.vfo_main_code])
+    sub_code = bytes([radio.profile.vfo_sub_code])
+    radio.send_civ.assert_any_await(0x07, sub=None, data=main_code, wait_response=False)
+    radio.send_civ.assert_any_await(0x07, sub=None, data=sub_code, wait_response=False)
+    radio.set_mode.assert_awaited_once_with("USB", None)
