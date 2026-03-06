@@ -39,6 +39,7 @@ def create_radio(config: BackendConfig) -> Radio:
             audio_sample_rate=config.audio_sample_rate,
             rx_device=config.rx_device,
             tx_device=config.tx_device,
+            allow_low_baud_scope=config.allow_low_baud_scope,
             profile=config.profile,
             model=config.model,
         )

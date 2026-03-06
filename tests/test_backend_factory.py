@@ -40,6 +40,13 @@ class TestBackendConfigValidation:
         assert config.rx_device == "IC-7610 USB Audio"
         assert config.tx_device == "BlackHole 2ch"
 
+    def test_serial_backend_scope_low_baud_override_is_typed_bool(self) -> None:
+        config = SerialBackendConfig(
+            device="/dev/tty.usbmodem-IC7610",
+            allow_low_baud_scope=True,
+        )
+        assert config.allow_low_baud_scope is True
+
 
 class TestCreateRadioFactory:
     def test_create_radio_builds_lan_backend(self) -> None:
@@ -69,6 +76,16 @@ class TestCreateRadioFactory:
         assert isinstance(radio, Icom7610SerialRadio)
         assert radio._serial_rx_device_override == "IC-7610 USB Audio"
         assert radio._serial_tx_device_override == "BlackHole 2ch"
+
+    def test_create_radio_passes_serial_scope_low_baud_override(self) -> None:
+        radio = create_radio(
+            SerialBackendConfig(
+                device="/dev/tty.usbmodem-IC7610",
+                allow_low_baud_scope=True,
+            )
+        )
+        assert isinstance(radio, Icom7610SerialRadio)
+        assert radio._allow_low_baud_scope is True
 
     def test_create_radio_rejects_unknown_backend(self) -> None:
         @dataclass(slots=True)

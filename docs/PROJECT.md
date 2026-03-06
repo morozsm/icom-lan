@@ -176,7 +176,7 @@ Each UDP packet has a fixed-format header (see `packettypes.h` in wfview):
 
 - [x] `#144` Serial radio wrapper/session
 - [x] `#145` USB audio driver
-- [ ] `#146` Scope/waterfall on serial with guardrails
+- [x] `#146` Scope/waterfall on serial with guardrails
 - [ ] `#147` CLI backend selection and serial/audio flags
 - [ ] `#148` Web backend-neutral integration
 - [ ] `#149` rigctld backend-neutral integration
@@ -188,7 +188,8 @@ Each UDP packet has a fixed-format header (see `packettypes.h` in wfview):
 **Latest full regression (local, 2026-03-06):** `1879 passed, 95 skipped`.
 - **M2 Platform Foundation (step #141):** extracted shared IC-7610 executable core (`Icom7610CoreRadio`) with LAN compatibility wrapper (`IcomRadio`) and no behavior changes.
 - **M2 profile abstraction (issue #119):** runtime `RadioProfile` matrix added for multi-model behavior; `model`/`capabilities` and receiver/cmd29 routing are now profile-driven with explicit unsupported-operation guards.
-- **M3 backlog:** active epic `#152` (priority P0), with implementation chunks `#145-#149`, `#151` (priority P1).
+- **M3 serial scope guardrails (issue #146, 2026-03-06):** serial backend now has full scope lifecycle (`enable_scope`/`disable_scope`, capture, callback streaming), deterministic low-baud guardrail with explicit override (`allow_low_baud_scope` / `ICOM_SERIAL_SCOPE_ALLOW_LOW_BAUD`), and serial-specific CI-V pacing profile (`ICOM_SERIAL_CIV_MIN_INTERVAL_MS`) while LAN scope behavior remains unchanged.
+- **M3 backlog:** active epic `#152` (priority P0), with remaining implementation chunks `#147-#149`, `#151` (priority P1).
 
 ### Reliability Test Expansion (2026-03-05)
 - Added extended integration coverage scaffolding for:
