@@ -16,6 +16,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from icom_lan.backends.icom7610.drivers.serial_stub import SerialMockRadio
 from icom_lan.rigctld.contract import (
     ClientSession,
     HamlibError,
@@ -140,6 +141,18 @@ class TestLifecycle:
         await srv.start()
         await srv.stop()
         await srv.stop()  # second call must not raise
+
+    async def test_start_reuses_radio_state_cache_when_available(self, cfg: RigctldConfig) -> None:
+        radio = SerialMockRadio()
+        srv = RigctldServer(radio, cfg)
+        await srv.start()
+        try:
+            assert srv._rig_handler is not None
+            assert srv._poller is not None
+            assert srv._rig_handler._cache is radio.state_cache
+            assert srv._poller._cache is radio.state_cache
+        finally:
+            await srv.stop()
 
 
 # ---------------------------------------------------------------------------

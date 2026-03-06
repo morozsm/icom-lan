@@ -44,11 +44,13 @@ from __future__ import annotations
 from typing import Any, Awaitable, Callable, Protocol, runtime_checkable
 
 from .radio_state import RadioState
+from .types import Mode
 
 __all__ = [
     "Radio",
     "AudioCapable",
     "CivCommandCapable",
+    "ModeInfoCapable",
     "ScopeCapable",
     "DualReceiverCapable",
     "StateCacheCapable",
@@ -291,6 +293,15 @@ class CivCommandCapable(Protocol):
         wait_response: bool = True,
     ) -> Any:
         """Send a CI-V command through the active backend transport."""
+        ...
+
+
+@runtime_checkable
+class ModeInfoCapable(Protocol):
+    """Radio exposes backend-native mode metadata for rigctld consumers."""
+
+    async def get_mode_info(self, receiver: int = 0) -> tuple[Mode, int | None]:
+        """Return backend-native mode enum and filter selector."""
         ...
 
 

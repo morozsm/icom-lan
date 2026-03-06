@@ -19,10 +19,11 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, cast
 
 from ..exceptions import ConnectionError as IcomConnectionError
 from ..exceptions import TimeoutError as IcomTimeoutError
+from ..radio_protocol import ModeInfoCapable
 from .circuit_breaker import CircuitBreaker, CircuitState
 from .contract import CIV_TO_HAMLIB_MODE, RigctldConfig
 from .state_cache import StateCache
@@ -36,6 +37,18 @@ logger = logging.getLogger(__name__)
 
 # How often to emit periodic stats to the log.
 _STATS_LOG_INTERVAL: float = 30.0
+
+
+def _get_mode_info_reader(
+    radio: object,
+) -> Callable[..., Awaitable[tuple[Any, int | None]]] | None:
+    """Return a backend-native mode reader when the radio exposes one."""
+    if isinstance(radio, ModeInfoCapable):
+        return radio.get_mode_info
+    candidate = getattr(radio, "get_mode_info", None)
+    if callable(candidate):
+        return cast(Callable[..., Awaitable[tuple[Any, int | None]]], candidate)
+    return None
 
 
 class RadioPoller:
@@ -165,9 +178,9 @@ class RadioPoller:
 
         # --- mode -------------------------------------------------------
         try:
-            _get_mode_info = getattr(self._radio, "get_mode_info", None)
-            if _get_mode_info is not None:
-                mode, filter_width = await _get_mode_info()
+            get_mode_info = _get_mode_info_reader(self._radio)
+            if get_mode_info is not None:
+                mode, filter_width = await get_mode_info()
                 mode_str = CIV_TO_HAMLIB_MODE.get(mode.value, "USB")
                 self._cache.update_mode(mode_str, filter_width)
         except (IcomTimeoutError, IcomConnectionError) as exc:

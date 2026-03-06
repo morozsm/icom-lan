@@ -35,6 +35,7 @@ from .audio import AudioStats
 from .backends.config import LanBackendConfig, SerialBackendConfig
 from .backends.factory import create_radio
 from .radio import IcomRadio
+from .radio_protocol import Radio
 from .types import Mode
 
 _AUDIO_FRAME_MS = 20
@@ -1477,7 +1478,7 @@ async def _cmd_audio_bridge(radio: IcomRadio, args: argparse.Namespace) -> int:
     return 0
 
 
-async def _cmd_serve(radio: IcomRadio, args: argparse.Namespace) -> int:
+async def _cmd_serve(radio: Radio, args: argparse.Namespace) -> int:
     import logging as _logging
 
     from .rigctld.audit import AUDIT_LOGGER_NAME, RigctldAuditFormatter
