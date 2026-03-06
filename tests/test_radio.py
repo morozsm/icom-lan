@@ -25,7 +25,17 @@ from icom_lan.commands import (
 )
 from icom_lan.exceptions import ConnectionError, TimeoutError, CommandError
 from icom_lan.radio import IcomRadio
-from icom_lan.types import CivFrame, Mode, PacketType, bcd_encode
+from icom_lan.types import (
+    AgcMode,
+    AudioPeakFilter,
+    BreakInMode,
+    CivFrame,
+    FilterShape,
+    Mode,
+    PacketType,
+    SsbTxBandwidth,
+    bcd_encode,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -181,6 +191,60 @@ def _ctl_mem_response(
             0x1A,
             sub=sub,
             data=prefix + payload,
+            receiver=receiver,
+        )
+    return _wrap_civ_in_udp(civ)
+
+
+def _function_response(
+    sub: int,
+    payload: bytes,
+    *,
+    receiver: int | None = None,
+) -> bytes:
+    """Build a CI-V 0x16 response, optionally cmd29-wrapped."""
+    if receiver is None:
+        civ = build_civ_frame(
+            CONTROLLER_ADDR,
+            IC_7610_ADDR,
+            0x16,
+            sub=sub,
+            data=payload,
+        )
+    else:
+        civ = build_cmd29_frame(
+            CONTROLLER_ADDR,
+            IC_7610_ADDR,
+            0x16,
+            sub=sub,
+            data=payload,
+            receiver=receiver,
+        )
+    return _wrap_civ_in_udp(civ)
+
+
+def _meter_status_response(
+    sub: int,
+    value: int,
+    *,
+    receiver: int | None = None,
+) -> bytes:
+    """Build a CI-V 0x15 status response, optionally cmd29-wrapped."""
+    if receiver is None:
+        civ = build_civ_frame(
+            CONTROLLER_ADDR,
+            IC_7610_ADDR,
+            0x15,
+            sub=sub,
+            data=bytes([value]),
+        )
+    else:
+        civ = build_cmd29_frame(
+            CONTROLLER_ADDR,
+            IC_7610_ADDR,
+            0x15,
+            sub=sub,
+            data=bytes([value]),
             receiver=receiver,
         )
     return _wrap_civ_in_udp(civ)
@@ -1303,3 +1367,152 @@ class TestDspLevelParity:
     ) -> None:
         with pytest.raises(ValueError, match="0-255"):
             await radio.set_nb_width(256)
+
+
+class TestOperatorToggleParity:
+    """Test high-level operator toggle/status parity methods."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("method_name", "response", "expected"),
+        [
+            ("get_s_meter_sql_status", _meter_status_response(0x01, 0x01, receiver=1), True),
+            ("get_overflow_status", _meter_status_response(0x07, 0x01), True),
+            ("get_auto_notch", _function_response(0x41, b"\x01", receiver=1), True),
+            ("get_compressor", _function_response(0x44, b"\x01"), True),
+            ("get_monitor", _function_response(0x45, b"\x01"), True),
+            ("get_vox", _function_response(0x46, b"\x01"), True),
+            ("get_manual_notch", _function_response(0x48, b"\x01", receiver=1), True),
+            ("get_twin_peak_filter", _function_response(0x4F, b"\x01", receiver=1), True),
+            ("get_dial_lock", _function_response(0x50, b"\x01"), True),
+        ],
+    )
+    async def test_get_bool_operator_toggle(
+        self,
+        radio: IcomRadio,
+        mock_transport: MockTransport,
+        method_name: str,
+        response: bytes,
+        expected: bool,
+    ) -> None:
+        mock_transport.queue_response(response)
+
+        method = getattr(radio, method_name)
+        kwargs = (
+            {"receiver": 1}
+            if method_name in {
+                "get_s_meter_sql_status",
+                "get_auto_notch",
+                "get_manual_notch",
+                "get_twin_peak_filter",
+            }
+            else {}
+        )
+        assert await method(**kwargs) is expected
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("method_name", "response", "expected"),
+        [
+            ("get_agc", _function_response(0x12, b"\x03"), AgcMode.SLOW),
+            (
+                "get_audio_peak_filter",
+                _function_response(0x32, b"\x02", receiver=1),
+                AudioPeakFilter.MID,
+            ),
+            ("get_break_in", _function_response(0x47, b"\x02"), BreakInMode.FULL),
+            (
+                "get_filter_shape",
+                _function_response(0x56, b"\x01", receiver=1),
+                FilterShape.SOFT,
+            ),
+            (
+                "get_ssb_tx_bandwidth",
+                _function_response(0x58, b"\x02"),
+                SsbTxBandwidth.NAR,
+            ),
+        ],
+    )
+    async def test_get_enum_operator_toggle(
+        self,
+        radio: IcomRadio,
+        mock_transport: MockTransport,
+        method_name: str,
+        response: bytes,
+        expected: object,
+    ) -> None:
+        mock_transport.queue_response(response)
+
+        method = getattr(radio, method_name)
+        kwargs = (
+            {"receiver": 1}
+            if method_name in {"get_audio_peak_filter", "get_filter_shape"}
+            else {}
+        )
+        assert await method(**kwargs) == expected
+
+    @pytest.mark.asyncio
+    async def test_get_agc_time_constant_reads_single_byte_bcd(
+        self,
+        radio: IcomRadio,
+        mock_transport: MockTransport,
+    ) -> None:
+        mock_transport.queue_response(_ctl_mem_response(0x04, b"\x13", receiver=1))
+        assert await radio.get_agc_time_constant(receiver=1) == 13
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("method_name", "value", "kwargs", "expected_tail"),
+        [
+            ("set_agc", AgcMode.MID, {}, b"\x16\x12\x02\xFD"),
+            (
+                "set_audio_peak_filter",
+                AudioPeakFilter.NAR,
+                {"receiver": 1},
+                b"\x29\x01\x16\x32\x03\xFD",
+            ),
+            ("set_auto_notch", True, {"receiver": 1}, b"\x29\x01\x16\x41\x01\xFD"),
+            ("set_compressor", True, {}, b"\x16\x44\x01\xFD"),
+            ("set_monitor", False, {}, b"\x16\x45\x00\xFD"),
+            ("set_vox", True, {}, b"\x16\x46\x01\xFD"),
+            ("set_break_in", BreakInMode.SEMI, {}, b"\x16\x47\x01\xFD"),
+            ("set_manual_notch", True, {"receiver": 1}, b"\x29\x01\x16\x48\x01\xFD"),
+            (
+                "set_twin_peak_filter",
+                False,
+                {"receiver": 1},
+                b"\x29\x01\x16\x4F\x00\xFD",
+            ),
+            ("set_dial_lock", True, {}, b"\x16\x50\x01\xFD"),
+            (
+                "set_filter_shape",
+                FilterShape.SHARP,
+                {"receiver": 1},
+                b"\x29\x01\x16\x56\x00\xFD",
+            ),
+            (
+                "set_ssb_tx_bandwidth",
+                SsbTxBandwidth.MID,
+                {},
+                b"\x16\x58\x01\xFD",
+            ),
+            (
+                "set_agc_time_constant",
+                13,
+                {"receiver": 1},
+                b"\x29\x01\x1A\x04\x13\xFD",
+            ),
+        ],
+    )
+    async def test_set_operator_toggle(
+        self,
+        radio: IcomRadio,
+        mock_transport: MockTransport,
+        method_name: str,
+        value: object,
+        kwargs: dict[str, int],
+        expected_tail: bytes,
+    ) -> None:
+        method = getattr(radio, method_name)
+        await method(value, **kwargs)
+        assert mock_transport.sent_packets[-1].endswith(expected_tail)

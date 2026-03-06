@@ -87,11 +87,18 @@ _CMD29_7610 = frozenset(
         (0x14, 0x08),   # PBT Outer
         (0x14, 0x12),   # NB Level
         (0x14, 0x13),   # DIGI-SEL Shift
+        (0x15, 0x01),   # S-meter squelch status
         (0x16, 0x02),   # PREAMP
+        (0x16, 0x32),   # Audio Peak Filter
         (0x16, 0x22),   # NB
         (0x16, 0x40),   # NR
+        (0x16, 0x41),   # Auto Notch
+        (0x16, 0x48),   # Manual Notch
         (0x16, 0x4E),   # DIGI-SEL
+        (0x16, 0x4F),   # Twin Peak Filter
+        (0x16, 0x56),   # Filter Shape
         (0x16, 0x65),   # IP+
+        (0x1A, 0x04),   # AGC Time Constant
         (0x1A, 0x09),   # AF Mute
     }
 )
