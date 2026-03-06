@@ -1542,6 +1542,8 @@ def set_nb_width(
     from_addr: int = CONTROLLER_ADDR,
 ) -> bytes:
     """Build a set NB Width command."""
+    if not 0 <= value <= 255:
+        raise ValueError(f"NB Width must be 0-255, got {value}")
     return _build_ctl_mem_set(
         _CTL_MEM_NB_WIDTH,
         value,

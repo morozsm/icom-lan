@@ -689,6 +689,57 @@ def test_update_radio_state_cmd14_power_level(radio_with_state: IcomRadio) -> No
     assert rs.power_level == 128
 
 
+@pytest.mark.parametrize(
+    ("sub", "value", "field"),
+    [
+        (0x05, 90, "apf_type_level"),
+        (0x06, 91, "nr_level"),
+        (0x07, 92, "pbt_inner"),
+        (0x08, 93, "pbt_outer"),
+        (0x12, 94, "nb_level"),
+        (0x13, 95, "digisel_shift"),
+    ],
+)
+def test_update_radio_state_cmd14_receiver_dsp_levels(
+    radio_with_state: IcomRadio,
+    sub: int,
+    value: int,
+    field: str,
+) -> None:
+    rs = radio_with_state._radio_state
+    frame = _make_frame(cmd=0x14, sub=sub, data=_bcd2(value), receiver=0x01)
+    radio_with_state._update_radio_state_from_frame(frame)
+    assert getattr(rs.sub, field) == value
+
+
+@pytest.mark.parametrize(
+    ("sub", "raw", "field", "expected"),
+    [
+        (0x09, 128, "cw_pitch", 600),
+        (0x0B, 101, "mic_gain", 101),
+        (0x0C, 146, "key_speed", 30),
+        (0x0D, 102, "notch_filter", 102),
+        (0x0E, 103, "compressor_level", 103),
+        (0x0F, 104, "break_in_delay", 104),
+        (0x14, 105, "drive_gain", 105),
+        (0x15, 106, "monitor_gain", 106),
+        (0x16, 107, "vox_gain", 107),
+        (0x17, 108, "anti_vox_gain", 108),
+    ],
+)
+def test_update_radio_state_cmd14_global_dsp_levels(
+    radio_with_state: IcomRadio,
+    sub: int,
+    raw: int,
+    field: str,
+    expected: int,
+) -> None:
+    rs = radio_with_state._radio_state
+    frame = _make_frame(cmd=0x14, sub=sub, data=_bcd2(raw))
+    radio_with_state._update_radio_state_from_frame(frame)
+    assert getattr(rs, field) == expected
+
+
 def test_update_radio_state_cmd11_attenuator(radio_with_state: IcomRadio) -> None:
     """cmd 0x11 updates attenuator (lines 548-552)."""
     rs = radio_with_state._radio_state
@@ -761,6 +812,34 @@ def test_update_radio_state_cmd1a_sub06_data_mode(radio_with_state: IcomRadio) -
     frame = _make_frame(cmd=0x1A, sub=0x06, data=bytes([0x01]))
     radio_with_state._update_radio_state_from_frame(frame)
     assert rs.main.data_mode is True
+
+
+@pytest.mark.parametrize(
+    ("data", "field", "expected"),
+    [
+        (b"\x00\x70\x05\x11", "ref_adjust", 511),
+        (b"\x02\x28\x45", "dash_ratio", 45),
+        (b"\x02\x90\x09", "nb_depth", 9),
+        (b"\x02\x91\x02\x55", "nb_width", 255),
+    ],
+)
+def test_update_radio_state_cmd1a_ctl_mem_dsp_levels(
+    radio_with_state: IcomRadio,
+    data: bytes,
+    field: str,
+    expected: int,
+) -> None:
+    rs = radio_with_state._radio_state
+    frame = _make_frame(cmd=0x1A, sub=0x05, data=data)
+    radio_with_state._update_radio_state_from_frame(frame)
+    assert getattr(rs, field) == expected
+
+
+def test_update_radio_state_cmd1a_af_mute(radio_with_state: IcomRadio) -> None:
+    rs = radio_with_state._radio_state
+    frame = _make_frame(cmd=0x1A, sub=0x09, data=b"\x01", receiver=0x01)
+    radio_with_state._update_radio_state_from_frame(frame)
+    assert rs.sub.af_mute is True
 
 
 def test_update_radio_state_cmd1c_ptt(radio_with_state: IcomRadio) -> None:

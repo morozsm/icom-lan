@@ -1296,3 +1296,10 @@ class TestDspLevelParity:
     ) -> None:
         with pytest.raises(ValueError, match="0-511"):
             await radio.set_ref_adjust(512)
+
+    @pytest.mark.asyncio
+    async def test_set_nb_width_rejects_out_of_range(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        with pytest.raises(ValueError, match="0-255"):
+            await radio.set_nb_width(256)

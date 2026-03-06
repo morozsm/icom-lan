@@ -590,12 +590,14 @@
         "icom_lan.commands:get_apf_type_level",
         "icom_lan.commands:set_apf_type_level",
         "icom_lan.radio:Icom7610CoreRadio.get_apf_type_level",
-        "icom_lan.radio:Icom7610CoreRadio.set_apf_type_level"
+        "icom_lan.radio:Icom7610CoreRadio.set_apf_type_level",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_cmd29_level_builders",
         "tests/test_radio.py::test_get_cmd29_dsp_level",
-        "tests/test_radio.py::test_set_cmd29_dsp_level"
+        "tests/test_radio.py::test_set_cmd29_dsp_level",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_cmd14_receiver_dsp_levels"
       ]
     },
     {
@@ -612,12 +614,14 @@
         "icom_lan.commands:get_nr_level",
         "icom_lan.commands:set_nr_level",
         "icom_lan.radio:Icom7610CoreRadio.get_nr_level",
-        "icom_lan.radio:Icom7610CoreRadio.set_nr_level"
+        "icom_lan.radio:Icom7610CoreRadio.set_nr_level",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_cmd29_level_builders",
         "tests/test_radio.py::test_get_cmd29_dsp_level",
-        "tests/test_radio.py::test_set_cmd29_dsp_level"
+        "tests/test_radio.py::test_set_cmd29_dsp_level",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_cmd14_receiver_dsp_levels"
       ]
     },
     {
@@ -634,12 +638,14 @@
         "icom_lan.commands:get_pbt_inner",
         "icom_lan.commands:set_pbt_inner",
         "icom_lan.radio:Icom7610CoreRadio.get_pbt_inner",
-        "icom_lan.radio:Icom7610CoreRadio.set_pbt_inner"
+        "icom_lan.radio:Icom7610CoreRadio.set_pbt_inner",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_cmd29_level_builders",
         "tests/test_radio.py::test_get_cmd29_dsp_level",
-        "tests/test_radio.py::test_set_cmd29_dsp_level"
+        "tests/test_radio.py::test_set_cmd29_dsp_level",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_cmd14_receiver_dsp_levels"
       ]
     },
     {
@@ -656,12 +662,14 @@
         "icom_lan.commands:get_pbt_outer",
         "icom_lan.commands:set_pbt_outer",
         "icom_lan.radio:Icom7610CoreRadio.get_pbt_outer",
-        "icom_lan.radio:Icom7610CoreRadio.set_pbt_outer"
+        "icom_lan.radio:Icom7610CoreRadio.set_pbt_outer",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_cmd29_level_builders",
         "tests/test_radio.py::test_get_cmd29_dsp_level",
-        "tests/test_radio.py::test_set_cmd29_dsp_level"
+        "tests/test_radio.py::test_set_cmd29_dsp_level",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_cmd14_receiver_dsp_levels"
       ]
     },
     {
@@ -678,12 +686,14 @@
         "icom_lan.commands:get_cw_pitch",
         "icom_lan.commands:set_cw_pitch",
         "icom_lan.radio:Icom7610CoreRadio.get_cw_pitch",
-        "icom_lan.radio:Icom7610CoreRadio.set_cw_pitch"
+        "icom_lan.radio:Icom7610CoreRadio.set_cw_pitch",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_level_builders",
         "tests/test_radio.py::test_get_cw_pitch_converts_raw_level",
-        "tests/test_radio.py::test_set_cw_pitch_sends_scaled_level"
+        "tests/test_radio.py::test_set_cw_pitch_sends_scaled_level",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_cmd14_global_dsp_levels"
       ]
     },
     {
@@ -721,12 +731,14 @@
         "icom_lan.commands:get_mic_gain",
         "icom_lan.commands:set_mic_gain",
         "icom_lan.radio:Icom7610CoreRadio.get_mic_gain",
-        "icom_lan.radio:Icom7610CoreRadio.set_mic_gain"
+        "icom_lan.radio:Icom7610CoreRadio.set_mic_gain",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_level_builders",
         "tests/test_radio.py::test_get_direct_dsp_level",
-        "tests/test_radio.py::test_set_direct_dsp_level"
+        "tests/test_radio.py::test_set_direct_dsp_level",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_cmd14_global_dsp_levels"
       ]
     },
     {
@@ -743,12 +755,14 @@
         "icom_lan.commands:get_key_speed",
         "icom_lan.commands:set_key_speed",
         "icom_lan.radio:Icom7610CoreRadio.get_key_speed",
-        "icom_lan.radio:Icom7610CoreRadio.set_key_speed"
+        "icom_lan.radio:Icom7610CoreRadio.set_key_speed",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_level_builders",
         "tests/test_radio.py::test_get_key_speed_converts_raw_level",
-        "tests/test_radio.py::test_set_key_speed_sends_scaled_level"
+        "tests/test_radio.py::test_set_key_speed_sends_scaled_level",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_cmd14_global_dsp_levels"
       ]
     },
     {
@@ -765,12 +779,14 @@
         "icom_lan.commands:get_notch_filter",
         "icom_lan.commands:set_notch_filter",
         "icom_lan.radio:Icom7610CoreRadio.get_notch_filter",
-        "icom_lan.radio:Icom7610CoreRadio.set_notch_filter"
+        "icom_lan.radio:Icom7610CoreRadio.set_notch_filter",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_level_builders",
         "tests/test_radio.py::test_get_direct_dsp_level",
-        "tests/test_radio.py::test_set_direct_dsp_level"
+        "tests/test_radio.py::test_set_direct_dsp_level",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_cmd14_global_dsp_levels"
       ]
     },
     {
@@ -787,12 +803,14 @@
         "icom_lan.commands:get_compressor_level",
         "icom_lan.commands:set_compressor_level",
         "icom_lan.radio:Icom7610CoreRadio.get_compressor_level",
-        "icom_lan.radio:Icom7610CoreRadio.set_compressor_level"
+        "icom_lan.radio:Icom7610CoreRadio.set_compressor_level",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_level_builders",
         "tests/test_radio.py::test_get_direct_dsp_level",
-        "tests/test_radio.py::test_set_direct_dsp_level"
+        "tests/test_radio.py::test_set_direct_dsp_level",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_cmd14_global_dsp_levels"
       ]
     },
     {
@@ -809,12 +827,14 @@
         "icom_lan.commands:get_break_in_delay",
         "icom_lan.commands:set_break_in_delay",
         "icom_lan.radio:Icom7610CoreRadio.get_break_in_delay",
-        "icom_lan.radio:Icom7610CoreRadio.set_break_in_delay"
+        "icom_lan.radio:Icom7610CoreRadio.set_break_in_delay",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_level_builders",
         "tests/test_radio.py::test_get_direct_dsp_level",
-        "tests/test_radio.py::test_set_direct_dsp_level"
+        "tests/test_radio.py::test_set_direct_dsp_level",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_cmd14_global_dsp_levels"
       ]
     },
     {
@@ -831,12 +851,14 @@
         "icom_lan.commands:get_nb_level",
         "icom_lan.commands:set_nb_level",
         "icom_lan.radio:Icom7610CoreRadio.get_nb_level",
-        "icom_lan.radio:Icom7610CoreRadio.set_nb_level"
+        "icom_lan.radio:Icom7610CoreRadio.set_nb_level",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_cmd29_level_builders",
         "tests/test_radio.py::test_get_cmd29_dsp_level",
-        "tests/test_radio.py::test_set_cmd29_dsp_level"
+        "tests/test_radio.py::test_set_cmd29_dsp_level",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_cmd14_receiver_dsp_levels"
       ]
     },
     {
@@ -853,12 +875,14 @@
         "icom_lan.commands:get_digisel_shift",
         "icom_lan.commands:set_digisel_shift",
         "icom_lan.radio:Icom7610CoreRadio.get_digisel_shift",
-        "icom_lan.radio:Icom7610CoreRadio.set_digisel_shift"
+        "icom_lan.radio:Icom7610CoreRadio.set_digisel_shift",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_cmd29_level_builders",
         "tests/test_radio.py::test_get_cmd29_dsp_level",
-        "tests/test_radio.py::test_set_cmd29_dsp_level"
+        "tests/test_radio.py::test_set_cmd29_dsp_level",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_cmd14_receiver_dsp_levels"
       ]
     },
     {
@@ -875,12 +899,14 @@
         "icom_lan.commands:get_drive_gain",
         "icom_lan.commands:set_drive_gain",
         "icom_lan.radio:Icom7610CoreRadio.get_drive_gain",
-        "icom_lan.radio:Icom7610CoreRadio.set_drive_gain"
+        "icom_lan.radio:Icom7610CoreRadio.set_drive_gain",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_level_builders",
         "tests/test_radio.py::test_get_direct_dsp_level",
-        "tests/test_radio.py::test_set_direct_dsp_level"
+        "tests/test_radio.py::test_set_direct_dsp_level",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_cmd14_global_dsp_levels"
       ]
     },
     {
@@ -897,12 +923,14 @@
         "icom_lan.commands:get_monitor_gain",
         "icom_lan.commands:set_monitor_gain",
         "icom_lan.radio:Icom7610CoreRadio.get_monitor_gain",
-        "icom_lan.radio:Icom7610CoreRadio.set_monitor_gain"
+        "icom_lan.radio:Icom7610CoreRadio.set_monitor_gain",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_level_builders",
         "tests/test_radio.py::test_get_direct_dsp_level",
-        "tests/test_radio.py::test_set_direct_dsp_level"
+        "tests/test_radio.py::test_set_direct_dsp_level",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_cmd14_global_dsp_levels"
       ]
     },
     {
@@ -919,12 +947,14 @@
         "icom_lan.commands:get_vox_gain",
         "icom_lan.commands:set_vox_gain",
         "icom_lan.radio:Icom7610CoreRadio.get_vox_gain",
-        "icom_lan.radio:Icom7610CoreRadio.set_vox_gain"
+        "icom_lan.radio:Icom7610CoreRadio.set_vox_gain",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_level_builders",
         "tests/test_radio.py::test_get_direct_dsp_level",
-        "tests/test_radio.py::test_set_direct_dsp_level"
+        "tests/test_radio.py::test_set_direct_dsp_level",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_cmd14_global_dsp_levels"
       ]
     },
     {
@@ -941,12 +971,14 @@
         "icom_lan.commands:get_anti_vox_gain",
         "icom_lan.commands:set_anti_vox_gain",
         "icom_lan.radio:Icom7610CoreRadio.get_anti_vox_gain",
-        "icom_lan.radio:Icom7610CoreRadio.set_anti_vox_gain"
+        "icom_lan.radio:Icom7610CoreRadio.set_anti_vox_gain",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_level_builders",
         "tests/test_radio.py::test_get_direct_dsp_level",
-        "tests/test_radio.py::test_set_direct_dsp_level"
+        "tests/test_radio.py::test_set_direct_dsp_level",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_cmd14_global_dsp_levels"
       ]
     },
     {
@@ -1505,12 +1537,14 @@
         "icom_lan.commands:set_ref_adjust",
         "icom_lan.commands:parse_level_response",
         "icom_lan.radio:Icom7610CoreRadio.get_ref_adjust",
-        "icom_lan.radio:Icom7610CoreRadio.set_ref_adjust"
+        "icom_lan.radio:Icom7610CoreRadio.set_ref_adjust",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_ctl_mem_level_builders",
         "tests/test_radio.py::test_get_ctl_mem_dsp_level",
-        "tests/test_radio.py::test_set_ctl_mem_dsp_level"
+        "tests/test_radio.py::test_set_ctl_mem_dsp_level",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_cmd1a_ctl_mem_dsp_levels"
       ]
     },
     {
@@ -1649,12 +1683,14 @@
         "icom_lan.commands:set_dash_ratio",
         "icom_lan.commands:parse_level_response",
         "icom_lan.radio:Icom7610CoreRadio.get_dash_ratio",
-        "icom_lan.radio:Icom7610CoreRadio.set_dash_ratio"
+        "icom_lan.radio:Icom7610CoreRadio.set_dash_ratio",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_ctl_mem_level_builders",
         "tests/test_radio.py::test_get_ctl_mem_dsp_level",
-        "tests/test_radio.py::test_set_ctl_mem_dsp_level"
+        "tests/test_radio.py::test_set_ctl_mem_dsp_level",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_cmd1a_ctl_mem_dsp_levels"
       ]
     },
     {
@@ -1672,12 +1708,14 @@
         "icom_lan.commands:set_nb_depth",
         "icom_lan.commands:parse_level_response",
         "icom_lan.radio:Icom7610CoreRadio.get_nb_depth",
-        "icom_lan.radio:Icom7610CoreRadio.set_nb_depth"
+        "icom_lan.radio:Icom7610CoreRadio.set_nb_depth",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_ctl_mem_level_builders",
         "tests/test_radio.py::test_get_ctl_mem_dsp_level",
-        "tests/test_radio.py::test_set_ctl_mem_dsp_level"
+        "tests/test_radio.py::test_set_ctl_mem_dsp_level",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_cmd1a_ctl_mem_dsp_levels"
       ]
     },
     {
@@ -1695,12 +1733,16 @@
         "icom_lan.commands:set_nb_width",
         "icom_lan.commands:parse_level_response",
         "icom_lan.radio:Icom7610CoreRadio.get_nb_width",
-        "icom_lan.radio:Icom7610CoreRadio.set_nb_width"
+        "icom_lan.radio:Icom7610CoreRadio.set_nb_width",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_ctl_mem_level_builders",
         "tests/test_radio.py::test_get_ctl_mem_dsp_level",
-        "tests/test_radio.py::test_set_ctl_mem_dsp_level"
+        "tests/test_radio.py::test_set_ctl_mem_dsp_level",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_cmd1a_ctl_mem_dsp_levels",
+        "tests/test_commands.py::test_set_nb_width_rejects_out_of_range",
+        "tests/test_radio.py::test_set_nb_width_rejects_out_of_range"
       ]
     },
     {
@@ -1739,12 +1781,14 @@
         "icom_lan.commands:set_af_mute",
         "icom_lan.commands:parse_bool_response",
         "icom_lan.radio:Icom7610CoreRadio.get_af_mute",
-        "icom_lan.radio:Icom7610CoreRadio.set_af_mute"
+        "icom_lan.radio:Icom7610CoreRadio.set_af_mute",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_af_mute_builders",
         "tests/test_radio.py::test_get_af_mute_reads_bool",
-        "tests/test_radio.py::test_set_af_mute_sends_cmd29_bool"
+        "tests/test_radio.py::test_set_af_mute_sends_cmd29_bool",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_cmd1a_af_mute"
       ]
     },
     {
