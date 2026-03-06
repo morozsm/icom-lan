@@ -18,12 +18,28 @@ from icom_lan.commands import (
     CONTROLLER_ADDR,
     IC_7610_ADDR,
     build_civ_frame,
+    get_scope_center_type,
+    get_scope_during_tx,
+    get_scope_edge,
+    get_scope_fixed_edge,
+    get_scope_hold,
+    get_scope_main_sub,
+    get_scope_mode,
+    get_scope_rbw,
+    get_scope_ref,
+    get_scope_single_dual,
+    get_scope_span,
+    get_scope_speed,
+    get_scope_vbw,
     scope_data_output_off,
     scope_data_output_on,
     scope_main_sub,
     scope_off,
     scope_on,
+    scope_set_center_type,
+    scope_set_during_tx,
     scope_set_edge,
+    scope_set_fixed_edge,
     scope_set_hold,
     scope_set_mode,
     scope_set_rbw,
@@ -547,6 +563,79 @@ class TestScopeCommandBuilders:
         assert frame[4] == 0x27
         assert frame[5] == 0x1F
         assert frame[6] == 0x02
+
+    def test_get_scope_main_sub(self) -> None:
+        frame = get_scope_main_sub()
+        assert frame == b"\xfe\xfe\x98\xe0\x27\x12\xfd"
+
+    def test_get_scope_single_dual(self) -> None:
+        frame = get_scope_single_dual()
+        assert frame == b"\xfe\xfe\x98\xe0\x27\x13\xfd"
+
+    def test_get_scope_mode(self) -> None:
+        frame = get_scope_mode()
+        assert frame == b"\xfe\xfe\x98\xe0\x27\x14\xfd"
+
+    def test_get_scope_span(self) -> None:
+        frame = get_scope_span()
+        assert frame == b"\xfe\xfe\x98\xe0\x27\x15\xfd"
+
+    def test_get_scope_edge(self) -> None:
+        frame = get_scope_edge()
+        assert frame == b"\xfe\xfe\x98\xe0\x27\x16\xfd"
+
+    def test_get_scope_hold(self) -> None:
+        frame = get_scope_hold()
+        assert frame == b"\xfe\xfe\x98\xe0\x27\x17\xfd"
+
+    def test_get_scope_ref(self) -> None:
+        frame = get_scope_ref()
+        assert frame == b"\xfe\xfe\x98\xe0\x27\x19\xfd"
+
+    def test_get_scope_speed(self) -> None:
+        frame = get_scope_speed()
+        assert frame == b"\xfe\xfe\x98\xe0\x27\x1a\xfd"
+
+    def test_get_scope_during_tx(self) -> None:
+        frame = get_scope_during_tx()
+        assert frame == b"\xfe\xfe\x98\xe0\x27\x1b\xfd"
+
+    def test_scope_set_during_tx(self) -> None:
+        frame = scope_set_during_tx(True)
+        assert frame[4] == 0x27
+        assert frame[5] == 0x1B
+        assert frame[6] == 0x01
+
+    def test_get_scope_center_type(self) -> None:
+        frame = get_scope_center_type()
+        assert frame == b"\xfe\xfe\x98\xe0\x27\x1c\xfd"
+
+    def test_scope_set_center_type(self) -> None:
+        frame = scope_set_center_type(2)
+        assert frame[4] == 0x27
+        assert frame[5] == 0x1C
+        assert frame[6] == 0x02
+
+    def test_get_scope_vbw(self) -> None:
+        frame = get_scope_vbw()
+        assert frame == b"\xfe\xfe\x98\xe0\x27\x1d\xfd"
+
+    def test_get_scope_fixed_edge(self) -> None:
+        frame = get_scope_fixed_edge()
+        assert frame == b"\xfe\xfe\x98\xe0\x27\x1e\xfd"
+
+    def test_scope_set_fixed_edge(self) -> None:
+        frame = scope_set_fixed_edge(edge=4, start_hz=14_000_000, end_hz=14_350_000)
+        assert frame[4] == 0x27
+        assert frame[5] == 0x1E
+        assert frame[6] == 0x06
+        assert frame[7] == 0x04
+        assert frame[8:13] == bcd_encode(14_000_000)
+        assert frame[13:18] == bcd_encode(14_350_000)
+
+    def test_get_scope_rbw(self) -> None:
+        frame = get_scope_rbw()
+        assert frame == b"\xfe\xfe\x98\xe0\x27\x1f\xfd"
 
     def test_custom_addrs(self) -> None:
         frame = scope_on(to_addr=0x70, from_addr=0xE1)

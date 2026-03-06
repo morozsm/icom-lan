@@ -1040,3 +1040,71 @@ class TestRitFrequencyParser:
         from icom_lan.commands import parse_rit_frequency_response
         assert parse_rit_frequency_response(b"\x50\x01") == 0
         assert parse_rit_frequency_response(b"") == 0
+
+
+class TestAdvancedScopeParsers:
+    """Test response parsing for advanced_scope commands."""
+
+    def test_parse_scope_mode_response_with_receiver_prefix(self) -> None:
+        from icom_lan.commands import parse_scope_mode_response
+
+        frame = CivFrame(0xE0, 0x98, 0x27, 0x14, b"\x01\x03")
+        receiver, mode = parse_scope_mode_response(frame)
+        assert receiver == 1
+        assert mode == 3
+
+    def test_parse_scope_span_response_from_bcd_frequency(self) -> None:
+        from icom_lan.commands import parse_scope_span_response
+        from icom_lan.types import bcd_encode
+
+        frame = CivFrame(0xE0, 0x98, 0x27, 0x15, b"\x00" + bcd_encode(250_000))
+        receiver, span = parse_scope_span_response(frame)
+        assert receiver == 0
+        assert span == 6
+
+    def test_parse_scope_ref_response(self) -> None:
+        from icom_lan.commands import parse_scope_ref_response
+
+        frame = CivFrame(0xE0, 0x98, 0x27, 0x19, b"\x00\x01\x05\x01")
+        receiver, ref_db = parse_scope_ref_response(frame)
+        assert receiver == 0
+        assert ref_db == -10.5
+
+    def test_parse_scope_during_tx_response(self) -> None:
+        from icom_lan.commands import parse_scope_during_tx_response
+
+        frame = CivFrame(0xE0, 0x98, 0x27, 0x1B, b"\x01")
+        assert parse_scope_during_tx_response(frame) is True
+
+    def test_parse_scope_center_type_response(self) -> None:
+        from icom_lan.commands import parse_scope_center_type_response
+
+        frame = CivFrame(0xE0, 0x98, 0x27, 0x1C, b"\x00\x02")
+        receiver, center_type = parse_scope_center_type_response(frame)
+        assert receiver == 0
+        assert center_type == 2
+
+    def test_parse_scope_fixed_edge_response(self) -> None:
+        from icom_lan.commands import parse_scope_fixed_edge_response
+        from icom_lan.types import bcd_encode
+
+        frame = CivFrame(
+            0xE0,
+            0x98,
+            0x27,
+            0x1E,
+            b"\x06\x04" + bcd_encode(14_000_000) + bcd_encode(14_350_000),
+        )
+        bounds = parse_scope_fixed_edge_response(frame)
+        assert bounds.range_index == 6
+        assert bounds.edge == 4
+        assert bounds.start_hz == 14_000_000
+        assert bounds.end_hz == 14_350_000
+
+    def test_parse_scope_rbw_response(self) -> None:
+        from icom_lan.commands import parse_scope_rbw_response
+
+        frame = CivFrame(0xE0, 0x98, 0x27, 0x1F, b"\x01\x02")
+        receiver, rbw = parse_scope_rbw_response(frame)
+        assert receiver == 1
+        assert rbw == 2

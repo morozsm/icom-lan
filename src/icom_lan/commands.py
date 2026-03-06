@@ -22,6 +22,7 @@ from .types import (
     CivFrame,
     FilterShape,
     Mode,
+    ScopeFixedEdge,
     SsbTxBandwidth,
     bcd_decode,
     bcd_encode,
@@ -141,16 +142,45 @@ __all__ = [
     "scope_data_output",
     "scope_data_output_on",
     "scope_data_output_off",
+    "get_scope_main_sub",
     "scope_main_sub",
+    "get_scope_single_dual",
     "scope_single_dual",
+    "get_scope_mode",
     "scope_set_mode",
+    "get_scope_span",
     "scope_set_span",
+    "get_scope_ref",
     "scope_set_ref",
+    "get_scope_speed",
     "scope_set_speed",
+    "get_scope_edge",
     "scope_set_edge",
+    "get_scope_hold",
     "scope_set_hold",
+    "get_scope_during_tx",
+    "scope_set_during_tx",
+    "get_scope_center_type",
+    "scope_set_center_type",
+    "get_scope_vbw",
     "scope_set_vbw",
+    "get_scope_fixed_edge",
+    "scope_set_fixed_edge",
+    "get_scope_rbw",
     "scope_set_rbw",
+    "parse_scope_main_sub_response",
+    "parse_scope_single_dual_response",
+    "parse_scope_mode_response",
+    "parse_scope_span_response",
+    "parse_scope_ref_response",
+    "parse_scope_speed_response",
+    "parse_scope_edge_response",
+    "parse_scope_hold_response",
+    "parse_scope_during_tx_response",
+    "parse_scope_center_type_response",
+    "parse_scope_vbw_response",
+    "parse_scope_fixed_edge_response",
+    "parse_scope_rbw_response",
     # Transceiver status family (#136)
     "get_band_edge_freq",
     "get_various_squelch",
@@ -2244,8 +2274,122 @@ _SUB_SCOPE_EDGE = 0x16
 _SUB_SCOPE_HOLD = 0x17
 _SUB_SCOPE_REF = 0x19
 _SUB_SCOPE_SPEED = 0x1A
+_SUB_SCOPE_DURING_TX = 0x1B
+_SUB_SCOPE_CENTER_TYPE = 0x1C
 _SUB_SCOPE_VBW = 0x1D
+_SUB_SCOPE_FIXED_EDGE = 0x1E
 _SUB_SCOPE_RBW = 0x1F
+
+_SCOPE_SPAN_PRESETS_HZ: tuple[int, ...] = (
+    2_500,
+    5_000,
+    10_000,
+    25_000,
+    50_000,
+    100_000,
+    250_000,
+    500_000,
+)
+_SCOPE_FIXED_EDGE_RANGE_STARTS_HZ: tuple[int, ...] = (
+    50_000_000,
+    28_000_000,
+    24_890_000,
+    21_000_000,
+    18_068_000,
+    14_000_000,
+    10_100_000,
+    7_000_000,
+    5_250_000,
+    3_500_000,
+    1_800_000,
+    472_000,
+    135_000,
+    10_000,
+)
+
+
+def _validate_scope_range(name: str, value: int, minimum: int, maximum: int) -> int:
+    if not minimum <= value <= maximum:
+        raise ValueError(f"{name} must be {minimum}-{maximum}, got {value}")
+    return value
+
+
+def _scope_payload(value: bytes, receiver: int | None = None) -> bytes:
+    if receiver is None:
+        return value
+    return bytes([receiver & 0x01]) + value
+
+
+def _scope_query(
+    sub: int,
+    *,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int | None = None,
+) -> bytes:
+    data = None if receiver is None else bytes([receiver & 0x01])
+    return build_civ_frame(to_addr, from_addr, _CMD_SCOPE, sub=sub, data=data)
+
+
+def _parse_scope_frame(frame: CivFrame, sub: int) -> bytes:
+    if frame.command != _CMD_SCOPE or frame.sub != sub:
+        got = 0 if frame.sub is None else frame.sub
+        raise ValueError(
+            f"Not a scope response: command 0x{frame.command:02x} sub 0x{got:02x}"
+        )
+    if not frame.data:
+        raise ValueError("Scope response has no payload")
+    return frame.data
+
+
+def _split_scope_receiver_prefix(
+    data: bytes,
+    *,
+    expected_lengths: tuple[int, ...],
+) -> tuple[int | None, bytes]:
+    if len(data) in {length + 1 for length in expected_lengths} and data[0] in (0x00, 0x01):
+        return data[0], data[1:]
+    if len(data) not in expected_lengths:
+        expected = " or ".join(str(length) for length in expected_lengths)
+        raise ValueError(
+            f"Unexpected scope payload length: expected {expected} byte(s), got {len(data)}"
+        )
+    return None, data
+
+
+def _decode_scope_bool(frame: CivFrame, sub: int) -> bool:
+    data = _parse_scope_frame(frame, sub)
+    if len(data) != 1:
+        raise ValueError(f"Scope bool response must be 1 byte, got {len(data)}")
+    return data[0] != 0x00
+
+
+def _decode_scope_value(
+    frame: CivFrame,
+    sub: int,
+    *,
+    minimum: int,
+    maximum: int,
+) -> tuple[int | None, int]:
+    data = _parse_scope_frame(frame, sub)
+    receiver, payload = _split_scope_receiver_prefix(data, expected_lengths=(1,))
+    value = payload[0]
+    _validate_scope_range("scope value", value, minimum, maximum)
+    return receiver, value
+
+
+def _decode_scope_bcd_value(
+    frame: CivFrame,
+    sub: int,
+    *,
+    minimum: int,
+    maximum: int,
+) -> tuple[int | None, int]:
+    data = _parse_scope_frame(frame, sub)
+    receiver, payload = _split_scope_receiver_prefix(data, expected_lengths=(1,))
+    value = _bcd_decode_value(payload)
+    _validate_scope_range("scope value", value, minimum, maximum)
+    return receiver, value
 
 
 def scope_on(
@@ -2278,18 +2422,71 @@ def scope_data_output(
     )
 
 
+def get_scope_main_sub(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a 'get scope receiver' CI-V command (0x27 0x12)."""
+    return _scope_query(_SUB_SCOPE_MAIN_SUB, to_addr=to_addr, from_addr=from_addr)
+
+
+def get_scope_single_dual(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a 'get scope single/dual mode' CI-V command (0x27 0x13)."""
+    return _scope_query(_SUB_SCOPE_SINGLE_DUAL, to_addr=to_addr, from_addr=from_addr)
+
+
+def get_scope_mode(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    *,
+    receiver: int | None = None,
+) -> bytes:
+    """Build a 'get scope mode' CI-V command (0x27 0x14)."""
+    return _scope_query(
+        _SUB_SCOPE_MODE,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
+    )
+
+
 def scope_set_mode(
     mode: int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    *,
+    receiver: int | None = None,
 ) -> bytes:
     """Build a 'set scope mode' CI-V command (0x27 0x14).
 
     Args:
         mode: 0=center, 1=fixed, 2=scroll-C, 3=scroll-F.
     """
+    _validate_scope_range("scope mode", mode, 0, 3)
     return build_civ_frame(
-        to_addr, from_addr, _CMD_SCOPE, sub=_SUB_SCOPE_MODE, data=bytes([mode])
+        to_addr,
+        from_addr,
+        _CMD_SCOPE,
+        sub=_SUB_SCOPE_MODE,
+        data=_scope_payload(bytes([mode]), receiver),
+    )
+
+
+def get_scope_span(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    *,
+    receiver: int | None = None,
+) -> bytes:
+    """Build a 'get scope span' CI-V command (0x27 0x15)."""
+    return _scope_query(
+        _SUB_SCOPE_SPAN,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
     )
 
 
@@ -2297,14 +2494,36 @@ def scope_set_span(
     span: int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    *,
+    receiver: int | None = None,
 ) -> bytes:
     """Build a 'set scope span' CI-V command (0x27 0x15).
 
     Args:
         span: 0–7 (span index, radio-model dependent).
     """
+    _validate_scope_range("scope span", span, 0, 7)
     return build_civ_frame(
-        to_addr, from_addr, _CMD_SCOPE, sub=_SUB_SCOPE_SPAN, data=bytes([span])
+        to_addr,
+        from_addr,
+        _CMD_SCOPE,
+        sub=_SUB_SCOPE_SPAN,
+        data=_scope_payload(bytes([span]), receiver),
+    )
+
+
+def get_scope_edge(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    *,
+    receiver: int | None = None,
+) -> bytes:
+    """Build a 'get scope edge' CI-V command (0x27 0x16)."""
+    return _scope_query(
+        _SUB_SCOPE_EDGE,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
     )
 
 
@@ -2312,14 +2531,36 @@ def scope_set_edge(
     edge: int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    *,
+    receiver: int | None = None,
 ) -> bytes:
     """Build a 'set scope edge' CI-V command (0x27 0x16).
 
     Args:
         edge: Edge number 1–4.
     """
+    _validate_scope_range("scope edge", edge, 1, 4)
     return build_civ_frame(
-        to_addr, from_addr, _CMD_SCOPE, sub=_SUB_SCOPE_EDGE, data=bytes([edge])
+        to_addr,
+        from_addr,
+        _CMD_SCOPE,
+        sub=_SUB_SCOPE_EDGE,
+        data=_scope_payload(bytes([edge]), receiver),
+    )
+
+
+def get_scope_hold(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    *,
+    receiver: int | None = None,
+) -> bytes:
+    """Build a 'get scope hold' CI-V command (0x27 0x17)."""
+    return _scope_query(
+        _SUB_SCOPE_HOLD,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
     )
 
 
@@ -2327,6 +2568,8 @@ def scope_set_hold(
     on: bool,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    *,
+    receiver: int | None = None,
 ) -> bytes:
     """Build a 'scope hold on/off' CI-V command (0x27 0x17).
 
@@ -2334,8 +2577,11 @@ def scope_set_hold(
         on: True to enable hold, False to disable.
     """
     return build_civ_frame(
-        to_addr, from_addr, _CMD_SCOPE, sub=_SUB_SCOPE_HOLD,
-        data=b"\x01" if on else b"\x00",
+        to_addr,
+        from_addr,
+        _CMD_SCOPE,
+        sub=_SUB_SCOPE_HOLD,
+        data=_scope_payload(b"\x01" if on else b"\x00", receiver),
     )
 
 
@@ -2350,6 +2596,8 @@ def _scope_ref_encode(ref: float) -> bytes:
     Returns:
         3 bytes: [BCD thousands/hundreds, BCD tens/units, sign(0=+, 1=-)].
     """
+    if not -30.0 <= ref <= 10.0:
+        raise ValueError(f"scope ref must be -30.0 to +10.0 dB, got {ref}")
     is_negative = ref < 0
     val = int(round(abs(ref) * 10))  # e.g. 10.0 dB → 100
     thousands = val // 1000
@@ -2362,10 +2610,27 @@ def _scope_ref_encode(ref: float) -> bytes:
     return bytes([b0, b1, sign])
 
 
+def get_scope_ref(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    *,
+    receiver: int | None = None,
+) -> bytes:
+    """Build a 'get scope reference level' CI-V command (0x27 0x19)."""
+    return _scope_query(
+        _SUB_SCOPE_REF,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
+    )
+
+
 def scope_set_ref(
     ref: float,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    *,
+    receiver: int | None = None,
 ) -> bytes:
     """Build a 'set scope reference level' CI-V command (0x27 0x19).
 
@@ -2373,8 +2638,26 @@ def scope_set_ref(
         ref: Reference level in dB (-30.0 to +10.0).
     """
     return build_civ_frame(
-        to_addr, from_addr, _CMD_SCOPE, sub=_SUB_SCOPE_REF,
-        data=_scope_ref_encode(ref),
+        to_addr,
+        from_addr,
+        _CMD_SCOPE,
+        sub=_SUB_SCOPE_REF,
+        data=_scope_payload(_scope_ref_encode(ref), receiver),
+    )
+
+
+def get_scope_speed(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    *,
+    receiver: int | None = None,
+) -> bytes:
+    """Build a 'get scope speed' CI-V command (0x27 0x1A)."""
+    return _scope_query(
+        _SUB_SCOPE_SPEED,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
     )
 
 
@@ -2382,14 +2665,92 @@ def scope_set_speed(
     speed: int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    *,
+    receiver: int | None = None,
 ) -> bytes:
     """Build a 'set scope speed' CI-V command (0x27 0x1A).
 
     Args:
         speed: 0=fast, 1=mid, 2=slow.
     """
+    _validate_scope_range("scope speed", speed, 0, 2)
     return build_civ_frame(
-        to_addr, from_addr, _CMD_SCOPE, sub=_SUB_SCOPE_SPEED, data=bytes([speed])
+        to_addr,
+        from_addr,
+        _CMD_SCOPE,
+        sub=_SUB_SCOPE_SPEED,
+        data=_scope_payload(bytes([speed]), receiver),
+    )
+
+
+def get_scope_during_tx(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a 'get scope during TX' CI-V command (0x27 0x1B)."""
+    return _scope_query(_SUB_SCOPE_DURING_TX, to_addr=to_addr, from_addr=from_addr)
+
+
+def scope_set_during_tx(
+    on: bool,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a 'set scope during TX' CI-V command (0x27 0x1B)."""
+    return build_civ_frame(
+        to_addr,
+        from_addr,
+        _CMD_SCOPE,
+        sub=_SUB_SCOPE_DURING_TX,
+        data=b"\x01" if on else b"\x00",
+    )
+
+
+def get_scope_center_type(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    *,
+    receiver: int | None = None,
+) -> bytes:
+    """Build a 'get scope center type' CI-V command (0x27 0x1C)."""
+    return _scope_query(
+        _SUB_SCOPE_CENTER_TYPE,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
+    )
+
+
+def scope_set_center_type(
+    center_type: int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    *,
+    receiver: int | None = None,
+) -> bytes:
+    """Build a 'set scope center type' CI-V command (0x27 0x1C)."""
+    _validate_scope_range("scope center type", center_type, 0, 2)
+    return build_civ_frame(
+        to_addr,
+        from_addr,
+        _CMD_SCOPE,
+        sub=_SUB_SCOPE_CENTER_TYPE,
+        data=_scope_payload(bytes([center_type]), receiver),
+    )
+
+
+def get_scope_vbw(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    *,
+    receiver: int | None = None,
+) -> bytes:
+    """Build a 'get scope VBW' CI-V command (0x27 0x1D)."""
+    return _scope_query(
+        _SUB_SCOPE_VBW,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
     )
 
 
@@ -2397,6 +2758,8 @@ def scope_set_vbw(
     narrow: bool,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    *,
+    receiver: int | None = None,
 ) -> bytes:
     """Build a 'set scope VBW' CI-V command (0x27 0x1D).
 
@@ -2404,8 +2767,82 @@ def scope_set_vbw(
         narrow: True for narrow VBW, False for wide.
     """
     return build_civ_frame(
-        to_addr, from_addr, _CMD_SCOPE, sub=_SUB_SCOPE_VBW,
-        data=b"\x01" if narrow else b"\x00",
+        to_addr,
+        from_addr,
+        _CMD_SCOPE,
+        sub=_SUB_SCOPE_VBW,
+        data=_scope_payload(b"\x01" if narrow else b"\x00", receiver),
+    )
+
+
+def _resolve_scope_fixed_edge_range(start_hz: int) -> int:
+    if start_hz < 0:
+        raise ValueError(f"scope fixed edge start_hz must be >= 0, got {start_hz}")
+    for index, band_start in enumerate(_SCOPE_FIXED_EDGE_RANGE_STARTS_HZ, start=1):
+        if start_hz >= band_start:
+            return index
+    raise ValueError(
+        f"scope fixed edge start_hz {start_hz} is outside known IC-7610 bands"
+    )
+
+
+def get_scope_fixed_edge(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a 'get fixed-edge scope bounds' CI-V command (0x27 0x1E)."""
+    return _scope_query(_SUB_SCOPE_FIXED_EDGE, to_addr=to_addr, from_addr=from_addr)
+
+
+def scope_set_fixed_edge(
+    *,
+    edge: int,
+    start_hz: int,
+    end_hz: int,
+    range_index: int | None = None,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a 'set fixed-edge scope bounds' CI-V command (0x27 0x1E)."""
+    _validate_scope_range("scope fixed edge", edge, 1, 4)
+    if start_hz < 0:
+        raise ValueError(f"scope fixed edge start_hz must be >= 0, got {start_hz}")
+    if end_hz <= start_hz:
+        raise ValueError(
+            f"scope fixed edge end_hz must be greater than start_hz, got {start_hz}..{end_hz}"
+        )
+    resolved_range = (
+        _resolve_scope_fixed_edge_range(start_hz)
+        if range_index is None
+        else _validate_scope_range("scope fixed edge range", range_index, 1, 99)
+    )
+    payload = (
+        _bcd_encode_value(resolved_range, byte_count=1)
+        + _bcd_encode_value(edge, byte_count=1)
+        + bcd_encode(start_hz)
+        + bcd_encode(end_hz)
+    )
+    return build_civ_frame(
+        to_addr,
+        from_addr,
+        _CMD_SCOPE,
+        sub=_SUB_SCOPE_FIXED_EDGE,
+        data=payload,
+    )
+
+
+def get_scope_rbw(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    *,
+    receiver: int | None = None,
+) -> bytes:
+    """Build a 'get scope RBW' CI-V command (0x27 0x1F)."""
+    return _scope_query(
+        _SUB_SCOPE_RBW,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
     )
 
 
@@ -2413,14 +2850,21 @@ def scope_set_rbw(
     rbw: int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    *,
+    receiver: int | None = None,
 ) -> bytes:
     """Build a 'set scope RBW' CI-V command (0x27 0x1F).
 
     Args:
         rbw: 0=wide, 1=mid, 2=narrow.
     """
+    _validate_scope_range("scope rbw", rbw, 0, 2)
     return build_civ_frame(
-        to_addr, from_addr, _CMD_SCOPE, sub=_SUB_SCOPE_RBW, data=bytes([rbw])
+        to_addr,
+        from_addr,
+        _CMD_SCOPE,
+        sub=_SUB_SCOPE_RBW,
+        data=_scope_payload(bytes([rbw]), receiver),
     )
 
 
@@ -2474,6 +2918,103 @@ def scope_single_dual(
         to_addr, from_addr, _CMD_SCOPE, sub=_SUB_SCOPE_SINGLE_DUAL,
         data=b"\x01" if dual else b"\x00",
     )
+
+
+def parse_scope_main_sub_response(frame: CivFrame) -> int:
+    """Parse a scope receiver selection response."""
+    data = _parse_scope_frame(frame, _SUB_SCOPE_MAIN_SUB)
+    if len(data) != 1:
+        raise ValueError(f"Scope receiver response must be 1 byte, got {len(data)}")
+    return _validate_scope_range("scope receiver", data[0], 0, 1)
+
+
+def parse_scope_single_dual_response(frame: CivFrame) -> bool:
+    """Parse a scope single/dual response."""
+    return _decode_scope_bool(frame, _SUB_SCOPE_SINGLE_DUAL)
+
+
+def parse_scope_mode_response(frame: CivFrame) -> tuple[int | None, int]:
+    """Parse a scope mode response."""
+    return _decode_scope_value(frame, _SUB_SCOPE_MODE, minimum=0, maximum=3)
+
+
+def parse_scope_span_response(frame: CivFrame) -> tuple[int | None, int]:
+    """Parse a scope span response into the 0..7 span index."""
+    data = _parse_scope_frame(frame, _SUB_SCOPE_SPAN)
+    receiver, payload = _split_scope_receiver_prefix(data, expected_lengths=(1, 5))
+    if len(payload) == 1:
+        return receiver, _validate_scope_range("scope span", payload[0], 0, 7)
+    hz = bcd_decode(payload)
+    try:
+        span = _SCOPE_SPAN_PRESETS_HZ.index(hz)
+    except ValueError as exc:
+        raise ValueError(f"Unknown scope span frequency {hz}") from exc
+    return receiver, span
+
+
+def parse_scope_ref_response(frame: CivFrame) -> tuple[int | None, float]:
+    """Parse a scope reference response into dB."""
+    data = _parse_scope_frame(frame, _SUB_SCOPE_REF)
+    receiver, payload = _split_scope_receiver_prefix(data, expected_lengths=(3,))
+    absolute_tenths = _bcd_decode_value(payload[:2])
+    ref = absolute_tenths / 10.0
+    if payload[2]:
+        ref *= -1
+    return receiver, ref
+
+
+def parse_scope_speed_response(frame: CivFrame) -> tuple[int | None, int]:
+    """Parse a scope speed response."""
+    return _decode_scope_value(frame, _SUB_SCOPE_SPEED, minimum=0, maximum=2)
+
+
+def parse_scope_edge_response(frame: CivFrame) -> tuple[int | None, int]:
+    """Parse a scope edge response."""
+    return _decode_scope_bcd_value(frame, _SUB_SCOPE_EDGE, minimum=1, maximum=4)
+
+
+def parse_scope_hold_response(frame: CivFrame) -> tuple[int | None, bool]:
+    """Parse a scope hold response."""
+    data = _parse_scope_frame(frame, _SUB_SCOPE_HOLD)
+    receiver, payload = _split_scope_receiver_prefix(data, expected_lengths=(1,))
+    return receiver, payload[0] != 0x00
+
+
+def parse_scope_during_tx_response(frame: CivFrame) -> bool:
+    """Parse a scope during-TX response."""
+    return _decode_scope_bool(frame, _SUB_SCOPE_DURING_TX)
+
+
+def parse_scope_center_type_response(frame: CivFrame) -> tuple[int | None, int]:
+    """Parse a scope center-type response."""
+    return _decode_scope_value(frame, _SUB_SCOPE_CENTER_TYPE, minimum=0, maximum=2)
+
+
+def parse_scope_vbw_response(frame: CivFrame) -> tuple[int | None, bool]:
+    """Parse a scope VBW response."""
+    data = _parse_scope_frame(frame, _SUB_SCOPE_VBW)
+    receiver, payload = _split_scope_receiver_prefix(data, expected_lengths=(1,))
+    return receiver, payload[0] != 0x00
+
+
+def parse_scope_fixed_edge_response(frame: CivFrame) -> ScopeFixedEdge:
+    """Parse a fixed-edge scope response."""
+    data = _parse_scope_frame(frame, _SUB_SCOPE_FIXED_EDGE)
+    if len(data) == 13 and data[0] in (0x00, 0x01):
+        data = data[1:]
+    if len(data) != 12:
+        raise ValueError(f"Scope fixed-edge response must be 12 bytes, got {len(data)}")
+    return ScopeFixedEdge(
+        range_index=_bcd_decode_value(data[:1]),
+        edge=_bcd_decode_value(data[1:2]),
+        start_hz=bcd_decode(data[2:7]),
+        end_hz=bcd_decode(data[7:12]),
+    )
+
+
+def parse_scope_rbw_response(frame: CivFrame) -> tuple[int | None, int]:
+    """Parse a scope RBW response."""
+    return _decode_scope_value(frame, _SUB_SCOPE_RBW, minimum=0, maximum=2)
 
 
 # --- CW keying ---

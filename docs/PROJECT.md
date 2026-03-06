@@ -193,7 +193,7 @@ Each UDP packet has a fixed-format header (see `packettypes.h` in wfview):
 - [ ] `#134` repeater / tone family
 - [ ] `#135` system / configuration family
 - [ ] `#136` transceiver / RIT / TX status family
-- [ ] `#137` advanced scope controls
+- [x] `#137` advanced scope controls
 - [ ] `#138` cross-surface exposure (API / CLI / Web / rigctld)
 
 ### Current Status
@@ -208,12 +208,13 @@ Each UDP packet has a fixed-format header (see `packettypes.h` in wfview):
 - **M3 rigctld integration (issue #149, 2026-03-06):** rigctld startup now reuses the shared factory/config path for `--backend lan` and `--backend serial`, shares backend-provided state cache when available, prefers backend-native mode introspection via `radio_protocol.ModeInfoCapable` while falling back to the core `Radio.get_mode()/set_mode(str, ...)` contract, and adds serial TCP smoke coverage for read/write rigctld commands while keeping audit logging and circuit-breaker behavior unchanged.
 - **M3 documentation (issue #151, 2026-03-06):** comprehensive IC-7610 USB serial backend setup guide (macOS-first), backend capability matrix (LAN vs Serial), migration/backward-compatibility section, troubleshooting for serial CI-V and USB audio, and critical hardware finding (`CI-V USB Port` must be `Link to [CI-V]`, not `[REMOTE]`) documented across guide/radios.md, guide/troubleshooting.md, radio-protocol.md, and new guide/ic7610-usb-setup.md.
 - **M3 status:** complete (epic #152 closed-out).
-- **IC-7610 parity matrix (issue #139, 2026-03-06): 85 implemented, 14 partial, 35 missing**; source of truth is `docs/parity/ic7610_command_matrix.json`, and the explicit parity smoke profile is `pytest -m "integration and ic7610_parity" tests/integration`.
+- **M4 advanced scope parity (issue #137, 2026-03-06):** `advanced_scope` is now fully implemented in maintained library/runtime surfaces, including receiver select, single/dual, mode/span/edge/hold/ref/speed, during-TX, center type, VBW/RBW, fixed-edge bounds, and receive-side projection into `RadioState.scope_controls`.
+- **IC-7610 parity matrix (issue #139, 2026-03-06): 98 implemented, 4 partial, 32 missing**; source of truth is `docs/parity/ic7610_command_matrix.json`, and the explicit parity smoke profile is `pytest -m "integration and ic7610_parity" tests/integration`.
 - **M4 parity family counts (from matrix):**
   - `baseline_core` (pre-M4 baseline, no owner issue): 38 implemented, 0 partial, 0 missing
   - `#132 vfo_dualwatch_scan`: 0 implemented, 4 partial, 6 missing
   - `#136 transceiver_status`: 11 implemented, 0 partial, 0 missing
-  - `#137 advanced_scope`: 0 implemented, 10 partial, 3 missing
+  - `#137 advanced_scope`: 13 implemented, 0 partial, 0 missing
   - `#130 dsp_levels`: 21 implemented, 0 partial, 0 missing
   - `#131 operator_toggles`: 15 implemented, 0 partial, 0 missing
   - `#133 memory_bandstack`: 0 implemented, 0 partial, 6 missing

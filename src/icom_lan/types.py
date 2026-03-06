@@ -15,6 +15,7 @@ __all__ = [
     "AudioCapabilities",
     "get_audio_capabilities",
     "ScopeCompletionPolicy",
+    "ScopeFixedEdge",
     "PacketHeader",
     "CivFrame",
     "HEADER_SIZE",
@@ -130,6 +131,16 @@ class ScopeCompletionPolicy(StrEnum):
     STRICT = "strict"  # Wait for a CI-V ACK response
     FAST = "fast"      # Fire-and-forget, do not wait for ACK
     VERIFY = "verify"  # Fire-and-forget, but await actual scope data activity
+
+
+@dataclass(frozen=True, slots=True)
+class ScopeFixedEdge:
+    """Fixed-edge scope bounds for IC-7610 scope configuration."""
+
+    range_index: int
+    edge: int
+    start_hz: int
+    end_hz: int
 
 
 @dataclass(frozen=True, slots=True)

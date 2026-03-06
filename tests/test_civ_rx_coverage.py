@@ -924,6 +924,49 @@ def test_update_radio_state_cmd07_active_receiver_main(radio_with_state: IcomRad
     assert rs.active == "MAIN"
 
 
+def test_update_radio_state_advanced_scope_family(
+    radio_with_state: IcomRadio,
+) -> None:
+    """Readable scope-control responses project into RadioState.scope_controls."""
+    rs = radio_with_state._radio_state
+
+    for frame in (
+        _make_frame(cmd=0x27, sub=0x12, data=b"\x01"),
+        _make_frame(cmd=0x27, sub=0x13, data=b"\x01"),
+        _make_frame(cmd=0x27, sub=0x14, data=b"\x00\x03"),
+        _make_frame(cmd=0x27, sub=0x15, data=b"\x00" + bcd_encode(250_000)),
+        _make_frame(cmd=0x27, sub=0x17, data=b"\x00\x01"),
+        _make_frame(cmd=0x27, sub=0x19, data=b"\x00\x01\x05\x01"),
+        _make_frame(cmd=0x27, sub=0x1A, data=b"\x00\x02"),
+        _make_frame(cmd=0x27, sub=0x1B, data=b"\x01"),
+        _make_frame(cmd=0x27, sub=0x1C, data=b"\x00\x02"),
+        _make_frame(cmd=0x27, sub=0x1D, data=b"\x00\x01"),
+        _make_frame(
+            cmd=0x27,
+            sub=0x1E,
+            data=b"\x06\x04" + bcd_encode(14_000_000) + bcd_encode(14_350_000),
+        ),
+        _make_frame(cmd=0x27, sub=0x1F, data=b"\x01\x02"),
+    ):
+        radio_with_state._update_radio_state_from_frame(frame)
+
+    assert rs.scope_controls.receiver == 1
+    assert rs.scope_controls.dual is True
+    assert rs.scope_controls.mode == 3
+    assert rs.scope_controls.span == 6
+    assert rs.scope_controls.hold is True
+    assert rs.scope_controls.ref_db == -10.5
+    assert rs.scope_controls.speed == 2
+    assert rs.scope_controls.during_tx is True
+    assert rs.scope_controls.center_type == 2
+    assert rs.scope_controls.vbw_narrow is True
+    assert rs.scope_controls.fixed_edge.range_index == 6
+    assert rs.scope_controls.fixed_edge.edge == 4
+    assert rs.scope_controls.fixed_edge.start_hz == 14_000_000
+    assert rs.scope_controls.fixed_edge.end_hz == 14_350_000
+    assert rs.scope_controls.rbw == 2
+
+
 def test_update_radio_state_exception_suppressed(radio_with_state: IcomRadio) -> None:
     """Exception in _update_radio_state_from_frame is suppressed (line 621-622)."""
     # RadioState uses slots=True, so replace the whole object with a MagicMock

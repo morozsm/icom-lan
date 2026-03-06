@@ -21,6 +21,19 @@ from .commands import (
     parse_frequency_response,
     parse_level_response,
     parse_mode_response,
+    parse_scope_center_type_response,
+    parse_scope_during_tx_response,
+    parse_scope_edge_response,
+    parse_scope_fixed_edge_response,
+    parse_scope_hold_response,
+    parse_scope_main_sub_response,
+    parse_scope_mode_response,
+    parse_scope_rbw_response,
+    parse_scope_ref_response,
+    parse_scope_single_dual_response,
+    parse_scope_span_response,
+    parse_scope_speed_response,
+    parse_scope_vbw_response,
 )
 from .exceptions import ConnectionError, TimeoutError
 from .scope import ScopeFrame
@@ -548,6 +561,87 @@ class _CivRxMixin:
                         self._notify_change("ssb_tx_bandwidth_changed", {"value": val})
                     elif sub == 0x65:  # IP+
                         self._notify_change("ipplus_changed", {"on": bool(val)})
+            elif frame.command == 0x27:
+                if frame.sub == 0x12:
+                    self._notify_change(
+                        "scope_receiver_changed",
+                        {"receiver": parse_scope_main_sub_response(frame)},
+                    )
+                elif frame.sub == 0x13:
+                    self._notify_change(
+                        "scope_dual_changed",
+                        {"dual": parse_scope_single_dual_response(frame)},
+                    )
+                elif frame.sub == 0x14:
+                    receiver, mode = parse_scope_mode_response(frame)
+                    self._notify_change(
+                        "scope_mode_changed",
+                        {"receiver": receiver, "mode": mode},
+                    )
+                elif frame.sub == 0x15:
+                    receiver, span = parse_scope_span_response(frame)
+                    self._notify_change(
+                        "scope_span_changed",
+                        {"receiver": receiver, "span": span},
+                    )
+                elif frame.sub == 0x16:
+                    receiver, edge = parse_scope_edge_response(frame)
+                    self._notify_change(
+                        "scope_edge_changed",
+                        {"receiver": receiver, "edge": edge},
+                    )
+                elif frame.sub == 0x17:
+                    receiver, hold = parse_scope_hold_response(frame)
+                    self._notify_change(
+                        "scope_hold_changed",
+                        {"receiver": receiver, "on": hold},
+                    )
+                elif frame.sub == 0x19:
+                    receiver, ref_db = parse_scope_ref_response(frame)
+                    self._notify_change(
+                        "scope_ref_changed",
+                        {"receiver": receiver, "ref_db": ref_db},
+                    )
+                elif frame.sub == 0x1A:
+                    receiver, speed = parse_scope_speed_response(frame)
+                    self._notify_change(
+                        "scope_speed_changed",
+                        {"receiver": receiver, "speed": speed},
+                    )
+                elif frame.sub == 0x1B:
+                    self._notify_change(
+                        "scope_during_tx_changed",
+                        {"on": parse_scope_during_tx_response(frame)},
+                    )
+                elif frame.sub == 0x1C:
+                    receiver, center_type = parse_scope_center_type_response(frame)
+                    self._notify_change(
+                        "scope_center_type_changed",
+                        {"receiver": receiver, "center_type": center_type},
+                    )
+                elif frame.sub == 0x1D:
+                    receiver, narrow = parse_scope_vbw_response(frame)
+                    self._notify_change(
+                        "scope_vbw_changed",
+                        {"receiver": receiver, "narrow": narrow},
+                    )
+                elif frame.sub == 0x1E:
+                    bounds = parse_scope_fixed_edge_response(frame)
+                    self._notify_change(
+                        "scope_fixed_edge_changed",
+                        {
+                            "range_index": bounds.range_index,
+                            "edge": bounds.edge,
+                            "start_hz": bounds.start_hz,
+                            "end_hz": bounds.end_hz,
+                        },
+                    )
+                elif frame.sub == 0x1F:
+                    receiver, rbw = parse_scope_rbw_response(frame)
+                    self._notify_change(
+                        "scope_rbw_changed",
+                        {"receiver": receiver, "rbw": rbw},
+                    )
             elif frame.command == 0x1C and frame.sub == 0x00:  # PTT
                 if frame.data:
                     val = bool(frame.data[0])
@@ -708,6 +802,63 @@ class _CivRxMixin:
                     elif sub in _CMD16_GLOBAL_VALUE_FIELDS:
                         field, _ = _CMD16_GLOBAL_VALUE_FIELDS[sub]
                         setattr(rs, field, ((val >> 4) & 0x0F) * 10 + (val & 0x0F))
+
+            elif cmd == 0x27:
+                scope = rs.scope_controls
+                if frame.sub == 0x12:
+                    scope.receiver = parse_scope_main_sub_response(frame)
+                elif frame.sub == 0x13:
+                    scope.dual = parse_scope_single_dual_response(frame)
+                elif frame.sub == 0x14:
+                    receiver, mode = parse_scope_mode_response(frame)
+                    if receiver is not None:
+                        scope.receiver = receiver
+                    scope.mode = mode
+                elif frame.sub == 0x15:
+                    receiver, span = parse_scope_span_response(frame)
+                    if receiver is not None:
+                        scope.receiver = receiver
+                    scope.span = span
+                elif frame.sub == 0x16:
+                    receiver, edge = parse_scope_edge_response(frame)
+                    if receiver is not None:
+                        scope.receiver = receiver
+                    scope.edge = edge
+                elif frame.sub == 0x17:
+                    receiver, hold = parse_scope_hold_response(frame)
+                    if receiver is not None:
+                        scope.receiver = receiver
+                    scope.hold = hold
+                elif frame.sub == 0x19:
+                    receiver, ref_db = parse_scope_ref_response(frame)
+                    if receiver is not None:
+                        scope.receiver = receiver
+                    scope.ref_db = ref_db
+                elif frame.sub == 0x1A:
+                    receiver, speed = parse_scope_speed_response(frame)
+                    if receiver is not None:
+                        scope.receiver = receiver
+                    scope.speed = speed
+                elif frame.sub == 0x1B:
+                    scope.during_tx = parse_scope_during_tx_response(frame)
+                elif frame.sub == 0x1C:
+                    receiver, center_type = parse_scope_center_type_response(frame)
+                    if receiver is not None:
+                        scope.receiver = receiver
+                    scope.center_type = center_type
+                elif frame.sub == 0x1D:
+                    receiver, vbw_narrow = parse_scope_vbw_response(frame)
+                    if receiver is not None:
+                        scope.receiver = receiver
+                    scope.vbw_narrow = vbw_narrow
+                elif frame.sub == 0x1E:
+                    scope.fixed_edge = parse_scope_fixed_edge_response(frame)
+                    scope.edge = scope.fixed_edge.edge
+                elif frame.sub == 0x1F:
+                    receiver, rbw = parse_scope_rbw_response(frame)
+                    if receiver is not None:
+                        scope.receiver = receiver
+                    scope.rbw = rbw
 
             elif cmd == 0x1A:
                 sub = frame.sub
@@ -990,7 +1141,7 @@ class _CivRxMixin:
         if frame.command == 0x17:
             return False
         if frame.command == 0x27:
-            return False
+            return len(frame.data) == 0
         # If no further payload beyond command/sub is included, it's typically a GET
         return len(frame.data) == 0
 

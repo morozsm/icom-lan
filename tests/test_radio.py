@@ -250,6 +250,18 @@ def _meter_status_response(
     return _wrap_civ_in_udp(civ)
 
 
+def _scope_response(sub: int, payload: bytes) -> bytes:
+    """Build a CI-V scope-control response wrapped in UDP."""
+    civ = build_civ_frame(
+        CONTROLLER_ADDR,
+        IC_7610_ADDR,
+        0x27,
+        sub=sub,
+        data=payload,
+    )
+    return _wrap_civ_in_udp(civ)
+
+
 # ---------------------------------------------------------------------------
 # MockTransport — replaces IcomTransport for unit testing
 # ---------------------------------------------------------------------------
@@ -717,6 +729,133 @@ class TestScopeCallbackSafety:
 
         # set_frequency is fire-and-forget — RX pump unaffected.
         await radio.set_frequency(7_074_000)
+
+
+class TestAdvancedScopeControls:
+    """Advanced scope getters/setters are exposed as maintained radio methods."""
+
+    @pytest.mark.asyncio
+    async def test_get_scope_receiver(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        mock_transport.queue_response(_scope_response(0x12, b"\x01"))
+        assert await radio.get_scope_receiver() == 1
+
+    @pytest.mark.asyncio
+    async def test_set_scope_receiver_updates_radio_state(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        await radio.set_scope_receiver(1)
+        assert radio.radio_state.scope_controls.receiver == 1
+        assert len(mock_transport.sent_packets) > 0
+
+    @pytest.mark.asyncio
+    async def test_get_scope_mode(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        mock_transport.queue_response(_scope_response(0x14, b"\x00\x03"))
+        assert await radio.get_scope_mode() == 3
+
+    @pytest.mark.asyncio
+    async def test_set_scope_during_tx_updates_radio_state(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        await radio.set_scope_during_tx(True)
+        assert radio.radio_state.scope_controls.during_tx is True
+        assert len(mock_transport.sent_packets) > 0
+
+    @pytest.mark.asyncio
+    async def test_get_scope_center_type(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        mock_transport.queue_response(_scope_response(0x1C, b"\x00\x02"))
+        assert await radio.get_scope_center_type() == 2
+
+    @pytest.mark.asyncio
+    async def test_get_scope_fixed_edge(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        mock_transport.queue_response(
+            _scope_response(
+                0x1E,
+                b"\x06\x04" + bcd_encode(14_000_000) + bcd_encode(14_350_000),
+            )
+        )
+        bounds = await radio.get_scope_fixed_edge()
+        assert bounds.range_index == 6
+        assert bounds.edge == 4
+        assert bounds.start_hz == 14_000_000
+        assert bounds.end_hz == 14_350_000
+
+    @pytest.mark.asyncio
+    async def test_set_scope_fixed_edge_updates_radio_state(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        await radio.set_scope_fixed_edge(edge=4, start_hz=14_000_000, end_hz=14_350_000)
+        fixed_edge = radio.radio_state.scope_controls.fixed_edge
+        assert fixed_edge.range_index == 6
+        assert fixed_edge.edge == 4
+        assert fixed_edge.start_hz == 14_000_000
+        assert fixed_edge.end_hz == 14_350_000
+        assert len(mock_transport.sent_packets) > 0
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("method_name", "response", "field_name", "expected"),
+        [
+            ("get_scope_dual", _scope_response(0x13, b"\x01"), "dual", True),
+            ("get_scope_span", _scope_response(0x15, b"\x00" + bcd_encode(250_000)), "span", 6),
+            ("get_scope_edge", _scope_response(0x16, b"\x00\x04"), "edge", 4),
+            ("get_scope_hold", _scope_response(0x17, b"\x00\x01"), "hold", True),
+            ("get_scope_ref", _scope_response(0x19, b"\x00\x01\x05\x01"), "ref_db", -10.5),
+            ("get_scope_speed", _scope_response(0x1A, b"\x00\x02"), "speed", 2),
+            ("get_scope_during_tx", _scope_response(0x1B, b"\x01"), "during_tx", True),
+            ("get_scope_vbw", _scope_response(0x1D, b"\x00\x01"), "vbw_narrow", True),
+            ("get_scope_rbw", _scope_response(0x1F, b"\x01\x02"), "rbw", 2),
+        ],
+    )
+    async def test_get_scope_variants_update_radio_state(
+        self,
+        radio: IcomRadio,
+        mock_transport: MockTransport,
+        method_name: str,
+        response: bytes,
+        field_name: str,
+        expected: object,
+    ) -> None:
+        mock_transport.queue_response(response)
+        result = await getattr(radio, method_name)()
+        assert result == expected
+        assert getattr(radio.radio_state.scope_controls, field_name) == expected
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("method_name", "kwargs", "field_name", "expected"),
+        [
+            ("set_scope_dual", {"dual": True}, "dual", True),
+            ("set_scope_mode", {"mode": 3}, "mode", 3),
+            ("set_scope_span", {"span": 6}, "span", 6),
+            ("set_scope_edge", {"edge": 4}, "edge", 4),
+            ("set_scope_hold", {"on": True}, "hold", True),
+            ("set_scope_ref", {"ref": -10.5}, "ref_db", -10.5),
+            ("set_scope_speed", {"speed": 2}, "speed", 2),
+            ("set_scope_center_type", {"center_type": 2}, "center_type", 2),
+            ("set_scope_vbw", {"narrow": True}, "vbw_narrow", True),
+            ("set_scope_rbw", {"rbw": 2}, "rbw", 2),
+        ],
+    )
+    async def test_set_scope_variants_update_radio_state(
+        self,
+        radio: IcomRadio,
+        mock_transport: MockTransport,
+        method_name: str,
+        kwargs: dict[str, object],
+        field_name: str,
+        expected: object,
+    ) -> None:
+        await getattr(radio, method_name)(**kwargs)
+        assert getattr(radio.radio_state.scope_controls, field_name) == expected
+        assert len(mock_transport.sent_packets) > 0
 
 
 # ---------------------------------------------------------------------------

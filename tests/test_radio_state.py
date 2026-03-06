@@ -95,6 +95,10 @@ def test_radio_state_defaults() -> None:
     assert rs.dash_ratio == 0
     assert rs.nb_depth == 0
     assert rs.nb_width == 0
+    assert rs.scope_controls.receiver == 0
+    assert rs.scope_controls.dual is False
+    assert rs.scope_controls.during_tx is False
+    assert rs.scope_controls.fixed_edge.start_hz == 0
     assert isinstance(rs.main, ReceiverState)
     assert isinstance(rs.sub, ReceiverState)
 
@@ -175,6 +179,7 @@ def test_to_dict_structure() -> None:
         "dash_ratio",
         "nb_depth",
         "nb_width",
+        "scope_controls",
         "main",
         "sub",
     }
@@ -208,11 +213,41 @@ def test_to_dict_reflects_field_changes() -> None:
     rs.main.att = 18
     rs.ptt = True
     rs.split = True
+    rs.scope_controls.receiver = 1
+    rs.scope_controls.during_tx = True
     d = rs.to_dict()
     assert d["ptt"] is True
     assert d["split"] is True
     assert d["main"]["freq"] == 14_074_000
     assert d["main"]["att"] == 18
+    assert d["scope_controls"]["receiver"] == 1
+    assert d["scope_controls"]["during_tx"] is True
+
+
+def test_to_dict_scope_controls_structure() -> None:
+    rs = RadioState()
+    scope = rs.to_dict()["scope_controls"]
+    assert set(scope.keys()) == {
+        "receiver",
+        "dual",
+        "mode",
+        "span",
+        "edge",
+        "hold",
+        "ref_db",
+        "speed",
+        "during_tx",
+        "center_type",
+        "vbw_narrow",
+        "rbw",
+        "fixed_edge",
+    }
+    assert set(scope["fixed_edge"].keys()) == {
+        "range_index",
+        "edge",
+        "start_hz",
+        "end_hz",
+    }
 
 
 def test_to_dict_sub_independent() -> None:

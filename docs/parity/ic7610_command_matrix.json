@@ -6,9 +6,9 @@
     "wfview_commander": "references/wfview/src/radio/icomcommander.cpp"
   },
   "status_totals": {
-    "implemented": 85,
-    "partial": 14,
-    "missing": 35
+    "implemented": 98,
+    "partial": 4,
+    "missing": 32
   },
   "families": {
     "baseline_core": {
@@ -96,9 +96,9 @@
       "owner_issue": 137,
       "summary": "Remaining scope configuration controls tracked by issue #137.",
       "counts": {
-        "implemented": 0,
-        "partial": 10,
-        "missing": 3
+        "implemented": 13,
+        "partial": 0,
+        "missing": 0
       }
     }
   },
@@ -2384,16 +2384,21 @@
       "set": true,
       "admin": false,
       "family": "advanced_scope",
-      "status": "partial",
+      "status": "implemented",
       "runtime_symbols": [
+        "icom_lan.commands:get_scope_main_sub",
         "icom_lan.commands:scope_main_sub",
-        "icom_lan.web.radio_poller:SwitchScopeReceiver"
+        "icom_lan.commands:parse_scope_main_sub_response",
+        "icom_lan.radio:Icom7610CoreRadio.get_scope_receiver",
+        "icom_lan.radio:Icom7610CoreRadio.set_scope_receiver",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
-        "tests/test_scope.py::scope_main_sub",
-        "tests/test_web_server.py::SwitchScopeReceiver"
-      ],
-      "notes": "Scope receiver selection is wired for web poller/use-site callers, but not exposed as a stable high-level radio method."
+        "tests/test_scope.py::test_get_scope_main_sub",
+        "tests/test_scope.py::test_scope_main_sub_sub",
+        "tests/test_radio.py::test_get_scope_receiver",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_advanced_scope_family"
+      ]
     },
     {
       "id": 120,
@@ -2404,14 +2409,22 @@
       "set": true,
       "admin": false,
       "family": "advanced_scope",
-      "status": "partial",
+      "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:scope_single_dual"
+        "icom_lan.commands:get_scope_single_dual",
+        "icom_lan.commands:scope_single_dual",
+        "icom_lan.commands:parse_scope_single_dual_response",
+        "icom_lan.radio:Icom7610CoreRadio.get_scope_dual",
+        "icom_lan.radio:Icom7610CoreRadio.set_scope_dual",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
-        "tests/test_scope.py::scope_single_dual"
-      ],
-      "notes": "Single/dual scope mode has a tested builder only; no maintained high-level surface yet."
+        "tests/test_scope.py::test_get_scope_single_dual",
+        "tests/test_scope.py::test_scope_single_dual_dual",
+        "tests/test_radio.py::test_get_scope_variants_update_radio_state",
+        "tests/test_radio.py::test_set_scope_variants_update_radio_state",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_advanced_scope_family"
+      ]
     },
     {
       "id": 121,
@@ -2422,14 +2435,23 @@
       "set": true,
       "admin": false,
       "family": "advanced_scope",
-      "status": "partial",
+      "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:scope_set_mode"
+        "icom_lan.commands:get_scope_mode",
+        "icom_lan.commands:scope_set_mode",
+        "icom_lan.commands:parse_scope_mode_response",
+        "icom_lan.radio:Icom7610CoreRadio.get_scope_mode",
+        "icom_lan.radio:Icom7610CoreRadio.set_scope_mode",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
-        "tests/test_scope.py::test_scope_set_mode"
-      ],
-      "notes": "Scope mode has a tested builder only; no maintained high-level surface yet."
+        "tests/test_scope.py::test_get_scope_mode",
+        "tests/test_scope.py::test_scope_set_mode",
+        "tests/test_commands.py::test_parse_scope_mode_response_with_receiver_prefix",
+        "tests/test_radio.py::test_get_scope_mode",
+        "tests/test_radio.py::test_set_scope_variants_update_radio_state",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_advanced_scope_family"
+      ]
     },
     {
       "id": 122,
@@ -2440,14 +2462,23 @@
       "set": true,
       "admin": false,
       "family": "advanced_scope",
-      "status": "partial",
+      "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:scope_set_span"
+        "icom_lan.commands:get_scope_span",
+        "icom_lan.commands:scope_set_span",
+        "icom_lan.commands:parse_scope_span_response",
+        "icom_lan.radio:Icom7610CoreRadio.get_scope_span",
+        "icom_lan.radio:Icom7610CoreRadio.set_scope_span",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
-        "tests/test_scope.py::test_scope_set_span"
-      ],
-      "notes": "Scope span has a tested builder only; no maintained high-level surface yet."
+        "tests/test_scope.py::test_get_scope_span",
+        "tests/test_scope.py::test_scope_set_span",
+        "tests/test_commands.py::test_parse_scope_span_response_from_bcd_frequency",
+        "tests/test_radio.py::test_get_scope_variants_update_radio_state",
+        "tests/test_radio.py::test_set_scope_variants_update_radio_state",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_advanced_scope_family"
+      ]
     },
     {
       "id": 123,
@@ -2458,14 +2489,22 @@
       "set": true,
       "admin": false,
       "family": "advanced_scope",
-      "status": "partial",
+      "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:scope_set_edge"
+        "icom_lan.commands:get_scope_edge",
+        "icom_lan.commands:scope_set_edge",
+        "icom_lan.commands:parse_scope_edge_response",
+        "icom_lan.radio:Icom7610CoreRadio.get_scope_edge",
+        "icom_lan.radio:Icom7610CoreRadio.set_scope_edge",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
-        "tests/test_scope.py::test_scope_set_edge"
-      ],
-      "notes": "Scope edge selection has a tested builder only; no maintained high-level surface yet."
+        "tests/test_scope.py::test_get_scope_edge",
+        "tests/test_scope.py::test_scope_set_edge",
+        "tests/test_radio.py::test_get_scope_variants_update_radio_state",
+        "tests/test_radio.py::test_set_scope_variants_update_radio_state",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_advanced_scope_family"
+      ]
     },
     {
       "id": 124,
@@ -2476,14 +2515,22 @@
       "set": true,
       "admin": false,
       "family": "advanced_scope",
-      "status": "partial",
+      "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:scope_set_hold"
+        "icom_lan.commands:get_scope_hold",
+        "icom_lan.commands:scope_set_hold",
+        "icom_lan.commands:parse_scope_hold_response",
+        "icom_lan.radio:Icom7610CoreRadio.get_scope_hold",
+        "icom_lan.radio:Icom7610CoreRadio.set_scope_hold",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
-        "tests/test_scope.py::test_scope_set_hold"
-      ],
-      "notes": "Scope hold has a tested builder only; no maintained high-level surface yet."
+        "tests/test_scope.py::test_get_scope_hold",
+        "tests/test_scope.py::test_scope_set_hold",
+        "tests/test_radio.py::test_get_scope_variants_update_radio_state",
+        "tests/test_radio.py::test_set_scope_variants_update_radio_state",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_advanced_scope_family"
+      ]
     },
     {
       "id": 125,
@@ -2494,14 +2541,23 @@
       "set": true,
       "admin": false,
       "family": "advanced_scope",
-      "status": "partial",
+      "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:scope_set_ref"
+        "icom_lan.commands:get_scope_ref",
+        "icom_lan.commands:scope_set_ref",
+        "icom_lan.commands:parse_scope_ref_response",
+        "icom_lan.radio:Icom7610CoreRadio.get_scope_ref",
+        "icom_lan.radio:Icom7610CoreRadio.set_scope_ref",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
-        "tests/test_scope.py::test_scope_set_ref"
-      ],
-      "notes": "Scope reference level has a tested builder only; no maintained high-level surface yet."
+        "tests/test_scope.py::test_get_scope_ref",
+        "tests/test_scope.py::test_scope_set_ref",
+        "tests/test_commands.py::test_parse_scope_ref_response",
+        "tests/test_radio.py::test_get_scope_variants_update_radio_state",
+        "tests/test_radio.py::test_set_scope_variants_update_radio_state",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_advanced_scope_family"
+      ]
     },
     {
       "id": 126,
@@ -2512,14 +2568,22 @@
       "set": true,
       "admin": false,
       "family": "advanced_scope",
-      "status": "partial",
+      "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:scope_set_speed"
+        "icom_lan.commands:get_scope_speed",
+        "icom_lan.commands:scope_set_speed",
+        "icom_lan.commands:parse_scope_speed_response",
+        "icom_lan.radio:Icom7610CoreRadio.get_scope_speed",
+        "icom_lan.radio:Icom7610CoreRadio.set_scope_speed",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
-        "tests/test_scope.py::test_scope_set_speed"
-      ],
-      "notes": "Scope speed has a tested builder only; no maintained high-level surface yet."
+        "tests/test_scope.py::test_get_scope_speed",
+        "tests/test_scope.py::test_scope_set_speed",
+        "tests/test_radio.py::test_get_scope_variants_update_radio_state",
+        "tests/test_radio.py::test_set_scope_variants_update_radio_state",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_advanced_scope_family"
+      ]
     },
     {
       "id": 127,
@@ -2530,7 +2594,23 @@
       "set": true,
       "admin": false,
       "family": "advanced_scope",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_scope_during_tx",
+        "icom_lan.commands:scope_set_during_tx",
+        "icom_lan.commands:parse_scope_during_tx_response",
+        "icom_lan.radio:Icom7610CoreRadio.get_scope_during_tx",
+        "icom_lan.radio:Icom7610CoreRadio.set_scope_during_tx",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+      ],
+      "test_patterns": [
+        "tests/test_scope.py::test_get_scope_during_tx",
+        "tests/test_scope.py::test_scope_set_during_tx",
+        "tests/test_commands.py::test_parse_scope_during_tx_response",
+        "tests/test_radio.py::test_get_scope_variants_update_radio_state",
+        "tests/test_radio.py::test_set_scope_during_tx_updates_radio_state",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_advanced_scope_family"
+      ]
     },
     {
       "id": 128,
@@ -2541,7 +2621,23 @@
       "set": true,
       "admin": false,
       "family": "advanced_scope",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_scope_center_type",
+        "icom_lan.commands:scope_set_center_type",
+        "icom_lan.commands:parse_scope_center_type_response",
+        "icom_lan.radio:Icom7610CoreRadio.get_scope_center_type",
+        "icom_lan.radio:Icom7610CoreRadio.set_scope_center_type",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+      ],
+      "test_patterns": [
+        "tests/test_scope.py::test_get_scope_center_type",
+        "tests/test_scope.py::test_scope_set_center_type",
+        "tests/test_commands.py::test_parse_scope_center_type_response",
+        "tests/test_radio.py::test_get_scope_center_type",
+        "tests/test_radio.py::test_set_scope_variants_update_radio_state",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_advanced_scope_family"
+      ]
     },
     {
       "id": 129,
@@ -2552,14 +2648,22 @@
       "set": true,
       "admin": false,
       "family": "advanced_scope",
-      "status": "partial",
+      "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:scope_set_vbw"
+        "icom_lan.commands:get_scope_vbw",
+        "icom_lan.commands:scope_set_vbw",
+        "icom_lan.commands:parse_scope_vbw_response",
+        "icom_lan.radio:Icom7610CoreRadio.get_scope_vbw",
+        "icom_lan.radio:Icom7610CoreRadio.set_scope_vbw",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
-        "tests/test_scope.py::test_scope_set_vbw"
-      ],
-      "notes": "Scope VBW has a tested builder only; no maintained high-level surface yet."
+        "tests/test_scope.py::test_get_scope_vbw",
+        "tests/test_scope.py::test_scope_set_vbw",
+        "tests/test_radio.py::test_get_scope_variants_update_radio_state",
+        "tests/test_radio.py::test_set_scope_variants_update_radio_state",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_advanced_scope_family"
+      ]
     },
     {
       "id": 130,
@@ -2570,7 +2674,23 @@
       "set": true,
       "admin": false,
       "family": "advanced_scope",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_scope_fixed_edge",
+        "icom_lan.commands:scope_set_fixed_edge",
+        "icom_lan.commands:parse_scope_fixed_edge_response",
+        "icom_lan.radio:Icom7610CoreRadio.get_scope_fixed_edge",
+        "icom_lan.radio:Icom7610CoreRadio.set_scope_fixed_edge",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+      ],
+      "test_patterns": [
+        "tests/test_scope.py::test_get_scope_fixed_edge",
+        "tests/test_scope.py::test_scope_set_fixed_edge",
+        "tests/test_commands.py::test_parse_scope_fixed_edge_response",
+        "tests/test_radio.py::test_get_scope_fixed_edge",
+        "tests/test_radio.py::test_set_scope_fixed_edge_updates_radio_state",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_advanced_scope_family"
+      ]
     },
     {
       "id": 131,
@@ -2581,14 +2701,23 @@
       "set": true,
       "admin": false,
       "family": "advanced_scope",
-      "status": "partial",
+      "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:scope_set_rbw"
+        "icom_lan.commands:get_scope_rbw",
+        "icom_lan.commands:scope_set_rbw",
+        "icom_lan.commands:parse_scope_rbw_response",
+        "icom_lan.radio:Icom7610CoreRadio.get_scope_rbw",
+        "icom_lan.radio:Icom7610CoreRadio.set_scope_rbw",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
-        "tests/test_scope.py::test_scope_set_rbw"
-      ],
-      "notes": "Scope RBW has a tested builder only; no maintained high-level surface yet."
+        "tests/test_scope.py::test_get_scope_rbw",
+        "tests/test_scope.py::test_scope_set_rbw",
+        "tests/test_commands.py::test_parse_scope_rbw_response",
+        "tests/test_radio.py::test_get_scope_variants_update_radio_state",
+        "tests/test_radio.py::test_set_scope_variants_update_radio_state",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_advanced_scope_family"
+      ]
     },
     {
       "id": 132,

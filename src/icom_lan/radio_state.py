@@ -13,7 +13,9 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
 
-__all__ = ["ReceiverState", "RadioState"]
+from .types import ScopeFixedEdge
+
+__all__ = ["ReceiverState", "ScopeControlsState", "RadioState"]
 
 
 @dataclass(slots=True)
@@ -49,6 +51,32 @@ class ReceiverState:
     nb_level: int = 0         # 0-255
     digisel_shift: int = 0    # 0-255
     af_mute: bool = False
+
+
+@dataclass(slots=True)
+class ScopeControlsState:
+    """Readable IC-7610 scope-control state."""
+
+    receiver: int = 0
+    dual: bool = False
+    mode: int = 0
+    span: int = 0
+    edge: int = 0
+    hold: bool = False
+    ref_db: float = 0.0
+    speed: int = 0
+    during_tx: bool = False
+    center_type: int = 0
+    vbw_narrow: bool = False
+    rbw: int = 0
+    fixed_edge: ScopeFixedEdge = field(
+        default_factory=lambda: ScopeFixedEdge(
+            range_index=0,
+            edge=0,
+            start_hz=0,
+            end_hz=0,
+        )
+    )
 
 
 @dataclass(slots=True)
@@ -91,6 +119,7 @@ class RadioState:
     dash_ratio: int = 0         # 28-45
     nb_depth: int = 0           # 0-9
     nb_width: int = 0           # 0-255
+    scope_controls: ScopeControlsState = field(default_factory=ScopeControlsState)
 
     def to_dict(self) -> dict:
         """Return a JSON-serialisable dict of the current radio state."""
@@ -129,6 +158,7 @@ class RadioState:
             "dash_ratio": self.dash_ratio,
             "nb_depth": self.nb_depth,
             "nb_width": self.nb_width,
+            "scope_controls": asdict(self.scope_controls),
             "main": asdict(self.main),
             "sub": asdict(self.sub),
         }
