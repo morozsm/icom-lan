@@ -18,11 +18,13 @@ import asyncio
 import datetime
 import logging
 import time
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, cast
 
 from . import audit as _audit
 from .circuit_breaker import CircuitBreaker, CircuitState
 from .contract import ClientSession, HamlibError, RigctldConfig
+from ..radio_protocol import ModeInfoCapable, StateCacheCapable
+from .state_cache import StateCache
 
 if TYPE_CHECKING:
     from ..radio_protocol import Radio
@@ -30,6 +32,18 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 __all__ = ["RigctldServer", "run_rigctld_server"]
+
+
+def _get_mode_info_reader(
+    radio: object,
+) -> Callable[..., Awaitable[tuple[Any, int | None]]] | None:
+    """Return a backend-native mode reader when the radio exposes one."""
+    if isinstance(radio, ModeInfoCapable):
+        return radio.get_mode_info
+    candidate = getattr(radio, "get_mode_info", None)
+    if callable(candidate):
+        return cast(Callable[..., Awaitable[tuple[Any, int | None]]], candidate)
+    return None
 
 
 def _is_packet_mode_set(cmd: Any) -> bool:
@@ -107,9 +121,12 @@ class RigctldServer:
 
         if self._rig_handler is None:
             from . import handler as _handler_mod  # noqa: PLC0415
-            from .state_cache import StateCache  # noqa: PLC0415
             from .poller import RadioPoller  # noqa: PLC0415
-            cache = StateCache()
+            cache = (
+                cast(StateCache, self._radio.state_cache)
+                if isinstance(self._radio, StateCacheCapable)
+                else StateCache()
+            )
             self._rig_handler = _handler_mod.RigctldHandler(
                 self._radio, self._config, cache=cache
             )
@@ -247,11 +264,14 @@ class RigctldServer:
 
     async def _wsjtx_compat_prewarm(self) -> None:
         """Best-effort DATA-mode prewarm for WSJT-X compatibility mode."""
+        get_mode_info = _get_mode_info_reader(self._radio)
+        if get_mode_info is None:
+            return
         poller = self._poller
         if poller is not None:
             poller.write_busy = True
         try:
-            mode, _ = await self._radio.get_mode_info()
+            mode, _ = await get_mode_info()
             data_on = await self._radio.get_data_mode()
             mode_name = getattr(mode, "name", str(mode)).upper()
             if not data_on and mode_name in {"USB", "LSB", "RTTY"}:

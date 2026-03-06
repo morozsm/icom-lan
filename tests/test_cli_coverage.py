@@ -160,6 +160,48 @@ async def test_run_web_uses_serial_backend_factory_config() -> None:
 
 
 @pytest.mark.asyncio
+async def test_run_serve_uses_serial_backend_factory_config() -> None:
+    args = _run_args(
+        command="serve",
+        backend="serial",
+        serial_port="/dev/tty.usbmodem-IC7610",
+        serial_baud=115200,
+        serial_ptt_mode="civ",
+        rx_device="IC-7610 USB Audio RX",
+        tx_device="IC-7610 USB Audio TX",
+        serve_host="127.0.0.1",
+        serve_port=4532,
+        read_only=False,
+        max_clients=4,
+        cache_ttl=0.1,
+        wsjtx_compat=False,
+        log_level="INFO",
+        audit_log=None,
+        rate_limit=None,
+    )
+    _, radio = _mock_radio_ctx()
+    with (
+        patch("icom_lan.cli.create_radio", return_value=radio) as create_radio,
+        patch("icom_lan.cli._cmd_serve", new_callable=AsyncMock) as cmd_serve,
+    ):
+        cmd_serve.return_value = 0
+        rc = await _run(args)
+
+    assert rc == 0
+    create_radio.assert_called_once_with(
+        SerialBackendConfig(
+            device="/dev/tty.usbmodem-IC7610",
+            baudrate=115200,
+            timeout=1.0,
+            rx_device="IC-7610 USB Audio RX",
+            tx_device="IC-7610 USB Audio TX",
+            ptt_mode="civ",
+        )
+    )
+    cmd_serve.assert_awaited_once_with(radio, args)
+
+
+@pytest.mark.asyncio
 async def test_run_dispatches_power_on_off_and_unknown_paths(capsys: pytest.CaptureFixture[str]) -> None:
     _, radio = _mock_radio_ctx()
     with patch("icom_lan.cli.create_radio", return_value=radio):

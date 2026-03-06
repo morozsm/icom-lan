@@ -179,7 +179,7 @@ Each UDP packet has a fixed-format header (see `packettypes.h` in wfview):
 - [x] `#146` Scope/waterfall on serial with guardrails (code/tests complete; live serial evidence pending for final issue closure)
 - [x] `#147` CLI backend selection and serial/audio flags
 - [x] `#148` Web backend-neutral integration
-- [ ] `#149` rigctld backend-neutral integration
+- [x] `#149` rigctld backend-neutral integration
 - [ ] `#151` Docs/migration/capability matrix
 
 ### Current Status
@@ -191,7 +191,8 @@ Each UDP packet has a fixed-format header (see `packettypes.h` in wfview):
 - **M3 serial scope guardrails (issue #146, 2026-03-06):** serial backend keeps the shared error contract in disconnected state (`ConnectionError` before low-baud guardrail evaluation), includes deterministic low-baud guardrail with explicit override (`allow_low_baud_scope` / `ICOM_SERIAL_SCOPE_ALLOW_LOW_BAUD`), and now has dedicated serial integration scope profile/gating (`ICOM_SERIAL_DEVICE`, `ICOM_SERIAL_BAUDRATE`, `ICOM_SERIAL_RADIO_ADDR`) alongside serial-specific CI-V pacing (`ICOM_SERIAL_CIV_MIN_INTERVAL_MS`) while LAN scope behavior remains unchanged.
 - **M3 CLI integration (issue #147, 2026-03-06):** unified CLI backend selection now routes through `create_radio(...)`, includes serial/audio flags, supports JSON audio-device listing, and preserves backward-compatible LAN defaults.
 - **M3 web integration (issue #148, 2026-03-06):** web startup/runtime now stays on the shared factory/config path for both LAN and serial radios, removes backend-specific state pokes from `web/`, gates scope/audio behavior via runtime capability protocols, and adds serial-focused smoke/contract coverage so LAN-only assumptions are caught in CI.
-- **M3 backlog:** active epic `#152` (priority P0), with remaining implementation chunks `#149`, `#151` (priority P1); `#146` only needs live serial hardware evidence for issue closure.
+- **M3 rigctld integration (issue #149, 2026-03-06):** rigctld startup now reuses the shared factory/config path for `--backend lan` and `--backend serial`, shares backend-provided state cache when available, formalizes backend-native mode introspection via `radio_protocol.ModeInfoCapable`, and adds serial TCP smoke coverage for read/write rigctld commands while keeping audit logging and circuit-breaker behavior unchanged.
+- **M3 backlog:** active epic `#152` (priority P0), with remaining implementation chunk `#151` (priority P1); `#146` only needs live serial hardware evidence for issue closure.
 
 ### Reliability Test Expansion (2026-03-05)
 - Added extended integration coverage scaffolding for:
