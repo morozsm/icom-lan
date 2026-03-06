@@ -116,13 +116,17 @@ class Icom7610SerialRadio(Icom7610CoreRadio):
         await self.disconnect()
 
     async def disconnect(self) -> None:
+        # Always stop watchdog first to avoid orphan retry loops on failed reconnects.
+        await self._stop_civ_data_watchdog()
         if (
             self._conn_state != RadioConnectionState.CONNECTED
             and not self._serial_session.connected
         ):
+            self._conn_state = RadioConnectionState.DISCONNECTED
+            self._civ_stream_ready = False
+            self._civ_recovering = False
             return
         if self._conn_state != RadioConnectionState.CONNECTED:
-            await self._stop_civ_data_watchdog()
             await self._stop_civ_worker()
             await self._stop_civ_rx_pump()
             await self._serial_session.disconnect()
@@ -133,6 +137,7 @@ class Icom7610SerialRadio(Icom7610CoreRadio):
             self._civ_recovering = False
             return
         await super().disconnect()
+        await self._serial_session.disconnect()
         self._ctrl_transport = self._serial_session.control_transport
 
     async def soft_reconnect(self) -> None:
@@ -150,9 +155,10 @@ class Icom7610SerialRadio(Icom7610CoreRadio):
         try:
             await self._serial_session.connect()
         except Exception as exc:
-            self._conn_state = RadioConnectionState.DISCONNECTED
+            # Keep recovery state so watchdog can continue retries.
+            self._conn_state = RadioConnectionState.RECONNECTING
             self._civ_stream_ready = False
-            self._civ_recovering = False
+            self._civ_recovering = True
             raise ConnectionError(
                 f"Failed to reconnect serial session on {self._serial_device}: {exc}"
             ) from exc
@@ -209,11 +215,15 @@ class Icom7610SerialRadio(Icom7610CoreRadio):
         try:
             while True:
                 await asyncio.sleep(self._SERIAL_WATCHDOG_INTERVAL_S)
-                if self._conn_state != RadioConnectionState.CONNECTED:
+                if self._conn_state not in (
+                    RadioConnectionState.CONNECTED,
+                    RadioConnectionState.RECONNECTING,
+                ):
                     continue
                 if self._serial_session.ready:
                     self._civ_stream_ready = True
                     self._civ_recovering = False
+                    self._conn_state = RadioConnectionState.CONNECTED
                     self._last_civ_data_received = time.monotonic()
                     continue
 
