@@ -48,6 +48,45 @@ _DEFAULT_STATIC_DIR = pathlib.Path(__file__).parent / "static"
 _RADIO_MODEL = "IC-7610"
 
 
+def _runtime_capabilities(radio: "Radio | None") -> set[str]:
+    """Return conservative runtime capabilities for the active radio."""
+    if radio is None:
+        return set()
+
+    from ..radio_protocol import AudioCapable, DualReceiverCapable, ScopeCapable
+
+    raw_caps = getattr(radio, "capabilities", None)
+    if isinstance(raw_caps, set):
+        caps = set(raw_caps)
+    else:
+        caps = set()
+
+    if caps:
+        if "scope" in caps and not isinstance(radio, ScopeCapable):
+            caps.discard("scope")
+        if "audio" in caps and not isinstance(radio, AudioCapable):
+            caps.discard("audio")
+        if "dual_rx" in caps and not isinstance(radio, DualReceiverCapable):
+            caps.discard("dual_rx")
+        return caps
+
+    if isinstance(radio, ScopeCapable):
+        caps.add("scope")
+    if isinstance(radio, AudioCapable):
+        caps.add("audio")
+    if isinstance(radio, DualReceiverCapable):
+        caps.add("dual_rx")
+    return caps
+
+
+def _supports_scope(radio: "Radio | None") -> bool:
+    return "scope" in _runtime_capabilities(radio)
+
+
+def _supports_audio(radio: "Radio | None") -> bool:
+    return "audio" in _runtime_capabilities(radio)
+
+
 @dataclass
 class WebConfig:
     """Configuration for :class:`WebServer`.
@@ -103,7 +142,10 @@ class WebServer:
                 self._state_cache = StateCache()
         else:
             self._state_cache = StateCache()
-        self._radio_state: RadioState = RadioState()
+        raw_radio_state = getattr(radio, "radio_state", None) if radio is not None else None
+        self._radio_state: RadioState = (
+            raw_radio_state if isinstance(raw_radio_state, RadioState) else RadioState()
+        )
         self._audio_broadcaster = AudioBroadcaster(radio)
         self._command_queue: CommandQueue = CommandQueue()
         self._radio_poller: RadioPoller | None = None
@@ -159,6 +201,9 @@ class WebServer:
         async with self._scope_enable_lock:
             self._scope_handlers.add(handler)
             if self._radio is not None:
+                if not _supports_scope(self._radio):
+                    logger.info("scope: active radio does not expose runtime scope support")
+                    return
                 if self._radio_ready():
                     self._set_scope_data_callback(self._broadcast_scope)
                     self._command_queue.put(EnableScope())
@@ -171,7 +216,7 @@ class WebServer:
     def unregister_scope_handler(self, handler: "ScopeHandler") -> None:
         """Unregister a scope handler."""
         self._scope_handlers.discard(handler)
-        if not self._scope_handlers and self._radio is not None:
+        if not self._scope_handlers and self._radio is not None and _supports_scope(self._radio):
             self._set_scope_data_callback(None)
             if self._scope_enabled:
                 loop = asyncio.get_event_loop()
@@ -179,7 +224,7 @@ class WebServer:
 
     async def _disable_scope_async(self) -> None:
         """Disable scope on the radio when no more handlers are connected."""
-        if self._radio is None:
+        if self._radio is None or not _supports_scope(self._radio):
             return
         await asyncio.sleep(self._scope_disable_grace)
         if self._scope_handlers:
@@ -310,7 +355,7 @@ class WebServer:
 
     def _on_radio_reconnect(self) -> None:
         """Called after soft_reconnect — re-enable scope if clients are connected."""
-        if self._scope_handlers and self._radio is not None:
+        if self._scope_handlers and self._radio is not None and _supports_scope(self._radio):
             if self._radio_ready():
                 self._set_scope_data_callback(self._broadcast_scope)
                 self._command_queue.put(EnableScope())
@@ -342,6 +387,8 @@ class WebServer:
         try:
             while True:
                 if not self._scope_handlers or self._radio is None:
+                    return
+                if not _supports_scope(self._radio):
                     return
                 if self._radio_ready():
                     self._set_scope_data_callback(self._broadcast_scope)
@@ -385,6 +432,8 @@ class WebServer:
                 await asyncio.sleep(self._scope_health_interval)
                 if not self._scope_handlers or self._radio is None:
                     continue
+                if not _supports_scope(self._radio):
+                    continue
                 # Don't re-enable scope while radio is disconnected
                 if not self._radio_ready():
                     self._scope_last_nonzero = time.monotonic()  # reset timer
@@ -426,9 +475,6 @@ class WebServer:
             # Register callback so CI-V RX stream can notify us of state changes.
             # This is the primary path for freq/mode/meter updates (fire-and-forget).
             self._radio.set_state_change_callback(self._on_radio_state_change)
-            # Pass RadioState to the CI-V RX mixin for dual-receiver state tracking.
-            if hasattr(self._radio, "_radio_state"):
-                setattr(self._radio, "_radio_state", self._radio_state)
             # Re-enable scope after soft_reconnect (CI-V stream reset loses scope state)
             self._radio.set_reconnect_callback(self._on_radio_reconnect)
             self._radio_poller = RadioPoller(
@@ -439,9 +485,10 @@ class WebServer:
                 on_meter_readings=self._on_poller_meter_readings,
             )
             self._radio_poller.start()
-            self._scope_health_task = asyncio.get_running_loop().create_task(
-                self._scope_health_monitor(), name="scope-health"
-            )
+            if _supports_scope(self._radio):
+                self._scope_health_task = asyncio.get_running_loop().create_task(
+                    self._scope_health_monitor(), name="scope-health"
+                )
         if self._config.dx_cluster_host:
             self._dx_client = DXClusterClient(
                 self._config.dx_cluster_host,
@@ -484,6 +531,10 @@ class WebServer:
             return
         if self._radio is None:
             raise RuntimeError("No radio connected")
+        if not _supports_audio(self._radio):
+            raise RuntimeError(
+                "Audio bridge is unavailable: active radio does not support audio streaming."
+            )
 
         self._audio_bridge = AudioBridge(
             self._radio,
@@ -770,19 +821,7 @@ class WebServer:
         )
 
     async def _serve_capabilities(self, writer: asyncio.StreamWriter) -> None:
-        _raw_caps = getattr(self._radio, "capabilities", None) if self._radio is not None else None
-        caps: set[str]
-        if isinstance(_raw_caps, set):
-            caps = set(_raw_caps)
-        else:
-            caps = set()
-            if self._radio is not None:
-                if hasattr(self._radio, "enable_scope"):
-                    caps.add("scope")
-                if hasattr(self._radio, "start_audio_rx_opus"):
-                    caps.add("audio")
-                if hasattr(self._radio, "set_ptt"):
-                    caps.add("tx")
+        caps = _runtime_capabilities(self._radio)
         _raw_model = getattr(self._radio, "model", None) if self._radio is not None else None
         model: str = _raw_model if isinstance(_raw_model, str) else self._config.radio_model
         body = json.dumps(

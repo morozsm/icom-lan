@@ -135,6 +135,8 @@ class _ContractRadio(Protocol):
     def capabilities(self) -> set[str]: ...
     @property
     def connected(self) -> bool: ...
+    @property
+    def radio_ready(self) -> bool: ...
 
 
 @dataclass(slots=True)
@@ -251,3 +253,15 @@ async def test_backend_contract_metadata_and_disconnect(
     assert "tx" in backend_fixture.radio.capabilities
     await backend_fixture.radio.disconnect()
     assert backend_fixture.radio.connected is False
+
+
+@pytest.mark.asyncio
+async def test_backend_contract_radio_ready_tracks_connection(
+    backend_fixture: _BackendFixture,
+) -> None:
+    expected_initial = backend_fixture.name == "lan"
+    assert backend_fixture.radio.radio_ready is expected_initial
+    if backend_fixture.name == "serial":
+        await backend_fixture.radio.connect()
+        assert backend_fixture.radio.connected is True
+        assert backend_fixture.radio.radio_ready is True

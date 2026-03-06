@@ -48,6 +48,7 @@ from .radio_state import RadioState
 __all__ = [
     "Radio",
     "AudioCapable",
+    "CivCommandCapable",
     "ScopeCapable",
     "DualReceiverCapable",
     "StateCacheCapable",
@@ -274,6 +275,22 @@ class AudioCapable(Protocol):
 
     async def push_audio_tx_opus(self, data: bytes) -> None:
         """Send Opus-encoded audio data for transmission."""
+        ...
+
+
+@runtime_checkable
+class CivCommandCapable(Protocol):
+    """Radio exposes low-level CI-V command injection for background pollers."""
+
+    async def send_civ(
+        self,
+        command: int,
+        sub: int | None = None,
+        data: bytes | None = None,
+        *,
+        wait_response: bool = True,
+    ) -> Any:
+        """Send a CI-V command through the active backend transport."""
         ...
 
 

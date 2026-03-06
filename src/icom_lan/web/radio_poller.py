@@ -381,9 +381,15 @@ class RadioPoller:
         For non-Icom backends this is a no-op — scope/meter polling simply
         won't happen, which is acceptable.
         """
-        _send_civ = getattr(self._radio, "send_civ", None)
-        if _send_civ is not None:
-            await _send_civ(cmd, sub=sub, data=data, wait_response=wait_response)
+        from ..radio_protocol import CivCommandCapable
+
+        if isinstance(self._radio, CivCommandCapable):
+            await self._radio.send_civ(
+                cmd,
+                sub=sub,
+                data=data,
+                wait_response=wait_response,
+            )
 
     def _current_active(self) -> str:
         """Return current active receiver ('MAIN' or 'SUB') from RadioState."""
@@ -393,7 +399,11 @@ class RadioPoller:
 
     async def _execute(self, cmd: Command) -> None:
         radio = self._radio
-        from ..radio_protocol import AdvancedControlCapable, DualReceiverCapable, ScopeCapable
+        from ..radio_protocol import (
+            AdvancedControlCapable,
+            DualReceiverCapable,
+            ScopeCapable,
+        )
         match cmd:
             case SetFreq(freq=freq, receiver=rx):
                 self._ensure_receiver_supported(rx, operation="set_freq")
@@ -533,20 +543,20 @@ class RadioPoller:
                 if self._on_state_event:
                     self._on_state_event("vfo_changed", {"vfo": vfo})
             case VfoSwap():
-                if hasattr(radio, "vfo_exchange"):
+                if isinstance(radio, DualReceiverCapable):
                     await cast(DualReceiverCapable, radio).vfo_exchange()
                 # After swap, active VFO stays same but freqs are exchanged
                 if self._on_state_event:
                     self._on_state_event("vfo_swapped", {})
             case VfoEqualize():
-                if hasattr(radio, "vfo_equalize"):
+                if isinstance(radio, DualReceiverCapable):
                     await cast(DualReceiverCapable, radio).vfo_equalize()
             case EnableScope(policy=policy):
-                if hasattr(radio, "enable_scope"):
+                if isinstance(radio, ScopeCapable):
                     await cast(ScopeCapable, radio).enable_scope(policy=policy)
                     logger.info("radio-poller: scope enabled")
             case DisableScope():
-                if hasattr(radio, "disable_scope"):
+                if isinstance(radio, ScopeCapable):
                     await cast(ScopeCapable, radio).disable_scope()
                     logger.info("radio-poller: scope disabled")
             case SwitchScopeReceiver(receiver=receiver):
