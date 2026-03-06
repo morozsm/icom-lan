@@ -7,7 +7,11 @@ Set environment variables to enable:
     export ICOM_USER=your_username
     export ICOM_PASS=your_password
 
-Without these, all integration tests are skipped.
+Serial-backend integration tests use:
+
+    export ICOM_SERIAL_DEVICE=/dev/ttyUSB0
+    export ICOM_SERIAL_BAUDRATE=115200
+    export ICOM_SERIAL_RADIO_ADDR=0x98
 """
 
 from __future__ import annotations
@@ -27,16 +31,32 @@ sys.path.insert(0, str(src_path))
 
 from icom_lan import IcomRadio  # noqa: E402
 
+
+def _env_int(name: str, default: int) -> int:
+    raw = os.environ.get(name)
+    if raw is None or raw.strip() == "":
+        return default
+    return int(raw, 0)
+
+
 # Environment variables
 ICOM_HOST = os.environ.get("ICOM_HOST", "")
 ICOM_USER = os.environ.get("ICOM_USER", "")
 ICOM_PASS = os.environ.get("ICOM_PASS", "")
-ICOM_RADIO_ADDR = int(os.environ.get("ICOM_RADIO_ADDR", "0x98"), 16)  # IC-7610 default
+ICOM_RADIO_ADDR = _env_int("ICOM_RADIO_ADDR", 0x98)  # IC-7610 default
+ICOM_SERIAL_DEVICE = os.environ.get("ICOM_SERIAL_DEVICE", "")
+ICOM_SERIAL_BAUDRATE = _env_int("ICOM_SERIAL_BAUDRATE", 115200)
+ICOM_SERIAL_RADIO_ADDR = _env_int("ICOM_SERIAL_RADIO_ADDR", ICOM_RADIO_ADDR)
 
 
 def has_radio_config() -> bool:
     """Check if radio connection is configured."""
     return bool(ICOM_HOST and ICOM_USER and ICOM_PASS)
+
+
+def has_serial_radio_config() -> bool:
+    """Check if serial integration backend is configured."""
+    return bool(ICOM_SERIAL_DEVICE)
 
 
 async def _connect_with_retries(radio: IcomRadio, attempts: int = 7) -> None:
@@ -69,6 +89,16 @@ def radio_config() -> dict:
         "username": ICOM_USER,
         "password": ICOM_PASS,
         "radio_addr": ICOM_RADIO_ADDR,
+    }
+
+
+@pytest.fixture
+def serial_radio_config() -> dict:
+    """Serial backend connection configuration for integration tests."""
+    return {
+        "device": ICOM_SERIAL_DEVICE,
+        "baudrate": ICOM_SERIAL_BAUDRATE,
+        "radio_addr": ICOM_SERIAL_RADIO_ADDR,
     }
 
 
@@ -149,16 +179,34 @@ def pytest_configure(config: pytest.Config) -> None:
         "markers",
         "integration: tests requiring real radio hardware (skip if not configured)",
     )
+    config.addinivalue_line(
+        "markers",
+        "serial_integration: tests requiring serial backend hardware configuration",
+    )
 
 
 def pytest_collection_modifyitems(
     config: pytest.Config, items: list[pytest.Item]
 ) -> None:
-    """Skip integration tests if radio not configured."""
-    if not has_radio_config():
-        skip = pytest.mark.skip(
-            reason="Radio not configured (set ICOM_HOST, ICOM_USER, ICOM_PASS)"
+    """Skip integration tests if required hardware profile is not configured."""
+    _ = config
+    missing_lan = not has_radio_config()
+    missing_serial = not has_serial_radio_config()
+    skip_lan = pytest.mark.skip(
+        reason="Radio not configured (set ICOM_HOST, ICOM_USER, ICOM_PASS)"
+    )
+    skip_serial = pytest.mark.skip(
+        reason=(
+            "Serial radio not configured "
+            "(set ICOM_SERIAL_DEVICE, optional ICOM_SERIAL_BAUDRATE/ICOM_SERIAL_RADIO_ADDR)"
         )
-        for item in items:
-            if "integration" in item.keywords:
-                item.add_marker(skip)
+    )
+    for item in items:
+        if "integration" not in item.keywords:
+            continue
+        if "serial_integration" in item.keywords:
+            if missing_serial:
+                item.add_marker(skip_serial)
+            continue
+        if missing_lan:
+            item.add_marker(skip_lan)

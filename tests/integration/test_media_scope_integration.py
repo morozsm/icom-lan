@@ -9,8 +9,12 @@ from typing import List
 import pytest
 
 from icom_lan import IcomRadio
-from icom_lan.exceptions import AudioCodecBackendError
+from icom_lan.backends.icom7610 import Icom7610SerialRadio
+from icom_lan.exceptions import AudioCodecBackendError, CommandError
 pytestmark = pytest.mark.integration
+
+
+_SERIAL_SCOPE_MIN_BAUD = 115200
 
 
 def _flag_enabled(name: str) -> bool:
@@ -19,6 +23,10 @@ def _flag_enabled(name: str) -> bool:
 
 def _pcm_require_frames() -> bool:
     return os.environ.get("ICOM_PCM_REQUIRE_FRAMES", "1") != "0"
+
+
+def _serial_scope_enabled() -> bool:
+    return _flag_enabled("ICOM_ALLOW_SERIAL_SCOPE") or _flag_enabled("ICOM_ALLOW_SCOPE")
 
 
 class TestAudioPcm:
@@ -113,3 +121,69 @@ class TestScopeIntegration:
                 await radio.disable_scope(policy="fast")
             except Exception:
                 pass
+
+
+@pytest.mark.serial_integration
+class TestSerialScopeIntegration:
+    """Integration coverage for serial backend scope lifecycle and guardrails."""
+
+    async def test_serial_scope_enable_capture_disable(
+        self, serial_radio_config: dict
+    ) -> None:
+        """Connect serial backend, capture a scope frame, then disable and disconnect."""
+        if not _serial_scope_enabled():
+            pytest.skip(
+                "Set ICOM_ALLOW_SERIAL_SCOPE=1 (or ICOM_ALLOW_SCOPE=1) to run serial scope integration tests"
+            )
+        baudrate = int(serial_radio_config["baudrate"])
+        if baudrate < _SERIAL_SCOPE_MIN_BAUD:
+            pytest.skip(
+                "Set ICOM_SERIAL_BAUDRATE>=115200 for serial scope lifecycle integration run"
+            )
+
+        radio = Icom7610SerialRadio(**serial_radio_config)
+        connected = False
+        try:
+            await radio.connect()
+            connected = True
+            assert radio.connected is True
+            await radio.enable_scope(policy="verify", timeout=10.0)
+            frame = await radio.capture_scope_frame(timeout=12.0)
+            assert frame.start_freq_hz > 0
+            assert frame.end_freq_hz >= frame.start_freq_hz
+            if not frame.out_of_range:
+                assert len(frame.pixels) > 0
+        except ImportError as exc:
+            pytest.skip(str(exc))
+        finally:
+            if connected:
+                try:
+                    await radio.disable_scope(policy="fast")
+                except Exception:
+                    pass
+                await radio.disconnect()
+
+    async def test_serial_scope_low_baud_guardrail_rejects(
+        self, serial_radio_config: dict
+    ) -> None:
+        """Validate low-baud guardrail rejection on real serial backend when configured."""
+        baudrate = int(serial_radio_config["baudrate"])
+        if baudrate >= _SERIAL_SCOPE_MIN_BAUD:
+            pytest.skip(
+                "Set ICOM_SERIAL_BAUDRATE below 115200 to validate serial low-baud guardrail"
+            )
+        if _flag_enabled("ICOM_SERIAL_SCOPE_ALLOW_LOW_BAUD"):
+            pytest.skip("Unset ICOM_SERIAL_SCOPE_ALLOW_LOW_BAUD to validate guardrail rejection")
+
+        radio = Icom7610SerialRadio(**serial_radio_config)
+        connected = False
+        try:
+            await radio.connect()
+            connected = True
+            with pytest.raises(CommandError, match="baudrate"):
+                await radio.enable_scope(policy="fast")
+        except ImportError as exc:
+            pytest.skip(str(exc))
+        finally:
+            if connected:
+                await radio.disconnect()
