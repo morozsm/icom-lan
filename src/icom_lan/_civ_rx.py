@@ -553,6 +553,23 @@ class _CivRxMixin:
                     val = bool(frame.data[0])
                     cache.update_ptt(val)
                     self._notify_change("ptt", {"state": val})
+            elif frame.command == 0x1C and frame.sub == 0x01:  # Tuner/ATU
+                if frame.data:
+                    self._notify_change("tuner_changed", {"status": frame.data[0]})
+            elif frame.command == 0x1C and frame.sub == 0x03:  # TX Freq Monitor
+                if frame.data:
+                    self._notify_change(
+                        "tx_freq_monitor_changed", {"on": bool(frame.data[0])}
+                    )
+            elif frame.command == 0x21:  # RIT
+                if frame.sub == 0x00 and len(frame.data) >= 3:
+                    from .commands import parse_rit_frequency_response
+                    hz = parse_rit_frequency_response(frame.data)
+                    self._notify_change("rit_freq_changed", {"hz": hz})
+                elif frame.sub == 0x01 and frame.data:
+                    self._notify_change("rit_changed", {"on": bool(frame.data[0])})
+                elif frame.sub == 0x02 and frame.data:
+                    self._notify_change("rit_tx_changed", {"on": bool(frame.data[0])})
         except Exception:
             logger.debug("civ-rx: cache update failed", exc_info=True)  # Best-effort; never let cache update break the RX loop
         # Also update RadioState (additive, does not replace StateCache)
@@ -621,15 +638,25 @@ class _CivRxMixin:
                 # Meter readings — update s_meter on active receiver
                 if frame.sub == 0x01 and frame.data:
                     rx.s_meter_sql_open = bool(frame.data[0])
+                elif frame.sub == 0x05 and frame.data:
+                    # Various squelch (Command29-aware, per-receiver)
+                    rx.s_meter_sql_open = bool(frame.data[0])
                 elif frame.sub == 0x07 and frame.data:
                     rs.overflow = bool(frame.data[0])
-                elif frame.sub == 0x02 and len(frame.data) >= 2:
+                elif len(frame.data) >= 2:
                     b0, b1 = frame.data[0], frame.data[1]
                     raw = (
                         (b0 >> 4) * 1000 + (b0 & 0x0F) * 100
                         + (b1 >> 4) * 10 + (b1 & 0x0F)
                     )
-                    rs.receiver(rs.active).s_meter = raw
+                    if frame.sub == 0x02:
+                        rs.receiver(rs.active).s_meter = raw
+                    elif frame.sub == 0x14:
+                        rs.comp_meter = raw
+                    elif frame.sub == 0x15:
+                        rs.vd_meter = raw
+                    elif frame.sub == 0x16:
+                        rs.id_meter = raw
 
             elif cmd == 0x14:
                 # Level values (AF, RF gain, SQL, power) — BCD-encoded 2-byte
@@ -720,6 +747,27 @@ class _CivRxMixin:
                 # PTT (global)
                 if frame.data:
                     rs.ptt = bool(frame.data[0])
+
+            elif cmd == 0x1C and frame.sub == 0x01:
+                # Tuner/ATU status (global)
+                if frame.data:
+                    rs.tuner_status = frame.data[0]
+
+            elif cmd == 0x1C and frame.sub == 0x03:
+                # TX frequency monitor on/off (global)
+                if frame.data:
+                    rs.tx_freq_monitor = bool(frame.data[0])
+
+            elif cmd == 0x21:
+                # RIT commands
+                if frame.sub == 0x00 and len(frame.data) >= 3:
+                    # RIT frequency offset (BCD + sign)
+                    from .commands import parse_rit_frequency_response
+                    rs.rit_freq = parse_rit_frequency_response(frame.data)
+                elif frame.sub == 0x01 and frame.data:
+                    rs.rit_on = bool(frame.data[0])
+                elif frame.sub == 0x02 and frame.data:
+                    rs.rit_tx = bool(frame.data[0])
 
             elif cmd == 0x0F:
                 # Split (global)

@@ -1108,3 +1108,82 @@ def test_check_connected_raises_when_civ_transport_none(radio: IcomRadio) -> Non
     radio._civ_transport = None
     with pytest.raises(ConnectionError, match="Not connected to radio"):
         radio._check_connected()
+
+
+# ---------------------------------------------------------------------------
+# Transceiver status family (#136) — state projection
+# ---------------------------------------------------------------------------
+
+
+def test_update_radio_state_tuner_status(radio_with_state: IcomRadio) -> None:
+    """Tuner/ATU status (0x1C 0x01) → RadioState.tuner_status."""
+    frame = CivFrame(0xE0, 0x98, 0x1C, 0x01, b"\x02")
+    radio_with_state._update_radio_state_from_frame(frame)
+    assert radio_with_state._radio_state.tuner_status == 2
+
+
+def test_update_radio_state_tx_freq_monitor(radio_with_state: IcomRadio) -> None:
+    """TX freq monitor (0x1C 0x03) → RadioState.tx_freq_monitor."""
+    frame = CivFrame(0xE0, 0x98, 0x1C, 0x03, b"\x01")
+    radio_with_state._update_radio_state_from_frame(frame)
+    assert radio_with_state._radio_state.tx_freq_monitor is True
+
+
+def test_update_radio_state_rit_frequency(radio_with_state: IcomRadio) -> None:
+    """RIT frequency (0x21 0x00) → RadioState.rit_freq."""
+    # 150 Hz positive: d0=0x50, d1=0x01, sign=0x00
+    frame = CivFrame(0xE0, 0x98, 0x21, 0x00, b"\x50\x01\x00")
+    radio_with_state._update_radio_state_from_frame(frame)
+    assert radio_with_state._radio_state.rit_freq == 150
+
+
+def test_update_radio_state_rit_frequency_negative(radio_with_state: IcomRadio) -> None:
+    """RIT frequency negative (0x21 0x00) → RadioState.rit_freq."""
+    frame = CivFrame(0xE0, 0x98, 0x21, 0x00, b"\x00\x02\x01")
+    radio_with_state._update_radio_state_from_frame(frame)
+    assert radio_with_state._radio_state.rit_freq == -200
+
+
+def test_update_radio_state_rit_status(radio_with_state: IcomRadio) -> None:
+    """RIT status (0x21 0x01) → RadioState.rit_on."""
+    frame = CivFrame(0xE0, 0x98, 0x21, 0x01, b"\x01")
+    radio_with_state._update_radio_state_from_frame(frame)
+    assert radio_with_state._radio_state.rit_on is True
+
+
+def test_update_radio_state_rit_tx_status(radio_with_state: IcomRadio) -> None:
+    """RIT TX status (0x21 0x02) → RadioState.rit_tx."""
+    frame = CivFrame(0xE0, 0x98, 0x21, 0x02, b"\x01")
+    radio_with_state._update_radio_state_from_frame(frame)
+    assert radio_with_state._radio_state.rit_tx is True
+
+
+def test_update_radio_state_comp_meter(radio_with_state: IcomRadio) -> None:
+    """Comp meter (0x15 0x14) → RadioState.comp_meter."""
+    # 42 BCD: 0x00 0x42
+    frame = CivFrame(0xE0, 0x98, 0x15, 0x14, b"\x00\x42")
+    radio_with_state._update_radio_state_from_frame(frame)
+    assert radio_with_state._radio_state.comp_meter == 42
+
+
+def test_update_radio_state_vd_meter(radio_with_state: IcomRadio) -> None:
+    """Vd meter (0x15 0x15) → RadioState.vd_meter."""
+    frame = CivFrame(0xE0, 0x98, 0x15, 0x15, b"\x01\x30")
+    radio_with_state._update_radio_state_from_frame(frame)
+    assert radio_with_state._radio_state.vd_meter == 130
+
+
+def test_update_radio_state_id_meter(radio_with_state: IcomRadio) -> None:
+    """Id meter (0x15 0x16) → RadioState.id_meter."""
+    frame = CivFrame(0xE0, 0x98, 0x15, 0x16, b"\x00\x55")
+    radio_with_state._update_radio_state_from_frame(frame)
+    assert radio_with_state._radio_state.id_meter == 55
+
+
+def test_update_radio_state_various_squelch(radio_with_state: IcomRadio) -> None:
+    """Various squelch (0x15 0x05) → ReceiverState.s_meter_sql_open."""
+    frame = CivFrame(0xE0, 0x98, 0x15, 0x05, b"\x01")
+    radio_with_state._update_radio_state_from_frame(frame)
+    rs = radio_with_state._radio_state
+    # Various squelch updates the active receiver's s_meter_sql_open
+    assert rs.receiver(rs.active).s_meter_sql_open is True

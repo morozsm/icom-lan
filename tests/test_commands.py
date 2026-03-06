@@ -866,3 +866,172 @@ class TestOperatorToggleParityCommands:
         from icom_lan.commands import parse_bool_response
 
         assert parse_bool_response(frame, **kwargs) is True
+
+
+# --- Transceiver status family (#136) ---
+
+class TestTransceiverStatusBuilders:
+    """Test CI-V builders for transceiver_status commands."""
+
+    def test_get_band_edge_freq(self) -> None:
+        from icom_lan.commands import get_band_edge_freq
+        frame = get_band_edge_freq()
+        assert b"\xfe\xfe\x98\xe0\x02\xfd" == frame
+
+    def test_get_various_squelch_main(self) -> None:
+        from icom_lan.commands import get_various_squelch
+        frame = get_various_squelch(receiver=0x00)
+        # Command29 frame: FE FE to from 29 00 15 05 FD
+        assert frame[4] == 0x29  # cmd29 prefix
+        assert b"\x15\x05" in frame
+
+    def test_get_various_squelch_sub(self) -> None:
+        from icom_lan.commands import get_various_squelch
+        frame = get_various_squelch(receiver=0x01)
+        assert frame[4] == 0x29
+        assert frame[5] == 0x01  # SUB receiver
+
+    def test_get_power_meter(self) -> None:
+        from icom_lan.commands import get_power_meter
+        frame = get_power_meter()
+        assert b"\xfe\xfe\x98\xe0\x15\x11\xfd" == frame
+
+    def test_get_comp_meter(self) -> None:
+        from icom_lan.commands import get_comp_meter
+        frame = get_comp_meter()
+        assert b"\xfe\xfe\x98\xe0\x15\x14\xfd" == frame
+
+    def test_get_vd_meter(self) -> None:
+        from icom_lan.commands import get_vd_meter
+        frame = get_vd_meter()
+        assert b"\xfe\xfe\x98\xe0\x15\x15\xfd" == frame
+
+    def test_get_id_meter(self) -> None:
+        from icom_lan.commands import get_id_meter
+        frame = get_id_meter()
+        assert b"\xfe\xfe\x98\xe0\x15\x16\xfd" == frame
+
+    def test_get_tuner_status(self) -> None:
+        from icom_lan.commands import get_tuner_status
+        frame = get_tuner_status()
+        assert b"\xfe\xfe\x98\xe0\x1c\x01\xfd" == frame
+
+    def test_set_tuner_status_on(self) -> None:
+        from icom_lan.commands import set_tuner_status
+        frame = set_tuner_status(1)
+        assert b"\x1c\x01\x01" in frame
+
+    def test_set_tuner_status_tune(self) -> None:
+        from icom_lan.commands import set_tuner_status
+        frame = set_tuner_status(2)
+        assert b"\x1c\x01\x02" in frame
+
+    def test_set_tuner_status_off(self) -> None:
+        from icom_lan.commands import set_tuner_status
+        frame = set_tuner_status(0)
+        assert b"\x1c\x01\x00" in frame
+
+    def test_set_tuner_status_invalid(self) -> None:
+        from icom_lan.commands import set_tuner_status
+        with pytest.raises(ValueError, match="0, 1, or 2"):
+            set_tuner_status(3)
+
+    def test_get_tx_freq_monitor(self) -> None:
+        from icom_lan.commands import get_tx_freq_monitor
+        frame = get_tx_freq_monitor()
+        assert b"\xfe\xfe\x98\xe0\x1c\x03\xfd" == frame
+
+    def test_set_tx_freq_monitor_on(self) -> None:
+        from icom_lan.commands import set_tx_freq_monitor
+        frame = set_tx_freq_monitor(True)
+        assert b"\x1c\x03\x01" in frame
+
+    def test_set_tx_freq_monitor_off(self) -> None:
+        from icom_lan.commands import set_tx_freq_monitor
+        frame = set_tx_freq_monitor(False)
+        assert b"\x1c\x03\x00" in frame
+
+    def test_get_rit_frequency(self) -> None:
+        from icom_lan.commands import get_rit_frequency
+        frame = get_rit_frequency()
+        assert b"\xfe\xfe\x98\xe0\x21\x00\xfd" == frame
+
+    def test_set_rit_frequency_positive(self) -> None:
+        from icom_lan.commands import set_rit_frequency
+        frame = set_rit_frequency(150)
+        # 150 Hz → BCD: d0=0x50 (50), d1=0x01 (01), sign=0x00 (positive)
+        assert b"\x21\x00\x50\x01\x00" in frame
+
+    def test_set_rit_frequency_negative(self) -> None:
+        from icom_lan.commands import set_rit_frequency
+        frame = set_rit_frequency(-200)
+        # 200 Hz → BCD: d0=0x00, d1=0x02, sign=0x01 (negative)
+        assert b"\x21\x00\x00\x02\x01" in frame
+
+    def test_set_rit_frequency_zero(self) -> None:
+        from icom_lan.commands import set_rit_frequency
+        frame = set_rit_frequency(0)
+        assert b"\x21\x00\x00\x00\x00" in frame
+
+    def test_set_rit_frequency_out_of_range(self) -> None:
+        from icom_lan.commands import set_rit_frequency
+        with pytest.raises(ValueError, match="±9999"):
+            set_rit_frequency(10000)
+        with pytest.raises(ValueError, match="±9999"):
+            set_rit_frequency(-10000)
+
+    def test_get_rit_status(self) -> None:
+        from icom_lan.commands import get_rit_status
+        frame = get_rit_status()
+        assert b"\xfe\xfe\x98\xe0\x21\x01\xfd" == frame
+
+    def test_set_rit_status_on(self) -> None:
+        from icom_lan.commands import set_rit_status
+        frame = set_rit_status(True)
+        assert b"\x21\x01\x01" in frame
+
+    def test_set_rit_status_off(self) -> None:
+        from icom_lan.commands import set_rit_status
+        frame = set_rit_status(False)
+        assert b"\x21\x01\x00" in frame
+
+    def test_get_rit_tx_status(self) -> None:
+        from icom_lan.commands import get_rit_tx_status
+        frame = get_rit_tx_status()
+        assert b"\xfe\xfe\x98\xe0\x21\x02\xfd" == frame
+
+    def test_set_rit_tx_status_on(self) -> None:
+        from icom_lan.commands import set_rit_tx_status
+        frame = set_rit_tx_status(True)
+        assert b"\x21\x02\x01" in frame
+
+
+class TestRitFrequencyParser:
+    """Test parse_rit_frequency_response."""
+
+    def test_positive_150hz(self) -> None:
+        from icom_lan.commands import parse_rit_frequency_response
+        # 150 Hz positive: d0=0x50, d1=0x01, sign=0x00
+        assert parse_rit_frequency_response(b"\x50\x01\x00") == 150
+
+    def test_negative_200hz(self) -> None:
+        from icom_lan.commands import parse_rit_frequency_response
+        assert parse_rit_frequency_response(b"\x00\x02\x01") == -200
+
+    def test_zero(self) -> None:
+        from icom_lan.commands import parse_rit_frequency_response
+        assert parse_rit_frequency_response(b"\x00\x00\x00") == 0
+
+    def test_max_positive(self) -> None:
+        from icom_lan.commands import parse_rit_frequency_response
+        # 9999 Hz: d0=0x99, d1=0x99, sign=0x00
+        assert parse_rit_frequency_response(b"\x99\x99\x00") == 9999
+
+    def test_max_negative(self) -> None:
+        from icom_lan.commands import parse_rit_frequency_response
+        assert parse_rit_frequency_response(b"\x99\x99\x01") == -9999
+
+    def test_short_data_returns_zero(self) -> None:
+        from icom_lan.commands import parse_rit_frequency_response
+        assert parse_rit_frequency_response(b"\x50\x01") == 0
+        assert parse_rit_frequency_response(b"") == 0

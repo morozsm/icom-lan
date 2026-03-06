@@ -147,6 +147,14 @@ def test_to_dict_structure() -> None:
         "split",
         "dual_watch",
         "overflow",
+        "tuner_status",
+        "tx_freq_monitor",
+        "rit_freq",
+        "rit_on",
+        "rit_tx",
+        "comp_meter",
+        "vd_meter",
+        "id_meter",
         "cw_pitch",
         "mic_gain",
         "key_speed",
@@ -226,3 +234,56 @@ def test_to_dict_is_json_serialisable() -> None:
     reloaded = json.loads(payload)
     assert reloaded["main"]["freq"] == 14_074_000
     assert reloaded["main"]["nb"] is True
+
+
+# --- Transceiver status family (#136) ---
+
+class TestTransceiverStatusState:
+    """Test RadioState fields for transceiver_status family."""
+
+    def test_tuner_status_default(self) -> None:
+        rs = RadioState()
+        assert rs.tuner_status == 0
+
+    def test_tuner_status_set(self) -> None:
+        rs = RadioState()
+        rs.tuner_status = 2
+        assert rs.tuner_status == 2
+        d = rs.to_dict()
+        assert d["tuner_status"] == 2
+
+    def test_tx_freq_monitor_default(self) -> None:
+        rs = RadioState()
+        assert rs.tx_freq_monitor is False
+
+    def test_rit_fields_defaults(self) -> None:
+        rs = RadioState()
+        assert rs.rit_freq == 0
+        assert rs.rit_on is False
+        assert rs.rit_tx is False
+
+    def test_rit_fields_set(self) -> None:
+        rs = RadioState()
+        rs.rit_freq = -150
+        rs.rit_on = True
+        rs.rit_tx = True
+        d = rs.to_dict()
+        assert d["rit_freq"] == -150
+        assert d["rit_on"] is True
+        assert d["rit_tx"] is True
+
+    def test_meter_fields_defaults(self) -> None:
+        rs = RadioState()
+        assert rs.comp_meter == 0
+        assert rs.vd_meter == 0
+        assert rs.id_meter == 0
+
+    def test_meter_fields_in_dict(self) -> None:
+        rs = RadioState()
+        rs.comp_meter = 42
+        rs.vd_meter = 130
+        rs.id_meter = 55
+        d = rs.to_dict()
+        assert d["comp_meter"] == 42
+        assert d["vd_meter"] == 130
+        assert d["id_meter"] == 55

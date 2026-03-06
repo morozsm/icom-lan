@@ -63,6 +63,14 @@ class RadioState:
     split: bool = False
     dual_watch: bool = False
     overflow: bool = False
+    tuner_status: int = 0       # 0=off, 1=on, 2=tuning
+    tx_freq_monitor: bool = False
+    rit_freq: int = 0           # signed Hz (±9999)
+    rit_on: bool = False
+    rit_tx: bool = False
+    comp_meter: int = 0         # raw 0-255
+    vd_meter: int = 0           # raw 0-255 (supply voltage)
+    id_meter: int = 0           # raw 0-255 (drain current)
     cw_pitch: int = 0           # Hz
     mic_gain: int = 0           # 0-255
     key_speed: int = 0          # WPM
@@ -93,6 +101,14 @@ class RadioState:
             "split": self.split,
             "dual_watch": self.dual_watch,
             "overflow": self.overflow,
+            "tuner_status": self.tuner_status,
+            "tx_freq_monitor": self.tx_freq_monitor,
+            "rit_freq": self.rit_freq,
+            "rit_on": self.rit_on,
+            "rit_tx": self.rit_tx,
+            "comp_meter": self.comp_meter,
+            "vd_meter": self.vd_meter,
+            "id_meter": self.id_meter,
             "cw_pitch": self.cw_pitch,
             "mic_gain": self.mic_gain,
             "key_speed": self.key_speed,
