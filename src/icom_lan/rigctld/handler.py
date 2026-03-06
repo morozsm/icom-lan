@@ -108,15 +108,60 @@ def _err(code: HamlibError) -> RigctldResponse:
     return RigctldResponse(error=code)
 
 
-def _get_mode_info_reader(
+def _mode_to_hamlib_str(mode: object) -> str:
+    """Normalize backend mode values to a hamlib-compatible string."""
+    if isinstance(mode, Mode):
+        return CIV_TO_HAMLIB_MODE.get(mode.value, mode.name)
+    if isinstance(mode, str):
+        return mode.upper()
+    name = getattr(mode, "name", None)
+    if isinstance(name, str):
+        return name.upper()
+    value = getattr(mode, "value", None)
+    if isinstance(value, int):
+        return CIV_TO_HAMLIB_MODE.get(value, "USB")
+    return str(mode).upper()
+
+
+def _get_mode_reader(
     radio: object,
-) -> Callable[..., Awaitable[tuple[Mode, int | None]]] | None:
-    """Return a backend-native mode reader when the radio exposes one."""
+) -> Callable[..., Awaitable[tuple[str, int | None]]] | None:
+    """Return a mode reader using backend-native info or the core contract."""
     if isinstance(radio, ModeInfoCapable):
-        return radio.get_mode_info
-    candidate = getattr(radio, "get_mode_info", None)
-    if callable(candidate):
-        return cast(Callable[..., Awaitable[tuple[Mode, int | None]]], candidate)
+        async def _read_mode_info(
+            receiver: int = 0,
+        ) -> tuple[str, int | None]:
+            mode, filt = await radio.get_mode_info(receiver=receiver)
+            return _mode_to_hamlib_str(mode), filt
+
+        return _read_mode_info
+
+    get_mode_info = getattr(radio, "get_mode_info", None)
+    if callable(get_mode_info):
+        async def _read_dynamic_mode_info(
+            receiver: int = 0,
+        ) -> tuple[str, int | None]:
+            mode, filt = await cast(
+                Callable[..., Awaitable[tuple[object, int | None]]],
+                get_mode_info,
+            )(receiver=receiver)
+            return _mode_to_hamlib_str(mode), filt
+
+        return _read_dynamic_mode_info
+
+    get_mode = getattr(radio, "get_mode", None)
+    if callable(get_mode):
+        async def _read_mode(
+            receiver: int = 0,
+        ) -> tuple[str, int | None]:
+            mode, filt = await cast(
+                Callable[..., Awaitable[tuple[object, int | None]]],
+                get_mode,
+            )(receiver=receiver)
+            return _mode_to_hamlib_str(mode), filt
+
+        return _read_mode
+
     return None
 
 
@@ -214,11 +259,10 @@ class RigctldHandler:
             passband = _filter_to_passband(self._cache.filter_width)
             data_mode = self._cache.data_mode
         else:
-            get_mode_info = _get_mode_info_reader(self._radio)
-            if get_mode_info is None:
+            get_mode = _get_mode_reader(self._radio)
+            if get_mode is None:
                 return _err(HamlibError.ENIMPL)
-            mode, filt = await get_mode_info()
-            mode_str = CIV_TO_HAMLIB_MODE.get(mode.value, "USB")
+            mode_str, filt = await get_mode()
             self._cache.update_mode(mode_str, filt)
             passband = _filter_to_passband(filt)
             # Fetch data mode alongside mode to keep them in sync.
@@ -243,14 +287,15 @@ class RigctldHandler:
     async def _cmd_set_mode(self, cmd: RigctldCommand) -> RigctldResponse:
         if not cmd.args:
             return _err(HamlibError.EINVAL)
-        mode_str = cmd.args[0].upper()
-        if mode_str not in HAMLIB_MODE_MAP:
+        requested_mode = cmd.args[0].upper()
+        if requested_mode not in HAMLIB_MODE_MAP:
             return _err(HamlibError.EINVAL)
-        civ_val = HAMLIB_MODE_MAP[mode_str]
+        civ_val = HAMLIB_MODE_MAP[requested_mode]
         try:
             mode = Mode(civ_val)
         except ValueError:
             return _err(HamlibError.EINVAL)
+        base_mode_str = CIV_TO_HAMLIB_MODE.get(mode.value, "USB")
         passband_hz = 0
         if len(cmd.args) >= 2:
             try:
@@ -260,24 +305,24 @@ class RigctldHandler:
         filter_width = _passband_to_filter(passband_hz)
         packet_modes = {"PKTUSB", "PKTLSB", "PKTRTTY"}
 
-        await self._radio.set_mode(mode, filter_width=filter_width)
+        await self._radio.set_mode(base_mode_str, filter_width=filter_width)
 
         # Only set DATA mode explicitly for packet modes.
         # For non-packet modes, avoid hidden side-effects (do not force DATA off).
-        if mode_str in packet_modes:
+        if requested_mode in packet_modes:
             await self._radio.set_data_mode(True)
 
             # Read-back sync: keep next get_mode deterministic for CAT clients.
             # Some radios acknowledge set-data quickly but reflect packet mode
             # with a short delay. We wait briefly to reduce client-side stalls.
             synced = False
-            get_mode_info = _get_mode_info_reader(self._radio)
-            if get_mode_info is not None:
+            get_mode = _get_mode_reader(self._radio)
+            if get_mode is not None:
                 for _ in range(5):
                     try:
-                        read_mode, _ = await get_mode_info()
+                        read_mode, _ = await get_mode()
                         read_data = await self._radio.get_data_mode()
-                        if read_mode == mode and read_data:
+                        if read_mode == base_mode_str and read_data:
                             synced = True
                             break
                     except Exception:
@@ -285,18 +330,17 @@ class RigctldHandler:
                     await asyncio.sleep(0.05)
 
             # Cache optimistic final state even if read-back lagged.
-            base_mode = CIV_TO_HAMLIB_MODE.get(mode.value, "USB")
-            self._cache.update_mode(base_mode, filter_width)
+            self._cache.update_mode(base_mode_str, filter_width)
             self._cache.update_data_mode(True)
             if not synced:
                 logger.debug(
                     "set_mode(%s): packet read-back not fully synced yet; cached optimistic state",
-                    mode_str,
+                    requested_mode,
                 )
         else:
             # For non-packet mode changes update mode cache, but preserve DATA
             # state (no forced DATA off side-effect).
-            self._cache.update_mode(mode_str, filter_width)
+            self._cache.update_mode(base_mode_str, filter_width)
 
         return _ok()
 

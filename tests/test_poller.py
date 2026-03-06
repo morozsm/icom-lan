@@ -47,6 +47,34 @@ def poller(mock_radio: AsyncMock, cache: StateCache, config: RigctldConfig) -> R
     return RadioPoller(mock_radio, cache, config)
 
 
+class _ContractModeRadio:
+    def __init__(
+        self,
+        *,
+        freq: int = 14_074_000,
+        mode: str = "USB",
+        filter_width: int | None = 1,
+        data_mode: bool = False,
+    ) -> None:
+        self.freq = freq
+        self.mode = mode
+        self.filter_width = filter_width
+        self.data_mode = data_mode
+        self.get_mode_calls = 0
+
+    async def get_frequency(self, receiver: int = 0) -> int:
+        assert receiver == 0
+        return self.freq
+
+    async def get_mode(self, receiver: int = 0) -> tuple[str, int | None]:
+        assert receiver == 0
+        self.get_mode_calls += 1
+        return self.mode, self.filter_width
+
+    async def get_data_mode(self) -> bool:
+        return self.data_mode
+
+
 # ---------------------------------------------------------------------------
 # Lifecycle
 # ---------------------------------------------------------------------------
@@ -137,6 +165,19 @@ async def test_poll_calls_radio_multiple_times(
     await poller.stop()
     # With interval=0.01s and sleep=0.05s, expect at least 3 cycles.
     assert mock_radio.get_frequency.await_count >= 3
+
+
+async def test_poll_falls_back_to_core_radio_mode_contract(
+    cache: StateCache,
+    config: RigctldConfig,
+) -> None:
+    radio = _ContractModeRadio(mode="CW", filter_width=3, data_mode=True)
+    poller = RadioPoller(radio, cache, config)
+    await poller._poll_once()
+    assert cache.mode == "CW"
+    assert cache.filter_width == 3
+    assert cache.data_mode is True
+    assert radio.get_mode_calls == 1
 
 
 # ---------------------------------------------------------------------------

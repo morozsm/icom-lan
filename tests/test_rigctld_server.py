@@ -70,6 +70,23 @@ async def _read_all(reader: asyncio.StreamReader, *, timeout: float = 1.0) -> by
         return b""
 
 
+class _ContractPrewarmRadio:
+    def __init__(self, mode: str, data_mode: bool = False) -> None:
+        self.mode = mode
+        self.data_mode = data_mode
+        self.set_data_mode = AsyncMock(side_effect=self._set_data_mode)
+
+    async def get_mode(self, receiver: int = 0) -> tuple[str, int | None]:
+        assert receiver == 0
+        return self.mode, 2
+
+    async def get_data_mode(self) -> bool:
+        return self.data_mode
+
+    async def _set_data_mode(self, on: bool) -> None:
+        self.data_mode = on
+
+
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -632,6 +649,15 @@ class TestRunRigctldServer:
 # ---------------------------------------------------------------------------
 
 class TestWsjtxCompatPrewarm:
+    async def test_prewarm_falls_back_to_core_radio_contract(self) -> None:
+        radio = _ContractPrewarmRadio("USB", data_mode=False)
+        cfg = RigctldConfig(wsjtx_compat=True)
+        srv = RigctldServer(radio, cfg, _protocol=MagicMock(), _handler=MagicMock())
+
+        await srv._wsjtx_compat_prewarm()
+
+        radio.set_data_mode.assert_awaited_once_with(True)
+
     async def test_prewarm_enables_data_when_usb_and_data_off(self, mock_radio: MagicMock) -> None:
         cfg = RigctldConfig(wsjtx_compat=True)
         srv = RigctldServer(mock_radio, cfg, _protocol=MagicMock(), _handler=MagicMock())

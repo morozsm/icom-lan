@@ -182,7 +182,7 @@ class TestHandlerPktUsb:
     ) -> None:
         resp = await handler.execute(set_cmd("set_mode", "PKTUSB"))
         assert resp.ok
-        mock_radio.set_mode.assert_awaited_once_with(Mode.USB, filter_width=None)
+        mock_radio.set_mode.assert_awaited_once_with("USB", filter_width=None)
 
     @pytest.mark.asyncio
     async def test_set_pktusb_enables_data_mode(
@@ -197,7 +197,7 @@ class TestHandlerPktUsb:
     ) -> None:
         resp = await handler.execute(set_cmd("set_mode", "PKTLSB"))
         assert resp.ok
-        mock_radio.set_mode.assert_awaited_once_with(Mode.LSB, filter_width=None)
+        mock_radio.set_mode.assert_awaited_once_with("LSB", filter_width=None)
 
     @pytest.mark.asyncio
     async def test_set_pktlsb_enables_data_mode(
@@ -219,7 +219,7 @@ class TestHandlerPktUsb:
     ) -> None:
         resp = await handler.execute(set_cmd("set_mode", "PKTRTTY"))
         assert resp.ok
-        mock_radio.set_mode.assert_awaited_once_with(Mode.RTTY, filter_width=None)
+        mock_radio.set_mode.assert_awaited_once_with("RTTY", filter_width=None)
         mock_radio.set_data_mode.assert_awaited_once_with(True)
 
 

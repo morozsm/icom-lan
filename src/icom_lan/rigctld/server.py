@@ -34,15 +34,58 @@ logger = logging.getLogger(__name__)
 __all__ = ["RigctldServer", "run_rigctld_server"]
 
 
-def _get_mode_info_reader(
+def _mode_to_name(mode: object) -> str:
+    """Normalize backend mode values to an uppercase mode name."""
+    name = getattr(mode, "name", None)
+    if isinstance(name, str):
+        return name.upper()
+    if isinstance(mode, str):
+        return mode.upper()
+    value = getattr(mode, "value", None)
+    if isinstance(value, int):
+        return getattr(mode, "name", "USB").upper()
+    return str(mode).upper()
+
+
+def _get_mode_reader(
     radio: object,
-) -> Callable[..., Awaitable[tuple[Any, int | None]]] | None:
-    """Return a backend-native mode reader when the radio exposes one."""
+) -> Callable[..., Awaitable[tuple[str, int | None]]] | None:
+    """Return a mode reader using backend-native info or the core contract."""
     if isinstance(radio, ModeInfoCapable):
-        return radio.get_mode_info
-    candidate = getattr(radio, "get_mode_info", None)
-    if callable(candidate):
-        return cast(Callable[..., Awaitable[tuple[Any, int | None]]], candidate)
+        async def _read_mode_info(
+            receiver: int = 0,
+        ) -> tuple[str, int | None]:
+            mode, filt = await radio.get_mode_info(receiver=receiver)
+            return _mode_to_name(mode), filt
+
+        return _read_mode_info
+
+    get_mode_info = getattr(radio, "get_mode_info", None)
+    if callable(get_mode_info):
+        async def _read_dynamic_mode_info(
+            receiver: int = 0,
+        ) -> tuple[str, int | None]:
+            mode, filt = await cast(
+                Callable[..., Awaitable[tuple[Any, int | None]]],
+                get_mode_info,
+            )(receiver=receiver)
+            return _mode_to_name(mode), filt
+
+        return _read_dynamic_mode_info
+
+    get_mode = getattr(radio, "get_mode", None)
+    if callable(get_mode):
+        async def _read_mode(
+            receiver: int = 0,
+        ) -> tuple[str, int | None]:
+            mode, filt = await cast(
+                Callable[..., Awaitable[tuple[Any, int | None]]],
+                get_mode,
+            )(receiver=receiver)
+            return _mode_to_name(mode), filt
+
+        return _read_mode
+
     return None
 
 
@@ -264,16 +307,15 @@ class RigctldServer:
 
     async def _wsjtx_compat_prewarm(self) -> None:
         """Best-effort DATA-mode prewarm for WSJT-X compatibility mode."""
-        get_mode_info = _get_mode_info_reader(self._radio)
-        if get_mode_info is None:
+        get_mode = _get_mode_reader(self._radio)
+        if get_mode is None:
             return
         poller = self._poller
         if poller is not None:
             poller.write_busy = True
         try:
-            mode, _ = await get_mode_info()
+            mode_name, _ = await get_mode()
             data_on = await self._radio.get_data_mode()
-            mode_name = getattr(mode, "name", str(mode)).upper()
             if not data_on and mode_name in {"USB", "LSB", "RTTY"}:
                 await self._radio.set_data_mode(True)
                 if poller is not None:

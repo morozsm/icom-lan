@@ -44,6 +44,39 @@ def set_cmd(long_cmd: str, *args: str) -> RigctldCommand:
     return RigctldCommand(short_cmd="", long_cmd=long_cmd, args=tuple(args), is_set=True)
 
 
+class _ContractModeRadio:
+    def __init__(
+        self,
+        *,
+        mode: str = "USB",
+        filter_width: int | None = 1,
+        data_mode: bool = False,
+    ) -> None:
+        self.mode = mode
+        self.filter_width = filter_width
+        self.data_mode = data_mode
+        self.set_mode_calls: list[tuple[str, int | None, int]] = []
+        self.set_data_mode_calls: list[bool] = []
+
+    async def get_mode(self, receiver: int = 0) -> tuple[str, int | None]:
+        assert receiver == 0
+        return self.mode, self.filter_width
+
+    async def set_mode(
+        self, mode: str, filter_width: int | None = None, receiver: int = 0,
+    ) -> None:
+        self.set_mode_calls.append((mode, filter_width, receiver))
+        self.mode = mode
+        self.filter_width = filter_width
+
+    async def get_data_mode(self) -> bool:
+        return self.data_mode
+
+    async def set_data_mode(self, on: bool) -> None:
+        self.set_data_mode_calls.append(on)
+        self.data_mode = on
+
+
 # ---------------------------------------------------------------------------
 # get_freq / set_freq
 # ---------------------------------------------------------------------------
@@ -137,6 +170,15 @@ async def test_get_mode_none_filter_returns_zero_passband(
 
 
 @pytest.mark.asyncio
+async def test_get_mode_falls_back_to_core_radio_contract() -> None:
+    radio = _ContractModeRadio(mode="LSB", filter_width=2)
+    h = RigctldHandler(radio, RigctldConfig())
+    resp = await h.execute(get_cmd("get_mode"))
+    assert resp.ok
+    assert resp.values == ["LSB", "2400"]
+
+
+@pytest.mark.asyncio
 async def test_get_mode_served_from_cache(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
     mock_radio.get_mode_info.return_value = (Mode.USB, 1)
     cmd = get_cmd("get_mode")
@@ -159,7 +201,7 @@ async def test_get_mode_cache_expires(mock_radio: AsyncMock) -> None:
 async def test_set_mode_calls_radio(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
     resp = await handler.execute(set_cmd("set_mode", "USB", "2400"))
     assert resp.ok
-    mock_radio.set_mode.assert_awaited_once_with(Mode.USB, filter_width=2)
+    mock_radio.set_mode.assert_awaited_once_with("USB", filter_width=2)
 
 
 @pytest.mark.asyncio
@@ -168,7 +210,7 @@ async def test_set_mode_without_passband_uses_none_filter(
 ) -> None:
     resp = await handler.execute(set_cmd("set_mode", "LSB"))
     assert resp.ok
-    mock_radio.set_mode.assert_awaited_once_with(Mode.LSB, filter_width=None)
+    mock_radio.set_mode.assert_awaited_once_with("LSB", filter_width=None)
 
 
 @pytest.mark.asyncio
@@ -186,7 +228,7 @@ async def test_set_mode_passband_zero_uses_none_filter(
 ) -> None:
     resp = await handler.execute(set_cmd("set_mode", "FM", "0"))
     assert resp.ok
-    mock_radio.set_mode.assert_awaited_once_with(Mode.FM, filter_width=None)
+    mock_radio.set_mode.assert_awaited_once_with("FM", filter_width=None)
 
 
 @pytest.mark.asyncio
@@ -195,8 +237,18 @@ async def test_set_mode_pktrtty_maps_to_rtty_and_sets_data(
 ) -> None:
     resp = await handler.execute(set_cmd("set_mode", "PKTRTTY"))
     assert resp.ok
-    mock_radio.set_mode.assert_awaited_once_with(Mode.RTTY, filter_width=None)
+    mock_radio.set_mode.assert_awaited_once_with("RTTY", filter_width=None)
     mock_radio.set_data_mode.assert_awaited_once_with(True)
+
+
+@pytest.mark.asyncio
+async def test_set_mode_uses_core_contract_string_values() -> None:
+    radio = _ContractModeRadio(mode="USB", filter_width=1, data_mode=False)
+    h = RigctldHandler(radio, RigctldConfig())
+    resp = await h.execute(set_cmd("set_mode", "PKTUSB", "2400"))
+    assert resp.ok
+    assert radio.set_mode_calls == [("USB", 2, 0)]
+    assert radio.set_data_mode_calls == [True]
 
 
 @pytest.mark.asyncio

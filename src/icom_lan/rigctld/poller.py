@@ -39,15 +39,58 @@ logger = logging.getLogger(__name__)
 _STATS_LOG_INTERVAL: float = 30.0
 
 
-def _get_mode_info_reader(
+def _mode_to_hamlib_str(mode: object) -> str:
+    """Normalize backend mode values to a hamlib-compatible string."""
+    value = getattr(mode, "value", None)
+    if isinstance(value, int):
+        return CIV_TO_HAMLIB_MODE.get(value, getattr(mode, "name", "USB"))
+    name = getattr(mode, "name", None)
+    if isinstance(name, str):
+        return name.upper()
+    if isinstance(mode, str):
+        return mode.upper()
+    return str(mode).upper()
+
+
+def _get_mode_reader(
     radio: object,
-) -> Callable[..., Awaitable[tuple[Any, int | None]]] | None:
-    """Return a backend-native mode reader when the radio exposes one."""
+) -> Callable[..., Awaitable[tuple[str, int | None]]] | None:
+    """Return a mode reader using backend-native info or the core contract."""
     if isinstance(radio, ModeInfoCapable):
-        return radio.get_mode_info
-    candidate = getattr(radio, "get_mode_info", None)
-    if callable(candidate):
-        return cast(Callable[..., Awaitable[tuple[Any, int | None]]], candidate)
+        async def _read_mode_info(
+            receiver: int = 0,
+        ) -> tuple[str, int | None]:
+            mode, filt = await radio.get_mode_info(receiver=receiver)
+            return _mode_to_hamlib_str(mode), filt
+
+        return _read_mode_info
+
+    get_mode_info = getattr(radio, "get_mode_info", None)
+    if callable(get_mode_info):
+        async def _read_dynamic_mode_info(
+            receiver: int = 0,
+        ) -> tuple[str, int | None]:
+            mode, filt = await cast(
+                Callable[..., Awaitable[tuple[Any, int | None]]],
+                get_mode_info,
+            )(receiver=receiver)
+            return _mode_to_hamlib_str(mode), filt
+
+        return _read_dynamic_mode_info
+
+    get_mode = getattr(radio, "get_mode", None)
+    if callable(get_mode):
+        async def _read_mode(
+            receiver: int = 0,
+        ) -> tuple[str, int | None]:
+            mode, filt = await cast(
+                Callable[..., Awaitable[tuple[Any, int | None]]],
+                get_mode,
+            )(receiver=receiver)
+            return _mode_to_hamlib_str(mode), filt
+
+        return _read_mode
+
     return None
 
 
@@ -178,15 +221,14 @@ class RadioPoller:
 
         # --- mode -------------------------------------------------------
         try:
-            get_mode_info = _get_mode_info_reader(self._radio)
-            if get_mode_info is not None:
-                mode, filter_width = await get_mode_info()
-                mode_str = CIV_TO_HAMLIB_MODE.get(mode.value, "USB")
+            get_mode = _get_mode_reader(self._radio)
+            if get_mode is not None:
+                mode_str, filter_width = await get_mode()
                 self._cache.update_mode(mode_str, filter_width)
         except (IcomTimeoutError, IcomConnectionError) as exc:
-            logger.warning("RadioPoller: get_mode_info failed: %s", exc)
+            logger.warning("RadioPoller: get_mode failed: %s", exc)
         except Exception as exc:  # pragma: no cover — unexpected
-            logger.warning("RadioPoller: get_mode_info unexpected error: %s", exc)
+            logger.warning("RadioPoller: get_mode unexpected error: %s", exc)
 
         # Bail out early if a write started while we were awaiting.
         if self.write_busy:
