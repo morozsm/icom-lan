@@ -171,16 +171,16 @@ Each UDP packet has a fixed-format header (see `packettypes.h` in wfview):
 - [x] Add serial CI-V link foundation + deterministic serial test matrix
 - [x] Expand reliability matrix and stabilize connect/recovery behavior
 
-### Phase 8 — IC-7610 USB Backend MVP (M3) 🚧 IN PROGRESS
+### Phase 8 — IC-7610 USB Backend MVP (M3) ✅ COMPLETE
 **Goal:** Complete IC-7610 serial backend (control + audio + scope) and wire all consumers.
 
 - [x] `#144` Serial radio wrapper/session
 - [x] `#145` USB audio driver
-- [x] `#146` Scope/waterfall on serial with guardrails (code/tests complete; live serial evidence pending for final issue closure)
+- [x] `#146` Scope/waterfall on serial with guardrails (live hardware validated, 2026-03-06)
 - [x] `#147` CLI backend selection and serial/audio flags
 - [x] `#148` Web backend-neutral integration
 - [x] `#149` rigctld backend-neutral integration
-- [ ] `#151` Docs/migration/capability matrix
+- [x] `#151` Docs/migration/capability matrix (2026-03-06)
 
 ### Current Status
 **Package version in `pyproject.toml`: `0.11.0`.**
@@ -192,7 +192,8 @@ Each UDP packet has a fixed-format header (see `packettypes.h` in wfview):
 - **M3 CLI integration (issue #147, 2026-03-06):** unified CLI backend selection now routes through `create_radio(...)`, includes serial/audio flags, supports JSON audio-device listing, and preserves backward-compatible LAN defaults.
 - **M3 web integration (issue #148, 2026-03-06):** web startup/runtime now stays on the shared factory/config path for both LAN and serial radios, removes backend-specific state pokes from `web/`, gates scope/audio behavior via runtime capability protocols, and adds serial-focused smoke/contract coverage so LAN-only assumptions are caught in CI.
 - **M3 rigctld integration (issue #149, 2026-03-06):** rigctld startup now reuses the shared factory/config path for `--backend lan` and `--backend serial`, shares backend-provided state cache when available, prefers backend-native mode introspection via `radio_protocol.ModeInfoCapable` while falling back to the core `Radio.get_mode()/set_mode(str, ...)` contract, and adds serial TCP smoke coverage for read/write rigctld commands while keeping audit logging and circuit-breaker behavior unchanged.
-- **M3 backlog:** active epic `#152` (priority P0), with remaining implementation chunk `#151` (priority P1); `#146` only needs live serial hardware evidence for issue closure.
+- **M3 documentation (issue #151, 2026-03-06):** comprehensive IC-7610 USB serial backend setup guide (macOS-first), backend capability matrix (LAN vs Serial), migration/backward-compatibility section, troubleshooting for serial CI-V and USB audio, and critical hardware finding (`CI-V USB Port` must be `Link to [CI-V]`, not `[REMOTE]`) documented across guide/radios.md, guide/troubleshooting.md, radio-protocol.md, and new guide/ic7610-usb-setup.md.
+- **M3 status:** complete (epic #152 closed-out).
 
 ### Reliability Test Expansion (2026-03-05)
 - Added extended integration coverage scaffolding for:

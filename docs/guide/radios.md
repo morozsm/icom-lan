@@ -5,9 +5,27 @@
 ### IC-7610
 
 - **CI-V Address:** `0x98`
-- **Ports:** 50001 (control), 50002 (CI-V), 50003 (audio)
-- **Features verified:** frequency, mode, power, S-meter, SWR, ALC, PTT, CW keying, VFO select, split, attenuator, preamp, power on/off, discovery
+- **LAN Ports:** 50001 (control), 50002 (CI-V), 50003 (audio)
+- **USB:** Serial CI-V + USB audio devices ([setup guide](ic7610-usb-setup.md))
+- **Features verified:** frequency, mode, power, S-meter, SWR, ALC, PTT, CW keying, VFO select, split, attenuator, preamp, power on/off, discovery (LAN only), scope/waterfall
 - **Dual receiver:** use `select_vfo("MAIN")` / `select_vfo("SUB")`
+
+#### Backend Comparison
+
+| Feature | LAN Backend | Serial Backend |
+|---------|-------------|----------------|
+| **Control (freq/mode/PTT)** | ✅ Full | ✅ Full |
+| **Meters (S/SWR/ALC)** | ✅ Full | ✅ Full |
+| **Audio RX** | ✅ Opus/PCM over UDP | ✅ USB audio device |
+| **Audio TX** | ✅ Opus/PCM over UDP | ✅ USB audio device |
+| **Scope/Waterfall** | ✅ Full (~225 pkt/s) | ⚠️ Requires ≥115200 baud |
+| **Dual Receiver** | ✅ Command29 | ✅ Command29 |
+| **Remote Access** | ✅ Over LAN/VPN | ❌ USB only |
+| **Discovery** | ✅ UDP broadcast | ❌ N/A |
+| **Setup** | IP, username, password | USB cable + device path |
+
+!!! tip "USB Serial Setup"
+    See the **[IC-7610 USB Serial Backend Setup Guide](ic7610-usb-setup.md)** for step-by-step instructions on using the serial backend (macOS-first).
 
 ## Should Work (Untested)
 
