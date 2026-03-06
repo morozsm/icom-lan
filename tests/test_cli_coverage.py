@@ -14,6 +14,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from icom_lan.backends.config import SerialBackendConfig
 from icom_lan.cli import (
     _cmd_att,
     _cmd_audio_loopback,
@@ -114,6 +115,48 @@ async def test_run_dispatches_non_audio_commands(command: str, handler_name: str
 
     assert rc == 7
     handler.assert_awaited_once_with(radio, args)
+
+
+@pytest.mark.asyncio
+async def test_run_web_uses_serial_backend_factory_config() -> None:
+    args = _run_args(
+        command="web",
+        backend="serial",
+        serial_port="/dev/tty.usbmodem-IC7610",
+        serial_baud=115200,
+        serial_ptt_mode="civ",
+        rx_device=None,
+        tx_device=None,
+        web_host="127.0.0.1",
+        web_port=8080,
+        web_static_dir=None,
+        web_bridge=None,
+        web_bridge_tx_device=None,
+        web_bridge_rx_only=False,
+        web_rigctld=False,
+        dx_cluster=None,
+        callsign=None,
+    )
+    _, radio = _mock_radio_ctx()
+    with (
+        patch("icom_lan.cli.create_radio", return_value=radio) as create_radio,
+        patch("icom_lan.cli._cmd_web", new_callable=AsyncMock) as cmd_web,
+    ):
+        cmd_web.return_value = 0
+        rc = await _run(args)
+
+    assert rc == 0
+    create_radio.assert_called_once_with(
+        SerialBackendConfig(
+            device="/dev/tty.usbmodem-IC7610",
+            baudrate=115200,
+            timeout=1.0,
+            rx_device=None,
+            tx_device=None,
+            ptt_mode="civ",
+        )
+    )
+    cmd_web.assert_awaited_once_with(radio, args)
 
 
 @pytest.mark.asyncio

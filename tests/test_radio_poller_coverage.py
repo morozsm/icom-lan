@@ -57,6 +57,7 @@ def _make_radio(active: str = "MAIN") -> MagicMock:
     radio.vfo_equalize = AsyncMock()
     radio.enable_scope = AsyncMock()
     radio.disable_scope = AsyncMock()
+    radio.on_scope_data = MagicMock()
     return radio
 
 

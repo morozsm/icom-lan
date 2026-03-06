@@ -165,6 +165,7 @@ class SerialMockRadio:
         self._state_cache = StateCache()
         self._radio_state = RadioState()
         self._scope_callback: Any = None
+        self._scope_enabled = False
         self._state_change_callback: Any = None
         self._reconnect_callback: Any = None
         self._rx: dict[int, _ReceiverState] = {
@@ -235,8 +236,23 @@ class SerialMockRadio:
     def on_scope_data(self, callback: Any | None) -> None:
         self._scope_callback = callback
 
-    async def send_civ(self, frame: bytes) -> None:
+    async def send_civ(
+        self,
+        command: int,
+        sub: int | None = None,
+        data: bytes | None = None,
+        *,
+        wait_response: bool = True,
+    ) -> None:
+        _ = (command, sub, data, wait_response)
         return None
+
+    async def enable_scope(self, **kwargs: Any) -> None:
+        _ = kwargs
+        self._scope_enabled = True
+
+    async def disable_scope(self) -> None:
+        self._scope_enabled = False
 
     async def set_frequency(self, freq: int, receiver: int = 0) -> None:
         self._receiver_state(receiver, operation="set_frequency").freq = freq

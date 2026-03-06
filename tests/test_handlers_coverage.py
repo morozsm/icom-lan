@@ -216,7 +216,12 @@ def test_enqueue_command_errors() -> None:
     with pytest.raises(ValueError, match="unhandled command"):
         handler._enqueue_command("definitely_unknown", {})
 
-    radio = SimpleNamespace(capabilities={"dual_rx", "scope"})
+    radio = SimpleNamespace(
+        capabilities={"dual_rx", "scope"},
+        enable_scope=AsyncMock(),
+        disable_scope=AsyncMock(),
+        on_scope_data=MagicMock(),
+    )
     handler = _control_handler(
         radio=radio,
         server=SimpleNamespace(command_queue=queue),
@@ -473,7 +478,11 @@ async def test_radio_disconnect_paths() -> None:
     msg = decode_json(ws.send_text.await_args_list[-1].args[0])
     assert msg["result"]["status"] == "already_disconnected"
 
-    radio = SimpleNamespace(connected=True, soft_disconnect=AsyncMock())
+    radio = SimpleNamespace(
+        connected=True,
+        soft_disconnect=AsyncMock(),
+        soft_reconnect=AsyncMock(),
+    )
     h = _control_handler(ws=ws, radio=radio)
     await h._handle_radio_disconnect({"id": "d2"})
     msgs = [decode_json(c.args[0]) for c in ws.send_text.await_args_list[-2:]]
@@ -483,6 +492,7 @@ async def test_radio_disconnect_paths() -> None:
     radio = SimpleNamespace(
         connected=True,
         soft_disconnect=AsyncMock(side_effect=RuntimeError("boom")),
+        soft_reconnect=AsyncMock(),
     )
     h = _control_handler(ws=ws, radio=radio)
     await h._handle_radio_disconnect({"id": "d3"})

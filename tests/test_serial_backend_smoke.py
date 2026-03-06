@@ -243,6 +243,7 @@ async def test_web_server_smoke_with_serial_mock_backend() -> None:
             hello = json.loads(payload.decode("utf-8"))
             assert hello["type"] == "hello"
             assert hello["connected"] is False
+            assert hello["radio_ready"] is False
 
             await _ws_send_text(
                 writer,
@@ -253,6 +254,12 @@ async def test_web_server_smoke_with_serial_mock_backend() -> None:
             assert connect_resp["type"] == "response"
             assert connect_resp["id"] == "connect-1"
             assert connect_resp["ok"] is True
+
+            status, _, body = await _http_get(host, port, "/api/v1/state")
+            assert status == 200
+            connected_state = json.loads(body.decode("utf-8"))
+            assert connected_state["connected"] is True
+            assert connected_state["radio_ready"] is True
         finally:
             await _close_writer(writer)
     finally:

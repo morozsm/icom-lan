@@ -242,13 +242,17 @@ def mock_radio() -> MagicMock:
     radio.select_vfo = AsyncMock()
     radio.vfo_swap = AsyncMock()
     radio.vfo_exchange = AsyncMock()
+    radio.vfo_equalize = AsyncMock()
     radio.vfo_a_equals_b = AsyncMock()
     # on_scope_data is a synchronous setter
     radio.on_scope_data = MagicMock()
+    radio.enable_scope = AsyncMock()
+    radio.disable_scope = AsyncMock()
     # State cache shared between radio and server
     radio.state_cache = StateCache()
     # Methods used by WebServer.stop() and RadioPoller
     radio.soft_disconnect = AsyncMock()
+    radio.disconnect = AsyncMock()
     radio.send_civ = AsyncMock()
     # AudioBroadcaster needs these
     radio.start_audio_rx_opus = AsyncMock()
@@ -1354,7 +1358,9 @@ class TestScopeLifecycle:
 
     async def test_scope_not_disabled_while_handlers_remain(self) -> None:
         radio = MagicMock()
+        radio.capabilities = {"scope"}
         radio.on_scope_data = MagicMock()
+        radio.enable_scope = AsyncMock()
         radio.disable_scope = AsyncMock()
 
         server = WebServer(radio)
@@ -1373,7 +1379,9 @@ class TestScopeLifecycle:
 
     async def test_scope_disabled_when_last_handler_disconnects(self) -> None:
         radio = MagicMock()
+        radio.capabilities = {"scope"}
         radio.on_scope_data = MagicMock()
+        radio.enable_scope = AsyncMock()
         radio.disable_scope = AsyncMock()
 
         server = WebServer(radio)
@@ -1395,7 +1403,9 @@ class TestScopeLifecycle:
     async def test_scope_flag_reset_on_disable(self) -> None:
         """_scope_enabled is reset to False after successful disable."""
         radio = MagicMock()
+        radio.capabilities = {"scope"}
         radio.on_scope_data = MagicMock()
+        radio.enable_scope = AsyncMock()
         radio.disable_scope = AsyncMock()
 
         server = WebServer(radio)
@@ -1412,7 +1422,9 @@ class TestScopeLifecycle:
     async def test_scope_not_disabled_if_never_enabled(self) -> None:
         """disable_scope is NOT called if _scope_enabled is False."""
         radio = MagicMock()
+        radio.capabilities = {"scope"}
         radio.on_scope_data = MagicMock()
+        radio.enable_scope = AsyncMock()
         radio.disable_scope = AsyncMock()
 
         server = WebServer(radio)
@@ -1800,6 +1812,8 @@ class TestRadioPoller:
         radio.set_frequency = AsyncMock()
         radio.set_mode = AsyncMock()
         radio.set_ptt = AsyncMock()
+        radio.vfo_exchange = AsyncMock()
+        radio.vfo_equalize = AsyncMock()
         radio.send_civ = AsyncMock()  # RadioPoller now calls send_civ directly
         radio.state_cache = StateCache()
         return radio

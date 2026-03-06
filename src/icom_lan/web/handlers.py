@@ -69,6 +69,37 @@ logger = logging.getLogger(__name__)
 HIGH_WATERMARK = 5  # Max queued scope/meter frames before dropping
 
 
+def _runtime_capabilities(radio: "Radio | None") -> set[str]:
+    """Return conservative runtime capabilities for the active radio."""
+    if radio is None:
+        return set()
+
+    from ..radio_protocol import AudioCapable, DualReceiverCapable, ScopeCapable
+
+    raw_caps = getattr(radio, "capabilities", None)
+    if isinstance(raw_caps, set):
+        caps = set(raw_caps)
+    else:
+        caps = set()
+
+    if caps:
+        if "scope" in caps and not isinstance(radio, ScopeCapable):
+            caps.discard("scope")
+        if "audio" in caps and not isinstance(radio, AudioCapable):
+            caps.discard("audio")
+        if "dual_rx" in caps and not isinstance(radio, DualReceiverCapable):
+            caps.discard("dual_rx")
+        return caps
+
+    if isinstance(radio, ScopeCapable):
+        caps.add("scope")
+    if isinstance(radio, AudioCapable):
+        caps.add("audio")
+    if isinstance(radio, DualReceiverCapable):
+        caps.add("dual_rx")
+    return caps
+
+
 class ControlHandler:
     """Handles the /api/v1/ws control WebSocket channel.
 
@@ -179,27 +210,7 @@ class ControlHandler:
         await self._ws.send_text(encode_json(msg))
 
     def _capabilities(self) -> set[str]:
-        if self._radio is None:
-            return set()
-        raw_caps = getattr(self._radio, "capabilities", None)
-        if isinstance(raw_caps, set):
-            return set(raw_caps)
-        caps: set[str] = set()
-        if hasattr(self._radio, "enable_scope"):
-            caps.add("scope")
-        if hasattr(self._radio, "start_audio_rx_opus"):
-            caps.add("audio")
-        if hasattr(self._radio, "set_ptt"):
-            caps.add("tx")
-        if hasattr(self._radio, "set_rf_gain"):
-            caps.add("rf_gain")
-        if hasattr(self._radio, "set_af_level"):
-            caps.add("af_level")
-        if hasattr(self._radio, "set_squelch"):
-            caps.add("squelch")
-        if hasattr(self._radio, "vfo_exchange"):
-            caps.add("dual_rx")
-        return caps
+        return _runtime_capabilities(self._radio)
 
     def _ensure_receiver_supported(self, receiver: int) -> None:
         if self._radio is None:
@@ -295,7 +306,7 @@ class ControlHandler:
                                        "result": {"status": "already_connected"}})
                 return
             from ..radio_protocol import RecoverableConnection
-            if hasattr(self._radio, "soft_reconnect"):
+            if isinstance(self._radio, RecoverableConnection):
                 recoverable = cast(RecoverableConnection, self._radio)
                 try:
                     await recoverable.soft_reconnect()
@@ -326,12 +337,10 @@ class ControlHandler:
                                        "result": {"status": "already_disconnected"}})
                 return
             from ..radio_protocol import RecoverableConnection
-            if hasattr(self._radio, "soft_disconnect"):
+            if isinstance(self._radio, RecoverableConnection):
                 await cast(RecoverableConnection, self._radio).soft_disconnect()
-            elif hasattr(self._radio, "disconnect"):
-                await self._radio.disconnect()
             else:
-                raise RuntimeError("radio backend has no disconnect method")
+                await self._radio.disconnect()
             await self._send_json({"type": "response", "id": msg_id, "ok": True,
                                    "result": {"status": "disconnected"}})
             await self._broadcast_connection_state(False)
