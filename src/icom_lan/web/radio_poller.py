@@ -308,6 +308,18 @@ class RadioPoller:
                 queries.append((0x16, 0x4E, receiver))
             if self._supports_capability("ip_plus") and self._profile.supports_cmd29(0x16, 0x65):
                 queries.append((0x16, 0x65, receiver))
+            if self._profile.model == "IC-7610":
+                for cmd_byte, sub_byte in (
+                    (0x15, 0x01),  # S-meter squelch status
+                    (0x16, 0x32),  # Audio peak filter
+                    (0x16, 0x41),  # Auto notch
+                    (0x16, 0x48),  # Manual notch
+                    (0x16, 0x4F),  # Twin peak filter
+                    (0x16, 0x56),  # Filter shape
+                    (0x1A, 0x04),  # AGC time constant
+                ):
+                    if self._profile.supports_cmd29(cmd_byte, sub_byte):
+                        queries.append((cmd_byte, sub_byte, receiver))
         queries.extend(
             [
                 (0x1C, 0x00, None),   # PTT (global)
@@ -317,6 +329,19 @@ class RadioPoller:
                 (0x07, 0xC2, None),   # Dual Watch status
             ]
         )
+        if self._profile.model == "IC-7610":
+            queries.extend(
+                [
+                    (0x15, 0x07, None),  # Overflow status
+                    (0x16, 0x12, None),  # AGC mode
+                    (0x16, 0x44, None),  # Compressor status
+                    (0x16, 0x45, None),  # Monitor status
+                    (0x16, 0x46, None),  # VOX status
+                    (0x16, 0x47, None),  # Break-in mode
+                    (0x16, 0x50, None),  # Dial lock status
+                    (0x16, 0x58, None),  # SSB TX bandwidth
+                ]
+            )
         return queries
 
     async def _run(self) -> None:
