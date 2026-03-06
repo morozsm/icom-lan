@@ -2314,10 +2314,16 @@ def _validate_scope_range(name: str, value: int, minimum: int, maximum: int) -> 
     return value
 
 
+def _validate_scope_receiver(receiver: int) -> int:
+    if receiver not in (0, 1):
+        raise ValueError(f"scope receiver must be 0 or 1, got {receiver}")
+    return receiver
+
+
 def _scope_payload(value: bytes, receiver: int | None = None) -> bytes:
     if receiver is None:
         return value
-    return bytes([receiver & 0x01]) + value
+    return bytes([_validate_scope_receiver(receiver)]) + value
 
 
 def _scope_query(
@@ -2327,7 +2333,7 @@ def _scope_query(
     from_addr: int = CONTROLLER_ADDR,
     receiver: int | None = None,
 ) -> bytes:
-    data = None if receiver is None else bytes([receiver & 0x01])
+    data = None if receiver is None else bytes([_validate_scope_receiver(receiver)])
     return build_civ_frame(to_addr, from_addr, _CMD_SCOPE, sub=sub, data=data)
 
 
@@ -2900,7 +2906,7 @@ def scope_main_sub(
         from_addr,
         _CMD_SCOPE,
         sub=_SUB_SCOPE_MAIN_SUB,
-        data=bytes([receiver & 0x01]),
+        data=bytes([_validate_scope_receiver(receiver)]),
     )
 
 
@@ -3000,15 +3006,12 @@ def parse_scope_vbw_response(frame: CivFrame) -> tuple[int | None, bool]:
 def parse_scope_fixed_edge_response(frame: CivFrame) -> ScopeFixedEdge:
     """Parse a fixed-edge scope response."""
     data = _parse_scope_frame(frame, _SUB_SCOPE_FIXED_EDGE)
-    if len(data) == 13 and data[0] in (0x00, 0x01):
-        data = data[1:]
-    if len(data) != 12:
-        raise ValueError(f"Scope fixed-edge response must be 12 bytes, got {len(data)}")
+    _receiver, payload = _split_scope_receiver_prefix(data, expected_lengths=(12,))
     return ScopeFixedEdge(
-        range_index=_bcd_decode_value(data[:1]),
-        edge=_bcd_decode_value(data[1:2]),
-        start_hz=bcd_decode(data[2:7]),
-        end_hz=bcd_decode(data[7:12]),
+        range_index=_bcd_decode_value(payload[:1]),
+        edge=_bcd_decode_value(payload[1:2]),
+        start_hz=bcd_decode(payload[2:7]),
+        end_hz=bcd_decode(payload[7:12]),
     )
 
 

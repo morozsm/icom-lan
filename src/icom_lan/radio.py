@@ -3420,6 +3420,8 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
             civ,
             wait_response=False,
         )
+        # Re-parse the frame we just built to recover the resolved range_index
+        # (computed inside scope_set_fixed_edge_cmd) without duplicating logic.
         fixed_edge = parse_scope_fixed_edge_response(parse_civ_frame(civ))
         self._scope_controls().fixed_edge = fixed_edge
         self._scope_controls().edge = fixed_edge.edge
