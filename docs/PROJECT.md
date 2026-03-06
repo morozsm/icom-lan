@@ -2,49 +2,52 @@
 
 ## Goal
 
-Create a Python library for direct control of Icom transceivers over LAN (UDP), without intermediary software (wfview, RS-BA1, hamlib).
+Create a Python library for direct control of Icom transceivers with a shared radio core:
+- LAN backend (UDP, native Icom protocol)
+- serial backend (USB CI-V + exported USB audio devices, in progress)
+
+No intermediary software (wfview, RS-BA1, hamlib) is required for supported paths.
 
 ### Objectives
 - Connect to Icom over network (authentication, keep-alive)
 - Send/receive CI-V commands (frequency, mode, power, meters)
 - Receive/transmit audio stream (Opus)
 - Simple Pythonic API (sync + async)
-- Support for IC-7610, IC-705, IC-7300, IC-9700
+- Keep one `Radio` contract for API/CLI/Web/rigctld consumers
+- Support IC-7610 first, then expand to other models/families via backend/profile architecture
 
 ### Non-goals (for now)
 - GUI
 - Full wfview replacement
-- USB/serial support (hamlib handles that)
+- Non-IC-7610 serial expansion before IC-7610 USB MVP is stable
+- Cross-platform USB/audio polish beyond macOS-first rollout
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────┐
-│                 icom-lan                     │
-│                                             │
-│  ┌───────────┐  ┌──────────┐  ┌──────────┐ │
-│  │ Transport │  │   CIV    │  │  Audio   │ │
-│  │  (UDP)    │  │ Commands │  │ (Opus)   │ │
-│  └─────┬─────┘  └────┬─────┘  └────┬─────┘ │
-│        │             │             │        │
-│  ┌─────┴─────────────┴─────────────┴─────┐  │
-│  │         IcomRadio (public API)        │  │
-│  └──────────────────┬────────────────────┘  │
-│                     │                       │
-│  ┌──────────────────┴────────────────────┐  │
-│  │    rigctld TCP Server (:4532)         │  │
-│  │    (Hamlib NET rigctl compatible)     │  │
-│  └───────────────────────────────────────┘  │
-└─────────────────────────────────────────────┘
-                     │ UDP
-                     ▼
-            ┌─────────────────┐
-            │   Icom Radio    │
-            │  192.168.x.x    │
-            │  :50001 control │
-            │  :50002 ci-v    │
-            │  :50003 audio   │
-            └─────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│                           icom-lan                           │
+│                                                              │
+│  Consumers: API / CLI / Web / rigctld                       │
+│                 │                                            │
+│                 ▼                                            │
+│      radio_protocol.Radio (+ capability protocols)           │
+│                 │                                            │
+│                 ▼                                            │
+│            backends.factory.create_radio()                   │
+│                 │                                            │
+│                 ▼                                            │
+│     Icom7610CoreRadio (shared commander/state/civ routing)   │
+│          ┌───────────────────────────────┴─────────────────┐ │
+│          ▼                                                 ▼ │
+│  Icom7610LanRadio                                Icom7610SerialRadio
+│  - control/auth/keepalive (UDP)                  - serial session
+│  - CI-V over UDP                                 - CI-V over USB serial
+│  - LAN audio (Opus/PCM)                          - USB audio devices
+└──────────┬───────────────────────────────────────────────┬───┘
+           │                                               │
+           ▼                                               ▼
+   IC-7610 over LAN                                IC-7610 over USB
 ```
 
 ## Icom LAN Protocol (based on wfview research)
@@ -159,11 +162,33 @@ Each UDP packet has a fixed-format header (see `packettypes.h` in wfview):
 
 ### Phase 6 — Scope/Waterfall ✅ COMPLETE (v0.6.0)
 
+### Phase 7 — Platform Foundation (M2) ✅ COMPLETE
+**Goal:** Backend-neutral architecture for stable platform evolution.
+
+- [x] Extract shared IC-7610 executable core (`Icom7610CoreRadio`) with LAN compatibility wrapper
+- [x] Introduce profile-driven model/capability abstraction (`RadioProfile`)
+- [x] Establish backend factory/config wiring (`create_radio`, backend config objects)
+- [x] Add serial CI-V link foundation + deterministic serial test matrix
+- [x] Expand reliability matrix and stabilize connect/recovery behavior
+
+### Phase 8 — IC-7610 USB Backend MVP (M3) 🚧 IN PROGRESS
+**Goal:** Complete IC-7610 serial backend (control + audio + scope) and wire all consumers.
+
+- [ ] `#144` Serial radio wrapper/session
+- [ ] `#145` USB audio driver
+- [ ] `#146` Scope/waterfall on serial with guardrails
+- [ ] `#147` CLI backend selection and serial/audio flags
+- [ ] `#148` Web backend-neutral integration
+- [ ] `#149` rigctld backend-neutral integration
+- [ ] `#151` Docs/migration/capability matrix
+
 ### Current Status
-**v0.8.0 released on PyPI. Reliability integration backlog (items 1-13) completed on 2026-03-05.**
-**Latest full regression:** `1797 passed, 95 skipped`.
+**Package version in `pyproject.toml`: `0.11.0`.**
+**Reliability integration backlog (items 1-13) completed on 2026-03-05.**
+**Latest full regression (local, 2026-03-05):** `1876 passed, 95 skipped`.
 - **M2 Platform Foundation (step #141):** extracted shared IC-7610 executable core (`Icom7610CoreRadio`) with LAN compatibility wrapper (`IcomRadio`) and no behavior changes.
 - **M2 profile abstraction (issue #119):** runtime `RadioProfile` matrix added for multi-model behavior; `model`/`capabilities` and receiver/cmd29 routing are now profile-driven with explicit unsupported-operation guards.
+- **M3 backlog:** active epic `#152` (priority P0), with implementation chunks `#144-#149`, `#151` (priority P1).
 
 ### Reliability Test Expansion (2026-03-05)
 - Added extended integration coverage scaffolding for:
@@ -184,8 +209,9 @@ Each UDP packet has a fixed-format header (see `packettypes.h` in wfview):
 ## Test Equipment
 
 - **Icom IC-7610** at `192.168.55.40`
-- Ports: 50001 (control), 50002 (serial), 50003 (audio)
-- Mac mini M4 Pro on the same LAN (`192.168.55.152`)
+- LAN ports: 50001 (control), 50002 (CI-V), 50003 (audio)
+- USB path: CI-V serial device + exported RX/TX audio devices
+- Local development host on the same LAN (IP redacted)
 
 ## License Notes
 
