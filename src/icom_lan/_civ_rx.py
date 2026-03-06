@@ -17,7 +17,9 @@ from .commander import IcomCommander, Priority
 from .commands import (
     CONTROLLER_ADDR,
     parse_civ_frame,
+    parse_bool_response,
     parse_frequency_response,
+    parse_level_response,
     parse_mode_response,
 )
 from .exceptions import ConnectionError, TimeoutError
@@ -30,6 +32,36 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 CIV_HEADER_SIZE = 0x15
+
+_CMD14_RECEIVER_LEVEL_FIELDS = {
+    0x01: "af_level",
+    0x02: "rf_gain",
+    0x03: "squelch",
+    0x05: "apf_type_level",
+    0x06: "nr_level",
+    0x07: "pbt_inner",
+    0x08: "pbt_outer",
+    0x12: "nb_level",
+    0x13: "digisel_shift",
+}
+
+_CMD14_GLOBAL_LEVEL_FIELDS = {
+    0x0B: "mic_gain",
+    0x0D: "notch_filter",
+    0x0E: "compressor_level",
+    0x0F: "break_in_delay",
+    0x14: "drive_gain",
+    0x15: "monitor_gain",
+    0x16: "vox_gain",
+    0x17: "anti_vox_gain",
+}
+
+_CMD1A_CTL_MEM_LEVEL_FIELDS = {
+    b"\x00\x70": ("ref_adjust", 2),
+    b"\x02\x28": ("dash_ratio", 1),
+    b"\x02\x90": ("nb_depth", 1),
+    b"\x02\x91": ("nb_width", 2),
+}
 
 # CI-V data watchdog (wfview icomudpcivdata::watchdog)
 # If no CI-V data for this long, send open_close to restart the stream.
@@ -545,14 +577,18 @@ class _CivRxMixin:
                         + (b1 >> 4) * 10 + (b1 & 0x0F)
                     )
                     sub = frame.sub
-                    if sub == 0x01:
-                        rx.af_level = raw
-                    elif sub == 0x02:
-                        rx.rf_gain = raw
-                    elif sub == 0x03:
-                        rx.squelch = raw
+                    if sub in _CMD14_RECEIVER_LEVEL_FIELDS:
+                        setattr(rx, _CMD14_RECEIVER_LEVEL_FIELDS[sub], raw)
                     elif sub == 0x0A:
                         rs.power_level = raw
+                    elif sub == 0x09:
+                        rs.cw_pitch = int(
+                            round((((600.0 / 255.0) * raw) + 300) / 5.0) * 5.0
+                        )
+                    elif sub == 0x0C:
+                        rs.key_speed = round((raw / 6.071) + 6)
+                    elif sub in _CMD14_GLOBAL_LEVEL_FIELDS:
+                        setattr(rs, _CMD14_GLOBAL_LEVEL_FIELDS[sub], raw)
 
             elif cmd == 0x11:
                 # Attenuator (BCD-encoded single byte: 0x18 = 18 dB)
@@ -588,8 +624,25 @@ class _CivRxMixin:
                     # NOT filter selector (1/2/3). Filter selector comes from
                     # mode response (0x04/0x26). Do NOT update rx.filter here.
                     pass
+                elif sub == 0x05:
+                    for prefix, (field, bcd_bytes) in _CMD1A_CTL_MEM_LEVEL_FIELDS.items():
+                        if frame.data.startswith(prefix):
+                            setattr(
+                                rs,
+                                field,
+                                parse_level_response(
+                                    frame,
+                                    command=0x1A,
+                                    sub=0x05,
+                                    prefix=prefix,
+                                    bcd_bytes=bcd_bytes,
+                                ),
+                            )
+                            break
                 elif sub == 0x06 and frame.data:
                     rx.data_mode = bool(frame.data[0])
+                elif sub == 0x09:
+                    rx.af_mute = parse_bool_response(frame, command=0x1A, sub=0x09)
 
             elif cmd == 0x1C and frame.sub == 0x00:
                 # PTT (global)

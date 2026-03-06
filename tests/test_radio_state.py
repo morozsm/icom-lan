@@ -28,6 +28,13 @@ def test_receiver_state_defaults() -> None:
     assert rx.rf_gain == 0
     assert rx.squelch == 0
     assert rx.s_meter == 0
+    assert rx.apf_type_level == 0
+    assert rx.nr_level == 0
+    assert rx.pbt_inner == 0
+    assert rx.pbt_outer == 0
+    assert rx.nb_level == 0
+    assert rx.digisel_shift == 0
+    assert rx.af_mute is False
 
 
 def test_receiver_state_field_update() -> None:
@@ -59,6 +66,20 @@ def test_radio_state_defaults() -> None:
     assert rs.power_level == 0
     assert rs.split is False
     assert rs.dual_watch is False
+    assert rs.cw_pitch == 0
+    assert rs.mic_gain == 0
+    assert rs.key_speed == 0
+    assert rs.notch_filter == 0
+    assert rs.compressor_level == 0
+    assert rs.break_in_delay == 0
+    assert rs.drive_gain == 0
+    assert rs.monitor_gain == 0
+    assert rs.vox_gain == 0
+    assert rs.anti_vox_gain == 0
+    assert rs.ref_adjust == 0
+    assert rs.dash_ratio == 0
+    assert rs.nb_depth == 0
+    assert rs.nb_width == 0
     assert isinstance(rs.main, ReceiverState)
     assert isinstance(rs.sub, ReceiverState)
 
@@ -104,7 +125,29 @@ def test_receiver_unknown_falls_back_to_sub() -> None:
 def test_to_dict_structure() -> None:
     rs = RadioState()
     d = rs.to_dict()
-    assert set(d.keys()) == {"active", "ptt", "power_level", "split", "dual_watch", "main", "sub"}
+    assert set(d.keys()) == {
+        "active",
+        "ptt",
+        "power_level",
+        "split",
+        "dual_watch",
+        "cw_pitch",
+        "mic_gain",
+        "key_speed",
+        "notch_filter",
+        "compressor_level",
+        "break_in_delay",
+        "drive_gain",
+        "monitor_gain",
+        "vox_gain",
+        "anti_vox_gain",
+        "ref_adjust",
+        "dash_ratio",
+        "nb_depth",
+        "nb_width",
+        "main",
+        "sub",
+    }
     assert d["active"] == "MAIN"
     assert d["ptt"] is False
     assert d["power_level"] == 0
@@ -119,6 +162,8 @@ def test_to_dict_main_keys() -> None:
         "freq", "mode", "filter", "data_mode",
         "att", "preamp", "nb", "nr", "digisel", "ipplus",
         "af_level", "rf_gain", "squelch", "s_meter",
+        "apf_type_level", "nr_level", "pbt_inner", "pbt_outer",
+        "nb_level", "digisel_shift", "af_mute",
     }
     assert set(main.keys()) == expected_keys
 

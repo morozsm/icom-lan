@@ -34,6 +34,13 @@ class ReceiverState:
     rf_gain: int = 0    # 0-255
     squelch: int = 0    # 0-255
     s_meter: int = 0    # raw 0-241
+    apf_type_level: int = 0   # 0-255
+    nr_level: int = 0         # 0-255
+    pbt_inner: int = 0        # 0-255
+    pbt_outer: int = 0        # 0-255
+    nb_level: int = 0         # 0-255
+    digisel_shift: int = 0    # 0-255
+    af_mute: bool = False
 
 
 @dataclass(slots=True)
@@ -47,6 +54,20 @@ class RadioState:
     power_level: int = 0    # TX power 0-255
     split: bool = False
     dual_watch: bool = False
+    cw_pitch: int = 0           # Hz
+    mic_gain: int = 0           # 0-255
+    key_speed: int = 0          # WPM
+    notch_filter: int = 0       # 0-255
+    compressor_level: int = 0   # 0-255
+    break_in_delay: int = 0     # 0-255
+    drive_gain: int = 0         # 0-255
+    monitor_gain: int = 0       # 0-255
+    vox_gain: int = 0           # 0-255
+    anti_vox_gain: int = 0      # 0-255
+    ref_adjust: int = 0         # 0-511
+    dash_ratio: int = 0         # 28-45
+    nb_depth: int = 0           # 0-9
+    nb_width: int = 0           # 0-255
 
     def to_dict(self) -> dict:
         """Return a JSON-serialisable dict of the current radio state."""
@@ -56,6 +77,20 @@ class RadioState:
             "power_level": self.power_level,
             "split": self.split,
             "dual_watch": self.dual_watch,
+            "cw_pitch": self.cw_pitch,
+            "mic_gain": self.mic_gain,
+            "key_speed": self.key_speed,
+            "notch_filter": self.notch_filter,
+            "compressor_level": self.compressor_level,
+            "break_in_delay": self.break_in_delay,
+            "drive_gain": self.drive_gain,
+            "monitor_gain": self.monitor_gain,
+            "vox_gain": self.vox_gain,
+            "anti_vox_gain": self.anti_vox_gain,
+            "ref_adjust": self.ref_adjust,
+            "dash_ratio": self.dash_ratio,
+            "nb_depth": self.nb_depth,
+            "nb_width": self.nb_width,
             "main": asdict(self.main),
             "sub": asdict(self.sub),
         }

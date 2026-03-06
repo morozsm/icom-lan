@@ -713,3 +713,9 @@ class TestDspLevelParityCommands:
         )
         with pytest.raises(ValueError, match="prefix"):
             parse_level_response(frame, command=0x1A, sub=0x05, prefix=b"\x00\x70")
+
+    def test_set_nb_width_rejects_out_of_range(self) -> None:
+        from icom_lan.commands import set_nb_width
+
+        with pytest.raises(ValueError, match="0-255"):
+            set_nb_width(256)
