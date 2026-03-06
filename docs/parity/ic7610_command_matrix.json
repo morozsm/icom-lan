@@ -1,0 +1,2014 @@
+{
+  "format_version": 1,
+  "radio_model": "IC-7610",
+  "reference": {
+    "wfview_rig": "references/wfview/rigs/IC-7610.rig",
+    "wfview_commander": "references/wfview/src/radio/icomcommander.cpp"
+  },
+  "status_totals": {
+    "implemented": 38,
+    "partial": 16,
+    "missing": 80
+  },
+  "families": {
+    "baseline_core": {
+      "title": "Baseline core and already-exposed parity",
+      "owner_issue": 138,
+      "summary": "Commands already backed by maintained library/runtime surfaces or by the internal primitives that those surfaces depend on.",
+      "counts": {
+        "implemented": 38,
+        "partial": 0,
+        "missing": 0
+      }
+    },
+    "dsp_levels": {
+      "title": "DSP and level controls",
+      "owner_issue": 130,
+      "summary": "Missing APF/PBT/NB/monitor/VOX/mod-level style controls tracked by issue #130.",
+      "counts": {
+        "implemented": 0,
+        "partial": 0,
+        "missing": 21
+      }
+    },
+    "operator_toggles": {
+      "title": "Operator toggles and status flags",
+      "owner_issue": 131,
+      "summary": "Missing AGC/ANF/compressor/VOX/break-in and related toggle/status work tracked by issue #131.",
+      "counts": {
+        "implemented": 0,
+        "partial": 0,
+        "missing": 15
+      }
+    },
+    "vfo_dualwatch_scan": {
+      "title": "VFO, dual-watch, and scan control",
+      "owner_issue": 132,
+      "summary": "Remaining dual-watch/scanning/VFO parity tracked by issue #132.",
+      "counts": {
+        "implemented": 0,
+        "partial": 4,
+        "missing": 6
+      }
+    },
+    "memory_bandstack": {
+      "title": "Memory and band-stacking",
+      "owner_issue": 133,
+      "summary": "Memory register, recall, and band-stacking work tracked by issue #133.",
+      "counts": {
+        "implemented": 0,
+        "partial": 0,
+        "missing": 6
+      }
+    },
+    "tone_repeater": {
+      "title": "Tone and repeater controls",
+      "owner_issue": 134,
+      "summary": "Repeater tone/TSQL frequency family tracked by issue #134.",
+      "counts": {
+        "implemented": 0,
+        "partial": 0,
+        "missing": 4
+      }
+    },
+    "system_config": {
+      "title": "System and configuration",
+      "owner_issue": 135,
+      "summary": "Antenna, CI-V config, mod routing, and date/time/UTC work tracked by issue #135.",
+      "counts": {
+        "implemented": 0,
+        "partial": 0,
+        "missing": 16
+      }
+    },
+    "transceiver_status": {
+      "title": "Transceiver, telemetry, and RIT/TX status",
+      "owner_issue": 136,
+      "summary": "RIT/TX status and remaining telemetry parity tracked by issue #136.",
+      "counts": {
+        "implemented": 0,
+        "partial": 2,
+        "missing": 9
+      }
+    },
+    "advanced_scope": {
+      "title": "Advanced scope controls",
+      "owner_issue": 137,
+      "summary": "Remaining scope configuration controls tracked by issue #137.",
+      "counts": {
+        "implemented": 0,
+        "partial": 10,
+        "missing": 3
+      }
+    }
+  },
+  "commands": [
+    {
+      "id": 1,
+      "name": "Freq (TRX)",
+      "wire": "\\\\x00",
+      "command29": false,
+      "get": false,
+      "set": false,
+      "admin": false,
+      "family": "baseline_core",
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan._civ_rx:_CivRxMixin._update_state_cache_from_frame",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+      ],
+      "test_patterns": [
+        "tests/test_civ_rx_coverage.py::cmd 0x00"
+      ],
+      "notes": "Unsolicited transceive updates are projected into StateCache and RadioState."
+    },
+    {
+      "id": 2,
+      "name": "Mode (TRX)",
+      "wire": "\\\\x01",
+      "command29": false,
+      "get": false,
+      "set": false,
+      "admin": false,
+      "family": "baseline_core",
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan._civ_rx:_CivRxMixin._update_state_cache_from_frame",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+      ],
+      "test_patterns": [
+        "tests/test_civ_rx_coverage.py::cmd 0x01"
+      ],
+      "notes": "Unsolicited transceive updates are projected into StateCache and RadioState."
+    },
+    {
+      "id": 3,
+      "name": "Band Edge Freq",
+      "wire": "\\\\x02",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "transceiver_status",
+      "status": "missing"
+    },
+    {
+      "id": 4,
+      "name": "Freq Get",
+      "wire": "\\\\x03",
+      "command29": false,
+      "get": true,
+      "set": false,
+      "admin": false,
+      "family": "baseline_core",
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_frequency",
+        "icom_lan.radio:Icom7610CoreRadio.get_frequency"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_get_frequency"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "Mode Get",
+      "wire": "\\\\x04",
+      "command29": false,
+      "get": true,
+      "set": false,
+      "admin": false,
+      "family": "baseline_core",
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_mode",
+        "icom_lan.radio:Icom7610CoreRadio.get_mode"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_get_mode"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "Freq Set",
+      "wire": "\\\\x05",
+      "command29": false,
+      "get": false,
+      "set": true,
+      "admin": false,
+      "family": "baseline_core",
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:set_frequency",
+        "icom_lan.radio:Icom7610CoreRadio.set_frequency"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_set_frequency_14mhz"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "Mode Set",
+      "wire": "\\\\x06",
+      "command29": false,
+      "get": false,
+      "set": true,
+      "admin": false,
+      "family": "baseline_core",
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:set_mode",
+        "icom_lan.radio:Icom7610CoreRadio.set_mode"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_set_mode_usb"
+      ]
+    },
+    {
+      "id": 8,
+      "name": "VFO Mode Select",
+      "wire": "\\\\x07",
+      "command29": true,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "baseline_core",
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:select_vfo",
+        "icom_lan.radio:Icom7610CoreRadio.select_vfo"
+      ],
+      "test_patterns": [
+        "tests/test_commands_extended.py::test_vfo_main"
+      ]
+    },
+    {
+      "id": 9,
+      "name": "VFO Swap M/S",
+      "wire": "\\\\x07\\\\xb0",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "baseline_core",
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:vfo_swap",
+        "icom_lan.radio:Icom7610CoreRadio.vfo_exchange"
+      ],
+      "test_patterns": [
+        "tests/test_commands_extended.py::test_vfo_swap"
+      ]
+    },
+    {
+      "id": 10,
+      "name": "VFO Equal MS",
+      "wire": "\\\\x07\\\\xb1",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "baseline_core",
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:vfo_a_equals_b",
+        "icom_lan.radio:Icom7610CoreRadio.vfo_equalize"
+      ],
+      "test_patterns": [
+        "tests/test_commands_extended.py::test_vfo_a_equals_b"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "VFO Dual Watch Off",
+      "wire": "\\\\x07\\\\xc0",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "vfo_dualwatch_scan",
+      "status": "partial",
+      "runtime_symbols": [
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+      ],
+      "test_patterns": [
+        "tests/test_civ_rx_coverage.py::dual_watch"
+      ],
+      "notes": "Dual-watch off is only observed through CI-V receive-state projection; there is no dedicated public API yet."
+    },
+    {
+      "id": 12,
+      "name": "VFO Dual Watch On",
+      "wire": "\\\\x07\\\\xc1",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "vfo_dualwatch_scan",
+      "status": "partial",
+      "runtime_symbols": [
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+      ],
+      "test_patterns": [
+        "tests/test_civ_rx_coverage.py::dual_watch"
+      ],
+      "notes": "Dual-watch on is only observed through CI-V receive-state projection; there is no dedicated public API yet."
+    },
+    {
+      "id": 13,
+      "name": "VFO Dual Watch",
+      "wire": "\\\\x07\\\\xc2",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "vfo_dualwatch_scan",
+      "status": "partial",
+      "runtime_symbols": [
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+      ],
+      "test_patterns": [
+        "tests/test_civ_rx_coverage.py::dual_watch"
+      ],
+      "notes": "Dual-watch status is tracked in RadioState, but not exposed through a maintained public method/CLI/Web command family yet."
+    },
+    {
+      "id": 14,
+      "name": "VFO Main Select",
+      "wire": "\\\\x07\\\\xd0",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "baseline_core",
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:select_vfo",
+        "icom_lan.radio:Icom7610CoreRadio.select_vfo"
+      ],
+      "test_patterns": [
+        "tests/test_commands_extended.py::test_vfo_main"
+      ]
+    },
+    {
+      "id": 15,
+      "name": "VFO Sub Select",
+      "wire": "\\\\x07\\\\xd1",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "baseline_core",
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:select_vfo",
+        "icom_lan.radio:Icom7610CoreRadio.select_vfo"
+      ],
+      "test_patterns": [
+        "tests/test_commands_extended.py::test_vfo_sub"
+      ]
+    },
+    {
+      "id": 16,
+      "name": "VFO Main/Sub Band",
+      "wire": "\\\\x07\\\\xd2",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "vfo_dualwatch_scan",
+      "status": "partial",
+      "runtime_symbols": [
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+      ],
+      "test_patterns": [
+        "tests/test_civ_rx_coverage.py::active_receiver"
+      ],
+      "notes": "Active MAIN/SUB receiver state is projected into RadioState, but there is no dedicated parity API for the 0x07/0xD2 family yet."
+    },
+    {
+      "id": 17,
+      "name": "Memory Mode",
+      "wire": "\\\\x08",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "memory_bandstack",
+      "status": "missing"
+    },
+    {
+      "id": 18,
+      "name": "Memory Write",
+      "wire": "\\\\x09",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "memory_bandstack",
+      "status": "missing"
+    },
+    {
+      "id": 19,
+      "name": "Memory to VFO",
+      "wire": "\\\\x0a",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "memory_bandstack",
+      "status": "missing"
+    },
+    {
+      "id": 20,
+      "name": "Memory Clear",
+      "wire": "\\\\x0b",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "memory_bandstack",
+      "status": "missing"
+    },
+    {
+      "id": 21,
+      "name": "Scanning",
+      "wire": "\\\\x0e",
+      "command29": false,
+      "get": false,
+      "set": true,
+      "admin": false,
+      "family": "vfo_dualwatch_scan",
+      "status": "missing"
+    },
+    {
+      "id": 22,
+      "name": "Split/Duplex",
+      "wire": "\\\\x0f",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "baseline_core",
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:set_split",
+        "icom_lan.radio:Icom7610CoreRadio.set_split_mode",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+      ],
+      "test_patterns": [
+        "tests/test_commands_extended.py::test_split_on",
+        "tests/test_civ_rx_coverage.py::cmd 0x0F"
+      ]
+    },
+    {
+      "id": 23,
+      "name": "Tuning Step",
+      "wire": "\\\\x10",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "vfo_dualwatch_scan",
+      "status": "missing"
+    },
+    {
+      "id": 24,
+      "name": "Attenuator Status",
+      "wire": "\\\\x11",
+      "command29": true,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "baseline_core",
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_attenuator",
+        "icom_lan.commands:set_attenuator_level",
+        "icom_lan.radio:Icom7610CoreRadio.get_attenuator_level",
+        "icom_lan.radio:Icom7610CoreRadio.set_attenuator_level"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::get_attenuator",
+        "tests/test_radio_coverage.py::get_attenuator_level"
+      ]
+    },
+    {
+      "id": 25,
+      "name": "Antenna",
+      "wire": "\\\\x12",
+      "command29": true,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "system_config",
+      "status": "missing"
+    },
+    {
+      "id": 26,
+      "name": "Speech",
+      "wire": "\\\\x13",
+      "command29": false,
+      "get": false,
+      "set": true,
+      "admin": false,
+      "family": "system_config",
+      "status": "missing"
+    },
+    {
+      "id": 27,
+      "name": "AF Gain",
+      "wire": "\\\\x14\\\\x01",
+      "command29": true,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "baseline_core",
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_af_level",
+        "icom_lan.commands:set_af_level",
+        "icom_lan.radio:Icom7610CoreRadio.get_af_level",
+        "icom_lan.radio:Icom7610CoreRadio.set_af_level"
+      ],
+      "test_patterns": [
+        "tests/test_rf_gain_af_level.py::get_af_level",
+        "tests/test_radio_coverage.py::get_af_level"
+      ]
+    },
+    {
+      "id": 28,
+      "name": "RF Gain",
+      "wire": "\\\\x14\\\\x02",
+      "command29": true,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "baseline_core",
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_rf_gain",
+        "icom_lan.commands:set_rf_gain",
+        "icom_lan.radio:Icom7610CoreRadio.get_rf_gain",
+        "icom_lan.radio:Icom7610CoreRadio.set_rf_gain"
+      ],
+      "test_patterns": [
+        "tests/test_rf_gain_af_level.py::get_rf_gain",
+        "tests/test_radio_coverage.py::get_rf_gain"
+      ]
+    },
+    {
+      "id": 29,
+      "name": "Squelch",
+      "wire": "\\\\x14\\\\x03",
+      "command29": true,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "baseline_core",
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:set_squelch",
+        "icom_lan.radio:Icom7610CoreRadio.set_squelch",
+        "icom_lan._civ_rx:_CivRxMixin._update_state_cache_from_frame"
+      ],
+      "test_patterns": [
+        "tests/test_radio_coverage.py::set_squelch"
+      ]
+    },
+    {
+      "id": 30,
+      "name": "APF Type Level",
+      "wire": "\\\\x14\\\\x05",
+      "command29": true,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "dsp_levels",
+      "status": "missing"
+    },
+    {
+      "id": 31,
+      "name": "NR Level",
+      "wire": "\\\\x14\\\\x06",
+      "command29": true,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "dsp_levels",
+      "status": "missing"
+    },
+    {
+      "id": 32,
+      "name": "PBT Inner",
+      "wire": "\\\\x14\\\\x07",
+      "command29": true,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "dsp_levels",
+      "status": "missing"
+    },
+    {
+      "id": 33,
+      "name": "PBT Outer",
+      "wire": "\\\\x14\\\\x08",
+      "command29": true,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "dsp_levels",
+      "status": "missing"
+    },
+    {
+      "id": 34,
+      "name": "CW Pitch",
+      "wire": "\\\\x14\\\\x09",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "dsp_levels",
+      "status": "missing"
+    },
+    {
+      "id": 35,
+      "name": "RF Power",
+      "wire": "\\\\x14\\\\x0a",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "baseline_core",
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_power",
+        "icom_lan.commands:set_power",
+        "icom_lan.radio:Icom7610CoreRadio.get_power",
+        "icom_lan.radio:Icom7610CoreRadio.set_power"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_get_power",
+        "tests/test_commands.py::test_set_power"
+      ]
+    },
+    {
+      "id": 36,
+      "name": "Mic Gain",
+      "wire": "\\\\x14\\\\x0b",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "dsp_levels",
+      "status": "missing"
+    },
+    {
+      "id": 37,
+      "name": "Key Speed",
+      "wire": "\\\\x14\\\\x0c",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "dsp_levels",
+      "status": "missing"
+    },
+    {
+      "id": 38,
+      "name": "Notch Filter",
+      "wire": "\\\\x14\\\\x0d",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "dsp_levels",
+      "status": "missing"
+    },
+    {
+      "id": 39,
+      "name": "Compressor Level",
+      "wire": "\\\\x14\\\\x0e",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "dsp_levels",
+      "status": "missing"
+    },
+    {
+      "id": 40,
+      "name": "Break-In Delay",
+      "wire": "\\\\x14\\\\x0f",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "dsp_levels",
+      "status": "missing"
+    },
+    {
+      "id": 41,
+      "name": "NB Level",
+      "wire": "\\\\x14\\\\x12",
+      "command29": true,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "dsp_levels",
+      "status": "missing"
+    },
+    {
+      "id": 42,
+      "name": "DIGI-SEL Shift",
+      "wire": "\\\\x14\\\\x13",
+      "command29": true,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "dsp_levels",
+      "status": "missing"
+    },
+    {
+      "id": 43,
+      "name": "Drive Gain",
+      "wire": "\\\\x14\\\\x14",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "dsp_levels",
+      "status": "missing"
+    },
+    {
+      "id": 44,
+      "name": "Monitor Gain",
+      "wire": "\\\\x14\\\\x15",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "dsp_levels",
+      "status": "missing"
+    },
+    {
+      "id": 45,
+      "name": "Vox Gain",
+      "wire": "\\\\x14\\\\x16",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "dsp_levels",
+      "status": "missing"
+    },
+    {
+      "id": 46,
+      "name": "Anti-Vox Gain",
+      "wire": "\\\\x14\\\\x17",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "dsp_levels",
+      "status": "missing"
+    },
+    {
+      "id": 47,
+      "name": "S Meter Sql Status",
+      "wire": "\\\\x15\\\\x01",
+      "command29": true,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "operator_toggles",
+      "status": "missing"
+    },
+    {
+      "id": 48,
+      "name": "S Meter",
+      "wire": "\\\\x15\\\\x02",
+      "command29": true,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "baseline_core",
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_s_meter",
+        "icom_lan.commands:parse_meter_response",
+        "icom_lan.radio:Icom7610CoreRadio.get_s_meter"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_get_s_meter",
+        "tests/test_civ_rx_coverage.py::s_meter"
+      ]
+    },
+    {
+      "id": 49,
+      "name": "Various Squelch",
+      "wire": "\\\\x15\\\\x05",
+      "command29": true,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "transceiver_status",
+      "status": "missing"
+    },
+    {
+      "id": 50,
+      "name": "Overflow Status",
+      "wire": "\\\\x15\\\\x07",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "operator_toggles",
+      "status": "missing"
+    },
+    {
+      "id": 51,
+      "name": "Power Meter",
+      "wire": "\\\\x15\\\\x11",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "transceiver_status",
+      "status": "partial",
+      "runtime_symbols": [
+        "icom_lan.web.radio_poller:RadioPoller._FAST_CMDS",
+        "icom_lan.web.server:WebServer._on_radio_state_change"
+      ],
+      "test_patterns": [
+        "tests/test_web_server.py::METER_POWER"
+      ],
+      "notes": "RF power meter currently exists through the web meter polling/broadcast path only; there is no typed radio API for this meter."
+    },
+    {
+      "id": 52,
+      "name": "SWR Meter",
+      "wire": "\\\\x15\\\\x12",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "baseline_core",
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_swr",
+        "icom_lan.radio:Icom7610CoreRadio.get_swr"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_get_swr"
+      ]
+    },
+    {
+      "id": 53,
+      "name": "ALC Meter",
+      "wire": "\\\\x15\\\\x13",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "baseline_core",
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_alc",
+        "icom_lan.radio:Icom7610CoreRadio.get_alc"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_get_alc"
+      ]
+    },
+    {
+      "id": 54,
+      "name": "Comp Meter",
+      "wire": "\\\\x15\\\\x14",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "transceiver_status",
+      "status": "missing"
+    },
+    {
+      "id": 55,
+      "name": "Vd Meter",
+      "wire": "\\\\x15\\\\x15",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "transceiver_status",
+      "status": "partial",
+      "runtime_symbols": [
+        "icom_lan.web.radio_poller:RadioPoller._FAST_CMDS",
+        "icom_lan.web.server:WebServer._on_radio_state_change"
+      ],
+      "test_patterns": [
+        "tests/test_web_server.py::METER_VD"
+      ],
+      "notes": "Vd telemetry currently exists through the web meter polling/broadcast path only; there is no typed radio API for this meter."
+    },
+    {
+      "id": 56,
+      "name": "Id Meter",
+      "wire": "\\\\x15\\\\x16",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "transceiver_status",
+      "status": "missing"
+    },
+    {
+      "id": 57,
+      "name": "Preamp Status",
+      "wire": "\\\\x16\\\\x02",
+      "command29": true,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "baseline_core",
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_preamp",
+        "icom_lan.commands:set_preamp",
+        "icom_lan.radio:Icom7610CoreRadio.get_preamp",
+        "icom_lan.radio:Icom7610CoreRadio.set_preamp"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::get_preamp",
+        "tests/test_radio_coverage.py::get_preamp"
+      ]
+    },
+    {
+      "id": 58,
+      "name": "AGC Status",
+      "wire": "\\\\x16\\\\x12",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "operator_toggles",
+      "status": "missing"
+    },
+    {
+      "id": 59,
+      "name": "Noise Blanker",
+      "wire": "\\\\x16\\\\x22",
+      "command29": true,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "baseline_core",
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_nb",
+        "icom_lan.commands:set_nb",
+        "icom_lan.radio:Icom7610CoreRadio.get_nb",
+        "icom_lan.radio:Icom7610CoreRadio.set_nb"
+      ],
+      "test_patterns": [
+        "tests/test_radio_coverage.py::get_nb"
+      ]
+    },
+    {
+      "id": 60,
+      "name": "Audio Peak Filter",
+      "wire": "\\\\x16\\\\x32",
+      "command29": true,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "operator_toggles",
+      "status": "missing"
+    },
+    {
+      "id": 61,
+      "name": "Noise Reduction",
+      "wire": "\\\\x16\\\\x40",
+      "command29": true,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "baseline_core",
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_nr",
+        "icom_lan.commands:set_nr",
+        "icom_lan.radio:Icom7610CoreRadio.get_nr",
+        "icom_lan.radio:Icom7610CoreRadio.set_nr"
+      ],
+      "test_patterns": [
+        "tests/test_radio_coverage.py::get_nr"
+      ]
+    },
+    {
+      "id": 62,
+      "name": "Auto Notch",
+      "wire": "\\\\x16\\\\x41",
+      "command29": true,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "operator_toggles",
+      "status": "missing"
+    },
+    {
+      "id": 63,
+      "name": "Repeater Tone",
+      "wire": "\\\\x16\\\\x42",
+      "command29": true,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "tone_repeater",
+      "status": "missing"
+    },
+    {
+      "id": 64,
+      "name": "Repeater TSQL",
+      "wire": "\\\\x16\\\\x43",
+      "command29": true,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "tone_repeater",
+      "status": "missing"
+    },
+    {
+      "id": 65,
+      "name": "Compressor Status",
+      "wire": "\\\\x16\\\\x44",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "operator_toggles",
+      "status": "missing"
+    },
+    {
+      "id": 66,
+      "name": "Monitor Status",
+      "wire": "\\\\x16\\\\x45",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "operator_toggles",
+      "status": "missing"
+    },
+    {
+      "id": 67,
+      "name": "Vox Status",
+      "wire": "\\\\x16\\\\x46",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "operator_toggles",
+      "status": "missing"
+    },
+    {
+      "id": 68,
+      "name": "Break-In Status",
+      "wire": "\\\\x16\\\\x47",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "operator_toggles",
+      "status": "missing"
+    },
+    {
+      "id": 69,
+      "name": "Manual Notch",
+      "wire": "\\\\x16\\\\x48",
+      "command29": true,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "operator_toggles",
+      "status": "missing"
+    },
+    {
+      "id": 70,
+      "name": "DIGI-Sel Status",
+      "wire": "\\\\x16\\\\x4e",
+      "command29": true,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "baseline_core",
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_digisel",
+        "icom_lan.commands:set_digisel",
+        "icom_lan.radio:Icom7610CoreRadio.get_digisel",
+        "icom_lan.radio:Icom7610CoreRadio.set_digisel"
+      ],
+      "test_patterns": [
+        "tests/test_radio_coverage.py::get_digisel"
+      ]
+    },
+    {
+      "id": 71,
+      "name": "Twin Peak Filter",
+      "wire": "\\\\x16\\\\x4f",
+      "command29": true,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "operator_toggles",
+      "status": "missing"
+    },
+    {
+      "id": 72,
+      "name": "Dial Lock Status",
+      "wire": "\\\\x16\\\\x50",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "operator_toggles",
+      "status": "missing"
+    },
+    {
+      "id": 73,
+      "name": "RX Antenna",
+      "wire": "\\\\x16\\\\x53",
+      "command29": true,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "system_config",
+      "status": "missing"
+    },
+    {
+      "id": 74,
+      "name": "Filter Shape",
+      "wire": "\\\\x16\\\\x56",
+      "command29": true,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "operator_toggles",
+      "status": "missing"
+    },
+    {
+      "id": 75,
+      "name": "SSB TX Bandwidth",
+      "wire": "\\\\x16\\\\x58",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "operator_toggles",
+      "status": "missing"
+    },
+    {
+      "id": 76,
+      "name": "Main/Sub Tracking",
+      "wire": "\\\\x16\\\\x5e",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "vfo_dualwatch_scan",
+      "status": "missing"
+    },
+    {
+      "id": 77,
+      "name": "IP Plus Status",
+      "wire": "\\\\x16\\\\x65",
+      "command29": true,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "baseline_core",
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_ip_plus",
+        "icom_lan.commands:set_ip_plus",
+        "icom_lan.radio:Icom7610CoreRadio.get_ip_plus",
+        "icom_lan.radio:Icom7610CoreRadio.set_ip_plus"
+      ],
+      "test_patterns": [
+        "tests/test_radio_coverage.py::get_ip_plus"
+      ]
+    },
+    {
+      "id": 78,
+      "name": "Send CW",
+      "wire": "\\\\x17",
+      "command29": false,
+      "get": false,
+      "set": true,
+      "admin": false,
+      "family": "baseline_core",
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:send_cw",
+        "icom_lan.commands:stop_cw",
+        "icom_lan.radio:Icom7610CoreRadio.send_cw_text",
+        "icom_lan.radio:Icom7610CoreRadio.stop_cw_text"
+      ],
+      "test_patterns": [
+        "tests/test_commands_extended.py::test_send_short",
+        "tests/test_commands_extended.py::test_stop_cw"
+      ]
+    },
+    {
+      "id": 79,
+      "name": "Power Control",
+      "wire": "\\\\x18",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "baseline_core",
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:power_on",
+        "icom_lan.commands:power_off",
+        "icom_lan.radio:Icom7610CoreRadio.power_control"
+      ],
+      "test_patterns": [
+        "tests/test_commands_extended.py::test_power_on",
+        "tests/test_commands_extended.py::test_power_off"
+      ]
+    },
+    {
+      "id": 80,
+      "name": "Transceiver ID",
+      "wire": "\\\\x19\\\\x00",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "system_config",
+      "status": "missing"
+    },
+    {
+      "id": 81,
+      "name": "Memory Contents",
+      "wire": "\\\\x1a\\\\x00",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "memory_bandstack",
+      "status": "missing"
+    },
+    {
+      "id": 82,
+      "name": "Band Stacking Reg",
+      "wire": "\\\\x1a\\\\x01",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "memory_bandstack",
+      "status": "missing"
+    },
+    {
+      "id": 83,
+      "name": "Filter Width",
+      "wire": "\\\\x1a\\\\x03",
+      "command29": true,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "baseline_core",
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.radio:Icom7610CoreRadio.get_filter",
+        "icom_lan.radio:Icom7610CoreRadio.set_filter"
+      ],
+      "test_patterns": [
+        "tests/test_radio_coverage.py::get_filter",
+        "tests/test_radio_coverage.py::set_filter"
+      ]
+    },
+    {
+      "id": 84,
+      "name": "Quick Dual Watch",
+      "wire": "\\\\x1a\\\\x05\\\\x00\\\\x32",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "vfo_dualwatch_scan",
+      "status": "missing"
+    },
+    {
+      "id": 85,
+      "name": "Quick Split",
+      "wire": "\\\\x1a\\\\x05\\\\x00\\\\x33",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "vfo_dualwatch_scan",
+      "status": "missing"
+    },
+    {
+      "id": 86,
+      "name": "REF Adjust",
+      "wire": "\\\\x1a\\\\x05\\\\x00\\\\x70",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "dsp_levels",
+      "status": "missing"
+    },
+    {
+      "id": 87,
+      "name": "ACC1 Mod Level",
+      "wire": "\\\\x1A\\\\x05\\\\x00\\\\x88",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "system_config",
+      "status": "missing"
+    },
+    {
+      "id": 88,
+      "name": "USB Mod Level",
+      "wire": "\\\\x1a\\\\x05\\\\x00\\\\x89",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "system_config",
+      "status": "missing"
+    },
+    {
+      "id": 89,
+      "name": "LAN Mod Level",
+      "wire": "\\\\x1a\\\\x05\\\\x00\\\\x90",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "system_config",
+      "status": "missing"
+    },
+    {
+      "id": 90,
+      "name": "Data Off Mod Input",
+      "wire": "\\\\x1a\\\\x05\\\\x00\\\\x91",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "system_config",
+      "status": "missing"
+    },
+    {
+      "id": 91,
+      "name": "DATA1 Mod Input",
+      "wire": "\\\\x1a\\\\x05\\\\x00\\\\x92",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "system_config",
+      "status": "missing"
+    },
+    {
+      "id": 92,
+      "name": "DATA2 Mod Input",
+      "wire": "\\\\x1a\\\\x05\\\\x00\\\\x93",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "system_config",
+      "status": "missing"
+    },
+    {
+      "id": 93,
+      "name": "DATA3 Mod Input",
+      "wire": "\\\\x1a\\\\x05\\\\x00\\\\x94",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "system_config",
+      "status": "missing"
+    },
+    {
+      "id": 94,
+      "name": "CIV Transceive",
+      "wire": "\\\\x1a\\\\x05\\\\x01\\\\x12",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "system_config",
+      "status": "missing"
+    },
+    {
+      "id": 95,
+      "name": "System Date",
+      "wire": "\\\\x1a\\\\x05\\\\x01\\\\x58",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "system_config",
+      "status": "missing"
+    },
+    {
+      "id": 96,
+      "name": "System Time",
+      "wire": "\\\\x1a\\\\x05\\\\x01\\\\x59",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "system_config",
+      "status": "missing"
+    },
+    {
+      "id": 97,
+      "name": "UTC Offset",
+      "wire": "\\\\x1a\\\\x05\\\\x01\\\\x62",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "system_config",
+      "status": "missing"
+    },
+    {
+      "id": 98,
+      "name": "Dash Ratio",
+      "wire": "\\\\x1a\\\\x05\\\\x02\\\\x28",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "dsp_levels",
+      "status": "missing"
+    },
+    {
+      "id": 99,
+      "name": "NB Depth",
+      "wire": "\\\\x1a\\\\x05\\\\x02\\\\x90",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "dsp_levels",
+      "status": "missing"
+    },
+    {
+      "id": 100,
+      "name": "NB Width",
+      "wire": "\\\\x1a\\\\x05\\\\x02\\\\x91",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "dsp_levels",
+      "status": "missing"
+    },
+    {
+      "id": 101,
+      "name": "Data Mode Filter",
+      "wire": "\\\\x1a\\\\x06",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "baseline_core",
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_data_mode",
+        "icom_lan.commands:set_data_mode",
+        "icom_lan.radio:Icom7610CoreRadio.get_data_mode",
+        "icom_lan.radio:Icom7610CoreRadio.set_data_mode"
+      ],
+      "test_patterns": [
+        "tests/test_data_mode.py::get_data_mode",
+        "tests/test_radio_coverage.py::set_data_mode"
+      ]
+    },
+    {
+      "id": 102,
+      "name": "AF Mute Status",
+      "wire": "\\\\x1a\\\\x09",
+      "command29": true,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "dsp_levels",
+      "status": "missing"
+    },
+    {
+      "id": 103,
+      "name": "AGC Time Constant",
+      "wire": "\\\\x1a04",
+      "command29": true,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "operator_toggles",
+      "status": "missing"
+    },
+    {
+      "id": 104,
+      "name": "Tone Frequency",
+      "wire": "\\\\x1b\\\\x00",
+      "command29": true,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "tone_repeater",
+      "status": "missing"
+    },
+    {
+      "id": 105,
+      "name": "TSQL Frequency",
+      "wire": "\\\\x1b\\\\x01",
+      "command29": true,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "tone_repeater",
+      "status": "missing"
+    },
+    {
+      "id": 106,
+      "name": "Transceiver Status",
+      "wire": "\\\\x1c\\\\x00",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "baseline_core",
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:ptt_on",
+        "icom_lan.commands:ptt_off",
+        "icom_lan.radio:Icom7610CoreRadio.set_ptt",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_ptt_on",
+        "tests/test_civ_rx_coverage.py::cmd1c",
+        "tests/test_radio.py::test_set_ptt_on"
+      ]
+    },
+    {
+      "id": 107,
+      "name": "Tuner/ATU Status",
+      "wire": "\\\\x1c\\\\x01",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "transceiver_status",
+      "status": "missing"
+    },
+    {
+      "id": 108,
+      "name": "XFC Status",
+      "wire": "\\\\x1c\\\\x02",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "vfo_dualwatch_scan",
+      "status": "missing"
+    },
+    {
+      "id": 109,
+      "name": "TX Freq",
+      "wire": "\\\\x1c\\\\x03",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "transceiver_status",
+      "status": "missing"
+    },
+    {
+      "id": 110,
+      "name": "CI-V Output (ANT)",
+      "wire": "\\\\x1c\\\\x04",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "system_config",
+      "status": "missing"
+    },
+    {
+      "id": 111,
+      "name": "RIT Frequency",
+      "wire": "\\\\x21\\\\x00",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "transceiver_status",
+      "status": "missing"
+    },
+    {
+      "id": 112,
+      "name": "RIT Status",
+      "wire": "\\\\x21\\\\x01",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "transceiver_status",
+      "status": "missing"
+    },
+    {
+      "id": 113,
+      "name": "RIT TX Status",
+      "wire": "\\\\x21\\\\x02",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "transceiver_status",
+      "status": "missing"
+    },
+    {
+      "id": 114,
+      "name": "RX Frequency",
+      "wire": "\\\\x25",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "baseline_core",
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+      ],
+      "test_patterns": [
+        "tests/test_civ_rx_coverage.py::cmd25"
+      ],
+      "notes": "Dual-receiver RX frequency responses are consumed by RadioState/web runtime rather than a standalone public getter."
+    },
+    {
+      "id": 115,
+      "name": "RX Mode",
+      "wire": "\\\\x26",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "baseline_core",
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+      ],
+      "test_patterns": [
+        "tests/test_civ_rx_coverage.py::cmd26"
+      ],
+      "notes": "Dual-receiver RX mode responses are consumed by RadioState/web runtime rather than a standalone public getter."
+    },
+    {
+      "id": 116,
+      "name": "Scope Wave Data",
+      "wire": "\\\\x27\\\\x00",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "baseline_core",
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.scope:ScopeAssembler",
+        "icom_lan.radio:Icom7610CoreRadio.scope_stream"
+      ],
+      "test_patterns": [
+        "tests/test_scope.py::assembles_complete_frame",
+        "tests/test_radio_coverage.py::capture_scope_frame"
+      ]
+    },
+    {
+      "id": 117,
+      "name": "Scope On/Off",
+      "wire": "\\\\x27\\\\x10",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "baseline_core",
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:scope_on",
+        "icom_lan.commands:scope_off",
+        "icom_lan.radio:Icom7610CoreRadio.enable_scope",
+        "icom_lan.radio:Icom7610CoreRadio.disable_scope"
+      ],
+      "test_patterns": [
+        "tests/test_scope.py::test_scope_on",
+        "tests/test_scope.py::test_scope_off",
+        "tests/test_radio_coverage.py::enable_scope"
+      ],
+      "notes": "High-level scope lifecycle covers this family; disable is currently implemented via data-output gating rather than a dedicated hard-off workflow."
+    },
+    {
+      "id": 118,
+      "name": "Scope Data Output",
+      "wire": "\\\\x27\\\\x11",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "baseline_core",
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:scope_data_output",
+        "icom_lan.radio:Icom7610CoreRadio.enable_scope",
+        "icom_lan.radio:Icom7610CoreRadio.disable_scope"
+      ],
+      "test_patterns": [
+        "tests/test_scope.py::scope_data_output_on",
+        "tests/test_scope.py::scope_data_output_off"
+      ]
+    },
+    {
+      "id": 119,
+      "name": "Scope Main/Sub",
+      "wire": "\\\\x27\\\\x12",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "advanced_scope",
+      "status": "partial",
+      "runtime_symbols": [
+        "icom_lan.commands:scope_main_sub",
+        "icom_lan.web.radio_poller:SwitchScopeReceiver"
+      ],
+      "test_patterns": [
+        "tests/test_scope.py::scope_main_sub",
+        "tests/test_web_server.py::SwitchScopeReceiver"
+      ],
+      "notes": "Scope receiver selection is wired for web poller/use-site callers, but not exposed as a stable high-level radio method."
+    },
+    {
+      "id": 120,
+      "name": "Scope Single/Dual",
+      "wire": "\\\\x27\\\\x13",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "advanced_scope",
+      "status": "partial",
+      "runtime_symbols": [
+        "icom_lan.commands:scope_single_dual"
+      ],
+      "test_patterns": [
+        "tests/test_scope.py::scope_single_dual"
+      ],
+      "notes": "Single/dual scope mode has a tested builder only; no maintained high-level surface yet."
+    },
+    {
+      "id": 121,
+      "name": "Scope Mode",
+      "wire": "\\\\x27\\\\x14",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "advanced_scope",
+      "status": "partial",
+      "runtime_symbols": [
+        "icom_lan.commands:scope_set_mode"
+      ],
+      "test_patterns": [
+        "tests/test_scope.py::test_scope_set_mode"
+      ],
+      "notes": "Scope mode has a tested builder only; no maintained high-level surface yet."
+    },
+    {
+      "id": 122,
+      "name": "Scope Span",
+      "wire": "\\\\x27\\\\x15",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "advanced_scope",
+      "status": "partial",
+      "runtime_symbols": [
+        "icom_lan.commands:scope_set_span"
+      ],
+      "test_patterns": [
+        "tests/test_scope.py::test_scope_set_span"
+      ],
+      "notes": "Scope span has a tested builder only; no maintained high-level surface yet."
+    },
+    {
+      "id": 123,
+      "name": "Scope Edge",
+      "wire": "\\\\x27\\\\x16",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "advanced_scope",
+      "status": "partial",
+      "runtime_symbols": [
+        "icom_lan.commands:scope_set_edge"
+      ],
+      "test_patterns": [
+        "tests/test_scope.py::test_scope_set_edge"
+      ],
+      "notes": "Scope edge selection has a tested builder only; no maintained high-level surface yet."
+    },
+    {
+      "id": 124,
+      "name": "Scope Hold",
+      "wire": "\\\\x27\\\\x17",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "advanced_scope",
+      "status": "partial",
+      "runtime_symbols": [
+        "icom_lan.commands:scope_set_hold"
+      ],
+      "test_patterns": [
+        "tests/test_scope.py::test_scope_set_hold"
+      ],
+      "notes": "Scope hold has a tested builder only; no maintained high-level surface yet."
+    },
+    {
+      "id": 125,
+      "name": "Scope Ref",
+      "wire": "\\\\x27\\\\x19",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "advanced_scope",
+      "status": "partial",
+      "runtime_symbols": [
+        "icom_lan.commands:scope_set_ref"
+      ],
+      "test_patterns": [
+        "tests/test_scope.py::test_scope_set_ref"
+      ],
+      "notes": "Scope reference level has a tested builder only; no maintained high-level surface yet."
+    },
+    {
+      "id": 126,
+      "name": "Scope Speed",
+      "wire": "\\\\x27\\\\x1a",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "advanced_scope",
+      "status": "partial",
+      "runtime_symbols": [
+        "icom_lan.commands:scope_set_speed"
+      ],
+      "test_patterns": [
+        "tests/test_scope.py::test_scope_set_speed"
+      ],
+      "notes": "Scope speed has a tested builder only; no maintained high-level surface yet."
+    },
+    {
+      "id": 127,
+      "name": "Scope During TX",
+      "wire": "\\\\x27\\\\x1b",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "advanced_scope",
+      "status": "missing"
+    },
+    {
+      "id": 128,
+      "name": "Scope Center Type",
+      "wire": "\\\\x27\\\\x1c",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "advanced_scope",
+      "status": "missing"
+    },
+    {
+      "id": 129,
+      "name": "Scope VBW",
+      "wire": "\\\\x27\\\\x1d",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "advanced_scope",
+      "status": "partial",
+      "runtime_symbols": [
+        "icom_lan.commands:scope_set_vbw"
+      ],
+      "test_patterns": [
+        "tests/test_scope.py::test_scope_set_vbw"
+      ],
+      "notes": "Scope VBW has a tested builder only; no maintained high-level surface yet."
+    },
+    {
+      "id": 130,
+      "name": "Scope Fixed Edge Freq",
+      "wire": "\\\\x27\\\\x1e",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "advanced_scope",
+      "status": "missing"
+    },
+    {
+      "id": 131,
+      "name": "Scope RBW",
+      "wire": "\\\\x27\\\\x1f",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "advanced_scope",
+      "status": "partial",
+      "runtime_symbols": [
+        "icom_lan.commands:scope_set_rbw"
+      ],
+      "test_patterns": [
+        "tests/test_scope.py::test_scope_set_rbw"
+      ],
+      "notes": "Scope RBW has a tested builder only; no maintained high-level surface yet."
+    },
+    {
+      "id": 132,
+      "name": "Main/Sub Prefix",
+      "wire": "\\\\x29",
+      "command29": false,
+      "get": true,
+      "set": true,
+      "admin": false,
+      "family": "baseline_core",
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:build_cmd29_frame",
+        "icom_lan.radio:Icom7610CoreRadio._require_cmd29_route"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::build_cmd29_frame",
+        "tests/test_cmd29_parsing.py::build_cmd29_frame"
+      ],
+      "notes": "Command29 prefixing is a maintained internal primitive used by exposed dual-receiver commands."
+    },
+    {
+      "id": 133,
+      "name": "Command Error FA",
+      "wire": "\\\\xfa",
+      "command29": false,
+      "get": false,
+      "set": false,
+      "admin": false,
+      "family": "baseline_core",
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:parse_ack_nak"
+      ],
+      "test_patterns": [
+        "tests/test_commands_extended.py::test_nak"
+      ]
+    },
+    {
+      "id": 134,
+      "name": "Command OK FB",
+      "wire": "\\\\xfb",
+      "command29": false,
+      "get": false,
+      "set": false,
+      "admin": false,
+      "family": "baseline_core",
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:parse_ack_nak"
+      ],
+      "test_patterns": [
+        "tests/test_commands_extended.py::test_ack"
+      ]
+    }
+  ]
+}

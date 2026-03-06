@@ -182,6 +182,20 @@ Each UDP packet has a fixed-format header (see `packettypes.h` in wfview):
 - [x] `#149` rigctld backend-neutral integration
 - [x] `#151` Docs/migration/capability matrix (2026-03-06)
 
+### Phase 9 — IC-7610 wfview Command Parity (M4) ⏳ IN PROGRESS
+**Goal:** Close the remaining IC-7610 command parity gap against wfview using a maintained command matrix and regression gate.
+
+- [x] `#139` parity matrix + regression gate (`docs/parity/ic7610_command_matrix.json`)
+- [ ] `#130` DSP / level command family
+- [ ] `#131` operator toggles / status family
+- [ ] `#132` VFO / dual-watch / scanning family
+- [ ] `#133` memory + band-stacking family
+- [ ] `#134` repeater / tone family
+- [ ] `#135` system / configuration family
+- [ ] `#136` transceiver / RIT / TX status family
+- [ ] `#137` advanced scope controls
+- [ ] `#138` cross-surface exposure (API / CLI / Web / rigctld)
+
 ### Current Status
 **Package version in `pyproject.toml`: `0.11.0`.**
 **Reliability integration backlog (items 1-13) completed on 2026-03-05.**
@@ -194,6 +208,17 @@ Each UDP packet has a fixed-format header (see `packettypes.h` in wfview):
 - **M3 rigctld integration (issue #149, 2026-03-06):** rigctld startup now reuses the shared factory/config path for `--backend lan` and `--backend serial`, shares backend-provided state cache when available, prefers backend-native mode introspection via `radio_protocol.ModeInfoCapable` while falling back to the core `Radio.get_mode()/set_mode(str, ...)` contract, and adds serial TCP smoke coverage for read/write rigctld commands while keeping audit logging and circuit-breaker behavior unchanged.
 - **M3 documentation (issue #151, 2026-03-06):** comprehensive IC-7610 USB serial backend setup guide (macOS-first), backend capability matrix (LAN vs Serial), migration/backward-compatibility section, troubleshooting for serial CI-V and USB audio, and critical hardware finding (`CI-V USB Port` must be `Link to [CI-V]`, not `[REMOTE]`) documented across guide/radios.md, guide/troubleshooting.md, radio-protocol.md, and new guide/ic7610-usb-setup.md.
 - **M3 status:** complete (epic #152 closed-out).
+- **IC-7610 parity matrix (issue #139, 2026-03-06): 38 implemented, 16 partial, 80 missing**; source of truth is `docs/parity/ic7610_command_matrix.json`.
+- **M4 parity family counts (from matrix):**
+  - `#138 baseline_core`: 38 implemented, 0 partial, 0 missing
+  - `#132 vfo_dualwatch_scan`: 0 implemented, 4 partial, 6 missing
+  - `#136 transceiver_status`: 0 implemented, 2 partial, 9 missing
+  - `#137 advanced_scope`: 0 implemented, 10 partial, 3 missing
+  - `#130 dsp_levels`: 0 implemented, 0 partial, 21 missing
+  - `#131 operator_toggles`: 0 implemented, 0 partial, 15 missing
+  - `#133 memory_bandstack`: 0 implemented, 0 partial, 6 missing
+  - `#134 tone_repeater`: 0 implemented, 0 partial, 4 missing
+  - `#135 system_config`: 0 implemented, 0 partial, 16 missing
 
 ### Reliability Test Expansion (2026-03-05)
 - Added extended integration coverage scaffolding for:

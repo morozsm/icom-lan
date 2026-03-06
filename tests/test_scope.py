@@ -23,6 +23,14 @@ from icom_lan.commands import (
     scope_main_sub,
     scope_off,
     scope_on,
+    scope_set_edge,
+    scope_set_hold,
+    scope_set_mode,
+    scope_set_rbw,
+    scope_set_ref,
+    scope_set_span,
+    scope_set_speed,
+    scope_set_vbw,
     scope_single_dual,
 )
 from icom_lan.scope import ScopeAssembler, ScopeFrame
@@ -491,6 +499,54 @@ class TestScopeCommandBuilders:
         assert frame[4] == 0x27
         assert frame[5] == 0x13
         assert frame[6] == 0x01
+
+    def test_scope_set_mode(self) -> None:
+        frame = scope_set_mode(2)
+        assert frame[4] == 0x27
+        assert frame[5] == 0x14
+        assert frame[6] == 0x02
+
+    def test_scope_set_span(self) -> None:
+        frame = scope_set_span(3)
+        assert frame[4] == 0x27
+        assert frame[5] == 0x15
+        assert frame[6] == 0x03
+
+    def test_scope_set_edge(self) -> None:
+        frame = scope_set_edge(4)
+        assert frame[4] == 0x27
+        assert frame[5] == 0x16
+        assert frame[6] == 0x04
+
+    def test_scope_set_hold(self) -> None:
+        frame = scope_set_hold(True)
+        assert frame[4] == 0x27
+        assert frame[5] == 0x17
+        assert frame[6] == 0x01
+
+    def test_scope_set_ref(self) -> None:
+        frame = scope_set_ref(-10.5)
+        assert frame[4] == 0x27
+        assert frame[5] == 0x19
+        assert frame[6:9] == b"\x01\x05\x01"
+
+    def test_scope_set_speed(self) -> None:
+        frame = scope_set_speed(1)
+        assert frame[4] == 0x27
+        assert frame[5] == 0x1A
+        assert frame[6] == 0x01
+
+    def test_scope_set_vbw(self) -> None:
+        frame = scope_set_vbw(True)
+        assert frame[4] == 0x27
+        assert frame[5] == 0x1D
+        assert frame[6] == 0x01
+
+    def test_scope_set_rbw(self) -> None:
+        frame = scope_set_rbw(2)
+        assert frame[4] == 0x27
+        assert frame[5] == 0x1F
+        assert frame[6] == 0x02
 
     def test_custom_addrs(self) -> None:
         frame = scope_on(to_addr=0x70, from_addr=0xE1)
