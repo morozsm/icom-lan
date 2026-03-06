@@ -111,6 +111,11 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Timeout in seconds (default: 5)",
     )
     p.add_argument(
+        "--json",
+        action="store_true",
+        help="Output as JSON when supported by the selected command",
+    )
+    p.add_argument(
         "--backend",
         choices=["lan", "serial"],
         default="lan",
@@ -130,6 +135,14 @@ def _build_parser() -> argparse.ArgumentParser:
         default=int(_get_env("ICOM_SERIAL_BAUDRATE", "115200")),
         metavar="BAUD",
         help="Serial baud rate for --backend serial (default: $ICOM_SERIAL_BAUDRATE or 115200)",
+    )
+    p.add_argument(
+        "--serial-ptt-mode",
+        dest="serial_ptt_mode",
+        choices=["civ"],
+        default=_get_env("ICOM_SERIAL_PTT_MODE", "civ").lower(),
+        metavar="MODE",
+        help="Serial PTT mode for --backend serial (currently supported: civ)",
     )
     p.add_argument(
         "--rx-device",
@@ -593,6 +606,7 @@ def _build_backend_config(args: argparse.Namespace) -> LanBackendConfig | Serial
             timeout=args.timeout,
             rx_device=getattr(args, "rx_device", None) or None,
             tx_device=getattr(args, "tx_device", None) or None,
+            ptt_mode=getattr(args, "serial_ptt_mode", "civ"),
         )
     return LanBackendConfig(
         host=args.host,

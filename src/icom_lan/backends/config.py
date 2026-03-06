@@ -67,6 +67,7 @@ class SerialBackendConfig:
     audio_sample_rate: int = _DEFAULT_AUDIO_SAMPLE_RATE
     rx_device: str | None = None
     tx_device: str | None = None
+    ptt_mode: Literal["civ"] = "civ"
     allow_low_baud_scope: bool = False
     profile: RadioProfile | str | None = None
     model: str | None = None
@@ -86,6 +87,8 @@ class SerialBackendConfig:
             raise ValueError("rx_device override must be a non-empty string.")
         if self.tx_device is not None and not self.tx_device.strip():
             raise ValueError("tx_device override must be a non-empty string.")
+        if self.ptt_mode != "civ":
+            raise ValueError("ptt_mode must be 'civ'.")
         if not isinstance(self.allow_low_baud_scope, bool):
             raise ValueError("allow_low_baud_scope must be a bool.")
 
