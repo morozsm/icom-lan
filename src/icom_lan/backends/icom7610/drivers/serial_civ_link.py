@@ -140,7 +140,7 @@ class SerialCivLink:
         self,
         *,
         device: str,
-        baudrate: int = 19200,
+        baudrate: int = 115200,
         read_chunk_size: int = 512,
         connect_timeout_s: float = 5.0,
         codec: SerialFrameCodec | None = None,

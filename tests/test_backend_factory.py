@@ -26,6 +26,10 @@ class TestBackendConfigValidation:
         with pytest.raises(ValueError, match="device"):
             SerialBackendConfig(device="")
 
+    def test_serial_backend_default_baudrate_matches_runtime_default(self) -> None:
+        config = SerialBackendConfig(device="/dev/tty.usbmodem-IC7610")
+        assert config.baudrate == 115200
+
 
 class TestCreateRadioFactory:
     def test_create_radio_builds_lan_backend(self) -> None:

@@ -385,3 +385,8 @@ def test_codec_keeps_already_framed_payload() -> None:
     codec = SerialFrameCodec(max_frame_len=64, frame_timeout_s=0.01)
     frame = b"\xFE\xFE\x98\xE0\x03\xFD"
     assert codec.encode(frame) == frame
+
+
+def test_serial_civ_link_default_baudrate_is_115200() -> None:
+    link = SerialCivLink(device="/dev/tty.usbmodem-IC7610")
+    assert link._baudrate == 115200

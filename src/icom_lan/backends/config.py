@@ -60,7 +60,7 @@ class SerialBackendConfig:
 
     backend: Literal["serial"] = "serial"
     device: str = ""
-    baudrate: int = 19200
+    baudrate: int = 115200
     radio_addr: int | None = None
     timeout: float = 5.0
     profile: RadioProfile | str | None = None

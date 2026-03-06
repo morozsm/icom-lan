@@ -1,6 +1,6 @@
 """Extended tests for IcomRadio — VFO, split, attenuator, preamp, CW, power control, audio, disconnected states."""
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, call
 
 import pytest
 
@@ -12,6 +12,7 @@ from icom_lan.commands import (
 from icom_lan.commander import Priority
 from icom_lan.exceptions import ConnectionError, CommandError
 from icom_lan.radio import IcomRadio
+from icom_lan.types import CivFrame, Mode, bcd_encode
 
 # Reuse helpers from test_radio
 from test_radio import (
@@ -287,6 +288,79 @@ class TestCW:
         r = IcomRadio("192.168.1.100")
         with pytest.raises(ConnectionError):
             await r.send_cw_text("CQ")
+
+
+# ---------------------------------------------------------------------------
+# Receiver-aware contract / fallback routing
+# ---------------------------------------------------------------------------
+
+
+class TestReceiverAwareContract:
+    @pytest.mark.asyncio
+    async def test_get_frequency_receiver_sub_uses_vfo_fallback(
+        self, radio: IcomRadio
+    ) -> None:
+        radio.select_vfo = AsyncMock()  # type: ignore[method-assign]
+        expected = 7_074_000
+        radio._send_civ_raw = AsyncMock(  # type: ignore[method-assign]
+            return_value=CivFrame(
+                to_addr=CONTROLLER_ADDR,
+                from_addr=IC_7610_ADDR,
+                command=0x03,
+                sub=None,
+                data=bcd_encode(expected),
+            )
+        )
+
+        got = await radio.get_frequency(receiver=1)
+
+        assert got == expected
+        radio.select_vfo.assert_has_awaits([call("SUB"), call("MAIN")])
+
+    @pytest.mark.asyncio
+    async def test_get_mode_receiver_sub_uses_vfo_fallback(
+        self, radio: IcomRadio
+    ) -> None:
+        radio.select_vfo = AsyncMock()  # type: ignore[method-assign]
+        radio._send_civ_raw = AsyncMock(  # type: ignore[method-assign]
+            return_value=CivFrame(
+                to_addr=CONTROLLER_ADDR,
+                from_addr=IC_7610_ADDR,
+                command=0x04,
+                sub=None,
+                data=bytes([Mode.LSB, 2]),
+            )
+        )
+
+        mode_name, filt = await radio.get_mode(receiver=1)
+
+        assert mode_name == "LSB"
+        assert filt == 2
+        radio.select_vfo.assert_has_awaits([call("SUB"), call("MAIN")])
+
+    @pytest.mark.asyncio
+    async def test_set_frequency_receiver_sub_uses_vfo_fallback(
+        self, radio: IcomRadio
+    ) -> None:
+        radio.select_vfo = AsyncMock()  # type: ignore[method-assign]
+        radio._send_civ_raw = AsyncMock(return_value=None)  # type: ignore[method-assign]
+
+        await radio.set_frequency(14_074_000, receiver=1)
+
+        radio.select_vfo.assert_has_awaits([call("SUB"), call("MAIN")])
+        radio._send_civ_raw.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_set_mode_receiver_sub_uses_vfo_fallback(
+        self, radio: IcomRadio
+    ) -> None:
+        radio.select_vfo = AsyncMock()  # type: ignore[method-assign]
+        radio._send_civ_raw = AsyncMock(return_value=None)  # type: ignore[method-assign]
+
+        await radio.set_mode("USB", receiver=1)
+
+        radio.select_vfo.assert_has_awaits([call("SUB"), call("MAIN")])
+        radio._send_civ_raw.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_stop_cw_disconnected(self) -> None:

@@ -80,6 +80,7 @@ def test_docs_sync_radio_contract_invariants() -> None:
             r"radio_ready",
             r"backend[- ]managed",
             r"connected.*radio_ready",
+            r"radio_addr:\s*int\s*\|\s*None\s*=\s*None|Optional CI-V address override",
         ],
     )
 
