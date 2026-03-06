@@ -186,7 +186,7 @@ Each UDP packet has a fixed-format header (see `packettypes.h` in wfview):
 **Goal:** Close the remaining IC-7610 command parity gap against wfview using a maintained command matrix and regression gate.
 
 - [x] `#139` parity matrix + regression gate (`docs/parity/ic7610_command_matrix.json`)
-- [ ] `#130` DSP / level command family
+- [x] `#130` DSP / level command family
 - [ ] `#131` operator toggles / status family
 - [ ] `#132` VFO / dual-watch / scanning family
 - [ ] `#133` memory + band-stacking family
@@ -208,13 +208,13 @@ Each UDP packet has a fixed-format header (see `packettypes.h` in wfview):
 - **M3 rigctld integration (issue #149, 2026-03-06):** rigctld startup now reuses the shared factory/config path for `--backend lan` and `--backend serial`, shares backend-provided state cache when available, prefers backend-native mode introspection via `radio_protocol.ModeInfoCapable` while falling back to the core `Radio.get_mode()/set_mode(str, ...)` contract, and adds serial TCP smoke coverage for read/write rigctld commands while keeping audit logging and circuit-breaker behavior unchanged.
 - **M3 documentation (issue #151, 2026-03-06):** comprehensive IC-7610 USB serial backend setup guide (macOS-first), backend capability matrix (LAN vs Serial), migration/backward-compatibility section, troubleshooting for serial CI-V and USB audio, and critical hardware finding (`CI-V USB Port` must be `Link to [CI-V]`, not `[REMOTE]`) documented across guide/radios.md, guide/troubleshooting.md, radio-protocol.md, and new guide/ic7610-usb-setup.md.
 - **M3 status:** complete (epic #152 closed-out).
-- **IC-7610 parity matrix (issue #139, 2026-03-06): 38 implemented, 16 partial, 80 missing**; source of truth is `docs/parity/ic7610_command_matrix.json`, and the explicit parity smoke profile is `pytest -m "integration and ic7610_parity" tests/integration`.
+- **IC-7610 parity matrix (issue #139, 2026-03-06): 59 implemented, 16 partial, 59 missing**; source of truth is `docs/parity/ic7610_command_matrix.json`, and the explicit parity smoke profile is `pytest -m "integration and ic7610_parity" tests/integration`.
 - **M4 parity family counts (from matrix):**
   - `baseline_core` (pre-M4 baseline, no owner issue): 38 implemented, 0 partial, 0 missing
   - `#132 vfo_dualwatch_scan`: 0 implemented, 4 partial, 6 missing
   - `#136 transceiver_status`: 0 implemented, 2 partial, 9 missing
   - `#137 advanced_scope`: 0 implemented, 10 partial, 3 missing
-  - `#130 dsp_levels`: 0 implemented, 0 partial, 21 missing
+  - `#130 dsp_levels`: 21 implemented, 0 partial, 0 missing
   - `#131 operator_toggles`: 0 implemented, 0 partial, 15 missing
   - `#133 memory_bandstack`: 0 implemented, 0 partial, 6 missing
   - `#134 tone_repeater`: 0 implemented, 0 partial, 4 missing

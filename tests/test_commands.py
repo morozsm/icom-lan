@@ -569,3 +569,147 @@ class TestCmd29ReceiverRouting:
         assert set_nb(True)[4] == 0x16
         assert set_nr(True)[4] == 0x16
         assert set_ip_plus(True)[4] == 0x16
+
+
+class TestDspLevelParityCommands:
+    """Test IC-7610 DSP/level parity command builders and parsers."""
+
+    @pytest.mark.parametrize(
+        ("getter_name", "setter_name", "sub", "receiver"),
+        [
+            ("get_apf_type_level", "set_apf_type_level", 0x05, 1),
+            ("get_nr_level", "set_nr_level", 0x06, 1),
+            ("get_pbt_inner", "set_pbt_inner", 0x07, 1),
+            ("get_pbt_outer", "set_pbt_outer", 0x08, 1),
+            ("get_nb_level", "set_nb_level", 0x12, 1),
+            ("get_digisel_shift", "set_digisel_shift", 0x13, 1),
+        ],
+    )
+    def test_cmd29_level_builders(
+        self,
+        getter_name: str,
+        setter_name: str,
+        sub: int,
+        receiver: int,
+    ) -> None:
+        import icom_lan.commands as commands
+
+        getter = getattr(commands, getter_name)
+        setter = getattr(commands, setter_name)
+        expected = bytes([0xFE, 0xFE, 0x98, 0xE0, 0x29, receiver, 0x14, sub])
+
+        assert getter(receiver=receiver) == expected + b"\xFD"
+        assert setter(128, receiver=receiver) == expected + b"\x01\x28\xFD"
+
+    @pytest.mark.parametrize(
+        ("getter_name", "setter_name", "sub", "value"),
+        [
+            ("get_cw_pitch", "set_cw_pitch", 0x09, 600),
+            ("get_mic_gain", "set_mic_gain", 0x0B, 128),
+            ("get_key_speed", "set_key_speed", 0x0C, 30),
+            ("get_notch_filter", "set_notch_filter", 0x0D, 128),
+            ("get_compressor_level", "set_compressor_level", 0x0E, 128),
+            ("get_break_in_delay", "set_break_in_delay", 0x0F, 128),
+            ("get_drive_gain", "set_drive_gain", 0x14, 128),
+            ("get_monitor_gain", "set_monitor_gain", 0x15, 128),
+            ("get_vox_gain", "set_vox_gain", 0x16, 128),
+            ("get_anti_vox_gain", "set_anti_vox_gain", 0x17, 128),
+        ],
+    )
+    def test_level_builders(
+        self,
+        getter_name: str,
+        setter_name: str,
+        sub: int,
+        value: int,
+    ) -> None:
+        import icom_lan.commands as commands
+
+        getter = getattr(commands, getter_name)
+        setter = getattr(commands, setter_name)
+
+        assert getter() == bytes([0xFE, 0xFE, 0x98, 0xE0, 0x14, sub, 0xFD])
+        assert setter(value).startswith(bytes([0xFE, 0xFE, 0x98, 0xE0, 0x14, sub]))
+        assert setter(value).endswith(b"\xFD")
+
+    @pytest.mark.parametrize(
+        ("getter_name", "setter_name", "prefix", "value", "expected_payload"),
+        [
+            ("get_ref_adjust", "set_ref_adjust", b"\x00\x70", 511, b"\x05\x11"),
+            ("get_dash_ratio", "set_dash_ratio", b"\x02\x28", 45, b"\x45"),
+            ("get_nb_depth", "set_nb_depth", b"\x02\x90", 9, b"\x09"),
+            ("get_nb_width", "set_nb_width", b"\x02\x91", 255, b"\x02\x55"),
+        ],
+    )
+    def test_ctl_mem_level_builders(
+        self,
+        getter_name: str,
+        setter_name: str,
+        prefix: bytes,
+        value: int,
+        expected_payload: bytes,
+    ) -> None:
+        import icom_lan.commands as commands
+
+        getter = getattr(commands, getter_name)
+        setter = getattr(commands, setter_name)
+
+        assert getter() == b"\xFE\xFE\x98\xE0\x1A\x05" + prefix + b"\xFD"
+        assert setter(value) == b"\xFE\xFE\x98\xE0\x1A\x05" + prefix + expected_payload + b"\xFD"
+
+    def test_af_mute_builders(self) -> None:
+        from icom_lan.commands import get_af_mute, set_af_mute, RECEIVER_SUB
+
+        assert get_af_mute() == b"\xFE\xFE\x98\xE0\x29\x00\x1A\x09\xFD"
+        assert get_af_mute(receiver=RECEIVER_SUB) == b"\xFE\xFE\x98\xE0\x29\x01\x1A\x09\xFD"
+        assert set_af_mute(True) == b"\xFE\xFE\x98\xE0\x29\x00\x1A\x09\x01\xFD"
+        assert set_af_mute(False, receiver=RECEIVER_SUB) == b"\xFE\xFE\x98\xE0\x29\x01\x1A\x09\x00\xFD"
+
+    def test_parse_level_response_direct_level(self) -> None:
+        from icom_lan.commands import parse_level_response
+
+        frame = CivFrame(
+            to_addr=0xE0,
+            from_addr=0x98,
+            command=0x14,
+            sub=0x13,
+            data=b"\x01\x99",
+        )
+        assert parse_level_response(frame, sub=0x13) == 199
+
+    def test_parse_level_response_with_ctl_mem_prefix(self) -> None:
+        from icom_lan.commands import parse_level_response
+
+        frame = CivFrame(
+            to_addr=0xE0,
+            from_addr=0x98,
+            command=0x1A,
+            sub=0x05,
+            data=b"\x00\x70\x05\x11",
+        )
+        assert parse_level_response(frame, command=0x1A, sub=0x05, prefix=b"\x00\x70") == 511
+
+    def test_parse_bool_response(self) -> None:
+        from icom_lan.commands import parse_bool_response
+
+        frame = CivFrame(
+            to_addr=0xE0,
+            from_addr=0x98,
+            command=0x1A,
+            sub=0x09,
+            data=b"\x01",
+        )
+        assert parse_bool_response(frame, command=0x1A, sub=0x09) is True
+
+    def test_parse_level_response_rejects_wrong_prefix(self) -> None:
+        from icom_lan.commands import parse_level_response
+
+        frame = CivFrame(
+            to_addr=0xE0,
+            from_addr=0x98,
+            command=0x1A,
+            sub=0x05,
+            data=b"\x02\x90\x00",
+        )
+        with pytest.raises(ValueError, match="prefix"):
+            parse_level_response(frame, command=0x1A, sub=0x05, prefix=b"\x00\x70")

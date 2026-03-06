@@ -811,6 +811,9 @@ class _CivRxMixin:
         """Determine if a CI-V frame expects a data RESPONSE or just an ACK/NAK."""
         if frame.command in (0x03, 0x04):
             return True
+        if frame.command == 0x1A and frame.sub == 0x05 and len(frame.data) == 2:
+            # Selector-style config register GETs use 1A 05 <reg_hi> <reg_lo>.
+            return True
         if frame.command == 0x17:
             return False
         if frame.command == 0x27:

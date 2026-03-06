@@ -6,9 +6,9 @@
     "wfview_commander": "references/wfview/src/radio/icomcommander.cpp"
   },
   "status_totals": {
-    "implemented": 38,
+    "implemented": 59,
     "partial": 16,
-    "missing": 80
+    "missing": 59
   },
   "families": {
     "baseline_core": {
@@ -26,9 +26,9 @@
       "owner_issue": 130,
       "summary": "Missing APF/PBT/NB/monitor/VOX/mod-level style controls tracked by issue #130.",
       "counts": {
-        "implemented": 0,
+        "implemented": 21,
         "partial": 0,
-        "missing": 21
+        "missing": 0
       }
     },
     "operator_toggles": {
@@ -585,7 +585,18 @@
       "set": true,
       "admin": false,
       "family": "dsp_levels",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_apf_type_level",
+        "icom_lan.commands:set_apf_type_level",
+        "icom_lan.radio:Icom7610CoreRadio.get_apf_type_level",
+        "icom_lan.radio:Icom7610CoreRadio.set_apf_type_level"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_cmd29_level_builders",
+        "tests/test_radio.py::test_get_cmd29_dsp_level",
+        "tests/test_radio.py::test_set_cmd29_dsp_level"
+      ]
     },
     {
       "id": 31,
@@ -596,7 +607,18 @@
       "set": true,
       "admin": false,
       "family": "dsp_levels",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_nr_level",
+        "icom_lan.commands:set_nr_level",
+        "icom_lan.radio:Icom7610CoreRadio.get_nr_level",
+        "icom_lan.radio:Icom7610CoreRadio.set_nr_level"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_cmd29_level_builders",
+        "tests/test_radio.py::test_get_cmd29_dsp_level",
+        "tests/test_radio.py::test_set_cmd29_dsp_level"
+      ]
     },
     {
       "id": 32,
@@ -607,7 +629,18 @@
       "set": true,
       "admin": false,
       "family": "dsp_levels",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_pbt_inner",
+        "icom_lan.commands:set_pbt_inner",
+        "icom_lan.radio:Icom7610CoreRadio.get_pbt_inner",
+        "icom_lan.radio:Icom7610CoreRadio.set_pbt_inner"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_cmd29_level_builders",
+        "tests/test_radio.py::test_get_cmd29_dsp_level",
+        "tests/test_radio.py::test_set_cmd29_dsp_level"
+      ]
     },
     {
       "id": 33,
@@ -618,7 +651,18 @@
       "set": true,
       "admin": false,
       "family": "dsp_levels",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_pbt_outer",
+        "icom_lan.commands:set_pbt_outer",
+        "icom_lan.radio:Icom7610CoreRadio.get_pbt_outer",
+        "icom_lan.radio:Icom7610CoreRadio.set_pbt_outer"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_cmd29_level_builders",
+        "tests/test_radio.py::test_get_cmd29_dsp_level",
+        "tests/test_radio.py::test_set_cmd29_dsp_level"
+      ]
     },
     {
       "id": 34,
@@ -629,7 +673,18 @@
       "set": true,
       "admin": false,
       "family": "dsp_levels",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_cw_pitch",
+        "icom_lan.commands:set_cw_pitch",
+        "icom_lan.radio:Icom7610CoreRadio.get_cw_pitch",
+        "icom_lan.radio:Icom7610CoreRadio.set_cw_pitch"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_level_builders",
+        "tests/test_radio.py::test_get_cw_pitch_converts_raw_level",
+        "tests/test_radio.py::test_set_cw_pitch_sends_scaled_level"
+      ]
     },
     {
       "id": 35,
@@ -661,7 +716,18 @@
       "set": true,
       "admin": false,
       "family": "dsp_levels",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_mic_gain",
+        "icom_lan.commands:set_mic_gain",
+        "icom_lan.radio:Icom7610CoreRadio.get_mic_gain",
+        "icom_lan.radio:Icom7610CoreRadio.set_mic_gain"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_level_builders",
+        "tests/test_radio.py::test_get_direct_dsp_level",
+        "tests/test_radio.py::test_set_direct_dsp_level"
+      ]
     },
     {
       "id": 37,
@@ -672,7 +738,18 @@
       "set": true,
       "admin": false,
       "family": "dsp_levels",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_key_speed",
+        "icom_lan.commands:set_key_speed",
+        "icom_lan.radio:Icom7610CoreRadio.get_key_speed",
+        "icom_lan.radio:Icom7610CoreRadio.set_key_speed"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_level_builders",
+        "tests/test_radio.py::test_get_key_speed_converts_raw_level",
+        "tests/test_radio.py::test_set_key_speed_sends_scaled_level"
+      ]
     },
     {
       "id": 38,
@@ -683,7 +760,18 @@
       "set": true,
       "admin": false,
       "family": "dsp_levels",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_notch_filter",
+        "icom_lan.commands:set_notch_filter",
+        "icom_lan.radio:Icom7610CoreRadio.get_notch_filter",
+        "icom_lan.radio:Icom7610CoreRadio.set_notch_filter"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_level_builders",
+        "tests/test_radio.py::test_get_direct_dsp_level",
+        "tests/test_radio.py::test_set_direct_dsp_level"
+      ]
     },
     {
       "id": 39,
@@ -694,7 +782,18 @@
       "set": true,
       "admin": false,
       "family": "dsp_levels",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_compressor_level",
+        "icom_lan.commands:set_compressor_level",
+        "icom_lan.radio:Icom7610CoreRadio.get_compressor_level",
+        "icom_lan.radio:Icom7610CoreRadio.set_compressor_level"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_level_builders",
+        "tests/test_radio.py::test_get_direct_dsp_level",
+        "tests/test_radio.py::test_set_direct_dsp_level"
+      ]
     },
     {
       "id": 40,
@@ -705,7 +804,18 @@
       "set": true,
       "admin": false,
       "family": "dsp_levels",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_break_in_delay",
+        "icom_lan.commands:set_break_in_delay",
+        "icom_lan.radio:Icom7610CoreRadio.get_break_in_delay",
+        "icom_lan.radio:Icom7610CoreRadio.set_break_in_delay"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_level_builders",
+        "tests/test_radio.py::test_get_direct_dsp_level",
+        "tests/test_radio.py::test_set_direct_dsp_level"
+      ]
     },
     {
       "id": 41,
@@ -716,7 +826,18 @@
       "set": true,
       "admin": false,
       "family": "dsp_levels",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_nb_level",
+        "icom_lan.commands:set_nb_level",
+        "icom_lan.radio:Icom7610CoreRadio.get_nb_level",
+        "icom_lan.radio:Icom7610CoreRadio.set_nb_level"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_cmd29_level_builders",
+        "tests/test_radio.py::test_get_cmd29_dsp_level",
+        "tests/test_radio.py::test_set_cmd29_dsp_level"
+      ]
     },
     {
       "id": 42,
@@ -727,7 +848,18 @@
       "set": true,
       "admin": false,
       "family": "dsp_levels",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_digisel_shift",
+        "icom_lan.commands:set_digisel_shift",
+        "icom_lan.radio:Icom7610CoreRadio.get_digisel_shift",
+        "icom_lan.radio:Icom7610CoreRadio.set_digisel_shift"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_cmd29_level_builders",
+        "tests/test_radio.py::test_get_cmd29_dsp_level",
+        "tests/test_radio.py::test_set_cmd29_dsp_level"
+      ]
     },
     {
       "id": 43,
@@ -738,7 +870,18 @@
       "set": true,
       "admin": false,
       "family": "dsp_levels",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_drive_gain",
+        "icom_lan.commands:set_drive_gain",
+        "icom_lan.radio:Icom7610CoreRadio.get_drive_gain",
+        "icom_lan.radio:Icom7610CoreRadio.set_drive_gain"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_level_builders",
+        "tests/test_radio.py::test_get_direct_dsp_level",
+        "tests/test_radio.py::test_set_direct_dsp_level"
+      ]
     },
     {
       "id": 44,
@@ -749,7 +892,18 @@
       "set": true,
       "admin": false,
       "family": "dsp_levels",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_monitor_gain",
+        "icom_lan.commands:set_monitor_gain",
+        "icom_lan.radio:Icom7610CoreRadio.get_monitor_gain",
+        "icom_lan.radio:Icom7610CoreRadio.set_monitor_gain"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_level_builders",
+        "tests/test_radio.py::test_get_direct_dsp_level",
+        "tests/test_radio.py::test_set_direct_dsp_level"
+      ]
     },
     {
       "id": 45,
@@ -760,7 +914,18 @@
       "set": true,
       "admin": false,
       "family": "dsp_levels",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_vox_gain",
+        "icom_lan.commands:set_vox_gain",
+        "icom_lan.radio:Icom7610CoreRadio.get_vox_gain",
+        "icom_lan.radio:Icom7610CoreRadio.set_vox_gain"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_level_builders",
+        "tests/test_radio.py::test_get_direct_dsp_level",
+        "tests/test_radio.py::test_set_direct_dsp_level"
+      ]
     },
     {
       "id": 46,
@@ -771,7 +936,18 @@
       "set": true,
       "admin": false,
       "family": "dsp_levels",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_anti_vox_gain",
+        "icom_lan.commands:set_anti_vox_gain",
+        "icom_lan.radio:Icom7610CoreRadio.get_anti_vox_gain",
+        "icom_lan.radio:Icom7610CoreRadio.set_anti_vox_gain"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_level_builders",
+        "tests/test_radio.py::test_get_direct_dsp_level",
+        "tests/test_radio.py::test_set_direct_dsp_level"
+      ]
     },
     {
       "id": 47,
@@ -1323,7 +1499,19 @@
       "set": true,
       "admin": false,
       "family": "dsp_levels",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_ref_adjust",
+        "icom_lan.commands:set_ref_adjust",
+        "icom_lan.commands:parse_level_response",
+        "icom_lan.radio:Icom7610CoreRadio.get_ref_adjust",
+        "icom_lan.radio:Icom7610CoreRadio.set_ref_adjust"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_ctl_mem_level_builders",
+        "tests/test_radio.py::test_get_ctl_mem_dsp_level",
+        "tests/test_radio.py::test_set_ctl_mem_dsp_level"
+      ]
     },
     {
       "id": 87,
@@ -1455,7 +1643,19 @@
       "set": true,
       "admin": false,
       "family": "dsp_levels",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_dash_ratio",
+        "icom_lan.commands:set_dash_ratio",
+        "icom_lan.commands:parse_level_response",
+        "icom_lan.radio:Icom7610CoreRadio.get_dash_ratio",
+        "icom_lan.radio:Icom7610CoreRadio.set_dash_ratio"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_ctl_mem_level_builders",
+        "tests/test_radio.py::test_get_ctl_mem_dsp_level",
+        "tests/test_radio.py::test_set_ctl_mem_dsp_level"
+      ]
     },
     {
       "id": 99,
@@ -1466,7 +1666,19 @@
       "set": true,
       "admin": false,
       "family": "dsp_levels",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_nb_depth",
+        "icom_lan.commands:set_nb_depth",
+        "icom_lan.commands:parse_level_response",
+        "icom_lan.radio:Icom7610CoreRadio.get_nb_depth",
+        "icom_lan.radio:Icom7610CoreRadio.set_nb_depth"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_ctl_mem_level_builders",
+        "tests/test_radio.py::test_get_ctl_mem_dsp_level",
+        "tests/test_radio.py::test_set_ctl_mem_dsp_level"
+      ]
     },
     {
       "id": 100,
@@ -1477,7 +1689,19 @@
       "set": true,
       "admin": false,
       "family": "dsp_levels",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_nb_width",
+        "icom_lan.commands:set_nb_width",
+        "icom_lan.commands:parse_level_response",
+        "icom_lan.radio:Icom7610CoreRadio.get_nb_width",
+        "icom_lan.radio:Icom7610CoreRadio.set_nb_width"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_ctl_mem_level_builders",
+        "tests/test_radio.py::test_get_ctl_mem_dsp_level",
+        "tests/test_radio.py::test_set_ctl_mem_dsp_level"
+      ]
     },
     {
       "id": 101,
@@ -1509,7 +1733,19 @@
       "set": true,
       "admin": false,
       "family": "dsp_levels",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_af_mute",
+        "icom_lan.commands:set_af_mute",
+        "icom_lan.commands:parse_bool_response",
+        "icom_lan.radio:Icom7610CoreRadio.get_af_mute",
+        "icom_lan.radio:Icom7610CoreRadio.set_af_mute"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_af_mute_builders",
+        "tests/test_radio.py::test_get_af_mute_reads_bool",
+        "tests/test_radio.py::test_set_af_mute_sends_cmd29_bool"
+      ]
     },
     {
       "id": 103,

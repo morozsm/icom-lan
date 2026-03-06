@@ -27,18 +27,41 @@ from .commands import (
     _level_bcd_decode,
     build_civ_frame,
     get_alc,
+    get_af_mute,
     get_attenuator as get_attenuator_cmd,
+    get_apf_type_level,
     get_data_mode as get_data_mode_cmd,
+    get_dash_ratio,
+    get_digisel_shift,
+    get_drive_gain,
     get_frequency,
+    get_break_in_delay,
+    get_compressor_level,
+    get_cw_pitch,
+    get_key_speed,
+    get_mic_gain,
     get_mode,
+    get_monitor_gain,
+    get_nb_depth,
+    get_nb_level,
+    get_nb_width,
+    get_notch_filter,
+    get_nr_level,
+    get_pbt_inner,
+    get_pbt_outer,
     get_power,
     get_digisel,
     get_preamp as get_preamp_cmd,
+    get_ref_adjust,
     get_s_meter,
     get_swr,
+    get_vox_gain,
+    get_anti_vox_gain,
     parse_ack_nak,
+    parse_bool_response,
     parse_data_mode_response,
     parse_frequency_response,
+    parse_level_response,
     parse_meter_response,
     parse_mode_response,
     power_off,
@@ -49,18 +72,39 @@ from .commands import (
     scope_on as _scope_on_cmd,
     select_vfo as _select_vfo_cmd,
     send_cw,
+    set_af_mute,
+    set_apf_type_level,
     set_attenuator,
     set_attenuator_level,
+    set_break_in_delay,
+    set_compressor_level,
+    set_cw_pitch,
     set_data_mode as set_data_mode_cmd,
+    set_dash_ratio,
     set_digisel,
+    set_digisel_shift,
+    set_drive_gain,
+    set_key_speed,
+    set_mic_gain,
+    set_monitor_gain,
     set_nb,
+    set_nb_depth,
+    set_nb_level,
+    set_nb_width,
+    set_notch_filter,
     set_nr,
+    set_nr_level,
+    set_pbt_inner,
+    set_pbt_outer,
+    set_ref_adjust,
     get_nb,
     get_nr,
     get_ip_plus,
     set_ip_plus,
     set_frequency,
     set_mode,
+    set_vox_gain,
+    set_anti_vox_gain,
     set_power,
     get_rf_gain,
     set_rf_gain,
@@ -1526,6 +1570,46 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         """Parse a level BCD response into an integer 0-255."""
         return _level_bcd_decode(resp.data)
 
+    async def _get_bcd_level(
+        self,
+        civ: bytes,
+        *,
+        key: str,
+        command: int,
+        sub: int,
+        prefix: bytes = b"",
+        bcd_bytes: int = 2,
+    ) -> int:
+        """Send a GET command and parse a BCD-encoded integer response."""
+        self._check_connected()
+        resp = await self._send_civ_raw(civ, key=key, dedupe=True)
+        return parse_level_response(
+            resp,
+            command=command,
+            sub=sub,
+            prefix=prefix,
+            bcd_bytes=bcd_bytes,
+        )
+
+    async def _get_bool_value(
+        self,
+        civ: bytes,
+        *,
+        key: str,
+        command: int,
+        sub: int,
+        prefix: bytes = b"",
+    ) -> bool:
+        """Send a GET command and parse a boolean response."""
+        self._check_connected()
+        resp = await self._send_civ_raw(civ, key=key, dedupe=True)
+        return parse_bool_response(resp, command=command, sub=sub, prefix=prefix)
+
+    async def _send_fire_and_forget(self, civ: bytes) -> None:
+        """Send a fire-and-forget CI-V command after connection checks."""
+        self._check_connected()
+        await self._send_civ_raw(civ, wait_response=False)
+
     async def get_power(self) -> int:
         """Get the RF power level (0-255).
 
@@ -1630,6 +1714,376 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         from .commands import set_squelch as _set_squelch
         civ = _set_squelch(level, to_addr=self._radio_addr, receiver=receiver)
         await self._send_civ_raw(civ, wait_response=False)
+
+    async def get_apf_type_level(self, receiver: int = RECEIVER_MAIN) -> int:
+        """Read APF Type Level (0-255)."""
+        self._require_receiver(receiver, operation="get_apf_type_level")
+        self._require_cmd29_route(
+            0x14, 0x05, receiver=receiver, operation="get_apf_type_level"
+        )
+        civ = get_apf_type_level(to_addr=self._radio_addr, receiver=receiver)
+        return await self._get_bcd_level(
+            civ,
+            key=f"get_apf_type_level:{receiver}",
+            command=0x14,
+            sub=0x05,
+        )
+
+    async def set_apf_type_level(
+        self, level: int, receiver: int = RECEIVER_MAIN
+    ) -> None:
+        """Set APF Type Level (0-255)."""
+        self._require_receiver(receiver, operation="set_apf_type_level")
+        self._require_cmd29_route(
+            0x14, 0x05, receiver=receiver, operation="set_apf_type_level"
+        )
+        await self._send_fire_and_forget(
+            set_apf_type_level(level, to_addr=self._radio_addr, receiver=receiver)
+        )
+
+    async def get_nr_level(self, receiver: int = RECEIVER_MAIN) -> int:
+        """Read NR Level (0-255)."""
+        self._require_receiver(receiver, operation="get_nr_level")
+        self._require_cmd29_route(
+            0x14, 0x06, receiver=receiver, operation="get_nr_level"
+        )
+        civ = get_nr_level(to_addr=self._radio_addr, receiver=receiver)
+        return await self._get_bcd_level(
+            civ, key=f"get_nr_level:{receiver}", command=0x14, sub=0x06
+        )
+
+    async def set_nr_level(self, level: int, receiver: int = RECEIVER_MAIN) -> None:
+        """Set NR Level (0-255)."""
+        self._require_receiver(receiver, operation="set_nr_level")
+        self._require_cmd29_route(
+            0x14, 0x06, receiver=receiver, operation="set_nr_level"
+        )
+        await self._send_fire_and_forget(
+            set_nr_level(level, to_addr=self._radio_addr, receiver=receiver)
+        )
+
+    async def get_pbt_inner(self, receiver: int = RECEIVER_MAIN) -> int:
+        """Read PBT Inner level (0-255)."""
+        self._require_receiver(receiver, operation="get_pbt_inner")
+        self._require_cmd29_route(
+            0x14, 0x07, receiver=receiver, operation="get_pbt_inner"
+        )
+        civ = get_pbt_inner(to_addr=self._radio_addr, receiver=receiver)
+        return await self._get_bcd_level(
+            civ, key=f"get_pbt_inner:{receiver}", command=0x14, sub=0x07
+        )
+
+    async def set_pbt_inner(self, level: int, receiver: int = RECEIVER_MAIN) -> None:
+        """Set PBT Inner level (0-255)."""
+        self._require_receiver(receiver, operation="set_pbt_inner")
+        self._require_cmd29_route(
+            0x14, 0x07, receiver=receiver, operation="set_pbt_inner"
+        )
+        await self._send_fire_and_forget(
+            set_pbt_inner(level, to_addr=self._radio_addr, receiver=receiver)
+        )
+
+    async def get_pbt_outer(self, receiver: int = RECEIVER_MAIN) -> int:
+        """Read PBT Outer level (0-255)."""
+        self._require_receiver(receiver, operation="get_pbt_outer")
+        self._require_cmd29_route(
+            0x14, 0x08, receiver=receiver, operation="get_pbt_outer"
+        )
+        civ = get_pbt_outer(to_addr=self._radio_addr, receiver=receiver)
+        return await self._get_bcd_level(
+            civ, key=f"get_pbt_outer:{receiver}", command=0x14, sub=0x08
+        )
+
+    async def set_pbt_outer(self, level: int, receiver: int = RECEIVER_MAIN) -> None:
+        """Set PBT Outer level (0-255)."""
+        self._require_receiver(receiver, operation="set_pbt_outer")
+        self._require_cmd29_route(
+            0x14, 0x08, receiver=receiver, operation="set_pbt_outer"
+        )
+        await self._send_fire_and_forget(
+            set_pbt_outer(level, to_addr=self._radio_addr, receiver=receiver)
+        )
+
+    async def get_cw_pitch(self) -> int:
+        """Read CW pitch in Hz."""
+        level = await self._get_bcd_level(
+            get_cw_pitch(to_addr=self._radio_addr),
+            key="get_cw_pitch",
+            command=0x14,
+            sub=0x09,
+        )
+        return round((((600.0 / 255.0) * level) + 300) / 5.0) * 5
+
+    async def set_cw_pitch(self, pitch_hz: int) -> None:
+        """Set CW pitch in Hz."""
+        await self._send_fire_and_forget(
+            set_cw_pitch(pitch_hz, to_addr=self._radio_addr)
+        )
+
+    async def get_mic_gain(self) -> int:
+        """Read Mic Gain (0-255)."""
+        return await self._get_bcd_level(
+            get_mic_gain(to_addr=self._radio_addr),
+            key="get_mic_gain",
+            command=0x14,
+            sub=0x0B,
+        )
+
+    async def set_mic_gain(self, level: int) -> None:
+        """Set Mic Gain (0-255)."""
+        await self._send_fire_and_forget(set_mic_gain(level, to_addr=self._radio_addr))
+
+    async def get_key_speed(self) -> int:
+        """Read key speed in WPM."""
+        level = await self._get_bcd_level(
+            get_key_speed(to_addr=self._radio_addr),
+            key="get_key_speed",
+            command=0x14,
+            sub=0x0C,
+        )
+        return round((level / 6.071) + 6)
+
+    async def set_key_speed(self, wpm: int) -> None:
+        """Set key speed in WPM."""
+        await self._send_fire_and_forget(
+            set_key_speed(wpm, to_addr=self._radio_addr)
+        )
+
+    async def get_notch_filter(self) -> int:
+        """Read notch filter level (0-255)."""
+        return await self._get_bcd_level(
+            get_notch_filter(to_addr=self._radio_addr),
+            key="get_notch_filter",
+            command=0x14,
+            sub=0x0D,
+        )
+
+    async def set_notch_filter(self, level: int) -> None:
+        """Set notch filter level (0-255)."""
+        await self._send_fire_and_forget(
+            set_notch_filter(level, to_addr=self._radio_addr)
+        )
+
+    async def get_compressor_level(self) -> int:
+        """Read compressor level (0-255)."""
+        return await self._get_bcd_level(
+            get_compressor_level(to_addr=self._radio_addr),
+            key="get_compressor_level",
+            command=0x14,
+            sub=0x0E,
+        )
+
+    async def set_compressor_level(self, level: int) -> None:
+        """Set compressor level (0-255)."""
+        await self._send_fire_and_forget(
+            set_compressor_level(level, to_addr=self._radio_addr)
+        )
+
+    async def get_break_in_delay(self) -> int:
+        """Read break-in delay level (0-255)."""
+        return await self._get_bcd_level(
+            get_break_in_delay(to_addr=self._radio_addr),
+            key="get_break_in_delay",
+            command=0x14,
+            sub=0x0F,
+        )
+
+    async def set_break_in_delay(self, level: int) -> None:
+        """Set break-in delay level (0-255)."""
+        await self._send_fire_and_forget(
+            set_break_in_delay(level, to_addr=self._radio_addr)
+        )
+
+    async def get_nb_level(self, receiver: int = RECEIVER_MAIN) -> int:
+        """Read NB level (0-255)."""
+        self._require_receiver(receiver, operation="get_nb_level")
+        self._require_cmd29_route(
+            0x14, 0x12, receiver=receiver, operation="get_nb_level"
+        )
+        civ = get_nb_level(to_addr=self._radio_addr, receiver=receiver)
+        return await self._get_bcd_level(
+            civ, key=f"get_nb_level:{receiver}", command=0x14, sub=0x12
+        )
+
+    async def set_nb_level(self, level: int, receiver: int = RECEIVER_MAIN) -> None:
+        """Set NB level (0-255)."""
+        self._require_receiver(receiver, operation="set_nb_level")
+        self._require_cmd29_route(
+            0x14, 0x12, receiver=receiver, operation="set_nb_level"
+        )
+        await self._send_fire_and_forget(
+            set_nb_level(level, to_addr=self._radio_addr, receiver=receiver)
+        )
+
+    async def get_digisel_shift(self, receiver: int = RECEIVER_MAIN) -> int:
+        """Read DIGI-SEL Shift (0-255)."""
+        self._require_receiver(receiver, operation="get_digisel_shift")
+        self._require_cmd29_route(
+            0x14, 0x13, receiver=receiver, operation="get_digisel_shift"
+        )
+        civ = get_digisel_shift(to_addr=self._radio_addr, receiver=receiver)
+        return await self._get_bcd_level(
+            civ, key=f"get_digisel_shift:{receiver}", command=0x14, sub=0x13
+        )
+
+    async def set_digisel_shift(
+        self, level: int, receiver: int = RECEIVER_MAIN
+    ) -> None:
+        """Set DIGI-SEL Shift (0-255)."""
+        self._require_receiver(receiver, operation="set_digisel_shift")
+        self._require_cmd29_route(
+            0x14, 0x13, receiver=receiver, operation="set_digisel_shift"
+        )
+        await self._send_fire_and_forget(
+            set_digisel_shift(level, to_addr=self._radio_addr, receiver=receiver)
+        )
+
+    async def get_drive_gain(self) -> int:
+        """Read drive gain (0-255)."""
+        return await self._get_bcd_level(
+            get_drive_gain(to_addr=self._radio_addr),
+            key="get_drive_gain",
+            command=0x14,
+            sub=0x14,
+        )
+
+    async def set_drive_gain(self, level: int) -> None:
+        """Set drive gain (0-255)."""
+        await self._send_fire_and_forget(
+            set_drive_gain(level, to_addr=self._radio_addr)
+        )
+
+    async def get_monitor_gain(self) -> int:
+        """Read monitor gain (0-255)."""
+        return await self._get_bcd_level(
+            get_monitor_gain(to_addr=self._radio_addr),
+            key="get_monitor_gain",
+            command=0x14,
+            sub=0x15,
+        )
+
+    async def set_monitor_gain(self, level: int) -> None:
+        """Set monitor gain (0-255)."""
+        await self._send_fire_and_forget(
+            set_monitor_gain(level, to_addr=self._radio_addr)
+        )
+
+    async def get_vox_gain(self) -> int:
+        """Read VOX gain (0-255)."""
+        return await self._get_bcd_level(
+            get_vox_gain(to_addr=self._radio_addr),
+            key="get_vox_gain",
+            command=0x14,
+            sub=0x16,
+        )
+
+    async def set_vox_gain(self, level: int) -> None:
+        """Set VOX gain (0-255)."""
+        await self._send_fire_and_forget(
+            set_vox_gain(level, to_addr=self._radio_addr)
+        )
+
+    async def get_anti_vox_gain(self) -> int:
+        """Read anti-VOX gain (0-255)."""
+        return await self._get_bcd_level(
+            get_anti_vox_gain(to_addr=self._radio_addr),
+            key="get_anti_vox_gain",
+            command=0x14,
+            sub=0x17,
+        )
+
+    async def set_anti_vox_gain(self, level: int) -> None:
+        """Set anti-VOX gain (0-255)."""
+        await self._send_fire_and_forget(
+            set_anti_vox_gain(level, to_addr=self._radio_addr)
+        )
+
+    async def get_ref_adjust(self) -> int:
+        """Read REF Adjust (0-511)."""
+        return await self._get_bcd_level(
+            get_ref_adjust(to_addr=self._radio_addr),
+            key="get_ref_adjust",
+            command=0x1A,
+            sub=0x05,
+            prefix=b"\x00\x70",
+        )
+
+    async def set_ref_adjust(self, value: int) -> None:
+        """Set REF Adjust (0-511)."""
+        await self._send_fire_and_forget(
+            set_ref_adjust(value, to_addr=self._radio_addr)
+        )
+
+    async def get_dash_ratio(self) -> int:
+        """Read dash ratio (28-45)."""
+        return await self._get_bcd_level(
+            get_dash_ratio(to_addr=self._radio_addr),
+            key="get_dash_ratio",
+            command=0x1A,
+            sub=0x05,
+            prefix=b"\x02\x28",
+            bcd_bytes=1,
+        )
+
+    async def set_dash_ratio(self, value: int) -> None:
+        """Set dash ratio (28-45)."""
+        await self._send_fire_and_forget(
+            set_dash_ratio(value, to_addr=self._radio_addr)
+        )
+
+    async def get_nb_depth(self) -> int:
+        """Read NB depth (0-9)."""
+        return await self._get_bcd_level(
+            get_nb_depth(to_addr=self._radio_addr),
+            key="get_nb_depth",
+            command=0x1A,
+            sub=0x05,
+            prefix=b"\x02\x90",
+            bcd_bytes=1,
+        )
+
+    async def set_nb_depth(self, value: int) -> None:
+        """Set NB depth (0-9)."""
+        await self._send_fire_and_forget(
+            set_nb_depth(value, to_addr=self._radio_addr)
+        )
+
+    async def get_nb_width(self) -> int:
+        """Read NB width (0-255)."""
+        return await self._get_bcd_level(
+            get_nb_width(to_addr=self._radio_addr),
+            key="get_nb_width",
+            command=0x1A,
+            sub=0x05,
+            prefix=b"\x02\x91",
+        )
+
+    async def set_nb_width(self, value: int) -> None:
+        """Set NB width (0-255)."""
+        await self._send_fire_and_forget(
+            set_nb_width(value, to_addr=self._radio_addr)
+        )
+
+    async def get_af_mute(self, receiver: int = RECEIVER_MAIN) -> bool:
+        """Read AF mute status."""
+        self._require_receiver(receiver, operation="get_af_mute")
+        self._require_cmd29_route(
+            0x1A, 0x09, receiver=receiver, operation="get_af_mute"
+        )
+        civ = get_af_mute(to_addr=self._radio_addr, receiver=receiver)
+        return await self._get_bool_value(
+            civ, key=f"get_af_mute:{receiver}", command=0x1A, sub=0x09
+        )
+
+    async def set_af_mute(self, on: bool, receiver: int = RECEIVER_MAIN) -> None:
+        """Set AF mute status."""
+        self._require_receiver(receiver, operation="set_af_mute")
+        self._require_cmd29_route(
+            0x1A, 0x09, receiver=receiver, operation="set_af_mute"
+        )
+        await self._send_fire_and_forget(
+            set_af_mute(on, to_addr=self._radio_addr, receiver=receiver)
+        )
 
     async def get_s_meter(self) -> int:
         """Read the S-meter value (0-255)."""

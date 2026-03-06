@@ -10,6 +10,7 @@ from icom_lan.commands import (
     CONTROLLER_ADDR,
     IC_7610_ADDR,
     build_civ_frame,
+    build_cmd29_frame,
     _CMD_ACK,
     _CMD_FREQ_GET,
     _CMD_MODE_GET,
@@ -121,6 +122,67 @@ def _ptt_response(on: bool) -> bytes:
         sub=_SUB_PTT,
         data=bytes([0x01 if on else 0x00]),
     )
+    return _wrap_civ_in_udp(civ)
+
+
+def _bcd_bytes(value: int, digits: int = 4) -> bytes:
+    """Build packed BCD bytes for small CI-V register payloads."""
+    text = f"{value:0{digits}d}"
+    if len(text) % 2 != 0:
+        text = f"0{text}"
+    return bytes(
+        (int(text[index]) << 4) | int(text[index + 1])
+        for index in range(0, len(text), 2)
+    )
+
+
+def _level_response(sub: int, value: int, *, receiver: int | None = None) -> bytes:
+    """Build a CI-V level response, optionally cmd29-wrapped."""
+    if receiver is None:
+        civ = build_civ_frame(
+            CONTROLLER_ADDR,
+            IC_7610_ADDR,
+            _CMD_LEVEL,
+            sub=sub,
+            data=_bcd_bytes(value),
+        )
+    else:
+        civ = build_cmd29_frame(
+            CONTROLLER_ADDR,
+            IC_7610_ADDR,
+            _CMD_LEVEL,
+            sub=sub,
+            data=_bcd_bytes(value),
+            receiver=receiver,
+        )
+    return _wrap_civ_in_udp(civ)
+
+
+def _ctl_mem_response(
+    sub: int,
+    payload: bytes,
+    *,
+    prefix: bytes = b"",
+    receiver: int | None = None,
+) -> bytes:
+    """Build a CI-V 0x1A response, optionally cmd29-wrapped."""
+    if receiver is None:
+        civ = build_civ_frame(
+            CONTROLLER_ADDR,
+            IC_7610_ADDR,
+            0x1A,
+            sub=sub,
+            data=prefix + payload,
+        )
+    else:
+        civ = build_cmd29_frame(
+            CONTROLLER_ADDR,
+            IC_7610_ADDR,
+            0x1A,
+            sub=sub,
+            data=prefix + payload,
+            receiver=receiver,
+        )
     return _wrap_civ_in_udp(civ)
 
 
@@ -1016,3 +1078,221 @@ class TestSetCommandsUpdateCache:
             await radio.set_frequency(freq)
         # Cache holds the last value sent.
         assert radio.state_cache.freq == 7_200_000
+
+
+class TestDspLevelParity:
+    """Test high-level DSP/level parity methods."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("method_name", "sub", "value", "receiver"),
+        [
+            ("get_apf_type_level", 0x05, 90, 1),
+            ("get_nr_level", 0x06, 91, 1),
+            ("get_pbt_inner", 0x07, 92, 1),
+            ("get_pbt_outer", 0x08, 93, 1),
+            ("get_nb_level", 0x12, 94, 1),
+            ("get_digisel_shift", 0x13, 95, 1),
+        ],
+    )
+    async def test_get_cmd29_dsp_level(
+        self,
+        radio: IcomRadio,
+        mock_transport: MockTransport,
+        method_name: str,
+        sub: int,
+        value: int,
+        receiver: int,
+    ) -> None:
+        mock_transport.queue_response(_level_response(sub, value, receiver=receiver))
+
+        method = getattr(radio, method_name)
+        assert await method(receiver=receiver) == value
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("method_name", "sub", "value"),
+        [
+            ("get_mic_gain", 0x0B, 101),
+            ("get_notch_filter", 0x0D, 102),
+            ("get_compressor_level", 0x0E, 103),
+            ("get_break_in_delay", 0x0F, 104),
+            ("get_drive_gain", 0x14, 105),
+            ("get_monitor_gain", 0x15, 106),
+            ("get_vox_gain", 0x16, 107),
+            ("get_anti_vox_gain", 0x17, 108),
+        ],
+    )
+    async def test_get_direct_dsp_level(
+        self,
+        radio: IcomRadio,
+        mock_transport: MockTransport,
+        method_name: str,
+        sub: int,
+        value: int,
+    ) -> None:
+        mock_transport.queue_response(_level_response(sub, value))
+
+        method = getattr(radio, method_name)
+        assert await method() == value
+
+    @pytest.mark.asyncio
+    async def test_get_cw_pitch_converts_raw_level(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        mock_transport.queue_response(_level_response(0x09, 128))
+        assert await radio.get_cw_pitch() == 600
+
+    @pytest.mark.asyncio
+    async def test_get_key_speed_converts_raw_level(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        mock_transport.queue_response(_level_response(0x0C, 146))
+        assert await radio.get_key_speed() == 30
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("method_name", "prefix", "payload", "expected"),
+        [
+            ("get_ref_adjust", b"\x00\x70", b"\x05\x11", 511),
+            ("get_dash_ratio", b"\x02\x28", b"\x45", 45),
+            ("get_nb_depth", b"\x02\x90", b"\x09", 9),
+            ("get_nb_width", b"\x02\x91", b"\x02\x55", 255),
+        ],
+    )
+    async def test_get_ctl_mem_dsp_level(
+        self,
+        radio: IcomRadio,
+        mock_transport: MockTransport,
+        method_name: str,
+        prefix: bytes,
+        payload: bytes,
+        expected: int,
+    ) -> None:
+        mock_transport.queue_response(_ctl_mem_response(0x05, payload, prefix=prefix))
+
+        method = getattr(radio, method_name)
+        assert await method() == expected
+
+    @pytest.mark.asyncio
+    async def test_get_af_mute_reads_bool(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        mock_transport.queue_response(_ctl_mem_response(0x09, b"\x01", receiver=1))
+        assert await radio.get_af_mute(receiver=1) is True
+
+    @pytest.mark.asyncio
+    async def test_set_cw_pitch_sends_scaled_level(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        await radio.set_cw_pitch(600)
+        sent = mock_transport.sent_packets[-1]
+        assert b"\x14\x09\x01\x28\xFD" in sent
+
+    @pytest.mark.asyncio
+    async def test_set_key_speed_sends_scaled_level(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        await radio.set_key_speed(30)
+        sent = mock_transport.sent_packets[-1]
+        assert b"\x14\x0C\x01\x46\xFD" in sent
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("method_name", "value", "expected_tail"),
+        [
+            ("set_apf_type_level", 120, b"\x29\x01\x14\x05\x01\x20\xFD"),
+            ("set_nr_level", 121, b"\x29\x01\x14\x06\x01\x21\xFD"),
+            ("set_pbt_inner", 122, b"\x29\x01\x14\x07\x01\x22\xFD"),
+            ("set_pbt_outer", 123, b"\x29\x01\x14\x08\x01\x23\xFD"),
+            ("set_nb_level", 124, b"\x29\x01\x14\x12\x01\x24\xFD"),
+            ("set_digisel_shift", 125, b"\x29\x01\x14\x13\x01\x25\xFD"),
+        ],
+    )
+    async def test_set_cmd29_dsp_level(
+        self,
+        radio: IcomRadio,
+        mock_transport: MockTransport,
+        method_name: str,
+        value: int,
+        expected_tail: bytes,
+    ) -> None:
+        method = getattr(radio, method_name)
+        await method(value, receiver=1)
+        assert mock_transport.sent_packets[-1].endswith(expected_tail)
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("method_name", "value", "expected_tail"),
+        [
+            ("set_mic_gain", 130, b"\x14\x0B\x01\x30\xFD"),
+            ("set_notch_filter", 131, b"\x14\x0D\x01\x31\xFD"),
+            ("set_compressor_level", 132, b"\x14\x0E\x01\x32\xFD"),
+            ("set_break_in_delay", 133, b"\x14\x0F\x01\x33\xFD"),
+            ("set_drive_gain", 134, b"\x14\x14\x01\x34\xFD"),
+            ("set_monitor_gain", 135, b"\x14\x15\x01\x35\xFD"),
+            ("set_vox_gain", 136, b"\x14\x16\x01\x36\xFD"),
+            ("set_anti_vox_gain", 137, b"\x14\x17\x01\x37\xFD"),
+        ],
+    )
+    async def test_set_direct_dsp_level(
+        self,
+        radio: IcomRadio,
+        mock_transport: MockTransport,
+        method_name: str,
+        value: int,
+        expected_tail: bytes,
+    ) -> None:
+        method = getattr(radio, method_name)
+        await method(value)
+        assert mock_transport.sent_packets[-1].endswith(expected_tail)
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("method_name", "value", "expected_tail"),
+        [
+            ("set_ref_adjust", 511, b"\x1A\x05\x00\x70\x05\x11\xFD"),
+            ("set_dash_ratio", 45, b"\x1A\x05\x02\x28\x45\xFD"),
+            ("set_nb_depth", 9, b"\x1A\x05\x02\x90\x09\xFD"),
+            ("set_nb_width", 255, b"\x1A\x05\x02\x91\x02\x55\xFD"),
+        ],
+    )
+    async def test_set_ctl_mem_dsp_level(
+        self,
+        radio: IcomRadio,
+        mock_transport: MockTransport,
+        method_name: str,
+        value: int,
+        expected_tail: bytes,
+    ) -> None:
+        method = getattr(radio, method_name)
+        await method(value)
+        assert mock_transport.sent_packets[-1].endswith(expected_tail)
+
+    @pytest.mark.asyncio
+    async def test_set_af_mute_sends_cmd29_bool(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        await radio.set_af_mute(True, receiver=1)
+        assert mock_transport.sent_packets[-1].endswith(b"\x29\x01\x1A\x09\x01\xFD")
+
+    @pytest.mark.asyncio
+    async def test_set_cw_pitch_rejects_out_of_range(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        with pytest.raises(ValueError, match="300-900"):
+            await radio.set_cw_pitch(299)
+
+    @pytest.mark.asyncio
+    async def test_set_key_speed_rejects_out_of_range(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        with pytest.raises(ValueError, match="6-48"):
+            await radio.set_key_speed(49)
+
+    @pytest.mark.asyncio
+    async def test_set_ref_adjust_rejects_out_of_range(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        with pytest.raises(ValueError, match="0-511"):
+            await radio.set_ref_adjust(512)

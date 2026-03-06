@@ -13,6 +13,8 @@ where ``receiver`` = ``0x00`` (MAIN) or ``0x01`` (SUB).
 Reference: wfview icomcommander.cpp, IC-7610.rig
 """
 
+import math
+
 from .types import CivFrame, Mode, bcd_decode, bcd_encode
 
 __all__ = [
@@ -49,9 +51,53 @@ __all__ = [
     "set_preamp",
     "get_digisel",
     "set_digisel",
+    "get_apf_type_level",
+    "set_apf_type_level",
+    "get_nr_level",
+    "set_nr_level",
+    "get_pbt_inner",
+    "set_pbt_inner",
+    "get_pbt_outer",
+    "set_pbt_outer",
+    "get_cw_pitch",
+    "set_cw_pitch",
+    "get_mic_gain",
+    "set_mic_gain",
+    "get_key_speed",
+    "set_key_speed",
+    "get_notch_filter",
+    "set_notch_filter",
+    "get_compressor_level",
+    "set_compressor_level",
+    "get_break_in_delay",
+    "set_break_in_delay",
+    "get_nb_level",
+    "set_nb_level",
+    "get_digisel_shift",
+    "set_digisel_shift",
+    "get_drive_gain",
+    "set_drive_gain",
+    "get_monitor_gain",
+    "set_monitor_gain",
+    "get_vox_gain",
+    "set_vox_gain",
+    "get_anti_vox_gain",
+    "set_anti_vox_gain",
+    "get_ref_adjust",
+    "set_ref_adjust",
+    "get_dash_ratio",
+    "set_dash_ratio",
+    "get_nb_depth",
+    "set_nb_depth",
+    "get_nb_width",
+    "set_nb_width",
+    "get_af_mute",
+    "set_af_mute",
     "get_data_mode",
     "set_data_mode",
     "parse_data_mode_response",
+    "parse_level_response",
+    "parse_bool_response",
     "scope_on",
     "scope_off",
     "scope_data_output",
@@ -94,12 +140,35 @@ _CMD_NAK = 0xFA
 _SUB_AF_LEVEL = 0x01  # AF output level (0x14 0x01)
 _SUB_RF_GAIN = 0x02   # RF Gain level (0x14 0x02)
 _SUB_SQL = 0x03       # Squelch level (0x14 0x03)
+_SUB_APF_TYPE_LEVEL = 0x05
+_SUB_NR_LEVEL = 0x06
+_SUB_PBT_INNER = 0x07
+_SUB_PBT_OUTER = 0x08
+_SUB_CW_PITCH = 0x09
 _SUB_RF_POWER = 0x0A
+_SUB_MIC_GAIN = 0x0B
+_SUB_KEY_SPEED = 0x0C
+_SUB_NOTCH_FILTER = 0x0D
+_SUB_COMPRESSOR_LEVEL = 0x0E
+_SUB_BREAK_IN_DELAY = 0x0F
+_SUB_NB_LEVEL = 0x12
+_SUB_DIGISEL_SHIFT = 0x13
+_SUB_DRIVE_GAIN = 0x14
+_SUB_MONITOR_GAIN = 0x15
+_SUB_VOX_GAIN = 0x16
+_SUB_ANTI_VOX_GAIN = 0x17
 _SUB_S_METER = 0x02
 _SUB_SWR_METER = 0x12
 _SUB_ALC_METER = 0x13
 _SUB_PTT = 0x00
+_SUB_CTL_MEM = 0x05
 _SUB_DATA_MODE = 0x06  # DATA mode sub-command for 0x1A
+_SUB_AF_MUTE = 0x09
+
+_CTL_MEM_REF_ADJUST = b"\x00\x70"
+_CTL_MEM_DASH_RATIO = b"\x02\x28"
+_CTL_MEM_NB_DEPTH = b"\x02\x90"
+_CTL_MEM_NB_WIDTH = b"\x02\x91"
 
 # CI-V frame markers
 _PREAMBLE = b"\xfe\xfe"
@@ -409,11 +478,187 @@ def _level_bcd_decode(data: bytes) -> int:
         raise ValueError(
             f"Level payload too short: expected at least 2 bytes, got {len(data)}"
         )
-    d0 = (data[0] >> 4) & 0x0F
-    d1 = data[0] & 0x0F
-    d2 = (data[1] >> 4) & 0x0F
-    d3 = data[1] & 0x0F
-    return d0 * 1000 + d1 * 100 + d2 * 10 + d3
+    return _bcd_decode_value(data[:2])
+
+
+def _bcd_decode_value(data: bytes) -> int:
+    """Decode packed BCD bytes into an integer."""
+    value = 0
+    for index, byte in enumerate(data):
+        high = (byte >> 4) & 0x0F
+        low = byte & 0x0F
+        if high > 9 or low > 9:
+            raise ValueError(f"Invalid BCD digit in byte {index}: 0x{byte:02x}")
+        value = (value * 100) + (high * 10) + low
+    return value
+
+
+def _bcd_encode_value(value: int, *, byte_count: int) -> bytes:
+    """Encode an integer as packed BCD using a fixed byte width."""
+    if value < 0:
+        raise ValueError(f"BCD value must be non-negative, got {value}")
+    digits = byte_count * 2
+    maximum = (10 ** digits) - 1
+    if value > maximum:
+        raise ValueError(
+            f"BCD value must fit in {byte_count} byte(s), got {value}"
+        )
+    text = f"{value:0{digits}d}"
+    return bytes(
+        (int(text[index]) << 4) | int(text[index + 1])
+        for index in range(0, len(text), 2)
+    )
+
+
+def parse_level_response(
+    frame: CivFrame,
+    *,
+    command: int = _CMD_LEVEL,
+    sub: int | None = None,
+    prefix: bytes = b"",
+    bcd_bytes: int = 2,
+) -> int:
+    """Parse a BCD-encoded level/config response."""
+    if frame.command != command:
+        raise ValueError(f"Not a level response: command 0x{frame.command:02x}")
+    if sub is not None and frame.sub != sub:
+        got = 0 if frame.sub is None else frame.sub
+        raise ValueError(
+            f"Not a level response: sub-command 0x{got:02x} != 0x{sub:02x}"
+        )
+    data = frame.data
+    if prefix:
+        if not data.startswith(prefix):
+            raise ValueError(
+                f"Level response prefix mismatch: expected {prefix.hex()}, got {data.hex()}"
+            )
+        data = data[len(prefix):]
+    if len(data) < bcd_bytes:
+        raise ValueError(
+            f"Level response payload too short: expected at least {bcd_bytes} bytes, got {len(data)}"
+        )
+    return _bcd_decode_value(data[:bcd_bytes])
+
+
+def parse_bool_response(
+    frame: CivFrame,
+    *,
+    command: int,
+    sub: int | None = None,
+    prefix: bytes = b"",
+) -> bool:
+    """Parse a boolean CI-V response payload."""
+    if frame.command != command:
+        raise ValueError(f"Not a boolean response: command 0x{frame.command:02x}")
+    if sub is not None and frame.sub != sub:
+        got = 0 if frame.sub is None else frame.sub
+        raise ValueError(
+            f"Not a boolean response: sub-command 0x{got:02x} != 0x{sub:02x}"
+        )
+    data = frame.data
+    if prefix:
+        if not data.startswith(prefix):
+            raise ValueError(
+                f"Boolean response prefix mismatch: expected {prefix.hex()}, got {data.hex()}"
+            )
+        data = data[len(prefix):]
+    if not data:
+        raise ValueError("Boolean response has no payload byte")
+    return data[0] != 0x00
+
+
+def _build_level_get(
+    sub: int,
+    *,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+    command29: bool = False,
+) -> bytes:
+    if command29:
+        return build_cmd29_frame(
+            to_addr,
+            from_addr,
+            _CMD_LEVEL,
+            sub=sub,
+            receiver=receiver,
+        )
+    return build_civ_frame(to_addr, from_addr, _CMD_LEVEL, sub=sub)
+
+
+def _build_level_set(
+    sub: int,
+    value: int,
+    *,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+    command29: bool = False,
+    encoder=_level_bcd_encode,
+) -> bytes:
+    payload = encoder(value)
+    if command29:
+        return build_cmd29_frame(
+            to_addr,
+            from_addr,
+            _CMD_LEVEL,
+            sub=sub,
+            data=payload,
+            receiver=receiver,
+        )
+    return build_civ_frame(to_addr, from_addr, _CMD_LEVEL, sub=sub, data=payload)
+
+
+def _build_ctl_mem_get(
+    prefix: bytes,
+    *,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    return build_civ_frame(
+        to_addr,
+        from_addr,
+        _CMD_CTL_MEM,
+        sub=_SUB_CTL_MEM,
+        data=prefix,
+    )
+
+
+def _build_ctl_mem_set(
+    prefix: bytes,
+    value: int,
+    *,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    byte_count: int,
+) -> bytes:
+    return build_civ_frame(
+        to_addr,
+        from_addr,
+        _CMD_CTL_MEM,
+        sub=_SUB_CTL_MEM,
+        data=prefix + _bcd_encode_value(value, byte_count=byte_count),
+    )
+
+
+def _cw_pitch_from_level(level: int) -> int:
+    return int(round((((600.0 / 255.0) * level) + 300) / 5.0) * 5.0)
+
+
+def _cw_pitch_to_level(pitch_hz: int) -> int:
+    if not 300 <= pitch_hz <= 900:
+        raise ValueError(f"CW pitch must be 300-900 Hz, got {pitch_hz}")
+    return math.ceil((pitch_hz - 300) * (255.0 / 600.0))
+
+
+def _key_speed_from_level(level: int) -> int:
+    return round((level / 6.071) + 6)
+
+
+def _key_speed_to_level(wpm: int) -> int:
+    if not 6 <= wpm <= 48:
+        raise ValueError(f"Key speed must be 6-48 WPM, got {wpm}")
+    return round((wpm - 6) * 6.071)
 
 
 def get_power(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR) -> bytes:
@@ -503,6 +748,414 @@ def set_squelch(
     if receiver != RECEIVER_MAIN:
         return build_cmd29_frame(to_addr, from_addr, _CMD_LEVEL, sub=_SUB_SQL, data=bcd, receiver=receiver)
     return build_civ_frame(to_addr, from_addr, _CMD_LEVEL, sub=_SUB_SQL, data=bcd)
+
+
+def get_apf_type_level(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+) -> bytes:
+    """Build a read APF Type Level command."""
+    return _build_level_get(
+        _SUB_APF_TYPE_LEVEL,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
+        command29=True,
+    )
+
+
+def set_apf_type_level(
+    level: int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+) -> bytes:
+    """Build a set APF Type Level command."""
+    return _build_level_set(
+        _SUB_APF_TYPE_LEVEL,
+        level,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
+        command29=True,
+    )
+
+
+def get_nr_level(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+) -> bytes:
+    """Build a read NR Level command."""
+    return _build_level_get(
+        _SUB_NR_LEVEL,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
+        command29=True,
+    )
+
+
+def set_nr_level(
+    level: int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+) -> bytes:
+    """Build a set NR Level command."""
+    return _build_level_set(
+        _SUB_NR_LEVEL,
+        level,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
+        command29=True,
+    )
+
+
+def get_pbt_inner(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+) -> bytes:
+    """Build a read PBT Inner command."""
+    return _build_level_get(
+        _SUB_PBT_INNER,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
+        command29=True,
+    )
+
+
+def set_pbt_inner(
+    level: int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+) -> bytes:
+    """Build a set PBT Inner command."""
+    return _build_level_set(
+        _SUB_PBT_INNER,
+        level,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
+        command29=True,
+    )
+
+
+def get_pbt_outer(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+) -> bytes:
+    """Build a read PBT Outer command."""
+    return _build_level_get(
+        _SUB_PBT_OUTER,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
+        command29=True,
+    )
+
+
+def set_pbt_outer(
+    level: int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+) -> bytes:
+    """Build a set PBT Outer command."""
+    return _build_level_set(
+        _SUB_PBT_OUTER,
+        level,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
+        command29=True,
+    )
+
+
+def get_cw_pitch(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a read CW Pitch command."""
+    return _build_level_get(_SUB_CW_PITCH, to_addr=to_addr, from_addr=from_addr)
+
+
+def set_cw_pitch(
+    pitch_hz: int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a set CW Pitch command."""
+    return _build_level_set(
+        _SUB_CW_PITCH,
+        _cw_pitch_to_level(pitch_hz),
+        to_addr=to_addr,
+        from_addr=from_addr,
+    )
+
+
+def get_mic_gain(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a read Mic Gain command."""
+    return _build_level_get(_SUB_MIC_GAIN, to_addr=to_addr, from_addr=from_addr)
+
+
+def set_mic_gain(
+    level: int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a set Mic Gain command."""
+    return _build_level_set(_SUB_MIC_GAIN, level, to_addr=to_addr, from_addr=from_addr)
+
+
+def get_key_speed(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a read Key Speed command."""
+    return _build_level_get(_SUB_KEY_SPEED, to_addr=to_addr, from_addr=from_addr)
+
+
+def set_key_speed(
+    wpm: int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a set Key Speed command."""
+    return _build_level_set(
+        _SUB_KEY_SPEED,
+        _key_speed_to_level(wpm),
+        to_addr=to_addr,
+        from_addr=from_addr,
+    )
+
+
+def get_notch_filter(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a read Notch Filter level command."""
+    return _build_level_get(_SUB_NOTCH_FILTER, to_addr=to_addr, from_addr=from_addr)
+
+
+def set_notch_filter(
+    level: int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a set Notch Filter level command."""
+    return _build_level_set(
+        _SUB_NOTCH_FILTER,
+        level,
+        to_addr=to_addr,
+        from_addr=from_addr,
+    )
+
+
+def get_compressor_level(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a read Compressor Level command."""
+    return _build_level_get(
+        _SUB_COMPRESSOR_LEVEL, to_addr=to_addr, from_addr=from_addr
+    )
+
+
+def set_compressor_level(
+    level: int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a set Compressor Level command."""
+    return _build_level_set(
+        _SUB_COMPRESSOR_LEVEL,
+        level,
+        to_addr=to_addr,
+        from_addr=from_addr,
+    )
+
+
+def get_break_in_delay(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a read Break-In Delay command."""
+    return _build_level_get(
+        _SUB_BREAK_IN_DELAY, to_addr=to_addr, from_addr=from_addr
+    )
+
+
+def set_break_in_delay(
+    level: int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a set Break-In Delay command."""
+    return _build_level_set(
+        _SUB_BREAK_IN_DELAY,
+        level,
+        to_addr=to_addr,
+        from_addr=from_addr,
+    )
+
+
+def get_nb_level(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+) -> bytes:
+    """Build a read NB Level command."""
+    return _build_level_get(
+        _SUB_NB_LEVEL,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
+        command29=True,
+    )
+
+
+def set_nb_level(
+    level: int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+) -> bytes:
+    """Build a set NB Level command."""
+    return _build_level_set(
+        _SUB_NB_LEVEL,
+        level,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
+        command29=True,
+    )
+
+
+def get_digisel_shift(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+) -> bytes:
+    """Build a read DIGI-SEL Shift command."""
+    return _build_level_get(
+        _SUB_DIGISEL_SHIFT,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
+        command29=True,
+    )
+
+
+def set_digisel_shift(
+    level: int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+) -> bytes:
+    """Build a set DIGI-SEL Shift command."""
+    return _build_level_set(
+        _SUB_DIGISEL_SHIFT,
+        level,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
+        command29=True,
+    )
+
+
+def get_drive_gain(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a read Drive Gain command."""
+    return _build_level_get(_SUB_DRIVE_GAIN, to_addr=to_addr, from_addr=from_addr)
+
+
+def set_drive_gain(
+    level: int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a set Drive Gain command."""
+    return _build_level_set(
+        _SUB_DRIVE_GAIN,
+        level,
+        to_addr=to_addr,
+        from_addr=from_addr,
+    )
+
+
+def get_monitor_gain(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a read Monitor Gain command."""
+    return _build_level_get(_SUB_MONITOR_GAIN, to_addr=to_addr, from_addr=from_addr)
+
+
+def set_monitor_gain(
+    level: int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a set Monitor Gain command."""
+    return _build_level_set(
+        _SUB_MONITOR_GAIN,
+        level,
+        to_addr=to_addr,
+        from_addr=from_addr,
+    )
+
+
+def get_vox_gain(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a read Vox Gain command."""
+    return _build_level_get(_SUB_VOX_GAIN, to_addr=to_addr, from_addr=from_addr)
+
+
+def set_vox_gain(
+    level: int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a set Vox Gain command."""
+    return _build_level_set(_SUB_VOX_GAIN, level, to_addr=to_addr, from_addr=from_addr)
+
+
+def get_anti_vox_gain(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a read Anti-Vox Gain command."""
+    return _build_level_get(
+        _SUB_ANTI_VOX_GAIN, to_addr=to_addr, from_addr=from_addr
+    )
+
+
+def set_anti_vox_gain(
+    level: int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a set Anti-Vox Gain command."""
+    return _build_level_set(
+        _SUB_ANTI_VOX_GAIN,
+        level,
+        to_addr=to_addr,
+        from_addr=from_addr,
+    )
 
 
 # --- Meter commands ---
@@ -798,6 +1451,136 @@ def set_ip_plus(
     if receiver != RECEIVER_MAIN:
         return build_cmd29_frame(to_addr, from_addr, _CMD_PREAMP, sub=_SUB_IP_PLUS, data=data, receiver=receiver)
     return build_civ_frame(to_addr, from_addr, _CMD_PREAMP, sub=_SUB_IP_PLUS, data=data)
+
+
+def get_ref_adjust(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a read REF Adjust command."""
+    return _build_ctl_mem_get(_CTL_MEM_REF_ADJUST, to_addr=to_addr, from_addr=from_addr)
+
+
+def set_ref_adjust(
+    value: int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a set REF Adjust command."""
+    if not 0 <= value <= 511:
+        raise ValueError(f"REF Adjust must be 0-511, got {value}")
+    return _build_ctl_mem_set(
+        _CTL_MEM_REF_ADJUST,
+        value,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        byte_count=2,
+    )
+
+
+def get_dash_ratio(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a read Dash Ratio command."""
+    return _build_ctl_mem_get(_CTL_MEM_DASH_RATIO, to_addr=to_addr, from_addr=from_addr)
+
+
+def set_dash_ratio(
+    value: int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a set Dash Ratio command."""
+    if not 28 <= value <= 45:
+        raise ValueError(f"Dash Ratio must be 28-45, got {value}")
+    return _build_ctl_mem_set(
+        _CTL_MEM_DASH_RATIO,
+        value,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        byte_count=1,
+    )
+
+
+def get_nb_depth(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a read NB Depth command."""
+    return _build_ctl_mem_get(_CTL_MEM_NB_DEPTH, to_addr=to_addr, from_addr=from_addr)
+
+
+def set_nb_depth(
+    value: int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a set NB Depth command."""
+    if not 0 <= value <= 9:
+        raise ValueError(f"NB Depth must be 0-9, got {value}")
+    return _build_ctl_mem_set(
+        _CTL_MEM_NB_DEPTH,
+        value,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        byte_count=1,
+    )
+
+
+def get_nb_width(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a read NB Width command."""
+    return _build_ctl_mem_get(_CTL_MEM_NB_WIDTH, to_addr=to_addr, from_addr=from_addr)
+
+
+def set_nb_width(
+    value: int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a set NB Width command."""
+    return _build_ctl_mem_set(
+        _CTL_MEM_NB_WIDTH,
+        value,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        byte_count=2,
+    )
+
+
+def get_af_mute(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+) -> bytes:
+    """Build a read AF Mute command."""
+    return build_cmd29_frame(
+        to_addr,
+        from_addr,
+        _CMD_CTL_MEM,
+        sub=_SUB_AF_MUTE,
+        receiver=receiver,
+    )
+
+
+def set_af_mute(
+    on: bool,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+) -> bytes:
+    """Build a set AF Mute command."""
+    return build_cmd29_frame(
+        to_addr,
+        from_addr,
+        _CMD_CTL_MEM,
+        sub=_SUB_AF_MUTE,
+        data=b"\x01" if on else b"\x00",
+        receiver=receiver,
+    )
 
 def get_data_mode(
     to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
