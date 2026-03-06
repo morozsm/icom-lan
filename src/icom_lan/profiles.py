@@ -88,6 +88,7 @@ _CMD29_7610 = frozenset(
         (0x14, 0x12),   # NB Level
         (0x14, 0x13),   # DIGI-SEL Shift
         (0x15, 0x01),   # S-meter squelch status
+        (0x15, 0x05),   # Various squelch
         (0x16, 0x02),   # PREAMP
         (0x16, 0x32),   # Audio Peak Filter
         (0x16, 0x22),   # NB

@@ -142,6 +142,11 @@ class TestFrequencyCommands:
         freq = parse_frequency_response(resp)
         assert freq == 14_074_000
 
+    def test_parse_frequency_response_band_edge(self) -> None:
+        resp = parse_civ_frame(b"\xfe\xfe\xe0\x98\x02\x00\x40\x07\x14\x00\xfd")
+        freq = parse_frequency_response(resp)
+        assert freq == 14_074_000
+
     def test_parse_frequency_response_wrong_cmd(self) -> None:
         resp = CivFrame(
             to_addr=0xE0, from_addr=0x98, command=0x04, sub=None, data=b"\x00" * 5

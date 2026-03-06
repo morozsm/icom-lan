@@ -247,3 +247,21 @@ def test_state_queries_include_operator_toggle_reads_for_ic7610() -> None:
         (0x1A, 0x04, 0x00),
         (0x1A, 0x04, 0x01),
     }.issubset(set(poller._STATE_QUERIES))  # noqa: SLF001
+
+
+def test_state_queries_include_transceiver_status_reads_for_ic7610() -> None:
+    poller = RadioPoller(_make_radio(), StateCache(), CommandQueue())
+
+    assert {
+        (0x1C, 0x01, None),
+        (0x1C, 0x03, None),
+        (0x21, 0x00, None),
+        (0x21, 0x01, None),
+        (0x21, 0x02, None),
+    }.issubset(set(poller._STATE_QUERIES))  # noqa: SLF001
+
+
+def test_fast_cmds_include_comp_meter_for_ic7610() -> None:
+    poller = RadioPoller(_make_radio(), StateCache(), CommandQueue())
+
+    assert (0x15, 0x14) in poller._FAST_CMDS  # noqa: SLF001

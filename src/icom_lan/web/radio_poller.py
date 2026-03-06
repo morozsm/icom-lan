@@ -323,10 +323,15 @@ class RadioPoller:
         queries.extend(
             [
                 (0x1C, 0x00, None),   # PTT (global)
+                (0x1C, 0x01, None),   # Tuner/ATU status
+                (0x1C, 0x03, None),   # TX frequency monitor
                 (0x14, 0x0A, None),   # Power level (global)
                 (0x0F, None, None),   # Split (global)
                 (0x07, 0xD2, None),   # Active receiver
                 (0x07, 0xC2, None),   # Dual Watch status
+                (0x21, 0x00, None),   # RIT frequency
+                (0x21, 0x01, None),   # RIT status
+                (0x21, 0x02, None),   # RIT TX status
             ]
         )
         if self._profile.model == "IC-7610":
@@ -607,6 +612,7 @@ class RadioPoller:
         (0x15, 0x11),   # RF power
         (0x15, 0x12),   # SWR
         (0x15, 0x13),   # ALC
+        (0x15, 0x14),   # Compressor meter
         (0x15, 0x15),   # VD (voltage)
         (0x15, 0x16),   # Id (PA drain current)
     ]

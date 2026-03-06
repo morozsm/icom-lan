@@ -152,10 +152,14 @@
       "family": "transceiver_status",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.commands:get_band_edge_freq"
+        "icom_lan.commands:get_band_edge_freq",
+        "icom_lan.commands:parse_frequency_response",
+        "icom_lan.radio:IcomRadio.get_band_edge_freq"
       ],
       "test_patterns": [
-        "tests/test_commands.py::test_get_band_edge_freq"
+        "tests/test_commands.py::test_get_band_edge_freq",
+        "tests/test_commands.py::test_parse_frequency_response_band_edge",
+        "tests/test_radio.py::test_get_band_edge_freq"
       ],
       "notes": "Read-only builder; response uses standard frequency BCD parsing."
     },
@@ -1043,10 +1047,12 @@
       "status": "implemented",
       "runtime_symbols": [
         "icom_lan.commands:get_various_squelch",
+        "icom_lan.radio:IcomRadio.get_various_squelch",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_various_squelch_main",
+        "tests/test_radio.py::test_get_various_squelch",
         "tests/test_civ_rx_coverage.py::test_update_radio_state_various_squelch"
       ],
       "notes": ""
@@ -1145,11 +1151,13 @@
       "runtime_symbols": [
         "icom_lan.commands:get_comp_meter",
         "icom_lan.radio:IcomRadio.get_comp_meter",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame",
+        "icom_lan.web.radio_poller:RadioPoller._FAST_CMDS"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_comp_meter",
-        "tests/test_civ_rx_coverage.py::test_update_radio_state_comp_meter"
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_comp_meter",
+        "tests/test_radio_poller_coverage.py::test_fast_cmds_include_comp_meter_for_ic7610"
       ],
       "notes": ""
     },
@@ -2130,12 +2138,14 @@
         "icom_lan.commands:set_tuner_status",
         "icom_lan.radio:IcomRadio.get_tuner_status",
         "icom_lan.radio:IcomRadio.set_tuner_status",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame",
+        "icom_lan.web.radio_poller:RadioPoller._build_state_queries"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_tuner_status",
         "tests/test_commands.py::test_set_tuner_status_on",
-        "tests/test_civ_rx_coverage.py::test_update_radio_state_tuner_status"
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_tuner_status",
+        "tests/test_radio_poller_coverage.py::test_state_queries_include_transceiver_status_reads_for_ic7610"
       ],
       "notes": ""
     },
@@ -2165,12 +2175,14 @@
         "icom_lan.commands:set_tx_freq_monitor",
         "icom_lan.radio:IcomRadio.get_tx_freq_monitor",
         "icom_lan.radio:IcomRadio.set_tx_freq_monitor",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame",
+        "icom_lan.web.radio_poller:RadioPoller._build_state_queries"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_tx_freq_monitor",
         "tests/test_commands.py::test_set_tx_freq_monitor_on",
-        "tests/test_civ_rx_coverage.py::test_update_radio_state_tx_freq_monitor"
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_tx_freq_monitor",
+        "tests/test_radio_poller_coverage.py::test_state_queries_include_transceiver_status_reads_for_ic7610"
       ],
       "notes": ""
     },
@@ -2201,13 +2213,15 @@
         "icom_lan.commands:parse_rit_frequency_response",
         "icom_lan.radio:IcomRadio.get_rit_frequency",
         "icom_lan.radio:IcomRadio.set_rit_frequency",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame",
+        "icom_lan.web.radio_poller:RadioPoller._build_state_queries"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_rit_frequency",
         "tests/test_commands.py::test_set_rit_frequency_positive",
         "tests/test_commands.py::TestRitFrequencyParser",
-        "tests/test_civ_rx_coverage.py::test_update_radio_state_rit_frequency"
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_rit_frequency",
+        "tests/test_radio_poller_coverage.py::test_state_queries_include_transceiver_status_reads_for_ic7610"
       ],
       "notes": ""
     },
@@ -2226,12 +2240,14 @@
         "icom_lan.commands:set_rit_status",
         "icom_lan.radio:IcomRadio.get_rit_status",
         "icom_lan.radio:IcomRadio.set_rit_status",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame",
+        "icom_lan.web.radio_poller:RadioPoller._build_state_queries"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_rit_status",
         "tests/test_commands.py::test_set_rit_status_on",
-        "tests/test_civ_rx_coverage.py::test_update_radio_state_rit_status"
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_rit_status",
+        "tests/test_radio_poller_coverage.py::test_state_queries_include_transceiver_status_reads_for_ic7610"
       ],
       "notes": ""
     },
@@ -2250,12 +2266,14 @@
         "icom_lan.commands:set_rit_tx_status",
         "icom_lan.radio:IcomRadio.get_rit_tx_status",
         "icom_lan.radio:IcomRadio.set_rit_tx_status",
-        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame",
+        "icom_lan.web.radio_poller:RadioPoller._build_state_queries"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_rit_tx_status",
         "tests/test_commands.py::test_set_rit_tx_status_on",
-        "tests/test_civ_rx_coverage.py::test_update_radio_state_rit_tx_status"
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_rit_tx_status",
+        "tests/test_radio_poller_coverage.py::test_state_queries_include_transceiver_status_reads_for_ic7610"
       ],
       "notes": ""
     },

@@ -441,7 +441,7 @@ def parse_frequency_response(frame: CivFrame) -> int:
     """Parse a frequency response frame.
 
     Args:
-        frame: Parsed CivFrame (command 0x03 with 5-byte BCD data).
+        frame: Parsed CivFrame (command 0x02/0x03/0x00 with 5-byte BCD data).
 
     Returns:
         Frequency in Hz.
@@ -449,7 +449,7 @@ def parse_frequency_response(frame: CivFrame) -> int:
     Raises:
         ValueError: If frame is not a frequency response.
     """
-    if frame.command not in (_CMD_FREQ_GET, 0x00):
+    if frame.command not in (_CMD_BAND_EDGE, _CMD_FREQ_GET, 0x00):
         raise ValueError(f"Not a frequency response: command 0x{frame.command:02x}")
     return bcd_decode(frame.data)
 
