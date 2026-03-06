@@ -63,6 +63,10 @@ class SerialBackendConfig:
     baudrate: int = 115200
     radio_addr: int | None = None
     timeout: float = 5.0
+    audio_codec: AudioCodec | int = _DEFAULT_AUDIO_CODEC
+    audio_sample_rate: int = _DEFAULT_AUDIO_SAMPLE_RATE
+    rx_device: str | None = None
+    tx_device: str | None = None
     profile: RadioProfile | str | None = None
     model: str | None = None
 
@@ -75,6 +79,12 @@ class SerialBackendConfig:
             raise ValueError("radio_addr must be a single byte (0..255).")
         if self.timeout <= 0:
             raise ValueError("timeout must be > 0.")
+        if self.audio_sample_rate <= 0:
+            raise ValueError("audio_sample_rate must be > 0.")
+        if self.rx_device is not None and not self.rx_device.strip():
+            raise ValueError("rx_device override must be a non-empty string.")
+        if self.tx_device is not None and not self.tx_device.strip():
+            raise ValueError("tx_device override must be a non-empty string.")
 
 
 BackendConfig = LanBackendConfig | SerialBackendConfig

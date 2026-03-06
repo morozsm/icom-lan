@@ -175,7 +175,7 @@ Each UDP packet has a fixed-format header (see `packettypes.h` in wfview):
 **Goal:** Complete IC-7610 serial backend (control + audio + scope) and wire all consumers.
 
 - [x] `#144` Serial radio wrapper/session
-- [ ] `#145` USB audio driver
+- [x] `#145` USB audio driver
 - [ ] `#146` Scope/waterfall on serial with guardrails
 - [ ] `#147` CLI backend selection and serial/audio flags
 - [ ] `#148` Web backend-neutral integration
@@ -200,11 +200,15 @@ Each UDP packet has a fixed-format header (see `packettypes.h` in wfview):
 - Added regression matrix gate for shared-core LAN + serial-ready architecture:
   - backend-agnostic contract tests (LAN fixture + deterministic serial mock fixture),
   - deterministic serial framing/stability unit tests (partial frames/timeouts/overflow),
-  - USB audio stub unit tests (selection/lifecycle/error paths),
+  - USB audio driver unit tests (selection/lifecycle/error paths),
   - web/rigctld smoke tests on serial mock backend to guard against LAN-only assumptions.
 - Added production `SerialCivLink` driver for IC-7610 USB CI-V with robust FE FE ... FD framing
   recovery, collision/abort handling, timeout/overflow guardrails, writer backpressure handling,
   and optional dependency guard (`pip install icom-lan[serial]`).
+- Added production `UsbAudioDriver` for IC-7610 serial backend with deterministic device probe/
+  selection (auto-detect + explicit RX/TX overrides), RX/TX lifecycle guardrails, actionable
+  optional dependency errors (`sounddevice`/`numpy`), and serial-audio contract coverage for web
+  audio channel + bridge flows.
 
 ## Test Equipment
 

@@ -7,16 +7,134 @@ import base64
 import hashlib
 import json
 import struct
+from unittest.mock import patch
 
 import pytest
 
+from icom_lan.audio_bridge import AudioBridge
+from icom_lan.backends.icom7610 import Icom7610SerialRadio
 from icom_lan.backends.icom7610.drivers.serial_stub import SerialMockRadio
 from icom_lan.rigctld.contract import RigctldConfig
 from icom_lan.rigctld.server import RigctldServer
+from icom_lan.web.handlers import AudioBroadcaster
+from icom_lan.web.protocol import AUDIO_CODEC_PCM16, AUDIO_HEADER_SIZE
 from icom_lan.web.server import WebConfig, WebServer
 
 
 _WS_MAGIC = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
+
+
+class _FakeSerialCivLink:
+    def __init__(self) -> None:
+        self.connected = False
+        self.ready = False
+        self.healthy = False
+
+    async def connect(self) -> None:
+        self.connected = True
+        self.ready = True
+        self.healthy = True
+
+    async def disconnect(self) -> None:
+        self.connected = False
+        self.ready = False
+        self.healthy = False
+
+    async def send(self, frame: bytes) -> None:
+        _ = frame
+        return None
+
+    async def receive(self, timeout: float | None = None) -> bytes | None:
+        await asyncio.sleep(0.02 if timeout is None else min(timeout, 0.02))
+        return None
+
+
+class _FakeUsbAudioDriver:
+    def __init__(self) -> None:
+        self.rx_running = False
+        self.tx_running = False
+        self.rx_callback = None
+        self.tx_frames: list[bytes] = []
+
+    async def start_rx(self, callback, **kwargs) -> None:  # type: ignore[no-untyped-def]
+        _ = kwargs
+        self.rx_callback = callback
+        self.rx_running = True
+
+    async def stop_rx(self) -> None:
+        self.rx_running = False
+        self.rx_callback = None
+
+    async def start_tx(self, **kwargs) -> None:  # type: ignore[no-untyped-def]
+        _ = kwargs
+        self.tx_running = True
+
+    async def stop_tx(self) -> None:
+        self.tx_running = False
+
+    async def push_tx_pcm(self, frame: bytes) -> None:
+        self.tx_frames.append(bytes(frame))
+
+    def emit_rx_pcm(self, frame: bytes) -> None:
+        if self.rx_callback is not None:
+            self.rx_callback(frame)
+
+
+class _BridgeOutputStream:
+    def __init__(self) -> None:
+        self.active = False
+        self.writes: list[bytes] = []
+
+    def start(self) -> None:
+        self.active = True
+
+    def stop(self) -> None:
+        self.active = False
+
+    def close(self) -> None:
+        return None
+
+    def write(self, data) -> None:  # type: ignore[no-untyped-def]
+        if hasattr(data, "tobytes"):
+            self.writes.append(bytes(data.tobytes()))
+            return
+        self.writes.append(bytes(data))
+
+
+class _BridgeInputStream:
+    def __init__(self) -> None:
+        self.active = False
+
+    def start(self) -> None:
+        self.active = True
+
+    def stop(self) -> None:
+        self.active = False
+
+    def close(self) -> None:
+        return None
+
+    def read(self, frames: int):  # type: ignore[no-untyped-def]
+        import numpy as np
+
+        return np.full((frames, 1), 100, dtype=np.int16), False
+
+
+class _BridgeSoundDevice:
+    def __init__(self) -> None:
+        self.output_stream = _BridgeOutputStream()
+        self.input_stream = _BridgeInputStream()
+
+    def query_devices(self):  # type: ignore[no-untyped-def]
+        return [{"name": "BlackHole 2ch", "index": 1}]
+
+    def OutputStream(self, **kwargs):  # noqa: N802 # type: ignore[no-untyped-def]
+        _ = kwargs
+        return self.output_stream
+
+    def InputStream(self, **kwargs):  # noqa: N802 # type: ignore[no-untyped-def]
+        _ = kwargs
+        return self.input_stream
 
 
 def _addr_from_asyncio_server(server: asyncio.Server) -> tuple[str, int]:
@@ -178,3 +296,53 @@ async def test_rigctld_smoke_with_serial_mock_backend() -> None:
             await _close_writer(writer)
     finally:
         await server.stop()
+
+
+@pytest.mark.asyncio
+async def test_web_audio_broadcaster_smoke_with_serial_backend_audio_driver() -> None:
+    serial_audio = _FakeUsbAudioDriver()
+    radio = Icom7610SerialRadio(
+        device="/dev/tty.usbmodem-IC7610",
+        civ_link=_FakeSerialCivLink(),
+        audio_driver=serial_audio,
+    )
+    await radio.connect()
+    broadcaster = AudioBroadcaster(radio)
+    queue = await broadcaster.subscribe()
+    pcm_frame = b"\xAB\xCD" * 960
+    try:
+        serial_audio.emit_rx_pcm(pcm_frame)
+        web_frame = await asyncio.wait_for(queue.get(), timeout=1.0)
+        assert web_frame[1] == AUDIO_CODEC_PCM16
+        assert web_frame[AUDIO_HEADER_SIZE:] == pcm_frame
+    finally:
+        await broadcaster.unsubscribe(queue)
+        await radio.disconnect()
+
+
+@pytest.mark.asyncio
+async def test_audio_bridge_smoke_with_serial_backend_audio_driver() -> None:
+    serial_audio = _FakeUsbAudioDriver()
+    radio = Icom7610SerialRadio(
+        device="/dev/tty.usbmodem-IC7610",
+        civ_link=_FakeSerialCivLink(),
+        audio_driver=serial_audio,
+    )
+    await radio.connect()
+    fake_sd = _BridgeSoundDevice()
+    bridge = AudioBridge(radio, device_name="BlackHole", tx_enabled=True)
+    try:
+        with patch.dict("sys.modules", {"sounddevice": fake_sd}):
+            await bridge.start()
+            serial_audio.emit_rx_pcm(b"\x10\x20" * 960)
+            deadline = asyncio.get_running_loop().time() + 1.0
+            while (
+                not serial_audio.tx_frames
+                and asyncio.get_running_loop().time() < deadline
+            ):
+                await asyncio.sleep(0.02)
+            assert fake_sd.output_stream.writes
+            assert serial_audio.tx_frames
+            await bridge.stop()
+    finally:
+        await radio.disconnect()
