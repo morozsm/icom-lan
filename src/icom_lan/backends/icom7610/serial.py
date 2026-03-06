@@ -237,6 +237,7 @@ class Icom7610SerialRadio(Icom7610CoreRadio):
         policy: ScopeCompletionPolicy | str = ScopeCompletionPolicy.VERIFY,
         timeout: float = 5.0,
     ) -> None:
+        self._check_connected()
         self._ensure_scope_baud_guardrail()
         await super().enable_scope(output=output, policy=policy, timeout=timeout)
 
