@@ -935,6 +935,7 @@ def test_update_radio_state_advanced_scope_family(
         _make_frame(cmd=0x27, sub=0x13, data=b"\x01"),
         _make_frame(cmd=0x27, sub=0x14, data=b"\x00\x03"),
         _make_frame(cmd=0x27, sub=0x15, data=b"\x00" + bcd_encode(250_000)),
+        _make_frame(cmd=0x27, sub=0x16, data=b"\x00\x04"),
         _make_frame(cmd=0x27, sub=0x17, data=b"\x00\x01"),
         _make_frame(cmd=0x27, sub=0x19, data=b"\x00\x01\x05\x01"),
         _make_frame(cmd=0x27, sub=0x1A, data=b"\x00\x02"),
@@ -954,6 +955,7 @@ def test_update_radio_state_advanced_scope_family(
     assert rs.scope_controls.dual is True
     assert rs.scope_controls.mode == 3
     assert rs.scope_controls.span == 6
+    assert rs.scope_controls.edge == 4
     assert rs.scope_controls.hold is True
     assert rs.scope_controls.ref_db == -10.5
     assert rs.scope_controls.speed == 2
@@ -965,6 +967,26 @@ def test_update_radio_state_advanced_scope_family(
     assert rs.scope_controls.fixed_edge.start_hz == 14_000_000
     assert rs.scope_controls.fixed_edge.end_hz == 14_350_000
     assert rs.scope_controls.rbw == 2
+
+
+def test_civ_expects_response_scope_get(
+    radio_with_state: IcomRadio,
+) -> None:
+    """Scope GET (empty data) expects a response."""
+    frame = _make_frame(cmd=0x27, sub=0x14, data=b"")
+    assert radio_with_state._civ_expects_response(frame) is True
+
+
+def test_civ_expects_response_scope_set(
+    radio_with_state: IcomRadio,
+) -> None:
+    """Scope SET (non-empty data) does not expect a data response."""
+    frame = _make_frame(cmd=0x27, sub=0x14, data=b"\x00\x03")
+    assert radio_with_state._civ_expects_response(frame) is False
+
+    # Single-byte SET (scope_on 0x27 0x10 0x01)
+    frame = _make_frame(cmd=0x27, sub=0x10, data=b"\x01")
+    assert radio_with_state._civ_expects_response(frame) is False
 
 
 def test_update_radio_state_exception_suppressed(radio_with_state: IcomRadio) -> None:

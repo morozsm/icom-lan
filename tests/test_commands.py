@@ -1101,6 +1101,14 @@ class TestAdvancedScopeParsers:
         assert bounds.start_hz == 14_000_000
         assert bounds.end_hz == 14_350_000
 
+    def test_parse_scope_span_response_from_single_byte_index(self) -> None:
+        from icom_lan.commands import parse_scope_span_response
+
+        frame = CivFrame(0xE0, 0x98, 0x27, 0x15, b"\x05")
+        receiver, span = parse_scope_span_response(frame)
+        assert receiver is None
+        assert span == 5
+
     def test_parse_scope_rbw_response(self) -> None:
         from icom_lan.commands import parse_scope_rbw_response
 
@@ -1108,3 +1116,73 @@ class TestAdvancedScopeParsers:
         receiver, rbw = parse_scope_rbw_response(frame)
         assert receiver == 1
         assert rbw == 2
+
+
+class TestAdvancedScopeValidation:
+    """Negative tests for scope builder input validation."""
+
+    def test_scope_set_mode_rejects_out_of_range(self) -> None:
+        from icom_lan.commands import scope_set_mode
+
+        with pytest.raises(ValueError, match="scope mode must be 0-3"):
+            scope_set_mode(5)
+
+    def test_scope_set_span_rejects_negative(self) -> None:
+        from icom_lan.commands import scope_set_span
+
+        with pytest.raises(ValueError, match="scope span must be 0-7"):
+            scope_set_span(-1)
+
+    def test_scope_set_edge_rejects_zero(self) -> None:
+        from icom_lan.commands import scope_set_edge
+
+        with pytest.raises(ValueError, match="scope edge must be 1-4"):
+            scope_set_edge(0)
+
+    def test_scope_set_speed_rejects_out_of_range(self) -> None:
+        from icom_lan.commands import scope_set_speed
+
+        with pytest.raises(ValueError, match="scope speed must be 0-2"):
+            scope_set_speed(3)
+
+    def test_scope_set_center_type_rejects_out_of_range(self) -> None:
+        from icom_lan.commands import scope_set_center_type
+
+        with pytest.raises(ValueError, match="scope center type must be 0-2"):
+            scope_set_center_type(5)
+
+    def test_scope_set_rbw_rejects_out_of_range(self) -> None:
+        from icom_lan.commands import scope_set_rbw
+
+        with pytest.raises(ValueError, match="scope rbw must be 0-2"):
+            scope_set_rbw(3)
+
+    def test_scope_set_ref_rejects_out_of_range(self) -> None:
+        from icom_lan.commands import scope_set_ref
+
+        with pytest.raises(ValueError, match="scope ref must be"):
+            scope_set_ref(15.0)
+
+    def test_scope_set_fixed_edge_rejects_end_before_start(self) -> None:
+        from icom_lan.commands import scope_set_fixed_edge
+
+        with pytest.raises(ValueError, match="end_hz must be greater"):
+            scope_set_fixed_edge(edge=1, start_hz=14_350_000, end_hz=14_000_000)
+
+    def test_scope_set_fixed_edge_rejects_edge_out_of_range(self) -> None:
+        from icom_lan.commands import scope_set_fixed_edge
+
+        with pytest.raises(ValueError, match="scope fixed edge must be 1-4"):
+            scope_set_fixed_edge(edge=5, start_hz=14_000_000, end_hz=14_350_000)
+
+    def test_scope_receiver_rejects_invalid(self) -> None:
+        from icom_lan.commands import scope_main_sub
+
+        with pytest.raises(ValueError, match="scope receiver must be 0 or 1"):
+            scope_main_sub(5)
+
+    def test_scope_payload_rejects_invalid_receiver(self) -> None:
+        from icom_lan.commands import scope_set_mode
+
+        with pytest.raises(ValueError, match="scope receiver must be 0 or 1"):
+            scope_set_mode(0, receiver=5)

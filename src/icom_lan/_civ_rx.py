@@ -1141,6 +1141,12 @@ class _CivRxMixin:
         if frame.command == 0x17:
             return False
         if frame.command == 0x27:
+            # Scope GETs have empty data.  SET commands always carry a payload.
+            # Note: receiver-prefixed GETs (e.g. get_scope_mode(receiver=0))
+            # produce data=b"\x00" which is ambiguous with SET values.
+            # IcomRadio methods always use receiver=None for GETs, so empty
+            # data is sufficient.  If receiver-prefixed GETs are ever used
+            # directly, pass wait_response=True to _send_civ_raw.
             return len(frame.data) == 0
         # If no further payload beyond command/sub is included, it's typically a GET
         return len(frame.data) == 0
