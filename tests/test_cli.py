@@ -327,6 +327,18 @@ class TestBackendArgs:
         args = p.parse_args(["--serial-baud", "57600", "status"])
         assert args.serial_baud == 57600
 
+    def test_serial_ptt_mode_default(self):
+        p = _build_parser()
+        args = p.parse_args(["status"])
+        assert args.serial_ptt_mode == "civ"
+
+    def test_serial_ptt_mode_override(self):
+        p = _build_parser()
+        args = p.parse_args(
+            ["--serial-ptt-mode", "civ", "--backend", "serial", "status"]
+        )
+        assert args.serial_ptt_mode == "civ"
+
     def test_rx_device_default_none(self):
         p = _build_parser()
         args = p.parse_args(["status"])
@@ -423,6 +435,18 @@ class TestBuildBackendConfig:
         assert config.rx_device == "IC-7610 RX"
         assert config.tx_device == "IC-7610 TX"
 
+    def test_serial_ptt_mode_passed(self):
+        p = _build_parser()
+        args = p.parse_args([
+            "--backend", "serial",
+            "--serial-port", "/dev/tty.usb0",
+            "--serial-ptt-mode", "civ",
+            "status",
+        ])
+        config = _build_backend_config(args)
+        assert isinstance(config, SerialBackendConfig)
+        assert config.ptt_mode == "civ"
+
     def test_serial_missing_port_raises_value_error(self):
         p = _build_parser()
         args = p.parse_args(["--backend", "serial", "status"])
@@ -492,6 +516,20 @@ class TestListAudioDevices:
         assert exc_info.value.code == 0
         captured = capsys.readouterr()
         assert "IC-7610 USB Audio" in captured.out
+
+    def test_list_audio_devices_json_flag_is_parser_reachable(self):
+        captured: dict[str, object] = {}
+
+        async def fake_list_cmd(args):
+            captured["json"] = getattr(args, "json", False)
+            return 0
+
+        with patch("icom_lan.cli._cmd_list_audio_devices", side_effect=fake_list_cmd):
+            with patch("sys.argv", ["icom-lan", "--list-audio-devices", "--json"]):
+                with pytest.raises(SystemExit) as exc_info:
+                    main()
+        assert exc_info.value.code == 0
+        assert captured["json"] is True
 
     def test_list_audio_devices_json_output(self, capsys):
         import asyncio

@@ -93,6 +93,7 @@ class Icom7610SerialRadio(Icom7610CoreRadio):
         audio_sample_rate: int = _DEFAULT_AUDIO_SAMPLE_RATE,
         rx_device: str | None = None,
         tx_device: str | None = None,
+        ptt_mode: str = "civ",
         profile: "RadioProfile | str | None" = None,
         model: str | None = None,
         allow_low_baud_scope: bool = False,
@@ -118,6 +119,12 @@ class Icom7610SerialRadio(Icom7610CoreRadio):
         self._serial_baudrate = baudrate
         self._serial_rx_device_override = rx_device
         self._serial_tx_device_override = tx_device
+        if ptt_mode != "civ":
+            raise ValueError(
+                "Unsupported serial PTT mode. "
+                "Only 'civ' is currently supported."
+            )
+        self._serial_ptt_mode = ptt_mode
         self._allow_low_baud_scope = allow_low_baud_scope or _env_bool(
             "ICOM_SERIAL_SCOPE_ALLOW_LOW_BAUD",
             default=False,

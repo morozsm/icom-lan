@@ -13,9 +13,11 @@ All commands accept these options:
 | `--user` | `ICOM_USER` | `""` | Username (LAN backend) |
 | `--pass` | `ICOM_PASS` | `""` | Password (LAN backend) |
 | `--timeout` | — | `5.0` | Timeout in seconds |
+| `--json` | — | `false` | Emit JSON when supported by the selected command |
 | `--backend` | — | `lan` | Backend type: `lan` or `serial` |
 | `--serial-port` | `ICOM_SERIAL_DEVICE` | — | Serial device path (`--backend serial`) |
 | `--serial-baud` | `ICOM_SERIAL_BAUDRATE` | `115200` | Serial baud rate (`--backend serial`) |
+| `--serial-ptt-mode` | `ICOM_SERIAL_PTT_MODE` | `civ` | Serial PTT mode (`civ` currently supported) |
 | `--rx-device` | `ICOM_USB_RX_DEVICE` | auto | USB audio RX device name (`--backend serial`) |
 | `--tx-device` | `ICOM_USB_TX_DEVICE` | auto | USB audio TX device name (`--backend serial`) |
 | `--list-audio-devices` | — | — | List USB audio devices and exit |
@@ -65,6 +67,7 @@ The serial backend uses USB audio devices exported by the radio. By default, dev
 ```bash
 # List all available audio devices
 icom-lan --list-audio-devices
+icom-lan --list-audio-devices --json
 
 # Specify explicit devices
 icom-lan --backend serial --serial-port /dev/tty.usbmodem-IC7610 \

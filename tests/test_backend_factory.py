@@ -47,6 +47,13 @@ class TestBackendConfigValidation:
         )
         assert config.allow_low_baud_scope is True
 
+    def test_serial_backend_ptt_mode_validation_rejects_unknown_values(self) -> None:
+        with pytest.raises(ValueError, match="ptt_mode"):
+            SerialBackendConfig(
+                device="/dev/tty.usbmodem-IC7610",
+                ptt_mode="rts",  # type: ignore[arg-type]
+            )
+
 
 class TestCreateRadioFactory:
     def test_create_radio_builds_lan_backend(self) -> None:
@@ -86,6 +93,16 @@ class TestCreateRadioFactory:
         )
         assert isinstance(radio, Icom7610SerialRadio)
         assert radio._allow_low_baud_scope is True
+
+    def test_create_radio_passes_serial_ptt_mode(self) -> None:
+        radio = create_radio(
+            SerialBackendConfig(
+                device="/dev/tty.usbmodem-IC7610",
+                ptt_mode="civ",
+            )
+        )
+        assert isinstance(radio, Icom7610SerialRadio)
+        assert radio._serial_ptt_mode == "civ"
 
     def test_create_radio_rejects_unknown_backend(self) -> None:
         @dataclass(slots=True)

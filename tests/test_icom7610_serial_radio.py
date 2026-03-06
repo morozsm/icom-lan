@@ -207,6 +207,14 @@ async def test_serial_radio_connect_failure_sets_disconnected_state() -> None:
     assert radio.radio_ready is False
 
 
+def test_serial_radio_rejects_unsupported_ptt_mode() -> None:
+    with pytest.raises(ValueError, match="Unsupported serial PTT mode"):
+        Icom7610SerialRadio(
+            device="/dev/ttyUSB0",
+            ptt_mode="rts",
+        )
+
+
 @pytest.mark.asyncio
 async def test_serial_radio_ready_tracks_serial_link_health() -> None:
     link = _FakeSerialCivLink()
