@@ -8,7 +8,7 @@ Status rules:
 - `missing`: no maintained parity surface is claimed yet. Generic `send_civ()` access does not count as parity coverage.
 
 Family mapping:
-- `baseline_core` -> `#138`
+- `baseline_core` -> pre-M4 baseline (no open issue owner)
 - `dsp_levels` -> `#130`
 - `operator_toggles` -> `#131`
 - `vfo_dualwatch_scan` -> `#132`
@@ -23,3 +23,13 @@ Update workflow:
 2. Update family counts and total counts in the same file.
 3. Update the parity summary line in `docs/PROJECT.md`.
 4. Run `PYTHONPATH=src pytest -q tests/test_ic7610_parity_matrix.py`.
+5. Run the explicit parity smoke profile:
+   `PYTHONPATH=src pytest -q tests/integration -m "integration and ic7610_parity"`.
+
+Explicit parity smoke profile:
+- Marker: `ic7610_parity`
+- Current coverage focus:
+  - `baseline_core` stateful smoke (`snapshot_state()` / `restore_state()`)
+  - `advanced_scope` lifecycle smoke on LAN and serial backends
+- Serial-only parity smoke continues to require `ICOM_SERIAL_DEVICE` and the usual
+  scope gate (`ICOM_ALLOW_SERIAL_SCOPE=1` or `ICOM_ALLOW_SCOPE=1`).

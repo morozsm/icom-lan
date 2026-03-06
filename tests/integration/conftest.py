@@ -183,6 +183,10 @@ def pytest_configure(config: pytest.Config) -> None:
         "markers",
         "serial_integration: tests requiring serial backend hardware configuration",
     )
+    config.addinivalue_line(
+        "markers",
+        "ic7610_parity: maintained IC-7610 parity smoke profile across high-risk families",
+    )
 
 
 def pytest_collection_modifyitems(

@@ -93,6 +93,7 @@ class TestAudioPcm:
 class TestScopeIntegration:
     """Integration coverage for scope lifecycle APIs."""
 
+    @pytest.mark.ic7610_parity
     async def test_scope_enable_capture_disable(self, radio: IcomRadio) -> None:
         """Enable scope, capture frames, then disable output."""
         if not _flag_enabled("ICOM_ALLOW_SCOPE"):
@@ -127,6 +128,7 @@ class TestScopeIntegration:
 class TestSerialScopeIntegration:
     """Integration coverage for serial backend scope lifecycle and guardrails."""
 
+    @pytest.mark.ic7610_parity
     async def test_serial_scope_enable_capture_disable(
         self, serial_radio_config: dict
     ) -> None:
@@ -163,6 +165,7 @@ class TestSerialScopeIntegration:
                     pass
                 await radio.disconnect()
 
+    @pytest.mark.ic7610_parity
     async def test_serial_scope_low_baud_guardrail_rejects(
         self, serial_radio_config: dict
     ) -> None:

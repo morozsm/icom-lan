@@ -199,7 +199,7 @@ Each UDP packet has a fixed-format header (see `packettypes.h` in wfview):
 ### Current Status
 **Package version in `pyproject.toml`: `0.11.0`.**
 **Reliability integration backlog (items 1-13) completed on 2026-03-05.**
-**Latest full regression (local, 2026-03-06):** `1879 passed, 95 skipped`.
+**Latest full regression (local, 2026-03-06):** green; exact counts are tracked in issue comments because the total moves as the parity/integration suite grows.
 - **M2 Platform Foundation (step #141):** extracted shared IC-7610 executable core (`Icom7610CoreRadio`) with LAN compatibility wrapper (`IcomRadio`) and no behavior changes.
 - **M2 profile abstraction (issue #119):** runtime `RadioProfile` matrix added for multi-model behavior; `model`/`capabilities` and receiver/cmd29 routing are now profile-driven with explicit unsupported-operation guards.
 - **M3 serial scope guardrails (issue #146, 2026-03-06):** serial backend keeps the shared error contract in disconnected state (`ConnectionError` before low-baud guardrail evaluation), includes deterministic low-baud guardrail with explicit override (`allow_low_baud_scope` / `ICOM_SERIAL_SCOPE_ALLOW_LOW_BAUD`), and now has dedicated serial integration scope profile/gating (`ICOM_SERIAL_DEVICE`, `ICOM_SERIAL_BAUDRATE`, `ICOM_SERIAL_RADIO_ADDR`) alongside serial-specific CI-V pacing (`ICOM_SERIAL_CIV_MIN_INTERVAL_MS`) while LAN scope behavior remains unchanged.
@@ -208,9 +208,9 @@ Each UDP packet has a fixed-format header (see `packettypes.h` in wfview):
 - **M3 rigctld integration (issue #149, 2026-03-06):** rigctld startup now reuses the shared factory/config path for `--backend lan` and `--backend serial`, shares backend-provided state cache when available, prefers backend-native mode introspection via `radio_protocol.ModeInfoCapable` while falling back to the core `Radio.get_mode()/set_mode(str, ...)` contract, and adds serial TCP smoke coverage for read/write rigctld commands while keeping audit logging and circuit-breaker behavior unchanged.
 - **M3 documentation (issue #151, 2026-03-06):** comprehensive IC-7610 USB serial backend setup guide (macOS-first), backend capability matrix (LAN vs Serial), migration/backward-compatibility section, troubleshooting for serial CI-V and USB audio, and critical hardware finding (`CI-V USB Port` must be `Link to [CI-V]`, not `[REMOTE]`) documented across guide/radios.md, guide/troubleshooting.md, radio-protocol.md, and new guide/ic7610-usb-setup.md.
 - **M3 status:** complete (epic #152 closed-out).
-- **IC-7610 parity matrix (issue #139, 2026-03-06): 38 implemented, 16 partial, 80 missing**; source of truth is `docs/parity/ic7610_command_matrix.json`.
+- **IC-7610 parity matrix (issue #139, 2026-03-06): 38 implemented, 16 partial, 80 missing**; source of truth is `docs/parity/ic7610_command_matrix.json`, and the explicit parity smoke profile is `pytest -m "integration and ic7610_parity" tests/integration`.
 - **M4 parity family counts (from matrix):**
-  - `#138 baseline_core`: 38 implemented, 0 partial, 0 missing
+  - `baseline_core` (pre-M4 baseline, no owner issue): 38 implemented, 0 partial, 0 missing
   - `#132 vfo_dualwatch_scan`: 0 implemented, 4 partial, 6 missing
   - `#136 transceiver_status`: 0 implemented, 2 partial, 9 missing
   - `#137 advanced_scope`: 0 implemented, 10 partial, 3 missing

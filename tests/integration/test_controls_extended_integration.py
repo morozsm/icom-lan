@@ -128,6 +128,7 @@ class TestControlApiExtended:
             await radio.set_digisel(original_digisel)
             print("Frontend toggles restored ✓")
 
+    @pytest.mark.ic7610_parity
     async def test_snapshot_restore_roundtrip(self, radio: IcomRadio) -> None:
         """Modify multiple knobs and validate snapshot_state/restore_state."""
         snapshot = await radio.snapshot_state()

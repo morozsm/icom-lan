@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 MATRIX_PATH = ROOT / "docs/parity/ic7610_command_matrix.json"
 WFVIEW_RIG_PATH = ROOT / "references/wfview/rigs/IC-7610.rig"
 PROJECT_DOC_PATH = ROOT / "docs/PROJECT.md"
+PARITY_README_PATH = ROOT / "docs/parity/README.md"
 ALLOWED_STATUSES = {"implemented", "partial", "missing"}
 
 
@@ -146,3 +147,27 @@ def test_project_doc_parity_summary_matches_matrix() -> None:
         "partial": int(match.group("partial")),
         "missing": int(match.group("missing")),
     } == matrix["status_totals"]
+
+
+def test_parity_docs_and_integration_profile_are_explicit() -> None:
+    matrix = _load_matrix()
+    parity_readme = PARITY_README_PATH.read_text(encoding="utf-8")
+    project_doc = PROJECT_DOC_PATH.read_text(encoding="utf-8")
+    integration_conftest = (ROOT / "tests/integration/conftest.py").read_text(
+        encoding="utf-8"
+    )
+    marked_files = {
+        "tests/integration/test_media_scope_integration.py": (
+            ROOT / "tests/integration/test_media_scope_integration.py"
+        ).read_text(encoding="utf-8"),
+        "tests/integration/test_controls_extended_integration.py": (
+            ROOT / "tests/integration/test_controls_extended_integration.py"
+        ).read_text(encoding="utf-8"),
+    }
+
+    assert matrix["families"]["baseline_core"]["owner_issue"] is None
+    assert "baseline_core` -> pre-M4 baseline (no open issue owner)" in parity_readme
+    assert 'integration and ic7610_parity' in parity_readme
+    assert 'integration and ic7610_parity' in project_doc
+    assert "ic7610_parity:" in integration_conftest
+    assert any("pytest.mark.ic7610_parity" in text for text in marked_files.values())

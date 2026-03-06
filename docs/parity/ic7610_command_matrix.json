@@ -13,8 +13,8 @@
   "families": {
     "baseline_core": {
       "title": "Baseline core and already-exposed parity",
-      "owner_issue": 138,
-      "summary": "Commands already backed by maintained library/runtime surfaces or by the internal primitives that those surfaces depend on.",
+      "owner_issue": null,
+      "summary": "Pre-M4 baseline commands already backed by maintained library/runtime surfaces or by the internal primitives that those surfaces depend on.",
       "counts": {
         "implemented": 38,
         "partial": 0,
