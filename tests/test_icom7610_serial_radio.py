@@ -415,6 +415,17 @@ async def test_serial_scope_low_baud_guardrail_rejects_without_override() -> Non
 
 
 @pytest.mark.asyncio
+async def test_serial_scope_enable_disconnected_low_baud_keeps_connection_error_contract() -> None:
+    radio = Icom7610SerialRadio(
+        device="/dev/ttyUSB0",
+        baudrate=19200,
+        civ_link=_FakeSerialCivLink(),
+    )
+    with pytest.raises(ConnectionError, match="Not connected"):
+        await radio.enable_scope(policy="fast")
+
+
+@pytest.mark.asyncio
 async def test_serial_scope_low_baud_guardrail_override_allows_with_warning(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
