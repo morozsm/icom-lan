@@ -247,6 +247,19 @@ class UsbAudioDriver:
     def selected_tx_device(self) -> UsbAudioDevice | None:
         return self._selected_tx
 
+    @staticmethod
+    def _stop_and_close_stream(stream: Any, *, direction: str) -> None:
+        if stream is None:
+            return
+        try:
+            stream.stop()
+        except Exception:
+            logger.debug("usb-audio: %s stream stop failed", direction, exc_info=True)
+        try:
+            stream.close()
+        except Exception:
+            logger.debug("usb-audio: %s stream close failed", direction, exc_info=True)
+
     def _ensure_dependencies(self) -> tuple[Any, Any]:
         if self._sd is not None and self._np is not None:
             return self._sd, self._np
@@ -345,15 +358,7 @@ class UsbAudioDriver:
                 await task
             except asyncio.CancelledError:
                 pass
-        if stream is not None:
-            try:
-                stream.stop()
-            except Exception:
-                logger.debug("usb-audio: RX stream stop failed", exc_info=True)
-            try:
-                stream.close()
-            except Exception:
-                logger.debug("usb-audio: RX stream close failed", exc_info=True)
+        self._stop_and_close_stream(stream, direction="RX")
 
     async def start_tx(
         self,
@@ -415,19 +420,48 @@ class UsbAudioDriver:
                 await task
             except asyncio.CancelledError:
                 pass
-        if stream is not None:
-            try:
-                stream.stop()
-            except Exception:
-                logger.debug("usb-audio: TX stream stop failed", exc_info=True)
-            try:
-                stream.close()
-            except Exception:
-                logger.debug("usb-audio: TX stream close failed", exc_info=True)
+        self._stop_and_close_stream(stream, direction="TX")
+
+    async def _cleanup_rx_after_loop(
+        self,
+        stream: Any,
+        *,
+        owner_task: asyncio.Task[None] | None,
+    ) -> None:
+        close_stream = False
+        async with self._rx_lock:
+            if self._rx_stream is stream:
+                self._rx_stream = None
+                self._rx_callback = None
+                close_stream = True
+            if self._rx_task is owner_task:
+                self._rx_task = None
+                self._rx_callback = None
+        if close_stream:
+            self._stop_and_close_stream(stream, direction="RX")
+
+    async def _cleanup_tx_after_loop(
+        self,
+        stream: Any,
+        *,
+        owner_task: asyncio.Task[None] | None,
+    ) -> None:
+        close_stream = False
+        async with self._tx_lock:
+            if self._tx_stream is stream:
+                self._tx_stream = None
+                close_stream = True
+            if self._tx_task is owner_task:
+                self._tx_task = None
+            if close_stream or self._tx_task is None:
+                self._tx_queue = asyncio.Queue(maxsize=64)
+        if close_stream:
+            self._stop_and_close_stream(stream, direction="TX")
 
     async def _rx_loop(self, blocksize: int) -> None:
         assert self._rx_stream is not None
         stream = self._rx_stream
+        owner_task = asyncio.current_task()
         try:
             while True:
                 data, _overflowed = await asyncio.to_thread(stream.read, blocksize)
@@ -443,10 +477,13 @@ class UsbAudioDriver:
             pass
         except Exception:
             logger.warning("usb-audio: RX loop failed", exc_info=True)
+        finally:
+            await self._cleanup_rx_after_loop(stream, owner_task=owner_task)
 
     async def _tx_loop(self, channels: int) -> None:
         assert self._tx_stream is not None
         stream = self._tx_stream
+        owner_task = asyncio.current_task()
         _, np_module = self._ensure_dependencies()
         try:
             while True:
@@ -458,6 +495,8 @@ class UsbAudioDriver:
             pass
         except Exception:
             logger.warning("usb-audio: TX loop failed", exc_info=True)
+        finally:
+            await self._cleanup_tx_after_loop(stream, owner_task=owner_task)
 
 
 __all__ = [

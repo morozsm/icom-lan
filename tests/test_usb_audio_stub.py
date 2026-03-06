@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass
 from types import SimpleNamespace
+from typing import Callable
 
 import pytest
 
@@ -35,6 +36,17 @@ class _FakeNumpy:
     def frombuffer(data: bytes, dtype: object) -> _FakeArray:
         _ = dtype
         return _FakeArray(bytes(data))
+
+
+class _RaiseOnceNumpy(_FakeNumpy):
+    def __init__(self) -> None:
+        self._raised = False
+
+    def frombuffer(self, data: bytes, dtype: object) -> _FakeArray:
+        if not self._raised:
+            self._raised = True
+            raise RuntimeError("injected numpy.frombuffer failure")
+        return super().frombuffer(data, dtype)
 
 
 class _FakeInputStream:
@@ -132,6 +144,15 @@ class _FakeSoundDevice:
         stream = _FakeOutputStream(self)
         self.output_streams.append(stream)
         return stream
+
+
+async def _wait_until(predicate: Callable[[], bool], *, timeout: float = 1.0) -> None:
+    loop = asyncio.get_running_loop()
+    deadline = loop.time() + timeout
+    while not predicate():
+        if loop.time() >= deadline:
+            raise AssertionError("Timed out waiting for condition")
+        await asyncio.sleep(0.01)
 
 
 def _devices_fixture() -> list[dict[str, object]]:
@@ -281,3 +302,67 @@ async def test_usb_audio_driver_missing_optional_dependencies_is_actionable() ->
     driver = UsbAudioDriver(dependency_loader=_missing_sounddevice)
     with pytest.raises(ImportError, match="pip install icom-lan\\[bridge\\]"):
         await driver.start_rx(lambda _frame: None)
+
+
+@pytest.mark.asyncio
+async def test_usb_audio_driver_rx_loop_crash_cleans_up_and_supports_restart() -> None:
+    fake_sd = _FakeSoundDevice(
+        _devices_fixture(),
+        default_input=1,
+        default_output=1,
+    )
+    driver = UsbAudioDriver(
+        dependency_loader=lambda: (fake_sd, _FakeNumpy()),
+    )
+
+    first_frame = b"\x33\x44" * 960
+    fake_sd.rx_frames.append(first_frame)
+
+    def _boom_callback(_frame: bytes) -> None:
+        raise RuntimeError("injected callback crash")
+
+    await driver.start_rx(_boom_callback)
+    await _wait_until(lambda: driver.rx_running is False)
+
+    assert fake_sd.input_streams[0].closed is True
+    assert driver._rx_stream is None
+    assert driver._rx_task is None
+    assert driver._rx_callback is None
+
+    received_frames: list[bytes] = []
+    second_frame = b"\x55\x66" * 960
+    fake_sd.rx_frames.append(second_frame)
+    await driver.start_rx(received_frames.append)
+    await _wait_until(lambda: bool(received_frames))
+    assert received_frames[0] == second_frame
+    assert driver.rx_running is True
+    await driver.stop_rx()
+
+
+@pytest.mark.asyncio
+async def test_usb_audio_driver_tx_loop_crash_cleans_up_and_supports_restart() -> None:
+    fake_sd = _FakeSoundDevice(
+        _devices_fixture(),
+        default_input=1,
+        default_output=1,
+    )
+    driver = UsbAudioDriver(
+        dependency_loader=lambda: (fake_sd, _RaiseOnceNumpy()),
+    )
+
+    first_frame = b"\x77\x88" * 960
+    await driver.start_tx()
+    await driver.push_tx_pcm(first_frame)
+    await _wait_until(lambda: driver.tx_running is False)
+
+    assert fake_sd.output_streams[0].closed is True
+    assert driver._tx_stream is None
+    assert driver._tx_task is None
+
+    second_frame = b"\x99\xAA" * 960
+    await driver.start_tx()
+    await driver.push_tx_pcm(second_frame)
+    await _wait_until(lambda: bool(fake_sd.tx_frames))
+    assert fake_sd.tx_frames[-1] == second_frame
+    assert driver.tx_running is True
+    await driver.stop_tx()
