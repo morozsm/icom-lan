@@ -4,14 +4,16 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import time
 from typing import TYPE_CHECKING, Callable, Protocol
 
 from ..._connection_state import RadioConnectionState
 from ...audio import AudioPacket
-from ...exceptions import AudioFormatError, ConnectionError
+from ...commands import parse_ack_nak, scope_off as _scope_off_cmd
+from ...exceptions import AudioFormatError, CommandError, ConnectionError
 from ...radio import Icom7610CoreRadio
-from ...types import AudioCodec, get_audio_capabilities
+from ...types import AudioCodec, ScopeCompletionPolicy, get_audio_capabilities
 from .drivers.serial_civ_link import SerialCivLink
 from .drivers.serial_session import SerialSessionDriver
 from .drivers.usb_audio import UsbAudioDriver
@@ -29,6 +31,15 @@ _TWO_CHANNEL_CODECS = {
     AudioCodec.ULAW_2CH,
     AudioCodec.OPUS_2CH,
 }
+_SERIAL_DEFAULT_CIV_MIN_INTERVAL_MS = 50.0
+_SERIAL_SCOPE_MIN_BAUD = 115200
+
+
+def _env_bool(name: str, default: bool = False) -> bool:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 
 class _SerialAudioDriver(Protocol):
@@ -84,6 +95,7 @@ class Icom7610SerialRadio(Icom7610CoreRadio):
         tx_device: str | None = None,
         profile: "RadioProfile | str | None" = None,
         model: str | None = None,
+        allow_low_baud_scope: bool = False,
         civ_link: SerialCivLink | None = None,
         session_driver: SerialSessionDriver | None = None,
         audio_driver: _SerialAudioDriver | None = None,
@@ -106,6 +118,20 @@ class Icom7610SerialRadio(Icom7610CoreRadio):
         self._serial_baudrate = baudrate
         self._serial_rx_device_override = rx_device
         self._serial_tx_device_override = tx_device
+        self._allow_low_baud_scope = allow_low_baud_scope or _env_bool(
+            "ICOM_SERIAL_SCOPE_ALLOW_LOW_BAUD",
+            default=False,
+        )
+        self._low_baud_scope_warned = False
+        serial_min_interval_ms = float(
+            os.environ.get(
+                "ICOM_SERIAL_CIV_MIN_INTERVAL_MS",
+                f"{_SERIAL_DEFAULT_CIV_MIN_INTERVAL_MS}",
+            )
+        )
+        if serial_min_interval_ms <= 0:
+            raise ValueError("ICOM_SERIAL_CIV_MIN_INTERVAL_MS must be > 0")
+        self._civ_min_interval = serial_min_interval_ms / 1000.0
         serial_link = civ_link or SerialCivLink(device=device, baudrate=baudrate)
         self._serial_session = session_driver or SerialSessionDriver(serial_link)
         self._serial_audio_driver = audio_driver or UsbAudioDriver(
@@ -203,6 +229,29 @@ class Icom7610SerialRadio(Icom7610CoreRadio):
         await super().disconnect()
         await self._serial_session.disconnect()
         self._ctrl_transport = self._serial_session.control_transport
+
+    async def enable_scope(
+        self,
+        *,
+        output: bool = True,
+        policy: ScopeCompletionPolicy | str = ScopeCompletionPolicy.VERIFY,
+        timeout: float = 5.0,
+    ) -> None:
+        self._ensure_scope_baud_guardrail()
+        await super().enable_scope(output=output, policy=policy, timeout=timeout)
+
+    async def disable_scope(
+        self, *, policy: ScopeCompletionPolicy | str = ScopeCompletionPolicy.FAST
+    ) -> None:
+        await super().disable_scope(policy=policy)
+        pol = ScopeCompletionPolicy(policy)
+        wait_resp = pol == ScopeCompletionPolicy.STRICT
+        resp = await self._send_civ_raw(
+            _scope_off_cmd(to_addr=self._radio_addr),
+            wait_response=wait_resp,
+        )
+        if wait_resp and resp is not None and parse_ack_nak(resp) is False:
+            raise CommandError("Radio rejected scope disable")
 
     async def start_audio_rx_opus(
         self,
@@ -499,6 +548,22 @@ class Icom7610SerialRadio(Icom7610CoreRadio):
 
     def _serial_codec_is_opus(self) -> bool:
         return self._audio_codec in (AudioCodec.OPUS_1CH, AudioCodec.OPUS_2CH)
+
+    def _ensure_scope_baud_guardrail(self) -> None:
+        if self._serial_baudrate >= _SERIAL_SCOPE_MIN_BAUD:
+            return
+
+        msg = (
+            "Scope over serial requires baudrate >= "
+            f"{_SERIAL_SCOPE_MIN_BAUD} for stable command path; got baudrate="
+            f"{self._serial_baudrate}. Set allow_low_baud_scope=True to override."
+        )
+        if not self._allow_low_baud_scope:
+            raise CommandError(msg)
+
+        if not self._low_baud_scope_warned:
+            logger.warning("%s Running with override may increase timeout risk.", msg)
+            self._low_baud_scope_warned = True
 
 
 __all__ = ["Icom7610SerialRadio"]

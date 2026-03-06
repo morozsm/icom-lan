@@ -63,6 +63,23 @@ Look for:
 - `Status: civ_port=50002` — confirms port negotiation succeeded
 - `CI-V port not in status, using default` — port negotiation failed, likely a GUID issue
 
+### "Scope over serial requires baudrate >= 115200"
+
+**Symptom:** `CommandError` on `enable_scope()` / `capture_scope_frame()` with a low
+serial baudrate.
+
+**Cause:** Scope/waterfall CI-V traffic over serial is high-rate; low baud can starve
+regular command responses. The serial backend enforces a deterministic guardrail.
+
+**Fixes:**
+
+1. Set the serial CI-V speed to at least `115200` (recommended).
+2. If you must run lower for diagnostics, use explicit override:
+   - Python API: `Icom7610SerialRadio(..., allow_low_baud_scope=True)`
+   - Env var: `ICOM_SERIAL_SCOPE_ALLOW_LOW_BAUD=1`
+
+When override is used, the backend logs a warning because timeout risk increases.
+
 ### Connection drops after ~30 seconds
 
 **Symptom:** Commands work initially, then start timing out.

@@ -6,10 +6,16 @@ import asyncio
 
 import pytest
 
-from icom_lan import RadioConnectionState
+from icom_lan import IcomRadio, RadioConnectionState
 from icom_lan.backends.icom7610 import Icom7610SerialRadio
-from icom_lan.commands import CONTROLLER_ADDR, IC_7610_ADDR, _CMD_FREQ_GET, build_civ_frame
-from icom_lan.exceptions import ConnectionError
+from icom_lan.commands import (
+    CONTROLLER_ADDR,
+    IC_7610_ADDR,
+    _CMD_FREQ_GET,
+    build_civ_frame,
+    parse_civ_frame,
+)
+from icom_lan.exceptions import CommandError, ConnectionError
 from icom_lan.types import AudioCodec
 from icom_lan.types import bcd_encode
 
@@ -20,6 +26,37 @@ def _freq_response_frame(freq_hz: int) -> bytes:
         IC_7610_ADDR,
         _CMD_FREQ_GET,
         data=bcd_encode(freq_hz),
+    )
+
+
+def _bcd_byte(value: int) -> int:
+    return ((value // 10) << 4) | (value % 10)
+
+
+def _scope_wave_frame(
+    *,
+    receiver: int = 0,
+    mode: int = 1,
+    start_hz: int = 14_000_000,
+    end_hz: int = 14_350_000,
+    pixels: bytes = b"\x10\x20\x30",
+) -> bytes:
+    payload = bytes([
+        receiver,
+        _bcd_byte(1),
+        _bcd_byte(1),
+        mode,
+        *bcd_encode(start_hz),
+        *bcd_encode(end_hz),
+        0x00,
+        *pixels,
+    ])
+    return build_civ_frame(
+        CONTROLLER_ADDR,
+        IC_7610_ADDR,
+        0x27,
+        sub=0x00,
+        data=payload,
     )
 
 
@@ -86,6 +123,9 @@ class _FakeSerialCivLink:
 
     def queue_response_on_send(self, send_no: int, frame: bytes) -> None:
         self._responses_by_send.setdefault(send_no, []).append(frame)
+
+    def queue_response(self, frame: bytes) -> None:
+        self._responses.put_nowait(frame)
 
 
 class _FakeUsbAudioDriver:
@@ -287,4 +327,124 @@ async def test_serial_audio_tx_requires_start() -> None:
     await radio.connect()
     with pytest.raises(RuntimeError, match="Audio TX not started"):
         await radio.push_audio_tx_opus(b"\x00" * 1920)
+    await radio.disconnect()
+
+
+def test_serial_scope_pacing_profile_is_separate_from_lan(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("ICOM_CIV_MIN_INTERVAL_MS", raising=False)
+    monkeypatch.delenv("ICOM_SERIAL_CIV_MIN_INTERVAL_MS", raising=False)
+    serial_radio = Icom7610SerialRadio(
+        device="/dev/ttyUSB0",
+        civ_link=_FakeSerialCivLink(),
+    )
+    lan_radio = IcomRadio("192.168.55.40")
+    assert serial_radio._civ_min_interval > lan_radio._civ_min_interval
+
+
+@pytest.mark.asyncio
+async def test_serial_scope_enable_disable_full_lifecycle_commands() -> None:
+    link = _FakeSerialCivLink()
+    radio = Icom7610SerialRadio(
+        device="/dev/ttyUSB0",
+        civ_link=link,
+    )
+    await radio.connect()
+    await radio.enable_scope(policy="fast")
+    await radio.disable_scope(policy="fast")
+    await radio.disconnect()
+
+    signatures = []
+    for frame in link.sent_frames:
+        civ = parse_civ_frame(frame)
+        signatures.append((civ.command, civ.sub, civ.data))
+
+    assert signatures[0] == (0x27, 0x10, b"\x01")
+    assert signatures[1] == (0x27, 0x11, b"\x01")
+    assert signatures[2] == (0x27, 0x11, b"\x00")
+    assert signatures[3] == (0x27, 0x10, b"\x00")
+
+
+@pytest.mark.asyncio
+async def test_serial_scope_capture_scope_frame() -> None:
+    link = _FakeSerialCivLink()
+    link.queue_response_on_send(1, _scope_wave_frame(pixels=b"\x31\x32\x33"))
+    radio = Icom7610SerialRadio(
+        device="/dev/ttyUSB0",
+        civ_link=link,
+    )
+    await radio.connect()
+    frame = await radio.capture_scope_frame(timeout=1.0)
+    await radio.disable_scope(policy="fast")
+    await radio.disconnect()
+
+    assert frame.receiver == 0
+    assert frame.start_freq_hz == 14_000_000
+    assert frame.end_freq_hz == 14_350_000
+    assert frame.pixels == b"\x31\x32\x33"
+
+
+@pytest.mark.asyncio
+async def test_serial_scope_callback_streaming_path() -> None:
+    link = _FakeSerialCivLink()
+    link.queue_response_on_send(1, _scope_wave_frame(pixels=b"\x51\x52"))
+    radio = Icom7610SerialRadio(
+        device="/dev/ttyUSB0",
+        civ_link=link,
+    )
+    await radio.connect()
+    seen = []
+    radio.on_scope_data(seen.append)
+    await radio.enable_scope(policy="verify", timeout=1.0)
+    assert await _wait_until(lambda: len(seen) == 1, timeout_s=1.0)
+    await radio.disable_scope(policy="fast")
+    await radio.disconnect()
+    assert seen[0].pixels == b"\x51\x52"
+
+
+@pytest.mark.asyncio
+async def test_serial_scope_low_baud_guardrail_rejects_without_override() -> None:
+    radio = Icom7610SerialRadio(
+        device="/dev/ttyUSB0",
+        baudrate=19200,
+        civ_link=_FakeSerialCivLink(),
+    )
+    await radio.connect()
+    with pytest.raises(CommandError, match="baudrate"):
+        await radio.enable_scope(policy="fast")
+    await radio.disconnect()
+
+
+@pytest.mark.asyncio
+async def test_serial_scope_low_baud_guardrail_override_allows_with_warning(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    radio = Icom7610SerialRadio(
+        device="/dev/ttyUSB0",
+        baudrate=19200,
+        allow_low_baud_scope=True,
+        civ_link=_FakeSerialCivLink(),
+    )
+    await radio.connect()
+    with caplog.at_level("WARNING"):
+        await radio.enable_scope(policy="fast")
+    await radio.disable_scope(policy="fast")
+    await radio.disconnect()
+    assert "baudrate" in caplog.text.lower()
+    assert "override" in caplog.text.lower()
+
+
+@pytest.mark.asyncio
+async def test_serial_scope_flood_does_not_starve_get_frequency() -> None:
+    link = _FakeSerialCivLink()
+    for _ in range(120):
+        link.queue_response_on_send(3, _scope_wave_frame(pixels=b"\x11\x12\x13"))
+    link.queue_response_on_send(3, _freq_response_frame(14_074_000))
+    radio = Icom7610SerialRadio(
+        device="/dev/ttyUSB0",
+        civ_link=link,
+    )
+    await radio.connect()
+    await radio.enable_scope(policy="fast")
+    assert await radio.get_frequency() == 14_074_000
+    await radio.disable_scope(policy="fast")
     await radio.disconnect()
