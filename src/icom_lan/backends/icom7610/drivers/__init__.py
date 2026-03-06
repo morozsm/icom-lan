@@ -8,6 +8,7 @@ from .serial_civ_link import (
     SerialFrameOverflowError,
     SerialFrameTimeoutError,
 )
+from .serial_session import SerialSessionDriver
 
 __all__ = [
     "AudioDriver",
@@ -18,4 +19,5 @@ __all__ = [
     "SerialFrameError",
     "SerialFrameOverflowError",
     "SerialFrameTimeoutError",
+    "SerialSessionDriver",
 ]

@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 from ..radio import IcomRadio
+from ..radio_protocol import Radio
 from .config import BackendConfig, LanBackendConfig, SerialBackendConfig
+from .icom7610.serial import Icom7610SerialRadio
 
 
-def create_radio(config: BackendConfig) -> IcomRadio:
+def create_radio(config: BackendConfig) -> Radio:
     """Create a radio instance for the selected backend config."""
     if isinstance(config, LanBackendConfig):
         return IcomRadio(
@@ -28,9 +30,13 @@ def create_radio(config: BackendConfig) -> IcomRadio:
             model=config.model,
         )
     if isinstance(config, SerialBackendConfig):
-        raise NotImplementedError(
-            "Serial backend is not implemented yet. "
-            "Use LanBackendConfig/backend='lan' for now."
+        return Icom7610SerialRadio(
+            device=config.device,
+            baudrate=config.baudrate,
+            radio_addr=config.radio_addr,
+            timeout=config.timeout,
+            profile=config.profile,
+            model=config.model,
         )
 
     backend = getattr(config, "backend", None)

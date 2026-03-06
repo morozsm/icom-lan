@@ -8,6 +8,7 @@ import pytest
 
 from icom_lan import IcomRadio, create_radio
 from icom_lan.backends.config import LanBackendConfig, SerialBackendConfig
+from icom_lan.backends.icom7610 import Icom7610SerialRadio
 from icom_lan.backends.icom7610.drivers.contracts import AudioDriver, CivLink, SessionDriver
 
 
@@ -43,9 +44,10 @@ class TestCreateRadioFactory:
         assert radio.model == "IC-7300"
         assert radio._radio_addr == 0x94
 
-    def test_create_radio_serial_stub_is_actionable(self) -> None:
-        with pytest.raises(NotImplementedError, match="Serial backend is not implemented yet"):
-            create_radio(SerialBackendConfig(device="/dev/ttyUSB0"))
+    def test_create_radio_builds_serial_backend(self) -> None:
+        radio = create_radio(SerialBackendConfig(device="/dev/ttyUSB0"))
+        assert isinstance(radio, Icom7610SerialRadio)
+        assert radio.model == "IC-7610"
 
     def test_create_radio_rejects_unknown_backend(self) -> None:
         @dataclass(slots=True)

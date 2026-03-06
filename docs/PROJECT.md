@@ -174,7 +174,7 @@ Each UDP packet has a fixed-format header (see `packettypes.h` in wfview):
 ### Phase 8 — IC-7610 USB Backend MVP (M3) 🚧 IN PROGRESS
 **Goal:** Complete IC-7610 serial backend (control + audio + scope) and wire all consumers.
 
-- [ ] `#144` Serial radio wrapper/session
+- [x] `#144` Serial radio wrapper/session
 - [ ] `#145` USB audio driver
 - [ ] `#146` Scope/waterfall on serial with guardrails
 - [ ] `#147` CLI backend selection and serial/audio flags
@@ -185,10 +185,10 @@ Each UDP packet has a fixed-format header (see `packettypes.h` in wfview):
 ### Current Status
 **Package version in `pyproject.toml`: `0.11.0`.**
 **Reliability integration backlog (items 1-13) completed on 2026-03-05.**
-**Latest full regression (local, 2026-03-05):** `1876 passed, 95 skipped`.
+**Latest full regression (local, 2026-03-06):** `1879 passed, 95 skipped`.
 - **M2 Platform Foundation (step #141):** extracted shared IC-7610 executable core (`Icom7610CoreRadio`) with LAN compatibility wrapper (`IcomRadio`) and no behavior changes.
 - **M2 profile abstraction (issue #119):** runtime `RadioProfile` matrix added for multi-model behavior; `model`/`capabilities` and receiver/cmd29 routing are now profile-driven with explicit unsupported-operation guards.
-- **M3 backlog:** active epic `#152` (priority P0), with implementation chunks `#144-#149`, `#151` (priority P1).
+- **M3 backlog:** active epic `#152` (priority P0), with implementation chunks `#145-#149`, `#151` (priority P1).
 
 ### Reliability Test Expansion (2026-03-05)
 - Added extended integration coverage scaffolding for:
