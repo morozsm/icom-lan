@@ -56,6 +56,34 @@ _CMD14_GLOBAL_LEVEL_FIELDS = {
     0x17: "anti_vox_gain",
 }
 
+_CMD16_RECEIVER_BOOL_FIELDS = {
+    0x22: "nb",
+    0x40: "nr",
+    0x41: "auto_notch",
+    0x48: "manual_notch",
+    0x4E: "digisel",
+    0x4F: "twin_peak_filter",
+    0x65: "ipplus",
+}
+
+_CMD16_RECEIVER_VALUE_FIELDS = {
+    0x12: ("agc", 1),
+    0x32: ("audio_peak_filter", 1),
+    0x56: ("filter_shape", 1),
+}
+
+_CMD16_GLOBAL_BOOL_FIELDS = {
+    0x44: "compressor_on",
+    0x45: "monitor_on",
+    0x46: "vox_on",
+    0x50: "dial_lock",
+}
+
+_CMD16_GLOBAL_VALUE_FIELDS = {
+    0x47: ("break_in", 1),
+    0x58: ("ssb_tx_bandwidth", 1),
+}
+
 _CMD1A_CTL_MEM_LEVEL_FIELDS = {
     b"\x00\x70": ("ref_adjust", 2),
     b"\x02\x28": ("dash_ratio", 1),
@@ -418,7 +446,14 @@ class _CivRxMixin:
                 filt_str = f"FIL{filt}" if filt else ""
                 self._notify_change("mode_changed", {"mode": mode.name, "filter": filt_str})
             elif frame.command == 0x15:  # meter readings
-                if len(frame.data) >= 2:
+                if frame.sub == 0x01 and frame.data:
+                    self._notify_change(
+                        "s_meter_sql_changed",
+                        {"receiver": frame.receiver, "open": bool(frame.data[0])},
+                    )
+                elif frame.sub == 0x07 and frame.data:
+                    self._notify_change("overflow_changed", {"on": bool(frame.data[0])})
+                elif len(frame.data) >= 2:
                     sub = frame.sub
                     # IC-7610 meters are BCD-encoded (0x0137 = 137, not 311)
                     b0, b1 = frame.data[0], frame.data[1]
@@ -481,12 +516,36 @@ class _CivRxMixin:
                         cache.update_preamp(val)
                         if val != old_pre:
                             self._notify_change("preamp_changed", {"level": val})
+                    elif sub == 0x12:
+                        self._notify_change("agc_changed", {"value": val})
+                    elif sub == 0x32:
+                        self._notify_change("audio_peak_filter_changed", {"value": val})
                     elif sub == 0x22:  # NB
                         self._notify_change("nb_changed", {"on": bool(val)})
                     elif sub == 0x40:  # NR
                         self._notify_change("nr_changed", {"on": bool(val)})
+                    elif sub == 0x41:
+                        self._notify_change("auto_notch_changed", {"on": bool(val)})
+                    elif sub == 0x44:
+                        self._notify_change("compressor_changed", {"on": bool(val)})
+                    elif sub == 0x45:
+                        self._notify_change("monitor_changed", {"on": bool(val)})
+                    elif sub == 0x46:
+                        self._notify_change("vox_changed", {"on": bool(val)})
+                    elif sub == 0x47:
+                        self._notify_change("break_in_changed", {"value": val})
+                    elif sub == 0x48:
+                        self._notify_change("manual_notch_changed", {"on": bool(val)})
                     elif sub == 0x4E:  # DIGI-SEL
                         self._notify_change("digisel_changed", {"on": bool(val)})
+                    elif sub == 0x4F:
+                        self._notify_change("twin_peak_filter_changed", {"on": bool(val)})
+                    elif sub == 0x50:
+                        self._notify_change("dial_lock_changed", {"on": bool(val)})
+                    elif sub == 0x56:
+                        self._notify_change("filter_shape_changed", {"value": val})
+                    elif sub == 0x58:
+                        self._notify_change("ssb_tx_bandwidth_changed", {"value": val})
                     elif sub == 0x65:  # IP+
                         self._notify_change("ipplus_changed", {"on": bool(val)})
             elif frame.command == 0x1C and frame.sub == 0x00:  # PTT
@@ -560,7 +619,11 @@ class _CivRxMixin:
 
             elif cmd == 0x15:
                 # Meter readings — update s_meter on active receiver
-                if frame.sub == 0x02 and len(frame.data) >= 2:
+                if frame.sub == 0x01 and frame.data:
+                    rx.s_meter_sql_open = bool(frame.data[0])
+                elif frame.sub == 0x07 and frame.data:
+                    rs.overflow = bool(frame.data[0])
+                elif frame.sub == 0x02 and len(frame.data) >= 2:
                     b0, b1 = frame.data[0], frame.data[1]
                     raw = (
                         (b0 >> 4) * 1000 + (b0 & 0x0F) * 100
@@ -608,17 +671,26 @@ class _CivRxMixin:
                     val = data[0]
                     if sub == 0x02:
                         rx.preamp = val
-                    elif sub == 0x22:
-                        rx.nb = bool(val)
-                    elif sub == 0x40:
-                        rx.nr = bool(val)
-                    elif sub == 0x4E:
-                        rx.digisel = bool(val)
-                    elif sub == 0x65:
-                        rx.ipplus = bool(val)
+                    elif sub in _CMD16_RECEIVER_BOOL_FIELDS:
+                        setattr(rx, _CMD16_RECEIVER_BOOL_FIELDS[sub], bool(val))
+                    elif sub in _CMD16_RECEIVER_VALUE_FIELDS:
+                        field, _ = _CMD16_RECEIVER_VALUE_FIELDS[sub]
+                        setattr(rx, field, ((val >> 4) & 0x0F) * 10 + (val & 0x0F))
+                    elif sub in _CMD16_GLOBAL_BOOL_FIELDS:
+                        setattr(rs, _CMD16_GLOBAL_BOOL_FIELDS[sub], bool(val))
+                    elif sub in _CMD16_GLOBAL_VALUE_FIELDS:
+                        field, _ = _CMD16_GLOBAL_VALUE_FIELDS[sub]
+                        setattr(rs, field, ((val >> 4) & 0x0F) * 10 + (val & 0x0F))
 
             elif cmd == 0x1A:
                 sub = frame.sub
+                if sub == 0x04:
+                    rx.agc_time_constant = parse_level_response(
+                        frame,
+                        command=0x1A,
+                        sub=0x04,
+                        bcd_bytes=1,
+                    )
                 if sub == 0x03 and frame.data:
                     # IC-7610: 1A 03 returns IF filter width code (e.g. 0x34),
                     # NOT filter selector (1/2/3). Filter selector comes from

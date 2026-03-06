@@ -15,7 +15,17 @@ Reference: wfview icomcommander.cpp, IC-7610.rig
 
 import math
 
-from .types import CivFrame, Mode, bcd_decode, bcd_encode
+from .types import (
+    AgcMode,
+    AudioPeakFilter,
+    BreakInMode,
+    CivFrame,
+    FilterShape,
+    Mode,
+    SsbTxBandwidth,
+    bcd_decode,
+    bcd_encode,
+)
 
 __all__ = [
     "IC_7610_ADDR",
@@ -93,6 +103,34 @@ __all__ = [
     "set_nb_width",
     "get_af_mute",
     "set_af_mute",
+    "get_s_meter_sql_status",
+    "get_overflow_status",
+    "get_agc",
+    "set_agc",
+    "get_audio_peak_filter",
+    "set_audio_peak_filter",
+    "get_auto_notch",
+    "set_auto_notch",
+    "get_compressor",
+    "set_compressor",
+    "get_monitor",
+    "set_monitor",
+    "get_vox",
+    "set_vox",
+    "get_break_in",
+    "set_break_in",
+    "get_manual_notch",
+    "set_manual_notch",
+    "get_twin_peak_filter",
+    "set_twin_peak_filter",
+    "get_dial_lock",
+    "set_dial_lock",
+    "get_filter_shape",
+    "set_filter_shape",
+    "get_ssb_tx_bandwidth",
+    "set_ssb_tx_bandwidth",
+    "get_agc_time_constant",
+    "set_agc_time_constant",
     "get_data_mode",
     "set_data_mode",
     "parse_data_mode_response",
@@ -639,6 +677,137 @@ def _build_ctl_mem_set(
         sub=_SUB_CTL_MEM,
         data=prefix + _bcd_encode_value(value, byte_count=byte_count),
     )
+
+
+def _build_meter_bool_get(
+    sub: int,
+    *,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+    command29: bool = False,
+) -> bytes:
+    if command29:
+        return build_cmd29_frame(
+            to_addr,
+            from_addr,
+            _CMD_METER,
+            sub=sub,
+            receiver=receiver,
+        )
+    return build_civ_frame(to_addr, from_addr, _CMD_METER, sub=sub)
+
+
+def _build_function_get(
+    sub: int,
+    *,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+    command29: bool = False,
+) -> bytes:
+    if command29:
+        return build_cmd29_frame(
+            to_addr,
+            from_addr,
+            _CMD_PREAMP,
+            sub=sub,
+            receiver=receiver,
+        )
+    return build_civ_frame(to_addr, from_addr, _CMD_PREAMP, sub=sub)
+
+
+def _build_function_bool_set(
+    sub: int,
+    on: bool,
+    *,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+    command29: bool = False,
+) -> bytes:
+    payload = b"\x01" if on else b"\x00"
+    if command29:
+        return build_cmd29_frame(
+            to_addr,
+            from_addr,
+            _CMD_PREAMP,
+            sub=sub,
+            data=payload,
+            receiver=receiver,
+        )
+    return build_civ_frame(to_addr, from_addr, _CMD_PREAMP, sub=sub, data=payload)
+
+
+def _build_function_value_set(
+    sub: int,
+    value: int,
+    *,
+    minimum: int,
+    maximum: int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+    command29: bool = False,
+) -> bytes:
+    if not minimum <= value <= maximum:
+        raise ValueError(f"Value must be {minimum}-{maximum}, got {value}")
+    payload = bytes([_bcd_byte(value)])
+    if command29:
+        return build_cmd29_frame(
+            to_addr,
+            from_addr,
+            _CMD_PREAMP,
+            sub=sub,
+            data=payload,
+            receiver=receiver,
+        )
+    return build_civ_frame(to_addr, from_addr, _CMD_PREAMP, sub=sub, data=payload)
+
+
+def _build_ctl_mem_single_bcd_get(
+    sub: int,
+    *,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+    command29: bool = False,
+) -> bytes:
+    if command29:
+        return build_cmd29_frame(
+            to_addr,
+            from_addr,
+            _CMD_CTL_MEM,
+            sub=sub,
+            receiver=receiver,
+        )
+    return build_civ_frame(to_addr, from_addr, _CMD_CTL_MEM, sub=sub)
+
+
+def _build_ctl_mem_single_bcd_set(
+    sub: int,
+    value: int,
+    *,
+    minimum: int,
+    maximum: int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+    command29: bool = False,
+) -> bytes:
+    if not minimum <= value <= maximum:
+        raise ValueError(f"Value must be {minimum}-{maximum}, got {value}")
+    payload = bytes([_bcd_byte(value)])
+    if command29:
+        return build_cmd29_frame(
+            to_addr,
+            from_addr,
+            _CMD_CTL_MEM,
+            sub=sub,
+            data=payload,
+            receiver=receiver,
+        )
+    return build_civ_frame(to_addr, from_addr, _CMD_CTL_MEM, sub=sub, data=payload)
 
 
 def _cw_pitch_from_level(level: int) -> int:
@@ -1218,11 +1387,26 @@ _CMD_VFO_EQUAL = 0x07
 _CMD_SPLIT = 0x0F
 _CMD_ATT = 0x11
 _CMD_PREAMP = 0x16
+_SUB_S_METER_SQL_STATUS = 0x01
+_SUB_OVERFLOW_STATUS = 0x07
 _SUB_PREAMP_STATUS = 0x02
+_SUB_AGC = 0x12
+_SUB_AUDIO_PEAK_FILTER = 0x32
+_SUB_AUTO_NOTCH = 0x41
+_SUB_COMPRESSOR = 0x44
+_SUB_MONITOR = 0x45
+_SUB_VOX = 0x46
+_SUB_BREAK_IN = 0x47
+_SUB_MANUAL_NOTCH = 0x48
 _SUB_DIGISEL_STATUS = 0x4E
+_SUB_TWIN_PEAK_FILTER = 0x4F
+_SUB_DIAL_LOCK = 0x50
+_SUB_FILTER_SHAPE = 0x56
+_SUB_SSB_TX_BANDWIDTH = 0x58
 _SUB_NB = 0x22        # Noise Blanker on/off (0x16 0x22)
 _SUB_NR = 0x40        # Noise Reduction on/off (0x16 0x40)
 _SUB_IP_PLUS = 0x65   # IP+ on/off (0x16 0x65)
+_SUB_AGC_TIME_CONSTANT = 0x04
 
 
 def select_vfo(
@@ -1583,6 +1767,391 @@ def set_af_mute(
         data=b"\x01" if on else b"\x00",
         receiver=receiver,
     )
+
+
+def get_s_meter_sql_status(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+) -> bytes:
+    """Build a read S-meter squelch status command."""
+    return _build_meter_bool_get(
+        _SUB_S_METER_SQL_STATUS,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
+        command29=True,
+    )
+
+
+def get_overflow_status(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a read overflow status command."""
+    return _build_meter_bool_get(
+        _SUB_OVERFLOW_STATUS,
+        to_addr=to_addr,
+        from_addr=from_addr,
+    )
+
+
+def get_agc(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a read AGC mode command."""
+    return _build_function_get(_SUB_AGC, to_addr=to_addr, from_addr=from_addr)
+
+
+def set_agc(
+    mode: AgcMode | int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a set AGC mode command."""
+    return _build_function_value_set(
+        _SUB_AGC,
+        int(AgcMode(mode)),
+        minimum=int(AgcMode.FAST),
+        maximum=int(AgcMode.SLOW),
+        to_addr=to_addr,
+        from_addr=from_addr,
+    )
+
+
+def get_audio_peak_filter(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+) -> bytes:
+    """Build a read audio peak filter mode command."""
+    return _build_function_get(
+        _SUB_AUDIO_PEAK_FILTER,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
+        command29=True,
+    )
+
+
+def set_audio_peak_filter(
+    mode: AudioPeakFilter | int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+) -> bytes:
+    """Build a set audio peak filter mode command."""
+    return _build_function_value_set(
+        _SUB_AUDIO_PEAK_FILTER,
+        int(AudioPeakFilter(mode)),
+        minimum=int(AudioPeakFilter.OFF),
+        maximum=int(AudioPeakFilter.NAR),
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
+        command29=True,
+    )
+
+
+def get_auto_notch(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+) -> bytes:
+    """Build a read auto-notch status command."""
+    return _build_function_get(
+        _SUB_AUTO_NOTCH,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
+        command29=True,
+    )
+
+
+def set_auto_notch(
+    on: bool,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+) -> bytes:
+    """Build a set auto-notch status command."""
+    return _build_function_bool_set(
+        _SUB_AUTO_NOTCH,
+        on,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
+        command29=True,
+    )
+
+
+def get_compressor(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a read compressor status command."""
+    return _build_function_get(_SUB_COMPRESSOR, to_addr=to_addr, from_addr=from_addr)
+
+
+def set_compressor(
+    on: bool,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a set compressor status command."""
+    return _build_function_bool_set(
+        _SUB_COMPRESSOR,
+        on,
+        to_addr=to_addr,
+        from_addr=from_addr,
+    )
+
+
+def get_monitor(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a read monitor status command."""
+    return _build_function_get(_SUB_MONITOR, to_addr=to_addr, from_addr=from_addr)
+
+
+def set_monitor(
+    on: bool,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a set monitor status command."""
+    return _build_function_bool_set(
+        _SUB_MONITOR,
+        on,
+        to_addr=to_addr,
+        from_addr=from_addr,
+    )
+
+
+def get_vox(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a read VOX status command."""
+    return _build_function_get(_SUB_VOX, to_addr=to_addr, from_addr=from_addr)
+
+
+def set_vox(
+    on: bool,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a set VOX status command."""
+    return _build_function_bool_set(_SUB_VOX, on, to_addr=to_addr, from_addr=from_addr)
+
+
+def get_break_in(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a read break-in mode command."""
+    return _build_function_get(_SUB_BREAK_IN, to_addr=to_addr, from_addr=from_addr)
+
+
+def set_break_in(
+    mode: BreakInMode | int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a set break-in mode command."""
+    return _build_function_value_set(
+        _SUB_BREAK_IN,
+        int(BreakInMode(mode)),
+        minimum=int(BreakInMode.OFF),
+        maximum=int(BreakInMode.FULL),
+        to_addr=to_addr,
+        from_addr=from_addr,
+    )
+
+
+def get_manual_notch(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+) -> bytes:
+    """Build a read manual-notch status command."""
+    return _build_function_get(
+        _SUB_MANUAL_NOTCH,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
+        command29=True,
+    )
+
+
+def set_manual_notch(
+    on: bool,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+) -> bytes:
+    """Build a set manual-notch status command."""
+    return _build_function_bool_set(
+        _SUB_MANUAL_NOTCH,
+        on,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
+        command29=True,
+    )
+
+
+def get_twin_peak_filter(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+) -> bytes:
+    """Build a read twin-peak-filter status command."""
+    return _build_function_get(
+        _SUB_TWIN_PEAK_FILTER,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
+        command29=True,
+    )
+
+
+def set_twin_peak_filter(
+    on: bool,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+) -> bytes:
+    """Build a set twin-peak-filter status command."""
+    return _build_function_bool_set(
+        _SUB_TWIN_PEAK_FILTER,
+        on,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
+        command29=True,
+    )
+
+
+def get_dial_lock(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a read dial-lock status command."""
+    return _build_function_get(_SUB_DIAL_LOCK, to_addr=to_addr, from_addr=from_addr)
+
+
+def set_dial_lock(
+    on: bool,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a set dial-lock status command."""
+    return _build_function_bool_set(
+        _SUB_DIAL_LOCK,
+        on,
+        to_addr=to_addr,
+        from_addr=from_addr,
+    )
+
+
+def get_filter_shape(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+) -> bytes:
+    """Build a read DSP IF filter shape command."""
+    return _build_function_get(
+        _SUB_FILTER_SHAPE,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
+        command29=True,
+    )
+
+
+def set_filter_shape(
+    shape: FilterShape | int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+) -> bytes:
+    """Build a set DSP IF filter shape command."""
+    return _build_function_value_set(
+        _SUB_FILTER_SHAPE,
+        int(FilterShape(shape)),
+        minimum=int(FilterShape.SHARP),
+        maximum=int(FilterShape.SOFT),
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
+        command29=True,
+    )
+
+
+def get_ssb_tx_bandwidth(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a read SSB TX bandwidth preset command."""
+    return _build_function_get(
+        _SUB_SSB_TX_BANDWIDTH,
+        to_addr=to_addr,
+        from_addr=from_addr,
+    )
+
+
+def set_ssb_tx_bandwidth(
+    bandwidth: SsbTxBandwidth | int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a set SSB TX bandwidth preset command."""
+    return _build_function_value_set(
+        _SUB_SSB_TX_BANDWIDTH,
+        int(SsbTxBandwidth(bandwidth)),
+        minimum=int(SsbTxBandwidth.WIDE),
+        maximum=int(SsbTxBandwidth.NAR),
+        to_addr=to_addr,
+        from_addr=from_addr,
+    )
+
+
+def get_agc_time_constant(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+) -> bytes:
+    """Build a read AGC time constant command."""
+    return _build_ctl_mem_single_bcd_get(
+        _SUB_AGC_TIME_CONSTANT,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
+        command29=True,
+    )
+
+
+def set_agc_time_constant(
+    value: int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+) -> bytes:
+    """Build a set AGC time constant command."""
+    return _build_ctl_mem_single_bcd_set(
+        _SUB_AGC_TIME_CONSTANT,
+        value,
+        minimum=0,
+        maximum=13,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
+        command29=True,
+    )
+
 
 def get_data_mode(
     to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR

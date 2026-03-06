@@ -36,12 +36,16 @@ from .commands import (
     get_drive_gain,
     get_frequency,
     get_break_in_delay,
+    get_break_in,
     get_compressor_level,
+    get_compressor,
     get_cw_pitch,
+    get_dial_lock,
     get_key_speed,
     get_mic_gain,
     get_mode,
     get_monitor_gain,
+    get_monitor,
     get_nb_depth,
     get_nb_level,
     get_nb_width,
@@ -50,11 +54,22 @@ from .commands import (
     get_pbt_inner,
     get_pbt_outer,
     get_power,
+    get_s_meter_sql_status,
+    get_overflow_status,
+    get_agc,
+    get_audio_peak_filter,
+    get_auto_notch,
+    get_filter_shape,
     get_digisel,
+    get_manual_notch,
     get_preamp as get_preamp_cmd,
     get_ref_adjust,
     get_s_meter,
     get_swr,
+    get_ssb_tx_bandwidth,
+    get_twin_peak_filter,
+    get_agc_time_constant,
+    get_vox,
     get_vox_gain,
     get_anti_vox_gain,
     parse_ack_nak,
@@ -77,15 +92,24 @@ from .commands import (
     set_attenuator,
     set_attenuator_level,
     set_break_in_delay,
+    set_break_in,
     set_compressor_level,
+    set_compressor,
     set_cw_pitch,
     set_data_mode as set_data_mode_cmd,
     set_dash_ratio,
+    set_dial_lock,
     set_digisel,
     set_digisel_shift,
     set_drive_gain,
+    set_agc,
+    set_audio_peak_filter,
+    set_auto_notch,
+    set_filter_shape,
     set_key_speed,
+    set_manual_notch,
     set_mic_gain,
+    set_monitor,
     set_monitor_gain,
     set_nb,
     set_nb_depth,
@@ -97,6 +121,10 @@ from .commands import (
     set_pbt_inner,
     set_pbt_outer,
     set_ref_adjust,
+    set_ssb_tx_bandwidth,
+    set_twin_peak_filter,
+    set_agc_time_constant,
+    set_vox,
     get_nb,
     get_nr,
     get_ip_plus,
@@ -134,11 +162,16 @@ from .radio_state import RadioState
 from .scope import ScopeAssembler, ScopeFrame
 from .transport import IcomTransport
 from .types import (
+    AgcMode,
     AudioCapabilities,
+    AudioPeakFilter,
     AudioCodec,
+    BreakInMode,
     CivFrame,
+    FilterShape,
     Mode,
     ScopeCompletionPolicy,
+    SsbTxBandwidth,
     get_audio_capabilities,
 )
 
@@ -2083,6 +2116,302 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         )
         await self._send_fire_and_forget(
             set_af_mute(on, to_addr=self._radio_addr, receiver=receiver)
+        )
+
+    async def get_s_meter_sql_status(self, receiver: int = RECEIVER_MAIN) -> bool:
+        """Read S-meter squelch status for the selected receiver."""
+        self._require_receiver(receiver, operation="get_s_meter_sql_status")
+        self._require_cmd29_route(
+            0x15, 0x01, receiver=receiver, operation="get_s_meter_sql_status"
+        )
+        civ = get_s_meter_sql_status(to_addr=self._radio_addr, receiver=receiver)
+        return await self._get_bool_value(
+            civ,
+            key=f"get_s_meter_sql_status:{receiver}",
+            command=0x15,
+            sub=0x01,
+        )
+
+    async def get_overflow_status(self) -> bool:
+        """Read OVF indicator status."""
+        civ = get_overflow_status(to_addr=self._radio_addr)
+        return await self._get_bool_value(
+            civ,
+            key="get_overflow_status",
+            command=0x15,
+            sub=0x07,
+        )
+
+    async def get_agc(self) -> AgcMode:
+        """Read AGC mode."""
+        value = await self._get_bcd_level(
+            get_agc(to_addr=self._radio_addr),
+            key="get_agc",
+            command=0x16,
+            sub=0x12,
+            bcd_bytes=1,
+        )
+        return AgcMode(value)
+
+    async def set_agc(self, mode: AgcMode | int) -> None:
+        """Set AGC mode."""
+        agc = AgcMode(mode)
+        await self._send_fire_and_forget(set_agc(agc, to_addr=self._radio_addr))
+
+    async def get_audio_peak_filter(
+        self, receiver: int = RECEIVER_MAIN
+    ) -> AudioPeakFilter:
+        """Read audio peak filter mode."""
+        self._require_receiver(receiver, operation="get_audio_peak_filter")
+        self._require_cmd29_route(
+            0x16, 0x32, receiver=receiver, operation="get_audio_peak_filter"
+        )
+        value = await self._get_bcd_level(
+            get_audio_peak_filter(to_addr=self._radio_addr, receiver=receiver),
+            key=f"get_audio_peak_filter:{receiver}",
+            command=0x16,
+            sub=0x32,
+            bcd_bytes=1,
+        )
+        return AudioPeakFilter(value)
+
+    async def set_audio_peak_filter(
+        self,
+        mode: AudioPeakFilter | int,
+        receiver: int = RECEIVER_MAIN,
+    ) -> None:
+        """Set audio peak filter mode."""
+        self._require_receiver(receiver, operation="set_audio_peak_filter")
+        self._require_cmd29_route(
+            0x16, 0x32, receiver=receiver, operation="set_audio_peak_filter"
+        )
+        apf = AudioPeakFilter(mode)
+        await self._send_fire_and_forget(
+            set_audio_peak_filter(apf, to_addr=self._radio_addr, receiver=receiver)
+        )
+
+    async def get_auto_notch(self, receiver: int = RECEIVER_MAIN) -> bool:
+        """Read auto-notch status."""
+        self._require_receiver(receiver, operation="get_auto_notch")
+        self._require_cmd29_route(
+            0x16, 0x41, receiver=receiver, operation="get_auto_notch"
+        )
+        civ = get_auto_notch(to_addr=self._radio_addr, receiver=receiver)
+        return await self._get_bool_value(
+            civ,
+            key=f"get_auto_notch:{receiver}",
+            command=0x16,
+            sub=0x41,
+        )
+
+    async def set_auto_notch(
+        self, on: bool, receiver: int = RECEIVER_MAIN
+    ) -> None:
+        """Set auto-notch status."""
+        self._require_receiver(receiver, operation="set_auto_notch")
+        self._require_cmd29_route(
+            0x16, 0x41, receiver=receiver, operation="set_auto_notch"
+        )
+        await self._send_fire_and_forget(
+            set_auto_notch(on, to_addr=self._radio_addr, receiver=receiver)
+        )
+
+    async def get_compressor(self) -> bool:
+        """Read speech compressor status."""
+        civ = get_compressor(to_addr=self._radio_addr)
+        return await self._get_bool_value(
+            civ, key="get_compressor", command=0x16, sub=0x44
+        )
+
+    async def set_compressor(self, on: bool) -> None:
+        """Set speech compressor status."""
+        await self._send_fire_and_forget(set_compressor(on, to_addr=self._radio_addr))
+
+    async def get_monitor(self) -> bool:
+        """Read monitor status."""
+        civ = get_monitor(to_addr=self._radio_addr)
+        return await self._get_bool_value(
+            civ, key="get_monitor", command=0x16, sub=0x45
+        )
+
+    async def set_monitor(self, on: bool) -> None:
+        """Set monitor status."""
+        await self._send_fire_and_forget(set_monitor(on, to_addr=self._radio_addr))
+
+    async def get_vox(self) -> bool:
+        """Read VOX status."""
+        civ = get_vox(to_addr=self._radio_addr)
+        return await self._get_bool_value(civ, key="get_vox", command=0x16, sub=0x46)
+
+    async def set_vox(self, on: bool) -> None:
+        """Set VOX status."""
+        await self._send_fire_and_forget(set_vox(on, to_addr=self._radio_addr))
+
+    async def get_break_in(self) -> BreakInMode:
+        """Read break-in mode."""
+        value = await self._get_bcd_level(
+            get_break_in(to_addr=self._radio_addr),
+            key="get_break_in",
+            command=0x16,
+            sub=0x47,
+            bcd_bytes=1,
+        )
+        return BreakInMode(value)
+
+    async def set_break_in(self, mode: BreakInMode | int) -> None:
+        """Set break-in mode."""
+        break_in = BreakInMode(mode)
+        await self._send_fire_and_forget(
+            set_break_in(break_in, to_addr=self._radio_addr)
+        )
+
+    async def get_manual_notch(self, receiver: int = RECEIVER_MAIN) -> bool:
+        """Read manual-notch status."""
+        self._require_receiver(receiver, operation="get_manual_notch")
+        self._require_cmd29_route(
+            0x16, 0x48, receiver=receiver, operation="get_manual_notch"
+        )
+        civ = get_manual_notch(to_addr=self._radio_addr, receiver=receiver)
+        return await self._get_bool_value(
+            civ,
+            key=f"get_manual_notch:{receiver}",
+            command=0x16,
+            sub=0x48,
+        )
+
+    async def set_manual_notch(
+        self, on: bool, receiver: int = RECEIVER_MAIN
+    ) -> None:
+        """Set manual-notch status."""
+        self._require_receiver(receiver, operation="set_manual_notch")
+        self._require_cmd29_route(
+            0x16, 0x48, receiver=receiver, operation="set_manual_notch"
+        )
+        await self._send_fire_and_forget(
+            set_manual_notch(on, to_addr=self._radio_addr, receiver=receiver)
+        )
+
+    async def get_twin_peak_filter(self, receiver: int = RECEIVER_MAIN) -> bool:
+        """Read twin peak filter status."""
+        self._require_receiver(receiver, operation="get_twin_peak_filter")
+        self._require_cmd29_route(
+            0x16, 0x4F, receiver=receiver, operation="get_twin_peak_filter"
+        )
+        civ = get_twin_peak_filter(to_addr=self._radio_addr, receiver=receiver)
+        return await self._get_bool_value(
+            civ,
+            key=f"get_twin_peak_filter:{receiver}",
+            command=0x16,
+            sub=0x4F,
+        )
+
+    async def set_twin_peak_filter(
+        self, on: bool, receiver: int = RECEIVER_MAIN
+    ) -> None:
+        """Set twin peak filter status."""
+        self._require_receiver(receiver, operation="set_twin_peak_filter")
+        self._require_cmd29_route(
+            0x16, 0x4F, receiver=receiver, operation="set_twin_peak_filter"
+        )
+        await self._send_fire_and_forget(
+            set_twin_peak_filter(on, to_addr=self._radio_addr, receiver=receiver)
+        )
+
+    async def get_dial_lock(self) -> bool:
+        """Read dial lock status."""
+        civ = get_dial_lock(to_addr=self._radio_addr)
+        return await self._get_bool_value(
+            civ, key="get_dial_lock", command=0x16, sub=0x50
+        )
+
+    async def set_dial_lock(self, on: bool) -> None:
+        """Set dial lock status."""
+        await self._send_fire_and_forget(set_dial_lock(on, to_addr=self._radio_addr))
+
+    async def get_filter_shape(
+        self, receiver: int = RECEIVER_MAIN
+    ) -> FilterShape:
+        """Read DSP IF filter shape."""
+        self._require_receiver(receiver, operation="get_filter_shape")
+        self._require_cmd29_route(
+            0x16, 0x56, receiver=receiver, operation="get_filter_shape"
+        )
+        value = await self._get_bcd_level(
+            get_filter_shape(to_addr=self._radio_addr, receiver=receiver),
+            key=f"get_filter_shape:{receiver}",
+            command=0x16,
+            sub=0x56,
+            bcd_bytes=1,
+        )
+        return FilterShape(value)
+
+    async def set_filter_shape(
+        self,
+        shape: FilterShape | int,
+        receiver: int = RECEIVER_MAIN,
+    ) -> None:
+        """Set DSP IF filter shape."""
+        self._require_receiver(receiver, operation="set_filter_shape")
+        self._require_cmd29_route(
+            0x16, 0x56, receiver=receiver, operation="set_filter_shape"
+        )
+        filter_shape = FilterShape(shape)
+        await self._send_fire_and_forget(
+            set_filter_shape(
+                filter_shape,
+                to_addr=self._radio_addr,
+                receiver=receiver,
+            )
+        )
+
+    async def get_ssb_tx_bandwidth(self) -> SsbTxBandwidth:
+        """Read SSB transmit bandwidth preset."""
+        value = await self._get_bcd_level(
+            get_ssb_tx_bandwidth(to_addr=self._radio_addr),
+            key="get_ssb_tx_bandwidth",
+            command=0x16,
+            sub=0x58,
+            bcd_bytes=1,
+        )
+        return SsbTxBandwidth(value)
+
+    async def set_ssb_tx_bandwidth(
+        self, bandwidth: SsbTxBandwidth | int
+    ) -> None:
+        """Set SSB transmit bandwidth preset."""
+        ssb_tx_bandwidth = SsbTxBandwidth(bandwidth)
+        await self._send_fire_and_forget(
+            set_ssb_tx_bandwidth(ssb_tx_bandwidth, to_addr=self._radio_addr)
+        )
+
+    async def get_agc_time_constant(self, receiver: int = RECEIVER_MAIN) -> int:
+        """Read AGC time constant preset (0-13)."""
+        self._require_receiver(receiver, operation="get_agc_time_constant")
+        self._require_cmd29_route(
+            0x1A, 0x04, receiver=receiver, operation="get_agc_time_constant"
+        )
+        return await self._get_bcd_level(
+            get_agc_time_constant(to_addr=self._radio_addr, receiver=receiver),
+            key=f"get_agc_time_constant:{receiver}",
+            command=0x1A,
+            sub=0x04,
+            bcd_bytes=1,
+        )
+
+    async def set_agc_time_constant(
+        self, value: int, receiver: int = RECEIVER_MAIN
+    ) -> None:
+        """Set AGC time constant preset (0-13)."""
+        self._require_receiver(receiver, operation="set_agc_time_constant")
+        self._require_cmd29_route(
+            0x1A, 0x04, receiver=receiver, operation="set_agc_time_constant"
+        )
+        await self._send_fire_and_forget(
+            set_agc_time_constant(
+                value,
+                to_addr=self._radio_addr,
+                receiver=receiver,
+            )
         )
 
     async def get_s_meter(self) -> int:

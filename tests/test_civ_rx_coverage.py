@@ -788,6 +788,44 @@ def test_update_radio_state_cmd16_ipplus(radio_with_state: IcomRadio) -> None:
     assert rs.main.ipplus is True
 
 
+@pytest.mark.parametrize(
+    ("cmd", "sub", "data", "receiver", "target", "field", "expected"),
+    [
+        (0x15, 0x01, b"\x01", 0x01, "sub", "s_meter_sql_open", True),
+        (0x15, 0x07, b"\x01", None, "radio", "overflow", True),
+        (0x16, 0x12, b"\x03", 0x01, "sub", "agc", 3),
+        (0x16, 0x32, b"\x02", 0x01, "sub", "audio_peak_filter", 2),
+        (0x16, 0x41, b"\x01", 0x01, "sub", "auto_notch", True),
+        (0x16, 0x44, b"\x01", None, "radio", "compressor_on", True),
+        (0x16, 0x45, b"\x01", None, "radio", "monitor_on", True),
+        (0x16, 0x46, b"\x01", None, "radio", "vox_on", True),
+        (0x16, 0x47, b"\x02", None, "radio", "break_in", 2),
+        (0x16, 0x48, b"\x01", 0x01, "sub", "manual_notch", True),
+        (0x16, 0x4F, b"\x01", 0x01, "sub", "twin_peak_filter", True),
+        (0x16, 0x50, b"\x01", None, "radio", "dial_lock", True),
+        (0x16, 0x56, b"\x01", 0x01, "sub", "filter_shape", 1),
+        (0x16, 0x58, b"\x02", None, "radio", "ssb_tx_bandwidth", 2),
+        (0x1A, 0x04, b"\x13", 0x01, "sub", "agc_time_constant", 13),
+    ],
+)
+def test_update_radio_state_operator_toggle_family(
+    radio_with_state: IcomRadio,
+    cmd: int,
+    sub: int,
+    data: bytes,
+    receiver: int | None,
+    target: str,
+    field: str,
+    expected: object,
+) -> None:
+    rs = radio_with_state._radio_state
+    frame = _make_frame(cmd=cmd, sub=sub, data=data, receiver=receiver)
+    radio_with_state._update_radio_state_from_frame(frame)
+
+    owner = {"radio": rs, "sub": rs.sub}[target]
+    assert getattr(owner, field) == expected
+
+
 def test_update_radio_state_cmd16_via_data_sub(radio_with_state: IcomRadio) -> None:
     """cmd 0x16 with sub=0x00 reads sub-code from data[0] (lines 558-561)."""
     rs = radio_with_state._radio_state

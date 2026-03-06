@@ -30,6 +30,14 @@ class ReceiverState:
     nr: bool = False
     digisel: bool = False
     ipplus: bool = False
+    s_meter_sql_open: bool = False
+    agc: int = 0
+    audio_peak_filter: int = 0
+    auto_notch: bool = False
+    manual_notch: bool = False
+    twin_peak_filter: bool = False
+    filter_shape: int = 0
+    agc_time_constant: int = 0
     af_level: int = 0   # 0-255
     rf_gain: int = 0    # 0-255
     squelch: int = 0    # 0-255
@@ -54,16 +62,23 @@ class RadioState:
     power_level: int = 0    # TX power 0-255
     split: bool = False
     dual_watch: bool = False
+    overflow: bool = False
     cw_pitch: int = 0           # Hz
     mic_gain: int = 0           # 0-255
     key_speed: int = 0          # WPM
     notch_filter: int = 0       # 0-255
+    compressor_on: bool = False
     compressor_level: int = 0   # 0-255
+    monitor_on: bool = False
     break_in_delay: int = 0     # 0-255
+    break_in: int = 0           # 0=off, 1=semi, 2=full
+    dial_lock: bool = False
     drive_gain: int = 0         # 0-255
     monitor_gain: int = 0       # 0-255
+    vox_on: bool = False
     vox_gain: int = 0           # 0-255
     anti_vox_gain: int = 0      # 0-255
+    ssb_tx_bandwidth: int = 0   # 0=wide, 1=mid, 2=nar
     ref_adjust: int = 0         # 0-511
     dash_ratio: int = 0         # 28-45
     nb_depth: int = 0           # 0-9
@@ -77,16 +92,23 @@ class RadioState:
             "power_level": self.power_level,
             "split": self.split,
             "dual_watch": self.dual_watch,
+            "overflow": self.overflow,
             "cw_pitch": self.cw_pitch,
             "mic_gain": self.mic_gain,
             "key_speed": self.key_speed,
             "notch_filter": self.notch_filter,
+            "compressor_on": self.compressor_on,
             "compressor_level": self.compressor_level,
+            "monitor_on": self.monitor_on,
             "break_in_delay": self.break_in_delay,
+            "break_in": self.break_in,
+            "dial_lock": self.dial_lock,
             "drive_gain": self.drive_gain,
             "monitor_gain": self.monitor_gain,
+            "vox_on": self.vox_on,
             "vox_gain": self.vox_gain,
             "anti_vox_gain": self.anti_vox_gain,
+            "ssb_tx_bandwidth": self.ssb_tx_bandwidth,
             "ref_adjust": self.ref_adjust,
             "dash_ratio": self.dash_ratio,
             "nb_depth": self.nb_depth,

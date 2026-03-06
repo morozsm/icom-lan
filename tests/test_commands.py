@@ -23,7 +23,15 @@ from icom_lan.commands import (
     parse_meter_response,
     parse_ack_nak,
 )
-from icom_lan.types import CivFrame, Mode
+from icom_lan.types import (
+    AgcMode,
+    AudioPeakFilter,
+    BreakInMode,
+    CivFrame,
+    FilterShape,
+    Mode,
+    SsbTxBandwidth,
+)
 
 
 class TestConstants:
@@ -719,3 +727,142 @@ class TestDspLevelParityCommands:
 
         with pytest.raises(ValueError, match="0-255"):
             set_nb_width(256)
+
+
+class TestOperatorToggleParityCommands:
+    """Test IC-7610 operator toggle/status parity command builders."""
+
+    @pytest.mark.parametrize(
+        ("getter_name", "sub", "receiver"),
+        [
+            ("get_s_meter_sql_status", 0x01, 1),
+            ("get_audio_peak_filter", 0x32, 1),
+            ("get_auto_notch", 0x41, 1),
+            ("get_manual_notch", 0x48, 1),
+            ("get_twin_peak_filter", 0x4F, 1),
+            ("get_filter_shape", 0x56, 1),
+            ("get_agc_time_constant", 0x04, 1),
+        ],
+    )
+    def test_cmd29_operator_getters(
+        self,
+        getter_name: str,
+        sub: int,
+        receiver: int,
+    ) -> None:
+        import icom_lan.commands as commands
+
+        getter = getattr(commands, getter_name)
+        command = 0x15 if sub == 0x01 else 0x1A if sub == 0x04 else 0x16
+
+        assert getter(receiver=receiver) == bytes(
+            [0xFE, 0xFE, 0x98, 0xE0, 0x29, receiver, command, sub, 0xFD]
+        )
+
+    @pytest.mark.parametrize(
+        ("setter_name", "value", "expected_tail"),
+        [
+            ("set_audio_peak_filter", AudioPeakFilter.MID, b"\x29\x01\x16\x32\x02\xFD"),
+            ("set_auto_notch", True, b"\x29\x01\x16\x41\x01\xFD"),
+            ("set_manual_notch", False, b"\x29\x01\x16\x48\x00\xFD"),
+            ("set_twin_peak_filter", True, b"\x29\x01\x16\x4F\x01\xFD"),
+            ("set_filter_shape", FilterShape.SOFT, b"\x29\x01\x16\x56\x01\xFD"),
+            ("set_agc_time_constant", 13, b"\x29\x01\x1A\x04\x13\xFD"),
+        ],
+    )
+    def test_cmd29_operator_setters(
+        self,
+        setter_name: str,
+        value: object,
+        expected_tail: bytes,
+    ) -> None:
+        import icom_lan.commands as commands
+
+        setter = getattr(commands, setter_name)
+        assert setter(value, receiver=1).endswith(expected_tail)
+
+    @pytest.mark.parametrize(
+        ("getter_name", "sub"),
+        [
+            ("get_overflow_status", 0x07),
+            ("get_agc", 0x12),
+            ("get_compressor", 0x44),
+            ("get_monitor", 0x45),
+            ("get_vox", 0x46),
+            ("get_break_in", 0x47),
+            ("get_dial_lock", 0x50),
+            ("get_ssb_tx_bandwidth", 0x58),
+        ],
+    )
+    def test_direct_operator_getters(self, getter_name: str, sub: int) -> None:
+        import icom_lan.commands as commands
+
+        getter = getattr(commands, getter_name)
+        command = 0x15 if sub == 0x07 else 0x16
+        assert getter() == bytes([0xFE, 0xFE, 0x98, 0xE0, command, sub, 0xFD])
+
+    @pytest.mark.parametrize(
+        ("setter_name", "value", "expected_tail"),
+        [
+            ("set_agc", AgcMode.SLOW, b"\x16\x12\x03\xFD"),
+            ("set_compressor", True, b"\x16\x44\x01\xFD"),
+            ("set_monitor", False, b"\x16\x45\x00\xFD"),
+            ("set_vox", True, b"\x16\x46\x01\xFD"),
+            ("set_break_in", BreakInMode.FULL, b"\x16\x47\x02\xFD"),
+            ("set_dial_lock", True, b"\x16\x50\x01\xFD"),
+            ("set_ssb_tx_bandwidth", SsbTxBandwidth.NAR, b"\x16\x58\x02\xFD"),
+        ],
+    )
+    def test_direct_operator_setters(
+        self,
+        setter_name: str,
+        value: object,
+        expected_tail: bytes,
+    ) -> None:
+        import icom_lan.commands as commands
+
+        setter = getattr(commands, setter_name)
+        assert setter(value).endswith(expected_tail)
+
+    @pytest.mark.parametrize(
+        ("frame", "kwargs", "expected"),
+        [
+            (
+                CivFrame(0xE0, 0x98, 0x16, 0x12, b"\x03"),
+                {"command": 0x16, "sub": 0x12, "bcd_bytes": 1},
+                3,
+            ),
+            (
+                CivFrame(0xE0, 0x98, 0x1A, 0x04, b"\x13"),
+                {"command": 0x1A, "sub": 0x04, "bcd_bytes": 1},
+                13,
+            ),
+        ],
+    )
+    def test_parse_single_byte_bcd_operator_values(
+        self,
+        frame: CivFrame,
+        kwargs: dict[str, int],
+        expected: int,
+    ) -> None:
+        from icom_lan.commands import parse_level_response
+
+        assert parse_level_response(frame, **kwargs) == expected
+
+    @pytest.mark.parametrize(
+        ("frame", "kwargs"),
+        [
+            (CivFrame(0xE0, 0x98, 0x15, 0x01, b"\x01"), {"command": 0x15, "sub": 0x01}),
+            (CivFrame(0xE0, 0x98, 0x15, 0x07, b"\x01"), {"command": 0x15, "sub": 0x07}),
+            (CivFrame(0xE0, 0x98, 0x16, 0x41, b"\x01"), {"command": 0x16, "sub": 0x41}),
+            (CivFrame(0xE0, 0x98, 0x16, 0x44, b"\x01"), {"command": 0x16, "sub": 0x44}),
+        ],
+    )
+    def test_parse_operator_bool_response(
+        self,
+        frame: CivFrame,
+        kwargs: dict[str, int],
+    ) -> None:
+        from icom_lan.commands import parse_bool_response
+
+        assert parse_bool_response(frame, **kwargs) is True

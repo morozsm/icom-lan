@@ -6,6 +6,11 @@ from enum import IntEnum, StrEnum
 __all__ = [
     "PacketType",
     "Mode",
+    "AgcMode",
+    "AudioPeakFilter",
+    "BreakInMode",
+    "FilterShape",
+    "SsbTxBandwidth",
     "AudioCodec",
     "AudioCapabilities",
     "get_audio_capabilities",
@@ -77,6 +82,46 @@ class Mode(IntEnum):
     CW_R = 0x07
     RTTY_R = 0x08
     DV = 0x17
+
+
+class AgcMode(IntEnum):
+    """IC-7610 AGC mode selection."""
+
+    FAST = 0x01
+    MID = 0x02
+    SLOW = 0x03
+
+
+class AudioPeakFilter(IntEnum):
+    """IC-7610 APF mode selection."""
+
+    OFF = 0x00
+    WIDE = 0x01
+    MID = 0x02
+    NAR = 0x03
+
+
+class BreakInMode(IntEnum):
+    """IC-7610 BK-IN mode selection."""
+
+    OFF = 0x00
+    SEMI = 0x01
+    FULL = 0x02
+
+
+class FilterShape(IntEnum):
+    """IC-7610 DSP IF filter shape."""
+
+    SHARP = 0x00
+    SOFT = 0x01
+
+
+class SsbTxBandwidth(IntEnum):
+    """IC-7610 SSB transmit bandwidth preset."""
+
+    WIDE = 0x00
+    MID = 0x01
+    NAR = 0x02
 
 
 class ScopeCompletionPolicy(StrEnum):

@@ -6,9 +6,9 @@
     "wfview_commander": "references/wfview/src/radio/icomcommander.cpp"
   },
   "status_totals": {
-    "implemented": 59,
+    "implemented": 74,
     "partial": 16,
-    "missing": 59
+    "missing": 44
   },
   "families": {
     "baseline_core": {
@@ -34,11 +34,11 @@
     "operator_toggles": {
       "title": "Operator toggles and status flags",
       "owner_issue": 131,
-      "summary": "Missing AGC/ANF/compressor/VOX/break-in and related toggle/status work tracked by issue #131.",
+      "summary": "AGC/ANF/compressor/VOX/break-in and related toggle/status parity completed by issue #131.",
       "counts": {
-        "implemented": 0,
+        "implemented": 15,
         "partial": 0,
-        "missing": 15
+        "missing": 0
       }
     },
     "vfo_dualwatch_scan": {
@@ -990,7 +990,19 @@
       "set": true,
       "admin": false,
       "family": "operator_toggles",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_s_meter_sql_status",
+        "icom_lan.commands:parse_bool_response",
+        "icom_lan.radio:Icom7610CoreRadio.get_s_meter_sql_status",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_cmd29_operator_getters",
+        "tests/test_radio.py::test_get_bool_operator_toggle",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_operator_toggle_family"
+      ],
+      "notes": "Official IC-7610 CI-V guide documents this wire as a read-only status response despite wfview marking set=true."
     },
     {
       "id": 48,
@@ -1032,7 +1044,19 @@
       "set": true,
       "admin": false,
       "family": "operator_toggles",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_overflow_status",
+        "icom_lan.commands:parse_bool_response",
+        "icom_lan.radio:Icom7610CoreRadio.get_overflow_status",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_direct_operator_getters",
+        "tests/test_radio.py::test_get_bool_operator_toggle",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_operator_toggle_family"
+      ],
+      "notes": "Official IC-7610 CI-V guide documents this wire as a read-only status response despite wfview marking set=true."
     },
     {
       "id": 51,
@@ -1160,7 +1184,24 @@
       "set": true,
       "admin": false,
       "family": "operator_toggles",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_agc",
+        "icom_lan.commands:set_agc",
+        "icom_lan.commands:parse_level_response",
+        "icom_lan.radio:Icom7610CoreRadio.get_agc",
+        "icom_lan.radio:Icom7610CoreRadio.set_agc",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_direct_operator_getters",
+        "tests/test_commands.py::test_direct_operator_setters",
+        "tests/test_commands.py::test_parse_single_byte_bcd_operator_values",
+        "tests/test_radio.py::test_get_enum_operator_toggle",
+        "tests/test_radio.py::test_set_operator_toggle",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_operator_toggle_family"
+      ],
+      "notes": "wfview labels 0x16 0x12 as AGC status; the IC-7610 CI-V guide defines the payload as AGC mode (FAST/MID/SLOW)."
     },
     {
       "id": 59,
@@ -1191,7 +1232,22 @@
       "set": true,
       "admin": false,
       "family": "operator_toggles",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_audio_peak_filter",
+        "icom_lan.commands:set_audio_peak_filter",
+        "icom_lan.commands:parse_level_response",
+        "icom_lan.radio:Icom7610CoreRadio.get_audio_peak_filter",
+        "icom_lan.radio:Icom7610CoreRadio.set_audio_peak_filter",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_cmd29_operator_getters",
+        "tests/test_commands.py::test_cmd29_operator_setters",
+        "tests/test_radio.py::test_get_enum_operator_toggle",
+        "tests/test_radio.py::test_set_operator_toggle",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_operator_toggle_family"
+      ]
     },
     {
       "id": 61,
@@ -1222,7 +1278,23 @@
       "set": true,
       "admin": false,
       "family": "operator_toggles",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_auto_notch",
+        "icom_lan.commands:set_auto_notch",
+        "icom_lan.commands:parse_bool_response",
+        "icom_lan.radio:Icom7610CoreRadio.get_auto_notch",
+        "icom_lan.radio:Icom7610CoreRadio.set_auto_notch",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_cmd29_operator_getters",
+        "tests/test_commands.py::test_cmd29_operator_setters",
+        "tests/test_commands.py::test_parse_operator_bool_response",
+        "tests/test_radio.py::test_get_bool_operator_toggle",
+        "tests/test_radio.py::test_set_operator_toggle",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_operator_toggle_family"
+      ]
     },
     {
       "id": 63,
@@ -1255,7 +1327,23 @@
       "set": true,
       "admin": false,
       "family": "operator_toggles",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_compressor",
+        "icom_lan.commands:set_compressor",
+        "icom_lan.commands:parse_bool_response",
+        "icom_lan.radio:Icom7610CoreRadio.get_compressor",
+        "icom_lan.radio:Icom7610CoreRadio.set_compressor",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_direct_operator_getters",
+        "tests/test_commands.py::test_direct_operator_setters",
+        "tests/test_commands.py::test_parse_operator_bool_response",
+        "tests/test_radio.py::test_get_bool_operator_toggle",
+        "tests/test_radio.py::test_set_operator_toggle",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_operator_toggle_family"
+      ]
     },
     {
       "id": 66,
@@ -1266,7 +1354,22 @@
       "set": true,
       "admin": false,
       "family": "operator_toggles",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_monitor",
+        "icom_lan.commands:set_monitor",
+        "icom_lan.commands:parse_bool_response",
+        "icom_lan.radio:Icom7610CoreRadio.get_monitor",
+        "icom_lan.radio:Icom7610CoreRadio.set_monitor",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_direct_operator_getters",
+        "tests/test_commands.py::test_direct_operator_setters",
+        "tests/test_radio.py::test_get_bool_operator_toggle",
+        "tests/test_radio.py::test_set_operator_toggle",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_operator_toggle_family"
+      ]
     },
     {
       "id": 67,
@@ -1277,7 +1380,22 @@
       "set": true,
       "admin": false,
       "family": "operator_toggles",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_vox",
+        "icom_lan.commands:set_vox",
+        "icom_lan.commands:parse_bool_response",
+        "icom_lan.radio:Icom7610CoreRadio.get_vox",
+        "icom_lan.radio:Icom7610CoreRadio.set_vox",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_direct_operator_getters",
+        "tests/test_commands.py::test_direct_operator_setters",
+        "tests/test_radio.py::test_get_bool_operator_toggle",
+        "tests/test_radio.py::test_set_operator_toggle",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_operator_toggle_family"
+      ]
     },
     {
       "id": 68,
@@ -1288,7 +1406,22 @@
       "set": true,
       "admin": false,
       "family": "operator_toggles",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_break_in",
+        "icom_lan.commands:set_break_in",
+        "icom_lan.commands:parse_level_response",
+        "icom_lan.radio:Icom7610CoreRadio.get_break_in",
+        "icom_lan.radio:Icom7610CoreRadio.set_break_in",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_direct_operator_getters",
+        "tests/test_commands.py::test_direct_operator_setters",
+        "tests/test_radio.py::test_get_enum_operator_toggle",
+        "tests/test_radio.py::test_set_operator_toggle",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_operator_toggle_family"
+      ]
     },
     {
       "id": 69,
@@ -1299,7 +1432,22 @@
       "set": true,
       "admin": false,
       "family": "operator_toggles",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_manual_notch",
+        "icom_lan.commands:set_manual_notch",
+        "icom_lan.commands:parse_bool_response",
+        "icom_lan.radio:Icom7610CoreRadio.get_manual_notch",
+        "icom_lan.radio:Icom7610CoreRadio.set_manual_notch",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_cmd29_operator_getters",
+        "tests/test_commands.py::test_cmd29_operator_setters",
+        "tests/test_radio.py::test_get_bool_operator_toggle",
+        "tests/test_radio.py::test_set_operator_toggle",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_operator_toggle_family"
+      ]
     },
     {
       "id": 70,
@@ -1330,7 +1478,22 @@
       "set": true,
       "admin": false,
       "family": "operator_toggles",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_twin_peak_filter",
+        "icom_lan.commands:set_twin_peak_filter",
+        "icom_lan.commands:parse_bool_response",
+        "icom_lan.radio:Icom7610CoreRadio.get_twin_peak_filter",
+        "icom_lan.radio:Icom7610CoreRadio.set_twin_peak_filter",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_cmd29_operator_getters",
+        "tests/test_commands.py::test_cmd29_operator_setters",
+        "tests/test_radio.py::test_get_bool_operator_toggle",
+        "tests/test_radio.py::test_set_operator_toggle",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_operator_toggle_family"
+      ]
     },
     {
       "id": 72,
@@ -1341,7 +1504,22 @@
       "set": true,
       "admin": false,
       "family": "operator_toggles",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_dial_lock",
+        "icom_lan.commands:set_dial_lock",
+        "icom_lan.commands:parse_bool_response",
+        "icom_lan.radio:Icom7610CoreRadio.get_dial_lock",
+        "icom_lan.radio:Icom7610CoreRadio.set_dial_lock",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_direct_operator_getters",
+        "tests/test_commands.py::test_direct_operator_setters",
+        "tests/test_radio.py::test_get_bool_operator_toggle",
+        "tests/test_radio.py::test_set_operator_toggle",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_operator_toggle_family"
+      ]
     },
     {
       "id": 73,
@@ -1363,7 +1541,23 @@
       "set": true,
       "admin": false,
       "family": "operator_toggles",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_filter_shape",
+        "icom_lan.commands:set_filter_shape",
+        "icom_lan.commands:parse_level_response",
+        "icom_lan.radio:Icom7610CoreRadio.get_filter_shape",
+        "icom_lan.radio:Icom7610CoreRadio.set_filter_shape",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_cmd29_operator_getters",
+        "tests/test_commands.py::test_cmd29_operator_setters",
+        "tests/test_radio.py::test_get_enum_operator_toggle",
+        "tests/test_radio.py::test_set_operator_toggle",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_operator_toggle_family"
+      ],
+      "notes": "wfview advertises a broader numeric range, but the IC-7610 CI-V guide defines 0x16 0x56 as a two-state SHARP/SOFT selector."
     },
     {
       "id": 75,
@@ -1374,7 +1568,22 @@
       "set": true,
       "admin": false,
       "family": "operator_toggles",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_ssb_tx_bandwidth",
+        "icom_lan.commands:set_ssb_tx_bandwidth",
+        "icom_lan.commands:parse_level_response",
+        "icom_lan.radio:Icom7610CoreRadio.get_ssb_tx_bandwidth",
+        "icom_lan.radio:Icom7610CoreRadio.set_ssb_tx_bandwidth",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_direct_operator_getters",
+        "tests/test_commands.py::test_direct_operator_setters",
+        "tests/test_radio.py::test_get_enum_operator_toggle",
+        "tests/test_radio.py::test_set_operator_toggle",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_operator_toggle_family"
+      ]
     },
     {
       "id": 76,
@@ -1800,7 +2009,23 @@
       "set": true,
       "admin": false,
       "family": "operator_toggles",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_agc_time_constant",
+        "icom_lan.commands:set_agc_time_constant",
+        "icom_lan.commands:parse_level_response",
+        "icom_lan.radio:Icom7610CoreRadio.get_agc_time_constant",
+        "icom_lan.radio:Icom7610CoreRadio.set_agc_time_constant",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_cmd29_operator_getters",
+        "tests/test_commands.py::test_cmd29_operator_setters",
+        "tests/test_commands.py::test_parse_single_byte_bcd_operator_values",
+        "tests/test_radio.py::test_get_agc_time_constant_reads_single_byte_bcd",
+        "tests/test_radio.py::test_set_operator_toggle",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_operator_toggle_family"
+      ]
     },
     {
       "id": 104,

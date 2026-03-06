@@ -24,6 +24,14 @@ def test_receiver_state_defaults() -> None:
     assert rx.nr is False
     assert rx.digisel is False
     assert rx.ipplus is False
+    assert rx.s_meter_sql_open is False
+    assert rx.agc == 0
+    assert rx.audio_peak_filter == 0
+    assert rx.auto_notch is False
+    assert rx.manual_notch is False
+    assert rx.twin_peak_filter is False
+    assert rx.filter_shape == 0
+    assert rx.agc_time_constant == 0
     assert rx.af_level == 0
     assert rx.rf_gain == 0
     assert rx.squelch == 0
@@ -66,16 +74,23 @@ def test_radio_state_defaults() -> None:
     assert rs.power_level == 0
     assert rs.split is False
     assert rs.dual_watch is False
+    assert rs.overflow is False
     assert rs.cw_pitch == 0
     assert rs.mic_gain == 0
     assert rs.key_speed == 0
     assert rs.notch_filter == 0
+    assert rs.compressor_on is False
     assert rs.compressor_level == 0
+    assert rs.monitor_on is False
     assert rs.break_in_delay == 0
+    assert rs.break_in == 0
+    assert rs.dial_lock is False
     assert rs.drive_gain == 0
     assert rs.monitor_gain == 0
+    assert rs.vox_on is False
     assert rs.vox_gain == 0
     assert rs.anti_vox_gain == 0
+    assert rs.ssb_tx_bandwidth == 0
     assert rs.ref_adjust == 0
     assert rs.dash_ratio == 0
     assert rs.nb_depth == 0
@@ -131,16 +146,23 @@ def test_to_dict_structure() -> None:
         "power_level",
         "split",
         "dual_watch",
+        "overflow",
         "cw_pitch",
         "mic_gain",
         "key_speed",
         "notch_filter",
+        "compressor_on",
         "compressor_level",
+        "monitor_on",
         "break_in_delay",
+        "break_in",
+        "dial_lock",
         "drive_gain",
         "monitor_gain",
+        "vox_on",
         "vox_gain",
         "anti_vox_gain",
+        "ssb_tx_bandwidth",
         "ref_adjust",
         "dash_ratio",
         "nb_depth",
@@ -161,6 +183,9 @@ def test_to_dict_main_keys() -> None:
     expected_keys = {
         "freq", "mode", "filter", "data_mode",
         "att", "preamp", "nb", "nr", "digisel", "ipplus",
+        "s_meter_sql_open", "agc", "audio_peak_filter", "auto_notch",
+        "manual_notch", "twin_peak_filter", "filter_shape",
+        "agc_time_constant",
         "af_level", "rf_gain", "squelch", "s_meter",
         "apf_type_level", "nr_level", "pbt_inner", "pbt_outer",
         "nb_level", "digisel_shift", "af_mute",
