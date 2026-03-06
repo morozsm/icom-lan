@@ -151,6 +151,24 @@ __all__ = [
     "scope_set_hold",
     "scope_set_vbw",
     "scope_set_rbw",
+    # Transceiver status family (#136)
+    "get_band_edge_freq",
+    "get_various_squelch",
+    "get_power_meter",
+    "get_comp_meter",
+    "get_vd_meter",
+    "get_id_meter",
+    "get_tuner_status",
+    "set_tuner_status",
+    "get_tx_freq_monitor",
+    "set_tx_freq_monitor",
+    "get_rit_frequency",
+    "set_rit_frequency",
+    "get_rit_status",
+    "set_rit_status",
+    "get_rit_tx_status",
+    "set_rit_tx_status",
+    "parse_rit_frequency_response",
 ]
 
 # CI-V addresses
@@ -171,6 +189,8 @@ _CMD_LEVEL = 0x14  # Levels (RF power, etc.)
 _CMD_METER = 0x15  # Meter readings
 _CMD_PTT = 0x1C  # Transceiver status / PTT
 _CMD_CTL_MEM = 0x1A  # Memory / configuration command
+_CMD_BAND_EDGE = 0x02  # Band edge frequency
+_CMD_RIT = 0x21       # RIT/XIT
 _CMD_ACK = 0xFB
 _CMD_NAK = 0xFA
 
@@ -196,8 +216,13 @@ _SUB_MONITOR_GAIN = 0x15
 _SUB_VOX_GAIN = 0x16
 _SUB_ANTI_VOX_GAIN = 0x17
 _SUB_S_METER = 0x02
+_SUB_VARIOUS_SQUELCH = 0x05   # Various squelch (cmd29)
+_SUB_POWER_METER = 0x11
 _SUB_SWR_METER = 0x12
 _SUB_ALC_METER = 0x13
+_SUB_COMP_METER = 0x14
+_SUB_VD_METER = 0x15
+_SUB_ID_METER = 0x16
 _SUB_PTT = 0x00
 _SUB_CTL_MEM = 0x05
 _SUB_DATA_MODE = 0x06  # DATA mode sub-command for 0x1A
@@ -213,7 +238,7 @@ _PREAMBLE = b"\xfe\xfe"
 _TERMINATOR = b"\xfd"
 
 # Commands that use sub-commands (for parse disambiguation)
-_COMMANDS_WITH_SUB: set[int] = {_CMD_LEVEL, _CMD_METER, _CMD_PTT, _CMD_CTL_MEM, 0x27, 0x16}
+_COMMANDS_WITH_SUB: set[int] = {_CMD_LEVEL, _CMD_METER, _CMD_PTT, _CMD_CTL_MEM, _CMD_RIT, 0x27, 0x16}
 
 
 def build_civ_frame(
@@ -2501,6 +2526,205 @@ def power_on(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR) -> b
 def power_off(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR) -> bytes:
     """Build CI-V frame to power off the radio."""
     return build_civ_frame(to_addr, from_addr, _CMD_POWER_CTRL, data=b"\x00")
+
+
+# --- Transceiver status family (#136) ---
+
+# Sub-commands for 0x1C (Transceiver status register)
+_SUB_TUNER_STATUS = 0x01
+_SUB_TX_FREQ_MONITOR = 0x03
+
+# Sub-commands for 0x21 (RIT/XIT register)
+_SUB_RIT_FREQ = 0x00
+_SUB_RIT_STATUS = 0x01
+_SUB_RIT_TX_STATUS = 0x02
+
+
+def get_band_edge_freq(
+    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a read band-edge frequency command (0x02).
+
+    Returns the current band-edge frequency (same BCD encoding as 0x03).
+    """
+    return build_civ_frame(to_addr, from_addr, _CMD_BAND_EDGE)
+
+
+def get_various_squelch(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+) -> bytes:
+    """Build a read various-squelch status command (0x15 0x05, Command29)."""
+    return _build_meter_bool_get(
+        _SUB_VARIOUS_SQUELCH,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
+        command29=True,
+    )
+
+
+def get_power_meter(
+    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a read RF power meter command (0x15 0x11)."""
+    return build_civ_frame(to_addr, from_addr, _CMD_METER, sub=_SUB_POWER_METER)
+
+
+def get_comp_meter(
+    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a read compressor meter command (0x15 0x14)."""
+    return build_civ_frame(to_addr, from_addr, _CMD_METER, sub=_SUB_COMP_METER)
+
+
+def get_vd_meter(
+    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a read Vd (supply voltage) meter command (0x15 0x15)."""
+    return build_civ_frame(to_addr, from_addr, _CMD_METER, sub=_SUB_VD_METER)
+
+
+def get_id_meter(
+    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a read Id (drain current) meter command (0x15 0x16)."""
+    return build_civ_frame(to_addr, from_addr, _CMD_METER, sub=_SUB_ID_METER)
+
+
+def get_tuner_status(
+    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a read tuner/ATU status command (0x1C 0x01).
+
+    Response data: 0x00=off, 0x01=on, 0x02=tuning.
+    """
+    return build_civ_frame(to_addr, from_addr, _CMD_PTT, sub=_SUB_TUNER_STATUS)
+
+
+def set_tuner_status(
+    value: int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a set tuner/ATU status command (0x1C 0x01).
+
+    Args:
+        value: 0=off, 1=on, 2=tune.
+    """
+    if value not in (0, 1, 2):
+        raise ValueError(f"Tuner status must be 0, 1, or 2, got {value}")
+    return build_civ_frame(
+        to_addr, from_addr, _CMD_PTT, sub=_SUB_TUNER_STATUS, data=bytes([value])
+    )
+
+
+def get_tx_freq_monitor(
+    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a read TX frequency monitor status command (0x1C 0x03)."""
+    return build_civ_frame(to_addr, from_addr, _CMD_PTT, sub=_SUB_TX_FREQ_MONITOR)
+
+
+def set_tx_freq_monitor(
+    on: bool,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a set TX frequency monitor command (0x1C 0x03)."""
+    return build_civ_frame(
+        to_addr, from_addr, _CMD_PTT, sub=_SUB_TX_FREQ_MONITOR,
+        data=b"\x01" if on else b"\x00",
+    )
+
+
+def get_rit_frequency(
+    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a read RIT frequency offset command (0x21 0x00).
+
+    Response: 2 bytes BCD Hz + 1 byte sign (0x00=positive, 0x01=negative).
+    Range: ±9999 Hz.
+    """
+    return build_civ_frame(to_addr, from_addr, _CMD_RIT, sub=_SUB_RIT_FREQ)
+
+
+def set_rit_frequency(
+    offset_hz: int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a set RIT frequency offset command (0x21 0x00).
+
+    Args:
+        offset_hz: RIT offset in Hz (±9999).
+    """
+    if not -9999 <= offset_hz <= 9999:
+        raise ValueError(f"RIT offset must be ±9999 Hz, got {offset_hz}")
+    abs_hz = abs(offset_hz)
+    # Encode as 2-byte BCD: e.g. 150 → 0x01 0x50
+    d0 = ((abs_hz % 100 // 10) << 4) | (abs_hz % 10)
+    d1 = ((abs_hz % 10000 // 1000) << 4) | (abs_hz % 1000 // 100)
+    sign = b"\x01" if offset_hz < 0 else b"\x00"
+    return build_civ_frame(
+        to_addr, from_addr, _CMD_RIT, sub=_SUB_RIT_FREQ,
+        data=bytes([d0, d1]) + sign,
+    )
+
+
+def parse_rit_frequency_response(data: bytes) -> int:
+    """Parse RIT frequency response data (2-byte BCD + sign byte).
+
+    Args:
+        data: 3 bytes — BCD Hz (2 bytes LE) + sign (0x00=pos, 0x01=neg).
+
+    Returns:
+        Signed RIT offset in Hz.
+    """
+    if len(data) < 3:
+        return 0
+    d0, d1, sign = data[0], data[1], data[2]
+    hz = (d1 >> 4) * 1000 + (d1 & 0x0F) * 100 + (d0 >> 4) * 10 + (d0 & 0x0F)
+    return -hz if sign else hz
+
+
+def get_rit_status(
+    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a read RIT on/off status command (0x21 0x01)."""
+    return build_civ_frame(to_addr, from_addr, _CMD_RIT, sub=_SUB_RIT_STATUS)
+
+
+def set_rit_status(
+    on: bool,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a set RIT on/off command (0x21 0x01)."""
+    return build_civ_frame(
+        to_addr, from_addr, _CMD_RIT, sub=_SUB_RIT_STATUS,
+        data=b"\x01" if on else b"\x00",
+    )
+
+
+def get_rit_tx_status(
+    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a read RIT TX status command (0x21 0x02)."""
+    return build_civ_frame(to_addr, from_addr, _CMD_RIT, sub=_SUB_RIT_TX_STATUS)
+
+
+def set_rit_tx_status(
+    on: bool,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a set RIT TX status command (0x21 0x02)."""
+    return build_civ_frame(
+        to_addr, from_addr, _CMD_RIT, sub=_SUB_RIT_TX_STATUS,
+        data=b"\x01" if on else b"\x00",
+    )
 
 
 # --- ACK/NAK ---

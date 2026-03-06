@@ -6,9 +6,9 @@
     "wfview_commander": "references/wfview/src/radio/icomcommander.cpp"
   },
   "status_totals": {
-    "implemented": 74,
-    "partial": 16,
-    "missing": 44
+    "implemented": 85,
+    "partial": 14,
+    "missing": 35
   },
   "families": {
     "baseline_core": {
@@ -86,9 +86,9 @@
       "owner_issue": 136,
       "summary": "RIT/TX status and remaining telemetry parity tracked by issue #136.",
       "counts": {
-        "implemented": 0,
-        "partial": 2,
-        "missing": 9
+        "implemented": 11,
+        "partial": 0,
+        "missing": 0
       }
     },
     "advanced_scope": {
@@ -150,7 +150,14 @@
       "set": true,
       "admin": false,
       "family": "transceiver_status",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_band_edge_freq"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_get_band_edge_freq"
+      ],
+      "notes": "Read-only builder; response uses standard frequency BCD parsing."
     },
     {
       "id": 4,
@@ -1033,7 +1040,16 @@
       "set": true,
       "admin": false,
       "family": "transceiver_status",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_various_squelch",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_get_various_squelch_main",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_various_squelch"
+      ],
+      "notes": ""
     },
     {
       "id": 50,
@@ -1067,15 +1083,18 @@
       "set": true,
       "admin": false,
       "family": "transceiver_status",
-      "status": "partial",
+      "status": "implemented",
       "runtime_symbols": [
+        "icom_lan.commands:get_power_meter",
+        "icom_lan.radio:IcomRadio.get_power_meter",
         "icom_lan.web.radio_poller:RadioPoller._FAST_CMDS",
         "icom_lan.web.server:WebServer._on_radio_state_change"
       ],
       "test_patterns": [
+        "tests/test_commands.py::test_get_power_meter",
         "tests/test_web_server.py::METER_POWER"
       ],
-      "notes": "RF power meter currently exists through the web meter polling/broadcast path only; there is no typed radio API for this meter."
+      "notes": ""
     },
     {
       "id": 52,
@@ -1122,7 +1141,17 @@
       "set": true,
       "admin": false,
       "family": "transceiver_status",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_comp_meter",
+        "icom_lan.radio:IcomRadio.get_comp_meter",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_get_comp_meter",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_comp_meter"
+      ],
+      "notes": ""
     },
     {
       "id": 55,
@@ -1133,15 +1162,20 @@
       "set": true,
       "admin": false,
       "family": "transceiver_status",
-      "status": "partial",
+      "status": "implemented",
       "runtime_symbols": [
+        "icom_lan.commands:get_vd_meter",
+        "icom_lan.radio:IcomRadio.get_vd_meter",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame",
         "icom_lan.web.radio_poller:RadioPoller._FAST_CMDS",
         "icom_lan.web.server:WebServer._on_radio_state_change"
       ],
       "test_patterns": [
+        "tests/test_commands.py::test_get_vd_meter",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_vd_meter",
         "tests/test_web_server.py::METER_VD"
       ],
-      "notes": "Vd telemetry currently exists through the web meter polling/broadcast path only; there is no typed radio API for this meter."
+      "notes": ""
     },
     {
       "id": 56,
@@ -1152,7 +1186,17 @@
       "set": true,
       "admin": false,
       "family": "transceiver_status",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_id_meter",
+        "icom_lan.radio:IcomRadio.get_id_meter",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_get_id_meter",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_id_meter"
+      ],
+      "notes": ""
     },
     {
       "id": 57,
@@ -2080,7 +2124,20 @@
       "set": true,
       "admin": false,
       "family": "transceiver_status",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_tuner_status",
+        "icom_lan.commands:set_tuner_status",
+        "icom_lan.radio:IcomRadio.get_tuner_status",
+        "icom_lan.radio:IcomRadio.set_tuner_status",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_get_tuner_status",
+        "tests/test_commands.py::test_set_tuner_status_on",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_tuner_status"
+      ],
+      "notes": ""
     },
     {
       "id": 108,
@@ -2102,7 +2159,20 @@
       "set": true,
       "admin": false,
       "family": "transceiver_status",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_tx_freq_monitor",
+        "icom_lan.commands:set_tx_freq_monitor",
+        "icom_lan.radio:IcomRadio.get_tx_freq_monitor",
+        "icom_lan.radio:IcomRadio.set_tx_freq_monitor",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_get_tx_freq_monitor",
+        "tests/test_commands.py::test_set_tx_freq_monitor_on",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_tx_freq_monitor"
+      ],
+      "notes": ""
     },
     {
       "id": 110,
@@ -2124,7 +2194,22 @@
       "set": true,
       "admin": false,
       "family": "transceiver_status",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_rit_frequency",
+        "icom_lan.commands:set_rit_frequency",
+        "icom_lan.commands:parse_rit_frequency_response",
+        "icom_lan.radio:IcomRadio.get_rit_frequency",
+        "icom_lan.radio:IcomRadio.set_rit_frequency",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_get_rit_frequency",
+        "tests/test_commands.py::test_set_rit_frequency_positive",
+        "tests/test_commands.py::TestRitFrequencyParser",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_rit_frequency"
+      ],
+      "notes": ""
     },
     {
       "id": 112,
@@ -2135,7 +2220,20 @@
       "set": true,
       "admin": false,
       "family": "transceiver_status",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_rit_status",
+        "icom_lan.commands:set_rit_status",
+        "icom_lan.radio:IcomRadio.get_rit_status",
+        "icom_lan.radio:IcomRadio.set_rit_status",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_get_rit_status",
+        "tests/test_commands.py::test_set_rit_status_on",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_rit_status"
+      ],
+      "notes": ""
     },
     {
       "id": 113,
@@ -2146,7 +2244,20 @@
       "set": true,
       "admin": false,
       "family": "transceiver_status",
-      "status": "missing"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_rit_tx_status",
+        "icom_lan.commands:set_rit_tx_status",
+        "icom_lan.radio:IcomRadio.get_rit_tx_status",
+        "icom_lan.radio:IcomRadio.set_rit_tx_status",
+        "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_get_rit_tx_status",
+        "tests/test_commands.py::test_set_rit_tx_status_on",
+        "tests/test_civ_rx_coverage.py::test_update_radio_state_rit_tx_status"
+      ],
+      "notes": ""
     },
     {
       "id": 114,

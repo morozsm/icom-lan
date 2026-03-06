@@ -143,6 +143,22 @@ from .commands import (
     stop_cw,
     vfo_a_equals_b,
     vfo_swap,
+    # Transceiver status family (#136)
+    get_power_meter,
+    get_comp_meter,
+    get_vd_meter,
+    get_id_meter,
+    get_tuner_status,
+    set_tuner_status,
+    get_tx_freq_monitor,
+    set_tx_freq_monitor,
+    get_rit_frequency,
+    set_rit_frequency,
+    get_rit_status,
+    set_rit_status,
+    get_rit_tx_status,
+    set_rit_tx_status,
+    parse_rit_frequency_response,
 )
 from .exceptions import (
     CommandError,
@@ -2453,6 +2469,108 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         await self._send_civ_raw(civ, priority=Priority.IMMEDIATE, wait_response=False)
         self._state_cache.update_ptt(on)
         logger.debug("set_ptt(%s) sent (fire-and-forget)", on)
+
+    # ------------------------------------------------------------------
+    # Transceiver status family (#136)
+    # ------------------------------------------------------------------
+
+    async def get_power_meter(self) -> int:
+        """Read the RF power meter (0-255 raw BCD)."""
+        self._check_connected()
+        civ = get_power_meter(to_addr=self._radio_addr)
+        resp = await self._send_civ_raw(civ)
+        return parse_meter_response(resp)
+
+    async def get_comp_meter(self) -> int:
+        """Read the compressor meter (0-255 raw BCD)."""
+        self._check_connected()
+        civ = get_comp_meter(to_addr=self._radio_addr)
+        resp = await self._send_civ_raw(civ)
+        return parse_meter_response(resp)
+
+    async def get_vd_meter(self) -> int:
+        """Read the Vd supply voltage meter (0-255 raw BCD)."""
+        self._check_connected()
+        civ = get_vd_meter(to_addr=self._radio_addr)
+        resp = await self._send_civ_raw(civ)
+        return parse_meter_response(resp)
+
+    async def get_id_meter(self) -> int:
+        """Read the Id drain current meter (0-255 raw BCD)."""
+        self._check_connected()
+        civ = get_id_meter(to_addr=self._radio_addr)
+        resp = await self._send_civ_raw(civ)
+        return parse_meter_response(resp)
+
+    async def get_tuner_status(self) -> int:
+        """Read the tuner/ATU status (0=off, 1=on, 2=tuning)."""
+        self._check_connected()
+        civ = get_tuner_status(to_addr=self._radio_addr)
+        resp = await self._send_civ_raw(civ)
+        if resp.data:
+            return resp.data[0]
+        return 0
+
+    async def set_tuner_status(self, value: int) -> None:
+        """Set the tuner/ATU status (0=off, 1=on, 2=tune).
+
+        Fire-and-forget SET command.
+        """
+        self._check_connected()
+        civ = set_tuner_status(value, to_addr=self._radio_addr)
+        await self._send_civ_raw(civ, wait_response=False)
+
+    async def get_tx_freq_monitor(self) -> bool:
+        """Read TX frequency monitor status."""
+        self._check_connected()
+        civ = get_tx_freq_monitor(to_addr=self._radio_addr)
+        resp = await self._send_civ_raw(civ)
+        return bool(resp.data[0]) if resp.data else False
+
+    async def set_tx_freq_monitor(self, on: bool) -> None:
+        """Set TX frequency monitor on/off. Fire-and-forget."""
+        self._check_connected()
+        civ = set_tx_freq_monitor(on, to_addr=self._radio_addr)
+        await self._send_civ_raw(civ, wait_response=False)
+
+    async def get_rit_frequency(self) -> int:
+        """Read the RIT frequency offset in Hz (±9999)."""
+        self._check_connected()
+        civ = get_rit_frequency(to_addr=self._radio_addr)
+        resp = await self._send_civ_raw(civ)
+        return parse_rit_frequency_response(resp.data)
+
+    async def set_rit_frequency(self, offset_hz: int) -> None:
+        """Set the RIT frequency offset in Hz (±9999). Fire-and-forget."""
+        self._check_connected()
+        civ = set_rit_frequency(offset_hz, to_addr=self._radio_addr)
+        await self._send_civ_raw(civ, wait_response=False)
+
+    async def get_rit_status(self) -> bool:
+        """Read RIT on/off status."""
+        self._check_connected()
+        civ = get_rit_status(to_addr=self._radio_addr)
+        resp = await self._send_civ_raw(civ)
+        return bool(resp.data[0]) if resp.data else False
+
+    async def set_rit_status(self, on: bool) -> None:
+        """Set RIT on/off. Fire-and-forget."""
+        self._check_connected()
+        civ = set_rit_status(on, to_addr=self._radio_addr)
+        await self._send_civ_raw(civ, wait_response=False)
+
+    async def get_rit_tx_status(self) -> bool:
+        """Read RIT TX status."""
+        self._check_connected()
+        civ = get_rit_tx_status(to_addr=self._radio_addr)
+        resp = await self._send_civ_raw(civ)
+        return bool(resp.data[0]) if resp.data else False
+
+    async def set_rit_tx_status(self, on: bool) -> None:
+        """Set RIT TX status on/off. Fire-and-forget."""
+        self._check_connected()
+        civ = set_rit_tx_status(on, to_addr=self._radio_addr)
+        await self._send_civ_raw(civ, wait_response=False)
 
     # ------------------------------------------------------------------
     # VFO / Split
