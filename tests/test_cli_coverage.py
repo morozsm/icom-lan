@@ -104,9 +104,9 @@ async def test_run_dispatches_non_audio_commands(command: str, handler_name: str
         args.audit_log = None
         args.rate_limit = None
 
-    radio_cls, radio = _mock_radio_ctx()
+    _, radio = _mock_radio_ctx()
     with (
-        patch("icom_lan.cli.IcomRadio", radio_cls),
+        patch("icom_lan.cli.create_radio", return_value=radio),
         patch(f"icom_lan.cli.{handler_name}", new_callable=AsyncMock) as handler,
     ):
         handler.return_value = 7
@@ -118,8 +118,8 @@ async def test_run_dispatches_non_audio_commands(command: str, handler_name: str
 
 @pytest.mark.asyncio
 async def test_run_dispatches_power_on_off_and_unknown_paths(capsys: pytest.CaptureFixture[str]) -> None:
-    radio_cls, radio = _mock_radio_ctx()
-    with patch("icom_lan.cli.IcomRadio", radio_cls):
+    _, radio = _mock_radio_ctx()
+    with patch("icom_lan.cli.create_radio", return_value=radio):
         rc_on = await _run(_run_args(command="power-on"))
         rc_off = await _run(_run_args(command="power-off"))
     assert rc_on == 0
@@ -128,13 +128,13 @@ async def test_run_dispatches_power_on_off_and_unknown_paths(capsys: pytest.Capt
     radio.power_control.assert_any_await(False)
 
     bad_audio = _run_args(command="audio", audio_command="invalid")
-    with patch("icom_lan.cli.IcomRadio", radio_cls):
+    with patch("icom_lan.cli.create_radio", return_value=radio):
         rc_bad = await _run(bad_audio)
     assert rc_bad == 1
     assert "unknown audio command" in capsys.readouterr().err.lower()
 
     with (
-        patch("icom_lan.cli.IcomRadio", radio_cls),
+        patch("icom_lan.cli.create_radio", return_value=radio),
         patch("icom_lan.cli._cmd_status", new_callable=AsyncMock) as status_cmd,
     ):
         status_cmd.return_value = 9

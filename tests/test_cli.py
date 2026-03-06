@@ -2,11 +2,12 @@
 
 import argparse
 import io
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from icom_lan.cli import _build_parser, _parse_frequency, main
+from icom_lan.cli import _build_backend_config, _build_parser, _parse_frequency, main
+from icom_lan.backends.config import LanBackendConfig, SerialBackendConfig
 
 
 class TestParseFrequency:
@@ -292,3 +293,232 @@ class TestMainEntryPoint:
             with pytest.raises(SystemExit) as exc_info:
                 main()
             assert exc_info.value.code == 0
+
+
+class TestBackendArgs:
+    def test_backend_default_is_lan(self):
+        p = _build_parser()
+        args = p.parse_args(["status"])
+        assert args.backend == "lan"
+
+    def test_backend_lan_explicit(self):
+        p = _build_parser()
+        args = p.parse_args(["--backend", "lan", "status"])
+        assert args.backend == "lan"
+
+    def test_backend_serial(self):
+        p = _build_parser()
+        args = p.parse_args(["--backend", "serial", "--serial-port", "/dev/tty.test", "status"])
+        assert args.backend == "serial"
+        assert args.serial_port == "/dev/tty.test"
+
+    def test_serial_port_flag(self):
+        p = _build_parser()
+        args = p.parse_args(["--serial-port", "/dev/tty.usbmodem1", "status"])
+        assert args.serial_port == "/dev/tty.usbmodem1"
+
+    def test_serial_baud_default(self):
+        p = _build_parser()
+        args = p.parse_args(["status"])
+        assert args.serial_baud == 115200
+
+    def test_serial_baud_override(self):
+        p = _build_parser()
+        args = p.parse_args(["--serial-baud", "57600", "status"])
+        assert args.serial_baud == 57600
+
+    def test_rx_device_default_none(self):
+        p = _build_parser()
+        args = p.parse_args(["status"])
+        assert args.rx_device is None
+
+    def test_rx_device_override(self):
+        p = _build_parser()
+        args = p.parse_args(["--rx-device", "IC-7610 USB Audio", "status"])
+        assert args.rx_device == "IC-7610 USB Audio"
+
+    def test_tx_device_default_none(self):
+        p = _build_parser()
+        args = p.parse_args(["status"])
+        assert args.tx_device is None
+
+    def test_tx_device_override(self):
+        p = _build_parser()
+        args = p.parse_args(["--tx-device", "BlackHole 2ch", "status"])
+        assert args.tx_device == "BlackHole 2ch"
+
+    def test_list_audio_devices_flag(self):
+        p = _build_parser()
+        args = p.parse_args(["--list-audio-devices"])
+        assert args.list_audio_devices is True
+
+    def test_list_audio_devices_default_false(self):
+        p = _build_parser()
+        args = p.parse_args(["status"])
+        assert args.list_audio_devices is False
+
+    def test_backend_invalid_rejected(self):
+        p = _build_parser()
+        with pytest.raises(SystemExit):
+            p.parse_args(["--backend", "zigbee", "status"])
+
+
+class TestBuildBackendConfig:
+    def test_lan_default(self):
+        p = _build_parser()
+        args = p.parse_args(["--host", "192.168.1.1", "status"])
+        config = _build_backend_config(args)
+        assert isinstance(config, LanBackendConfig)
+        assert config.backend == "lan"
+        assert config.host == "192.168.1.1"
+        assert config.port == 50001
+
+    def test_lan_preserves_user_pass(self):
+        p = _build_parser()
+        args = p.parse_args(["--host", "10.0.0.1", "--user", "admin", "--pass", "secret", "status"])
+        config = _build_backend_config(args)
+        assert isinstance(config, LanBackendConfig)
+        assert config.username == "admin"
+        assert config.password == "secret"
+
+    def test_lan_custom_port(self):
+        p = _build_parser()
+        args = p.parse_args(["--host", "10.0.0.1", "--control-port", "50010", "status"])
+        config = _build_backend_config(args)
+        assert isinstance(config, LanBackendConfig)
+        assert config.port == 50010
+
+    def test_serial_config_built(self):
+        p = _build_parser()
+        args = p.parse_args(["--backend", "serial", "--serial-port", "/dev/tty.usb0", "status"])
+        config = _build_backend_config(args)
+        assert isinstance(config, SerialBackendConfig)
+        assert config.backend == "serial"
+        assert config.device == "/dev/tty.usb0"
+        assert config.baudrate == 115200
+
+    def test_serial_baud_passed(self):
+        p = _build_parser()
+        args = p.parse_args([
+            "--backend", "serial",
+            "--serial-port", "/dev/tty.usb0",
+            "--serial-baud", "9600",
+            "status",
+        ])
+        config = _build_backend_config(args)
+        assert isinstance(config, SerialBackendConfig)
+        assert config.baudrate == 9600
+
+    def test_serial_rx_tx_device(self):
+        p = _build_parser()
+        args = p.parse_args([
+            "--backend", "serial",
+            "--serial-port", "/dev/tty.usb0",
+            "--rx-device", "IC-7610 RX",
+            "--tx-device", "IC-7610 TX",
+            "status",
+        ])
+        config = _build_backend_config(args)
+        assert isinstance(config, SerialBackendConfig)
+        assert config.rx_device == "IC-7610 RX"
+        assert config.tx_device == "IC-7610 TX"
+
+    def test_serial_missing_port_raises_value_error(self):
+        p = _build_parser()
+        args = p.parse_args(["--backend", "serial", "status"])
+        with pytest.raises(ValueError, match="--serial-port"):
+            _build_backend_config(args)
+
+    def test_serial_missing_port_error_mentions_env_var(self):
+        p = _build_parser()
+        args = p.parse_args(["--backend", "serial", "status"])
+        with pytest.raises(ValueError, match="ICOM_SERIAL_DEVICE"):
+            _build_backend_config(args)
+
+    def test_serial_missing_port_error_shows_example(self):
+        p = _build_parser()
+        args = p.parse_args(["--backend", "serial", "status"])
+        with pytest.raises(ValueError, match="Example"):
+            _build_backend_config(args)
+
+
+class TestBackendAwareDiscover:
+    def test_discover_serial_exits_with_error(self, capsys):
+        with patch("sys.argv", ["icom-lan", "--backend", "serial", "discover"]):
+            with pytest.raises(SystemExit) as exc_info:
+                main()
+        assert exc_info.value.code == 1
+        captured = capsys.readouterr()
+        assert "serial" in captured.err.lower()
+        assert "not supported" in captured.err.lower()
+
+    def test_discover_serial_error_mentions_lan(self, capsys):
+        with patch("sys.argv", ["icom-lan", "--backend", "serial", "discover"]):
+            with pytest.raises(SystemExit):
+                main()
+        captured = capsys.readouterr()
+        assert "lan" in captured.err.lower()
+
+
+class TestListAudioDevices:
+    def test_list_audio_devices_missing_sounddevice(self, capsys):
+        import builtins
+        real_import = builtins.__import__
+
+        def mock_import(name, *args, **kwargs):
+            if name == "sounddevice":
+                raise ImportError("No module named 'sounddevice'")
+            return real_import(name, *args, **kwargs)
+
+        with patch("builtins.__import__", side_effect=mock_import):
+            with patch("sys.argv", ["icom-lan", "--list-audio-devices"]):
+                with pytest.raises(SystemExit) as exc_info:
+                    main()
+        assert exc_info.value.code == 1
+        captured = capsys.readouterr()
+        assert "sounddevice" in captured.err
+
+    def test_list_audio_devices_plain_output(self, capsys):
+        async def fake_list_cmd(args):
+            print("2 audio device(s):")
+            print("  [0] IC-7610 USB Audio  (in=1, out=1)")
+            print("  [1] Built-in Mic  (in=1, out=0)")
+            return 0
+
+        with patch("icom_lan.cli._cmd_list_audio_devices", side_effect=fake_list_cmd):
+            with patch("sys.argv", ["icom-lan", "--list-audio-devices"]):
+                with pytest.raises(SystemExit) as exc_info:
+                    main()
+        assert exc_info.value.code == 0
+        captured = capsys.readouterr()
+        assert "IC-7610 USB Audio" in captured.out
+
+    def test_list_audio_devices_json_output(self, capsys):
+        import asyncio
+        import argparse as _ap
+        import json as json_module
+        from icom_lan.cli import _cmd_list_audio_devices
+
+        mock_sd = MagicMock()
+        mock_sd.query_devices.return_value = [
+            {
+                "index": 0,
+                "name": "IC-7610 USB Audio",
+                "max_input_channels": 1,
+                "max_output_channels": 1,
+                "default_samplerate": 48000,
+            },
+        ]
+        mock_sd.default = MagicMock()
+        mock_sd.default.device = [-1, -1]
+
+        test_args = _ap.Namespace(json=True)
+
+        with patch.dict("sys.modules", {"sounddevice": mock_sd}):
+            result = asyncio.run(_cmd_list_audio_devices(test_args))
+
+        assert result == 0
+        captured = capsys.readouterr()
+        data = json_module.loads(captured.out.strip())
+        assert data[0]["name"] == "IC-7610 USB Audio"
+        assert data[0]["index"] == 0

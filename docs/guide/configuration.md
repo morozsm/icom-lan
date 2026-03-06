@@ -1,15 +1,47 @@
 # Configuration
 
-## Connection Parameters
+## Backend Selection
+
+icom-lan supports two backends selected via `--backend`:
+
+| Backend | Description |
+|---------|-------------|
+| `lan` (default) | Connects over UDP to the radio's LAN interface |
+| `serial` | Connects via USB CI-V serial port + USB audio devices |
+
+## LAN Backend Parameters
 
 | Parameter | Python API | CLI Flag | Env Var | Default | Description |
 |-----------|-----------|----------|---------|---------|-------------|
 | Host | `host` | `--host` | `ICOM_HOST` | `192.168.1.100` | Radio IP address |
-| Port | `port` | `--port` | `ICOM_PORT` | `50001` | Control port |
+| Port | `port` | `--control-port` | `ICOM_PORT` | `50001` | Control port |
 | Username | `username` | `--user` | `ICOM_USER` | `""` | Auth username |
 | Password | `password` | `--pass` | `ICOM_PASS` | `""` | Auth password |
 | CI-V Address | `radio_addr` | — | — | `0x98` (IC-7610) | Radio's CI-V address |
 | Timeout | `timeout` | `--timeout` | — | `5.0` | Operation timeout (seconds) |
+
+## Serial Backend Parameters
+
+| Parameter | Python API | CLI Flag | Env Var | Default | Description |
+|-----------|-----------|----------|---------|---------|-------------|
+| Device | `device` | `--serial-port` | `ICOM_SERIAL_DEVICE` | — | Serial device path (required) |
+| Baud rate | `baudrate` | `--serial-baud` | `ICOM_SERIAL_BAUDRATE` | `115200` | CI-V baud rate |
+| RX device | `rx_device` | `--rx-device` | `ICOM_USB_RX_DEVICE` | auto | USB audio RX device name |
+| TX device | `tx_device` | `--tx-device` | `ICOM_USB_TX_DEVICE` | auto | USB audio TX device name |
+| CI-V Address | `radio_addr` | — | — | `0x98` (IC-7610) | Radio's CI-V address |
+| Timeout | `timeout` | `--timeout` | — | `5.0` | Operation timeout (seconds) |
+
+```bash
+# Serial backend quick start
+export ICOM_SERIAL_DEVICE=/dev/tty.usbmodem-IC7610
+icom-lan --backend serial status
+icom-lan --backend serial freq 14.074m
+
+# List available USB audio devices
+icom-lan --list-audio-devices
+```
+
+## Connection Parameters (LAN, reference)
 
 ## CI-V Addresses
 

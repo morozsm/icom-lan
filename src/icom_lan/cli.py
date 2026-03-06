@@ -32,6 +32,8 @@ logger = logging.getLogger(__name__)
 
 from . import __version__
 from .audio import AudioStats
+from .backends.config import LanBackendConfig, SerialBackendConfig
+from .backends.factory import create_radio
 from .radio import IcomRadio
 from .types import Mode
 
@@ -107,6 +109,47 @@ def _build_parser() -> argparse.ArgumentParser:
         type=float,
         default=5.0,
         help="Timeout in seconds (default: 5)",
+    )
+    p.add_argument(
+        "--backend",
+        choices=["lan", "serial"],
+        default="lan",
+        help="Backend type: lan (default) or serial (USB CI-V + audio)",
+    )
+    p.add_argument(
+        "--serial-port",
+        dest="serial_port",
+        default=_get_env("ICOM_SERIAL_DEVICE", ""),
+        metavar="PATH",
+        help="Serial device path for --backend serial (default: $ICOM_SERIAL_DEVICE)",
+    )
+    p.add_argument(
+        "--serial-baud",
+        dest="serial_baud",
+        type=int,
+        default=int(_get_env("ICOM_SERIAL_BAUDRATE", "115200")),
+        metavar="BAUD",
+        help="Serial baud rate for --backend serial (default: $ICOM_SERIAL_BAUDRATE or 115200)",
+    )
+    p.add_argument(
+        "--rx-device",
+        dest="rx_device",
+        default=_get_env("ICOM_USB_RX_DEVICE") or None,
+        metavar="NAME",
+        help="USB audio RX device name for --backend serial (default: $ICOM_USB_RX_DEVICE or auto)",
+    )
+    p.add_argument(
+        "--tx-device",
+        dest="tx_device",
+        default=_get_env("ICOM_USB_TX_DEVICE") or None,
+        metavar="NAME",
+        help="USB audio TX device name for --backend serial (default: $ICOM_USB_TX_DEVICE or auto)",
+    )
+    p.add_argument(
+        "--list-audio-devices",
+        dest="list_audio_devices",
+        action="store_true",
+        help="List available USB audio devices and exit (requires icom-lan[bridge])",
     )
     sub = p.add_subparsers(dest="command", help="Command")
 
@@ -534,18 +577,93 @@ def _parse_frequency(value: str) -> int:
         return int(float(value))
 
 
-async def _run(args: argparse.Namespace) -> int:
-    wants_stats = bool(getattr(args, "stats", False))
-    if args.command == "audio" and args.audio_command == "caps" and not wants_stats:
-        return await _cmd_audio_caps(args)
-
-    radio = IcomRadio(
-        args.host,
+def _build_backend_config(args: argparse.Namespace) -> LanBackendConfig | SerialBackendConfig:
+    """Build typed backend config from parsed CLI args."""
+    backend = getattr(args, "backend", "lan")
+    if backend == "serial":
+        device = getattr(args, "serial_port", "")
+        if not device:
+            raise ValueError(
+                "Serial backend requires --serial-port (or $ICOM_SERIAL_DEVICE).\n"
+                "  Example: icom-lan --backend serial --serial-port /dev/tty.usbmodem-IC7610 status"
+            )
+        return SerialBackendConfig(
+            device=device,
+            baudrate=getattr(args, "serial_baud", 115200),
+            timeout=args.timeout,
+            rx_device=getattr(args, "rx_device", None) or None,
+            tx_device=getattr(args, "tx_device", None) or None,
+        )
+    return LanBackendConfig(
+        host=args.host,
         port=args.control_port,
         username=args.user,
         password=args.password,
         timeout=args.timeout,
     )
+
+
+async def _cmd_list_audio_devices(args: argparse.Namespace) -> int:
+    """List available USB audio devices."""
+    try:
+        import sounddevice as _sd
+    except ImportError:
+        print(
+            "Error: --list-audio-devices requires the sounddevice package.\n"
+            "  Install with: pip install icom-lan[bridge]",
+            file=sys.stderr,
+        )
+        return 1
+    from .backends.icom7610.drivers.usb_audio import list_usb_audio_devices
+
+    devices = list_usb_audio_devices(_sd)
+    if getattr(args, "json", False):
+        print(
+            json.dumps(
+                [
+                    {
+                        "index": d.index,
+                        "name": d.name,
+                        "input_channels": d.input_channels,
+                        "output_channels": d.output_channels,
+                        "default_samplerate": d.default_samplerate,
+                        "is_default_input": d.is_default_input,
+                        "is_default_output": d.is_default_output,
+                    }
+                    for d in devices
+                ]
+            )
+        )
+    else:
+        if not devices:
+            print("No audio devices found.")
+        else:
+            print(f"{len(devices)} audio device(s):")
+            for d in devices:
+                tags: list[str] = []
+                if d.is_default_input:
+                    tags.append("default-in")
+                if d.is_default_output:
+                    tags.append("default-out")
+                tag_str = f"  [{', '.join(tags)}]" if tags else ""
+                print(
+                    f"  [{d.index}] {d.name}"
+                    f"  (in={d.input_channels}, out={d.output_channels}){tag_str}"
+                )
+    return 0
+
+
+async def _run(args: argparse.Namespace) -> int:
+    wants_stats = bool(getattr(args, "stats", False))
+    if args.command == "audio" and args.audio_command == "caps" and not wants_stats:
+        return await _cmd_audio_caps(args)
+
+    try:
+        config = _build_backend_config(args)
+    except ValueError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+    radio = create_radio(config)  # type: ignore[assignment]
 
     try:
         async with radio:
@@ -1527,7 +1645,17 @@ def main() -> None:
             datefmt="%H:%M:%S",
         )
 
-    if args.command == "discover":
+    if getattr(args, "list_audio_devices", False):
+        sys.exit(asyncio.run(_cmd_list_audio_devices(args)))
+    elif args.command == "discover":
+        if getattr(args, "backend", "lan") == "serial":
+            print(
+                "Error: 'discover' is not supported for the serial backend.\n"
+                "  Tip: discover scans the network via UDP broadcast (LAN only).\n"
+                "  Use --backend lan or omit --backend to discover radios on the network.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
         sys.exit(asyncio.run(_cmd_discover(None, args)))  # type: ignore[arg-type]
     elif args.command == "proxy":
         from .proxy import run_proxy

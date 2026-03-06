@@ -8,11 +8,17 @@ All commands accept these options:
 
 | Option | Env Var | Default | Description |
 |--------|---------|---------|-------------|
-| `--host` | `ICOM_HOST` | `192.168.1.100` | Radio IP address |
+| `--host` | `ICOM_HOST` | `192.168.1.100` | Radio IP address (LAN backend) |
 | `--control-port` | `ICOM_PORT` | `50001` | Radio UDP control port (`--port` is a deprecated alias) |
-| `--user` | `ICOM_USER` | `""` | Username |
-| `--pass` | `ICOM_PASS` | `""` | Password |
+| `--user` | `ICOM_USER` | `""` | Username (LAN backend) |
+| `--pass` | `ICOM_PASS` | `""` | Password (LAN backend) |
 | `--timeout` | — | `5.0` | Timeout in seconds |
+| `--backend` | — | `lan` | Backend type: `lan` or `serial` |
+| `--serial-port` | `ICOM_SERIAL_DEVICE` | — | Serial device path (`--backend serial`) |
+| `--serial-baud` | `ICOM_SERIAL_BAUDRATE` | `115200` | Serial baud rate (`--backend serial`) |
+| `--rx-device` | `ICOM_USB_RX_DEVICE` | auto | USB audio RX device name (`--backend serial`) |
+| `--tx-device` | `ICOM_USB_TX_DEVICE` | auto | USB audio TX device name (`--backend serial`) |
+| `--list-audio-devices` | — | — | List USB audio devices and exit |
 | `--version` | — | — | Print version and exit |
 
 !!! tip "Use Environment Variables"
@@ -24,6 +30,57 @@ All commands accept these options:
     export ICOM_USER=myuser
     export ICOM_PASS=mypass
     ```
+
+## Backend Selection
+
+icom-lan supports two backends: **LAN** (default) and **serial** (USB CI-V + audio).
+
+### LAN backend (default)
+
+```bash
+# Connects over UDP to the radio's LAN interface
+icom-lan status
+icom-lan --backend lan status
+```
+
+### Serial backend
+
+```bash
+# Connects via USB CI-V serial port (IC-7610, USB cable required)
+icom-lan --backend serial --serial-port /dev/tty.usbmodem-IC7610 status
+icom-lan --backend serial --serial-port /dev/tty.usbmodem-IC7610 freq
+```
+
+Set via environment variable to avoid repeating:
+
+```bash
+export ICOM_SERIAL_DEVICE=/dev/tty.usbmodem-IC7610
+icom-lan --backend serial status
+```
+
+### Audio device selection (serial backend)
+
+The serial backend uses USB audio devices exported by the radio. By default, devices are auto-detected.
+
+```bash
+# List all available audio devices
+icom-lan --list-audio-devices
+
+# Specify explicit devices
+icom-lan --backend serial --serial-port /dev/tty.usbmodem-IC7610 \
+    --rx-device "IC-7610 USB Audio" \
+    --tx-device "IC-7610 USB Audio" \
+    audio rx --out rx.wav --seconds 10
+```
+
+### `discover` command — LAN only
+
+The `discover` command scans the network via UDP broadcast and is only supported with the LAN backend:
+
+```bash
+icom-lan discover                      # LAN: broadcasts and finds radios
+icom-lan --backend serial discover     # Error: not supported
+```
 
 ## Commands
 

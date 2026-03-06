@@ -493,19 +493,19 @@ class TestRunErrorHandling:
             "stale_packets_dropped": 0,
             "out_of_order_packets": 0,
         }
-        with patch("icom_lan.cli.IcomRadio") as radio_cls:
-            radio = AsyncMock()
-            radio.__aenter__.return_value = radio
-            radio.__aexit__.return_value = None
-            radio.start_audio_rx_opus = AsyncMock()
-            radio.stop_audio_rx_opus = AsyncMock()
-            radio.get_audio_stats = MagicMock(return_value=runtime_stats)
-            radio_cls.return_value = radio
-            radio_cls.audio_capabilities.return_value = get_audio_capabilities()
-            with patch("icom_lan.cli.asyncio.sleep", new=AsyncMock()):
-                rc = await _run(args)
+        radio = AsyncMock()
+        radio.__aenter__.return_value = radio
+        radio.__aexit__.return_value = None
+        radio.start_audio_rx_opus = AsyncMock()
+        radio.stop_audio_rx_opus = AsyncMock()
+        radio.get_audio_stats = MagicMock(return_value=runtime_stats)
+        with patch("icom_lan.cli.create_radio", return_value=radio) as mock_create:
+            with patch("icom_lan.cli.IcomRadio") as radio_cls:
+                radio_cls.audio_capabilities.return_value = get_audio_capabilities()
+                with patch("icom_lan.cli.asyncio.sleep", new=AsyncMock()):
+                    rc = await _run(args)
         assert rc == 0
-        radio_cls.assert_called_once()
+        mock_create.assert_called_once()
         radio.start_audio_rx_opus.assert_awaited_once()
         radio.stop_audio_rx_opus.assert_awaited_once()
         data = json.loads(capsys.readouterr().out)
@@ -545,11 +545,10 @@ class TestRunErrorHandling:
             json=False,
             stats=False,
         )
-        with patch("icom_lan.cli.IcomRadio") as radio_cls:
-            radio = AsyncMock()
-            radio.__aenter__.return_value = radio
-            radio.__aexit__.return_value = None
-            radio_cls.return_value = radio
+        radio = AsyncMock()
+        radio.__aenter__.return_value = radio
+        radio.__aexit__.return_value = None
+        with patch("icom_lan.cli.create_radio", return_value=radio):
             with patch("icom_lan.cli._cmd_audio_rx", new_callable=AsyncMock) as cmd:
                 cmd.return_value = 0
                 rc = await _run(args)
@@ -572,11 +571,10 @@ class TestRunErrorHandling:
             json=False,
             stats=False,
         )
-        with patch("icom_lan.cli.IcomRadio") as radio_cls:
-            radio = AsyncMock()
-            radio.__aenter__.return_value = radio
-            radio.__aexit__.return_value = None
-            radio_cls.return_value = radio
+        radio = AsyncMock()
+        radio.__aenter__.return_value = radio
+        radio.__aexit__.return_value = None
+        with patch("icom_lan.cli.create_radio", return_value=radio):
             with patch("icom_lan.cli._cmd_audio_tx", new_callable=AsyncMock) as cmd:
                 cmd.return_value = 0
                 rc = await _run(args)
@@ -599,11 +597,10 @@ class TestRunErrorHandling:
             json=False,
             stats=False,
         )
-        with patch("icom_lan.cli.IcomRadio") as radio_cls:
-            radio = AsyncMock()
-            radio.__aenter__.return_value = radio
-            radio.__aexit__.return_value = None
-            radio_cls.return_value = radio
+        radio = AsyncMock()
+        radio.__aenter__.return_value = radio
+        radio.__aexit__.return_value = None
+        with patch("icom_lan.cli.create_radio", return_value=radio):
             with patch(
                 "icom_lan.cli._cmd_audio_loopback",
                 new_callable=AsyncMock,
