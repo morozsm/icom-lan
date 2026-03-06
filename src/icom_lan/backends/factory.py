@@ -35,6 +35,10 @@ def create_radio(config: BackendConfig) -> Radio:
             baudrate=config.baudrate,
             radio_addr=config.radio_addr,
             timeout=config.timeout,
+            audio_codec=config.audio_codec,
+            audio_sample_rate=config.audio_sample_rate,
+            rx_device=config.rx_device,
+            tx_device=config.tx_device,
             profile=config.profile,
             model=config.model,
         )

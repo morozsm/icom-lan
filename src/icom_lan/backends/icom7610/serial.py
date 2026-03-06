@@ -5,18 +5,64 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable, Protocol
 
 from ..._connection_state import RadioConnectionState
-from ...exceptions import ConnectionError
+from ...audio import AudioPacket
+from ...exceptions import AudioFormatError, ConnectionError
 from ...radio import Icom7610CoreRadio
+from ...types import AudioCodec, get_audio_capabilities
 from .drivers.serial_civ_link import SerialCivLink
 from .drivers.serial_session import SerialSessionDriver
+from .drivers.usb_audio import UsbAudioDriver
 
 if TYPE_CHECKING:
     from ...profiles import RadioProfile
 
 logger = logging.getLogger(__name__)
+_AUDIO_CAPABILITIES = get_audio_capabilities()
+_DEFAULT_AUDIO_CODEC = _AUDIO_CAPABILITIES.default_codec
+_DEFAULT_AUDIO_SAMPLE_RATE = _AUDIO_CAPABILITIES.default_sample_rate_hz
+_TWO_CHANNEL_CODECS = {
+    AudioCodec.PCM_2CH_8BIT,
+    AudioCodec.PCM_2CH_16BIT,
+    AudioCodec.ULAW_2CH,
+    AudioCodec.OPUS_2CH,
+}
+
+
+class _SerialAudioDriver(Protocol):
+    async def start_rx(
+        self,
+        callback: Callable[[bytes], None] | None = None,
+        *,
+        sample_rate: int | None = None,
+        channels: int | None = None,
+        frame_ms: int | None = None,
+    ) -> None:
+        ...
+
+    async def stop_rx(self) -> None:
+        ...
+
+    async def start_tx(
+        self,
+        *,
+        sample_rate: int | None = None,
+        channels: int | None = None,
+        frame_ms: int | None = None,
+    ) -> None:
+        ...
+
+    async def stop_tx(self) -> None:
+        ...
+
+    async def push_tx_pcm(self, frame: bytes) -> None:
+        ...
+
+    @property
+    def tx_running(self) -> bool:
+        ...
 
 
 class Icom7610SerialRadio(Icom7610CoreRadio):
@@ -32,10 +78,15 @@ class Icom7610SerialRadio(Icom7610CoreRadio):
         baudrate: int = 115200,
         radio_addr: int | None = None,
         timeout: float = 5.0,
+        audio_codec: AudioCodec | int = _DEFAULT_AUDIO_CODEC,
+        audio_sample_rate: int = _DEFAULT_AUDIO_SAMPLE_RATE,
+        rx_device: str | None = None,
+        tx_device: str | None = None,
         profile: "RadioProfile | str | None" = None,
         model: str | None = None,
         civ_link: SerialCivLink | None = None,
         session_driver: SerialSessionDriver | None = None,
+        audio_driver: _SerialAudioDriver | None = None,
     ) -> None:
         if session_driver is not None and civ_link is not None:
             raise ValueError("Provide either civ_link or session_driver, not both.")
@@ -46,13 +97,25 @@ class Icom7610SerialRadio(Icom7610CoreRadio):
             password="",
             radio_addr=radio_addr,
             timeout=timeout,
+            audio_codec=audio_codec,
+            audio_sample_rate=audio_sample_rate,
             profile=profile,
             model=model,
         )
         self._serial_device = device
         self._serial_baudrate = baudrate
+        self._serial_rx_device_override = rx_device
+        self._serial_tx_device_override = tx_device
         serial_link = civ_link or SerialCivLink(device=device, baudrate=baudrate)
         self._serial_session = session_driver or SerialSessionDriver(serial_link)
+        self._serial_audio_driver = audio_driver or UsbAudioDriver(
+            rx_device=rx_device,
+            tx_device=tx_device,
+            sample_rate=audio_sample_rate,
+            channels=self._serial_audio_channels_for_codec(),
+            frame_ms=20,
+        )
+        self._serial_audio_seq = 0
 
     @property
     def connected(self) -> bool:
@@ -118,6 +181,7 @@ class Icom7610SerialRadio(Icom7610CoreRadio):
     async def disconnect(self) -> None:
         # Always stop watchdog first to avoid orphan retry loops on failed reconnects.
         await self._stop_civ_data_watchdog()
+        await self._stop_serial_audio_driver()
         if (
             self._conn_state != RadioConnectionState.CONNECTED
             and not self._serial_session.connected
@@ -139,6 +203,183 @@ class Icom7610SerialRadio(Icom7610CoreRadio):
         await super().disconnect()
         await self._serial_session.disconnect()
         self._ctrl_transport = self._serial_session.control_transport
+
+    async def start_audio_rx_opus(
+        self,
+        callback: Callable[[AudioPacket | None], None],
+        *,
+        jitter_depth: int = 5,
+    ) -> None:
+        if not callable(callback):
+            raise TypeError("callback must be callable and accept AudioPacket | None.")
+        if isinstance(jitter_depth, bool) or not isinstance(jitter_depth, int):
+            raise TypeError(f"jitter_depth must be an int, got {type(jitter_depth).__name__}.")
+        if jitter_depth < 0:
+            raise ValueError(f"jitter_depth must be >= 0, got {jitter_depth}.")
+        self._check_connected()
+
+        self._opus_rx_user_callback = callback
+        self._opus_rx_jitter_depth = jitter_depth
+
+        sample_rate = self.audio_sample_rate
+        channels = self._serial_audio_channels_for_codec()
+        frame_ms = 20
+        transcoder = (
+            self._get_pcm_transcoder(
+                sample_rate=sample_rate,
+                channels=channels,
+                frame_ms=frame_ms,
+            )
+            if self._serial_codec_is_opus()
+            else None
+        )
+
+        def _on_pcm_frame(pcm_frame: bytes) -> None:
+            payload = pcm_frame
+            if transcoder is not None:
+                try:
+                    payload = transcoder.pcm_to_opus(pcm_frame)
+                except Exception:
+                    logger.warning("serial-audio: failed to encode PCM frame to Opus", exc_info=True)
+                    return
+            packet = AudioPacket(
+                ident=0x9781,
+                send_seq=self._serial_audio_seq,
+                data=payload,
+            )
+            self._serial_audio_seq = (self._serial_audio_seq + 1) & 0xFFFF
+            callback(packet)
+
+        await self._serial_audio_driver.start_rx(
+            _on_pcm_frame,
+            sample_rate=sample_rate,
+            channels=channels,
+            frame_ms=frame_ms,
+        )
+
+    async def stop_audio_rx_opus(self) -> None:
+        self._opus_rx_user_callback = None
+        await self._serial_audio_driver.stop_rx()
+
+    async def start_audio_rx_pcm(
+        self,
+        callback: Callable[[bytes | None], None],
+        *,
+        sample_rate: int = 48000,
+        channels: int = 1,
+        frame_ms: int = 20,
+        jitter_depth: int = 5,
+    ) -> None:
+        if not callable(callback):
+            raise TypeError("callback must be callable and accept bytes | None.")
+        for name, value in (
+            ("sample_rate", sample_rate),
+            ("channels", channels),
+            ("frame_ms", frame_ms),
+            ("jitter_depth", jitter_depth),
+        ):
+            if isinstance(value, bool) or not isinstance(value, int):
+                raise TypeError(f"{name} must be an int, got {type(value).__name__}.")
+        if jitter_depth < 0:
+            raise ValueError(f"jitter_depth must be >= 0, got {jitter_depth}.")
+        if (sample_rate * frame_ms) % 1000 != 0:
+            raise AudioFormatError("sample_rate * frame_ms must produce an integer frame size.")
+
+        self._check_connected()
+        self._pcm_rx_user_callback = callback
+        self._pcm_rx_jitter_depth = jitter_depth
+
+        def _on_pcm_frame(pcm_frame: bytes) -> None:
+            callback(pcm_frame)
+
+        await self._serial_audio_driver.start_rx(
+            _on_pcm_frame,
+            sample_rate=sample_rate,
+            channels=channels,
+            frame_ms=frame_ms,
+        )
+
+    async def stop_audio_rx_pcm(self) -> None:
+        self._pcm_rx_user_callback = None
+        await self.stop_audio_rx_opus()
+
+    async def start_audio_tx_opus(self) -> None:
+        self._check_connected()
+        await self._serial_audio_driver.start_tx(
+            sample_rate=self.audio_sample_rate,
+            channels=self._serial_audio_channels_for_codec(),
+            frame_ms=20,
+        )
+
+    async def push_audio_tx_opus(self, opus_data: bytes) -> None:
+        self._check_connected()
+        if not self._serial_audio_driver.tx_running:
+            raise RuntimeError("Audio TX not started")
+        payload = bytes(opus_data)
+        if self._serial_codec_is_opus():
+            transcoder = self._get_pcm_transcoder(
+                sample_rate=self.audio_sample_rate,
+                channels=self._serial_audio_channels_for_codec(),
+                frame_ms=20,
+            )
+            payload = transcoder.opus_to_pcm(payload)
+        await self._serial_audio_driver.push_tx_pcm(payload)
+
+    async def start_audio_tx_pcm(
+        self,
+        *,
+        sample_rate: int = 48000,
+        channels: int = 1,
+        frame_ms: int = 20,
+    ) -> None:
+        for name, value in (
+            ("sample_rate", sample_rate),
+            ("channels", channels),
+            ("frame_ms", frame_ms),
+        ):
+            if isinstance(value, bool) or not isinstance(value, int):
+                raise TypeError(f"{name} must be an int, got {type(value).__name__}.")
+        if (sample_rate * frame_ms) % 1000 != 0:
+            raise AudioFormatError("sample_rate * frame_ms must produce an integer frame size.")
+
+        self._check_connected()
+        await self._serial_audio_driver.start_tx(
+            sample_rate=sample_rate,
+            channels=channels,
+            frame_ms=frame_ms,
+        )
+        self._pcm_tx_fmt = (sample_rate, channels, frame_ms)
+
+    async def push_audio_tx_pcm(
+        self,
+        pcm_bytes: bytes | bytearray | memoryview,
+    ) -> None:
+        self._check_connected()
+        if self._pcm_tx_fmt is None:
+            raise RuntimeError(
+                "PCM TX not started; call start_audio_tx_pcm() before push_audio_tx_pcm()."
+            )
+        if not isinstance(pcm_bytes, (bytes, bytearray, memoryview)):
+            raise AudioFormatError("PCM input must be bytes-like.")
+        sample_rate, channels, frame_ms = self._pcm_tx_fmt
+        if (sample_rate * frame_ms) % 1000 != 0:
+            raise AudioFormatError("sample_rate * frame_ms must produce an integer frame size.")
+        frame_samples = (sample_rate * frame_ms) // 1000
+        expected = frame_samples * channels * 2
+        frame = bytes(pcm_bytes)
+        if len(frame) != expected:
+            raise AudioFormatError(
+                f"PCM frame size mismatch: expected {expected} bytes "
+                f"({frame_ms}ms at {sample_rate}Hz, {channels}ch s16le), got {len(frame)}."
+            )
+        await self._serial_audio_driver.push_tx_pcm(frame)
+
+    async def stop_audio_tx_opus(self) -> None:
+        await self._serial_audio_driver.stop_tx()
+        self._pcm_tx_fmt = None
+
+    async def stop_audio_tx_pcm(self) -> None:
+        await self.stop_audio_tx_opus()
 
     async def soft_reconnect(self) -> None:
         if self._serial_session.ready and self._civ_transport is not None:
@@ -239,6 +480,25 @@ class Icom7610SerialRadio(Icom7610CoreRadio):
                     await asyncio.sleep(self._SERIAL_WATCHDOG_RETRY_S)
         except asyncio.CancelledError:
             pass
+
+    async def _stop_serial_audio_driver(self) -> None:
+        self._pcm_tx_fmt = None
+        self._pcm_rx_user_callback = None
+        self._opus_rx_user_callback = None
+        try:
+            await self._serial_audio_driver.stop_tx()
+        except Exception:
+            logger.debug("serial-audio: failed to stop TX path", exc_info=True)
+        try:
+            await self._serial_audio_driver.stop_rx()
+        except Exception:
+            logger.debug("serial-audio: failed to stop RX path", exc_info=True)
+
+    def _serial_audio_channels_for_codec(self) -> int:
+        return 2 if self._audio_codec in _TWO_CHANNEL_CODECS else 1
+
+    def _serial_codec_is_opus(self) -> bool:
+        return self._audio_codec in (AudioCodec.OPUS_1CH, AudioCodec.OPUS_2CH)
 
 
 __all__ = ["Icom7610SerialRadio"]

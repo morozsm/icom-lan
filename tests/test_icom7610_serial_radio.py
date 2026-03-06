@@ -10,6 +10,7 @@ from icom_lan import RadioConnectionState
 from icom_lan.backends.icom7610 import Icom7610SerialRadio
 from icom_lan.commands import CONTROLLER_ADDR, IC_7610_ADDR, _CMD_FREQ_GET, build_civ_frame
 from icom_lan.exceptions import ConnectionError
+from icom_lan.types import AudioCodec
 from icom_lan.types import bcd_encode
 
 
@@ -85,6 +86,45 @@ class _FakeSerialCivLink:
 
     def queue_response_on_send(self, send_no: int, frame: bytes) -> None:
         self._responses_by_send.setdefault(send_no, []).append(frame)
+
+
+class _FakeUsbAudioDriver:
+    def __init__(self) -> None:
+        self.rx_running = False
+        self.tx_running = False
+        self._rx_callback = None
+        self.tx_frames: list[bytes] = []
+        self.rx_starts = 0
+        self.tx_starts = 0
+
+    async def start_rx(self, callback, **kwargs) -> None:  # type: ignore[no-untyped-def]
+        _ = kwargs
+        if self.rx_running:
+            raise RuntimeError("RX stream already started.")
+        self.rx_running = True
+        self.rx_starts += 1
+        self._rx_callback = callback
+
+    async def stop_rx(self) -> None:
+        self.rx_running = False
+        self._rx_callback = None
+
+    async def start_tx(self, **kwargs) -> None:  # type: ignore[no-untyped-def]
+        _ = kwargs
+        if self.tx_running:
+            raise RuntimeError("TX stream already started.")
+        self.tx_running = True
+        self.tx_starts += 1
+
+    async def stop_tx(self) -> None:
+        self.tx_running = False
+
+    async def push_tx_pcm(self, frame: bytes) -> None:
+        self.tx_frames.append(bytes(frame))
+
+    def emit_rx_pcm(self, frame: bytes) -> None:
+        if self._rx_callback is not None:
+            self._rx_callback(frame)
 
 
 @pytest.mark.asyncio
@@ -182,3 +222,69 @@ async def test_serial_disconnect_cleans_watchdog_when_already_disconnected() -> 
     radio._civ_data_watchdog_task = asyncio.create_task(asyncio.sleep(10))
     await radio.disconnect()
     assert getattr(radio, "_civ_data_watchdog_task", None) is None
+
+
+@pytest.mark.asyncio
+async def test_serial_audio_opus_contract_uses_usb_driver_lifecycle() -> None:
+    usb_audio = _FakeUsbAudioDriver()
+    radio = Icom7610SerialRadio(
+        device="/dev/ttyUSB0",
+        civ_link=_FakeSerialCivLink(),
+        audio_driver=usb_audio,
+    )
+    await radio.connect()
+    received: list[bytes] = []
+    await radio.start_audio_rx_opus(lambda packet: received.append(packet.data))
+    usb_audio.emit_rx_pcm(b"\x01\x02" * 960)
+    await asyncio.sleep(0.05)
+    await radio.start_audio_tx_opus()
+    await radio.push_audio_tx_opus(b"\x11\x22" * 960)
+    await radio.stop_audio_tx_opus()
+    await radio.stop_audio_rx_opus()
+    await radio.disconnect()
+
+    assert usb_audio.rx_starts == 1
+    assert usb_audio.tx_starts == 1
+    assert received
+    assert received[0] == b"\x01\x02" * 960
+    assert usb_audio.tx_frames[0] == b"\x11\x22" * 960
+
+
+@pytest.mark.asyncio
+async def test_serial_audio_pcm_contract_bridge_compatible() -> None:
+    usb_audio = _FakeUsbAudioDriver()
+    radio = Icom7610SerialRadio(
+        device="/dev/ttyUSB0",
+        civ_link=_FakeSerialCivLink(),
+        audio_driver=usb_audio,
+        audio_codec=AudioCodec.OPUS_1CH,
+    )
+    await radio.connect()
+
+    rx_pcm: list[bytes] = []
+    await radio.start_audio_rx_pcm(lambda frame: rx_pcm.append(frame or b""))
+    usb_audio.emit_rx_pcm(b"\x21\x43" * 960)
+    await asyncio.sleep(0.05)
+
+    await radio.start_audio_tx_pcm()
+    await radio.push_audio_tx_pcm(b"\x10\x20" * 960)
+    await radio.stop_audio_tx_pcm()
+    await radio.stop_audio_rx_pcm()
+    await radio.disconnect()
+
+    assert rx_pcm
+    assert rx_pcm[0] == b"\x21\x43" * 960
+    assert usb_audio.tx_frames[0] == b"\x10\x20" * 960
+
+
+@pytest.mark.asyncio
+async def test_serial_audio_tx_requires_start() -> None:
+    radio = Icom7610SerialRadio(
+        device="/dev/ttyUSB0",
+        civ_link=_FakeSerialCivLink(),
+        audio_driver=_FakeUsbAudioDriver(),
+    )
+    await radio.connect()
+    with pytest.raises(RuntimeError, match="Audio TX not started"):
+        await radio.push_audio_tx_opus(b"\x00" * 1920)
+    await radio.disconnect()
