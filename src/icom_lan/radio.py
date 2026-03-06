@@ -30,6 +30,7 @@ from .commands import (
     get_af_mute,
     get_attenuator as get_attenuator_cmd,
     get_apf_type_level,
+    get_band_edge_freq,
     get_data_mode as get_data_mode_cmd,
     get_dash_ratio,
     get_digisel_shift,
@@ -69,6 +70,7 @@ from .commands import (
     get_ssb_tx_bandwidth,
     get_twin_peak_filter,
     get_agc_time_constant,
+    get_various_squelch,
     get_vox,
     get_vox_gain,
     get_anti_vox_gain,
@@ -2473,6 +2475,29 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
     # ------------------------------------------------------------------
     # Transceiver status family (#136)
     # ------------------------------------------------------------------
+
+    async def get_band_edge_freq(self) -> int:
+        """Read the current band-edge frequency in Hz."""
+        self._check_connected()
+        civ = get_band_edge_freq(to_addr=self._radio_addr)
+        resp = await self._send_civ_raw(civ, key="get_band_edge_freq", dedupe=True)
+        return parse_frequency_response(resp)
+
+    async def get_various_squelch(
+        self, receiver: int = RECEIVER_MAIN
+    ) -> bool:
+        """Read various-squelch status for the selected receiver."""
+        self._require_receiver(receiver, operation="get_various_squelch")
+        self._require_cmd29_route(
+            0x15, 0x05, receiver=receiver, operation="get_various_squelch"
+        )
+        civ = get_various_squelch(to_addr=self._radio_addr, receiver=receiver)
+        return await self._get_bool_value(
+            civ,
+            key=f"get_various_squelch:{receiver}",
+            command=0x15,
+            sub=0x05,
+        )
 
     async def get_power_meter(self) -> int:
         """Read the RF power meter (0-255 raw BCD)."""

@@ -1451,6 +1451,33 @@ class TestOperatorToggleParity:
         )
         assert await method(**kwargs) == expected
 
+
+class TestTransceiverStatusParity:
+    """Test high-level transceiver status parity methods."""
+
+    @pytest.mark.asyncio
+    async def test_get_band_edge_freq(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        mock_transport.queue_response(
+            _wrap_civ_in_udp(
+                build_civ_frame(
+                    CONTROLLER_ADDR,
+                    IC_7610_ADDR,
+                    0x02,
+                    data=bcd_encode(14_074_000),
+                )
+            )
+        )
+        assert await radio.get_band_edge_freq() == 14_074_000
+
+    @pytest.mark.asyncio
+    async def test_get_various_squelch(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        mock_transport.queue_response(_meter_status_response(0x05, 0x01, receiver=1))
+        assert await radio.get_various_squelch(receiver=1) is True
+
     @pytest.mark.asyncio
     async def test_get_agc_time_constant_reads_single_byte_bcd(
         self,

@@ -212,7 +212,7 @@ Each UDP packet has a fixed-format header (see `packettypes.h` in wfview):
 - **M4 parity family counts (from matrix):**
   - `baseline_core` (pre-M4 baseline, no owner issue): 38 implemented, 0 partial, 0 missing
   - `#132 vfo_dualwatch_scan`: 0 implemented, 4 partial, 6 missing
-  - `#136 transceiver_status`: 0 implemented, 2 partial, 9 missing
+  - `#136 transceiver_status`: 11 implemented, 0 partial, 0 missing
   - `#137 advanced_scope`: 0 implemented, 10 partial, 3 missing
   - `#130 dsp_levels`: 21 implemented, 0 partial, 0 missing
   - `#131 operator_toggles`: 15 implemented, 0 partial, 0 missing
