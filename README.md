@@ -5,13 +5,14 @@
 [![Tests](https://img.shields.io/badge/tests-1807%20passed-brightgreen.svg)](#testing)
 [![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen.svg)](#testing)
 
-**Python library for controlling Icom transceivers over LAN (UDP).**
+**Python library for controlling Icom transceivers over LAN (UDP) or USB serial.**
 
 Direct connection to your radio — no wfview, hamlib, or RS-BA1 required.
 
 ## Features
 
-- 📡 **Direct UDP connection** — no intermediate software needed
+- 📡 **Direct UDP connection** — LAN backend (UDP ports 50001/2/3), no intermediate software needed
+- 🔌 **USB serial backend** — IC-7610 USB CI-V + USB audio devices ([setup guide](https://morozsm.github.io/icom-lan/guide/ic7610-usb-setup/))
 - 🎛️ **Full CI-V command set** — frequency, mode, filter, power, meters, PTT, CW keying, VFO, split, ATT, PREAMP
 - 🔍 **Network discovery** — find radios on your LAN automatically
 - 💻 **CLI tool** — `icom-lan status`, `icom-lan freq 14.074m`
@@ -37,16 +38,18 @@ Direct connection to your radio — no wfview, hamlib, or RS-BA1 required.
 
 ## Supported Radios
 
-| Radio | Status | CI-V Address |
-|-------|--------|-------------|
-| **IC-7610** | ✅ Tested | `0x98` |
-| IC-705 | Should work | `0xA4` |
-| IC-7300 | Should work | `0x94` |
-| IC-9700 | Should work | `0xA2` |
-| IC-7851 | Should work | `0x8E` |
-| IC-R8600 | Should work | `0x96` |
+| Radio | LAN | USB Serial | CI-V Address |
+|-------|-----|------------|-------------|
+| **IC-7610** | ✅ Tested | ✅ Tested | `0x98` |
+| IC-705 | Should work | — | `0xA4` |
+| IC-7300 | Should work | — | `0x94` |
+| IC-9700 | Should work | — | `0xA2` |
+| IC-7851 | Should work | — | `0x8E` |
+| IC-R8600 | Should work | — | `0x96` |
 
-Any Icom radio with LAN/WiFi control should work — the CI-V address is configurable.
+Any Icom radio with LAN/WiFi control should work over LAN — the CI-V address is configurable.
+
+**USB Serial Backend**: Currently supports IC-7610 (hardware validated). See [IC-7610 USB Serial Backend Setup Guide](https://morozsm.github.io/icom-lan/guide/ic7610-usb-setup/) for setup instructions.
 
 ## Installation
 

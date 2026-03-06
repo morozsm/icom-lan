@@ -64,6 +64,101 @@
   └─────────────────────────────────────────┘
 ```
 
+!!! note "Legacy LAN-Only Diagram"
+    The diagram above represents the original LAN-only architecture. For the current multi-backend architecture (LAN + Serial), see the **Multi-Backend Architecture** section below.
+
+## Multi-Backend Architecture
+
+icom-lan now uses a **shared-core backend-neutral architecture**. Consumers (CLI/Web/rigctld) program against the `Radio` protocol, while thin backend adapters handle transport-specific details.
+
+```
+┌──────────────────────────────────────────────────────────────────────────┐
+│                              icom-lan                                    │
+│                                                                          │
+│  ┌───────────┐       ┌─────────────┐       ┌────────────┐              │
+│  │    CLI    │       │   Web UI    │       │  Rigctld   │              │
+│  │  (cli.py) │       │   (web/)    │       │ (rigctld/) │              │
+│  └─────┬─────┘       └──────┬──────┘       └─────┬──────┘              │
+│        └─────────────────────┼────────────────────┘                     │
+│                              │                                          │
+│                 ┌────────────▼─────────────┐                            │
+│                 │   Radio Protocol         │  ← Backend-neutral API     │
+│                 │  (radio_protocol.py)     │                            │
+│                 │  + capability protocols  │                            │
+│                 └────────────┬─────────────┘                            │
+│                              │                                          │
+│                 ┌────────────▼─────────────┐                            │
+│                 │  backends/factory.py     │  ← create_radio(config)    │
+│                 │  create_radio(...)       │                            │
+│                 └────────────┬─────────────┘                            │
+│                              │                                          │
+│              ┌───────────────┴────────────────┐                         │
+│              │                                │                         │
+│    ┌─────────▼──────────┐         ┌─────────▼──────────┐               │
+│    │   IcomRadio        │         │ Icom7610Serial     │               │
+│    │  (LAN adapter)     │         │ Radio              │               │
+│    │  radio.py          │         │ backends/icom      │               │
+│    │                    │         │  7610/serial.py    │               │
+│    │  ┌──────────────┐  │         │                    │               │
+│    │  │ LAN-specific │  │         │  ┌──────────────┐  │               │
+│    │  │ transports   │  │         │  │ SerialCivLink│  │               │
+│    │  │ UDP :50001   │  │         │  │ UsbAudioDrvr │  │               │
+│    │  │ UDP :50002   │  │         │  └──────────────┘  │               │
+│    │  │ UDP :50003   │  │         │                    │               │
+│    │  └──────────────┘  │         └──────────┬─────────┘               │
+│    └─────────┬──────────┘                    │                         │
+│              │                               │                         │
+│              │       ┌───────────────────────┴──────────────┐          │
+│              │       │      Icom7610CoreRadio               │          │
+│              └───────►      (shared executable core)        │          │
+│                      │  - Commander (priority queue)        │          │
+│                      │  - CI-V RX routing                   │          │
+│                      │  - RadioState (MAIN/SUB)             │          │
+│                      │  - ScopeAssembler                    │          │
+│                      │  - Command29 dual-receiver routing   │          │
+│                      │  - StateCache                        │          │
+│                      └──────────────────────────────────────┘          │
+└──────────────────────────────────────────────────────────────────────────┘
+                              │                       │
+                              ▼                       ▼
+                     IC-7610 over LAN         IC-7610 over USB
+                     (UDP :50001/2/3)        (serial CI-V + USB audio)
+```
+
+### Key Architectural Layers
+
+1. **Consumers** (CLI/Web/rigctld) — program against `Radio` + capability protocols
+2. **Backend Factory** — `create_radio(config)` wires typed config → concrete radio
+3. **Backend Adapters** — thin adapters for LAN (UDP) and serial (USB CI-V + audio)
+4. **Shared Core** — `Icom7610CoreRadio` with commander, state, CI-V routing, scope assembly
+5. **Transports** — LAN uses UDP sockets, serial uses `SerialCivLink` + `UsbAudioDriver`
+
+### Backend-Neutral Boundary
+
+All consumer code (`web/`, `rigctld/`, `cli.py`) depends **only** on:
+- `radio_protocol.Radio` (core interface)
+- Optional capability protocols (`AudioCapable`, `ScopeCapable`, `DualReceiverCapable`)
+
+Direct imports of `IcomRadio` or `Icom7610SerialRadio` are **forbidden** in consumer layers and enforced by lint/CI.
+
+### Backend Comparison: IC-7610 LAN vs Serial
+
+| Feature | LAN Backend | Serial Backend |
+|---------|-------------|----------------|
+| **Control (freq/mode/PTT)** | ✅ Full | ✅ Full |
+| **Meters (S/SWR/ALC)** | ✅ Full | ✅ Full |
+| **Audio RX** | ✅ Opus/PCM over UDP | ✅ USB audio device |
+| **Audio TX** | ✅ Opus/PCM over UDP | ✅ USB audio device |
+| **Scope/Waterfall** | ✅ Full (~225 pkt/s) | ⚠️ Requires ≥115200 baud* |
+| **Dual Receiver** | ✅ Command29 | ✅ Command29 |
+| **Remote Access** | ✅ Over LAN/VPN | ❌ USB only |
+| **Discovery** | ✅ UDP broadcast | ❌ N/A |
+| **Setup** | IP, username, password | USB cable + device path |
+
+\* **Scope guardrail**: Serial backend enforces minimum 115200 baud for scope/waterfall due to high CI-V packet rate. Lower baud rates risk command timeout/starvation. Override via `allow_low_baud_scope=True` or `ICOM_SERIAL_SCOPE_ALLOW_LOW_BAUD=1` (use with caution).
+
+See [IC-7610 USB Serial Backend Setup Guide](../guide/ic7610-usb-setup.md) for detailed setup instructions.
+
 ## Module Responsibilities
 
 ### `radio.py` — High-Level Public API (1549 lines)

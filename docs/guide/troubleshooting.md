@@ -229,3 +229,143 @@ may stutter briefly during reconnection.
 
 **Solution:** v0.8.0+ uses a 200ms jitter buffer (up from 50ms). For very high
 latency connections, this may still be insufficient — consider a local deployment.
+
+## Serial Backend Issues (IC-7610 USB)
+
+### "No such file or directory: /dev/cu.usbserial-..."
+
+**Symptom:** `FileNotFoundError` or `SerialException` when connecting.
+
+**Causes:**
+1. USB cable not connected
+2. Radio not powered on
+3. Wrong device path
+
+**Solutions:**
+```bash
+# List available serial devices (macOS)
+ls -l /dev/cu.usbserial-*
+
+# Linux
+ls -l /dev/ttyUSB*
+
+# Wait 5-10 seconds after power-on for device to appear
+```
+
+### "CI-V USB Port must be set to CI-V, not REMOTE"
+
+**Symptom:** Serial connection opens, but CI-V commands fail with timeout or NAK.
+
+**Cause:** Radio's `CI-V USB Port` setting is in `[REMOTE]` mode (RS-BA1), not `Link to [CI-V]`.
+
+**Solution:**
+1. On IC-7610: Menu → Set → Connectors → CI-V → **CI-V USB Port**
+2. Set to **`Link to [CI-V]`** (NOT `[REMOTE]`)
+3. Disconnect/reconnect USB cable
+4. Retry connection
+
+!!! danger "Critical Hardware Finding"
+    This was confirmed with live IC-7610 hardware validation (issue #146, 2026-03-06). `[REMOTE]` mode blocks serial CI-V commands. Use `Link to [CI-V]` for icom-lan serial backend.
+
+### "Audio device 'IC-7610 USB Audio' not found"
+
+**Symptom:** `AudioError` or `sounddevice` exception when starting audio.
+
+**Causes:**
+1. USB audio not enabled on radio
+2. Wrong device name
+3. sounddevice/numpy not installed
+
+**Solutions:**
+```bash
+# List available audio devices
+icom-lan --list-audio-devices
+icom-lan --list-audio-devices --json
+
+# Check radio settings:
+# Menu → Set → Connectors → USB Audio → USB Audio (RX/TX) → Enabled
+
+# Install audio dependencies if missing
+pip install 'icom-lan[serial]'
+```
+
+### "Scope over serial requires baudrate >= 115200"
+
+**Symptom:** `CommandError` when calling `enable_scope()` or `capture_scope_frame()` on serial backend with baud < 115200.
+
+**Cause:** Scope CI-V traffic is high-rate (~225 packets/sec on LAN). Lower serial baud rates cannot sustain this without starving command responses. The serial backend enforces a deterministic guardrail.
+
+**Solutions:**
+1. **Recommended:** Set CI-V USB Baud Rate to 115200 or higher in radio settings:
+   - Menu → Set → Connectors → CI-V → CI-V USB Baud Rate → **115200**
+2. **Override** (use with caution for debugging only):
+   ```bash
+   export ICOM_SERIAL_SCOPE_ALLOW_LOW_BAUD=1
+   icom-lan --backend serial --serial-baud 19200 scope
+   ```
+   Python API:
+   ```python
+   config = SerialBackendConfig(..., allow_low_baud_scope=True)
+   ```
+   The library will log a warning about increased timeout risk.
+
+### Serial CI-V commands time out under load
+
+**Symptom:** `TimeoutError` on CI-V commands when audio or scope is active.
+
+**Causes:**
+1. Baud rate too low for combined traffic
+2. CI-V pacing too aggressive
+
+**Solutions:**
+```bash
+# Increase serial CI-V pacing interval (default 50 ms)
+export ICOM_SERIAL_CIV_MIN_INTERVAL_MS=80
+icom-lan --backend serial status
+
+# Or use higher baud rate (radio setting)
+# Menu → Set → Connectors → CI-V → CI-V USB Baud Rate → 115200
+```
+
+### USB audio RX works, but TX does not
+
+**Symptom:** Can hear radio RX audio, but transmit from computer does not work.
+
+**Causes:**
+1. Radio USB Audio TX not enabled
+2. PTT not activated
+3. Wrong TX device selected
+
+**Solutions:**
+```bash
+# Check radio setting:
+# Menu → Set → Connectors → USB Audio → USB Audio TX → Enabled
+
+# Verify TX device name matches RX
+icom-lan --list-audio-devices
+
+# Explicitly set TX device
+icom-lan --backend serial --tx-device "IC-7610 USB Audio" audio tx --in test.wav
+
+# Ensure PTT is active during TX (library handles this automatically for audio tx)
+```
+
+### Permission denied on /dev/cu.usbserial-*
+
+**Symptom:** `PermissionError` when opening serial device.
+
+**Cause:** User lacks permissions (rare on macOS, more common on Linux).
+
+**Solutions:**
+```bash
+# Linux: add user to dialout group
+sudo usermod -a -G dialout $USER
+# Logout/login required
+
+# macOS: check ownership (typically world-readable by default)
+ls -l /dev/cu.usbserial-*
+# Should show: crw-rw-rw- root wheel
+
+# Temporary workaround (not recommended for production)
+sudo chmod 666 /dev/cu.usbserial-XXXXXX
+```

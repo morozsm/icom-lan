@@ -234,11 +234,154 @@ assert isinstance(YaesuRadio("/dev/ttyUSB0"), Radio)
 
 ## Backend Comparison
 
+### IC-7610: LAN vs Serial
+
+| Feature | LAN Backend | Serial Backend |
+|---------|-------------|----------------|
+| **Transport** | UDP (ports 50001/2/3) | USB CI-V serial + USB audio devices |
+| **Protocol** | CI-V over UDP | CI-V over serial + USB audio |
+| **Control (freq/mode/PTT)** | ✅ Full | ✅ Full |
+| **Meters (S/SWR/ALC)** | ✅ Full | ✅ Full |
+| **Audio RX** | ✅ Opus/PCM over UDP | ✅ USB audio device |
+| **Audio TX** | ✅ Opus/PCM over UDP | ✅ USB audio device |
+| **Scope/Waterfall** | ✅ Full (~225 pkt/s) | ⚠️ Requires ≥115200 baud* |
+| **Dual Receiver (Command29)** | ✅ Full | ✅ Full |
+| **Remote Access** | ✅ Over LAN/VPN | ❌ USB only (local) |
+| **Discovery** | ✅ UDP broadcast | ❌ N/A |
+| **Setup** | IP, username, password | USB cable + device path |
+| **Tested Models** | IC-7610, IC-7851 | IC-7610 |
+
+\* **Scope guardrail**: Serial backend enforces minimum 115200 baud for scope/waterfall due to high CI-V packet rate. Lower baud rates risk command timeout/starvation. Override via `allow_low_baud_scope=True` or `ICOM_SERIAL_SCOPE_ALLOW_LOW_BAUD=1` (use with caution).
+
+### Cross-Vendor Comparison
+
 | Feature | Icom LAN | Icom Serial | Yaesu CAT | Digirig |
 |---------|----------|-------------|-----------|---------|
 | **Transport** | UDP | USB Serial | USB Serial | USB Serial |
 | **Protocol** | CI-V | CI-V | CAT | CAT/CI-V |
 | **Audio** | LAN (Opus/PCM) | USB Audio Device | USB Audio Device | USB Audio Device |
-| **Scope** | LAN | ❌ | ❌ | ❌ |
-| **Dual RX** | ✅ (IC-7610) | ❌ | ❌ | ❌ |
-| **Radios** | IC-7610, IC-7851 | IC-7300, IC-705 | FTX-1, FT-710, etc. | Any + 3.5mm |
+| **Scope** | ✅ (IC-7610/7851) | ⚠️ (IC-7610, ≥115200 baud) | ❌ | ❌ |
+| **Dual RX** | ✅ (IC-7610) | ✅ (IC-7610) | ❌ | ❌ |
+| **Radios** | IC-7610, IC-7851 | IC-7610 | FTX-1, FT-710, etc. | Any + 3.5mm |
+
+## Migration and Backward Compatibility
+
+### Existing Code (LAN Backend)
+
+If you're currently using `IcomRadio` directly, **no changes are required**:
+
+```python
+from icom_lan import IcomRadio
+
+# This still works (LAN backend, backward compatible)
+async with IcomRadio("192.168.1.100", username="user", password="pass") as radio:
+    freq = await radio.get_frequency()
+```
+
+`IcomRadio` is now a **backward-compatible alias** for the LAN backend. All existing code, scripts, and integrations continue to work without modification.
+
+### New Code (Backend Factory)
+
+For new code or when adding serial backend support, use the **typed config factory**:
+
+```python
+from icom_lan.backends.factory import create_radio
+from icom_lan.backends.config import LanBackendConfig, SerialBackendConfig
+
+# LAN backend via factory (explicit)
+lan_config = LanBackendConfig(
+    host="192.168.1.100",
+    username="user",
+    password="pass",
+)
+radio = create_radio(lan_config)
+
+# Serial backend via factory
+serial_config = SerialBackendConfig(
+    device="/dev/cu.usbserial-111120",
+    baudrate=115200,
+)
+radio = create_radio(serial_config)
+
+# Both return a Radio protocol-compliant instance
+async with radio:
+    freq = await radio.get_frequency()
+```
+
+### CLI Backward Compatibility
+
+Default behavior is **unchanged** (LAN):
+
+```bash
+# Default: LAN backend (same as before)
+icom-lan status
+icom-lan freq 14.074m
+
+# Explicit LAN backend
+icom-lan --backend lan status
+
+# New: Serial backend
+icom-lan --backend serial --serial-port /dev/cu.usbserial-111120 status
+```
+
+### Web UI and rigctld
+
+Web UI and rigctld now support backend selection via CLI flags. Default is LAN for backward compatibility.
+
+```bash
+# Web UI: LAN backend (default)
+icom-lan web
+
+# Web UI: Serial backend
+icom-lan --backend serial --serial-port /dev/cu.usbserial-111120 web
+
+# rigctld: LAN backend (default)
+icom-lan serve
+
+# rigctld: Serial backend
+icom-lan --backend serial --serial-port /dev/cu.usbserial-111120 serve
+```
+
+### Consumer Code (Web/rigctld/CLI)
+
+Consumer code (`web/`, `rigctld/`, `cli.py`) **already programs against the `Radio` protocol**, so no changes are needed when adding new backends. The backend factory handles instantiation.
+
+**Boundary rule**: Direct imports of `IcomRadio` or `Icom7610SerialRadio` are **forbidden** in consumer layers and enforced by lint/CI. Consumers must depend only on `radio_protocol.Radio` and capability protocols.
+
+### Capability Detection
+
+Use runtime capability detection for optional features:
+
+```python
+from icom_lan.radio_protocol import AudioCapable, ScopeCapable
+
+radio = create_radio(config)  # LAN or serial
+
+async with radio:
+    # Audio
+    if isinstance(radio, AudioCapable):
+        await radio.start_audio_rx_opus(on_audio)
+    
+    # Scope
+    if isinstance(radio, ScopeCapable):
+        await radio.enable_scope()
+```
+
+### Migration Checklist
+
+- [x] **Existing LAN code**: No changes required — `IcomRadio` still works
+- [x] **New backend-agnostic code**: Use `create_radio(config)` factory
+- [x] **CLI**: Default unchanged (LAN); add `--backend serial` for serial
+- [x] **Web/rigctld**: Default unchanged (LAN); add `--backend serial` for serial
+- [x] **Capability-specific code**: Use `isinstance(radio, AudioCapable)` checks
+- [x] **Tests**: Use `Radio` protocol for mocks, not concrete `IcomRadio`
+
+### Default Backend Selection
+
+| Context | Default Backend | Override |
+|---------|-----------------|----------|
+| CLI | LAN | `--backend serial` |
+| Python API (legacy) | LAN (`IcomRadio` alias) | Use `create_radio(SerialBackendConfig(...))` |
+| Python API (new) | Explicit via config | `LanBackendConfig` or `SerialBackendConfig` |
+| Web UI | LAN | `--backend serial` flag |
+| rigctld | LAN | `--backend serial` flag |
