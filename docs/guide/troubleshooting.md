@@ -285,8 +285,8 @@ icom-lan --list-audio-devices --json
 # Check radio settings:
 # Menu → Set → Connectors → USB Audio → USB Audio (RX/TX) → Enabled
 
-# Install audio dependencies if missing
-pip install 'icom-lan[serial]'
+# Install serial + USB audio dependencies if missing
+pip install 'icom-lan[serial,bridge]'
 ```
 
 ### "Scope over serial requires baudrate >= 115200"

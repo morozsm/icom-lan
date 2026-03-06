@@ -26,6 +26,8 @@
 
 !!! tip "USB Serial Setup"
     See the **[IC-7610 USB Serial Backend Setup Guide](ic7610-usb-setup.md)** for step-by-step instructions on using the serial backend (macOS-first).
+    For IC-7610 USB operation, set **Menu → Set → Connectors → CI-V → CI-V USB Port**
+    to the CI-V option (`Link to [CI-V]`), not `[REMOTE]`.
 
 ## Should Work (Untested)
 

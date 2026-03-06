@@ -53,9 +53,9 @@ async def main():
     ) as radio:
         # Read current state
         freq = await radio.get_frequency()
-        mode = await radio.get_mode()
+        mode, _ = await radio.get_mode()
         s_meter = await radio.get_s_meter()
-        print(f"{freq/1e6:.3f} MHz  {mode.name}  S={s_meter}")
+        print(f"{freq/1e6:.3f} MHz  {mode}  S={s_meter}")
 
         # Tune to 20m FT8
         await radio.set_frequency(14_074_000)

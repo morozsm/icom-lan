@@ -278,7 +278,9 @@ async with IcomRadio("192.168.1.100", username="user", password="pass") as radio
     freq = await radio.get_frequency()
 ```
 
-`IcomRadio` is now a **backward-compatible alias** for the LAN backend. All existing code, scripts, and integrations continue to work without modification.
+`IcomRadio` remains the **backward-compatible LAN adapter** built on the shared
+IC-7610 core. All existing code, scripts, and integrations continue to work
+without modification.
 
 ### New Code (Backend Factory)
 
@@ -344,9 +346,14 @@ icom-lan --backend serial --serial-port /dev/cu.usbserial-111120 serve
 
 ### Consumer Code (Web/rigctld/CLI)
 
-Consumer code (`web/`, `rigctld/`, `cli.py`) **already programs against the `Radio` protocol**, so no changes are needed when adding new backends. The backend factory handles instantiation.
+Consumer runtime paths (`web/`, `rigctld/`, and CLI command execution) are
+factory-backed and program against the `Radio` protocol, so no consumer changes
+are needed when adding new backends.
 
-**Boundary rule**: Direct imports of `IcomRadio` or `Icom7610SerialRadio` are **forbidden** in consumer layers and enforced by lint/CI. Consumers must depend only on `radio_protocol.Radio` and capability protocols.
+**Boundary rule**: `web/` and `rigctld/` must not import concrete radio classes;
+they depend only on `radio_protocol.Radio` and capability protocols. The CLI
+still keeps narrow `IcomRadio` helper imports, but backend selection at runtime
+goes through `create_radio(...)`.
 
 ### Capability Detection
 
@@ -376,12 +383,18 @@ async with radio:
 - [x] **Capability-specific code**: Use `isinstance(radio, AudioCapable)` checks
 - [x] **Tests**: Use `Radio` protocol for mocks, not concrete `IcomRadio`
 
+### IC-7610 USB Hardware Note
+
+For the IC-7610 serial backend, set **Menu → Set → Connectors → CI-V → CI-V USB
+Port** to the CI-V option (`Link to [CI-V]`), not `[REMOTE]`. `[REMOTE]` blocks
+serial CI-V control and was confirmed on live hardware in issue `#146`.
+
 ### Default Backend Selection
 
 | Context | Default Backend | Override |
 |---------|-----------------|----------|
 | CLI | LAN | `--backend serial` |
-| Python API (legacy) | LAN (`IcomRadio` alias) | Use `create_radio(SerialBackendConfig(...))` |
+| Python API (legacy) | LAN (`IcomRadio` adapter) | Use `create_radio(SerialBackendConfig(...))` |
 | Python API (new) | Explicit via config | `LanBackendConfig` or `SerialBackendConfig` |
 | Web UI | LAN | `--backend serial` flag |
 | rigctld | LAN | `--backend serial` flag |
