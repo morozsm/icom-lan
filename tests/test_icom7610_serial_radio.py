@@ -6,6 +6,7 @@ import asyncio
 
 import pytest
 
+from icom_lan import RadioConnectionState
 from icom_lan.backends.icom7610 import Icom7610SerialRadio
 from icom_lan.commands import CONTROLLER_ADDR, IC_7610_ADDR, _CMD_FREQ_GET, build_civ_frame
 from icom_lan.exceptions import ConnectionError
@@ -31,8 +32,14 @@ async def _wait_until(predicate, *, timeout_s: float = 1.0) -> bool:  # type: ig
 
 
 class _FakeSerialCivLink:
-    def __init__(self, *, fail_connect: BaseException | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        fail_connect: BaseException | None = None,
+        fail_connect_calls: set[int] | None = None,
+    ) -> None:
         self._fail_connect = fail_connect
+        self._fail_connect_calls = set(fail_connect_calls or set())
         self.connect_calls = 0
         self.disconnect_calls = 0
         self.connected = False
@@ -44,6 +51,8 @@ class _FakeSerialCivLink:
 
     async def connect(self) -> None:
         self.connect_calls += 1
+        if self.connect_calls in self._fail_connect_calls:
+            raise OSError(f"connect failed on call {self.connect_calls}")
         if self._fail_connect is not None:
             raise self._fail_connect
         self.connected = True
@@ -138,3 +147,38 @@ async def test_serial_radio_ready_tracks_serial_link_health() -> None:
     assert await _wait_until(lambda: radio.radio_ready)
 
     await radio.disconnect()
+
+
+@pytest.mark.asyncio
+async def test_serial_watchdog_retries_after_transient_soft_reconnect_failure() -> None:
+    link = _FakeSerialCivLink(fail_connect_calls={2})
+    radio = Icom7610SerialRadio(
+        device="/dev/ttyUSB0",
+        civ_link=link,
+    )
+    radio._SERIAL_WATCHDOG_INTERVAL_S = 0.05  # type: ignore[attr-defined]
+    radio._SERIAL_WATCHDOG_RETRY_S = 0.01  # type: ignore[attr-defined]
+
+    await radio.connect()
+    assert link.connect_calls == 1
+    assert radio.radio_ready is True
+
+    link.ready = False
+    link.healthy = False
+    assert await _wait_until(lambda: link.connect_calls >= 3, timeout_s=2.0)
+    assert await _wait_until(lambda: radio.radio_ready, timeout_s=2.0)
+    assert radio.conn_state == RadioConnectionState.CONNECTED
+
+    await radio.disconnect()
+
+
+@pytest.mark.asyncio
+async def test_serial_disconnect_cleans_watchdog_when_already_disconnected() -> None:
+    radio = Icom7610SerialRadio(
+        device="/dev/ttyUSB0",
+        civ_link=_FakeSerialCivLink(),
+    )
+    radio._conn_state = RadioConnectionState.DISCONNECTED
+    radio._civ_data_watchdog_task = asyncio.create_task(asyncio.sleep(10))
+    await radio.disconnect()
+    assert getattr(radio, "_civ_data_watchdog_task", None) is None
