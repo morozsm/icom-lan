@@ -127,6 +127,11 @@ class SerialFrameCodec:
         self._partial_since = None
         return True
 
+    def reset(self) -> None:
+        """Reset buffered parser state."""
+        self._buffer.clear()
+        self._partial_since = None
+
 
 class SerialCivLink:
     """Async serial CI-V link with framing, writer serialization, and health flags."""
@@ -166,8 +171,11 @@ class SerialCivLink:
         self._writer: Any | None = None
         self._connected = False
         self._healthy = False
+        self._max_write_queue = max_write_queue
         self._frames: asyncio.Queue[bytes] = asyncio.Queue()
-        self._write_queue: asyncio.Queue[bytes | None] = asyncio.Queue(maxsize=max_write_queue)
+        self._write_queue: asyncio.Queue[bytes | None] = asyncio.Queue(
+            maxsize=max_write_queue
+        )
         self._writer_task: asyncio.Task[None] | None = None
 
     @property
@@ -192,6 +200,7 @@ class SerialCivLink:
         if self._require_optional_deps:
             self._ensure_serial_dependencies()
 
+        self._reset_session_buffers()
         opener = self._resolve_opener()
         reader, writer = await asyncio.wait_for(opener(), timeout=self._connect_timeout_s)
         self._reader = reader
@@ -223,6 +232,7 @@ class SerialCivLink:
         writer = self._writer
         self._writer = None
         self._reader = None
+        self._reset_session_buffers()
 
         if writer is not None:
             writer.close()
@@ -233,9 +243,15 @@ class SerialCivLink:
 
     async def send(self, frame: bytes) -> None:
         """Queue one CI-V payload/frame for serialized sending."""
-        if not self._connected:
-            raise ConnectionError("Serial CI-V link is disconnected.")
-        await self._write_queue.put(bytes(frame))
+        payload = bytes(frame)
+        while True:
+            if not self._connected:
+                raise ConnectionError("Serial CI-V link is disconnected.")
+            try:
+                self._write_queue.put_nowait(payload)
+                return
+            except asyncio.QueueFull:
+                await asyncio.sleep(0)
 
     async def receive(self, timeout: float | None = None) -> bytes | None:
         """Receive one full framed CI-V packet, or None on timeout."""
@@ -344,6 +360,12 @@ class SerialCivLink:
             importlib.import_module("serial_asyncio")
         except ImportError as exc:
             raise ImportError(_DEPENDENCY_HINT) from exc
+
+    def _reset_session_buffers(self) -> None:
+        """Drop buffered RX/TX data between sessions."""
+        self._frames = asyncio.Queue()
+        self._write_queue = asyncio.Queue(maxsize=self._max_write_queue)
+        self._codec.reset()
 
 
 __all__ = [

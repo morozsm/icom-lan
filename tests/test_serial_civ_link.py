@@ -279,6 +279,103 @@ async def test_writer_worker_cancellation_does_not_leak_tasks() -> None:
         await task
 
 
+@pytest.mark.asyncio
+async def test_disconnect_drops_stale_rx_frames_before_reconnect() -> None:
+    reader1 = _FakeReader()
+    reader2 = _FakeReader()
+    writer1 = _FakeWriter()
+    writer2 = _FakeWriter()
+    session = 0
+
+    async def _open() -> tuple[_FakeReader, _FakeWriter]:
+        nonlocal session
+        session += 1
+        if session == 1:
+            return reader1, writer1
+        return reader2, writer2
+
+    link = SerialCivLink(
+        device="/dev/tty.usbmodem-IC7610",
+        open_serial_connection=_open,
+    )
+    await link.connect()
+    try:
+        frame1 = b"\xFE\xFE\x98\xE0\x01\xFD"
+        frame2 = b"\xFE\xFE\x98\xE0\x02\xFD"
+        frame3 = b"\xFE\xFE\x98\xE0\x03\xFD"
+        reader1.push(frame1 + frame2)
+        assert await link.receive(timeout=0.05) == frame1
+
+        await link.disconnect()
+        await link.connect()
+        reader2.push(frame3)
+        assert await link.receive(timeout=0.05) == frame3
+    finally:
+        await link.disconnect()
+
+
+@pytest.mark.asyncio
+async def test_disconnect_drops_stale_tx_queue_before_reconnect() -> None:
+    drain_gate = asyncio.Event()
+    reader1 = _FakeReader()
+    reader2 = _FakeReader()
+    writer1 = _FakeWriter(drain_gate=drain_gate)
+    writer2 = _FakeWriter()
+    session = 0
+
+    async def _open() -> tuple[_FakeReader, _FakeWriter]:
+        nonlocal session
+        session += 1
+        if session == 1:
+            return reader1, writer1
+        return reader2, writer2
+
+    link = SerialCivLink(
+        device="/dev/tty.usbmodem-IC7610",
+        max_write_queue=1,
+        open_serial_connection=_open,
+    )
+    await link.connect()
+    try:
+        await link.send(b"\x98\xE0\x01")
+        await asyncio.sleep(0)
+        await link.send(b"\x98\xE0\x02")
+        await asyncio.sleep(0)
+
+        await link.disconnect()
+        drain_gate.set()
+        await link.connect()
+
+        await link.send(b"\x98\xE0\x03")
+        await asyncio.sleep(0)
+        assert writer2.writes == [b"\xFE\xFE\x98\xE0\x03\xFD"]
+    finally:
+        await link.disconnect()
+
+
+@pytest.mark.asyncio
+async def test_send_backpressure_unblocks_on_disconnect() -> None:
+    drain_gate = asyncio.Event()
+    writer = _FakeWriter(drain_gate=drain_gate)
+    link, _reader, _writer = await _make_link(queue_size=1, writer=writer)
+    try:
+        await link.send(b"\x98\xE0\x01")
+        await asyncio.sleep(0)
+        await link.send(b"\x98\xE0\x02")
+        await asyncio.sleep(0)
+
+        blocked_send = asyncio.create_task(link.send(b"\x98\xE0\x03"))
+        await asyncio.sleep(0)
+        assert not blocked_send.done()
+
+        await link.disconnect()
+        with pytest.raises(ConnectionError):
+            await asyncio.wait_for(blocked_send, timeout=0.1)
+    finally:
+        drain_gate.set()
+        await link.disconnect()
+
+
 def test_codec_encodes_unframed_payload() -> None:
     codec = SerialFrameCodec(max_frame_len=64, frame_timeout_s=0.01)
     assert codec.encode(b"\x98\xE0\x03") == b"\xFE\xFE\x98\xE0\x03\xFD"
