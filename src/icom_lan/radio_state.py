@@ -90,6 +90,8 @@ class RadioState:
     power_level: int = 0    # TX power 0-255
     split: bool = False
     dual_watch: bool = False
+    scanning: bool = False
+    tuning_step: int = 0
     overflow: bool = False
     tuner_status: int = 0       # 0=off, 1=on, 2=tuning
     tx_freq_monitor: bool = False
@@ -130,6 +132,8 @@ class RadioState:
             "power_level": self.power_level,
             "split": self.split,
             "dual_watch": self.dual_watch,
+            "scanning": self.scanning,
+            "tuning_step": self.tuning_step,
             "overflow": self.overflow,
             "tuner_status": self.tuner_status,
             "tx_freq_monitor": self.tx_freq_monitor,

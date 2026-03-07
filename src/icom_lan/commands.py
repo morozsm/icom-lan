@@ -201,6 +201,17 @@ __all__ = [
     "get_rit_tx_status",
     "set_rit_tx_status",
     "parse_rit_frequency_response",
+    # VFO / Dual Watch / Scanning (#132)
+    "get_tuning_step",
+    "set_tuning_step",
+    "start_scan",
+    "stop_scan",
+    "set_dual_watch_off",
+    "set_dual_watch_on",
+    "get_dual_watch",
+    "set_dual_watch",
+    "quick_dual_watch",
+    "quick_split",
 ]
 
 # CI-V addresses
@@ -1442,6 +1453,13 @@ def ptt_off(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR) -> by
 _CMD_VFO_SELECT = 0x07
 _CMD_VFO_EQUAL = 0x07
 _CMD_SPLIT = 0x0F
+_CMD_SCAN = 0x0E
+_CMD_TUNING_STEP = 0x10
+_VFO_DUAL_WATCH_OFF = 0xC0
+_VFO_DUAL_WATCH_ON = 0xC1
+_VFO_DUAL_WATCH_QUERY = 0xC2
+_CTL_MEM_QUICK_DUAL_WATCH = b"\x00\x32"
+_CTL_MEM_QUICK_SPLIT = b"\x00\x33"
 _CMD_ATT = 0x11
 _CMD_PREAMP = 0x16
 _SUB_S_METER_SQL_STATUS = 0x01
@@ -1505,6 +1523,100 @@ def set_split(
     return build_civ_frame(
         to_addr, from_addr, _CMD_SPLIT, data=b"\x01" if on else b"\x00"
     )
+
+
+def get_tuning_step(
+    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
+) -> bytes:
+    """Build CI-V command to get tuning step (0x10).
+
+    Returns:
+        CI-V frame bytes.
+    """
+    return build_civ_frame(to_addr, from_addr, _CMD_TUNING_STEP)
+
+
+def set_tuning_step(
+    step: int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build CI-V command to set tuning step (0x10).
+
+    Args:
+        step: Tuning step index (0-8), BCD-encoded (as per wfview bcdEncodeChar).
+
+    Returns:
+        CI-V frame bytes.
+    """
+    if not 0 <= step <= 8:
+        raise ValueError(f"Tuning step must be 0-8, got {step}")
+    return build_civ_frame(to_addr, from_addr, _CMD_TUNING_STEP, data=bytes([_bcd_byte(step)]))
+
+
+def start_scan(
+    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
+) -> bytes:
+    """Build CI-V command to start scanning (0x0E 0x01)."""
+    return build_civ_frame(to_addr, from_addr, _CMD_SCAN, data=b"\x01")
+
+
+def stop_scan(
+    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
+) -> bytes:
+    """Build CI-V command to stop scanning (0x0E 0x00)."""
+    return build_civ_frame(to_addr, from_addr, _CMD_SCAN, data=b"\x00")
+
+
+def set_dual_watch_off(
+    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
+) -> bytes:
+    """Build CI-V command to turn off dual watch (0x07 0xC0)."""
+    return build_civ_frame(to_addr, from_addr, _CMD_VFO_SELECT, data=bytes([_VFO_DUAL_WATCH_OFF]))
+
+
+def set_dual_watch_on(
+    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
+) -> bytes:
+    """Build CI-V command to turn on dual watch (0x07 0xC1)."""
+    return build_civ_frame(to_addr, from_addr, _CMD_VFO_SELECT, data=bytes([_VFO_DUAL_WATCH_ON]))
+
+
+def get_dual_watch(
+    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
+) -> bytes:
+    """Build CI-V command to query dual watch status (0x07 0xC2)."""
+    return build_civ_frame(to_addr, from_addr, _CMD_VFO_SELECT, data=bytes([_VFO_DUAL_WATCH_QUERY]))
+
+
+def set_dual_watch(
+    on: bool,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build CI-V command to enable or disable dual watch.
+
+    Args:
+        on: True to enable dual watch, False to disable.
+
+    Returns:
+        CI-V frame bytes.
+    """
+    return set_dual_watch_on(to_addr, from_addr) if on else set_dual_watch_off(to_addr, from_addr)
+
+
+def quick_dual_watch(
+    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
+) -> bytes:
+    """Build CI-V command for one-shot dual watch trigger (0x1A 0x05 0x00 0x32)."""
+    return build_civ_frame(to_addr, from_addr, _CMD_CTL_MEM, sub=_SUB_CTL_MEM, data=_CTL_MEM_QUICK_DUAL_WATCH)
+
+
+def quick_split(
+    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
+) -> bytes:
+    """Build CI-V command for one-shot split trigger (0x1A 0x05 0x00 0x33)."""
+    return build_civ_frame(to_addr, from_addr, _CMD_CTL_MEM, sub=_SUB_CTL_MEM, data=_CTL_MEM_QUICK_SPLIT)
 
 
 def _bcd_byte(value: int) -> int:
