@@ -3671,13 +3671,18 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
     # --- Memory Commands ---
 
     async def get_memory_mode(self) -> int:
-        """Get currently selected memory channel (1-101)."""
-        self._check_connected()
-        resp = await self._send_civ_raw(
-            build_memory_mode_get(to_addr=self._radio_addr)
+        """Get currently selected memory channel (1-101).
+        
+        Raises:
+            NotImplementedError: IC-7610 does not support reading the current
+                memory channel. Command 0x08 is SELECT-only per the official
+                CI-V Reference Manual.
+        """
+        raise NotImplementedError(
+            "IC-7610 does not support reading the current memory channel. "
+            "Command 0x08 is SELECT-only (no GET variant). "
+            "See IC-7610 CI-V Reference Manual page 4."
         )
-        frame = parse_civ_frame(resp)
-        return parse_memory_mode_response(frame)
 
     async def set_memory_mode(self, channel: int) -> None:
         """Select memory channel (1-101)."""
@@ -3710,15 +3715,22 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         )
 
     async def get_memory_contents(self, channel: int) -> types.MemoryChannel:
-        """Read full memory channel data."""
+        """Read full memory channel data.
+        
+        Args:
+            channel: Memory channel number (1-101).
+            
+        Raises:
+            NotImplementedError: IC-7610 does not support reading memory
+                contents. Command 0x1A 0x00 GET is not documented in the
+                official CI-V Reference Manual.
+        """
         if not 1 <= channel <= 101:
             raise ValueError(f"Channel must be 1-101, got {channel}")
-        self._check_connected()
-        resp = await self._send_civ_raw(
-            build_memory_contents_get(channel, to_addr=self._radio_addr)
+        raise NotImplementedError(
+            f"IC-7610 does not support reading memory channel {channel} contents. "
+            "Command 0x1A 0x00 GET is not documented in the CI-V Reference Manual."
         )
-        frame = parse_civ_frame(resp)
-        return parse_memory_contents_response(frame)
 
     async def set_memory_contents(self, mem: types.MemoryChannel) -> None:
         """Write full memory channel data."""
@@ -3731,17 +3743,25 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
     async def get_band_stack(
         self, band: int, register: int
     ) -> types.BandStackRegister:
-        """Read band stacking register (band 0-24, register 1-3)."""
+        """Read band stacking register (band 0-24, register 1-3).
+        
+        Args:
+            band: Band number (0-24).
+            register: Register number (1-3).
+            
+        Raises:
+            NotImplementedError: IC-7610 does not support reading band
+                stacking registers. Command 0x1A 0x01 GET is not documented
+                in the official CI-V Reference Manual.
+        """
         if not 0 <= band <= 24:
             raise ValueError(f"Band must be 0-24, got {band}")
         if not 1 <= register <= 3:
             raise ValueError(f"Register must be 1-3, got {register}")
-        self._check_connected()
-        resp = await self._send_civ_raw(
-            build_band_stack_get(band, register, to_addr=self._radio_addr)
+        raise NotImplementedError(
+            f"IC-7610 does not support reading band stack register (band={band}, reg={register}). "
+            "Command 0x1A 0x01 GET is not documented in the CI-V Reference Manual."
         )
-        frame = parse_civ_frame(resp)
-        return parse_band_stack_response(frame)
 
     async def set_band_stack(self, bsr: types.BandStackRegister) -> None:
         """Write band stacking register."""

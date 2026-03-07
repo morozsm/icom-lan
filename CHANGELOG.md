@@ -2,6 +2,30 @@
 
 All notable changes to [icom-lan](https://github.com/morozsm/icom-lan) are documented here.
 
+## [Unreleased]
+
+### Added
+- Memory and band-stacking register commands (Issue #133)
+  - `set_memory_mode(channel)` - Select memory channel (1-101)
+  - `memory_write()` - Write VFO to selected memory channel
+  - `memory_to_vfo(channel)` - Load memory channel to VFO
+  - `memory_clear(channel)` - Clear memory channel
+  - `set_memory_contents(mem)` - Write full memory channel data
+  - `set_band_stack(bsr)` - Write band stacking register
+  - New dataclasses: `MemoryChannel`, `BandStackRegister`
+
+### Known Limitations
+- **Memory GET commands not supported by IC-7610**
+  - `get_memory_mode()` raises `NotImplementedError`
+  - `get_memory_contents(channel)` raises `NotImplementedError`
+  - `get_band_stack(band, register)` raises `NotImplementedError`
+  - **Reason:** IC-7610 CI-V protocol does not support reading current memory
+    channel or memory contents. Command 0x08 is SELECT-only per the official
+    CI-V Reference Manual (page 4). Commands 0x1A 0x00 and 0x1A 0x01 GET
+    variants are not documented.
+  - **Workaround:** Use SET commands to write known values, then track state
+    in application code.
+
 ## [0.12.0] — 2026-03-03
 
 ### 🔊 AudioBus Pub/Sub & Virtual Audio Bridge ([#106](https://github.com/morozsm/icom-lan/issues/106))
