@@ -288,7 +288,7 @@ icom-lan uses an abstract **Radio Protocol** that enables support for multiple r
 ## Testing
 
 ```bash
-# Unit tests (no radio required) — 1772 tests, 95% coverage
+# Unit tests (no radio required) — 2962 tests, 95% coverage
 pytest tests/test_*.py
 
 # Mock integration tests (full UDP protocol, no radio required)
