@@ -1558,3 +1558,618 @@ class TestToneTsqlCommands:
         assert bsr.frequency_hz == 14200000
         assert bsr.mode == 1
         assert bsr.filter == 1
+
+
+class TestSystemConfigCommands:
+    """Tests for system/config command builders and parsers (#135)."""
+
+    # --- REF Adjust (0x1A 0x05 0x00 0x70) ---
+
+    def test_get_ref_adjust_frame(self) -> None:
+        from icom_lan.commands import get_ref_adjust
+
+        frame = get_ref_adjust()
+        # FE FE 98 E0 1A 05 00 70 FD
+        assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x00\x70\xfd"
+
+    def test_set_ref_adjust_255(self) -> None:
+        from icom_lan.commands import set_ref_adjust
+
+        frame = set_ref_adjust(255)
+        # 255 as 2-byte BCD: 0x02 0x55
+        assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x00\x70\x02\x55\xfd"
+
+    def test_set_ref_adjust_0(self) -> None:
+        from icom_lan.commands import set_ref_adjust
+
+        frame = set_ref_adjust(0)
+        assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x00\x70\x00\x00\xfd"
+
+    def test_set_ref_adjust_511(self) -> None:
+        from icom_lan.commands import set_ref_adjust
+
+        frame = set_ref_adjust(511)
+        # 511 as 2-byte BCD: 0x05 0x11
+        assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x00\x70\x05\x11\xfd"
+
+    def test_set_ref_adjust_rejects_out_of_range(self) -> None:
+        from icom_lan.commands import set_ref_adjust
+
+        with pytest.raises(ValueError, match="REF Adjust must be 0-511"):
+            set_ref_adjust(-1)
+        with pytest.raises(ValueError, match="REF Adjust must be 0-511"):
+            set_ref_adjust(512)
+
+    def test_parse_ref_adjust_response(self) -> None:
+        from icom_lan.commands import parse_civ_frame, parse_level_response
+
+        # Radio responds with REF Adjust = 256
+        civ = b"\xfe\xfe\xe0\x98\x1a\x05\x00\x70\x02\x56\xfd"
+        frame = parse_civ_frame(civ)
+        value = parse_level_response(frame, command=0x1A, sub=0x05, prefix=b"\x00\x70")
+        assert value == 256
+
+    def test_ref_adjust_roundtrip(self) -> None:
+        from icom_lan.commands import set_ref_adjust, parse_civ_frame, parse_level_response
+
+        for v in [0, 128, 256, 511]:
+            frame = set_ref_adjust(v)
+            response = b"\xfe\xfe" + bytes([frame[3], frame[2]]) + frame[4:]
+            parsed = parse_civ_frame(response)
+            assert parse_level_response(parsed, command=0x1A, sub=0x05, prefix=b"\x00\x70") == v
+
+    # --- Dash Ratio (0x1A 0x05 0x02 0x28) ---
+
+    def test_get_dash_ratio_frame(self) -> None:
+        from icom_lan.commands import get_dash_ratio
+
+        frame = get_dash_ratio()
+        # FE FE 98 E0 1A 05 02 28 FD
+        assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x02\x28\xfd"
+
+    def test_set_dash_ratio_28(self) -> None:
+        from icom_lan.commands import set_dash_ratio
+
+        frame = set_dash_ratio(28)
+        # 28 as 1-byte BCD: 0x28
+        assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x02\x28\x28\xfd"
+
+    def test_set_dash_ratio_30(self) -> None:
+        from icom_lan.commands import set_dash_ratio
+
+        frame = set_dash_ratio(30)
+        assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x02\x28\x30\xfd"
+
+    def test_set_dash_ratio_45(self) -> None:
+        from icom_lan.commands import set_dash_ratio
+
+        frame = set_dash_ratio(45)
+        # 45 as 1-byte BCD: 0x45
+        assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x02\x28\x45\xfd"
+
+    def test_set_dash_ratio_rejects_out_of_range(self) -> None:
+        from icom_lan.commands import set_dash_ratio
+
+        with pytest.raises(ValueError, match="Dash Ratio must be 28-45"):
+            set_dash_ratio(27)
+        with pytest.raises(ValueError, match="Dash Ratio must be 28-45"):
+            set_dash_ratio(46)
+
+    def test_parse_dash_ratio_response(self) -> None:
+        from icom_lan.commands import parse_civ_frame, parse_level_response
+
+        # Radio responds with Dash Ratio = 35 (0x35)
+        civ = b"\xfe\xfe\xe0\x98\x1a\x05\x02\x28\x35\xfd"
+        frame = parse_civ_frame(civ)
+        value = parse_level_response(
+            frame, command=0x1A, sub=0x05, prefix=b"\x02\x28", bcd_bytes=1
+        )
+        assert value == 35
+
+    def test_dash_ratio_roundtrip(self) -> None:
+        from icom_lan.commands import set_dash_ratio, parse_civ_frame, parse_level_response
+
+        for v in [28, 30, 35, 40, 45]:
+            frame = set_dash_ratio(v)
+            response = b"\xfe\xfe" + bytes([frame[3], frame[2]]) + frame[4:]
+            parsed = parse_civ_frame(response)
+            assert parse_level_response(
+                parsed, command=0x1A, sub=0x05, prefix=b"\x02\x28", bcd_bytes=1
+            ) == v
+
+    # --- Antenna Selection (0x12) ---
+
+    def test_get_antenna_1_frame(self) -> None:
+        from icom_lan.commands import get_antenna_1
+
+        frame = get_antenna_1()
+        # FE FE 98 E0 12 00 FD
+        assert frame == b"\xfe\xfe\x98\xe0\x12\x00\xfd"
+
+    def test_set_antenna_1_on(self) -> None:
+        from icom_lan.commands import set_antenna_1
+
+        frame = set_antenna_1(True)
+        # FE FE 98 E0 12 00 01 FD
+        assert frame == b"\xfe\xfe\x98\xe0\x12\x00\x01\xfd"
+
+    def test_set_antenna_1_off(self) -> None:
+        from icom_lan.commands import set_antenna_1
+
+        frame = set_antenna_1(False)
+        assert frame == b"\xfe\xfe\x98\xe0\x12\x00\x00\xfd"
+
+    def test_get_antenna_2_frame(self) -> None:
+        from icom_lan.commands import get_antenna_2
+
+        frame = get_antenna_2()
+        assert frame == b"\xfe\xfe\x98\xe0\x12\x01\xfd"
+
+    def test_set_antenna_2_on(self) -> None:
+        from icom_lan.commands import set_antenna_2
+
+        frame = set_antenna_2(True)
+        assert frame == b"\xfe\xfe\x98\xe0\x12\x01\x01\xfd"
+
+    def test_get_rx_antenna_ant1_frame(self) -> None:
+        from icom_lan.commands import get_rx_antenna_ant1
+
+        frame = get_rx_antenna_ant1()
+        assert frame == b"\xfe\xfe\x98\xe0\x12\x12\xfd"
+
+    def test_set_rx_antenna_ant1_on(self) -> None:
+        from icom_lan.commands import set_rx_antenna_ant1
+
+        frame = set_rx_antenna_ant1(True)
+        assert frame == b"\xfe\xfe\x98\xe0\x12\x12\x01\xfd"
+
+    def test_get_rx_antenna_ant2_frame(self) -> None:
+        from icom_lan.commands import get_rx_antenna_ant2
+
+        frame = get_rx_antenna_ant2()
+        assert frame == b"\xfe\xfe\x98\xe0\x12\x13\xfd"
+
+    def test_set_rx_antenna_ant2_off(self) -> None:
+        from icom_lan.commands import set_rx_antenna_ant2
+
+        frame = set_rx_antenna_ant2(False)
+        assert frame == b"\xfe\xfe\x98\xe0\x12\x13\x00\xfd"
+
+    def test_parse_antenna_bool_response(self) -> None:
+        from icom_lan.commands import parse_civ_frame, parse_bool_response
+
+        # Radio responds: FE FE E0 98 12 00 01 FD (ANT1 = ON)
+        civ = b"\xfe\xfe\xe0\x98\x12\x00\x01\xfd"
+        frame = parse_civ_frame(civ)
+        result = parse_bool_response(frame, command=0x12, sub=0x00)
+        assert result is True
+
+    def test_parse_antenna_bool_response_off(self) -> None:
+        from icom_lan.commands import parse_civ_frame, parse_bool_response
+
+        civ = b"\xfe\xfe\xe0\x98\x12\x01\x00\xfd"
+        frame = parse_civ_frame(civ)
+        result = parse_bool_response(frame, command=0x12, sub=0x01)
+        assert result is False
+
+    # --- Modulation Levels (0x14 0x0B / 0x10 / 0x11) ---
+
+    def test_get_acc1_mod_level_frame(self) -> None:
+        from icom_lan.commands import get_acc1_mod_level
+
+        frame = get_acc1_mod_level()
+        assert frame == b"\xfe\xfe\x98\xe0\x14\x0b\xfd"
+
+    def test_set_acc1_mod_level_128(self) -> None:
+        from icom_lan.commands import set_acc1_mod_level
+
+        frame = set_acc1_mod_level(128)
+        # 128 BCD-encoded: 0x01 0x28
+        assert frame == b"\xfe\xfe\x98\xe0\x14\x0b\x01\x28\xfd"
+
+    def test_set_acc1_mod_level_0(self) -> None:
+        from icom_lan.commands import set_acc1_mod_level
+
+        frame = set_acc1_mod_level(0)
+        assert frame == b"\xfe\xfe\x98\xe0\x14\x0b\x00\x00\xfd"
+
+    def test_set_acc1_mod_level_255(self) -> None:
+        from icom_lan.commands import set_acc1_mod_level
+
+        frame = set_acc1_mod_level(255)
+        assert frame == b"\xfe\xfe\x98\xe0\x14\x0b\x02\x55\xfd"
+
+    def test_set_acc1_mod_level_rejects_out_of_range(self) -> None:
+        from icom_lan.commands import set_acc1_mod_level
+
+        with pytest.raises(ValueError, match="Level must be 0-255"):
+            set_acc1_mod_level(256)
+
+    def test_get_usb_mod_level_frame(self) -> None:
+        from icom_lan.commands import get_usb_mod_level
+
+        frame = get_usb_mod_level()
+        assert frame == b"\xfe\xfe\x98\xe0\x14\x10\xfd"
+
+    def test_set_usb_mod_level_100(self) -> None:
+        from icom_lan.commands import set_usb_mod_level
+
+        frame = set_usb_mod_level(100)
+        # 100 BCD-encoded: 0x01 0x00
+        assert frame == b"\xfe\xfe\x98\xe0\x14\x10\x01\x00\xfd"
+
+    def test_get_lan_mod_level_frame(self) -> None:
+        from icom_lan.commands import get_lan_mod_level
+
+        frame = get_lan_mod_level()
+        assert frame == b"\xfe\xfe\x98\xe0\x14\x11\xfd"
+
+    def test_set_lan_mod_level_50(self) -> None:
+        from icom_lan.commands import set_lan_mod_level
+
+        frame = set_lan_mod_level(50)
+        # 50 BCD-encoded: 0x00 0x50
+        assert frame == b"\xfe\xfe\x98\xe0\x14\x11\x00\x50\xfd"
+
+    def test_parse_mod_level_response(self) -> None:
+        from icom_lan.commands import parse_civ_frame, parse_level_response
+
+        # ACC1 mod level = 128 (0x01 0x28)
+        civ = b"\xfe\xfe\xe0\x98\x14\x0b\x01\x28\xfd"
+        frame = parse_civ_frame(civ)
+        level = parse_level_response(frame, command=0x14, sub=0x0B)
+        assert level == 128
+
+    # --- Modulation Input Routing (0x1A 0x05 0x00 0x91-0x94) ---
+
+    def test_get_data_off_mod_input_frame(self) -> None:
+        from icom_lan.commands import get_data_off_mod_input
+
+        frame = get_data_off_mod_input()
+        # FE FE 98 E0 1A 05 00 91 FD
+        assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x00\x91\xfd"
+
+    def test_set_data_off_mod_input_mic(self) -> None:
+        from icom_lan.commands import set_data_off_mod_input
+
+        frame = set_data_off_mod_input(0)  # MIC
+        assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x00\x91\x00\xfd"
+
+    def test_set_data_off_mod_input_lan(self) -> None:
+        from icom_lan.commands import set_data_off_mod_input
+
+        frame = set_data_off_mod_input(5)  # LAN
+        assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x00\x91\x05\xfd"
+
+    def test_set_data_off_mod_input_rejects_out_of_range(self) -> None:
+        from icom_lan.commands import set_data_off_mod_input
+
+        with pytest.raises(ValueError, match="0-5"):
+            set_data_off_mod_input(6)
+
+    def test_get_data1_mod_input_frame(self) -> None:
+        from icom_lan.commands import get_data1_mod_input
+
+        frame = get_data1_mod_input()
+        assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x00\x92\xfd"
+
+    def test_set_data1_mod_input_usb(self) -> None:
+        from icom_lan.commands import set_data1_mod_input
+
+        frame = set_data1_mod_input(2)  # USB
+        assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x00\x92\x02\xfd"
+
+    def test_set_data1_mod_input_rejects_out_of_range(self) -> None:
+        from icom_lan.commands import set_data1_mod_input
+
+        with pytest.raises(ValueError, match="0-4"):
+            set_data1_mod_input(5)
+
+    def test_get_data2_mod_input_frame(self) -> None:
+        from icom_lan.commands import get_data2_mod_input
+
+        frame = get_data2_mod_input()
+        assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x00\x93\xfd"
+
+    def test_get_data3_mod_input_frame(self) -> None:
+        from icom_lan.commands import get_data3_mod_input
+
+        frame = get_data3_mod_input()
+        assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x00\x94\xfd"
+
+    def test_set_data3_mod_input_lan_usb(self) -> None:
+        from icom_lan.commands import set_data3_mod_input
+
+        frame = set_data3_mod_input(4)  # LAN+USB
+        assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x00\x94\x04\xfd"
+
+    def test_parse_mod_input_response(self) -> None:
+        from icom_lan.commands import parse_civ_frame, parse_level_response
+
+        # Data Off mod input = 3 (USB)
+        civ = b"\xfe\xfe\xe0\x98\x1a\x05\x00\x91\x03\xfd"
+        frame = parse_civ_frame(civ)
+        source = parse_level_response(
+            frame, command=0x1A, sub=0x05, prefix=b"\x00\x91", bcd_bytes=1
+        )
+        assert source == 3
+
+    # --- CI-V Options (0x1A 0x05 0x01 0x29 / 0x30) ---
+
+    def test_get_civ_transceive_frame(self) -> None:
+        from icom_lan.commands import get_civ_transceive
+
+        frame = get_civ_transceive()
+        assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x01\x29\xfd"
+
+    def test_set_civ_transceive_on(self) -> None:
+        from icom_lan.commands import set_civ_transceive
+
+        frame = set_civ_transceive(True)
+        assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x01\x29\x01\xfd"
+
+    def test_set_civ_transceive_off(self) -> None:
+        from icom_lan.commands import set_civ_transceive
+
+        frame = set_civ_transceive(False)
+        assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x01\x29\x00\xfd"
+
+    def test_get_civ_output_ant_frame(self) -> None:
+        from icom_lan.commands import get_civ_output_ant
+
+        frame = get_civ_output_ant()
+        assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x01\x30\xfd"
+
+    def test_set_civ_output_ant_on(self) -> None:
+        from icom_lan.commands import set_civ_output_ant
+
+        frame = set_civ_output_ant(True)
+        assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x01\x30\x01\xfd"
+
+    def test_parse_civ_bool_response(self) -> None:
+        from icom_lan.commands import parse_civ_frame, parse_bool_response
+
+        # CI-V transceive = ON
+        civ = b"\xfe\xfe\xe0\x98\x1a\x05\x01\x29\x01\xfd"
+        frame = parse_civ_frame(civ)
+        result = parse_bool_response(
+            frame, command=0x1A, sub=0x05, prefix=b"\x01\x29"
+        )
+        assert result is True
+
+    def test_parse_civ_output_ant_off_response(self) -> None:
+        from icom_lan.commands import parse_civ_frame, parse_bool_response
+
+        civ = b"\xfe\xfe\xe0\x98\x1a\x05\x01\x30\x00\xfd"
+        frame = parse_civ_frame(civ)
+        result = parse_bool_response(
+            frame, command=0x1A, sub=0x05, prefix=b"\x01\x30"
+        )
+        assert result is False
+
+    # --- System Date (0x1A 0x05 0x01 0x58) ---
+
+    def test_get_system_date_frame(self) -> None:
+        from icom_lan.commands import get_system_date
+
+        frame = get_system_date()
+        assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x01\x58\xfd"
+
+    def test_set_system_date_2026_03_07(self) -> None:
+        from icom_lan.commands import set_system_date
+
+        frame = set_system_date(2026, 3, 7)
+        # FE FE 98 E0 1A 05 01 58 20 26 03 07 FD
+        assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x01\x58\x20\x26\x03\x07\xfd"
+
+    def test_set_system_date_2000_01_01(self) -> None:
+        from icom_lan.commands import set_system_date
+
+        frame = set_system_date(2000, 1, 1)
+        assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x01\x58\x20\x00\x01\x01\xfd"
+
+    def test_set_system_date_rejects_invalid_month(self) -> None:
+        from icom_lan.commands import set_system_date
+
+        with pytest.raises(ValueError, match="Month must be 1-12"):
+            set_system_date(2026, 0, 1)
+        with pytest.raises(ValueError, match="Month must be 1-12"):
+            set_system_date(2026, 13, 1)
+
+    def test_set_system_date_rejects_invalid_day(self) -> None:
+        from icom_lan.commands import set_system_date
+
+        with pytest.raises(ValueError, match="Day must be 1-31"):
+            set_system_date(2026, 3, 0)
+        with pytest.raises(ValueError, match="Day must be 1-31"):
+            set_system_date(2026, 3, 32)
+
+    def test_set_system_date_rejects_year_too_low(self) -> None:
+        from icom_lan.commands import set_system_date
+
+        with pytest.raises(ValueError, match="Year must be 2000-2099"):
+            set_system_date(1999, 1, 1)
+
+    def test_set_system_date_rejects_year_too_high(self) -> None:
+        from icom_lan.commands import set_system_date
+
+        with pytest.raises(ValueError, match="Year must be 2000-2099"):
+            set_system_date(2100, 1, 1)
+
+    def test_set_system_date_accepts_year_boundaries(self) -> None:
+        from icom_lan.commands import set_system_date
+
+        # Should accept 2000 and 2099
+        frame_2000 = set_system_date(2000, 1, 1)
+        assert frame_2000 == b"\xfe\xfe\x98\xe0\x1a\x05\x01\x58\x20\x00\x01\x01\xfd"
+        
+        frame_2099 = set_system_date(2099, 12, 31)
+        assert frame_2099 == b"\xfe\xfe\x98\xe0\x1a\x05\x01\x58\x20\x99\x12\x31\xfd"
+
+    def test_parse_system_date_response(self) -> None:
+        from icom_lan.commands import parse_civ_frame, parse_system_date_response
+
+        # Response: 2026-03-07
+        civ = b"\xfe\xfe\xe0\x98\x1a\x05\x01\x58\x20\x26\x03\x07\xfd"
+        frame = parse_civ_frame(civ)
+        year, month, day = parse_system_date_response(frame)
+        assert year == 2026
+        assert month == 3
+        assert day == 7
+
+    def test_parse_system_date_response_2000(self) -> None:
+        from icom_lan.commands import parse_civ_frame, parse_system_date_response
+
+        civ = b"\xfe\xfe\xe0\x98\x1a\x05\x01\x58\x20\x00\x12\x31\xfd"
+        frame = parse_civ_frame(civ)
+        year, month, day = parse_system_date_response(frame)
+        assert year == 2000
+        assert month == 12
+        assert day == 31
+
+    def test_system_date_roundtrip(self) -> None:
+        from icom_lan.commands import set_system_date, parse_civ_frame, parse_system_date_response
+
+        frame = set_system_date(2025, 6, 15)
+        # Simulate radio echoing back the frame (swap addresses)
+        response = b"\xfe\xfe" + bytes([frame[3], frame[2]]) + frame[4:]
+        parsed = parse_civ_frame(response)
+        year, month, day = parse_system_date_response(parsed)
+        assert (year, month, day) == (2025, 6, 15)
+
+    # --- System Time (0x1A 0x05 0x01 0x59) ---
+
+    def test_get_system_time_frame(self) -> None:
+        from icom_lan.commands import get_system_time
+
+        frame = get_system_time()
+        assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x01\x59\xfd"
+
+    def test_set_system_time_16_45(self) -> None:
+        from icom_lan.commands import set_system_time
+
+        frame = set_system_time(16, 45)
+        # FE FE 98 E0 1A 05 01 59 16 45 FD
+        assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x01\x59\x16\x45\xfd"
+
+    def test_set_system_time_00_00(self) -> None:
+        from icom_lan.commands import set_system_time
+
+        frame = set_system_time(0, 0)
+        assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x01\x59\x00\x00\xfd"
+
+    def test_set_system_time_23_59(self) -> None:
+        from icom_lan.commands import set_system_time
+
+        frame = set_system_time(23, 59)
+        assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x01\x59\x23\x59\xfd"
+
+    def test_set_system_time_rejects_invalid_hour(self) -> None:
+        from icom_lan.commands import set_system_time
+
+        with pytest.raises(ValueError, match="Hour must be 0-23"):
+            set_system_time(24, 0)
+
+    def test_set_system_time_rejects_invalid_minute(self) -> None:
+        from icom_lan.commands import set_system_time
+
+        with pytest.raises(ValueError, match="Minute must be 0-59"):
+            set_system_time(12, 60)
+
+    def test_parse_system_time_response(self) -> None:
+        from icom_lan.commands import parse_civ_frame, parse_system_time_response
+
+        # Response: 16:45
+        civ = b"\xfe\xfe\xe0\x98\x1a\x05\x01\x59\x16\x45\xfd"
+        frame = parse_civ_frame(civ)
+        hour, minute = parse_system_time_response(frame)
+        assert hour == 16
+        assert minute == 45
+
+    def test_system_time_roundtrip(self) -> None:
+        from icom_lan.commands import set_system_time, parse_civ_frame, parse_system_time_response
+
+        frame = set_system_time(9, 5)
+        response = b"\xfe\xfe" + bytes([frame[3], frame[2]]) + frame[4:]
+        parsed = parse_civ_frame(response)
+        hour, minute = parse_system_time_response(parsed)
+        assert (hour, minute) == (9, 5)
+
+    # --- UTC Offset (0x1A 0x05 0x01 0x62) ---
+
+    def test_get_utc_offset_frame(self) -> None:
+        from icom_lan.commands import get_utc_offset
+
+        frame = get_utc_offset()
+        assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x01\x62\xfd"
+
+    def test_set_utc_offset_plus_05_30(self) -> None:
+        from icom_lan.commands import set_utc_offset
+
+        frame = set_utc_offset(5, 30, False)
+        # FE FE 98 E0 1A 05 01 62 05 30 00 FD
+        assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x01\x62\x05\x30\x00\xfd"
+
+    def test_set_utc_offset_minus_08_00(self) -> None:
+        from icom_lan.commands import set_utc_offset
+
+        frame = set_utc_offset(8, 0, True)
+        # FE FE 98 E0 1A 05 01 62 08 00 01 FD
+        assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x01\x62\x08\x00\x01\xfd"
+
+    def test_set_utc_offset_zero(self) -> None:
+        from icom_lan.commands import set_utc_offset
+
+        frame = set_utc_offset(0, 0, False)
+        assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x01\x62\x00\x00\x00\xfd"
+
+    def test_set_utc_offset_max_positive(self) -> None:
+        from icom_lan.commands import set_utc_offset
+
+        frame = set_utc_offset(14, 0, False)
+        assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x01\x62\x14\x00\x00\xfd"
+
+    def test_set_utc_offset_rejects_invalid_hours(self) -> None:
+        from icom_lan.commands import set_utc_offset
+
+        with pytest.raises(ValueError, match="hours must be 0-14"):
+            set_utc_offset(15, 0, False)
+
+    def test_set_utc_offset_rejects_invalid_minutes(self) -> None:
+        from icom_lan.commands import set_utc_offset
+
+        with pytest.raises(ValueError, match="minutes must be 0/15/30/45"):
+            set_utc_offset(5, 10, False)
+        with pytest.raises(ValueError, match="minutes must be 0/15/30/45"):
+            set_utc_offset(5, 60, False)
+
+    def test_parse_utc_offset_response_positive(self) -> None:
+        from icom_lan.commands import parse_civ_frame, parse_utc_offset_response
+
+        # +05:30
+        civ = b"\xfe\xfe\xe0\x98\x1a\x05\x01\x62\x05\x30\x00\xfd"
+        frame = parse_civ_frame(civ)
+        hours, minutes, is_negative = parse_utc_offset_response(frame)
+        assert hours == 5
+        assert minutes == 30
+        assert is_negative is False
+
+    def test_parse_utc_offset_response_negative(self) -> None:
+        from icom_lan.commands import parse_civ_frame, parse_utc_offset_response
+
+        # -08:00
+        civ = b"\xfe\xfe\xe0\x98\x1a\x05\x01\x62\x08\x00\x01\xfd"
+        frame = parse_civ_frame(civ)
+        hours, minutes, is_negative = parse_utc_offset_response(frame)
+        assert hours == 8
+        assert minutes == 0
+        assert is_negative is True
+
+    def test_utc_offset_roundtrip(self) -> None:
+        from icom_lan.commands import set_utc_offset, parse_civ_frame, parse_utc_offset_response
+
+        frame = set_utc_offset(9, 45, True)
+        response = b"\xfe\xfe" + bytes([frame[3], frame[2]]) + frame[4:]
+        parsed = parse_civ_frame(response)
+        hours, minutes, is_negative = parse_utc_offset_response(parsed)
+        assert (hours, minutes, is_negative) == (9, 45, True)
