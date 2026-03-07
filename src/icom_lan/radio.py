@@ -227,6 +227,19 @@ from .commands import (
     parse_tsql_freq_response,
     _SUB_REPEATER_TONE,
     _SUB_REPEATER_TSQL,
+    # Memory and band-stacking (#133)
+    build_memory_mode_get,
+    build_memory_mode_set,
+    build_memory_write,
+    build_memory_to_vfo,
+    build_memory_clear,
+    build_memory_contents_get,
+    build_memory_contents_set,
+    build_band_stack_get,
+    build_band_stack_set,
+    parse_memory_mode_response,
+    parse_memory_contents_response,
+    parse_band_stack_response,
 )
 from .exceptions import (
     CommandError,
@@ -3659,56 +3672,60 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
 
     async def get_memory_mode(self) -> int:
         """Get currently selected memory channel (1-101)."""
-        frame = await self._send_civ_command(
-            commands.build_memory_mode_get(to_addr=self._radio_addr)
+        self._check_connected()
+        resp = await self._send_civ_raw(
+            build_memory_mode_get(to_addr=self._radio_addr)
         )
-        return commands.parse_memory_mode_response(frame)
+        frame = parse_civ_frame(resp)
+        return parse_memory_mode_response(frame)
 
     async def set_memory_mode(self, channel: int) -> None:
         """Select memory channel (1-101)."""
         if not 1 <= channel <= 101:
             raise ValueError(f"Channel must be 1-101, got {channel}")
-        await self._send_civ_command(
-            commands.build_memory_mode_set(channel, to_addr=self._radio_addr)
+        await self._send_fire_and_forget(
+            build_memory_mode_set(channel, to_addr=self._radio_addr)
         )
 
     async def memory_write(self) -> None:
         """Write current VFO state to selected memory channel."""
-        await self._send_civ_command(
-            commands.build_memory_write(to_addr=self._radio_addr)
+        await self._send_fire_and_forget(
+            build_memory_write(to_addr=self._radio_addr)
         )
 
     async def memory_to_vfo(self, channel: int) -> None:
         """Load memory channel to VFO."""
         if not 1 <= channel <= 101:
             raise ValueError(f"Channel must be 1-101, got {channel}")
-        await self._send_civ_command(
-            commands.build_memory_to_vfo(channel, to_addr=self._radio_addr)
+        await self._send_fire_and_forget(
+            build_memory_to_vfo(channel, to_addr=self._radio_addr)
         )
 
     async def memory_clear(self, channel: int) -> None:
         """Clear memory channel."""
         if not 1 <= channel <= 101:
             raise ValueError(f"Channel must be 1-101, got {channel}")
-        await self._send_civ_command(
-            commands.build_memory_clear(channel, to_addr=self._radio_addr)
+        await self._send_fire_and_forget(
+            build_memory_clear(channel, to_addr=self._radio_addr)
         )
 
     async def get_memory_contents(self, channel: int) -> types.MemoryChannel:
         """Read full memory channel data."""
         if not 1 <= channel <= 101:
             raise ValueError(f"Channel must be 1-101, got {channel}")
-        frame = await self._send_civ_command(
-            commands.build_memory_contents_get(channel, to_addr=self._radio_addr)
+        self._check_connected()
+        resp = await self._send_civ_raw(
+            build_memory_contents_get(channel, to_addr=self._radio_addr)
         )
-        return commands.parse_memory_contents_response(frame)
+        frame = parse_civ_frame(resp)
+        return parse_memory_contents_response(frame)
 
     async def set_memory_contents(self, mem: types.MemoryChannel) -> None:
         """Write full memory channel data."""
         if not 1 <= mem.channel <= 101:
             raise ValueError(f"Channel must be 1-101, got {mem.channel}")
-        await self._send_civ_command(
-            commands.build_memory_contents_set(mem, to_addr=self._radio_addr)
+        await self._send_fire_and_forget(
+            build_memory_contents_set(mem, to_addr=self._radio_addr)
         )
 
     async def get_band_stack(
@@ -3719,10 +3736,12 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
             raise ValueError(f"Band must be 0-24, got {band}")
         if not 1 <= register <= 3:
             raise ValueError(f"Register must be 1-3, got {register}")
-        frame = await self._send_civ_command(
-            commands.build_band_stack_get(band, register, to_addr=self._radio_addr)
+        self._check_connected()
+        resp = await self._send_civ_raw(
+            build_band_stack_get(band, register, to_addr=self._radio_addr)
         )
-        return commands.parse_band_stack_response(frame)
+        frame = parse_civ_frame(resp)
+        return parse_band_stack_response(frame)
 
     async def set_band_stack(self, bsr: types.BandStackRegister) -> None:
         """Write band stacking register."""
@@ -3730,8 +3749,8 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
             raise ValueError(f"Band must be 0-24, got {bsr.band}")
         if not 1 <= bsr.register <= 3:
             raise ValueError(f"Register must be 1-3, got {bsr.register}")
-        await self._send_civ_command(
-            commands.build_band_stack_set(bsr, to_addr=self._radio_addr)
+        await self._send_fire_and_forget(
+            build_band_stack_set(bsr, to_addr=self._radio_addr)
         )
 
 
