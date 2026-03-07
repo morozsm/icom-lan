@@ -227,6 +227,42 @@ from .commands import (
     parse_tsql_freq_response,
     _SUB_REPEATER_TONE,
     _SUB_REPEATER_TSQL,
+    # System/Config commands (#135)
+    get_antenna_1,
+    set_antenna_1,
+    get_antenna_2,
+    set_antenna_2,
+    get_rx_antenna_ant1,
+    set_rx_antenna_ant1,
+    get_rx_antenna_ant2,
+    set_rx_antenna_ant2,
+    get_acc1_mod_level,
+    set_acc1_mod_level,
+    get_usb_mod_level,
+    set_usb_mod_level,
+    get_lan_mod_level,
+    set_lan_mod_level,
+    get_data_off_mod_input,
+    set_data_off_mod_input,
+    get_data1_mod_input,
+    set_data1_mod_input,
+    get_data2_mod_input,
+    set_data2_mod_input,
+    get_data3_mod_input,
+    set_data3_mod_input,
+    get_civ_transceive,
+    set_civ_transceive,
+    get_civ_output_ant,
+    set_civ_output_ant,
+    get_system_date,
+    set_system_date,
+    parse_system_date_response,
+    get_system_time,
+    set_system_time,
+    parse_system_time_response,
+    get_utc_offset,
+    set_utc_offset,
+    parse_utc_offset_response,
     # Memory and band-stacking (#133)
     build_memory_mode_get,
     build_memory_mode_set,
@@ -3085,6 +3121,271 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         """Set TSQL frequency in Hz (0x1B 0x01)."""
         await self._send_fire_and_forget(
             _set_tsql_freq_cmd(freq_hz, to_addr=self._radio_addr, receiver=receiver)
+        )
+
+    # ------------------------------------------------------------------
+    # System/Config commands (#135)
+    # ------------------------------------------------------------------
+
+    async def get_antenna_1(self) -> bool:
+        """Read ANT1 selection status (0x12 0x00)."""
+        return await self._get_bool_value(
+            get_antenna_1(to_addr=self._radio_addr),
+            key="get_antenna_1",
+            command=0x12,
+            sub=0x00,
+        )
+
+    async def set_antenna_1(self, enabled: bool) -> None:
+        """Set ANT1 selection (0x12 0x00)."""
+        await self._send_fire_and_forget(
+            set_antenna_1(enabled, to_addr=self._radio_addr)
+        )
+
+    async def get_antenna_2(self) -> bool:
+        """Read ANT2 selection status (0x12 0x01)."""
+        return await self._get_bool_value(
+            get_antenna_2(to_addr=self._radio_addr),
+            key="get_antenna_2",
+            command=0x12,
+            sub=0x01,
+        )
+
+    async def set_antenna_2(self, enabled: bool) -> None:
+        """Set ANT2 selection (0x12 0x01)."""
+        await self._send_fire_and_forget(
+            set_antenna_2(enabled, to_addr=self._radio_addr)
+        )
+
+    async def get_rx_antenna_ant1(self) -> bool:
+        """Read RX antenna on ANT1 status (0x12 0x12)."""
+        return await self._get_bool_value(
+            get_rx_antenna_ant1(to_addr=self._radio_addr),
+            key="get_rx_antenna_ant1",
+            command=0x12,
+            sub=0x12,
+        )
+
+    async def set_rx_antenna_ant1(self, enabled: bool) -> None:
+        """Set RX antenna on ANT1 (0x12 0x12)."""
+        await self._send_fire_and_forget(
+            set_rx_antenna_ant1(enabled, to_addr=self._radio_addr)
+        )
+
+    async def get_rx_antenna_ant2(self) -> bool:
+        """Read RX antenna on ANT2 status (0x12 0x13)."""
+        return await self._get_bool_value(
+            get_rx_antenna_ant2(to_addr=self._radio_addr),
+            key="get_rx_antenna_ant2",
+            command=0x12,
+            sub=0x13,
+        )
+
+    async def set_rx_antenna_ant2(self, enabled: bool) -> None:
+        """Set RX antenna on ANT2 (0x12 0x13)."""
+        await self._send_fire_and_forget(
+            set_rx_antenna_ant2(enabled, to_addr=self._radio_addr)
+        )
+
+    async def get_acc1_mod_level(self) -> int:
+        """Read ACC1 modulation level (0-255)."""
+        return await self._get_bcd_level(
+            get_acc1_mod_level(to_addr=self._radio_addr),
+            key="get_acc1_mod_level",
+            command=0x14,
+            sub=0x0B,
+        )
+
+    async def set_acc1_mod_level(self, level: int) -> None:
+        """Set ACC1 modulation level (0-255)."""
+        await self._send_fire_and_forget(
+            set_acc1_mod_level(level, to_addr=self._radio_addr)
+        )
+
+    async def get_usb_mod_level(self) -> int:
+        """Read USB modulation level (0-255)."""
+        return await self._get_bcd_level(
+            get_usb_mod_level(to_addr=self._radio_addr),
+            key="get_usb_mod_level",
+            command=0x14,
+            sub=0x10,
+        )
+
+    async def set_usb_mod_level(self, level: int) -> None:
+        """Set USB modulation level (0-255)."""
+        await self._send_fire_and_forget(
+            set_usb_mod_level(level, to_addr=self._radio_addr)
+        )
+
+    async def get_lan_mod_level(self) -> int:
+        """Read LAN modulation level (0-255)."""
+        return await self._get_bcd_level(
+            get_lan_mod_level(to_addr=self._radio_addr),
+            key="get_lan_mod_level",
+            command=0x14,
+            sub=0x11,
+        )
+
+    async def set_lan_mod_level(self, level: int) -> None:
+        """Set LAN modulation level (0-255)."""
+        await self._send_fire_and_forget(
+            set_lan_mod_level(level, to_addr=self._radio_addr)
+        )
+
+    async def get_data_off_mod_input(self) -> int:
+        """Read Data Off modulation input source (0-5)."""
+        return await self._get_bcd_level(
+            get_data_off_mod_input(to_addr=self._radio_addr),
+            key="get_data_off_mod_input",
+            command=0x1A,
+            sub=0x05,
+            prefix=b"\x00\x91",
+            bcd_bytes=1,
+        )
+
+    async def set_data_off_mod_input(self, source: int) -> None:
+        """Set Data Off modulation input source (0-5)."""
+        await self._send_fire_and_forget(
+            set_data_off_mod_input(source, to_addr=self._radio_addr)
+        )
+
+    async def get_data1_mod_input(self) -> int:
+        """Read DATA1 modulation input source (0-4)."""
+        return await self._get_bcd_level(
+            get_data1_mod_input(to_addr=self._radio_addr),
+            key="get_data1_mod_input",
+            command=0x1A,
+            sub=0x05,
+            prefix=b"\x00\x92",
+            bcd_bytes=1,
+        )
+
+    async def set_data1_mod_input(self, source: int) -> None:
+        """Set DATA1 modulation input source (0-4)."""
+        await self._send_fire_and_forget(
+            set_data1_mod_input(source, to_addr=self._radio_addr)
+        )
+
+    async def get_data2_mod_input(self) -> int:
+        """Read DATA2 modulation input source (0-4)."""
+        return await self._get_bcd_level(
+            get_data2_mod_input(to_addr=self._radio_addr),
+            key="get_data2_mod_input",
+            command=0x1A,
+            sub=0x05,
+            prefix=b"\x00\x93",
+            bcd_bytes=1,
+        )
+
+    async def set_data2_mod_input(self, source: int) -> None:
+        """Set DATA2 modulation input source (0-4)."""
+        await self._send_fire_and_forget(
+            set_data2_mod_input(source, to_addr=self._radio_addr)
+        )
+
+    async def get_data3_mod_input(self) -> int:
+        """Read DATA3 modulation input source (0-4)."""
+        return await self._get_bcd_level(
+            get_data3_mod_input(to_addr=self._radio_addr),
+            key="get_data3_mod_input",
+            command=0x1A,
+            sub=0x05,
+            prefix=b"\x00\x94",
+            bcd_bytes=1,
+        )
+
+    async def set_data3_mod_input(self, source: int) -> None:
+        """Set DATA3 modulation input source (0-4)."""
+        await self._send_fire_and_forget(
+            set_data3_mod_input(source, to_addr=self._radio_addr)
+        )
+
+    async def get_civ_transceive(self) -> bool:
+        """Read CI-V transceive status."""
+        return await self._get_bool_value(
+            get_civ_transceive(to_addr=self._radio_addr),
+            key="get_civ_transceive",
+            command=0x1A,
+            sub=0x05,
+            prefix=b"\x01\x29",
+        )
+
+    async def set_civ_transceive(self, enabled: bool) -> None:
+        """Set CI-V transceive status."""
+        await self._send_fire_and_forget(
+            set_civ_transceive(enabled, to_addr=self._radio_addr)
+        )
+
+    async def get_civ_output_ant(self) -> bool:
+        """Read CI-V output (ANT) status."""
+        return await self._get_bool_value(
+            get_civ_output_ant(to_addr=self._radio_addr),
+            key="get_civ_output_ant",
+            command=0x1A,
+            sub=0x05,
+            prefix=b"\x01\x30",
+        )
+
+    async def set_civ_output_ant(self, enabled: bool) -> None:
+        """Set CI-V output (ANT) status."""
+        await self._send_fire_and_forget(
+            set_civ_output_ant(enabled, to_addr=self._radio_addr)
+        )
+
+    async def get_system_date(self) -> tuple[int, int, int]:
+        """Read system date as (year, month, day)."""
+        self._check_connected()
+        civ = get_system_date(to_addr=self._radio_addr)
+        resp = await self._send_civ_raw(civ, key="get_system_date", dedupe=True)
+        return parse_system_date_response(resp)
+
+    async def set_system_date(self, year: int, month: int, day: int) -> None:
+        """Set system date.
+
+        Args:
+            year: 4-digit year.
+            month: Month 1-12.
+            day: Day 1-31.
+        """
+        await self._send_fire_and_forget(
+            set_system_date(year, month, day, to_addr=self._radio_addr)
+        )
+
+    async def get_system_time(self) -> tuple[int, int]:
+        """Read system time as (hour, minute)."""
+        self._check_connected()
+        civ = get_system_time(to_addr=self._radio_addr)
+        resp = await self._send_civ_raw(civ, key="get_system_time", dedupe=True)
+        return parse_system_time_response(resp)
+
+    async def set_system_time(self, hour: int, minute: int) -> None:
+        """Set system time.
+
+        Args:
+            hour: Hour 0-23.
+            minute: Minute 0-59.
+        """
+        await self._send_fire_and_forget(
+            set_system_time(hour, minute, to_addr=self._radio_addr)
+        )
+
+    async def get_utc_offset(self) -> tuple[int, int, bool]:
+        """Read UTC offset as (hours, minutes, is_negative)."""
+        self._check_connected()
+        civ = get_utc_offset(to_addr=self._radio_addr)
+        resp = await self._send_civ_raw(civ, key="get_utc_offset", dedupe=True)
+        return parse_utc_offset_response(resp)
+
+    async def set_utc_offset(self, hours: int, minutes: int, is_negative: bool) -> None:
+        """Set UTC offset.
+
+        Args:
+            hours: Offset hours 0-14.
+            minutes: Offset minutes, one of 0/15/30/45.
+            is_negative: True for negative (west) offset.
+        """
+        await self._send_fire_and_forget(
+            set_utc_offset(hours, minutes, is_negative, to_addr=self._radio_addr)
         )
 
     async def snapshot_state(self) -> dict[str, object]:

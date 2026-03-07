@@ -223,6 +223,42 @@ __all__ = [
     "set_tsql_freq",
     "parse_tone_freq_response",
     "parse_tsql_freq_response",
+    # System/Config commands (#135)
+    "get_antenna_1",
+    "set_antenna_1",
+    "get_antenna_2",
+    "set_antenna_2",
+    "get_rx_antenna_ant1",
+    "set_rx_antenna_ant1",
+    "get_rx_antenna_ant2",
+    "set_rx_antenna_ant2",
+    "get_acc1_mod_level",
+    "set_acc1_mod_level",
+    "get_usb_mod_level",
+    "set_usb_mod_level",
+    "get_lan_mod_level",
+    "set_lan_mod_level",
+    "get_data_off_mod_input",
+    "set_data_off_mod_input",
+    "get_data1_mod_input",
+    "set_data1_mod_input",
+    "get_data2_mod_input",
+    "set_data2_mod_input",
+    "get_data3_mod_input",
+    "set_data3_mod_input",
+    "get_civ_transceive",
+    "set_civ_transceive",
+    "get_civ_output_ant",
+    "set_civ_output_ant",
+    "get_system_date",
+    "set_system_date",
+    "parse_system_date_response",
+    "get_system_time",
+    "set_system_time",
+    "parse_system_time_response",
+    "get_utc_offset",
+    "set_utc_offset",
+    "parse_utc_offset_response",
 ]
 
 # CI-V addresses
@@ -287,17 +323,36 @@ _SUB_CTL_MEM = 0x05
 _SUB_DATA_MODE = 0x06  # DATA mode sub-command for 0x1A
 _SUB_AF_MUTE = 0x09
 
+_CMD_ANTENNA = 0x12
+_SUB_ANT1 = 0x00
+_SUB_ANT2 = 0x01
+_SUB_RX_ANT_ANT1 = 0x12
+_SUB_RX_ANT_ANT2 = 0x13
+
+_SUB_ACC1_MOD_LEVEL = 0x0B
+_SUB_USB_MOD_LEVEL = 0x10
+_SUB_LAN_MOD_LEVEL = 0x11
+
 _CTL_MEM_REF_ADJUST = b"\x00\x70"
 _CTL_MEM_DASH_RATIO = b"\x02\x28"
 _CTL_MEM_NB_DEPTH = b"\x02\x90"
 _CTL_MEM_NB_WIDTH = b"\x02\x91"
+_CTL_MEM_DATA_OFF_MOD_INPUT = b"\x00\x91"
+_CTL_MEM_DATA1_MOD_INPUT = b"\x00\x92"
+_CTL_MEM_DATA2_MOD_INPUT = b"\x00\x93"
+_CTL_MEM_DATA3_MOD_INPUT = b"\x00\x94"
+_CTL_MEM_CIV_TRANSCEIVE = b"\x01\x29"
+_CTL_MEM_CIV_OUTPUT_ANT = b"\x01\x30"
+_CTL_MEM_SYSTEM_DATE = b"\x01\x58"
+_CTL_MEM_SYSTEM_TIME = b"\x01\x59"
+_CTL_MEM_UTC_OFFSET = b"\x01\x62"
 
 # CI-V frame markers
 _PREAMBLE = b"\xfe\xfe"
 _TERMINATOR = b"\xfd"
 
 # Commands that use sub-commands (for parse disambiguation)
-_COMMANDS_WITH_SUB: set[int] = {_CMD_LEVEL, _CMD_METER, _CMD_PTT, _CMD_CTL_MEM, _CMD_RIT, 0x27, 0x16, _CMD_TONE}
+_COMMANDS_WITH_SUB: set[int] = {_CMD_LEVEL, _CMD_METER, _CMD_PTT, _CMD_CTL_MEM, _CMD_RIT, 0x27, 0x16, _CMD_TONE, _CMD_ANTENNA}
 
 
 def build_civ_frame(
@@ -3866,6 +3921,510 @@ def parse_band_stack_response(frame: CivFrame) -> "BandStackRegister":
         mode=_bcd_decode_value(data[7:8]),
         filter=_bcd_decode_value(data[8:9]),
     )
+
+
+# --- Antenna Selection (0x12) ---
+
+
+def get_antenna_1(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build read ANT1 selection command (0x12 0x00)."""
+    return build_civ_frame(to_addr, from_addr, _CMD_ANTENNA, sub=_SUB_ANT1)
+
+
+def set_antenna_1(
+    enabled: bool,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build set ANT1 selection command (0x12 0x00).
+
+    Args:
+        enabled: True to select ANT1, False to deselect.
+    """
+    return build_civ_frame(
+        to_addr, from_addr, _CMD_ANTENNA, sub=_SUB_ANT1,
+        data=b"\x01" if enabled else b"\x00",
+    )
+
+
+def get_antenna_2(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build read ANT2 selection command (0x12 0x01)."""
+    return build_civ_frame(to_addr, from_addr, _CMD_ANTENNA, sub=_SUB_ANT2)
+
+
+def set_antenna_2(
+    enabled: bool,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build set ANT2 selection command (0x12 0x01).
+
+    Args:
+        enabled: True to select ANT2, False to deselect.
+    """
+    return build_civ_frame(
+        to_addr, from_addr, _CMD_ANTENNA, sub=_SUB_ANT2,
+        data=b"\x01" if enabled else b"\x00",
+    )
+
+
+def get_rx_antenna_ant1(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build read RX antenna on ANT1 command (0x12 0x12)."""
+    return build_civ_frame(to_addr, from_addr, _CMD_ANTENNA, sub=_SUB_RX_ANT_ANT1)
+
+
+def set_rx_antenna_ant1(
+    enabled: bool,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build set RX antenna on ANT1 command (0x12 0x12).
+
+    Args:
+        enabled: True to enable RX antenna on ANT1.
+    """
+    return build_civ_frame(
+        to_addr, from_addr, _CMD_ANTENNA, sub=_SUB_RX_ANT_ANT1,
+        data=b"\x01" if enabled else b"\x00",
+    )
+
+
+def get_rx_antenna_ant2(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build read RX antenna on ANT2 command (0x12 0x13)."""
+    return build_civ_frame(to_addr, from_addr, _CMD_ANTENNA, sub=_SUB_RX_ANT_ANT2)
+
+
+def set_rx_antenna_ant2(
+    enabled: bool,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build set RX antenna on ANT2 command (0x12 0x13).
+
+    Args:
+        enabled: True to enable RX antenna on ANT2.
+    """
+    return build_civ_frame(
+        to_addr, from_addr, _CMD_ANTENNA, sub=_SUB_RX_ANT_ANT2,
+        data=b"\x01" if enabled else b"\x00",
+    )
+
+
+# --- Modulation Levels (0x14 0x0B / 0x10 / 0x11) ---
+
+
+def get_acc1_mod_level(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build read ACC1 modulation level command (0x14 0x0B)."""
+    return build_civ_frame(to_addr, from_addr, _CMD_LEVEL, sub=_SUB_ACC1_MOD_LEVEL)
+
+
+def set_acc1_mod_level(
+    level: int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build set ACC1 modulation level command (0x14 0x0B).
+
+    Args:
+        level: Mod level 0-255.
+    """
+    return build_civ_frame(
+        to_addr, from_addr, _CMD_LEVEL, sub=_SUB_ACC1_MOD_LEVEL,
+        data=_level_bcd_encode(level),
+    )
+
+
+def get_usb_mod_level(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build read USB modulation level command (0x14 0x10)."""
+    return build_civ_frame(to_addr, from_addr, _CMD_LEVEL, sub=_SUB_USB_MOD_LEVEL)
+
+
+def set_usb_mod_level(
+    level: int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build set USB modulation level command (0x14 0x10).
+
+    Args:
+        level: Mod level 0-255.
+    """
+    return build_civ_frame(
+        to_addr, from_addr, _CMD_LEVEL, sub=_SUB_USB_MOD_LEVEL,
+        data=_level_bcd_encode(level),
+    )
+
+
+def get_lan_mod_level(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build read LAN modulation level command (0x14 0x11)."""
+    return build_civ_frame(to_addr, from_addr, _CMD_LEVEL, sub=_SUB_LAN_MOD_LEVEL)
+
+
+def set_lan_mod_level(
+    level: int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build set LAN modulation level command (0x14 0x11).
+
+    Args:
+        level: Mod level 0-255.
+    """
+    return build_civ_frame(
+        to_addr, from_addr, _CMD_LEVEL, sub=_SUB_LAN_MOD_LEVEL,
+        data=_level_bcd_encode(level),
+    )
+
+
+# --- Modulation Input Routing (0x1A 0x05 0x00 0x91-0x94) ---
+
+
+def get_data_off_mod_input(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build read Data Off modulation input command (0x1A 0x05 0x00 0x91)."""
+    return _build_ctl_mem_get(_CTL_MEM_DATA_OFF_MOD_INPUT, to_addr=to_addr, from_addr=from_addr)
+
+
+def set_data_off_mod_input(
+    source: int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build set Data Off modulation input command (0x1A 0x05 0x00 0x91).
+
+    Args:
+        source: 0=MIC, 1=ACC, 2=MIC+ACC, 3=USB, 4=MIC+USB, 5=LAN.
+    """
+    if not 0 <= source <= 5:
+        raise ValueError(f"Data Off mod input must be 0-5, got {source}")
+    return _build_ctl_mem_set(
+        _CTL_MEM_DATA_OFF_MOD_INPUT, source,
+        to_addr=to_addr, from_addr=from_addr, byte_count=1,
+    )
+
+
+def get_data1_mod_input(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build read DATA1 modulation input command (0x1A 0x05 0x00 0x92)."""
+    return _build_ctl_mem_get(_CTL_MEM_DATA1_MOD_INPUT, to_addr=to_addr, from_addr=from_addr)
+
+
+def set_data1_mod_input(
+    source: int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build set DATA1 modulation input command (0x1A 0x05 0x00 0x92).
+
+    Args:
+        source: 0=MIC, 1=ACC, 2=USB, 3=LAN, 4=LAN+USB.
+    """
+    if not 0 <= source <= 4:
+        raise ValueError(f"DATA1 mod input must be 0-4, got {source}")
+    return _build_ctl_mem_set(
+        _CTL_MEM_DATA1_MOD_INPUT, source,
+        to_addr=to_addr, from_addr=from_addr, byte_count=1,
+    )
+
+
+def get_data2_mod_input(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build read DATA2 modulation input command (0x1A 0x05 0x00 0x93)."""
+    return _build_ctl_mem_get(_CTL_MEM_DATA2_MOD_INPUT, to_addr=to_addr, from_addr=from_addr)
+
+
+def set_data2_mod_input(
+    source: int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build set DATA2 modulation input command (0x1A 0x05 0x00 0x93).
+
+    Args:
+        source: 0=MIC, 1=ACC, 2=USB, 3=LAN, 4=LAN+USB.
+    """
+    if not 0 <= source <= 4:
+        raise ValueError(f"DATA2 mod input must be 0-4, got {source}")
+    return _build_ctl_mem_set(
+        _CTL_MEM_DATA2_MOD_INPUT, source,
+        to_addr=to_addr, from_addr=from_addr, byte_count=1,
+    )
+
+
+def get_data3_mod_input(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build read DATA3 modulation input command (0x1A 0x05 0x00 0x94)."""
+    return _build_ctl_mem_get(_CTL_MEM_DATA3_MOD_INPUT, to_addr=to_addr, from_addr=from_addr)
+
+
+def set_data3_mod_input(
+    source: int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build set DATA3 modulation input command (0x1A 0x05 0x00 0x94).
+
+    Args:
+        source: 0=MIC, 1=ACC, 2=USB, 3=LAN, 4=LAN+USB.
+    """
+    if not 0 <= source <= 4:
+        raise ValueError(f"DATA3 mod input must be 0-4, got {source}")
+    return _build_ctl_mem_set(
+        _CTL_MEM_DATA3_MOD_INPUT, source,
+        to_addr=to_addr, from_addr=from_addr, byte_count=1,
+    )
+
+
+# --- CI-V Options (0x1A 0x05 0x01 0x29 / 0x30) ---
+
+
+def get_civ_transceive(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build read CI-V transceive command (0x1A 0x05 0x01 0x29)."""
+    return _build_ctl_mem_get(_CTL_MEM_CIV_TRANSCEIVE, to_addr=to_addr, from_addr=from_addr)
+
+
+def set_civ_transceive(
+    enabled: bool,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build set CI-V transceive command (0x1A 0x05 0x01 0x29).
+
+    Args:
+        enabled: True to enable CI-V transceive mode.
+    """
+    return _build_ctl_mem_set(
+        _CTL_MEM_CIV_TRANSCEIVE, 1 if enabled else 0,
+        to_addr=to_addr, from_addr=from_addr, byte_count=1,
+    )
+
+
+def get_civ_output_ant(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build read CI-V output (ANT) command (0x1A 0x05 0x01 0x30)."""
+    return _build_ctl_mem_get(_CTL_MEM_CIV_OUTPUT_ANT, to_addr=to_addr, from_addr=from_addr)
+
+
+def set_civ_output_ant(
+    enabled: bool,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build set CI-V output (ANT) command (0x1A 0x05 0x01 0x30).
+
+    Args:
+        enabled: True to enable CI-V output on ANT connector.
+    """
+    return _build_ctl_mem_set(
+        _CTL_MEM_CIV_OUTPUT_ANT, 1 if enabled else 0,
+        to_addr=to_addr, from_addr=from_addr, byte_count=1,
+    )
+
+
+# --- Date / Time / UTC Offset (0x1A 0x05 0x01 0x58-0x62) ---
+
+
+def get_system_date(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build read system date command (0x1A 0x05 0x01 0x58)."""
+    return _build_ctl_mem_get(_CTL_MEM_SYSTEM_DATE, to_addr=to_addr, from_addr=from_addr)
+
+
+def set_system_date(
+    year: int,
+    month: int,
+    day: int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build set system date command (0x1A 0x05 0x01 0x58).
+
+    Args:
+        year: 4-digit year (2000-2099).
+        month: Month 1-12.
+        day: Day 1-31.
+    """
+    if not 2000 <= year <= 2099:
+        raise ValueError(f"Year must be 2000-2099, got {year}")
+    if not 1 <= month <= 12:
+        raise ValueError(f"Month must be 1-12, got {month}")
+    if not 1 <= day <= 31:
+        raise ValueError(f"Day must be 1-31, got {day}")
+    bcd = (
+        _bcd_encode_value(year, byte_count=2)
+        + _bcd_encode_value(month, byte_count=1)
+        + _bcd_encode_value(day, byte_count=1)
+    )
+    return build_civ_frame(
+        to_addr, from_addr, _CMD_CTL_MEM, sub=_SUB_CTL_MEM,
+        data=_CTL_MEM_SYSTEM_DATE + bcd,
+    )
+
+
+def parse_system_date_response(frame: CivFrame) -> tuple[int, int, int]:
+    """Parse system date response (0x1A 0x05 0x01 0x58).
+
+    Returns:
+        Tuple of (year, month, day).
+    """
+    if frame.command != _CMD_CTL_MEM or frame.sub != _SUB_CTL_MEM:
+        raise ValueError(f"Not a system date response: 0x{frame.command:02x}")
+    data = frame.data
+    if not data.startswith(_CTL_MEM_SYSTEM_DATE):
+        raise ValueError(f"System date prefix mismatch: {data.hex()}")
+    data = data[len(_CTL_MEM_SYSTEM_DATE):]
+    if len(data) < 4:
+        raise ValueError(f"System date payload too short: {len(data)} bytes")
+    year = _bcd_decode_value(data[0:2])
+    month = _bcd_decode_value(data[2:3])
+    day = _bcd_decode_value(data[3:4])
+    return (year, month, day)
+
+
+def get_system_time(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build read system time command (0x1A 0x05 0x01 0x59)."""
+    return _build_ctl_mem_get(_CTL_MEM_SYSTEM_TIME, to_addr=to_addr, from_addr=from_addr)
+
+
+def set_system_time(
+    hour: int,
+    minute: int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build set system time command (0x1A 0x05 0x01 0x59).
+
+    Args:
+        hour: Hour 0-23.
+        minute: Minute 0-59.
+    """
+    if not 0 <= hour <= 23:
+        raise ValueError(f"Hour must be 0-23, got {hour}")
+    if not 0 <= minute <= 59:
+        raise ValueError(f"Minute must be 0-59, got {minute}")
+    bcd = (
+        _bcd_encode_value(hour, byte_count=1)
+        + _bcd_encode_value(minute, byte_count=1)
+    )
+    return build_civ_frame(
+        to_addr, from_addr, _CMD_CTL_MEM, sub=_SUB_CTL_MEM,
+        data=_CTL_MEM_SYSTEM_TIME + bcd,
+    )
+
+
+def parse_system_time_response(frame: CivFrame) -> tuple[int, int]:
+    """Parse system time response (0x1A 0x05 0x01 0x59).
+
+    Returns:
+        Tuple of (hour, minute).
+    """
+    if frame.command != _CMD_CTL_MEM or frame.sub != _SUB_CTL_MEM:
+        raise ValueError(f"Not a system time response: 0x{frame.command:02x}")
+    data = frame.data
+    if not data.startswith(_CTL_MEM_SYSTEM_TIME):
+        raise ValueError(f"System time prefix mismatch: {data.hex()}")
+    data = data[len(_CTL_MEM_SYSTEM_TIME):]
+    if len(data) < 2:
+        raise ValueError(f"System time payload too short: {len(data)} bytes")
+    hour = _bcd_decode_value(data[0:1])
+    minute = _bcd_decode_value(data[1:2])
+    return (hour, minute)
+
+
+def get_utc_offset(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build read UTC offset command (0x1A 0x05 0x01 0x62)."""
+    return _build_ctl_mem_get(_CTL_MEM_UTC_OFFSET, to_addr=to_addr, from_addr=from_addr)
+
+
+def set_utc_offset(
+    hours: int,
+    minutes: int,
+    is_negative: bool,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build set UTC offset command (0x1A 0x05 0x01 0x62).
+
+    Args:
+        hours: Offset hours 0-14.
+        minutes: Offset minutes, one of 0/15/30/45.
+        is_negative: True for negative (west) offset.
+    """
+    if not 0 <= hours <= 14:
+        raise ValueError(f"UTC offset hours must be 0-14, got {hours}")
+    if minutes not in (0, 15, 30, 45):
+        raise ValueError(f"UTC offset minutes must be 0/15/30/45, got {minutes}")
+    payload = (
+        _bcd_encode_value(hours, byte_count=1)
+        + _bcd_encode_value(minutes, byte_count=1)
+        + (b"\x01" if is_negative else b"\x00")
+    )
+    return build_civ_frame(
+        to_addr, from_addr, _CMD_CTL_MEM, sub=_SUB_CTL_MEM,
+        data=_CTL_MEM_UTC_OFFSET + payload,
+    )
+
+
+def parse_utc_offset_response(frame: CivFrame) -> tuple[int, int, bool]:
+    """Parse UTC offset response (0x1A 0x05 0x01 0x62).
+
+    Returns:
+        Tuple of (hours, minutes, is_negative).
+    """
+    if frame.command != _CMD_CTL_MEM or frame.sub != _SUB_CTL_MEM:
+        raise ValueError(f"Not a UTC offset response: 0x{frame.command:02x}")
+    data = frame.data
+    if not data.startswith(_CTL_MEM_UTC_OFFSET):
+        raise ValueError(f"UTC offset prefix mismatch: {data.hex()}")
+    data = data[len(_CTL_MEM_UTC_OFFSET):]
+    if len(data) < 3:
+        raise ValueError(f"UTC offset payload too short: {len(data)} bytes")
+    hours = _bcd_decode_value(data[0:1])
+    minutes = _bcd_decode_value(data[1:2])
+    is_negative = data[2] != 0x00
+    return (hours, minutes, is_negative)
 
 
 # --- ACK/NAK ---
