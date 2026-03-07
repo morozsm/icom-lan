@@ -246,6 +246,10 @@ _CMD_CTL_MEM = 0x1A  # Memory / configuration command
 _CMD_BAND_EDGE = 0x02  # Band edge frequency
 _CMD_RIT = 0x21       # RIT/XIT
 _CMD_TONE = 0x1B      # Tone/TSQL frequency
+_CMD_MEMORY_MODE = 0x08  # Memory mode (select channel)
+_CMD_MEMORY_WRITE = 0x09  # Memory write
+_CMD_MEMORY_TO_VFO = 0x0A  # Memory to VFO
+_CMD_MEMORY_CLEAR = 0x0B  # Memory clear
 _CMD_ACK = 0xFB
 _CMD_NAK = 0xFA
 
@@ -1499,6 +1503,8 @@ _SUB_REPEATER_TSQL = 0x43     # Repeater TSQL on/off (0x16 0x43)
 # 0x1B subcodes (tone frequencies)
 _SUB_TONE_FREQ = 0x00         # CTCSS Tone frequency (0x1B 0x00)
 _SUB_TSQL_FREQ = 0x01         # TSQL frequency (0x1B 0x01)
+_SUB_MEMORY_CONTENTS = 0x00   # Memory contents (0x1A 0x00)
+_SUB_BAND_STACK = 0x01        # Band stacking register (0x1A 0x01)
 _SUB_AGC_TIME_CONSTANT = 0x04
 
 
@@ -3627,6 +3633,236 @@ def parse_tsql_freq_response(frame: CivFrame) -> tuple[int | None, float]:
     if len(frame.data) < 3:
         raise ValueError(f"Expected 3 bytes for TSQL freq, got {len(frame.data)}")
     return (frame.receiver, _decode_tone_freq(frame.data))
+
+
+# --- Memory Commands ---
+
+
+def build_memory_mode_get(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR) -> bytes:
+    """Build CI-V frame to get current memory mode (0x08)."""
+    return build_civ_frame(to_addr, from_addr, _CMD_MEMORY_MODE)
+
+
+def build_memory_mode_set(
+    channel: int, to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
+) -> bytes:
+    """Build CI-V frame to set memory mode (0x08).
+
+    Args:
+        channel: Memory channel number (1-101).
+    """
+    if not 1 <= channel <= 101:
+        raise ValueError(f"Channel must be 1-101, got {channel}")
+    data = _bcd_encode_value(channel, byte_count=2)
+    return build_civ_frame(to_addr, from_addr, _CMD_MEMORY_MODE, data=data)
+
+
+def parse_memory_mode_response(frame: CivFrame) -> int:
+    """Parse memory mode response (0x08).
+
+    Returns:
+        Memory channel number (1-101).
+    """
+    if frame.command != _CMD_MEMORY_MODE:
+        raise ValueError(f"Not a memory mode response: 0x{frame.command:02x}")
+    if len(frame.data) < 2:
+        raise ValueError(f"Expected 2 bytes for memory mode, got {len(frame.data)}")
+    return _bcd_decode_value(frame.data[:2])
+
+
+def build_memory_write(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR) -> bytes:
+    """Build CI-V frame to write VFO to memory (0x09)."""
+    return build_civ_frame(to_addr, from_addr, _CMD_MEMORY_WRITE)
+
+
+def build_memory_to_vfo(
+    channel: int, to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
+) -> bytes:
+    """Build CI-V frame to load memory to VFO (0x0A).
+
+    Args:
+        channel: Memory channel number (1-101).
+    """
+    if not 1 <= channel <= 101:
+        raise ValueError(f"Channel must be 1-101, got {channel}")
+    data = _bcd_encode_value(channel, byte_count=2)
+    return build_civ_frame(to_addr, from_addr, _CMD_MEMORY_TO_VFO, data=data)
+
+
+def build_memory_clear(
+    channel: int, to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
+) -> bytes:
+    """Build CI-V frame to clear memory channel (0x0B).
+
+    Args:
+        channel: Memory channel number (1-101).
+    """
+    if not 1 <= channel <= 101:
+        raise ValueError(f"Channel must be 1-101, got {channel}")
+    data = _bcd_encode_value(channel, byte_count=2)
+    return build_civ_frame(to_addr, from_addr, _CMD_MEMORY_CLEAR, data=data)
+
+
+def build_memory_contents_get(
+    channel: int, to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
+) -> bytes:
+    """Build CI-V frame to get memory contents (0x1A 0x00).
+
+    Args:
+        channel: Memory channel number (1-101).
+    """
+    if not 1 <= channel <= 101:
+        raise ValueError(f"Channel must be 1-101, got {channel}")
+    channel_bcd = _bcd_encode_value(channel, byte_count=2)
+    return build_civ_frame(
+        to_addr, from_addr, _CMD_CTL_MEM, sub=_SUB_MEMORY_CONTENTS, data=channel_bcd
+    )
+
+
+def build_memory_contents_set(
+    mem: "MemoryChannel", to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
+) -> bytes:
+    """Build CI-V frame to set memory contents (0x1A 0x00).
+
+    Args:
+        mem: MemoryChannel dataclass with all fields.
+    """
+    from .types import MemoryChannel
+
+    if not isinstance(mem, MemoryChannel):
+        raise TypeError(f"Expected MemoryChannel, got {type(mem)}")
+    if not 1 <= mem.channel <= 101:
+        raise ValueError(f"Channel must be 1-101, got {mem.channel}")
+
+    # Build payload per IC-7610 MemFormat spec:
+    # %1.2b %3.1c %4.5f %9.1g %10.1h %11.1k %12.3n %15.3o %18.10z
+    payload = bytearray(28)
+    payload[1:3] = _bcd_encode_value(mem.channel, byte_count=2)
+    payload[3] = mem.scan
+    payload[4:9] = bcd_encode(mem.frequency_hz)
+    payload[9] = _bcd_encode_value(mem.mode, byte_count=1)[0]
+    payload[10] = _bcd_encode_value(mem.filter, byte_count=1)[0]
+    payload[11] = (mem.datamode << 4) | (mem.tonemode & 0x0F)
+    if mem.tone_freq_hz:
+        payload[12:15] = _bcd_encode_value(mem.tone_freq_hz, byte_count=3)
+    if mem.tsql_freq_hz:
+        payload[15:18] = _bcd_encode_value(mem.tsql_freq_hz, byte_count=3)
+    name_bytes = mem.name.encode("ascii", errors="replace")[:10]
+    payload[18 : 18 + len(name_bytes)] = name_bytes
+
+    channel_bcd = _bcd_encode_value(mem.channel, byte_count=2)
+    return build_civ_frame(
+        to_addr,
+        from_addr,
+        _CMD_CTL_MEM,
+        sub=_SUB_MEMORY_CONTENTS,
+        data=channel_bcd + bytes(payload),
+    )
+
+
+def parse_memory_contents_response(frame: CivFrame) -> "MemoryChannel":
+    """Parse memory contents response (0x1A 0x00).
+
+    Returns:
+        MemoryChannel dataclass.
+    """
+    from .types import MemoryChannel
+
+    if frame.command != _CMD_CTL_MEM or frame.sub != _SUB_MEMORY_CONTENTS:
+        raise ValueError(
+            f"Not a memory contents response: 0x{frame.command:02x} sub=0x{frame.sub!r}"
+        )
+    if len(frame.data) < 28:
+        raise ValueError(f"Memory contents too short: {len(frame.data)} bytes")
+
+    data = frame.data
+    return MemoryChannel(
+        channel=_bcd_decode_value(data[1:3]),
+        scan=data[3],
+        frequency_hz=bcd_decode(data[4:9]),
+        mode=_bcd_decode_value(data[9:10]),
+        filter=_bcd_decode_value(data[10:11]),
+        datamode=(data[11] >> 4) & 0x0F,
+        tonemode=data[11] & 0x0F,
+        tone_freq_hz=(
+            _bcd_decode_value(data[12:15]) if data[12:15] != b"\x00\x00\x00" else None
+        ),
+        tsql_freq_hz=(
+            _bcd_decode_value(data[15:18]) if data[15:18] != b"\x00\x00\x00" else None
+        ),
+        name=data[18:28].rstrip(b"\x00").decode("ascii", errors="replace"),
+    )
+
+
+def build_band_stack_get(
+    band: int, register: int, to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
+) -> bytes:
+    """Build CI-V frame to get band stacking register (0x1A 0x01).
+
+    Args:
+        band: Band code (0x00-0x18).
+        register: Register number (1-3).
+    """
+    if not 0 <= band <= 24:
+        raise ValueError(f"Band must be 0-24, got {band}")
+    if not 1 <= register <= 3:
+        raise ValueError(f"Register must be 1-3, got {register}")
+    data = bytes([band, register])
+    return build_civ_frame(
+        to_addr, from_addr, _CMD_CTL_MEM, sub=_SUB_BAND_STACK, data=data
+    )
+
+
+def build_band_stack_set(
+    bsr: "BandStackRegister", to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
+) -> bytes:
+    """Build CI-V frame to set band stacking register (0x1A 0x01).
+
+    Args:
+        bsr: BandStackRegister dataclass.
+    """
+    from .types import BandStackRegister
+
+    if not isinstance(bsr, BandStackRegister):
+        raise TypeError(f"Expected BandStackRegister, got {type(bsr)}")
+    if not 0 <= bsr.band <= 24:
+        raise ValueError(f"Band must be 0-24, got {bsr.band}")
+    if not 1 <= bsr.register <= 3:
+        raise ValueError(f"Register must be 1-3, got {bsr.register}")
+
+    # Payload: band + reg + freq(5) + mode(1) + filter(1)
+    payload = bytes([bsr.band, bsr.register])
+    payload += bcd_encode(bsr.frequency_hz)
+    payload += _bcd_encode_value(bsr.mode, byte_count=1)
+    payload += _bcd_encode_value(bsr.filter, byte_count=1)
+    return build_civ_frame(
+        to_addr, from_addr, _CMD_CTL_MEM, sub=_SUB_BAND_STACK, data=payload
+    )
+
+
+def parse_band_stack_response(frame: CivFrame) -> "BandStackRegister":
+    """Parse band stacking register response (0x1A 0x01).
+
+    Returns:
+        BandStackRegister dataclass.
+    """
+    from .types import BandStackRegister
+
+    if frame.command != _CMD_CTL_MEM or frame.sub != _SUB_BAND_STACK:
+        raise ValueError(
+            f"Not a band stack response: 0x{frame.command:02x} sub=0x{frame.sub!r}"
+        )
+    if len(frame.data) < 9:
+        raise ValueError(f"Band stack data too short: {len(frame.data)} bytes")
+
+    data = frame.data
+    return BandStackRegister(
+        band=data[0],
+        register=data[1],
+        frequency_hz=bcd_decode(data[2:7]),
+        mode=_bcd_decode_value(data[7:8]),
+        filter=_bcd_decode_value(data[8:9]),
+    )
 
 
 # --- ACK/NAK ---

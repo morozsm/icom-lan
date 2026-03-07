@@ -22,6 +22,8 @@ __all__ = [
     "AUDIO_HEADER_SIZE",
     "bcd_encode",
     "bcd_decode",
+    "MemoryChannel",
+    "BandStackRegister",
 ]
 
 # Fixed header size: 4 (len) + 2 (type) + 2 (seq) + 4 (sentid) + 4 (rcvdid) = 16 bytes
@@ -343,3 +345,56 @@ def bcd_decode(data: bytes) -> int:
         # low nibble = digit at position 2i, high nibble = position 2i+1
         freq += low * (10 ** (2 * i)) + high * (10 ** (2 * i + 1))
     return freq
+
+
+@dataclass
+class MemoryChannel:
+    """Memory channel data structure for IC-7610.
+
+    Represents a single memory channel entry with frequency, mode, filter,
+    tone settings, and name.
+
+    Attributes:
+        channel: Memory channel number (1-101).
+        frequency_hz: Frequency in Hz.
+        mode: Mode code (BCD-encoded, see Mode enum).
+        filter: Filter number (1-3).
+        scan: Scan flag (0/1).
+        datamode: Data mode flag (high nibble of combined byte).
+        tonemode: Tone mode flag (low nibble of combined byte).
+        tone_freq_hz: CTCSS tone frequency in Hz (optional).
+        tsql_freq_hz: TSQL frequency in Hz (optional).
+        name: Memory channel name (max 10 ASCII characters).
+    """
+
+    channel: int
+    frequency_hz: int
+    mode: int
+    filter: int
+    scan: int
+    datamode: int
+    tonemode: int
+    tone_freq_hz: int | None = None
+    tsql_freq_hz: int | None = None
+    name: str = ""
+
+
+@dataclass
+class BandStackRegister:
+    """Band stacking register entry for IC-7610.
+
+    Represents a quick-recall frequency/mode setting for a band.
+
+    Attributes:
+        band: Band code (0x00-0x18, see availableBands in wfview).
+        register: Register number (1-3).
+        frequency_hz: Frequency in Hz.
+        mode: Mode code (BCD-encoded).
+        filter: Filter number (1-3).
+    """
+
+    band: int
+    register: int
+    frequency_hz: int
+    mode: int
+    filter: int
