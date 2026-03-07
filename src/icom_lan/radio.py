@@ -68,6 +68,8 @@ from .commands import (
     get_s_meter,
     get_swr,
     get_ssb_tx_bandwidth,
+    get_main_sub_tracking as _get_main_sub_tracking_cmd,
+    set_main_sub_tracking as _set_main_sub_tracking_cmd,
     get_twin_peak_filter,
     get_agc_time_constant,
     get_various_squelch,
@@ -2441,6 +2443,19 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         ssb_tx_bandwidth = SsbTxBandwidth(bandwidth)
         await self._send_fire_and_forget(
             set_ssb_tx_bandwidth(ssb_tx_bandwidth, to_addr=self._radio_addr)
+        )
+
+    async def get_main_sub_tracking(self) -> bool:
+        """Read Main/Sub Tracking status."""
+        civ = _get_main_sub_tracking_cmd(to_addr=self._radio_addr)
+        return await self._get_bool_value(
+            civ, key="get_main_sub_tracking", command=0x16, sub=0x5E
+        )
+
+    async def set_main_sub_tracking(self, on: bool) -> None:
+        """Set Main/Sub Tracking status."""
+        await self._send_fire_and_forget(
+            _set_main_sub_tracking_cmd(on, to_addr=self._radio_addr)
         )
 
     async def get_agc_time_constant(self, receiver: int = RECEIVER_MAIN) -> int:

@@ -103,6 +103,7 @@ class RadioState:
     mic_gain: int = 0           # 0-255
     key_speed: int = 0          # WPM
     notch_filter: int = 0       # 0-255
+    main_sub_tracking: bool = False
     compressor_on: bool = False
     compressor_level: int = 0   # 0-255
     monitor_on: bool = False
@@ -142,6 +143,7 @@ class RadioState:
             "mic_gain": self.mic_gain,
             "key_speed": self.key_speed,
             "notch_filter": self.notch_filter,
+            "main_sub_tracking": self.main_sub_tracking,
             "compressor_on": self.compressor_on,
             "compressor_level": self.compressor_level,
             "monitor_on": self.monitor_on,

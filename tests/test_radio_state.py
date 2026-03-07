@@ -163,6 +163,7 @@ def test_to_dict_structure() -> None:
         "mic_gain",
         "key_speed",
         "notch_filter",
+        "main_sub_tracking",
         "compressor_on",
         "compressor_level",
         "monitor_on",

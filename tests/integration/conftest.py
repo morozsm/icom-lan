@@ -187,6 +187,10 @@ def pytest_configure(config: pytest.Config) -> None:
         "markers",
         "ic7610_parity: maintained IC-7610 parity smoke profile across high-risk families",
     )
+    config.addinivalue_line(
+        "markers",
+        "mock_integration: integration tests using MockIcomRadio (no real hardware required)",
+    )
 
 
 def pytest_collection_modifyitems(
@@ -207,6 +211,9 @@ def pytest_collection_modifyitems(
     )
     for item in items:
         if "integration" not in item.keywords:
+            continue
+        # mock_integration: uses MockIcomRadio — no real hardware needed
+        if "mock_integration" in item.keywords:
             continue
         if "serial_integration" in item.keywords:
             if missing_serial:
