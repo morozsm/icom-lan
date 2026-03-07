@@ -3736,19 +3736,20 @@ def build_memory_contents_set(
 
     # Build payload per IC-7610 MemFormat spec:
     # %1.2b %3.1c %4.5f %9.1g %10.1h %11.1k %12.3n %15.3o %18.10z
-    payload = bytearray(28)
-    payload[1:3] = _bcd_encode_value(mem.channel, byte_count=2)
-    payload[3] = mem.scan
-    payload[4:9] = bcd_encode(mem.frequency_hz)
-    payload[9] = _bcd_encode_value(mem.mode, byte_count=1)[0]
-    payload[10] = _bcd_encode_value(mem.filter, byte_count=1)[0]
-    payload[11] = (mem.datamode << 4) | (mem.tonemode & 0x0F)
+    # Positions are 1-based in wfview spec, but payload is 0-based array
+    # Channel is sent separately in data prefix, payload starts with scan
+    payload = bytearray(26)  # 28 - 2 (channel sent separately)
+    payload[0] = mem.scan
+    payload[1:6] = bcd_encode(mem.frequency_hz)
+    payload[6] = _bcd_encode_value(mem.mode, byte_count=1)[0]
+    payload[7] = _bcd_encode_value(mem.filter, byte_count=1)[0]
+    payload[8] = (mem.datamode << 4) | (mem.tonemode & 0x0F)
     if mem.tone_freq_hz:
-        payload[12:15] = _bcd_encode_value(mem.tone_freq_hz, byte_count=3)
+        payload[9:12] = _bcd_encode_value(mem.tone_freq_hz, byte_count=3)
     if mem.tsql_freq_hz:
-        payload[15:18] = _bcd_encode_value(mem.tsql_freq_hz, byte_count=3)
+        payload[12:15] = _bcd_encode_value(mem.tsql_freq_hz, byte_count=3)
     name_bytes = mem.name.encode("ascii", errors="replace")[:10]
-    payload[18 : 18 + len(name_bytes)] = name_bytes
+    payload[15 : 15 + len(name_bytes)] = name_bytes
 
     channel_bcd = _bcd_encode_value(mem.channel, byte_count=2)
     return build_civ_frame(
@@ -3772,25 +3773,27 @@ def parse_memory_contents_response(frame: CivFrame) -> "MemoryChannel":
         raise ValueError(
             f"Not a memory contents response: 0x{frame.command:02x} sub=0x{frame.sub!r}"
         )
+    # data = channel(2) + payload(26)
     if len(frame.data) < 28:
         raise ValueError(f"Memory contents too short: {len(frame.data)} bytes")
 
     data = frame.data
+    # Channel in first 2 bytes, payload starts at index 2
     return MemoryChannel(
-        channel=_bcd_decode_value(data[1:3]),
-        scan=data[3],
-        frequency_hz=bcd_decode(data[4:9]),
-        mode=_bcd_decode_value(data[9:10]),
-        filter=_bcd_decode_value(data[10:11]),
-        datamode=(data[11] >> 4) & 0x0F,
-        tonemode=data[11] & 0x0F,
+        channel=_bcd_decode_value(data[0:2]),
+        scan=data[2],
+        frequency_hz=bcd_decode(data[3:8]),
+        mode=_bcd_decode_value(data[8:9]),
+        filter=_bcd_decode_value(data[9:10]),
+        datamode=(data[10] >> 4) & 0x0F,
+        tonemode=data[10] & 0x0F,
         tone_freq_hz=(
-            _bcd_decode_value(data[12:15]) if data[12:15] != b"\x00\x00\x00" else None
+            _bcd_decode_value(data[11:14]) if data[11:14] != b"\x00\x00\x00" else None
         ),
         tsql_freq_hz=(
-            _bcd_decode_value(data[15:18]) if data[15:18] != b"\x00\x00\x00" else None
+            _bcd_decode_value(data[14:17]) if data[14:17] != b"\x00\x00\x00" else None
         ),
-        name=data[18:28].rstrip(b"\x00").decode("ascii", errors="replace"),
+        name=data[17:27].rstrip(b"\x00").decode("ascii", errors="replace"),
     )
 
 
