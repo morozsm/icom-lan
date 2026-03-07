@@ -1186,3 +1186,208 @@ class TestAdvancedScopeValidation:
 
         with pytest.raises(ValueError, match="scope receiver must be 0 or 1"):
             scope_set_mode(0, receiver=5)
+
+
+class TestToneTsqlCommands:
+    """Tests for tone/TSQL command builders and parsers (#134)."""
+
+    # --- Repeater Tone (0x16 0x42) ---
+
+    def test_get_repeater_tone_main_uses_cmd29(self) -> None:
+        from icom_lan.commands import get_repeater_tone, RECEIVER_MAIN
+
+        frame = get_repeater_tone(receiver=RECEIVER_MAIN)
+        assert frame[4] == 0x29
+        assert frame[5] == RECEIVER_MAIN
+        assert frame[6] == 0x16
+        assert frame[7] == 0x42
+
+    def test_get_repeater_tone_sub_uses_cmd29(self) -> None:
+        from icom_lan.commands import get_repeater_tone, RECEIVER_SUB
+
+        frame = get_repeater_tone(receiver=RECEIVER_SUB)
+        assert frame[4] == 0x29
+        assert frame[5] == RECEIVER_SUB
+        assert frame[6] == 0x16
+        assert frame[7] == 0x42
+
+    def test_set_repeater_tone_on(self) -> None:
+        from icom_lan.commands import set_repeater_tone, RECEIVER_MAIN
+
+        frame = set_repeater_tone(True, receiver=RECEIVER_MAIN)
+        assert frame[4] == 0x29
+        assert frame[6] == 0x16
+        assert frame[7] == 0x42
+        assert frame[8] == 0x01
+
+    def test_set_repeater_tone_off(self) -> None:
+        from icom_lan.commands import set_repeater_tone, RECEIVER_MAIN
+
+        frame = set_repeater_tone(False, receiver=RECEIVER_MAIN)
+        assert frame[8] == 0x00
+
+    # --- Repeater TSQL (0x16 0x43) ---
+
+    def test_get_repeater_tsql_uses_cmd29(self) -> None:
+        from icom_lan.commands import get_repeater_tsql, RECEIVER_MAIN
+
+        frame = get_repeater_tsql(receiver=RECEIVER_MAIN)
+        assert frame[4] == 0x29
+        assert frame[6] == 0x16
+        assert frame[7] == 0x43
+
+    def test_set_repeater_tsql_on_sub(self) -> None:
+        from icom_lan.commands import set_repeater_tsql, RECEIVER_SUB
+
+        frame = set_repeater_tsql(True, receiver=RECEIVER_SUB)
+        assert frame[4] == 0x29
+        assert frame[5] == RECEIVER_SUB
+        assert frame[6] == 0x16
+        assert frame[7] == 0x43
+        assert frame[8] == 0x01
+
+    # --- Tone frequency encoding/decoding ---
+
+    def test_encode_tone_freq_88_5(self) -> None:
+        from icom_lan.commands import _encode_tone_freq
+
+        assert _encode_tone_freq(88.5) == bytes([0x00, 0x88, 0x05])
+
+    def test_encode_tone_freq_110_9(self) -> None:
+        from icom_lan.commands import _encode_tone_freq
+
+        assert _encode_tone_freq(110.9) == bytes([0x01, 0x10, 0x09])
+
+    def test_encode_tone_freq_100_0(self) -> None:
+        from icom_lan.commands import _encode_tone_freq
+
+        assert _encode_tone_freq(100.0) == bytes([0x01, 0x00, 0x00])
+
+    def test_encode_tone_freq_67_0(self) -> None:
+        from icom_lan.commands import _encode_tone_freq
+
+        assert _encode_tone_freq(67.0) == bytes([0x00, 0x67, 0x00])
+
+    def test_encode_tone_freq_254_1(self) -> None:
+        from icom_lan.commands import _encode_tone_freq
+
+        assert _encode_tone_freq(254.1) == bytes([0x02, 0x54, 0x01])
+
+    def test_encode_tone_freq_rejects_out_of_range(self) -> None:
+        from icom_lan.commands import _encode_tone_freq
+
+        with pytest.raises(ValueError, match="67.0-254.1"):
+            _encode_tone_freq(60.0)
+        with pytest.raises(ValueError, match="67.0-254.1"):
+            _encode_tone_freq(300.0)
+
+    def test_decode_tone_freq_88_5(self) -> None:
+        from icom_lan.commands import _decode_tone_freq
+
+        assert _decode_tone_freq(bytes([0x00, 0x88, 0x05])) == pytest.approx(88.5)
+
+    def test_decode_tone_freq_110_9(self) -> None:
+        from icom_lan.commands import _decode_tone_freq
+
+        assert _decode_tone_freq(bytes([0x01, 0x10, 0x09])) == pytest.approx(110.9)
+
+    def test_decode_tone_freq_roundtrip(self) -> None:
+        from icom_lan.commands import _encode_tone_freq, _decode_tone_freq
+
+        for freq in [67.0, 88.5, 100.0, 110.9, 127.3, 203.5, 254.1]:
+            encoded = _encode_tone_freq(freq)
+            assert _decode_tone_freq(encoded) == pytest.approx(freq, abs=0.05)
+
+    # --- Tone Frequency command (0x1B 0x00) ---
+
+    def test_get_tone_freq_uses_cmd29(self) -> None:
+        from icom_lan.commands import get_tone_freq, RECEIVER_MAIN
+
+        frame = get_tone_freq(receiver=RECEIVER_MAIN)
+        assert frame[4] == 0x29
+        assert frame[5] == RECEIVER_MAIN
+        assert frame[6] == 0x1B
+        assert frame[7] == 0x00
+
+    def test_set_tone_freq_encodes_bcd(self) -> None:
+        from icom_lan.commands import set_tone_freq, RECEIVER_MAIN
+
+        frame = set_tone_freq(88.5, receiver=RECEIVER_MAIN)
+        assert frame[4] == 0x29
+        assert frame[6] == 0x1B
+        assert frame[7] == 0x00
+        assert frame[8:11] == bytes([0x00, 0x88, 0x05])
+
+    def test_set_tone_freq_rejects_out_of_range(self) -> None:
+        from icom_lan.commands import set_tone_freq
+
+        with pytest.raises(ValueError, match="67.0-254.1"):
+            set_tone_freq(50.0)
+
+    # --- TSQL Frequency command (0x1B 0x01) ---
+
+    def test_get_tsql_freq_uses_cmd29(self) -> None:
+        from icom_lan.commands import get_tsql_freq, RECEIVER_SUB
+
+        frame = get_tsql_freq(receiver=RECEIVER_SUB)
+        assert frame[4] == 0x29
+        assert frame[5] == RECEIVER_SUB
+        assert frame[6] == 0x1B
+        assert frame[7] == 0x01
+
+    def test_set_tsql_freq_encodes_bcd(self) -> None:
+        from icom_lan.commands import set_tsql_freq, RECEIVER_MAIN
+
+        frame = set_tsql_freq(110.9, receiver=RECEIVER_MAIN)
+        assert frame[4] == 0x29
+        assert frame[6] == 0x1B
+        assert frame[7] == 0x01
+        assert frame[8:11] == bytes([0x01, 0x10, 0x09])
+
+    # --- Response parsers ---
+
+    def test_parse_tone_freq_response(self) -> None:
+        from icom_lan.commands import (
+            build_cmd29_frame,
+            parse_civ_frame,
+            parse_tone_freq_response,
+            IC_7610_ADDR,
+            CONTROLLER_ADDR,
+            RECEIVER_MAIN,
+        )
+
+        civ = build_cmd29_frame(
+            CONTROLLER_ADDR,
+            IC_7610_ADDR,
+            0x1B,
+            sub=0x00,
+            data=bytes([0x00, 0x88, 0x05]),
+            receiver=RECEIVER_MAIN,
+        )
+        frame = parse_civ_frame(civ)
+        receiver, freq = parse_tone_freq_response(frame)
+        assert receiver == RECEIVER_MAIN
+        assert freq == pytest.approx(88.5)
+
+    def test_parse_tsql_freq_response(self) -> None:
+        from icom_lan.commands import (
+            build_cmd29_frame,
+            parse_civ_frame,
+            parse_tsql_freq_response,
+            IC_7610_ADDR,
+            CONTROLLER_ADDR,
+            RECEIVER_SUB,
+        )
+
+        civ = build_cmd29_frame(
+            CONTROLLER_ADDR,
+            IC_7610_ADDR,
+            0x1B,
+            sub=0x01,
+            data=bytes([0x01, 0x10, 0x09]),
+            receiver=RECEIVER_SUB,
+        )
+        frame = parse_civ_frame(civ)
+        receiver, freq = parse_tsql_freq_response(frame)
+        assert receiver == RECEIVER_SUB
+        assert freq == pytest.approx(110.9)

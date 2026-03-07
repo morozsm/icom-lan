@@ -212,6 +212,17 @@ __all__ = [
     "set_dual_watch",
     "quick_dual_watch",
     "quick_split",
+    # Tone/TSQL (#134)
+    "get_repeater_tone",
+    "set_repeater_tone",
+    "get_repeater_tsql",
+    "set_repeater_tsql",
+    "get_tone_freq",
+    "set_tone_freq",
+    "get_tsql_freq",
+    "set_tsql_freq",
+    "parse_tone_freq_response",
+    "parse_tsql_freq_response",
 ]
 
 # CI-V addresses
@@ -234,6 +245,7 @@ _CMD_PTT = 0x1C  # Transceiver status / PTT
 _CMD_CTL_MEM = 0x1A  # Memory / configuration command
 _CMD_BAND_EDGE = 0x02  # Band edge frequency
 _CMD_RIT = 0x21       # RIT/XIT
+_CMD_TONE = 0x1B      # Tone/TSQL frequency
 _CMD_ACK = 0xFB
 _CMD_NAK = 0xFA
 
@@ -281,7 +293,7 @@ _PREAMBLE = b"\xfe\xfe"
 _TERMINATOR = b"\xfd"
 
 # Commands that use sub-commands (for parse disambiguation)
-_COMMANDS_WITH_SUB: set[int] = {_CMD_LEVEL, _CMD_METER, _CMD_PTT, _CMD_CTL_MEM, _CMD_RIT, 0x27, 0x16}
+_COMMANDS_WITH_SUB: set[int] = {_CMD_LEVEL, _CMD_METER, _CMD_PTT, _CMD_CTL_MEM, _CMD_RIT, 0x27, 0x16, _CMD_TONE}
 
 
 def build_civ_frame(
@@ -1482,6 +1494,11 @@ _SUB_NB = 0x22        # Noise Blanker on/off (0x16 0x22)
 _SUB_NR = 0x40        # Noise Reduction on/off (0x16 0x40)
 _SUB_IP_PLUS = 0x65   # IP+ on/off (0x16 0x65)
 _SUB_MAIN_SUB_TRACKING = 0x5E  # Main/Sub Tracking on/off (0x16 0x5E)
+_SUB_REPEATER_TONE = 0x42     # Repeater Tone on/off (0x16 0x42)
+_SUB_REPEATER_TSQL = 0x43     # Repeater TSQL on/off (0x16 0x43)
+# 0x1B subcodes (tone frequencies)
+_SUB_TONE_FREQ = 0x00         # CTCSS Tone frequency (0x1B 0x00)
+_SUB_TSQL_FREQ = 0x01         # TSQL frequency (0x1B 0x01)
 _SUB_AGC_TIME_CONSTANT = 0x04
 
 
@@ -3405,6 +3422,211 @@ def set_rit_tx_status(
         to_addr, from_addr, _CMD_RIT, sub=_SUB_RIT_TX_STATUS,
         data=b"\x01" if on else b"\x00",
     )
+
+
+# --- Tone / TSQL frequency (#134) ---
+
+
+def _encode_tone_freq(freq_hz: float) -> bytes:
+    """Encode tone frequency (Hz) to 3-byte BCD.
+
+    Args:
+        freq_hz: Tone frequency in Hz (e.g. 88.5, 110.9).
+
+    Returns:
+        3 bytes: [hundreds BCD, tens+units BCD, tenths BCD]
+
+    Example:
+        88.5 → b'\\x00\\x88\\x05'
+        110.9 → b'\\x01\\x10\\x09'
+    """
+    if not 67.0 <= freq_hz <= 254.1:
+        raise ValueError(f"Tone frequency must be 67.0-254.1 Hz, got {freq_hz}")
+    total_tenths = round(freq_hz * 10)
+    integer_hz = total_tenths // 10
+    hundreds = integer_hz // 100
+    tens_units = integer_hz % 100
+    tenths_digit = total_tenths % 10
+    return bytes([
+        _bcd_byte(hundreds),
+        _bcd_byte(tens_units),
+        _bcd_byte(tenths_digit),
+    ])
+
+
+def _decode_tone_freq(data: bytes) -> float:
+    """Decode 3-byte BCD to tone frequency (Hz).
+
+    Args:
+        data: 3 bytes [hundreds BCD, tens+units BCD, tenths BCD].
+
+    Returns:
+        Frequency in Hz (e.g. 88.5, 110.9).
+    """
+    if len(data) < 3:
+        raise ValueError(f"Expected 3 bytes for tone freq, got {len(data)}")
+    hundreds = _bcd_decode_value(data[0:1])
+    tens_units = _bcd_decode_value(data[1:2])
+    tenths_digit = _bcd_decode_value(data[2:3])
+    return float(hundreds * 100 + tens_units) + tenths_digit / 10.0
+
+
+def get_repeater_tone(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+) -> bytes:
+    """Build CI-V command to get repeater tone status (0x16 0x42)."""
+    return _build_function_get(
+        _SUB_REPEATER_TONE,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
+        command29=True,
+    )
+
+
+def set_repeater_tone(
+    on: bool,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+) -> bytes:
+    """Build CI-V command to set repeater tone (0x16 0x42)."""
+    return _build_function_bool_set(
+        _SUB_REPEATER_TONE,
+        on,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
+        command29=True,
+    )
+
+
+def get_repeater_tsql(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+) -> bytes:
+    """Build CI-V command to get repeater TSQL status (0x16 0x43)."""
+    return _build_function_get(
+        _SUB_REPEATER_TSQL,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
+        command29=True,
+    )
+
+
+def set_repeater_tsql(
+    on: bool,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+) -> bytes:
+    """Build CI-V command to set repeater TSQL (0x16 0x43)."""
+    return _build_function_bool_set(
+        _SUB_REPEATER_TSQL,
+        on,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
+        command29=True,
+    )
+
+
+def get_tone_freq(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+) -> bytes:
+    """Build CI-V command to get tone frequency (0x1B 0x00)."""
+    return build_cmd29_frame(
+        to_addr, from_addr, _CMD_TONE, sub=_SUB_TONE_FREQ, receiver=receiver
+    )
+
+
+def set_tone_freq(
+    freq_hz: float,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+) -> bytes:
+    """Build CI-V command to set tone frequency (0x1B 0x00).
+
+    Args:
+        freq_hz: CTCSS tone frequency in Hz (67.0-254.1).
+    """
+    return build_cmd29_frame(
+        to_addr,
+        from_addr,
+        _CMD_TONE,
+        sub=_SUB_TONE_FREQ,
+        data=_encode_tone_freq(freq_hz),
+        receiver=receiver,
+    )
+
+
+def get_tsql_freq(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+) -> bytes:
+    """Build CI-V command to get TSQL frequency (0x1B 0x01)."""
+    return build_cmd29_frame(
+        to_addr, from_addr, _CMD_TONE, sub=_SUB_TSQL_FREQ, receiver=receiver
+    )
+
+
+def set_tsql_freq(
+    freq_hz: float,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+) -> bytes:
+    """Build CI-V command to set TSQL frequency (0x1B 0x01).
+
+    Args:
+        freq_hz: TSQL tone frequency in Hz (67.0-254.1).
+    """
+    return build_cmd29_frame(
+        to_addr,
+        from_addr,
+        _CMD_TONE,
+        sub=_SUB_TSQL_FREQ,
+        data=_encode_tone_freq(freq_hz),
+        receiver=receiver,
+    )
+
+
+def parse_tone_freq_response(frame: CivFrame) -> tuple[int | None, float]:
+    """Parse tone frequency response (0x1B 0x00).
+
+    Returns:
+        (receiver | None, freq_hz)
+    """
+    if frame.command != _CMD_TONE or frame.sub != _SUB_TONE_FREQ:
+        raise ValueError(
+            f"Not a tone freq response: 0x{frame.command:02x} sub=0x{frame.sub!r}"
+        )
+    if len(frame.data) < 3:
+        raise ValueError(f"Expected 3 bytes for tone freq, got {len(frame.data)}")
+    return (frame.receiver, _decode_tone_freq(frame.data))
+
+
+def parse_tsql_freq_response(frame: CivFrame) -> tuple[int | None, float]:
+    """Parse TSQL frequency response (0x1B 0x01).
+
+    Returns:
+        (receiver | None, freq_hz)
+    """
+    if frame.command != _CMD_TONE or frame.sub != _SUB_TSQL_FREQ:
+        raise ValueError(
+            f"Not a TSQL freq response: 0x{frame.command:02x} sub=0x{frame.sub!r}"
+        )
+    if len(frame.data) < 3:
+        raise ValueError(f"Expected 3 bytes for TSQL freq, got {len(frame.data)}")
+    return (frame.receiver, _decode_tone_freq(frame.data))
 
 
 # --- ACK/NAK ---

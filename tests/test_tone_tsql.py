@@ -1,0 +1,539 @@
+"""Unit tests for IC-7610 tone/TSQL commands (#134).
+
+Commands tested:
+  0x16 0x42 — Repeater Tone enable/disable
+  0x16 0x43 — Repeater TSQL enable/disable
+  0x1B 0x00 — CTCSS Tone frequency (get/set + parse)
+  0x1B 0x01 — TSQL frequency (get/set + parse)
+
+All four commands use cmd29 wrapping (dual-receiver).
+"""
+
+from __future__ import annotations
+
+import pytest
+
+from icom_lan import commands
+from icom_lan.commands import (
+    IC_7610_ADDR,
+    CONTROLLER_ADDR,
+    RECEIVER_MAIN,
+    RECEIVER_SUB,
+    parse_bool_response,
+    parse_tone_freq_response,
+    parse_tsql_freq_response,
+)
+from icom_lan.types import CivFrame
+
+# ---------------------------------------------------------------------------
+# Frame-level constants
+# ---------------------------------------------------------------------------
+
+_PREAMBLE = b"\xfe\xfe"
+_TERMINATOR = b"\xfd"
+_CMD_PREAMP = 0x16
+_CMD_TONE = 0x1B
+_CMD_CMD29 = 0x29
+_SUB_REPEATER_TONE = 0x42
+_SUB_REPEATER_TSQL = 0x43
+_SUB_TONE_FREQ = 0x00
+_SUB_TSQL_FREQ = 0x01
+
+# ---------------------------------------------------------------------------
+# Frame-building helpers (expected byte sequences)
+# ---------------------------------------------------------------------------
+
+
+def _cmd29_preamp_get(sub: int, receiver: int = RECEIVER_MAIN) -> bytes:
+    """Expected bytes for a cmd29-wrapped 0x16 get."""
+    return (
+        _PREAMBLE
+        + bytes([IC_7610_ADDR, CONTROLLER_ADDR, _CMD_CMD29, receiver, _CMD_PREAMP, sub])
+        + _TERMINATOR
+    )
+
+
+def _cmd29_preamp_set(sub: int, value: int, receiver: int = RECEIVER_MAIN) -> bytes:
+    """Expected bytes for a cmd29-wrapped 0x16 set."""
+    return (
+        _PREAMBLE
+        + bytes([IC_7610_ADDR, CONTROLLER_ADDR, _CMD_CMD29, receiver, _CMD_PREAMP, sub, value])
+        + _TERMINATOR
+    )
+
+
+def _cmd29_tone_get(sub: int, receiver: int = RECEIVER_MAIN) -> bytes:
+    """Expected bytes for a cmd29-wrapped 0x1B get (no data)."""
+    return (
+        _PREAMBLE
+        + bytes([IC_7610_ADDR, CONTROLLER_ADDR, _CMD_CMD29, receiver, _CMD_TONE, sub])
+        + _TERMINATOR
+    )
+
+
+def _cmd29_tone_set(sub: int, bcd: bytes, receiver: int = RECEIVER_MAIN) -> bytes:
+    """Expected bytes for a cmd29-wrapped 0x1B set with BCD payload."""
+    return (
+        _PREAMBLE
+        + bytes([IC_7610_ADDR, CONTROLLER_ADDR, _CMD_CMD29, receiver, _CMD_TONE, sub])
+        + bcd
+        + _TERMINATOR
+    )
+
+
+# CivFrame helpers for response parsing tests (radio→controller direction).
+
+def _preamp_response(sub: int, data: bytes, receiver: int = RECEIVER_MAIN) -> CivFrame:
+    """Simulate a cmd29 response from the radio for 0x16 commands."""
+    return CivFrame(
+        to_addr=CONTROLLER_ADDR,
+        from_addr=IC_7610_ADDR,
+        command=_CMD_PREAMP,
+        sub=sub,
+        data=data,
+        receiver=receiver,
+    )
+
+
+def _tone_freq_response(bcd: bytes, receiver: int | None = None) -> CivFrame:
+    """Simulate a response frame for 0x1B 0x00 (tone freq)."""
+    return CivFrame(
+        to_addr=CONTROLLER_ADDR,
+        from_addr=IC_7610_ADDR,
+        command=_CMD_TONE,
+        sub=_SUB_TONE_FREQ,
+        data=bcd,
+        receiver=receiver,
+    )
+
+
+def _tsql_freq_response(bcd: bytes, receiver: int | None = None) -> CivFrame:
+    """Simulate a response frame for 0x1B 0x01 (TSQL freq)."""
+    return CivFrame(
+        to_addr=CONTROLLER_ADDR,
+        from_addr=IC_7610_ADDR,
+        command=_CMD_TONE,
+        sub=_SUB_TSQL_FREQ,
+        data=bcd,
+        receiver=receiver,
+    )
+
+
+# ---------------------------------------------------------------------------
+# BCD encoding reference values
+# ---------------------------------------------------------------------------
+
+# freq_hz → expected 3-byte BCD encoding
+_BCD_TABLE: list[tuple[float, bytes]] = [
+    (67.0,  b"\x00\x67\x00"),
+    (88.5,  b"\x00\x88\x05"),
+    (110.9, b"\x01\x10\x09"),
+    (136.5, b"\x01\x36\x05"),
+    (167.9, b"\x01\x67\x09"),
+    (254.1, b"\x02\x54\x01"),
+]
+
+
+# ===========================================================================
+# Repeater Tone (0x16 0x42)
+# ===========================================================================
+
+
+class TestRepeaterTone:
+    """Tests for get_repeater_tone / set_repeater_tone."""
+
+    def test_get_main_receiver(self) -> None:
+        assert commands.get_repeater_tone(receiver=RECEIVER_MAIN) == _cmd29_preamp_get(
+            _SUB_REPEATER_TONE, RECEIVER_MAIN
+        )
+
+    def test_get_sub_receiver(self) -> None:
+        assert commands.get_repeater_tone(receiver=RECEIVER_SUB) == _cmd29_preamp_get(
+            _SUB_REPEATER_TONE, RECEIVER_SUB
+        )
+
+    def test_get_default_is_main(self) -> None:
+        assert commands.get_repeater_tone() == commands.get_repeater_tone(receiver=RECEIVER_MAIN)
+
+    def test_set_on_main(self) -> None:
+        assert commands.set_repeater_tone(True) == _cmd29_preamp_set(
+            _SUB_REPEATER_TONE, 0x01, RECEIVER_MAIN
+        )
+
+    def test_set_off_main(self) -> None:
+        assert commands.set_repeater_tone(False) == _cmd29_preamp_set(
+            _SUB_REPEATER_TONE, 0x00, RECEIVER_MAIN
+        )
+
+    def test_set_on_sub(self) -> None:
+        assert commands.set_repeater_tone(True, receiver=RECEIVER_SUB) == _cmd29_preamp_set(
+            _SUB_REPEATER_TONE, 0x01, RECEIVER_SUB
+        )
+
+    def test_set_off_sub(self) -> None:
+        assert commands.set_repeater_tone(False, receiver=RECEIVER_SUB) == _cmd29_preamp_set(
+            _SUB_REPEATER_TONE, 0x00, RECEIVER_SUB
+        )
+
+    def test_parse_on(self) -> None:
+        frame = _preamp_response(_SUB_REPEATER_TONE, b"\x01")
+        assert parse_bool_response(frame, command=_CMD_PREAMP, sub=_SUB_REPEATER_TONE) is True
+
+    def test_parse_off(self) -> None:
+        frame = _preamp_response(_SUB_REPEATER_TONE, b"\x00")
+        assert parse_bool_response(frame, command=_CMD_PREAMP, sub=_SUB_REPEATER_TONE) is False
+
+    def test_custom_addresses(self) -> None:
+        frame = commands.get_repeater_tone(to_addr=0xA4, from_addr=0xE1)
+        assert frame[2] == 0xA4
+        assert frame[3] == 0xE1
+
+    def test_uses_cmd29_prefix(self) -> None:
+        frame = commands.get_repeater_tone()
+        assert frame[4] == _CMD_CMD29
+
+
+# ===========================================================================
+# Repeater TSQL (0x16 0x43)
+# ===========================================================================
+
+
+class TestRepeaterTSQL:
+    """Tests for get_repeater_tsql / set_repeater_tsql."""
+
+    def test_get_main_receiver(self) -> None:
+        assert commands.get_repeater_tsql(receiver=RECEIVER_MAIN) == _cmd29_preamp_get(
+            _SUB_REPEATER_TSQL, RECEIVER_MAIN
+        )
+
+    def test_get_sub_receiver(self) -> None:
+        assert commands.get_repeater_tsql(receiver=RECEIVER_SUB) == _cmd29_preamp_get(
+            _SUB_REPEATER_TSQL, RECEIVER_SUB
+        )
+
+    def test_get_default_is_main(self) -> None:
+        assert commands.get_repeater_tsql() == commands.get_repeater_tsql(receiver=RECEIVER_MAIN)
+
+    def test_set_on_main(self) -> None:
+        assert commands.set_repeater_tsql(True) == _cmd29_preamp_set(
+            _SUB_REPEATER_TSQL, 0x01, RECEIVER_MAIN
+        )
+
+    def test_set_off_main(self) -> None:
+        assert commands.set_repeater_tsql(False) == _cmd29_preamp_set(
+            _SUB_REPEATER_TSQL, 0x00, RECEIVER_MAIN
+        )
+
+    def test_set_on_sub(self) -> None:
+        assert commands.set_repeater_tsql(True, receiver=RECEIVER_SUB) == _cmd29_preamp_set(
+            _SUB_REPEATER_TSQL, 0x01, RECEIVER_SUB
+        )
+
+    def test_set_off_sub(self) -> None:
+        assert commands.set_repeater_tsql(False, receiver=RECEIVER_SUB) == _cmd29_preamp_set(
+            _SUB_REPEATER_TSQL, 0x00, RECEIVER_SUB
+        )
+
+    def test_parse_on(self) -> None:
+        frame = _preamp_response(_SUB_REPEATER_TSQL, b"\x01")
+        assert parse_bool_response(frame, command=_CMD_PREAMP, sub=_SUB_REPEATER_TSQL) is True
+
+    def test_parse_off(self) -> None:
+        frame = _preamp_response(_SUB_REPEATER_TSQL, b"\x00")
+        assert parse_bool_response(frame, command=_CMD_PREAMP, sub=_SUB_REPEATER_TSQL) is False
+
+    def test_custom_addresses(self) -> None:
+        frame = commands.get_repeater_tsql(to_addr=0xA4, from_addr=0xE1)
+        assert frame[2] == 0xA4
+        assert frame[3] == 0xE1
+
+    def test_uses_cmd29_prefix(self) -> None:
+        frame = commands.get_repeater_tsql()
+        assert frame[4] == _CMD_CMD29
+
+
+# ===========================================================================
+# Tone Frequency (0x1B 0x00)
+# ===========================================================================
+
+
+class TestToneFreqBCDEncoding:
+    """BCD encoding of CTCSS tone frequencies."""
+
+    @pytest.mark.parametrize("freq, bcd", _BCD_TABLE)
+    def test_encode(self, freq: float, bcd: bytes) -> None:
+        frame = commands.set_tone_freq(freq)
+        assert bcd in frame
+
+    def test_rejects_below_minimum(self) -> None:
+        with pytest.raises(ValueError, match="67.0"):
+            commands.set_tone_freq(50.0)
+
+    def test_rejects_above_maximum(self) -> None:
+        with pytest.raises(ValueError, match="254.1"):
+            commands.set_tone_freq(300.0)
+
+    def test_accepts_boundary_low(self) -> None:
+        frame = commands.set_tone_freq(67.0)
+        assert b"\x00\x67\x00" in frame
+
+    def test_accepts_boundary_high(self) -> None:
+        frame = commands.set_tone_freq(254.1)
+        assert b"\x02\x54\x01" in frame
+
+
+class TestGetToneFreq:
+    """Frame construction for get_tone_freq (0x1B 0x00)."""
+
+    def test_main_receiver(self) -> None:
+        assert commands.get_tone_freq(receiver=RECEIVER_MAIN) == _cmd29_tone_get(
+            _SUB_TONE_FREQ, RECEIVER_MAIN
+        )
+
+    def test_sub_receiver(self) -> None:
+        assert commands.get_tone_freq(receiver=RECEIVER_SUB) == _cmd29_tone_get(
+            _SUB_TONE_FREQ, RECEIVER_SUB
+        )
+
+    def test_default_is_main(self) -> None:
+        assert commands.get_tone_freq() == commands.get_tone_freq(receiver=RECEIVER_MAIN)
+
+    def test_uses_cmd29_prefix(self) -> None:
+        frame = commands.get_tone_freq()
+        assert frame[4] == _CMD_CMD29
+
+    def test_contains_tone_command_and_sub(self) -> None:
+        frame = commands.get_tone_freq()
+        assert bytes([_CMD_TONE, _SUB_TONE_FREQ]) in frame
+
+    def test_custom_addresses(self) -> None:
+        frame = commands.get_tone_freq(to_addr=0xA4, from_addr=0xE1)
+        assert frame[2] == 0xA4
+        assert frame[3] == 0xE1
+
+
+class TestSetToneFreq:
+    """Frame construction for set_tone_freq (0x1B 0x00)."""
+
+    @pytest.mark.parametrize("freq, bcd", _BCD_TABLE)
+    def test_set_encodes_bcd(self, freq: float, bcd: bytes) -> None:
+        assert commands.set_tone_freq(freq) == _cmd29_tone_set(
+            _SUB_TONE_FREQ, bcd, RECEIVER_MAIN
+        )
+
+    def test_set_sub_receiver(self) -> None:
+        assert commands.set_tone_freq(88.5, receiver=RECEIVER_SUB) == _cmd29_tone_set(
+            _SUB_TONE_FREQ, b"\x00\x88\x05", RECEIVER_SUB
+        )
+
+    def test_set_custom_addresses(self) -> None:
+        frame = commands.set_tone_freq(88.5, to_addr=0xA4, from_addr=0xE1)
+        assert frame[2] == 0xA4
+        assert frame[3] == 0xE1
+
+
+class TestParseToneFreqResponse:
+    """Parsing of tone frequency responses."""
+
+    @pytest.mark.parametrize("freq, bcd", _BCD_TABLE)
+    def test_decode_main_receiver(self, freq: float, bcd: bytes) -> None:
+        frame = _tone_freq_response(bcd, receiver=RECEIVER_MAIN)
+        rx, decoded = parse_tone_freq_response(frame)
+        assert rx == RECEIVER_MAIN
+        assert decoded == pytest.approx(freq, abs=0.05)
+
+    @pytest.mark.parametrize("freq, bcd", _BCD_TABLE)
+    def test_decode_sub_receiver(self, freq: float, bcd: bytes) -> None:
+        frame = _tone_freq_response(bcd, receiver=RECEIVER_SUB)
+        rx, decoded = parse_tone_freq_response(frame)
+        assert rx == RECEIVER_SUB
+        assert decoded == pytest.approx(freq, abs=0.05)
+
+    def test_decode_no_receiver(self) -> None:
+        frame = _tone_freq_response(b"\x00\x88\x05", receiver=None)
+        rx, freq = parse_tone_freq_response(frame)
+        assert rx is None
+        assert freq == pytest.approx(88.5)
+
+    def test_rejects_wrong_command(self) -> None:
+        frame = CivFrame(
+            to_addr=CONTROLLER_ADDR,
+            from_addr=IC_7610_ADDR,
+            command=0x14,
+            sub=_SUB_TONE_FREQ,
+            data=b"\x00\x88\x05",
+        )
+        with pytest.raises(ValueError):
+            parse_tone_freq_response(frame)
+
+    def test_rejects_wrong_sub(self) -> None:
+        frame = CivFrame(
+            to_addr=CONTROLLER_ADDR,
+            from_addr=IC_7610_ADDR,
+            command=_CMD_TONE,
+            sub=_SUB_TSQL_FREQ,  # wrong sub for tone
+            data=b"\x00\x88\x05",
+        )
+        with pytest.raises(ValueError):
+            parse_tone_freq_response(frame)
+
+    def test_rejects_short_data(self) -> None:
+        frame = CivFrame(
+            to_addr=CONTROLLER_ADDR,
+            from_addr=IC_7610_ADDR,
+            command=_CMD_TONE,
+            sub=_SUB_TONE_FREQ,
+            data=b"\x00\x88",  # only 2 bytes
+        )
+        with pytest.raises(ValueError):
+            parse_tone_freq_response(frame)
+
+
+# ===========================================================================
+# TSQL Frequency (0x1B 0x01)
+# ===========================================================================
+
+
+class TestTSQLFreqBCDEncoding:
+    """BCD encoding of TSQL frequencies (shares codec with tone freq)."""
+
+    @pytest.mark.parametrize("freq, bcd", _BCD_TABLE)
+    def test_encode(self, freq: float, bcd: bytes) -> None:
+        frame = commands.set_tsql_freq(freq)
+        assert bcd in frame
+
+    def test_rejects_below_minimum(self) -> None:
+        with pytest.raises(ValueError, match="67.0"):
+            commands.set_tsql_freq(50.0)
+
+    def test_rejects_above_maximum(self) -> None:
+        with pytest.raises(ValueError, match="254.1"):
+            commands.set_tsql_freq(300.0)
+
+
+class TestGetTSQLFreq:
+    """Frame construction for get_tsql_freq (0x1B 0x01)."""
+
+    def test_main_receiver(self) -> None:
+        assert commands.get_tsql_freq(receiver=RECEIVER_MAIN) == _cmd29_tone_get(
+            _SUB_TSQL_FREQ, RECEIVER_MAIN
+        )
+
+    def test_sub_receiver(self) -> None:
+        assert commands.get_tsql_freq(receiver=RECEIVER_SUB) == _cmd29_tone_get(
+            _SUB_TSQL_FREQ, RECEIVER_SUB
+        )
+
+    def test_default_is_main(self) -> None:
+        assert commands.get_tsql_freq() == commands.get_tsql_freq(receiver=RECEIVER_MAIN)
+
+    def test_uses_cmd29_prefix(self) -> None:
+        frame = commands.get_tsql_freq()
+        assert frame[4] == _CMD_CMD29
+
+    def test_contains_tsql_sub(self) -> None:
+        frame = commands.get_tsql_freq()
+        assert bytes([_CMD_TONE, _SUB_TSQL_FREQ]) in frame
+
+
+class TestSetTSQLFreq:
+    """Frame construction for set_tsql_freq (0x1B 0x01)."""
+
+    @pytest.mark.parametrize("freq, bcd", _BCD_TABLE)
+    def test_set_encodes_bcd(self, freq: float, bcd: bytes) -> None:
+        assert commands.set_tsql_freq(freq) == _cmd29_tone_set(
+            _SUB_TSQL_FREQ, bcd, RECEIVER_MAIN
+        )
+
+    def test_set_sub_receiver(self) -> None:
+        assert commands.set_tsql_freq(88.5, receiver=RECEIVER_SUB) == _cmd29_tone_set(
+            _SUB_TSQL_FREQ, b"\x00\x88\x05", RECEIVER_SUB
+        )
+
+
+class TestParseTSQLFreqResponse:
+    """Parsing of TSQL frequency responses."""
+
+    @pytest.mark.parametrize("freq, bcd", _BCD_TABLE)
+    def test_decode_main_receiver(self, freq: float, bcd: bytes) -> None:
+        frame = _tsql_freq_response(bcd, receiver=RECEIVER_MAIN)
+        rx, decoded = parse_tsql_freq_response(frame)
+        assert rx == RECEIVER_MAIN
+        assert decoded == pytest.approx(freq, abs=0.05)
+
+    def test_decode_no_receiver(self) -> None:
+        frame = _tsql_freq_response(b"\x00\x88\x05", receiver=None)
+        rx, freq = parse_tsql_freq_response(frame)
+        assert rx is None
+        assert freq == pytest.approx(88.5)
+
+    def test_rejects_wrong_sub(self) -> None:
+        frame = CivFrame(
+            to_addr=CONTROLLER_ADDR,
+            from_addr=IC_7610_ADDR,
+            command=_CMD_TONE,
+            sub=_SUB_TONE_FREQ,  # wrong sub for TSQL
+            data=b"\x00\x88\x05",
+        )
+        with pytest.raises(ValueError):
+            parse_tsql_freq_response(frame)
+
+    def test_rejects_short_data(self) -> None:
+        frame = CivFrame(
+            to_addr=CONTROLLER_ADDR,
+            from_addr=IC_7610_ADDR,
+            command=_CMD_TONE,
+            sub=_SUB_TSQL_FREQ,
+            data=b"\x00\x88",
+        )
+        with pytest.raises(ValueError):
+            parse_tsql_freq_response(frame)
+
+
+# ===========================================================================
+# Command distinctness
+# ===========================================================================
+
+
+class TestCommandDistinctness:
+    """Different commands must produce distinct CI-V frames."""
+
+    def test_repeater_tone_vs_tsql_get(self) -> None:
+        assert commands.get_repeater_tone() != commands.get_repeater_tsql()
+
+    def test_repeater_tone_vs_tsql_set_on(self) -> None:
+        assert commands.set_repeater_tone(True) != commands.set_repeater_tsql(True)
+
+    def test_tone_freq_vs_tsql_freq_get(self) -> None:
+        assert commands.get_tone_freq() != commands.get_tsql_freq()
+
+    def test_tone_freq_vs_tsql_freq_set(self) -> None:
+        assert commands.set_tone_freq(88.5) != commands.set_tsql_freq(88.5)
+
+    def test_tone_main_vs_sub_get(self) -> None:
+        assert commands.get_tone_freq(receiver=RECEIVER_MAIN) != commands.get_tone_freq(
+            receiver=RECEIVER_SUB
+        )
+
+    def test_tsql_main_vs_sub_get(self) -> None:
+        assert commands.get_tsql_freq(receiver=RECEIVER_MAIN) != commands.get_tsql_freq(
+            receiver=RECEIVER_SUB
+        )
+
+    def test_repeater_tone_main_vs_sub_get(self) -> None:
+        assert commands.get_repeater_tone(receiver=RECEIVER_MAIN) != commands.get_repeater_tone(
+            receiver=RECEIVER_SUB
+        )
+
+    def test_tone_on_vs_off(self) -> None:
+        assert commands.set_repeater_tone(True) != commands.set_repeater_tone(False)
+
+    def test_tsql_on_vs_off(self) -> None:
+        assert commands.set_repeater_tsql(True) != commands.set_repeater_tsql(False)
+
+    def test_different_tone_freqs(self) -> None:
+        assert commands.set_tone_freq(88.5) != commands.set_tone_freq(110.9)
+
+    def test_repeater_tone_distinct_from_freq_cmd(self) -> None:
+        """0x16 and 0x1B commands are fundamentally different."""
+        assert commands.get_repeater_tone() != commands.get_tone_freq()
