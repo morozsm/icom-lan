@@ -248,6 +248,9 @@ def mock_radio() -> MagicMock:
     radio.on_scope_data = MagicMock()
     radio.enable_scope = AsyncMock()
     radio.disable_scope = AsyncMock()
+    radio.set_scope_during_tx = AsyncMock()
+    radio.set_scope_center_type = AsyncMock()
+    radio.set_scope_fixed_edge = AsyncMock()
     # State cache shared between radio and server
     radio.state_cache = StateCache()
     # Methods used by WebServer.stop() and RadioPoller
@@ -2152,5 +2155,123 @@ class TestSwitchScopeReceiverCommand:
                 c.kwargs.get("sub") == 0x12 and c.kwargs.get("data") == bytes([0x00])
                 for c in scope_calls
             ), "Expected CI-V 0x27/0x12/0x00 for MAIN scope"
+        finally:
+            await _close_ws(writer)
+
+
+class TestScopeAdvancedCommands:
+    """ControlHandler handles set_scope_during_tx, set_scope_center_type, set_scope_fixed_edge."""
+
+    async def test_set_scope_during_tx_on(
+        self, server: WebServer, mock_radio: MagicMock
+    ) -> None:
+        """set_scope_during_tx with on=true calls radio.set_scope_during_tx(True)."""
+        host, port = _addr(server)
+        reader, writer, _ = await _ws_connect(host, port, "/api/v1/ws")
+        try:
+            await _ws_recv_frame(reader)  # skip hello
+
+            cmd = json.dumps({
+                "type": "cmd",
+                "id": "sdt1",
+                "name": "set_scope_during_tx",
+                "params": {"on": True},
+            })
+            await _ws_send_text(writer, cmd)
+            _, resp_bytes = await _ws_recv_frame(reader)
+            resp = json.loads(resp_bytes)
+
+            assert resp["ok"] is True
+            assert resp["result"]["on"] is True
+
+            await asyncio.sleep(0.15)
+            mock_radio.set_scope_during_tx.assert_called_once_with(True)
+        finally:
+            await _close_ws(writer)
+
+    async def test_set_scope_during_tx_off(
+        self, server: WebServer, mock_radio: MagicMock
+    ) -> None:
+        """set_scope_during_tx with on=false calls radio.set_scope_during_tx(False)."""
+        host, port = _addr(server)
+        reader, writer, _ = await _ws_connect(host, port, "/api/v1/ws")
+        try:
+            await _ws_recv_frame(reader)
+
+            cmd = json.dumps({
+                "type": "cmd",
+                "id": "sdt2",
+                "name": "set_scope_during_tx",
+                "params": {"on": False},
+            })
+            await _ws_send_text(writer, cmd)
+            _, resp_bytes = await _ws_recv_frame(reader)
+            resp = json.loads(resp_bytes)
+
+            assert resp["ok"] is True
+            assert resp["result"]["on"] is False
+
+            await asyncio.sleep(0.15)
+            mock_radio.set_scope_during_tx.assert_called_once_with(False)
+        finally:
+            await _close_ws(writer)
+
+    async def test_set_scope_center_type(
+        self, server: WebServer, mock_radio: MagicMock
+    ) -> None:
+        """set_scope_center_type sends center_type to radio."""
+        host, port = _addr(server)
+        reader, writer, _ = await _ws_connect(host, port, "/api/v1/ws")
+        try:
+            await _ws_recv_frame(reader)
+
+            cmd = json.dumps({
+                "type": "cmd",
+                "id": "sct1",
+                "name": "set_scope_center_type",
+                "params": {"center_type": 2},
+            })
+            await _ws_send_text(writer, cmd)
+            _, resp_bytes = await _ws_recv_frame(reader)
+            resp = json.loads(resp_bytes)
+
+            assert resp["ok"] is True
+            assert resp["result"]["center_type"] == 2
+
+            await asyncio.sleep(0.15)
+            mock_radio.set_scope_center_type.assert_called_once_with(2)
+        finally:
+            await _close_ws(writer)
+
+    async def test_set_scope_fixed_edge(
+        self, server: WebServer, mock_radio: MagicMock
+    ) -> None:
+        """set_scope_fixed_edge sends start_hz and span_hz to radio."""
+        host, port = _addr(server)
+        reader, writer, _ = await _ws_connect(host, port, "/api/v1/ws")
+        try:
+            await _ws_recv_frame(reader)
+
+            cmd = json.dumps({
+                "type": "cmd",
+                "id": "sfe1",
+                "name": "set_scope_fixed_edge",
+                "params": {"edge": 1, "start_hz": 14_000_000, "end_hz": 15_000_000},
+            })
+            await _ws_send_text(writer, cmd)
+            _, resp_bytes = await _ws_recv_frame(reader)
+            resp = json.loads(resp_bytes)
+
+            assert resp["ok"] is True
+            assert resp["result"]["edge"] == 1
+            assert resp["result"]["start_hz"] == 14_000_000
+            assert resp["result"]["end_hz"] == 15_000_000
+
+            await asyncio.sleep(0.15)
+            mock_radio.set_scope_fixed_edge.assert_called_once_with(
+                edge=1,
+                start_hz=14_000_000,
+                end_hz=15_000_000,
+            )
         finally:
             await _close_ws(writer)

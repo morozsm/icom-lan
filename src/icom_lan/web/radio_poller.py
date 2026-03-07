@@ -40,7 +40,8 @@ from ..rigctld.state_cache import StateCache
 if TYPE_CHECKING:
     from ..radio_protocol import Radio
 
-__all__ = ["RadioPoller", "CommandQueue", "EnableScope", "DisableScope", "SwitchScopeReceiver"]
+__all__ = ["RadioPoller", "CommandQueue", "EnableScope", "DisableScope", "SwitchScopeReceiver",
+           "SetScopeDuringTx", "SetScopeCenterType", "SetScopeFixedEdge"]
 
 logger = logging.getLogger(__name__)
 
@@ -156,6 +157,20 @@ class SwitchScopeReceiver:
     receiver: int  # 0=MAIN, 1=SUB
 
 @dataclass(frozen=True, slots=True)
+class SetScopeDuringTx:
+    on: bool
+
+@dataclass(frozen=True, slots=True)
+class SetScopeCenterType:
+    center_type: int  # 0-2
+
+@dataclass(frozen=True, slots=True)
+class SetScopeFixedEdge:
+    edge: int
+    start_hz: int
+    end_hz: int
+
+@dataclass(frozen=True, slots=True)
 class SetPowerstat:
     on: bool
 
@@ -163,7 +178,8 @@ class SetPowerstat:
 Command = (
     SetFreq | SetMode | SetFilter | SetPower | SetRfGain | SetAfLevel | SetSquelch | SetNB | SetNR | SetDigiSel | SetIpPlus
     | SetAttenuator | SetPreamp | PttOn | PttOff | SetBand | SelectVfo
-    | VfoSwap | VfoEqualize | EnableScope | DisableScope | SwitchScopeReceiver | SetPowerstat
+    | VfoSwap | VfoEqualize | EnableScope | DisableScope | SwitchScopeReceiver
+    | SetScopeDuringTx | SetScopeCenterType | SetScopeFixedEdge | SetPowerstat
 )
 
 
@@ -600,6 +616,19 @@ class RadioPoller:
                     "radio-poller: scope receiver → %s",
                     "SUB" if receiver else "MAIN",
                 )
+            case SetScopeDuringTx(on=on):
+                if isinstance(radio, ScopeCapable):
+                    await radio.set_scope_during_tx(on)
+            case SetScopeCenterType(center_type=center_type):
+                if isinstance(radio, ScopeCapable):
+                    await radio.set_scope_center_type(center_type)
+            case SetScopeFixedEdge(edge=edge, start_hz=start_hz, end_hz=end_hz):
+                if isinstance(radio, ScopeCapable):
+                    await radio.set_scope_fixed_edge(
+                        edge=edge,
+                        start_hz=start_hz,
+                        end_hz=end_hz,
+                    )
             case SetPowerstat(on=on):
                 # CI-V 0x18: 0x01 = power on, 0x00 = power off
                 await self._civ(0x18, data=b"\x01" if on else b"\x00")

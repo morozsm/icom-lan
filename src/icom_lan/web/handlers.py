@@ -47,6 +47,9 @@ from .radio_poller import (
     SetDigiSel,
     SetIpPlus,
     SetPowerstat,
+    SetScopeCenterType,
+    SetScopeDuringTx,
+    SetScopeFixedEdge,
     SwitchScopeReceiver,
     VfoEqualize,
     VfoSwap,
@@ -137,6 +140,9 @@ class ControlHandler:
             "vfo_swap",
             "vfo_equalize",
             "switch_scope_receiver",
+            "set_scope_during_tx",
+            "set_scope_center_type",
+            "set_scope_fixed_edge",
         ]
     )
 
@@ -603,6 +609,23 @@ class ControlHandler:
                 self._ensure_receiver_supported(receiver)
                 q.put(SwitchScopeReceiver(receiver))
                 return {"receiver": receiver}
+            case "set_scope_during_tx":
+                on = bool(params["on"])
+                self._ensure_capability("scope", "set_scope_during_tx")
+                q.put(SetScopeDuringTx(on))
+                return {"on": on}
+            case "set_scope_center_type":
+                center_type = int(params["center_type"])
+                self._ensure_capability("scope", "set_scope_center_type")
+                q.put(SetScopeCenterType(center_type))
+                return {"center_type": center_type}
+            case "set_scope_fixed_edge":
+                edge = int(params["edge"])
+                start_hz = int(params["start_hz"])
+                end_hz = int(params["end_hz"])
+                self._ensure_capability("scope", "set_scope_fixed_edge")
+                q.put(SetScopeFixedEdge(edge, start_hz, end_hz))
+                return {"edge": edge, "start_hz": start_hz, "end_hz": end_hz}
             case _:
                 raise ValueError(f"unhandled command: {name!r}")
 
