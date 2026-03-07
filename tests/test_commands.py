@@ -1391,3 +1391,170 @@ class TestToneTsqlCommands:
         receiver, freq = parse_tsql_freq_response(frame)
         assert receiver == RECEIVER_SUB
         assert freq == pytest.approx(110.9)
+
+    def test_build_memory_mode_get(self) -> None:
+        from icom_lan.commands import (
+            build_memory_mode_get,
+            IC_7610_ADDR,
+            CONTROLLER_ADDR,
+        )
+
+        civ = build_memory_mode_get()
+        # FE FE 98 E0 08 FD
+        assert civ == b"\xfe\xfe\x98\xe0\x08\xfd"
+
+    def test_build_memory_mode_set(self) -> None:
+        from icom_lan.commands import build_memory_mode_set
+
+        civ = build_memory_mode_set(42)
+        # FE FE 98 E0 08 00 42 FD (channel 42 in BCD)
+        assert civ == b"\xfe\xfe\x98\xe0\x08\x00\x42\xfd"
+
+    def test_build_memory_mode_set_validates_range(self) -> None:
+        from icom_lan.commands import build_memory_mode_set
+
+        with pytest.raises(ValueError, match="Channel must be 1-101"):
+            build_memory_mode_set(0)
+        with pytest.raises(ValueError, match="Channel must be 1-101"):
+            build_memory_mode_set(102)
+
+    def test_parse_memory_mode_response(self) -> None:
+        from icom_lan.commands import parse_civ_frame, parse_memory_mode_response
+
+        # Response: FE FE E0 98 08 00 42 FD (channel 42)
+        civ = b"\xfe\xfe\xe0\x98\x08\x00\x42\xfd"
+        frame = parse_civ_frame(civ)
+        channel = parse_memory_mode_response(frame)
+        assert channel == 42
+
+    def test_build_memory_write(self) -> None:
+        from icom_lan.commands import build_memory_write
+
+        civ = build_memory_write()
+        # FE FE 98 E0 09 FD
+        assert civ == b"\xfe\xfe\x98\xe0\x09\xfd"
+
+    def test_build_memory_to_vfo(self) -> None:
+        from icom_lan.commands import build_memory_to_vfo
+
+        civ = build_memory_to_vfo(99)
+        # FE FE 98 E0 0A 00 99 FD (channel 99 in BCD)
+        assert civ == b"\xfe\xfe\x98\xe0\x0a\x00\x99\xfd"
+
+    def test_build_memory_clear(self) -> None:
+        from icom_lan.commands import build_memory_clear
+
+        civ = build_memory_clear(1)
+        # FE FE 98 E0 0B 00 01 FD (channel 1 in BCD)
+        assert civ == b"\xfe\xfe\x98\xe0\x0b\x00\x01\xfd"
+
+    def test_build_memory_contents_get(self) -> None:
+        from icom_lan.commands import build_memory_contents_get
+
+        civ = build_memory_contents_get(50)
+        # FE FE 98 E0 1A 00 00 50 FD (0x1A sub=0x00, channel 50 BCD)
+        assert civ == b"\xfe\xfe\x98\xe0\x1a\x00\x00\x50\xfd"
+
+    def test_build_memory_contents_set(self) -> None:
+        from icom_lan.commands import build_memory_contents_set
+        from icom_lan.types import MemoryChannel
+
+        mem = MemoryChannel(
+            channel=42,
+            frequency_hz=14074000,
+            mode=1,  # USB
+            filter=1,
+            scan=0,
+            datamode=0,
+            tonemode=0,
+            tone_freq_hz=None,
+            tsql_freq_hz=None,
+            name="FT8",
+        )
+        civ = build_memory_contents_set(mem)
+        # FE FE 98 E0 1A 00 <channel 2 bytes> <payload 26 bytes> FD
+        # Structure: FE FE(2) + to/from(2) + cmd(1) + sub(1) + data(28) + FD(1) = 35 bytes
+        assert len(civ) == 35
+        assert civ[:8] == b"\xfe\xfe\x98\xe0\x1a\x00\x00\x42"
+        # Payload starts at offset 8: scan(1) + freq(5) + ...
+        # Check freq at offset 8+1 = 9: 14.074 MHz = 0x00 0x40 0x07 0x14 0x00
+        assert civ[9:14] == b"\x00\x40\x07\x14\x00"
+        # Check name at offset 8+1+5+1+1+1+3+3 = 23: "FT8" padded
+        assert civ[23:26] == b"FT8"
+
+    def test_parse_memory_contents_response(self) -> None:
+        from icom_lan.commands import parse_civ_frame, parse_memory_contents_response
+
+        # Build minimal response: channel 42, freq 14.074 MHz, mode USB, filter 1, name "TEST"
+        # data = channel(2) + payload(26)
+        data = bytearray(28)
+        data[0:2] = b"\x00\x42"  # channel 42
+        data[2] = 0  # scan off
+        data[3:8] = b"\x00\x40\x07\x14\x00"  # 14.074 MHz
+        data[8] = 0x01  # USB
+        data[9] = 0x01  # filter 1
+        data[10] = 0x00  # datamode=0, tonemode=0
+        data[17:21] = b"TEST"
+
+        # FE FE E0 98 1A 00 <data> FD
+        civ = b"\xfe\xfe\xe0\x98\x1a\x00" + bytes(data) + b"\xfd"
+        frame = parse_civ_frame(civ)
+        mem = parse_memory_contents_response(frame)
+
+        assert mem.channel == 42
+        assert mem.frequency_hz == 14074000
+        assert mem.mode == 1
+        assert mem.filter == 1
+        assert mem.scan == 0
+        assert mem.name == "TEST"
+
+    def test_build_band_stack_get(self) -> None:
+        from icom_lan.commands import build_band_stack_get
+
+        civ = build_band_stack_get(15, 1)  # band 15 (20m), register 1
+        # FE FE 98 E0 1A 01 0F 01 FD (0x1A sub=0x01, band=15, reg=1)
+        assert civ == b"\xfe\xfe\x98\xe0\x1a\x01\x0f\x01\xfd"
+
+    def test_build_band_stack_get_validates_range(self) -> None:
+        from icom_lan.commands import build_band_stack_get
+
+        with pytest.raises(ValueError, match="Band must be 0-24"):
+            build_band_stack_get(25, 1)
+        with pytest.raises(ValueError, match="Register must be 1-3"):
+            build_band_stack_get(15, 0)
+        with pytest.raises(ValueError, match="Register must be 1-3"):
+            build_band_stack_get(15, 4)
+
+    def test_build_band_stack_set(self) -> None:
+        from icom_lan.commands import build_band_stack_set
+        from icom_lan.types import BandStackRegister
+
+        bsr = BandStackRegister(
+            band=15,  # 20m
+            register=1,
+            frequency_hz=14200000,
+            mode=1,  # USB
+            filter=1,
+        )
+        civ = build_band_stack_set(bsr)
+        # FE FE 98 E0 1A 01 0F 01 <freq 5 bytes> <mode 1 byte> <filter 1 byte> FD
+        assert civ[:8] == b"\xfe\xfe\x98\xe0\x1a\x01\x0f\x01"
+        # freq 14.200 MHz = 00 00 20 14 00 (BCD little-endian)
+        assert civ[8:13] == b"\x00\x00\x20\x14\x00"
+        assert civ[13] == 0x01  # mode
+        assert civ[14] == 0x01  # filter
+
+    def test_parse_band_stack_response(self) -> None:
+        from icom_lan.commands import parse_civ_frame, parse_band_stack_response
+
+        # Response: band=15, reg=1, freq=14.200 MHz, mode=1, filter=1
+        payload = bytes([15, 1]) + b"\x00\x00\x20\x14\x00" + bytes([0x01, 0x01])
+        civ = b"\xfe\xfe\xe0\x98\x1a\x01" + payload + b"\xfd"
+        frame = parse_civ_frame(civ)
+        bsr = parse_band_stack_response(frame)
+
+        assert bsr.band == 15
+        assert bsr.register == 1
+        assert bsr.frequency_hz == 14200000
+        assert bsr.mode == 1
+        assert bsr.filter == 1
