@@ -90,6 +90,7 @@ _CMD16_GLOBAL_BOOL_FIELDS = {
     0x45: "monitor_on",
     0x46: "vox_on",
     0x50: "dial_lock",
+    0x5E: "main_sub_tracking",
 }
 
 _CMD16_GLOBAL_VALUE_FIELDS = {
@@ -559,6 +560,8 @@ class _CivRxMixin:
                         self._notify_change("filter_shape_changed", {"value": val})
                     elif sub == 0x58:
                         self._notify_change("ssb_tx_bandwidth_changed", {"value": val})
+                    elif sub == 0x5E:
+                        self._notify_change("main_sub_tracking_changed", {"on": bool(val)})
                     elif sub == 0x65:  # IP+
                         self._notify_change("ipplus_changed", {"on": bool(val)})
             elif frame.command == 0x27:

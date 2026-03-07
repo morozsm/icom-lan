@@ -130,6 +130,8 @@ __all__ = [
     "set_filter_shape",
     "get_ssb_tx_bandwidth",
     "set_ssb_tx_bandwidth",
+    "get_main_sub_tracking",
+    "set_main_sub_tracking",
     "get_agc_time_constant",
     "set_agc_time_constant",
     "get_data_mode",
@@ -1461,6 +1463,7 @@ _SUB_SSB_TX_BANDWIDTH = 0x58
 _SUB_NB = 0x22        # Noise Blanker on/off (0x16 0x22)
 _SUB_NR = 0x40        # Noise Reduction on/off (0x16 0x40)
 _SUB_IP_PLUS = 0x65   # IP+ on/off (0x16 0x65)
+_SUB_MAIN_SUB_TRACKING = 0x5E  # Main/Sub Tracking on/off (0x16 0x5E)
 _SUB_AGC_TIME_CONSTANT = 0x04
 
 
@@ -2171,6 +2174,27 @@ def set_ssb_tx_bandwidth(
         maximum=int(SsbTxBandwidth.NAR),
         to_addr=to_addr,
         from_addr=from_addr,
+    )
+
+
+def get_main_sub_tracking(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a read Main/Sub Tracking status command (0x16 0x5E)."""
+    return _build_function_get(
+        _SUB_MAIN_SUB_TRACKING, to_addr=to_addr, from_addr=from_addr
+    )
+
+
+def set_main_sub_tracking(
+    on: bool,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a set Main/Sub Tracking status command (0x16 0x5E)."""
+    return _build_function_bool_set(
+        _SUB_MAIN_SUB_TRACKING, on, to_addr=to_addr, from_addr=from_addr
     )
 
 
