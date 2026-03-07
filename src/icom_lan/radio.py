@@ -203,6 +203,17 @@ from .commands import (
     get_rit_tx_status,
     set_rit_tx_status,
     parse_rit_frequency_response,
+    # VFO / Dual Watch / Scanning (#132)
+    get_tuning_step,
+    set_tuning_step,
+    start_scan,
+    stop_scan,
+    set_dual_watch_off,
+    set_dual_watch_on,
+    get_dual_watch,
+    set_dual_watch,
+    quick_dual_watch,
+    quick_split,
 )
 from .exceptions import (
     CommandError,
@@ -2693,6 +2704,66 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         if ack is False:
             raise CommandError(f"Radio rejected split {'on' if on else 'off'}")
         self._last_split = on
+
+    async def get_tuning_step(self) -> int:
+        """Read the tuning step index (0-8, BCD-encoded per IC-7610, CI-V 0x10)."""
+        self._check_connected()
+        civ = get_tuning_step(to_addr=self._radio_addr)
+        resp = await self._send_civ_raw(civ)
+        if resp.data:
+            b = resp.data[0]
+            return ((b >> 4) & 0x0F) * 10 + (b & 0x0F)
+        return 0
+
+    async def set_tuning_step(self, step: int) -> None:
+        """Set the tuning step index (0-8, BCD-encoded, CI-V 0x10). Fire-and-forget."""
+        self._check_connected()
+        civ = set_tuning_step(step, to_addr=self._radio_addr)
+        await self._send_civ_raw(civ, wait_response=False)
+
+    async def start_scan(self) -> None:
+        """Start scanning (CI-V 0x0E 0x01). Fire-and-forget."""
+        self._check_connected()
+        civ = start_scan(to_addr=self._radio_addr)
+        await self._send_civ_raw(civ, wait_response=False)
+
+    async def stop_scan(self) -> None:
+        """Stop scanning (CI-V 0x0E 0x00). Fire-and-forget."""
+        self._check_connected()
+        civ = stop_scan(to_addr=self._radio_addr)
+        await self._send_civ_raw(civ, wait_response=False)
+
+    async def get_dual_watch(self) -> bool:
+        """Query dual watch status (CI-V 0x07 0xC2).
+
+        Returns:
+            True if dual watch is enabled, False otherwise.
+        """
+        self._check_connected()
+        civ = get_dual_watch(to_addr=self._radio_addr)
+        resp = await self._send_civ_raw(civ)
+        # Response: cmd=0x07, data=[0xC2, <value>]
+        if resp.data and len(resp.data) >= 2 and resp.data[0] == 0xC2:
+            return bool(resp.data[1])
+        return False
+
+    async def set_dual_watch(self, on: bool) -> None:
+        """Enable or disable dual watch (CI-V 0x07 0xC0/0xC1). Fire-and-forget."""
+        self._check_connected()
+        civ = set_dual_watch(on, to_addr=self._radio_addr)
+        await self._send_civ_raw(civ, wait_response=False)
+
+    async def quick_dual_watch(self) -> None:
+        """One-shot dual watch trigger (CI-V 0x1A 0x05 0x00 0x32). Fire-and-forget."""
+        self._check_connected()
+        civ = quick_dual_watch(to_addr=self._radio_addr)
+        await self._send_civ_raw(civ, wait_response=False)
+
+    async def quick_split(self) -> None:
+        """One-shot split trigger (CI-V 0x1A 0x05 0x00 0x33). Fire-and-forget."""
+        self._check_connected()
+        civ = quick_split(to_addr=self._radio_addr)
+        await self._send_civ_raw(civ, wait_response=False)
 
     async def get_attenuator_level(self, receiver: int = RECEIVER_MAIN) -> int:
         """Read attenuator level in dB (Command29-aware).

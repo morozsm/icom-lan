@@ -150,6 +150,8 @@ def test_to_dict_structure() -> None:
         "power_level",
         "split",
         "dual_watch",
+        "scanning",
+        "tuning_step",
         "overflow",
         "tuner_status",
         "tx_freq_monitor",

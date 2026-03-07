@@ -667,6 +667,15 @@ class _CivRxMixin:
                     self._notify_change("rit_changed", {"on": bool(frame.data[0])})
                 elif frame.sub == 0x02 and frame.data:
                     self._notify_change("rit_tx_changed", {"on": bool(frame.data[0])})
+            elif frame.command == 0x0E and frame.data:  # Scanning
+                self._notify_change("scanning_changed", {"on": bool(frame.data[0])})
+            elif frame.command == 0x10 and frame.data:  # Tuning step
+                b = frame.data[0]
+                step = ((b >> 4) & 0x0F) * 10 + (b & 0x0F)
+                self._notify_change("tuning_step_changed", {"step": step})
+            elif frame.command == 0x07 and frame.data and frame.data[0] == 0xC2 and len(frame.data) >= 2:
+                # Dual Watch status response
+                self._notify_change("dual_watch_changed", {"on": bool(frame.data[1])})
         except Exception:
             logger.debug("civ-rx: cache update failed", exc_info=True)  # Best-effort; never let cache update break the RX loop
         # Also update RadioState (additive, does not replace StateCache)
@@ -922,6 +931,17 @@ class _CivRxMixin:
                     rs.rit_on = bool(frame.data[0])
                 elif frame.sub == 0x02 and frame.data:
                     rs.rit_tx = bool(frame.data[0])
+
+            elif cmd == 0x0E:
+                # Scanning (global): 0x00=stopped, 0x01=started
+                if frame.data:
+                    rs.scanning = bool(frame.data[0])
+
+            elif cmd == 0x10:
+                # Tuning step (global): BCD-encoded single byte index
+                if frame.data:
+                    b = frame.data[0]
+                    rs.tuning_step = ((b >> 4) & 0x0F) * 10 + (b & 0x0F)
 
             elif cmd == 0x0F:
                 # Split (global)
