@@ -92,8 +92,12 @@ def _make_mock_poller() -> MagicMock:
 @pytest.fixture
 async def wire_server() -> RigctldServer:  # type: ignore[misc]
     """Real RigctldServer bound to 127.0.0.1:0 with mock radio + poller."""
+    from icom_lan.rigctld.state_cache import StateCache
+    from icom_lan.rigctld.handler import RigctldHandler
+    
     radio = _make_mock_radio()
     poller = _make_mock_poller()
+    cache = StateCache()  # Real cache to avoid AsyncMock.state_cache confusion
     cfg = RigctldConfig(
         host="127.0.0.1",
         port=0,
@@ -101,7 +105,8 @@ async def wire_server() -> RigctldServer:  # type: ignore[misc]
         command_timeout=1.0,
         cache_ttl=0.0,      # always fresh → deterministic radio calls
     )
-    srv = RigctldServer(radio, cfg, _poller=poller)
+    handler = RigctldHandler(radio, cfg, cache=cache)
+    srv = RigctldServer(radio, cfg, _handler=handler, _poller=poller)
     async with srv:
         yield srv  # type: ignore[misc]
 
@@ -109,8 +114,12 @@ async def wire_server() -> RigctldServer:  # type: ignore[misc]
 @pytest.fixture
 async def ro_wire_server() -> RigctldServer:  # type: ignore[misc]
     """Read-only RigctldServer for testing that setters are rejected."""
+    from icom_lan.rigctld.state_cache import StateCache
+    from icom_lan.rigctld.handler import RigctldHandler
+    
     radio = _make_mock_radio()
     poller = _make_mock_poller()
+    cache = StateCache()  # Real cache to avoid AsyncMock.state_cache confusion
     cfg = RigctldConfig(
         host="127.0.0.1",
         port=0,
@@ -119,7 +128,8 @@ async def ro_wire_server() -> RigctldServer:  # type: ignore[misc]
         read_only=True,
         cache_ttl=0.0,
     )
-    srv = RigctldServer(radio, cfg, _poller=poller)
+    handler = RigctldHandler(radio, cfg, cache=cache)
+    srv = RigctldServer(radio, cfg, _handler=handler, _poller=poller)
     async with srv:
         yield srv  # type: ignore[misc]
 
