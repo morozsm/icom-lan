@@ -214,6 +214,19 @@ from .commands import (
     set_dual_watch,
     quick_dual_watch,
     quick_split,
+    # Tone/TSQL (#134)
+    get_repeater_tone as _get_repeater_tone_cmd,
+    set_repeater_tone as _set_repeater_tone_cmd,
+    get_repeater_tsql as _get_repeater_tsql_cmd,
+    set_repeater_tsql as _set_repeater_tsql_cmd,
+    get_tone_freq as _get_tone_freq_cmd,
+    set_tone_freq as _set_tone_freq_cmd,
+    get_tsql_freq as _get_tsql_freq_cmd,
+    set_tsql_freq as _set_tsql_freq_cmd,
+    parse_tone_freq_response,
+    parse_tsql_freq_response,
+    _SUB_REPEATER_TONE,
+    _SUB_REPEATER_TSQL,
 )
 from .exceptions import (
     CommandError,
@@ -3006,6 +3019,60 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         )
         civ = set_ip_plus(on, to_addr=self._radio_addr, receiver=receiver)
         await self._send_civ_raw(civ, wait_response=False)
+
+    async def get_repeater_tone(self, receiver: int = 0) -> bool:
+        """Read repeater tone status (0x16 0x42)."""
+        civ = _get_repeater_tone_cmd(to_addr=self._radio_addr, receiver=receiver)
+        return await self._get_bool_value(
+            civ, key="get_repeater_tone", command=0x16, sub=_SUB_REPEATER_TONE
+        )
+
+    async def set_repeater_tone(self, on: bool, receiver: int = 0) -> None:
+        """Set repeater tone on/off (0x16 0x42)."""
+        await self._send_fire_and_forget(
+            _set_repeater_tone_cmd(on, to_addr=self._radio_addr, receiver=receiver)
+        )
+
+    async def get_repeater_tsql(self, receiver: int = 0) -> bool:
+        """Read repeater TSQL status (0x16 0x43)."""
+        civ = _get_repeater_tsql_cmd(to_addr=self._radio_addr, receiver=receiver)
+        return await self._get_bool_value(
+            civ, key="get_repeater_tsql", command=0x16, sub=_SUB_REPEATER_TSQL
+        )
+
+    async def set_repeater_tsql(self, on: bool, receiver: int = 0) -> None:
+        """Set repeater TSQL on/off (0x16 0x43)."""
+        await self._send_fire_and_forget(
+            _set_repeater_tsql_cmd(on, to_addr=self._radio_addr, receiver=receiver)
+        )
+
+    async def get_tone_freq(self, receiver: int = 0) -> float:
+        """Read CTCSS tone frequency in Hz (0x1B 0x00)."""
+        self._check_connected()
+        civ = _get_tone_freq_cmd(to_addr=self._radio_addr, receiver=receiver)
+        resp = await self._send_civ_raw(civ)
+        _, freq = parse_tone_freq_response(resp)
+        return freq
+
+    async def set_tone_freq(self, freq_hz: float, receiver: int = 0) -> None:
+        """Set CTCSS tone frequency in Hz (0x1B 0x00)."""
+        await self._send_fire_and_forget(
+            _set_tone_freq_cmd(freq_hz, to_addr=self._radio_addr, receiver=receiver)
+        )
+
+    async def get_tsql_freq(self, receiver: int = 0) -> float:
+        """Read TSQL frequency in Hz (0x1B 0x01)."""
+        self._check_connected()
+        civ = _get_tsql_freq_cmd(to_addr=self._radio_addr, receiver=receiver)
+        resp = await self._send_civ_raw(civ)
+        _, freq = parse_tsql_freq_response(resp)
+        return freq
+
+    async def set_tsql_freq(self, freq_hz: float, receiver: int = 0) -> None:
+        """Set TSQL frequency in Hz (0x1B 0x01)."""
+        await self._send_fire_and_forget(
+            _set_tsql_freq_cmd(freq_hz, to_addr=self._radio_addr, receiver=receiver)
+        )
 
     async def snapshot_state(self) -> dict[str, object]:
         """Best-effort snapshot of core rig state for safe restore."""

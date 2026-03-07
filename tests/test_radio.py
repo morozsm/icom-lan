@@ -1682,3 +1682,102 @@ class TestTransceiverStatusParity:
         method = getattr(radio, method_name)
         await method(value, **kwargs)
         assert mock_transport.sent_packets[-1].endswith(expected_tail)
+
+
+class TestToneTsqlParity:
+    """Test high-level tone/TSQL parity methods (#134)."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("method_name", "sub", "payload", "receiver", "expected"),
+        [
+            ("get_repeater_tone", 0x42, b"\x01", 0, True),
+            ("get_repeater_tone", 0x42, b"\x00", 1, False),
+            ("get_repeater_tsql", 0x43, b"\x01", 0, True),
+            ("get_repeater_tsql", 0x43, b"\x00", 1, False),
+        ],
+    )
+    async def test_get_repeater_toggle(
+        self,
+        radio: IcomRadio,
+        mock_transport: MockTransport,
+        method_name: str,
+        sub: int,
+        payload: bytes,
+        receiver: int,
+        expected: bool,
+    ) -> None:
+        mock_transport.queue_response(_function_response(sub, payload, receiver=receiver))
+        result = await getattr(radio, method_name)(receiver=receiver)
+        assert result is expected
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("method_name", "value", "kwargs", "expected_tail"),
+        [
+            ("set_repeater_tone", True, {"receiver": 0}, b"\x29\x00\x16\x42\x01\xFD"),
+            ("set_repeater_tone", False, {"receiver": 1}, b"\x29\x01\x16\x42\x00\xFD"),
+            ("set_repeater_tsql", True, {"receiver": 0}, b"\x29\x00\x16\x43\x01\xFD"),
+            ("set_repeater_tsql", False, {"receiver": 1}, b"\x29\x01\x16\x43\x00\xFD"),
+        ],
+    )
+    async def test_set_repeater_toggle(
+        self,
+        radio: IcomRadio,
+        mock_transport: MockTransport,
+        method_name: str,
+        value: bool,
+        kwargs: dict[str, int],
+        expected_tail: bytes,
+    ) -> None:
+        await getattr(radio, method_name)(value, **kwargs)
+        assert mock_transport.sent_packets[-1].endswith(expected_tail)
+
+    @pytest.mark.asyncio
+    async def test_get_tone_freq(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        civ = build_cmd29_frame(
+            CONTROLLER_ADDR,
+            IC_7610_ADDR,
+            0x1B,
+            sub=0x00,
+            data=bytes([0x00, 0x88, 0x05]),
+            receiver=0,
+        )
+        mock_transport.queue_response(_wrap_civ_in_udp(civ))
+        assert await radio.get_tone_freq() == pytest.approx(88.5)
+
+    @pytest.mark.asyncio
+    async def test_get_tsql_freq(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        civ = build_cmd29_frame(
+            CONTROLLER_ADDR,
+            IC_7610_ADDR,
+            0x1B,
+            sub=0x01,
+            data=bytes([0x01, 0x10, 0x09]),
+            receiver=0,
+        )
+        mock_transport.queue_response(_wrap_civ_in_udp(civ))
+        assert await radio.get_tsql_freq() == pytest.approx(110.9)
+
+    @pytest.mark.asyncio
+    async def test_set_tone_freq(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        await radio.set_tone_freq(88.5)
+        # cmd29 + receiver=0 + 0x1B + 0x00 + BCD(88.5) + FD
+        assert mock_transport.sent_packets[-1].endswith(
+            b"\x29\x00\x1B\x00\x00\x88\x05\xFD"
+        )
+
+    @pytest.mark.asyncio
+    async def test_set_tsql_freq(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        await radio.set_tsql_freq(110.9, receiver=1)
+        assert mock_transport.sent_packets[-1].endswith(
+            b"\x29\x01\x1B\x01\x01\x10\x09\xFD"
+        )
