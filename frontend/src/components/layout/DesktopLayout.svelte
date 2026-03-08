@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import VfoDisplay from '../vfo/VfoDisplay.svelte';
   import ReceiverSwitch from '../controls/ReceiverSwitch.svelte';
   import SMeter from '../meters/SMeter.svelte';
@@ -11,6 +12,8 @@
   import AudioControls from '../audio/AudioControls.svelte';
   import PttButton from '../audio/PttButton.svelte';
   import StatusBar from '../shared/StatusBar.svelte';
+  import Toast from '../shared/Toast.svelte';
+  import DxClusterPanel from '../dx/DxClusterPanel.svelte';
 
   import {
     getRadioState,
@@ -19,6 +22,7 @@
   } from '../../lib/stores/radio.svelte';
   import { hasDualReceiver, hasTx } from '../../lib/stores/capabilities.svelte';
   import { sendCommand } from '../../lib/transport/ws-client';
+  import { setupKeyboard } from '../../lib/actions/keyboard';
 
   let state = $derived(getRadioState());
   let main = $derived(getMainReceiver());
@@ -26,6 +30,10 @@
   let activeRx = $derived(state?.active ?? 'MAIN');
   let isDualRx = $derived(hasDualReceiver());
   let isTx = $derived(hasTx());
+
+  onMount(() => {
+    return setupKeyboard();
+  });
 
   function handleTune(receiver: 'MAIN' | 'SUB', newFreq: number) {
     const rx = receiver === 'MAIN' ? 0 : 1;
@@ -50,7 +58,7 @@
   <StatusBar />
 
   <main class="main-grid">
-    <!-- Left pane: VFO + Spectrum -->
+    <!-- Left pane: VFO + Spectrum + Band bar -->
     <section class="left-pane">
       <!-- Dual VFO display -->
       <div class="vfo-section">
@@ -99,11 +107,16 @@
       <div class="spectrum-section">
         <SpectrumPanel />
       </div>
+
+      <!-- Band bar -->
+      <div class="band-bar">
+        <BandSelector />
+      </div>
     </section>
 
-    <!-- Right pane: Meters + Controls -->
+    <!-- Right pane: Meters + Controls + DX -->
     <aside class="right-pane">
-      <!-- S-Meter -->
+      <!-- S-Meter / Power meter -->
       <div class="panel-card">
         {#if main}
           <SMeter value={main.sMeter} label="S" />
@@ -114,10 +127,9 @@
         {/if}
       </div>
 
-      <!-- Band / Mode / Filter selectors -->
+      <!-- Mode / Filter selectors -->
       <div class="panel-card">
         <div class="selectors-row">
-          <BandSelector />
           <ModeSelector />
           <FilterSelector />
         </div>
@@ -131,9 +143,17 @@
         <AudioControls />
         <PttButton />
       </div>
+
+      <!-- DX Cluster -->
+      <div class="panel-card dx-card">
+        <DxClusterPanel />
+      </div>
     </aside>
   </main>
 </div>
+
+<!-- Toast notifications — rendered in fixed position overlay -->
+<Toast />
 
 <style>
   .desktop-layout {
@@ -165,6 +185,7 @@
     display: flex;
     align-items: flex-start;
     gap: var(--space-3);
+    flex-shrink: 0;
   }
 
   .vfo-pair {
@@ -194,7 +215,14 @@
   .spectrum-section {
     flex: 1;
     overflow: hidden;
-    padding: var(--space-2) var(--space-4) var(--space-4);
+    padding: var(--space-2) var(--space-4) 0;
+  }
+
+  .band-bar {
+    flex-shrink: 0;
+    padding: var(--space-2) var(--space-4);
+    border-top: 1px solid var(--panel-border);
+    overflow-x: auto;
   }
 
   /* ── Right pane ── */
@@ -216,6 +244,12 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
+  }
+
+  .dx-card {
+    flex: 1;
+    min-height: 120px;
+    overflow: hidden;
   }
 
   .meter-spacer {
