@@ -13,6 +13,19 @@
   let isPartial = $derived(status === 'partial');
   let isPtt = $derived(state?.ptt ?? false);
 
+  // Brief green flash on status bar when connection becomes established
+  let flashConnected = $state(false);
+  let prevStatus = '';
+
+  $effect(() => {
+    const s = status;
+    if (s === 'connected' && prevStatus !== 'connected' && prevStatus !== '') {
+      flashConnected = true;
+      setTimeout(() => { flashConnected = false; }, 700);
+    }
+    prevStatus = s;
+  });
+
   // Format frequency: 14.074.000
   function formatFreq(hz: number): string {
     if (!hz) return '—';
@@ -40,7 +53,7 @@
   });
 </script>
 
-<header class="status-bar">
+<header class="status-bar" class:flash-connected={flashConnected}>
   <!-- Left: model + connection -->
   <div class="left">
     <span
@@ -121,6 +134,11 @@
 
   .dot.partial {
     background: var(--warning);
+    animation: reconnect-pulse 1.5s ease-in-out infinite;
+  }
+
+  .status-bar.flash-connected {
+    animation: status-connected-flash 0.7s ease-out;
   }
 
   .model {

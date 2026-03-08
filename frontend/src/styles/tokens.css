@@ -2,6 +2,9 @@
   --bg: #0b0f14;
   --panel: #121922;
   --panel-border: #1e293b;
+  --panel-border-subtle: #192233;
+  --panel-border-strong: #2d3d52;
+  --panel-gradient: linear-gradient(180deg, #141e2b 0%, #0f1920 100%);
   --text: #e6edf3;
   --text-muted: #8b949e;
   --accent: #4db6ff;
@@ -18,8 +21,15 @@
   --right-pane-width: 320px;
   --font-mono: 'JetBrains Mono', 'SF Mono', monospace;
   --font-sans: system-ui, -apple-system, sans-serif;
+  --font-size-xs: clamp(0.625rem, 1.5vw, 0.75rem);
+  --font-size-sm: clamp(0.75rem, 2vw, 0.875rem);
+  --font-size-base: clamp(0.875rem, 2.5vw, 1rem);
+  --font-size-lg: clamp(1rem, 3vw, 1.25rem);
+  --font-size-xl: clamp(1.25rem, 4vw, 1.5rem);
+  --font-size-freq: clamp(1.25rem, 5vw, 1.75rem);
   --radius: 8px;
   --radius-lg: 12px;
   --tap-target: 44px;
   --bottom-bar-height: 56px;
+  --focus-ring: 0 0 0 2px var(--accent);
 }

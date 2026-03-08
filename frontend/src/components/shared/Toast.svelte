@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { fly } from 'svelte/transition';
   import { onMessage } from '../../lib/transport/ws-client';
 
   interface ToastItem {
@@ -30,26 +31,26 @@
   });
 </script>
 
-{#if toasts.length > 0}
-  <div class="toast-container" aria-live="polite" aria-label="Notifications">
-    {#each toasts as toast (toast.id)}
-      <button
-        class="toast"
-        class:info={toast.level === 'info'}
-        class:warning={toast.level === 'warning'}
-        class:error={toast.level === 'error'}
-        aria-label="Dismiss notification"
-        onclick={() => dismiss(toast.id)}
-      >
-        <span class="toast-icon" aria-hidden="true">
-          {#if toast.level === 'error'}✕{:else if toast.level === 'warning'}⚠{:else}ℹ{/if}
-        </span>
-        <span class="toast-msg">{toast.message}</span>
-        <span class="toast-close" aria-hidden="true">×</span>
-      </button>
-    {/each}
-  </div>
-{/if}
+<div class="toast-container" aria-live="polite" aria-label="Notifications">
+  {#each toasts as toast (toast.id)}
+    <button
+      class="toast"
+      class:info={toast.level === 'info'}
+      class:warning={toast.level === 'warning'}
+      class:error={toast.level === 'error'}
+      aria-label="Dismiss notification"
+      onclick={() => dismiss(toast.id)}
+      in:fly={{ x: 80, duration: 200, opacity: 0 }}
+      out:fly={{ x: 80, duration: 150, opacity: 0 }}
+    >
+      <span class="toast-icon" aria-hidden="true">
+        {#if toast.level === 'error'}✕{:else if toast.level === 'warning'}⚠{:else}ℹ{/if}
+      </span>
+      <span class="toast-msg">{toast.message}</span>
+      <span class="toast-close" aria-hidden="true">×</span>
+    </button>
+  {/each}
+</div>
 
 <style>
   .toast-container {
@@ -80,14 +81,13 @@
     padding: var(--space-3);
     border-radius: var(--radius);
     border-left: 3px solid;
-    background: var(--panel);
+    background: var(--panel-gradient);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
     font-size: 0.8125rem;
     font-family: var(--font-sans);
     cursor: pointer;
     pointer-events: all;
-    animation: slide-in 0.2s ease;
-    transition: opacity 0.2s;
+    transition: opacity var(--transition-fast);
   }
 
   .toast:hover {
@@ -137,14 +137,4 @@
     color: var(--text);
   }
 
-  @keyframes slide-in {
-    from {
-      transform: translateX(calc(100% + var(--space-4)));
-      opacity: 0;
-    }
-    to {
-      transform: translateX(0);
-      opacity: 1;
-    }
-  }
 </style>
