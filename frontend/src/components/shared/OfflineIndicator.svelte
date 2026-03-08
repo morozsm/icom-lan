@@ -4,13 +4,25 @@
   let offline = $state(!navigator.onLine);
 
   onMount(() => {
-    const goOnline = () => { offline = false; };
-    const goOffline = () => { offline = true; };
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const goOnline = () => {
+      if (debounceTimer !== null) {
+        clearTimeout(debounceTimer);
+        debounceTimer = null;
+      }
+      offline = false;
+    };
+    const goOffline = () => {
+      // Debounce: wait 1s before showing indicator to avoid rapid toggle on flaky connections
+      debounceTimer = setTimeout(() => { offline = true; }, 1000);
+    };
     window.addEventListener('online', goOnline);
     window.addEventListener('offline', goOffline);
     return () => {
       window.removeEventListener('online', goOnline);
       window.removeEventListener('offline', goOffline);
+      if (debounceTimer !== null) clearTimeout(debounceTimer);
     };
   });
 </script>

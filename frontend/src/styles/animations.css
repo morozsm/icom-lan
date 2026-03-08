@@ -7,41 +7,49 @@
 
 /* ── Keyframes ── */
 
+/* Used by: SMeter.svelte (.meter-fill during TX), PowerMeter.svelte */
 @keyframes meter-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.8; }
 }
 
+/* Used by: PttButton.svelte (TX active glow), MobileLayout.svelte (.tx-badge) */
 @keyframes tx-pulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
   50% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
 }
 
+/* Used by: Toast.svelte (toast enter), SettingsPanel.svelte */
 @keyframes fade-in {
   from { opacity: 0; transform: translateY(-4px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* Used by: SettingsPanel.svelte (slide-in from right) */
 @keyframes slide-in-right {
   from { transform: translateX(100%); }
   to { transform: translateX(0); }
 }
 
+/* Used by: Skeleton.svelte (.skeleton loading shimmer) */
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
 
+/* Used by: StatusBar.svelte (.status-dot partial), DesktopLayout.svelte (.connection-overlay) */
 @keyframes reconnect-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
 }
 
+/* Used by: VfoDisplay.svelte (.vfo-digit on frequency change) */
 @keyframes freq-flash {
   from { filter: brightness(2.5); }
   to { filter: brightness(1); }
 }
 
+/* Used by: StatusBar.svelte (.status-bar on reconnect) */
 @keyframes status-connected-flash {
   0% { background-color: color-mix(in srgb, var(--success) 20%, var(--panel)); }
   100% { background-color: var(--panel); }

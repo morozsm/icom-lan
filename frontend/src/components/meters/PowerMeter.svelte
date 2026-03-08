@@ -51,7 +51,8 @@
     <div class="meter-section">
       <div class="meter-header">
         <span class="meter-label">PWR</span>
-        <span class="meter-value">{power}W</span>
+        <!-- Backend sends raw 0-255; show percentage until calibrated watts available -->
+        <span class="meter-value">{fillPercent.toFixed(0)}%</span>
       </div>
       <div class="meter-track">
         <div class="meter-fill" style="width: {fillPercent}%; background: {barColor}"></div>

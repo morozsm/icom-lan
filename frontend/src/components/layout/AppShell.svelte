@@ -4,7 +4,6 @@
   import { setLayout } from '../../lib/stores/ui.svelte';
   import InstallPrompt from '../shared/InstallPrompt.svelte';
   import OfflineIndicator from '../shared/OfflineIndicator.svelte';
-  import SwUpdateToast from '../shared/SwUpdateToast.svelte';
 
   const MOBILE_BREAKPOINT = 768;
 
@@ -23,7 +22,6 @@
 </script>
 
 <OfflineIndicator />
-<SwUpdateToast />
 
 {#if isMobile}
   <MobileLayout />

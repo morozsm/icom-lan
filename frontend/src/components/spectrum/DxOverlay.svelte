@@ -21,7 +21,8 @@
           .filter((s) => s.freq >= startFreq && s.freq <= endFreq)
           .map((s) => ({
             spot: s,
-            pct: ((s.freq - startFreq) / (endFreq - startFreq)) * 100,
+            // Clamp to 2–98% to prevent badge overflow at spectrum edges
+            pct: Math.max(2, Math.min(98, ((s.freq - startFreq) / (endFreq - startFreq)) * 100)),
           }))
       : ([] as PositionedSpot[]),
   );
