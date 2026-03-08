@@ -5,6 +5,7 @@
     defaultSpectrumOptions,
     type SpectrumOptions,
   } from '../../lib/renderers/spectrum-renderer';
+  import { getChannel } from '../../lib/transport/ws-client';
 
   interface Props {
     data: Uint8Array | null;
@@ -18,24 +19,35 @@
   let cssHeight = 1;
   let rafId = 0;
 
-  function draw(): void {
-    if (!canvas || !data || cssWidth <= 0 || cssHeight <= 0) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    renderSpectrum(ctx, data, cssWidth, cssHeight, options);
-  }
+  // Latest scope pixels — updated directly from WS binary, not via Svelte props
+  let latestPixels: Uint8Array | null = null;
 
-  function scheduleRender(): void {
-    cancelAnimationFrame(rafId);
+  function draw(): void {
+    const pixels = latestPixels ?? data;
+    if (canvas && pixels && cssWidth > 0 && cssHeight > 0) {
+      const ctx = canvas.getContext('2d');
+      if (ctx) renderSpectrum(ctx, pixels, cssWidth, cssHeight, options);
+    }
+    // Always schedule next frame — data may arrive at any time
     rafId = requestAnimationFrame(draw);
   }
 
-  // Re-render when data or options change
-  $effect(() => {
-    if (data !== null || options) scheduleRender();
-  });
-
   onMount(() => {
+    // Direct scope binary subscription — bypasses Svelte prop reactivity
+    // which cannot track Uint8Array changes at 100+ fps
+    const scopeCh = getChannel('scope');
+    const unsubBinary = scopeCh.onBinary((buf: ArrayBuffer) => {
+      if (buf.byteLength < 16) return;
+      const view = new DataView(buf);
+      if (view.getUint8(0) !== 0x01) return;
+      const pxCount = view.getUint16(14, true);
+      if (16 + pxCount > buf.byteLength) return;
+      latestPixels = new Uint8Array(buf, 16, pxCount);
+    });
+
+    // Continuous RAF loop for smooth rendering
+    rafId = requestAnimationFrame(draw);
+
     const ro = new ResizeObserver((entries) => {
       const rect = entries[0]?.contentRect;
       if (!rect) return;
@@ -46,10 +58,11 @@
       canvas.height = Math.round(cssHeight * dpr);
       const ctx = canvas.getContext('2d');
       ctx?.setTransform(dpr, 0, 0, dpr, 0, 0);
-      scheduleRender();
     });
     ro.observe(canvas);
+
     return () => {
+      unsubBinary();
       ro.disconnect();
       cancelAnimationFrame(rafId);
     };
