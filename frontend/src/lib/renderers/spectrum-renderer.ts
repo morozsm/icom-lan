@@ -96,11 +96,14 @@ export function renderSpectrum(
   }
 
   // Map amplitude data to canvas y-coordinates
+  // Gain boost: map 0-80 → full height with sqrt curve for better contrast
+  // at low signal levels (IC-7610 scope data typically peaks at ~55)
   const yPoints = new Float32Array(width);
   for (let x = 0; x < width; x++) {
     const idx = Math.min(n - 1, Math.floor((x / width) * n));
-    const amp = clamp(data[idx], 0, 160) / 160;
-    yPoints[x] = height * (1 - amp);
+    const amp = Math.min(1.0, data[idx] / 80);
+    const boosted = Math.sqrt(amp);
+    yPoints[x] = height * (1 - boosted);
   }
 
   // Filled area under spectrum (gradient cached; recreated only when height or fillColor changes)

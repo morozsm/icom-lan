@@ -115,7 +115,10 @@ export class WaterfallRenderer {
     const lut = this.lut;
     for (let x = 0; x < w; x++) {
       const p = data[Math.min(n - 1, Math.floor((x / w) * n))];
-      const v = Math.min(255, Math.floor((Math.min(p, 160) / 160) * 255));
+      // Gain boost: map 0-80 → 0-255 with sqrt curve for better contrast
+      // at low signal levels (IC-7610 scope data peaks at ~55)
+      const norm = Math.min(1.0, p / 80);
+      const v = Math.min(255, Math.floor(Math.sqrt(norm) * 255));
       const li = v * 3;
       const pi = x * 4;
       rowData[pi] = lut[li];
