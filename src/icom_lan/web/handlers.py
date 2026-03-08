@@ -166,6 +166,8 @@ class ControlHandler:
             "set_lan_mod_level",
             "get_dual_watch",
             "set_dual_watch",
+            "get_tuner_status",
+            "set_tuner_status",
         ]
     )
 
@@ -526,6 +528,21 @@ class ControlHandler:
                 raise RuntimeError("radio connection not available")
             on = await self._radio.get_dual_watch()
             return {"on": on}
+        if name == "get_tuner_status":
+            if self._radio is None:
+                raise RuntimeError("radio connection not available")
+            status = await self._radio.get_tuner_status()
+            label = {0: "OFF", 1: "ON", 2: "TUNING"}.get(status, "UNKNOWN")
+            return {"status": status, "label": label}
+        if name == "set_tuner_status":
+            if self._radio is None:
+                raise RuntimeError("radio connection not available")
+            value = int(params.get("value", 0))
+            if value not in (0, 1, 2):
+                raise ValueError(f"tuner value must be 0, 1, or 2, got {value}")
+            await self._radio.set_tuner_status(value)
+            label = {0: "OFF", 1: "ON", 2: "TUNING"}[value]
+            return {"value": value, "label": label}
 
         q = self._server.command_queue if self._server is not None else None
         if q is None:
