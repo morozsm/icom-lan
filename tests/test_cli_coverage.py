@@ -757,3 +757,92 @@ async def test_cmd_tuner_json_output(capsys: pytest.CaptureFixture[str]) -> None
     assert await _cmd_tuner(radio, argparse.Namespace(action="tune", json=True)) == 0
     data = json.loads(capsys.readouterr().out)
     assert data == {"tuner_status": 2, "label": "TUNING"}
+
+
+# ---------------------------------------------------------------------------
+# _cmd_audio_bridge — Task 3
+# ---------------------------------------------------------------------------
+
+import icom_lan.audio_bridge as _ab_mod
+from icom_lan.cli import _cmd_audio_bridge  # noqa: E402
+
+
+def _fake_bridge_cls(start_err: Exception | None = None) -> type:
+    """Return a fake AudioBridge class for testing."""
+    start_mock = AsyncMock(side_effect=start_err)
+    stop_mock = AsyncMock()
+    _stats = {
+        "running": False, "rx_frames": 5, "tx_frames": 3, "rx_drops": 0,
+        "uptime_seconds": 1.0, "rx_interval_ms": 20.0, "tx_interval_ms": 20.0,
+        "buffer_size": 5,
+    }
+
+    class _FakeBridge:
+        start = start_mock
+        stop = stop_mock
+
+        def __init__(self, *_a: object, **_kw: object) -> None:
+            pass
+
+        @property
+        def stats(self) -> dict:
+            return _stats
+
+    _FakeBridge._start_mock = start_mock  # type: ignore[attr-defined]
+    _FakeBridge._stop_mock = stop_mock    # type: ignore[attr-defined]
+    return _FakeBridge
+
+
+@pytest.mark.asyncio
+async def test_cmd_audio_bridge_list_devices() -> None:
+    """--list-devices prints available audio devices and exits 0."""
+    radio = MagicMock()
+    args = argparse.Namespace(list_devices=True, device=None, rx_only=False)
+    fake_devices = [
+        {"name": "Built-in Output", "index": 0, "max_input_channels": 0, "max_output_channels": 2},
+        {"name": "BlackHole 2ch", "index": 1, "max_input_channels": 2, "max_output_channels": 2},
+    ]
+    with patch.object(_ab_mod, "list_audio_devices", return_value=fake_devices):
+        result = await _cmd_audio_bridge(radio, args)
+    assert result == 0
+
+
+@pytest.mark.asyncio
+async def test_cmd_audio_bridge_list_devices_import_error() -> None:
+    """--list-devices returns 1 when sounddevice is not installed."""
+    radio = MagicMock()
+    args = argparse.Namespace(list_devices=True, device=None, rx_only=False)
+
+    with patch.object(_ab_mod, "list_audio_devices", side_effect=ImportError("sounddevice required")):
+        result = await _cmd_audio_bridge(radio, args)
+    assert result == 1
+
+
+@pytest.mark.asyncio
+async def test_cmd_audio_bridge_standalone_runs_until_cancelled() -> None:
+    """Bridge starts, runs, and stops cleanly when cancelled (standalone mode)."""
+    radio = MagicMock()
+    args = argparse.Namespace(list_devices=False, device="BlackHole 2ch", rx_only=False)
+
+    fake_cls = _fake_bridge_cls()
+    with patch.object(_ab_mod, "AudioBridge", fake_cls):
+        task = asyncio.create_task(_cmd_audio_bridge(radio, args))
+        await asyncio.sleep(0.05)
+        task.cancel()
+        rc = await asyncio.gather(task, return_exceptions=True)
+
+    assert rc[0] == 0
+    fake_cls._start_mock.assert_called_once()
+    fake_cls._stop_mock.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_cmd_audio_bridge_device_not_found() -> None:
+    """Returns exit code 1 when virtual audio device is not found."""
+    radio = MagicMock()
+    args = argparse.Namespace(list_devices=False, device="NonExistent", rx_only=False)
+
+    fake_cls = _fake_bridge_cls(start_err=RuntimeError("Virtual audio device not found"))
+    with patch.object(_ab_mod, "AudioBridge", fake_cls):
+        result = await _cmd_audio_bridge(radio, args)
+    assert result == 1

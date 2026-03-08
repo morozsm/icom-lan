@@ -282,6 +282,31 @@ class WebServer:
             except asyncio.QueueFull:
                 pass
 
+    def broadcast_notification(
+        self,
+        level: str,
+        message: str,
+        category: str = "system",
+    ) -> None:
+        """Broadcast a notification to all connected WebSocket clients.
+
+        Args:
+            level: Severity level — "info", "warning", "error", or "success".
+            message: Human-readable notification text.
+            category: Logical category — "connection", "dx_cluster", "bridge", "system".
+        """
+        notification: dict[str, Any] = {
+            "type": "notification",
+            "level": level,
+            "message": message,
+            "category": category,
+        }
+        for q in list(self._control_event_queues):
+            try:
+                q.put_nowait(notification)
+            except asyncio.QueueFull:
+                pass
+
     def _broadcast_dx_spot(self, spot: Any) -> None:
         """Add DX spot to buffer and push dx_spot message to all control clients."""
         self._spot_buffer.add(spot)
@@ -329,6 +354,11 @@ class WebServer:
         a CI-V frame (solicited response or unsolicited change).
         """
         self.broadcast_event(name, data)
+        if name == "connection_state":
+            if data.get("connected"):
+                self.broadcast_notification("success", "Radio connected", "connection")
+            else:
+                self.broadcast_notification("warning", "Radio disconnected", "connection")
         # Also broadcast meter readings to MetersHandler clients
         if name == "meter":
             from .protocol import (
@@ -542,12 +572,14 @@ class WebServer:
             tx_enabled=tx_enabled,
         )
         await self._audio_bridge.start()
+        self.broadcast_notification("success", "Audio bridge started", "bridge")
 
     async def stop_audio_bridge(self) -> None:
         """Stop the audio bridge."""
         if self._audio_bridge is not None:
             await self._audio_bridge.stop()
             self._audio_bridge = None
+            self.broadcast_notification("info", "Audio bridge stopped", "bridge")
 
     @property
     def audio_bridge_stats(self) -> dict[str, Any] | None:

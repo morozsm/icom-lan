@@ -394,3 +394,51 @@ async def test_send_response_and_run_web_server() -> None:
     with patch("icom_lan.web.server.WebServer", return_value=fake_server):
         await run_web_server(None, host="127.0.0.1", port=8000)
     fake_server.serve_forever.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_broadcast_notification_puts_to_all_queues() -> None:
+    """broadcast_notification pushes notification dict to all registered queues."""
+    srv = WebServer()
+    q1: asyncio.Queue[dict] = asyncio.Queue()
+    q2: asyncio.Queue[dict] = asyncio.Queue()
+    srv.register_control_event_queue(q1)
+    srv.register_control_event_queue(q2)
+
+    srv.broadcast_notification("success", "Radio connected", "connection")
+
+    assert not q1.empty()
+    assert not q2.empty()
+    n1 = q1.get_nowait()
+    n2 = q2.get_nowait()
+    assert n1["type"] == "notification"
+    assert n1["level"] == "success"
+    assert n1["message"] == "Radio connected"
+    assert n1["category"] == "connection"
+    assert n1 == n2
+
+
+@pytest.mark.asyncio
+async def test_broadcast_notification_default_category() -> None:
+    """broadcast_notification uses 'system' as default category."""
+    srv = WebServer()
+    q: asyncio.Queue[dict] = asyncio.Queue()
+    srv.register_control_event_queue(q)
+
+    srv.broadcast_notification("info", "Hello")
+
+    n = q.get_nowait()
+    assert n["category"] == "system"
+
+
+@pytest.mark.asyncio
+async def test_broadcast_notification_full_queue_no_crash() -> None:
+    """broadcast_notification silently skips full queues (dead clients)."""
+    srv = WebServer()
+    q: asyncio.Queue[dict] = asyncio.Queue(maxsize=1)
+    q.put_nowait({"type": "other"})  # fill the queue
+    srv.register_control_event_queue(q)
+
+    # Should not raise even though queue is full
+    srv.broadcast_notification("warning", "Test")
+    assert q.qsize() == 1  # queue still has the old item, notification was dropped

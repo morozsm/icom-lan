@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -137,6 +138,12 @@ class AudioBridge:
         self._rx_frames = 0
         self._tx_frames = 0
         self._rx_drops = 0
+        # Timing
+        self._rx_latency_samples: list[float] = []
+        self._tx_latency_samples: list[float] = []
+        self._last_rx_time: float = 0.0
+        self._last_tx_time: float = 0.0
+        self._start_time: float = 0.0
 
     @property
     def running(self) -> bool:
@@ -146,11 +153,26 @@ class AudioBridge:
     @property
     def stats(self) -> dict:
         """Bridge statistics."""
+        uptime = time.monotonic() - self._start_time if self._running else 0.0
+        rx_avg = (
+            sum(self._rx_latency_samples) / len(self._rx_latency_samples)
+            if self._rx_latency_samples
+            else 0.0
+        )
+        tx_avg = (
+            sum(self._tx_latency_samples) / len(self._tx_latency_samples)
+            if self._tx_latency_samples
+            else 0.0
+        )
         return {
             "running": self._running,
             "rx_frames": self._rx_frames,
             "tx_frames": self._tx_frames,
             "rx_drops": self._rx_drops,
+            "uptime_seconds": round(uptime, 1),
+            "rx_interval_ms": round(rx_avg * 1000, 1),
+            "tx_interval_ms": round(tx_avg * 1000, 1),
+            "buffer_size": len(self._rx_latency_samples),
         }
 
     async def start(self) -> None:
@@ -168,6 +190,7 @@ class AudioBridge:
             logger.warning("audio-bridge: already running")
             return
 
+        self._start_time = time.monotonic()
         self._loop = asyncio.get_running_loop()
 
         # Find the device
@@ -303,6 +326,13 @@ class AudioBridge:
                     else:
                         # PCM — data is already raw PCM bytes
                         pcm_data = opus_data
+                    now = time.monotonic()
+                    if self._last_rx_time > 0:
+                        delta = now - self._last_rx_time
+                        self._rx_latency_samples.append(delta)
+                        if len(self._rx_latency_samples) > 100:
+                            self._rx_latency_samples.pop(0)
+                    self._last_rx_time = now
                     self._rx_frames += 1
                     if self._rx_stream and self._rx_stream.active:
                         frame = np.frombuffer(pcm_data, dtype=np.int16).reshape(
@@ -351,6 +381,13 @@ class AudioBridge:
                     continue
 
                 pcm_bytes = data.astype(np.int16).tobytes()
+                now = time.monotonic()
+                if self._last_tx_time > 0:
+                    delta = now - self._last_tx_time
+                    self._tx_latency_samples.append(delta)
+                    if len(self._tx_latency_samples) > 100:
+                        self._tx_latency_samples.pop(0)
+                self._last_tx_time = now
                 self._tx_frames += 1
 
                 if self._tx_frames <= 3 or self._tx_frames % 1000 == 0:
