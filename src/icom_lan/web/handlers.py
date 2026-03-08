@@ -537,7 +537,9 @@ class ControlHandler:
         if name == "set_tuner_status":
             if self._radio is None:
                 raise RuntimeError("radio connection not available")
-            value = int(params.get("value", 0))
+            if "value" not in params:
+                raise ValueError("missing required 'value' parameter")
+            value = int(params["value"])
             if value not in (0, 1, 2):
                 raise ValueError(f"tuner value must be 0, 1, or 2, got {value}")
             await self._radio.set_tuner_status(value)
