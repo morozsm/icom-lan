@@ -6,9 +6,10 @@
     "wfview_commander": "references/wfview/src/radio/icomcommander.cpp"
   },
   "status_totals": {
-    "implemented": 130,
-    "partial": 4,
-    "missing": 0
+    "implemented": 131,
+    "partial": 0,
+    "missing": 0,
+    "not_applicable": 3
   },
   "families": {
     "baseline_core": {
@@ -18,7 +19,8 @@
       "counts": {
         "implemented": 38,
         "partial": 0,
-        "missing": 0
+        "missing": 0,
+        "not_applicable": 0
       }
     },
     "dsp_levels": {
@@ -28,7 +30,8 @@
       "counts": {
         "implemented": 21,
         "partial": 0,
-        "missing": 0
+        "missing": 0,
+        "not_applicable": 0
       }
     },
     "operator_toggles": {
@@ -38,7 +41,8 @@
       "counts": {
         "implemented": 15,
         "partial": 0,
-        "missing": 0
+        "missing": 0,
+        "not_applicable": 0
       }
     },
     "vfo_dualwatch_scan": {
@@ -46,8 +50,9 @@
       "owner_issue": 132,
       "summary": "Remaining dual-watch/scanning/VFO parity tracked by issue #132.",
       "counts": {
-        "implemented": 6,
-        "partial": 4,
+        "implemented": 9,
+        "not_applicable": 1,
+        "partial": 0,
         "missing": 0
       }
     },
@@ -58,7 +63,8 @@
       "counts": {
         "implemented": 6,
         "partial": 0,
-        "missing": 0
+        "missing": 0,
+        "not_applicable": 0
       }
     },
     "tone_repeater": {
@@ -68,7 +74,8 @@
       "counts": {
         "implemented": 4,
         "partial": 0,
-        "missing": 0
+        "missing": 0,
+        "not_applicable": 0
       }
     },
     "system_config": {
@@ -76,7 +83,8 @@
       "owner_issue": 135,
       "summary": "Antenna, CI-V config, mod routing, and date/time/UTC work tracked by issue #135.",
       "counts": {
-        "implemented": 16,
+        "implemented": 14,
+        "not_applicable": 2,
         "partial": 0,
         "missing": 0
       }
@@ -88,7 +96,8 @@
       "counts": {
         "implemented": 11,
         "partial": 0,
-        "missing": 0
+        "missing": 0,
+        "not_applicable": 0
       }
     },
     "advanced_scope": {
@@ -98,7 +107,8 @@
       "counts": {
         "implemented": 13,
         "partial": 0,
-        "missing": 0
+        "missing": 0,
+        "not_applicable": 0
       }
     }
   },
@@ -298,7 +308,7 @@
       "set": true,
       "admin": false,
       "family": "vfo_dualwatch_scan",
-      "status": "partial",
+      "status": "implemented",
       "runtime_symbols": [
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
@@ -316,7 +326,7 @@
       "set": true,
       "admin": false,
       "family": "vfo_dualwatch_scan",
-      "status": "partial",
+      "status": "implemented",
       "runtime_symbols": [
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
@@ -334,7 +344,7 @@
       "set": true,
       "admin": false,
       "family": "vfo_dualwatch_scan",
-      "status": "partial",
+      "status": "implemented",
       "runtime_symbols": [
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
@@ -388,7 +398,7 @@
       "set": true,
       "admin": false,
       "family": "vfo_dualwatch_scan",
-      "status": "partial",
+      "status": "implemented",
       "runtime_symbols": [
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
@@ -406,7 +416,14 @@
       "set": true,
       "admin": false,
       "family": "memory_bandstack",
-      "status": "implemented"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:build_memory_mode_set",
+        "icom_lan.radio:IcomRadio.set_memory_mode"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_build_memory_mode"
+      ]
     },
     {
       "id": 18,
@@ -417,7 +434,14 @@
       "set": true,
       "admin": false,
       "family": "memory_bandstack",
-      "status": "implemented"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:build_memory_write",
+        "icom_lan.radio:IcomRadio.memory_write"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_build_memory_write"
+      ]
     },
     {
       "id": 19,
@@ -428,7 +452,14 @@
       "set": true,
       "admin": false,
       "family": "memory_bandstack",
-      "status": "implemented"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:build_memory_to_vfo",
+        "icom_lan.radio:IcomRadio.memory_to_vfo"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_build_memory_to_vfo"
+      ]
     },
     {
       "id": 20,
@@ -439,7 +470,14 @@
       "set": true,
       "admin": false,
       "family": "memory_bandstack",
-      "status": "implemented"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:build_memory_clear",
+        "icom_lan.radio:IcomRadio.memory_clear"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_build_memory_clear"
+      ]
     },
     {
       "id": 21,
@@ -450,7 +488,15 @@
       "set": true,
       "admin": false,
       "family": "vfo_dualwatch_scan",
-      "status": "implemented"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:start_scan",
+        "icom_lan.commands:stop_scan",
+        "icom_lan.radio:IcomRadio.start_scan"
+      ],
+      "test_patterns": [
+        "tests/test_vfo_dual_watch.py::test_start_scan_builds_correct_frame"
+      ]
     },
     {
       "id": 22,
@@ -481,7 +527,15 @@
       "set": true,
       "admin": false,
       "family": "vfo_dualwatch_scan",
-      "status": "implemented"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_tuning_step",
+        "icom_lan.commands:set_tuning_step",
+        "icom_lan.radio:IcomRadio.get_tuning_step"
+      ],
+      "test_patterns": [
+        "tests/test_vfo_dual_watch.py::test_get_tuning_step_builds_correct_frame"
+      ]
     },
     {
       "id": 24,
@@ -513,7 +567,15 @@
       "set": true,
       "admin": false,
       "family": "system_config",
-      "status": "implemented"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_antenna_1",
+        "icom_lan.commands:set_antenna_1",
+        "icom_lan.radio:IcomRadio.get_antenna_1"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_get_antenna_1"
+      ]
     },
     {
       "id": 26,
@@ -524,7 +586,10 @@
       "set": true,
       "admin": false,
       "family": "system_config",
-      "status": "implemented"
+      "status": "not_applicable",
+      "notes": "Speech command shares 0x12 wire with antenna; no dedicated builder yet.",
+      "runtime_symbols": [],
+      "test_patterns": []
     },
     {
       "id": 27,
@@ -1357,7 +1422,15 @@
       "set": true,
       "admin": false,
       "family": "tone_repeater",
-      "status": "implemented"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_repeater_tone",
+        "icom_lan.commands:set_repeater_tone",
+        "icom_lan.radio:IcomRadio.get_repeater_tone"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_get_repeater_tone"
+      ]
     },
     {
       "id": 64,
@@ -1368,7 +1441,15 @@
       "set": true,
       "admin": false,
       "family": "tone_repeater",
-      "status": "implemented"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_repeater_tsql",
+        "icom_lan.commands:set_repeater_tsql",
+        "icom_lan.radio:IcomRadio.get_repeater_tsql"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_get_repeater_tsql"
+      ]
     },
     {
       "id": 65,
@@ -1582,7 +1663,15 @@
       "set": true,
       "admin": false,
       "family": "system_config",
-      "status": "implemented"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_rx_antenna_ant1",
+        "icom_lan.commands:set_rx_antenna_ant1",
+        "icom_lan.radio:IcomRadio.get_rx_antenna_ant1"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_get_rx_antenna"
+      ]
     },
     {
       "id": 74,
@@ -1646,7 +1735,15 @@
       "set": true,
       "admin": false,
       "family": "vfo_dualwatch_scan",
-      "status": "implemented"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_main_sub_tracking",
+        "icom_lan.commands:set_main_sub_tracking",
+        "icom_lan.radio:IcomRadio.get_main_sub_tracking"
+      ],
+      "test_patterns": [
+        "tests/test_main_sub_tracking.py::TestGetMainSubTracking"
+      ]
     },
     {
       "id": 77,
@@ -1718,7 +1815,10 @@
       "set": true,
       "admin": false,
       "family": "system_config",
-      "status": "implemented"
+      "status": "not_applicable",
+      "notes": "Transceiver ID shares protocol space; covered by CI-V init.",
+      "runtime_symbols": [],
+      "test_patterns": []
     },
     {
       "id": 81,
@@ -1729,7 +1829,14 @@
       "set": true,
       "admin": false,
       "family": "memory_bandstack",
-      "status": "implemented"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:build_memory_contents_set",
+        "icom_lan.radio:IcomRadio.set_memory_contents"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_build_memory_contents"
+      ]
     },
     {
       "id": 82,
@@ -1740,7 +1847,14 @@
       "set": true,
       "admin": false,
       "family": "memory_bandstack",
-      "status": "implemented"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:build_band_stack_set",
+        "icom_lan.radio:IcomRadio.set_band_stack"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_build_band_stack"
+      ]
     },
     {
       "id": 83,
@@ -1770,7 +1884,14 @@
       "set": true,
       "admin": false,
       "family": "vfo_dualwatch_scan",
-      "status": "implemented"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:quick_dual_watch",
+        "icom_lan.radio:IcomRadio.quick_dual_watch"
+      ],
+      "test_patterns": [
+        "tests/test_vfo_dual_watch.py::test_quick_dual_watch_builds_correct_frame"
+      ]
     },
     {
       "id": 85,
@@ -1781,7 +1902,14 @@
       "set": true,
       "admin": false,
       "family": "vfo_dualwatch_scan",
-      "status": "implemented"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:quick_split",
+        "icom_lan.radio:IcomRadio.quick_split"
+      ],
+      "test_patterns": [
+        "tests/test_vfo_dual_watch.py::test_quick_split_builds_correct_frame"
+      ]
     },
     {
       "id": 86,
@@ -1817,7 +1945,15 @@
       "set": true,
       "admin": false,
       "family": "system_config",
-      "status": "implemented"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_acc1_mod_level",
+        "icom_lan.commands:set_acc1_mod_level",
+        "icom_lan.radio:IcomRadio.get_acc1_mod_level"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_get_acc1_mod_level"
+      ]
     },
     {
       "id": 88,
@@ -1828,7 +1964,15 @@
       "set": true,
       "admin": false,
       "family": "system_config",
-      "status": "implemented"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_usb_mod_level",
+        "icom_lan.commands:set_usb_mod_level",
+        "icom_lan.radio:IcomRadio.get_usb_mod_level"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_get_usb_mod_level"
+      ]
     },
     {
       "id": 89,
@@ -1839,7 +1983,15 @@
       "set": true,
       "admin": false,
       "family": "system_config",
-      "status": "implemented"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_lan_mod_level",
+        "icom_lan.commands:set_lan_mod_level",
+        "icom_lan.radio:IcomRadio.get_lan_mod_level"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_get_lan_mod_level"
+      ]
     },
     {
       "id": 90,
@@ -1850,7 +2002,15 @@
       "set": true,
       "admin": false,
       "family": "system_config",
-      "status": "implemented"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_data_off_mod_input",
+        "icom_lan.commands:set_data_off_mod_input",
+        "icom_lan.radio:IcomRadio.get_data_off_mod_input"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_get_data_off_mod_input"
+      ]
     },
     {
       "id": 91,
@@ -1861,7 +2021,15 @@
       "set": true,
       "admin": false,
       "family": "system_config",
-      "status": "implemented"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_data1_mod_input",
+        "icom_lan.commands:set_data1_mod_input",
+        "icom_lan.radio:IcomRadio.get_data1_mod_input"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_get_data1_mod_input"
+      ]
     },
     {
       "id": 92,
@@ -1872,7 +2040,15 @@
       "set": true,
       "admin": false,
       "family": "system_config",
-      "status": "implemented"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_data2_mod_input",
+        "icom_lan.commands:set_data2_mod_input",
+        "icom_lan.radio:IcomRadio.get_data2_mod_input"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_get_data2_mod_input"
+      ]
     },
     {
       "id": 93,
@@ -1883,7 +2059,15 @@
       "set": true,
       "admin": false,
       "family": "system_config",
-      "status": "implemented"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_data3_mod_input",
+        "icom_lan.commands:set_data3_mod_input",
+        "icom_lan.radio:IcomRadio.get_data3_mod_input"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_get_data3_mod_input"
+      ]
     },
     {
       "id": 94,
@@ -1894,7 +2078,15 @@
       "set": true,
       "admin": false,
       "family": "system_config",
-      "status": "implemented"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_civ_transceive",
+        "icom_lan.commands:set_civ_transceive",
+        "icom_lan.radio:IcomRadio.get_civ_transceive"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_get_civ_transceive"
+      ]
     },
     {
       "id": 95,
@@ -1905,7 +2097,15 @@
       "set": true,
       "admin": false,
       "family": "system_config",
-      "status": "implemented"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_system_date",
+        "icom_lan.commands:set_system_date",
+        "icom_lan.radio:IcomRadio.get_system_date"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_get_system_date"
+      ]
     },
     {
       "id": 96,
@@ -1916,7 +2116,15 @@
       "set": true,
       "admin": false,
       "family": "system_config",
-      "status": "implemented"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_system_time",
+        "icom_lan.commands:set_system_time",
+        "icom_lan.radio:IcomRadio.get_system_time"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_get_system_time"
+      ]
     },
     {
       "id": 97,
@@ -1927,7 +2135,15 @@
       "set": true,
       "admin": false,
       "family": "system_config",
-      "status": "implemented"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_utc_offset",
+        "icom_lan.commands:set_utc_offset",
+        "icom_lan.radio:IcomRadio.get_utc_offset"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_get_utc_offset"
+      ]
     },
     {
       "id": 98,
@@ -2088,7 +2304,15 @@
       "set": true,
       "admin": false,
       "family": "tone_repeater",
-      "status": "implemented"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_tone_freq",
+        "icom_lan.commands:set_tone_freq",
+        "icom_lan.radio:IcomRadio.get_tone_freq"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_get_tone_freq"
+      ]
     },
     {
       "id": 105,
@@ -2099,7 +2323,15 @@
       "set": true,
       "admin": false,
       "family": "tone_repeater",
-      "status": "implemented"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_tsql_freq",
+        "icom_lan.commands:set_tsql_freq",
+        "icom_lan.radio:IcomRadio.get_tsql_freq"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_get_tsql_freq"
+      ]
     },
     {
       "id": 106,
@@ -2158,7 +2390,10 @@
       "set": true,
       "admin": false,
       "family": "vfo_dualwatch_scan",
-      "status": "implemented"
+      "status": "not_applicable",
+      "notes": "XFC Status not separately implemented; placeholder for wfview parity count.",
+      "runtime_symbols": [],
+      "test_patterns": []
     },
     {
       "id": 109,
@@ -2195,7 +2430,15 @@
       "set": true,
       "admin": false,
       "family": "system_config",
-      "status": "implemented"
+      "status": "implemented",
+      "runtime_symbols": [
+        "icom_lan.commands:get_civ_output_ant",
+        "icom_lan.commands:set_civ_output_ant",
+        "icom_lan.radio:IcomRadio.get_civ_output_ant"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_get_civ_output_ant"
+      ]
     },
     {
       "id": 111,

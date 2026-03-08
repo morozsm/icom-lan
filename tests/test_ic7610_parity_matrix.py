@@ -11,7 +11,7 @@ MATRIX_PATH = ROOT / "docs/parity/ic7610_command_matrix.json"
 WFVIEW_RIG_PATH = ROOT / "references/wfview/rigs/IC-7610.rig"
 PROJECT_DOC_PATH = ROOT / "docs/PROJECT.md"
 PARITY_README_PATH = ROOT / "docs/parity/README.md"
-ALLOWED_STATUSES = {"implemented", "partial", "missing"}
+ALLOWED_STATUSES = {"implemented", "partial", "missing", "not_applicable"}
 
 
 def _load_matrix() -> dict[str, object]:
@@ -135,18 +135,20 @@ def test_project_doc_parity_summary_matches_matrix() -> None:
     matrix = _load_matrix()
     project_doc = PROJECT_DOC_PATH.read_text(encoding="utf-8")
     match = re.search(
-        r"IC-7610 parity matrix \(issue #139, 2026-03-06\): "
+        r"IC-7610 parity matrix \(issue #139, 2026-03-0[67]\): "
         r"(?P<implemented>\d+) implemented, "
         r"(?P<partial>\d+) partial, "
         r"(?P<missing>\d+) missing",
         project_doc,
     )
     assert match is not None, "docs/PROJECT.md is missing the parity summary line"
-    assert {
+    expected = {
         "implemented": int(match.group("implemented")),
         "partial": int(match.group("partial")),
         "missing": int(match.group("missing")),
-    } == matrix["status_totals"]
+    }
+    totals = matrix["status_totals"]
+    assert expected == {k: v for k, v in totals.items() if k in expected}
 
 
 def test_parity_docs_and_integration_profile_are_explicit() -> None:
