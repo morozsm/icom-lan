@@ -20,6 +20,7 @@ command dispatch and scope/meter data delivery.
 from __future__ import annotations
 
 import asyncio
+import datetime
 import json
 import logging
 import mimetypes
@@ -353,6 +354,8 @@ class WebServer:
         This is the PRIMARY update path.  Called whenever the radio sends
         a CI-V frame (solicited response or unsolicited change).
         """
+        if self._radio_poller is not None:
+            self._radio_poller.bump_revision()
         self.broadcast_event(name, data)
         if name == "connection_state":
             if data.get("connected"):
@@ -817,12 +820,45 @@ class WebServer:
             else None
         )
         model = raw_model if isinstance(raw_model, str) else self._config.radio_model
+        caps = _runtime_capabilities(self._radio)
+        has_dual_rx = "dual_rx" in caps
+        raw_connected = (
+            getattr(self._radio, "connected", False) if self._radio else False
+        )
+        connected = raw_connected if isinstance(raw_connected, bool) else False
+        raw_control_connected = (
+            getattr(self._radio, "control_connected", False) if self._radio else False
+        )
+        control_connected = (
+            raw_control_connected if isinstance(raw_control_connected, bool) else False
+        )
         body = json.dumps(
             {
+                # Backward-compatible legacy fields
                 "server": "icom-lan",
                 "version": __version__,
                 "proto": 1,
                 "radio": model,
+                # New structured fields
+                "model": model,
+                "capabilities": {
+                    "hasSpectrum": "scope" in caps,
+                    "hasAudio": "audio" in caps,
+                    "hasTx": "tx" in caps,
+                    "hasDualReceiver": has_dual_rx,
+                    "hasTuner": "tuner" in caps,
+                    "hasCw": "cw" in caps,
+                    "maxReceivers": 2 if has_dual_rx else 1,
+                    "tags": sorted(caps),
+                    "modes": ["USB", "LSB", "CW", "AM", "FM", "RTTY", "CWR"],
+                    "filters": ["FIL1", "FIL2", "FIL3"],
+                },
+                "connection": {
+                    "rigConnected": connected,
+                    "radioReady": self._radio_ready(),
+                    "controlConnected": control_connected,
+                    "wsClients": len(self._client_tasks),
+                },
             },
             separators=(",", ":"),
         ).encode()
@@ -846,6 +882,8 @@ class WebServer:
             if isinstance(raw_control_connected, bool)
             else False
         )
+        d["revision"] = self._radio_poller.revision if self._radio_poller is not None else 0
+        d["updatedAt"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
         body = json.dumps(d, separators=(",", ":")).encode()
         await _send_response(
             writer, 200, "OK", body, {"Content-Type": "application/json"}
