@@ -729,8 +729,11 @@ async def test_cmd_tuner_set_on_off_tune(capsys: pytest.CaptureFixture[str]) -> 
     radio.set_tuner_status = AsyncMock()
 
     assert await _cmd_tuner(radio, argparse.Namespace(action="on", json=False)) == 0
+    radio.set_tuner_status.assert_awaited_with(1)
     assert await _cmd_tuner(radio, argparse.Namespace(action="off", json=False)) == 0
+    radio.set_tuner_status.assert_awaited_with(0)
     assert await _cmd_tuner(radio, argparse.Namespace(action="tune", json=False)) == 0
+    radio.set_tuner_status.assert_awaited_with(2)
     out = capsys.readouterr().out
     assert "ON" in out
     assert "OFF" in out

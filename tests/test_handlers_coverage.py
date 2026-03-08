@@ -867,9 +867,26 @@ async def test_set_tuner_status_ws_command() -> None:
 
 
 @pytest.mark.asyncio
+async def test_set_tuner_status_ws_command_no_radio() -> None:
+    """set_tuner_status raises when radio is not connected."""
+    handler = _control_handler(radio=None)
+    with pytest.raises(RuntimeError, match="radio connection not available"):
+        await handler._enqueue_command("set_tuner_status", {"value": 1})
+
+
+@pytest.mark.asyncio
 async def test_set_tuner_status_invalid_value() -> None:
     """set_tuner_status raises ValueError for out-of-range values."""
     radio = SimpleNamespace(set_tuner_status=AsyncMock())
     handler = _control_handler(radio=radio)
     with pytest.raises(ValueError, match="tuner value must be 0, 1, or 2"):
         await handler._enqueue_command("set_tuner_status", {"value": 5})
+
+
+@pytest.mark.asyncio
+async def test_set_tuner_status_missing_value() -> None:
+    """set_tuner_status raises ValueError when value param is missing."""
+    radio = SimpleNamespace(set_tuner_status=AsyncMock())
+    handler = _control_handler(radio=radio)
+    with pytest.raises(ValueError, match="missing required 'value' parameter"):
+        await handler._enqueue_command("set_tuner_status", {})
