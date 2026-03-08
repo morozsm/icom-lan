@@ -187,7 +187,7 @@ def _scope_frame() -> ScopeFrame:
         ),
     ],
 )
-def test_enqueue_command_variants(
+async def test_enqueue_command_variants(
     name: str,
     params: dict[str, object],
     expected_type: type,
@@ -197,7 +197,7 @@ def test_enqueue_command_variants(
     queue = _QueueRecorder()
     server = SimpleNamespace(command_queue=queue)
     handler = _control_handler(server=server)
-    result = handler._enqueue_command(name, params)
+    result = await handler._enqueue_command(name, params)
     assert result == expected_result
     assert len(queue.items) == 1
     cmd = queue.items[0]
@@ -206,15 +206,15 @@ def test_enqueue_command_variants(
         assert getattr(cmd, key) == value
 
 
-def test_enqueue_command_errors() -> None:
+async def test_enqueue_command_errors() -> None:
     handler = _control_handler(server=None)
     with pytest.raises(RuntimeError, match="no command queue"):
-        handler._enqueue_command("set_freq", {"freq": 1})
+        await handler._enqueue_command("set_freq", {"freq": 1})
 
     queue = _QueueRecorder()
     handler = _control_handler(server=SimpleNamespace(command_queue=queue))
     with pytest.raises(ValueError, match="unhandled command"):
-        handler._enqueue_command("definitely_unknown", {})
+        await handler._enqueue_command("definitely_unknown", {})
 
     radio = SimpleNamespace(
         capabilities={"dual_rx", "scope"},
@@ -227,9 +227,9 @@ def test_enqueue_command_errors() -> None:
         server=SimpleNamespace(command_queue=queue),
     )
     with pytest.raises(ValueError, match="receiver=2"):
-        handler._enqueue_command("set_freq", {"freq": 7_074_000, "receiver": 2})
+        await handler._enqueue_command("set_freq", {"freq": 7_074_000, "receiver": 2})
     with pytest.raises(ValueError, match="receiver=-1"):
-        handler._enqueue_command("switch_scope_receiver", {"receiver": -1})
+        await handler._enqueue_command("switch_scope_receiver", {"receiver": -1})
 
 
 async def test_control_run_registers_unregisters_and_sends_hello() -> None:
