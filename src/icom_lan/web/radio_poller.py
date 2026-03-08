@@ -297,6 +297,7 @@ class RadioPoller:
         self._on_state_event = on_state_event
         self._on_meter_readings = on_meter_readings
         self._poll_index: int = 0
+        self._revision: int = 0
         self._task: asyncio.Task[None] | None = None
         self._caps: set[str] = self._radio_capabilities()
         self._profile: RadioProfile = self._runtime_profile()
@@ -319,6 +320,15 @@ class RadioPoller:
     @property
     def running(self) -> bool:
         return self._task is not None and not self._task.done()
+
+    @property
+    def revision(self) -> int:
+        """Monotonic counter incremented on every radio state change."""
+        return self._revision
+
+    def bump_revision(self) -> None:
+        """Increment the revision counter (called on each state change)."""
+        self._revision += 1
 
     def _radio_capabilities(self) -> set[str]:
         raw_caps = getattr(self._radio, "capabilities", None)

@@ -442,3 +442,209 @@ async def test_broadcast_notification_full_queue_no_crash() -> None:
     # Should not raise even though queue is full
     srv.broadcast_notification("warning", "Test")
     assert q.qsize() == 1  # queue still has the old item, notification was dropped
+
+
+# ---------------------------------------------------------------------------
+# Sprint 0B: revision counter + updatedAt (#158)
+# ---------------------------------------------------------------------------
+
+
+def test_radio_poller_revision_starts_at_zero() -> None:
+    """RadioPoller.revision is 0 before any state changes."""
+    from icom_lan.web.radio_poller import CommandQueue, RadioPoller
+    from icom_lan.rigctld.state_cache import StateCache
+
+    radio = MagicMock()
+    radio.capabilities = set()
+    radio.profile = MagicMock()
+    radio.profile.receiver_count = 1
+    radio.profile.model = "IC-7300"
+    radio.profile.supports_receiver = MagicMock(return_value=True)
+    radio.profile.supports_cmd29 = MagicMock(return_value=False)
+    radio.profile.vfo_sub_code = None
+    radio.profile.vfo_main_code = None
+    radio.profile.vfo_swap_code = None
+
+    poller = RadioPoller(radio, StateCache(), CommandQueue())
+    assert poller.revision == 0
+
+
+def test_radio_poller_revision_increments() -> None:
+    """bump_revision() monotonically increments revision."""
+    from icom_lan.web.radio_poller import CommandQueue, RadioPoller
+    from icom_lan.rigctld.state_cache import StateCache
+
+    radio = MagicMock()
+    radio.capabilities = set()
+    radio.profile = MagicMock()
+    radio.profile.receiver_count = 1
+    radio.profile.model = "IC-7300"
+    radio.profile.supports_receiver = MagicMock(return_value=True)
+    radio.profile.supports_cmd29 = MagicMock(return_value=False)
+    radio.profile.vfo_sub_code = None
+    radio.profile.vfo_main_code = None
+    radio.profile.vfo_swap_code = None
+
+    poller = RadioPoller(radio, StateCache(), CommandQueue())
+    assert poller.revision == 0
+    poller.bump_revision()
+    assert poller.revision == 1
+    poller.bump_revision()
+    assert poller.revision == 2
+
+
+def test_radio_poller_revision_never_decreases() -> None:
+    """After many bump_revision calls, revision is always >= previous value."""
+    from icom_lan.web.radio_poller import CommandQueue, RadioPoller
+    from icom_lan.rigctld.state_cache import StateCache
+
+    radio = MagicMock()
+    radio.capabilities = set()
+    radio.profile = MagicMock()
+    radio.profile.receiver_count = 1
+    radio.profile.model = "IC-7300"
+    radio.profile.supports_receiver = MagicMock(return_value=True)
+    radio.profile.supports_cmd29 = MagicMock(return_value=False)
+    radio.profile.vfo_sub_code = None
+    radio.profile.vfo_main_code = None
+    radio.profile.vfo_swap_code = None
+
+    poller = RadioPoller(radio, StateCache(), CommandQueue())
+    prev = poller.revision
+    for _ in range(10):
+        poller.bump_revision()
+        assert poller.revision >= prev
+        prev = poller.revision
+
+
+@pytest.mark.asyncio
+async def test_state_response_includes_revision_and_updated_at() -> None:
+    """_serve_state adds revision (int) and updatedAt (ISO 8601) to JSON."""
+    import datetime as _dt
+    import json as _json
+
+    srv = WebServer(None)
+    writer = _FakeWriter()
+    await srv._serve_state(writer)  # noqa: SLF001
+
+    text = writer.buffer.decode("ascii", errors="replace")
+    assert "200 OK" in text
+    # Extract JSON body (after blank line)
+    body_start = text.index("\r\n\r\n") + 4
+    data = _json.loads(text[body_start:])
+    assert "revision" in data
+    assert isinstance(data["revision"], int)
+    assert "updatedAt" in data
+    # Must parse as valid ISO 8601 UTC datetime
+    ts = _dt.datetime.fromisoformat(data["updatedAt"])
+    assert ts.tzinfo is not None
+
+
+@pytest.mark.asyncio
+async def test_state_response_revision_zero_without_poller() -> None:
+    """revision is 0 when no RadioPoller is attached."""
+    import json as _json
+
+    srv = WebServer(None)
+    assert srv._radio_poller is None  # noqa: SLF001
+    writer = _FakeWriter()
+    await srv._serve_state(writer)  # noqa: SLF001
+    text = writer.buffer.decode("ascii", errors="replace")
+    body_start = text.index("\r\n\r\n") + 4
+    data = _json.loads(text[body_start:])
+    assert data["revision"] == 0
+
+
+@pytest.mark.asyncio
+async def test_on_radio_state_change_bumps_revision() -> None:
+    """_on_radio_state_change increments poller.revision."""
+    from icom_lan.web.radio_poller import CommandQueue, RadioPoller
+    from icom_lan.rigctld.state_cache import StateCache
+
+    radio = MagicMock()
+    radio.capabilities = set()
+    radio.profile = MagicMock()
+    radio.profile.receiver_count = 1
+    radio.profile.model = "IC-7300"
+    radio.profile.supports_receiver = MagicMock(return_value=True)
+    radio.profile.supports_cmd29 = MagicMock(return_value=False)
+    radio.profile.vfo_sub_code = None
+    radio.profile.vfo_main_code = None
+    radio.profile.vfo_swap_code = None
+
+    srv = WebServer(None)
+    poller = RadioPoller(radio, StateCache(), CommandQueue())
+    srv._radio_poller = poller  # noqa: SLF001
+    assert poller.revision == 0
+
+    srv._on_radio_state_change("freq_changed", {"freq": 14074000})  # noqa: SLF001
+    assert poller.revision == 1
+
+    srv._on_radio_state_change("mode_changed", {"mode": "USB"})  # noqa: SLF001
+    assert poller.revision == 2
+
+
+@pytest.mark.asyncio
+async def test_info_endpoint_returns_structured_capabilities() -> None:
+    """/api/v1/info returns model, capabilities, and connection objects."""
+    import json as _json
+
+    radio = MagicMock()
+    radio.model = "IC-7610"
+    radio.connected = True
+    radio.control_connected = False
+    radio.radio_ready = True
+    radio.capabilities = {"scope", "audio", "dual_rx"}
+
+    srv = WebServer(radio)
+    writer = _FakeWriter()
+    await srv._serve_info(writer)  # noqa: SLF001
+
+    text = writer.buffer.decode("ascii", errors="replace")
+    assert "200 OK" in text
+    body_start = text.index("\r\n\r\n") + 4
+    data = _json.loads(text[body_start:])
+
+    # Legacy fields still present (backward compat)
+    assert data["server"] == "icom-lan"
+    assert data["proto"] == 1
+    assert data["radio"] == "IC-7610"
+
+    # New structured fields
+    assert data["model"] == "IC-7610"
+    caps = data["capabilities"]
+    assert caps["hasSpectrum"] is True
+    assert caps["hasAudio"] is True
+    assert caps["hasDualReceiver"] is True
+    assert caps["maxReceivers"] == 2
+    assert isinstance(caps["tags"], list)
+    assert isinstance(caps["modes"], list)
+    assert isinstance(caps["filters"], list)
+
+    conn = data["connection"]
+    assert conn["rigConnected"] is True
+    assert conn["controlConnected"] is False
+    assert isinstance(conn["wsClients"], int)
+
+
+@pytest.mark.asyncio
+async def test_info_endpoint_no_radio() -> None:
+    """/api/v1/info works without a radio (all capabilities false)."""
+    import json as _json
+
+    srv = WebServer(None)
+    writer = _FakeWriter()
+    await srv._serve_info(writer)  # noqa: SLF001
+
+    text = writer.buffer.decode("ascii", errors="replace")
+    body_start = text.index("\r\n\r\n") + 4
+    data = _json.loads(text[body_start:])
+    caps = data["capabilities"]
+    assert caps["hasSpectrum"] is False
+    assert caps["hasAudio"] is False
+    assert caps["hasDualReceiver"] is False
+    assert caps["maxReceivers"] == 1
+    assert caps["tags"] == []
+    conn = data["connection"]
+    assert conn["rigConnected"] is False
+    assert conn["radioReady"] is False
