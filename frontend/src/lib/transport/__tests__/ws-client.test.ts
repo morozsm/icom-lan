@@ -146,7 +146,7 @@ describe('WsChannel', () => {
     const { WsChannel } = await import('../ws-client');
     const ch = new WsChannel();
 
-    const cmd: WsCommand = { type: 'set_freq', id: '1', freqHz: 14074000 };
+    const cmd: WsCommand = { type: 'cmd', name: 'set_freq', id: '1', params: { freqHz: 14074000 } };
     const queued = ch.send(cmd);
     expect(queued).toBe(false);
 
@@ -155,7 +155,7 @@ describe('WsChannel', () => {
 
     // queue drained on open
     expect(instances[0].sent).toHaveLength(1);
-    expect(JSON.parse(instances[0].sent[0])).toMatchObject({ type: 'set_freq' });
+    expect(JSON.parse(instances[0].sent[0])).toMatchObject({ type: 'cmd', name: 'set_freq' });
   });
 
   it('reconnects with exponential backoff after close', async () => {
@@ -262,9 +262,8 @@ describe('control channel singleton', () => {
 
   it('sendCommand returns false and queues when not connected', async () => {
     const { sendCommand, isConnected } = await import('../ws-client');
-    const cmd: WsCommand = { type: 'ptt_on', id: 'x' };
     expect(isConnected()).toBe(false);
-    const result = sendCommand(cmd);
+    const result = sendCommand('ptt', { state: true });
     expect(result).toBe(false);
   });
 

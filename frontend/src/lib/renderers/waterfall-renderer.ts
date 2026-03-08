@@ -160,5 +160,6 @@ export class WaterfallRenderer {
     this.destroyed = true;
     this.rowBuf = null;
     this.rowData = null;
+    this.ctx = null as unknown as CanvasRenderingContext2D;
   }
 }

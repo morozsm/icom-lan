@@ -12,7 +12,8 @@
     type WaterfallOptions,
   } from '../../lib/renderers/waterfall-renderer';
   import { getChannel, onMessage, sendCommand } from '../../lib/transport/ws-client';
-  import { makeCommandId, type DxSpot } from '../../lib/types/protocol';
+  import { type DxSpot } from '../../lib/types/protocol';
+  import { getRadioState } from '../../lib/stores/radio.svelte';
 
   // --- Scope frame binary protocol ---
   interface ScopeFrame {
@@ -67,7 +68,8 @@
   function handleTune(hz: number): void {
     const freq = Math.round(hz);
     if (freq <= 0) return;
-    sendCommand({ type: 'set_freq', id: makeCommandId(), freq });
+    const receiver = getRadioState()?.active === 'SUB' ? 1 : 0;
+    sendCommand('set_freq', { freq, receiver });
   }
 
   // --- Fullscreen toggle ---
@@ -104,6 +106,7 @@
     return () => {
       unsubBinary();
       unsubMsg();
+      scopeCh.disconnect();
     };
   });
 </script>

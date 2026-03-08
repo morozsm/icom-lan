@@ -1,6 +1,5 @@
 <script lang="ts">
   import { sendCommand } from '../../lib/transport/ws-client';
-  import { makeCommandId } from '../../lib/types/protocol';
   import { getFrequency, getRadioState } from '../../lib/stores/radio.svelte';
 
   interface Band {
@@ -10,6 +9,7 @@
     maxHz: number;
   }
 
+  // Bands cover IC-7610 frequency range: HF (160m–10m) + 6m. No 2m/70cm — IC-7610 is HF+6m only.
   const BANDS: Band[] = [
     { name: '160m', defaultHz: 1_825_000,  minHz: 1_800_000,  maxHz: 2_000_000  },
     { name: '80m',  defaultHz: 3_700_000,  minHz: 3_500_000,  maxHz: 4_000_000  },
@@ -29,7 +29,7 @@
   let activeBand = $derived(BANDS.find(b => freq >= b.minHz && freq <= b.maxHz)?.name ?? null);
 
   function selectBand(band: Band) {
-    sendCommand({ type: 'set_freq', id: makeCommandId(), freq: band.defaultHz, receiver: receiverIdx });
+    sendCommand('set_freq', { freq: band.defaultHz, receiver: receiverIdx });
   }
 </script>
 

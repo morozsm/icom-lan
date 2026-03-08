@@ -108,8 +108,8 @@ export class WsChannel {
       return true;
     }
     // Deduplicate idempotent commands — keep only the latest value
-    if (IDEMPOTENT_TYPES.has(cmd.type)) {
-      this.sendQueue = this.sendQueue.filter((c) => c.type !== cmd.type);
+    if (IDEMPOTENT_TYPES.has(cmd.name)) {
+      this.sendQueue = this.sendQueue.filter((c) => c.name !== cmd.name);
     }
     this.sendQueue.push(cmd);
     // Drop oldest if over limit
@@ -174,8 +174,13 @@ export function disconnect() {
   _ctrl.disconnect();
 }
 
-export function sendCommand(cmd: WsCommand): boolean {
-  return _ctrl.send(cmd);
+export function sendCommand(name: string, params: Record<string, unknown> = {}, id?: string): boolean {
+  return _ctrl.send({
+    type: 'cmd',
+    name,
+    id: id ?? crypto.randomUUID(),
+    params,
+  });
 }
 
 export function onMessage(handler: MessageHandler): () => void {

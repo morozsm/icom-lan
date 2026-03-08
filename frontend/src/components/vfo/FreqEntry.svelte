@@ -53,6 +53,7 @@
     }
   }
 
+  // Quick-access FT8 frequencies (defaults). TODO: make configurable via user settings.
   const quickFreqs: Array<{ label: string; mhz: number }> = [
     { label: '3.573', mhz: 3.573 },
     { label: '7.074', mhz: 7.074 },

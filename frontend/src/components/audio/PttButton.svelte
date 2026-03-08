@@ -1,7 +1,6 @@
 <script lang="ts">
   import { sendCommand } from '../../lib/transport/ws-client';
-  import { makeCommandId } from '../../lib/types/protocol';
-  import { getIsTransmitting, getRadioState } from '../../lib/stores/radio.svelte';
+  import { getIsTransmitting } from '../../lib/stores/radio.svelte';
 
   let transmitting = $derived(getIsTransmitting());
   let pending = $state(false);
@@ -19,7 +18,7 @@
     const next = !transmitting;
     pending = true;
     pendingValue = next;
-    sendCommand({ type: 'ptt', id: makeCommandId(), state: next });
+    sendCommand('ptt', { state: next });
   }
 </script>
 

@@ -1,8 +1,10 @@
 <script lang="ts">
   interface Props {
-    power: number; // watts
+    // TODO: powerLevel from backend (radio_state.py) is raw 0-255, not watts.
+    // Need backend conversion before display is meaningful. For now treated as 0-100 scale via maxPower.
+    power: number;
     swr: number; // SWR ratio (1.0 = perfect)
-    maxPower?: number; // configurable max watts
+    maxPower?: number; // configurable max (default 100)
   }
 
   let { power, swr, maxPower = 100 }: Props = $props();

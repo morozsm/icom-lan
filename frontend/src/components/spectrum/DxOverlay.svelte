@@ -33,7 +33,7 @@
 </script>
 
 <div class="dx-overlay" aria-hidden="true">
-  {#each positioned as { spot, pct } (spot.dx + spot.freq)}
+  {#each positioned as { spot, pct } (`${spot.dx}@${spot.freq}@${spot.spotter}`)}
     <button
       class="dx-badge"
       style="left: {pct}%"

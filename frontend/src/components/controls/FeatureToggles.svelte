@@ -1,6 +1,5 @@
 <script lang="ts">
   import { sendCommand } from '../../lib/transport/ws-client';
-  import { makeCommandId } from '../../lib/types/protocol';
   import { getActiveReceiver, getRadioState } from '../../lib/stores/radio.svelte';
 
   let rx = $derived(getActiveReceiver());
@@ -11,18 +10,15 @@
   let att  = $derived(rx?.att  ?? 0);
   let pre  = $derived(rx?.preamp ?? 0);
   let agc  = $derived(rx?.agc  ?? null);
+  // COMP state is display-only — no backend handler for set_comp
   let comp = $derived(getRadioState()?.compressorOn ?? false);
 
   function toggleNb() {
-    sendCommand({ type: 'set_nb', id: makeCommandId(), on: !nb, receiver: receiverIdx });
+    sendCommand('set_nb', { on: !nb, receiver: receiverIdx });
   }
 
   function toggleNr() {
-    sendCommand({ type: 'set_nr', id: makeCommandId(), on: !nr, receiver: receiverIdx });
-  }
-
-  function toggleComp() {
-    sendCommand({ type: 'set_comp', id: makeCommandId(), on: !comp });
+    sendCommand('set_nr', { on: !nr, receiver: receiverIdx });
   }
 
   function attLabel(v: number): string {
@@ -51,14 +47,12 @@
     title="Noise Reduction"
   >NR</button>
 
-  <button
-    class="toggle-btn"
-    class:active={comp}
-    onclick={toggleComp}
-    aria-pressed={comp}
-    title="Compressor"
-  >COMP</button>
+  <!-- COMP is display-only — no backend handler exists for set_comp -->
+  <span class="value-badge" class:nonzero={comp} title="Compressor">
+    COMP
+  </span>
 
+  <!-- ATT/PRE are display-only — backend set_att/set_preamp commands exist but UI controls not yet implemented -->
   <span class="value-badge" class:nonzero={att !== 0} title="Attenuator">
     ATT <span class="val">{attLabel(att)}</span>
   </span>
