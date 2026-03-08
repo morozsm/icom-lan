@@ -6,7 +6,7 @@
     type WaterfallOptions,
   } from '../../lib/renderers/waterfall-renderer';
   import { gesture } from '../../lib/gestures/use-gesture';
-  import { sendCommand } from '../../lib/transport/ws-client';
+  import { getChannel, sendCommand } from '../../lib/transport/ws-client';
   import { getRadioState } from '../../lib/stores/radio.svelte';
   import { vibrate } from '../../lib/utils/haptics';
 
@@ -14,9 +14,10 @@
     data: Uint8Array | null;
     options?: WaterfallOptions;
     onFreqClick?: (hz: number) => void;
+    onRegisterPush?: (fn: (data: Uint8Array) => void) => void;
   }
 
-  let { data, options = defaultWaterfallOptions, onFreqClick }: Props = $props();
+  let { data, options = defaultWaterfallOptions, onFreqClick, onRegisterPush }: Props = $props();
 
   let canvas: HTMLCanvasElement;
   let renderer = $state<WaterfallRenderer | null>(null);
@@ -24,16 +25,11 @@
   // Accumulated pan offset in Hz (applied on drag end)
   let panOffsetHz = $state(0);
 
-  // Track last data reference to detect new scope frames
-  let lastDataRef: Uint8Array | null = null;
-  let rafId = 0;
-
-  function tick() {
-    if (data && renderer && data !== lastDataRef) {
-      lastDataRef = data;
-      renderer.pushRow(data);
-    }
-    rafId = requestAnimationFrame(tick);
+  // Direct push function — called by parent SpectrumPanel for each scope frame.
+  // Svelte 5 reactivity cannot reliably track Uint8Array prop changes at 100+ fps,
+  // so we bypass it entirely with a direct function call.
+  function directPush(pixels: Uint8Array): void {
+    renderer?.pushRow(pixels);
   }
 
   // Sync options changes (colorMap, centerHz, spanHz) to the renderer
@@ -93,7 +89,21 @@
 
   onMount(() => {
     renderer = new WaterfallRenderer(canvas, options);
-    rafId = requestAnimationFrame(tick);
+
+    // Register direct push callback with parent
+    onRegisterPush?.(directPush);
+
+    // ALSO subscribe directly to scope binary — belt and suspenders.
+    // Svelte prop reactivity drops Uint8Array updates at high frame rates.
+    const scopeCh = getChannel('scope');
+    const unsubBinary = scopeCh.onBinary((buf: ArrayBuffer) => {
+      if (!renderer || buf.byteLength < 16) return;
+      const view = new DataView(buf);
+      if (view.getUint8(0) !== 0x01) return;
+      const pxCount = view.getUint16(14, true);
+      if (16 + pxCount > buf.byteLength) return;
+      renderer.pushRow(new Uint8Array(buf, 16, pxCount));
+    });
 
     const ro = new ResizeObserver((entries) => {
       const rect = entries[0]?.contentRect;
@@ -108,7 +118,7 @@
     ro.observe(canvas);
 
     return () => {
-      cancelAnimationFrame(rafId);
+      unsubBinary();
       ro.disconnect();
       renderer?.destroy();
       renderer = null;

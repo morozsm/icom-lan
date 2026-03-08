@@ -96,17 +96,22 @@ export class WaterfallRenderer {
 
   /** Add a new scope data row at the top; shift existing content down. */
   pushRow(data: Uint8Array): void {
-    if (this.destroyed || !this.rowBuf || !this.rowData) return;
-    const w = this.width;
-    const h = this.height;
+    if (this.destroyed) return;
+    const ctx = this.ctx;
+    if (!ctx) return;
+    const canvas = ctx.canvas;
+    const w = canvas.width;
+    const h = canvas.height;
     const n = data.length;
     if (!n || w <= 0 || h <= 0) return;
 
     // Shift existing waterfall content down by 1 row (no full redraw)
-    this.ctx.drawImage(this.ctx.canvas, 0, 0, w, h - 1, 0, 1, w, h - 1);
+    ctx.drawImage(canvas, 0, 0, w, h - 1, 0, 1, w, h - 1);
 
-    // Build the new top row using the color LUT
-    const rowData = this.rowData;
+    // Build the new top row using the color LUT — fresh ImageData each time
+    // (avoids stale buffer issues after resize)
+    const rowBuf = ctx.createImageData(w, 1);
+    const rowData = rowBuf.data;
     const lut = this.lut;
     for (let x = 0; x < w; x++) {
       const p = data[Math.min(n - 1, Math.floor((x / w) * n))];
@@ -118,7 +123,7 @@ export class WaterfallRenderer {
       rowData[pi + 2] = lut[li + 2];
       rowData[pi + 3] = 255;
     }
-    this.ctx.putImageData(this.rowBuf, 0, 0);
+    ctx.putImageData(rowBuf, 0, 0);
   }
 
   /** Resize the waterfall canvas and reset buffer. Clears the display. */
