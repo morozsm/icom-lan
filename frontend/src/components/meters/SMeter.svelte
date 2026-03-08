@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
+
   interface Props {
     value: number; // raw backend value 0-255
     label?: string;
@@ -13,6 +15,27 @@
   const S9_RAW = 153; // 9 * 17
 
   let fillPercent = $derived(Math.min(100, (Math.max(0, value) / MAX_RAW) * 100));
+
+  // Peak hold: track max value, hold for 2s then slowly decay
+  let peakValue = $state(0);
+  let peakPercent = $derived(Math.min(100, (peakValue / MAX_RAW) * 100));
+  let peakLastSet = 0; // plain var — not tracked, only read inside setInterval
+
+  $effect(() => {
+    if (value > peakValue) {
+      peakValue = value;
+      peakLastSet = Date.now();
+    }
+  });
+
+  onMount(() => {
+    const interval = setInterval(() => {
+      if (peakValue > 0 && Date.now() - peakLastSet > 2000) {
+        peakValue = Math.max(0, peakValue - 4);
+      }
+    }, 80);
+    return () => clearInterval(interval);
+  });
 
   function sMeterLabel(v: number): string {
     if (v <= 0) return 'S0';
@@ -49,6 +72,10 @@
     <div class="meter-track">
       <!-- Gradient fill bar -->
       <div class="meter-fill" style="width: {fillPercent}%"></div>
+      <!-- Peak hold indicator -->
+      {#if peakValue > 0}
+        <div class="peak-mark" style="left: {peakPercent}%"></div>
+      {/if}
       <!-- S9 threshold marker -->
       <div class="threshold-mark" style="left: {S9_PCT}%"></div>
     </div>
@@ -123,7 +150,19 @@
       var(--danger) 60%,
       var(--danger) 100%
     );
-    transition: width 0.12s ease-out;
+    transition: width var(--transition-fast);
+  }
+
+  .peak-mark {
+    position: absolute;
+    top: 1px;
+    bottom: 1px;
+    width: 2px;
+    background: rgba(255, 255, 255, 0.85);
+    border-radius: 1px;
+    pointer-events: none;
+    transform: translateX(-1px);
+    transition: left var(--transition-fast);
   }
 
   .threshold-mark {

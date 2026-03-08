@@ -21,6 +21,7 @@
     getSubReceiver,
   } from '../../lib/stores/radio.svelte';
   import { hasDualReceiver, hasTx } from '../../lib/stores/capabilities.svelte';
+  import { getConnectionStatus } from '../../lib/stores/connection.svelte';
   import { sendCommand } from '../../lib/transport/ws-client';
   import { setupKeyboard } from '../../lib/actions/keyboard';
 
@@ -30,6 +31,9 @@
   let activeRx = $derived(state?.active ?? 'MAIN');
   let isDualRx = $derived(hasDualReceiver());
   let isTx = $derived(hasTx());
+  let connectionStatus = $derived(getConnectionStatus());
+  let isDisconnected = $derived(connectionStatus === 'disconnected');
+  let isReconnecting = $derived(connectionStatus === 'partial');
 
   onMount(() => {
     return setupKeyboard();
@@ -155,6 +159,15 @@
 <!-- Toast notifications — rendered in fixed position overlay -->
 <Toast />
 
+<!-- Disconnection overlay: dims UI when not connected -->
+{#if isDisconnected || isReconnecting}
+  <div
+    class="connection-overlay"
+    class:reconnecting={isReconnecting}
+    aria-hidden="true"
+  ></div>
+{/if}
+
 <style>
   .desktop-layout {
     display: flex;
@@ -228,8 +241,8 @@
   /* ── Right pane ── */
   .right-pane {
     padding: var(--space-3);
-    background-color: var(--panel);
-    border-left: 1px solid var(--panel-border);
+    background: var(--panel-gradient);
+    border-left: 1px solid var(--panel-border-strong);
     overflow-y: auto;
     display: flex;
     flex-direction: column;
@@ -244,6 +257,7 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
   }
 
   .dx-card {
@@ -268,5 +282,19 @@
     display: flex;
     gap: var(--space-1);
     flex-wrap: wrap;
+  }
+
+  /* ── Connection overlay ── */
+  .connection-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background: rgba(0, 0, 0, 0.5);
+    pointer-events: none;
+  }
+
+  .connection-overlay.reconnecting {
+    background: rgba(0, 0, 0, 0.3);
+    animation: reconnect-pulse 1.5s ease-in-out infinite;
   }
 </style>
