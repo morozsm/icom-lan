@@ -1,5 +1,6 @@
 import type { ServerState } from '../types/state';
 import type { Capabilities } from '../types/capabilities';
+import type { InfoResponse } from '../types/protocol';
 
 const BASE = '/api/v1';
 
@@ -15,22 +16,45 @@ export async function fetchCapabilities(): Promise<Capabilities> {
   return res.json() as Promise<Capabilities>;
 }
 
-// Polling helper — calls callback every intervalMs
+export async function fetchInfo(): Promise<InfoResponse> {
+  const res = await fetch(`${BASE}/info`);
+  if (!res.ok) throw new Error(`fetchInfo: ${res.status}`);
+  return res.json() as Promise<InfoResponse>;
+}
+
+/**
+ * Poll `/api/v1/state` at the given interval, calling `callback` only when
+ * the revision advances. Skips the poll if the previous one hasn't returned.
+ *
+ * @returns A stop function.
+ */
 export function startPolling(
-  callback: () => Promise<void>,
+  callback: (state: ServerState) => void,
   intervalMs = 200,
 ): () => void {
   let timer: ReturnType<typeof setTimeout> | null = null;
   let running = true;
+  let inflight = false;
+  let lastRevision = -1;
 
   async function tick() {
     if (!running) return;
-    try {
-      await callback();
-    } finally {
-      if (running) {
-        timer = setTimeout(tick, intervalMs);
+    if (!inflight) {
+      inflight = true;
+      try {
+        const state = await fetchState();
+        if (state.revision > lastRevision) {
+          lastRevision = state.revision;
+          callback(state);
+        }
+      } catch {
+        // network errors are transient — don't crash the app
+      } finally {
+        inflight = false;
       }
+    }
+    if (running) {
+      timer = setTimeout(tick, intervalMs);
     }
   }
 
