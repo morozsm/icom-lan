@@ -4,9 +4,10 @@
     dualWatch?: boolean;
     hasDualReceiver?: boolean;
     onswitch?: (receiver: 'MAIN' | 'SUB') => void;
+    ondwtoggle?: () => void;
   }
 
-  let { active, dualWatch = false, hasDualReceiver = false, onswitch }: Props = $props();
+  let { active, dualWatch = false, hasDualReceiver = false, onswitch, ondwtoggle }: Props = $props();
 </script>
 
 <div class="receiver-switch">
@@ -31,7 +32,7 @@
   {/if}
 
   {#if dualWatch}
-    <span class="dw-badge" title="Dual Watch active">DW</span>
+    <button class="dw-badge" onclick={() => ondwtoggle?.()} title="Dual Watch active — click to toggle">DW</button>
   {/if}
 </div>
 

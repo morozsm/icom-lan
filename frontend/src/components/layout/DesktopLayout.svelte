@@ -19,7 +19,6 @@
   } from '../../lib/stores/radio.svelte';
   import { hasDualReceiver, hasTx } from '../../lib/stores/capabilities.svelte';
   import { sendCommand } from '../../lib/transport/ws-client';
-  import { makeCommandId, CMD_SET_FREQ, CMD_SET_MODE } from '../../lib/types/protocol';
 
   let state = $derived(getRadioState());
   let main = $derived(getMainReceiver());
@@ -29,29 +28,21 @@
   let isTx = $derived(hasTx());
 
   function handleTune(receiver: 'MAIN' | 'SUB', newFreq: number) {
-    sendCommand({
-      type: CMD_SET_FREQ,
-      id: makeCommandId(),
-      receiver,
-      freq: newFreq,
-    });
+    const rx = receiver === 'MAIN' ? 0 : 1;
+    sendCommand('set_freq', { freq: newFreq, receiver: rx });
   }
 
   function handleModeChange(receiver: 'MAIN' | 'SUB', mode: string) {
-    sendCommand({
-      type: CMD_SET_MODE,
-      id: makeCommandId(),
-      receiver,
-      mode,
-    });
+    const rx = receiver === 'MAIN' ? 0 : 1;
+    sendCommand('set_mode', { mode, receiver: rx });
   }
 
   function handleReceiverSwitch(receiver: 'MAIN' | 'SUB') {
-    sendCommand({
-      type: 'set_active_receiver',
-      id: makeCommandId(),
-      receiver,
-    });
+    sendCommand('select_vfo', { vfo: receiver === 'MAIN' ? 'A' : 'B' });
+  }
+
+  function handleDwToggle() {
+    sendCommand('set_dw', { on: !(state?.dualWatch ?? false) });
   }
 </script>
 
@@ -73,7 +64,6 @@
               active={activeRx === 'MAIN'}
               dataMode={main.dataMode}
               ontune={(f) => handleTune('MAIN', f)}
-              onmodechange={(m) => handleModeChange('MAIN', m)}
             />
           {:else}
             <div class="vfo-placeholder">VFO A — connecting…</div>
@@ -88,7 +78,6 @@
               active={activeRx === 'SUB'}
               dataMode={sub.dataMode}
               ontune={(f) => handleTune('SUB', f)}
-              onmodechange={(m) => handleModeChange('SUB', m)}
             />
           {/if}
         </div>
@@ -100,6 +89,7 @@
               dualWatch={state?.dualWatch ?? false}
               hasDualReceiver={isDualRx}
               onswitch={handleReceiverSwitch}
+              ondwtoggle={handleDwToggle}
             />
           {/if}
         </div>

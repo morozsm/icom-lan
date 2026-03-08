@@ -23,7 +23,7 @@
     const above = v - S9_RAW;
     if (above <= S_UNIT) return 'S9+10';
     if (above <= 2 * S_UNIT) return 'S9+20';
-    if (above <= 59) return 'S9+40';
+    if (above <= 3 * S_UNIT) return 'S9+40';
     return 'S9+60';
   }
 

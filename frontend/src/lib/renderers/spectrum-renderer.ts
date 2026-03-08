@@ -29,12 +29,18 @@ function clamp(v: number, lo: number, hi: number): number {
   return v < lo ? lo : v > hi ? hi : v;
 }
 
+// Cached gradient: recreated only when height or fillColor changes
+let _gradCache: { grad: CanvasGradient; height: number; fillColor: string } | null = null;
+
 /**
  * Render a spectrum line chart onto an existing 2D canvas context.
  *
  * The caller is responsible for DPR scaling: set canvas physical dimensions
  * to width*dpr × height*dpr, call ctx.setTransform(dpr,0,0,dpr,0,0) once,
  * then pass CSS logical width/height here.
+ *
+ * Optimization note: the $effect in SpectrumCanvas triggers on every data change;
+ * for smoother perf consider throttling to requestAnimationFrame (already done via scheduleRender).
  */
 export function renderSpectrum(
   ctx: CanvasRenderingContext2D,
@@ -97,11 +103,14 @@ export function renderSpectrum(
     yPoints[x] = height * (1 - amp);
   }
 
-  // Filled area under spectrum
-  const grad = ctx.createLinearGradient(0, 0, 0, height);
-  grad.addColorStop(0, fillColor);
-  grad.addColorStop(1, 'rgba(30,58,138,0.02)');
-  ctx.fillStyle = grad;
+  // Filled area under spectrum (gradient cached; recreated only when height or fillColor changes)
+  if (!_gradCache || _gradCache.height !== height || _gradCache.fillColor !== fillColor) {
+    const grad = ctx.createLinearGradient(0, 0, 0, height);
+    grad.addColorStop(0, fillColor);
+    grad.addColorStop(1, 'rgba(30,58,138,0.02)');
+    _gradCache = { grad, height, fillColor };
+  }
+  ctx.fillStyle = _gradCache.grad;
   ctx.beginPath();
   ctx.moveTo(0, height);
   for (let x = 0; x < width; x++) {

@@ -10,7 +10,6 @@
     active: boolean;
     dataMode?: boolean;
     ontune?: (newFreq: number) => void;
-    onmodechange?: (mode: string) => void;
   }
 
   let {
@@ -98,6 +97,8 @@
   >
     <span class="vfo-label">{label}</span>
     <span class="vfo-meta">{mode}{dataMode ? '-D' : ''} · FIL{filter}</span>
+    <!-- Design choice: badge shows role ("MAIN"/"sub") not VFO letter ("A"/"B"),
+         matching IC-7610 panel conventions where active receiver is "MAIN". -->
     {#if active}
       <span class="active-badge">MAIN</span>
     {:else}

@@ -1,10 +1,11 @@
 // WebSocket protocol types
 
-// Outgoing: client → server
+// Outgoing: client → server (envelope format)
 export interface WsCommand {
-  type: string;
+  type: 'cmd';
+  name: string;
   id: string;
-  [key: string]: unknown;
+  params: Record<string, unknown>;
 }
 
 // DX cluster spot
@@ -59,8 +60,6 @@ export interface InfoResponse {
 export const CMD_SET_FREQ = 'set_freq';
 export const CMD_SET_MODE = 'set_mode';
 export const CMD_SET_FILTER = 'set_filter';
-export const CMD_PTT_ON = 'ptt_on';
-export const CMD_PTT_OFF = 'ptt_off';
 
 /** Generate a unique command ID using the Web Crypto API. */
 export function makeCommandId(): string {

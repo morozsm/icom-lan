@@ -1,6 +1,5 @@
 <script lang="ts">
   import { sendCommand } from '../../lib/transport/ws-client';
-  import { makeCommandId } from '../../lib/types/protocol';
   import { getActiveReceiver, getRadioState } from '../../lib/stores/radio.svelte';
   import { getSupportedFilters } from '../../lib/stores/capabilities.svelte';
 
@@ -15,7 +14,7 @@
   }
 
   function setFilter(fil: string) {
-    sendCommand({ type: 'set_filter', id: makeCommandId(), filter: fil, receiver: receiverIdx });
+    sendCommand('set_filter', { filter: fil, receiver: receiverIdx });
   }
 </script>
 

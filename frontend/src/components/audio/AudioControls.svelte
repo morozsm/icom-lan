@@ -1,6 +1,5 @@
 <script lang="ts">
   import { sendCommand } from '../../lib/transport/ws-client';
-  import { makeCommandId } from '../../lib/types/protocol';
   import { getActiveReceiver, getRadioState } from '../../lib/stores/radio.svelte';
   import { getAudioState, toggleMute } from '../../lib/stores/audio.svelte';
 
@@ -15,12 +14,12 @@
 
   function onVolumeChange(e: Event) {
     const level = Math.round(Number((e.target as HTMLInputElement).value));
-    sendCommand({ type: 'set_af_level', id: makeCommandId(), level, receiver: receiverIdx });
+    sendCommand('set_af_level', { level, receiver: receiverIdx });
   }
 
   function onMute() {
+    // Mute is client-side only — toggleMute() handles local audio muting
     toggleMute();
-    sendCommand({ type: 'set_af_mute', id: makeCommandId(), on: !muted, receiver: receiverIdx });
   }
 </script>
 
