@@ -1,14 +1,135 @@
 <script lang="ts">
-  // FeatureToggles — placeholder
+  import { sendCommand } from '../../lib/transport/ws-client';
+  import { makeCommandId } from '../../lib/types/protocol';
+  import { getActiveReceiver, getRadioState } from '../../lib/stores/radio.svelte';
+
+  let rx = $derived(getActiveReceiver());
+  let receiverIdx = $derived(getRadioState()?.active === 'SUB' ? 1 : 0);
+
+  let nb   = $derived(rx?.nb   ?? false);
+  let nr   = $derived(rx?.nr   ?? false);
+  let att  = $derived(rx?.att  ?? 0);
+  let pre  = $derived(rx?.preamp ?? 0);
+  let agc  = $derived(rx?.agc  ?? null);
+  let comp = $derived(getRadioState()?.compressorOn ?? false);
+
+  function toggleNb() {
+    sendCommand({ type: 'set_nb', id: makeCommandId(), on: !nb, receiver: receiverIdx });
+  }
+
+  function toggleNr() {
+    sendCommand({ type: 'set_nr', id: makeCommandId(), on: !nr, receiver: receiverIdx });
+  }
+
+  function toggleComp() {
+    sendCommand({ type: 'set_comp', id: makeCommandId(), on: !comp });
+  }
+
+  function attLabel(v: number): string {
+    return v === 0 ? 'OFF' : `${v}dB`;
+  }
+
+  function preLabel(v: number): string {
+    return v === 0 ? 'OFF' : `P${v}`;
+  }
 </script>
 
-<div>
-  <span class="placeholder">FeatureToggles</span>
+<div class="feature-toggles" role="group" aria-label="DSP features">
+  <button
+    class="toggle-btn"
+    class:active={nb}
+    onclick={toggleNb}
+    aria-pressed={nb}
+    title="Noise Blanker"
+  >NB</button>
+
+  <button
+    class="toggle-btn"
+    class:active={nr}
+    onclick={toggleNr}
+    aria-pressed={nr}
+    title="Noise Reduction"
+  >NR</button>
+
+  <button
+    class="toggle-btn"
+    class:active={comp}
+    onclick={toggleComp}
+    aria-pressed={comp}
+    title="Compressor"
+  >COMP</button>
+
+  <span class="value-badge" class:nonzero={att !== 0} title="Attenuator">
+    ATT <span class="val">{attLabel(att)}</span>
+  </span>
+
+  <span class="value-badge" class:nonzero={pre !== 0} title="Preamp">
+    PRE <span class="val">{preLabel(pre)}</span>
+  </span>
+
+  {#if agc !== null}
+    <span class="value-badge" title="AGC">
+      AGC <span class="val">{agc}</span>
+    </span>
+  {/if}
 </div>
 
 <style>
-  .placeholder {
+  .feature-toggles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    align-items: center;
+  }
+
+  .toggle-btn {
+    min-height: var(--tap-target);
+    padding: 0 var(--space-3);
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 9999px;
     color: var(--text-muted);
-    font-size: 0.875rem;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.1s, color 0.1s, border-color 0.1s;
+  }
+
+  .toggle-btn:hover {
+    color: var(--text);
+    border-color: var(--accent);
+  }
+
+  .toggle-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #000;
+  }
+
+  .value-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    min-height: var(--tap-target);
+    padding: 0 var(--space-3);
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 9999px;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 600;
+    user-select: none;
+  }
+
+  .value-badge.nonzero {
+    border-color: var(--warning);
+    color: var(--warning);
+  }
+
+  .val {
+    font-weight: 400;
+    opacity: 0.85;
   }
 </style>
