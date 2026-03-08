@@ -24,6 +24,7 @@ from icom_lan.cli import (
     _cmd_preamp,
     _cmd_scope,
     _cmd_serve,
+    _cmd_tuner,
     _cmd_web,
     _emit_audio_result,
     _run,
@@ -712,3 +713,44 @@ def test_main_branches(monkeypatch, capsys: pytest.CaptureFixture[str]) -> None:
             main()
     sys_exit.assert_called_once_with(130)
     assert "Interrupted, shutting down..." in capsys.readouterr().err
+
+
+@pytest.mark.asyncio
+async def test_cmd_tuner_get(capsys: pytest.CaptureFixture[str]) -> None:
+    radio = AsyncMock()
+    radio.get_tuner_status = AsyncMock(return_value=1)
+    assert await _cmd_tuner(radio, argparse.Namespace(action=None, json=False)) == 0
+    assert "ON" in capsys.readouterr().out
+
+
+@pytest.mark.asyncio
+async def test_cmd_tuner_set_on_off_tune(capsys: pytest.CaptureFixture[str]) -> None:
+    radio = AsyncMock()
+    radio.set_tuner_status = AsyncMock()
+
+    assert await _cmd_tuner(radio, argparse.Namespace(action="on", json=False)) == 0
+    assert await _cmd_tuner(radio, argparse.Namespace(action="off", json=False)) == 0
+    assert await _cmd_tuner(radio, argparse.Namespace(action="tune", json=False)) == 0
+    out = capsys.readouterr().out
+    assert "ON" in out
+    assert "OFF" in out
+    assert "TUNING" in out
+
+
+@pytest.mark.asyncio
+async def test_cmd_tuner_json_output(capsys: pytest.CaptureFixture[str]) -> None:
+    radio = AsyncMock()
+    radio.get_tuner_status = AsyncMock(return_value=0)
+    radio.set_tuner_status = AsyncMock()
+
+    assert await _cmd_tuner(radio, argparse.Namespace(action=None, json=True)) == 0
+    data = json.loads(capsys.readouterr().out)
+    assert data == {"tuner_status": 0, "label": "OFF"}
+
+    assert await _cmd_tuner(radio, argparse.Namespace(action="on", json=True)) == 0
+    data = json.loads(capsys.readouterr().out)
+    assert data == {"tuner_status": 1, "label": "ON"}
+
+    assert await _cmd_tuner(radio, argparse.Namespace(action="tune", json=True)) == 0
+    data = json.loads(capsys.readouterr().out)
+    assert data == {"tuner_status": 2, "label": "TUNING"}

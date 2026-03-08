@@ -836,3 +836,40 @@ async def test_enqueue_command_get_dual_watch_no_radio() -> None:
     handler = _control_handler(radio=None)
     with pytest.raises(RuntimeError, match="radio connection not available"):
         await handler._enqueue_command("get_dual_watch", {})
+
+
+@pytest.mark.asyncio
+async def test_get_tuner_status_ws_command() -> None:
+    """get_tuner_status is a read-only command — bypasses the command queue."""
+    radio = SimpleNamespace(get_tuner_status=AsyncMock(return_value=1))
+    handler = _control_handler(radio=radio)
+    result = await handler._enqueue_command("get_tuner_status", {})
+    assert result == {"status": 1, "label": "ON"}
+    radio.get_tuner_status.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_get_tuner_status_ws_command_no_radio() -> None:
+    """get_tuner_status raises when radio is not connected."""
+    handler = _control_handler(radio=None)
+    with pytest.raises(RuntimeError, match="radio connection not available"):
+        await handler._enqueue_command("get_tuner_status", {})
+
+
+@pytest.mark.asyncio
+async def test_set_tuner_status_ws_command() -> None:
+    """set_tuner_status fires the radio method and returns label."""
+    radio = SimpleNamespace(set_tuner_status=AsyncMock())
+    handler = _control_handler(radio=radio)
+    result = await handler._enqueue_command("set_tuner_status", {"value": 2})
+    assert result == {"value": 2, "label": "TUNING"}
+    radio.set_tuner_status.assert_awaited_once_with(2)
+
+
+@pytest.mark.asyncio
+async def test_set_tuner_status_invalid_value() -> None:
+    """set_tuner_status raises ValueError for out-of-range values."""
+    radio = SimpleNamespace(set_tuner_status=AsyncMock())
+    handler = _control_handler(radio=radio)
+    with pytest.raises(ValueError, match="tuner value must be 0, 1, or 2"):
+        await handler._enqueue_command("set_tuner_status", {"value": 5})

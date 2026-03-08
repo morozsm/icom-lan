@@ -399,6 +399,16 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Set dual watch on or off (get if omitted)",
     )
 
+    # tuner
+    tuner_p = sub.add_parser("tuner", help="Get or set antenna tuner (ATU) state")
+    tuner_p.add_argument(
+        "action",
+        nargs="?",
+        choices=["on", "off", "tune"],
+        help="on=enable, off=disable, tune=start tune cycle (get if omitted)",
+    )
+    _add_json(tuner_p)
+
     # discover
     sub.add_parser("discover", help="Discover radios on the network")
 
@@ -746,6 +756,8 @@ async def _run(args: argparse.Namespace) -> int:
                 return await _cmd_time(radio, args)
             elif args.command == "dualwatch":
                 return await _cmd_dualwatch(radio, args)
+            elif args.command == "tuner":
+                return await _cmd_tuner(radio, args)
             elif args.command == "web":
                 return await _cmd_web(radio, args)
             elif args.command == "scope":
@@ -1435,6 +1447,25 @@ async def _cmd_dualwatch(radio: IcomRadio, args: argparse.Namespace) -> int:
     else:
         on = await radio.get_dual_watch()
         print(f"Dual watch: {'ON' if on else 'OFF'}")
+    return 0
+
+
+async def _cmd_tuner(radio: IcomRadio, args: argparse.Namespace) -> int:
+    if args.action is not None:
+        value = {"on": 1, "off": 0, "tune": 2}[args.action]
+        await radio.set_tuner_status(value)
+        label = {0: "OFF", 1: "ON", 2: "TUNING"}[value]
+        if getattr(args, "json", False):
+            print(json.dumps({"tuner_status": value, "label": label}))
+        else:
+            print(f"Tuner: {label}")
+    else:
+        status = await radio.get_tuner_status()
+        label = {0: "OFF", 1: "ON", 2: "TUNING"}.get(status, f"UNKNOWN({status})")
+        if getattr(args, "json", False):
+            print(json.dumps({"tuner_status": status, "label": label}))
+        else:
+            print(f"Tuner: {label}")
     return 0
 
 
