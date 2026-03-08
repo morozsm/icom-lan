@@ -104,12 +104,15 @@ def test_bridge_init_defaults():
     radio = MagicMock()
     bridge = AudioBridge(radio)
     assert not bridge.running
-    assert bridge.stats == {
-        "running": False,
-        "rx_frames": 0,
-        "tx_frames": 0,
-        "rx_drops": 0,
-    }
+    s = bridge.stats
+    assert s["running"] is False
+    assert s["rx_frames"] == 0
+    assert s["tx_frames"] == 0
+    assert s["rx_drops"] == 0
+    assert s["uptime_seconds"] == 0.0
+    assert s["rx_interval_ms"] == 0.0
+    assert s["tx_interval_ms"] == 0.0
+    assert s["buffer_size"] == 0
 
 
 def test_bridge_init_custom():
@@ -275,3 +278,65 @@ async def test_bridge_rx_via_bus():
         assert bridge._subscription._received == 2
 
         await bridge.stop()
+
+
+# ---------------------------------------------------------------------------
+# Latency stats — Task 2
+# ---------------------------------------------------------------------------
+
+def test_stats_has_new_fields():
+    """stats dict contains all timing fields."""
+    radio = MagicMock()
+    bridge = AudioBridge(radio)
+    s = bridge.stats
+    assert "uptime_seconds" in s
+    assert "rx_interval_ms" in s
+    assert "tx_interval_ms" in s
+    assert "buffer_size" in s
+
+
+def test_rx_latency_calculation():
+    """RX inter-frame timing is computed and averaged."""
+    import time
+
+    radio = MagicMock()
+    bridge = AudioBridge(radio)
+
+    # Simulate two frames arriving ~20ms apart
+    bridge._last_rx_time = time.monotonic() - 0.020
+    bridge._rx_latency_samples.append(0.020)
+    bridge._rx_latency_samples.append(0.020)
+
+    s = bridge.stats
+    assert s["rx_interval_ms"] == pytest.approx(20.0, abs=0.1)
+    assert s["buffer_size"] == 2
+
+
+def test_tx_latency_calculation():
+    """TX inter-frame timing is computed and averaged."""
+    radio = MagicMock()
+    bridge = AudioBridge(radio)
+
+    bridge._tx_latency_samples.append(0.040)
+    bridge._tx_latency_samples.append(0.040)
+
+    s = bridge.stats
+    assert s["tx_interval_ms"] == pytest.approx(40.0, abs=0.1)
+
+
+def test_latency_buffer_capped_at_100():
+    """RX and TX sample buffers are capped at 100 entries."""
+    import time
+
+    radio = MagicMock()
+    bridge = AudioBridge(radio)
+    bridge._last_rx_time = time.monotonic() - 0.020
+
+    # Simulate filling buffer beyond 100
+    bridge._rx_latency_samples = [0.020] * 100
+    bridge._rx_latency_samples.append(0.030)
+    if len(bridge._rx_latency_samples) > 100:
+        bridge._rx_latency_samples.pop(0)
+
+    assert len(bridge._rx_latency_samples) == 100
+    assert bridge.stats["buffer_size"] == 100

@@ -619,12 +619,22 @@ input[type=range]::-webkit-slider-thumb {
     btn.textContent = label;
   }
 
-  function showToast(text) {
+  var _toastColors = {
+    info:    { bg: 'rgba(30,41,59,0.95)', border: '#475569', color: '#94a3b8' },
+    warning: { bg: 'rgba(30,22,10,0.95)', border: '#b45309', color: '#fbbf24' },
+    error:   { bg: 'rgba(40,10,10,0.95)', border: '#b91c1c', color: '#fca5a5' },
+    success: { bg: 'rgba(10,30,20,0.95)', border: '#15803d', color: '#86efac' },
+  };
+  function showToast(level, message) {
+    var scheme = _toastColors[level] || _toastColors.info;
     var el = document.createElement('div');
-    el.textContent = text;
-    el.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#dc2626;color:#fff;padding:8px 16px;border-radius:8px;font-size:13px;z-index:9999;opacity:0.95;';
+    el.textContent = message || level;
+    el.style.cssText = 'position:fixed;top:1rem;right:1rem;z-index:9999;' +
+      'background:' + scheme.bg + ';border:1px solid ' + scheme.border + ';color:' + scheme.color + ';' +
+      'padding:8px 16px;border-radius:8px;font-size:12px;pointer-events:none;' +
+      'transition:opacity 0.3s ease;opacity:0.97;max-width:360px;word-break:break-word;';
     document.body.appendChild(el);
-    setTimeout(function () { el.remove(); }, 4000);
+    setTimeout(function() { el.style.opacity = '0'; setTimeout(function() { el.remove(); }, 300); }, 4700);
   }
 
   function updateFreqDisplays() {
@@ -1277,7 +1287,7 @@ input[type=range]::-webkit-slider-thumb {
       }
       // Command error handling
       if (msg.type === 'response' && msg.ok === false && msg.message) {
-        showToast(msg.message);
+        showToast('error', msg.message);
         return;
       }
       // All state data handled by HTTP poll (/api/v1/state):
@@ -1304,6 +1314,11 @@ input[type=range]::-webkit-slider-thumb {
         else if (mt === 'vd') { dom.vdVal.textContent = val.toFixed(1) + 'V'; }
         return;
       }
+      return;
+    }
+
+    if (msg.type === 'notification') {
+      showToast(msg.level, msg.message);
       return;
     }
 
@@ -1578,16 +1593,6 @@ input[type=range]::-webkit-slider-thumb {
     } else {
       dom.dwBadge.className = 'text-[9px] px-1.5 py-0.5 rounded font-digital font-bold bg-slate-800 text-slate-600';
     }
-  }
-
-  function showToast(msg) {
-    var toast = document.createElement('div');
-    toast.textContent = msg;
-    toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);' +
-      'background:rgba(30,22,32,0.92);color:#fbbf24;border:1px solid #b45309;' +
-      'padding:6px 18px;border-radius:8px;font-size:12px;z-index:9999;pointer-events:none;';
-    document.body.appendChild(toast);
-    setTimeout(function() { toast.remove(); }, 3000);
   }
 
   function resizeScopeCanvases() {
@@ -2347,7 +2352,7 @@ input[type=range]::-webkit-slider-thumb {
     if (state.radioConnected) {
       sendControl({ type: 'radio_disconnect', id: nextCmdId('radio') });
     } else {
-      showToast('Backend manages radio reconnect automatically');
+      showToast('info', 'Backend manages radio reconnect automatically');
       setStatusVisual();
     }
   }
@@ -2676,7 +2681,7 @@ input[type=range]::-webkit-slider-thumb {
           clearWaterfallCanvas();
           updateScopeReceiverBadge();
           sendCommand('switch_scope_receiver', { receiver: 0 });
-          showToast('SUB scope requires Dual Watch');
+          showToast('warning', 'SUB scope requires Dual Watch');
         }
         return;
       } else {

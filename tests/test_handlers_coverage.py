@@ -890,3 +890,26 @@ async def test_set_tuner_status_missing_value() -> None:
     handler = _control_handler(radio=radio)
     with pytest.raises(ValueError, match="missing required 'value' parameter"):
         await handler._enqueue_command("set_tuner_status", {})
+
+
+@pytest.mark.asyncio
+async def test_event_sender_loop_forwards_notifications_without_subscription() -> None:
+    """Notifications are sent even when client has not subscribed to 'state'."""
+    ws = SimpleNamespace(send_text=AsyncMock())
+    handler = _control_handler(ws=ws)
+    # Do NOT add "state" to subscribed_streams
+
+    task = asyncio.create_task(handler._event_sender_loop())
+    try:
+        notification = {"type": "notification", "level": "success", "message": "Radio connected", "category": "connection"}
+        await handler._event_queue.put(notification)
+        await asyncio.sleep(0)
+        assert ws.send_text.await_count == 1
+
+        # Regular event should still be blocked when not subscribed
+        await handler._event_queue.put({"type": "event", "name": "freq_changed"})
+        await asyncio.sleep(0)
+        assert ws.send_text.await_count == 1  # unchanged
+    finally:
+        task.cancel()
+        await task
