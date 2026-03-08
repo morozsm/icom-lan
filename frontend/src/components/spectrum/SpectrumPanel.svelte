@@ -42,6 +42,7 @@
 
   // --- Component state ---
   let scopePixels = $state<Uint8Array | null>(null);
+  let waterfallPush: ((data: Uint8Array) => void) | null = null;
   let startFreq = $state(0);
   let endFreq = $state(0);
   let fullscreen = $state(false);
@@ -90,6 +91,9 @@
         endFreq = frame.endFreq;
       }
       scopePixels = frame.pixels;
+      // Direct push to waterfall renderer — bypasses Svelte reactivity
+      // which can't track Uint8Array changes at 100+ fps
+      waterfallPush?.(frame.pixels);
     });
 
     // DX spots come through the main control WebSocket as JSON messages
@@ -116,7 +120,7 @@
     <SpectrumCanvas data={scopePixels} options={spectrumOptions} />
   </div>
   <div class="waterfall-area">
-    <WaterfallCanvas data={scopePixels} options={waterfallOptions} onFreqClick={handleTune} />
+    <WaterfallCanvas data={scopePixels} options={waterfallOptions} onFreqClick={handleTune} onRegisterPush={(fn) => waterfallPush = fn} />
     <DxOverlay spots={dxSpots} {startFreq} {endFreq} onTune={handleTune} />
   </div>
   <button class="fullscreen-btn" onclick={toggleFullscreen} title="Toggle fullscreen">
