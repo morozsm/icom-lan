@@ -79,6 +79,9 @@
       title={connectionStatus}
     ></span>
     <span class="radio-name">{modelName}</span>
+    {#if state?.ptt}
+      <span class="tx-badge">TX</span>
+    {/if}
     <span class="spacer"></span>
     <span class="utc-clock">{utcTime} UTC</span>
   </header>
@@ -236,6 +239,17 @@
 
   .status-dot.partial {
     background: var(--warning);
+  }
+
+  .tx-badge {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #fff;
+    background: var(--danger);
+    padding: 1px 5px;
+    border-radius: 3px;
+    animation: tx-pulse 1s ease-in-out infinite;
   }
 
   .spacer {

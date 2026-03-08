@@ -37,9 +37,13 @@
     if (!deferredPrompt) return;
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
+    deferredPrompt = null; // prompt() can only be called once — always clear
     if (outcome === 'accepted') {
       visible = false;
-      deferredPrompt = null;
+    } else {
+      // User dismissed native dialog — store timestamp so we don't re-prompt for 7 days
+      localStorage.setItem(DISMISS_KEY, String(Date.now()));
+      visible = false;
     }
   }
 
