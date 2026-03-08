@@ -58,10 +58,7 @@ def _runtime_capabilities(radio: "Radio | None") -> set[str]:
     raw_caps = getattr(radio, "capabilities", None)
     if isinstance(raw_caps, set):
         caps = set(raw_caps)
-    else:
-        caps = set()
-
-    if caps:
+        # If capabilities is explicitly set (even if empty), don't fallback to Protocol checks
         if "scope" in caps and not isinstance(radio, ScopeCapable):
             caps.discard("scope")
         if "audio" in caps and not isinstance(radio, AudioCapable):
@@ -70,6 +67,8 @@ def _runtime_capabilities(radio: "Radio | None") -> set[str]:
             caps.discard("dual_rx")
         return caps
 
+    # capabilities not set (None) → fallback to Protocol checks
+    caps = set()
     if isinstance(radio, ScopeCapable):
         caps.add("scope")
     if isinstance(radio, AudioCapable):
