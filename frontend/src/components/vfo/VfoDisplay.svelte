@@ -1,6 +1,8 @@
 <script lang="ts">
   import VfoDigit from './VfoDigit.svelte';
   import FreqEntry from './FreqEntry.svelte';
+  import { gesture } from '../../lib/gestures/use-gesture';
+  import { vibrate } from '../../lib/utils/haptics';
 
   interface Props {
     label?: string; // 'VFO A' | 'VFO B'
@@ -84,6 +86,28 @@
     if (e instanceof KeyboardEvent && e.key !== 'Enter') return;
     freqEntryOpen = true;
   }
+
+  // Swipe-to-tune: velocity determines step size
+  // Slow (<0.3 px/ms): 100 Hz, Medium (<1 px/ms): 1 kHz, Fast: 10 kHz
+  let swipeOffset = $state(0);
+
+  const freqGestures = {
+    onSwipe(dir: 'left' | 'right' | 'up' | 'down', velocity: number, _distance: number) {
+      if (dir !== 'left' && dir !== 'right') return;
+      let step: number;
+      if (velocity < 0.3) {
+        step = 100;
+      } else if (velocity < 1) {
+        step = 1_000;
+      } else {
+        step = 10_000;
+      }
+      const delta = dir === 'right' ? 1 : -1;
+      const newFreq = Math.max(0, Math.min(999_999_999, freq + delta * step));
+      vibrate('tune');
+      ontune?.(newFreq);
+    },
+  };
 </script>
 
 <div class="vfo-display" class:active class:inactive={!active}>
@@ -106,7 +130,7 @@
     {/if}
   </div>
 
-  <div class="vfo-freq" role="group" aria-label="Frequency {freq} Hz">
+  <div class="vfo-freq" role="group" aria-label="Frequency {freq} Hz" use:gesture={freqGestures}>
     {#each digits as item (item.position ?? 'dot-' + item.char)}
       {#if item.position === null}
         <span class="dot">.</span>

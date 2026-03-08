@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { vibrate } from '../../lib/utils/haptics';
+
   interface Props {
     digit: string;
     position: number; // 0=1Hz, 1=10Hz, 2=100Hz, 3=1kHz, 6=1MHz, etc.
@@ -19,6 +21,7 @@
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
       const delta = e.deltaY < 0 ? 1 : -1;
+      vibrate('tune');
       _onincrement?.(_position, delta);
     };
     target.addEventListener('wheel', handleWheel, { passive: false });
@@ -32,9 +35,11 @@
   function handleKeyDown(e: KeyboardEvent) {
     if (e.key === 'ArrowUp') {
       e.preventDefault();
+      vibrate('tune');
       onincrement?.(position, 1);
     } else if (e.key === 'ArrowDown') {
       e.preventDefault();
+      vibrate('tune');
       onincrement?.(position, -1);
     }
   }
