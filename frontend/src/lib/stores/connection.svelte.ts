@@ -1,28 +1,41 @@
 // Connection health state
-let connected = $state(false);
+let httpConnected = $state(false);
 let wsConnected = $state(false);
-let lastUpdated = $state<Date | null>(null);
+let lastResponseTime = $state<number | null>(null);
 
-export function getConnected() {
-  return connected;
+let isFullyConnected = $derived(httpConnected && wsConnected);
+let connectionStatus = $derived<'connected' | 'partial' | 'disconnected'>(
+  isFullyConnected ? 'connected' : httpConnected || wsConnected ? 'partial' : 'disconnected',
+);
+
+export function setHttpConnected(v: boolean): void {
+  httpConnected = v;
 }
 
-export function getWsConnected() {
+export function setWsConnected(v: boolean): void {
+  wsConnected = v;
+}
+
+export function setLastResponseTime(ms: number): void {
+  lastResponseTime = ms;
+}
+
+export function getConnectionStatus(): 'connected' | 'partial' | 'disconnected' {
+  return connectionStatus;
+}
+
+export function isConnected(): boolean {
+  return isFullyConnected;
+}
+
+export function getHttpConnected(): boolean {
+  return httpConnected;
+}
+
+export function getWsConnected(): boolean {
   return wsConnected;
 }
 
-export function getLastUpdated() {
-  return lastUpdated;
-}
-
-export function setConnected(value: boolean) {
-  connected = value;
-}
-
-export function setWsConnected(value: boolean) {
-  wsConnected = value;
-}
-
-export function markUpdated() {
-  lastUpdated = new Date();
+export function getLastResponseTime(): number | null {
+  return lastResponseTime;
 }

@@ -1,4 +1,4 @@
-// State types — mirrors backend /api/v1/state schema
+// State types — mirrors backend /api/v1/state schema (camelCase)
 
 export interface ReceiverState {
   freqHz: number;
@@ -13,6 +13,45 @@ export interface ReceiverState {
   afLevel: number;
   rfGain: number;
   squelch: number;
+  // Extended fields present in real API
+  digisel: boolean;
+  ipplus: boolean;
+  sMeterSqlOpen: boolean;
+  agc: number;
+  audioPeakFilter: number;
+  autoNotch: boolean;
+  manualNotch: boolean;
+  twinPeakFilter: boolean;
+  filterShape: number;
+  agcTimeConstant: number;
+  apfTypeLevel: number;
+  nrLevel: number;
+  pbtInner: number;
+  pbtOuter: number;
+  nbLevel: number;
+  digiselShift: number;
+  afMute: boolean;
+}
+
+export interface ScopeControls {
+  receiver: number;
+  dual: boolean;
+  mode: number;
+  span: number;
+  edge: number;
+  hold: boolean;
+  refDb: number;
+  speed: number;
+  duringTx: boolean;
+  centerType: number;
+  vbwNarrow: boolean;
+  rbw: number;
+  fixedEdge: {
+    rangeIndex: number;
+    edge: number;
+    startHz: number;
+    endHz: number;
+  };
 }
 
 export interface ServerState {
@@ -33,6 +72,41 @@ export interface ServerState {
     radioReady: boolean;
     controlConnected: boolean;
   };
+
+  // Extended fields present in real API
+  powerLevel: number;
+  scanning: boolean;
+  tuningStep: number;
+  overflow: boolean;
+  txFreqMonitor: boolean;
+  ritFreq: number;
+  ritOn: boolean;
+  ritTx: boolean;
+  compMeter: number;
+  vdMeter: number;
+  idMeter: number;
+  cwPitch: number;
+  micGain: number;
+  keySpeed: number;
+  notchFilter: number;
+  mainSubTracking: boolean;
+  compressorOn: boolean;
+  compressorLevel: number;
+  monitorOn: boolean;
+  breakInDelay: number;
+  breakIn: number;
+  dialLock: boolean;
+  driveGain: number;
+  monitorGain: number;
+  voxOn: boolean;
+  voxGain: number;
+  antiVoxGain: number;
+  ssbTxBandwidth: number;
+  refAdjust: number;
+  dashRatio: number;
+  nbDepth: number;
+  nbWidth: number;
+  scopeControls: ScopeControls;
 }
 
 export interface UiState {
@@ -49,7 +123,7 @@ export interface UiState {
 
 export interface PendingCommand {
   id: string;
-  type: 'set_freq' | 'set_mode' | 'set_filter' | 'ptt_on' | 'ptt_off';
+  type: string;
   payload: unknown;
   createdAt: number;
   status: 'pending' | 'acked' | 'failed';
