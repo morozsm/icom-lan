@@ -13,7 +13,9 @@
   --space-2: 8px;
   --space-3: 12px;
   --space-4: 16px;
+  --space-5: 20px;
   --space-6: 24px;
+  --right-pane-width: 320px;
   --font-mono: 'JetBrains Mono', 'SF Mono', monospace;
   --font-sans: system-ui, -apple-system, sans-serif;
   --radius: 8px;

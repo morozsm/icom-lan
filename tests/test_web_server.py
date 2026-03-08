@@ -493,8 +493,8 @@ class TestHttpEndpoints:
         host, port = _addr(server)
         _, _, body = await _http_get(host, port, "/api/v1/state")
         data = json.loads(body)
-        assert "radio_ready" in data
-        assert isinstance(data["radio_ready"], bool)
+        assert "connection" in data
+        assert isinstance(data["connection"]["radioReady"], bool)
 
     async def test_root_returns_html(self, server: WebServer) -> None:
         host, port = _addr(server)

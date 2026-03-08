@@ -1,4 +1,5 @@
 import type { WsCommand, WsMessage } from '../types/protocol';
+import { setWsConnected } from '../stores/connection.svelte';
 
 type MessageHandler = (msg: WsMessage) => void;
 
@@ -8,7 +9,7 @@ let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 const handlers = new Set<MessageHandler>();
 const RECONNECT_DELAY_MS = 2000;
 
-export function connect(url: string = '/ws') {
+export function connect(url: string = '/api/v1/ws') {
   if (ws?.readyState === WebSocket.OPEN) return;
 
   ws = new WebSocket(url);
@@ -18,6 +19,7 @@ export function connect(url: string = '/ws') {
       clearTimeout(reconnectTimer);
       reconnectTimer = null;
     }
+    setWsConnected(true);
   };
 
   ws.onmessage = (event: MessageEvent) => {
@@ -31,6 +33,7 @@ export function connect(url: string = '/ws') {
 
   ws.onclose = () => {
     ws = null;
+    setWsConnected(false);
     reconnectTimer = setTimeout(() => connect(url), RECONNECT_DELAY_MS);
   };
 
@@ -45,11 +48,17 @@ export function disconnect() {
   ws = null;
 }
 
-export function sendCommand(cmd: WsCommand) {
+/**
+ * Send a command over the WebSocket connection.
+ * Returns `false` if the socket is not currently connected (caller should
+ * check `isConnected()` or rely on the commands store to track pending state).
+ */
+export function sendCommand(cmd: WsCommand): boolean {
   if (ws?.readyState !== WebSocket.OPEN) {
-    throw new Error('WebSocket not connected');
+    return false;
   }
   ws.send(JSON.stringify(cmd));
+  return true;
 }
 
 export function addMessageHandler(handler: MessageHandler) {

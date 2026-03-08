@@ -48,6 +48,58 @@ logger = logging.getLogger(__name__)
 _DEFAULT_STATIC_DIR = pathlib.Path(__file__).parent / "static"
 _RADIO_MODEL = "IC-7610"
 
+_MODES = ["USB", "LSB", "CW", "AM", "FM", "RTTY", "CWR"]
+_FILTERS = ["FIL1", "FIL2", "FIL3"]
+
+_RECEIVER_KEY_MAP = {"freq": "freqHz"}
+
+
+def _to_camel(s: str) -> str:
+    """Convert a snake_case identifier to camelCase."""
+    parts = s.split("_")
+    return parts[0] + "".join(p.capitalize() for p in parts[1:])
+
+
+def _camel_keys(d: dict) -> dict:
+    """Recursively convert all dict keys from snake_case to camelCase."""
+    return {
+        _to_camel(k): (_camel_keys(v) if isinstance(v, dict) else v)
+        for k, v in d.items()
+    }
+
+
+def _camel_case_state(d: dict) -> dict:
+    """Transform ``RadioState.to_dict()`` output to camelCase for the frontend.
+
+    - All snake_case keys become camelCase.
+    - ``freq`` inside receiver dicts (``main``, ``sub``) is renamed to
+      ``freqHz``.
+    - Flat ``connected`` / ``radio_ready`` / ``control_connected`` keys are
+      removed from the top level and wrapped in a nested ``connection`` object.
+    """
+    connection = {
+        "rigConnected": d.get("connected", False),
+        "radioReady": d.get("radio_ready", False),
+        "controlConnected": d.get("control_connected", False),
+    }
+    skip = {"connected", "radio_ready", "control_connected"}
+    result: dict = {}
+    for key, value in d.items():
+        if key in skip:
+            continue
+        if key in ("main", "sub") and isinstance(value, dict):
+            inner = {}
+            for k, v in value.items():
+                new_k = _RECEIVER_KEY_MAP.get(k, _to_camel(k))
+                inner[new_k] = _camel_keys(v) if isinstance(v, dict) else v
+            result[key] = inner
+        elif isinstance(value, dict):
+            result[_to_camel(key)] = _camel_keys(value)
+        else:
+            result[_to_camel(key)] = value
+    result["connection"] = connection
+    return result
+
 
 def _runtime_capabilities(radio: "Radio | None") -> set[str]:
     """Return conservative runtime capabilities for the active radio."""
@@ -850,8 +902,8 @@ class WebServer:
                     "hasCw": "cw" in caps,
                     "maxReceivers": 2 if has_dual_rx else 1,
                     "tags": sorted(caps),
-                    "modes": ["USB", "LSB", "CW", "AM", "FM", "RTTY", "CWR"],
-                    "filters": ["FIL1", "FIL2", "FIL3"],
+                    "modes": _MODES,
+                    "filters": _FILTERS,
                 },
                 "connection": {
                     "rigConnected": connected,
@@ -884,7 +936,7 @@ class WebServer:
         )
         d["revision"] = self._radio_poller.revision if self._radio_poller is not None else 0
         d["updatedAt"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
-        body = json.dumps(d, separators=(",", ":")).encode()
+        body = json.dumps(_camel_case_state(d), separators=(",", ":")).encode()
         await _send_response(
             writer, 200, "OK", body, {"Content-Type": "application/json"}
         )
@@ -900,12 +952,12 @@ class WebServer:
                 "audio": "audio" in caps,
                 "tx": "tx" in caps,
                 "capabilities": sorted(caps),
-                "freq_ranges": [
+                "freqRanges": [
                     {"start": 30000, "end": 60000000, "label": "HF"},
                     {"start": 50000000, "end": 54000000, "label": "6m"},
                 ],
-                "modes": ["USB", "LSB", "CW", "AM", "FM", "RTTY", "CWR"],
-                "filters": ["FIL1", "FIL2", "FIL3"],
+                "modes": _MODES,
+                "filters": _FILTERS,
             },
             separators=(",", ":"),
         ).encode()

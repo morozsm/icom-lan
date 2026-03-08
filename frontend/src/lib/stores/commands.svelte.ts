@@ -21,6 +21,12 @@ export function failCommand(id: string) {
   if (cmd) cmd.status = 'failed';
 }
 
+/**
+ * Remove all finished commands (both `acked` and `failed`) from the queue.
+ * Only `pending` commands are kept. Call this after processing acknowledged
+ * results to prevent unbounded queue growth. If you need to inspect or retry
+ * failed commands, do so before calling this function.
+ */
 export function clearFinishedCommands() {
   commands = commands.filter((c) => c.status === 'pending');
 }
