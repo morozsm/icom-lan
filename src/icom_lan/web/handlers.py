@@ -53,6 +53,15 @@ from .radio_poller import (
     SwitchScopeReceiver,
     VfoEqualize,
     VfoSwap,
+    SetAntenna1,
+    SetAntenna2,
+    SetRxAntennaAnt1,
+    SetRxAntennaAnt2,
+    SetSystemDate,
+    SetSystemTime,
+    SetAcc1ModLevel,
+    SetUsbModLevel,
+    SetLanModLevel,
 )
 from .websocket import WS_OP_BINARY, WS_OP_TEXT, WebSocketConnection
 
@@ -143,6 +152,17 @@ class ControlHandler:
             "set_scope_during_tx",
             "set_scope_center_type",
             "set_scope_fixed_edge",
+            "set_antenna_1",
+            "set_antenna_2",
+            "set_rx_antenna_ant1",
+            "set_rx_antenna_ant2",
+            "get_system_date",
+            "set_system_date",
+            "get_system_time",
+            "set_system_time",
+            "set_acc1_mod_level",
+            "set_usb_mod_level",
+            "set_lan_mod_level",
         ]
     )
 
@@ -456,7 +476,7 @@ class ControlHandler:
             return
 
         try:
-            result = self._enqueue_command(name, params)
+            result = await self._enqueue_command(name, params)
             await self._ws.send_text(
                 encode_json(
                     {
@@ -481,17 +501,27 @@ class ControlHandler:
                 )
             )
 
-    def _enqueue_command(
+    async def _enqueue_command(
         self, name: str, params: dict[str, Any]
     ) -> dict[str, Any]:
         """Build a Command dataclass, enqueue it, and return the ack result."""
+        logger.info("enqueue_command: %s params=%s", name, params)
+
+        # Read-only commands — no command queue needed
+        if name == "get_system_date":
+            if self._radio is None:
+                raise RuntimeError("radio connection not available")
+            year, month, day = await self._radio.get_system_date()
+            return {"year": year, "month": month, "day": day}
+        if name == "get_system_time":
+            if self._radio is None:
+                raise RuntimeError("radio connection not available")
+            hour, minute = await self._radio.get_system_time()
+            return {"hour": hour, "minute": minute}
+
         q = self._server.command_queue if self._server is not None else None
         if q is None:
             raise RuntimeError("no command queue available")
-        if name == "set_freq":
-            logger.info("enqueue_command: %s params=%s", name, params)
-        else:
-            logger.info("enqueue_command: %s params=%s", name, params)
 
         match name:
             case "set_band":
@@ -626,6 +656,45 @@ class ControlHandler:
                 self._ensure_capability("scope", "set_scope_fixed_edge")
                 q.put(SetScopeFixedEdge(edge, start_hz, end_hz))
                 return {"edge": edge, "start_hz": start_hz, "end_hz": end_hz}
+            case "set_antenna_1":
+                on = bool(params.get("on", False))
+                q.put(SetAntenna1(on))
+                return {"on": on}
+            case "set_antenna_2":
+                on = bool(params.get("on", False))
+                q.put(SetAntenna2(on))
+                return {"on": on}
+            case "set_rx_antenna_ant1":
+                on = bool(params.get("on", False))
+                q.put(SetRxAntennaAnt1(on))
+                return {"on": on}
+            case "set_rx_antenna_ant2":
+                on = bool(params.get("on", False))
+                q.put(SetRxAntennaAnt2(on))
+                return {"on": on}
+            case "set_system_date":
+                year = int(params["year"])
+                month = int(params["month"])
+                day = int(params["day"])
+                q.put(SetSystemDate(year, month, day))
+                return {"year": year, "month": month, "day": day}
+            case "set_system_time":
+                hour = int(params["hour"])
+                minute = int(params["minute"])
+                q.put(SetSystemTime(hour, minute))
+                return {"hour": hour, "minute": minute}
+            case "set_acc1_mod_level":
+                level = int(params["level"])
+                q.put(SetAcc1ModLevel(level))
+                return {"level": level}
+            case "set_usb_mod_level":
+                level = int(params["level"])
+                q.put(SetUsbModLevel(level))
+                return {"level": level}
+            case "set_lan_mod_level":
+                level = int(params["level"])
+                q.put(SetLanModLevel(level))
+                return {"level": level}
             case _:
                 raise ValueError(f"unhandled command: {name!r}")
 

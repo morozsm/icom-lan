@@ -77,7 +77,7 @@ async def test_single_profile_poller_rejects_sub_receiver() -> None:
     assert all(receiver in {0, None} for _, _, receiver in poller._STATE_QUERIES)  # noqa: SLF001
 
 
-def test_control_handler_checks_capabilities_not_model_name() -> None:
+async def test_control_handler_checks_capabilities_not_model_name() -> None:
     profile = resolve_radio_profile(model="IC-7300")
     ws = SimpleNamespace(send_text=AsyncMock(), recv=AsyncMock())
     queue = SimpleNamespace(put=lambda _cmd: None)
@@ -86,7 +86,7 @@ def test_control_handler_checks_capabilities_not_model_name() -> None:
     handler = ControlHandler(ws, radio, "1.0", profile.model, server=server)
 
     with pytest.raises(ValueError, match="missing capability: nb"):
-        handler._enqueue_command("set_nb", {"on": True, "receiver": 0})
+        await handler._enqueue_command("set_nb", {"on": True, "receiver": 0})
 
 
 @pytest.mark.asyncio

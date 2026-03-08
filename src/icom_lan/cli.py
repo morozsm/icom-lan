@@ -13,6 +13,9 @@ Usage:
     icom-lan att [VALUE] [--host HOST] [--user USER] [--pass PASS]
     icom-lan preamp [VALUE] [--host HOST] [--user USER] [--pass PASS]
     icom-lan ptt {on,off} [--host HOST] [--user USER] [--pass PASS]
+    icom-lan antenna [--ant1 on|off] [--ant2 on|off] [--rx-ant1 on|off] [--rx-ant2 on|off]
+    icom-lan date [YYYY-MM-DD]
+    icom-lan time [HH:MM]
     icom-lan discover
 """
 
@@ -372,6 +375,21 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Preamp level: 0 (off), 1 (PRE1), 2 (PRE2), or 'off'",
     )
 
+    # antenna
+    antenna_p = sub.add_parser("antenna", help="Antenna selection control")
+    antenna_p.add_argument("--ant1", choices=["on", "off"], help="Set ANT1")
+    antenna_p.add_argument("--ant2", choices=["on", "off"], help="Set ANT2")
+    antenna_p.add_argument("--rx-ant1", dest="rx_ant1", choices=["on", "off"], help="Set RX antenna on ANT1")
+    antenna_p.add_argument("--rx-ant2", dest="rx_ant2", choices=["on", "off"], help="Set RX antenna on ANT2")
+
+    # date
+    date_p = sub.add_parser("date", help="Get or set system date (YYYY-MM-DD)")
+    date_p.add_argument("date", nargs="?", help="Date to set (get if omitted)")
+
+    # time
+    time_p = sub.add_parser("time", help="Get or set system time (HH:MM)")
+    time_p.add_argument("time", nargs="?", help="Time to set (get if omitted)")
+
     # discover
     sub.add_parser("discover", help="Discover radios on the network")
 
@@ -711,6 +729,12 @@ async def _run(args: argparse.Namespace) -> int:
                 return await _cmd_att(radio, args)
             elif args.command == "preamp":
                 return await _cmd_preamp(radio, args)
+            elif args.command == "antenna":
+                return await _cmd_antenna(radio, args)
+            elif args.command == "date":
+                return await _cmd_date(radio, args)
+            elif args.command == "time":
+                return await _cmd_time(radio, args)
             elif args.command == "web":
                 return await _cmd_web(radio, args)
             elif args.command == "scope":
@@ -1325,6 +1349,70 @@ async def _cmd_preamp(radio: IcomRadio, args: argparse.Namespace) -> int:
             )
         else:
             print(f"Preamp: {_PREAMP_NAMES.get(level, str(level))}")
+    return 0
+
+
+async def _cmd_antenna(radio: IcomRadio, args: argparse.Namespace) -> int:
+    acted = False
+    if args.ant1 is not None:
+        on = args.ant1 == "on"
+        await radio.set_antenna_1(on)
+        print(f"ANT1: {'ON' if on else 'OFF'}")
+        acted = True
+    if args.ant2 is not None:
+        on = args.ant2 == "on"
+        await radio.set_antenna_2(on)
+        print(f"ANT2: {'ON' if on else 'OFF'}")
+        acted = True
+    if args.rx_ant1 is not None:
+        on = args.rx_ant1 == "on"
+        await radio.set_rx_antenna_ant1(on)
+        print(f"RX ANT1: {'ON' if on else 'OFF'}")
+        acted = True
+    if args.rx_ant2 is not None:
+        on = args.rx_ant2 == "on"
+        await radio.set_rx_antenna_ant2(on)
+        print(f"RX ANT2: {'ON' if on else 'OFF'}")
+        acted = True
+    if not acted:
+        ant1 = await radio.get_antenna_1()
+        ant2 = await radio.get_antenna_2()
+        rx_ant1 = await radio.get_rx_antenna_ant1()
+        rx_ant2 = await radio.get_rx_antenna_ant2()
+        print(f"ANT1: {'ON' if ant1 else 'OFF'}")
+        print(f"ANT2: {'ON' if ant2 else 'OFF'}")
+        print(f"RX ANT1: {'ON' if rx_ant1 else 'OFF'}")
+        print(f"RX ANT2: {'ON' if rx_ant2 else 'OFF'}")
+    return 0
+
+
+async def _cmd_date(radio: IcomRadio, args: argparse.Namespace) -> int:
+    if args.date is not None:
+        try:
+            year, month, day = map(int, args.date.split("-"))
+        except ValueError:
+            print(f"Error: invalid date format '{args.date}' (expected YYYY-MM-DD)", file=sys.stderr)
+            return 1
+        await radio.set_system_date(year, month, day)
+        print(f"Date set: {year}-{month:02d}-{day:02d}")
+    else:
+        year, month, day = await radio.get_system_date()
+        print(f"{year}-{month:02d}-{day:02d}")
+    return 0
+
+
+async def _cmd_time(radio: IcomRadio, args: argparse.Namespace) -> int:
+    if args.time is not None:
+        try:
+            hour, minute = map(int, args.time.split(":"))
+        except ValueError:
+            print(f"Error: invalid time format '{args.time}' (expected HH:MM)", file=sys.stderr)
+            return 1
+        await radio.set_system_time(hour, minute)
+        print(f"Time set: {hour:02d}:{minute:02d}")
+    else:
+        hour, minute = await radio.get_system_time()
+        print(f"{hour:02d}:{minute:02d}")
     return 0
 
 

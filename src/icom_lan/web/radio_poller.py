@@ -41,7 +41,10 @@ if TYPE_CHECKING:
     from ..radio_protocol import Radio
 
 __all__ = ["RadioPoller", "CommandQueue", "EnableScope", "DisableScope", "SwitchScopeReceiver",
-           "SetScopeDuringTx", "SetScopeCenterType", "SetScopeFixedEdge"]
+           "SetScopeDuringTx", "SetScopeCenterType", "SetScopeFixedEdge",
+           "SetAntenna1", "SetAntenna2", "SetRxAntennaAnt1", "SetRxAntennaAnt2",
+           "SetSystemDate", "SetSystemTime",
+           "SetAcc1ModLevel", "SetUsbModLevel", "SetLanModLevel"]
 
 logger = logging.getLogger(__name__)
 
@@ -174,12 +177,54 @@ class SetScopeFixedEdge:
 class SetPowerstat:
     on: bool
 
+@dataclass(frozen=True, slots=True)
+class SetAntenna1:
+    on: bool
+
+@dataclass(frozen=True, slots=True)
+class SetAntenna2:
+    on: bool
+
+@dataclass(frozen=True, slots=True)
+class SetRxAntennaAnt1:
+    on: bool
+
+@dataclass(frozen=True, slots=True)
+class SetRxAntennaAnt2:
+    on: bool
+
+@dataclass(frozen=True, slots=True)
+class SetSystemDate:
+    year: int
+    month: int
+    day: int
+
+@dataclass(frozen=True, slots=True)
+class SetSystemTime:
+    hour: int
+    minute: int
+
+@dataclass(frozen=True, slots=True)
+class SetAcc1ModLevel:
+    level: int
+
+@dataclass(frozen=True, slots=True)
+class SetUsbModLevel:
+    level: int
+
+@dataclass(frozen=True, slots=True)
+class SetLanModLevel:
+    level: int
+
 
 Command = (
     SetFreq | SetMode | SetFilter | SetPower | SetRfGain | SetAfLevel | SetSquelch | SetNB | SetNR | SetDigiSel | SetIpPlus
     | SetAttenuator | SetPreamp | PttOn | PttOff | SetBand | SelectVfo
     | VfoSwap | VfoEqualize | EnableScope | DisableScope | SwitchScopeReceiver
     | SetScopeDuringTx | SetScopeCenterType | SetScopeFixedEdge | SetPowerstat
+    | SetAntenna1 | SetAntenna2 | SetRxAntennaAnt1 | SetRxAntennaAnt2
+    | SetSystemDate | SetSystemTime
+    | SetAcc1ModLevel | SetUsbModLevel | SetLanModLevel
 )
 
 
@@ -633,6 +678,24 @@ class RadioPoller:
                 # CI-V 0x18: 0x01 = power on, 0x00 = power off
                 await self._civ(0x18, data=b"\x01" if on else b"\x00")
                 logger.info("radio-poller: power %s", "ON" if on else "OFF")
+            case SetAntenna1(on=on):
+                await radio.set_antenna_1(on)
+            case SetAntenna2(on=on):
+                await radio.set_antenna_2(on)
+            case SetRxAntennaAnt1(on=on):
+                await radio.set_rx_antenna_ant1(on)
+            case SetRxAntennaAnt2(on=on):
+                await radio.set_rx_antenna_ant2(on)
+            case SetSystemDate(year=year, month=month, day=day):
+                await radio.set_system_date(year, month, day)
+            case SetSystemTime(hour=hour, minute=minute):
+                await radio.set_system_time(hour, minute)
+            case SetAcc1ModLevel(level=level):
+                await radio.set_acc1_mod_level(level)
+            case SetUsbModLevel(level=level):
+                await radio.set_usb_mod_level(level)
+            case SetLanModLevel(level=level):
+                await radio.set_lan_mod_level(level)
 
     # Fast: meters (polled on even cycles)
     # wfview: Priority=Highest, queue interval 25ms for LAN (HasFDComms)
