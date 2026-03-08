@@ -24,12 +24,17 @@
   // Accumulated pan offset in Hz (applied on drag end)
   let panOffsetHz = $state(0);
 
-  // Push new scope row when data changes
-  $effect(() => {
-    if (data && renderer) {
+  // Track last data reference to detect new scope frames
+  let lastDataRef: Uint8Array | null = null;
+  let rafId = 0;
+
+  function tick() {
+    if (data && renderer && data !== lastDataRef) {
+      lastDataRef = data;
       renderer.pushRow(data);
     }
-  });
+    rafId = requestAnimationFrame(tick);
+  }
 
   // Sync options changes (colorMap, centerHz, spanHz) to the renderer
   $effect(() => {
@@ -88,6 +93,7 @@
 
   onMount(() => {
     renderer = new WaterfallRenderer(canvas, options);
+    rafId = requestAnimationFrame(tick);
 
     const ro = new ResizeObserver((entries) => {
       const rect = entries[0]?.contentRect;
@@ -102,6 +108,7 @@
     ro.observe(canvas);
 
     return () => {
+      cancelAnimationFrame(rafId);
       ro.disconnect();
       renderer?.destroy();
       renderer = null;
