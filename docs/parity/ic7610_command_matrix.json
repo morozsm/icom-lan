@@ -8,8 +8,8 @@
   "status_totals": {
     "implemented": 131,
     "partial": 0,
-    "missing": 0,
-    "not_applicable": 3
+    "missing": 3,
+    "not_applicable": 0
   },
   "families": {
     "baseline_core": {
@@ -51,9 +51,9 @@
       "summary": "Remaining dual-watch/scanning/VFO parity tracked by issue #132.",
       "counts": {
         "implemented": 9,
-        "not_applicable": 1,
         "partial": 0,
-        "missing": 0
+        "missing": 1,
+        "not_applicable": 0
       }
     },
     "memory_bandstack": {
@@ -84,9 +84,9 @@
       "summary": "Antenna, CI-V config, mod routing, and date/time/UTC work tracked by issue #135.",
       "counts": {
         "implemented": 14,
-        "not_applicable": 2,
         "partial": 0,
-        "missing": 0
+        "missing": 2,
+        "not_applicable": 0
       }
     },
     "transceiver_status": {
@@ -586,8 +586,8 @@
       "set": true,
       "admin": false,
       "family": "system_config",
-      "status": "not_applicable",
-      "notes": "Speech command shares 0x12 wire with antenna; no dedicated builder yet.",
+      "status": "missing",
+      "notes": "Speech (0x13) - no builder in commands.py",
       "runtime_symbols": [],
       "test_patterns": []
     },
@@ -1815,8 +1815,8 @@
       "set": true,
       "admin": false,
       "family": "system_config",
-      "status": "not_applicable",
-      "notes": "Transceiver ID shares protocol space; covered by CI-V init.",
+      "status": "missing",
+      "notes": "Transceiver ID (0x19 0x00) - no builder",
       "runtime_symbols": [],
       "test_patterns": []
     },
@@ -2390,8 +2390,8 @@
       "set": true,
       "admin": false,
       "family": "vfo_dualwatch_scan",
-      "status": "not_applicable",
-      "notes": "XFC Status not separately implemented; placeholder for wfview parity count.",
+      "status": "missing",
+      "notes": "XFC Status (0x1C 0x02) - no builder",
       "runtime_symbols": [],
       "test_patterns": []
     },
