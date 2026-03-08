@@ -1,38 +1,37 @@
-// Audio state — volume, mute, PTT
-let volume = $state(0.8);
-let muted = $state(false);
-let ptt = $state(false);
-let pttPending = $state(false);
+// Audio state — volume, mute, RX/TX bridge
+let audioState = $state({
+  rxEnabled: false,
+  txEnabled: false,
+  volume: 50,
+  muted: false,
+  micEnabled: false,
+  bridgeRunning: false,
+});
 
-export function getVolume() {
-  return volume;
+export function getAudioState(): typeof audioState {
+  return audioState;
 }
 
-export function getMuted() {
-  return muted;
+export function setVolume(v: number): void {
+  audioState.volume = Math.max(0, Math.min(100, Math.round(v)));
 }
 
-export function getPtt() {
-  return ptt;
+export function toggleMute(): void {
+  audioState.muted = !audioState.muted;
 }
 
-export function getPttPending() {
-  return pttPending;
+export function setRxEnabled(v: boolean): void {
+  audioState.rxEnabled = v;
 }
 
-export function setVolume(value: number) {
-  volume = Math.max(0, Math.min(1, value));
+export function setTxEnabled(v: boolean): void {
+  audioState.txEnabled = v;
 }
 
-export function toggleMute() {
-  muted = !muted;
+export function setMicEnabled(v: boolean): void {
+  audioState.micEnabled = v;
 }
 
-export function setPttPending(value: boolean) {
-  pttPending = value;
-}
-
-export function setPtt(value: boolean) {
-  ptt = value;
-  pttPending = false;
+export function setBridgeRunning(v: boolean): void {
+  audioState.bridgeRunning = v;
 }

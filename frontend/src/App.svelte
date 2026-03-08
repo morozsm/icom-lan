@@ -4,7 +4,7 @@
   import { connect } from './lib/transport/ws-client';
   import { setCapabilities } from './lib/stores/capabilities.svelte';
   import { setRadioState } from './lib/stores/radio.svelte';
-  import { setConnected } from './lib/stores/connection.svelte';
+  import { setHttpConnected } from './lib/stores/connection.svelte';
   import AppShell from './components/layout/AppShell.svelte';
   import './app.css';
 
@@ -16,7 +16,7 @@
       setCapabilities(caps);
       stopPolling = startPolling((state) => {
         setRadioState(state);
-        setConnected(true);
+        setHttpConnected(true);
       });
       connect('/api/v1/ws');
     })();
