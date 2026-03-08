@@ -1,71 +1,189 @@
 import type { WsCommand, WsMessage } from '../types/protocol';
 import { setWsConnected } from '../stores/connection.svelte';
 
+export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'reconnecting';
 type MessageHandler = (msg: WsMessage) => void;
+type BinaryHandler = (data: ArrayBuffer) => void;
+type StateHandler = (state: ConnectionState) => void;
 
-// WebSocket client with auto-reconnect
-let ws: WebSocket | null = null;
-let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-const handlers = new Set<MessageHandler>();
-const RECONNECT_DELAY_MS = 2000;
+const BACKOFF_BASE_MS = 1_000;
+const BACKOFF_MAX_MS = 30_000;
+const HEARTBEAT_TIMEOUT_MS = 10_000;
+
+function calcBackoff(attempt: number): number {
+  return Math.min(BACKOFF_BASE_MS * 2 ** attempt, BACKOFF_MAX_MS);
+}
+
+export class WsChannel {
+  private ws: WebSocket | null = null;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private heartbeatTimer: ReturnType<typeof setTimeout> | null = null;
+  private attempt = 0;
+  private intentionalClose = false;
+  private sendQueue: WsCommand[] = [];
+  private messageHandlers = new Set<MessageHandler>();
+  private binaryHandlers = new Set<BinaryHandler>();
+  private stateHandlers = new Set<StateHandler>();
+  private _state: ConnectionState = 'disconnected';
+  private url = '';
+
+  get state(): ConnectionState {
+    return this._state;
+  }
+
+  private setState(s: ConnectionState) {
+    this._state = s;
+    this.stateHandlers.forEach((h) => h(s));
+  }
+
+  connect(url: string) {
+    if (this.ws?.readyState === WebSocket.OPEN) return;
+    this.url = url;
+    this.intentionalClose = false;
+    this._open();
+  }
+
+  private _open() {
+    this.setState(this.attempt === 0 ? 'connecting' : 'reconnecting');
+    const ws = new WebSocket(this.url);
+    ws.binaryType = 'arraybuffer';
+    this.ws = ws;
+
+    ws.onopen = () => {
+      this.attempt = 0;
+      this.setState('connected');
+      this._resetHeartbeat();
+      // drain send queue
+      const queued = this.sendQueue.splice(0);
+      for (const cmd of queued) ws.send(JSON.stringify(cmd));
+    };
+
+    ws.onmessage = (event: MessageEvent) => {
+      this._resetHeartbeat();
+      if (event.data instanceof ArrayBuffer) {
+        this.binaryHandlers.forEach((h) => h(event.data as ArrayBuffer));
+      } else {
+        try {
+          const msg = JSON.parse(event.data as string) as WsMessage;
+          this.messageHandlers.forEach((h) => h(msg));
+        } catch {
+          // ignore malformed frames
+        }
+      }
+    };
+
+    ws.onclose = () => {
+      this._clearHeartbeat();
+      this.ws = null;
+      this.setState('disconnected');
+      if (!this.intentionalClose) {
+        const delay = calcBackoff(this.attempt++);
+        this.reconnectTimer = setTimeout(() => this._open(), delay);
+      }
+    };
+
+    ws.onerror = () => {
+      ws.close();
+    };
+  }
+
+  disconnect() {
+    this.intentionalClose = true;
+    this._clearTimers();
+    this.ws?.close();
+    this.ws = null;
+    this.setState('disconnected');
+    this.attempt = 0;
+  }
+
+  send(cmd: WsCommand): boolean {
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify(cmd));
+      return true;
+    }
+    this.sendQueue.push(cmd);
+    return false;
+  }
+
+  isConnected(): boolean {
+    return this.ws?.readyState === WebSocket.OPEN;
+  }
+
+  onMessage(handler: MessageHandler): () => void {
+    this.messageHandlers.add(handler);
+    return () => this.messageHandlers.delete(handler);
+  }
+
+  onBinary(handler: BinaryHandler): () => void {
+    this.binaryHandlers.add(handler);
+    return () => this.binaryHandlers.delete(handler);
+  }
+
+  onStateChange(handler: StateHandler): () => void {
+    this.stateHandlers.add(handler);
+    return () => this.stateHandlers.delete(handler);
+  }
+
+  private _resetHeartbeat() {
+    this._clearHeartbeat();
+    this.heartbeatTimer = setTimeout(() => {
+      this.ws?.close();
+    }, HEARTBEAT_TIMEOUT_MS);
+  }
+
+  private _clearHeartbeat() {
+    if (this.heartbeatTimer) {
+      clearTimeout(this.heartbeatTimer);
+      this.heartbeatTimer = null;
+    }
+  }
+
+  private _clearTimers() {
+    this._clearHeartbeat();
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+  }
+}
+
+// ─── Control channel singleton (backward-compat API) ───────────────────────
+
+const _ctrl = new WsChannel();
+_ctrl.onStateChange((s) => setWsConnected(s === 'connected'));
 
 export function connect(url: string = '/api/v1/ws') {
-  if (ws?.readyState === WebSocket.OPEN) return;
-
-  ws = new WebSocket(url);
-
-  ws.onopen = () => {
-    if (reconnectTimer) {
-      clearTimeout(reconnectTimer);
-      reconnectTimer = null;
-    }
-    setWsConnected(true);
-  };
-
-  ws.onmessage = (event: MessageEvent) => {
-    try {
-      const msg: WsMessage = JSON.parse(event.data as string);
-      handlers.forEach((h) => h(msg));
-    } catch {
-      // ignore non-JSON frames (e.g. binary scope data)
-    }
-  };
-
-  ws.onclose = () => {
-    ws = null;
-    setWsConnected(false);
-    reconnectTimer = setTimeout(() => connect(url), RECONNECT_DELAY_MS);
-  };
-
-  ws.onerror = () => {
-    ws?.close();
-  };
+  _ctrl.connect(url);
 }
 
 export function disconnect() {
-  if (reconnectTimer) clearTimeout(reconnectTimer);
-  ws?.close();
-  ws = null;
+  _ctrl.disconnect();
 }
 
-/**
- * Send a command over the WebSocket connection.
- * Returns `false` if the socket is not currently connected (caller should
- * check `isConnected()` or rely on the commands store to track pending state).
- */
 export function sendCommand(cmd: WsCommand): boolean {
-  if (ws?.readyState !== WebSocket.OPEN) {
-    return false;
-  }
-  ws.send(JSON.stringify(cmd));
-  return true;
+  return _ctrl.send(cmd);
 }
 
-export function addMessageHandler(handler: MessageHandler) {
-  handlers.add(handler);
-  return () => handlers.delete(handler);
+export function onMessage(handler: MessageHandler): () => void {
+  return _ctrl.onMessage(handler);
 }
+
+/** @deprecated Use onMessage */
+export const addMessageHandler = onMessage;
 
 export function isConnected(): boolean {
-  return ws?.readyState === WebSocket.OPEN;
+  return _ctrl.isConnected();
+}
+
+// ─── Named channel registry (scope / audio) ────────────────────────────────
+
+const _channels = new Map<string, WsChannel>();
+
+export function getChannel(name: string): WsChannel {
+  let ch = _channels.get(name);
+  if (!ch) {
+    ch = new WsChannel();
+    _channels.set(name, ch);
+  }
+  return ch;
 }

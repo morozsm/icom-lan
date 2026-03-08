@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { fetchCapabilities, fetchState, startPolling } from './lib/transport/http-client';
+  import { fetchCapabilities, startPolling } from './lib/transport/http-client';
   import { connect } from './lib/transport/ws-client';
   import { setCapabilities } from './lib/stores/capabilities.svelte';
   import { setRadioState } from './lib/stores/radio.svelte';
@@ -14,8 +14,7 @@
     void (async () => {
       const caps = await fetchCapabilities();
       setCapabilities(caps);
-      stopPolling = startPolling(async () => {
-        const state = await fetchState();
+      stopPolling = startPolling((state) => {
         setRadioState(state);
         setConnected(true);
       });
