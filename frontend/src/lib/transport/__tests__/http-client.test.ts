@@ -184,6 +184,42 @@ describe('startPolling', () => {
     stop();
   });
 
+  it('calls setHttpConnected(true) on successful poll', async () => {
+    const state = makeState(1);
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(state),
+    });
+
+    const { startPolling } = await import('../http-client');
+    const { getHttpConnected } = await import('../../stores/connection.svelte');
+
+    const stop = startPolling(() => {});
+    await flushMicrotasks();
+
+    expect(getHttpConnected()).toBe(true);
+    stop();
+  });
+
+  it('calls setHttpConnected(false) after 3 consecutive errors', async () => {
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('network gone'));
+
+    const { startPolling } = await import('../http-client');
+    const { getHttpConnected } = await import('../../stores/connection.svelte');
+
+    const stop = startPolling(() => {}, 10);
+
+    // Trigger 3 consecutive failures
+    for (let i = 0; i < 3; i++) {
+      await flushMicrotasks();
+      vi.advanceTimersByTime(10);
+    }
+    await flushMicrotasks();
+
+    expect(getHttpConnected()).toBe(false);
+    stop();
+  });
+
   it('returns a stop function that halts polling', async () => {
     let callCount = 0;
     globalThis.fetch = vi.fn().mockImplementation(() => {

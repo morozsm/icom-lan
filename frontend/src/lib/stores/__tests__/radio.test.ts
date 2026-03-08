@@ -139,7 +139,7 @@ describe('radio store', () => {
   it('sets state and reads it back', () => {
     const s = makeState({ revision: 1 });
     store.setRadioState(s);
-    expect(store.getRadioState()).toBe(s);
+    expect(store.getRadioState()).toStrictEqual(s);
   });
 
   it('ignores stale states (lower revision)', () => {
@@ -191,5 +191,20 @@ describe('radio store', () => {
     store.setRadioState(makeState());
     expect(store.getMainReceiver()?.freqHz).toBe(14074000);
     expect(store.getSubReceiver()?.freqHz).toBe(7100000);
+  });
+
+  it('detects server restart: accepts state when revision resets from high to near zero', () => {
+    store.setRadioState(makeState({ revision: 100 }));
+    store.setRadioState(makeState({ revision: 1, ptt: true }));
+    expect(store.getRadioState()?.revision).toBe(1);
+    expect(store.getRadioState()?.ptt).toBe(true);
+  });
+
+  it('does not treat small revision drop as server restart (lastRevision <= 10)', () => {
+    store.setRadioState(makeState({ revision: 5 }));
+    store.setRadioState(makeState({ revision: 1, ptt: true }));
+    // lastRevision=5 which is NOT > 10, so treated as stale
+    expect(store.getRadioState()?.revision).toBe(5);
+    expect(store.getRadioState()?.ptt).toBe(false);
   });
 });

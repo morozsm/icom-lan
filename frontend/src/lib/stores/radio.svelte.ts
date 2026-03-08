@@ -19,7 +19,13 @@ export function getRadioState(): ServerState | null {
 }
 
 export function setRadioState(state: ServerState): void {
-  if (state.revision > lastRevision) {
+  const isReset = lastRevision > 10 && state.revision < lastRevision / 2;
+  if (isReset) {
+    console.warn(
+      `Detected server restart: revision reset from ${lastRevision} to ${state.revision}`,
+    );
+  }
+  if (state.revision > lastRevision || isReset) {
     lastRevision = state.revision;
     radioState = state;
   }

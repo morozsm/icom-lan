@@ -16,18 +16,17 @@ export interface DxSpot {
   time: string;
 }
 
-// Incoming message union
+// Incoming JSON message union (scope_data is binary — handled via onBinary, not here)
 export type WsIncoming =
-  | { type: 'scope_data'; data: ArrayBuffer }
   | { type: 'dx_spot'; spot: DxSpot }
   | { type: 'dx_spots'; spots: DxSpot[] }
   | { type: 'notification'; level: string; message: string }
   | { type: 'ack'; id: string }
   | { type: 'error'; id: string; message: string };
 
-// Incoming: server → client (loose form for existing callers)
+// Incoming: server → client (base interface for typed sub-interfaces)
 export interface WsMessage {
-  type: 'scope_data' | 'dx_spot' | 'dx_spots' | 'notification' | 'ack' | 'error';
+  type: 'dx_spot' | 'dx_spots' | 'notification' | 'ack' | 'error';
   [key: string]: unknown;
 }
 
@@ -45,7 +44,7 @@ export interface ErrorMessage extends WsMessage {
 export interface NotificationMessage extends WsMessage {
   type: 'notification';
   level: 'info' | 'warning' | 'error';
-  text: string;
+  message: string;
 }
 
 // /api/v1/info response

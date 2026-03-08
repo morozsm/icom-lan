@@ -19,6 +19,12 @@ export function addCommand(type: string, payload: unknown): PendingCommand {
     timeoutMs: 5000,
   };
   commands.push(cmd);
+  setTimeout(() => {
+    const current = commands.find((c) => c.id === cmd.id);
+    if (current?.status === 'pending') {
+      current.status = 'failed';
+    }
+  }, cmd.timeoutMs);
   return cmd;
 }
 

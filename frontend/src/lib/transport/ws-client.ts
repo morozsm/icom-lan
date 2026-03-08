@@ -1,17 +1,22 @@
-import type { WsCommand, WsMessage } from '../types/protocol';
+import type { WsCommand, WsIncoming } from '../types/protocol';
 import { setWsConnected } from '../stores/connection.svelte';
 
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'reconnecting';
-type MessageHandler = (msg: WsMessage) => void;
+type MessageHandler = (msg: WsIncoming) => void;
 type BinaryHandler = (data: ArrayBuffer) => void;
 type StateHandler = (state: ConnectionState) => void;
 
 const BACKOFF_BASE_MS = 1_000;
 const BACKOFF_MAX_MS = 30_000;
 const HEARTBEAT_TIMEOUT_MS = 10_000;
+const MAX_QUEUE_SIZE = 20;
+
+// Command types where only the latest value matters (last write wins)
+const IDEMPOTENT_TYPES = new Set(['set_freq', 'set_mode', 'set_filter']);
 
 function calcBackoff(attempt: number): number {
-  return Math.min(BACKOFF_BASE_MS * 2 ** attempt, BACKOFF_MAX_MS);
+  const base = Math.min(BACKOFF_BASE_MS * 2 ** attempt, BACKOFF_MAX_MS);
+  return base * (0.8 + Math.random() * 0.4);
 }
 
 export class WsChannel {
@@ -37,7 +42,8 @@ export class WsChannel {
   }
 
   connect(url: string) {
-    if (this.ws?.readyState === WebSocket.OPEN) return;
+    const rs = this.ws?.readyState;
+    if (rs === WebSocket.OPEN || rs === WebSocket.CONNECTING) return;
     this.url = url;
     this.intentionalClose = false;
     this._open();
@@ -64,7 +70,7 @@ export class WsChannel {
         this.binaryHandlers.forEach((h) => h(event.data as ArrayBuffer));
       } else {
         try {
-          const msg = JSON.parse(event.data as string) as WsMessage;
+          const msg = JSON.parse(event.data as string) as WsIncoming;
           this.messageHandlers.forEach((h) => h(msg));
         } catch {
           // ignore malformed frames
@@ -90,9 +96,9 @@ export class WsChannel {
   disconnect() {
     this.intentionalClose = true;
     this._clearTimers();
-    this.ws?.close();
+    const ws = this.ws;
     this.ws = null;
-    this.setState('disconnected');
+    ws?.close(); // onclose fires, sees intentionalClose=true, calls setState('disconnected')
     this.attempt = 0;
   }
 
@@ -101,7 +107,15 @@ export class WsChannel {
       this.ws.send(JSON.stringify(cmd));
       return true;
     }
+    // Deduplicate idempotent commands — keep only the latest value
+    if (IDEMPOTENT_TYPES.has(cmd.type)) {
+      this.sendQueue = this.sendQueue.filter((c) => c.type !== cmd.type);
+    }
     this.sendQueue.push(cmd);
+    // Drop oldest if over limit
+    if (this.sendQueue.length > MAX_QUEUE_SIZE) {
+      this.sendQueue.shift();
+    }
     return false;
   }
 

@@ -203,8 +203,8 @@ describe('WsChannel', () => {
     vi.advanceTimersByTime(10001);
 
     // heartbeat timer should have fired and closed the socket
-    // reconnect timer fires at 1s (attempt 0)
-    vi.advanceTimersByTime(1000);
+    // reconnect timer fires at 1s ± 20% jitter (attempt 0) — advance 1.3s to cover max
+    vi.advanceTimersByTime(1300);
     expect(instances.length).toBeGreaterThan(1);
   });
 

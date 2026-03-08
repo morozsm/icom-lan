@@ -13,24 +13,24 @@ export interface ReceiverState {
   afLevel: number;
   rfGain: number;
   squelch: number;
-  // Extended fields present in real API
-  digisel: boolean;
-  ipplus: boolean;
-  sMeterSqlOpen: boolean;
-  agc: number;
-  audioPeakFilter: number;
-  autoNotch: boolean;
-  manualNotch: boolean;
-  twinPeakFilter: boolean;
-  filterShape: number;
-  agcTimeConstant: number;
-  apfTypeLevel: number;
-  nrLevel: number;
-  pbtInner: number;
-  pbtOuter: number;
-  nbLevel: number;
-  digiselShift: number;
-  afMute: boolean;
+  // Extended fields — optional (not all radio models expose these)
+  digisel?: boolean;
+  ipplus?: boolean;
+  sMeterSqlOpen?: boolean;
+  agc?: number;
+  audioPeakFilter?: number;
+  autoNotch?: boolean;
+  manualNotch?: boolean;
+  twinPeakFilter?: boolean;
+  filterShape?: number;
+  agcTimeConstant?: number;
+  apfTypeLevel?: number;
+  nrLevel?: number;
+  pbtInner?: number;
+  pbtOuter?: number;
+  nbLevel?: number;
+  digiselShift?: number;
+  afMute?: boolean;
 }
 
 export interface ScopeControls {
@@ -73,40 +73,40 @@ export interface ServerState {
     controlConnected: boolean;
   };
 
-  // Extended fields present in real API
-  powerLevel: number;
-  scanning: boolean;
-  tuningStep: number;
-  overflow: boolean;
-  txFreqMonitor: boolean;
-  ritFreq: number;
-  ritOn: boolean;
-  ritTx: boolean;
-  compMeter: number;
-  vdMeter: number;
-  idMeter: number;
-  cwPitch: number;
-  micGain: number;
-  keySpeed: number;
-  notchFilter: number;
-  mainSubTracking: boolean;
-  compressorOn: boolean;
-  compressorLevel: number;
-  monitorOn: boolean;
-  breakInDelay: number;
-  breakIn: number;
-  dialLock: boolean;
-  driveGain: number;
-  monitorGain: number;
-  voxOn: boolean;
-  voxGain: number;
-  antiVoxGain: number;
-  ssbTxBandwidth: number;
-  refAdjust: number;
-  dashRatio: number;
-  nbDepth: number;
-  nbWidth: number;
-  scopeControls: ScopeControls;
+  // Extended fields — optional (not all radio models expose these)
+  powerLevel?: number;
+  scanning?: boolean;
+  tuningStep?: number;
+  overflow?: boolean;
+  txFreqMonitor?: boolean;
+  ritFreq?: number;
+  ritOn?: boolean;
+  ritTx?: boolean;
+  compMeter?: number;
+  vdMeter?: number;
+  idMeter?: number;
+  cwPitch?: number;
+  micGain?: number;
+  keySpeed?: number;
+  notchFilter?: number;
+  mainSubTracking?: boolean;
+  compressorOn?: boolean;
+  compressorLevel?: number;
+  monitorOn?: boolean;
+  breakInDelay?: number;
+  breakIn?: number;
+  dialLock?: boolean;
+  driveGain?: number;
+  monitorGain?: number;
+  voxOn?: boolean;
+  voxGain?: number;
+  antiVoxGain?: number;
+  ssbTxBandwidth?: number;
+  refAdjust?: number;
+  dashRatio?: number;
+  nbDepth?: number;
+  nbWidth?: number;
+  scopeControls?: ScopeControls;
 }
 
 export interface UiState {
