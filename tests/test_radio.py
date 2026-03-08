@@ -989,6 +989,53 @@ class TestCivTimeoutIsolation:
 
 
 # ---------------------------------------------------------------------------
+# Dual watch
+# ---------------------------------------------------------------------------
+
+
+def _dual_watch_response(on: bool) -> bytes:
+    """Build a CI-V dual-watch query response (0x07 0xC2 <on>) wrapped in UDP."""
+    from icom_lan.commands import build_civ_frame
+    civ = build_civ_frame(CONTROLLER_ADDR, IC_7610_ADDR, 0x07, data=bytes([0xC2, 0x01 if on else 0x00]))
+    return _wrap_civ_in_udp(civ)
+
+
+class TestDualWatch:
+    """Tests for IcomRadio.get_dual_watch / set_dual_watch."""
+
+    @pytest.mark.asyncio
+    async def test_get_dual_watch_on(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        mock_transport.queue_response(_dual_watch_response(True))
+        result = await radio.get_dual_watch()
+        assert result is True
+
+    @pytest.mark.asyncio
+    async def test_get_dual_watch_off(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        mock_transport.queue_response(_dual_watch_response(False))
+        result = await radio.get_dual_watch()
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_set_dual_watch_sends_packet(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        """set_dual_watch is fire-and-forget — completes without a radio response."""
+        await radio.set_dual_watch(True)
+        assert len(mock_transport.sent_packets) > 0
+
+    @pytest.mark.asyncio
+    async def test_set_dual_watch_off_sends_packet(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        await radio.set_dual_watch(False)
+        assert len(mock_transport.sent_packets) > 0
+
+
+# ---------------------------------------------------------------------------
 # Issue #56: state cache populated from unsolicited CI-V frames
 # ---------------------------------------------------------------------------
 

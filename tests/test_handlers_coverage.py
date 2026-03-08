@@ -31,6 +31,7 @@ from icom_lan.web.radio_poller import (
     SetAttenuator,
     SetBand,
     SetDigiSel,
+    SetDualWatch,
     SetFilter,
     SetFreq,
     SetIpPlus,
@@ -185,6 +186,8 @@ def _scope_frame() -> ScopeFrame:
             {"receiver": 1},
             {"receiver": 1},
         ),
+        ("set_dual_watch", {"on": True}, SetDualWatch, {"on": True}, {"on": True}),
+        ("set_dual_watch", {"on": False}, SetDualWatch, {"on": False}, {"on": False}),
     ],
 )
 async def test_enqueue_command_variants(
@@ -817,3 +820,19 @@ async def test_audio_handler_run_calls_stop_rx_on_exit() -> None:
 
 def test_audio_handler_constants_are_expected() -> None:
     assert AUDIO_CODEC_PCM16 != AUDIO_CODEC_OPUS
+
+
+async def test_enqueue_command_get_dual_watch() -> None:
+    """get_dual_watch is a read-only command — bypasses the command queue."""
+    radio = SimpleNamespace(get_dual_watch=AsyncMock(return_value=True))
+    handler = _control_handler(radio=radio)
+    result = await handler._enqueue_command("get_dual_watch", {})
+    assert result == {"on": True}
+    radio.get_dual_watch.assert_awaited_once()
+
+
+async def test_enqueue_command_get_dual_watch_no_radio() -> None:
+    """get_dual_watch raises when radio is not connected."""
+    handler = _control_handler(radio=None)
+    with pytest.raises(RuntimeError, match="radio connection not available"):
+        await handler._enqueue_command("get_dual_watch", {})

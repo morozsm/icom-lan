@@ -62,6 +62,7 @@ from .radio_poller import (
     SetAcc1ModLevel,
     SetUsbModLevel,
     SetLanModLevel,
+    SetDualWatch,
 )
 from .websocket import WS_OP_BINARY, WS_OP_TEXT, WebSocketConnection
 
@@ -163,6 +164,8 @@ class ControlHandler:
             "set_acc1_mod_level",
             "set_usb_mod_level",
             "set_lan_mod_level",
+            "get_dual_watch",
+            "set_dual_watch",
         ]
     )
 
@@ -518,6 +521,11 @@ class ControlHandler:
                 raise RuntimeError("radio connection not available")
             hour, minute = await self._radio.get_system_time()
             return {"hour": hour, "minute": minute}
+        if name == "get_dual_watch":
+            if self._radio is None:
+                raise RuntimeError("radio connection not available")
+            on = await self._radio.get_dual_watch()
+            return {"on": on}
 
         q = self._server.command_queue if self._server is not None else None
         if q is None:
@@ -695,6 +703,10 @@ class ControlHandler:
                 level = int(params["level"])
                 q.put(SetLanModLevel(level))
                 return {"level": level}
+            case "set_dual_watch":
+                on = bool(params.get("on", False))
+                q.put(SetDualWatch(on))
+                return {"on": on}
             case _:
                 raise ValueError(f"unhandled command: {name!r}")
 

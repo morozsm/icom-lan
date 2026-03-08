@@ -390,6 +390,15 @@ def _build_parser() -> argparse.ArgumentParser:
     time_p = sub.add_parser("time", help="Get or set system time (HH:MM)")
     time_p.add_argument("time", nargs="?", help="Time to set (get if omitted)")
 
+    # dualwatch
+    dualwatch_p = sub.add_parser("dualwatch", help="Get or set dual-watch state")
+    dualwatch_p.add_argument(
+        "state",
+        nargs="?",
+        choices=["on", "off"],
+        help="Set dual watch on or off (get if omitted)",
+    )
+
     # discover
     sub.add_parser("discover", help="Discover radios on the network")
 
@@ -735,6 +744,8 @@ async def _run(args: argparse.Namespace) -> int:
                 return await _cmd_date(radio, args)
             elif args.command == "time":
                 return await _cmd_time(radio, args)
+            elif args.command == "dualwatch":
+                return await _cmd_dualwatch(radio, args)
             elif args.command == "web":
                 return await _cmd_web(radio, args)
             elif args.command == "scope":
@@ -1413,6 +1424,17 @@ async def _cmd_time(radio: IcomRadio, args: argparse.Namespace) -> int:
     else:
         hour, minute = await radio.get_system_time()
         print(f"{hour:02d}:{minute:02d}")
+    return 0
+
+
+async def _cmd_dualwatch(radio: IcomRadio, args: argparse.Namespace) -> int:
+    if args.state is not None:
+        on = args.state == "on"
+        await radio.set_dual_watch(on)
+        print(f"Dual watch: {'ON' if on else 'OFF'}")
+    else:
+        on = await radio.get_dual_watch()
+        print(f"Dual watch: {'ON' if on else 'OFF'}")
     return 0
 
 

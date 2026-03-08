@@ -44,7 +44,8 @@ __all__ = ["RadioPoller", "CommandQueue", "EnableScope", "DisableScope", "Switch
            "SetScopeDuringTx", "SetScopeCenterType", "SetScopeFixedEdge",
            "SetAntenna1", "SetAntenna2", "SetRxAntennaAnt1", "SetRxAntennaAnt2",
            "SetSystemDate", "SetSystemTime",
-           "SetAcc1ModLevel", "SetUsbModLevel", "SetLanModLevel"]
+           "SetAcc1ModLevel", "SetUsbModLevel", "SetLanModLevel",
+           "SetDualWatch"]
 
 logger = logging.getLogger(__name__)
 
@@ -216,6 +217,10 @@ class SetUsbModLevel:
 class SetLanModLevel:
     level: int
 
+@dataclass(frozen=True, slots=True)
+class SetDualWatch:
+    on: bool
+
 
 Command = (
     SetFreq | SetMode | SetFilter | SetPower | SetRfGain | SetAfLevel | SetSquelch | SetNB | SetNR | SetDigiSel | SetIpPlus
@@ -225,6 +230,7 @@ Command = (
     | SetAntenna1 | SetAntenna2 | SetRxAntennaAnt1 | SetRxAntennaAnt2
     | SetSystemDate | SetSystemTime
     | SetAcc1ModLevel | SetUsbModLevel | SetLanModLevel
+    | SetDualWatch
 )
 
 
@@ -696,6 +702,8 @@ class RadioPoller:
                 await radio.set_usb_mod_level(level)
             case SetLanModLevel(level=level):
                 await radio.set_lan_mod_level(level)
+            case SetDualWatch(on=on):
+                await radio.set_dual_watch(on)
 
     # Fast: meters (polled on even cycles)
     # wfview: Priority=Highest, queue interval 25ms for LAN (HasFDComms)
