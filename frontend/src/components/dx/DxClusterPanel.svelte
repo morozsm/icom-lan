@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { fade } from 'svelte/transition';
   import { onMessage, sendCommand } from '../../lib/transport/ws-client';
   import { getFrequency, getRadioState } from '../../lib/stores/radio.svelte';
   import type { DxSpot } from '../../lib/types/protocol';
@@ -99,6 +100,7 @@
           class="dx-spot"
           onclick={() => tuneToSpot(spot)}
           title={spot.comment || spot.spotter}
+          in:fade={{ duration: 200 }}
         >
           <span class="spot-call" style="color: {band?.color ?? 'var(--text)'}">
             {spot.dx}

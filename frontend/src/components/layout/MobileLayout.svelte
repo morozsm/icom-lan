@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { fade } from 'svelte/transition';
   import VfoDisplay from '../vfo/VfoDisplay.svelte';
   import ReceiverSwitch from '../controls/ReceiverSwitch.svelte';
   import SMeter from '../meters/SMeter.svelte';
@@ -162,7 +163,12 @@
 <Toast />
 
 {#if spectrumFullscreen}
-  <div class="spectrum-overlay" role="dialog" aria-label="Spectrum fullscreen">
+  <div
+    class="spectrum-overlay"
+    role="dialog"
+    aria-label="Spectrum fullscreen"
+    transition:fade={{ duration: 200 }}
+  >
     <!-- Thin VFO info strip at top of overlay -->
     <div class="overlay-header">
       {#if active}
@@ -350,6 +356,7 @@
     background: var(--bg);
     display: flex;
     flex-direction: column;
+    transform-origin: center;
   }
 
   .overlay-header {

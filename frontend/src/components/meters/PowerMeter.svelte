@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
+
   interface Props {
     // TODO: powerLevel from backend (radio_state.py) is raw 0-255, not watts.
     // Need backend conversion before display is meaningful. For now treated as 0-100 scale via maxPower.
@@ -22,6 +24,26 @@
   let swrColor = $derived(
     swr <= 1.5 ? 'var(--success)' : swr <= 3.0 ? 'var(--warning)' : 'var(--danger)',
   );
+
+  // Peak hold: track max fill, hold 2s then decay
+  let peakFill = $state(0);
+  let peakLastSet = 0;
+
+  $effect(() => {
+    if (fillPercent > peakFill) {
+      peakFill = fillPercent;
+      peakLastSet = Date.now();
+    }
+  });
+
+  onMount(() => {
+    const interval = setInterval(() => {
+      if (peakFill > 0 && Date.now() - peakLastSet > 2000) {
+        peakFill = Math.max(0, peakFill - 2);
+      }
+    }, 80);
+    return () => clearInterval(interval);
+  });
 </script>
 
 <div class="power-meter">
@@ -33,6 +55,9 @@
       </div>
       <div class="meter-track">
         <div class="meter-fill" style="width: {fillPercent}%; background: {barColor}"></div>
+        {#if peakFill > 0}
+          <div class="peak-mark" style="left: {peakFill}%"></div>
+        {/if}
       </div>
       <div class="scale-row">
         <span>0</span>
@@ -89,6 +114,7 @@
   }
 
   .meter-track {
+    position: relative;
     height: 8px;
     background: var(--bg);
     border: 1px solid var(--panel-border);
@@ -100,8 +126,20 @@
     height: 100%;
     border-radius: 4px;
     transition:
-      width 0.12s ease-out,
-      background-color 0.3s;
+      width var(--transition-fast),
+      background-color var(--transition-normal);
+  }
+
+  .peak-mark {
+    position: absolute;
+    top: 1px;
+    bottom: 1px;
+    width: 2px;
+    background: rgba(255, 255, 255, 0.85);
+    border-radius: 1px;
+    pointer-events: none;
+    transform: translateX(-1px);
+    transition: left var(--transition-fast);
   }
 
   .scale-row {

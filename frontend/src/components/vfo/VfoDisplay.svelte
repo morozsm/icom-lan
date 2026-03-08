@@ -67,6 +67,19 @@
 
   let digits = $derived(buildDigits(freq));
 
+  // Brief flash when frequency changes
+  let freqFlash = $state(false);
+  let prevFreq = 0;
+
+  $effect(() => {
+    const f = freq;
+    if (prevFreq !== 0 && f !== prevFreq) {
+      freqFlash = true;
+      setTimeout(() => { freqFlash = false; }, 300);
+    }
+    prevFreq = f;
+  });
+
   function handleSelect(position: number) {
     selectedPosition = position;
   }
@@ -130,7 +143,7 @@
     {/if}
   </div>
 
-  <div class="vfo-freq" role="group" aria-label="Frequency {freq} Hz" use:gesture={freqGestures}>
+  <div class="vfo-freq" class:freq-flash={freqFlash} role="group" aria-label="Frequency {freq} Hz" use:gesture={freqGestures}>
     {#each digits as item (item.position ?? 'dot-' + item.char)}
       {#if item.position === null}
         <span class="dot">.</span>
@@ -247,6 +260,10 @@
 
   .vfo-display.active .dot {
     color: rgba(77, 182, 255, 0.5);
+  }
+
+  .vfo-freq.freq-flash {
+    animation: freq-flash var(--transition-slow);
   }
 
   @media (max-width: 768px) {
