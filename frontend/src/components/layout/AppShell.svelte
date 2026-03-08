@@ -1,14 +1,16 @@
 <script lang="ts">
   import DesktopLayout from './DesktopLayout.svelte';
   import MobileLayout from './MobileLayout.svelte';
+  import { setLayout } from '../../lib/stores/ui.svelte';
 
   const MOBILE_BREAKPOINT = 768;
 
-  let width = $state(window.innerWidth);
+  let width = $state(typeof window !== 'undefined' ? window.innerWidth : 1024);
 
   $effect(() => {
     function onResize() {
       width = window.innerWidth;
+      setLayout(width < MOBILE_BREAKPOINT ? 'mobile' : 'desktop');
     }
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);

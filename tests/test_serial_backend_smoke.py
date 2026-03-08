@@ -235,7 +235,7 @@ async def test_web_server_smoke_with_serial_mock_backend() -> None:
         status, _, body = await _http_get(host, port, "/api/v1/state")
         assert status == 200
         state = json.loads(body.decode("utf-8"))
-        assert state["connected"] is False
+        assert state["connection"]["rigConnected"] is False
 
         reader, writer = await _ws_connect(host, port, "/api/v1/ws")
         try:
@@ -258,8 +258,8 @@ async def test_web_server_smoke_with_serial_mock_backend() -> None:
             status, _, body = await _http_get(host, port, "/api/v1/state")
             assert status == 200
             connected_state = json.loads(body.decode("utf-8"))
-            assert connected_state["connected"] is True
-            assert connected_state["radio_ready"] is True
+            assert connected_state["connection"]["rigConnected"] is True
+            assert connected_state["connection"]["radioReady"] is True
         finally:
             await _close_writer(writer)
     finally:

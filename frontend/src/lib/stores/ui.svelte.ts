@@ -2,7 +2,7 @@ import type { UiState } from '../types/state';
 
 // $uiState — client-only UI state (layout, panels, gestures)
 let uiState = $state<UiState>({
-  layout: window.innerWidth < 768 ? 'mobile' : 'desktop',
+  layout: typeof window !== 'undefined' && window.innerWidth < 768 ? 'mobile' : 'desktop',
   activePanel: 'main',
   spectrumFullscreen: false,
   freqEntryOpen: false,

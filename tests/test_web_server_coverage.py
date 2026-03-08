@@ -648,3 +648,97 @@ async def test_info_endpoint_no_radio() -> None:
     conn = data["connection"]
     assert conn["rigConnected"] is False
     assert conn["radioReady"] is False
+
+
+# ---------------------------------------------------------------------------
+# Sprint 0 fixes: _camel_case_state transform (C2)
+# ---------------------------------------------------------------------------
+
+
+from icom_lan.web.server import _camel_case_state  # noqa: E402
+
+
+class TestCamelCaseState:
+    """Unit tests for the _camel_case_state serialisation helper."""
+
+    def _minimal_dict(self) -> dict:
+        """Return the smallest valid state dict for testing."""
+        return {
+            "active": "MAIN",
+            "dual_watch": False,
+            "tuner_status": 0,
+            "connected": False,
+            "radio_ready": False,
+            "control_connected": False,
+            "revision": 1,
+            "updatedAt": "2026-01-01T00:00:00+00:00",
+            "main": {"freq": 14074000, "data_mode": False, "s_meter": 10, "af_level": 128, "rf_gain": 200},
+            "sub": {"freq": 7100000, "data_mode": True, "s_meter": 0, "af_level": 64, "rf_gain": 100},
+            "scope_controls": {"ref_db": -13.5, "vbw_narrow": False},
+        }
+
+    def test_snake_case_keys_become_camel_case(self) -> None:
+        result = _camel_case_state(self._minimal_dict())
+        assert "dualWatch" in result
+        assert "dual_watch" not in result
+        assert "tunerStatus" in result
+        assert "tuner_status" not in result
+
+    def test_freq_renamed_to_freq_hz_in_receiver_dicts(self) -> None:
+        result = _camel_case_state(self._minimal_dict())
+        assert "freqHz" in result["main"]
+        assert "freq" not in result["main"]
+        assert result["main"]["freqHz"] == 14074000
+        assert "freqHz" in result["sub"]
+        assert result["sub"]["freqHz"] == 7100000
+
+    def test_receiver_snake_keys_become_camel_case(self) -> None:
+        result = _camel_case_state(self._minimal_dict())
+        assert "dataMode" in result["main"]
+        assert "data_mode" not in result["main"]
+        assert "sMeter" in result["main"]
+        assert "afLevel" in result["main"]
+        assert "rfGain" in result["main"]
+
+    def test_connection_fields_wrapped_into_object(self) -> None:
+        d = self._minimal_dict()
+        d["connected"] = True
+        d["radio_ready"] = True
+        d["control_connected"] = False
+        result = _camel_case_state(d)
+        assert "connected" not in result
+        assert "radio_ready" not in result
+        assert "control_connected" not in result
+        conn = result["connection"]
+        assert conn["rigConnected"] is True
+        assert conn["radioReady"] is True
+        assert conn["controlConnected"] is False
+
+    def test_revision_and_updated_at_preserved(self) -> None:
+        result = _camel_case_state(self._minimal_dict())
+        assert result["revision"] == 1
+        assert result["updatedAt"] == "2026-01-01T00:00:00+00:00"
+
+    def test_scope_controls_keys_converted(self) -> None:
+        result = _camel_case_state(self._minimal_dict())
+        sc = result["scopeControls"]
+        assert "refDb" in sc
+        assert "vbwNarrow" in sc
+        assert "ref_db" not in sc
+
+    @pytest.mark.asyncio
+    async def test_state_response_is_camel_case(self) -> None:
+        """Integration: _serve_state HTTP response body is camelCase."""
+        import json as _json
+
+        srv = WebServer(None)
+        writer = _FakeWriter()
+        await srv._serve_state(writer)  # noqa: SLF001
+        text = writer.buffer.decode("ascii", errors="replace")
+        body_start = text.index("\r\n\r\n") + 4
+        data = _json.loads(text[body_start:])
+        assert "dualWatch" in data
+        assert "dual_watch" not in data
+        assert "tunerStatus" in data
+        assert "connection" in data
+        assert "rigConnected" in data["connection"]

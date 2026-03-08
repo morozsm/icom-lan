@@ -35,7 +35,7 @@
 
   .main-grid {
     display: grid;
-    grid-template-columns: 1fr 320px;
+    grid-template-columns: 1fr var(--right-pane-width);
     flex: 1;
     overflow: hidden;
   }
