@@ -13,18 +13,26 @@ let uiState = $state<UiState>({
   },
 });
 
-export function getUiState() {
+export function getUiState(): UiState {
   return uiState;
 }
 
-export function setActivePanel(panel: UiState['activePanel']) {
-  uiState.activePanel = panel;
-}
-
-export function setLayout(layout: UiState['layout']) {
+export function setLayout(layout: UiState['layout']): void {
   uiState.layout = layout;
 }
 
-export function toggleSpectrumFullscreen() {
+export function setActivePanel(panel: UiState['activePanel']): void {
+  uiState.activePanel = panel;
+}
+
+export function toggleSpectrumFullscreen(): void {
   uiState.spectrumFullscreen = !uiState.spectrumFullscreen;
+}
+
+export function toggleFreqEntry(): void {
+  uiState.freqEntryOpen = !uiState.freqEntryOpen;
+}
+
+export function setTheme(theme: UiState['theme']): void {
+  uiState.theme = theme;
 }
