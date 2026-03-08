@@ -5,6 +5,9 @@
     defaultWaterfallOptions,
     type WaterfallOptions,
   } from '../../lib/renderers/waterfall-renderer';
+  import { gesture } from '../../lib/gestures/use-gesture';
+  import { sendCommand } from '../../lib/transport/ws-client';
+  import { vibrate } from '../../lib/utils/haptics';
 
   interface Props {
     data: Uint8Array | null;
@@ -16,6 +19,9 @@
 
   let canvas: HTMLCanvasElement;
   let renderer = $state<WaterfallRenderer | null>(null);
+
+  // Accumulated pan offset in Hz (applied on drag end)
+  let panOffsetHz = $state(0);
 
   // Push new scope row when data changes
   $effect(() => {
@@ -31,13 +37,47 @@
     }
   });
 
-  function handleClick(e: MouseEvent): void {
-    if (!renderer || !onFreqClick) return;
+  // --- Hz per pixel helper ---
+  function hzPerPixel(): number {
+    if (!canvas || options.spanHz <= 0) return 0;
     const dpr = window.devicePixelRatio || 1;
-    const rect = (e.currentTarget as HTMLCanvasElement).getBoundingClientRect();
-    const freq = renderer.pixelToFreq((e.clientX - rect.left) * dpr);
-    if (freq > 0) onFreqClick(freq);
+    return options.spanHz / (canvas.getBoundingClientRect().width * dpr);
   }
+
+  // --- Waterfall gesture callbacks ---
+  const waterfallGestures = {
+    onTap(x: number, y: number): void {
+      if (!renderer || !onFreqClick) return;
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      const freq = renderer.pixelToFreq((x - rect.left) * dpr);
+      if (freq > 0) {
+        vibrate('tap');
+        onFreqClick(freq);
+      }
+    },
+
+    onPinch(scale: number, _cx: number, _cy: number): void {
+      if (options.spanHz <= 0) return;
+      // Clamp span to reasonable radio range (2.5 kHz – 5 MHz)
+      const newSpan = Math.max(2_500, Math.min(5_000_000, options.spanHz / scale));
+      sendCommand('set_scope_span', { span: Math.round(newSpan) });
+    },
+
+    onPan(dx: number, _dy: number): void {
+      const hpp = hzPerPixel();
+      if (hpp <= 0) return;
+      // Accumulate; visual feedback is implicit through options update from server
+      panOffsetHz -= dx * hpp;
+    },
+
+    onPanEnd(): void {
+      if (panOffsetHz === 0 || options.centerHz <= 0) return;
+      const newCenter = Math.max(0, options.centerHz + panOffsetHz);
+      sendCommand('set_freq', { freq: Math.round(newCenter) });
+      panOffsetHz = 0;
+    },
+  };
 
   onMount(() => {
     renderer = new WaterfallRenderer(canvas, options);
@@ -62,7 +102,7 @@
   });
 </script>
 
-<canvas bind:this={canvas} onclick={handleClick}></canvas>
+<canvas bind:this={canvas} use:gesture={waterfallGestures}></canvas>
 
 <style>
   canvas {

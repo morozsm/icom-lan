@@ -1,6 +1,7 @@
 <script lang="ts">
   import { sendCommand } from '../../lib/transport/ws-client';
   import { getFrequency, getRadioState } from '../../lib/stores/radio.svelte';
+  import { vibrate } from '../../lib/utils/haptics';
 
   interface Band {
     name: string;
@@ -29,6 +30,7 @@
   let activeBand = $derived(BANDS.find(b => freq >= b.minHz && freq <= b.maxHz)?.name ?? null);
 
   function selectBand(band: Band) {
+    vibrate('tap');
     sendCommand('set_freq', { freq: band.defaultHz, receiver: receiverIdx });
   }
 </script>
