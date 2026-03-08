@@ -6,9 +6,9 @@
     "wfview_commander": "references/wfview/src/radio/icomcommander.cpp"
   },
   "status_totals": {
-    "implemented": 98,
+    "implemented": 130,
     "partial": 4,
-    "missing": 32
+    "missing": 0
   },
   "families": {
     "baseline_core": {
@@ -46,9 +46,9 @@
       "owner_issue": 132,
       "summary": "Remaining dual-watch/scanning/VFO parity tracked by issue #132.",
       "counts": {
-        "implemented": 0,
+        "implemented": 6,
         "partial": 4,
-        "missing": 6
+        "missing": 0
       }
     },
     "memory_bandstack": {
@@ -56,9 +56,9 @@
       "owner_issue": 133,
       "summary": "Memory register, recall, and band-stacking work tracked by issue #133.",
       "counts": {
-        "implemented": 0,
+        "implemented": 6,
         "partial": 0,
-        "missing": 6
+        "missing": 0
       }
     },
     "tone_repeater": {
@@ -66,9 +66,9 @@
       "owner_issue": 134,
       "summary": "Repeater tone/TSQL frequency family tracked by issue #134.",
       "counts": {
-        "implemented": 0,
+        "implemented": 4,
         "partial": 0,
-        "missing": 4
+        "missing": 0
       }
     },
     "system_config": {
@@ -76,9 +76,9 @@
       "owner_issue": 135,
       "summary": "Antenna, CI-V config, mod routing, and date/time/UTC work tracked by issue #135.",
       "counts": {
-        "implemented": 0,
+        "implemented": 16,
         "partial": 0,
-        "missing": 16
+        "missing": 0
       }
     },
     "transceiver_status": {
@@ -406,7 +406,7 @@
       "set": true,
       "admin": false,
       "family": "memory_bandstack",
-      "status": "missing"
+      "status": "implemented"
     },
     {
       "id": 18,
@@ -417,7 +417,7 @@
       "set": true,
       "admin": false,
       "family": "memory_bandstack",
-      "status": "missing"
+      "status": "implemented"
     },
     {
       "id": 19,
@@ -428,7 +428,7 @@
       "set": true,
       "admin": false,
       "family": "memory_bandstack",
-      "status": "missing"
+      "status": "implemented"
     },
     {
       "id": 20,
@@ -439,7 +439,7 @@
       "set": true,
       "admin": false,
       "family": "memory_bandstack",
-      "status": "missing"
+      "status": "implemented"
     },
     {
       "id": 21,
@@ -450,7 +450,7 @@
       "set": true,
       "admin": false,
       "family": "vfo_dualwatch_scan",
-      "status": "missing"
+      "status": "implemented"
     },
     {
       "id": 22,
@@ -481,7 +481,7 @@
       "set": true,
       "admin": false,
       "family": "vfo_dualwatch_scan",
-      "status": "missing"
+      "status": "implemented"
     },
     {
       "id": 24,
@@ -513,7 +513,7 @@
       "set": true,
       "admin": false,
       "family": "system_config",
-      "status": "missing"
+      "status": "implemented"
     },
     {
       "id": 26,
@@ -524,7 +524,7 @@
       "set": true,
       "admin": false,
       "family": "system_config",
-      "status": "missing"
+      "status": "implemented"
     },
     {
       "id": 27,
@@ -1357,7 +1357,7 @@
       "set": true,
       "admin": false,
       "family": "tone_repeater",
-      "status": "missing"
+      "status": "implemented"
     },
     {
       "id": 64,
@@ -1368,7 +1368,7 @@
       "set": true,
       "admin": false,
       "family": "tone_repeater",
-      "status": "missing"
+      "status": "implemented"
     },
     {
       "id": 65,
@@ -1582,7 +1582,7 @@
       "set": true,
       "admin": false,
       "family": "system_config",
-      "status": "missing"
+      "status": "implemented"
     },
     {
       "id": 74,
@@ -1646,7 +1646,7 @@
       "set": true,
       "admin": false,
       "family": "vfo_dualwatch_scan",
-      "status": "missing"
+      "status": "implemented"
     },
     {
       "id": 77,
@@ -1718,7 +1718,7 @@
       "set": true,
       "admin": false,
       "family": "system_config",
-      "status": "missing"
+      "status": "implemented"
     },
     {
       "id": 81,
@@ -1729,7 +1729,7 @@
       "set": true,
       "admin": false,
       "family": "memory_bandstack",
-      "status": "missing"
+      "status": "implemented"
     },
     {
       "id": 82,
@@ -1740,7 +1740,7 @@
       "set": true,
       "admin": false,
       "family": "memory_bandstack",
-      "status": "missing"
+      "status": "implemented"
     },
     {
       "id": 83,
@@ -1770,7 +1770,7 @@
       "set": true,
       "admin": false,
       "family": "vfo_dualwatch_scan",
-      "status": "missing"
+      "status": "implemented"
     },
     {
       "id": 85,
@@ -1781,7 +1781,7 @@
       "set": true,
       "admin": false,
       "family": "vfo_dualwatch_scan",
-      "status": "missing"
+      "status": "implemented"
     },
     {
       "id": 86,
@@ -1817,7 +1817,7 @@
       "set": true,
       "admin": false,
       "family": "system_config",
-      "status": "missing"
+      "status": "implemented"
     },
     {
       "id": 88,
@@ -1828,7 +1828,7 @@
       "set": true,
       "admin": false,
       "family": "system_config",
-      "status": "missing"
+      "status": "implemented"
     },
     {
       "id": 89,
@@ -1839,7 +1839,7 @@
       "set": true,
       "admin": false,
       "family": "system_config",
-      "status": "missing"
+      "status": "implemented"
     },
     {
       "id": 90,
@@ -1850,7 +1850,7 @@
       "set": true,
       "admin": false,
       "family": "system_config",
-      "status": "missing"
+      "status": "implemented"
     },
     {
       "id": 91,
@@ -1861,7 +1861,7 @@
       "set": true,
       "admin": false,
       "family": "system_config",
-      "status": "missing"
+      "status": "implemented"
     },
     {
       "id": 92,
@@ -1872,7 +1872,7 @@
       "set": true,
       "admin": false,
       "family": "system_config",
-      "status": "missing"
+      "status": "implemented"
     },
     {
       "id": 93,
@@ -1883,7 +1883,7 @@
       "set": true,
       "admin": false,
       "family": "system_config",
-      "status": "missing"
+      "status": "implemented"
     },
     {
       "id": 94,
@@ -1894,7 +1894,7 @@
       "set": true,
       "admin": false,
       "family": "system_config",
-      "status": "missing"
+      "status": "implemented"
     },
     {
       "id": 95,
@@ -1905,7 +1905,7 @@
       "set": true,
       "admin": false,
       "family": "system_config",
-      "status": "missing"
+      "status": "implemented"
     },
     {
       "id": 96,
@@ -1916,7 +1916,7 @@
       "set": true,
       "admin": false,
       "family": "system_config",
-      "status": "missing"
+      "status": "implemented"
     },
     {
       "id": 97,
@@ -1927,7 +1927,7 @@
       "set": true,
       "admin": false,
       "family": "system_config",
-      "status": "missing"
+      "status": "implemented"
     },
     {
       "id": 98,
@@ -2088,7 +2088,7 @@
       "set": true,
       "admin": false,
       "family": "tone_repeater",
-      "status": "missing"
+      "status": "implemented"
     },
     {
       "id": 105,
@@ -2099,7 +2099,7 @@
       "set": true,
       "admin": false,
       "family": "tone_repeater",
-      "status": "missing"
+      "status": "implemented"
     },
     {
       "id": 106,
@@ -2158,7 +2158,7 @@
       "set": true,
       "admin": false,
       "family": "vfo_dualwatch_scan",
-      "status": "missing"
+      "status": "implemented"
     },
     {
       "id": 109,
@@ -2195,7 +2195,7 @@
       "set": true,
       "admin": false,
       "family": "system_config",
-      "status": "missing"
+      "status": "implemented"
     },
     {
       "id": 111,
