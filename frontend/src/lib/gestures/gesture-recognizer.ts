@@ -23,7 +23,6 @@ interface PointerState {
 const TAP_MOVE_THRESHOLD = 10; // px — max movement for a tap
 const TAP_TIME_THRESHOLD = 300; // ms — max duration for a tap
 const LONG_PRESS_DELAY = 500; // ms
-const PTT_HOLD_DELAY = 200; // ms — min hold before activation
 const DOUBLE_TAP_WINDOW = 300; // ms between taps
 
 export function createGestureRecognizer(

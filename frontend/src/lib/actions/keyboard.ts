@@ -39,7 +39,8 @@ function isInputFocused(): boolean {
   return (
     el instanceof HTMLInputElement ||
     el instanceof HTMLTextAreaElement ||
-    el instanceof HTMLSelectElement
+    el instanceof HTMLSelectElement ||
+    (el instanceof HTMLElement && el.isContentEditable)
   );
 }
 
@@ -91,7 +92,7 @@ function handleKeydown(e: KeyboardEvent): void {
     case ' ': {
       e.preventDefault();
       const ptt = state?.ptt ?? false;
-      sendCommand(ptt ? 'ptt_off' : 'ptt_on', {});
+      sendCommand('ptt', { state: !ptt });
       break;
     }
 

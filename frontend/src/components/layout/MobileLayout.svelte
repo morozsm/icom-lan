@@ -8,13 +8,15 @@
   import FilterSelector from '../controls/FilterSelector.svelte';
   import FeatureToggles from '../controls/FeatureToggles.svelte';
   import BottomBar from '../shared/BottomBar.svelte';
+  import Toast from '../shared/Toast.svelte';
 
   import {
     getRadioState,
     getMainReceiver,
     getActiveReceiver,
   } from '../../lib/stores/radio.svelte';
-  import { hasDualReceiver } from '../../lib/stores/capabilities.svelte';
+  import { hasDualReceiver, getCapabilities } from '../../lib/stores/capabilities.svelte';
+  import { getConnectionStatus } from '../../lib/stores/connection.svelte';
   import { sendCommand } from '../../lib/transport/ws-client';
 
   let state = $derived(getRadioState());
@@ -22,6 +24,11 @@
   let active = $derived(getActiveReceiver());
   let activeRx = $derived(state?.active ?? 'MAIN');
   let isDualRx = $derived(hasDualReceiver());
+  let caps = $derived(getCapabilities());
+  let connectionStatus = $derived(getConnectionStatus());
+  let modelName = $derived(caps?.model ?? 'Radio');
+  let isConnected = $derived(connectionStatus === 'connected');
+  let isPartial = $derived(connectionStatus === 'partial');
 
   // Fullscreen spectrum overlay
   let spectrumFullscreen = $state(false);
@@ -34,15 +41,9 @@
   }
 
   $effect(() => {
-    const msToNextMinute = 60_000 - (Date.now() % 60_000);
-    const initial = setTimeout(() => {
-      utcTime = nowUtc();
-      const interval = setInterval(() => {
-        utcTime = nowUtc();
-      }, 60_000);
-      return () => clearInterval(interval);
-    }, msToNextMinute);
-    return () => clearTimeout(initial);
+    utcTime = nowUtc();
+    const id = setInterval(() => { utcTime = nowUtc(); }, 60_000);
+    return () => clearInterval(id);
   });
 
   function handleTune(newFreq: number) {
@@ -55,7 +56,7 @@
   }
 
   function handleDwToggle() {
-    sendCommand('set_dw', { on: !(state?.dualWatch ?? false) });
+    sendCommand('set_dual_watch', { on: !(state?.dualWatch ?? false) });
   }
 
   function openSpectrum() {
@@ -70,8 +71,13 @@
 <div class="mobile-layout">
   <!-- ── Status bar ── -->
   <header class="status-bar">
-    <span class="radio-name">IC-7610</span>
-    <span class="status-connected" title="Connected">●</span>
+    <span
+      class="status-dot"
+      class:connected={isConnected}
+      class:partial={isPartial}
+      title={connectionStatus}
+    ></span>
+    <span class="radio-name">{modelName}</span>
     <span class="spacer"></span>
     <span class="utc-clock">{utcTime} UTC</span>
   </header>
@@ -152,6 +158,9 @@
 </div>
 
 <!-- ── Spectrum fullscreen overlay ── -->
+<!-- Toast notifications — rendered in fixed position overlay -->
+<Toast />
+
 {#if spectrumFullscreen}
   <div class="spectrum-overlay" role="dialog" aria-label="Spectrum fullscreen">
     <!-- Thin VFO info strip at top of overlay -->
@@ -206,9 +215,21 @@
     letter-spacing: 0.05em;
   }
 
-  .status-connected {
-    color: var(--success);
-    font-size: 0.65rem;
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--danger);
+    flex-shrink: 0;
+    transition: background 0.3s;
+  }
+
+  .status-dot.connected {
+    background: var(--success);
+  }
+
+  .status-dot.partial {
+    background: var(--warning);
   }
 
   .spacer {

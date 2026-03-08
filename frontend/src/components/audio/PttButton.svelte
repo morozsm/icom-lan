@@ -67,8 +67,8 @@
       clearTimeout(holdTimer);
       holdTimer = null;
     }
-    // Pointer left button area — release TX if active
-    if (transmitting) {
+    // Pointer left button area — release TX if active or about to activate
+    if (transmitting || (pending && pendingValue)) {
       vibrate('ptt');
       pending = true;
       pendingValue = false;

@@ -7,6 +7,7 @@
   } from '../../lib/renderers/waterfall-renderer';
   import { gesture } from '../../lib/gestures/use-gesture';
   import { sendCommand } from '../../lib/transport/ws-client';
+  import { getRadioState } from '../../lib/stores/radio.svelte';
   import { vibrate } from '../../lib/utils/haptics';
 
   interface Props {
@@ -61,7 +62,12 @@
       if (options.spanHz <= 0) return;
       // Clamp span to reasonable radio range (2.5 kHz – 5 MHz)
       const newSpan = Math.max(2_500, Math.min(5_000_000, options.spanHz / scale));
-      sendCommand('set_scope_span', { span: Math.round(newSpan) });
+      const half = Math.round(newSpan / 2);
+      sendCommand('set_scope_fixed_edge', {
+        edge: 1,
+        start_hz: Math.max(0, options.centerHz - half),
+        end_hz: options.centerHz + half,
+      });
     },
 
     onPan(dx: number, _dy: number): void {
@@ -74,7 +80,8 @@
     onPanEnd(): void {
       if (panOffsetHz === 0 || options.centerHz <= 0) return;
       const newCenter = Math.max(0, options.centerHz + panOffsetHz);
-      sendCommand('set_freq', { freq: Math.round(newCenter) });
+      const receiver = getRadioState()?.active === 'SUB' ? 1 : 0;
+      sendCommand('set_freq', { freq: Math.round(newCenter), receiver });
       panOffsetHz = 0;
     },
   };

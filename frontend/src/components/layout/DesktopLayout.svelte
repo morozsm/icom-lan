@@ -50,7 +50,7 @@
   }
 
   function handleDwToggle() {
-    sendCommand('set_dw', { on: !(state?.dualWatch ?? false) });
+    sendCommand('set_dual_watch', { on: !(state?.dualWatch ?? false) });
   }
 </script>
 

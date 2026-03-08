@@ -43,7 +43,7 @@
   let currentFreq = $derived(getFrequency());
   let receiverIdx = $derived(getRadioState()?.active === 'SUB' ? 1 : 0);
 
-  let filteredSpots = $derived((): DxSpot[] => {
+  let filteredSpots = $derived.by((): DxSpot[] => {
     if (!filterCurrentBand) return spots;
     const currentBand = getBand(currentFreq);
     if (!currentBand) return spots;
