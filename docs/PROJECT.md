@@ -209,7 +209,7 @@ Each UDP packet has a fixed-format header (see `packettypes.h` in wfview):
 - **M3 documentation (issue #151, 2026-03-06):** comprehensive IC-7610 USB serial backend setup guide (macOS-first), backend capability matrix (LAN vs Serial), migration/backward-compatibility section, troubleshooting for serial CI-V and USB audio, and critical hardware finding (`CI-V USB Port` must be `Link to [CI-V]`, not `[REMOTE]`) documented across guide/radios.md, guide/troubleshooting.md, radio-protocol.md, and new guide/ic7610-usb-setup.md.
 - **M3 status:** complete (epic #152 closed-out).
 - **M4 advanced scope parity (issue #137, 2026-03-06):** `advanced_scope` is now fully implemented in maintained library/runtime surfaces, including receiver select, single/dual, mode/span/edge/hold/ref/speed, during-TX, center type, VBW/RBW, fixed-edge bounds, and receive-side projection into `RadioState.scope_controls`.
-- **IC-7610 parity matrix (issue #139, 2026-03-07): 131 implemented, 0 partial, 3 missing**; source of truth is `docs/parity/ic7610_command_matrix.json`, and the explicit parity smoke profile is `pytest -m "integration and ic7610_parity" tests/integration`.
+- **IC-7610 parity matrix (issue #139, 2026-03-07): 134 implemented, 0 partial, 0 missing (100%)**; source of truth is `docs/parity/ic7610_command_matrix.json`, and the explicit parity smoke profile is `pytest -m "integration and ic7610_parity" tests/integration`.
 - **M4 parity family counts (from matrix):**
   - `baseline_core` (pre-M4 baseline, no owner issue): 38 implemented, 0 partial, 0 missing
   - `#132 vfo_dualwatch_scan`: 10 implemented, 0 partial, 0 missing

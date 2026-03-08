@@ -6,9 +6,9 @@
     "wfview_commander": "references/wfview/src/radio/icomcommander.cpp"
   },
   "status_totals": {
-    "implemented": 131,
+    "implemented": 134,
     "partial": 0,
-    "missing": 3,
+    "missing": 0,
     "not_applicable": 0
   },
   "families": {
@@ -50,9 +50,9 @@
       "owner_issue": 132,
       "summary": "Remaining dual-watch/scanning/VFO parity tracked by issue #132.",
       "counts": {
-        "implemented": 9,
+        "implemented": 10,
         "partial": 0,
-        "missing": 1,
+        "missing": 0,
         "not_applicable": 0
       }
     },
@@ -83,9 +83,9 @@
       "owner_issue": 135,
       "summary": "Antenna, CI-V config, mod routing, and date/time/UTC work tracked by issue #135.",
       "counts": {
-        "implemented": 14,
+        "implemented": 16,
         "partial": 0,
-        "missing": 2,
+        "missing": 0,
         "not_applicable": 0
       }
     },
@@ -586,10 +586,19 @@
       "set": true,
       "admin": false,
       "family": "system_config",
-      "status": "missing",
-      "notes": "Speech (0x13) - no builder in commands.py",
-      "runtime_symbols": [],
-      "test_patterns": []
+      "status": "implemented",
+      "notes": "Speech voice synthesizer (0x13). Fire-and-forget SET only (0=all, 1=freq, 2=mode).",
+      "runtime_symbols": [
+        "icom_lan.commands:speech",
+        "icom_lan.radio:IcomRadio.speech"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_speech_all",
+        "tests/test_commands.py::test_speech_freq",
+        "tests/test_commands.py::test_speech_mode",
+        "tests/test_commands.py::test_speech_invalid",
+        "tests/test_radio.py::test_speech_sends_packet"
+      ]
     },
     {
       "id": 27,
@@ -1815,10 +1824,16 @@
       "set": true,
       "admin": false,
       "family": "system_config",
-      "status": "missing",
-      "notes": "Transceiver ID (0x19 0x00) - no builder",
-      "runtime_symbols": [],
-      "test_patterns": []
+      "status": "implemented",
+      "notes": "Transceiver ID (0x19 0x00). GET only, returns 1-byte model ID (IC-7610=0x98).",
+      "runtime_symbols": [
+        "icom_lan.commands:get_transceiver_id",
+        "icom_lan.radio:IcomRadio.get_transceiver_id"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_get_transceiver_id",
+        "tests/test_radio.py::test_get_transceiver_id"
+      ]
     },
     {
       "id": 81,
@@ -2390,10 +2405,23 @@
       "set": true,
       "admin": false,
       "family": "vfo_dualwatch_scan",
-      "status": "missing",
-      "notes": "XFC Status (0x1C 0x02) - no builder",
-      "runtime_symbols": [],
-      "test_patterns": []
+      "status": "implemented",
+      "notes": "XFC Status (0x1C 0x02). GET/SET boolean (0=off, 1=on).",
+      "runtime_symbols": [
+        "icom_lan.commands:get_xfc_status",
+        "icom_lan.commands:set_xfc_status",
+        "icom_lan.radio:IcomRadio.get_xfc_status",
+        "icom_lan.radio:IcomRadio.set_xfc_status"
+      ],
+      "test_patterns": [
+        "tests/test_commands.py::test_get_xfc_status",
+        "tests/test_commands.py::test_set_xfc_status_on",
+        "tests/test_commands.py::test_set_xfc_status_off",
+        "tests/test_radio.py::test_get_xfc_status_on",
+        "tests/test_radio.py::test_get_xfc_status_off",
+        "tests/test_radio.py::test_set_xfc_status_on",
+        "tests/test_radio.py::test_set_xfc_status_off"
+      ]
     },
     {
       "id": 109,
@@ -3016,5 +3044,8 @@
         "tests/test_commands_extended.py::test_ack"
       ]
     }
-  ]
+  ],
+  "updated": "2026-03-07",
+  "coverage_percent": 100.0,
+  "total_commands": 134
 }

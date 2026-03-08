@@ -1036,6 +1036,111 @@ class TestDualWatch:
 
 
 # ---------------------------------------------------------------------------
+# Speech, Transceiver ID, XFC Status
+# ---------------------------------------------------------------------------
+
+
+def _bool_response_1c(sub: int, val: bool) -> bytes:
+    """Build a mock 0x1C response from the radio, wrapped in UDP."""
+    from icom_lan.commands import build_civ_frame
+    civ = build_civ_frame(
+        CONTROLLER_ADDR, IC_7610_ADDR, 0x1C,
+        sub=sub, data=bytes([0x01 if val else 0x00]),
+    )
+    return _wrap_civ_in_udp(civ)
+
+
+def _transceiver_id_response(model_id: int = 0x98) -> bytes:
+    """Build a mock 0x19 0x00 response from the radio, wrapped in UDP."""
+    from icom_lan.commands import build_civ_frame
+    civ = build_civ_frame(
+        CONTROLLER_ADDR, IC_7610_ADDR, 0x19,
+        sub=0x00, data=bytes([model_id]),
+    )
+    return _wrap_civ_in_udp(civ)
+
+
+class TestSpeechTransceiverIdXfc:
+    """Tests for speech, get_transceiver_id, get/set_xfc_status."""
+
+    @pytest.fixture
+    def mock_transport(self) -> MockTransport:
+        return MockTransport()
+
+    @pytest.fixture
+    def radio(self, mock_transport: MockTransport) -> IcomRadio:
+        r = IcomRadio("192.168.1.100")
+        r._connected = True
+        r._radio_addr = 0x98
+        r._civ_transport = mock_transport
+        r._ctrl_transport = mock_transport
+        return r
+
+    @pytest.mark.asyncio
+    async def test_speech_sends_packet(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        """speech() is fire-and-forget — completes without response."""
+        await radio.speech(0)
+        assert len(mock_transport.sent_packets) > 0
+        assert b"\x13\x00" in mock_transport.sent_packets[-1]
+
+    @pytest.mark.asyncio
+    async def test_speech_freq(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        await radio.speech(1)
+        assert b"\x13\x01" in mock_transport.sent_packets[-1]
+
+    @pytest.mark.asyncio
+    async def test_speech_mode(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        await radio.speech(2)
+        assert b"\x13\x02" in mock_transport.sent_packets[-1]
+
+    @pytest.mark.asyncio
+    async def test_get_transceiver_id(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        mock_transport.queue_response(_transceiver_id_response(0x98))
+        result = await radio.get_transceiver_id()
+        assert result == 0x98
+
+    @pytest.mark.asyncio
+    async def test_get_xfc_status_on(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        mock_transport.queue_response(_bool_response_1c(0x02, True))
+        result = await radio.get_xfc_status()
+        assert result is True
+
+    @pytest.mark.asyncio
+    async def test_get_xfc_status_off(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        mock_transport.queue_response(_bool_response_1c(0x02, False))
+        result = await radio.get_xfc_status()
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_set_xfc_status_on(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        await radio.set_xfc_status(True)
+        assert len(mock_transport.sent_packets) > 0
+        assert b"\x1c\x02\x01" in mock_transport.sent_packets[-1]
+
+    @pytest.mark.asyncio
+    async def test_set_xfc_status_off(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        await radio.set_xfc_status(False)
+        assert len(mock_transport.sent_packets) > 0
+        assert b"\x1c\x02\x00" in mock_transport.sent_packets[-1]
+
+
+# ---------------------------------------------------------------------------
 # Issue #56: state cache populated from unsolicited CI-V frames
 # ---------------------------------------------------------------------------
 

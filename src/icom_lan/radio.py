@@ -194,8 +194,12 @@ from .commands import (
     get_id_meter,
     get_tuner_status,
     set_tuner_status,
+    get_xfc_status,
+    set_xfc_status,
     get_tx_freq_monitor,
     set_tx_freq_monitor,
+    speech,
+    get_transceiver_id,
     get_rit_frequency,
     set_rit_frequency,
     get_rit_status,
@@ -2656,6 +2660,29 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         resp = await self._send_civ_raw(civ)
         return parse_meter_response(resp)
 
+    async def speech(self, what: int = 0) -> None:
+        """Trigger voice synthesizer announcement.
+
+        Fire-and-forget.
+
+        Args:
+            what: 0 = all (S-meter, frequency, mode),
+                  1 = frequency + S-meter,
+                  2 = mode.
+        """
+        self._check_connected()
+        civ = speech(what, to_addr=self._radio_addr)
+        await self._send_civ_raw(civ, wait_response=False)
+
+    async def get_transceiver_id(self) -> int:
+        """Read the transceiver model ID (IC-7610 = 0x98)."""
+        self._check_connected()
+        civ = get_transceiver_id(to_addr=self._radio_addr)
+        resp = await self._send_civ_raw(civ)
+        if resp.data:
+            return resp.data[0]
+        return 0
+
     async def get_tuner_status(self) -> int:
         """Read the tuner/ATU status (0=off, 1=on, 2=tuning)."""
         self._check_connected()
@@ -2672,6 +2699,19 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         """
         self._check_connected()
         civ = set_tuner_status(value, to_addr=self._radio_addr)
+        await self._send_civ_raw(civ, wait_response=False)
+
+    async def get_xfc_status(self) -> bool:
+        """Read XFC (transmit frequency correction) status."""
+        self._check_connected()
+        civ = get_xfc_status(to_addr=self._radio_addr)
+        resp = await self._send_civ_raw(civ)
+        return bool(resp.data[0]) if resp.data else False
+
+    async def set_xfc_status(self, on: bool) -> None:
+        """Set XFC status on/off. Fire-and-forget."""
+        self._check_connected()
+        civ = set_xfc_status(on, to_addr=self._radio_addr)
         await self._send_civ_raw(civ, wait_response=False)
 
     async def get_tx_freq_monitor(self) -> bool:

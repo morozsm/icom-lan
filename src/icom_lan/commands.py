@@ -352,7 +352,7 @@ _PREAMBLE = b"\xfe\xfe"
 _TERMINATOR = b"\xfd"
 
 # Commands that use sub-commands (for parse disambiguation)
-_COMMANDS_WITH_SUB: set[int] = {_CMD_LEVEL, _CMD_METER, _CMD_PTT, _CMD_CTL_MEM, _CMD_RIT, 0x27, 0x16, _CMD_TONE, _CMD_ANTENNA}
+_COMMANDS_WITH_SUB: set[int] = {_CMD_LEVEL, _CMD_METER, _CMD_PTT, _CMD_CTL_MEM, _CMD_RIT, 0x27, 0x16, _CMD_TONE, _CMD_ANTENNA, 0x19}
 
 
 def build_civ_frame(
@@ -3286,10 +3286,61 @@ def power_off(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR) -> 
     return build_civ_frame(to_addr, from_addr, _CMD_POWER_CTRL, data=b"\x00")
 
 
+# --- Speech (0x13) ---
+
+_CMD_SPEECH = 0x13
+
+
+def speech(
+    what: int = 0,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a speech announcement CI-V command (0x13).
+
+    Fire-and-forget.  Triggers the IC-7610 voice synthesizer.
+
+    Args:
+        what: 0 = all (S-meter, frequency, mode),
+              1 = frequency + S-meter,
+              2 = mode.
+        to_addr: Radio CI-V address.
+        from_addr: Controller CI-V address.
+
+    Returns:
+        CI-V frame bytes.
+
+    Raises:
+        ValueError: If *what* is not 0, 1, or 2.
+    """
+    if what not in (0, 1, 2):
+        raise ValueError(f"speech 'what' must be 0, 1, or 2, got {what}")
+    return build_civ_frame(to_addr, from_addr, _CMD_SPEECH, data=bytes([what]))
+
+
+# --- Transceiver ID (0x19 0x00) ---
+
+_CMD_TRANSCEIVER_ID = 0x19
+_SUB_TRANSCEIVER_ID = 0x00
+
+
+def get_transceiver_id(
+    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a read transceiver ID command (0x19 0x00).
+
+    GET only.  Response data: 1 byte model ID (IC-7610 = 0x98).
+    """
+    return build_civ_frame(
+        to_addr, from_addr, _CMD_TRANSCEIVER_ID, sub=_SUB_TRANSCEIVER_ID,
+    )
+
+
 # --- Transceiver status family (#136) ---
 
 # Sub-commands for 0x1C (Transceiver status register)
 _SUB_TUNER_STATUS = 0x01
+_SUB_XFC_STATUS = 0x02
 _SUB_TX_FREQ_MONITOR = 0x03
 
 # Sub-commands for 0x21 (RIT/XIT register)
@@ -3375,6 +3426,32 @@ def set_tuner_status(
         raise ValueError(f"Tuner status must be 0, 1, or 2, got {value}")
     return build_civ_frame(
         to_addr, from_addr, _CMD_PTT, sub=_SUB_TUNER_STATUS, data=bytes([value])
+    )
+
+
+def get_xfc_status(
+    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a read XFC status command (0x1C 0x02).
+
+    Response data: 0x00=off, 0x01=on.
+    """
+    return build_civ_frame(to_addr, from_addr, _CMD_PTT, sub=_SUB_XFC_STATUS)
+
+
+def set_xfc_status(
+    on: bool,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a set XFC status command (0x1C 0x02).
+
+    Args:
+        on: True to enable XFC, False to disable.
+    """
+    return build_civ_frame(
+        to_addr, from_addr, _CMD_PTT, sub=_SUB_XFC_STATUS,
+        data=b"\x01" if on else b"\x00",
     )
 
 

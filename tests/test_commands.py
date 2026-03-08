@@ -2173,3 +2173,49 @@ class TestSystemConfigCommands:
         parsed = parse_civ_frame(response)
         hours, minutes, is_negative = parse_utc_offset_response(parsed)
         assert (hours, minutes, is_negative) == (9, 45, True)
+
+    # --- Speech (0x13) ---
+
+    def test_speech_all(self) -> None:
+        from icom_lan.commands import speech
+        frame = speech(0)
+        assert frame == b"\xfe\xfe\x98\xe0\x13\x00\xfd"
+
+    def test_speech_freq(self) -> None:
+        from icom_lan.commands import speech
+        frame = speech(1)
+        assert b"\x13\x01" in frame
+
+    def test_speech_mode(self) -> None:
+        from icom_lan.commands import speech
+        frame = speech(2)
+        assert b"\x13\x02" in frame
+
+    def test_speech_invalid(self) -> None:
+        from icom_lan.commands import speech
+        with pytest.raises(ValueError, match="0, 1, or 2"):
+            speech(3)
+
+    # --- Transceiver ID (0x19 0x00) ---
+
+    def test_get_transceiver_id(self) -> None:
+        from icom_lan.commands import get_transceiver_id
+        frame = get_transceiver_id()
+        assert frame == b"\xfe\xfe\x98\xe0\x19\x00\xfd"
+
+    # --- XFC Status (0x1C 0x02) ---
+
+    def test_get_xfc_status(self) -> None:
+        from icom_lan.commands import get_xfc_status
+        frame = get_xfc_status()
+        assert frame == b"\xfe\xfe\x98\xe0\x1c\x02\xfd"
+
+    def test_set_xfc_status_on(self) -> None:
+        from icom_lan.commands import set_xfc_status
+        frame = set_xfc_status(True)
+        assert b"\x1c\x02\x01" in frame
+
+    def test_set_xfc_status_off(self) -> None:
+        from icom_lan.commands import set_xfc_status
+        frame = set_xfc_status(False)
+        assert b"\x1c\x02\x00" in frame
