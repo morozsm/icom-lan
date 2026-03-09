@@ -49,8 +49,7 @@ logger = logging.getLogger(__name__)
 _DEFAULT_STATIC_DIR = pathlib.Path(__file__).parent / "static"
 _RADIO_MODEL = "IC-7610"
 
-_MODES = ["USB", "LSB", "CW", "AM", "FM", "RTTY", "CWR"]
-_FILTERS = ["FIL1", "FIL2", "FIL3"]
+# Mode/filter lists moved to RadioProfile (profiles.py)
 
 _RECEIVER_KEY_MAP = {"freq": "freqHz"}
 
@@ -227,6 +226,18 @@ class WebServer:
     # ------------------------------------------------------------------
     # Helpers for scope callback operations
     # ------------------------------------------------------------------
+
+    def _get_profile(self) -> "RadioProfile":
+        """Resolve the RadioProfile for the connected radio."""
+        from ..profiles import RadioProfile, resolve_radio_profile
+
+        raw_profile = getattr(self._radio, "profile", None) if self._radio else None
+        if isinstance(raw_profile, RadioProfile):
+            return raw_profile
+        try:
+            return resolve_radio_profile(model=self._config.radio_model)
+        except KeyError:
+            return resolve_radio_profile(model="IC-7610")
 
     def _radio_ready(self) -> bool:
         """Backend view of radio readiness (CI-V healthy)."""
@@ -966,8 +977,8 @@ class WebServer:
                     "hasCw": "cw" in caps,
                     "maxReceivers": 2 if has_dual_rx else 1,
                     "tags": sorted(caps),
-                    "modes": _MODES,
-                    "filters": _FILTERS,
+                    "modes": list(self._get_profile().modes),
+                    "filters": list(self._get_profile().filters),
                 },
                 "connection": {
                     "rigConnected": connected,
@@ -978,12 +989,7 @@ class WebServer:
             },
             separators=(",", ":"),
         ).encode()
-        extra: dict[str, str] = {"Content-Type": "application/json"}
-        if len(body) > 1024 and "gzip" in (headers or {}).get("accept-encoding", ""):
-            body = _gzip.compress(body, compresslevel=1)
-            extra["Content-Encoding"] = "gzip"
-            extra["Vary"] = "Accept-Encoding"
-        await _send_response(writer, 200, "OK", body, extra)
+        await _send_json(writer, body, headers)
 
     async def _serve_state(self, writer: asyncio.StreamWriter, headers: dict[str, str] | None = None) -> None:
         d = self._radio_state.to_dict()
@@ -1005,24 +1011,28 @@ class WebServer:
         d["revision"] = revision
         d["updatedAt"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
-        etag = f'"{revision}"'
-        if_none_match = (headers or {}).get("if-none-match", "")
-        if if_none_match == etag:
-            await _send_response(writer, 304, "Not Modified", b"", {"ETag": etag})
-            return
-
         body = json.dumps(_camel_case_state(d), separators=(",", ":")).encode()
-        extra: dict[str, str] = {"Content-Type": "application/json", "ETag": etag}
-        if len(body) > 1024 and "gzip" in (headers or {}).get("accept-encoding", ""):
-            body = _gzip.compress(body, compresslevel=1)
-            extra["Content-Encoding"] = "gzip"
-            extra["Vary"] = "Accept-Encoding"
-        await _send_response(writer, 200, "OK", body, extra)
+        await _send_json(writer, body, headers, etag=f'"{revision}"')
 
     async def _serve_capabilities(self, writer: asyncio.StreamWriter, headers: dict[str, str] | None = None) -> None:
         caps = _runtime_capabilities(self._radio)
         _raw_model = getattr(self._radio, "model", None) if self._radio is not None else None
         model: str = _raw_model if isinstance(_raw_model, str) else self._config.radio_model
+        profile = self._get_profile()
+
+        freq_ranges = [
+            {
+                "start": r.start,
+                "end": r.end,
+                "label": r.label,
+                "bands": [
+                    {"name": b.name, "start": b.start, "end": b.end, "default": b.default}
+                    for b in r.bands
+                ],
+            }
+            for r in profile.freq_ranges
+        ]
+
         body = json.dumps(
             {
                 "model": model,
@@ -1030,35 +1040,9 @@ class WebServer:
                 "audio": "audio" in caps,
                 "tx": "tx" in caps,
                 "capabilities": sorted(caps),
-                "freqRanges": [
-                    {
-                        "start": 30000,
-                        "end": 60000000,
-                        "label": "HF",
-                        "bands": [
-                            {"name": "160m", "start": 1800000, "end": 2000000, "default": 1825000},
-                            {"name": "80m", "start": 3500000, "end": 4000000, "default": 3700000},
-                            {"name": "60m", "start": 5330000, "end": 5410000, "default": 5357000},
-                            {"name": "40m", "start": 7000000, "end": 7300000, "default": 7100000},
-                            {"name": "30m", "start": 10100000, "end": 10150000, "default": 10130000},
-                            {"name": "20m", "start": 14000000, "end": 14350000, "default": 14200000},
-                            {"name": "17m", "start": 18068000, "end": 18168000, "default": 18120000},
-                            {"name": "15m", "start": 21000000, "end": 21450000, "default": 21200000},
-                            {"name": "12m", "start": 24890000, "end": 24990000, "default": 24940000},
-                            {"name": "10m", "start": 28000000, "end": 29700000, "default": 28500000},
-                        ],
-                    },
-                    {
-                        "start": 50000000,
-                        "end": 54000000,
-                        "label": "6m",
-                        "bands": [
-                            {"name": "6m", "start": 50000000, "end": 54000000, "default": 50125000},
-                        ],
-                    },
-                ],
-                "modes": _MODES,
-                "filters": _FILTERS,
+                "freqRanges": freq_ranges,
+                "modes": list(profile.modes),
+                "filters": list(profile.filters),
                 "scopeConfig": {
                     "centerMode": True,
                     "amplitudeMax": 160,
@@ -1072,12 +1056,7 @@ class WebServer:
             },
             separators=(",", ":"),
         ).encode()
-        extra: dict[str, str] = {"Content-Type": "application/json"}
-        if len(body) > 1024 and "gzip" in (headers or {}).get("accept-encoding", ""):
-            body = _gzip.compress(body, compresslevel=1)
-            extra["Content-Encoding"] = "gzip"
-            extra["Vary"] = "Accept-Encoding"
-        await _send_response(writer, 200, "OK", body, extra)
+        await _send_json(writer, body, headers)
 
     async def _serve_dx_spots(self, writer: asyncio.StreamWriter) -> None:
         spots = self._spot_buffer.get_spots()
@@ -1242,6 +1221,28 @@ class WebServer:
 # ------------------------------------------------------------------
 # HTTP response helper
 # ------------------------------------------------------------------
+
+
+async def _send_json(
+    writer: asyncio.StreamWriter,
+    body: bytes,
+    headers: dict[str, str] | None = None,
+    *,
+    etag: str | None = None,
+) -> None:
+    """Send a JSON response with optional gzip and ETag support."""
+    extra: dict[str, str] = {"Content-Type": "application/json"}
+    if etag:
+        if_none_match = (headers or {}).get("if-none-match", "")
+        if if_none_match == etag:
+            await _send_response(writer, 304, "Not Modified", b"", {"ETag": etag})
+            return
+        extra["ETag"] = etag
+    if len(body) > 1024 and "gzip" in (headers or {}).get("accept-encoding", ""):
+        body = _gzip.compress(body, compresslevel=1)
+        extra["Content-Encoding"] = "gzip"
+        extra["Vary"] = "Accept-Encoding"
+    await _send_response(writer, 200, "OK", body, extra)
 
 
 async def _send_response(

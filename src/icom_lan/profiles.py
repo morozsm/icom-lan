@@ -16,6 +16,67 @@ def _normalize(value: str) -> str:
 
 
 @dataclass(frozen=True, slots=True)
+class BandInfo:
+    """Amateur band definition for UI band selector."""
+
+    name: str
+    start: int     # Hz
+    end: int       # Hz
+    default: int   # Hz — default tuning frequency
+
+
+@dataclass(frozen=True, slots=True)
+class FreqRangeInfo:
+    """Frequency range with optional band plan."""
+
+    start: int     # Hz
+    end: int       # Hz
+    label: str
+    bands: tuple[BandInfo, ...] = ()
+
+
+# Standard HF amateur bands (ITU Region 2 / USA)
+_HF_BANDS = (
+    BandInfo("160m", 1_800_000, 2_000_000, 1_825_000),
+    BandInfo("80m", 3_500_000, 4_000_000, 3_700_000),
+    BandInfo("60m", 5_330_000, 5_410_000, 5_357_000),
+    BandInfo("40m", 7_000_000, 7_300_000, 7_100_000),
+    BandInfo("30m", 10_100_000, 10_150_000, 10_130_000),
+    BandInfo("20m", 14_000_000, 14_350_000, 14_200_000),
+    BandInfo("17m", 18_068_000, 18_168_000, 18_120_000),
+    BandInfo("15m", 21_000_000, 21_450_000, 21_200_000),
+    BandInfo("12m", 24_890_000, 24_990_000, 24_940_000),
+    BandInfo("10m", 28_000_000, 29_700_000, 28_500_000),
+)
+
+_6M_BANDS = (
+    BandInfo("6m", 50_000_000, 54_000_000, 50_125_000),
+)
+
+_VHF_UHF_BANDS = (
+    BandInfo("2m", 144_000_000, 148_000_000, 146_520_000),
+    BandInfo("70cm", 420_000_000, 450_000_000, 446_000_000),
+    BandInfo("23cm", 1_240_000_000, 1_300_000_000, 1_296_100_000),
+)
+
+_HF_6M_RANGES = (
+    FreqRangeInfo(30_000, 60_000_000, "HF", _HF_BANDS),
+    FreqRangeInfo(50_000_000, 54_000_000, "6m", _6M_BANDS),
+)
+
+_HF_VHF_UHF_RANGES = (
+    FreqRangeInfo(30_000, 60_000_000, "HF", _HF_BANDS),
+    FreqRangeInfo(50_000_000, 54_000_000, "6m", _6M_BANDS),
+    FreqRangeInfo(144_000_000, 148_000_000, "2m", (BandInfo("2m", 144_000_000, 148_000_000, 146_520_000),)),
+    FreqRangeInfo(420_000_000, 450_000_000, "70cm", (BandInfo("70cm", 420_000_000, 450_000_000, 446_000_000),)),
+    FreqRangeInfo(1_240_000_000, 1_300_000_000, "23cm", (BandInfo("23cm", 1_240_000_000, 1_300_000_000, 1_296_100_000),)),
+)
+
+_HF_MODES = ("USB", "LSB", "CW", "CW-R", "AM", "FM", "RTTY", "RTTY-R")
+_HF_FILTERS = ("FIL1", "FIL2", "FIL3")
+
+
+@dataclass(frozen=True, slots=True)
 class RadioProfile:
     """Runtime radio profile used by command routing and capability checks."""
 
@@ -28,6 +89,9 @@ class RadioProfile:
     vfo_main_code: int | None = None
     vfo_sub_code: int | None = None
     vfo_swap_code: int | None = None
+    freq_ranges: tuple[FreqRangeInfo, ...] = _HF_6M_RANGES
+    modes: tuple[str, ...] = _HF_MODES
+    filters: tuple[str, ...] = _HF_FILTERS
 
     def supports_capability(self, capability: str) -> bool:
         return capability in self.capabilities
@@ -126,6 +190,7 @@ _PROFILES: dict[str, RadioProfile] = {
         vfo_main_code=0xD0,
         vfo_sub_code=0xD1,
         vfo_swap_code=0xB0,
+        freq_ranges=_HF_VHF_UHF_RANGES,
     ),
     "IC-7300": RadioProfile(
         id="icom_ic7300",
