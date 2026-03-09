@@ -36,7 +36,12 @@ from ..rigctld.state_cache import StateCache
 from .dx_cluster import DXClusterClient, SpotBuffer
 from .handlers import AudioBroadcaster, AudioHandler, ControlHandler, MetersHandler, ScopeHandler
 from .radio_poller import CommandQueue, DisableScope, EnableScope, RadioPoller
-from .websocket import WS_KEEPALIVE_INTERVAL, WebSocketConnection, make_accept_key
+from .websocket import (
+    WS_KEEPALIVE_INTERVAL,
+    WebSocketConnection,
+    make_accept_key,
+    negotiate_deflate,
+)
 
 if TYPE_CHECKING:
     from ..audio_bridge import AudioBridge
@@ -1154,17 +1159,26 @@ class WebServer:
             return
 
         accept = make_accept_key(ws_key)
+        # Negotiate permessage-deflate (RFC 7692)
+        ext_header = headers.get("sec-websocket-extensions", "")
+        deflate_resp = negotiate_deflate(ext_header) if ext_header else None
+        ext_line = (
+            f"Sec-WebSocket-Extensions: {deflate_resp}\r\n"
+            if deflate_resp
+            else ""
+        )
         response = (
             "HTTP/1.1 101 Switching Protocols\r\n"
             "Upgrade: websocket\r\n"
             "Connection: Upgrade\r\n"
             f"Sec-WebSocket-Accept: {accept}\r\n"
+            f"{ext_line}"
             "\r\n"
         )
         writer.write(response.encode("ascii"))
         await writer.drain()
 
-        ws = WebSocketConnection(reader, writer)
+        ws = WebSocketConnection(reader, writer, deflate=bool(deflate_resp))
         raw_model = (
             getattr(self._radio, "model", None)
             if self._radio is not None

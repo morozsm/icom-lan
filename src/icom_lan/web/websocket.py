@@ -1,10 +1,11 @@
-"""RFC 6455 WebSocket protocol implementation (stdlib only).
+"""RFC 6455 WebSocket + RFC 7692 permessage-deflate (stdlib only).
 
 Provides:
 - HTTP Upgrade handshake key computation
 - Frame serialization (server→client, unmasked)
 - Frame parsing (client→server, masked)
 - WebSocketConnection class for full-duplex messaging
+- Optional per-message deflate compression
 """
 
 from __future__ import annotations
@@ -13,6 +14,7 @@ import asyncio
 import base64
 import hashlib
 import struct
+import zlib
 
 __all__ = [
     "WS_MAGIC",
@@ -26,6 +28,7 @@ __all__ = [
     "WebSocketError",
     "make_accept_key",
     "make_frame",
+    "negotiate_deflate",
     "WebSocketConnection",
 ]
 
@@ -40,36 +43,64 @@ WS_OP_CLOSE = 0x8
 WS_OP_PING = 0x9
 WS_OP_PONG = 0xA
 
+_RSV1 = 0x40  # per-message deflate flag
+
+# zlib flush marker appended by deflate, stripped per RFC 7692 §7.2.1
+_DEFLATE_TAIL = b"\x00\x00\xff\xff"
+
 
 class WebSocketError(Exception):
     """Raised when a WebSocket protocol violation is detected."""
 
 
 def make_accept_key(client_key: str) -> str:
-    """Compute the Sec-WebSocket-Accept value from the client's key.
-
-    Args:
-        client_key: The Sec-WebSocket-Key header value (base64 string).
-
-    Returns:
-        Base64-encoded SHA-1 of (client_key + WS_MAGIC).
-    """
+    """Compute the Sec-WebSocket-Accept value from the client's key."""
     raw = (client_key + WS_MAGIC).encode("ascii")
     return base64.b64encode(hashlib.sha1(raw).digest()).decode("ascii")
 
 
-def make_frame(opcode: int, payload: bytes, *, fin: bool = True) -> bytes:
+def negotiate_deflate(extensions_header: str) -> str | None:
+    """Parse Sec-WebSocket-Extensions and return response value if deflate ok.
+
+    Uses server_no_context_takeover + client_no_context_takeover for
+    simplicity (no per-connection zlib state to manage).
+
+    Returns:
+        Extension response string for the 101 header, or None if client
+        did not offer permessage-deflate.
+    """
+    for ext in extensions_header.split(","):
+        name = ext.strip().split(";")[0].strip().lower()
+        if name == "permessage-deflate":
+            return (
+                "permessage-deflate; "
+                "server_no_context_takeover; "
+                "client_no_context_takeover"
+            )
+    return None
+
+
+def make_frame(
+    opcode: int,
+    payload: bytes,
+    *,
+    fin: bool = True,
+    rsv1: bool = False,
+) -> bytes:
     """Serialize a WebSocket frame (server→client, no masking).
 
     Args:
         opcode: Frame opcode (WS_OP_TEXT, WS_OP_BINARY, etc.).
         payload: Frame payload bytes.
-        fin: Whether this is the final fragment (True for all non-fragmented frames).
+        fin: Whether this is the final fragment.
+        rsv1: Set RSV1 bit (used for permessage-deflate).
 
     Returns:
         Serialized frame bytes.
     """
     first_byte = (0x80 if fin else 0x00) | (opcode & 0x0F)
+    if rsv1:
+        first_byte |= _RSV1
     length = len(payload)
 
     if length <= 125:
@@ -84,30 +115,25 @@ def make_frame(opcode: int, payload: bytes, *, fin: bool = True) -> bytes:
 
 async def _read_one_frame(
     reader: asyncio.StreamReader,
-) -> tuple[int, bytes, bool]:
+    *,
+    deflate: bool = False,
+) -> tuple[int, bytes, bool, bool]:
     """Read one WebSocket frame from the stream.
 
-    Client→server frames are always masked (RFC 6455 §5.3).
-    Server→client frames are never masked.
-
-    Args:
-        reader: asyncio StreamReader.
-
     Returns:
-        Tuple of (opcode, payload, fin).
-
-    Raises:
-        WebSocketError: On protocol violation.
-        asyncio.IncompleteReadError: On EOF.
+        Tuple of (opcode, payload, fin, rsv1).
     """
     header = await reader.readexactly(2)
     byte0, byte1 = header[0], header[1]
 
     fin = bool(byte0 & 0x80)
-    # RSV1-3 must be 0 unless extensions are negotiated (we negotiate none)
-    rsv = (byte0 >> 4) & 0x07
-    if rsv != 0:
-        raise WebSocketError(f"non-zero RSV bits: {rsv:#x}")
+    rsv1 = bool(byte0 & _RSV1)
+    rsv23 = (byte0 >> 4) & 0x03  # RSV2 and RSV3
+
+    if rsv23 != 0:
+        raise WebSocketError(f"non-zero RSV2/RSV3 bits: {rsv23:#x}")
+    if rsv1 and not deflate:
+        raise WebSocketError("RSV1 set but permessage-deflate not negotiated")
 
     opcode = byte0 & 0x0F
     masked = bool(byte1 & 0x80)
@@ -131,49 +157,68 @@ async def _read_one_frame(
     else:
         payload = raw
 
-    return opcode, payload, fin
+    return opcode, payload, fin, rsv1
 
 
 class WebSocketConnection:
     """An established WebSocket connection (post-handshake).
 
-    Wraps asyncio StreamReader/StreamWriter and provides frame-level I/O.
-    Handles fragmentation, ping/pong, and close handshake internally.
+    Supports optional permessage-deflate compression (RFC 7692).
 
     Args:
         reader: asyncio StreamReader (post-HTTP handshake).
         writer: asyncio StreamWriter (post-HTTP handshake).
+        deflate: Enable permessage-deflate compression.
     """
 
     def __init__(
         self,
         reader: asyncio.StreamReader,
         writer: asyncio.StreamWriter,
+        *,
+        deflate: bool = False,
     ) -> None:
         self._reader = reader
         self._writer = writer
         self._closed = False
+        self._deflate = deflate
         self._fragmented_opcode: int = 0
         self._fragments: list[bytes] = []
+
+    @property
+    def deflate_enabled(self) -> bool:
+        """True if permessage-deflate was negotiated."""
+        return self._deflate
+
+    def _compress(self, data: bytes) -> bytes:
+        """Compress payload per RFC 7692 §7.2.1."""
+        # Use raw deflate (wbits=-15), flush with Z_SYNC_FLUSH,
+        # then strip the trailing 0x00 0x00 0xff 0xff marker.
+        c = zlib.compressobj(zlib.Z_DEFAULT_COMPRESSION, zlib.DEFLATED, -15)
+        out = c.compress(data) + c.flush(zlib.Z_SYNC_FLUSH)
+        if out.endswith(_DEFLATE_TAIL):
+            out = out[: -len(_DEFLATE_TAIL)]
+        return out
+
+    def _decompress(self, data: bytes) -> bytes:
+        """Decompress payload per RFC 7692 §7.2.2."""
+        d = zlib.decompressobj(-15)
+        return d.decompress(data + _DEFLATE_TAIL)
 
     async def recv(self) -> tuple[int, bytes]:
         """Receive the next complete message.
 
-        Handles fragmented frames, ping/pong internally. Raises EOFError
-        on clean close or WebSocketError on protocol violation.
+        Handles fragmented frames, ping/pong, and deflate decompression
+        internally. Raises EOFError on clean close.
 
         Returns:
-            Tuple of (opcode, payload), where opcode is WS_OP_TEXT or
-            WS_OP_BINARY (never continuation or control opcodes).
-
-        Raises:
-            EOFError: When the connection is closed (cleanly or by peer).
-            WebSocketError: On protocol error.
-            asyncio.IncompleteReadError: On abrupt EOF.
+            Tuple of (opcode, payload).
         """
         while True:
             try:
-                opcode, payload, fin = await _read_one_frame(self._reader)
+                opcode, payload, fin, rsv1 = await _read_one_frame(
+                    self._reader, deflate=self._deflate
+                )
             except asyncio.IncompleteReadError as exc:
                 raise EOFError("connection closed") from exc
 
@@ -182,11 +227,10 @@ class WebSocketConnection:
                 continue
 
             if opcode == WS_OP_PONG:
-                continue  # ignore unsolicited pong
+                continue
 
             if opcode == WS_OP_CLOSE:
                 self._closed = True
-                # Echo close frame back
                 if not self._writer.is_closing():
                     try:
                         self._writer.write(make_frame(WS_OP_CLOSE, payload))
@@ -204,42 +248,49 @@ class WebSocketConnection:
                     op = self._fragmented_opcode
                     self._fragments = []
                     self._fragmented_opcode = 0
+                    # RSV1 is set on the FIRST fragment only (per RFC 7692)
+                    # Decompression was deferred to reassembly
+                    if rsv1 and self._deflate:
+                        data = self._decompress(data)
                     return op, data
-                # More fragments coming
                 continue
 
             # Data frame (text or binary)
             if not fin:
-                # First fragment of a fragmented message
                 self._fragmented_opcode = opcode
                 self._fragments = [payload]
                 continue
 
+            # Complete single-frame message
+            if rsv1 and self._deflate:
+                payload = self._decompress(payload)
             return opcode, payload
 
     async def send_text(self, text: str) -> None:
-        """Send a text frame.
-
-        Args:
-            text: UTF-8 string to send.
-        """
-        await self._send_raw(make_frame(WS_OP_TEXT, text.encode("utf-8")))
+        """Send a text frame, compressed if deflate is enabled."""
+        data = text.encode("utf-8")
+        if self._deflate:
+            compressed = self._compress(data)
+            await self._send_raw(
+                make_frame(WS_OP_TEXT, compressed, rsv1=True)
+            )
+        else:
+            await self._send_raw(make_frame(WS_OP_TEXT, data))
 
     async def send_binary(self, data: bytes) -> None:
-        """Send a binary frame.
-
-        Args:
-            data: Binary data to send.
-        """
+        """Send a binary frame, compressed if deflate is enabled."""
+        if self._deflate:
+            compressed = self._compress(data)
+            # Only compress if it actually saves space
+            if len(compressed) < len(data):
+                await self._send_raw(
+                    make_frame(WS_OP_BINARY, compressed, rsv1=True)
+                )
+                return
         await self._send_raw(make_frame(WS_OP_BINARY, data))
 
     async def close(self, code: int = 1000, reason: str = "") -> None:
-        """Send a WebSocket close frame.
-
-        Args:
-            code: WebSocket close status code (default 1000 = normal closure).
-            reason: Optional close reason string.
-        """
+        """Send a WebSocket close frame (never compressed)."""
         if not self._closed:
             payload = struct.pack("!H", code) + reason.encode("utf-8")
             try:
@@ -254,15 +305,7 @@ class WebSocketConnection:
         return self._closed
 
     async def keepalive_loop(self, interval: float = 20.0) -> None:
-        """Send periodic WebSocket ping frames to detect dead connections.
-
-        Runs until cancelled or the connection is closed. If the underlying
-        TCP connection is gone, the write will fail and the exception will
-        propagate, causing the task to exit silently.
-
-        Args:
-            interval: Seconds between pings (default 20s).
-        """
+        """Send periodic ping frames to detect dead connections."""
         try:
             while not self._closed:
                 await asyncio.sleep(interval)
@@ -271,7 +314,7 @@ class WebSocketConnection:
         except asyncio.CancelledError:
             pass
         except Exception:
-            pass  # Connection gone; exit quietly
+            pass
 
     async def _send_raw(self, data: bytes) -> None:
         self._writer.write(data)
