@@ -1,207 +1,169 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { arcPath, polar, valueToAngle } from '../../lib/utils/meter-utils';
+  import { createSmoother } from '../../lib/utils/smoothing.svelte';
 
   interface Props {
     value: number; // raw backend value 0-255
-    label?: string;
+    tx?: boolean;
   }
 
-  let { value, label = 'S' }: Props = $props();
+  let { value, tx = false }: Props = $props();
 
-  // Raw value scale:
-  // S0=0, S1=17, S2=34, ..., S9=153, S9+10=170, S9+20=187, S9+40=212, S9+60=237
-  const MAX_RAW = 255;
-  const S_UNIT = 17; // raw units per S-step
-  const S9_RAW = 153; // 9 * 17
+  const S_UNIT = 17;
+  const S9_RAW = 153;
 
-  let fillPercent = $derived(Math.min(100, (Math.max(0, value) / MAX_RAW) * 100));
+  const width = 860;
+  const height = 470;
+  const cx = width / 2;
+  const cy = 310;
+  const outerR = 255;
+  const tickInner = 190;
+  const tickOuter = 214;
+  const labelR = 238;
 
-  // Peak hold: track max value, hold for 2s then slowly decay
-  let peakValue = $state(0);
-  let peakPercent = $derived(Math.min(100, (peakValue / MAX_RAW) * 100));
-  let peakLastSet = 0; // plain var — not tracked, only read inside setInterval
+  const MAIN_MARKS = [
+    { value: 1, label: '1', color: '#f8fafc' },
+    { value: 3, label: '3', color: '#f8fafc' },
+    { value: 5, label: '5', color: '#f8fafc' },
+    { value: 7, label: '7', color: '#f8fafc' },
+    { value: 9, label: '9', color: '#f8fafc' },
+    { value: 10, label: '+20', color: '#ef4444' },
+    { value: 11, label: '+40', color: '#ef4444' },
+    { value: 12, label: '+60dB', color: '#ef4444' },
+  ];
+
+  const ticks = Array.from({ length: 61 }, (_, i) => {
+    const scaleValue = (i / 60) * 12;
+    return {
+      angle: valueToAngle(scaleValue),
+      major: i % 5 === 0,
+      red: scaleValue > 9,
+    };
+  });
+
+  // Map raw 0-255 to 0-12 internal scale
+  let scaledValue = $derived((() => {
+    if (value <= 0) return 0;
+    if (value <= S9_RAW) return value / S_UNIT; // 0-9
+    const above = value - S9_RAW;
+    if (above <= S_UNIT) return 10; // +20dB
+    if (above <= 2 * S_UNIT) return 11; // +40dB
+    return 12; // +60dB
+  })());
+
+  const smoother = createSmoother(0.08, 0.38);
 
   $effect(() => {
-    if (value > peakValue) {
-      peakValue = value;
-      peakLastSet = Date.now();
-    }
+    smoother.update(scaledValue);
   });
 
   onMount(() => {
-    const interval = setInterval(() => {
-      if (peakValue > 0 && Date.now() - peakLastSet > 2000) {
-        peakValue = Math.max(0, peakValue - 4);
-      }
-    }, 80);
-    return () => clearInterval(interval);
+    smoother.start();
+    return () => smoother.stop();
   });
 
-  function sMeterLabel(v: number): string {
-    if (v <= 0) return 'S0';
-    if (v <= S9_RAW) {
-      const s = Math.min(9, Math.round(v / S_UNIT));
-      return `S${s}`;
-    }
-    const above = v - S9_RAW;
-    if (above <= S_UNIT) return 'S9+10';
-    if (above <= 2 * S_UNIT) return 'S9+20';
-    if (above <= 3 * S_UNIT) return 'S9+40';
-    return 'S9+60';
-  }
-
-  let displayLabel = $derived(sMeterLabel(value));
-
-  // Color thresholds: green S1-S5 (≤85), yellow S6-S9 (≤153), red S9+
-  let meterColor = $derived(
-    value <= 85 ? 'var(--success)' : value <= S9_RAW ? 'var(--warning)' : 'var(--danger)',
-  );
-
-  // Positions for scale labels on the track (as % of MAX_RAW)
-  const S5_PCT = (85 / MAX_RAW) * 100;
-  const S9_PCT = (S9_RAW / MAX_RAW) * 100;
+  let angle = $derived(valueToAngle(smoother.value));
 </script>
 
-<div class="s-meter">
-  <div class="meter-header">
-    <span class="meter-label">{label}</span>
-    <span class="meter-value" style="color: {meterColor}">{displayLabel}</span>
-  </div>
+<svg viewBox="0 0 {width} {height}" class="w-full">
+  <defs>
+    <filter id="glowW">
+      <feGaussianBlur stdDeviation="1.5" result="b" />
+      <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+    </filter>
+    <filter id="glowR">
+      <feGaussianBlur stdDeviation="2" result="b" />
+      <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+    </filter>
+    <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0c0c0d" />
+      <stop offset="100%" stop-color="#050505" />
+    </linearGradient>
+  </defs>
 
-  <div class="meter-bar-wrap">
-    <div class="meter-track">
-      <!-- Gradient fill bar -->
-      <div class="meter-fill" style="width: {fillPercent}%"></div>
-      <!-- Peak hold indicator -->
-      {#if peakValue > 0}
-        <div class="peak-mark" style="left: {peakPercent}%"></div>
-      {/if}
-      <!-- S9 threshold marker -->
-      <div class="threshold-mark" style="left: {S9_PCT}%"></div>
-    </div>
+  <rect x="0" y="0" {width} {height} rx="28" fill="url(#panel)" />
 
-    <div class="scale-row">
-      <span class="scale-start">S1</span>
-      <span class="scale-mid" style="left: {S5_PCT}%">S5</span>
-      <span class="scale-s9" style="left: {S9_PCT}%">S9</span>
-      <span class="scale-end">+60</span>
-    </div>
-  </div>
-</div>
+  <!-- Main arc: white S0-S9, red S9+ -->
+  <path d={arcPath(cx, cy, outerR, -126, -18)} stroke="#f8fafc" stroke-width="5" fill="none" />
+  <path d={arcPath(cx, cy, outerR, -18, 18)} stroke="#ef4444" stroke-width="5" fill="none" filter="url(#glowR)" />
+
+  <!-- Tick marks -->
+  {#each ticks as t}
+    {@const p1 = polar(cx, cy, t.major ? tickInner : tickInner + 10, t.angle)}
+    {@const p2 = polar(cx, cy, tickOuter, t.angle)}
+    <line
+      x1={p1.x} y1={p1.y}
+      x2={p2.x} y2={p2.y}
+      stroke={t.red ? '#ef4444' : '#f8fafc'}
+      stroke-width={t.major ? 3 : 1.4}
+      opacity="0.96"
+    />
+  {/each}
+
+  <!-- Scale labels -->
+  {#each MAIN_MARKS as m}
+    {@const p = polar(cx, cy, labelR, valueToAngle(m.value))}
+    <text
+      x={p.x} y={p.y}
+      text-anchor="middle"
+      dominant-baseline="middle"
+      font-size={m.value <= 9 ? 30 : 24}
+      font-weight="700"
+      fill={m.color}
+      filter={m.color === '#ef4444' ? 'url(#glowR)' : 'url(#glowW)'}
+    >{m.label}</text>
+  {/each}
+
+  <!-- Meter type labels -->
+  <text x="64" y="146" font-size="36" font-weight="700" fill="#f8fafc">S</text>
+  <text x="60" y="237" font-size="24" font-weight="700" fill="#f8fafc">Po</text>
+  <text x="48" y="316" font-size="28" font-weight="700" fill="#f8fafc">SWR</text>
+  <text x="93" y="344" font-size="20" font-weight="700" fill="#60a5fa">COMP</text>
+
+  <!-- Inner arcs (Po, SWR, COMP) -->
+  <path d={arcPath(cx, cy, 184, -123, 14)} stroke="#e5e7eb" stroke-width="2.2" fill="none" opacity="0.95" />
+  <path d={arcPath(cx, cy, 139, -120, 16)} stroke="#e5e7eb" stroke-width="2.1" fill="none" opacity="0.95" />
+  <path d={arcPath(cx, cy, 88, -116, 4)} stroke="#60a5fa" stroke-width="3.6" fill="none" opacity="0.95" />
+  <path d={arcPath(cx, cy, 88, 4, 16)} stroke="#ef4444" stroke-width="3.6" fill="none" opacity="0.95" />
+
+  <!-- Po labels -->
+  {#each [{ a: -111, l: '0' }, { a: -84, l: '10' }, { a: -56, l: '20' }, { a: -28, l: '50' }, { a: 1, l: '100' }, { a: 15, l: '30' }] as m}
+    {@const p = polar(cx, cy, 141, m.a)}
+    <text x={p.x} y={p.y} font-size="19" font-weight="700" fill="#f8fafc" text-anchor="middle">{m.l}</text>
+  {/each}
+
+  <!-- COMP/SWR labels -->
+  {#each [{ a: -112, l: '0', c: '#60a5fa' }, { a: -85, l: '10', c: '#60a5fa' }, { a: -58, l: '20', c: '#60a5fa' }, { a: -12, l: '10', c: '#f8fafc' }, { a: 14, l: '16V', c: '#f8fafc' }, { a: 24, l: 'Vd', c: '#f8fafc' }] as m}
+    {@const p = polar(cx, cy, 92, m.a)}
+    <text x={p.x} y={p.y + 6} font-size="18" font-weight="700" fill={m.c} text-anchor="middle">{m.l}</text>
+  {/each}
+
+  <!-- SWR scale numbers -->
+  <text x="294" y="349" font-size="18" font-weight="700" fill="#f8fafc">1</text>
+  <text x="347" y="349" font-size="18" font-weight="700" fill="#f8fafc">2</text>
+  <text x="397" y="349" font-size="18" font-weight="700" fill="#f8fafc">3</text>
+  <text x="582" y="346" font-size="24" font-weight="700" fill="#60a5fa">20</text>
+  <text x="706" y="345" font-size="22" font-weight="700" fill="#f8fafc">∞</text>
+  <text x="732" y="345" font-size="16" font-weight="700" fill="#f8fafc">dB</text>
+
+  <!-- Needle -->
+  <g transform="rotate({angle} {cx} {cy})">
+    <line x1={cx - 20} y1={cy} x2={cx + 214} y2={cy} stroke="#f8fafc" stroke-width="5" stroke-linecap="round" />
+    <polygon points="{cx + 222},{cy} {cx + 197},{cy - 6} {cx + 197},{cy + 6}" fill="#f8fafc" />
+  </g>
+  <circle {cx} {cy} r="13" fill="#d4d4d8" />
+  <circle {cx} {cy} r="5" fill="#09090b" />
+
+  <!-- TX indicator -->
+  <g transform="translate(30 300)">
+    <rect x="0" y="0" width="72" height="46" rx="8" fill={tx ? '#991b1b' : '#27272a'} stroke={tx ? '#fb7185' : '#52525b'} stroke-width="2" />
+    <text x="36" y="30" text-anchor="middle" font-size="28" font-weight="800" fill={tx ? '#fee2e2' : '#d4d4d8'}>TX</text>
+  </g>
+</svg>
 
 <style>
-  .s-meter {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
-  }
-
-  .meter-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-  }
-
-  .meter-label {
-    color: var(--text-muted);
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    font-size: 0.65rem;
-  }
-
-  .meter-value {
-    font-weight: 700;
-    font-size: 0.875rem;
-    transition: color 0.2s;
-    min-width: 48px;
-    text-align: right;
-  }
-
-  .meter-bar-wrap {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-
-  .meter-track {
-    position: relative;
-    height: 8px;
-    background: var(--bg);
-    border: 1px solid var(--panel-border);
-    border-radius: 4px;
-    overflow: hidden;
-  }
-
-  .meter-fill {
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    border-radius: 4px;
-    /* Color gradient: green → yellow → red, keyed to S5 and S9 positions */
-    background: linear-gradient(
-      to right,
-      var(--success) 0%,
-      var(--success) 33.3%,
-      var(--warning) 33.3%,
-      var(--warning) 60%,
-      var(--danger) 60%,
-      var(--danger) 100%
-    );
-    transition: width var(--transition-fast);
-  }
-
-  .peak-mark {
-    position: absolute;
-    top: 1px;
-    bottom: 1px;
-    width: 2px;
-    background: rgba(255, 255, 255, 0.85);
-    border-radius: 1px;
-    pointer-events: none;
-    transform: translateX(-1px);
-    transition: left var(--transition-fast);
-  }
-
-  .threshold-mark {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    width: 1px;
-    background: rgba(255, 255, 255, 0.3);
-    pointer-events: none;
-  }
-
-  .scale-row {
-    position: relative;
-    height: 12px;
-    font-family: var(--font-mono);
-    font-size: 0.5rem;
-    color: var(--text-muted);
-    user-select: none;
-  }
-
-  .scale-start {
-    position: absolute;
-    left: 0;
-  }
-
-  .scale-mid {
-    position: absolute;
-    transform: translateX(-50%);
-  }
-
-  .scale-s9 {
-    position: absolute;
-    transform: translateX(-50%);
-    color: var(--warning);
-  }
-
-  .scale-end {
-    position: absolute;
-    right: 0;
-    color: var(--danger);
+  svg {
+    display: block;
   }
 </style>

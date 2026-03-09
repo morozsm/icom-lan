@@ -193,7 +193,7 @@
       <!-- S-Meter / Power meter -->
       <div class="panel-card">
         {#if main}
-          <SMeter value={main.sMeter} label="S" />
+          <SMeter value={main.sMeter} tx={state?.ptt ?? false} />
         {/if}
         {#if isTx}
           <div class="meter-spacer"></div>
