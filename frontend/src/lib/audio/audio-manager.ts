@@ -129,7 +129,11 @@ class AudioManager {
     ws.onmessage = (ev) => {
       if (ev.data instanceof ArrayBuffer) {
         frameCount++;
-        this.rxPlayer.feed(ev.data);
+        try {
+          this.rxPlayer.feed(ev.data);
+        } catch (e) {
+          if (frameCount <= 3) console.error('[audio-ws] feed error:', e);
+        }
       }
     };
 

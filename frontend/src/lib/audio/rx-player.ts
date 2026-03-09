@@ -122,6 +122,8 @@ export class RxPlayer {
         },
         error: (err: DOMException) => {
           console.warn('RxPlayer: AudioDecoder error', err);
+          // Decoder auto-closes on error — null it so next frame recreates
+          this.decoder = null;
         },
       });
       this.decoder.configure({
@@ -129,6 +131,11 @@ export class RxPlayer {
         sampleRate: sr > 0 ? sr : SAMPLE_RATE,
         numberOfChannels: ch === 2 ? 2 : 1,
       });
+    }
+
+    if (!this.decoder || this.decoder.state === 'closed') {
+      this.decoder = null;
+      return; // will be recreated on next call
     }
 
     const chunk = new EncodedAudioChunk({

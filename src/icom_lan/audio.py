@@ -49,7 +49,8 @@ class AudioPacket:
     Attributes:
         ident: Audio stream identifier (0x0080 for TX, varies for RX).
         send_seq: Audio-level sequence number.
-        data: Opus-encoded audio data (raw bytes after header).
+        data: Raw audio payload (format depends on negotiated codec —
+              PCM16, uLaw, or Opus).  Bytes after Icom LAN header.
     """
 
     ident: int
