@@ -803,7 +803,7 @@ class WebServer:
         """
         try:
             request_line = await asyncio.wait_for(
-                reader.readline(), timeout=30.0
+                reader.readline(), timeout=10.0
             )
         except asyncio.TimeoutError:
             return None
@@ -848,30 +848,21 @@ class WebServer:
     ) -> None:
         peer = writer.get_extra_info("peername", ("?", 0))
         try:
-            while True:  # keepalive loop
-                result = await self._read_request(reader)
-                if result is None:
-                    return
-                method, path, headers, query = result
+            result = await self._read_request(reader)
+            if result is None:
+                return
+            method, path, headers, query = result
 
-                conn_header = headers.get("connection", "").lower()
+            logger.debug("request: %s %s from %s:%s", method, path, peer[0], peer[1])
 
-                logger.debug("request: %s %s from %s:%s", method, path, peer[0], peer[1])
-
-                # WebSocket upgrade?
-                if (
-                    headers.get("upgrade", "").lower() == "websocket"
-                    and conn_header.find("upgrade") >= 0
-                ):
-                    await self._handle_websocket(reader, writer, path, headers, query)
-                    return  # WS takes over, exit keepalive loop
-                else:
-                    await self._handle_http(writer, method, path, headers)
-
-                    # Close if client requests it
-                    if conn_header == "close":
-                        return
-                    # Continue loop for next request (keepalive)
+            # WebSocket upgrade?
+            if (
+                headers.get("upgrade", "").lower() == "websocket"
+                and headers.get("connection", "").lower().find("upgrade") >= 0
+            ):
+                await self._handle_websocket(reader, writer, path, headers, query)
+            else:
+                await self._handle_http(writer, method, path, headers)
         except asyncio.CancelledError:
             raise
         except Exception as exc:
@@ -1254,6 +1245,7 @@ async def _send_response(
 ) -> None:
     headers = {
         "Content-Length": str(len(body)),
+        "Connection": "close",
         **extra_headers,
     }
     header_lines = "".join(f"{k}: {v}\r\n" for k, v in headers.items())
