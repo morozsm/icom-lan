@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import asyncio
 import datetime
+import gzip as _gzip
 import json
 import logging
 import mimetypes
@@ -791,7 +792,7 @@ class WebServer:
         """
         try:
             request_line = await asyncio.wait_for(
-                reader.readline(), timeout=10.0
+                reader.readline(), timeout=30.0
             )
         except asyncio.TimeoutError:
             return None
@@ -836,21 +837,30 @@ class WebServer:
     ) -> None:
         peer = writer.get_extra_info("peername", ("?", 0))
         try:
-            result = await self._read_request(reader)
-            if result is None:
-                return
-            method, path, headers, query = result
+            while True:  # keepalive loop
+                result = await self._read_request(reader)
+                if result is None:
+                    return
+                method, path, headers, query = result
 
-            logger.debug("request: %s %s from %s:%s", method, path, peer[0], peer[1])
+                conn_header = headers.get("connection", "").lower()
 
-            # WebSocket upgrade?
-            if (
-                headers.get("upgrade", "").lower() == "websocket"
-                and headers.get("connection", "").lower().find("upgrade") >= 0
-            ):
-                await self._handle_websocket(reader, writer, path, headers, query)
-            else:
-                await self._handle_http(writer, method, path, headers)
+                logger.debug("request: %s %s from %s:%s", method, path, peer[0], peer[1])
+
+                # WebSocket upgrade?
+                if (
+                    headers.get("upgrade", "").lower() == "websocket"
+                    and conn_header.find("upgrade") >= 0
+                ):
+                    await self._handle_websocket(reader, writer, path, headers, query)
+                    return  # WS takes over, exit keepalive loop
+                else:
+                    await self._handle_http(writer, method, path, headers)
+
+                    # Close if client requests it
+                    if conn_header == "close":
+                        return
+                    # Continue loop for next request (keepalive)
         except asyncio.CancelledError:
             raise
         except Exception as exc:
@@ -901,11 +911,11 @@ class WebServer:
             return
 
         if path == "/api/v1/info":
-            await self._serve_info(writer)
+            await self._serve_info(writer, headers)
         elif path == "/api/v1/state":
-            await self._serve_state(writer)
+            await self._serve_state(writer, headers)
         elif path == "/api/v1/capabilities":
-            await self._serve_capabilities(writer)
+            await self._serve_capabilities(writer, headers)
         elif path == "/api/v1/dx/spots":
             await self._serve_dx_spots(writer)
         elif path == "/api/v1/bridge":
@@ -919,7 +929,7 @@ class WebServer:
         else:
             await _send_response(writer, 404, "Not Found", b"404 Not Found", {})
 
-    async def _serve_info(self, writer: asyncio.StreamWriter) -> None:
+    async def _serve_info(self, writer: asyncio.StreamWriter, headers: dict[str, str] | None = None) -> None:
         raw_model = (
             getattr(self._radio, "model", None)
             if self._radio is not None
@@ -968,11 +978,14 @@ class WebServer:
             },
             separators=(",", ":"),
         ).encode()
-        await _send_response(
-            writer, 200, "OK", body, {"Content-Type": "application/json"}
-        )
+        extra: dict[str, str] = {"Content-Type": "application/json"}
+        if len(body) > 1024 and "gzip" in (headers or {}).get("accept-encoding", ""):
+            body = _gzip.compress(body, compresslevel=1)
+            extra["Content-Encoding"] = "gzip"
+            extra["Vary"] = "Accept-Encoding"
+        await _send_response(writer, 200, "OK", body, extra)
 
-    async def _serve_state(self, writer: asyncio.StreamWriter) -> None:
+    async def _serve_state(self, writer: asyncio.StreamWriter, headers: dict[str, str] | None = None) -> None:
         d = self._radio_state.to_dict()
         raw_connected = (
             getattr(self._radio, "connected", False) if self._radio else False
@@ -988,14 +1001,25 @@ class WebServer:
             if isinstance(raw_control_connected, bool)
             else False
         )
-        d["revision"] = self._radio_poller.revision if self._radio_poller is not None else 0
+        revision = self._radio_poller.revision if self._radio_poller is not None else 0
+        d["revision"] = revision
         d["updatedAt"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
-        body = json.dumps(_camel_case_state(d), separators=(",", ":")).encode()
-        await _send_response(
-            writer, 200, "OK", body, {"Content-Type": "application/json"}
-        )
 
-    async def _serve_capabilities(self, writer: asyncio.StreamWriter) -> None:
+        etag = f'"{revision}"'
+        if_none_match = (headers or {}).get("if-none-match", "")
+        if if_none_match == etag:
+            await _send_response(writer, 304, "Not Modified", b"", {"ETag": etag})
+            return
+
+        body = json.dumps(_camel_case_state(d), separators=(",", ":")).encode()
+        extra: dict[str, str] = {"Content-Type": "application/json", "ETag": etag}
+        if len(body) > 1024 and "gzip" in (headers or {}).get("accept-encoding", ""):
+            body = _gzip.compress(body, compresslevel=1)
+            extra["Content-Encoding"] = "gzip"
+            extra["Vary"] = "Accept-Encoding"
+        await _send_response(writer, 200, "OK", body, extra)
+
+    async def _serve_capabilities(self, writer: asyncio.StreamWriter, headers: dict[str, str] | None = None) -> None:
         caps = _runtime_capabilities(self._radio)
         _raw_model = getattr(self._radio, "model", None) if self._radio is not None else None
         model: str = _raw_model if isinstance(_raw_model, str) else self._config.radio_model
@@ -1007,17 +1031,53 @@ class WebServer:
                 "tx": "tx" in caps,
                 "capabilities": sorted(caps),
                 "freqRanges": [
-                    {"start": 30000, "end": 60000000, "label": "HF"},
-                    {"start": 50000000, "end": 54000000, "label": "6m"},
+                    {
+                        "start": 30000,
+                        "end": 60000000,
+                        "label": "HF",
+                        "bands": [
+                            {"name": "160m", "start": 1800000, "end": 2000000, "default": 1825000},
+                            {"name": "80m", "start": 3500000, "end": 4000000, "default": 3700000},
+                            {"name": "60m", "start": 5330000, "end": 5410000, "default": 5357000},
+                            {"name": "40m", "start": 7000000, "end": 7300000, "default": 7100000},
+                            {"name": "30m", "start": 10100000, "end": 10150000, "default": 10130000},
+                            {"name": "20m", "start": 14000000, "end": 14350000, "default": 14200000},
+                            {"name": "17m", "start": 18068000, "end": 18168000, "default": 18120000},
+                            {"name": "15m", "start": 21000000, "end": 21450000, "default": 21200000},
+                            {"name": "12m", "start": 24890000, "end": 24990000, "default": 24940000},
+                            {"name": "10m", "start": 28000000, "end": 29700000, "default": 28500000},
+                        ],
+                    },
+                    {
+                        "start": 50000000,
+                        "end": 54000000,
+                        "label": "6m",
+                        "bands": [
+                            {"name": "6m", "start": 50000000, "end": 54000000, "default": 50125000},
+                        ],
+                    },
                 ],
                 "modes": _MODES,
                 "filters": _FILTERS,
+                "scopeConfig": {
+                    "centerMode": True,
+                    "amplitudeMax": 160,
+                    "defaultSpan": 500000,
+                },
+                "audioConfig": {
+                    "sampleRate": 48000,
+                    "channels": 1,
+                    "codecs": ["opus"],
+                },
             },
             separators=(",", ":"),
         ).encode()
-        await _send_response(
-            writer, 200, "OK", body, {"Content-Type": "application/json"}
-        )
+        extra: dict[str, str] = {"Content-Type": "application/json"}
+        if len(body) > 1024 and "gzip" in (headers or {}).get("accept-encoding", ""):
+            body = _gzip.compress(body, compresslevel=1)
+            extra["Content-Encoding"] = "gzip"
+            extra["Vary"] = "Accept-Encoding"
+        await _send_response(writer, 200, "OK", body, extra)
 
     async def _serve_dx_spots(self, writer: asyncio.StreamWriter) -> None:
         spots = self._spot_buffer.get_spots()
@@ -1193,7 +1253,6 @@ async def _send_response(
 ) -> None:
     headers = {
         "Content-Length": str(len(body)),
-        "Connection": "close",
         **extra_headers,
     }
     header_lines = "".join(f"{k}: {v}\r\n" for k, v in headers.items())

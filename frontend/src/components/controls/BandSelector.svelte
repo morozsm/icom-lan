@@ -2,6 +2,7 @@
   import { sendCommand } from '../../lib/transport/ws-client';
   import { radio } from '../../lib/stores/radio.svelte';
   import { vibrate } from '../../lib/utils/haptics';
+  import { getCapabilities } from '../../lib/stores/capabilities.svelte';
 
   interface Band {
     name: string;
@@ -10,20 +11,11 @@
     maxHz: number;
   }
 
-  // Bands cover IC-7610 frequency range: HF (160m–10m) + 6m. No 2m/70cm — IC-7610 is HF+6m only.
-  const BANDS: Band[] = [
-    { name: '160m', defaultHz: 1_825_000,  minHz: 1_800_000,  maxHz: 2_000_000  },
-    { name: '80m',  defaultHz: 3_700_000,  minHz: 3_500_000,  maxHz: 4_000_000  },
-    { name: '60m',  defaultHz: 5_357_000,  minHz: 5_330_000,  maxHz: 5_410_000  },
-    { name: '40m',  defaultHz: 7_100_000,  minHz: 7_000_000,  maxHz: 7_300_000  },
-    { name: '30m',  defaultHz: 10_130_000, minHz: 10_100_000, maxHz: 10_150_000 },
-    { name: '20m',  defaultHz: 14_200_000, minHz: 14_000_000, maxHz: 14_350_000 },
-    { name: '17m',  defaultHz: 18_120_000, minHz: 18_068_000, maxHz: 18_168_000 },
-    { name: '15m',  defaultHz: 21_200_000, minHz: 21_000_000, maxHz: 21_450_000 },
-    { name: '12m',  defaultHz: 24_940_000, minHz: 24_890_000, maxHz: 24_990_000 },
-    { name: '10m',  defaultHz: 28_500_000, minHz: 28_000_000, maxHz: 29_700_000 },
-    { name: '6m',   defaultHz: 50_200_000, minHz: 50_000_000, maxHz: 54_000_000 },
-  ];
+  const caps = getCapabilities();
+  const BANDS: Band[] = caps?.freqRanges
+    ?.flatMap(r => r.bands ?? [])
+    ?.map(b => ({ name: b.name, defaultHz: b.default, minHz: b.start, maxHz: b.end }))
+    ?? [];
 
   let freq = $derived((radio.current?.active === 'SUB' ? radio.current?.sub : radio.current?.main)?.freqHz ?? 0);
   let receiverIdx = $derived(radio.current?.active === 'SUB' ? 1 : 0);
