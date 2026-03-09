@@ -1011,16 +1011,34 @@ class AudioBroadcaster:
         if not self._radio or not isinstance(self._radio, AudioCapable):
             return
 
-        # AudioBus always delivers raw Opus packets (start_audio_rx_opus),
-        # regardless of radio.audio_codec setting. Wire format is always Opus.
-        self._web_codec = AUDIO_CODEC_OPUS
+        # Negotiate web codec from radio's actual audio codec
         _codec = getattr(self._radio, "audio_codec", None)
         if isinstance(_codec, AudioCodec):
+            # Map radio codec → web transport codec
+            _CODEC_MAP = {
+                AudioCodec.OPUS_1CH: AUDIO_CODEC_OPUS,
+                AudioCodec.OPUS_2CH: AUDIO_CODEC_OPUS,
+                AudioCodec.PCM_1CH_16BIT: AUDIO_CODEC_PCM16,
+                AudioCodec.PCM_2CH_16BIT: AUDIO_CODEC_PCM16,
+                AudioCodec.PCM_1CH_8BIT: AUDIO_CODEC_PCM16,  # upcast in future
+                AudioCodec.PCM_2CH_8BIT: AUDIO_CODEC_PCM16,
+                AudioCodec.ULAW_1CH: AUDIO_CODEC_PCM16,  # TODO: decode ulaw→pcm
+                AudioCodec.ULAW_2CH: AUDIO_CODEC_PCM16,
+            }
+            self._web_codec = _CODEC_MAP.get(_codec, AUDIO_CODEC_PCM16)
             if _codec in (
                 AudioCodec.PCM_2CH_8BIT, AudioCodec.PCM_2CH_16BIT,
                 AudioCodec.ULAW_2CH, AudioCodec.OPUS_2CH,
             ):
                 self._channels = 2
+            logger.info(
+                "audio-broadcaster: radio codec=%s (0x%02x) → web_codec=0x%02x",
+                _codec.name, int(_codec), self._web_codec,
+            )
+        else:
+            logger.warning(
+                "audio-broadcaster: no radio codec info, defaulting to PCM16"
+            )
         _sr = getattr(self._radio, "audio_sample_rate", None)
         if isinstance(_sr, int) and not isinstance(_sr, bool) and _sr > 0:
             self._sample_rate = _sr
