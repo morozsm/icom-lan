@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { fade } from 'svelte/transition';
   import VfoDisplay from '../vfo/VfoDisplay.svelte';
   import ReceiverSwitch from '../controls/ReceiverSwitch.svelte';
@@ -10,29 +11,66 @@
   import FeatureToggles from '../controls/FeatureToggles.svelte';
   import BottomBar from '../shared/BottomBar.svelte';
   import Toast from '../shared/Toast.svelte';
+  import TuningWheel from '../controls/TuningWheel.svelte';
+  import StepSelector from '../controls/StepSelector.svelte';
 
-  import {
-    getRadioState,
-    getMainReceiver,
-    getActiveReceiver,
-  } from '../../lib/stores/radio.svelte';
+
+  import { radio } from '../../lib/stores/radio.svelte';
   import { hasDualReceiver, getCapabilities } from '../../lib/stores/capabilities.svelte';
   import { getConnectionStatus } from '../../lib/stores/connection.svelte';
   import { sendCommand } from '../../lib/transport/ws-client';
+  import { applyModeDefault } from '../../lib/stores/tuning.svelte';
 
-  let state = $derived(getRadioState());
-  let main = $derived(getMainReceiver());
-  let active = $derived(getActiveReceiver());
+  let state = $derived(radio.current);
+  let main = $derived(radio.current?.main ?? null);
+  let active = $derived(radio.current?.active === 'SUB' ? (radio.current?.sub ?? null) : (radio.current?.main ?? null));
   let activeRx = $derived(state?.active ?? 'MAIN');
   let isDualRx = $derived(hasDualReceiver());
+
+  // Auto step based on mode
+  let currentMode = $derived(active?.mode ?? '');
+  $effect(() => {
+    if (currentMode) applyModeDefault(currentMode);
+  });
   let caps = $derived(getCapabilities());
   let connectionStatus = $derived(getConnectionStatus());
   let modelName = $derived(caps?.model ?? 'Radio');
   let isConnected = $derived(connectionStatus === 'connected');
   let isPartial = $derived(connectionStatus === 'partial');
 
-  // Fullscreen spectrum overlay
+  // Fullscreen spectrum — auto on landscape orientation
   let spectrumFullscreen = $state(false);
+  let isLandscape = $state(false);
+
+  onMount(() => {
+    const mql = window.matchMedia('(orientation: landscape)');
+    isLandscape = mql.matches;
+    spectrumFullscreen = mql.matches;
+    if (mql.matches) requestFullscreen();
+
+    function onChange(e: MediaQueryListEvent) {
+      isLandscape = e.matches;
+      spectrumFullscreen = e.matches;
+      if (e.matches) {
+        requestFullscreen();
+      } else {
+        exitFullscreen();
+      }
+    }
+    mql.addEventListener('change', onChange);
+    return () => mql.removeEventListener('change', onChange);
+  });
+
+  function requestFullscreen() {
+    const el = document.documentElement;
+    if (document.fullscreenElement) return;
+    el.requestFullscreen?.().catch(() => {});
+  }
+
+  function exitFullscreen() {
+    if (!document.fullscreenElement) return;
+    document.exitFullscreen?.().catch(() => {});
+  }
 
   // UTC clock — ticks every minute
   let utcTime = $state(nowUtc());
@@ -58,10 +96,6 @@
 
   function handleDwToggle() {
     sendCommand('set_dual_watch', { on: !(state?.dualWatch ?? false) });
-  }
-
-  function openSpectrum() {
-    spectrumFullscreen = true;
   }
 
   function closeSpectrum() {
@@ -101,12 +135,25 @@
             dataMode={active.dataMode}
             ontune={handleTune}
           />
+        {:else if main}
+          <VfoDisplay
+            label="VFO A"
+            freq={main.freqHz}
+            mode={main.mode}
+            filter={main.filter}
+            active={true}
+            dataMode={main.dataMode}
+            ontune={handleTune}
+          />
+        {:else if state}
+          <div class="vfo-placeholder">Loading VFO…</div>
         {:else}
           <div class="vfo-placeholder">Connecting…</div>
         {/if}
       </div>
 
       {#if isDualRx}
+        {@const inactiveRx = activeRx === 'MAIN' ? radio.current?.sub : radio.current?.main}
         <div class="receiver-row">
           <ReceiverSwitch
             active={activeRx}
@@ -115,25 +162,21 @@
             onswitch={handleReceiverSwitch}
             ondwtoggle={handleDwToggle}
           />
+          {#if inactiveRx}
+            <span class="inactive-vfo" onclick={() => handleReceiverSwitch(activeRx === 'MAIN' ? 'SUB' : 'MAIN')}>
+              {activeRx === 'MAIN' ? 'B' : 'A'}: {(inactiveRx.freqHz / 1_000_000).toFixed(6)} {inactiveRx.mode}
+            </span>
+          {/if}
         </div>
       {/if}
     </section>
 
-    <!-- Spectrum section — tap to expand -->
+    <!-- Spectrum section — fullscreen on landscape -->
     {#if !spectrumFullscreen}
-      <div
-        class="spectrum-section"
-        onclick={openSpectrum}
-        onkeydown={(e) => e.key === 'Enter' && openSpectrum()}
-        role="button"
-        tabindex="0"
-        aria-label="Spectrum — tap to expand"
-      >
+      <div class="spectrum-section">
         <SpectrumPanel />
-        <div class="spectrum-hint">tap to expand</div>
       </div>
     {:else}
-      <!-- Placeholder height so layout doesn't collapse -->
       <div class="spectrum-placeholder" aria-hidden="true"></div>
     {/if}
 
@@ -157,7 +200,8 @@
     </section>
   </main>
 
-  <!-- ── Fixed bottom bar ── -->
+  <!-- ── Tuning wheel + Bottom bar ── -->
+  <TuningWheel />
   <BottomBar />
 </div>
 
@@ -169,24 +213,30 @@
   <div
     class="spectrum-overlay"
     role="dialog"
-    aria-label="Spectrum fullscreen"
+    aria-label="Spectrum landscape"
     transition:fade={{ duration: 200 }}
   >
-    <!-- Thin VFO info strip at top of overlay -->
-    <div class="overlay-header">
-      {#if active}
-        <span class="overlay-freq">
-          {(active.freqHz / 1_000_000).toFixed(6)} MHz
-        </span>
-        <span class="overlay-mode">{active.mode} · FIL{active.filter}</span>
-      {/if}
-      <button
-        class="overlay-close"
-        onclick={closeSpectrum}
-        aria-label="Close fullscreen spectrum"
-      >✕</button>
+    <!-- Left sidebar: VFO info + controls -->
+    <div class="overlay-sidebar">
+      <div class="overlay-vfo">
+        {#if active}
+          <div class="overlay-freq">{(active.freqHz / 1_000_000).toFixed(6)}</div>
+          <div class="overlay-info">{active.mode} · FIL{active.filter}</div>
+        {/if}
+      </div>
+
+      <div class="overlay-controls">
+        <ModeSelector />
+        <FilterSelector />
+        <FeatureToggles />
+      </div>
+
+      <div class="overlay-bottom">
+        <BottomBar />
+      </div>
     </div>
 
+    <!-- Spectrum fills the rest -->
     <div class="overlay-spectrum">
       <SpectrumPanel />
     </div>
@@ -264,20 +314,20 @@
   /* ── Scrollable main stack ── */
   .stack {
     flex: 1;
+    min-height: 0;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: var(--space-2);
-    padding: var(--space-2);
-    /* Leave room for fixed bottom bar */
-    padding-bottom: var(--space-2);
+    gap: var(--space-1);
+    padding: var(--space-1) var(--space-2);
   }
 
   /* ── VFO section ── */
   .vfo-section {
     display: flex;
     flex-direction: column;
-    gap: var(--space-2);
+    gap: var(--space-1);
+    flex-shrink: 0;
   }
 
   .vfo-row {
@@ -296,20 +346,35 @@
 
   .receiver-row {
     display: flex;
+    align-items: center;
     justify-content: flex-end;
+    gap: var(--space-2);
+  }
+
+  .inactive-vfo {
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.15s;
+    white-space: nowrap;
+  }
+
+  .inactive-vfo:hover {
+    opacity: 1;
   }
 
   /* ── Spectrum section ── */
   .spectrum-section {
-    height: 180px;
+    flex: 1 1 0;
+    min-height: 120px;
+    max-height: 50vh;
     background: var(--bg);
     border: 1px solid var(--panel-border);
     border-radius: var(--radius);
     overflow: hidden;
-    cursor: pointer;
     position: relative;
-    flex-shrink: 0;
-    /* Remove default button outline, add focus ring */
     outline: none;
   }
 
@@ -338,11 +403,12 @@
   .controls-section {
     display: flex;
     flex-direction: column;
-    gap: var(--space-2);
+    gap: var(--space-1);
     background: var(--panel);
     border: 1px solid var(--panel-border);
     border-radius: var(--radius);
-    padding: var(--space-3);
+    padding: var(--space-2);
+    flex-shrink: 0;
   }
 
   .smeter-row {
@@ -363,59 +429,57 @@
   }
 
   /* ── Spectrum fullscreen overlay ── */
+  /* ── Landscape overlay ── */
   .spectrum-overlay {
     position: fixed;
     inset: 0;
     z-index: 100;
     background: var(--bg);
     display: flex;
-    flex-direction: column;
-    transform-origin: center;
+    flex-direction: row;
   }
 
-  .overlay-header {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
-    padding: 0 var(--space-4);
-    height: 44px;
-    background: var(--panel);
-    border-bottom: 1px solid var(--panel-border);
-    font-family: var(--font-mono);
+  .overlay-sidebar {
+    width: 220px;
     flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--panel);
+    border-right: 1px solid var(--panel-border);
+    overflow-y: auto;
+  }
+
+  .overlay-vfo {
+    padding: var(--space-2) var(--space-3);
+    border-bottom: 1px solid var(--panel-border);
   }
 
   .overlay-freq {
-    font-size: 1rem;
+    font-family: var(--font-mono);
+    font-size: 1.125rem;
     font-weight: 700;
     color: var(--accent);
     letter-spacing: 0.04em;
   }
 
-  .overlay-mode {
-    font-size: 0.8rem;
+  .overlay-info {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
     color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  .overlay-controls {
     flex: 1;
-  }
-
-  .overlay-close {
-    min-width: 44px;
-    min-height: 44px;
-    background: none;
-    border: 1px solid var(--panel-border);
-    border-radius: var(--radius);
-    color: var(--text-muted);
-    font-size: 1rem;
-    cursor: pointer;
+    padding: var(--space-2) var(--space-3);
     display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: color 0.15s, border-color 0.15s;
+    flex-direction: column;
+    gap: var(--space-2);
+    overflow-y: auto;
   }
 
-  .overlay-close:hover {
-    color: var(--text);
-    border-color: var(--text-muted);
+  .overlay-bottom {
+    border-top: 1px solid var(--panel-border);
   }
 
   .overlay-spectrum {

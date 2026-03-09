@@ -11,6 +11,10 @@ export interface SpectrumOptions {
   spanHz: number;     // frequency span in Hz
   centerHz: number;   // center frequency in Hz
   lineWidth: number;
+  // Passband overlay
+  tuneHz: number;     // current tuned frequency (0 = hide)
+  passbandHz: number; // filter passband width in Hz (0 = hide)
+  mode: string;       // current mode (USB/LSB/CW/AM/FM) — affects passband placement
 }
 
 export const defaultSpectrumOptions: SpectrumOptions = {
@@ -23,6 +27,9 @@ export const defaultSpectrumOptions: SpectrumOptions = {
   spanHz: 0,
   centerHz: 0,
   lineWidth: 1.2,
+  tuneHz: 0,
+  passbandHz: 0,
+  mode: '',
 };
 
 function clamp(v: number, lo: number, hi: number): number {
@@ -52,7 +59,7 @@ export function renderSpectrum(
   const n = data.length;
   if (!n || width <= 0 || height <= 0) return;
 
-  const { bgColor, lineColor, fillColor, gridColor, textColor, spanHz, centerHz, lineWidth } =
+  const { bgColor, lineColor, fillColor, gridColor, textColor, spanHz, centerHz, lineWidth, tuneHz, passbandHz } =
     options;
 
   ctx.clearRect(0, 0, width, height);
@@ -133,13 +140,54 @@ export function renderSpectrum(
   }
   ctx.stroke();
 
-  // Center frequency marker
+  // Tuning indicator + passband overlay
   if (spanHz > 0) {
+    // Center mode (IC-7610 default): scope is always centered on VFO freq.
+    // Line is always at center — no calculation needed.
+    const tunePx = width / 2;
+
+    // Draw passband rectangle
+    if (passbandHz > 0) {
+      const bwPx = (passbandHz / spanHz) * width;
+      const mode = options.mode?.toUpperCase() ?? '';
+      let pbLeft: number, pbRight: number;
+
+      if (mode === 'LSB') {
+        // Lower sideband: passband is below carrier
+        pbLeft = tunePx - bwPx;
+        pbRight = tunePx;
+      } else if (mode === 'CW' || mode === 'CW-R' || mode === 'RTTY' || mode === 'RTTY-R' || mode === 'AM') {
+        // Symmetric around carrier
+        pbLeft = tunePx - bwPx / 2;
+        pbRight = tunePx + bwPx / 2;
+      } else {
+        // USB and default: passband is above carrier
+        pbLeft = tunePx;
+        pbRight = tunePx + bwPx;
+      }
+
+      ctx.fillStyle = 'rgba(59,130,246,0.15)';
+      ctx.fillRect(pbLeft, 0, pbRight - pbLeft, height);
+
+      // Passband edges
+      ctx.strokeStyle = 'rgba(59,130,246,0.4)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      ctx.moveTo(pbLeft, 0);
+      ctx.lineTo(pbLeft, height);
+      ctx.moveTo(pbRight, 0);
+      ctx.lineTo(pbRight, height);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // Center frequency line (carrier)
     ctx.strokeStyle = 'rgba(239,68,68,0.75)';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(width / 2, 0);
-    ctx.lineTo(width / 2, height);
+    ctx.moveTo(tunePx, 0);
+    ctx.lineTo(tunePx, height);
     ctx.stroke();
   }
 }

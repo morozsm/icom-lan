@@ -144,7 +144,7 @@
   </div>
 
   <div class="vfo-freq" class:freq-flash={freqFlash} role="group" aria-label="Frequency {freq} Hz" use:gesture={freqGestures}>
-    {#each digits as item (item.position ?? 'dot-' + item.char)}
+    {#each digits as item, i (item.position ?? `dot-${i}`)}
       {#if item.position === null}
         <span class="dot">.</span>
       {:else}
@@ -173,7 +173,7 @@
     background-color: var(--panel);
     border: 1px solid var(--panel-border);
     border-radius: var(--radius);
-    padding: var(--space-3) var(--space-4);
+    padding: var(--space-2) var(--space-3);
     transition: border-color 0.2s, box-shadow 0.2s, opacity 0.2s;
   }
 
@@ -190,9 +190,9 @@
     display: flex;
     align-items: center;
     gap: var(--space-2);
-    margin-bottom: var(--space-2);
+    margin-bottom: var(--space-1);
     font-family: var(--font-mono);
-    font-size: 0.75rem;
+    font-size: 0.6875rem;
     cursor: pointer;
     padding: 2px 0;
     border-radius: 4px;
@@ -266,9 +266,15 @@
     animation: freq-flash var(--transition-slow);
   }
 
-  @media (max-width: 768px) {
+  @media (max-width: 1200px) {
     .dot {
       font-size: 1.5rem;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .dot {
+      font-size: 1.25rem;
     }
   }
 </style>

@@ -6,8 +6,8 @@
     type WaterfallOptions,
   } from '../../lib/renderers/waterfall-renderer';
   import { gesture } from '../../lib/gestures/use-gesture';
-  import { getChannel, sendCommand } from '../../lib/transport/ws-client';
-  import { getRadioState } from '../../lib/stores/radio.svelte';
+  import { sendCommand } from '../../lib/transport/ws-client';
+  import { radio } from '../../lib/stores/radio.svelte';
   import { vibrate } from '../../lib/utils/haptics';
 
   interface Props {
@@ -29,6 +29,7 @@
   // Svelte 5 reactivity cannot reliably track Uint8Array prop changes at 100+ fps,
   // so we bypass it entirely with a direct function call.
   function directPush(pixels: Uint8Array): void {
+    if (document.hidden) return; // skip when tab hidden
     renderer?.pushRow(pixels);
   }
 
@@ -81,7 +82,7 @@
     onPanEnd(): void {
       if (panOffsetHz === 0 || options.centerHz <= 0) return;
       const newCenter = Math.max(0, options.centerHz + panOffsetHz);
-      const receiver = getRadioState()?.active === 'SUB' ? 1 : 0;
+      const receiver = radio.current?.active === 'SUB' ? 1 : 0;
       sendCommand('set_freq', { freq: Math.round(newCenter), receiver });
       panOffsetHz = 0;
     },
@@ -92,18 +93,6 @@
 
     // Register direct push callback with parent
     onRegisterPush?.(directPush);
-
-    // ALSO subscribe directly to scope binary — belt and suspenders.
-    // Svelte prop reactivity drops Uint8Array updates at high frame rates.
-    const scopeCh = getChannel('scope');
-    const unsubBinary = scopeCh.onBinary((buf: ArrayBuffer) => {
-      if (!renderer || buf.byteLength < 16) return;
-      const view = new DataView(buf);
-      if (view.getUint8(0) !== 0x01) return;
-      const pxCount = view.getUint16(14, true);
-      if (16 + pxCount > buf.byteLength) return;
-      renderer.pushRow(new Uint8Array(buf, 16, pxCount));
-    });
 
     const ro = new ResizeObserver((entries) => {
       const rect = entries[0]?.contentRect;
@@ -118,7 +107,6 @@
     ro.observe(canvas);
 
     return () => {
-      unsubBinary();
       ro.disconnect();
       renderer?.destroy();
       renderer = null;

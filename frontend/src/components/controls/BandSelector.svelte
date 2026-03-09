@@ -1,6 +1,6 @@
 <script lang="ts">
   import { sendCommand } from '../../lib/transport/ws-client';
-  import { getFrequency, getRadioState } from '../../lib/stores/radio.svelte';
+  import { radio } from '../../lib/stores/radio.svelte';
   import { vibrate } from '../../lib/utils/haptics';
 
   interface Band {
@@ -25,8 +25,8 @@
     { name: '6m',   defaultHz: 50_200_000, minHz: 50_000_000, maxHz: 54_000_000 },
   ];
 
-  let freq = $derived(getFrequency());
-  let receiverIdx = $derived(getRadioState()?.active === 'SUB' ? 1 : 0);
+  let freq = $derived((radio.current?.active === 'SUB' ? radio.current?.sub : radio.current?.main)?.freqHz ?? 0);
+  let receiverIdx = $derived(radio.current?.active === 'SUB' ? 1 : 0);
   let activeBand = $derived(BANDS.find(b => freq >= b.minHz && freq <= b.maxHz)?.name ?? null);
 
   function selectBand(band: Band) {

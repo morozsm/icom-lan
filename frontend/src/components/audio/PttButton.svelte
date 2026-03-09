@@ -1,9 +1,9 @@
 <script lang="ts">
   import { sendCommand } from '../../lib/transport/ws-client';
-  import { getIsTransmitting } from '../../lib/stores/radio.svelte';
+  import { radio } from '../../lib/stores/radio.svelte';
   import { vibrate } from '../../lib/utils/haptics';
 
-  let transmitting = $derived(getIsTransmitting());
+  let transmitting = $derived(radio.current?.ptt ?? false);
   let pending = $state(false);
   let pendingValue = $state(false);
 

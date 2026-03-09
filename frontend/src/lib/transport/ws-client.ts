@@ -1,5 +1,7 @@
 import type { WsCommand, WsIncoming } from '../types/protocol';
+import { makeCommandId } from '../types/protocol';
 import { setWsConnected } from '../stores/connection.svelte';
+import { patchActiveReceiver, patchRadioState } from '../stores/radio.svelte';
 
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'reconnecting';
 type MessageHandler = (msg: WsIncoming) => void;
@@ -8,7 +10,8 @@ type StateHandler = (state: ConnectionState) => void;
 
 const BACKOFF_BASE_MS = 1_000;
 const BACKOFF_MAX_MS = 30_000;
-const HEARTBEAT_TIMEOUT_MS = 10_000;
+const HEARTBEAT_TIMEOUT_MS = 30_000;  // server may be idle on control WS
+const KEEPALIVE_INTERVAL_MS = 15_000; // send ping to prevent idle timeout
 const MAX_QUEUE_SIZE = 20;
 
 // Command types where only the latest value matters (last write wins)
@@ -23,6 +26,7 @@ export class WsChannel {
   private ws: WebSocket | null = null;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private heartbeatTimer: ReturnType<typeof setTimeout> | null = null;
+  private keepaliveTimer: ReturnType<typeof setInterval> | null = null;
   private attempt = 0;
   private intentionalClose = false;
   private sendQueue: WsCommand[] = [];
@@ -59,6 +63,7 @@ export class WsChannel {
       this.attempt = 0;
       this.setState('connected');
       this._resetHeartbeat();
+      this._startKeepalive();
       // drain send queue
       const queued = this.sendQueue.splice(0);
       for (const cmd of queued) ws.send(JSON.stringify(cmd));
@@ -72,6 +77,13 @@ export class WsChannel {
         try {
           const msg = JSON.parse(event.data as string) as WsIncoming;
           this.messageHandlers.forEach((h) => h(msg));
+          if (msg.type === 'response' && msg.ok === false) {
+            const errorMsg = msg.message || msg.error || 'Command failed';
+            console.warn(`[ws] command ${msg.id} failed: ${errorMsg}`);
+            for (const h of this.messageHandlers) {
+              h({ type: 'notification', level: 'error', message: errorMsg, category: 'command' } as any);
+            }
+          }
         } catch {
           // ignore malformed frames
         }
@@ -141,6 +153,7 @@ export class WsChannel {
   private _resetHeartbeat() {
     this._clearHeartbeat();
     this.heartbeatTimer = setTimeout(() => {
+      console.warn('[ws] heartbeat timeout — closing');
       this.ws?.close();
     }, HEARTBEAT_TIMEOUT_MS);
   }
@@ -152,8 +165,27 @@ export class WsChannel {
     }
   }
 
+  private _startKeepalive() {
+    this._stopKeepalive();
+    this.keepaliveTimer = setInterval(() => {
+      if (this.ws?.readyState === WebSocket.OPEN) {
+        this.ws.send(JSON.stringify({ type: 'ping' }));
+        // Reset heartbeat — we know the connection is alive if send succeeds
+        this._resetHeartbeat();
+      }
+    }, KEEPALIVE_INTERVAL_MS);
+  }
+
+  private _stopKeepalive() {
+    if (this.keepaliveTimer) {
+      clearInterval(this.keepaliveTimer);
+      this.keepaliveTimer = null;
+    }
+  }
+
   private _clearTimers() {
     this._clearHeartbeat();
+    this._stopKeepalive();
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
@@ -170,17 +202,75 @@ export function connect(url: string = '/api/v1/ws') {
   _ctrl.connect(url);
 }
 
+/** Send a raw JSON message (e.g. subscribe). */
+export function sendRaw(msg: Record<string, unknown>): boolean {
+  return _ctrl.send(msg as any);
+}
+
 export function disconnect() {
   _ctrl.disconnect();
 }
 
 export function sendCommand(name: string, params: Record<string, unknown> = {}, id?: string): boolean {
+  // Auto-optimistic: apply UI patch immediately before sending
+  try { _applyOptimistic(name, params); } catch (e) { console.warn('[optimistic]', e); }
   return _ctrl.send({
     type: 'cmd',
     name,
-    id: id ?? crypto.randomUUID(),
+    id: id ?? makeCommandId(),
     params,
   });
+}
+
+/** Auto-optimistic update mapping: command → state patch */
+function _applyOptimistic(name: string, params: Record<string, unknown>): void {
+  switch (name) {
+    case 'set_freq':
+      if (typeof params.freq === 'number') patchActiveReceiver({ freqHz: params.freq });
+      break;
+    case 'set_mode':
+      if (typeof params.mode === 'string') patchActiveReceiver({ mode: params.mode });
+      break;
+    case 'set_filter':
+      if (typeof params.filter === 'string') {
+        const n = parseInt((params.filter as string).replace('FIL', ''), 10);
+        if (n >= 1 && n <= 3) patchActiveReceiver({ filter: n });
+      }
+      break;
+    case 'set_nb':
+      if (typeof params.on === 'boolean') patchActiveReceiver({ nb: params.on });
+      break;
+    case 'set_nr':
+      if (typeof params.on === 'boolean') patchActiveReceiver({ nr: params.on });
+      break;
+    case 'set_af_level':
+      if (typeof params.level === 'number') patchActiveReceiver({ afLevel: params.level });
+      break;
+    case 'set_rf_gain':
+      if (typeof params.level === 'number') patchActiveReceiver({ rfGain: params.level });
+      break;
+    case 'set_squelch':
+      if (typeof params.level === 'number') patchActiveReceiver({ squelch: params.level });
+      break;
+    case 'set_att':
+      if (typeof params.level === 'number') patchActiveReceiver({ att: params.level });
+      break;
+    case 'set_preamp':
+      if (typeof params.level === 'number') patchActiveReceiver({ preamp: params.level });
+      break;
+    case 'set_digisel':
+      if (typeof params.on === 'boolean') patchActiveReceiver({ digisel: params.on });
+      break;
+    case 'set_ip_plus':
+      if (typeof params.on === 'boolean') patchActiveReceiver({ ipplus: params.on });
+      break;
+    case 'ptt':
+      if (typeof params.state === 'boolean') patchRadioState({ ptt: params.state });
+      break;
+    case 'set_dual_watch':
+      if (typeof params.on === 'boolean') patchRadioState({ dualWatch: params.on });
+      break;
+  }
 }
 
 export function onMessage(handler: MessageHandler): () => void {

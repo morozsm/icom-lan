@@ -1,9 +1,9 @@
 <script lang="ts">
   import { sendCommand } from '../../lib/transport/ws-client';
-  import { getActiveReceiver, getRadioState } from '../../lib/stores/radio.svelte';
+  import { radio } from '../../lib/stores/radio.svelte';
 
-  let rx = $derived(getActiveReceiver());
-  let receiverIdx = $derived(getRadioState()?.active === 'SUB' ? 1 : 0);
+  let rx = $derived(radio.current?.active === 'SUB' ? (radio.current?.sub ?? null) : (radio.current?.main ?? null));
+  let receiverIdx = $derived(radio.current?.active === 'SUB' ? 1 : 0);
 
   let nb   = $derived(rx?.nb   ?? false);
   let nr   = $derived(rx?.nr   ?? false);
@@ -11,7 +11,7 @@
   let pre  = $derived(rx?.preamp ?? 0);
   let agc  = $derived(rx?.agc  ?? null);
   // COMP state is display-only — no backend handler for set_comp
-  let comp = $derived(getRadioState()?.compressorOn ?? false);
+  let comp = $derived(radio.current?.compressorOn ?? false);
 
   function toggleNb() {
     sendCommand('set_nb', { on: !nb, receiver: receiverIdx });

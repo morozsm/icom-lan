@@ -1,4 +1,5 @@
 import type { PendingCommand } from '../types/state';
+import { makeCommandId } from '../types/protocol';
 
 // Command queue — commands awaiting server acknowledgment
 let commands = $state<PendingCommand[]>([]);
@@ -11,7 +12,7 @@ export function getPendingCommands(): PendingCommand[] {
 
 export function addCommand(type: string, payload: unknown): PendingCommand {
   const cmd: PendingCommand = {
-    id: crypto.randomUUID(),
+    id: makeCommandId(),
     type,
     payload,
     createdAt: Date.now(),

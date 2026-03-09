@@ -5,24 +5,25 @@
     defaultSpectrumOptions,
     type SpectrumOptions,
   } from '../../lib/renderers/spectrum-renderer';
-  import { getChannel } from '../../lib/transport/ws-client';
-
   interface Props {
     data: Uint8Array | null;
     options?: SpectrumOptions;
+    onRegisterPush?: (fn: (data: Uint8Array) => void) => void;
   }
 
-  let { data, options = defaultSpectrumOptions }: Props = $props();
+  let { data, options = defaultSpectrumOptions, onRegisterPush }: Props = $props();
 
   let canvas: HTMLCanvasElement;
   let cssWidth = 1;
   let cssHeight = 1;
   let rafId = 0;
+  let visible = true;
 
   // Latest scope pixels — updated directly from WS binary, not via Svelte props
   let latestPixels: Uint8Array | null = null;
 
   function draw(): void {
+    if (!visible) return; // will be restarted by visibilitychange
     const pixels = latestPixels ?? data;
     if (canvas && pixels && cssWidth > 0 && cssHeight > 0) {
       const ctx = canvas.getContext('2d');
@@ -32,18 +33,20 @@
     rafId = requestAnimationFrame(draw);
   }
 
+  function onVisibilityChange() {
+    visible = !document.hidden;
+    if (visible && rafId === 0) {
+      rafId = requestAnimationFrame(draw);
+    }
+  }
+
   onMount(() => {
-    // Direct scope binary subscription — bypasses Svelte prop reactivity
-    // which cannot track Uint8Array changes at 100+ fps
-    const scopeCh = getChannel('scope');
-    const unsubBinary = scopeCh.onBinary((buf: ArrayBuffer) => {
-      if (buf.byteLength < 16) return;
-      const view = new DataView(buf);
-      if (view.getUint8(0) !== 0x01) return;
-      const pxCount = view.getUint16(14, true);
-      if (16 + pxCount > buf.byteLength) return;
-      latestPixels = new Uint8Array(buf, 16, pxCount);
+    // Register push callback with parent — parent handles WS subscription
+    onRegisterPush?.((pixels: Uint8Array) => {
+      latestPixels = pixels;
     });
+
+    document.addEventListener('visibilitychange', onVisibilityChange);
 
     // Continuous RAF loop for smooth rendering
     rafId = requestAnimationFrame(draw);
@@ -62,7 +65,7 @@
     ro.observe(canvas);
 
     return () => {
-      unsubBinary();
+      document.removeEventListener('visibilitychange', onVisibilityChange);
       ro.disconnect();
       cancelAnimationFrame(rafId);
     };

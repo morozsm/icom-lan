@@ -1,16 +1,22 @@
 <script lang="ts">
   import { sendCommand } from '../../lib/transport/ws-client';
-  import {
-    getActiveReceiver,
-    getRadioState,
-    getIsTransmitting,
-  } from '../../lib/stores/radio.svelte';
+  import { radio } from '../../lib/stores/radio.svelte';
   import { getAudioState, toggleMute } from '../../lib/stores/audio.svelte';
+  import { audioManager } from '../../lib/audio/audio-manager';
+  import { onMount } from 'svelte';
+
+  let audioTick = $state(0);
+  onMount(() => {
+    const unsub = audioManager.onChange(() => { audioTick++; });
+    return () => unsub();
+  });
+  let rxOn = $derived(audioTick >= 0 && audioManager.rxEnabled);
+  let wsOk = $derived(audioTick >= 0 && audioManager.wsConnected);
 
   let audio = $derived(getAudioState());
-  let rx = $derived(getActiveReceiver());
-  let receiverIdx = $derived(getRadioState()?.active === 'SUB' ? 1 : 0);
-  let transmitting = $derived(getIsTransmitting());
+  let rx = $derived(radio.current?.active === 'SUB' ? (radio.current?.sub ?? null) : (radio.current?.main ?? null));
+  let receiverIdx = $derived(radio.current?.active === 'SUB' ? 1 : 0);
+  let transmitting = $derived(radio.current?.ptt ?? false);
   let pending = $state(false);
   let pendingValue = $state(false);
 
@@ -38,11 +44,34 @@
     pending = true;
     pendingValue = next;
     sendCommand('ptt', { state: next });
+
+    // Safety timeout — clear pending if server doesn't respond
+    setTimeout(() => {
+      if (pending) {
+        pending = false;
+      }
+    }, 5000);
+  }
+
+  function toggleRxAudio() {
+    if (rxOn) audioManager.stopRx();
+    else audioManager.startRx();
   }
 </script>
 
 <footer class="bottom-bar">
-  <!-- Left: volume + mute -->
+  <!-- RX Audio toggle (first) -->
+  <button
+    class="rx-btn"
+    class:active={rxOn}
+    onclick={toggleRxAudio}
+    aria-pressed={rxOn}
+    aria-label={rxOn ? 'Stop RX audio' : 'Start RX audio'}
+  >
+    <span class="rx-dot" class:on={rxOn}></span>RX
+  </button>
+
+  <!-- Volume -->
   <div class="audio-section">
     <button
       class="mute-btn"
@@ -65,7 +94,7 @@
     />
   </div>
 
-  <!-- Right: PTT button -->
+  <!-- PTT button -->
   <button
     class="ptt-btn"
     class:transmitting
@@ -131,6 +160,45 @@
     accent-color: var(--accent);
     cursor: pointer;
     height: 4px;
+  }
+
+  .rx-btn {
+    min-width: 52px;
+    min-height: 44px;
+    padding: 0 var(--space-3);
+    background: rgba(22, 101, 52, 0.2);
+    border: 2px solid rgba(22, 101, 52, 0.4);
+    border-radius: var(--radius);
+    color: #4ade80;
+    font-family: var(--font-mono);
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: background 0.15s, border-color 0.15s;
+  }
+
+  .rx-btn.active {
+    background: #15803d;
+    border-color: #22c55e;
+    color: #fff;
+  }
+
+  .rx-dot {
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #4ade8060;
+  }
+
+  .rx-dot.on {
+    background: #22c55e;
+    box-shadow: 0 0 4px #22c55e;
   }
 
   .ptt-btn {

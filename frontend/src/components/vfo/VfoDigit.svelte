@@ -89,9 +89,17 @@
     outline-offset: 1px;
   }
 
-  @media (max-width: 768px) {
+  @media (max-width: 1200px) {
     .digit {
       font-size: 1.5rem;
+      padding: 0 1px;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .digit {
+      font-size: 1.25rem;
+      padding: 0 1px;
     }
   }
 </style>

@@ -10,33 +10,59 @@
   import FilterSelector from '../controls/FilterSelector.svelte';
   import FeatureToggles from '../controls/FeatureToggles.svelte';
   import AudioControls from '../audio/AudioControls.svelte';
+  import AudioPanel from '../audio/AudioPanel.svelte';
   import PttButton from '../audio/PttButton.svelte';
   import StatusBar from '../shared/StatusBar.svelte';
   import Toast from '../shared/Toast.svelte';
   import DxClusterPanel from '../dx/DxClusterPanel.svelte';
+  import StepSelector from '../controls/StepSelector.svelte';
 
-  import {
-    getRadioState,
-    getMainReceiver,
-    getSubReceiver,
-  } from '../../lib/stores/radio.svelte';
+  import { radio } from '../../lib/stores/radio.svelte';
   import { hasDualReceiver, hasTx } from '../../lib/stores/capabilities.svelte';
   import { getConnectionStatus } from '../../lib/stores/connection.svelte';
   import { sendCommand } from '../../lib/transport/ws-client';
   import { setupKeyboard } from '../../lib/actions/keyboard';
+  import { applyModeDefault, tuneBy } from '../../lib/stores/tuning.svelte';
 
-  let state = $derived(getRadioState());
-  let main = $derived(getMainReceiver());
-  let sub = $derived(getSubReceiver());
-  let activeRx = $derived(state?.active ?? 'MAIN');
+  let state = $derived(radio.current);
+  let main = $derived(radio.current?.main ?? null);
+  let sub = $derived(radio.current?.sub ?? null);
+  let activeRx = $derived(radio.current?.active ?? 'MAIN');
+
   let isDualRx = $derived(hasDualReceiver());
   let isTx = $derived(hasTx());
   let connectionStatus = $derived(getConnectionStatus());
   let isDisconnected = $derived(connectionStatus === 'disconnected');
   let isReconnecting = $derived(connectionStatus === 'partial');
 
+  // Auto-select tuning step when mode changes
+  let currentMode = $derived(main?.mode ?? '');
+  $effect(() => {
+    if (currentMode) applyModeDefault(currentMode);
+  });
+
   onMount(() => {
-    return setupKeyboard();
+    const cleanupKb = setupKeyboard();
+
+    // Arrow key tuning
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key === 'ArrowUp' || e.key === 'ArrowRight') {
+        e.preventDefault();
+        const freq = tuneBy(1);
+        if (freq > 0) sendCommand('set_freq', { freq, receiver: activeRx === 'SUB' ? 1 : 0 });
+      } else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') {
+        e.preventDefault();
+        const freq = tuneBy(-1);
+        if (freq > 0) sendCommand('set_freq', { freq, receiver: activeRx === 'SUB' ? 1 : 0 });
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      cleanupKb();
+      window.removeEventListener('keydown', onKeyDown);
+    };
   });
 
   function handleTune(receiver: 'MAIN' | 'SUB', newFreq: number) {
@@ -131,12 +157,13 @@
         {/if}
       </div>
 
-      <!-- Mode / Filter selectors -->
+      <!-- Mode / Filter / Step selectors -->
       <div class="panel-card">
         <div class="selectors-row">
           <ModeSelector />
           <FilterSelector />
         </div>
+        <StepSelector />
         <div class="toggles-row">
           <FeatureToggles />
         </div>
@@ -146,6 +173,11 @@
       <div class="panel-card">
         <AudioControls />
         <PttButton />
+      </div>
+
+      <!-- Audio RX/TX streaming -->
+      <div class="panel-card">
+        <AudioPanel />
       </div>
 
       <!-- DX Cluster -->
@@ -193,18 +225,18 @@
   }
 
   .vfo-section {
-    padding: var(--space-3) var(--space-4);
+    padding: var(--space-2) var(--space-3);
     border-bottom: 1px solid var(--panel-border);
     display: flex;
     align-items: flex-start;
-    gap: var(--space-3);
+    gap: var(--space-2);
     flex-shrink: 0;
   }
 
   .vfo-pair {
     display: flex;
     flex-direction: column;
-    gap: var(--space-2);
+    gap: var(--space-1);
     flex: 1;
   }
 
@@ -227,8 +259,9 @@
 
   .spectrum-section {
     flex: 1;
+    min-height: 200px;
     overflow: hidden;
-    padding: var(--space-2) var(--space-4) 0;
+    padding: var(--space-2) var(--space-3) 0;
   }
 
   .band-bar {

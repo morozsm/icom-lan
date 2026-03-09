@@ -8,9 +8,61 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <link rel="manifest" href="/manifest.webmanifest" />
   </head>
   <body>
+    <script>
+      // Kill stale Service Workers
+      if (navigator.serviceWorker) {
+        navigator.serviceWorker.getRegistrations().then(function(r) {
+          r.forEach(function(sw) { sw.unregister(); });
+        });
+      }
+
+      window.__RADIO_STATE__ = null;
+      window.__STATE_REV__ = -1;
+      window.__RADIO_OFFLINE__ = false;
+
+      var _pollErrors = 0;
+      var _pollInterval = 200;
+      var _pollTimer = null;
+
+      function pollState() {
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', '/api/v1/state', true);
+        xhr.timeout = 3000;
+        xhr.onload = function() {
+          try {
+            var state = JSON.parse(xhr.responseText);
+            window.__RADIO_STATE__ = state;
+            window.__STATE_REV__ = state.revision;
+            _pollErrors = 0;
+            _pollInterval = 200;
+            window.__RADIO_OFFLINE__ = false;
+          } catch(e) {
+            _onPollError();
+          }
+        };
+        xhr.onerror = function() { _onPollError(); };
+        xhr.ontimeout = function() { _onPollError(); };
+        xhr.send();
+      }
+
+      function _onPollError() {
+        _pollErrors++;
+        if (_pollErrors >= 3) {
+          window.__RADIO_OFFLINE__ = true;
+        }
+        // Exponential backoff: 200 → 400 → 800 → ... → 10000 max
+        _pollInterval = Math.min(10000, _pollInterval * 2);
+      }
+
+      function _schedulePoll() {
+        pollState();
+        _pollTimer = setTimeout(_schedulePoll, _pollInterval);
+      }
+
+      _schedulePoll();
+    </script>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>

@@ -1,14 +1,15 @@
 <script lang="ts">
   import { getCapabilities } from '../../lib/stores/capabilities.svelte';
-  import { getConnectionStatus } from '../../lib/stores/connection.svelte';
-  import { getRadioState, getActiveReceiver } from '../../lib/stores/radio.svelte';
+  import { getConnectionStatus, isStale } from '../../lib/stores/connection.svelte';
+  import { radio } from '../../lib/stores/radio.svelte';
 
   let caps = $derived(getCapabilities());
   let status = $derived(getConnectionStatus());
-  let state = $derived(getRadioState());
-  let active = $derived(getActiveReceiver());
+  let state = $derived(radio.current);
+  let active = $derived(radio.current?.active === 'SUB' ? (radio.current?.sub ?? null) : (radio.current?.main ?? null));
 
   let modelName = $derived(caps?.model ?? 'Radio');
+  let stale = $derived(isStale());
   let isConnected = $derived(status === 'connected');
   let isPartial = $derived(status === 'partial');
   let isPtt = $derived(state?.ptt ?? false);
@@ -58,11 +59,11 @@
   <div class="left">
     <span
       class="dot"
-      class:connected={isConnected}
-      class:partial={isPartial}
-      title={status}
+      class:connected={isConnected && !stale}
+      class:partial={isPartial || stale}
+      title={stale ? 'Data stale' : status}
     ></span>
-    <span class="model">{modelName}</span>
+    <span class="model">{modelName}{stale ? ' (stale)' : ''}</span>
   </div>
 
   <!-- Center: frequency -->

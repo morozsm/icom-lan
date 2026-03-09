@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { fade } from 'svelte/transition';
   import { onMessage, sendCommand } from '../../lib/transport/ws-client';
-  import { getFrequency, getRadioState } from '../../lib/stores/radio.svelte';
+  import { radio } from '../../lib/stores/radio.svelte';
   import type { DxSpot } from '../../lib/types/protocol';
 
   const MAX_SPOTS = 100;
@@ -41,8 +41,8 @@
   let spots = $state<DxSpot[]>([]);
   let filterCurrentBand = $state(false);
 
-  let currentFreq = $derived(getFrequency());
-  let receiverIdx = $derived(getRadioState()?.active === 'SUB' ? 1 : 0);
+  let currentFreq = $derived((radio.current?.active === 'SUB' ? radio.current?.sub : radio.current?.main)?.freqHz ?? 0);
+  let receiverIdx = $derived(radio.current?.active === 'SUB' ? 1 : 0);
 
   let filteredSpots = $derived.by((): DxSpot[] => {
     if (!filterCurrentBand) return spots;

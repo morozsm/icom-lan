@@ -1,41 +1,64 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { fetchCapabilities, startPolling } from './lib/transport/http-client';
-  import { connect } from './lib/transport/ws-client';
+  import { fetchCapabilities } from './lib/transport/http-client';
+  import { connect, sendRaw } from './lib/transport/ws-client';
   import { setCapabilities } from './lib/stores/capabilities.svelte';
-  import { setRadioState } from './lib/stores/radio.svelte';
+  import { setRadioState, getLastRevision } from './lib/stores/radio.svelte';
+  import { setHttpConnected, markStateUpdated } from './lib/stores/connection.svelte';
   import AppShell from './components/layout/AppShell.svelte';
   import './app.css';
 
   let backendError = $state<string | null>(null);
   let retrying = $state(false);
+  let retryCount = 0;
+  const MAX_RETRIES = 5;
+  const RETRY_DELAYS = [3000, 5000, 10000, 20000, 30000];
+
+  // State poller: reads window.__RADIO_STATE__ written by index.html XHR
+  // (index.html XHR polling works reliably across all browsers including iOS Safari)
+  let pollInterval: ReturnType<typeof setInterval> | undefined;
+
+  function startStatePoller() {
+    pollInterval = setInterval(() => {
+      const s = (window as any).__RADIO_STATE__;
+      if (s && s.revision > getLastRevision()) {
+        setRadioState(s);
+        setHttpConnected(true);
+        markStateUpdated();
+      }
+    }, 150);
+  }
 
   onMount(() => {
-    let stopPolling: (() => void) | undefined;
+    startStatePoller();
+
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
 
-    async function init() {
-      retrying = false;
+    (async () => {
       try {
         const caps = await fetchCapabilities();
         setCapabilities(caps);
         backendError = null;
-        stopPolling = startPolling((state) => {
-          setRadioState(state);
-        });
-        connect('/api/v1/ws');
-      } catch (err) {
-        console.error('Failed to fetch capabilities:', err);
-        backendError = 'Backend unreachable — retrying in 5s…';
-        retrying = true;
-        retryTimer = setTimeout(() => void init(), 5000);
-      }
-    }
 
-    void init();
+        connect('/api/v1/ws');
+        sendRaw({ type: 'subscribe', streams: ['events'] });
+      } catch (err) {
+        console.error('init error:', err);
+        backendError = `Backend error: ${err}`;
+        if (retryCount < MAX_RETRIES) {
+          const delay = RETRY_DELAYS[Math.min(retryCount, RETRY_DELAYS.length - 1)];
+          retrying = true;
+          retryTimer = setTimeout(() => location.reload(), delay);
+          retryCount++;
+        } else {
+          backendError = 'Server unreachable after multiple attempts. Check connection and reload manually.';
+          retrying = false;
+        }
+      }
+    })();
 
     return () => {
-      stopPolling?.();
+      if (pollInterval) clearInterval(pollInterval);
       if (retryTimer) clearTimeout(retryTimer);
     };
   });

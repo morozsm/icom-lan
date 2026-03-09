@@ -1,13 +1,13 @@
 <script lang="ts">
   import { sendCommand } from '../../lib/transport/ws-client';
-  import { getActiveReceiver, getRadioState } from '../../lib/stores/radio.svelte';
+  import { radio } from '../../lib/stores/radio.svelte';
   import { getSupportedFilters } from '../../lib/stores/capabilities.svelte';
 
   const DEFAULT_FILTERS = ['FIL1', 'FIL2', 'FIL3'];
 
   let filters = $derived(getSupportedFilters().length ? getSupportedFilters() : DEFAULT_FILTERS);
-  let currentFilter = $derived(getActiveReceiver()?.filter ?? 1);
-  let receiverIdx = $derived(getRadioState()?.active === 'SUB' ? 1 : 0);
+  let currentFilter = $derived(radio.current?.active === 'SUB' ? (radio.current?.sub ?? null) : (radio.current?.main ?? null)?.filter ?? 1);
+  let receiverIdx = $derived(radio.current?.active === 'SUB' ? 1 : 0);
 
   function filterNum(name: string): number {
     return parseInt(name.replace('FIL', ''), 10) || 1;

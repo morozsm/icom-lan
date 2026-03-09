@@ -13,7 +13,9 @@
   } from '../../lib/renderers/waterfall-renderer';
   import { getChannel, onMessage, sendCommand } from '../../lib/transport/ws-client';
   import { type DxSpot } from '../../lib/types/protocol';
-  import { getRadioState } from '../../lib/stores/radio.svelte';
+  import { radio } from '../../lib/stores/radio.svelte';
+  import { getFilterWidthHz } from '../../lib/utils/filter-width';
+  import { snapToStep } from '../../lib/stores/tuning.svelte';
 
   // --- Scope frame binary protocol ---
   interface ScopeFrame {
@@ -42,6 +44,7 @@
 
   // --- Component state ---
   let scopePixels = $state<Uint8Array | null>(null);
+  let spectrumPush: ((data: Uint8Array) => void) | null = null;
   let waterfallPush: ((data: Uint8Array) => void) | null = null;
   let startFreq = $state(0);
   let endFreq = $state(0);
@@ -53,10 +56,19 @@
   );
   let spanHz = $derived(endFreq > startFreq ? endFreq - startFreq : 0);
 
+  // Active receiver data for passband overlay
+  let rx = $derived(radio.current?.active === 'SUB' ? radio.current?.sub : radio.current?.main);
+  let tuneHz = $derived(rx?.freqHz ?? 0);
+  let rxMode = $derived(rx?.mode ?? '');
+  let passbandHz = $derived(getFilterWidthHz(rxMode, rx?.filter ?? 1));
+
   let spectrumOptions = $derived<SpectrumOptions>({
     ...defaultSpectrumOptions,
     spanHz,
     centerHz,
+    tuneHz,
+    passbandHz,
+    mode: rxMode,
   });
 
   let waterfallOptions = $derived<WaterfallOptions>({
@@ -65,11 +77,22 @@
     centerHz,
   });
 
+  // Passband overlay position — always centered in center scope mode
+  let tunePct = $derived(50); // center mode: VFO freq is always at center
+  let pbWidthPct = $derived(spanHz > 0 && passbandHz > 0 ? (passbandHz / spanHz) * 100 : 0);
+  let pbLeftPct = $derived(() => {
+    const m = rxMode?.toUpperCase() ?? '';
+    if (m === 'LSB') return tunePct - pbWidthPct;
+    if (m === 'CW' || m === 'CW-R' || m === 'RTTY' || m === 'RTTY-R' || m === 'AM')
+      return tunePct - pbWidthPct / 2;
+    return tunePct; // USB default
+  });
+
   // --- Click-to-tune ---
   function handleTune(hz: number): void {
-    const freq = Math.round(hz);
+    const freq = snapToStep(Math.round(hz));
     if (freq <= 0) return;
-    const receiver = getRadioState()?.active === 'SUB' ? 1 : 0;
+    const receiver = radio.current?.active === 'SUB' ? 1 : 0;
     sendCommand('set_freq', { freq, receiver });
   }
 
@@ -91,8 +114,9 @@
         endFreq = frame.endFreq;
       }
       scopePixels = frame.pixels;
-      // Direct push to waterfall renderer — bypasses Svelte reactivity
+      // Direct push to both children — bypasses Svelte reactivity
       // which can't track Uint8Array changes at 100+ fps
+      spectrumPush?.(frame.pixels);
       waterfallPush?.(frame.pixels);
     });
 
@@ -117,11 +141,18 @@
 
 <div class="spectrum-panel" class:fullscreen>
   <div class="spectrum-area">
-    <SpectrumCanvas data={scopePixels} options={spectrumOptions} />
+    <SpectrumCanvas data={scopePixels} options={spectrumOptions} onRegisterPush={(fn) => spectrumPush = fn} />
   </div>
   <div class="waterfall-area">
     <WaterfallCanvas data={scopePixels} options={waterfallOptions} onFreqClick={handleTune} onRegisterPush={(fn) => waterfallPush = fn} />
     <DxOverlay spots={dxSpots} {startFreq} {endFreq} onTune={handleTune} />
+    <!-- Tuning + passband indicator overlays the waterfall -->
+    {#if spanHz > 0}
+      {#if pbWidthPct > 0}
+        <div class="passband-overlay" style="left:{pbLeftPct()}%;width:{pbWidthPct}%"></div>
+      {/if}
+      <div class="tune-line" style="left:50%"></div>
+    {/if}
   </div>
   <button class="fullscreen-btn" onclick={toggleFullscreen} title="Toggle fullscreen">
     {fullscreen ? '✕' : '⛶'}
@@ -183,5 +214,28 @@
   .fullscreen-btn:hover {
     color: var(--text);
     border-color: var(--accent);
+  }
+
+  /* Tuning line + passband overlay on waterfall */
+  .tune-line {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: rgba(239, 68, 68, 0.75);
+    pointer-events: none;
+    z-index: 5;
+    transform: translateX(-0.5px);
+  }
+
+  .passband-overlay {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    background: rgba(59, 130, 246, 0.15);
+    border-left: 1px dashed rgba(59, 130, 246, 0.4);
+    border-right: 1px dashed rgba(59, 130, 246, 0.4);
+    pointer-events: none;
+    z-index: 4;
   }
 </style>

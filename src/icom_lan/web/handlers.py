@@ -140,6 +140,7 @@ class ControlHandler:
             "set_rf_gain",
             "set_af_level",
             "set_sql",
+            "set_squelch",
             "set_nb",
             "set_nr",
             "set_digisel",
@@ -602,10 +603,10 @@ class ControlHandler:
                 self._ensure_receiver_supported(rx)
                 q.put(SetAfLevel(level, receiver=rx))
                 return {"level": level, "receiver": rx}
-            case "set_sql":
+            case "set_sql" | "set_squelch":
                 level = int(params["level"])
                 rx = int(params.get("receiver", 0))
-                self._ensure_capability("squelch", "set_sql")
+                self._ensure_capability("squelch", name)
                 self._ensure_receiver_supported(rx)
                 q.put(SetSquelch(level, receiver=rx))
                 return {"level": level, "receiver": rx}
@@ -638,7 +639,7 @@ class ControlHandler:
                 q.put(SetIpPlus(on, receiver=rx))
                 return {"on": on, "receiver": rx}
             case "set_att":
-                db = int(params["db"])
+                db = int(params.get("level", params.get("db", 0)))
                 rx = int(params.get("receiver", 0))
                 self._ensure_capability("attenuator", "set_att")
                 self._ensure_receiver_supported(rx)

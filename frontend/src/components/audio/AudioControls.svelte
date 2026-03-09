@@ -1,11 +1,11 @@
 <script lang="ts">
   import { sendCommand } from '../../lib/transport/ws-client';
-  import { getActiveReceiver, getRadioState } from '../../lib/stores/radio.svelte';
+  import { radio } from '../../lib/stores/radio.svelte';
   import { getAudioState, toggleMute } from '../../lib/stores/audio.svelte';
 
   let audio = $derived(getAudioState());
-  let rx = $derived(getActiveReceiver());
-  let receiverIdx = $derived(getRadioState()?.active === 'SUB' ? 1 : 0);
+  let rx = $derived(radio.current?.active === 'SUB' ? (radio.current?.sub ?? null) : (radio.current?.main ?? null));
+  let receiverIdx = $derived(radio.current?.active === 'SUB' ? 1 : 0);
 
   // Radio AF level from server state; fall back to local volume
   let afLevel = $derived(rx?.afLevel ?? audio.volume);

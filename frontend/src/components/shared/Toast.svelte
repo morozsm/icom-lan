@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { fly } from 'svelte/transition';
   import { onMessage } from '../../lib/transport/ws-client';
+  import { makeCommandId } from '../../lib/types/protocol';
 
   interface ToastItem {
     id: string;
@@ -16,7 +17,7 @@
   }
 
   function addToast(level: 'info' | 'warning' | 'error', message: string) {
-    const id = crypto.randomUUID();
+    const id = makeCommandId();
     toasts = [...toasts, { id, level, message }];
     setTimeout(() => dismiss(id), 5_000);
   }

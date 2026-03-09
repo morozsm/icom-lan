@@ -21,13 +21,17 @@ export interface DxSpot {
 export type WsIncoming =
   | { type: 'dx_spot'; spot: DxSpot }
   | { type: 'dx_spots'; spots: DxSpot[] }
-  | { type: 'notification'; level: string; message: string }
+  | { type: 'notification'; level: string; message: string; category?: string }
   | { type: 'ack'; id: string }
-  | { type: 'error'; id: string; message: string };
+  | { type: 'error'; id: string; message: string }
+  | { type: 'response'; id: string; ok: boolean; result?: Record<string, unknown>; error?: string; message?: string }
+  | { type: 'hello'; proto: number; server: string; version: string; radio: string; connected: boolean; capabilities: string[] }
+  | { type: 'state'; data: Record<string, unknown> }
+  | { type: 'event'; name: string; data: Record<string, unknown> };
 
 // Incoming: server → client (base interface for typed sub-interfaces)
 export interface WsMessage {
-  type: 'dx_spot' | 'dx_spots' | 'notification' | 'ack' | 'error';
+  type: 'dx_spot' | 'dx_spots' | 'notification' | 'ack' | 'error' | 'response' | 'hello' | 'state' | 'event';
   [key: string]: unknown;
 }
 
@@ -61,7 +65,16 @@ export const CMD_SET_FREQ = 'set_freq';
 export const CMD_SET_MODE = 'set_mode';
 export const CMD_SET_FILTER = 'set_filter';
 
-/** Generate a unique command ID using the Web Crypto API. */
+/** Generate a unique command ID (works in non-secure contexts too). */
 export function makeCommandId(): string {
-  return crypto.randomUUID();
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  // Fallback for HTTP (non-secure) contexts
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const h = [...bytes].map(b => b.toString(16).padStart(2, '0')).join('');
+  return `${h.slice(0,8)}-${h.slice(8,12)}-${h.slice(12,16)}-${h.slice(16,20)}-${h.slice(20)}`;
 }

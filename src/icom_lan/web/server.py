@@ -846,6 +846,18 @@ class WebServer:
             await _send_response(writer, 405, "Method Not Allowed", b"", {})
             return
 
+        # Nuclear SW cleanup: Clear-Site-Data on /?clearcache
+        if path == "/clearcache":
+            await _send_response(
+                writer, 200, "OK",
+                b"<h2>Site data cleared. <a href='/'>Reload</a></h2>",
+                {
+                    "Content-Type": "text/html",
+                    "Clear-Site-Data": '"cache", "storage"',
+                },
+            )
+            return
+
         if path == "/api/v1/info":
             await self._serve_info(writer)
         elif path == "/api/v1/state":

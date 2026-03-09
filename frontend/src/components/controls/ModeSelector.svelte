@@ -1,11 +1,11 @@
 <script lang="ts">
   import { sendCommand } from '../../lib/transport/ws-client';
-  import { getMode, getRadioState } from '../../lib/stores/radio.svelte';
+  import { radio } from '../../lib/stores/radio.svelte';
   import { getSupportedModes } from '../../lib/stores/capabilities.svelte';
 
-  let currentMode = $derived(getMode());
+  let currentMode = $derived((radio.current?.active === 'SUB' ? radio.current?.sub : radio.current?.main)?.mode ?? '');
   let modes = $derived(getSupportedModes());
-  let receiverIdx = $derived(getRadioState()?.active === 'SUB' ? 1 : 0);
+  let receiverIdx = $derived(radio.current?.active === 'SUB' ? 1 : 0);
 
   function setMode(mode: string) {
     sendCommand('set_mode', { mode, receiver: receiverIdx });
