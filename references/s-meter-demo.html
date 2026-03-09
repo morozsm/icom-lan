@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>S-Meter Demo</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo, useRef } = React;
+
+    function clamp(v, min, max) {
+      return Math.max(min, Math.min(max, v));
+    }
+
+    function lerp(a, b, t) {
+      return a + (b - a) * t;
+    }
+
+    function polar(cx, cy, r, deg) {
+      const rad = (deg * Math.PI) / 180;
+      return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+    }
+
+    function arcPath(cx, cy, r, startDeg, endDeg) {
+      const start = polar(cx, cy, r, startDeg);
+      const end = polar(cx, cy, r, endDeg);
+      const largeArc = Math.abs(endDeg - startDeg) > 180 ? 1 : 0;
+      const sweep = endDeg > startDeg ? 1 : 0;
+      return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} ${sweep} ${end.x} ${end.y}`;
+    }
+
+    function valueToAngle(v) {
+      const value = clamp(v, 0, 12);
+      return lerp(-126, 18, value / 12);
+    }
+
+    function valueToSegments(v, total) {
+      return Math.round((clamp(v, 0, 12) / 12) * total);
+    }
+
+    function useSmoothedValue(target, attack = 0.12, release = 0.32) {
+      const [value, setValue] = useState(target);
+      const ref = useRef(target);
+
+      useEffect(() => {
+        let frame = 0;
+        let last = performance.now();
+
+        const tick = (now) => {
+          const dt = Math.min(0.05, (now - last) / 1000);
+          last = now;
+          const current = ref.current;
+          const tau = target >= current ? attack : release;
+          const alpha = 1 - Math.exp(-dt / tau);
+          const next = current + (target - current) * alpha;
+          ref.current = next;
+          setValue(next);
+          frame = requestAnimationFrame(tick);
+        };
+
+        frame = requestAnimationFrame(tick);
+        return () => cancelAnimationFrame(frame);
+      }, [target, attack, release]);
+
+      return value;
+    }
+
+    const MAIN_MARKS = [
+      { value: 1, label: '1', color: '#f8fafc' },
+      { value: 3, label: '3', color: '#f8fafc' },
+      { value: 5, label: '5', color: '#f8fafc' },
+      { value: 7, label: '7', color: '#f8fafc' },
+      { value: 9, label: '9', color: '#f8fafc' },
+      { value: 10, label: '+20', color: '#ef4444' },
+      { value: 11, label: '+40', color: '#ef4444' },
+      { value: 12, label: '+60dB', color: '#ef4444' },
+    ];
+
+    function AnalogSMeter({ value = 4.6, tx = false }) {
+      const width = 860;
+      const height = 470;
+      const cx = width / 2;
+      const cy = 310;
+      const outerR = 255;
+      const tickInner = 190;
+      const tickOuter = 214;
+      const labelR = 238;
+      const angle = valueToAngle(value);
+
+      const ticks = useMemo(() => {
+        const out = [];
+        for (let i = 0; i <= 60; i++) {
+          const scaleValue = (i / 60) * 12;
+          out.push({
+            angle: valueToAngle(scaleValue),
+            major: i % 5 === 0,
+            red: scaleValue > 9,
+          });
+        }
+        return out;
+      }, []);
+
+      return (
+        <div className="rounded-3xl border border-zinc-700 bg-zinc-950 p-4 shadow-2xl shadow-black/40">
+          <div className="mb-3 flex items-center justify-between text-sm text-zinc-300">
+            <div className="flex gap-2">
+              <span className="rounded border border-zinc-600 px-2 py-0.5">ANT 1</span>
+              <span className="rounded border border-zinc-600 px-2 py-0.5">METER SWR</span>
+            </div>
+            <div className="flex gap-2">
+              <span className="rounded border border-zinc-600 px-2 py-0.5">BW 3.0k</span>
+              <span className="rounded border border-zinc-600 px-2 py-0.5">SFT 0</span>
+              <span className="rounded bg-blue-700 px-2 py-0.5 text-blue-50">AN</span>
+            </div>
+          </div>
+
+          <svg viewBox={`0 0 ${width} ${height}`} className="w-full">
+            <defs>
+              <filter id="glowW">
+                <feGaussianBlur stdDeviation="1.5" result="b" />
+                <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+              </filter>
+              <filter id="glowR">
+                <feGaussianBlur stdDeviation="2" result="b" />
+                <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+              </filter>
+              <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#0c0c0d" />
+                <stop offset="100%" stopColor="#050505" />
+              </linearGradient>
+            </defs>
+
+            <rect x="0" y="0" width={width} height={height} rx="28" fill="url(#panel)" />
+
+            <path d={arcPath(cx, cy, outerR, -126, -18)} stroke="#f8fafc" strokeWidth="5" fill="none" />
+            <path d={arcPath(cx, cy, outerR, -18, 18)} stroke="#ef4444" strokeWidth="5" fill="none" filter="url(#glowR)" />
+
+            {ticks.map((t, i) => {
+              const p1 = polar(cx, cy, t.major ? tickInner : tickInner + 10, t.angle);
+              const p2 = polar(cx, cy, tickOuter, t.angle);
+              return (
+                <line
+                  key={i}
+                  x1={p1.x}
+                  y1={p1.y}
+                  x2={p2.x}
+                  y2={p2.y}
+                  stroke={t.red ? '#ef4444' : '#f8fafc'}
+                  strokeWidth={t.major ? 3 : 1.4}
+                  opacity="0.96"
+                />
+              );
+            })}
+
+            {MAIN_MARKS.map((m) => {
+              const p = polar(cx, cy, labelR, valueToAngle(m.value));
+              return (
+                <text
+                  key={m.label}
+                  x={p.x}
+                  y={p.y}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fontSize={m.value <= 9 ? 30 : 24}
+                  fontWeight="700"
+                  fill={m.color}
+                  filter={m.color === '#ef4444' ? 'url(#glowR)' : 'url(#glowW)'}
+                >
+                  {m.label}
+                </text>
+              );
+            })}
+
+            <text x="64" y="146" fontSize="36" fontWeight="700" fill="#f8fafc">S</text>
+            <text x="60" y="237" fontSize="24" fontWeight="700" fill="#f8fafc">Po</text>
+            <text x="48" y="316" fontSize="28" fontWeight="700" fill="#f8fafc">SWR</text>
+            <text x="93" y="344" fontSize="20" fontWeight="700" fill="#60a5fa">COMP</text>
+
+            <path d={arcPath(cx, cy, 184, -123, 14)} stroke="#e5e7eb" strokeWidth="2.2" fill="none" opacity="0.95" />
+            <path d={arcPath(cx, cy, 139, -120, 16)} stroke="#e5e7eb" strokeWidth="2.1" fill="none" opacity="0.95" />
+            <path d={arcPath(cx, cy, 88, -116, 4)} stroke="#60a5fa" strokeWidth="3.6" fill="none" opacity="0.95" />
+            <path d={arcPath(cx, cy, 88, 4, 16)} stroke="#ef4444" strokeWidth="3.6" fill="none" opacity="0.95" />
+
+            {[
+              { a: -111, l: '0' },
+              { a: -84, l: '10' },
+              { a: -56, l: '20' },
+              { a: -28, l: '50' },
+              { a: 1, l: '100' },
+              { a: 15, l: '30' },
+            ].map((m) => {
+              const p = polar(cx, cy, 141, m.a);
+              return <text key={m.a} x={p.x} y={p.y} fontSize="19" fontWeight="700" fill="#f8fafc" textAnchor="middle">{m.l}</text>;
+            })}
+
+            {[
+              { a: -112, l: '0', c: '#60a5fa' },
+              { a: -85, l: '10', c: '#60a5fa' },
+              { a: -58, l: '20', c: '#60a5fa' },
+              { a: -12, l: '10', c: '#f8fafc' },
+              { a: 14, l: '16V', c: '#f8fafc' },
+              { a: 24, l: 'Vd', c: '#f8fafc' },
+            ].map((m) => {
+              const p = polar(cx, cy, 92, m.a);
+              return <text key={m.a} x={p.x} y={p.y + 6} fontSize="18" fontWeight="700" fill={m.c} textAnchor="middle">{m.l}</text>;
+            })}
+
+            <text x="294" y="349" fontSize="18" fontWeight="700" fill="#f8fafc">1</text>
+            <text x="347" y="349" fontSize="18" fontWeight="700" fill="#f8fafc">2</text>
+            <text x="397" y="349" fontSize="18" fontWeight="700" fill="#f8fafc">3</text>
+            <text x="582" y="346" fontSize="24" fontWeight="700" fill="#60a5fa">20</text>
+            <text x="706" y="345" fontSize="22" fontWeight="700" fill="#f8fafc">∞</text>
+            <text x="732" y="345" fontSize="16" fontWeight="700" fill="#f8fafc">dB</text>
+
+            <g transform={`rotate(${angle} ${cx} ${cy})`}>
+              <line x1={cx - 20} y1={cy} x2={cx + 214} y2={cy} stroke="#f8fafc" strokeWidth="5" strokeLinecap="round" />
+              <polygon points={`${cx + 222},${cy} ${cx + 197},${cy - 6} ${cx + 197},${cy + 6}`} fill="#f8fafc" />
+            </g>
+            <circle cx={cx} cy={cy} r="13" fill="#d4d4d8" />
+            <circle cx={cx} cy={cy} r="5" fill="#09090b" />
+
+            <g transform="translate(30 300)">
+              <rect x="0" y="0" width="72" height="46" rx="8" fill={tx ? '#991b1b' : '#27272a'} stroke={tx ? '#fb7185' : '#52525b'} strokeWidth="2" />
+              <text x="36" y="30" textAnchor="middle" fontSize="28" fontWeight="800" fill={tx ? '#fee2e2' : '#d4d4d8'}>TX</text>
+            </g>
+
+            <g transform="translate(170 300)">
+              <rect x="0" y="0" width="138" height="60" rx="12" fill="#60a5fa" />
+              <text x="69" y="39" textAnchor="middle" fontSize="34" fontWeight="800" fill="#e0f2fe">LSB</text>
+            </g>
+            <text x="325" y="338" fontSize="34" fontWeight="700" fill="#f8fafc">FIL1</text>
+            <rect x="458" y="300" width="84" height="42" rx="10" fill="#2563eb" />
+            <text x="500" y="328" textAnchor="middle" fontSize="28" fontWeight="800" fill="#e0f2fe">AN</text>
+
+            <text x="190" y="430" fontSize="96" fontWeight="800" fill="#f8fafc">7.048.00</text>
+          </svg>
+        </div>
+      );
+    }
+
+    function DigitalSMeter({ value = 4.6 }) {
+      const total = 110;
+      const lit = valueToSegments(value, total);
+      const labels = [
+        { v: 1, l: '1', c: '#f8fafc' },
+        { v: 3, l: '3', c: '#f8fafc' },
+        { v: 5, l: '5', c: '#f8fafc' },
+        { v: 7, l: '7', c: '#f8fafc' },
+        { v: 9, l: '9', c: '#f8fafc' },
+        { v: 10, l: '+20', c: '#ef4444' },
+        { v: 11, l: '+40', c: '#ef4444' },
+        { v: 12, l: '+60dB', c: '#ef4444' },
+      ];
+
+      return (
+        <div className="rounded-3xl border border-zinc-700 bg-zinc-950 p-4 shadow-2xl shadow-black/40">
+          <div className="mb-4 flex items-center justify-between text-sm text-zinc-300">
+            <div className="flex gap-2">
+              <span className="rounded border border-zinc-600 px-2 py-0.5">BW 3.0k</span>
+              <span className="rounded border border-zinc-600 px-2 py-0.5">SFT 0</span>
+            </div>
+            <div className="rounded bg-blue-700 px-2 py-0.5 text-blue-50">AN</div>
+          </div>
+
+          <div className="mb-2 flex items-end justify-between px-2">
+            <div className="text-4xl font-bold tracking-wide text-zinc-50">S</div>
+            <div className="flex w-[92%] justify-between text-[38px] font-bold leading-none">
+              {labels.map((m) => <span key={m.l} style={{ color: m.c }}>{m.l}</span>)}
+            </div>
+          </div>
+
+          <div className="mb-3 flex items-end gap-3 px-2 text-[36px] font-bold leading-none text-zinc-50">
+            <div className="w-10">SWR</div>
+            <div className="flex w-full justify-between pr-12 text-[34px]">
+              <span>1</span><span>1.5</span><span>2</span><span>2.5</span><span>3</span><span>∞</span>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-zinc-800 bg-black px-4 py-5">
+            <div className="flex gap-[2px]">
+              {Array.from({ length: total }).map((_, i) => {
+                const active = i < lit;
+                const isRedZone = i >= Math.floor((9 / 12) * total);
+                const color = active ? (isRedZone ? '#ef4444' : '#3b82f6') : '#2a2a2a';
+                return (
+                  <div
+                    key={i}
+                    className="h-8 flex-1 rounded-[1px]"
+                    style={{
+                      background: color,
+                      boxShadow: active ? `0 0 6px ${color}` : 'none',
+                      opacity: active ? 1 : 0.85,
+                    }}
+                  />
+                );
+              })}
+            </div>
+
+            <div className="mt-3 flex justify-between px-2 text-[28px] font-bold text-zinc-200">
+              <span>41</span>
+              <span className="rounded-lg bg-blue-500 px-5 py-1 text-sky-50">LSB</span>
+              <span>FIL1</span>
+              <span className="rounded-lg bg-blue-700 px-3 py-1 text-sky-50">AN</span>
+            </div>
+
+            <div className="mt-2 text-[88px] font-extrabold tracking-tight text-zinc-50">7.048.00</div>
+          </div>
+        </div>
+      );
+    }
+
+    function DemoPanel({ title, children }) {
+      return (
+        <div className="rounded-3xl border border-zinc-800 bg-zinc-900/60 p-4">
+          <div className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-zinc-400">{title}</div>
+          {children}
+        </div>
+      );
+    }
+
+    function App() {
+      const [rawValue, setRawValue] = useState(4.6);
+      const [tx, setTx] = useState(false);
+      const [auto, setAuto] = useState(true);
+      const smooth = useSmoothedValue(rawValue, 0.08, 0.38);
+
+      useEffect(() => {
+        if (!auto) return;
+        const id = setInterval(() => {
+          const r = Math.random();
+          const next = r > 0.92 ? 9 + Math.random() * 3 : Math.random() * 8.5;
+          setRawValue(Number(next.toFixed(2)));
+        }, 850);
+        return () => clearInterval(id);
+      }, [auto]);
+
+      const dbText = useMemo(() => {
+        if (smooth <= 9) return `S${Math.max(0, Math.round(smooth))}`;
+        if (smooth <= 10) return '+20 dB';
+        if (smooth <= 11) return '+40 dB';
+        return '+60 dB';
+      }, [smooth]);
+
+      return (
+        <div className="min-h-screen bg-zinc-950 p-6 text-zinc-100">
+          <div className="mx-auto max-w-7xl space-y-6">
+            <div className="rounded-3xl border border-zinc-800 bg-zinc-900/70 p-5 shadow-2xl shadow-black/30">
+              <div className="mb-4 flex flex-wrap items-center gap-4">
+                <div>
+                  <div className="text-xl font-semibold">Transceiver S-meter prototype</div>
+                  <div className="text-sm text-zinc-400">SVG analog + segmented digital bar</div>
+                </div>
+                <div className="ml-auto rounded-2xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-right">
+                  <div className="text-xs uppercase tracking-widest text-zinc-500">Current reading</div>
+                  <div className="text-2xl font-bold text-zinc-100">{smooth.toFixed(2)} / {dbText}</div>
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-[1fr_auto]">
+                <label className="rounded-2xl border border-zinc-700 bg-zinc-950 p-4">
+                  <div className="mb-2 text-sm text-zinc-400">Signal</div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="12"
+                    step="0.01"
+                    value={rawValue}
+                    onChange={(e) => setRawValue(parseFloat(e.target.value))}
+                    className="w-full"
+                  />
+                  <div className="mt-2 text-sm text-zinc-400">0..9 = S-units, 10 = +20 dB, 11 = +40 dB, 12 = +60 dB</div>
+                </label>
+
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    onClick={() => setAuto((v) => !v)}
+                    className="rounded-2xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm font-semibold hover:bg-zinc-900"
+                  >
+                    {auto ? 'Stop demo' : 'Start demo'}
+                  </button>
+                  <button
+                    onClick={() => setTx((v) => !v)}
+                    className="rounded-2xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm font-semibold hover:bg-zinc-900"
+                  >
+                    TX: {tx ? 'ON' : 'OFF'}
+                  </button>
+                  <button
+                    onClick={() => setRawValue(9.2)}
+                    className="rounded-2xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm font-semibold hover:bg-zinc-900"
+                  >
+                    Jump to S9+
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <DemoPanel title="Analog S-meter (стрелка)">
+              <AnalogSMeter value={smooth} tx={tx} />
+            </DemoPanel>
+
+            <DemoPanel title="Digital S-meter (полоса)">
+              <DigitalSMeter value={smooth} />
+            </DemoPanel>
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>

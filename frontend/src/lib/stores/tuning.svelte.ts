@@ -50,12 +50,12 @@ export function snapToStep(freqHz: number): number {
   return Math.round(freqHz / _step) * _step;
 }
 
-/** Tune up/down by current step */
-export function tuneBy(direction: 1 | -1): number {
+/** Tune up/down by N steps (positive = up, negative = down) */
+export function tuneBy(steps: number): number {
   const rx = radio.current?.active === 'SUB' ? radio.current?.sub : radio.current?.main;
   const freq = rx?.freqHz ?? 0;
   if (freq <= 0) return 0;
-  return snapToStep(freq + direction * _step);
+  return snapToStep(freq + steps * _step);
 }
 
 /** Format step for display */

@@ -44,24 +44,37 @@
   onMount(() => {
     const cleanupKb = setupKeyboard();
 
-    // Arrow key tuning
+    // Arrow key tuning — debounced to prevent race conditions from rapid keypresses.
+    // Keypresses accumulate delta; a single command is sent after 100ms of inactivity.
+    let tuningDebounce: ReturnType<typeof setTimeout> | null = null;
+    let accumulatedDelta = 0;
+
     function onKeyDown(e: KeyboardEvent) {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       if (e.key === 'ArrowUp' || e.key === 'ArrowRight') {
-        e.preventDefault();
-        const freq = tuneBy(1);
-        if (freq > 0) sendCommand('set_freq', { freq, receiver: activeRx === 'SUB' ? 1 : 0 });
+        accumulatedDelta += 1;
       } else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') {
-        e.preventDefault();
-        const freq = tuneBy(-1);
-        if (freq > 0) sendCommand('set_freq', { freq, receiver: activeRx === 'SUB' ? 1 : 0 });
+        accumulatedDelta -= 1;
+      } else {
+        return;
       }
+      e.preventDefault();
+
+      if (tuningDebounce) clearTimeout(tuningDebounce);
+      tuningDebounce = setTimeout(() => {
+        const delta = accumulatedDelta;
+        accumulatedDelta = 0;
+        tuningDebounce = null;
+        const freq = tuneBy(delta);
+        if (freq > 0) sendCommand('set_freq', { freq, receiver: activeRx === 'SUB' ? 1 : 0 });
+      }, 100);
     }
 
     window.addEventListener('keydown', onKeyDown);
     return () => {
       cleanupKb();
       window.removeEventListener('keydown', onKeyDown);
+      if (tuningDebounce) clearTimeout(tuningDebounce);
     };
   });
 

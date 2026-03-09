@@ -6,8 +6,9 @@
   let rx = $derived(radio.current?.active === 'SUB' ? (radio.current?.sub ?? null) : (radio.current?.main ?? null));
   let receiverIdx = $derived(radio.current?.active === 'SUB' ? 1 : 0);
 
-  let nb   = $derived(rx?.nb   ?? false);
-  let nr   = $derived(rx?.nr   ?? false);
+  let nb      = $derived(rx?.nb      ?? false);
+  let nr      = $derived(rx?.nr      ?? false);
+  let digisel = $derived(rx?.digisel ?? false);
   let att  = $derived(rx?.att  ?? 0);
   let pre  = $derived(rx?.preamp ?? 0);
   let agc  = $derived(rx?.agc  ?? null);
@@ -22,6 +23,10 @@
 
   function toggleNr() {
     sendCommand('set_nr', { on: !nr, receiver: receiverIdx });
+  }
+
+  function toggleDigisel() {
+    sendCommand('set_digisel', { on: !digisel, receiver: receiverIdx });
   }
 
   function cycleAtt() {
@@ -60,6 +65,14 @@
     aria-pressed={nr}
     title="Noise Reduction"
   >NR</button>
+
+  <button
+    class="toggle-btn"
+    class:active={digisel}
+    onclick={toggleDigisel}
+    aria-pressed={digisel}
+    title="Digital Selection (DIGI-SEL)"
+  >DIGI</button>
 
   <!-- COMP is display-only — no backend handler exists for set_comp -->
   <span class="value-badge" class:nonzero={comp} title="Compressor">
