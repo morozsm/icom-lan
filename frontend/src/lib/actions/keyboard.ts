@@ -32,7 +32,7 @@ const BAND_FREQS_HZ: number[] = [
 const FALLBACK_MODES = ['USB', 'LSB', 'CW', 'AM', 'FM'];
 
 // Tuning step for ↑/↓ keys
-const TUNE_STEP_HZ = 1_000;
+// TUNE_STEP_HZ removed - tuning step now handled by tuning.svelte.ts store
 
 function isInputFocused(): boolean {
   const el = document.activeElement;
@@ -75,19 +75,7 @@ function handleKeydown(e: KeyboardEvent): void {
       break;
     }
 
-    case 'ArrowUp': {
-      e.preventDefault();
-      const freq = (state?.active === 'SUB' ? state.sub?.freqHz : state?.main?.freqHz) ?? 0;
-      sendCommand('set_freq', { freq: freq + TUNE_STEP_HZ, receiver: receiverIdx });
-      break;
-    }
-
-    case 'ArrowDown': {
-      e.preventDefault();
-      const freq = (state?.active === 'SUB' ? state.sub?.freqHz : state?.main?.freqHz) ?? 0;
-      sendCommand('set_freq', { freq: Math.max(0, freq - TUNE_STEP_HZ), receiver: receiverIdx });
-      break;
-    }
+    // Arrow keys handled in DesktopLayout with debounce + stable base freq
 
     case ' ': {
       e.preventDefault();

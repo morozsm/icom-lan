@@ -72,6 +72,12 @@
         const rx = current?.active === 'SUB' ? current?.sub : current?.main;
         baseFreq = rx?.freqHz ?? 0;
         capturedReceiver = current?.active === 'SUB' ? 1 : 0;
+        
+        // Guard: can't tune if no valid freq
+        if (baseFreq <= 0) {
+          console.warn('[arrow-tuning] No valid base freq, ignoring keypress');
+          return;
+        }
       }
 
       // Accumulate delta
@@ -80,6 +86,10 @@
       // Calculate and apply optimistic freq from stable base
       const step = getTuningStep();
       const optimisticFreq = snapToStep(baseFreq + accumulatedDelta * step);
+      
+      console.log('[arrow-tuning] baseFreq=%d delta=%d step=%d → optimistic=%d', 
+        baseFreq, accumulatedDelta, step, optimisticFreq);
+      
       if (optimisticFreq > 0) {
         radio.patchActiveReceiver({ freqHz: optimisticFreq });
       }
