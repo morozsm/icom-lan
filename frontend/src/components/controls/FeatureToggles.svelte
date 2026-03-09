@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte';
   import { sendCommand } from '../../lib/transport/ws-client';
   import { radio } from '../../lib/stores/radio.svelte';
   import { hasTx } from '../../lib/stores/capabilities.svelte';
@@ -26,7 +27,13 @@
 
   let showAttMenu = $state(false);
   let showPreMenu = $state(false);
-  let pressTimer: ReturnType<typeof setTimeout>;
+  let attPressTimer: ReturnType<typeof setTimeout>;
+  let prePressTimer: ReturnType<typeof setTimeout>;
+
+  onDestroy(() => {
+    clearTimeout(attPressTimer);
+    clearTimeout(prePressTimer);
+  });
 
   function toggleNb() {
     sendCommand('set_nb', { on: !nb, receiver: receiverIdx });
@@ -58,15 +65,19 @@
   }
 
   function startAttLongPress() {
-    pressTimer = setTimeout(() => (showAttMenu = true), 500);
+    attPressTimer = setTimeout(() => (showAttMenu = true), 500);
   }
 
   function startPreLongPress() {
-    pressTimer = setTimeout(() => (showPreMenu = true), 500);
+    prePressTimer = setTimeout(() => (showPreMenu = true), 500);
   }
 
-  function cancelLongPress() {
-    clearTimeout(pressTimer);
+  function cancelAttLongPress() {
+    clearTimeout(attPressTimer);
+  }
+
+  function cancelPreLongPress() {
+    clearTimeout(prePressTimer);
   }
 
   function attLabel(v: number): string {
@@ -111,8 +122,8 @@
       class:active={att !== 0}
       onclick={cycleAtt}
       onpointerdown={startAttLongPress}
-      onpointerup={cancelLongPress}
-      onpointerleave={cancelLongPress}
+      onpointerup={cancelAttLongPress}
+      onpointerleave={cancelAttLongPress}
       aria-pressed={att !== 0}
       title="Attenuator (click to cycle, long-press for menu)"
     >ATT <span class="val">{attLabel(att)}</span></button>
@@ -122,8 +133,8 @@
       class:active={pre !== 0}
       onclick={cyclePre}
       onpointerdown={startPreLongPress}
-      onpointerup={cancelLongPress}
-      onpointerleave={cancelLongPress}
+      onpointerup={cancelPreLongPress}
+      onpointerleave={cancelPreLongPress}
       aria-pressed={pre !== 0}
       title="Preamp (click to cycle, long-press for menu)"
     >PRE <span class="val">{preLabel(pre)}</span></button>
