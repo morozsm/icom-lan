@@ -181,13 +181,13 @@
   }
 
   .spectrum-area {
-    flex: 0 0 40%;
+    flex: 0 0 30%;
     min-height: 0;
     border-bottom: 1px solid var(--panel-border);
   }
 
   .waterfall-area {
-    flex: 1 1 60%;
+    flex: 1 1 70%;
     min-height: 0;
     position: relative;
   }

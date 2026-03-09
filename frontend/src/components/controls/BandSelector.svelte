@@ -62,9 +62,15 @@
   }
 
   .btn-bar {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
     gap: var(--space-1);
+  }
+
+  @media (max-width: 600px) {
+    .btn-bar {
+      grid-template-columns: repeat(2, 1fr);
+    }
   }
 
   .band-btn {
