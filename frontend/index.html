@@ -23,20 +23,22 @@
       window.__RADIO_OFFLINE__ = false;
 
       var _pollErrors = 0;
-      var _pollInterval = 200;
+      var _pollInterval = 1000;  // WS is primary now
       var _pollTimer = null;
 
       function pollState() {
         var xhr = new XMLHttpRequest();
         xhr.open('GET', '/api/v1/state', true);
         xhr.timeout = 3000;
+        var token = localStorage.getItem('icom-lan-auth-token');
+        if (token) xhr.setRequestHeader('Authorization', 'Bearer ' + token);
         xhr.onload = function() {
           try {
             var state = JSON.parse(xhr.responseText);
             window.__RADIO_STATE__ = state;
             window.__STATE_REV__ = state.revision;
             _pollErrors = 0;
-            _pollInterval = 200;
+            _pollInterval = 1000;
             window.__RADIO_OFFLINE__ = false;
           } catch(e) {
             _onPollError();

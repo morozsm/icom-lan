@@ -1,7 +1,7 @@
 import type { WsCommand, WsIncoming } from '../types/protocol';
 import { makeCommandId } from '../types/protocol';
-import { setWsConnected } from '../stores/connection.svelte';
-import { patchActiveReceiver, patchRadioState } from '../stores/radio.svelte';
+import { setWsConnected, setHttpConnected, markStateUpdated } from '../stores/connection.svelte';
+import { patchActiveReceiver, patchRadioState, setRadioState } from '../stores/radio.svelte';
 
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'reconnecting';
 type MessageHandler = (msg: WsIncoming) => void;
@@ -197,9 +197,18 @@ export class WsChannel {
 
 const _ctrl = new WsChannel();
 _ctrl.onStateChange((s) => setWsConnected(s === 'connected'));
+_ctrl.onMessage((msg) => {
+  if (msg.type === 'state_update' && (msg as any).data) {
+    setRadioState((msg as any).data);
+    setHttpConnected(true);
+    markStateUpdated();
+  }
+});
 
 export function connect(url: string = '/api/v1/ws') {
-  _ctrl.connect(url);
+  const token = localStorage.getItem('icom-lan-auth-token');
+  const wsUrl = token ? `${url}?token=${encodeURIComponent(token)}` : url;
+  _ctrl.connect(wsUrl);
 }
 
 /** Send a raw JSON message (e.g. subscribe). */

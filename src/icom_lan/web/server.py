@@ -162,6 +162,7 @@ class WebConfig:
     dx_cluster_host: str = ""
     dx_cluster_port: int = 0
     dx_callsign: str = ""
+    auth_token: str = ""  # empty = no auth required
 
 
 class WebServer:
@@ -206,6 +207,8 @@ class WebServer:
         self._meter_cache: list[tuple[int, int]] | None = None
         # Control handler event queues
         self._control_event_queues: set[asyncio.Queue[dict[str, Any]]] = set()
+        # State broadcast throttle
+        self._last_state_broadcast: float = 0.0
         # Audio bridge (virtual device integration)
         self._audio_bridge: "AudioBridge | None" = None
         # Scope health monitor
@@ -335,6 +338,31 @@ class WebServer:
             except asyncio.QueueFull:
                 pass
 
+    def _broadcast_state_update(self) -> None:
+        """Broadcast current state to all control WS clients (throttled)."""
+        import time
+
+        now = time.monotonic()
+        if now - self._last_state_broadcast < 0.05:
+            return
+        self._last_state_broadcast = now
+
+        d = self._radio_state.to_dict()
+        d["revision"] = self._radio_poller.revision if self._radio_poller is not None else 0
+        raw_connected = getattr(self._radio, "connected", False) if self._radio else False
+        d["connected"] = raw_connected if isinstance(raw_connected, bool) else False
+        d["radio_ready"] = self._radio_ready()
+        raw_control = getattr(self._radio, "control_connected", False) if self._radio else False
+        d["control_connected"] = raw_control if isinstance(raw_control, bool) else False
+
+        body = _camel_case_state(d)
+        event = {"type": "state_update", "data": body}
+        for q in list(self._control_event_queues):
+            try:
+                q.put_nowait(event)
+            except asyncio.QueueFull:
+                pass
+
     def broadcast_notification(
         self,
         level: str,
@@ -409,6 +437,7 @@ class WebServer:
         if self._radio_poller is not None:
             self._radio_poller.bump_revision()
         self.broadcast_event(name, data)
+        self._broadcast_state_update()
         if name == "connection_state":
             if data.get("connected"):
                 self.broadcast_notification("success", "Radio connected", "connection")
@@ -754,11 +783,11 @@ class WebServer:
 
     async def _read_request(
         self, reader: asyncio.StreamReader
-    ) -> tuple[str, str, dict[str, str]] | None:
+    ) -> tuple[str, str, dict[str, str], dict[str, list[str]]] | None:
         """Read and parse an HTTP request line + headers.
 
         Returns:
-            Tuple of (method, path, headers_dict) or None on EOF/error.
+            Tuple of (method, path, headers_dict, query_params) or None on EOF/error.
         """
         try:
             request_line = await asyncio.wait_for(
@@ -774,9 +803,10 @@ class WebServer:
             return None
         method, raw_path = parts[0], parts[1]
 
-        # Decode path (strip query string)
+        # Decode path (preserve query string separately)
         parsed = urllib.parse.urlparse(raw_path)
         path = urllib.parse.unquote(parsed.path)
+        query = urllib.parse.parse_qs(parsed.query)
 
         headers: dict[str, str] = {}
         while True:
@@ -793,7 +823,7 @@ class WebServer:
                     value.decode("ascii", errors="replace").strip()
                 )
 
-        return method, path, headers
+        return method, path, headers, query
 
     # ------------------------------------------------------------------
     # Main connection handler
@@ -809,7 +839,7 @@ class WebServer:
             result = await self._read_request(reader)
             if result is None:
                 return
-            method, path, headers = result
+            method, path, headers, query = result
 
             logger.debug("request: %s %s from %s:%s", method, path, peer[0], peer[1])
 
@@ -818,9 +848,9 @@ class WebServer:
                 headers.get("upgrade", "").lower() == "websocket"
                 and headers.get("connection", "").lower().find("upgrade") >= 0
             ):
-                await self._handle_websocket(reader, writer, path, headers)
+                await self._handle_websocket(reader, writer, path, headers, query)
             else:
-                await self._handle_http(writer, method, path)
+                await self._handle_http(writer, method, path, headers)
         except asyncio.CancelledError:
             raise
         except Exception as exc:
@@ -841,10 +871,22 @@ class WebServer:
         writer: asyncio.StreamWriter,
         method: str,
         path: str,
+        headers: dict[str, str] | None = None,
     ) -> None:
         if method not in ("GET", "HEAD"):
             await _send_response(writer, 405, "Method Not Allowed", b"", {})
             return
+
+        # Auth check for API endpoints
+        if self._config.auth_token and path.startswith("/api/"):
+            auth_header = (headers or {}).get("authorization", "")
+            if auth_header != f"Bearer {self._config.auth_token}":
+                await _send_response(
+                    writer, 401, "Unauthorized",
+                    b'{"error":"unauthorized","message":"Valid auth token required"}',
+                    {"Content-Type": "application/json", "WWW-Authenticate": "Bearer"},
+                )
+                return
 
         # Nuclear SW cleanup: Clear-Site-Data on /?clearcache
         if path == "/clearcache":
@@ -1066,7 +1108,16 @@ class WebServer:
         writer: asyncio.StreamWriter,
         path: str,
         headers: dict[str, str],
+        query: dict[str, list[str]] | None = None,
     ) -> None:
+        # Auth check: accept Bearer header or ?token= query param
+        if self._config.auth_token:
+            auth_header = headers.get("authorization", "")
+            token_param = (query or {}).get("token", [""])[0]
+            if auth_header != f"Bearer {self._config.auth_token}" and token_param != self._config.auth_token:
+                await _send_response(writer, 401, "Unauthorized", b"Unauthorized", {})
+                return
+
         ws_key = headers.get("sec-websocket-key", "")
         if not ws_key:
             await _send_response(writer, 400, "Bad Request", b"Missing key", {})

@@ -548,6 +548,13 @@ def _build_parser() -> argparse.ArgumentParser:
         default=4532,
         help="rigctld TCP port (default: 4532)",
     )
+    web_p.add_argument(
+        "--auth-token",
+        dest="auth_token",
+        default="",
+        metavar="TOKEN",
+        help="Bearer token for API authentication (empty = no auth)",
+    )
 
     # proxy
     proxy_p = sub.add_parser("proxy", help="Transparent UDP relay for remote access via VPN")
@@ -1689,6 +1696,10 @@ async def _cmd_web(radio: IcomRadio, args: argparse.Namespace) -> int:
         config_kwargs["dx_cluster_host"] = host_part
         config_kwargs["dx_cluster_port"] = int(port_str)
         config_kwargs["dx_callsign"] = getattr(args, "callsign", None) or ""
+
+    auth_token = getattr(args, "auth_token", "")
+    if auth_token:
+        config_kwargs["auth_token"] = auth_token
 
     config = WebConfig(**config_kwargs)
     server = WebServer(radio, config)

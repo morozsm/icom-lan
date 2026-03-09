@@ -26,7 +26,7 @@
         setHttpConnected(true);
         markStateUpdated();
       }
-    }, 150);
+    }, 1000);  // WS is primary, this is fallback
   }
 
   onMount(() => {

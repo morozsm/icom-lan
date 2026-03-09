@@ -5,21 +5,38 @@ import { setHttpConnected } from '../stores/connection.svelte';
 
 const BASE = '/api/v1';
 
+function getAuthHeaders(): Record<string, string> {
+  const token = localStorage.getItem('icom-lan-auth-token');
+  if (token) return { Authorization: `Bearer ${token}` };
+  return {};
+}
+
+function handleUnauthorized(): void {
+  const token = prompt('Enter auth token:');
+  if (token) {
+    localStorage.setItem('icom-lan-auth-token', token);
+    location.reload();
+  }
+}
+
 export async function fetchState(): Promise<ServerState> {
-  const res = await fetch(`${BASE}/state`);
+  const res = await fetch(`${BASE}/state`, { headers: getAuthHeaders() });
+  if (res.status === 401) { handleUnauthorized(); throw new Error('Unauthorized'); }
   if (!res.ok) throw new Error(`fetchState: ${res.status}`);
   return res.json() as Promise<ServerState>;
 }
 
 export async function fetchCapabilities(): Promise<Capabilities> {
-  const res = await fetch(`${BASE}/capabilities`);
+  const res = await fetch(`${BASE}/capabilities`, { headers: getAuthHeaders() });
+  if (res.status === 401) { handleUnauthorized(); throw new Error('Unauthorized'); }
   if (!res.ok) throw new Error(`fetchCapabilities: ${res.status}`);
   return res.json() as Promise<Capabilities>;
 }
 
 /** Fetch server info (version, uptime). Used by StatusBar component (Sprint 2). */
 export async function fetchInfo(): Promise<InfoResponse> {
-  const res = await fetch(`${BASE}/info`);
+  const res = await fetch(`${BASE}/info`, { headers: getAuthHeaders() });
+  if (res.status === 401) { handleUnauthorized(); throw new Error('Unauthorized'); }
   if (!res.ok) throw new Error(`fetchInfo: ${res.status}`);
   return res.json() as Promise<InfoResponse>;
 }

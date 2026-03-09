@@ -219,8 +219,13 @@ class ControlHandler:
         try:
             while True:
                 event = await self._event_queue.get()
-                # Notifications are always forwarded regardless of subscription state.
-                if event.get("type") == "notification" or "state" in self._subscribed_streams:
+                msg_type = event.get("type")
+                if msg_type == "notification":
+                    await self._send_json(event)
+                elif msg_type == "state_update":
+                    # Always forward state updates (clients need fresh state)
+                    await self._send_json(event)
+                elif "state" in self._subscribed_streams or "events" in self._subscribed_streams:
                     await self._send_json(event)
         except asyncio.CancelledError:
             pass
