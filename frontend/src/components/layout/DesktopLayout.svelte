@@ -80,8 +80,9 @@
       const optimisticFreq = snapToStep(currentFreq + delta * step);
       
       // Apply optimistic update immediately for responsive feel
+      // Lock freqHz field to prevent server updates during rapid tuning
       if (optimisticFreq > 0) {
-        patchActiveReceiver({ freqHz: optimisticFreq });
+        patchActiveReceiver({ freqHz: optimisticFreq }, true);
       }
 
       // Debounce: send command with FINAL visible freq after 100ms of inactivity

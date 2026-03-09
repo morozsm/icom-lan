@@ -28,6 +28,19 @@ function applyOptimistic(state: ServerState): ServerState {
     const rx = { ...serverRx };
     let changed = false;
     for (const [field, entry] of map) {
+      // Check if field is locked (rapid input protection)
+      const lockKey = `${key}.${field}`;
+      const lockExpires = lockedFields.get(lockKey);
+      if (lockExpires && now < lockExpires) {
+        // Field is locked - keep optimistic value, don't check server
+        (rx as any)[field] = entry.value;
+        changed = true;
+        continue;
+      } else if (lockExpires) {
+        // Lock expired - clear it
+        lockedFields.delete(lockKey);
+      }
+      
       const serverVal = (serverRx as any)[field];
 
       // Clear condition: hard timeout OR server confirmed
@@ -80,14 +93,22 @@ const OPTIMISTIC_TTL = 5000; // hard timeout — normally cleared by server conf
  * Optimistic update — instantly patch the active receiver's state
  * AND register patches so incoming polls don't revert them.
  */
-export function patchActiveReceiver(patch: Partial<ReceiverState>): void {
+// Field lock: prevent server updates from overwriting local changes during rapid input
+const lockedFields = new Map<string, number>(); // `${receiver}.${field}` → expires timestamp
+
+export function patchActiveReceiver(patch: Partial<ReceiverState>, lock = false): void {
   const s = radio.current;
   if (!s) return;
   const key = s.active === 'SUB' ? 'sub' : 'main';
   const map = key === 'sub' ? optimisticSub : optimisticMain;
   const expires = Date.now() + OPTIMISTIC_TTL;
   const currentRx = s[key];
+  
   for (const [field, value] of Object.entries(patch)) {
+    if (lock) {
+      // Lock this field to prevent server updates for short duration (covers network lag)
+      lockedFields.set(`${key}.${field}`, Date.now() + 500); // 500ms lock
+    }
     map.set(field, { value, expires, serverValueAtPatch: (currentRx as any)[field] });
   }
   radio.current = {
