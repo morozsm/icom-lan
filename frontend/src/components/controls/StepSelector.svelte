@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte';
   import {
     TUNING_STEPS,
     getTuningStep,
@@ -13,6 +14,10 @@
   let auto = $derived(isAutoStep());
   let showStepMenu = $state(false);
   let pressTimer: ReturnType<typeof setTimeout>;
+
+  onDestroy(() => {
+    clearTimeout(pressTimer);
+  });
 
   function stepDown() {
     const idx = (TUNING_STEPS as readonly number[]).indexOf(currentStep);

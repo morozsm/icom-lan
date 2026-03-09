@@ -134,18 +134,24 @@ export class WaterfallRenderer {
     // Shift existing waterfall content down by 1 row (no full redraw)
     ctx.drawImage(canvas, 0, 0, w, h - 1, 0, 1, w, h - 1);
 
+    // Reuse or allocate rowBuf if size changed
+    if (!this.rowBuf || this.rowBuf.width !== w) {
+      this.rowBuf = ctx.createImageData(w, 1);
+      this.rowData = this.rowBuf.data;
+    }
+    const rowData = this.rowData!;
+
     // Build the new top row using the color LUT
-    const rowBuf = ctx.createImageData(w, 1);
-    const rowData = rowBuf.data;
     const lut = this.lut;
-    // Ref level: maps -30..+30 dB → -127..+127 shift on 0-255 scale
-    const refShift = Math.round((this.options.refLevel / 60) * 255);
+    // Ref level: maps -30..+30 dB → ±20 on 0-80 scale
+    const refAdjust = (this.options.refLevel / 60) * 40;
     for (let x = 0; x < w; x++) {
       const p = data[Math.min(n - 1, Math.floor((x / w) * n))];
       // Gain boost: map 0-80 → 0-255 with sqrt curve for better contrast
       // at low signal levels (IC-7610 scope data peaks at ~55)
-      const norm = Math.min(1.0, p / 80);
-      const v = Math.min(255, Math.max(0, Math.floor(Math.sqrt(norm) * 255) + refShift));
+      const adjusted = Math.min(80, Math.max(0, p + refAdjust));
+      const norm = adjusted / 80;
+      const v = Math.floor(Math.sqrt(norm) * 255);
       const li = v * 3;
       const pi = x * 4;
       rowData[pi] = lut[li];
@@ -153,7 +159,7 @@ export class WaterfallRenderer {
       rowData[pi + 2] = lut[li + 2];
       rowData[pi + 3] = 255;
     }
-    ctx.putImageData(rowBuf, 0, 0);
+    ctx.putImageData(this.rowBuf, 0, 0);
   }
 
   /** Resize the waterfall canvas and reset buffer. Clears the display. */
