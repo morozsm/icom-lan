@@ -45,12 +45,13 @@
     const cleanupKb = setupKeyboard();
 
     // Arrow key tuning — optimistic update from stable base frequency.
-    // First keypress captures base freq; subsequent presses accumulate delta.
+    // First keypress captures base freq + receiver; subsequent presses accumulate delta.
     // Optimistic updates applied instantly for responsive feel.
     // Command sent with total delta after 100ms of inactivity.
     let tuningDebounce: ReturnType<typeof setTimeout> | null = null;
     let accumulatedDelta = 0;
     let baseFreq = 0;
+    let capturedReceiver = 0;
 
     function onKeyDown(e: KeyboardEvent) {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
@@ -65,10 +66,12 @@
       }
       e.preventDefault();
 
-      // Capture base freq on first keypress (when no debounce active)
+      // Capture base freq + receiver on first keypress (when no debounce active)
       if (!tuningDebounce) {
-        const rx = state?.active === 'SUB' ? state?.sub : state?.main;
+        const current = radio.current;
+        const rx = current?.active === 'SUB' ? current?.sub : current?.main;
         baseFreq = rx?.freqHz ?? 0;
+        capturedReceiver = current?.active === 'SUB' ? 1 : 0;
       }
 
       // Accumulate delta
@@ -84,13 +87,17 @@
       // Debounce: send command after 100ms of inactivity
       if (tuningDebounce) clearTimeout(tuningDebounce);
       tuningDebounce = setTimeout(() => {
-        const finalFreq = optimisticFreq;
+        // Recalculate final freq from stable base + accumulated delta
+        const finalStep = getTuningStep();
+        const finalFreq = snapToStep(baseFreq + accumulatedDelta * finalStep);
+        
+        // Reset state
         accumulatedDelta = 0;
         baseFreq = 0;
         tuningDebounce = null;
         
         if (finalFreq > 0) {
-          sendCommand('set_freq', { freq: finalFreq, receiver: activeRx === 'SUB' ? 1 : 0 });
+          sendCommand('set_freq', { freq: finalFreq, receiver: capturedReceiver });
         }
       }, 100);
     }
