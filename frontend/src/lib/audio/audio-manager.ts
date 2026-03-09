@@ -114,6 +114,7 @@ class AudioManager {
     ws.onopen = () => {
       this.backoff = BACKOFF_MIN;
       setAudioConnected(true);
+      console.log('[audio-ws] connected');
       if (this._rxEnabled) {
         ws.send(JSON.stringify({ type: 'audio_start', direction: 'rx' }));
       }
@@ -124,15 +125,21 @@ class AudioManager {
       this.notify();
     };
 
+    let frameCount = 0;
     ws.onmessage = (ev) => {
       if (ev.data instanceof ArrayBuffer) {
+        frameCount++;
         this.rxPlayer.feed(ev.data);
       }
     };
 
-    ws.onerror = () => ws.close();
+    ws.onerror = (e) => {
+      console.error('[audio-ws] error', e);
+      ws.close();
+    };
 
-    ws.onclose = () => {
+    ws.onclose = (ev) => {
+      console.warn(`[audio-ws] closed code=${ev.code} reason=${ev.reason} frames=${frameCount} rxEnabled=${this._rxEnabled}`);
       this.ws = null;
       setAudioConnected(false);
       this.notify();

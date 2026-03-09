@@ -1149,8 +1149,10 @@ class AudioHandler:
                 elif opcode == WS_OP_BINARY:
                     # TX audio frame from browser
                     await self._handle_tx_audio(payload)
-        except EOFError:
-            pass
+        except EOFError as exc:
+            logger.info("audio: reader EOF: %s", exc)
+        except asyncio.IncompleteReadError as exc:
+            logger.info("audio: reader incomplete: %s", exc)
 
     async def _handle_control(self, msg: dict[str, Any]) -> None:
         """Handle audio_start / audio_stop messages."""
