@@ -1239,7 +1239,18 @@ class AudioHandler:
                     frame = await asyncio.wait_for(
                         self._frame_queue.get(), timeout=0.5,
                     )
-                    await self._ws.send_binary(frame)
+                    # Wrap send in timeout to detect dead WebSocket connections
+                    # If send blocks >5s, connection is likely dead (half-open TCP)
+                    try:
+                        await asyncio.wait_for(
+                            self._ws.send_binary(frame), timeout=5.0,
+                        )
+                    except TimeoutError:
+                        logger.warning(
+                            "audio: send timeout after %d frames (dead connection), exiting",
+                            sent,
+                        )
+                        break  # Exit loop, trigger cleanup in finally
                     sent += 1
                     if sent <= 3 or sent % 500 == 0:
                         logger.info("audio: sent frame #%d (%d bytes)", sent, len(frame))
