@@ -198,8 +198,8 @@ export class WsChannel {
 const _ctrl = new WsChannel();
 _ctrl.onStateChange((s) => setWsConnected(s === 'connected'));
 _ctrl.onMessage((msg) => {
-  if (msg.type === 'state_update' && (msg as any).data) {
-    setRadioState((msg as any).data);
+  if (msg.type === 'state_update' && msg.data) {
+    setRadioState(msg.data as any);
     setHttpConnected(true);
     markStateUpdated();
   }

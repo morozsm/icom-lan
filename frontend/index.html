@@ -33,6 +33,11 @@
         var token = localStorage.getItem('icom-lan-auth-token');
         if (token) xhr.setRequestHeader('Authorization', 'Bearer ' + token);
         xhr.onload = function() {
+          if (xhr.status === 401) {
+            var t = prompt('Enter auth token:');
+            if (t) { localStorage.setItem('icom-lan-auth-token', t); location.reload(); }
+            return;
+          }
           try {
             var state = JSON.parse(xhr.responseText);
             window.__RADIO_STATE__ = state;

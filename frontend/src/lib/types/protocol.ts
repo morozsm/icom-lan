@@ -27,6 +27,7 @@ export type WsIncoming =
   | { type: 'response'; id: string; ok: boolean; result?: Record<string, unknown>; error?: string; message?: string }
   | { type: 'hello'; proto: number; server: string; version: string; radio: string; connected: boolean; capabilities: string[] }
   | { type: 'state'; data: Record<string, unknown> }
+  | { type: 'state_update'; data: Record<string, unknown> }
   | { type: 'event'; name: string; data: Record<string, unknown> };
 
 // Incoming: server → client (base interface for typed sub-interfaces)
