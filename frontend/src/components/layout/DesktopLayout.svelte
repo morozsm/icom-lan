@@ -44,13 +44,10 @@
   onMount(() => {
     const cleanupKb = setupKeyboard();
 
-    // Arrow key tuning — optimistic update from stable base frequency.
-    // First keypress captures base freq + receiver; subsequent presses accumulate delta.
+    // Arrow key tuning — each keypress tunes from CURRENT visible freq (with optimistic).
     // Optimistic updates applied instantly for responsive feel.
-    // Command sent with total delta after 100ms of inactivity.
+    // Command sent with final visible freq after 100ms of inactivity.
     let tuningDebounce: ReturnType<typeof setTimeout> | null = null;
-    let accumulatedDelta = 0;
-    let baseFreq = 0;
     let capturedReceiver = 0;
 
     function onKeyDown(e: KeyboardEvent) {
@@ -74,49 +71,46 @@
       
       console.log('[onKeyDown] arrow key detected, delta=%d', delta);
 
-      // Capture base freq + receiver on first keypress (when no debounce active)
+      // Get current freq (includes optimistic updates from previous keypresses)
+      const current = radio.current;
+      const rx = current?.active === 'SUB' ? current?.sub : current?.main;
+      const currentFreq = rx?.freqHz ?? 0;
+      
+      if (currentFreq <= 0) {
+        console.warn('[arrow-tuning] No valid freq, ignoring keypress');
+        return;
+      }
+      
+      // Capture receiver on first keypress
       if (!tuningDebounce) {
-        const current = radio.current;
-        const rx = current?.active === 'SUB' ? current?.sub : current?.main;
-        baseFreq = rx?.freqHz ?? 0;
         capturedReceiver = current?.active === 'SUB' ? 1 : 0;
-        
-        // Guard: can't tune if no valid freq
-        if (baseFreq <= 0) {
-          console.warn('[arrow-tuning] No valid base freq, ignoring keypress');
-          return;
-        }
       }
 
-      // Accumulate delta
-      accumulatedDelta += delta;
-
-      // Calculate and apply optimistic freq from stable base
+      // Calculate next freq from CURRENT visible freq (not old base)
       const step = getTuningStep();
-      const optimisticFreq = snapToStep(baseFreq + accumulatedDelta * step);
+      const optimisticFreq = snapToStep(currentFreq + delta * step);
       
-      console.log('[arrow-tuning] baseFreq=%d delta=%d step=%d → optimistic=%d', 
-        baseFreq, accumulatedDelta, step, optimisticFreq);
+      console.log('[arrow-tuning] current=%d step=%d delta=%d → optimistic=%d', 
+        currentFreq, step, delta, optimisticFreq);
       
+      // Apply optimistic update immediately for responsive feel
       if (optimisticFreq > 0) {
         patchActiveReceiver({ freqHz: optimisticFreq });
       }
 
-      // Debounce: send command after 100ms of inactivity
+      // Debounce: send command with FINAL visible freq after 100ms of inactivity
       if (tuningDebounce) clearTimeout(tuningDebounce);
       tuningDebounce = setTimeout(() => {
-        // Recalculate final freq from stable base + accumulated delta
-        const finalStep = getTuningStep();
-        const finalFreq = snapToStep(baseFreq + accumulatedDelta * finalStep);
-        
-        // Reset state
-        accumulatedDelta = 0;
-        baseFreq = 0;
-        tuningDebounce = null;
+        // Send command with current visible freq (after all optimistic updates)
+        const finalRx = radio.current?.active === 'SUB' ? radio.current?.sub : radio.current?.main;
+        const finalFreq = finalRx?.freqHz ?? 0;
         
         if (finalFreq > 0) {
           sendCommand('set_freq', { freq: finalFreq, receiver: capturedReceiver });
         }
+        
+        // Reset debounce flag
+        tuningDebounce = null;
       }, 100);
     }
 
