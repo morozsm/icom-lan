@@ -51,12 +51,7 @@
     let capturedReceiver = 0;
 
     function onKeyDown(e: KeyboardEvent) {
-      console.log('[onKeyDown] key=%s target=%s', e.key, e.target?.constructor.name);
-      
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-        console.log('[onKeyDown] skipping - input focused');
-        return;
-      }
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       
       let delta = 0;
       if (e.key === 'ArrowUp' || e.key === 'ArrowRight') {
@@ -64,22 +59,16 @@
       } else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') {
         delta = -1;
       } else {
-        console.log('[onKeyDown] ignoring non-arrow key');
         return;
       }
       e.preventDefault();
-      
-      console.log('[onKeyDown] arrow key detected, delta=%d', delta);
 
       // Get current freq (includes optimistic updates from previous keypresses)
       const current = radio.current;
       const rx = current?.active === 'SUB' ? current?.sub : current?.main;
       const currentFreq = rx?.freqHz ?? 0;
       
-      if (currentFreq <= 0) {
-        console.warn('[arrow-tuning] No valid freq, ignoring keypress');
-        return;
-      }
+      if (currentFreq <= 0) return;
       
       // Capture receiver on first keypress
       if (!tuningDebounce) {
@@ -89,9 +78,6 @@
       // Calculate next freq from CURRENT visible freq (not old base)
       const step = getTuningStep();
       const optimisticFreq = snapToStep(currentFreq + delta * step);
-      
-      console.log('[arrow-tuning] current=%d step=%d delta=%d → optimistic=%d', 
-        currentFreq, step, delta, optimisticFreq);
       
       // Apply optimistic update immediately for responsive feel
       if (optimisticFreq > 0) {
