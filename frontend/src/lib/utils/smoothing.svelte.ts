@@ -3,7 +3,7 @@
  * React useSmoothedValue → Svelte $state + rAF loop.
  */
 export function createSmoother(attack = 0.12, release = 0.32) {
-  let current = 0;
+  let current = $state(0);
   let target = 0;
   let frameId = 0;
   let lastTime = 0;
