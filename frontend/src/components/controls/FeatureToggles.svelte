@@ -15,7 +15,6 @@
   let att  = $derived(rx?.att  ?? 0);
   let pre  = $derived(rx?.preamp ?? 0);
   let agc  = $derived(rx?.agc  ?? null);
-  // COMP state is display-only — no backend handler for set_comp
   let comp = $derived(radio.current?.compressorOn ?? false);
   let powerLevel = $derived(radio.current?.powerLevel ?? 0);
   let isTx = $derived(hasTx());
@@ -45,6 +44,10 @@
 
   function toggleDigisel() {
     sendCommand('set_digisel', { on: !digisel, receiver: receiverIdx });
+  }
+
+  function toggleComp() {
+    sendCommand('set_comp', { on: !comp });
   }
 
   function cycleAtt() {
@@ -147,10 +150,13 @@
   </ControlGroup>
 
   <ControlGroup title="TX">
-    <!-- COMP is display-only — no backend handler exists for set_comp -->
-    <span class="value-badge" class:nonzero={comp} title="Compressor">
-      COMP
-    </span>
+    <button
+      class="toggle-btn"
+      class:active={comp}
+      onclick={toggleComp}
+      aria-pressed={comp}
+      title="Speech Compressor"
+    >COMP</button>
 
     <button
       class="toggle-btn"

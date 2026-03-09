@@ -63,6 +63,7 @@ from .radio_poller import (
     SetUsbModLevel,
     SetLanModLevel,
     SetDualWatch,
+    SetCompressor,
 )
 from .websocket import WS_OP_BINARY, WS_OP_TEXT, WebSocketConnection
 
@@ -169,6 +170,7 @@ class ControlHandler:
             "set_dual_watch",
             "get_tuner_status",
             "set_tuner_status",
+            "set_comp",
         ]
     )
 
@@ -732,6 +734,10 @@ class ControlHandler:
             case "set_dual_watch":
                 on = bool(params.get("on", False))
                 q.put(SetDualWatch(on))
+                return {"on": on}
+            case "set_comp":
+                on = bool(params.get("on", True))
+                q.put(SetCompressor(on))
                 return {"on": on}
             case _:
                 raise ValueError(f"unhandled command: {name!r}")
