@@ -11,11 +11,13 @@
     maxHz: number;
   }
 
-  const caps = getCapabilities();
-  const BANDS: Band[] = caps?.freqRanges
-    ?.flatMap(r => r.bands ?? [])
-    ?.map(b => ({ name: b.name, defaultHz: b.default, minHz: b.start, maxHz: b.end }))
-    ?? [];
+  // Reactive: re-derives when capabilities load (may be null on first render)
+  const BANDS: Band[] = $derived(
+    getCapabilities()?.freqRanges
+      ?.flatMap(r => r.bands ?? [])
+      ?.map(b => ({ name: b.name, defaultHz: b.default, minHz: b.start, maxHz: b.end }))
+      ?? []
+  );
 
   let freq = $derived((radio.current?.active === 'SUB' ? radio.current?.sub : radio.current?.main)?.freqHz ?? 0);
   let receiverIdx = $derived(radio.current?.active === 'SUB' ? 1 : 0);
