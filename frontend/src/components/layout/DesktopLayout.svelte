@@ -17,7 +17,7 @@
   import DxClusterPanel from '../dx/DxClusterPanel.svelte';
   import StepSelector from '../controls/StepSelector.svelte';
 
-  import { radio } from '../../lib/stores/radio.svelte';
+  import { radio, patchActiveReceiver } from '../../lib/stores/radio.svelte';
   import { hasDualReceiver, hasTx } from '../../lib/stores/capabilities.svelte';
   import { getConnectionStatus } from '../../lib/stores/connection.svelte';
   import { sendCommand } from '../../lib/transport/ws-client';
@@ -54,7 +54,12 @@
     let capturedReceiver = 0;
 
     function onKeyDown(e: KeyboardEvent) {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      console.log('[onKeyDown] key=%s target=%s', e.key, e.target?.constructor.name);
+      
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        console.log('[onKeyDown] skipping - input focused');
+        return;
+      }
       
       let delta = 0;
       if (e.key === 'ArrowUp' || e.key === 'ArrowRight') {
@@ -62,9 +67,12 @@
       } else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') {
         delta = -1;
       } else {
+        console.log('[onKeyDown] ignoring non-arrow key');
         return;
       }
       e.preventDefault();
+      
+      console.log('[onKeyDown] arrow key detected, delta=%d', delta);
 
       // Capture base freq + receiver on first keypress (when no debounce active)
       if (!tuningDebounce) {
@@ -91,7 +99,7 @@
         baseFreq, accumulatedDelta, step, optimisticFreq);
       
       if (optimisticFreq > 0) {
-        radio.patchActiveReceiver({ freqHz: optimisticFreq });
+        patchActiveReceiver({ freqHz: optimisticFreq });
       }
 
       // Debounce: send command after 100ms of inactivity
