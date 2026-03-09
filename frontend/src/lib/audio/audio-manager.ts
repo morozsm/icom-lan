@@ -10,6 +10,7 @@
 
 import { RxPlayer } from './rx-player';
 import { TxMic } from './tx-mic';
+import { setAudioConnected } from '../stores/connection.svelte';
 
 const BACKOFF_MIN = 500;
 const BACKOFF_MAX = 10000;
@@ -112,6 +113,7 @@ class AudioManager {
 
     ws.onopen = () => {
       this.backoff = BACKOFF_MIN;
+      setAudioConnected(true);
       if (this._rxEnabled) {
         ws.send(JSON.stringify({ type: 'audio_start', direction: 'rx' }));
       }
@@ -132,6 +134,7 @@ class AudioManager {
 
     ws.onclose = () => {
       this.ws = null;
+      setAudioConnected(false);
       this.notify();
       if (!this._rxEnabled && !this._txEnabled) return;
       // Reconnect with backoff
@@ -150,6 +153,7 @@ class AudioManager {
       this.ws.onclose = null;
       this.ws.close();
       this.ws = null;
+      setAudioConnected(false);
     }
   }
 

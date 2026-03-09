@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { sendCommand } from '../../lib/transport/ws-client';
+
   interface Props {
     active: 'MAIN' | 'SUB';
     dualWatch?: boolean;
@@ -29,6 +31,20 @@
     >
       SUB
     </button>
+  {/if}
+
+  {#if hasDualReceiver}
+    <button
+      class="vfo-btn"
+      onclick={() => sendCommand('vfo_swap', {})}
+      title="Swap Main↔Sub VFO"
+    >A↔B</button>
+
+    <button
+      class="vfo-btn"
+      onclick={() => sendCommand('vfo_equalize', {})}
+      title="Copy active VFO to other"
+    >A=B</button>
   {/if}
 
   {#if dualWatch}
@@ -65,6 +81,25 @@
 
   .rx-btn.active {
     background: rgba(77, 182, 255, 0.15);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .vfo-btn {
+    padding: var(--space-1) var(--space-2);
+    min-height: 32px;
+    background: var(--bg);
+    border: 1px solid var(--panel-border);
+    border-radius: var(--radius);
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .vfo-btn:hover {
     border-color: var(--accent);
     color: var(--accent);
   }

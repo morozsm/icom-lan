@@ -1,6 +1,7 @@
 <script lang="ts">
   import { getCapabilities } from '../../lib/stores/capabilities.svelte';
-  import { getConnectionStatus, isStale } from '../../lib/stores/connection.svelte';
+  import { getConnectionStatus, isAudioConnected, isStale } from '../../lib/stores/connection.svelte';
+  import { audioManager } from '../../lib/audio/audio-manager';
   import { radio } from '../../lib/stores/radio.svelte';
 
   let caps = $derived(getCapabilities());
@@ -76,6 +77,9 @@
 
   <!-- Right: UTC + TX/RX -->
   <div class="right">
+    {#if audioManager.rxEnabled && !isAudioConnected()}
+      <span class="audio-warn" title="Audio disconnected">🔇</span>
+    {/if}
     {#if isPtt}
       <span class="tx-badge">TX</span>
     {:else}

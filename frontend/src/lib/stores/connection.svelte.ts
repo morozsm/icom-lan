@@ -1,6 +1,7 @@
 // Connection health state
 let httpConnected = $state(false);
 let wsConnected = $state(false);
+let audioConnected = $state(false);
 let lastResponseTime = $state<number | null>(null);
 
 let lastStateUpdate = $state(0);
@@ -46,6 +47,14 @@ export function getHttpConnected(): boolean {
 
 export function getWsConnected(): boolean {
   return wsConnected;
+}
+
+export function setAudioConnected(v: boolean): void {
+  audioConnected = v;
+}
+
+export function isAudioConnected(): boolean {
+  return audioConnected;
 }
 
 export function getLastResponseTime(): number | null {
