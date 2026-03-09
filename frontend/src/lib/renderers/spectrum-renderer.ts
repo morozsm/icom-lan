@@ -1,5 +1,6 @@
 // Framework-agnostic spectrum renderer for radio scope data.
 // Data: Uint8Array of amplitude values (0–160), mapped to canvas width.
+// SpectrumRenderer class adds stateful averaging and peak hold on top.
 
 export interface SpectrumOptions {
   bgColor: string;
@@ -188,6 +189,97 @@ export function renderSpectrum(
     ctx.beginPath();
     ctx.moveTo(tunePx, 0);
     ctx.lineTo(tunePx, height);
+    ctx.stroke();
+  }
+}
+
+// --- Stateful renderer class (averaging + peak hold) ---
+
+const AVG_DEPTH = 5;
+const PEAK_DECAY_MS = 3000;
+
+export class SpectrumRenderer {
+  private frameHistory: Uint8Array[] = [];
+  private peakValues: number[] = [];
+  private peakTimestamps: number[] = [];
+  private avgEnabled = true;
+  private peakHoldEnabled = true;
+
+  setAvgEnabled(enabled: boolean): void {
+    this.avgEnabled = enabled;
+    if (!enabled) this.frameHistory = [];
+  }
+
+  setPeakHoldEnabled(enabled: boolean): void {
+    this.peakHoldEnabled = enabled;
+    if (!enabled) {
+      this.peakValues = [];
+      this.peakTimestamps = [];
+    }
+  }
+
+  render(
+    ctx: CanvasRenderingContext2D,
+    data: Uint8Array,
+    width: number,
+    height: number,
+    options: SpectrumOptions,
+  ): void {
+    const now = performance.now();
+
+    // --- Moving average ---
+    let displayData = data;
+    if (this.avgEnabled) {
+      this.frameHistory.push(new Uint8Array(data));
+      if (this.frameHistory.length > AVG_DEPTH) this.frameHistory.shift();
+      const averaged = new Uint8Array(data.length);
+      for (let i = 0; i < data.length; i++) {
+        let sum = 0;
+        for (const frame of this.frameHistory) sum += frame[i];
+        averaged[i] = Math.round(sum / this.frameHistory.length);
+      }
+      displayData = averaged;
+    }
+
+    // Draw main spectrum with (optionally averaged) data
+    renderSpectrum(ctx, displayData, width, height, options);
+
+    // --- Peak hold ---
+    if (this.peakHoldEnabled) {
+      const n = data.length;
+      if (this.peakValues.length !== n) {
+        this.peakValues = new Array(n).fill(0);
+        this.peakTimestamps = new Array(n).fill(now);
+      }
+      for (let i = 0; i < n; i++) {
+        if (data[i] > this.peakValues[i]) {
+          this.peakValues[i] = data[i];
+          this.peakTimestamps[i] = now;
+        } else if (now - this.peakTimestamps[i] > PEAK_DECAY_MS) {
+          this.peakValues[i] = data[i];
+          this.peakTimestamps[i] = now;
+        }
+      }
+      this._drawPeakHold(ctx, this.peakValues, width, height);
+    }
+  }
+
+  private _drawPeakHold(
+    ctx: CanvasRenderingContext2D,
+    peaks: number[],
+    width: number,
+    height: number,
+  ): void {
+    ctx.strokeStyle = 'rgba(255, 255, 0, 0.5)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let i = 0; i < peaks.length; i++) {
+      const x = (i / peaks.length) * width;
+      const amp = Math.min(1.0, peaks[i] / 80);
+      const y = height * (1 - Math.sqrt(amp));
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
     ctx.stroke();
   }
 }
