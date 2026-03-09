@@ -10,6 +10,7 @@
   import {
     defaultWaterfallOptions,
     type WaterfallOptions,
+    type ColorSchemeName,
   } from '../../lib/renderers/waterfall-renderer';
   import { getChannel, onMessage, sendCommand } from '../../lib/transport/ws-client';
   import { type DxSpot } from '../../lib/types/protocol';
@@ -44,6 +45,10 @@
 
   // --- Component state ---
   let scopePixels = $state<Uint8Array | null>(null);
+  let enableAvg = $state(true);
+  let enablePeakHold = $state(true);
+  let refLevel = $state(0);
+  let colorScheme = $state<ColorSchemeName>('classic');
   let spectrumPush: ((data: Uint8Array) => void) | null = null;
   let waterfallPush: ((data: Uint8Array) => void) | null = null;
   let startFreq = $state(0);
@@ -75,7 +80,35 @@
     ...defaultWaterfallOptions,
     spanHz,
     centerHz,
+    refLevel,
+    colorScheme,
   });
+
+  // --- Scale helpers ---
+  function formatFreqOffset(hz: number): string {
+    if (hz === 0) return '0';
+    const absHz = Math.abs(hz);
+    const sign = hz < 0 ? '-' : '+';
+    if (absHz >= 1e6) return `${sign}${(absHz / 1e6).toFixed(1)}M`;
+    if (absHz >= 1e3) return `${sign}${(absHz / 1e3).toFixed(0)}k`;
+    return `${sign}${absHz}`;
+  }
+
+  const DB_TICKS = [
+    { position: 0, label: '0' },
+    { position: 33, label: '-20' },
+    { position: 67, label: '-40' },
+    { position: 100, label: '-60' },
+  ];
+
+  let freqTicks = $derived(
+    spanHz > 0
+      ? [-1, -0.5, 0, 0.5, 1].map((ratio) => ({
+          position: (ratio + 1) * 50,
+          label: formatFreqOffset((spanHz * ratio) / 2),
+        }))
+      : [],
+  );
 
   // Passband overlay position — always centered in center scope mode
   let tunePct = $derived(50); // center mode: VFO freq is always at center
@@ -140,9 +173,23 @@
 </script>
 
 <div class="spectrum-panel" class:fullscreen>
-  <div class="spectrum-area">
-    <SpectrumCanvas data={scopePixels} options={spectrumOptions} onRegisterPush={(fn) => spectrumPush = fn} />
+  <div class="spectrum-with-scales">
+    <div class="db-scale">
+      {#each DB_TICKS as tick}
+        <div class="tick" style="top: {tick.position}%">{tick.label}</div>
+      {/each}
+    </div>
+    <div class="spectrum-area">
+      <SpectrumCanvas data={scopePixels} options={spectrumOptions} {spanHz} {enableAvg} {enablePeakHold} onRegisterPush={(fn) => spectrumPush = fn} />
+    </div>
   </div>
+  {#if freqTicks.length > 0}
+    <div class="freq-axis">
+      {#each freqTicks as tick}
+        <div class="tick" style="left: {tick.position}%">{tick.label}</div>
+      {/each}
+    </div>
+  {/if}
   <div class="waterfall-area">
     <WaterfallCanvas data={scopePixels} options={waterfallOptions} onFreqClick={handleTune} onRegisterPush={(fn) => waterfallPush = fn} />
     <DxOverlay spots={dxSpots} {startFreq} {endFreq} onTune={handleTune} />
@@ -153,6 +200,36 @@
       {/if}
       <div class="tune-line" style="left:50%"></div>
     {/if}
+  </div>
+  <div class="spectrum-controls">
+    <label class="spectrum-option">
+      <input type="checkbox" bind:checked={enableAvg} />
+      Avg
+    </label>
+    <label class="spectrum-option">
+      <input type="checkbox" bind:checked={enablePeakHold} />
+      Peak
+    </label>
+    <label class="ref-level-control">
+      Ref
+      <input
+        type="range"
+        min="-30"
+        max="30"
+        step="5"
+        value={refLevel}
+        oninput={(e) => (refLevel = +(e.target as HTMLInputElement).value)}
+      />
+      <span class="value">{refLevel > 0 ? '+' : ''}{refLevel}</span>
+    </label>
+    <label class="color-scheme-selector">
+      Colors
+      <select bind:value={colorScheme}>
+        <option value="classic">Classic</option>
+        <option value="thermal">Thermal</option>
+        <option value="grayscale">Gray</option>
+      </select>
+    </label>
   </div>
   <button class="fullscreen-btn" onclick={toggleFullscreen} title="Toggle fullscreen">
     {fullscreen ? '✕' : '⛶'}
@@ -180,16 +257,146 @@
     border: none;
   }
 
-  .spectrum-area {
+  .spectrum-with-scales {
     flex: 0 0 30%;
     min-height: 0;
+    display: flex;
     border-bottom: 1px solid var(--panel-border);
+  }
+
+  .db-scale {
+    flex: 0 0 44px;
+    position: relative;
+    background: var(--panel);
+    border-right: 1px solid var(--panel-border);
+  }
+
+  .db-scale .tick {
+    position: absolute;
+    right: 6px;
+    transform: translateY(-50%);
+    font-size: 10px;
+    color: var(--text-muted);
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .spectrum-area {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .freq-axis {
+    flex: 0 0 20px;
+    position: relative;
+    background: var(--panel);
+    border-bottom: 1px solid var(--panel-border);
+  }
+
+  .freq-axis .tick {
+    position: absolute;
+    transform: translateX(-50%);
+    font-size: 10px;
+    color: var(--text-muted);
+    line-height: 20px;
+    white-space: nowrap;
+    padding-left: 44px; /* offset for db-scale width */
+  }
+
+  .freq-axis .tick:first-child {
+    transform: translateX(0);
+  }
+
+  .freq-axis .tick:last-child {
+    transform: translateX(-100%);
   }
 
   .waterfall-area {
     flex: 1 1 70%;
     min-height: 0;
     position: relative;
+  }
+
+  .spectrum-controls {
+    position: absolute;
+    top: var(--space-2);
+    right: 36px;
+    z-index: 10;
+    display: flex;
+    gap: var(--space-2);
+  }
+
+  .spectrum-option {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--panel-border);
+    border-radius: var(--radius);
+    padding: 2px 6px;
+    user-select: none;
+  }
+
+  .spectrum-option:hover {
+    color: var(--text);
+  }
+
+  .spectrum-option input[type='checkbox'] {
+    margin: 0;
+    cursor: pointer;
+  }
+
+  .ref-level-control {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--panel-border);
+    border-radius: var(--radius);
+    padding: 2px 6px;
+  }
+
+  .ref-level-control input[type='range'] {
+    width: 60px;
+    cursor: pointer;
+    accent-color: var(--accent);
+  }
+
+  .ref-level-control .value {
+    min-width: 28px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .color-scheme-selector {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--panel-border);
+    border-radius: var(--radius);
+    padding: 2px 6px;
+  }
+
+  .color-scheme-selector select {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .color-scheme-selector select:focus {
+    outline: none;
   }
 
   .fullscreen-btn {
