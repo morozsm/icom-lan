@@ -22,7 +22,7 @@
   import { getConnectionStatus } from '../../lib/stores/connection.svelte';
   import { sendCommand } from '../../lib/transport/ws-client';
   import { setupKeyboard } from '../../lib/actions/keyboard';
-  import { applyModeDefault, tuneBy } from '../../lib/stores/tuning.svelte';
+  import { applyModeDefault, tuneBy, getTuningStep, snapToStep } from '../../lib/stores/tuning.svelte';
 
   let state = $derived(radio.current);
   let main = $derived(radio.current?.main ?? null);
@@ -44,29 +44,54 @@
   onMount(() => {
     const cleanupKb = setupKeyboard();
 
-    // Arrow key tuning — debounced to prevent race conditions from rapid keypresses.
-    // Keypresses accumulate delta; a single command is sent after 100ms of inactivity.
+    // Arrow key tuning — optimistic update from stable base frequency.
+    // First keypress captures base freq; subsequent presses accumulate delta.
+    // Optimistic updates applied instantly for responsive feel.
+    // Command sent with total delta after 100ms of inactivity.
     let tuningDebounce: ReturnType<typeof setTimeout> | null = null;
     let accumulatedDelta = 0;
+    let baseFreq = 0;
 
     function onKeyDown(e: KeyboardEvent) {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      
+      let delta = 0;
       if (e.key === 'ArrowUp' || e.key === 'ArrowRight') {
-        accumulatedDelta += 1;
+        delta = 1;
       } else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') {
-        accumulatedDelta -= 1;
+        delta = -1;
       } else {
         return;
       }
       e.preventDefault();
 
+      // Capture base freq on first keypress (when no debounce active)
+      if (!tuningDebounce) {
+        const rx = state?.active === 'SUB' ? state?.sub : state?.main;
+        baseFreq = rx?.freqHz ?? 0;
+      }
+
+      // Accumulate delta
+      accumulatedDelta += delta;
+
+      // Calculate and apply optimistic freq from stable base
+      const step = getTuningStep();
+      const optimisticFreq = snapToStep(baseFreq + accumulatedDelta * step);
+      if (optimisticFreq > 0) {
+        radio.patchActiveReceiver({ freqHz: optimisticFreq });
+      }
+
+      // Debounce: send command after 100ms of inactivity
       if (tuningDebounce) clearTimeout(tuningDebounce);
       tuningDebounce = setTimeout(() => {
-        const delta = accumulatedDelta;
+        const finalFreq = optimisticFreq;
         accumulatedDelta = 0;
+        baseFreq = 0;
         tuningDebounce = null;
-        const freq = tuneBy(delta);
-        if (freq > 0) sendCommand('set_freq', { freq, receiver: activeRx === 'SUB' ? 1 : 0 });
+        
+        if (finalFreq > 0) {
+          sendCommand('set_freq', { freq: finalFreq, receiver: activeRx === 'SUB' ? 1 : 0 });
+        }
       }, 100);
     }
 
