@@ -3,6 +3,7 @@
   import { radio } from '../../lib/stores/radio.svelte';
   import { hasTx } from '../../lib/stores/capabilities.svelte';
   import ControlGroup from './ControlGroup.svelte';
+  import CapabilityMenu from './CapabilityMenu.svelte';
 
   let rx = $derived(radio.current?.active === 'SUB' ? (radio.current?.sub ?? null) : (radio.current?.main ?? null));
   let receiverIdx = $derived(radio.current?.active === 'SUB' ? 1 : 0);
@@ -18,6 +19,15 @@
   let powerLevel = $derived(radio.current?.powerLevel ?? 0);
   let isTx = $derived(hasTx());
 
+  // IC-7610 ATT values: 0 (off) and 20 dB
+  const attValues = [0, 20];
+  // IC-7610 PRE values: 0 (off), 1 (preamp 1), 2 (preamp 2)
+  const preValues = [0, 1, 2];
+
+  let showAttMenu = $state(false);
+  let showPreMenu = $state(false);
+  let pressTimer: ReturnType<typeof setTimeout>;
+
   function toggleNb() {
     sendCommand('set_nb', { on: !nb, receiver: receiverIdx });
   }
@@ -31,14 +41,32 @@
   }
 
   function cycleAtt() {
-    // IC-7610 ATT: 0 or 20dB
     sendCommand('set_att', { db: att === 0 ? 20 : 0, receiver: receiverIdx });
   }
 
   function cyclePre() {
-    // IC-7610 PRE: 0 (off), 1 (preamp 1), 2 (preamp 2)
     const next = (pre + 1) % 3;
     sendCommand('set_preamp', { level: next, receiver: receiverIdx });
+  }
+
+  function setAtt(db: number) {
+    sendCommand('set_att', { db, receiver: receiverIdx });
+  }
+
+  function setPre(level: number) {
+    sendCommand('set_preamp', { level, receiver: receiverIdx });
+  }
+
+  function startAttLongPress() {
+    pressTimer = setTimeout(() => (showAttMenu = true), 500);
+  }
+
+  function startPreLongPress() {
+    pressTimer = setTimeout(() => (showPreMenu = true), 500);
+  }
+
+  function cancelLongPress() {
+    clearTimeout(pressTimer);
   }
 
   function attLabel(v: number): string {
@@ -82,16 +110,22 @@
       class="toggle-btn"
       class:active={att !== 0}
       onclick={cycleAtt}
+      onpointerdown={startAttLongPress}
+      onpointerup={cancelLongPress}
+      onpointerleave={cancelLongPress}
       aria-pressed={att !== 0}
-      title="Attenuator (click to cycle)"
+      title="Attenuator (click to cycle, long-press for menu)"
     >ATT <span class="val">{attLabel(att)}</span></button>
 
     <button
       class="toggle-btn"
       class:active={pre !== 0}
       onclick={cyclePre}
+      onpointerdown={startPreLongPress}
+      onpointerup={cancelLongPress}
+      onpointerleave={cancelLongPress}
       aria-pressed={pre !== 0}
-      title="Preamp (click to cycle)"
+      title="Preamp (click to cycle, long-press for menu)"
     >PRE <span class="val">{preLabel(pre)}</span></button>
 
     {#if agc !== null}
@@ -134,6 +168,28 @@
     {/if}
   </ControlGroup>
 </div>
+
+{#if showAttMenu}
+  <CapabilityMenu
+    title="Attenuator"
+    values={attValues}
+    current={att}
+    labels={attLabel}
+    onSelect={setAtt}
+    onClose={() => (showAttMenu = false)}
+  />
+{/if}
+
+{#if showPreMenu}
+  <CapabilityMenu
+    title="Preamp"
+    values={preValues}
+    current={pre}
+    labels={preLabel}
+    onSelect={setPre}
+    onClose={() => (showPreMenu = false)}
+  />
+{/if}
 
 <style>
   .feature-toggles {
