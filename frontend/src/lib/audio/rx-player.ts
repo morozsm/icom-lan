@@ -33,10 +33,16 @@ export class RxPlayer {
   }
 
   start(): void {
-    if (this.ctx) return;
+    if (this.ctx) {
+      // Resume if suspended (browser autoplay policy)
+      if (this.ctx.state === 'suspended') this.ctx.resume();
+      return;
+    }
     const Ctx = globalThis.AudioContext ?? (globalThis as any).webkitAudioContext;
     if (!Ctx) return;
     this.ctx = new Ctx({ sampleRate: SAMPLE_RATE });
+    // Must resume — Chrome/Safari suspend AudioContext by default
+    if (this.ctx.state === 'suspended') this.ctx.resume();
     this.gain = this.ctx.createGain();
     this.gain.gain.value = this._volume;
     this.gain.connect(this.ctx.destination);

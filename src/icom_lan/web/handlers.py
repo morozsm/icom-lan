@@ -1011,10 +1011,11 @@ class AudioBroadcaster:
         if not self._radio or not isinstance(self._radio, AudioCapable):
             return
 
+        # AudioBus always delivers raw Opus packets (start_audio_rx_opus),
+        # regardless of radio.audio_codec setting. Wire format is always Opus.
+        self._web_codec = AUDIO_CODEC_OPUS
         _codec = getattr(self._radio, "audio_codec", None)
         if isinstance(_codec, AudioCodec):
-            if _codec in (AudioCodec.OPUS_1CH, AudioCodec.OPUS_2CH):
-                self._web_codec = AUDIO_CODEC_OPUS
             if _codec in (
                 AudioCodec.PCM_2CH_8BIT, AudioCodec.PCM_2CH_16BIT,
                 AudioCodec.ULAW_2CH, AudioCodec.OPUS_2CH,
