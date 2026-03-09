@@ -2,6 +2,7 @@
   import { sendCommand } from '../../lib/transport/ws-client';
   import { radio } from '../../lib/stores/radio.svelte';
   import { hasTx } from '../../lib/stores/capabilities.svelte';
+  import ControlGroup from './ControlGroup.svelte';
 
   let rx = $derived(radio.current?.active === 'SUB' ? (radio.current?.sub ?? null) : (radio.current?.main ?? null));
   let receiverIdx = $derived(radio.current?.active === 'SUB' ? 1 : 0);
@@ -49,91 +50,96 @@
   }
 </script>
 
-<div class="feature-toggles" role="group" aria-label="DSP features">
-  <button
-    class="toggle-btn"
-    class:active={nb}
-    onclick={toggleNb}
-    aria-pressed={nb}
-    title="Noise Blanker"
-  >NB</button>
+<div class="feature-toggles">
+  <ControlGroup title="DSP">
+    <button
+      class="toggle-btn"
+      class:active={nb}
+      onclick={toggleNb}
+      aria-pressed={nb}
+      title="Noise Blanker"
+    >NB</button>
 
-  <button
-    class="toggle-btn"
-    class:active={nr}
-    onclick={toggleNr}
-    aria-pressed={nr}
-    title="Noise Reduction"
-  >NR</button>
+    <button
+      class="toggle-btn"
+      class:active={nr}
+      onclick={toggleNr}
+      aria-pressed={nr}
+      title="Noise Reduction"
+    >NR</button>
 
-  <button
-    class="toggle-btn"
-    class:active={digisel}
-    onclick={toggleDigisel}
-    aria-pressed={digisel}
-    title="Digital Selection (DIGI-SEL)"
-  >DIGI</button>
+    <button
+      class="toggle-btn"
+      class:active={digisel}
+      onclick={toggleDigisel}
+      aria-pressed={digisel}
+      title="Digital Selection (DIGI-SEL)"
+    >DIGI</button>
+  </ControlGroup>
 
-  <!-- COMP is display-only — no backend handler exists for set_comp -->
-  <span class="value-badge" class:nonzero={comp} title="Compressor">
-    COMP
-  </span>
+  <ControlGroup title="RX">
+    <button
+      class="toggle-btn"
+      class:active={att !== 0}
+      onclick={cycleAtt}
+      aria-pressed={att !== 0}
+      title="Attenuator (click to cycle)"
+    >ATT <span class="val">{attLabel(att)}</span></button>
 
-  <button
-    class="toggle-btn"
-    class:active={att !== 0}
-    onclick={cycleAtt}
-    aria-pressed={att !== 0}
-    title="Attenuator (click to cycle)"
-  >ATT <span class="val">{attLabel(att)}</span></button>
+    <button
+      class="toggle-btn"
+      class:active={pre !== 0}
+      onclick={cyclePre}
+      aria-pressed={pre !== 0}
+      title="Preamp (click to cycle)"
+    >PRE <span class="val">{preLabel(pre)}</span></button>
 
-  <button
-    class="toggle-btn"
-    class:active={pre !== 0}
-    onclick={cyclePre}
-    aria-pressed={pre !== 0}
-    title="Preamp (click to cycle)"
-  >PRE <span class="val">{preLabel(pre)}</span></button>
+    {#if agc !== null}
+      <span class="value-badge" title="AGC">
+        AGC <span class="val">{agc}</span>
+      </span>
+    {/if}
+  </ControlGroup>
 
-  {#if agc !== null}
-    <span class="value-badge" title="AGC">
-      AGC <span class="val">{agc}</span>
+  <ControlGroup title="TX">
+    <!-- COMP is display-only — no backend handler exists for set_comp -->
+    <span class="value-badge" class:nonzero={comp} title="Compressor">
+      COMP
     </span>
-  {/if}
 
-  <button
-    class="toggle-btn"
-    onclick={() => sendCommand('set_antenna_1', { on: true })}
-    title="Select ANT1"
-  >ANT1</button>
+    <button
+      class="toggle-btn"
+      onclick={() => sendCommand('set_antenna_1', { on: true })}
+      title="Select ANT1"
+    >ANT1</button>
 
-  <button
-    class="toggle-btn"
-    onclick={() => sendCommand('set_antenna_2', { on: true })}
-    title="Select ANT2"
-  >ANT2</button>
+    <button
+      class="toggle-btn"
+      onclick={() => sendCommand('set_antenna_2', { on: true })}
+      title="Select ANT2"
+    >ANT2</button>
 
-  {#if isTx}
-    <label class="pwr-control" title="TX Power (0–255)">
-      PWR
-      <input
-        type="range"
-        min="0"
-        max="255"
-        value={powerLevel}
-        onchange={(e) => sendCommand('set_power', { level: parseInt((e.currentTarget as HTMLInputElement).value) })}
-      />
-      <span class="val">{powerLevel}</span>
-    </label>
-  {/if}
+    {#if isTx}
+      <label class="pwr-control" title="TX Power (0–255)">
+        PWR
+        <input
+          type="range"
+          min="0"
+          max="255"
+          value={powerLevel}
+          onchange={(e) => sendCommand('set_power', { level: parseInt((e.currentTarget as HTMLInputElement).value) })}
+        />
+        <span class="val">{powerLevel}</span>
+      </label>
+    {/if}
+  </ControlGroup>
 </div>
 
 <style>
   .feature-toggles {
     display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-1);
-    align-items: center;
+    flex-direction: column;
+    gap: var(--space-3);
   }
 
   .toggle-btn {
