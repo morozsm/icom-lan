@@ -191,15 +191,18 @@
     </div>
   {/if}
   <div class="waterfall-area">
-    <WaterfallCanvas data={scopePixels} options={waterfallOptions} onFreqClick={handleTune} onRegisterPush={(fn) => waterfallPush = fn} />
-    <DxOverlay spots={dxSpots} {startFreq} {endFreq} onTune={handleTune} />
-    <!-- Tuning + passband indicator overlays the waterfall -->
-    {#if spanHz > 0}
-      {#if pbWidthPct > 0}
-        <div class="passband-overlay" style="left:{pbLeftPct()}%;width:{pbWidthPct}%"></div>
+    <div class="waterfall-scale"></div>
+    <div class="waterfall-content">
+      <WaterfallCanvas data={scopePixels} options={waterfallOptions} onFreqClick={handleTune} onRegisterPush={(fn) => waterfallPush = fn} />
+      <DxOverlay spots={dxSpots} {startFreq} {endFreq} onTune={handleTune} />
+      <!-- Tuning + passband indicator overlays the waterfall -->
+      {#if spanHz > 0}
+        {#if pbWidthPct > 0}
+          <div class="passband-overlay" style="left:{pbLeftPct()}%;width:{pbWidthPct}%"></div>
+        {/if}
+        <div class="tune-line" style="left:50%"></div>
       {/if}
-      <div class="tune-line" style="left:50%"></div>
-    {/if}
+    </div>
   </div>
   <div class="spectrum-controls">
     <label class="spectrum-option">
@@ -315,6 +318,19 @@
   .waterfall-area {
     flex: 1 1 70%;
     min-height: 0;
+    position: relative;
+    display: flex;
+  }
+
+  .waterfall-scale {
+    flex: 0 0 44px;
+    background: var(--panel);
+    border-right: 1px solid var(--panel-border);
+  }
+
+  .waterfall-content {
+    flex: 1 1 auto;
+    min-width: 0;
     position: relative;
   }
 

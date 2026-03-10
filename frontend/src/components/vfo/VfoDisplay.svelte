@@ -11,6 +11,8 @@
     filter: number;
     active: boolean;
     dataMode?: boolean;
+    att?: number;
+    preamp?: number;
     ontune?: (newFreq: number) => void;
   }
 
@@ -21,6 +23,8 @@
     filter,
     active,
     dataMode = false,
+    att = 0,
+    preamp = 0,
     ontune,
   }: Props = $props();
 
@@ -133,7 +137,11 @@
     title="Click to enter frequency directly"
   >
     <span class="vfo-label">{label}</span>
-    <span class="vfo-meta">{mode}{dataMode ? '-D' : ''} · FIL{filter}</span>
+    <span class="vfo-meta">
+      {mode}{dataMode ? '-D' : ''} · FIL{filter}
+      {#if att > 0} · ATT{att}{/if}
+      {#if preamp > 0} · PRE{preamp}{/if}
+    </span>
     <!-- Design choice: badge shows role ("MAIN"/"sub") not VFO letter ("A"/"B"),
          matching IC-7610 panel conventions where active receiver is "MAIN". -->
     {#if active}

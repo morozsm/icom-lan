@@ -19,8 +19,8 @@
   let powerLevel = $derived(radio.current?.powerLevel ?? 0);
   let isTx = $derived(hasTx());
 
-  // IC-7610 ATT values: 0 (off) and 20 dB
-  const attValues = [0, 20];
+  // IC-7610 ATT values: 0, 3, 6, 9, 12, 15, 18, 21 dB
+  const attValues = [0, 3, 6, 9, 12, 15, 18, 21];
   // IC-7610 PRE values: 0 (off), 1 (preamp 1), 2 (preamp 2)
   const preValues = [0, 1, 2];
 
@@ -51,7 +51,11 @@
   }
 
   function cycleAtt() {
-    sendCommand('set_att', { db: att === 0 ? 20 : 0, receiver: receiverIdx });
+    // Cycle through common values: 0 → 6 → 12 → 18 → 0
+    const cycle = [0, 6, 12, 18];
+    const idx = cycle.indexOf(att);
+    const next = idx >= 0 ? cycle[(idx + 1) % cycle.length] : 6;
+    sendCommand('set_att', { db: next, receiver: receiverIdx });
   }
 
   function cyclePre() {

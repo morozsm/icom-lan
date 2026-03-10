@@ -11,6 +11,7 @@
 import { RxPlayer } from './rx-player';
 import { TxMic } from './tx-mic';
 import { setAudioConnected } from '../stores/connection.svelte';
+import { getRadioState } from '../stores/radio.svelte';
 
 const BACKOFF_MIN = 500;
 const BACKOFF_MAX = 10000;
@@ -32,9 +33,32 @@ class AudioManager {
   get txSupported(): boolean { return TxMic.supported(); }
 
   constructor() {
+    let txFrames = 0;
+    let droppedFrames = 0;
     this.txMic = new TxMic((data) => {
+      // CRITICAL: Only send TX frames when PTT is active
+      // IC-7610 LAN audio cannot do full duplex (RX + TX simultaneously)
+      const ptt = getRadioState()?.ptt ?? false;
+      if (!ptt) {
+        droppedFrames++;
+        if (droppedFrames <= 3 || droppedFrames % 100 === 0) {
+          console.log(`[audio-ws] TX frame dropped (PTT OFF), total=${droppedFrames}`);
+        }
+        return;
+      }
+      
       if (this.ws?.readyState === WebSocket.OPEN) {
         this.ws.send(data);
+        txFrames++;
+        if (txFrames <= 3 || txFrames % 50 === 0) {
+          console.log(`[audio-ws] TX frame #${txFrames} sent, size=${data.byteLength}`);
+        }
+      } else {
+        // Dropped! WS not ready
+        droppedFrames++;
+        if (droppedFrames <= 5) {
+          console.warn(`[audio-ws] TX frame dropped, WS state=${this.ws?.readyState}`);
+        }
       }
     });
   }

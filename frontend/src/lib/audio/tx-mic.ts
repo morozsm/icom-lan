@@ -60,6 +60,7 @@ export class TxMic {
     const processor = new MediaStreamTrackProcessor({ track });
     this.reader = processor.readable.getReader();
 
+    let sentFrames = 0;
     this.encoder = new AudioEncoder({
       output: (chunk: EncodedAudioChunk) => {
         const payload = new Uint8Array(chunk.byteLength);
@@ -69,6 +70,10 @@ export class TxMic {
         frame.set(header);
         frame.set(payload, header.length);
         this.sendFn(frame.buffer);
+        sentFrames++;
+        if (sentFrames <= 3 || sentFrames % 50 === 0) {
+          console.log(`[TxMic] sent frame #${sentFrames}, size=${frame.length} bytes`);
+        }
       },
       error: (err: DOMException) => {
         console.warn('TxMic: encoder error', err);
@@ -104,18 +109,29 @@ export class TxMic {
   }
 
   private async readLoop(): Promise<void> {
+    let samplesRead = 0;
+    console.log('[TxMic] read loop started');
     while (this._active && this.reader) {
       let result: ReadableStreamReadResult<AudioData>;
       try {
         result = await this.reader.read();
-      } catch {
+      } catch (err) {
+        console.error('[TxMic] read error:', err);
         break;
       }
-      if (!result || result.done) break;
+      if (!result || result.done) {
+        console.log('[TxMic] read loop done');
+        break;
+      }
       if (this.encoder && this._active) {
         this.encoder.encode(result.value);
+        samplesRead++;
+        if (samplesRead <= 3 || samplesRead % 100 === 0) {
+          console.log(`[TxMic] encoded sample #${samplesRead}`);
+        }
       }
       result.value.close();
     }
+    console.log('[TxMic] read loop exited, samples=' + samplesRead);
   }
 }

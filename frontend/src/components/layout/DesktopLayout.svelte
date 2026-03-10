@@ -145,6 +145,8 @@
               filter={main.filter}
               active={activeRx === 'MAIN'}
               dataMode={main.dataMode}
+              att={main.att}
+              preamp={main.preamp}
               ontune={(f) => handleTune('MAIN', f)}
             />
           {:else}
@@ -159,6 +161,8 @@
               filter={sub.filter}
               active={activeRx === 'SUB'}
               dataMode={sub.dataMode}
+              att={sub.att}
+              preamp={sub.preamp}
               ontune={(f) => handleTune('SUB', f)}
             />
           {/if}

@@ -106,10 +106,13 @@ export function renderSpectrum(
   // Map amplitude data to canvas y-coordinates
   // Gain boost: map 0-80 → full height with sqrt curve for better contrast
   // at low signal levels (IC-7610 scope data typically peaks at ~55)
+  // Ref level: -30..+30 dB → ±40 on 0-80 scale (same mapping as waterfall)
+  const refAdjust = (options.refLevel / 60) * 40;
   const yPoints = new Float32Array(width);
   for (let x = 0; x < width; x++) {
     const idx = Math.min(n - 1, Math.floor((x / width) * n));
-    const amp = Math.min(1.0, data[idx] / 80);
+    const adjusted = Math.min(80, Math.max(0, data[idx] + refAdjust));
+    const amp = Math.min(1.0, adjusted / 80);
     const boosted = Math.sqrt(amp);
     yPoints[x] = height * (1 - boosted);
   }
@@ -195,7 +198,7 @@ export function renderSpectrum(
 
 // --- Stateful renderer class (averaging + peak hold) ---
 
-const AVG_DEPTH = 5;
+const AVG_DEPTH = 15;  // ~500ms window at 30 fps
 const PEAK_DECAY_MS = 3000;
 
 export class SpectrumRenderer {
@@ -241,10 +244,7 @@ export class SpectrumRenderer {
       displayData = averaged;
     }
 
-    // Draw main spectrum with (optionally averaged) data
-    renderSpectrum(ctx, displayData, width, height, options);
-
-    // --- Peak hold ---
+    // --- Peak hold update ---
     if (this.peakHoldEnabled) {
       const n = data.length;
       if (this.peakValues.length !== n) {
@@ -260,26 +260,52 @@ export class SpectrumRenderer {
           this.peakTimestamps[i] = now;
         }
       }
-      this._drawPeakHold(ctx, this.peakValues, width, height);
+    }
+
+    // Draw main spectrum first
+    renderSpectrum(ctx, displayData, width, height, options);
+
+    // Draw peak hold fill on top (subtle overlay above spectrum)
+    if (this.peakHoldEnabled) {
+      this._drawPeakHold(ctx, displayData, this.peakValues, width, height, options);
     }
   }
 
   private _drawPeakHold(
     ctx: CanvasRenderingContext2D,
+    currentData: Uint8Array,
     peaks: number[],
     width: number,
     height: number,
+    options: SpectrumOptions,
   ): void {
-    ctx.strokeStyle = 'rgba(255, 255, 0, 0.5)';
-    ctx.lineWidth = 1;
+    // Draw peak hold as subtle gray fill between current spectrum and peak line
+    const refAdjust = (options.refLevel / 60) * 40;
+    const n = currentData.length;
+    
+    ctx.fillStyle = 'rgba(200, 200, 200, 0.25)';
     ctx.beginPath();
-    for (let i = 0; i < peaks.length; i++) {
-      const x = (i / peaks.length) * width;
-      const amp = Math.min(1.0, peaks[i] / 80);
+    
+    // Start from left, draw current spectrum line
+    for (let x = 0; x < width; x++) {
+      const idx = Math.min(n - 1, Math.floor((x / width) * n));
+      const adjusted = Math.min(80, Math.max(0, currentData[idx] + refAdjust));
+      const amp = Math.min(1.0, adjusted / 80);
       const y = height * (1 - Math.sqrt(amp));
-      if (i === 0) ctx.moveTo(x, y);
+      if (x === 0) ctx.moveTo(x, y);
       else ctx.lineTo(x, y);
     }
-    ctx.stroke();
+    
+    // Draw back along peak line (right to left)
+    for (let i = peaks.length - 1; i >= 0; i--) {
+      const x = (i / peaks.length) * width;
+      const peakAdjusted = Math.min(80, Math.max(0, peaks[i] + refAdjust));
+      const amp = Math.min(1.0, peakAdjusted / 80);
+      const y = height * (1 - Math.sqrt(amp));
+      ctx.lineTo(x, y);
+    }
+    
+    ctx.closePath();
+    ctx.fill();
   }
 }
