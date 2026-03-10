@@ -27,7 +27,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from .radio_protocol import Radio
@@ -249,7 +249,6 @@ class AudioBridge:
             self._decoder = None
             logger.info("audio-bridge: PCM mode (no decode needed)")
 
-        from .audio_bus import AudioBus
         bus = self._radio.audio_bus
         self._subscription = bus.subscribe(name="audio-bridge")
         await self._subscription.start()

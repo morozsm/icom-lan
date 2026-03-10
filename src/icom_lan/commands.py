@@ -13,7 +13,10 @@ where ``receiver`` = ``0x00`` (MAIN) or ``0x01`` (SUB).
 Reference: wfview icomcommander.cpp, IC-7610.rig
 """
 
+from __future__ import annotations
+
 import math
+from typing import TYPE_CHECKING
 
 from .types import (
     AgcMode,
@@ -27,6 +30,9 @@ from .types import (
     bcd_decode,
     bcd_encode,
 )
+
+if TYPE_CHECKING:
+    from .types import BandStackRegister, MemoryChannel
 
 __all__ = [
     "IC_7610_ADDR",

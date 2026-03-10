@@ -45,6 +45,7 @@ from .websocket import (
 
 if TYPE_CHECKING:
     from ..audio_bridge import AudioBridge
+    from ..profiles import RadioProfile
     from ..radio_protocol import Radio
 
 __all__ = ["WebConfig", "WebServer", "run_web_server"]

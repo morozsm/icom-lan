@@ -212,8 +212,6 @@ from .commands import (
     set_tuning_step,
     start_scan,
     stop_scan,
-    set_dual_watch_off,
-    set_dual_watch_on,
     get_dual_watch,
     set_dual_watch,
     quick_dual_watch,
@@ -268,18 +266,12 @@ from .commands import (
     set_utc_offset,
     parse_utc_offset_response,
     # Memory and band-stacking (#133)
-    build_memory_mode_get,
     build_memory_mode_set,
     build_memory_write,
     build_memory_to_vfo,
     build_memory_clear,
-    build_memory_contents_get,
     build_memory_contents_set,
-    build_band_stack_get,
     build_band_stack_set,
-    parse_memory_mode_response,
-    parse_memory_contents_response,
-    parse_band_stack_response,
 )
 from .exceptions import (
     CommandError,
@@ -303,9 +295,11 @@ from .types import (
     AudioCapabilities,
     AudioPeakFilter,
     AudioCodec,
+    BandStackRegister,
     BreakInMode,
     CivFrame,
     FilterShape,
+    MemoryChannel,
     Mode,
     ScopeFixedEdge,
     ScopeCompletionPolicy,
@@ -4055,7 +4049,7 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
             build_memory_clear(channel, to_addr=self._radio_addr)
         )
 
-    async def get_memory_contents(self, channel: int) -> types.MemoryChannel:
+    async def get_memory_contents(self, channel: int) -> MemoryChannel:
         """Read full memory channel data.
         
         Args:
@@ -4073,7 +4067,7 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
             "Command 0x1A 0x00 GET is not documented in the CI-V Reference Manual."
         )
 
-    async def set_memory_contents(self, mem: types.MemoryChannel) -> None:
+    async def set_memory_contents(self, mem: MemoryChannel) -> None:
         """Write full memory channel data."""
         if not 1 <= mem.channel <= 101:
             raise ValueError(f"Channel must be 1-101, got {mem.channel}")
@@ -4083,7 +4077,7 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
 
     async def get_band_stack(
         self, band: int, register: int
-    ) -> types.BandStackRegister:
+    ) -> BandStackRegister:
         """Read band stacking register (band 0-24, register 1-3).
         
         Args:
@@ -4104,7 +4098,7 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
             "Command 0x1A 0x01 GET is not documented in the CI-V Reference Manual."
         )
 
-    async def set_band_stack(self, bsr: types.BandStackRegister) -> None:
+    async def set_band_stack(self, bsr: BandStackRegister) -> None:
         """Write band stacking register."""
         if not 0 <= bsr.band <= 24:
             raise ValueError(f"Band must be 0-24, got {bsr.band}")

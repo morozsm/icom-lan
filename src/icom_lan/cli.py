@@ -1563,7 +1563,7 @@ async def _cmd_scope(radio: IcomRadio, args: argparse.Namespace) -> int:
 
 async def _cmd_audio_bridge(radio: IcomRadio, args: argparse.Namespace) -> int:
     """Bridge radio audio to a virtual audio device."""
-    from .audio_bridge import AudioBridge, find_loopback_device, list_audio_devices
+    from .audio_bridge import AudioBridge, list_audio_devices
 
     if args.list_devices:
         try:
