@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Any, Protocol, cast
 from ..profiles import RadioProfile
 from ..scope import ScopeFrame
 from ..types import AudioCodec
+from .._audio_transcoder import PcmOpusTranscoder, create_pcm_opus_transcoder
 from .protocol import (
     AUDIO_CODEC_OPUS,
     AUDIO_CODEC_PCM16,
@@ -1145,6 +1146,12 @@ class AudioHandler:
             maxsize=self.HIGH_WATERMARK,
         )
         self._done = asyncio.Event()
+        # Opus decoder for TX when radio uses PCM codec
+        self._transcoder: PcmOpusTranscoder | None = None
+        try:
+            self._transcoder = create_pcm_opus_transcoder()
+        except Exception:
+            logger.debug("audio: TX transcoder unavailable (opus codec missing?)")
 
     async def run(self) -> None:
         """Run the audio channel lifecycle."""
@@ -1215,20 +1222,49 @@ class AudioHandler:
 
     async def _handle_tx_audio(self, payload: bytes) -> None:
         """Forward TX audio from browser to radio."""
-        if not self._tx_active or not self._radio:
+        if not self._tx_active:
+            logger.debug("audio: TX frame ignored (tx_active=False), size=%d", len(payload))
+            return
+        if not self._radio:
+            logger.warning("audio: TX frame ignored (no radio), size=%d", len(payload))
             return
         from ..radio_protocol import AudioCapable
         if not isinstance(self._radio, AudioCapable):
+            logger.warning("audio: TX frame ignored (radio not AudioCapable), size=%d", len(payload))
             return
         if len(payload) < AUDIO_HEADER_SIZE:
+            logger.warning("audio: TX frame too small (%d < %d), ignoring", len(payload), AUDIO_HEADER_SIZE)
             return
-        # Extract opus data after 8-byte header
+        # Extract audio data after 8-byte header (frontend sends Opus)
         opus_data = payload[AUDIO_HEADER_SIZE:]
         if opus_data:
             try:
-                await self._radio.push_audio_tx_opus(opus_data)
+                # Check if radio uses PCM codec → decode Opus → PCM
+                audio_codec = getattr(self._radio, 'audio_codec', None)
+                if audio_codec == AudioCodec.PCM_1CH_16BIT and self._transcoder:
+                    try:
+                        # Decode Opus → PCM16
+                        pcm_data = self._transcoder.opus_to_pcm(opus_data)
+                        # Send PCM via push_audio_tx_opus (method accepts any codec)
+                        await self._radio.push_audio_tx_opus(pcm_data)
+                        tx_data_desc = f"{len(pcm_data)} bytes pcm"
+                    except Exception as e:
+                        logger.warning("audio: Opus decode failed: %s, dropping frame", e)
+                        return
+                else:
+                    # Radio uses Opus or PCM_1CH_8BIT/etc → send Opus as-is
+                    await self._radio.push_audio_tx_opus(opus_data)
+                    tx_data_desc = f"{len(opus_data)} bytes opus"
+                
+                # Log every 50th frame to avoid spam
+                if not hasattr(self, '_tx_frame_count'):
+                    self._tx_frame_count = 0
+                self._tx_frame_count += 1
+                if self._tx_frame_count <= 3 or self._tx_frame_count % 50 == 0:
+                    logger.info("audio: TX frame #%d pushed to radio (%s)", 
+                               self._tx_frame_count, tx_data_desc)
             except Exception:
-                logger.debug("audio: push TX error", exc_info=True)
+                logger.warning("audio: push TX error", exc_info=True)
 
     async def _sender_loop(self) -> None:
         """Send queued audio frames to the WebSocket client."""
