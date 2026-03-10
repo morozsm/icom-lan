@@ -91,6 +91,38 @@ When override is used, the backend logs a warning because timeout risk increases
 
 The library sends pings every 500ms automatically. If the radio doesn't receive pings for its timeout period (usually 10–30 seconds), it drops the connection.
 
+### Web UI API returns 401 Unauthorized
+
+**Symptom:** `GET /api/v1/info` (or WebSocket connect) fails with HTTP 401.
+
+**Cause:** Web server was started with `--auth-token`, but request does not include token.
+
+**Fixes:**
+
+```bash
+# HTTP API
+curl -H "Authorization: Bearer <TOKEN>" http://127.0.0.1:8080/api/v1/info
+```
+
+For WebSocket clients, send either:
+
+- `Authorization: Bearer <TOKEN>` header, or
+- `?token=<TOKEN>` query parameter.
+
+### `radio_connect` returns `backend_recovering`
+
+**Symptom:** WebSocket response:
+
+```json
+{"type":"response","ok":false,"error":"backend_recovering"}
+```
+
+**Cause:** Backend is already in reconnect/recovery state. Parallel manual reconnect
+requests are rejected intentionally.
+
+**Fix:** Wait for `radio_ready=true` in state updates before retrying manual connect.
+Do not spam reconnect requests from frontend automation loops.
+
 ## Command Issues
 
 ### "Radio rejected set_frequency"
@@ -229,6 +261,30 @@ may stutter briefly during reconnection.
 
 **Solution:** v0.8.0+ uses a 200ms jitter buffer (up from 50ms). For very high
 latency connections, this may still be insufficient — consider a local deployment.
+
+## TX Audio Has No Modulation on macOS (Web UI / Bridge)
+
+**Symptom:** PTT toggles ON, but transmitted audio is silent or very weak.
+
+**Typical logs:**
+
+- `audio: TX transcoder unavailable (opus codec missing?)`
+- Opus library import failures from `opuslib`.
+
+**Cause:** On macOS, `opuslib` may fail to locate Homebrew `libopus` automatically.
+
+**Fixes:**
+
+```bash
+# Install libopus via Homebrew
+brew install opus
+
+# Apply project patch for opuslib path detection
+python scripts/patch_opuslib_macos.py
+```
+
+Then restart the app and retest TX audio. See detailed notes:
+`docs/opuslib-macos-fix.md`.
 
 ## Serial Backend Issues (IC-7610 USB)
 

@@ -433,6 +433,9 @@ Start the all-in-one server: Web UI + optional audio bridge + rigctld.
 # Web UI only
 icom-lan web
 
+# Bind to localhost only (development)
+icom-lan web --host 127.0.0.1
+
 # Web UI + audio bridge + rigctld (recommended for WSJT-X)
 icom-lan web --bridge "BlackHole 2ch"
 
@@ -444,10 +447,14 @@ icom-lan web --no-rigctld
 
 # Custom ports
 icom-lan web --port 9090 --rigctld-port 4533
+
+# Require token for /api and WebSocket channels
+icom-lan web --auth-token "change-me"
 ```
 
 | Option | Default | Description |
 |--------|---------|-------------|
+| `--host` | `0.0.0.0` | Web server bind address |
 | `--port` | `8080` | Web server port |
 | `--static-dir PATH` | — | Serve static files from a custom directory (default: built-in assets) |
 | `--bridge DEVICE` | — | Start audio bridge with named virtual device |
@@ -457,6 +464,7 @@ icom-lan web --port 9090 --rigctld-port 4533
 | `--rigctld-port` | `4532` | Rigctld listen port |
 | `--dx-cluster HOST:PORT` | — | Connect to DX cluster server for real-time spot overlays (opt-in) |
 | `--callsign CALL` | — | Your callsign for DX cluster login (required with `--dx-cluster`) |
+| `--auth-token TOKEN` | — | Require `Authorization: Bearer <TOKEN>` for `/api/*` and WS channels |
 
 ### `audio bridge`
 
@@ -622,10 +630,12 @@ icom-lan proxy --radio 192.168.1.100 --listen 10.8.0.1
 
 | Flag | Command | Default | Description |
 |------|---------|---------|-------------|
+| `--host ADDR` | `web` | `0.0.0.0` | Bind Web UI server to a specific interface |
 | `--bridge-tx-device DEVICE` | `web` | *(none)* | Separate TX-only audio device for bidirectional bridge |
 | `--static-dir PATH` | `web` | *(built-in)* | Serve static web assets from a custom directory instead of the built-in UI |
 | `--dx-cluster HOST:PORT` | `web` | *(none)* | Connect to a DX cluster server for real-time spot overlays |
 | `--callsign CALL` | `web` | *(none)* | Your callsign for DX cluster login (required with `--dx-cluster`) |
+| `--auth-token TOKEN` | `web` | *(none)* | Require Bearer auth for API/WS endpoints |
 
 ```bash
 # Bidirectional bridge: RX from BlackHole 2ch, TX through BlackHole 16ch
@@ -636,6 +646,9 @@ icom-lan web --static-dir /opt/icom-ui/dist
 
 # Connect to a DX cluster and show spot overlays on the waterfall
 icom-lan web --dx-cluster dxc.nc7j.com:7373 --callsign KN4KYD
+
+# Protect API + WS endpoints with a bearer token
+icom-lan web --auth-token "change-me"
 ```
 
 ## Exit Codes
