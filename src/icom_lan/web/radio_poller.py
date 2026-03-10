@@ -581,10 +581,29 @@ class RadioPoller:
                     await radio.set_filter(fn, receiver=rx)
             case PttOn():
                 logger.info("poller: PTT ON")
+                # Start TX audio stream before PTT (LAN audio requires this)
+                from ..radio_protocol import AudioCapable
+                if isinstance(radio, AudioCapable):
+                    try:
+                        await radio.start_audio_tx_opus()
+                        logger.info("poller: TX audio stream started")
+                    except Exception as e:
+                        logger.warning("poller: start TX audio failed: %s", e)
                 await radio.set_ptt(True)
             case PttOff():
                 logger.info("poller: PTT OFF")
                 await radio.set_ptt(False)
+                # Stop TX audio stream after PTT, then restart RX
+                from ..radio_protocol import AudioCapable
+                if isinstance(radio, AudioCapable):
+                    try:
+                        await radio.stop_audio_tx()
+                        logger.info("poller: TX audio stream stopped")
+                        # Restart RX audio after TX (IC-7610 doesn't support full duplex)
+                        await radio.start_audio_rx_opus()
+                        logger.info("poller: RX audio stream restarted")
+                    except Exception as e:
+                        logger.debug("poller: audio stream transition failed: %s", e)
             case SetPower(level=level):
                 await radio.set_power(level)
             case SetRfGain(level=level, receiver=rx):
