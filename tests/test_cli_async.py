@@ -426,6 +426,7 @@ class TestCmdPtt:
         assert "ON" in capsys.readouterr().out
 
     @pytest.mark.asyncio
+    @pytest.mark.filterwarnings("ignore:coroutine .* was never awaited:RuntimeWarning")
     async def test_ptt_off(self, mock_radio, capsys) -> None:
         args = Namespace(state="off")
         rc = await _cmd_ptt(mock_radio, args)
