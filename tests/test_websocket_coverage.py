@@ -99,7 +99,7 @@ async def test_read_one_frame_non_zero_rsv_raises() -> None:
     """Non-zero RSV bits must raise WebSocketError."""
     frame = _client_frame(WS_OP_TEXT, b"hi", rsv=1)
     reader = _make_reader(frame)
-    with pytest.raises(WebSocketError, match="non-zero RSV bits"):
+    with pytest.raises(WebSocketError, match="non-zero RSV"):
         await _read_one_frame(reader)
 
 
@@ -108,7 +108,7 @@ async def test_read_one_frame_16bit_extended_length() -> None:
     payload = b"x" * 200  # > 125 → uses 16-bit length
     frame = _client_frame(WS_OP_BINARY, payload)
     reader = _make_reader(frame)
-    opcode, data, fin = await _read_one_frame(reader)
+    opcode, data, fin, _ = await _read_one_frame(reader)
     assert opcode == WS_OP_BINARY
     assert data == payload
     assert fin is True
@@ -119,7 +119,7 @@ async def test_read_one_frame_64bit_extended_length() -> None:
     payload = b"y" * 70000  # > 65535 → uses 64-bit length
     frame = _client_frame(WS_OP_BINARY, payload)
     reader = _make_reader(frame)
-    opcode, data, fin = await _read_one_frame(reader)
+    opcode, data, fin, _ = await _read_one_frame(reader)
     assert opcode == WS_OP_BINARY
     assert data == payload
 
@@ -128,7 +128,7 @@ async def test_read_one_frame_unmasked_payload() -> None:
     """Unmasked frames (server→client style) should have payload returned as-is."""
     frame = _unmasked_frame(WS_OP_TEXT, b"hello")
     reader = _make_reader(frame)
-    opcode, data, fin = await _read_one_frame(reader)
+    opcode, data, fin, _ = await _read_one_frame(reader)
     assert opcode == WS_OP_TEXT
     assert data == b"hello"
 

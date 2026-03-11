@@ -29,6 +29,8 @@ Open `http://<server-ip>:8080` (or your custom port).
 | WS handlers | `src/icom_lan/web/handlers.py` | Per-channel handlers for control/scope/meters/audio |
 | Frontend app | `frontend/` (Svelte + TypeScript) | Built assets are served from `icom_lan.web.static` by default |
 
+The backend manages reconnect and recovery when the radio link drops; scope enable is deferred until `radio_ready` is true.
+
 ## Public HTTP Interface
 
 | Method | Path | Purpose |

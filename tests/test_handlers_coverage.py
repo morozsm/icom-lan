@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import time
 import struct
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
@@ -46,6 +47,7 @@ from icom_lan.web.radio_poller import (
     VfoEqualize,
     VfoSwap,
 )
+from icom_lan.rigctld.state_cache import StateCache
 from icom_lan.web.websocket import WS_OP_BINARY, WS_OP_TEXT
 
 
@@ -312,11 +314,11 @@ async def test_subscribe_unsubscribe_and_subscribed_streams_property() -> None:
 
 async def test_send_state_snapshot_uses_server_cache() -> None:
     ws = SimpleNamespace(send_text=AsyncMock())
-    cache = SimpleNamespace(
-        freq_ts=1.0,
+    cache = StateCache(
         freq=14_074_000,
-        mode_ts=1.0,
+        freq_ts=time.monotonic(),
         mode="USB",
+        mode_ts=time.monotonic(),
         filter_width=2,
         ptt=True,
     )
@@ -338,11 +340,11 @@ async def test_send_state_snapshot_uses_radio_cache_when_server_cache_missing() 
     ws = SimpleNamespace(send_text=AsyncMock())
     radio = SimpleNamespace(
         radio_ready=False,
-        state_cache=SimpleNamespace(
-            freq_ts=1.0,
+        state_cache=StateCache(
             freq=7_074_000,
-            mode_ts=1.0,
+            freq_ts=time.monotonic(),
             mode="LSB",
+            mode_ts=time.monotonic(),
             filter_width=None,
             ptt=False,
         )
