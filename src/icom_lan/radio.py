@@ -3582,6 +3582,10 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         Args:
             on: True to power on, False to power off.
         """
+        await self.set_powerstat(on)
+
+    async def set_powerstat(self, on: bool) -> None:
+        """Power the radio on or off (PowerControlCapable protocol)."""
         self._check_connected()
         civ = (
             power_on(to_addr=self._radio_addr)

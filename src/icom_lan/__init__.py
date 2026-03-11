@@ -35,7 +35,16 @@ from .transport import ConnectionState, IcomTransport
 from ._connection_state import RadioConnectionState
 from .commander import IcomCommander, Priority
 from .radio import AudioRecoveryState, IcomRadio
-from .radio_protocol import AudioCapable, DualReceiverCapable, Radio, ScopeCapable
+from .radio_protocol import (
+    AudioCapable,
+    DualReceiverCapable,
+    LevelsCapable,
+    MetersCapable,
+    PowerControlCapable,
+    Radio,
+    ScopeCapable,
+    StateNotifyCapable,
+)
 from .radio_state import RadioState
 from .profiles import RadioProfile, get_radio_profile, resolve_radio_profile
 from .radios import RADIOS, RadioModel, get_civ_addr
@@ -142,6 +151,10 @@ __all__ = [
     "AudioCapable",
     "ScopeCapable",
     "DualReceiverCapable",
+    "LevelsCapable",
+    "MetersCapable",
+    "PowerControlCapable",
+    "StateNotifyCapable",
     "RadioState",
     "RadioProfile",
     "get_radio_profile",

@@ -73,6 +73,8 @@ from .websocket import WS_OP_BINARY, WS_OP_TEXT, WebSocketConnection
 if TYPE_CHECKING:
     from ..radio_protocol import Radio
 
+from ..radio_protocol import LevelsCapable, PowerControlCapable
+
 __all__ = [
     "HIGH_WATERMARK",
     "ControlHandler",
@@ -566,14 +568,29 @@ class ControlHandler:
                 q.put(PttOn() if on else PttOff())
                 return {"state": on}
             case "set_power":
+                if not isinstance(self._radio, PowerControlCapable):
+                    raise ValueError(
+                        "command set_power is not supported by this radio "
+                        "(missing PowerControlCapable)"
+                    )
                 level = int(params["level"])
                 q.put(SetPower(level))
                 return {"level": level}
             case "set_powerstat":
+                if not isinstance(self._radio, PowerControlCapable):
+                    raise ValueError(
+                        "command set_powerstat is not supported by this radio "
+                        "(missing PowerControlCapable)"
+                    )
                 on = bool(params.get("on", True))
                 q.put(SetPowerstat(on))
                 return {"on": on}
             case "set_rf_gain":
+                if not isinstance(self._radio, LevelsCapable):
+                    raise ValueError(
+                        "command set_rf_gain is not supported by this radio "
+                        "(missing LevelsCapable)"
+                    )
                 level = int(params["level"])
                 rx = int(params.get("receiver", 0))
                 self._ensure_capability("rf_gain", "set_rf_gain")
@@ -581,6 +598,11 @@ class ControlHandler:
                 q.put(SetRfGain(level, receiver=rx))
                 return {"level": level, "receiver": rx}
             case "set_af_level":
+                if not isinstance(self._radio, LevelsCapable):
+                    raise ValueError(
+                        "command set_af_level is not supported by this radio "
+                        "(missing LevelsCapable)"
+                    )
                 level = int(params["level"])
                 rx = int(params.get("receiver", 0))
                 self._ensure_capability("af_level", "set_af_level")
@@ -588,6 +610,11 @@ class ControlHandler:
                 q.put(SetAfLevel(level, receiver=rx))
                 return {"level": level, "receiver": rx}
             case "set_sql" | "set_squelch":
+                if not isinstance(self._radio, LevelsCapable):
+                    raise ValueError(
+                        f"command {name!r} is not supported by this radio "
+                        "(missing LevelsCapable)"
+                    )
                 level = int(params["level"])
                 rx = int(params.get("receiver", 0))
                 self._ensure_capability("squelch", name)

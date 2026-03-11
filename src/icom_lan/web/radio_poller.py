@@ -514,6 +514,8 @@ class RadioPoller:
         from ..radio_protocol import (
             AdvancedControlCapable,
             DualReceiverCapable,
+            LevelsCapable,
+            PowerControlCapable,
             ScopeCapable,
         )
         match cmd:
@@ -605,16 +607,20 @@ class RadioPoller:
                     except Exception as e:
                         logger.debug("poller: audio stream transition failed: %s", e)
             case SetPower(level=level):
-                await radio.set_power(level)
+                if isinstance(radio, PowerControlCapable):
+                    await radio.set_power(level)
             case SetRfGain(level=level, receiver=rx):
-                self._ensure_receiver_supported(rx, operation="set_rf_gain")
-                await radio.set_rf_gain(level, receiver=rx)
+                if isinstance(radio, LevelsCapable):
+                    self._ensure_receiver_supported(rx, operation="set_rf_gain")
+                    await radio.set_rf_gain(level, receiver=rx)
             case SetAfLevel(level=level, receiver=rx):
-                self._ensure_receiver_supported(rx, operation="set_af_level")
-                await radio.set_af_level(level, receiver=rx)
+                if isinstance(radio, LevelsCapable):
+                    self._ensure_receiver_supported(rx, operation="set_af_level")
+                    await radio.set_af_level(level, receiver=rx)
             case SetSquelch(level=level, receiver=rx):
-                self._ensure_receiver_supported(rx, operation="set_squelch")
-                await radio.set_squelch(level, receiver=rx)
+                if isinstance(radio, LevelsCapable):
+                    self._ensure_receiver_supported(rx, operation="set_squelch")
+                    await radio.set_squelch(level, receiver=rx)
             case SetNB(on=on, receiver=rx):
                 if isinstance(radio, AdvancedControlCapable):
                     self._ensure_receiver_supported(rx, operation="set_nb")
@@ -715,9 +721,9 @@ class RadioPoller:
                         end_hz=end_hz,
                     )
             case SetPowerstat(on=on):
-                # CI-V 0x18: 0x01 = power on, 0x00 = power off
-                await self._civ(0x18, data=b"\x01" if on else b"\x00")
-                logger.info("radio-poller: power %s", "ON" if on else "OFF")
+                if isinstance(radio, PowerControlCapable):
+                    await radio.set_powerstat(on)
+                    logger.info("radio-poller: power %s", "ON" if on else "OFF")
             case SetAntenna1(on=on):
                 await radio.set_antenna_1(on)
             case SetAntenna2(on=on):

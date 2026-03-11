@@ -23,6 +23,12 @@ This page defines the **officially supported** public API of `icom_lan`. Use the
 | `AudioCapable` | Protocol for radios that support audio streaming. |
 | `ScopeCapable` | Protocol for radios that support scope/waterfall. |
 | `DualReceiverCapable` | Protocol for dual-receiver (MAIN/SUB) support. |
+| `LevelsCapable` | Protocol for setting receiver levels: AF, RF gain, squelch. |
+| `MetersCapable` | Protocol for read-only meters: S-meter, SWR, TX power. |
+| `PowerControlCapable` | Protocol for power on/off and TX power level control. |
+| `StateNotifyCapable` | Protocol for state-change and reconnect callbacks (server integration). |
+
+**Note:** The core `Radio` protocol no longer includes meter, level, power, or state-notify methods; those live on the capability protocols above. Use `isinstance(radio, MetersCapable)` (etc.) before calling them.
 
 ### Exceptions
 

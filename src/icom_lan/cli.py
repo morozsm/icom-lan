@@ -37,7 +37,13 @@ from . import __version__
 from .audio import AudioStats
 from .backends.config import LanBackendConfig, SerialBackendConfig
 from .backends.factory import create_radio
-from .radio_protocol import AudioCapable, Radio, ScopeCapable
+from .radio_protocol import (
+    AudioCapable,
+    MetersCapable,
+    PowerControlCapable,
+    Radio,
+    ScopeCapable,
+)
 from .types import Mode, get_audio_capabilities
 
 _AUDIO_FRAME_MS = 20
@@ -788,11 +794,23 @@ async def _run(args: argparse.Namespace) -> int:
                 print("Error: unknown audio command", file=sys.stderr)
                 return 1
             elif args.command == "power-on":
-                await radio.power_control(True)
+                if not isinstance(radio, PowerControlCapable):
+                    print(
+                        "Error: this radio does not support power on/off.",
+                        file=sys.stderr,
+                    )
+                    return 1
+                await radio.set_powerstat(True)
                 print("Power ON")
                 return 0
             elif args.command == "power-off":
-                await radio.power_control(False)
+                if not isinstance(radio, PowerControlCapable):
+                    print(
+                        "Error: this radio does not support power on/off.",
+                        file=sys.stderr,
+                    )
+                    return 1
+                await radio.set_powerstat(False)
                 print("Power OFF")
                 return 0
             else:
@@ -874,8 +892,14 @@ def _print_audio_stats(stats: dict[str, bool | int | float | str]) -> None:
 async def _cmd_status(radio: Radio, args: argparse.Namespace) -> int:
     freq = await radio.get_frequency()
     mode_name, _filt = await radio.get_mode()
-    s_meter = await radio.get_s_meter()
-    power = await radio.get_power()
+    s_meter: int | str = 0
+    power: int | str = 0
+    if isinstance(radio, MetersCapable):
+        s_meter = await radio.get_s_meter()
+        power = await radio.get_power()
+    else:
+        s_meter = "n/a"
+        power = "n/a"
 
     if args.json:
         import json
@@ -1296,9 +1320,21 @@ async def _cmd_mode(radio: Radio, args: argparse.Namespace) -> int:
 
 async def _cmd_power(radio: Radio, args: argparse.Namespace) -> int:
     if args.value is not None:
+        if not isinstance(radio, PowerControlCapable):
+            print(
+                "Error: this radio does not support setting power level.",
+                file=sys.stderr,
+            )
+            return 1
         await radio.set_power(args.value)
         print(f"Set: {args.value}")
     else:
+        if not isinstance(radio, MetersCapable):
+            print(
+                "Error: this radio does not support reading power level.",
+                file=sys.stderr,
+            )
+            return 1
         power = await radio.get_power()
         if args.json:
             import json
@@ -1312,13 +1348,21 @@ async def _cmd_power(radio: Radio, args: argparse.Namespace) -> int:
 async def _cmd_meter(radio: Radio, args: argparse.Namespace) -> int:
     from .exceptions import TimeoutError as IcomTimeout
 
+    if not isinstance(radio, MetersCapable):
+        print(
+            "Error: this radio does not support meters (S-meter, SWR, power).",
+            file=sys.stderr,
+        )
+        return 1
     results: dict[str, int | str] = {}
-    for name, getter in [
+    meter_getters: list[tuple[str, Any]] = [
         ("s_meter", radio.get_s_meter),
         ("power", radio.get_power),
         ("swr", radio.get_swr),
-        ("alc", radio.get_alc),
-    ]:
+    ]
+    if hasattr(radio, "get_alc"):
+        meter_getters.append(("alc", radio.get_alc))
+    for name, getter in meter_getters:
         try:
             results[name] = await getter()
         except IcomTimeout:

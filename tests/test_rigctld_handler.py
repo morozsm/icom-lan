@@ -26,8 +26,12 @@ def config() -> RigctldConfig:
 
 @pytest.fixture
 def mock_radio() -> AsyncMock:
+    """Radio mock; implements MetersCapable (get_s_meter, get_swr, get_power) for get_level tests."""
     radio = AsyncMock()
     radio.get_data_mode.return_value = False
+    radio.get_s_meter = AsyncMock(return_value=0)
+    radio.get_swr = AsyncMock(return_value=0.0)
+    radio.get_power = AsyncMock(return_value=0)
     return radio
 
 

@@ -47,8 +47,28 @@ from icom_lan.web.radio_poller import (
     VfoEqualize,
     VfoSwap,
 )
+from icom_lan.profiles import resolve_radio_profile
 from icom_lan.rigctld.state_cache import StateCache
 from icom_lan.web.websocket import WS_OP_BINARY, WS_OP_TEXT
+
+
+def _capable_radio() -> SimpleNamespace:
+    """Radio mock that satisfies PowerControlCapable, LevelsCapable, ScopeCapable for enqueue tests."""
+    return SimpleNamespace(
+        capabilities={
+            "rf_gain", "af_level", "squelch", "tx", "dual_rx", "scope",
+            "nb", "nr", "digisel", "ip_plus", "attenuator", "preamp",
+        },
+        profile=resolve_radio_profile(model="IC-7610"),
+        set_power=AsyncMock(),
+        set_powerstat=AsyncMock(),
+        set_rf_gain=AsyncMock(),
+        set_af_level=AsyncMock(),
+        set_squelch=AsyncMock(),
+        enable_scope=AsyncMock(),
+        disable_scope=AsyncMock(),
+        on_scope_data=MagicMock(),
+    )
 
 
 class _QueueRecorder:
@@ -201,7 +221,7 @@ async def test_enqueue_command_variants(
 ) -> None:
     queue = _QueueRecorder()
     server = SimpleNamespace(command_queue=queue)
-    handler = _control_handler(server=server)
+    handler = _control_handler(radio=_capable_radio(), server=server)
     result = await handler._enqueue_command(name, params)
     assert result == expected_result
     assert len(queue.items) == 1

@@ -27,6 +27,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from concurrent.futures import Executor
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -103,6 +104,12 @@ class AudioBridge:
         channels: Number of audio channels (default 1, mono).
         frame_ms: PCM frame duration in milliseconds (default 20).
         tx_enabled: Whether to bridge TX audio (device → radio). Default True.
+        tx_executor: Optional executor for blocking TX reads (device → radio).
+            The TX path runs ``sounddevice.InputStream.read()`` in a thread to avoid
+            blocking the event loop. If ``None`` (default), the loop's default
+            thread pool is used. For heavy usage or multiple bridge instances,
+            pass a dedicated :class:`concurrent.futures.ThreadPoolExecutor` (e.g.
+            ``max_workers=1`` or ``2``) to isolate TX I/O and avoid contention.
     """
 
     def __init__(
@@ -115,6 +122,7 @@ class AudioBridge:
         channels: int = CHANNELS,
         frame_ms: int = FRAME_MS,
         tx_enabled: bool = True,
+        tx_executor: Executor | None = None,
     ) -> None:
         self._radio = radio
         self._device_name = device_name
@@ -123,6 +131,7 @@ class AudioBridge:
         self._channels = channels
         self._frame_ms = frame_ms
         self._tx_enabled = tx_enabled
+        self._tx_executor = tx_executor
 
         self._running = False
         self._rx_stream = None  # sounddevice OutputStream (radio → device)
@@ -369,7 +378,7 @@ class AudioBridge:
             while self._running and self._tx_stream and self._tx_stream.active:
                 # Read from sounddevice in a thread to avoid blocking the loop
                 data, overflowed = await loop.run_in_executor(
-                    None,
+                    self._tx_executor,
                     lambda: self._tx_stream.read(samples_per_frame),
                 )
                 if overflowed:

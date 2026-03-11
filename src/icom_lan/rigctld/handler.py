@@ -34,6 +34,8 @@ from .._shared_state_runtime import is_cache_fresh
 if TYPE_CHECKING:
     from ..radio_protocol import Radio
 
+from ..radio_protocol import MetersCapable
+
 __all__ = ["RigctldHandler"]
 
 logger = logging.getLogger(__name__)
@@ -340,6 +342,19 @@ class RigctldHandler:
         if not cmd.args:
             return _err(HamlibError.EINVAL)
         level = cmd.args[0].upper()
+        if level not in ("STRENGTH", "RFPOWER", "SWR"):
+            return _err(HamlibError.EINVAL)
+        if not isinstance(self._radio, MetersCapable):
+            # Return cached values if available, else unimplemented
+            if level == "STRENGTH" and self._cache.s_meter is not None:
+                raw = self._cache.s_meter
+                strength_db = round((raw / 241.0) * 114.0 - 54.0)
+                return RigctldResponse(values=[str(strength_db)])
+            if level == "RFPOWER" and self._cache.rf_power is not None:
+                return RigctldResponse(values=[f"{self._cache.rf_power:.6f}"])
+            if level == "SWR" and self._cache.swr is not None:
+                return RigctldResponse(values=[f"{self._cache.swr:.6f}"])
+            return _err(HamlibError.ENIMPL)
         if level == "STRENGTH":
             raw = await self._radio.get_s_meter()
             # IC-7610 S-meter: 0→S0(−54 dB), 120→S9(0 dB), 241→S9+60 dB
@@ -349,7 +364,9 @@ class RigctldHandler:
             raw = await self._radio.get_power()
             return RigctldResponse(values=[f"{raw / 255.0:.6f}"])
         if level == "SWR":
-            raw = await self._radio.get_swr()
+            raw_val = await self._radio.get_swr()
+            # Protocol returns float; backend may return int
+            raw = float(raw_val) if isinstance(raw_val, (int, float)) else raw_val
             # Map 0-255 to 1.0-5.0
             swr = 1.0 + (raw / 255.0) * 4.0
             return RigctldResponse(values=[f"{swr:.6f}"])

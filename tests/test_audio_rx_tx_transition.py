@@ -30,23 +30,31 @@ from icom_lan.web.radio_poller import (
 
 
 def _make_audio_capable_radio() -> MagicMock:
-    """Create mock radio with audio capabilities."""
+    """Create mock radio with audio capabilities.
+
+    Must satisfy isinstance(radio, AudioCapable) so that the poller
+    runs the PTT-on/off audio stream transitions (start/stop TX, restart RX).
+    """
     profile = resolve_radio_profile(model="IC-7610")
     radio = MagicMock()
     radio.profile = profile
     radio.model = profile.model
     radio.capabilities = set(profile.capabilities)
     radio._radio_state = SimpleNamespace(active="MAIN")
-    
+
     # Core methods
     radio.send_civ = AsyncMock()
     radio.set_ptt = AsyncMock()
-    
-    # Audio methods (AudioCapable protocol)
+
+    # AudioCapable protocol (required for isinstance(radio, AudioCapable))
+    radio.audio_bus = MagicMock()
+    radio.start_audio_rx_opus = AsyncMock()
+    radio.stop_audio_rx_opus = AsyncMock()
+    radio.push_audio_tx_opus = AsyncMock()
+    # PTT transition methods (used by poller when AudioCapable)
     radio.start_audio_tx_opus = AsyncMock()
     radio.stop_audio_tx = AsyncMock()
-    radio.start_audio_rx_opus = AsyncMock()
-    
+
     return radio
 
 

@@ -584,11 +584,12 @@ class WebServer:
         addr = self._server.sockets[0].getsockname()
         logger.info("web server listening on %s:%d", addr[0], addr[1])
         if self._radio is not None:
-            # Register callback so CI-V RX stream can notify us of state changes.
-            # This is the primary path for freq/mode/meter updates (fire-and-forget).
-            self._radio.set_state_change_callback(self._on_radio_state_change)
-            # Re-enable scope after soft_reconnect (CI-V stream reset loses scope state)
-            self._radio.set_reconnect_callback(self._on_radio_reconnect)
+            from ..radio_protocol import StateNotifyCapable
+            if isinstance(self._radio, StateNotifyCapable):
+                # Register callback so CI-V RX stream can notify us of state changes.
+                self._radio.set_state_change_callback(self._on_radio_state_change)
+                # Re-enable scope after soft_reconnect (CI-V stream reset loses scope state)
+                self._radio.set_reconnect_callback(self._on_radio_reconnect)
             self._radio_poller = RadioPoller(
                 self._radio,
                 self._state_cache,

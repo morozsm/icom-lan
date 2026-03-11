@@ -18,6 +18,7 @@ from typing import Callable
 
 from .audio import AudioPacket
 from .radio import IcomRadio as _AsyncIcomRadio
+from .radio_protocol import MetersCapable, PowerControlCapable
 from .types import AudioCapabilities, AudioCodec, Mode
 
 __all__ = ["IcomRadio"]
@@ -145,10 +146,16 @@ class IcomRadio:
 
     def get_power(self) -> int:
         """Get the RF power level (0-255)."""
+        if not isinstance(self._radio, MetersCapable):
+            raise AttributeError("get_power requires a radio that implements MetersCapable")
         return self._run(self._radio.get_power())
 
     def set_power(self, level: int) -> None:
         """Set the RF power level (0-255)."""
+        if not isinstance(self._radio, PowerControlCapable):
+            raise AttributeError(
+                "set_power requires a radio that implements PowerControlCapable"
+            )
         self._run(self._radio.set_power(level))
 
     # ------------------------------------------------------------------
@@ -157,14 +164,23 @@ class IcomRadio:
 
     def get_s_meter(self) -> int:
         """Read the S-meter value (0-255)."""
+        if not isinstance(self._radio, MetersCapable):
+            raise AttributeError(
+                "get_s_meter requires a radio that implements MetersCapable"
+            )
         return self._run(self._radio.get_s_meter())
 
     def get_swr(self) -> int:
         """Read the SWR meter (0-255)."""
-        return self._run(self._radio.get_swr())
+        if not isinstance(self._radio, MetersCapable):
+            raise AttributeError("get_swr requires a radio that implements MetersCapable")
+        raw = self._run(self._radio.get_swr())
+        return int(raw) if isinstance(raw, float) else raw
 
     def get_alc(self) -> int:
         """Read the ALC meter (0-255)."""
+        if not hasattr(self._radio, "get_alc"):
+            raise AttributeError("get_alc is not supported by this radio")
         return self._run(self._radio.get_alc())
 
     # ------------------------------------------------------------------
@@ -261,7 +277,11 @@ class IcomRadio:
 
     def power_control(self, on: bool) -> None:
         """Power on/off the radio."""
-        self._run(self._radio.power_control(on))
+        if not isinstance(self._radio, PowerControlCapable):
+            raise AttributeError(
+                "power_control requires a radio that implements PowerControlCapable"
+            )
+        self._run(self._radio.set_powerstat(on))
 
     # ------------------------------------------------------------------
     # Audio

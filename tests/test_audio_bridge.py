@@ -117,6 +117,7 @@ def test_bridge_init_defaults():
 
 def test_bridge_init_custom():
     radio = MagicMock()
+    custom_executor = MagicMock()
     bridge = AudioBridge(
         radio,
         device_name="MyDevice",
@@ -124,17 +125,82 @@ def test_bridge_init_custom():
         channels=2,
         frame_ms=40,
         tx_enabled=False,
+        tx_executor=custom_executor,
     )
     assert bridge._device_name == "MyDevice"
     assert bridge._sample_rate == 8000
     assert bridge._channels == 2
     assert bridge._frame_ms == 40
     assert bridge._tx_enabled is False
+    assert bridge._tx_executor is custom_executor
 
 
 # ---------------------------------------------------------------------------
 # AudioBridge start — device not found
 # ---------------------------------------------------------------------------
+
+async def test_bridge_tx_loop_uses_custom_executor():
+    """When tx_executor is provided, TX read runs in that executor."""
+    from icom_lan.audio_bus import AudioBus
+
+    executor_used: list = []
+    custom_executor = MagicMock()
+
+    radio = MagicMock()
+    radio.start_audio_rx_opus = AsyncMock()
+    radio.stop_audio_rx_opus = AsyncMock()
+    radio.start_audio_tx_pcm = AsyncMock()
+    radio.stop_audio_tx_pcm = AsyncMock()
+    radio.push_audio_tx_pcm = AsyncMock()
+    radio.push_audio_tx_opus = AsyncMock()
+    bus = AudioBus(radio)
+    radio.audio_bus = bus
+
+    mock_output_stream = MagicMock()
+    mock_output_stream.active = True
+
+    # TX stream: read returns (samples, overflowed); one frame then bridge can stop
+    samples_per_frame = 960
+    mock_tx_stream = MagicMock()
+    mock_tx_stream.active = True
+    mock_tx_stream.read.return_value = (
+        np.zeros((samples_per_frame, 1), dtype=np.int16),
+        False,
+    )
+
+    mock_sd = MagicMock()
+    mock_sd.query_devices.return_value = [
+        {"name": "BlackHole 2ch", "index": 1},
+    ]
+    mock_sd.OutputStream.return_value = mock_output_stream
+    mock_sd.InputStream.return_value = mock_tx_stream
+
+    mock_opuslib = MagicMock()
+    mock_opuslib.Decoder.return_value = MagicMock()
+
+    loop = asyncio.get_running_loop()
+    original_run_in_executor = loop.run_in_executor
+
+    def capture_executor(executor, fn, *args):
+        executor_used.append(executor)
+        return original_run_in_executor(executor, fn, *args)
+
+    with patch.dict("sys.modules", {"sounddevice": mock_sd, "opuslib": mock_opuslib}):
+        with patch.object(loop, "run_in_executor", capture_executor):
+            bridge = AudioBridge(
+                radio,
+                device_name="BlackHole",
+                tx_enabled=True,
+                tx_executor=custom_executor,
+            )
+            await bridge.start()
+            # Allow TX loop at least one run_in_executor call
+            await asyncio.sleep(0.08)
+            await bridge.stop()
+
+    assert len(executor_used) >= 1
+    assert executor_used[0] is custom_executor
+
 
 async def test_bridge_start_no_device():
     radio = MagicMock()

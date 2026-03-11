@@ -56,6 +56,10 @@ __all__ = [
     "StateCacheCapable",
     "RecoverableConnection",
     "AdvancedControlCapable",
+    "LevelsCapable",
+    "MetersCapable",
+    "PowerControlCapable",
+    "StateNotifyCapable",
 ]
 
 
@@ -149,44 +153,6 @@ class Radio(Protocol):
         """Key or unkey the transmitter."""
         ...
 
-    # -- Meters ------------------------------------------------------------
-
-    async def get_s_meter(self, receiver: int = 0) -> int:
-        """Get S-meter reading (raw value, vendor-specific scale)."""
-        ...
-
-    async def get_swr(self) -> float:
-        """Get SWR reading (1.0 = perfect match)."""
-        ...
-
-    # -- Power -------------------------------------------------------------
-
-    async def get_power(self) -> int:
-        """Get TX power level (0-255 normalised scale)."""
-        ...
-
-    async def set_powerstat(self, on: bool) -> None:
-        """Power the radio on or off."""
-        ...
-
-    async def set_power(self, level: int) -> None:
-        """Set TX power level (0-255 normalised scale)."""
-        ...
-
-    # -- Levels ------------------------------------------------------------
-
-    async def set_af_level(self, level: int, receiver: int = 0) -> None:
-        """Set AF (audio) output level (0-255)."""
-        ...
-
-    async def set_rf_gain(self, level: int, receiver: int = 0) -> None:
-        """Set RF gain level (0-255)."""
-        ...
-
-    async def set_squelch(self, level: int, receiver: int = 0) -> None:
-        """Set squelch level (0-255)."""
-        ...
-
     # -- State -------------------------------------------------------------
 
     @property
@@ -208,7 +174,91 @@ class Radio(Protocol):
         """
         ...
 
-    # -- Server integration ------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# Optional capability Protocols
+# ---------------------------------------------------------------------------
+
+# --- Capabilities split from Radio (P1 slim) -------------------------------
+
+
+@runtime_checkable
+class LevelsCapable(Protocol):
+    """Radio supports setting receiver levels: AF, RF gain, squelch."""
+
+    async def set_af_level(self, level: int, receiver: int = 0) -> None:
+        """Set AF (audio) output level (0-255).
+
+        Args:
+            level: Level in 0-255 scale.
+            receiver: 0 = main (default), 1 = sub.
+        """
+        ...
+
+    async def set_rf_gain(self, level: int, receiver: int = 0) -> None:
+        """Set RF gain level (0-255).
+
+        Args:
+            level: Level in 0-255 scale.
+            receiver: 0 = main (default), 1 = sub.
+        """
+        ...
+
+    async def set_squelch(self, level: int, receiver: int = 0) -> None:
+        """Set squelch level (0-255).
+
+        Args:
+            level: Level in 0-255 scale.
+            receiver: 0 = main (default), 1 = sub.
+        """
+        ...
+
+
+@runtime_checkable
+class MetersCapable(Protocol):
+    """Radio supports read-only meters: S-meter, SWR, TX power."""
+
+    async def get_s_meter(self, receiver: int = 0) -> int:
+        """Get S-meter reading (raw value, vendor-specific scale).
+
+        Args:
+            receiver: 0 = main (default), 1 = sub.
+        """
+        ...
+
+    async def get_swr(self) -> float:
+        """Get SWR reading (1.0 = perfect match)."""
+        ...
+
+    async def get_power(self) -> int:
+        """Get TX power level (0-255 normalised scale)."""
+        ...
+
+
+@runtime_checkable
+class PowerControlCapable(Protocol):
+    """Radio supports power on/off and TX power level control."""
+
+    async def set_powerstat(self, on: bool) -> None:
+        """Power the radio on or off.
+
+        Args:
+            on: True to power on, False to power off.
+        """
+        ...
+
+    async def set_power(self, level: int) -> None:
+        """Set TX power level (0-255 normalised scale).
+
+        Args:
+            level: Power level in 0-255 scale.
+        """
+        ...
+
+
+@runtime_checkable
+class StateNotifyCapable(Protocol):
+    """Radio supports server integration callbacks for state and reconnect."""
 
     def set_state_change_callback(
         self, callback: Callable[..., Any] | None,
@@ -232,7 +282,7 @@ class Radio(Protocol):
 
 
 # ---------------------------------------------------------------------------
-# Optional capability Protocols
+# Other optional capability Protocols
 # ---------------------------------------------------------------------------
 
 
