@@ -52,10 +52,13 @@ icom-lan discover
 
 ```python
 import logging
+from icom_lan import create_radio, LanBackendConfig
+
 logging.basicConfig(level=logging.DEBUG)
 
 # This will show the full handshake sequence
-async with IcomRadio("192.168.1.100", ...) as radio:
+config = LanBackendConfig(host="192.168.1.100", username="u", password="p")
+async with create_radio(config) as radio:
     freq = await radio.get_frequency()
 ```
 
@@ -75,7 +78,7 @@ regular command responses. The serial backend enforces a deterministic guardrail
 
 1. Set the serial CI-V speed to at least `115200` (recommended).
 2. If you must run lower for diagnostics, use explicit override:
-   - Python API: `Icom7610SerialRadio(..., allow_low_baud_scope=True)`
+   - Python API: `SerialBackendConfig(..., allow_low_baud_scope=True)` when using `create_radio(config)`
    - Env var: `ICOM_SERIAL_SCOPE_ALLOW_LOW_BAUD=1`
 
 When override is used, the backend logs a warning because timeout risk increases.

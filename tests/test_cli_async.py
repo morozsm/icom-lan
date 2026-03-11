@@ -32,6 +32,19 @@ from icom_lan.types import Mode, get_audio_capabilities
 # ---------------------------------------------------------------------------
 
 
+def _add_capability_protocols(radio: MagicMock) -> MagicMock:
+    """Add minimal attributes so mock satisfies isinstance(..., AudioCapable) and ScopeCapable."""
+    radio.audio_bus = MagicMock()
+    radio.start_audio_rx_opus = AsyncMock()
+    radio.stop_audio_rx_opus = AsyncMock()
+    radio.push_audio_tx_opus = AsyncMock()
+    radio.enable_scope = AsyncMock()
+    if not hasattr(radio, "disable_scope"):
+        radio.disable_scope = AsyncMock()
+    radio.on_scope_data = MagicMock()
+    return radio
+
+
 @pytest.fixture
 def mock_radio():
     radio = AsyncMock()
@@ -55,6 +68,7 @@ def mock_radio():
     radio.start_audio_tx_pcm = AsyncMock()
     radio.stop_audio_tx_pcm = AsyncMock()
     radio.push_audio_tx_pcm = AsyncMock()
+    _add_capability_protocols(radio)
     return radio
 
 
@@ -453,11 +467,8 @@ class TestRunErrorHandling:
             audio_command="caps",
             json=True,
         )
-        with patch("icom_lan.cli.IcomRadio") as radio_cls:
-            radio_cls.audio_capabilities.return_value = get_audio_capabilities()
-            rc = await _run(args)
+        rc = await _run(args)
         assert rc == 0
-        radio_cls.assert_not_called()
         data = json.loads(capsys.readouterr().out)
         assert data["default_channels"] == 1
 
@@ -499,11 +510,10 @@ class TestRunErrorHandling:
         radio.start_audio_rx_opus = AsyncMock()
         radio.stop_audio_rx_opus = AsyncMock()
         radio.get_audio_stats = MagicMock(return_value=runtime_stats)
+        _add_capability_protocols(radio)
         with patch("icom_lan.cli.create_radio", return_value=radio) as mock_create:
-            with patch("icom_lan.cli.IcomRadio") as radio_cls:
-                radio_cls.audio_capabilities.return_value = get_audio_capabilities()
-                with patch("icom_lan.cli.asyncio.sleep", new=AsyncMock()):
-                    rc = await _run(args)
+            with patch("icom_lan.cli.asyncio.sleep", new=AsyncMock()):
+                rc = await _run(args)
         assert rc == 0
         mock_create.assert_called_once()
         radio.start_audio_rx_opus.assert_awaited_once()

@@ -2,6 +2,8 @@
 
 `ic7610_command_matrix.json` is the maintained source of truth for wfview parity work on IC-7610 command coverage.
 
+**Test mapping:** [test_mapping.md](test_mapping.md) maps each parity family and reliability scenario to test files and representative test cases. Use it when extending the matrix or adding regression tests.
+
 Status rules:
 - `implemented`: maintained support exists through a user-facing library/runtime surface or through an internal primitive that exposed features directly depend on.
 - `partial`: tested low-level/runtime support exists, but parity is not fully exposed through `IcomRadio`, CLI, Web, or rigctld-facing state.

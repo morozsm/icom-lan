@@ -21,7 +21,7 @@ Deprecated aliases still work during the deprecation window (two minor releases)
 
 ## Runtime Audio Stats (`get_audio_stats`)
 
-Use `get_audio_stats()` on `AudioStream` or `IcomRadio` to retrieve a JSON-friendly
+Use `get_audio_stats()` on `AudioStream` or on the **Radio** (from `create_radio`) to retrieve a JSON-friendly
 snapshot of live stream quality metrics.
 
 ```python
@@ -91,7 +91,10 @@ The AudioBus provides pub/sub distribution for radio RX audio. Multiple consumer
 ### Basic Usage
 
 ```python
-async with IcomRadio("192.168.1.100", username="u", password="p") as radio:
+from icom_lan import create_radio, LanBackendConfig
+
+config = LanBackendConfig(host="192.168.1.100", username="u", password="p")
+async with create_radio(config) as radio:
     # Subscribe to audio bus
     async with radio.audio_bus.subscribe(name="my-app") as sub:
         async for packet in sub:
@@ -158,7 +161,10 @@ is accepted.
 ### RX Audio (callback-based)
 
 ```python
-async with IcomRadio("192.168.1.100", username="u", password="p") as radio:
+from icom_lan import create_radio, LanBackendConfig
+
+config = LanBackendConfig(host="192.168.1.100", username="u", password="p")
+async with create_radio(config) as radio:
     received = []
 
     def on_audio(pkt):
@@ -173,7 +179,8 @@ async with IcomRadio("192.168.1.100", username="u", password="p") as radio:
 ### RX Audio (high-level PCM)
 
 ```python
-async with IcomRadio("192.168.1.100", username="u", password="p") as radio:
+config = LanBackendConfig(host="192.168.1.100", username="u", password="p")
+async with create_radio(config) as radio:
     def on_pcm(frame: bytes | None) -> None:
         if frame is None:
             return  # gap placeholder from jitter buffer
@@ -194,7 +201,8 @@ async with IcomRadio("192.168.1.100", username="u", password="p") as radio:
 ### TX Audio (push-based)
 
 ```python
-async with IcomRadio("192.168.1.100", username="u", password="p") as radio:
+config = LanBackendConfig(host="192.168.1.100", username="u", password="p")
+async with create_radio(config) as radio:
     await radio.start_audio_tx_opus()
     await radio.push_audio_tx_opus(opus_frame)
     await radio.stop_audio_tx_opus()
@@ -203,7 +211,8 @@ async with IcomRadio("192.168.1.100", username="u", password="p") as radio:
 ### TX Audio (high-level PCM)
 
 ```python
-async with IcomRadio("192.168.1.100", username="u", password="p") as radio:
+config = LanBackendConfig(host="192.168.1.100", username="u", password="p")
+async with create_radio(config) as radio:
     await radio.start_audio_tx_pcm(sample_rate=48000, channels=1, frame_ms=20)
     await radio.push_audio_tx_pcm(pcm_frame)  # one 20ms PCM frame (1920 bytes)
     await radio.stop_audio_tx_pcm()
@@ -212,7 +221,8 @@ async with IcomRadio("192.168.1.100", username="u", password="p") as radio:
 ### Full-Duplex
 
 ```python
-async with IcomRadio("192.168.1.100", username="u", password="p") as radio:
+config = LanBackendConfig(host="192.168.1.100", username="u", password="p")
+async with create_radio(config) as radio:
     await radio.start_audio_opus(rx_callback=on_audio, tx_enabled=True)
     # ... push TX frames, receive RX via callback ...
     await radio.stop_audio_opus()
@@ -221,28 +231,36 @@ async with IcomRadio("192.168.1.100", username="u", password="p") as radio:
 ### Codec Selection
 
 ```python
-from icom_lan import IcomRadio, AudioCodec
+from icom_lan import create_radio, LanBackendConfig, AudioCodec
 
-radio = IcomRadio(
-    "192.168.1.100",
+config = LanBackendConfig(
+    host="192.168.1.100",
+    username="u",
+    password="p",
     audio_codec=AudioCodec.PCM_1CH_16BIT,  # default
     audio_sample_rate=48000,
 )
+async with create_radio(config) as radio:
+    ...
 ```
 
 ### Capability Introspection
 
-Use the capability API to inspect negotiated client-side audio options and defaults:
+Use the capability API to inspect negotiated client-side audio options and defaults. The same API is available on the **Radio** returned by `create_radio` and on **IcomRadio** (legacy):
 
 ```python
-from icom_lan import IcomRadio
+from icom_lan import create_radio, get_audio_capabilities, LanBackendConfig
 
-caps = IcomRadio.audio_capabilities()
+config = LanBackendConfig(host="192.168.1.100", username="u", password="p")
+# Static defaults (no connection required):
+caps = get_audio_capabilities()
 print(caps.supported_codecs)
 print(caps.supported_sample_rates_hz)
 print(caps.supported_channels)
 print(caps.default_codec, caps.default_sample_rate_hz, caps.default_channels)
 ```
+
+For legacy LAN-only code, `IcomRadio.audio_capabilities()` returns the same structure.
 
 Deterministic default selection rules:
 

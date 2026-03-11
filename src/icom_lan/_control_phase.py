@@ -7,6 +7,7 @@ import logging
 import socket as _socket
 import struct
 import time
+from typing import TYPE_CHECKING
 
 from .auth import (
     build_conninfo_packet,
@@ -17,6 +18,9 @@ from .auth import (
 from ._connection_state import RadioConnectionState
 from .exceptions import AuthenticationError, ConnectionError, TimeoutError
 from .transport import ConnectionState, IcomTransport
+
+if TYPE_CHECKING:
+    from ._runtime_protocols import ControlPhaseHost
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +46,7 @@ class _ControlPhaseMixin:
     # Public lifecycle
     # ------------------------------------------------------------------
 
-    async def connect(self) -> None:
+    async def connect(self: "ControlPhaseHost") -> None:
         """Open connection to the radio and authenticate.
 
         Performs the full handshake sequence:
@@ -57,38 +61,38 @@ class _ControlPhaseMixin:
             AuthenticationError: If login is rejected.
             TimeoutError: If the radio doesn't respond.
         """
-        self._conn_state = RadioConnectionState.CONNECTING  # type: ignore[attr-defined]
-        self._civ_stream_ready = False  # type: ignore[attr-defined]
-        self._civ_recovering = False  # type: ignore[attr-defined]
-        self._last_status_error = 0  # type: ignore[attr-defined]
-        self._last_status_disconnected = False  # type: ignore[attr-defined]
+        self._conn_state = RadioConnectionState.CONNECTING
+        self._civ_stream_ready = False
+        self._civ_recovering = False
+        self._last_status_error = 0
+        self._last_status_disconnected = False
 
         # --- Phase 1: Control port ---
         # On reconnect, skip discovery — reuse cached remote_id.
         _reconnect = getattr(self, "_has_connected_once", False)
         try:
             if _reconnect:
-                await self._ctrl_transport.reconnect(self._host, self._port)  # type: ignore[attr-defined]
+                await self._ctrl_transport.reconnect(self._host, self._port)
             else:
-                await self._ctrl_transport.connect(self._host, self._port)  # type: ignore[attr-defined]
+                await self._ctrl_transport.connect(self._host, self._port)
         except OSError as exc:
             raise ConnectionError(
-                f"Failed to connect to {self._host}:{self._port}: {exc}"  # type: ignore[attr-defined]
+                f"Failed to connect to {self._host}:{self._port}: {exc}"
             ) from exc
 
-        self._ctrl_transport.start_ping_loop()  # type: ignore[attr-defined]
-        self._ctrl_transport.start_retransmit_loop()  # type: ignore[attr-defined]
+        self._ctrl_transport.start_ping_loop()
+        self._ctrl_transport.start_retransmit_loop()
 
         # Login
         login_pkt = build_login_packet(
-            self._username,  # type: ignore[attr-defined]
-            self._password,  # type: ignore[attr-defined]
-            sender_id=self._ctrl_transport.my_id,  # type: ignore[attr-defined]
-            receiver_id=self._ctrl_transport.remote_id,  # type: ignore[attr-defined]
+            self._username,
+            self._password,
+            sender_id=self._ctrl_transport.my_id,
+            receiver_id=self._ctrl_transport.remote_id,
         )
-        await self._ctrl_transport.send_tracked(login_pkt)  # type: ignore[attr-defined]
+        await self._ctrl_transport.send_tracked(login_pkt)
         resp_data = await self._wait_for_packet(
-            self._ctrl_transport,  # type: ignore[attr-defined]
+            self._ctrl_transport,
             size=0x60,
             label="login response",
         )
@@ -97,13 +101,13 @@ class _ControlPhaseMixin:
             raise AuthenticationError(
                 f"Authentication failed (error=0x{auth.error:08X})"
             )
-        self._token = auth.token  # type: ignore[attr-defined]
-        self._tok_request = auth.tok_request  # type: ignore[attr-defined]
+        self._token = auth.token
+        self._tok_request = auth.tok_request
         logger.info(
             "Authenticated with %s:%d, token=0x%08X",
-            self._host,  # type: ignore[attr-defined]
-            self._port,  # type: ignore[attr-defined]
-            self._token,  # type: ignore[attr-defined]
+            self._host,
+            self._port,
+            self._token,
         )
 
         # Token ack
@@ -131,11 +135,11 @@ class _ControlPhaseMixin:
         # correct for all known Icom radios.  Send conninfo and try to read
         # the status packet in the background; if the radio reports different
         # ports we'll log a warning (future: reconnect).
-        self._civ_port = self._port + 1  # type: ignore[attr-defined]
-        self._audio_port = self._port + 2  # type: ignore[attr-defined]
+        self._civ_port = self._port + 1
+        self._audio_port = self._port + 2
 
-        self._civ_local_port = _civ_local_port  # type: ignore[attr-defined]
-        self._audio_local_port = _audio_local_port  # type: ignore[attr-defined]
+        self._civ_local_port = _civ_local_port
+        self._audio_local_port = _audio_local_port
         await self._send_conninfo(guid, _civ_local_port, _audio_local_port)
 
         # Non-blocking: try to read status once (short timeout).
@@ -165,7 +169,7 @@ class _ControlPhaseMixin:
                         civ_port = await self._receive_civ_port()
                         if civ_port > 0:
                             logger.info("Radio now reports civ_port=%d", civ_port)
-                            self._civ_port = civ_port  # type: ignore[attr-defined]
+                            self._civ_port = civ_port
                             break
                     except asyncio.TimeoutError:
                         pass
@@ -174,14 +178,14 @@ class _ControlPhaseMixin:
                     # CI-V port, because this creates a false-positive connect
                     # with a dead command path.
                     if getattr(self, "_last_status_error", 0) == 0xFFFFFFFF:
-                        await self._ctrl_transport.disconnect()  # type: ignore[attr-defined]
-                        self._conn_state = RadioConnectionState.DISCONNECTED  # type: ignore[attr-defined]
+                        await self._ctrl_transport.disconnect()
+                        self._conn_state = RadioConnectionState.DISCONNECTED
                         raise ConnectionError(
                             "Radio rejected session allocation (status error=0xFFFFFFFF, civ_port=0)"
                         )
                     logger.warning(
                         "Radio still returns civ_port=0 after retries, using default %d",
-                        self._civ_port,  # type: ignore[attr-defined]
+                        self._civ_port,
                     )
         except asyncio.TimeoutError:
             logger.debug("No status packet received, using default ports")

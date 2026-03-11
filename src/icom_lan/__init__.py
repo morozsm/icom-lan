@@ -132,25 +132,20 @@ from .types import (
     get_audio_capabilities,
 )
 
+# Supported public API: create_radio, Radio, backend configs, capability protocols,
+# exceptions, RadioState, profiles. See docs/api/public-api-surface.md.
+# Other symbols below are advanced/implementation detail; prefer the supported API.
 __all__ = [
     "__version__",
-    # Radio
-    "AudioRecoveryState",
-    "IcomRadio",
-    "IcomCommander",
-    "RadioConnectionState",
-    "Priority",
-    # Protocol
+    # --- Supported: Radio and backends ---
     "Radio",
     "AudioCapable",
     "ScopeCapable",
     "DualReceiverCapable",
-    # State
     "RadioState",
     "RadioProfile",
     "get_radio_profile",
     "resolve_radio_profile",
-    # Radio models
     "RADIOS",
     "RadioModel",
     "get_civ_addr",
@@ -158,7 +153,10 @@ __all__ = [
     "LanBackendConfig",
     "SerialBackendConfig",
     "create_radio",
-    # Exceptions
+    # Legacy LAN entry point
+    "AudioRecoveryState",
+    "IcomRadio",
+    # --- Exceptions (supported) ---
     "IcomLanError",
     "ConnectionError",
     "AuthenticationError",
@@ -168,7 +166,7 @@ __all__ = [
     "AudioCodecBackendError",
     "AudioFormatError",
     "AudioTranscodeError",
-    # Types
+    # --- Types (supported: used in API signatures) ---
     "PacketType",
     "Mode",
     "AudioCodec",
@@ -181,7 +179,7 @@ __all__ = [
     "bcd_encode",
     "bcd_decode",
     "get_audio_capabilities",
-    # Commands
+    # --- Advanced: low-level commands and CI-V ---
     "IC_7610_ADDR",
     "CONTROLLER_ADDR",
     "RECEIVER_MAIN",
@@ -213,7 +211,7 @@ __all__ = [
     "parse_mode_response",
     "parse_meter_response",
     "parse_ack_nak",
-    # Scope / Waterfall
+    # --- Advanced: scope/waterfall types and rendering ---
     "ScopeAssembler",
     "ScopeFrame",
     # Scope rendering (optional — requires Pillow)
@@ -252,7 +250,7 @@ __all__ = [
     "scope_set_fixed_edge",
     "get_scope_rbw",
     "scope_set_rbw",
-    # Protocol
+    # --- Advanced: protocol and auth ---
     "parse_header",
     "serialize_header",
     "identify_packet_type",
@@ -264,10 +262,13 @@ __all__ = [
     "build_conninfo_packet",
     "parse_auth_response",
     "parse_status_response",
-    # Transport
+    # --- Advanced: transport and commander ---
     "ConnectionState",
     "IcomTransport",
-    # Audio
+    "IcomCommander",
+    "RadioConnectionState",
+    "Priority",
+    # --- Advanced: audio pipeline types ---
     "AudioPacket",
     "AudioState",
     "AudioStats",

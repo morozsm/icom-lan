@@ -28,7 +28,7 @@ Base exception for all icom-lan errors. Catch this to handle any library error.
 
 ```python
 try:
-    async with IcomRadio(...) as radio:
+    async with create_radio(config) as radio:
         ...
 except IcomLanError as e:
     print(f"icom-lan error: {e}")
@@ -135,7 +135,7 @@ Raised when encode/decode fails in the codec backend.
 ### Catch specific errors
 
 ```python
-from icom_lan import IcomRadio
+from icom_lan import create_radio, LanBackendConfig
 from icom_lan.exceptions import (
     ConnectionError,
     AuthenticationError,
@@ -143,8 +143,9 @@ from icom_lan.exceptions import (
     TimeoutError,
 )
 
+config = LanBackendConfig(host="192.168.1.100", username="u", password="p")
 try:
-    async with IcomRadio("192.168.1.100", username="u", password="p") as radio:
+    async with create_radio(config) as radio:
         await radio.set_frequency(999_999_999)
 except ConnectionError:
     print("Cannot reach the radio")
@@ -160,7 +161,7 @@ except TimeoutError:
 
 ```python
 import asyncio
-from icom_lan import IcomRadio, TimeoutError
+from icom_lan import create_radio, TimeoutError
 
 async def get_frequency_with_retry(radio, retries=3):
     for attempt in range(retries):

@@ -1,0 +1,162 @@
+from __future__ import annotations
+
+import json
+from typing import Any
+
+import pytest
+from unittest.mock import MagicMock
+
+from icom_lan.web.runtime_helpers import radio_ready, runtime_capabilities
+from icom_lan.web.server import WebServer
+
+
+class _FakeWriter:
+    """Minimal writer for capturing HTTP response (buffer, write, close, wait_closed)."""
+
+    def __init__(self) -> None:
+        self.buffer = bytearray()
+        self.closed = False
+        self.wait_closed_called = False
+
+    def write(self, data: bytes) -> None:
+        self.buffer.extend(data)
+
+    async def drain(self) -> None:
+        return None
+
+    def close(self) -> None:
+        self.closed = True
+
+    async def wait_closed(self) -> None:
+        self.wait_closed_called = True
+
+
+class _FakeRadio:
+    def __init__(
+        self,
+        *,
+        caps: set[str] | None = None,
+        connected: bool | None = True,
+        radio_ready_flag: bool | None = True,
+    ) -> None:
+        self.capabilities = caps  # may be None or a set
+        self.connected = connected
+        self.radio_ready = radio_ready_flag
+        self.control_connected = False
+        self.model = "IC-TEST"
+
+
+def test_runtime_capabilities_none_radio_returns_empty() -> None:
+    assert runtime_capabilities(None) == set()
+
+
+def test_runtime_capabilities_uses_explicit_caps_without_protocol_fallback() -> None:
+    radio = _FakeRadio(caps=set())
+    caps = runtime_capabilities(radio)
+    assert caps == set()
+
+
+def test_runtime_capabilities_falls_back_to_protocols_when_caps_missing() -> None:
+    from icom_lan.radio_protocol import AudioCapable, DualReceiverCapable, ScopeCapable
+
+    class _ProtoRadio(ScopeCapable, AudioCapable, DualReceiverCapable):  # type: ignore[misc]
+        def __init__(self) -> None:
+            self.capabilities = None
+
+        async def enable_scope(self, **kwargs: Any) -> None:  # noqa: ARG002
+            ...
+
+        async def disable_scope(self) -> None:
+            ...
+
+        def on_scope_data(self, callback: Any | None) -> None:  # noqa: ARG002
+            ...
+
+        @property
+        def audio_bus(self) -> Any:
+            return MagicMock()
+
+        async def start_audio_rx_opus(self, callback: Any) -> None:  # noqa: ARG002
+            ...
+
+        async def stop_audio_rx_opus(self) -> None:
+            ...
+
+        async def push_audio_tx_opus(self, data: bytes) -> None:  # noqa: ARG002
+            ...
+
+        async def vfo_exchange(self) -> None:
+            ...
+
+        async def vfo_equalize(self) -> None:
+            ...
+
+    radio = _ProtoRadio()
+    caps = runtime_capabilities(radio)
+    assert caps == {"scope", "audio", "dual_rx"}
+
+
+def test_runtime_capabilities_filters_incompatible_tags() -> None:
+    radio = _FakeRadio(caps={"scope", "audio", "dual_rx", "tx"})
+    caps = runtime_capabilities(radio)
+    # No Protocols implemented → scope/audio/dual_rx must be dropped, tx preserved
+    assert caps == {"tx"}
+
+
+def test_radio_ready_prefers_radio_ready_flag() -> None:
+    radio = _FakeRadio(connected=False, radio_ready_flag=True)
+    assert radio_ready(radio) is True
+
+
+def test_radio_ready_falls_back_to_connected() -> None:
+    radio = _FakeRadio(connected=True, radio_ready_flag=None)
+    assert radio_ready(radio) is True
+
+
+def test_radio_ready_handles_missing_or_non_bool_attributes() -> None:
+    radio = _FakeRadio(connected="yes", radio_ready_flag="maybe")  # type: ignore[arg-type]
+    assert radio_ready(radio) is False
+    assert radio_ready(None) is False
+
+
+@pytest.mark.asyncio
+async def test_webserver_and_control_handler_use_same_capabilities_and_ready() -> None:
+    """HTTP /api/v1/info and WS hello share the same runtime helpers."""
+    from icom_lan.web.handlers import ControlHandler
+    from icom_lan.web.websocket import WebSocketConnection
+
+    caps = {"audio", "scope", "dual_rx", "tx"}
+    radio = _FakeRadio(caps=caps, connected=True, radio_ready_flag=True)
+
+    server = WebServer(radio)
+
+    # HTTP: capture /api/v1/info JSON body
+    writer = _FakeWriter()
+    await server._serve_info(writer)  # noqa: SLF001
+    text = writer.buffer.decode("ascii", errors="replace")
+    body_start = text.index("\r\n\r\n") + 4
+    info = json.loads(text[body_start:])
+
+    # WS: capture hello message emitted by ControlHandler
+    ws = MagicMock(spec=WebSocketConnection)
+
+    async def _send_text(payload: str) -> None:
+        ws._last_payload = payload  # type: ignore[attr-defined]
+
+    ws.send_text = _send_text  # type: ignore[assignment]
+
+    handler = ControlHandler(ws, radio, "0.0.0-test", radio.model, server=server)
+    await handler._send_hello()  # type: ignore[attr-defined]
+
+    hello = json.loads(ws._last_payload)  # type: ignore[attr-defined]
+
+    # Capabilities: tags and hello list must match runtime_capabilities(radio)
+    expected_caps = sorted(runtime_capabilities(radio))
+    assert sorted(info["capabilities"]["tags"]) == expected_caps
+    assert sorted(hello["capabilities"]) == expected_caps
+
+    # Readiness: both must reflect radio_ready(radio)
+    expected_ready = radio_ready(radio)
+    assert info["connection"]["radioReady"] is expected_ready
+    assert hello["radio_ready"] is expected_ready
+

@@ -1,6 +1,7 @@
 """Tests for IcomTransport — packet handling, ping, retransmit, sequence tracking."""
 
 import asyncio
+import logging
 import struct
 
 import pytest
@@ -10,6 +11,7 @@ from icom_lan.transport import (
     PING_SIZE,
     ConnectionState,
     IcomTransport,
+    PACKET_QUEUE_MAXSIZE,
 )
 from icom_lan.types import HEADER_SIZE, PacketType
 
@@ -366,6 +368,58 @@ class TestHandlePacket:
         pkt = _build_control(ptype=PacketType.I_AM_HERE, seq=0)
         transport._handle_packet(pkt)
         assert not transport._packet_queue.empty()
+
+
+# ---------------------------------------------------------------------------
+# Packet queue capacity / overflow
+# ---------------------------------------------------------------------------
+
+
+class TestPacketQueueOverflow:
+    def test_queue_is_bounded(self, transport: IcomTransport) -> None:
+        # Fill queue to maxsize
+        for seq in range(1, PACKET_QUEUE_MAXSIZE + 1):
+            pkt = _build_data_packet(seq=seq)
+            transport._packet_queue.put_nowait(pkt)
+
+        assert transport._packet_queue.qsize() == PACKET_QUEUE_MAXSIZE
+
+        # Incoming packet when full should not grow queue beyond maxsize
+        extra_pkt = _build_data_packet(seq=PACKET_QUEUE_MAXSIZE + 1)
+        transport._handle_packet(extra_pkt)
+
+        assert transport._packet_queue.qsize() == PACKET_QUEUE_MAXSIZE
+
+        # Oldest packet should have been dropped; newest should be present.
+        seen_seqs: set[int] = set()
+        while not transport._packet_queue.empty():
+            pkt = transport._packet_queue.get_nowait()
+            seq = struct.unpack_from("<H", pkt, 6)[0]
+            seen_seqs.add(seq)
+
+        assert 1 not in seen_seqs
+        assert PACKET_QUEUE_MAXSIZE + 1 in seen_seqs
+
+    def test_overflow_logged_as_warning(
+        self, transport: IcomTransport, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        for seq in range(1, PACKET_QUEUE_MAXSIZE + 1):
+            pkt = _build_data_packet(seq=seq)
+            transport._packet_queue.put_nowait(pkt)
+
+        extra_pkt = _build_data_packet(seq=PACKET_QUEUE_MAXSIZE + 1)
+
+        with caplog.at_level(logging.WARNING):
+            transport._handle_packet(extra_pkt)
+
+        warnings = [
+            rec for rec in caplog.records if rec.levelno == logging.WARNING
+        ]
+        assert warnings, "Expected at least one WARNING log for queue overflow"
+        # Ensure log mentions queue and overflow in some form
+        joined = " ".join(rec.getMessage() for rec in warnings)
+        assert "queue" in joined.lower()
+        assert "overflow" in joined.lower()
 
 
 # ---------------------------------------------------------------------------

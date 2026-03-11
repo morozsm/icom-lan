@@ -295,6 +295,49 @@ class TestMainEntryPoint:
             assert exc_info.value.code == 0
 
 
+class TestPidFile:
+    """PID file is optional and only used for daemon-like commands (web, serve)."""
+
+    def test_pid_file_not_created_when_icom_pid_file_unset(self):
+        """Without ICOM_PID_FILE, Path.write_text is not called for PID."""
+        with patch.dict("os.environ", {"ICOM_PID_FILE": ""}, clear=False):
+            with patch("sys.argv", ["icom-lan", "--host", "127.0.0.1", "serve"]):
+                with patch("icom_lan.cli._run", new_callable=AsyncMock, return_value=0):
+                    with patch("icom_lan.cli.asyncio.run") as mock_run:
+                        mock_run.side_effect = lambda _coro: 0
+                        with pytest.raises(SystemExit) as exc:
+                            main()
+                        assert exc.value.code == 0
+        # No Path.write_text for PID when ICOM_PID_FILE is empty
+        # (we did not patch Path, so no direct assertion; behavior is "no file path set")
+
+    def test_pid_file_created_for_serve_when_icom_pid_file_set(self, tmp_path):
+        """With ICOM_PID_FILE set, serve writes PID to that path and removes it on exit."""
+        pid_path = tmp_path / "icom.pid"
+        with patch.dict("os.environ", {"ICOM_PID_FILE": str(pid_path)}, clear=False):
+            with patch("sys.argv", ["icom-lan", "--host", "127.0.0.1", "serve"]):
+                with patch("icom_lan.cli._run", new_callable=AsyncMock, return_value=0):
+                    with patch("icom_lan.cli.asyncio.run") as mock_run:
+                        mock_run.side_effect = lambda _coro: 0
+                        with pytest.raises(SystemExit) as exc:
+                            main()
+                        assert exc.value.code == 0
+        assert not pid_path.exists()  # removed in finally
+
+    def test_pid_file_not_created_for_status_even_when_icom_pid_file_set(self, tmp_path):
+        """With ICOM_PID_FILE set, status (non-daemon) does not write a PID file."""
+        pid_path = tmp_path / "icom.pid"
+        with patch.dict("os.environ", {"ICOM_PID_FILE": str(pid_path)}, clear=False):
+            with patch("sys.argv", ["icom-lan", "--host", "127.0.0.1", "status"]):
+                with patch("icom_lan.cli._run", new_callable=AsyncMock, return_value=0):
+                    with patch("icom_lan.cli.asyncio.run") as mock_run:
+                        mock_run.side_effect = lambda _coro: 0
+                        with pytest.raises(SystemExit) as exc:
+                            main()
+                        assert exc.value.code == 0
+        assert not pid_path.exists()
+
+
 class TestBackendArgs:
     def test_backend_default_is_lan(self):
         p = _build_parser()

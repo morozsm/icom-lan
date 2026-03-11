@@ -244,11 +244,21 @@ def test_emit_audio_result_text_stats(capsys: pytest.CaptureFixture[str]) -> Non
 
 
 @pytest.mark.asyncio
+def _make_audio_capable_mock(base: MagicMock | None = None) -> MagicMock:
+    """Return a mock that satisfies isinstance(..., AudioCapable) in CLI."""
+    radio = base if base is not None else AsyncMock()
+    radio.audio_bus = MagicMock()
+    radio.start_audio_rx_opus = AsyncMock()
+    radio.stop_audio_rx_opus = AsyncMock()
+    radio.push_audio_tx_opus = AsyncMock()
+    return radio
+
+
 async def test_cmd_audio_rx_stop_failure_and_write_failure(
     tmp_path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    radio = AsyncMock()
+    radio = _make_audio_capable_mock(AsyncMock())
 
     async def start_rx(cb, **_kwargs):
         cb(b"\x01\x02" * 960)
@@ -285,7 +295,7 @@ async def test_cmd_audio_rx_stop_failure_and_write_failure(
 
 @pytest.mark.asyncio
 async def test_cmd_audio_tx_error_branches_and_padding(capsys: pytest.CaptureFixture[str]) -> None:
-    radio = AsyncMock()
+    radio = _make_audio_capable_mock(AsyncMock())
     radio.start_audio_tx_pcm = AsyncMock()
     radio.stop_audio_tx_pcm = AsyncMock()
     radio.push_audio_tx_pcm = AsyncMock()
@@ -341,7 +351,7 @@ async def test_cmd_audio_tx_error_branches_and_padding(capsys: pytest.CaptureFix
 async def test_cmd_audio_loopback_queue_full_and_worker_error(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    radio = AsyncMock()
+    radio = _make_audio_capable_mock(AsyncMock())
     frame = b"\x01\x02" * 960
 
     async def start_rx(cb, **_kwargs):
@@ -411,8 +421,17 @@ async def test_cmd_att_and_preamp_all_paths(capsys: pytest.CaptureFixture[str]) 
 
 
 @pytest.mark.asyncio
+def _make_scope_capable_mock(base: MagicMock | None = None) -> MagicMock:
+    """Return a mock that satisfies isinstance(..., ScopeCapable) in CLI."""
+    radio = base if base is not None else AsyncMock()
+    radio.enable_scope = AsyncMock()
+    radio.disable_scope = AsyncMock()
+    radio.on_scope_data = MagicMock()
+    return radio
+
+
 async def test_cmd_scope_json_image_and_error_paths(monkeypatch, capsys: pytest.CaptureFixture[str]) -> None:
-    radio = AsyncMock()
+    radio = _make_scope_capable_mock(AsyncMock())
     frame = ScopeFrame(0, 1, 14_000_000, 14_350_000, b"\x01\x02", False)
     radio.capture_scope_frame = AsyncMock(return_value=frame)
     radio.capture_scope_frames = AsyncMock(return_value=[frame, frame])
@@ -490,7 +509,7 @@ async def test_cmd_scope_json_image_and_error_paths(monkeypatch, capsys: pytest.
 
 @pytest.mark.asyncio
 async def test_cmd_scope_validation_and_import_error(monkeypatch, capsys: pytest.CaptureFixture[str]) -> None:
-    radio = AsyncMock()
+    radio = _make_scope_capable_mock(AsyncMock())
     radio.disable_scope = AsyncMock()
 
     assert await _cmd_scope(
@@ -821,7 +840,7 @@ async def test_cmd_audio_bridge_list_devices_import_error() -> None:
 @pytest.mark.asyncio
 async def test_cmd_audio_bridge_standalone_runs_until_cancelled() -> None:
     """Bridge starts, runs, and stops cleanly when cancelled (standalone mode)."""
-    radio = MagicMock()
+    radio = _make_audio_capable_mock(MagicMock())
     args = argparse.Namespace(list_devices=False, device="BlackHole 2ch", rx_only=False)
 
     fake_cls = _fake_bridge_cls()
@@ -839,7 +858,7 @@ async def test_cmd_audio_bridge_standalone_runs_until_cancelled() -> None:
 @pytest.mark.asyncio
 async def test_cmd_audio_bridge_device_not_found() -> None:
     """Returns exit code 1 when virtual audio device is not found."""
-    radio = MagicMock()
+    radio = _make_audio_capable_mock(MagicMock())
     args = argparse.Namespace(list_devices=False, device="NonExistent", rx_only=False)
 
     fake_cls = _fake_bridge_cls(start_err=RuntimeError("Virtual audio device not found"))

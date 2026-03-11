@@ -1,6 +1,6 @@
 # Authentication
 
-Low-level authentication functions for the Icom LAN protocol. These are used internally by [`IcomRadio`](radio.md).
+Low-level authentication functions for the Icom LAN protocol. These are used internally by the LAN backend (e.g. when using [`create_radio`](public-api-surface.md) with `LanBackendConfig`, or [`IcomRadio`](radio.md) directly).
 
 ## Credential Encoding
 

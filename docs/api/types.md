@@ -91,8 +91,8 @@ Parsed CI-V frame.
 from icom_lan import AudioCapabilities
 ```
 
-Stable audio capability structure returned by `get_audio_capabilities()` and
-`IcomRadio.audio_capabilities()`.
+Stable audio capability structure returned by `get_audio_capabilities()` (and by
+`IcomRadio.audio_capabilities()` for legacy use).
 
 | Field | Type | Description |
 |-------|------|-------------|

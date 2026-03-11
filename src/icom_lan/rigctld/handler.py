@@ -15,10 +15,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, cast
+from typing import TYPE_CHECKING, Any
 
 from ..exceptions import ConnectionError, TimeoutError
-from ..radio_protocol import ModeInfoCapable
 from ..types import Mode
 from .contract import (
     CIV_TO_HAMLIB_MODE,
@@ -29,6 +28,8 @@ from .contract import (
     RigctldResponse,
 )
 from .state_cache import StateCache
+from .utils import get_mode_reader
+from .._shared_state_runtime import is_cache_fresh
 
 if TYPE_CHECKING:
     from ..radio_protocol import Radio
@@ -123,48 +124,6 @@ def _mode_to_hamlib_str(mode: object) -> str:
     return str(mode).upper()
 
 
-def _get_mode_reader(
-    radio: object,
-) -> Callable[..., Awaitable[tuple[str, int | None]]] | None:
-    """Return a mode reader using backend-native info or the core contract."""
-    if isinstance(radio, ModeInfoCapable):
-        async def _read_mode_info(
-            receiver: int = 0,
-        ) -> tuple[str, int | None]:
-            mode, filt = await radio.get_mode_info(receiver=receiver)
-            return _mode_to_hamlib_str(mode), filt
-
-        return _read_mode_info
-
-    get_mode_info = getattr(radio, "get_mode_info", None)
-    if callable(get_mode_info):
-        async def _read_dynamic_mode_info(
-            receiver: int = 0,
-        ) -> tuple[str, int | None]:
-            mode, filt = await cast(
-                Callable[..., Awaitable[tuple[object, int | None]]],
-                get_mode_info,
-            )(receiver=receiver)
-            return _mode_to_hamlib_str(mode), filt
-
-        return _read_dynamic_mode_info
-
-    get_mode = getattr(radio, "get_mode", None)
-    if callable(get_mode):
-        async def _read_mode(
-            receiver: int = 0,
-        ) -> tuple[str, int | None]:
-            mode, filt = await cast(
-                Callable[..., Awaitable[tuple[object, int | None]]],
-                get_mode,
-            )(receiver=receiver)
-            return _mode_to_hamlib_str(mode), filt
-
-        return _read_mode
-
-    return None
-
-
 # ---------------------------------------------------------------------------
 # Handler
 # ---------------------------------------------------------------------------
@@ -232,7 +191,7 @@ class RigctldHandler:
     # ------------------------------------------------------------------
 
     async def _cmd_get_freq(self, cmd: RigctldCommand) -> RigctldResponse:
-        if self._cache.is_fresh("freq", self._config.cache_ttl):
+        if is_cache_fresh(self._cache, "freq", self._config.cache_ttl):
             return RigctldResponse(values=[str(self._cache.freq)])
         freq = await self._radio.get_frequency()
         self._cache.update_freq(freq)
@@ -254,12 +213,12 @@ class RigctldHandler:
     # ------------------------------------------------------------------
 
     async def _cmd_get_mode(self, cmd: RigctldCommand) -> RigctldResponse:
-        if self._cache.is_fresh("mode", self._config.cache_ttl):
+        if is_cache_fresh(self._cache, "mode", self._config.cache_ttl):
             mode_str = self._cache.mode
             passband = _filter_to_passband(self._cache.filter_width)
             data_mode = self._cache.data_mode
         else:
-            get_mode = _get_mode_reader(self._radio)
+            get_mode = get_mode_reader(self._radio, _mode_to_hamlib_str)
             if get_mode is None:
                 return _err(HamlibError.ENIMPL)
             mode_str, filt = await get_mode()
@@ -316,7 +275,7 @@ class RigctldHandler:
             # Some radios acknowledge set-data quickly but reflect packet mode
             # with a short delay. We wait briefly to reduce client-side stalls.
             synced = False
-            get_mode = _get_mode_reader(self._radio)
+            get_mode = get_mode_reader(self._radio, _mode_to_hamlib_str)
             if get_mode is not None:
                 for _ in range(5):
                     try:

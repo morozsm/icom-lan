@@ -1,6 +1,6 @@
 # Commands Module
 
-Low-level CI-V command encoding and decoding. Most users should use the high-level [`IcomRadio`](radio.md) API.
+Low-level CI-V command encoding and decoding. Most users should use the high-level **Radio** API (via [`create_radio`](public-api-surface.md)).
 
 ::: icom_lan.commands
 

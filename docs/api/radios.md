@@ -20,11 +20,15 @@ Presets for known Icom radios with CI-V addresses and capabilities.
 ## Usage
 
 ```python
-from icom_lan import IcomRadio, get_civ_addr
+from icom_lan import create_radio, LanBackendConfig, get_civ_addr
 
 # Look up CI-V address by model name
 addr = get_civ_addr("IC-705")  # returns 0xA4
 
-# Use with IcomRadio
-radio = IcomRadio("192.168.1.100", radio_addr=addr)
+# Use with create_radio (recommended)
+config = LanBackendConfig(host="192.168.1.100", username="u", password="p", radio_addr=addr)
+async with create_radio(config) as radio:
+    ...
 ```
+
+For LAN-only code you can still use `IcomRadio(host, radio_addr=addr)` — see [IcomRadio](radio.md).

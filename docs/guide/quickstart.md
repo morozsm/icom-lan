@@ -41,16 +41,19 @@ icom-lan meter --json
 
 ## 3. Python API
 
+Use **`create_radio`** with a backend config to get a **`Radio`** instance (works for both LAN and USB serial backends):
+
 ```python
 import asyncio
-from icom_lan import IcomRadio
+from icom_lan import create_radio, LanBackendConfig
 
 async def main():
-    async with IcomRadio(
-        "192.168.1.100",
+    config = LanBackendConfig(
+        host="192.168.1.100",
         username="myuser",
         password="mypass",
-    ) as radio:
+    )
+    async with create_radio(config) as radio:
         # Read current state
         freq = await radio.get_frequency()
         mode, _ = await radio.get_mode()
@@ -63,6 +66,8 @@ async def main():
 
 asyncio.run(main())
 ```
+
+For LAN-only scripts you can still use **`IcomRadio(host, username=..., password=...)`** — see [API Reference](../api/radio.md).
 
 ## 4. Discover Radios
 
@@ -83,5 +88,6 @@ Scanning for Icom radios (3 seconds)...
 
 - **[CLI Reference](cli.md)** — full list of CLI commands
 - **[CI-V Commands](commands.md)** — frequency, mode, meters, PTT, CW, VFO
-- **[API Reference](../api/radio.md)** — complete `IcomRadio` API documentation
+- **[Public API Surface](../api/public-api-surface.md)** — supported vs advanced exports
+- **[API Reference](../api/radio.md)** — complete Radio API and legacy IcomRadio reference
 - **[Connection Lifecycle](connection.md)** — understand the handshake and keep-alive

@@ -482,6 +482,17 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         # wfview-style: send once, short deadline, fall back to cache.
         self._civ_get_timeout: float = min(timeout, 2.0)
 
+    def __del__(self) -> None:
+        """Emit WARN if instance is collected while still connected (forgotten teardown)."""
+        try:
+            if self._conn_state == RadioConnectionState.CONNECTED:
+                logger.warning(
+                    "Radio collected with active connection/tasks; "
+                    "ensure disconnect() or async with is used."
+                )
+        except Exception:
+            pass  # avoid raising in destructor
+
     @property
     def conn_state(self) -> RadioConnectionState:
         """Current connection state."""

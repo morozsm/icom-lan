@@ -40,7 +40,11 @@ These radios use the same Icom LAN protocol and should work out of the box. Comm
 - **Notes:** WiFi may have higher latency than Ethernet — consider increasing timeout.
 
 ```python
-radio = IcomRadio("192.168.1.101", radio_addr=0xA4, timeout=10.0)
+from icom_lan import create_radio, LanBackendConfig
+
+config = LanBackendConfig(host="192.168.1.101", radio_addr=0xA4, timeout=10.0)
+async with create_radio(config) as radio:
+    ...
 ```
 
 ### IC-7300
@@ -71,18 +75,25 @@ radio = IcomRadio("192.168.1.101", radio_addr=0xA4, timeout=10.0)
 Instead of remembering CI-V addresses, use the built-in presets:
 
 ```python
-from icom_lan import IcomRadio, get_civ_addr
+from icom_lan import create_radio, LanBackendConfig, get_civ_addr
 
-# Look up by model name
-radio = IcomRadio("192.168.1.100", radio_addr=get_civ_addr("IC-705"))
+# Look up by model name and pass to config
+addr = get_civ_addr("IC-705")
+config = LanBackendConfig(host="192.168.1.100", username="u", password="p", radio_addr=addr)
+async with create_radio(config) as radio:
+    ...
 ```
+
+For LAN-only scripts you can still use `IcomRadio(host, radio_addr=get_civ_addr("IC-705"), ...)` — see [API Reference](../api/radio.md).
 
 ## Custom CI-V Address
 
-If you've changed your radio's CI-V address in the menu, specify it explicitly:
+If you've changed your radio's CI-V address in the menu, specify it explicitly in the backend config:
 
 ```python
-radio = IcomRadio("192.168.1.100", radio_addr=0x42)
+config = LanBackendConfig(host="192.168.1.100", username="u", password="p", radio_addr=0x42)
+async with create_radio(config) as radio:
+    ...
 ```
 
 ## Adding Support for New Radios

@@ -18,13 +18,14 @@ import asyncio
 import datetime
 import logging
 import time
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from . import audit as _audit
 from .circuit_breaker import CircuitBreaker, CircuitState
 from .contract import ClientSession, HamlibError, RigctldConfig
-from ..radio_protocol import ModeInfoCapable, StateCacheCapable
 from .state_cache import StateCache
+from .utils import get_mode_reader
+from ..radio_protocol import StateCacheCapable
 
 if TYPE_CHECKING:
     from ..radio_protocol import Radio
@@ -45,48 +46,6 @@ def _mode_to_name(mode: object) -> str:
     if isinstance(value, int):
         return getattr(mode, "name", "USB").upper()
     return str(mode).upper()
-
-
-def _get_mode_reader(
-    radio: object,
-) -> Callable[..., Awaitable[tuple[str, int | None]]] | None:
-    """Return a mode reader using backend-native info or the core contract."""
-    if isinstance(radio, ModeInfoCapable):
-        async def _read_mode_info(
-            receiver: int = 0,
-        ) -> tuple[str, int | None]:
-            mode, filt = await radio.get_mode_info(receiver=receiver)
-            return _mode_to_name(mode), filt
-
-        return _read_mode_info
-
-    get_mode_info = getattr(radio, "get_mode_info", None)
-    if callable(get_mode_info):
-        async def _read_dynamic_mode_info(
-            receiver: int = 0,
-        ) -> tuple[str, int | None]:
-            mode, filt = await cast(
-                Callable[..., Awaitable[tuple[Any, int | None]]],
-                get_mode_info,
-            )(receiver=receiver)
-            return _mode_to_name(mode), filt
-
-        return _read_dynamic_mode_info
-
-    get_mode = getattr(radio, "get_mode", None)
-    if callable(get_mode):
-        async def _read_mode(
-            receiver: int = 0,
-        ) -> tuple[str, int | None]:
-            mode, filt = await cast(
-                Callable[..., Awaitable[tuple[Any, int | None]]],
-                get_mode,
-            )(receiver=receiver)
-            return _mode_to_name(mode), filt
-
-        return _read_mode
-
-    return None
 
 
 def _is_packet_mode_set(cmd: Any) -> bool:
@@ -140,6 +99,17 @@ class RigctldServer:
         self._circuit_breaker: CircuitBreaker | None = _circuit_breaker
         # Per-client sliding window for rate limiting: client_id → timestamps
         self._rate_windows: dict[int, list[float]] = {}
+
+    def __del__(self) -> None:
+        """Emit WARN if instance is collected while TCP server/poller is still active."""
+        try:
+            if self._server is not None:
+                logger.warning(
+                    "RigctldServer collected while still running; "
+                    "ensure stop() or async context manager is used."
+                )
+        except Exception:
+            pass  # avoid raising in destructor
 
     # ------------------------------------------------------------------
     # Diagnostics
@@ -307,7 +277,7 @@ class RigctldServer:
 
     async def _wsjtx_compat_prewarm(self) -> None:
         """Best-effort DATA-mode prewarm for WSJT-X compatibility mode."""
-        get_mode = _get_mode_reader(self._radio)
+        get_mode = get_mode_reader(self._radio, _mode_to_name)
         if get_mode is None:
             return
         poller = self._poller

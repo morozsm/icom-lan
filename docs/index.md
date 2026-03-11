@@ -28,9 +28,9 @@ Direct connection to your radio — no wfview, hamlib, or RS-BA1 required.
 
     ---
 
-    Full async Python API documentation.
+    Supported public API and full async Python documentation.
 
-    [:octicons-arrow-right-24: API Docs](api/radio.md)
+    [:octicons-arrow-right-24: Public API Surface](api/public-api-surface.md) · [:octicons-arrow-right-24: IcomRadio](api/radio.md)
 
 - :material-radio-tower:{ .lg .middle } **Protocol Internals**
 
@@ -75,10 +75,11 @@ Any Icom radio with LAN/WiFi control should work — the CI-V address is configu
 
 ```python
 import asyncio
-from icom_lan import IcomRadio
+from icom_lan import create_radio, LanBackendConfig
 
 async def main():
-    async with IcomRadio("192.168.1.100", username="user", password="pass") as radio:
+    config = LanBackendConfig(host="192.168.1.100", username="user", password="pass")
+    async with create_radio(config) as radio:
         freq = await radio.get_frequency()
         print(f"{freq / 1e6:.3f} MHz")
 

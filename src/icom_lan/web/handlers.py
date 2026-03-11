@@ -14,10 +14,12 @@ import logging
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any, Protocol, cast
 
+from .._audio_transcoder import PcmOpusTranscoder, create_pcm_opus_transcoder
+from .._shared_state_runtime import DEFAULT_STATE_CACHE_TTL, is_cache_fresh
 from ..profiles import RadioProfile
 from ..scope import ScopeFrame
 from ..types import AudioCodec
-from .._audio_transcoder import PcmOpusTranscoder, create_pcm_opus_transcoder
+from .runtime_helpers import radio_ready, runtime_capabilities
 from .protocol import (
     AUDIO_CODEC_OPUS,
     AUDIO_CODEC_PCM16,
@@ -85,34 +87,8 @@ HIGH_WATERMARK = 5  # Max queued scope/meter frames before dropping
 
 
 def _runtime_capabilities(radio: "Radio | None") -> set[str]:
-    """Return conservative runtime capabilities for the active radio."""
-    if radio is None:
-        return set()
-
-    from ..radio_protocol import AudioCapable, DualReceiverCapable, ScopeCapable
-
-    raw_caps = getattr(radio, "capabilities", None)
-    if isinstance(raw_caps, set):
-        caps = set(raw_caps)
-    else:
-        caps = set()
-
-    if caps:
-        if "scope" in caps and not isinstance(radio, ScopeCapable):
-            caps.discard("scope")
-        if "audio" in caps and not isinstance(radio, AudioCapable):
-            caps.discard("audio")
-        if "dual_rx" in caps and not isinstance(radio, DualReceiverCapable):
-            caps.discard("dual_rx")
-        return caps
-
-    if isinstance(radio, ScopeCapable):
-        caps.add("scope")
-    if isinstance(radio, AudioCapable):
-        caps.add("audio")
-    if isinstance(radio, DualReceiverCapable):
-        caps.add("dual_rx")
-    return caps
+    """Backward-compatible alias to shared runtime_capabilities helper."""
+    return runtime_capabilities(radio)
 
 
 class ControlHandler:
@@ -251,7 +227,7 @@ class ControlHandler:
         await self._ws.send_text(encode_json(msg))
 
     def _capabilities(self) -> set[str]:
-        return _runtime_capabilities(self._radio)
+        return runtime_capabilities(self._radio)
 
     def _ensure_receiver_supported(self, receiver: int) -> None:
         if self._radio is None:
@@ -280,13 +256,7 @@ class ControlHandler:
 
     def _radio_ready(self) -> bool:
         """Return backend radio readiness (CI-V healthy), with fallback."""
-        if self._radio is None:
-            return False
-        ready = getattr(self._radio, "radio_ready", None)
-        if isinstance(ready, bool):
-            return ready
-        connected = getattr(self._radio, "connected", False)
-        return connected if isinstance(connected, bool) else False
+        return radio_ready(self._radio)
 
     def _backend_recovering(self) -> bool:
         """Whether backend is already managing a reconnect/recovery path."""
@@ -429,7 +399,8 @@ class ControlHandler:
                 "receiver": 0,
             },
         }
-        # Read from state cache — zero CI-V.
+        # Read from shared state cache — zero CI-V.  Use the same TTL
+        # semantics as rigctld so state projections stay consistent.
         cache = (
             self._server.state_cache
             if self._server is not None
@@ -441,9 +412,14 @@ class ControlHandler:
                 cache = self._radio.state_cache
         if cache is not None:
             try:
-                if cache.freq_ts > 0.0:
+                ttl = getattr(
+                    getattr(self._server, "_config", None),
+                    "cache_ttl",
+                    DEFAULT_STATE_CACHE_TTL,
+                )
+                if is_cache_fresh(cache, "freq", ttl):
                     data["freq_a"] = cache.freq
-                if cache.mode_ts > 0.0:
+                if is_cache_fresh(cache, "mode", ttl):
                     data["mode"] = cache.mode
                     if cache.filter_width is not None:
                         data["filter"] = f"FIL{cache.filter_width}"

@@ -35,6 +35,7 @@ from ..radio_state import RadioState
 from ..rigctld.state_cache import StateCache
 from .dx_cluster import DXClusterClient, SpotBuffer
 from .handlers import AudioBroadcaster, AudioHandler, ControlHandler, MetersHandler, ScopeHandler
+from .runtime_helpers import radio_ready, runtime_capabilities
 from .radio_poller import CommandQueue, DisableScope, EnableScope, RadioPoller
 from .websocket import (
     WS_KEEPALIVE_INTERVAL,
@@ -108,41 +109,16 @@ def _camel_case_state(d: dict) -> dict:
 
 
 def _runtime_capabilities(radio: "Radio | None") -> set[str]:
-    """Return conservative runtime capabilities for the active radio."""
-    if radio is None:
-        return set()
-
-    from ..radio_protocol import AudioCapable, DualReceiverCapable, ScopeCapable
-
-    raw_caps = getattr(radio, "capabilities", None)
-    if isinstance(raw_caps, set):
-        caps = set(raw_caps)
-        # If capabilities is explicitly set (even if empty), don't fallback to Protocol checks
-        if "scope" in caps and not isinstance(radio, ScopeCapable):
-            caps.discard("scope")
-        if "audio" in caps and not isinstance(radio, AudioCapable):
-            caps.discard("audio")
-        if "dual_rx" in caps and not isinstance(radio, DualReceiverCapable):
-            caps.discard("dual_rx")
-        return caps
-
-    # capabilities not set (None) → fallback to Protocol checks
-    caps = set()
-    if isinstance(radio, ScopeCapable):
-        caps.add("scope")
-    if isinstance(radio, AudioCapable):
-        caps.add("audio")
-    if isinstance(radio, DualReceiverCapable):
-        caps.add("dual_rx")
-    return caps
+    """Backward-compatible alias to shared runtime_capabilities helper."""
+    return runtime_capabilities(radio)
 
 
 def _supports_scope(radio: "Radio | None") -> bool:
-    return "scope" in _runtime_capabilities(radio)
+    return "scope" in runtime_capabilities(radio)
 
 
 def _supports_audio(radio: "Radio | None") -> bool:
-    return "audio" in _runtime_capabilities(radio)
+    return "audio" in runtime_capabilities(radio)
 
 
 @dataclass
@@ -229,6 +205,17 @@ class WebServer:
         self._dx_client: DXClusterClient | None = None
         self._dx_client_task: asyncio.Task[None] | None = None
 
+    def __del__(self) -> None:
+        """Emit WARN if instance is collected while server is still running (forgotten teardown)."""
+        try:
+            if self._server is not None:
+                logger.warning(
+                    "WebServer collected while still running; "
+                    "ensure stop() or async context manager is used."
+                )
+        except Exception:
+            pass  # avoid raising in destructor
+
     # ------------------------------------------------------------------
     # Helpers for scope callback operations
     # ------------------------------------------------------------------
@@ -247,13 +234,7 @@ class WebServer:
 
     def _radio_ready(self) -> bool:
         """Backend view of radio readiness (CI-V healthy)."""
-        if self._radio is None:
-            return False
-        ready = getattr(self._radio, "radio_ready", None)
-        if isinstance(ready, bool):
-            return ready
-        connected = getattr(self._radio, "connected", False)
-        return connected if isinstance(connected, bool) else False
+        return radio_ready(self._radio)
 
     def _set_scope_data_callback(self, callback: Any) -> None:
         """Set the scope data callback on the radio if it supports it."""

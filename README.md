@@ -69,12 +69,19 @@ pip install -e .
 
 ### Python API
 
+The recommended way to connect is **`create_radio`** with a backend config (LAN or serial). You get a **`Radio`** instance that works the same regardless of backend:
+
 ```python
 import asyncio
-from icom_lan import IcomRadio
+from icom_lan import create_radio, LanBackendConfig
 
 async def main():
-    async with IcomRadio("192.168.1.100", username="user", password="pass") as radio:
+    config = LanBackendConfig(
+        host="192.168.1.100",
+        username="user",
+        password="pass",
+    )
+    async with create_radio(config) as radio:
         # Read current state
         freq = await radio.get_frequency()
         mode, _ = await radio.get_mode()
@@ -92,7 +99,7 @@ async def main():
         # CW
         await radio.send_cw_text("CQ CQ DE KN4KYD K")
 
-        # Scope / Waterfall
+        # Scope / Waterfall (if radio supports it)
         def on_frame(frame):
             print(f"{frame.start_freq_hz/1e6:.3f}–{frame.end_freq_hz/1e6:.3f} MHz, {len(frame.pixels)} px")
         radio.on_scope_data(on_frame)
@@ -100,6 +107,8 @@ async def main():
 
 asyncio.run(main())
 ```
+
+**Legacy:** For direct LAN-only code you can still use `IcomRadio(host, username=..., password=...)` — see [Public API Surface](https://morozsm.github.io/icom-lan/api/public-api-surface/) and [API Reference](https://morozsm.github.io/icom-lan/api/radio/).
 
 ### CLI
 
@@ -183,7 +192,9 @@ icom-lan audio bridge --device "BlackHole 2ch" --rx-only
 
 ## API Reference
 
-### IcomRadio Methods
+The main entry point is **`create_radio(config)`** returning a **`Radio`** (see [Public API Surface](https://morozsm.github.io/icom-lan/api/public-api-surface/)). For LAN-only usage, **`IcomRadio`** remains available as a legacy class with the same methods.
+
+### Radio methods (create_radio / IcomRadio)
 
 | Method | Description |
 |--------|-------------|
@@ -315,6 +326,7 @@ pytest -m integration tests/integration/test_radio_integration.py::TestSoak::tes
 
 - [Getting Started](https://morozsm.github.io/icom-lan/guide/quickstart/)
 - [CLI Reference](https://morozsm.github.io/icom-lan/guide/cli/)
+- [Public API Surface](https://morozsm.github.io/icom-lan/api/public-api-surface/) — recommended `create_radio` + `Radio`
 - [API Reference](https://morozsm.github.io/icom-lan/api/radio/)
 - [Protocol Internals](https://morozsm.github.io/icom-lan/internals/protocol/)
 - [Security](https://morozsm.github.io/icom-lan/SECURITY/)

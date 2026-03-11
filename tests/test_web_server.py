@@ -24,6 +24,7 @@ import pytest
 
 from icom_lan.rigctld.state_cache import StateCache
 from icom_lan.scope import ScopeFrame
+from icom_lan.backends.icom7610.drivers.serial_stub import SerialMockRadio
 from icom_lan.web.protocol import (
     METER_ALC,
     METER_POWER,
@@ -285,6 +286,24 @@ async def server_no_radio() -> WebServer:
     await srv.stop()
 
 
+@pytest.fixture
+async def server_serial_radio() -> tuple[WebServer, SerialMockRadio]:
+    """WebServer running on top of a real SerialMockRadio core."""
+    radio = SerialMockRadio()
+    await radio.connect()
+    # Seed RadioState so /api/v1/state exposes non-trivial freq/mode.
+    radio.radio_state.main.freq = 14_074_000
+    radio.radio_state.main.mode = "USB"
+
+    config = WebConfig(host="127.0.0.1", port=0, keepalive_interval=9999.0)
+    srv = WebServer(radio, config)
+    await srv.start()
+    try:
+        yield srv, radio
+    finally:
+        await srv.stop()
+
+
 # ---------------------------------------------------------------------------
 # Protocol unit tests (no network)
 # ---------------------------------------------------------------------------
@@ -507,6 +526,27 @@ class TestHttpEndpoints:
         host, port = _addr(server)
         status, _, _ = await _http_get(host, port, "/api/v1/nonexistent")
         assert status == 404
+
+    async def test_info_and_state_flow_from_serial_mock_radio(
+        self, server_serial_radio: tuple[WebServer, SerialMockRadio]
+    ) -> None:
+        """SerialMockRadio model/connection and basic state flow through HTTP."""
+        server, radio = server_serial_radio
+        host, port = _addr(server)
+
+        # /api/v1/info reflects runtime model and connection flags.
+        _, _, body = await _http_get(host, port, "/api/v1/info")
+        info = json.loads(body)
+        assert info["model"] == radio.model
+        assert info["connection"]["rigConnected"] is True
+        assert info["connection"]["radioReady"] is True
+
+        # /api/v1/state exposes seeded freq/mode from RadioState via camelCase JSON.
+        _, _, body_state = await _http_get(host, port, "/api/v1/state")
+        state = json.loads(body_state)
+        main = state["main"]
+        assert main["freqHz"] == 14_074_000
+        assert main["mode"] == "USB"
 
 
 # ---------------------------------------------------------------------------

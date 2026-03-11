@@ -58,16 +58,22 @@ Each Icom radio model has a default CI-V address. You can also configure a custo
 | IC-R8600 | `0x96` |
 
 ```python
-from icom_lan import IcomRadio
+from icom_lan import create_radio, LanBackendConfig
 
-# IC-7610 (default)
-radio = IcomRadio("192.168.1.100", radio_addr=0x98)
+# IC-7610 (default radio_addr 0x98)
+config = LanBackendConfig(host="192.168.1.100", username="u", password="p")
+async with create_radio(config) as radio:
+    ...
 
 # IC-705
-radio = IcomRadio("192.168.1.101", radio_addr=0xA4)
+config = LanBackendConfig(host="192.168.1.101", username="u", password="p", radio_addr=0xA4)
+async with create_radio(config) as radio:
+    ...
 
 # Custom CI-V address
-radio = IcomRadio("192.168.1.100", radio_addr=0x42)
+config = LanBackendConfig(host="192.168.1.100", username="u", password="p", radio_addr=0x42)
+async with create_radio(config) as radio:
+    ...
 ```
 
 ## Port Architecture
@@ -130,11 +136,17 @@ ICOM_PASS=mypass
 The default 5-second timeout works well for local networks. Adjust if needed:
 
 ```python
+from icom_lan import create_radio, LanBackendConfig
+
 # Fast local network
-radio = IcomRadio("192.168.1.100", timeout=2.0)
+config = LanBackendConfig(host="192.168.1.100", username="u", password="p", timeout=2.0)
+async with create_radio(config) as radio:
+    ...
 
 # Over VPN or high-latency link
-radio = IcomRadio("10.0.0.100", timeout=15.0)
+config = LanBackendConfig(host="10.0.0.100", username="u", password="p", timeout=15.0)
+async with create_radio(config) as radio:
+    ...
 ```
 
 The timeout applies to:

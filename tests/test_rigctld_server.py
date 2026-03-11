@@ -16,7 +16,6 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from icom_lan.backends.icom7610.drivers.serial_stub import SerialMockRadio
 from icom_lan.rigctld.contract import (
     ClientSession,
     HamlibError,
@@ -26,6 +25,7 @@ from icom_lan.rigctld.contract import (
 )
 from icom_lan.rigctld.server import RigctldServer, run_rigctld_server
 from icom_lan.types import Mode
+from icom_lan.backends.icom7610.drivers.serial_stub import SerialMockRadio
 
 
 # ---------------------------------------------------------------------------
@@ -131,6 +131,19 @@ async def server(mock_radio: MagicMock, cfg: RigctldConfig, proto: MagicMock, ha
     await srv.start()
     yield srv  # type: ignore[misc]
     await srv.stop()
+
+
+@pytest.fixture
+async def server_serial_radio(cfg: RigctldConfig) -> tuple[RigctldServer, SerialMockRadio]:
+    """RigctldServer running on top of a real SerialMockRadio core."""
+    radio = SerialMockRadio()
+    await radio.connect()
+    srv = RigctldServer(radio, cfg)
+    await srv.start()
+    try:
+        yield srv, radio
+    finally:
+        await srv.stop()
 
 
 # ---------------------------------------------------------------------------
@@ -246,6 +259,69 @@ class TestAcceptResponse:
         assert data == _RESPONSE_BYTES
         proto.parse_line.assert_called_once_with(b"f")
         await _close(w)
+
+
+class TestSemiIntegrationSerialMockRadio:
+    async def test_get_and_set_frequency_flows_through_core(
+        self, server_serial_radio: tuple[RigctldServer, SerialMockRadio]
+    ) -> None:
+        """f/F commands go through real RigctldHandler into SerialMockRadio."""
+        server, radio = server_serial_radio
+        reader, writer = await _connect(server)
+        try:
+            # Initial frequency from SerialMockRadio default state.
+            writer.write(b"f\n")
+            await writer.drain()
+            data = await asyncio.wait_for(reader.read(4096), timeout=1.0)
+            assert b"14074000" in data
+
+            # Change frequency and verify both protocol response and core state.
+            writer.write(b"F 7050000\n")
+            await writer.drain()
+            data_set = await asyncio.wait_for(reader.read(4096), timeout=1.0)
+            assert data_set == b"RPRT 0\n"
+
+            writer.write(b"f\n")
+            await writer.drain()
+            data_after = await asyncio.wait_for(reader.read(4096), timeout=1.0)
+            assert data_after == b"7050000\n"
+
+            freq_core = await radio.get_frequency()
+            assert freq_core == 7_050_000
+        finally:
+            await _close(writer)
+
+    async def test_get_and_set_mode_flows_through_core(
+        self, server_serial_radio: tuple[RigctldServer, SerialMockRadio]
+    ) -> None:
+        """m/M commands go through real RigctldHandler into SerialMockRadio."""
+        server, radio = server_serial_radio
+        reader, writer = await _connect(server)
+        try:
+            # Initial mode from SerialMockRadio default state.
+            writer.write(b"m\n")
+            await writer.drain()
+            data = await asyncio.wait_for(reader.read(4096), timeout=1.0)
+            lines = data.decode().splitlines()
+            assert lines[0] == "USB"
+
+            # Change mode to LSB with passband and verify both layers.
+            writer.write(b"M LSB 2400\n")
+            await writer.drain()
+            data_set = await asyncio.wait_for(reader.read(4096), timeout=1.0)
+            assert data_set == b"RPRT 0\n"
+
+            writer.write(b"m\n")
+            await writer.drain()
+            data_after = await asyncio.wait_for(reader.read(4096), timeout=1.0)
+            after_lines = data_after.decode().splitlines()
+            assert after_lines[0] == "LSB"
+
+            mode_core, filt_core = await radio.get_mode()
+            assert mode_core == "LSB"
+            assert filt_core == 2
+        finally:
+            await _close(writer)
 
 
 # ---------------------------------------------------------------------------

@@ -538,22 +538,23 @@ icom-lan scope --capture-timeout 20
 | `--json` | — | Output raw frame data as JSON |
 | `--capture-timeout` | `10`/`15` | Capture timeout in seconds |
 
-## PID File
+## PID File (optional)
 
-When any long-running command starts (e.g. `web`, `serve`, `audio bridge`), icom-lan writes its process ID to `/tmp/icom-lan.pid`. The file is removed automatically on clean exit or SIGTERM.
+For daemon-like commands (`web`, `serve`), you can opt in to writing a PID file by setting the **`ICOM_PID_FILE`** environment variable to the desired path. The file is created only when starting `web` or `serve` and is removed automatically on clean exit or SIGTERM.
 
 ```bash
+# Enable PID file for web/serve (e.g. in systemd or a wrapper script)
+export ICOM_PID_FILE=/var/run/icom-lan.pid
+icom-lan web
+
 # Graceful shutdown
-kill $(cat /tmp/icom-lan.pid)
+kill $(cat /var/run/icom-lan.pid)
 
 # Check if icom-lan is running
-cat /tmp/icom-lan.pid && ps -p $(cat /tmp/icom-lan.pid)
+test -f /var/run/icom-lan.pid && ps -p $(cat /var/run/icom-lan.pid)
 ```
 
-This is equivalent to pressing Ctrl-C in the terminal — the radio session is disconnected cleanly before the process exits.
-
-!!! note
-    The PID file is not written for one-shot commands (`status`, `freq`, `discover`, `proxy`, etc.) that exit on their own.
+If `ICOM_PID_FILE` is unset or empty, no PID file is written. This avoids conflicts when running multiple instances or in tests.
 
 ## Flag Reference
 

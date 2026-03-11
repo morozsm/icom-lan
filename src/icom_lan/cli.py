@@ -37,9 +37,8 @@ from . import __version__
 from .audio import AudioStats
 from .backends.config import LanBackendConfig, SerialBackendConfig
 from .backends.factory import create_radio
-from .radio import IcomRadio
-from .radio_protocol import Radio
-from .types import Mode
+from .radio_protocol import AudioCapable, Radio, ScopeCapable
+from .types import Mode, get_audio_capabilities
 
 _AUDIO_FRAME_MS = 20
 _PCM_SAMPLE_WIDTH_BYTES = 2
@@ -230,7 +229,7 @@ def _build_parser() -> argparse.ArgumentParser:
     _add_json(audio_caps_p)
     _add_stats(audio_caps_p)
 
-    audio_caps = IcomRadio.audio_capabilities()
+    audio_caps = get_audio_capabilities()
 
     def _add_audio_common_flags(sp: argparse.ArgumentParser) -> None:
         sp.add_argument(
@@ -722,11 +721,17 @@ async def _run(args: argparse.Namespace) -> int:
     except ValueError as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
-    radio = create_radio(config)  # type: ignore[assignment]
+    radio = create_radio(config)
 
     try:
         async with radio:
             if args.command == "audio" and args.audio_command == "caps":
+                if not isinstance(radio, AudioCapable):
+                    print(
+                        "Error: audio caps with --stats requires a radio that supports audio (e.g. LAN or serial with audio).",
+                        file=sys.stderr,
+                    )
+                    return 1
                 runtime_stats: dict[str, bool | int | float | str] = (
                     AudioStats.inactive().to_dict()
                 )
@@ -807,7 +812,7 @@ def _validate_audio_format_args(sample_rate: int, channels: int) -> str | None:
     if channels <= 0:
         return "--channels must be > 0."
 
-    caps = IcomRadio.audio_capabilities()
+    caps = get_audio_capabilities()
     if sample_rate not in caps.supported_sample_rates_hz:
         supported = ", ".join(str(rate) for rate in caps.supported_sample_rates_hz)
         return f"Unsupported --sample-rate {sample_rate}. Supported values: {supported}."
@@ -866,7 +871,7 @@ def _print_audio_stats(stats: dict[str, bool | int | float | str]) -> None:
     print(f"  out_of_order_packets: {stats['out_of_order_packets']}")
 
 
-async def _cmd_status(radio: IcomRadio, args: argparse.Namespace) -> int:
+async def _cmd_status(radio: Radio, args: argparse.Namespace) -> int:
     freq = await radio.get_frequency()
     mode_name, _filt = await radio.get_mode()
     s_meter = await radio.get_s_meter()
@@ -899,7 +904,7 @@ async def _cmd_audio_caps(
     *,
     runtime_stats: dict[str, bool | int | float | str] | None = None,
 ) -> int:
-    caps = IcomRadio.audio_capabilities()
+    caps = get_audio_capabilities()
     wants_stats = bool(getattr(args, "stats", False))
 
     if args.json:
@@ -945,7 +950,13 @@ async def _cmd_audio_caps(
     return 0
 
 
-async def _cmd_audio_rx(radio: IcomRadio, args: argparse.Namespace) -> int:
+async def _cmd_audio_rx(radio: Radio, args: argparse.Namespace) -> int:
+    if not isinstance(radio, AudioCapable):
+        print(
+            "Error: this command requires a radio that supports audio (e.g. LAN or serial with audio).",
+            file=sys.stderr,
+        )
+        return 1
     fmt_error = _validate_audio_format_args(args.sample_rate, args.channels)
     if fmt_error is not None:
         print(f"Error: {fmt_error}", file=sys.stderr)
@@ -1029,7 +1040,13 @@ def _load_wav_pcm(input_file: str) -> tuple[int, int, int, bytes]:
     return sample_rate, channels, sample_width, pcm
 
 
-async def _cmd_audio_tx(radio: IcomRadio, args: argparse.Namespace) -> int:
+async def _cmd_audio_tx(radio: Radio, args: argparse.Namespace) -> int:
+    if not isinstance(radio, AudioCapable):
+        print(
+            "Error: this command requires a radio that supports audio (e.g. LAN or serial with audio).",
+            file=sys.stderr,
+        )
+        return 1
     fmt_error = _validate_audio_format_args(args.sample_rate, args.channels)
     if fmt_error is not None:
         print(f"Error: {fmt_error}", file=sys.stderr)
@@ -1127,7 +1144,13 @@ async def _cmd_audio_tx(radio: IcomRadio, args: argparse.Namespace) -> int:
     return 0
 
 
-async def _cmd_audio_loopback(radio: IcomRadio, args: argparse.Namespace) -> int:
+async def _cmd_audio_loopback(radio: Radio, args: argparse.Namespace) -> int:
+    if not isinstance(radio, AudioCapable):
+        print(
+            "Error: this command requires a radio that supports audio (e.g. LAN or serial with audio).",
+            file=sys.stderr,
+        )
+        return 1
     fmt_error = _validate_audio_format_args(args.sample_rate, args.channels)
     if fmt_error is not None:
         print(f"Error: {fmt_error}", file=sys.stderr)
@@ -1236,7 +1259,7 @@ async def _cmd_audio_loopback(radio: IcomRadio, args: argparse.Namespace) -> int
     return 0
 
 
-async def _cmd_freq(radio: IcomRadio, args: argparse.Namespace) -> int:
+async def _cmd_freq(radio: Radio, args: argparse.Namespace) -> int:
     if args.value is not None:
         freq_hz = _parse_frequency(args.value)
         await radio.set_frequency(freq_hz)
@@ -1256,7 +1279,7 @@ async def _cmd_freq(radio: IcomRadio, args: argparse.Namespace) -> int:
     return 0
 
 
-async def _cmd_mode(radio: IcomRadio, args: argparse.Namespace) -> int:
+async def _cmd_mode(radio: Radio, args: argparse.Namespace) -> int:
     if args.value is not None:
         await radio.set_mode(args.value)
         print(f"Set: {args.value}")
@@ -1271,7 +1294,7 @@ async def _cmd_mode(radio: IcomRadio, args: argparse.Namespace) -> int:
     return 0
 
 
-async def _cmd_power(radio: IcomRadio, args: argparse.Namespace) -> int:
+async def _cmd_power(radio: Radio, args: argparse.Namespace) -> int:
     if args.value is not None:
         await radio.set_power(args.value)
         print(f"Set: {args.value}")
@@ -1286,7 +1309,7 @@ async def _cmd_power(radio: IcomRadio, args: argparse.Namespace) -> int:
     return 0
 
 
-async def _cmd_meter(radio: IcomRadio, args: argparse.Namespace) -> int:
+async def _cmd_meter(radio: Radio, args: argparse.Namespace) -> int:
     from .exceptions import TimeoutError as IcomTimeout
 
     results: dict[str, int | str] = {}
@@ -1312,20 +1335,20 @@ async def _cmd_meter(radio: IcomRadio, args: argparse.Namespace) -> int:
     return 0
 
 
-async def _cmd_ptt(radio: IcomRadio, args: argparse.Namespace) -> int:
+async def _cmd_ptt(radio: Radio, args: argparse.Namespace) -> int:
     on = args.state == "on"
     await radio.set_ptt(on)
     print(f"PTT {'ON' if on else 'OFF'}")
     return 0
 
 
-async def _cmd_cw(radio: IcomRadio, args: argparse.Namespace) -> int:
+async def _cmd_cw(radio: Radio, args: argparse.Namespace) -> int:
     await radio.send_cw_text(args.text)
     print(f"CW: {args.text}")
     return 0
 
 
-async def _cmd_att(radio: IcomRadio, args: argparse.Namespace) -> int:
+async def _cmd_att(radio: Radio, args: argparse.Namespace) -> int:
     if args.value is not None:
         val = args.value.strip().lower()
         if val == "on":
@@ -1355,7 +1378,7 @@ async def _cmd_att(radio: IcomRadio, args: argparse.Namespace) -> int:
 _PREAMP_NAMES = {0: "OFF", 1: "PRE1", 2: "PRE2"}
 
 
-async def _cmd_preamp(radio: IcomRadio, args: argparse.Namespace) -> int:
+async def _cmd_preamp(radio: Radio, args: argparse.Namespace) -> int:
     if args.value is not None:
         val = args.value.strip().lower()
         if val == "off":
@@ -1382,7 +1405,7 @@ async def _cmd_preamp(radio: IcomRadio, args: argparse.Namespace) -> int:
     return 0
 
 
-async def _cmd_antenna(radio: IcomRadio, args: argparse.Namespace) -> int:
+async def _cmd_antenna(radio: Radio, args: argparse.Namespace) -> int:
     acted = False
     if args.ant1 is not None:
         on = args.ant1 == "on"
@@ -1416,7 +1439,7 @@ async def _cmd_antenna(radio: IcomRadio, args: argparse.Namespace) -> int:
     return 0
 
 
-async def _cmd_date(radio: IcomRadio, args: argparse.Namespace) -> int:
+async def _cmd_date(radio: Radio, args: argparse.Namespace) -> int:
     if args.date is not None:
         try:
             year, month, day = map(int, args.date.split("-"))
@@ -1431,7 +1454,7 @@ async def _cmd_date(radio: IcomRadio, args: argparse.Namespace) -> int:
     return 0
 
 
-async def _cmd_time(radio: IcomRadio, args: argparse.Namespace) -> int:
+async def _cmd_time(radio: Radio, args: argparse.Namespace) -> int:
     if args.time is not None:
         try:
             hour, minute = map(int, args.time.split(":"))
@@ -1446,7 +1469,7 @@ async def _cmd_time(radio: IcomRadio, args: argparse.Namespace) -> int:
     return 0
 
 
-async def _cmd_dualwatch(radio: IcomRadio, args: argparse.Namespace) -> int:
+async def _cmd_dualwatch(radio: Radio, args: argparse.Namespace) -> int:
     if args.state is not None:
         on = args.state == "on"
         await radio.set_dual_watch(on)
@@ -1457,7 +1480,7 @@ async def _cmd_dualwatch(radio: IcomRadio, args: argparse.Namespace) -> int:
     return 0
 
 
-async def _cmd_tuner(radio: IcomRadio, args: argparse.Namespace) -> int:
+async def _cmd_tuner(radio: Radio, args: argparse.Namespace) -> int:
     if args.action is not None:
         value = {"on": 1, "off": 0, "tune": 2}[args.action]
         await radio.set_tuner_status(value)
@@ -1476,7 +1499,13 @@ async def _cmd_tuner(radio: IcomRadio, args: argparse.Namespace) -> int:
     return 0
 
 
-async def _cmd_scope(radio: IcomRadio, args: argparse.Namespace) -> int:
+async def _cmd_scope(radio: Radio, args: argparse.Namespace) -> int:
+    if not isinstance(radio, ScopeCapable):
+        print(
+            "Error: scope requires a radio that supports scope/waterfall (e.g. LAN or serial).",
+            file=sys.stderr,
+        )
+        return 1
     if args.frames < 1:
         print("Error: --frames must be >= 1", file=sys.stderr)
         return 1
@@ -1561,10 +1590,16 @@ async def _cmd_scope(radio: IcomRadio, args: argparse.Namespace) -> int:
     return 0
 
 
-async def _cmd_audio_bridge(radio: IcomRadio, args: argparse.Namespace) -> int:
+async def _cmd_audio_bridge(radio: Radio, args: argparse.Namespace) -> int:
     """Bridge radio audio to a virtual audio device."""
     from .audio_bridge import AudioBridge, list_audio_devices
 
+    if not args.list_devices and not isinstance(radio, AudioCapable):
+        print(
+            "Error: audio bridge requires a radio that supports audio (e.g. LAN or serial with audio).",
+            file=sys.stderr,
+        )
+        return 1
     if args.list_devices:
         try:
             devices = list_audio_devices()
@@ -1669,7 +1704,7 @@ async def _cmd_serve(radio: Radio, args: argparse.Namespace) -> int:
     return 0
 
 
-async def _cmd_web(radio: IcomRadio, args: argparse.Namespace) -> int:
+async def _cmd_web(radio: Radio, args: argparse.Namespace) -> int:
     import pathlib
 
     from .web.server import WebConfig, WebServer
@@ -1749,7 +1784,7 @@ async def _cmd_web(radio: IcomRadio, args: argparse.Namespace) -> int:
     return 0
 
 
-async def _cmd_discover(_radio: IcomRadio, _args: argparse.Namespace) -> int:
+async def _cmd_discover(_radio: Radio, _args: argparse.Namespace) -> int:
     """Discover Icom radios on the local network via broadcast."""
     import socket
     import struct
@@ -1838,9 +1873,17 @@ def main() -> None:
             raise KeyboardInterrupt()
         signal.signal(signal.SIGTERM, _sigterm_handler)
 
-        # Write PID file for clean stop/restart
-        pid_file = Path("/tmp/icom-lan.pid")
-        pid_file.write_text(str(os.getpid()))
+        # Optional PID file only for daemon-like commands (web, serve).
+        # Set ICOM_PID_FILE to a path to enable; no default path to avoid multi-instance conflicts.
+        pid_path = os.environ.get("ICOM_PID_FILE", "").strip()
+        pid_file: Path | None = None
+        if pid_path and args.command in ("web", "serve"):
+            pid_file = Path(pid_path)
+            try:
+                pid_file.write_text(str(os.getpid()))
+            except OSError as e:
+                logger.warning("Could not write PID file %s: %s", pid_path, e)
+                pid_file = None
 
         try:
             sys.exit(asyncio.run(_run(args)))
@@ -1849,10 +1892,11 @@ def main() -> None:
             print("Interrupted, shutting down...", file=sys.stderr)
             sys.exit(130)
         finally:
-            try:
-                pid_file.unlink(missing_ok=True)
-            except OSError:
-                pass
+            if pid_file is not None:
+                try:
+                    pid_file.unlink(missing_ok=True)
+                except OSError:
+                    pass
 
 
 if __name__ == "__main__":

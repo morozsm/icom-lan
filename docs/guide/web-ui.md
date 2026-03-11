@@ -163,3 +163,4 @@ curl http://127.0.0.1:8080/api/v1/state
 - [CLI Reference](cli.md#web)
 - [Troubleshooting](troubleshooting.md)
 - [Web UI Protocol RFC (historical draft)](../internals/rfc-web-ui-v1.md)
+- [Reliability semantics](../internals/reliability-semantics.md) — timeouts, cache TTLs, and `radio_ready` / connection state behavior.

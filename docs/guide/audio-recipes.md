@@ -25,7 +25,7 @@ Saves the incoming audio stream from the radio to `rx.wav`.
 import asyncio
 import wave
 
-from icom_lan import IcomRadio, AudioCodec
+from icom_lan import create_radio, LanBackendConfig, AudioCodec
 
 SAMPLE_RATE = 48000
 CHANNELS = 1
@@ -35,7 +35,7 @@ SECONDS = 10
 async def main() -> None:
     frames: list[bytes] = []
 
-    radio = IcomRadio(
+    config = LanBackendConfig(
         host="192.168.1.100",
         username="YOUR_USER",
         password="YOUR_PASS",
@@ -47,7 +47,7 @@ async def main() -> None:
         # For PCM codec, pkt.data contains raw PCM bytes.
         frames.append(pkt.data)
 
-    async with radio:
+    async with create_radio(config) as radio:
         await radio.start_audio_rx_opus(on_audio)
         await asyncio.sleep(SECONDS)
         await radio.stop_audio_rx_opus()
@@ -72,7 +72,7 @@ Reads `tx.wav` (16-bit mono 48 kHz PCM) and transmits it.
 import asyncio
 import wave
 
-from icom_lan import IcomRadio, AudioCodec
+from icom_lan import create_radio, LanBackendConfig, AudioCodec
 
 SAMPLE_RATE = 48000
 CHANNELS = 1
@@ -82,7 +82,7 @@ BYTES_PER_FRAME = SAMPLE_RATE * CHANNELS * SAMPLE_WIDTH * FRAME_MS // 1000  # 19
 
 
 async def main() -> None:
-    radio = IcomRadio(
+    config = LanBackendConfig(
         host="192.168.1.100",
         username="YOUR_USER",
         password="YOUR_PASS",
@@ -96,7 +96,7 @@ async def main() -> None:
         assert wf.getsampwidth() == SAMPLE_WIDTH, "tx.wav must be 16-bit"
         pcm = wf.readframes(wf.getnframes())
 
-    async with radio:
+    async with create_radio(config) as radio:
         await radio.start_audio_tx_pcm(
             sample_rate=SAMPLE_RATE,
             channels=CHANNELS,
@@ -129,7 +129,7 @@ import asyncio
 import math
 import struct
 
-from icom_lan import IcomRadio, AudioCodec
+from icom_lan import create_radio, LanBackendConfig, AudioCodec
 
 SAMPLE_RATE = 48000
 CHANNELS = 1
@@ -154,7 +154,7 @@ def make_tone_frame(phase: float) -> tuple[bytes, float]:
 async def main() -> None:
     rx_packets = 0
 
-    radio = IcomRadio(
+    config = LanBackendConfig(
         host="192.168.1.100",
         username="YOUR_USER",
         password="YOUR_PASS",
@@ -166,7 +166,7 @@ async def main() -> None:
         nonlocal rx_packets
         rx_packets += 1
 
-    async with radio:
+    async with create_radio(config) as radio:
         await radio.start_audio_rx_opus(on_audio)
         await radio.start_audio_tx_pcm(
             sample_rate=SAMPLE_RATE,
@@ -198,16 +198,16 @@ Route the same RX audio to multiple consumers simultaneously.
 
 ```python
 import asyncio
-from icom_lan import IcomRadio
+from icom_lan import create_radio, LanBackendConfig
 
 async def main() -> None:
-    radio = IcomRadio(
+    config = LanBackendConfig(
         host="192.168.1.100",
         username="YOUR_USER",
         password="YOUR_PASS",
     )
 
-    async with radio:
+    async with create_radio(config) as radio:
         bus = radio.audio_bus
 
         # Consumer 1: count packets

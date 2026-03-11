@@ -17,6 +17,7 @@ from .types import HEADER_SIZE, PacketType
 __all__ = [
     "ConnectionState",
     "IcomTransport",
+    "PACKET_QUEUE_MAXSIZE",
 ]
 
 logger = logging.getLogger(__name__)
@@ -30,6 +31,7 @@ DISCOVERY_RETRIES = 10
 DISCOVERY_TIMEOUT = 1.0  # seconds per attempt
 BUFSIZE = 500
 MAX_MISSING = 50
+PACKET_QUEUE_MAXSIZE = 1024
 
 
 class ConnectionState(StrEnum):
@@ -91,7 +93,9 @@ class IcomTransport:
         self._ping_task: asyncio.Task | None = None
         self._idle_task: asyncio.Task | None = None
         self._retransmit_task: asyncio.Task | None = None
-        self._packet_queue: asyncio.Queue[bytes] = asyncio.Queue()
+        self._packet_queue: asyncio.Queue[bytes] = asyncio.Queue(
+            maxsize=PACKET_QUEUE_MAXSIZE
+        )
         self._raw_send = self._default_raw_send
         self.rx_packet_count: int = 0  # total packets received (incl. pings)
         self._last_tracked_send: float = 0.0  # monotonic time of last tracked send
@@ -475,8 +479,52 @@ class IcomTransport:
         if self.remote_id == 0 and sender_id != 0:
             self.remote_id = sender_id
 
-        # Queue for consumer
-        self._packet_queue.put_nowait(data)
+        # Queue for consumer with bounded capacity. On overflow, drop the oldest
+        # packet and log a warning with basic diagnostics.
+        if self._packet_queue.full():
+            dropped: bytes | None = None
+            try:
+                dropped = self._packet_queue.get_nowait()
+            except asyncio.QueueEmpty:
+                dropped = None
+
+            dropped_seq: int | None = None
+            if dropped is not None and len(dropped) >= HEADER_SIZE:
+                dropped_seq = struct.unpack_from("<H", dropped, 6)[0]
+
+            logger.warning(
+                (
+                    "Packet-queue overflow: dropping oldest packet "
+                    "(dropped_seq=%s, new_seq=0x%04X, ptype=0x%04X, "
+                    "sender_id=0x%08X, queue_size=%d, maxsize=%d, rx_count=%d)"
+                ),
+                (
+                    f"0x{dropped_seq:04X}" if isinstance(dropped_seq, int) else "n/a"
+                ),
+                seq,
+                ptype,
+                sender_id,
+                self._packet_queue.qsize(),
+                self._packet_queue.maxsize,
+                self.rx_packet_count,
+            )
+
+        try:
+            self._packet_queue.put_nowait(data)
+        except asyncio.QueueFull:
+            # In a rare race, the queue might become full again between full()
+            # and put_nowait(). Drop the newest packet and log a secondary
+            # warning instead of blocking the UDP handler.
+            logger.warning(
+                (
+                    "Packet-queue overflow (second-chance): dropping newest packet "
+                    "(seq=0x%04X, ptype=0x%04X, sender_id=0x%08X, maxsize=%d)"
+                ),
+                seq,
+                ptype,
+                sender_id,
+                self._packet_queue.maxsize,
+            )
 
     async def _ping_loop(self) -> None:
         """Background task: send pings every PING_PERIOD."""

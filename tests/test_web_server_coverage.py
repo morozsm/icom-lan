@@ -142,11 +142,12 @@ async def test_read_request_parses_and_handles_invalid_cases() -> None:
     reader = _reader_with(
         b"GET /x%20y?q=1 HTTP/1.1\r\nHost: localhost\r\nX-Test: abc\r\n\r\n"
     )
-    method, path, headers = await srv._read_request(reader)  # noqa: SLF001
+    method, path, headers, query = await srv._read_request(reader)  # noqa: SLF001
     assert method == "GET"
     assert path == "/x y"
     assert headers["host"] == "localhost"
     assert headers["x-test"] == "abc"
+    assert query == {"q": ["1"]}
 
     bad = _reader_with(b"BROKEN\r\n\r\n")
     assert await srv._read_request(bad) is None  # noqa: SLF001
@@ -268,14 +269,14 @@ async def test_handle_connection_none_http_ws_and_exception() -> None:
     assert writer.closed is True
 
     writer2 = _FakeWriter()
-    srv._read_request = AsyncMock(return_value=("GET", "/api/v1/info", {}))
+    srv._read_request = AsyncMock(return_value=("GET", "/api/v1/info", {}, {}))
     srv._handle_http = AsyncMock()
     await srv._handle_connection(_reader_with(b""), writer2)  # noqa: SLF001
     srv._handle_http.assert_awaited_once()
 
     writer3 = _FakeWriter()
     srv._read_request = AsyncMock(return_value=(
-        "GET", "/api/v1/ws", {"upgrade": "websocket", "connection": "Upgrade"},
+        "GET", "/api/v1/ws", {"upgrade": "websocket", "connection": "Upgrade"}, {},
     ))
     srv._handle_websocket = AsyncMock()
     await srv._handle_connection(_reader_with(b""), writer3)  # noqa: SLF001
@@ -589,12 +590,17 @@ async def test_info_endpoint_returns_structured_capabilities() -> None:
     """/api/v1/info returns model, capabilities, and connection objects."""
     import json as _json
 
-    radio = MagicMock()
-    radio.model = "IC-7610"
-    radio.connected = True
-    radio.control_connected = False
-    radio.radio_ready = True
-    radio.capabilities = {"scope", "audio", "dual_rx"}
+    from icom_lan.radio_protocol import AudioCapable, DualReceiverCapable, ScopeCapable
+
+    class _FakeRadio(ScopeCapable, AudioCapable, DualReceiverCapable):
+        def __init__(self) -> None:
+            self.model = "IC-7610"
+            self.connected = True
+            self.control_connected = False
+            self.radio_ready = True
+            self.capabilities = {"scope", "audio", "dual_rx"}
+
+    radio = _FakeRadio()
 
     srv = WebServer(radio)
     writer = _FakeWriter()

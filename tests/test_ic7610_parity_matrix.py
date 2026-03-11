@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import importlib
 import json
+import os
 import re
+import subprocess
+import sys
 from pathlib import Path
 
 
@@ -173,3 +176,42 @@ def test_parity_docs_and_integration_profile_are_explicit() -> None:
     assert 'integration and ic7610_parity' in project_doc
     assert "ic7610_parity:" in integration_conftest
     assert any("pytest.mark.ic7610_parity" in text for text in marked_files.values())
+
+
+def _unique_test_files_from_matrix(matrix: dict[str, object]) -> set[str]:
+    """Return all unique test file paths (prefix before '::') from matrix test_patterns."""
+    out: set[str] = set()
+    for entry in matrix["commands"]:
+        for pattern_ref in entry.get("test_patterns", []):
+            part = pattern_ref.partition("::")[0].strip()
+            if part:
+                out.add(part)
+    return out
+
+
+def test_parity_matrix_test_files_are_collectable() -> None:
+    """Every test file referenced in the parity matrix exists and is collectable by pytest."""
+    matrix = _load_matrix()
+    test_files = _unique_test_files_from_matrix(matrix)
+    assert test_files, "Matrix has no test_patterns"
+
+    env = {**os.environ, "PYTHONPATH": str(ROOT / "src")}
+    for rel_path in sorted(test_files):
+        path = ROOT / rel_path
+        assert path.exists(), f"Matrix references missing test file: {rel_path}"
+        result = subprocess.run(
+            [sys.executable, "-m", "pytest", "--collect-only", "-q", rel_path],
+            cwd=ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        assert result.returncode == 0, (
+            f"pytest --collect-only {rel_path} failed (exit {result.returncode}): "
+            f"{result.stderr or result.stdout}"
+        )
+        # Ensure at least one collectible item (module may contain only fixtures; that's ok)
+        assert "test session starts" in (result.stdout or "") or "collected" in (result.stdout or ""), (
+            f"pytest did not collect anything from {rel_path}"
+        )

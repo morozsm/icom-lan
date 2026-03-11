@@ -108,12 +108,18 @@ Clean disconnect sends:
 
 ```python
 # Automatic with context manager
-async with IcomRadio(...) as radio:
+async with create_radio(config) as radio:
     ...  # Disconnect happens on exit
 
 # Manual
 await radio.disconnect()
 ```
+
+!!! tip "Preferred pattern"
+    Using ``async with`` (or calling ``stop()`` for servers) is the supported pattern.
+    If you forget teardown, background tasks (ping loop, CI-V RX, pollers, etc.) may keep running
+    until the instance is garbage-collected; the library will then emit a **WARN** log to help
+    diagnose this.
 
 ## Connection States
 
@@ -146,15 +152,16 @@ is skipped for that attempt.
 ## Error Handling
 
 ```python
-from icom_lan import IcomRadio
+from icom_lan import create_radio, LanBackendConfig
 from icom_lan.exceptions import (
     ConnectionError,
     AuthenticationError,
     TimeoutError,
 )
 
+config = LanBackendConfig(host="192.168.1.100", username="u", password="p")
 try:
-    async with IcomRadio("192.168.1.100", username="u", password="p") as radio:
+    async with create_radio(config) as radio:
         freq = await radio.get_frequency()
 except ConnectionError as e:
     print(f"Can't reach radio: {e}")

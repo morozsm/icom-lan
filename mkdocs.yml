@@ -80,6 +80,7 @@ nav:
       - Supported Radios: guide/radios.md
       - Troubleshooting: guide/troubleshooting.md
   - API Reference:
+      - Public API Surface: api/public-api-surface.md
       - IcomRadio: api/radio.md
       - Sync API: api/sync.md
       - Audio: api/audio.md
@@ -93,7 +94,9 @@ nav:
   - Internals:
       - Architecture: internals/architecture.md
       - Protocol Deep Dive: internals/protocol.md
+      - Reliability semantics: internals/reliability-semantics.md
       - Web UI RFC: internals/rfc-web-ui-v1.md
+      - CLI design: internals/cli-design.md
       - Contributing: internals/contributing.md
       - Changelog: CHANGELOG.md
       - Security: SECURITY.md

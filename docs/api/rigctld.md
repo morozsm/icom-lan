@@ -3,7 +3,7 @@
 Hamlib NET rigctld-compatible TCP server for icom-lan.
 
 Provides a drop-in replacement for `rigctld` that bridges the hamlib line-based TCP
-protocol to an `IcomRadio` instance. Clients such as WSJT-X, JS8Call, fldigi, and
+protocol to a **Radio** instance (from `create_radio`). Clients such as WSJT-X, JS8Call, fldigi, and
 rigctl connect over TCP (default port 4532) and issue standard hamlib CAT commands.
 
 ## Architecture
@@ -12,7 +12,7 @@ rigctl connect over TCP (default port 4532) and issue standard hamlib CAT comman
 graph LR
     A[CAT Client\nWSJT-X / fldigi] -->|TCP 4532| B[RigctldServer]
     B --> C[RigctldHandler]
-    C -->|CI-V| D[IcomRadio]
+    C -->|CI-V| D[Radio]
     E[RadioPoller] -->|background| D
     E -->|updates| F[StateCache]
     C -->|reads| F
@@ -21,10 +21,13 @@ graph LR
 ```
 
 `RigctldServer` owns the TCP listener and per-client tasks. `RigctldHandler`
-dispatches parsed commands to `IcomRadio`. `RadioPoller` runs in the background
+dispatches parsed commands to the **Radio** instance. `RadioPoller` runs in the background
 and keeps `StateCache` warm so reads can be served without waiting for a CI-V
 round-trip. `CircuitBreaker` prevents cascading failures when the radio stops
 responding.
+
+For timeout values, cache TTL semantics, and connection/readiness state, see
+[Reliability semantics](../internals/reliability-semantics.md).
 
 ---
 
@@ -64,12 +67,13 @@ icom-lan --host 192.168.1.10 web --no-rigctld
 
 ```python
 import asyncio
-from icom_lan import IcomRadio
+from icom_lan import create_radio, LanBackendConfig
 from icom_lan.rigctld import RigctldServer
 from icom_lan.rigctld.contract import RigctldConfig
 
 async def main() -> None:
-    async with IcomRadio("192.168.1.10", username="admin", password="secret") as radio:
+    radio_config = LanBackendConfig(host="192.168.1.10", username="admin", password="secret")
+    async with create_radio(radio_config) as radio:
         config = RigctldConfig(host="0.0.0.0", port=4532)
         async with RigctldServer(radio, config) as server:
             await server.serve_forever()
@@ -91,14 +95,14 @@ Asyncio TCP server implementing the hamlib NET rigctld protocol.
 
 ```python
 RigctldServer(
-    radio: IcomRadio,
+    radio: Radio,
     config: RigctldConfig | None = None,
 )
 ```
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `radio` | `IcomRadio` | *required* | Connected radio instance |
+| `radio` | `Radio` | *required* | Connected radio instance (from `create_radio`) |
 | `config` | `RigctldConfig \| None` | `None` | Server config; uses `RigctldConfig()` defaults if omitted |
 
 ### Context Manager
@@ -199,14 +203,14 @@ RigctldConfig(
 from icom_lan.rigctld.handler import RigctldHandler
 ```
 
-Dispatches parsed rigctld commands to `IcomRadio`. Handles the read-only gate,
+Dispatches parsed rigctld commands to the **Radio** instance. Handles the read-only gate,
 frequency/mode cache, and translates icom-lan exceptions to Hamlib error codes.
 
 ### Constructor
 
 ```python
 RigctldHandler(
-    radio: IcomRadio,
+    radio: Radio,
     config: RigctldConfig,
     cache: StateCache | None = None,
 )
@@ -214,7 +218,7 @@ RigctldHandler(
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `radio` | `IcomRadio` | Connected radio instance |
+| `radio` | `Radio` | Connected radio instance (from `create_radio`) |
 | `config` | `RigctldConfig` | Server configuration |
 | `cache` | `StateCache \| None` | Shared state cache; creates a private one if omitted |
 
@@ -292,7 +296,7 @@ mode) and updates a shared `StateCache`. Started and stopped automatically by
 
 ```python
 RadioPoller(
-    radio: IcomRadio,
+    radio: Radio,
     cache: StateCache,
     config: RigctldConfig,
     circuit_breaker: CircuitBreaker | None = None,
@@ -648,7 +652,7 @@ from icom_lan.rigctld.contract import HamlibError
 ```python
 from icom_lan.rigctld.server import run_rigctld_server
 
-async def run_rigctld_server(radio: IcomRadio, **kwargs) -> None
+async def run_rigctld_server(radio: Radio, **kwargs) -> None
 ```
 
 Convenience coroutine: create a `RigctldServer` from keyword arguments (forwarded

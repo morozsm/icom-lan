@@ -27,9 +27,18 @@ from icom_lan.cli import (
 # ---------------------------------------------------------------------------
 
 
+def _add_audio_capable(radio: MagicMock) -> MagicMock:
+    """Make mock satisfy isinstance(..., AudioCapable) in CLI."""
+    radio.audio_bus = MagicMock()
+    radio.start_audio_rx_opus = getattr(radio, "start_audio_rx_opus", AsyncMock())
+    radio.stop_audio_rx_opus = getattr(radio, "stop_audio_rx_opus", AsyncMock())
+    radio.push_audio_tx_opus = getattr(radio, "push_audio_tx_opus", AsyncMock())
+    return radio
+
+
 @pytest.fixture
 def mock_radio():
-    """Fully-mocked IcomRadio for CLI handler tests."""
+    """Fully-mocked Radio (AudioCapable) for CLI handler tests."""
     radio = AsyncMock()
     radio.start_audio_rx_pcm = AsyncMock()
     radio.stop_audio_rx_pcm = AsyncMock()
@@ -55,6 +64,7 @@ def mock_radio():
         "stale_packets_dropped": 0,
         "out_of_order_packets": 0,
     })
+    _add_audio_capable(radio)
     return radio
 
 

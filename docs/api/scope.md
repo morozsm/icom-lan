@@ -9,11 +9,12 @@ Icom radios with spectrum scope (IC-7610, IC-7300, IC-705, etc.) stream real-tim
 ## Quick Start
 
 ```python
-from icom_lan import IcomRadio
+from icom_lan import create_radio, LanBackendConfig
 from icom_lan.scope import ScopeFrame
 
 async def main():
-    async with IcomRadio("192.168.1.100", username="u", password="p") as radio:
+    config = LanBackendConfig(host="192.168.1.100", username="u", password="p")
+    async with create_radio(config) as radio:
         frames = []
 
         def on_frame(frame: ScopeFrame):
@@ -70,7 +71,7 @@ if frame is not None:
     process(frame)
 ```
 
-Most users should use `IcomRadio.on_scope_data()` instead of `ScopeAssembler` directly.
+Most users should use `radio.on_scope_data()` (on the `Radio` returned by `create_radio`) instead of `ScopeAssembler` directly.
 
 ## Scope Command Builders
 
