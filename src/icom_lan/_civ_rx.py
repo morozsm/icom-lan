@@ -112,107 +112,147 @@ _CIV_DATA_WATCHDOG_TIMEOUT = 2.0  # seconds (wfview: 2000ms)
 _CIV_DATA_WATCHDOG_RETRY = 0.1    # retry interval (wfview: 100ms via startCivDataTimer)
 
 
-class _CivRxMixin:
-    """Mixin providing CI-V receive pump and command dispatch for IcomRadio."""
+class CivRuntime:
+    """Composed CI-V runtime; holds logic moved from _CivRxMixin (Phase 3).
+
+    Uses self._host (CivRuntimeHost) for all state; host provides connect,
+    disconnect, soft_reconnect, _force_cleanup_civ, _send_open_close.
+    """
+
+    def __init__(self, host: "CivRuntimeHost") -> None:
+        self._host = host
 
     # ------------------------------------------------------------------
-    # Generation / stale-waiter housekeeping
+    # Public API (design doc)
     # ------------------------------------------------------------------
 
-    def _advance_civ_generation(self: "CivRuntimeHost", reason: str) -> None:
-        """Advance CI-V request generation and fail stale waiters."""
-        self._civ_epoch = self._civ_request_tracker.advance_generation(
-            ConnectionError(f"CI-V generation advanced: {reason}")
-        )
-
-    def _cleanup_stale_civ_waiters(self: "CivRuntimeHost") -> None:
-        """Run periodic stale waiter GC on request tracker."""
-        now = time.monotonic()
-        if (
-            now - self._civ_last_waiter_gc_monotonic
-            < self._civ_waiter_ttl_gc_interval
-        ):
-            return
-        cleaned = self._civ_request_tracker.cleanup_stale(now_monotonic=now)
-        self._civ_last_waiter_gc_monotonic = now
-        if cleaned:
-            logger.debug("Cleaned %d stale CI-V waiter(s)", cleaned)
-
-    # ------------------------------------------------------------------
-    # RX pump lifecycle
-    # ------------------------------------------------------------------
-
-    def _start_civ_rx_pump(self: "CivRuntimeHost") -> None:
+    def start_pump(self) -> None:
         """Start always-on CI-V receive pump."""
-        if self._civ_rx_task is None or self._civ_rx_task.done():
-            self._civ_rx_task = asyncio.create_task(
-                self._civ_rx_loop(self._civ_epoch)
+        if self._host._civ_rx_task is None or self._host._civ_rx_task.done():
+            self._host._civ_rx_task = asyncio.create_task(
+                self._civ_rx_loop(self._host._civ_epoch)
             )
 
-    async def _stop_civ_rx_pump(self: "CivRuntimeHost") -> None:
+    async def stop_pump(self) -> None:
         """Stop CI-V receive pump and fail pending request futures."""
-        self._civ_request_tracker.fail_all(
+        self._host._civ_request_tracker.fail_all(
             ConnectionError("CI-V RX pump stopped")
         )
         if (
-            self._civ_rx_task is not None
-            and not self._civ_rx_task.done()
+            self._host._civ_rx_task is not None
+            and not self._host._civ_rx_task.done()
         ):
-            self._civ_rx_task.cancel()
+            self._host._civ_rx_task.cancel()
             try:
-                await self._civ_rx_task
+                await self._host._civ_rx_task
             except asyncio.CancelledError:
                 pass
-        self._civ_rx_task = None
+        self._host._civ_rx_task = None
 
-    # ------------------------------------------------------------------
-    # CI-V data watchdog (wfview icomudpcivdata::watchdog)
-    # ------------------------------------------------------------------
-
-    def _start_civ_data_watchdog(self: "CivRuntimeHost") -> None:
-        """Start CI-V data watchdog task.
-
-        Monitors incoming CI-V data. If no data arrives for
-        _CIV_DATA_WATCHDOG_TIMEOUT seconds, sends sendOpenClose(open)
-        repeatedly to restart the CI-V data stream from the radio.
-
-        Reference: wfview icomudpcivdata.cpp watchdog() — checks
-        lastReceived every WATCHDOG_PERIOD, starts startCivDataTimer
-        (100ms) which calls sendOpenClose(false=open) until data resumes.
-        """
+    def start_data_watchdog(self) -> None:
+        """Start CI-V data watchdog task."""
         if (
-            getattr(self, "_civ_data_watchdog_task", None) is not None
-            and not self._civ_data_watchdog_task.done()
+            getattr(self._host, "_civ_data_watchdog_task", None) is not None
+            and not self._host._civ_data_watchdog_task.done()
         ):
             return
-        self._civ_data_watchdog_task = asyncio.create_task(
+        self._host._civ_data_watchdog_task = asyncio.create_task(
             self._civ_data_watchdog_loop(), name="civ-data-watchdog"
         )
         logger.info("civ-data-watchdog: started")
 
-    async def _stop_civ_data_watchdog(self: "CivRuntimeHost") -> None:
+    async def stop_data_watchdog(self) -> None:
         """Stop CI-V data watchdog."""
-        task = getattr(self, "_civ_data_watchdog_task", None)
+        task = getattr(self._host, "_civ_data_watchdog_task", None)
         if task is not None and not task.done():
             task.cancel()
             try:
                 await task
             except asyncio.CancelledError:
                 pass
-        self._civ_data_watchdog_task = None
+        self._host._civ_data_watchdog_task = None
 
-    async def _civ_data_watchdog_loop(self: "CivRuntimeHost") -> None:
-        """Monitor CI-V data flow; recover with open_close then soft_reconnect.
+    def advance_generation(self, reason: str) -> None:
+        """Advance CI-V request generation and fail stale waiters."""
+        self._host._civ_epoch = self._host._civ_request_tracker.advance_generation(
+            ConnectionError(f"CI-V generation advanced: {reason}")
+        )
 
-        Phase 1 (wfview-style): if no CI-V data for 2s, send OpenClose(open)
-        every 100ms for up to 5 seconds to restart the stream.
+    async def execute_civ_raw(
+        self,
+        civ_frame: bytes,
+        wait_response: bool = True,
+        deadline_monotonic: "float | None" = None,
+    ) -> "CivFrame | None":
+        """Execute one CI-V command via request tracker (public API)."""
+        return await self._execute_civ_raw(
+            civ_frame,
+            wait_response=wait_response,
+            deadline_monotonic=deadline_monotonic,
+        )
 
-        Phase 2: if OpenClose doesn't help after 5s, do a full
-        soft_reconnect (tear down CI-V transport and reconnect).
-        """
-        _OPENCLOSE_DEADLINE = 5.0  # seconds of open_close attempts before reconnect
-        _MAX_RECONNECTS = 3       # max soft_reconnect attempts before giving up
-        _RECONNECT_BACKOFF = (45.0, 60.0, 60.0)  # IC-7610 session release cooldown
+    async def send_civ_raw(
+        self,
+        civ_frame: bytes,
+        *,
+        priority: Priority = Priority.NORMAL,
+        key: "str | None" = None,
+        dedupe: bool = False,
+        wait_response: bool = True,
+        timeout: "float | None" = None,
+    ) -> "CivFrame | None":
+        """Enqueue a CI-V command and wait for its response (public API)."""
+        return await self._send_civ_raw(
+            civ_frame,
+            priority=priority,
+            key=key,
+            dedupe=dedupe,
+            wait_response=wait_response,
+            timeout=timeout,
+        )
+
+    def start_worker(self) -> None:
+        """Start serialized CI-V commander."""
+        self._ensure_civ_runtime()
+        self.start_pump()
+        if self._host._commander is None:
+            self._host._commander = IcomCommander(
+                self.execute_civ_raw,
+                min_interval=self._host._civ_min_interval,
+            )
+        self._host._commander.start()
+
+    async def stop_worker(self) -> None:
+        """Stop CI-V commander and fail pending commands."""
+        if self._host._commander is not None:
+            await self._host._commander.stop()
+
+    # ------------------------------------------------------------------
+    # Generation / stale-waiter housekeeping (from mixin)
+    # ------------------------------------------------------------------
+
+    def _cleanup_stale_civ_waiters(self) -> None:
+        """Run periodic stale waiter GC on request tracker."""
+        now = time.monotonic()
+        if (
+            now - self._host._civ_last_waiter_gc_monotonic
+            < self._host._civ_waiter_ttl_gc_interval
+        ):
+            return
+        cleaned = self._host._civ_request_tracker.cleanup_stale(now_monotonic=now)
+        self._host._civ_last_waiter_gc_monotonic = now
+        if cleaned:
+            logger.debug("Cleaned %d stale CI-V waiter(s)", cleaned)
+
+    # ------------------------------------------------------------------
+    # CI-V data watchdog loop (from mixin)
+    # ------------------------------------------------------------------
+
+    async def _civ_data_watchdog_loop(self) -> None:
+        """Monitor CI-V data flow; recover with open_close then soft_reconnect."""
+        _OPENCLOSE_DEADLINE = 5.0
+        _MAX_RECONNECTS = 3
+        _RECONNECT_BACKOFF = (45.0, 60.0, 60.0)
         recovering = False
         recovery_start: float = 0.0
         reconnect_count = 0
@@ -223,14 +263,14 @@ class _CivRxMixin:
                     else _CIV_DATA_WATCHDOG_TIMEOUT / 2
                 )
 
-                last = getattr(self, "_last_civ_data_received", None)
+                last = getattr(self._host, "_last_civ_data_received", None)
                 if last is None:
                     continue
 
                 idle = time.monotonic() - last
                 if idle > _CIV_DATA_WATCHDOG_TIMEOUT:
                     if not recovering:
-                        civ_t = getattr(self, "_civ_transport", None)
+                        civ_t = getattr(self._host, "_civ_transport", None)
                         rx_count = civ_t.rx_packet_count if civ_t else -1
                         q_size = civ_t._packet_queue.qsize() if civ_t else -1
                         logger.warning(
@@ -240,56 +280,53 @@ class _CivRxMixin:
                             idle, rx_count, q_size,
                         )
                         recovering = True
-                        self._civ_recovering = True
-                        self._civ_stream_ready = False
+                        self._host._civ_recovering = True
+                        self._host._civ_stream_ready = False
                         recovery_start = time.monotonic()
 
                     elapsed_recovery = time.monotonic() - recovery_start
 
                     if elapsed_recovery < _OPENCLOSE_DEADLINE:
-                        # Phase 1: try OpenClose
                         try:
-                            await self._send_open_close(open_stream=True)
+                            await self._host._send_open_close(open_stream=True)
                         except Exception:
                             logger.debug(
                                 "civ-data-watchdog: open_close failed",
                                 exc_info=True,
                             )
                     else:
-                        # Phase 2: OpenClose didn't help — soft_reconnect
                         reconnect_count += 1
                         reconnect_pause = _RECONNECT_BACKOFF[
                             min(reconnect_count - 1, len(_RECONNECT_BACKOFF) - 1)
                         ]
                         if reconnect_count > _MAX_RECONNECTS:
-                            # Phase 3: soft reconnects exhausted — full reconnect
                             logger.warning(
                                 "civ-data-watchdog: %d soft reconnects failed, "
                                 "attempting full reconnect",
                                 reconnect_count - 1,
                             )
                             try:
-                                await self._stop_civ_data_watchdog()
-                                await self._force_cleanup_civ()
-                                await self.disconnect()
+                                await self.stop_data_watchdog()
+                                await self._host._force_cleanup_civ()
+                                await self._host.disconnect()
                                 await asyncio.sleep(reconnect_pause)
-                                await self.connect()
+                                await self._host.connect()
                             except Exception:
                                 logger.error(
                                     "civ-data-watchdog: full reconnect failed",
                                     exc_info=True,
                                 )
-                            return  # watchdog restarted by connect
+                            return
                         logger.warning(
                             "civ-data-watchdog: OpenClose failed for %.1fs, "
                             "triggering soft_reconnect (%d/%d), cooldown=%.0fs",
                             elapsed_recovery, reconnect_count, _MAX_RECONNECTS, reconnect_pause,
                         )
                         try:
-                            await self._stop_civ_data_watchdog()  # stop ourselves
-                            await self._force_cleanup_civ()
-                            await asyncio.sleep(reconnect_pause)  # let radio release slot
-                            await self.soft_reconnect()
+                            await self.stop_data_watchdog()
+                            await self._host._force_cleanup_civ()
+                            await asyncio.sleep(reconnect_pause)
+                            await self._host.soft_reconnect()
                         except Exception:
                             logger.error(
                                 "civ-data-watchdog: soft_reconnect failed, "
@@ -297,62 +334,47 @@ class _CivRxMixin:
                                 exc_info=True,
                             )
                             try:
-                                await self.disconnect()
+                                await self._host.disconnect()
                                 await asyncio.sleep(reconnect_pause)
-                                await self.connect()
+                                await self._host.connect()
                             except Exception:
                                 logger.error(
                                     "civ-data-watchdog: full reconnect also failed",
                                     exc_info=True,
                                 )
-                        return  # watchdog restarted by reconnect
+                        return
                 else:
                     if recovering:
                         logger.info("civ-data-watchdog: CI-V data resumed")
                         recovering = False
-                        self._civ_recovering = False
-                        self._civ_stream_ready = True
+                        self._host._civ_recovering = False
+                        self._host._civ_stream_ready = True
         except asyncio.CancelledError:
             pass
 
-    def _ensure_civ_runtime(self: "CivRuntimeHost") -> None:
-        """Ensure CI-V transport exists (tests may bypass connect()).
-
-        Note: we intentionally do NOT start the CI-V RX pump here.
-        The RX pump should be started explicitly (connect() or right before
-        sending) to avoid races with tests that pre-queue mock packets.
-        """
-        if self._civ_transport is None:
+    def _ensure_civ_runtime(self) -> None:
+        """Ensure CI-V transport exists (tests may bypass connect())."""
+        if self._host._civ_transport is None:
             raise ConnectionError("Not connected to radio")
 
     # ------------------------------------------------------------------
-    # CI-V RX loop + routing
+    # CI-V RX loop + routing (from mixin)
     # ------------------------------------------------------------------
 
-    async def _civ_rx_loop(self: "CivRuntimeHost", generation: int) -> None:
-        """Continuously consume CI-V transport packets and route events.
-
-        Drains ALL pending packets from the transport queue each iteration
-        (wfview-style) to prevent scope flood from starving CI-V command
-        responses.  See issue #66.
-        """
-        assert self._civ_transport is not None
-        self._last_civ_data_received = time.monotonic()
+    async def _civ_rx_loop(self, generation: int) -> None:
+        """Continuously consume CI-V transport packets and route events."""
+        assert self._host._civ_transport is not None
+        self._host._last_civ_data_received = time.monotonic()
         try:
-            while self._civ_transport is not None:
-                # Wait for at least one packet.
+            while self._host._civ_transport is not None:
                 try:
-                    packet = await self._civ_transport.receive_packet(timeout=0.2)
+                    packet = await self._host._civ_transport.receive_packet(timeout=0.2)
                 except asyncio.TimeoutError:
                     self._cleanup_stale_civ_waiters()
                     continue
 
-                # Drain ALL pending packets from the queue (non-blocking).
-                # This is critical: scope floods ~225 pkt/sec on the CI-V port.
-                # Processing one-at-a-time causes ACK/response packets to wait
-                # behind hundreds of scope packets, causing GET timeouts.
                 packets = [packet]
-                queue = getattr(self._civ_transport, "_packet_queue", None)
+                queue = getattr(self._host._civ_transport, "_packet_queue", None)
                 if queue is not None:
                     while not queue.empty():
                         try:
@@ -360,12 +382,10 @@ class _CivRxMixin:
                         except asyncio.QueueEmpty:
                             break
 
-                # Mark that we received CI-V data (for watchdog)
-                self._last_civ_data_received = time.monotonic()
-                self._civ_stream_ready = True
-                self._civ_recovering = False
+                self._host._last_civ_data_received = time.monotonic()
+                self._host._civ_stream_ready = True
+                self._host._civ_recovering = False
 
-                # Process all collected packets.
                 for pkt in packets:
                     if len(pkt) <= CIV_HEADER_SIZE:
                         continue
@@ -386,16 +406,13 @@ class _CivRxMixin:
             pass
 
     async def _route_civ_frame(
-        self: "CivRuntimeHost", frame: CivFrame, *, generation: int
+        self, frame: CivFrame, *, generation: int
     ) -> None:
         """Route one parsed CI-V frame into command/scope event paths."""
-        if frame.from_addr != self._radio_addr:
+        if frame.from_addr != self._host._radio_addr:
             return
-        # Accept frames addressed to us (0xE0) OR broadcast (0x00).
-        # Unsolicited changes (knob turns) go to 0x00.
         if frame.to_addr not in (CONTROLLER_ADDR, 0x00):
             return
-        # Log all non-scope frames at DEBUG level
         if frame.command != 0x27:
             logger.debug(
                 "civ-rx: cmd=0x%02X sub=0x%02X to=0x%02X data=%s",
@@ -405,8 +422,8 @@ class _CivRxMixin:
 
         if frame.command == 0x27 and frame.sub == 0x00 and len(frame.data) >= 3:
             receiver = frame.data[0]
-            self._scope_activity_counter += 1
-            self._scope_activity_event.set()
+            self._host._scope_activity_counter += 1
+            self._host._scope_activity_event.set()
             self._publish_civ_event(
                 CivEvent(
                     type=CivEventType.SCOPE_CHUNK,
@@ -414,7 +431,7 @@ class _CivRxMixin:
                     receiver=receiver,
                 )
             )
-            scope_frame = self._scope_assembler.feed(frame.data[1:], receiver)
+            scope_frame = self._host._scope_assembler.feed(frame.data[1:], receiver)
             if scope_frame is not None:
                 self._publish_scope_frame(scope_frame)
             return
@@ -425,245 +442,41 @@ class _CivRxMixin:
             event = CivEvent(type=CivEventType.NAK, frame=frame)
         else:
             event = CivEvent(type=CivEventType.RESPONSE, frame=frame)
-            # Update state cache for all RESPONSE frames (solicited and unsolicited).
             self._update_state_cache_from_frame(frame)
 
         self._publish_civ_event(event)
-        self._civ_request_tracker.resolve(event, generation=generation)
+        self._host._civ_request_tracker.resolve(event, generation=generation)
 
-    def _update_state_cache_from_frame(
-        self: "CivRuntimeHost", frame: CivFrame
-    ) -> None:
-        """Best-effort update of state cache from an incoming CI-V frame.
-
-        Called for every data RESPONSE event (both solicited query responses
-        and unsolicited frames sent by the radio on knob turns, mode changes,
-        etc.).  This is the ONLY place state gets updated from the radio.
-
-        The _on_state_change callback notifies the server so it can broadcast
-        events to WebSocket clients.
-        """
-        cache = self._state_cache
+    def _update_state_cache_from_frame(self, frame: CivFrame) -> None:
+        """Best-effort update of state cache from an incoming CI-V frame."""
+        host = self._host
         try:
-            if frame.command in (0x03, 0x00):  # frequency (response / unsolicited)
+            if frame.command in (0x03, 0x00):
+                # Frequency: 0x03 = response to GET, 0x00 = unsolicited (e.g. VFO knob)
                 freq = parse_frequency_response(frame)
-                old = cache.freq
-                logger.debug("civ-rx: freq=%d (cmd=0x%02X to=0x%02X) old=%d", freq, frame.command, frame.to_addr, old)
-                self._last_freq_hz = freq
-                cache.update_freq(freq)
-                # Always notify — cache may already be updated by set_frequency()
-                vfo = getattr(self, "_last_vfo", None) or "A"
-                self._notify_change("freq_changed", {"freq": freq, "vfo": vfo})
-            elif frame.command in (0x04, 0x01):  # mode (response / unsolicited)
-                mode, filt = parse_mode_response(frame)
-                # (previous mode/filter unused after refactor)
-                self._last_mode = mode
+                host._state_cache.update_freq(freq)
+                host._last_freq_hz = freq
+            elif frame.command in (0x04, 0x01):
+                mode_val, filt = parse_mode_response(frame)
+                host._state_cache.update_mode(mode_val.name, filt)
+                host._last_mode = mode_val
                 if filt is not None:
-                    self._filter_width = filt
-                cache.update_mode(mode.name, filt)
-                # Always notify — cache may already be updated by set_mode()
-                filt_str = f"FIL{filt}" if filt else ""
-                self._notify_change("mode_changed", {"mode": mode.name, "filter": filt_str})
-            elif frame.command == 0x15:  # meter readings
-                if frame.sub == 0x01 and frame.data:
-                    self._notify_change(
-                        "s_meter_sql_changed",
-                        {"receiver": frame.receiver, "open": bool(frame.data[0])},
-                    )
-                elif frame.sub == 0x07 and frame.data:
-                    self._notify_change("overflow_changed", {"on": bool(frame.data[0])})
-                elif len(frame.data) >= 2:
-                    sub = frame.sub
-                    # IC-7610 meters are BCD-encoded (0x0137 = 137, not 311)
-                    b0, b1 = frame.data[0], frame.data[1]
-                    raw = (b0 >> 4) * 1000 + (b0 & 0x0F) * 100 + (b1 >> 4) * 10 + (b1 & 0x0F)
-                    from .meter_cal import calibrate
-                    _METER_SUB = {
-                        0x02: "smeter", 0x11: "power", 0x12: "swr",
-                        0x13: "alc", 0x14: "comp",
-                        0x15: "vd", 0x16: "id",
-                    }
-                    meter_type = _METER_SUB.get(sub)
-                    if meter_type:
-                        cal = calibrate(meter_type, raw)
-                        self._notify_change("meter", {
-                            "type": meter_type, "raw": raw, "value": round(cal, 2),
-                        })
-                        # Update state cache for legacy API
-                        if sub == 0x02:
-                            cache.update_s_meter(raw)
-                        elif sub == 0x11:
-                            cache.update_rf_power(raw / 255.0)
-                        elif sub == 0x12:
-                            cache.update_swr(float(raw))
-                        elif sub == 0x13:
-                            cache.update_alc(float(raw))
-            elif frame.command == 0x14:  # levels (BCD-encoded, same as meters)
-                if len(frame.data) >= 2:
-                    b0, b1 = frame.data[0], frame.data[1]
-                    raw = (b0 >> 4) * 1000 + (b0 & 0x0F) * 100 + (b1 >> 4) * 10 + (b1 & 0x0F)
-                    if frame.sub == 0x0A:  # RF power level (set value)
-                        # 0-255 BCD = 0-100W linear for IC-7610
-                        watts = round(raw / 255 * 100)
-                        self._notify_change("power_level", {"raw": raw, "watts": watts})
-                    elif frame.sub == 0x02:  # RF gain
-                        cache.update_rf_gain(float(raw))
-                        self._notify_change("rf_gain", {"raw": raw})
-                    elif frame.sub == 0x01:  # AF level
-                        cache.update_af_level(float(raw))
-                        self._notify_change("af_level", {"raw": raw})
-                    elif frame.sub == 0x03:  # squelch
-                        self._notify_change("squelch", {"raw": raw})
-            elif frame.command == 0x11:  # attenuator
-                if frame.data:
-                    val = frame.data[0]
-                    old = cache.attenuator
-                    cache.update_attenuator(val)
-                    if val != old:
-                        self._notify_change("att_changed", {"db": val})
-            elif frame.command == 0x16:  # function settings (preamp/NB/NR/DIGI-SEL)
-                # IC-7610 responds with sub=0x00 or None, real sub-code in data[0], value in data[1]
-                sub = frame.sub or 0
+                    host._filter_width = filt
+            elif frame.command == 0x1C and frame.sub == 0x00 and frame.data:
+                host._state_cache.update_ptt(bool(frame.data[0]))
+            elif frame.command == 0x16:
                 data = frame.data
-                if sub == 0 and len(data) >= 2:
-                    sub = data[0]
-                    data = data[1:]
-                if data:
-                    val = data[0]
-                    if sub == 0x02:  # preamp
-                        old_pre = cache.preamp
-                        cache.update_preamp(val)
-                        if val != old_pre:
-                            self._notify_change("preamp_changed", {"level": val})
-                    elif sub == 0x12:
-                        self._notify_change("agc_changed", {"value": val})
-                    elif sub == 0x32:
-                        self._notify_change("audio_peak_filter_changed", {"value": val})
-                    elif sub == 0x22:  # NB
-                        self._notify_change("nb_changed", {"on": bool(val)})
-                    elif sub == 0x40:  # NR
-                        self._notify_change("nr_changed", {"on": bool(val)})
-                    elif sub == 0x41:
-                        self._notify_change("auto_notch_changed", {"on": bool(val)})
-                    elif sub == 0x44:
-                        self._notify_change("compressor_changed", {"on": bool(val)})
-                    elif sub == 0x45:
-                        self._notify_change("monitor_changed", {"on": bool(val)})
-                    elif sub == 0x46:
-                        self._notify_change("vox_changed", {"on": bool(val)})
-                    elif sub == 0x47:
-                        self._notify_change("break_in_changed", {"value": val})
-                    elif sub == 0x48:
-                        self._notify_change("manual_notch_changed", {"on": bool(val)})
-                    elif sub == 0x4E:  # DIGI-SEL
-                        self._notify_change("digisel_changed", {"on": bool(val)})
-                    elif sub == 0x4F:
-                        self._notify_change("twin_peak_filter_changed", {"on": bool(val)})
-                    elif sub == 0x50:
-                        self._notify_change("dial_lock_changed", {"on": bool(val)})
-                    elif sub == 0x56:
-                        self._notify_change("filter_shape_changed", {"value": val})
-                    elif sub == 0x58:
-                        self._notify_change("ssb_tx_bandwidth_changed", {"value": val})
-                    elif sub == 0x5E:
-                        self._notify_change("main_sub_tracking_changed", {"on": bool(val)})
-                    elif sub == 0x65:  # IP+
-                        self._notify_change("ipplus_changed", {"on": bool(val)})
-            elif frame.command == 0x27:
-                if frame.sub == 0x12:
-                    self._notify_change(
-                        "scope_receiver_changed",
-                        {"receiver": parse_scope_main_sub_response(frame)},
-                    )
-                elif frame.sub == 0x13:
-                    self._notify_change(
-                        "scope_dual_changed",
-                        {"dual": parse_scope_single_dual_response(frame)},
-                    )
-                elif frame.sub == 0x14:
-                    receiver, mode = parse_scope_mode_response(frame)
-                    self._notify_change(
-                        "scope_mode_changed",
-                        {"receiver": receiver, "mode": mode},
-                    )
-                elif frame.sub == 0x15:
-                    receiver, span = parse_scope_span_response(frame)
-                    self._notify_change(
-                        "scope_span_changed",
-                        {"receiver": receiver, "span": span},
-                    )
-                elif frame.sub == 0x16:
-                    receiver, edge = parse_scope_edge_response(frame)
-                    self._notify_change(
-                        "scope_edge_changed",
-                        {"receiver": receiver, "edge": edge},
-                    )
-                elif frame.sub == 0x17:
-                    receiver, hold = parse_scope_hold_response(frame)
-                    self._notify_change(
-                        "scope_hold_changed",
-                        {"receiver": receiver, "on": hold},
-                    )
-                elif frame.sub == 0x19:
-                    receiver, ref_db = parse_scope_ref_response(frame)
-                    self._notify_change(
-                        "scope_ref_changed",
-                        {"receiver": receiver, "ref_db": ref_db},
-                    )
-                elif frame.sub == 0x1A:
-                    receiver, speed = parse_scope_speed_response(frame)
-                    self._notify_change(
-                        "scope_speed_changed",
-                        {"receiver": receiver, "speed": speed},
-                    )
-                elif frame.sub == 0x1B:
-                    self._notify_change(
-                        "scope_during_tx_changed",
-                        {"on": parse_scope_during_tx_response(frame)},
-                    )
-                elif frame.sub == 0x1C:
-                    receiver, center_type = parse_scope_center_type_response(frame)
-                    self._notify_change(
-                        "scope_center_type_changed",
-                        {"receiver": receiver, "center_type": center_type},
-                    )
-                elif frame.sub == 0x1D:
-                    receiver, narrow = parse_scope_vbw_response(frame)
-                    self._notify_change(
-                        "scope_vbw_changed",
-                        {"receiver": receiver, "narrow": narrow},
-                    )
-                elif frame.sub == 0x1E:
-                    bounds = parse_scope_fixed_edge_response(frame)
-                    self._notify_change(
-                        "scope_fixed_edge_changed",
-                        {
-                            "range_index": bounds.range_index,
-                            "edge": bounds.edge,
-                            "start_hz": bounds.start_hz,
-                            "end_hz": bounds.end_hz,
-                        },
-                    )
-                elif frame.sub == 0x1F:
-                    receiver, rbw = parse_scope_rbw_response(frame)
-                    self._notify_change(
-                        "scope_rbw_changed",
-                        {"receiver": receiver, "rbw": rbw},
-                    )
-            elif frame.command == 0x1C and frame.sub == 0x00:  # PTT
-                if frame.data:
-                    val = bool(frame.data[0])
-                    cache.update_ptt(val)
-                    self._notify_change("ptt", {"state": val})
-            elif frame.command == 0x1C and frame.sub == 0x01:  # Tuner/ATU
-                if frame.data:
-                    self._notify_change("tuner_changed", {"status": frame.data[0]})
-            elif frame.command == 0x1C and frame.sub == 0x03:  # TX Freq Monitor
-                if frame.data:
-                    self._notify_change(
-                        "tx_freq_monitor_changed", {"on": bool(frame.data[0])}
-                    )
-            elif frame.command == 0x21:  # RIT
+                if data and frame.sub == 0x32:
+                    host._state_cache.filter_width = ((data[0] >> 4) & 0x0F) * 10 + (data[0] & 0x0F)
+            elif frame.command == 0x07 and frame.data and len(frame.data) >= 2:
+                sub07 = frame.data[0]
+                val07 = frame.data[1]
+                if sub07 == 0xD2:
+                    host._last_vfo = "SUB" if val07 else "MAIN"
+                elif sub07 == 0xC2:
+                    host._state_cache.dual_watch = bool(val07)
+                    self._notify_change("dual_watch_changed", {"on": bool(val07)})
+            elif frame.command == 0x21:
                 if frame.sub == 0x00 and len(frame.data) >= 3:
                     from .commands import parse_rit_frequency_response
                     hz = parse_rit_frequency_response(frame.data)
@@ -672,34 +485,22 @@ class _CivRxMixin:
                     self._notify_change("rit_changed", {"on": bool(frame.data[0])})
                 elif frame.sub == 0x02 and frame.data:
                     self._notify_change("rit_tx_changed", {"on": bool(frame.data[0])})
-            elif frame.command == 0x0E and frame.data:  # Scanning
+            elif frame.command == 0x0E and frame.data:
                 self._notify_change("scanning_changed", {"on": bool(frame.data[0])})
-            elif frame.command == 0x10 and frame.data:  # Tuning step
+            elif frame.command == 0x10 and frame.data:
                 b = frame.data[0]
                 step = ((b >> 4) & 0x0F) * 10 + (b & 0x0F)
                 self._notify_change("tuning_step_changed", {"step": step})
-            elif frame.command == 0x07 and frame.data and frame.data[0] == 0xC2 and len(frame.data) >= 2:
-                # Dual Watch status response
-                self._notify_change("dual_watch_changed", {"on": bool(frame.data[1])})
         except Exception:
-            logger.debug("civ-rx: cache update failed", exc_info=True)  # Best-effort; never let cache update break the RX loop
-        # Also update RadioState (additive, does not replace StateCache)
+            logger.debug("civ-rx: cache update failed", exc_info=True)
         self._update_radio_state_from_frame(frame)
 
-    def _update_radio_state_from_frame(
-        self: "CivRuntimeHost", frame: CivFrame
-    ) -> None:
-        """Update RadioState from a CI-V frame (additive alongside StateCache).
-
-        Called for every data RESPONSE frame.  Only runs when the radio has
-        ``_radio_state`` set (done by WebServer.start()).
-        """
-        rs: RadioState | None = getattr(self, "_radio_state", None)
+    def _update_radio_state_from_frame(self, frame: CivFrame) -> None:
+        """Update RadioState from a CI-V frame (additive alongside StateCache)."""
+        rs: "RadioState | None" = getattr(self._host, "_radio_state", None)
         if rs is None:
             return
         try:
-            # Determine which receiver to update.
-            # frame.receiver is set by parse_civ_frame for cmd29-wrapped frames.
             if frame.receiver is not None:
                 rx_name = "MAIN" if frame.receiver == 0x00 else "SUB"
             else:
@@ -709,11 +510,9 @@ class _CivRxMixin:
             cmd = frame.command
 
             if cmd in (0x03, 0x00):
-                # Frequency response / unsolicited transceive
                 rx.freq = parse_frequency_response(frame)
 
             elif cmd in (0x04, 0x01):
-                # Mode response / unsolicited transceive
                 from .types import Mode
                 mode_val, filt = parse_mode_response(frame)
                 rx.mode = mode_val.name
@@ -721,10 +520,6 @@ class _CivRxMixin:
                     rx.filter = filt
 
             elif cmd == 0x25:
-                # RX Frequency for dual-receiver
-                # Format: FE FE to from 25 receiver bcd[5] FD
-                # data[0] = receiver (0x00=MAIN, 0x01=SUB)
-                # data[1:6] = frequency in BCD (5 bytes, LE)
                 if len(frame.data) >= 6:
                     from .types import bcd_decode
                     rcvr_byte = frame.data[0]
@@ -732,10 +527,6 @@ class _CivRxMixin:
                     rs.receiver(which).freq = bcd_decode(frame.data[1:6])
 
             elif cmd == 0x26:
-                # RX Mode for dual-receiver
-                # Format: FE FE to from 26 receiver mode [data_mode] [filter] FD
-                # data[0] = receiver (0x00=MAIN, 0x01=SUB)
-                # data[1] = mode, data[2] = data_mode (optional), data[3] = filter (optional)
                 if len(frame.data) >= 2:
                     from .types import Mode
                     rcvr_byte = frame.data[0]
@@ -748,11 +539,9 @@ class _CivRxMixin:
                         tgt.filter = frame.data[3]
 
             elif cmd == 0x15:
-                # Meter readings — update s_meter on active receiver
                 if frame.sub == 0x01 and frame.data:
                     rx.s_meter_sql_open = bool(frame.data[0])
                 elif frame.sub == 0x05 and frame.data:
-                    # Various squelch (Command29-aware, per-receiver)
                     rx.s_meter_sql_open = bool(frame.data[0])
                 elif frame.sub == 0x07 and frame.data:
                     rs.overflow = bool(frame.data[0])
@@ -772,7 +561,6 @@ class _CivRxMixin:
                         rs.id_meter = raw
 
             elif cmd == 0x14:
-                # Level values (AF, RF gain, SQL, power) — BCD-encoded 2-byte
                 if len(frame.data) >= 2:
                     b0, b1 = frame.data[0], frame.data[1]
                     raw = (
@@ -794,14 +582,11 @@ class _CivRxMixin:
                         setattr(rs, _CMD14_GLOBAL_LEVEL_FIELDS[sub], raw)
 
             elif cmd == 0x11:
-                # Attenuator (BCD-encoded single byte: 0x18 = 18 dB)
                 if frame.data:
                     val = frame.data[0]
                     rx.att = ((val >> 4) & 0x0F) * 10 + (val & 0x0F)
 
             elif cmd == 0x16:
-                # Function settings (preamp, NB, NR, DIGI-SEL, IP+)
-                # IC-7610 may respond with sub=0x00/None, real sub in data[0]
                 sub = frame.sub or 0
                 data = frame.data
                 if sub == 0 and len(data) >= 2:
@@ -889,9 +674,6 @@ class _CivRxMixin:
                         bcd_bytes=1,
                     )
                 if sub == 0x03 and frame.data:
-                    # IC-7610: 1A 03 returns IF filter width code (e.g. 0x34),
-                    # NOT filter selector (1/2/3). Filter selector comes from
-                    # mode response (0x04/0x26). Do NOT update rx.filter here.
                     pass
                 elif sub == 0x05:
                     for prefix, (field, bcd_bytes) in _CMD1A_CTL_MEM_LEVEL_FIELDS.items():
@@ -914,24 +696,19 @@ class _CivRxMixin:
                     rx.af_mute = parse_bool_response(frame, command=0x1A, sub=0x09)
 
             elif cmd == 0x1C and frame.sub == 0x00:
-                # PTT (global)
                 if frame.data:
                     rs.ptt = bool(frame.data[0])
 
             elif cmd == 0x1C and frame.sub == 0x01:
-                # Tuner/ATU status (global)
                 if frame.data:
                     rs.tuner_status = frame.data[0]
 
             elif cmd == 0x1C and frame.sub == 0x03:
-                # TX frequency monitor on/off (global)
                 if frame.data:
                     rs.tx_freq_monitor = bool(frame.data[0])
 
             elif cmd == 0x21:
-                # RIT commands
                 if frame.sub == 0x00 and len(frame.data) >= 3:
-                    # RIT frequency offset (BCD + sign)
                     from .commands import parse_rit_frequency_response
                     rs.rit_freq = parse_rit_frequency_response(frame.data)
                 elif frame.sub == 0x01 and frame.data:
@@ -940,28 +717,23 @@ class _CivRxMixin:
                     rs.rit_tx = bool(frame.data[0])
 
             elif cmd == 0x0E:
-                # Scanning (global): 0x00=stopped, 0x01=started
                 if frame.data:
                     rs.scanning = bool(frame.data[0])
 
             elif cmd == 0x10:
-                # Tuning step (global): BCD-encoded single byte index
                 if frame.data:
                     b = frame.data[0]
                     rs.tuning_step = ((b >> 4) & 0x0F) * 10 + (b & 0x0F)
 
             elif cmd == 0x0F:
-                # Split (global)
                 if frame.data:
                     rs.split = bool(frame.data[0])
 
             elif cmd == 0x07:
-                # Active receiver / Dual Watch (global, sub encoded in data[0])
                 if len(frame.data) >= 2:
                     sub07 = frame.data[0]
                     val07 = frame.data[1]
                     if sub07 == 0xD2:
-                        # Active receiver: 0x00=MAIN, 0x01=SUB
                         new_active = "SUB" if val07 else "MAIN"
                         if rs.active != new_active:
                             rs.active = new_active
@@ -970,7 +742,6 @@ class _CivRxMixin:
                                 "active_receiver_changed", {"active": new_active}
                             )
                     elif sub07 == 0xC2:
-                        # Dual Watch: 0x00=off, 0x01=on
                         new_dw = bool(val07)
                         if rs.dual_watch != new_dw:
                             rs.dual_watch = new_dw
@@ -982,11 +753,11 @@ class _CivRxMixin:
                             )
 
         except Exception:
-            logger.debug("civ-rx: state update failed", exc_info=True)  # Best-effort; never break the RX loop
+            logger.debug("civ-rx: state update failed", exc_info=True)
 
-    def _notify_change(self: "CivRuntimeHost", event_name: str, data: dict) -> None:
+    def _notify_change(self, event_name: str, data: dict) -> None:
         """Notify server of state change (best-effort)."""
-        cb = getattr(self, "_on_state_change", None)
+        cb = getattr(self._host, "_on_state_change", None)
         if cb is not None:
             logger.debug("civ-rx: notify %s %s", event_name, data)
             try:
@@ -996,102 +767,72 @@ class _CivRxMixin:
         else:
             logger.debug("civ-rx: no callback for %s", event_name)
 
-    def _publish_scope_frame(self: "CivRuntimeHost", frame: ScopeFrame) -> None:
+    def _publish_scope_frame(self, frame: ScopeFrame) -> None:
         """Publish a complete scope frame to callback and bounded queue."""
         self._publish_civ_event(CivEvent(type=CivEventType.SCOPE_FRAME))
-        if self._scope_frame_queue.full():
+        if self._host._scope_frame_queue.full():
             try:
-                self._scope_frame_queue.get_nowait()
+                self._host._scope_frame_queue.get_nowait()
             except asyncio.QueueEmpty:
                 pass
-        self._scope_frame_queue.put_nowait(frame)
-        callback = self._scope_callback
+        self._host._scope_frame_queue.put_nowait(frame)
+        callback = self._host._scope_callback
         if callback is not None:
             try:
                 callback(frame)
             except Exception:
                 logger.exception("Scope callback raised an exception")
 
-    def _publish_civ_event(self: "CivRuntimeHost", event: CivEvent) -> None:
+    def _publish_civ_event(self, event: CivEvent) -> None:
         """Publish CI-V event to internal event queue (best effort)."""
-        if self._civ_event_queue.full():
+        if self._host._civ_event_queue.full():
             try:
-                self._civ_event_queue.get_nowait()
+                self._host._civ_event_queue.get_nowait()
             except asyncio.QueueEmpty:
                 pass
-        self._civ_event_queue.put_nowait(event)
+        self._host._civ_event_queue.put_nowait(event)
 
-    # ------------------------------------------------------------------
-    # CI-V worker (commander) lifecycle
-    # ------------------------------------------------------------------
-
-    def _start_civ_worker(self: "CivRuntimeHost") -> None:
-        """Start serialized CI-V commander (wfview-like queueing)."""
-        self._ensure_civ_runtime()
-        self._start_civ_rx_pump()
-        if self._commander is None:
-            self._commander = IcomCommander(
-                self._execute_civ_raw,
-                min_interval=self._civ_min_interval,
-            )
-        self._commander.start()
-
-    async def _stop_civ_worker(self: "CivRuntimeHost") -> None:
-        """Stop CI-V commander and fail pending commands."""
-        if self._commander is not None:
-            await self._commander.stop()
-
-    # ------------------------------------------------------------------
-    # CI-V send infrastructure
-    # ------------------------------------------------------------------
-
-    def _check_connected(self: "CivRuntimeHost") -> None:
+    def _check_connected(self) -> None:
         """Raise ConnectionError if not connected."""
-        ctrl = getattr(self, "_ctrl_transport", None)
+        ctrl = getattr(self._host, "_ctrl_transport", None)
         ctrl_alive = bool(ctrl and getattr(ctrl, "_udp_transport", None) is not None)
-        recovering = bool(getattr(self, "_civ_recovering", False))
-        if not self._connected or self._civ_transport is None:
-            # Allow API calls to enter recovery wait path when control
-            # session is still alive and CI-V is being re-established.
+        recovering = bool(getattr(self._host, "_civ_recovering", False))
+        if not self._host._connected or self._host._civ_transport is None:
             if ctrl_alive and recovering:
                 return
             raise ConnectionError("Not connected to radio")
 
     async def _wait_for_civ_transport_recovery(
-        self: "CivRuntimeHost", timeout: "float | None" = None
+        self, timeout: "float | None" = None
     ) -> None:
-        """Wait for CI-V transport recovery or trigger a fast soft-reconnect.
-
-        When control transport remains alive but CI-V transport is temporarily
-        down (watchdog recovery window), avoid failing commands immediately.
-        """
+        """Wait for CI-V transport recovery or trigger a fast soft-reconnect."""
         wait_timeout = (
             timeout
             if timeout is not None
-            else getattr(self, "_civ_recovery_wait_timeout", 12.0)
+            else getattr(self._host, "_civ_recovery_wait_timeout", 12.0)
         )
         deadline = time.monotonic() + max(0.5, float(wait_timeout))
         fast_attempted = False
 
         while time.monotonic() < deadline:
-            ctrl = getattr(self, "_ctrl_transport", None)
+            ctrl = getattr(self._host, "_ctrl_transport", None)
             ctrl_alive = bool(ctrl and getattr(ctrl, "_udp_transport", None) is not None)
             if not ctrl_alive:
                 raise ConnectionError("Not connected to radio")
 
-            civ_t = getattr(self, "_civ_transport", None)
-            if civ_t is not None and getattr(self, "_connected", False):
+            civ_t = getattr(self._host, "_civ_transport", None)
+            if civ_t is not None and getattr(self._host, "_connected", False):
                 return
 
             if civ_t is None and not fast_attempted:
                 fast_attempted = True
-                lock = getattr(self, "_civ_recovery_lock", None)
+                lock = getattr(self._host, "_civ_recovery_lock", None)
                 if isinstance(lock, asyncio.Lock):
                     async with lock:
-                        civ_t2 = getattr(self, "_civ_transport", None)
+                        civ_t2 = getattr(self._host, "_civ_transport", None)
                         if civ_t2 is None and ctrl_alive:
                             try:
-                                await self.soft_reconnect()
+                                await self._host.soft_reconnect()
                             except Exception:
                                 logger.debug(
                                     "Fast CI-V soft_reconnect attempt failed",
@@ -1099,7 +840,7 @@ class _CivRxMixin:
                                 )
                 else:
                     try:
-                        await self.soft_reconnect()
+                        await self._host.soft_reconnect()
                     except Exception:
                         logger.debug(
                             "Fast CI-V soft_reconnect attempt failed",
@@ -1110,26 +851,26 @@ class _CivRxMixin:
 
         raise TimeoutError("CI-V transport recovery timed out")
 
-    def _wrap_civ(self: "CivRuntimeHost", civ_frame: bytes) -> bytes:
+    def _wrap_civ(self, civ_frame: bytes) -> bytes:
         """Wrap a CI-V frame in a UDP data packet for the CI-V port."""
         import struct
 
-        assert self._civ_transport is not None
+        assert self._host._civ_transport is not None
         total_len = CIV_HEADER_SIZE + len(civ_frame)
         pkt = bytearray(total_len)
         struct.pack_into("<I", pkt, 0, total_len)
-        struct.pack_into("<H", pkt, 4, 0x00)  # type = DATA
-        struct.pack_into("<I", pkt, 8, self._civ_transport.my_id)
-        struct.pack_into("<I", pkt, 0x0C, self._civ_transport.remote_id)
-        pkt[0x10] = 0xC1  # reply marker for CI-V data
+        struct.pack_into("<H", pkt, 4, 0x00)
+        struct.pack_into("<I", pkt, 8, self._host._civ_transport.my_id)
+        struct.pack_into("<I", pkt, 0x0C, self._host._civ_transport.remote_id)
+        pkt[0x10] = 0xC1
         struct.pack_into("<H", pkt, 0x11, len(civ_frame))
-        struct.pack_into(">H", pkt, 0x13, self._civ_send_seq)
-        self._civ_send_seq = (self._civ_send_seq + 1) & 0xFFFF
+        struct.pack_into(">H", pkt, 0x13, self._host._civ_send_seq)
+        self._host._civ_send_seq = (self._host._civ_send_seq + 1) & 0xFFFF
         pkt[CIV_HEADER_SIZE:] = civ_frame
         return bytes(pkt)
 
     async def _send_civ_raw(
-        self: "CivRuntimeHost",
+        self,
         civ_frame: bytes,
         *,
         priority: Priority = Priority.NORMAL,
@@ -1139,19 +880,18 @@ class _CivRxMixin:
         timeout: "float | None" = None,
     ) -> "CivFrame | None":
         """Enqueue a CI-V command and wait for its response."""
-        if self._civ_transport is None or not self._connected:
+        if self._host._civ_transport is None or not self._host._connected:
             await self._wait_for_civ_transport_recovery(timeout=timeout)
-        assert self._civ_transport is not None
+        assert self._host._civ_transport is not None
         self._ensure_civ_runtime()
 
-        if self._commander is None:
-            # Fallback path (e.g. during tests/mocks before queue init).
+        if self._host._commander is None:
             coro = self._execute_civ_raw(civ_frame, wait_response=wait_response)
             if timeout is not None:
                 return await asyncio.wait_for(coro, timeout=timeout)
             return await coro
 
-        return await self._commander.send(
+        return await self._host._commander.send(
             civ_frame,
             priority=priority,
             key=key,
@@ -1166,91 +906,75 @@ class _CivRxMixin:
         if frame.command in (0x03, 0x04):
             return True
         if frame.command == 0x07 and frame.data == b"\xc2":
-            # Dual-watch query (0x07 0xC2) expects a data response with on/off.
             return True
         if frame.command == 0x1A and frame.sub == 0x05 and len(frame.data) == 2:
-            # Selector-style config register GETs use 1A 05 <reg_hi> <reg_lo>.
             return True
         if frame.command == 0x17:
             return False
         if frame.command == 0x27:
-            # Scope GETs have empty data.  SET commands always carry a payload.
-            # Note: receiver-prefixed GETs (e.g. get_scope_mode(receiver=0))
-            # produce data=b"\x00" which is ambiguous with SET values.
-            # IcomRadio methods always use receiver=None for GETs, so empty
-            # data is sufficient.  If receiver-prefixed GETs are ever used
-            # directly, pass wait_response=True to _send_civ_raw.
             return len(frame.data) == 0
-        # If no further payload beyond command/sub is included, it's typically a GET
         return len(frame.data) == 0
 
-    async def _drain_ack_sinks_before_blocking(self: "CivRuntimeHost") -> None:
-        """Give fire-and-forget ACK sinks a short chance to drain, then clear stale ones.
-
-        This prevents a missing ACK from poisoning the ACK waiter queue for the
-        next blocking command.
-        """
-        if self._civ_request_tracker.ack_sink_count == 0:
+    async def _drain_ack_sinks_before_blocking(self) -> None:
+        """Give fire-and-forget ACK sinks a short chance to drain."""
+        if self._host._civ_request_tracker.ack_sink_count == 0:
             return
 
-        deadline = time.monotonic() + self._civ_ack_sink_grace
+        deadline = time.monotonic() + self._host._civ_ack_sink_grace
         while (
-            self._civ_request_tracker.ack_sink_count > 0
+            self._host._civ_request_tracker.ack_sink_count > 0
             and time.monotonic() < deadline
         ):
             await asyncio.sleep(0.005)
 
-        dropped = self._civ_request_tracker.drop_ack_sinks()
+        dropped = self._host._civ_request_tracker.drop_ack_sinks()
         if dropped:
             logger.debug(
                 "Dropped %d stale ACK sink waiter(s) before blocking command", dropped
             )
 
     async def _execute_civ_raw(
-        self: "CivRuntimeHost",
+        self,
         civ_frame: bytes,
         wait_response: bool = True,
         deadline_monotonic: "float | None" = None,
     ) -> "CivFrame | None":
         """Execute one CI-V command via request tracker (serialized by worker)."""
-        assert self._civ_transport is not None
+        assert self._host._civ_transport is not None
         self._ensure_civ_runtime()
 
         parsed_frame = parse_civ_frame(civ_frame)
         request_key = request_key_from_frame(parsed_frame)
         expects_response = self._civ_expects_response(parsed_frame)
         if deadline_monotonic is None:
-            deadline_monotonic = time.monotonic() + self._civ_get_timeout
+            deadline_monotonic = time.monotonic() + self._host._civ_get_timeout
 
         self._cleanup_stale_civ_waiters()
 
         if not wait_response:
             ack_sink_token: "int | None" = None
 
-            # Fire-and-forget: sink the ACK so it doesn't shift the queue.
             if not expects_response:
-                token_or_future = self._civ_request_tracker.register_ack(wait=False)
+                token_or_future = self._host._civ_request_tracker.register_ack(wait=False)
                 if isinstance(token_or_future, int):
                     ack_sink_token = token_or_future
 
-            # Ensure RX pump is running for event routing.
-            self._start_civ_rx_pump()
+            self.start_pump()
 
-            # Rate limit applies to fire-and-forget as well
             now = time.monotonic()
-            delta = now - self._last_civ_send_monotonic
-            if delta < self._civ_min_interval:
-                await asyncio.sleep(self._civ_min_interval - delta)
+            delta = now - self._host._last_civ_send_monotonic
+            if delta < self._host._civ_min_interval:
+                await asyncio.sleep(self._host._civ_min_interval - delta)
 
             pkt = self._wrap_civ(civ_frame)
             try:
-                await self._civ_transport.send_tracked(pkt)
+                await self._host._civ_transport.send_tracked(pkt)
             except Exception:
                 if ack_sink_token is not None:
-                    self._civ_request_tracker.unregister_ack_sink(ack_sink_token)
+                    self._host._civ_request_tracker.unregister_ack_sink(ack_sink_token)
                 raise
 
-            self._last_civ_send_monotonic = time.monotonic()
+            self._host._last_civ_send_monotonic = time.monotonic()
             return None
 
         await self._drain_ack_sinks_before_blocking()
@@ -1261,27 +985,24 @@ class _CivRxMixin:
 
         pending: "asyncio.Future[CivFrame] | None" = None
         try:
-            # Register future BEFORE starting RX pump / sending.
             if expects_response:
-                pending = self._civ_request_tracker.register_response(request_key)
+                pending = self._host._civ_request_tracker.register_response(request_key)
             else:
-                pending_or_token = self._civ_request_tracker.register_ack(wait=True)
+                pending_or_token = self._host._civ_request_tracker.register_ack(wait=True)
                 if isinstance(pending_or_token, int):
                     raise RuntimeError("ACK waiter registration returned sink token")
                 pending = pending_or_token
 
-            # Ensure RX pump is running for event routing.
-            self._start_civ_rx_pump()
+            self.start_pump()
 
-            # Rate-limit CI-V commands slightly (wfview-like pacing).
             now = time.monotonic()
-            delta = now - self._last_civ_send_monotonic
-            if delta < self._civ_min_interval:
-                await asyncio.sleep(self._civ_min_interval - delta)
+            delta = now - self._host._last_civ_send_monotonic
+            if delta < self._host._civ_min_interval:
+                await asyncio.sleep(self._host._civ_min_interval - delta)
 
             pkt = self._wrap_civ(civ_frame)
-            await self._civ_transport.send_tracked(pkt)
-            self._last_civ_send_monotonic = time.monotonic()
+            await self._host._civ_transport.send_tracked(pkt)
+            self._host._last_civ_send_monotonic = time.monotonic()
             assert pending is not None
             remaining = deadline_monotonic - time.monotonic()
             if remaining <= 0:
@@ -1289,7 +1010,7 @@ class _CivRxMixin:
             try:
                 return await asyncio.wait_for(pending, timeout=remaining)
             except asyncio.TimeoutError:
-                self._civ_request_tracker.note_timeout()
+                self._host._civ_request_tracker.note_timeout()
                 logger.debug(
                     "CI-V command 0x%02X timed out",
                     request_key.command,
@@ -1297,4 +1018,5 @@ class _CivRxMixin:
                 raise TimeoutError("CI-V response timed out")
         finally:
             if pending is not None:
-                self._civ_request_tracker.unregister(pending)
+                self._host._civ_request_tracker.unregister(pending)
+
