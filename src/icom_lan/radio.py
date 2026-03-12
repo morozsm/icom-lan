@@ -309,14 +309,14 @@ from .types import (
 
 # Import split modules
 from ._connection_state import RadioConnectionState
-from ._audio_recovery import AudioRecoveryState, _AudioRecoveryMixin
-from ._civ_rx import _CivRxMixin
+from ._audio_recovery import AudioRecoveryRuntime, AudioRecoveryState
+from ._civ_rx import CivRuntime
 from ._control_phase import (
     CONNINFO_SIZE,  # noqa: F401 (re-export for tests)
+    ControlPhaseRuntime,
     OPENCLOSE_SIZE,  # noqa: F401 (re-export for tests)
     STATUS_SIZE,  # noqa: F401 (re-export for tests)
     TOKEN_ACK_SIZE,  # noqa: F401 (re-export for tests)
-    _ControlPhaseMixin,
 )
 
 __all__ = [
@@ -340,7 +340,7 @@ _DEFAULT_AUDIO_SAMPLE_RATE = _AUDIO_CAPABILITIES.default_sample_rate_hz
 _DEFAULT_CACHE_TTL: dict[str, float] = {"freq": 10.0, "mode": 10.0, "rf_power": 30.0}
 
 
-class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
+class Icom7610CoreRadio:
     """High-level async interface for controlling an Icom transceiver over LAN.
 
     Manages two UDP connections:
@@ -362,6 +362,14 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
             freq = await radio.get_frequency()
             await radio.set_frequency(7_074_000)
     """
+
+    # Watchdog timing (used by _watchdog_loop; were on _ControlPhaseMixin)
+    WATCHDOG_CHECK_INTERVAL = 0.5
+    _WATCHDOG_HEALTH_LOG_INTERVAL = 30.0
+
+    def _stop_token_renewal(self) -> None:
+        """Delegate to control-phase runtime."""
+        self._control_phase._stop_token_renewal()
 
     def __init__(
         self,
@@ -449,6 +457,7 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         self._scope_assembler: ScopeAssembler = ScopeAssembler()
         self._scope_callback: Callable[[ScopeFrame], Any] | None = None
         self._civ_rx_task: asyncio.Task[None] | None = None
+        self._civ_data_watchdog_task: asyncio.Task[None] | None = None
         self._civ_request_tracker = CivRequestTracker()
         self._civ_epoch = self._civ_request_tracker.generation
         self._scope_frame_queue: asyncio.Queue[ScopeFrame] = asyncio.Queue(maxsize=64)
@@ -481,6 +490,10 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         # GET commands use a shorter timeout than the general connection timeout.
         # wfview-style: send once, short deadline, fall back to cache.
         self._civ_get_timeout: float = min(timeout, 2.0)
+        # Composed runtimes (P0 decomposition); order: civ first so control_phase can call it.
+        self._civ_runtime: CivRuntime = CivRuntime(self)
+        self._control_phase: ControlPhaseRuntime = ControlPhaseRuntime(self)
+        self._audio_runtime: AudioRecoveryRuntime = AudioRecoveryRuntime(self)
 
     def __del__(self) -> None:
         """Emit WARN if instance is collected while still connected (forgotten teardown)."""
@@ -806,6 +819,13 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         """
         return self._civ_request_tracker.snapshot_stats()
 
+    async def connect(self) -> None:
+        """Open connection to the radio and authenticate.
+
+        Delegates to the composed ControlPhaseRuntime.
+        """
+        await self._control_phase.connect()
+
     async def __aenter__(self) -> "Icom7610CoreRadio":
         await self.connect()
         return self
@@ -815,46 +835,7 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
 
     async def disconnect(self) -> None:
         """Cleanly disconnect from the radio."""
-        if self._conn_state == RadioConnectionState.CONNECTED:
-            self._conn_state = RadioConnectionState.DISCONNECTING
-            self._advance_civ_generation("disconnect")
-            self._stop_watchdog()
-            self._stop_reconnect()
-            self._stop_token_renewal()
-            # Stop audio streams
-            if self._audio_stream is not None:
-                await self._audio_stream.stop_rx()
-                await self._audio_stream.stop_tx()
-                self._audio_stream = None
-            self._pcm_tx_fmt = None
-            self._pcm_rx_user_callback = None
-            self._opus_rx_user_callback = None
-            if self._audio_transport is not None:
-                try:
-                    await self._send_audio_open_close(open_stream=False)
-                except Exception:
-                    logger.debug("disconnect: audio open/close failed", exc_info=True)
-                await self._audio_transport.disconnect()
-                self._audio_transport = None
-            if self._civ_transport:
-                try:
-                    await self._send_open_close(open_stream=False)
-                except Exception:
-                    logger.debug("disconnect: civ open/close failed", exc_info=True)
-                await self._stop_civ_data_watchdog()
-                await self._stop_civ_worker()
-                await self._stop_civ_rx_pump()
-                await self._civ_transport.disconnect()
-                self._civ_transport = None
-            try:
-                await self._send_token(0x01)
-            except Exception:
-                logger.debug("disconnect: token remove failed", exc_info=True)
-            await self._ctrl_transport.disconnect()
-            self._conn_state = RadioConnectionState.DISCONNECTED
-            self._civ_stream_ready = False
-            self._civ_recovering = False
-            logger.info("Disconnected from %s:%d", self._host, self._port)
+        await self._control_phase.disconnect()
 
     async def soft_disconnect(self) -> None:
         """Disconnect CI-V and audio but keep control transport alive.
@@ -865,7 +846,7 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         if self._conn_state != RadioConnectionState.CONNECTED:
             return
         self._conn_state = RadioConnectionState.DISCONNECTING
-        self._advance_civ_generation("soft_disconnect")
+        self._civ_runtime.advance_generation("soft_disconnect")
 
         # Stop audio
         if self._audio_stream is not None:
@@ -889,9 +870,9 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
                 await self._send_open_close(open_stream=False)
             except Exception:
                 logger.debug("soft_disconnect: civ open/close failed", exc_info=True)
-            await self._stop_civ_data_watchdog()
-            await self._stop_civ_worker()
-            await self._stop_civ_rx_pump()
+            await self._civ_runtime.stop_data_watchdog()
+            await self._civ_runtime.stop_worker()
+            await self._civ_runtime.stop_pump()
             await self._civ_transport.disconnect()
             self._civ_transport = None
 
@@ -907,9 +888,9 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
         fails or state is inconsistent (e.g. after struct overflow crash).
         """
         logger.info("force_cleanup_civ: tearing down CI-V unconditionally")
-        await self._stop_civ_data_watchdog()
-        await self._stop_civ_worker()
-        await self._stop_civ_rx_pump()
+        await self._civ_runtime.stop_data_watchdog()
+        await self._civ_runtime.stop_worker()
+        await self._civ_runtime.stop_pump()
         if self._civ_transport is not None:
             try:
                 await self._civ_transport.disconnect()
@@ -931,65 +912,62 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
     async def soft_reconnect(self) -> None:
         """Reconnect CI-V transport using existing control session.
 
-        Skips discovery and authentication — reuses the existing control
-        transport and token. Only re-opens the CI-V data stream.
+        Delegates to the composed ControlPhaseRuntime.
         """
-        if self._civ_transport is not None:
-            logger.warning("soft_reconnect: CI-V transport already open")
-            return
-        if not self._ctrl_transport or not self._ctrl_transport._udp_transport:
-            # Control transport dead — need full connect
-            logger.info("soft_reconnect: control transport gone, doing full connect")
-            await self.connect()
-            return
+        await self._control_phase.soft_reconnect()
 
-        self._conn_state = RadioConnectionState.CONNECTING
-        self._civ_stream_ready = False
-        self._civ_recovering = True
+    async def _send_open_close(self, *, open_stream: bool) -> None:
+        """Delegate to control-phase runtime (for soft_disconnect, _force_cleanup_civ, etc.)."""
+        await self._control_phase._send_open_close(open_stream=open_stream)
 
-        # Re-open CI-V transport (reuse known port)
-        from .transport import IcomTransport
-        self._civ_transport = IcomTransport()
-        try:
-            await self._civ_transport.connect(
-                self._host, self._civ_port,
-                local_port=getattr(self, "_civ_local_port", 0),
-            )
-        except OSError as exc:
-            self._civ_transport = None
-            self._conn_state = (
-                RadioConnectionState.RECONNECTING
-                if self.control_connected
-                else RadioConnectionState.DISCONNECTED
-            )
-            self._civ_stream_ready = False
-            self._civ_recovering = self.control_connected
-            raise ConnectionError(f"Failed to reconnect CI-V: {exc}") from exc
+    def _check_connected(self) -> None:
+        """Delegate to CI-V runtime (raises ConnectionError if not connected)."""
+        self._civ_runtime._check_connected()
 
-        self._civ_transport.start_ping_loop()
-        self._civ_transport.start_retransmit_loop()
-        # ⚠️ DO NOT REMOVE — see _control_phase.py comment (2026-03-02)
-        self._civ_transport.start_idle_loop()
-        await self._send_open_close(open_stream=True)
+    async def _execute_civ_raw(
+        self,
+        civ_frame: bytes,
+        wait_response: bool = True,
+        deadline_monotonic: float | None = None,
+    ) -> CivFrame | None:
+        """Delegate to CI-V runtime (for tests and internal callers)."""
+        return await self._civ_runtime.execute_civ_raw(
+            civ_frame,
+            wait_response=wait_response,
+            deadline_monotonic=deadline_monotonic,
+        )
 
-        self._advance_civ_generation("soft_reconnect")
-        self._civ_last_waiter_gc_monotonic = __import__("time").monotonic()
-        # Force-restart rx pump (old task may be lingering)
-        await self._stop_civ_rx_pump()
-        self._start_civ_rx_pump()
-        self._conn_state = RadioConnectionState.CONNECTED
-        self._civ_transport._udp_error_count = 0  # reset error count after successful reconnect
-        # Reset watchdog timestamp so it doesn't immediately trigger
-        self._last_civ_data_received = __import__("time").monotonic()
-        self._start_civ_worker()
-        self._start_civ_data_watchdog()
-        logger.info("Soft reconnect to %s (civ=%d)", self._host, self._civ_port)
-        # Notify server to re-enable scope/audio after CI-V stream reset
-        if self._on_reconnect is not None:
-            try:
-                self._on_reconnect()
-            except Exception:
-                logger.debug("soft_reconnect: _on_reconnect callback failed", exc_info=True)
+    def _update_state_cache_from_frame(self, frame: CivFrame) -> None:
+        """Delegate to CI-V runtime (for tests that feed unsolicited frames)."""
+        self._civ_runtime._update_state_cache_from_frame(frame)
+
+    async def _send_civ_raw(
+        self,
+        civ_frame: bytes,
+        *,
+        priority: Priority = Priority.NORMAL,
+        key: str | None = None,
+        dedupe: bool = False,
+        wait_response: bool = True,
+        timeout: float | None = None,
+    ) -> CivFrame | None:
+        """Delegate to CI-V runtime (keeps existing call sites unchanged)."""
+        return await self._civ_runtime.send_civ_raw(
+            civ_frame,
+            priority=priority,
+            key=key,
+            dedupe=dedupe,
+            wait_response=wait_response,
+            timeout=timeout,
+        )
+
+    async def _send_audio_open_close(self, *, open_stream: bool) -> None:
+        """Delegate to control-phase runtime."""
+        await self._control_phase._send_audio_open_close(open_stream=open_stream)
+
+    async def _send_token(self, magic: int) -> None:
+        """Delegate to control-phase runtime."""
+        await self._control_phase._send_token(magic)
 
     # ------------------------------------------------------------------
     # Watchdog & reconnect loops
@@ -1046,7 +1024,7 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
                         idle,
                     )
                     self._conn_state = RadioConnectionState.RECONNECTING
-                    self._advance_civ_generation("watchdog-timeout")
+                    self._civ_runtime.advance_generation("watchdog-timeout")
                     self._reconnect_task = asyncio.create_task(self._reconnect_loop())
                     return
         except asyncio.CancelledError:
@@ -1061,9 +1039,9 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
                 attempt += 1
                 logger.info("Reconnect attempt %d (delay=%.1fs)", attempt, delay)
                 try:
-                    self._advance_civ_generation("reconnect-attempt")
+                    self._civ_runtime.advance_generation("reconnect-attempt")
                     # Capture audio state for auto-recovery.
-                    audio_snapshot = self._capture_audio_snapshot()
+                    audio_snapshot = self._audio_runtime.capture_snapshot()
                     # Clean up old transports
                     self._stop_token_renewal()
                     if self._audio_stream is not None:
@@ -1101,7 +1079,7 @@ class Icom7610CoreRadio(_ControlPhaseMixin, _CivRxMixin, _AudioRecoveryMixin):
                         "Reconnected successfully after %d attempts", attempt
                     )
                     if self._auto_recover_audio and audio_snapshot is not None:
-                        await self._recover_audio(audio_snapshot)
+                        await self._audio_runtime.recover(audio_snapshot)
                     return
                 except Exception as exc:
                     self._conn_state = RadioConnectionState.RECONNECTING

@@ -1,11 +1,11 @@
-"""Internal runtime host Protocols for mixins.
+"""Internal runtime host Protocols (P0 decomposition).
 
-These Protocols describe the attributes and helper methods expected from
-the concrete radio runtime that mixes in internal helpers such as
-``_CivRxMixin``, ``_ControlPhaseMixin``, and ``_AudioRecoveryMixin``.
+These Protocols describe the attributes and methods that the composed
+runtimes (CivRuntime, ControlPhaseRuntime, AudioRecoveryRuntime) expect
+from their host (Icom7610CoreRadio). State remains on the host; runtimes
+access it via self._host.
 
-They are intentionally not part of the public API and exist purely to make
-cross-mixin coupling explicit and type-safe.
+They are not part of the public API.
 """
 
 from __future__ import annotations
@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from .audio import AudioPacket, AudioState, AudioStream
     from .civ import CivEvent, CivRequestTracker
     from .commander import IcomCommander
+    from ._civ_rx import CivRuntime
     from .rigctld.state_cache import StateCache
     from .radio_state import RadioState
     from .scope import ScopeAssembler, ScopeFrame
@@ -32,7 +33,7 @@ __all__ = [
 
 
 class CivRuntimeHost(Protocol):
-    """Host interface required by ``_CivRxMixin``."""
+    """Host interface required by CivRuntime."""
 
     # CI-V transport and commander
     _civ_transport: "IcomTransport | None"
@@ -102,21 +103,6 @@ class CivRuntimeHost(Protocol):
     async def _send_open_close(self, *, open_stream: bool) -> None:
         ...
 
-    def _ensure_civ_runtime(self) -> None:
-        ...
-
-    def _start_civ_rx_pump(self) -> None:
-        ...
-
-    async def _stop_civ_rx_pump(self) -> None:
-        ...
-
-    def _start_civ_worker(self) -> None:
-        ...
-
-    async def _stop_civ_worker(self) -> None:
-        ...
-
 
 class ControlPhaseHost(Protocol):
     """Host interface required by ``_ControlPhaseMixin``."""
@@ -166,33 +152,15 @@ class ControlPhaseHost(Protocol):
     TOKEN_RENEWAL_INTERVAL: float
     TOKEN_PACKET_SIZE: int
 
-    # CI-V flags shared with CIV runtime
+    # CI-V flags shared with CivRuntime
     _civ_stream_ready: bool
     _civ_recovering: bool
     _civ_last_waiter_gc_monotonic: float
 
-    # Helpers provided by the host or mixins
-    def _advance_civ_generation(self, reason: str) -> None:
-        ...
+    # Composed CI-V runtime (host delegates to it for pump/watchdog/worker)
+    _civ_runtime: "CivRuntime"
 
-    def _start_civ_rx_pump(self) -> None:
-        ...
-
-    def _start_civ_data_watchdog(self) -> None:
-        ...
-
-    def _start_civ_worker(self) -> None:
-        ...
-
-    async def _stop_civ_data_watchdog(self) -> None:
-        ...
-
-    async def _stop_civ_worker(self) -> None:
-        ...
-
-    async def _stop_civ_rx_pump(self) -> None:
-        ...
-
+    # Control-phase internal helpers
     def _start_token_renewal(self) -> None:
         ...
 
@@ -210,7 +178,7 @@ class ControlPhaseHost(Protocol):
 
 
 class AudioRuntimeHost(Protocol):
-    """Host interface required by ``_AudioRecoveryMixin``."""
+    """Host interface required by AudioRecoveryRuntime."""
 
     # Audio transports and stream
     _audio_transport: "IcomTransport | None"
