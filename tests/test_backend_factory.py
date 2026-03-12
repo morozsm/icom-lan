@@ -9,7 +9,11 @@ import pytest
 from icom_lan import IcomRadio, create_radio
 from icom_lan.backends.config import LanBackendConfig, SerialBackendConfig
 from icom_lan.backends.icom7610 import Icom7610SerialRadio
-from icom_lan.backends.icom7610.drivers.contracts import AudioDriver, CivLink, SessionDriver
+from icom_lan.backends.icom7610.drivers.contracts import (
+    AudioDriver,
+    CivLink,
+    SessionDriver,
+)
 
 
 class TestBackendConfigValidation:
@@ -57,7 +61,9 @@ class TestBackendConfigValidation:
 
 class TestCreateRadioFactory:
     def test_create_radio_builds_lan_backend(self) -> None:
-        radio = create_radio(LanBackendConfig(host="192.168.55.40", username="u", password="p"))
+        radio = create_radio(
+            LanBackendConfig(host="192.168.55.40", username="u", password="p")
+        )
         assert isinstance(radio, IcomRadio)
         assert radio.model == "IC-7610"
 

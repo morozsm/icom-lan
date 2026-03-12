@@ -176,9 +176,7 @@ class ControlHandler:
         await self._send_hello()
         if self._server is not None:
             self._server.register_control_event_queue(self._event_queue)
-        event_task: asyncio.Task[None] = asyncio.create_task(
-            self._event_sender_loop()
-        )
+        event_task: asyncio.Task[None] = asyncio.create_task(self._event_sender_loop())
         try:
             while True:
                 opcode, payload = await self._ws.recv()
@@ -206,7 +204,10 @@ class ControlHandler:
                 elif msg_type == "state_update":
                     # Always forward state updates (clients need fresh state)
                     await self._send_json(event)
-                elif "state" in self._subscribed_streams or "events" in self._subscribed_streams:
+                elif (
+                    "state" in self._subscribed_streams
+                    or "events" in self._subscribed_streams
+                ):
                     await self._send_json(event)
         except asyncio.CancelledError:
             pass
@@ -299,8 +300,15 @@ class ControlHandler:
         logger.info("radio_connect requested")
         msg_id = msg.get("id", "")
         if self._radio is None:
-            await self._send_json({"type": "response", "id": msg_id, "ok": False,
-                                   "error": "no_radio", "message": "no radio instance"})
+            await self._send_json(
+                {
+                    "type": "response",
+                    "id": msg_id,
+                    "ok": False,
+                    "error": "no_radio",
+                    "message": "no radio instance",
+                }
+            )
             return
         if self._backend_recovering():
             await self._send_json(
@@ -315,10 +323,17 @@ class ControlHandler:
             return
         try:
             if self._radio.connected:
-                await self._send_json({"type": "response", "id": msg_id, "ok": True,
-                                       "result": {"status": "already_connected"}})
+                await self._send_json(
+                    {
+                        "type": "response",
+                        "id": msg_id,
+                        "ok": True,
+                        "result": {"status": "already_connected"},
+                    }
+                )
                 return
             from ..radio_protocol import RecoverableConnection
+
             if isinstance(self._radio, RecoverableConnection):
                 recoverable = cast(RecoverableConnection, self._radio)
                 try:
@@ -328,45 +343,90 @@ class ControlHandler:
                     await self._radio.connect()
             else:
                 await self._radio.connect()
-            await self._send_json({"type": "response", "id": msg_id, "ok": True,
-                                   "result": {"status": "connected"}})
+            await self._send_json(
+                {
+                    "type": "response",
+                    "id": msg_id,
+                    "ok": True,
+                    "result": {"status": "connected"},
+                }
+            )
             await self._broadcast_connection_state(True)
         except Exception as exc:
             logger.warning("radio_connect failed: %s", exc)
-            await self._send_json({"type": "response", "id": msg_id, "ok": False,
-                                   "error": "connect_failed", "message": str(exc)})
+            await self._send_json(
+                {
+                    "type": "response",
+                    "id": msg_id,
+                    "ok": False,
+                    "error": "connect_failed",
+                    "message": str(exc),
+                }
+            )
 
     async def _handle_radio_disconnect(self, msg: dict[str, Any]) -> None:
         """Handle radio_disconnect request — disconnect the radio."""
         logger.info("radio_disconnect requested")
         msg_id = msg.get("id", "")
         if self._radio is None:
-            await self._send_json({"type": "response", "id": msg_id, "ok": False,
-                                   "error": "no_radio", "message": "no radio instance"})
+            await self._send_json(
+                {
+                    "type": "response",
+                    "id": msg_id,
+                    "ok": False,
+                    "error": "no_radio",
+                    "message": "no radio instance",
+                }
+            )
             return
         try:
             if not self._radio.connected:
-                await self._send_json({"type": "response", "id": msg_id, "ok": True,
-                                       "result": {"status": "already_disconnected"}})
+                await self._send_json(
+                    {
+                        "type": "response",
+                        "id": msg_id,
+                        "ok": True,
+                        "result": {"status": "already_disconnected"},
+                    }
+                )
                 return
             from ..radio_protocol import RecoverableConnection
+
             if isinstance(self._radio, RecoverableConnection):
                 await cast(RecoverableConnection, self._radio).soft_disconnect()
             else:
                 await self._radio.disconnect()
-            await self._send_json({"type": "response", "id": msg_id, "ok": True,
-                                   "result": {"status": "disconnected"}})
+            await self._send_json(
+                {
+                    "type": "response",
+                    "id": msg_id,
+                    "ok": True,
+                    "result": {"status": "disconnected"},
+                }
+            )
             await self._broadcast_connection_state(False)
         except Exception as exc:
             logger.warning("radio_disconnect failed: %s", exc)
-            await self._send_json({"type": "response", "id": msg_id, "ok": False,
-                                   "error": "disconnect_failed", "message": str(exc)})
+            await self._send_json(
+                {
+                    "type": "response",
+                    "id": msg_id,
+                    "ok": False,
+                    "error": "disconnect_failed",
+                    "message": str(exc),
+                }
+            )
 
     async def _broadcast_connection_state(self, connected: bool) -> None:
         """Broadcast connection state change to this client."""
-        await self._send_json({"type": "event", "event": "connection_state",
-                               "connected": connected,
-                               "radio_ready": self._radio_ready()})
+        await self._send_json(
+            {
+                "type": "event",
+                "event": "connection_state",
+                "connected": connected,
+                "radio_ready": self._radio_ready(),
+            }
+        )
 
     async def _send_json(self, obj: dict[str, Any]) -> None:
         """Send a JSON message to the WebSocket client."""
@@ -403,13 +463,10 @@ class ControlHandler:
         }
         # Read from shared state cache — zero CI-V.  Use the same TTL
         # semantics as rigctld so state projections stay consistent.
-        cache = (
-            self._server.state_cache
-            if self._server is not None
-            else None
-        )
+        cache = self._server.state_cache if self._server is not None else None
         if cache is None and self._radio is not None:
             from ..radio_protocol import StateCacheCapable
+
             if isinstance(self._radio, StateCacheCapable):
                 cache = self._radio.state_cache
         if cache is not None:
@@ -835,7 +892,8 @@ class ScopeHandler:
         while True:
             try:
                 data = await asyncio.wait_for(
-                    self._frame_queue.get(), timeout=1.0,
+                    self._frame_queue.get(),
+                    timeout=1.0,
                 )
                 await self._ws.send_binary(data)
                 sent += 1
@@ -843,7 +901,10 @@ class ScopeHandler:
                     logger.debug("scope: sent frame #%d (%d bytes)", sent, len(data))
             except TimeoutError:
                 if sent == 0:
-                    logger.debug("scope: sender timeout, no frames yet, qsize=%d", self._frame_queue.qsize())
+                    logger.debug(
+                        "scope: sender timeout, no frames yet, qsize=%d",
+                        self._frame_queue.qsize(),
+                    )
             except Exception as exc:
                 logger.warning("scope: sender error: %s", exc)
                 break
@@ -947,9 +1008,7 @@ class MetersHandler:
         """Continuously dequeues and sends meter frames."""
         while True:
             try:
-                data = await asyncio.wait_for(
-                    self._frame_queue.get(), timeout=1.0
-                )
+                data = await asyncio.wait_for(self._frame_queue.get(), timeout=1.0)
                 await self._ws.send_binary(data)
             except asyncio.TimeoutError:
                 pass
@@ -971,8 +1030,6 @@ class MetersHandler:
             self._frame_queue.put_nowait(encoded)
         except asyncio.QueueFull:
             pass
-
-
 
 
 class AudioBroadcaster:
@@ -1018,6 +1075,7 @@ class AudioBroadcaster:
 
     async def _start_relay(self) -> None:
         from ..radio_protocol import AudioCapable
+
         if not self._radio or not isinstance(self._radio, AudioCapable):
             return
 
@@ -1037,13 +1095,17 @@ class AudioBroadcaster:
             }
             self._web_codec = _CODEC_MAP.get(_codec, AUDIO_CODEC_PCM16)
             if _codec in (
-                AudioCodec.PCM_2CH_8BIT, AudioCodec.PCM_2CH_16BIT,
-                AudioCodec.ULAW_2CH, AudioCodec.OPUS_2CH,
+                AudioCodec.PCM_2CH_8BIT,
+                AudioCodec.PCM_2CH_16BIT,
+                AudioCodec.ULAW_2CH,
+                AudioCodec.OPUS_2CH,
             ):
                 self._channels = 2
             logger.info(
                 "audio-broadcaster: radio codec=%s (0x%02x) → web_codec=0x%02x",
-                _codec.name, int(_codec), self._web_codec,
+                _codec.name,
+                int(_codec),
+                self._web_codec,
             )
         else:
             logger.warning(
@@ -1054,7 +1116,9 @@ class AudioBroadcaster:
             self._sample_rate = _sr
         logger.info(
             "audio-broadcaster: starting relay codec=0x%02x sr=%d ch=%d",
-            self._web_codec, self._sample_rate, self._channels,
+            self._web_codec,
+            self._sample_rate,
+            self._channels,
         )
 
         try:
@@ -1077,11 +1141,18 @@ class AudioBroadcaster:
                 if self._seq < 3 or self._seq % 500 == 0:
                     logger.info(
                         "audio: rx packet #%d, web_codec=0x%02x, data=%d bytes",
-                        self._seq, self._web_codec, len(pkt.data),
+                        self._seq,
+                        self._web_codec,
+                        len(pkt.data),
                     )
                 frame = encode_audio_frame(
-                    MSG_TYPE_AUDIO_RX, self._web_codec, self._seq,
-                    self._sample_rate // 100, self._channels, 20, pkt.data,
+                    MSG_TYPE_AUDIO_RX,
+                    self._web_codec,
+                    self._seq,
+                    self._sample_rate // 100,
+                    self._channels,
+                    20,
+                    pkt.data,
                 )
                 self._seq = (self._seq + 1) & 0xFFFF
                 for q in list(self._clients.values()):
@@ -1226,24 +1297,34 @@ class AudioHandler:
     async def _handle_tx_audio(self, payload: bytes) -> None:
         """Forward TX audio from browser to radio."""
         if not self._tx_active:
-            logger.debug("audio: TX frame ignored (tx_active=False), size=%d", len(payload))
+            logger.debug(
+                "audio: TX frame ignored (tx_active=False), size=%d", len(payload)
+            )
             return
         if not self._radio:
             logger.warning("audio: TX frame ignored (no radio), size=%d", len(payload))
             return
         from ..radio_protocol import AudioCapable
+
         if not isinstance(self._radio, AudioCapable):
-            logger.warning("audio: TX frame ignored (radio not AudioCapable), size=%d", len(payload))
+            logger.warning(
+                "audio: TX frame ignored (radio not AudioCapable), size=%d",
+                len(payload),
+            )
             return
         if len(payload) < AUDIO_HEADER_SIZE:
-            logger.warning("audio: TX frame too small (%d < %d), ignoring", len(payload), AUDIO_HEADER_SIZE)
+            logger.warning(
+                "audio: TX frame too small (%d < %d), ignoring",
+                len(payload),
+                AUDIO_HEADER_SIZE,
+            )
             return
         # Extract audio data after 8-byte header (frontend sends Opus)
         opus_data = payload[AUDIO_HEADER_SIZE:]
         if opus_data:
             try:
                 # Check if radio uses PCM codec → decode Opus → PCM
-                audio_codec = getattr(self._radio, 'audio_codec', None)
+                audio_codec = getattr(self._radio, "audio_codec", None)
                 if audio_codec == AudioCodec.PCM_1CH_16BIT and self._transcoder:
                     try:
                         # Decode Opus → PCM16
@@ -1252,20 +1333,25 @@ class AudioHandler:
                         await self._radio.push_audio_tx_opus(pcm_data)
                         tx_data_desc = f"{len(pcm_data)} bytes pcm"
                     except Exception as e:
-                        logger.warning("audio: Opus decode failed: %s, dropping frame", e)
+                        logger.warning(
+                            "audio: Opus decode failed: %s, dropping frame", e
+                        )
                         return
                 else:
                     # Radio uses Opus or PCM_1CH_8BIT/etc → send Opus as-is
                     await self._radio.push_audio_tx_opus(opus_data)
                     tx_data_desc = f"{len(opus_data)} bytes opus"
-                
+
                 # Log every 50th frame to avoid spam
-                if not hasattr(self, '_tx_frame_count'):
+                if not hasattr(self, "_tx_frame_count"):
                     self._tx_frame_count = 0
                 self._tx_frame_count += 1
                 if self._tx_frame_count <= 3 or self._tx_frame_count % 50 == 0:
-                    logger.info("audio: TX frame #%d pushed to radio (%s)", 
-                               self._tx_frame_count, tx_data_desc)
+                    logger.info(
+                        "audio: TX frame #%d pushed to radio (%s)",
+                        self._tx_frame_count,
+                        tx_data_desc,
+                    )
             except Exception:
                 logger.warning("audio: push TX error", exc_info=True)
 
@@ -1276,13 +1362,15 @@ class AudioHandler:
             while not self._done.is_set():
                 try:
                     frame = await asyncio.wait_for(
-                        self._frame_queue.get(), timeout=0.5,
+                        self._frame_queue.get(),
+                        timeout=0.5,
                     )
                     # Wrap send in timeout to detect dead WebSocket connections
                     # If send blocks >5s, connection is likely dead (half-open TCP)
                     try:
                         await asyncio.wait_for(
-                            self._ws.send_binary(frame), timeout=5.0,
+                            self._ws.send_binary(frame),
+                            timeout=5.0,
                         )
                     except TimeoutError:
                         logger.warning(
@@ -1292,7 +1380,9 @@ class AudioHandler:
                         break  # Exit loop, trigger cleanup in finally
                     sent += 1
                     if sent <= 3 or sent % 500 == 0:
-                        logger.info("audio: sent frame #%d (%d bytes)", sent, len(frame))
+                        logger.info(
+                            "audio: sent frame #%d (%d bytes)", sent, len(frame)
+                        )
                 except TimeoutError:
                     continue
         except asyncio.CancelledError:
@@ -1308,16 +1398,12 @@ class _AudioPacketLike(Protocol):
 
 
 class _AudioSubscription(Protocol):
-    async def start(self) -> None:
-        ...
+    async def start(self) -> None: ...
 
-    def stop(self) -> None:
-        ...
+    def stop(self) -> None: ...
 
-    def __aiter__(self) -> AsyncIterator[_AudioPacketLike | None]:
-        ...
+    def __aiter__(self) -> AsyncIterator[_AudioPacketLike | None]: ...
 
 
 class _AudioBus(Protocol):
-    def subscribe(self, name: str = "") -> _AudioSubscription:
-        ...
+    def subscribe(self, name: str = "") -> _AudioSubscription: ...

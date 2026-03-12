@@ -128,7 +128,10 @@ class Radio(Protocol):
         ...
 
     async def set_mode(
-        self, mode: str, filter_width: int | None = None, receiver: int = 0,
+        self,
+        mode: str,
+        filter_width: int | None = None,
+        receiver: int = 0,
     ) -> None:
         """Set the operating mode.
 
@@ -261,7 +264,8 @@ class StateNotifyCapable(Protocol):
     """Radio supports server integration callbacks for state and reconnect."""
 
     def set_state_change_callback(
-        self, callback: Callable[..., Any] | None,
+        self,
+        callback: Callable[..., Any] | None,
     ) -> None:
         """Register a callback for radio state change notifications.
 
@@ -271,7 +275,8 @@ class StateNotifyCapable(Protocol):
         ...
 
     def set_reconnect_callback(
-        self, callback: Callable[..., Any] | None,
+        self,
+        callback: Callable[..., Any] | None,
     ) -> None:
         """Register a callback invoked after successful reconnection.
 
@@ -312,7 +317,8 @@ class AudioCapable(Protocol):
         ...
 
     async def start_audio_rx_opus(
-        self, callback: Callable[..., Awaitable[None]],
+        self,
+        callback: Callable[..., Awaitable[None]],
     ) -> None:
         """Start receiving audio.  Decoded frames are passed to *callback*.
 
@@ -415,23 +421,16 @@ class RecoverableConnection(Protocol):
 class AdvancedControlCapable(Protocol):
     """Radio supports extended control surface used by the web layer."""
 
-    async def set_filter(self, filter_num: int, receiver: int = 0) -> None:
-        ...
+    async def set_filter(self, filter_num: int, receiver: int = 0) -> None: ...
 
-    async def set_nb(self, on: bool, receiver: int = 0) -> None:
-        ...
+    async def set_nb(self, on: bool, receiver: int = 0) -> None: ...
 
-    async def set_nr(self, on: bool, receiver: int = 0) -> None:
-        ...
+    async def set_nr(self, on: bool, receiver: int = 0) -> None: ...
 
-    async def set_digisel(self, on: bool, receiver: int = 0) -> None:
-        ...
+    async def set_digisel(self, on: bool, receiver: int = 0) -> None: ...
 
-    async def set_ip_plus(self, on: bool, receiver: int = 0) -> None:
-        ...
+    async def set_ip_plus(self, on: bool, receiver: int = 0) -> None: ...
 
-    async def set_attenuator_level(self, db: int, receiver: int = 0) -> None:
-        ...
+    async def set_attenuator_level(self, db: int, receiver: int = 0) -> None: ...
 
-    async def set_preamp(self, level: int, receiver: int = 0) -> None:
-        ...
+    async def set_preamp(self, level: int, receiver: int = 0) -> None: ...

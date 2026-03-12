@@ -14,7 +14,9 @@ import pytest
 class TestRequirePillowImportError:
     """Test the _require_pillow() ImportError guard."""
 
-    def test_require_pillow_raises_when_pil_missing(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_require_pillow_raises_when_pil_missing(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """_require_pillow() must raise ImportError with helpful message when PIL absent."""
         # Temporarily shadow PIL in sys.modules to simulate it being uninstalled.
         # Setting the value to None causes Python to raise ImportError on import.

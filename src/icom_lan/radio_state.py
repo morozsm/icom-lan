@@ -26,8 +26,8 @@ class ReceiverState:
     mode: str = "USB"
     filter: int | None = None
     data_mode: bool = False
-    att: int = 0        # dB: 0, 3, 6, …, 45
-    preamp: int = 0     # 0=off, 1=P1, 2=P2
+    att: int = 0  # dB: 0, 3, 6, …, 45
+    preamp: int = 0  # 0=off, 1=P1, 2=P2
     nb: bool = False
     nr: bool = False
     digisel: bool = False
@@ -40,16 +40,16 @@ class ReceiverState:
     twin_peak_filter: bool = False
     filter_shape: int = 0
     agc_time_constant: int = 0
-    af_level: int = 0   # 0-255
-    rf_gain: int = 0    # 0-255
-    squelch: int = 0    # 0-255
-    s_meter: int = 0    # raw 0-241
-    apf_type_level: int = 0   # 0-255
-    nr_level: int = 0         # 0-255
-    pbt_inner: int = 0        # 0-255
-    pbt_outer: int = 0        # 0-255
-    nb_level: int = 0         # 0-255
-    digisel_shift: int = 0    # 0-255
+    af_level: int = 0  # 0-255
+    rf_gain: int = 0  # 0-255
+    squelch: int = 0  # 0-255
+    s_meter: int = 0  # raw 0-241
+    apf_type_level: int = 0  # 0-255
+    nr_level: int = 0  # 0-255
+    pbt_inner: int = 0  # 0-255
+    pbt_outer: int = 0  # 0-255
+    nb_level: int = 0  # 0-255
+    digisel_shift: int = 0  # 0-255
     af_mute: bool = False
 
 
@@ -85,46 +85,46 @@ class RadioState:
 
     main: ReceiverState = field(default_factory=ReceiverState)
     sub: ReceiverState = field(default_factory=ReceiverState)
-    active: str = "MAIN"    # "MAIN" | "SUB"
+    active: str = "MAIN"  # "MAIN" | "SUB"
     ptt: bool = False
-    power_level: int = 0    # TX power 0-255
+    power_level: int = 0  # TX power 0-255
     split: bool = False
     dual_watch: bool = False
     scanning: bool = False
     tuning_step: int = 0
     overflow: bool = False
-    tuner_status: int = 0       # 0=off, 1=on, 2=tuning
+    tuner_status: int = 0  # 0=off, 1=on, 2=tuning
     tx_freq_monitor: bool = False
-    rit_freq: int = 0           # signed Hz (±9999)
+    rit_freq: int = 0  # signed Hz (±9999)
     rit_on: bool = False
     rit_tx: bool = False
-    comp_meter: int = 0         # raw 0-255
-    vd_meter: int = 0           # raw 0-255 (supply voltage)
-    id_meter: int = 0           # raw 0-255 (drain current)
-    cw_pitch: int = 0           # Hz
-    mic_gain: int = 0           # 0-255
-    key_speed: int = 0          # WPM
-    notch_filter: int = 0       # 0-255
+    comp_meter: int = 0  # raw 0-255
+    vd_meter: int = 0  # raw 0-255 (supply voltage)
+    id_meter: int = 0  # raw 0-255 (drain current)
+    cw_pitch: int = 0  # Hz
+    mic_gain: int = 0  # 0-255
+    key_speed: int = 0  # WPM
+    notch_filter: int = 0  # 0-255
     main_sub_tracking: bool = False
     compressor_on: bool = False
-    compressor_level: int = 0   # 0-255
+    compressor_level: int = 0  # 0-255
     monitor_on: bool = False
-    break_in_delay: int = 0     # 0-255
-    break_in: int = 0           # 0=off, 1=semi, 2=full
+    break_in_delay: int = 0  # 0-255
+    break_in: int = 0  # 0=off, 1=semi, 2=full
     dial_lock: bool = False
-    drive_gain: int = 0         # 0-255
-    monitor_gain: int = 0       # 0-255
+    drive_gain: int = 0  # 0-255
+    monitor_gain: int = 0  # 0-255
     vox_on: bool = False
-    vox_gain: int = 0           # 0-255
-    anti_vox_gain: int = 0      # 0-255
-    ssb_tx_bandwidth: int = 0   # 0=wide, 1=mid, 2=nar
-    ref_adjust: int = 0         # 0-511
-    dash_ratio: int = 0         # 28-45
-    nb_depth: int = 0           # 0-9
-    nb_width: int = 0           # 0-255
+    vox_gain: int = 0  # 0-255
+    anti_vox_gain: int = 0  # 0-255
+    ssb_tx_bandwidth: int = 0  # 0=wide, 1=mid, 2=nar
+    ref_adjust: int = 0  # 0-511
+    dash_ratio: int = 0  # 28-45
+    nb_depth: int = 0  # 0-9
+    nb_width: int = 0  # 0-255
     scope_controls: ScopeControlsState = field(default_factory=ScopeControlsState)
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, object]:
         """Return a JSON-serialisable dict of the current radio state."""
         return {
             "active": self.active,

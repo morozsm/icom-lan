@@ -12,7 +12,9 @@ import sys
 import pytest
 
 
-def test_rigctld_init_import_error_sets_empty_all(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_rigctld_init_import_error_sets_empty_all(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """If RigctldServer import fails, __all__ should be set to []."""
     # Block the server sub-module so the 'from .server import RigctldServer' fails
     monkeypatch.setitem(
@@ -27,6 +29,7 @@ def test_rigctld_init_import_error_sets_empty_all(monkeypatch: pytest.MonkeyPatc
 
     # Re-import the __init__; with server blocked, ImportError branch is taken
     import icom_lan.rigctld as rigctld_pkg
+
     importlib.reload(rigctld_pkg)
 
     assert rigctld_pkg.__all__ == []

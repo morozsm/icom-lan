@@ -29,12 +29,15 @@ from icom_lan.types import Mode
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _addr(srv: RigctldServer) -> tuple[str, int]:
     assert srv._server is not None
     return srv._server.sockets[0].getsockname()  # type: ignore[index]
 
 
-async def _connect(srv: RigctldServer) -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
+async def _connect(
+    srv: RigctldServer,
+) -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
     host, port = _addr(srv)
     return await asyncio.open_connection(host, port)
 
@@ -64,11 +67,12 @@ async def _read_eof(reader: asyncio.StreamReader, *, timeout: float = 2.0) -> by
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 def _make_mock_radio() -> AsyncMock:
     """AsyncMock radio with sensible default return values."""
     radio = AsyncMock()
     radio.get_frequency.return_value = 14_074_000
-    radio.get_mode_info.return_value = (Mode.USB, 2)       # USB, FIL2 = 2400 Hz
+    radio.get_mode_info.return_value = (Mode.USB, 2)  # USB, FIL2 = 2400 Hz
     radio.get_data_mode.return_value = False
     radio.get_s_meter.return_value = 120
     radio.get_power.return_value = 255
@@ -94,16 +98,20 @@ async def wire_server() -> RigctldServer:  # type: ignore[misc]
     """Real RigctldServer bound to 127.0.0.1:0 with mock radio + poller."""
     from icom_lan.rigctld.state_cache import StateCache
     from icom_lan.rigctld.handler import RigctldHandler
-    
+
     radio = _make_mock_radio()
     poller = _make_mock_poller()
     cache = StateCache()  # Real cache to avoid AsyncMock.state_cache confusion
+    # Populate level cache so get_level (STRENGTH/RFPOWER/SWR) returns numeric values
+    cache.update_s_meter(120)
+    cache.update_rf_power(1.0)
+    cache.update_swr(1.0)
     cfg = RigctldConfig(
         host="127.0.0.1",
         port=0,
         client_timeout=2.0,
         command_timeout=1.0,
-        cache_ttl=0.0,      # always fresh → deterministic radio calls
+        cache_ttl=0.0,  # always fresh → deterministic radio calls
     )
     handler = RigctldHandler(radio, cfg, cache=cache)
     srv = RigctldServer(radio, cfg, _handler=handler, _poller=poller)
@@ -116,7 +124,7 @@ async def ro_wire_server() -> RigctldServer:  # type: ignore[misc]
     """Read-only RigctldServer for testing that setters are rejected."""
     from icom_lan.rigctld.state_cache import StateCache
     from icom_lan.rigctld.handler import RigctldHandler
-    
+
     radio = _make_mock_radio()
     poller = _make_mock_poller()
     cache = StateCache()  # Real cache to avoid AsyncMock.state_cache confusion
@@ -137,6 +145,7 @@ async def ro_wire_server() -> RigctldServer:  # type: ignore[misc]
 # ---------------------------------------------------------------------------
 # Basic get / set roundtrip
 # ---------------------------------------------------------------------------
+
 
 class TestGetSetRoundtrip:
     async def test_get_freq_wire(self, wire_server: RigctldServer) -> None:
@@ -283,6 +292,7 @@ class TestGetSetRoundtrip:
 # dump_state wire format
 # ---------------------------------------------------------------------------
 
+
 class TestDumpStateWire:
     _EXPECTED_DUMP_STATE = (
         b"0\n3078\n1\n"
@@ -319,6 +329,7 @@ class TestDumpStateWire:
 # Multiple commands on the same connection
 # ---------------------------------------------------------------------------
 
+
 class TestMultipleCommands:
     async def test_three_sequential_get_freq(self, wire_server: RigctldServer) -> None:
         """Three f commands on the same connection → three identical responses."""
@@ -348,7 +359,9 @@ class TestMultipleCommands:
 
         await _close(w)
 
-    async def test_set_then_get_ptt_reflects_state(self, wire_server: RigctldServer) -> None:
+    async def test_set_then_get_ptt_reflects_state(
+        self, wire_server: RigctldServer
+    ) -> None:
         """set_ptt(1) then get_ptt should return 1."""
         r, w = await _connect(wire_server)
 
@@ -387,6 +400,7 @@ class TestMultipleCommands:
 # Quit closes connection
 # ---------------------------------------------------------------------------
 
+
 class TestQuitWire:
     async def test_quit_closes_connection(self, wire_server: RigctldServer) -> None:
         """'q\\n' causes the server to close the TCP connection (EOF)."""
@@ -412,7 +426,9 @@ class TestQuitWire:
         assert data == b""
         await _close(w)
 
-    async def test_quit_decrements_client_count(self, wire_server: RigctldServer) -> None:
+    async def test_quit_decrements_client_count(
+        self, wire_server: RigctldServer
+    ) -> None:
         r, w = await _connect(wire_server)
         await asyncio.sleep(0.05)  # let server register client
         assert wire_server._client_count == 1
@@ -429,6 +445,7 @@ class TestQuitWire:
 # ---------------------------------------------------------------------------
 # Read-only mode
 # ---------------------------------------------------------------------------
+
 
 class TestReadOnlyMode:
     async def test_set_freq_read_only(self, ro_wire_server: RigctldServer) -> None:
@@ -476,7 +493,9 @@ class TestReadOnlyMode:
         assert data == b"RPRT -22\n"
         await _close(w)
 
-    async def test_get_commands_still_work_read_only(self, ro_wire_server: RigctldServer) -> None:
+    async def test_get_commands_still_work_read_only(
+        self, ro_wire_server: RigctldServer
+    ) -> None:
         """Read commands should succeed even in read-only mode."""
         r, w = await _connect(ro_wire_server)
         w.write(b"f\n")
@@ -491,8 +510,11 @@ class TestReadOnlyMode:
 # Invalid / unknown commands
 # ---------------------------------------------------------------------------
 
+
 class TestInvalidCommands:
-    async def test_unknown_command_returns_enimpl(self, wire_server: RigctldServer) -> None:
+    async def test_unknown_command_returns_enimpl(
+        self, wire_server: RigctldServer
+    ) -> None:
         """Unknown command returns RPRT -4 (ENIMPL) without closing connection."""
         r, w = await _connect(wire_server)
         w.write(b"garbage\n")
@@ -502,7 +524,9 @@ class TestInvalidCommands:
         assert data == b"RPRT -4\n"
         await _close(w)
 
-    async def test_unknown_command_connection_stays_open(self, wire_server: RigctldServer) -> None:
+    async def test_unknown_command_connection_stays_open(
+        self, wire_server: RigctldServer
+    ) -> None:
         """After an unknown-command error, the connection should stay open."""
         r, w = await _connect(wire_server)
 
@@ -519,7 +543,9 @@ class TestInvalidCommands:
 
         await _close(w)
 
-    async def test_set_mode_invalid_mode_returns_einval(self, wire_server: RigctldServer) -> None:
+    async def test_set_mode_invalid_mode_returns_einval(
+        self, wire_server: RigctldServer
+    ) -> None:
         """set_mode with an invalid mode name returns RPRT -1 (EINVAL)."""
         r, w = await _connect(wire_server)
         w.write(b"M INVALID\n")
@@ -554,6 +580,7 @@ class TestInvalidCommands:
 # Level commands wire format
 # ---------------------------------------------------------------------------
 
+
 class TestLevelWire:
     async def test_get_level_strength_wire(self, wire_server: RigctldServer) -> None:
         """'l STRENGTH' with raw=120 → strength dB string terminated by newline."""
@@ -586,7 +613,9 @@ class TestLevelWire:
         assert data == b"1.000000\n"
         await _close(w)
 
-    async def test_get_level_unknown_level_wire(self, wire_server: RigctldServer) -> None:
+    async def test_get_level_unknown_level_wire(
+        self, wire_server: RigctldServer
+    ) -> None:
         """'l NOSUCHLEVEL' → RPRT -1 (EINVAL from handler)."""
         r, w = await _connect(wire_server)
         w.write(b"l NOSUCHLEVEL\n")
@@ -600,6 +629,7 @@ class TestLevelWire:
 # ---------------------------------------------------------------------------
 # Power conversion commands
 # ---------------------------------------------------------------------------
+
 
 class TestPowerConversionWire:
     async def test_power2mw_wire(self, wire_server: RigctldServer) -> None:

@@ -24,7 +24,6 @@ from icom_lan.cli import (
     main,
 )
 from icom_lan.exceptions import TimeoutError as IcomTimeout
-from icom_lan.types import Mode, get_audio_capabilities
 
 
 # ---------------------------------------------------------------------------
@@ -59,7 +58,7 @@ def mock_radio():
     radio.get_alc = AsyncMock(return_value=30)
     radio.set_ptt = AsyncMock()
     radio.send_cw_text = AsyncMock()
-    radio.power_control = AsyncMock()
+    radio.set_powerstat = AsyncMock()
     radio.capture_scope_frame = AsyncMock()
     radio.capture_scope_frames = AsyncMock()
     radio.disable_scope = AsyncMock()

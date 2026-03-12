@@ -17,7 +17,7 @@ from icom_lan.types import CivFrame, FilterShape, SsbTxBandwidth
 _PREAMBLE = b"\xfe\xfe"
 _TERMINATOR = b"\xfd"
 _CMD_CMD29 = 0x29
-_CMD_LEVEL = 0x14   # for DIGI-SEL shift
+_CMD_LEVEL = 0x14  # for DIGI-SEL shift
 _CMD_PREAMP = 0x16  # for filter shape, SSB TX bandwidth
 _CMD_CTL_MEM = 0x1A  # for AGC time constant, AF mute
 
@@ -33,6 +33,7 @@ _SUB_AF_MUTE = 0x09
 # Frame builder helpers
 # ---------------------------------------------------------------------------
 
+
 def _simple_get(cmd: int, sub: int) -> bytes:
     """Expected bytes for a simple (non-cmd29) get frame."""
     return _PREAMBLE + bytes([IC_7610_ADDR, CONTROLLER_ADDR, cmd, sub]) + _TERMINATOR
@@ -40,7 +41,11 @@ def _simple_get(cmd: int, sub: int) -> bytes:
 
 def _simple_set(cmd: int, sub: int, *data: int) -> bytes:
     """Expected bytes for a simple (non-cmd29) set frame."""
-    return _PREAMBLE + bytes([IC_7610_ADDR, CONTROLLER_ADDR, cmd, sub, *data]) + _TERMINATOR
+    return (
+        _PREAMBLE
+        + bytes([IC_7610_ADDR, CONTROLLER_ADDR, cmd, sub, *data])
+        + _TERMINATOR
+    )
 
 
 def _cmd29_get(cmd: int, sub: int, receiver: int = RECEIVER_MAIN) -> bytes:
@@ -91,7 +96,9 @@ class TestDigiselShift:
         )
 
     def test_get_digisel_shift_default_is_main(self) -> None:
-        assert commands.get_digisel_shift() == commands.get_digisel_shift(receiver=RECEIVER_MAIN)
+        assert commands.get_digisel_shift() == commands.get_digisel_shift(
+            receiver=RECEIVER_MAIN
+        )
 
     def test_set_digisel_shift_zero_main(self) -> None:
         # 0 -> 2-byte BCD: 0x00 0x00
@@ -131,15 +138,30 @@ class TestDigiselShift:
 
     def test_parse_digisel_shift_zero(self) -> None:
         frame = _response_frame(_CMD_LEVEL, _SUB_DIGISEL_SHIFT, b"\x00\x00")
-        assert parse_level_response(frame, command=_CMD_LEVEL, sub=_SUB_DIGISEL_SHIFT, bcd_bytes=2) == 0
+        assert (
+            parse_level_response(
+                frame, command=_CMD_LEVEL, sub=_SUB_DIGISEL_SHIFT, bcd_bytes=2
+            )
+            == 0
+        )
 
     def test_parse_digisel_shift_128(self) -> None:
         frame = _response_frame(_CMD_LEVEL, _SUB_DIGISEL_SHIFT, b"\x01\x28")
-        assert parse_level_response(frame, command=_CMD_LEVEL, sub=_SUB_DIGISEL_SHIFT, bcd_bytes=2) == 128
+        assert (
+            parse_level_response(
+                frame, command=_CMD_LEVEL, sub=_SUB_DIGISEL_SHIFT, bcd_bytes=2
+            )
+            == 128
+        )
 
     def test_parse_digisel_shift_255(self) -> None:
         frame = _response_frame(_CMD_LEVEL, _SUB_DIGISEL_SHIFT, b"\x02\x55")
-        assert parse_level_response(frame, command=_CMD_LEVEL, sub=_SUB_DIGISEL_SHIFT, bcd_bytes=2) == 255
+        assert (
+            parse_level_response(
+                frame, command=_CMD_LEVEL, sub=_SUB_DIGISEL_SHIFT, bcd_bytes=2
+            )
+            == 255
+        )
 
     def test_get_digisel_shift_custom_addresses(self) -> None:
         frame = commands.get_digisel_shift(to_addr=0xA4, from_addr=0xE1)
@@ -216,22 +238,31 @@ class TestAGCTimeConstant:
 
     def test_parse_agc_time_constant_zero(self) -> None:
         frame = _response_frame(_CMD_CTL_MEM, _SUB_AGC_TIME_CONSTANT, b"\x00")
-        assert parse_level_response(
-            frame, command=_CMD_CTL_MEM, sub=_SUB_AGC_TIME_CONSTANT, bcd_bytes=1
-        ) == 0
+        assert (
+            parse_level_response(
+                frame, command=_CMD_CTL_MEM, sub=_SUB_AGC_TIME_CONSTANT, bcd_bytes=1
+            )
+            == 0
+        )
 
     def test_parse_agc_time_constant_twelve(self) -> None:
         # BCD byte 0x12 -> value 12
         frame = _response_frame(_CMD_CTL_MEM, _SUB_AGC_TIME_CONSTANT, b"\x12")
-        assert parse_level_response(
-            frame, command=_CMD_CTL_MEM, sub=_SUB_AGC_TIME_CONSTANT, bcd_bytes=1
-        ) == 12
+        assert (
+            parse_level_response(
+                frame, command=_CMD_CTL_MEM, sub=_SUB_AGC_TIME_CONSTANT, bcd_bytes=1
+            )
+            == 12
+        )
 
     def test_parse_agc_time_constant_thirteen(self) -> None:
         frame = _response_frame(_CMD_CTL_MEM, _SUB_AGC_TIME_CONSTANT, b"\x13")
-        assert parse_level_response(
-            frame, command=_CMD_CTL_MEM, sub=_SUB_AGC_TIME_CONSTANT, bcd_bytes=1
-        ) == 13
+        assert (
+            parse_level_response(
+                frame, command=_CMD_CTL_MEM, sub=_SUB_AGC_TIME_CONSTANT, bcd_bytes=1
+            )
+            == 13
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -253,38 +284,44 @@ class TestFilterShape:
         )
 
     def test_get_filter_shape_default_is_main(self) -> None:
-        assert commands.get_filter_shape() == commands.get_filter_shape(receiver=RECEIVER_MAIN)
+        assert commands.get_filter_shape() == commands.get_filter_shape(
+            receiver=RECEIVER_MAIN
+        )
 
     def test_set_filter_shape_sharp_main(self) -> None:
-        assert commands.set_filter_shape(FilterShape.SHARP, receiver=RECEIVER_MAIN) == _cmd29_set(
-            _CMD_PREAMP, _SUB_FILTER_SHAPE, 0x00, receiver=RECEIVER_MAIN
-        )
+        assert commands.set_filter_shape(
+            FilterShape.SHARP, receiver=RECEIVER_MAIN
+        ) == _cmd29_set(_CMD_PREAMP, _SUB_FILTER_SHAPE, 0x00, receiver=RECEIVER_MAIN)
 
     def test_set_filter_shape_soft_main(self) -> None:
-        assert commands.set_filter_shape(FilterShape.SOFT, receiver=RECEIVER_MAIN) == _cmd29_set(
-            _CMD_PREAMP, _SUB_FILTER_SHAPE, 0x01, receiver=RECEIVER_MAIN
-        )
+        assert commands.set_filter_shape(
+            FilterShape.SOFT, receiver=RECEIVER_MAIN
+        ) == _cmd29_set(_CMD_PREAMP, _SUB_FILTER_SHAPE, 0x01, receiver=RECEIVER_MAIN)
 
     def test_set_filter_shape_sharp_sub_receiver(self) -> None:
-        assert commands.set_filter_shape(FilterShape.SHARP, receiver=RECEIVER_SUB) == _cmd29_set(
-            _CMD_PREAMP, _SUB_FILTER_SHAPE, 0x00, receiver=RECEIVER_SUB
-        )
+        assert commands.set_filter_shape(
+            FilterShape.SHARP, receiver=RECEIVER_SUB
+        ) == _cmd29_set(_CMD_PREAMP, _SUB_FILTER_SHAPE, 0x00, receiver=RECEIVER_SUB)
 
     def test_set_filter_shape_soft_sub_receiver(self) -> None:
-        assert commands.set_filter_shape(FilterShape.SOFT, receiver=RECEIVER_SUB) == _cmd29_set(
-            _CMD_PREAMP, _SUB_FILTER_SHAPE, 0x01, receiver=RECEIVER_SUB
-        )
+        assert commands.set_filter_shape(
+            FilterShape.SOFT, receiver=RECEIVER_SUB
+        ) == _cmd29_set(_CMD_PREAMP, _SUB_FILTER_SHAPE, 0x01, receiver=RECEIVER_SUB)
 
     def test_set_filter_shape_accepts_int(self) -> None:
-        assert commands.set_filter_shape(0) == commands.set_filter_shape(FilterShape.SHARP)
+        assert commands.set_filter_shape(0) == commands.set_filter_shape(
+            FilterShape.SHARP
+        )
 
     def test_set_filter_shape_accepts_int_one(self) -> None:
-        assert commands.set_filter_shape(1) == commands.set_filter_shape(FilterShape.SOFT)
+        assert commands.set_filter_shape(1) == commands.set_filter_shape(
+            FilterShape.SOFT
+        )
 
     def test_set_filter_shape_default_receiver_is_main(self) -> None:
-        assert commands.set_filter_shape(FilterShape.SHARP) == commands.set_filter_shape(
-            FilterShape.SHARP, receiver=RECEIVER_MAIN
-        )
+        assert commands.set_filter_shape(
+            FilterShape.SHARP
+        ) == commands.set_filter_shape(FilterShape.SHARP, receiver=RECEIVER_MAIN)
 
     def test_set_filter_shape_rejects_invalid_enum(self) -> None:
         with pytest.raises(ValueError):
@@ -318,7 +355,9 @@ class TestSsbTxBandwidth:
     """Tests for get_ssb_tx_bandwidth / set_ssb_tx_bandwidth."""
 
     def test_get_ssb_tx_bandwidth_builds_simple_frame(self) -> None:
-        assert commands.get_ssb_tx_bandwidth() == _simple_get(_CMD_PREAMP, _SUB_SSB_TX_BANDWIDTH)
+        assert commands.get_ssb_tx_bandwidth() == _simple_get(
+            _CMD_PREAMP, _SUB_SSB_TX_BANDWIDTH
+        )
 
     def test_get_ssb_tx_bandwidth_no_cmd29(self) -> None:
         # Frame must not contain the 0x29 receiver-prefix byte
@@ -423,15 +462,21 @@ class TestAfMute:
         )
 
     def test_set_af_mute_default_receiver_is_main(self) -> None:
-        assert commands.set_af_mute(True) == commands.set_af_mute(True, receiver=RECEIVER_MAIN)
+        assert commands.set_af_mute(True) == commands.set_af_mute(
+            True, receiver=RECEIVER_MAIN
+        )
 
     def test_parse_af_mute_on(self) -> None:
         frame = _response_frame(_CMD_CTL_MEM, _SUB_AF_MUTE, b"\x01")
-        assert parse_bool_response(frame, command=_CMD_CTL_MEM, sub=_SUB_AF_MUTE) is True
+        assert (
+            parse_bool_response(frame, command=_CMD_CTL_MEM, sub=_SUB_AF_MUTE) is True
+        )
 
     def test_parse_af_mute_off(self) -> None:
         frame = _response_frame(_CMD_CTL_MEM, _SUB_AF_MUTE, b"\x00")
-        assert parse_bool_response(frame, command=_CMD_CTL_MEM, sub=_SUB_AF_MUTE) is False
+        assert (
+            parse_bool_response(frame, command=_CMD_CTL_MEM, sub=_SUB_AF_MUTE) is False
+        )
 
     def test_get_af_mute_custom_addresses(self) -> None:
         frame = commands.get_af_mute(to_addr=0xA4, from_addr=0xE1)

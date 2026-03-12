@@ -75,21 +75,21 @@ class TestSendToken:
 class TestTokenRenewalLoop:
     @pytest.mark.asyncio
     async def test_start_stop(self, radio: IcomRadio) -> None:
-        radio._start_token_renewal()
+        radio._control_phase._start_token_renewal()
         assert radio._token_task is not None
         assert not radio._token_task.done()
-        radio._stop_token_renewal()
+        radio._control_phase._stop_token_renewal()
         await asyncio.sleep(0.05)
         assert radio._token_task is None
 
     @pytest.mark.asyncio
     async def test_loop_sends_after_interval(self, radio: IcomRadio) -> None:
         # Shorten interval for testing
-        radio.TOKEN_RENEWAL_INTERVAL = 0.1
+        radio._control_phase.TOKEN_RENEWAL_INTERVAL = 0.1
         mt = radio._ctrl_transport
-        radio._start_token_renewal()
+        radio._control_phase._start_token_renewal()
         await asyncio.sleep(0.25)
-        radio._stop_token_renewal()
+        radio._control_phase._stop_token_renewal()
         # Should have sent at least 1 renewal
         assert len(mt.sent_packets) >= 1
         # Verify it's a token packet
@@ -98,4 +98,4 @@ class TestTokenRenewalLoop:
 
     @pytest.mark.asyncio
     async def test_stop_when_not_started(self, radio: IcomRadio) -> None:
-        radio._stop_token_renewal()  # should not raise
+        radio._control_phase._stop_token_renewal()  # should not raise

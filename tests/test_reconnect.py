@@ -28,21 +28,21 @@ def radio() -> IcomRadio:
 class TestWatchdog:
     @pytest.mark.asyncio
     async def test_start_stop(self, radio: IcomRadio) -> None:
-        radio._start_watchdog()
+        radio._control_phase._start_watchdog()
         assert radio._watchdog_task is not None
-        radio._stop_watchdog()
+        radio._control_phase._stop_watchdog()
         await asyncio.sleep(0.05)
         assert radio._watchdog_task is None
 
     @pytest.mark.asyncio
     async def test_stop_when_not_started(self) -> None:
         r = IcomRadio("192.168.1.100")
-        r._stop_watchdog()  # should not raise
+        r._control_phase._stop_watchdog()  # should not raise
 
     @pytest.mark.asyncio
     async def test_watchdog_triggers_on_timeout(self, radio: IcomRadio) -> None:
         """Watchdog should set connected=False after timeout with no activity."""
-        radio._start_watchdog()
+        radio._control_phase._start_watchdog()
         # Wait longer than watchdog_timeout
         await asyncio.sleep(0.6)
         assert not radio._connected
@@ -50,21 +50,21 @@ class TestWatchdog:
         assert radio._reconnect_task is not None
         # Clean up
         radio._intentional_disconnect = True
-        radio._stop_reconnect()
-        radio._stop_watchdog()
+        radio._control_phase._stop_reconnect()
+        radio._control_phase._stop_watchdog()
 
     @pytest.mark.asyncio
     async def test_watchdog_does_not_trigger_with_activity(
         self, radio: IcomRadio
     ) -> None:
         """Watchdog should not trigger if there's queue activity."""
-        radio._start_watchdog()
+        radio._control_phase._start_watchdog()
         # Simulate activity by putting something in the queue
         for _ in range(3):
             radio._ctrl_transport._packet_queue.put_nowait(b"\x00" * 16)
             await asyncio.sleep(0.15)
         assert radio._connected
-        radio._stop_watchdog()
+        radio._control_phase._stop_watchdog()
         # Drain queue
         while not radio._ctrl_transport._packet_queue.empty():
             radio._ctrl_transport._packet_queue.get_nowait()
@@ -74,7 +74,7 @@ class TestReconnect:
     @pytest.mark.asyncio
     async def test_stop_reconnect_when_not_started(self) -> None:
         r = IcomRadio("192.168.1.100")
-        r._stop_reconnect()  # should not raise
+        r._control_phase._stop_reconnect()  # should not raise
 
     @pytest.mark.asyncio
     async def test_intentional_disconnect_stops_reconnect(
@@ -97,7 +97,7 @@ class TestReconnect:
         await asyncio.sleep(0.5)
         # Should still be trying (not connected, not intentional)
         radio._intentional_disconnect = True
-        radio._stop_reconnect()
+        radio._control_phase._stop_reconnect()
         await asyncio.sleep(0.05)
 
 

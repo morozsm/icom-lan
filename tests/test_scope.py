@@ -58,6 +58,7 @@ from icom_lan.radio import IcomRadio
 # Helpers — build raw payload bytes
 # ---------------------------------------------------------------------------
 
+
 def _bcd_byte(value: int) -> int:
     """Encode a decimal 0-99 as BCD byte."""
     return ((value // 10) << 4) | (value % 10)
@@ -74,15 +75,17 @@ def _seq1_payload(
     extra_pixels: bytes = b"",
 ) -> bytes:
     """Build a sequence-1 payload (after the receiver byte)."""
-    return bytes([
-        _bcd_byte(seq),
-        _bcd_byte(seq_max),
-        mode,
-        *bcd_encode(start_hz),
-        *bcd_encode(end_hz),
-        0x01 if oor else 0x00,
-        *extra_pixels,
-    ])
+    return bytes(
+        [
+            _bcd_byte(seq),
+            _bcd_byte(seq_max),
+            mode,
+            *bcd_encode(start_hz),
+            *bcd_encode(end_hz),
+            0x01 if oor else 0x00,
+            *extra_pixels,
+        ]
+    )
 
 
 def _seq_n_payload(
@@ -102,7 +105,10 @@ def _scope_civ_frame(
 ) -> bytes:
     """Wrap scope wave data in a full CI-V frame (FE FE to from 27 00 ...)."""
     return build_civ_frame(
-        to_addr, from_addr, 0x27, sub=0x00,
+        to_addr,
+        from_addr,
+        0x27,
+        sub=0x00,
         data=bytes([receiver]) + payload_after_receiver,
     )
 
@@ -128,6 +134,7 @@ def _wrap_civ_in_udp(civ_data: bytes, seq: int = 1) -> bytes:
 # Tests for ScopeAssembler → ScopeFrame
 # ---------------------------------------------------------------------------
 
+
 class TestScopeAssemblerSequence1:
     """Sequence 1 (metadata) parsing tests."""
 
@@ -135,8 +142,13 @@ class TestScopeAssemblerSequence1:
         """Seq 1 with seqMax > 1 does not complete the frame."""
         asm = ScopeAssembler()
         payload = _seq1_payload(
-            receiver=0, seq=1, seq_max=3,
-            mode=1, start_hz=14_000_000, end_hz=14_350_000, oor=False,
+            receiver=0,
+            seq=1,
+            seq_max=3,
+            mode=1,
+            start_hz=14_000_000,
+            end_hz=14_350_000,
+            oor=False,
         )
         result = asm.feed(payload, 0)
         assert result is None
@@ -156,8 +168,13 @@ class TestScopeAssemblerSequence1:
         """OOR=True on seq 1 returns ScopeFrame immediately with empty pixels."""
         asm = ScopeAssembler()
         payload = _seq1_payload(
-            receiver=0, seq=1, seq_max=3,
-            mode=1, start_hz=14_000_000, end_hz=14_350_000, oor=True,
+            receiver=0,
+            seq=1,
+            seq_max=3,
+            mode=1,
+            start_hz=14_000_000,
+            end_hz=14_350_000,
+            oor=True,
         )
         result = asm.feed(payload, 0)
         assert result is not None
@@ -170,8 +187,13 @@ class TestScopeAssemblerSequence1:
         """When seq == seqMax == 1, pixels follow immediately (LAN mode)."""
         pixels = bytes([10, 20, 30, 40, 50])
         payload = _seq1_payload(
-            receiver=0, seq=1, seq_max=1,
-            mode=1, start_hz=14_000_000, end_hz=14_350_000, oor=False,
+            receiver=0,
+            seq=1,
+            seq_max=1,
+            mode=1,
+            start_hz=14_000_000,
+            end_hz=14_350_000,
+            oor=False,
             extra_pixels=pixels,
         )
         asm = ScopeAssembler()
@@ -190,8 +212,13 @@ class TestScopeAssemblerMultiSequence:
     def _build_3seq_frame(self, receiver: int = 0, mode: int = 1) -> list[bytes]:
         """Build a 3-sequence scope burst (seq_max=3)."""
         seq1 = _seq1_payload(
-            receiver=receiver, seq=1, seq_max=3,
-            mode=mode, start_hz=14_000_000, end_hz=14_350_000, oor=False,
+            receiver=receiver,
+            seq=1,
+            seq_max=3,
+            mode=mode,
+            start_hz=14_000_000,
+            end_hz=14_350_000,
+            oor=False,
         )
         seq2 = _seq_n_payload(seq=2, seq_max=3, pixels=bytes(range(50)))
         seq3 = _seq_n_payload(seq=3, seq_max=3, pixels=bytes(range(10)))
@@ -212,8 +239,13 @@ class TestScopeAssemblerMultiSequence:
         pixels2 = bytes(range(50))
         pixels3 = bytes(range(10))
         seq1 = _seq1_payload(
-            receiver=0, seq=1, seq_max=3,
-            mode=1, start_hz=14_000_000, end_hz=14_350_000, oor=False,
+            receiver=0,
+            seq=1,
+            seq_max=3,
+            mode=1,
+            start_hz=14_000_000,
+            end_hz=14_350_000,
+            oor=False,
         )
         seq2 = _seq_n_payload(2, 3, pixels2)
         seq3 = _seq_n_payload(3, 3, pixels3)
@@ -246,7 +278,9 @@ class TestScopeAssemblerCenterMode:
         half_span_hz = 175_000
         asm = ScopeAssembler()
         payload = _seq1_payload(
-            receiver=0, seq=1, seq_max=1,
+            receiver=0,
+            seq=1,
+            seq_max=1,
             mode=0,
             start_hz=center_hz,
             end_hz=half_span_hz,
@@ -263,8 +297,13 @@ class TestScopeAssemblerCenterMode:
         """Mode 1 (fixed): start/end passed through unchanged."""
         asm = ScopeAssembler()
         payload = _seq1_payload(
-            receiver=0, seq=1, seq_max=1,
-            mode=1, start_hz=14_000_000, end_hz=14_350_000, oor=False,
+            receiver=0,
+            seq=1,
+            seq_max=1,
+            mode=1,
+            start_hz=14_000_000,
+            end_hz=14_350_000,
+            oor=False,
             extra_pixels=b"\x20",
         )
         result = asm.feed(payload, 0)
@@ -282,14 +321,24 @@ class TestScopeAssemblerReceiverIsolation:
         pixels = bytes(range(5))
 
         seq1_main = _seq1_payload(
-            receiver=0, seq=1, seq_max=2,
-            mode=1, start_hz=14_000_000, end_hz=14_350_000, oor=False,
+            receiver=0,
+            seq=1,
+            seq_max=2,
+            mode=1,
+            start_hz=14_000_000,
+            end_hz=14_350_000,
+            oor=False,
         )
         asm.feed(seq1_main, 0)
 
         seq1_sub = _seq1_payload(
-            receiver=1, seq=1, seq_max=2,
-            mode=1, start_hz=7_000_000, end_hz=7_300_000, oor=False,
+            receiver=1,
+            seq=1,
+            seq_max=2,
+            mode=1,
+            start_hz=7_000_000,
+            end_hz=7_300_000,
+            oor=False,
         )
         asm.feed(seq1_sub, 1)
 
@@ -309,14 +358,24 @@ class TestScopeAssemblerReceiverIsolation:
         asm = ScopeAssembler()
 
         seq1_main = _seq1_payload(
-            receiver=0, seq=1, seq_max=2,
-            mode=1, start_hz=14_000_000, end_hz=14_350_000, oor=False,
+            receiver=0,
+            seq=1,
+            seq_max=2,
+            mode=1,
+            start_hz=14_000_000,
+            end_hz=14_350_000,
+            oor=False,
         )
         asm.feed(seq1_main, 0)
 
         seq1_sub_oor = _seq1_payload(
-            receiver=1, seq=1, seq_max=2,
-            mode=1, start_hz=0, end_hz=0, oor=True,
+            receiver=1,
+            seq=1,
+            seq_max=2,
+            mode=1,
+            start_hz=0,
+            end_hz=0,
+            oor=True,
         )
         oor_result = asm.feed(seq1_sub_oor, 1)
         assert oor_result is not None
@@ -336,8 +395,13 @@ class TestScopeAssemblerTimeout:
         asm = ScopeAssembler(assembly_timeout=5.0)
 
         seq1 = _seq1_payload(
-            receiver=0, seq=1, seq_max=3,
-            mode=1, start_hz=14_000_000, end_hz=14_350_000, oor=False,
+            receiver=0,
+            seq=1,
+            seq_max=3,
+            mode=1,
+            start_hz=14_000_000,
+            end_hz=14_350_000,
+            oor=False,
         )
 
         t0 = 1000.0
@@ -347,9 +411,12 @@ class TestScopeAssemblerTimeout:
 
         # Feed a middle packet well past the timeout.
         import logging
+
         t_expired = t0 + 6.0
-        with patch("icom_lan.scope.time.monotonic", return_value=t_expired), \
-             patch.object(logging.getLogger("icom_lan.scope"), "warning") as mock_warn:
+        with (
+            patch("icom_lan.scope.time.monotonic", return_value=t_expired),
+            patch.object(logging.getLogger("icom_lan.scope"), "warning") as mock_warn,
+        ):
             seq2 = _seq_n_payload(2, 3, bytes(range(10)))
             result2 = asm.feed(seq2, 0)
 
@@ -364,8 +431,13 @@ class TestScopeAssemblerTimeout:
         asm = ScopeAssembler(assembly_timeout=5.0)
 
         seq1_old = _seq1_payload(
-            receiver=0, seq=1, seq_max=3,
-            mode=1, start_hz=14_000_000, end_hz=14_350_000, oor=False,
+            receiver=0,
+            seq=1,
+            seq_max=3,
+            mode=1,
+            start_hz=14_000_000,
+            end_hz=14_350_000,
+            oor=False,
         )
         t0 = 1000.0
         with patch("icom_lan.scope.time.monotonic", return_value=t0):
@@ -380,8 +452,13 @@ class TestScopeAssemblerTimeout:
         # New single-packet frame should assemble correctly.
         pixels = bytes([0x11, 0x22, 0x33])
         seq1_new = _seq1_payload(
-            receiver=0, seq=1, seq_max=1,
-            mode=1, start_hz=7_000_000, end_hz=7_300_000, oor=False,
+            receiver=0,
+            seq=1,
+            seq_max=1,
+            mode=1,
+            start_hz=7_000_000,
+            end_hz=7_300_000,
+            oor=False,
             extra_pixels=pixels,
         )
         with patch("icom_lan.scope.time.monotonic", return_value=t_expired + 0.1):
@@ -396,8 +473,13 @@ class TestScopeAssemblerTimeout:
         asm = ScopeAssembler(assembly_timeout=1.0)
 
         seq1 = _seq1_payload(
-            receiver=0, seq=1, seq_max=2,
-            mode=1, start_hz=14_000_000, end_hz=14_350_000, oor=False,
+            receiver=0,
+            seq=1,
+            seq_max=2,
+            mode=1,
+            start_hz=14_000_000,
+            end_hz=14_350_000,
+            oor=False,
         )
         t0 = 0.0
         with patch("icom_lan.scope.time.monotonic", return_value=t0):
@@ -414,8 +496,13 @@ class TestScopeAssemblerTimeout:
         asm = ScopeAssembler(assembly_timeout=5.0)
 
         seq1 = _seq1_payload(
-            receiver=0, seq=1, seq_max=2,
-            mode=1, start_hz=14_000_000, end_hz=14_350_000, oor=False,
+            receiver=0,
+            seq=1,
+            seq_max=2,
+            mode=1,
+            start_hz=14_000_000,
+            end_hz=14_350_000,
+            oor=False,
         )
         t0 = 1000.0
         with patch("icom_lan.scope.time.monotonic", return_value=t0):
@@ -439,16 +526,26 @@ class TestScopeAssemblerReset:
         asm = ScopeAssembler()
 
         seq1 = _seq1_payload(
-            receiver=0, seq=1, seq_max=3,
-            mode=1, start_hz=14_000_000, end_hz=14_350_000, oor=False,
+            receiver=0,
+            seq=1,
+            seq_max=3,
+            mode=1,
+            start_hz=14_000_000,
+            end_hz=14_350_000,
+            oor=False,
         )
         seq2 = _seq_n_payload(2, 3, bytes([0xAA] * 10))
         asm.feed(seq1, 0)
         asm.feed(seq2, 0)
 
         seq1_new = _seq1_payload(
-            receiver=0, seq=1, seq_max=2,
-            mode=1, start_hz=7_000_000, end_hz=7_300_000, oor=False,
+            receiver=0,
+            seq=1,
+            seq_max=2,
+            mode=1,
+            start_hz=7_000_000,
+            end_hz=7_300_000,
+            oor=False,
         )
         asm.feed(seq1_new, 0)
 
@@ -462,6 +559,7 @@ class TestScopeAssemblerReset:
 # ---------------------------------------------------------------------------
 # Tests for scope command builders
 # ---------------------------------------------------------------------------
+
 
 class TestScopeCommandBuilders:
     """Verify scope CI-V command bytes."""
@@ -647,6 +745,7 @@ class TestScopeCommandBuilders:
 # Integration: IcomRadio._execute_civ_raw with scope callback
 # ---------------------------------------------------------------------------
 
+
 class MockTransport:
     """Minimal mock transport for radio integration tests."""
 
@@ -709,8 +808,9 @@ class TestRadioScopeCallback:
 
         pixels1 = bytes([0x10, 0x20, 0x30])
         pixels2 = bytes([0x40, 0x50])
-        seq1_payload = _seq1_payload(0, 1, 2, mode=1,
-                                     start_hz=14_000_000, end_hz=14_350_000, oor=False)
+        seq1_payload = _seq1_payload(
+            0, 1, 2, mode=1, start_hz=14_000_000, end_hz=14_350_000, oor=False
+        )
         seq2_payload = _seq_n_payload(2, 2, pixels1 + pixels2)
 
         scope_seq1 = _scope_civ_frame(0, seq1_payload)
@@ -722,8 +822,9 @@ class TestRadioScopeCallback:
 
         # Use SET frequency (0x05): this path expects ACK/NAK, unlike GET (0x03)
         # which expects a data response and would not match queued ACK packets here.
-        civ_cmd = build_civ_frame(IC_7610_ADDR, CONTROLLER_ADDR, 0x05,
-                                  data=bcd_encode(14_074_000))
+        civ_cmd = build_civ_frame(
+            IC_7610_ADDR, CONTROLLER_ADDR, 0x05, data=bcd_encode(14_074_000)
+        )
         response = await radio._execute_civ_raw(civ_cmd)
 
         assert response.command == 0xFB
@@ -746,9 +847,16 @@ class TestRadioScopeCallback:
         radio, transport = radio_with_mock
         assert radio._scope_callback is None
 
-        seq1_payload = _seq1_payload(0, 1, 1, mode=1,
-                                     start_hz=14_000_000, end_hz=14_350_000, oor=False,
-                                     extra_pixels=bytes([10]))
+        seq1_payload = _seq1_payload(
+            0,
+            1,
+            1,
+            mode=1,
+            start_hz=14_000_000,
+            end_hz=14_350_000,
+            oor=False,
+            extra_pixels=bytes([10]),
+        )
         scope_frame = _scope_civ_frame(0, seq1_payload)
         transport.queue_response(_wrap_civ_in_udp(scope_frame))
         transport.queue_response(_ack_udp())
@@ -770,9 +878,16 @@ class TestRadioScopeCallback:
         radio.on_scope_data(None)
         assert radio._scope_callback is None
 
-        seq1_payload = _seq1_payload(0, 1, 1, mode=1,
-                                     start_hz=14_000_000, end_hz=14_350_000, oor=False,
-                                     extra_pixels=bytes([10]))
+        seq1_payload = _seq1_payload(
+            0,
+            1,
+            1,
+            mode=1,
+            start_hz=14_000_000,
+            end_hz=14_350_000,
+            oor=False,
+            extra_pixels=bytes([10]),
+        )
         scope_frame = _scope_civ_frame(0, seq1_payload)
         transport.queue_response(_wrap_civ_in_udp(scope_frame))
         transport.queue_response(_ack_udp())

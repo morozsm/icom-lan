@@ -23,6 +23,7 @@ def get_mode_reader(
     rigctld layer (hamlib-compatible or generic uppercase name).
     """
     if isinstance(radio, ModeInfoCapable):
+
         async def _read_mode_info(
             receiver: int = 0,
         ) -> tuple[str, int | None]:
@@ -33,6 +34,7 @@ def get_mode_reader(
 
     get_mode_info = getattr(radio, "get_mode_info", None)
     if callable(get_mode_info):
+
         async def _read_dynamic_mode_info(
             receiver: int = 0,
         ) -> tuple[str, int | None]:
@@ -46,6 +48,7 @@ def get_mode_reader(
 
     get_mode = getattr(radio, "get_mode", None)
     if callable(get_mode):
+
         async def _read_mode(
             receiver: int = 0,
         ) -> tuple[str, int | None]:
@@ -58,4 +61,3 @@ def get_mode_reader(
         return _read_mode
 
     return None
-

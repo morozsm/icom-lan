@@ -200,7 +200,6 @@ class TestParseStatusResponse:
         return bytes(pkt)
 
     def test_parse_ports(self):
-
         data = self._make_status(civport=50001, audioport=50002)
         resp = parse_status_response(data)
         assert resp.civ_port == 50001
@@ -209,13 +208,11 @@ class TestParseStatusResponse:
         assert resp.disconnected is False
 
     def test_disconnected(self):
-
         data = self._make_status(disc=1)
         resp = parse_status_response(data)
         assert resp.disconnected is True
 
     def test_error(self):
-
         data = self._make_status(error=0xFFFFFFFF)
         resp = parse_status_response(data)
         assert resp.error == 0xFFFFFFFF

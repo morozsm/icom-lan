@@ -38,7 +38,9 @@ def test_radio_gc_with_active_connection_logs_warning(
     assert any(
         "active" in r.message.lower() and "disconnect" in r.message.lower()
         for r in caplog.records
-    ), f"Expected WARN about active connection; got: {[r.message for r in caplog.records]}"
+    ), (
+        f"Expected WARN about active connection; got: {[r.message for r in caplog.records]}"
+    )
     assert any(r.levelno == logging.WARNING for r in caplog.records)
 
 

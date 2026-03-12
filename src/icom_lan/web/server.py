@@ -34,7 +34,13 @@ from .. import __version__
 from ..radio_state import RadioState
 from ..rigctld.state_cache import StateCache
 from .dx_cluster import DXClusterClient, SpotBuffer
-from .handlers import AudioBroadcaster, AudioHandler, ControlHandler, MetersHandler, ScopeHandler
+from .handlers import (
+    AudioBroadcaster,
+    AudioHandler,
+    ControlHandler,
+    MetersHandler,
+    ScopeHandler,
+)
 from .runtime_helpers import radio_ready, runtime_capabilities
 from .radio_poller import CommandQueue, DisableScope, EnableScope, RadioPoller
 from .websocket import (
@@ -67,7 +73,7 @@ def _to_camel(s: str) -> str:
     return parts[0] + "".join(p.capitalize() for p in parts[1:])
 
 
-def _camel_keys(d: dict) -> dict:
+def _camel_keys(d: dict[str, Any]) -> dict[str, Any]:
     """Recursively convert all dict keys from snake_case to camelCase."""
     return {
         _to_camel(k): (_camel_keys(v) if isinstance(v, dict) else v)
@@ -75,7 +81,7 @@ def _camel_keys(d: dict) -> dict:
     }
 
 
-def _camel_case_state(d: dict) -> dict:
+def _camel_case_state(d: dict[str, Any]) -> dict[str, Any]:
     """Transform ``RadioState.to_dict()`` output to camelCase for the frontend.
 
     - All snake_case keys become camelCase.
@@ -90,7 +96,7 @@ def _camel_case_state(d: dict) -> dict:
         "controlConnected": d.get("control_connected", False),
     }
     skip = {"connected", "radio_ready", "control_connected"}
-    result: dict = {}
+    result: dict[str, Any] = {}
     for key, value in d.items():
         if key in skip:
             continue
@@ -171,13 +177,16 @@ class WebServer:
         # RadioPoller: single CI-V serialiser
         if radio is not None:
             from ..radio_protocol import StateCacheCapable
+
             if isinstance(radio, StateCacheCapable):
                 self._state_cache: StateCache = cast(StateCache, radio.state_cache)
             else:
                 self._state_cache = StateCache()
         else:
             self._state_cache = StateCache()
-        raw_radio_state = getattr(radio, "radio_state", None) if radio is not None else None
+        raw_radio_state = (
+            getattr(radio, "radio_state", None) if radio is not None else None
+        )
         self._radio_state: RadioState = (
             raw_radio_state if isinstance(raw_radio_state, RadioState) else RadioState()
         )
@@ -196,7 +205,9 @@ class WebServer:
         # Scope health monitor
         self._scope_last_nonzero: float = 0.0
         self._scope_health_task: asyncio.Task[None] | None = None
-        self._scope_health_interval: float = 10.0  # seconds of zero frames before re-enable
+        self._scope_health_interval: float = (
+            10.0  # seconds of zero frames before re-enable
+        )
         self._scope_reenable_task: asyncio.Task[None] | None = None
         self._scope_reenable_poll_interval: float = 0.5
         self._scope_reenable_timeout: float = 30.0
@@ -239,6 +250,7 @@ class WebServer:
     def _set_scope_data_callback(self, callback: Any) -> None:
         """Set the scope data callback on the radio if it supports it."""
         from ..radio_protocol import ScopeCapable
+
         if self._radio is not None and isinstance(self._radio, ScopeCapable):
             self._radio.on_scope_data(callback)
 
@@ -256,7 +268,9 @@ class WebServer:
             self._scope_handlers.add(handler)
             if self._radio is not None:
                 if not _supports_scope(self._radio):
-                    logger.info("scope: active radio does not expose runtime scope support")
+                    logger.info(
+                        "scope: active radio does not expose runtime scope support"
+                    )
                     return
                 if self._radio_ready():
                     self._set_scope_data_callback(self._broadcast_scope)
@@ -270,7 +284,11 @@ class WebServer:
     def unregister_scope_handler(self, handler: "ScopeHandler") -> None:
         """Unregister a scope handler."""
         self._scope_handlers.discard(handler)
-        if not self._scope_handlers and self._radio is not None and _supports_scope(self._radio):
+        if (
+            not self._scope_handlers
+            and self._radio is not None
+            and _supports_scope(self._radio)
+        ):
             self._set_scope_data_callback(None)
             if self._scope_enabled:
                 loop = asyncio.get_event_loop()
@@ -291,13 +309,15 @@ class WebServer:
             self._scope_enabled = False
             logger.info("scope: disable queued (no active handlers)")
         else:
-            logger.debug("scope: disable queued but new handler present — will re-enable")
+            logger.debug(
+                "scope: disable queued but new handler present — will re-enable"
+            )
             if self._radio is not None:
                 self._set_scope_data_callback(self._broadcast_scope)
 
     def _broadcast_scope(self, frame: Any) -> None:
         """Broadcast scope frame to all registered handlers.
-        
+
         Also extract VFO frequency from scope center mode frames
         and update state cache — bypasses CI-V polling for freq.
         """
@@ -347,11 +367,17 @@ class WebServer:
         self._last_state_broadcast = now
 
         d = self._radio_state.to_dict()
-        d["revision"] = self._radio_poller.revision if self._radio_poller is not None else 0
-        raw_connected = getattr(self._radio, "connected", False) if self._radio else False
+        d["revision"] = (
+            self._radio_poller.revision if self._radio_poller is not None else 0
+        )
+        raw_connected = (
+            getattr(self._radio, "connected", False) if self._radio else False
+        )
         d["connected"] = raw_connected if isinstance(raw_connected, bool) else False
         d["radio_ready"] = self._radio_ready()
-        raw_control = getattr(self._radio, "control_connected", False) if self._radio else False
+        raw_control = (
+            getattr(self._radio, "control_connected", False) if self._radio else False
+        )
         d["control_connected"] = raw_control if isinstance(raw_control, bool) else False
 
         body = _camel_case_state(d)
@@ -441,13 +467,21 @@ class WebServer:
             if data.get("connected"):
                 self.broadcast_notification("success", "Radio connected", "connection")
             else:
-                self.broadcast_notification("warning", "Radio disconnected", "connection")
+                self.broadcast_notification(
+                    "warning", "Radio disconnected", "connection"
+                )
         # Also broadcast meter readings to MetersHandler clients
         if name == "meter":
             from .protocol import (
-                METER_SMETER_MAIN, METER_POWER, METER_SWR, METER_ALC,
-                METER_ID_DRAIN, METER_VD, METER_TEMP,
+                METER_SMETER_MAIN,
+                METER_POWER,
+                METER_SWR,
+                METER_ALC,
+                METER_ID_DRAIN,
+                METER_VD,
+                METER_TEMP,
             )
+
             meter_map = {
                 "smeter": METER_SMETER_MAIN,
                 "power": METER_POWER,
@@ -458,7 +492,9 @@ class WebServer:
                 "temp": METER_TEMP,
             }
             meter_type = data.get("type")
-            meter_id = meter_map.get(meter_type) if isinstance(meter_type, str) else None
+            meter_id = (
+                meter_map.get(meter_type) if isinstance(meter_type, str) else None
+            )
             if meter_id is not None:
                 # Binary protocol uses raw for bar width
                 raw = data.get("raw", 0)
@@ -467,7 +503,11 @@ class WebServer:
 
     def _on_radio_reconnect(self) -> None:
         """Called after soft_reconnect — re-enable scope if clients are connected."""
-        if self._scope_handlers and self._radio is not None and _supports_scope(self._radio):
+        if (
+            self._scope_handlers
+            and self._radio is not None
+            and _supports_scope(self._radio)
+        ):
             if self._radio_ready():
                 self._set_scope_data_callback(self._broadcast_scope)
                 self._command_queue.put(EnableScope())
@@ -495,6 +535,7 @@ class WebServer:
     async def _wait_and_enable_scope(self, *, reason: str) -> None:
         """Wait until radio_ready before queuing EnableScope."""
         import time
+
         deadline = time.monotonic() + self._scope_reenable_timeout
         try:
             while True:
@@ -528,6 +569,7 @@ class WebServer:
     def _scope_health_check(self, frame: Any) -> None:
         """Track whether scope frames contain real data (non-zero pixels)."""
         import time
+
         try:
             # ScopeFrame has .pixels (bytes-like)
             pixels = getattr(frame, "pixels", None) or b""
@@ -539,6 +581,7 @@ class WebServer:
     async def _scope_health_monitor(self) -> None:
         """Background task: re-enable scope if frames are all-zero for too long."""
         import time
+
         try:
             while True:
                 await asyncio.sleep(self._scope_health_interval)
@@ -585,6 +628,7 @@ class WebServer:
         logger.info("web server listening on %s:%d", addr[0], addr[1])
         if self._radio is not None:
             from ..radio_protocol import StateNotifyCapable
+
             if isinstance(self._radio, StateNotifyCapable):
                 # Register callback so CI-V RX stream can notify us of state changes.
                 self._radio.set_state_change_callback(self._on_radio_state_change)
@@ -790,9 +834,7 @@ class WebServer:
             Tuple of (method, path, headers_dict, query_params) or None on EOF/error.
         """
         try:
-            request_line = await asyncio.wait_for(
-                reader.readline(), timeout=10.0
-            )
+            request_line = await asyncio.wait_for(reader.readline(), timeout=10.0)
         except asyncio.TimeoutError:
             return None
         if not request_line:
@@ -882,7 +924,9 @@ class WebServer:
             auth_header = (headers or {}).get("authorization", "")
             if auth_header != f"Bearer {self._config.auth_token}":
                 await _send_response(
-                    writer, 401, "Unauthorized",
+                    writer,
+                    401,
+                    "Unauthorized",
                     b'{"error":"unauthorized","message":"Valid auth token required"}',
                     {"Content-Type": "application/json", "WWW-Authenticate": "Bearer"},
                 )
@@ -891,7 +935,9 @@ class WebServer:
         # Nuclear SW cleanup: Clear-Site-Data on /?clearcache
         if path == "/clearcache":
             await _send_response(
-                writer, 200, "OK",
+                writer,
+                200,
+                "OK",
                 b"<h2>Site data cleared. <a href='/'>Reload</a></h2>",
                 {
                     "Content-Type": "text/html",
@@ -919,11 +965,11 @@ class WebServer:
         else:
             await _send_response(writer, 404, "Not Found", b"404 Not Found", {})
 
-    async def _serve_info(self, writer: asyncio.StreamWriter, headers: dict[str, str] | None = None) -> None:
+    async def _serve_info(
+        self, writer: asyncio.StreamWriter, headers: dict[str, str] | None = None
+    ) -> None:
         raw_model = (
-            getattr(self._radio, "model", None)
-            if self._radio is not None
-            else None
+            getattr(self._radio, "model", None) if self._radio is not None else None
         )
         model = raw_model if isinstance(raw_model, str) else self._config.radio_model
         caps = _runtime_capabilities(self._radio)
@@ -970,7 +1016,9 @@ class WebServer:
         ).encode()
         await _send_json(writer, body, headers)
 
-    async def _serve_state(self, writer: asyncio.StreamWriter, headers: dict[str, str] | None = None) -> None:
+    async def _serve_state(
+        self, writer: asyncio.StreamWriter, headers: dict[str, str] | None = None
+    ) -> None:
         d = self._radio_state.to_dict()
         raw_connected = (
             getattr(self._radio, "connected", False) if self._radio else False
@@ -978,13 +1026,10 @@ class WebServer:
         d["connected"] = raw_connected if isinstance(raw_connected, bool) else False
         d["radio_ready"] = self._radio_ready()
         raw_control_connected = (
-            getattr(self._radio, "control_connected", False)
-            if self._radio else False
+            getattr(self._radio, "control_connected", False) if self._radio else False
         )
         d["control_connected"] = (
-            raw_control_connected
-            if isinstance(raw_control_connected, bool)
-            else False
+            raw_control_connected if isinstance(raw_control_connected, bool) else False
         )
         revision = self._radio_poller.revision if self._radio_poller is not None else 0
         d["revision"] = revision
@@ -993,10 +1038,16 @@ class WebServer:
         body = json.dumps(_camel_case_state(d), separators=(",", ":")).encode()
         await _send_json(writer, body, headers, etag=f'"{revision}"')
 
-    async def _serve_capabilities(self, writer: asyncio.StreamWriter, headers: dict[str, str] | None = None) -> None:
+    async def _serve_capabilities(
+        self, writer: asyncio.StreamWriter, headers: dict[str, str] | None = None
+    ) -> None:
         caps = _runtime_capabilities(self._radio)
-        _raw_model = getattr(self._radio, "model", None) if self._radio is not None else None
-        model: str = _raw_model if isinstance(_raw_model, str) else self._config.radio_model
+        _raw_model = (
+            getattr(self._radio, "model", None) if self._radio is not None else None
+        )
+        model: str = (
+            _raw_model if isinstance(_raw_model, str) else self._config.radio_model
+        )
         profile = self._get_profile()
 
         freq_ranges = [
@@ -1005,7 +1056,12 @@ class WebServer:
                 "end": r.end,
                 "label": r.label,
                 "bands": [
-                    {"name": b.name, "start": b.start, "end": b.end, "default": b.default}
+                    {
+                        "name": b.name,
+                        "start": b.start,
+                        "end": b.end,
+                        "default": b.default,
+                    }
                     for b in r.bands
                 ],
             }
@@ -1045,45 +1101,64 @@ class WebServer:
         )
 
     async def _handle_bridge(
-        self, method: str, writer: asyncio.StreamWriter,
+        self,
+        method: str,
+        writer: asyncio.StreamWriter,
     ) -> None:
         """Handle /api/v1/bridge — GET status, POST start, DELETE stop."""
         if method == "GET":
             stats = self.audio_bridge_stats
             body = json.dumps(
-                {"running": stats is not None and stats.get("running", False),
-                 **(stats or {})},
+                {
+                    "running": stats is not None and stats.get("running", False),
+                    **(stats or {}),
+                },
                 separators=(",", ":"),
             ).encode()
             await _send_response(
-                writer, 200, "OK", body, {"Content-Type": "application/json"},
+                writer,
+                200,
+                "OK",
+                body,
+                {"Content-Type": "application/json"},
             )
         elif method == "POST":
             try:
                 await self.start_audio_bridge()
                 body = json.dumps({"status": "started"}, separators=(",", ":")).encode()
                 await _send_response(
-                    writer, 200, "OK", body, {"Content-Type": "application/json"},
+                    writer,
+                    200,
+                    "OK",
+                    body,
+                    {"Content-Type": "application/json"},
                 )
             except Exception as exc:
                 body = json.dumps(
-                    {"error": str(exc)}, separators=(",", ":"),
+                    {"error": str(exc)},
+                    separators=(",", ":"),
                 ).encode()
                 await _send_response(
-                    writer, 500, "Error", body, {"Content-Type": "application/json"},
+                    writer,
+                    500,
+                    "Error",
+                    body,
+                    {"Content-Type": "application/json"},
                 )
         elif method == "DELETE":
             await self.stop_audio_bridge()
             body = json.dumps({"status": "stopped"}, separators=(",", ":")).encode()
             await _send_response(
-                writer, 200, "OK", body, {"Content-Type": "application/json"},
+                writer,
+                200,
+                "OK",
+                body,
+                {"Content-Type": "application/json"},
             )
         else:
             await _send_response(writer, 405, "Method Not Allowed", b"", {})
 
-    async def _serve_static(
-        self, writer: asyncio.StreamWriter, filename: str
-    ) -> None:
+    async def _serve_static(self, writer: asyncio.StreamWriter, filename: str) -> None:
         # Prevent path traversal
         static_dir = self._config.static_dir.resolve()
         target = (static_dir / filename).resolve()
@@ -1132,7 +1207,10 @@ class WebServer:
         if self._config.auth_token:
             auth_header = headers.get("authorization", "")
             token_param = (query or {}).get("token", [""])[0]
-            if auth_header != f"Bearer {self._config.auth_token}" and token_param != self._config.auth_token:
+            if (
+                auth_header != f"Bearer {self._config.auth_token}"
+                and token_param != self._config.auth_token
+            ):
                 await _send_response(writer, 401, "Unauthorized", b"Unauthorized", {})
                 return
 
@@ -1146,9 +1224,7 @@ class WebServer:
         ext_header = headers.get("sec-websocket-extensions", "")
         deflate_resp = negotiate_deflate(ext_header) if ext_header else None
         ext_line = (
-            f"Sec-WebSocket-Extensions: {deflate_resp}\r\n"
-            if deflate_resp
-            else ""
+            f"Sec-WebSocket-Extensions: {deflate_resp}\r\n" if deflate_resp else ""
         )
         response = (
             "HTTP/1.1 101 Switching Protocols\r\n"
@@ -1163,15 +1239,16 @@ class WebServer:
 
         ws = WebSocketConnection(reader, writer, deflate=bool(deflate_resp))
         raw_model = (
-            getattr(self._radio, "model", None)
-            if self._radio is not None
-            else None
+            getattr(self._radio, "model", None) if self._radio is not None else None
         )
         model = raw_model if isinstance(raw_model, str) else self._config.radio_model
 
         if path == "/api/v1/ws":
             handler: Any = ControlHandler(
-                ws, self._radio, __version__, model,
+                ws,
+                self._radio,
+                __version__,
+                model,
                 server=self,
             )
         elif path == "/api/v1/scope":
@@ -1187,9 +1264,14 @@ class WebServer:
         peer = writer.get_extra_info("peername", ("?", 0))
         logger.info(
             "ws connect: %s %s:%s (active=%d)",
-            path, peer[0], peer[1], len(self._client_tasks),
+            path,
+            peer[0],
+            peer[1],
+            len(self._client_tasks),
         )
-        keepalive = asyncio.create_task(ws.keepalive_loop(self._config.keepalive_interval))
+        keepalive = asyncio.create_task(
+            ws.keepalive_loop(self._config.keepalive_interval)
+        )
         try:
             await handler.run()
         except Exception as exc:
@@ -1202,7 +1284,10 @@ class WebServer:
                 pass
             logger.info(
                 "ws disconnect: %s %s:%s (active=%d)",
-                path, peer[0], peer[1], len(self._client_tasks) - 1,
+                path,
+                peer[0],
+                peer[1],
+                len(self._client_tasks) - 1,
             )
 
 
@@ -1246,11 +1331,9 @@ async def _send_response(
         **extra_headers,
     }
     header_lines = "".join(f"{k}: {v}\r\n" for k, v in headers.items())
-    response = (
-        f"HTTP/1.1 {status} {reason}\r\n"
-        f"{header_lines}"
-        "\r\n"
-    ).encode("ascii") + body
+    response = (f"HTTP/1.1 {status} {reason}\r\n{header_lines}\r\n").encode(
+        "ascii"
+    ) + body
     writer.write(response)
     await writer.drain()
 
@@ -1260,9 +1343,7 @@ async def _send_response(
 # ------------------------------------------------------------------
 
 
-async def run_web_server(
-    radio: "Radio | None" = None, **kwargs: Any
-) -> None:
+async def run_web_server(radio: "Radio | None" = None, **kwargs: Any) -> None:
     """Create a :class:`WebServer` from *kwargs* and run it forever.
 
     Keyword arguments are forwarded to :class:`WebConfig`.

@@ -528,9 +528,7 @@ class TestCW:
 
             # Confirm mode before keying.
             actual_mode, _ = await radio.get_mode()
-            assert actual_mode == Mode.CW.name, (
-                f"Expected CW mode, got {actual_mode}"
-            )
+            assert actual_mode == Mode.CW.name, f"Expected CW mode, got {actual_mode}"
 
             # Longer test message (easier to hear on-air)
             msg = "VV KN4KYD TEST TEST TEST VV"

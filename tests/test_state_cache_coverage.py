@@ -24,6 +24,7 @@ def cache() -> StateCache:
 # is_fresh for additional fields
 # ---------------------------------------------------------------------------
 
+
 def test_is_fresh_swr_never_set_returns_false(cache: StateCache) -> None:
     assert cache.is_fresh("swr", 1.0) is False
 
@@ -82,6 +83,7 @@ def test_is_fresh_preamp_after_update_returns_true(cache: StateCache) -> None:
 # update_rf_gain
 # ---------------------------------------------------------------------------
 
+
 def test_update_rf_gain_stores_value(cache: StateCache) -> None:
     cache.update_rf_gain(150.0)
     assert cache.rf_gain == pytest.approx(150.0)
@@ -97,6 +99,7 @@ def test_update_rf_gain_sets_timestamp(cache: StateCache) -> None:
 # update_af_level
 # ---------------------------------------------------------------------------
 
+
 def test_update_af_level_stores_value(cache: StateCache) -> None:
     cache.update_af_level(64.0)
     assert cache.af_level == pytest.approx(64.0)
@@ -111,6 +114,7 @@ def test_update_af_level_sets_timestamp(cache: StateCache) -> None:
 # ---------------------------------------------------------------------------
 # update_swr / update_alc
 # ---------------------------------------------------------------------------
+
 
 def test_update_swr_stores_value(cache: StateCache) -> None:
     cache.update_swr(2.3)
@@ -138,6 +142,7 @@ def test_update_alc_sets_timestamp(cache: StateCache) -> None:
 # update_attenuator / update_preamp
 # ---------------------------------------------------------------------------
 
+
 def test_update_attenuator_stores_value(cache: StateCache) -> None:
     cache.update_attenuator(18)
     assert cache.attenuator == 18
@@ -163,6 +168,7 @@ def test_update_preamp_sets_timestamp(cache: StateCache) -> None:
 # ---------------------------------------------------------------------------
 # snapshot includes all new fields
 # ---------------------------------------------------------------------------
+
 
 def test_snapshot_includes_swr(cache: StateCache) -> None:
     cache.update_swr(1.5)

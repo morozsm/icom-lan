@@ -131,7 +131,7 @@ class ScopeCompletionPolicy(StrEnum):
     """Policies for awaiting completion of scope commands."""
 
     STRICT = "strict"  # Wait for a CI-V ACK response
-    FAST = "fast"      # Fire-and-forget, do not wait for ACK
+    FAST = "fast"  # Fire-and-forget, do not wait for ACK
     VERIFY = "verify"  # Fire-and-forget, but await actual scope data activity
 
 
@@ -203,9 +203,7 @@ def _build_audio_capabilities() -> AudioCapabilities:
         sorted({_AUDIO_CODEC_CHANNELS[codec] for codec in _SUPPORTED_AUDIO_CODECS})
     )
     default_codec = next(
-        codec
-        for codec in _DEFAULT_CODEC_PREFERENCE
-        if codec in _SUPPORTED_AUDIO_CODECS
+        codec for codec in _DEFAULT_CODEC_PREFERENCE if codec in _SUPPORTED_AUDIO_CODECS
     )
     implied_default_channels = _AUDIO_CODEC_CHANNELS[default_codec]
     default_channels = (
@@ -236,7 +234,6 @@ def get_audio_capabilities() -> AudioCapabilities:
     3. Channels: channel-count implied by default codec (fallback to minimum).
     """
     return _AUDIO_CAPABILITIES
-
 
 
 @dataclass(frozen=True, slots=True)

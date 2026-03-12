@@ -11,6 +11,7 @@ import pytest
 from icom_lan import IcomRadio
 from icom_lan.backends.icom7610 import Icom7610SerialRadio
 from icom_lan.exceptions import AudioCodecBackendError, CommandError
+
 pytestmark = pytest.mark.integration
 
 
@@ -176,7 +177,9 @@ class TestSerialScopeIntegration:
                 "Set ICOM_SERIAL_BAUDRATE below 115200 to validate serial low-baud guardrail"
             )
         if _flag_enabled("ICOM_SERIAL_SCOPE_ALLOW_LOW_BAUD"):
-            pytest.skip("Unset ICOM_SERIAL_SCOPE_ALLOW_LOW_BAUD to validate guardrail rejection")
+            pytest.skip(
+                "Unset ICOM_SERIAL_SCOPE_ALLOW_LOW_BAUD to validate guardrail rejection"
+            )
 
         radio = Icom7610SerialRadio(**serial_radio_config)
         connected = False

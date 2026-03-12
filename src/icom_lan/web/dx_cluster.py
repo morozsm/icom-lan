@@ -11,6 +11,8 @@ from collections import deque
 from dataclasses import dataclass, field
 from typing import Callable
 
+__all__ = ["DXSpot", "parse_spot", "DXClusterClient", "SpotBuffer"]
+
 _log = logging.getLogger(__name__)
 
 
@@ -46,7 +48,7 @@ def parse_spot(line: str) -> DXSpot | None:
     freq = round(float(m.group(2)) * 1000)  # kHz → Hz
     call = m.group(3)
 
-    rest = line[m.end():].strip()
+    rest = line[m.end() :].strip()
 
     time_m = _TIME_RE.search(rest)
     if time_m:
@@ -123,7 +125,7 @@ class DXClusterClient:
             except Exception as exc:
                 if not self._running:
                     break
-                wait = min(2 ** attempt, 60)
+                wait = min(2**attempt, 60)
                 attempt += 1
                 _log.warning("DX cluster disconnected (%s), retry in %ds", exc, wait)
                 await asyncio.sleep(wait)
@@ -208,4 +210,5 @@ class SpotBuffer:
     def to_json(self) -> str:
         """Serialise the current spot list to a JSON string."""
         import json as _json
+
         return _json.dumps(self.get_spots())

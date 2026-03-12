@@ -5,7 +5,7 @@ Tests fire-and-forget commands that don't wait for responses.
 
 import asyncio
 import pytest
-from icom_lan.radio import IcomRadio
+from icom_lan.radio import IcomRadio  # noqa: TID251
 from icom_lan.types import MemoryChannel, BandStackRegister
 
 pytestmark = pytest.mark.integration
@@ -24,7 +24,7 @@ async def test_memory_contents_set_only(radio: IcomRadio) -> None:
         scan=0,
         datamode=0,
         tonemode=0,
-        name="SETONLY"
+        name="SETONLY",
     )
     # This is fire-and-forget, should not timeout
     await radio.set_memory_contents(mem)
@@ -36,11 +36,7 @@ async def test_memory_contents_set_only(radio: IcomRadio) -> None:
 async def test_band_stack_set_only(radio: IcomRadio) -> None:
     """Test band stack SET (0x1A 0x01 SET)."""
     bsr = BandStackRegister(
-        band=15,
-        register=3,
-        frequency_hz=14200000,
-        mode=1,
-        filter=1
+        band=15, register=3, frequency_hz=14200000, mode=1, filter=1
     )
     # Fire-and-forget
     await radio.set_band_stack(bsr)

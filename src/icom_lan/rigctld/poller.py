@@ -57,6 +57,7 @@ def _get_mode_reader(
 ) -> Callable[..., Awaitable[tuple[str, int | None]]] | None:
     """Return a mode reader using backend-native info or the core contract."""
     if isinstance(radio, ModeInfoCapable):
+
         async def _read_mode_info(
             receiver: int = 0,
         ) -> tuple[str, int | None]:
@@ -67,6 +68,7 @@ def _get_mode_reader(
 
     get_mode_info = getattr(radio, "get_mode_info", None)
     if callable(get_mode_info):
+
         async def _read_dynamic_mode_info(
             receiver: int = 0,
         ) -> tuple[str, int | None]:
@@ -80,6 +82,7 @@ def _get_mode_reader(
 
     get_mode = getattr(radio, "get_mode", None)
     if callable(get_mode):
+
         async def _read_mode(
             receiver: int = 0,
         ) -> tuple[str, int | None]:

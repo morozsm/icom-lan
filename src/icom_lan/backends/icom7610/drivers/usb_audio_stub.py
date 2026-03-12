@@ -36,7 +36,9 @@ def select_usb_audio_device(
     """Select a device deterministically for test and backend wiring."""
     candidates = [d for d in devices if (d.duplex or not require_duplex)]
     if not candidates:
-        raise AudioDeviceSelectionError("No USB audio device satisfies selection rules.")
+        raise AudioDeviceSelectionError(
+            "No USB audio device satisfies selection rules."
+        )
 
     if preferred_name is not None:
         for dev in candidates:

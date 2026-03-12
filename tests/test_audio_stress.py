@@ -11,7 +11,7 @@ from __future__ import annotations
 import asyncio
 import struct
 import time
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -52,10 +52,7 @@ def _make_audio_bytes(
 
 def _make_audio_packet_queue(count: int) -> list[bytes]:
     """Build `count` raw UDP audio packets (seq 0..count-1)."""
-    return [
-        _make_audio_bytes(bytes([i % 256] * 160), send_seq=i)
-        for i in range(count)
-    ]
+    return [_make_audio_bytes(bytes([i % 256] * 160), send_seq=i) for i in range(count)]
 
 
 class QueuedAudioTransport:

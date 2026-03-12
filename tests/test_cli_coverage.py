@@ -76,7 +76,9 @@ def _mock_radio_ctx() -> tuple[MagicMock, AsyncMock]:
         ("serve", "_cmd_serve"),
     ],
 )
-async def test_run_dispatches_non_audio_commands(command: str, handler_name: str) -> None:
+async def test_run_dispatches_non_audio_commands(
+    command: str, handler_name: str
+) -> None:
     args = _run_args(command=command)
     if command == "ptt":
         args.state = "on"
@@ -203,15 +205,19 @@ async def test_run_serve_uses_serial_backend_factory_config() -> None:
 
 
 @pytest.mark.asyncio
-async def test_run_dispatches_power_on_off_and_unknown_paths(capsys: pytest.CaptureFixture[str]) -> None:
+async def test_run_dispatches_power_on_off_and_unknown_paths(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     _, radio = _mock_radio_ctx()
+    radio.set_powerstat = AsyncMock()
+    radio.set_power = AsyncMock()
     with patch("icom_lan.cli.create_radio", return_value=radio):
         rc_on = await _run(_run_args(command="power-on"))
         rc_off = await _run(_run_args(command="power-off"))
     assert rc_on == 0
     assert rc_off == 0
-    radio.power_control.assert_any_await(True)
-    radio.power_control.assert_any_await(False)
+    radio.set_powerstat.assert_any_await(True)
+    radio.set_powerstat.assert_any_await(False)
 
     bad_audio = _run_args(command="audio", audio_command="invalid")
     with patch("icom_lan.cli.create_radio", return_value=radio):
@@ -294,7 +300,9 @@ async def test_cmd_audio_rx_stop_failure_and_write_failure(
 
 
 @pytest.mark.asyncio
-async def test_cmd_audio_tx_error_branches_and_padding(capsys: pytest.CaptureFixture[str]) -> None:
+async def test_cmd_audio_tx_error_branches_and_padding(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     radio = _make_audio_capable_mock(AsyncMock())
     radio.start_audio_tx_pcm = AsyncMock()
     radio.stop_audio_tx_pcm = AsyncMock()
@@ -430,7 +438,9 @@ def _make_scope_capable_mock(base: MagicMock | None = None) -> MagicMock:
     return radio
 
 
-async def test_cmd_scope_json_image_and_error_paths(monkeypatch, capsys: pytest.CaptureFixture[str]) -> None:
+async def test_cmd_scope_json_image_and_error_paths(
+    monkeypatch, capsys: pytest.CaptureFixture[str]
+) -> None:
     radio = _make_scope_capable_mock(AsyncMock())
     frame = ScopeFrame(0, 1, 14_000_000, 14_350_000, b"\x01\x02", False)
     radio.capture_scope_frame = AsyncMock(return_value=frame)
@@ -508,31 +518,57 @@ async def test_cmd_scope_json_image_and_error_paths(monkeypatch, capsys: pytest.
 
 
 @pytest.mark.asyncio
-async def test_cmd_scope_validation_and_import_error(monkeypatch, capsys: pytest.CaptureFixture[str]) -> None:
+async def test_cmd_scope_validation_and_import_error(
+    monkeypatch, capsys: pytest.CaptureFixture[str]
+) -> None:
     radio = _make_scope_capable_mock(AsyncMock())
     radio.disable_scope = AsyncMock()
 
-    assert await _cmd_scope(
-        radio,
-        argparse.Namespace(
-            frames=0, width=800, capture_timeout=None, json=True,
-            spectrum_only=True, output="x.png", theme="classic",
-        ),
-    ) == 1
-    assert await _cmd_scope(
-        radio,
-        argparse.Namespace(
-            frames=1, width=10, capture_timeout=None, json=True,
-            spectrum_only=True, output="x.png", theme="classic",
-        ),
-    ) == 1
-    assert await _cmd_scope(
-        radio,
-        argparse.Namespace(
-            frames=1, width=800, capture_timeout=0, json=True,
-            spectrum_only=True, output="x.png", theme="classic",
-        ),
-    ) == 1
+    assert (
+        await _cmd_scope(
+            radio,
+            argparse.Namespace(
+                frames=0,
+                width=800,
+                capture_timeout=None,
+                json=True,
+                spectrum_only=True,
+                output="x.png",
+                theme="classic",
+            ),
+        )
+        == 1
+    )
+    assert (
+        await _cmd_scope(
+            radio,
+            argparse.Namespace(
+                frames=1,
+                width=10,
+                capture_timeout=None,
+                json=True,
+                spectrum_only=True,
+                output="x.png",
+                theme="classic",
+            ),
+        )
+        == 1
+    )
+    assert (
+        await _cmd_scope(
+            radio,
+            argparse.Namespace(
+                frames=1,
+                width=800,
+                capture_timeout=0,
+                json=True,
+                spectrum_only=True,
+                output="x.png",
+                theme="classic",
+            ),
+        )
+        == 1
+    )
 
     real_import = __import__
 
@@ -545,8 +581,13 @@ async def test_cmd_scope_validation_and_import_error(monkeypatch, capsys: pytest
     rc = await _cmd_scope(
         radio,
         argparse.Namespace(
-            frames=1, width=800, capture_timeout=0.5, json=False,
-            spectrum_only=True, output="x.png", theme="classic",
+            frames=1,
+            width=800,
+            capture_timeout=0.5,
+            json=False,
+            spectrum_only=True,
+            output="x.png",
+            theme="classic",
         ),
     )
     assert rc == 1
@@ -554,7 +595,9 @@ async def test_cmd_scope_validation_and_import_error(monkeypatch, capsys: pytest
 
 
 @pytest.mark.asyncio
-async def test_cmd_serve_and_cmd_web_paths(tmp_path, capsys: pytest.CaptureFixture[str]) -> None:
+async def test_cmd_serve_and_cmd_web_paths(
+    tmp_path, capsys: pytest.CaptureFixture[str]
+) -> None:
     radio = AsyncMock()
 
     class FakeRigctldServer:
@@ -596,7 +639,9 @@ async def test_cmd_serve_and_cmd_web_paths(tmp_path, capsys: pytest.CaptureFixtu
             raise asyncio.CancelledError
 
     with patch("icom_lan.web.server.WebServer", FakeWebServer):
-        args = argparse.Namespace(web_host="127.0.0.1", web_port=9090, web_static_dir=None)
+        args = argparse.Namespace(
+            web_host="127.0.0.1", web_port=9090, web_static_dir=None
+        )
         assert await _cmd_web(radio, args) == 0
         args2 = argparse.Namespace(
             web_host="127.0.0.1",
@@ -607,7 +652,9 @@ async def test_cmd_serve_and_cmd_web_paths(tmp_path, capsys: pytest.CaptureFixtu
 
 
 @pytest.mark.asyncio
-async def test_cmd_discover_found_and_not_found(capsys: pytest.CaptureFixture[str]) -> None:
+async def test_cmd_discover_found_and_not_found(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     class FakeLoop:
         def __init__(self):
             self.t = 0.0
@@ -782,7 +829,7 @@ async def test_cmd_tuner_json_output(capsys: pytest.CaptureFixture[str]) -> None
 # _cmd_audio_bridge — Task 3
 # ---------------------------------------------------------------------------
 
-import icom_lan.audio_bridge as _ab_mod
+import icom_lan.audio_bridge as _ab_mod  # noqa: E402
 from icom_lan.cli import _cmd_audio_bridge  # noqa: E402
 
 
@@ -791,8 +838,13 @@ def _fake_bridge_cls(start_err: Exception | None = None) -> type:
     start_mock = AsyncMock(side_effect=start_err)
     stop_mock = AsyncMock()
     _stats = {
-        "running": False, "rx_frames": 5, "tx_frames": 3, "rx_drops": 0,
-        "uptime_seconds": 1.0, "rx_interval_ms": 20.0, "tx_interval_ms": 20.0,
+        "running": False,
+        "rx_frames": 5,
+        "tx_frames": 3,
+        "rx_drops": 0,
+        "uptime_seconds": 1.0,
+        "rx_interval_ms": 20.0,
+        "tx_interval_ms": 20.0,
         "buffer_size": 5,
     }
 
@@ -808,7 +860,7 @@ def _fake_bridge_cls(start_err: Exception | None = None) -> type:
             return _stats
 
     _FakeBridge._start_mock = start_mock  # type: ignore[attr-defined]
-    _FakeBridge._stop_mock = stop_mock    # type: ignore[attr-defined]
+    _FakeBridge._stop_mock = stop_mock  # type: ignore[attr-defined]
     return _FakeBridge
 
 
@@ -818,8 +870,18 @@ async def test_cmd_audio_bridge_list_devices() -> None:
     radio = MagicMock()
     args = argparse.Namespace(list_devices=True, device=None, rx_only=False)
     fake_devices = [
-        {"name": "Built-in Output", "index": 0, "max_input_channels": 0, "max_output_channels": 2},
-        {"name": "BlackHole 2ch", "index": 1, "max_input_channels": 2, "max_output_channels": 2},
+        {
+            "name": "Built-in Output",
+            "index": 0,
+            "max_input_channels": 0,
+            "max_output_channels": 2,
+        },
+        {
+            "name": "BlackHole 2ch",
+            "index": 1,
+            "max_input_channels": 2,
+            "max_output_channels": 2,
+        },
     ]
     with patch.object(_ab_mod, "list_audio_devices", return_value=fake_devices):
         result = await _cmd_audio_bridge(radio, args)
@@ -832,7 +894,9 @@ async def test_cmd_audio_bridge_list_devices_import_error() -> None:
     radio = MagicMock()
     args = argparse.Namespace(list_devices=True, device=None, rx_only=False)
 
-    with patch.object(_ab_mod, "list_audio_devices", side_effect=ImportError("sounddevice required")):
+    with patch.object(
+        _ab_mod, "list_audio_devices", side_effect=ImportError("sounddevice required")
+    ):
         result = await _cmd_audio_bridge(radio, args)
     assert result == 1
 
@@ -861,7 +925,9 @@ async def test_cmd_audio_bridge_device_not_found() -> None:
     radio = _make_audio_capable_mock(MagicMock())
     args = argparse.Namespace(list_devices=False, device="NonExistent", rx_only=False)
 
-    fake_cls = _fake_bridge_cls(start_err=RuntimeError("Virtual audio device not found"))
+    fake_cls = _fake_bridge_cls(
+        start_err=RuntimeError("Virtual audio device not found")
+    )
     with patch.object(_ab_mod, "AudioBridge", fake_cls):
         result = await _cmd_audio_bridge(radio, args)
     assert result == 1

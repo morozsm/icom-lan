@@ -14,7 +14,7 @@ import asyncio
 from typing import TYPE_CHECKING, Any, Callable, Protocol
 
 if TYPE_CHECKING:
-    from .audio import AudioPacket, AudioState, AudioStream
+    from .audio import AudioPacket, AudioStream
     from .civ import CivEvent, CivRequestTracker
     from .commander import IcomCommander
     from ._civ_rx import CivRuntime
@@ -62,6 +62,8 @@ class CivRuntimeHost(Protocol):
 
     # CI-V watchdog / last data timestamps
     _last_civ_data_received: "float | None"
+    _civ_waiter_ttl_gc_interval: float
+    _civ_last_waiter_gc_monotonic: float
 
     # Scope and CI-V event queues
     _scope_assembler: "ScopeAssembler"
@@ -88,20 +90,15 @@ class CivRuntimeHost(Protocol):
     _connected: bool
 
     # Helpers provided by the host
-    async def disconnect(self) -> None:
-        ...
+    async def disconnect(self) -> None: ...
 
-    async def connect(self) -> None:
-        ...
+    async def connect(self) -> None: ...
 
-    async def soft_reconnect(self) -> None:
-        ...
+    async def soft_reconnect(self) -> None: ...
 
-    async def _force_cleanup_civ(self) -> None:
-        ...
+    async def _force_cleanup_civ(self) -> None: ...
 
-    async def _send_open_close(self, *, open_stream: bool) -> None:
-        ...
+    async def _send_open_close(self, *, open_stream: bool) -> None: ...
 
 
 class ControlPhaseHost(Protocol):
@@ -156,25 +153,87 @@ class ControlPhaseHost(Protocol):
     _civ_stream_ready: bool
     _civ_recovering: bool
     _civ_last_waiter_gc_monotonic: float
+    _last_civ_data_received: "float | None"
 
     # Composed CI-V runtime (host delegates to it for pump/watchdog/worker)
     _civ_runtime: "CivRuntime"
 
-    # Control-phase internal helpers
-    def _start_token_renewal(self) -> None:
-        ...
+    # CI-V send sequence numbers (used by open/close)
+    _civ_send_seq: int
+    _audio_send_seq: int
 
-    def _stop_token_renewal(self) -> None:
-        ...
+    # Optional: audio stream and callbacks (for disconnect cleanup)
+    _audio_stream: Any  # AudioStream | None
+    _pcm_tx_fmt: Any  # tuple[int, int, int] | None
+    _pcm_rx_user_callback: Any
+    _opus_rx_user_callback: Any
 
-    def _start_watchdog(self) -> None:
-        ...
+    # Optional callback after soft_reconnect
+    _on_reconnect: "Callable[[], None] | None"
 
-    def _stop_watchdog(self) -> None:
-        ...
+    # Control-phase internal helpers (host methods called by runtime/mixin)
+    def _start_token_renewal(self) -> None: ...
 
-    def _stop_reconnect(self) -> None:
-        ...
+    def _stop_token_renewal(self) -> None: ...
+
+    def _start_watchdog(self) -> None: ...
+
+    def _stop_watchdog(self) -> None: ...
+
+    def _stop_reconnect(self) -> None: ...
+
+    async def _watchdog_loop(self) -> None: ...
+
+    async def _wait_for_packet(
+        self, transport: "IcomTransport", *, size: int, label: str
+    ) -> bytes: ...
+
+    async def _send_token_ack(self) -> None: ...
+
+    async def _receive_guid(self) -> "bytes | None": ...
+
+    async def _send_conninfo(
+        self,
+        guid: "bytes | None",
+        civ_local_port: int = 0,
+        audio_local_port: int = 0,
+    ) -> None: ...
+
+    async def _receive_civ_port(self) -> int: ...
+
+    def _status_retry_pause(self) -> float: ...
+
+    async def _send_open_close(self, *, open_stream: bool) -> None: ...
+
+    def _advance_civ_generation(self, reason: str) -> None: ...
+
+    def _start_civ_rx_pump(self) -> None: ...
+
+    def _start_civ_data_watchdog(self) -> None: ...
+
+    async def _stop_civ_data_watchdog(self) -> None: ...
+
+    async def _stop_civ_worker(self) -> None: ...
+
+    async def _stop_civ_rx_pump(self) -> None: ...
+
+    def _start_civ_worker(self) -> None: ...
+
+    async def _token_renewal_loop(self) -> None: ...
+
+    async def _send_token(self, magic: int) -> None: ...
+
+    async def _flush_queue(
+        self, transport: "IcomTransport", max_pkts: int = 200
+    ) -> int: ...
+
+    async def _send_open_close_on_transport(
+        self,
+        transport: "IcomTransport",
+        *,
+        send_seq: int,
+        open_stream: bool,
+    ) -> None: ...
 
 
 class AudioRuntimeHost(Protocol):
@@ -205,16 +264,14 @@ class AudioRuntimeHost(Protocol):
         channels: int,
         frame_ms: int,
         jitter_depth: int,
-    ) -> None:
-        ...
+    ) -> None: ...
 
     async def start_audio_rx_opus(
         self,
         callback: "Callable[[AudioPacket | None], None]",
         *,
         jitter_depth: int,
-    ) -> None:
-        ...
+    ) -> None: ...
 
     async def start_audio_tx_pcm(
         self,
@@ -222,9 +279,6 @@ class AudioRuntimeHost(Protocol):
         sample_rate: int,
         channels: int,
         frame_ms: int,
-    ) -> None:
-        ...
+    ) -> None: ...
 
-    async def start_audio_tx_opus(self) -> None:
-        ...
-
+    async def start_audio_tx_opus(self) -> None: ...

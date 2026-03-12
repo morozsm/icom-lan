@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from icom_lan._connection_state import RadioConnectionState
 from icom_lan.sync import IcomRadio
 
 
@@ -34,6 +35,11 @@ def test_connect_disconnect_and_context_manager() -> None:
 
 def test_sync_wrappers_delegate_and_return_values() -> None:
     r = _radio()
+    # Make radio appear connected so send_civ_raw / recovery paths do not raise
+    r._radio._ctrl_transport = MagicMock()
+    r._radio._ctrl_transport._udp_transport = MagicMock()
+    r._radio._civ_transport = MagicMock()
+    r._radio._conn_state = RadioConnectionState.CONNECTED
     r._radio.get_frequency = AsyncMock(return_value=7_100_000)
     r._radio.get_mode = AsyncMock(return_value=("USB", 2))
     r._radio.get_mode_info = AsyncMock(return_value=("USB", 2))
@@ -64,7 +70,7 @@ def test_sync_wrappers_delegate_and_return_values() -> None:
     r._radio.restore_state = AsyncMock()
     r._radio.send_cw_text = AsyncMock()
     r._radio.stop_cw_text = AsyncMock()
-    r._radio.power_control = AsyncMock()
+    r._radio.set_powerstat = AsyncMock()
 
     assert r.get_frequency() == 7_100_000
     assert r.get_mode() == ("USB", 2)
@@ -114,7 +120,7 @@ def test_sync_wrappers_delegate_and_return_values() -> None:
     r._radio.restore_state.assert_awaited_once_with({"freq": 7000000})
     r._radio.send_cw_text.assert_awaited_once_with("TEST")
     r._radio.stop_cw_text.assert_awaited_once()
-    r._radio.power_control.assert_awaited_once_with(False)
+    r._radio.set_powerstat.assert_awaited_once_with(False)
     r._loop.close()
 
 
@@ -133,13 +139,13 @@ def test_audio_wrappers_and_deprecated_aliases() -> None:
     r.start_audio_rx_opus(cb, jitter_depth=7)
     r.stop_audio_rx_opus()
     r.start_audio_tx_opus()
-    r.push_audio_tx_opus(b"\xAA\xBB")
+    r.push_audio_tx_opus(b"\xaa\xbb")
     r.stop_audio_tx_opus()
 
     r._radio.start_audio_rx_opus.assert_awaited_once_with(cb, jitter_depth=7)
     r._radio.stop_audio_rx_opus.assert_awaited_once()
     r._radio.start_audio_tx_opus.assert_awaited_once()
-    r._radio.push_audio_tx_opus.assert_awaited_once_with(b"\xAA\xBB")
+    r._radio.push_audio_tx_opus.assert_awaited_once_with(b"\xaa\xbb")
     r._radio.stop_audio_tx_opus.assert_awaited_once()
 
     with pytest.warns(DeprecationWarning):

@@ -19,6 +19,8 @@ Usage:
     icom-lan discover
 """
 
+__all__ = ["main"]
+
 import argparse
 import asyncio
 import json
@@ -33,18 +35,18 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-from . import __version__
-from .audio import AudioStats
-from .backends.config import LanBackendConfig, SerialBackendConfig
-from .backends.factory import create_radio
-from .radio_protocol import (
+from . import __version__  # noqa: E402
+from .audio import AudioStats  # noqa: E402
+from .backends.config import LanBackendConfig, SerialBackendConfig  # noqa: E402
+from .backends.factory import create_radio  # noqa: E402
+from .radio_protocol import (  # noqa: E402
     AudioCapable,
     MetersCapable,
     PowerControlCapable,
     Radio,
     ScopeCapable,
 )
-from .types import Mode, get_audio_capabilities
+from .types import Mode, get_audio_capabilities  # noqa: E402
 
 _AUDIO_FRAME_MS = 20
 _PCM_SAMPLE_WIDTH_BYTES = 2
@@ -243,8 +245,7 @@ def _build_parser() -> argparse.ArgumentParser:
             type=int,
             default=audio_caps.default_sample_rate_hz,
             help=(
-                "PCM sample rate in Hz "
-                f"(default: {audio_caps.default_sample_rate_hz})"
+                f"PCM sample rate in Hz (default: {audio_caps.default_sample_rate_hz})"
             ),
         )
         sp.add_argument(
@@ -384,8 +385,18 @@ def _build_parser() -> argparse.ArgumentParser:
     antenna_p = sub.add_parser("antenna", help="Antenna selection control")
     antenna_p.add_argument("--ant1", choices=["on", "off"], help="Set ANT1")
     antenna_p.add_argument("--ant2", choices=["on", "off"], help="Set ANT2")
-    antenna_p.add_argument("--rx-ant1", dest="rx_ant1", choices=["on", "off"], help="Set RX antenna on ANT1")
-    antenna_p.add_argument("--rx-ant2", dest="rx_ant2", choices=["on", "off"], help="Set RX antenna on ANT2")
+    antenna_p.add_argument(
+        "--rx-ant1",
+        dest="rx_ant1",
+        choices=["on", "off"],
+        help="Set RX antenna on ANT1",
+    )
+    antenna_p.add_argument(
+        "--rx-ant2",
+        dest="rx_ant2",
+        choices=["on", "off"],
+        help="Set RX antenna on ANT2",
+    )
 
     # date
     date_p = sub.add_parser("date", help="Get or set system date (YYYY-MM-DD)")
@@ -562,7 +573,9 @@ def _build_parser() -> argparse.ArgumentParser:
     )
 
     # proxy
-    proxy_p = sub.add_parser("proxy", help="Transparent UDP relay for remote access via VPN")
+    proxy_p = sub.add_parser(
+        "proxy", help="Transparent UDP relay for remote access via VPN"
+    )
     proxy_p.add_argument(
         "--radio",
         required=True,
@@ -640,7 +653,9 @@ def _parse_frequency(value: str) -> int:
         return int(float(value))
 
 
-def _build_backend_config(args: argparse.Namespace) -> LanBackendConfig | SerialBackendConfig:
+def _build_backend_config(
+    args: argparse.Namespace,
+) -> LanBackendConfig | SerialBackendConfig:
     """Build typed backend config from parsed CLI args."""
     backend = getattr(args, "backend", "lan")
     if backend == "serial":
@@ -670,7 +685,7 @@ def _build_backend_config(args: argparse.Namespace) -> LanBackendConfig | Serial
 async def _cmd_list_audio_devices(args: argparse.Namespace) -> int:
     """List available USB audio devices."""
     try:
-        import sounddevice as _sd
+        import sounddevice as _sd  # type: ignore[import-not-found]
     except ImportError:
         print(
             "Error: --list-audio-devices requires the sounddevice package.\n"
@@ -820,7 +835,9 @@ async def _run(args: argparse.Namespace) -> int:
         return 1
 
 
-def _audio_frame_bytes(sample_rate: int, channels: int, frame_ms: int = _AUDIO_FRAME_MS) -> int:
+def _audio_frame_bytes(
+    sample_rate: int, channels: int, frame_ms: int = _AUDIO_FRAME_MS
+) -> int:
     return sample_rate * channels * _PCM_SAMPLE_WIDTH_BYTES * frame_ms // 1000
 
 
@@ -833,7 +850,9 @@ def _validate_audio_format_args(sample_rate: int, channels: int) -> str | None:
     caps = get_audio_capabilities()
     if sample_rate not in caps.supported_sample_rates_hz:
         supported = ", ".join(str(rate) for rate in caps.supported_sample_rates_hz)
-        return f"Unsupported --sample-rate {sample_rate}. Supported values: {supported}."
+        return (
+            f"Unsupported --sample-rate {sample_rate}. Supported values: {supported}."
+        )
     if channels not in caps.supported_channels:
         supported = ", ".join(str(ch) for ch in caps.supported_channels)
         return f"Unsupported --channels {channels}. Supported values: {supported}."
@@ -876,14 +895,8 @@ def _print_audio_stats(stats: dict[str, bool | int | float | str]) -> None:
     print(f"  underrun_count: {stats['underrun_count']}")
     print(f"  overrun_count: {stats['overrun_count']}")
     print(f"  estimated_latency_ms: {float(stats['estimated_latency_ms']):.3f}")
-    print(
-        "  jitter_buffer_depth_packets: "
-        f"{stats['jitter_buffer_depth_packets']}"
-    )
-    print(
-        "  jitter_buffer_pending_packets: "
-        f"{stats['jitter_buffer_pending_packets']}"
-    )
+    print(f"  jitter_buffer_depth_packets: {stats['jitter_buffer_depth_packets']}")
+    print(f"  jitter_buffer_pending_packets: {stats['jitter_buffer_pending_packets']}")
     print(f"  duplicates_dropped: {stats['duplicates_dropped']}")
     print(f"  stale_packets_dropped: {stats['stale_packets_dropped']}")
     print(f"  out_of_order_packets: {stats['out_of_order_packets']}")
@@ -955,10 +968,7 @@ async def _cmd_audio_caps(
             + ", ".join(str(channels) for channels in caps.supported_channels)
         )
         print("Defaults:")
-        print(
-            f"  codec: {caps.default_codec.name} "
-            f"(0x{int(caps.default_codec):02X})"
-        )
+        print(f"  codec: {caps.default_codec.name} (0x{int(caps.default_codec):02X})")
         print(f"  sample_rate_hz: {caps.default_sample_rate_hz}")
         print(f"  channels: {caps.default_channels}")
         print("Selection rules:")
@@ -1032,7 +1042,10 @@ async def _cmd_audio_rx(radio: Radio, args: argparse.Namespace) -> int:
             wf.setframerate(args.sample_rate)
             wf.writeframes(pcm_bytes)
     except Exception as exc:
-        print(f"Error: failed to write WAV file '{args.output_file}': {exc}", file=sys.stderr)
+        print(
+            f"Error: failed to write WAV file '{args.output_file}': {exc}",
+            file=sys.stderr,
+        )
         return 1
 
     elapsed = round(time.monotonic() - start_time, 3)
@@ -1077,7 +1090,9 @@ async def _cmd_audio_tx(radio: Radio, args: argparse.Namespace) -> int:
         return 1
 
     try:
-        file_sample_rate, file_channels, sample_width, pcm = _load_wav_pcm(args.input_file)
+        file_sample_rate, file_channels, sample_width, pcm = _load_wav_pcm(
+            args.input_file
+        )
     except FileNotFoundError:
         print(f"Error: input file not found: {args.input_file}", file=sys.stderr)
         return 1
@@ -1090,10 +1105,7 @@ async def _cmd_audio_tx(radio: Radio, args: argparse.Namespace) -> int:
 
     if sample_width != _PCM_SAMPLE_WIDTH_BYTES:
         print(
-            (
-                "Error: input WAV must be 16-bit PCM "
-                f"(got {sample_width * 8}-bit)."
-            ),
+            (f"Error: input WAV must be 16-bit PCM (got {sample_width * 8}-bit)."),
             file=sys.stderr,
         )
         return 1
@@ -1488,7 +1500,10 @@ async def _cmd_date(radio: Radio, args: argparse.Namespace) -> int:
         try:
             year, month, day = map(int, args.date.split("-"))
         except ValueError:
-            print(f"Error: invalid date format '{args.date}' (expected YYYY-MM-DD)", file=sys.stderr)
+            print(
+                f"Error: invalid date format '{args.date}' (expected YYYY-MM-DD)",
+                file=sys.stderr,
+            )
             return 1
         await radio.set_system_date(year, month, day)
         print(f"Date set: {year}-{month:02d}-{day:02d}")
@@ -1503,7 +1518,10 @@ async def _cmd_time(radio: Radio, args: argparse.Namespace) -> int:
         try:
             hour, minute = map(int, args.time.split(":"))
         except ValueError:
-            print(f"Error: invalid time format '{args.time}' (expected HH:MM)", file=sys.stderr)
+            print(
+                f"Error: invalid time format '{args.time}' (expected HH:MM)",
+                file=sys.stderr,
+            )
             return 1
         await radio.set_system_time(hour, minute)
         print(f"Time set: {hour:02d}:{minute:02d}")
@@ -1753,9 +1771,7 @@ async def _cmd_web(radio: Radio, args: argparse.Namespace) -> int:
 
     from .web.server import WebConfig, WebServer
 
-    static_dir = (
-        pathlib.Path(args.web_static_dir) if args.web_static_dir else None
-    )
+    static_dir = pathlib.Path(args.web_static_dir) if args.web_static_dir else None
     config_kwargs: dict[str, Any] = {
         "host": args.web_host,
         "port": args.web_port,
@@ -1783,7 +1799,9 @@ async def _cmd_web(radio: Radio, args: argparse.Namespace) -> int:
     config = WebConfig(**config_kwargs)
     server = WebServer(radio, config)
     if dx_cluster:
-        print(f"DX cluster: {dx_cluster} (callsign: {config_kwargs.get('dx_callsign', '')})")
+        print(
+            f"DX cluster: {dx_cluster} (callsign: {config_kwargs.get('dx_callsign', '')})"
+        )
     print(f"Web UI listening on http://{args.web_host}:{args.web_port}/")
 
     # Start audio bridge if requested
@@ -1905,6 +1923,7 @@ def main() -> None:
         sys.exit(asyncio.run(_cmd_discover(None, args)))  # type: ignore[arg-type]
     elif args.command == "proxy":
         from .proxy import run_proxy
+
         asyncio.run(run_proxy(args.radio, args.listen, args.port))
         sys.exit(0)
     elif args.command is None:
@@ -1915,6 +1934,7 @@ def main() -> None:
         # properly unwinds the async context manager (radio.disconnect()).
         def _sigterm_handler(signum: int, frame: Any) -> None:
             raise KeyboardInterrupt()
+
         signal.signal(signal.SIGTERM, _sigterm_handler)
 
         # Optional PID file only for daemon-like commands (web, serve).

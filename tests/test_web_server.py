@@ -71,7 +71,9 @@ async def _http_get(
     """Minimal synchronous-style HTTP GET over asyncio."""
     reader, writer = await asyncio.open_connection(host, port)
     try:
-        request = f"GET {path} HTTP/1.1\r\nHost: {host}:{port}\r\nConnection: close\r\n\r\n"
+        request = (
+            f"GET {path} HTTP/1.1\r\nHost: {host}:{port}\r\nConnection: close\r\n\r\n"
+        )
         writer.write(request.encode())
         await writer.drain()
 
@@ -495,9 +497,7 @@ class TestHttpEndpoints:
         status, _, _ = await _http_get(host, port, "/api/v1/capabilities")
         assert status == 200
 
-    async def test_capabilities_endpoint_json_fields(
-        self, server: WebServer
-    ) -> None:
+    async def test_capabilities_endpoint_json_fields(self, server: WebServer) -> None:
         host, port = _addr(server)
         _, _, body = await _http_get(host, port, "/api/v1/capabilities")
         data = json.loads(body)
@@ -506,9 +506,7 @@ class TestHttpEndpoints:
         assert "modes" in data
         assert isinstance(data["modes"], list)
 
-    async def test_state_endpoint_contains_radio_ready(
-        self, server: WebServer
-    ) -> None:
+    async def test_state_endpoint_contains_radio_ready(self, server: WebServer) -> None:
         host, port = _addr(server)
         _, _, body = await _http_get(host, port, "/api/v1/state")
         data = json.loads(body)
@@ -698,9 +696,7 @@ class TestControlChannel:
         finally:
             await _close_ws(writer)
 
-    async def test_command_ptt(
-        self, server: WebServer, mock_radio: MagicMock
-    ) -> None:
+    async def test_command_ptt(self, server: WebServer, mock_radio: MagicMock) -> None:
         host, port = _addr(server)
         reader, writer, _ = await _ws_connect(host, port, "/api/v1/ws")
         try:
@@ -719,9 +715,7 @@ class TestControlChannel:
         finally:
             await _close_ws(writer)
 
-    async def test_command_unknown_returns_error(
-        self, server: WebServer
-    ) -> None:
+    async def test_command_unknown_returns_error(self, server: WebServer) -> None:
         host, port = _addr(server)
         reader, writer, _ = await _ws_connect(host, port, "/api/v1/ws")
         try:
@@ -741,9 +735,7 @@ class TestControlChannel:
         finally:
             await _close_ws(writer)
 
-    async def test_unsubscribe_removes_stream(
-        self, server: WebServer
-    ) -> None:
+    async def test_unsubscribe_removes_stream(self, server: WebServer) -> None:
         host, port = _addr(server)
         reader, writer, _ = await _ws_connect(host, port, "/api/v1/ws")
         try:
@@ -983,27 +975,32 @@ class TestBackpressure:
 class TestAudioFrameFormat:
     def test_audio_frame_header_size(self) -> None:
         from icom_lan.web.protocol import AUDIO_HEADER_SIZE, encode_audio_frame
+
         frame = encode_audio_frame(0x10, 0x01, 0, 480, 1, 20, b"")
         assert len(frame) == AUDIO_HEADER_SIZE
 
     def test_audio_rx_msg_type(self) -> None:
         from icom_lan.web.protocol import encode_audio_frame
+
         frame = encode_audio_frame(0x10, 0x01, 42, 480, 1, 20, b"\x00" * 100)
         assert frame[0] == 0x10
 
     def test_audio_tx_msg_type(self) -> None:
         from icom_lan.web.protocol import encode_audio_frame
+
         frame = encode_audio_frame(0x11, 0x01, 0, 480, 1, 20, b"\x00" * 50)
         assert frame[0] == 0x11
 
     def test_audio_codec_byte(self) -> None:
         from icom_lan.web.protocol import AUDIO_CODEC_OPUS, encode_audio_frame
+
         frame = encode_audio_frame(0x10, AUDIO_CODEC_OPUS, 0, 480, 1, 20, b"\x01")
         assert frame[1] == AUDIO_CODEC_OPUS
 
     def test_audio_sequence_le(self) -> None:
         import struct
         from icom_lan.web.protocol import encode_audio_frame
+
         frame = encode_audio_frame(0x10, 0x01, 0x1234, 480, 1, 20, b"")
         seq = struct.unpack_from("<H", frame, 2)[0]
         assert seq == 0x1234
@@ -1011,18 +1008,21 @@ class TestAudioFrameFormat:
     def test_audio_sample_rate_le(self) -> None:
         import struct
         from icom_lan.web.protocol import encode_audio_frame
+
         frame = encode_audio_frame(0x10, 0x01, 0, 480, 1, 20, b"")
         sr = struct.unpack_from("<H", frame, 4)[0]
         assert sr == 480
 
     def test_audio_channels_and_frame_ms(self) -> None:
         from icom_lan.web.protocol import encode_audio_frame
+
         frame = encode_audio_frame(0x10, 0x01, 0, 480, 1, 20, b"")
         assert frame[6] == 1  # mono
         assert frame[7] == 20  # 20ms
 
     def test_audio_payload_appended(self) -> None:
         from icom_lan.web.protocol import AUDIO_HEADER_SIZE, encode_audio_frame
+
         payload = b"\xaa\xbb\xcc\xdd"
         frame = encode_audio_frame(0x10, 0x01, 0, 480, 1, 20, payload)
         assert frame[AUDIO_HEADER_SIZE:] == payload
@@ -1031,6 +1031,7 @@ class TestAudioFrameFormat:
     def test_audio_sequence_wraps(self) -> None:
         import struct
         from icom_lan.web.protocol import encode_audio_frame
+
         frame = encode_audio_frame(0x10, 0x01, 0x10000, 480, 1, 20, b"")
         seq = struct.unpack_from("<H", frame, 2)[0]
         assert seq == 0  # wrapped
@@ -1076,8 +1077,12 @@ class TestProtocolConformance:
 
     def test_scope_freq_range_boundaries(self) -> None:
         """Test with real HF/VHF frequency values."""
-        for sf, ef in [(1_800_000, 2_000_000), (50_000_000, 54_000_000),
-                       (144_000_000, 148_000_000), (430_000_000, 440_000_000)]:
+        for sf, ef in [
+            (1_800_000, 2_000_000),
+            (50_000_000, 54_000_000),
+            (144_000_000, 148_000_000),
+            (430_000_000, 440_000_000),
+        ]:
             frame = ScopeFrame(0, 0, sf, ef, b"\x00", False)
             data = encode_scope_frame(frame, 0)
             assert struct.unpack_from("<I", data, 3)[0] == sf
@@ -1088,11 +1093,28 @@ class TestProtocolConformance:
     def test_meter_all_9_ids(self) -> None:
         """All 9 meter IDs from RFC."""
         from icom_lan.web.protocol import (
-            METER_ALC, METER_COMP, METER_ID_DRAIN, METER_POWER,
-            METER_SMETER_MAIN, METER_SMETER_SUB, METER_SWR, METER_TEMP, METER_VD,
+            METER_ALC,
+            METER_COMP,
+            METER_ID_DRAIN,
+            METER_POWER,
+            METER_SMETER_MAIN,
+            METER_SMETER_SUB,
+            METER_SWR,
+            METER_TEMP,
+            METER_VD,
         )
-        all_ids = [METER_SMETER_MAIN, METER_SMETER_SUB, METER_POWER, METER_SWR,
-                   METER_ALC, METER_COMP, METER_ID_DRAIN, METER_VD, METER_TEMP]
+
+        all_ids = [
+            METER_SMETER_MAIN,
+            METER_SMETER_SUB,
+            METER_POWER,
+            METER_SWR,
+            METER_ALC,
+            METER_COMP,
+            METER_ID_DRAIN,
+            METER_VD,
+            METER_TEMP,
+        ]
         meters = [(mid, 128) for mid in all_ids]
         data = encode_meter_frame(meters, 0)
         assert data[3] == 9  # count
@@ -1125,10 +1147,16 @@ class TestProtocolConformance:
     def test_audio_opus_typical_frame(self) -> None:
         """Typical Opus frame: 48kHz, mono, 20ms, ~80-120 bytes payload."""
         from icom_lan.web.protocol import (
-            AUDIO_CODEC_OPUS, AUDIO_HEADER_SIZE, MSG_TYPE_AUDIO_RX, encode_audio_frame,
+            AUDIO_CODEC_OPUS,
+            AUDIO_HEADER_SIZE,
+            MSG_TYPE_AUDIO_RX,
+            encode_audio_frame,
         )
+
         payload = bytes(range(100))  # ~100 bytes typical Opus
-        frame = encode_audio_frame(MSG_TYPE_AUDIO_RX, AUDIO_CODEC_OPUS, 42, 480, 1, 20, payload)
+        frame = encode_audio_frame(
+            MSG_TYPE_AUDIO_RX, AUDIO_CODEC_OPUS, 42, 480, 1, 20, payload
+        )
         assert len(frame) == AUDIO_HEADER_SIZE + 100
         assert frame[0] == MSG_TYPE_AUDIO_RX
         assert frame[1] == AUDIO_CODEC_OPUS
@@ -1138,20 +1166,33 @@ class TestProtocolConformance:
 
     def test_hello_message_schema(self) -> None:
         """hello message must have all required fields per RFC."""
-        msg = json.loads(encode_json({
-            "type": "hello", "proto": 1, "server": "icom-lan",
-            "version": "0.8.0", "radio": "IC-7610",
-            "capabilities": ["scope", "audio", "tx"],
-        }))
+        msg = json.loads(
+            encode_json(
+                {
+                    "type": "hello",
+                    "proto": 1,
+                    "server": "icom-lan",
+                    "version": "0.8.0",
+                    "radio": "IC-7610",
+                    "capabilities": ["scope", "audio", "tx"],
+                }
+            )
+        )
         assert msg["type"] == "hello"
         assert isinstance(msg["proto"], int)
         assert isinstance(msg["capabilities"], list)
 
     def test_state_message_schema(self) -> None:
-        msg = {"type": "state", "data": {
-            "freq_a": 14074000, "freq_b": 7074000,
-            "mode": "USB", "filter": "FIL1", "ptt": False,
-        }}
+        msg = {
+            "type": "state",
+            "data": {
+                "freq_a": 14074000,
+                "freq_b": 7074000,
+                "mode": "USB",
+                "filter": "FIL1",
+                "ptt": False,
+            },
+        }
         text = encode_json(msg)
         parsed = json.loads(text)
         assert parsed["type"] == "state"
@@ -1159,34 +1200,58 @@ class TestProtocolConformance:
         assert isinstance(parsed["data"]["ptt"], bool)
 
     def test_event_message_schema(self) -> None:
-        msg = {"type": "event", "name": "freq_changed", "data": {"vfo": "A", "freq": 14074500}}
+        msg = {
+            "type": "event",
+            "name": "freq_changed",
+            "data": {"vfo": "A", "freq": 14074500},
+        }
         text = encode_json(msg)
         parsed = json.loads(text)
         assert parsed["name"] == "freq_changed"
 
     def test_command_message_schema(self) -> None:
-        msg = {"type": "cmd", "id": "a1b2", "name": "set_freq", "params": {"vfo": "A", "freq": 14074000}}
+        msg = {
+            "type": "cmd",
+            "id": "a1b2",
+            "name": "set_freq",
+            "params": {"vfo": "A", "freq": 14074000},
+        }
         text = encode_json(msg)
         parsed = json.loads(text)
         assert parsed["id"] == "a1b2"
         assert parsed["name"] == "set_freq"
 
     def test_response_ok_schema(self) -> None:
-        msg = {"type": "response", "id": "a1b2", "ok": True, "result": {"freq": 14074000}}
+        msg = {
+            "type": "response",
+            "id": "a1b2",
+            "ok": True,
+            "result": {"freq": 14074000},
+        }
         parsed = json.loads(encode_json(msg))
         assert parsed["ok"] is True
 
     def test_response_error_schema(self) -> None:
-        msg = {"type": "response", "id": "a1b3", "ok": False,
-               "error": "invalid_param", "message": "Frequency out of range"}
+        msg = {
+            "type": "response",
+            "id": "a1b3",
+            "ok": False,
+            "error": "invalid_param",
+            "message": "Frequency out of range",
+        }
         parsed = json.loads(encode_json(msg))
         assert parsed["ok"] is False
         assert "error" in parsed
         assert "message" in parsed
 
     def test_subscribe_message_schema(self) -> None:
-        msg = {"type": "subscribe", "id": "s1", "streams": ["scope", "meters"],
-               "scope_fps": 30, "scope_receiver": 0}
+        msg = {
+            "type": "subscribe",
+            "id": "s1",
+            "streams": ["scope", "meters"],
+            "scope_fps": 30,
+            "scope_receiver": 0,
+        }
         parsed = json.loads(encode_json(msg))
         assert isinstance(parsed["streams"], list)
         assert "scope" in parsed["streams"]
@@ -1248,11 +1313,12 @@ class TestAudioHandlerCodecDetection:
     for Opus (OPUS_1CH = 0x40), the web frame must carry AUDIO_CODEC_OPUS.
     """
 
-    async def _start_rx_and_capture(self, audio_codec: object, sample_rate: int) -> bytes:
+    async def _start_rx_and_capture(
+        self, audio_codec: object, sample_rate: int
+    ) -> bytes:
         """Start RX via AudioBroadcaster (using AudioBus) and return first queued frame."""
         from icom_lan.audio_bus import AudioBus
         from icom_lan.radio_protocol import AudioCapable
-        from icom_lan.types import AudioCodec
         from icom_lan.web.handlers import AudioBroadcaster, AudioHandler
         from icom_lan.web.websocket import WebSocketConnection
 
@@ -1439,8 +1505,11 @@ class TestScopeLifecycle:
 
         # DisableScope goes through command queue, not direct radio call
         from icom_lan.web.radio_poller import DisableScope
+
         cmds = server._command_queue.drain()
-        assert any(isinstance(c, DisableScope) for c in cmds), "DisableScope should be in queue"
+        assert any(isinstance(c, DisableScope) for c in cmds), (
+            "DisableScope should be in queue"
+        )
         assert not server._scope_enabled
 
     async def test_scope_flag_reset_on_disable(self) -> None:
@@ -1489,9 +1558,7 @@ class TestScopeLifecycle:
 class TestCacheControl:
     """Static file responses must include Cache-Control: no-cache."""
 
-    async def test_static_index_has_cache_control(
-        self, server: WebServer
-    ) -> None:
+    async def test_static_index_has_cache_control(self, server: WebServer) -> None:
         host, port = _addr(server)
         status, headers, _ = await _http_get(host, port, "/")
         assert status == 200
@@ -1506,9 +1573,7 @@ class TestCacheControl:
         status, headers, _ = await _http_get(host, port, "/nonexistent-file.xyz")
         assert status == 404
 
-    async def test_api_info_no_cache_control_required(
-        self, server: WebServer
-    ) -> None:
+    async def test_api_info_no_cache_control_required(self, server: WebServer) -> None:
         """JSON API endpoints are not required to have Cache-Control."""
         host, port = _addr(server)
         status, _, body = await _http_get(host, port, "/api/v1/info")
@@ -1635,6 +1700,7 @@ class TestScopeEnableAtomic:
 
         # EnableScope goes through command queue
         from icom_lan.web.radio_poller import EnableScope
+
         cmds = server._command_queue.drain()
         enable_cmds = [c for c in cmds if isinstance(c, EnableScope)]
         assert len(enable_cmds) >= 1, "At least one EnableScope should be queued"
@@ -1697,6 +1763,7 @@ class TestScopeEnableAtomic:
 
         # EnableScope goes through command queue
         from icom_lan.web.radio_poller import EnableScope
+
         cmds = server._command_queue.drain()
         enable_cmds = [c for c in cmds if isinstance(c, EnableScope)]
         assert len(enable_cmds) >= 1, "At least one EnableScope should be queued"
@@ -1729,6 +1796,7 @@ class TestScopeReconnect:
         await asyncio.sleep(0.05)
 
         from icom_lan.web.radio_poller import DisableScope
+
         cmds = server._command_queue.drain()
         assert any(isinstance(c, DisableScope) for c in cmds)
         assert not server._scope_enabled
@@ -1745,7 +1813,7 @@ class TestScopeReconnect:
         server = WebServer(radio)
         server._scope_disable_grace = 0
 
-        from icom_lan.web.radio_poller import EnableScope, DisableScope
+        from icom_lan.web.radio_poller import EnableScope
 
         # First connect
         h1 = MagicMock()
@@ -1822,6 +1890,7 @@ class TestScopeReconnect:
         h2.enqueue_frame.assert_called_once_with(frame)
         h1.enqueue_frame.assert_not_called()
 
+
 # ---------------------------------------------------------------------------
 # #72: RadioPoller — single CI-V serialiser
 # ---------------------------------------------------------------------------
@@ -1886,7 +1955,9 @@ class TestRadioPoller:
         queue = CommandQueue()
         events: list[tuple[str, dict]] = []
         poller = RadioPoller(
-            radio, cache, queue,
+            radio,
+            cache,
+            queue,
             on_state_event=lambda n, d: events.append((n, d)),
         )
 
@@ -1948,8 +2019,9 @@ class TestRadioPoller:
         # Interleaved design: even cycles = meter, odd cycles = state.
         # In 150ms at 25ms/cycle ≈ 6 cycles → ~3 meter + ~3 state queries.
         assert radio.send_civ.await_count >= 4
-        meter_calls = [c for c in radio.send_civ.call_args_list
-                       if c[0][0] == 0x15]  # cmd=0x15
+        meter_calls = [
+            c for c in radio.send_civ.call_args_list if c[0][0] == 0x15
+        ]  # cmd=0x15
         assert len(meter_calls) >= 3
 
     async def test_poller_idempotent_start(self) -> None:
@@ -2011,7 +2083,9 @@ class TestSwitchScopeReceiver:
     async def test_switch_scope_receiver_main_sends_civ(self) -> None:
         """SwitchScopeReceiver(0) sends 0x27/0x12/0x00 CI-V command."""
         from icom_lan.web.radio_poller import (
-            CommandQueue, RadioPoller, SwitchScopeReceiver,
+            CommandQueue,
+            RadioPoller,
+            SwitchScopeReceiver,
         )
 
         radio = self._make_radio()
@@ -2023,10 +2097,7 @@ class TestSwitchScopeReceiver:
         await asyncio.sleep(0.15)
         poller.stop()
 
-        scope_calls = [
-            c for c in radio.send_civ.call_args_list
-            if c[0][0] == 0x27
-        ]
+        scope_calls = [c for c in radio.send_civ.call_args_list if c[0][0] == 0x27]
         assert any(
             c.kwargs.get("sub") == 0x12 and c.kwargs.get("data") == bytes([0x00])
             for c in scope_calls
@@ -2035,7 +2106,9 @@ class TestSwitchScopeReceiver:
     async def test_switch_scope_receiver_sub_sends_civ(self) -> None:
         """SwitchScopeReceiver(1) sends 0x27/0x12/0x01 CI-V command."""
         from icom_lan.web.radio_poller import (
-            CommandQueue, RadioPoller, SwitchScopeReceiver,
+            CommandQueue,
+            RadioPoller,
+            SwitchScopeReceiver,
         )
 
         radio = self._make_radio()
@@ -2047,10 +2120,7 @@ class TestSwitchScopeReceiver:
         await asyncio.sleep(0.15)
         poller.stop()
 
-        scope_calls = [
-            c for c in radio.send_civ.call_args_list
-            if c[0][0] == 0x27
-        ]
+        scope_calls = [c for c in radio.send_civ.call_args_list if c[0][0] == 0x27]
         assert any(
             c.kwargs.get("sub") == 0x12 and c.kwargs.get("data") == bytes([0x01])
             for c in scope_calls
@@ -2059,7 +2129,9 @@ class TestSwitchScopeReceiver:
     async def test_switch_scope_receiver_rejects_out_of_range_receiver(self) -> None:
         """Out-of-range receiver value must not be masked into a valid target."""
         from icom_lan.web.radio_poller import (
-            CommandQueue, RadioPoller, SwitchScopeReceiver,
+            CommandQueue,
+            RadioPoller,
+            SwitchScopeReceiver,
         )
 
         radio = self._make_radio()
@@ -2071,18 +2143,17 @@ class TestSwitchScopeReceiver:
         await asyncio.sleep(0.15)
         poller.stop()
 
-        scope_calls = [
-            c for c in radio.send_civ.call_args_list
-            if c[0][0] == 0x27
-        ]
-        assert not any(
-            c.kwargs.get("sub") == 0x12 for c in scope_calls
-        ), "Expected invalid receiver to be rejected without CI-V send"
+        scope_calls = [c for c in radio.send_civ.call_args_list if c[0][0] == 0x27]
+        assert not any(c.kwargs.get("sub") == 0x12 for c in scope_calls), (
+            "Expected invalid receiver to be rejected without CI-V send"
+        )
 
     async def test_select_vfo_sub_sends_swap(self) -> None:
         """SelectVfo("SUB") sends VFO swap (0x07 0xB0) when active=MAIN."""
         from icom_lan.web.radio_poller import (
-            CommandQueue, RadioPoller, SelectVfo,
+            CommandQueue,
+            RadioPoller,
+            SelectVfo,
         )
 
         radio = self._make_radio()
@@ -2095,7 +2166,8 @@ class TestSwitchScopeReceiver:
         poller.stop()
 
         swap_calls = [
-            c for c in radio.send_civ.call_args_list
+            c
+            for c in radio.send_civ.call_args_list
             if c[0][0] == 0x07 and c.kwargs.get("data") == bytes([0xB0])
         ]
         assert len(swap_calls) >= 1, "Expected VFO swap (0x07 0xB0) on SelectVfo SUB"
@@ -2103,7 +2175,9 @@ class TestSwitchScopeReceiver:
     async def test_select_vfo_main_no_swap_when_already_main(self) -> None:
         """SelectVfo("MAIN") does NOT swap when already on MAIN."""
         from icom_lan.web.radio_poller import (
-            CommandQueue, RadioPoller, SelectVfo,
+            CommandQueue,
+            RadioPoller,
+            SelectVfo,
         )
 
         radio = self._make_radio()
@@ -2116,7 +2190,8 @@ class TestSwitchScopeReceiver:
         poller.stop()
 
         swap_calls = [
-            c for c in radio.send_civ.call_args_list
+            c
+            for c in radio.send_civ.call_args_list
             if c[0][0] == 0x07 and c.kwargs.get("data") == bytes([0xB0])
         ]
         assert len(swap_calls) == 0, "Should NOT swap when already on MAIN"
@@ -2135,12 +2210,14 @@ class TestSwitchScopeReceiverCommand:
             # skip hello
             await _ws_recv_frame(reader)
 
-            cmd = json.dumps({
-                "type": "cmd",
-                "id": "ssr1",
-                "name": "switch_scope_receiver",
-                "params": {"receiver": 1},
-            })
+            cmd = json.dumps(
+                {
+                    "type": "cmd",
+                    "id": "ssr1",
+                    "name": "switch_scope_receiver",
+                    "params": {"receiver": 1},
+                }
+            )
             await _ws_send_text(writer, cmd)
             _, resp_bytes = await _ws_recv_frame(reader)
             resp = json.loads(resp_bytes)
@@ -2152,8 +2229,7 @@ class TestSwitchScopeReceiverCommand:
             await asyncio.sleep(0.15)
 
             scope_calls = [
-                c for c in mock_radio.send_civ.call_args_list
-                if c[0][0] == 0x27
+                c for c in mock_radio.send_civ.call_args_list if c[0][0] == 0x27
             ]
             assert any(
                 c.kwargs.get("sub") == 0x12 and c.kwargs.get("data") == bytes([0x01])
@@ -2171,12 +2247,14 @@ class TestSwitchScopeReceiverCommand:
         try:
             await _ws_recv_frame(reader)
 
-            cmd = json.dumps({
-                "type": "cmd",
-                "id": "ssr2",
-                "name": "switch_scope_receiver",
-                "params": {"receiver": 0},
-            })
+            cmd = json.dumps(
+                {
+                    "type": "cmd",
+                    "id": "ssr2",
+                    "name": "switch_scope_receiver",
+                    "params": {"receiver": 0},
+                }
+            )
             await _ws_send_text(writer, cmd)
             _, resp_bytes = await _ws_recv_frame(reader)
             resp = json.loads(resp_bytes)
@@ -2188,8 +2266,7 @@ class TestSwitchScopeReceiverCommand:
             await asyncio.sleep(0.15)
 
             scope_calls = [
-                c for c in mock_radio.send_civ.call_args_list
-                if c[0][0] == 0x27
+                c for c in mock_radio.send_civ.call_args_list if c[0][0] == 0x27
             ]
             assert any(
                 c.kwargs.get("sub") == 0x12 and c.kwargs.get("data") == bytes([0x00])
@@ -2211,12 +2288,14 @@ class TestScopeAdvancedCommands:
         try:
             await _ws_recv_frame(reader)  # skip hello
 
-            cmd = json.dumps({
-                "type": "cmd",
-                "id": "sdt1",
-                "name": "set_scope_during_tx",
-                "params": {"on": True},
-            })
+            cmd = json.dumps(
+                {
+                    "type": "cmd",
+                    "id": "sdt1",
+                    "name": "set_scope_during_tx",
+                    "params": {"on": True},
+                }
+            )
             await _ws_send_text(writer, cmd)
             _, resp_bytes = await _ws_recv_frame(reader)
             resp = json.loads(resp_bytes)
@@ -2238,12 +2317,14 @@ class TestScopeAdvancedCommands:
         try:
             await _ws_recv_frame(reader)
 
-            cmd = json.dumps({
-                "type": "cmd",
-                "id": "sdt2",
-                "name": "set_scope_during_tx",
-                "params": {"on": False},
-            })
+            cmd = json.dumps(
+                {
+                    "type": "cmd",
+                    "id": "sdt2",
+                    "name": "set_scope_during_tx",
+                    "params": {"on": False},
+                }
+            )
             await _ws_send_text(writer, cmd)
             _, resp_bytes = await _ws_recv_frame(reader)
             resp = json.loads(resp_bytes)
@@ -2265,12 +2346,14 @@ class TestScopeAdvancedCommands:
         try:
             await _ws_recv_frame(reader)
 
-            cmd = json.dumps({
-                "type": "cmd",
-                "id": "sct1",
-                "name": "set_scope_center_type",
-                "params": {"center_type": 2},
-            })
+            cmd = json.dumps(
+                {
+                    "type": "cmd",
+                    "id": "sct1",
+                    "name": "set_scope_center_type",
+                    "params": {"center_type": 2},
+                }
+            )
             await _ws_send_text(writer, cmd)
             _, resp_bytes = await _ws_recv_frame(reader)
             resp = json.loads(resp_bytes)
@@ -2292,12 +2375,14 @@ class TestScopeAdvancedCommands:
         try:
             await _ws_recv_frame(reader)
 
-            cmd = json.dumps({
-                "type": "cmd",
-                "id": "sfe1",
-                "name": "set_scope_fixed_edge",
-                "params": {"edge": 1, "start_hz": 14_000_000, "end_hz": 15_000_000},
-            })
+            cmd = json.dumps(
+                {
+                    "type": "cmd",
+                    "id": "sfe1",
+                    "name": "set_scope_fixed_edge",
+                    "params": {"edge": 1, "start_hz": 14_000_000, "end_hz": 15_000_000},
+                }
+            )
             await _ws_send_text(writer, cmd)
             _, resp_bytes = await _ws_recv_frame(reader)
             resp = json.loads(resp_bytes)

@@ -272,8 +272,6 @@ class TestDualWatch:
         assert result is False
 
 
-
-
 # ---------------------------------------------------------------------------
 # Quick Commands (0x1A 0x05 0x00 0x32/0x33)
 # ---------------------------------------------------------------------------
@@ -284,16 +282,20 @@ class TestQuickCommands:
 
     def test_quick_dual_watch_builds_correct_frame(self) -> None:
         """quick_dual_watch builds 0x1A 0x05 0x00 0x32 frame."""
-        expected = _PREAMBLE + bytes(
-            [IC_7610_ADDR, CONTROLLER_ADDR, _CMD_CTL_MEM, 0x05, 0x00, 0x32]
-        ) + _TERMINATOR
+        expected = (
+            _PREAMBLE
+            + bytes([IC_7610_ADDR, CONTROLLER_ADDR, _CMD_CTL_MEM, 0x05, 0x00, 0x32])
+            + _TERMINATOR
+        )
         assert commands.quick_dual_watch() == expected
 
     def test_quick_split_builds_correct_frame(self) -> None:
         """quick_split builds 0x1A 0x05 0x00 0x33 frame."""
-        expected = _PREAMBLE + bytes(
-            [IC_7610_ADDR, CONTROLLER_ADDR, _CMD_CTL_MEM, 0x05, 0x00, 0x33]
-        ) + _TERMINATOR
+        expected = (
+            _PREAMBLE
+            + bytes([IC_7610_ADDR, CONTROLLER_ADDR, _CMD_CTL_MEM, 0x05, 0x00, 0x33])
+            + _TERMINATOR
+        )
         assert commands.quick_split() == expected
 
     def test_quick_dual_watch_distinct_from_quick_split(self) -> None:

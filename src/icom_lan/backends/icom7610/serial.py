@@ -50,11 +50,9 @@ class _SerialAudioDriver(Protocol):
         sample_rate: int | None = None,
         channels: int | None = None,
         frame_ms: int | None = None,
-    ) -> None:
-        ...
+    ) -> None: ...
 
-    async def stop_rx(self) -> None:
-        ...
+    async def stop_rx(self) -> None: ...
 
     async def start_tx(
         self,
@@ -62,18 +60,14 @@ class _SerialAudioDriver(Protocol):
         sample_rate: int | None = None,
         channels: int | None = None,
         frame_ms: int | None = None,
-    ) -> None:
-        ...
+    ) -> None: ...
 
-    async def stop_tx(self) -> None:
-        ...
+    async def stop_tx(self) -> None: ...
 
-    async def push_tx_pcm(self, frame: bytes) -> None:
-        ...
+    async def push_tx_pcm(self, frame: bytes) -> None: ...
 
     @property
-    def tx_running(self) -> bool:
-        ...
+    def tx_running(self) -> bool: ...
 
 
 class Icom7610SerialRadio(Icom7610CoreRadio):
@@ -121,8 +115,7 @@ class Icom7610SerialRadio(Icom7610CoreRadio):
         self._serial_tx_device_override = tx_device
         if ptt_mode != "civ":
             raise ValueError(
-                "Unsupported serial PTT mode. "
-                "Only 'civ' is currently supported."
+                "Unsupported serial PTT mode. Only 'civ' is currently supported."
             )
         self._serial_ptt_mode = ptt_mode
         self._allow_low_baud_scope = allow_low_baud_scope or _env_bool(
@@ -270,7 +263,9 @@ class Icom7610SerialRadio(Icom7610CoreRadio):
         if not callable(callback):
             raise TypeError("callback must be callable and accept AudioPacket | None.")
         if isinstance(jitter_depth, bool) or not isinstance(jitter_depth, int):
-            raise TypeError(f"jitter_depth must be an int, got {type(jitter_depth).__name__}.")
+            raise TypeError(
+                f"jitter_depth must be an int, got {type(jitter_depth).__name__}."
+            )
         if jitter_depth < 0:
             raise ValueError(f"jitter_depth must be >= 0, got {jitter_depth}.")
         self._check_connected()
@@ -297,7 +292,10 @@ class Icom7610SerialRadio(Icom7610CoreRadio):
                 try:
                     payload = transcoder.pcm_to_opus(pcm_frame)
                 except Exception:
-                    logger.warning("serial-audio: failed to encode PCM frame to Opus", exc_info=True)
+                    logger.warning(
+                        "serial-audio: failed to encode PCM frame to Opus",
+                        exc_info=True,
+                    )
                     return
             packet = AudioPacket(
                 ident=0x9781,
@@ -340,7 +338,9 @@ class Icom7610SerialRadio(Icom7610CoreRadio):
         if jitter_depth < 0:
             raise ValueError(f"jitter_depth must be >= 0, got {jitter_depth}.")
         if (sample_rate * frame_ms) % 1000 != 0:
-            raise AudioFormatError("sample_rate * frame_ms must produce an integer frame size.")
+            raise AudioFormatError(
+                "sample_rate * frame_ms must produce an integer frame size."
+            )
 
         self._check_connected()
         self._pcm_rx_user_callback = callback
@@ -397,7 +397,9 @@ class Icom7610SerialRadio(Icom7610CoreRadio):
             if isinstance(value, bool) or not isinstance(value, int):
                 raise TypeError(f"{name} must be an int, got {type(value).__name__}.")
         if (sample_rate * frame_ms) % 1000 != 0:
-            raise AudioFormatError("sample_rate * frame_ms must produce an integer frame size.")
+            raise AudioFormatError(
+                "sample_rate * frame_ms must produce an integer frame size."
+            )
 
         self._check_connected()
         await self._serial_audio_driver.start_tx(
@@ -420,7 +422,9 @@ class Icom7610SerialRadio(Icom7610CoreRadio):
             raise AudioFormatError("PCM input must be bytes-like.")
         sample_rate, channels, frame_ms = self._pcm_tx_fmt
         if (sample_rate * frame_ms) % 1000 != 0:
-            raise AudioFormatError("sample_rate * frame_ms must produce an integer frame size.")
+            raise AudioFormatError(
+                "sample_rate * frame_ms must produce an integer frame size."
+            )
         frame_samples = (sample_rate * frame_ms) // 1000
         expected = frame_samples * channels * 2
         frame = bytes(pcm_bytes)

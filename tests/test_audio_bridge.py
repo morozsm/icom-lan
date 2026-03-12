@@ -24,6 +24,7 @@ from icom_lan.audio_bridge import (
 # Constants
 # ---------------------------------------------------------------------------
 
+
 def test_constants():
     assert SAMPLE_RATE == 48000
     assert CHANNELS == 1
@@ -35,6 +36,7 @@ def test_constants():
 # ---------------------------------------------------------------------------
 # find_loopback_device
 # ---------------------------------------------------------------------------
+
 
 def test_find_loopback_device_no_sounddevice():
     with patch.dict("sys.modules", {"sounddevice": None}):
@@ -81,6 +83,7 @@ def test_find_loopback_device_auto_detect():
 # list_audio_devices
 # ---------------------------------------------------------------------------
 
+
 def test_list_audio_devices():
     mock_sd = MagicMock()
     devs = [{"name": "A", "index": 0}, {"name": "B", "index": 1}]
@@ -99,6 +102,7 @@ def test_list_audio_devices_no_sounddevice():
 # ---------------------------------------------------------------------------
 # AudioBridge init
 # ---------------------------------------------------------------------------
+
 
 def test_bridge_init_defaults():
     radio = MagicMock()
@@ -138,6 +142,7 @@ def test_bridge_init_custom():
 # ---------------------------------------------------------------------------
 # AudioBridge start — device not found
 # ---------------------------------------------------------------------------
+
 
 async def test_bridge_tx_loop_uses_custom_executor():
     """When tx_executor is provided, TX read runs in that executor."""
@@ -223,6 +228,7 @@ async def test_bridge_start_no_device():
 # AudioBridge start + stop — happy path (mocked)
 # ---------------------------------------------------------------------------
 
+
 async def test_bridge_start_stop_rx_only():
     from icom_lan.audio_bus import AudioBus
 
@@ -299,6 +305,7 @@ async def test_bridge_stop_when_not_running():
 # RX callback
 # ---------------------------------------------------------------------------
 
+
 async def test_bridge_rx_via_bus():
     """Bridge receives opus packets via AudioBus subscription."""
     from icom_lan.audio_bus import AudioBus
@@ -349,6 +356,7 @@ async def test_bridge_rx_via_bus():
 # ---------------------------------------------------------------------------
 # Latency stats — Task 2
 # ---------------------------------------------------------------------------
+
 
 def test_stats_has_new_fields():
     """stats dict contains all timing fields."""

@@ -24,7 +24,11 @@ from icom_lan._audio_transcoder import (
     _OpuslibBackend,
     _load_default_backend,
 )
-from icom_lan.exceptions import AudioCodecBackendError, AudioFormatError, AudioTranscodeError
+from icom_lan.exceptions import (
+    AudioCodecBackendError,
+    AudioFormatError,
+    AudioTranscodeError,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -92,7 +96,7 @@ class TestOpuslibBackendAdapter:
         """create_encoder uses default 2049 when APPLICATION_AUDIO is missing (line 51)."""
         mock_opuslib = MagicMock()
         # MagicMock responds to getattr, so simulate getattr default
-        result = getattr(mock_opuslib, "APPLICATION_AUDIO", 2049)
+        getattr(mock_opuslib, "APPLICATION_AUDIO", 2049)
         # With MagicMock, getattr returns a MagicMock; we just test the backend runs
         backend = _OpuslibBackend(mock_opuslib)
         backend.create_encoder(48000, 2)

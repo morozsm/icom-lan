@@ -327,7 +327,9 @@ class TestPidFile:
                         assert exc.value.code == 0
         assert not pid_path.exists()  # removed in finally
 
-    def test_pid_file_not_created_for_status_even_when_icom_pid_file_set(self, tmp_path):
+    def test_pid_file_not_created_for_status_even_when_icom_pid_file_set(
+        self, tmp_path
+    ):
         """With ICOM_PID_FILE set, status (non-daemon) does not write a PID file."""
         pid_path = tmp_path / "icom.pid"
         real_run = asyncio.run
@@ -355,7 +357,9 @@ class TestBackendArgs:
 
     def test_backend_serial(self):
         p = _build_parser()
-        args = p.parse_args(["--backend", "serial", "--serial-port", "/dev/tty.test", "status"])
+        args = p.parse_args(
+            ["--backend", "serial", "--serial-port", "/dev/tty.test", "status"]
+        )
         assert args.backend == "serial"
         assert args.serial_port == "/dev/tty.test"
 
@@ -434,7 +438,9 @@ class TestBuildBackendConfig:
 
     def test_lan_preserves_user_pass(self):
         p = _build_parser()
-        args = p.parse_args(["--host", "10.0.0.1", "--user", "admin", "--pass", "secret", "status"])
+        args = p.parse_args(
+            ["--host", "10.0.0.1", "--user", "admin", "--pass", "secret", "status"]
+        )
         config = _build_backend_config(args)
         assert isinstance(config, LanBackendConfig)
         assert config.username == "admin"
@@ -449,7 +455,9 @@ class TestBuildBackendConfig:
 
     def test_serial_config_built(self):
         p = _build_parser()
-        args = p.parse_args(["--backend", "serial", "--serial-port", "/dev/tty.usb0", "status"])
+        args = p.parse_args(
+            ["--backend", "serial", "--serial-port", "/dev/tty.usb0", "status"]
+        )
         config = _build_backend_config(args)
         assert isinstance(config, SerialBackendConfig)
         assert config.backend == "serial"
@@ -458,25 +466,36 @@ class TestBuildBackendConfig:
 
     def test_serial_baud_passed(self):
         p = _build_parser()
-        args = p.parse_args([
-            "--backend", "serial",
-            "--serial-port", "/dev/tty.usb0",
-            "--serial-baud", "9600",
-            "status",
-        ])
+        args = p.parse_args(
+            [
+                "--backend",
+                "serial",
+                "--serial-port",
+                "/dev/tty.usb0",
+                "--serial-baud",
+                "9600",
+                "status",
+            ]
+        )
         config = _build_backend_config(args)
         assert isinstance(config, SerialBackendConfig)
         assert config.baudrate == 9600
 
     def test_serial_rx_tx_device(self):
         p = _build_parser()
-        args = p.parse_args([
-            "--backend", "serial",
-            "--serial-port", "/dev/tty.usb0",
-            "--rx-device", "IC-7610 RX",
-            "--tx-device", "IC-7610 TX",
-            "status",
-        ])
+        args = p.parse_args(
+            [
+                "--backend",
+                "serial",
+                "--serial-port",
+                "/dev/tty.usb0",
+                "--rx-device",
+                "IC-7610 RX",
+                "--tx-device",
+                "IC-7610 TX",
+                "status",
+            ]
+        )
         config = _build_backend_config(args)
         assert isinstance(config, SerialBackendConfig)
         assert config.rx_device == "IC-7610 RX"
@@ -484,12 +503,17 @@ class TestBuildBackendConfig:
 
     def test_serial_ptt_mode_passed(self):
         p = _build_parser()
-        args = p.parse_args([
-            "--backend", "serial",
-            "--serial-port", "/dev/tty.usb0",
-            "--serial-ptt-mode", "civ",
-            "status",
-        ])
+        args = p.parse_args(
+            [
+                "--backend",
+                "serial",
+                "--serial-port",
+                "/dev/tty.usb0",
+                "--serial-ptt-mode",
+                "civ",
+                "status",
+            ]
+        )
         config = _build_backend_config(args)
         assert isinstance(config, SerialBackendConfig)
         assert config.ptt_mode == "civ"
@@ -534,6 +558,7 @@ class TestBackendAwareDiscover:
 class TestListAudioDevices:
     def test_list_audio_devices_missing_sounddevice(self, capsys):
         import builtins
+
         real_import = builtins.__import__
 
         def mock_import(name, *args, **kwargs):

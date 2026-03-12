@@ -94,11 +94,11 @@ class TestPcmRxE2E:
         await radio.start_audio_rx_pcm(lambda frame: received.append(frame))
         rx_cb = radio._audio_stream.start_rx.await_args.args[0]
 
-        rx_cb(AudioPacket(ident=0x0080, send_seq=1, data=b"\xAA"))
+        rx_cb(AudioPacket(ident=0x0080, send_seq=1, data=b"\xaa"))
         rx_cb(None)  # gap
-        rx_cb(AudioPacket(ident=0x0080, send_seq=3, data=b"\xBB"))
+        rx_cb(AudioPacket(ident=0x0080, send_seq=3, data=b"\xbb"))
 
-        assert received == [b"pcm:\xAA", None, b"pcm:\xBB"]
+        assert received == [b"pcm:\xaa", None, b"pcm:\xbb"]
 
         await radio.stop_audio_rx_pcm()
 
@@ -222,8 +222,8 @@ class TestPcmStartStopCycles:
 
             await radio.start_audio_rx_pcm(lambda frame: received.append(frame))
             rx_cb = radio._audio_stream.start_rx.await_args.args[0]
-            rx_cb(AudioPacket(ident=0x0080, send_seq=0, data=b"\xCC"))
-            assert received == [b"pcm:\xCC"]
+            rx_cb(AudioPacket(ident=0x0080, send_seq=0, data=b"\xcc"))
+            assert received == [b"pcm:\xcc"]
 
             await radio.stop_audio_rx_pcm()
             radio._audio_stream.stop_rx.assert_awaited_once()
@@ -234,7 +234,7 @@ class TestPcmStartStopCycles:
             radio = _make_radio()
 
             await radio.start_audio_tx_pcm()
-            await radio.push_audio_tx_pcm(b"\xAA\xBB" * 960)
+            await radio.push_audio_tx_pcm(b"\xaa\xbb" * 960)
             assert radio._audio_stream.push_tx.await_count == 1
 
             await radio.stop_audio_tx_pcm()
@@ -248,7 +248,6 @@ class TestPcmStartStopCycles:
 
 @pytest.mark.e2e
 class TestPcmEdgeCases:
-
     @pytest.mark.asyncio
     async def test_stop_rx_without_start_is_noop(self) -> None:
         """Stopping RX before starting should not raise."""
@@ -293,7 +292,6 @@ class TestPcmEdgeCases:
 
 @pytest.mark.e2e
 class TestPcmStatsE2E:
-
     def test_stats_idle(self) -> None:
         radio = _make_radio()
         # No audio stream => inactive stats.

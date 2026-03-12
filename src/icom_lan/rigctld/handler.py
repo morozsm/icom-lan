@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from ..exceptions import ConnectionError, TimeoutError
 from ..types import Mode
@@ -54,31 +54,31 @@ logger = logging.getLogger(__name__)
 #              | RIG_LEVEL_ALC(0x04000000) | RIG_LEVEL_RFPOWER(0x00001000)
 #              = 0x54001000
 _IC7610_DUMP_STATE: list[str] = [
-    "0",                                                          # protocol version
-    "3078",                                                       # rig model (IC-7610)
-    "1",                                                          # ITU region
-    "100000.000000 60000000.000000 0x1ff -1 -1 0x3 0xf",        # RX range
-    "0 0 0 0 0 0 0",                                             # end of RX ranges
-    "1800000.000000 60000000.000000 0x1ff 5000 100000 0x3 0xf", # TX range
-    "0 0 0 0 0 0 0",                                             # end of TX ranges
-    "0x1ff 1",                                                    # tuning step (all modes, 1 Hz)
-    "0 0",                                                        # end of tuning steps
-    "0x1ff 3000",                                                 # filter: wide 3000 Hz
-    "0x1ff 2400",                                                 # filter: normal 2400 Hz
-    "0x1ff 1800",                                                 # filter: narrow 1800 Hz
-    "0 0",                                                        # end of filters
-    "0",                                                          # max_rit
-    "0",                                                          # max_xit
-    "0",                                                          # max_ifshift
-    "0",                                                          # announces
-    "12 20 0",                                                    # preamp (dB values, 0-terminated)
-    "6 12 18 0",                                                  # attenuator (dB values, 0-terminated)
-    "0",                                                          # has_get_func
-    "0",                                                          # has_set_func
-    "0x54001000",                                                 # has_get_level (STRENGTH|SWR|ALC|RFPOWER)
-    "0x00001000",                                                 # has_set_level (RFPOWER)
-    "0",                                                          # has_get_parm
-    "0",                                                          # has_set_parm
+    "0",  # protocol version
+    "3078",  # rig model (IC-7610)
+    "1",  # ITU region
+    "100000.000000 60000000.000000 0x1ff -1 -1 0x3 0xf",  # RX range
+    "0 0 0 0 0 0 0",  # end of RX ranges
+    "1800000.000000 60000000.000000 0x1ff 5000 100000 0x3 0xf",  # TX range
+    "0 0 0 0 0 0 0",  # end of TX ranges
+    "0x1ff 1",  # tuning step (all modes, 1 Hz)
+    "0 0",  # end of tuning steps
+    "0x1ff 3000",  # filter: wide 3000 Hz
+    "0x1ff 2400",  # filter: normal 2400 Hz
+    "0x1ff 1800",  # filter: narrow 1800 Hz
+    "0 0",  # end of filters
+    "0",  # max_rit
+    "0",  # max_xit
+    "0",  # max_ifshift
+    "0",  # announces
+    "12 20 0",  # preamp (dB values, 0-terminated)
+    "6 12 18 0",  # attenuator (dB values, 0-terminated)
+    "0",  # has_get_func
+    "0",  # has_set_func
+    "0x54001000",  # has_get_level (STRENGTH|SWR|ALC|RFPOWER)
+    "0x00001000",  # has_set_level (RFPOWER)
+    "0",  # has_get_parm
+    "0",  # has_set_parm
 ]
 
 # Filter number → approximate passband in Hz (IC-7610 USB defaults)
@@ -130,6 +130,7 @@ def _mode_to_hamlib_str(mode: object) -> str:
 # Handler
 # ---------------------------------------------------------------------------
 
+
 class RigctldHandler:
     """Dispatches parsed rigctld commands to IcomRadio.
 
@@ -174,7 +175,7 @@ class RigctldHandler:
             return _err(HamlibError.ENIMPL)
 
         try:
-            return await handler_fn(self, cmd)
+            return cast(RigctldResponse, await handler_fn(self, cmd))
         except ConnectionError:
             logger.warning("I/O error executing %s", cmd.long_cmd)
             return _err(HamlibError.EIO)
@@ -366,9 +367,11 @@ class RigctldHandler:
         if level == "SWR":
             raw_val = await self._radio.get_swr()
             # Protocol returns float; backend may return int
-            raw = float(raw_val) if isinstance(raw_val, (int, float)) else raw_val
+            raw_swr: float = (
+                float(raw_val) if isinstance(raw_val, (int, float)) else float(raw_val)
+            )
             # Map 0-255 to 1.0-5.0
-            swr = 1.0 + (raw / 255.0) * 4.0
+            swr = 1.0 + (raw_swr / 255.0) * 4.0
             return RigctldResponse(values=[f"{swr:.6f}"])
         return _err(HamlibError.EINVAL)
 
@@ -461,25 +464,25 @@ class RigctldHandler:
 
 # Build the dispatch table after the class is defined so all methods exist.
 RigctldHandler._DISPATCH = {
-    "get_freq":       RigctldHandler._cmd_get_freq,
-    "set_freq":       RigctldHandler._cmd_set_freq,
-    "get_mode":       RigctldHandler._cmd_get_mode,
-    "set_mode":       RigctldHandler._cmd_set_mode,
-    "get_ptt":        RigctldHandler._cmd_get_ptt,
-    "set_ptt":        RigctldHandler._cmd_set_ptt,
-    "get_vfo":        RigctldHandler._cmd_get_vfo,
-    "set_vfo":        RigctldHandler._cmd_set_vfo,
-    "get_level":      RigctldHandler._cmd_get_level,
-    "get_split_vfo":  RigctldHandler._cmd_get_split_vfo,
-    "set_split_vfo":  RigctldHandler._cmd_set_split_vfo,
-    "get_rit":        RigctldHandler._cmd_get_rit,
-    "dump_state":     RigctldHandler._cmd_dump_state,
-    "dump_caps":      RigctldHandler._cmd_dump_caps,
-    "get_info":       RigctldHandler._cmd_get_info,
-    "chk_vfo":        RigctldHandler._cmd_chk_vfo,
-    "get_powerstat":  RigctldHandler._cmd_get_powerstat,
-    "quit":           RigctldHandler._cmd_quit,
-    "power2mW":       RigctldHandler._cmd_power2mw,
-    "mW2power":       RigctldHandler._cmd_mw2power,
-    "get_lock_mode":  RigctldHandler._cmd_get_lock_mode,
+    "get_freq": RigctldHandler._cmd_get_freq,
+    "set_freq": RigctldHandler._cmd_set_freq,
+    "get_mode": RigctldHandler._cmd_get_mode,
+    "set_mode": RigctldHandler._cmd_set_mode,
+    "get_ptt": RigctldHandler._cmd_get_ptt,
+    "set_ptt": RigctldHandler._cmd_set_ptt,
+    "get_vfo": RigctldHandler._cmd_get_vfo,
+    "set_vfo": RigctldHandler._cmd_set_vfo,
+    "get_level": RigctldHandler._cmd_get_level,
+    "get_split_vfo": RigctldHandler._cmd_get_split_vfo,
+    "set_split_vfo": RigctldHandler._cmd_set_split_vfo,
+    "get_rit": RigctldHandler._cmd_get_rit,
+    "dump_state": RigctldHandler._cmd_dump_state,
+    "dump_caps": RigctldHandler._cmd_dump_caps,
+    "get_info": RigctldHandler._cmd_get_info,
+    "chk_vfo": RigctldHandler._cmd_chk_vfo,
+    "get_powerstat": RigctldHandler._cmd_get_powerstat,
+    "quit": RigctldHandler._cmd_quit,
+    "power2mW": RigctldHandler._cmd_power2mw,
+    "mW2power": RigctldHandler._cmd_mw2power,
+    "get_lock_mode": RigctldHandler._cmd_get_lock_mode,
 }

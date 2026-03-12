@@ -77,9 +77,19 @@ def _scope_radio(*, ready: bool = True, connected: bool = True) -> MagicMock:
     return radio
 
 
+class _StateNotifyRadio(MagicMock):
+    """Minimal mock that satisfies StateNotifyCapable so server registers callbacks."""
+
+    def set_state_change_callback(self, callback: object) -> None:
+        self._state_change_callback = callback
+
+    def set_reconnect_callback(self, callback: object) -> None:
+        self._reconnect_callback = callback
+
+
 @pytest.mark.asyncio
 async def test_start_and_stop_with_radio_sets_callbacks() -> None:
-    radio = MagicMock()
+    radio = _StateNotifyRadio()
     radio.state_cache = MagicMock()
     radio.disconnect = AsyncMock()
     fake_server = _FakeAsyncServer()
@@ -87,13 +97,18 @@ async def test_start_and_stop_with_radio_sets_callbacks() -> None:
 
     srv = WebServer(radio, WebConfig(host="127.0.0.1", port=0))
     with (
-        patch("icom_lan.web.server.asyncio.start_server", new=AsyncMock(return_value=fake_server)),
+        patch(
+            "icom_lan.web.server.asyncio.start_server",
+            new=AsyncMock(return_value=fake_server),
+        ),
         patch("icom_lan.web.server.RadioPoller", return_value=fake_poller),
     ):
         await srv.start()
         assert srv.port == 4242
-        radio.set_state_change_callback.assert_called_once_with(srv._on_radio_state_change)
-        radio.set_reconnect_callback.assert_called_once_with(srv._on_radio_reconnect)
+        assert radio._state_change_callback is not None
+        assert radio._state_change_callback == srv._on_radio_state_change
+        assert radio._reconnect_callback is not None
+        assert radio._reconnect_callback == srv._on_radio_reconnect
         fake_poller.start.assert_called_once()
         await srv.stop()
 
@@ -220,7 +235,9 @@ async def test_serve_static_forbidden_missing_read_error_and_success(tmp_path) -
 
 
 @pytest.mark.asyncio
-async def test_handle_websocket_missing_key_unknown_channel_and_control_handler() -> None:
+async def test_handle_websocket_missing_key_unknown_channel_and_control_handler() -> (
+    None
+):
     srv = WebServer(None)
     writer = _FakeWriter()
     with patch("icom_lan.web.server._send_response", new=AsyncMock()) as send_resp:
@@ -232,7 +249,9 @@ async def test_handle_websocket_missing_key_unknown_channel_and_control_handler(
     ws_unknown.keepalive_loop = AsyncMock()
     with patch("icom_lan.web.server.WebSocketConnection", return_value=ws_unknown):
         await srv._handle_websocket(  # noqa: SLF001
-            _reader_with(b""), _FakeWriter(), "/api/v1/unknown",
+            _reader_with(b""),
+            _FakeWriter(),
+            "/api/v1/unknown",
             {"sec-websocket-key": "abc"},
         )
     ws_unknown.close.assert_awaited_once_with(1008, "unknown channel")
@@ -252,7 +271,9 @@ async def test_handle_websocket_missing_key_unknown_channel_and_control_handler(
         patch("icom_lan.web.server.ControlHandler", return_value=handler),
     ):
         await srv._handle_websocket(  # noqa: SLF001
-            _reader_with(b""), writer_ok, "/api/v1/ws",
+            _reader_with(b""),
+            writer_ok,
+            "/api/v1/ws",
             {"sec-websocket-key": "abc"},
         )
     assert b"101 Switching Protocols" in writer_ok.buffer
@@ -275,9 +296,14 @@ async def test_handle_connection_none_http_ws_and_exception() -> None:
     srv._handle_http.assert_awaited_once()
 
     writer3 = _FakeWriter()
-    srv._read_request = AsyncMock(return_value=(
-        "GET", "/api/v1/ws", {"upgrade": "websocket", "connection": "Upgrade"}, {},
-    ))
+    srv._read_request = AsyncMock(
+        return_value=(
+            "GET",
+            "/api/v1/ws",
+            {"upgrade": "websocket", "connection": "Upgrade"},
+            {},
+        )
+    )
     srv._handle_websocket = AsyncMock()
     await srv._handle_connection(_reader_with(b""), writer3)  # noqa: SLF001
     srv._handle_websocket.assert_awaited_once()
@@ -678,8 +704,20 @@ class TestCamelCaseState:
             "control_connected": False,
             "revision": 1,
             "updatedAt": "2026-01-01T00:00:00+00:00",
-            "main": {"freq": 14074000, "data_mode": False, "s_meter": 10, "af_level": 128, "rf_gain": 200},
-            "sub": {"freq": 7100000, "data_mode": True, "s_meter": 0, "af_level": 64, "rf_gain": 100},
+            "main": {
+                "freq": 14074000,
+                "data_mode": False,
+                "s_meter": 10,
+                "af_level": 128,
+                "rf_gain": 200,
+            },
+            "sub": {
+                "freq": 7100000,
+                "data_mode": True,
+                "s_meter": 0,
+                "af_level": 64,
+                "rf_gain": 100,
+            },
             "scope_controls": {"ref_db": -13.5, "vbw_narrow": False},
         }
 

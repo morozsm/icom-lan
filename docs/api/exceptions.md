@@ -85,8 +85,8 @@ Raised when an operation doesn't complete within the timeout period.
 - CI-V command response not received
 - Status packet not received during handshake
 
-!!! note
-    This is `icom_lan.TimeoutError`, not the built-in `builtins.TimeoutError`. Import explicitly to avoid shadowing.
+!!! note "TimeoutError vs built-in and asyncio"
+    This is `icom_lan.exceptions.TimeoutError`, not the built-in `builtins.TimeoutError` (Python 3.10+). Import explicitly to avoid shadowing (e.g. `from icom_lan.exceptions import TimeoutError as IcomTimeoutError`). When handling timeouts, distinguish from `asyncio.TimeoutError`: the library converts asyncio timeouts to `icom_lan.TimeoutError` in its own code; if you use `asyncio.wait_for()` or similar, you may need to catch both.
 
 ### `AudioError`
 

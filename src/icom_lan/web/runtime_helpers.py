@@ -36,14 +36,14 @@ def runtime_capabilities(radio: "Radio | None") -> set[str]:
             caps.discard("dual_rx")
         return caps
 
-    caps: set[str] = set()
+    result: set[str] = set()
     if isinstance(radio, ScopeCapable):
-        caps.add("scope")
+        result.add("scope")
     if isinstance(radio, AudioCapable):
-        caps.add("audio")
+        result.add("audio")
     if isinstance(radio, DualReceiverCapable):
-        caps.add("dual_rx")
-    return caps
+        result.add("dual_rx")
+    return result
 
 
 def radio_ready(radio: "Radio | None") -> bool:
@@ -62,4 +62,3 @@ def radio_ready(radio: "Radio | None") -> bool:
         return ready
     connected: Any = getattr(radio, "connected", False)
     return connected if isinstance(connected, bool) else False
-

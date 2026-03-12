@@ -7,7 +7,7 @@ from collections.abc import AsyncGenerator
 
 import pytest
 
-from icom_lan.radio import IcomRadio
+from icom_lan.radio import IcomRadio  # noqa: TID251
 from icom_lan.types import HEADER_SIZE, PacketType
 
 from mock_server import MockIcomRadio

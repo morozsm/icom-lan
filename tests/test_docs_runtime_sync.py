@@ -45,12 +45,16 @@ def test_runtime_invariant_radio_ready_tracks_civ_health() -> None:
     assert radio.radio_ready is False
 
     radio._civ_recovering = False
-    radio._last_civ_data_received = time.monotonic() - (radio._civ_ready_idle_timeout + 0.1)
+    radio._last_civ_data_received = time.monotonic() - (
+        radio._civ_ready_idle_timeout + 0.1
+    )
     assert radio.radio_ready is False
 
 
 @pytest.mark.asyncio
-async def test_runtime_invariant_control_rejects_manual_connect_during_backend_recovery() -> None:
+async def test_runtime_invariant_control_rejects_manual_connect_during_backend_recovery() -> (
+    None
+):
     ws = SimpleNamespace(send_text=AsyncMock(), recv=AsyncMock())
     sent: list[str] = []
 

@@ -429,18 +429,19 @@ class Icom7610CoreRadio:
         self._last_power: int | None = None
         self._last_split: bool | None = None
         self._last_vfo: str | None = None
-        self._token_task: asyncio.Task | None = None
+        self._token_task: asyncio.Task[None] | None = None
         self._auto_reconnect = auto_reconnect
         self._reconnect_delay = reconnect_delay
         self._reconnect_max_delay = reconnect_max_delay
         self._watchdog_timeout = watchdog_timeout
-        self._watchdog_task: asyncio.Task | None = None
-        self._reconnect_task: asyncio.Task | None = None
+        self._watchdog_task: asyncio.Task[None] | None = None
+        self._reconnect_task: asyncio.Task[None] | None = None
         self._auto_recover_audio = auto_recover_audio
         self._on_audio_recovery = on_audio_recovery
         self._on_reconnect: Callable[[], None] | None = None
         self._civ_stream_ready: bool = False
         self._civ_recovering: bool = False
+        self._last_civ_data_received: float | None = None
         self._civ_recovery_lock = asyncio.Lock()
         self._civ_recovery_wait_timeout: float = float(
             os.environ.get("ICOM_CIV_RECOVERY_WAIT_TIMEOUT_S", "12.0")
@@ -473,7 +474,7 @@ class Icom7610CoreRadio:
             float(os.environ.get("ICOM_CIV_RETRY_SLICE_MS", "150")) / 1000.0
         )
         self._state_cache: StateCache = StateCache()
-        self._on_state_change: Callable | None = None  # set by server
+        self._on_state_change: Callable[[str, dict[str, Any]], None] | None = None  # set by server
         self._radio_state: RadioState = RadioState()  # may be replaced by WebServer
         _ttl = {**_DEFAULT_CACHE_TTL, **(cache_ttl_s or {})}
         self._cache_ttl_freq: float = _ttl["freq"]
@@ -484,9 +485,7 @@ class Icom7610CoreRadio:
             model=model,
             radio_addr=radio_addr,
         )
-        self._radio_addr = (
-            self._profile.civ_addr if radio_addr is None else radio_addr
-        )
+        self._radio_addr = self._profile.civ_addr if radio_addr is None else radio_addr
         # GET commands use a shorter timeout than the general connection timeout.
         # wfview-style: send once, short deadline, fall back to cache.
         self._civ_get_timeout: float = min(timeout, 2.0)
@@ -494,6 +493,25 @@ class Icom7610CoreRadio:
         self._civ_runtime: CivRuntime = CivRuntime(self)
         self._control_phase: ControlPhaseRuntime = ControlPhaseRuntime(self)
         self._audio_runtime: AudioRecoveryRuntime = AudioRecoveryRuntime(self)
+
+    # Host shims for ControlPhaseRuntime and Icom7610SerialRadio (delegate to civ_runtime)
+    def _advance_civ_generation(self, reason: str) -> None:
+        self._civ_runtime.advance_generation(reason)
+
+    def _start_civ_rx_pump(self) -> None:
+        self._civ_runtime.start_pump()
+
+    async def _stop_civ_rx_pump(self) -> None:
+        await self._civ_runtime.stop_pump()
+
+    def _start_civ_data_watchdog(self) -> None:
+        self._civ_runtime.start_data_watchdog()
+
+    def _start_civ_worker(self) -> None:
+        self._civ_runtime.start_worker()
+
+    async def _stop_civ_worker(self) -> None:
+        await self._civ_runtime.stop_worker()
 
     def __del__(self) -> None:
         """Emit WARN if instance is collected while still connected (forgotten teardown)."""
@@ -597,6 +615,7 @@ class Icom7610CoreRadio:
         """Lazy-initialized AudioBus for pub/sub audio distribution."""
         if self._audio_bus is None:
             from .audio_bus import AudioBus
+
             self._audio_bus = AudioBus(self)
         return self._audio_bus
 
@@ -715,7 +734,9 @@ class Icom7610CoreRadio:
         civ = get_frequency(to_addr=self._radio_addr)
         try:
             resp = await self._send_civ_raw(
-                civ, key="get_frequency", dedupe=not bypass_cache,
+                civ,
+                key="get_frequency",
+                dedupe=not bypass_cache,
             )
             freq = parse_frequency_response(resp)
             if update_cache:
@@ -723,7 +744,9 @@ class Icom7610CoreRadio:
                 self._state_cache.update_freq(freq)
             return freq
         except TimeoutError:
-            if update_cache and self._state_cache.is_fresh("freq", self._cache_ttl_freq):
+            if update_cache and self._state_cache.is_fresh(
+                "freq", self._cache_ttl_freq
+            ):
                 logger.debug(
                     "get_frequency: timeout, returning cached %d Hz",
                     self._state_cache.freq,
@@ -731,7 +754,9 @@ class Icom7610CoreRadio:
                 return self._state_cache.freq
             raise
 
-    async def _set_frequency_main(self, freq_hz: int, *, update_cache: bool = True) -> None:
+    async def _set_frequency_main(
+        self, freq_hz: int, *, update_cache: bool = True
+    ) -> None:
         """Set MAIN receiver frequency with optional cache updates."""
         civ = set_frequency(freq_hz, to_addr=self._radio_addr, receiver=RECEIVER_MAIN)
         await self._send_civ_raw(civ, wait_response=False)
@@ -754,7 +779,9 @@ class Icom7610CoreRadio:
                 self._state_cache.update_mode(mode.name, filt)
             return mode, filt
         except TimeoutError:
-            if update_cache and self._state_cache.is_fresh("mode", self._cache_ttl_mode):
+            if update_cache and self._state_cache.is_fresh(
+                "mode", self._cache_ttl_mode
+            ):
                 logger.debug(
                     "get_mode_info: timeout, returning cached %s",
                     self._state_cache.mode,
@@ -801,11 +828,13 @@ class Icom7610CoreRadio:
                 f"Unknown mode: {raw_mode!r}. Supported modes: {supported}"
             ) from exc
 
-    def set_state_change_callback(self, callback: Callable | None) -> None:
+    def set_state_change_callback(
+        self, callback: Callable[[str, dict[str, Any]], None] | None
+    ) -> None:
         """Register callback for CI-V state change notifications."""
         self._on_state_change = callback
 
-    def set_reconnect_callback(self, callback: Callable | None) -> None:
+    def set_reconnect_callback(self, callback: Callable[[], None] | None) -> None:
         """Register callback invoked after successful soft reconnect."""
         self._on_reconnect = callback
 
@@ -879,7 +908,9 @@ class Icom7610CoreRadio:
         self._conn_state = RadioConnectionState.DISCONNECTED
         self._civ_stream_ready = False
         self._civ_recovering = False
-        logger.info("Soft disconnect from %s:%d (control kept alive)", self._host, self._port)
+        logger.info(
+            "Soft disconnect from %s:%d (control kept alive)", self._host, self._port
+        )
 
     async def _force_cleanup_civ(self) -> None:
         """Unconditionally tear down CI-V transport regardless of state.
@@ -895,7 +926,9 @@ class Icom7610CoreRadio:
             try:
                 await self._civ_transport.disconnect()
             except Exception:
-                logger.debug("force_cleanup_civ: transport disconnect failed", exc_info=True)
+                logger.debug(
+                    "force_cleanup_civ: transport disconnect failed", exc_info=True
+                )
             self._civ_transport = None
         ctrl_alive = bool(
             self._ctrl_transport
@@ -996,9 +1029,7 @@ class Icom7610CoreRadio:
                 # Check if any transport has received new packets since last check
                 ctrl_count = self._ctrl_transport.rx_packet_count
                 civ_count = (
-                    self._civ_transport.rx_packet_count
-                    if self._civ_transport
-                    else 0
+                    self._civ_transport.rx_packet_count if self._civ_transport else 0
                 )
                 if ctrl_count != last_rx_count or civ_count != last_civ_count:
                     last_activity = time.monotonic()
@@ -1049,19 +1080,27 @@ class Icom7610CoreRadio:
                             await self._audio_stream.stop_rx()
                             await self._audio_stream.stop_tx()
                         except Exception:
-                            logger.debug("reconnect: audio_stream stop failed", exc_info=True)
+                            logger.debug(
+                                "reconnect: audio_stream stop failed", exc_info=True
+                            )
                         self._audio_stream = None
                     if self._audio_transport is not None:
                         try:
                             await self._audio_transport.disconnect()
                         except Exception:
-                            logger.debug("reconnect: audio_transport disconnect failed", exc_info=True)
+                            logger.debug(
+                                "reconnect: audio_transport disconnect failed",
+                                exc_info=True,
+                            )
                         self._audio_transport = None
                     if self._civ_transport is not None:
                         try:
                             await self._civ_transport.disconnect()
                         except Exception:
-                            logger.debug("reconnect: civ_transport disconnect failed", exc_info=True)
+                            logger.debug(
+                                "reconnect: civ_transport disconnect failed",
+                                exc_info=True,
+                            )
                         self._civ_transport = None
                     try:
                         await self._send_token(0x01)
@@ -1070,14 +1109,14 @@ class Icom7610CoreRadio:
                     try:
                         await self._ctrl_transport.disconnect()
                     except Exception:
-                        logger.debug("reconnect: ctrl_transport disconnect failed", exc_info=True)
+                        logger.debug(
+                            "reconnect: ctrl_transport disconnect failed", exc_info=True
+                        )
 
                     # Re-initialize transport
                     self._ctrl_transport = IcomTransport()
                     await self.connect()
-                    logger.info(
-                        "Reconnected successfully after %d attempts", attempt
-                    )
+                    logger.info("Reconnected successfully after %d attempts", attempt)
                     if self._auto_recover_audio and audio_snapshot is not None:
                         await self._audio_runtime.recover(audio_snapshot)
                     return
@@ -1204,14 +1243,16 @@ class Icom7610CoreRadio:
             await self._audio_stream.stop_rx()
 
     def _add_opus_rx_tap(
-        self, callback: "Callable[[AudioPacket | None], None]",
+        self,
+        callback: "Callable[[AudioPacket | None], None]",
     ) -> None:
         """Add an additional opus RX listener (non-exclusive, parallel to main callback)."""
         if self._audio_stream is not None:
             self._audio_stream.add_rx_tap(callback)
 
     def _remove_opus_rx_tap(
-        self, callback: "Callable[[AudioPacket | None], None]",
+        self,
+        callback: "Callable[[AudioPacket | None], None]",
     ) -> None:
         """Remove an opus RX tap."""
         if self._audio_stream is not None:
@@ -1509,7 +1550,8 @@ class Icom7610CoreRadio:
         self._audio_transport = IcomTransport()
         try:
             await self._audio_transport.connect(
-                self._host, self._audio_port,
+                self._host,
+                self._audio_port,
                 local_port=getattr(self, "_audio_local_port", 0),
             )
         except OSError as exc:
@@ -1608,7 +1650,7 @@ class Icom7610CoreRadio:
 
         self._radio_state.receiver("SUB").freq = freq_hz
 
-    async def get_mode(self, receiver: int = 0) -> tuple[str, int | None]:  # type: ignore[override]
+    async def get_mode(self, receiver: int = 0) -> tuple[str, int | None]:
         """Get current mode as (name, filter) — Protocol-compatible.
 
         Returns a ``(mode_name, filter_number)`` tuple. For the Icom-specific
@@ -1658,7 +1700,9 @@ class Icom7610CoreRadio:
         mode_name, _ = await self.get_mode(receiver=receiver)
         await self.set_mode(mode_name, filter_width=filter_width, receiver=receiver)
 
-    async def set_mode(self, mode: Mode | str, filter_width: int | None = None, receiver: int = 0) -> None:
+    async def set_mode(
+        self, mode: Mode | str, filter_width: int | None = None, receiver: int = 0
+    ) -> None:
         """Set the operating mode.
 
         Args:
@@ -1783,9 +1827,7 @@ class Icom7610CoreRadio:
                 and self._state_cache.rf_power is not None
             ):
                 cached_level = round(self._state_cache.rf_power * 255)
-                logger.debug(
-                    "get_power: timeout, returning cached %d", cached_level
-                )
+                logger.debug("get_power: timeout, returning cached %d", cached_level)
                 return cached_level
             raise
 
@@ -1866,6 +1908,7 @@ class Icom7610CoreRadio:
             operation="set_squelch",
         )
         from .commands import set_squelch as _set_squelch
+
         civ = _set_squelch(level, to_addr=self._radio_addr, receiver=receiver)
         await self._send_civ_raw(civ, wait_response=False)
 
@@ -1999,9 +2042,7 @@ class Icom7610CoreRadio:
 
     async def set_key_speed(self, wpm: int) -> None:
         """Set key speed in WPM."""
-        await self._send_fire_and_forget(
-            set_key_speed(wpm, to_addr=self._radio_addr)
-        )
+        await self._send_fire_and_forget(set_key_speed(wpm, to_addr=self._radio_addr))
 
     async def get_notch_filter(self) -> int:
         """Read notch filter level (0-255)."""
@@ -2133,9 +2174,7 @@ class Icom7610CoreRadio:
 
     async def set_vox_gain(self, level: int) -> None:
         """Set VOX gain (0-255)."""
-        await self._send_fire_and_forget(
-            set_vox_gain(level, to_addr=self._radio_addr)
-        )
+        await self._send_fire_and_forget(set_vox_gain(level, to_addr=self._radio_addr))
 
     async def get_anti_vox_gain(self) -> int:
         """Read anti-VOX gain (0-255)."""
@@ -2198,9 +2237,7 @@ class Icom7610CoreRadio:
 
     async def set_nb_depth(self, value: int) -> None:
         """Set NB depth (0-9)."""
-        await self._send_fire_and_forget(
-            set_nb_depth(value, to_addr=self._radio_addr)
-        )
+        await self._send_fire_and_forget(set_nb_depth(value, to_addr=self._radio_addr))
 
     async def get_nb_width(self) -> int:
         """Read NB width (0-255)."""
@@ -2214,9 +2251,7 @@ class Icom7610CoreRadio:
 
     async def set_nb_width(self, value: int) -> None:
         """Set NB width (0-255)."""
-        await self._send_fire_and_forget(
-            set_nb_width(value, to_addr=self._radio_addr)
-        )
+        await self._send_fire_and_forget(set_nb_width(value, to_addr=self._radio_addr))
 
     async def get_af_mute(self, receiver: int = RECEIVER_MAIN) -> bool:
         """Read AF mute status."""
@@ -2325,9 +2360,7 @@ class Icom7610CoreRadio:
             sub=0x41,
         )
 
-    async def set_auto_notch(
-        self, on: bool, receiver: int = RECEIVER_MAIN
-    ) -> None:
+    async def set_auto_notch(self, on: bool, receiver: int = RECEIVER_MAIN) -> None:
         """Set auto-notch status."""
         self._require_receiver(receiver, operation="set_auto_notch")
         self._require_cmd29_route(
@@ -2400,9 +2433,7 @@ class Icom7610CoreRadio:
             sub=0x48,
         )
 
-    async def set_manual_notch(
-        self, on: bool, receiver: int = RECEIVER_MAIN
-    ) -> None:
+    async def set_manual_notch(self, on: bool, receiver: int = RECEIVER_MAIN) -> None:
         """Set manual-notch status."""
         self._require_receiver(receiver, operation="set_manual_notch")
         self._require_cmd29_route(
@@ -2449,9 +2480,7 @@ class Icom7610CoreRadio:
         """Set dial lock status."""
         await self._send_fire_and_forget(set_dial_lock(on, to_addr=self._radio_addr))
 
-    async def get_filter_shape(
-        self, receiver: int = RECEIVER_MAIN
-    ) -> FilterShape:
+    async def get_filter_shape(self, receiver: int = RECEIVER_MAIN) -> FilterShape:
         """Read DSP IF filter shape."""
         self._require_receiver(receiver, operation="get_filter_shape")
         self._require_cmd29_route(
@@ -2496,9 +2525,7 @@ class Icom7610CoreRadio:
         )
         return SsbTxBandwidth(value)
 
-    async def set_ssb_tx_bandwidth(
-        self, bandwidth: SsbTxBandwidth | int
-    ) -> None:
+    async def set_ssb_tx_bandwidth(self, bandwidth: SsbTxBandwidth | int) -> None:
         """Set SSB transmit bandwidth preset."""
         ssb_tx_bandwidth = SsbTxBandwidth(bandwidth)
         await self._send_fire_and_forget(
@@ -2599,9 +2626,7 @@ class Icom7610CoreRadio:
         resp = await self._send_civ_raw(civ, key="get_band_edge_freq", dedupe=True)
         return parse_frequency_response(resp)
 
-    async def get_various_squelch(
-        self, receiver: int = RECEIVER_MAIN
-    ) -> bool:
+    async def get_various_squelch(self, receiver: int = RECEIVER_MAIN) -> bool:
         """Read various-squelch status for the selected receiver."""
         self._require_receiver(receiver, operation="get_various_squelch")
         self._require_cmd29_route(
@@ -2986,7 +3011,10 @@ class Icom7610CoreRadio:
                     raise  # Our own error — propagate
                 # get_digisel() failed (radio doesn't support it, timeout, etc.) — ignore
             except Exception:
-                logger.debug("set_preamp: unexpected error checking DIGI-SEL, proceeding", exc_info=True)
+                logger.debug(
+                    "set_preamp: unexpected error checking DIGI-SEL, proceeding",
+                    exc_info=True,
+                )
 
         civ = set_preamp(level, to_addr=self._radio_addr, receiver=receiver)
         await self._send_civ_raw(civ, wait_response=False)
@@ -3025,7 +3053,6 @@ class Icom7610CoreRadio:
         ack = parse_ack_nak(resp)
         if ack is False:
             raise CommandError(f"Radio rejected DIGI-SEL {'on' if on else 'off'}")
-
 
     async def get_nb(self) -> bool:
         """Read Noise Blanker status."""
@@ -3068,8 +3095,6 @@ class Icom7610CoreRadio:
         )
         civ = set_nr(on, to_addr=self._radio_addr, receiver=receiver)
         await self._send_civ_raw(civ, wait_response=False)
-
-
 
     async def get_ip_plus(self) -> bool:
         """Read IP+ status."""
@@ -3690,7 +3715,9 @@ class Icom7610CoreRadio:
     async def get_scope_receiver(self) -> int:
         """Read the selected scope receiver (0=MAIN, 1=SUB)."""
         self._check_connected()
-        resp = await self._send_civ_raw(_get_scope_main_sub_cmd(to_addr=self._radio_addr))
+        resp = await self._send_civ_raw(
+            _get_scope_main_sub_cmd(to_addr=self._radio_addr)
+        )
         receiver = parse_scope_main_sub_response(resp)
         self._scope_controls().receiver = receiver
         return receiver
@@ -3709,7 +3736,9 @@ class Icom7610CoreRadio:
     async def get_scope_dual(self) -> bool:
         """Read whether the scope is in dual-display mode."""
         self._check_connected()
-        resp = await self._send_civ_raw(_get_scope_single_dual_cmd(to_addr=self._radio_addr))
+        resp = await self._send_civ_raw(
+            _get_scope_single_dual_cmd(to_addr=self._radio_addr)
+        )
         dual = parse_scope_single_dual_response(resp)
         self._scope_controls().dual = dual
         return dual
@@ -3834,7 +3863,9 @@ class Icom7610CoreRadio:
     async def get_scope_during_tx(self) -> bool:
         """Read whether the scope remains visible during transmit."""
         self._check_connected()
-        resp = await self._send_civ_raw(_get_scope_during_tx_cmd(to_addr=self._radio_addr))
+        resp = await self._send_civ_raw(
+            _get_scope_during_tx_cmd(to_addr=self._radio_addr)
+        )
         during_tx = parse_scope_during_tx_response(resp)
         self._scope_controls().during_tx = during_tx
         return during_tx
@@ -3851,7 +3882,9 @@ class Icom7610CoreRadio:
     async def get_scope_center_type(self) -> int:
         """Read the scope center-type setting (0..2)."""
         self._check_connected()
-        resp = await self._send_civ_raw(_get_scope_center_type_cmd(to_addr=self._radio_addr))
+        resp = await self._send_civ_raw(
+            _get_scope_center_type_cmd(to_addr=self._radio_addr)
+        )
         receiver, center_type = parse_scope_center_type_response(resp)
         self._apply_scope_receiver_hint(receiver)
         self._scope_controls().center_type = center_type
@@ -3887,7 +3920,9 @@ class Icom7610CoreRadio:
     async def get_scope_fixed_edge(self) -> ScopeFixedEdge:
         """Read the fixed-edge scope bounds."""
         self._check_connected()
-        resp = await self._send_civ_raw(_get_scope_fixed_edge_cmd(to_addr=self._radio_addr))
+        resp = await self._send_civ_raw(
+            _get_scope_fixed_edge_cmd(to_addr=self._radio_addr)
+        )
         fixed_edge = parse_scope_fixed_edge_response(resp)
         self._scope_controls().fixed_edge = fixed_edge
         self._scope_controls().edge = fixed_edge.edge
@@ -3985,7 +4020,9 @@ class Icom7610CoreRadio:
         old_callback = self._scope_callback
         self.on_scope_data(_on_frame)
         try:
-            await self.enable_scope(policy=ScopeCompletionPolicy.VERIFY, timeout=timeout)
+            await self.enable_scope(
+                policy=ScopeCompletionPolicy.VERIFY, timeout=timeout
+            )
             try:
                 await asyncio.wait_for(frame_ready.wait(), timeout=timeout)
             except asyncio.TimeoutError:
@@ -4000,7 +4037,7 @@ class Icom7610CoreRadio:
 
     async def get_memory_mode(self) -> int:
         """Get currently selected memory channel (1-101).
-        
+
         Raises:
             NotImplementedError: IC-7610 does not support reading the current
                 memory channel. Command 0x08 is SELECT-only per the official
@@ -4022,9 +4059,7 @@ class Icom7610CoreRadio:
 
     async def memory_write(self) -> None:
         """Write current VFO state to selected memory channel."""
-        await self._send_fire_and_forget(
-            build_memory_write(to_addr=self._radio_addr)
-        )
+        await self._send_fire_and_forget(build_memory_write(to_addr=self._radio_addr))
 
     async def memory_to_vfo(self, channel: int) -> None:
         """Load memory channel to VFO."""
@@ -4044,10 +4079,10 @@ class Icom7610CoreRadio:
 
     async def get_memory_contents(self, channel: int) -> MemoryChannel:
         """Read full memory channel data.
-        
+
         Args:
             channel: Memory channel number (1-101).
-            
+
         Raises:
             NotImplementedError: IC-7610 does not support reading memory
                 contents. Command 0x1A 0x00 GET is not documented in the
@@ -4068,15 +4103,13 @@ class Icom7610CoreRadio:
             build_memory_contents_set(mem, to_addr=self._radio_addr)
         )
 
-    async def get_band_stack(
-        self, band: int, register: int
-    ) -> BandStackRegister:
+    async def get_band_stack(self, band: int, register: int) -> BandStackRegister:
         """Read band stacking register (band 0-24, register 1-3).
-        
+
         Args:
             band: Band number (0-24).
             register: Register number (1-3).
-            
+
         Raises:
             NotImplementedError: IC-7610 does not support reading band
                 stacking registers. Command 0x1A 0x01 GET is not documented
@@ -4105,12 +4138,20 @@ class Icom7610CoreRadio:
 class IcomRadio(Icom7610CoreRadio):
     """LAN adapter for IC-7610 built on top of the shared executable core."""
 
+    @staticmethod
+    async def _flush_queue(transport: IcomTransport, max_pkts: int = 200) -> int:
+        """Flush receive queue on the given transport (delegates to ControlPhaseRuntime)."""
+        from ._control_phase import ControlPhaseRuntime
+
+        return await ControlPhaseRuntime._flush_queue(transport, max_pkts)
+
     pass
 
 
 # ---------------------------------------------------------------------------
 # Protocol compliance checks (not executed automatically — call explicitly)
 # ---------------------------------------------------------------------------
+
 
 def _check_protocol_compliance() -> None:
     """Verify IcomRadio satisfies all Radio protocol variants.

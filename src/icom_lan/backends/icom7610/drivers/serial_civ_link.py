@@ -12,7 +12,7 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-_SOF = b"\xFE\xFE"
+_SOF = b"\xfe\xfe"
 _EOF = 0xFD
 _ABORT = 0xFC
 _DEPENDENCY_HINT = (
@@ -36,7 +36,9 @@ class SerialFrameOverflowError(SerialFrameError):
 class SerialFrameCodec:
     """CI-V FE FE ... FD frame codec with malformed-stream recovery."""
 
-    def __init__(self, *, max_frame_len: int = 1024, frame_timeout_s: float = 0.2) -> None:
+    def __init__(
+        self, *, max_frame_len: int = 1024, frame_timeout_s: float = 0.2
+    ) -> None:
         if max_frame_len < 4:
             raise ValueError("max_frame_len must be >= 4")
         if frame_timeout_s <= 0:
@@ -85,7 +87,9 @@ class SerialFrameCodec:
 
             if nested_start >= 0 and (end < 0 or nested_start < end):
                 # Current frame is malformed/truncated; resync on the newer SOF.
-                logger.debug("Malformed frame candidate; resynchronizing on nested SOF.")
+                logger.debug(
+                    "Malformed frame candidate; resynchronizing on nested SOF."
+                )
                 del self._buffer[:nested_start]
                 self._partial_since = None
                 continue
@@ -202,7 +206,9 @@ class SerialCivLink:
 
         self._reset_session_buffers()
         opener = self._resolve_opener()
-        reader, writer = await asyncio.wait_for(opener(), timeout=self._connect_timeout_s)
+        reader, writer = await asyncio.wait_for(
+            opener(), timeout=self._connect_timeout_s
+        )
         self._reader = reader
         self._writer = writer
         self._connected = True
@@ -268,7 +274,9 @@ class SerialCivLink:
             if remaining <= 0:
                 if self._codec.expire_partial():
                     self._healthy = False
-                    raise SerialFrameTimeoutError("Timed out waiting for complete frame.")
+                    raise SerialFrameTimeoutError(
+                        "Timed out waiting for complete frame."
+                    )
                 return None
 
             try:
@@ -279,7 +287,9 @@ class SerialCivLink:
             except asyncio.TimeoutError:
                 if self._codec.expire_partial():
                     self._healthy = False
-                    raise SerialFrameTimeoutError("Timed out waiting for complete frame.")
+                    raise SerialFrameTimeoutError(
+                        "Timed out waiting for complete frame."
+                    )
                 return None
 
             if chunk is None:
@@ -347,10 +357,11 @@ class SerialCivLink:
         serial_asyncio = importlib.import_module("serial_asyncio")
 
         async def _open() -> tuple[Any, Any]:
-            return await serial_asyncio.open_serial_connection(  # type: ignore[attr-defined]
+            reader, writer = await serial_asyncio.open_serial_connection(
                 url=self._device,
                 baudrate=self._baudrate,
             )
+            return (reader, writer)
 
         return _open
 

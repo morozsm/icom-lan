@@ -19,6 +19,7 @@ from icom_lan.types import Mode
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def config() -> RigctldConfig:
     return RigctldConfig()
@@ -41,11 +42,15 @@ def handler(mock_radio: AsyncMock, config: RigctldConfig) -> RigctldHandler:
 
 
 def get_cmd(long_cmd: str, *args: str) -> RigctldCommand:
-    return RigctldCommand(short_cmd="", long_cmd=long_cmd, args=tuple(args), is_set=False)
+    return RigctldCommand(
+        short_cmd="", long_cmd=long_cmd, args=tuple(args), is_set=False
+    )
 
 
 def set_cmd(long_cmd: str, *args: str) -> RigctldCommand:
-    return RigctldCommand(short_cmd="", long_cmd=long_cmd, args=tuple(args), is_set=True)
+    return RigctldCommand(
+        short_cmd="", long_cmd=long_cmd, args=tuple(args), is_set=True
+    )
 
 
 class _ContractModeRadio:
@@ -67,7 +72,10 @@ class _ContractModeRadio:
         return self.mode, self.filter_width
 
     async def set_mode(
-        self, mode: str, filter_width: int | None = None, receiver: int = 0,
+        self,
+        mode: str,
+        filter_width: int | None = None,
+        receiver: int = 0,
     ) -> None:
         self.set_mode_calls.append((mode, filter_width, receiver))
         self.mode = mode
@@ -85,8 +93,11 @@ class _ContractModeRadio:
 # get_freq / set_freq
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
-async def test_get_freq_returns_frequency(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+async def test_get_freq_returns_frequency(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
     mock_radio.get_frequency.return_value = 14_074_000
     resp = await handler.execute(get_cmd("get_freq"))
     assert resp.ok
@@ -95,7 +106,9 @@ async def test_get_freq_returns_frequency(handler: RigctldHandler, mock_radio: A
 
 
 @pytest.mark.asyncio
-async def test_get_freq_served_from_cache(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+async def test_get_freq_served_from_cache(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
     mock_radio.get_frequency.return_value = 14_074_000
     cmd = get_cmd("get_freq")
     resp1 = await handler.execute(cmd)
@@ -118,14 +131,18 @@ async def test_get_freq_cache_expires(mock_radio: AsyncMock) -> None:
 
 
 @pytest.mark.asyncio
-async def test_set_freq_calls_radio(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+async def test_set_freq_calls_radio(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
     resp = await handler.execute(set_cmd("set_freq", "14074000"))
     assert resp.ok
     mock_radio.set_frequency.assert_awaited_once_with(14_074_000)
 
 
 @pytest.mark.asyncio
-async def test_set_freq_invalidates_cache(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+async def test_set_freq_invalidates_cache(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
     mock_radio.get_frequency.return_value = 14_074_000
     await handler.execute(get_cmd("get_freq"))  # populate cache
 
@@ -138,7 +155,9 @@ async def test_set_freq_invalidates_cache(handler: RigctldHandler, mock_radio: A
 
 
 @pytest.mark.asyncio
-async def test_set_freq_invalid_arg(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+async def test_set_freq_invalid_arg(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
     resp = await handler.execute(set_cmd("set_freq", "not_a_number"))
     assert resp.error == HamlibError.EINVAL
     mock_radio.set_frequency.assert_not_awaited()
@@ -154,8 +173,11 @@ async def test_set_freq_no_args(handler: RigctldHandler, mock_radio: AsyncMock) 
 # get_mode / set_mode
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
-async def test_get_mode_returns_mode_and_passband(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+async def test_get_mode_returns_mode_and_passband(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
     mock_radio.get_mode_info.return_value = (Mode.USB, 2)
     resp = await handler.execute(get_cmd("get_mode"))
     assert resp.ok
@@ -183,7 +205,9 @@ async def test_get_mode_falls_back_to_core_radio_contract() -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_mode_served_from_cache(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+async def test_get_mode_served_from_cache(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
     mock_radio.get_mode_info.return_value = (Mode.USB, 1)
     cmd = get_cmd("get_mode")
     await handler.execute(cmd)
@@ -202,7 +226,9 @@ async def test_get_mode_cache_expires(mock_radio: AsyncMock) -> None:
 
 
 @pytest.mark.asyncio
-async def test_set_mode_calls_radio(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+async def test_set_mode_calls_radio(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
     resp = await handler.execute(set_cmd("set_mode", "USB", "2400"))
     assert resp.ok
     mock_radio.set_mode.assert_awaited_once_with("USB", filter_width=2)
@@ -256,7 +282,9 @@ async def test_set_mode_uses_core_contract_string_values() -> None:
 
 
 @pytest.mark.asyncio
-async def test_set_mode_invalid_mode(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+async def test_set_mode_invalid_mode(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
     resp = await handler.execute(set_cmd("set_mode", "INVALID"))
     assert resp.error == HamlibError.EINVAL
     mock_radio.set_mode.assert_not_awaited()
@@ -281,8 +309,11 @@ async def test_set_mode_refreshes_cache_immediately(
 # get_ptt / set_ptt
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
-async def test_get_ptt_defaults_off(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+async def test_get_ptt_defaults_off(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
     resp = await handler.execute(get_cmd("get_ptt"))
     assert resp.ok
     assert resp.values == ["0"]
@@ -304,7 +335,9 @@ async def test_set_ptt_off(handler: RigctldHandler, mock_radio: AsyncMock) -> No
 
 
 @pytest.mark.asyncio
-async def test_ptt_state_reflected_in_get(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+async def test_ptt_state_reflected_in_get(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
     await handler.execute(set_cmd("set_ptt", "1"))
     resp = await handler.execute(get_cmd("get_ptt"))
     assert resp.values == ["1"]
@@ -315,7 +348,9 @@ async def test_ptt_state_reflected_in_get(handler: RigctldHandler, mock_radio: A
 
 
 @pytest.mark.asyncio
-async def test_set_ptt_invalid_arg(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+async def test_set_ptt_invalid_arg(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
     resp = await handler.execute(set_cmd("set_ptt", "x"))
     assert resp.error == HamlibError.EINVAL
 
@@ -324,15 +359,20 @@ async def test_set_ptt_invalid_arg(handler: RigctldHandler, mock_radio: AsyncMoc
 # get_vfo / set_vfo
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
-async def test_get_vfo_returns_vfoa(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+async def test_get_vfo_returns_vfoa(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
     resp = await handler.execute(get_cmd("get_vfo"))
     assert resp.ok
     assert resp.values == ["VFOA"]
 
 
 @pytest.mark.asyncio
-async def test_set_vfo_accepts_any_name(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+async def test_set_vfo_accepts_any_name(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
     resp = await handler.execute(set_cmd("set_vfo", "VFOB"))
     assert resp.ok
 
@@ -341,8 +381,11 @@ async def test_set_vfo_accepts_any_name(handler: RigctldHandler, mock_radio: Asy
 # get_level
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
-async def test_get_level_strength(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+async def test_get_level_strength(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
     mock_radio.get_s_meter.return_value = 120  # ≈ S9 → 0 dB
     resp = await handler.execute(get_cmd("get_level", "STRENGTH"))
     assert resp.ok
@@ -351,7 +394,9 @@ async def test_get_level_strength(handler: RigctldHandler, mock_radio: AsyncMock
 
 
 @pytest.mark.asyncio
-async def test_get_level_strength_s0(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+async def test_get_level_strength_s0(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
     mock_radio.get_s_meter.return_value = 0
     resp = await handler.execute(get_cmd("get_level", "STRENGTH"))
     assert resp.ok
@@ -359,7 +404,9 @@ async def test_get_level_strength_s0(handler: RigctldHandler, mock_radio: AsyncM
 
 
 @pytest.mark.asyncio
-async def test_get_level_rfpower(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+async def test_get_level_rfpower(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
     mock_radio.get_power.return_value = 255
     resp = await handler.execute(get_cmd("get_level", "RFPOWER"))
     assert resp.ok
@@ -368,7 +415,9 @@ async def test_get_level_rfpower(handler: RigctldHandler, mock_radio: AsyncMock)
 
 
 @pytest.mark.asyncio
-async def test_get_level_rfpower_zero(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+async def test_get_level_rfpower_zero(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
     mock_radio.get_power.return_value = 0
     resp = await handler.execute(get_cmd("get_level", "RFPOWER"))
     assert resp.ok
@@ -384,7 +433,9 @@ async def test_get_level_swr(handler: RigctldHandler, mock_radio: AsyncMock) -> 
 
 
 @pytest.mark.asyncio
-async def test_get_level_swr_max(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+async def test_get_level_swr_max(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
     mock_radio.get_swr.return_value = 255
     resp = await handler.execute(get_cmd("get_level", "SWR"))
     assert resp.ok
@@ -392,13 +443,17 @@ async def test_get_level_swr_max(handler: RigctldHandler, mock_radio: AsyncMock)
 
 
 @pytest.mark.asyncio
-async def test_get_level_no_args(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+async def test_get_level_no_args(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
     resp = await handler.execute(get_cmd("get_level"))
     assert resp.error == HamlibError.EINVAL
 
 
 @pytest.mark.asyncio
-async def test_get_level_unknown(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+async def test_get_level_unknown(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
     resp = await handler.execute(get_cmd("get_level", "NOSUCHLEVEL"))
     assert resp.error == HamlibError.EINVAL
 
@@ -406,6 +461,7 @@ async def test_get_level_unknown(handler: RigctldHandler, mock_radio: AsyncMock)
 # ---------------------------------------------------------------------------
 # get_split_vfo / set_split_vfo
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_get_split_vfo(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
@@ -424,6 +480,7 @@ async def test_set_split_vfo(handler: RigctldHandler, mock_radio: AsyncMock) -> 
 # ---------------------------------------------------------------------------
 # Info / control commands
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_dump_state(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
@@ -456,26 +513,28 @@ async def test_dump_state(handler: RigctldHandler, mock_radio: AsyncMock) -> Non
     # Line 12: end of filters sentinel
     assert lines[12] == "0 0"
     # Lines 13-16: bare scalars — no 'key: value' prefix
-    assert lines[13] == "0"   # max_rit
-    assert lines[14] == "0"   # max_xit
-    assert lines[15] == "0"   # max_ifshift
-    assert lines[16] == "0"   # announces
+    assert lines[13] == "0"  # max_rit
+    assert lines[14] == "0"  # max_xit
+    assert lines[15] == "0"  # max_ifshift
+    assert lines[16] == "0"  # announces
     # Lines 17-18: preamp/attenuator — space-separated ints, 0-terminated
     assert lines[17] == "12 20 0"
     assert lines[18] == "6 12 18 0"
     # Lines 19-24: capability bitmasks — bare hex/int, no label prefix
-    assert lines[19] == "0"             # has_get_func
-    assert lines[20] == "0"             # has_set_func
+    assert lines[19] == "0"  # has_get_func
+    assert lines[20] == "0"  # has_set_func
     # has_get_level must include RIG_LEVEL_STRENGTH (0x40000000)
-    assert lines[21] == "0x54001000"    # STRENGTH|SWR|ALC|RFPOWER
-    assert lines[22] == "0x00001000"    # has_set_level (RFPOWER)
-    assert lines[23] == "0"             # has_get_parm
-    assert lines[24] == "0"             # has_set_parm
+    assert lines[21] == "0x54001000"  # STRENGTH|SWR|ALC|RFPOWER
+    assert lines[22] == "0x00001000"  # has_set_level (RFPOWER)
+    assert lines[23] == "0"  # has_get_parm
+    assert lines[24] == "0"  # has_set_parm
     assert len(lines) == 25
 
 
 @pytest.mark.asyncio
-async def test_dump_caps_same_as_dump_state(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+async def test_dump_caps_same_as_dump_state(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
     r1 = await handler.execute(get_cmd("dump_state"))
     r2 = await handler.execute(get_cmd("dump_caps"))
     assert r1.values == r2.values
@@ -520,7 +579,9 @@ async def test_get_rit(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
 
 
 @pytest.mark.asyncio
-async def test_quit_returns_ok_with_echo(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+async def test_quit_returns_ok_with_echo(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
     resp = await handler.execute(get_cmd("quit"))
     assert resp.ok
     assert resp.cmd_echo == "quit"
@@ -530,8 +591,11 @@ async def test_quit_returns_ok_with_echo(handler: RigctldHandler, mock_radio: As
 # Unknown command
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
-async def test_unknown_command_returns_enimpl(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+async def test_unknown_command_returns_enimpl(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
     cmd = RigctldCommand(short_cmd="?", long_cmd="totally_unknown_cmd")
     resp = await handler.execute(cmd)
     assert resp.error == HamlibError.ENIMPL
@@ -540,6 +604,7 @@ async def test_unknown_command_returns_enimpl(handler: RigctldHandler, mock_radi
 # ---------------------------------------------------------------------------
 # Read-only mode
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_read_only_rejects_set_freq(mock_radio: AsyncMock) -> None:
@@ -584,22 +649,29 @@ async def test_read_only_allows_get_mode(mock_radio: AsyncMock) -> None:
 # Exception translation
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
-async def test_connection_error_becomes_eio(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+async def test_connection_error_becomes_eio(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
     mock_radio.get_frequency.side_effect = IcomConnectionError("lost")
     resp = await handler.execute(get_cmd("get_freq"))
     assert resp.error == HamlibError.EIO
 
 
 @pytest.mark.asyncio
-async def test_timeout_error_becomes_etimeout(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+async def test_timeout_error_becomes_etimeout(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
     mock_radio.get_frequency.side_effect = IcomTimeoutError("timeout")
     resp = await handler.execute(get_cmd("get_freq"))
     assert resp.error == HamlibError.ETIMEOUT
 
 
 @pytest.mark.asyncio
-async def test_value_error_becomes_einval(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+async def test_value_error_becomes_einval(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
     mock_radio.get_frequency.side_effect = ValueError("bad value")
     resp = await handler.execute(get_cmd("get_freq"))
     assert resp.error == HamlibError.EINVAL
@@ -636,46 +708,56 @@ async def test_timeout_error_on_set_ptt_becomes_etimeout(
 # Passband / filter mapping helpers (unit tests)
 # ---------------------------------------------------------------------------
 
+
 def test_passband_to_filter_zero_gives_none() -> None:
     from icom_lan.rigctld.handler import _passband_to_filter
+
     assert _passband_to_filter(0) is None
 
 
 def test_passband_to_filter_negative_gives_none() -> None:
     from icom_lan.rigctld.handler import _passband_to_filter
+
     assert _passband_to_filter(-1) is None
 
 
 def test_passband_to_filter_wide_gives_fil1() -> None:
     from icom_lan.rigctld.handler import _passband_to_filter
+
     assert _passband_to_filter(3000) == 1
 
 
 def test_passband_to_filter_medium_gives_fil2() -> None:
     from icom_lan.rigctld.handler import _passband_to_filter
+
     assert _passband_to_filter(2400) == 2
 
 
 def test_passband_to_filter_narrow_gives_fil3() -> None:
     from icom_lan.rigctld.handler import _passband_to_filter
+
     assert _passband_to_filter(1800) == 3
 
 
 def test_filter_to_passband_none_gives_zero() -> None:
     from icom_lan.rigctld.handler import _filter_to_passband
+
     assert _filter_to_passband(None) == 0
 
 
 def test_filter_to_passband_fil1() -> None:
     from icom_lan.rigctld.handler import _filter_to_passband
+
     assert _filter_to_passband(1) == 3000
 
 
 def test_filter_to_passband_fil2() -> None:
     from icom_lan.rigctld.handler import _filter_to_passband
+
     assert _filter_to_passband(2) == 2400
 
 
 def test_filter_to_passband_fil3() -> None:
     from icom_lan.rigctld.handler import _filter_to_passband
+
     assert _filter_to_passband(3) == 1800

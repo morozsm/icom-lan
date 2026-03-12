@@ -50,7 +50,9 @@ class _RaiseOnceNumpy(_FakeNumpy):
 
 
 class _FakeInputStream:
-    def __init__(self, backend: "_FakeSoundDevice", channels: int, blocksize: int) -> None:
+    def __init__(
+        self, backend: "_FakeSoundDevice", channels: int, blocksize: int
+    ) -> None:
         self._backend = backend
         self._channels = channels
         self._blocksize = blocksize
@@ -224,7 +226,9 @@ def test_select_usb_audio_devices_auto_detect_prefers_icom_like_name() -> None:
 
 def test_select_usb_audio_devices_invalid_override_raises_clear_error() -> None:
     devices = [
-        UsbAudioDevice(index=1, name="USB Audio CODEC", input_channels=2, output_channels=2),
+        UsbAudioDevice(
+            index=1, name="USB Audio CODEC", input_channels=2, output_channels=2
+        ),
     ]
     with pytest.raises(AudioDeviceSelectionError, match="Unknown RX device"):
         select_usb_audio_devices(devices, rx_device="Not Existing")
@@ -234,7 +238,9 @@ def test_select_usb_audio_devices_missing_directional_capability_raises() -> Non
     devices = [
         UsbAudioDevice(index=1, name="InputOnly", input_channels=2, output_channels=0),
     ]
-    with pytest.raises(AudioDeviceSelectionError, match="No suitable TX USB audio device"):
+    with pytest.raises(
+        AudioDeviceSelectionError, match="No suitable TX USB audio device"
+    ):
         select_usb_audio_devices(devices)
 
 
@@ -288,7 +294,9 @@ async def test_usb_audio_driver_double_start_and_missing_tx_guardrails() -> None
     await driver.start_rx(lambda _frame: None)
     with pytest.raises(AudioDriverLifecycleError, match="already started"):
         await driver.start_rx(lambda _frame: None)
-    with pytest.raises(AudioDriverLifecycleError, match="Audio TX stream is not started"):
+    with pytest.raises(
+        AudioDriverLifecycleError, match="Audio TX stream is not started"
+    ):
         await driver.push_tx_pcm(b"\x00\x01" * 960)
     await driver.stop_rx()
     await driver.stop_rx()  # idempotent
@@ -359,7 +367,7 @@ async def test_usb_audio_driver_tx_loop_crash_cleans_up_and_supports_restart() -
     assert driver._tx_stream is None
     assert driver._tx_task is None
 
-    second_frame = b"\x99\xAA" * 960
+    second_frame = b"\x99\xaa" * 960
     await driver.start_tx()
     await driver.push_tx_pcm(second_frame)
     await _wait_until(lambda: bool(fake_sd.tx_frames))

@@ -555,7 +555,7 @@ class TestInternals:
 
     def test_wrap_civ(self, radio: IcomRadio) -> None:
         civ = build_civ_frame(IC_7610_ADDR, CONTROLLER_ADDR, 0x03)
-        pkt = radio._wrap_civ(civ)
+        pkt = radio._civ_runtime._wrap_civ(civ)
         assert len(pkt) == 0x15 + len(civ)
         assert pkt[0x10] == 0xC1
 

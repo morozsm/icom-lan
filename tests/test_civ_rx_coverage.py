@@ -38,7 +38,7 @@ import pytest
 
 from icom_lan._civ_rx import CIV_HEADER_SIZE
 from icom_lan.commands import CONTROLLER_ADDR, IC_7610_ADDR, build_civ_frame
-from icom_lan.exceptions import ConnectionError, TimeoutError
+from icom_lan.exceptions import ConnectionError
 from icom_lan.radio import IcomRadio
 from icom_lan.radio_state import RadioState
 from icom_lan.scope import ScopeFrame
@@ -103,7 +103,7 @@ def test_cleanup_stale_civ_waiters_logs_cleaned_count(radio: IcomRadio) -> None:
     radio._civ_last_waiter_gc_monotonic = 0.0
     radio._civ_waiter_ttl_gc_interval = 0.0
     radio._civ_request_tracker.cleanup_stale = MagicMock(return_value=3)
-    radio._cleanup_stale_civ_waiters()
+    radio._civ_runtime._cleanup_stale_civ_waiters()
     radio._civ_request_tracker.cleanup_stale.assert_called_once()
 
 
@@ -112,7 +112,7 @@ def test_cleanup_stale_civ_waiters_no_log_when_zero(radio: IcomRadio) -> None:
     radio._civ_last_waiter_gc_monotonic = 0.0
     radio._civ_waiter_ttl_gc_interval = 0.0
     radio._civ_request_tracker.cleanup_stale = MagicMock(return_value=0)
-    radio._cleanup_stale_civ_waiters()  # should not raise
+    radio._civ_runtime._cleanup_stale_civ_waiters()  # should not raise
 
 
 # ---------------------------------------------------------------------------
@@ -131,7 +131,7 @@ async def test_stop_civ_rx_pump_handles_cancellation(radio: IcomRadio) -> None:
 
     task = asyncio.create_task(_long_task())
     radio._civ_rx_task = task
-    await radio._stop_civ_rx_pump()
+    await radio._civ_runtime.stop_pump()
     assert radio._civ_rx_task is None
     assert task.cancelled()
 
@@ -139,7 +139,7 @@ async def test_stop_civ_rx_pump_handles_cancellation(radio: IcomRadio) -> None:
 async def test_stop_civ_rx_pump_when_task_is_none(radio: IcomRadio) -> None:
     """_stop_civ_rx_pump is a no-op when there is no task."""
     radio._civ_rx_task = None
-    await radio._stop_civ_rx_pump()  # should not raise
+    await radio._civ_runtime.stop_pump()  # should not raise
     assert radio._civ_rx_task is None
 
 
@@ -157,7 +157,7 @@ def test_start_civ_data_watchdog_returns_early_when_already_running(
     radio._civ_data_watchdog_task = mock_task
 
     with patch("asyncio.create_task") as mock_create:
-        radio._start_civ_data_watchdog()
+        radio._civ_runtime.start_data_watchdog()
         mock_create.assert_not_called()
 
 
@@ -168,6 +168,7 @@ def test_start_civ_data_watchdog_creates_task_when_done(radio: IcomRadio) -> Non
     radio._civ_data_watchdog_task = mock_task
 
     fake_new_task = MagicMock()
+
     def _create_task(coro: object, *args: object, **kwargs: object) -> MagicMock:
         close = getattr(coro, "close", None)
         if callable(close):
@@ -175,7 +176,7 @@ def test_start_civ_data_watchdog_creates_task_when_done(radio: IcomRadio) -> Non
         return fake_new_task
 
     with patch("asyncio.create_task", side_effect=_create_task) as mock_create:
-        radio._start_civ_data_watchdog()
+        radio._civ_runtime.start_data_watchdog()
         mock_create.assert_called_once()
 
 
@@ -198,7 +199,7 @@ async def test_watchdog_loop_continues_when_no_data_received(radio: IcomRadio) -
             raise asyncio.CancelledError()
 
     with patch("asyncio.sleep", side_effect=mock_sleep):
-        await radio._civ_data_watchdog_loop()
+        await radio._civ_runtime._civ_data_watchdog_loop()
 
     assert iteration_count[0] >= 3
 
@@ -225,7 +226,7 @@ async def test_watchdog_loop_phase1_sends_open_close(radio: IcomRadio) -> None:
         patch("asyncio.sleep", side_effect=mock_sleep),
         patch.object(radio, "_send_open_close", side_effect=mock_open_close),
     ):
-        await radio._civ_data_watchdog_loop()
+        await radio._civ_runtime._civ_data_watchdog_loop()
 
     # open_close(open_stream=True) should have been called
     assert True in open_close_calls
@@ -254,7 +255,7 @@ async def test_watchdog_loop_data_resumed_resets_recovering(radio: IcomRadio) ->
         patch("asyncio.sleep", side_effect=mock_sleep),
         patch.object(radio, "_send_open_close", side_effect=mock_open_close),
     ):
-        await radio._civ_data_watchdog_loop()
+        await radio._civ_runtime._civ_data_watchdog_loop()
 
     # The loop should have run without error and data resumed path was hit
 
@@ -280,7 +281,7 @@ async def test_watchdog_loop_phase1_open_close_exception_ignored(
         patch("asyncio.sleep", side_effect=mock_sleep),
         patch.object(radio, "_send_open_close", side_effect=failing_open_close),
     ):
-        await radio._civ_data_watchdog_loop()  # should complete without raising
+        await radio._civ_runtime._civ_data_watchdog_loop()  # should complete without raising
 
 
 async def test_watchdog_loop_phase2_uses_long_reconnect_cooldown(
@@ -289,7 +290,7 @@ async def test_watchdog_loop_phase2_uses_long_reconnect_cooldown(
     """Phase 2 uses a long cooldown before reconnect to avoid reconnect churn."""
     radio._last_civ_data_received = 0.0
     radio._civ_recovering = False
-    radio._stop_civ_data_watchdog = AsyncMock()
+    radio._civ_runtime.stop_data_watchdog = AsyncMock()
     radio._force_cleanup_civ = AsyncMock()
     radio.soft_reconnect = AsyncMock()
 
@@ -313,7 +314,7 @@ async def test_watchdog_loop_phase2_uses_long_reconnect_cooldown(
         patch("time.monotonic", side_effect=_mono),
         patch.object(radio, "_send_open_close", new=AsyncMock()),
     ):
-        await radio._civ_data_watchdog_loop()
+        await radio._civ_runtime._civ_data_watchdog_loop()
 
     assert any(d >= 45.0 for d in delays)
 
@@ -327,12 +328,12 @@ def test_ensure_civ_runtime_raises_when_no_transport(radio: IcomRadio) -> None:
     """_ensure_civ_runtime raises ConnectionError when civ_transport is None (line 244)."""
     radio._civ_transport = None
     with pytest.raises(ConnectionError, match="Not connected to radio"):
-        radio._ensure_civ_runtime()
+        radio._civ_runtime._ensure_civ_runtime()
 
 
 def test_ensure_civ_runtime_ok_when_transport_present(radio: IcomRadio) -> None:
     """_ensure_civ_runtime does nothing when transport is set."""
-    radio._ensure_civ_runtime()  # should not raise
+    radio._civ_runtime._ensure_civ_runtime()  # should not raise
 
 
 # ---------------------------------------------------------------------------
@@ -355,17 +356,16 @@ async def test_civ_rx_loop_drains_extra_packets_from_queue(
     transport._packet_queue.put_nowait(udp_pkt)
 
     frames_routed = [0]
-    original_route = radio._route_civ_frame
 
     async def counting_route(frame: CivFrame, *, generation: int) -> None:
         frames_routed[0] += 1
 
     # Run rx loop briefly: get the queued packet, drain extra, then timeout and exit
     radio._civ_rx_task = None
-    radio._start_civ_rx_pump()
+    radio._civ_runtime.start_pump()
     assert radio._civ_rx_task is not None
 
-    with patch.object(radio, "_route_civ_frame", side_effect=counting_route):
+    with patch.object(radio._civ_runtime, "_route_civ_frame", side_effect=counting_route):
         # Let loop run for a short time, then cancel
         await asyncio.sleep(0.05)
         radio._civ_rx_task.cancel()
@@ -395,8 +395,8 @@ async def test_civ_rx_loop_skips_short_packets(
     async def counting_route(frame: CivFrame, *, generation: int) -> None:
         frames_routed[0] += 1
 
-    with patch.object(radio, "_route_civ_frame", side_effect=counting_route):
-        radio._start_civ_rx_pump()
+    with patch.object(radio._civ_runtime, "_route_civ_frame", side_effect=counting_route):
+        radio._civ_runtime.start_pump()
         await asyncio.sleep(0.1)
         if radio._civ_rx_task:
             radio._civ_rx_task.cancel()
@@ -417,7 +417,7 @@ async def test_civ_rx_loop_skips_invalid_civ_frames(
     import struct
 
     header_size = CIV_HEADER_SIZE
-    garbage_civ = b"\xFF\xFF\xFF\xFF"  # Not a valid CI-V frame
+    garbage_civ = b"\xff\xff\xff\xff"  # Not a valid CI-V frame
     total_len = header_size + len(garbage_civ)
     pkt = bytearray(total_len)
     struct.pack_into("<I", pkt, 0, total_len)
@@ -435,8 +435,8 @@ async def test_civ_rx_loop_skips_invalid_civ_frames(
     async def counting_route(frame: CivFrame, *, generation: int) -> None:
         frames_routed[0] += 1
 
-    with patch.object(radio, "_route_civ_frame", side_effect=counting_route):
-        radio._start_civ_rx_pump()
+    with patch.object(radio._civ_runtime, "_route_civ_frame", side_effect=counting_route):
+        radio._civ_runtime.start_pump()
         await asyncio.sleep(0.15)
         if radio._civ_rx_task:
             radio._civ_rx_task.cancel()
@@ -457,8 +457,8 @@ async def test_civ_rx_loop_handles_route_exception(
     async def exploding_route(frame: CivFrame, *, generation: int) -> None:
         raise RuntimeError("route exploded")
 
-    with patch.object(radio, "_route_civ_frame", side_effect=exploding_route):
-        radio._start_civ_rx_pump()
+    with patch.object(radio._civ_runtime, "_route_civ_frame", side_effect=exploding_route):
+        radio._civ_runtime.start_pump()
         await asyncio.sleep(0.1)
         if radio._civ_rx_task:
             radio._civ_rx_task.cancel()
@@ -477,21 +477,21 @@ async def test_civ_rx_loop_handles_route_exception(
 async def test_route_civ_frame_wrong_from_addr(radio: IcomRadio) -> None:
     """Frame with wrong from_addr is silently dropped (line 307)."""
     frame = _make_frame(cmd=0x03, from_addr=0x00)  # wrong: not IC_7610_ADDR (0x94)
-    await radio._route_civ_frame(frame, generation=radio._civ_epoch)
+    await radio._civ_runtime._route_civ_frame(frame, generation=radio._civ_epoch)
     # No error, no state change expected
 
 
 async def test_route_civ_frame_wrong_to_addr(radio: IcomRadio) -> None:
     """Frame addressed to unknown dest is silently dropped (line 311)."""
     frame = _make_frame(cmd=0x03, to_addr=0x12)  # not CONTROLLER_ADDR or 0x00
-    await radio._route_civ_frame(frame, generation=radio._civ_epoch)
+    await radio._civ_runtime._route_civ_frame(frame, generation=radio._civ_epoch)
 
 
 async def test_route_civ_frame_broadcast_addr_accepted(radio: IcomRadio) -> None:
     """Frame addressed to 0x00 (broadcast) is accepted (line 310)."""
     freq_data = bcd_encode(14_074_000)
     frame = _make_frame(cmd=0x03, to_addr=0x00, data=freq_data)
-    await radio._route_civ_frame(frame, generation=radio._civ_epoch)
+    await radio._civ_runtime._route_civ_frame(frame, generation=radio._civ_epoch)
 
 
 # ---------------------------------------------------------------------------
@@ -502,32 +502,32 @@ async def test_route_civ_frame_broadcast_addr_accepted(radio: IcomRadio) -> None
 def test_update_state_cache_s_meter_sub_02(radio: IcomRadio) -> None:
     """cmd 0x15 sub 0x02 updates s_meter cache (line 401)."""
     frame = _make_frame(cmd=0x15, sub=0x02, data=_bcd2(100))
-    radio._update_state_cache_from_frame(frame)
+    radio._civ_runtime._update_state_cache_from_frame(frame)
     # State cache should have been updated; no error expected
 
 
 def test_update_state_cache_level_rf_power(radio: IcomRadio) -> None:
     """cmd 0x14 sub 0x0A updates power level (line 410-413)."""
     frame = _make_frame(cmd=0x14, sub=0x0A, data=_bcd2(128))
-    radio._update_state_cache_from_frame(frame)
+    radio._civ_runtime._update_state_cache_from_frame(frame)
 
 
 def test_update_state_cache_level_rf_gain(radio: IcomRadio) -> None:
     """cmd 0x14 sub 0x02 updates RF gain (line 414-415)."""
     frame = _make_frame(cmd=0x14, sub=0x02, data=_bcd2(200))
-    radio._update_state_cache_from_frame(frame)
+    radio._civ_runtime._update_state_cache_from_frame(frame)
 
 
 def test_update_state_cache_level_af_level(radio: IcomRadio) -> None:
     """cmd 0x14 sub 0x01 updates AF level (line 416-418)."""
     frame = _make_frame(cmd=0x14, sub=0x01, data=_bcd2(150))
-    radio._update_state_cache_from_frame(frame)
+    radio._civ_runtime._update_state_cache_from_frame(frame)
 
 
 def test_update_state_cache_level_squelch(radio: IcomRadio) -> None:
     """cmd 0x14 sub 0x03 updates squelch (line 419-421)."""
     frame = _make_frame(cmd=0x14, sub=0x03, data=_bcd2(50))
-    radio._update_state_cache_from_frame(frame)
+    radio._civ_runtime._update_state_cache_from_frame(frame)
 
 
 def test_update_state_cache_ip_plus(radio: IcomRadio) -> None:
@@ -539,7 +539,7 @@ def test_update_state_cache_ip_plus(radio: IcomRadio) -> None:
 
     radio._on_state_change = _on_change
     frame = _make_frame(cmd=0x16, sub=0x65, data=bytes([0x01]))
-    radio._update_state_cache_from_frame(frame)
+    radio._civ_runtime._update_state_cache_from_frame(frame)
     assert "ipplus_changed" in notify_calls
 
 
@@ -552,7 +552,7 @@ def test_update_state_cache_exception_suppressed(radio: IcomRadio) -> None:
     freq_data = bcd_encode(14_074_000)
     frame = _make_frame(cmd=0x03, data=freq_data)
     # Should NOT raise, exception is swallowed
-    radio._update_state_cache_from_frame(frame)
+    radio._civ_runtime._update_state_cache_from_frame(frame)
 
 
 # ---------------------------------------------------------------------------
@@ -571,7 +571,7 @@ def test_update_radio_state_freq_cmd03(radio_with_state: IcomRadio) -> None:
     """cmd 0x03 updates receiver frequency (line 482-483)."""
     rs = radio_with_state._radio_state
     frame = _make_frame(cmd=0x03, data=bcd_encode(14_074_000))
-    radio_with_state._update_radio_state_from_frame(frame)
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
     assert rs.main.freq == 14_074_000
 
 
@@ -579,7 +579,7 @@ def test_update_radio_state_freq_cmd00(radio_with_state: IcomRadio) -> None:
     """cmd 0x00 (unsolicited transceive) also updates frequency (line 481)."""
     rs = radio_with_state._radio_state
     frame = _make_frame(cmd=0x00, data=bcd_encode(7_074_000))
-    radio_with_state._update_radio_state_from_frame(frame)
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
     assert rs.main.freq == 7_074_000
 
 
@@ -587,7 +587,7 @@ def test_update_radio_state_mode_cmd04(radio_with_state: IcomRadio) -> None:
     """cmd 0x04 updates receiver mode and filter (lines 485-490)."""
     rs = radio_with_state._radio_state
     frame = _make_frame(cmd=0x04, data=bytes([Mode.LSB.value, 2]))
-    radio_with_state._update_radio_state_from_frame(frame)
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
     assert rs.main.mode == "LSB"
     assert rs.main.filter == 2
 
@@ -596,7 +596,7 @@ def test_update_radio_state_mode_cmd01(radio_with_state: IcomRadio) -> None:
     """cmd 0x01 (unsolicited) updates mode (line 485)."""
     rs = radio_with_state._radio_state
     frame = _make_frame(cmd=0x01, data=bytes([Mode.USB.value, 1]))
-    radio_with_state._update_radio_state_from_frame(frame)
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
     assert rs.main.mode == "USB"
 
 
@@ -606,7 +606,7 @@ def test_update_radio_state_cmd25_rx_frequency(radio_with_state: IcomRadio) -> N
     # data[0]=0x00 (MAIN), data[1:6]=freq BCD
     freq_bcd = bcd_encode(21_000_000)
     frame = _make_frame(cmd=0x25, data=bytes([0x00]) + freq_bcd)
-    radio_with_state._update_radio_state_from_frame(frame)
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
     assert rs.main.freq == 21_000_000
 
 
@@ -615,21 +615,23 @@ def test_update_radio_state_cmd25_sub_receiver(radio_with_state: IcomRadio) -> N
     rs = radio_with_state._radio_state
     freq_bcd = bcd_encode(28_000_000)
     frame = _make_frame(cmd=0x25, data=bytes([0x01]) + freq_bcd)
-    radio_with_state._update_radio_state_from_frame(frame)
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
     assert rs.sub.freq == 28_000_000
 
 
-def test_update_radio_state_cmd25_short_data_ignored(radio_with_state: IcomRadio) -> None:
+def test_update_radio_state_cmd25_short_data_ignored(
+    radio_with_state: IcomRadio,
+) -> None:
     """cmd 0x25 with short data is ignored (condition: len >= 6)."""
     frame = _make_frame(cmd=0x25, data=bytes([0x00, 0x01, 0x02]))
-    radio_with_state._update_radio_state_from_frame(frame)  # should not raise
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)  # should not raise
 
 
 def test_update_radio_state_cmd26_rx_mode(radio_with_state: IcomRadio) -> None:
     """cmd 0x26 updates dual-receiver mode (lines 504-518)."""
     rs = radio_with_state._radio_state
     frame = _make_frame(cmd=0x26, data=bytes([0x01, Mode.CW.value, 0x00, 3]))
-    radio_with_state._update_radio_state_from_frame(frame)
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
     assert rs.sub.mode == "CW"
     assert rs.sub.filter == 3
 
@@ -637,7 +639,7 @@ def test_update_radio_state_cmd26_rx_mode(radio_with_state: IcomRadio) -> None:
 def test_update_radio_state_cmd26_minimal(radio_with_state: IcomRadio) -> None:
     """cmd 0x26 with minimal 2-byte data."""
     frame = _make_frame(cmd=0x26, data=bytes([0x00, Mode.FM.value]))
-    radio_with_state._update_radio_state_from_frame(frame)
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
     # No crash
 
 
@@ -645,7 +647,7 @@ def test_update_radio_state_cmd26_with_data_mode(radio_with_state: IcomRadio) ->
     """cmd 0x26 with data_mode byte (line 516)."""
     rs = radio_with_state._radio_state
     frame = _make_frame(cmd=0x26, data=bytes([0x00, Mode.USB.value, 0x01]))
-    radio_with_state._update_radio_state_from_frame(frame)
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
     assert rs.main.data_mode is True
 
 
@@ -653,7 +655,7 @@ def test_update_radio_state_cmd15_smeter(radio_with_state: IcomRadio) -> None:
     """cmd 0x15 sub 0x02 updates s_meter on active receiver (lines 521-528)."""
     rs = radio_with_state._radio_state
     frame = _make_frame(cmd=0x15, sub=0x02, data=_bcd2(150))
-    radio_with_state._update_radio_state_from_frame(frame)
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
     assert rs.main.s_meter == 150
 
 
@@ -661,7 +663,7 @@ def test_update_radio_state_cmd14_af_level(radio_with_state: IcomRadio) -> None:
     """cmd 0x14 sub 0x01 updates AF level (lines 531-541)."""
     rs = radio_with_state._radio_state
     frame = _make_frame(cmd=0x14, sub=0x01, data=_bcd2(200))
-    radio_with_state._update_radio_state_from_frame(frame)
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
     assert rs.main.af_level == 200
 
 
@@ -669,7 +671,7 @@ def test_update_radio_state_cmd14_rf_gain(radio_with_state: IcomRadio) -> None:
     """cmd 0x14 sub 0x02 updates RF gain."""
     rs = radio_with_state._radio_state
     frame = _make_frame(cmd=0x14, sub=0x02, data=_bcd2(180))
-    radio_with_state._update_radio_state_from_frame(frame)
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
     assert rs.main.rf_gain == 180
 
 
@@ -677,7 +679,7 @@ def test_update_radio_state_cmd14_squelch(radio_with_state: IcomRadio) -> None:
     """cmd 0x14 sub 0x03 updates squelch."""
     rs = radio_with_state._radio_state
     frame = _make_frame(cmd=0x14, sub=0x03, data=_bcd2(50))
-    radio_with_state._update_radio_state_from_frame(frame)
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
     assert rs.main.squelch == 50
 
 
@@ -685,7 +687,7 @@ def test_update_radio_state_cmd14_power_level(radio_with_state: IcomRadio) -> No
     """cmd 0x14 sub 0x0A updates global power level (line 545-546)."""
     rs = radio_with_state._radio_state
     frame = _make_frame(cmd=0x14, sub=0x0A, data=_bcd2(128))
-    radio_with_state._update_radio_state_from_frame(frame)
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
     assert rs.power_level == 128
 
 
@@ -708,7 +710,7 @@ def test_update_radio_state_cmd14_receiver_dsp_levels(
 ) -> None:
     rs = radio_with_state._radio_state
     frame = _make_frame(cmd=0x14, sub=sub, data=_bcd2(value), receiver=0x01)
-    radio_with_state._update_radio_state_from_frame(frame)
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
     assert getattr(rs.sub, field) == value
 
 
@@ -736,7 +738,7 @@ def test_update_radio_state_cmd14_global_dsp_levels(
 ) -> None:
     rs = radio_with_state._radio_state
     frame = _make_frame(cmd=0x14, sub=sub, data=_bcd2(raw))
-    radio_with_state._update_radio_state_from_frame(frame)
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
     assert getattr(rs, field) == expected
 
 
@@ -744,7 +746,7 @@ def test_update_radio_state_cmd11_attenuator(radio_with_state: IcomRadio) -> Non
     """cmd 0x11 updates attenuator (lines 548-552)."""
     rs = radio_with_state._radio_state
     frame = _make_frame(cmd=0x11, data=bytes([0x18]))  # 0x18 BCD = 18 dB
-    radio_with_state._update_radio_state_from_frame(frame)
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
     assert rs.main.att == 18
 
 
@@ -752,7 +754,7 @@ def test_update_radio_state_cmd16_preamp(radio_with_state: IcomRadio) -> None:
     """cmd 0x16 sub 0x02 updates preamp (lines 554-565)."""
     rs = radio_with_state._radio_state
     frame = _make_frame(cmd=0x16, sub=0x02, data=bytes([0x01]))
-    radio_with_state._update_radio_state_from_frame(frame)
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
     assert rs.main.preamp == 1
 
 
@@ -760,7 +762,7 @@ def test_update_radio_state_cmd16_nb(radio_with_state: IcomRadio) -> None:
     """cmd 0x16 sub 0x22 updates noise blanker."""
     rs = radio_with_state._radio_state
     frame = _make_frame(cmd=0x16, sub=0x22, data=bytes([0x01]))
-    radio_with_state._update_radio_state_from_frame(frame)
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
     assert rs.main.nb is True
 
 
@@ -768,7 +770,7 @@ def test_update_radio_state_cmd16_nr(radio_with_state: IcomRadio) -> None:
     """cmd 0x16 sub 0x40 updates noise reduction."""
     rs = radio_with_state._radio_state
     frame = _make_frame(cmd=0x16, sub=0x40, data=bytes([0x01]))
-    radio_with_state._update_radio_state_from_frame(frame)
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
     assert rs.main.nr is True
 
 
@@ -776,7 +778,7 @@ def test_update_radio_state_cmd16_digisel(radio_with_state: IcomRadio) -> None:
     """cmd 0x16 sub 0x4E updates DIGI-SEL."""
     rs = radio_with_state._radio_state
     frame = _make_frame(cmd=0x16, sub=0x4E, data=bytes([0x01]))
-    radio_with_state._update_radio_state_from_frame(frame)
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
     assert rs.main.digisel is True
 
 
@@ -784,7 +786,7 @@ def test_update_radio_state_cmd16_ipplus(radio_with_state: IcomRadio) -> None:
     """cmd 0x16 sub 0x65 updates IP+ (line 572-573)."""
     rs = radio_with_state._radio_state
     frame = _make_frame(cmd=0x16, sub=0x65, data=bytes([0x01]))
-    radio_with_state._update_radio_state_from_frame(frame)
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
     assert rs.main.ipplus is True
 
 
@@ -820,7 +822,7 @@ def test_update_radio_state_operator_toggle_family(
 ) -> None:
     rs = radio_with_state._radio_state
     frame = _make_frame(cmd=cmd, sub=sub, data=data, receiver=receiver)
-    radio_with_state._update_radio_state_from_frame(frame)
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
 
     owner = {"radio": rs, "sub": rs.sub}[target]
     assert getattr(owner, field) == expected
@@ -831,7 +833,7 @@ def test_update_radio_state_cmd16_via_data_sub(radio_with_state: IcomRadio) -> N
     rs = radio_with_state._radio_state
     # sub=None, data[0]=0x02 (preamp), data[1]=0x01
     frame = _make_frame(cmd=0x16, sub=None, data=bytes([0x02, 0x01]))
-    radio_with_state._update_radio_state_from_frame(frame)
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
     assert rs.main.preamp == 1
 
 
@@ -840,7 +842,7 @@ def test_update_radio_state_cmd1a_sub03_ignored(radio_with_state: IcomRadio) -> 
     rs = radio_with_state._radio_state
     old_filter = rs.main.filter
     frame = _make_frame(cmd=0x1A, sub=0x03, data=bytes([0x34]))
-    radio_with_state._update_radio_state_from_frame(frame)
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
     assert rs.main.filter == old_filter  # unchanged
 
 
@@ -848,7 +850,7 @@ def test_update_radio_state_cmd1a_sub06_data_mode(radio_with_state: IcomRadio) -
     """cmd 0x1A sub 0x06 updates data_mode (lines 582-583)."""
     rs = radio_with_state._radio_state
     frame = _make_frame(cmd=0x1A, sub=0x06, data=bytes([0x01]))
-    radio_with_state._update_radio_state_from_frame(frame)
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
     assert rs.main.data_mode is True
 
 
@@ -869,14 +871,14 @@ def test_update_radio_state_cmd1a_ctl_mem_dsp_levels(
 ) -> None:
     rs = radio_with_state._radio_state
     frame = _make_frame(cmd=0x1A, sub=0x05, data=data)
-    radio_with_state._update_radio_state_from_frame(frame)
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
     assert getattr(rs, field) == expected
 
 
 def test_update_radio_state_cmd1a_af_mute(radio_with_state: IcomRadio) -> None:
     rs = radio_with_state._radio_state
     frame = _make_frame(cmd=0x1A, sub=0x09, data=b"\x01", receiver=0x01)
-    radio_with_state._update_radio_state_from_frame(frame)
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
     assert rs.sub.af_mute is True
 
 
@@ -884,7 +886,7 @@ def test_update_radio_state_cmd1c_ptt(radio_with_state: IcomRadio) -> None:
     """cmd 0x1C sub 0x00 updates global PTT (lines 585-588)."""
     rs = radio_with_state._radio_state
     frame = _make_frame(cmd=0x1C, sub=0x00, data=bytes([0x01]))
-    radio_with_state._update_radio_state_from_frame(frame)
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
     assert rs.ptt is True
 
 
@@ -892,7 +894,7 @@ def test_update_radio_state_cmd0f_split(radio_with_state: IcomRadio) -> None:
     """cmd 0x0F updates global split (lines 590-593)."""
     rs = radio_with_state._radio_state
     frame = _make_frame(cmd=0x0F, data=bytes([0x01]))
-    radio_with_state._update_radio_state_from_frame(frame)
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
     assert rs.split is True
 
 
@@ -902,7 +904,7 @@ def test_update_radio_state_cmd07_active_receiver(radio_with_state: IcomRadio) -
     assert rs.active == "MAIN"
     # data[0]=0xD2 (active receiver sub), data[1]=0x01 (SUB)
     frame = _make_frame(cmd=0x07, data=bytes([0xD2, 0x01]))
-    radio_with_state._update_radio_state_from_frame(frame)
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
     assert rs.active == "SUB"
 
 
@@ -911,16 +913,18 @@ def test_update_radio_state_cmd07_dual_watch(radio_with_state: IcomRadio) -> Non
     rs = radio_with_state._radio_state
     assert rs.dual_watch is False
     frame = _make_frame(cmd=0x07, data=bytes([0xC2, 0x01]))
-    radio_with_state._update_radio_state_from_frame(frame)
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
     assert rs.dual_watch is True
 
 
-def test_update_radio_state_cmd07_active_receiver_main(radio_with_state: IcomRadio) -> None:
+def test_update_radio_state_cmd07_active_receiver_main(
+    radio_with_state: IcomRadio,
+) -> None:
     """cmd 0x07 with val=0x00 sets active to MAIN."""
     rs = radio_with_state._radio_state
     rs.active = "SUB"
     frame = _make_frame(cmd=0x07, data=bytes([0xD2, 0x00]))
-    radio_with_state._update_radio_state_from_frame(frame)
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
     assert rs.active == "MAIN"
 
 
@@ -949,7 +953,7 @@ def test_update_radio_state_advanced_scope_family(
         ),
         _make_frame(cmd=0x27, sub=0x1F, data=b"\x01\x02"),
     ):
-        radio_with_state._update_radio_state_from_frame(frame)
+        radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
 
     assert rs.scope_controls.receiver == 1
     assert rs.scope_controls.dual is True
@@ -974,7 +978,7 @@ def test_civ_expects_response_scope_get(
 ) -> None:
     """Scope GET (empty data) expects a response."""
     frame = _make_frame(cmd=0x27, sub=0x14, data=b"")
-    assert radio_with_state._civ_expects_response(frame) is True
+    assert radio_with_state._civ_runtime._civ_expects_response(frame) is True
 
 
 def test_civ_expects_response_scope_set(
@@ -982,11 +986,11 @@ def test_civ_expects_response_scope_set(
 ) -> None:
     """Scope SET (non-empty data) does not expect a data response."""
     frame = _make_frame(cmd=0x27, sub=0x14, data=b"\x00\x03")
-    assert radio_with_state._civ_expects_response(frame) is False
+    assert radio_with_state._civ_runtime._civ_expects_response(frame) is False
 
     # Single-byte SET (scope_on 0x27 0x10 0x01)
     frame = _make_frame(cmd=0x27, sub=0x10, data=b"\x01")
-    assert radio_with_state._civ_expects_response(frame) is False
+    assert radio_with_state._civ_runtime._civ_expects_response(frame) is False
 
 
 def test_update_radio_state_exception_suppressed(radio_with_state: IcomRadio) -> None:
@@ -996,16 +1000,18 @@ def test_update_radio_state_exception_suppressed(radio_with_state: IcomRadio) ->
     mock_state.receiver = MagicMock(side_effect=RuntimeError("oops"))
     radio_with_state._radio_state = mock_state
     frame = _make_frame(cmd=0x03, data=bcd_encode(14_000_000))
-    radio_with_state._update_radio_state_from_frame(frame)  # should not raise
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)  # should not raise
 
 
-def test_update_radio_state_with_receiver_field_set(radio_with_state: IcomRadio) -> None:
+def test_update_radio_state_with_receiver_field_set(
+    radio_with_state: IcomRadio,
+) -> None:
     """When frame.receiver is not None, uses MAIN/SUB based on receiver byte (lines 473-476)."""
     rs = radio_with_state._radio_state
     freq_data = bcd_encode(7_000_000)
     # receiver=0x01 means SUB
     frame = _make_frame(cmd=0x03, data=freq_data, receiver=0x01)
-    radio_with_state._update_radio_state_from_frame(frame)
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
     assert rs.sub.freq == 7_000_000
 
 
@@ -1013,7 +1019,7 @@ def test_update_radio_state_returns_when_no_radio_state(radio: IcomRadio) -> Non
     """When _radio_state is None (not set), method returns immediately (line 469)."""
     radio._radio_state = None  # type: ignore[assignment]
     frame = _make_frame(cmd=0x03, data=bcd_encode(14_000_000))
-    radio._update_radio_state_from_frame(frame)  # should not raise
+    radio._civ_runtime._update_radio_state_from_frame(frame)  # should not raise
 
 
 # ---------------------------------------------------------------------------
@@ -1029,7 +1035,7 @@ def test_notify_change_calls_callback(radio: IcomRadio) -> None:
         calls.append((event_name, data))
 
     radio._on_state_change = my_callback
-    radio._notify_change("test_event", {"key": "value"})
+    radio._civ_runtime._notify_change("test_event", {"key": "value"})
     assert calls == [("test_event", {"key": "value"})]
 
 
@@ -1040,13 +1046,13 @@ def test_notify_change_callback_exception_suppressed(radio: IcomRadio) -> None:
         raise RuntimeError("callback error")
 
     radio._on_state_change = failing_callback
-    radio._notify_change("test_event", {})  # should not raise
+    radio._civ_runtime._notify_change("test_event", {})  # should not raise
 
 
 def test_notify_change_no_callback_debug_log(radio: IcomRadio) -> None:
     """When no callback set, logs debug message (line 634)."""
     radio._on_state_change = None
-    radio._notify_change("test_event", {})  # should not raise
+    radio._civ_runtime._notify_change("test_event", {})  # should not raise
 
 
 # ---------------------------------------------------------------------------
@@ -1069,7 +1075,7 @@ def test_publish_scope_frame_drops_oldest_when_full(radio: IcomRadio) -> None:
         radio._scope_frame_queue.put_nowait(dummy_frame)
 
     # Now publish a new frame — should drop oldest and add new
-    radio._publish_scope_frame(dummy_frame)
+    radio._civ_runtime._publish_scope_frame(dummy_frame)
     # Queue should still be at max
     assert radio._scope_frame_queue.full()
 
@@ -1087,7 +1093,7 @@ def test_publish_scope_frame_invokes_callback(radio: IcomRadio) -> None:
         pixels=bytes([50] * 10),
         out_of_range=False,
     )
-    radio._publish_scope_frame(dummy_frame)
+    radio._civ_runtime._publish_scope_frame(dummy_frame)
     assert received == [dummy_frame]
 
 
@@ -1107,7 +1113,7 @@ def test_publish_civ_event_drops_oldest_when_full(radio: IcomRadio) -> None:
         radio._civ_event_queue.put_nowait(event)
 
     # Publish one more — should succeed by dropping oldest
-    radio._publish_civ_event(event)
+    radio._civ_runtime._publish_civ_event(event)
     assert radio._civ_event_queue.full()
 
 
@@ -1125,7 +1131,7 @@ async def test_start_civ_worker_reuses_existing_commander(radio: IcomRadio) -> N
     radio._commander = mock_commander
 
     with patch("icom_lan._civ_rx.IcomCommander") as mock_cls:
-        radio._start_civ_worker()
+        radio._civ_runtime.start_worker()
         mock_cls.assert_not_called()  # Commander should NOT be re-created
 
 
@@ -1138,9 +1144,11 @@ async def test_drain_ack_sinks_returns_early_when_no_sinks(radio: IcomRadio) -> 
     """Returns immediately when ack_sink_count == 0."""
     # ack_sink_count is a read-only property; must patch via PropertyMock on the class
     tracker_type = type(radio._civ_request_tracker)
-    with patch.object(tracker_type, "ack_sink_count", new_callable=PropertyMock, return_value=0):
+    with patch.object(
+        tracker_type, "ack_sink_count", new_callable=PropertyMock, return_value=0
+    ):
         # Should return instantly without any sleeping
-        await radio._drain_ack_sinks_before_blocking()
+        await radio._civ_runtime._drain_ack_sinks_before_blocking()
 
 
 async def test_drain_ack_sinks_drains_and_drops(radio: IcomRadio) -> None:
@@ -1150,8 +1158,10 @@ async def test_drain_ack_sinks_drains_and_drops(radio: IcomRadio) -> None:
     radio._civ_request_tracker.drop_ack_sinks = MagicMock(return_value=2)
     radio._civ_ack_sink_grace = 0.001  # very short grace period
 
-    with patch.object(tracker_type, "ack_sink_count", new_callable=PropertyMock, return_value=2):
-        await radio._drain_ack_sinks_before_blocking()
+    with patch.object(
+        tracker_type, "ack_sink_count", new_callable=PropertyMock, return_value=2
+    ):
+        await radio._civ_runtime._drain_ack_sinks_before_blocking()
 
     radio._civ_request_tracker.drop_ack_sinks.assert_called_once()
 
@@ -1165,14 +1175,14 @@ def test_check_connected_raises_when_not_connected(radio: IcomRadio) -> None:
     """_check_connected raises when _connected is False."""
     radio._connected = False
     with pytest.raises(ConnectionError, match="Not connected to radio"):
-        radio._check_connected()
+        radio._civ_runtime._check_connected()
 
 
 def test_check_connected_raises_when_civ_transport_none(radio: IcomRadio) -> None:
     """_check_connected raises when _civ_transport is None."""
     radio._civ_transport = None
     with pytest.raises(ConnectionError, match="Not connected to radio"):
-        radio._check_connected()
+        radio._civ_runtime._check_connected()
 
 
 # ---------------------------------------------------------------------------
@@ -1183,14 +1193,14 @@ def test_check_connected_raises_when_civ_transport_none(radio: IcomRadio) -> Non
 def test_update_radio_state_tuner_status(radio_with_state: IcomRadio) -> None:
     """Tuner/ATU status (0x1C 0x01) → RadioState.tuner_status."""
     frame = CivFrame(0xE0, 0x98, 0x1C, 0x01, b"\x02")
-    radio_with_state._update_radio_state_from_frame(frame)
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
     assert radio_with_state._radio_state.tuner_status == 2
 
 
 def test_update_radio_state_tx_freq_monitor(radio_with_state: IcomRadio) -> None:
     """TX freq monitor (0x1C 0x03) → RadioState.tx_freq_monitor."""
     frame = CivFrame(0xE0, 0x98, 0x1C, 0x03, b"\x01")
-    radio_with_state._update_radio_state_from_frame(frame)
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
     assert radio_with_state._radio_state.tx_freq_monitor is True
 
 
@@ -1198,28 +1208,28 @@ def test_update_radio_state_rit_frequency(radio_with_state: IcomRadio) -> None:
     """RIT frequency (0x21 0x00) → RadioState.rit_freq."""
     # 150 Hz positive: d0=0x50, d1=0x01, sign=0x00
     frame = CivFrame(0xE0, 0x98, 0x21, 0x00, b"\x50\x01\x00")
-    radio_with_state._update_radio_state_from_frame(frame)
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
     assert radio_with_state._radio_state.rit_freq == 150
 
 
 def test_update_radio_state_rit_frequency_negative(radio_with_state: IcomRadio) -> None:
     """RIT frequency negative (0x21 0x00) → RadioState.rit_freq."""
     frame = CivFrame(0xE0, 0x98, 0x21, 0x00, b"\x00\x02\x01")
-    radio_with_state._update_radio_state_from_frame(frame)
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
     assert radio_with_state._radio_state.rit_freq == -200
 
 
 def test_update_radio_state_rit_status(radio_with_state: IcomRadio) -> None:
     """RIT status (0x21 0x01) → RadioState.rit_on."""
     frame = CivFrame(0xE0, 0x98, 0x21, 0x01, b"\x01")
-    radio_with_state._update_radio_state_from_frame(frame)
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
     assert radio_with_state._radio_state.rit_on is True
 
 
 def test_update_radio_state_rit_tx_status(radio_with_state: IcomRadio) -> None:
     """RIT TX status (0x21 0x02) → RadioState.rit_tx."""
     frame = CivFrame(0xE0, 0x98, 0x21, 0x02, b"\x01")
-    radio_with_state._update_radio_state_from_frame(frame)
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
     assert radio_with_state._radio_state.rit_tx is True
 
 
@@ -1227,28 +1237,28 @@ def test_update_radio_state_comp_meter(radio_with_state: IcomRadio) -> None:
     """Comp meter (0x15 0x14) → RadioState.comp_meter."""
     # 42 BCD: 0x00 0x42
     frame = CivFrame(0xE0, 0x98, 0x15, 0x14, b"\x00\x42")
-    radio_with_state._update_radio_state_from_frame(frame)
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
     assert radio_with_state._radio_state.comp_meter == 42
 
 
 def test_update_radio_state_vd_meter(radio_with_state: IcomRadio) -> None:
     """Vd meter (0x15 0x15) → RadioState.vd_meter."""
     frame = CivFrame(0xE0, 0x98, 0x15, 0x15, b"\x01\x30")
-    radio_with_state._update_radio_state_from_frame(frame)
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
     assert radio_with_state._radio_state.vd_meter == 130
 
 
 def test_update_radio_state_id_meter(radio_with_state: IcomRadio) -> None:
     """Id meter (0x15 0x16) → RadioState.id_meter."""
     frame = CivFrame(0xE0, 0x98, 0x15, 0x16, b"\x00\x55")
-    radio_with_state._update_radio_state_from_frame(frame)
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
     assert radio_with_state._radio_state.id_meter == 55
 
 
 def test_update_radio_state_various_squelch(radio_with_state: IcomRadio) -> None:
     """Various squelch (0x15 0x05) → ReceiverState.s_meter_sql_open."""
     frame = CivFrame(0xE0, 0x98, 0x15, 0x05, b"\x01")
-    radio_with_state._update_radio_state_from_frame(frame)
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
     rs = radio_with_state._radio_state
     # Various squelch updates the active receiver's s_meter_sql_open
     assert rs.receiver(rs.active).s_meter_sql_open is True

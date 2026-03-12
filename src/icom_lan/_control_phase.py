@@ -30,6 +30,14 @@ TOKEN_ACK_SIZE = 0x40
 CONNINFO_SIZE = 0x90
 STATUS_SIZE = 0x50
 
+__all__ = [
+    "ControlPhaseRuntime",
+    "OPENCLOSE_SIZE",
+    "TOKEN_ACK_SIZE",
+    "CONNINFO_SIZE",
+    "STATUS_SIZE",
+]
+
 
 class ControlPhaseRuntime:
     """Composed control-phase runtime: connect, disconnect, token renewal, watchdog.
@@ -91,7 +99,9 @@ class ControlPhaseRuntime:
         h._tok_request = auth.tok_request
         logger.info(
             "Authenticated with %s:%d, token=0x%08X",
-            h._host, h._port, h._token,
+            h._host,
+            h._port,
+            h._token,
         )
 
         await self._send_token_ack()
@@ -108,7 +118,8 @@ class ControlPhaseRuntime:
         _audio_sock.close()
         logger.debug(
             "Reserved local ports: civ=%d, audio=%d",
-            _civ_local_port, _audio_local_port,
+            _civ_local_port,
+            _audio_local_port,
         )
 
         h._civ_port = h._port + 1
@@ -122,7 +133,8 @@ class ControlPhaseRuntime:
             if civ_port > 0 and civ_port != h._civ_port:
                 logger.warning(
                     "Radio reported non-default civ_port=%d (expected %d), using radio value",
-                    civ_port, h._civ_port,
+                    civ_port,
+                    h._civ_port,
                 )
                 h._civ_port = civ_port
             elif civ_port == 0:
@@ -157,15 +169,15 @@ class ControlPhaseRuntime:
                     )
         except asyncio.TimeoutError:
             logger.debug("No status packet received, using default ports")
-            logger.warning(
-                "Audio port not in status, using default %d", h._audio_port
-            )
+            logger.warning("Audio port not in status, using default %d", h._audio_port)
 
         from .transport import IcomTransport
+
         h._civ_transport = IcomTransport()
         try:
             await h._civ_transport.connect(
-                h._host, h._civ_port,
+                h._host,
+                h._civ_port,
                 local_port=h._civ_local_port,
             )
         except OSError as exc:
@@ -205,7 +217,9 @@ class ControlPhaseRuntime:
         h._has_connected_once = True
         logger.info(
             "Connected to %s (control=%d, civ=%d)",
-            h._host, h._port, h._civ_port,
+            h._host,
+            h._port,
+            h._civ_port,
         )
 
     async def disconnect(self) -> None:
@@ -267,7 +281,9 @@ class ControlPhaseRuntime:
         if h._civ_transport is not None:
             logger.warning("soft_reconnect: CI-V transport already open")
             return
-        if not h._ctrl_transport or not getattr(h._ctrl_transport, "_udp_transport", None):
+        if not h._ctrl_transport or not getattr(
+            h._ctrl_transport, "_udp_transport", None
+        ):
             logger.info("soft_reconnect: control transport gone, doing full connect")
             await self.connect()
             return
@@ -277,10 +293,12 @@ class ControlPhaseRuntime:
         h._civ_recovering = True
 
         from .transport import IcomTransport
+
         h._civ_transport = IcomTransport()
         try:
             await h._civ_transport.connect(
-                h._host, h._civ_port,
+                h._host,
+                h._civ_port,
                 local_port=getattr(h, "_civ_local_port", 0),
             )
         except OSError as exc:
@@ -322,11 +340,14 @@ class ControlPhaseRuntime:
             h._start_civ_worker()
             h._start_civ_data_watchdog()
         logger.info("Soft reconnect to %s (civ=%d)", h._host, h._civ_port)
-        if getattr(h, "_on_reconnect", None) is not None:
+        on_reconnect = getattr(h, "_on_reconnect", None)
+        if on_reconnect is not None:
             try:
-                h._on_reconnect()
+                on_reconnect()
             except Exception:
-                logger.debug("soft_reconnect: _on_reconnect callback failed", exc_info=True)
+                logger.debug(
+                    "soft_reconnect: _on_reconnect callback failed", exc_info=True
+                )
 
     async def _send_token_ack(self) -> None:
         h = self._host
@@ -387,7 +408,8 @@ class ControlPhaseRuntime:
         await h._ctrl_transport.send_tracked(conninfo)
         logger.debug(
             "Conninfo sent (civ_local=%d, audio_local=%d)",
-            civ_local_port, audio_local_port,
+            civ_local_port,
+            audio_local_port,
         )
 
     async def _receive_civ_port(self) -> int:
@@ -398,9 +420,7 @@ class ControlPhaseRuntime:
         while time.monotonic() < deadline:
             try:
                 remaining = max(0.1, deadline - time.monotonic())
-                d = await h._ctrl_transport.receive_packet(
-                    timeout=min(remaining, 0.3)
-                )
+                d = await h._ctrl_transport.receive_packet(timeout=min(remaining, 0.3))
                 if len(d) != STATUS_SIZE:
                     continue
                 status = parse_status_response(d)
@@ -411,7 +431,10 @@ class ControlPhaseRuntime:
                 h._last_status_disconnected = status.disconnected
                 logger.info(
                     "Status: civ_port=%d, audio_port=%d, error=0x%08X, disconnected=%s",
-                    got_civ, got_audio, status.error, status.disconnected,
+                    got_civ,
+                    got_audio,
+                    status.error,
+                    status.disconnected,
                 )
                 if got_audio > 0:
                     h._audio_port = got_audio
@@ -685,7 +708,8 @@ class _ControlPhaseMixin:
             if civ_port > 0 and civ_port != self._civ_port:
                 logger.warning(
                     "Radio reported non-default civ_port=%d (expected %d), using radio value",
-                    civ_port, self._civ_port,
+                    civ_port,
+                    self._civ_port,
                 )
                 self._civ_port = civ_port
             elif civ_port == 0:
@@ -726,28 +750,31 @@ class _ControlPhaseMixin:
         except asyncio.TimeoutError:
             logger.debug("No status packet received, using default ports")
             logger.warning(
-                "Audio port not in status, using default %d", self._audio_port  # type: ignore[attr-defined]
+                "Audio port not in status, using default %d",
+                self._audio_port,
             )
 
         # --- Phase 2: CI-V port ---
-        self._civ_transport = IcomTransport()  # type: ignore[attr-defined]
+        civ_transport = IcomTransport()
+        self._civ_transport = civ_transport
         try:
-            await self._civ_transport.connect(  # type: ignore[attr-defined]
-                self._host, self._civ_port,
-                local_port=self._civ_local_port,  # type: ignore[attr-defined]
+            await civ_transport.connect(
+                self._host,
+                self._civ_port,
+                local_port=self._civ_local_port,
             )
         except OSError as exc:
-            await self._ctrl_transport.disconnect()  # type: ignore[attr-defined]
+            await self._ctrl_transport.disconnect()
             raise ConnectionError(
-                f"Failed to connect CI-V port {self._civ_port}: {exc}"  # type: ignore[attr-defined]
+                f"Failed to connect CI-V port {self._civ_port}: {exc}"
             ) from exc
 
-        self._civ_transport.start_ping_loop()  # type: ignore[attr-defined]
-        self._civ_transport.start_retransmit_loop()  # type: ignore[attr-defined]
+        civ_transport.start_ping_loop()
+        civ_transport.start_retransmit_loop()
         # ⚠️ DO NOT REMOVE idle_loop! The IC-7610 kills CI-V sessions after ~40s
         # without tracked control packets. CI-V payload commands do NOT substitute
         # for transport-level keepalive. This was learned the hard way (2026-03-02).
-        self._civ_transport.start_idle_loop()  # type: ignore[attr-defined]
+        civ_transport.start_idle_loop()
         # NOTE: no idle_loop on CI-V — fire-and-forget CI-V commands already
         # keep the session alive; idle tracked packets flood tx_buffer.
 
@@ -756,31 +783,31 @@ class _ControlPhaseMixin:
 
         # Flush initial waterfall/status data
         await asyncio.sleep(0.3)
-        await self._flush_queue(self._civ_transport)  # type: ignore[attr-defined]
+        await self._flush_queue(civ_transport)
 
-        self._advance_civ_generation("connect")  # type: ignore[attr-defined]
-        self._civ_last_waiter_gc_monotonic = time.monotonic()  # type: ignore[attr-defined]
-        self._start_civ_rx_pump()  # type: ignore[attr-defined]
-        self._start_civ_data_watchdog()  # type: ignore[attr-defined]
-        self._conn_state = RadioConnectionState.CONNECTED  # type: ignore[attr-defined]
-        self._ctrl_transport.state = ConnectionState.CONNECTED  # type: ignore[attr-defined]
-        self._start_civ_worker()  # type: ignore[attr-defined]
+        self._advance_civ_generation("connect")
+        self._civ_last_waiter_gc_monotonic = time.monotonic()
+        self._start_civ_rx_pump()
+        self._start_civ_data_watchdog()
+        self._conn_state = RadioConnectionState.CONNECTED
+        self._ctrl_transport.state = ConnectionState.CONNECTED
+        self._start_civ_worker()
         self._start_token_renewal()
-        if self._auto_reconnect:  # type: ignore[attr-defined]
+        if self._auto_reconnect:
             self._start_watchdog()
-        self._has_connected_once = True  # type: ignore[attr-defined]
+        self._has_connected_once = True
         logger.info(
             "Connected to %s (control=%d, civ=%d)",
-            self._host,  # type: ignore[attr-defined]
-            self._port,  # type: ignore[attr-defined]
-            self._civ_port,  # type: ignore[attr-defined]
+            self._host,
+            self._port,
+            self._civ_port,
         )
 
     # ------------------------------------------------------------------
     # Internal connection helpers
     # ------------------------------------------------------------------
 
-    async def _send_token_ack(self) -> None:
+    async def _send_token_ack(self: "ControlPhaseHost") -> None:
         """Send token acknowledgement (0x40-byte token packet).
 
         Layout per wfview packettypes.h (token_packet):
@@ -791,26 +818,26 @@ class _ControlPhaseMixin:
         """
         pkt = bytearray(TOKEN_ACK_SIZE)
         struct.pack_into("<I", pkt, 0x00, TOKEN_ACK_SIZE)
-        struct.pack_into("<I", pkt, 0x08, self._ctrl_transport.my_id)  # type: ignore[attr-defined]
-        struct.pack_into("<I", pkt, 0x0C, self._ctrl_transport.remote_id)  # type: ignore[attr-defined]
+        struct.pack_into("<I", pkt, 0x08, self._ctrl_transport.my_id)
+        struct.pack_into("<I", pkt, 0x0C, self._ctrl_transport.remote_id)
         struct.pack_into(">I", pkt, 0x10, TOKEN_ACK_SIZE - 0x10)  # payloadsize BE
         pkt[0x14] = 0x01  # requestreply
         pkt[0x15] = 0x02  # requesttype = token ack (magic=0x02)
-        struct.pack_into(">H", pkt, 0x16, self._auth_seq)  # innerseq BE  # type: ignore[attr-defined]
-        self._auth_seq += 1  # type: ignore[attr-defined]
-        struct.pack_into("<H", pkt, 0x1A, self._tok_request)  # tokrequest  # type: ignore[attr-defined]
-        struct.pack_into("<I", pkt, 0x1C, self._token)  # token  # type: ignore[attr-defined]
+        struct.pack_into(">H", pkt, 0x16, self._auth_seq)  # innerseq BE
+        self._auth_seq += 1
+        struct.pack_into("<H", pkt, 0x1A, self._tok_request)  # tokrequest
+        struct.pack_into("<I", pkt, 0x1C, self._token)  # token
         struct.pack_into(">H", pkt, 0x24, 0x0798)  # resetcap
-        await self._ctrl_transport.send_tracked(bytes(pkt))  # type: ignore[attr-defined]
-        logger.debug("Token ack sent (token=0x%08X)", self._token)  # type: ignore[attr-defined]
+        await self._ctrl_transport.send_tracked(bytes(pkt))
+        logger.debug("Token ack sent (token=0x%08X)", self._token)
 
-    async def _receive_guid(self) -> "bytes | None":
+    async def _receive_guid(self: "ControlPhaseHost") -> "bytes | None":
         """Receive the radio's conninfo and extract GUID/MAC area."""
         await asyncio.sleep(0.3)
         guid = None
         for _ in range(30):
             try:
-                d = await self._ctrl_transport.receive_packet(timeout=0.1)  # type: ignore[attr-defined]
+                d = await self._ctrl_transport.receive_packet(timeout=0.1)
                 if len(d) == CONNINFO_SIZE:
                     guid = d[0x20:0x30]
                     logger.debug("Got radio GUID: %s", guid.hex())
@@ -819,38 +846,38 @@ class _ControlPhaseMixin:
         return guid
 
     async def _send_conninfo(
-        self,
+        self: "ControlPhaseHost",
         guid: "bytes | None",
         civ_local_port: int = 0,
         audio_local_port: int = 0,
     ) -> None:
         """Send our conninfo to the radio."""
         conninfo = build_conninfo_packet(
-            sender_id=self._ctrl_transport.my_id,  # type: ignore[attr-defined]
-            receiver_id=self._ctrl_transport.remote_id,  # type: ignore[attr-defined]
-            username=self._username,  # type: ignore[attr-defined]
-            token=self._token,  # type: ignore[attr-defined]
-            tok_request=self._tok_request,  # type: ignore[attr-defined]
+            sender_id=self._ctrl_transport.my_id,
+            receiver_id=self._ctrl_transport.remote_id,
+            username=self._username,
+            token=self._token,
+            tok_request=self._tok_request,
             radio_name="IC-7610",
             mac_address=b"\x00" * 6,
-            auth_seq=self._auth_seq,  # type: ignore[attr-defined]
+            auth_seq=self._auth_seq,
             guid=guid,
-            rx_codec=int(self._audio_codec),  # type: ignore[attr-defined]
-            tx_codec=int(self._audio_codec),  # type: ignore[attr-defined]
-            rx_sample_rate=self._audio_sample_rate,  # type: ignore[attr-defined]
-            tx_sample_rate=self._audio_sample_rate,  # type: ignore[attr-defined]
+            rx_codec=int(self._audio_codec),
+            tx_codec=int(self._audio_codec),
+            rx_sample_rate=self._audio_sample_rate,
+            tx_sample_rate=self._audio_sample_rate,
             civ_local_port=civ_local_port,
             audio_local_port=audio_local_port,
         )
-        self._auth_seq += 1  # type: ignore[attr-defined]
-        await self._ctrl_transport.send_tracked(conninfo)  # type: ignore[attr-defined]
+        self._auth_seq += 1
+        await self._ctrl_transport.send_tracked(conninfo)
         logger.debug(
             "Conninfo sent (civ_local=%d, audio_local=%d)",
             civ_local_port,
             audio_local_port,
         )
 
-    async def _receive_civ_port(self) -> int:
+    async def _receive_civ_port(self: "ControlPhaseHost") -> int:
         """Wait for status packet and extract CI-V port quickly.
 
         Audio port is optional at connect-time and can be resolved lazily on first
@@ -863,7 +890,7 @@ class _ControlPhaseMixin:
         while time.monotonic() < deadline:
             try:
                 remaining = max(0.1, deadline - time.monotonic())
-                d = await self._ctrl_transport.receive_packet(  # type: ignore[attr-defined]
+                d = await self._ctrl_transport.receive_packet(
                     timeout=min(remaining, 0.3)
                 )
                 if len(d) != STATUS_SIZE:
@@ -873,8 +900,8 @@ class _ControlPhaseMixin:
                 got_civ = status.civ_port
                 got_audio = status.audio_port
                 status_packets_seen += 1
-                self._last_status_error = status.error  # type: ignore[attr-defined]
-                self._last_status_disconnected = status.disconnected  # type: ignore[attr-defined]
+                self._last_status_error = status.error
+                self._last_status_disconnected = status.disconnected
                 logger.info(
                     "Status: civ_port=%d, audio_port=%d, error=0x%08X, disconnected=%s",
                     got_civ,
@@ -884,7 +911,7 @@ class _ControlPhaseMixin:
                 )
 
                 if got_audio > 0:
-                    self._audio_port = got_audio  # type: ignore[attr-defined]
+                    self._audio_port = got_audio
                 if status.error == 0xFFFFFFFF:
                     logger.warning(
                         "Status indicates session rejection (error=0x%08X); "
@@ -905,36 +932,36 @@ class _ControlPhaseMixin:
 
         return civ_port
 
-    def _status_retry_pause(self) -> float:
+    def _status_retry_pause(self: "ControlPhaseHost") -> float:
         """Choose conninfo retry pause from the latest status error code."""
         if getattr(self, "_last_status_error", 0) == 0xFFFFFFFF:
             return self._STATUS_REJECT_COOLDOWN
         return self._STATUS_RETRY_PAUSE
 
-    async def _send_open_close(self, *, open_stream: bool) -> None:
+    async def _send_open_close(self: "ControlPhaseHost", *, open_stream: bool) -> None:
         """Send OpenClose packet on the CI-V port."""
-        if self._civ_transport is None:  # type: ignore[attr-defined]
+        if self._civ_transport is None:
             return
         await self._send_open_close_on_transport(
-            self._civ_transport,  # type: ignore[attr-defined]
-            send_seq=self._civ_send_seq,  # type: ignore[attr-defined]
+            self._civ_transport,
+            send_seq=self._civ_send_seq,
             open_stream=open_stream,
         )
-        self._civ_send_seq = (self._civ_send_seq + 1) & 0xFFFF  # type: ignore[attr-defined]
+        self._civ_send_seq = (self._civ_send_seq + 1) & 0xFFFF
 
-    async def _send_audio_open_close(self, *, open_stream: bool) -> None:
+    async def _send_audio_open_close(self: "ControlPhaseHost", *, open_stream: bool) -> None:
         """Send OpenClose packet on the audio port (wfview behavior)."""
-        if self._audio_transport is None:  # type: ignore[attr-defined]
+        if self._audio_transport is None:
             return
         await self._send_open_close_on_transport(
-            self._audio_transport,  # type: ignore[attr-defined]
-            send_seq=self._audio_send_seq,  # type: ignore[attr-defined]
+            self._audio_transport,
+            send_seq=self._audio_send_seq,
             open_stream=open_stream,
         )
-        self._audio_send_seq = (self._audio_send_seq + 1) & 0xFFFF  # type: ignore[attr-defined]
+        self._audio_send_seq = (self._audio_send_seq + 1) & 0xFFFF
 
     async def _send_open_close_on_transport(
-        self,
+        self: "ControlPhaseHost",
         transport: IcomTransport,
         *,
         send_seq: int,
@@ -959,7 +986,11 @@ class _ControlPhaseMixin:
         logger.debug("OpenClose(%s) sent", "open" if open_stream else "close")
 
     async def _wait_for_packet(
-        self, transport: IcomTransport, *, size: int, label: str
+        self: "ControlPhaseHost",
+        transport: IcomTransport,
+        *,
+        size: int,
+        label: str,
     ) -> bytes:
         """Wait for a packet of a specific size, skipping others."""
         deadline = time.monotonic() + 2.0  # Short timeout — default ports used anyway
@@ -993,29 +1024,29 @@ class _ControlPhaseMixin:
     # Token renewal
     # ------------------------------------------------------------------
 
-    def _start_token_renewal(self) -> None:
+    def _start_token_renewal(self: "ControlPhaseHost") -> None:
         """Start periodic token renewal task."""
         if (
-            self._token_task is None  # type: ignore[attr-defined]
-            or self._token_task.done()  # type: ignore[attr-defined]
+            self._token_task is None
+            or self._token_task.done()
         ):
-            self._token_task = asyncio.create_task(self._token_renewal_loop())  # type: ignore[attr-defined]
+            self._token_task = asyncio.create_task(self._token_renewal_loop())
 
-    def _stop_token_renewal(self) -> None:
+    def _stop_token_renewal(self: "ControlPhaseHost") -> None:
         """Cancel token renewal task."""
         if (
-            self._token_task is not None  # type: ignore[attr-defined]
-            and not self._token_task.done()  # type: ignore[attr-defined]
+            self._token_task is not None
+            and not self._token_task.done()
         ):
-            self._token_task.cancel()  # type: ignore[attr-defined]
-            self._token_task = None  # type: ignore[attr-defined]
+            self._token_task.cancel()
+            self._token_task = None
 
-    async def _token_renewal_loop(self) -> None:
+    async def _token_renewal_loop(self: "ControlPhaseHost") -> None:
         """Background task: send token renewal every TOKEN_RENEWAL_INTERVAL."""
         try:
-            while self._conn_state == RadioConnectionState.CONNECTED:  # type: ignore[attr-defined]
+            while self._conn_state == RadioConnectionState.CONNECTED:
                 await asyncio.sleep(self.TOKEN_RENEWAL_INTERVAL)
-                if self._conn_state != RadioConnectionState.CONNECTED:  # type: ignore[attr-defined]
+                if self._conn_state != RadioConnectionState.CONNECTED:
                     break
                 try:
                     await self._send_token(0x05)  # renewal magic
@@ -1025,7 +1056,7 @@ class _ControlPhaseMixin:
         except asyncio.CancelledError:
             pass
 
-    async def _send_token(self, magic: int) -> None:
+    async def _send_token(self: "ControlPhaseHost", magic: int) -> None:
         """Send a token packet (renewal=0x05, ack=0x02, remove=0x01).
 
         Reference: wfview icomudphandler.cpp sendToken().
@@ -1036,44 +1067,44 @@ class _ControlPhaseMixin:
         pkt = bytearray(self.TOKEN_PACKET_SIZE)
         struct.pack_into("<I", pkt, 0x00, self.TOKEN_PACKET_SIZE)
         struct.pack_into("<H", pkt, 0x04, 0x00)  # type = data
-        struct.pack_into("<I", pkt, 0x08, self._ctrl_transport.my_id)  # type: ignore[attr-defined]
-        struct.pack_into("<I", pkt, 0x0C, self._ctrl_transport.remote_id)  # type: ignore[attr-defined]
+        struct.pack_into("<I", pkt, 0x08, self._ctrl_transport.my_id)
+        struct.pack_into("<I", pkt, 0x0C, self._ctrl_transport.remote_id)
         struct.pack_into(">I", pkt, 0x10, self.TOKEN_PACKET_SIZE - 0x10)
         pkt[0x14] = 0x01  # requestreply
         pkt[0x15] = magic  # requesttype
-        struct.pack_into(">H", pkt, 0x16, self._auth_seq)  # type: ignore[attr-defined]
-        self._auth_seq += 1  # type: ignore[attr-defined]
-        struct.pack_into("<H", pkt, 0x1A, self._tok_request)  # type: ignore[attr-defined]
+        struct.pack_into(">H", pkt, 0x16, self._auth_seq)
+        self._auth_seq += 1
+        struct.pack_into("<H", pkt, 0x1A, self._tok_request)
         struct.pack_into(">H", pkt, 0x24, 0x0798)  # resetcap
-        struct.pack_into("<I", pkt, 0x1C, self._token)  # type: ignore[attr-defined]
-        await self._ctrl_transport.send_tracked(bytes(pkt))  # type: ignore[attr-defined]
+        struct.pack_into("<I", pkt, 0x1C, self._token)
+        await self._ctrl_transport.send_tracked(bytes(pkt))
 
     # ------------------------------------------------------------------
     # Watchdog & Auto-reconnect
     # ------------------------------------------------------------------
 
-    def _start_watchdog(self) -> None:
+    def _start_watchdog(self: "ControlPhaseHost") -> None:
         """Start connection watchdog task."""
         if (
-            self._watchdog_task is None  # type: ignore[attr-defined]
-            or self._watchdog_task.done()  # type: ignore[attr-defined]
+            self._watchdog_task is None
+            or self._watchdog_task.done()
         ):
-            self._watchdog_task = asyncio.create_task(self._watchdog_loop())  # type: ignore[attr-defined]
+            self._watchdog_task = asyncio.create_task(self._watchdog_loop())
 
-    def _stop_watchdog(self) -> None:
+    def _stop_watchdog(self: "ControlPhaseHost") -> None:
         """Stop watchdog task."""
         if (
-            self._watchdog_task is not None  # type: ignore[attr-defined]
-            and not self._watchdog_task.done()  # type: ignore[attr-defined]
+            self._watchdog_task is not None
+            and not self._watchdog_task.done()
         ):
-            self._watchdog_task.cancel()  # type: ignore[attr-defined]
-            self._watchdog_task = None  # type: ignore[attr-defined]
+            self._watchdog_task.cancel()
+            self._watchdog_task = None
 
-    def _stop_reconnect(self) -> None:
+    def _stop_reconnect(self: "ControlPhaseHost") -> None:
         """Cancel any pending reconnect task."""
         if (
-            self._reconnect_task is not None  # type: ignore[attr-defined]
-            and not self._reconnect_task.done()  # type: ignore[attr-defined]
+            self._reconnect_task is not None
+            and not self._reconnect_task.done()
         ):
-            self._reconnect_task.cancel()  # type: ignore[attr-defined]
-            self._reconnect_task = None  # type: ignore[attr-defined]
+            self._reconnect_task.cancel()
+            self._reconnect_task = None

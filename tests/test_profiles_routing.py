@@ -90,7 +90,9 @@ async def test_control_handler_checks_capabilities_not_model_name() -> None:
 
 
 @pytest.mark.asyncio
-async def test_dual_profile_poller_routes_main_mode_via_vfo_switch_when_active_sub() -> None:
+async def test_dual_profile_poller_routes_main_mode_via_vfo_switch_when_active_sub() -> (
+    None
+):
     radio = _dual_radio_mock()
     radio._radio_state.active = "SUB"
     poller = RadioPoller(radio, StateCache(), CommandQueue())

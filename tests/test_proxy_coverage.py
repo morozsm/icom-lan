@@ -22,6 +22,7 @@ from icom_lan.proxy import _RelayProtocol, _session_watchdog
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 class _FakeTransport:
     def __init__(self) -> None:
         self.sent: list[tuple[bytes, tuple[str, int]]] = []
@@ -41,6 +42,7 @@ def _make_relay(radio_host: str = "192.168.1.100", port: int = 50001) -> _RelayP
 # datagram_received — transport is None (line 42)
 # ---------------------------------------------------------------------------
 
+
 def test_datagram_received_before_connection_made_is_noop() -> None:
     """Should silently drop packets when transport has not been set yet."""
     relay = _make_relay()
@@ -52,6 +54,7 @@ def test_datagram_received_before_connection_made_is_noop() -> None:
 # ---------------------------------------------------------------------------
 # datagram_received — client address change (line 53)
 # ---------------------------------------------------------------------------
+
 
 def test_datagram_received_logs_client_address_change(
     caplog: pytest.LogCaptureFixture,
@@ -77,6 +80,7 @@ def test_datagram_received_logs_client_address_change(
 # error_received() — line 68
 # ---------------------------------------------------------------------------
 
+
 def test_error_received_logs_warning(caplog: pytest.LogCaptureFixture) -> None:
     """error_received() should log a warning with the exception."""
     import logging
@@ -94,6 +98,7 @@ def test_error_received_logs_warning(caplog: pytest.LogCaptureFixture) -> None:
 # connection_lost() — line 71
 # ---------------------------------------------------------------------------
 
+
 def test_connection_lost_logs_info(caplog: pytest.LogCaptureFixture) -> None:
     """connection_lost() should log an info message."""
     import logging
@@ -109,6 +114,7 @@ def test_connection_lost_logs_info(caplog: pytest.LogCaptureFixture) -> None:
 # ---------------------------------------------------------------------------
 # _session_watchdog() — lines 79-87
 # ---------------------------------------------------------------------------
+
 
 async def test_session_watchdog_clears_stale_client() -> None:
     """Watchdog resets client_addr when session timed out."""

@@ -67,8 +67,12 @@ class _FakeBackend:
 
 
 class TestPcmOpusTranscoder:
-    def test_missing_backend_raises_actionable_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr("icom_lan._audio_transcoder._load_default_backend", lambda: None)
+    def test_missing_backend_raises_actionable_error(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(
+            "icom_lan._audio_transcoder._load_default_backend", lambda: None
+        )
         with pytest.raises(AudioCodecBackendError, match="install icom-lan\\[audio\\]"):
             PcmOpusTranscoder()
 
@@ -109,12 +113,12 @@ class TestPcmOpusTranscoder:
     def test_decode_failure_wrapped(self) -> None:
         transcoder = PcmOpusTranscoder(backend=_FakeBackend(fail_decode=True))
         with pytest.raises(AudioTranscodeError, match="decode Opus frame"):
-            transcoder.opus_to_pcm(b"\xAA")
+            transcoder.opus_to_pcm(b"\xaa")
 
     def test_decode_size_mismatch_wrapped(self) -> None:
         transcoder = PcmOpusTranscoder(backend=_FakeBackend(decode_size_mismatch=True))
         with pytest.raises(AudioTranscodeError, match="size mismatch"):
-            transcoder.opus_to_pcm(b"\xAA")
+            transcoder.opus_to_pcm(b"\xaa")
 
 
 class TestRadioPcmHooks:
@@ -143,16 +147,16 @@ class TestRadioPcmHooks:
         radio._pcm_transcoder = _DummyTranscoder()  # type: ignore[assignment]
         radio._pcm_transcoder_fmt = (48000, 1, 20)
 
-        packet = AudioPacket(ident=0x0080, send_seq=1, data=b"\xAA\xBB")
+        packet = AudioPacket(ident=0x0080, send_seq=1, data=b"\xaa\xbb")
         decoded = radio._decode_audio_packet_to_pcm(packet)
-        assert decoded == b"pcm:\xAA\xBB"
+        assert decoded == b"pcm:\xaa\xbb"
 
         received: list[bytes | None] = []
         adapter = radio._build_pcm_rx_callback(lambda frame: received.append(frame))
         adapter(None)
         adapter(packet)
 
-        assert received == [None, b"pcm:\xAA\xBB"]
+        assert received == [None, b"pcm:\xaa\xbb"]
 
 
 class TestRadioPcmRxApi:
