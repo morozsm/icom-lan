@@ -12,6 +12,7 @@ Usage::
 
 try:
     from .server import RigctldServer
+
     __all__ = ["RigctldServer"]
 except ImportError:
     __all__ = []

@@ -80,8 +80,8 @@ async def _make_link(
 async def test_receive_complete_frame() -> None:
     link, reader, _ = await _make_link()
     try:
-        reader.push(b"\xFE\xFE\x98\xE0\x03\xFD")
-        assert await link.receive(timeout=0.05) == b"\xFE\xFE\x98\xE0\x03\xFD"
+        reader.push(b"\xfe\xfe\x98\xe0\x03\xfd")
+        assert await link.receive(timeout=0.05) == b"\xfe\xfe\x98\xe0\x03\xfd"
     finally:
         await link.disconnect()
 
@@ -90,10 +90,10 @@ async def test_receive_complete_frame() -> None:
 async def test_receive_split_frame_across_chunks() -> None:
     link, reader, _ = await _make_link()
     try:
-        reader.push(b"\xFE\xFE\x98")
-        reader.push(b"\xE0\x03")
-        reader.push(b"\xFD")
-        assert await link.receive(timeout=0.05) == b"\xFE\xFE\x98\xE0\x03\xFD"
+        reader.push(b"\xfe\xfe\x98")
+        reader.push(b"\xe0\x03")
+        reader.push(b"\xfd")
+        assert await link.receive(timeout=0.05) == b"\xfe\xfe\x98\xe0\x03\xfd"
     finally:
         await link.disconnect()
 
@@ -102,9 +102,9 @@ async def test_receive_split_frame_across_chunks() -> None:
 async def test_receive_multiple_frames_in_single_chunk() -> None:
     link, reader, _ = await _make_link()
     try:
-        reader.push(b"\xFE\xFE\x98\xE0\x03\xFD\xFE\xFE\x98\xE0\x04\xFD")
-        assert await link.receive(timeout=0.05) == b"\xFE\xFE\x98\xE0\x03\xFD"
-        assert await link.receive(timeout=0.05) == b"\xFE\xFE\x98\xE0\x04\xFD"
+        reader.push(b"\xfe\xfe\x98\xe0\x03\xfd\xfe\xfe\x98\xe0\x04\xfd")
+        assert await link.receive(timeout=0.05) == b"\xfe\xfe\x98\xe0\x03\xfd"
+        assert await link.receive(timeout=0.05) == b"\xfe\xfe\x98\xe0\x04\xfd"
     finally:
         await link.disconnect()
 
@@ -113,8 +113,8 @@ async def test_receive_multiple_frames_in_single_chunk() -> None:
 async def test_receive_ignores_garbage_before_sof() -> None:
     link, reader, _ = await _make_link()
     try:
-        reader.push(b"garbage\x00\x01\xFE\xFE\x98\xE0\x03\xFD")
-        assert await link.receive(timeout=0.05) == b"\xFE\xFE\x98\xE0\x03\xFD"
+        reader.push(b"garbage\x00\x01\xfe\xfe\x98\xe0\x03\xfd")
+        assert await link.receive(timeout=0.05) == b"\xfe\xfe\x98\xe0\x03\xfd"
     finally:
         await link.disconnect()
 
@@ -123,8 +123,8 @@ async def test_receive_ignores_garbage_before_sof() -> None:
 async def test_receive_recovers_from_malformed_partial_then_valid_frame() -> None:
     link, reader, _ = await _make_link()
     try:
-        reader.push(b"\xFE\xFE\x98\xE0\x03\xFE\xFE\x98\xE0\x04\xFD")
-        assert await link.receive(timeout=0.05) == b"\xFE\xFE\x98\xE0\x04\xFD"
+        reader.push(b"\xfe\xfe\x98\xe0\x03\xfe\xfe\x98\xe0\x04\xfd")
+        assert await link.receive(timeout=0.05) == b"\xfe\xfe\x98\xe0\x04\xfd"
     finally:
         await link.disconnect()
 
@@ -133,8 +133,8 @@ async def test_receive_recovers_from_malformed_partial_then_valid_frame() -> Non
 async def test_receive_drops_collision_abort_pattern() -> None:
     link, reader, _ = await _make_link()
     try:
-        reader.push(b"\xFE\xFE\x98\xE0\xFC\xFD\xFE\xFE\x98\xE0\x03\xFD")
-        assert await link.receive(timeout=0.05) == b"\xFE\xFE\x98\xE0\x03\xFD"
+        reader.push(b"\xfe\xfe\x98\xe0\xfc\xfd\xfe\xfe\x98\xe0\x03\xfd")
+        assert await link.receive(timeout=0.05) == b"\xfe\xfe\x98\xe0\x03\xfd"
     finally:
         await link.disconnect()
 
@@ -144,7 +144,7 @@ async def test_partial_frame_timeout_raises() -> None:
     codec = SerialFrameCodec(max_frame_len=64, frame_timeout_s=0.001)
     link, reader, _ = await _make_link(codec=codec)
     try:
-        reader.push(b"\xFE\xFE\x98")
+        reader.push(b"\xfe\xfe\x98")
         with pytest.raises(SerialFrameTimeoutError):
             await link.receive(timeout=0.02)
     finally:
@@ -156,7 +156,7 @@ async def test_overflow_guard_raises() -> None:
     codec = SerialFrameCodec(max_frame_len=6, frame_timeout_s=0.1)
     link, reader, _ = await _make_link(codec=codec)
     try:
-        reader.push(b"\xFE\xFE\x98\xE0")
+        reader.push(b"\xfe\xfe\x98\xe0")
         reader.push(b"\x03\x99\x98")
         with pytest.raises(SerialFrameOverflowError):
             await link.receive(timeout=0.05)
@@ -170,11 +170,11 @@ async def test_writer_serialization_and_backpressure() -> None:
     writer = _FakeWriter(drain_gate=drain_gate)
     link, _reader, fake_writer = await _make_link(queue_size=1, writer=writer)
     try:
-        t1 = asyncio.create_task(link.send(b"\x98\xE0\x03"))
+        t1 = asyncio.create_task(link.send(b"\x98\xe0\x03"))
         await asyncio.sleep(0)
-        t2 = asyncio.create_task(link.send(b"\x98\xE0\x04"))
+        t2 = asyncio.create_task(link.send(b"\x98\xe0\x04"))
         await asyncio.sleep(0)
-        t3 = asyncio.create_task(link.send(b"\x98\xE0\x05"))
+        t3 = asyncio.create_task(link.send(b"\x98\xe0\x05"))
         await asyncio.sleep(0)
 
         assert t1.done()
@@ -183,9 +183,9 @@ async def test_writer_serialization_and_backpressure() -> None:
         drain_gate.set()
         await asyncio.wait_for(asyncio.gather(t1, t2, t3), timeout=0.2)
         assert fake_writer.writes == [
-            b"\xFE\xFE\x98\xE0\x03\xFD",
-            b"\xFE\xFE\x98\xE0\x04\xFD",
-            b"\xFE\xFE\x98\xE0\x05\xFD",
+            b"\xfe\xfe\x98\xe0\x03\xfd",
+            b"\xfe\xfe\x98\xe0\x04\xfd",
+            b"\xfe\xfe\x98\xe0\x05\xfd",
         ]
     finally:
         await link.disconnect()
@@ -196,8 +196,8 @@ async def test_receive_recoverable_io_error_returns_next_valid_frame() -> None:
     link, reader, _ = await _make_link()
     try:
         reader.push_error(OSError("temporary serial read failure"))
-        reader.push(b"\xFE\xFE\x98\xE0\x03\xFD")
-        assert await link.receive(timeout=0.05) == b"\xFE\xFE\x98\xE0\x03\xFD"
+        reader.push(b"\xfe\xfe\x98\xe0\x03\xfd")
+        assert await link.receive(timeout=0.05) == b"\xfe\xfe\x98\xe0\x03\xfd"
         assert link.connected is True
         assert link.healthy is True
     finally:
@@ -240,7 +240,7 @@ async def test_send_when_disconnected_raises() -> None:
     link, _reader, _writer = await _make_link()
     await link.disconnect()
     with pytest.raises(ConnectionError):
-        await link.send(b"\x98\xE0\x03")
+        await link.send(b"\x98\xe0\x03")
 
 
 @pytest.mark.asyncio
@@ -300,9 +300,9 @@ async def test_disconnect_drops_stale_rx_frames_before_reconnect() -> None:
     )
     await link.connect()
     try:
-        frame1 = b"\xFE\xFE\x98\xE0\x01\xFD"
-        frame2 = b"\xFE\xFE\x98\xE0\x02\xFD"
-        frame3 = b"\xFE\xFE\x98\xE0\x03\xFD"
+        frame1 = b"\xfe\xfe\x98\xe0\x01\xfd"
+        frame2 = b"\xfe\xfe\x98\xe0\x02\xfd"
+        frame3 = b"\xfe\xfe\x98\xe0\x03\xfd"
         reader1.push(frame1 + frame2)
         assert await link.receive(timeout=0.05) == frame1
 
@@ -337,18 +337,18 @@ async def test_disconnect_drops_stale_tx_queue_before_reconnect() -> None:
     )
     await link.connect()
     try:
-        await link.send(b"\x98\xE0\x01")
+        await link.send(b"\x98\xe0\x01")
         await asyncio.sleep(0)
-        await link.send(b"\x98\xE0\x02")
+        await link.send(b"\x98\xe0\x02")
         await asyncio.sleep(0)
 
         await link.disconnect()
         drain_gate.set()
         await link.connect()
 
-        await link.send(b"\x98\xE0\x03")
+        await link.send(b"\x98\xe0\x03")
         await asyncio.sleep(0)
-        assert writer2.writes == [b"\xFE\xFE\x98\xE0\x03\xFD"]
+        assert writer2.writes == [b"\xfe\xfe\x98\xe0\x03\xfd"]
     finally:
         await link.disconnect()
 
@@ -359,12 +359,12 @@ async def test_send_backpressure_unblocks_on_disconnect() -> None:
     writer = _FakeWriter(drain_gate=drain_gate)
     link, _reader, _writer = await _make_link(queue_size=1, writer=writer)
     try:
-        await link.send(b"\x98\xE0\x01")
+        await link.send(b"\x98\xe0\x01")
         await asyncio.sleep(0)
-        await link.send(b"\x98\xE0\x02")
+        await link.send(b"\x98\xe0\x02")
         await asyncio.sleep(0)
 
-        blocked_send = asyncio.create_task(link.send(b"\x98\xE0\x03"))
+        blocked_send = asyncio.create_task(link.send(b"\x98\xe0\x03"))
         await asyncio.sleep(0)
         assert not blocked_send.done()
 
@@ -378,12 +378,12 @@ async def test_send_backpressure_unblocks_on_disconnect() -> None:
 
 def test_codec_encodes_unframed_payload() -> None:
     codec = SerialFrameCodec(max_frame_len=64, frame_timeout_s=0.01)
-    assert codec.encode(b"\x98\xE0\x03") == b"\xFE\xFE\x98\xE0\x03\xFD"
+    assert codec.encode(b"\x98\xe0\x03") == b"\xfe\xfe\x98\xe0\x03\xfd"
 
 
 def test_codec_keeps_already_framed_payload() -> None:
     codec = SerialFrameCodec(max_frame_len=64, frame_timeout_s=0.01)
-    frame = b"\xFE\xFE\x98\xE0\x03\xFD"
+    frame = b"\xfe\xfe\x98\xe0\x03\xfd"
     assert codec.encode(frame) == frame
 
 

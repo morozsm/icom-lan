@@ -29,10 +29,12 @@ class SerialFrameOverflowError(SerialFrameError):
 class SerialFrameCodec:
     """Simple FE FE ... FD frame codec with deterministic timeout behavior."""
 
-    _START = b"\xFE\xFE"
+    _START = b"\xfe\xfe"
     _END = 0xFD
 
-    def __init__(self, *, max_frame_len: int = 1024, frame_timeout_s: float = 0.1) -> None:
+    def __init__(
+        self, *, max_frame_len: int = 1024, frame_timeout_s: float = 0.1
+    ) -> None:
         if max_frame_len < 4:
             raise ValueError("max_frame_len must be >= 4")
         if frame_timeout_s <= 0:
@@ -120,13 +122,19 @@ class DeterministicSerialCivLink:
             remaining = deadline - time.monotonic()
             if remaining <= 0:
                 if self._codec.expire_partial():
-                    raise SerialFrameTimeoutError("Timed out waiting for complete frame.")
+                    raise SerialFrameTimeoutError(
+                        "Timed out waiting for complete frame."
+                    )
                 return None
             try:
-                chunk = await asyncio.wait_for(self._incoming_chunks.get(), timeout=remaining)
+                chunk = await asyncio.wait_for(
+                    self._incoming_chunks.get(), timeout=remaining
+                )
             except asyncio.TimeoutError:
                 if self._codec.expire_partial():
-                    raise SerialFrameTimeoutError("Timed out waiting for complete frame.")
+                    raise SerialFrameTimeoutError(
+                        "Timed out waiting for complete frame."
+                    )
                 return None
             for frame in self._codec.feed(chunk):
                 self._decoded_frames.put_nowait(frame)
@@ -332,10 +340,14 @@ class SerialMockRadio:
         self._receiver_state(receiver, operation="set_squelch").squelch = level
 
     async def get_attenuator_level(self, receiver: int = 0) -> int:
-        return self._receiver_state(receiver, operation="get_attenuator_level").attenuator_db
+        return self._receiver_state(
+            receiver, operation="get_attenuator_level"
+        ).attenuator_db
 
     async def set_attenuator_level(self, db: int, receiver: int = 0) -> None:
-        self._receiver_state(receiver, operation="set_attenuator_level").attenuator_db = db
+        self._receiver_state(
+            receiver, operation="set_attenuator_level"
+        ).attenuator_db = db
 
     async def get_preamp(self, receiver: int = 0) -> int:
         return self._receiver_state(receiver, operation="get_preamp").preamp_level

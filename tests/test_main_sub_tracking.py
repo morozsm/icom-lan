@@ -1,15 +1,10 @@
 """Tests for Main/Sub Tracking command (CI-V 0x16 0x5E)."""
 
-import pytest
-
 from icom_lan.commands import (
-    IC_7610_ADDR,
-    CONTROLLER_ADDR,
     get_main_sub_tracking,
     set_main_sub_tracking,
     parse_civ_frame,
 )
-from icom_lan.types import CivFrame
 
 
 class TestGetMainSubTracking:
@@ -69,12 +64,14 @@ class TestMainSubTrackingState:
 
     def test_radio_state_has_field(self) -> None:
         from icom_lan.radio_state import RadioState
+
         rs = RadioState()
         assert hasattr(rs, "main_sub_tracking")
         assert rs.main_sub_tracking is False
 
     def test_radio_state_to_dict_includes_field(self) -> None:
         from icom_lan.radio_state import RadioState
+
         rs = RadioState()
         d = rs.to_dict()
         assert "main_sub_tracking" in d
@@ -82,6 +79,7 @@ class TestMainSubTrackingState:
 
     def test_radio_state_field_set(self) -> None:
         from icom_lan.radio_state import RadioState
+
         rs = RadioState()
         rs.main_sub_tracking = True
         assert rs.main_sub_tracking is True

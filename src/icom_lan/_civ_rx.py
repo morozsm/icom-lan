@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from .civ import (
     CivEvent,
@@ -46,6 +46,8 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 CIV_HEADER_SIZE = 0x15
+
+__all__ = ["CivRuntime", "CIV_HEADER_SIZE"]
 
 _CMD14_RECEIVER_LEVEL_FIELDS = {
     0x01: "af_level",
@@ -99,6 +101,23 @@ _CMD16_GLOBAL_VALUE_FIELDS = {
     0x58: ("ssb_tx_bandwidth", 1),
 }
 
+# Sub-command to state-change event name for unsolicited 0x16 updates (web/poller).
+_CMD16_NOTIFY_EVENTS = {
+    0x12: "agc_changed",
+    0x32: "audio_peak_filter_changed",
+    0x56: "filter_shape_changed",
+    0x41: "auto_notch_changed",
+    0x48: "manual_notch_changed",
+    0x4F: "twin_peak_filter_changed",
+    0x44: "compressor_changed",
+    0x45: "monitor_changed",
+    0x46: "vox_changed",
+    0x50: "dial_lock_changed",
+    0x47: "break_in_changed",
+    0x58: "ssb_tx_bandwidth_changed",
+    0x65: "ipplus_changed",
+}
+
 _CMD1A_CTL_MEM_LEVEL_FIELDS = {
     b"\x00\x70": ("ref_adjust", 2),
     b"\x02\x28": ("dash_ratio", 1),
@@ -109,7 +128,7 @@ _CMD1A_CTL_MEM_LEVEL_FIELDS = {
 # CI-V data watchdog (wfview icomudpcivdata::watchdog)
 # If no CI-V data for this long, send open_close to restart the stream.
 _CIV_DATA_WATCHDOG_TIMEOUT = 2.0  # seconds (wfview: 2000ms)
-_CIV_DATA_WATCHDOG_RETRY = 0.1    # retry interval (wfview: 100ms via startCivDataTimer)
+_CIV_DATA_WATCHDOG_RETRY = 0.1  # retry interval (wfview: 100ms via startCivDataTimer)
 
 
 class CivRuntime:
@@ -138,10 +157,7 @@ class CivRuntime:
         self._host._civ_request_tracker.fail_all(
             ConnectionError("CI-V RX pump stopped")
         )
-        if (
-            self._host._civ_rx_task is not None
-            and not self._host._civ_rx_task.done()
-        ):
+        if self._host._civ_rx_task is not None and not self._host._civ_rx_task.done():
             self._host._civ_rx_task.cancel()
             try:
                 await self._host._civ_rx_task
@@ -151,10 +167,8 @@ class CivRuntime:
 
     def start_data_watchdog(self) -> None:
         """Start CI-V data watchdog task."""
-        if (
-            getattr(self._host, "_civ_data_watchdog_task", None) is not None
-            and not self._host._civ_data_watchdog_task.done()
-        ):
+        task = self._host._civ_data_watchdog_task
+        if task is not None and not task.done():
             return
         self._host._civ_data_watchdog_task = asyncio.create_task(
             self._civ_data_watchdog_loop(), name="civ-data-watchdog"
@@ -259,7 +273,8 @@ class CivRuntime:
         try:
             while True:
                 await asyncio.sleep(
-                    _CIV_DATA_WATCHDOG_RETRY if recovering
+                    _CIV_DATA_WATCHDOG_RETRY
+                    if recovering
                     else _CIV_DATA_WATCHDOG_TIMEOUT / 2
                 )
 
@@ -277,7 +292,9 @@ class CivRuntime:
                             "civ-data-watchdog: no CI-V data for %.1fs, "
                             "requesting data start "
                             "(transport rx_count=%d, queue=%d)",
-                            idle, rx_count, q_size,
+                            idle,
+                            rx_count,
+                            q_size,
                         )
                         recovering = True
                         self._host._civ_recovering = True
@@ -320,7 +337,10 @@ class CivRuntime:
                         logger.warning(
                             "civ-data-watchdog: OpenClose failed for %.1fs, "
                             "triggering soft_reconnect (%d/%d), cooldown=%.0fs",
-                            elapsed_recovery, reconnect_count, _MAX_RECONNECTS, reconnect_pause,
+                            elapsed_recovery,
+                            reconnect_count,
+                            _MAX_RECONNECTS,
+                            reconnect_pause,
                         )
                         try:
                             await self.stop_data_watchdog()
@@ -405,9 +425,7 @@ class CivRuntime:
         except asyncio.CancelledError:
             pass
 
-    async def _route_civ_frame(
-        self, frame: CivFrame, *, generation: int
-    ) -> None:
+    async def _route_civ_frame(self, frame: CivFrame, *, generation: int) -> None:
         """Route one parsed CI-V frame into command/scope event paths."""
         if frame.from_addr != self._host._radio_addr:
             return
@@ -416,7 +434,9 @@ class CivRuntime:
         if frame.command != 0x27:
             logger.debug(
                 "civ-rx: cmd=0x%02X sub=0x%02X to=0x%02X data=%s",
-                frame.command, frame.sub or 0, frame.to_addr,
+                frame.command,
+                frame.sub or 0,
+                frame.to_addr,
                 frame.data.hex() if frame.data else "",
             )
 
@@ -467,7 +487,11 @@ class CivRuntime:
             elif frame.command == 0x16:
                 data = frame.data
                 if data and frame.sub == 0x32:
-                    host._state_cache.filter_width = ((data[0] >> 4) & 0x0F) * 10 + (data[0] & 0x0F)
+                    host._state_cache.filter_width = ((data[0] >> 4) & 0x0F) * 10 + (
+                        data[0] & 0x0F
+                    )
+                elif data and frame.sub == 0x65:
+                    self._notify_change("ipplus_changed", {"on": bool(data[0])})
             elif frame.command == 0x07 and frame.data and len(frame.data) >= 2:
                 sub07 = frame.data[0]
                 val07 = frame.data[1]
@@ -479,6 +503,7 @@ class CivRuntime:
             elif frame.command == 0x21:
                 if frame.sub == 0x00 and len(frame.data) >= 3:
                     from .commands import parse_rit_frequency_response
+
                     hz = parse_rit_frequency_response(frame.data)
                     self._notify_change("rit_freq_changed", {"hz": hz})
                 elif frame.sub == 0x01 and frame.data:
@@ -514,6 +539,7 @@ class CivRuntime:
 
             elif cmd in (0x04, 0x01):
                 from .types import Mode
+
                 mode_val, filt = parse_mode_response(frame)
                 rx.mode = mode_val.name
                 if filt is not None:
@@ -522,6 +548,7 @@ class CivRuntime:
             elif cmd == 0x25:
                 if len(frame.data) >= 6:
                     from .types import bcd_decode
+
                     rcvr_byte = frame.data[0]
                     which = "MAIN" if rcvr_byte == 0x00 else "SUB"
                     rs.receiver(which).freq = bcd_decode(frame.data[1:6])
@@ -529,6 +556,7 @@ class CivRuntime:
             elif cmd == 0x26:
                 if len(frame.data) >= 2:
                     from .types import Mode
+
                     rcvr_byte = frame.data[0]
                     which = "MAIN" if rcvr_byte == 0x00 else "SUB"
                     tgt = rs.receiver(which)
@@ -548,8 +576,10 @@ class CivRuntime:
                 elif len(frame.data) >= 2:
                     b0, b1 = frame.data[0], frame.data[1]
                     raw = (
-                        (b0 >> 4) * 1000 + (b0 & 0x0F) * 100
-                        + (b1 >> 4) * 10 + (b1 & 0x0F)
+                        (b0 >> 4) * 1000
+                        + (b0 & 0x0F) * 100
+                        + (b1 >> 4) * 10
+                        + (b1 & 0x0F)
                     )
                     if frame.sub == 0x02:
                         rs.receiver(rs.active).s_meter = raw
@@ -564,8 +594,10 @@ class CivRuntime:
                 if len(frame.data) >= 2:
                     b0, b1 = frame.data[0], frame.data[1]
                     raw = (
-                        (b0 >> 4) * 1000 + (b0 & 0x0F) * 100
-                        + (b1 >> 4) * 10 + (b1 & 0x0F)
+                        (b0 >> 4) * 1000
+                        + (b0 & 0x0F) * 100
+                        + (b1 >> 4) * 10
+                        + (b1 & 0x0F)
                     )
                     sub = frame.sub
                     if sub in _CMD14_RECEIVER_LEVEL_FIELDS:
@@ -606,6 +638,19 @@ class CivRuntime:
                     elif sub in _CMD16_GLOBAL_VALUE_FIELDS:
                         field, _ = _CMD16_GLOBAL_VALUE_FIELDS[sub]
                         setattr(rs, field, ((val >> 4) & 0x0F) * 10 + (val & 0x0F))
+                    event_name = _CMD16_NOTIFY_EVENTS.get(sub)
+                    if event_name is not None:
+                        if (
+                            sub in _CMD16_RECEIVER_BOOL_FIELDS
+                            or sub in _CMD16_GLOBAL_BOOL_FIELDS
+                        ):
+                            self._notify_change(event_name, {"on": bool(val)})
+                        elif (
+                            sub in _CMD16_RECEIVER_VALUE_FIELDS
+                            or sub in _CMD16_GLOBAL_VALUE_FIELDS
+                        ):
+                            decoded = ((val >> 4) & 0x0F) * 10 + (val & 0x0F)
+                            self._notify_change(event_name, {"value": decoded})
 
             elif cmd == 0x27:
                 scope = rs.scope_controls
@@ -676,7 +721,10 @@ class CivRuntime:
                 if sub == 0x03 and frame.data:
                     pass
                 elif sub == 0x05:
-                    for prefix, (field, bcd_bytes) in _CMD1A_CTL_MEM_LEVEL_FIELDS.items():
+                    for prefix, (
+                        field,
+                        bcd_bytes,
+                    ) in _CMD1A_CTL_MEM_LEVEL_FIELDS.items():
                         if frame.data.startswith(prefix):
                             setattr(
                                 rs,
@@ -710,6 +758,7 @@ class CivRuntime:
             elif cmd == 0x21:
                 if frame.sub == 0x00 and len(frame.data) >= 3:
                     from .commands import parse_rit_frequency_response
+
                     rs.rit_freq = parse_rit_frequency_response(frame.data)
                 elif frame.sub == 0x01 and frame.data:
                     rs.rit_on = bool(frame.data[0])
@@ -748,14 +797,12 @@ class CivRuntime:
                             logger.debug(
                                 "civ-rx: dual watch → %s", "ON" if new_dw else "OFF"
                             )
-                            self._notify_change(
-                                "dual_watch_changed", {"on": new_dw}
-                            )
+                            self._notify_change("dual_watch_changed", {"on": new_dw})
 
         except Exception:
             logger.debug("civ-rx: state update failed", exc_info=True)
 
-    def _notify_change(self, event_name: str, data: dict) -> None:
+    def _notify_change(self, event_name: str, data: dict[str, Any]) -> None:
         """Notify server of state change (best-effort)."""
         cb = getattr(self._host, "_on_state_change", None)
         if cb is not None:
@@ -816,7 +863,9 @@ class CivRuntime:
 
         while time.monotonic() < deadline:
             ctrl = getattr(self._host, "_ctrl_transport", None)
-            ctrl_alive = bool(ctrl and getattr(ctrl, "_udp_transport", None) is not None)
+            ctrl_alive = bool(
+                ctrl and getattr(ctrl, "_udp_transport", None) is not None
+            )
             if not ctrl_alive:
                 raise ConnectionError("Not connected to radio")
 
@@ -955,7 +1004,9 @@ class CivRuntime:
             ack_sink_token: "int | None" = None
 
             if not expects_response:
-                token_or_future = self._host._civ_request_tracker.register_ack(wait=False)
+                token_or_future = self._host._civ_request_tracker.register_ack(
+                    wait=False
+                )
                 if isinstance(token_or_future, int):
                     ack_sink_token = token_or_future
 
@@ -988,7 +1039,9 @@ class CivRuntime:
             if expects_response:
                 pending = self._host._civ_request_tracker.register_response(request_key)
             else:
-                pending_or_token = self._host._civ_request_tracker.register_ack(wait=True)
+                pending_or_token = self._host._civ_request_tracker.register_ack(
+                    wait=True
+                )
                 if isinstance(pending_or_token, int):
                     raise RuntimeError("ACK waiter registration returned sink token")
                 pending = pending_or_token
@@ -1019,4 +1072,3 @@ class CivRuntime:
         finally:
             if pending is not None:
                 self._host._civ_request_tracker.unregister(pending)
-

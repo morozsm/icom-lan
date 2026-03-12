@@ -39,12 +39,20 @@ _SUB_DIAL_LOCK = 0x50
 
 def _simple_get(sub: int) -> bytes:
     """Expected bytes for a simple (non-cmd29) get frame."""
-    return _PREAMBLE + bytes([IC_7610_ADDR, CONTROLLER_ADDR, _CMD_PREAMP, sub]) + _TERMINATOR
+    return (
+        _PREAMBLE
+        + bytes([IC_7610_ADDR, CONTROLLER_ADDR, _CMD_PREAMP, sub])
+        + _TERMINATOR
+    )
 
 
 def _simple_set(sub: int, value: int) -> bytes:
     """Expected bytes for a simple (non-cmd29) set frame."""
-    return _PREAMBLE + bytes([IC_7610_ADDR, CONTROLLER_ADDR, _CMD_PREAMP, sub, value]) + _TERMINATOR
+    return (
+        _PREAMBLE
+        + bytes([IC_7610_ADDR, CONTROLLER_ADDR, _CMD_PREAMP, sub, value])
+        + _TERMINATOR
+    )
 
 
 def _cmd29_get(sub: int, receiver: int = RECEIVER_MAIN) -> bytes:
@@ -60,7 +68,17 @@ def _cmd29_set(sub: int, value: int, receiver: int = RECEIVER_MAIN) -> bytes:
     """Expected bytes for a cmd29-wrapped set frame."""
     return (
         _PREAMBLE
-        + bytes([IC_7610_ADDR, CONTROLLER_ADDR, _CMD_CMD29, receiver, _CMD_PREAMP, sub, value])
+        + bytes(
+            [
+                IC_7610_ADDR,
+                CONTROLLER_ADDR,
+                _CMD_CMD29,
+                receiver,
+                _CMD_PREAMP,
+                sub,
+                value,
+            ]
+        )
         + _TERMINATOR
     )
 
@@ -113,12 +131,16 @@ class TestAGCStatus:
 
     def test_parse_agc_response_fast(self) -> None:
         frame = _response_frame(_SUB_AGC, b"\x01")
-        value = parse_level_response(frame, command=_CMD_PREAMP, sub=_SUB_AGC, bcd_bytes=1)
+        value = parse_level_response(
+            frame, command=_CMD_PREAMP, sub=_SUB_AGC, bcd_bytes=1
+        )
         assert AgcMode(value) == AgcMode.FAST
 
     def test_parse_agc_response_slow(self) -> None:
         frame = _response_frame(_SUB_AGC, b"\x03")
-        value = parse_level_response(frame, command=_CMD_PREAMP, sub=_SUB_AGC, bcd_bytes=1)
+        value = parse_level_response(
+            frame, command=_CMD_PREAMP, sub=_SUB_AGC, bcd_bytes=1
+        )
         assert AgcMode(value) == AgcMode.SLOW
 
     def test_get_agc_custom_addresses(self) -> None:
@@ -156,12 +178,14 @@ class TestAudioPeakFilter:
         )
 
     def test_set_audio_peak_filter_wide_sub(self) -> None:
-        assert commands.set_audio_peak_filter(AudioPeakFilter.WIDE, receiver=RECEIVER_SUB) == _cmd29_set(
-            _SUB_AUDIO_PEAK_FILTER, 0x01, RECEIVER_SUB
-        )
+        assert commands.set_audio_peak_filter(
+            AudioPeakFilter.WIDE, receiver=RECEIVER_SUB
+        ) == _cmd29_set(_SUB_AUDIO_PEAK_FILTER, 0x01, RECEIVER_SUB)
 
     def test_set_audio_peak_filter_accepts_int(self) -> None:
-        assert commands.set_audio_peak_filter(0) == commands.set_audio_peak_filter(AudioPeakFilter.OFF)
+        assert commands.set_audio_peak_filter(0) == commands.set_audio_peak_filter(
+            AudioPeakFilter.OFF
+        )
 
     def test_set_audio_peak_filter_rejects_invalid(self) -> None:
         with pytest.raises(ValueError):
@@ -169,16 +193,22 @@ class TestAudioPeakFilter:
 
     def test_parse_audio_peak_filter_off(self) -> None:
         frame = _response_frame(_SUB_AUDIO_PEAK_FILTER, b"\x00")
-        value = parse_level_response(frame, command=_CMD_PREAMP, sub=_SUB_AUDIO_PEAK_FILTER, bcd_bytes=1)
+        value = parse_level_response(
+            frame, command=_CMD_PREAMP, sub=_SUB_AUDIO_PEAK_FILTER, bcd_bytes=1
+        )
         assert AudioPeakFilter(value) == AudioPeakFilter.OFF
 
     def test_parse_audio_peak_filter_mid(self) -> None:
         frame = _response_frame(_SUB_AUDIO_PEAK_FILTER, b"\x02")
-        value = parse_level_response(frame, command=_CMD_PREAMP, sub=_SUB_AUDIO_PEAK_FILTER, bcd_bytes=1)
+        value = parse_level_response(
+            frame, command=_CMD_PREAMP, sub=_SUB_AUDIO_PEAK_FILTER, bcd_bytes=1
+        )
         assert AudioPeakFilter(value) == AudioPeakFilter.MID
 
     def test_get_audio_peak_filter_default_is_main(self) -> None:
-        assert commands.get_audio_peak_filter() == commands.get_audio_peak_filter(receiver=RECEIVER_MAIN)
+        assert commands.get_audio_peak_filter() == commands.get_audio_peak_filter(
+            receiver=RECEIVER_MAIN
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -200,10 +230,14 @@ class TestAutoNotch:
         )
 
     def test_set_auto_notch_on_main(self) -> None:
-        assert commands.set_auto_notch(True) == _cmd29_set(_SUB_AUTO_NOTCH, 0x01, RECEIVER_MAIN)
+        assert commands.set_auto_notch(True) == _cmd29_set(
+            _SUB_AUTO_NOTCH, 0x01, RECEIVER_MAIN
+        )
 
     def test_set_auto_notch_off_main(self) -> None:
-        assert commands.set_auto_notch(False) == _cmd29_set(_SUB_AUTO_NOTCH, 0x00, RECEIVER_MAIN)
+        assert commands.set_auto_notch(False) == _cmd29_set(
+            _SUB_AUTO_NOTCH, 0x00, RECEIVER_MAIN
+        )
 
     def test_set_auto_notch_on_sub(self) -> None:
         assert commands.set_auto_notch(True, receiver=RECEIVER_SUB) == _cmd29_set(
@@ -217,14 +251,21 @@ class TestAutoNotch:
 
     def test_parse_auto_notch_on(self) -> None:
         frame = _response_frame(_SUB_AUTO_NOTCH, b"\x01")
-        assert parse_bool_response(frame, command=_CMD_PREAMP, sub=_SUB_AUTO_NOTCH) is True
+        assert (
+            parse_bool_response(frame, command=_CMD_PREAMP, sub=_SUB_AUTO_NOTCH) is True
+        )
 
     def test_parse_auto_notch_off(self) -> None:
         frame = _response_frame(_SUB_AUTO_NOTCH, b"\x00")
-        assert parse_bool_response(frame, command=_CMD_PREAMP, sub=_SUB_AUTO_NOTCH) is False
+        assert (
+            parse_bool_response(frame, command=_CMD_PREAMP, sub=_SUB_AUTO_NOTCH)
+            is False
+        )
 
     def test_get_auto_notch_default_is_main(self) -> None:
-        assert commands.get_auto_notch() == commands.get_auto_notch(receiver=RECEIVER_MAIN)
+        assert commands.get_auto_notch() == commands.get_auto_notch(
+            receiver=RECEIVER_MAIN
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -246,11 +287,16 @@ class TestCompressor:
 
     def test_parse_compressor_on(self) -> None:
         frame = _response_frame(_SUB_COMPRESSOR, b"\x01")
-        assert parse_bool_response(frame, command=_CMD_PREAMP, sub=_SUB_COMPRESSOR) is True
+        assert (
+            parse_bool_response(frame, command=_CMD_PREAMP, sub=_SUB_COMPRESSOR) is True
+        )
 
     def test_parse_compressor_off(self) -> None:
         frame = _response_frame(_SUB_COMPRESSOR, b"\x00")
-        assert parse_bool_response(frame, command=_CMD_PREAMP, sub=_SUB_COMPRESSOR) is False
+        assert (
+            parse_bool_response(frame, command=_CMD_PREAMP, sub=_SUB_COMPRESSOR)
+            is False
+        )
 
     def test_get_compressor_custom_addresses(self) -> None:
         frame = commands.get_compressor(to_addr=0xA4, from_addr=0xE1)
@@ -281,7 +327,9 @@ class TestMonitor:
 
     def test_parse_monitor_off(self) -> None:
         frame = _response_frame(_SUB_MONITOR, b"\x00")
-        assert parse_bool_response(frame, command=_CMD_PREAMP, sub=_SUB_MONITOR) is False
+        assert (
+            parse_bool_response(frame, command=_CMD_PREAMP, sub=_SUB_MONITOR) is False
+        )
 
     def test_monitor_sub_byte_is_distinct_from_compressor(self) -> None:
         assert commands.get_monitor() != commands.get_compressor()
@@ -330,13 +378,19 @@ class TestBreakIn:
         assert commands.get_break_in() == _simple_get(_SUB_BREAK_IN)
 
     def test_set_break_in_off_builds_correct_frame(self) -> None:
-        assert commands.set_break_in(BreakInMode.OFF) == _simple_set(_SUB_BREAK_IN, 0x00)
+        assert commands.set_break_in(BreakInMode.OFF) == _simple_set(
+            _SUB_BREAK_IN, 0x00
+        )
 
     def test_set_break_in_semi_builds_correct_frame(self) -> None:
-        assert commands.set_break_in(BreakInMode.SEMI) == _simple_set(_SUB_BREAK_IN, 0x01)
+        assert commands.set_break_in(BreakInMode.SEMI) == _simple_set(
+            _SUB_BREAK_IN, 0x01
+        )
 
     def test_set_break_in_full_builds_correct_frame(self) -> None:
-        assert commands.set_break_in(BreakInMode.FULL) == _simple_set(_SUB_BREAK_IN, 0x02)
+        assert commands.set_break_in(BreakInMode.FULL) == _simple_set(
+            _SUB_BREAK_IN, 0x02
+        )
 
     def test_set_break_in_accepts_int(self) -> None:
         assert commands.set_break_in(0) == commands.set_break_in(BreakInMode.OFF)
@@ -351,17 +405,23 @@ class TestBreakIn:
 
     def test_parse_break_in_off(self) -> None:
         frame = _response_frame(_SUB_BREAK_IN, b"\x00")
-        value = parse_level_response(frame, command=_CMD_PREAMP, sub=_SUB_BREAK_IN, bcd_bytes=1)
+        value = parse_level_response(
+            frame, command=_CMD_PREAMP, sub=_SUB_BREAK_IN, bcd_bytes=1
+        )
         assert BreakInMode(value) == BreakInMode.OFF
 
     def test_parse_break_in_semi(self) -> None:
         frame = _response_frame(_SUB_BREAK_IN, b"\x01")
-        value = parse_level_response(frame, command=_CMD_PREAMP, sub=_SUB_BREAK_IN, bcd_bytes=1)
+        value = parse_level_response(
+            frame, command=_CMD_PREAMP, sub=_SUB_BREAK_IN, bcd_bytes=1
+        )
         assert BreakInMode(value) == BreakInMode.SEMI
 
     def test_parse_break_in_full(self) -> None:
         frame = _response_frame(_SUB_BREAK_IN, b"\x02")
-        value = parse_level_response(frame, command=_CMD_PREAMP, sub=_SUB_BREAK_IN, bcd_bytes=1)
+        value = parse_level_response(
+            frame, command=_CMD_PREAMP, sub=_SUB_BREAK_IN, bcd_bytes=1
+        )
         assert BreakInMode(value) == BreakInMode.FULL
 
 
@@ -384,10 +444,14 @@ class TestManualNotch:
         )
 
     def test_set_manual_notch_on_main(self) -> None:
-        assert commands.set_manual_notch(True) == _cmd29_set(_SUB_MANUAL_NOTCH, 0x01, RECEIVER_MAIN)
+        assert commands.set_manual_notch(True) == _cmd29_set(
+            _SUB_MANUAL_NOTCH, 0x01, RECEIVER_MAIN
+        )
 
     def test_set_manual_notch_off_main(self) -> None:
-        assert commands.set_manual_notch(False) == _cmd29_set(_SUB_MANUAL_NOTCH, 0x00, RECEIVER_MAIN)
+        assert commands.set_manual_notch(False) == _cmd29_set(
+            _SUB_MANUAL_NOTCH, 0x00, RECEIVER_MAIN
+        )
 
     def test_set_manual_notch_on_sub(self) -> None:
         assert commands.set_manual_notch(True, receiver=RECEIVER_SUB) == _cmd29_set(
@@ -401,14 +465,22 @@ class TestManualNotch:
 
     def test_parse_manual_notch_on(self) -> None:
         frame = _response_frame(_SUB_MANUAL_NOTCH, b"\x01")
-        assert parse_bool_response(frame, command=_CMD_PREAMP, sub=_SUB_MANUAL_NOTCH) is True
+        assert (
+            parse_bool_response(frame, command=_CMD_PREAMP, sub=_SUB_MANUAL_NOTCH)
+            is True
+        )
 
     def test_parse_manual_notch_off(self) -> None:
         frame = _response_frame(_SUB_MANUAL_NOTCH, b"\x00")
-        assert parse_bool_response(frame, command=_CMD_PREAMP, sub=_SUB_MANUAL_NOTCH) is False
+        assert (
+            parse_bool_response(frame, command=_CMD_PREAMP, sub=_SUB_MANUAL_NOTCH)
+            is False
+        )
 
     def test_get_manual_notch_default_is_main(self) -> None:
-        assert commands.get_manual_notch() == commands.get_manual_notch(receiver=RECEIVER_MAIN)
+        assert commands.get_manual_notch() == commands.get_manual_notch(
+            receiver=RECEIVER_MAIN
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -445,20 +517,28 @@ class TestTwinPeakFilter:
         )
 
     def test_set_twin_peak_filter_off_sub(self) -> None:
-        assert commands.set_twin_peak_filter(False, receiver=RECEIVER_SUB) == _cmd29_set(
-            _SUB_TWIN_PEAK_FILTER, 0x00, RECEIVER_SUB
-        )
+        assert commands.set_twin_peak_filter(
+            False, receiver=RECEIVER_SUB
+        ) == _cmd29_set(_SUB_TWIN_PEAK_FILTER, 0x00, RECEIVER_SUB)
 
     def test_parse_twin_peak_filter_on(self) -> None:
         frame = _response_frame(_SUB_TWIN_PEAK_FILTER, b"\x01")
-        assert parse_bool_response(frame, command=_CMD_PREAMP, sub=_SUB_TWIN_PEAK_FILTER) is True
+        assert (
+            parse_bool_response(frame, command=_CMD_PREAMP, sub=_SUB_TWIN_PEAK_FILTER)
+            is True
+        )
 
     def test_parse_twin_peak_filter_off(self) -> None:
         frame = _response_frame(_SUB_TWIN_PEAK_FILTER, b"\x00")
-        assert parse_bool_response(frame, command=_CMD_PREAMP, sub=_SUB_TWIN_PEAK_FILTER) is False
+        assert (
+            parse_bool_response(frame, command=_CMD_PREAMP, sub=_SUB_TWIN_PEAK_FILTER)
+            is False
+        )
 
     def test_get_twin_peak_filter_default_is_main(self) -> None:
-        assert commands.get_twin_peak_filter() == commands.get_twin_peak_filter(receiver=RECEIVER_MAIN)
+        assert commands.get_twin_peak_filter() == commands.get_twin_peak_filter(
+            receiver=RECEIVER_MAIN
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -480,11 +560,15 @@ class TestDialLock:
 
     def test_parse_dial_lock_on(self) -> None:
         frame = _response_frame(_SUB_DIAL_LOCK, b"\x01")
-        assert parse_bool_response(frame, command=_CMD_PREAMP, sub=_SUB_DIAL_LOCK) is True
+        assert (
+            parse_bool_response(frame, command=_CMD_PREAMP, sub=_SUB_DIAL_LOCK) is True
+        )
 
     def test_parse_dial_lock_off(self) -> None:
         frame = _response_frame(_SUB_DIAL_LOCK, b"\x00")
-        assert parse_bool_response(frame, command=_CMD_PREAMP, sub=_SUB_DIAL_LOCK) is False
+        assert (
+            parse_bool_response(frame, command=_CMD_PREAMP, sub=_SUB_DIAL_LOCK) is False
+        )
 
     def test_get_dial_lock_custom_addresses(self) -> None:
         frame = commands.get_dial_lock(to_addr=0xA4, from_addr=0xE1)

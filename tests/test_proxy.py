@@ -101,9 +101,7 @@ class TestRelayProtocol:
 @pytest.mark.asyncio
 async def test_run_proxy_starts_and_stops() -> None:
     """run_proxy can be started and cancelled."""
-    task = asyncio.create_task(
-        run_proxy("192.168.1.100", "127.0.0.1", 59001)
-    )
+    task = asyncio.create_task(run_proxy("192.168.1.100", "127.0.0.1", 59001))
     await asyncio.sleep(0.1)
     assert not task.done()
     task.cancel()

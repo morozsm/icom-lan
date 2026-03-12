@@ -56,8 +56,18 @@ def _capable_radio() -> SimpleNamespace:
     """Radio mock that satisfies PowerControlCapable, LevelsCapable, ScopeCapable for enqueue tests."""
     return SimpleNamespace(
         capabilities={
-            "rf_gain", "af_level", "squelch", "tx", "dual_rx", "scope",
-            "nb", "nr", "digisel", "ip_plus", "attenuator", "preamp",
+            "rf_gain",
+            "af_level",
+            "squelch",
+            "tx",
+            "dual_rx",
+            "scope",
+            "nb",
+            "nr",
+            "digisel",
+            "ip_plus",
+            "attenuator",
+            "preamp",
         },
         profile=resolve_radio_profile(model="IC-7610"),
         set_power=AsyncMock(),
@@ -367,7 +377,7 @@ async def test_send_state_snapshot_uses_radio_cache_when_server_cache_missing() 
             mode_ts=time.monotonic(),
             filter_width=None,
             ptt=False,
-        )
+        ),
     )
     handler = _control_handler(
         ws=ws,
@@ -400,14 +410,20 @@ async def test_send_state_snapshot_cache_errors_are_ignored() -> None:
 
 async def test_handle_command_response_paths() -> None:
     ws = SimpleNamespace(send_text=AsyncMock())
-    handler = _control_handler(ws=ws, radio=SimpleNamespace(connected=True), server=None)
+    handler = _control_handler(
+        ws=ws, radio=SimpleNamespace(connected=True), server=None
+    )
 
     await handler._handle_command({"id": "a", "name": "bad", "params": {}})
     msg = decode_json(ws.send_text.await_args_list[-1].args[0])
     assert msg["ok"] is False and msg["error"] == "unknown_command"
 
-    handler = _control_handler(ws=ws, radio=None, server=SimpleNamespace(command_queue=_QueueRecorder()))
-    await handler._handle_command({"id": "b", "name": "set_freq", "params": {"freq": 1}})
+    handler = _control_handler(
+        ws=ws, radio=None, server=SimpleNamespace(command_queue=_QueueRecorder())
+    )
+    await handler._handle_command(
+        {"id": "b", "name": "set_freq", "params": {"freq": 1}}
+    )
     msg = decode_json(ws.send_text.await_args_list[-1].args[0])
     assert msg["ok"] is False and msg["error"] == "no_radio"
 
@@ -417,7 +433,9 @@ async def test_handle_command_response_paths() -> None:
         radio=SimpleNamespace(connected=True),
         server=SimpleNamespace(command_queue=queue),
     )
-    await handler._handle_command({"id": "c", "name": "set_freq", "params": {"freq": 123}})
+    await handler._handle_command(
+        {"id": "c", "name": "set_freq", "params": {"freq": 123}}
+    )
     msg = decode_json(ws.send_text.await_args_list[-1].args[0])
     assert msg["ok"] is True and msg["result"]["freq"] == 123
 
@@ -548,7 +566,9 @@ async def test_scope_run_and_control_handling() -> None:
     assert handler._running is False
 
 
-async def test_scope_sender_timeout_and_error_branches(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_scope_sender_timeout_and_error_branches(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     ws = SimpleNamespace(send_binary=AsyncMock())
     handler = ScopeHandler(ws, None)
     calls = {"count": 0}
@@ -745,10 +765,25 @@ async def test_audio_handler_reader_control_tx_and_sender_paths(
         recv=AsyncMock(
             side_effect=[
                 (WS_OP_TEXT, b"invalid"),
-                (WS_OP_TEXT, encode_json({"type": "audio_start", "direction": "rx"}).encode("utf-8")),
-                (WS_OP_TEXT, encode_json({"type": "audio_start", "direction": "tx"}).encode("utf-8")),
+                (
+                    WS_OP_TEXT,
+                    encode_json({"type": "audio_start", "direction": "rx"}).encode(
+                        "utf-8"
+                    ),
+                ),
+                (
+                    WS_OP_TEXT,
+                    encode_json({"type": "audio_start", "direction": "tx"}).encode(
+                        "utf-8"
+                    ),
+                ),
                 (WS_OP_BINARY, b"\x00" * AUDIO_HEADER_SIZE + b"\x11\x22"),
-                (WS_OP_TEXT, encode_json({"type": "audio_stop", "direction": "tx"}).encode("utf-8")),
+                (
+                    WS_OP_TEXT,
+                    encode_json({"type": "audio_stop", "direction": "tx"}).encode(
+                        "utf-8"
+                    ),
+                ),
                 EOFError(),
             ]
         ),
@@ -827,12 +862,16 @@ async def test_audio_handler_control_and_tx_guard_paths() -> None:
 
 
 async def test_audio_handler_run_calls_stop_rx_on_exit() -> None:
-    ws = SimpleNamespace(recv=AsyncMock(side_effect=[EOFError()]), send_binary=AsyncMock())
+    ws = SimpleNamespace(
+        recv=AsyncMock(side_effect=[EOFError()]), send_binary=AsyncMock()
+    )
     broadcaster = SimpleNamespace(
         subscribe=AsyncMock(return_value=asyncio.Queue()),
         unsubscribe=AsyncMock(),
     )
-    handler = AudioHandler(ws, SimpleNamespace(push_audio_tx_opus=AsyncMock()), broadcaster)
+    handler = AudioHandler(
+        ws, SimpleNamespace(push_audio_tx_opus=AsyncMock()), broadcaster
+    )
     handler._rx_active = True
     handler._frame_queue = asyncio.Queue()
     await handler.run()
@@ -923,7 +962,12 @@ async def test_event_sender_loop_forwards_notifications_without_subscription() -
 
     task = asyncio.create_task(handler._event_sender_loop())
     try:
-        notification = {"type": "notification", "level": "success", "message": "Radio connected", "category": "connection"}
+        notification = {
+            "type": "notification",
+            "level": "success",
+            "message": "Radio connected",
+            "category": "connection",
+        }
         await handler._event_queue.put(notification)
         await asyncio.sleep(0)
         assert ws.send_text.await_count == 1

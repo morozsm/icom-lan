@@ -57,7 +57,15 @@ def _bcd_byte_decode(b: int) -> int:
 class _ReceiverState:
     """Assembly state for one receiver channel (main or sub)."""
 
-    __slots__ = ("_mode", "_start_freq", "_end_freq", "_oor", "_chunks", "_timeout", "_start_time")
+    __slots__ = (
+        "_mode",
+        "_start_freq",
+        "_end_freq",
+        "_oor",
+        "_chunks",
+        "_timeout",
+        "_start_time",
+    )
 
     def __init__(self, timeout: float = _DEFAULT_ASSEMBLY_TIMEOUT) -> None:
         self._mode: int = 0

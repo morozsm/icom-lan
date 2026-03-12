@@ -57,7 +57,17 @@ def _cmd29_preamp_set(sub: int, value: int, receiver: int = RECEIVER_MAIN) -> by
     """Expected bytes for a cmd29-wrapped 0x16 set."""
     return (
         _PREAMBLE
-        + bytes([IC_7610_ADDR, CONTROLLER_ADDR, _CMD_CMD29, receiver, _CMD_PREAMP, sub, value])
+        + bytes(
+            [
+                IC_7610_ADDR,
+                CONTROLLER_ADDR,
+                _CMD_CMD29,
+                receiver,
+                _CMD_PREAMP,
+                sub,
+                value,
+            ]
+        )
         + _TERMINATOR
     )
 
@@ -82,6 +92,7 @@ def _cmd29_tone_set(sub: int, bcd: bytes, receiver: int = RECEIVER_MAIN) -> byte
 
 
 # CivFrame helpers for response parsing tests (radio→controller direction).
+
 
 def _preamp_response(sub: int, data: bytes, receiver: int = RECEIVER_MAIN) -> CivFrame:
     """Simulate a cmd29 response from the radio for 0x16 commands."""
@@ -125,8 +136,8 @@ def _tsql_freq_response(bcd: bytes, receiver: int | None = None) -> CivFrame:
 
 # freq_hz → expected 3-byte BCD encoding
 _BCD_TABLE: list[tuple[float, bytes]] = [
-    (67.0,  b"\x00\x67\x00"),
-    (88.5,  b"\x00\x88\x05"),
+    (67.0, b"\x00\x67\x00"),
+    (88.5, b"\x00\x88\x05"),
     (110.9, b"\x01\x10\x09"),
     (136.5, b"\x01\x36\x05"),
     (167.9, b"\x01\x67\x09"),
@@ -153,7 +164,9 @@ class TestRepeaterTone:
         )
 
     def test_get_default_is_main(self) -> None:
-        assert commands.get_repeater_tone() == commands.get_repeater_tone(receiver=RECEIVER_MAIN)
+        assert commands.get_repeater_tone() == commands.get_repeater_tone(
+            receiver=RECEIVER_MAIN
+        )
 
     def test_set_on_main(self) -> None:
         assert commands.set_repeater_tone(True) == _cmd29_preamp_set(
@@ -166,22 +179,28 @@ class TestRepeaterTone:
         )
 
     def test_set_on_sub(self) -> None:
-        assert commands.set_repeater_tone(True, receiver=RECEIVER_SUB) == _cmd29_preamp_set(
-            _SUB_REPEATER_TONE, 0x01, RECEIVER_SUB
-        )
+        assert commands.set_repeater_tone(
+            True, receiver=RECEIVER_SUB
+        ) == _cmd29_preamp_set(_SUB_REPEATER_TONE, 0x01, RECEIVER_SUB)
 
     def test_set_off_sub(self) -> None:
-        assert commands.set_repeater_tone(False, receiver=RECEIVER_SUB) == _cmd29_preamp_set(
-            _SUB_REPEATER_TONE, 0x00, RECEIVER_SUB
-        )
+        assert commands.set_repeater_tone(
+            False, receiver=RECEIVER_SUB
+        ) == _cmd29_preamp_set(_SUB_REPEATER_TONE, 0x00, RECEIVER_SUB)
 
     def test_parse_on(self) -> None:
         frame = _preamp_response(_SUB_REPEATER_TONE, b"\x01")
-        assert parse_bool_response(frame, command=_CMD_PREAMP, sub=_SUB_REPEATER_TONE) is True
+        assert (
+            parse_bool_response(frame, command=_CMD_PREAMP, sub=_SUB_REPEATER_TONE)
+            is True
+        )
 
     def test_parse_off(self) -> None:
         frame = _preamp_response(_SUB_REPEATER_TONE, b"\x00")
-        assert parse_bool_response(frame, command=_CMD_PREAMP, sub=_SUB_REPEATER_TONE) is False
+        assert (
+            parse_bool_response(frame, command=_CMD_PREAMP, sub=_SUB_REPEATER_TONE)
+            is False
+        )
 
     def test_custom_addresses(self) -> None:
         frame = commands.get_repeater_tone(to_addr=0xA4, from_addr=0xE1)
@@ -212,7 +231,9 @@ class TestRepeaterTSQL:
         )
 
     def test_get_default_is_main(self) -> None:
-        assert commands.get_repeater_tsql() == commands.get_repeater_tsql(receiver=RECEIVER_MAIN)
+        assert commands.get_repeater_tsql() == commands.get_repeater_tsql(
+            receiver=RECEIVER_MAIN
+        )
 
     def test_set_on_main(self) -> None:
         assert commands.set_repeater_tsql(True) == _cmd29_preamp_set(
@@ -225,22 +246,28 @@ class TestRepeaterTSQL:
         )
 
     def test_set_on_sub(self) -> None:
-        assert commands.set_repeater_tsql(True, receiver=RECEIVER_SUB) == _cmd29_preamp_set(
-            _SUB_REPEATER_TSQL, 0x01, RECEIVER_SUB
-        )
+        assert commands.set_repeater_tsql(
+            True, receiver=RECEIVER_SUB
+        ) == _cmd29_preamp_set(_SUB_REPEATER_TSQL, 0x01, RECEIVER_SUB)
 
     def test_set_off_sub(self) -> None:
-        assert commands.set_repeater_tsql(False, receiver=RECEIVER_SUB) == _cmd29_preamp_set(
-            _SUB_REPEATER_TSQL, 0x00, RECEIVER_SUB
-        )
+        assert commands.set_repeater_tsql(
+            False, receiver=RECEIVER_SUB
+        ) == _cmd29_preamp_set(_SUB_REPEATER_TSQL, 0x00, RECEIVER_SUB)
 
     def test_parse_on(self) -> None:
         frame = _preamp_response(_SUB_REPEATER_TSQL, b"\x01")
-        assert parse_bool_response(frame, command=_CMD_PREAMP, sub=_SUB_REPEATER_TSQL) is True
+        assert (
+            parse_bool_response(frame, command=_CMD_PREAMP, sub=_SUB_REPEATER_TSQL)
+            is True
+        )
 
     def test_parse_off(self) -> None:
         frame = _preamp_response(_SUB_REPEATER_TSQL, b"\x00")
-        assert parse_bool_response(frame, command=_CMD_PREAMP, sub=_SUB_REPEATER_TSQL) is False
+        assert (
+            parse_bool_response(frame, command=_CMD_PREAMP, sub=_SUB_REPEATER_TSQL)
+            is False
+        )
 
     def test_custom_addresses(self) -> None:
         frame = commands.get_repeater_tsql(to_addr=0xA4, from_addr=0xE1)
@@ -296,7 +323,9 @@ class TestGetToneFreq:
         )
 
     def test_default_is_main(self) -> None:
-        assert commands.get_tone_freq() == commands.get_tone_freq(receiver=RECEIVER_MAIN)
+        assert commands.get_tone_freq() == commands.get_tone_freq(
+            receiver=RECEIVER_MAIN
+        )
 
     def test_uses_cmd29_prefix(self) -> None:
         frame = commands.get_tone_freq()
@@ -425,7 +454,9 @@ class TestGetTSQLFreq:
         )
 
     def test_default_is_main(self) -> None:
-        assert commands.get_tsql_freq() == commands.get_tsql_freq(receiver=RECEIVER_MAIN)
+        assert commands.get_tsql_freq() == commands.get_tsql_freq(
+            receiver=RECEIVER_MAIN
+        )
 
     def test_uses_cmd29_prefix(self) -> None:
         frame = commands.get_tsql_freq()
@@ -521,9 +552,9 @@ class TestCommandDistinctness:
         )
 
     def test_repeater_tone_main_vs_sub_get(self) -> None:
-        assert commands.get_repeater_tone(receiver=RECEIVER_MAIN) != commands.get_repeater_tone(
-            receiver=RECEIVER_SUB
-        )
+        assert commands.get_repeater_tone(
+            receiver=RECEIVER_MAIN
+        ) != commands.get_repeater_tone(receiver=RECEIVER_SUB)
 
     def test_tone_on_vs_off(self) -> None:
         assert commands.set_repeater_tone(True) != commands.set_repeater_tone(False)

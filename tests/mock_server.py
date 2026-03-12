@@ -494,7 +494,9 @@ class MockIcomRadio:
 
         # --- Frequency ---
         if cmd == _CMD_FREQ_GET:  # 0x03 get
-            return self._civ_frame(to, frm, _CMD_FREQ_GET, data=_bcd_encode_freq(self._frequency))
+            return self._civ_frame(
+                to, frm, _CMD_FREQ_GET, data=_bcd_encode_freq(self._frequency)
+            )
 
         if cmd == _CMD_FREQ_SET:  # 0x05 set
             if len(payload) == 5:
@@ -503,7 +505,9 @@ class MockIcomRadio:
 
         # --- Mode ---
         if cmd == _CMD_MODE_GET:  # 0x04 get
-            return self._civ_frame(to, frm, _CMD_MODE_GET, data=bytes([self._mode, self._filter]))
+            return self._civ_frame(
+                to, frm, _CMD_MODE_GET, data=bytes([self._mode, self._filter])
+            )
 
         if cmd == _CMD_MODE_SET:  # 0x06 set
             if payload:
@@ -523,8 +527,13 @@ class MockIcomRadio:
                     self._power = self._decode_level_bcd(rest)
                     return self._civ_ack(to, frm)
                 else:  # get
-                    return self._civ_frame(to, frm, _CMD_LEVEL, sub=_SUB_RF_POWER,
-                                           data=_level_bcd_encode(self._power))
+                    return self._civ_frame(
+                        to,
+                        frm,
+                        _CMD_LEVEL,
+                        sub=_SUB_RF_POWER,
+                        data=_level_bcd_encode(self._power),
+                    )
             return self._civ_nak(to, frm)
 
         # --- Meter (0x15) ---
@@ -533,14 +542,29 @@ class MockIcomRadio:
                 return self._civ_nak(to, frm)
             sub = payload[0]
             if sub == _SUB_S_METER:  # 0x02
-                return self._civ_frame(to, frm, _CMD_METER, sub=_SUB_S_METER,
-                                       data=_level_bcd_encode(self._s_meter))
+                return self._civ_frame(
+                    to,
+                    frm,
+                    _CMD_METER,
+                    sub=_SUB_S_METER,
+                    data=_level_bcd_encode(self._s_meter),
+                )
             if sub == _SUB_SWR_METER:  # 0x12
-                return self._civ_frame(to, frm, _CMD_METER, sub=_SUB_SWR_METER,
-                                       data=_level_bcd_encode(self._swr))
+                return self._civ_frame(
+                    to,
+                    frm,
+                    _CMD_METER,
+                    sub=_SUB_SWR_METER,
+                    data=_level_bcd_encode(self._swr),
+                )
             if sub == _SUB_ALC_METER:  # 0x13
-                return self._civ_frame(to, frm, _CMD_METER, sub=_SUB_ALC_METER,
-                                       data=_level_bcd_encode(self._alc))
+                return self._civ_frame(
+                    to,
+                    frm,
+                    _CMD_METER,
+                    sub=_SUB_ALC_METER,
+                    data=_level_bcd_encode(self._alc),
+                )
             return self._civ_nak(to, frm)
 
         # ACK / NAK from client — ignore
@@ -572,8 +596,9 @@ class MockIcomRadio:
                 return self._civ_ack(to, frm)
             # GET — wrap response in Command29
             bcd = _bcd_byte(self._attenuator)
-            return self._civ_frame(to, frm, _CMD_CMD29,
-                                   data=bytes([receiver, _CMD_ATT, bcd]))
+            return self._civ_frame(
+                to, frm, _CMD_CMD29, data=bytes([receiver, _CMD_ATT, bcd])
+            )
 
         # PREAMP / DIGI-SEL (0x16)
         if real_cmd == _CMD_PREAMP:
@@ -587,18 +612,28 @@ class MockIcomRadio:
                     self._preamp = rest[0]
                     return self._civ_ack(to, frm)
                 # GET — wrap in Command29
-                return self._civ_frame(to, frm, _CMD_CMD29,
-                                       data=bytes([receiver, _CMD_PREAMP,
-                                                   _SUB_PREAMP_STATUS, self._preamp]))
+                return self._civ_frame(
+                    to,
+                    frm,
+                    _CMD_CMD29,
+                    data=bytes(
+                        [receiver, _CMD_PREAMP, _SUB_PREAMP_STATUS, self._preamp]
+                    ),
+                )
 
             if sub == _SUB_DIGISEL_STATUS:  # 0x4E
                 if rest:  # SET
                     self._digisel = rest[0]
                     return self._civ_ack(to, frm)
                 # GET — wrap in Command29
-                return self._civ_frame(to, frm, _CMD_CMD29,
-                                       data=bytes([receiver, _CMD_PREAMP,
-                                                   _SUB_DIGISEL_STATUS, self._digisel]))
+                return self._civ_frame(
+                    to,
+                    frm,
+                    _CMD_CMD29,
+                    data=bytes(
+                        [receiver, _CMD_PREAMP, _SUB_DIGISEL_STATUS, self._digisel]
+                    ),
+                )
 
             return self._civ_nak(to, frm)
 

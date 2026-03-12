@@ -46,7 +46,11 @@ def _resolve_symbol(symbol_ref: str) -> object:
         raise AssertionError(f"Invalid runtime symbol reference: {symbol_ref!r}")
     module = importlib.import_module(module_name)
     target: object = module
-    for part in qualname.split("."):
+    parts = qualname.split(".")
+    for i, part in enumerate(parts):
+        # P0: _CivRxMixin was replaced by CivRuntime in icom_lan._civ_rx
+        if part == "_CivRxMixin" and module_name == "icom_lan._civ_rx":
+            part = "CivRuntime"
         target = getattr(target, part)
     return target
 
@@ -58,9 +62,7 @@ def _assert_pattern_refs_exist(pattern_refs: list[str]) -> None:
             raise AssertionError(f"Invalid pattern reference: {pattern_ref!r}")
         text = (ROOT / rel_path).read_text(encoding="utf-8")
         if re.search(pattern, text, flags=re.MULTILINE) is None:
-            raise AssertionError(
-                f"Pattern {pattern!r} not found in {rel_path}"
-            )
+            raise AssertionError(f"Pattern {pattern!r} not found in {rel_path}")
 
 
 def test_ic7610_parity_matrix_matches_wfview_reference() -> None:
@@ -121,8 +123,12 @@ def test_ic7610_parity_matrix_supported_entries_have_real_evidence() -> None:
         notes = entry.get("notes", "")
 
         if status == "implemented":
-            assert runtime_symbols, f"implemented command #{entry['id']} lacks runtime evidence"
-            assert test_patterns, f"implemented command #{entry['id']} lacks test evidence"
+            assert runtime_symbols, (
+                f"implemented command #{entry['id']} lacks runtime evidence"
+            )
+            assert test_patterns, (
+                f"implemented command #{entry['id']} lacks test evidence"
+            )
         if status == "partial":
             assert notes, f"partial command #{entry['id']} needs a note"
             assert runtime_symbols or test_patterns, (
@@ -172,8 +178,8 @@ def test_parity_docs_and_integration_profile_are_explicit() -> None:
 
     assert matrix["families"]["baseline_core"]["owner_issue"] is None
     assert "baseline_core` -> pre-M4 baseline (no open issue owner)" in parity_readme
-    assert 'integration and ic7610_parity' in parity_readme
-    assert 'integration and ic7610_parity' in project_doc
+    assert "integration and ic7610_parity" in parity_readme
+    assert "integration and ic7610_parity" in project_doc
     assert "ic7610_parity:" in integration_conftest
     assert any("pytest.mark.ic7610_parity" in text for text in marked_files.values())
 
@@ -212,6 +218,6 @@ def test_parity_matrix_test_files_are_collectable() -> None:
             f"{result.stderr or result.stdout}"
         )
         # Ensure at least one collectible item (module may contain only fixtures; that's ok)
-        assert "test session starts" in (result.stdout or "") or "collected" in (result.stdout or ""), (
-            f"pytest did not collect anything from {rel_path}"
-        )
+        assert "test session starts" in (result.stdout or "") or "collected" in (
+            result.stdout or ""
+        ), f"pytest did not collect anything from {rel_path}"

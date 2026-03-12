@@ -74,7 +74,9 @@ class TestSyncAudioNaming:
 
     def test_get_audio_stats_delegates(self) -> None:
         r = IcomRadio("192.168.1.100")
-        r._radio.get_audio_stats = MagicMock(return_value={"active": False, "state": "idle"})
+        r._radio.get_audio_stats = MagicMock(
+            return_value={"active": False, "state": "idle"}
+        )
 
         stats = r.get_audio_stats()
 

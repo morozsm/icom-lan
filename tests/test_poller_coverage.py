@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import time
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -28,6 +28,7 @@ from icom_lan.types import Mode
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def config() -> RigctldConfig:
@@ -49,13 +50,16 @@ def mock_radio() -> AsyncMock:
 
 
 @pytest.fixture
-def poller(mock_radio: AsyncMock, cache: StateCache, config: RigctldConfig) -> RadioPoller:
+def poller(
+    mock_radio: AsyncMock, cache: StateCache, config: RigctldConfig
+) -> RadioPoller:
     return RadioPoller(mock_radio, cache, config)
 
 
 # ---------------------------------------------------------------------------
 # hold_for() — lines 108-114
 # ---------------------------------------------------------------------------
+
 
 def test_hold_for_zero_does_nothing(poller: RadioPoller) -> None:
     """hold_for(0) must not set _hold_until in the future."""
@@ -90,6 +94,7 @@ def test_hold_for_second_call_only_extends_if_longer(poller: RadioPoller) -> Non
 # _run() skips cycle during hold window — lines 122-123
 # ---------------------------------------------------------------------------
 
+
 async def test_run_skips_poll_during_hold_window(
     poller: RadioPoller,
     mock_radio: AsyncMock,
@@ -120,12 +125,14 @@ async def test_run_resumes_polling_after_hold_expires(
 # _poll_once() early-exit when write_busy fires mid-poll — line 164
 # ---------------------------------------------------------------------------
 
+
 async def test_poll_once_exits_early_if_write_busy_set_after_freq(
     poller: RadioPoller,
     cache: StateCache,
     mock_radio: AsyncMock,
 ) -> None:
     """write_busy set between freq and mode polls should skip mode."""
+
     async def get_freq_and_set_busy() -> int:
         poller.write_busy = True
         return 14_074_000
@@ -139,6 +146,7 @@ async def test_poll_once_exits_early_if_write_busy_set_after_freq(
 # ---------------------------------------------------------------------------
 # _poll_once() get_data_mode timeout — line 178
 # ---------------------------------------------------------------------------
+
 
 async def test_poll_once_data_mode_timeout_does_not_crash(
     poller: RadioPoller,
@@ -158,6 +166,7 @@ async def test_poll_once_data_mode_connection_error_does_not_crash(
 ) -> None:
     """ConnectionError on get_data_mode should be logged and not crash."""
     from icom_lan.exceptions import ConnectionError as IcomConnectionError
+
     mock_radio.get_data_mode.side_effect = IcomConnectionError("lost")
     await poller._poll_once()
     mock_radio.get_mode_info.assert_awaited()
@@ -166,6 +175,7 @@ async def test_poll_once_data_mode_connection_error_does_not_crash(
 # ---------------------------------------------------------------------------
 # _maybe_log_stats() — lines 198-210
 # ---------------------------------------------------------------------------
+
 
 async def test_maybe_log_stats_emits_after_interval(
     poller: RadioPoller,

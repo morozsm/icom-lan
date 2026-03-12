@@ -14,10 +14,12 @@ Example::
 
 import asyncio
 import warnings
-from typing import Callable
+from typing import Any, Callable, Coroutine, TypeVar
+
+T = TypeVar("T")
 
 from .audio import AudioPacket
-from .radio import IcomRadio as _AsyncIcomRadio
+from .radio import IcomRadio as _AsyncIcomRadio  # noqa: TID251
 from .radio_protocol import MetersCapable, PowerControlCapable
 from .types import AudioCapabilities, AudioCodec, Mode
 
@@ -64,7 +66,7 @@ class IcomRadio:
             audio_sample_rate=audio_sample_rate,
         )
 
-    def _run(self, coro):  # type: ignore[no-untyped-def]
+    def _run(self, coro: Coroutine[Any, Any, T]) -> T:
         """Run a coroutine on the internal event loop."""
         return self._loop.run_until_complete(coro)
 
@@ -147,7 +149,9 @@ class IcomRadio:
     def get_power(self) -> int:
         """Get the RF power level (0-255)."""
         if not isinstance(self._radio, MetersCapable):
-            raise AttributeError("get_power requires a radio that implements MetersCapable")
+            raise AttributeError(
+                "get_power requires a radio that implements MetersCapable"
+            )
         return self._run(self._radio.get_power())
 
     def set_power(self, level: int) -> None:
@@ -173,7 +177,9 @@ class IcomRadio:
     def get_swr(self) -> int:
         """Read the SWR meter (0-255)."""
         if not isinstance(self._radio, MetersCapable):
-            raise AttributeError("get_swr requires a radio that implements MetersCapable")
+            raise AttributeError(
+                "get_swr requires a radio that implements MetersCapable"
+            )
         raw = self._run(self._radio.get_swr())
         return int(raw) if isinstance(raw, float) else raw
 

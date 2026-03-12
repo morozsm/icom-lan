@@ -45,25 +45,27 @@ def mock_radio():
     radio.start_audio_tx_pcm = AsyncMock()
     radio.stop_audio_tx_pcm = AsyncMock()
     radio.push_audio_tx_pcm = AsyncMock()
-    radio.get_audio_stats = MagicMock(return_value={
-        "active": True,
-        "state": "receiving",
-        "rx_packets_received": 10,
-        "rx_packets_delivered": 9,
-        "tx_packets_sent": 0,
-        "packets_lost": 1,
-        "packet_loss_percent": 10.0,
-        "jitter_ms": 2.5,
-        "jitter_max_ms": 20.0,
-        "underrun_count": 0,
-        "overrun_count": 0,
-        "estimated_latency_ms": 100.0,
-        "jitter_buffer_depth_packets": 5,
-        "jitter_buffer_pending_packets": 1,
-        "duplicates_dropped": 0,
-        "stale_packets_dropped": 0,
-        "out_of_order_packets": 0,
-    })
+    radio.get_audio_stats = MagicMock(
+        return_value={
+            "active": True,
+            "state": "receiving",
+            "rx_packets_received": 10,
+            "rx_packets_delivered": 9,
+            "tx_packets_sent": 0,
+            "packets_lost": 1,
+            "packet_loss_percent": 10.0,
+            "jitter_ms": 2.5,
+            "jitter_max_ms": 20.0,
+            "underrun_count": 0,
+            "overrun_count": 0,
+            "estimated_latency_ms": 100.0,
+            "jitter_buffer_depth_packets": 5,
+            "jitter_buffer_pending_packets": 1,
+            "duplicates_dropped": 0,
+            "stale_packets_dropped": 0,
+            "out_of_order_packets": 0,
+        }
+    )
     _add_audio_capable(radio)
     return radio
 
@@ -85,10 +87,12 @@ def _make_wav(path, *, sample_rate=48000, channels=1, n_samples=960):
 
 @pytest.mark.e2e
 class TestCliAudioRxE2E:
-
     @pytest.mark.asyncio
     async def test_rx_creates_wav_with_correct_header(
-        self, mock_radio, tmp_path, capsys,
+        self,
+        mock_radio,
+        tmp_path,
+        capsys,
     ) -> None:
         """RX should create a valid WAV file with correct sample rate/channels."""
         frame = b"\x01\x02" * 960  # 1920 bytes, one mono 48kHz 20ms frame
@@ -127,10 +131,13 @@ class TestCliAudioRxE2E:
 
     @pytest.mark.asyncio
     async def test_rx_handles_gaps_as_silence(
-        self, mock_radio, tmp_path, capsys,
+        self,
+        mock_radio,
+        tmp_path,
+        capsys,
     ) -> None:
         """Gap (None) frames should be written as silence."""
-        frame = b"\xFF\x7F" * 960
+        frame = b"\xff\x7f" * 960
 
         async def _start_rx(cb, **_kw) -> None:
             cb(frame)
@@ -185,6 +192,7 @@ class TestCliAudioRxE2E:
     @pytest.mark.asyncio
     async def test_rx_text_output(self, mock_radio, tmp_path, capsys) -> None:
         """Text mode should print a human-readable message."""
+
         async def _start_rx(cb, **_kw) -> None:
             cb(b"\x00" * 1920)
 
@@ -213,7 +221,6 @@ class TestCliAudioRxE2E:
 
 @pytest.mark.e2e
 class TestCliAudioTxE2E:
-
     @pytest.mark.asyncio
     async def test_tx_sends_frames(self, mock_radio, tmp_path, capsys) -> None:
         """TX should read WAV and push PCM frames to the radio."""
@@ -291,7 +298,10 @@ class TestCliAudioTxE2E:
 
     @pytest.mark.asyncio
     async def test_tx_sample_rate_mismatch(
-        self, mock_radio, tmp_path, capsys,
+        self,
+        mock_radio,
+        tmp_path,
+        capsys,
     ) -> None:
         """TX should fail if WAV sample rate differs from --sample-rate."""
         in_file = _make_wav(tmp_path / "tx_mismatch.wav", sample_rate=8000)
@@ -311,7 +321,10 @@ class TestCliAudioTxE2E:
 
     @pytest.mark.asyncio
     async def test_tx_channel_mismatch(
-        self, mock_radio, tmp_path, capsys,
+        self,
+        mock_radio,
+        tmp_path,
+        capsys,
     ) -> None:
         """TX should fail if WAV channels differ from --channels."""
         in_file = _make_wav(tmp_path / "tx_ch.wav", channels=2)
@@ -337,7 +350,6 @@ class TestCliAudioTxE2E:
 
 @pytest.mark.e2e
 class TestCliAudioLoopbackE2E:
-
     @pytest.mark.asyncio
     async def test_loopback_runs_and_exits(self, mock_radio, capsys) -> None:
         """Loopback should start RX+TX, feed frames, and exit cleanly."""
@@ -372,6 +384,7 @@ class TestCliAudioLoopbackE2E:
     @pytest.mark.asyncio
     async def test_loopback_text_output(self, mock_radio, capsys) -> None:
         """Text mode should print a human-readable summary."""
+
         async def _start_rx(cb, **_kw) -> None:
             cb(b"\x00" * 1920)
 
@@ -398,7 +411,6 @@ class TestCliAudioLoopbackE2E:
 
 @pytest.mark.e2e
 class TestCliAudioCapsE2E:
-
     @pytest.mark.asyncio
     async def test_caps_json_format(self, capsys) -> None:
         """JSON output should include codec list and defaults."""
@@ -490,10 +502,12 @@ class TestCliAudioCapsE2E:
 
 @pytest.mark.e2e
 class TestCliAudioErrorCasesE2E:
-
     @pytest.mark.asyncio
     async def test_rx_invalid_sample_rate(
-        self, mock_radio, tmp_path, capsys,
+        self,
+        mock_radio,
+        tmp_path,
+        capsys,
     ) -> None:
         """RX with unsupported sample rate should fail."""
         args = Namespace(
@@ -510,7 +524,10 @@ class TestCliAudioErrorCasesE2E:
 
     @pytest.mark.asyncio
     async def test_rx_invalid_channels(
-        self, mock_radio, tmp_path, capsys,
+        self,
+        mock_radio,
+        tmp_path,
+        capsys,
     ) -> None:
         """RX with invalid channel count should fail."""
         args = Namespace(
@@ -527,7 +544,10 @@ class TestCliAudioErrorCasesE2E:
 
     @pytest.mark.asyncio
     async def test_rx_invalid_seconds(
-        self, mock_radio, tmp_path, capsys,
+        self,
+        mock_radio,
+        tmp_path,
+        capsys,
     ) -> None:
         """RX with zero/negative seconds should fail."""
         args = Namespace(
@@ -545,7 +565,9 @@ class TestCliAudioErrorCasesE2E:
 
     @pytest.mark.asyncio
     async def test_loopback_invalid_sample_rate(
-        self, mock_radio, capsys,
+        self,
+        mock_radio,
+        capsys,
     ) -> None:
         """Loopback with unsupported sample rate should fail."""
         args = Namespace(

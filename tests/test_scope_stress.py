@@ -42,20 +42,25 @@ def _seq1_payload_single(
     pixels: bytes,
 ) -> bytes:
     """Build single-packet scope payload (seq=1, seq_max=1) with pixel data."""
-    return bytes([
-        _bcd_byte(1),
-        _bcd_byte(1),
-        mode,
-        *bcd_encode(start_hz),
-        *bcd_encode(end_hz),
-        0x00,  # oor
-        *pixels,
-    ])
+    return bytes(
+        [
+            _bcd_byte(1),
+            _bcd_byte(1),
+            mode,
+            *bcd_encode(start_hz),
+            *bcd_encode(end_hz),
+            0x00,  # oor
+            *pixels,
+        ]
+    )
 
 
 def _scope_civ_frame(receiver: int, payload_after_receiver: bytes) -> bytes:
     return build_civ_frame(
-        CONTROLLER_ADDR, IC_7610_ADDR, 0x27, sub=0x00,
+        CONTROLLER_ADDR,
+        IC_7610_ADDR,
+        0x27,
+        sub=0x00,
         data=bytes([receiver]) + payload_after_receiver,
     )
 
@@ -154,7 +159,7 @@ async def test_scope_stress_slow_consumer_queue_bounded(
     for pkt in _make_scope_udp_packets(num_frames):
         transport.queue_response(pkt)
 
-    radio._start_civ_rx_pump()
+    radio._civ_runtime.start_pump()
     received: list[ScopeFrame] = []
     max_qsize_seen = 0
 
@@ -189,7 +194,7 @@ async def test_scope_stress_clean_teardown_no_lingering_tasks(
     for pkt in _make_scope_udp_packets(150):
         transport.queue_response(pkt)
 
-    radio._start_civ_rx_pump()
+    radio._civ_runtime.start_pump()
     received: list[ScopeFrame] = []
     consumer_done: asyncio.Event = asyncio.Event()
 
@@ -207,9 +212,11 @@ async def test_scope_stress_clean_teardown_no_lingering_tasks(
     await asyncio.wait_for(consumer_task, timeout=2.0)
     assert consumer_done.is_set()
 
-    await radio._stop_civ_rx_pump()
+    await radio._civ_runtime.stop_pump()
     await asyncio.sleep(0.15)
 
     civ_rx_task = getattr(radio, "_civ_rx_task", None)
-    assert civ_rx_task is None or civ_rx_task.done(), "CIV RX pump task should be stopped"
+    assert civ_rx_task is None or civ_rx_task.done(), (
+        "CIV RX pump task should be stopped"
+    )
     assert consumer_task.done()

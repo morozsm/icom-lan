@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
 
 from icom_lan.radio_state import RadioState, ReceiverState
 
@@ -197,14 +196,35 @@ def test_to_dict_main_keys() -> None:
     rs = RadioState()
     main = rs.to_dict()["main"]
     expected_keys = {
-        "freq", "mode", "filter", "data_mode",
-        "att", "preamp", "nb", "nr", "digisel", "ipplus",
-        "s_meter_sql_open", "agc", "audio_peak_filter", "auto_notch",
-        "manual_notch", "twin_peak_filter", "filter_shape",
+        "freq",
+        "mode",
+        "filter",
+        "data_mode",
+        "att",
+        "preamp",
+        "nb",
+        "nr",
+        "digisel",
+        "ipplus",
+        "s_meter_sql_open",
+        "agc",
+        "audio_peak_filter",
+        "auto_notch",
+        "manual_notch",
+        "twin_peak_filter",
+        "filter_shape",
         "agc_time_constant",
-        "af_level", "rf_gain", "squelch", "s_meter",
-        "apf_type_level", "nr_level", "pbt_inner", "pbt_outer",
-        "nb_level", "digisel_shift", "af_mute",
+        "af_level",
+        "rf_gain",
+        "squelch",
+        "s_meter",
+        "apf_type_level",
+        "nr_level",
+        "pbt_inner",
+        "pbt_outer",
+        "nb_level",
+        "digisel_shift",
+        "af_mute",
     }
     assert set(main.keys()) == expected_keys
 
@@ -264,6 +284,7 @@ def test_to_dict_sub_independent() -> None:
 
 def test_to_dict_is_json_serialisable() -> None:
     import json
+
     rs = RadioState()
     rs.main.freq = 14_074_000
     rs.main.nb = True
@@ -275,6 +296,7 @@ def test_to_dict_is_json_serialisable() -> None:
 
 
 # --- Transceiver status family (#136) ---
+
 
 class TestTransceiverStatusState:
     """Test RadioState fields for transceiver_status family."""

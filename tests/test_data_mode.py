@@ -31,17 +31,23 @@ from icom_lan.types import CivFrame, Mode
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def set_cmd(long_cmd: str, *args: str) -> RigctldCommand:
-    return RigctldCommand(short_cmd="", long_cmd=long_cmd, args=tuple(args), is_set=True)
+    return RigctldCommand(
+        short_cmd="", long_cmd=long_cmd, args=tuple(args), is_set=True
+    )
 
 
 def get_cmd(long_cmd: str, *args: str) -> RigctldCommand:
-    return RigctldCommand(short_cmd="", long_cmd=long_cmd, args=tuple(args), is_set=False)
+    return RigctldCommand(
+        short_cmd="", long_cmd=long_cmd, args=tuple(args), is_set=False
+    )
 
 
 # ---------------------------------------------------------------------------
 # commands.py — get_data_mode / set_data_mode
 # ---------------------------------------------------------------------------
+
 
 class TestGetDataModeCommand:
     def test_frame_bytes(self) -> None:
@@ -85,12 +91,16 @@ class TestParseDataModeResponse:
         assert parse_data_mode_response(frame) is True
 
     def test_wrong_command_raises(self) -> None:
-        frame = CivFrame(to_addr=0xE0, from_addr=0x98, command=0x04, sub=None, data=b"\x01")
+        frame = CivFrame(
+            to_addr=0xE0, from_addr=0x98, command=0x04, sub=None, data=b"\x01"
+        )
         with pytest.raises(ValueError, match="Not a DATA mode response"):
             parse_data_mode_response(frame)
 
     def test_wrong_sub_raises(self) -> None:
-        frame = CivFrame(to_addr=0xE0, from_addr=0x98, command=0x1A, sub=0x05, data=b"\x01")
+        frame = CivFrame(
+            to_addr=0xE0, from_addr=0x98, command=0x1A, sub=0x05, data=b"\x01"
+        )
         with pytest.raises(ValueError, match="Not a DATA mode response"):
             parse_data_mode_response(frame)
 
@@ -103,6 +113,7 @@ class TestParseDataModeResponse:
 # ---------------------------------------------------------------------------
 # state_cache.py — data_mode field
 # ---------------------------------------------------------------------------
+
 
 class TestStateCacheDataMode:
     def test_default_false(self) -> None:
@@ -157,6 +168,7 @@ class TestStateCacheDataMode:
 # ---------------------------------------------------------------------------
 # handler.py — PKTUSB / PKTLSB set_mode
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def config() -> RigctldConfig:
@@ -291,6 +303,7 @@ class TestHandlerGetModeWithDataMode:
 # handler.py — get_mode: data_mode from cache when mode is fresh
 # ---------------------------------------------------------------------------
 
+
 class TestHandlerGetModeCacheDataMode:
     @pytest.mark.asyncio
     async def test_cached_mode_uses_cached_data_mode(
@@ -326,6 +339,7 @@ class TestHandlerGetModeCacheDataMode:
 # poller.py — data mode polled each cycle
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def poll_config() -> RigctldConfig:
     return RigctldConfig(poll_interval=0.01)
@@ -346,7 +360,9 @@ def poll_radio() -> AsyncMock:
 
 
 @pytest.fixture
-def poller(poll_radio: AsyncMock, poll_cache: StateCache, poll_config: RigctldConfig) -> RadioPoller:
+def poller(
+    poll_radio: AsyncMock, poll_cache: StateCache, poll_config: RigctldConfig
+) -> RadioPoller:
     return RadioPoller(poll_radio, poll_cache, poll_config)
 
 
@@ -357,6 +373,7 @@ async def test_poller_updates_data_mode_in_cache(
     poll_radio: AsyncMock,
 ) -> None:
     import asyncio
+
     await poller.start()
     await asyncio.sleep(0.05)
     await poller.stop()
@@ -371,6 +388,7 @@ async def test_poller_data_mode_false(
     poll_radio: AsyncMock,
 ) -> None:
     import asyncio
+
     poll_radio.get_data_mode.return_value = False
     await poller.start()
     await asyncio.sleep(0.05)
@@ -385,6 +403,7 @@ async def test_poller_data_mode_error_does_not_crash(
 ) -> None:
     import asyncio
     from icom_lan.exceptions import TimeoutError as IcomTimeoutError
+
     poll_radio.get_data_mode.side_effect = IcomTimeoutError("timeout")
     await poller.start()
     await asyncio.sleep(0.05)

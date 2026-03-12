@@ -38,7 +38,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 pytestmark = pytest.mark.mock_integration
 
 from icom_lan.commands import RECEIVER_MAIN, RECEIVER_SUB  # noqa: E402
-from icom_lan.radio import IcomRadio  # noqa: E402
+from icom_lan.radio import IcomRadio  # noqa: E402, TID251
 from icom_lan.types import FilterShape, SsbTxBandwidth  # noqa: E402
 from mock_server import MockIcomRadio  # noqa: E402
 
@@ -111,7 +111,9 @@ def _build_cmd29_civ(
 ) -> bytes:
     """Build a Command29-wrapped CI-V frame."""
     return _build_civ(
-        to, frm, _CMD_CMD29,
+        to,
+        frm,
+        _CMD_CMD29,
         data=bytes([receiver, inner_cmd, sub]) + data,
     )
 
@@ -193,7 +195,10 @@ class DspLevelsMockRadio(MockIcomRadio):
                     return self._civ_ack(to, frm)
                 # GET
                 return self._civ_frame(
-                    to, frm, _CMD_PREAMP, sub=_SUB_SSB_TX_BANDWIDTH,
+                    to,
+                    frm,
+                    _CMD_PREAMP,
+                    sub=_SUB_SSB_TX_BANDWIDTH,
                     data=bytes([_bcd_byte(self._ssb_tx_bandwidth)]),
                 )
             return self._civ_nak(to, frm)
@@ -229,7 +234,9 @@ class DspLevelsMockRadio(MockIcomRadio):
                 # GET — respond wrapped in cmd29
                 level = store.get(receiver, 0)
                 return self._civ_frame(
-                    to, frm, _CMD_CMD29,
+                    to,
+                    frm,
+                    _CMD_CMD29,
                     data=bytes([receiver, _CMD_LEVEL, sub]) + _level_bcd_encode(level),
                 )
             return self._civ_nak(to, frm)
@@ -244,8 +251,12 @@ class DspLevelsMockRadio(MockIcomRadio):
             # GET
             shape = self._filter_shape.get(receiver, 0)
             return self._civ_frame(
-                to, frm, _CMD_CMD29,
-                data=bytes([receiver, _CMD_PREAMP, _SUB_FILTER_SHAPE, _bcd_byte(shape)]),
+                to,
+                frm,
+                _CMD_CMD29,
+                data=bytes(
+                    [receiver, _CMD_PREAMP, _SUB_FILTER_SHAPE, _bcd_byte(shape)]
+                ),
             )
 
         # CTL_MEM commands (0x1A): AGC time constant, AF mute
@@ -258,15 +269,19 @@ class DspLevelsMockRadio(MockIcomRadio):
             if sub == _SUB_AGC_TIME_CONSTANT:
                 if rest:  # SET — single BCD byte
                     raw = rest[0]
-                    self._agc_time_constant[receiver] = (
-                        ((raw >> 4) & 0x0F) * 10 + (raw & 0x0F)
+                    self._agc_time_constant[receiver] = ((raw >> 4) & 0x0F) * 10 + (
+                        raw & 0x0F
                     )
                     return self._civ_ack(to, frm)
                 # GET
                 val = self._agc_time_constant.get(receiver, 3)
                 return self._civ_frame(
-                    to, frm, _CMD_CMD29,
-                    data=bytes([receiver, _CMD_CTL_MEM, _SUB_AGC_TIME_CONSTANT, _bcd_byte(val)]),
+                    to,
+                    frm,
+                    _CMD_CMD29,
+                    data=bytes(
+                        [receiver, _CMD_CTL_MEM, _SUB_AGC_TIME_CONSTANT, _bcd_byte(val)]
+                    ),
                 )
 
             if sub == _SUB_AF_MUTE:
@@ -276,8 +291,12 @@ class DspLevelsMockRadio(MockIcomRadio):
                 # GET
                 on = self._af_mute.get(receiver, False)
                 return self._civ_frame(
-                    to, frm, _CMD_CMD29,
-                    data=bytes([receiver, _CMD_CTL_MEM, _SUB_AF_MUTE, 0x01 if on else 0x00]),
+                    to,
+                    frm,
+                    _CMD_CMD29,
+                    data=bytes(
+                        [receiver, _CMD_CTL_MEM, _SUB_AF_MUTE, 0x01 if on else 0x00]
+                    ),
                 )
 
             return self._civ_nak(to, frm)
@@ -380,8 +399,11 @@ class TestApfTypeLevel:
         """Radio sends unsolicited APF level update; GET reflects new value."""
         dsp_mock._apf_level[RECEIVER_MAIN] = 75
         frame = _build_cmd29_civ(
-            _CONTROLLER_ADDR, _RADIO_ADDR,
-            RECEIVER_MAIN, _CMD_LEVEL, _SUB_APF_TYPE_LEVEL,
+            _CONTROLLER_ADDR,
+            _RADIO_ADDR,
+            RECEIVER_MAIN,
+            _CMD_LEVEL,
+            _SUB_APF_TYPE_LEVEL,
             data=_level_bcd_encode(75),
         )
         dsp_mock.inject_unsolicited_civ(frame)
@@ -413,9 +435,7 @@ class TestNrLevel:
         assert got == 150
         assert dsp_mock._nr_level[RECEIVER_MAIN] == 150
 
-    async def test_nr_level_main_sub_independent(
-        self, dsp_radio: IcomRadio
-    ) -> None:
+    async def test_nr_level_main_sub_independent(self, dsp_radio: IcomRadio) -> None:
         """MAIN and SUB NR levels are independent."""
         await dsp_radio.set_nr_level(100, receiver=RECEIVER_MAIN)
         await dsp_radio.set_nr_level(200, receiver=RECEIVER_SUB)
@@ -442,8 +462,11 @@ class TestNrLevel:
         """Radio sends unsolicited NR level update; GET reflects new value."""
         dsp_mock._nr_level[RECEIVER_MAIN] = 180
         frame = _build_cmd29_civ(
-            _CONTROLLER_ADDR, _RADIO_ADDR,
-            RECEIVER_MAIN, _CMD_LEVEL, _SUB_NR_LEVEL,
+            _CONTROLLER_ADDR,
+            _RADIO_ADDR,
+            RECEIVER_MAIN,
+            _CMD_LEVEL,
+            _SUB_NR_LEVEL,
             data=_level_bcd_encode(180),
         )
         dsp_mock.inject_unsolicited_civ(frame)
@@ -473,9 +496,7 @@ class TestPbtInner:
         assert got == 50
         assert dsp_mock._pbt_inner[RECEIVER_MAIN] == 50
 
-    async def test_pbt_inner_main_sub_independent(
-        self, dsp_radio: IcomRadio
-    ) -> None:
+    async def test_pbt_inner_main_sub_independent(self, dsp_radio: IcomRadio) -> None:
         """MAIN and SUB PBT Inner are independent."""
         await dsp_radio.set_pbt_inner(100, receiver=RECEIVER_MAIN)
         await dsp_radio.set_pbt_inner(200, receiver=RECEIVER_SUB)
@@ -502,8 +523,11 @@ class TestPbtInner:
         """Radio sends unsolicited PBT Inner update; GET reflects new value."""
         dsp_mock._pbt_inner[RECEIVER_MAIN] = 60
         frame = _build_cmd29_civ(
-            _CONTROLLER_ADDR, _RADIO_ADDR,
-            RECEIVER_MAIN, _CMD_LEVEL, _SUB_PBT_INNER,
+            _CONTROLLER_ADDR,
+            _RADIO_ADDR,
+            RECEIVER_MAIN,
+            _CMD_LEVEL,
+            _SUB_PBT_INNER,
             data=_level_bcd_encode(60),
         )
         dsp_mock.inject_unsolicited_civ(frame)
@@ -533,9 +557,7 @@ class TestPbtOuter:
         assert got == 75
         assert dsp_mock._pbt_outer[RECEIVER_MAIN] == 75
 
-    async def test_pbt_outer_main_sub_independent(
-        self, dsp_radio: IcomRadio
-    ) -> None:
+    async def test_pbt_outer_main_sub_independent(self, dsp_radio: IcomRadio) -> None:
         """MAIN and SUB PBT Outer are independent."""
         await dsp_radio.set_pbt_outer(100, receiver=RECEIVER_MAIN)
         await dsp_radio.set_pbt_outer(200, receiver=RECEIVER_SUB)
@@ -562,8 +584,11 @@ class TestPbtOuter:
         """Radio sends unsolicited PBT Outer update; GET reflects new value."""
         dsp_mock._pbt_outer[RECEIVER_MAIN] = 190
         frame = _build_cmd29_civ(
-            _CONTROLLER_ADDR, _RADIO_ADDR,
-            RECEIVER_MAIN, _CMD_LEVEL, _SUB_PBT_OUTER,
+            _CONTROLLER_ADDR,
+            _RADIO_ADDR,
+            RECEIVER_MAIN,
+            _CMD_LEVEL,
+            _SUB_PBT_OUTER,
             data=_level_bcd_encode(190),
         )
         dsp_mock.inject_unsolicited_civ(frame)
@@ -593,9 +618,7 @@ class TestNbLevel:
         assert got == 120
         assert dsp_mock._nb_level[RECEIVER_MAIN] == 120
 
-    async def test_nb_level_main_sub_independent(
-        self, dsp_radio: IcomRadio
-    ) -> None:
+    async def test_nb_level_main_sub_independent(self, dsp_radio: IcomRadio) -> None:
         """MAIN and SUB NB levels are independent."""
         await dsp_radio.set_nb_level(80, receiver=RECEIVER_MAIN)
         await dsp_radio.set_nb_level(160, receiver=RECEIVER_SUB)
@@ -622,8 +645,11 @@ class TestNbLevel:
         """Radio sends unsolicited NB level update; GET reflects new value."""
         dsp_mock._nb_level[RECEIVER_MAIN] = 180
         frame = _build_cmd29_civ(
-            _CONTROLLER_ADDR, _RADIO_ADDR,
-            RECEIVER_MAIN, _CMD_LEVEL, _SUB_NB_LEVEL,
+            _CONTROLLER_ADDR,
+            _RADIO_ADDR,
+            RECEIVER_MAIN,
+            _CMD_LEVEL,
+            _SUB_NB_LEVEL,
             data=_level_bcd_encode(180),
         )
         dsp_mock.inject_unsolicited_civ(frame)
@@ -682,8 +708,11 @@ class TestDigiSelShift:
         """Radio sends unsolicited DIGI-SEL shift update; GET reflects new value."""
         dsp_mock._digisel_shift[RECEIVER_MAIN] = 90
         frame = _build_cmd29_civ(
-            _CONTROLLER_ADDR, _RADIO_ADDR,
-            RECEIVER_MAIN, _CMD_LEVEL, _SUB_DIGISEL_SHIFT,
+            _CONTROLLER_ADDR,
+            _RADIO_ADDR,
+            RECEIVER_MAIN,
+            _CMD_LEVEL,
+            _SUB_DIGISEL_SHIFT,
             data=_level_bcd_encode(90),
         )
         dsp_mock.inject_unsolicited_civ(frame)
@@ -743,8 +772,11 @@ class TestAgcTimeConstant:
         """Radio sends unsolicited AGC time constant update; GET reflects new value."""
         dsp_mock._agc_time_constant[RECEIVER_MAIN] = 9
         frame = _build_cmd29_civ(
-            _CONTROLLER_ADDR, _RADIO_ADDR,
-            RECEIVER_MAIN, _CMD_CTL_MEM, _SUB_AGC_TIME_CONSTANT,
+            _CONTROLLER_ADDR,
+            _RADIO_ADDR,
+            RECEIVER_MAIN,
+            _CMD_CTL_MEM,
+            _SUB_AGC_TIME_CONSTANT,
             data=bytes([_bcd_byte(9)]),
         )
         dsp_mock.inject_unsolicited_civ(frame)
@@ -781,7 +813,10 @@ class TestFilterShape:
         await asyncio.sleep(_SETTLE)
         await dsp_radio.set_filter_shape(FilterShape.SHARP, receiver=RECEIVER_MAIN)
         await asyncio.sleep(_SETTLE)
-        assert await dsp_radio.get_filter_shape(receiver=RECEIVER_MAIN) == FilterShape.SHARP
+        assert (
+            await dsp_radio.get_filter_shape(receiver=RECEIVER_MAIN)
+            == FilterShape.SHARP
+        )
 
     async def test_filter_shape_main_sub_independent(
         self, dsp_radio: IcomRadio
@@ -791,8 +826,12 @@ class TestFilterShape:
         await dsp_radio.set_filter_shape(FilterShape.SHARP, receiver=RECEIVER_SUB)
         await asyncio.sleep(_SETTLE)
 
-        assert await dsp_radio.get_filter_shape(receiver=RECEIVER_MAIN) == FilterShape.SOFT
-        assert await dsp_radio.get_filter_shape(receiver=RECEIVER_SUB) == FilterShape.SHARP
+        assert (
+            await dsp_radio.get_filter_shape(receiver=RECEIVER_MAIN) == FilterShape.SOFT
+        )
+        assert (
+            await dsp_radio.get_filter_shape(receiver=RECEIVER_SUB) == FilterShape.SHARP
+        )
 
     async def test_filter_shape_unsolicited_fires_event(
         self, dsp_radio: IcomRadio, dsp_mock: DspLevelsMockRadio
@@ -802,8 +841,11 @@ class TestFilterShape:
         dsp_radio._on_state_change = lambda name, data: events.append((name, data))  # type: ignore[assignment]
 
         frame = _build_cmd29_civ(
-            _CONTROLLER_ADDR, _RADIO_ADDR,
-            RECEIVER_MAIN, _CMD_PREAMP, _SUB_FILTER_SHAPE,
+            _CONTROLLER_ADDR,
+            _RADIO_ADDR,
+            RECEIVER_MAIN,
+            _CMD_PREAMP,
+            _SUB_FILTER_SHAPE,
             data=bytes([_bcd_byte(int(FilterShape.SOFT))]),
         )
         dsp_mock.inject_unsolicited_civ(frame)
@@ -858,7 +900,9 @@ class TestSsbTxBandwidth:
         dsp_radio._on_state_change = lambda name, data: events.append((name, data))  # type: ignore[assignment]
 
         frame = _build_civ(
-            _CONTROLLER_ADDR, _RADIO_ADDR, _CMD_PREAMP,
+            _CONTROLLER_ADDR,
+            _RADIO_ADDR,
+            _CMD_PREAMP,
             sub=_SUB_SSB_TX_BANDWIDTH,
             data=bytes([_bcd_byte(int(SsbTxBandwidth.NAR))]),
         )
@@ -898,9 +942,7 @@ class TestAfMute:
         assert await dsp_radio.get_af_mute(receiver=RECEIVER_MAIN) is False
         assert dsp_mock._af_mute[RECEIVER_MAIN] is False
 
-    async def test_af_mute_main_sub_independent(
-        self, dsp_radio: IcomRadio
-    ) -> None:
+    async def test_af_mute_main_sub_independent(self, dsp_radio: IcomRadio) -> None:
         """MAIN and SUB AF mute states are independent."""
         await dsp_radio.set_af_mute(True, receiver=RECEIVER_MAIN)
         await dsp_radio.set_af_mute(False, receiver=RECEIVER_SUB)
@@ -923,8 +965,11 @@ class TestAfMute:
         """Radio sends unsolicited AF mute update; GET reflects new state."""
         dsp_mock._af_mute[RECEIVER_MAIN] = True
         frame = _build_cmd29_civ(
-            _CONTROLLER_ADDR, _RADIO_ADDR,
-            RECEIVER_MAIN, _CMD_CTL_MEM, _SUB_AF_MUTE,
+            _CONTROLLER_ADDR,
+            _RADIO_ADDR,
+            RECEIVER_MAIN,
+            _CMD_CTL_MEM,
+            _SUB_AF_MUTE,
             data=b"\x01",
         )
         dsp_mock.inject_unsolicited_civ(frame)

@@ -78,7 +78,10 @@ async def _connect_with_cooldown(
             if attempt >= attempts:
                 break
             text = str(exc).lower()
-            if "status error=0xffffffff" in text or "rejected session allocation" in text:
+            if (
+                "status error=0xffffffff" in text
+                or "rejected session allocation" in text
+            ):
                 pause = min(12.0 + attempt * 4.0, 40.0)
             else:
                 pause = min(base_pause_s * attempt, 12.0)
@@ -123,8 +126,12 @@ class TestReliabilityMatrix:
             await asyncio.sleep(0.05)
 
         assert all(f > 0 for f in freqs)
-        assert civ_t.send_seq < 0x0100, f"Expected wrapped send_seq, got {civ_t.send_seq:#06x}"
-        assert 0x1234 not in civ_t.tx_buffer, "tx_buffer was not cleared on seq rollover"
+        assert civ_t.send_seq < 0x0100, (
+            f"Expected wrapped send_seq, got {civ_t.send_seq:#06x}"
+        )
+        assert 0x1234 not in civ_t.tx_buffer, (
+            "tx_buffer was not cleared on seq rollover"
+        )
 
     async def test_ack_mixed_stress_civ_stats(self, radio: IcomRadio) -> None:
         """Run mixed wait/non-wait commands and validate ACK tracker stats."""
@@ -269,9 +276,9 @@ class TestReliabilityMatrix:
                 probe = IcomRadio(**radio_config, timeout=10.0)
                 try:
                     await _connect_with_cooldown(probe, attempts=6)
-                    assert await _read_freq_with_retries(
-                        probe, retries=5, sleep_s=0.5
-                    ) > 0
+                    assert (
+                        await _read_freq_with_retries(probe, retries=5, sleep_s=0.5) > 0
+                    )
                 finally:
                     await probe.disconnect()
         finally:

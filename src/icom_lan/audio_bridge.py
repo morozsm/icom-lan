@@ -46,7 +46,7 @@ BYTES_PER_SAMPLE = 2  # s16le
 FRAME_BYTES = SAMPLES_PER_FRAME * CHANNELS * BYTES_PER_SAMPLE  # 1920
 
 
-def find_loopback_device(name: str | None = None) -> dict | None:
+def find_loopback_device(name: str | None = None) -> dict[str, Any] | None:
     """Find a virtual loopback audio device by name.
 
     Args:
@@ -57,7 +57,7 @@ def find_loopback_device(name: str | None = None) -> dict | None:
         A ``sounddevice`` device info dict, or ``None`` if not found.
     """
     try:
-        import sounddevice as sd
+        import sounddevice as sd  # type: ignore[import-not-found]
     except ImportError:
         raise ImportError(
             "sounddevice is required for audio bridge. "
@@ -76,7 +76,7 @@ def find_loopback_device(name: str | None = None) -> dict | None:
     return None
 
 
-def list_audio_devices() -> list[dict]:
+def list_audio_devices() -> list[dict[str, Any]]:
     """List all available audio devices.
 
     Returns:
@@ -126,7 +126,9 @@ class AudioBridge:
     ) -> None:
         self._radio = radio
         self._device_name = device_name
-        self._tx_device_name = tx_device_name  # separate TX device (if None, same as RX)
+        self._tx_device_name = (
+            tx_device_name  # separate TX device (if None, same as RX)
+        )
         self._sample_rate = sample_rate
         self._channels = channels
         self._frame_ms = frame_ms
@@ -136,8 +138,8 @@ class AudioBridge:
         self._running = False
         self._rx_stream = None  # sounddevice OutputStream (radio → device)
         self._tx_stream = None  # sounddevice InputStream (device → radio)
-        self._rx_task: asyncio.Task | None = None
-        self._tx_task: asyncio.Task | None = None
+        self._rx_task: asyncio.Task[None] | None = None
+        self._tx_task: asyncio.Task[None] | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
         self._decoder = None
         self._subscription = None
@@ -160,7 +162,7 @@ class AudioBridge:
         return self._running
 
     @property
-    def stats(self) -> dict:
+    def stats(self) -> dict[str, Any]:
         """Bridge statistics."""
         uptime = time.monotonic() - self._start_time if self._running else 0.0
         rx_avg = (
@@ -193,7 +195,7 @@ class AudioBridge:
             ConnectionError: If radio is not connected.
         """
         import numpy as np
-        import sounddevice as sd
+        import sounddevice as sd  # type: ignore[import-not-found]
 
         if self._running:
             logger.warning("audio-bridge: already running")
@@ -213,9 +215,7 @@ class AudioBridge:
 
         dev_index = dev["index"]
         dev_name = dev["name"]
-        logger.info(
-            "audio-bridge: using device %r (index %d)", dev_name, dev_index
-        )
+        logger.info("audio-bridge: using device %r (index %d)", dev_name, dev_index)
 
         samples_per_frame = self._sample_rate * self._frame_ms // 1000
 
@@ -232,16 +232,16 @@ class AudioBridge:
         self._rx_stream.start()
 
         # Silence frame for gap filling
-        self._silence = np.zeros(
-            (samples_per_frame, self._channels), dtype=np.int16
-        )
+        self._silence = np.zeros((samples_per_frame, self._channels), dtype=np.int16)
 
         # --- RX: subscribe to AudioBus for audio packets ---
         # Detect codec to decide if we need opus decoding
         from .types import AudioCodec
+
         _codec = getattr(self._radio, "audio_codec", None)
         self._is_opus = isinstance(_codec, AudioCodec) and _codec in (
-            AudioCodec.OPUS_1CH, AudioCodec.OPUS_2CH,
+            AudioCodec.OPUS_1CH,
+            AudioCodec.OPUS_2CH,
         )
 
         if self._is_opus:
@@ -284,7 +284,8 @@ class AudioBridge:
                     tx_dev_index = tx_dev["index"]
                     logger.info(
                         "audio-bridge: TX device %r (index %d)",
-                        tx_dev["name"], tx_dev_index,
+                        tx_dev["name"],
+                        tx_dev_index,
                     )
 
             # TX uses a blocking InputStream read in a thread
@@ -319,7 +320,9 @@ class AudioBridge:
                 if packet is None:
                     self._rx_drops += 1
                     if self._rx_drops <= 3:
-                        logger.debug("audio-bridge: None packet (gap) #%d", self._rx_drops)
+                        logger.debug(
+                            "audio-bridge: None packet (gap) #%d", self._rx_drops
+                        )
                     if self._rx_stream and self._rx_stream.active:
                         self._rx_stream.write(self._silence)
                     continue
@@ -330,7 +333,9 @@ class AudioBridge:
 
                 try:
                     if self._is_opus:
-                        pcm_data = self._decoder.decode(opus_data, self._samples_per_frame)
+                        pcm_data = self._decoder.decode(
+                            opus_data, self._samples_per_frame
+                        )
                     else:
                         # PCM — data is already raw PCM bytes
                         pcm_data = opus_data
@@ -352,7 +357,9 @@ class AudioBridge:
                     if self._rx_drops <= 5 or self._rx_drops % 1000 == 0:
                         logger.warning(
                             "audio-bridge: decode error #%d: %s (data=%d bytes)",
-                            self._rx_drops, exc, len(opus_data),
+                            self._rx_drops,
+                            exc,
+                            len(opus_data),
                         )
         except asyncio.CancelledError:
             pass
@@ -402,7 +409,9 @@ class AudioBridge:
                     peak = int(np.max(np.abs(data)))
                     logger.info(
                         "audio-bridge: TX frame #%d, %d bytes, peak=%d",
-                        self._tx_frames, len(pcm_bytes), peak,
+                        self._tx_frames,
+                        len(pcm_bytes),
+                        peak,
                     )
 
                 try:

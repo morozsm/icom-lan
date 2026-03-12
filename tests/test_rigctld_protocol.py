@@ -23,11 +23,13 @@ from icom_lan.rigctld.protocol import format_error, format_response, parse_line
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
+
 def _session(*, extended: bool = False) -> ClientSession:
     return ClientSession(extended_mode=extended)
 
 
 # ── parse_line: short commands ────────────────────────────────────────────────
+
 
 class TestParseLineShort:
     def test_get_freq(self) -> None:
@@ -126,6 +128,7 @@ class TestParseLineShort:
 
 # ── parse_line: long commands ─────────────────────────────────────────────────
 
+
 class TestParseLineLong:
     def test_get_freq(self) -> None:
         cmd = parse_line(b"\\get_freq")
@@ -191,6 +194,7 @@ class TestParseLineLong:
 
 # ── parse_line: tolerance and edge cases ──────────────────────────────────────
 
+
 class TestParseLineEdgeCases:
     def test_strips_trailing_cr(self) -> None:
         cmd = parse_line(b"f\r")
@@ -227,6 +231,7 @@ class TestParseLineEdgeCases:
 
 
 # ── parse_line: errors ────────────────────────────────────────────────────────
+
 
 class TestParseLineErrors:
     def test_unknown_short(self) -> None:
@@ -288,6 +293,7 @@ class TestParseLineErrors:
 
 # ── format_error ──────────────────────────────────────────────────────────────
 
+
 class TestFormatError:
     def test_ok(self) -> None:
         assert format_error(0) == b"RPRT 0\n"
@@ -310,6 +316,7 @@ class TestFormatError:
 
 
 # ── format_response: normal mode ─────────────────────────────────────────────
+
 
 class TestFormatResponseNormal:
     def test_get_single_value(self) -> None:
@@ -359,6 +366,7 @@ class TestFormatResponseNormal:
 
 
 # ── format_response: extended mode ───────────────────────────────────────────
+
 
 class TestFormatResponseExtended:
     def test_get_freq(self) -> None:

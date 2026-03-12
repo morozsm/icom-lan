@@ -170,7 +170,9 @@ class TestDXClusterClient:
             "icom_lan.web.dx_cluster.asyncio.open_connection",
             new=AsyncMock(return_value=(reader, writer)),
         ):
-            client = DXClusterClient("dx.example.com", 7300, "K1ABC", on_spot=MagicMock())
+            client = DXClusterClient(
+                "dx.example.com", 7300, "K1ABC", on_spot=MagicMock()
+            )
             await _run_and_cancel(client.start())
 
         writer.write.assert_called_once_with(b"K1ABC\r\n")
@@ -185,7 +187,9 @@ class TestDXClusterClient:
             "icom_lan.web.dx_cluster.asyncio.open_connection",
             new=AsyncMock(return_value=(reader, writer)),
         ):
-            client = DXClusterClient("dx.example.com", 7300, "K1ABC", on_spot=spots.append)
+            client = DXClusterClient(
+                "dx.example.com", 7300, "K1ABC", on_spot=spots.append
+            )
             await _run_and_cancel(client.start())
 
         assert len(spots) == 2
@@ -202,7 +206,9 @@ class TestDXClusterClient:
             "icom_lan.web.dx_cluster.asyncio.open_connection",
             new=AsyncMock(return_value=(reader, writer)),
         ):
-            client = DXClusterClient("dx.example.com", 7300, "K1ABC", on_spot=spots.append)
+            client = DXClusterClient(
+                "dx.example.com", 7300, "K1ABC", on_spot=spots.append
+            )
             await _run_and_cancel(client.start())
 
         assert len(spots) == 1
@@ -325,9 +331,9 @@ class TestSpotBuffer:
 
     def test_get_spots_filter_by_band_20m(self):
         buf = SpotBuffer()
-        buf.add(_make_spot("JA1XYZ", freq=14074000))   # 20m
-        buf.add(_make_spot("VK3ABC", freq=7074000))    # 40m
-        buf.add(_make_spot("W1ABC", freq=21074000))    # 15m
+        buf.add(_make_spot("JA1XYZ", freq=14074000))  # 20m
+        buf.add(_make_spot("VK3ABC", freq=7074000))  # 40m
+        buf.add(_make_spot("W1ABC", freq=21074000))  # 15m
         spots_20m = buf.get_spots(band="20m")
         assert len(spots_20m) == 1
         assert spots_20m[0]["call"] == "JA1XYZ"
@@ -346,7 +352,7 @@ class TestSpotBuffer:
     def test_expire_removes_old_spots(self):
         buf = SpotBuffer()
         now = time.monotonic()
-        old = _make_spot("OLD", ts=now - 3000)   # 50 min ago
+        old = _make_spot("OLD", ts=now - 3000)  # 50 min ago
         fresh = _make_spot("FRESH", ts=now - 60)  # 1 min ago
         buf.add(old)
         buf.add(fresh)
@@ -391,7 +397,13 @@ class TestWebServerDXBroadcast:
         q: asyncio.Queue = asyncio.Queue()
         srv.register_control_event_queue(q)
 
-        spot = DXSpot(spotter="K1ABC", freq=14074000, call="JA1XYZ", comment="FT8", time_utc="1234Z")
+        spot = DXSpot(
+            spotter="K1ABC",
+            freq=14074000,
+            call="JA1XYZ",
+            comment="FT8",
+            time_utc="1234Z",
+        )
         srv._broadcast_dx_spot(spot)
 
         msg = q.get_nowait()
@@ -444,7 +456,7 @@ class TestWebServerDXBroadcast:
 
         header_end = raw.find(b"\r\n\r\n")
         status_line = raw[:header_end].decode("ascii").split("\r\n")[0]
-        body = raw[header_end + 4:]
+        body = raw[header_end + 4 :]
 
         await srv.stop()
 
@@ -478,7 +490,9 @@ class TestWebServerDXBroadcast:
             nonlocal call_count
             call_count += 1
             if call_count == 1:
-                return WS_OP_TEXT, json.dumps({"type": "subscribe", "streams": ["state"]}).encode()
+                return WS_OP_TEXT, json.dumps(
+                    {"type": "subscribe", "streams": ["state"]}
+                ).encode()
             raise EOFError()
 
         ws.recv = mock_recv
@@ -540,18 +554,23 @@ class TestWebServerDXBroadcast:
 class TestCLIDXClusterFlags:
     def _build_parser(self):
         from icom_lan.cli import _build_parser
+
         return _build_parser()
 
     def test_dx_cluster_flag_parsed(self):
         """--dx-cluster HOST:PORT is accepted by the web command."""
         parser = self._build_parser()
-        args = parser.parse_args(["--host", "192.168.1.1", "web", "--dx-cluster", "dxc.nc7j.com:7373"])
+        args = parser.parse_args(
+            ["--host", "192.168.1.1", "web", "--dx-cluster", "dxc.nc7j.com:7373"]
+        )
         assert args.dx_cluster == "dxc.nc7j.com:7373"
 
     def test_callsign_flag_parsed(self):
         """--callsign CALL is accepted by the web command."""
         parser = self._build_parser()
-        args = parser.parse_args(["--host", "192.168.1.1", "web", "--callsign", "KN4KYD"])
+        args = parser.parse_args(
+            ["--host", "192.168.1.1", "web", "--callsign", "KN4KYD"]
+        )
         assert args.callsign == "KN4KYD"
 
     def test_without_dx_cluster_is_none(self):
@@ -569,11 +588,17 @@ class TestCLIDXClusterFlags:
     def test_dx_cluster_and_callsign_together(self):
         """Both flags work together."""
         parser = self._build_parser()
-        args = parser.parse_args([
-            "--host", "192.168.1.1", "web",
-            "--dx-cluster", "dxc.nc7j.com:7373",
-            "--callsign", "KN4KYD",
-        ])
+        args = parser.parse_args(
+            [
+                "--host",
+                "192.168.1.1",
+                "web",
+                "--dx-cluster",
+                "dxc.nc7j.com:7373",
+                "--callsign",
+                "KN4KYD",
+            ]
+        )
         assert args.dx_cluster == "dxc.nc7j.com:7373"
         assert args.callsign == "KN4KYD"
 

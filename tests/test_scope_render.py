@@ -217,8 +217,9 @@ class TestRenderSpectrum:
         img = render_spectrum(frame, width=800, height=200)
         # Bottom 25 rows = label strip
         label_strip = img.crop((0, 175, 800, 200))
-        assert any(b != 0 for b in label_strip.tobytes()), \
+        assert any(b != 0 for b in label_strip.tobytes()), (
             "Frequency label area should have non-black pixels"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -302,8 +303,9 @@ class TestRenderWaterfall:
         frames = [_make_frame() for _ in range(10)]
         img = render_waterfall(frames, width=800, height=400)
         label_strip = img.crop((0, 375, 800, 400))
-        assert any(b != 0 for b in label_strip.tobytes()), \
+        assert any(b != 0 for b in label_strip.tobytes()), (
             "Frequency label area should have non-black pixels"
+        )
 
 
 # ---------------------------------------------------------------------------

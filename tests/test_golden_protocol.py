@@ -67,10 +67,14 @@ def _make_mock_radio(mock_spec: dict) -> AsyncMock:
     Keys ending in ``__exc`` set a side_effect instead of a return_value.
     The ``get_mode_info`` key expects a [mode_int, filter_or_null] list which
     is converted to the ``(Mode, int|None)`` tuple the handler expects.
+    Level getters (get_s_meter, get_power, get_swr) are set as AsyncMock so
+    await in the handler returns the value.
     """
     radio = AsyncMock()
     # Sensible defaults so get_mode doesn't blow up when not explicitly mocked.
     radio.get_data_mode.return_value = False
+
+    _async_level_getters = {"get_s_meter", "get_power", "get_swr"}
 
     for key, value in mock_spec.items():
         if key.endswith("__exc"):
@@ -80,6 +84,8 @@ def _make_mock_radio(mock_spec: dict) -> AsyncMock:
         elif key == "get_mode_info":
             mode_int, filt = value[0], value[1]
             getattr(radio, key).return_value = (Mode(mode_int), filt)
+        elif key in _async_level_getters:
+            setattr(radio, key, AsyncMock(return_value=value))
         else:
             getattr(radio, key).return_value = value
 
@@ -90,14 +96,28 @@ def _make_mock_radio(mock_spec: dict) -> AsyncMock:
 # Parametrized test
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.parametrize("fixture", _FIXTURES, ids=[f["id"] for f in _FIXTURES])
 async def test_golden_protocol(fixture: dict) -> None:
     """Execute one golden fixture end-to-end through parse → handler → format."""
-    radio = _make_mock_radio(fixture.get("mock", {}))
+    mock_spec = fixture.get("mock", {})
+    radio = _make_mock_radio(mock_spec)
     read_only = fixture.get("read_only", False)
     # cache_ttl=0.0 → cache always expired → deterministic radio calls in tests.
     config = RigctldConfig(read_only=read_only, cache_ttl=0.0)
-    handler = RigctldHandler(radio, config)
+    # Populate level cache when mock has level getters so get_level returns numeric (not RPRT -4)
+    from icom_lan.rigctld.state_cache import StateCache
+
+    cache = StateCache()
+    if "get_s_meter" in mock_spec:
+        cache.update_s_meter(mock_spec["get_s_meter"])
+    if "get_power" in mock_spec:
+        cache.update_rf_power(float(mock_spec["get_power"]) / 255.0)
+    if "get_swr" in mock_spec:
+        raw = mock_spec["get_swr"]
+        swr_display = 1.0 + (float(raw) / 255.0) * 4.0
+        cache.update_swr(swr_display)
+    handler = RigctldHandler(radio, config, cache=cache)
 
     normal_session = ClientSession()
     extended_session = ClientSession(extended_mode=True)

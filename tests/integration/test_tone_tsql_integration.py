@@ -29,7 +29,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 # All tests use MockIcomRadio — no real hardware required.
 pytestmark = pytest.mark.mock_integration
 
-from icom_lan.radio import IcomRadio  # noqa: E402
+from icom_lan.radio import IcomRadio  # noqa: E402, TID251
 from mock_server import MockIcomRadio  # noqa: E402
 
 # ---------------------------------------------------------------------------
@@ -112,8 +112,8 @@ class ToneMockRadio(MockIcomRadio):
 
     def __init__(self, **kwargs: object) -> None:
         super().__init__(**kwargs)
-        self._repeater_tone: int = 0   # 0 = off, 1 = on
-        self._repeater_tsql: int = 0   # 0 = off, 1 = on
+        self._repeater_tone: int = 0  # 0 = off, 1 = on
+        self._repeater_tsql: int = 0  # 0 = off, 1 = on
         self._tone_freq_hz: float = _FREQ_DEFAULT
         self._tsql_freq_hz: float = _FREQ_DEFAULT
 
@@ -160,8 +160,12 @@ class ToneMockRadio(MockIcomRadio):
                     return self._civ_ack(to, frm)
                 # GET — wrap in Command29
                 return self._civ_frame(
-                    to, frm, 0x29,
-                    data=bytes([receiver, _CMD_FUNC, _SUB_REPEATER_TONE, self._repeater_tone])
+                    to,
+                    frm,
+                    0x29,
+                    data=bytes(
+                        [receiver, _CMD_FUNC, _SUB_REPEATER_TONE, self._repeater_tone]
+                    ),
                 )
 
             if sub == _SUB_REPEATER_TSQL:
@@ -170,8 +174,12 @@ class ToneMockRadio(MockIcomRadio):
                     return self._civ_ack(to, frm)
                 # GET — wrap in Command29
                 return self._civ_frame(
-                    to, frm, 0x29,
-                    data=bytes([receiver, _CMD_FUNC, _SUB_REPEATER_TSQL, self._repeater_tsql])
+                    to,
+                    frm,
+                    0x29,
+                    data=bytes(
+                        [receiver, _CMD_FUNC, _SUB_REPEATER_TSQL, self._repeater_tsql]
+                    ),
                 )
 
         # Handle 0x1B (tone frequency) sub-commands
@@ -187,8 +195,11 @@ class ToneMockRadio(MockIcomRadio):
                     return self._civ_ack(to, frm)
                 # GET — wrap in Command29
                 return self._civ_frame(
-                    to, frm, 0x29,
-                    data=bytes([receiver, _CMD_TONE, _SUB_TONE_FREQ]) + _encode_tone_freq(self._tone_freq_hz)
+                    to,
+                    frm,
+                    0x29,
+                    data=bytes([receiver, _CMD_TONE, _SUB_TONE_FREQ])
+                    + _encode_tone_freq(self._tone_freq_hz),
                 )
 
             if sub == _SUB_TSQL_FREQ:
@@ -197,8 +208,11 @@ class ToneMockRadio(MockIcomRadio):
                     return self._civ_ack(to, frm)
                 # GET — wrap in Command29
                 return self._civ_frame(
-                    to, frm, 0x29,
-                    data=bytes([receiver, _CMD_TONE, _SUB_TSQL_FREQ]) + _encode_tone_freq(self._tsql_freq_hz)
+                    to,
+                    frm,
+                    0x29,
+                    data=bytes([receiver, _CMD_TONE, _SUB_TSQL_FREQ])
+                    + _encode_tone_freq(self._tsql_freq_hz),
                 )
 
         # Fall through to parent for other commands (ATT, preamp status, etc.)
@@ -234,10 +248,15 @@ class ToneMockRadio(MockIcomRadio):
             self._repeater_tone = data[0]
             return self._civ_ack(to, frm)
         # GET: include receiver prefix in response if present
-        response_data = (bytes([receiver]) if receiver is not None else b"") + bytes([self._repeater_tone])
+        response_data = (bytes([receiver]) if receiver is not None else b"") + bytes(
+            [self._repeater_tone]
+        )
         return self._civ_frame(
-            to, frm, _CMD_FUNC,
-            sub=_SUB_REPEATER_TONE, data=response_data,
+            to,
+            frm,
+            _CMD_FUNC,
+            sub=_SUB_REPEATER_TONE,
+            data=response_data,
         )
 
     def _handle_repeater_tsql(self, rest: bytes, from_addr: int) -> bytes:
@@ -250,10 +269,15 @@ class ToneMockRadio(MockIcomRadio):
             self._repeater_tsql = data[0]
             return self._civ_ack(to, frm)
         # GET: include receiver prefix in response if present
-        response_data = (bytes([receiver]) if receiver is not None else b"") + bytes([self._repeater_tsql])
+        response_data = (bytes([receiver]) if receiver is not None else b"") + bytes(
+            [self._repeater_tsql]
+        )
         return self._civ_frame(
-            to, frm, _CMD_FUNC,
-            sub=_SUB_REPEATER_TSQL, data=response_data,
+            to,
+            frm,
+            _CMD_FUNC,
+            sub=_SUB_REPEATER_TSQL,
+            data=response_data,
         )
 
     def _handle_tone_freq(self, rest: bytes, from_addr: int) -> bytes:
@@ -266,10 +290,15 @@ class ToneMockRadio(MockIcomRadio):
             self._tone_freq_hz = _decode_tone_freq(data[:3])
             return self._civ_ack(to, frm)
         # GET: include receiver prefix in response if present
-        response_data = (bytes([receiver]) if receiver is not None else b"") + _encode_tone_freq(self._tone_freq_hz)
+        response_data = (
+            bytes([receiver]) if receiver is not None else b""
+        ) + _encode_tone_freq(self._tone_freq_hz)
         return self._civ_frame(
-            to, frm, _CMD_TONE,
-            sub=_SUB_TONE_FREQ, data=response_data,
+            to,
+            frm,
+            _CMD_TONE,
+            sub=_SUB_TONE_FREQ,
+            data=response_data,
         )
 
     def _handle_tsql_freq(self, rest: bytes, from_addr: int) -> bytes:
@@ -282,10 +311,15 @@ class ToneMockRadio(MockIcomRadio):
             self._tsql_freq_hz = _decode_tone_freq(data[:3])
             return self._civ_ack(to, frm)
         # GET: include receiver prefix in response if present
-        response_data = (bytes([receiver]) if receiver is not None else b"") + _encode_tone_freq(self._tsql_freq_hz)
+        response_data = (
+            bytes([receiver]) if receiver is not None else b""
+        ) + _encode_tone_freq(self._tsql_freq_hz)
         return self._civ_frame(
-            to, frm, _CMD_TONE,
-            sub=_SUB_TSQL_FREQ, data=response_data,
+            to,
+            frm,
+            _CMD_TONE,
+            sub=_SUB_TSQL_FREQ,
+            data=response_data,
         )
 
 
@@ -485,7 +519,14 @@ class TestToneFrequency:
 
     async def test_multiple_freq_changes(self, tone_radio: IcomRadio) -> None:
         """Change tone frequency through all standard test values."""
-        for freq in (_FREQ_MIN, _FREQ_DEFAULT, _FREQ_MID_LO, _FREQ_MID_HI, _FREQ_MID_2, _FREQ_MAX):
+        for freq in (
+            _FREQ_MIN,
+            _FREQ_DEFAULT,
+            _FREQ_MID_LO,
+            _FREQ_MID_HI,
+            _FREQ_MID_2,
+            _FREQ_MAX,
+        ):
             await tone_radio.set_tone_freq(freq)
             await asyncio.sleep(_SETTLE)
             result = await tone_radio.get_tone_freq()
@@ -545,7 +586,14 @@ class TestTSQLFrequency:
 
     async def test_multiple_freq_changes(self, tone_radio: IcomRadio) -> None:
         """Change TSQL frequency through all standard test values."""
-        for freq in (_FREQ_MIN, _FREQ_DEFAULT, _FREQ_MID_LO, _FREQ_MID_HI, _FREQ_MID_2, _FREQ_MAX):
+        for freq in (
+            _FREQ_MIN,
+            _FREQ_DEFAULT,
+            _FREQ_MID_LO,
+            _FREQ_MID_HI,
+            _FREQ_MID_2,
+            _FREQ_MAX,
+        ):
             await tone_radio.set_tsql_freq(freq)
             await asyncio.sleep(_SETTLE)
             result = await tone_radio.get_tsql_freq()
@@ -579,9 +627,21 @@ class TestTSQLFrequency:
 class TestBcdCodec:
     """Verify the mock's BCD encode/decode helpers are self-consistent."""
 
-    @pytest.mark.parametrize("freq", [
-        67.0, 77.0, 88.5, 100.0, 110.9, 127.3, 136.5, 167.9, 203.5, 254.1,
-    ])
+    @pytest.mark.parametrize(
+        "freq",
+        [
+            67.0,
+            77.0,
+            88.5,
+            100.0,
+            110.9,
+            127.3,
+            136.5,
+            167.9,
+            203.5,
+            254.1,
+        ],
+    )
     def test_encode_decode_roundtrip(self, freq: float) -> None:
         """encode → decode must recover the original frequency."""
         encoded = _encode_tone_freq(freq)

@@ -271,9 +271,7 @@ class WebSocketConnection:
         data = text.encode("utf-8")
         if self._deflate:
             compressed = self._compress(data)
-            await self._send_raw(
-                make_frame(WS_OP_TEXT, compressed, rsv1=True)
-            )
+            await self._send_raw(make_frame(WS_OP_TEXT, compressed, rsv1=True))
         else:
             await self._send_raw(make_frame(WS_OP_TEXT, data))
 
@@ -283,9 +281,7 @@ class WebSocketConnection:
             compressed = self._compress(data)
             # Only compress if it actually saves space
             if len(compressed) < len(data):
-                await self._send_raw(
-                    make_frame(WS_OP_BINARY, compressed, rsv1=True)
-                )
+                await self._send_raw(make_frame(WS_OP_BINARY, compressed, rsv1=True))
                 return
         await self._send_raw(make_frame(WS_OP_BINARY, data))
 

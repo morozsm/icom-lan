@@ -84,9 +84,7 @@ class TestConnect:
 
 
 class TestFrequency:
-    async def test_get_frequency_default(
-        self, connected_radio: IcomRadio
-    ) -> None:
+    async def test_get_frequency_default(self, connected_radio: IcomRadio) -> None:
         freq = await connected_radio.get_frequency()
         assert freq == 14_074_000
 
@@ -94,7 +92,9 @@ class TestFrequency:
         self, connected_radio: IcomRadio, mock_radio: MockIcomRadio
     ) -> None:
         await connected_radio.set_frequency(7_074_000)
-        await asyncio.sleep(0.05)  # fire-and-forget: give mock time to receive and process UDP
+        await asyncio.sleep(
+            0.05
+        )  # fire-and-forget: give mock time to receive and process UDP
         assert mock_radio._frequency == 7_074_000
         freq = await connected_radio.get_frequency()
         assert freq == 7_074_000
@@ -208,42 +208,30 @@ class TestAttPreamp:
         level = await connected_radio.get_attenuator_level()
         assert level == 0
 
-    async def test_set_and_get_attenuator(
-        self, connected_radio: IcomRadio
-    ) -> None:
+    async def test_set_and_get_attenuator(self, connected_radio: IcomRadio) -> None:
         await connected_radio.set_attenuator_level(18)
         level = await connected_radio.get_attenuator_level()
         assert level == 18
 
-    async def test_attenuator_bool_on(
-        self, connected_radio: IcomRadio
-    ) -> None:
+    async def test_attenuator_bool_on(self, connected_radio: IcomRadio) -> None:
         await connected_radio.set_attenuator(True)
         assert await connected_radio.get_attenuator() is True
 
-    async def test_attenuator_bool_off(
-        self, connected_radio: IcomRadio
-    ) -> None:
+    async def test_attenuator_bool_off(self, connected_radio: IcomRadio) -> None:
         await connected_radio.set_attenuator_level(18)
         await connected_radio.set_attenuator(False)
         assert await connected_radio.get_attenuator() is False
 
-    async def test_get_preamp_default_zero(
-        self, connected_radio: IcomRadio
-    ) -> None:
+    async def test_get_preamp_default_zero(self, connected_radio: IcomRadio) -> None:
         level = await connected_radio.get_preamp()
         assert level == 0
 
-    async def test_set_and_get_preamp(
-        self, connected_radio: IcomRadio
-    ) -> None:
+    async def test_set_and_get_preamp(self, connected_radio: IcomRadio) -> None:
         await connected_radio.set_preamp(1)
         level = await connected_radio.get_preamp()
         assert level == 1
 
-    async def test_preamp_level_2(
-        self, connected_radio: IcomRadio
-    ) -> None:
+    async def test_preamp_level_2(self, connected_radio: IcomRadio) -> None:
         await connected_radio.set_preamp(2)
         level = await connected_radio.get_preamp()
         assert level == 2
@@ -268,9 +256,7 @@ class TestAttPreamp:
 
 
 class TestKeepalive:
-    async def test_stays_connected_over_time(
-        self, connected_radio: IcomRadio
-    ) -> None:
+    async def test_stays_connected_over_time(self, connected_radio: IcomRadio) -> None:
         """Radio stays connected during a short wait (pings should keep it alive)."""
         assert connected_radio.connected
         await asyncio.sleep(1.5)  # > 3 × ping interval (0.5 s each)
@@ -290,8 +276,6 @@ class TestDisconnect:
         await connected_radio.disconnect()
         assert not connected_radio.connected
 
-    async def test_double_disconnect_is_safe(
-        self, connected_radio: IcomRadio
-    ) -> None:
+    async def test_double_disconnect_is_safe(self, connected_radio: IcomRadio) -> None:
         await connected_radio.disconnect()
         await connected_radio.disconnect()  # must not raise

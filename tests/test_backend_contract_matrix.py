@@ -15,9 +15,7 @@ from icom_lan.commands import (
     IC_7610_ADDR,
     _CMD_LEVEL,
     _CMD_MODE_GET,
-    _CMD_PTT,
     _CMD_FREQ_GET,
-    _SUB_PTT,
     _SUB_RF_POWER,
     build_civ_frame,
 )

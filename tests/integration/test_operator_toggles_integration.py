@@ -36,7 +36,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 pytestmark = pytest.mark.mock_integration
 
 from icom_lan.commands import RECEIVER_MAIN, RECEIVER_SUB  # noqa: E402
-from icom_lan.radio import IcomRadio  # noqa: E402
+from icom_lan.radio import IcomRadio  # noqa: E402, TID251
 from icom_lan.types import AgcMode, AudioPeakFilter, BreakInMode  # noqa: E402
 from mock_server import MockIcomRadio  # noqa: E402
 
@@ -97,7 +97,9 @@ def _build_cmd29_civ(
 ) -> bytes:
     """Build a Command29-wrapped CI-V frame."""
     return _build_civ(
-        to, frm, _CMD_CMD29,
+        to,
+        frm,
+        _CMD_CMD29,
         data=bytes([receiver, inner_cmd, sub]) + data,
     )
 
@@ -117,11 +119,11 @@ class ToggleMockRadio(MockIcomRadio):
     def __init__(self, **kwargs: object) -> None:
         super().__init__(**kwargs)
         # Global (non-receiver) toggle state
-        self._agc: int = int(AgcMode.FAST)        # 1 = FAST
+        self._agc: int = int(AgcMode.FAST)  # 1 = FAST
         self._compressor: int = 0
         self._monitor: int = 0
         self._vox: int = 0
-        self._break_in: int = int(BreakInMode.OFF)   # 0 = OFF
+        self._break_in: int = int(BreakInMode.OFF)  # 0 = OFF
         self._dial_lock: int = 0
         # Per-receiver toggle state
         self._apf: dict[int, int] = {0: 0, 1: 0}
@@ -192,7 +194,11 @@ class ToggleMockRadio(MockIcomRadio):
                 self._compressor = rest[0]
                 return self._civ_ack(to, frm)
             return self._civ_frame(
-                to, frm, _CMD_PREAMP, sub=_SUB_COMPRESSOR, data=bytes([self._compressor])
+                to,
+                frm,
+                _CMD_PREAMP,
+                sub=_SUB_COMPRESSOR,
+                data=bytes([self._compressor]),
             )
 
         if sub == _SUB_MONITOR:
@@ -217,7 +223,11 @@ class ToggleMockRadio(MockIcomRadio):
                 self._break_in = ((raw >> 4) & 0x0F) * 10 + (raw & 0x0F)
                 return self._civ_ack(to, frm)
             return self._civ_frame(
-                to, frm, _CMD_PREAMP, sub=_SUB_BREAK_IN, data=bytes([_bcd(self._break_in)])
+                to,
+                frm,
+                _CMD_PREAMP,
+                sub=_SUB_BREAK_IN,
+                data=bytes([_bcd(self._break_in)]),
             )
 
         if sub == _SUB_DIAL_LOCK:
@@ -246,9 +256,17 @@ class ToggleMockRadio(MockIcomRadio):
                     self._apf[receiver] = rest[0]
                     return self._civ_ack(to, frm)
                 return self._civ_frame(
-                    to, frm, _CMD_CMD29,
-                    data=bytes([receiver, _CMD_PREAMP, _SUB_AUDIO_PEAK_FILTER,
-                                self._apf.get(receiver, 0)]),
+                    to,
+                    frm,
+                    _CMD_CMD29,
+                    data=bytes(
+                        [
+                            receiver,
+                            _CMD_PREAMP,
+                            _SUB_AUDIO_PEAK_FILTER,
+                            self._apf.get(receiver, 0),
+                        ]
+                    ),
                 )
 
             if sub == _SUB_AUTO_NOTCH:
@@ -256,9 +274,17 @@ class ToggleMockRadio(MockIcomRadio):
                     self._auto_notch[receiver] = rest[0]
                     return self._civ_ack(to, frm)
                 return self._civ_frame(
-                    to, frm, _CMD_CMD29,
-                    data=bytes([receiver, _CMD_PREAMP, _SUB_AUTO_NOTCH,
-                                self._auto_notch.get(receiver, 0)]),
+                    to,
+                    frm,
+                    _CMD_CMD29,
+                    data=bytes(
+                        [
+                            receiver,
+                            _CMD_PREAMP,
+                            _SUB_AUTO_NOTCH,
+                            self._auto_notch.get(receiver, 0),
+                        ]
+                    ),
                 )
 
             if sub == _SUB_MANUAL_NOTCH:
@@ -266,9 +292,17 @@ class ToggleMockRadio(MockIcomRadio):
                     self._manual_notch[receiver] = rest[0]
                     return self._civ_ack(to, frm)
                 return self._civ_frame(
-                    to, frm, _CMD_CMD29,
-                    data=bytes([receiver, _CMD_PREAMP, _SUB_MANUAL_NOTCH,
-                                self._manual_notch.get(receiver, 0)]),
+                    to,
+                    frm,
+                    _CMD_CMD29,
+                    data=bytes(
+                        [
+                            receiver,
+                            _CMD_PREAMP,
+                            _SUB_MANUAL_NOTCH,
+                            self._manual_notch.get(receiver, 0),
+                        ]
+                    ),
                 )
 
             if sub == _SUB_TWIN_PEAK_FILTER:
@@ -276,9 +310,17 @@ class ToggleMockRadio(MockIcomRadio):
                     self._twin_peak[receiver] = rest[0]
                     return self._civ_ack(to, frm)
                 return self._civ_frame(
-                    to, frm, _CMD_CMD29,
-                    data=bytes([receiver, _CMD_PREAMP, _SUB_TWIN_PEAK_FILTER,
-                                self._twin_peak.get(receiver, 0)]),
+                    to,
+                    frm,
+                    _CMD_CMD29,
+                    data=bytes(
+                        [
+                            receiver,
+                            _CMD_PREAMP,
+                            _SUB_TWIN_PEAK_FILTER,
+                            self._twin_peak.get(receiver, 0),
+                        ]
+                    ),
                 )
 
         # Fall through to parent for ATT (0x11), PREAMP status (sub 0x02), DIGI-SEL (sub 0x4E)
@@ -344,14 +386,21 @@ class TestAgcToggle:
             assert got == target, f"AGC: expected {target}, got {got}"
             assert toggle_mock._agc == int(target)
 
-    async def test_agc_unsolicited_update(self, toggle_radio: IcomRadio, toggle_mock: ToggleMockRadio) -> None:
+    async def test_agc_unsolicited_update(
+        self, toggle_radio: IcomRadio, toggle_mock: ToggleMockRadio
+    ) -> None:
         """Radio sends unsolicited AGC change; _notify_change fires."""
         events: list[tuple[str, dict]] = []
         toggle_radio._on_state_change = lambda name, data: events.append((name, data))  # type: ignore[assignment]
 
         # Radio pushes AGC=SLOW unsolicited (e.g., front-panel knob turn)
-        frame = _build_civ(_CONTROLLER_ADDR, _RADIO_ADDR, _CMD_PREAMP,
-                           sub=_SUB_AGC, data=bytes([_bcd(int(AgcMode.SLOW))]))
+        frame = _build_civ(
+            _CONTROLLER_ADDR,
+            _RADIO_ADDR,
+            _CMD_PREAMP,
+            sub=_SUB_AGC,
+            data=bytes([_bcd(int(AgcMode.SLOW))]),
+        )
         toggle_mock.inject_unsolicited_civ(frame)
         await asyncio.sleep(0.15)
 
@@ -387,8 +436,12 @@ class TestAudioPeakFilterToggle:
         self, toggle_radio: IcomRadio, toggle_mock: ToggleMockRadio
     ) -> None:
         """APF MAIN and SUB states are independent."""
-        await toggle_radio.set_audio_peak_filter(AudioPeakFilter.WIDE, receiver=RECEIVER_MAIN)
-        await toggle_radio.set_audio_peak_filter(AudioPeakFilter.NAR, receiver=RECEIVER_SUB)
+        await toggle_radio.set_audio_peak_filter(
+            AudioPeakFilter.WIDE, receiver=RECEIVER_MAIN
+        )
+        await toggle_radio.set_audio_peak_filter(
+            AudioPeakFilter.NAR, receiver=RECEIVER_SUB
+        )
         await asyncio.sleep(_SETTLE)
 
         main = await toggle_radio.get_audio_peak_filter(receiver=RECEIVER_MAIN)
@@ -404,8 +457,11 @@ class TestAudioPeakFilterToggle:
         toggle_radio._on_state_change = lambda name, data: events.append((name, data))  # type: ignore[assignment]
 
         frame = _build_cmd29_civ(
-            _CONTROLLER_ADDR, _RADIO_ADDR,
-            RECEIVER_MAIN, _CMD_PREAMP, _SUB_AUDIO_PEAK_FILTER,
+            _CONTROLLER_ADDR,
+            _RADIO_ADDR,
+            RECEIVER_MAIN,
+            _CMD_PREAMP,
+            _SUB_AUDIO_PEAK_FILTER,
             data=bytes([int(AudioPeakFilter.MID)]),
         )
         toggle_mock.inject_unsolicited_civ(frame)
@@ -461,8 +517,11 @@ class TestAutoNotchToggle:
         toggle_radio._on_state_change = lambda name, data: events.append((name, data))  # type: ignore[assignment]
 
         frame = _build_cmd29_civ(
-            _CONTROLLER_ADDR, _RADIO_ADDR,
-            RECEIVER_MAIN, _CMD_PREAMP, _SUB_AUTO_NOTCH,
+            _CONTROLLER_ADDR,
+            _RADIO_ADDR,
+            RECEIVER_MAIN,
+            _CMD_PREAMP,
+            _SUB_AUTO_NOTCH,
             data=b"\x01",
         )
         toggle_mock.inject_unsolicited_civ(frame)
@@ -506,8 +565,13 @@ class TestCompressorToggle:
         events: list[tuple[str, dict]] = []
         toggle_radio._on_state_change = lambda name, data: events.append((name, data))  # type: ignore[assignment]
 
-        frame = _build_civ(_CONTROLLER_ADDR, _RADIO_ADDR, _CMD_PREAMP,
-                           sub=_SUB_COMPRESSOR, data=b"\x01")
+        frame = _build_civ(
+            _CONTROLLER_ADDR,
+            _RADIO_ADDR,
+            _CMD_PREAMP,
+            sub=_SUB_COMPRESSOR,
+            data=b"\x01",
+        )
         toggle_mock.inject_unsolicited_civ(frame)
         await asyncio.sleep(0.15)
 
@@ -549,8 +613,9 @@ class TestMonitorToggle:
         events: list[tuple[str, dict]] = []
         toggle_radio._on_state_change = lambda name, data: events.append((name, data))  # type: ignore[assignment]
 
-        frame = _build_civ(_CONTROLLER_ADDR, _RADIO_ADDR, _CMD_PREAMP,
-                           sub=_SUB_MONITOR, data=b"\x01")
+        frame = _build_civ(
+            _CONTROLLER_ADDR, _RADIO_ADDR, _CMD_PREAMP, sub=_SUB_MONITOR, data=b"\x01"
+        )
         toggle_mock.inject_unsolicited_civ(frame)
         await asyncio.sleep(0.15)
 
@@ -590,8 +655,9 @@ class TestVoxToggle:
         events: list[tuple[str, dict]] = []
         toggle_radio._on_state_change = lambda name, data: events.append((name, data))  # type: ignore[assignment]
 
-        frame = _build_civ(_CONTROLLER_ADDR, _RADIO_ADDR, _CMD_PREAMP,
-                           sub=_SUB_VOX, data=b"\x01")
+        frame = _build_civ(
+            _CONTROLLER_ADDR, _RADIO_ADDR, _CMD_PREAMP, sub=_SUB_VOX, data=b"\x01"
+        )
         toggle_mock.inject_unsolicited_civ(frame)
         await asyncio.sleep(0.15)
 
@@ -630,8 +696,13 @@ class TestBreakInToggle:
         events: list[tuple[str, dict]] = []
         toggle_radio._on_state_change = lambda name, data: events.append((name, data))  # type: ignore[assignment]
 
-        frame = _build_civ(_CONTROLLER_ADDR, _RADIO_ADDR, _CMD_PREAMP,
-                           sub=_SUB_BREAK_IN, data=bytes([_bcd(int(BreakInMode.SEMI))]))
+        frame = _build_civ(
+            _CONTROLLER_ADDR,
+            _RADIO_ADDR,
+            _CMD_PREAMP,
+            sub=_SUB_BREAK_IN,
+            data=bytes([_bcd(int(BreakInMode.SEMI))]),
+        )
         toggle_mock.inject_unsolicited_civ(frame)
         await asyncio.sleep(0.15)
 
@@ -684,8 +755,11 @@ class TestManualNotchToggle:
         toggle_radio._on_state_change = lambda name, data: events.append((name, data))  # type: ignore[assignment]
 
         frame = _build_cmd29_civ(
-            _CONTROLLER_ADDR, _RADIO_ADDR,
-            RECEIVER_MAIN, _CMD_PREAMP, _SUB_MANUAL_NOTCH,
+            _CONTROLLER_ADDR,
+            _RADIO_ADDR,
+            RECEIVER_MAIN,
+            _CMD_PREAMP,
+            _SUB_MANUAL_NOTCH,
             data=b"\x01",
         )
         toggle_mock.inject_unsolicited_civ(frame)
@@ -740,8 +814,11 @@ class TestTwinPeakFilterToggle:
         toggle_radio._on_state_change = lambda name, data: events.append((name, data))  # type: ignore[assignment]
 
         frame = _build_cmd29_civ(
-            _CONTROLLER_ADDR, _RADIO_ADDR,
-            RECEIVER_MAIN, _CMD_PREAMP, _SUB_TWIN_PEAK_FILTER,
+            _CONTROLLER_ADDR,
+            _RADIO_ADDR,
+            RECEIVER_MAIN,
+            _CMD_PREAMP,
+            _SUB_TWIN_PEAK_FILTER,
             data=b"\x01",
         )
         toggle_mock.inject_unsolicited_civ(frame)
@@ -783,8 +860,9 @@ class TestDialLockToggle:
         events: list[tuple[str, dict]] = []
         toggle_radio._on_state_change = lambda name, data: events.append((name, data))  # type: ignore[assignment]
 
-        frame = _build_civ(_CONTROLLER_ADDR, _RADIO_ADDR, _CMD_PREAMP,
-                           sub=_SUB_DIAL_LOCK, data=b"\x01")
+        frame = _build_civ(
+            _CONTROLLER_ADDR, _RADIO_ADDR, _CMD_PREAMP, sub=_SUB_DIAL_LOCK, data=b"\x01"
+        )
         toggle_mock.inject_unsolicited_civ(frame)
         await asyncio.sleep(0.15)
 
@@ -803,9 +881,7 @@ class TestDialLockToggle:
 class TestNakHandling:
     """Verify radio raises on NAK responses from mock (unknown sub → NAK)."""
 
-    async def test_unknown_sub_returns_nak(
-        self, toggle_radio: IcomRadio
-    ) -> None:
+    async def test_unknown_sub_returns_nak(self, toggle_radio: IcomRadio) -> None:
         """Sending an unknown sub-command to ToggleMockRadio returns NAK.
 
         ToggleMockRadio.get_agc works, but a command aimed at an unhandled

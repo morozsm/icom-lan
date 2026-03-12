@@ -41,16 +41,18 @@ def _scope_wave_frame(
     end_hz: int = 14_350_000,
     pixels: bytes = b"\x10\x20\x30",
 ) -> bytes:
-    payload = bytes([
-        receiver,
-        _bcd_byte(1),
-        _bcd_byte(1),
-        mode,
-        *bcd_encode(start_hz),
-        *bcd_encode(end_hz),
-        0x00,
-        *pixels,
-    ])
+    payload = bytes(
+        [
+            receiver,
+            _bcd_byte(1),
+            _bcd_byte(1),
+            mode,
+            *bcd_encode(start_hz),
+            *bcd_encode(end_hz),
+            0x00,
+            *pixels,
+        ]
+    )
     return build_civ_frame(
         CONTROLLER_ADDR,
         IC_7610_ADDR,
@@ -338,7 +340,9 @@ async def test_serial_audio_tx_requires_start() -> None:
     await radio.disconnect()
 
 
-def test_serial_scope_pacing_profile_is_separate_from_lan(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_serial_scope_pacing_profile_is_separate_from_lan(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.delenv("ICOM_CIV_MIN_INTERVAL_MS", raising=False)
     monkeypatch.delenv("ICOM_SERIAL_CIV_MIN_INTERVAL_MS", raising=False)
     serial_radio = Icom7610SerialRadio(
@@ -361,11 +365,15 @@ async def test_serial_scope_enable_disable_full_lifecycle_commands() -> None:
     await radio.disable_scope(policy="fast")
     await radio.disconnect()
 
+    # Only parse full CI-V frames (min 6 bytes); skip short/control bytes
     signatures = []
     for frame in link.sent_frames:
+        if len(frame) < 6:
+            continue
         civ = parse_civ_frame(frame)
         signatures.append((civ.command, civ.sub, civ.data))
 
+    assert len(signatures) >= 4, f"Expected at least 4 scope CI-V frames, got {len(signatures)}"
     assert signatures[0] == (0x27, 0x10, b"\x01")
     assert signatures[1] == (0x27, 0x11, b"\x01")
     assert signatures[2] == (0x27, 0x11, b"\x00")
@@ -423,7 +431,9 @@ async def test_serial_scope_low_baud_guardrail_rejects_without_override() -> Non
 
 
 @pytest.mark.asyncio
-async def test_serial_scope_enable_disconnected_low_baud_keeps_connection_error_contract() -> None:
+async def test_serial_scope_enable_disconnected_low_baud_keeps_connection_error_contract() -> (
+    None
+):
     radio = Icom7610SerialRadio(
         device="/dev/ttyUSB0",
         baudrate=19200,

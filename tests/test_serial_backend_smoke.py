@@ -293,39 +293,29 @@ async def test_rigctld_smoke_with_serial_mock_backend() -> None:
 
             writer.write(b"F 7074000\n")
             await writer.drain()
-            set_freq_resp = await asyncio.wait_for(
-                reader.readuntil(b"\n"), timeout=2.0
-            )
+            set_freq_resp = await asyncio.wait_for(reader.readuntil(b"\n"), timeout=2.0)
             assert set_freq_resp.strip() == b"RPRT 0"
 
             writer.write(b"f\n")
             await writer.drain()
-            new_freq_resp = await asyncio.wait_for(
-                reader.readuntil(b"\n"), timeout=2.0
-            )
+            new_freq_resp = await asyncio.wait_for(reader.readuntil(b"\n"), timeout=2.0)
             assert new_freq_resp.strip() == b"7074000"
 
             writer.write(b"m\n")
             await writer.drain()
             mode_line = await asyncio.wait_for(reader.readuntil(b"\n"), timeout=2.0)
-            passband_line = await asyncio.wait_for(
-                reader.readuntil(b"\n"), timeout=2.0
-            )
+            passband_line = await asyncio.wait_for(reader.readuntil(b"\n"), timeout=2.0)
             assert mode_line.strip() == b"USB"
             assert passband_line.strip() in {b"3000", b"2400", b"1800", b"0"}
 
             writer.write(b"M PKTUSB 2400\n")
             await writer.drain()
-            set_mode_resp = await asyncio.wait_for(
-                reader.readuntil(b"\n"), timeout=2.0
-            )
+            set_mode_resp = await asyncio.wait_for(reader.readuntil(b"\n"), timeout=2.0)
             assert set_mode_resp.strip() == b"RPRT 0"
 
             writer.write(b"m\n")
             await writer.drain()
-            pkt_mode_line = await asyncio.wait_for(
-                reader.readuntil(b"\n"), timeout=2.0
-            )
+            pkt_mode_line = await asyncio.wait_for(reader.readuntil(b"\n"), timeout=2.0)
             pkt_passband_line = await asyncio.wait_for(
                 reader.readuntil(b"\n"), timeout=2.0
             )
@@ -334,9 +324,7 @@ async def test_rigctld_smoke_with_serial_mock_backend() -> None:
 
             writer.write(b"T 1\n")
             await writer.drain()
-            set_ptt_resp = await asyncio.wait_for(
-                reader.readuntil(b"\n"), timeout=2.0
-            )
+            set_ptt_resp = await asyncio.wait_for(reader.readuntil(b"\n"), timeout=2.0)
             assert set_ptt_resp.strip() == b"RPRT 0"
 
             writer.write(b"t\n")
@@ -360,7 +348,7 @@ async def test_web_audio_broadcaster_smoke_with_serial_backend_audio_driver() ->
     await radio.connect()
     broadcaster = AudioBroadcaster(radio)
     queue = await broadcaster.subscribe()
-    pcm_frame = b"\xAB\xCD" * 960
+    pcm_frame = b"\xab\xcd" * 960
     try:
         serial_audio.emit_rx_pcm(pcm_frame)
         web_frame = await asyncio.wait_for(queue.get(), timeout=1.0)

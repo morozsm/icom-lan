@@ -124,11 +124,7 @@ def encode_meter_frame(meters: list[tuple[int, int]], sequence: int) -> bytes:
     count = len(meters)
     seq_u16 = sequence & 0xFFFF
 
-    header = (
-        bytes([MSG_TYPE_METER])
-        + struct.pack("<H", seq_u16)
-        + bytes([count])
-    )
+    header = bytes([MSG_TYPE_METER]) + struct.pack("<H", seq_u16) + bytes([count])
     data = b"".join(
         bytes([meter_id, value & 0xFF, (value >> 8) & 0xFF])
         for meter_id, value in meters

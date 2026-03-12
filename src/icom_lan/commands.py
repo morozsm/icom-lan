@@ -16,7 +16,7 @@ Reference: wfview icomcommander.cpp, IC-7610.rig
 from __future__ import annotations
 
 import math
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 from .types import (
     AgcMode,
@@ -286,8 +286,8 @@ _CMD_METER = 0x15  # Meter readings
 _CMD_PTT = 0x1C  # Transceiver status / PTT
 _CMD_CTL_MEM = 0x1A  # Memory / configuration command
 _CMD_BAND_EDGE = 0x02  # Band edge frequency
-_CMD_RIT = 0x21       # RIT/XIT
-_CMD_TONE = 0x1B      # Tone/TSQL frequency
+_CMD_RIT = 0x21  # RIT/XIT
+_CMD_TONE = 0x1B  # Tone/TSQL frequency
 _CMD_MEMORY_MODE = 0x08  # Memory mode (select channel)
 _CMD_MEMORY_WRITE = 0x09  # Memory write
 _CMD_MEMORY_TO_VFO = 0x0A  # Memory to VFO
@@ -297,8 +297,8 @@ _CMD_NAK = 0xFA
 
 # Sub-commands
 _SUB_AF_LEVEL = 0x01  # AF output level (0x14 0x01)
-_SUB_RF_GAIN = 0x02   # RF Gain level (0x14 0x02)
-_SUB_SQL = 0x03       # Squelch level (0x14 0x03)
+_SUB_RF_GAIN = 0x02  # RF Gain level (0x14 0x02)
+_SUB_SQL = 0x03  # Squelch level (0x14 0x03)
 _SUB_APF_TYPE_LEVEL = 0x05
 _SUB_NR_LEVEL = 0x06
 _SUB_PBT_INNER = 0x07
@@ -317,7 +317,7 @@ _SUB_MONITOR_GAIN = 0x15
 _SUB_VOX_GAIN = 0x16
 _SUB_ANTI_VOX_GAIN = 0x17
 _SUB_S_METER = 0x02
-_SUB_VARIOUS_SQUELCH = 0x05   # Various squelch (cmd29)
+_SUB_VARIOUS_SQUELCH = 0x05  # Various squelch (cmd29)
 _SUB_POWER_METER = 0x11
 _SUB_SWR_METER = 0x12
 _SUB_ALC_METER = 0x13
@@ -358,7 +358,18 @@ _PREAMBLE = b"\xfe\xfe"
 _TERMINATOR = b"\xfd"
 
 # Commands that use sub-commands (for parse disambiguation)
-_COMMANDS_WITH_SUB: set[int] = {_CMD_LEVEL, _CMD_METER, _CMD_PTT, _CMD_CTL_MEM, _CMD_RIT, 0x27, 0x16, _CMD_TONE, _CMD_ANTENNA, 0x19}
+_COMMANDS_WITH_SUB: set[int] = {
+    _CMD_LEVEL,
+    _CMD_METER,
+    _CMD_PTT,
+    _CMD_CTL_MEM,
+    _CMD_RIT,
+    0x27,
+    0x16,
+    _CMD_TONE,
+    _CMD_ANTENNA,
+    0x19,
+}
 
 
 def build_civ_frame(
@@ -553,7 +564,9 @@ def set_frequency(
     """
     bcd = bcd_encode(freq_hz)
     if receiver != RECEIVER_MAIN:
-        return build_cmd29_frame(to_addr, from_addr, _CMD_FREQ_SET, data=bcd, receiver=receiver)
+        return build_cmd29_frame(
+            to_addr, from_addr, _CMD_FREQ_SET, data=bcd, receiver=receiver
+        )
     return build_civ_frame(to_addr, from_addr, _CMD_FREQ_SET, data=bcd)
 
 
@@ -605,7 +618,9 @@ def set_mode(
     if filter_width is not None:
         data += bytes([filter_width])
     if receiver != RECEIVER_MAIN:
-        return build_cmd29_frame(to_addr, from_addr, _CMD_MODE_SET, data=data, receiver=receiver)
+        return build_cmd29_frame(
+            to_addr, from_addr, _CMD_MODE_SET, data=data, receiver=receiver
+        )
     return build_civ_frame(to_addr, from_addr, _CMD_MODE_SET, data=data)
 
 
@@ -681,11 +696,9 @@ def _bcd_encode_value(value: int, *, byte_count: int) -> bytes:
     if value < 0:
         raise ValueError(f"BCD value must be non-negative, got {value}")
     digits = byte_count * 2
-    maximum = (10 ** digits) - 1
+    maximum = (10**digits) - 1
     if value > maximum:
-        raise ValueError(
-            f"BCD value must fit in {byte_count} byte(s), got {value}"
-        )
+        raise ValueError(f"BCD value must fit in {byte_count} byte(s), got {value}")
     text = f"{value:0{digits}d}"
     return bytes(
         (int(text[index]) << 4) | int(text[index + 1])
@@ -715,7 +728,7 @@ def parse_level_response(
             raise ValueError(
                 f"Level response prefix mismatch: expected {prefix.hex()}, got {data.hex()}"
             )
-        data = data[len(prefix):]
+        data = data[len(prefix) :]
     if len(data) < bcd_bytes:
         raise ValueError(
             f"Level response payload too short: expected at least {bcd_bytes} bytes, got {len(data)}"
@@ -744,7 +757,7 @@ def parse_bool_response(
             raise ValueError(
                 f"Boolean response prefix mismatch: expected {prefix.hex()}, got {data.hex()}"
             )
-        data = data[len(prefix):]
+        data = data[len(prefix) :]
     if not data:
         raise ValueError("Boolean response has no payload byte")
     return data[0] != 0x00
@@ -777,7 +790,7 @@ def _build_level_set(
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     command29: bool = False,
-    encoder=_level_bcd_encode,
+    encoder: Callable[[int], bytes] = _level_bcd_encode,
 ) -> bytes:
     payload = encoder(value)
     if command29:
@@ -1019,11 +1032,20 @@ def set_rf_gain(
     """
     bcd = _level_bcd_encode(level)
     if receiver != RECEIVER_MAIN:
-        return build_cmd29_frame(to_addr, from_addr, _CMD_LEVEL, sub=_SUB_RF_GAIN, data=bcd, receiver=receiver)
+        return build_cmd29_frame(
+            to_addr,
+            from_addr,
+            _CMD_LEVEL,
+            sub=_SUB_RF_GAIN,
+            data=bcd,
+            receiver=receiver,
+        )
     return build_civ_frame(to_addr, from_addr, _CMD_LEVEL, sub=_SUB_RF_GAIN, data=bcd)
 
 
-def get_af_level(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR) -> bytes:
+def get_af_level(
+    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
+) -> bytes:
     """Build a 'read AF output level' CI-V command (0x14 0x01)."""
     return build_civ_frame(to_addr, from_addr, _CMD_LEVEL, sub=_SUB_AF_LEVEL)
 
@@ -1042,7 +1064,14 @@ def set_af_level(
     """
     bcd = _level_bcd_encode(level)
     if receiver != RECEIVER_MAIN:
-        return build_cmd29_frame(to_addr, from_addr, _CMD_LEVEL, sub=_SUB_AF_LEVEL, data=bcd, receiver=receiver)
+        return build_cmd29_frame(
+            to_addr,
+            from_addr,
+            _CMD_LEVEL,
+            sub=_SUB_AF_LEVEL,
+            data=bcd,
+            receiver=receiver,
+        )
     return build_civ_frame(to_addr, from_addr, _CMD_LEVEL, sub=_SUB_AF_LEVEL, data=bcd)
 
 
@@ -1060,7 +1089,9 @@ def set_squelch(
     """
     bcd = _level_bcd_encode(level)
     if receiver != RECEIVER_MAIN:
-        return build_cmd29_frame(to_addr, from_addr, _CMD_LEVEL, sub=_SUB_SQL, data=bcd, receiver=receiver)
+        return build_cmd29_frame(
+            to_addr, from_addr, _CMD_LEVEL, sub=_SUB_SQL, data=bcd, receiver=receiver
+        )
     return build_civ_frame(to_addr, from_addr, _CMD_LEVEL, sub=_SUB_SQL, data=bcd)
 
 
@@ -1280,9 +1311,7 @@ def get_compressor_level(
     from_addr: int = CONTROLLER_ADDR,
 ) -> bytes:
     """Build a read Compressor Level command."""
-    return _build_level_get(
-        _SUB_COMPRESSOR_LEVEL, to_addr=to_addr, from_addr=from_addr
-    )
+    return _build_level_get(_SUB_COMPRESSOR_LEVEL, to_addr=to_addr, from_addr=from_addr)
 
 
 def set_compressor_level(
@@ -1304,9 +1333,7 @@ def get_break_in_delay(
     from_addr: int = CONTROLLER_ADDR,
 ) -> bytes:
     """Build a read Break-In Delay command."""
-    return _build_level_get(
-        _SUB_BREAK_IN_DELAY, to_addr=to_addr, from_addr=from_addr
-    )
+    return _build_level_get(_SUB_BREAK_IN_DELAY, to_addr=to_addr, from_addr=from_addr)
 
 
 def set_break_in_delay(
@@ -1453,9 +1480,7 @@ def get_anti_vox_gain(
     from_addr: int = CONTROLLER_ADDR,
 ) -> bytes:
     """Build a read Anti-Vox Gain command."""
-    return _build_level_get(
-        _SUB_ANTI_VOX_GAIN, to_addr=to_addr, from_addr=from_addr
-    )
+    return _build_level_get(_SUB_ANTI_VOX_GAIN, to_addr=to_addr, from_addr=from_addr)
 
 
 def set_anti_vox_gain(
@@ -1555,17 +1580,17 @@ _SUB_TWIN_PEAK_FILTER = 0x4F
 _SUB_DIAL_LOCK = 0x50
 _SUB_FILTER_SHAPE = 0x56
 _SUB_SSB_TX_BANDWIDTH = 0x58
-_SUB_NB = 0x22        # Noise Blanker on/off (0x16 0x22)
-_SUB_NR = 0x40        # Noise Reduction on/off (0x16 0x40)
-_SUB_IP_PLUS = 0x65   # IP+ on/off (0x16 0x65)
+_SUB_NB = 0x22  # Noise Blanker on/off (0x16 0x22)
+_SUB_NR = 0x40  # Noise Reduction on/off (0x16 0x40)
+_SUB_IP_PLUS = 0x65  # IP+ on/off (0x16 0x65)
 _SUB_MAIN_SUB_TRACKING = 0x5E  # Main/Sub Tracking on/off (0x16 0x5E)
-_SUB_REPEATER_TONE = 0x42     # Repeater Tone on/off (0x16 0x42)
-_SUB_REPEATER_TSQL = 0x43     # Repeater TSQL on/off (0x16 0x43)
+_SUB_REPEATER_TONE = 0x42  # Repeater Tone on/off (0x16 0x42)
+_SUB_REPEATER_TSQL = 0x43  # Repeater TSQL on/off (0x16 0x43)
 # 0x1B subcodes (tone frequencies)
-_SUB_TONE_FREQ = 0x00         # CTCSS Tone frequency (0x1B 0x00)
-_SUB_TSQL_FREQ = 0x01         # TSQL frequency (0x1B 0x01)
-_SUB_MEMORY_CONTENTS = 0x00   # Memory contents (0x1A 0x00)
-_SUB_BAND_STACK = 0x01        # Band stacking register (0x1A 0x01)
+_SUB_TONE_FREQ = 0x00  # CTCSS Tone frequency (0x1B 0x00)
+_SUB_TSQL_FREQ = 0x01  # TSQL frequency (0x1B 0x01)
+_SUB_MEMORY_CONTENTS = 0x00  # Memory contents (0x1A 0x00)
+_SUB_BAND_STACK = 0x01  # Band stacking register (0x1A 0x01)
 _SUB_AGC_TIME_CONSTANT = 0x04
 
 
@@ -1635,19 +1660,17 @@ def set_tuning_step(
     """
     if not 0 <= step <= 8:
         raise ValueError(f"Tuning step must be 0-8, got {step}")
-    return build_civ_frame(to_addr, from_addr, _CMD_TUNING_STEP, data=bytes([_bcd_byte(step)]))
+    return build_civ_frame(
+        to_addr, from_addr, _CMD_TUNING_STEP, data=bytes([_bcd_byte(step)])
+    )
 
 
-def start_scan(
-    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
-) -> bytes:
+def start_scan(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR) -> bytes:
     """Build CI-V command to start scanning (0x0E 0x01)."""
     return build_civ_frame(to_addr, from_addr, _CMD_SCAN, data=b"\x01")
 
 
-def stop_scan(
-    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
-) -> bytes:
+def stop_scan(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR) -> bytes:
     """Build CI-V command to stop scanning (0x0E 0x00)."""
     return build_civ_frame(to_addr, from_addr, _CMD_SCAN, data=b"\x00")
 
@@ -1656,21 +1679,27 @@ def set_dual_watch_off(
     to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
 ) -> bytes:
     """Build CI-V command to turn off dual watch (0x07 0xC0)."""
-    return build_civ_frame(to_addr, from_addr, _CMD_VFO_SELECT, data=bytes([_VFO_DUAL_WATCH_OFF]))
+    return build_civ_frame(
+        to_addr, from_addr, _CMD_VFO_SELECT, data=bytes([_VFO_DUAL_WATCH_OFF])
+    )
 
 
 def set_dual_watch_on(
     to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
 ) -> bytes:
     """Build CI-V command to turn on dual watch (0x07 0xC1)."""
-    return build_civ_frame(to_addr, from_addr, _CMD_VFO_SELECT, data=bytes([_VFO_DUAL_WATCH_ON]))
+    return build_civ_frame(
+        to_addr, from_addr, _CMD_VFO_SELECT, data=bytes([_VFO_DUAL_WATCH_ON])
+    )
 
 
 def get_dual_watch(
     to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
 ) -> bytes:
     """Build CI-V command to query dual watch status (0x07 0xC2)."""
-    return build_civ_frame(to_addr, from_addr, _CMD_VFO_SELECT, data=bytes([_VFO_DUAL_WATCH_QUERY]))
+    return build_civ_frame(
+        to_addr, from_addr, _CMD_VFO_SELECT, data=bytes([_VFO_DUAL_WATCH_QUERY])
+    )
 
 
 def set_dual_watch(
@@ -1686,21 +1715,31 @@ def set_dual_watch(
     Returns:
         CI-V frame bytes.
     """
-    return set_dual_watch_on(to_addr, from_addr) if on else set_dual_watch_off(to_addr, from_addr)
+    return (
+        set_dual_watch_on(to_addr, from_addr)
+        if on
+        else set_dual_watch_off(to_addr, from_addr)
+    )
 
 
 def quick_dual_watch(
     to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
 ) -> bytes:
     """Build CI-V command for one-shot dual watch trigger (0x1A 0x05 0x00 0x32)."""
-    return build_civ_frame(to_addr, from_addr, _CMD_CTL_MEM, sub=_SUB_CTL_MEM, data=_CTL_MEM_QUICK_DUAL_WATCH)
+    return build_civ_frame(
+        to_addr,
+        from_addr,
+        _CMD_CTL_MEM,
+        sub=_SUB_CTL_MEM,
+        data=_CTL_MEM_QUICK_DUAL_WATCH,
+    )
 
 
-def quick_split(
-    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
-) -> bytes:
+def quick_split(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR) -> bytes:
     """Build CI-V command for one-shot split trigger (0x1A 0x05 0x00 0x33)."""
-    return build_civ_frame(to_addr, from_addr, _CMD_CTL_MEM, sub=_SUB_CTL_MEM, data=_CTL_MEM_QUICK_SPLIT)
+    return build_civ_frame(
+        to_addr, from_addr, _CMD_CTL_MEM, sub=_SUB_CTL_MEM, data=_CTL_MEM_QUICK_SPLIT
+    )
 
 
 def _bcd_byte(value: int) -> int:
@@ -1827,7 +1866,6 @@ def set_digisel(
 # --- DATA mode commands (CI-V 0x1A 0x06) ---
 
 
-
 def get_nb(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
@@ -1845,7 +1883,9 @@ def set_nb(
     """Set Noise Blanker on/off."""
     data = bytes([0x01 if on else 0x00])
     if receiver != RECEIVER_MAIN:
-        return build_cmd29_frame(to_addr, from_addr, _CMD_PREAMP, sub=_SUB_NB, data=data, receiver=receiver)
+        return build_cmd29_frame(
+            to_addr, from_addr, _CMD_PREAMP, sub=_SUB_NB, data=data, receiver=receiver
+        )
     return build_civ_frame(to_addr, from_addr, _CMD_PREAMP, sub=_SUB_NB, data=data)
 
 
@@ -1866,7 +1906,9 @@ def set_nr(
     """Set Noise Reduction on/off."""
     data = bytes([0x01 if on else 0x00])
     if receiver != RECEIVER_MAIN:
-        return build_cmd29_frame(to_addr, from_addr, _CMD_PREAMP, sub=_SUB_NR, data=data, receiver=receiver)
+        return build_cmd29_frame(
+            to_addr, from_addr, _CMD_PREAMP, sub=_SUB_NR, data=data, receiver=receiver
+        )
     return build_civ_frame(to_addr, from_addr, _CMD_PREAMP, sub=_SUB_NR, data=data)
 
 
@@ -1887,7 +1929,14 @@ def set_ip_plus(
     """Set IP+ on/off."""
     data = bytes([0x01 if on else 0x00])
     if receiver != RECEIVER_MAIN:
-        return build_cmd29_frame(to_addr, from_addr, _CMD_PREAMP, sub=_SUB_IP_PLUS, data=data, receiver=receiver)
+        return build_cmd29_frame(
+            to_addr,
+            from_addr,
+            _CMD_PREAMP,
+            sub=_SUB_IP_PLUS,
+            data=data,
+            receiver=receiver,
+        )
     return build_civ_frame(to_addr, from_addr, _CMD_PREAMP, sub=_SUB_IP_PLUS, data=data)
 
 
@@ -2455,7 +2504,10 @@ def set_data_mode(
         CI-V frame bytes.
     """
     return build_civ_frame(
-        to_addr, from_addr, _CMD_CTL_MEM, sub=_SUB_DATA_MODE,
+        to_addr,
+        from_addr,
+        _CMD_CTL_MEM,
+        sub=_SUB_DATA_MODE,
         data=b"\x01" if on else b"\x00",
     )
 
@@ -2573,7 +2625,10 @@ def _split_scope_receiver_prefix(
     *,
     expected_lengths: tuple[int, ...],
 ) -> tuple[int | None, bytes]:
-    if len(data) in {length + 1 for length in expected_lengths} and data[0] in (0x00, 0x01):
+    if len(data) in {length + 1 for length in expected_lengths} and data[0] in (
+        0x00,
+        0x01,
+    ):
         return data[0], data[1:]
     if len(data) not in expected_lengths:
         expected = " or ".join(str(length) for length in expected_lengths)
@@ -2618,18 +2673,18 @@ def _decode_scope_bcd_value(
     return receiver, value
 
 
-def scope_on(
-    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
-) -> bytes:
+def scope_on(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR) -> bytes:
     """Build a 'scope on' CI-V command (0x27 0x10 0x01)."""
-    return build_civ_frame(to_addr, from_addr, _CMD_SCOPE, sub=_SUB_SCOPE_ON, data=b"\x01")
+    return build_civ_frame(
+        to_addr, from_addr, _CMD_SCOPE, sub=_SUB_SCOPE_ON, data=b"\x01"
+    )
 
 
-def scope_off(
-    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
-) -> bytes:
+def scope_off(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR) -> bytes:
     """Build a 'scope off' CI-V command (0x27 0x10 0x00)."""
-    return build_civ_frame(to_addr, from_addr, _CMD_SCOPE, sub=_SUB_SCOPE_ON, data=b"\x00")
+    return build_civ_frame(
+        to_addr, from_addr, _CMD_SCOPE, sub=_SUB_SCOPE_ON, data=b"\x00"
+    )
 
 
 def scope_data_output(
@@ -2643,7 +2698,10 @@ def scope_data_output(
         on: True to enable wave data output, False to disable.
     """
     return build_civ_frame(
-        to_addr, from_addr, _CMD_SCOPE, sub=_SUB_SCOPE_DATA_OUTPUT,
+        to_addr,
+        from_addr,
+        _CMD_SCOPE,
+        sub=_SUB_SCOPE_DATA_OUTPUT,
         data=b"\x01" if on else b"\x00",
     )
 
@@ -3141,7 +3199,10 @@ def scope_single_dual(
         dual: True for dual scope, False for single.
     """
     return build_civ_frame(
-        to_addr, from_addr, _CMD_SCOPE, sub=_SUB_SCOPE_SINGLE_DUAL,
+        to_addr,
+        from_addr,
+        _CMD_SCOPE,
+        sub=_SUB_SCOPE_SINGLE_DUAL,
         data=b"\x01" if dual else b"\x00",
     )
 
@@ -3331,14 +3392,18 @@ _SUB_TRANSCEIVER_ID = 0x00
 
 
 def get_transceiver_id(
-    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
 ) -> bytes:
     """Build a read transceiver ID command (0x19 0x00).
 
     GET only.  Response data: 1 byte model ID (IC-7610 = 0x98).
     """
     return build_civ_frame(
-        to_addr, from_addr, _CMD_TRANSCEIVER_ID, sub=_SUB_TRANSCEIVER_ID,
+        to_addr,
+        from_addr,
+        _CMD_TRANSCEIVER_ID,
+        sub=_SUB_TRANSCEIVER_ID,
     )
 
 
@@ -3356,7 +3421,8 @@ _SUB_RIT_TX_STATUS = 0x02
 
 
 def get_band_edge_freq(
-    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
 ) -> bytes:
     """Build a read band-edge frequency command (0x02).
 
@@ -3381,35 +3447,40 @@ def get_various_squelch(
 
 
 def get_power_meter(
-    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
 ) -> bytes:
     """Build a read RF power meter command (0x15 0x11)."""
     return build_civ_frame(to_addr, from_addr, _CMD_METER, sub=_SUB_POWER_METER)
 
 
 def get_comp_meter(
-    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
 ) -> bytes:
     """Build a read compressor meter command (0x15 0x14)."""
     return build_civ_frame(to_addr, from_addr, _CMD_METER, sub=_SUB_COMP_METER)
 
 
 def get_vd_meter(
-    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
 ) -> bytes:
     """Build a read Vd (supply voltage) meter command (0x15 0x15)."""
     return build_civ_frame(to_addr, from_addr, _CMD_METER, sub=_SUB_VD_METER)
 
 
 def get_id_meter(
-    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
 ) -> bytes:
     """Build a read Id (drain current) meter command (0x15 0x16)."""
     return build_civ_frame(to_addr, from_addr, _CMD_METER, sub=_SUB_ID_METER)
 
 
 def get_tuner_status(
-    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
 ) -> bytes:
     """Build a read tuner/ATU status command (0x1C 0x01).
 
@@ -3436,7 +3507,8 @@ def set_tuner_status(
 
 
 def get_xfc_status(
-    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
 ) -> bytes:
     """Build a read XFC status command (0x1C 0x02).
 
@@ -3456,13 +3528,17 @@ def set_xfc_status(
         on: True to enable XFC, False to disable.
     """
     return build_civ_frame(
-        to_addr, from_addr, _CMD_PTT, sub=_SUB_XFC_STATUS,
+        to_addr,
+        from_addr,
+        _CMD_PTT,
+        sub=_SUB_XFC_STATUS,
         data=b"\x01" if on else b"\x00",
     )
 
 
 def get_tx_freq_monitor(
-    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
 ) -> bytes:
     """Build a read TX frequency monitor status command (0x1C 0x03)."""
     return build_civ_frame(to_addr, from_addr, _CMD_PTT, sub=_SUB_TX_FREQ_MONITOR)
@@ -3475,13 +3551,17 @@ def set_tx_freq_monitor(
 ) -> bytes:
     """Build a set TX frequency monitor command (0x1C 0x03)."""
     return build_civ_frame(
-        to_addr, from_addr, _CMD_PTT, sub=_SUB_TX_FREQ_MONITOR,
+        to_addr,
+        from_addr,
+        _CMD_PTT,
+        sub=_SUB_TX_FREQ_MONITOR,
         data=b"\x01" if on else b"\x00",
     )
 
 
 def get_rit_frequency(
-    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
 ) -> bytes:
     """Build a read RIT frequency offset command (0x21 0x00).
 
@@ -3509,7 +3589,10 @@ def set_rit_frequency(
     d1 = ((abs_hz % 10000 // 1000) << 4) | (abs_hz % 1000 // 100)
     sign = b"\x01" if offset_hz < 0 else b"\x00"
     return build_civ_frame(
-        to_addr, from_addr, _CMD_RIT, sub=_SUB_RIT_FREQ,
+        to_addr,
+        from_addr,
+        _CMD_RIT,
+        sub=_SUB_RIT_FREQ,
         data=bytes([d0, d1]) + sign,
     )
 
@@ -3531,7 +3614,8 @@ def parse_rit_frequency_response(data: bytes) -> int:
 
 
 def get_rit_status(
-    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
 ) -> bytes:
     """Build a read RIT on/off status command (0x21 0x01)."""
     return build_civ_frame(to_addr, from_addr, _CMD_RIT, sub=_SUB_RIT_STATUS)
@@ -3544,13 +3628,17 @@ def set_rit_status(
 ) -> bytes:
     """Build a set RIT on/off command (0x21 0x01)."""
     return build_civ_frame(
-        to_addr, from_addr, _CMD_RIT, sub=_SUB_RIT_STATUS,
+        to_addr,
+        from_addr,
+        _CMD_RIT,
+        sub=_SUB_RIT_STATUS,
         data=b"\x01" if on else b"\x00",
     )
 
 
 def get_rit_tx_status(
-    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
 ) -> bytes:
     """Build a read RIT TX status command (0x21 0x02)."""
     return build_civ_frame(to_addr, from_addr, _CMD_RIT, sub=_SUB_RIT_TX_STATUS)
@@ -3563,7 +3651,10 @@ def set_rit_tx_status(
 ) -> bytes:
     """Build a set RIT TX status command (0x21 0x02)."""
     return build_civ_frame(
-        to_addr, from_addr, _CMD_RIT, sub=_SUB_RIT_TX_STATUS,
+        to_addr,
+        from_addr,
+        _CMD_RIT,
+        sub=_SUB_RIT_TX_STATUS,
         data=b"\x01" if on else b"\x00",
     )
 
@@ -3591,11 +3682,13 @@ def _encode_tone_freq(freq_hz: float) -> bytes:
     hundreds = integer_hz // 100
     tens_units = integer_hz % 100
     tenths_digit = total_tenths % 10
-    return bytes([
-        _bcd_byte(hundreds),
-        _bcd_byte(tens_units),
-        _bcd_byte(tenths_digit),
-    ])
+    return bytes(
+        [
+            _bcd_byte(hundreds),
+            _bcd_byte(tens_units),
+            _bcd_byte(tenths_digit),
+        ]
+    )
 
 
 def _decode_tone_freq(data: bytes) -> float:
@@ -3776,7 +3869,9 @@ def parse_tsql_freq_response(frame: CivFrame) -> tuple[int | None, float]:
 # --- Memory Commands ---
 
 
-def build_memory_mode_get(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR) -> bytes:
+def build_memory_mode_get(
+    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
+) -> bytes:
     """Build CI-V frame to get current memory mode (0x08)."""
     return build_civ_frame(to_addr, from_addr, _CMD_MEMORY_MODE)
 
@@ -3808,7 +3903,9 @@ def parse_memory_mode_response(frame: CivFrame) -> int:
     return _bcd_decode_value(frame.data[:2])
 
 
-def build_memory_write(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR) -> bytes:
+def build_memory_write(
+    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
+) -> bytes:
     """Build CI-V frame to write VFO to memory (0x09)."""
     return build_civ_frame(to_addr, from_addr, _CMD_MEMORY_WRITE)
 
@@ -3936,7 +4033,10 @@ def parse_memory_contents_response(frame: CivFrame) -> "MemoryChannel":
 
 
 def build_band_stack_get(
-    band: int, register: int, to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
+    band: int,
+    register: int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
 ) -> bytes:
     """Build CI-V frame to get band stacking register (0x1A 0x01).
 
@@ -3955,7 +4055,9 @@ def build_band_stack_get(
 
 
 def build_band_stack_set(
-    bsr: "BandStackRegister", to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
+    bsr: "BandStackRegister",
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
 ) -> bytes:
     """Build CI-V frame to set band stacking register (0x1A 0x01).
 
@@ -4028,7 +4130,10 @@ def set_antenna_1(
         enabled: True to select ANT1, False to deselect.
     """
     return build_civ_frame(
-        to_addr, from_addr, _CMD_ANTENNA, sub=_SUB_ANT1,
+        to_addr,
+        from_addr,
+        _CMD_ANTENNA,
+        sub=_SUB_ANT1,
         data=b"\x01" if enabled else b"\x00",
     )
 
@@ -4052,7 +4157,10 @@ def set_antenna_2(
         enabled: True to select ANT2, False to deselect.
     """
     return build_civ_frame(
-        to_addr, from_addr, _CMD_ANTENNA, sub=_SUB_ANT2,
+        to_addr,
+        from_addr,
+        _CMD_ANTENNA,
+        sub=_SUB_ANT2,
         data=b"\x01" if enabled else b"\x00",
     )
 
@@ -4076,7 +4184,10 @@ def set_rx_antenna_ant1(
         enabled: True to enable RX antenna on ANT1.
     """
     return build_civ_frame(
-        to_addr, from_addr, _CMD_ANTENNA, sub=_SUB_RX_ANT_ANT1,
+        to_addr,
+        from_addr,
+        _CMD_ANTENNA,
+        sub=_SUB_RX_ANT_ANT1,
         data=b"\x01" if enabled else b"\x00",
     )
 
@@ -4100,7 +4211,10 @@ def set_rx_antenna_ant2(
         enabled: True to enable RX antenna on ANT2.
     """
     return build_civ_frame(
-        to_addr, from_addr, _CMD_ANTENNA, sub=_SUB_RX_ANT_ANT2,
+        to_addr,
+        from_addr,
+        _CMD_ANTENNA,
+        sub=_SUB_RX_ANT_ANT2,
         data=b"\x01" if enabled else b"\x00",
     )
 
@@ -4127,7 +4241,10 @@ def set_acc1_mod_level(
         level: Mod level 0-255.
     """
     return build_civ_frame(
-        to_addr, from_addr, _CMD_LEVEL, sub=_SUB_ACC1_MOD_LEVEL,
+        to_addr,
+        from_addr,
+        _CMD_LEVEL,
+        sub=_SUB_ACC1_MOD_LEVEL,
         data=_level_bcd_encode(level),
     )
 
@@ -4151,7 +4268,10 @@ def set_usb_mod_level(
         level: Mod level 0-255.
     """
     return build_civ_frame(
-        to_addr, from_addr, _CMD_LEVEL, sub=_SUB_USB_MOD_LEVEL,
+        to_addr,
+        from_addr,
+        _CMD_LEVEL,
+        sub=_SUB_USB_MOD_LEVEL,
         data=_level_bcd_encode(level),
     )
 
@@ -4175,7 +4295,10 @@ def set_lan_mod_level(
         level: Mod level 0-255.
     """
     return build_civ_frame(
-        to_addr, from_addr, _CMD_LEVEL, sub=_SUB_LAN_MOD_LEVEL,
+        to_addr,
+        from_addr,
+        _CMD_LEVEL,
+        sub=_SUB_LAN_MOD_LEVEL,
         data=_level_bcd_encode(level),
     )
 
@@ -4188,7 +4311,9 @@ def get_data_off_mod_input(
     from_addr: int = CONTROLLER_ADDR,
 ) -> bytes:
     """Build read Data Off modulation input command (0x1A 0x05 0x00 0x91)."""
-    return _build_ctl_mem_get(_CTL_MEM_DATA_OFF_MOD_INPUT, to_addr=to_addr, from_addr=from_addr)
+    return _build_ctl_mem_get(
+        _CTL_MEM_DATA_OFF_MOD_INPUT, to_addr=to_addr, from_addr=from_addr
+    )
 
 
 def set_data_off_mod_input(
@@ -4204,8 +4329,11 @@ def set_data_off_mod_input(
     if not 0 <= source <= 5:
         raise ValueError(f"Data Off mod input must be 0-5, got {source}")
     return _build_ctl_mem_set(
-        _CTL_MEM_DATA_OFF_MOD_INPUT, source,
-        to_addr=to_addr, from_addr=from_addr, byte_count=1,
+        _CTL_MEM_DATA_OFF_MOD_INPUT,
+        source,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        byte_count=1,
     )
 
 
@@ -4214,7 +4342,9 @@ def get_data1_mod_input(
     from_addr: int = CONTROLLER_ADDR,
 ) -> bytes:
     """Build read DATA1 modulation input command (0x1A 0x05 0x00 0x92)."""
-    return _build_ctl_mem_get(_CTL_MEM_DATA1_MOD_INPUT, to_addr=to_addr, from_addr=from_addr)
+    return _build_ctl_mem_get(
+        _CTL_MEM_DATA1_MOD_INPUT, to_addr=to_addr, from_addr=from_addr
+    )
 
 
 def set_data1_mod_input(
@@ -4230,8 +4360,11 @@ def set_data1_mod_input(
     if not 0 <= source <= 4:
         raise ValueError(f"DATA1 mod input must be 0-4, got {source}")
     return _build_ctl_mem_set(
-        _CTL_MEM_DATA1_MOD_INPUT, source,
-        to_addr=to_addr, from_addr=from_addr, byte_count=1,
+        _CTL_MEM_DATA1_MOD_INPUT,
+        source,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        byte_count=1,
     )
 
 
@@ -4240,7 +4373,9 @@ def get_data2_mod_input(
     from_addr: int = CONTROLLER_ADDR,
 ) -> bytes:
     """Build read DATA2 modulation input command (0x1A 0x05 0x00 0x93)."""
-    return _build_ctl_mem_get(_CTL_MEM_DATA2_MOD_INPUT, to_addr=to_addr, from_addr=from_addr)
+    return _build_ctl_mem_get(
+        _CTL_MEM_DATA2_MOD_INPUT, to_addr=to_addr, from_addr=from_addr
+    )
 
 
 def set_data2_mod_input(
@@ -4256,8 +4391,11 @@ def set_data2_mod_input(
     if not 0 <= source <= 4:
         raise ValueError(f"DATA2 mod input must be 0-4, got {source}")
     return _build_ctl_mem_set(
-        _CTL_MEM_DATA2_MOD_INPUT, source,
-        to_addr=to_addr, from_addr=from_addr, byte_count=1,
+        _CTL_MEM_DATA2_MOD_INPUT,
+        source,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        byte_count=1,
     )
 
 
@@ -4266,7 +4404,9 @@ def get_data3_mod_input(
     from_addr: int = CONTROLLER_ADDR,
 ) -> bytes:
     """Build read DATA3 modulation input command (0x1A 0x05 0x00 0x94)."""
-    return _build_ctl_mem_get(_CTL_MEM_DATA3_MOD_INPUT, to_addr=to_addr, from_addr=from_addr)
+    return _build_ctl_mem_get(
+        _CTL_MEM_DATA3_MOD_INPUT, to_addr=to_addr, from_addr=from_addr
+    )
 
 
 def set_data3_mod_input(
@@ -4282,8 +4422,11 @@ def set_data3_mod_input(
     if not 0 <= source <= 4:
         raise ValueError(f"DATA3 mod input must be 0-4, got {source}")
     return _build_ctl_mem_set(
-        _CTL_MEM_DATA3_MOD_INPUT, source,
-        to_addr=to_addr, from_addr=from_addr, byte_count=1,
+        _CTL_MEM_DATA3_MOD_INPUT,
+        source,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        byte_count=1,
     )
 
 
@@ -4295,7 +4438,9 @@ def get_civ_transceive(
     from_addr: int = CONTROLLER_ADDR,
 ) -> bytes:
     """Build read CI-V transceive command (0x1A 0x05 0x01 0x29)."""
-    return _build_ctl_mem_get(_CTL_MEM_CIV_TRANSCEIVE, to_addr=to_addr, from_addr=from_addr)
+    return _build_ctl_mem_get(
+        _CTL_MEM_CIV_TRANSCEIVE, to_addr=to_addr, from_addr=from_addr
+    )
 
 
 def set_civ_transceive(
@@ -4309,8 +4454,11 @@ def set_civ_transceive(
         enabled: True to enable CI-V transceive mode.
     """
     return _build_ctl_mem_set(
-        _CTL_MEM_CIV_TRANSCEIVE, 1 if enabled else 0,
-        to_addr=to_addr, from_addr=from_addr, byte_count=1,
+        _CTL_MEM_CIV_TRANSCEIVE,
+        1 if enabled else 0,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        byte_count=1,
     )
 
 
@@ -4319,7 +4467,9 @@ def get_civ_output_ant(
     from_addr: int = CONTROLLER_ADDR,
 ) -> bytes:
     """Build read CI-V output (ANT) command (0x1A 0x05 0x01 0x30)."""
-    return _build_ctl_mem_get(_CTL_MEM_CIV_OUTPUT_ANT, to_addr=to_addr, from_addr=from_addr)
+    return _build_ctl_mem_get(
+        _CTL_MEM_CIV_OUTPUT_ANT, to_addr=to_addr, from_addr=from_addr
+    )
 
 
 def set_civ_output_ant(
@@ -4333,8 +4483,11 @@ def set_civ_output_ant(
         enabled: True to enable CI-V output on ANT connector.
     """
     return _build_ctl_mem_set(
-        _CTL_MEM_CIV_OUTPUT_ANT, 1 if enabled else 0,
-        to_addr=to_addr, from_addr=from_addr, byte_count=1,
+        _CTL_MEM_CIV_OUTPUT_ANT,
+        1 if enabled else 0,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        byte_count=1,
     )
 
 
@@ -4346,7 +4499,9 @@ def get_system_date(
     from_addr: int = CONTROLLER_ADDR,
 ) -> bytes:
     """Build read system date command (0x1A 0x05 0x01 0x58)."""
-    return _build_ctl_mem_get(_CTL_MEM_SYSTEM_DATE, to_addr=to_addr, from_addr=from_addr)
+    return _build_ctl_mem_get(
+        _CTL_MEM_SYSTEM_DATE, to_addr=to_addr, from_addr=from_addr
+    )
 
 
 def set_system_date(
@@ -4375,7 +4530,10 @@ def set_system_date(
         + _bcd_encode_value(day, byte_count=1)
     )
     return build_civ_frame(
-        to_addr, from_addr, _CMD_CTL_MEM, sub=_SUB_CTL_MEM,
+        to_addr,
+        from_addr,
+        _CMD_CTL_MEM,
+        sub=_SUB_CTL_MEM,
         data=_CTL_MEM_SYSTEM_DATE + bcd,
     )
 
@@ -4391,7 +4549,7 @@ def parse_system_date_response(frame: CivFrame) -> tuple[int, int, int]:
     data = frame.data
     if not data.startswith(_CTL_MEM_SYSTEM_DATE):
         raise ValueError(f"System date prefix mismatch: {data.hex()}")
-    data = data[len(_CTL_MEM_SYSTEM_DATE):]
+    data = data[len(_CTL_MEM_SYSTEM_DATE) :]
     if len(data) < 4:
         raise ValueError(f"System date payload too short: {len(data)} bytes")
     year = _bcd_decode_value(data[0:2])
@@ -4405,7 +4563,9 @@ def get_system_time(
     from_addr: int = CONTROLLER_ADDR,
 ) -> bytes:
     """Build read system time command (0x1A 0x05 0x01 0x59)."""
-    return _build_ctl_mem_get(_CTL_MEM_SYSTEM_TIME, to_addr=to_addr, from_addr=from_addr)
+    return _build_ctl_mem_get(
+        _CTL_MEM_SYSTEM_TIME, to_addr=to_addr, from_addr=from_addr
+    )
 
 
 def set_system_time(
@@ -4424,12 +4584,14 @@ def set_system_time(
         raise ValueError(f"Hour must be 0-23, got {hour}")
     if not 0 <= minute <= 59:
         raise ValueError(f"Minute must be 0-59, got {minute}")
-    bcd = (
-        _bcd_encode_value(hour, byte_count=1)
-        + _bcd_encode_value(minute, byte_count=1)
+    bcd = _bcd_encode_value(hour, byte_count=1) + _bcd_encode_value(
+        minute, byte_count=1
     )
     return build_civ_frame(
-        to_addr, from_addr, _CMD_CTL_MEM, sub=_SUB_CTL_MEM,
+        to_addr,
+        from_addr,
+        _CMD_CTL_MEM,
+        sub=_SUB_CTL_MEM,
         data=_CTL_MEM_SYSTEM_TIME + bcd,
     )
 
@@ -4445,7 +4607,7 @@ def parse_system_time_response(frame: CivFrame) -> tuple[int, int]:
     data = frame.data
     if not data.startswith(_CTL_MEM_SYSTEM_TIME):
         raise ValueError(f"System time prefix mismatch: {data.hex()}")
-    data = data[len(_CTL_MEM_SYSTEM_TIME):]
+    data = data[len(_CTL_MEM_SYSTEM_TIME) :]
     if len(data) < 2:
         raise ValueError(f"System time payload too short: {len(data)} bytes")
     hour = _bcd_decode_value(data[0:1])
@@ -4485,7 +4647,10 @@ def set_utc_offset(
         + (b"\x01" if is_negative else b"\x00")
     )
     return build_civ_frame(
-        to_addr, from_addr, _CMD_CTL_MEM, sub=_SUB_CTL_MEM,
+        to_addr,
+        from_addr,
+        _CMD_CTL_MEM,
+        sub=_SUB_CTL_MEM,
         data=_CTL_MEM_UTC_OFFSET + payload,
     )
 
@@ -4501,7 +4666,7 @@ def parse_utc_offset_response(frame: CivFrame) -> tuple[int, int, bool]:
     data = frame.data
     if not data.startswith(_CTL_MEM_UTC_OFFSET):
         raise ValueError(f"UTC offset prefix mismatch: {data.hex()}")
-    data = data[len(_CTL_MEM_UTC_OFFSET):]
+    data = data[len(_CTL_MEM_UTC_OFFSET) :]
     if len(data) < 3:
         raise ValueError(f"UTC offset payload too short: {len(data)} bytes")
     hours = _bcd_decode_value(data[0:1])

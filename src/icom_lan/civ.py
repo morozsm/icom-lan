@@ -173,7 +173,9 @@ class CivRequestTracker:
         self._prune_ack_backlog(now_monotonic=created)
 
         if wait:
-            future: asyncio.Future[CivFrame] = asyncio.get_running_loop().create_future()
+            future: asyncio.Future[CivFrame] = (
+                asyncio.get_running_loop().create_future()
+            )
             if self._ack_backlog:
                 cached = self._ack_backlog.popleft()
                 future.set_result(cached.frame)

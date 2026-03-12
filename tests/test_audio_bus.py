@@ -284,7 +284,9 @@ async def test_bus_stats(bus, mock_radio):
 
 
 async def test_rx_start_failure_handled(mock_radio):
-    mock_radio.start_audio_rx_opus = AsyncMock(side_effect=ConnectionError("not connected"))
+    mock_radio.start_audio_rx_opus = AsyncMock(
+        side_effect=ConnectionError("not connected")
+    )
     bus = AudioBus(mock_radio)
     sub = bus.subscribe(name="s1")
     await sub.start()

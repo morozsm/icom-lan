@@ -23,7 +23,7 @@ from icom_lan.commands import (
     _SUB_RF_POWER,
     _SUB_PTT,
 )
-from icom_lan.exceptions import ConnectionError, TimeoutError, CommandError
+from icom_lan.exceptions import ConnectionError, TimeoutError
 from icom_lan.radio import IcomRadio
 from icom_lan.types import (
     AgcMode,
@@ -643,7 +643,9 @@ class TestAckSinkRobustness:
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
         # Fire-and-forget scope enable (ACK intentionally missing)
-        ff = build_civ_frame(IC_7610_ADDR, CONTROLLER_ADDR, 0x27, sub=0x10, data=b"\x01")
+        ff = build_civ_frame(
+            IC_7610_ADDR, CONTROLLER_ADDR, 0x27, sub=0x10, data=b"\x01"
+        )
         await radio._execute_civ_raw(ff, wait_response=False)
 
         # set_frequency is fire-and-forget — completes without any response.
@@ -652,7 +654,9 @@ class TestAckSinkRobustness:
     @pytest.mark.asyncio
     async def test_fire_and_forget_send_failure_rolls_back_sink(self) -> None:
         class FailingTransport(MockTransport):
-            async def send_tracked(self, data: bytes) -> None:  # pragma: no cover - simple stub
+            async def send_tracked(
+                self, data: bytes
+            ) -> None:  # pragma: no cover - simple stub
                 raise OSError("send failed")
 
         t = FailingTransport()
@@ -661,7 +665,9 @@ class TestAckSinkRobustness:
         radio._civ_transport = t
         radio._connected = True
 
-        ff = build_civ_frame(IC_7610_ADDR, CONTROLLER_ADDR, 0x27, sub=0x10, data=b"\x01")
+        ff = build_civ_frame(
+            IC_7610_ADDR, CONTROLLER_ADDR, 0x27, sub=0x10, data=b"\x01"
+        )
         with pytest.raises(OSError):
             await radio._execute_civ_raw(ff, wait_response=False)
 
@@ -804,10 +810,20 @@ class TestAdvancedScopeControls:
         ("method_name", "response", "field_name", "expected"),
         [
             ("get_scope_dual", _scope_response(0x13, b"\x01"), "dual", True),
-            ("get_scope_span", _scope_response(0x15, b"\x00" + bcd_encode(250_000)), "span", 6),
+            (
+                "get_scope_span",
+                _scope_response(0x15, b"\x00" + bcd_encode(250_000)),
+                "span",
+                6,
+            ),
             ("get_scope_edge", _scope_response(0x16, b"\x00\x04"), "edge", 4),
             ("get_scope_hold", _scope_response(0x17, b"\x00\x01"), "hold", True),
-            ("get_scope_ref", _scope_response(0x19, b"\x00\x01\x05\x01"), "ref_db", -10.5),
+            (
+                "get_scope_ref",
+                _scope_response(0x19, b"\x00\x01\x05\x01"),
+                "ref_db",
+                -10.5,
+            ),
             ("get_scope_speed", _scope_response(0x1A, b"\x00\x02"), "speed", 2),
             ("get_scope_during_tx", _scope_response(0x1B, b"\x01"), "during_tx", True),
             ("get_scope_vbw", _scope_response(0x1D, b"\x00\x01"), "vbw_narrow", True),
@@ -909,9 +925,7 @@ class TestSetModeFireAndForget:
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
         """A send-level error (e.g. OSError) still propagates from set_mode."""
-        with patch.object(
-            radio, "_send_civ_raw", side_effect=OSError("send failed")
-        ):
+        with patch.object(radio, "_send_civ_raw", side_effect=OSError("send failed")):
             with pytest.raises(OSError):
                 await radio.set_mode(Mode.USB)
 
@@ -996,7 +1010,10 @@ class TestCivTimeoutIsolation:
 def _dual_watch_response(on: bool) -> bytes:
     """Build a CI-V dual-watch query response (0x07 0xC2 <on>) wrapped in UDP."""
     from icom_lan.commands import build_civ_frame
-    civ = build_civ_frame(CONTROLLER_ADDR, IC_7610_ADDR, 0x07, data=bytes([0xC2, 0x01 if on else 0x00]))
+
+    civ = build_civ_frame(
+        CONTROLLER_ADDR, IC_7610_ADDR, 0x07, data=bytes([0xC2, 0x01 if on else 0x00])
+    )
     return _wrap_civ_in_udp(civ)
 
 
@@ -1043,9 +1060,13 @@ class TestDualWatch:
 def _bool_response_1c(sub: int, val: bool) -> bytes:
     """Build a mock 0x1C response from the radio, wrapped in UDP."""
     from icom_lan.commands import build_civ_frame
+
     civ = build_civ_frame(
-        CONTROLLER_ADDR, IC_7610_ADDR, 0x1C,
-        sub=sub, data=bytes([0x01 if val else 0x00]),
+        CONTROLLER_ADDR,
+        IC_7610_ADDR,
+        0x1C,
+        sub=sub,
+        data=bytes([0x01 if val else 0x00]),
     )
     return _wrap_civ_in_udp(civ)
 
@@ -1053,9 +1074,13 @@ def _bool_response_1c(sub: int, val: bool) -> bytes:
 def _transceiver_id_response(model_id: int = 0x98) -> bytes:
     """Build a mock 0x19 0x00 response from the radio, wrapped in UDP."""
     from icom_lan.commands import build_civ_frame
+
     civ = build_civ_frame(
-        CONTROLLER_ADDR, IC_7610_ADDR, 0x19,
-        sub=0x00, data=bytes([model_id]),
+        CONTROLLER_ADDR,
+        IC_7610_ADDR,
+        0x19,
+        sub=0x00,
+        data=bytes([model_id]),
     )
     return _wrap_civ_in_udp(civ)
 
@@ -1542,7 +1567,7 @@ class TestDspLevelParity:
     ) -> None:
         await radio.set_cw_pitch(600)
         sent = mock_transport.sent_packets[-1]
-        assert b"\x14\x09\x01\x28\xFD" in sent
+        assert b"\x14\x09\x01\x28\xfd" in sent
 
     @pytest.mark.asyncio
     async def test_set_key_speed_sends_scaled_level(
@@ -1550,18 +1575,18 @@ class TestDspLevelParity:
     ) -> None:
         await radio.set_key_speed(30)
         sent = mock_transport.sent_packets[-1]
-        assert b"\x14\x0C\x01\x46\xFD" in sent
+        assert b"\x14\x0c\x01\x46\xfd" in sent
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
         ("method_name", "value", "expected_tail"),
         [
-            ("set_apf_type_level", 120, b"\x29\x01\x14\x05\x01\x20\xFD"),
-            ("set_nr_level", 121, b"\x29\x01\x14\x06\x01\x21\xFD"),
-            ("set_pbt_inner", 122, b"\x29\x01\x14\x07\x01\x22\xFD"),
-            ("set_pbt_outer", 123, b"\x29\x01\x14\x08\x01\x23\xFD"),
-            ("set_nb_level", 124, b"\x29\x01\x14\x12\x01\x24\xFD"),
-            ("set_digisel_shift", 125, b"\x29\x01\x14\x13\x01\x25\xFD"),
+            ("set_apf_type_level", 120, b"\x29\x01\x14\x05\x01\x20\xfd"),
+            ("set_nr_level", 121, b"\x29\x01\x14\x06\x01\x21\xfd"),
+            ("set_pbt_inner", 122, b"\x29\x01\x14\x07\x01\x22\xfd"),
+            ("set_pbt_outer", 123, b"\x29\x01\x14\x08\x01\x23\xfd"),
+            ("set_nb_level", 124, b"\x29\x01\x14\x12\x01\x24\xfd"),
+            ("set_digisel_shift", 125, b"\x29\x01\x14\x13\x01\x25\xfd"),
         ],
     )
     async def test_set_cmd29_dsp_level(
@@ -1580,14 +1605,14 @@ class TestDspLevelParity:
     @pytest.mark.parametrize(
         ("method_name", "value", "expected_tail"),
         [
-            ("set_mic_gain", 130, b"\x14\x0B\x01\x30\xFD"),
-            ("set_notch_filter", 131, b"\x14\x0D\x01\x31\xFD"),
-            ("set_compressor_level", 132, b"\x14\x0E\x01\x32\xFD"),
-            ("set_break_in_delay", 133, b"\x14\x0F\x01\x33\xFD"),
-            ("set_drive_gain", 134, b"\x14\x14\x01\x34\xFD"),
-            ("set_monitor_gain", 135, b"\x14\x15\x01\x35\xFD"),
-            ("set_vox_gain", 136, b"\x14\x16\x01\x36\xFD"),
-            ("set_anti_vox_gain", 137, b"\x14\x17\x01\x37\xFD"),
+            ("set_mic_gain", 130, b"\x14\x0b\x01\x30\xfd"),
+            ("set_notch_filter", 131, b"\x14\x0d\x01\x31\xfd"),
+            ("set_compressor_level", 132, b"\x14\x0e\x01\x32\xfd"),
+            ("set_break_in_delay", 133, b"\x14\x0f\x01\x33\xfd"),
+            ("set_drive_gain", 134, b"\x14\x14\x01\x34\xfd"),
+            ("set_monitor_gain", 135, b"\x14\x15\x01\x35\xfd"),
+            ("set_vox_gain", 136, b"\x14\x16\x01\x36\xfd"),
+            ("set_anti_vox_gain", 137, b"\x14\x17\x01\x37\xfd"),
         ],
     )
     async def test_set_direct_dsp_level(
@@ -1606,10 +1631,10 @@ class TestDspLevelParity:
     @pytest.mark.parametrize(
         ("method_name", "value", "expected_tail"),
         [
-            ("set_ref_adjust", 511, b"\x1A\x05\x00\x70\x05\x11\xFD"),
-            ("set_dash_ratio", 45, b"\x1A\x05\x02\x28\x45\xFD"),
-            ("set_nb_depth", 9, b"\x1A\x05\x02\x90\x09\xFD"),
-            ("set_nb_width", 255, b"\x1A\x05\x02\x91\x02\x55\xFD"),
+            ("set_ref_adjust", 511, b"\x1a\x05\x00\x70\x05\x11\xfd"),
+            ("set_dash_ratio", 45, b"\x1a\x05\x02\x28\x45\xfd"),
+            ("set_nb_depth", 9, b"\x1a\x05\x02\x90\x09\xfd"),
+            ("set_nb_width", 255, b"\x1a\x05\x02\x91\x02\x55\xfd"),
         ],
     )
     async def test_set_ctl_mem_dsp_level(
@@ -1629,7 +1654,7 @@ class TestDspLevelParity:
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
         await radio.set_af_mute(True, receiver=1)
-        assert mock_transport.sent_packets[-1].endswith(b"\x29\x01\x1A\x09\x01\xFD")
+        assert mock_transport.sent_packets[-1].endswith(b"\x29\x01\x1a\x09\x01\xfd")
 
     @pytest.mark.asyncio
     async def test_set_cw_pitch_rejects_out_of_range(
@@ -1667,14 +1692,22 @@ class TestOperatorToggleParity:
     @pytest.mark.parametrize(
         ("method_name", "response", "expected"),
         [
-            ("get_s_meter_sql_status", _meter_status_response(0x01, 0x01, receiver=1), True),
+            (
+                "get_s_meter_sql_status",
+                _meter_status_response(0x01, 0x01, receiver=1),
+                True,
+            ),
             ("get_overflow_status", _meter_status_response(0x07, 0x01), True),
             ("get_auto_notch", _function_response(0x41, b"\x01", receiver=1), True),
             ("get_compressor", _function_response(0x44, b"\x01"), True),
             ("get_monitor", _function_response(0x45, b"\x01"), True),
             ("get_vox", _function_response(0x46, b"\x01"), True),
             ("get_manual_notch", _function_response(0x48, b"\x01", receiver=1), True),
-            ("get_twin_peak_filter", _function_response(0x4F, b"\x01", receiver=1), True),
+            (
+                "get_twin_peak_filter",
+                _function_response(0x4F, b"\x01", receiver=1),
+                True,
+            ),
             ("get_dial_lock", _function_response(0x50, b"\x01"), True),
         ],
     )
@@ -1691,7 +1724,8 @@ class TestOperatorToggleParity:
         method = getattr(radio, method_name)
         kwargs = (
             {"receiver": 1}
-            if method_name in {
+            if method_name
+            in {
                 "get_s_meter_sql_status",
                 "get_auto_notch",
                 "get_manual_notch",
@@ -1782,43 +1816,43 @@ class TestTransceiverStatusParity:
     @pytest.mark.parametrize(
         ("method_name", "value", "kwargs", "expected_tail"),
         [
-            ("set_agc", AgcMode.MID, {}, b"\x16\x12\x02\xFD"),
+            ("set_agc", AgcMode.MID, {}, b"\x16\x12\x02\xfd"),
             (
                 "set_audio_peak_filter",
                 AudioPeakFilter.NAR,
                 {"receiver": 1},
-                b"\x29\x01\x16\x32\x03\xFD",
+                b"\x29\x01\x16\x32\x03\xfd",
             ),
-            ("set_auto_notch", True, {"receiver": 1}, b"\x29\x01\x16\x41\x01\xFD"),
-            ("set_compressor", True, {}, b"\x16\x44\x01\xFD"),
-            ("set_monitor", False, {}, b"\x16\x45\x00\xFD"),
-            ("set_vox", True, {}, b"\x16\x46\x01\xFD"),
-            ("set_break_in", BreakInMode.SEMI, {}, b"\x16\x47\x01\xFD"),
-            ("set_manual_notch", True, {"receiver": 1}, b"\x29\x01\x16\x48\x01\xFD"),
+            ("set_auto_notch", True, {"receiver": 1}, b"\x29\x01\x16\x41\x01\xfd"),
+            ("set_compressor", True, {}, b"\x16\x44\x01\xfd"),
+            ("set_monitor", False, {}, b"\x16\x45\x00\xfd"),
+            ("set_vox", True, {}, b"\x16\x46\x01\xfd"),
+            ("set_break_in", BreakInMode.SEMI, {}, b"\x16\x47\x01\xfd"),
+            ("set_manual_notch", True, {"receiver": 1}, b"\x29\x01\x16\x48\x01\xfd"),
             (
                 "set_twin_peak_filter",
                 False,
                 {"receiver": 1},
-                b"\x29\x01\x16\x4F\x00\xFD",
+                b"\x29\x01\x16\x4f\x00\xfd",
             ),
-            ("set_dial_lock", True, {}, b"\x16\x50\x01\xFD"),
+            ("set_dial_lock", True, {}, b"\x16\x50\x01\xfd"),
             (
                 "set_filter_shape",
                 FilterShape.SHARP,
                 {"receiver": 1},
-                b"\x29\x01\x16\x56\x00\xFD",
+                b"\x29\x01\x16\x56\x00\xfd",
             ),
             (
                 "set_ssb_tx_bandwidth",
                 SsbTxBandwidth.MID,
                 {},
-                b"\x16\x58\x01\xFD",
+                b"\x16\x58\x01\xfd",
             ),
             (
                 "set_agc_time_constant",
                 13,
                 {"receiver": 1},
-                b"\x29\x01\x1A\x04\x13\xFD",
+                b"\x29\x01\x1a\x04\x13\xfd",
             ),
         ],
     )
@@ -1859,7 +1893,9 @@ class TestToneTsqlParity:
         receiver: int,
         expected: bool,
     ) -> None:
-        mock_transport.queue_response(_function_response(sub, payload, receiver=receiver))
+        mock_transport.queue_response(
+            _function_response(sub, payload, receiver=receiver)
+        )
         result = await getattr(radio, method_name)(receiver=receiver)
         assert result is expected
 
@@ -1867,10 +1903,10 @@ class TestToneTsqlParity:
     @pytest.mark.parametrize(
         ("method_name", "value", "kwargs", "expected_tail"),
         [
-            ("set_repeater_tone", True, {"receiver": 0}, b"\x29\x00\x16\x42\x01\xFD"),
-            ("set_repeater_tone", False, {"receiver": 1}, b"\x29\x01\x16\x42\x00\xFD"),
-            ("set_repeater_tsql", True, {"receiver": 0}, b"\x29\x00\x16\x43\x01\xFD"),
-            ("set_repeater_tsql", False, {"receiver": 1}, b"\x29\x01\x16\x43\x00\xFD"),
+            ("set_repeater_tone", True, {"receiver": 0}, b"\x29\x00\x16\x42\x01\xfd"),
+            ("set_repeater_tone", False, {"receiver": 1}, b"\x29\x01\x16\x42\x00\xfd"),
+            ("set_repeater_tsql", True, {"receiver": 0}, b"\x29\x00\x16\x43\x01\xfd"),
+            ("set_repeater_tsql", False, {"receiver": 1}, b"\x29\x01\x16\x43\x00\xfd"),
         ],
     )
     async def test_set_repeater_toggle(
@@ -1922,7 +1958,7 @@ class TestToneTsqlParity:
         await radio.set_tone_freq(88.5)
         # cmd29 + receiver=0 + 0x1B + 0x00 + BCD(88.5) + FD
         assert mock_transport.sent_packets[-1].endswith(
-            b"\x29\x00\x1B\x00\x00\x88\x05\xFD"
+            b"\x29\x00\x1b\x00\x00\x88\x05\xfd"
         )
 
     @pytest.mark.asyncio
@@ -1931,5 +1967,5 @@ class TestToneTsqlParity:
     ) -> None:
         await radio.set_tsql_freq(110.9, receiver=1)
         assert mock_transport.sent_packets[-1].endswith(
-            b"\x29\x01\x1B\x01\x01\x10\x09\xFD"
+            b"\x29\x01\x1b\x01\x01\x10\x09\xfd"
         )

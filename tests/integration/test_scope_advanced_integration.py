@@ -28,7 +28,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 # All tests in this module use MockIcomRadio and require no real hardware.
 pytestmark = pytest.mark.mock_integration
 
-from icom_lan.radio import IcomRadio  # noqa: E402
+from icom_lan.radio import IcomRadio  # noqa: E402, TID251
 from icom_lan.types import ScopeFixedEdge  # noqa: E402
 from mock_server import MockIcomRadio  # noqa: E402
 
@@ -98,8 +98,8 @@ class ScopeMockRadio(MockIcomRadio):
 
     def __init__(self, **kwargs: object) -> None:
         super().__init__(**kwargs)
-        self._during_tx: int = 0          # 0=off, 1=on
-        self._center_type: int = 0        # 0, 1, or 2
+        self._during_tx: int = 0  # 0=off, 1=on
+        self._center_type: int = 0  # 0, 1, or 2
         # Fixed-edge defaults: range 7, edge 1, 14.0–14.5 MHz
         self._fixed_range_index: int = 7
         self._fixed_edge: int = 1
@@ -125,25 +125,29 @@ class ScopeMockRadio(MockIcomRadio):
 
         # --- 0x27 0x1B: scope during TX ---
         if sub == _SUB_SCOPE_DURING_TX:
-            if rest:                          # SET
+            if rest:  # SET
                 self._during_tx = rest[0]
                 return self._civ_ack(to, frm)
             # GET: 1-byte bool payload
-            return self._civ_frame(to, frm, _CMD_SCOPE, sub=sub,
-                                   data=bytes([self._during_tx]))
+            return self._civ_frame(
+                to, frm, _CMD_SCOPE, sub=sub, data=bytes([self._during_tx])
+            )
 
         # --- 0x27 0x1C: scope center type ---
         if sub == _SUB_SCOPE_CENTER_TYPE:
-            if rest:  # SET: first byte is the value (radio.py never sends receiver here)
+            if (
+                rest
+            ):  # SET: first byte is the value (radio.py never sends receiver here)
                 self._center_type = rest[0]
                 return self._civ_ack(to, frm)
             # GET: return single value byte
-            return self._civ_frame(to, frm, _CMD_SCOPE, sub=sub,
-                                   data=bytes([self._center_type]))
+            return self._civ_frame(
+                to, frm, _CMD_SCOPE, sub=sub, data=bytes([self._center_type])
+            )
 
         # --- 0x27 0x1E: scope fixed edge ---
         if sub == _SUB_SCOPE_FIXED_EDGE:
-            if rest:                          # SET: 12-byte payload
+            if rest:  # SET: 12-byte payload
                 if len(rest) >= 12:
                     self._fixed_range_index = _bcd_byte_decode(rest[0])
                     self._fixed_edge = _bcd_byte_decode(rest[1])
@@ -347,9 +351,7 @@ class TestScopeFixedEdge:
         assert result.start_hz == start_hz
         assert result.end_hz == end_hz
 
-    async def test_fixed_edge_multiple_changes(
-        self, scope_radio: IcomRadio
-    ) -> None:
+    async def test_fixed_edge_multiple_changes(self, scope_radio: IcomRadio) -> None:
         """Change fixed edge multiple times and confirm each update is reflected."""
         settings = [
             (1, 14_000_000, 14_350_000),
@@ -357,12 +359,20 @@ class TestScopeFixedEdge:
             (3, 21_000_000, 21_450_000),
         ]
         for edge, start, end in settings:
-            await scope_radio.set_scope_fixed_edge(edge=edge, start_hz=start, end_hz=end)
+            await scope_radio.set_scope_fixed_edge(
+                edge=edge, start_hz=start, end_hz=end
+            )
             await asyncio.sleep(_SETTLE)
             result = await scope_radio.get_scope_fixed_edge()
-            assert result.start_hz == start, f"start mismatch: expected {start}, got {result.start_hz}"
-            assert result.end_hz == end, f"end mismatch: expected {end}, got {result.end_hz}"
-            assert result.edge == edge, f"edge mismatch: expected {edge}, got {result.edge}"
+            assert result.start_hz == start, (
+                f"start mismatch: expected {start}, got {result.start_hz}"
+            )
+            assert result.end_hz == end, (
+                f"end mismatch: expected {end}, got {result.end_hz}"
+            )
+            assert result.edge == edge, (
+                f"edge mismatch: expected {edge}, got {result.edge}"
+            )
 
     async def test_fixed_edge_range_index_preserved(
         self, scope_radio: IcomRadio

@@ -80,7 +80,6 @@ class _DummyTranscoder:
 
 @pytest.mark.e2e
 class TestAudioRecoveryConfig:
-
     def test_default_auto_recover_true(self) -> None:
         radio = IcomRadio("192.168.1.100")
         assert radio._auto_recover_audio is True
@@ -106,7 +105,6 @@ class TestAudioRecoveryConfig:
 
 @pytest.mark.e2e
 class TestAudioRecoveryStateEnum:
-
     def test_values(self) -> None:
         assert AudioRecoveryState.RECOVERING.value == "recovering"
         assert AudioRecoveryState.RECOVERED.value == "recovered"
@@ -120,15 +118,14 @@ class TestAudioRecoveryStateEnum:
 
 @pytest.mark.e2e
 class TestAudioSnapshotCapture:
-
     def test_snapshot_idle_returns_none(self) -> None:
         radio = _make_radio()
-        assert radio._capture_audio_snapshot() is None
+        assert radio._audio_runtime.capture_snapshot() is None
 
     def test_snapshot_no_stream_returns_none(self) -> None:
         radio = _make_radio()
         radio._audio_stream = None
-        assert radio._capture_audio_snapshot() is None
+        assert radio._audio_runtime.capture_snapshot() is None
 
     def test_snapshot_rx_pcm(self) -> None:
         radio = _make_radio()
@@ -141,7 +138,7 @@ class TestAudioSnapshotCapture:
         radio._pcm_transcoder = _DummyTranscoder()  # type: ignore[assignment]
         radio._pcm_transcoder_fmt = (48000, 1, 20)
 
-        snap = radio._capture_audio_snapshot()
+        snap = radio._audio_runtime.capture_snapshot()
         assert snap is not None
         assert snap.rx_active is True
         assert snap.tx_active is False
@@ -159,7 +156,7 @@ class TestAudioSnapshotCapture:
         radio._opus_rx_user_callback = cb
         radio._opus_rx_jitter_depth = 3
 
-        snap = radio._capture_audio_snapshot()
+        snap = radio._audio_runtime.capture_snapshot()
         assert snap is not None
         assert snap.rx_active is True
         assert snap.pcm_mode is False
@@ -175,7 +172,7 @@ class TestAudioSnapshotCapture:
         radio._pcm_transcoder = _DummyTranscoder()  # type: ignore[assignment]
         radio._pcm_transcoder_fmt = (48000, 2, 20)
 
-        snap = radio._capture_audio_snapshot()
+        snap = radio._audio_runtime.capture_snapshot()
         assert snap is not None
         assert snap.tx_active is True
         assert snap.pcm_mode is True
@@ -194,7 +191,7 @@ class TestAudioSnapshotCapture:
         radio._pcm_transcoder = _DummyTranscoder()  # type: ignore[assignment]
         radio._pcm_transcoder_fmt = (48000, 1, 20)
 
-        snap = radio._capture_audio_snapshot()
+        snap = radio._audio_runtime.capture_snapshot()
         assert snap is not None
         assert snap.rx_active is True
         assert snap.tx_active is True
@@ -209,7 +206,6 @@ class TestAudioSnapshotCapture:
 
 @pytest.mark.e2e
 class TestAudioRecoveryAfterReconnect:
-
     @pytest.mark.asyncio
     async def test_rx_pcm_recovered(self) -> None:
         """PCM RX should be restarted with same callback/params after reconnect."""
@@ -223,8 +219,12 @@ class TestAudioRecoveryAfterReconnect:
         radio._pcm_transcoder = _DummyTranscoder()  # type: ignore[assignment]
         radio._pcm_transcoder_fmt = (48000, 1, 20)
 
-        with patch.object(radio, "connect", new_callable=AsyncMock) as mock_connect, \
-             patch.object(radio, "start_audio_rx_pcm", new_callable=AsyncMock) as mock_start:
+        with (
+            patch.object(radio, "connect", new_callable=AsyncMock) as mock_connect,
+            patch.object(
+                radio, "start_audio_rx_pcm", new_callable=AsyncMock
+            ) as mock_start,
+        ):
             mock_connect.return_value = None
             radio._intentional_disconnect = False
             await radio._reconnect_loop()
@@ -248,8 +248,12 @@ class TestAudioRecoveryAfterReconnect:
         radio._pcm_transcoder = _DummyTranscoder()  # type: ignore[assignment]
         radio._pcm_transcoder_fmt = (48000, 1, 20)
 
-        with patch.object(radio, "connect", new_callable=AsyncMock) as mock_connect, \
-             patch.object(radio, "start_audio_tx_pcm", new_callable=AsyncMock) as mock_start:
+        with (
+            patch.object(radio, "connect", new_callable=AsyncMock) as mock_connect,
+            patch.object(
+                radio, "start_audio_tx_pcm", new_callable=AsyncMock
+            ) as mock_start,
+        ):
             mock_connect.return_value = None
             radio._intentional_disconnect = False
             await radio._reconnect_loop()
@@ -274,9 +278,15 @@ class TestAudioRecoveryAfterReconnect:
         radio._pcm_transcoder = _DummyTranscoder()  # type: ignore[assignment]
         radio._pcm_transcoder_fmt = (48000, 1, 20)
 
-        with patch.object(radio, "connect", new_callable=AsyncMock), \
-             patch.object(radio, "start_audio_rx_pcm", new_callable=AsyncMock) as mock_rx, \
-             patch.object(radio, "start_audio_tx_pcm", new_callable=AsyncMock) as mock_tx:
+        with (
+            patch.object(radio, "connect", new_callable=AsyncMock),
+            patch.object(
+                radio, "start_audio_rx_pcm", new_callable=AsyncMock
+            ) as mock_rx,
+            patch.object(
+                radio, "start_audio_tx_pcm", new_callable=AsyncMock
+            ) as mock_tx,
+        ):
             await radio._reconnect_loop()
 
         mock_rx.assert_awaited_once()
@@ -293,8 +303,12 @@ class TestAudioRecoveryAfterReconnect:
         radio._opus_rx_user_callback = opus_cb
         radio._opus_rx_jitter_depth = 3
 
-        with patch.object(radio, "connect", new_callable=AsyncMock), \
-             patch.object(radio, "start_audio_rx_opus", new_callable=AsyncMock) as mock_start:
+        with (
+            patch.object(radio, "connect", new_callable=AsyncMock),
+            patch.object(
+                radio, "start_audio_rx_opus", new_callable=AsyncMock
+            ) as mock_start,
+        ):
             await radio._reconnect_loop()
 
         mock_start.assert_awaited_once_with(
@@ -313,8 +327,12 @@ class TestAudioRecoveryAfterReconnect:
         radio._pcm_transcoder = _DummyTranscoder()  # type: ignore[assignment]
         radio._pcm_transcoder_fmt = (48000, 1, 20)
 
-        with patch.object(radio, "connect", new_callable=AsyncMock), \
-             patch.object(radio, "start_audio_rx_pcm", new_callable=AsyncMock) as mock_start:
+        with (
+            patch.object(radio, "connect", new_callable=AsyncMock),
+            patch.object(
+                radio, "start_audio_rx_pcm", new_callable=AsyncMock
+            ) as mock_start,
+        ):
             await radio._reconnect_loop()
 
         mock_start.assert_not_awaited()
@@ -332,8 +350,10 @@ class TestAudioRecoveryAfterReconnect:
         radio._pcm_transcoder = _DummyTranscoder()  # type: ignore[assignment]
         radio._pcm_transcoder_fmt = (48000, 1, 20)
 
-        with patch.object(radio, "connect", new_callable=AsyncMock), \
-             patch.object(radio, "start_audio_rx_pcm", new_callable=AsyncMock):
+        with (
+            patch.object(radio, "connect", new_callable=AsyncMock),
+            patch.object(radio, "start_audio_rx_pcm", new_callable=AsyncMock),
+        ):
             await radio._reconnect_loop()
 
         assert recovery_cb.call_count == 2
@@ -356,12 +376,15 @@ class TestAudioRecoveryAfterReconnect:
         radio._pcm_transcoder = _DummyTranscoder()  # type: ignore[assignment]
         radio._pcm_transcoder_fmt = (48000, 1, 20)
 
-        with patch.object(radio, "connect", new_callable=AsyncMock), \
-             patch.object(
-                 radio, "start_audio_rx_pcm",
-                 new_callable=AsyncMock,
-                 side_effect=RuntimeError("audio port gone"),
-             ):
+        with (
+            patch.object(radio, "connect", new_callable=AsyncMock),
+            patch.object(
+                radio,
+                "start_audio_rx_pcm",
+                new_callable=AsyncMock,
+                side_effect=RuntimeError("audio port gone"),
+            ),
+        ):
             with caplog.at_level(logging.WARNING, logger="icom_lan.radio"):
                 await radio._reconnect_loop()
 
@@ -401,7 +424,6 @@ class TestAudioRecoveryAfterReconnect:
 
 @pytest.mark.e2e
 class TestCallbackStorageAtStart:
-
     @pytest.mark.asyncio
     async def test_start_audio_rx_pcm_stores_callback(self) -> None:
         """start_audio_rx_pcm should store the user callback on the radio."""

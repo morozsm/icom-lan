@@ -81,23 +81,29 @@ class TestAPFTypeLevel:
         )
 
     def test_get_apf_type_level_default_is_main(self) -> None:
-        assert commands.get_apf_type_level() == commands.get_apf_type_level(receiver=RECEIVER_MAIN)
+        assert commands.get_apf_type_level() == commands.get_apf_type_level(
+            receiver=RECEIVER_MAIN
+        )
 
     def test_set_apf_type_level_main_receiver(self) -> None:
-        assert commands.set_apf_type_level(128, receiver=RECEIVER_MAIN) == _cmd29_level_set(
-            _SUB_APF_TYPE_LEVEL, 128, RECEIVER_MAIN
-        )
+        assert commands.set_apf_type_level(
+            128, receiver=RECEIVER_MAIN
+        ) == _cmd29_level_set(_SUB_APF_TYPE_LEVEL, 128, RECEIVER_MAIN)
 
     def test_set_apf_type_level_sub_receiver(self) -> None:
-        assert commands.set_apf_type_level(64, receiver=RECEIVER_SUB) == _cmd29_level_set(
-            _SUB_APF_TYPE_LEVEL, 64, RECEIVER_SUB
-        )
+        assert commands.set_apf_type_level(
+            64, receiver=RECEIVER_SUB
+        ) == _cmd29_level_set(_SUB_APF_TYPE_LEVEL, 64, RECEIVER_SUB)
 
     def test_set_apf_type_level_boundary_zero(self) -> None:
-        assert commands.set_apf_type_level(0) == _cmd29_level_set(_SUB_APF_TYPE_LEVEL, 0)
+        assert commands.set_apf_type_level(0) == _cmd29_level_set(
+            _SUB_APF_TYPE_LEVEL, 0
+        )
 
     def test_set_apf_type_level_boundary_255(self) -> None:
-        assert commands.set_apf_type_level(255) == _cmd29_level_set(_SUB_APF_TYPE_LEVEL, 255)
+        assert commands.set_apf_type_level(255) == _cmd29_level_set(
+            _SUB_APF_TYPE_LEVEL, 255
+        )
 
     def test_set_apf_type_level_rejects_negative(self) -> None:
         with pytest.raises(ValueError):
@@ -203,7 +209,9 @@ class TestPBTInner:
         )
 
     def test_get_pbt_inner_default_is_main(self) -> None:
-        assert commands.get_pbt_inner() == commands.get_pbt_inner(receiver=RECEIVER_MAIN)
+        assert commands.get_pbt_inner() == commands.get_pbt_inner(
+            receiver=RECEIVER_MAIN
+        )
 
     def test_set_pbt_inner_main_receiver(self) -> None:
         assert commands.set_pbt_inner(75, receiver=RECEIVER_MAIN) == _cmd29_level_set(
@@ -267,7 +275,9 @@ class TestPBTOuter:
         )
 
     def test_get_pbt_outer_default_is_main(self) -> None:
-        assert commands.get_pbt_outer() == commands.get_pbt_outer(receiver=RECEIVER_MAIN)
+        assert commands.get_pbt_outer() == commands.get_pbt_outer(
+            receiver=RECEIVER_MAIN
+        )
 
     def test_set_pbt_outer_main_receiver(self) -> None:
         assert commands.set_pbt_outer(90, receiver=RECEIVER_MAIN) == _cmd29_level_set(

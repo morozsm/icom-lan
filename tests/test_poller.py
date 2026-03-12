@@ -22,6 +22,7 @@ from icom_lan.types import Mode
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def config() -> RigctldConfig:
     # Very short poll interval so tests run quickly.
@@ -43,7 +44,9 @@ def mock_radio() -> AsyncMock:
 
 
 @pytest.fixture
-def poller(mock_radio: AsyncMock, cache: StateCache, config: RigctldConfig) -> RadioPoller:
+def poller(
+    mock_radio: AsyncMock, cache: StateCache, config: RigctldConfig
+) -> RadioPoller:
     return RadioPoller(mock_radio, cache, config)
 
 
@@ -78,6 +81,7 @@ class _ContractModeRadio:
 # ---------------------------------------------------------------------------
 # Lifecycle
 # ---------------------------------------------------------------------------
+
 
 async def test_start_creates_task(poller: RadioPoller) -> None:
     await poller.start()
@@ -114,6 +118,7 @@ async def test_double_stop_is_safe(poller: RadioPoller) -> None:
 # ---------------------------------------------------------------------------
 # Cache updates
 # ---------------------------------------------------------------------------
+
 
 async def test_poll_updates_freq_in_cache(
     poller: RadioPoller,
@@ -184,6 +189,7 @@ async def test_poll_falls_back_to_core_radio_mode_contract(
 # write_busy — skip cycle
 # ---------------------------------------------------------------------------
 
+
 async def test_write_busy_skips_poll(
     poller: RadioPoller,
     mock_radio: AsyncMock,
@@ -217,6 +223,7 @@ async def test_write_busy_released_resumes_polling(
 # ---------------------------------------------------------------------------
 # Error resilience
 # ---------------------------------------------------------------------------
+
 
 async def test_timeout_on_get_frequency_does_not_crash(
     poller: RadioPoller,
@@ -289,6 +296,7 @@ async def test_timeout_logs_warning(
 ) -> None:
     mock_radio.get_frequency.side_effect = IcomTimeoutError("timed out")
     import logging
+
     with caplog.at_level(logging.WARNING, logger="icom_lan.rigctld.poller"):
         await poller.start()
         await asyncio.sleep(0.05)
@@ -299,6 +307,7 @@ async def test_timeout_logs_warning(
 # ---------------------------------------------------------------------------
 # Stop cancels the background task
 # ---------------------------------------------------------------------------
+
 
 async def test_stop_cancels_running_task(
     poller: RadioPoller,
@@ -327,6 +336,7 @@ async def test_no_more_polls_after_stop(
 # poll_interval respected
 # ---------------------------------------------------------------------------
 
+
 async def test_poll_interval_is_respected(
     mock_radio: AsyncMock,
     cache: StateCache,
@@ -345,6 +355,7 @@ async def test_poll_interval_is_respected(
 # ---------------------------------------------------------------------------
 # Circuit breaker integration
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def cb() -> CircuitBreaker:
@@ -427,7 +438,9 @@ async def test_poller_probe_on_half_open_success(
 
     p = RadioPoller(mock_radio, cache, config, circuit_breaker=cb)
 
-    with patch("icom_lan.rigctld.circuit_breaker.time.monotonic", return_value=future_now):
+    with patch(
+        "icom_lan.rigctld.circuit_breaker.time.monotonic", return_value=future_now
+    ):
         # The state property now sees elapsed time → HALF_OPEN.
         assert cb.state == CircuitState.HALF_OPEN
         await p._poll_once()
@@ -453,7 +466,9 @@ async def test_poller_probe_on_half_open_failure_reopens(
 
     p = RadioPoller(mock_radio, cache, config, circuit_breaker=cb)
 
-    with patch("icom_lan.rigctld.circuit_breaker.time.monotonic", return_value=future_now):
+    with patch(
+        "icom_lan.rigctld.circuit_breaker.time.monotonic", return_value=future_now
+    ):
         assert cb.state == CircuitState.HALF_OPEN
         await p._poll_once()
 
@@ -478,7 +493,9 @@ async def test_poller_probe_does_not_poll_mode(
 
     p = RadioPoller(mock_radio, cache, config, circuit_breaker=cb)
 
-    with patch("icom_lan.rigctld.circuit_breaker.time.monotonic", return_value=future_now):
+    with patch(
+        "icom_lan.rigctld.circuit_breaker.time.monotonic", return_value=future_now
+    ):
         assert cb.state == CircuitState.HALF_OPEN
         await p._poll_once()
 

@@ -49,7 +49,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 # All tests in this module use MockIcomRadio and require no real hardware.
 pytestmark = pytest.mark.mock_integration
 
-from icom_lan.radio import IcomRadio  # noqa: E402
+from icom_lan.radio import IcomRadio  # noqa: E402, TID251
 from mock_server import MockIcomRadio  # noqa: E402
 
 # ---------------------------------------------------------------------------
@@ -84,7 +84,7 @@ class VfoDualWatchMockRadio(MockIcomRadio):
     def __init__(self, **kwargs: object) -> None:
         super().__init__(**kwargs)
         # Tuning step stored as raw BCD index byte (matches wire format)
-        self._tuning_step: int = 0x04   # BCD index 4 (maps to 1kHz in IC-7610 table)
+        self._tuning_step: int = 0x04  # BCD index 4 (maps to 1kHz in IC-7610 table)
         self._scanning: bool = False
         self._dual_watch_on: bool = False
         # Unsolicited frame injection (for push-from-radio state update tests)
@@ -131,7 +131,9 @@ class VfoDualWatchMockRadio(MockIcomRadio):
                 self._tuning_step = payload[0]
                 return self._civ_ack(to, frm)
             # GET: respond with 1-byte BCD step index
-            return self._civ_frame(to, frm, _CMD_TUNING_STEP, data=bytes([self._tuning_step]))
+            return self._civ_frame(
+                to, frm, _CMD_TUNING_STEP, data=bytes([self._tuning_step])
+            )
 
         # --- Scanning (0x0E) --- SET only
         if cmd == _CMD_SCANNING:
@@ -273,7 +275,9 @@ class TestTuningStep:
             assert got == idx, f"step mismatch for index {idx}"
             assert vfo_mock._tuning_step == idx
 
-    async def test_tuning_step_default(self, vfo_radio: IcomRadio, vfo_mock: VfoDualWatchMockRadio) -> None:
+    async def test_tuning_step_default(
+        self, vfo_radio: IcomRadio, vfo_mock: VfoDualWatchMockRadio
+    ) -> None:
         """GET before any SET returns mock's initial default step index."""
         step = await vfo_radio.get_tuning_step()
         # Mock initialises to BCD index 4; implementation decodes as integer 4
@@ -417,7 +421,9 @@ class TestDualWatch:
         vfo_radio._on_state_change = lambda name, data: events.append((name, data))  # type: ignore[assignment]
 
         # Inject as if the radio pushed an unsolicited dual-watch=ON update
-        frame = _build_civ(_CONTROLLER_ADDR, _RADIO_ADDR, _CMD_VFO_SELECT, data=b"\xC2\x01")
+        frame = _build_civ(
+            _CONTROLLER_ADDR, _RADIO_ADDR, _CMD_VFO_SELECT, data=b"\xc2\x01"
+        )
         vfo_mock.inject_unsolicited_civ(frame)
         await asyncio.sleep(0.15)
 
@@ -435,13 +441,17 @@ class TestDualWatch:
         vfo_radio._on_state_change = lambda name, data: events.append((name, data))  # type: ignore[assignment]
 
         # First inject ON to establish state, then OFF
-        on_frame = _build_civ(_CONTROLLER_ADDR, _RADIO_ADDR, _CMD_VFO_SELECT, data=b"\xC2\x01")
+        on_frame = _build_civ(
+            _CONTROLLER_ADDR, _RADIO_ADDR, _CMD_VFO_SELECT, data=b"\xc2\x01"
+        )
         vfo_mock.inject_unsolicited_civ(on_frame)
         await asyncio.sleep(0.1)
 
         events.clear()
 
-        off_frame = _build_civ(_CONTROLLER_ADDR, _RADIO_ADDR, _CMD_VFO_SELECT, data=b"\xC2\x00")
+        off_frame = _build_civ(
+            _CONTROLLER_ADDR, _RADIO_ADDR, _CMD_VFO_SELECT, data=b"\xc2\x00"
+        )
         vfo_mock.inject_unsolicited_civ(off_frame)
         await asyncio.sleep(0.15)
 

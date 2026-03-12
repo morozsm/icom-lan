@@ -28,17 +28,13 @@ _PCM_SAMPLE_WIDTH = 2  # s16le
 class _OpusBackend(Protocol):
     """Minimal backend interface used by :class:`PcmOpusTranscoder`."""
 
-    def create_encoder(self, sample_rate: int, channels: int) -> Any:
-        ...
+    def create_encoder(self, sample_rate: int, channels: int) -> Any: ...
 
-    def create_decoder(self, sample_rate: int, channels: int) -> Any:
-        ...
+    def create_decoder(self, sample_rate: int, channels: int) -> Any: ...
 
-    def encode(self, encoder: Any, pcm_data: bytes, frame_samples: int) -> bytes:
-        ...
+    def encode(self, encoder: Any, pcm_data: bytes, frame_samples: int) -> bytes: ...
 
-    def decode(self, decoder: Any, opus_data: bytes, frame_samples: int) -> bytes:
-        ...
+    def decode(self, decoder: Any, opus_data: bytes, frame_samples: int) -> bytes: ...
 
 
 class _OpuslibBackend:
@@ -55,15 +51,17 @@ class _OpuslibBackend:
         return self._opuslib.Decoder(sample_rate, channels)
 
     def encode(self, encoder: Any, pcm_data: bytes, frame_samples: int) -> bytes:
-        return encoder.encode(pcm_data, frame_samples)
+        out: bytes = encoder.encode(pcm_data, frame_samples)
+        return out
 
     def decode(self, decoder: Any, opus_data: bytes, frame_samples: int) -> bytes:
-        return decoder.decode(opus_data, frame_samples)
+        out: bytes = decoder.decode(opus_data, frame_samples)
+        return out
 
 
 def _load_default_backend() -> _OpusBackend | None:
     try:
-        import opuslib
+        import opuslib  # type: ignore[import-not-found]
     except ImportError:
         return None
     return _OpuslibBackend(opuslib)
@@ -125,9 +123,13 @@ class PcmOpusTranscoder:
 
     def pcm_to_opus(self, pcm_data: bytes | bytearray | memoryview) -> bytes:
         """Encode one PCM frame to Opus."""
+        if self._backend is None:
+            raise AudioCodecBackendError(_INSTALL_HINT)
         frame = self._coerce_pcm_frame(pcm_data)
         try:
-            encoded = self._backend.encode(self._encoder, frame, self._fmt.frame_samples)
+            encoded = self._backend.encode(
+                self._encoder, frame, self._fmt.frame_samples
+            )
         except Exception as exc:
             raise AudioTranscodeError("Failed to encode PCM frame to Opus.") from exc
         if not isinstance(encoded, (bytes, bytearray, memoryview)):
@@ -136,6 +138,8 @@ class PcmOpusTranscoder:
 
     def opus_to_pcm(self, opus_data: bytes | bytearray | memoryview) -> bytes:
         """Decode one Opus frame to PCM."""
+        if self._backend is None:
+            raise AudioCodecBackendError(_INSTALL_HINT)
         if not isinstance(opus_data, (bytes, bytearray, memoryview)):
             raise AudioFormatError("Opus input must be bytes-like.")
         opus_frame = bytes(opus_data)

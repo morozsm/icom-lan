@@ -30,7 +30,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 # All tests use MockIcomRadio — no real hardware required.
 pytestmark = pytest.mark.mock_integration
 
-from icom_lan.radio import IcomRadio  # noqa: E402
+from icom_lan.radio import IcomRadio  # noqa: E402, TID251
 from mock_server import MockIcomRadio  # noqa: E402
 
 # ---------------------------------------------------------------------------
@@ -107,10 +107,10 @@ class RitTunerMockRadio(MockIcomRadio):
     def __init__(self, **kwargs: object) -> None:
         super().__init__(**kwargs)
         self._rit_offset_hz: int = 0
-        self._rit_on: int = 0        # 0=off, 1=on
-        self._rit_tx_on: int = 0     # 0=off, 1=on
+        self._rit_on: int = 0  # 0=off, 1=on
+        self._rit_tx_on: int = 0  # 0=off, 1=on
         self._tuner_status: int = 0  # 0=off, 1=on, 2=tuning
-        self._tx_freq_mon: int = 0   # 0=off, 1=on
+        self._tx_freq_mon: int = 0  # 0=off, 1=on
 
     # ------------------------------------------------------------------
     # CI-V dispatch override
@@ -155,8 +155,11 @@ class RitTunerMockRadio(MockIcomRadio):
 
         # GET
         return self._civ_frame(
-            to, frm, _CMD_RIT,
-            sub=_SUB_RIT_FREQ, data=_encode_rit_offset(self._rit_offset_hz),
+            to,
+            frm,
+            _CMD_RIT,
+            sub=_SUB_RIT_FREQ,
+            data=_encode_rit_offset(self._rit_offset_hz),
         )
 
     def _handle_rit_status(self, rest: bytes, from_addr: int) -> bytes:
@@ -170,8 +173,11 @@ class RitTunerMockRadio(MockIcomRadio):
 
         # GET
         return self._civ_frame(
-            to, frm, _CMD_RIT,
-            sub=_SUB_RIT_STATUS, data=bytes([self._rit_on]),
+            to,
+            frm,
+            _CMD_RIT,
+            sub=_SUB_RIT_STATUS,
+            data=bytes([self._rit_on]),
         )
 
     def _handle_rit_tx(self, rest: bytes, from_addr: int) -> bytes:
@@ -185,8 +191,11 @@ class RitTunerMockRadio(MockIcomRadio):
 
         # GET
         return self._civ_frame(
-            to, frm, _CMD_RIT,
-            sub=_SUB_RIT_TX, data=bytes([self._rit_tx_on]),
+            to,
+            frm,
+            _CMD_RIT,
+            sub=_SUB_RIT_TX,
+            data=bytes([self._rit_tx_on]),
         )
 
     # ------------------------------------------------------------------
@@ -218,8 +227,11 @@ class RitTunerMockRadio(MockIcomRadio):
 
         # GET
         return self._civ_frame(
-            to, frm, _CMD_TUNER,
-            sub=_SUB_TUNER_STATUS, data=bytes([self._tuner_status]),
+            to,
+            frm,
+            _CMD_TUNER,
+            sub=_SUB_TUNER_STATUS,
+            data=bytes([self._tuner_status]),
         )
 
     def _handle_tx_freq_mon(self, rest: bytes, from_addr: int) -> bytes:
@@ -233,8 +245,11 @@ class RitTunerMockRadio(MockIcomRadio):
 
         # GET
         return self._civ_frame(
-            to, frm, _CMD_TUNER,
-            sub=_SUB_TX_FREQ_MON, data=bytes([self._tx_freq_mon]),
+            to,
+            frm,
+            _CMD_TUNER,
+            sub=_SUB_TX_FREQ_MON,
+            data=bytes([self._tx_freq_mon]),
         )
 
 
@@ -253,7 +268,9 @@ async def rit_tuner_mock() -> AsyncGenerator[RitTunerMockRadio, None]:
 
 
 @pytest.fixture
-async def rit_tuner_radio(rit_tuner_mock: RitTunerMockRadio) -> AsyncGenerator[IcomRadio, None]:
+async def rit_tuner_radio(
+    rit_tuner_mock: RitTunerMockRadio,
+) -> AsyncGenerator[IcomRadio, None]:
     """IcomRadio connected to RitTunerMockRadio, disconnected after each test."""
     radio = IcomRadio(
         host="127.0.0.1",
@@ -571,11 +588,34 @@ class TestTxFreqMonitor:
 class TestRitBcdCodec:
     """Verify the mock's RIT BCD encode/decode helpers are self-consistent."""
 
-    @pytest.mark.parametrize("hz", [
-        0, 1, 9, 10, 99, 100, 999, 1000, 9999,
-        -1, -9, -10, -99, -100, -999, -1000, -9999,
-        150, -200, 500, -500, 1234, -5678,
-    ])
+    @pytest.mark.parametrize(
+        "hz",
+        [
+            0,
+            1,
+            9,
+            10,
+            99,
+            100,
+            999,
+            1000,
+            9999,
+            -1,
+            -9,
+            -10,
+            -99,
+            -100,
+            -999,
+            -1000,
+            -9999,
+            150,
+            -200,
+            500,
+            -500,
+            1234,
+            -5678,
+        ],
+    )
     def test_encode_decode_roundtrip(self, hz: int) -> None:
         """encode → decode must recover the original offset."""
         encoded = _encode_rit_offset(hz)

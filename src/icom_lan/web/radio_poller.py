@@ -40,29 +40,46 @@ from ..rigctld.state_cache import StateCache
 if TYPE_CHECKING:
     from ..radio_protocol import Radio
 
-__all__ = ["RadioPoller", "CommandQueue", "EnableScope", "DisableScope", "SwitchScopeReceiver",
-           "SetScopeDuringTx", "SetScopeCenterType", "SetScopeFixedEdge",
-           "SetAntenna1", "SetAntenna2", "SetRxAntennaAnt1", "SetRxAntennaAnt2",
-           "SetSystemDate", "SetSystemTime",
-           "SetAcc1ModLevel", "SetUsbModLevel", "SetLanModLevel",
-           "SetDualWatch", "SetCompressor"]
+__all__ = [
+    "RadioPoller",
+    "CommandQueue",
+    "EnableScope",
+    "DisableScope",
+    "SwitchScopeReceiver",
+    "SetScopeDuringTx",
+    "SetScopeCenterType",
+    "SetScopeFixedEdge",
+    "SetAntenna1",
+    "SetAntenna2",
+    "SetRxAntennaAnt1",
+    "SetRxAntennaAnt2",
+    "SetSystemDate",
+    "SetSystemTime",
+    "SetAcc1ModLevel",
+    "SetUsbModLevel",
+    "SetLanModLevel",
+    "SetDualWatch",
+    "SetCompressor",
+]
 
 logger = logging.getLogger(__name__)
 
 _GAP: float = 0.012
 _SEND_TIMEOUT: float = 1.0
 _FAST_INTERVAL: float = 0.025  # meters — wfview queue interval for LAN (25ms)
-_SLOW_INTERVAL: float = 0.25   # levels/settings — rarely change
+_SLOW_INTERVAL: float = 0.25  # levels/settings — rarely change
 
 
 # ------------------------------------------------------------------
 # Command types
 # ------------------------------------------------------------------
 
+
 @dataclass(frozen=True, slots=True)
 class SetFreq:
     freq: int
     receiver: int = 0
+
 
 @dataclass(frozen=True, slots=True)
 class SetMode:
@@ -70,103 +87,126 @@ class SetMode:
     filter_width: int | None = None
     receiver: int = 0
 
+
 @dataclass(frozen=True, slots=True)
 class SetFilter:
     filter_num: int
     receiver: int = 0
 
+
 @dataclass(frozen=True, slots=True)
 class SetPower:
     level: int
+
 
 @dataclass(frozen=True, slots=True)
 class SetRfGain:
     level: int
     receiver: int = 0
 
+
 @dataclass(frozen=True, slots=True)
 class SetAfLevel:
     level: int
     receiver: int = 0
+
 
 @dataclass(frozen=True, slots=True)
 class SetSquelch:
     level: int
     receiver: int = 0
 
+
 @dataclass(frozen=True, slots=True)
 class SetNB:
     on: bool
     receiver: int = 0
+
 
 @dataclass(frozen=True, slots=True)
 class SetNR:
     on: bool
     receiver: int = 0
 
+
 @dataclass(frozen=True, slots=True)
 class SetDigiSel:
     on: bool
     receiver: int = 0
+
 
 @dataclass(frozen=True, slots=True)
 class SetIpPlus:
     on: bool
     receiver: int = 0
 
+
 @dataclass(frozen=True, slots=True)
 class SetAttenuator:
     db: int
     receiver: int = 0
+
 
 @dataclass(frozen=True, slots=True)
 class SetPreamp:
     level: int
     receiver: int = 0
 
+
 @dataclass(frozen=True, slots=True)
 class PttOn:
     pass
+
 
 @dataclass(frozen=True, slots=True)
 class PttOff:
     pass
 
+
 @dataclass(frozen=True, slots=True)
 class SetBand:
     band: int  # CI-V band code: 0x00=160m, 0x01=80m, ... 0x09=6m
+
 
 @dataclass(frozen=True, slots=True)
 class SelectVfo:
     vfo: str
 
+
 @dataclass(frozen=True, slots=True)
 class VfoSwap:
     pass
+
 
 @dataclass(frozen=True, slots=True)
 class VfoEqualize:
     pass
 
+
 @dataclass(frozen=True, slots=True)
 class EnableScope:
     policy: str = "fast"
+
 
 @dataclass(frozen=True, slots=True)
 class DisableScope:
     pass
 
+
 @dataclass(frozen=True, slots=True)
 class SwitchScopeReceiver:
     receiver: int  # 0=MAIN, 1=SUB
+
 
 @dataclass(frozen=True, slots=True)
 class SetScopeDuringTx:
     on: bool
 
+
 @dataclass(frozen=True, slots=True)
 class SetScopeCenterType:
     center_type: int  # 0-2
+
 
 @dataclass(frozen=True, slots=True)
 class SetScopeFixedEdge:
@@ -174,25 +214,31 @@ class SetScopeFixedEdge:
     start_hz: int
     end_hz: int
 
+
 @dataclass(frozen=True, slots=True)
 class SetPowerstat:
     on: bool
+
 
 @dataclass(frozen=True, slots=True)
 class SetAntenna1:
     on: bool
 
+
 @dataclass(frozen=True, slots=True)
 class SetAntenna2:
     on: bool
+
 
 @dataclass(frozen=True, slots=True)
 class SetRxAntennaAnt1:
     on: bool
 
+
 @dataclass(frozen=True, slots=True)
 class SetRxAntennaAnt2:
     on: bool
+
 
 @dataclass(frozen=True, slots=True)
 class SetSystemDate:
@@ -200,26 +246,32 @@ class SetSystemDate:
     month: int
     day: int
 
+
 @dataclass(frozen=True, slots=True)
 class SetSystemTime:
     hour: int
     minute: int
 
+
 @dataclass(frozen=True, slots=True)
 class SetAcc1ModLevel:
     level: int
+
 
 @dataclass(frozen=True, slots=True)
 class SetUsbModLevel:
     level: int
 
+
 @dataclass(frozen=True, slots=True)
 class SetLanModLevel:
     level: int
 
+
 @dataclass(frozen=True, slots=True)
 class SetDualWatch:
     on: bool
+
 
 @dataclass(frozen=True, slots=True)
 class SetCompressor:
@@ -227,13 +279,41 @@ class SetCompressor:
 
 
 Command = (
-    SetFreq | SetMode | SetFilter | SetPower | SetRfGain | SetAfLevel | SetSquelch | SetNB | SetNR | SetDigiSel | SetIpPlus
-    | SetAttenuator | SetPreamp | PttOn | PttOff | SetBand | SelectVfo
-    | VfoSwap | VfoEqualize | EnableScope | DisableScope | SwitchScopeReceiver
-    | SetScopeDuringTx | SetScopeCenterType | SetScopeFixedEdge | SetPowerstat
-    | SetAntenna1 | SetAntenna2 | SetRxAntennaAnt1 | SetRxAntennaAnt2
-    | SetSystemDate | SetSystemTime
-    | SetAcc1ModLevel | SetUsbModLevel | SetLanModLevel
+    SetFreq
+    | SetMode
+    | SetFilter
+    | SetPower
+    | SetRfGain
+    | SetAfLevel
+    | SetSquelch
+    | SetNB
+    | SetNR
+    | SetDigiSel
+    | SetIpPlus
+    | SetAttenuator
+    | SetPreamp
+    | PttOn
+    | PttOff
+    | SetBand
+    | SelectVfo
+    | VfoSwap
+    | VfoEqualize
+    | EnableScope
+    | DisableScope
+    | SwitchScopeReceiver
+    | SetScopeDuringTx
+    | SetScopeCenterType
+    | SetScopeFixedEdge
+    | SetPowerstat
+    | SetAntenna1
+    | SetAntenna2
+    | SetRxAntennaAnt1
+    | SetRxAntennaAnt2
+    | SetSystemDate
+    | SetSystemTime
+    | SetAcc1ModLevel
+    | SetUsbModLevel
+    | SetLanModLevel
     | SetDualWatch
     | SetCompressor
 )
@@ -242,6 +322,7 @@ Command = (
 # ------------------------------------------------------------------
 # CommandQueue
 # ------------------------------------------------------------------
+
 
 class CommandQueue:
     def __init__(self) -> None:
@@ -279,6 +360,7 @@ class CommandQueue:
 # ------------------------------------------------------------------
 # RadioPoller
 # ------------------------------------------------------------------
+
 
 class RadioPoller:
     """Fire-and-forget CI-V poller.
@@ -372,23 +454,41 @@ class RadioPoller:
         for receiver in receivers:
             queries.append((0x25, None, receiver))
             queries.append((0x26, None, receiver))
-            if self._supports_capability("attenuator") and self._profile.supports_cmd29(0x11):
+            if self._supports_capability("attenuator") and self._profile.supports_cmd29(
+                0x11
+            ):
                 queries.append((0x11, None, receiver))
-            if self._supports_capability("af_level") and self._profile.supports_cmd29(0x14, 0x01):
+            if self._supports_capability("af_level") and self._profile.supports_cmd29(
+                0x14, 0x01
+            ):
                 queries.append((0x14, 0x01, receiver))
-            if self._supports_capability("rf_gain") and self._profile.supports_cmd29(0x14, 0x02):
+            if self._supports_capability("rf_gain") and self._profile.supports_cmd29(
+                0x14, 0x02
+            ):
                 queries.append((0x14, 0x02, receiver))
-            if self._supports_capability("squelch") and self._profile.supports_cmd29(0x14, 0x03):
+            if self._supports_capability("squelch") and self._profile.supports_cmd29(
+                0x14, 0x03
+            ):
                 queries.append((0x14, 0x03, receiver))
-            if self._supports_capability("preamp") and self._profile.supports_cmd29(0x16, 0x02):
+            if self._supports_capability("preamp") and self._profile.supports_cmd29(
+                0x16, 0x02
+            ):
                 queries.append((0x16, 0x02, receiver))
-            if self._supports_capability("nb") and self._profile.supports_cmd29(0x16, 0x22):
+            if self._supports_capability("nb") and self._profile.supports_cmd29(
+                0x16, 0x22
+            ):
                 queries.append((0x16, 0x22, receiver))
-            if self._supports_capability("nr") and self._profile.supports_cmd29(0x16, 0x40):
+            if self._supports_capability("nr") and self._profile.supports_cmd29(
+                0x16, 0x40
+            ):
                 queries.append((0x16, 0x40, receiver))
-            if self._supports_capability("digisel") and self._profile.supports_cmd29(0x16, 0x4E):
+            if self._supports_capability("digisel") and self._profile.supports_cmd29(
+                0x16, 0x4E
+            ):
                 queries.append((0x16, 0x4E, receiver))
-            if self._supports_capability("ip_plus") and self._profile.supports_cmd29(0x16, 0x65):
+            if self._supports_capability("ip_plus") and self._profile.supports_cmd29(
+                0x16, 0x65
+            ):
                 queries.append((0x16, 0x65, receiver))
             if self._profile.model == "IC-7610":
                 for cmd_byte, sub_byte in (
@@ -404,16 +504,16 @@ class RadioPoller:
                         queries.append((cmd_byte, sub_byte, receiver))
         queries.extend(
             [
-                (0x1C, 0x00, None),   # PTT (global)
-                (0x1C, 0x01, None),   # Tuner/ATU status
-                (0x1C, 0x03, None),   # TX frequency monitor
-                (0x14, 0x0A, None),   # Power level (global)
-                (0x0F, None, None),   # Split (global)
-                (0x07, 0xD2, None),   # Active receiver
-                (0x07, 0xC2, None),   # Dual Watch status
-                (0x21, 0x00, None),   # RIT frequency
-                (0x21, 0x01, None),   # RIT status
-                (0x21, 0x02, None),   # RIT TX status
+                (0x1C, 0x00, None),  # PTT (global)
+                (0x1C, 0x01, None),  # Tuner/ATU status
+                (0x1C, 0x03, None),  # TX frequency monitor
+                (0x14, 0x0A, None),  # Power level (global)
+                (0x0F, None, None),  # Split (global)
+                (0x07, 0xD2, None),  # Active receiver
+                (0x07, 0xC2, None),  # Dual Watch status
+                (0x21, 0x00, None),  # RIT frequency
+                (0x21, 0x01, None),  # RIT status
+                (0x21, 0x02, None),  # RIT TX status
             ]
         )
         if self._profile.model == "IC-7610":
@@ -445,8 +545,11 @@ class RadioPoller:
                         except (ConnectionError, RadioConnectionError):
                             _backoff = min(_backoff + 0.5, _MAX_BACKOFF)
                         except Exception:
-                            logger.debug("radio-poller: cmd error: %s",
-                                         type(cmd).__name__, exc_info=True)
+                            logger.debug(
+                                "radio-poller: cmd error: %s",
+                                type(cmd).__name__,
+                                exc_info=True,
+                            )
                         await asyncio.sleep(_GAP)
 
                 # If disconnected, back off to avoid log spam
@@ -468,7 +571,9 @@ class RadioPoller:
                     await self._send_query()
                 except (ConnectionError, RadioConnectionError):
                     _backoff = min(_backoff + 0.5, _MAX_BACKOFF)
-                    logger.info("radio-poller: radio disconnected, backing off %.1fs", _backoff)
+                    logger.info(
+                        "radio-poller: radio disconnected, backing off %.1fs", _backoff
+                    )
                     continue
                 except Exception:
                     logger.debug("radio-poller: query error", exc_info=True)
@@ -478,7 +583,9 @@ class RadioPoller:
         except asyncio.CancelledError:
             pass
         except Exception:
-            logger.exception("radio-poller: FATAL — task crashed, commands will stop working")
+            logger.exception(
+                "radio-poller: FATAL — task crashed, commands will stop working"
+            )
 
     async def _civ(
         self,
@@ -518,6 +625,7 @@ class RadioPoller:
             PowerControlCapable,
             ScopeCapable,
         )
+
         match cmd:
             case SetFreq(freq=freq, receiver=rx):
                 self._ensure_receiver_supported(rx, operation="set_freq")
@@ -525,7 +633,10 @@ class RadioPoller:
                 if rx != 0 and self._profile.supports_cmd29(0x05):
                     await radio.set_frequency(freq, receiver=rx)
                 elif rx != 0:
-                    if self._profile.vfo_sub_code is None or self._profile.vfo_main_code is None:
+                    if (
+                        self._profile.vfo_sub_code is None
+                        or self._profile.vfo_main_code is None
+                    ):
                         raise CommandError(
                             f"set_freq receiver={rx} is unsupported by profile {self._profile.model}: "
                             "no cmd29 route and no VFO switch codes"
@@ -542,10 +653,7 @@ class RadioPoller:
                         await self._civ(0x07, data=bytes([self._profile.vfo_main_code]))
                         await asyncio.sleep(_GAP)
                     await radio.set_frequency(freq)
-                    if (
-                        current != "MAIN"
-                        and self._profile.vfo_sub_code is not None
-                    ):
+                    if current != "MAIN" and self._profile.vfo_sub_code is not None:
                         await asyncio.sleep(_GAP)
                         await self._civ(0x07, data=bytes([self._profile.vfo_sub_code]))
             case SetMode(mode=mode, filter_width=fw, receiver=rx):
@@ -554,7 +662,10 @@ class RadioPoller:
                 if rx != 0 and self._profile.supports_cmd29(0x06):
                     await radio.set_mode(mode, fw, receiver=rx)
                 elif rx != 0:
-                    if self._profile.vfo_sub_code is None or self._profile.vfo_main_code is None:
+                    if (
+                        self._profile.vfo_sub_code is None
+                        or self._profile.vfo_main_code is None
+                    ):
                         raise CommandError(
                             f"set_mode receiver={rx} is unsupported by profile {self._profile.model}: "
                             "no cmd29 route and no VFO switch codes"
@@ -571,10 +682,7 @@ class RadioPoller:
                         await self._civ(0x07, data=bytes([self._profile.vfo_main_code]))
                         await asyncio.sleep(_GAP)
                     await radio.set_mode(mode, fw)
-                    if (
-                        current != "MAIN"
-                        and self._profile.vfo_sub_code is not None
-                    ):
+                    if current != "MAIN" and self._profile.vfo_sub_code is not None:
                         await asyncio.sleep(_GAP)
                         await self._civ(0x07, data=bytes([self._profile.vfo_sub_code]))
             case SetFilter(filter_num=fn, receiver=rx):
@@ -585,6 +693,7 @@ class RadioPoller:
                 logger.info("poller: PTT ON")
                 # Start TX audio stream before PTT (LAN audio requires this)
                 from ..radio_protocol import AudioCapable
+
                 if isinstance(radio, AudioCapable):
                     try:
                         await radio.start_audio_tx_opus()
@@ -597,6 +706,7 @@ class RadioPoller:
                 await radio.set_ptt(False)
                 # Stop TX audio stream after PTT, then restart RX
                 from ..radio_protocol import AudioCapable
+
                 if isinstance(radio, AudioCapable):
                     try:
                         await radio.stop_audio_tx()
@@ -665,7 +775,9 @@ class RadioPoller:
                 if is_sub:
                     self._ensure_receiver_supported(1, operation="select_vfo")
                 current = self._current_active()
-                need_swap = (is_sub and current == "MAIN") or (not is_sub and current == "SUB")
+                need_swap = (is_sub and current == "MAIN") or (
+                    not is_sub and current == "SUB"
+                )
                 if need_swap:
                     if self._profile.vfo_swap_code is None:
                         raise CommandError(
@@ -750,13 +862,13 @@ class RadioPoller:
     # Fast: meters (polled on even cycles)
     # wfview: Priority=Highest, queue interval 25ms for LAN (HasFDComms)
     _FAST_CMDS: list[tuple[int, int | None]] = [
-        (0x15, 0x02),   # S-meter
-        (0x15, 0x11),   # RF power
-        (0x15, 0x12),   # SWR
-        (0x15, 0x13),   # ALC
-        (0x15, 0x14),   # Compressor meter
-        (0x15, 0x15),   # VD (voltage)
-        (0x15, 0x16),   # Id (PA drain current)
+        (0x15, 0x02),  # S-meter
+        (0x15, 0x11),  # RF power
+        (0x15, 0x12),  # SWR
+        (0x15, 0x13),  # ALC
+        (0x15, 0x14),  # Compressor meter
+        (0x15, 0x15),  # VD (voltage)
+        (0x15, 0x16),  # Id (PA drain current)
     ]
 
     # State queries interleaved on odd cycles.

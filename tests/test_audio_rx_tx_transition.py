@@ -13,7 +13,6 @@ Fix: radio_poller.py PttOff case now calls start_audio_rx_opus() after stop_audi
 
 from __future__ import annotations
 
-import asyncio
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
@@ -81,44 +80,40 @@ def poller(
 
 
 @pytest.mark.asyncio
-async def test_ptt_on_starts_tx_audio(
-    poller: RadioPoller, radio: MagicMock
-) -> None:
+async def test_ptt_on_starts_tx_audio(poller: RadioPoller, radio: MagicMock) -> None:
     """PTT ON должен запускать TX audio stream."""
     # Execute PTT ON command directly
     await poller._execute(PttOn())
-    
+
     # Verify TX audio started before PTT
     radio.start_audio_tx_opus.assert_awaited_once()
     radio.set_ptt.assert_awaited_once_with(True)
-    
+
     # Verify call order: audio first, then PTT
     assert radio.start_audio_tx_opus.await_count == 1
     assert radio.set_ptt.await_count == 1
 
 
 @pytest.mark.asyncio
-async def test_ptt_off_restarts_rx_audio(
-    poller: RadioPoller, radio: MagicMock
-) -> None:
+async def test_ptt_off_restarts_rx_audio(poller: RadioPoller, radio: MagicMock) -> None:
     """PTT OFF должен останавливать TX и перезапускать RX audio.
-    
+
     This is the critical regression test for the 2026-03-09 bug.
     Without the fix, RX audio would not restart after PTT OFF,
     leaving the Web UI silent (no waterfall/spectrum/audio).
     """
     # Execute PTT OFF command directly
     await poller._execute(PttOff())
-    
+
     # Verify PTT turned off
     radio.set_ptt.assert_awaited_once_with(False)
-    
+
     # Verify TX audio stopped
     radio.stop_audio_tx.assert_awaited_once()
-    
+
     # CRITICAL: Verify RX audio restarted (this was the bug)
     radio.start_audio_rx_opus.assert_awaited_once()
-    
+
     # Verify call order: PTT off → stop TX → start RX
     assert radio.set_ptt.await_count == 1
     assert radio.stop_audio_tx.await_count == 1
@@ -126,22 +121,20 @@ async def test_ptt_off_restarts_rx_audio(
 
 
 @pytest.mark.asyncio
-async def test_ptt_cycle_full_sequence(
-    poller: RadioPoller, radio: MagicMock
-) -> None:
+async def test_ptt_cycle_full_sequence(poller: RadioPoller, radio: MagicMock) -> None:
     """Полный цикл PTT ON → PTT OFF должен корректно переключать audio streams."""
     # PTT ON
     await poller._execute(PttOn())
-    
+
     assert radio.start_audio_tx_opus.await_count == 1
     assert radio.set_ptt.call_args_list[-1][0][0] is True  # Last call was True
-    
+
     # PTT OFF
     await poller._execute(PttOff())
-    
+
     assert radio.stop_audio_tx.await_count == 1
     assert radio.set_ptt.call_args_list[-1][0][0] is False  # Last call was False
-    
+
     # CRITICAL: RX audio должен быть восстановлен
     assert radio.start_audio_rx_opus.await_count == 1
 
@@ -154,26 +147,24 @@ async def test_ptt_off_handles_audio_errors_gracefully(
     # Simulate audio method failures
     radio.stop_audio_tx.side_effect = RuntimeError("TX stop failed")
     radio.start_audio_rx_opus.side_effect = RuntimeError("RX start failed")
-    
+
     # Should not raise, errors are logged
     await poller._execute(PttOff())
-    
+
     # PTT still turned off despite audio errors
     radio.set_ptt.assert_awaited_once_with(False)
 
 
 @pytest.mark.asyncio
-async def test_multiple_ptt_cycles(
-    poller: RadioPoller, radio: MagicMock
-) -> None:
+async def test_multiple_ptt_cycles(poller: RadioPoller, radio: MagicMock) -> None:
     """Множественные PTT циклы должны работать стабильно."""
     for i in range(3):
         # PTT ON
         await poller._execute(PttOn())
-        
+
         # PTT OFF
         await poller._execute(PttOff())
-    
+
     # Each cycle should call all methods
     assert radio.start_audio_tx_opus.await_count == 3
     assert radio.stop_audio_tx.await_count == 3

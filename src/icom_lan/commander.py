@@ -9,6 +9,8 @@ from typing import TypeVar
 from .exceptions import ConnectionError
 from .types import CivFrame
 
+__all__ = ["IcomCommander", "Priority"]
+
 
 class Priority(IntEnum):
     IMMEDIATE = 0

@@ -18,8 +18,19 @@ __all__ = ["StateCache"]
 
 # Literal union of all cacheable field names (used for is_fresh).
 CacheField = Literal[
-    "freq", "mode", "vfo", "ptt", "s_meter", "rf_power", "data_mode",
-    "swr", "alc", "rf_gain", "af_level", "attenuator", "preamp",
+    "freq",
+    "mode",
+    "vfo",
+    "ptt",
+    "s_meter",
+    "rf_power",
+    "data_mode",
+    "swr",
+    "alc",
+    "rf_gain",
+    "af_level",
+    "attenuator",
+    "preamp",
 ]
 
 
@@ -101,6 +112,9 @@ class StateCache:
     # Preamp (0=off, 1=PREAMP1, 2=PREAMP2)
     preamp: int | None = None
     preamp_ts: float = 0.0
+
+    # Dual watch (IC-7610 0x07 0xC2)
+    dual_watch: bool = False
 
     # ------------------------------------------------------------------
     # Freshness check

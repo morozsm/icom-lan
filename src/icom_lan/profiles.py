@@ -20,17 +20,17 @@ class BandInfo:
     """Amateur band definition for UI band selector."""
 
     name: str
-    start: int     # Hz
-    end: int       # Hz
-    default: int   # Hz — default tuning frequency
+    start: int  # Hz
+    end: int  # Hz
+    default: int  # Hz — default tuning frequency
 
 
 @dataclass(frozen=True, slots=True)
 class FreqRangeInfo:
     """Frequency range with optional band plan."""
 
-    start: int     # Hz
-    end: int       # Hz
+    start: int  # Hz
+    end: int  # Hz
     label: str
     bands: tuple[BandInfo, ...] = ()
 
@@ -49,9 +49,7 @@ _HF_BANDS = (
     BandInfo("10m", 28_000_000, 29_700_000, 28_500_000),
 )
 
-_6M_BANDS = (
-    BandInfo("6m", 50_000_000, 54_000_000, 50_125_000),
-)
+_6M_BANDS = (BandInfo("6m", 50_000_000, 54_000_000, 50_125_000),)
 
 _VHF_UHF_BANDS = (
     BandInfo("2m", 144_000_000, 148_000_000, 146_520_000),
@@ -67,9 +65,24 @@ _HF_6M_RANGES = (
 _HF_VHF_UHF_RANGES = (
     FreqRangeInfo(30_000, 60_000_000, "HF", _HF_BANDS),
     FreqRangeInfo(50_000_000, 54_000_000, "6m", _6M_BANDS),
-    FreqRangeInfo(144_000_000, 148_000_000, "2m", (BandInfo("2m", 144_000_000, 148_000_000, 146_520_000),)),
-    FreqRangeInfo(420_000_000, 450_000_000, "70cm", (BandInfo("70cm", 420_000_000, 450_000_000, 446_000_000),)),
-    FreqRangeInfo(1_240_000_000, 1_300_000_000, "23cm", (BandInfo("23cm", 1_240_000_000, 1_300_000_000, 1_296_100_000),)),
+    FreqRangeInfo(
+        144_000_000,
+        148_000_000,
+        "2m",
+        (BandInfo("2m", 144_000_000, 148_000_000, 146_520_000),),
+    ),
+    FreqRangeInfo(
+        420_000_000,
+        450_000_000,
+        "70cm",
+        (BandInfo("70cm", 420_000_000, 450_000_000, 446_000_000),),
+    ),
+    FreqRangeInfo(
+        1_240_000_000,
+        1_300_000_000,
+        "23cm",
+        (BandInfo("23cm", 1_240_000_000, 1_300_000_000, 1_296_100_000),),
+    ),
 )
 
 _HF_MODES = ("USB", "LSB", "CW", "CW-R", "AM", "FM", "RTTY", "RTTY-R")
@@ -100,10 +113,10 @@ class RadioProfile:
         return 0 <= receiver < self.receiver_count
 
     def supports_cmd29(self, command: int, sub: int | None = None) -> bool:
-        return (
-            (command, sub) in self.cmd29_routes
-            or (command, None) in self.cmd29_routes
-        )
+        return (command, sub) in self.cmd29_routes or (
+            command,
+            None,
+        ) in self.cmd29_routes
 
 
 _DUAL_CAPS = frozenset(
@@ -141,30 +154,30 @@ _SINGLE_CAPS = frozenset(
 
 _CMD29_7610 = frozenset(
     {
-        (0x11, None),   # ATT
-        (0x14, 0x01),   # AF
-        (0x14, 0x02),   # RF gain
-        (0x14, 0x03),   # SQL
-        (0x14, 0x05),   # APF Type Level
-        (0x14, 0x06),   # NR Level
-        (0x14, 0x07),   # PBT Inner
-        (0x14, 0x08),   # PBT Outer
-        (0x14, 0x12),   # NB Level
-        (0x14, 0x13),   # DIGI-SEL Shift
-        (0x15, 0x01),   # S-meter squelch status
-        (0x15, 0x05),   # Various squelch
-        (0x16, 0x02),   # PREAMP
-        (0x16, 0x32),   # Audio Peak Filter
-        (0x16, 0x22),   # NB
-        (0x16, 0x40),   # NR
-        (0x16, 0x41),   # Auto Notch
-        (0x16, 0x48),   # Manual Notch
-        (0x16, 0x4E),   # DIGI-SEL
-        (0x16, 0x4F),   # Twin Peak Filter
-        (0x16, 0x56),   # Filter Shape
-        (0x16, 0x65),   # IP+
-        (0x1A, 0x04),   # AGC Time Constant
-        (0x1A, 0x09),   # AF Mute
+        (0x11, None),  # ATT
+        (0x14, 0x01),  # AF
+        (0x14, 0x02),  # RF gain
+        (0x14, 0x03),  # SQL
+        (0x14, 0x05),  # APF Type Level
+        (0x14, 0x06),  # NR Level
+        (0x14, 0x07),  # PBT Inner
+        (0x14, 0x08),  # PBT Outer
+        (0x14, 0x12),  # NB Level
+        (0x14, 0x13),  # DIGI-SEL Shift
+        (0x15, 0x01),  # S-meter squelch status
+        (0x15, 0x05),  # Various squelch
+        (0x16, 0x02),  # PREAMP
+        (0x16, 0x32),  # Audio Peak Filter
+        (0x16, 0x22),  # NB
+        (0x16, 0x40),  # NR
+        (0x16, 0x41),  # Auto Notch
+        (0x16, 0x48),  # Manual Notch
+        (0x16, 0x4E),  # DIGI-SEL
+        (0x16, 0x4F),  # Twin Peak Filter
+        (0x16, 0x56),  # Filter Shape
+        (0x16, 0x65),  # IP+
+        (0x1A, 0x04),  # AGC Time Constant
+        (0x1A, 0x09),  # AF Mute
     }
 )
 

@@ -147,7 +147,9 @@ async def test_send_query_even_and_odd_branch_variants() -> None:
     await poller._send_query()  # noqa: SLF001
     assert radio.send_civ.await_args.args[0] == 0x15
 
-    poller._STATE_QUERIES = [(0x25, None, 0x01)]  # receiver in data payload  # noqa: SLF001
+    poller._STATE_QUERIES = [
+        (0x25, None, 0x01)
+    ]  # receiver in data payload  # noqa: SLF001
     poller._poll_index = 1  # odd  # noqa: SLF001
     await poller._send_query()  # noqa: SLF001
     assert radio.send_civ.await_args.args[0] == 0x25

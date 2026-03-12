@@ -60,7 +60,9 @@ class UsbAudioDevice:
 
 def _safe_int(value: object, default: int = 0) -> int:
     try:
-        return int(value)
+        if isinstance(value, (int, float, str, bytes, bytearray)):
+            return int(value)
+        return default
     except (TypeError, ValueError):
         return default
 
@@ -144,22 +146,32 @@ def select_usb_audio_devices(
     selected_tx: UsbAudioDevice
 
     if rx_device is not None:
-        selected_rx = _find_by_override(rx_candidates, override=rx_device, direction="rx")
+        selected_rx = _find_by_override(
+            rx_candidates, override=rx_device, direction="rx"
+        )
     elif tx_device is not None:
-        selected_tx = _find_by_override(tx_candidates, override=tx_device, direction="tx")
-        selected_rx = selected_tx if selected_tx.supports_rx else _auto_pick(
-            rx_candidates, direction="rx"
+        selected_tx = _find_by_override(
+            tx_candidates, override=tx_device, direction="tx"
+        )
+        selected_rx = (
+            selected_tx
+            if selected_tx.supports_rx
+            else _auto_pick(rx_candidates, direction="rx")
         )
     else:
         selected_rx = _auto_pick(rx_candidates, direction="rx")
 
     if tx_device is not None:
-        selected_tx = _find_by_override(tx_candidates, override=tx_device, direction="tx")
+        selected_tx = _find_by_override(
+            tx_candidates, override=tx_device, direction="tx"
+        )
     elif rx_device is not None and selected_rx.supports_tx:
         selected_tx = selected_rx
     else:
-        selected_tx = selected_rx if selected_rx.supports_tx else _auto_pick(
-            tx_candidates, direction="tx"
+        selected_tx = (
+            selected_rx
+            if selected_rx.supports_tx
+            else _auto_pick(tx_candidates, direction="tx")
         )
 
     return selected_rx, selected_tx
@@ -184,8 +196,12 @@ def list_usb_audio_devices(sounddevice_module: Any) -> list[UsbAudioDevice]:
                 name=str(raw.get("name", f"device-{index}")),
                 input_channels=_safe_int(raw.get("max_input_channels")),
                 output_channels=_safe_int(raw.get("max_output_channels")),
-                default_samplerate=_safe_int(raw.get("default_samplerate"), default=48_000),
-                is_default_input=(default_input_idx is not None and index == default_input_idx),
+                default_samplerate=_safe_int(
+                    raw.get("default_samplerate"), default=48_000
+                ),
+                is_default_input=(
+                    default_input_idx is not None and index == default_input_idx
+                ),
                 is_default_output=(
                     default_output_idx is not None and index == default_output_idx
                 ),
@@ -271,13 +287,14 @@ class UsbAudioDriver:
                 raise ImportError(_DEPENDENCY_HINT) from exc
         else:
             try:
-                import sounddevice as sounddevice_module
+                import sounddevice as sd_module  # type: ignore[import-not-found]
             except ImportError as exc:
                 raise ImportError(_DEPENDENCY_HINT) from exc
             try:
                 import numpy as numpy_module
             except ImportError as exc:
                 raise ImportError(_DEPENDENCY_HINT) from exc
+            sounddevice_module = sd_module
 
         self._sd = sounddevice_module
         self._np = numpy_module

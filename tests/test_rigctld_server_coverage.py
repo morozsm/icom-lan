@@ -19,12 +19,11 @@ Covers:
 from __future__ import annotations
 
 import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from icom_lan.rigctld.contract import (
-    HamlibError,
     RigctldCommand,
     RigctldConfig,
     RigctldResponse,
@@ -37,7 +36,9 @@ from icom_lan.rigctld.server import RigctldServer, _is_packet_mode_set
 # ---------------------------------------------------------------------------
 
 _FREQ_CMD = RigctldCommand(short_cmd="f", long_cmd="get_freq", is_set=False)
-_PKT_CMD = RigctldCommand(short_cmd="M", long_cmd="set_mode", args=("PKTUSB",), is_set=True)
+_PKT_CMD = RigctldCommand(
+    short_cmd="M", long_cmd="set_mode", args=("PKTUSB",), is_set=True
+)
 _FREQ_RESP = RigctldResponse(values=["14074000"], error=0)
 _RESPONSE_BYTES = b"14074000\nRPRT 0\n"
 _ERROR_BYTES_ENIMPL = b"RPRT -4\n"
@@ -51,7 +52,9 @@ def _addr(server: RigctldServer) -> tuple[str, int]:
     return server._server.sockets[0].getsockname()
 
 
-async def _connect(server: RigctldServer) -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
+async def _connect(
+    server: RigctldServer,
+) -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
     host, port = _addr(server)
     return await asyncio.open_connection(host, port)
 
@@ -114,6 +117,7 @@ async def server(mock_radio: MagicMock, cfg: RigctldConfig) -> RigctldServer:  #
 # _is_packet_mode_set() — lines 35-48
 # ---------------------------------------------------------------------------
 
+
 class TestIsPacketModeSet:
     def test_non_set_command_returns_false(self) -> None:
         cmd = RigctldCommand(short_cmd="f", long_cmd="get_freq", is_set=False)
@@ -164,8 +168,11 @@ class TestIsPacketModeSet:
 # circuit_breaker_state property — lines 92-96
 # ---------------------------------------------------------------------------
 
+
 class TestCircuitBreakerState:
-    def test_returns_none_when_no_circuit_breaker(self, mock_radio: MagicMock, cfg: RigctldConfig) -> None:
+    def test_returns_none_when_no_circuit_breaker(
+        self, mock_radio: MagicMock, cfg: RigctldConfig
+    ) -> None:
         srv = RigctldServer(mock_radio, cfg)
         # Before start() circuit_breaker is None
         assert srv.circuit_breaker_state is None
@@ -174,10 +181,13 @@ class TestCircuitBreakerState:
         self, mock_radio: MagicMock, cfg: RigctldConfig
     ) -> None:
         from icom_lan.rigctld.circuit_breaker import CircuitBreaker
+
         proto = _make_proto()
         handler = _make_handler()
         cb = CircuitBreaker()
-        srv = RigctldServer(mock_radio, cfg, _protocol=proto, _handler=handler, _circuit_breaker=cb)
+        srv = RigctldServer(
+            mock_radio, cfg, _protocol=proto, _handler=handler, _circuit_breaker=cb
+        )
         await srv.start()
         try:
             # CircuitBreaker injected; state should be CLOSED
@@ -191,6 +201,7 @@ class TestCircuitBreakerState:
 # ---------------------------------------------------------------------------
 # start() with pre-set protocol and nil handler (lines 104-122)
 # ---------------------------------------------------------------------------
+
 
 async def test_start_creates_protocol_and_handler_when_none(
     mock_radio: MagicMock,
@@ -211,6 +222,7 @@ async def test_start_creates_protocol_and_handler_when_none(
 # quit command (line 343-345)
 # ---------------------------------------------------------------------------
 
+
 async def test_quit_command_closes_connection(server: RigctldServer) -> None:
     """Sending 'q\\n' must close the connection cleanly."""
     reader, writer = await _connect(server)
@@ -218,7 +230,7 @@ async def test_quit_command_closes_connection(server: RigctldServer) -> None:
         writer.write(b"q\n")
         await writer.drain()
         # Server closes the connection
-        data = await asyncio.wait_for(reader.read(1024), timeout=1.0)
+        await asyncio.wait_for(reader.read(1024), timeout=1.0)
         # Connection closed — either empty bytes or some data then EOF
     except asyncio.TimeoutError:
         pass
@@ -229,6 +241,7 @@ async def test_quit_command_closes_connection(server: RigctldServer) -> None:
 # ---------------------------------------------------------------------------
 # Rate limiting (EIO) — line 354-356
 # ---------------------------------------------------------------------------
+
 
 async def test_rate_limited_client_receives_eio(mock_radio: MagicMock) -> None:
     """Rate-limited commands should return RPRT -6 (EIO)."""
@@ -263,6 +276,7 @@ async def test_rate_limited_client_receives_eio(mock_radio: MagicMock) -> None:
 # Command timeout (ETIMEOUT) — lines 368-376
 # ---------------------------------------------------------------------------
 
+
 async def test_command_timeout_returns_etimeout(mock_radio: MagicMock) -> None:
     """When handler.execute times out, RPRT -5 (ETIMEOUT) should be returned."""
     cfg = RigctldConfig(
@@ -296,7 +310,10 @@ async def test_command_timeout_returns_etimeout(mock_radio: MagicMock) -> None:
 # parse_line raises generic Exception → EPROTO (lines 334-340)
 # ---------------------------------------------------------------------------
 
-async def test_generic_parse_error_returns_eproto(mock_radio: MagicMock, cfg: RigctldConfig) -> None:
+
+async def test_generic_parse_error_returns_eproto(
+    mock_radio: MagicMock, cfg: RigctldConfig
+) -> None:
     """A non-ValueError exception from parse_line must return EPROTO."""
     proto = _make_proto(parse_raises=RuntimeError("internal error"))
     handler = _make_handler()
@@ -317,7 +334,10 @@ async def test_generic_parse_error_returns_eproto(mock_radio: MagicMock, cfg: Ri
 # handler.execute raises generic Exception → EIO (lines 377-383)
 # ---------------------------------------------------------------------------
 
-async def test_handler_exception_returns_eio(mock_radio: MagicMock, cfg: RigctldConfig) -> None:
+
+async def test_handler_exception_returns_eio(
+    mock_radio: MagicMock, cfg: RigctldConfig
+) -> None:
     """If handler.execute raises an unexpected error, RPRT -6 (EIO) is returned."""
     proto = _make_proto()
     handler = _make_handler()
@@ -339,7 +359,10 @@ async def test_handler_exception_returns_eio(mock_radio: MagicMock, cfg: Rigctld
 # Poller hold_for on PKT set mode (lines 389-393)
 # ---------------------------------------------------------------------------
 
-async def test_pkt_set_mode_calls_poller_hold_for(mock_radio: MagicMock, cfg: RigctldConfig) -> None:
+
+async def test_pkt_set_mode_calls_poller_hold_for(
+    mock_radio: MagicMock, cfg: RigctldConfig
+) -> None:
     """set_mode with PKT* must call poller.hold_for(3.0) after execution."""
     proto = MagicMock(name="protocol")
     proto.parse_line.return_value = _PKT_CMD
@@ -353,8 +376,11 @@ async def test_pkt_set_mode_calls_poller_hold_for(mock_radio: MagicMock, cfg: Ri
     mock_poller.stop = AsyncMock()
 
     srv = RigctldServer(
-        mock_radio, cfg,
-        _protocol=proto, _handler=handler, _poller=mock_poller,
+        mock_radio,
+        cfg,
+        _protocol=proto,
+        _handler=handler,
+        _poller=mock_poller,
     )
     await srv.start()
     try:
@@ -371,6 +397,7 @@ async def test_pkt_set_mode_calls_poller_hold_for(mock_radio: MagicMock, cfg: Ri
 # ---------------------------------------------------------------------------
 # _readline: line too long (line 458)
 # ---------------------------------------------------------------------------
+
 
 async def test_readline_line_too_long_closes_connection(mock_radio: MagicMock) -> None:
     """A command line that exceeds max_line_length should close the connection."""
@@ -390,7 +417,7 @@ async def test_readline_line_too_long_closes_connection(mock_radio: MagicMock) -
         writer.write(b"x" * 50 + b"\n")
         await writer.drain()
         # Server should close the connection
-        data = await asyncio.wait_for(reader.read(1024), timeout=1.0)
+        await asyncio.wait_for(reader.read(1024), timeout=1.0)
         # Connection closed (empty read or partial)
     except asyncio.TimeoutError:
         pass
@@ -402,6 +429,7 @@ async def test_readline_line_too_long_closes_connection(mock_radio: MagicMock) -
 # ---------------------------------------------------------------------------
 # Max clients enforcement (line 206-215)
 # ---------------------------------------------------------------------------
+
 
 async def test_max_clients_rejected(mock_radio: MagicMock) -> None:
     """Connections beyond max_clients must be rejected immediately."""
@@ -438,7 +466,10 @@ async def test_max_clients_rejected(mock_radio: MagicMock) -> None:
 # WSJTX compat prewarm (line 229-230)
 # ---------------------------------------------------------------------------
 
-async def test_wsjtx_compat_prewarm_triggers_on_first_client(mock_radio: MagicMock) -> None:
+
+async def test_wsjtx_compat_prewarm_triggers_on_first_client(
+    mock_radio: MagicMock,
+) -> None:
     """With wsjtx_compat=True, prewarm coroutine should be scheduled on first connect."""
     from icom_lan.types import Mode
 

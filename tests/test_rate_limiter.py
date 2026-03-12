@@ -35,12 +35,15 @@ _RATE_ERROR_BYTES = b"RPRT -6\n"
 # Helpers (mirror test_rigctld_server.py)
 # ---------------------------------------------------------------------------
 
+
 def _addr(server: RigctldServer) -> tuple[str, int]:
     assert server._server is not None
     return server._server.sockets[0].getsockname()
 
 
-async def _connect(server: RigctldServer) -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
+async def _connect(
+    server: RigctldServer,
+) -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
     host, port = _addr(server)
     return await asyncio.open_connection(host, port)
 
@@ -60,6 +63,7 @@ async def _read(reader: asyncio.StreamReader, *, timeout: float = 1.0) -> bytes:
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def mock_radio() -> MagicMock:
@@ -102,6 +106,7 @@ def _make_server(
 # None = unlimited
 # ---------------------------------------------------------------------------
 
+
 class TestRateLimitNone:
     async def test_unlimited_many_commands(
         self,
@@ -126,6 +131,7 @@ class TestRateLimitNone:
 # Under the limit — commands go through
 # ---------------------------------------------------------------------------
 
+
 class TestUnderLimit:
     async def test_commands_under_limit_succeed(
         self,
@@ -148,6 +154,7 @@ class TestUnderLimit:
 # ---------------------------------------------------------------------------
 # Over the limit — command rejected with EIO (-6)
 # ---------------------------------------------------------------------------
+
 
 class TestOverLimit:
     async def test_excess_command_rejected(
@@ -198,12 +205,10 @@ class TestOverLimit:
             await _read(r)
 
             # Verify the last format_error call used EIO.
-            error_calls = [
-                call for call in proto.format_error.call_args_list
-            ]
-            assert any(
-                call.args[0] == HamlibError.EIO for call in error_calls
-            ), "format_error should have been called with HamlibError.EIO"
+            error_calls = [call for call in proto.format_error.call_args_list]
+            assert any(call.args[0] == HamlibError.EIO for call in error_calls), (
+                "format_error should have been called with HamlibError.EIO"
+            )
 
             await _close(w)
 
@@ -243,6 +248,7 @@ class TestOverLimit:
 # ---------------------------------------------------------------------------
 # Window reset — after 1 second, quota refills
 # ---------------------------------------------------------------------------
+
 
 class TestWindowReset:
     async def test_commands_allowed_after_window_expires(
@@ -284,6 +290,7 @@ class TestWindowReset:
 # ---------------------------------------------------------------------------
 # Rate windows cleaned up on disconnect
 # ---------------------------------------------------------------------------
+
 
 class TestRateWindowCleanup:
     async def test_rate_window_removed_on_disconnect(

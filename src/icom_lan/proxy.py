@@ -28,13 +28,17 @@ class _RelayProtocol(asyncio.DatagramProtocol):
         self.client_addr: tuple[str, int] | None = None
         self.last_activity: float = time.monotonic()
 
-    def connection_made(self, transport: asyncio.DatagramTransport) -> None:
-        self.transport = transport
+    def connection_made(self, transport: asyncio.BaseTransport) -> None:
+        # Accept any transport with sendto/get_extra_info (e.g. tests use FakeTransport)
+        self.transport = transport  # type: ignore[assignment]
         local = transport.get_extra_info("sockname")
         logger.info(
             "%s: listening on %s:%d -> radio %s:%d",
-            self.label, local[0], local[1],
-            self.radio_addr[0], self.radio_addr[1],
+            self.label,
+            local[0],
+            local[1],
+            self.radio_addr[0],
+            self.radio_addr[1],
         )
 
     def datagram_received(self, data: bytes, addr: tuple[str, int]) -> None:
@@ -53,13 +57,17 @@ class _RelayProtocol(asyncio.DatagramProtocol):
                     logger.info(
                         "%s: client changed %s:%d -> %s:%d",
                         self.label,
-                        self.client_addr[0], self.client_addr[1],
-                        addr[0], addr[1],
+                        self.client_addr[0],
+                        self.client_addr[1],
+                        addr[0],
+                        addr[1],
                     )
                 else:
                     logger.info(
                         "%s: client connected from %s:%d",
-                        self.label, addr[0], addr[1],
+                        self.label,
+                        addr[0],
+                        addr[1],
                     )
                 self.client_addr = addr
             self.transport.sendto(data, self.radio_addr)
@@ -82,7 +90,8 @@ async def _session_watchdog(relays: list[_RelayProtocol]) -> None:
                     logger.info(
                         "%s: session timeout, forgetting client %s:%d",
                         relay.label,
-                        relay.client_addr[0], relay.client_addr[1],
+                        relay.client_addr[0],
+                        relay.client_addr[1],
                     )
                     relay.client_addr = None
     except asyncio.CancelledError:
@@ -112,8 +121,11 @@ async def run_proxy(
     for i, label in enumerate(labels):
         port = base_port + i
         relay = _RelayProtocol(radio_host, port, label)
+        def _protocol_factory() -> _RelayProtocol:
+            return relay
+
         transport, _ = await loop.create_datagram_endpoint(
-            lambda r=relay: r,  # noqa: B023
+            _protocol_factory,
             local_addr=(listen_host, port),
         )
         relays.append(relay)
@@ -121,7 +133,10 @@ async def run_proxy(
 
     logger.info(
         "Proxy started: %s -> %s (ports %d-%d)",
-        listen_host, radio_host, base_port, base_port + 2,
+        listen_host,
+        radio_host,
+        base_port,
+        base_port + 2,
     )
 
     watchdog = asyncio.create_task(_session_watchdog(relays))

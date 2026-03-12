@@ -2,7 +2,7 @@
 
 import struct
 import time
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -101,7 +101,7 @@ class TestSendTokenAck:
         radio._ctrl_transport = mt
         radio._token = 0x12345678
         radio._tok_request = 0xABCD
-        await radio._send_token_ack()
+        await radio._control_phase._send_token_ack()
         assert len(mt.sent_packets) == 1
         pkt = mt.sent_packets[0]
         assert len(pkt) == TOKEN_ACK_SIZE
@@ -117,7 +117,7 @@ class TestReceiveGuid:
         mt = ConnectMockTransport()
         radio._ctrl_transport = mt
         mt.queue_response(_build_conninfo())
-        guid = await radio._receive_guid()
+        guid = await radio._control_phase._receive_guid()
         assert guid is not None
         assert len(guid) == 16
 
@@ -127,7 +127,7 @@ class TestReceiveGuid:
         mt = ConnectMockTransport()
         radio._ctrl_transport = mt
         # No response queued → returns None
-        guid = await radio._receive_guid()
+        guid = await radio._control_phase._receive_guid()
         assert guid is None
 
 
@@ -139,7 +139,7 @@ class TestSendConninfo:
         radio._ctrl_transport = mt
         radio._token = 0x12345678
         radio._tok_request = 0xABCD
-        await radio._send_conninfo(b"\x00" * 16)
+        await radio._control_phase._send_conninfo(b"\x00" * 16)
         assert len(mt.sent_packets) == 1
         assert len(mt.sent_packets[0]) == CONNINFO_SIZE
 
@@ -150,7 +150,7 @@ class TestSendConninfo:
         radio._ctrl_transport = mt
         radio._token = 0
         radio._tok_request = 0
-        await radio._send_conninfo(None)
+        await radio._control_phase._send_conninfo(None)
         assert len(mt.sent_packets) == 1
 
 
@@ -161,7 +161,7 @@ class TestReceiveCivPort:
         mt = ConnectMockTransport()
         radio._ctrl_transport = mt
         mt.queue_response(_build_status(50002, 50003))
-        port = await radio._receive_civ_port()
+        port = await radio._control_phase._receive_civ_port()
         assert port == 50002
         assert radio._audio_port == 50003
 
@@ -170,7 +170,7 @@ class TestReceiveCivPort:
         radio = IcomRadio("192.168.1.100", timeout=0.2)
         mt = ConnectMockTransport()
         radio._ctrl_transport = mt
-        port = await radio._receive_civ_port()
+        port = await radio._control_phase._receive_civ_port()
         assert port == 0
 
     @pytest.mark.asyncio
@@ -181,7 +181,7 @@ class TestReceiveCivPort:
         # Queue a non-status packet first, then status
         mt.queue_response(b"\x00" * 0x30)  # wrong size
         mt.queue_response(_build_status(50004))
-        port = await radio._receive_civ_port()
+        port = await radio._control_phase._receive_civ_port()
         assert port == 50004
 
     @pytest.mark.asyncio
@@ -193,7 +193,7 @@ class TestReceiveCivPort:
         mt.queue_response(_build_status(0, 50003))
 
         start = time.monotonic()
-        port = await radio._receive_civ_port()
+        port = await radio._control_phase._receive_civ_port()
         elapsed = time.monotonic() - start
 
         assert port == 0
@@ -206,16 +206,16 @@ class TestReceiveCivPort:
         mt = ConnectMockTransport()
         radio._ctrl_transport = mt
         mt.queue_response(_build_status(0, 50003, error=0xFFFFFFFF))
-        port = await radio._receive_civ_port()
+        port = await radio._control_phase._receive_civ_port()
         assert port == 0
         assert getattr(radio, "_last_status_error", 0) == 0xFFFFFFFF
 
     def test_status_retry_pause_uses_reject_cooldown(self) -> None:
         radio = IcomRadio("192.168.1.100")
         radio._last_status_error = 0xFFFFFFFF
-        assert radio._status_retry_pause() == radio._STATUS_REJECT_COOLDOWN
+        assert radio._control_phase._status_retry_pause() == radio._control_phase._STATUS_REJECT_COOLDOWN
         radio._last_status_error = 0
-        assert radio._status_retry_pause() == radio._STATUS_RETRY_PAUSE
+        assert radio._control_phase._status_retry_pause() == radio._control_phase._STATUS_RETRY_PAUSE
 
 
 class TestSendOpenClose:
@@ -253,7 +253,7 @@ class TestWaitForPacket:
         mt = ConnectMockTransport()
         mt.queue_response(b"\x00" * 0x20)  # wrong size
         mt.queue_response(b"\x00" * 0x60)  # correct
-        result = await radio._wait_for_packet(mt, size=0x60, label="test")
+        result = await radio._control_phase._wait_for_packet(mt, size=0x60, label="test")
         assert len(result) == 0x60
 
     @pytest.mark.asyncio
@@ -261,7 +261,7 @@ class TestWaitForPacket:
         radio = IcomRadio("192.168.1.100", timeout=0.1)
         mt = ConnectMockTransport()
         with pytest.raises(TimeoutError, match="test timed out"):
-            await radio._wait_for_packet(mt, size=0x60, label="test")
+            await radio._control_phase._wait_for_packet(mt, size=0x60, label="test")
 
     @pytest.mark.asyncio
     async def test_skips_wrong_sizes(self) -> None:
@@ -270,7 +270,7 @@ class TestWaitForPacket:
         for _ in range(5):
             mt.queue_response(b"\x00" * 0x10)
         mt.queue_response(b"\xff" * 0x60)
-        result = await radio._wait_for_packet(mt, size=0x60, label="test")
+        result = await radio._control_phase._wait_for_packet(mt, size=0x60, label="test")
         assert result == b"\xff" * 0x60
 
 
@@ -326,20 +326,32 @@ class TestConnectSessionRejection:
         radio = IcomRadio("192.168.1.100", username="u", password="p")
         mt = ConnectMockTransport()
         radio._ctrl_transport = mt
-        radio._status_retry_pause = lambda: 0.0  # type: ignore[method-assign]
-
-        radio._wait_for_packet = AsyncMock(return_value=_build_login_response())  # type: ignore[method-assign]
-        radio._send_token_ack = AsyncMock()  # type: ignore[method-assign]
-        radio._receive_guid = AsyncMock(return_value=b"\x00" * 16)  # type: ignore[method-assign]
-        radio._send_conninfo = AsyncMock()  # type: ignore[method-assign]
 
         async def _reject_status() -> int:
             radio._last_status_error = 0xFFFFFFFF
             return 0
 
-        radio._receive_civ_port = AsyncMock(side_effect=_reject_status)  # type: ignore[method-assign]
-
-        with pytest.raises(ConnectionError, match="rejected session allocation"):
-            await radio.connect()
+        with (
+            patch.object(radio._control_phase, "_status_retry_pause", return_value=0.0),
+            patch.object(
+                radio._control_phase,
+                "_wait_for_packet",
+                new=AsyncMock(return_value=_build_login_response()),
+            ),
+            patch.object(radio._control_phase, "_send_token_ack", new=AsyncMock()),
+            patch.object(
+                radio._control_phase,
+                "_receive_guid",
+                new=AsyncMock(return_value=b"\x00" * 16),
+            ),
+            patch.object(radio._control_phase, "_send_conninfo", new=AsyncMock()),
+            patch.object(
+                radio._control_phase,
+                "_receive_civ_port",
+                new=AsyncMock(side_effect=_reject_status),
+            ),
+        ):
+            with pytest.raises(ConnectionError, match="rejected session allocation"):
+                await radio.connect()
 
         assert mt.disconnected is True

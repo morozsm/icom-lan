@@ -7,7 +7,6 @@ correct receiver in RadioState.
 
 from __future__ import annotations
 
-import pytest
 
 from icom_lan.commands import (
     IC_7610_ADDR,
@@ -18,7 +17,7 @@ from icom_lan.commands import (
     build_civ_frame,
     parse_civ_frame,
 )
-from icom_lan.radio_state import RadioState, ReceiverState
+from icom_lan.radio_state import RadioState
 from icom_lan.types import bcd_encode, CivFrame
 
 
@@ -26,12 +25,15 @@ from icom_lan.types import bcd_encode, CivFrame
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _make_cmd29_response(receiver: int, inner_cmd: int, inner_sub: int | None, data: bytes) -> CivFrame:
+
+def _make_cmd29_response(
+    receiver: int, inner_cmd: int, inner_sub: int | None, data: bytes
+) -> CivFrame:
     """Build a simulated cmd29 response from the radio and parse it."""
     # The radio responds with cmd29 wrapping its answer.
     frame_bytes = build_cmd29_frame(
-        CONTROLLER_ADDR,   # to: controller
-        IC_7610_ADDR,      # from: radio
+        CONTROLLER_ADDR,  # to: controller
+        IC_7610_ADDR,  # from: radio
         inner_cmd,
         sub=inner_sub,
         data=data,
@@ -55,10 +57,12 @@ def _apply_frame(frame: CivFrame, rs: RadioState) -> None:
 
         if cmd in (0x03, 0x00):
             from icom_lan.commands import parse_frequency_response
+
             rx.freq = parse_frequency_response(frame)
 
         elif cmd in (0x04, 0x01):
             from icom_lan.commands import parse_mode_response
+
             mode_val, filt = parse_mode_response(frame)
             rx.mode = mode_val.name
             if filt is not None:
@@ -67,13 +71,17 @@ def _apply_frame(frame: CivFrame, rs: RadioState) -> None:
         elif cmd == 0x15:
             if frame.sub == 0x02 and len(frame.data) >= 2:
                 b0, b1 = frame.data[0], frame.data[1]
-                raw = (b0 >> 4) * 1000 + (b0 & 0x0F) * 100 + (b1 >> 4) * 10 + (b1 & 0x0F)
+                raw = (
+                    (b0 >> 4) * 1000 + (b0 & 0x0F) * 100 + (b1 >> 4) * 10 + (b1 & 0x0F)
+                )
                 rs.receiver(rs.active).s_meter = raw
 
         elif cmd == 0x14:
             if len(frame.data) >= 2:
                 b0, b1 = frame.data[0], frame.data[1]
-                raw = (b0 >> 4) * 1000 + (b0 & 0x0F) * 100 + (b1 >> 4) * 10 + (b1 & 0x0F)
+                raw = (
+                    (b0 >> 4) * 1000 + (b0 & 0x0F) * 100 + (b1 >> 4) * 10 + (b1 & 0x0F)
+                )
                 sub = frame.sub
                 if sub == 0x01:
                     rx.af_level = raw
@@ -343,9 +351,7 @@ def test_ptt_off_global() -> None:
 
 def test_split_on_global() -> None:
     rs = RadioState()
-    frame_bytes = build_civ_frame(
-        CONTROLLER_ADDR, IC_7610_ADDR, 0x0F, data=b"\x01"
-    )
+    frame_bytes = build_civ_frame(CONTROLLER_ADDR, IC_7610_ADDR, 0x0F, data=b"\x01")
     frame = parse_civ_frame(frame_bytes)
     _apply_frame(frame, rs)
     assert rs.split is True

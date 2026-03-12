@@ -13,9 +13,9 @@ semantics when deciding whether to serve cached values or hit the
 radio again.
 """
 
-from typing import Final
+from typing import Final  # noqa: E402
 
-from .rigctld.state_cache import CacheField, StateCache
+from .rigctld.state_cache import CacheField, StateCache  # noqa: E402
 
 __all__ = [
     "DEFAULT_STATE_CACHE_TTL",
@@ -46,4 +46,3 @@ def is_cache_fresh(
     if max_age_s is None or max_age_s <= 0.0:
         return False
     return cache.is_fresh(field, max_age_s)
-

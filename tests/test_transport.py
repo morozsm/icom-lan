@@ -246,7 +246,9 @@ class TestRxSequence:
         assert transport.rx_last_seq == 1
         assert set(transport.rx_missing.keys()) == {0xFFFF, 0x0000}
 
-    def test_old_packet_does_not_rewind_last_seq(self, transport: IcomTransport) -> None:
+    def test_old_packet_does_not_rewind_last_seq(
+        self, transport: IcomTransport
+    ) -> None:
         transport._record_rx_seq(2)
         transport._record_rx_seq(1)  # old/out-of-order relative to last_seq=2
         assert transport.rx_last_seq == 2
@@ -412,9 +414,7 @@ class TestPacketQueueOverflow:
         with caplog.at_level(logging.WARNING):
             transport._handle_packet(extra_pkt)
 
-        warnings = [
-            rec for rec in caplog.records if rec.levelno == logging.WARNING
-        ]
+        warnings = [rec for rec in caplog.records if rec.levelno == logging.WARNING]
         assert warnings, "Expected at least one WARNING log for queue overflow"
         # Ensure log mentions queue and overflow in some form
         joined = " ".join(rec.getMessage() for rec in warnings)

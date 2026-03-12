@@ -130,11 +130,13 @@ class RigctldServer:
         """Start the TCP listener and initialise the command handler."""
         if self._protocol is None:
             from . import protocol as _proto_mod  # noqa: PLC0415
+
             self._protocol = _proto_mod
 
         if self._rig_handler is None:
             from . import handler as _handler_mod  # noqa: PLC0415
             from .poller import RadioPoller  # noqa: PLC0415
+
             cache = (
                 cast(StateCache, self._radio.state_cache)
                 if isinstance(self._radio, StateCacheCapable)
@@ -147,7 +149,9 @@ class RigctldServer:
                 if self._circuit_breaker is None:
                     self._circuit_breaker = CircuitBreaker()
                 self._poller = RadioPoller(
-                    self._radio, cache, self._config,
+                    self._radio,
+                    cache,
+                    self._config,
                     circuit_breaker=self._circuit_breaker,
                 )
 
@@ -357,16 +361,12 @@ class RigctldServer:
                 except ValueError as exc:
                     # Unknown command or bad args → ENIMPL, not EPROTO
                     # (WSJT-X sends commands we don't support yet)
-                    logger.debug(
-                        "client #%d unknown/bad command: %s", client_id, exc
-                    )
+                    logger.debug("client #%d unknown/bad command: %s", client_id, exc)
                     writer.write(proto.format_error(HamlibError.ENIMPL))
                     await writer.drain()
                     continue
                 except Exception as exc:
-                    logger.warning(
-                        "client #%d parse error: %s", client_id, exc
-                    )
+                    logger.warning("client #%d parse error: %s", client_id, exc)
                     writer.write(proto.format_error(HamlibError.EPROTO))
                     await writer.drain()
                     continue
@@ -407,9 +407,7 @@ class RigctldServer:
                     await writer.drain()
                     continue
                 except Exception as exc:
-                    logger.error(
-                        "client #%d handler error: %s", client_id, exc
-                    )
+                    logger.error("client #%d handler error: %s", client_id, exc)
                     writer.write(proto.format_error(HamlibError.EIO))
                     await writer.drain()
                     continue
@@ -470,9 +468,7 @@ class RigctldServer:
     # Line reader
     # ------------------------------------------------------------------
 
-    async def _readline(
-        self, reader: asyncio.StreamReader
-    ) -> bytes | None:
+    async def _readline(self, reader: asyncio.StreamReader) -> bytes | None:
         """Read one newline-terminated line, stripping the terminator.
 
         Returns:
@@ -515,6 +511,6 @@ async def run_rigctld_server(radio: "Radio", **kwargs: Any) -> None:
 
         await run_rigctld_server(radio, host="0.0.0.0", port=4532)
     """
-    config = RigctldConfig(**kwargs)  # type: ignore[arg-type]
+    config = RigctldConfig(**kwargs)
     server = RigctldServer(radio, config)
     await server.serve_forever()

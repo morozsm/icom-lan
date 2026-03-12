@@ -65,18 +65,14 @@ class AudioRecoveryRuntime:
             or self._host._opus_rx_user_callback is not None
         )
         tx_active = (
-            state == AudioState.TRANSMITTING
-            or self._host._pcm_tx_fmt is not None
+            state == AudioState.TRANSMITTING or self._host._pcm_tx_fmt is not None
         )
         pcm_mode = (
             self._host._pcm_rx_user_callback is not None
             or self._host._pcm_tx_fmt is not None
         )
 
-        pcm_params = (
-            self._host._pcm_tx_fmt
-            or self._host._pcm_transcoder_fmt
-        )
+        pcm_params = self._host._pcm_tx_fmt or self._host._pcm_transcoder_fmt
 
         jitter_depth = (
             self._host._pcm_rx_jitter_depth
@@ -160,8 +156,7 @@ class _AudioRecoveryMixin:
             or self._opus_rx_user_callback is not None  # type: ignore[attr-defined]
         )
         tx_active = (
-            state == AudioState.TRANSMITTING
-            or self._pcm_tx_fmt is not None  # type: ignore[attr-defined]
+            state == AudioState.TRANSMITTING or self._pcm_tx_fmt is not None  # type: ignore[attr-defined]
         )
         pcm_mode = (
             self._pcm_rx_user_callback is not None  # type: ignore[attr-defined]

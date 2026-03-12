@@ -13,6 +13,7 @@ from icom_lan.rigctld.state_cache import StateCache
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def cache() -> StateCache:
     return StateCache()
@@ -21,6 +22,7 @@ def cache() -> StateCache:
 # ---------------------------------------------------------------------------
 # Initial state
 # ---------------------------------------------------------------------------
+
 
 def test_default_freq_is_zero(cache: StateCache) -> None:
     assert cache.freq == 0
@@ -54,6 +56,7 @@ def test_default_rf_power_is_none(cache: StateCache) -> None:
 # is_fresh — never-updated fields
 # ---------------------------------------------------------------------------
 
+
 def test_is_fresh_freq_never_set_returns_false(cache: StateCache) -> None:
     assert cache.is_fresh("freq", 1.0) is False
 
@@ -81,6 +84,7 @@ def test_is_fresh_rf_power_never_set_returns_false(cache: StateCache) -> None:
 # ---------------------------------------------------------------------------
 # is_fresh — after update
 # ---------------------------------------------------------------------------
+
 
 def test_is_fresh_freq_after_update_returns_true(cache: StateCache) -> None:
     cache.update_freq(14_074_000)
@@ -111,6 +115,7 @@ def test_is_fresh_rf_power_after_update_returns_true(cache: StateCache) -> None:
 # is_fresh — zero TTL always returns False
 # ---------------------------------------------------------------------------
 
+
 def test_is_fresh_zero_ttl_always_false_after_update(cache: StateCache) -> None:
     cache.update_freq(14_074_000)
     # Even immediately after update, 0.0 TTL means never fresh.
@@ -125,6 +130,7 @@ def test_is_fresh_zero_ttl_mode(cache: StateCache) -> None:
 # ---------------------------------------------------------------------------
 # is_fresh — expired (simulate old timestamp)
 # ---------------------------------------------------------------------------
+
 
 def test_is_fresh_expired_when_timestamp_is_old(cache: StateCache) -> None:
     cache.update_freq(14_074_000)
@@ -143,6 +149,7 @@ def test_is_fresh_not_expired_within_ttl(cache: StateCache) -> None:
 # ---------------------------------------------------------------------------
 # update_freq / invalidate_freq
 # ---------------------------------------------------------------------------
+
 
 def test_update_freq_stores_value(cache: StateCache) -> None:
     cache.update_freq(7_050_000)
@@ -172,6 +179,7 @@ def test_invalidate_freq_makes_is_fresh_false(cache: StateCache) -> None:
 # ---------------------------------------------------------------------------
 # update_mode / invalidate_mode
 # ---------------------------------------------------------------------------
+
 
 def test_update_mode_stores_mode_str(cache: StateCache) -> None:
     cache.update_mode("CW", 3)
@@ -212,6 +220,7 @@ def test_invalidate_mode_makes_is_fresh_false(cache: StateCache) -> None:
 # update_ptt
 # ---------------------------------------------------------------------------
 
+
 def test_update_ptt_true(cache: StateCache) -> None:
     cache.update_ptt(True)
     assert cache.ptt is True
@@ -232,6 +241,7 @@ def test_update_ptt_sets_timestamp(cache: StateCache) -> None:
 # ---------------------------------------------------------------------------
 # update_s_meter / update_rf_power
 # ---------------------------------------------------------------------------
+
 
 def test_update_s_meter_stores_value(cache: StateCache) -> None:
     cache.update_s_meter(120)
@@ -259,6 +269,7 @@ def test_update_rf_power_sets_timestamp(cache: StateCache) -> None:
 # snapshot
 # ---------------------------------------------------------------------------
 
+
 def test_snapshot_returns_dict(cache: StateCache) -> None:
     snap = cache.snapshot()
     assert isinstance(snap, dict)
@@ -272,7 +283,14 @@ def test_snapshot_contains_all_value_keys(cache: StateCache) -> None:
 
 def test_snapshot_contains_all_age_keys(cache: StateCache) -> None:
     snap = cache.snapshot()
-    for key in ("freq_age", "mode_age", "vfo_age", "ptt_age", "s_meter_age", "rf_power_age"):
+    for key in (
+        "freq_age",
+        "mode_age",
+        "vfo_age",
+        "ptt_age",
+        "s_meter_age",
+        "rf_power_age",
+    ):
         assert key in snap, f"missing age key: {key}"
 
 

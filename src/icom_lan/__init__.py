@@ -34,7 +34,7 @@ from .audio import (
 from .transport import ConnectionState, IcomTransport
 from ._connection_state import RadioConnectionState
 from .commander import IcomCommander, Priority
-from .radio import AudioRecoveryState, IcomRadio
+from .radio import AudioRecoveryState, IcomRadio  # noqa: TID251
 from .radio_protocol import (
     AudioCapable,
     DualReceiverCapable,
@@ -123,6 +123,7 @@ try:
         render_spectrum,
         render_waterfall,
     )
+
     _SCOPE_RENDER_AVAILABLE = True
 except ImportError:
     _SCOPE_RENDER_AVAILABLE = False

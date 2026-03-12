@@ -48,7 +48,8 @@ class _UdpProtocol(asyncio.DatagramProtocol):
     def __init__(self, transport_owner: "IcomTransport") -> None:
         self._owner = transport_owner
 
-    def connection_made(self, transport: asyncio.DatagramTransport) -> None:
+    def connection_made(self, transport: asyncio.BaseTransport) -> None:
+        assert isinstance(transport, asyncio.DatagramTransport)
         self._owner._udp_transport = transport
 
     def datagram_received(self, data: bytes, addr: tuple[str, int]) -> None:
@@ -59,7 +60,9 @@ class _UdpProtocol(asyncio.DatagramProtocol):
         owner._udp_error_count += 1
         if owner._udp_error_count <= 3 or owner._udp_error_count % 100 == 0:
             logger.error(
-                "UDP error (#%d): %s", owner._udp_error_count, exc,
+                "UDP error (#%d): %s",
+                owner._udp_error_count,
+                exc,
             )
 
     def connection_lost(self, exc: Exception | None) -> None:
@@ -90,9 +93,9 @@ class IcomTransport:
         self.rx_last_seq: int | None = None
         self.rx_missing: dict[int, int] = {}  # seq -> retry count
         self._udp_transport: asyncio.DatagramTransport | None = None
-        self._ping_task: asyncio.Task | None = None
-        self._idle_task: asyncio.Task | None = None
-        self._retransmit_task: asyncio.Task | None = None
+        self._ping_task: asyncio.Task[None] | None = None
+        self._idle_task: asyncio.Task[None] | None = None
+        self._retransmit_task: asyncio.Task[None] | None = None
         self._packet_queue: asyncio.Queue[bytes] = asyncio.Queue(
             maxsize=PACKET_QUEUE_MAXSIZE
         )
@@ -177,7 +180,10 @@ class IcomTransport:
             self.my_id = saved_my_id
         logger.info(
             "UDP reconnect to %s:%d, my_id=0x%08X (reusing remote_id=0x%08X)",
-            host, port, self.my_id, saved_remote_id,
+            host,
+            port,
+            self.my_id,
+            saved_remote_id,
         )
         self.remote_id = saved_remote_id
 
@@ -300,9 +306,9 @@ class IcomTransport:
         seq = self._next_send_seq()
         pkt = bytearray(data)
         struct.pack_into("<H", pkt, 6, seq)
-        pkt = bytes(pkt)
-        self._track_sent(seq, pkt)
-        self._raw_send(pkt)
+        pkt_bytes = bytes(pkt)
+        self._track_sent(seq, pkt_bytes)
+        self._raw_send(pkt_bytes)
         self._last_tracked_send = time.monotonic()
 
     async def receive_packet(self, timeout: float = 5.0) -> bytes:
@@ -498,9 +504,7 @@ class IcomTransport:
                     "(dropped_seq=%s, new_seq=0x%04X, ptype=0x%04X, "
                     "sender_id=0x%08X, queue_size=%d, maxsize=%d, rx_count=%d)"
                 ),
-                (
-                    f"0x{dropped_seq:04X}" if isinstance(dropped_seq, int) else "n/a"
-                ),
+                (f"0x{dropped_seq:04X}" if isinstance(dropped_seq, int) else "n/a"),
                 seq,
                 ptype,
                 sender_id,
@@ -555,7 +559,9 @@ class IcomTransport:
                     if idle_count % 100 == 1:
                         logger.debug(
                             "idle-keepalive: sent #%d (send_seq=%d, rx_count=%d)",
-                            idle_count, self.send_seq, self.rx_packet_count,
+                            idle_count,
+                            self.send_seq,
+                            self.rx_packet_count,
                         )
         except asyncio.CancelledError:
             pass

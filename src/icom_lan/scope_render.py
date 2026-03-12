@@ -15,10 +15,10 @@ Example::
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
-    from PIL.Image import Image as PILImage
+    from PIL.Image import Image as PILImage  # type: ignore[import-not-found]
     from .scope import ScopeFrame
 
 __all__ = [
@@ -35,15 +35,15 @@ __all__ = [
 
 # Anchor points: (amplitude_0_160, R, G, B)
 _CLASSIC_ANCHORS: list[tuple[int, int, int, int]] = [
-    (0, 0, 0, 40),       # noise floor: dark blue/black
-    (40, 0, 0, 200),     # weak: blue
-    (80, 0, 200, 200),   # medium: cyan
+    (0, 0, 0, 40),  # noise floor: dark blue/black
+    (40, 0, 0, 200),  # weak: blue
+    (80, 0, 200, 200),  # medium: cyan
     (120, 200, 200, 0),  # strong: yellow
     (160, 255, 50, 50),  # max: red
 ]
 
 _GRAYSCALE_ANCHORS: list[tuple[int, int, int, int]] = [
-    (0, 0, 0, 0),        # black
+    (0, 0, 0, 0),  # black
     (160, 255, 255, 255),  # white
 ]
 
@@ -77,7 +77,7 @@ def _build_colormap(
     return colormap
 
 
-THEMES: dict[str, dict] = {
+THEMES: dict[str, dict[str, object]] = {
     "classic": {
         "background": (0, 0, 0),
         "spectrum_line": (0, 255, 0),
@@ -98,7 +98,7 @@ THEMES: dict[str, dict] = {
 def _require_pillow() -> None:
     """Raise ImportError with install instructions if Pillow is missing."""
     try:
-        import PIL  # noqa: F401
+        import PIL  # type: ignore[import-not-found]  # noqa: F401
     except ImportError:
         raise ImportError(
             "Pillow is required for scope rendering. "
@@ -123,7 +123,7 @@ def amplitude_to_color(value: int, theme: str = "classic") -> tuple[int, int, in
     """
     colormap = THEMES[theme]["colormap"]
     idx = max(0, min(160, value))
-    return colormap[idx]
+    return cast(tuple[int, int, int], colormap[idx])
 
 
 def render_spectrum(
@@ -371,9 +371,7 @@ def render_scope_image(
         )
         combined.paste(spec, (0, 0))
 
-        wf = render_waterfall(
-            frames, width=width, height=waterfall_height, theme=theme
-        )
+        wf = render_waterfall(frames, width=width, height=waterfall_height, theme=theme)
         combined.paste(wf, (0, spectrum_height))
 
     if output is not None:

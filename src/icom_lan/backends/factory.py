@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ..radio import IcomRadio
+from ..radio import IcomRadio  # noqa: TID251
 from ..radio_protocol import Radio
 from .config import BackendConfig, LanBackendConfig, SerialBackendConfig
 from .icom7610.serial import Icom7610SerialRadio
@@ -51,9 +51,7 @@ def create_radio(config: BackendConfig) -> Radio:
             "Unsupported config instance for backend "
             f"{backend!r}; use typed backend config dataclasses."
         )
-    raise ValueError(
-        "Unsupported backend. Expected backend 'lan' or 'serial'."
-    )
+    raise ValueError("Unsupported backend. Expected backend 'lan' or 'serial'.")
 
 
 __all__ = ["create_radio"]

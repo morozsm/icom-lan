@@ -36,13 +36,13 @@ from icom_lan.web.websocket import (
     WebSocketConnection,
     WebSocketError,
     _read_one_frame,
-    make_frame,
 )
 
 
 # ---------------------------------------------------------------------------
 # Helper: build a minimal client→server frame (masked)
 # ---------------------------------------------------------------------------
+
 
 def _client_frame(
     opcode: int,
@@ -95,6 +95,7 @@ def _make_writer(is_closing: bool = False) -> MagicMock:
 # _read_one_frame
 # ---------------------------------------------------------------------------
 
+
 async def test_read_one_frame_non_zero_rsv_raises() -> None:
     """Non-zero RSV bits must raise WebSocketError."""
     frame = _client_frame(WS_OP_TEXT, b"hi", rsv=1)
@@ -136,6 +137,7 @@ async def test_read_one_frame_unmasked_payload() -> None:
 # ---------------------------------------------------------------------------
 # WebSocketConnection.recv()
 # ---------------------------------------------------------------------------
+
 
 async def test_recv_incomplete_read_raises_eof_error() -> None:
     """asyncio.IncompleteReadError during recv() should become EOFError."""
@@ -245,6 +247,7 @@ async def test_recv_two_fragment_message() -> None:
 # send_binary() — line 234
 # ---------------------------------------------------------------------------
 
+
 async def test_send_binary() -> None:
     """send_binary() must write a BINARY frame."""
     reader = asyncio.StreamReader()
@@ -260,6 +263,7 @@ async def test_send_binary() -> None:
 # ---------------------------------------------------------------------------
 # close() — lines 243-249
 # ---------------------------------------------------------------------------
+
 
 async def test_close_sends_close_frame() -> None:
     """close() should send a CLOSE frame with the status code."""
@@ -301,6 +305,7 @@ async def test_close_oserror_suppressed() -> None:
 # closed property — line 254
 # ---------------------------------------------------------------------------
 
+
 async def test_closed_property_false_initially() -> None:
     reader = asyncio.StreamReader()
     reader.feed_eof()
@@ -321,6 +326,7 @@ async def test_closed_property_true_after_close() -> None:
 # ---------------------------------------------------------------------------
 # keepalive_loop() — lines 256-274
 # ---------------------------------------------------------------------------
+
 
 async def test_keepalive_loop_sends_ping() -> None:
     """keepalive_loop() should send PING frames at the configured interval."""

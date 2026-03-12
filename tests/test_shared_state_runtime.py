@@ -2,13 +2,11 @@ from __future__ import annotations
 
 """Tests for icom_lan._shared_state_runtime helpers."""
 
-import time
-
-from icom_lan._shared_state_runtime import (
+from icom_lan._shared_state_runtime import (  # noqa: E402
     DEFAULT_STATE_CACHE_TTL,
     is_cache_fresh,
 )
-from icom_lan.rigctld.state_cache import StateCache
+from icom_lan.rigctld.state_cache import StateCache  # noqa: E402
 
 
 def test_is_cache_fresh_false_when_ttl_none_or_non_positive() -> None:
@@ -36,4 +34,3 @@ def test_is_cache_fresh_respects_never_written_fields() -> None:
     cache = StateCache()
     # No writes yet → timestamps are 0.0 and must be treated as stale.
     assert is_cache_fresh(cache, "mode", DEFAULT_STATE_CACHE_TTL) is False
-

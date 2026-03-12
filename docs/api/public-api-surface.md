@@ -35,7 +35,7 @@ This page defines the **officially supported** public API of `icom_lan`. Use the
 | Symbol | Description |
 |--------|-------------|
 | `IcomLanError` | Base exception. |
-| `ConnectionError`, `AuthenticationError`, `CommandError`, `TimeoutError` | Connection and command errors. |
+| `ConnectionError`, `AuthenticationError`, `CommandError`, `TimeoutError` | Connection and command errors. When catching timeouts, use `icom_lan.exceptions.TimeoutError` explicitly; distinguish from `asyncio.TimeoutError` if needed (see [exceptions](exceptions.md)). |
 | `AudioError`, `AudioCodecBackendError`, `AudioFormatError`, `AudioTranscodeError` | Audio-related errors. |
 
 ### Sync wrapper and utilities

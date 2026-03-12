@@ -71,7 +71,10 @@ async def _connect_with_retries(radio: IcomRadio, attempts: int = 7) -> None:
             if attempt >= attempts:
                 break
             text = str(exc).lower()
-            if "status error=0xffffffff" in text or "rejected session allocation" in text:
+            if (
+                "status error=0xffffffff" in text
+                or "rejected session allocation" in text
+            ):
                 # IC-7610 can hold old session slot for tens of seconds.
                 pause = min(12 + attempt * 4, 40)
             else:

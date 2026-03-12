@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 from typing import Any
 
 import pytest
@@ -109,4 +108,3 @@ def test_get_mode_reader_returns_none_when_no_mode_methods() -> None:
 
     reader = get_mode_reader(_NoModeRadio(), normalizer)
     assert reader is None
-
