@@ -1,11 +1,23 @@
-"""Serial port enumeration and candidate filtering for Icom radio discovery."""
+"""Serial port enumeration, candidate filtering, and CI-V probing for Icom radio discovery."""
 
 from __future__ import annotations
 
+import asyncio
 import logging
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
+from typing import Any
 
-__all__ = ["SerialPortCandidate", "enumerate_serial_ports"]
+__all__ = [
+    "CivProbeResult",
+    "SerialPortCandidate",
+    "enumerate_serial_ports",
+    "probe_serial_civ",
+]
+
+_CIV_PROBE_CMD = bytes([0xFE, 0xFE, 0x00, 0xE0, 0x19, 0x00, 0xFD])
+# Minimum valid response: FE FE E0 <addr> 19 00 <model_id_byte> FD = 8 bytes
+_RESPONSE_MIN_LEN = 8
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +38,164 @@ class SerialPortCandidate:
     device: str
     description: str
     hwid: str | None
+
+
+@dataclass
+class CivProbeResult:
+    """Result of a successful CI-V probe on a serial port.
+
+    Attributes:
+        port: OS device path, e.g. ``/dev/ttyUSB0``.
+        baud: Baud rate at which the radio responded.
+        address: CI-V address reported by the radio (e.g. ``0x98`` for IC-7610).
+        model_id: Model ID bytes from the transceiver ID response.
+    """
+
+    port: str
+    baud: int
+    address: int
+    model_id: bytes
+
+
+# Default open function; replaced in tests via _open_serial parameter.
+_OpenSerial = Callable[..., Awaitable[tuple[Any, Any]]]
+
+
+async def probe_serial_civ(
+    port: str,
+    baud_rates: list[int] | None = None,
+    timeout: float = 1.0,
+    *,
+    _open_serial: _OpenSerial | None = None,
+) -> CivProbeResult | None:
+    """Probe a serial port for a CI-V radio, trying multiple baud rates.
+
+    Sends a *Read Transceiver ID* broadcast (``FE FE 00 E0 19 00 FD``) at each
+    baud rate and waits up to *timeout* seconds for a valid response.
+
+    Args:
+        port: Serial device path (e.g. ``/dev/ttyUSB0``).
+        baud_rates: Baud rates to try, in order. Defaults to
+            ``[19200, 9600, 115200, 4800]``.
+        timeout: Per-baud timeout in seconds.
+        _open_serial: Override for ``serial_asyncio.open_serial_connection``
+            (used in tests).
+
+    Returns:
+        :class:`CivProbeResult` on success, or ``None`` if no radio responded.
+    """
+    if baud_rates is None:
+        baud_rates = [19200, 9600, 115200, 4800]
+
+    for baud in baud_rates:
+        result = await _try_baud(port, baud, timeout, _open_serial=_open_serial)
+        if result is not None:
+            return result
+    return None
+
+
+async def _try_baud(
+    port: str,
+    baud: int,
+    timeout: float,
+    *,
+    _open_serial: _OpenSerial | None = None,
+) -> CivProbeResult | None:
+    """Open *port* at *baud*, send CI-V probe, return result or None.
+
+    Args:
+        port: Serial device path.
+        baud: Baud rate to attempt.
+        timeout: Read timeout in seconds.
+        _open_serial: Override for ``serial_asyncio.open_serial_connection``.
+
+    Returns:
+        :class:`CivProbeResult` on success, or ``None`` on timeout / bad data.
+    """
+    open_fn = _open_serial or _default_open_serial()
+    try:
+        reader, writer = await open_fn(url=port, baudrate=baud)
+    except Exception:
+        logger.debug("probe_serial_civ: cannot open %s @ %d", port, baud)
+        return None
+
+    try:
+        writer.write(_CIV_PROBE_CMD)
+        await writer.drain()
+        logger.debug("probe_serial_civ: sent probe to %s @ %d baud", port, baud)
+
+        try:
+            data = await asyncio.wait_for(reader.read(64), timeout=timeout)
+        except asyncio.TimeoutError:
+            logger.debug("probe_serial_civ: timeout at %s @ %d", port, baud)
+            return None
+
+        return _parse_probe_response(port, baud, data)
+    finally:
+        writer.close()
+        await writer.wait_closed()
+
+
+def _default_open_serial() -> _OpenSerial:
+    """Return the real serial_asyncio opener, or raise ImportError with hint."""
+    try:
+        import serial_asyncio  # type: ignore[import-untyped]
+
+        return serial_asyncio.open_serial_connection  # type: ignore[no-any-return]
+    except ImportError as exc:
+        raise ImportError(
+            "CI-V probing requires pyserial-asyncio. "
+            "Install with: pip install icom-lan[serial]"
+        ) from exc
+
+
+def _parse_probe_response(port: str, baud: int, data: bytes) -> CivProbeResult | None:
+    """Parse raw bytes looking for a CI-V transceiver ID response.
+
+    Expected frame: ``FE FE E0 <addr> 19 00 <model_id...> FD``
+
+    Args:
+        port: Serial device path (for building result).
+        baud: Baud rate (for building result).
+        data: Raw bytes received from the serial port.
+
+    Returns:
+        :class:`CivProbeResult` if a valid response is found, else ``None``.
+    """
+    # Scan for response preamble FE FE E0 (to=controller, ignoring echo)
+    search = bytes([0xFE, 0xFE, 0xE0])
+    idx = data.find(search)
+    if idx == -1:
+        logger.debug("probe_serial_civ: no valid preamble in response from %s", port)
+        return None
+
+    frame = data[idx:]
+    if len(frame) < _RESPONSE_MIN_LEN:
+        logger.debug("probe_serial_civ: response too short from %s", port)
+        return None
+
+    # Verify command echo: bytes 4-5 should be 0x19 0x00
+    if frame[4] != 0x19 or frame[5] != 0x00:
+        logger.debug("probe_serial_civ: unexpected command bytes in response from %s", port)
+        return None
+
+    address = frame[3]
+
+    # model_id is everything between byte 6 and the terminator FD
+    end_idx = frame.find(0xFD, 6)
+    if end_idx == -1:
+        logger.debug("probe_serial_civ: no terminator in response from %s", port)
+        return None
+
+    model_id = bytes(frame[6:end_idx])
+    logger.info(
+        "probe_serial_civ: found radio at %s @ %d — addr=0x%02X model=%s",
+        port,
+        baud,
+        address,
+        model_id.hex(),
+    )
+    return CivProbeResult(port=port, baud=baud, address=address, model_id=model_id)
 
 
 def enumerate_serial_ports() -> list[SerialPortCandidate]:
