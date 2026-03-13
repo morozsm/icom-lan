@@ -240,6 +240,7 @@ async def discover_lan_radios(timeout: float = 3.0) -> list[dict[str, object]]:
     import time
 
     def _scan() -> list[dict[str, object]]:
+        # Build "Are You There" packet with sender_id=0
         pkt = bytearray(0x10)
         struct.pack_into("<I", pkt, 0, 0x10)
         struct.pack_into("<H", pkt, 4, 0x03)  # ARE_YOU_THERE
@@ -247,12 +248,10 @@ async def discover_lan_radios(timeout: float = 3.0) -> list[dict[str, object]]:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         sock.settimeout(0.5)
-        try:
-            sock.sendto(bytes(pkt), ("255.255.255.255", 50001))
-        except OSError:
-            logger.warning("discover_lan_radios: broadcast failed")
-            sock.close()
-            return []
+
+        # Broadcast on common Icom ports
+        for port in [50001]:
+            sock.sendto(bytes(pkt), ("255.255.255.255", port))
 
         found: dict[str, dict[str, object]] = {}
         deadline = time.monotonic() + timeout
@@ -267,6 +266,7 @@ async def discover_lan_radios(timeout: float = 3.0) -> list[dict[str, object]]:
                         logger.info("discover_lan_radios: found %s id=0x%08X", addr[0], remote_id)
             except socket.timeout:
                 continue
+
         sock.close()
         return list(found.values())
 
