@@ -102,7 +102,7 @@ class CivRuntimeHost(Protocol):
 
 
 class ControlPhaseHost(Protocol):
-    """Host interface required by ``_ControlPhaseMixin``."""
+    """Host interface required by ``ControlPhaseRuntime``."""
 
     # Basic connection configuration
     _host: str
