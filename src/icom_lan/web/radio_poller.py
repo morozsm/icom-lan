@@ -35,7 +35,8 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Callable, cast
 
 from ..profiles import RadioProfile, resolve_radio_profile
-from ..rigctld.state_cache import StateCache
+from ..rigctld.state_cache import CacheField, StateCache
+from .._shared_state_runtime import DEFAULT_STATE_CACHE_TTL, is_cache_fresh
 
 if TYPE_CHECKING:
     from ..radio_protocol import Radio
@@ -416,6 +417,24 @@ class RadioPoller:
     def bump_revision(self) -> None:
         """Increment the revision counter (called on each state change)."""
         self._revision += 1
+
+    def state_is_fresh(
+        self,
+        field: CacheField,
+        ttl: float = DEFAULT_STATE_CACHE_TTL,
+    ) -> bool:
+        """Return True if *field* in the shared cache is still fresh.
+
+        Convenience wrapper around :func:`~icom_lan._shared_state_runtime.is_cache_fresh`
+        so callers that hold a :class:`RadioPoller` reference do not need to
+        import the lower-level helper directly.
+
+        Args:
+            field: Cache field name (e.g. ``"freq"``, ``"mode"``).
+            ttl: Maximum acceptable age in seconds (defaults to
+                :data:`~icom_lan._shared_state_runtime.DEFAULT_STATE_CACHE_TTL`).
+        """
+        return is_cache_fresh(self._cache, field, ttl)
 
     def _radio_capabilities(self) -> set[str]:
         raw_caps = getattr(self._radio, "capabilities", None)

@@ -223,15 +223,15 @@ class RadioPoller:
             return
 
         # --- mode -------------------------------------------------------
-        try:
-            get_mode = _get_mode_reader(self._radio)
-            if get_mode is not None:
-                mode_str, filter_width = await get_mode()
-                self._cache.update_mode(mode_str, filter_width)
-        except (IcomTimeoutError, IcomConnectionError) as exc:
-            logger.warning("RadioPoller: get_mode failed: %s", exc)
-        except Exception as exc:  # pragma: no cover — unexpected
-            logger.warning("RadioPoller: get_mode unexpected error: %s", exc)
+        get_mode = _get_mode_reader(self._radio)
+        if get_mode is not None:
+            from .._shared_state_runtime import poll_mode
+
+            mode_result = await poll_mode(
+                self._radio, self._cache, 0.0, mode_reader=get_mode
+            )
+            if mode_result is None:
+                logger.warning("RadioPoller: get_mode failed")
 
         # Bail out early if a write started while we were awaiting.
         if self.write_busy:
