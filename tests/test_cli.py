@@ -542,17 +542,19 @@ class TestBackendAwareDiscover:
         with patch("sys.argv", ["icom-lan", "--backend", "serial", "discover"]):
             with pytest.raises(SystemExit) as exc_info:
                 main()
-        assert exc_info.value.code == 1
+        assert exc_info.value.code == 0
         captured = capsys.readouterr()
-        assert "serial" in captured.err.lower()
-        assert "not supported" in captured.err.lower()
+        assert "Scanning for Icom radios" in captured.out
+        assert "serial" in captured.out.lower()
 
     def test_discover_serial_error_mentions_lan(self, capsys):
         with patch("sys.argv", ["icom-lan", "--backend", "serial", "discover"]):
-            with pytest.raises(SystemExit):
+            with pytest.raises(SystemExit) as exc_info:
                 main()
+        assert exc_info.value.code == 0
         captured = capsys.readouterr()
-        assert "lan" in captured.err.lower()
+        assert "Scanning for Icom radios" in captured.out
+        assert "lan" in captured.out.lower()
 
 
 class TestListAudioDevices:

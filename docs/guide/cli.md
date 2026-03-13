@@ -595,6 +595,10 @@ These flags apply to **every** command and must come before the subcommand name.
 |------|---------|---------|-------------|
 | `--version` | *(global)* | — | Print version and exit |
 | `--control-port PORT` | *(global)* | `50001` (`$ICOM_PORT`) | Radio UDP control port; `--port` is a deprecated alias |
+| `--ant1` | *(global)* | — | Select antenna 1 (main transceiver antenna) |
+| `--ant2` | *(global)* | — | Select antenna 2 (alternate antenna) |
+| `--rx-ant1` | *(global)* | — | Select receive antenna 1 |
+| `--rx-ant2` | *(global)* | — | Select receive antenna 2 |
 
 ```bash
 # Print installed version
@@ -602,6 +606,12 @@ icom-lan --version
 
 # Connect to a radio on a non-default port
 icom-lan --control-port 50002 status
+
+# Select main antenna
+icom-lan --ant1 status
+
+# Use alternate receive antenna
+icom-lan --rx-ant2 freq
 ```
 
 ### `serve` flags

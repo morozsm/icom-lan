@@ -783,8 +783,9 @@ async def test_cmd_discover_found_and_not_found(
         rc_found = await _cmd_discover(None, None)
     assert rc_found == 0
     out = capsys.readouterr().out
-    assert "Found: 192.168.1.9:50001" in out
-    assert "1 radio(s) found" in out
+    assert "192.168.1.9:" in out
+    assert "LAN: 192.168.1.9" in out
+    assert "Found 1 radio with 1 connection method:" in out
 
     none_sock = FakeSocket([socket.timeout(), socket.timeout()])
     with (

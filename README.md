@@ -2,7 +2,7 @@
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-3173%20passed-brightgreen.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-3162%20passed-brightgreen.svg)](#testing)
 [![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen.svg)](#testing)
 [![Type Safety](https://img.shields.io/badge/mypy-0%20errors-blue.svg)](#testing)
 
