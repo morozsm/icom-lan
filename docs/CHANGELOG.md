@@ -7,8 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] — 2026-03-12
+
 ### Added
 - **Abstract Radio Protocol** (`radio_protocol.py`) — vendor-neutral interface with `Radio`, `AudioCapable`, `ScopeCapable`, `DualReceiverCapable` protocols
+- **Epic #140 complete** — 100% CI-V command coverage (134/134 IC-7610 commands implemented)
+- **Epic #215 complete** — Post-audit cleanup: mypy 197→0 errors, dead code removed (-616 lines), `__all__` API surface defined
 - `IcomRadio.model`, `.capabilities`, `.radio_state` properties
 - `set_state_change_callback()`, `set_reconnect_callback()` public methods
 - `control_connected` property for transport health status
@@ -30,7 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - All Web UI/rigctld consumers now use `Radio` Protocol type hints instead of `IcomRadio`
 - `isinstance(radio, AudioCapable)` guards instead of `hasattr`
-- Test coverage: 85% → 95% (1739 tests)
+- Test coverage: 85% → 95% (3173 tests, +1434 from v0.10.0)
+- **Type safety** — 0 mypy errors, full protocol-based typing for Radio/AudioCapable/ScopeCapable/DualReceiverCapable
 
 ## [0.8.0] — 2026-02-28
 

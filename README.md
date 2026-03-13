@@ -2,8 +2,9 @@
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-1807%20passed-brightgreen.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-3173%20passed-brightgreen.svg)](#testing)
 [![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen.svg)](#testing)
+[![Type Safety](https://img.shields.io/badge/mypy-0%20errors-blue.svg)](#testing)
 
 **Python library for controlling Icom transceivers over LAN (UDP) or USB serial.**
 
@@ -11,6 +12,7 @@ Direct connection to your radio — no wfview, hamlib, or RS-BA1 required.
 
 ## Features
 
+- ✅ **100% CI-V command coverage** — all 134 IC-7610 commands implemented (Epic #140, 2026-03-07)
 - 📡 **Direct UDP connection** — LAN backend (UDP ports 50001/2/3), no intermediate software needed
 - 🔌 **USB serial backend** — IC-7610 USB CI-V + USB audio devices ([setup guide](https://morozsm.github.io/icom-lan/guide/ic7610-usb-setup/))
 - 🎛️ **Full CI-V command set** — frequency, mode, filter, power, meters, PTT, CW keying, VFO, split, ATT, PREAMP
@@ -299,7 +301,7 @@ icom-lan uses an abstract **Radio Protocol** that enables support for multiple r
 ## Testing
 
 ```bash
-# Unit tests (no radio required) — 2962 tests, 95% coverage
+# Unit tests (no radio required) — 3173 tests, 95% coverage
 pytest tests/test_*.py
 
 # Mock integration tests (full UDP protocol, no radio required)
@@ -319,6 +321,14 @@ pytest -m integration tests/integration/test_radio_integration.py::TestPowerHard
 export ICOM_SOAK_SECONDS=120
 pytest -m integration tests/integration/test_radio_integration.py::TestSoak::test_soak_retries_and_logging -q -s
 ```
+
+### Test Suite Quality
+
+- **3173 tests** across 109 files (89 unit, 20 integration)
+- **95% code coverage** — comprehensive protocol and runtime coverage
+- **0 mypy errors** — full type safety with protocol-based architecture
+- **Epic #140 complete** — 100% CI-V command coverage (134/134 commands)
+- **Epic #215 complete** — post-audit cleanup: type safety, dead code removal, API surface definition
 
 ## Documentation
 
