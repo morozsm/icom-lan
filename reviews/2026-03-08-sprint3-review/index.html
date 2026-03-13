@@ -1,0 +1,2696 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Python library for controlling Icom transceivers over LAN">
+      
+      
+      
+        <link rel="canonical" href="https://morozsm.github.io/icom-lan/reviews/2026-03-08-sprint3-review/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.3">
+    
+    
+      
+        <title>Code Review: Sprint 3 — Desktop Polish, Mobile, Touch - icom-lan</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#code-review-sprint-3-desktop-polish-mobile-touch" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="icom-lan" class="md-header__button md-logo" aria-label="icom-lan" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            icom-lan
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Code Review: Sprint 3 — Desktop Polish, Mobile, Touch
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/morozsm/icom-lan" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    morozsm/icom-lan
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../guide/installation/" class="md-tabs__link">
+          
+  
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../guide/connection/" class="md-tabs__link">
+          
+  
+  
+  User Guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../api/public-api-surface/" class="md-tabs__link">
+          
+  
+  
+  API Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../internals/architecture/" class="md-tabs__link">
+          
+  
+  
+  Internals
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="icom-lan" class="md-nav__button md-logo" aria-label="icom-lan" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    icom-lan
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/morozsm/icom-lan" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    morozsm/icom-lan
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/connection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Connection Lifecycle
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/wsjtx-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WSJT-X / Digital Modes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/audio-recipes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audio Recipes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/web-ui/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Web UI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/commands/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CI-V Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/radios/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Supported Radios
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/public-api-surface/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Public API Surface
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/radio/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IcomRadio
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/sync/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sync API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/audio/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audio
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/radios/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Radio Models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/transport/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Transport
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/commander/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Commander
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/commands/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/types/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Types & Enums
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/auth/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authentication
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/exceptions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Exceptions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Internals
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Internals
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../internals/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../internals/protocol/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Protocol Deep Dive
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../internals/reliability-semantics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reliability semantics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../internals/rfc-web-ui-v1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Web UI RFC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../internals/cli-design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI design
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../internals/contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CHANGELOG/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../SECURITY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sprint-2-regression-check" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sprint 2 Regression Check
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#critical-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🔴 Critical Issues
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🔴 Critical Issues">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#c1-space-bar-ptt-sends-unknown-commands-ptt_onptt_off" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        C1 — Space-bar PTT sends unknown commands ptt_on/ptt_off
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#c2-dual-watch-toggle-sends-set_dw-not-a-valid-backend-command" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        C2 — Dual-watch toggle sends set_dw — not a valid backend command
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#c3-pinch-to-zoom-sends-set_scope_span-not-a-valid-backend-command" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        C3 — Pinch-to-zoom sends set_scope_span — not a valid backend command
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#warnings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🟡 Warnings
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🟡 Warnings">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#w1-mobilelayout-utc-clock-setinterval-is-never-cleaned-up" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        W1 — MobileLayout UTC clock: setInterval is never cleaned up
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#w2-mobilelayout-status-bar-is-hardcoded-and-disconnected-from-stores" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        W2 — MobileLayout status bar is hardcoded and disconnected from stores
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#w3-waterfallcanvas-pan-to-tune-ignores-active-receiver" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        W3 — WaterfallCanvas pan-to-tune ignores active receiver
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#w4-dxclusterpanel-uses-derived-of-a-function-svelte-5-anti-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        W4 — DxClusterPanel uses $derived of a function (Svelte 5 anti-pattern)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#w5-toast-auto-dismiss-timers-are-not-tracked" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        W5 — Toast auto-dismiss timers are not tracked
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#suggestions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🔵 Suggestions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🔵 Suggestions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#s1-ptt_hold_delay-defined-in-gesture-recognizerts-but-never-used" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        S1 — PTT_HOLD_DELAY defined in gesture-recognizer.ts but never used
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#s2-pttbutton-hold-to-cancel-checks-live-transmitting-state-not-captured-intent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        S2 — PttButton hold-to-cancel checks live transmitting state, not captured intent
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#s3-keyboard-handler-does-not-guard-contenteditable-elements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        S3 — Keyboard handler does not guard contenteditable elements
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#s4-desktoplayout-misses-toast-bottom-of-file-placement-guard" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        S4 — DesktopLayout misses &lt;Toast /&gt; bottom-of-file placement guard
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ws-command-audit-all-sendcommand-calls-vs-handlerspy-_commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        WS Command Audit (all sendCommand calls vs handlers.py _COMMANDS)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#component-by-component-review" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Component-by-Component Review
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Component-by-Component Review">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#desktoplayoutsvelte-except-c2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DesktopLayout.svelte ✅ (except C2)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#statusbarsvelte" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        StatusBar.svelte ✅
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#toastsvelte-with-w5-noted" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Toast.svelte ✅ (with W5 noted)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dxclusterpanelsvelte-with-w4-noted" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DxClusterPanel.svelte ✅ (with W4 noted)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#keyboardts-ptt-broken-c1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        keyboard.ts — PTT broken (C1)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#appsvelte" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        App.svelte ✅
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mobilelayoutsvelte-mostly-good-w1-w2-c2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MobileLayout.svelte — mostly good (W1, W2, C2)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bottombarsvelte" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BottomBar.svelte ✅
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gesture-recognizerts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gesture-recognizer.ts ✅
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#use-gesturets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        use-gesture.ts ✅
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#vfodisplaysvelte-swipe" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        VfoDisplay.svelte swipe ✅
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#waterfallcanvassvelte-pinchpan-c3-w3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        WaterfallCanvas.svelte pinch/pan — C3, W3
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pttbuttonsvelte-with-s2-noted" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PttButton.svelte ✅ (with S2 noted)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hapticsts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        haptics.ts ✅
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#architecture-compliance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture Compliance
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prioritised-fix-list" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prioritised Fix List
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="code-review-sprint-3-desktop-polish-mobile-touch">Code Review: Sprint 3 — Desktop Polish, Mobile, Touch<a class="headerlink" href="#code-review-sprint-3-desktop-polish-mobile-touch" title="Permanent link">&para;</a></h1>
+<p><strong>Date:</strong> 2026-03-08
+<strong>Reviewer:</strong> Claude (automated)
+<strong>PRs:</strong> #164 (Desktop), #165 (Mobile), #166 (Touch)
+<strong>Status:</strong> ⛔ Blocked — 3 critical issues make PTT shortcut, dual-watch, and pinch-zoom non-functional</p>
+<hr />
+<h2 id="summary">Summary<a class="headerlink" href="#summary" title="Permanent link">&para;</a></h2>
+<p>Sprint 3 delivers a visually complete UI with excellent architecture: Svelte 5 rune
+patterns are correct throughout, TypeScript is strict, CSS tokens are used consistently,
+gesture recognizer design is solid, and the <code>sendCommand('name', {params})</code> envelope
+format from Sprint 2 C1 is correctly applied in almost every call site. Three new
+critical bugs introduce unknown command names that the backend silently rejects.</p>
+<hr />
+<h2 id="sprint-2-regression-check">Sprint 2 Regression Check<a class="headerlink" href="#sprint-2-regression-check" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Sprint 2 issue</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>C1 — WS command envelope format</td>
+<td>✅ Fixed — <code>sendCommand('name', {params})</code> used everywhere</td>
+</tr>
+<tr>
+<td>C2 — <code>set_active_receiver</code> → <code>select_vfo</code></td>
+<td>✅ Fixed — <code>select_vfo</code> with <code>vfo: 'A'\|'B'</code></td>
+</tr>
+<tr>
+<td>C3 — <code>set_af_mute</code> WS call</td>
+<td>✅ Fixed — <code>toggleMute()</code> only, no WS command</td>
+</tr>
+<tr>
+<td>C3 — <code>set_comp</code> unknown command</td>
+<td>✅ Fixed — not seen in Sprint 3 components</td>
+</tr>
+<tr>
+<td>W1 — <code>SpectrumPanel</code> scope WS leak</td>
+<td>Not re-verified (not in Sprint 3 scope)</td>
+</tr>
+<tr>
+<td>W3 — <code>WaterfallCanvas</code> DPR scaling</td>
+<td>✅ Fixed — <code>dpr</code> applied in <code>ResizeObserver</code></td>
+</tr>
+<tr>
+<td>W10 — dead <code>onmodechange</code> prop</td>
+<td>✅ Fixed — removed from <code>VfoDisplay</code> and <code>DesktopLayout</code></td>
+</tr>
+<tr>
+<td>S5 — <code>CMD_PTT_ON</code>/<code>CMD_PTT_OFF</code> constants</td>
+<td>✅ Fixed — removed from <code>protocol.ts</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="critical-issues">🔴 Critical Issues<a class="headerlink" href="#critical-issues" title="Permanent link">&para;</a></h2>
+<h3 id="c1-space-bar-ptt-sends-unknown-commands-ptt_onptt_off">C1 — Space-bar PTT sends unknown commands <code>ptt_on</code>/<code>ptt_off</code><a class="headerlink" href="#c1-space-bar-ptt-sends-unknown-commands-ptt_onptt_off" title="Permanent link">&para;</a></h3>
+<p><strong>File:</strong> <code>frontend/src/lib/actions/keyboard.ts:94</code></p>
+<p><strong>Issue:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">case</span><span class="w"> </span><span class="s1">&#39; &#39;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nx">e</span><span class="p">.</span><span class="nx">preventDefault</span><span class="p">();</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">ptt</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">state</span><span class="o">?</span><span class="p">.</span><span class="nx">ptt</span><span class="w"> </span><span class="o">??</span><span class="w"> </span><span class="kc">false</span><span class="p">;</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nx">sendCommand</span><span class="p">(</span><span class="nx">ptt</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="s1">&#39;ptt_off&#39;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;ptt_on&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">{});</span><span class="w">  </span><span class="c1">// ← WRONG</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="k">break</span><span class="p">;</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="p">}</span>
+</code></pre></div>
+<p>The backend <code>ControlHandler._COMMANDS</code> contains <code>"ptt"</code> only:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">case</span> <span class="s2">&quot;ptt&quot;</span><span class="p">:</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    <span class="n">on</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;state&quot;</span><span class="p">])</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    <span class="n">q</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">PttOn</span><span class="p">()</span> <span class="k">if</span> <span class="n">on</span> <span class="k">else</span> <span class="n">PttOff</span><span class="p">())</span>
+</code></pre></div>
+<p><code>"ptt_on"</code> and <code>"ptt_off"</code> are not in <code>_COMMANDS</code>. The server responds with
+<code>{type: "response", ok: false, error: "unknown_command"}</code>. The space-bar PTT
+shortcut is completely non-functional.</p>
+<p><strong>Fix:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">case</span><span class="w"> </span><span class="s1">&#39; &#39;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nx">e</span><span class="p">.</span><span class="nx">preventDefault</span><span class="p">();</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">ptt</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">state</span><span class="o">?</span><span class="p">.</span><span class="nx">ptt</span><span class="w"> </span><span class="o">??</span><span class="w"> </span><span class="kc">false</span><span class="p">;</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="nx">sendCommand</span><span class="p">(</span><span class="s1">&#39;ptt&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">state</span><span class="o">:</span><span class="w"> </span><span class="o">!</span><span class="nx">ptt</span><span class="w"> </span><span class="p">});</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span><span class="k">break</span><span class="p">;</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="p">}</span>
+</code></pre></div>
+<p>Note: This is the same pattern already used correctly by <code>PttButton.svelte:27</code> and
+<code>BottomBar.svelte:40</code>.</p>
+<hr />
+<h3 id="c2-dual-watch-toggle-sends-set_dw-not-a-valid-backend-command">C2 — Dual-watch toggle sends <code>set_dw</code> — not a valid backend command<a class="headerlink" href="#c2-dual-watch-toggle-sends-set_dw-not-a-valid-backend-command" title="Permanent link">&para;</a></h3>
+<p><strong>Files:</strong>
+- <code>frontend/src/components/layout/DesktopLayout.svelte:53</code>
+- <code>frontend/src/components/layout/MobileLayout.svelte:58</code></p>
+<p><strong>Issue:</strong> Both layouts send <code>'set_dw'</code> which does not appear in <code>_COMMANDS</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1">// DesktopLayout.svelte:52-54</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="kd">function</span><span class="w"> </span><span class="nx">handleDwToggle</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nx">sendCommand</span><span class="p">(</span><span class="s1">&#39;set_dw&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">on</span><span class="o">:</span><span class="w"> </span><span class="o">!</span><span class="p">(</span><span class="nx">state</span><span class="o">?</span><span class="p">.</span><span class="nx">dualWatch</span><span class="w"> </span><span class="o">??</span><span class="w"> </span><span class="kc">false</span><span class="p">)</span><span class="w"> </span><span class="p">});</span><span class="w">  </span><span class="c1">// ← &#39;set_dw&#39; unknown</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="p">}</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="c1">// MobileLayout.svelte:57-59</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="kd">function</span><span class="w"> </span><span class="nx">handleDwToggle</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">  </span><span class="nx">sendCommand</span><span class="p">(</span><span class="s1">&#39;set_dw&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">on</span><span class="o">:</span><span class="w"> </span><span class="o">!</span><span class="p">(</span><span class="nx">state</span><span class="o">?</span><span class="p">.</span><span class="nx">dualWatch</span><span class="w"> </span><span class="o">??</span><span class="w"> </span><span class="kc">false</span><span class="p">)</span><span class="w"> </span><span class="p">});</span><span class="w">  </span><span class="c1">// ← &#39;set_dw&#39; unknown</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="p">}</span>
+</code></pre></div>
+<p>The backend command is <code>"set_dual_watch"</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">case</span> <span class="s2">&quot;set_dual_watch&quot;</span><span class="p">:</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="n">on</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;on&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">))</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>    <span class="n">q</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">SetDualWatch</span><span class="p">(</span><span class="n">on</span><span class="p">))</span>
+</code></pre></div>
+<p>Both calls are silently rejected. The dual-watch toggle does nothing.</p>
+<p><strong>Fix:</strong> Replace <code>'set_dw'</code> with <code>'set_dual_watch'</code> in both files.</p>
+<hr />
+<h3 id="c3-pinch-to-zoom-sends-set_scope_span-not-a-valid-backend-command">C3 — Pinch-to-zoom sends <code>set_scope_span</code> — not a valid backend command<a class="headerlink" href="#c3-pinch-to-zoom-sends-set_scope_span-not-a-valid-backend-command" title="Permanent link">&para;</a></h3>
+<p><strong>File:</strong> <code>frontend/src/components/spectrum/WaterfallCanvas.svelte:64</code></p>
+<p><strong>Issue:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nx">onPinch</span><span class="p">(</span><span class="nx">scale</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">,</span><span class="w"> </span><span class="nx">_cx</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">,</span><span class="w"> </span><span class="nx">_cy</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">)</span><span class="o">:</span><span class="w"> </span><span class="ow">void</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">options</span><span class="p">.</span><span class="nx">spanHz</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="mf">0</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="p">;</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">newSpan</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">Math</span><span class="p">.</span><span class="nx">max</span><span class="p">(</span><span class="mf">2</span><span class="nx">_500</span><span class="p">,</span><span class="w"> </span><span class="nb">Math</span><span class="p">.</span><span class="nx">min</span><span class="p">(</span><span class="mf">5</span><span class="nx">_000_000</span><span class="p">,</span><span class="w"> </span><span class="nx">options</span><span class="p">.</span><span class="nx">spanHz</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="nx">scale</span><span class="p">));</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span><span class="nx">sendCommand</span><span class="p">(</span><span class="s1">&#39;set_scope_span&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">span</span><span class="o">:</span><span class="w"> </span><span class="kt">Math.round</span><span class="p">(</span><span class="nx">newSpan</span><span class="p">)</span><span class="w"> </span><span class="p">});</span><span class="w">  </span><span class="c1">// ← unknown command</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="p">},</span>
+</code></pre></div>
+<p><code>"set_scope_span"</code> does not exist in <code>_COMMANDS</code>. The backend scope control
+commands are:
+- <code>"set_scope_center_type"</code> — changes center/fixed-edge mode
+- <code>"set_scope_fixed_edge"</code> — sets edge, start_hz, end_hz (for fixed-edge spans)</p>
+<p>There is no single-parameter span command. Pinch-to-zoom silently fails.</p>
+<p><strong>Fix options:</strong></p>
+<p>Option A (recommended): Use <code>"set_scope_fixed_edge"</code> to map <code>newSpan</code> to
+<code>start_hz</code>/<code>end_hz</code> around the current center:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nx">onPinch</span><span class="p">(</span><span class="nx">scale</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">,</span><span class="w"> </span><span class="nx">_cx</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">,</span><span class="w"> </span><span class="nx">_cy</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">)</span><span class="o">:</span><span class="w"> </span><span class="ow">void</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">options</span><span class="p">.</span><span class="nx">spanHz</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="mf">0</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nx">options</span><span class="p">.</span><span class="nx">centerHz</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="mf">0</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="p">;</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">newSpan</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">Math</span><span class="p">.</span><span class="nx">max</span><span class="p">(</span><span class="mf">2</span><span class="nx">_500</span><span class="p">,</span><span class="w"> </span><span class="nb">Math</span><span class="p">.</span><span class="nx">min</span><span class="p">(</span><span class="mf">5</span><span class="nx">_000_000</span><span class="p">,</span><span class="w"> </span><span class="nx">options</span><span class="p">.</span><span class="nx">spanHz</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="nx">scale</span><span class="p">));</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">half</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">Math</span><span class="p">.</span><span class="nx">round</span><span class="p">(</span><span class="nx">newSpan</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mf">2</span><span class="p">);</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">  </span><span class="nx">sendCommand</span><span class="p">(</span><span class="s1">&#39;set_scope_fixed_edge&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">    </span><span class="nx">edge</span><span class="o">:</span><span class="w"> </span><span class="kt">1</span><span class="p">,</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">    </span><span class="nx">start_hz</span><span class="o">:</span><span class="w"> </span><span class="kt">Math.max</span><span class="p">(</span><span class="mf">0</span><span class="p">,</span><span class="w"> </span><span class="nx">options</span><span class="p">.</span><span class="nx">centerHz</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">half</span><span class="p">),</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">    </span><span class="nx">end_hz</span><span class="o">:</span><span class="w"> </span><span class="kt">options.centerHz</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">half</span><span class="p">,</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">  </span><span class="p">});</span>
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="p">},</span>
+</code></pre></div>
+<p>Option B: Implement <code>"set_scope_span"</code> in the backend as a convenience command
+that internally computes <code>start_hz</code>/<code>end_hz</code>.</p>
+<p>Note: <code>set_scope_center_type</code> and <code>set_scope_fixed_edge</code> both require the <code>"scope"</code>
+capability check — the frontend should guard accordingly.</p>
+<hr />
+<h2 id="warnings">🟡 Warnings<a class="headerlink" href="#warnings" title="Permanent link">&para;</a></h2>
+<h3 id="w1-mobilelayout-utc-clock-setinterval-is-never-cleaned-up">W1 — <code>MobileLayout</code> UTC clock: setInterval is never cleaned up<a class="headerlink" href="#w1-mobilelayout-utc-clock-setinterval-is-never-cleaned-up" title="Permanent link">&para;</a></h3>
+<p><strong>File:</strong> <code>frontend/src/components/layout/MobileLayout.svelte:36-45</code></p>
+<p><strong>Issue:</strong> The <code>$effect</code> creates a nested timer pattern where the inner <code>setInterval</code>
+leaks permanently:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nx">$effect</span><span class="p">(()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">msToNextMinute</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">60</span><span class="nx">_000</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="p">(</span><span class="nb">Date</span><span class="p">.</span><span class="nx">now</span><span class="p">()</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="mf">60</span><span class="nx">_000</span><span class="p">);</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">initial</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">setTimeout</span><span class="p">(()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="nx">utcTime</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">nowUtc</span><span class="p">();</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">interval</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">setInterval</span><span class="p">(()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">      </span><span class="nx">utcTime</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">nowUtc</span><span class="p">();</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">    </span><span class="p">},</span><span class="w"> </span><span class="mf">60</span><span class="nx">_000</span><span class="p">);</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">clearInterval</span><span class="p">(</span><span class="nx">interval</span><span class="p">);</span><span class="w"> </span><span class="c1">// ← BUG: setTimeout ignores return values</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="w">  </span><span class="p">},</span><span class="w"> </span><span class="nx">msToNextMinute</span><span class="p">);</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">clearTimeout</span><span class="p">(</span><span class="nx">initial</span><span class="p">);</span><span class="w"> </span><span class="c1">// only cancels the initial timeout</span>
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="p">});</span>
+</code></pre></div>
+<p><code>setTimeout</code> callbacks are fire-and-forget — their return values are discarded.
+The <code>return () =&gt; clearInterval(interval)</code> is dead code. Once <code>initial</code> fires,
+<code>interval</code> is created and runs indefinitely, even after the component is destroyed.</p>
+<p>Compare with <code>StatusBar.svelte:36-40</code> which does this correctly:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nx">$effect</span><span class="p">(()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nx">updateClock</span><span class="p">();</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">setInterval</span><span class="p">(</span><span class="nx">updateClock</span><span class="p">,</span><span class="w"> </span><span class="mf">1</span><span class="nx">_000</span><span class="p">);</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">clearInterval</span><span class="p">(</span><span class="nx">id</span><span class="p">);</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="p">});</span>
+</code></pre></div>
+<p><strong>Fix:</strong> Follow the <code>StatusBar</code> pattern:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nx">$effect</span><span class="p">(()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">setInterval</span><span class="p">(()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">utcTime</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">nowUtc</span><span class="p">();</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="mf">60</span><span class="nx">_000</span><span class="p">);</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">clearInterval</span><span class="p">(</span><span class="nx">id</span><span class="p">);</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="p">});</span>
+</code></pre></div>
+<p>Or synchronize to minute boundaries by clearing and recreating, but keep the
+reference accessible to the <code>$effect</code> cleanup.</p>
+<hr />
+<h3 id="w2-mobilelayout-status-bar-is-hardcoded-and-disconnected-from-stores">W2 — <code>MobileLayout</code> status bar is hardcoded and disconnected from stores<a class="headerlink" href="#w2-mobilelayout-status-bar-is-hardcoded-and-disconnected-from-stores" title="Permanent link">&para;</a></h3>
+<p><strong>File:</strong> <code>frontend/src/components/layout/MobileLayout.svelte:73-74</code></p>
+<p><strong>Issue:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>&lt;span class=&quot;radio-name&quot;&gt;IC-7610&lt;/span&gt;
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>&lt;span class=&quot;status-connected&quot; title=&quot;Connected&quot;&gt;●&lt;/span&gt;
+</code></pre></div>
+<p>The radio name is hardcoded <code>"IC-7610"</code> and always appears in green (<code>.status-connected</code>
+has <code>color: var(--success)</code>). This makes the mobile status bar useless as a connection
+indicator — it will show green even when the radio is disconnected.</p>
+<p>Compare with <code>StatusBar.svelte</code> which correctly reads from stores:
+- <code>getCapabilities()</code> for <code>caps?.model</code>
+- <code>getConnectionStatus()</code> for the dot color</p>
+<p><strong>Fix:</strong> Either import <code>StatusBar.svelte</code> (same component used by Desktop), or inline
+the same store reads:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">getCapabilities</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">&#39;../../lib/stores/capabilities.svelte&#39;</span><span class="p">;</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">getConnectionStatus</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">&#39;../../lib/stores/connection.svelte&#39;</span><span class="p">;</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="kd">let</span><span class="w"> </span><span class="nx">caps</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">$derived</span><span class="p">(</span><span class="nx">getCapabilities</span><span class="p">());</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="kd">let</span><span class="w"> </span><span class="nx">status</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">$derived</span><span class="p">(</span><span class="nx">getConnectionStatus</span><span class="p">());</span>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="kd">let</span><span class="w"> </span><span class="nx">isConnected</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">$derived</span><span class="p">(</span><span class="nx">status</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="s1">&#39;connected&#39;</span><span class="p">);</span>
+</code></pre></div>
+<hr />
+<h3 id="w3-waterfallcanvas-pan-to-tune-ignores-active-receiver">W3 — <code>WaterfallCanvas</code> pan-to-tune ignores active receiver<a class="headerlink" href="#w3-waterfallcanvas-pan-to-tune-ignores-active-receiver" title="Permanent link">&para;</a></h3>
+<p><strong>File:</strong> <code>frontend/src/components/spectrum/WaterfallCanvas.svelte:74-79</code></p>
+<p><strong>Issue:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nx">onPanEnd</span><span class="p">()</span><span class="o">:</span><span class="w"> </span><span class="ow">void</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">panOffsetHz</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="mf">0</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nx">options</span><span class="p">.</span><span class="nx">centerHz</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="mf">0</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="p">;</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">newCenter</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">Math</span><span class="p">.</span><span class="nx">max</span><span class="p">(</span><span class="mf">0</span><span class="p">,</span><span class="w"> </span><span class="nx">options</span><span class="p">.</span><span class="nx">centerHz</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">panOffsetHz</span><span class="p">);</span>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">  </span><span class="nx">sendCommand</span><span class="p">(</span><span class="s1">&#39;set_freq&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">freq</span><span class="o">:</span><span class="w"> </span><span class="kt">Math.round</span><span class="p">(</span><span class="nx">newCenter</span><span class="p">)</span><span class="w"> </span><span class="p">});</span><span class="w">  </span><span class="c1">// ← no receiver</span>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">  </span><span class="nx">panOffsetHz</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0</span><span class="p">;</span>
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="p">},</span>
+</code></pre></div>
+<p><code>set_freq</code> with no <code>receiver</code> defaults to receiver <code>0</code> (MAIN) in the backend:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="k">case</span> <span class="s2">&quot;set_freq&quot;</span><span class="p">:</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>    <span class="n">freq</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;freq&quot;</span><span class="p">])</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>    <span class="n">rx</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;receiver&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>  <span class="c1"># defaults to MAIN</span>
+</code></pre></div>
+<p>If the user has SUB selected as active, panning the waterfall always tunes MAIN.
+This was flagged as Sprint 2 W2 for click-to-tune in <code>SpectrumPanel</code>; the same
+issue applies to pan-end in <code>WaterfallCanvas</code>.</p>
+<p><strong>Fix:</strong> Import the radio state to read the active receiver:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">getRadioState</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">&#39;../../lib/stores/radio.svelte&#39;</span><span class="p">;</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="nx">onPanEnd</span><span class="p">()</span><span class="o">:</span><span class="w"> </span><span class="ow">void</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">panOffsetHz</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="mf">0</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nx">options</span><span class="p">.</span><span class="nx">centerHz</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="mf">0</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="p">;</span>
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">newCenter</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">Math</span><span class="p">.</span><span class="nx">max</span><span class="p">(</span><span class="mf">0</span><span class="p">,</span><span class="w"> </span><span class="nx">options</span><span class="p">.</span><span class="nx">centerHz</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">panOffsetHz</span><span class="p">);</span>
+<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">receiver</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">getRadioState</span><span class="p">()</span><span class="o">?</span><span class="p">.</span><span class="nx">active</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="s1">&#39;SUB&#39;</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="nx">1</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="kt">0</span><span class="p">;</span>
+<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="w">  </span><span class="nx">sendCommand</span><span class="p">(</span><span class="s1">&#39;set_freq&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">freq</span><span class="o">:</span><span class="w"> </span><span class="kt">Math.round</span><span class="p">(</span><span class="nx">newCenter</span><span class="p">),</span><span class="w"> </span><span class="nx">receiver</span><span class="w"> </span><span class="p">});</span>
+<a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a><span class="w">  </span><span class="nx">panOffsetHz</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0</span><span class="p">;</span>
+<a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a><span class="p">},</span>
+</code></pre></div>
+<hr />
+<h3 id="w4-dxclusterpanel-uses-derived-of-a-function-svelte-5-anti-pattern">W4 — <code>DxClusterPanel</code> uses <code>$derived</code> of a function (Svelte 5 anti-pattern)<a class="headerlink" href="#w4-dxclusterpanel-uses-derived-of-a-function-svelte-5-anti-pattern" title="Permanent link">&para;</a></h3>
+<p><strong>File:</strong> <code>frontend/src/components/dx/DxClusterPanel.svelte:46-51</code></p>
+<p><strong>Issue:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="kd">let</span><span class="w"> </span><span class="nx">filteredSpots</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">$derived</span><span class="p">(()</span><span class="o">:</span><span class="w"> </span><span class="nx">DxSpot</span><span class="p">[]</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="nx">filterCurrentBand</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="nx">spots</span><span class="p">;</span>
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">currentBand</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">getBand</span><span class="p">(</span><span class="nx">currentFreq</span><span class="p">);</span>
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="nx">currentBand</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="nx">spots</span><span class="p">;</span>
+<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="nx">spots</span><span class="p">.</span><span class="nx">filter</span><span class="p">((</span><span class="nx">s</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">getBand</span><span class="p">(</span><span class="nx">spotFreqHz</span><span class="p">(</span><span class="nx">s</span><span class="p">))</span><span class="o">?</span><span class="p">.</span><span class="nx">name</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="nx">currentBand</span><span class="p">.</span><span class="nx">name</span><span class="p">);</span>
+<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="p">});</span>
+</code></pre></div>
+<p><code>$derived</code> computes a value — here, the "value" is a function object. When Svelte
+evaluates this <code>$derived</code>, it runs the outer arrow function <code>() =&gt; (): DxSpot[] =&gt; {...}</code>,
+which returns a new arrow function. No reactive reads happen during this evaluation
+(the body of the inner function is not executed), so Svelte tracks zero dependencies.
+<code>filteredSpots</code> never recomputes when <code>filterCurrentBand</code>, <code>spots</code>, or <code>currentFreq</code> change.</p>
+<p>The filter toggle appears to work because Svelte's template compiler tracks reactive
+reads made during <code>{#each filteredSpots() as ...}</code> — the function body reads reactive
+state, so the template re-renders. But the <code>$derived</code> wrapper itself is dead weight
+and the pattern is fragile (relies on template-level reactivity, breaks if called
+outside a template context).</p>
+<p><strong>Fix:</strong> Derive the array directly:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="kd">let</span><span class="w"> </span><span class="nx">filteredSpots</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">$derived</span><span class="p">.</span><span class="nx">by</span><span class="p">(()</span><span class="o">:</span><span class="w"> </span><span class="nx">DxSpot</span><span class="p">[]</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="nx">filterCurrentBand</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="nx">spots</span><span class="p">;</span>
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">currentBand</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">getBand</span><span class="p">(</span><span class="nx">currentFreq</span><span class="p">);</span>
+<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="nx">currentBand</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="nx">spots</span><span class="p">;</span>
+<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="nx">spots</span><span class="p">.</span><span class="nx">filter</span><span class="p">((</span><span class="nx">s</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">getBand</span><span class="p">(</span><span class="nx">spotFreqHz</span><span class="p">(</span><span class="nx">s</span><span class="p">))</span><span class="o">?</span><span class="p">.</span><span class="nx">name</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="nx">currentBand</span><span class="p">.</span><span class="nx">name</span><span class="p">);</span>
+<a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="p">});</span>
+</code></pre></div>
+<p><code>$derived.by()</code> is the correct Svelte 5 syntax for a derived value computed from
+a thunk. It tracks reactive reads inside the function and <code>filteredSpots</code> becomes
+a <code>DxSpot[]</code> value, not a function.</p>
+<hr />
+<h3 id="w5-toast-auto-dismiss-timers-are-not-tracked">W5 — <code>Toast</code> auto-dismiss timers are not tracked<a class="headerlink" href="#w5-toast-auto-dismiss-timers-are-not-tracked" title="Permanent link">&para;</a></h3>
+<p><strong>File:</strong> <code>frontend/src/components/shared/Toast.svelte:20</code></p>
+<p><strong>Issue:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="kd">function</span><span class="w"> </span><span class="nx">addToast</span><span class="p">(</span><span class="nx">level</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;info&#39;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s1">&#39;warning&#39;</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s1">&#39;error&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">message</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">crypto</span><span class="p">.</span><span class="nx">randomUUID</span><span class="p">();</span>
+<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">  </span><span class="nx">toasts</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[...</span><span class="nx">toasts</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">id</span><span class="p">,</span><span class="w"> </span><span class="nx">level</span><span class="p">,</span><span class="w"> </span><span class="nx">message</span><span class="w"> </span><span class="p">}];</span>
+<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="w">  </span><span class="nx">setTimeout</span><span class="p">(()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">dismiss</span><span class="p">(</span><span class="nx">id</span><span class="p">),</span><span class="w"> </span><span class="mf">5</span><span class="nx">_000</span><span class="p">);</span><span class="w">  </span><span class="c1">// ← no reference saved</span>
+<a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="p">}</span>
+</code></pre></div>
+<p><code>setTimeout</code> IDs are discarded. If Toast is ever destroyed before the 5s timer fires,
+the callback attempts to mutate state on a dead component. Toast is currently a
+singleton rendered once in <code>DesktopLayout</code>, so the risk is low — but in <code>MobileLayout</code>
+it is not rendered at all (there is no <code>&lt;Toast /&gt;</code> in MobileLayout), so mobile users
+receive no WS notifications.</p>
+<p>Two distinct issues:
+1. <strong>Toast is missing from MobileLayout</strong> — <code>notification</code> WS messages are silently dropped on mobile.
+2. <strong>Timer tracking</strong> — Low priority given singleton use, but technically leaks on destroy.</p>
+<p><strong>Fix:</strong>
+- Add <code>&lt;Toast /&gt;</code> to <code>MobileLayout.svelte</code> (outside <code>.mobile-layout</code>, before end of file, same as Desktop's pattern).
+- Track timers for cancel-on-destroy if Toast ever becomes non-singleton.</p>
+<hr />
+<h2 id="suggestions">🔵 Suggestions<a class="headerlink" href="#suggestions" title="Permanent link">&para;</a></h2>
+<h3 id="s1-ptt_hold_delay-defined-in-gesture-recognizerts-but-never-used">S1 — <code>PTT_HOLD_DELAY</code> defined in gesture-recognizer.ts but never used<a class="headerlink" href="#s1-ptt_hold_delay-defined-in-gesture-recognizerts-but-never-used" title="Permanent link">&para;</a></h3>
+<p><strong>File:</strong> <code>frontend/src/lib/gestures/gesture-recognizer.ts:27</code></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="kd">const</span><span class="w"> </span><span class="nx">PTT_HOLD_DELAY</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">200</span><span class="p">;</span><span class="w"> </span><span class="c1">// ms — min hold before activation</span>
+</code></pre></div>
+<p>This constant is defined at line 27 but not referenced anywhere inside <code>gesture-recognizer.ts</code>.
+The 200ms delay is separately defined as <code>HOLD_DELAY_MS = 200</code> in <code>PttButton.svelte:13</code>.
+Remove <code>PTT_HOLD_DELAY</code> from <code>gesture-recognizer.ts</code> (it belongs in <code>PttButton</code> only).</p>
+<hr />
+<h3 id="s2-pttbutton-hold-to-cancel-checks-live-transmitting-state-not-captured-intent">S2 — <code>PttButton</code> hold-to-cancel checks live <code>transmitting</code> state, not captured intent<a class="headerlink" href="#s2-pttbutton-hold-to-cancel-checks-live-transmitting-state-not-captured-intent" title="Permanent link">&para;</a></h3>
+<p><strong>File:</strong> <code>frontend/src/components/audio/PttButton.svelte:64-76</code></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="kd">function</span><span class="w"> </span><span class="nx">onPressCancel</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="w">  </span><span class="nx">pressing</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span><span class="p">;</span>
+<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">holdTimer</span><span class="w"> </span><span class="o">!==</span><span class="w"> </span><span class="kc">null</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="w">    </span><span class="nx">clearTimeout</span><span class="p">(</span><span class="nx">holdTimer</span><span class="p">);</span>
+<a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a><span class="w">    </span><span class="nx">holdTimer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">null</span><span class="p">;</span>
+<a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a><span class="w">  </span><span class="p">}</span>
+<a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a><span class="w">  </span><span class="c1">// Pointer left button area — release TX if active</span>
+<a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a><span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">transmitting</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">      </span><span class="c1">// ← reads live server-confirmed state</span>
+<a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a><span class="w">    </span><span class="nx">vibrate</span><span class="p">(</span><span class="s1">&#39;ptt&#39;</span><span class="p">);</span>
+<a id="__codelineno-19-10" name="__codelineno-19-10" href="#__codelineno-19-10"></a><span class="w">    </span><span class="nx">pending</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span><span class="p">;</span>
+<a id="__codelineno-19-11" name="__codelineno-19-11" href="#__codelineno-19-11"></a><span class="w">    </span><span class="nx">pendingValue</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span><span class="p">;</span>
+<a id="__codelineno-19-12" name="__codelineno-19-12" href="#__codelineno-19-12"></a><span class="w">    </span><span class="nx">sendCommand</span><span class="p">(</span><span class="s1">&#39;ptt&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">state</span><span class="o">:</span><span class="w"> </span><span class="kt">false</span><span class="w"> </span><span class="p">});</span>
+<a id="__codelineno-19-13" name="__codelineno-19-13" href="#__codelineno-19-13"></a><span class="w">  </span><span class="p">}</span>
+<a id="__codelineno-19-14" name="__codelineno-19-14" href="#__codelineno-19-14"></a><span class="p">}</span>
+</code></pre></div>
+<p><code>transmitting</code> is <code>$derived(getIsTransmitting())</code> — server-confirmed state that lags
+by at least one WS round-trip. If the user holds for &gt;200ms (activating TX), then
+immediately slides off the button, <code>transmitting</code> may still be <code>false</code> while the
+<code>ptt_on</code> WS response is in-flight. The cancel does nothing, leaving TX stuck on.</p>
+<p>The hold timer sets <code>pendingValue = true</code> before the server confirms. <code>onPressCancel</code>
+should use <code>pendingValue</code> to detect pending TX intent:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="kd">function</span><span class="w"> </span><span class="nx">onPressCancel</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="w">  </span><span class="nx">pressing</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span><span class="p">;</span>
+<a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">holdTimer</span><span class="w"> </span><span class="o">!==</span><span class="w"> </span><span class="kc">null</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="w">    </span><span class="nx">clearTimeout</span><span class="p">(</span><span class="nx">holdTimer</span><span class="p">);</span>
+<a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a><span class="w">    </span><span class="nx">holdTimer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">null</span><span class="p">;</span>
+<a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a><span class="w">  </span><span class="p">}</span>
+<a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a><span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">transmitting</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="p">(</span><span class="nx">pending</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nx">pendingValue</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-20-8" name="__codelineno-20-8" href="#__codelineno-20-8"></a><span class="w">    </span><span class="nx">vibrate</span><span class="p">(</span><span class="s1">&#39;ptt&#39;</span><span class="p">);</span>
+<a id="__codelineno-20-9" name="__codelineno-20-9" href="#__codelineno-20-9"></a><span class="w">    </span><span class="nx">pending</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span><span class="p">;</span>
+<a id="__codelineno-20-10" name="__codelineno-20-10" href="#__codelineno-20-10"></a><span class="w">    </span><span class="nx">pendingValue</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span><span class="p">;</span>
+<a id="__codelineno-20-11" name="__codelineno-20-11" href="#__codelineno-20-11"></a><span class="w">    </span><span class="nx">sendCommand</span><span class="p">(</span><span class="s1">&#39;ptt&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">state</span><span class="o">:</span><span class="w"> </span><span class="kt">false</span><span class="w"> </span><span class="p">});</span>
+<a id="__codelineno-20-12" name="__codelineno-20-12" href="#__codelineno-20-12"></a><span class="w">  </span><span class="p">}</span>
+<a id="__codelineno-20-13" name="__codelineno-20-13" href="#__codelineno-20-13"></a><span class="p">}</span>
+</code></pre></div>
+<hr />
+<h3 id="s3-keyboard-handler-does-not-guard-contenteditable-elements">S3 — Keyboard handler does not guard <code>contenteditable</code> elements<a class="headerlink" href="#s3-keyboard-handler-does-not-guard-contenteditable-elements" title="Permanent link">&para;</a></h3>
+<p><strong>File:</strong> <code>frontend/src/lib/actions/keyboard.ts:37-44</code></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="kd">function</span><span class="w"> </span><span class="nx">isInputFocused</span><span class="p">()</span><span class="o">:</span><span class="w"> </span><span class="kt">boolean</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">el</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">document</span><span class="p">.</span><span class="nx">activeElement</span><span class="p">;</span>
+<a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a><span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="p">(</span>
+<a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a><span class="w">    </span><span class="nx">el</span><span class="w"> </span><span class="ow">instanceof</span><span class="w"> </span><span class="nx">HTMLInputElement</span><span class="w"> </span><span class="o">||</span>
+<a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a><span class="w">    </span><span class="nx">el</span><span class="w"> </span><span class="ow">instanceof</span><span class="w"> </span><span class="nx">HTMLTextAreaElement</span><span class="w"> </span><span class="o">||</span>
+<a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a><span class="w">    </span><span class="nx">el</span><span class="w"> </span><span class="ow">instanceof</span><span class="w"> </span><span class="nx">HTMLSelectElement</span>
+<a id="__codelineno-21-7" name="__codelineno-21-7" href="#__codelineno-21-7"></a><span class="w">  </span><span class="p">);</span>
+<a id="__codelineno-21-8" name="__codelineno-21-8" href="#__codelineno-21-8"></a><span class="p">}</span>
+</code></pre></div>
+<p><code>contenteditable</code> elements (e.g., any rich-text widget) are not guarded. If the
+app ever adds a contenteditable region, arrow keys and space would still steal
+focus. Add:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="k">return</span><span class="w"> </span><span class="p">(</span>
+<a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="w">  </span><span class="nx">el</span><span class="w"> </span><span class="ow">instanceof</span><span class="w"> </span><span class="nx">HTMLInputElement</span><span class="w"> </span><span class="o">||</span>
+<a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a><span class="w">  </span><span class="nx">el</span><span class="w"> </span><span class="ow">instanceof</span><span class="w"> </span><span class="nx">HTMLTextAreaElement</span><span class="w"> </span><span class="o">||</span>
+<a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a><span class="w">  </span><span class="nx">el</span><span class="w"> </span><span class="ow">instanceof</span><span class="w"> </span><span class="nx">HTMLSelectElement</span><span class="w"> </span><span class="o">||</span>
+<a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a><span class="w">  </span><span class="p">(</span><span class="nx">el</span><span class="w"> </span><span class="ow">instanceof</span><span class="w"> </span><span class="nx">HTMLElement</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nx">el</span><span class="p">.</span><span class="nx">isContentEditable</span><span class="p">)</span>
+<a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a><span class="p">);</span>
+</code></pre></div>
+<hr />
+<h3 id="s4-desktoplayout-misses-toast-bottom-of-file-placement-guard">S4 — <code>DesktopLayout</code> misses <code>&lt;Toast /&gt;</code> bottom-of-file placement guard<a class="headerlink" href="#s4-desktoplayout-misses-toast-bottom-of-file-placement-guard" title="Permanent link">&para;</a></h3>
+<p><strong>File:</strong> <code>frontend/src/components/layout/DesktopLayout.svelte:156</code></p>
+<p><code>&lt;Toast /&gt;</code> is rendered after the closing <code>&lt;/div&gt;</code> of <code>.desktop-layout</code>. This is
+correct (renders as a sibling in the DOM, not inside the layout container), but it
+relies on the parent <code>AppShell</code> not restricting overflow. Currently this works, but
+document the pattern with a comment to prevent future breakage:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>&lt;!-- Toast notifications — rendered outside layout container to prevent clipping --&gt;
+<a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>&lt;Toast /&gt;
+</code></pre></div>
+<p>This comment is already present at line 155. ✅ (Just noting it's good practice.)</p>
+<hr />
+<h2 id="ws-command-audit-all-sendcommand-calls-vs-handlerspy-_commands">WS Command Audit (all <code>sendCommand</code> calls vs <code>handlers.py _COMMANDS</code>)<a class="headerlink" href="#ws-command-audit-all-sendcommand-calls-vs-handlerspy-_commands" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Line</th>
+<th>Command sent</th>
+<th>Backend has it?</th>
+<th>Params correct?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>DesktopLayout.svelte</code></td>
+<td>40</td>
+<td><code>set_freq</code></td>
+<td>✅</td>
+<td>✅ <code>{freq, receiver: 0\|1}</code></td>
+</tr>
+<tr>
+<td><code>DesktopLayout.svelte</code></td>
+<td>45</td>
+<td><code>set_mode</code></td>
+<td>✅</td>
+<td>✅ <code>{mode, receiver: 0\|1}</code></td>
+</tr>
+<tr>
+<td><code>DesktopLayout.svelte</code></td>
+<td>49</td>
+<td><code>select_vfo</code></td>
+<td>✅</td>
+<td>✅ <code>{vfo: 'A'\|'B'}</code></td>
+</tr>
+<tr>
+<td><code>DesktopLayout.svelte</code></td>
+<td>53</td>
+<td><code>set_dw</code></td>
+<td>❌ <strong>C2</strong></td>
+<td>N/A — unknown command</td>
+</tr>
+<tr>
+<td><code>MobileLayout.svelte</code></td>
+<td>50</td>
+<td><code>set_freq</code></td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+<tr>
+<td><code>MobileLayout.svelte</code></td>
+<td>54</td>
+<td><code>select_vfo</code></td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+<tr>
+<td><code>MobileLayout.svelte</code></td>
+<td>58</td>
+<td><code>set_dw</code></td>
+<td>❌ <strong>C2</strong></td>
+<td>N/A — unknown command</td>
+</tr>
+<tr>
+<td><code>DxClusterPanel.svelte</code></td>
+<td>67</td>
+<td><code>set_freq</code></td>
+<td>✅</td>
+<td>✅ <code>{freq, receiver: 0\|1}</code></td>
+</tr>
+<tr>
+<td><code>keyboard.ts</code></td>
+<td>59</td>
+<td><code>set_freq</code></td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+<tr>
+<td><code>keyboard.ts</code></td>
+<td>73</td>
+<td><code>set_mode</code></td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+<tr>
+<td><code>keyboard.ts</code></td>
+<td>80</td>
+<td><code>set_freq</code></td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+<tr>
+<td><code>keyboard.ts</code></td>
+<td>87</td>
+<td><code>set_freq</code></td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+<tr>
+<td><code>keyboard.ts</code></td>
+<td>94</td>
+<td><code>ptt_on</code>/<code>ptt_off</code></td>
+<td>❌ <strong>C1</strong></td>
+<td>N/A — unknown commands</td>
+</tr>
+<tr>
+<td><code>WaterfallCanvas.svelte</code></td>
+<td>64</td>
+<td><code>set_scope_span</code></td>
+<td>❌ <strong>C3</strong></td>
+<td>N/A — unknown command</td>
+</tr>
+<tr>
+<td><code>WaterfallCanvas.svelte</code></td>
+<td>77</td>
+<td><code>set_freq</code></td>
+<td>✅</td>
+<td>⚠️ <strong>W3</strong> missing <code>receiver</code></td>
+</tr>
+<tr>
+<td><code>PttButton.svelte</code></td>
+<td>27, 41, 60, 75</td>
+<td><code>ptt</code></td>
+<td>✅</td>
+<td>✅ <code>{state: bool}</code></td>
+</tr>
+<tr>
+<td><code>BottomBar.svelte</code></td>
+<td>28</td>
+<td><code>set_af_level</code></td>
+<td>✅</td>
+<td>✅ <code>{level, receiver}</code></td>
+</tr>
+<tr>
+<td><code>BottomBar.svelte</code></td>
+<td>40</td>
+<td><code>ptt</code></td>
+<td>✅</td>
+<td>✅ <code>{state: bool}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Summary:</strong> 3 unknown commands (C1, C2, C3), 1 missing param (W3), all others correct.</p>
+<hr />
+<h2 id="component-by-component-review">Component-by-Component Review<a class="headerlink" href="#component-by-component-review" title="Permanent link">&para;</a></h2>
+<h3 id="desktoplayoutsvelte-except-c2">DesktopLayout.svelte ✅ (except C2)<a class="headerlink" href="#desktoplayoutsvelte-except-c2" title="Permanent link">&para;</a></h3>
+<ul>
+<li>CSS Grid: <code>grid-template-columns: 1fr var(--right-pane-width)</code> — correct two-column layout. ✅</li>
+<li>Side panel (<code>right-pane</code>): scrollable, proper <code>overflow-y: auto</code>. ✅</li>
+<li>Band bar: <code>overflow-x: auto</code> prevents clipping on narrow widths. ✅</li>
+<li><code>setupKeyboard()</code> returned from <code>onMount</code> — correct cleanup. ✅</li>
+<li><code>set_dw</code> command name wrong — <strong>C2</strong>. ❌</li>
+</ul>
+<h3 id="statusbarsvelte">StatusBar.svelte ✅<a class="headerlink" href="#statusbarsvelte" title="Permanent link">&para;</a></h3>
+<ul>
+<li>UTC clock: <code>setInterval</code> correctly cleaned up in <code>$effect</code>. ✅</li>
+<li>Connection indicator: reads <code>getConnectionStatus()</code> — correct. ✅</li>
+<li>TX/RX badge: reads <code>state?.ptt</code> — correct. ✅</li>
+<li><code>isPartial</code> status shown as <code>--warning</code> dot — good partial-connection UX. ✅</li>
+</ul>
+<h3 id="toastsvelte-with-w5-noted">Toast.svelte ✅ (with W5 noted)<a class="headerlink" href="#toastsvelte-with-w5-noted" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>onMount</code> returns <code>onMessage(...)</code> unsubscribe — correct cleanup. ✅</li>
+<li><code>notification</code> type check is correct: <code>msg.type === 'notification'</code>. ✅</li>
+<li>Level mapping handles unexpected values safely. ✅</li>
+<li><code>pointer-events: none</code> on container, <code>pointer-events: all</code> on individual toasts — correct. ✅</li>
+<li>Auto-dismiss timer tracking — <strong>W5</strong>. ⚠️</li>
+<li>Not included in MobileLayout — <strong>W5</strong>. ⚠️</li>
+</ul>
+<h3 id="dxclusterpanelsvelte-with-w4-noted">DxClusterPanel.svelte ✅ (with W4 noted)<a class="headerlink" href="#dxclusterpanelsvelte-with-w4-noted" title="Permanent link">&para;</a></h3>
+<ul>
+<li>WS subscription via <code>onMount(() =&gt; return onMessage(...))</code> — correct cleanup. ✅</li>
+<li><code>msg.type === 'dx_spot'</code> / <code>'dx_spots'</code> — matches backend exactly. ✅</li>
+<li><code>tuneToSpot</code>: <code>set_freq</code> with <code>{freq: spotFreqHz(spot), receiver: receiverIdx}</code> — correct. ✅</li>
+<li><code>spot.freq * 1_000</code> for Hz conversion (DX cluster is kHz) — correct. ✅</li>
+<li>Dedup logic <code>!(s.dx === spot.dx &amp;&amp; s.freq === spot.freq)</code> — correct. ✅</li>
+<li><code>filteredSpots = $derived((): DxSpot[] =&gt; {...})</code> — anti-pattern — <strong>W4</strong>. ⚠️</li>
+</ul>
+<h3 id="keyboardts-ptt-broken-c1">keyboard.ts — PTT broken (C1)<a class="headerlink" href="#keyboardts-ptt-broken-c1" title="Permanent link">&para;</a></h3>
+<ul>
+<li>F1–F11 band switching: <code>set_freq</code> correct. ✅</li>
+<li>M mode cycling: <code>set_mode</code> correct. ✅</li>
+<li>Arrow key tuning: <code>set_freq</code> correct. ✅</li>
+<li>Space PTT: <code>ptt_on</code>/<code>ptt_off</code> — <strong>C1</strong>. ❌</li>
+<li>Input focus guard: correct but misses <code>contenteditable</code> — <strong>S3</strong>. ⚠️</li>
+<li>Cleanup: <code>removeEventListener</code> in returned function — correct. ✅</li>
+</ul>
+<h3 id="appsvelte">App.svelte ✅<a class="headerlink" href="#appsvelte" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Error overlay: <code>role="alert"</code> with <code>aria-live="assertive"</code> — correct. ✅</li>
+<li>Retry timer: tracked and cleared in <code>onMount</code> cleanup. ✅</li>
+<li>Error overlay shows over <code>AppShell</code> via <code>z-index: 10000</code>. ✅</li>
+<li>Retry at 5s: reasonable backoff for initial connection failure. ✅</li>
+</ul>
+<h3 id="mobilelayoutsvelte-mostly-good-w1-w2-c2">MobileLayout.svelte — mostly good (W1, W2, C2)<a class="headerlink" href="#mobilelayoutsvelte-mostly-good-w1-w2-c2" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>height: 100dvh</code> — correct, avoids iOS toolbar issue. ✅</li>
+<li><code>BottomBar</code> is a flex child (not fixed position), properly constrained. ✅</li>
+<li>Fullscreen spectrum overlay: <code>position: fixed; inset: 0; z-index: 100</code> — correct. ✅</li>
+<li>Overlay close button: <code>min-width: 44px; min-height: 44px</code> — meets touch target spec. ✅</li>
+<li>UTC clock timer leak — <strong>W1</strong>. ❌</li>
+<li>Hardcoded radio name + static dot — <strong>W2</strong>. ⚠️</li>
+<li><code>set_dw</code> unknown command — <strong>C2</strong>. ❌</li>
+</ul>
+<h3 id="bottombarsvelte">BottomBar.svelte ✅<a class="headerlink" href="#bottombarsvelte" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>height: 56px; flex-shrink: 0</code> — correct fixed-height footer. ✅</li>
+<li>Volume: <code>sendCommand('set_af_level', { level, receiver: receiverIdx })</code> — correct. ✅</li>
+<li>PTT: <code>sendCommand('ptt', { state: next })</code> — correct. ✅</li>
+<li><code>pending</code> guard prevents double-send. ✅</li>
+<li><code>disabled={pending &amp;&amp; !transmitting}</code> — prevents click while pending TX. ✅</li>
+<li>Mute button: calls <code>toggleMute()</code> only (local audio mute, no WS command). ✅</li>
+</ul>
+<h3 id="gesture-recognizerts">gesture-recognizer.ts ✅<a class="headerlink" href="#gesture-recognizerts" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Pointer capture: <code>element.setPointerCapture(e.pointerId)</code> — prevents pointer loss. ✅</li>
+<li>Multi-pointer pinch: <code>pointers.size === 2</code> tracking — correct. ✅</li>
+<li>Long press cancel on move &gt; <code>TAP_MOVE_THRESHOLD</code>. ✅</li>
+<li><code>onPointerCancel</code>: clears timers and calls <code>onPanEnd</code>. ✅</li>
+<li><code>destroy()</code>: removes all 4 listeners, resets <code>touchAction</code>. ✅</li>
+<li><code>PTT_HOLD_DELAY</code> unused — <strong>S1</strong>. ⚠️</li>
+</ul>
+<h3 id="use-gesturets">use-gesture.ts ✅<a class="headerlink" href="#use-gesturets" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Proxy pattern prevents stale closure capture. ✅</li>
+<li><code>update(newCallbacks)</code> replaces current callbacks live. ✅</li>
+<li><code>destroy()</code> delegates to recognizer. ✅</li>
+<li>Returns <code>{ update, destroy }</code> — correct Svelte action contract. ✅</li>
+</ul>
+<h3 id="vfodisplaysvelte-swipe">VfoDisplay.svelte swipe ✅<a class="headerlink" href="#vfodisplaysvelte-swipe" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Gesture attached to <code>.vfo-freq</code> div with <code>use:gesture</code>. ✅</li>
+<li>Velocity thresholds: 100/1k/10kHz — reasonable for ham radio use. ✅</li>
+<li><code>vibrate('tune')</code> with <code>navigator.vibrate</code> guard in <code>haptics.ts</code>. ✅</li>
+<li><code>ontune?.(newFreq)</code> — delegates to parent (which calls <code>sendCommand</code>). ✅</li>
+</ul>
+<h3 id="waterfallcanvassvelte-pinchpan-c3-w3">WaterfallCanvas.svelte pinch/pan — C3, W3<a class="headerlink" href="#waterfallcanvassvelte-pinchpan-c3-w3" title="Permanent link">&para;</a></h3>
+<ul>
+<li>DPR applied in <code>ResizeObserver</code> — Sprint 2 W3 fixed. ✅</li>
+<li><code>hzPerPixel()</code> uses <code>getBoundingClientRect().width * dpr</code> — correct. ✅</li>
+<li>Pinch: <code>sendCommand('set_scope_span', ...)</code> — <strong>C3</strong> unknown command. ❌</li>
+<li>Pan accumulation pattern (defer command to <code>onPanEnd</code>) — good design. ✅</li>
+<li><code>onPanEnd</code>: missing <code>receiver</code> — <strong>W3</strong>. ⚠️</li>
+</ul>
+<h3 id="pttbuttonsvelte-with-s2-noted">PttButton.svelte ✅ (with S2 noted)<a class="headerlink" href="#pttbuttonsvelte-with-s2-noted" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Hold-to-talk: 200ms <code>setTimeout</code> before activating TX — correct. ✅</li>
+<li><code>setPointerCapture</code> prevents pointer loss if finger slides. ✅</li>
+<li><code>onpointerleave</code> / <code>onpointercancel</code> both wired to <code>onPressCancel</code>. ✅</li>
+<li>Short press falls through to <code>onPtt()</code> (toggle) via hold timer cancel. ✅</li>
+<li><code>touch-action: none</code> in CSS — prevents browser scroll interference. ✅</li>
+<li>Cancel checks <code>transmitting</code> not <code>pendingValue</code> — <strong>S2</strong> race risk. ⚠️</li>
+<li>Pulsing animation on TX — nice UX touch. ✅</li>
+</ul>
+<h3 id="hapticsts">haptics.ts ✅<a class="headerlink" href="#hapticsts" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>navigator.vibrate</code> guard (<code>if (!navigator.vibrate) return</code>) — correct. ✅</li>
+<li>Pattern durations reasonable: tap=10ms, ptt=50ms, tune=[10,30,10], error=[100,50,100]. ✅</li>
+</ul>
+<hr />
+<h2 id="architecture-compliance">Architecture Compliance<a class="headerlink" href="#architecture-compliance" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Spec requirement</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>height: 100dvh</code> for full-screen layouts</td>
+<td>✅ Both layouts</td>
+</tr>
+<tr>
+<td>Fixed bottom bar 56px</td>
+<td>✅ BottomBar</td>
+</tr>
+<tr>
+<td>Touch targets ≥44px</td>
+<td>✅ All interactive controls</td>
+</tr>
+<tr>
+<td>Svelte 5 <code>$state</code>/<code>$derived</code>/<code>$effect</code></td>
+<td>✅ Throughout (W4 anti-pattern)</td>
+</tr>
+<tr>
+<td>TypeScript strict, no <code>any</code></td>
+<td>✅</td>
+</tr>
+<tr>
+<td>CSS design tokens only</td>
+<td>✅ No magic values</td>
+</tr>
+<tr>
+<td>WS command format <code>sendCommand('name', {params})</code></td>
+<td>❌ 3 wrong command names (C1, C2, C3)</td>
+</tr>
+<tr>
+<td>Event listeners cleaned up on destroy</td>
+<td>✅ keyboard, gestures, WS; ❌ setInterval (W1)</td>
+</tr>
+<tr>
+<td>Pointer events for touch (not touch events)</td>
+<td>✅ gesture-recognizer.ts</td>
+</tr>
+<tr>
+<td><code>touch-action: none</code> on gesture elements</td>
+<td>✅ PttButton CSS, gesture-recognizer element style</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="prioritised-fix-list">Prioritised Fix List<a class="headerlink" href="#prioritised-fix-list" title="Permanent link">&para;</a></h2>
+<p>Fix in this order before merge:</p>
+<ol>
+<li><strong>C1</strong> — <code>keyboard.ts:94</code>: <code>ptt_on</code>/<code>ptt_off</code> → <code>ptt</code> with <code>{state: !ptt}</code> (1 line)</li>
+<li><strong>C2</strong> — <code>DesktopLayout.svelte:53</code>, <code>MobileLayout.svelte:58</code>: <code>set_dw</code> → <code>set_dual_watch</code> (2 lines)</li>
+<li><strong>C3</strong> — <code>WaterfallCanvas.svelte:64</code>: <code>set_scope_span</code> → <code>set_scope_fixed_edge</code> (3 lines, needs center+span math)</li>
+<li><strong>W1</strong> — <code>MobileLayout.svelte:36-45</code>: Fix timer pattern to match <code>StatusBar</code></li>
+<li><strong>W5</strong> — <code>MobileLayout.svelte</code>: Add <code>&lt;Toast /&gt;</code> so mobile users see notifications</li>
+<li><strong>W4</strong> — <code>DxClusterPanel.svelte:46</code>: <code>$derived(fn)</code> → <code>$derived.by(fn)</code></li>
+<li><strong>W2</strong> — <code>MobileLayout.svelte:73-74</code>: Read model+status from stores</li>
+<li><strong>W3</strong> — <code>WaterfallCanvas.svelte:77</code>: Add <code>receiver</code> to pan-end <code>set_freq</code></li>
+<li><strong>S2</strong> — <code>PttButton.svelte</code>: Add <code>pending &amp;&amp; pendingValue</code> to cancel guard</li>
+<li><strong>S1</strong> — <code>gesture-recognizer.ts:27</code>: Remove unused <code>PTT_HOLD_DELAY</code> constant</li>
+</ol>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/morozsm/icom-lan" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

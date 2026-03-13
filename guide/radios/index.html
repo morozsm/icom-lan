@@ -290,7 +290,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../api/radio/" class="md-tabs__link">
+        <a href="../../api/public-api-surface/" class="md-tabs__link">
           
   
   
@@ -851,6 +851,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="IC-7610">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#backend-comparison" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Backend Comparison
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
       </ul>
@@ -1085,6 +1102,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../api/public-api-surface/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Public API Surface
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../api/radio/" class="md-nav__link">
         
   
@@ -1205,6 +1250,34 @@
     
   
     Transport
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/commander/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Commander
   
 
     
@@ -1454,6 +1527,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../internals/reliability-semantics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reliability semantics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../internals/rfc-web-ui-v1/" class="md-nav__link">
         
   
@@ -1462,6 +1563,34 @@
     
   
     Web UI RFC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../internals/cli-design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI design
   
 
     
@@ -1612,6 +1741,23 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="IC-7610">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#backend-comparison" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Backend Comparison
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
         
@@ -1767,10 +1913,74 @@
 <h3 id="ic-7610">IC-7610<a class="headerlink" href="#ic-7610" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>CI-V Address:</strong> <code>0x98</code></li>
-<li><strong>Ports:</strong> 50001 (control), 50002 (CI-V), 50003 (audio)</li>
-<li><strong>Features verified:</strong> frequency, mode, power, S-meter, SWR, ALC, PTT, CW keying, VFO select, split, attenuator, preamp, power on/off, discovery</li>
+<li><strong>LAN Ports:</strong> 50001 (control), 50002 (CI-V), 50003 (audio)</li>
+<li><strong>USB:</strong> Serial CI-V + USB audio devices (<a href="../ic7610-usb-setup/">setup guide</a>)</li>
+<li><strong>Features verified:</strong> frequency, mode, power, S-meter, SWR, ALC, PTT, CW keying, VFO select, split, attenuator, preamp, power on/off, discovery (LAN only), scope/waterfall</li>
 <li><strong>Dual receiver:</strong> use <code>select_vfo("MAIN")</code> / <code>select_vfo("SUB")</code></li>
 </ul>
+<h4 id="backend-comparison">Backend Comparison<a class="headerlink" href="#backend-comparison" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>LAN Backend</th>
+<th>Serial Backend</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Control (freq/mode/PTT)</strong></td>
+<td>✅ Full</td>
+<td>✅ Full</td>
+</tr>
+<tr>
+<td><strong>Meters (S/SWR/ALC)</strong></td>
+<td>✅ Full</td>
+<td>✅ Full</td>
+</tr>
+<tr>
+<td><strong>Audio RX</strong></td>
+<td>✅ Opus/PCM over UDP</td>
+<td>✅ USB audio device</td>
+</tr>
+<tr>
+<td><strong>Audio TX</strong></td>
+<td>✅ Opus/PCM over UDP</td>
+<td>✅ USB audio device</td>
+</tr>
+<tr>
+<td><strong>Scope/Waterfall</strong></td>
+<td>✅ Full (~225 pkt/s)</td>
+<td>⚠️ Requires ≥115200 baud</td>
+</tr>
+<tr>
+<td><strong>Dual Receiver</strong></td>
+<td>✅ Command29</td>
+<td>✅ Command29</td>
+</tr>
+<tr>
+<td><strong>Remote Access</strong></td>
+<td>✅ Over LAN/VPN</td>
+<td>❌ USB only</td>
+</tr>
+<tr>
+<td><strong>Discovery</strong></td>
+<td>✅ UDP broadcast</td>
+<td>❌ N/A</td>
+</tr>
+<tr>
+<td><strong>Setup</strong></td>
+<td>IP, username, password</td>
+<td>USB cable + device path</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition tip">
+<p class="admonition-title">USB Serial Setup</p>
+<p>See the <strong><a href="../ic7610-usb-setup/">IC-7610 USB Serial Backend Setup Guide</a></strong> for step-by-step instructions on using the serial backend (macOS-first).
+For IC-7610 USB operation, set <strong>Menu → Set → Connectors → CI-V → CI-V USB Port</strong>
+to the CI-V option (<code>Link to [CI-V]</code>), not <code>[REMOTE]</code>.</p>
+</div>
 <h2 id="should-work-untested">Should Work (Untested)<a class="headerlink" href="#should-work-untested" title="Permanent link">&para;</a></h2>
 <p>These radios use the same Icom LAN protocol and should work out of the box. Community testing and reports welcome!</p>
 <h3 id="ic-705">IC-705<a class="headerlink" href="#ic-705" title="Permanent link">&para;</a></h3>
@@ -1779,7 +1989,11 @@
 <li><strong>Connectivity:</strong> WiFi (built-in)</li>
 <li><strong>Notes:</strong> WiFi may have higher latency than Ethernet — consider increasing timeout.</li>
 </ul>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">radio</span> <span class="o">=</span> <span class="n">IcomRadio</span><span class="p">(</span><span class="s2">&quot;192.168.1.101&quot;</span><span class="p">,</span> <span class="n">radio_addr</span><span class="o">=</span><span class="mh">0xA4</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mf">10.0</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan</span><span class="w"> </span><span class="kn">import</span> <span class="n">create_radio</span><span class="p">,</span> <span class="n">LanBackendConfig</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">config</span> <span class="o">=</span> <span class="n">LanBackendConfig</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="s2">&quot;192.168.1.101&quot;</span><span class="p">,</span> <span class="n">radio_addr</span><span class="o">=</span><span class="mh">0xA4</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mf">10.0</span><span class="p">)</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="k">async</span> <span class="k">with</span> <span class="n">create_radio</span><span class="p">(</span><span class="n">config</span><span class="p">)</span> <span class="k">as</span> <span class="n">radio</span><span class="p">:</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="o">...</span>
 </code></pre></div>
 <h3 id="ic-7300">IC-7300<a class="headerlink" href="#ic-7300" title="Permanent link">&para;</a></h3>
 <ul>
@@ -1806,14 +2020,20 @@
 </ul>
 <h2 id="using-presets">Using Presets<a class="headerlink" href="#using-presets" title="Permanent link">&para;</a></h2>
 <p>Instead of remembering CI-V addresses, use the built-in presets:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan</span><span class="w"> </span><span class="kn">import</span> <span class="n">IcomRadio</span><span class="p">,</span> <span class="n">get_civ_addr</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan</span><span class="w"> </span><span class="kn">import</span> <span class="n">create_radio</span><span class="p">,</span> <span class="n">LanBackendConfig</span><span class="p">,</span> <span class="n">get_civ_addr</span>
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="c1"># Look up by model name</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">radio</span> <span class="o">=</span> <span class="n">IcomRadio</span><span class="p">(</span><span class="s2">&quot;192.168.1.100&quot;</span><span class="p">,</span> <span class="n">radio_addr</span><span class="o">=</span><span class="n">get_civ_addr</span><span class="p">(</span><span class="s2">&quot;IC-705&quot;</span><span class="p">))</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="c1"># Look up by model name and pass to config</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">addr</span> <span class="o">=</span> <span class="n">get_civ_addr</span><span class="p">(</span><span class="s2">&quot;IC-705&quot;</span><span class="p">)</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">config</span> <span class="o">=</span> <span class="n">LanBackendConfig</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="s2">&quot;192.168.1.100&quot;</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="s2">&quot;u&quot;</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="s2">&quot;p&quot;</span><span class="p">,</span> <span class="n">radio_addr</span><span class="o">=</span><span class="n">addr</span><span class="p">)</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="k">async</span> <span class="k">with</span> <span class="n">create_radio</span><span class="p">(</span><span class="n">config</span><span class="p">)</span> <span class="k">as</span> <span class="n">radio</span><span class="p">:</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>    <span class="o">...</span>
 </code></pre></div>
+<p>For LAN-only scripts you can still use <code>IcomRadio(host, radio_addr=get_civ_addr("IC-705"), ...)</code> — see <a href="../../api/radio/">API Reference</a>.</p>
 <h2 id="custom-ci-v-address">Custom CI-V Address<a class="headerlink" href="#custom-ci-v-address" title="Permanent link">&para;</a></h2>
-<p>If you've changed your radio's CI-V address in the menu, specify it explicitly:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">radio</span> <span class="o">=</span> <span class="n">IcomRadio</span><span class="p">(</span><span class="s2">&quot;192.168.1.100&quot;</span><span class="p">,</span> <span class="n">radio_addr</span><span class="o">=</span><span class="mh">0x42</span><span class="p">)</span>
+<p>If you've changed your radio's CI-V address in the menu, specify it explicitly in the backend config:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">config</span> <span class="o">=</span> <span class="n">LanBackendConfig</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="s2">&quot;192.168.1.100&quot;</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="s2">&quot;u&quot;</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="s2">&quot;p&quot;</span><span class="p">,</span> <span class="n">radio_addr</span><span class="o">=</span><span class="mh">0x42</span><span class="p">)</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="k">async</span> <span class="k">with</span> <span class="n">create_radio</span><span class="p">(</span><span class="n">config</span><span class="p">)</span> <span class="k">as</span> <span class="n">radio</span><span class="p">:</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    <span class="o">...</span>
 </code></pre></div>
 <h2 id="adding-support-for-new-radios">Adding Support for New Radios<a class="headerlink" href="#adding-support-for-new-radios" title="Permanent link">&para;</a></h2>
 <p>The library is CI-V address agnostic — any radio that speaks the Icom LAN protocol should work by specifying the correct <code>radio_addr</code>. If you test with a new model:</p>

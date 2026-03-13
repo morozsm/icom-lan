@@ -2,134 +2,258 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://morozsm.github.io/icom-lan/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <lastmod>2026-03-13</lastmod>
     </url>
     <url>
          <loc>https://morozsm.github.io/icom-lan/CHANGELOG/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <lastmod>2026-03-13</lastmod>
     </url>
     <url>
          <loc>https://morozsm.github.io/icom-lan/PROJECT/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <lastmod>2026-03-13</lastmod>
     </url>
     <url>
          <loc>https://morozsm.github.io/icom-lan/RELEASE_READINESS/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <lastmod>2026-03-13</lastmod>
     </url>
     <url>
          <loc>https://morozsm.github.io/icom-lan/ROADMAP/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <lastmod>2026-03-13</lastmod>
     </url>
     <url>
          <loc>https://morozsm.github.io/icom-lan/SECURITY/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <lastmod>2026-03-13</lastmod>
     </url>
     <url>
          <loc>https://morozsm.github.io/icom-lan/STRATEGY/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <lastmod>2026-03-13</lastmod>
+    </url>
+    <url>
+         <loc>https://morozsm.github.io/icom-lan/issues-dump/</loc>
+         <lastmod>2026-03-13</lastmod>
+    </url>
+    <url>
+         <loc>https://morozsm.github.io/icom-lan/opuslib-macos-fix/</loc>
+         <lastmod>2026-03-13</lastmod>
+    </url>
+    <url>
+         <loc>https://morozsm.github.io/icom-lan/radio-protocol/</loc>
+         <lastmod>2026-03-13</lastmod>
     </url>
     <url>
          <loc>https://morozsm.github.io/icom-lan/api/audio/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <lastmod>2026-03-13</lastmod>
     </url>
     <url>
          <loc>https://morozsm.github.io/icom-lan/api/auth/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <lastmod>2026-03-13</lastmod>
+    </url>
+    <url>
+         <loc>https://morozsm.github.io/icom-lan/api/commander/</loc>
+         <lastmod>2026-03-13</lastmod>
     </url>
     <url>
          <loc>https://morozsm.github.io/icom-lan/api/commands/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <lastmod>2026-03-13</lastmod>
     </url>
     <url>
          <loc>https://morozsm.github.io/icom-lan/api/exceptions/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <lastmod>2026-03-13</lastmod>
+    </url>
+    <url>
+         <loc>https://morozsm.github.io/icom-lan/api/public-api-surface/</loc>
+         <lastmod>2026-03-13</lastmod>
     </url>
     <url>
          <loc>https://morozsm.github.io/icom-lan/api/radio/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <lastmod>2026-03-13</lastmod>
     </url>
     <url>
          <loc>https://morozsm.github.io/icom-lan/api/radios/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <lastmod>2026-03-13</lastmod>
+    </url>
+    <url>
+         <loc>https://morozsm.github.io/icom-lan/api/rigctld/</loc>
+         <lastmod>2026-03-13</lastmod>
     </url>
     <url>
          <loc>https://morozsm.github.io/icom-lan/api/scope/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <lastmod>2026-03-13</lastmod>
     </url>
     <url>
          <loc>https://morozsm.github.io/icom-lan/api/sync/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <lastmod>2026-03-13</lastmod>
     </url>
     <url>
          <loc>https://morozsm.github.io/icom-lan/api/transport/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <lastmod>2026-03-13</lastmod>
     </url>
     <url>
          <loc>https://morozsm.github.io/icom-lan/api/types/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <lastmod>2026-03-13</lastmod>
     </url>
     <url>
          <loc>https://morozsm.github.io/icom-lan/guide/audio-recipes/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <lastmod>2026-03-13</lastmod>
     </url>
     <url>
          <loc>https://morozsm.github.io/icom-lan/guide/cli/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <lastmod>2026-03-13</lastmod>
     </url>
     <url>
          <loc>https://morozsm.github.io/icom-lan/guide/commands/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <lastmod>2026-03-13</lastmod>
     </url>
     <url>
          <loc>https://morozsm.github.io/icom-lan/guide/configuration/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <lastmod>2026-03-13</lastmod>
     </url>
     <url>
          <loc>https://morozsm.github.io/icom-lan/guide/connection/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <lastmod>2026-03-13</lastmod>
+    </url>
+    <url>
+         <loc>https://morozsm.github.io/icom-lan/guide/ic7610-usb-setup/</loc>
+         <lastmod>2026-03-13</lastmod>
     </url>
     <url>
          <loc>https://morozsm.github.io/icom-lan/guide/installation/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <lastmod>2026-03-13</lastmod>
     </url>
     <url>
          <loc>https://morozsm.github.io/icom-lan/guide/quickstart/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <lastmod>2026-03-13</lastmod>
     </url>
     <url>
          <loc>https://morozsm.github.io/icom-lan/guide/radios/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <lastmod>2026-03-13</lastmod>
     </url>
     <url>
          <loc>https://morozsm.github.io/icom-lan/guide/troubleshooting/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <lastmod>2026-03-13</lastmod>
     </url>
     <url>
          <loc>https://morozsm.github.io/icom-lan/guide/web-ui/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <lastmod>2026-03-13</lastmod>
     </url>
     <url>
          <loc>https://morozsm.github.io/icom-lan/guide/wsjtx-setup/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <lastmod>2026-03-13</lastmod>
     </url>
     <url>
          <loc>https://morozsm.github.io/icom-lan/internals/architecture/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <lastmod>2026-03-13</lastmod>
+    </url>
+    <url>
+         <loc>https://morozsm.github.io/icom-lan/internals/cli-design/</loc>
+         <lastmod>2026-03-13</lastmod>
     </url>
     <url>
          <loc>https://morozsm.github.io/icom-lan/internals/contributing/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <lastmod>2026-03-13</lastmod>
     </url>
     <url>
          <loc>https://morozsm.github.io/icom-lan/internals/protocol/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <lastmod>2026-03-13</lastmod>
+    </url>
+    <url>
+         <loc>https://morozsm.github.io/icom-lan/internals/reliability-semantics/</loc>
+         <lastmod>2026-03-13</lastmod>
     </url>
     <url>
          <loc>https://morozsm.github.io/icom-lan/internals/rfc-audio-v1-mini/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <lastmod>2026-03-13</lastmod>
     </url>
     <url>
          <loc>https://morozsm.github.io/icom-lan/internals/rfc-web-ui-v1/</loc>
-         <lastmod>2026-02-27</lastmod>
+         <lastmod>2026-03-13</lastmod>
+    </url>
+    <url>
+         <loc>https://morozsm.github.io/icom-lan/parity/</loc>
+         <lastmod>2026-03-13</lastmod>
+    </url>
+    <url>
+         <loc>https://morozsm.github.io/icom-lan/parity/test_mapping/</loc>
+         <lastmod>2026-03-13</lastmod>
+    </url>
+    <url>
+         <loc>https://morozsm.github.io/icom-lan/plans/2026-03-04-dx-cluster/</loc>
+         <lastmod>2026-03-13</lastmod>
+    </url>
+    <url>
+         <loc>https://morozsm.github.io/icom-lan/plans/2026-03-04-mobile-ui-design/</loc>
+         <lastmod>2026-03-13</lastmod>
+    </url>
+    <url>
+         <loc>https://morozsm.github.io/icom-lan/plans/2026-03-04-mobile-ui-plan/</loc>
+         <lastmod>2026-03-13</lastmod>
+    </url>
+    <url>
+         <loc>https://morozsm.github.io/icom-lan/plans/2026-03-07-ui-architecture-research/</loc>
+         <lastmod>2026-03-13</lastmod>
+    </url>
+    <url>
+         <loc>https://morozsm.github.io/icom-lan/plans/2026-03-07-ui-architecture/</loc>
+         <lastmod>2026-03-13</lastmod>
+    </url>
+    <url>
+         <loc>https://morozsm.github.io/icom-lan/plans/fix-civ-rx-tests-and-mypy/</loc>
+         <lastmod>2026-03-13</lastmod>
+    </url>
+    <url>
+         <loc>https://morozsm.github.io/icom-lan/plans/fix-p0-test-failures/</loc>
+         <lastmod>2026-03-13</lastmod>
+    </url>
+    <url>
+         <loc>https://morozsm.github.io/icom-lan/plans/mypy-remaining-errors/</loc>
+         <lastmod>2026-03-13</lastmod>
+    </url>
+    <url>
+         <loc>https://morozsm.github.io/icom-lan/plans/p0-core-runtime-decomposition/</loc>
+         <lastmod>2026-03-13</lastmod>
+    </url>
+    <url>
+         <loc>https://morozsm.github.io/icom-lan/plans/p1-radio-protocol-slim-plan/</loc>
+         <lastmod>2026-03-13</lastmod>
+    </url>
+    <url>
+         <loc>https://morozsm.github.io/icom-lan/reviews/2026-03-07-sprint0-review/</loc>
+         <lastmod>2026-03-13</lastmod>
+    </url>
+    <url>
+         <loc>https://morozsm.github.io/icom-lan/reviews/2026-03-07-sprint1-review/</loc>
+         <lastmod>2026-03-13</lastmod>
+    </url>
+    <url>
+         <loc>https://morozsm.github.io/icom-lan/reviews/2026-03-08-sprint2-review/</loc>
+         <lastmod>2026-03-13</lastmod>
+    </url>
+    <url>
+         <loc>https://morozsm.github.io/icom-lan/reviews/2026-03-08-sprint3-review/</loc>
+         <lastmod>2026-03-13</lastmod>
+    </url>
+    <url>
+         <loc>https://morozsm.github.io/icom-lan/reviews/2026-03-08-sprint4-review/</loc>
+         <lastmod>2026-03-13</lastmod>
+    </url>
+    <url>
+         <loc>https://morozsm.github.io/icom-lan/reviews/2026-03-09-p1-p2-review/</loc>
+         <lastmod>2026-03-13</lastmod>
+    </url>
+    <url>
+         <loc>https://morozsm.github.io/icom-lan/reviews/2026-03-09-p3-review/</loc>
+         <lastmod>2026-03-13</lastmod>
+    </url>
+    <url>
+         <loc>https://morozsm.github.io/icom-lan/reviews/2026-03-11-post-audit-report/</loc>
+         <lastmod>2026-03-13</lastmod>
+    </url>
+    <url>
+         <loc>https://morozsm.github.io/icom-lan/reviews/2026-03-p1-p2-code-review/</loc>
+         <lastmod>2026-03-13</lastmod>
+    </url>
+    <url>
+         <loc>https://morozsm.github.io/icom-lan/sessions/2026-03-04-dx-cluster-power/</loc>
+         <lastmod>2026-03-13</lastmod>
     </url>
 </urlset>

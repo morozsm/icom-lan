@@ -290,7 +290,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../api/radio/" class="md-tabs__link">
+        <a href="../../api/public-api-surface/" class="md-tabs__link">
           
   
   
@@ -731,10 +731,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#1-start-the-rigctld-server" class="md-nav__link">
+  <a href="#1-start-the-server" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. Start the rigctld server
+        1. Start the server
       
     </span>
   </a>
@@ -746,6 +746,39 @@
     <span class="md-ellipsis">
       
         2. Configure WSJT-X
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-configure-wsjt-x-audio-with-blackhole-bridge" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Configure WSJT-X Audio (with BlackHole bridge)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#radio-settings-for-tx-audio" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Radio Settings (for TX audio)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#verifying-audio" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verifying Audio
       
     </span>
   </a>
@@ -1135,6 +1168,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../api/public-api-surface/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Public API Surface
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../api/radio/" class="md-nav__link">
         
   
@@ -1255,6 +1316,34 @@
     
   
     Transport
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/commander/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Commander
   
 
     
@@ -1504,6 +1593,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../internals/reliability-semantics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reliability semantics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../internals/rfc-web-ui-v1/" class="md-nav__link">
         
   
@@ -1512,6 +1629,34 @@
     
   
     Web UI RFC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../internals/cli-design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI design
   
 
     
@@ -1655,10 +1800,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#1-start-the-rigctld-server" class="md-nav__link">
+  <a href="#1-start-the-server" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. Start the rigctld server
+        1. Start the server
       
     </span>
   </a>
@@ -1670,6 +1815,39 @@
     <span class="md-ellipsis">
       
         2. Configure WSJT-X
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-configure-wsjt-x-audio-with-blackhole-bridge" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Configure WSJT-X Audio (with BlackHole bridge)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#radio-settings-for-tx-audio" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Radio Settings (for TX audio)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#verifying-audio" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verifying Audio
       
     </span>
   </a>
@@ -1866,12 +2044,28 @@
 <p>This guide covers configuring WSJT-X (and compatible apps like JTDX, JS8Call)
 to work with <code>icom-lan serve</code> as a Hamlib NET rigctld replacement.</p>
 <h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
-<h3 id="1-start-the-rigctld-server">1. Start the rigctld server<a class="headerlink" href="#1-start-the-rigctld-server" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Basic</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>icom-lan<span class="w"> </span>--host<span class="w"> </span>&lt;RADIO_IP&gt;<span class="w"> </span>--user<span class="w"> </span>&lt;USER&gt;<span class="w"> </span>--pass<span class="w"> </span>&lt;PASS&gt;<span class="w"> </span>serve
+<h3 id="1-start-the-server">1. Start the server<a class="headerlink" href="#1-start-the-server" title="Permanent link">&para;</a></h3>
+<p><strong>Recommended: all-in-one</strong> (Web UI + audio bridge + rigctld):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Install bridge dependencies</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>pip<span class="w"> </span>install<span class="w"> </span>icom-lan<span class="o">[</span>bridge<span class="o">]</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Recommended for WSJT-X (pre-warms DATA mode on first client)</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>icom-lan<span class="w"> </span>--host<span class="w"> </span>&lt;RADIO_IP&gt;<span class="w"> </span>--user<span class="w"> </span>&lt;USER&gt;<span class="w"> </span>--pass<span class="w"> </span>&lt;PASS&gt;<span class="w"> </span>serve<span class="w"> </span>--wsjtx-compat
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Install BlackHole virtual audio devices (macOS)</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="c1"># Two devices required: one for RX, one for TX (single device creates feedback loop)</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>brew<span class="w"> </span>install<span class="w"> </span>blackhole-2ch
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>brew<span class="w"> </span>install<span class="w"> </span>blackhole-16ch
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="c1"># IMPORTANT: Reboot after installing BlackHole to activate the audio drivers!</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="c1"># Start all-in-one server with separate RX/TX devices</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>icom-lan<span class="w"> </span>--host<span class="w"> </span>&lt;RADIO_IP&gt;<span class="w"> </span>--user<span class="w"> </span>&lt;USER&gt;<span class="w"> </span>--pass<span class="w"> </span>&lt;PASS&gt;<span class="w"> </span>web<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">  </span>--bridge<span class="w"> </span><span class="s2">&quot;BlackHole 2ch&quot;</span><span class="w"> </span>--bridge-tx-device<span class="w"> </span><span class="s2">&quot;BlackHole 16ch&quot;</span>
+</code></pre></div>
+<p>This starts:
+- <strong>Web UI</strong> on <code>:8080</code>
+- <strong>Audio bridge</strong> routing radio RX → BlackHole 2ch, BlackHole 16ch → radio TX
+- <strong>Rigctld</strong> on <code>:4532</code> (enabled by default)</p>
+<p><strong>Alternative: rigctld only</strong> (no Web UI or audio bridge):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>icom-lan<span class="w"> </span>--host<span class="w"> </span>&lt;RADIO_IP&gt;<span class="w"> </span>--user<span class="w"> </span>&lt;USER&gt;<span class="w"> </span>--pass<span class="w"> </span>&lt;PASS&gt;<span class="w"> </span>serve<span class="w"> </span>--wsjtx-compat
 </code></pre></div>
 <h3 id="2-configure-wsjt-x">2. Configure WSJT-X<a class="headerlink" href="#2-configure-wsjt-x" title="Permanent link">&para;</a></h3>
 <p>In <strong>Settings → Radio</strong>:</p>
@@ -1907,6 +2101,48 @@ to work with <code>icom-lan serve</code> as a Hamlib NET rigctld replacement.</p
 </table>
 <p>Press <strong>Test CAT</strong> — the button should turn green.
 Press <strong>Test PTT</strong> — the radio should key up briefly.</p>
+<h3 id="3-configure-wsjt-x-audio-with-blackhole-bridge">3. Configure WSJT-X Audio (with BlackHole bridge)<a class="headerlink" href="#3-configure-wsjt-x-audio-with-blackhole-bridge" title="Permanent link">&para;</a></h3>
+<p>Configure WSJT-X audio to use the BlackHole devices:</p>
+<p>In <strong>Settings → Audio</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Value</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Input</strong></td>
+<td><code>BlackHole 2ch</code></td>
+<td>Receives RX audio from radio</td>
+</tr>
+<tr>
+<td><strong>Output</strong></td>
+<td><code>BlackHole 16ch</code></td>
+<td>Sends TX audio to radio</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>⚠️ <strong>Why two devices?</strong> BlackHole is a unidirectional loopback — if you use the
+same device for both input and output, the bridge reads its own RX output as TX
+input, creating a feedback loop. Two separate devices isolate the paths.</p>
+</blockquote>
+<p>The audio bridge routes:
+- <strong>Radio RX → icom-lan → BlackHole 2ch → WSJT-X Input</strong> (decode FT8/FT4)
+- <strong>WSJT-X Output → BlackHole 16ch → icom-lan → Radio TX</strong> (transmit FT8/FT4)</p>
+<h3 id="radio-settings-for-tx-audio">Radio Settings (for TX audio)<a class="headerlink" href="#radio-settings-for-tx-audio" title="Permanent link">&para;</a></h3>
+<p>On the IC-7610 front panel, set:
+- <strong>Menu → Connectors → MOD Input → LAN</strong> (select <code>Data</code> or <code>USB</code>)
+- This tells the radio to accept modulation input from the LAN connection</p>
+<h3 id="verifying-audio">Verifying Audio<a class="headerlink" href="#verifying-audio" title="Permanent link">&para;</a></h3>
+<p>After starting, check the bridge status:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>curl<span class="w"> </span>http://localhost:8080/api/v1/bridge
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="c1"># Should show: {&quot;active&quot;: true, &quot;rx_frames&quot;: ..., &quot;rx_drops&quot;: 0, ...}</span>
+</code></pre></div></p>
+<p>Zero <code>rx_drops</code> = healthy bridge. If you see drops, check CPU load.</p>
 <h2 id="the-wsjtx-compat-flag">The <code>--wsjtx-compat</code> Flag<a class="headerlink" href="#the-wsjtx-compat-flag" title="Permanent link">&para;</a></h2>
 <h3 id="what-it-does">What it does<a class="headerlink" href="#what-it-does" title="Permanent link">&para;</a></h3>
 <p>When a CAT client connects for the first time:</p>

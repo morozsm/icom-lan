@@ -288,7 +288,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../api/radio/" class="md-tabs__link">
+        <a href="../../api/public-api-surface/" class="md-tabs__link">
           
   
   
@@ -885,6 +885,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../api/public-api-surface/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Public API Surface
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../api/radio/" class="md-nav__link">
         
   
@@ -1005,6 +1033,34 @@
     
   
     Transport
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/commander/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Commander
   
 
     
@@ -1272,6 +1328,56 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#multi-backend-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multi-Backend Architecture
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Multi-Backend Architecture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#key-architectural-layers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Architectural Layers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#backend-neutral-boundary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Backend-Neutral Boundary
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#backend-comparison-ic-7610-lan-vs-serial" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Backend Comparison: IC-7610 LAN vs Serial
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#module-responsibilities" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1284,10 +1390,54 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#radiopy-high-level-api" class="md-nav__link">
+  <a href="#radiopy-high-level-public-api-1549-lines" class="md-nav__link">
     <span class="md-ellipsis">
       
-        radio.py — High-Level API
+        radio.py — High-Level Public API (1549 lines)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_control_phasepy-connection-setup-452-lines" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        _control_phase.py — Connection Setup (452 lines)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_civ_rxpy-ci-v-receive-pump-418-lines" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        _civ_rx.py — CI-V Receive Pump (418 lines)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_audio_recoverypy-audio-resilience-132-lines" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        _audio_recovery.py — Audio Resilience (132 lines)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_connection_statepy-connection-fsm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        _connection_state.py — Connection FSM
       
     </span>
   </a>
@@ -1317,6 +1467,78 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#audio_buspy-audio-pubsub-distribution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        audio_bus.py — Audio Pub/Sub Distribution
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#audio_bridgepy-virtual-audio-device-bridge" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        audio_bridge.py — Virtual Audio Device Bridge
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#web-built-in-web-ui" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        web/ — Built-in Web UI
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="web/ — Built-in Web UI">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#web-module-descriptions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        web/ Module Descriptions
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rigctld-hamlib-net-rigctld-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        rigctld/ — Hamlib NET rigctld Server
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#proxypy-transparent-udp-relay" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        proxy.py — Transparent UDP Relay
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#commandspy-ci-v-encodingdecoding" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1339,10 +1561,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#protocolpy-packet-parsing" class="md-nav__link">
+  <a href="#typespy-protocol-primitives" class="md-nav__link">
     <span class="md-ellipsis">
       
-        protocol.py — Packet Parsing
+        types.py — Protocol Primitives
       
     </span>
   </a>
@@ -1350,10 +1572,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#typespy-data-types" class="md-nav__link">
+  <a href="#protocolpy-packet-header-parsing" class="md-nav__link">
     <span class="md-ellipsis">
       
-        types.py — Data Types
+        protocol.py — Packet Header Parsing
       
     </span>
   </a>
@@ -1361,10 +1583,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#exceptionspy-error-hierarchy" class="md-nav__link">
+  <a href="#exceptionspy-exception-hierarchy" class="md-nav__link">
     <span class="md-ellipsis">
       
-        exceptions.py — Error Hierarchy
+        exceptions.py — Exception Hierarchy
       
     </span>
   </a>
@@ -1372,10 +1594,109 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#clipy-command-line-interface" class="md-nav__link">
+  <a href="#audiopy-audio-streaming-engine" class="md-nav__link">
     <span class="md-ellipsis">
       
-        cli.py — Command Line Interface
+        audio.py — Audio Streaming Engine
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_audio_transcoderpy-pcmopus-transcoder" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        _audio_transcoder.py — PCM↔Opus Transcoder
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#civpy-ci-v-request-tracking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        civ.py — CI-V Request Tracking
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#radio_protocolpy-abstract-radio-protocols" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        radio_protocol.py — Abstract Radio Protocols
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#radio_statepy-live-radio-state" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        radio_state.py — Live Radio State
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#radiospy-radio-model-registry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        radios.py — Radio Model Registry
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#meter_calpy-meter-calibration-tables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        meter_cal.py — Meter Calibration Tables
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scopepy-spectrum-scope-assembler" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        scope.py — Spectrum Scope Assembler
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scope_renderpy-scope-image-rendering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        scope_render.py — Scope Image Rendering
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#syncpy-synchronous-api-wrapper" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        sync.py — Synchronous API Wrapper
       
     </span>
   </a>
@@ -1400,10 +1721,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#sending-a-command" class="md-nav__link">
+  <a href="#ci-v-command-get" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Sending a Command
+        CI-V Command (GET)
       
     </span>
   </a>
@@ -1411,10 +1732,32 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#receiving-a-response" class="md-nav__link">
+  <a href="#ci-v-command-set-fire-and-forget" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Receiving a Response
+        CI-V Command (SET, fire-and-forget)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scope-streaming" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scope Streaming
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#high-level-data-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        High-Level Data Flow
       
     </span>
   </a>
@@ -1439,10 +1782,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#dual-port-architecture" class="md-nav__link">
+  <a href="#drain-all-rx-pattern-66" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Dual-Port Architecture
+        Drain-All RX Pattern (#66)
       
     </span>
   </a>
@@ -1450,10 +1793,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#guid-echo" class="md-nav__link">
+  <a href="#soft-reconnect" class="md-nav__link">
     <span class="md-ellipsis">
       
-        GUID Echo
+        Soft Reconnect
       
     </span>
   </a>
@@ -1461,10 +1804,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#response-filtering" class="md-nav__link">
+  <a href="#optimistic-port-connection" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Response Filtering
+        Optimistic Port Connection
       
     </span>
   </a>
@@ -1472,10 +1815,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#sequence-number-management" class="md-nav__link">
+  <a href="#fire-and-forget-set-commands-56" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Sequence Number Management
+        Fire-and-Forget SET Commands (#56)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mixin-pattern-60" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mixin Pattern (#60)
       
     </span>
   </a>
@@ -1495,6 +1849,216 @@
       
     </span>
   </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#high-level-flows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        High-Level Flows
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="High-Level Flows">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#control-cli-radio-ci-v-ic-7610" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Control: CLI → Radio → CI-V → IC-7610
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#audio-ic-7610-audiobus-websocket-bridge-blackhole-wsjt-x" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Audio: IC-7610 → AudioBus → [WebSocket, Bridge → BlackHole → WSJT-X]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scope-ic-7610-scopeassembler-websocket" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scope: IC-7610 → ScopeAssembler → WebSocket
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#module-data-flow-diagrams" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Module Data Flow Diagrams
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Module Data Flow Diagrams">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#audiopy-audiostream-state-machine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        audio.py — AudioStream State Machine
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_audio_transcoderpy-backend-abstraction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        _audio_transcoder.py — Backend Abstraction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#civpy-ci-v-request-lifecycle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        civ.py — CI-V Request Lifecycle
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#exceptionspy-exception-hierarchy_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        exceptions.py — Exception Hierarchy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#meter_calpy-calibration-lookup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        meter_cal.py — Calibration Lookup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#protocolpy-packet-header-io" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        protocol.py — Packet Header I/O
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#proxypy-udp-relay-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        proxy.py — UDP Relay Flow
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#radio_statepy-live-state-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        radio_state.py — Live State Model
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#radiospy-model-registry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        radios.py — Model Registry
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scopepy-multi-packet-assembly" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        scope.py — Multi-Packet Assembly
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scope_renderpy-rendering-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        scope_render.py — Rendering Pipeline
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#syncpy-synchronous-event-loop-wrapper" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        sync.py — Synchronous Event-Loop Wrapper
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#typespy-bcd-frequency-encoding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        types.py — BCD Frequency Encoding
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1542,6 +2106,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../reliability-semantics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reliability semantics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../rfc-web-ui-v1/" class="md-nav__link">
         
   
@@ -1550,6 +2142,34 @@
     
   
     Web UI RFC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli-design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI design
   
 
     
@@ -1692,6 +2312,56 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#multi-backend-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multi-Backend Architecture
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Multi-Backend Architecture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#key-architectural-layers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Architectural Layers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#backend-neutral-boundary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Backend-Neutral Boundary
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#backend-comparison-ic-7610-lan-vs-serial" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Backend Comparison: IC-7610 LAN vs Serial
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#module-responsibilities" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1704,10 +2374,54 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#radiopy-high-level-api" class="md-nav__link">
+  <a href="#radiopy-high-level-public-api-1549-lines" class="md-nav__link">
     <span class="md-ellipsis">
       
-        radio.py — High-Level API
+        radio.py — High-Level Public API (1549 lines)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_control_phasepy-connection-setup-452-lines" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        _control_phase.py — Connection Setup (452 lines)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_civ_rxpy-ci-v-receive-pump-418-lines" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        _civ_rx.py — CI-V Receive Pump (418 lines)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_audio_recoverypy-audio-resilience-132-lines" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        _audio_recovery.py — Audio Resilience (132 lines)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_connection_statepy-connection-fsm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        _connection_state.py — Connection FSM
       
     </span>
   </a>
@@ -1737,6 +2451,78 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#audio_buspy-audio-pubsub-distribution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        audio_bus.py — Audio Pub/Sub Distribution
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#audio_bridgepy-virtual-audio-device-bridge" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        audio_bridge.py — Virtual Audio Device Bridge
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#web-built-in-web-ui" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        web/ — Built-in Web UI
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="web/ — Built-in Web UI">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#web-module-descriptions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        web/ Module Descriptions
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rigctld-hamlib-net-rigctld-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        rigctld/ — Hamlib NET rigctld Server
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#proxypy-transparent-udp-relay" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        proxy.py — Transparent UDP Relay
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#commandspy-ci-v-encodingdecoding" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1759,10 +2545,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#protocolpy-packet-parsing" class="md-nav__link">
+  <a href="#typespy-protocol-primitives" class="md-nav__link">
     <span class="md-ellipsis">
       
-        protocol.py — Packet Parsing
+        types.py — Protocol Primitives
       
     </span>
   </a>
@@ -1770,10 +2556,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#typespy-data-types" class="md-nav__link">
+  <a href="#protocolpy-packet-header-parsing" class="md-nav__link">
     <span class="md-ellipsis">
       
-        types.py — Data Types
+        protocol.py — Packet Header Parsing
       
     </span>
   </a>
@@ -1781,10 +2567,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#exceptionspy-error-hierarchy" class="md-nav__link">
+  <a href="#exceptionspy-exception-hierarchy" class="md-nav__link">
     <span class="md-ellipsis">
       
-        exceptions.py — Error Hierarchy
+        exceptions.py — Exception Hierarchy
       
     </span>
   </a>
@@ -1792,10 +2578,109 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#clipy-command-line-interface" class="md-nav__link">
+  <a href="#audiopy-audio-streaming-engine" class="md-nav__link">
     <span class="md-ellipsis">
       
-        cli.py — Command Line Interface
+        audio.py — Audio Streaming Engine
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_audio_transcoderpy-pcmopus-transcoder" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        _audio_transcoder.py — PCM↔Opus Transcoder
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#civpy-ci-v-request-tracking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        civ.py — CI-V Request Tracking
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#radio_protocolpy-abstract-radio-protocols" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        radio_protocol.py — Abstract Radio Protocols
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#radio_statepy-live-radio-state" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        radio_state.py — Live Radio State
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#radiospy-radio-model-registry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        radios.py — Radio Model Registry
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#meter_calpy-meter-calibration-tables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        meter_cal.py — Meter Calibration Tables
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scopepy-spectrum-scope-assembler" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        scope.py — Spectrum Scope Assembler
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scope_renderpy-scope-image-rendering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        scope_render.py — Scope Image Rendering
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#syncpy-synchronous-api-wrapper" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        sync.py — Synchronous API Wrapper
       
     </span>
   </a>
@@ -1820,10 +2705,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#sending-a-command" class="md-nav__link">
+  <a href="#ci-v-command-get" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Sending a Command
+        CI-V Command (GET)
       
     </span>
   </a>
@@ -1831,10 +2716,32 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#receiving-a-response" class="md-nav__link">
+  <a href="#ci-v-command-set-fire-and-forget" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Receiving a Response
+        CI-V Command (SET, fire-and-forget)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scope-streaming" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scope Streaming
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#high-level-data-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        High-Level Data Flow
       
     </span>
   </a>
@@ -1859,10 +2766,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#dual-port-architecture" class="md-nav__link">
+  <a href="#drain-all-rx-pattern-66" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Dual-Port Architecture
+        Drain-All RX Pattern (#66)
       
     </span>
   </a>
@@ -1870,10 +2777,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#guid-echo" class="md-nav__link">
+  <a href="#soft-reconnect" class="md-nav__link">
     <span class="md-ellipsis">
       
-        GUID Echo
+        Soft Reconnect
       
     </span>
   </a>
@@ -1881,10 +2788,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#response-filtering" class="md-nav__link">
+  <a href="#optimistic-port-connection" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Response Filtering
+        Optimistic Port Connection
       
     </span>
   </a>
@@ -1892,10 +2799,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#sequence-number-management" class="md-nav__link">
+  <a href="#fire-and-forget-set-commands-56" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Sequence Number Management
+        Fire-and-Forget SET Commands (#56)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mixin-pattern-60" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mixin Pattern (#60)
       
     </span>
   </a>
@@ -1915,6 +2833,216 @@
       
     </span>
   </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#high-level-flows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        High-Level Flows
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="High-Level Flows">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#control-cli-radio-ci-v-ic-7610" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Control: CLI → Radio → CI-V → IC-7610
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#audio-ic-7610-audiobus-websocket-bridge-blackhole-wsjt-x" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Audio: IC-7610 → AudioBus → [WebSocket, Bridge → BlackHole → WSJT-X]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scope-ic-7610-scopeassembler-websocket" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scope: IC-7610 → ScopeAssembler → WebSocket
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#module-data-flow-diagrams" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Module Data Flow Diagrams
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Module Data Flow Diagrams">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#audiopy-audiostream-state-machine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        audio.py — AudioStream State Machine
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_audio_transcoderpy-backend-abstraction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        _audio_transcoder.py — Backend Abstraction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#civpy-ci-v-request-lifecycle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        civ.py — CI-V Request Lifecycle
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#exceptionspy-exception-hierarchy_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        exceptions.py — Exception Hierarchy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#meter_calpy-calibration-lookup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        meter_cal.py — Calibration Lookup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#protocolpy-packet-header-io" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        protocol.py — Packet Header I/O
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#proxypy-udp-relay-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        proxy.py — UDP Relay Flow
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#radio_statepy-live-state-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        radio_state.py — Live State Model
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#radiospy-model-registry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        radios.py — Model Registry
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scopepy-multi-packet-assembly" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        scope.py — Multi-Packet Assembly
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scope_renderpy-rendering-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        scope_render.py — Rendering Pipeline
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#syncpy-synchronous-event-loop-wrapper" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        sync.py — Synchronous Event-Loop Wrapper
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#typespy-bcd-frequency-encoding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        types.py — BCD Frequency Encoding
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1940,143 +3068,894 @@
 
 <h1 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h1>
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>┌─────────────────────────────────────────────────────┐
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>│                     icom-lan                         │
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>│                                                      │
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>│  ┌─────────┐   ┌──────────┐   ┌──────────────────┐  │
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>│  │  CLI    │   │  Public  │   │  Raw CI-V        │  │
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>│  │ (cli.py)│   │   API    │   │  (commands.py)   │  │
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>│  └────┬────┘   │(radio.py)│   └────────┬─────────┘  │
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>│       │        └────┬─────┘            │             │
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>│       └─────────────┤                  │             │
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>│                     │                  │             │
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>│            ┌────────┴──────────────────┴──────┐      │
-<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>│            │           IcomRadio               │      │
-<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>│            │   ┌──────────┐  ┌──────────┐     │      │
-<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>│            │   │  Control │  │   CI-V   │     │      │
-<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>│            │   │Transport │  │Transport │     │      │
-<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>│            │   │ (:50001) │  │ (:50002) │     │      │
-<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>│            │   └────┬─────┘  └────┬─────┘     │      │
-<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>│            │        ┌──────────────────────┐   │      │
-<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>│            │        │ IcomCommander queue  │   │      │
-<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>│            │        │ priorities/pacing    │   │      │
-<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>│            │        └──────────────────────┘   │      │
-<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>│            └────────┼─────────────┼───────────┘      │
-<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>│                     │             │                   │
-<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>└─────────────────────┼─────────────┼───────────────────┘
-<a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>                      │   UDP       │   UDP
-<a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>                      ▼             ▼
-<a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>              ┌───────────────────────────┐
-<a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>              │       Icom Radio          │
-<a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>              │   Control  CI-V   Audio   │
-<a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>              │   :50001  :50002  :50003  │
-<a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>              └───────────────────────────┘
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>┌──────────────────────────────────────────────────────────┐
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>│                        icom-lan                          │
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>│                                                          │
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>│  ┌─────────┐   ┌──────────┐   ┌────────────┐            │
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>│  │   CLI   │   │  Web UI  │   │  Rigctld   │            │
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>│  │(cli.py) │   │(web/)    │   │(rigctld.py)│            │
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>│  └────┬────┘   └────┬─────┘   └─────┬──────┘            │
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>│       └──────────────┼───────────────┘                   │
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>│                      │                                   │
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>│       ┌──────────────┼──────────────────┐                │
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>│       │         AudioBus                │                │
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>│       │    (audio_bus.py)               │                │
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>│       │  ┌──────────┐ ┌──────────────┐  │                │
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>│       │  │Broadcaster│ │ AudioBridge  │  │                │
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>│       │  │(handlers) │ │(bridge.py)  │  │                │
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>│       │  └──────────┘ └──────────────┘  │                │
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>│       └──────────────┬──────────────────┘                │
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>│                      │                                   │
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>│            ┌─────────┴──────────┐                        │
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>│            │     IcomRadio      │  ← Public API           │
+<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>│            │    (radio.py)      │     Unchanged surface   │
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>│            ├────────────────────┤                        │
+<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>│            │  Mixins:           │                        │
+<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>│            │  ┌───────────────┐ │                        │
+<a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>│            │  │ControlPhase  │ │  _control_phase.py     │
+<a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>│            │  │ (auth/connect)│ │  Auth → Token → Ports  │
+<a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>│            │  ├───────────────┤ │                        │
+<a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>│            │  │  CivRx       │ │  _civ_rx.py            │
+<a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>│            │  │ (RX pump)    │ │  Drain-all + dispatch   │
+<a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>│            │  ├───────────────┤ │                        │
+<a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>│            │  │AudioRecovery │ │  _audio_recovery.py    │
+<a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a>│            │  │ (snapshot)   │ │  Snapshot/resume        │
+<a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a>│            │  └───────────────┘ │                        │
+<a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a>│            ├────────────────────┤                        │
+<a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a>│            │  ConnectionState   │  _connection_state.py  │
+<a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a>│            │  (FSM enum)        │                        │
+<a id="__codelineno-0-37" name="__codelineno-0-37" href="#__codelineno-0-37"></a>│            ├────────────────────┤                        │
+<a id="__codelineno-0-38" name="__codelineno-0-38" href="#__codelineno-0-38"></a>│            │  IcomCommander     │  commander.py          │
+<a id="__codelineno-0-39" name="__codelineno-0-39" href="#__codelineno-0-39"></a>│            │  (priority queue)  │  IMMEDIATE/NORMAL/BG   │
+<a id="__codelineno-0-40" name="__codelineno-0-40" href="#__codelineno-0-40"></a>│            ├────────────────────┤                        │
+<a id="__codelineno-0-41" name="__codelineno-0-41" href="#__codelineno-0-41"></a>│            │  State Cache       │  Configurable TTL      │
+<a id="__codelineno-0-42" name="__codelineno-0-42" href="#__codelineno-0-42"></a>│            │  (GET fallbacks)   │  10s freq, 30s power   │
+<a id="__codelineno-0-43" name="__codelineno-0-43" href="#__codelineno-0-43"></a>│            └────────┬──────────┘                        │
+<a id="__codelineno-0-44" name="__codelineno-0-44" href="#__codelineno-0-44"></a>│                     │                                   │
+<a id="__codelineno-0-45" name="__codelineno-0-45" href="#__codelineno-0-45"></a>│         ┌───────────┼───────────────┐                   │
+<a id="__codelineno-0-46" name="__codelineno-0-46" href="#__codelineno-0-46"></a>│         │           │               │                   │
+<a id="__codelineno-0-47" name="__codelineno-0-47" href="#__codelineno-0-47"></a>│    ┌────┴─────┐ ┌───┴────┐  ┌──────┴──────┐            │
+<a id="__codelineno-0-48" name="__codelineno-0-48" href="#__codelineno-0-48"></a>│    │ Control  │ │  CI-V  │  │   Audio     │            │
+<a id="__codelineno-0-49" name="__codelineno-0-49" href="#__codelineno-0-49"></a>│    │Transport │ │Transport│  │ Transport   │            │
+<a id="__codelineno-0-50" name="__codelineno-0-50" href="#__codelineno-0-50"></a>│    │ (:50001) │ │(:50002)│  │  (:50003)   │            │
+<a id="__codelineno-0-51" name="__codelineno-0-51" href="#__codelineno-0-51"></a>│    └────┬─────┘ └───┬────┘  └──────┬──────┘            │
+<a id="__codelineno-0-52" name="__codelineno-0-52" href="#__codelineno-0-52"></a>└─────────┼───────────┼──────────────┼────────────────────┘
+<a id="__codelineno-0-53" name="__codelineno-0-53" href="#__codelineno-0-53"></a>          │   UDP     │   UDP        │   UDP
+<a id="__codelineno-0-54" name="__codelineno-0-54" href="#__codelineno-0-54"></a>          ▼           ▼              ▼
+<a id="__codelineno-0-55" name="__codelineno-0-55" href="#__codelineno-0-55"></a>  ┌─────────────────────────────────────────┐
+<a id="__codelineno-0-56" name="__codelineno-0-56" href="#__codelineno-0-56"></a>  │            Icom Radio (IC-7610)          │
+<a id="__codelineno-0-57" name="__codelineno-0-57" href="#__codelineno-0-57"></a>  │   Control    CI-V      Audio             │
+<a id="__codelineno-0-58" name="__codelineno-0-58" href="#__codelineno-0-58"></a>  │   :50001    :50002    :50003             │
+<a id="__codelineno-0-59" name="__codelineno-0-59" href="#__codelineno-0-59"></a>  └─────────────────────────────────────────┘
 </code></pre></div>
+<div class="admonition note">
+<p class="admonition-title">Legacy LAN-Only Diagram</p>
+<p>The diagram above represents the original LAN-only architecture. For the current multi-backend architecture (LAN + Serial), see the <strong>Multi-Backend Architecture</strong> section below.</p>
+</div>
+<h2 id="multi-backend-architecture">Multi-Backend Architecture<a class="headerlink" href="#multi-backend-architecture" title="Permanent link">&para;</a></h2>
+<p>icom-lan now uses a <strong>shared-core backend-neutral architecture</strong>. Consumers (CLI/Web/rigctld) program against the <code>Radio</code> protocol, while thin backend adapters handle transport-specific details.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>┌──────────────────────────────────────────────────────────────────────────┐
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>│                              icom-lan                                    │
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>│                                                                          │
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>│  ┌───────────┐       ┌─────────────┐       ┌────────────┐              │
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>│  │    CLI    │       │   Web UI    │       │  Rigctld   │              │
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>│  │  (cli.py) │       │   (web/)    │       │ (rigctld/) │              │
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>│  └─────┬─────┘       └──────┬──────┘       └─────┬──────┘              │
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>│        └─────────────────────┼────────────────────┘                     │
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>│                              │                                          │
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>│                 ┌────────────▼─────────────┐                            │
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>│                 │   Radio Protocol         │  ← Backend-neutral API     │
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>│                 │  (radio_protocol.py)     │                            │
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>│                 │  + capability protocols  │                            │
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>│                 └────────────┬─────────────┘                            │
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>│                              │                                          │
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>│                 ┌────────────▼─────────────┐                            │
+<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>│                 │  backends/factory.py     │  ← create_radio(config)    │
+<a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>│                 │  create_radio(...)       │                            │
+<a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>│                 └────────────┬─────────────┘                            │
+<a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>│                              │                                          │
+<a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>│              ┌───────────────┴────────────────┐                         │
+<a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a>│              │                                │                         │
+<a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>│    ┌─────────▼──────────┐         ┌─────────▼──────────┐               │
+<a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a>│    │   IcomRadio        │         │ Icom7610Serial     │               │
+<a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a>│    │  (LAN adapter)     │         │ Radio              │               │
+<a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a>│    │  radio.py          │         │ backends/icom      │               │
+<a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a>│    │                    │         │  7610/serial.py    │               │
+<a id="__codelineno-1-28" name="__codelineno-1-28" href="#__codelineno-1-28"></a>│    │  ┌──────────────┐  │         │                    │               │
+<a id="__codelineno-1-29" name="__codelineno-1-29" href="#__codelineno-1-29"></a>│    │  │ LAN-specific │  │         │  ┌──────────────┐  │               │
+<a id="__codelineno-1-30" name="__codelineno-1-30" href="#__codelineno-1-30"></a>│    │  │ transports   │  │         │  │ SerialCivLink│  │               │
+<a id="__codelineno-1-31" name="__codelineno-1-31" href="#__codelineno-1-31"></a>│    │  │ UDP :50001   │  │         │  │ UsbAudioDrvr │  │               │
+<a id="__codelineno-1-32" name="__codelineno-1-32" href="#__codelineno-1-32"></a>│    │  │ UDP :50002   │  │         │  └──────────────┘  │               │
+<a id="__codelineno-1-33" name="__codelineno-1-33" href="#__codelineno-1-33"></a>│    │  │ UDP :50003   │  │         │                    │               │
+<a id="__codelineno-1-34" name="__codelineno-1-34" href="#__codelineno-1-34"></a>│    │  └──────────────┘  │         └──────────┬─────────┘               │
+<a id="__codelineno-1-35" name="__codelineno-1-35" href="#__codelineno-1-35"></a>│    └─────────┬──────────┘                    │                         │
+<a id="__codelineno-1-36" name="__codelineno-1-36" href="#__codelineno-1-36"></a>│              │                               │                         │
+<a id="__codelineno-1-37" name="__codelineno-1-37" href="#__codelineno-1-37"></a>│              │       ┌───────────────────────┴──────────────┐          │
+<a id="__codelineno-1-38" name="__codelineno-1-38" href="#__codelineno-1-38"></a>│              │       │      Icom7610CoreRadio               │          │
+<a id="__codelineno-1-39" name="__codelineno-1-39" href="#__codelineno-1-39"></a>│              └───────►      (shared executable core)        │          │
+<a id="__codelineno-1-40" name="__codelineno-1-40" href="#__codelineno-1-40"></a>│                      │  - Commander (priority queue)        │          │
+<a id="__codelineno-1-41" name="__codelineno-1-41" href="#__codelineno-1-41"></a>│                      │  - CI-V RX routing                   │          │
+<a id="__codelineno-1-42" name="__codelineno-1-42" href="#__codelineno-1-42"></a>│                      │  - RadioState (MAIN/SUB)             │          │
+<a id="__codelineno-1-43" name="__codelineno-1-43" href="#__codelineno-1-43"></a>│                      │  - ScopeAssembler                    │          │
+<a id="__codelineno-1-44" name="__codelineno-1-44" href="#__codelineno-1-44"></a>│                      │  - Command29 dual-receiver routing   │          │
+<a id="__codelineno-1-45" name="__codelineno-1-45" href="#__codelineno-1-45"></a>│                      │  - StateCache                        │          │
+<a id="__codelineno-1-46" name="__codelineno-1-46" href="#__codelineno-1-46"></a>│                      └──────────────────────────────────────┘          │
+<a id="__codelineno-1-47" name="__codelineno-1-47" href="#__codelineno-1-47"></a>└──────────────────────────────────────────────────────────────────────────┘
+<a id="__codelineno-1-48" name="__codelineno-1-48" href="#__codelineno-1-48"></a>                              │                       │
+<a id="__codelineno-1-49" name="__codelineno-1-49" href="#__codelineno-1-49"></a>                              ▼                       ▼
+<a id="__codelineno-1-50" name="__codelineno-1-50" href="#__codelineno-1-50"></a>                     IC-7610 over LAN         IC-7610 over USB
+<a id="__codelineno-1-51" name="__codelineno-1-51" href="#__codelineno-1-51"></a>                     (UDP :50001/2/3)        (serial CI-V + USB audio)
+</code></pre></div>
+<h3 id="key-architectural-layers">Key Architectural Layers<a class="headerlink" href="#key-architectural-layers" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Consumers</strong> (CLI/Web/rigctld) — program against <code>Radio</code> + capability protocols</li>
+<li><strong>Backend Factory</strong> — <code>create_radio(config)</code> wires typed config → concrete radio</li>
+<li><strong>Backend Adapters</strong> — thin adapters for LAN (UDP) and serial (USB CI-V + audio)</li>
+<li><strong>Shared Core</strong> — <code>Icom7610CoreRadio</code> with commander, state, CI-V routing, scope assembly</li>
+<li><strong>Transports</strong> — LAN uses UDP sockets, serial uses <code>SerialCivLink</code> + <code>UsbAudioDriver</code></li>
+</ol>
+<h3 id="backend-neutral-boundary">Backend-Neutral Boundary<a class="headerlink" href="#backend-neutral-boundary" title="Permanent link">&para;</a></h3>
+<p>Consumer runtime paths depend on the backend-neutral contract:
+- <code>radio_protocol.Radio</code> (core interface)
+- Optional capability protocols (<code>AudioCapable</code>, <code>ScopeCapable</code>, <code>DualReceiverCapable</code>)</p>
+<p><code>web/</code> and <code>rigctld/</code> must not import concrete radio classes and are guarded by
+lint/CI. The CLI still keeps a narrow <code>IcomRadio</code> import for helper/static
+methods, but command execution routes through <code>create_radio(...)</code>.</p>
+<h3 id="backend-comparison-ic-7610-lan-vs-serial">Backend Comparison: IC-7610 LAN vs Serial<a class="headerlink" href="#backend-comparison-ic-7610-lan-vs-serial" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>LAN Backend</th>
+<th>Serial Backend</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Control (freq/mode/PTT)</strong></td>
+<td>✅ Full</td>
+<td>✅ Full</td>
+</tr>
+<tr>
+<td><strong>Meters (S/SWR/ALC)</strong></td>
+<td>✅ Full</td>
+<td>✅ Full</td>
+</tr>
+<tr>
+<td><strong>Audio RX</strong></td>
+<td>✅ Opus/PCM over UDP</td>
+<td>✅ USB audio device</td>
+</tr>
+<tr>
+<td><strong>Audio TX</strong></td>
+<td>✅ Opus/PCM over UDP</td>
+<td>✅ USB audio device</td>
+</tr>
+<tr>
+<td><strong>Scope/Waterfall</strong></td>
+<td>✅ Full (~225 pkt/s)</td>
+<td>⚠️ Requires ≥115200 baud*</td>
+</tr>
+<tr>
+<td><strong>Dual Receiver</strong></td>
+<td>✅ Command29</td>
+<td>✅ Command29</td>
+</tr>
+<tr>
+<td><strong>Remote Access</strong></td>
+<td>✅ Over LAN/VPN</td>
+<td>❌ USB only</td>
+</tr>
+<tr>
+<td><strong>Discovery</strong></td>
+<td>✅ UDP broadcast</td>
+<td>❌ N/A</td>
+</tr>
+<tr>
+<td><strong>Setup</strong></td>
+<td>IP, username, password</td>
+<td>USB cable + device path</td>
+</tr>
+</tbody>
+</table>
+<p>* <strong>Scope guardrail</strong>: Serial backend enforces minimum 115200 baud for scope/waterfall due to high CI-V packet rate. Lower baud rates risk command timeout/starvation. Override via <code>allow_low_baud_scope=True</code> or <code>ICOM_SERIAL_SCOPE_ALLOW_LOW_BAUD=1</code> (use with caution).</p>
+<p>See <a href="../../guide/ic7610-usb-setup/">IC-7610 USB Serial Backend Setup Guide</a> for detailed setup instructions.</p>
 <h2 id="module-responsibilities">Module Responsibilities<a class="headerlink" href="#module-responsibilities" title="Permanent link">&para;</a></h2>
-<h3 id="radiopy-high-level-api"><code>radio.py</code> — High-Level API<a class="headerlink" href="#radiopy-high-level-api" title="Permanent link">&para;</a></h3>
-<p>The central orchestrator. <code>IcomRadio</code> manages:</p>
+<h3 id="radiopy-high-level-public-api-1549-lines"><code>radio.py</code> — High-Level Public API (1549 lines)<a class="headerlink" href="#radiopy-high-level-public-api-1549-lines" title="Permanent link">&para;</a></h3>
+<p>The central orchestrator. <code>IcomRadio</code> inherits from three mixins and manages:</p>
 <ul>
-<li><strong>Two transport instances</strong>: one for control (port 50001), one for CI-V (port 50002)</li>
-<li><strong>Full handshake sequence</strong>: discovery → login → token → conninfo → CI-V open</li>
+<li><strong>Three transport instances</strong>: control (50001), CI-V (50002), audio (50003, lazy)</li>
 <li><strong>Commander integration</strong>: enqueues CI-V operations with priorities and pacing</li>
-<li><strong>Lazy audio init</strong>: non-audio flows do not block on audio-port negotiation</li>
-<li><strong>CI-V command wrapping</strong>: takes raw CI-V frames, wraps them in UDP data packets</li>
-<li><strong>Response filtering</strong>: skips echoes, waterfall data, and control packets to find CI-V responses</li>
-<li><strong>State guardrails</strong>: snapshot/restore helpers for safe test transactions</li>
-<li><strong>Public API methods</strong>: <code>get_frequency()</code>, <code>set_mode()</code>, etc.</li>
+<li><strong>State cache</strong>: GET command results cached with TTL, returned on timeout</li>
+<li><strong>Public API methods</strong>: <code>get_frequency()</code>, <code>set_mode()</code>, etc. — all unchanged</li>
 </ul>
-<h3 id="commanderpy-ci-v-command-queue"><code>commander.py</code> — CI-V Command Queue<a class="headerlink" href="#commanderpy-ci-v-command-queue" title="Permanent link">&para;</a></h3>
-<p>Serialized command execution layer inspired by wfview:</p>
+<h3 id="_control_phasepy-connection-setup-452-lines"><code>_control_phase.py</code> — Connection Setup (452 lines)<a class="headerlink" href="#_control_phasepy-connection-setup-452-lines" title="Permanent link">&para;</a></h3>
+<p><code>ControlPhaseMixin</code> handles the full handshake sequence:</p>
 <ul>
-<li><strong>Priority queue</strong> (<code>IMMEDIATE</code> / <code>NORMAL</code> / <code>BACKGROUND</code>)</li>
-<li><strong>Pacing/throttling</strong> between commands (<code>ICOM_CIV_MIN_INTERVAL_MS</code>)</li>
-<li><strong>Dedupe</strong> for background polling keys</li>
-<li><strong>Transaction helper</strong> (<code>snapshot -&gt; body -&gt; restore</code>)</li>
+<li>Discovery → Login → Token ACK → GUID extraction → Conninfo → Status</li>
+<li><strong>Optimistic ports</strong>: uses default ports (control+1, control+2) immediately</li>
+<li><strong>Background status check</strong>: reads status packet with 2s timeout; uses radio-reported
+  ports if they differ from defaults</li>
+<li><strong>Local port reservation</strong>: <code>socket.bind(("", 0))</code> for CI-V and audio (wfview-style)</li>
+<li>Token renewal (60s background task)</li>
+</ul>
+<h3 id="_civ_rxpy-ci-v-receive-pump-418-lines"><code>_civ_rx.py</code> — CI-V Receive Pump (418 lines)<a class="headerlink" href="#_civ_rxpy-ci-v-receive-pump-418-lines" title="Permanent link">&para;</a></h3>
+<p><code>CivRxMixin</code> handles all incoming CI-V traffic:</p>
+<ul>
+<li><strong>Drain-all pattern</strong>: processes ALL queued packets per iteration (not one-at-a-time)</li>
+<li><strong>Frame dispatch</strong>: parses CI-V frames, routes to waiters or callbacks</li>
+<li><strong>Scope assembly</strong>: reassembles multi-sequence 0x27 bursts into <code>ScopeFrame</code></li>
+<li><strong>Stale waiter cleanup</strong>: drops abandoned waiters to prevent resource leaks</li>
+</ul>
+<h3 id="_audio_recoverypy-audio-resilience-132-lines"><code>_audio_recovery.py</code> — Audio Resilience (132 lines)<a class="headerlink" href="#_audio_recoverypy-audio-resilience-132-lines" title="Permanent link">&para;</a></h3>
+<p><code>AudioRecoveryMixin</code> handles audio stream lifecycle:</p>
+<ul>
+<li>Snapshot active audio state before disconnect</li>
+<li>Resume audio streams after reconnect</li>
+<li>Lazy audio transport initialization</li>
+</ul>
+<h3 id="_connection_statepy-connection-fsm"><code>_connection_state.py</code> — Connection FSM<a class="headerlink" href="#_connection_statepy-connection-fsm" title="Permanent link">&para;</a></h3>
+<p><code>RadioConnectionState</code> enum: <code>DISCONNECTED</code> → <code>CONNECTING</code> → <code>AUTHENTICATING</code> →
+<code>CONNECTED</code> → <code>DISCONNECTING</code>. Used for guard clauses and state assertions.</p>
+<h3 id="commanderpy-ci-v-command-queue"><code>commander.py</code> — CI-V Command Queue<a class="headerlink" href="#commanderpy-ci-v-command-queue" title="Permanent link">&para;</a></h3>
+<p>Serialized command execution layer:</p>
+<ul>
+<li><strong>Priority queue</strong>: <code>IMMEDIATE</code> / <code>NORMAL</code> / <code>BACKGROUND</code></li>
+<li><strong>Fire-and-forget</strong>: SET commands don't wait for ACK (wfview-style)</li>
+<li><strong>GET timeout</strong>: 2s with cache fallback</li>
+<li><strong>Pacing</strong>: configurable inter-command delay (<code>ICOM_CIV_MIN_INTERVAL_MS</code>)</li>
+<li><strong>Dedupe</strong>: background polling keys prevent duplicate requests</li>
 </ul>
 <h3 id="transportpy-udp-transport"><code>transport.py</code> — UDP Transport<a class="headerlink" href="#transportpy-udp-transport" title="Permanent link">&para;</a></h3>
 <p>Low-level asyncio UDP handler. Each <code>IcomTransport</code> instance manages:</p>
 <ul>
-<li><strong>UDP socket</strong> via <code>asyncio.DatagramProtocol</code></li>
-<li><strong>Discovery handshake</strong> (Are You There → I Am Here → Are You Ready)</li>
-<li><strong>Keep-alive pings</strong> (500ms interval)</li>
-<li><strong>Sequence tracking</strong> with gap detection</li>
-<li><strong>Retransmit requests</strong> for missing packets</li>
-<li><strong>Packet queue</strong> for consumers</li>
+<li>UDP socket via <code>asyncio.DatagramProtocol</code></li>
+<li>Discovery handshake (Are You There → I Am Here → Are You Ready)</li>
+<li>Keep-alive pings (500ms interval)</li>
+<li>Sequence tracking with gap detection and retransmit requests</li>
+<li>Packet queue (<code>asyncio.Queue[bytes]</code>) for consumers</li>
 </ul>
-<h3 id="commandspy-ci-v-encodingdecoding"><code>commands.py</code> — CI-V Encoding/Decoding<a class="headerlink" href="#commandspy-ci-v-encodingdecoding" title="Permanent link">&para;</a></h3>
-<p>Pure functions for building and parsing CI-V frames:</p>
+<h3 id="audio_buspy-audio-pubsub-distribution"><code>audio_bus.py</code> — Audio Pub/Sub Distribution<a class="headerlink" href="#audio_buspy-audio-pubsub-distribution" title="Permanent link">&para;</a></h3>
+<p>Central audio distribution hub for multi-consumer audio streaming:</p>
 <ul>
-<li>Frame construction with BCD frequency encoding</li>
-<li>Response parsing (frequency, mode, meters, ACK/NAK)</li>
-<li>No state, no I/O — purely data transformation</li>
+<li><strong>AudioBus</strong>: subscribes once to radio RX opus, fans out to all subscribers</li>
+<li><strong>AudioSubscription</strong>: async iterator with sliding-window queue (64 packets default)</li>
+<li>Lifecycle: first subscriber triggers <code>start_audio_rx_opus()</code>, last unsubscribe stops it</li>
+<li>Consumers: AudioBroadcaster (WebSocket), AudioBridge (virtual device), future recorders</li>
 </ul>
-<h3 id="authpy-authentication"><code>auth.py</code> — Authentication<a class="headerlink" href="#authpy-authentication" title="Permanent link">&para;</a></h3>
-<p>Handles Icom's proprietary credential encoding and packet construction:</p>
-<ul>
-<li><code>encode_credentials()</code> — substitution-table obfuscation</li>
-<li><code>build_login_packet()</code> — 0x80-byte login packet</li>
-<li><code>build_conninfo_packet()</code> — 0x90-byte connection info</li>
-<li>Response parsers for auth and status packets</li>
-</ul>
-<h3 id="protocolpy-packet-parsing"><code>protocol.py</code> — Packet Parsing<a class="headerlink" href="#protocolpy-packet-parsing" title="Permanent link">&para;</a></h3>
-<p>Header serialization/deserialization and packet type identification.</p>
-<h3 id="typespy-data-types"><code>types.py</code> — Data Types<a class="headerlink" href="#typespy-data-types" title="Permanent link">&para;</a></h3>
-<p>Enums (<code>PacketType</code>, <code>Mode</code>), dataclasses (<code>PacketHeader</code>, <code>CivFrame</code>), and BCD helpers.</p>
-<h3 id="exceptionspy-error-hierarchy"><code>exceptions.py</code> — Error Hierarchy<a class="headerlink" href="#exceptionspy-error-hierarchy" title="Permanent link">&para;</a></h3>
-<p>Custom exception classes for structured error handling.</p>
-<h3 id="clipy-command-line-interface"><code>cli.py</code> — Command Line Interface<a class="headerlink" href="#clipy-command-line-interface" title="Permanent link">&para;</a></h3>
-<p>Argparse-based CLI that wraps the async API with <code>asyncio.run()</code>.</p>
-<h2 id="data-flow">Data Flow<a class="headerlink" href="#data-flow" title="Permanent link">&para;</a></h2>
-<h3 id="sending-a-command">Sending a Command<a class="headerlink" href="#sending-a-command" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>radio.get_frequency()
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    → get_frequency() builds CI-V frame: FE FE 98 E0 03 FD
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    → IcomCommander.enqueue(priority=normal, key=get_frequency)
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    → _wrap_civ() adds UDP header (0x15-byte prefix)
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    → _civ_transport.send_tracked() assigns sequence number
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    → UDP packet sent to radio:50002
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>Radio (opus RX) → AudioBus._on_opus_packet()
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>                    → AudioSubscription(&quot;web-audio&quot;)   → WebSocket clients
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>                    → AudioSubscription(&quot;audio-bridge&quot;) → BlackHole → WSJT-X
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>                    → AudioSubscription(&quot;recorder&quot;)     → WAV file
 </code></pre></div>
-<h3 id="receiving-a-response">Receiving a Response<a class="headerlink" href="#receiving-a-response" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>UDP packet arrives on :50002
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    → _UdpProtocol.datagram_received()
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    → IcomTransport._handle_packet()
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>        → Check: retransmit request? ping? → handle internally
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>        → Otherwise: queue for consumer
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    → IcomRadio._send_civ_raw() picks up from queue
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>        → Skip packets that are too small (control)
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>        → Scan payload for CI-V frames (FE FE ... FD)
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>        → Filter: skip echoes (from_addr == CONTROLLER), waterfall (cmd 0x27)
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>        → Match: response from radio with correct command byte
-<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>    → parse_frequency_response() extracts Hz from BCD data
+<h3 id="audio_bridgepy-virtual-audio-device-bridge"><code>audio_bridge.py</code> — Virtual Audio Device Bridge<a class="headerlink" href="#audio_bridgepy-virtual-audio-device-bridge" title="Permanent link">&para;</a></h3>
+<p>Bidirectional PCM bridge between radio and virtual audio devices:</p>
+<ul>
+<li>RX: opus → decode → PCM → sounddevice OutputStream → BlackHole/Loopback</li>
+<li>TX: sounddevice InputStream → noise gate → opus encode → radio</li>
+<li>Uses AudioBus subscription (shares RX stream with other consumers)</li>
+<li>Optional dependency: <code>pip install icom-lan[bridge]</code> (sounddevice + numpy + opuslib)</li>
+</ul>
+<h3 id="web-built-in-web-ui"><code>web/</code> — Built-in Web UI<a class="headerlink" href="#web-built-in-web-ui" title="Permanent link">&para;</a></h3>
+<p>WebSocket-based browser interface:</p>
+<ul>
+<li><code>server.py</code> — aiohttp web server, WebSocket handler management, audio bridge integration</li>
+<li><code>handlers.py</code> — scope, meters, audio, and control WebSocket handlers</li>
+<li><code>static/index.html</code> — single-page app with Canvas2D rendering</li>
+<li>Audio: PCM16 binary frames over WebSocket, Web Audio API playback</li>
+<li>AudioBroadcaster uses AudioBus subscription for RX audio distribution</li>
+</ul>
+<h4 id="web-module-descriptions"><code>web/</code> Module Descriptions<a class="headerlink" href="#web-module-descriptions" title="Permanent link">&para;</a></h4>
+<p><strong><code>web/protocol.py</code></strong> — Binary frame codec for web UI data streams. Encodes scope frames
+(16-byte header + pixel data), meter frames (4-byte header + values), and audio frames
+(8-byte header + payload). Also provides JSON encode/decode helpers for control messages.</p>
+<p><strong><code>web/radio_poller.py</code></strong> — CI-V command serialiser for the web UI. Deduplicates pending
+commands, drives rapid meter polling (25 ms interval), slower state polling, and scope
+enable/disable. Avoids request-response patterns to survive the IC-7610's 225-packet/sec
+scope flood.</p>
+<p><strong><code>web/websocket.py</code></strong> — Pure-stdlib RFC 6455 WebSocket implementation (no aiohttp WebSocket
+dependency). HTTP Upgrade handshake key computation, frame serialisation/parsing, and
+<code>WebSocketConnection</code> class for full-duplex messaging with ping/pong support.</p>
+<p><strong>Boundary rule (web layer):</strong>
+- <code>src/icom_lan/web/</code> must depend on <code>radio_protocol</code> protocols (<code>Radio</code> + capability protocols), not on concrete <code>IcomRadio</code>.
+- Direct import of <code>icom_lan.radio.IcomRadio</code> in <code>web/</code> is forbidden and enforced by lint/CI.</p>
+<h3 id="rigctld-hamlib-net-rigctld-server"><code>rigctld/</code> — Hamlib NET rigctld Server<a class="headerlink" href="#rigctld-hamlib-net-rigctld-server" title="Permanent link">&para;</a></h3>
+<p>TCP server that exposes the radio via the Hamlib <code>NET rigctld</code> protocol, enabling control
+from WSJT-X, fldigi, and any other Hamlib-aware software without needing a physical serial
+port.</p>
+<p><strong><code>rigctld/server.py</code></strong> — asyncio TCP server (<code>asyncio.start_server</code>) implementing the hamlib
+NET rigctld protocol. Manages the TCP listener, per-client session lifecycle, connection
+timeout, configurable max-client cap, and per-client rate limiting.</p>
+<p><strong><code>rigctld/handler.py</code></strong> — Command dispatcher bridging parsed rigctld commands to <code>IcomRadio</code>.
+Implements get/set operations for frequency, mode, PTT, VFO, RF/AF levels, split VFO, and
+RIT. Uses <code>StateCache</code> for reads to avoid CI-V round-trips; translates icom-lan exceptions
+to Hamlib error codes.</p>
+<p><strong><code>rigctld/protocol.py</code></strong> — Stateless wire-protocol layer. Pure functions for parsing
+line-based rigctld commands and formatting normal and extended-protocol (<code>;</code>-separated)
+responses. No I/O, no state.</p>
+<p><strong><code>rigctld/state_cache.py</code></strong> — Shared radio state cache with monotonic per-field timestamps.
+Allows read commands to be served from cache instead of waiting for CI-V round-trips. Provides
+freshness checks (configurable TTL) and an atomic snapshot for status dumps.</p>
+<p><strong><code>rigctld/poller.py</code></strong> — Background task that periodically polls the radio and writes results
+into <code>StateCache</code>. Integrates with the circuit breaker: skips poll cycles when the circuit is
+OPEN, issues lightweight probe reads when HALF_OPEN.</p>
+<p><strong><code>rigctld/circuit_breaker.py</code></strong> — Circuit breaker with three states (CLOSED → OPEN →
+HALF_OPEN). Fast-fails rigctld commands when the radio stops responding, preventing cascading
+timeouts from blocking connected clients.</p>
+<p><strong><code>rigctld/audit.py</code></strong> — Structured per-command audit logging. Defines <code>AuditRecord</code> dataclass
+and <code>RigctldAuditFormatter</code>, emitting JSON-formatted records to a dedicated logger
+(<code>icom_lan.rigctld.audit</code>) for external log aggregation.</p>
+<p><strong><code>rigctld/contract.py</code></strong> — Shared type definitions for the rigctld subpackage. Contains the
+Hamlib error code enum, hamlib mode-string mappings (USB, LSB, CW, …), and configuration
+dataclasses: <code>RigctldConfig</code>, <code>ClientSession</code>, <code>RigctldCommand</code>, <code>RigctldResponse</code>.</p>
+<h3 id="proxypy-transparent-udp-relay"><code>proxy.py</code> — Transparent UDP Relay<a class="headerlink" href="#proxypy-transparent-udp-relay" title="Permanent link">&para;</a></h3>
+<p>Forwards Icom LAN UDP traffic between a remote client and a local radio across all three
+ports (control :50001, CI-V :50002, audio :50003). Designed for VPN-based remote operation:
+the proxy runs on a machine on the same LAN as the radio, and the remote operator connects to
+the proxy address instead of the radio directly. No packet modification — pure relay with
+session timeout handling.</p>
+<h3 id="commandspy-ci-v-encodingdecoding"><code>commands.py</code> — CI-V Encoding/Decoding<a class="headerlink" href="#commandspy-ci-v-encodingdecoding" title="Permanent link">&para;</a></h3>
+<p>Pure functions for building and parsing CI-V frames. No state, no I/O.</p>
+<h3 id="authpy-authentication"><code>auth.py</code> — Authentication<a class="headerlink" href="#authpy-authentication" title="Permanent link">&para;</a></h3>
+<p>Icom credential encoding, login/conninfo packet construction.</p>
+<h3 id="typespy-protocol-primitives"><code>types.py</code> — Protocol Primitives<a class="headerlink" href="#typespy-protocol-primitives" title="Permanent link">&para;</a></h3>
+<p>Shared enums, dataclasses, and BCD encode/decode helpers. Zero dependencies — no imports from other project files. Everything else in the library imports from here.</p>
+<ul>
+<li><strong><code>PacketType</code></strong> (IntEnum): wire type codes — <code>DATA=0x00</code>, <code>CONTROL=0x01</code>, <code>ARE_YOU_THERE=0x03</code>, <code>PING=0x07</code>, …</li>
+<li><strong><code>Mode</code></strong> (IntEnum): CI-V mode bytes — <code>LSB=0x00</code>, <code>USB=0x01</code>, <code>CW=0x03</code>, <code>FM=0x05</code>, …</li>
+<li><strong><code>AudioCodec</code></strong> (IntEnum): codec IDs for conninfo packets — <code>PCM_1CH_16BIT=0x04</code>, <code>OPUS_1CH=0x40</code>, …</li>
+<li><strong><code>CivFrame</code></strong>: frozen dataclass — parsed CI-V frame (<code>to_addr</code>, <code>from_addr</code>, <code>command</code>, <code>sub</code>, <code>data</code>, <code>receiver</code>)</li>
+<li><strong><code>PacketHeader</code></strong>: frozen dataclass — 16-byte UDP header fields</li>
+<li><strong><code>bcd_encode</code></strong> / <strong><code>bcd_decode</code></strong>: Icom 5-byte little-endian BCD frequency format (14_074_000 Hz ↔ <code>00 40 07 14 00</code>)</li>
+<li><strong><code>AudioCapabilities</code></strong> / <strong><code>get_audio_capabilities()</code></strong>: static codec/sample-rate capability matrix; default is <code>PCM_1CH_16BIT</code> at 48 kHz</li>
+</ul>
+<h3 id="protocolpy-packet-header-parsing"><code>protocol.py</code> — Packet Header Parsing<a class="headerlink" href="#protocolpy-packet-header-parsing" title="Permanent link">&para;</a></h3>
+<p>Low-level serialization and identification of the fixed 16-byte header present in every Icom LAN UDP packet. No state, no I/O — pure <code>struct</code> packing.</p>
+<ul>
+<li><strong><code>parse_header(data)</code></strong> → <code>PacketHeader</code>: unpacks <code>&lt;IHHII</code> from first 16 bytes</li>
+<li><strong><code>serialize_header(header)</code></strong> → <code>bytes</code>: packs a <code>PacketHeader</code> back to wire format</li>
+<li><strong><code>identify_packet_type(data)</code></strong> → <code>PacketType | None</code>: peeks at offset 0x04 without full parse</li>
+</ul>
+<h3 id="exceptionspy-exception-hierarchy"><code>exceptions.py</code> — Exception Hierarchy<a class="headerlink" href="#exceptionspy-exception-hierarchy" title="Permanent link">&para;</a></h3>
+<p>All library exceptions derive from <code>IcomLanError</code>, allowing callers to catch either the base class or a specific subtype. Audio exceptions form a distinct sub-tree.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>IcomLanError
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>├── ConnectionError      — connection failed or lost
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>├── AuthenticationError  — login rejected by radio
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>├── CommandError         — CI-V NAK or unexpected response
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>├── TimeoutError         — operation exceeded time budget
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>└── AudioError
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>    ├── AudioCodecBackendError  — opuslib not installed
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>    ├── AudioFormatError        — invalid PCM/Opus input format
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>    └── AudioTranscodeError     — encode/decode failure at runtime
+</code></pre></div>
+<h3 id="audiopy-audio-streaming-engine"><code>audio.py</code> — Audio Streaming Engine<a class="headerlink" href="#audiopy-audio-streaming-engine" title="Permanent link">&para;</a></h3>
+<p>Manages RX/TX audio on the Icom audio UDP port (50003). Codec-agnostic: passes raw payloads to callbacks regardless of whether the radio sends PCM or Opus. Includes a sequence-number-aware jitter buffer.</p>
+<ul>
+<li><strong><code>AudioStream</code></strong>: full-duplex RX/TX engine — <code>start_rx()</code>, <code>push_tx()</code>, <code>stop_rx()</code>, <code>stop_tx()</code>; supports multiple tap callbacks alongside the primary callback</li>
+<li><strong><code>JitterBuffer</code></strong>: reorder-and-delay buffer (configurable depth, gap-fill with <code>None</code>, duplicate/stale detection, overflow flush)</li>
+<li><strong><code>AudioPacket</code></strong>: frozen dataclass — <code>ident</code>, <code>send_seq</code>, <code>data</code> (raw payload bytes after the 24-byte header)</li>
+<li><strong><code>AudioStats</code></strong>: frozen dataclass — 17 fields (packet counts, jitter EMA, latency estimate, buffer depth); exposed via <code>AudioStream.get_audio_stats()</code></li>
+<li><strong><code>build_audio_packet()</code></strong>: assembles wire-ready UDP packet; auto-chunks payloads larger than <code>MAX_AUDIO_PAYLOAD = 1364</code> bytes (IC-7610 hard limit)</li>
+<li><strong><code>parse_audio_packet()</code></strong>: strips 24-byte header, returns <code>AudioPacket</code> or <code>None</code> for control/ping packets</li>
+</ul>
+<h3 id="_audio_transcoderpy-pcmopus-transcoder"><code>_audio_transcoder.py</code> — PCM↔Opus Transcoder<a class="headerlink" href="#_audio_transcoderpy-pcmopus-transcoder" title="Permanent link">&para;</a></h3>
+<p>Internal (private) PCM↔Opus transcoding layer wrapping the optional <code>opuslib</code> dependency behind a <code>Protocol</code>-based backend interface, keeping the rest of the library decoupled from the native codec.</p>
+<ul>
+<li><strong><code>PcmAudioFormat</code></strong>: frozen dataclass — <code>sample_rate</code>, <code>channels</code>, <code>frame_ms</code>, <code>sample_width</code>; computes <code>frame_samples</code> and <code>frame_bytes</code>; validates supported values on construction</li>
+<li><strong><code>PcmOpusTranscoder</code></strong>: <code>pcm_to_opus(pcm_data)</code> and <code>opus_to_pcm(opus_data)</code> — strict frame-size validation; raises typed <code>AudioError</code> subclasses on failure</li>
+<li><strong><code>create_pcm_opus_transcoder()</code></strong>: factory used by audio internals; raises <code>AudioCodecBackendError</code> immediately if <code>opuslib</code> is absent</li>
+<li><code>_OpusBackend</code> (Protocol) / <code>_OpuslibBackend</code>: pluggable backend seam — testable without a real codec</li>
+</ul>
+<h3 id="civpy-ci-v-request-tracking"><code>civ.py</code> — CI-V Request Tracking<a class="headerlink" href="#civpy-ci-v-request-tracking" title="Permanent link">&para;</a></h3>
+<p>CI-V event classification, request-response matching, and frame scanning utilities. Pure logic (no I/O); consumed by <code>_civ_rx.py</code> to match incoming frames to pending waiters.</p>
+<ul>
+<li><strong><code>CivRequestTracker</code></strong>: tracks pending ACK/response waiters with generation-based invalidation, stale TTL GC (<code>cleanup_stale()</code>), and fire-and-forget sink support (<code>register_ack(wait=False)</code>)</li>
+<li><strong><code>CivEventType</code></strong> (StrEnum): <code>ACK</code>, <code>NAK</code>, <code>RESPONSE</code>, <code>SCOPE_CHUNK</code>, <code>SCOPE_FRAME</code></li>
+<li><strong><code>CivRequestKey</code></strong>: match key — <code>(command, sub, receiver)</code> — correlates responses to requests</li>
+<li><strong><code>iter_civ_frames(payload)</code></strong>: yields raw <code>FE FE … FD</code> byte sequences from an arbitrary buffer (handles concatenated frames)</li>
+<li><strong><code>request_key_from_frame(frame)</code></strong>: derives a <code>CivRequestKey</code> from an outgoing <code>CivFrame</code></li>
+</ul>
+<h3 id="radio_protocolpy-abstract-radio-protocols"><code>radio_protocol.py</code> — Abstract Radio Protocols<a class="headerlink" href="#radio_protocolpy-abstract-radio-protocols" title="Permanent link">&para;</a></h3>
+<p>Runtime-checkable <code>Protocol</code> interfaces for multi-backend radio control. Web UI, rigctld, and CLI program against these interfaces so any backend (Icom LAN, serial, Yaesu CAT) can be substituted without changing consumers.</p>
+<ul>
+<li><strong><code>Radio</code></strong>: core interface — lifecycle (<code>connect</code>/<code>disconnect</code>), frequency, mode, PTT, meters, power, levels, <code>radio_state</code>, <code>capabilities</code> set</li>
+<li><strong><code>AudioCapable</code></strong>: <code>audio_bus</code>, <code>start_audio_rx_opus</code>, <code>push_audio_tx_opus</code></li>
+<li><strong><code>ScopeCapable</code></strong>: <code>enable_scope</code>, <code>disable_scope</code></li>
+<li><strong><code>DualReceiverCapable</code></strong>: <code>vfo_exchange</code>, <code>vfo_equalize</code></li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>classDiagram
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    class Radio {
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>        &lt;&lt;Protocol&gt;&gt;
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>        +connect()
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>        +disconnect()
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>        +connected bool
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>        +get_frequency()
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>        +set_frequency()
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>        +get_mode() / set_mode()
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>        +set_ptt()
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>        +radio_state RadioState
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>        +capabilities set[str]
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>    }
+<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>    class AudioCapable {
+<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>        &lt;&lt;Protocol&gt;&gt;
+<a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a>        +audio_bus AudioBus
+<a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>        +start_audio_rx_opus()
+<a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a>        +push_audio_tx_opus()
+<a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a>    }
+<a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a>    class ScopeCapable {
+<a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a>        &lt;&lt;Protocol&gt;&gt;
+<a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a>        +enable_scope()
+<a id="__codelineno-4-23" name="__codelineno-4-23" href="#__codelineno-4-23"></a>        +disable_scope()
+<a id="__codelineno-4-24" name="__codelineno-4-24" href="#__codelineno-4-24"></a>    }
+<a id="__codelineno-4-25" name="__codelineno-4-25" href="#__codelineno-4-25"></a>    class DualReceiverCapable {
+<a id="__codelineno-4-26" name="__codelineno-4-26" href="#__codelineno-4-26"></a>        &lt;&lt;Protocol&gt;&gt;
+<a id="__codelineno-4-27" name="__codelineno-4-27" href="#__codelineno-4-27"></a>        +vfo_exchange()
+<a id="__codelineno-4-28" name="__codelineno-4-28" href="#__codelineno-4-28"></a>        +vfo_equalize()
+<a id="__codelineno-4-29" name="__codelineno-4-29" href="#__codelineno-4-29"></a>    }
+<a id="__codelineno-4-30" name="__codelineno-4-30" href="#__codelineno-4-30"></a>    class IcomRadio {
+<a id="__codelineno-4-31" name="__codelineno-4-31" href="#__codelineno-4-31"></a>        +host str
+<a id="__codelineno-4-32" name="__codelineno-4-32" href="#__codelineno-4-32"></a>        +port int
+<a id="__codelineno-4-33" name="__codelineno-4-33" href="#__codelineno-4-33"></a>    }
+<a id="__codelineno-4-34" name="__codelineno-4-34" href="#__codelineno-4-34"></a>    Radio &lt;|.. IcomRadio
+<a id="__codelineno-4-35" name="__codelineno-4-35" href="#__codelineno-4-35"></a>    AudioCapable &lt;|.. IcomRadio
+<a id="__codelineno-4-36" name="__codelineno-4-36" href="#__codelineno-4-36"></a>    ScopeCapable &lt;|.. IcomRadio
+<a id="__codelineno-4-37" name="__codelineno-4-37" href="#__codelineno-4-37"></a>    DualReceiverCapable &lt;|.. IcomRadio
+</code></pre></div>
+<h3 id="radio_statepy-live-radio-state"><code>radio_state.py</code> — Live Radio State<a class="headerlink" href="#radio_statepy-live-radio-state" title="Permanent link">&para;</a></h3>
+<p><code>RadioState</code> dataclass holds the complete live state for both receivers plus global parameters. Populated continuously by <code>CivRxMixin</code> from incoming CI-V frames; served by <code>GET /api/v1/state</code>. Runs alongside the existing <code>StateCache</code> without replacing it.</p>
+<ul>
+<li><strong><code>ReceiverState</code></strong>: per-receiver mutable state — <code>freq</code>, <code>mode</code>, <code>filter</code>, <code>data_mode</code>, <code>att</code>, <code>preamp</code>, <code>nb</code>, <code>nr</code>, <code>digisel</code>, <code>ipplus</code>, <code>af_level</code>, <code>rf_gain</code>, <code>squelch</code>, <code>s_meter</code></li>
+<li><strong><code>RadioState</code></strong>: top-level container — <code>main</code> + <code>sub</code> (<code>ReceiverState</code>), <code>ptt</code>, <code>power_level</code>, <code>split</code>, <code>dual_watch</code>, <code>active</code> ("MAIN" | "SUB")</li>
+<li><code>to_dict()</code>: JSON-serializable snapshot (used by <code>/api/v1/state</code>)</li>
+<li><code>receiver(which)</code>: returns <code>main</code> or <code>sub</code> by name string</li>
+</ul>
+<h3 id="radiospy-radio-model-registry"><code>radios.py</code> — Radio Model Registry<a class="headerlink" href="#radiospy-radio-model-registry" title="Permanent link">&para;</a></h3>
+<p>Static registry of known Icom models with their CI-V addresses and hardware capabilities. Prevents hard-coding model-specific values in <code>IcomRadio</code> and <code>rigctld</code>.</p>
+<ul>
+<li><strong><code>RadioModel</code></strong>: frozen dataclass — <code>name</code>, <code>civ_addr</code>, <code>receivers</code>, <code>has_lan</code>, <code>has_wifi</code></li>
+<li><strong><code>RADIOS</code></strong>: <code>{"IC-7610": 0x98, "IC-7300": 0x94, "IC-705": 0xA4, "IC-9700": 0xA2, "IC-R8600": 0x96, "IC-7851": 0x8E}</code></li>
+<li><strong><code>get_civ_addr(model)</code></strong>: case-insensitive lookup; raises <code>KeyError</code> for unknown models</li>
+</ul>
+<h3 id="meter_calpy-meter-calibration-tables"><code>meter_cal.py</code> — Meter Calibration Tables<a class="headerlink" href="#meter_calpy-meter-calibration-tables" title="Permanent link">&para;</a></h3>
+<p>Converts raw BCD meter values (0–255) to calibrated engineering units using piecewise linear interpolation tables ported directly from wfview's <code>IC-7610.rig</code> file. No dependencies.</p>
+<ul>
+<li><strong><code>MeterType</code></strong> (str Enum): <code>SMETER</code>, <code>POWER</code>, <code>SWR</code>, <code>ALC</code>, <code>COMP</code>, <code>CURRENT</code>, <code>VOLTAGE</code></li>
+<li><strong><code>calibrate(meter, raw)</code></strong> → <code>float</code>: linear interpolation through the matching table; returns <code>float(raw)</code> unchanged for unknown meter types</li>
+<li>Calibrated ranges: S-meter (−54 to +60 dBm), power (0–120 W), SWR (1.0–6.0), supply voltage (0–16 V)</li>
+</ul>
+<h3 id="scopepy-spectrum-scope-assembler"><code>scope.py</code> — Spectrum Scope Assembler<a class="headerlink" href="#scopepy-spectrum-scope-assembler" title="Permanent link">&para;</a></h3>
+<p>Reassembles multi-sequence CI-V <code>0x27/0x00</code> bursts into complete <code>ScopeFrame</code> objects. The IC-7610 splits each frame across up to 15 UDP packets at ~225 frames/sec; <code>ScopeAssembler</code> accumulates chunks per receiver with timeout-based partial-frame discard.</p>
+<ul>
+<li><strong><code>ScopeAssembler</code></strong>: <code>feed(raw_payload, receiver)</code> → <code>ScopeFrame | None</code>; maintains independent state for main (0) and sub (1) receivers; center-mode frequency edge correction built in</li>
+<li><strong><code>ScopeFrame</code></strong>: dataclass — <code>receiver</code>, <code>mode</code>, <code>start_freq_hz</code>, <code>end_freq_hz</code>, <code>pixels</code> (bytes 0–160 amplitude), <code>out_of_range</code></li>
+<li><code>_ReceiverState</code>: internal per-channel accumulator — resets on <code>seq=1</code>, emits on <code>seq=seqMax</code>, discards partials older than <code>assembly_timeout</code> (default 5 s)</li>
+</ul>
+<h3 id="scope_renderpy-scope-image-rendering"><code>scope_render.py</code> — Scope Image Rendering<a class="headerlink" href="#scope_renderpy-scope-image-rendering" title="Permanent link">&para;</a></h3>
+<p>Renders <code>ScopeFrame</code> data to PNG images using Pillow (optional <code>icom-lan[scope]</code>). Provides spectrum (amplitude vs. frequency line chart) and waterfall (time × frequency heatmap) views with configurable color themes.</p>
+<ul>
+<li><strong><code>render_spectrum(frame, width, height, theme)</code></strong> → PIL Image: frequency-labeled X axis, amplitude Y axis, filled line graph</li>
+<li><strong><code>render_waterfall(frames, width, height, theme)</code></strong> → PIL Image: newest row at top; uses direct pixel access (<code>img.load()</code>) for ~10× speedup over <code>draw.point</code></li>
+<li><strong><code>render_scope_image(frames, …, output)</code></strong> → PIL Image: composite spectrum-on-top + waterfall-below; optionally saves PNG</li>
+<li><strong><code>THEMES</code></strong>: <code>"classic"</code> (dark-blue → cyan → yellow → red) and <code>"grayscale"</code>; <code>amplitude_to_color(value, theme)</code> for per-pixel use</li>
+</ul>
+<h3 id="syncpy-synchronous-api-wrapper"><code>sync.py</code> — Synchronous API Wrapper<a class="headerlink" href="#syncpy-synchronous-api-wrapper" title="Permanent link">&para;</a></h3>
+<p>Thin blocking wrapper around async <code>IcomRadio</code> for use in scripts and REPL sessions. Runs a dedicated <code>asyncio</code> event loop internally; exposes the full async API as synchronous methods with context-manager support.</p>
+<ul>
+<li><strong><code>IcomRadio</code></strong>: <code>with IcomRadio(host, …) as radio:</code> pattern — <code>__enter__</code> calls <code>connect()</code>, <code>__exit__</code> calls <code>disconnect()</code> and closes the event loop</li>
+<li>Mirrors all async methods: frequency, mode, power, meters, PTT, VFO, attenuator, audio, CW, state snapshot/restore</li>
+<li>Deprecated aliases (<code>start_audio_rx</code> → <code>start_audio_rx_opus</code>, etc.) emit <code>DeprecationWarning</code> with <code>stacklevel=2</code></li>
+</ul>
+<h2 id="data-flow">Data Flow<a class="headerlink" href="#data-flow" title="Permanent link">&para;</a></h2>
+<h3 id="ci-v-command-get">CI-V Command (GET)<a class="headerlink" href="#ci-v-command-get" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>radio.get_frequency()
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>  → commander.enqueue(priority=NORMAL)
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>  → build CI-V frame: FE FE 98 E0 03 FD
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>  → _civ_transport.send_tracked()
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>  → UDP → radio:50002
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>  → response arrives in _packet_queue
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>  → _civ_rx_loop drains queue → parse → match waiter → return
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>  → (on timeout: return cached value if available)
+</code></pre></div>
+<h3 id="ci-v-command-set-fire-and-forget">CI-V Command (SET, fire-and-forget)<a class="headerlink" href="#ci-v-command-set-fire-and-forget" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>radio.set_frequency(14_074_000)
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>  → commander.enqueue(priority=NORMAL)
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>  → build CI-V frame: FE FE 98 E0 05 ... FD
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>  → _civ_transport.send_tracked()
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>  → UDP → radio:50002
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>  → (no wait for ACK — fire and forget)
+</code></pre></div>
+<h3 id="scope-streaming">Scope Streaming<a class="headerlink" href="#scope-streaming" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>radio:50002 sends ~225 scope packets/sec
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>  → _civ_rx_loop drains ALL from queue each iteration
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>  → scope frames (cmd 0x27) → ScopeAssembler → callback
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>  → non-scope frames → routed to command waiters
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>  → (drain-all prevents scope flood from starving GET responses)
+</code></pre></div>
+<h3 id="high-level-data-flow">High-Level Data Flow<a class="headerlink" href="#high-level-data-flow" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>flowchart TD
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>    subgraph Consumers
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>        CLI[CLI\ncli.py]
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>        WebUI[Web UI\nweb/]
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>        Rigctld[rigctld]
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>        Sync[sync.IcomRadio]
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>    end
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>    subgraph Core[&quot;IcomRadio (radio.py + mixins)&quot;]
+<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>        API[Public API]
+<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>        Commander[IcomCommander\npriority queue]
+<a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>        CivRx[CivRxMixin\ndrain-all RX]
+<a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>        RadioStateObj[RadioState\nradio_state.py]
+<a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>        ScopeAsm[ScopeAssembler\nscope.py]
+<a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a>    end
+<a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a>
+<a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a>    subgraph Transports
+<a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a>        CtrlT[Control :50001]
+<a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a>        CivT[CI-V :50002]
+<a id="__codelineno-8-20" name="__codelineno-8-20" href="#__codelineno-8-20"></a>        AudioT[Audio :50003]
+<a id="__codelineno-8-21" name="__codelineno-8-21" href="#__codelineno-8-21"></a>    end
+<a id="__codelineno-8-22" name="__codelineno-8-22" href="#__codelineno-8-22"></a>
+<a id="__codelineno-8-23" name="__codelineno-8-23" href="#__codelineno-8-23"></a>    subgraph AudioPipeline[&quot;Audio Pipeline&quot;]
+<a id="__codelineno-8-24" name="__codelineno-8-24" href="#__codelineno-8-24"></a>        AudioStream[AudioStream\naudio.py]
+<a id="__codelineno-8-25" name="__codelineno-8-25" href="#__codelineno-8-25"></a>        AudioBus[AudioBus\naudio_bus.py]
+<a id="__codelineno-8-26" name="__codelineno-8-26" href="#__codelineno-8-26"></a>        WsAudio[WebSocket\nclients]
+<a id="__codelineno-8-27" name="__codelineno-8-27" href="#__codelineno-8-27"></a>        Bridge[AudioBridge\naudio_bridge.py]
+<a id="__codelineno-8-28" name="__codelineno-8-28" href="#__codelineno-8-28"></a>        BlackHole[BlackHole /\nLoopback]
+<a id="__codelineno-8-29" name="__codelineno-8-29" href="#__codelineno-8-29"></a>        WSJTX[WSJT-X /\nfldigi]
+<a id="__codelineno-8-30" name="__codelineno-8-30" href="#__codelineno-8-30"></a>    end
+<a id="__codelineno-8-31" name="__codelineno-8-31" href="#__codelineno-8-31"></a>
+<a id="__codelineno-8-32" name="__codelineno-8-32" href="#__codelineno-8-32"></a>    Radio[IC-7610]
+<a id="__codelineno-8-33" name="__codelineno-8-33" href="#__codelineno-8-33"></a>
+<a id="__codelineno-8-34" name="__codelineno-8-34" href="#__codelineno-8-34"></a>    Consumers --&gt; API
+<a id="__codelineno-8-35" name="__codelineno-8-35" href="#__codelineno-8-35"></a>    API --&gt; Commander
+<a id="__codelineno-8-36" name="__codelineno-8-36" href="#__codelineno-8-36"></a>    Commander --&gt; CivT
+<a id="__codelineno-8-37" name="__codelineno-8-37" href="#__codelineno-8-37"></a>    CivT -- UDP --&gt; Radio
+<a id="__codelineno-8-38" name="__codelineno-8-38" href="#__codelineno-8-38"></a>    Radio -- UDP --&gt; CivT
+<a id="__codelineno-8-39" name="__codelineno-8-39" href="#__codelineno-8-39"></a>    CivT --&gt; CivRx
+<a id="__codelineno-8-40" name="__codelineno-8-40" href="#__codelineno-8-40"></a>    CivRx --&gt; RadioStateObj
+<a id="__codelineno-8-41" name="__codelineno-8-41" href="#__codelineno-8-41"></a>    CivRx --&gt; ScopeAsm
+<a id="__codelineno-8-42" name="__codelineno-8-42" href="#__codelineno-8-42"></a>    ScopeAsm --&gt;|scope frames| WebUI
+<a id="__codelineno-8-43" name="__codelineno-8-43" href="#__codelineno-8-43"></a>
+<a id="__codelineno-8-44" name="__codelineno-8-44" href="#__codelineno-8-44"></a>    CtrlT -- UDP keepalive --&gt; Radio
+<a id="__codelineno-8-45" name="__codelineno-8-45" href="#__codelineno-8-45"></a>
+<a id="__codelineno-8-46" name="__codelineno-8-46" href="#__codelineno-8-46"></a>    Radio -- UDP audio --&gt; AudioT
+<a id="__codelineno-8-47" name="__codelineno-8-47" href="#__codelineno-8-47"></a>    AudioT --&gt; AudioStream
+<a id="__codelineno-8-48" name="__codelineno-8-48" href="#__codelineno-8-48"></a>    AudioStream --&gt; AudioBus
+<a id="__codelineno-8-49" name="__codelineno-8-49" href="#__codelineno-8-49"></a>    AudioBus --&gt;|Opus/PCM| WsAudio
+<a id="__codelineno-8-50" name="__codelineno-8-50" href="#__codelineno-8-50"></a>    AudioBus --&gt; Bridge
+<a id="__codelineno-8-51" name="__codelineno-8-51" href="#__codelineno-8-51"></a>    Bridge --&gt; BlackHole
+<a id="__codelineno-8-52" name="__codelineno-8-52" href="#__codelineno-8-52"></a>    BlackHole --&gt; WSJTX
 </code></pre></div>
 <h2 id="key-design-decisions">Key Design Decisions<a class="headerlink" href="#key-design-decisions" title="Permanent link">&para;</a></h2>
-<h3 id="dual-port-architecture">Dual-Port Architecture<a class="headerlink" href="#dual-port-architecture" title="Permanent link">&para;</a></h3>
-<p>CI-V commands <strong>must</strong> go through port 50002, not 50001. The control port (50001) is only for authentication and session management. This was discovered by tracing that the radio never responds to CI-V on the control port.</p>
-<h3 id="guid-echo">GUID Echo<a class="headerlink" href="#guid-echo" title="Permanent link">&para;</a></h3>
-<p>The radio won't report CI-V/audio ports in its status packet unless the client echoes the radio's GUID (bytes 0x20–0x2F from its conninfo) in the client's own conninfo. Without this, <code>civ_port</code> comes back as 0.</p>
-<h3 id="response-filtering">Response Filtering<a class="headerlink" href="#response-filtering" title="Permanent link">&para;</a></h3>
-<p>The CI-V port receives various traffic: our command echoes, waterfall data (cmd 0x27), and actual responses. <code>_send_civ_raw()</code> filters through all of this to find the matching response from the radio.</p>
-<h3 id="sequence-number-management">Sequence Number Management<a class="headerlink" href="#sequence-number-management" title="Permanent link">&para;</a></h3>
-<ul>
-<li><code>send_seq</code> — tracked data packets on each transport</li>
-<li><code>ping_seq</code> — keep-alive pings (separate counter)</li>
-<li><code>_auth_seq</code> — authentication sequence in radio.py</li>
-<li><code>_civ_send_seq</code> — CI-V and OpenClose packets (separate from transport seq)</li>
-</ul>
+<h3 id="drain-all-rx-pattern-66">Drain-All RX Pattern (#66)<a class="headerlink" href="#drain-all-rx-pattern-66" title="Permanent link">&para;</a></h3>
+<p>The CI-V port receives mixed traffic: scope data (~225 pkt/sec), command responses,
+unsolicited status updates. Processing one packet per iteration caused GET commands
+to time out because responses waited behind hundreds of scope packets. The drain-all
+pattern processes every queued packet each iteration, matching wfview's synchronous
+<code>dataReceived()</code> approach.</p>
+<h3 id="soft-reconnect">Soft Reconnect<a class="headerlink" href="#soft-reconnect" title="Permanent link">&para;</a></h3>
+<p>The Web UI's Connect/Disconnect button uses a two-tier reconnect strategy:</p>
+<ol>
+<li><strong>Soft disconnect</strong> (<code>soft_disconnect()</code>) — closes CI-V and audio transports but
+   keeps the control transport alive (pings continue). The radio maintains the session.</li>
+<li><strong>Soft reconnect</strong> (<code>soft_reconnect()</code>) — re-opens only the CI-V transport using
+   the existing control session. No discovery, no login, no conninfo — just CI-V open.
+   Takes ~1 second vs 30-60s for a full reconnect.</li>
+<li><strong>Fallback</strong> — if the control transport died, falls back to full <code>connect()</code>.</li>
+</ol>
+<p>This mirrors how wfview handles temporary CI-V interruptions without tearing down
+the entire session.</p>
+<h3 id="optimistic-port-connection">Optimistic Port Connection<a class="headerlink" href="#optimistic-port-connection" title="Permanent link">&para;</a></h3>
+<p>Icom radios use fixed port offsets (control+1 for CI-V, control+2 for audio).
+Instead of blocking on the status packet (which returns <code>civ_port=0</code> after rapid
+reconnects), we connect immediately to default ports and verify asynchronously.</p>
+<h3 id="fire-and-forget-set-commands-56">Fire-and-Forget SET Commands (#56)<a class="headerlink" href="#fire-and-forget-set-commands-56" title="Permanent link">&para;</a></h3>
+<p>SET commands (frequency, mode, power, PTT) don't need ACK confirmation for
+normal operation. Waiting for ACK under scope flood caused cascading timeouts.
+GET commands still wait (with cache fallback), matching wfview's behavior.</p>
+<h3 id="mixin-pattern-60">Mixin Pattern (#60)<a class="headerlink" href="#mixin-pattern-60" title="Permanent link">&para;</a></h3>
+<p><code>radio.py</code> was split using Python mixins to keep the public API surface unchanged
+while separating concerns. <code>IcomRadio</code> inherits from <code>ControlPhaseMixin</code>,
+<code>CivRxMixin</code>, and <code>AudioRecoveryMixin</code>. Cross-mixin access uses
+<code>self._xxx  # type: ignore[attr-defined]</code> — accepted trade-off for zero API breakage.</p>
 <h2 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>icom-lan (runtime)
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>└── Python 3.11+ stdlib only
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    ├── asyncio
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    ├── struct
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    ├── socket
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    ├── logging
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>    └── dataclasses
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>icom-lan[dev] (testing)
-<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>├── pytest
-<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>└── pytest-asyncio
-<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>
-<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>icom-lan[audio] (future)
-<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>└── opuslib
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>icom-lan (runtime)
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>└── Python 3.11+ stdlib only
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>    ├── asyncio, struct, socket, logging, dataclasses
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>icom-lan[dev]
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>├── pytest, pytest-asyncio
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>
+<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>icom-lan[scope]
+<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>└── Pillow (for scope image rendering)
+<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a>
+<a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a>icom-lan[bridge]
+<a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a>├── sounddevice (PortAudio bindings)
+<a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a>├── numpy (PCM frame processing)
+<a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a>└── opuslib (Opus codec for decode/encode)
+</code></pre></div>
+<h2 id="high-level-flows">High-Level Flows<a class="headerlink" href="#high-level-flows" title="Permanent link">&para;</a></h2>
+<h3 id="control-cli-radio-ci-v-ic-7610">Control: CLI → Radio → CI-V → IC-7610<a class="headerlink" href="#control-cli-radio-ci-v-ic-7610" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>flowchart LR
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>    subgraph Consumers
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>        CLI[cli.py]
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>        Web[web/]
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>        Rigctld[rigctld/]
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>        Sync[sync.py]
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>    end
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>    subgraph Core[&quot;IcomRadio (radio.py + mixins)&quot;]
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>        API[Public API]
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>        Cmdr[IcomCommander\ncommander.py]
+<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>        CivRxM[CivRxMixin\n_civ_rx.py]
+<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a>        RStat[RadioState\nradio_state.py]
+<a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a>    end
+<a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a>
+<a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a>    Consumers --&gt; API
+<a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a>    API --&gt; Cmdr
+<a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a>    Cmdr --&gt;|&quot;FE FE 98 E0 xx FD\nCI-V frame&quot;| CivT[CI-V Transport\n:50002]
+<a id="__codelineno-10-18" name="__codelineno-10-18" href="#__codelineno-10-18"></a>    CivT &lt;--&gt;|UDP| IC7610[IC-7610]
+<a id="__codelineno-10-19" name="__codelineno-10-19" href="#__codelineno-10-19"></a>    CivT --&gt; CivRxM
+<a id="__codelineno-10-20" name="__codelineno-10-20" href="#__codelineno-10-20"></a>    CivRxM --&gt;|response frames| Cmdr
+<a id="__codelineno-10-21" name="__codelineno-10-21" href="#__codelineno-10-21"></a>    CivRxM --&gt; RStat
+</code></pre></div>
+<h3 id="audio-ic-7610-audiobus-websocket-bridge-blackhole-wsjt-x">Audio: IC-7610 → AudioBus → [WebSocket, Bridge → BlackHole → WSJT-X]<a class="headerlink" href="#audio-ic-7610-audiobus-websocket-bridge-blackhole-wsjt-x" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>flowchart TD
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>    IC7610[IC-7610\n:50003 UDP] --&gt;|PCM/Opus frames| AudioT[Audio Transport\ntransport.py]
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>    AudioT --&gt; AStream[AudioStream\naudio.py + JitterBuffer]
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>    AStream --&gt;|AudioPacket callback| ABus[AudioBus\naudio_bus.py\npub/sub hub]
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>    ABus --&gt;|AudioSubscription| WsBcast[AudioBroadcaster\nweb/handlers.py]
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>    ABus --&gt;|AudioSubscription| Bridge[AudioBridge\naudio_bridge.py]
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>    WsBcast --&gt;|PCM16 binary frames| WsClients[Browser\nWeb Audio API]
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>    Bridge --&gt;|opus_to_pcm| Xcode[_audio_transcoder.py]
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>    Xcode --&gt;|s16le PCM| SndDev[sounddevice OutputStream]
+<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a>    SndDev --&gt; BH[BlackHole / Loopback]
+<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a>    BH --&gt; WSJTX[WSJT-X / fldigi]
+</code></pre></div>
+<h3 id="scope-ic-7610-scopeassembler-websocket">Scope: IC-7610 → ScopeAssembler → WebSocket<a class="headerlink" href="#scope-ic-7610-scopeassembler-websocket" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>flowchart LR
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>    IC7610[IC-7610] --&gt;|&quot;~225 pkt/s\n0x27/0x00 CI-V&quot;| CivT[CI-V Transport\n:50002]
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>    CivT --&gt; CivRx[CivRxMixin\ndrain-all loop]
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>    CivRx --&gt;|&quot;seq=1..N chunks\ncmd 0x27&quot;| ScopeAsm[ScopeAssembler\nscope.py]
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>    ScopeAsm --&gt;|&quot;ScopeFrame\nreceiver+pixels+freq&quot;| ScopeH[ScopeHandler\nweb/handlers.py]
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>    ScopeH --&gt;|&quot;binary frame\n16B hdr + pixels&quot;| WSC[WebSocket clients\nbrowser Canvas2D]
+</code></pre></div>
+<h2 id="module-data-flow-diagrams">Module Data Flow Diagrams<a class="headerlink" href="#module-data-flow-diagrams" title="Permanent link">&para;</a></h2>
+<h3 id="audiopy-audiostream-state-machine"><code>audio.py</code> — AudioStream State Machine<a class="headerlink" href="#audiopy-audiostream-state-machine" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>stateDiagram-v2
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>    [*] --&gt; IDLE
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>    IDLE --&gt; RECEIVING : start_rx(callback)
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>    RECEIVING --&gt; TRANSMITTING : start_tx()
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>    TRANSMITTING --&gt; RECEIVING : stop_tx() — RX still active
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>    RECEIVING --&gt; IDLE : stop_rx()
+<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>    TRANSMITTING --&gt; IDLE : stop_tx() — no active RX
+</code></pre></div>
+<p>RX data path through <code>JitterBuffer</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>flowchart LR
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>    UDP[UDP datagram\nfrom :50003] --&gt; Parse[&quot;parse_audio_packet()\nstrip 24-byte header&quot;]
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>    Parse --&gt;|AudioPacket| JB{JitterBuffer\ndepth=5 pkts}
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>    JB --&gt;|&quot;in-order, enough buffered&quot;| CB[RX callback\n+ rx_taps]
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>    JB --&gt;|&quot;gap detected → None placeholder&quot;| CB
+<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>    JB --&gt;|buffer not yet full| Hold[hold — wait\nfor more packets]
+</code></pre></div>
+<h3 id="_audio_transcoderpy-backend-abstraction"><code>_audio_transcoder.py</code> — Backend Abstraction<a class="headerlink" href="#_audio_transcoderpy-backend-abstraction" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>classDiagram
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>    class _OpusBackend {
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>        &lt;&lt;Protocol&gt;&gt;
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>        +create_encoder(sample_rate, channels)
+<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>        +create_decoder(sample_rate, channels)
+<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a>        +encode(encoder, pcm, frame_samples) bytes
+<a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a>        +decode(decoder, opus, frame_samples) bytes
+<a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a>    }
+<a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a>    class _OpuslibBackend {
+<a id="__codelineno-15-10" name="__codelineno-15-10" href="#__codelineno-15-10"></a>        -_opuslib module
+<a id="__codelineno-15-11" name="__codelineno-15-11" href="#__codelineno-15-11"></a>        +create_encoder()
+<a id="__codelineno-15-12" name="__codelineno-15-12" href="#__codelineno-15-12"></a>        +create_decoder()
+<a id="__codelineno-15-13" name="__codelineno-15-13" href="#__codelineno-15-13"></a>        +encode()
+<a id="__codelineno-15-14" name="__codelineno-15-14" href="#__codelineno-15-14"></a>        +decode()
+<a id="__codelineno-15-15" name="__codelineno-15-15" href="#__codelineno-15-15"></a>    }
+<a id="__codelineno-15-16" name="__codelineno-15-16" href="#__codelineno-15-16"></a>    class PcmOpusTranscoder {
+<a id="__codelineno-15-17" name="__codelineno-15-17" href="#__codelineno-15-17"></a>        +fmt PcmAudioFormat
+<a id="__codelineno-15-18" name="__codelineno-15-18" href="#__codelineno-15-18"></a>        +pcm_to_opus(pcm) bytes
+<a id="__codelineno-15-19" name="__codelineno-15-19" href="#__codelineno-15-19"></a>        +opus_to_pcm(opus) bytes
+<a id="__codelineno-15-20" name="__codelineno-15-20" href="#__codelineno-15-20"></a>    }
+<a id="__codelineno-15-21" name="__codelineno-15-21" href="#__codelineno-15-21"></a>    class PcmAudioFormat {
+<a id="__codelineno-15-22" name="__codelineno-15-22" href="#__codelineno-15-22"></a>        +sample_rate int
+<a id="__codelineno-15-23" name="__codelineno-15-23" href="#__codelineno-15-23"></a>        +channels int
+<a id="__codelineno-15-24" name="__codelineno-15-24" href="#__codelineno-15-24"></a>        +frame_ms int
+<a id="__codelineno-15-25" name="__codelineno-15-25" href="#__codelineno-15-25"></a>        +frame_samples int
+<a id="__codelineno-15-26" name="__codelineno-15-26" href="#__codelineno-15-26"></a>        +frame_bytes int
+<a id="__codelineno-15-27" name="__codelineno-15-27" href="#__codelineno-15-27"></a>    }
+<a id="__codelineno-15-28" name="__codelineno-15-28" href="#__codelineno-15-28"></a>    _OpusBackend &lt;|.. _OpuslibBackend : implements
+<a id="__codelineno-15-29" name="__codelineno-15-29" href="#__codelineno-15-29"></a>    PcmOpusTranscoder --&gt; _OpusBackend : uses
+<a id="__codelineno-15-30" name="__codelineno-15-30" href="#__codelineno-15-30"></a>    PcmOpusTranscoder --&gt; PcmAudioFormat
+</code></pre></div>
+<h3 id="civpy-ci-v-request-lifecycle"><code>civ.py</code> — CI-V Request Lifecycle<a class="headerlink" href="#civpy-ci-v-request-lifecycle" title="Permanent link">&para;</a></h3>
+<p>GET command (awaited future):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>sequenceDiagram
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>    participant Cmd as IcomCommander
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>    participant Tracker as CivRequestTracker
+<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>    participant Transport
+<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>    participant RxLoop as CivRxMixin
+<a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a>
+<a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a>    Cmd-&gt;&gt;Tracker: register_ack(wait=True) → Future
+<a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a>    Cmd-&gt;&gt;Transport: send_tracked(civ_frame)
+<a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a>    Transport-&gt;&gt;IC7610: UDP (FE FE 98 E0 .. FD)
+<a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a>    IC7610--&gt;&gt;Transport: UDP response
+<a id="__codelineno-16-11" name="__codelineno-16-11" href="#__codelineno-16-11"></a>    Transport-&gt;&gt;RxLoop: packet queued
+<a id="__codelineno-16-12" name="__codelineno-16-12" href="#__codelineno-16-12"></a>    RxLoop-&gt;&gt;Tracker: resolve(event=ACK) → True
+<a id="__codelineno-16-13" name="__codelineno-16-13" href="#__codelineno-16-13"></a>    Tracker--&gt;&gt;Cmd: Future.set_result(frame)
+</code></pre></div>
+<p>SET command (fire-and-forget):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>sequenceDiagram
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>    participant Cmd as IcomCommander
+<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>    participant Tracker as CivRequestTracker
+<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a>    participant Transport
+<a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a>
+<a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a>    Cmd-&gt;&gt;Tracker: register_ack(wait=False) → sink token
+<a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a>    Cmd-&gt;&gt;Transport: send_tracked(civ_frame)
+<a id="__codelineno-17-8" name="__codelineno-17-8" href="#__codelineno-17-8"></a>    Transport-&gt;&gt;IC7610: UDP
+<a id="__codelineno-17-9" name="__codelineno-17-9" href="#__codelineno-17-9"></a>    Note over Cmd: returns immediately — no await
+<a id="__codelineno-17-10" name="__codelineno-17-10" href="#__codelineno-17-10"></a>    IC7610--&gt;&gt;Transport: ACK consumed by sink
+</code></pre></div>
+<h3 id="exceptionspy-exception-hierarchy_1"><code>exceptions.py</code> — Exception Hierarchy<a class="headerlink" href="#exceptionspy-exception-hierarchy_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>classDiagram
+<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>    class IcomLanError
+<a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>    class ConnectionError
+<a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a>    class AuthenticationError
+<a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a>    class CommandError
+<a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a>    class TimeoutError
+<a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a>    class AudioError
+<a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a>    class AudioCodecBackendError
+<a id="__codelineno-18-9" name="__codelineno-18-9" href="#__codelineno-18-9"></a>    class AudioFormatError
+<a id="__codelineno-18-10" name="__codelineno-18-10" href="#__codelineno-18-10"></a>    class AudioTranscodeError
+<a id="__codelineno-18-11" name="__codelineno-18-11" href="#__codelineno-18-11"></a>    IcomLanError &lt;|-- ConnectionError
+<a id="__codelineno-18-12" name="__codelineno-18-12" href="#__codelineno-18-12"></a>    IcomLanError &lt;|-- AuthenticationError
+<a id="__codelineno-18-13" name="__codelineno-18-13" href="#__codelineno-18-13"></a>    IcomLanError &lt;|-- CommandError
+<a id="__codelineno-18-14" name="__codelineno-18-14" href="#__codelineno-18-14"></a>    IcomLanError &lt;|-- TimeoutError
+<a id="__codelineno-18-15" name="__codelineno-18-15" href="#__codelineno-18-15"></a>    IcomLanError &lt;|-- AudioError
+<a id="__codelineno-18-16" name="__codelineno-18-16" href="#__codelineno-18-16"></a>    AudioError &lt;|-- AudioCodecBackendError
+<a id="__codelineno-18-17" name="__codelineno-18-17" href="#__codelineno-18-17"></a>    AudioError &lt;|-- AudioFormatError
+<a id="__codelineno-18-18" name="__codelineno-18-18" href="#__codelineno-18-18"></a>    AudioError &lt;|-- AudioTranscodeError
+</code></pre></div>
+<h3 id="meter_calpy-calibration-lookup"><code>meter_cal.py</code> — Calibration Lookup<a class="headerlink" href="#meter_calpy-calibration-lookup" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>flowchart LR
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>    Raw[&quot;raw value 0–255&quot;] --&gt; Cal[&quot;calibrate(meter, raw)&quot;]
+<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>    Cal --&gt; Tbl{_TABLES lookup}
+<a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a>    Tbl --&gt;|table found| Interp[&quot;_interp()\npiecewise linear&quot;]
+<a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a>    Tbl --&gt;|unknown type| Pass[&quot;return float(raw)&quot;]
+<a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a>    Interp --&gt; Out[&quot;calibrated float\ne.g. dBm, watts, SWR&quot;]
+<a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a>    Pass --&gt; Out
+</code></pre></div>
+<h3 id="protocolpy-packet-header-io"><code>protocol.py</code> — Packet Header I/O<a class="headerlink" href="#protocolpy-packet-header-io" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>flowchart LR
+<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>    Raw[&quot;raw bytes ≥16&quot;] --&gt; PH[&quot;parse_header()\nstruct &#39;&lt;IHHII&#39;&quot;]
+<a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>    PH --&gt; Header[&quot;PacketHeader\nlength · type · seq\nsender_id · receiver_id&quot;]
+<a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a>    Header --&gt; SH[&quot;serialize_header()\nstruct pack&quot;]
+<a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a>    SH --&gt; Wire[&quot;16 bytes wire format&quot;]
+<a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a>    Raw --&gt; IT[&quot;identify_packet_type()\npeek offset 0x04&quot;]
+<a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a>    IT --&gt; PT[&quot;PacketType | None&quot;]
+</code></pre></div>
+<h3 id="proxypy-udp-relay-flow"><code>proxy.py</code> — UDP Relay Flow<a class="headerlink" href="#proxypy-udp-relay-flow" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>flowchart LR
+<a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>    subgraph Remote[&quot;Remote operator (via VPN)&quot;]
+<a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>        Client[wfview / icom-lan\nclient]
+<a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a>    end
+<a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a>    subgraph Proxy[&quot;Proxy machine (on radio LAN)&quot;]
+<a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a>        C[&quot;_RelayProtocol\ncontrol :50001&quot;]
+<a id="__codelineno-21-7" name="__codelineno-21-7" href="#__codelineno-21-7"></a>        V[&quot;_RelayProtocol\nCI-V :50002&quot;]
+<a id="__codelineno-21-8" name="__codelineno-21-8" href="#__codelineno-21-8"></a>        A[&quot;_RelayProtocol\naudio :50003&quot;]
+<a id="__codelineno-21-9" name="__codelineno-21-9" href="#__codelineno-21-9"></a>        W[&quot;Watchdog\nresets idle sessions\nafter 60 s&quot;]
+<a id="__codelineno-21-10" name="__codelineno-21-10" href="#__codelineno-21-10"></a>    end
+<a id="__codelineno-21-11" name="__codelineno-21-11" href="#__codelineno-21-11"></a>    subgraph RadioLAN[&quot;Local LAN&quot;]
+<a id="__codelineno-21-12" name="__codelineno-21-12" href="#__codelineno-21-12"></a>        Radio[IC-7610]
+<a id="__codelineno-21-13" name="__codelineno-21-13" href="#__codelineno-21-13"></a>    end
+<a id="__codelineno-21-14" name="__codelineno-21-14" href="#__codelineno-21-14"></a>
+<a id="__codelineno-21-15" name="__codelineno-21-15" href="#__codelineno-21-15"></a>    Client &lt;--&gt;|UDP| C
+<a id="__codelineno-21-16" name="__codelineno-21-16" href="#__codelineno-21-16"></a>    Client &lt;--&gt;|UDP| V
+<a id="__codelineno-21-17" name="__codelineno-21-17" href="#__codelineno-21-17"></a>    Client &lt;--&gt;|UDP| A
+<a id="__codelineno-21-18" name="__codelineno-21-18" href="#__codelineno-21-18"></a>    C &lt;--&gt;|UDP| Radio
+<a id="__codelineno-21-19" name="__codelineno-21-19" href="#__codelineno-21-19"></a>    V &lt;--&gt;|UDP| Radio
+<a id="__codelineno-21-20" name="__codelineno-21-20" href="#__codelineno-21-20"></a>    A &lt;--&gt;|UDP| Radio
+<a id="__codelineno-21-21" name="__codelineno-21-21" href="#__codelineno-21-21"></a>    W -. resets client_addr .-&gt; C
+<a id="__codelineno-21-22" name="__codelineno-21-22" href="#__codelineno-21-22"></a>    W -. resets client_addr .-&gt; V
+<a id="__codelineno-21-23" name="__codelineno-21-23" href="#__codelineno-21-23"></a>    W -. resets client_addr .-&gt; A
+</code></pre></div>
+<h3 id="radio_statepy-live-state-model"><code>radio_state.py</code> — Live State Model<a class="headerlink" href="#radio_statepy-live-state-model" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>classDiagram
+<a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>    class RadioState {
+<a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a>        +main ReceiverState
+<a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a>        +sub ReceiverState
+<a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a>        +active &quot;MAIN&quot;|&quot;SUB&quot;
+<a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a>        +ptt bool
+<a id="__codelineno-22-7" name="__codelineno-22-7" href="#__codelineno-22-7"></a>        +power_level int
+<a id="__codelineno-22-8" name="__codelineno-22-8" href="#__codelineno-22-8"></a>        +split bool
+<a id="__codelineno-22-9" name="__codelineno-22-9" href="#__codelineno-22-9"></a>        +dual_watch bool
+<a id="__codelineno-22-10" name="__codelineno-22-10" href="#__codelineno-22-10"></a>        +to_dict() dict
+<a id="__codelineno-22-11" name="__codelineno-22-11" href="#__codelineno-22-11"></a>        +receiver(which) ReceiverState
+<a id="__codelineno-22-12" name="__codelineno-22-12" href="#__codelineno-22-12"></a>    }
+<a id="__codelineno-22-13" name="__codelineno-22-13" href="#__codelineno-22-13"></a>    class ReceiverState {
+<a id="__codelineno-22-14" name="__codelineno-22-14" href="#__codelineno-22-14"></a>        +freq int
+<a id="__codelineno-22-15" name="__codelineno-22-15" href="#__codelineno-22-15"></a>        +mode str
+<a id="__codelineno-22-16" name="__codelineno-22-16" href="#__codelineno-22-16"></a>        +filter int|None
+<a id="__codelineno-22-17" name="__codelineno-22-17" href="#__codelineno-22-17"></a>        +data_mode bool
+<a id="__codelineno-22-18" name="__codelineno-22-18" href="#__codelineno-22-18"></a>        +att int
+<a id="__codelineno-22-19" name="__codelineno-22-19" href="#__codelineno-22-19"></a>        +preamp int
+<a id="__codelineno-22-20" name="__codelineno-22-20" href="#__codelineno-22-20"></a>        +nb bool
+<a id="__codelineno-22-21" name="__codelineno-22-21" href="#__codelineno-22-21"></a>        +nr bool
+<a id="__codelineno-22-22" name="__codelineno-22-22" href="#__codelineno-22-22"></a>        +digisel bool
+<a id="__codelineno-22-23" name="__codelineno-22-23" href="#__codelineno-22-23"></a>        +ipplus bool
+<a id="__codelineno-22-24" name="__codelineno-22-24" href="#__codelineno-22-24"></a>        +af_level int
+<a id="__codelineno-22-25" name="__codelineno-22-25" href="#__codelineno-22-25"></a>        +rf_gain int
+<a id="__codelineno-22-26" name="__codelineno-22-26" href="#__codelineno-22-26"></a>        +squelch int
+<a id="__codelineno-22-27" name="__codelineno-22-27" href="#__codelineno-22-27"></a>        +s_meter int
+<a id="__codelineno-22-28" name="__codelineno-22-28" href="#__codelineno-22-28"></a>    }
+<a id="__codelineno-22-29" name="__codelineno-22-29" href="#__codelineno-22-29"></a>    RadioState &quot;1&quot; --&gt; &quot;2&quot; ReceiverState : main + sub
+</code></pre></div>
+<p>Update flow (CI-V frames → live state → consumers):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>flowchart LR
+<a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>    CivRx[CivRxMixin\n_civ_rx.py] --&gt;|&quot;incoming frame\ne.g. cmd 0x03 freq&quot;| Update[update RadioState fields]
+<a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a>    Update --&gt; RS[radio_state\nRadioState instance]
+<a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a>    RS --&gt;|GET /api/v1/state| HTTP[Web UI HTTP response]
+<a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a>    RS --&gt;|state_change_callback| WS[WebSocket push\nclientside update]
+</code></pre></div>
+<h3 id="radiospy-model-registry"><code>radios.py</code> — Model Registry<a class="headerlink" href="#radiospy-model-registry" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>flowchart LR
+<a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a>    Name[&quot;&#39;IC-7610&#39;&quot;] --&gt; GCA[&quot;get_civ_addr(model)&quot;]
+<a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a>    GCA --&gt; Dict[(RADIOS dict)]
+<a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a>    Dict --&gt; Model[&quot;RadioModel\nciv_addr=0x98\nreceivers=2\nhas_lan=True&quot;]
+<a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a>    Model --&gt;|civ_addr| Radio[&quot;IcomRadio\nconfiguration&quot;]
+</code></pre></div>
+<h3 id="scopepy-multi-packet-assembly"><code>scope.py</code> — Multi-Packet Assembly<a class="headerlink" href="#scopepy-multi-packet-assembly" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>sequenceDiagram
+<a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>    participant CivRx as CivRxMixin
+<a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>    participant Asm as ScopeAssembler
+<a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a>    participant RS as _ReceiverState
+<a id="__codelineno-25-5" name="__codelineno-25-5" href="#__codelineno-25-5"></a>
+<a id="__codelineno-25-6" name="__codelineno-25-6" href="#__codelineno-25-6"></a>    CivRx-&gt;&gt;Asm: feed(seq=1, mode+freq+OOR+pixels)
+<a id="__codelineno-25-7" name="__codelineno-25-7" href="#__codelineno-25-7"></a>    Asm-&gt;&gt;RS: _reset() + store mode/freq metadata
+<a id="__codelineno-25-8" name="__codelineno-25-8" href="#__codelineno-25-8"></a>    CivRx-&gt;&gt;Asm: feed(seq=2, pixel bytes)
+<a id="__codelineno-25-9" name="__codelineno-25-9" href="#__codelineno-25-9"></a>    Asm-&gt;&gt;RS: append chunk
+<a id="__codelineno-25-10" name="__codelineno-25-10" href="#__codelineno-25-10"></a>    Note over RS: accumulating chunks…
+<a id="__codelineno-25-11" name="__codelineno-25-11" href="#__codelineno-25-11"></a>    CivRx-&gt;&gt;Asm: feed(seq=N=seqMax, pixel bytes)
+<a id="__codelineno-25-12" name="__codelineno-25-12" href="#__codelineno-25-12"></a>    Asm-&gt;&gt;RS: append final chunk
+<a id="__codelineno-25-13" name="__codelineno-25-13" href="#__codelineno-25-13"></a>    RS--&gt;&gt;Asm: _build_frame() → ScopeFrame
+<a id="__codelineno-25-14" name="__codelineno-25-14" href="#__codelineno-25-14"></a>    Asm--&gt;&gt;CivRx: ScopeFrame (complete)
+</code></pre></div>
+<p>Center-mode frequency correction (built into <code>_ReceiverState.feed</code>):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>seq=1 payload → start_freq=center, end_freq=bandwidth
+<a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>→ corrected: start = center − bw, end = center + bw
+</code></pre></div>
+<h3 id="scope_renderpy-rendering-pipeline"><code>scope_render.py</code> — Rendering Pipeline<a class="headerlink" href="#scope_renderpy-rendering-pipeline" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a>flowchart TD
+<a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a>    Frames[&quot;list[ScopeFrame]&quot;] --&gt; RSI[&quot;render_scope_image()&quot;]
+<a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a>    RSI --&gt; RS[&quot;render_spectrum(frames[-1])\nfilled line graph\nfreq-labeled axes&quot;]
+<a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a>    RSI --&gt; RW[&quot;render_waterfall(frames)\nheatmap rows\ncolormap lookup&quot;]
+<a id="__codelineno-27-5" name="__codelineno-27-5" href="#__codelineno-27-5"></a>    RS --&gt; Spec[&quot;PIL Image\nspectrum top&quot;]
+<a id="__codelineno-27-6" name="__codelineno-27-6" href="#__codelineno-27-6"></a>    RW --&gt; WF[&quot;PIL Image\nwaterfall bottom&quot;]
+<a id="__codelineno-27-7" name="__codelineno-27-7" href="#__codelineno-27-7"></a>    Spec --&gt; Comb[&quot;combined PIL Image\n(spectrum on top, waterfall below)&quot;]
+<a id="__codelineno-27-8" name="__codelineno-27-8" href="#__codelineno-27-8"></a>    WF --&gt; Comb
+<a id="__codelineno-27-9" name="__codelineno-27-9" href="#__codelineno-27-9"></a>    Comb --&gt;|optional output| PNG[waterfall.png]
+</code></pre></div>
+<h3 id="syncpy-synchronous-event-loop-wrapper"><code>sync.py</code> — Synchronous Event-Loop Wrapper<a class="headerlink" href="#syncpy-synchronous-event-loop-wrapper" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a>flowchart LR
+<a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a>    App[&quot;Script / REPL\nwith IcomRadio(...) as r:&quot;] --&gt; SR[&quot;sync.IcomRadio\n__enter__ → connect()&quot;]
+<a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a>    SR --&gt;|&quot;_run(coro)\nrun_until_complete&quot;| Loop[&quot;asyncio event loop\ndedicated per instance&quot;]
+<a id="__codelineno-28-4" name="__codelineno-28-4" href="#__codelineno-28-4"></a>    Loop --&gt; AR[&quot;radio.IcomRadio\n(async)&quot;]
+<a id="__codelineno-28-5" name="__codelineno-28-5" href="#__codelineno-28-5"></a>    AR --&gt;|result| Loop
+<a id="__codelineno-28-6" name="__codelineno-28-6" href="#__codelineno-28-6"></a>    Loop --&gt;|blocking return| SR
+<a id="__codelineno-28-7" name="__codelineno-28-7" href="#__codelineno-28-7"></a>    SR --&gt;|result| App
+</code></pre></div>
+<h3 id="typespy-bcd-frequency-encoding"><code>types.py</code> — BCD Frequency Encoding<a class="headerlink" href="#typespy-bcd-frequency-encoding" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a>flowchart LR
+<a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a>    Hz[&quot;14_074_000 Hz&quot;] --&gt;|bcd_encode| BCD[&quot;bytes: 00 40 07 14 00\n5-byte little-endian BCD&quot;]
+<a id="__codelineno-29-3" name="__codelineno-29-3" href="#__codelineno-29-3"></a>    BCD --&gt;|bcd_decode| Hz2[&quot;14_074_000 Hz&quot;]
+</code></pre></div>
+<p>BCD byte layout for <code>14_074_000</code> Hz:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a>Decimal string: &quot;0014074000&quot;   (10 digits, most-significant first)
+<a id="__codelineno-30-2" name="__codelineno-30-2" href="#__codelineno-30-2"></a>byte[0] = 0x00  → units+tens          = 00
+<a id="__codelineno-30-3" name="__codelineno-30-3" href="#__codelineno-30-3"></a>byte[1] = 0x40  → hundreds+thousands  = 40  (0×10² + 4×10³ = 4000)
+<a id="__codelineno-30-4" name="__codelineno-30-4" href="#__codelineno-30-4"></a>byte[2] = 0x07  → 10k+100k           = 07  (0×10⁴ + 7×10⁵ = 70000)
+<a id="__codelineno-30-5" name="__codelineno-30-5" href="#__codelineno-30-5"></a>byte[3] = 0x14  → 1M+10M             = 14  (4×10⁶ + 1×10⁷ = 14000000)
+<a id="__codelineno-30-6" name="__codelineno-30-6" href="#__codelineno-30-6"></a>byte[4] = 0x00  → 100M+1G            = 00
 </code></pre></div>
 
 

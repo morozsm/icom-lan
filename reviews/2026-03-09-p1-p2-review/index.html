@@ -1,0 +1,2332 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Python library for controlling Icom transceivers over LAN">
+      
+      
+      
+        <link rel="canonical" href="https://morozsm.github.io/icom-lan/reviews/2026-03-09-p1-p2-review/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.3">
+    
+    
+      
+        <title>Code Review: P1 + P2 Sprints (2026-03-09) - icom-lan</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#code-review-p1-p2-sprints-2026-03-09" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="icom-lan" class="md-header__button md-logo" aria-label="icom-lan" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            icom-lan
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Code Review: P1 + P2 Sprints (2026-03-09)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/morozsm/icom-lan" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    morozsm/icom-lan
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../guide/installation/" class="md-tabs__link">
+          
+  
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../guide/connection/" class="md-tabs__link">
+          
+  
+  
+  User Guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../api/public-api-surface/" class="md-tabs__link">
+          
+  
+  
+  API Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../internals/architecture/" class="md-tabs__link">
+          
+  
+  
+  Internals
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="icom-lan" class="md-nav__button md-logo" aria-label="icom-lan" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    icom-lan
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/morozsm/icom-lan" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    morozsm/icom-lan
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/connection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Connection Lifecycle
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/wsjtx-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WSJT-X / Digital Modes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/audio-recipes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audio Recipes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/web-ui/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Web UI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/commands/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CI-V Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/radios/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Supported Radios
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/public-api-surface/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Public API Surface
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/radio/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IcomRadio
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/sync/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sync API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/audio/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audio
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/radios/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Radio Models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/transport/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Transport
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/commander/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Commander
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/commands/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/types/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Types & Enums
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/auth/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authentication
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/exceptions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Exceptions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Internals
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Internals
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../internals/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../internals/protocol/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Protocol Deep Dive
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../internals/reliability-semantics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reliability semantics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../internals/rfc-web-ui-v1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Web UI RFC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../internals/cli-design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI design
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../internals/contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CHANGELOG/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../SECURITY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#critical-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🔴 Critical Issues
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🔴 Critical Issues">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#c1-state-used-outside-svelte-component-incorrect-fix-reverted" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        C1: ~~$state() Used Outside Svelte Component~~ ⚠️ INCORRECT FIX — REVERTED
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#c2-waterfall-pushrow-memory-allocation-regression" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        C2: Waterfall pushRow Memory Allocation Regression
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#c3-ref-level-math-applied-at-wrong-stage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        C3: Ref Level Math Applied at Wrong Stage
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#high-priority-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🟡 High Priority Issues
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🟡 High Priority Issues">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#h1-shared-timer-variable-for-multiple-long-press-controls" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        H1: Shared Timer Variable for Multiple Long-Press Controls
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#h2-timer-cleanup-missing-in-long-press-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        H2: Timer Cleanup Missing in Long-Press Components
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#medium-priority-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🟢 Medium Priority Issues
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🟢 Medium Priority Issues">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#m1-capabilitymenu-labels-prop-can-be-undefined" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        M1: CapabilityMenu labels Prop Can Be Undefined
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#m2-duplicate-code-in-stepmenu-and-capabilitymenu" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        M2: Duplicate Code in StepMenu and CapabilityMenu
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#m3-scaledvalue-wrapped-in-extra-arrow-function" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        M3: scaledValue Wrapped in Extra Arrow Function
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#m4-peak-hold-y-scaling-uses-magic-numbers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        M4: Peak Hold Y-Scaling Uses Magic Numbers
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#positive-observations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ✅ Positive Observations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="✅ Positive Observations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#excellent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Excellent
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#good" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Good
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testing-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🧪 Testing Status
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#risk-assessment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        📊 Risk Assessment
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fix-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🛠️ Fix Plan
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🛠️ Fix Plan">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#immediate-before-testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Immediate (before testing)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#before-merge-to-main" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Before merge to main
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#nice-to-have-follow-up-pr" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Nice-to-have (follow-up PR)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#commit-quality" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        📝 Commit Quality
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#recommendations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🎯 Recommendations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🎯 Recommendations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#process-improvements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Process Improvements
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lessons-learned" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        💡 Lessons Learned
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="💡 Lessons Learned">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-sveltets-files-support-runes-svelte-5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. .svelte.ts Files Support Runes (Svelte 5)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-regression-testing-critical-for-known-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Regression Testing Critical for Known Issues
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-multi-agent-coordination-needs-better-protocol" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Multi-Agent Coordination Needs Better Protocol
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#approval-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ✅ Approval Status
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="✅ Approval Status">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#fixes-applied" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixes Applied
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="code-review-p1-p2-sprints-2026-03-09">Code Review: P1 + P2 Sprints (2026-03-09)<a class="headerlink" href="#code-review-p1-p2-sprints-2026-03-09" title="Permanent link">&para;</a></h1>
+<p><strong>Reviewer:</strong> Opus 4.6<br />
+<strong>Date:</strong> 2026-03-09 13:13 EDT<br />
+<strong>Commits Reviewed:</strong>
+- e0b73e5 — CSS (spectrum proportions + band grid)
+- f7f01ca — UI (STEP selector + ATT/PRE long-press)
+- f3520f4 — SVG (analog S-meter)
+- 5d3de0e — waterfall (ref level + color schemes) + labels (freq/dB scales)
+- 322efee — spectrum (averaging + peak hold)</p>
+<p><strong>Total Changes:</strong> 14 files, +981 -284 lines (net +697)</p>
+<hr />
+<h2 id="critical-issues">🔴 Critical Issues<a class="headerlink" href="#critical-issues" title="Permanent link">&para;</a></h2>
+<h3 id="c1-state-used-outside-svelte-component-incorrect-fix-reverted">C1: ~~<code>$state()</code> Used Outside Svelte Component~~ ⚠️ INCORRECT FIX — REVERTED<a class="headerlink" href="#c1-state-used-outside-svelte-component-incorrect-fix-reverted" title="Permanent link">&para;</a></h3>
+<p><strong>File:</strong> <code>frontend/src/lib/utils/smoothing.svelte.ts</code><br />
+<strong>Line:</strong> 6</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kd">let</span><span class="w"> </span><span class="nx">current</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">$state</span><span class="p">(</span><span class="mf">0</span><span class="p">);</span><span class="w">  </span><span class="c1">// ✅ CORRECT (contrary to original review)</span>
+</code></pre></div>
+<p><strong>Original problem (WRONG):</strong> Review claimed <code>$state()</code> doesn't work in <code>.ts</code> files.</p>
+<p><strong>Reality:</strong> <strong><code>.svelte.ts</code> is a special Svelte 5 suffix that ALLOWS runes!</strong>
+- <code>.svelte.ts</code> files are compiled by Svelte preprocessor
+- Runes (<code>$state</code>, <code>$derived</code>, <code>$effect</code>) are <strong>explicitly supported</strong> in <code>.svelte.ts</code>
+- This is the <strong>recommended pattern</strong> for shared reactive logic in Svelte 5</p>
+<p><strong>What actually happened:</strong>
+1. Review incorrectly flagged <code>$state(0)</code> as an error
+2. Fix commit <code>d55ae7e</code> changed <code>$state(0)</code> → <code>0</code> (plain variable)
+3. <strong>This broke S-meter reactivity</strong> — needle stopped moving
+4. Reverted in follow-up commit (2026-03-09 14:27 EDT)</p>
+<p><strong>Correct code:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">export</span><span class="w"> </span><span class="kd">function</span><span class="w"> </span><span class="nx">createSmoother</span><span class="p">(</span><span class="nx">attack</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.12</span><span class="p">,</span><span class="w"> </span><span class="nx">release</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.32</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="kd">let</span><span class="w"> </span><span class="nx">current</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">$state</span><span class="p">(</span><span class="mf">0</span><span class="p">);</span><span class="w">  </span><span class="c1">// ✅ Reactive state for Svelte 5</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="c1">// ...</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="nx">get</span><span class="w"> </span><span class="nx">value</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="nx">current</span><span class="p">;</span><span class="w"> </span><span class="p">},</span><span class="w">  </span><span class="c1">// Getter exposes reactive value</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">  </span><span class="p">};</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="p">}</span>
+</code></pre></div></p>
+<p><strong>Why it works:</strong>
+- <code>.svelte.ts</code> !== <code>.ts</code> — different treatment by Svelte compiler
+- <code>.svelte</code> files: runes work in <code>&lt;script&gt;</code> blocks
+- <code>.svelte.ts</code> files: runes work at top level (for shared modules)
+- <code>.ts</code> files: runes DON'T work (plain TypeScript)</p>
+<p><strong>Impact of incorrect fix:</strong> S-meter frozen (no needle movement) — critical UX bug.</p>
+<p><strong>Lesson learned:</strong> Always verify Svelte 5 conventions before "fixing" runes usage. <code>.svelte.ts</code> is a first-class reactive module format.</p>
+<hr />
+<h3 id="c2-waterfall-pushrow-memory-allocation-regression">C2: Waterfall <code>pushRow</code> Memory Allocation Regression<a class="headerlink" href="#c2-waterfall-pushrow-memory-allocation-regression" title="Permanent link">&para;</a></h3>
+<p><strong>File:</strong> <code>frontend/src/lib/renderers/waterfall-renderer.ts</code><br />
+<strong>Line:</strong> 137-138</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kd">const</span><span class="w"> </span><span class="nx">rowBuf</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">ctx</span><span class="p">.</span><span class="nx">createImageData</span><span class="p">(</span><span class="nx">w</span><span class="p">,</span><span class="w"> </span><span class="mf">1</span><span class="p">);</span><span class="w">  </span><span class="c1">// ❌ Allocates EVERY frame</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kd">const</span><span class="w"> </span><span class="nx">rowData</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">rowBuf</span><span class="p">.</span><span class="nx">data</span><span class="p">;</span>
+</code></pre></div>
+<p><strong>Problem:</strong> Creates new <code>ImageData</code> object <strong>every frame</strong> (30+ fps) instead of reusing <code>this.rowBuf</code> initialized in <code>_initBuffers()</code>.</p>
+<p><strong>Impact:</strong> 
+- ~1-2 KB allocation per frame × 30 fps = 30-60 KB/sec garbage
+- Forces GC pauses, drops frames on mobile</p>
+<p><strong>History:</strong> This was <strong>fixed on 2026-03-08</strong> (commit 8d5488f) but <strong>regressed</strong> in 5d3de0e when waterfall agent rewrote the renderer.</p>
+<p><strong>Fix:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="k">this</span><span class="p">.</span><span class="nx">rowBuf</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="nx">rowBuf</span><span class="p">.</span><span class="nx">width</span><span class="w"> </span><span class="o">!==</span><span class="w"> </span><span class="nx">w</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="k">this</span><span class="p">.</span><span class="nx">rowBuf</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">ctx</span><span class="p">.</span><span class="nx">createImageData</span><span class="p">(</span><span class="nx">w</span><span class="p">,</span><span class="w"> </span><span class="mf">1</span><span class="p">);</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="k">this</span><span class="p">.</span><span class="nx">rowData</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="nx">rowBuf</span><span class="p">.</span><span class="nx">data</span><span class="p">;</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="p">}</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="kd">const</span><span class="w"> </span><span class="nx">rowData</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="nx">rowData</span><span class="o">!</span><span class="p">;</span>
+</code></pre></div></p>
+<p><strong>Additional note:</strong> <code>resize()</code> already sets <code>this.rowBuf = null</code> — reuse pattern was intended but not implemented in <code>pushRow</code>.</p>
+<hr />
+<h3 id="c3-ref-level-math-applied-at-wrong-stage">C3: Ref Level Math Applied at Wrong Stage<a class="headerlink" href="#c3-ref-level-math-applied-at-wrong-stage" title="Permanent link">&para;</a></h3>
+<p><strong>File:</strong> <code>frontend/src/lib/renderers/waterfall-renderer.ts</code><br />
+<strong>Line:</strong> 145-147</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kd">const</span><span class="w"> </span><span class="nx">norm</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">Math</span><span class="p">.</span><span class="nx">min</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="nx">p</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mf">80</span><span class="p">);</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="kd">const</span><span class="w"> </span><span class="nx">v</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">Math</span><span class="p">.</span><span class="nx">min</span><span class="p">(</span><span class="mf">255</span><span class="p">,</span><span class="w"> </span><span class="nb">Math</span><span class="p">.</span><span class="nx">max</span><span class="p">(</span><span class="mf">0</span><span class="p">,</span><span class="w"> </span><span class="nb">Math</span><span class="p">.</span><span class="nx">floor</span><span class="p">(</span><span class="nb">Math</span><span class="p">.</span><span class="nx">sqrt</span><span class="p">(</span><span class="nx">norm</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">255</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">refShift</span><span class="p">));</span>
+</code></pre></div>
+<p><strong>Problem:</strong> <code>refShift</code> is added <strong>after</strong> sqrt curve, making it a simple brightness offset instead of proper dB gain adjustment.</p>
+<p><strong>Impact:</strong> Ref level doesn't behave like a real RF gain control — affects color mapping, not signal visibility.</p>
+<p><strong>Expected behavior:</strong> Adjust input <code>p</code> before normalization:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kd">const</span><span class="w"> </span><span class="nx">adjusted</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">Math</span><span class="p">.</span><span class="nx">min</span><span class="p">(</span><span class="mf">80</span><span class="p">,</span><span class="w"> </span><span class="nb">Math</span><span class="p">.</span><span class="nx">max</span><span class="p">(</span><span class="mf">0</span><span class="p">,</span><span class="w"> </span><span class="nx">p</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="p">(</span><span class="nx">refShift</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mf">255</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">40</span><span class="p">));</span><span class="w"> </span><span class="c1">// map ±127 → ±20 on 0-80 scale</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="kd">const</span><span class="w"> </span><span class="nx">norm</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">adjusted</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mf">80</span><span class="p">;</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="kd">const</span><span class="w"> </span><span class="nx">v</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">Math</span><span class="p">.</span><span class="nx">floor</span><span class="p">(</span><span class="nb">Math</span><span class="p">.</span><span class="nx">sqrt</span><span class="p">(</span><span class="nx">norm</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">255</span><span class="p">);</span>
+</code></pre></div></p>
+<p><strong>Severity:</strong> Medium-high — feature works but incorrectly. Users expect "Ref Level" to act like hardware gain knob.</p>
+<hr />
+<h2 id="high-priority-issues">🟡 High Priority Issues<a class="headerlink" href="#high-priority-issues" title="Permanent link">&para;</a></h2>
+<h3 id="h1-shared-timer-variable-for-multiple-long-press-controls">H1: Shared Timer Variable for Multiple Long-Press Controls<a class="headerlink" href="#h1-shared-timer-variable-for-multiple-long-press-controls" title="Permanent link">&para;</a></h3>
+<p><strong>File:</strong> <code>frontend/src/components/controls/FeatureToggles.svelte</code><br />
+<strong>Line:</strong> 21</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kd">let</span><span class="w"> </span><span class="nx">pressTimer</span><span class="o">:</span><span class="w"> </span><span class="kt">ReturnType</span><span class="o">&lt;</span><span class="ow">typeof</span><span class="w"> </span><span class="nx">setTimeout</span><span class="o">&gt;</span><span class="p">;</span>
+</code></pre></div>
+<p><strong>Problem:</strong> Single <code>pressTimer</code> shared between ATT and PRE buttons. If user:
+1. Press ATT (starts timer)
+2. Hold ATT
+3. Press PRE (clears ATT timer, starts PRE timer)
+4. ATT long-press never fires</p>
+<p><strong>Impact:</strong> Edge case, but confusing UX.</p>
+<p><strong>Fix:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kd">let</span><span class="w"> </span><span class="nx">attPressTimer</span><span class="o">:</span><span class="w"> </span><span class="kt">ReturnType</span><span class="o">&lt;</span><span class="ow">typeof</span><span class="w"> </span><span class="nx">setTimeout</span><span class="o">&gt;</span><span class="p">;</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="kd">let</span><span class="w"> </span><span class="nx">prePressTimer</span><span class="o">:</span><span class="w"> </span><span class="kt">ReturnType</span><span class="o">&lt;</span><span class="ow">typeof</span><span class="w"> </span><span class="nx">setTimeout</span><span class="o">&gt;</span><span class="p">;</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="kd">function</span><span class="w"> </span><span class="nx">startAttLongPress</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span><span class="nx">attPressTimer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">setTimeout</span><span class="p">(()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">(</span><span class="nx">showAttMenu</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span><span class="p">),</span><span class="w"> </span><span class="mf">500</span><span class="p">);</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="p">}</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="kd">function</span><span class="w"> </span><span class="nx">cancelAttLongPress</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">  </span><span class="nx">clearTimeout</span><span class="p">(</span><span class="nx">attPressTimer</span><span class="p">);</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="p">}</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="c1">// Same for PRE</span>
+</code></pre></div></p>
+<hr />
+<h3 id="h2-timer-cleanup-missing-in-long-press-components">H2: Timer Cleanup Missing in Long-Press Components<a class="headerlink" href="#h2-timer-cleanup-missing-in-long-press-components" title="Permanent link">&para;</a></h3>
+<p><strong>Files:</strong>
+- <code>frontend/src/components/controls/StepSelector.svelte</code>
+- <code>frontend/src/components/controls/FeatureToggles.svelte</code></p>
+<p><strong>Problem:</strong> If component unmounts during long-press (e.g., user navigates away), timer keeps running.</p>
+<p><strong>Impact:</strong> Rare but can cause leaked refs and console warnings.</p>
+<p><strong>Fix:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">onDestroy</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">&#39;svelte&#39;</span><span class="p">;</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="nx">onDestroy</span><span class="p">(()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">  </span><span class="nx">clearTimeout</span><span class="p">(</span><span class="nx">pressTimer</span><span class="p">);</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="p">});</span>
+</code></pre></div></p>
+<hr />
+<h2 id="medium-priority-issues">🟢 Medium Priority Issues<a class="headerlink" href="#medium-priority-issues" title="Permanent link">&para;</a></h2>
+<h3 id="m1-capabilitymenu-labels-prop-can-be-undefined">M1: CapabilityMenu <code>labels</code> Prop Can Be Undefined<a class="headerlink" href="#m1-capabilitymenu-labels-prop-can-be-undefined" title="Permanent link">&para;</a></h3>
+<p><strong>File:</strong> <code>frontend/src/components/controls/CapabilityMenu.svelte</code><br />
+<strong>Line:</strong> 20</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="p">{</span><span class="nx">labels</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="nx">labels</span><span class="p">(</span><span class="nx">v</span><span class="p">)</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="nb">String</span><span class="p">(</span><span class="nx">v</span><span class="p">)}</span>
+</code></pre></div>
+<p><strong>Problem:</strong> Ternary handles undefined, but better to provide default in prop signature.</p>
+<p><strong>Fix:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kd">let</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">title</span><span class="p">,</span><span class="w"> </span><span class="nx">values</span><span class="p">,</span><span class="w"> </span><span class="nx">current</span><span class="p">,</span><span class="w"> </span><span class="nx">labels</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="nx">v</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nb">String</span><span class="p">(</span><span class="nx">v</span><span class="p">),</span><span class="w"> </span><span class="nx">onSelect</span><span class="p">,</span><span class="w"> </span><span class="nx">onClose</span><span class="w"> </span><span class="p">}</span><span class="o">:</span><span class="w"> </span><span class="nx">Props</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">$props</span><span class="p">();</span>
+</code></pre></div></p>
+<hr />
+<h3 id="m2-duplicate-code-in-stepmenu-and-capabilitymenu">M2: Duplicate Code in StepMenu and CapabilityMenu<a class="headerlink" href="#m2-duplicate-code-in-stepmenu-and-capabilitymenu" title="Permanent link">&para;</a></h3>
+<p><strong>Files:</strong>
+- <code>frontend/src/components/controls/StepMenu.svelte</code>
+- <code>frontend/src/components/controls/CapabilityMenu.svelte</code></p>
+<p><strong>Problem:</strong> 90% identical code (backdrop, modal, grid, styling).</p>
+<p><strong>Impact:</strong> Maintenance burden — future changes need 2× edits.</p>
+<p><strong>Recommendation:</strong> Generalize CapabilityMenu to accept either:
+- <code>values: number[]</code> + <code>labels?: (v: number) =&gt; string</code>
+- Or <code>items: Array&lt;{value: T, label: string}&gt;</code></p>
+<p>Then StepMenu can just wrap CapabilityMenu.</p>
+<p><strong>Not blocking:</strong> Acceptable duplication for P1/P2 sprint velocity.</p>
+<hr />
+<h3 id="m3-scaledvalue-wrapped-in-extra-arrow-function">M3: <code>scaledValue</code> Wrapped in Extra Arrow Function<a class="headerlink" href="#m3-scaledvalue-wrapped-in-extra-arrow-function" title="Permanent link">&para;</a></h3>
+<p><strong>File:</strong> <code>frontend/src/components/meters/SMeter.svelte</code><br />
+<strong>Line:</strong> 48-54</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="kd">let</span><span class="w"> </span><span class="nx">scaledValue</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">$derived</span><span class="p">((()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span><span class="w">  </span><span class="c1">// ❌ Extra parens</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span><span class="c1">// ...</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="p">})());</span>
+</code></pre></div>
+<p><strong>Should be:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="kd">let</span><span class="w"> </span><span class="nx">scaledValue</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">$derived</span><span class="p">(()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span><span class="c1">// ...</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="p">});</span>
+</code></pre></div></p>
+<p><strong>Impact:</strong> Works but confusing syntax. Extra IIFE not needed.</p>
+<hr />
+<h3 id="m4-peak-hold-y-scaling-uses-magic-numbers">M4: Peak Hold Y-Scaling Uses Magic Numbers<a class="headerlink" href="#m4-peak-hold-y-scaling-uses-magic-numbers" title="Permanent link">&para;</a></h3>
+<p><strong>File:</strong> <code>frontend/src/lib/renderers/spectrum-renderer.ts</code><br />
+<strong>Line:</strong> 241-242</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="kd">const</span><span class="w"> </span><span class="nx">amp</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">Math</span><span class="p">.</span><span class="nx">min</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="nx">peaks</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mf">80</span><span class="p">);</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="kd">const</span><span class="w"> </span><span class="nx">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">height</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="p">(</span><span class="mf">1</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nb">Math</span><span class="p">.</span><span class="nx">sqrt</span><span class="p">(</span><span class="nx">amp</span><span class="p">));</span>
+</code></pre></div>
+<p><strong>Problem:</strong> Duplicates logic from <code>renderSpectrum</code> but hardcodes constants (80 max, sqrt curve). Should extract shared scaling function.</p>
+<p><strong>Impact:</strong> If spectrum scaling changes, peak hold won't match.</p>
+<p><strong>Fix:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="kd">function</span><span class="w"> </span><span class="nx">amplitudeToY</span><span class="p">(</span><span class="nx">value</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">,</span><span class="w"> </span><span class="nx">height</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">)</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">amp</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">Math</span><span class="p">.</span><span class="nx">min</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="nx">value</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mf">80</span><span class="p">);</span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="nx">height</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="p">(</span><span class="mf">1</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nb">Math</span><span class="p">.</span><span class="nx">sqrt</span><span class="p">(</span><span class="nx">amp</span><span class="p">));</span>
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="p">}</span>
+</code></pre></div></p>
+<p>Use in both <code>renderSpectrum</code> and <code>_drawPeakHold</code>.</p>
+<hr />
+<h2 id="positive-observations">✅ Positive Observations<a class="headerlink" href="#positive-observations" title="Permanent link">&para;</a></h2>
+<h3 id="excellent">Excellent<a class="headerlink" href="#excellent" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Mobile-first design:</strong> All modals have 44px min-height touch targets</li>
+<li><strong>Grid layouts:</strong> Responsive breakpoints (3→2 columns) properly implemented</li>
+<li><strong>Accessibility:</strong> ARIA labels, roles, pressed states consistently added</li>
+<li><strong>Performance-conscious:</strong> Moving average uses fixed-size buffer (5 frames)</li>
+<li><strong>Type safety:</strong> All new components have proper Props interfaces</li>
+<li><strong>Graceful fallbacks:</strong> Peak hold/averaging disable cleanly (clear arrays)</li>
+<li><strong>Reactive derivations:</strong> Good use of <code>$derived</code> for computed values</li>
+<li><strong>Code style:</strong> Consistent with existing codebase (formatting, naming)</li>
+</ol>
+<h3 id="good">Good<a class="headerlink" href="#good" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Separation of concerns:</strong> Rendering logic in <code>lib/renderers/</code>, UI in <code>components/</code></li>
+<li><strong>Reusable utilities:</strong> <code>meter-utils.ts</code> pure functions (clamp, lerp, polar)</li>
+<li><strong>Color schemes:</strong> Clean abstraction with gradient builder</li>
+<li><strong>Documentation:</strong> Inline comments explain magic numbers (S_UNIT, S9_RAW, decay times)</li>
+</ol>
+<hr />
+<h2 id="testing-status">🧪 Testing Status<a class="headerlink" href="#testing-status" title="Permanent link">&para;</a></h2>
+<p><strong>Build:</strong> ✅ Passes (warnings pre-existing)<br />
+<strong>TypeScript:</strong> ✅ No new errors<br />
+<strong>Runtime:</strong> ⚠️ <strong>Will crash</strong> due to C1 (<code>$state</code> in .ts file)</p>
+<p><strong>Recommended tests before merge:</strong>
+1. Load UI and verify S-meter renders (will fail until C1 fixed)
+2. Change waterfall ref level slider (check for frame drops → C2)
+3. Long-press ATT, then PRE without releasing ATT (check timer conflict → H1)
+4. Toggle averaging/peak hold rapidly (check for memory leaks)</p>
+<hr />
+<h2 id="risk-assessment">📊 Risk Assessment<a class="headerlink" href="#risk-assessment" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Issue</th>
+<th>Severity</th>
+<th>Likelihood</th>
+<th>Impact</th>
+<th>Priority</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>C1 (smoothing $state)</td>
+<td>🔴 Critical</td>
+<td>100%</td>
+<td>S-meter crash</td>
+<td><strong>P0</strong></td>
+</tr>
+<tr>
+<td>C2 (waterfall alloc)</td>
+<td>🔴 Critical</td>
+<td>100%</td>
+<td>Frame drops</td>
+<td><strong>P0</strong></td>
+</tr>
+<tr>
+<td>C3 (ref level math)</td>
+<td>🟡 High</td>
+<td>100%</td>
+<td>Wrong behavior</td>
+<td><strong>P1</strong></td>
+</tr>
+<tr>
+<td>H1 (shared timer)</td>
+<td>🟡 High</td>
+<td>5%</td>
+<td>UX confusion</td>
+<td><strong>P2</strong></td>
+</tr>
+<tr>
+<td>H2 (timer cleanup)</td>
+<td>🟡 High</td>
+<td>1%</td>
+<td>Leaked refs</td>
+<td><strong>P3</strong></td>
+</tr>
+<tr>
+<td>M1-M4</td>
+<td>🟢 Medium</td>
+<td>Varies</td>
+<td>Code quality</td>
+<td><strong>P4</strong></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="fix-plan">🛠️ Fix Plan<a class="headerlink" href="#fix-plan" title="Permanent link">&para;</a></h2>
+<h3 id="immediate-before-testing">Immediate (before testing)<a class="headerlink" href="#immediate-before-testing" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Fix C1:</strong> Change <code>smoothing.svelte.ts</code> line 6 to <code>let current = 0;</code></li>
+<li><strong>Fix C2:</strong> Reuse <code>this.rowBuf</code> in <code>pushRow</code> (see fix above)</li>
+<li><strong>Fix C3:</strong> Move refShift before sqrt curve</li>
+</ol>
+<h3 id="before-merge-to-main">Before merge to main<a class="headerlink" href="#before-merge-to-main" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Fix H1:</strong> Separate ATT/PRE timers</li>
+<li><strong>Fix H2:</strong> Add onDestroy cleanup</li>
+</ol>
+<h3 id="nice-to-have-follow-up-pr">Nice-to-have (follow-up PR)<a class="headerlink" href="#nice-to-have-follow-up-pr" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Fix M2:</strong> Consolidate StepMenu/CapabilityMenu</li>
+<li><strong>Fix M3:</strong> Remove extra parens in SMeter</li>
+<li><strong>Fix M4:</strong> Extract shared amplitude scaling</li>
+</ol>
+<hr />
+<h2 id="commit-quality">📝 Commit Quality<a class="headerlink" href="#commit-quality" title="Permanent link">&para;</a></h2>
+<p><strong>Commit messages:</strong> ✅ Excellent (feat: prefix, closes #N, clear descriptions)<br />
+<strong>Commit size:</strong> ✅ Reasonable (CSS/UI/SVG/waterfall/spectrum logically separated)<br />
+<strong>Atomicity:</strong> ⚠️ C2 regression introduced mid-sprint — better cross-agent review needed</p>
+<hr />
+<h2 id="recommendations">🎯 Recommendations<a class="headerlink" href="#recommendations" title="Permanent link">&para;</a></h2>
+<h3 id="process-improvements">Process Improvements<a class="headerlink" href="#process-improvements" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Agent handoff protocol:</strong> When multiple agents touch same file (SpectrumCanvas, waterfall-renderer), final commit should include reconciliation check</li>
+<li><strong>Regression tests:</strong> C2 was fixed 2026-03-08 and broke 2026-03-09 — need smoke test for known issues</li>
+<li><strong>Runes in .ts files:</strong> Add ESLint rule to catch <code>$state/$derived/$effect</code> outside .svelte context</li>
+</ol>
+<h3 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Smoothing pattern:</strong> Consider Svelte 5 native approach (reactive stores or <code>$state</code> in component, not external module)</li>
+<li><strong>Renderer lifecycle:</strong> WaterfallRenderer has <code>destroy()</code> but SpectrumRenderer doesn't — add for symmetry</li>
+<li><strong>Color scheme storage:</strong> Consider localStorage persistence (user sets thermal, it persists across sessions)</li>
+</ol>
+<hr />
+<h2 id="lessons-learned">💡 Lessons Learned<a class="headerlink" href="#lessons-learned" title="Permanent link">&para;</a></h2>
+<h3 id="1-sveltets-files-support-runes-svelte-5">1. <code>.svelte.ts</code> Files Support Runes (Svelte 5)<a class="headerlink" href="#1-sveltets-files-support-runes-svelte-5" title="Permanent link">&para;</a></h3>
+<p><strong>Mistake:</strong> Review incorrectly flagged <code>$state(0)</code> in <code>smoothing.svelte.ts</code> as invalid.</p>
+<p><strong>Reality:</strong>
+- <code>.svelte.ts</code> = Svelte 5 reactive module (runes allowed)
+- <code>.ts</code> = plain TypeScript (runes not allowed)
+- <code>.svelte</code> files = runes in <code>&lt;script&gt;</code> only</p>
+<p><strong>Reference:</strong> <a href="https://svelte.dev/docs/svelte/$state#$state-in-ts-files">Svelte 5 docs on .svelte.ts modules</a></p>
+<p><strong>Impact:</strong> Our "fix" broke S-meter reactivity → frozen needle.</p>
+<p><strong>Takeaway:</strong> Verify framework conventions before "fixing" what looks wrong. <code>.svelte.ts</code> is a first-class pattern in Svelte 5.</p>
+<h3 id="2-regression-testing-critical-for-known-issues">2. Regression Testing Critical for Known Issues<a class="headerlink" href="#2-regression-testing-critical-for-known-issues" title="Permanent link">&para;</a></h3>
+<p><strong>Problem:</strong> C2 (waterfall memory allocation) was fixed on 2026-03-08, broke on 2026-03-09.</p>
+<p><strong>Why:</strong> Agent rewrote waterfall-renderer.ts without awareness of prior fix.</p>
+<p><strong>Solution:</strong>
+- Add regression test suite for critical bugs
+- Include fix commit hash in code comments: <code>// Fixed 2026-03-08 (8d5488f): reuse rowBuf</code>
+- Pre-commit hook: check for known anti-patterns</p>
+<h3 id="3-multi-agent-coordination-needs-better-protocol">3. Multi-Agent Coordination Needs Better Protocol<a class="headerlink" href="#3-multi-agent-coordination-needs-better-protocol" title="Permanent link">&para;</a></h3>
+<p><strong>Observed:</strong> 
+- Waterfall agent committed both waterfall + labels work (2 issues)
+- SpectrumCanvas.svelte modified by 2 agents (labels + spectrum)</p>
+<p><strong>Risk:</strong> Merge conflicts, duplicate work, regression introduction</p>
+<p><strong>Mitigation:</strong>
+- Task files should declare file ownership: <code>FILES: waterfall-renderer.ts (exclusive)</code>
+- Final reconciliation step before commit: <code>git diff --name-only | check_conflicts</code></p>
+<hr />
+<h2 id="approval-status">✅ Approval Status<a class="headerlink" href="#approval-status" title="Permanent link">&para;</a></h2>
+<p><strong>Original Status (2026-03-09 13:13 EDT):</strong> ❌ <strong>BLOCKED</strong> — Critical issues C1 and C2 must be fixed before production use.</p>
+<p><strong>Updated Status (2026-03-09 14:28 EDT):</strong> ✅ <strong>APPROVED</strong> with corrections</p>
+<h3 id="fixes-applied">Fixes Applied<a class="headerlink" href="#fixes-applied" title="Permanent link">&para;</a></h3>
+<p><strong>Commit <code>d55ae7e</code> (2026-03-09 13:22 EDT):</strong>
+- ~~C1: Removed <code>$state(0)</code> from smoothing.svelte.ts~~ ← <strong>INCORRECT FIX, reverted</strong>
+- ✅ C2: Waterfall rowBuf reuse restored
+- ✅ C3: Ref level applied before sqrt curve
+- ✅ H1: Split ATT/PRE timers
+- ✅ H2: Added onDestroy cleanup</p>
+<p><strong>Commit (2026-03-09 14:27 EDT):</strong>
+- ✅ C1 REVERT: Restored <code>$state(0)</code> in smoothing.svelte.ts (S-meter fix)</p>
+<p><strong>Status:</strong> All critical issues resolved. Medium priority issues (M1-M4) tracked for follow-up.</p>
+<p><strong>Remaining work:</strong>
+- M1: Waterfall edge pixels (cosmetic)
+- M2: Passband colors (enhancement)
+- M3: ATT/PRE keyboard shortcuts (feature request)
+- M4: Peak hold decay tuning (nice-to-have)</p>
+<hr />
+<p><strong>Total review time:</strong> 10 minutes<br />
+<strong>Files read:</strong> 14 (full), 3 (partial)<br />
+<strong>LOC reviewed:</strong> ~1400</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/morozsm/icom-lan" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

@@ -284,7 +284,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../api/radio/" class="md-tabs__link">
+        <a href="../api/public-api-surface/" class="md-tabs__link">
           
   
   
@@ -879,6 +879,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../api/public-api-surface/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Public API Surface
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../api/radio/" class="md-nav__link">
         
   
@@ -999,6 +1027,34 @@
     
   
     Transport
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/commander/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Commander
   
 
     
@@ -1248,6 +1304,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../internals/reliability-semantics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reliability semantics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../internals/rfc-web-ui-v1/" class="md-nav__link">
         
   
@@ -1256,6 +1340,34 @@
     
   
     Web UI RFC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../internals/cli-design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI design
   
 
     
@@ -1587,10 +1699,54 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#phase-7-platform-foundation-m2-complete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 7 — Platform Foundation (M2) ✅ COMPLETE
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-8-ic-7610-usb-backend-mvp-m3-complete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 8 — IC-7610 USB Backend MVP (M3) ✅ COMPLETE
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-9-ic-7610-wfview-command-parity-m4-in-progress" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 9 — IC-7610 wfview Command Parity (M4) ⏳ IN PROGRESS
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#current-status" class="md-nav__link">
     <span class="md-ellipsis">
       
         Current Status
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reliability-test-expansion-2026-03-05" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reliability Test Expansion (2026-03-05)
       
     </span>
   </a>
@@ -1646,48 +1802,50 @@
 
 <h1 id="icom-lan-project-documentation">icom-lan — Project Documentation<a class="headerlink" href="#icom-lan-project-documentation" title="Permanent link">&para;</a></h1>
 <h2 id="goal">Goal<a class="headerlink" href="#goal" title="Permanent link">&para;</a></h2>
-<p>Create a Python library for direct control of Icom transceivers over LAN (UDP), without intermediary software (wfview, RS-BA1, hamlib).</p>
+<p>Create a Python library for direct control of Icom transceivers with a shared radio core:
+- LAN backend (UDP, native Icom protocol)
+- serial backend (USB CI-V + exported USB audio devices, in progress)</p>
+<p>No intermediary software (wfview, RS-BA1, hamlib) is required for supported paths.</p>
 <h3 id="objectives">Objectives<a class="headerlink" href="#objectives" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Connect to Icom over network (authentication, keep-alive)</li>
 <li>Send/receive CI-V commands (frequency, mode, power, meters)</li>
 <li>Receive/transmit audio stream (Opus)</li>
 <li>Simple Pythonic API (sync + async)</li>
-<li>Support for IC-7610, IC-705, IC-7300, IC-9700</li>
+<li>Keep one <code>Radio</code> contract for API/CLI/Web/rigctld consumers</li>
+<li>Support IC-7610 first, then expand to other models/families via backend/profile architecture</li>
 </ul>
 <h3 id="non-goals-for-now">Non-goals (for now)<a class="headerlink" href="#non-goals-for-now" title="Permanent link">&para;</a></h3>
 <ul>
 <li>GUI</li>
 <li>Full wfview replacement</li>
-<li>USB/serial support (hamlib handles that)</li>
+<li>Non-IC-7610 serial expansion before IC-7610 USB MVP is stable</li>
+<li>Cross-platform USB/audio polish beyond macOS-first rollout</li>
 </ul>
 <h2 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>┌─────────────────────────────────────────────┐
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>│                 icom-lan                     │
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>│                                             │
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>│  ┌───────────┐  ┌──────────┐  ┌──────────┐ │
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>│  │ Transport │  │   CIV    │  │  Audio   │ │
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>│  │  (UDP)    │  │ Commands │  │ (Opus)   │ │
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>│  └─────┬─────┘  └────┬─────┘  └────┬─────┘ │
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>│        │             │             │        │
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>│  ┌─────┴─────────────┴─────────────┴─────┐  │
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>│  │         IcomRadio (public API)        │  │
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>│  └──────────────────┬────────────────────┘  │
-<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>│                     │                       │
-<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>│  ┌──────────────────┴────────────────────┐  │
-<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>│  │    rigctld TCP Server (:4532)         │  │
-<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>│  │    (Hamlib NET rigctl compatible)     │  │
-<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>│  └───────────────────────────────────────┘  │
-<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>└─────────────────────────────────────────────┘
-<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>                     │ UDP
-<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>                     ▼
-<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>            ┌─────────────────┐
-<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>            │   Icom Radio    │
-<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>            │  192.168.x.x    │
-<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>            │  :50001 control │
-<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>            │  :50002 ci-v    │
-<a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>            │  :50003 audio   │
-<a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>            └─────────────────┘
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>┌──────────────────────────────────────────────────────────────┐
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>│                           icom-lan                           │
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>│                                                              │
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>│  Consumers: API / CLI / Web / rigctld                       │
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>│                 │                                            │
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>│                 ▼                                            │
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>│      radio_protocol.Radio (+ capability protocols)           │
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>│                 │                                            │
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>│                 ▼                                            │
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>│            backends.factory.create_radio()                   │
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>│                 │                                            │
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>│                 ▼                                            │
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>│     Icom7610CoreRadio (shared commander/state/civ routing)   │
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>│          ┌───────────────────────────────┴─────────────────┐ │
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>│          ▼                                                 ▼ │
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>│  Icom7610LanRadio                                Icom7610SerialRadio
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>│  - control/auth/keepalive (UDP)                  - serial session
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>│  - CI-V over UDP                                 - CI-V over USB serial
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>│  - LAN audio (Opus/PCM)                          - USB audio devices
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>└──────────┬───────────────────────────────────────────────┬───┘
+<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>           │                                               │
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>           ▼                                               ▼
+<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>   IC-7610 over LAN                                IC-7610 over USB
 </code></pre></div>
 <h2 id="icom-lan-protocol-based-on-wfview-research">Icom LAN Protocol (based on wfview research)<a class="headerlink" href="#icom-lan-protocol-based-on-wfview-research" title="Permanent link">&para;</a></h2>
 <h3 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h3>
@@ -1835,7 +1993,7 @@
 <li>[x] Multi-model support (IC-7610, IC-705, IC-7300, IC-9700)</li>
 <li>[x] CLI utility (<code>icom-lan status</code>, <code>icom-lan freq 14074000</code>)</li>
 <li>[x] Documentation + MkDocs site</li>
-<li>[x] PyPI publication (v0.7.0)</li>
+<li>[x] PyPI publication (v0.8.0)</li>
 </ul>
 <h3 id="phase-5-hamlib-net-rigctld-complete">Phase 5 — Hamlib NET rigctld ✅ COMPLETE<a class="headerlink" href="#phase-5-hamlib-net-rigctld-complete" title="Permanent link">&para;</a></h3>
 <p><strong>Goal:</strong> Drop-in rigctld replacement for WSJT-X, JS8Call, fldigi.</p>
@@ -1850,13 +2008,91 @@
 <li>[x] CI-V desync fix + circuit breaker</li>
 </ul>
 <h3 id="phase-6-scopewaterfall-complete-v060">Phase 6 — Scope/Waterfall ✅ COMPLETE (v0.6.0)<a class="headerlink" href="#phase-6-scopewaterfall-complete-v060" title="Permanent link">&para;</a></h3>
+<h3 id="phase-7-platform-foundation-m2-complete">Phase 7 — Platform Foundation (M2) ✅ COMPLETE<a class="headerlink" href="#phase-7-platform-foundation-m2-complete" title="Permanent link">&para;</a></h3>
+<p><strong>Goal:</strong> Backend-neutral architecture for stable platform evolution.</p>
+<ul>
+<li>[x] Extract shared IC-7610 executable core (<code>Icom7610CoreRadio</code>) with LAN compatibility wrapper</li>
+<li>[x] Introduce profile-driven model/capability abstraction (<code>RadioProfile</code>)</li>
+<li>[x] Establish backend factory/config wiring (<code>create_radio</code>, backend config objects)</li>
+<li>[x] Add serial CI-V link foundation + deterministic serial test matrix</li>
+<li>[x] Expand reliability matrix and stabilize connect/recovery behavior</li>
+</ul>
+<h3 id="phase-8-ic-7610-usb-backend-mvp-m3-complete">Phase 8 — IC-7610 USB Backend MVP (M3) ✅ COMPLETE<a class="headerlink" href="#phase-8-ic-7610-usb-backend-mvp-m3-complete" title="Permanent link">&para;</a></h3>
+<p><strong>Goal:</strong> Complete IC-7610 serial backend (control + audio + scope) and wire all consumers.</p>
+<ul>
+<li>[x] <code>#144</code> Serial radio wrapper/session</li>
+<li>[x] <code>#145</code> USB audio driver</li>
+<li>[x] <code>#146</code> Scope/waterfall on serial with guardrails (live hardware validated, 2026-03-06)</li>
+<li>[x] <code>#147</code> CLI backend selection and serial/audio flags</li>
+<li>[x] <code>#148</code> Web backend-neutral integration</li>
+<li>[x] <code>#149</code> rigctld backend-neutral integration</li>
+<li>[x] <code>#151</code> Docs/migration/capability matrix (2026-03-06)</li>
+</ul>
+<h3 id="phase-9-ic-7610-wfview-command-parity-m4-in-progress">Phase 9 — IC-7610 wfview Command Parity (M4) ⏳ IN PROGRESS<a class="headerlink" href="#phase-9-ic-7610-wfview-command-parity-m4-in-progress" title="Permanent link">&para;</a></h3>
+<p><strong>Goal:</strong> Close the remaining IC-7610 command parity gap against wfview using a maintained command matrix and regression gate.</p>
+<ul>
+<li>[x] <code>#139</code> parity matrix + regression gate (<code>docs/parity/ic7610_command_matrix.json</code>)</li>
+<li>[x] <code>#130</code> DSP / level command family</li>
+<li>[x] <code>#131</code> operator toggles / status family</li>
+<li>[ ] <code>#132</code> VFO / dual-watch / scanning family</li>
+<li>[ ] <code>#133</code> memory + band-stacking family</li>
+<li>[ ] <code>#134</code> repeater / tone family</li>
+<li>[ ] <code>#135</code> system / configuration family</li>
+<li>[ ] <code>#136</code> transceiver / RIT / TX status family</li>
+<li>[x] <code>#137</code> advanced scope controls</li>
+<li>[ ] <code>#138</code> cross-surface exposure (API / CLI / Web / rigctld)</li>
+</ul>
 <h3 id="current-status">Current Status<a class="headerlink" href="#current-status" title="Permanent link">&para;</a></h3>
-<p><strong>All 32 issues closed. 1040 tests. v0.7.0 released on PyPI.</strong></p>
+<p><strong>Package version in <code>pyproject.toml</code>: <code>0.11.0</code>.</strong>
+<strong>Reliability integration backlog (items 1-13) completed on 2026-03-05.</strong>
+<strong>Latest full regression (local, 2026-03-06):</strong> green; exact counts are tracked in issue comments because the total moves as the parity/integration suite grows.
+- <strong>M2 Platform Foundation (step #141):</strong> extracted shared IC-7610 executable core (<code>Icom7610CoreRadio</code>) with LAN compatibility wrapper (<code>IcomRadio</code>) and no behavior changes.
+- <strong>M2 profile abstraction (issue #119):</strong> runtime <code>RadioProfile</code> matrix added for multi-model behavior; <code>model</code>/<code>capabilities</code> and receiver/cmd29 routing are now profile-driven with explicit unsupported-operation guards.
+- <strong>M3 serial scope guardrails (issue #146, 2026-03-06):</strong> serial backend keeps the shared error contract in disconnected state (<code>ConnectionError</code> before low-baud guardrail evaluation), includes deterministic low-baud guardrail with explicit override (<code>allow_low_baud_scope</code> / <code>ICOM_SERIAL_SCOPE_ALLOW_LOW_BAUD</code>), and now has dedicated serial integration scope profile/gating (<code>ICOM_SERIAL_DEVICE</code>, <code>ICOM_SERIAL_BAUDRATE</code>, <code>ICOM_SERIAL_RADIO_ADDR</code>) alongside serial-specific CI-V pacing (<code>ICOM_SERIAL_CIV_MIN_INTERVAL_MS</code>) while LAN scope behavior remains unchanged.
+- <strong>M3 CLI integration (issue #147, 2026-03-06):</strong> unified CLI backend selection now routes through <code>create_radio(...)</code>, includes serial/audio flags, supports JSON audio-device listing, and preserves backward-compatible LAN defaults.
+- <strong>M3 web integration (issue #148, 2026-03-06):</strong> web startup/runtime now stays on the shared factory/config path for both LAN and serial radios, removes backend-specific state pokes from <code>web/</code>, gates scope/audio behavior via runtime capability protocols, and adds serial-focused smoke/contract coverage so LAN-only assumptions are caught in CI.
+- <strong>M3 rigctld integration (issue #149, 2026-03-06):</strong> rigctld startup now reuses the shared factory/config path for <code>--backend lan</code> and <code>--backend serial</code>, shares backend-provided state cache when available, prefers backend-native mode introspection via <code>radio_protocol.ModeInfoCapable</code> while falling back to the core <code>Radio.get_mode()/set_mode(str, ...)</code> contract, and adds serial TCP smoke coverage for read/write rigctld commands while keeping audit logging and circuit-breaker behavior unchanged.
+- <strong>M3 documentation (issue #151, 2026-03-06):</strong> comprehensive IC-7610 USB serial backend setup guide (macOS-first), backend capability matrix (LAN vs Serial), migration/backward-compatibility section, troubleshooting for serial CI-V and USB audio, and critical hardware finding (<code>CI-V USB Port</code> must be <code>Link to [CI-V]</code>, not <code>[REMOTE]</code>) documented across guide/radios.md, guide/troubleshooting.md, radio-protocol.md, and new guide/ic7610-usb-setup.md.
+- <strong>M3 status:</strong> complete (epic #152 closed-out).
+- <strong>M4 advanced scope parity (issue #137, 2026-03-06):</strong> <code>advanced_scope</code> is now fully implemented in maintained library/runtime surfaces, including receiver select, single/dual, mode/span/edge/hold/ref/speed, during-TX, center type, VBW/RBW, fixed-edge bounds, and receive-side projection into <code>RadioState.scope_controls</code>.
+- <strong>IC-7610 parity matrix (issue #139, 2026-03-07): 134 implemented, 0 partial, 0 missing (100%)</strong>; source of truth is <code>docs/parity/ic7610_command_matrix.json</code>, and the explicit parity smoke profile is <code>pytest -m "integration and ic7610_parity" tests/integration</code>.
+- <strong>M4 parity family counts (from matrix):</strong>
+  - <code>baseline_core</code> (pre-M4 baseline, no owner issue): 38 implemented, 0 partial, 0 missing
+  - <code>#132 vfo_dualwatch_scan</code>: 10 implemented, 0 partial, 0 missing
+  - <code>#136 transceiver_status</code>: 11 implemented, 0 partial, 0 missing
+  - <code>#137 advanced_scope</code>: 13 implemented, 0 partial, 0 missing
+  - <code>#130 dsp_levels</code>: 21 implemented, 0 partial, 0 missing
+  - <code>#131 operator_toggles</code>: 15 implemented, 0 partial, 0 missing
+  - <code>#133 memory_bandstack</code>: 6 implemented, 0 partial, 0 missing
+  - <code>#134 tone_repeater</code>: 4 implemented, 0 partial, 0 missing
+  - <code>#135 system_config</code>: 16 implemented, 0 partial, 0 missing</p>
+<h3 id="reliability-test-expansion-2026-03-05">Reliability Test Expansion (2026-03-05)<a class="headerlink" href="#reliability-test-expansion-2026-03-05" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Added extended integration coverage scaffolding for:</li>
+<li>transport sequence wrap-around and ACK mixed stress,</li>
+<li>session longevity/contention/readiness transitions,</li>
+<li>control API roundtrips (DATA/RF/AF/squelch/NB/NR/IP+/state),</li>
+<li>PCM audio path and scope lifecycle,</li>
+<li>negative auth/connect paths and legacy script migration to pytest.</li>
+<li>Added regression matrix gate for shared-core LAN + serial-ready architecture:</li>
+<li>backend-agnostic contract tests (LAN fixture + deterministic serial mock fixture),</li>
+<li>deterministic serial framing/stability unit tests (partial frames/timeouts/overflow),</li>
+<li>USB audio driver unit tests (selection/lifecycle/error paths),</li>
+<li>web/rigctld smoke tests on serial mock backend to guard against LAN-only assumptions.</li>
+<li>Added production <code>SerialCivLink</code> driver for IC-7610 USB CI-V with robust FE FE ... FD framing
+  recovery, collision/abort handling, timeout/overflow guardrails, writer backpressure handling,
+  and optional dependency guard (<code>pip install icom-lan[serial]</code>).</li>
+<li>Added production <code>UsbAudioDriver</code> for IC-7610 serial backend with deterministic device probe/
+  selection (auto-detect + explicit RX/TX overrides), RX/TX lifecycle guardrails, actionable
+  optional dependency errors (<code>sounddevice</code>/<code>numpy</code>), and serial-audio contract coverage for web
+  audio channel + bridge flows.</li>
+</ul>
 <h2 id="test-equipment">Test Equipment<a class="headerlink" href="#test-equipment" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Icom IC-7610</strong> at <code>192.168.55.40</code></li>
-<li>Ports: 50001 (control), 50002 (serial), 50003 (audio)</li>
-<li>Mac mini M4 Pro on the same LAN (<code>192.168.55.152</code>)</li>
+<li>LAN ports: 50001 (control), 50002 (CI-V), 50003 (audio)</li>
+<li>USB path: CI-V serial device + exported RX/TX audio devices</li>
+<li>Local development host on the same LAN (IP redacted)</li>
 </ul>
 <h2 id="license-notes">License Notes<a class="headerlink" href="#license-notes" title="Permanent link">&para;</a></h2>
 <ul>

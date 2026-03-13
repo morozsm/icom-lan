@@ -290,7 +290,7 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="../radio/" class="md-tabs__link">
+        <a href="../public-api-surface/" class="md-tabs__link">
           
   
   
@@ -888,6 +888,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../public-api-surface/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Public API Surface
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../radio/" class="md-nav__link">
         
   
@@ -1008,6 +1036,34 @@
     
   
     Transport
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../commander/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Commander
   
 
     
@@ -1455,6 +1511,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../internals/reliability-semantics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reliability semantics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../internals/rfc-web-ui-v1/" class="md-nav__link">
         
   
@@ -1463,6 +1547,34 @@
     
   
     Web UI RFC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../internals/cli-design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI design
   
 
     
@@ -1765,7 +1877,7 @@
 
 
 <h1 id="authentication">Authentication<a class="headerlink" href="#authentication" title="Permanent link">&para;</a></h1>
-<p>Low-level authentication functions for the Icom LAN protocol. These are used internally by <a href="../radio/"><code>IcomRadio</code></a>.</p>
+<p>Low-level authentication functions for the Icom LAN protocol. These are used internally by the LAN backend (e.g. when using <a href="../public-api-surface/"><code>create_radio</code></a> with <code>LanBackendConfig</code>, or <a href="../radio/"><code>IcomRadio</code></a> directly).</p>
 <h2 id="credential-encoding">Credential Encoding<a class="headerlink" href="#credential-encoding" title="Permanent link">&para;</a></h2>
 <h3 id="encode_credentials"><code>encode_credentials()</code><a class="headerlink" href="#encode_credentials" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">encode_credentials</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span>

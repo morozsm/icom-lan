@@ -290,7 +290,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../api/radio/" class="md-tabs__link">
+        <a href="../../api/public-api-surface/" class="md-tabs__link">
           
   
   
@@ -602,10 +602,43 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#connection-parameters" class="md-nav__link">
+  <a href="#backend-selection" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Connection Parameters
+        Backend Selection
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lan-backend-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LAN Backend Parameters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#serial-backend-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Serial Backend Parameters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#connection-parameters-lan-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Connection Parameters (LAN, reference)
       
     </span>
   </a>
@@ -1051,6 +1084,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../api/public-api-surface/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Public API Surface
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../api/radio/" class="md-nav__link">
         
   
@@ -1171,6 +1232,34 @@
     
   
     Transport
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/commander/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Commander
   
 
     
@@ -1420,6 +1509,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../internals/reliability-semantics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reliability semantics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../internals/rfc-web-ui-v1/" class="md-nav__link">
         
   
@@ -1428,6 +1545,34 @@
     
   
     Web UI RFC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../internals/cli-design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI design
   
 
     
@@ -1559,10 +1704,43 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#connection-parameters" class="md-nav__link">
+  <a href="#backend-selection" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Connection Parameters
+        Backend Selection
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lan-backend-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LAN Backend Parameters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#serial-backend-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Serial Backend Parameters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#connection-parameters-lan-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Connection Parameters (LAN, reference)
       
     </span>
   </a>
@@ -1695,7 +1873,27 @@
 
 
 <h1 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h1>
-<h2 id="connection-parameters">Connection Parameters<a class="headerlink" href="#connection-parameters" title="Permanent link">&para;</a></h2>
+<h2 id="backend-selection">Backend Selection<a class="headerlink" href="#backend-selection" title="Permanent link">&para;</a></h2>
+<p>icom-lan supports two backends selected via <code>--backend</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Backend</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>lan</code> (default)</td>
+<td>Connects over UDP to the radio's LAN interface</td>
+</tr>
+<tr>
+<td><code>serial</code></td>
+<td>Connects via USB CI-V serial port + USB audio devices</td>
+</tr>
+</tbody>
+</table>
+<h2 id="lan-backend-parameters">LAN Backend Parameters<a class="headerlink" href="#lan-backend-parameters" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
@@ -1719,7 +1917,7 @@
 <tr>
 <td>Port</td>
 <td><code>port</code></td>
-<td><code>--port</code></td>
+<td><code>--control-port</code></td>
 <td><code>ICOM_PORT</code></td>
 <td><code>50001</code></td>
 <td>Control port</td>
@@ -1758,6 +1956,86 @@
 </tr>
 </tbody>
 </table>
+<h2 id="serial-backend-parameters">Serial Backend Parameters<a class="headerlink" href="#serial-backend-parameters" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Python API</th>
+<th>CLI Flag</th>
+<th>Env Var</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Device</td>
+<td><code>device</code></td>
+<td><code>--serial-port</code></td>
+<td><code>ICOM_SERIAL_DEVICE</code></td>
+<td>—</td>
+<td>Serial device path (required)</td>
+</tr>
+<tr>
+<td>Baud rate</td>
+<td><code>baudrate</code></td>
+<td><code>--serial-baud</code></td>
+<td><code>ICOM_SERIAL_BAUDRATE</code></td>
+<td><code>115200</code></td>
+<td>CI-V baud rate</td>
+</tr>
+<tr>
+<td>PTT mode</td>
+<td><code>ptt_mode</code></td>
+<td><code>--serial-ptt-mode</code></td>
+<td><code>ICOM_SERIAL_PTT_MODE</code></td>
+<td><code>civ</code></td>
+<td>Serial PTT control mode (<code>civ</code> supported)</td>
+</tr>
+<tr>
+<td>RX device</td>
+<td><code>rx_device</code></td>
+<td><code>--rx-device</code></td>
+<td><code>ICOM_USB_RX_DEVICE</code></td>
+<td>auto</td>
+<td>USB audio RX device name</td>
+</tr>
+<tr>
+<td>TX device</td>
+<td><code>tx_device</code></td>
+<td><code>--tx-device</code></td>
+<td><code>ICOM_USB_TX_DEVICE</code></td>
+<td>auto</td>
+<td>USB audio TX device name</td>
+</tr>
+<tr>
+<td>CI-V Address</td>
+<td><code>radio_addr</code></td>
+<td>—</td>
+<td>—</td>
+<td><code>0x98</code> (IC-7610)</td>
+<td>Radio's CI-V address</td>
+</tr>
+<tr>
+<td>Timeout</td>
+<td><code>timeout</code></td>
+<td><code>--timeout</code></td>
+<td>—</td>
+<td><code>5.0</code></td>
+<td>Operation timeout (seconds)</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Serial backend quick start</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">ICOM_SERIAL_DEVICE</span><span class="o">=</span>/dev/tty.usbmodem-IC7610
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>status
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>icom-lan<span class="w"> </span>--backend<span class="w"> </span>serial<span class="w"> </span>freq<span class="w"> </span><span class="m">14</span>.074m
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="c1"># List available USB audio devices</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>icom-lan<span class="w"> </span>--list-audio-devices
+</code></pre></div>
+<h2 id="connection-parameters-lan-reference">Connection Parameters (LAN, reference)<a class="headerlink" href="#connection-parameters-lan-reference" title="Permanent link">&para;</a></h2>
 <h2 id="ci-v-addresses">CI-V Addresses<a class="headerlink" href="#ci-v-addresses" title="Permanent link">&para;</a></h2>
 <p>Each Icom radio model has a default CI-V address. You can also configure a custom address in the radio's menu.</p>
 <table>
@@ -1794,16 +2072,22 @@
 </tr>
 </tbody>
 </table>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan</span><span class="w"> </span><span class="kn">import</span> <span class="n">IcomRadio</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="c1"># IC-7610 (default)</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">radio</span> <span class="o">=</span> <span class="n">IcomRadio</span><span class="p">(</span><span class="s2">&quot;192.168.1.100&quot;</span><span class="p">,</span> <span class="n">radio_addr</span><span class="o">=</span><span class="mh">0x98</span><span class="p">)</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="c1"># IC-705</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="n">radio</span> <span class="o">=</span> <span class="n">IcomRadio</span><span class="p">(</span><span class="s2">&quot;192.168.1.101&quot;</span><span class="p">,</span> <span class="n">radio_addr</span><span class="o">=</span><span class="mh">0xA4</span><span class="p">)</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="c1"># Custom CI-V address</span>
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="n">radio</span> <span class="o">=</span> <span class="n">IcomRadio</span><span class="p">(</span><span class="s2">&quot;192.168.1.100&quot;</span><span class="p">,</span> <span class="n">radio_addr</span><span class="o">=</span><span class="mh">0x42</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan</span><span class="w"> </span><span class="kn">import</span> <span class="n">create_radio</span><span class="p">,</span> <span class="n">LanBackendConfig</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="c1"># IC-7610 (default radio_addr 0x98)</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">config</span> <span class="o">=</span> <span class="n">LanBackendConfig</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="s2">&quot;192.168.1.100&quot;</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="s2">&quot;u&quot;</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="s2">&quot;p&quot;</span><span class="p">)</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="k">async</span> <span class="k">with</span> <span class="n">create_radio</span><span class="p">(</span><span class="n">config</span><span class="p">)</span> <span class="k">as</span> <span class="n">radio</span><span class="p">:</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="o">...</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="c1"># IC-705</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="n">config</span> <span class="o">=</span> <span class="n">LanBackendConfig</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="s2">&quot;192.168.1.101&quot;</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="s2">&quot;u&quot;</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="s2">&quot;p&quot;</span><span class="p">,</span> <span class="n">radio_addr</span><span class="o">=</span><span class="mh">0xA4</span><span class="p">)</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="k">async</span> <span class="k">with</span> <span class="n">create_radio</span><span class="p">(</span><span class="n">config</span><span class="p">)</span> <span class="k">as</span> <span class="n">radio</span><span class="p">:</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>    <span class="o">...</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="c1"># Custom CI-V address</span>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="n">config</span> <span class="o">=</span> <span class="n">LanBackendConfig</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="s2">&quot;192.168.1.100&quot;</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="s2">&quot;u&quot;</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="s2">&quot;p&quot;</span><span class="p">,</span> <span class="n">radio_addr</span><span class="o">=</span><span class="mh">0x42</span><span class="p">)</span>
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="k">async</span> <span class="k">with</span> <span class="n">create_radio</span><span class="p">(</span><span class="n">config</span><span class="p">)</span> <span class="k">as</span> <span class="n">radio</span><span class="p">:</span>
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>    <span class="o">...</span>
 </code></pre></div>
 <h2 id="port-architecture">Port Architecture<a class="headerlink" href="#port-architecture" title="Permanent link">&para;</a></h2>
 <p>The Icom LAN protocol uses three UDP ports:</p>
@@ -1856,6 +2140,14 @@
 <td>Tune CI-V pacing interval in commander</td>
 </tr>
 <tr>
+<td><code>ICOM_SERIAL_CIV_MIN_INTERVAL_MS=&lt;ms&gt;</code></td>
+<td>Serial-backend CI-V pacing override (default 50 ms)</td>
+</tr>
+<tr>
+<td><code>ICOM_SERIAL_SCOPE_ALLOW_LOW_BAUD=1</code></td>
+<td>Override serial scope low-baud guardrail (use with caution)</td>
+</tr>
+<tr>
 <td><code>ICOM_STRICT_FRONTEND=1</code></td>
 <td>Enable strict ATT/PREAMP integration profile (fail instead of skip)</td>
 </tr>
@@ -1864,20 +2156,20 @@
 <h2 id="environment-variable-setup">Environment Variable Setup<a class="headerlink" href="#environment-variable-setup" title="Permanent link">&para;</a></h2>
 <h3 id="bash-zsh">Bash / Zsh<a class="headerlink" href="#bash-zsh" title="Permanent link">&para;</a></h3>
 <p>Add to <code>~/.bashrc</code>, <code>~/.zshrc</code>, or <code>~/.profile</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">ICOM_HOST</span><span class="o">=</span><span class="m">192</span>.168.1.100
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">ICOM_USER</span><span class="o">=</span>myuser
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">ICOM_PASS</span><span class="o">=</span>mypass
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">ICOM_HOST</span><span class="o">=</span><span class="m">192</span>.168.1.100
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">ICOM_USER</span><span class="o">=</span>myuser
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">ICOM_PASS</span><span class="o">=</span>mypass
 </code></pre></div>
 <h3 id="fish">Fish<a class="headerlink" href="#fish" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">set</span> -Ux ICOM_HOST 192.168.1.100
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="k">set</span> -Ux ICOM_USER myuser
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="k">set</span> -Ux ICOM_PASS mypass
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">set</span> -Ux ICOM_HOST 192.168.1.100
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="k">set</span> -Ux ICOM_USER myuser
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="k">set</span> -Ux ICOM_PASS mypass
 </code></pre></div>
 <h3 id="env-file-for-scripts"><code>.env</code> File (for scripts)<a class="headerlink" href="#env-file-for-scripts" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># .env</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nv">ICOM_HOST</span><span class="o">=</span><span class="m">192</span>.168.1.100
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="nv">ICOM_USER</span><span class="o">=</span>myuser
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="nv">ICOM_PASS</span><span class="o">=</span>mypass
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># .env</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nv">ICOM_HOST</span><span class="o">=</span><span class="m">192</span>.168.1.100
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="nv">ICOM_USER</span><span class="o">=</span>myuser
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="nv">ICOM_PASS</span><span class="o">=</span>mypass
 </code></pre></div>
 <div class="admonition warning">
 <p class="admonition-title">Security</p>
@@ -1885,11 +2177,17 @@
 </div>
 <h2 id="timeout-tuning">Timeout Tuning<a class="headerlink" href="#timeout-tuning" title="Permanent link">&para;</a></h2>
 <p>The default 5-second timeout works well for local networks. Adjust if needed:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Fast local network</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">radio</span> <span class="o">=</span> <span class="n">IcomRadio</span><span class="p">(</span><span class="s2">&quot;192.168.1.100&quot;</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mf">2.0</span><span class="p">)</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="c1"># Over VPN or high-latency link</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="n">radio</span> <span class="o">=</span> <span class="n">IcomRadio</span><span class="p">(</span><span class="s2">&quot;10.0.0.100&quot;</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mf">15.0</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan</span><span class="w"> </span><span class="kn">import</span> <span class="n">create_radio</span><span class="p">,</span> <span class="n">LanBackendConfig</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="c1"># Fast local network</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="n">config</span> <span class="o">=</span> <span class="n">LanBackendConfig</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="s2">&quot;192.168.1.100&quot;</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="s2">&quot;u&quot;</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="s2">&quot;p&quot;</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mf">2.0</span><span class="p">)</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="k">async</span> <span class="k">with</span> <span class="n">create_radio</span><span class="p">(</span><span class="n">config</span><span class="p">)</span> <span class="k">as</span> <span class="n">radio</span><span class="p">:</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>    <span class="o">...</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="c1"># Over VPN or high-latency link</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="n">config</span> <span class="o">=</span> <span class="n">LanBackendConfig</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="s2">&quot;10.0.0.100&quot;</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="s2">&quot;u&quot;</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="s2">&quot;p&quot;</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mf">15.0</span><span class="p">)</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="k">async</span> <span class="k">with</span> <span class="n">create_radio</span><span class="p">(</span><span class="n">config</span><span class="p">)</span> <span class="k">as</span> <span class="n">radio</span><span class="p">:</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>    <span class="o">...</span>
 </code></pre></div>
 <p>The timeout applies to:</p>
 <ul>
@@ -1900,14 +2198,14 @@
 </ul>
 <h2 id="logging">Logging<a class="headerlink" href="#logging" title="Permanent link">&para;</a></h2>
 <p>The library uses Python's standard <code>logging</code> module. Enable debug output to troubleshoot connection issues:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="c1"># See all icom-lan internal messages</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="n">logging</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">(</span><span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="c1"># Or target specific modules</span>
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;icom_lan.transport&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;icom_lan.radio&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="c1"># See all icom-lan internal messages</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="n">logging</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">(</span><span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="c1"># Or target specific modules</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;icom_lan.transport&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;icom_lan.radio&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
 </code></pre></div>
 <p>Log levels:</p>
 <table>
