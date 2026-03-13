@@ -71,17 +71,28 @@ For LAN-only scripts you can still use **`IcomRadio(host, username=..., password
 
 ## 4. Discover Radios
 
-Don't know your radio's IP? Use autodiscovery:
+Don't know your radio's IP — or want to find USB-connected radios too? Use unified discovery:
 
 ```bash
 icom-lan discover
 ```
 
 ```
-Scanning for Icom radios (3 seconds)...
-  Found: 192.168.1.100:50001  id=0xDEADBEEF
+Scanning for Icom radios (3s LAN + serial)...
 
-1 radio(s) found.
+Found 1 radio with 2 connection methods:
+
+IC-7610:
+  • LAN: 192.168.55.40
+  • Serial: /dev/cu.usbserial-11320 (19200 baud)
+```
+
+The command scans both LAN (UDP broadcast) and USB serial ports in parallel. Use filters for targeted scans:
+
+```bash
+icom-lan discover --lan-only      # UDP broadcast only
+icom-lan discover --serial-only   # USB serial ports only
+icom-lan discover --timeout 5     # Longer LAN listen window
 ```
 
 ## What's Next?

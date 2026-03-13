@@ -12,6 +12,7 @@ from icom_lan.discovery import (
     SerialPortCandidate,
     _is_candidate,
     _parse_probe_response,
+    dedupe_radios,
     enumerate_serial_ports,
     probe_serial_civ,
 )
@@ -310,3 +311,88 @@ class TestEnumerateSerialPorts:
         with patch("serial.tools.list_ports.comports", return_value=[]):
             result = enumerate_serial_ports()
         assert isinstance(result, list)
+
+
+# ---------------------------------------------------------------------------
+# dedupe_radios tests
+# ---------------------------------------------------------------------------
+
+
+class TestDedupeRadios:
+    def test_same_radio_lan_and_serial_grouped(self) -> None:
+        lan = [{"model": "IC-7610", "address": 0x98, "host": "192.168.1.100"}]
+        serial = [{"model": "IC-7610", "address": 0x98, "port": "/dev/ttyUSB0", "baud": 19200}]
+
+        result = dedupe_radios(lan, serial)
+
+        assert len(result) == 1
+        assert result[0]["model"] == "IC-7610"
+        assert len(result[0]["lan"]) == 1
+        assert len(result[0]["serial"]) == 1
+
+    def test_different_radios_stay_separate(self) -> None:
+        lan = [{"model": "IC-7610", "address": 0x98, "host": "192.168.1.100"}]
+        serial = [{"model": "IC-705", "address": 0xA4, "port": "/dev/ttyUSB0", "baud": 19200}]
+
+        result = dedupe_radios(lan, serial)
+
+        assert len(result) == 2
+
+    def test_lan_only_no_serial_section(self) -> None:
+        lan = [{"model": "IC-7610", "address": 0x98, "host": "192.168.1.100"}]
+        serial: list[dict] = []
+
+        result = dedupe_radios(lan, serial)
+
+        assert len(result) == 1
+        assert len(result[0]["serial"]) == 0
+        assert len(result[0]["lan"]) == 1
+
+    def test_serial_only_no_lan_section(self) -> None:
+        lan: list[dict] = []
+        serial = [{"model": "IC-705", "address": 0xA4, "port": "/dev/ttyUSB0", "baud": 19200}]
+
+        result = dedupe_radios(lan, serial)
+
+        assert len(result) == 1
+        assert len(result[0]["lan"]) == 0
+        assert len(result[0]["serial"]) == 1
+
+    def test_empty_both(self) -> None:
+        assert dedupe_radios([], []) == []
+
+    def test_two_lan_same_radio_merged(self) -> None:
+        # Same model+address from two LAN entries — merged (unusual but defensive)
+        lan = [
+            {"model": "IC-7610", "address": 0x98, "host": "192.168.1.100"},
+            {"model": "IC-7610", "address": 0x98, "host": "192.168.1.101"},
+        ]
+        result = dedupe_radios(lan, [])
+        assert len(result) == 1
+        assert len(result[0]["lan"]) == 2
+
+    def test_lan_without_model_not_merged_with_serial(self) -> None:
+        # LAN entry has no model/address → cannot be deduped → stays separate
+        lan = [{"host": "192.168.1.100"}]
+        serial = [{"model": "IC-7610", "address": 0x98, "port": "/dev/ttyUSB0", "baud": 19200}]
+
+        result = dedupe_radios(lan, serial)
+
+        assert len(result) == 2
+
+    def test_multiple_lan_without_model_each_separate(self) -> None:
+        # Two unidentified LAN radios → each is its own entry
+        lan = [{"host": "192.168.1.100"}, {"host": "192.168.1.101"}]
+        result = dedupe_radios(lan, [])
+        assert len(result) == 2
+
+    def test_return_type_is_list(self) -> None:
+        result = dedupe_radios([], [])
+        assert isinstance(result, list)
+
+    def test_result_entry_has_required_keys(self) -> None:
+        lan = [{"model": "IC-7610", "address": 0x98, "host": "192.168.1.100"}]
+        result = dedupe_radios(lan, [])
+        assert "model" in result[0]
+        assert "lan" in result[0]
+        assert "serial" in result[0]
