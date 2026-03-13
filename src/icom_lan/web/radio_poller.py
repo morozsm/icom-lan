@@ -434,7 +434,8 @@ class RadioPoller:
             ttl: Maximum acceptable age in seconds (defaults to
                 :data:`~icom_lan._shared_state_runtime.DEFAULT_STATE_CACHE_TTL`).
         """
-        return is_cache_fresh(self._cache, field, ttl)
+        result: bool = is_cache_fresh(self._cache, field, ttl)
+        return result
 
     def _radio_capabilities(self) -> set[str]:
         raw_caps = getattr(self._radio, "capabilities", None)
