@@ -1900,18 +1900,11 @@ async def _cmd_web(radio: Radio, args: argparse.Namespace) -> int:
 
 async def _cmd_discover(_radio: Radio, args: argparse.Namespace) -> int:
     """Discover Icom radios on LAN and/or serial ports."""
-    from .discovery import SERIAL_AVAILABLE, dedupe_radios, discover_lan_radios, discover_serial_radios
+    from .discovery import dedupe_radios, discover_lan_radios, discover_serial_radios
 
     serial_only: bool = getattr(args, "serial_only", False)
     lan_only: bool = getattr(args, "lan_only", False)
     timeout: float = getattr(args, "timeout", 3.0)
-
-    if not lan_only and not SERIAL_AVAILABLE:
-        print(
-            "  Note: Serial discovery unavailable"
-            " (install with: pip install icom-lan[serial])",
-            file=sys.stderr,
-        )
 
     tasks = []
     if not serial_only:
