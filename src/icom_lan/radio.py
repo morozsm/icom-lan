@@ -363,7 +363,7 @@ class Icom7610CoreRadio:
             await radio.set_frequency(7_074_000)
     """
 
-    # Watchdog timing (used by _watchdog_loop; were on _ControlPhaseMixin)
+    # Watchdog timing (used by _watchdog_loop)
     WATCHDOG_CHECK_INTERVAL = 0.5
     _WATCHDOG_HEALTH_LOG_INTERVAL = 30.0
 
