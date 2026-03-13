@@ -53,7 +53,7 @@ from .websocket import (
 if TYPE_CHECKING:
     from ..audio_bridge import AudioBridge
     from ..profiles import RadioProfile
-    from ..radio_protocol import Radio
+    from ..radio_protocol import AudioCapable, Radio
 
 __all__ = ["WebConfig", "WebServer", "run_web_server"]
 
@@ -694,7 +694,7 @@ class WebServer:
             )
 
         self._audio_bridge = AudioBridge(
-            self._radio,
+            cast("AudioCapable", self._radio),
             device_name=device_name,
             tx_device_name=tx_device_name,
             tx_enabled=tx_enabled,

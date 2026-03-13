@@ -49,11 +49,75 @@ def _run_args(**overrides: object) -> argparse.Namespace:
     return argparse.Namespace(**base)
 
 
-def _mock_radio_ctx() -> tuple[MagicMock, AsyncMock]:
-    radio_cls = MagicMock()
+def _make_full_capable_mock() -> AsyncMock:
+    """Return AsyncMock that satisfies AudioCapable and AdvancedControlCapable.
+
+    All attrs must be explicitly set; Python 3.12+ runtime_checkable Protocol uses
+    inspect.getattr_static which bypasses MagicMock.__getattr__.
+    """
     radio = AsyncMock()
     radio.__aenter__.return_value = radio
     radio.__aexit__.return_value = None
+    # AudioCapable
+    radio.audio_bus = MagicMock()
+    radio.start_audio_rx_opus = AsyncMock()
+    radio.stop_audio_rx_opus = AsyncMock()
+    radio.push_audio_tx_opus = AsyncMock()
+    radio.start_audio_rx_pcm = AsyncMock()
+    radio.stop_audio_rx_pcm = AsyncMock()
+    radio.start_audio_tx_pcm = AsyncMock()
+    radio.push_audio_tx_pcm = AsyncMock()
+    radio.stop_audio_tx_pcm = AsyncMock()
+    radio.get_audio_stats = AsyncMock(return_value={})
+    radio.start_audio_tx_opus = AsyncMock()
+    radio.stop_audio_tx = AsyncMock()
+    # ScopeCapable
+    radio.enable_scope = AsyncMock()
+    radio.disable_scope = AsyncMock()
+    radio.on_scope_data = MagicMock()
+    radio.capture_scope_frame = AsyncMock()
+    radio.capture_scope_frames = AsyncMock()
+    radio.set_scope_during_tx = AsyncMock()
+    radio.set_scope_center_type = AsyncMock()
+    radio.set_scope_fixed_edge = AsyncMock()
+    # AdvancedControlCapable
+    radio.send_cw_text = AsyncMock()
+    radio.set_attenuator = AsyncMock()
+    radio.set_attenuator_level = AsyncMock()
+    radio.get_attenuator_level = AsyncMock(return_value=0)
+    radio.set_preamp = AsyncMock()
+    radio.get_preamp = AsyncMock(return_value=0)
+    radio.set_antenna_1 = AsyncMock()
+    radio.set_antenna_2 = AsyncMock()
+    radio.set_rx_antenna_ant1 = AsyncMock()
+    radio.set_rx_antenna_ant2 = AsyncMock()
+    radio.get_antenna_1 = AsyncMock(return_value=0)
+    radio.get_antenna_2 = AsyncMock(return_value=0)
+    radio.get_rx_antenna_ant1 = AsyncMock(return_value=0)
+    radio.get_rx_antenna_ant2 = AsyncMock(return_value=0)
+    radio.set_system_date = AsyncMock()
+    radio.get_system_date = AsyncMock(return_value=(2026, 1, 1))
+    radio.set_system_time = AsyncMock()
+    radio.get_system_time = AsyncMock(return_value=(0, 0))
+    radio.set_dual_watch = AsyncMock()
+    radio.get_dual_watch = AsyncMock(return_value=False)
+    radio.set_tuner_status = AsyncMock()
+    radio.get_tuner_status = AsyncMock(return_value=False)
+    radio.set_acc1_mod_level = AsyncMock()
+    radio.set_usb_mod_level = AsyncMock()
+    radio.set_lan_mod_level = AsyncMock()
+    radio.set_compressor = AsyncMock()
+    radio.set_nb = AsyncMock()
+    radio.set_nr = AsyncMock()
+    radio.set_ip_plus = AsyncMock()
+    radio.set_digisel = AsyncMock()
+    radio.set_filter = AsyncMock()
+    return radio
+
+
+def _mock_radio_ctx() -> tuple[MagicMock, AsyncMock]:
+    radio_cls = MagicMock()
+    radio = _make_full_capable_mock()
     radio_cls.return_value = radio
     return radio_cls, radio
 
@@ -249,14 +313,25 @@ def test_emit_audio_result_text_stats(capsys: pytest.CaptureFixture[str]) -> Non
     assert "bytes: 100" in out
 
 
-@pytest.mark.asyncio
 def _make_audio_capable_mock(base: MagicMock | None = None) -> MagicMock:
-    """Return a mock that satisfies isinstance(..., AudioCapable) in CLI."""
+    """Return a mock that satisfies isinstance(..., AudioCapable) in CLI.
+
+    All attrs must be explicitly set; Python 3.12+ runtime_checkable Protocol uses
+    inspect.getattr_static which bypasses MagicMock.__getattr__.
+    """
     radio = base if base is not None else AsyncMock()
     radio.audio_bus = MagicMock()
     radio.start_audio_rx_opus = AsyncMock()
     radio.stop_audio_rx_opus = AsyncMock()
     radio.push_audio_tx_opus = AsyncMock()
+    radio.start_audio_rx_pcm = AsyncMock()
+    radio.stop_audio_rx_pcm = AsyncMock()
+    radio.start_audio_tx_pcm = AsyncMock()
+    radio.push_audio_tx_pcm = AsyncMock()
+    radio.stop_audio_tx_pcm = AsyncMock()
+    radio.get_audio_stats = AsyncMock(return_value={})
+    radio.start_audio_tx_opus = AsyncMock()
+    radio.stop_audio_tx = AsyncMock()
     return radio
 
 
@@ -428,13 +503,21 @@ async def test_cmd_att_and_preamp_all_paths(capsys: pytest.CaptureFixture[str]) 
     assert "Preamp" in output
 
 
-@pytest.mark.asyncio
 def _make_scope_capable_mock(base: MagicMock | None = None) -> MagicMock:
-    """Return a mock that satisfies isinstance(..., ScopeCapable) in CLI."""
+    """Return a mock that satisfies isinstance(..., ScopeCapable) in CLI.
+
+    All attrs must be explicitly set; Python 3.12+ runtime_checkable Protocol uses
+    inspect.getattr_static which bypasses MagicMock.__getattr__.
+    """
     radio = base if base is not None else AsyncMock()
     radio.enable_scope = AsyncMock()
     radio.disable_scope = AsyncMock()
     radio.on_scope_data = MagicMock()
+    radio.capture_scope_frame = AsyncMock()
+    radio.capture_scope_frames = AsyncMock()
+    radio.set_scope_during_tx = AsyncMock()
+    radio.set_scope_center_type = AsyncMock()
+    radio.set_scope_fixed_edge = AsyncMock()
     return radio
 
 

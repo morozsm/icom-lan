@@ -287,14 +287,15 @@ class UsbAudioDriver:
                 raise ImportError(_DEPENDENCY_HINT) from exc
         else:
             try:
-                import sounddevice as sd_module  # type: ignore[import-not-found]
+                import sounddevice as sd_module  # noqa: F401
             except ImportError as exc:
                 raise ImportError(_DEPENDENCY_HINT) from exc
             try:
-                import numpy as numpy_module
+                import numpy as np_module
             except ImportError as exc:
                 raise ImportError(_DEPENDENCY_HINT) from exc
             sounddevice_module = sd_module
+            numpy_module = np_module
 
         self._sd = sounddevice_module
         self._np = numpy_module

@@ -31,7 +31,7 @@ from concurrent.futures import Executor
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from .radio_protocol import Radio
+    from .radio_protocol import AudioCapable
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +57,7 @@ def find_loopback_device(name: str | None = None) -> dict[str, Any] | None:
         A ``sounddevice`` device info dict, or ``None`` if not found.
     """
     try:
-        import sounddevice as sd  # type: ignore[import-not-found]
+        import sounddevice as sd  # noqa: F401
     except ImportError:
         raise ImportError(
             "sounddevice is required for audio bridge. "
@@ -72,7 +72,7 @@ def find_loopback_device(name: str | None = None) -> dict[str, Any] | None:
         dev_name = dev.get("name", "")
         for search in search_names:
             if search.lower() in dev_name.lower():
-                return dev
+                return dict(dev)
     return None
 
 
@@ -114,7 +114,7 @@ class AudioBridge:
 
     def __init__(
         self,
-        radio: Radio,
+        radio: "AudioCapable",
         *,
         device_name: str | None = None,
         tx_device_name: str | None = None,
@@ -136,13 +136,13 @@ class AudioBridge:
         self._tx_executor = tx_executor
 
         self._running = False
-        self._rx_stream = None  # sounddevice OutputStream (radio → device)
-        self._tx_stream = None  # sounddevice InputStream (device → radio)
+        self._rx_stream: Any = None  # sounddevice OutputStream (radio → device)
+        self._tx_stream: Any = None  # sounddevice InputStream (device → radio)
         self._rx_task: asyncio.Task[None] | None = None
         self._tx_task: asyncio.Task[None] | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
-        self._decoder = None
-        self._subscription = None
+        self._decoder: Any = None
+        self._subscription: Any = None
         self._samples_per_frame = sample_rate * frame_ms // 1000
 
         # Stats
@@ -195,7 +195,7 @@ class AudioBridge:
             ConnectionError: If radio is not connected.
         """
         import numpy as np
-        import sounddevice as sd  # type: ignore[import-not-found]
+        import sounddevice as sd  # noqa: F401
 
         if self._running:
             logger.warning("audio-bridge: already running")

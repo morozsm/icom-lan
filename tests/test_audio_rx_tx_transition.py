@@ -46,10 +46,18 @@ def _make_audio_capable_radio() -> MagicMock:
     radio.set_ptt = AsyncMock()
 
     # AudioCapable protocol (required for isinstance(radio, AudioCapable))
+    # All attrs must be explicitly set; Python 3.12+ runtime_checkable uses
+    # inspect.getattr_static which bypasses MagicMock.__getattr__.
     radio.audio_bus = MagicMock()
     radio.start_audio_rx_opus = AsyncMock()
     radio.stop_audio_rx_opus = AsyncMock()
     radio.push_audio_tx_opus = AsyncMock()
+    radio.start_audio_rx_pcm = AsyncMock()
+    radio.stop_audio_rx_pcm = AsyncMock()
+    radio.start_audio_tx_pcm = AsyncMock()
+    radio.push_audio_tx_pcm = AsyncMock()
+    radio.stop_audio_tx_pcm = AsyncMock()
+    radio.get_audio_stats = AsyncMock(return_value={})
     # PTT transition methods (used by poller when AudioCapable)
     radio.start_audio_tx_opus = AsyncMock()
     radio.stop_audio_tx = AsyncMock()

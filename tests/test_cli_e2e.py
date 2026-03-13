@@ -28,11 +28,17 @@ from icom_lan.cli import (
 
 
 def _add_audio_capable(radio: MagicMock) -> MagicMock:
-    """Make mock satisfy isinstance(..., AudioCapable) in CLI."""
+    """Make mock satisfy isinstance(..., AudioCapable) in CLI.
+
+    All attrs must be explicitly set; Python 3.12+ runtime_checkable Protocol uses
+    inspect.getattr_static which bypasses MagicMock.__getattr__.
+    """
     radio.audio_bus = MagicMock()
-    radio.start_audio_rx_opus = getattr(radio, "start_audio_rx_opus", AsyncMock())
-    radio.stop_audio_rx_opus = getattr(radio, "stop_audio_rx_opus", AsyncMock())
-    radio.push_audio_tx_opus = getattr(radio, "push_audio_tx_opus", AsyncMock())
+    radio.start_audio_rx_opus = AsyncMock()
+    radio.stop_audio_rx_opus = AsyncMock()
+    radio.push_audio_tx_opus = AsyncMock()
+    radio.start_audio_tx_opus = AsyncMock()
+    radio.stop_audio_tx = AsyncMock()
     return radio
 
 

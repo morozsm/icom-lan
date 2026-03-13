@@ -16,10 +16,11 @@ import logging
 import os
 import time
 import warnings
-from typing import TYPE_CHECKING, AsyncGenerator
+from typing import TYPE_CHECKING, AsyncGenerator, cast
 
 if TYPE_CHECKING:
     from typing import Any, Awaitable, Callable
+    from ._runtime_protocols import ControlPhaseHost
 
 from .commands import (
     CONTROLLER_ADDR,
@@ -287,7 +288,7 @@ from .civ import (
     CivEvent,
     CivRequestTracker,
 )
-from .radio_state import RadioState
+from .radio_state import RadioState, ScopeControlsState
 from .scope import ScopeAssembler, ScopeFrame
 from .transport import IcomTransport
 from .types import (
@@ -491,7 +492,7 @@ class Icom7610CoreRadio:
         self._civ_get_timeout: float = min(timeout, 2.0)
         # Composed runtimes (P0 decomposition); order: civ first so control_phase can call it.
         self._civ_runtime: CivRuntime = CivRuntime(self)
-        self._control_phase: ControlPhaseRuntime = ControlPhaseRuntime(self)
+        self._control_phase: ControlPhaseRuntime = ControlPhaseRuntime(cast("ControlPhaseHost", self))
         self._audio_runtime: AudioRecoveryRuntime = AudioRecoveryRuntime(self)
 
     # Host shims for ControlPhaseRuntime and Icom7610SerialRadio (delegate to civ_runtime)
@@ -680,7 +681,7 @@ class Icom7610CoreRadio:
         """Best-effort active receiver name for VFO-routing fallbacks."""
         active = getattr(self._radio_state, "active", None)
         if active in {"MAIN", "SUB"}:
-            return active
+            return str(active)
         if self._last_vfo in {"SUB", "B"}:
             return "SUB"
         return "MAIN"
@@ -738,6 +739,7 @@ class Icom7610CoreRadio:
                 key="get_frequency",
                 dedupe=not bypass_cache,
             )
+            assert resp is not None
             freq = parse_frequency_response(resp)
             if update_cache:
                 self._last_freq_hz = freq
@@ -771,6 +773,7 @@ class Icom7610CoreRadio:
         civ = get_mode(to_addr=self._radio_addr)
         try:
             resp = await self._send_civ_raw(civ)
+            assert resp is not None
             mode, filt = parse_mode_response(resp)
             if update_cache:
                 self._last_mode = mode
@@ -1617,13 +1620,13 @@ class Icom7610CoreRadio:
         if receiver == RECEIVER_MAIN:
             return await self._get_frequency_main(bypass_cache=bypass_cache)
 
-        return await self._run_with_receiver_vfo_fallback(
+        return int(await self._run_with_receiver_vfo_fallback(
             receiver=receiver,
             operation="get_frequency",
             action=lambda: self._get_frequency_main(
                 bypass_cache=bypass_cache, update_cache=False
             ),
-        )
+        ))
 
     async def set_frequency(self, freq_hz: int, receiver: int = 0) -> None:
         """Set the operating frequency.
@@ -1684,11 +1687,12 @@ class Icom7610CoreRadio:
         if receiver == RECEIVER_MAIN:
             return await self._get_mode_info_main(update_cache=True)
 
-        return await self._run_with_receiver_vfo_fallback(
+        result = await self._run_with_receiver_vfo_fallback(
             receiver=receiver,
             operation="get_mode_info",
             action=lambda: self._get_mode_info_main(update_cache=False),
         )
+        return cast("tuple[Mode, int | None]", result)
 
     async def get_filter(self) -> int | None:
         """Get current mode filter number (1-3) when available."""
@@ -1749,6 +1753,7 @@ class Icom7610CoreRadio:
         self._check_connected()
         civ = get_data_mode_cmd(to_addr=self._radio_addr)
         resp = await self._send_civ_raw(civ)
+        assert resp is not None
         return parse_data_mode_response(resp)
 
     async def set_data_mode(self, on: bool) -> None:
@@ -1760,6 +1765,7 @@ class Icom7610CoreRadio:
         self._check_connected()
         civ = set_data_mode_cmd(on, to_addr=self._radio_addr)
         resp = await self._send_civ_raw(civ)
+        assert resp is not None
         ack = parse_ack_nak(resp)
         if ack is False:
             raise CommandError(f"Radio rejected set_data_mode({on})")
@@ -1781,6 +1787,7 @@ class Icom7610CoreRadio:
         """Send a GET command and parse a BCD-encoded integer response."""
         self._check_connected()
         resp = await self._send_civ_raw(civ, key=key, dedupe=True)
+        assert resp is not None
         return parse_level_response(
             resp,
             command=command,
@@ -1801,6 +1808,7 @@ class Icom7610CoreRadio:
         """Send a GET command and parse a boolean response."""
         self._check_connected()
         resp = await self._send_civ_raw(civ, key=key, dedupe=True)
+        assert resp is not None
         return parse_bool_response(resp, command=command, sub=sub, prefix=prefix)
 
     async def _send_fire_and_forget(self, civ: bytes) -> None:
@@ -1817,6 +1825,7 @@ class Icom7610CoreRadio:
         civ = get_power(to_addr=self._radio_addr)
         try:
             resp = await self._send_civ_raw(civ, key="get_power", dedupe=True)
+            assert resp is not None
             level = _level_bcd_decode(resp.data)
             self._last_power = level
             self._state_cache.update_rf_power(level / 255.0)
@@ -1848,6 +1857,7 @@ class Icom7610CoreRadio:
         civ = get_rf_gain(to_addr=self._radio_addr)
         try:
             resp = await self._send_civ_raw(civ, key="get_rf_gain", dedupe=True)
+            assert resp is not None
             return self._parse_level(resp)
         except TimeoutError:
             raise
@@ -1874,6 +1884,7 @@ class Icom7610CoreRadio:
         civ = get_af_level(to_addr=self._radio_addr)
         try:
             resp = await self._send_civ_raw(civ, key="get_af_level", dedupe=True)
+            assert resp is not None
             return self._parse_level(resp)
         except TimeoutError:
             raise
@@ -2580,6 +2591,7 @@ class Icom7610CoreRadio:
         self._check_connected()
         civ = get_s_meter(to_addr=self._radio_addr)
         resp = await self._send_civ_raw(civ)
+        assert resp is not None
         return parse_meter_response(resp)
 
     async def get_swr(self) -> int:
@@ -2587,6 +2599,7 @@ class Icom7610CoreRadio:
         self._check_connected()
         civ = get_swr(to_addr=self._radio_addr)
         resp = await self._send_civ_raw(civ)
+        assert resp is not None
         return parse_meter_response(resp)
 
     async def get_alc(self) -> int:
@@ -2594,6 +2607,7 @@ class Icom7610CoreRadio:
         self._check_connected()
         civ = get_alc(to_addr=self._radio_addr)
         resp = await self._send_civ_raw(civ)
+        assert resp is not None
         return parse_meter_response(resp)
 
     async def set_ptt(self, on: bool) -> None:
@@ -2624,6 +2638,7 @@ class Icom7610CoreRadio:
         self._check_connected()
         civ = get_band_edge_freq(to_addr=self._radio_addr)
         resp = await self._send_civ_raw(civ, key="get_band_edge_freq", dedupe=True)
+        assert resp is not None
         return parse_frequency_response(resp)
 
     async def get_various_squelch(self, receiver: int = RECEIVER_MAIN) -> bool:
@@ -2645,6 +2660,7 @@ class Icom7610CoreRadio:
         self._check_connected()
         civ = get_power_meter(to_addr=self._radio_addr)
         resp = await self._send_civ_raw(civ)
+        assert resp is not None
         return parse_meter_response(resp)
 
     async def get_comp_meter(self) -> int:
@@ -2652,6 +2668,7 @@ class Icom7610CoreRadio:
         self._check_connected()
         civ = get_comp_meter(to_addr=self._radio_addr)
         resp = await self._send_civ_raw(civ)
+        assert resp is not None
         return parse_meter_response(resp)
 
     async def get_vd_meter(self) -> int:
@@ -2659,6 +2676,7 @@ class Icom7610CoreRadio:
         self._check_connected()
         civ = get_vd_meter(to_addr=self._radio_addr)
         resp = await self._send_civ_raw(civ)
+        assert resp is not None
         return parse_meter_response(resp)
 
     async def get_id_meter(self) -> int:
@@ -2666,6 +2684,7 @@ class Icom7610CoreRadio:
         self._check_connected()
         civ = get_id_meter(to_addr=self._radio_addr)
         resp = await self._send_civ_raw(civ)
+        assert resp is not None
         return parse_meter_response(resp)
 
     async def speech(self, what: int = 0) -> None:
@@ -2687,6 +2706,7 @@ class Icom7610CoreRadio:
         self._check_connected()
         civ = get_transceiver_id(to_addr=self._radio_addr)
         resp = await self._send_civ_raw(civ)
+        assert resp is not None
         if resp.data:
             return resp.data[0]
         return 0
@@ -2696,6 +2716,7 @@ class Icom7610CoreRadio:
         self._check_connected()
         civ = get_tuner_status(to_addr=self._radio_addr)
         resp = await self._send_civ_raw(civ)
+        assert resp is not None
         if resp.data:
             return resp.data[0]
         return 0
@@ -2714,6 +2735,7 @@ class Icom7610CoreRadio:
         self._check_connected()
         civ = get_xfc_status(to_addr=self._radio_addr)
         resp = await self._send_civ_raw(civ)
+        assert resp is not None
         return bool(resp.data[0]) if resp.data else False
 
     async def set_xfc_status(self, on: bool) -> None:
@@ -2727,6 +2749,7 @@ class Icom7610CoreRadio:
         self._check_connected()
         civ = get_tx_freq_monitor(to_addr=self._radio_addr)
         resp = await self._send_civ_raw(civ)
+        assert resp is not None
         return bool(resp.data[0]) if resp.data else False
 
     async def set_tx_freq_monitor(self, on: bool) -> None:
@@ -2740,6 +2763,7 @@ class Icom7610CoreRadio:
         self._check_connected()
         civ = get_rit_frequency(to_addr=self._radio_addr)
         resp = await self._send_civ_raw(civ)
+        assert resp is not None
         return parse_rit_frequency_response(resp.data)
 
     async def set_rit_frequency(self, offset_hz: int) -> None:
@@ -2753,6 +2777,7 @@ class Icom7610CoreRadio:
         self._check_connected()
         civ = get_rit_status(to_addr=self._radio_addr)
         resp = await self._send_civ_raw(civ)
+        assert resp is not None
         return bool(resp.data[0]) if resp.data else False
 
     async def set_rit_status(self, on: bool) -> None:
@@ -2766,6 +2791,7 @@ class Icom7610CoreRadio:
         self._check_connected()
         civ = get_rit_tx_status(to_addr=self._radio_addr)
         resp = await self._send_civ_raw(civ)
+        assert resp is not None
         return bool(resp.data[0]) if resp.data else False
 
     async def set_rit_tx_status(self, on: bool) -> None:
@@ -2788,6 +2814,7 @@ class Icom7610CoreRadio:
         self._check_connected()
         civ = _select_vfo_cmd(vfo, to_addr=self._radio_addr)
         resp = await self._send_civ_raw(civ)
+        assert resp is not None
         ack = parse_ack_nak(resp)
         if ack is False:
             raise CommandError(f"Radio rejected VFO select {vfo}")
@@ -2810,6 +2837,7 @@ class Icom7610CoreRadio:
         self._check_connected()
         civ = set_split(on, to_addr=self._radio_addr)
         resp = await self._send_civ_raw(civ)
+        assert resp is not None
         ack = parse_ack_nak(resp)
         if ack is False:
             raise CommandError(f"Radio rejected split {'on' if on else 'off'}")
@@ -2820,6 +2848,7 @@ class Icom7610CoreRadio:
         self._check_connected()
         civ = get_tuning_step(to_addr=self._radio_addr)
         resp = await self._send_civ_raw(civ)
+        assert resp is not None
         if resp.data:
             b = resp.data[0]
             return ((b >> 4) & 0x0F) * 10 + (b & 0x0F)
@@ -2852,6 +2881,7 @@ class Icom7610CoreRadio:
         self._check_connected()
         civ = get_dual_watch(to_addr=self._radio_addr)
         resp = await self._send_civ_raw(civ)
+        assert resp is not None
         # Response: cmd=0x07, data=[0xC2, <value>]
         if resp.data and len(resp.data) >= 2 and resp.data[0] == 0xC2:
             return bool(resp.data[1])
@@ -2892,6 +2922,7 @@ class Icom7610CoreRadio:
         civ = get_attenuator_cmd(to_addr=self._radio_addr, receiver=receiver)
         try:
             resp = await self._send_civ_raw(civ)
+            assert resp is not None
             if resp.data:
                 raw = resp.data[0]
                 val = ((raw >> 4) & 0x0F) * 10 + (raw & 0x0F)
@@ -2966,6 +2997,7 @@ class Icom7610CoreRadio:
         civ = get_preamp_cmd(to_addr=self._radio_addr, receiver=receiver)
         try:
             resp = await self._send_civ_raw(civ)
+            assert resp is not None
             if resp.data:
                 raw = resp.data[0]
                 self._preamp_level = ((raw >> 4) & 0x0F) * 10 + (raw & 0x0F)
@@ -3031,6 +3063,7 @@ class Icom7610CoreRadio:
             )
         civ = get_digisel(to_addr=self._radio_addr)
         resp = await self._send_civ_raw(civ)
+        assert resp is not None
         if not resp.data:
             raise CommandError("Radio returned empty DIGI-SEL response")
         raw = resp.data[0]
@@ -3050,6 +3083,7 @@ class Icom7610CoreRadio:
         )
         civ = set_digisel(on, to_addr=self._radio_addr, receiver=receiver)
         resp = await self._send_civ_raw(civ)
+        assert resp is not None
         ack = parse_ack_nak(resp)
         if ack is False:
             raise CommandError(f"Radio rejected DIGI-SEL {'on' if on else 'off'}")
@@ -3059,6 +3093,7 @@ class Icom7610CoreRadio:
         self._check_connected()
         civ = get_nb(to_addr=self._radio_addr)
         resp = await self._send_civ_raw(civ)
+        assert resp is not None
         return resp.data[0] == 0x01 if resp.data else False
 
     async def set_nb(self, on: bool, receiver: int = 0) -> None:
@@ -3080,6 +3115,7 @@ class Icom7610CoreRadio:
         self._check_connected()
         civ = get_nr(to_addr=self._radio_addr)
         resp = await self._send_civ_raw(civ)
+        assert resp is not None
         return resp.data[0] == 0x01 if resp.data else False
 
     async def set_nr(self, on: bool, receiver: int = 0) -> None:
@@ -3101,6 +3137,7 @@ class Icom7610CoreRadio:
         self._check_connected()
         civ = get_ip_plus(to_addr=self._radio_addr)
         resp = await self._send_civ_raw(civ)
+        assert resp is not None
         return resp.data[0] == 0x01 if resp.data else False
 
     async def set_ip_plus(self, on: bool, receiver: int = 0) -> None:
@@ -3148,6 +3185,7 @@ class Icom7610CoreRadio:
         self._check_connected()
         civ = _get_tone_freq_cmd(to_addr=self._radio_addr, receiver=receiver)
         resp = await self._send_civ_raw(civ)
+        assert resp is not None
         _, freq = parse_tone_freq_response(resp)
         return freq
 
@@ -3162,6 +3200,7 @@ class Icom7610CoreRadio:
         self._check_connected()
         civ = _get_tsql_freq_cmd(to_addr=self._radio_addr, receiver=receiver)
         resp = await self._send_civ_raw(civ)
+        assert resp is not None
         _, freq = parse_tsql_freq_response(resp)
         return freq
 
@@ -3385,6 +3424,7 @@ class Icom7610CoreRadio:
         self._check_connected()
         civ = get_system_date(to_addr=self._radio_addr)
         resp = await self._send_civ_raw(civ, key="get_system_date", dedupe=True)
+        assert resp is not None
         return parse_system_date_response(resp)
 
     async def set_system_date(self, year: int, month: int, day: int) -> None:
@@ -3404,6 +3444,7 @@ class Icom7610CoreRadio:
         self._check_connected()
         civ = get_system_time(to_addr=self._radio_addr)
         resp = await self._send_civ_raw(civ, key="get_system_time", dedupe=True)
+        assert resp is not None
         return parse_system_time_response(resp)
 
     async def set_system_time(self, hour: int, minute: int) -> None:
@@ -3422,6 +3463,7 @@ class Icom7610CoreRadio:
         self._check_connected()
         civ = get_utc_offset(to_addr=self._radio_addr)
         resp = await self._send_civ_raw(civ, key="get_utc_offset", dedupe=True)
+        assert resp is not None
         return parse_utc_offset_response(resp)
 
     async def set_utc_offset(self, hours: int, minutes: int, is_negative: bool) -> None:
@@ -3495,7 +3537,7 @@ class Icom7610CoreRadio:
 
         if "power" in state:
             try:
-                await self.set_power(int(state["power"]))
+                await self.set_power(int(cast(int, state["power"])))
             except Exception:
                 logger.debug("restore_state: set_power failed", exc_info=True)
 
@@ -3511,7 +3553,7 @@ class Icom7610CoreRadio:
 
         if "frequency" in state:
             try:
-                await self.set_frequency(int(state["frequency"]))
+                await self.set_frequency(int(cast(int, state["frequency"])))
             except Exception:
                 logger.debug("restore_state: set_frequency failed", exc_info=True)
 
@@ -3523,7 +3565,7 @@ class Icom7610CoreRadio:
 
         if "preamp" in state:
             try:
-                await self.set_preamp(int(state["preamp"]))
+                await self.set_preamp(int(cast(int, state["preamp"])))
             except Exception:
                 logger.debug("restore_state: set_preamp failed", exc_info=True)
 
@@ -3568,6 +3610,7 @@ class Icom7610CoreRadio:
         frames = send_cw(text, to_addr=self._radio_addr)
         for frame in frames:
             resp = await self._send_civ_raw(frame)
+            assert resp is not None
             ack = parse_ack_nak(resp)
             if ack is False:
                 raise CommandError("Radio rejected CW text")
@@ -3596,6 +3639,7 @@ class Icom7610CoreRadio:
             else power_off(to_addr=self._radio_addr)
         )
         resp = await self._send_civ_raw(civ)
+        assert resp is not None
         ack = parse_ack_nak(resp)
         if ack is False:
             raise CommandError(f"Radio rejected power {'on' if on else 'off'}")
@@ -3612,7 +3656,7 @@ class Icom7610CoreRadio:
         """
         self._scope_callback = callback
 
-    def _scope_controls(self):
+    def _scope_controls(self) -> ScopeControlsState:
         """Return the mutable scope-control state bucket."""
         return self._radio_state.scope_controls
 
@@ -3718,6 +3762,7 @@ class Icom7610CoreRadio:
         resp = await self._send_civ_raw(
             _get_scope_main_sub_cmd(to_addr=self._radio_addr)
         )
+        assert resp is not None
         receiver = parse_scope_main_sub_response(resp)
         self._scope_controls().receiver = receiver
         return receiver
@@ -3739,6 +3784,7 @@ class Icom7610CoreRadio:
         resp = await self._send_civ_raw(
             _get_scope_single_dual_cmd(to_addr=self._radio_addr)
         )
+        assert resp is not None
         dual = parse_scope_single_dual_response(resp)
         self._scope_controls().dual = dual
         return dual
@@ -3756,6 +3802,7 @@ class Icom7610CoreRadio:
         """Read the current scope mode (0=center, 1=fixed, 2=scroll-C, 3=scroll-F)."""
         self._check_connected()
         resp = await self._send_civ_raw(_get_scope_mode_cmd(to_addr=self._radio_addr))
+        assert resp is not None
         receiver, mode = parse_scope_mode_response(resp)
         self._apply_scope_receiver_hint(receiver)
         self._scope_controls().mode = mode
@@ -3774,6 +3821,7 @@ class Icom7610CoreRadio:
         """Read the scope span preset index (0..7)."""
         self._check_connected()
         resp = await self._send_civ_raw(_get_scope_span_cmd(to_addr=self._radio_addr))
+        assert resp is not None
         receiver, span = parse_scope_span_response(resp)
         self._apply_scope_receiver_hint(receiver)
         self._scope_controls().span = span
@@ -3792,6 +3840,7 @@ class Icom7610CoreRadio:
         """Read the fixed-edge selection (1..4)."""
         self._check_connected()
         resp = await self._send_civ_raw(_get_scope_edge_cmd(to_addr=self._radio_addr))
+        assert resp is not None
         receiver, edge = parse_scope_edge_response(resp)
         self._apply_scope_receiver_hint(receiver)
         self._scope_controls().edge = edge
@@ -3810,6 +3859,7 @@ class Icom7610CoreRadio:
         """Read whether scope hold is enabled."""
         self._check_connected()
         resp = await self._send_civ_raw(_get_scope_hold_cmd(to_addr=self._radio_addr))
+        assert resp is not None
         receiver, hold = parse_scope_hold_response(resp)
         self._apply_scope_receiver_hint(receiver)
         self._scope_controls().hold = hold
@@ -3828,6 +3878,7 @@ class Icom7610CoreRadio:
         """Read the scope reference level in dB."""
         self._check_connected()
         resp = await self._send_civ_raw(_get_scope_ref_cmd(to_addr=self._radio_addr))
+        assert resp is not None
         receiver, ref_db = parse_scope_ref_response(resp)
         self._apply_scope_receiver_hint(receiver)
         self._scope_controls().ref_db = ref_db
@@ -3846,6 +3897,7 @@ class Icom7610CoreRadio:
         """Read the scope speed preset (0=fast, 1=mid, 2=slow)."""
         self._check_connected()
         resp = await self._send_civ_raw(_get_scope_speed_cmd(to_addr=self._radio_addr))
+        assert resp is not None
         receiver, speed = parse_scope_speed_response(resp)
         self._apply_scope_receiver_hint(receiver)
         self._scope_controls().speed = speed
@@ -3866,6 +3918,7 @@ class Icom7610CoreRadio:
         resp = await self._send_civ_raw(
             _get_scope_during_tx_cmd(to_addr=self._radio_addr)
         )
+        assert resp is not None
         during_tx = parse_scope_during_tx_response(resp)
         self._scope_controls().during_tx = during_tx
         return during_tx
@@ -3885,6 +3938,7 @@ class Icom7610CoreRadio:
         resp = await self._send_civ_raw(
             _get_scope_center_type_cmd(to_addr=self._radio_addr)
         )
+        assert resp is not None
         receiver, center_type = parse_scope_center_type_response(resp)
         self._apply_scope_receiver_hint(receiver)
         self._scope_controls().center_type = center_type
@@ -3903,6 +3957,7 @@ class Icom7610CoreRadio:
         """Read whether narrow scope VBW is enabled."""
         self._check_connected()
         resp = await self._send_civ_raw(_get_scope_vbw_cmd(to_addr=self._radio_addr))
+        assert resp is not None
         receiver, narrow = parse_scope_vbw_response(resp)
         self._apply_scope_receiver_hint(receiver)
         self._scope_controls().vbw_narrow = narrow
@@ -3923,6 +3978,7 @@ class Icom7610CoreRadio:
         resp = await self._send_civ_raw(
             _get_scope_fixed_edge_cmd(to_addr=self._radio_addr)
         )
+        assert resp is not None
         fixed_edge = parse_scope_fixed_edge_response(resp)
         self._scope_controls().fixed_edge = fixed_edge
         self._scope_controls().edge = fixed_edge.edge
@@ -3959,6 +4015,7 @@ class Icom7610CoreRadio:
         """Read the scope RBW preset (0=wide, 1=mid, 2=narrow)."""
         self._check_connected()
         resp = await self._send_civ_raw(_get_scope_rbw_cmd(to_addr=self._radio_addr))
+        assert resp is not None
         receiver, rbw = parse_scope_rbw_response(resp)
         self._apply_scope_receiver_hint(receiver)
         self._scope_controls().rbw = rbw

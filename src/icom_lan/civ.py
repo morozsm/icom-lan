@@ -366,9 +366,9 @@ class CivRequestTracker:
         self._ack_waiters.clear()
         self._ack_backlog.clear()
 
-        for w in self._response_waiters:
-            if not w.future.done():
-                w.future.set_exception(exc)
+        for pending in self._response_waiters:
+            if not pending.future.done():
+                pending.future.set_exception(exc)
         self._response_waiters.clear()
 
     @staticmethod

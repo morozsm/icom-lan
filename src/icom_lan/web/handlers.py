@@ -73,7 +73,7 @@ from .websocket import WS_OP_BINARY, WS_OP_TEXT, WebSocketConnection
 if TYPE_CHECKING:
     from ..radio_protocol import Radio
 
-from ..radio_protocol import LevelsCapable, PowerControlCapable
+from ..radio_protocol import AdvancedControlCapable, LevelsCapable, PowerControlCapable
 
 __all__ = [
     "HIGH_WATERMARK",
@@ -561,27 +561,37 @@ class ControlHandler:
         if name == "get_system_date":
             if self._radio is None:
                 raise RuntimeError("radio connection not available")
+            if not isinstance(self._radio, AdvancedControlCapable):
+                raise RuntimeError("radio does not support this command")
             year, month, day = await self._radio.get_system_date()
             return {"year": year, "month": month, "day": day}
         if name == "get_system_time":
             if self._radio is None:
                 raise RuntimeError("radio connection not available")
+            if not isinstance(self._radio, AdvancedControlCapable):
+                raise RuntimeError("radio does not support this command")
             hour, minute = await self._radio.get_system_time()
             return {"hour": hour, "minute": minute}
         if name == "get_dual_watch":
             if self._radio is None:
                 raise RuntimeError("radio connection not available")
+            if not isinstance(self._radio, AdvancedControlCapable):
+                raise RuntimeError("radio does not support this command")
             on = await self._radio.get_dual_watch()
             return {"on": on}
         if name == "get_tuner_status":
             if self._radio is None:
                 raise RuntimeError("radio connection not available")
+            if not isinstance(self._radio, AdvancedControlCapable):
+                raise RuntimeError("radio does not support this command")
             status = await self._radio.get_tuner_status()
             label = {0: "OFF", 1: "ON", 2: "TUNING"}.get(status, "UNKNOWN")
             return {"status": status, "label": label}
         if name == "set_tuner_status":
             if self._radio is None:
                 raise RuntimeError("radio connection not available")
+            if not isinstance(self._radio, AdvancedControlCapable):
+                raise RuntimeError("radio does not support this command")
             if "value" not in params:
                 raise ValueError("missing required 'value' parameter")
             value = int(params["value"])
