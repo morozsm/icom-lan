@@ -75,8 +75,16 @@ ls -l /dev/cu.usbserial-*
 
 The IC-7610 typically appears as `/dev/cu.usbserial-XXXXXX` where `XXXXXX` is the radio's serial number.
 
-Use system tools for serial-device discovery; `icom-lan` does not yet expose a
-serial-device listing command.
+You can also use `icom-lan discover --serial-only` to find USB-connected radios automatically:
+
+```bash
+icom-lan discover --serial-only
+```
+
+```
+IC-7610:
+  • Serial: /dev/cu.usbserial-111120 (19200 baud)
+```
 
 ### 4. Find USB Audio Devices
 
@@ -255,7 +263,7 @@ icom-lan --backend serial serve
 | **Scope/Waterfall** | ✅ Full (~225 pkt/s) | ⚠️ Requires ≥115200 baud* |
 | **Dual Receiver** | ✅ Command29 | ✅ Command29 |
 | **Remote Access** | ✅ Over LAN/VPN | ❌ USB only |
-| **Discovery** | ✅ UDP broadcast | ❌ N/A |
+| **Discovery** | ✅ UDP broadcast | ✅ CI-V auto-probe |
 
 \* **Scope guardrail**: Serial backend enforces a minimum 115200 baud for scope/waterfall operations due to high CI-V packet rate. Lower baud rates risk command timeout/starvation. Override is possible via `allow_low_baud_scope=True` or `ICOM_SERIAL_SCOPE_ALLOW_LOW_BAUD=1` (use with caution).
 

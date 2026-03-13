@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Serial port auto-discovery** (Epic #222) — `icom-lan discover` now scans both LAN (UDP broadcast) and USB serial ports
+  - `enumerate_serial_ports()` — filters USB serial candidates
+  - `probe_serial_civ()` — CI-V probing with auto baud detection (19200, 9600, 115200, 4800)
+  - `identify_radio()` — model identification from CI-V address
+  - `dedupe_radios()` — groups same radio found via LAN and serial
+  - CLI flags: `--serial-only`, `--lan-only`, `--timeout`
+- **pyserial is now a required dependency** (was optional `[serial]` extra)
+
+### Fixed
+- **LAN discovery ignored by IC-7610** — ARE_YOU_THERE packets with `sender_id=0` are silently ignored; now uses random non-zero sender ID
+- **Serial CI-V probe missed radio response** — `reader.read(64)` returned only the echo; now reads in a loop until actual response preamble (`FE FE E0`) is found
+
 ## [0.11.0] — 2026-03-12
 
 ### Added
