@@ -182,8 +182,8 @@ class Icom7610SerialRadio(Icom7610CoreRadio):
                 f"Failed to connect serial session on {self._serial_device}: {exc}"
             ) from exc
 
-        self._ctrl_transport = self._serial_session.control_transport
-        self._civ_transport = self._serial_session.civ_transport
+        self._ctrl_transport = self._serial_session.control_transport  # type: ignore[assignment]
+        self._civ_transport = self._serial_session.civ_transport  # type: ignore[assignment]
         self._advance_civ_generation("serial-connect")
         self._civ_last_waiter_gc_monotonic = time.monotonic()
         self._last_civ_data_received = time.monotonic()
@@ -220,7 +220,7 @@ class Icom7610SerialRadio(Icom7610CoreRadio):
             await self._stop_civ_worker()
             await self._stop_civ_rx_pump()
             await self._serial_session.disconnect()
-            self._ctrl_transport = self._serial_session.control_transport
+            self._ctrl_transport = self._serial_session.control_transport  # type: ignore[assignment]
             self._civ_transport = None
             self._conn_state = RadioConnectionState.DISCONNECTED
             self._civ_stream_ready = False
@@ -228,7 +228,7 @@ class Icom7610SerialRadio(Icom7610CoreRadio):
             return
         await super().disconnect()
         await self._serial_session.disconnect()
-        self._ctrl_transport = self._serial_session.control_transport
+        self._ctrl_transport = self._serial_session.control_transport  # type: ignore[assignment]
 
     async def enable_scope(
         self,
@@ -465,8 +465,8 @@ class Icom7610SerialRadio(Icom7610CoreRadio):
                 f"Failed to reconnect serial session on {self._serial_device}: {exc}"
             ) from exc
 
-        self._ctrl_transport = self._serial_session.control_transport
-        self._civ_transport = self._serial_session.civ_transport
+        self._ctrl_transport = self._serial_session.control_transport  # type: ignore[assignment]
+        self._civ_transport = self._serial_session.civ_transport  # type: ignore[assignment]
         self._civ_last_waiter_gc_monotonic = time.monotonic()
         self._last_civ_data_received = time.monotonic()
         self._start_civ_rx_pump()
@@ -493,9 +493,10 @@ class Icom7610SerialRadio(Icom7610CoreRadio):
         return None
 
     def _start_civ_data_watchdog(self) -> None:
+        _existing_watchdog = getattr(self, "_civ_data_watchdog_task", None)
         if (
-            getattr(self, "_civ_data_watchdog_task", None) is not None
-            and not self._civ_data_watchdog_task.done()
+            _existing_watchdog is not None
+            and not _existing_watchdog.done()
         ):
             return
         self._civ_data_watchdog_task = asyncio.create_task(

@@ -731,7 +731,10 @@ class RadioPoller:
                         await radio.stop_audio_tx()
                         logger.info("poller: TX audio stream stopped")
                         # Restart RX audio after TX (IC-7610 doesn't support full duplex)
-                        await radio.start_audio_rx_opus()
+                        async def _noop_rx(_pkt: Any) -> None:
+                            pass
+
+                        await radio.start_audio_rx_opus(_noop_rx)
                         logger.info("poller: RX audio stream restarted")
                     except Exception as e:
                         logger.debug("poller: audio stream transition failed: %s", e)
@@ -856,27 +859,38 @@ class RadioPoller:
                     await radio.set_powerstat(on)
                     logger.info("radio-poller: power %s", "ON" if on else "OFF")
             case SetAntenna1(on=on):
-                await radio.set_antenna_1(on)
+                if isinstance(radio, AdvancedControlCapable):
+                    await radio.set_antenna_1(on)
             case SetAntenna2(on=on):
-                await radio.set_antenna_2(on)
+                if isinstance(radio, AdvancedControlCapable):
+                    await radio.set_antenna_2(on)
             case SetRxAntennaAnt1(on=on):
-                await radio.set_rx_antenna_ant1(on)
+                if isinstance(radio, AdvancedControlCapable):
+                    await radio.set_rx_antenna_ant1(on)
             case SetRxAntennaAnt2(on=on):
-                await radio.set_rx_antenna_ant2(on)
+                if isinstance(radio, AdvancedControlCapable):
+                    await radio.set_rx_antenna_ant2(on)
             case SetSystemDate(year=year, month=month, day=day):
-                await radio.set_system_date(year, month, day)
+                if isinstance(radio, AdvancedControlCapable):
+                    await radio.set_system_date(year, month, day)
             case SetSystemTime(hour=hour, minute=minute):
-                await radio.set_system_time(hour, minute)
+                if isinstance(radio, AdvancedControlCapable):
+                    await radio.set_system_time(hour, minute)
             case SetAcc1ModLevel(level=level):
-                await radio.set_acc1_mod_level(level)
+                if isinstance(radio, AdvancedControlCapable):
+                    await radio.set_acc1_mod_level(level)
             case SetUsbModLevel(level=level):
-                await radio.set_usb_mod_level(level)
+                if isinstance(radio, AdvancedControlCapable):
+                    await radio.set_usb_mod_level(level)
             case SetLanModLevel(level=level):
-                await radio.set_lan_mod_level(level)
+                if isinstance(radio, AdvancedControlCapable):
+                    await radio.set_lan_mod_level(level)
             case SetDualWatch(on=on):
-                await radio.set_dual_watch(on)
+                if isinstance(radio, AdvancedControlCapable):
+                    await radio.set_dual_watch(on)
             case SetCompressor(on=on):
-                await radio.set_compressor(on)
+                if isinstance(radio, AdvancedControlCapable):
+                    await radio.set_compressor(on)
 
     # Fast: meters (polled on even cycles)
     # wfview: Priority=Highest, queue interval 25ms for LAN (HasFDComms)

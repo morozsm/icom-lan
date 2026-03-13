@@ -15,11 +15,19 @@ Example::
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, TypedDict
 
 if TYPE_CHECKING:
-    from PIL.Image import Image as PILImage  # type: ignore[import-not-found]
+    from PIL.Image import Image as PILImage
     from .scope import ScopeFrame
+
+
+class _ThemeSpec(TypedDict):
+    background: tuple[int, int, int]
+    spectrum_line: tuple[int, int, int]
+    grid: tuple[int, int, int]
+    label_color: tuple[int, int, int]
+    colormap: list[tuple[int, int, int]]
 
 __all__ = [
     "THEMES",
@@ -77,7 +85,7 @@ def _build_colormap(
     return colormap
 
 
-THEMES: dict[str, dict[str, object]] = {
+THEMES: dict[str, _ThemeSpec] = {
     "classic": {
         "background": (0, 0, 0),
         "spectrum_line": (0, 255, 0),
@@ -98,7 +106,7 @@ THEMES: dict[str, dict[str, object]] = {
 def _require_pillow() -> None:
     """Raise ImportError with install instructions if Pillow is missing."""
     try:
-        import PIL  # type: ignore[import-not-found]  # noqa: F401
+        import PIL  # noqa: F401
     except ImportError:
         raise ImportError(
             "Pillow is required for scope rendering. "
@@ -123,7 +131,7 @@ def amplitude_to_color(value: int, theme: str = "classic") -> tuple[int, int, in
     """
     colormap = THEMES[theme]["colormap"]
     idx = max(0, min(160, value))
-    return cast(tuple[int, int, int], colormap[idx])
+    return colormap[idx]
 
 
 def render_spectrum(
