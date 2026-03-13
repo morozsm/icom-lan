@@ -17,7 +17,11 @@ venv/
 Thumbs.db
 
 # Reference code (large, cloned separately)
-references/wfview/
+references/wfview/*
+# But keep IC-7610.rig for parity matrix tests
+!references/wfview/rigs/
+references/wfview/rigs/*
+!references/wfview/rigs/IC-7610.rig
 
 # Test artifacts
 *.pcap
