@@ -548,6 +548,14 @@ class TestHttpEndpoints:
         assert isinstance(data["connection"]["radioReady"], bool)
 
     async def test_root_returns_html(self, server: WebServer) -> None:
+        import pytest
+        from pathlib import Path
+        
+        # Skip if frontend not built (not included in git, requires npm build)
+        frontend_dist = Path(__file__).parent.parent / "frontend" / "dist"
+        if not frontend_dist.exists():
+            pytest.skip("frontend/dist not available (requires npm build)")
+        
         host, port = _addr(server)
         status, headers, body = await _http_get(host, port, "/")
         assert status == 200

@@ -8,6 +8,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 
 ROOT = Path(__file__).resolve().parents[1]
 MATRIX_PATH = ROOT / "docs/parity/ic7610_command_matrix.json"
@@ -66,6 +68,9 @@ def _assert_pattern_refs_exist(pattern_refs: list[str]) -> None:
 
 
 def test_ic7610_parity_matrix_matches_wfview_reference() -> None:
+    if not WFVIEW_RIG_PATH.exists():
+        pytest.skip("wfview IC-7610.rig not available (GPLv3 license incompatibility)")
+    
     matrix = _load_matrix()
     commands = matrix["commands"]
     rig_commands = _parse_wfview_rig()
