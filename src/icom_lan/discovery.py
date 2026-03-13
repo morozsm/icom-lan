@@ -240,10 +240,17 @@ async def discover_lan_radios(timeout: float = 3.0) -> list[dict[str, object]]:
     import time
 
     def _scan() -> list[dict[str, object]]:
-        # Build "Are You There" packet with sender_id=0
+        import random
+
+        # Build "Are You There" packet with random sender_id
+        # IC-7610 ignores packets with sender_id=0
         pkt = bytearray(0x10)
-        struct.pack_into("<I", pkt, 0, 0x10)
-        struct.pack_into("<H", pkt, 4, 0x03)  # ARE_YOU_THERE
+        struct.pack_into("<I", pkt, 0, 0x10)        # size
+        struct.pack_into("<H", pkt, 4, 0x03)         # ARE_YOU_THERE
+        struct.pack_into("<H", pkt, 6, 0)            # seq=0
+        my_id = random.randint(1, 0xFFFFFFFF)
+        struct.pack_into("<I", pkt, 8, my_id)        # sender_id (non-zero!)
+        struct.pack_into("<I", pkt, 0x0C, 0)         # remote_id=0 (unknown)
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
@@ -270,7 +277,7 @@ async def discover_lan_radios(timeout: float = 3.0) -> list[dict[str, object]]:
         sock.close()
         return list(found.values())
 
-    return await asyncio.to_thread(_scan)
+    return _scan()
 
 
 async def discover_serial_radios() -> list[dict[str, object]]:
