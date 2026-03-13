@@ -41,6 +41,7 @@ jobs:
           cd frontend
           npm install
           npm run build
+          rm -f ../src/icom_lan/web/static
           mkdir -p ../src/icom_lan/web/static
           cp -r dist/* ../src/icom_lan/web/static/
 
