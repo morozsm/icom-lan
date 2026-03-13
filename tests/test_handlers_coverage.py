@@ -53,7 +53,11 @@ from icom_lan.web.websocket import WS_OP_BINARY, WS_OP_TEXT
 
 
 def _capable_radio() -> SimpleNamespace:
-    """Radio mock that satisfies PowerControlCapable, LevelsCapable, ScopeCapable for enqueue tests."""
+    """Radio mock that satisfies PowerControlCapable, LevelsCapable, ScopeCapable for enqueue tests.
+
+    All ScopeCapable attrs must be explicitly set on SimpleNamespace; Python 3.12+
+    runtime_checkable Protocol uses inspect.getattr_static which does not call __getattr__.
+    """
     return SimpleNamespace(
         capabilities={
             "rf_gain",
@@ -75,9 +79,47 @@ def _capable_radio() -> SimpleNamespace:
         set_rf_gain=AsyncMock(),
         set_af_level=AsyncMock(),
         set_squelch=AsyncMock(),
+        # ScopeCapable protocol attrs (all required for isinstance check)
         enable_scope=AsyncMock(),
         disable_scope=AsyncMock(),
         on_scope_data=MagicMock(),
+        capture_scope_frame=AsyncMock(),
+        capture_scope_frames=AsyncMock(),
+        set_scope_during_tx=AsyncMock(),
+        set_scope_center_type=AsyncMock(),
+        set_scope_fixed_edge=AsyncMock(),
+        # AdvancedControlCapable protocol attrs
+        send_cw_text=AsyncMock(),
+        set_attenuator=AsyncMock(),
+        set_attenuator_level=AsyncMock(),
+        get_attenuator_level=AsyncMock(return_value=0),
+        set_preamp=AsyncMock(),
+        get_preamp=AsyncMock(return_value=0),
+        set_antenna_1=AsyncMock(),
+        set_antenna_2=AsyncMock(),
+        set_rx_antenna_ant1=AsyncMock(),
+        set_rx_antenna_ant2=AsyncMock(),
+        get_antenna_1=AsyncMock(return_value=0),
+        get_antenna_2=AsyncMock(return_value=0),
+        get_rx_antenna_ant1=AsyncMock(return_value=0),
+        get_rx_antenna_ant2=AsyncMock(return_value=0),
+        set_system_date=AsyncMock(),
+        get_system_date=AsyncMock(return_value=(2026, 1, 1)),
+        set_system_time=AsyncMock(),
+        get_system_time=AsyncMock(return_value=(0, 0)),
+        set_dual_watch=AsyncMock(),
+        get_dual_watch=AsyncMock(return_value=False),
+        set_tuner_status=AsyncMock(),
+        get_tuner_status=AsyncMock(return_value=False),
+        set_acc1_mod_level=AsyncMock(),
+        set_usb_mod_level=AsyncMock(),
+        set_lan_mod_level=AsyncMock(),
+        set_compressor=AsyncMock(),
+        set_nb=AsyncMock(),
+        set_nr=AsyncMock(),
+        set_ip_plus=AsyncMock(),
+        set_digisel=AsyncMock(),
+        set_filter=AsyncMock(),
     )
 
 
@@ -256,6 +298,13 @@ async def test_enqueue_command_errors() -> None:
         enable_scope=AsyncMock(),
         disable_scope=AsyncMock(),
         on_scope_data=MagicMock(),
+        capture_scope_frame=AsyncMock(),
+        capture_scope_frames=AsyncMock(),
+        set_scope_during_tx=AsyncMock(),
+        set_scope_center_type=AsyncMock(),
+        set_scope_fixed_edge=AsyncMock(),
+        vfo_exchange=AsyncMock(),
+        vfo_equalize=AsyncMock(),
     )
     handler = _control_handler(
         radio=radio,
@@ -677,6 +726,15 @@ async def test_audio_broadcaster_subscribe_unsubscribe_lifecycle() -> None:
         start_audio_rx_opus=AsyncMock(),
         stop_audio_rx_opus=AsyncMock(),
         push_audio_tx_opus=AsyncMock(),
+        start_audio_rx_pcm=AsyncMock(),
+        stop_audio_rx_pcm=AsyncMock(),
+        start_audio_tx_pcm=AsyncMock(),
+        push_audio_tx_pcm=AsyncMock(),
+        stop_audio_tx_pcm=AsyncMock(),
+        get_audio_stats=AsyncMock(return_value={}),
+        start_audio_tx_opus=AsyncMock(),
+        stop_audio_tx=AsyncMock(),
+        audio_bus=None,
     )
     bus = AudioBus(radio)
     radio.audio_bus = bus
@@ -703,6 +761,15 @@ async def test_audio_broadcaster_codec_and_frame_metadata() -> None:
         start_audio_rx_opus=AsyncMock(),
         stop_audio_rx_opus=AsyncMock(),
         push_audio_tx_opus=AsyncMock(),
+        start_audio_rx_pcm=AsyncMock(),
+        stop_audio_rx_pcm=AsyncMock(),
+        start_audio_tx_pcm=AsyncMock(),
+        push_audio_tx_pcm=AsyncMock(),
+        stop_audio_tx_pcm=AsyncMock(),
+        get_audio_stats=AsyncMock(return_value={}),
+        start_audio_tx_opus=AsyncMock(),
+        stop_audio_tx=AsyncMock(),
+        audio_bus=None,
     )
     bus = AudioBus(radio)
     radio.audio_bus = bus
@@ -885,7 +952,8 @@ def test_audio_handler_constants_are_expected() -> None:
 
 async def test_enqueue_command_get_dual_watch() -> None:
     """get_dual_watch is a read-only command — bypasses the command queue."""
-    radio = SimpleNamespace(get_dual_watch=AsyncMock(return_value=True))
+    radio = _capable_radio()
+    radio.get_dual_watch = AsyncMock(return_value=True)
     handler = _control_handler(radio=radio)
     result = await handler._enqueue_command("get_dual_watch", {})
     assert result == {"on": True}
@@ -902,7 +970,8 @@ async def test_enqueue_command_get_dual_watch_no_radio() -> None:
 @pytest.mark.asyncio
 async def test_get_tuner_status_ws_command() -> None:
     """get_tuner_status is a read-only command — bypasses the command queue."""
-    radio = SimpleNamespace(get_tuner_status=AsyncMock(return_value=1))
+    radio = _capable_radio()
+    radio.get_tuner_status = AsyncMock(return_value=1)
     handler = _control_handler(radio=radio)
     result = await handler._enqueue_command("get_tuner_status", {})
     assert result == {"status": 1, "label": "ON"}
@@ -920,7 +989,8 @@ async def test_get_tuner_status_ws_command_no_radio() -> None:
 @pytest.mark.asyncio
 async def test_set_tuner_status_ws_command() -> None:
     """set_tuner_status fires the radio method and returns label."""
-    radio = SimpleNamespace(set_tuner_status=AsyncMock())
+    radio = _capable_radio()
+    radio.set_tuner_status = AsyncMock()
     handler = _control_handler(radio=radio)
     result = await handler._enqueue_command("set_tuner_status", {"value": 2})
     assert result == {"value": 2, "label": "TUNING"}
@@ -938,7 +1008,8 @@ async def test_set_tuner_status_ws_command_no_radio() -> None:
 @pytest.mark.asyncio
 async def test_set_tuner_status_invalid_value() -> None:
     """set_tuner_status raises ValueError for out-of-range values."""
-    radio = SimpleNamespace(set_tuner_status=AsyncMock())
+    radio = _capable_radio()
+    radio.set_tuner_status = AsyncMock()
     handler = _control_handler(radio=radio)
     with pytest.raises(ValueError, match="tuner value must be 0, 1, or 2"):
         await handler._enqueue_command("set_tuner_status", {"value": 5})
@@ -947,7 +1018,8 @@ async def test_set_tuner_status_invalid_value() -> None:
 @pytest.mark.asyncio
 async def test_set_tuner_status_missing_value() -> None:
     """set_tuner_status raises ValueError when value param is missing."""
-    radio = SimpleNamespace(set_tuner_status=AsyncMock())
+    radio = _capable_radio()
+    radio.set_tuner_status = AsyncMock()
     handler = _control_handler(radio=radio)
     with pytest.raises(ValueError, match="missing required 'value' parameter"):
         await handler._enqueue_command("set_tuner_status", {})

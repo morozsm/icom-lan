@@ -40,6 +40,7 @@ from .audio import AudioStats  # noqa: E402
 from .backends.config import LanBackendConfig, SerialBackendConfig  # noqa: E402
 from .backends.factory import create_radio  # noqa: E402
 from .radio_protocol import (  # noqa: E402
+    AdvancedControlCapable,
     AudioCapable,
     MetersCapable,
     PowerControlCapable,
@@ -685,7 +686,7 @@ def _build_backend_config(
 async def _cmd_list_audio_devices(args: argparse.Namespace) -> int:
     """List available USB audio devices."""
     try:
-        import sounddevice as _sd  # type: ignore[import-not-found]
+        import sounddevice as _sd  # noqa: F401
     except ImportError:
         print(
             "Error: --list-audio-devices requires the sounddevice package.\n"
@@ -756,10 +757,13 @@ async def _run(args: argparse.Namespace) -> int:
                 runtime_stats: dict[str, bool | int | float | str] = (
                     AudioStats.inactive().to_dict()
                 )
-                await radio.start_audio_rx_opus(lambda _pkt: None)
+                async def _noop_pkt(_pkt: Any) -> None:
+                    pass
+
+                await radio.start_audio_rx_opus(_noop_pkt)
                 try:
                     await asyncio.sleep(1.0)
-                    runtime_stats = radio.get_audio_stats()
+                    runtime_stats = await radio.get_audio_stats()
                 finally:
                     await radio.stop_audio_rx_opus()
                 return await _cmd_audio_caps(args, runtime_stats=runtime_stats)
@@ -776,20 +780,44 @@ async def _run(args: argparse.Namespace) -> int:
             elif args.command == "ptt":
                 return await _cmd_ptt(radio, args)
             elif args.command == "cw":
+                if not isinstance(radio, AdvancedControlCapable):
+                    print("Error: this radio does not support CW control.", file=sys.stderr)
+                    return 1
                 return await _cmd_cw(radio, args)
             elif args.command == "att":
+                if not isinstance(radio, AdvancedControlCapable):
+                    print("Error: this radio does not support attenuator control.", file=sys.stderr)
+                    return 1
                 return await _cmd_att(radio, args)
             elif args.command == "preamp":
+                if not isinstance(radio, AdvancedControlCapable):
+                    print("Error: this radio does not support preamp control.", file=sys.stderr)
+                    return 1
                 return await _cmd_preamp(radio, args)
             elif args.command == "antenna":
+                if not isinstance(radio, AdvancedControlCapable):
+                    print("Error: this radio does not support antenna control.", file=sys.stderr)
+                    return 1
                 return await _cmd_antenna(radio, args)
             elif args.command == "date":
+                if not isinstance(radio, AdvancedControlCapable):
+                    print("Error: this radio does not support date control.", file=sys.stderr)
+                    return 1
                 return await _cmd_date(radio, args)
             elif args.command == "time":
+                if not isinstance(radio, AdvancedControlCapable):
+                    print("Error: this radio does not support time control.", file=sys.stderr)
+                    return 1
                 return await _cmd_time(radio, args)
             elif args.command == "dualwatch":
+                if not isinstance(radio, AdvancedControlCapable):
+                    print("Error: this radio does not support dual watch.", file=sys.stderr)
+                    return 1
                 return await _cmd_dualwatch(radio, args)
             elif args.command == "tuner":
+                if not isinstance(radio, AdvancedControlCapable):
+                    print("Error: this radio does not support tuner control.", file=sys.stderr)
+                    return 1
                 return await _cmd_tuner(radio, args)
             elif args.command == "web":
                 return await _cmd_web(radio, args)
@@ -1398,13 +1426,13 @@ async def _cmd_ptt(radio: Radio, args: argparse.Namespace) -> int:
     return 0
 
 
-async def _cmd_cw(radio: Radio, args: argparse.Namespace) -> int:
+async def _cmd_cw(radio: AdvancedControlCapable, args: argparse.Namespace) -> int:
     await radio.send_cw_text(args.text)
     print(f"CW: {args.text}")
     return 0
 
 
-async def _cmd_att(radio: Radio, args: argparse.Namespace) -> int:
+async def _cmd_att(radio: AdvancedControlCapable, args: argparse.Namespace) -> int:
     if args.value is not None:
         val = args.value.strip().lower()
         if val == "on":
@@ -1434,7 +1462,7 @@ async def _cmd_att(radio: Radio, args: argparse.Namespace) -> int:
 _PREAMP_NAMES = {0: "OFF", 1: "PRE1", 2: "PRE2"}
 
 
-async def _cmd_preamp(radio: Radio, args: argparse.Namespace) -> int:
+async def _cmd_preamp(radio: AdvancedControlCapable, args: argparse.Namespace) -> int:
     if args.value is not None:
         val = args.value.strip().lower()
         if val == "off":
@@ -1461,7 +1489,7 @@ async def _cmd_preamp(radio: Radio, args: argparse.Namespace) -> int:
     return 0
 
 
-async def _cmd_antenna(radio: Radio, args: argparse.Namespace) -> int:
+async def _cmd_antenna(radio: AdvancedControlCapable, args: argparse.Namespace) -> int:
     acted = False
     if args.ant1 is not None:
         on = args.ant1 == "on"
@@ -1495,7 +1523,7 @@ async def _cmd_antenna(radio: Radio, args: argparse.Namespace) -> int:
     return 0
 
 
-async def _cmd_date(radio: Radio, args: argparse.Namespace) -> int:
+async def _cmd_date(radio: AdvancedControlCapable, args: argparse.Namespace) -> int:
     if args.date is not None:
         try:
             year, month, day = map(int, args.date.split("-"))
@@ -1513,7 +1541,7 @@ async def _cmd_date(radio: Radio, args: argparse.Namespace) -> int:
     return 0
 
 
-async def _cmd_time(radio: Radio, args: argparse.Namespace) -> int:
+async def _cmd_time(radio: AdvancedControlCapable, args: argparse.Namespace) -> int:
     if args.time is not None:
         try:
             hour, minute = map(int, args.time.split(":"))
@@ -1531,7 +1559,7 @@ async def _cmd_time(radio: Radio, args: argparse.Namespace) -> int:
     return 0
 
 
-async def _cmd_dualwatch(radio: Radio, args: argparse.Namespace) -> int:
+async def _cmd_dualwatch(radio: AdvancedControlCapable, args: argparse.Namespace) -> int:
     if args.state is not None:
         on = args.state == "on"
         await radio.set_dual_watch(on)
@@ -1542,7 +1570,7 @@ async def _cmd_dualwatch(radio: Radio, args: argparse.Namespace) -> int:
     return 0
 
 
-async def _cmd_tuner(radio: Radio, args: argparse.Namespace) -> int:
+async def _cmd_tuner(radio: AdvancedControlCapable, args: argparse.Namespace) -> int:
     if args.action is not None:
         value = {"on": 1, "off": 0, "tune": 2}[args.action]
         await radio.set_tuner_status(value)
@@ -1683,6 +1711,9 @@ async def _cmd_audio_bridge(radio: Radio, args: argparse.Namespace) -> int:
             print(f"  [{idx}] {name}  (in={max_in}, out={max_out}){marker}")
         return 0
 
+    if not isinstance(radio, AudioCapable):
+        print("Error: audio bridge requires a radio that supports audio.", file=sys.stderr)
+        return 1
     try:
         bridge = AudioBridge(
             radio,

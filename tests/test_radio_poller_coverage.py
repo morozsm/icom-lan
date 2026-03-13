@@ -58,6 +58,11 @@ def _make_radio(active: str = "MAIN") -> MagicMock:
     radio.enable_scope = AsyncMock()
     radio.disable_scope = AsyncMock()
     radio.on_scope_data = MagicMock()
+    radio.capture_scope_frame = AsyncMock()
+    radio.capture_scope_frames = AsyncMock()
+    radio.set_scope_during_tx = AsyncMock()
+    radio.set_scope_center_type = AsyncMock()
+    radio.set_scope_fixed_edge = AsyncMock()
     return radio
 
 

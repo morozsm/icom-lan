@@ -191,6 +191,28 @@ async def _close_ws(writer: asyncio.StreamWriter) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _add_scope_capable_attrs(radio: MagicMock) -> MagicMock:
+    """Explicitly set all ScopeCapable protocol attrs on a MagicMock.
+
+    Python 3.12+ runtime_checkable Protocol uses inspect.getattr_static which
+    bypasses MagicMock.__getattr__, so all attrs must be set in __dict__.
+    """
+    radio.on_scope_data = MagicMock()
+    radio.enable_scope = AsyncMock()
+    radio.disable_scope = AsyncMock()
+    radio.capture_scope_frame = AsyncMock()
+    radio.capture_scope_frames = AsyncMock()
+    radio.set_scope_during_tx = AsyncMock()
+    radio.set_scope_center_type = AsyncMock()
+    radio.set_scope_fixed_edge = AsyncMock()
+    return radio
+
+
+# ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
 
@@ -247,24 +269,36 @@ def mock_radio() -> MagicMock:
     radio.vfo_exchange = AsyncMock()
     radio.vfo_equalize = AsyncMock()
     radio.vfo_a_equals_b = AsyncMock()
-    # on_scope_data is a synchronous setter
+    # ScopeCapable protocol attrs (all required for isinstance check in Python 3.12+)
     radio.on_scope_data = MagicMock()
     radio.enable_scope = AsyncMock()
     radio.disable_scope = AsyncMock()
     radio.set_scope_during_tx = AsyncMock()
     radio.set_scope_center_type = AsyncMock()
     radio.set_scope_fixed_edge = AsyncMock()
+    radio.capture_scope_frame = AsyncMock()
+    radio.capture_scope_frames = AsyncMock()
+    # AudioCapable protocol attrs (all required for isinstance check in Python 3.12+)
+    radio.audio_bus = MagicMock()
+    radio.start_audio_rx_opus = AsyncMock()
+    radio.stop_audio_rx_opus = AsyncMock()
+    radio.push_audio_tx_opus = AsyncMock()
+    radio.start_audio_rx_pcm = AsyncMock()
+    radio.stop_audio_rx_pcm = AsyncMock()
+    radio.start_audio_tx_pcm = AsyncMock()
+    radio.push_audio_tx_pcm = AsyncMock()
+    radio.stop_audio_tx_pcm = AsyncMock()
+    radio.get_audio_stats = AsyncMock(return_value={})
+    radio.start_audio_tx_opus = AsyncMock()
+    radio.stop_audio_tx = AsyncMock()
+    radio.audio_codec = None
+    radio.audio_sample_rate = 48000
     # State cache shared between radio and server
     radio.state_cache = StateCache()
     # Methods used by WebServer.stop() and RadioPoller
     radio.soft_disconnect = AsyncMock()
     radio.disconnect = AsyncMock()
     radio.send_civ = AsyncMock()
-    # AudioBroadcaster needs these
-    radio.start_audio_rx_opus = AsyncMock()
-    radio.stop_audio_rx_opus = AsyncMock()
-    radio.audio_codec = None
-    radio.audio_sample_rate = 48000
     return radio
 
 
@@ -1468,9 +1502,7 @@ class TestScopeLifecycle:
     async def test_scope_not_disabled_while_handlers_remain(self) -> None:
         radio = MagicMock()
         radio.capabilities = {"scope"}
-        radio.on_scope_data = MagicMock()
-        radio.enable_scope = AsyncMock()
-        radio.disable_scope = AsyncMock()
+        _add_scope_capable_attrs(radio)
 
         server = WebServer(radio)
         server._scope_enabled = True
@@ -1489,9 +1521,7 @@ class TestScopeLifecycle:
     async def test_scope_disabled_when_last_handler_disconnects(self) -> None:
         radio = MagicMock()
         radio.capabilities = {"scope"}
-        radio.on_scope_data = MagicMock()
-        radio.enable_scope = AsyncMock()
-        radio.disable_scope = AsyncMock()
+        _add_scope_capable_attrs(radio)
 
         server = WebServer(radio)
         server._scope_disable_grace = 0
@@ -1516,9 +1546,7 @@ class TestScopeLifecycle:
         """_scope_enabled is reset to False after successful disable."""
         radio = MagicMock()
         radio.capabilities = {"scope"}
-        radio.on_scope_data = MagicMock()
-        radio.enable_scope = AsyncMock()
-        radio.disable_scope = AsyncMock()
+        _add_scope_capable_attrs(radio)
 
         server = WebServer(radio)
         server._scope_disable_grace = 0
@@ -1535,9 +1563,7 @@ class TestScopeLifecycle:
         """disable_scope is NOT called if _scope_enabled is False."""
         radio = MagicMock()
         radio.capabilities = {"scope"}
-        radio.on_scope_data = MagicMock()
-        radio.enable_scope = AsyncMock()
-        radio.disable_scope = AsyncMock()
+        _add_scope_capable_attrs(radio)
 
         server = WebServer(radio)
         server._scope_enabled = False  # was never enabled
@@ -1686,9 +1712,7 @@ class TestScopeEnableAtomic:
 
     async def test_enable_scope_called_once_for_concurrent_handlers(self) -> None:
         radio = MagicMock()
-        radio.on_scope_data = MagicMock()
-        radio.enable_scope = AsyncMock()
-        radio.disable_scope = AsyncMock()
+        _add_scope_capable_attrs(radio)
         radio.connected = True
         radio.radio_ready = True
 
@@ -1708,9 +1732,7 @@ class TestScopeEnableAtomic:
 
     async def test_all_handlers_registered_after_concurrent_enables(self) -> None:
         radio = MagicMock()
-        radio.on_scope_data = MagicMock()
-        radio.enable_scope = AsyncMock()
-        radio.disable_scope = AsyncMock()
+        _add_scope_capable_attrs(radio)
         radio.connected = True
         radio.radio_ready = True
 
@@ -1726,9 +1748,7 @@ class TestScopeEnableAtomic:
         """HTTP endpoint must return 200 after several WS connect/disconnect cycles."""
         config = WebConfig(host="127.0.0.1", port=0, keepalive_interval=9999.0)
         radio = MagicMock()
-        radio.on_scope_data = MagicMock()
-        radio.enable_scope = AsyncMock()
-        radio.disable_scope = AsyncMock()
+        _add_scope_capable_attrs(radio)
         radio.connected = True
         radio.radio_ready = True
 
@@ -1748,9 +1768,7 @@ class TestScopeEnableAtomic:
     ) -> None:
         """Sequential registrations only enable scope once too."""
         radio = MagicMock()
-        radio.on_scope_data = MagicMock()
-        radio.enable_scope = AsyncMock()
-        radio.disable_scope = AsyncMock()
+        _add_scope_capable_attrs(radio)
         radio.connected = True
         radio.radio_ready = True
 
@@ -1780,9 +1798,7 @@ class TestScopeReconnect:
     async def test_scope_disabled_via_queue_after_grace(self) -> None:
         """After grace period, DisableScope is queued and flag resets."""
         radio = MagicMock()
-        radio.on_scope_data = MagicMock()
-        radio.enable_scope = AsyncMock()
-        radio.disable_scope = AsyncMock()
+        _add_scope_capable_attrs(radio)
         radio.connected = True
         radio.radio_ready = True
 
@@ -1804,9 +1820,7 @@ class TestScopeReconnect:
     async def test_enable_scope_queued_again_after_full_disconnect(self) -> None:
         """After last handler disconnects, a new handler must queue EnableScope again."""
         radio = MagicMock()
-        radio.on_scope_data = MagicMock()
-        radio.enable_scope = AsyncMock()
-        radio.disable_scope = AsyncMock()
+        _add_scope_capable_attrs(radio)
         radio.connected = True
         radio.radio_ready = True
 
@@ -1837,9 +1851,7 @@ class TestScopeReconnect:
         """If a new handler connects before the disable task runs,
         disable_scope() must NOT be called."""
         radio = MagicMock()
-        radio.on_scope_data = MagicMock()
-        radio.enable_scope = AsyncMock()
-        radio.disable_scope = AsyncMock()
+        _add_scope_capable_attrs(radio)
         radio.connected = True
         radio.radio_ready = True
 
@@ -1867,9 +1879,7 @@ class TestScopeReconnect:
     ) -> None:
         """Frames broadcast after reconnect must reach the new handler."""
         radio = MagicMock()
-        radio.on_scope_data = MagicMock()
-        radio.enable_scope = AsyncMock()
-        radio.disable_scope = AsyncMock()
+        _add_scope_capable_attrs(radio)
         radio.connected = True
         radio.radio_ready = True
 
