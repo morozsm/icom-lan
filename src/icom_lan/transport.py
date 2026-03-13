@@ -49,8 +49,14 @@ class _UdpProtocol(asyncio.DatagramProtocol):
         self._owner = transport_owner
 
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
-        assert isinstance(transport, asyncio.DatagramTransport)
-        self._owner._udp_transport = transport
+        # asyncio guarantees DatagramTransport for DatagramProtocol;
+        # avoid bare assert — it silently kills the callback in asyncio's error handler.
+        if not isinstance(transport, asyncio.DatagramTransport):
+            logger.warning(
+                "Unexpected transport type in connection_made: %s (expected DatagramTransport)",
+                type(transport).__name__,
+            )
+        self._owner._udp_transport = transport  # type: ignore[assignment]
 
     def datagram_received(self, data: bytes, addr: tuple[str, int]) -> None:
         self._owner._handle_packet(data)
