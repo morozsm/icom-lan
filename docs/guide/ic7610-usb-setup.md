@@ -48,7 +48,7 @@ This guide shows how to control the IC-7610 via **USB serial CI-V + USB audio de
 pip install icom-lan
 
 # For serial CI-V control:
-pip install 'icom-lan[serial]'
+pip install icom-lan
 
 # For USB audio RX/TX and audio-device listing:
 pip install 'icom-lan[serial,bridge]'
