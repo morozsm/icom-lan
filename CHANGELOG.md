@@ -4,6 +4,8 @@ All notable changes to [icom-lan](https://github.com/morozsm/icom-lan) are docum
 
 ## [Unreleased]
 
+## [0.13.0] — 2026-03-13
+
 ### Added
 - Memory and band-stacking register commands (Issue #133)
   - `set_memory_mode(channel)` - Select memory channel (1-101)
