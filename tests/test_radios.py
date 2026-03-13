@@ -1,8 +1,10 @@
 """Tests for radio model presets."""
 
+import logging
+
 import pytest
 
-from icom_lan.radios import RADIOS, RadioModel, get_civ_addr
+from icom_lan.radios import RADIOS, SERIAL_RADIO_MAP, RadioModel, get_civ_addr, identify_radio
 
 
 class TestRadioModels:
@@ -51,6 +53,26 @@ class TestGetCivAddr:
     def test_unknown_raises(self) -> None:
         with pytest.raises(KeyError, match="Unknown radio"):
             get_civ_addr("IC-FAKE")
+
+
+class TestIdentifyRadio:
+    def test_ic7610(self) -> None:
+        assert identify_radio(0x98, b"\x01\x06") == "IC-7610"
+
+    def test_ic705(self) -> None:
+        assert identify_radio(0xA4, b"\x01\x05") == "IC-705"
+
+    def test_unknown_address(self) -> None:
+        assert identify_radio(0xFF, b"\x00\x00") == "Unknown (0xFF)"
+
+    def test_model_id_mismatch_returns_name(self, caplog: pytest.LogCaptureFixture) -> None:
+        with caplog.at_level(logging.WARNING, logger="icom_lan.radios"):
+            result = identify_radio(0x98, b"\xFF\xFF")
+        assert result == "IC-7610"
+        assert "model id" in caplog.text.lower()
+
+    def test_all_map_entries_covered(self) -> None:
+        assert len(SERIAL_RADIO_MAP) == 6
 
 
 class TestRadioModelDataclass:

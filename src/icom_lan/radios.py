@@ -1,11 +1,14 @@
 """Radio model presets with CI-V addresses and capabilities.
 
-Reference: wfview rigs/*.rig files.
+Reference: wfview rigs/*.rig files and rigidentities.h.
 """
 
+import logging
 from dataclasses import dataclass
 
-__all__ = ["RadioModel", "RADIOS"]
+__all__ = ["RadioModel", "RADIOS", "SERIAL_RADIO_MAP", "identify_radio"]
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -58,6 +61,47 @@ RADIOS: dict[str, RadioModel] = {
         receivers=2,
     ),
 }
+
+
+#: Mapping from CI-V address to (model name, model ID bytes).
+#: Model ID is the 2-byte BCD identifier from the 0x19 0x00 response.
+#: Source: wfview rigidentities.h
+SERIAL_RADIO_MAP: dict[int, tuple[str, bytes]] = {
+    0x98: ("IC-7610", b"\x01\x06"),
+    0xA4: ("IC-705", b"\x01\x05"),
+    0x94: ("IC-7300", b"\x01\x01"),
+    0xA2: ("IC-9700", b"\x01\x20"),
+    0x8E: ("IC-7851", b"\x01\x35"),
+    0x96: ("IC-R8600", b"\x01\x26"),
+}
+
+
+def identify_radio(address: int, model_id: bytes) -> str:
+    """Identify radio from CI-V address and model ID.
+
+    Args:
+        address: CI-V address (e.g. 0x98 for IC-7610).
+        model_id: 2-byte BCD model ID from 0x19 0x00 response.
+
+    Returns:
+        Radio name (e.g. "IC-7610") or "Unknown (0xXX)" if address not found.
+    """
+    entry = SERIAL_RADIO_MAP.get(address)
+    if not entry:
+        return f"Unknown (0x{address:02X})"
+
+    expected_name, expected_id = entry
+
+    if model_id != expected_id:
+        logger.warning(
+            "CI-V address 0x%02X maps to %s, but model ID %s != %s",
+            address,
+            expected_name,
+            model_id.hex(),
+            expected_id.hex(),
+        )
+
+    return expected_name
 
 
 def _normalize_model_name(model: str) -> str:
