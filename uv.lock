@@ -564,6 +564,10 @@ wheels = [
 name = "icom-lan"
 version = "0.11.0"
 source = { editable = "." }
+dependencies = [
+    { name = "pyserial" },
+    { name = "pyserial-asyncio" },
+]
 
 [package.optional-dependencies]
 audio = [
@@ -584,10 +588,6 @@ dev = [
 ]
 scope = [
     { name = "pillow" },
-]
-serial = [
-    { name = "pyserial" },
-    { name = "pyserial-asyncio" },
 ]
 
 [package.dev-dependencies]
@@ -610,8 +610,8 @@ requires-dist = [
     { name = "opuslib", marker = "extra == 'audio'" },
     { name = "opuslib", marker = "extra == 'bridge'" },
     { name = "pillow", marker = "extra == 'scope'", specifier = ">=10.0" },
-    { name = "pyserial", marker = "extra == 'serial'", specifier = ">=3.5" },
-    { name = "pyserial-asyncio", marker = "extra == 'serial'", specifier = ">=0.6" },
+    { name = "pyserial", specifier = ">=3.5" },
+    { name = "pyserial-asyncio", specifier = ">=0.6" },
     { name = "pytest", marker = "extra == 'dev'" },
     { name = "pytest-asyncio", marker = "extra == 'dev'" },
     { name = "pytest-cov", marker = "extra == 'dev'" },
@@ -619,7 +619,7 @@ requires-dist = [
     { name = "ruff", marker = "extra == 'dev'" },
     { name = "sounddevice", marker = "extra == 'bridge'" },
 ]
-provides-extras = ["audio", "bridge", "serial", "scope", "dev"]
+provides-extras = ["audio", "bridge", "scope", "dev"]
 
 [package.metadata.requires-dev]
 dev = [

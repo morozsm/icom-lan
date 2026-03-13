@@ -127,13 +127,34 @@ async def _try_baud(
         await writer.drain()
         logger.debug("probe_serial_civ: sent probe to %s @ %d baud", port, baud)
 
+        # Read in a loop: first read often returns only the echo of our
+        # command; the actual radio response arrives a few ms later.
+        buf = bytearray()
+        response_preamble = bytes([0xFE, 0xFE, 0xE0])
         try:
-            data = await asyncio.wait_for(reader.read(64), timeout=timeout)
+            deadline = asyncio.get_event_loop().time() + timeout
+            while asyncio.get_event_loop().time() < deadline:
+                remaining = deadline - asyncio.get_event_loop().time()
+                if remaining <= 0:
+                    break
+                try:
+                    chunk = await asyncio.wait_for(
+                        reader.read(64), timeout=remaining
+                    )
+                    buf.extend(chunk)
+                except asyncio.TimeoutError:
+                    break
+                # Check if we have the response (not just echo)
+                if buf.find(response_preamble) != -1:
+                    break
         except asyncio.TimeoutError:
+            pass
+
+        if not buf:
             logger.debug("probe_serial_civ: timeout at %s @ %d", port, baud)
             return None
 
-        return _parse_probe_response(port, baud, data)
+        return _parse_probe_response(port, baud, bytes(buf))
     finally:
         writer.close()
         await writer.wait_closed()

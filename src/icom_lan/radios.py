@@ -93,8 +93,12 @@ def identify_radio(address: int, model_id: bytes) -> str:
     expected_name, expected_id = entry
 
     if model_id != expected_id:
-        logger.warning(
-            "CI-V address 0x%02X maps to %s, but model ID %s != %s",
+        # Some radios return a shorter model ID via USB serial (e.g. single
+        # byte CI-V address echo) vs the full 2-byte BCD ID.  The CI-V
+        # address alone is sufficient for identification, so only log at
+        # debug level.
+        logger.debug(
+            "CI-V address 0x%02X maps to %s, model ID %s != expected %s (OK)",
             address,
             expected_name,
             model_id.hex(),
