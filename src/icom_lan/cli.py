@@ -427,7 +427,28 @@ def _build_parser() -> argparse.ArgumentParser:
     _add_json(tuner_p)
 
     # discover
-    sub.add_parser("discover", help="Discover radios on the network")
+    discover_p = sub.add_parser(
+        "discover", help="Discover Icom radios on LAN and serial ports"
+    )
+    discover_p.add_argument(
+        "--serial-only",
+        action="store_true",
+        default=False,
+        help="Only scan serial (USB) ports; skip LAN broadcast",
+    )
+    discover_p.add_argument(
+        "--lan-only",
+        action="store_true",
+        default=False,
+        help="Only scan LAN via UDP broadcast; skip serial ports",
+    )
+    discover_p.add_argument(
+        "--timeout",
+        type=float,
+        default=3.0,
+        metavar="SECONDS",
+        help="LAN broadcast listen timeout in seconds (default: 3.0)",
+    )
 
     # serve
     serve_p = sub.add_parser("serve", help="Start rigctld-compatible TCP server")
@@ -1877,46 +1898,66 @@ async def _cmd_web(radio: Radio, args: argparse.Namespace) -> int:
     return 0
 
 
-async def _cmd_discover(_radio: Radio, _args: argparse.Namespace) -> int:
-    """Discover Icom radios on the local network via broadcast."""
-    import socket
-    import struct
+async def _cmd_discover(_radio: Radio, args: argparse.Namespace) -> int:
+    """Discover Icom radios on LAN and/or serial ports."""
+    from .discovery import dedupe_radios, discover_lan_radios, discover_serial_radios
 
-    print("Scanning for Icom radios (3 seconds)...")
+    serial_only: bool = getattr(args, "serial_only", False)
+    lan_only: bool = getattr(args, "lan_only", False)
+    timeout: float = getattr(args, "timeout", 3.0)
 
-    # Build "Are You There" packet with sender_id=0
-    pkt = bytearray(0x10)
-    struct.pack_into("<I", pkt, 0, 0x10)
-    struct.pack_into("<H", pkt, 4, 0x03)  # ARE_YOU_THERE
+    tasks = []
+    if not serial_only:
+        tasks.append(discover_lan_radios(timeout=timeout))
+    if not lan_only:
+        tasks.append(discover_serial_radios())
 
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-    sock.settimeout(0.5)
-
-    # Broadcast on common Icom ports
-    for port in [50001]:
-        sock.sendto(bytes(pkt), ("255.255.255.255", port))
-
-    found: dict[str, int] = {}
-    deadline = asyncio.get_event_loop().time() + 3.0
-    while asyncio.get_event_loop().time() < deadline:
-        try:
-            data, addr = sock.recvfrom(256)
-            if len(data) >= 0x10:
-                ptype = struct.unpack_from("<H", data, 4)[0]
-                if ptype == 0x04:  # I_AM_HERE
-                    remote_id = struct.unpack_from("<I", data, 8)[0]
-                    found[addr[0]] = remote_id
-                    print(f"  Found: {addr[0]}:{addr[1]}  id=0x{remote_id:08X}")
-        except socket.timeout:
-            continue
-
-    sock.close()
-
-    if not found:
-        print("No radios found.")
+    if not serial_only and not lan_only:
+        print(f"Scanning for Icom radios ({timeout:.0f}s LAN + serial)...")
+    elif serial_only:
+        print("Scanning serial ports for Icom radios...")
     else:
-        print(f"\n{len(found)} radio(s) found.")
+        print(f"Scanning LAN for Icom radios ({timeout:.0f}s)...")
+
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+
+    if not serial_only and not lan_only:
+        lan_result, serial_result = results[0], results[1]
+    elif serial_only:
+        lan_result, serial_result = [], results[0]
+    else:
+        lan_result, serial_result = results[0], []
+
+    lan_radios: list[dict] = lan_result if not isinstance(lan_result, BaseException) else []
+    serial_radios: list[dict] = (
+        serial_result if not isinstance(serial_result, BaseException) else []
+    )
+
+    if isinstance(lan_result, BaseException):
+        print(f"  Warning: LAN discovery failed — {lan_result}", file=sys.stderr)
+    if isinstance(serial_result, BaseException):
+        print(f"  Warning: Serial discovery failed — {serial_result}", file=sys.stderr)
+
+    grouped = dedupe_radios(lan_radios, serial_radios)
+
+    if not grouped:
+        print("No radios found.")
+        return 0
+
+    total_connections = sum(len(r["lan"]) + len(r["serial"]) for r in grouped)
+    n_radios = len(grouped)
+    n_methods = total_connections
+
+    print(
+        f"\nFound {n_radios} radio{'s' if n_radios != 1 else ''}"
+        f" with {n_methods} connection method{'s' if n_methods != 1 else ''}:\n"
+    )
+    for radio in grouped:
+        print(f"{radio['model']}:")
+        for lan in radio["lan"]:
+            print(f"  \u2022 LAN: {lan['host']}")
+        for serial in radio["serial"]:
+            print(f"  \u2022 Serial: {serial['port']} ({serial['baud']} baud)")
     return 0
 
 
@@ -1943,14 +1984,6 @@ def main() -> None:
     if getattr(args, "list_audio_devices", False):
         sys.exit(asyncio.run(_cmd_list_audio_devices(args)))
     elif args.command == "discover":
-        if getattr(args, "backend", "lan") == "serial":
-            print(
-                "Error: 'discover' is not supported for the serial backend.\n"
-                "  Tip: discover scans the network via UDP broadcast (LAN only).\n"
-                "  Use --backend lan or omit --backend to discover radios on the network.",
-                file=sys.stderr,
-            )
-            sys.exit(1)
         sys.exit(asyncio.run(_cmd_discover(None, args)))  # type: ignore[arg-type]
     elif args.command == "proxy":
         from .proxy import run_proxy

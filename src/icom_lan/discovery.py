@@ -11,6 +11,9 @@ from typing import Any
 __all__ = [
     "CivProbeResult",
     "SerialPortCandidate",
+    "dedupe_radios",
+    "discover_lan_radios",
+    "discover_serial_radios",
     "enumerate_serial_ports",
     "probe_serial_civ",
 ]
@@ -221,6 +224,133 @@ def enumerate_serial_ports() -> list[SerialPortCandidate]:
         else:
             logger.debug("Skipping port: %s (%s)", port.device, port.description)
     return candidates
+
+
+async def discover_lan_radios(timeout: float = 3.0) -> list[dict[str, object]]:
+    """Discover Icom radios on LAN via UDP broadcast ("Are You There").
+
+    Args:
+        timeout: How long to listen for responses, in seconds.
+
+    Returns:
+        List of dicts with keys ``host`` and ``remote_id``.
+    """
+    import socket
+    import struct
+    import time
+
+    def _scan() -> list[dict[str, object]]:
+        pkt = bytearray(0x10)
+        struct.pack_into("<I", pkt, 0, 0x10)
+        struct.pack_into("<H", pkt, 4, 0x03)  # ARE_YOU_THERE
+
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        sock.settimeout(0.5)
+        try:
+            sock.sendto(bytes(pkt), ("255.255.255.255", 50001))
+        except OSError:
+            logger.warning("discover_lan_radios: broadcast failed")
+            sock.close()
+            return []
+
+        found: dict[str, dict[str, object]] = {}
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            try:
+                data, addr = sock.recvfrom(256)
+                if len(data) >= 0x10:
+                    ptype = struct.unpack_from("<H", data, 4)[0]
+                    if ptype == 0x04:  # I_AM_HERE
+                        remote_id = struct.unpack_from("<I", data, 8)[0]
+                        found[addr[0]] = {"host": addr[0], "remote_id": remote_id}
+                        logger.info("discover_lan_radios: found %s id=0x%08X", addr[0], remote_id)
+            except socket.timeout:
+                continue
+        sock.close()
+        return list(found.values())
+
+    return await asyncio.to_thread(_scan)
+
+
+async def discover_serial_radios() -> list[dict[str, object]]:
+    """Discover Icom radios connected via USB serial (CI-V).
+
+    Returns:
+        List of dicts with keys ``model``, ``address``, ``port``, ``baud``.
+    """
+    from .radios import identify_radio
+
+    candidates = enumerate_serial_ports()
+    results: list[dict[str, object]] = []
+    for port in candidates:
+        probe = await probe_serial_civ(port.device)
+        if probe:
+            model = identify_radio(probe.address, probe.model_id)
+            results.append(
+                {
+                    "model": model,
+                    "address": probe.address,
+                    "port": probe.port,
+                    "baud": probe.baud,
+                }
+            )
+    return results
+
+
+def dedupe_radios(
+    lan_radios: list[dict[str, object]], serial_radios: list[dict[str, object]]
+) -> list[dict[str, object]]:
+    """Group LAN and serial discovery results by radio identity.
+
+    Two entries are considered the same radio when their ``model`` **and**
+    ``address`` (CI-V address) fields match.  Entries that lack either field
+    are treated as distinct radios and are never merged.
+
+    Args:
+        lan_radios: Dicts from :func:`discover_lan_radios`.
+        serial_radios: Dicts from :func:`discover_serial_radios`.
+
+    Returns:
+        List of dicts, each with keys ``model``, ``lan`` (list), ``serial``
+        (list).  ``model`` is the display name of the radio.
+    """
+    radios: dict[tuple[object, ...], dict[str, object]] = {}
+    _counter = 0
+
+    for lan in lan_radios:
+        model = lan.get("model")
+        address = lan.get("address")
+        if model is not None and address is not None:
+            key: tuple[object, ...] = (model, address)
+        else:
+            _counter += 1
+            key = (f"__unid_lan_{_counter}",)
+        if key not in radios:
+            radios[key] = {
+                "model": model or lan.get("host", "Unknown"),
+                "lan": [],
+                "serial": [],
+            }
+        cast_list = radios[key]["lan"]
+        assert isinstance(cast_list, list)
+        cast_list.append(lan)
+
+    for serial in serial_radios:
+        model = serial.get("model")
+        address = serial.get("address")
+        if model is not None and address is not None:
+            key = (model, address)
+        else:
+            _counter += 1
+            key = (f"__unid_serial_{_counter}",)
+        if key not in radios:
+            radios[key] = {"model": model or "Unknown", "lan": [], "serial": []}
+        cast_list = radios[key]["serial"]
+        assert isinstance(cast_list, list)
+        cast_list.append(serial)
+
+    return list(radios.values())
 
 
 def _is_candidate(port: object) -> bool:

@@ -16,7 +16,7 @@ Direct connection to your radio — no wfview, hamlib, or RS-BA1 required.
 - 📡 **Direct UDP connection** — LAN backend (UDP ports 50001/2/3), no intermediate software needed
 - 🔌 **USB serial backend** — IC-7610 USB CI-V + USB audio devices ([setup guide](https://morozsm.github.io/icom-lan/guide/ic7610-usb-setup/))
 - 🎛️ **Full CI-V command set** — frequency, mode, filter, power, meters, PTT, CW keying, VFO, split, ATT, PREAMP
-- 🔍 **Network discovery** — find radios on your LAN automatically
+- 🔍 **Unified discovery** — find radios on LAN and USB serial ports, deduplicated by identity
 - 💻 **CLI tool** — `icom-lan status`, `icom-lan freq 14.074m`
 - ⚡ **Async API** — built on asyncio for seamless integration
 - 🚀 **Fast non-audio connect path** — CLI/status calls don't block on audio-port negotiation
@@ -164,7 +164,7 @@ icom-lan power-off
 # UDP relay proxy (for VPN/Tailscale remote access)
 icom-lan proxy --radio 192.168.55.40 --port 50001
 
-# Discover radios on network
+# Discover radios on LAN + USB serial (unified, deduped)
 icom-lan discover
 
 # Built-in Web UI (spectrum, waterfall, controls, audio)

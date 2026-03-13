@@ -76,13 +76,15 @@ icom-lan --backend serial --serial-port /dev/tty.usbmodem-IC7610 \
     audio rx --out rx.wav --seconds 10
 ```
 
-### `discover` command — LAN only
+### `discover` command — LAN + serial
 
-The `discover` command scans the network via UDP broadcast and is only supported with the LAN backend:
+The `discover` command scans both LAN (UDP broadcast) and USB serial ports concurrently:
 
 ```bash
-icom-lan discover                      # LAN: broadcasts and finds radios
-icom-lan --backend serial discover     # Error: not supported
+icom-lan discover                      # LAN + serial (default)
+icom-lan discover --lan-only           # UDP broadcast only
+icom-lan discover --serial-only        # USB serial ports only
+icom-lan discover --timeout 5          # Longer LAN listen window
 ```
 
 ## Commands
@@ -358,18 +360,43 @@ icom-lan power-off
 
 ### `discover`
 
-Discover Icom radios on the local network via UDP broadcast.
+Discover Icom radios on LAN and USB serial ports. Results are grouped by radio identity — the same physical radio connected via both LAN and USB appears as one entry with two connection methods.
 
 ```bash
-icom-lan discover
+icom-lan discover                   # LAN + serial
+icom-lan discover --lan-only        # UDP broadcast only
+icom-lan discover --serial-only     # USB serial ports only
+icom-lan discover --timeout 5       # Longer LAN listen window (default: 3s)
 ```
 
 ```
-Scanning for Icom radios (3 seconds)...
-  Found: 192.168.1.100:50001  id=0xDEADBEEF
+Scanning for Icom radios (3s LAN + serial)...
 
-1 radio(s) found.
+Found 1 radio with 2 connection methods:
+
+IC-7610:
+  • LAN: 192.168.55.40
+  • Serial: /dev/cu.usbserial-11320 (19200 baud)
 ```
+
+Multiple radios:
+
+```
+Found 2 radios with 3 connection methods:
+
+IC-7610:
+  • LAN: 192.168.55.40
+  • Serial: /dev/cu.usbserial-11320 (19200 baud)
+
+IC-705:
+  • Serial: /dev/cu.usbserial-54321 (115200 baud)
+```
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--lan-only` | off | Only scan via UDP broadcast |
+| `--serial-only` | off | Only scan USB serial ports |
+| `--timeout SECONDS` | `3.0` | LAN broadcast listen timeout |
 
 ### `serve`
 
