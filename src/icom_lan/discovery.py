@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from typing import Any
 
 __all__ = [
+    "SERIAL_AVAILABLE",
     "CivProbeResult",
     "SerialPortCandidate",
     "dedupe_radios",
@@ -17,6 +18,14 @@ __all__ = [
     "enumerate_serial_ports",
     "probe_serial_civ",
 ]
+
+try:
+    import serial.tools.list_ports as _serial_list_ports  # noqa: F401
+    import serial_asyncio as _serial_asyncio  # noqa: F401
+
+    SERIAL_AVAILABLE = True
+except ImportError:
+    SERIAL_AVAILABLE = False
 
 _CIV_PROBE_CMD = bytes([0xFE, 0xFE, 0x00, 0xE0, 0x19, 0x00, 0xFD])
 # Minimum valid response: FE FE E0 <addr> 19 00 <model_id_byte> FD = 8 bytes
@@ -87,6 +96,9 @@ async def probe_serial_civ(
     Returns:
         :class:`CivProbeResult` on success, or ``None`` if no radio responded.
     """
+    if not SERIAL_AVAILABLE:
+        return None
+
     if baud_rates is None:
         baud_rates = [19200, 9600, 115200, 4800]
 
@@ -208,6 +220,9 @@ def enumerate_serial_ports() -> list[SerialPortCandidate]:
         List of :class:`SerialPortCandidate` objects for ports that pass the
         candidate filter (USB, non-Bluetooth, non-virtual).
     """
+    if not SERIAL_AVAILABLE:
+        return []
+
     from serial.tools import list_ports
 
     candidates = []
@@ -279,6 +294,9 @@ async def discover_serial_radios() -> list[dict[str, object]]:
     Returns:
         List of dicts with keys ``model``, ``address``, ``port``, ``baud``.
     """
+    if not SERIAL_AVAILABLE:
+        return []
+
     from .radios import identify_radio
 
     candidates = enumerate_serial_ports()
