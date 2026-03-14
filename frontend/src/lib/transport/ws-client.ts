@@ -75,13 +75,28 @@ export class WsChannel {
         this.binaryHandlers.forEach((h) => h(event.data as ArrayBuffer));
       } else {
         try {
-          const msg = JSON.parse(event.data as string) as WsIncoming;
+          const raw = JSON.parse(event.data as string) as Record<string, unknown>;
+          // Handle status-based error responses ({"status":"error", ...})
+          if (raw['status'] === 'error') {
+            const errorMsg = (raw['message'] as string) || (raw['error'] as string) || 'Command failed';
+            console.error(`[ws] error response:`, raw);
+            const errNote = { type: 'notification', level: 'error', message: errorMsg, category: 'command' } as any;
+            this.messageHandlers.forEach((h) => h(errNote));
+            return;
+          }
+          const msg = raw as unknown as WsIncoming;
           this.messageHandlers.forEach((h) => h(msg));
-          if (msg.type === 'response' && msg.ok === false) {
-            const errorMsg = msg.message || msg.error || 'Command failed';
-            console.warn(`[ws] command ${msg.id} failed: ${errorMsg}`);
-            for (const h of this.messageHandlers) {
-              h({ type: 'notification', level: 'error', message: errorMsg, category: 'command' } as any);
+          if (msg.type === 'error') {
+            console.error(`[ws] error from server (id=${msg.id}): ${msg.message}`);
+          } else if (msg.type === 'response') {
+            if (msg.ok === false) {
+              const errorMsg = msg.message || msg.error || 'Command failed';
+              console.error(`[ws] command ${msg.id} failed: ${errorMsg}`);
+              for (const h of this.messageHandlers) {
+                h({ type: 'notification', level: 'error', message: errorMsg, category: 'command' } as any);
+              }
+            } else {
+              console.debug(`[ws] command ${msg.id} ok`);
             }
           }
         } catch {
