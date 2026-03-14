@@ -1327,7 +1327,6 @@ async def _send_response(
 ) -> None:
     headers = {
         "Content-Length": str(len(body)),
-        "Connection": "close",
         **extra_headers,
     }
     header_lines = "".join(f"{k}: {v}\r\n" for k, v in headers.items())
