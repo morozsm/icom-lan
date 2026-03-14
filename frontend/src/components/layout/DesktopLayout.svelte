@@ -16,6 +16,11 @@
   import Toast from '../shared/Toast.svelte';
   import DxClusterPanel from '../dx/DxClusterPanel.svelte';
   import StepSelector from '../controls/StepSelector.svelte';
+  import TunerPanel from '../radio/TunerPanel.svelte';
+  import AntennaPanel from '../radio/AntennaPanel.svelte';
+  import SplitRitPanel from '../radio/SplitRitPanel.svelte';
+  import AgcPanel from '../radio/AgcPanel.svelte';
+  import SettingsPanel from '../settings/SettingsPanel.svelte';
 
   import { radio, patchActiveReceiver } from '../../lib/stores/radio.svelte';
   import { hasDualReceiver, hasTx } from '../../lib/stores/capabilities.svelte';
@@ -215,6 +220,19 @@
         <div class="toggles-row">
           <FeatureToggles />
         </div>
+      </div>
+
+      <!-- Tuner + Split/RIT + AGC -->
+      <div class="panel-card">
+        <TunerPanel />
+        <SplitRitPanel />
+        <AgcPanel />
+      </div>
+
+      <!-- Antenna + Settings -->
+      <div class="panel-card">
+        <AntennaPanel />
+        <SettingsPanel />
       </div>
 
       <!-- Audio + PTT -->
