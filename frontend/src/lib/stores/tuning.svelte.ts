@@ -44,10 +44,13 @@ export function applyModeDefault(mode: string): void {
   _step = MODE_DEFAULTS[mode?.toUpperCase()] ?? DEFAULT_STEP;
 }
 
-/** Snap frequency to nearest step boundary */
+/** Snap frequency to nearest step boundary 
+ * NOTE: Only used for display/tuning UI. Server always returns precise Hz.
+ */
 export function snapToStep(freqHz: number): number {
   if (_step <= 0) return freqHz;
-  return Math.round(freqHz / _step) * _step;
+  // Round to 1 Hz (server precision) instead of step size to avoid flicker
+  return Math.round(freqHz);
 }
 
 /** Tune up/down by N steps (positive = up, negative = down) */
