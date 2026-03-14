@@ -5,7 +5,7 @@ let audioConnected = $state(false);
 let lastResponseTime = $state<number | null>(null);
 
 let lastStateUpdate = $state(0);
-const STALE_THRESHOLD_MS = 3000;
+const STALE_THRESHOLD_MS = 5000;
 let staleState = $state(false);
 
 if (typeof window !== 'undefined') {
