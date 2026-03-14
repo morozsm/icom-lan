@@ -1383,20 +1383,22 @@ async def test_soft_reconnect_calls_on_reconnect_callback(
     assert reconnect_called[0]
 
 
-@pytest.mark.timeout(5)  # Prevent CI hang if mock fails
 async def test_soft_reconnect_handles_connect_failure(radio: IcomRadio) -> None:
     """soft_reconnect() raises ConnectionError when transport.connect() fails (lines 444-447)."""
     from icom_lan.exceptions import TimeoutError as IcomTimeout
+    from icom_lan.transport import IcomTransport
 
     radio._civ_transport = None
     radio._ctrl_transport._udp_transport = MagicMock()  # type: ignore[attr-defined]
 
-    fake_civ_transport = MagicMock()
-    fake_civ_transport.connect = AsyncMock(side_effect=IcomTimeout("discovery failed"))
+    # Patch IcomTransport constructor to return a mock that fails on connect
+    async def failing_connect(*args, **kwargs):
+        raise IcomTimeout("discovery failed")
+    
+    fake_transport = AsyncMock(spec=IcomTransport)
+    fake_transport.connect = failing_connect
 
-    with (
-        patch("icom_lan.radio.IcomTransport", return_value=fake_civ_transport),
-    ):
+    with patch("icom_lan.radio.IcomTransport", return_value=fake_transport):
         with pytest.raises(ConnectionError, match="Failed to reconnect CI-V"):
             await radio.soft_reconnect()
 
