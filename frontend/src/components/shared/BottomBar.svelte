@@ -19,6 +19,7 @@
   let transmitting = $derived(radio.current?.ptt ?? false);
   let pending = $state(false);
   let pendingValue = $state(false);
+  let pttTimeoutId = $state<number | null>(null);
 
   let afLevel = $derived(rx?.afLevel ?? audio.volume);
   let muted = $derived(audio.muted);
@@ -26,6 +27,32 @@
   $effect(() => {
     if (pending && transmitting === pendingValue) {
       pending = false;
+    }
+  });
+
+  // PTT safety: auto-release after 30s or on WS disconnect
+  $effect(() => {
+    if (transmitting) {
+      // Start 30s timeout when PTT goes active
+      if (pttTimeoutId) clearTimeout(pttTimeoutId);
+      pttTimeoutId = setTimeout(() => {
+        console.warn('[PTT] 30s timeout — forcing PTT off');
+        sendCommand('ptt', { state: false });
+      }, 30_000) as unknown as number;
+    } else {
+      // Clear timeout when PTT goes inactive
+      if (pttTimeoutId) {
+        clearTimeout(pttTimeoutId);
+        pttTimeoutId = null;
+      }
+    }
+  });
+
+  // Force PTT off if WS disconnects while transmitting
+  $effect(() => {
+    if (transmitting && !wsOk) {
+      console.warn('[PTT] WS disconnected — forcing PTT off');
+      sendCommand('ptt', { state: false });
     }
   });
 
