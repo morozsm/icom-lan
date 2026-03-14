@@ -3,6 +3,7 @@
   import { radio } from '../../lib/stores/radio.svelte';
   import { getAudioState, toggleMute } from '../../lib/stores/audio.svelte';
   import { audioManager } from '../../lib/audio/audio-manager';
+  import { getWsConnected, isAudioAliveControlDead } from '../../lib/stores/connection.svelte';
   import { onMount } from 'svelte';
 
   let audioTick = $state(0);
@@ -12,6 +13,8 @@
   });
   let rxOn = $derived(audioTick >= 0 && audioManager.rxEnabled);
   let wsOk = $derived(audioTick >= 0 && audioManager.wsConnected);
+  let controlOk = $derived(getWsConnected());
+  let audioDeadZone = $derived(isAudioAliveControlDead());
 
   let audio = $derived(getAudioState());
   let rx = $derived(radio.current?.active === 'SUB' ? (radio.current?.sub ?? null) : (radio.current?.main ?? null));
@@ -94,9 +97,15 @@
     onclick={toggleRxAudio}
     aria-pressed={rxOn}
     aria-label={rxOn ? 'Stop RX audio' : 'Start RX audio'}
+    disabled={!controlOk}
+    title={!controlOk ? 'Control connection lost' : undefined}
   >
     <span class="rx-dot" class:on={rxOn}></span>RX
   </button>
+
+  {#if audioDeadZone}
+    <span class="audio-warn" title="Audio WS connected but control WS is down">Audio/ctrl mismatch</span>
+  {/if}
 
   <!-- Volume -->
   <div class="audio-section">
@@ -266,5 +275,17 @@
 
   .ptt-btn:disabled {
     cursor: wait;
+  }
+
+  .rx-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .audio-warn {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--warning);
+    flex-shrink: 0;
   }
 </style>

@@ -19,6 +19,8 @@ if (typeof window !== 'undefined') {
 }
 
 let isFullyConnected = $derived(httpConnected && wsConnected);
+let overallConnected = $derived(wsConnected && audioConnected);
+let audioAliveControlDead = $derived(audioConnected && !wsConnected);
 let connectionStatus = $derived<'connected' | 'partial' | 'disconnected'>(
   isFullyConnected ? 'connected' : httpConnected || wsConnected ? 'partial' : 'disconnected',
 );
@@ -57,6 +59,14 @@ export function setAudioConnected(v: boolean): void {
 
 export function isAudioConnected(): boolean {
   return audioConnected;
+}
+
+export function isOverallConnected(): boolean {
+  return overallConnected;
+}
+
+export function isAudioAliveControlDead(): boolean {
+  return audioAliveControlDead;
 }
 
 export function getLastResponseTime(): number | null {

@@ -2,6 +2,7 @@
   import { sendCommand } from '../../lib/transport/ws-client';
   import { radio } from '../../lib/stores/radio.svelte';
   import { getAudioState, toggleMute } from '../../lib/stores/audio.svelte';
+  import { getWsConnected } from '../../lib/stores/connection.svelte';
 
   let audio = $derived(getAudioState());
   let rx = $derived(radio.current?.active === 'SUB' ? (radio.current?.sub ?? null) : (radio.current?.main ?? null));
@@ -11,6 +12,7 @@
   let afLevel = $derived(rx?.afLevel ?? audio.volume);
   let muted = $derived(audio.muted);
   let rxActive = $derived(audio.rxEnabled);
+  let controlOk = $derived(getWsConnected());
 
   function onVolumeChange(e: Event) {
     const level = Math.round(Number((e.target as HTMLInputElement).value));
@@ -36,6 +38,7 @@
     aria-pressed={muted}
     aria-label={muted ? 'Unmute' : 'Mute'}
     title={muted ? 'Unmute' : 'Mute'}
+    disabled={!controlOk}
   >
     {muted ? '🔇' : '🔊'}
   </button>
@@ -50,6 +53,7 @@
     value={afLevel}
     onchange={onVolumeChange}
     aria-label="AF volume"
+    disabled={!controlOk}
   />
   <span class="volume-val">{afLevel}</span>
 </div>
