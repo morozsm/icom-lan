@@ -11,13 +11,12 @@
   import { vibrate } from '../../lib/utils/haptics';
 
   interface Props {
-    data: Uint8Array | null;
     options?: WaterfallOptions;
     onFreqClick?: (hz: number) => void;
     onRegisterPush?: (fn: (data: Uint8Array) => void) => void;
   }
 
-  let { data, options = defaultWaterfallOptions, onFreqClick, onRegisterPush }: Props = $props();
+  let { options = defaultWaterfallOptions, onFreqClick, onRegisterPush }: Props = $props();
 
   let canvas: HTMLCanvasElement;
   let renderer = $state<WaterfallRenderer | null>(null);
