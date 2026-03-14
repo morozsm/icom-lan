@@ -39,7 +39,7 @@
   let latestPixels: Uint8Array | null = null;
 
   function draw(): void {
-    if (!visible) return; // will be restarted by visibilitychange
+    if (!visible) { rafId = 0; return; } // will be restarted by visibilitychange
     const pixels = latestPixels ?? data;
     if (canvas && pixels && cssWidth > 0 && cssHeight > 0) {
       const ctx = canvas.getContext('2d');
