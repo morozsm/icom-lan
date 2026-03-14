@@ -7,12 +7,14 @@ let lastResponseTime = $state<number | null>(null);
 let lastStateUpdate = $state(0);
 const STALE_THRESHOLD_MS = 5000;
 let staleState = $state(false);
+let reconnecting = $state(false);
 
 if (typeof window !== 'undefined') {
   setInterval(() => {
     const offline = (window as any).__RADIO_OFFLINE__ === true;
     const age = lastStateUpdate > 0 ? Date.now() - lastStateUpdate : 0;
     staleState = offline || (lastStateUpdate > 0 && age > STALE_THRESHOLD_MS);
+    reconnecting = (window as any).__POLL_RECONNECTING__ === true;
   }, 1000);
 }
 
@@ -68,4 +70,8 @@ export function markStateUpdated(): void {
 
 export function isStale(): boolean {
   return staleState;
+}
+
+export function isReconnecting(): boolean {
+  return reconnecting;
 }

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { getCapabilities } from '../../lib/stores/capabilities.svelte';
-  import { getConnectionStatus, isAudioConnected, isStale } from '../../lib/stores/connection.svelte';
+  import { getConnectionStatus, isAudioConnected, isReconnecting, isStale } from '../../lib/stores/connection.svelte';
   import { audioManager } from '../../lib/audio/audio-manager';
   import { radio } from '../../lib/stores/radio.svelte';
 
@@ -11,6 +11,7 @@
 
   let modelName = $derived(caps?.model ?? 'Radio');
   let stale = $derived(isStale());
+  let reconnect = $derived(isReconnecting());
   let isConnected = $derived(status === 'connected');
   let isPartial = $derived(status === 'partial');
   let isPtt = $derived(state?.ptt ?? false);
@@ -60,11 +61,11 @@
   <div class="left">
     <span
       class="dot"
-      class:connected={isConnected && !stale}
-      class:partial={isPartial || stale}
-      title={stale ? 'Data stale' : status}
+      class:connected={isConnected && !stale && !reconnect}
+      class:partial={isPartial || stale || reconnect}
+      title={reconnect ? 'Reconnecting…' : stale ? 'Data stale' : status}
     ></span>
-    <span class="model">{modelName}{stale ? ' (stale)' : ''}</span>
+    <span class="model">{modelName}{reconnect ? ' (reconnecting…)' : stale ? ' (stale)' : ''}</span>
   </div>
 
   <!-- Center: frequency -->
