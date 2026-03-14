@@ -34,3 +34,15 @@ export function getSupportedModes(): string[] {
 export function getSupportedFilters(): string[] {
   return capabilities?.filters ?? [];
 }
+
+export function getAttValues(): number[] {
+  return capabilities?.attValues ?? [0, 6, 12, 18];
+}
+
+export function getPreValues(): number[] {
+  return capabilities?.preValues ?? [0, 1];
+}
+
+export function getAntennaCount(): number {
+  return capabilities?.antennas ?? 1;
+}

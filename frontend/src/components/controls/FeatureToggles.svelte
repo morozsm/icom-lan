@@ -2,7 +2,7 @@
   import { onDestroy } from 'svelte';
   import { sendCommand } from '../../lib/transport/ws-client';
   import { radio } from '../../lib/stores/radio.svelte';
-  import { hasTx } from '../../lib/stores/capabilities.svelte';
+  import { hasTx, getAttValues, getPreValues, getAntennaCount } from '../../lib/stores/capabilities.svelte';
   import ControlGroup from './ControlGroup.svelte';
   import CapabilityMenu from './CapabilityMenu.svelte';
 
@@ -18,11 +18,9 @@
   let comp = $derived(radio.current?.compressorOn ?? false);
   let powerLevel = $derived(radio.current?.powerLevel ?? 0);
   let isTx = $derived(hasTx());
-
-  // IC-7610 ATT values: 0, 3, 6, 9, 12, 15, 18, 21 dB
-  const attValues = [0, 3, 6, 9, 12, 15, 18, 21];
-  // IC-7610 PRE values: 0 (off), 1 (preamp 1), 2 (preamp 2)
-  const preValues = [0, 1, 2];
+  let attValues = $derived(getAttValues());
+  let preValues = $derived(getPreValues());
+  let antennaCount = $derived(getAntennaCount());
 
   let showAttMenu = $state(false);
   let showPreMenu = $state(false);
@@ -51,15 +49,14 @@
   }
 
   function cycleAtt() {
-    // Cycle through common values: 0 → 6 → 12 → 18 → 0
-    const cycle = [0, 6, 12, 18];
-    const idx = cycle.indexOf(att);
-    const next = idx >= 0 ? cycle[(idx + 1) % cycle.length] : 6;
+    const idx = attValues.indexOf(att);
+    const next = idx >= 0 ? attValues[(idx + 1) % attValues.length] : attValues[1] ?? 6;
     sendCommand('set_att', { db: next, receiver: receiverIdx });
   }
 
   function cyclePre() {
-    const next = (pre + 1) % 3;
+    const idx = preValues.indexOf(pre);
+    const next = idx >= 0 ? preValues[(idx + 1) % preValues.length] : preValues[1] ?? 1;
     sendCommand('set_preamp', { level: next, receiver: receiverIdx });
   }
 
@@ -162,17 +159,13 @@
       title="Speech Compressor"
     >COMP</button>
 
-    <button
-      class="toggle-btn"
-      onclick={() => sendCommand('set_antenna_1', { on: true })}
-      title="Select ANT1"
-    >ANT1</button>
-
-    <button
-      class="toggle-btn"
-      onclick={() => sendCommand('set_antenna_2', { on: true })}
-      title="Select ANT2"
-    >ANT2</button>
+    {#each { length: antennaCount } as _, i}
+      <button
+        class="toggle-btn"
+        onclick={() => sendCommand(`set_antenna_${i + 1}`, { on: true })}
+        title="Select ANT{i + 1}"
+      >ANT{i + 1}</button>
+    {/each}
 
     {#if isTx}
       <label class="pwr-control" title="TX Power (0–255)">
