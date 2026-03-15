@@ -4,7 +4,7 @@ Implements:
 - Minimal asyncio HTTP server (no external deps)
 - RFC 6455 WebSocket upgrade
 - HTTP endpoints: GET /, GET /api/v1/info, GET /api/v1/capabilities
-- WebSocket channels: /api/v1/ws, /api/v1/scope, /api/v1/meters, /api/v1/audio
+- WebSocket channels: /api/v1/ws, /api/v1/scope, /api/v1/audio
 
 Architecture
 ------------
@@ -14,7 +14,7 @@ Single asyncio.start_server accepts raw TCP. For each connection:
 3. Else → serve HTTP response (static file or JSON API)
 
 The server holds an optional radio protocol instance and uses it for
-command dispatch and scope/meter data delivery.
+command dispatch and scope data delivery.
 """
 
 from __future__ import annotations
@@ -38,7 +38,6 @@ from .handlers import (
     AudioBroadcaster,
     AudioHandler,
     ControlHandler,
-    MetersHandler,
     ScopeHandler,
 )
 from .runtime_helpers import radio_ready, runtime_capabilities
@@ -193,9 +192,6 @@ class WebServer:
         self._audio_broadcaster = AudioBroadcaster(radio)
         self._command_queue: CommandQueue = CommandQueue()
         self._radio_poller: RadioPoller | None = None
-        # Meter broadcast
-        self._meter_handlers: set["MetersHandler"] = set()
-        self._meter_cache: list[tuple[int, int]] | None = None
         # Control handler event queues
         self._control_event_queues: set[asyncio.Queue[dict[str, Any]]] = set()
         # State broadcast throttle
@@ -437,22 +433,6 @@ class WebServer:
     # Meter handler registration (no poller — RadioPoller broadcasts)
     # ------------------------------------------------------------------
 
-    def register_meter_handler(self, handler: "MetersHandler") -> None:
-        """Register a meter handler for broadcast."""
-        self._meter_handlers.add(handler)
-        if self._meter_cache is not None:
-            handler.enqueue_frame(self._meter_cache)
-
-    def unregister_meter_handler(self, handler: "MetersHandler") -> None:
-        """Unregister a meter handler."""
-        self._meter_handlers.discard(handler)
-
-    def _broadcast_meters(self, readings: list[tuple[int, int]]) -> None:
-        """Broadcast meter readings to all registered handlers."""
-        self._meter_cache = readings
-        for h in list(self._meter_handlers):
-            h.enqueue_frame(readings)
-
     def _on_radio_state_change(self, name: str, data: dict[str, Any]) -> None:
         """Callback from CI-V RX stream (_update_state_cache_from_frame).
 
@@ -470,37 +450,6 @@ class WebServer:
                 self.broadcast_notification(
                     "warning", "Radio disconnected", "connection"
                 )
-        # Also broadcast meter readings to MetersHandler clients
-        if name == "meter":
-            from .protocol import (
-                METER_SMETER_MAIN,
-                METER_POWER,
-                METER_SWR,
-                METER_ALC,
-                METER_ID_DRAIN,
-                METER_VD,
-                METER_TEMP,
-            )
-
-            meter_map = {
-                "smeter": METER_SMETER_MAIN,
-                "power": METER_POWER,
-                "swr": METER_SWR,
-                "alc": METER_ALC,
-                "id": METER_ID_DRAIN,
-                "vd": METER_VD,
-                "temp": METER_TEMP,
-            }
-            meter_type = data.get("type")
-            meter_id = (
-                meter_map.get(meter_type) if isinstance(meter_type, str) else None
-            )
-            if meter_id is not None:
-                # Binary protocol uses raw for bar width
-                raw = data.get("raw", 0)
-                value = raw if isinstance(raw, int) else 0
-                self._broadcast_meters([(meter_id, value)])
-
     def _on_radio_reconnect(self) -> None:
         """Called after soft_reconnect — re-enable scope if clients are connected."""
         if (
@@ -613,10 +562,6 @@ class WebServer:
         """Callback from RadioPoller (legacy, kept for compatibility)."""
         self.broadcast_event(name, data)
 
-    def _on_poller_meter_readings(self, readings: list[tuple[int, int]]) -> None:
-        """Callback from RadioPoller when meter values are polled."""
-        self._broadcast_meters(readings)
-
     async def start(self) -> None:
         """Start the HTTP/WS listener and RadioPoller (if radio is connected)."""
         self._server = await asyncio.start_server(
@@ -639,7 +584,6 @@ class WebServer:
                 self._state_cache,
                 self._command_queue,
                 on_state_event=self._on_poller_state_event,
-                on_meter_readings=self._on_poller_meter_readings,
             )
             self._radio_poller.start()
             if _supports_scope(self._radio):
@@ -1253,8 +1197,6 @@ class WebServer:
             )
         elif path == "/api/v1/scope":
             handler = ScopeHandler(ws, self._radio, server=self)
-        elif path == "/api/v1/meters":
-            handler = MetersHandler(ws, self._radio, server=self)
         elif path == "/api/v1/audio":
             handler = AudioHandler(ws, self._radio, self._audio_broadcaster)
         else:

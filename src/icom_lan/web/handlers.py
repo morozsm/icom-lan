@@ -3,7 +3,6 @@
 Each handler manages the lifecycle of one client connection on one channel:
 - control (/api/v1/ws): JSON commands, events, state
 - scope (/api/v1/scope): binary scope frames with backpressure
-- meters (/api/v1/meters): binary meter frames
 - audio (/api/v1/audio): placeholder for future audio streaming
 """
 
@@ -28,7 +27,6 @@ from .protocol import (
     decode_json,
     encode_audio_frame,
     encode_json,
-    encode_meter_frame,
     encode_scope_frame,
 )
 from .radio_poller import (
@@ -79,7 +77,6 @@ __all__ = [
     "HIGH_WATERMARK",
     "ControlHandler",
     "ScopeHandler",
-    "MetersHandler",
     "AudioHandler",
 ]
 
@@ -926,120 +923,6 @@ class ScopeHandler:
             frame: Scope frame to forward to the client.
         """
         self.enqueue_frame(frame)
-
-
-class MetersHandler:
-    """Handles the /api/v1/meters binary WebSocket channel.
-
-    Receives meter frames broadcast by RadioPoller (via server) and
-    forwards them to the client.  Implements backpressure: drops frames
-    when queue exceeds HIGH_WATERMARK.
-
-    Args:
-        ws: Established WebSocket connection.
-        radio: Radio protocol instance (may be None).
-        server: WebServer instance for meter broadcast registration.
-    """
-
-    def __init__(
-        self,
-        ws: WebSocketConnection,
-        radio: "Radio | None",
-        server: Any = None,
-    ) -> None:
-        self._ws = ws
-        self._radio = radio
-        self._server = server
-        self._seq: int = 0
-        self._active = False
-        self._frame_queue: asyncio.Queue[bytes] = asyncio.Queue(
-            maxsize=HIGH_WATERMARK * 2
-        )
-
-    async def run(self) -> None:
-        """Run the meters channel lifecycle.
-
-        Reads JSON control messages (meters_start/stop).  On meters_start,
-        registers with the server for meter broadcasts from RadioPoller.
-        """
-        sender_task: asyncio.Task[None] = asyncio.create_task(self._sender())
-        try:
-            while True:
-                opcode, payload = await self._ws.recv()
-                if opcode != WS_OP_TEXT:
-                    continue
-                try:
-                    msg = decode_json(payload.decode("utf-8"))
-                except ValueError:
-                    continue
-
-                msg_type = msg.get("type")
-                if msg_type == "meters_start":
-                    self._active = True
-                    if self._server is not None:
-                        self._server.register_meter_handler(self)
-                elif msg_type == "meters_stop":
-                    self._active = False
-                    if self._server is not None:
-                        self._server.unregister_meter_handler(self)
-        except EOFError:
-            pass
-        finally:
-            self._active = False
-            if self._server is not None:
-                self._server.unregister_meter_handler(self)
-            sender_task.cancel()
-            try:
-                await sender_task
-            except asyncio.CancelledError:
-                pass
-
-    def enqueue_frame(self, readings: list[tuple[int, int]]) -> None:
-        """Enqueue meter readings broadcast by the server's MeterPoller.
-
-        Args:
-            readings: List of (meter_id, value) pairs.
-        """
-        if not self._active:
-            return
-        encoded = encode_meter_frame(readings, self._seq)
-        self._seq = (self._seq + 1) & 0xFFFF
-        if self._frame_queue.full():
-            try:
-                self._frame_queue.get_nowait()
-            except asyncio.QueueEmpty:
-                pass
-        try:
-            self._frame_queue.put_nowait(encoded)
-        except asyncio.QueueFull:
-            pass
-
-    async def _sender(self) -> None:
-        """Continuously dequeues and sends meter frames."""
-        while True:
-            try:
-                data = await asyncio.wait_for(self._frame_queue.get(), timeout=1.0)
-                await self._ws.send_binary(data)
-            except asyncio.TimeoutError:
-                pass
-
-    def push_frame(self, meters: list[tuple[int, int]]) -> None:
-        """Push a meter frame directly (used for testing/injection).
-
-        Args:
-            meters: List of (meter_id, value) pairs.
-        """
-        encoded = encode_meter_frame(meters, self._seq)
-        self._seq = (self._seq + 1) & 0xFFFF
-        if self._frame_queue.full():
-            try:
-                self._frame_queue.get_nowait()
-            except asyncio.QueueEmpty:
-                pass
-        try:
-            self._frame_queue.put_nowait(encoded)
-        except asyncio.QueueFull:
-            pass
 
 
 class AudioBroadcaster:

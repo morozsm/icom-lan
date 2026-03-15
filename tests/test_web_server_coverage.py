@@ -321,10 +321,8 @@ async def test_handle_connection_none_http_ws_and_exception() -> None:
 
 @pytest.mark.asyncio
 async def test_scope_health_and_radio_state_event_paths() -> None:
-    meter_handler = MagicMock()
     radio = _scope_radio()
     srv = WebServer(radio)
-    srv._meter_handlers.add(meter_handler)
 
     frame = SimpleNamespace(pixels=b"\x00\x01")
     before = srv._scope_last_nonzero
@@ -334,9 +332,8 @@ async def test_scope_health_and_radio_state_event_paths() -> None:
     bad = SimpleNamespace(pixels=123)
     srv._scope_health_check(bad)  # noqa: SLF001
 
+    # Meter state change still triggers broadcast_state_update
     srv._on_radio_state_change("meter", {"type": "power", "raw": 77})  # noqa: SLF001
-    sent = meter_handler.enqueue_frame.call_args.args[0]
-    assert sent[0][1] == 77
 
     scope_handler = MagicMock()
     srv._scope_handlers.add(scope_handler)

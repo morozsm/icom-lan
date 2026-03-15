@@ -213,18 +213,14 @@ def test_start_stop_running_and_emit_helpers() -> None:
         assert poller.running is False
 
     events: list[tuple[str, dict]] = []
-    meter_events: list[list[tuple[int, int]]] = []
     poller2 = RadioPoller(
         radio,
         StateCache(),
         CommandQueue(),
         on_state_event=lambda name, data: events.append((name, data)),
-        on_meter_readings=lambda m: meter_events.append(m),
     )
     poller2._emit("x", {"a": 1})  # noqa: SLF001
-    poller2._emit_meters(7, 99)  # noqa: SLF001
     assert events == [("x", {"a": 1})]
-    assert meter_events == [[(7, 99)]]
 
 
 def test_state_queries_include_operator_toggle_reads_for_ic7610() -> None:

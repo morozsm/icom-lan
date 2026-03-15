@@ -1,4 +1,4 @@
-"""Web UI binary frame protocol for scope and meter data.
+"""Web UI binary frame protocol for scope and audio data.
 
 Binary Scope Frame (RFC):
     Offset  Size  Field           Description
@@ -11,13 +11,6 @@ Binary Scope Frame (RFC):
     13      1     flags           bit 0: out_of_range
     14      2     pixel_count     uint16 LE
     16      N     pixels          uint8[], amplitude 0-160
-
-Binary Meter Frame (RFC):
-    Offset  Size  Field        Description
-    0       1     msg_type     0x20 = meter_frame
-    1       2     sequence     uint16 LE
-    3       1     count        number of meters
-    4       N×3   meters[]     [meter_id(u8), value_lo(u8), value_hi(u8)]
 """
 
 from __future__ import annotations
@@ -28,22 +21,10 @@ from typing import Any, Protocol
 
 __all__ = [
     "MSG_TYPE_SCOPE",
-    "MSG_TYPE_METER",
     "MSG_TYPE_AUDIO_RX",
     "MSG_TYPE_AUDIO_TX",
-    "METER_SMETER_MAIN",
-    "METER_SMETER_SUB",
-    "METER_POWER",
-    "METER_SWR",
-    "METER_ALC",
-    "METER_COMP",
-    "METER_ID_DRAIN",
-    "METER_VD",
-    "METER_TEMP",
     "SCOPE_HEADER_SIZE",
-    "METER_HEADER_SIZE",
     "encode_scope_frame",
-    "encode_meter_frame",
     "encode_audio_frame",
     "AUDIO_HEADER_SIZE",
     "AUDIO_CODEC_OPUS",
@@ -54,24 +35,11 @@ __all__ = [
 
 # Message type constants
 MSG_TYPE_SCOPE: int = 0x01
-MSG_TYPE_METER: int = 0x20
 MSG_TYPE_AUDIO_RX: int = 0x10
 MSG_TYPE_AUDIO_TX: int = 0x11
 
-# Meter ID constants
-METER_SMETER_MAIN: int = 0x01
-METER_SMETER_SUB: int = 0x02
-METER_POWER: int = 0x03
-METER_SWR: int = 0x04
-METER_ALC: int = 0x05
-METER_COMP: int = 0x06
-METER_ID_DRAIN: int = 0x07
-METER_VD: int = 0x08
-METER_TEMP: int = 0x09
-
 # Header sizes
 SCOPE_HEADER_SIZE: int = 16
-METER_HEADER_SIZE: int = 4  # msg_type(1) + sequence(2) + count(1)
 
 
 class ScopeFrameLike(Protocol):
@@ -109,27 +77,6 @@ def encode_scope_frame(frame: ScopeFrameLike, sequence: int) -> bytes:
     )
     # header is exactly 3 + 4 + 4 + 2 + 1 + 2 = 16 bytes
     return header + frame.pixels
-
-
-def encode_meter_frame(meters: list[tuple[int, int]], sequence: int) -> bytes:
-    """Serialize a meter frame to binary wire format (RFC).
-
-    Args:
-        meters: List of (meter_id, value) pairs. Values are uint16.
-        sequence: Wrapping sequence counter (uint16).
-
-    Returns:
-        4-byte header + (3 × count) meter bytes.
-    """
-    count = len(meters)
-    seq_u16 = sequence & 0xFFFF
-
-    header = bytes([MSG_TYPE_METER]) + struct.pack("<H", seq_u16) + bytes([count])
-    data = b"".join(
-        bytes([meter_id, value & 0xFF, (value >> 8) & 0xFF])
-        for meter_id, value in meters
-    )
-    return header + data
 
 
 def encode_audio_frame(

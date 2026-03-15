@@ -377,13 +377,11 @@ class RadioPoller:
         command_queue: CommandQueue,
         *,
         on_state_event: Callable[[str, dict[str, Any]], None] | None = None,
-        on_meter_readings: Callable[[list[tuple[int, int]]], None] | None = None,
     ) -> None:
         self._radio = radio
         self._cache = state_cache
         self._queue = command_queue
         self._on_state_event = on_state_event
-        self._on_meter_readings = on_meter_readings
         self._poll_index: int = 0
         self._revision: int = 0
         self._task: asyncio.Task[None] | None = None
@@ -941,6 +939,3 @@ class RadioPoller:
         if self._on_state_event is not None:
             self._on_state_event(name, data)
 
-    def _emit_meters(self, meter_id: int, value: int) -> None:
-        if self._on_meter_readings is not None:
-            self._on_meter_readings([(meter_id, int(value))])

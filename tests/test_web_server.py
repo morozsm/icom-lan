@@ -26,16 +26,10 @@ from icom_lan.rigctld.state_cache import StateCache
 from icom_lan.scope import ScopeFrame
 from icom_lan.backends.icom7610.drivers.serial_stub import SerialMockRadio
 from icom_lan.web.protocol import (
-    METER_ALC,
-    METER_POWER,
-    METER_SMETER_MAIN,
-    METER_SWR,
-    MSG_TYPE_METER,
     MSG_TYPE_SCOPE,
     SCOPE_HEADER_SIZE,
     decode_json,
     encode_json,
-    encode_meter_frame,
     encode_scope_frame,
 )
 from icom_lan.web.server import WebConfig, WebServer
@@ -420,43 +414,6 @@ class TestProtocolEncoding:
         data = encode_scope_frame(frame, 0)
         assert len(data) == 16 + 475
 
-    def test_encode_meter_frame_header(self) -> None:
-        data = encode_meter_frame([], sequence=0)
-        assert data[0] == MSG_TYPE_METER
-        assert len(data) == 4  # header only, 0 meters
-
-    def test_encode_meter_frame_sequence_little_endian(self) -> None:
-        for seq in (0, 1, 255, 1000, 65535):
-            data = encode_meter_frame([], sequence=seq)
-            read_seq = struct.unpack_from("<H", data, 1)[0]
-            assert read_seq == seq & 0xFFFF
-
-    def test_encode_meter_frame_count(self) -> None:
-        meters = [(METER_SMETER_MAIN, 42), (METER_POWER, 200)]
-        data = encode_meter_frame(meters, 0)
-        assert data[3] == 2
-
-    def test_encode_meter_frame_meter_values(self) -> None:
-        meters = [(METER_SMETER_MAIN, 42), (METER_SWR, 300), (METER_ALC, 0)]
-        data = encode_meter_frame(meters, 0)
-        # First meter at offset 4
-        assert data[4] == METER_SMETER_MAIN
-        assert data[5] == 42 & 0xFF
-        assert data[6] == (42 >> 8) & 0xFF
-        # Second meter at offset 7
-        assert data[7] == METER_SWR
-        assert data[8] == 300 & 0xFF
-        assert data[9] == (300 >> 8) & 0xFF
-        # Third meter at offset 10
-        assert data[10] == METER_ALC
-        assert data[11] == 0
-        assert data[12] == 0
-
-    def test_encode_meter_frame_total_size(self) -> None:
-        meters = [(i, i * 10) for i in range(9)]
-        data = encode_meter_frame(meters, 0)
-        assert len(data) == 4 + 9 * 3  # header + 9 meters
-
     def test_encode_decode_json_roundtrip(self) -> None:
         msg = {"type": "hello", "proto": 1, "version": "0.7.0"}
         assert decode_json(encode_json(msg)) == msg
@@ -597,11 +554,6 @@ class TestWebSocketHandshake:
         reader, writer, _ = await _ws_connect(host, port, "/api/v1/scope")
         await _close_ws(writer)
 
-    async def test_upgrade_meters_channel(self, server: WebServer) -> None:
-        host, port = _addr(server)
-        reader, writer, _ = await _ws_connect(host, port, "/api/v1/meters")
-        await _close_ws(writer)
-
     async def test_upgrade_audio_channel(self, server: WebServer) -> None:
         host, port = _addr(server)
         reader, writer, _ = await _ws_connect(host, port, "/api/v1/audio")
@@ -657,7 +609,7 @@ class TestControlChannel:
             # Consume hello
             await _ws_recv_frame(reader)
             # Send subscribe
-            sub = {"type": "subscribe", "streams": ["scope", "meters"]}
+            sub = {"type": "subscribe", "streams": ["scope"]}
             await _ws_send_text(writer, json.dumps(sub))
             # Should receive state snapshot
             opcode, payload = await _ws_recv_frame(reader)
@@ -777,7 +729,7 @@ class TestControlChannel:
             # subscribe
             await _ws_send_text(
                 writer,
-                json.dumps({"type": "subscribe", "streams": ["scope", "meters"]}),
+                json.dumps({"type": "subscribe", "streams": ["scope"]}),
             )
             await _ws_recv_frame(reader)  # state
             # unsubscribe
@@ -889,44 +841,6 @@ class TestScopeFrameFormat:
 
 
 # ---------------------------------------------------------------------------
-# Binary meter frame format tests (RFC conformance)
-# ---------------------------------------------------------------------------
-
-
-class TestMeterFrameFormat:
-    """Verify binary meter frame layout matches the RFC exactly."""
-
-    def test_offset_0_is_msg_type_20(self) -> None:
-        data = encode_meter_frame([], 0)
-        assert data[0] == 0x20
-
-    def test_offset_1_3_is_sequence_le(self) -> None:
-        data = encode_meter_frame([], 500)
-        assert struct.unpack_from("<H", data, 1)[0] == 500
-
-    def test_offset_3_is_count(self) -> None:
-        data = encode_meter_frame([(1, 10), (2, 20), (3, 30)], 0)
-        assert data[3] == 3
-
-    def test_meter_triples_at_offset_4(self) -> None:
-        meters = [(METER_SMETER_MAIN, 0x1234), (METER_POWER, 0xAB)]
-        data = encode_meter_frame(meters, 0)
-        # First meter
-        assert data[4] == METER_SMETER_MAIN
-        assert data[5] == 0x34  # low byte of 0x1234
-        assert data[6] == 0x12  # high byte of 0x1234
-        # Second meter
-        assert data[7] == METER_POWER
-        assert data[8] == 0xAB
-        assert data[9] == 0x00
-
-    def test_9_meters_total_size(self) -> None:
-        meters = [(i + 1, i * 10) for i in range(9)]
-        data = encode_meter_frame(meters, 0)
-        assert len(data) == 4 + 9 * 3  # 4-byte header + 27 bytes
-
-
-# ---------------------------------------------------------------------------
 # Backpressure tests
 # ---------------------------------------------------------------------------
 
@@ -951,20 +865,6 @@ class TestBackpressure:
 
         # Queue size should be bounded by HIGH_WATERMARK * 2 (maxsize)
         # but frames were dropped, so it should be <= HIGH_WATERMARK * 2
-        assert handler._frame_queue.qsize() <= HIGH_WATERMARK * 2
-
-    def test_meter_frame_queue_drops_when_full(self) -> None:
-        """Meter frames are dropped under backpressure."""
-        from icom_lan.web.handlers import HIGH_WATERMARK, MetersHandler
-        from icom_lan.web.websocket import WebSocketConnection
-
-        mock_ws = MagicMock(spec=WebSocketConnection)
-        handler = MetersHandler(mock_ws, None)
-
-        meters = [(METER_SMETER_MAIN, 42)]
-        for i in range(HIGH_WATERMARK * 4):
-            handler.push_frame(meters)
-
         assert handler._frame_queue.qsize() <= HIGH_WATERMARK * 2
 
     def test_scope_sequence_increments(self) -> None:
@@ -1122,60 +1022,6 @@ class TestProtocolConformance:
             assert struct.unpack_from("<I", data, 3)[0] == sf
             assert struct.unpack_from("<I", data, 7)[0] == ef
 
-    # --- Meter frame edge cases ---
-
-    def test_meter_all_9_ids(self) -> None:
-        """All 9 meter IDs from RFC."""
-        from icom_lan.web.protocol import (
-            METER_ALC,
-            METER_COMP,
-            METER_ID_DRAIN,
-            METER_POWER,
-            METER_SMETER_MAIN,
-            METER_SMETER_SUB,
-            METER_SWR,
-            METER_TEMP,
-            METER_VD,
-        )
-
-        all_ids = [
-            METER_SMETER_MAIN,
-            METER_SMETER_SUB,
-            METER_POWER,
-            METER_SWR,
-            METER_ALC,
-            METER_COMP,
-            METER_ID_DRAIN,
-            METER_VD,
-            METER_TEMP,
-        ]
-        meters = [(mid, 128) for mid in all_ids]
-        data = encode_meter_frame(meters, 0)
-        assert data[3] == 9  # count
-        assert len(data) == 4 + 9 * 3  # 31 bytes per RFC
-
-    def test_meter_value_range_uint16(self) -> None:
-        """Meter values are uint16 (lo + hi bytes)."""
-        meters = [(0x01, 0), (0x03, 255), (0x04, 256), (0x05, 65535)]
-        data = encode_meter_frame(meters, 0)
-        # Check value 256 = 0x0100 → lo=0x00, hi=0x01
-        off = 4 + 2 * 3  # third meter (0x04, 256)
-        assert data[off] == 0x04  # meter_id
-        assert data[off + 1] == 0x00  # lo
-        assert data[off + 2] == 0x01  # hi
-        # Check value 65535 = 0xFFFF → lo=0xFF, hi=0xFF
-        off = 4 + 3 * 3
-        assert data[off + 1] == 0xFF
-        assert data[off + 2] == 0xFF
-
-    def test_meter_bandwidth_calculation(self) -> None:
-        """9 meters × 3 bytes + 4 header = 31 bytes. At 20fps = 620 B/s."""
-        meters = [(i, 100) for i in range(1, 10)]
-        data = encode_meter_frame(meters, 0)
-        assert len(data) == 31
-        # 620 bytes/sec at 20fps
-        assert len(data) * 20 == 620
-
     # --- Audio frame edge cases ---
 
     def test_audio_opus_typical_frame(self) -> None:
@@ -1282,7 +1128,7 @@ class TestProtocolConformance:
         msg = {
             "type": "subscribe",
             "id": "s1",
-            "streams": ["scope", "meters"],
+            "streams": ["scope"],
             "scope_fps": 30,
             "scope_receiver": 0,
         }

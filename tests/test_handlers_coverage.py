@@ -14,7 +14,6 @@ from icom_lan.web.handlers import (
     AudioBroadcaster,
     AudioHandler,
     ControlHandler,
-    MetersHandler,
     ScopeHandler,
 )
 from icom_lan.web.protocol import (
@@ -656,65 +655,6 @@ async def test_scope_enqueue_and_push_paths() -> None:
     handler._running = True
     handler.push_frame(frame)
     assert handler._frame_queue.qsize() == 1
-
-
-async def test_meters_run_and_control_messages() -> None:
-    ws = SimpleNamespace(
-        recv=AsyncMock(
-            side_effect=[
-                (WS_OP_BINARY, b"x"),
-                (WS_OP_TEXT, b"not-json"),
-                (WS_OP_TEXT, encode_json({"type": "meters_start"}).encode("utf-8")),
-                (WS_OP_TEXT, encode_json({"type": "meters_stop"}).encode("utf-8")),
-                EOFError(),
-            ]
-        ),
-        send_binary=AsyncMock(),
-    )
-    server = SimpleNamespace(
-        register_meter_handler=MagicMock(),
-        unregister_meter_handler=MagicMock(),
-    )
-    handler = MetersHandler(ws, None, server=server)
-    handler._sender = AsyncMock(return_value=None)  # type: ignore[method-assign]
-    await handler.run()
-    server.register_meter_handler.assert_called_once_with(handler)
-    assert server.unregister_meter_handler.call_count >= 1
-    assert handler._active is False
-
-
-async def test_meters_enqueue_sender_and_push_paths(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    ws = SimpleNamespace(send_binary=AsyncMock())
-    handler = MetersHandler(ws, None)
-    handler.enqueue_frame([(1, 1)])
-    assert handler._frame_queue.qsize() == 0
-    handler._active = True
-    handler.enqueue_frame([(1, 2)])
-    assert handler._frame_queue.qsize() == 1
-    handler.push_frame([(1, 3)])
-    assert handler._frame_queue.qsize() == 2
-
-    calls = {"count": 0}
-
-    async def _fake_wait_for(coro: object, timeout: float) -> bytes:
-        del timeout
-        calls["count"] += 1
-        if calls["count"] == 1:
-            return await coro  # type: ignore[misc]
-        if calls["count"] == 2:
-            if hasattr(coro, "close"):
-                coro.close()
-            raise asyncio.TimeoutError()
-        if hasattr(coro, "close"):
-            coro.close()
-        raise RuntimeError("stop")
-
-    monkeypatch.setattr("icom_lan.web.handlers.asyncio.wait_for", _fake_wait_for)
-    with pytest.raises(RuntimeError, match="stop"):
-        await handler._sender()
-    assert ws.send_binary.await_count == 1
 
 
 async def test_audio_broadcaster_subscribe_unsubscribe_lifecycle() -> None:
