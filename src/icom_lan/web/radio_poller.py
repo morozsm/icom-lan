@@ -395,6 +395,7 @@ class RadioPoller:
         self._task: asyncio.Task[None] | None = None
         self._caps: set[str] = self._radio_capabilities()
         self._profile: RadioProfile = self._runtime_profile()
+        self._cmd_map: dict[str, tuple[int, ...]] = self._load_command_map()
         # Serial backends need slower polling to avoid flooding the CI-V link
         self._is_serial: bool = not self._profile.has_lan
         self._gap: float = _GAP_SERIAL if self._is_serial else _GAP
@@ -466,6 +467,40 @@ class RadioPoller:
         if "dual_rx" in self._caps:
             return resolve_radio_profile(model="IC-7610")
         return resolve_radio_profile(model="IC-7300")
+
+    def _load_command_map(self) -> dict[str, tuple[int, ...]]:
+        """Load command wire bytes from TOML rig profile."""
+        try:
+            from ..rig_loader import discover_rigs
+            from pathlib import Path
+
+            for rig_dir in [
+                Path(__file__).resolve().parent.parent.parent.parent / "rigs",
+                Path(__file__).resolve().parent.parent / "rigs",
+            ]:
+                if rig_dir.is_dir():
+                    rigs = discover_rigs(rig_dir)
+                    for _model, rig_config in rigs.items():
+                        if rig_config.model == self._profile.model:
+                            return rig_config.commands
+        except Exception:
+            logger.debug("radio-poller: failed to load command map", exc_info=True)
+        return {}
+
+    async def _send_cmd(self, cmd_name: str, data: bytes = b"") -> bool:
+        """Send a command using wire bytes from TOML profile.
+
+        Returns True if command was found and sent, False otherwise.
+        """
+        wire = self._cmd_map.get(cmd_name)
+        if not wire:
+            logger.debug("radio-poller: command %s not in profile", cmd_name)
+            return False
+        cmd = wire[0]
+        sub = wire[1] if len(wire) > 1 else None
+        extra = bytes(wire[2:]) if len(wire) > 2 else b""
+        await self._civ(cmd, sub=sub, data=extra + data)
+        return True
 
     def _supports_capability(self, capability: str) -> bool:
         return capability in self._caps
@@ -763,15 +798,13 @@ class RadioPoller:
                     self._ensure_receiver_supported(rx, operation="set_squelch")
                     await radio.set_squelch(level, receiver=rx)
             case SetNB(on=on, receiver=rx):
-                if isinstance(radio, AdvancedControlCapable):
-                    self._ensure_receiver_supported(rx, operation="set_nb")
-                    await radio.set_nb(on, receiver=rx)
+                # Wire bytes from TOML: set_nb = [0x16, 0x22]
+                await self._send_cmd("set_nb", bytes([0x01 if on else 0x00]))
                 if self._on_state_event:
                     self._on_state_event("nb_changed", {"on": on})
             case SetNR(on=on, receiver=rx):
-                if isinstance(radio, AdvancedControlCapable):
-                    self._ensure_receiver_supported(rx, operation="set_nr")
-                    await radio.set_nr(on, receiver=rx)
+                # Wire bytes from TOML: set_nr = [0x16, 0x40]
+                await self._send_cmd("set_nr", bytes([0x01 if on else 0x00]))
                 if self._on_state_event:
                     self._on_state_event("nr_changed", {"on": on})
             case SetDigiSel(on=on, receiver=rx):
@@ -787,26 +820,15 @@ class RadioPoller:
                 if self._on_state_event:
                     self._on_state_event("ipplus_changed", {"on": on})
             case SetAttenuator(db=db, receiver=rx):
-                if self._profile.supports_cmd29(0x11):
-                    if isinstance(radio, AdvancedControlCapable):
-                        await radio.set_attenuator_level(db, receiver=rx)
-                else:
-                    # Plain CI-V: 0x11 + BCD-encoded dB value
-                    bcd = ((db // 10) << 4) | (db % 10)
-                    await self._civ(0x11, data=bytes([bcd]))
+                # Wire bytes from TOML: set_attenuator = [0x11]
+                bcd = ((db // 10) << 4) | (db % 10)
+                await self._send_cmd("set_attenuator", bytes([bcd]))
             case SetPreamp(level=level, receiver=rx):
-                if self._profile.supports_cmd29(0x16, 0x02):
-                    if isinstance(radio, AdvancedControlCapable):
-                        await radio.set_preamp(level, receiver=rx)
-                else:
-                    # Plain CI-V: 0x16 0x02 + level byte
-                    await self._civ(0x16, sub=0x02, data=bytes([level]))
+                # Wire bytes from TOML: set_preamp = [0x16, 0x02]
+                await self._send_cmd("set_preamp", bytes([level]))
             case SetAgc(mode=mode):
-                if self._profile.supports_cmd29(0x16, 0x12):
-                    await self._civ(0x29, data=bytes([0x00, 0x16, 0x12, mode]))
-                else:
-                    # Plain CI-V: 0x16 0x12 + mode byte
-                    await self._civ(0x16, sub=0x12, data=bytes([mode]))
+                # Wire bytes from TOML: set_agc = [0x16, 0x12]
+                await self._send_cmd("set_agc", bytes([mode]))
             case SetBand(band=band):
                 await self._civ(0x07, data=bytes([band]))
             case SelectVfo(vfo=vfo):
