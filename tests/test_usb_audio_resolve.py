@@ -1,0 +1,358 @@
+"""Tests for USB audio device resolution from serial port topology."""
+
+from __future__ import annotations
+
+import textwrap
+from typing import Any
+from unittest.mock import MagicMock, patch
+
+import pytest
+
+from icom_lan.usb_audio_resolve import (
+    AudioDeviceMapping,
+    _extract_tty_suffix,
+    _find_audio_codec_locations,
+    _find_serial_location,
+    _is_usb_audio_codec,
+    _resolve_macos,
+    resolve_audio_for_serial_port,
+)
+
+# ---------------------------------------------------------------------------
+# Fixtures — minimal IORegistry snippets for testing
+# ---------------------------------------------------------------------------
+
+# Simulates two Icom radios: one at hub prefix 0x2014, one at 0x0111
+IOREG_TWO_RADIOS = textwrap.dedent("""\
+    | +-o USB Audio CODEC@20144000  <class IOUSBHostDevice, id 0x1000045f6>
+    | |   "locationID" = 538198016
+    | |   "USB Product Name" = "USB Audio CODEC"
+    | |   "iSerialNumber" = 0
+    | +-o CP2102 USB to UART Bridge Controller@20141000
+    | |   "locationID" = 538185728
+    | |   "USB Serial Number" = "IC-7300 02040999"
+    | | +-o AppleUSBSLCOM
+    | |   | "IOTTYSuffix" = "201410"
+    | |   | "IOCalloutDevice" = "/dev/cu.usbserial-201410"
+    | +-o USB Audio CODEC@01111400  <class IOUSBHostDevice, id 0x1000045b4>
+    | |   "locationID" = 17895424
+    | |   "USB Product Name" = "USB Audio CODEC"
+    | |   "iSerialNumber" = 0
+    | +-o CP2102 USB to UART Bridge Controller@01112000
+    | |   "locationID" = 17895936
+    | |   "USB Serial Number" = "IC-7610 21001793 A"
+    | | +-o AppleUSBSLCOM
+    | |   | "IOTTYSuffix" = "111120"
+    | |   | "IOCalloutDevice" = "/dev/cu.usbserial-111120"
+""")
+
+# Single radio only
+IOREG_SINGLE_RADIO = textwrap.dedent("""\
+    | +-o USB Audio CODEC@20144000  <class IOUSBHostDevice, id 0x100004500>
+    | |   "locationID" = 538198016
+    | +-o CP2102 USB to UART Bridge Controller@20141000
+    | |   "locationID" = 538185728
+    | | +-o AppleUSBSLCOM
+    | |   | "IOTTYSuffix" = "201410"
+""")
+
+# No audio devices
+IOREG_NO_AUDIO = textwrap.dedent("""\
+    | +-o CP2102 USB to UART Bridge Controller@20141000
+    | |   "locationID" = 538185728
+    | | +-o AppleUSBSLCOM
+    | |   | "IOTTYSuffix" = "201410"
+""")
+
+# Three radios to test scalability
+IOREG_THREE_RADIOS = textwrap.dedent("""\
+    | +-o USB Audio CODEC@01111400  <class IOUSBHostDevice>
+    | +-o CP2102@01112000
+    | |   "locationID" = 17895936
+    | | +-o AppleUSBSLCOM
+    | |   | "IOTTYSuffix" = "111120"
+    | +-o USB Audio CODEC@20144000  <class IOUSBHostDevice>
+    | +-o CP2102@20141000
+    | |   "locationID" = 538185728
+    | | +-o AppleUSBSLCOM
+    | |   | "IOTTYSuffix" = "201410"
+    | +-o USB Audio CODEC@30144000  <class IOUSBHostDevice>
+    | +-o CP2102@30141000
+    | |   "locationID" = 806621184
+    | | +-o AppleUSBSLCOM
+    | |   | "IOTTYSuffix" = "301410"
+""")
+
+
+def _make_mock_sd(
+    usb_codec_count: int = 2,
+) -> MagicMock:
+    """Create a mock sounddevice module with N USB Audio CODEC pairs.
+
+    Each pair consists of one output-only and one input-only device.
+    Device indices start at 1 (0 is built-in speaker).
+    """
+    devices: list[dict[str, Any]] = [
+        {
+            "name": "Built-in Speaker",
+            "index": 0,
+            "max_input_channels": 0,
+            "max_output_channels": 2,
+            "default_samplerate": 48000.0,
+        },
+    ]
+    for i in range(usb_codec_count):
+        base_idx = 1 + i * 2
+        devices.append(
+            {
+                "name": "USB Audio CODEC",
+                "index": base_idx,
+                "max_input_channels": 0,
+                "max_output_channels": 2,
+                "default_samplerate": 48000.0,
+            }
+        )
+        devices.append(
+            {
+                "name": "USB Audio CODEC",
+                "index": base_idx + 1,
+                "max_input_channels": 2,
+                "max_output_channels": 0,
+                "default_samplerate": 48000.0,
+            }
+        )
+
+    sd = MagicMock()
+    sd.query_devices.return_value = devices
+    sd.default.device = [-1, -1]
+    return sd
+
+
+# ---------------------------------------------------------------------------
+# Unit tests — helper functions
+# ---------------------------------------------------------------------------
+
+
+class TestExtractTtySuffix:
+    def test_macos_cu(self) -> None:
+        assert _extract_tty_suffix("/dev/cu.usbserial-201410") == "201410"
+
+    def test_macos_tty(self) -> None:
+        assert _extract_tty_suffix("/dev/tty.usbserial-201410") == "201410"
+
+    def test_long_suffix(self) -> None:
+        assert _extract_tty_suffix("/dev/cu.usbserial-ABCDEF01") == "ABCDEF01"
+
+    def test_no_match(self) -> None:
+        assert _extract_tty_suffix("/dev/ttyUSB0") is None
+
+    def test_empty(self) -> None:
+        assert _extract_tty_suffix("") is None
+
+
+class TestFindAudioCodecLocations:
+    def test_two_radios(self) -> None:
+        locs = _find_audio_codec_locations(IOREG_TWO_RADIOS)
+        assert locs == [0x01111400, 0x20144000]
+
+    def test_single_radio(self) -> None:
+        locs = _find_audio_codec_locations(IOREG_SINGLE_RADIO)
+        assert locs == [0x20144000]
+
+    def test_no_audio(self) -> None:
+        assert _find_audio_codec_locations(IOREG_NO_AUDIO) == []
+
+    def test_three_radios(self) -> None:
+        locs = _find_audio_codec_locations(IOREG_THREE_RADIOS)
+        assert locs == [0x01111400, 0x20144000, 0x30144000]
+
+
+class TestFindSerialLocation:
+    def test_ic7300(self) -> None:
+        loc = _find_serial_location(IOREG_TWO_RADIOS, "201410")
+        assert loc == 538185728  # 0x20141000
+
+    def test_ic7610(self) -> None:
+        loc = _find_serial_location(IOREG_TWO_RADIOS, "111120")
+        assert loc == 17895936  # 0x01112000
+
+    def test_not_found(self) -> None:
+        assert _find_serial_location(IOREG_TWO_RADIOS, "999999") is None
+
+    def test_empty_ioreg(self) -> None:
+        assert _find_serial_location("", "201410") is None
+
+
+class TestIsUsbAudioCodec:
+    def test_exact(self) -> None:
+        assert _is_usb_audio_codec("USB Audio CODEC") is True
+
+    def test_lowercase(self) -> None:
+        assert _is_usb_audio_codec("usb audio codec") is True
+
+    def test_mixed_case(self) -> None:
+        assert _is_usb_audio_codec("USB audio CODEC") is True
+
+    def test_no_match(self) -> None:
+        assert _is_usb_audio_codec("Built-in Speaker") is False
+
+
+# ---------------------------------------------------------------------------
+# Integration tests — full resolution flow
+# ---------------------------------------------------------------------------
+
+
+class TestResolveMacos:
+    """Test the full macOS resolution pipeline with mocked IORegistry."""
+
+    def test_two_radios_ic7300(self) -> None:
+        sd = _make_mock_sd(usb_codec_count=2)
+        result = _resolve_macos(
+            "/dev/cu.usbserial-201410",
+            sounddevice_module=sd,
+            ioreg_output=IOREG_TWO_RADIOS,
+        )
+        assert result is not None
+        assert result.serial_port == "/dev/cu.usbserial-201410"
+        assert result.location_prefix == 0x2014
+        # Second pair (sorted by locationID: 0x0111 < 0x2014)
+        assert result.rx_device_index == 4  # input[1]
+        assert result.tx_device_index == 3  # output[1]
+
+    def test_two_radios_ic7610(self) -> None:
+        sd = _make_mock_sd(usb_codec_count=2)
+        result = _resolve_macos(
+            "/dev/cu.usbserial-111120",
+            sounddevice_module=sd,
+            ioreg_output=IOREG_TWO_RADIOS,
+        )
+        assert result is not None
+        assert result.location_prefix == 0x0111
+        # First pair
+        assert result.rx_device_index == 2  # input[0]
+        assert result.tx_device_index == 1  # output[0]
+
+    def test_single_radio(self) -> None:
+        sd = _make_mock_sd(usb_codec_count=1)
+        result = _resolve_macos(
+            "/dev/cu.usbserial-201410",
+            sounddevice_module=sd,
+            ioreg_output=IOREG_SINGLE_RADIO,
+        )
+        assert result is not None
+        assert result.rx_device_index == 2
+        assert result.tx_device_index == 1
+
+    def test_no_audio_devices(self) -> None:
+        sd = _make_mock_sd(usb_codec_count=0)
+        result = _resolve_macos(
+            "/dev/cu.usbserial-201410",
+            sounddevice_module=sd,
+            ioreg_output=IOREG_NO_AUDIO,
+        )
+        assert result is None
+
+    def test_serial_port_not_in_ioreg(self) -> None:
+        sd = _make_mock_sd(usb_codec_count=2)
+        result = _resolve_macos(
+            "/dev/cu.usbserial-999999",
+            sounddevice_module=sd,
+            ioreg_output=IOREG_TWO_RADIOS,
+        )
+        assert result is None
+
+    def test_non_usb_serial_port(self) -> None:
+        sd = _make_mock_sd(usb_codec_count=2)
+        result = _resolve_macos(
+            "/dev/ttyUSB0",
+            sounddevice_module=sd,
+            ioreg_output=IOREG_TWO_RADIOS,
+        )
+        assert result is None
+
+    def test_three_radios_middle(self) -> None:
+        """Resolve the middle radio in a 3-radio setup."""
+        sd = _make_mock_sd(usb_codec_count=3)
+        result = _resolve_macos(
+            "/dev/cu.usbserial-201410",
+            sounddevice_module=sd,
+            ioreg_output=IOREG_THREE_RADIOS,
+        )
+        assert result is not None
+        assert result.location_prefix == 0x2014
+        # Middle pair (sorted: 0x0111, 0x2014, 0x3014)
+        assert result.rx_device_index == 4  # input[1]
+        assert result.tx_device_index == 3  # output[1]
+
+    def test_three_radios_last(self) -> None:
+        """Resolve the third radio in a 3-radio setup."""
+        sd = _make_mock_sd(usb_codec_count=3)
+        result = _resolve_macos(
+            "/dev/cu.usbserial-301410",
+            sounddevice_module=sd,
+            ioreg_output=IOREG_THREE_RADIOS,
+        )
+        assert result is not None
+        assert result.location_prefix == 0x3014
+        assert result.rx_device_index == 6  # input[2]
+        assert result.tx_device_index == 5  # output[2]
+
+
+class TestResolvePlatformDispatch:
+    """Test that resolve_audio_for_serial_port dispatches correctly."""
+
+    @patch("icom_lan.usb_audio_resolve.platform")
+    def test_non_darwin_returns_none(self, mock_platform: MagicMock) -> None:
+        mock_platform.system.return_value = "Linux"
+        result = resolve_audio_for_serial_port("/dev/ttyUSB0")
+        assert result is None
+
+    @patch("icom_lan.usb_audio_resolve.platform")
+    @patch("icom_lan.usb_audio_resolve._resolve_macos")
+    def test_darwin_delegates(
+        self, mock_resolve: MagicMock, mock_platform: MagicMock
+    ) -> None:
+        mock_platform.system.return_value = "Darwin"
+        mock_resolve.return_value = AudioDeviceMapping(
+            rx_device_index=4,
+            tx_device_index=3,
+            serial_port="/dev/cu.usbserial-201410",
+            location_prefix=0x2014,
+        )
+        result = resolve_audio_for_serial_port("/dev/cu.usbserial-201410")
+        assert result is not None
+        assert result.rx_device_index == 4
+        mock_resolve.assert_called_once()
+
+
+class TestAudioDeviceMapping:
+    """Test the dataclass itself."""
+
+    def test_creation(self) -> None:
+        m = AudioDeviceMapping(
+            rx_device_index=2,
+            tx_device_index=1,
+            serial_port="/dev/cu.usbserial-201410",
+            location_prefix=0x2014,
+        )
+        assert m.rx_device_index == 2
+        assert m.tx_device_index == 1
+        assert m.serial_port == "/dev/cu.usbserial-201410"
+        assert m.location_prefix == 0x2014
+
+    def test_default_location_prefix(self) -> None:
+        m = AudioDeviceMapping(
+            rx_device_index=2,
+            tx_device_index=1,
+            serial_port="/dev/cu.usbserial-201410",
+        )
+        assert m.location_prefix is None
+
+    def test_frozen(self) -> None:
+        m = AudioDeviceMapping(
+            rx_device_index=2,
+            tx_device_index=1,
+            serial_port="/dev/cu.usbserial-201410",
+        )
+        with pytest.raises(AttributeError):
+            m.rx_device_index = 99  # type: ignore[misc]

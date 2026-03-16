@@ -1,4 +1,9 @@
-"""Production USB audio driver for IC-7610 serial backend (macOS-first)."""
+"""Production USB audio driver for Icom serial backends (macOS-first).
+
+Supports automatic device resolution when multiple identical USB Audio CODEC
+devices are present (e.g. IC-7300 + IC-7610 both connected via USB).
+See :mod:`icom_lan.usb_audio_resolve` for the topology-based resolution logic.
+"""
 
 from __future__ import annotations
 
@@ -220,6 +225,7 @@ class UsbAudioDriver:
         *,
         rx_device: str | None = None,
         tx_device: str | None = None,
+        serial_port: str | None = None,
         sample_rate: int = 48_000,
         channels: int = 1,
         frame_ms: int = 20,
@@ -227,6 +233,7 @@ class UsbAudioDriver:
     ) -> None:
         self._rx_device_override = rx_device
         self._tx_device_override = tx_device
+        self._serial_port = serial_port
         self._sample_rate = sample_rate
         self._channels = channels
         self._frame_ms = frame_ms
@@ -304,6 +311,19 @@ class UsbAudioDriver:
     def _ensure_selected_devices(self) -> tuple[UsbAudioDevice, UsbAudioDevice]:
         sounddevice_module, _ = self._ensure_dependencies()
         devices = list_usb_audio_devices(sounddevice_module)
+
+        # If serial_port is set and no explicit rx/tx overrides, try
+        # topology-based resolution to find the correct audio pair.
+        if (
+            self._serial_port
+            and self._rx_device_override is None
+            and self._tx_device_override is None
+        ):
+            resolved = self._try_resolve_from_serial(sounddevice_module, devices)
+            if resolved is not None:
+                self._selected_rx, self._selected_tx = resolved
+                return resolved
+
         selected_rx, selected_tx = select_usb_audio_devices(
             devices,
             rx_device=self._rx_device_override,
@@ -312,6 +332,51 @@ class UsbAudioDriver:
         self._selected_rx = selected_rx
         self._selected_tx = selected_tx
         return selected_rx, selected_tx
+
+    def _try_resolve_from_serial(
+        self,
+        sounddevice_module: Any,
+        devices: list[UsbAudioDevice],
+    ) -> tuple[UsbAudioDevice, UsbAudioDevice] | None:
+        """Attempt topology-based audio device resolution from serial port.
+
+        Returns a (rx, tx) device pair, or ``None`` to fall back to
+        name-based selection.
+        """
+        from ...usb_audio_resolve import resolve_audio_for_serial_port
+
+        mapping = resolve_audio_for_serial_port(
+            self._serial_port,  # type: ignore[arg-type]
+            sounddevice_module=sounddevice_module,
+        )
+        if mapping is None:
+            return None
+
+        rx_dev = next(
+            (d for d in devices if d.index == mapping.rx_device_index), None
+        )
+        tx_dev = next(
+            (d for d in devices if d.index == mapping.tx_device_index), None
+        )
+        if rx_dev is None or tx_dev is None:
+            logger.warning(
+                "usb-audio: topology resolved indices [%d, %d] but devices "
+                "not found in normalized list",
+                mapping.rx_device_index,
+                mapping.tx_device_index,
+            )
+            return None
+
+        logger.info(
+            "usb-audio: topology-resolved devices for %s: "
+            "RX=[%d] %s, TX=[%d] %s",
+            self._serial_port,
+            rx_dev.index,
+            rx_dev.name,
+            tx_dev.index,
+            tx_dev.name,
+        )
+        return rx_dev, tx_dev
 
     def list_devices(self) -> list[UsbAudioDevice]:
         """List normalized devices from the active audio backend."""

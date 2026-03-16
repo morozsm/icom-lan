@@ -137,6 +137,7 @@ class Icom7610SerialRadio(Icom7610CoreRadio):
         self._serial_audio_driver = audio_driver or UsbAudioDriver(
             rx_device=rx_device,
             tx_device=tx_device,
+            serial_port=device,
             sample_rate=audio_sample_rate,
             channels=self._serial_audio_channels_for_codec(),
             frame_ms=20,
