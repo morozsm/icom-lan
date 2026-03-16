@@ -63,6 +63,10 @@ class RigConfig:
     commands: dict[str, tuple[int, ...]]
     cmd29_routes: tuple[tuple[int, int | None], ...]
     spectrum: dict[str, int] | None
+    att_values: tuple[int, ...] | None
+    pre_values: tuple[int, ...] | None
+    agc_modes: tuple[int, ...] | None
+    agc_labels: dict[str, str] | None
 
     def to_profile(self) -> RadioProfile:
         """Build a ``RadioProfile`` from this config."""
@@ -103,6 +107,10 @@ class RigConfig:
             freq_ranges=ranges,
             modes=tuple(self.modes),
             filters=tuple(self.filters),
+            att_values=self.att_values,
+            pre_values=self.pre_values,
+            agc_modes=self.agc_modes,
+            agc_labels=self.agc_labels,
         )
 
     def to_command_map(self) -> CommandMap:
@@ -214,6 +222,17 @@ def load_rig(path: Path) -> RigConfig:
     # Parse spectrum
     spectrum = data.get("spectrum")
 
+    # Parse attenuator/preamp/agc (optional sections)
+    att_section = data.get("attenuator", {})
+    att_values = tuple(att_section["values"]) if "values" in att_section else None
+
+    pre_section = data.get("preamp", {})
+    pre_values = tuple(pre_section["values"]) if "values" in pre_section else None
+
+    agc_section = data.get("agc", {})
+    agc_modes = tuple(agc_section["modes"]) if "modes" in agc_section else None
+    agc_labels = dict(agc_section["labels"]) if "labels" in agc_section else None
+
     return RigConfig(
         id=radio["id"],
         model=radio["model"],
@@ -233,6 +252,10 @@ def load_rig(path: Path) -> RigConfig:
         commands=commands,
         cmd29_routes=tuple(cmd29_routes),
         spectrum=spectrum,
+        att_values=att_values,
+        pre_values=pre_values,
+        agc_modes=agc_modes,
+        agc_labels=agc_labels,
     )
 
 

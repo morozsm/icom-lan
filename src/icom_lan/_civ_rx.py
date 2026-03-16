@@ -484,13 +484,50 @@ class CivRuntime:
                     host._filter_width = filt
             elif frame.command == 0x1C and frame.sub == 0x00 and frame.data:
                 host._state_cache.update_ptt(bool(frame.data[0]))
+            elif frame.command == 0x11 and frame.data:
+                # Attenuator response (plain CI-V, no cmd29)
+                val = frame.data[0]
+                rx = host._state_cache.main
+                rx.att = ((val >> 4) & 0x0F) * 10 + (val & 0x0F)
+            elif frame.command == 0x14 and frame.data and len(frame.data) >= 2:
+                # Level response (plain CI-V, no cmd29)
+                sub = frame.sub or 0
+                raw = ((frame.data[0] >> 4) & 0x0F) * 100 + (frame.data[0] & 0x0F) * 10
+                if len(frame.data) > 1:
+                    raw += (frame.data[1] >> 4) & 0x0F
+                rx = host._state_cache.main
+                if sub == 0x01:
+                    rx.af_level = raw
+                elif sub == 0x02:
+                    rx.rf_gain = raw
+                elif sub == 0x03:
+                    rx.squelch = raw
+                elif sub == 0x06:
+                    rx.nr_level = raw
+                elif sub == 0x12:
+                    rx.nb_level = raw
             elif frame.command == 0x16:
                 data = frame.data
-                if data and frame.sub == 0x32:
+                sub = frame.sub or 0
+                if data and sub == 0x02:
+                    # Preamp response (plain CI-V)
+                    host._state_cache.main.preamp = data[0]
+                elif data and sub == 0x12:
+                    # AGC mode response (plain CI-V)
+                    host._state_cache.main.agc = data[0]
+                elif data and sub == 0x22:
+                    # NB on/off (plain CI-V)
+                    host._state_cache.main.nb = bool(data[0])
+                    self._notify_change("nb_changed", {"on": bool(data[0])})
+                elif data and sub == 0x40:
+                    # NR on/off (plain CI-V)
+                    host._state_cache.main.nr = bool(data[0])
+                    self._notify_change("nr_changed", {"on": bool(data[0])})
+                elif data and sub == 0x32:
                     host._state_cache.filter_width = ((data[0] >> 4) & 0x0F) * 10 + (
                         data[0] & 0x0F
                     )
-                elif data and frame.sub == 0x65:
+                elif data and sub == 0x65:
                     self._notify_change("ipplus_changed", {"on": bool(data[0])})
             elif frame.command == 0x07 and frame.data and len(frame.data) >= 2:
                 sub07 = frame.data[0]

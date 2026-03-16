@@ -41,6 +41,7 @@ from .radio_poller import (
     SetMode,
     SetPower,
     SetPreamp,
+    SetAgc,
     SetRfGain,
     SetSquelch,
     SetNB,
@@ -124,6 +125,7 @@ class ControlHandler:
             "set_ipplus",
             "set_att",
             "set_preamp",
+            "set_agc",
             "select_vfo",
             "vfo_swap",
             "vfo_equalize",
@@ -734,6 +736,10 @@ class ControlHandler:
                 self._ensure_receiver_supported(rx)
                 q.put(SetPreamp(level, receiver=rx))
                 return {"level": level, "receiver": rx}
+            case "set_agc":
+                mode = int(params["mode"])
+                q.put(SetAgc(mode))
+                return {"mode": mode}
             case "select_vfo":
                 vfo = str(params.get("vfo", "A"))
                 q.put(SelectVfo(vfo))

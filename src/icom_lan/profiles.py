@@ -62,6 +62,10 @@ class RadioProfile:
     freq_ranges: tuple[FreqRangeInfo, ...] = ()
     modes: tuple[str, ...] = ()
     filters: tuple[str, ...] = ()
+    att_values: tuple[int, ...] | None = None
+    pre_values: tuple[int, ...] | None = None
+    agc_modes: tuple[int, ...] | None = None
+    agc_labels: dict[str, str] | None = None
 
     def supports_capability(self, capability: str) -> bool:
         return capability in self.capabilities

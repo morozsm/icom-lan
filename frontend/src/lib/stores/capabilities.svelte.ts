@@ -43,6 +43,14 @@ export function getPreValues(): number[] {
   return capabilities?.preValues ?? [0, 1];
 }
 
+export function getAgcModes(): number[] {
+  return capabilities?.agcModes ?? [1, 2, 3];
+}
+
+export function getAgcLabels(): Record<string, string> {
+  return capabilities?.agcLabels ?? { "1": "FAST", "2": "MID", "3": "SLOW" };
+}
+
 export function getAntennaCount(): number {
   return capabilities?.antennas ?? 1;
 }

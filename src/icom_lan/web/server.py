@@ -977,6 +977,10 @@ class WebServer:
                     "filters": list(profile.filters),
                     "vfoScheme": profile.vfo_scheme,
                     "hasLan": profile.has_lan,
+                    "attValues": list(profile.att_values) if profile.att_values else None,
+                    "preValues": list(profile.pre_values) if profile.pre_values else None,
+                    "agcModes": list(profile.agc_modes) if profile.agc_modes else None,
+                    "agcLabels": profile.agc_labels,
                 },
                 "connection": {
                     "rigConnected": connected,
@@ -1058,6 +1062,10 @@ class WebServer:
                 "freqRanges": freq_ranges,
                 "modes": list(profile.modes),
                 "filters": list(profile.filters),
+                "attValues": list(profile.att_values) if profile.att_values else [0],
+                "preValues": list(profile.pre_values) if profile.pre_values else [0],
+                "agcModes": list(profile.agc_modes) if profile.agc_modes else [],
+                "agcLabels": profile.agc_labels if profile.agc_labels else {},
                 "scopeConfig": {
                     "centerMode": True,
                     "amplitudeMax": 160,

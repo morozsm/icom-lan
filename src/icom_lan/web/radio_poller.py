@@ -157,6 +157,11 @@ class SetPreamp:
 
 
 @dataclass(frozen=True, slots=True)
+class SetAgc:
+    mode: int  # 1=FAST, 2=MID, 3=SLOW
+
+
+@dataclass(frozen=True, slots=True)
 class PttOn:
     pass
 
@@ -295,6 +300,7 @@ Command = (
     | SetIpPlus
     | SetAttenuator
     | SetPreamp
+    | SetAgc
     | PttOn
     | PttOff
     | SetBand
@@ -782,6 +788,11 @@ class RadioPoller:
                 if isinstance(radio, AdvancedControlCapable):
                     self._ensure_receiver_supported(rx, operation="set_preamp")
                     await radio.set_preamp(level, receiver=rx)
+            case SetAgc(mode=mode):
+                # AGC: 0x16 0x12 — plain CI-V, no cmd29 needed
+                await self._civ(0x16, sub=0x12, data=bytes([mode]))
+                if self._on_state_event:
+                    self._on_state_event("agc_changed", {"mode": mode})
             case SetBand(band=band):
                 await self._civ(0x07, data=bytes([band]))
             case SelectVfo(vfo=vfo):

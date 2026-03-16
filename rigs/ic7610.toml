@@ -35,6 +35,16 @@ features = [
     "ip_plus",
 ]
 
+[attenuator]
+values = [0, 6, 12, 18]  # 0=OFF, 6/12/18 dB
+
+[preamp]
+values = [0, 1, 2]  # 0=OFF, 1=PRE1, 2=PRE2
+
+[agc]
+modes = [1, 2, 3]  # 1=FAST, 2=MID, 3=SLOW
+labels = { "1" = "FAST", "2" = "MID", "3" = "SLOW" }
+
 [modes]
 list = ["USB", "LSB", "CW", "CW-R", "AM", "FM", "RTTY", "RTTY-R"]
 

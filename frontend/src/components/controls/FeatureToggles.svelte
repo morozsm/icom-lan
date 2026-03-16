@@ -2,7 +2,7 @@
   import { onDestroy } from 'svelte';
   import { sendCommand } from '../../lib/transport/ws-client';
   import { radio } from '../../lib/stores/radio.svelte';
-  import { hasTx, getAttValues, getPreValues, getAntennaCount, hasCapability } from '../../lib/stores/capabilities.svelte';
+  import { hasTx, getAttValues, getPreValues, getAgcModes, getAgcLabels, getAntennaCount, hasCapability } from '../../lib/stores/capabilities.svelte';
   import ControlGroup from './ControlGroup.svelte';
   import CapabilityMenu from './CapabilityMenu.svelte';
 
@@ -22,6 +22,8 @@
   let preValues = $derived(getPreValues());
   let antennaCount = $derived(getAntennaCount());
   let hasDigisel = $derived(hasCapability('digisel'));
+  let agcModes = $derived(getAgcModes());
+  let agcLabels = $derived(getAgcLabels());
 
   let showAttMenu = $state(false);
   let showPreMenu = $state(false);
@@ -47,6 +49,18 @@
 
   function toggleComp() {
     sendCommand('set_comp', { on: !comp });
+  }
+
+  function cycleAgc() {
+    if (!agcModes.length) return;
+    const idx = agcModes.indexOf(agc ?? 0);
+    const next = idx >= 0 ? agcModes[(idx + 1) % agcModes.length] : agcModes[0];
+    sendCommand('set_agc', { mode: next });
+  }
+
+  function agcLabel(v: number | null): string {
+    if (v === null || v === 0) return 'OFF';
+    return agcLabels[String(v)] ?? String(v);
   }
 
   function cycleAtt() {
@@ -146,10 +160,13 @@
       title="Preamp (click to cycle, long-press for menu)"
     >PRE <span class="val">{preLabel(pre)}</span></button>
 
-    {#if agc !== null}
-      <span class="value-badge" title="AGC">
-        AGC <span class="val">{agc}</span>
-      </span>
+    {#if agcModes.length > 0}
+      <button
+        class="toggle-btn"
+        class:active={agc !== null && agc !== 0}
+        onclick={cycleAgc}
+        title="AGC (click to cycle: {agcModes.map(m => agcLabels[String(m)] ?? m).join(' → ')})"
+      >AGC <span class="val">{agcLabel(agc)}</span></button>
     {/if}
   </ControlGroup>
 

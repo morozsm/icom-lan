@@ -38,8 +38,10 @@ export interface Capabilities {
   freqRanges: FreqRange[];
   modes: string[];
   filters: string[];
-  attValues?: number[];   // Attenuator dB steps (e.g. [0,3,6,...,21] for IC-7610)
+  attValues?: number[];   // Attenuator dB steps (e.g. [0,20] for IC-7300, [0,6,12,18] for IC-7610)
   preValues?: number[];   // Preamp levels: 0 = off, 1 = P1, 2 = P2, etc.
+  agcModes?: number[];    // AGC mode values (e.g. [1,2,3] = FAST/MID/SLOW)
+  agcLabels?: Record<string, string>;  // AGC mode labels (e.g. {"1":"FAST","2":"MID","3":"SLOW"})
   antennas?: number;      // Number of antenna ports
   scopeConfig?: ScopeConfig;
   audioConfig?: AudioConfig;
