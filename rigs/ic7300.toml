@@ -6,6 +6,7 @@
 id = "icom_ic7300"
 model = "IC-7300"
 civ_addr = 0x94
+default_baud = 115200  # Required for scope data over serial CI-V
 receiver_count = 1
 has_lan = false
 has_wifi = false

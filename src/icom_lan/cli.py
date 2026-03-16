@@ -176,6 +176,19 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="List available USB audio devices and exit (requires icom-lan[bridge])",
     )
+    p.add_argument(
+        "--model",
+        type=str,
+        default=None,
+        help="Radio model (e.g. IC-7300). Resolves settings from rigs/*.toml",
+    )
+    p.add_argument(
+        "--radio-addr",
+        type=lambda x: int(x, 0),
+        default=None,
+        dest="radio_addr",
+        help="CI-V radio address override (hex: 0x94, or decimal: 148)",
+    )
     sub = p.add_subparsers(dest="command", help="Command")
 
     def _add_json(sp: argparse.ArgumentParser) -> None:
@@ -675,10 +688,62 @@ def _parse_frequency(value: str) -> int:
         return int(float(value))
 
 
+def _rigs_dir() -> Path:
+    """Return the path to the rigs/ directory shipped with the package."""
+    # Installed layout: icom_lan/rigs/ next to this file
+    pkg_rigs = Path(__file__).resolve().parent / "rigs"
+    if pkg_rigs.is_dir():
+        return pkg_rigs
+    # Development layout: repo_root/rigs/
+    return Path(__file__).resolve().parents[2] / "rigs"
+
+
+def _resolve_model(
+    args: argparse.Namespace,
+) -> tuple[int | None, str | None]:
+    """Resolve radio_addr and model name from --model / --radio-addr flags.
+
+    Returns:
+        (radio_addr, model_name) — either may be None.
+    """
+    from .rig_loader import discover_rigs
+
+    model_name: str | None = getattr(args, "model", None)
+    radio_addr: int | None = getattr(args, "radio_addr", None)
+
+    if model_name is None:
+        return radio_addr, None
+
+    rigs = discover_rigs(_rigs_dir())
+
+    # Case-insensitive match by model name or by rig id
+    matched = None
+    for _name, rig in rigs.items():
+        if (
+            _name.lower() == model_name.lower()
+            or rig.id.lower() == model_name.lower().replace("-", "_")
+        ):
+            matched = rig
+            break
+
+    if matched is None:
+        available = ", ".join(sorted(rigs.keys()))
+        raise ValueError(
+            f"Unknown model {model_name!r}. Available: {available}"
+        )
+
+    # --radio-addr overrides profile civ_addr
+    if radio_addr is None:
+        radio_addr = matched.civ_addr
+
+    return radio_addr, matched.model
+
+
 def _build_backend_config(
     args: argparse.Namespace,
 ) -> LanBackendConfig | SerialBackendConfig:
     """Build typed backend config from parsed CLI args."""
+    radio_addr, model_name = _resolve_model(args)
     backend = getattr(args, "backend", "lan")
     if backend == "serial":
         device = getattr(args, "serial_port", "")
@@ -691,6 +756,8 @@ def _build_backend_config(
             device=device,
             baudrate=getattr(args, "serial_baud", 115200),
             timeout=args.timeout,
+            radio_addr=radio_addr,
+            model=model_name,
             rx_device=getattr(args, "rx_device", None) or None,
             tx_device=getattr(args, "tx_device", None) or None,
             ptt_mode=getattr(args, "serial_ptt_mode", "civ"),
@@ -701,6 +768,8 @@ def _build_backend_config(
         username=args.user,
         password=args.password,
         timeout=args.timeout,
+        radio_addr=radio_addr,
+        model=model_name,
     )
 
 

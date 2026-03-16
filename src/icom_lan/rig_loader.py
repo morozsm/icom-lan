@@ -51,6 +51,7 @@ class RigConfig:
     receiver_count: int
     has_lan: bool
     has_wifi: bool
+    default_baud: int
     capabilities: tuple[str, ...]
     modes: tuple[str, ...]
     filters: tuple[str, ...]
@@ -220,6 +221,7 @@ def load_rig(path: Path) -> RigConfig:
         receiver_count=radio["receiver_count"],
         has_lan=radio["has_lan"],
         has_wifi=radio["has_wifi"],
+        default_baud=radio.get("default_baud", 19200),
         capabilities=tuple(features),
         modes=tuple(modes),
         filters=tuple(filters),
