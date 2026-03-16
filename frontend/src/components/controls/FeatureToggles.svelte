@@ -234,6 +234,7 @@
 
   .toggle-btn {
     min-height: var(--tap-target);
+    min-width: 5.5rem;
     padding: 0 var(--space-3);
     background: var(--panel);
     border: 1px solid var(--panel-border);
@@ -244,6 +245,8 @@
     font-weight: 600;
     cursor: pointer;
     transition: background 0.1s, color 0.1s, border-color 0.1s;
+    text-align: center;
+    white-space: nowrap;
   }
 
   .toggle-btn:hover {
