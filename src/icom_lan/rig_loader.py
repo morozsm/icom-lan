@@ -97,6 +97,8 @@ class RigConfig:
             vfo_main_code=vfo_main,
             vfo_sub_code=vfo_sub,
             vfo_swap_code=vfo_swap,
+            vfo_scheme=self.vfo_scheme,
+            has_lan=self.has_lan,
             freq_ranges=ranges,
             modes=tuple(self.modes),
             filters=tuple(self.filters),

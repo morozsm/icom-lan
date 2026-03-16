@@ -102,6 +102,8 @@ class RadioProfile:
     vfo_main_code: int | None = None
     vfo_sub_code: int | None = None
     vfo_swap_code: int | None = None
+    vfo_scheme: str = "main_sub"
+    has_lan: bool = False
     freq_ranges: tuple[FreqRangeInfo, ...] = _HF_6M_RANGES
     modes: tuple[str, ...] = _HF_MODES
     filters: tuple[str, ...] = _HF_FILTERS
@@ -192,6 +194,8 @@ _PROFILES: dict[str, RadioProfile] = {
         vfo_main_code=0xD0,
         vfo_sub_code=0xD1,
         vfo_swap_code=0xB0,
+        vfo_scheme="main_sub",
+        has_lan=True,
     ),
     "IC-9700": RadioProfile(
         id="icom_ic9700",
@@ -203,6 +207,8 @@ _PROFILES: dict[str, RadioProfile] = {
         vfo_main_code=0xD0,
         vfo_sub_code=0xD1,
         vfo_swap_code=0xB0,
+        vfo_scheme="main_sub",
+        has_lan=True,
         freq_ranges=_HF_VHF_UHF_RANGES,
     ),
     "IC-7300": RadioProfile(
@@ -212,6 +218,8 @@ _PROFILES: dict[str, RadioProfile] = {
         receiver_count=1,
         capabilities=_SINGLE_CAPS,
         cmd29_routes=frozenset(),
+        vfo_scheme="ab",
+        has_lan=False,
     ),
     "IC-705": RadioProfile(
         id="icom_ic705",
@@ -220,6 +228,8 @@ _PROFILES: dict[str, RadioProfile] = {
         receiver_count=1,
         capabilities=_SINGLE_CAPS,
         cmd29_routes=frozenset(),
+        vfo_scheme="ab",
+        has_lan=False,
     ),
 }
 

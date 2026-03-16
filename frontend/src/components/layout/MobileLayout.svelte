@@ -16,7 +16,7 @@
 
 
   import { radio } from '../../lib/stores/radio.svelte';
-  import { hasDualReceiver, getCapabilities } from '../../lib/stores/capabilities.svelte';
+  import { hasDualReceiver, getCapabilities, vfoLabel } from '../../lib/stores/capabilities.svelte';
   import { getConnectionStatus } from '../../lib/stores/connection.svelte';
   import { sendCommand } from '../../lib/transport/ws-client';
   import { applyModeDefault } from '../../lib/stores/tuning.svelte';
@@ -26,6 +26,8 @@
   let active = $derived(radio.current?.active === 'SUB' ? (radio.current?.sub ?? null) : (radio.current?.main ?? null));
   let activeRx = $derived(state?.active ?? 'MAIN');
   let isDualRx = $derived(hasDualReceiver());
+  let labelA = $derived(vfoLabel('A'));
+  let labelB = $derived(vfoLabel('B'));
 
   // Auto step based on mode
   let currentMode = $derived(active?.mode ?? '');
@@ -127,7 +129,7 @@
       <div class="vfo-row">
         {#if active}
           <VfoDisplay
-            label={activeRx === 'MAIN' ? 'VFO A' : 'VFO B'}
+            label={activeRx === 'MAIN' ? labelA : labelB}
             freq={active.freqHz}
             mode={active.mode}
             filter={active.filter}
@@ -137,7 +139,7 @@
           />
         {:else if main}
           <VfoDisplay
-            label="VFO A"
+            label={labelA}
             freq={main.freqHz}
             mode={main.mode}
             filter={main.filter}
@@ -164,7 +166,7 @@
           />
           {#if inactiveRx}
             <span class="inactive-vfo" onclick={() => handleReceiverSwitch(activeRx === 'MAIN' ? 'SUB' : 'MAIN')}>
-              {activeRx === 'MAIN' ? 'B' : 'A'}: {(inactiveRx.freqHz / 1_000_000).toFixed(6)} {inactiveRx.mode}
+              {activeRx === 'MAIN' ? labelB : labelA}: {(inactiveRx.freqHz / 1_000_000).toFixed(6)} {inactiveRx.mode}
             </span>
           {/if}
         </div>
