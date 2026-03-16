@@ -232,3 +232,25 @@ class TestCommandMapOverride:
         hardcoded = commands.set_power(128)
         assert result != hardcoded
         assert b"\x14\xff" in result
+
+    def test_four_byte_wire_extended_sub(self):
+        """IC-7300 style: 4-byte wire like [0x1A, 0x05, 0x00, 0x64].
+
+        Bytes 0-1 are command+sub, bytes 2+ are prepended to data payload.
+        """
+        custom = CommandMap({"get_acc1_mod_level": (0x1A, 0x05, 0x00, 0x64)})
+        result = commands.get_acc1_mod_level(cmd_map=custom)
+        # Frame: FE FE <to> <from> 1A 05 00 64 FD
+        assert b"\x1a\x05\x00\x64" in result
+        assert result.startswith(b"\xfe\xfe")
+        assert result.endswith(b"\xfd")
+
+    def test_four_byte_wire_with_set_data(self):
+        """4-byte wire + data: extra wire bytes prepend to data."""
+        custom = CommandMap({"set_acc1_mod_level": (0x1A, 0x05, 0x00, 0x64)})
+        result = commands.set_acc1_mod_level(128, cmd_map=custom)
+        # Frame: FE FE <to> <from> 1A 05 00 64 <level_bcd> FD
+        assert b"\x1a\x05\x00\x64" in result
+        # The level data should follow the extended sub-command bytes
+        idx = result.index(b"\x00\x64")
+        assert idx + 2 < len(result) - 1  # there's data after 00 64 before FD
