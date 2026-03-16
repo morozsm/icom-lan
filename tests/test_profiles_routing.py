@@ -78,6 +78,9 @@ async def test_single_profile_poller_rejects_sub_receiver() -> None:
 
 
 async def test_control_handler_checks_capabilities_not_model_name() -> None:
+    """IC-7300 has nb capability (from TOML) — verify it DOES NOT raise.
+
+    Also test that a radio WITHOUT nb capability DOES raise."""
     profile = resolve_radio_profile(model="IC-7300")
     ws = SimpleNamespace(send_text=AsyncMock(), recv=AsyncMock())
     queue = SimpleNamespace(put=lambda _cmd: None)
@@ -85,8 +88,14 @@ async def test_control_handler_checks_capabilities_not_model_name() -> None:
     radio = SimpleNamespace(capabilities=set(profile.capabilities))
     handler = ControlHandler(ws, radio, "1.0", profile.model, server=server)
 
+    # IC-7300 has nb — should NOT raise
+    await handler._enqueue_command("set_nb", {"on": True, "receiver": 0})
+
+    # A radio without nb capability should raise
+    radio_no_nb = SimpleNamespace(capabilities={"audio", "scope", "meters"})
+    handler_no_nb = ControlHandler(ws, radio_no_nb, "1.0", "FAKE", server=server)
     with pytest.raises(ValueError, match="missing capability: nb"):
-        await handler._enqueue_command("set_nb", {"on": True, "receiver": 0})
+        await handler_no_nb._enqueue_command("set_nb", {"on": True, "receiver": 0})
 
 
 @pytest.mark.asyncio

@@ -1,6 +1,7 @@
-"""IC-7610 TOML parity tests — verify TOML matches hardcoded Python exactly.
+"""IC-7610 TOML profile tests — verify TOML produces correct RadioProfile.
 
-TDD: these tests were written FIRST, then the TOML was fixed to pass them.
+All profile data comes from TOML; there are no hardcoded constants to
+compare against.  Tests verify expected values directly.
 """
 
 from __future__ import annotations
@@ -9,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from icom_lan.profiles import RadioProfile, _CMD29_7610, _DUAL_CAPS
+from icom_lan.profiles import RadioProfile
 from icom_lan.rig_loader import load_rig
 
 RIGS_DIR = Path(__file__).resolve().parent.parent / "rigs"
@@ -53,13 +54,26 @@ class TestProfileParity:
         assert profile.receiver_count == 2
 
     def test_capabilities_exact(self, profile):
-        assert profile.capabilities == _DUAL_CAPS
+        expected = frozenset({
+            "audio", "scope", "dual_rx", "meters", "tx", "cw",
+            "attenuator", "preamp", "rf_gain", "af_level", "squelch",
+            "nb", "nr", "digisel", "ip_plus",
+        })
+        assert profile.capabilities == expected
 
     def test_capabilities_count(self, profile):
         assert len(profile.capabilities) == 15
 
     def test_cmd29_routes_exact(self, profile):
-        assert profile.cmd29_routes == _CMD29_7610
+        expected = frozenset({
+            (0x11, None), (0x14, 0x01), (0x14, 0x02), (0x14, 0x03),
+            (0x14, 0x05), (0x14, 0x06), (0x14, 0x07), (0x14, 0x08),
+            (0x14, 0x12), (0x14, 0x13), (0x15, 0x01), (0x15, 0x05),
+            (0x16, 0x02), (0x16, 0x32), (0x16, 0x22), (0x16, 0x40),
+            (0x16, 0x41), (0x16, 0x48), (0x16, 0x4E), (0x16, 0x4F),
+            (0x16, 0x56), (0x16, 0x65), (0x1A, 0x04), (0x1A, 0x09),
+        })
+        assert profile.cmd29_routes == expected
 
     def test_cmd29_routes_count(self, profile):
         assert len(profile.cmd29_routes) == 24
