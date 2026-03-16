@@ -66,8 +66,10 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 _GAP: float = 0.012
+_GAP_SERIAL: float = 0.050  # serial CI-V needs more breathing room
 _SEND_TIMEOUT: float = 1.0
 _FAST_INTERVAL: float = 0.025  # meters — wfview queue interval for LAN (25ms)
+_FAST_INTERVAL_SERIAL: float = 0.200  # serial: 5 meter polls/sec (not 40)
 _SLOW_INTERVAL: float = 0.25  # levels/settings — rarely change
 
 
@@ -387,6 +389,12 @@ class RadioPoller:
         self._task: asyncio.Task[None] | None = None
         self._caps: set[str] = self._radio_capabilities()
         self._profile: RadioProfile = self._runtime_profile()
+        # Serial backends need slower polling to avoid flooding the CI-V link
+        self._is_serial: bool = not self._profile.has_lan
+        self._gap: float = _GAP_SERIAL if self._is_serial else _GAP
+        self._fast_interval: float = (
+            _FAST_INTERVAL_SERIAL if self._is_serial else _FAST_INTERVAL
+        )
         self._STATE_QUERIES = self._build_state_queries()
 
     def start(self) -> None:
@@ -470,8 +478,11 @@ class RadioPoller:
             receivers.append(1)
         queries: list[tuple[int, int | None, int | None]] = []
         for receiver in receivers:
-            queries.append((0x25, None, receiver))
-            queries.append((0x26, None, receiver))
+            # On serial backends with CI-V Transceive, freq/mode stream
+            # automatically (0x00/0x01).  Skip polling to save bandwidth.
+            if not self._is_serial:
+                queries.append((0x25, None, receiver))  # frequency
+                queries.append((0x26, None, receiver))  # mode
             if self._supports_capability("attenuator") and self._profile.supports_cmd29(
                 0x11
             ):
@@ -568,7 +579,7 @@ class RadioPoller:
                                 type(cmd).__name__,
                                 exc_info=True,
                             )
-                        await asyncio.sleep(_GAP)
+                        await asyncio.sleep(self._gap)
 
                 # If disconnected, back off to avoid log spam
                 if _backoff > 0:
@@ -597,7 +608,7 @@ class RadioPoller:
                     logger.debug("radio-poller: query error", exc_info=True)
 
                 # 3. Wait for next cycle
-                await self._queue.wait(timeout=_FAST_INTERVAL)
+                await self._queue.wait(timeout=self._fast_interval)
         except asyncio.CancelledError:
             pass
         except Exception:
@@ -661,18 +672,18 @@ class RadioPoller:
                         )
                     if current != "SUB":
                         await self._civ(0x07, data=bytes([self._profile.vfo_sub_code]))
-                        await asyncio.sleep(_GAP)
+                        await asyncio.sleep(self._gap)
                     await radio.set_frequency(freq)
                     if current != "SUB":
-                        await asyncio.sleep(_GAP)
+                        await asyncio.sleep(self._gap)
                         await self._civ(0x07, data=bytes([self._profile.vfo_main_code]))
                 else:
                     if current != "MAIN" and self._profile.vfo_main_code is not None:
                         await self._civ(0x07, data=bytes([self._profile.vfo_main_code]))
-                        await asyncio.sleep(_GAP)
+                        await asyncio.sleep(self._gap)
                     await radio.set_frequency(freq)
                     if current != "MAIN" and self._profile.vfo_sub_code is not None:
-                        await asyncio.sleep(_GAP)
+                        await asyncio.sleep(self._gap)
                         await self._civ(0x07, data=bytes([self._profile.vfo_sub_code]))
             case SetMode(mode=mode, filter_width=fw, receiver=rx):
                 self._ensure_receiver_supported(rx, operation="set_mode")
@@ -690,18 +701,18 @@ class RadioPoller:
                         )
                     if current != "SUB":
                         await self._civ(0x07, data=bytes([self._profile.vfo_sub_code]))
-                        await asyncio.sleep(_GAP)
+                        await asyncio.sleep(self._gap)
                     await radio.set_mode(mode, fw)
                     if current != "SUB":
-                        await asyncio.sleep(_GAP)
+                        await asyncio.sleep(self._gap)
                         await self._civ(0x07, data=bytes([self._profile.vfo_main_code]))
                 else:
                     if current != "MAIN" and self._profile.vfo_main_code is not None:
                         await self._civ(0x07, data=bytes([self._profile.vfo_main_code]))
-                        await asyncio.sleep(_GAP)
+                        await asyncio.sleep(self._gap)
                     await radio.set_mode(mode, fw)
                     if current != "MAIN" and self._profile.vfo_sub_code is not None:
-                        await asyncio.sleep(_GAP)
+                        await asyncio.sleep(self._gap)
                         await self._civ(0x07, data=bytes([self._profile.vfo_sub_code]))
             case SetFilter(filter_num=fn, receiver=rx):
                 if isinstance(radio, AdvancedControlCapable):
