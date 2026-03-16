@@ -49,8 +49,7 @@ export function applyModeDefault(mode: string): void {
  */
 export function snapToStep(freqHz: number): number {
   if (_step <= 0) return freqHz;
-  // Round to 1 Hz (server precision) instead of step size to avoid flicker
-  return Math.round(freqHz);
+  return Math.round(freqHz / _step) * _step;
 }
 
 /** Tune up/down by N steps (positive = up, negative = down) */
