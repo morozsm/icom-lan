@@ -538,16 +538,22 @@ class RadioPoller:
                 (0x21, 0x02, None),  # RIT TX status
             ]
         )
+        # Common feature queries (data-driven: if radio has the command, poll it)
+        _COMMON_FEATURE_QUERIES = [
+            (0x16, 0x12),  # AGC mode
+            (0x16, 0x44),  # Compressor status
+            (0x16, 0x45),  # Monitor status
+            (0x16, 0x46),  # VOX status
+            (0x16, 0x47),  # Break-in mode
+            (0x16, 0x50),  # Dial lock status
+        ]
+        for cmd, sub in _COMMON_FEATURE_QUERIES:
+            queries.append((cmd, sub, None))
+
         if self._profile.model == "IC-7610":
             queries.extend(
                 [
                     (0x15, 0x07, None),  # Overflow status
-                    (0x16, 0x12, None),  # AGC mode
-                    (0x16, 0x44, None),  # Compressor status
-                    (0x16, 0x45, None),  # Monitor status
-                    (0x16, 0x46, None),  # VOX status
-                    (0x16, 0x47, None),  # Break-in mode
-                    (0x16, 0x50, None),  # Dial lock status
                     (0x16, 0x58, None),  # SSB TX bandwidth
                 ]
             )
@@ -781,18 +787,26 @@ class RadioPoller:
                 if self._on_state_event:
                     self._on_state_event("ipplus_changed", {"on": on})
             case SetAttenuator(db=db, receiver=rx):
-                if isinstance(radio, AdvancedControlCapable):
-                    self._ensure_receiver_supported(rx, operation="set_attenuator")
-                    await radio.set_attenuator_level(db, receiver=rx)
+                if self._profile.supports_cmd29(0x11):
+                    if isinstance(radio, AdvancedControlCapable):
+                        await radio.set_attenuator_level(db, receiver=rx)
+                else:
+                    # Plain CI-V: 0x11 + BCD-encoded dB value
+                    bcd = ((db // 10) << 4) | (db % 10)
+                    await self._civ(0x11, data=bytes([bcd]))
             case SetPreamp(level=level, receiver=rx):
-                if isinstance(radio, AdvancedControlCapable):
-                    self._ensure_receiver_supported(rx, operation="set_preamp")
-                    await radio.set_preamp(level, receiver=rx)
+                if self._profile.supports_cmd29(0x16, 0x02):
+                    if isinstance(radio, AdvancedControlCapable):
+                        await radio.set_preamp(level, receiver=rx)
+                else:
+                    # Plain CI-V: 0x16 0x02 + level byte
+                    await self._civ(0x16, sub=0x02, data=bytes([level]))
             case SetAgc(mode=mode):
-                # AGC: 0x16 0x12 — plain CI-V, no cmd29 needed
-                await self._civ(0x16, sub=0x12, data=bytes([mode]))
-                if self._on_state_event:
-                    self._on_state_event("agc_changed", {"mode": mode})
+                if self._profile.supports_cmd29(0x16, 0x12):
+                    await self._civ(0x29, data=bytes([0x00, 0x16, 0x12, mode]))
+                else:
+                    # Plain CI-V: 0x16 0x12 + mode byte
+                    await self._civ(0x16, sub=0x12, data=bytes([mode]))
             case SetBand(band=band):
                 await self._civ(0x07, data=bytes([band]))
             case SelectVfo(vfo=vfo):
