@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.0] — 2026-03-15
+
+### Added
+
+- **Data-driven rig profiles** (Epic #251) — radio configuration moved from hardcoded Python
+  to TOML files in `rigs/`:
+  - `rigs/ic7610.toml` — IC-7610 reference profile (full feature set, dual receiver)
+  - `rigs/ic7300.toml` — IC-7300 profile (single receiver, VFO A/B, no DIGI-SEL/IP+)
+  - `rigs/_schema.md` — TOML schema specification
+  - `rig_loader.py` — `load_rig()`, `discover_rigs()`, `RigConfig`, `RigLoadError`
+  - `command_map.py` — `CommandMap` (immutable CI-V wire byte lookup)
+- **IC-7300 support** — tested via USB serial backend; rig profile defines all 200+
+  supported commands, VFO A/B scheme, and IC-7300-specific wire byte overrides
+- **`cmd_map` parameter on all 223 command functions** — every builder function in
+  `commands.py` now accepts `cmd_map: CommandMap | None = None`; when provided, wire bytes
+  come from the TOML profile instead of hardcoded IC-7610 defaults
+- **`RadioProfile` additions** — `vfo_scheme` (`"ab"` | `"main_sub"`), `has_lan` fields
+- **Web UI capability guards** — UI controls for DIGI-SEL, IP+, and dual-receiver
+  features are automatically hidden when the active profile doesn't support them
+- **Dynamic VFO labels** — Web UI shows "MAIN" / "SUB" for IC-7610 (main_sub scheme)
+  and "VFO A" / "VFO B" for IC-7300 (ab scheme)
+- **`/api/v1/info` enriched** — `capabilities` object now includes `vfoScheme`, `hasLan`,
+  `maxReceivers`, `modes`, `filters` from the active rig profile
+- **`/api/v1/capabilities` additions** — `receivers`, `vfoScheme` fields
+- **`/api/v1/state` adapts** — omits `sub` receiver state for single-receiver rigs
+
+### Changed
+
+- +3497 lines, 236 new tests across `test_rig_loader.py`, `test_command_map.py`,
+  `test_rig_ic7610.py`, `test_rig_ic7300.py`, `test_commands_cmd_map.py`
+- Hardcoded IC-7610 wire bytes remain as defaults when `cmd_map=None` — fully backward-compatible
+
 ## [Unreleased]
 
 ### Added
@@ -211,7 +243,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Transport layer, authentication, CI-V commands, meters, PTT, keep-alive.
 - Clean-room Icom LAN UDP protocol implementation.
 
-[Unreleased]: https://github.com/morozsm/icom-lan/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/morozsm/icom-lan/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/morozsm/icom-lan/compare/v0.11.0...v0.12.0
+[0.11.0]: https://github.com/morozsm/icom-lan/compare/v0.8.0...v0.11.0
 [0.8.0]: https://github.com/morozsm/icom-lan/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/morozsm/icom-lan/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/morozsm/icom-lan/compare/v0.5.1...v0.6.0

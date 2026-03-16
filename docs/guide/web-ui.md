@@ -149,12 +149,77 @@ curl http://127.0.0.1:8080/api/v1/info
 curl http://127.0.0.1:8080/api/v1/state
 ```
 
+## Dynamic UI — Radio-Aware Controls
+
+The Web UI adapts to the active radio's capabilities. Capabilities are fetched once
+from `GET /api/v1/capabilities` on startup and cached in
+`frontend/src/lib/stores/capabilities.svelte.ts`.
+
+### VFO Labels
+
+VFO button labels change based on the radio's VFO scheme:
+
+| Radio | Scheme | Button A label | Button B label |
+|-------|--------|----------------|----------------|
+| IC-7610 | `main_sub` | **MAIN** | **SUB** |
+| IC-7300 | `ab` | **VFO A** | **VFO B** |
+
+The `vfoLabel()` function in the capabilities store drives this:
+
+```typescript
+// Returns "MAIN" or "VFO A" depending on active profile
+vfoLabel('A')
+
+// Returns "SUB" or "VFO B"
+vfoLabel('B')
+```
+
+### Capability-Based UI Guards
+
+Controls that depend on hardware features are automatically hidden or disabled when the
+active radio profile doesn't support them:
+
+| Control | Capability flag | Visible on IC-7610 | Visible on IC-7300 |
+|---------|----------------|--------------------|--------------------|
+| DIGI-SEL toggle | `digisel` | ✅ | ❌ hidden |
+| IP+ toggle | `ip_plus` | ✅ | ❌ hidden |
+| SUB receiver panel | `dual_rx` | ✅ | ❌ hidden |
+| TX controls, PTT | `tx` | ✅ | ✅ |
+| Audio RX/TX | `audio` | ✅ | ✅ |
+| Scope/waterfall | `scope` | ✅ | ✅ |
+
+Use `hasCapability(name)` to check for a capability in Svelte components:
+
+```typescript
+import { hasCapability } from '$lib/stores/capabilities.svelte';
+
+// In a Svelte component template:
+// {#if hasCapability('digisel')}
+//   <DigiSelControl />
+// {/if}
+```
+
+### State Endpoint and Receiver Count
+
+`GET /api/v1/state` omits the `sub` receiver for single-receiver radios.
+Frontend code should guard against the missing `sub` key rather than assuming it is
+always present.
+
+```typescript
+// Safe receiver access
+const sub = state.sub ?? null;
+```
+
 ## Common Pitfalls for Developers
 
 - **Capability-gated commands:** commands fail with `command_failed` if active profile
   does not expose required capability (for example, `set_rf_gain` on unsupported radios).
 - **Receiver indexing:** many commands expect `receiver=0` (MAIN) or `receiver=1` (SUB)
   and validate against runtime profile receiver count.
+- **`sub` may be absent:** `GET /api/v1/state` omits `sub` for single-receiver radios —
+  always guard with a null check.
+- **VFO commands:** use `select_vfo("A")` / `select_vfo("B")` regardless of scheme;
+  the backend translates to the correct CI-V codes for the active profile.
 - **Authoritative state source:** use `state_update` payloads as source of truth; optimistic
   UI updates can be overwritten by server state.
 - **Scope recovery behavior:** scope enable/re-enable is deferred until `radio_ready=true`;
