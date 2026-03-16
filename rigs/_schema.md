@@ -95,6 +95,30 @@ Array of tables, each defining a frequency coverage range.
 | `end_hz`     | int    | yes      | Band end frequency in Hz                    |
 | `default_hz` | int    | yes      | Default tuning frequency in Hz (within band)|
 
+## `[cmd29]` — Command 29 Routes
+
+Optional section for dual-receiver radios that use Command 29 prefix for
+receiver targeting. Single-receiver radios omit this section entirely.
+
+| Field    | Type       | Required | Description                                        |
+|----------|------------|----------|----------------------------------------------------|
+| `routes` | int[][]    | yes      | List of `[cmd, sub]` or `[cmd]` (sub=None) entries |
+
+Each entry is a 1- or 2-element integer array:
+- `[0x11]` — command-only route (sub = None, e.g. ATT)
+- `[0x14, 0x01]` — command + sub-command route (e.g. AF Gain)
+
+Example:
+
+```toml
+[cmd29]
+routes = [
+    [0x11],           # ATT (sub=None)
+    [0x14, 0x01],     # AF Gain
+    [0x16, 0x02],     # PREAMP
+]
+```
+
 ## `[commands]` — CI-V Wire Bytes
 
 Each key maps a command name to its CI-V wire bytes as an integer array.

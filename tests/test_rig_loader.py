@@ -15,7 +15,7 @@ from icom_lan.profiles import BandInfo, FreqRangeInfo, RadioProfile
 from icom_lan.rig_loader import RigConfig, RigLoadError, discover_rigs, load_rig
 
 RIGS_DIR = Path(__file__).resolve().parent.parent / "rigs"
-TEMPLATE_PATH = RIGS_DIR / "_template.toml"
+TEMPLATE_PATH = RIGS_DIR / "ic7610.toml"
 
 
 # ── Helpers ──────────────────────────────────────────────────────
@@ -291,10 +291,10 @@ class TestDiscoverRigs:
         assert "IC-7300" in rigs
         assert isinstance(rigs["IC-7300"], RigConfig)
 
-    def test_ignores_underscore_files(self):
-        # rigs/ only has _template.toml (underscore prefix) — should be ignored
+    def test_discovers_ic7610(self):
+        # rigs/ has ic7610.toml — should be discovered
         rigs = discover_rigs(RIGS_DIR)
-        assert len(rigs) == 0
+        assert "IC-7610" in rigs
 
     def test_ignores_underscore_prefix(self, tmp_path):
         # Create a proper rig file and an underscore-prefixed file

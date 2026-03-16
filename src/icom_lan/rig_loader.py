@@ -60,6 +60,7 @@ class RigConfig:
     vfo_swap: tuple[int, ...] | None
     freq_ranges: tuple[dict, ...]
     commands: dict[str, tuple[int, ...]]
+    cmd29_routes: tuple[tuple[int, int | None], ...]
     spectrum: dict[str, int] | None
 
     def to_profile(self) -> RadioProfile:
@@ -92,7 +93,7 @@ class RigConfig:
             civ_addr=self.civ_addr,
             receiver_count=self.receiver_count,
             capabilities=frozenset(self.capabilities),
-            cmd29_routes=frozenset(),  # populated separately if needed
+            cmd29_routes=frozenset(self.cmd29_routes),
             vfo_main_code=vfo_main,
             vfo_sub_code=vfo_sub,
             vfo_swap_code=vfo_swap,
@@ -198,6 +199,15 @@ def load_rig(path: Path) -> RigConfig:
     vfo_sub = tuple(vfo["sub_select"]) if "sub_select" in vfo else None
     vfo_swap = tuple(vfo["swap"]) if "swap" in vfo else None
 
+    # Parse cmd29 routes
+    cmd29_raw = data.get("cmd29", {}).get("routes", [])
+    cmd29_routes: list[tuple[int, int | None]] = []
+    for entry in cmd29_raw:
+        if len(entry) == 1:
+            cmd29_routes.append((entry[0], None))
+        elif len(entry) == 2:
+            cmd29_routes.append((entry[0], entry[1]))
+
     # Parse spectrum
     spectrum = data.get("spectrum")
 
@@ -217,6 +227,7 @@ def load_rig(path: Path) -> RigConfig:
         vfo_swap=vfo_swap,
         freq_ranges=tuple(freq_ranges_data),
         commands=commands,
+        cmd29_routes=tuple(cmd29_routes),
         spectrum=spectrum,
     )
 

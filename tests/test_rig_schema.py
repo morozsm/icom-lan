@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 
 RIGS_DIR = Path(__file__).resolve().parent.parent / "rigs"
-TEMPLATE_PATH = RIGS_DIR / "_template.toml"
+TEMPLATE_PATH = RIGS_DIR / "ic7610.toml"
 SCHEMA_PATH = RIGS_DIR / "_schema.md"
 
 REQUIRED_SECTIONS = [

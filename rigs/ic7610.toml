@@ -1,5 +1,5 @@
-# Rig Configuration Template — IC-7610
-# This file defines a complete radio profile in TOML format.
+# Rig Configuration — IC-7610
+# This file defines the IC-7610 radio profile in TOML format.
 # See _schema.md for field documentation.
 
 [radio]
@@ -123,6 +123,38 @@ name = "6m"
 start_hz = 50_000_000
 end_hz = 54_000_000
 default_hz = 50_125_000
+
+# ── Command 29 Routes ───────────────────────────────────────────
+# Commands that use the Command29 prefix for dual-receiver targeting.
+# Each entry: [command_byte, sub_byte] or [command_byte] for cmd-only (sub=None).
+
+[cmd29]
+routes = [
+    [0x11],           # ATT (sub=None)
+    [0x14, 0x01],     # AF Gain
+    [0x14, 0x02],     # RF Gain
+    [0x14, 0x03],     # SQL
+    [0x14, 0x05],     # APF Type Level
+    [0x14, 0x06],     # NR Level
+    [0x14, 0x07],     # PBT Inner
+    [0x14, 0x08],     # PBT Outer
+    [0x14, 0x12],     # NB Level
+    [0x14, 0x13],     # DIGI-SEL Shift
+    [0x15, 0x01],     # S-meter squelch status
+    [0x15, 0x05],     # Various squelch
+    [0x16, 0x02],     # PREAMP
+    [0x16, 0x22],     # NB
+    [0x16, 0x32],     # Audio Peak Filter
+    [0x16, 0x40],     # NR
+    [0x16, 0x41],     # Auto Notch
+    [0x16, 0x48],     # Manual Notch
+    [0x16, 0x4E],     # DIGI-SEL
+    [0x16, 0x4F],     # Twin Peak Filter
+    [0x16, 0x56],     # Filter Shape
+    [0x16, 0x65],     # IP+
+    [0x1A, 0x04],     # AGC Time Constant
+    [0x1A, 0x09],     # AF Mute
+]
 
 # ── CI-V Commands ────────────────────────────────────────────────
 # Wire bytes as integer arrays. These are the DEFAULT command bytes
