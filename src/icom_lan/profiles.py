@@ -148,9 +148,13 @@ _SINGLE_CAPS = frozenset(
         "meters",
         "tx",
         "cw",
+        "attenuator",
+        "preamp",
         "rf_gain",
         "af_level",
         "squelch",
+        "nb",
+        "nr",
     }
 )
 
