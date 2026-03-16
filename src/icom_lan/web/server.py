@@ -585,8 +585,9 @@ class WebServer:
             pass
 
     def _on_poller_state_event(self, name: str, data: dict[str, Any]) -> None:
-        """Callback from RadioPoller (legacy, kept for compatibility)."""
+        """Callback from RadioPoller — forward event and push fresh state."""
         self.broadcast_event(name, data)
+        self._broadcast_state_update()
 
     async def start(self) -> None:
         """Start the HTTP/WS listener and RadioPoller (if radio is connected)."""
@@ -1044,6 +1045,7 @@ class WebServer:
                         "start": b.start,
                         "end": b.end,
                         "default": b.default,
+                        **({"bsrCode": b.bsr_code} if b.bsr_code is not None else {}),
                     }
                     for b in r.bands
                 ],

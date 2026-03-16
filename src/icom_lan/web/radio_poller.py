@@ -672,21 +672,26 @@ class RadioPoller:
         sub: int | None = None,
         data: bytes = b"",
         wait_response: bool = False,
-    ) -> None:
+    ) -> Any:
         """Send a raw CI-V command if the backend provides a CI-V transport.
 
         For non-Icom backends this is a no-op — scope/meter polling simply
         won't happen, which is acceptable.
+
+        Returns:
+            CivFrame response if wait_response=True and backend supports it,
+            else None.
         """
         from ..radio_protocol import CivCommandCapable
 
         if isinstance(self._radio, CivCommandCapable):
-            await self._radio.send_civ(
+            return await self._radio.send_civ(
                 cmd,
                 sub=sub,
                 data=data,
                 wait_response=wait_response,
             )
+        return None
 
     def _current_active(self) -> str:
         """Return current active receiver ('MAIN' or 'SUB') from RadioState."""
@@ -740,6 +745,8 @@ class RadioPoller:
                     if target:
                         target.freq_hz = freq
                     self.bump_revision()
+                if self._on_state_event:
+                    self._on_state_event("freq_changed", {"freq": freq, "receiver": rx})
             case SetMode(mode=mode, filter_width=fw, receiver=rx):
                 self._ensure_receiver_supported(rx, operation="set_mode")
                 current = self._current_active()
@@ -775,6 +782,8 @@ class RadioPoller:
                     if target:
                         target.mode = mode
                     self.bump_revision()
+                if self._on_state_event:
+                    self._on_state_event("mode_changed", {"mode": mode, "receiver": rx})
             case SetFilter(filter_num=fn, receiver=rx):
                 if isinstance(radio, AdvancedControlCapable):
                     self._ensure_receiver_supported(rx, operation="set_filter")
@@ -876,7 +885,63 @@ class RadioPoller:
                     self._radio_state.main.agc = mode
                     self.bump_revision()
             case SetBand(band=band):
-                await self._civ(0x07, data=bytes([band]))
+                # Band Stack Register recall: 0x1A 0x01 <bsr_code> <register>
+                # Read stored freq/mode from register 01 (latest)
+                from ..commands import bcd_decode
+                from ..types import Mode as CivMode
+
+                bsr_ok = False
+                try:
+                    resp = await self._civ(
+                        0x1A, sub=0x01, data=bytes([band, 0x01]),
+                        wait_response=True,
+                    )
+                    if resp and hasattr(resp, "data") and resp.data and len(resp.data) >= 8:
+                        # BSR response: [1A 01 band reg] freq(5 BCD) mode filter ...
+                        # Skip first 2 bytes (band + register) to get freq
+                        freq = bcd_decode(resp.data[2:7])
+                        mode_code = resp.data[7]
+                        filter_num = resp.data[8] if len(resp.data) > 8 else 1
+                        try:
+                            mode_name = CivMode(mode_code).name.replace("_", "-")
+                        except ValueError:
+                            mode_name = "USB"
+                        logger.info(
+                            "BSR recall: band=%d freq=%d mode=%s fil=%d",
+                            band, freq, mode_name, filter_num,
+                        )
+                        await radio.set_frequency(freq)
+                        await asyncio.sleep(self._gap)
+                        await radio.set_mode(mode_name, filter_num)
+                        # Update local state immediately (don't wait for transceive echo)
+                        if self._radio_state:
+                            target = self._radio_state.main
+                            if target:
+                                target.freq = freq
+                                target.mode = mode_name
+                            self.bump_revision()
+                        if self._on_state_event:
+                            self._on_state_event("freq_changed", {"freq": freq, "receiver": 0})
+                            self._on_state_event("mode_changed", {"mode": mode_name, "receiver": 0})
+                        bsr_ok = True
+                except Exception:
+                    logger.debug("BSR recall failed", exc_info=True)
+
+                if not bsr_ok:
+                    # Fallback: set default freq from rig profile
+                    default_freq: int | None = None
+                    for fr in self._profile.freq_ranges:
+                        for bi in fr.bands:
+                            if bi.bsr_code == band:
+                                default_freq = bi.default
+                                break
+                        if default_freq is not None:
+                            break
+                    if default_freq is not None:
+                        logger.info("BSR fallback: band=%d → freq=%d", band, default_freq)
+                        await radio.set_frequency(default_freq)
+                    else:
+                        logger.warning("set_band: unknown bsr_code=%d", band)
             case SelectVfo(vfo=vfo):
                 # IC-7610 LAN audio is always from MAIN receiver (mono).
                 # To "switch" audio to SUB, we SWAP MAIN↔SUB (0x07 0xB0).

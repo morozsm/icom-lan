@@ -470,6 +470,9 @@ class CivRuntime:
     def _update_state_cache_from_frame(self, frame: CivFrame) -> None:
         """Best-effort update of state cache from an incoming CI-V frame."""
         host = self._host
+        # Use RadioState.main for per-receiver state (StateCache lacks .main)
+        _rs = getattr(host, "_radio_state", None)
+        _rx = getattr(_rs, "main", None) if _rs is not None else None
         try:
             if frame.command in (0x03, 0x00):
                 # Frequency: 0x03 = response to GET, 0x00 = unsolicited (e.g. VFO knob)
@@ -484,44 +487,42 @@ class CivRuntime:
                     host._filter_width = filt
             elif frame.command == 0x1C and frame.sub == 0x00 and frame.data:
                 host._state_cache.update_ptt(bool(frame.data[0]))
-            elif frame.command == 0x11 and frame.data:
+            elif frame.command == 0x11 and frame.data and _rx is not None:
                 # Attenuator response (plain CI-V, no cmd29)
                 val = frame.data[0]
-                rx = host._state_cache.main
-                rx.att = ((val >> 4) & 0x0F) * 10 + (val & 0x0F)
-            elif frame.command == 0x14 and frame.data and len(frame.data) >= 2:
+                _rx.att = ((val >> 4) & 0x0F) * 10 + (val & 0x0F)
+            elif frame.command == 0x14 and frame.data and len(frame.data) >= 2 and _rx is not None:
                 # Level response (plain CI-V, no cmd29)
                 sub = frame.sub or 0
                 raw = ((frame.data[0] >> 4) & 0x0F) * 100 + (frame.data[0] & 0x0F) * 10
                 if len(frame.data) > 1:
                     raw += (frame.data[1] >> 4) & 0x0F
-                rx = host._state_cache.main
                 if sub == 0x01:
-                    rx.af_level = raw
+                    _rx.af_level = raw
                 elif sub == 0x02:
-                    rx.rf_gain = raw
+                    _rx.rf_gain = raw
                 elif sub == 0x03:
-                    rx.squelch = raw
+                    _rx.squelch = raw
                 elif sub == 0x06:
-                    rx.nr_level = raw
+                    _rx.nr_level = raw
                 elif sub == 0x12:
-                    rx.nb_level = raw
+                    _rx.nb_level = raw
             elif frame.command == 0x16:
                 data = frame.data
                 sub = frame.sub or 0
-                if data and sub == 0x02:
+                if data and sub == 0x02 and _rx is not None:
                     # Preamp response (plain CI-V)
-                    host._state_cache.main.preamp = data[0]
-                elif data and sub == 0x12:
+                    _rx.preamp = data[0]
+                elif data and sub == 0x12 and _rx is not None:
                     # AGC mode response (plain CI-V)
-                    host._state_cache.main.agc = data[0]
-                elif data and sub == 0x22:
+                    _rx.agc = data[0]
+                elif data and sub == 0x22 and _rx is not None:
                     # NB on/off (plain CI-V)
-                    host._state_cache.main.nb = bool(data[0])
+                    _rx.nb = bool(data[0])
                     self._notify_change("nb_changed", {"on": bool(data[0])})
-                elif data and sub == 0x40:
+                elif data and sub == 0x40 and _rx is not None:
                     # NR on/off (plain CI-V)
-                    host._state_cache.main.nr = bool(data[0])
+                    _rx.nr = bool(data[0])
                     self._notify_change("nr_changed", {"on": bool(data[0])})
                 elif data and sub == 0x32:
                     host._state_cache.filter_width = ((data[0] >> 4) & 0x0F) * 10 + (
@@ -994,6 +995,9 @@ class CivRuntime:
         if frame.command == 0x07 and frame.data == b"\xc2":
             return True
         if frame.command == 0x1A and frame.sub == 0x05 and len(frame.data) == 2:
+            return True
+        if frame.command == 0x1A and frame.sub == 0x01 and len(frame.data) == 2:
+            # Band Stacking Register read: 1A 01 <band> <register>
             return True
         if frame.command == 0x17:
             return False

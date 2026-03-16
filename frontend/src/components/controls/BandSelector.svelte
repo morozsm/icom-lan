@@ -9,13 +9,20 @@
     defaultHz: number;
     minHz: number;
     maxHz: number;
+    bsrCode: number | null;
   }
 
   // Reactive: re-derives when capabilities load (may be null on first render)
   const BANDS: Band[] = $derived(
     getCapabilities()?.freqRanges
       ?.flatMap(r => r.bands ?? [])
-      ?.map(b => ({ name: b.name, defaultHz: b.default, minHz: b.start, maxHz: b.end }))
+      ?.map(b => ({
+        name: b.name,
+        defaultHz: b.default,
+        minHz: b.start,
+        maxHz: b.end,
+        bsrCode: b.bsrCode ?? null,
+      }))
       ?? []
   );
 
@@ -25,7 +32,13 @@
 
   function selectBand(band: Band) {
     vibrate('tap');
-    sendCommand('set_freq', { freq: band.defaultHz, receiver: receiverIdx });
+    if (band.bsrCode !== null) {
+      // Band Stack Register recall — radio remembers last freq/mode for each band
+      sendCommand('set_band', { band: band.bsrCode });
+    } else {
+      // Fallback: set frequency directly (bands without BSR, e.g. 60m)
+      sendCommand('set_freq', { freq: band.defaultHz, receiver: receiverIdx });
+    }
   }
 </script>
 

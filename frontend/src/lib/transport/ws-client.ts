@@ -250,8 +250,7 @@ export function sendCommand(name: string, params: Record<string, unknown> = {}, 
 function _applyOptimistic(name: string, params: Record<string, unknown>): void {
   switch (name) {
     case 'set_freq':
-      // Optimistic update handled in arrow key handler (DesktopLayout)
-      // to avoid race condition with debounced commands
+      if (typeof params.freq === 'number') patchActiveReceiver({ freqHz: params.freq });
       break;
     case 'set_mode':
       if (typeof params.mode === 'string') patchActiveReceiver({ mode: params.mode });

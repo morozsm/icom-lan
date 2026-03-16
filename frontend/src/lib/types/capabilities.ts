@@ -5,6 +5,7 @@ export interface Band {
   start: number;
   end: number;
   default: number;
+  bsrCode?: number;
 }
 
 export interface FreqRange {

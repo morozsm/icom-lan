@@ -66,12 +66,14 @@ name = "160m"
 start_hz = 1_800_000
 end_hz = 2_000_000
 default_hz = 1_825_000
+bsr_code = 0x01
 
 [[freq_ranges.ranges.bands]]
 name = "80m"
 start_hz = 3_500_000
 end_hz = 4_000_000
 default_hz = 3_700_000
+bsr_code = 0x02
 
 [[freq_ranges.ranges.bands]]
 name = "60m"
@@ -84,42 +86,49 @@ name = "40m"
 start_hz = 7_000_000
 end_hz = 7_300_000
 default_hz = 7_100_000
+bsr_code = 0x03
 
 [[freq_ranges.ranges.bands]]
 name = "30m"
 start_hz = 10_100_000
 end_hz = 10_150_000
 default_hz = 10_130_000
+bsr_code = 0x04
 
 [[freq_ranges.ranges.bands]]
 name = "20m"
 start_hz = 14_000_000
 end_hz = 14_350_000
 default_hz = 14_200_000
+bsr_code = 0x05
 
 [[freq_ranges.ranges.bands]]
 name = "17m"
 start_hz = 18_068_000
 end_hz = 18_168_000
 default_hz = 18_120_000
+bsr_code = 0x06
 
 [[freq_ranges.ranges.bands]]
 name = "15m"
 start_hz = 21_000_000
 end_hz = 21_450_000
 default_hz = 21_200_000
+bsr_code = 0x07
 
 [[freq_ranges.ranges.bands]]
 name = "12m"
 start_hz = 24_890_000
 end_hz = 24_990_000
 default_hz = 24_940_000
+bsr_code = 0x08
 
 [[freq_ranges.ranges.bands]]
 name = "10m"
 start_hz = 28_000_000
 end_hz = 29_700_000
 default_hz = 28_500_000
+bsr_code = 0x09
 
 [[freq_ranges.ranges]]
 label = "6m"
@@ -131,6 +140,7 @@ name = "6m"
 start_hz = 50_000_000
 end_hz = 54_000_000
 default_hz = 50_125_000
+bsr_code = 0x0A
 
 # ── CI-V Commands ────────────────────────────────────────────────
 # Wire bytes as integer arrays. Based on IC-7610 commands with

@@ -85,6 +85,7 @@ class RigConfig:
                         start=b["start_hz"],
                         end=b["end_hz"],
                         default=b["default_hz"],
+                        bsr_code=b.get("bsr_code"),
                     )
                     for b in r.get("bands", ())
                 ),
