@@ -32,6 +32,7 @@ from .types import (
 )
 
 if TYPE_CHECKING:
+    from .command_map import CommandMap
     from .types import BandStackRegister, MemoryChannel
 
 __all__ = [
@@ -445,6 +446,37 @@ def build_cmd29_frame(
     )
 
 
+
+def _build_from_map(
+    cmd_map: CommandMap,
+    name: str,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    data: bytes | None = None,
+    receiver: int = RECEIVER_MAIN,
+    command29: bool = False,
+) -> bytes:
+    """Build a CI-V frame using wire bytes from a CommandMap.
+
+    Wire bytes may have 1–N elements.  The first byte is the CI-V command,
+    the second (if present) is the sub-command, and any remaining bytes are
+    prepended to *data* as extended sub-command addressing (e.g. 0x1A 0x05
+    0x00 0x64 for IC-7300 ACC1 mod level).
+    """
+    wire = cmd_map.get(name)
+    command = wire[0]
+    sub = wire[1] if len(wire) > 1 else None
+    # Extra wire bytes beyond command+sub become a data prefix
+    if len(wire) > 2:
+        extra = bytes(wire[2:])
+        data = extra + data if data else extra
+    if command29:
+        return build_cmd29_frame(
+            to_addr, from_addr, command, sub=sub, data=data, receiver=receiver
+        )
+    return build_civ_frame(to_addr, from_addr, command, sub=sub, data=data)
+
+
 def parse_civ_frame(data: bytes) -> CivFrame:
     """Parse a CI-V frame into a CivFrame.
 
@@ -526,7 +558,8 @@ def parse_civ_frame(data: bytes) -> CivFrame:
 
 
 def get_frequency(
-    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
+    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a 'get frequency' CI-V command.
 
@@ -537,6 +570,8 @@ def get_frequency(
     Returns:
         CI-V frame bytes.
     """
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_freq", to_addr=to_addr, from_addr=from_addr)
     return build_civ_frame(to_addr, from_addr, _CMD_FREQ_GET)
 
 
@@ -545,6 +580,7 @@ def set_frequency(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a 'set frequency' CI-V command.
 
@@ -562,6 +598,15 @@ def set_frequency(
     Returns:
         CI-V frame bytes.
     """
+    if cmd_map is not None:
+        return _build_from_map(
+            cmd_map, "set_freq",
+            to_addr=to_addr,
+            from_addr=from_addr,
+            data=bcd_encode(freq_hz),
+            receiver=receiver,
+            command29=(receiver != RECEIVER_MAIN),
+        )
     bcd = bcd_encode(freq_hz)
     if receiver != RECEIVER_MAIN:
         return build_cmd29_frame(
@@ -590,8 +635,14 @@ def parse_frequency_response(frame: CivFrame) -> int:
 # --- Mode commands ---
 
 
-def get_mode(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR) -> bytes:
+def get_mode(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+) -> bytes:
     """Build a 'get mode' CI-V command."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_mode", to_addr=to_addr, from_addr=from_addr)
     return build_civ_frame(to_addr, from_addr, _CMD_MODE_GET)
 
 
@@ -601,6 +652,7 @@ def set_mode(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a 'set mode' CI-V command.
 
@@ -617,6 +669,11 @@ def set_mode(
     data = bytes([mode])
     if filter_width is not None:
         data += bytes([filter_width])
+    if cmd_map is not None:
+        return _build_from_map(
+            cmd_map, "set_mode", to_addr=to_addr, from_addr=from_addr,
+            data=data, command29=receiver != RECEIVER_MAIN, receiver=receiver,
+        )
     if receiver != RECEIVER_MAIN:
         return build_cmd29_frame(
             to_addr, from_addr, _CMD_MODE_SET, data=data, receiver=receiver
@@ -770,7 +827,11 @@ def _build_level_get(
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     command29: bool = False,
+    cmd_map: CommandMap | None = None,
+    cmd_name: str | None = None,
 ) -> bytes:
+    if cmd_map is not None and cmd_name is not None:
+        return _build_from_map(cmd_map, cmd_name, to_addr=to_addr, from_addr=from_addr, receiver=receiver, command29=command29)
     if command29:
         return build_cmd29_frame(
             to_addr,
@@ -791,7 +852,11 @@ def _build_level_set(
     receiver: int = RECEIVER_MAIN,
     command29: bool = False,
     encoder: Callable[[int], bytes] = _level_bcd_encode,
+    cmd_map: CommandMap | None = None,
+    cmd_name: str | None = None,
 ) -> bytes:
+    if cmd_map is not None and cmd_name is not None:
+        return _build_from_map(cmd_map, cmd_name, to_addr=to_addr, from_addr=from_addr, data=payload, receiver=receiver, command29=command29)
     payload = encoder(value)
     if command29:
         return build_cmd29_frame(
@@ -810,7 +875,11 @@ def _build_ctl_mem_get(
     *,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+    cmd_name: str | None = None,
 ) -> bytes:
+    if cmd_map is not None and cmd_name is not None:
+        return _build_from_map(cmd_map, cmd_name, to_addr=to_addr, from_addr=from_addr, data=prefix)
     return build_civ_frame(
         to_addr,
         from_addr,
@@ -827,7 +896,12 @@ def _build_ctl_mem_set(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     byte_count: int,
+    cmd_map: CommandMap | None = None,
+    cmd_name: str | None = None,
 ) -> bytes:
+    data = prefix + _bcd_encode_value(value, byte_count=byte_count)
+    if cmd_map is not None and cmd_name is not None:
+        return _build_from_map(cmd_map, cmd_name, to_addr=to_addr, from_addr=from_addr, data=data)
     return build_civ_frame(
         to_addr,
         from_addr,
@@ -844,7 +918,11 @@ def _build_meter_bool_get(
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     command29: bool = False,
+    cmd_map: CommandMap | None = None,
+    cmd_name: str | None = None,
 ) -> bytes:
+    if cmd_map is not None and cmd_name is not None:
+        return _build_from_map(cmd_map, cmd_name, to_addr=to_addr, from_addr=from_addr, receiver=receiver, command29=command29)
     if command29:
         return build_cmd29_frame(
             to_addr,
@@ -863,7 +941,11 @@ def _build_function_get(
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     command29: bool = False,
+    cmd_map: CommandMap | None = None,
+    cmd_name: str | None = None,
 ) -> bytes:
+    if cmd_map is not None and cmd_name is not None:
+        return _build_from_map(cmd_map, cmd_name, to_addr=to_addr, from_addr=from_addr, receiver=receiver, command29=command29)
     if command29:
         return build_cmd29_frame(
             to_addr,
@@ -883,7 +965,11 @@ def _build_function_bool_set(
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     command29: bool = False,
+    cmd_map: CommandMap | None = None,
+    cmd_name: str | None = None,
 ) -> bytes:
+    if cmd_map is not None and cmd_name is not None:
+        return _build_from_map(cmd_map, cmd_name, to_addr=to_addr, from_addr=from_addr, data=payload, receiver=receiver, command29=command29)
     payload = b"\x01" if on else b"\x00"
     if command29:
         return build_cmd29_frame(
@@ -907,7 +993,11 @@ def _build_function_value_set(
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     command29: bool = False,
+    cmd_map: CommandMap | None = None,
+    cmd_name: str | None = None,
 ) -> bytes:
+    if cmd_map is not None and cmd_name is not None:
+        return _build_from_map(cmd_map, cmd_name, to_addr=to_addr, from_addr=from_addr, data=payload, receiver=receiver, command29=command29)
     if not minimum <= value <= maximum:
         raise ValueError(f"Value must be {minimum}-{maximum}, got {value}")
     payload = bytes([_bcd_byte(value)])
@@ -930,7 +1020,11 @@ def _build_ctl_mem_single_bcd_get(
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     command29: bool = False,
+    cmd_map: CommandMap | None = None,
+    cmd_name: str | None = None,
 ) -> bytes:
+    if cmd_map is not None and cmd_name is not None:
+        return _build_from_map(cmd_map, cmd_name, to_addr=to_addr, from_addr=from_addr, receiver=receiver, command29=command29)
     if command29:
         return build_cmd29_frame(
             to_addr,
@@ -952,7 +1046,11 @@ def _build_ctl_mem_single_bcd_set(
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     command29: bool = False,
+    cmd_map: CommandMap | None = None,
+    cmd_name: str | None = None,
 ) -> bytes:
+    if cmd_map is not None and cmd_name is not None:
+        return _build_from_map(cmd_map, cmd_name, to_addr=to_addr, from_addr=from_addr, data=payload, receiver=receiver, command29=command29)
     if not minimum <= value <= maximum:
         raise ValueError(f"Value must be {minimum}-{maximum}, got {value}")
     payload = bytes([_bcd_byte(value)])
@@ -988,8 +1086,14 @@ def _key_speed_to_level(wpm: int) -> int:
     return round((wpm - 6) * 6.071)
 
 
-def get_power(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR) -> bytes:
+def get_power(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+) -> bytes:
     """Build a 'get RF power' CI-V command."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_rf_power", to_addr=to_addr, from_addr=from_addr)
     return build_civ_frame(to_addr, from_addr, _CMD_LEVEL, sub=_SUB_RF_POWER)
 
 
@@ -997,6 +1101,7 @@ def set_power(
     level: int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a 'set RF power' CI-V command.
 
@@ -1008,13 +1113,26 @@ def set_power(
     Returns:
         CI-V frame bytes.
     """
+    if cmd_map is not None:
+        return _build_from_map(
+            cmd_map, "set_rf_power",
+            to_addr=to_addr,
+            from_addr=from_addr,
+            data=_level_bcd_encode(level),
+        )
     return build_civ_frame(
         to_addr, from_addr, _CMD_LEVEL, sub=_SUB_RF_POWER, data=_level_bcd_encode(level)
     )
 
 
-def get_rf_gain(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR) -> bytes:
+def get_rf_gain(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+) -> bytes:
     """Build a 'read RF gain' CI-V command (0x14 0x02)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_rf_gain", to_addr=to_addr, from_addr=from_addr)
     return build_civ_frame(to_addr, from_addr, _CMD_LEVEL, sub=_SUB_RF_GAIN)
 
 
@@ -1023,6 +1141,7 @@ def set_rf_gain(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a 'set RF gain' CI-V command.
 
@@ -1030,6 +1149,15 @@ def set_rf_gain(
         level: Gain level 0-255 (0=min, 255=max).
         receiver: RECEIVER_MAIN (0x00) or RECEIVER_SUB (0x01).
     """
+    if cmd_map is not None:
+        return _build_from_map(
+            cmd_map, "set_rf_gain",
+            to_addr=to_addr,
+            from_addr=from_addr,
+            data=_level_bcd_encode(level),
+            receiver=receiver,
+            command29=(receiver != RECEIVER_MAIN),
+        )
     bcd = _level_bcd_encode(level)
     if receiver != RECEIVER_MAIN:
         return build_cmd29_frame(
@@ -1044,9 +1172,12 @@ def set_rf_gain(
 
 
 def get_af_level(
-    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
+    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a 'read AF output level' CI-V command (0x14 0x01)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_af_level", to_addr=to_addr, from_addr=from_addr)
     return build_civ_frame(to_addr, from_addr, _CMD_LEVEL, sub=_SUB_AF_LEVEL)
 
 
@@ -1055,6 +1186,7 @@ def set_af_level(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a 'set AF output level' CI-V command.
 
@@ -1062,6 +1194,15 @@ def set_af_level(
         level: AF level 0-255 (0=min, 255=max).
         receiver: RECEIVER_MAIN (0x00) or RECEIVER_SUB (0x01).
     """
+    if cmd_map is not None:
+        return _build_from_map(
+            cmd_map, "set_af_level",
+            to_addr=to_addr,
+            from_addr=from_addr,
+            data=_level_bcd_encode(level),
+            receiver=receiver,
+            command29=(receiver != RECEIVER_MAIN),
+        )
     bcd = _level_bcd_encode(level)
     if receiver != RECEIVER_MAIN:
         return build_cmd29_frame(
@@ -1080,6 +1221,7 @@ def set_squelch(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a 'set squelch level' CI-V command.
 
@@ -1087,6 +1229,15 @@ def set_squelch(
         level: Squelch level 0-255 (0=open, 255=closed).
         receiver: RECEIVER_MAIN (0x00) or RECEIVER_SUB (0x01).
     """
+    if cmd_map is not None:
+        return _build_from_map(
+            cmd_map, "set_squelch",
+            to_addr=to_addr,
+            from_addr=from_addr,
+            data=_level_bcd_encode(level),
+            receiver=receiver,
+            command29=(receiver != RECEIVER_MAIN),
+        )
     bcd = _level_bcd_encode(level)
     if receiver != RECEIVER_MAIN:
         return build_cmd29_frame(
@@ -1099,6 +1250,7 @@ def get_apf_type_level(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read APF Type Level command."""
     return _build_level_get(
@@ -1107,6 +1259,7 @@ def get_apf_type_level(
         from_addr=from_addr,
         receiver=receiver,
         command29=True,
+        cmd_map=cmd_map, cmd_name="get_apf_type_level",
     )
 
 
@@ -1115,6 +1268,7 @@ def set_apf_type_level(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a set APF Type Level command."""
     return _build_level_set(
@@ -1124,6 +1278,7 @@ def set_apf_type_level(
         from_addr=from_addr,
         receiver=receiver,
         command29=True,
+        cmd_map=cmd_map, cmd_name="set_apf_type_level",
     )
 
 
@@ -1131,6 +1286,7 @@ def get_nr_level(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read NR Level command."""
     return _build_level_get(
@@ -1139,6 +1295,7 @@ def get_nr_level(
         from_addr=from_addr,
         receiver=receiver,
         command29=True,
+        cmd_map=cmd_map, cmd_name="get_nr_level",
     )
 
 
@@ -1147,6 +1304,7 @@ def set_nr_level(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a set NR Level command."""
     return _build_level_set(
@@ -1156,6 +1314,7 @@ def set_nr_level(
         from_addr=from_addr,
         receiver=receiver,
         command29=True,
+        cmd_map=cmd_map, cmd_name="set_nr_level",
     )
 
 
@@ -1163,6 +1322,7 @@ def get_pbt_inner(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read PBT Inner command."""
     return _build_level_get(
@@ -1171,6 +1331,7 @@ def get_pbt_inner(
         from_addr=from_addr,
         receiver=receiver,
         command29=True,
+        cmd_map=cmd_map, cmd_name="get_pbt_inner",
     )
 
 
@@ -1179,6 +1340,7 @@ def set_pbt_inner(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a set PBT Inner command."""
     return _build_level_set(
@@ -1188,6 +1350,7 @@ def set_pbt_inner(
         from_addr=from_addr,
         receiver=receiver,
         command29=True,
+        cmd_map=cmd_map, cmd_name="set_pbt_inner",
     )
 
 
@@ -1195,6 +1358,7 @@ def get_pbt_outer(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read PBT Outer command."""
     return _build_level_get(
@@ -1203,6 +1367,7 @@ def get_pbt_outer(
         from_addr=from_addr,
         receiver=receiver,
         command29=True,
+        cmd_map=cmd_map, cmd_name="get_pbt_outer",
     )
 
 
@@ -1211,6 +1376,7 @@ def set_pbt_outer(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a set PBT Outer command."""
     return _build_level_set(
@@ -1220,21 +1386,24 @@ def set_pbt_outer(
         from_addr=from_addr,
         receiver=receiver,
         command29=True,
+        cmd_map=cmd_map, cmd_name="set_pbt_outer",
     )
 
 
 def get_cw_pitch(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read CW Pitch command."""
-    return _build_level_get(_SUB_CW_PITCH, to_addr=to_addr, from_addr=from_addr)
+    return _build_level_get(_SUB_CW_PITCH, to_addr=to_addr, from_addr=from_addr, cmd_map=cmd_map, cmd_name="get_cw_pitch")
 
 
 def set_cw_pitch(
     pitch_hz: int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a set CW Pitch command."""
     return _build_level_set(
@@ -1242,38 +1411,43 @@ def set_cw_pitch(
         _cw_pitch_to_level(pitch_hz),
         to_addr=to_addr,
         from_addr=from_addr,
+        cmd_map=cmd_map, cmd_name="set_cw_pitch",
     )
 
 
 def get_mic_gain(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read Mic Gain command."""
-    return _build_level_get(_SUB_MIC_GAIN, to_addr=to_addr, from_addr=from_addr)
+    return _build_level_get(_SUB_MIC_GAIN, to_addr=to_addr, from_addr=from_addr, cmd_map=cmd_map, cmd_name="get_mic_gain")
 
 
 def set_mic_gain(
     level: int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a set Mic Gain command."""
-    return _build_level_set(_SUB_MIC_GAIN, level, to_addr=to_addr, from_addr=from_addr)
+    return _build_level_set(_SUB_MIC_GAIN, level, to_addr=to_addr, from_addr=from_addr, cmd_map=cmd_map, cmd_name="set_mic_gain")
 
 
 def get_key_speed(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read Key Speed command."""
-    return _build_level_get(_SUB_KEY_SPEED, to_addr=to_addr, from_addr=from_addr)
+    return _build_level_get(_SUB_KEY_SPEED, to_addr=to_addr, from_addr=from_addr, cmd_map=cmd_map, cmd_name="get_key_speed")
 
 
 def set_key_speed(
     wpm: int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a set Key Speed command."""
     return _build_level_set(
@@ -1281,21 +1455,24 @@ def set_key_speed(
         _key_speed_to_level(wpm),
         to_addr=to_addr,
         from_addr=from_addr,
+        cmd_map=cmd_map, cmd_name="set_key_speed",
     )
 
 
 def get_notch_filter(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read Notch Filter level command."""
-    return _build_level_get(_SUB_NOTCH_FILTER, to_addr=to_addr, from_addr=from_addr)
+    return _build_level_get(_SUB_NOTCH_FILTER, to_addr=to_addr, from_addr=from_addr, cmd_map=cmd_map, cmd_name="get_notch_filter")
 
 
 def set_notch_filter(
     level: int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a set Notch Filter level command."""
     return _build_level_set(
@@ -1303,21 +1480,24 @@ def set_notch_filter(
         level,
         to_addr=to_addr,
         from_addr=from_addr,
+        cmd_map=cmd_map, cmd_name="set_notch_filter",
     )
 
 
 def get_compressor_level(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read Compressor Level command."""
-    return _build_level_get(_SUB_COMPRESSOR_LEVEL, to_addr=to_addr, from_addr=from_addr)
+    return _build_level_get(_SUB_COMPRESSOR_LEVEL, to_addr=to_addr, from_addr=from_addr, cmd_map=cmd_map, cmd_name="get_compressor_level")
 
 
 def set_compressor_level(
     level: int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a set Compressor Level command."""
     return _build_level_set(
@@ -1325,21 +1505,24 @@ def set_compressor_level(
         level,
         to_addr=to_addr,
         from_addr=from_addr,
+        cmd_map=cmd_map, cmd_name="set_compressor_level",
     )
 
 
 def get_break_in_delay(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read Break-In Delay command."""
-    return _build_level_get(_SUB_BREAK_IN_DELAY, to_addr=to_addr, from_addr=from_addr)
+    return _build_level_get(_SUB_BREAK_IN_DELAY, to_addr=to_addr, from_addr=from_addr, cmd_map=cmd_map, cmd_name="get_break_in_delay")
 
 
 def set_break_in_delay(
     level: int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a set Break-In Delay command."""
     return _build_level_set(
@@ -1347,6 +1530,7 @@ def set_break_in_delay(
         level,
         to_addr=to_addr,
         from_addr=from_addr,
+        cmd_map=cmd_map, cmd_name="set_break_in_delay",
     )
 
 
@@ -1354,6 +1538,7 @@ def get_nb_level(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read NB Level command."""
     return _build_level_get(
@@ -1362,6 +1547,7 @@ def get_nb_level(
         from_addr=from_addr,
         receiver=receiver,
         command29=True,
+        cmd_map=cmd_map, cmd_name="get_nb_level",
     )
 
 
@@ -1370,6 +1556,7 @@ def set_nb_level(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a set NB Level command."""
     return _build_level_set(
@@ -1379,6 +1566,7 @@ def set_nb_level(
         from_addr=from_addr,
         receiver=receiver,
         command29=True,
+        cmd_map=cmd_map, cmd_name="set_nb_level",
     )
 
 
@@ -1386,6 +1574,7 @@ def get_digisel_shift(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read DIGI-SEL Shift command."""
     return _build_level_get(
@@ -1394,6 +1583,7 @@ def get_digisel_shift(
         from_addr=from_addr,
         receiver=receiver,
         command29=True,
+        cmd_map=cmd_map, cmd_name="get_digisel_shift",
     )
 
 
@@ -1402,6 +1592,7 @@ def set_digisel_shift(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a set DIGI-SEL Shift command."""
     return _build_level_set(
@@ -1411,21 +1602,24 @@ def set_digisel_shift(
         from_addr=from_addr,
         receiver=receiver,
         command29=True,
+        cmd_map=cmd_map, cmd_name="set_digisel_shift",
     )
 
 
 def get_drive_gain(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read Drive Gain command."""
-    return _build_level_get(_SUB_DRIVE_GAIN, to_addr=to_addr, from_addr=from_addr)
+    return _build_level_get(_SUB_DRIVE_GAIN, to_addr=to_addr, from_addr=from_addr, cmd_map=cmd_map, cmd_name="get_drive_gain")
 
 
 def set_drive_gain(
     level: int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a set Drive Gain command."""
     return _build_level_set(
@@ -1433,21 +1627,24 @@ def set_drive_gain(
         level,
         to_addr=to_addr,
         from_addr=from_addr,
+        cmd_map=cmd_map, cmd_name="set_drive_gain",
     )
 
 
 def get_monitor_gain(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read Monitor Gain command."""
-    return _build_level_get(_SUB_MONITOR_GAIN, to_addr=to_addr, from_addr=from_addr)
+    return _build_level_get(_SUB_MONITOR_GAIN, to_addr=to_addr, from_addr=from_addr, cmd_map=cmd_map, cmd_name="get_monitor_gain")
 
 
 def set_monitor_gain(
     level: int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a set Monitor Gain command."""
     return _build_level_set(
@@ -1455,38 +1652,43 @@ def set_monitor_gain(
         level,
         to_addr=to_addr,
         from_addr=from_addr,
+        cmd_map=cmd_map, cmd_name="set_monitor_gain",
     )
 
 
 def get_vox_gain(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read Vox Gain command."""
-    return _build_level_get(_SUB_VOX_GAIN, to_addr=to_addr, from_addr=from_addr)
+    return _build_level_get(_SUB_VOX_GAIN, to_addr=to_addr, from_addr=from_addr, cmd_map=cmd_map, cmd_name="get_vox_gain")
 
 
 def set_vox_gain(
     level: int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a set Vox Gain command."""
-    return _build_level_set(_SUB_VOX_GAIN, level, to_addr=to_addr, from_addr=from_addr)
+    return _build_level_set(_SUB_VOX_GAIN, level, to_addr=to_addr, from_addr=from_addr, cmd_map=cmd_map, cmd_name="set_vox_gain")
 
 
 def get_anti_vox_gain(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read Anti-Vox Gain command."""
-    return _build_level_get(_SUB_ANTI_VOX_GAIN, to_addr=to_addr, from_addr=from_addr)
+    return _build_level_get(_SUB_ANTI_VOX_GAIN, to_addr=to_addr, from_addr=from_addr, cmd_map=cmd_map, cmd_name="get_anti_vox_gain")
 
 
 def set_anti_vox_gain(
     level: int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a set Anti-Vox Gain command."""
     return _build_level_set(
@@ -1494,24 +1696,43 @@ def set_anti_vox_gain(
         level,
         to_addr=to_addr,
         from_addr=from_addr,
+        cmd_map=cmd_map, cmd_name="set_anti_vox_gain",
     )
 
 
 # --- Meter commands ---
 
 
-def get_s_meter(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR) -> bytes:
+def get_s_meter(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+) -> bytes:
     """Build a 'read S-meter' CI-V command."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_s_meter", to_addr=to_addr, from_addr=from_addr)
     return build_civ_frame(to_addr, from_addr, _CMD_METER, sub=_SUB_S_METER)
 
 
-def get_swr(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR) -> bytes:
+def get_swr(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+) -> bytes:
     """Build a 'read SWR meter' CI-V command."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_swr", to_addr=to_addr, from_addr=from_addr)
     return build_civ_frame(to_addr, from_addr, _CMD_METER, sub=_SUB_SWR_METER)
 
 
-def get_alc(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR) -> bytes:
+def get_alc(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+) -> bytes:
     """Build a 'read ALC meter' CI-V command."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_alc", to_addr=to_addr, from_addr=from_addr)
     return build_civ_frame(to_addr, from_addr, _CMD_METER, sub=_SUB_ALC_METER)
 
 
@@ -1540,13 +1761,25 @@ def parse_meter_response(frame: CivFrame) -> int:
 # --- PTT commands ---
 
 
-def ptt_on(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR) -> bytes:
+def ptt_on(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+) -> bytes:
     """Build a PTT-on CI-V command."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "ptt_on", to_addr=to_addr, from_addr=from_addr, data=b"\x01")
     return build_civ_frame(to_addr, from_addr, _CMD_PTT, sub=_SUB_PTT, data=b"\x01")
 
 
-def ptt_off(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR) -> bytes:
+def ptt_off(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+) -> bytes:
     """Build a PTT-off CI-V command."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "ptt_off", to_addr=to_addr, from_addr=from_addr, data=b"\x00")
     return build_civ_frame(to_addr, from_addr, _CMD_PTT, sub=_SUB_PTT, data=b"\x00")
 
 
@@ -1598,6 +1831,7 @@ def select_vfo(
     vfo: str = "A",
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Select VFO.
 
@@ -1608,18 +1842,26 @@ def select_vfo(
     """
     codes = {"A": 0x00, "B": 0x01, "MAIN": 0xD0, "SUB": 0xD1}
     code = codes.get(vfo.upper(), 0x00)
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "set_vfo", to_addr=to_addr, from_addr=from_addr, data=bytes([code]))
     return build_civ_frame(to_addr, from_addr, _CMD_VFO_SELECT, data=bytes([code]))
 
 
 def vfo_a_equals_b(
-    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
+    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Copy VFO A to VFO B (A=B)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "set_vfo", to_addr=to_addr, from_addr=from_addr, data=b"\xa0")
     return build_civ_frame(to_addr, from_addr, _CMD_VFO_EQUAL, data=b"\xa0")
 
 
-def vfo_swap(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR) -> bytes:
+def vfo_swap(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR,
+             cmd_map: CommandMap | None = None) -> bytes:
     """Swap VFO A and B."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "set_vfo", to_addr=to_addr, from_addr=from_addr, data=b"\xb0")
     return build_civ_frame(to_addr, from_addr, _CMD_VFO_EQUAL, data=b"\xb0")
 
 
@@ -1627,21 +1869,32 @@ def set_split(
     on: bool,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Enable or disable split mode."""
+    if cmd_map is not None:
+        return _build_from_map(
+            cmd_map, "set_split",
+            to_addr=to_addr,
+            from_addr=from_addr,
+            data=b"\x01" if on else b"\x00",
+        )
     return build_civ_frame(
         to_addr, from_addr, _CMD_SPLIT, data=b"\x01" if on else b"\x00"
     )
 
 
 def get_tuning_step(
-    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
+    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build CI-V command to get tuning step (0x10).
 
     Returns:
         CI-V frame bytes.
     """
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_tuning_step", to_addr=to_addr, from_addr=from_addr)
     return build_civ_frame(to_addr, from_addr, _CMD_TUNING_STEP)
 
 
@@ -1649,6 +1902,7 @@ def set_tuning_step(
     step: int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build CI-V command to set tuning step (0x10).
 
@@ -1658,6 +1912,13 @@ def set_tuning_step(
     Returns:
         CI-V frame bytes.
     """
+    if cmd_map is not None:
+        return _build_from_map(
+            cmd_map, "set_tuning_step",
+            to_addr=to_addr,
+            from_addr=from_addr,
+            data=bytes([_bcd_byte(step)]),
+        )
     if not 0 <= step <= 8:
         raise ValueError(f"Tuning step must be 0-8, got {step}")
     return build_civ_frame(
@@ -1665,38 +1926,59 @@ def set_tuning_step(
     )
 
 
-def start_scan(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR) -> bytes:
+def start_scan(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+) -> bytes:
     """Build CI-V command to start scanning (0x0E 0x01)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "scan_start", to_addr=to_addr, from_addr=from_addr, data=b"\x01")
     return build_civ_frame(to_addr, from_addr, _CMD_SCAN, data=b"\x01")
 
 
-def stop_scan(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR) -> bytes:
+def stop_scan(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+) -> bytes:
     """Build CI-V command to stop scanning (0x0E 0x00)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "scan_stop", to_addr=to_addr, from_addr=from_addr, data=b"\x00")
     return build_civ_frame(to_addr, from_addr, _CMD_SCAN, data=b"\x00")
 
 
 def set_dual_watch_off(
-    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
+    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build CI-V command to turn off dual watch (0x07 0xC0)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "set_dual_watch", to_addr=to_addr, from_addr=from_addr, data=bytes([_VFO_DUAL_WATCH_OFF]))
     return build_civ_frame(
         to_addr, from_addr, _CMD_VFO_SELECT, data=bytes([_VFO_DUAL_WATCH_OFF])
     )
 
 
 def set_dual_watch_on(
-    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
+    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build CI-V command to turn on dual watch (0x07 0xC1)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "set_dual_watch", to_addr=to_addr, from_addr=from_addr, data=bytes([_VFO_DUAL_WATCH_ON]))
     return build_civ_frame(
         to_addr, from_addr, _CMD_VFO_SELECT, data=bytes([_VFO_DUAL_WATCH_ON])
     )
 
 
 def get_dual_watch(
-    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
+    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build CI-V command to query dual watch status (0x07 0xC2)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_dual_watch", to_addr=to_addr, from_addr=from_addr, data=bytes([_VFO_DUAL_WATCH_QUERY]))
     return build_civ_frame(
         to_addr, from_addr, _CMD_VFO_SELECT, data=bytes([_VFO_DUAL_WATCH_QUERY])
     )
@@ -1706,6 +1988,7 @@ def set_dual_watch(
     on: bool,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build CI-V command to enable or disable dual watch.
 
@@ -1716,16 +1999,19 @@ def set_dual_watch(
         CI-V frame bytes.
     """
     return (
-        set_dual_watch_on(to_addr, from_addr)
+        set_dual_watch_on(to_addr, from_addr, cmd_map=cmd_map)
         if on
-        else set_dual_watch_off(to_addr, from_addr)
+        else set_dual_watch_off(to_addr, from_addr, cmd_map=cmd_map)
     )
 
 
 def quick_dual_watch(
-    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
+    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build CI-V command for one-shot dual watch trigger (0x1A 0x05 0x00 0x32)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "quick_dual_watch", to_addr=to_addr, from_addr=from_addr, data=_CTL_MEM_QUICK_DUAL_WATCH)
     return build_civ_frame(
         to_addr,
         from_addr,
@@ -1735,8 +2021,13 @@ def quick_dual_watch(
     )
 
 
-def quick_split(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR) -> bytes:
+def quick_split(
+    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+) -> bytes:
     """Build CI-V command for one-shot split trigger (0x1A 0x05 0x00 0x33)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "quick_split", to_addr=to_addr, from_addr=from_addr, data=_CTL_MEM_QUICK_SPLIT)
     return build_civ_frame(
         to_addr, from_addr, _CMD_CTL_MEM, sub=_SUB_CTL_MEM, data=_CTL_MEM_QUICK_SPLIT
     )
@@ -1753,8 +2044,17 @@ def get_attenuator(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build CI-V command to read attenuator level (Command29-aware)."""
+    if cmd_map is not None:
+        return _build_from_map(
+            cmd_map, "get_attenuator",
+            to_addr=to_addr,
+            from_addr=from_addr,
+            receiver=receiver,
+            command29=True,
+        )
     return build_cmd29_frame(to_addr, from_addr, _CMD_ATT, receiver=receiver)
 
 
@@ -1763,11 +2063,21 @@ def set_attenuator_level(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Set attenuator level in dB (IC-7610 supports 0..45 in 3 dB steps).
 
     Uses Command29 framing for dual-receiver compatibility.
     """
+    if cmd_map is not None:
+        return _build_from_map(
+            cmd_map, "set_attenuator",
+            to_addr=to_addr,
+            from_addr=from_addr,
+            data=bytes([_bcd_byte(db)]),
+            receiver=receiver,
+            command29=True,
+        )
     return build_cmd29_frame(
         to_addr,
         from_addr,
@@ -1782,6 +2092,7 @@ def set_attenuator(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Compatibility wrapper for attenuator toggle.
 
@@ -1793,6 +2104,7 @@ def set_attenuator(
         to_addr=to_addr,
         from_addr=from_addr,
         receiver=receiver,
+        cmd_map=cmd_map,
     )
 
 
@@ -1800,8 +2112,17 @@ def get_preamp(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build CI-V command to read preamp status (Command29-aware)."""
+    if cmd_map is not None:
+        return _build_from_map(
+            cmd_map, "get_preamp",
+            to_addr=to_addr,
+            from_addr=from_addr,
+            receiver=receiver,
+            command29=True,
+        )
     return build_cmd29_frame(
         to_addr,
         from_addr,
@@ -1816,11 +2137,21 @@ def set_preamp(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Set preamp level (0=off, 1=PREAMP1, 2=PREAMP2).
 
     Uses Command29 framing for dual-receiver compatibility.
     """
+    if cmd_map is not None:
+        return _build_from_map(
+            cmd_map, "set_preamp",
+            to_addr=to_addr,
+            from_addr=from_addr,
+            data=bytes([_bcd_byte(level)]),
+            receiver=receiver,
+            command29=True,
+        )
     return build_cmd29_frame(
         to_addr,
         from_addr,
@@ -1835,8 +2166,17 @@ def get_digisel(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build CI-V command to read DIGI-SEL status (0/1) (Command29-aware)."""
+    if cmd_map is not None:
+        return _build_from_map(
+            cmd_map, "get_digisel",
+            to_addr=to_addr,
+            from_addr=from_addr,
+            receiver=receiver,
+            command29=True,
+        )
     return build_cmd29_frame(
         to_addr,
         from_addr,
@@ -1851,8 +2191,18 @@ def set_digisel(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Set DIGI-SEL status (0/1) (Command29-aware)."""
+    if cmd_map is not None:
+        return _build_from_map(
+            cmd_map, "set_digisel",
+            to_addr=to_addr,
+            from_addr=from_addr,
+            data=bytes([_bcd_byte(1 if on else 0)]),
+            receiver=receiver,
+            command29=True,
+        )
     return build_cmd29_frame(
         to_addr,
         from_addr,
@@ -1869,8 +2219,11 @@ def set_digisel(
 def get_nb(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build CI-V command to read NB status (0/1)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_nb", to_addr=to_addr, from_addr=from_addr)
     return build_civ_frame(to_addr, from_addr, _CMD_PREAMP, sub=_SUB_NB)
 
 
@@ -1879,8 +2232,18 @@ def set_nb(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Set Noise Blanker on/off."""
+    if cmd_map is not None:
+        return _build_from_map(
+            cmd_map, "set_nb",
+            to_addr=to_addr,
+            from_addr=from_addr,
+            data=bytes([0x01 if on else 0x00]),
+            receiver=receiver,
+            command29=(receiver != RECEIVER_MAIN),
+        )
     data = bytes([0x01 if on else 0x00])
     if receiver != RECEIVER_MAIN:
         return build_cmd29_frame(
@@ -1892,8 +2255,11 @@ def set_nb(
 def get_nr(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build CI-V command to read NR status (0/1)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_nr", to_addr=to_addr, from_addr=from_addr)
     return build_civ_frame(to_addr, from_addr, _CMD_PREAMP, sub=_SUB_NR)
 
 
@@ -1902,8 +2268,18 @@ def set_nr(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Set Noise Reduction on/off."""
+    if cmd_map is not None:
+        return _build_from_map(
+            cmd_map, "set_nr",
+            to_addr=to_addr,
+            from_addr=from_addr,
+            data=bytes([0x01 if on else 0x00]),
+            receiver=receiver,
+            command29=(receiver != RECEIVER_MAIN),
+        )
     data = bytes([0x01 if on else 0x00])
     if receiver != RECEIVER_MAIN:
         return build_cmd29_frame(
@@ -1915,8 +2291,11 @@ def set_nr(
 def get_ip_plus(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build CI-V command to read IP+ status (0/1)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_ip_plus", to_addr=to_addr, from_addr=from_addr)
     return build_civ_frame(to_addr, from_addr, _CMD_PREAMP, sub=_SUB_IP_PLUS)
 
 
@@ -1925,8 +2304,18 @@ def set_ip_plus(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Set IP+ on/off."""
+    if cmd_map is not None:
+        return _build_from_map(
+            cmd_map, "set_ip_plus",
+            to_addr=to_addr,
+            from_addr=from_addr,
+            data=bytes([0x01 if on else 0x00]),
+            receiver=receiver,
+            command29=(receiver != RECEIVER_MAIN),
+        )
     data = bytes([0x01 if on else 0x00])
     if receiver != RECEIVER_MAIN:
         return build_cmd29_frame(
@@ -1943,15 +2332,17 @@ def set_ip_plus(
 def get_ref_adjust(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read REF Adjust command."""
-    return _build_ctl_mem_get(_CTL_MEM_REF_ADJUST, to_addr=to_addr, from_addr=from_addr)
+    return _build_ctl_mem_get(_CTL_MEM_REF_ADJUST, to_addr=to_addr, from_addr=from_addr, cmd_map=cmd_map, cmd_name="get_ref_adjust")
 
 
 def set_ref_adjust(
     value: int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a set REF Adjust command."""
     if not 0 <= value <= 511:
@@ -1962,21 +2353,24 @@ def set_ref_adjust(
         to_addr=to_addr,
         from_addr=from_addr,
         byte_count=2,
+        cmd_map=cmd_map, cmd_name="set_ref_adjust",
     )
 
 
 def get_dash_ratio(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read Dash Ratio command."""
-    return _build_ctl_mem_get(_CTL_MEM_DASH_RATIO, to_addr=to_addr, from_addr=from_addr)
+    return _build_ctl_mem_get(_CTL_MEM_DASH_RATIO, to_addr=to_addr, from_addr=from_addr, cmd_map=cmd_map, cmd_name="get_dash_ratio")
 
 
 def set_dash_ratio(
     value: int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a set Dash Ratio command."""
     if not 28 <= value <= 45:
@@ -1987,21 +2381,25 @@ def set_dash_ratio(
         to_addr=to_addr,
         from_addr=from_addr,
         byte_count=1,
+        cmd_map=cmd_map,
+        cmd_name="set_dash_ratio",
     )
 
 
 def get_nb_depth(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read NB Depth command."""
-    return _build_ctl_mem_get(_CTL_MEM_NB_DEPTH, to_addr=to_addr, from_addr=from_addr)
+    return _build_ctl_mem_get(_CTL_MEM_NB_DEPTH, to_addr=to_addr, from_addr=from_addr, cmd_map=cmd_map, cmd_name="get_nb_depth")
 
 
 def set_nb_depth(
     value: int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a set NB Depth command."""
     if not 0 <= value <= 9:
@@ -2012,21 +2410,25 @@ def set_nb_depth(
         to_addr=to_addr,
         from_addr=from_addr,
         byte_count=1,
+        cmd_map=cmd_map,
+        cmd_name="set_nb_depth",
     )
 
 
 def get_nb_width(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read NB Width command."""
-    return _build_ctl_mem_get(_CTL_MEM_NB_WIDTH, to_addr=to_addr, from_addr=from_addr)
+    return _build_ctl_mem_get(_CTL_MEM_NB_WIDTH, to_addr=to_addr, from_addr=from_addr, cmd_map=cmd_map, cmd_name="get_nb_width")
 
 
 def set_nb_width(
     value: int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a set NB Width command."""
     if not 0 <= value <= 255:
@@ -2037,6 +2439,8 @@ def set_nb_width(
         to_addr=to_addr,
         from_addr=from_addr,
         byte_count=2,
+        cmd_map=cmd_map,
+        cmd_name="set_nb_width",
     )
 
 
@@ -2044,8 +2448,17 @@ def get_af_mute(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read AF Mute command."""
+    if cmd_map is not None:
+        return _build_from_map(
+            cmd_map, "get_af_mute",
+            to_addr=to_addr,
+            from_addr=from_addr,
+            receiver=receiver,
+            command29=True,
+        )
     return build_cmd29_frame(
         to_addr,
         from_addr,
@@ -2060,8 +2473,18 @@ def set_af_mute(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a set AF Mute command."""
+    if cmd_map is not None:
+        return _build_from_map(
+            cmd_map, "set_af_mute",
+            to_addr=to_addr,
+            from_addr=from_addr,
+            data=b"\x01" if on else b"\x00",
+            receiver=receiver,
+            command29=True,
+        )
     return build_cmd29_frame(
         to_addr,
         from_addr,
@@ -2076,6 +2499,7 @@ def get_s_meter_sql_status(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read S-meter squelch status command."""
     return _build_meter_bool_get(
@@ -2084,33 +2508,38 @@ def get_s_meter_sql_status(
         from_addr=from_addr,
         receiver=receiver,
         command29=True,
+        cmd_map=cmd_map, cmd_name="get_s_meter_sql_status",
     )
 
 
 def get_overflow_status(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read overflow status command."""
     return _build_meter_bool_get(
         _SUB_OVERFLOW_STATUS,
         to_addr=to_addr,
         from_addr=from_addr,
+        cmd_map=cmd_map, cmd_name="get_overflow_status",
     )
 
 
 def get_agc(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read AGC mode command."""
-    return _build_function_get(_SUB_AGC, to_addr=to_addr, from_addr=from_addr)
+    return _build_function_get(_SUB_AGC, to_addr=to_addr, from_addr=from_addr, cmd_map=cmd_map, cmd_name="get_agc")
 
 
 def set_agc(
     mode: AgcMode | int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a set AGC mode command."""
     return _build_function_value_set(
@@ -2120,6 +2549,7 @@ def set_agc(
         maximum=int(AgcMode.SLOW),
         to_addr=to_addr,
         from_addr=from_addr,
+        cmd_map=cmd_map, cmd_name="set_agc",
     )
 
 
@@ -2127,6 +2557,7 @@ def get_audio_peak_filter(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read audio peak filter mode command."""
     return _build_function_get(
@@ -2135,6 +2566,7 @@ def get_audio_peak_filter(
         from_addr=from_addr,
         receiver=receiver,
         command29=True,
+        cmd_map=cmd_map, cmd_name="get_audio_peak_filter",
     )
 
 
@@ -2143,6 +2575,7 @@ def set_audio_peak_filter(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a set audio peak filter mode command."""
     return _build_function_value_set(
@@ -2154,6 +2587,7 @@ def set_audio_peak_filter(
         from_addr=from_addr,
         receiver=receiver,
         command29=True,
+        cmd_map=cmd_map, cmd_name="set_audio_peak_filter",
     )
 
 
@@ -2161,6 +2595,7 @@ def get_auto_notch(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read auto-notch status command."""
     return _build_function_get(
@@ -2169,6 +2604,7 @@ def get_auto_notch(
         from_addr=from_addr,
         receiver=receiver,
         command29=True,
+        cmd_map=cmd_map, cmd_name="get_auto_notch",
     )
 
 
@@ -2177,6 +2613,7 @@ def set_auto_notch(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a set auto-notch status command."""
     return _build_function_bool_set(
@@ -2186,21 +2623,24 @@ def set_auto_notch(
         from_addr=from_addr,
         receiver=receiver,
         command29=True,
+        cmd_map=cmd_map, cmd_name="set_auto_notch",
     )
 
 
 def get_compressor(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read compressor status command."""
-    return _build_function_get(_SUB_COMPRESSOR, to_addr=to_addr, from_addr=from_addr)
+    return _build_function_get(_SUB_COMPRESSOR, to_addr=to_addr, from_addr=from_addr, cmd_map=cmd_map, cmd_name="get_compressor")
 
 
 def set_compressor(
     on: bool,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a set compressor status command."""
     return _build_function_bool_set(
@@ -2208,21 +2648,24 @@ def set_compressor(
         on,
         to_addr=to_addr,
         from_addr=from_addr,
+        cmd_map=cmd_map, cmd_name="set_compressor",
     )
 
 
 def get_monitor(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read monitor status command."""
-    return _build_function_get(_SUB_MONITOR, to_addr=to_addr, from_addr=from_addr)
+    return _build_function_get(_SUB_MONITOR, to_addr=to_addr, from_addr=from_addr, cmd_map=cmd_map, cmd_name="get_monitor")
 
 
 def set_monitor(
     on: bool,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a set monitor status command."""
     return _build_function_bool_set(
@@ -2230,38 +2673,43 @@ def set_monitor(
         on,
         to_addr=to_addr,
         from_addr=from_addr,
+        cmd_map=cmd_map, cmd_name="set_monitor",
     )
 
 
 def get_vox(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read VOX status command."""
-    return _build_function_get(_SUB_VOX, to_addr=to_addr, from_addr=from_addr)
+    return _build_function_get(_SUB_VOX, to_addr=to_addr, from_addr=from_addr, cmd_map=cmd_map, cmd_name="get_vox")
 
 
 def set_vox(
     on: bool,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a set VOX status command."""
-    return _build_function_bool_set(_SUB_VOX, on, to_addr=to_addr, from_addr=from_addr)
+    return _build_function_bool_set(_SUB_VOX, on, to_addr=to_addr, from_addr=from_addr, cmd_map=cmd_map, cmd_name="set_vox")
 
 
 def get_break_in(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read break-in mode command."""
-    return _build_function_get(_SUB_BREAK_IN, to_addr=to_addr, from_addr=from_addr)
+    return _build_function_get(_SUB_BREAK_IN, to_addr=to_addr, from_addr=from_addr, cmd_map=cmd_map, cmd_name="get_break_in")
 
 
 def set_break_in(
     mode: BreakInMode | int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a set break-in mode command."""
     return _build_function_value_set(
@@ -2271,6 +2719,7 @@ def set_break_in(
         maximum=int(BreakInMode.FULL),
         to_addr=to_addr,
         from_addr=from_addr,
+        cmd_map=cmd_map, cmd_name="set_break_in",
     )
 
 
@@ -2278,6 +2727,7 @@ def get_manual_notch(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read manual-notch status command."""
     return _build_function_get(
@@ -2286,6 +2736,7 @@ def get_manual_notch(
         from_addr=from_addr,
         receiver=receiver,
         command29=True,
+        cmd_map=cmd_map, cmd_name="get_manual_notch",
     )
 
 
@@ -2294,6 +2745,7 @@ def set_manual_notch(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a set manual-notch status command."""
     return _build_function_bool_set(
@@ -2303,6 +2755,7 @@ def set_manual_notch(
         from_addr=from_addr,
         receiver=receiver,
         command29=True,
+        cmd_map=cmd_map, cmd_name="set_manual_notch",
     )
 
 
@@ -2310,6 +2763,7 @@ def get_twin_peak_filter(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read twin-peak-filter status command."""
     return _build_function_get(
@@ -2318,6 +2772,7 @@ def get_twin_peak_filter(
         from_addr=from_addr,
         receiver=receiver,
         command29=True,
+        cmd_map=cmd_map, cmd_name="get_twin_peak_filter",
     )
 
 
@@ -2326,6 +2781,7 @@ def set_twin_peak_filter(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a set twin-peak-filter status command."""
     return _build_function_bool_set(
@@ -2335,21 +2791,24 @@ def set_twin_peak_filter(
         from_addr=from_addr,
         receiver=receiver,
         command29=True,
+        cmd_map=cmd_map, cmd_name="set_twin_peak_filter",
     )
 
 
 def get_dial_lock(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read dial-lock status command."""
-    return _build_function_get(_SUB_DIAL_LOCK, to_addr=to_addr, from_addr=from_addr)
+    return _build_function_get(_SUB_DIAL_LOCK, to_addr=to_addr, from_addr=from_addr, cmd_map=cmd_map, cmd_name="get_dial_lock")
 
 
 def set_dial_lock(
     on: bool,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a set dial-lock status command."""
     return _build_function_bool_set(
@@ -2357,6 +2816,7 @@ def set_dial_lock(
         on,
         to_addr=to_addr,
         from_addr=from_addr,
+        cmd_map=cmd_map, cmd_name="set_dial_lock",
     )
 
 
@@ -2364,6 +2824,7 @@ def get_filter_shape(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read DSP IF filter shape command."""
     return _build_function_get(
@@ -2372,6 +2833,7 @@ def get_filter_shape(
         from_addr=from_addr,
         receiver=receiver,
         command29=True,
+        cmd_map=cmd_map, cmd_name="get_filter_shape",
     )
 
 
@@ -2380,6 +2842,7 @@ def set_filter_shape(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a set DSP IF filter shape command."""
     return _build_function_value_set(
@@ -2391,18 +2854,22 @@ def set_filter_shape(
         from_addr=from_addr,
         receiver=receiver,
         command29=True,
+        cmd_map=cmd_map, cmd_name="set_filter_shape",
     )
 
 
 def get_ssb_tx_bandwidth(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read SSB TX bandwidth preset command."""
     return _build_function_get(
         _SUB_SSB_TX_BANDWIDTH,
         to_addr=to_addr,
         from_addr=from_addr,
+        cmd_map=cmd_map,
+        cmd_name="get_ssb_tx_bandwidth",
     )
 
 
@@ -2410,6 +2877,7 @@ def set_ssb_tx_bandwidth(
     bandwidth: SsbTxBandwidth | int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a set SSB TX bandwidth preset command."""
     return _build_function_value_set(
@@ -2419,16 +2887,20 @@ def set_ssb_tx_bandwidth(
         maximum=int(SsbTxBandwidth.NAR),
         to_addr=to_addr,
         from_addr=from_addr,
+        cmd_map=cmd_map,
+        cmd_name="set_ssb_tx_bandwidth",
     )
 
 
 def get_main_sub_tracking(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read Main/Sub Tracking status command (0x16 0x5E)."""
     return _build_function_get(
-        _SUB_MAIN_SUB_TRACKING, to_addr=to_addr, from_addr=from_addr
+        _SUB_MAIN_SUB_TRACKING, to_addr=to_addr, from_addr=from_addr,
+        cmd_map=cmd_map, cmd_name="get_main_sub_tracking",
     )
 
 
@@ -2436,10 +2908,12 @@ def set_main_sub_tracking(
     on: bool,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a set Main/Sub Tracking status command (0x16 0x5E)."""
     return _build_function_bool_set(
-        _SUB_MAIN_SUB_TRACKING, on, to_addr=to_addr, from_addr=from_addr
+        _SUB_MAIN_SUB_TRACKING, on, to_addr=to_addr, from_addr=from_addr,
+        cmd_map=cmd_map, cmd_name="set_main_sub_tracking",
     )
 
 
@@ -2447,6 +2921,7 @@ def get_agc_time_constant(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read AGC time constant command."""
     return _build_ctl_mem_single_bcd_get(
@@ -2455,6 +2930,7 @@ def get_agc_time_constant(
         from_addr=from_addr,
         receiver=receiver,
         command29=True,
+        cmd_map=cmd_map, cmd_name="get_agc_time_constant",
     )
 
 
@@ -2463,6 +2939,7 @@ def set_agc_time_constant(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a set AGC time constant command."""
     return _build_ctl_mem_single_bcd_set(
@@ -2474,17 +2951,21 @@ def set_agc_time_constant(
         from_addr=from_addr,
         receiver=receiver,
         command29=True,
+        cmd_map=cmd_map, cmd_name="set_agc_time_constant",
     )
 
 
 def get_data_mode(
-    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
+    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a 'get DATA mode' CI-V command (0x1A 0x06).
 
     Returns:
         CI-V frame bytes.
     """
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_data_mode", to_addr=to_addr, from_addr=from_addr)
     return build_civ_frame(to_addr, from_addr, _CMD_CTL_MEM, sub=_SUB_DATA_MODE)
 
 
@@ -2492,6 +2973,7 @@ def set_data_mode(
     on: bool,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a 'set DATA mode' CI-V command (0x1A 0x06 <0x00|0x01>).
 
@@ -2503,6 +2985,11 @@ def set_data_mode(
     Returns:
         CI-V frame bytes.
     """
+    if cmd_map is not None:
+        return _build_from_map(
+            cmd_map, "set_data_mode", to_addr=to_addr, from_addr=from_addr,
+            data=b"\x01" if on else b"\x00",
+        )
     return build_civ_frame(
         to_addr,
         from_addr,
@@ -2673,15 +3160,27 @@ def _decode_scope_bcd_value(
     return receiver, value
 
 
-def scope_on(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR) -> bytes:
+def scope_on(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+) -> bytes:
     """Build a 'scope on' CI-V command (0x27 0x10 0x01)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "scope_on", to_addr=to_addr, from_addr=from_addr, data=b"\x01")
     return build_civ_frame(
         to_addr, from_addr, _CMD_SCOPE, sub=_SUB_SCOPE_ON, data=b"\x01"
     )
 
 
-def scope_off(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR) -> bytes:
+def scope_off(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+) -> bytes:
     """Build a 'scope off' CI-V command (0x27 0x10 0x00)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "scope_off", to_addr=to_addr, from_addr=from_addr, data=b"\x00")
     return build_civ_frame(
         to_addr, from_addr, _CMD_SCOPE, sub=_SUB_SCOPE_ON, data=b"\x00"
     )
@@ -2691,12 +3190,20 @@ def scope_data_output(
     on: bool,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a 'scope data output enable/disable' CI-V command (0x27 0x11).
 
     Args:
         on: True to enable wave data output, False to disable.
     """
+    if cmd_map is not None:
+        return _build_from_map(
+            cmd_map, "scope_data_output",
+            to_addr=to_addr,
+            from_addr=from_addr,
+            data=b"\x01" if on else b"\x00",
+        )
     return build_civ_frame(
         to_addr,
         from_addr,
@@ -2709,26 +3216,35 @@ def scope_data_output(
 def get_scope_main_sub(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a 'get scope receiver' CI-V command (0x27 0x12)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_scope_main_sub", to_addr=to_addr, from_addr=from_addr)
     return _scope_query(_SUB_SCOPE_MAIN_SUB, to_addr=to_addr, from_addr=from_addr)
 
 
 def get_scope_single_dual(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a 'get scope single/dual mode' CI-V command (0x27 0x13)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_scope_single_dual", to_addr=to_addr, from_addr=from_addr)
     return _scope_query(_SUB_SCOPE_SINGLE_DUAL, to_addr=to_addr, from_addr=from_addr)
 
 
 def get_scope_mode(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
     *,
     receiver: int | None = None,
 ) -> bytes:
     """Build a 'get scope mode' CI-V command (0x27 0x14)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_scope_mode", to_addr=to_addr, from_addr=from_addr)
     return _scope_query(
         _SUB_SCOPE_MODE,
         to_addr=to_addr,
@@ -2741,6 +3257,7 @@ def scope_set_mode(
     mode: int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
     *,
     receiver: int | None = None,
 ) -> bytes:
@@ -2750,6 +3267,12 @@ def scope_set_mode(
         mode: 0=center, 1=fixed, 2=scroll-C, 3=scroll-F.
     """
     _validate_scope_range("scope mode", mode, 0, 3)
+    if cmd_map is not None:
+        return _build_from_map(
+            cmd_map, "get_scope_mode",
+            to_addr=to_addr, from_addr=from_addr,
+            data=_scope_payload(bytes([mode]), receiver),
+        )
     return build_civ_frame(
         to_addr,
         from_addr,
@@ -2762,10 +3285,13 @@ def scope_set_mode(
 def get_scope_span(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
     *,
     receiver: int | None = None,
 ) -> bytes:
     """Build a 'get scope span' CI-V command (0x27 0x15)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_scope_span", to_addr=to_addr, from_addr=from_addr)
     return _scope_query(
         _SUB_SCOPE_SPAN,
         to_addr=to_addr,
@@ -2778,6 +3304,7 @@ def scope_set_span(
     span: int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
     *,
     receiver: int | None = None,
 ) -> bytes:
@@ -2787,6 +3314,12 @@ def scope_set_span(
         span: 0–7 (span index, radio-model dependent).
     """
     _validate_scope_range("scope span", span, 0, 7)
+    if cmd_map is not None:
+        return _build_from_map(
+            cmd_map, "get_scope_span",
+            to_addr=to_addr, from_addr=from_addr,
+            data=_scope_payload(bytes([span]), receiver),
+        )
     return build_civ_frame(
         to_addr,
         from_addr,
@@ -2799,10 +3332,13 @@ def scope_set_span(
 def get_scope_edge(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
     *,
     receiver: int | None = None,
 ) -> bytes:
     """Build a 'get scope edge' CI-V command (0x27 0x16)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_scope_edge", to_addr=to_addr, from_addr=from_addr)
     return _scope_query(
         _SUB_SCOPE_EDGE,
         to_addr=to_addr,
@@ -2815,6 +3351,7 @@ def scope_set_edge(
     edge: int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
     *,
     receiver: int | None = None,
 ) -> bytes:
@@ -2824,6 +3361,12 @@ def scope_set_edge(
         edge: Edge number 1–4.
     """
     _validate_scope_range("scope edge", edge, 1, 4)
+    if cmd_map is not None:
+        return _build_from_map(
+            cmd_map, "get_scope_edge",
+            to_addr=to_addr, from_addr=from_addr,
+            data=_scope_payload(bytes([edge]), receiver),
+        )
     return build_civ_frame(
         to_addr,
         from_addr,
@@ -2836,10 +3379,13 @@ def scope_set_edge(
 def get_scope_hold(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
     *,
     receiver: int | None = None,
 ) -> bytes:
     """Build a 'get scope hold' CI-V command (0x27 0x17)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_scope_hold", to_addr=to_addr, from_addr=from_addr)
     return _scope_query(
         _SUB_SCOPE_HOLD,
         to_addr=to_addr,
@@ -2852,6 +3398,7 @@ def scope_set_hold(
     on: bool,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
     *,
     receiver: int | None = None,
 ) -> bytes:
@@ -2860,6 +3407,12 @@ def scope_set_hold(
     Args:
         on: True to enable hold, False to disable.
     """
+    if cmd_map is not None:
+        return _build_from_map(
+            cmd_map, "get_scope_hold",
+            to_addr=to_addr, from_addr=from_addr,
+            data=_scope_payload(b"\x01" if on else b"\x00", receiver),
+        )
     return build_civ_frame(
         to_addr,
         from_addr,
@@ -2897,10 +3450,13 @@ def _scope_ref_encode(ref: float) -> bytes:
 def get_scope_ref(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
     *,
     receiver: int | None = None,
 ) -> bytes:
     """Build a 'get scope reference level' CI-V command (0x27 0x19)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_scope_ref", to_addr=to_addr, from_addr=from_addr)
     return _scope_query(
         _SUB_SCOPE_REF,
         to_addr=to_addr,
@@ -2913,6 +3469,7 @@ def scope_set_ref(
     ref: float,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
     *,
     receiver: int | None = None,
 ) -> bytes:
@@ -2921,6 +3478,12 @@ def scope_set_ref(
     Args:
         ref: Reference level in dB (-30.0 to +10.0).
     """
+    if cmd_map is not None:
+        return _build_from_map(
+            cmd_map, "get_scope_ref",
+            to_addr=to_addr, from_addr=from_addr,
+            data=_scope_payload(_scope_ref_encode(ref), receiver),
+        )
     return build_civ_frame(
         to_addr,
         from_addr,
@@ -2933,10 +3496,13 @@ def scope_set_ref(
 def get_scope_speed(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
     *,
     receiver: int | None = None,
 ) -> bytes:
     """Build a 'get scope speed' CI-V command (0x27 0x1A)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_scope_speed", to_addr=to_addr, from_addr=from_addr)
     return _scope_query(
         _SUB_SCOPE_SPEED,
         to_addr=to_addr,
@@ -2949,6 +3515,7 @@ def scope_set_speed(
     speed: int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
     *,
     receiver: int | None = None,
 ) -> bytes:
@@ -2958,6 +3525,12 @@ def scope_set_speed(
         speed: 0=fast, 1=mid, 2=slow.
     """
     _validate_scope_range("scope speed", speed, 0, 2)
+    if cmd_map is not None:
+        return _build_from_map(
+            cmd_map, "get_scope_speed",
+            to_addr=to_addr, from_addr=from_addr,
+            data=_scope_payload(bytes([speed]), receiver),
+        )
     return build_civ_frame(
         to_addr,
         from_addr,
@@ -2970,8 +3543,11 @@ def scope_set_speed(
 def get_scope_during_tx(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a 'get scope during TX' CI-V command (0x27 0x1B)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_scope_during_tx", to_addr=to_addr, from_addr=from_addr)
     return _scope_query(_SUB_SCOPE_DURING_TX, to_addr=to_addr, from_addr=from_addr)
 
 
@@ -2979,8 +3555,15 @@ def scope_set_during_tx(
     on: bool,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a 'set scope during TX' CI-V command (0x27 0x1B)."""
+    if cmd_map is not None:
+        return _build_from_map(
+            cmd_map, "get_scope_during_tx",
+            to_addr=to_addr, from_addr=from_addr,
+            data=b"\x01" if on else b"\x00",
+        )
     return build_civ_frame(
         to_addr,
         from_addr,
@@ -2993,10 +3576,13 @@ def scope_set_during_tx(
 def get_scope_center_type(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
     *,
     receiver: int | None = None,
 ) -> bytes:
     """Build a 'get scope center type' CI-V command (0x27 0x1C)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_scope_center_type", to_addr=to_addr, from_addr=from_addr)
     return _scope_query(
         _SUB_SCOPE_CENTER_TYPE,
         to_addr=to_addr,
@@ -3009,11 +3595,18 @@ def scope_set_center_type(
     center_type: int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
     *,
     receiver: int | None = None,
 ) -> bytes:
     """Build a 'set scope center type' CI-V command (0x27 0x1C)."""
     _validate_scope_range("scope center type", center_type, 0, 2)
+    if cmd_map is not None:
+        return _build_from_map(
+            cmd_map, "get_scope_center_type",
+            to_addr=to_addr, from_addr=from_addr,
+            data=_scope_payload(bytes([center_type]), receiver),
+        )
     return build_civ_frame(
         to_addr,
         from_addr,
@@ -3026,10 +3619,13 @@ def scope_set_center_type(
 def get_scope_vbw(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
     *,
     receiver: int | None = None,
 ) -> bytes:
     """Build a 'get scope VBW' CI-V command (0x27 0x1D)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_scope_vbw", to_addr=to_addr, from_addr=from_addr)
     return _scope_query(
         _SUB_SCOPE_VBW,
         to_addr=to_addr,
@@ -3042,6 +3638,7 @@ def scope_set_vbw(
     narrow: bool,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
     *,
     receiver: int | None = None,
 ) -> bytes:
@@ -3050,6 +3647,12 @@ def scope_set_vbw(
     Args:
         narrow: True for narrow VBW, False for wide.
     """
+    if cmd_map is not None:
+        return _build_from_map(
+            cmd_map, "get_scope_vbw",
+            to_addr=to_addr, from_addr=from_addr,
+            data=_scope_payload(b"\x01" if narrow else b"\x00", receiver),
+        )
     return build_civ_frame(
         to_addr,
         from_addr,
@@ -3073,8 +3676,11 @@ def _resolve_scope_fixed_edge_range(start_hz: int) -> int:
 def get_scope_fixed_edge(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a 'get fixed-edge scope bounds' CI-V command (0x27 0x1E)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_scope_fixed_edge", to_addr=to_addr, from_addr=from_addr)
     return _scope_query(_SUB_SCOPE_FIXED_EDGE, to_addr=to_addr, from_addr=from_addr)
 
 
@@ -3086,6 +3692,7 @@ def scope_set_fixed_edge(
     range_index: int | None = None,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a 'set fixed-edge scope bounds' CI-V command (0x27 0x1E)."""
     _validate_scope_range("scope fixed edge", edge, 1, 4)
@@ -3106,6 +3713,12 @@ def scope_set_fixed_edge(
         + bcd_encode(start_hz)
         + bcd_encode(end_hz)
     )
+    if cmd_map is not None:
+        return _build_from_map(
+            cmd_map, "get_scope_fixed_edge",
+            to_addr=to_addr, from_addr=from_addr,
+            data=payload,
+        )
     return build_civ_frame(
         to_addr,
         from_addr,
@@ -3118,10 +3731,13 @@ def scope_set_fixed_edge(
 def get_scope_rbw(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
     *,
     receiver: int | None = None,
 ) -> bytes:
     """Build a 'get scope RBW' CI-V command (0x27 0x1F)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_scope_rbw", to_addr=to_addr, from_addr=from_addr)
     return _scope_query(
         _SUB_SCOPE_RBW,
         to_addr=to_addr,
@@ -3134,6 +3750,7 @@ def scope_set_rbw(
     rbw: int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
     *,
     receiver: int | None = None,
 ) -> bytes:
@@ -3143,6 +3760,12 @@ def scope_set_rbw(
         rbw: 0=wide, 1=mid, 2=narrow.
     """
     _validate_scope_range("scope rbw", rbw, 0, 2)
+    if cmd_map is not None:
+        return _build_from_map(
+            cmd_map, "get_scope_rbw",
+            to_addr=to_addr, from_addr=from_addr,
+            data=_scope_payload(bytes([rbw]), receiver),
+        )
     return build_civ_frame(
         to_addr,
         from_addr,
@@ -3156,16 +3779,30 @@ def scope_set_rbw(
 
 
 def scope_data_output_on(
-    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
+    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Enable scope wave data output (0x27 0x11 0x01)."""
+    if cmd_map is not None:
+        return _build_from_map(
+            cmd_map, "scope_data_output",
+            to_addr=to_addr, from_addr=from_addr,
+            data=b"\x01",
+        )
     return scope_data_output(True, to_addr=to_addr, from_addr=from_addr)
 
 
 def scope_data_output_off(
-    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
+    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Disable scope wave data output (0x27 0x11 0x00)."""
+    if cmd_map is not None:
+        return _build_from_map(
+            cmd_map, "scope_data_output",
+            to_addr=to_addr, from_addr=from_addr,
+            data=b"\x00",
+        )
     return scope_data_output(False, to_addr=to_addr, from_addr=from_addr)
 
 
@@ -3173,12 +3810,19 @@ def scope_main_sub(
     receiver: int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Select scope receiver (0x27 0x12 <0x00|0x01>).
 
     Args:
         receiver: 0 for MAIN, 1 for SUB.
     """
+    if cmd_map is not None:
+        return _build_from_map(
+            cmd_map, "get_scope_main_sub",
+            to_addr=to_addr, from_addr=from_addr,
+            data=bytes([_validate_scope_receiver(receiver)]),
+        )
     return build_civ_frame(
         to_addr,
         from_addr,
@@ -3192,12 +3836,19 @@ def scope_single_dual(
     dual: bool,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Select scope single/dual mode (0x27 0x13 <0x00|0x01>).
 
     Args:
         dual: True for dual scope, False for single.
     """
+    if cmd_map is not None:
+        return _build_from_map(
+            cmd_map, "get_scope_single_dual",
+            to_addr=to_addr, from_addr=from_addr,
+            data=b"\x01" if dual else b"\x00",
+        )
     return build_civ_frame(
         to_addr,
         from_addr,
@@ -3310,6 +3961,7 @@ def send_cw(
     text: str,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> list[bytes]:
     """Build CI-V frames to send CW text.
 
@@ -3329,12 +3981,21 @@ def send_cw(
     for i in range(0, len(text), 30):
         chunk = text[i : i + 30]
         data = chunk.encode("ascii")
-        frames.append(build_civ_frame(to_addr, from_addr, _CMD_SEND_CW, data=data))
+        if cmd_map is not None:
+            frames.append(_build_from_map(cmd_map, "send_cw", to_addr=to_addr, from_addr=from_addr, data=data))
+        else:
+            frames.append(build_civ_frame(to_addr, from_addr, _CMD_SEND_CW, data=data))
     return frames
 
 
-def stop_cw(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR) -> bytes:
+def stop_cw(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+) -> bytes:
     """Build CI-V frame to stop CW sending."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "stop_cw", to_addr=to_addr, from_addr=from_addr, data=b"\xff")
     return build_civ_frame(to_addr, from_addr, _CMD_SEND_CW, data=b"\xff")
 
 
@@ -3343,13 +4004,25 @@ def stop_cw(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR) -> by
 _CMD_POWER_CTRL = 0x18
 
 
-def power_on(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR) -> bytes:
+def power_on(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+) -> bytes:
     """Build CI-V frame to power on the radio."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "power_on", to_addr=to_addr, from_addr=from_addr, data=b"\x01")
     return build_civ_frame(to_addr, from_addr, _CMD_POWER_CTRL, data=b"\x01")
 
 
-def power_off(to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR) -> bytes:
+def power_off(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+) -> bytes:
     """Build CI-V frame to power off the radio."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "power_off", to_addr=to_addr, from_addr=from_addr, data=b"\x00")
     return build_civ_frame(to_addr, from_addr, _CMD_POWER_CTRL, data=b"\x00")
 
 
@@ -3362,6 +4035,7 @@ def speech(
     what: int = 0,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a speech announcement CI-V command (0x13).
 
@@ -3380,6 +4054,13 @@ def speech(
     Raises:
         ValueError: If *what* is not 0, 1, or 2.
     """
+    if cmd_map is not None:
+        return _build_from_map(
+            cmd_map, "get_speech",
+            to_addr=to_addr,
+            from_addr=from_addr,
+            data=bytes([what]),
+        )
     if what not in (0, 1, 2):
         raise ValueError(f"speech 'what' must be 0, 1, or 2, got {what}")
     return build_civ_frame(to_addr, from_addr, _CMD_SPEECH, data=bytes([what]))
@@ -3394,11 +4075,14 @@ _SUB_TRANSCEIVER_ID = 0x00
 def get_transceiver_id(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read transceiver ID command (0x19 0x00).
 
     GET only.  Response data: 1 byte model ID (IC-7610 = 0x98).
     """
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_transceiver_id", to_addr=to_addr, from_addr=from_addr)
     return build_civ_frame(
         to_addr,
         from_addr,
@@ -3423,11 +4107,14 @@ _SUB_RIT_TX_STATUS = 0x02
 def get_band_edge_freq(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read band-edge frequency command (0x02).
 
     Returns the current band-edge frequency (same BCD encoding as 0x03).
     """
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_band_edge_freq", to_addr=to_addr, from_addr=from_addr)
     return build_civ_frame(to_addr, from_addr, _CMD_BAND_EDGE)
 
 
@@ -3435,6 +4122,7 @@ def get_various_squelch(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read various-squelch status command (0x15 0x05, Command29)."""
     return _build_meter_bool_get(
@@ -3443,49 +4131,65 @@ def get_various_squelch(
         from_addr=from_addr,
         receiver=receiver,
         command29=True,
+        cmd_map=cmd_map, cmd_name="get_various_squelch",
     )
 
 
 def get_power_meter(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read RF power meter command (0x15 0x11)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_power_meter", to_addr=to_addr, from_addr=from_addr)
     return build_civ_frame(to_addr, from_addr, _CMD_METER, sub=_SUB_POWER_METER)
 
 
 def get_comp_meter(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read compressor meter command (0x15 0x14)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_comp_meter", to_addr=to_addr, from_addr=from_addr)
     return build_civ_frame(to_addr, from_addr, _CMD_METER, sub=_SUB_COMP_METER)
 
 
 def get_vd_meter(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read Vd (supply voltage) meter command (0x15 0x15)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_vd_meter", to_addr=to_addr, from_addr=from_addr)
     return build_civ_frame(to_addr, from_addr, _CMD_METER, sub=_SUB_VD_METER)
 
 
 def get_id_meter(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read Id (drain current) meter command (0x15 0x16)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_id_meter", to_addr=to_addr, from_addr=from_addr)
     return build_civ_frame(to_addr, from_addr, _CMD_METER, sub=_SUB_ID_METER)
 
 
 def get_tuner_status(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read tuner/ATU status command (0x1C 0x01).
 
     Response data: 0x00=off, 0x01=on, 0x02=tuning.
     """
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_tuner_status", to_addr=to_addr, from_addr=from_addr)
     return build_civ_frame(to_addr, from_addr, _CMD_PTT, sub=_SUB_TUNER_STATUS)
 
 
@@ -3493,6 +4197,7 @@ def set_tuner_status(
     value: int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a set tuner/ATU status command (0x1C 0x01).
 
@@ -3501,6 +4206,8 @@ def set_tuner_status(
     """
     if value not in (0, 1, 2):
         raise ValueError(f"Tuner status must be 0, 1, or 2, got {value}")
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "set_tuner_status", to_addr=to_addr, from_addr=from_addr, data=bytes([value]))
     return build_civ_frame(
         to_addr, from_addr, _CMD_PTT, sub=_SUB_TUNER_STATUS, data=bytes([value])
     )
@@ -3509,11 +4216,14 @@ def set_tuner_status(
 def get_xfc_status(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read XFC status command (0x1C 0x02).
 
     Response data: 0x00=off, 0x01=on.
     """
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_xfc_status", to_addr=to_addr, from_addr=from_addr)
     return build_civ_frame(to_addr, from_addr, _CMD_PTT, sub=_SUB_XFC_STATUS)
 
 
@@ -3521,12 +4231,15 @@ def set_xfc_status(
     on: bool,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a set XFC status command (0x1C 0x02).
 
     Args:
         on: True to enable XFC, False to disable.
     """
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "set_xfc_status", to_addr=to_addr, from_addr=from_addr, data=b"\x01" if on else b"\x00")
     return build_civ_frame(
         to_addr,
         from_addr,
@@ -3539,8 +4252,11 @@ def set_xfc_status(
 def get_tx_freq_monitor(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read TX frequency monitor status command (0x1C 0x03)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_tx_freq_monitor", to_addr=to_addr, from_addr=from_addr)
     return build_civ_frame(to_addr, from_addr, _CMD_PTT, sub=_SUB_TX_FREQ_MONITOR)
 
 
@@ -3548,8 +4264,11 @@ def set_tx_freq_monitor(
     on: bool,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a set TX frequency monitor command (0x1C 0x03)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "set_tx_freq_monitor", to_addr=to_addr, from_addr=from_addr, data=b"\x01" if on else b"\x00")
     return build_civ_frame(
         to_addr,
         from_addr,
@@ -3562,12 +4281,15 @@ def set_tx_freq_monitor(
 def get_rit_frequency(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read RIT frequency offset command (0x21 0x00).
 
     Response: 2 bytes BCD Hz + 1 byte sign (0x00=positive, 0x01=negative).
     Range: ±9999 Hz.
     """
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_rit_frequency", to_addr=to_addr, from_addr=from_addr)
     return build_civ_frame(to_addr, from_addr, _CMD_RIT, sub=_SUB_RIT_FREQ)
 
 
@@ -3575,6 +4297,7 @@ def set_rit_frequency(
     offset_hz: int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a set RIT frequency offset command (0x21 0x00).
 
@@ -3588,6 +4311,8 @@ def set_rit_frequency(
     d0 = ((abs_hz % 100 // 10) << 4) | (abs_hz % 10)
     d1 = ((abs_hz % 10000 // 1000) << 4) | (abs_hz % 1000 // 100)
     sign = b"\x01" if offset_hz < 0 else b"\x00"
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "set_rit_frequency", to_addr=to_addr, from_addr=from_addr, data=bytes([d0, d1]) + sign)
     return build_civ_frame(
         to_addr,
         from_addr,
@@ -3616,8 +4341,11 @@ def parse_rit_frequency_response(data: bytes) -> int:
 def get_rit_status(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read RIT on/off status command (0x21 0x01)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_rit_status", to_addr=to_addr, from_addr=from_addr)
     return build_civ_frame(to_addr, from_addr, _CMD_RIT, sub=_SUB_RIT_STATUS)
 
 
@@ -3625,8 +4353,11 @@ def set_rit_status(
     on: bool,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a set RIT on/off command (0x21 0x01)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "set_rit_status", to_addr=to_addr, from_addr=from_addr, data=b"\x01" if on else b"\x00")
     return build_civ_frame(
         to_addr,
         from_addr,
@@ -3639,8 +4370,11 @@ def set_rit_status(
 def get_rit_tx_status(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a read RIT TX status command (0x21 0x02)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_rit_tx_status", to_addr=to_addr, from_addr=from_addr)
     return build_civ_frame(to_addr, from_addr, _CMD_RIT, sub=_SUB_RIT_TX_STATUS)
 
 
@@ -3648,8 +4382,11 @@ def set_rit_tx_status(
     on: bool,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a set RIT TX status command (0x21 0x02)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "set_rit_tx_status", to_addr=to_addr, from_addr=from_addr, data=b"\x01" if on else b"\x00")
     return build_civ_frame(
         to_addr,
         from_addr,
@@ -3712,6 +4449,7 @@ def get_repeater_tone(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build CI-V command to get repeater tone status (0x16 0x42)."""
     return _build_function_get(
@@ -3720,6 +4458,8 @@ def get_repeater_tone(
         from_addr=from_addr,
         receiver=receiver,
         command29=True,
+        cmd_map=cmd_map,
+        cmd_name="get_repeater_tone",
     )
 
 
@@ -3728,6 +4468,7 @@ def set_repeater_tone(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build CI-V command to set repeater tone (0x16 0x42)."""
     return _build_function_bool_set(
@@ -3737,6 +4478,8 @@ def set_repeater_tone(
         from_addr=from_addr,
         receiver=receiver,
         command29=True,
+        cmd_map=cmd_map,
+        cmd_name="set_repeater_tone",
     )
 
 
@@ -3744,6 +4487,7 @@ def get_repeater_tsql(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build CI-V command to get repeater TSQL status (0x16 0x43)."""
     return _build_function_get(
@@ -3752,6 +4496,8 @@ def get_repeater_tsql(
         from_addr=from_addr,
         receiver=receiver,
         command29=True,
+        cmd_map=cmd_map,
+        cmd_name="get_repeater_tsql",
     )
 
 
@@ -3760,6 +4506,7 @@ def set_repeater_tsql(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build CI-V command to set repeater TSQL (0x16 0x43)."""
     return _build_function_bool_set(
@@ -3769,6 +4516,8 @@ def set_repeater_tsql(
         from_addr=from_addr,
         receiver=receiver,
         command29=True,
+        cmd_map=cmd_map,
+        cmd_name="set_repeater_tsql",
     )
 
 
@@ -3776,8 +4525,11 @@ def get_tone_freq(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build CI-V command to get tone frequency (0x1B 0x00)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_tone_freq", to_addr=to_addr, from_addr=from_addr, command29=True, receiver=receiver)
     return build_cmd29_frame(
         to_addr, from_addr, _CMD_TONE, sub=_SUB_TONE_FREQ, receiver=receiver
     )
@@ -3788,12 +4540,15 @@ def set_tone_freq(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build CI-V command to set tone frequency (0x1B 0x00).
 
     Args:
         freq_hz: CTCSS tone frequency in Hz (67.0-254.1).
     """
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "set_tone_freq", to_addr=to_addr, from_addr=from_addr, command29=True, receiver=receiver, data=_encode_tone_freq(freq_hz))
     return build_cmd29_frame(
         to_addr,
         from_addr,
@@ -3808,8 +4563,11 @@ def get_tsql_freq(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build CI-V command to get TSQL frequency (0x1B 0x01)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_tsql_freq", to_addr=to_addr, from_addr=from_addr, command29=True, receiver=receiver)
     return build_cmd29_frame(
         to_addr, from_addr, _CMD_TONE, sub=_SUB_TSQL_FREQ, receiver=receiver
     )
@@ -3820,12 +4578,15 @@ def set_tsql_freq(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build CI-V command to set TSQL frequency (0x1B 0x01).
 
     Args:
         freq_hz: TSQL tone frequency in Hz (67.0-254.1).
     """
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "set_tsql_freq", to_addr=to_addr, from_addr=from_addr, command29=True, receiver=receiver, data=_encode_tone_freq(freq_hz))
     return build_cmd29_frame(
         to_addr,
         from_addr,
@@ -4114,8 +4875,11 @@ def parse_band_stack_response(frame: CivFrame) -> "BandStackRegister":
 def get_antenna_1(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build read ANT1 selection command (0x12 0x00)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_antenna", to_addr=to_addr, from_addr=from_addr, data=bytes([_SUB_ANT1]))
     return build_civ_frame(to_addr, from_addr, _CMD_ANTENNA, sub=_SUB_ANT1)
 
 
@@ -4123,12 +4887,15 @@ def set_antenna_1(
     enabled: bool,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build set ANT1 selection command (0x12 0x00).
 
     Args:
         enabled: True to select ANT1, False to deselect.
     """
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "set_antenna", to_addr=to_addr, from_addr=from_addr, data=bytes([_SUB_ANT1]) + (b"\x01" if enabled else b"\x00"))
     return build_civ_frame(
         to_addr,
         from_addr,
@@ -4141,8 +4908,11 @@ def set_antenna_1(
 def get_antenna_2(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build read ANT2 selection command (0x12 0x01)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_antenna", to_addr=to_addr, from_addr=from_addr, data=bytes([_SUB_ANT2]))
     return build_civ_frame(to_addr, from_addr, _CMD_ANTENNA, sub=_SUB_ANT2)
 
 
@@ -4150,12 +4920,15 @@ def set_antenna_2(
     enabled: bool,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build set ANT2 selection command (0x12 0x01).
 
     Args:
         enabled: True to select ANT2, False to deselect.
     """
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "set_antenna", to_addr=to_addr, from_addr=from_addr, data=bytes([_SUB_ANT2]) + (b"\x01" if enabled else b"\x00"))
     return build_civ_frame(
         to_addr,
         from_addr,
@@ -4168,8 +4941,11 @@ def set_antenna_2(
 def get_rx_antenna_ant1(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build read RX antenna on ANT1 command (0x12 0x12)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_antenna", to_addr=to_addr, from_addr=from_addr, data=bytes([_SUB_RX_ANT_ANT1]))
     return build_civ_frame(to_addr, from_addr, _CMD_ANTENNA, sub=_SUB_RX_ANT_ANT1)
 
 
@@ -4177,12 +4953,15 @@ def set_rx_antenna_ant1(
     enabled: bool,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build set RX antenna on ANT1 command (0x12 0x12).
 
     Args:
         enabled: True to enable RX antenna on ANT1.
     """
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "set_antenna", to_addr=to_addr, from_addr=from_addr, data=bytes([_SUB_RX_ANT_ANT1]) + (b"\x01" if enabled else b"\x00"))
     return build_civ_frame(
         to_addr,
         from_addr,
@@ -4195,8 +4974,11 @@ def set_rx_antenna_ant1(
 def get_rx_antenna_ant2(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build read RX antenna on ANT2 command (0x12 0x13)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_rx_antenna_ant2", to_addr=to_addr, from_addr=from_addr)
     return build_civ_frame(to_addr, from_addr, _CMD_ANTENNA, sub=_SUB_RX_ANT_ANT2)
 
 
@@ -4204,12 +4986,19 @@ def set_rx_antenna_ant2(
     enabled: bool,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build set RX antenna on ANT2 command (0x12 0x13).
 
     Args:
         enabled: True to enable RX antenna on ANT2.
     """
+    if cmd_map is not None:
+        return _build_from_map(
+            cmd_map, "set_rx_antenna_ant2",
+            to_addr=to_addr, from_addr=from_addr,
+            data=b"\x01" if enabled else b"\x00",
+        )
     return build_civ_frame(
         to_addr,
         from_addr,
@@ -4225,8 +5014,11 @@ def set_rx_antenna_ant2(
 def get_acc1_mod_level(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build read ACC1 modulation level command (0x14 0x0B)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_acc1_mod_level", to_addr=to_addr, from_addr=from_addr)
     return build_civ_frame(to_addr, from_addr, _CMD_LEVEL, sub=_SUB_ACC1_MOD_LEVEL)
 
 
@@ -4234,12 +5026,18 @@ def set_acc1_mod_level(
     level: int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build set ACC1 modulation level command (0x14 0x0B).
 
     Args:
         level: Mod level 0-255.
     """
+    if cmd_map is not None:
+        return _build_from_map(
+            cmd_map, "set_acc1_mod_level", to_addr=to_addr, from_addr=from_addr,
+            data=_level_bcd_encode(level),
+        )
     return build_civ_frame(
         to_addr,
         from_addr,
@@ -4252,8 +5050,11 @@ def set_acc1_mod_level(
 def get_usb_mod_level(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build read USB modulation level command (0x14 0x10)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_usb_mod_level", to_addr=to_addr, from_addr=from_addr)
     return build_civ_frame(to_addr, from_addr, _CMD_LEVEL, sub=_SUB_USB_MOD_LEVEL)
 
 
@@ -4261,12 +5062,18 @@ def set_usb_mod_level(
     level: int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build set USB modulation level command (0x14 0x10).
 
     Args:
         level: Mod level 0-255.
     """
+    if cmd_map is not None:
+        return _build_from_map(
+            cmd_map, "set_usb_mod_level", to_addr=to_addr, from_addr=from_addr,
+            data=_level_bcd_encode(level),
+        )
     return build_civ_frame(
         to_addr,
         from_addr,
@@ -4279,8 +5086,11 @@ def set_usb_mod_level(
 def get_lan_mod_level(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build read LAN modulation level command (0x14 0x11)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_lan_mod_level", to_addr=to_addr, from_addr=from_addr)
     return build_civ_frame(to_addr, from_addr, _CMD_LEVEL, sub=_SUB_LAN_MOD_LEVEL)
 
 
@@ -4288,12 +5098,18 @@ def set_lan_mod_level(
     level: int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build set LAN modulation level command (0x14 0x11).
 
     Args:
         level: Mod level 0-255.
     """
+    if cmd_map is not None:
+        return _build_from_map(
+            cmd_map, "set_lan_mod_level", to_addr=to_addr, from_addr=from_addr,
+            data=_level_bcd_encode(level),
+        )
     return build_civ_frame(
         to_addr,
         from_addr,
@@ -4309,10 +5125,12 @@ def set_lan_mod_level(
 def get_data_off_mod_input(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build read Data Off modulation input command (0x1A 0x05 0x00 0x91)."""
     return _build_ctl_mem_get(
-        _CTL_MEM_DATA_OFF_MOD_INPUT, to_addr=to_addr, from_addr=from_addr
+        _CTL_MEM_DATA_OFF_MOD_INPUT, to_addr=to_addr, from_addr=from_addr,
+        cmd_map=cmd_map, cmd_name="get_data_off_mod_input",
     )
 
 
@@ -4320,6 +5138,7 @@ def set_data_off_mod_input(
     source: int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build set Data Off modulation input command (0x1A 0x05 0x00 0x91).
 
@@ -4334,16 +5153,20 @@ def set_data_off_mod_input(
         to_addr=to_addr,
         from_addr=from_addr,
         byte_count=1,
+        cmd_map=cmd_map,
+        cmd_name="set_data_off_mod_input",
     )
 
 
 def get_data1_mod_input(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build read DATA1 modulation input command (0x1A 0x05 0x00 0x92)."""
     return _build_ctl_mem_get(
-        _CTL_MEM_DATA1_MOD_INPUT, to_addr=to_addr, from_addr=from_addr
+        _CTL_MEM_DATA1_MOD_INPUT, to_addr=to_addr, from_addr=from_addr,
+        cmd_map=cmd_map, cmd_name="get_data1_mod_input",
     )
 
 
@@ -4351,6 +5174,7 @@ def set_data1_mod_input(
     source: int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build set DATA1 modulation input command (0x1A 0x05 0x00 0x92).
 
@@ -4365,16 +5189,20 @@ def set_data1_mod_input(
         to_addr=to_addr,
         from_addr=from_addr,
         byte_count=1,
+        cmd_map=cmd_map,
+        cmd_name="set_data1_mod_input",
     )
 
 
 def get_data2_mod_input(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build read DATA2 modulation input command (0x1A 0x05 0x00 0x93)."""
     return _build_ctl_mem_get(
-        _CTL_MEM_DATA2_MOD_INPUT, to_addr=to_addr, from_addr=from_addr
+        _CTL_MEM_DATA2_MOD_INPUT, to_addr=to_addr, from_addr=from_addr,
+        cmd_map=cmd_map, cmd_name="get_data2_mod_input",
     )
 
 
@@ -4382,6 +5210,7 @@ def set_data2_mod_input(
     source: int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build set DATA2 modulation input command (0x1A 0x05 0x00 0x93).
 
@@ -4396,16 +5225,20 @@ def set_data2_mod_input(
         to_addr=to_addr,
         from_addr=from_addr,
         byte_count=1,
+        cmd_map=cmd_map,
+        cmd_name="set_data2_mod_input",
     )
 
 
 def get_data3_mod_input(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build read DATA3 modulation input command (0x1A 0x05 0x00 0x94)."""
     return _build_ctl_mem_get(
-        _CTL_MEM_DATA3_MOD_INPUT, to_addr=to_addr, from_addr=from_addr
+        _CTL_MEM_DATA3_MOD_INPUT, to_addr=to_addr, from_addr=from_addr,
+        cmd_map=cmd_map, cmd_name="get_data3_mod_input",
     )
 
 
@@ -4413,6 +5246,7 @@ def set_data3_mod_input(
     source: int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build set DATA3 modulation input command (0x1A 0x05 0x00 0x94).
 
@@ -4427,6 +5261,8 @@ def set_data3_mod_input(
         to_addr=to_addr,
         from_addr=from_addr,
         byte_count=1,
+        cmd_map=cmd_map,
+        cmd_name="set_data3_mod_input",
     )
 
 
@@ -4436,10 +5272,12 @@ def set_data3_mod_input(
 def get_civ_transceive(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build read CI-V transceive command (0x1A 0x05 0x01 0x29)."""
     return _build_ctl_mem_get(
-        _CTL_MEM_CIV_TRANSCEIVE, to_addr=to_addr, from_addr=from_addr
+        _CTL_MEM_CIV_TRANSCEIVE, to_addr=to_addr, from_addr=from_addr,
+        cmd_map=cmd_map, cmd_name="get_civ_transceive",
     )
 
 
@@ -4447,6 +5285,7 @@ def set_civ_transceive(
     enabled: bool,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build set CI-V transceive command (0x1A 0x05 0x01 0x29).
 
@@ -4459,16 +5298,20 @@ def set_civ_transceive(
         to_addr=to_addr,
         from_addr=from_addr,
         byte_count=1,
+        cmd_map=cmd_map,
+        cmd_name="set_civ_transceive",
     )
 
 
 def get_civ_output_ant(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build read CI-V output (ANT) command (0x1A 0x05 0x01 0x30)."""
     return _build_ctl_mem_get(
-        _CTL_MEM_CIV_OUTPUT_ANT, to_addr=to_addr, from_addr=from_addr
+        _CTL_MEM_CIV_OUTPUT_ANT, to_addr=to_addr, from_addr=from_addr,
+        cmd_map=cmd_map, cmd_name="get_civ_output_ant",
     )
 
 
@@ -4476,6 +5319,7 @@ def set_civ_output_ant(
     enabled: bool,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build set CI-V output (ANT) command (0x1A 0x05 0x01 0x30).
 
@@ -4488,6 +5332,8 @@ def set_civ_output_ant(
         to_addr=to_addr,
         from_addr=from_addr,
         byte_count=1,
+        cmd_map=cmd_map,
+        cmd_name="set_civ_output_ant",
     )
 
 
@@ -4497,10 +5343,12 @@ def set_civ_output_ant(
 def get_system_date(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build read system date command (0x1A 0x05 0x01 0x58)."""
     return _build_ctl_mem_get(
-        _CTL_MEM_SYSTEM_DATE, to_addr=to_addr, from_addr=from_addr
+        _CTL_MEM_SYSTEM_DATE, to_addr=to_addr, from_addr=from_addr,
+        cmd_map=cmd_map, cmd_name="system_date",
     )
 
 
@@ -4510,6 +5358,7 @@ def set_system_date(
     day: int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build set system date command (0x1A 0x05 0x01 0x58).
 
@@ -4529,6 +5378,8 @@ def set_system_date(
         + _bcd_encode_value(month, byte_count=1)
         + _bcd_encode_value(day, byte_count=1)
     )
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "system_date", to_addr=to_addr, from_addr=from_addr, data=bcd)
     return build_civ_frame(
         to_addr,
         from_addr,
@@ -4561,10 +5412,12 @@ def parse_system_date_response(frame: CivFrame) -> tuple[int, int, int]:
 def get_system_time(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build read system time command (0x1A 0x05 0x01 0x59)."""
     return _build_ctl_mem_get(
-        _CTL_MEM_SYSTEM_TIME, to_addr=to_addr, from_addr=from_addr
+        _CTL_MEM_SYSTEM_TIME, to_addr=to_addr, from_addr=from_addr,
+        cmd_map=cmd_map, cmd_name="system_time",
     )
 
 
@@ -4573,6 +5426,7 @@ def set_system_time(
     minute: int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build set system time command (0x1A 0x05 0x01 0x59).
 
@@ -4587,6 +5441,8 @@ def set_system_time(
     bcd = _bcd_encode_value(hour, byte_count=1) + _bcd_encode_value(
         minute, byte_count=1
     )
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "system_time", to_addr=to_addr, from_addr=from_addr, data=bcd)
     return build_civ_frame(
         to_addr,
         from_addr,
@@ -4618,9 +5474,10 @@ def parse_system_time_response(frame: CivFrame) -> tuple[int, int]:
 def get_utc_offset(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build read UTC offset command (0x1A 0x05 0x01 0x62)."""
-    return _build_ctl_mem_get(_CTL_MEM_UTC_OFFSET, to_addr=to_addr, from_addr=from_addr)
+    return _build_ctl_mem_get(_CTL_MEM_UTC_OFFSET, to_addr=to_addr, from_addr=from_addr, cmd_map=cmd_map, cmd_name="utc_offset")
 
 
 def set_utc_offset(
@@ -4629,6 +5486,7 @@ def set_utc_offset(
     is_negative: bool,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build set UTC offset command (0x1A 0x05 0x01 0x62).
 
@@ -4646,6 +5504,8 @@ def set_utc_offset(
         + _bcd_encode_value(minutes, byte_count=1)
         + (b"\x01" if is_negative else b"\x00")
     )
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "utc_offset", to_addr=to_addr, from_addr=from_addr, data=payload)
     return build_civ_frame(
         to_addr,
         from_addr,

@@ -247,7 +247,14 @@ class ControlHandler:
     def _ensure_capability(self, capability: str, command_name: str) -> None:
         if self._radio is None:
             return
-        if capability in self._capabilities():
+        caps = self._capabilities()
+        # Also check profile capabilities (runtime_capabilities may strip
+        # protocol-gated tags like dual_rx even when the profile supports them).
+        raw_profile = getattr(self._radio, "profile", None)
+        if isinstance(raw_profile, RadioProfile):
+            if capability in raw_profile.capabilities:
+                return
+        if capability in caps:
             return
         raise ValueError(
             f"command {command_name!r} is not supported by active profile "
@@ -801,6 +808,7 @@ class ControlHandler:
                 return {"level": level}
             case "set_dual_watch":
                 on = bool(params.get("on", False))
+                self._ensure_capability("dual_rx", "set_dual_watch")
                 q.put(SetDualWatch(on))
                 return {"on": on}
             case "set_comp":
