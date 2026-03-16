@@ -46,3 +46,17 @@ export function getPreValues(): number[] {
 export function getAntennaCount(): number {
   return capabilities?.antennas ?? 1;
 }
+
+export function getVfoScheme(): string {
+  return capabilities?.vfoScheme ?? 'main_sub';
+}
+
+export function hasCapability(name: string): boolean {
+  return capabilities?.capabilities.includes(name) ?? false;
+}
+
+export function vfoLabel(slot: 'A' | 'B'): string {
+  const scheme = capabilities?.vfoScheme ?? 'main_sub';
+  if (scheme === 'ab') return slot === 'A' ? 'VFO A' : 'VFO B';
+  return slot === 'A' ? 'MAIN' : 'SUB';
+}

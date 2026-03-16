@@ -23,7 +23,7 @@
   import SettingsPanel from '../settings/SettingsPanel.svelte';
 
   import { radio, patchActiveReceiver } from '../../lib/stores/radio.svelte';
-  import { hasDualReceiver, hasTx } from '../../lib/stores/capabilities.svelte';
+  import { hasDualReceiver, hasTx, vfoLabel } from '../../lib/stores/capabilities.svelte';
   import { getConnectionStatus } from '../../lib/stores/connection.svelte';
   import { sendCommand } from '../../lib/transport/ws-client';
   import { setupKeyboard } from '../../lib/actions/keyboard';
@@ -36,6 +36,8 @@
 
   let isDualRx = $derived(hasDualReceiver());
   let isTx = $derived(hasTx());
+  let labelA = $derived(vfoLabel('A'));
+  let labelB = $derived(vfoLabel('B'));
   let connectionStatus = $derived(getConnectionStatus());
   let isDisconnected = $derived(connectionStatus === 'disconnected');
   let isReconnecting = $derived(connectionStatus === 'partial');
@@ -144,7 +146,7 @@
         <div class="vfo-pair">
           {#if main}
             <VfoDisplay
-              label="VFO A"
+              label={labelA}
               freq={main.freqHz}
               mode={main.mode}
               filter={main.filter}
@@ -155,12 +157,12 @@
               ontune={(f) => handleTune('MAIN', f)}
             />
           {:else}
-            <div class="vfo-placeholder">VFO A — connecting…</div>
+            <div class="vfo-placeholder">{labelA} — connecting…</div>
           {/if}
 
           {#if isDualRx && sub}
             <VfoDisplay
-              label="VFO B"
+              label={labelB}
               freq={sub.freqHz}
               mode={sub.mode}
               filter={sub.filter}

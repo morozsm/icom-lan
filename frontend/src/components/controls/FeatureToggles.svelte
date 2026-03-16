@@ -2,7 +2,7 @@
   import { onDestroy } from 'svelte';
   import { sendCommand } from '../../lib/transport/ws-client';
   import { radio } from '../../lib/stores/radio.svelte';
-  import { hasTx, getAttValues, getPreValues, getAntennaCount } from '../../lib/stores/capabilities.svelte';
+  import { hasTx, getAttValues, getPreValues, getAntennaCount, hasCapability } from '../../lib/stores/capabilities.svelte';
   import ControlGroup from './ControlGroup.svelte';
   import CapabilityMenu from './CapabilityMenu.svelte';
 
@@ -21,6 +21,7 @@
   let attValues = $derived(getAttValues());
   let preValues = $derived(getPreValues());
   let antennaCount = $derived(getAntennaCount());
+  let hasDigisel = $derived(hasCapability('digisel'));
 
   let showAttMenu = $state(false);
   let showPreMenu = $state(false);
@@ -111,13 +112,15 @@
       title="Noise Reduction"
     >NR</button>
 
-    <button
-      class="toggle-btn"
-      class:active={digisel}
-      onclick={toggleDigisel}
-      aria-pressed={digisel}
-      title="Digital Selection (DIGI-SEL)"
-    >DIGI</button>
+    {#if hasDigisel}
+      <button
+        class="toggle-btn"
+        class:active={digisel}
+        onclick={toggleDigisel}
+        aria-pressed={digisel}
+        title="Digital Selection (DIGI-SEL)"
+      >DIGI</button>
+    {/if}
   </ControlGroup>
 
   <ControlGroup title="RX">

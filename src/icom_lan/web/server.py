@@ -918,6 +918,7 @@ class WebServer:
         model = raw_model if isinstance(raw_model, str) else self._config.radio_model
         caps = _runtime_capabilities(self._radio)
         has_dual_rx = "dual_rx" in caps
+        profile = self._get_profile()
         raw_connected = (
             getattr(self._radio, "connected", False) if self._radio else False
         )
@@ -944,10 +945,12 @@ class WebServer:
                     "hasDualReceiver": has_dual_rx,
                     "hasTuner": "tuner" in caps,
                     "hasCw": "cw" in caps,
-                    "maxReceivers": 2 if has_dual_rx else 1,
+                    "maxReceivers": profile.receiver_count if self._radio is not None else (2 if has_dual_rx else 1),
                     "tags": sorted(caps),
-                    "modes": list(self._get_profile().modes),
-                    "filters": list(self._get_profile().filters),
+                    "modes": list(profile.modes),
+                    "filters": list(profile.filters),
+                    "vfoScheme": profile.vfo_scheme,
+                    "hasLan": profile.has_lan,
                 },
                 "connection": {
                     "rigConnected": connected,
@@ -978,6 +981,11 @@ class WebServer:
         revision = self._radio_poller.revision if self._radio_poller is not None else 0
         d["revision"] = revision
         d["updatedAt"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+        # Omit sub receiver state for single-receiver rigs
+        profile = self._get_profile()
+        if profile.receiver_count < 2:
+            d.pop("sub", None)
 
         body = json.dumps(_camel_case_state(d), separators=(",", ":")).encode()
         await _send_json(writer, body, headers, etag=f'"{revision}"')
@@ -1019,6 +1027,8 @@ class WebServer:
                 "audio": "audio" in caps,
                 "tx": "tx" in caps,
                 "capabilities": sorted(caps),
+                "receivers": profile.receiver_count,
+                "vfoScheme": profile.vfo_scheme,
                 "freqRanges": freq_ranges,
                 "modes": list(profile.modes),
                 "filters": list(profile.filters),

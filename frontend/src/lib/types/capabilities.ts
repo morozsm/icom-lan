@@ -32,6 +32,9 @@ export interface Capabilities {
   audio: boolean;
   tx: boolean;
   capabilities: string[];
+  receivers?: number;      // 1 = single, 2 = dual receiver
+  vfoScheme?: string;      // "ab" or "main_sub"
+  hasLan?: boolean;        // Radio has LAN connectivity
   freqRanges: FreqRange[];
   modes: string[];
   filters: string[];
