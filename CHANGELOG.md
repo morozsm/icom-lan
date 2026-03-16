@@ -4,6 +4,33 @@ All notable changes to [icom-lan](https://github.com/morozsm/icom-lan) are docum
 
 ## [Unreleased]
 
+### 🔌 USB Audio Topology Resolver (Multi-Radio)
+
+- **`usb_audio_resolve.py`**: new module — resolves the correct USB Audio device for a serial CI-V port when multiple identical "USB Audio CODEC" devices are connected (e.g. IC-7300 + IC-7610 both via USB)
+  - Uses macOS IORegistry (`ioreg`) to correlate USB hub topology: maps a serial port's `locationID` prefix to the matching audio input/output device indices
+  - Algorithm: TTY suffix → `locationID` → upper-16-bit hub prefix → match USB Audio CODEC by same prefix → map to `sounddevice` indices by positional order
+  - Returns `AudioDeviceMapping(rx_device_index, tx_device_index, serial_port, location_prefix)`
+  - Fallback: returns `None` on Linux or when `ioreg` is unavailable (falls back to existing name-based selection in `UsbAudioDriver`)
+  - Platform support: **macOS full**, Linux planned (sysfs), Windows not planned
+- **`UsbAudioDriver`** (`backends/icom7610/drivers/usb_audio.py`): accepts new `serial_port` parameter; when set, calls `resolve_audio_for_serial_port()` before falling back to name-based device selection — ensures correct device pairing in multi-radio setups
+- **`Icom7610SerialRadio`** (`backends/icom7610/serial.py`): passes `device` (serial port path) as `serial_port` to `UsbAudioDriver` automatically
+
+### 🎛️ Frontend
+
+- **ATT/PRE mutually exclusive**: enabling ATT now clears PRE and vice versa — optimistic state update in the UI prevents conflicting UI states before radio confirms the change
+- **Stable button widths**: RX control buttons use `min-width` + `nowrap` to prevent layout shifts when label text changes (e.g. "ATT 18" vs "ATT 0")
+- **AGC button**: AGC on/off control added to RX controls panel
+
+### 🏗️ Architecture
+
+- **Optimistic state updates**: all toggled controls (ATT, PRE, NB, NR, IP+, DIGI-SEL) now write to `RadioState` immediately on click, before CI-V ACK arrives — eliminates perceived latency in the UI
+- **Data-driven poller commands**: `RadioPoller` now reads polling queries from TOML `CommandMap` instead of hardcoded lists — radios without a given command skip it silently; common queries (freq, mode, meters) shared across all rig profiles
+- **Plain CI-V fallback**: radios that lack Command29 (`cmd29`) use plain CI-V (no receiver selector byte) for ATT, PRE, and level queries — enables correct operation for IC-7300 and other single-receiver radios
+
+### 🧪 Tests
+
+- **30 new tests** in `tests/test_usb_audio_resolve.py` covering topology resolution, TTY suffix extraction, hub prefix matching, fallback paths, and multi-radio disambiguation
+
 ## [0.13.0] — 2026-03-13
 
 ### Added

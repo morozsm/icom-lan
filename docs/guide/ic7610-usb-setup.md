@@ -117,6 +117,20 @@ The IC-7610 USB audio device is typically named `IC-7610 USB Audio` or similar.
     ```
     Returns structured JSON for scripting.
 
+!!! tip "Multi-Radio: Automatic USB Audio Resolution"
+    When two or more Icom radios are connected via USB simultaneously (e.g. IC-7300 + IC-7610),
+    each exposes an identically named "USB Audio CODEC" device. Specifying `--rx-device` by name
+    is ambiguous in this situation.
+
+    The serial backend automatically resolves the correct audio device using **USB topology
+    matching** (macOS only): it reads each device's USB hub location from IORegistry and matches
+    the audio device that shares the same USB hub as the serial CI-V port. No manual index
+    specification is required.
+
+    If topology resolution fails (e.g. on Linux), the driver falls back to selecting the
+    first matching USB Audio CODEC device by name, which may be incorrect for multi-radio setups.
+    In that case, specify explicit device indices with `--rx-device` and `--tx-device`.
+
 ### 5. Test the Connection
 
 ```bash
@@ -347,6 +361,25 @@ ls -l /dev/cu.usbserial-*
    # Check what's using the port (macOS)
    lsof | grep cu.usbserial
    ```
+
+### Wrong USB audio device selected with two radios connected
+
+**Symptom**: Audio from the wrong radio when IC-7300 and IC-7610 are both connected via USB.
+
+**Cause**: Two identical "USB Audio CODEC" devices appear in the system; name-based selection picks the first one regardless of which radio's serial port is in use.
+
+**Fix**: On macOS, this is resolved **automatically** — the library reads USB hub topology via IORegistry and selects the audio device on the same USB hub as the serial CI-V port. Check the log for a line like:
+
+```
+usb-audio-resolve: /dev/cu.usbserial-201410 → prefix 0x2014 → RX device [2], TX device [3]
+```
+
+If you see `"topology resolution not supported"` (Linux), specify device indices explicitly:
+```bash
+icom-lan --backend serial --rx-device 2 --tx-device 3 status
+```
+
+Use `icom-lan --list-audio-devices` to find the correct indices.
 
 ### Audio TX not working
 

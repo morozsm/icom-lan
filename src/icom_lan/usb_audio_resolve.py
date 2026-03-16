@@ -29,6 +29,7 @@ import platform
 import re
 import subprocess
 from dataclasses import dataclass
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -136,7 +137,7 @@ def _resolve_macos(
         return None
 
     # 6. Get sounddevice indices
-    sd = sounddevice_module
+    sd: Any = sounddevice_module
     if sd is None:
         try:
             import sounddevice as sd_mod
