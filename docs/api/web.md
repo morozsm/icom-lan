@@ -92,7 +92,15 @@ Full capabilities object including rig profile data.
   "receivers": 1,
   "vfoScheme": "ab",
   "freqRanges": [
-    { "label": "HF", "startHz": 30000, "endHz": 60000000, "bands": [...] }
+    {
+      "label": "HF",
+      "start": 30000,
+      "end": 60000000,
+      "bands": [
+        { "name": "20m", "start": 14000000, "end": 14350000, "default": 14200000, "bsrCode": 5 },
+        { "name": "60m", "start": 5250000, "end": 5450000, "default": 5357000 }
+      ]
+    }
   ],
   "modes": ["USB", "LSB", "CW", ...],
   "filters": ["FIL1", "FIL2", "FIL3"]
@@ -105,10 +113,28 @@ Full capabilities object including rig profile data.
 |-------|------|-------------|
 | `receivers` | `int` | Receiver count from rig profile (1 or 2) |
 | `vfoScheme` | `"ab"` \| `"main_sub"` | VFO labeling scheme |
+| `freqRanges[].bands[].bsrCode` | `int` (optional) | Band Stack Register code used by Web UI `set_band` workflow |
+
+---
+
+### `set_band` command (WebSocket `/api/v1/ws`)
+
+Control payload:
+
+```json
+{"type":"cmd","id":"42","name":"set_band","params":{"band":5}}
+```
+
+`band` is the numeric BSR code (typically from `freqRanges[].bands[].bsrCode`).
+Backend behavior:
+
+1. Attempts BSR recall (`0x1A 0x01 <band> 0x01`) and applies recalled freq/mode.
+2. On recall failure, falls back to profile `default_hz` for matching `bsr_code`.
+3. If no matching `bsr_code` exists, command acknowledges but no retune is applied.
 
 ## Modules
 
-- `server.py` — HTTP server (Starlette/Uvicorn)
+- `server.py` — asyncio HTTP/WebSocket server
 - `handlers.py` — WebSocket command handlers
 - `radio_poller.py` — State polling for /api/v1/state endpoint
 - `websocket.py` — WebSocket connection management

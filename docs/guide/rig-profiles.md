@@ -165,6 +165,7 @@ name = "20m"
 start_hz = 14_000_000
 end_hz = 14_350_000
 default_hz = 14_200_000
+bsr_code = 0x05
 ```
 
 For VHF/UHF radios, add additional ranges:
@@ -181,6 +182,19 @@ start_hz = 144_000_000
 end_hz = 148_000_000
 default_hz = 146_520_000
 ```
+
+`bsr_code` is optional but strongly recommended for bands that support Icom
+Band Stack Register recall (`CI-V 0x1A 0x01`):
+
+- **Present** `bsr_code`: Web UI can use `set_band` and restore last freq/mode
+  stored in radio memory for that band.
+- **Missing** `bsr_code`: UI should use `default_hz` fallback (`set_freq`).
+
+Notes:
+
+- Keep `bsr_code` values unique within one rig profile to avoid ambiguous mapping.
+- In built-in IC-7300/IC-7610 profiles, 60m intentionally has no `bsr_code`, so
+  it uses default-frequency fallback.
 
 ### `[commands]` — CI-V Wire Bytes
 
