@@ -132,6 +132,7 @@ icom-lan now uses a **shared-core backend-neutral architecture**. Consumers (CLI
 3. **Backend Adapters** — thin adapters for LAN (UDP) and serial (USB CI-V + audio)
 4. **Shared Core** — `Icom7610CoreRadio` with commander, state, CI-V routing, scope assembly
 5. **Transports** — LAN uses UDP sockets, serial uses `SerialCivLink` + `UsbAudioDriver`
+6. **USB Audio Resolver** — `usb_audio_resolve.py` maps a serial port to the correct `sounddevice` indices via macOS IORegistry topology (used by `UsbAudioDriver` when `serial_port` is provided)
 
 ### Backend-Neutral Boundary
 
@@ -160,6 +161,29 @@ methods, but command execution routes through `create_radio(...)`.
 \* **Scope guardrail**: Serial backend enforces minimum 115200 baud for scope/waterfall due to high CI-V packet rate. Lower baud rates risk command timeout/starvation. Override via `allow_low_baud_scope=True` or `ICOM_SERIAL_SCOPE_ALLOW_LOW_BAUD=1` (use with caution).
 
 See [IC-7610 USB Serial Backend Setup Guide](../guide/ic7610-usb-setup.md) for detailed setup instructions.
+
+### USB Audio Topology Resolver
+
+When multiple Icom radios are connected via USB simultaneously (e.g. IC-7300 + IC-7610), each exposes an identically named "USB Audio CODEC" device. The library cannot determine which audio device belongs to which radio by name alone.
+
+**`usb_audio_resolve.py`** solves this by correlating USB hub topology:
+
+```
+Serial port path  →  TTY suffix  →  IORegistry locationID  →  hub prefix (upper 16 bits)
+                                                                       │
+USB Audio CODEC entries in IORegistry  →  filter by same hub prefix   │
+                                                                       ▼
+                                          sounddevice index lookup  (by sorted position)
+                                                                       │
+                                                                       ▼
+                                          AudioDeviceMapping(rx_device_index, tx_device_index)
+```
+
+- **macOS**: Full support via `/usr/sbin/ioreg -l`. Zero external deps.
+- **Linux**: Not yet implemented — falls back to name-based selection.
+- **Windows**: Not planned.
+
+`UsbAudioDriver` calls `resolve_audio_for_serial_port(serial_port)` when a `serial_port` is provided. If resolution succeeds, the returned device indices take precedence over any name-based or default selection. If resolution fails (platform not supported, `ioreg` missing, or no matching devices), name-based fallback applies.
 
 ## Rig Profiles (Data-Driven Radio Config)
 

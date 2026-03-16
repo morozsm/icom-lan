@@ -15,7 +15,7 @@ Direct connection to your radio — no wfview, hamlib, or RS-BA1 required.
 - ✅ **100% CI-V command coverage** — all 134 IC-7610 commands implemented (Epic #140, 2026-03-07)
 - 🗂️ **Data-driven rig profiles** — add new radio support by writing a `.toml` file, no Python required ([guide](https://morozsm.github.io/icom-lan/guide/rig-profiles/))
 - 📡 **Direct UDP connection** — LAN backend (UDP ports 50001/2/3), no intermediate software needed
-- 🔌 **USB serial backend** — IC-7610 and IC-7300 USB CI-V + USB audio devices ([setup guide](https://morozsm.github.io/icom-lan/guide/ic7610-usb-setup/))
+- 🔌 **USB serial backend** — IC-7610 and IC-7300 USB CI-V + USB audio devices ([setup guide](https://morozsm.github.io/icom-lan/guide/ic7610-usb-setup/)); **automatic USB audio device resolution** for multi-radio setups via macOS IORegistry topology matching
 - 🎛️ **Full CI-V command set** — frequency, mode, filter, power, meters, PTT, CW keying, VFO, split, ATT, PREAMP
 - 🔍 **Unified discovery** — find radios on LAN and USB serial ports, deduplicated by identity
 - 💻 **CLI tool** — `icom-lan status`, `icom-lan freq 14.074m`
