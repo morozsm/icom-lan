@@ -308,8 +308,17 @@ class SerialCivLink:
         except (OSError, asyncio.IncompleteReadError) as exc:
             logger.warning("Recoverable serial read error: %s", exc)
             self._healthy = False
-            await asyncio.sleep(0)
+            await asyncio.sleep(0.5)  # backoff to prevent log/CPU flood
             return b""
+        except Exception as exc:
+            # Catch pyserial SerialException ("device reports readiness...")
+            # which is not a subclass of OSError.
+            if "SerialException" in type(exc).__name__:
+                logger.warning("Recoverable serial read error: %s", exc)
+                self._healthy = False
+                await asyncio.sleep(0.5)
+                return b""
+            raise
         except Exception:
             logger.exception("Unrecoverable serial read error.")
             self._connected = False

@@ -6,6 +6,7 @@
 id = "icom_ic7610"
 model = "IC-7610"
 civ_addr = 0x98
+default_baud = 115200
 receiver_count = 2
 has_lan = true
 has_wifi = false

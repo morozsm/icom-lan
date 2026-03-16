@@ -207,6 +207,7 @@ class WebServer:
         self._scope_reenable_task: asyncio.Task[None] | None = None
         self._scope_reenable_poll_interval: float = 0.5
         self._scope_reenable_timeout: float = 30.0
+        self._scope_health_max_retries: int = 3  # give up after N failed re-enables
         # DX cluster
         self._spot_buffer: SpotBuffer = SpotBuffer()
         self._dx_client: DXClusterClient | None = None
@@ -528,9 +529,17 @@ class WebServer:
             logger.debug("scope health check: unexpected frame type", exc_info=True)
 
     async def _scope_health_monitor(self) -> None:
-        """Background task: re-enable scope if frames are all-zero for too long."""
+        """Background task: re-enable scope if frames are all-zero for too long.
+
+        For serial-only radios (has_lan=False), scope data delivery differs
+        significantly — the radio may need CI-V output enabled, higher baud
+        rates, etc.  Limit re-enable attempts to avoid flooding the serial
+        link and logs.
+        """
         import time
 
+        max_retries = self._scope_health_max_retries
+        retries = 0
         try:
             while True:
                 await asyncio.sleep(self._scope_health_interval)
@@ -541,6 +550,7 @@ class WebServer:
                 # Don't re-enable scope while radio is disconnected
                 if not self._radio_ready():
                     self._scope_last_nonzero = time.monotonic()  # reset timer
+                    retries = 0
                     continue
                 now = time.monotonic()
                 if self._scope_last_nonzero == 0.0:
@@ -549,12 +559,28 @@ class WebServer:
                     continue
                 elapsed = now - self._scope_last_nonzero
                 if elapsed > self._scope_health_interval:
+                    if retries >= max_retries:
+                        if retries == max_retries:
+                            logger.warning(
+                                "scope-health: giving up after %d retries "
+                                "(scope may not be available on this backend)",
+                                max_retries,
+                            )
+                            retries += 1  # log once
+                        continue
                     self._command_queue.put(EnableScope())
                     self._scope_last_nonzero = now  # reset to avoid spam
+                    retries += 1
                     logger.warning(
-                        "scope-health: all-zero frames for %.0fs, re-enabling scope",
+                        "scope-health: all-zero frames for %.0fs, re-enabling scope "
+                        "(attempt %d/%d)",
                         elapsed,
+                        retries,
+                        max_retries,
                     )
+                else:
+                    # Scope is healthy — reset retry counter
+                    retries = 0
         except asyncio.CancelledError:
             pass
 
