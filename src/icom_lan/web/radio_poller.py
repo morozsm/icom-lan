@@ -800,11 +800,15 @@ class RadioPoller:
             case SetNB(on=on, receiver=rx):
                 # Wire bytes from TOML: set_nb = [0x16, 0x22]
                 await self._send_cmd("set_nb", bytes([0x01 if on else 0x00]))
+                self._cache.main.nb = on
+                self.bump_revision()
                 if self._on_state_event:
                     self._on_state_event("nb_changed", {"on": on})
             case SetNR(on=on, receiver=rx):
                 # Wire bytes from TOML: set_nr = [0x16, 0x40]
                 await self._send_cmd("set_nr", bytes([0x01 if on else 0x00]))
+                self._cache.main.nr = on
+                self.bump_revision()
                 if self._on_state_event:
                     self._on_state_event("nr_changed", {"on": on})
             case SetDigiSel(on=on, receiver=rx):
@@ -823,12 +827,19 @@ class RadioPoller:
                 # Wire bytes from TOML: set_attenuator = [0x11]
                 bcd = ((db // 10) << 4) | (db % 10)
                 await self._send_cmd("set_attenuator", bytes([bcd]))
+                # Optimistic update — don't wait for poll cycle
+                self._cache.main.att = db
+                self.bump_revision()
             case SetPreamp(level=level, receiver=rx):
                 # Wire bytes from TOML: set_preamp = [0x16, 0x02]
                 await self._send_cmd("set_preamp", bytes([level]))
+                self._cache.main.preamp = level
+                self.bump_revision()
             case SetAgc(mode=mode):
                 # Wire bytes from TOML: set_agc = [0x16, 0x12]
                 await self._send_cmd("set_agc", bytes([mode]))
+                self._cache.main.agc = mode
+                self.bump_revision()
             case SetBand(band=band):
                 await self._civ(0x07, data=bytes([band]))
             case SelectVfo(vfo=vfo):
