@@ -343,7 +343,7 @@ class UsbAudioDriver:
         Returns a (rx, tx) device pair, or ``None`` to fall back to
         name-based selection.
         """
-        from ...usb_audio_resolve import resolve_audio_for_serial_port
+        from ....usb_audio_resolve import resolve_audio_for_serial_port
 
         mapping = resolve_audio_for_serial_port(
             self._serial_port,  # type: ignore[arg-type]
