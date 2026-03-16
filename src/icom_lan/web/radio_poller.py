@@ -478,47 +478,34 @@ class RadioPoller:
             receivers.append(1)
         queries: list[tuple[int, int | None, int | None]] = []
         for receiver in receivers:
-            # On serial backends with CI-V Transceive, freq/mode stream
-            # automatically (0x00/0x01).  Skip polling to save bandwidth.
-            if not self._is_serial:
-                queries.append((0x25, None, receiver))  # frequency
-                queries.append((0x26, None, receiver))  # mode
-            if self._supports_capability("attenuator") and self._profile.supports_cmd29(
-                0x11
-            ):
-                queries.append((0x11, None, receiver))
-            if self._supports_capability("af_level") and self._profile.supports_cmd29(
-                0x14, 0x01
-            ):
-                queries.append((0x14, 0x01, receiver))
-            if self._supports_capability("rf_gain") and self._profile.supports_cmd29(
-                0x14, 0x02
-            ):
-                queries.append((0x14, 0x02, receiver))
-            if self._supports_capability("squelch") and self._profile.supports_cmd29(
-                0x14, 0x03
-            ):
-                queries.append((0x14, 0x03, receiver))
-            if self._supports_capability("preamp") and self._profile.supports_cmd29(
-                0x16, 0x02
-            ):
-                queries.append((0x16, 0x02, receiver))
-            if self._supports_capability("nb") and self._profile.supports_cmd29(
-                0x16, 0x22
-            ):
-                queries.append((0x16, 0x22, receiver))
-            if self._supports_capability("nr") and self._profile.supports_cmd29(
-                0x16, 0x40
-            ):
-                queries.append((0x16, 0x40, receiver))
-            if self._supports_capability("digisel") and self._profile.supports_cmd29(
-                0x16, 0x4E
-            ):
-                queries.append((0x16, 0x4E, receiver))
-            if self._supports_capability("ip_plus") and self._profile.supports_cmd29(
-                0x16, 0x65
-            ):
-                queries.append((0x16, 0x65, receiver))
+            # Freq/mode are needed even on serial — for initial state and
+            # to pick up filter/attenuator/preamp that don't come via
+            # transceive.  The slow cycle handles them at SLOW_INTERVAL.
+            queries.append((0x25, None, receiver))  # frequency
+            queries.append((0x26, None, receiver))  # mode
+            # Per-receiver state queries.  On dual-receiver radios these use
+            # cmd29 wrapping.  On single-receiver radios without cmd29 we send
+            # plain CI-V queries (receiver=None).
+            _PER_RX_QUERIES: list[tuple[str, int, int | None]] = [
+                ("attenuator", 0x11, None),
+                ("af_level", 0x14, 0x01),
+                ("rf_gain", 0x14, 0x02),
+                ("squelch", 0x14, 0x03),
+                ("preamp", 0x16, 0x02),
+                ("nb", 0x16, 0x22),
+                ("nr", 0x16, 0x40),
+                ("digisel", 0x16, 0x4E),
+                ("ip_plus", 0x16, 0x65),
+            ]
+            for cap, cmd_byte, sub_byte in _PER_RX_QUERIES:
+                if not self._supports_capability(cap):
+                    continue
+                if self._profile.supports_cmd29(cmd_byte, sub_byte):
+                    # Dual-receiver: cmd29-wrapped with receiver byte
+                    queries.append((cmd_byte, sub_byte, receiver))
+                elif receiver == 0:
+                    # Single-receiver: plain CI-V query (only once, not per-rx)
+                    queries.append((cmd_byte, sub_byte, None))
             if self._profile.model == "IC-7610":
                 for cmd_byte, sub_byte in (
                     (0x15, 0x01),  # S-meter squelch status
