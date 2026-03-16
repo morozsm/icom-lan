@@ -42,9 +42,11 @@ civ_addr = 0xA2           # default CI-V address
 receiver_count = 2        # 1 or 2 independent receivers
 has_lan = true            # Ethernet port built-in?
 has_wifi = false          # WiFi built-in?
+default_baud = 115200     # optional: default serial baud rate
 ```
 
 `id` must be globally unique. Convention: `icom_<model_lower>` (e.g. `icom_ic7300`).
+`default_baud` is used by `--model` CLI auto-config for serial connections.
 
 ### `[spectrum]` — Scope Parameters
 
@@ -85,6 +87,29 @@ features = [
 
 The capability list controls Web UI guards — features not listed will be hidden or
 disabled in the UI automatically.
+
+### `[attenuator]`, `[preamp]`, `[agc]` — RX Control Steps
+
+These optional sections define the available values for front-panel RX controls.
+The Web UI reads these to render cycle buttons with correct labels and step sizes.
+
+```toml
+[attenuator]
+values = [0, 20]  # IC-7300: OFF or 20 dB
+# values = [0, 6, 12, 18]  # IC-7610: 6 dB steps
+
+[preamp]
+values = [0, 1, 2]  # 0=OFF, 1=PRE1, 2=PRE2
+
+[agc]
+modes = [1, 2, 3]  # 1=FAST, 2=MID, 3=SLOW
+labels = { "1" = "FAST", "2" = "MID", "3" = "SLOW" }
+```
+
+**ATT and PRE are mutually exclusive** — the radio hardware enforces this, and the
+UI applies optimistic updates (enabling ATT clears PRE, and vice versa).
+
+If these sections are omitted, the Web UI hides the corresponding buttons.
 
 ### `[modes]` and `[filters]`
 

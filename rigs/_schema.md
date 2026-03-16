@@ -15,6 +15,49 @@ This document describes the format of `.toml` rig configuration files used by
 | `receiver_count` | int    | yes      | Number of independent receivers (1 or 2)        |
 | `has_lan`        | bool   | yes      | Whether the radio has a LAN (Ethernet) port     |
 | `has_wifi`       | bool   | yes      | Whether the radio has built-in WiFi             |
+| `default_baud`   | int    | no       | Default serial baud rate (e.g. `115200`). Used by CLI `--model` auto-config. |
+
+## `[attenuator]` — Attenuator Steps
+
+Optional section. Defines available attenuator values for the radio.
+
+| Field    | Type  | Required | Description                                         |
+|----------|-------|----------|-----------------------------------------------------|
+| `values` | int[] | yes      | Available ATT values in dB (e.g. `[0, 6, 12, 18]`) |
+
+`0` = OFF, other values = attenuation in dB. The frontend cycles through these
+values in order. Different radios have different step sizes (IC-7610: 6 dB steps,
+IC-7300: single 20 dB step).
+
+## `[preamp]` — Preamplifier Steps
+
+Optional section. Defines available preamp settings.
+
+| Field    | Type  | Required | Description                                       |
+|----------|-------|----------|---------------------------------------------------|
+| `values` | int[] | yes      | Available preamp settings (e.g. `[0, 1, 2]`)     |
+
+`0` = OFF, `1` = PREAMP 1, `2` = PREAMP 2. The frontend cycles through these.
+
+## `[agc]` — AGC Modes
+
+Optional section. Defines available AGC modes and their display labels.
+
+| Field    | Type                | Required | Description                                     |
+|----------|---------------------|----------|-------------------------------------------------|
+| `modes`  | int[]               | yes      | Available AGC mode values (e.g. `[1, 2, 3]`)   |
+| `labels` | table (string→string) | yes    | Map of mode value to display label              |
+
+Example:
+
+```toml
+[agc]
+modes = [1, 2, 3]
+labels = { "1" = "FAST", "2" = "MID", "3" = "SLOW" }
+```
+
+The frontend uses `labels` for button text and cycles through `modes` in order.
+Note: TOML table keys must be strings, so mode values are stringified (`"1"`, not `1`).
 
 ## `[spectrum]` — Scope Parameters
 
