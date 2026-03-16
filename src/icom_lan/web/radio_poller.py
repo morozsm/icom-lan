@@ -832,15 +832,18 @@ class RadioPoller:
                 # Wire bytes from TOML: set_attenuator = [0x11]
                 bcd = ((db // 10) << 4) | (db % 10)
                 await self._send_cmd("set_attenuator", bytes([bcd]))
-                # Optimistic update — don't wait for poll cycle
                 if self._radio_state:
                     self._radio_state.main.att = db
+                    if db > 0:
+                        self._radio_state.main.preamp = 0
                     self.bump_revision()
             case SetPreamp(level=level, receiver=rx):
                 # Wire bytes from TOML: set_preamp = [0x16, 0x02]
                 await self._send_cmd("set_preamp", bytes([level]))
                 if self._radio_state:
                     self._radio_state.main.preamp = level
+                    if level > 0:
+                        self._radio_state.main.att = 0
                     self.bump_revision()
             case SetAgc(mode=mode):
                 # Wire bytes from TOML: set_agc = [0x16, 0x12]
