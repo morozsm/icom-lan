@@ -13,8 +13,9 @@ Direct connection to your radio — no wfview, hamlib, or RS-BA1 required.
 ## Features
 
 - ✅ **100% CI-V command coverage** — all 134 IC-7610 commands implemented (Epic #140, 2026-03-07)
+- 🗂️ **Data-driven rig profiles** — add new radio support by writing a `.toml` file, no Python required ([guide](https://morozsm.github.io/icom-lan/guide/rig-profiles/))
 - 📡 **Direct UDP connection** — LAN backend (UDP ports 50001/2/3), no intermediate software needed
-- 🔌 **USB serial backend** — IC-7610 USB CI-V + USB audio devices ([setup guide](https://morozsm.github.io/icom-lan/guide/ic7610-usb-setup/))
+- 🔌 **USB serial backend** — IC-7610 and IC-7300 USB CI-V + USB audio devices ([setup guide](https://morozsm.github.io/icom-lan/guide/ic7610-usb-setup/))
 - 🎛️ **Full CI-V command set** — frequency, mode, filter, power, meters, PTT, CW keying, VFO, split, ATT, PREAMP
 - 🔍 **Unified discovery** — find radios on LAN and USB serial ports, deduplicated by identity
 - 💻 **CLI tool** — `icom-lan status`, `icom-lan freq 14.074m`
@@ -40,18 +41,18 @@ Direct connection to your radio — no wfview, hamlib, or RS-BA1 required.
 
 ## Supported Radios
 
-| Radio | LAN | USB Serial | CI-V Address |
-|-------|-----|------------|-------------|
-| **IC-7610** | ✅ Tested | ✅ Tested | `0x98` |
-| IC-705 | Should work | — | `0xA4` |
-| IC-7300 | Should work | — | `0x94` |
-| IC-9700 | Should work | — | `0xA2` |
-| IC-7851 | Should work | — | `0x8E` |
-| IC-R8600 | Should work | — | `0x96` |
+| Radio | LAN | USB Serial | CI-V Address | Notes |
+|-------|-----|------------|-------------|-------|
+| **IC-7610** | ✅ Tested | ✅ Tested | `0x98` | Dual receiver (MAIN/SUB) |
+| **IC-7300** | — | ✅ Tested | `0x94` | Single receiver (VFO A/B), USB-only |
+| IC-705 | Should work | — | `0xA4` | WiFi |
+| IC-9700 | Should work | — | `0xA2` | VHF/UHF/SHF |
+| IC-7851 | Should work | — | `0x8E` | |
+| IC-R8600 | Should work | — | `0x96` | RX only |
 
-Any Icom radio with LAN/WiFi control should work over LAN — the CI-V address is configurable.
+Radio capabilities are defined in `rigs/*.toml` — see [Adding a New Radio](https://morozsm.github.io/icom-lan/guide/rig-profiles/) for how to add support for untested models.
 
-**USB Serial Backend**: Currently supports IC-7610 (hardware validated). See [IC-7610 USB Serial Backend Setup Guide](https://morozsm.github.io/icom-lan/guide/ic7610-usb-setup/) for setup instructions.
+**USB Serial Backend**: Tested with IC-7610 and IC-7300. See [IC-7610 USB Serial Backend Setup Guide](https://morozsm.github.io/icom-lan/guide/ic7610-usb-setup/) for setup instructions.
 
 ## Installation
 

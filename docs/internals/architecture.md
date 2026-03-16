@@ -161,6 +161,72 @@ methods, but command execution routes through `create_radio(...)`.
 
 See [IC-7610 USB Serial Backend Setup Guide](../guide/ic7610-usb-setup.md) for detailed setup instructions.
 
+## Rig Profiles (Data-Driven Radio Config)
+
+icom-lan uses **TOML rig profiles** to define per-radio capabilities, CI-V wire bytes,
+and hardware parameters. This makes adding new radio support a data task — not a code
+change.
+
+### Data Flow
+
+```
+rigs/ic7300.toml
+      │
+      ▼
+ load_rig(path)          # rig_loader.py
+      │
+      ├─► .to_profile()  → RadioProfile   (capability routing, VFO scheme, receiver count)
+      │                      │
+      │                      ├─► Web API:   /api/v1/info, /api/v1/capabilities
+      │                      ├─► Web UI:    VFO labels, capability guards
+      │                      └─► handlers:  receiver count validation
+      │
+      └─► .to_command_map() → CommandMap  (CI-V wire byte lookup)
+                                │
+                                └─► commands.py:  cmd_map= parameter on all 223 functions
+```
+
+### Key Classes
+
+| Class | Module | Role |
+|-------|--------|------|
+| `RigConfig` | `rig_loader.py` | Parsed TOML (frozen dataclass) |
+| `RadioProfile` | `profiles.py` | Runtime routing: capabilities, VFO, receiver count |
+| `CommandMap` | `command_map.py` | Immutable CI-V wire byte lookup by name |
+
+### Backward Compatibility
+
+All command builder functions in `commands.py` accept `cmd_map=None` (the default).
+When `cmd_map` is `None`, the hardcoded IC-7610 wire bytes are used unchanged.
+This means existing code that doesn't pass `cmd_map` continues to work exactly as before.
+
+```python
+# Old code — still works, uses IC-7610 defaults
+frame = get_af_level(to_addr=0x98)
+
+# New code — uses wire bytes from rig profile
+frame = get_af_level(to_addr=0x94, cmd_map=ic7300_cmd_map)
+```
+
+### VFO Scheme
+
+`RadioProfile.vfo_scheme` is `"ab"` or `"main_sub"`:
+
+- **`main_sub`** (IC-7610, IC-9700) — dual-receiver, uses 0xD0/0xD1 select codes.
+  Web UI shows "MAIN" / "SUB" labels.
+- **`ab`** (IC-7300, IC-705) — single-receiver, uses 0x00/0x01 VFO A/B select.
+  Web UI shows "VFO A" / "VFO B" labels.
+
+### Capability Guards
+
+`RadioProfile.capabilities` is a `frozenset[str]`. The Web UI and API use this to:
+
+- Hide controls for unsupported features (e.g. no DIGI-SEL on IC-7300)
+- Validate receiver index in command handlers
+- Report `hasDualRx`, `hasDigiSel`, etc. in `/api/v1/info` and `/api/v1/capabilities`
+
+See [`docs/guide/rig-profiles.md`](../guide/rig-profiles.md) for how to add a new radio.
+
 ## Module Responsibilities
 
 ### `radio.py` — High-Level Public API (1549 lines)

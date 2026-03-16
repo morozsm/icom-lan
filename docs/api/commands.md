@@ -2,6 +2,68 @@
 
 Low-level CI-V command encoding and decoding. Most users should use the high-level **Radio** API (via [`create_radio`](public-api-surface.md)).
 
+## Data-Driven Commands (cmd_map)
+
+All 223 command builder functions accept an optional `cmd_map` parameter. When provided,
+the function reads its CI-V wire bytes from the `CommandMap` instead of the hardcoded defaults.
+This is how rig profile support works at the lowest level.
+
+### Hardcoded path (default)
+
+```python
+from icom_lan.commands import get_af_level
+
+# Uses hardcoded IC-7610 wire bytes: [0x14, 0x01]
+frame = get_af_level(to_addr=0x98)
+```
+
+### Data-driven path (CommandMap)
+
+```python
+from pathlib import Path
+from icom_lan.rig_loader import load_rig
+from icom_lan.commands import get_af_level
+
+cfg = load_rig(Path("rigs/ic7300.toml"))
+cmd_map = cfg.to_command_map()
+
+# Wire bytes come from the TOML file
+frame = get_af_level(to_addr=0x94, cmd_map=cmd_map)
+```
+
+### `_build_from_map()` helper
+
+Inside command functions, wire bytes are resolved via the private helper:
+
+```python
+def _build_from_map(cmd_map: CommandMap | None, name: str, default: tuple[int, ...]) -> tuple[int, ...]:
+    """Return wire bytes from cmd_map if provided, otherwise return default."""
+    if cmd_map is not None:
+        return cmd_map.get(name)
+    return default
+```
+
+This gives commands a clean fallback to hardcoded bytes when no `cmd_map` is passed,
+preserving full backward compatibility.
+
+### When to use cmd_map
+
+- **CLI / Radio API** — `cmd_map` is wired automatically from the active rig profile.
+  You don't need to pass it manually.
+- **Tests** — pass a `CommandMap` constructed from a test dict to verify wire bytes.
+- **Custom radios** — pass `cmd_map` explicitly when building frames for non-IC-7610 radios.
+
+```python
+from icom_lan.command_map import CommandMap
+from icom_lan.commands import get_attenuator
+
+# Custom CommandMap for testing
+cm = CommandMap({"get_attenuator": (0x11,)})
+frame = get_attenuator(to_addr=0x94, cmd_map=cm)
+```
+
+See [`docs/api/rig-loader.md`](rig-loader.md) for the `CommandMap` class reference.
+
 ::: icom_lan.commands
 
 ## CI-V Frame Format

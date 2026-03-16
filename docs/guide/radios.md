@@ -1,5 +1,8 @@
 # Supported Radios
 
+Radio support in icom-lan is defined by **TOML rig profiles** in `rigs/`.
+Adding a new radio = adding a new `.toml` file — see [Adding a New Radio](rig-profiles.md).
+
 ## Tested
 
 ### IC-7610
@@ -29,6 +32,48 @@
     For IC-7610 USB operation, set **Menu → Set → Connectors → CI-V → CI-V USB Port**
     to the CI-V option (`Link to [CI-V]`), not `[REMOTE]`.
 
+### IC-7300
+
+- **CI-V Address:** `0x94`
+- **Connectivity:** USB serial (CI-V) — no built-in LAN
+- **VFO scheme:** VFO A/B (not Main/Sub)
+- **Rig profile:** `rigs/ic7300.toml`
+- **Features verified:** frequency, mode, power, S-meter, SWR, ALC, PTT, CW keying,
+  VFO A/B select, attenuator, preamp, NB, NR, scope/waterfall
+- **Not available:** DIGI-SEL, IP+, dual receiver
+
+!!! note "Serial-only radio"
+    The IC-7300 has no Ethernet port (only an optional RS-BA1 WiFi adapter which uses
+    a different protocol). Use the **serial backend** with a USB-A to USB-B cable.
+
+```python
+from icom_lan import create_radio, SerialBackendConfig
+
+config = SerialBackendConfig(port="/dev/tty.usbserial-XXXX", baud=19200)
+async with create_radio(config) as radio:
+    freq = await radio.get_frequency()
+    print(f"{freq/1e6:.3f} MHz")
+```
+
+```bash
+# CLI
+icom-lan --backend serial --serial-port /dev/tty.usbserial-XXXX freq
+```
+
+#### IC-7300 Capability Differences vs IC-7610
+
+| Feature | IC-7610 | IC-7300 |
+|---------|---------|---------|
+| Receivers | 2 (MAIN/SUB) | 1 (VFO A/B) |
+| VFO labels | MAIN / SUB | VFO A / VFO B |
+| DIGI-SEL | ✅ | ❌ |
+| IP+ | ✅ | ❌ |
+| LAN | ✅ | ❌ |
+| Scope | ✅ | ✅ |
+
+The Web UI automatically hides DIGI-SEL and IP+ controls when connected to an IC-7300
+(capability-based UI guards). VFO labels switch to "VFO A" / "VFO B" automatically.
+
 ## Should Work (Untested)
 
 These radios use the same Icom LAN protocol and should work out of the box. Community testing and reports welcome!
@@ -46,12 +91,6 @@ config = LanBackendConfig(host="192.168.1.101", radio_addr=0xA4, timeout=10.0)
 async with create_radio(config) as radio:
     ...
 ```
-
-### IC-7300
-
-- **CI-V Address:** `0x94`
-- **Connectivity:** Ethernet (optional LAN module)
-- **Notes:** Requires optional LAN interface module.
 
 ### IC-9700
 
@@ -98,11 +137,20 @@ async with create_radio(config) as radio:
 
 ## Adding Support for New Radios
 
-The library is CI-V address agnostic — any radio that speaks the Icom LAN protocol should work by specifying the correct `radio_addr`. If you test with a new model:
+See **[Adding a New Radio (Rig Profiles)](rig-profiles.md)** for the complete guide.
+In brief:
 
-1. Try connecting with the model's default CI-V address
+1. Copy `rigs/ic7610.toml` as a template
+2. Update `[radio]` section with the correct CI-V address and capability flags
+3. Remove unsupported commands, add any model-specific overrides
+4. Run `uv run pytest tests/test_rig_loader.py -v` to validate
+
+The library is CI-V address agnostic — any radio that speaks the Icom LAN protocol should
+work. If you test with a new model:
+
+1. Connect with the model's default CI-V address
 2. Verify basic operations (frequency, mode, meters)
-3. [Open an issue](https://github.com/morozsm/icom-lan/issues) or PR with your findings
+3. [Open an issue](https://github.com/morozsm/icom-lan/issues) or PR with your rig file
 
 ### Finding Your Radio's CI-V Address
 
