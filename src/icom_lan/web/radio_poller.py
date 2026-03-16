@@ -70,7 +70,7 @@ _GAP: float = 0.012
 _GAP_SERIAL: float = 0.050  # serial CI-V needs more breathing room
 _SEND_TIMEOUT: float = 1.0
 _FAST_INTERVAL: float = 0.025  # meters — wfview queue interval for LAN (25ms)
-_FAST_INTERVAL_SERIAL: float = 0.200  # serial: 5 meter polls/sec (not 40)
+_FAST_INTERVAL_SERIAL: float = 0.100  # serial: 10 polls/sec for responsive meters
 _SLOW_INTERVAL: float = 0.25  # levels/settings — rarely change
 
 
@@ -405,6 +405,9 @@ class RadioPoller:
         self._fast_interval: float = (
             _FAST_INTERVAL_SERIAL if self._is_serial else _FAST_INTERVAL
         )
+        self._FAST_CMDS = (
+            self._FAST_CMDS_SERIAL if self._is_serial else self._FAST_CMDS_LAN
+        )
         self._STATE_QUERIES = self._build_state_queries()
 
     def start(self) -> None:
@@ -585,6 +588,15 @@ class RadioPoller:
             (0x16, 0x47),  # Break-in mode
             (0x16, 0x50),  # Dial lock status
         ]
+        # For serial: ALC/comp/VD/Id meters move to slow state queries
+        # (they are NOT in _FAST_CMDS_SERIAL to keep S-meter responsive)
+        if self._is_serial:
+            _COMMON_FEATURE_QUERIES.extend([
+                (0x15, 0x13),  # ALC meter
+                (0x15, 0x14),  # Compressor meter
+                (0x15, 0x15),  # VD (voltage)
+                (0x15, 0x16),  # Id (PA drain current)
+            ])
         for cmd, sub in _COMMON_FEATURE_QUERIES:
             queries.append((cmd, sub, None))
 
@@ -722,6 +734,12 @@ class RadioPoller:
                     if current != "MAIN" and self._profile.vfo_sub_code is not None:
                         await asyncio.sleep(self._gap)
                         await self._civ(0x07, data=bytes([self._profile.vfo_sub_code]))
+                # Optimistic state update for frequency
+                if self._radio_state:
+                    target = self._radio_state.sub if rx != 0 else self._radio_state.main
+                    if target:
+                        target.freq_hz = freq
+                    self.bump_revision()
             case SetMode(mode=mode, filter_width=fw, receiver=rx):
                 self._ensure_receiver_supported(rx, operation="set_mode")
                 current = self._current_active()
@@ -751,6 +769,12 @@ class RadioPoller:
                     if current != "MAIN" and self._profile.vfo_sub_code is not None:
                         await asyncio.sleep(self._gap)
                         await self._civ(0x07, data=bytes([self._profile.vfo_sub_code]))
+                # Optimistic state update for mode
+                if self._radio_state:
+                    target = self._radio_state.sub if rx != 0 else self._radio_state.main
+                    if target:
+                        target.mode = mode
+                    self.bump_revision()
             case SetFilter(filter_num=fn, receiver=rx):
                 if isinstance(radio, AdvancedControlCapable):
                     self._ensure_receiver_supported(rx, operation="set_filter")
@@ -960,7 +984,8 @@ class RadioPoller:
 
     # Fast: meters (polled on even cycles)
     # wfview: Priority=Highest, queue interval 25ms for LAN (HasFDComms)
-    _FAST_CMDS: list[tuple[int, int | None]] = [
+    # For serial: only high-priority meters to keep S-meter responsive.
+    _FAST_CMDS_LAN: list[tuple[int, int | None]] = [
         (0x15, 0x02),  # S-meter
         (0x15, 0x11),  # RF power
         (0x15, 0x12),  # SWR
@@ -969,6 +994,13 @@ class RadioPoller:
         (0x15, 0x15),  # VD (voltage)
         (0x15, 0x16),  # Id (PA drain current)
     ]
+    _FAST_CMDS_SERIAL: list[tuple[int, int | None]] = [
+        (0x15, 0x02),  # S-meter — polled every cycle for responsiveness
+        (0x15, 0x11),  # RF power
+        (0x15, 0x02),  # S-meter again (2:1 ratio vs other meters)
+        (0x15, 0x12),  # SWR
+    ]
+    _FAST_CMDS: list[tuple[int, int | None]] = _FAST_CMDS_LAN  # class default
 
     # State queries interleaved on odd cycles.
     # Tuple: (cmd, sub, receiver) where receiver=None means global query.
