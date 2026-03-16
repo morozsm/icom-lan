@@ -610,6 +610,7 @@ class WebServer:
                 self._state_cache,
                 self._command_queue,
                 on_state_event=self._on_poller_state_event,
+                radio_state=self._radio_state,
             )
             self._radio_poller.start()
             if _supports_scope(self._radio):
