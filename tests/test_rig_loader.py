@@ -203,7 +203,7 @@ class TestToProfile:
 
     def test_modes(self):
         profile = load_rig(TEMPLATE_PATH).to_profile()
-        assert profile.modes == ("USB", "LSB", "CW", "CW-R", "AM", "FM", "RTTY", "RTTY-R")
+        assert profile.modes == ("USB", "LSB", "CW", "CW-R", "AM", "FM", "RTTY", "RTTY-R", "PSK", "PSK-R")
 
     def test_filters(self):
         profile = load_rig(TEMPLATE_PATH).to_profile()

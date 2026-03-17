@@ -55,28 +55,55 @@ class TestProfileParity:
 
     def test_capabilities_exact(self, profile):
         expected = frozenset({
-            "audio", "scope", "dual_rx", "meters", "tx", "cw",
-            "attenuator", "preamp", "rf_gain", "af_level", "squelch",
-            "nb", "nr", "digisel", "ip_plus",
+            # Receiver
+            "audio", "dual_rx", "dual_watch", "af_level", "rf_gain", "squelch",
+            # RF front end
+            "attenuator", "preamp", "digisel", "ip_plus",
+            # Antenna
+            "antenna", "rx_antenna",
+            # DSP / Noise
+            "nb", "nr", "notch", "apf", "twin_peak",
+            # Filter
+            "pbt", "filter_width", "filter_shape",
+            # TX
+            "tx", "split", "vox", "compressor", "monitor", "drive_gain", "ssb_tx_bw",
+            # CW
+            "cw", "break_in",
+            # RIT / XIT
+            "rit", "xit",
+            # Tuner
+            "tuner",
+            # Metering / Scope
+            "meters", "scope",
+            # Tone
+            "repeater_tone", "tsql",
+            # Data / System
+            "data_mode", "power_control", "dial_lock", "scan", "bsr",
+            "main_sub_tracking",
         })
         assert profile.capabilities == expected
 
     def test_capabilities_count(self, profile):
-        assert len(profile.capabilities) == 15
+        assert len(profile.capabilities) == 42
 
     def test_cmd29_routes_exact(self, profile):
         expected = frozenset({
-            (0x11, None), (0x14, 0x01), (0x14, 0x02), (0x14, 0x03),
+            (0x11, None), (0x12, None),
+            (0x14, 0x01), (0x14, 0x02), (0x14, 0x03),
             (0x14, 0x05), (0x14, 0x06), (0x14, 0x07), (0x14, 0x08),
-            (0x14, 0x12), (0x14, 0x13), (0x15, 0x01), (0x15, 0x05),
-            (0x16, 0x02), (0x16, 0x32), (0x16, 0x22), (0x16, 0x40),
-            (0x16, 0x41), (0x16, 0x48), (0x16, 0x4E), (0x16, 0x4F),
-            (0x16, 0x56), (0x16, 0x65), (0x1A, 0x04), (0x1A, 0x09),
+            (0x14, 0x0D), (0x14, 0x12), (0x14, 0x13),
+            (0x15, 0x01), (0x15, 0x02), (0x15, 0x05),
+            (0x16, 0x02), (0x16, 0x22), (0x16, 0x32),
+            (0x16, 0x40), (0x16, 0x41), (0x16, 0x42), (0x16, 0x43),
+            (0x16, 0x48), (0x16, 0x4E), (0x16, 0x4F),
+            (0x16, 0x53), (0x16, 0x56), (0x16, 0x65),
+            (0x1A, 0x03), (0x1A, 0x04), (0x1A, 0x09),
+            (0x1B, 0x00), (0x1B, 0x01),
         })
         assert profile.cmd29_routes == expected
 
     def test_cmd29_routes_count(self, profile):
-        assert len(profile.cmd29_routes) == 24
+        assert len(profile.cmd29_routes) == 33
 
     def test_vfo_main_code(self, profile):
         assert profile.vfo_main_code == 0xD0
@@ -107,7 +134,7 @@ class TestProfileParity:
         assert len(hf.bands) == 10
 
     def test_modes(self, profile):
-        assert profile.modes == ("USB", "LSB", "CW", "CW-R", "AM", "FM", "RTTY", "RTTY-R")
+        assert profile.modes == ("USB", "LSB", "CW", "CW-R", "AM", "FM", "RTTY", "RTTY-R", "PSK", "PSK-R")
 
     def test_filters(self, profile):
         assert profile.filters == ("FIL1", "FIL2", "FIL3")

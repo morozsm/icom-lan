@@ -1,6 +1,10 @@
 # Rig Configuration — IC-7300
 # This file defines the IC-7300 radio profile in TOML format.
 # See _schema.md for field documentation.
+#
+# Source: IC-7300MK2 CI-V Reference Guide (PDF)
+#         wfview IC-7300.rig
+#         Hardware testing
 
 [radio]
 id = "icom_ic7300"
@@ -16,43 +20,148 @@ seq_max = 11
 amp_max = 160
 data_len_max = 475
 
+# ── Capabilities ─────────────────────────────────────────────────
+# Feature tags determine which UI panels and controls are rendered.
+# Grouped by functional area.
+
 [capabilities]
 features = [
+    # Receiver
     "audio",
-    "scope",
-    "meters",
-    "tx",
-    "cw",
+    "af_level",
+    "rf_gain",
+    "squelch",
+    # RF front end
     "attenuator",
     "preamp",
-    "rf_gain",
-    "af_level",
-    "squelch",
+    # NOTE: no digisel, no ip_plus on IC-7300 (commands removed from CI-V)
+    # Antenna
+    "antenna",
+    # NOTE: no rx_antenna on IC-7300 (single antenna)
+    # DSP / Noise
     "nb",
     "nr",
+    "notch",
+    "apf",
+    "twin_peak",
+    # Filter
+    "pbt",
+    "filter_width",
+    "filter_shape",
+    # TX
+    "tx",
+    "split",
+    "vox",
+    "compressor",
+    "monitor",
+    # NOTE: no drive_gain on IC-7300
+    "ssb_tx_bw",
+    # CW
+    "cw",
+    "break_in",
+    # RIT / XIT
+    "rit",
+    "xit",
+    # Tuner
+    "tuner",
+    # Metering
+    "meters",
+    # Scope
+    "scope",
+    # Tone
+    "repeater_tone",
+    "tsql",
+    # Data
+    "data_mode",
+    # System
+    "power_control",
+    "dial_lock",
+    "scan",
+    "bsr",
 ]
 
+# ── Parameterized Capabilities ───────────────────────────────────
+
 [attenuator]
-values = [0, 20]  # 0=OFF, 20=20dB
+# CI-V 0x11: binary toggle only
+# 0x00=OFF, 0x20=20dB ON
+values = [0, 20]
 
 [preamp]
-values = [0, 1, 2]  # 0=OFF, 1=PRE1, 2=PRE2
+# CI-V 0x16 0x02: 0=OFF, 1=P.AMP1, 2=P.AMP2
+values = [0, 1, 2]
 
 [agc]
-modes = [1, 2, 3]  # 1=FAST, 2=MID, 3=SLOW
+# CI-V 0x16 0x12: 1=FAST, 2=MID, 3=SLOW
+modes = [1, 2, 3]
 labels = { "1" = "FAST", "2" = "MID", "3" = "SLOW" }
+
+[antenna]
+# CI-V 0x12: single antenna, no RX antenna
+tx_count = 1
+has_rx_ant = false
+
+[apf]
+# CI-V 0x16 0x32: 0=OFF, 1=ON (simple toggle, no WIDE/MID/NAR)
+# Different from IC-7610 which has 0-3!
+values = [0, 1]
+labels = { "0" = "OFF", "1" = "ON" }
+
+[notch]
+# CI-V 0x16 0x57: Manual notch width
+# 0=WIDE, 1=MID, 2=NAR (same as IC-7610)
+width_values = [0, 1, 2]
+width_labels = { "0" = "WIDE", "1" = "MID", "2" = "NAR" }
+
+[ssb_tx_bw]
+# CI-V 0x16 0x58: SSB TX bandwidth
+# 0=WIDE, 1=MID, 2=NAR
+values = [0, 1, 2]
+labels = { "0" = "WIDE", "1" = "MID", "2" = "NAR" }
+
+[break_in]
+# CI-V 0x16 0x47: 0=OFF, 1=Semi, 2=Full
+values = [0, 1, 2]
+labels = { "0" = "OFF", "1" = "SEMI", "2" = "FULL" }
+
+[rit]
+# CI-V 0x21 0x00: ±9.999 kHz in 10 Hz steps
+range_hz = 9999
+
+[cw]
+# CI-V 0x14 0x09: CW pitch 300-900 Hz
+# CI-V 0x14 0x0C: Key speed 6-48 WPM
+pitch_min_hz = 300
+pitch_max_hz = 900
+speed_min_wpm = 6
+speed_max_wpm = 48
+# NOTE: no dash_ratio on IC-7300 (not in wfview rig file)
+
+[nb]
+# CI-V 0x1A 0x05 ...: NB depth 1-10, NB width 0-255
+depth_min = 0
+depth_max = 9
+width_min = 0
+width_max = 255
+
+[power]
+max_watts = 100
 
 [modes]
 list = ["USB", "LSB", "CW", "CW-R", "AM", "FM", "RTTY", "RTTY-R"]
 
 [filters]
 list = ["FIL1", "FIL2", "FIL3"]
+# CI-V 0x1A 0x03: IF filter width 50-10000 Hz
+width_min_hz = 50
+width_max_hz = 10000
 
 [vfo]
 scheme = "ab"
-main_select = [0x00]
-sub_select = [0x01]
+main_select = [0x00]  # VFO A
+sub_select = [0x01]   # VFO B
 swap = [0xB0]
+equal = [0xA0]
 
 # ── Frequency Ranges ─────────────────────────────────────────────
 
@@ -143,64 +252,153 @@ default_hz = 50_125_000
 bsr_code = 0x0A
 
 # ── CI-V Commands ────────────────────────────────────────────────
-# Wire bytes as integer arrays. Based on IC-7610 commands with
-# IC-7300-specific overrides applied and unsupported commands removed.
+# Grouped by capability area. Wire bytes as integer arrays.
+# Source: IC-7300MK2 CI-V Reference Guide
+#
+# IC-7300 has NO Command29 support (single receiver).
 
 [commands]
+
+# ── Frequency / Mode ──
 get_freq = [0x03]
 set_freq = [0x05]
 get_mode = [0x04]
 set_mode = [0x06]
+get_band_edge_freq = [0x02]
+get_selected_freq = [0x25, 0x00]          # NOT_IMPLEMENTED — Selected VFO freq
+get_unselected_freq = [0x25, 0x01]        # NOT_IMPLEMENTED — Unselected VFO freq
+get_selected_mode = [0x26, 0x00]          # NOT_IMPLEMENTED — Selected VFO mode
+get_unselected_mode = [0x26, 0x01]        # NOT_IMPLEMENTED — Unselected VFO mode
+
+# ── VFO ──
 get_vfo = [0x07]
 set_vfo = [0x07]
 set_split = [0x0F]
+# NOTE: no dual_watch, no main/sub band select (single receiver)
+
+# ── Tuning ──
 get_tuning_step = [0x10]
 set_tuning_step = [0x10]
+
+# ── RF Front End (Attenuator / Preamp) ──
 get_attenuator = [0x11]
 set_attenuator = [0x11]
-get_antenna = [0x12]
+get_preamp = [0x16, 0x02]
+set_preamp = [0x16, 0x02]
+# NOTE: no digisel (0x16 0x4E), no digisel_shift (0x14 0x13) on IC-7300
+# NOTE: no ip_plus (0x16 0x65) on IC-7300 per CI-V reference
+#   (wfview lists it but CI-V PDF for IC-7300 does not include 0x16 0x65)
+
+# ── Antenna ──
+get_antenna = [0x12]                      # Single antenna
 set_antenna = [0x12]
-get_speech = [0x13]
+# NOTE: no rx_antenna (0x16 0x53) on IC-7300
+
+# ── Audio / AF ──
 get_af_level = [0x14, 0x01]
 set_af_level = [0x14, 0x01]
 get_rf_gain = [0x14, 0x02]
 set_rf_gain = [0x14, 0x02]
 get_squelch = [0x14, 0x03]
 set_squelch = [0x14, 0x03]
-get_apf_type_level = [0x14, 0x05]
-set_apf_type_level = [0x14, 0x05]
+# NOTE: no af_mute (0x1A 0x09) on IC-7300
+
+# ── DSP / Noise (NB, NR, Notch, APF, Twin Peak) ──
+get_nb = [0x16, 0x22]
+set_nb = [0x16, 0x22]
+get_nb_level = [0x14, 0x12]
+set_nb_level = [0x14, 0x12]
+get_nr = [0x16, 0x40]
+set_nr = [0x16, 0x40]
 get_nr_level = [0x14, 0x06]
 set_nr_level = [0x14, 0x06]
+get_auto_notch = [0x16, 0x41]
+set_auto_notch = [0x16, 0x41]
+get_manual_notch = [0x16, 0x48]
+set_manual_notch = [0x16, 0x48]
+get_notch_filter = [0x14, 0x0D]           # Notch position 0-255
+set_notch_filter = [0x14, 0x0D]
+get_manual_notch_width = [0x16, 0x57]     # 0=WIDE, 1=MID, 2=NAR
+set_manual_notch_width = [0x16, 0x57]
+get_audio_peak_filter = [0x16, 0x32]      # IC-7300: 0=OFF, 1=ON only
+set_audio_peak_filter = [0x16, 0x32]
+get_apf_type_level = [0x14, 0x05]         # NOT_IMPLEMENTED — APF position (not in 7300 wfview)
+set_apf_type_level = [0x14, 0x05]
+get_twin_peak_filter = [0x16, 0x4F]
+set_twin_peak_filter = [0x16, 0x4F]
+
+# ── Filter (PBT, IF width, shape) ──
 get_pbt_inner = [0x14, 0x07]
 set_pbt_inner = [0x14, 0x07]
 get_pbt_outer = [0x14, 0x08]
 set_pbt_outer = [0x14, 0x08]
-get_cw_pitch = [0x14, 0x09]
-set_cw_pitch = [0x14, 0x09]
+get_filter_width = [0x1A, 0x03]           # 50-10000 Hz
+set_filter_width = [0x1A, 0x03]
+get_filter_shape = [0x16, 0x56]
+set_filter_shape = [0x16, 0x56]
+get_agc = [0x16, 0x12]
+set_agc = [0x16, 0x12]
+get_agc_time_constant = [0x1A, 0x04]
+set_agc_time_constant = [0x1A, 0x04]
+
+# ── TX Controls (Power, Mic, Compressor, Monitor, VOX) ──
+ptt_on = [0x1C, 0x00]
+ptt_off = [0x1C, 0x00]
 get_rf_power = [0x14, 0x0A]
 set_rf_power = [0x14, 0x0A]
 get_mic_gain = [0x14, 0x0B]
 set_mic_gain = [0x14, 0x0B]
-get_key_speed = [0x14, 0x0C]
-set_key_speed = [0x14, 0x0C]
-get_notch_filter = [0x14, 0x0D]
-set_notch_filter = [0x14, 0x0D]
+# NOTE: no drive_gain (0x14 0x14) on IC-7300
+get_compressor = [0x16, 0x44]
+set_compressor = [0x16, 0x44]
 get_compressor_level = [0x14, 0x0E]
 set_compressor_level = [0x14, 0x0E]
-get_break_in_delay = [0x14, 0x0F]
-set_break_in_delay = [0x14, 0x0F]
-get_nb_level = [0x14, 0x12]
-set_nb_level = [0x14, 0x12]
-# digisel_shift removed (not available on IC-7300)
-# drive_gain removed (not available on IC-7300)
+get_monitor = [0x16, 0x45]
+set_monitor = [0x16, 0x45]
 get_monitor_gain = [0x14, 0x15]
 set_monitor_gain = [0x14, 0x15]
+get_vox = [0x16, 0x46]
+set_vox = [0x16, 0x46]
 get_vox_gain = [0x14, 0x16]
 set_vox_gain = [0x14, 0x16]
 get_anti_vox_gain = [0x14, 0x17]
 set_anti_vox_gain = [0x14, 0x17]
+get_ssb_tx_bandwidth = [0x16, 0x58]
+set_ssb_tx_bandwidth = [0x16, 0x58]
+
+# ── Split ──
+get_tx_freq_monitor = [0x1C, 0x03]
+set_tx_freq_monitor = [0x1C, 0x03]
+get_xfc_status = [0x1C, 0x02]             # XFC = transmit frequency monitor
+set_xfc_status = [0x1C, 0x02]
+
+# ── CW ──
+send_cw = [0x17]
+stop_cw = [0x17]
+get_cw_pitch = [0x14, 0x09]
+set_cw_pitch = [0x14, 0x09]
+get_key_speed = [0x14, 0x0C]
+set_key_speed = [0x14, 0x0C]
+get_break_in = [0x16, 0x47]
+set_break_in = [0x16, 0x47]
+get_break_in_delay = [0x14, 0x0F]
+set_break_in_delay = [0x14, 0x0F]
+
+# ── RIT / ∂TX (XIT) ──
+get_rit_frequency = [0x21, 0x00]
+set_rit_frequency = [0x21, 0x00]
+get_rit_status = [0x21, 0x01]
+set_rit_status = [0x21, 0x01]
+get_rit_tx_status = [0x21, 0x02]          # ∂TX on/off
+set_rit_tx_status = [0x21, 0x02]
+
+# ── Tuner / ATU ──
+get_tuner_status = [0x1C, 0x01]
+set_tuner_status = [0x1C, 0x01]
+
+# ── Meters ──
 get_s_meter = [0x15, 0x02]
-get_s_meter_sql_status = [0x16, 0x43]
+get_s_meter_sql_status = [0x15, 0x01]
 get_various_squelch = [0x15, 0x05]
 get_overflow_status = [0x15, 0x07]
 get_power_meter = [0x15, 0x11]
@@ -209,66 +407,27 @@ get_alc = [0x15, 0x13]
 get_comp_meter = [0x15, 0x14]
 get_vd_meter = [0x15, 0x15]
 get_id_meter = [0x15, 0x16]
-get_preamp = [0x16, 0x02]
-set_preamp = [0x16, 0x02]
-get_agc = [0x16, 0x12]
-set_agc = [0x16, 0x12]
-get_nb = [0x16, 0x22]
-set_nb = [0x16, 0x22]
-get_audio_peak_filter = [0x16, 0x32]
-set_audio_peak_filter = [0x16, 0x32]
-get_nr = [0x16, 0x40]
-set_nr = [0x16, 0x40]
-get_auto_notch = [0x16, 0x41]
-set_auto_notch = [0x16, 0x41]
-get_manual_notch = [0x16, 0x48]
-set_manual_notch = [0x16, 0x48]
-get_compressor = [0x16, 0x44]
-set_compressor = [0x16, 0x44]
-get_monitor = [0x16, 0x45]
-set_monitor = [0x16, 0x45]
-get_vox = [0x16, 0x46]
-set_vox = [0x16, 0x46]
-get_break_in = [0x16, 0x47]
-set_break_in = [0x16, 0x47]
-# digisel removed (not available on IC-7300)
-get_twin_peak_filter = [0x16, 0x4F]
-set_twin_peak_filter = [0x16, 0x4F]
-get_dial_lock = [0x16, 0x50]
-set_dial_lock = [0x16, 0x50]
-get_filter_shape = [0x16, 0x56]
-set_filter_shape = [0x16, 0x56]
-# ip_plus removed (not available on IC-7300)
-power_on = [0x18]
-power_off = [0x18]
-get_transceiver_id = [0x19, 0x00]
-ptt_on = [0x1C, 0x00]
-ptt_off = [0x1C, 0x00]
-get_ref_adjust = [0x1A, 0x05]
-set_ref_adjust = [0x1A, 0x05]
-get_data_mode = [0x1A, 0x06]
-set_data_mode = [0x1A, 0x06]
-get_af_mute = [0x1A, 0x09]
-set_af_mute = [0x1A, 0x09]
-get_agc_time_constant = [0x1A, 0x04]
-set_agc_time_constant = [0x1A, 0x04]
+
+# ── Tone / TSQL ──
+get_repeater_tone = [0x16, 0x42]
+set_repeater_tone = [0x16, 0x42]
+get_repeater_tsql = [0x16, 0x43]
+set_repeater_tsql = [0x16, 0x43]
 get_tone_freq = [0x1B, 0x00]
 set_tone_freq = [0x1B, 0x00]
 get_tsql_freq = [0x1B, 0x01]
 set_tsql_freq = [0x1B, 0x01]
-get_rit_frequency = [0x21, 0x00]
-set_rit_frequency = [0x21, 0x00]
-get_rit_status = [0x21, 0x01]
-set_rit_status = [0x21, 0x01]
-get_rit_tx_status = [0x21, 0x02]
-set_rit_tx_status = [0x21, 0x02]
-send_cw = [0x17]
-stop_cw = [0x17]
+
+# ── Data Mode ──
+get_data_mode = [0x1A, 0x06]
+set_data_mode = [0x1A, 0x06]
+
+# ── Scope ──
 scope_on = [0x27, 0x10]
 scope_off = [0x27, 0x10]
 scope_data_output = [0x27, 0x11]
-# scope_main_sub removed (single receiver)
-get_scope_single_dual = [0x27, 0x15]
+# NOTE: no scope_main_sub (0x27 0x12) — single receiver
+get_scope_single_dual = [0x27, 0x13]
 get_scope_mode = [0x27, 0x14]
 get_scope_span = [0x27, 0x15]
 get_scope_edge = [0x27, 0x16]
@@ -280,26 +439,44 @@ get_scope_center_type = [0x27, 0x1C]
 get_scope_vbw = [0x27, 0x1D]
 get_scope_fixed_edge = [0x27, 0x1E]
 get_scope_rbw = [0x27, 0x1F]
+
+# ── Scan ──
 scan_start = [0x0E]
 scan_stop = [0x0E]
-get_tuner_status = [0x1C, 0x01]
-set_tuner_status = [0x1C, 0x01]
-get_tx_freq_monitor = [0x1C, 0x03]
-set_tx_freq_monitor = [0x1C, 0x03]
-get_band_edge_freq = [0x02]
 
-# IC-7300-specific overrides (different wire bytes from IC-7610)
+# ── System / Power ──
+power_on = [0x18]
+power_off = [0x18]
+get_transceiver_id = [0x19, 0x00]
+get_speech = [0x13]
+get_dial_lock = [0x16, 0x50]
+set_dial_lock = [0x16, 0x50]
+
+# ── Band Stacking Register ──
+get_bsr = [0x1A, 0x01]
+set_bsr = [0x1A, 0x01]
+
+# ── Memory ── (NOT_IMPLEMENTED)
+# get_memory_contents = [0x1A, 0x00]
+# set_memory_contents = [0x1A, 0x00]
+# set_memory_mode = [0x08]
+# memory_clear = [0x0B]
+
+# ── Menu Settings (0x1A 0x05 ...) ──
+# IC-7300-specific sub-addresses (different from IC-7610!)
+
 [commands.overrides]
 acc1_mod_level = [0x1A, 0x05, 0x00, 0x64]
 usb_mod_level = [0x1A, 0x05, 0x00, 0x65]
 data_off_mod_input = [0x1A, 0x05, 0x00, 0x66]
 data1_mod_input = [0x1A, 0x05, 0x00, 0x67]
 civ_transceive = [0x1A, 0x05, 0x00, 0x71]
+civ_output_ant = [0x1A, 0x05, 0x00, 0x61]
 system_date = [0x1A, 0x05, 0x00, 0x94]
 system_time = [0x1A, 0x05, 0x00, 0x95]
 utc_offset = [0x1A, 0x05, 0x00, 0x96]
 quick_split = [0x1A, 0x05, 0x00, 0x30]
 nb_depth = [0x1A, 0x05, 0x01, 0x89]
 nb_width = [0x1A, 0x05, 0x01, 0x90]
-civ_output_ant = [0x1A, 0x05, 0x00, 0x61]
-agc_time_constant = [0x1A, 0x04]
+vox_delay = [0x1A, 0x05, 0x01, 0x91]     # NOT_IMPLEMENTED — 0-20 (0.0-2.0 sec)
+ref_adjust = [0x1A, 0x05, 0x00, 0x70]    # NOT_IMPLEMENTED — different address from IC-7610

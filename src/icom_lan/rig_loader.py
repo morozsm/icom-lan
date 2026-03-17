@@ -13,21 +13,62 @@ __all__ = ["RigConfig", "RigLoadError", "load_rig", "discover_rigs"]
 
 KNOWN_CAPABILITIES = frozenset(
     {
+        # Receiver
         "audio",
-        "scope",
         "dual_rx",
-        "meters",
-        "tx",
-        "cw",
+        "dual_watch",
+        "af_level",
+        "rf_gain",
+        "squelch",
+        # RF front end
         "attenuator",
         "preamp",
-        "rf_gain",
-        "af_level",
-        "squelch",
-        "nb",
-        "nr",
         "digisel",
         "ip_plus",
+        # Antenna
+        "antenna",
+        "rx_antenna",
+        # DSP / Noise
+        "nb",
+        "nr",
+        "notch",
+        "apf",
+        "twin_peak",
+        # Filter
+        "pbt",
+        "filter_width",
+        "filter_shape",
+        # TX
+        "tx",
+        "split",
+        "vox",
+        "compressor",
+        "monitor",
+        "drive_gain",
+        "ssb_tx_bw",
+        # CW
+        "cw",
+        "break_in",
+        # RIT / XIT
+        "rit",
+        "xit",
+        # Tuner
+        "tuner",
+        # Metering
+        "meters",
+        # Scope
+        "scope",
+        # Tone
+        "repeater_tone",
+        "tsql",
+        # Data
+        "data_mode",
+        # System
+        "power_control",
+        "dial_lock",
+        "scan",
+        "bsr",
+        "main_sub_tracking",
     }
 )
 
