@@ -96,6 +96,44 @@ If backend recovery is already in progress, `radio_connect` returns:
 - Receiver/routing: `select_vfo`, `vfo_swap`, `vfo_equalize`, `set_dual_watch`
 - Scope control: `switch_scope_receiver`, `set_scope_during_tx`, `set_scope_center_type`
 
+### Band switching with `set_band` (`bsrCode` workflow)
+
+`set_band` is intended for profile bands that expose `bsrCode` in
+`GET /api/v1/capabilities`:
+
+```json
+{
+  "freqRanges": [
+    {
+      "label": "HF",
+      "bands": [
+        { "name": "20m", "default": 14200000, "bsrCode": 5 },
+        { "name": "60m", "default": 5357000 }
+      ]
+    }
+  ]
+}
+```
+
+Control command:
+
+```json
+{"type":"cmd","id":"73","name":"set_band","params":{"band":5}}
+```
+
+Backend flow (`src/icom_lan/web/radio_poller.py`):
+
+1. Read Band Stack Register via CI-V `0x1A 0x01 <band> 0x01` (register 1).
+2. If response is valid, apply recalled frequency and mode/filter.
+3. If recall fails (timeout/exception/short response), fallback to profile
+   `default_hz` for the matching `bsr_code`.
+4. If no band with that `bsr_code` exists, no retune is applied and a warning is logged.
+
+Practical rule:
+
+- If a band has `bsrCode`, use `set_band` (radio recalls last freq/mode for that band).
+- If `bsrCode` is absent, use `set_freq` with band `default`.
+
 ## Audio Workflow and Constraints
 
 ### RX/TX lifecycle
