@@ -1,0 +1,68 @@
+name: Feature
+description: New feature or improvement
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Feature Request
+        Describe the feature clearly. Include mockup references if UI-related.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What and why. One paragraph.
+    validations:
+      required: true
+
+  - type: textarea
+    id: design
+    attributes:
+      label: Design / API
+      description: |
+        Props interface, API endpoints, CLI flags, or mockup reference.
+        Code blocks welcome.
+      render: typescript
+
+  - type: textarea
+    id: files
+    attributes:
+      label: Files to create/modify
+      description: List expected file paths.
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      description: |
+        Checkboxes. Each must be verifiable.
+        Example:
+        - [ ] Component renders with given props
+        - [ ] 100% tests pass
+      value: |
+        - [ ] Implementation complete
+        - [ ] Tests written and passing
+        - [ ] No regressions
+    validations:
+      required: true
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies
+      description: "Blocked by or depends on (e.g. #266, #268)"
+
+  - type: dropdown
+    id: size
+    attributes:
+      label: Size estimate
+      options:
+        - XS (< 1 hour)
+        - S (1-2 hours)
+        - M (half day)
+        - L (full day)
+        - XL (multi-day)
+    validations:
+      required: true

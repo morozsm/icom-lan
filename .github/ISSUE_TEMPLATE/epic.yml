@@ -1,0 +1,52 @@
+name: Epic
+description: Large feature decomposed into sub-issues
+title: "epic: "
+labels: ["epic"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Epic
+        A high-level feature broken into trackable sub-issues.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: High-level goal. Why this epic exists.
+    validations:
+      required: true
+
+  - type: textarea
+    id: sub-issues
+    attributes:
+      label: Sub-issues
+      description: |
+        Checklist of sub-issues with dependency arrows.
+        Update checkboxes as issues close.
+      value: |
+        ### Phase 1
+        - [ ] #000 — description
+
+        ### Phase 2
+        - [ ] #000 — description ← deps
+    validations:
+      required: true
+
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Constraints & Decisions
+      description: Architecture decisions, non-goals, compatibility notes.
+
+  - type: textarea
+    id: done
+    attributes:
+      label: Definition of Done
+      description: When is this epic complete?
+      value: |
+        - [ ] All sub-issues closed
+        - [ ] No regressions (full test suite green)
+        - [ ] Documentation updated
+    validations:
+      required: true
