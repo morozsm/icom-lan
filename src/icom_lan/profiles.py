@@ -67,6 +67,10 @@ class RadioProfile:
     pre_values: tuple[int, ...] | None = None
     agc_modes: tuple[int, ...] | None = None
     agc_labels: dict[str, str] | None = None
+    protocol_type: str = "civ"
+    controls: dict[str, dict] | None = None
+    meter_calibrations: dict[str, list[dict]] | None = None
+    rules: tuple[dict, ...] = ()
 
     def supports_capability(self, capability: str) -> bool:
         return capability in self.capabilities

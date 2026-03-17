@@ -555,3 +555,73 @@ nb_width = [0x1A, 0x05, 0x02, 0x91]
 dash_ratio = [0x1A, 0x05, 0x02, 0x28]
 vox_delay = [0x1A, 0x05, 0x02, 0x92]     # NOT_IMPLEMENTED — 0-20 (0.0-2.0 sec)
 civ_output_ant = [0x1A, 0x05, 0x01, 0x14]
+
+[protocol]
+type = "civ"
+
+[controls.attenuator]
+style = "stepped"
+
+[controls.nb]
+style = "toggle_and_level"
+
+[controls.nr]
+style = "toggle_and_level"
+
+[meters.s_meter]
+redline_raw = 130
+
+[[meters.s_meter.calibration]]
+raw = 0
+actual = -54.0
+label = "S0"
+
+[[meters.s_meter.calibration]]
+raw = 26
+actual = -48.0
+label = "S1"
+
+[[meters.s_meter.calibration]]
+raw = 52
+actual = -36.0
+label = "S3"
+
+[[meters.s_meter.calibration]]
+raw = 78
+actual = -24.0
+label = "S5"
+
+[[meters.s_meter.calibration]]
+raw = 103
+actual = -12.0
+label = "S7"
+
+[[meters.s_meter.calibration]]
+raw = 130
+actual = 0.0
+label = "S9"
+
+[[meters.s_meter.calibration]]
+raw = 165
+actual = 10.0
+label = "S9+10"
+
+[[meters.s_meter.calibration]]
+raw = 200
+actual = 20.0
+label = "S9+20"
+
+[[meters.s_meter.calibration]]
+raw = 240
+actual = 40.0
+label = "S9+40"
+
+[[rules]]
+kind = "mutex"
+fields = ["attenuator", "preamp"]
+
+[[rules]]
+kind = "disables"
+when_active = "digisel"
+disables = ["preamp"]
+reason = "DIGI-SEL overrides preamp"
