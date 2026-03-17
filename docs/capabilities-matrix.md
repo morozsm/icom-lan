@@ -25,30 +25,42 @@ Sources:
 
 **Correction:** IC-7610 has **2 TX + 1 RX antenna**, not "3 antennas".
 
+**IC-7610 CI-V 0x12 Antenna detail:**
+- `0x12 0x00` — Select/read ANT1. Sub-data: `0x00`=RX ANT OFF, `0x01`=RX ANT ON
+- `0x12 0x01` — Select/read ANT2. Sub-data: `0x00`=RX ANT OFF, `0x01`=RX ANT ON
+- With Command29 support
+- `0x16 0x53` — ANT-RX I/O on/off (separate RX antenna connector)
+- `0x1A 0x05 0x02 0x75` — RX-ANT Connectors type setting (receive antenna vs external device)
+- `0x1A 0x05 0x02 0x76-0x87` — Per-band antenna memory (12 frequency ranges)
+- `0x1A 0x05 0x02 0x89` — Antenna selection mode (OFF/Manual/Auto)
+
 TOML:
 ```toml
 [antenna]
 tx_count = 2        # ANT1, ANT2
-has_rx_ant = true   # Separate RX antenna jack
+has_rx_ant = true   # Separate RX antenna jack (0x16 0x53)
+has_ant_memory = true  # Per-band antenna memory
+ant_mode = ["off", "manual", "auto"]  # Selection modes
 ```
 vs IC-7300:
 ```toml
 [antenna]
 tx_count = 1
 has_rx_ant = false
+has_ant_memory = false
 ```
 
 ## RF Front End
 
 | Feature | IC-7610 | IC-7300 | CI-V | TOML |
 |---------|---------|---------|------|------|
-| Attenuator | 0/6/12/18 dB | 0/20 dB | 0x11 | `[attenuator] values` |
+| Attenuator | 0/3/6/9/12/15/18/21/24/27/30/33/36/39/42/45 dB | 0/20 dB | 0x11 | `[attenuator] values` |
 | Preamp | OFF/P1/P2 | OFF/P1/P2 | 0x16 0x02 (0/1/2) | `[preamp] values` |
 | RF Gain | 0-255 | 0-255 | 0x14 0x02 | `rf_gain` in features |
 | DIGI-SEL | ✅ | ❌ | 0x16 0x4E | `digisel` in features |
 | IP+ | ✅ | ❌ | 0x16 0x65 | `ip_plus` in features |
 
-**IC-7610 ATT:** wfview shows Max=45, but actual hardware values are 0/6/12/18 dB (discrete steps). The CI-V sends the dB value directly.
+**IC-7610 ATT:** CI-V reference shows 16 discrete values: 0/3/6/9/12/15/18/21/24/27/30/33/36/39/42/45 dB. Each sent as its dB value (e.g. 0x00=OFF, 0x03=3dB, 0x06=6dB, ..., 0x45=45dB). The current TOML `[0, 6, 12, 18]` is **WRONG** — must be updated to full range.
 **IC-7300 ATT:** Only 0x00=OFF, 0x20=ON (20 dB). Binary toggle.
 
 ## DSP / Noise
@@ -64,7 +76,7 @@ has_rx_ant = false
 | Auto notch | 0x16 0x41 (0/1) | 0x16 0x41 (0/1) | Same | |
 | Manual notch | 0x16 0x48 (0/1) | 0x16 0x48 (0/1) | Same | |
 | Notch freq | 0x14 0x0D (0-255) | 0x14 0x0D (0-255) | Same | |
-| APF | 0x16 0x32 (0/1) | 0x16 0x32 (0/1) | Same | Audio Peak Filter |
+| APF | 0x16 0x32 (0/1/2/3) | 0x16 0x32 (0/1) | Different! | IC-7610: OFF/WIDE/MID/NAR. IC-7300: ON/OFF |
 | Twin Peak | 0x16 0x4F (0/1) | 0x16 0x4F (0/1) | Same | |
 
 **NR modes:** Both IC-7610 and IC-7300 have NR as simple ON/OFF via CI-V (0x16 0x40).
@@ -148,14 +160,31 @@ dial_lock, scan, filter_shape, antenna
 
 ### IC-7610 only
 ```
-dual_rx, digisel, ip_plus, dual_watch, rx_antenna, drive_gain
+dual_rx, digisel, ip_plus, dual_watch, rx_antenna, drive_gain,
+main_sub_tracking, tx_inhibit, dpd, lcd_backlight
 ```
+
+**IC-7610-specific CI-V commands not in IC-7300:**
+- `0x16 0x4E` — DIGI-SEL on/off
+- `0x16 0x65` — IP+ on/off
+- `0x14 0x13` — DIGI-SEL shift level (0-255)
+- `0x14 0x14` — DRIVE gain (0-255)
+- `0x16 0x5E` — MAIN/SUB Tracking on/off
+- `0x16 0x66` — TX Inhibit on/off
+- `0x16 0x67` — DPD (Digital Pre-Distortion) on/off
+- `0x14 0x19` — LCD Backlight brightness (0-255)
+- `0x07 0xC0/0xC1/0xC2` — Dualwatch off/on/read
+- `0x07 0xD0/0xD1/0xD2` — Main/Sub band select/read
+- `0x16 0x53` — RX Antenna on/off (with Command29)
+- `0x16 0x57` — Manual Notch Width (WIDE/MID/NAR) — **verify if IC-7300 has this**
+- `0x16 0x58` — SSB TX Bandwidth (WIDE/MID/NAR)
+- `0x27 0x12` — Scope Main/Sub receiver select
 
 ### Parameterized differences
 
 | Parameter | IC-7610 | IC-7300 | TOML section |
 |-----------|---------|---------|-------------|
-| ATT values | [0, 6, 12, 18] | [0, 20] | `[attenuator]` |
+| ATT values | [0,3,6,9,12,15,18,21,24,27,30,33,36,39,42,45] | [0, 20] | `[attenuator]` |
 | PRE values | [0, 1, 2] | [0, 1, 2] | `[preamp]` |
 | AGC modes | [1, 2, 3] | [1, 2, 3] | `[agc]` |
 | TX antennas | 2 | 1 | `[antenna] tx_count` |
