@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import '../theme/index';
   import { radio } from '$lib/stores/radio.svelte';
   import { getCapabilities, hasDualReceiver, hasTx } from '$lib/stores/capabilities.svelte';
@@ -9,6 +10,12 @@
   import DockMeterPanel from '../panels/DockMeterPanel.svelte';
   import FrequencyDisplay from '../display/FrequencyDisplay.svelte';
   import LinearSMeter from '../meters/LinearSMeter.svelte';
+  import {
+    parseVfoLayoutScaleOverrides,
+    resolveVfoLayoutProfile,
+    vfoLayoutStyleVars,
+    type VfoLayoutScaleOverrides,
+  } from './vfo-layout-tokens';
   import { toVfoProps, toVfoOpsProps, toMeterProps } from '../wiring/state-adapter';
   import { makeVfoHandlers } from '../wiring/command-bus';
 
@@ -23,16 +30,45 @@
   let meter = $derived(toMeterProps(radioState));
   let txCapable = $derived(hasTx());
   let dualReceiver = $derived(hasDualReceiver());
+  let receiverDeckElement = $state<HTMLElement | null>(null);
+  let receiverDeckWidth = $state<number | null>(null);
+  let manualVfoScaleOverrides = $state<VfoLayoutScaleOverrides>({});
+  let vfoLayoutProfile = $derived(resolveVfoLayoutProfile(receiverDeckWidth));
+  let receiverDeckStyle = $derived(vfoLayoutStyleVars(vfoLayoutProfile, {
+    width: receiverDeckWidth,
+    overrides: manualVfoScaleOverrides,
+  }));
 
   // Command handlers via command-bus
   const vfoHandlers = makeVfoHandlers();
+
+  onMount(() => {
+    manualVfoScaleOverrides = parseVfoLayoutScaleOverrides(window.location.search);
+
+    if (!receiverDeckElement) {
+      return;
+    }
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) {
+        return;
+      }
+
+      receiverDeckWidth = entry.contentRect.width;
+    });
+
+    observer.observe(receiverDeckElement);
+    return () => observer.disconnect();
+  });
 </script>
 
 <div class="radio-layout">
-  <section class="receiver-deck">
+  <section class="receiver-deck" bind:this={receiverDeckElement} style={receiverDeckStyle}>
     <VfoHeader
       {mainVfo}
       {subVfo}
+      layoutProfile={vfoLayoutProfile}
       splitActive={vfoOps.splitActive}
       txVfo={vfoOps.txVfo}
       onSwap={vfoHandlers.onSwap}

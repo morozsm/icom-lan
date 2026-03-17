@@ -5,6 +5,7 @@
   import { getCapabilities, vfoLabel } from '$lib/stores/capabilities.svelte';
   import { findActiveBand } from '../controls/band-utils';
   import { formatBadges, formatRitOffset } from './vfo-utils';
+  import type { VfoLayoutProfile } from '../layout/vfo-layout-tokens';
 
   interface Props {
     receiver: 'main' | 'sub';
@@ -15,6 +16,7 @@
     isActive: boolean;
     badges: Record<string, boolean | string>;
     rit?: { active: boolean; offset: number };
+    layoutProfile?: VfoLayoutProfile;
     onModeClick?: () => void;
     onVfoClick?: () => void;
   }
@@ -28,6 +30,7 @@
     isActive,
     badges,
     rit,
+    layoutProfile = 'baseline',
     onModeClick,
     onVfoClick,
   }: Props = $props();
@@ -37,6 +40,7 @@
   let slotTag = $derived(label.startsWith('VFO ') ? label.slice(4) : label);
   let activeBand = $derived(findActiveBand(freq, getCapabilities()?.freqRanges ?? []));
   let badgeItems = $derived(formatBadges(badges));
+  let meterVariant = $derived(layoutProfile === 'wide' ? 'vfo-wide' : 'vfo');
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -46,6 +50,7 @@
   class:active={isActive}
   onclick={onVfoClick}
   role={onVfoClick ? 'button' : undefined}
+  data-layout-profile={layoutProfile}
 >
   <div class="panel-header">
     <div class="header-title-group">
@@ -60,7 +65,7 @@
   </div>
 
   <div class="smeter-row panel-meter">
-    <LinearSMeter value={sValue} compact label={slotTag} />
+    <LinearSMeter value={sValue} compact label={slotTag} variant={meterVariant} />
   </div>
 
   <div class="panel-body">
@@ -108,7 +113,10 @@
 <style>
   .panel {
     display: grid;
-    grid-template-rows: 18px 34px 64px;
+    grid-template-rows:
+      var(--vfo-panel-header-height, 18px)
+      var(--vfo-panel-meter-height, 58px)
+      var(--vfo-panel-body-height, 64px);
     min-height: 100%;
     background: linear-gradient(180deg, #0a1118 0%, #070c12 100%);
     border: 1px solid #1a2734;
@@ -127,15 +135,18 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    min-height: 18px;
-    padding: 6px 10px 0;
+    min-height: var(--vfo-panel-header-height, 18px);
+    padding:
+      var(--vfo-badge-inset-y, 3px)
+      var(--vfo-panel-pad-x, 10px)
+      0;
     border-bottom: none;
   }
 
   .header-title-group {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--vfo-header-group-gap, 5px);
   }
 
   .vfo-label {
@@ -149,13 +160,13 @@
   .receiver-state {
     display: inline-flex;
     align-items: center;
-    min-height: 14px;
-    padding: 0 6px;
+    min-height: var(--vfo-header-badge-height, 12px);
+    padding: 0 var(--vfo-header-badge-padding-x, 5px);
     border: 1px solid rgba(61, 110, 72, 0.9);
-    border-radius: 4px;
+    border-radius: var(--vfo-panel-badge-radius, 3px);
     color: #9ef6ac;
     background: rgba(21, 74, 34, 0.68);
-    font-size: 8px;
+    font-size: var(--vfo-control-badge-font-size, 7px);
     font-weight: 700;
     letter-spacing: 0.08em;
   }
@@ -169,17 +180,17 @@
   .header-badges {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--vfo-header-badge-gap, 3px);
   }
 
   .header-tag {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 18px;
-    padding: 0 7px;
-    border-radius: 4px;
-    font-size: 8px;
+    min-height: var(--vfo-header-badge-height, 12px);
+    padding: 0 var(--vfo-header-badge-padding-x, 5px);
+    border-radius: var(--vfo-panel-badge-radius, 3px);
+    font-size: var(--vfo-control-badge-font-size, 7px);
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -198,7 +209,7 @@
   }
 
   .panel-meter {
-    padding: 0 10px;
+    padding: 0 var(--vfo-panel-meter-pad-x, 6px);
   }
 
   .mode-badge {
@@ -206,13 +217,13 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 15px;
-    font-size: 10px;
+    min-height: var(--vfo-control-badge-height, 16px);
+    font-size: var(--vfo-control-badge-font-size, 7px);
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    padding: 0 8px;
-    border-radius: 4px;
+    padding: 0 var(--vfo-control-badge-padding-x, 6px);
+    border-radius: var(--vfo-panel-badge-radius, 3px);
     border: 1px solid rgba(0, 212, 255, 0.45);
     color: #eef6fc;
     background: rgba(8, 58, 85, 0.66);
@@ -230,13 +241,13 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 15px;
-    font-size: 10px;
+    min-height: var(--vfo-control-badge-height, 16px);
+    font-size: var(--vfo-control-badge-font-size, 7px);
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    padding: 0 8px;
-    border-radius: 4px;
+    padding: 0 var(--vfo-control-badge-padding-x, 6px);
+    border-radius: var(--vfo-panel-badge-radius, 3px);
     border: 1px solid rgba(61, 83, 105, 0.72);
     color: #88a2ba;
     background: rgba(15, 24, 34, 0.86);
@@ -245,9 +256,14 @@
 
   .panel-body {
     display: grid;
-    grid-template-rows: 41px 15px;
-    gap: 8px;
-    padding: 0 10px 8px;
+    grid-template-rows:
+      var(--vfo-display-row-height, 38px)
+      var(--vfo-control-strip-height, 22px);
+    gap: var(--vfo-panel-body-gap, 4px);
+    padding:
+      0
+      var(--vfo-panel-body-pad-x, 10px)
+      var(--vfo-panel-body-pad-bottom, 0px);
     min-height: 0;
   }
 
@@ -255,8 +271,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    min-height: 41px;
+    gap: var(--vfo-display-row-gap, 12px);
+    min-height: var(--vfo-display-row-height, 38px);
   }
 
   .freq-row {
@@ -266,8 +282,8 @@
   }
 
   .freq-row :global(.freq) {
-    font-size: 52px;
-    letter-spacing: 0.05em;
+    font-size: var(--vfo-frequency-size, 24px);
+    letter-spacing: var(--vfo-frequency-letter-spacing, 0.03em);
   }
 
   .freq-row :global(.sep) {
@@ -314,8 +330,8 @@
   .control-strip {
     display: flex;
     align-items: center;
-    gap: 6px;
-    min-height: 15px;
+    gap: var(--vfo-control-strip-gap, 4px);
+    min-height: var(--vfo-control-strip-height, 22px);
     overflow: hidden;
     white-space: nowrap;
   }
@@ -323,15 +339,14 @@
   .slot-readout,
   .band-readout {
     color: #6f88a0;
-    font-size: 10px;
+    font-size: var(--vfo-control-badge-font-size, 7px);
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
 
   .control-strip :global(.badge) {
-    min-height: 15px;
-    font-size: 7px;
+    min-height: var(--vfo-control-badge-min-height, 16px);
   }
 
   @media (max-width: 1280px) {

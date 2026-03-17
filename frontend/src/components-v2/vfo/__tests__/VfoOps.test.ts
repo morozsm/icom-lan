@@ -103,29 +103,29 @@ afterEach(() => {
   document.body.innerHTML = '';
 });
 
-function getBadgeLabels(t: HTMLElement): string[] {
-  return Array.from(t.querySelectorAll('.badge')).map((el) => el.textContent?.trim() ?? '');
+function getButtonLabels(t: HTMLElement): string[] {
+  return Array.from(t.querySelectorAll('.bridge-button')).map((el) => el.textContent?.trim() ?? '');
 }
 
 describe('always-visible buttons (ab scheme)', () => {
   it('renders A↔B swap button', () => {
     const t = mountComponent(baseProps);
-    expect(getBadgeLabels(t)).toContain('A↔B');
+    expect(getButtonLabels(t)).toContain('A↔B');
   });
 
   it('renders A→B copy button', () => {
     const t = mountComponent(baseProps);
-    expect(getBadgeLabels(t)).toContain('A→B');
+    expect(getButtonLabels(t)).toContain('A→B');
   });
 
   it('renders A=B equal button', () => {
     const t = mountComponent(baseProps);
-    expect(getBadgeLabels(t)).toContain('A=B');
+    expect(getButtonLabels(t)).toContain('A=B');
   });
 
   it('renders SPLIT badge', () => {
     const t = mountComponent(baseProps);
-    expect(getBadgeLabels(t)).toContain('SPLIT');
+    expect(getButtonLabels(t)).toContain('SPLIT');
   });
 });
 
@@ -136,32 +136,32 @@ describe('always-visible buttons (main_sub scheme)', () => {
 
   it('renders M↔S swap button', () => {
     const t = mountComponent(baseProps);
-    expect(getBadgeLabels(t)).toContain('M↔S');
+    expect(getButtonLabels(t)).toContain('M↔S');
   });
 
   it('renders M→S copy button', () => {
     const t = mountComponent(baseProps);
-    expect(getBadgeLabels(t)).toContain('M→S');
+    expect(getButtonLabels(t)).toContain('M→S');
   });
 
   it('renders M=S equal button', () => {
     const t = mountComponent(baseProps);
-    expect(getBadgeLabels(t)).toContain('M=S');
+    expect(getButtonLabels(t)).toContain('M=S');
   });
 });
 
-describe('SPLIT badge state', () => {
-  it('SPLIT badge is inactive when splitActive is false', () => {
+describe('SPLIT button state', () => {
+  it('SPLIT button is inactive when splitActive is false', () => {
     const t = mountComponent(baseProps);
-    const split = Array.from(t.querySelectorAll('.badge')).find(
+    const split = Array.from(t.querySelectorAll('.bridge-button')).find(
       (el) => el.textContent?.trim() === 'SPLIT',
     );
     expect(split?.getAttribute('data-active')).toBe('false');
   });
 
-  it('SPLIT badge is active when splitActive is true', () => {
+  it('SPLIT button is active when splitActive is true', () => {
     const t = mountComponent({ ...baseProps, splitActive: true });
-    const split = Array.from(t.querySelectorAll('.badge')).find(
+    const split = Array.from(t.querySelectorAll('.bridge-button')).find(
       (el) => el.textContent?.trim() === 'SPLIT',
     );
     expect(split?.getAttribute('data-active')).toBe('true');
@@ -175,7 +175,7 @@ describe('TX routing (dual receiver)', () => {
 
   it('shows TX→A and TX→B when hasDualReceiver is true (ab scheme)', () => {
     const t = mountComponent(baseProps);
-    const labels = getBadgeLabels(t);
+    const labels = getButtonLabels(t);
     expect(labels).toContain('TX→A');
     expect(labels).toContain('TX→B');
   });
@@ -183,7 +183,7 @@ describe('TX routing (dual receiver)', () => {
   it('shows TX→M and TX→S when hasDualReceiver is true (main_sub scheme)', () => {
     vi.mocked(getVfoScheme).mockReturnValue('main_sub');
     const t = mountComponent(baseProps);
-    const labels = getBadgeLabels(t);
+    const labels = getButtonLabels(t);
     expect(labels).toContain('TX→M');
     expect(labels).toContain('TX→S');
   });
@@ -191,22 +191,22 @@ describe('TX routing (dual receiver)', () => {
   it('hides TX badges when hasDualReceiver is false', () => {
     vi.mocked(hasDualReceiver).mockReturnValue(false);
     const t = mountComponent(baseProps);
-    const labels = getBadgeLabels(t);
+    const labels = getButtonLabels(t);
     expect(labels).not.toContain('TX→A');
     expect(labels).not.toContain('TX→B');
   });
 
-  it('TX→A badge is active when txVfo is main', () => {
+  it('TX→A button is active when txVfo is main', () => {
     const t = mountComponent({ ...baseProps, txVfo: 'main' });
-    const txA = Array.from(t.querySelectorAll('.badge')).find(
+    const txA = Array.from(t.querySelectorAll('.bridge-button')).find(
       (el) => el.textContent?.trim() === 'TX→A',
     );
     expect(txA?.getAttribute('data-active')).toBe('true');
   });
 
-  it('TX→B badge is active when txVfo is sub', () => {
+  it('TX→B button is active when txVfo is sub', () => {
     const t = mountComponent({ ...baseProps, txVfo: 'sub' });
-    const txB = Array.from(t.querySelectorAll('.badge')).find(
+    const txB = Array.from(t.querySelectorAll('.bridge-button')).find(
       (el) => el.textContent?.trim() === 'TX→B',
     );
     expect(txB?.getAttribute('data-active')).toBe('true');
@@ -214,40 +214,40 @@ describe('TX routing (dual receiver)', () => {
 });
 
 describe('callbacks', () => {
-  it('calls onSwap when swap badge is clicked', () => {
+  it('calls onSwap when swap button is clicked', () => {
     const onSwap = vi.fn();
     const t = mountComponent({ ...baseProps, onSwap });
-    const badge = Array.from(t.querySelectorAll('.badge')).find(
+    const badge = Array.from(t.querySelectorAll('.bridge-button')).find(
       (el) => el.textContent?.trim() === 'A↔B',
     ) as HTMLElement | undefined;
     badge?.click();
     expect(onSwap).toHaveBeenCalledOnce();
   });
 
-  it('calls onCopy when copy badge is clicked', () => {
+  it('calls onCopy when copy button is clicked', () => {
     const onCopy = vi.fn();
     const t = mountComponent({ ...baseProps, onCopy });
-    const badge = Array.from(t.querySelectorAll('.badge')).find(
+    const badge = Array.from(t.querySelectorAll('.bridge-button')).find(
       (el) => el.textContent?.trim() === 'A→B',
     ) as HTMLElement | undefined;
     badge?.click();
     expect(onCopy).toHaveBeenCalledOnce();
   });
 
-  it('calls onEqual when equal badge is clicked', () => {
+  it('calls onEqual when equal button is clicked', () => {
     const onEqual = vi.fn();
     const t = mountComponent({ ...baseProps, onEqual });
-    const badge = Array.from(t.querySelectorAll('.badge')).find(
+    const badge = Array.from(t.querySelectorAll('.bridge-button')).find(
       (el) => el.textContent?.trim() === 'A=B',
     ) as HTMLElement | undefined;
     badge?.click();
     expect(onEqual).toHaveBeenCalledOnce();
   });
 
-  it('calls onSplitToggle when SPLIT badge is clicked', () => {
+  it('calls onSplitToggle when SPLIT button is clicked', () => {
     const onSplitToggle = vi.fn();
     const t = mountComponent({ ...baseProps, onSplitToggle });
-    const badge = Array.from(t.querySelectorAll('.badge')).find(
+    const badge = Array.from(t.querySelectorAll('.bridge-button')).find(
       (el) => el.textContent?.trim() === 'SPLIT',
     ) as HTMLElement | undefined;
     badge?.click();
@@ -258,7 +258,7 @@ describe('callbacks', () => {
     vi.mocked(hasDualReceiver).mockReturnValue(true);
     const onTxVfoChange = vi.fn();
     const t = mountComponent({ ...baseProps, onTxVfoChange });
-    const badge = Array.from(t.querySelectorAll('.badge')).find(
+    const badge = Array.from(t.querySelectorAll('.bridge-button')).find(
       (el) => el.textContent?.trim() === 'TX→B',
     ) as HTMLElement | undefined;
     badge?.click();
@@ -269,7 +269,7 @@ describe('callbacks', () => {
     vi.mocked(hasDualReceiver).mockReturnValue(true);
     const onTxVfoChange = vi.fn();
     const t = mountComponent({ ...baseProps, txVfo: 'sub', onTxVfoChange });
-    const badge = Array.from(t.querySelectorAll('.badge')).find(
+    const badge = Array.from(t.querySelectorAll('.bridge-button')).find(
       (el) => el.textContent?.trim() === 'TX→A',
     ) as HTMLElement | undefined;
     badge?.click();

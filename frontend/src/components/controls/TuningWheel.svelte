@@ -58,6 +58,19 @@
     wheelEl.releasePointerCapture(e.pointerId);
   }
 
+  function onKeyDown(event: KeyboardEvent): void {
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') {
+      event.preventDefault();
+      tune(-1);
+      return;
+    }
+
+    if (event.key === 'ArrowRight' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      tune(1);
+    }
+  }
+
   let step = $derived(getTuningStep());
 </script>
 
@@ -70,9 +83,10 @@
     onpointermove={onPointerMove}
     onpointerup={onPointerUp}
     onpointercancel={onPointerUp}
-    role="slider"
-    aria-label="Tuning wheel"
-    aria-valuetext="Drag to tune"
+    onkeydown={onKeyDown}
+    role="button"
+    tabindex="0"
+    aria-label="Tuning wheel, drag left or right to tune frequency"
   >
     <div class="wheel-track">
       {#each Array(21) as _, i}

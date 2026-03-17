@@ -260,27 +260,6 @@
     color: #000;
   }
 
-  .value-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-1);
-    min-height: var(--tap-target);
-    padding: 0 var(--space-3);
-    background: var(--panel);
-    border: 1px solid var(--panel-border);
-    border-radius: 9999px;
-    color: var(--text-muted);
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-    font-weight: 600;
-    user-select: none;
-  }
-
-  .value-badge.nonzero {
-    border-color: var(--warning);
-    color: var(--warning);
-  }
-
   .val {
     font-weight: 400;
     opacity: 0.85;

@@ -7,18 +7,22 @@
     value: number;    // raw 0-255 from CI-V get_s_meter
     compact?: boolean;
     label?: string;
+    variant?: string;
   }
 
-  let { value, compact = false, label }: Props = $props();
+  let { value, compact = false, label, variant }: Props = $props();
+
+  const isVfoVariant = $derived(variant === 'vfo' || variant === 'vfo-wide');
+  const isWideVfoVariant = $derived(variant === 'vfo-wide');
 
   // ── Segment geometry ────────────────────────────────────────────────────────
   const SEG_COUNT = 20;
-  const BAR_X = 8;
-  const BAR_WIDTH = 484;
   const SEG_GAP = 1;
-  const SEG_W = (BAR_WIDTH - (SEG_COUNT - 1) * SEG_GAP) / SEG_COUNT; // ≈ 23.05
+  const BAR_X = $derived(compact && isVfoVariant ? (isWideVfoVariant ? 14 : 12) : 8);
+  const BAR_WIDTH = $derived(compact && isVfoVariant ? (isWideVfoVariant ? 498 : 492) : 484);
+  const SEG_W = $derived((BAR_WIDTH - (SEG_COUNT - 1) * SEG_GAP) / SEG_COUNT);
 
-  const READOUT_CX = BAR_X + BAR_WIDTH + 8 + 46; // ≈ 554
+  const READOUT_CX = $derived(BAR_X + BAR_WIDTH + (compact && isVfoVariant ? 36 : 54));
 
   function segX(i: number): number {
     return BAR_X + i * (SEG_W + SEG_GAP);
@@ -105,24 +109,24 @@
   // ── Layout (switches between full / compact) ────────────────────────────────
   //   When label is present: label at top → meter shifted down
   //   Vertical stacking: [label] → scale labels → ticks → bar
-  const LABEL_OFFSET  = $derived(label ? (compact ? 10 : 14) : 0);
-  const TAG_Y         = $derived(compact ? 2  : 3);   // label "MAIN"/"SUB" Y
+  const LABEL_OFFSET  = $derived(label ? (compact ? (isVfoVariant ? 8 : 10) : 14) : 0);
+  const TAG_Y         = $derived(compact ? (isVfoVariant ? 1 : 2) : 3);   // label "MAIN"/"SUB" Y
   const TAG_FS        = $derived(compact ? 7  : 8);
-  const SCALE_LABEL_Y = $derived((compact ? 2  : 3) + LABEL_OFFSET);
-  const SCALE_LABEL_FS = $derived(compact ? 8  : 9);
-  const TICK_MAJOR_Y1 = $derived((compact ? 14 : 18) + LABEL_OFFSET);
-  const TICK_MAJOR_Y2 = $derived((compact ? 26 : 38) + LABEL_OFFSET);
-  const TICK_MID_Y1   = $derived((compact ? 17 : 22) + LABEL_OFFSET);
-  const TICK_MID_Y2   = $derived((compact ? 26 : 38) + LABEL_OFFSET);
-  const TICK_MINOR_Y1 = $derived((compact ? 20 : 28) + LABEL_OFFSET);
-  const TICK_MINOR_Y2 = $derived((compact ? 26 : 38) + LABEL_OFFSET);
-  const TRACK_Y       = $derived((compact ? 28 : 40) + LABEL_OFFSET);
-  const TRACK_H       = $derived(compact ? 8  : 14);
+  const SCALE_LABEL_Y = $derived((compact ? (isVfoVariant ? 1 : 2) : 3) + LABEL_OFFSET);
+  const SCALE_LABEL_FS = $derived(compact ? (isVfoVariant ? 9 : 8) : 9);
+  const TICK_MAJOR_Y1 = $derived((compact ? (isVfoVariant ? 12 : 14) : 18) + LABEL_OFFSET);
+  const TICK_MAJOR_Y2 = $derived((compact ? (isVfoVariant ? 27 : 26) : 38) + LABEL_OFFSET);
+  const TICK_MID_Y1   = $derived((compact ? (isVfoVariant ? 16 : 17) : 22) + LABEL_OFFSET);
+  const TICK_MID_Y2   = $derived((compact ? (isVfoVariant ? 27 : 26) : 38) + LABEL_OFFSET);
+  const TICK_MINOR_Y1 = $derived((compact ? (isVfoVariant ? 20 : 20) : 28) + LABEL_OFFSET);
+  const TICK_MINOR_Y2 = $derived((compact ? (isVfoVariant ? 27 : 26) : 38) + LABEL_OFFSET);
+  const TRACK_Y       = $derived((compact ? (isVfoVariant ? 29 : 28) : 40) + LABEL_OFFSET);
+  const TRACK_H       = $derived(compact ? (isVfoVariant ? (isWideVfoVariant ? 11 : 10) : 8) : 14);
   // Readout aligned to bar: S-unit centered on bar, dBm just below
-  const S_UNIT_Y      = $derived(TRACK_Y - (compact ? 1 : 2));
-  const S_UNIT_FS     = $derived(compact ? 12 : 15);
-  const DBM_Y         = $derived(TRACK_Y + TRACK_H + (compact ? 1 : 2));
-  const DBM_FS        = $derived(compact ? 8  : 9);
+  const S_UNIT_Y      = $derived(TRACK_Y - (compact ? (isVfoVariant ? 2 : 1) : 2));
+  const S_UNIT_FS     = $derived(compact ? (isVfoVariant ? (isWideVfoVariant ? 15 : 14) : 12) : 15);
+  const DBM_Y         = $derived(TRACK_Y + TRACK_H + (compact ? (isVfoVariant ? 0 : 1) : 2));
+  const DBM_FS        = $derived(compact ? (isVfoVariant ? 9 : 8) : 9);
   // Bottom padding symmetric to top
   const TOTAL_HEIGHT  = $derived(TRACK_Y + TRACK_H + SCALE_LABEL_Y);
 
@@ -197,6 +201,7 @@
   width="100%"
   height="auto"
   preserveAspectRatio="xMidYMid meet"
+  data-variant={variant}
 >
   <!-- Container background -->
   <rect

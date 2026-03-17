@@ -165,9 +165,13 @@
             ondwtoggle={handleDwToggle}
           />
           {#if inactiveRx}
-            <span class="inactive-vfo" onclick={() => handleReceiverSwitch(activeRx === 'MAIN' ? 'SUB' : 'MAIN')}>
-              {activeRx === 'MAIN' ? labelB : labelA}: {(inactiveRx.freqHz / 1_000_000).toFixed(6)} {inactiveRx.mode}
-            </span>
+              <button
+                type="button"
+                class="inactive-vfo"
+                onclick={() => handleReceiverSwitch(activeRx === 'MAIN' ? 'SUB' : 'MAIN')}
+              >
+                {activeRx === 'MAIN' ? labelB : labelA}: {(inactiveRx.freqHz / 1_000_000).toFixed(6)} {inactiveRx.mode}
+              </button>
           {/if}
         </div>
       {/if}
@@ -354,6 +358,9 @@
   }
 
   .inactive-vfo {
+    background: transparent;
+    border: 0;
+    padding: 0;
     font-family: var(--font-mono);
     font-size: 0.625rem;
     color: var(--text-muted);
@@ -385,16 +392,6 @@
     outline-offset: 2px;
   }
 
-  .spectrum-hint {
-    position: absolute;
-    bottom: var(--space-2);
-    right: var(--space-2);
-    font-family: var(--font-mono);
-    font-size: 0.65rem;
-    color: rgba(255, 255, 255, 0.35);
-    pointer-events: none;
-    user-select: none;
-  }
 
   .spectrum-placeholder {
     height: 180px;
