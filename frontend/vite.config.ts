@@ -14,6 +14,7 @@ export default defineConfig({
     alias: {
       '$lib': path.resolve(__dirname, './src/lib'),
     },
+    conditions: ['svelte', 'browser'],
   },
   server: {
     proxy: {
