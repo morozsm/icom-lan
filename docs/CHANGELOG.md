@@ -40,6 +40,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Multi-vendor rig profiles** — TOML schema extended for non-Icom radios:
+  - `rigs/ftx1.toml` — Yaesu FTX-1 (17 modes, 6 freq ranges, meter calibration)
+  - `rigs/x6100.toml` — Xiegu X6100 (CI-V 0x70, IC-705 compatible, QRP 8W)
+  - `rigs/tx500.toml` — Lab599 TX-500 (Kenwood CAT text protocol)
+  - New optional TOML sections: `[protocol]`, `[controls]`, `[meters]`, `[[rules]]`
+  - 3 protocol types: `civ` (binary), `kenwood_cat` (text), `yaesu_cat` (text)
+  - 5 control styles: `toggle`, `stepped`, `selector`, `toggle_and_level`, `level_is_toggle`
+  - 4 VFO schemes: `ab`, `main_sub`, `ab_shared`, `single`
+  - Meter calibration tables for non-linear S-meter scales (raw→actual lookup)
+  - Constraint rules: `mutex`, `disables`, `requires`, `value_limit`
+  - `[commands]` and `civ_addr` now optional (for non-CI-V protocols)
+  - `_schema.md` updated with full documentation of all new sections
+  - 42 new tests in `test_rig_multi_vendor.py`, 0 regressions
 - **Serial port auto-discovery** (Epic #222) — `icom-lan discover` now scans both LAN (UDP broadcast) and USB serial ports
   - `enumerate_serial_ports()` — filters USB serial candidates
   - `probe_serial_civ()` — CI-V probing with auto baud detection (19200, 9600, 115200, 4800)

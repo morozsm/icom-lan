@@ -1,0 +1,157 @@
+# Rig Configuration — Xiegu X6100
+# Xiegu X6100 QRP transceiver.
+# Protocol: CI-V (IC-705 compatible subset)
+# CIV address: 0x70
+# Source: Xiegu X6100 documentation, CI-V reference
+
+[radio]
+id = "xiegu_x6100"
+model = "X6100"
+civ_addr = 0x70
+receiver_count = 1
+has_lan = false
+has_wifi = true
+default_baud = 115200
+
+[protocol]
+type = "civ"
+address = 0x70
+
+[capabilities]
+features = [
+    "audio",
+    "af_level",
+    "rf_gain",
+    "squelch",
+    "attenuator",
+    "preamp",
+    "nb",
+    "nr",
+    "notch",
+    "filter_width",
+    "pbt",
+    "tx",
+    "split",
+    "vox",
+    "compressor",
+    "cw",
+    "break_in",
+    "rit",
+    "xit",
+    "tuner",
+    "meters",
+    "repeater_tone",
+    "tsql",
+    "data_mode",
+    "scan",
+    "dial_lock",
+]
+
+[modes]
+list = ["USB", "LSB", "CW", "CW-R", "AM", "FM", "RTTY", "DIGI"]
+
+[filters]
+list = ["FIL1", "FIL2", "FIL3"]
+
+[vfo]
+scheme = "ab"
+
+[attenuator]
+values = [0, 1]
+
+[preamp]
+values = [0, 1]
+
+[controls.attenuator]
+style = "toggle"
+
+[[freq_ranges.ranges]]
+label = "HF"
+start_hz = 100000
+end_hz = 54000000
+
+[[freq_ranges.ranges.bands]]
+name = "160m"
+start_hz = 1800000
+end_hz = 2000000
+default_hz = 1825000
+
+[[freq_ranges.ranges.bands]]
+name = "80m"
+start_hz = 3500000
+end_hz = 3800000
+default_hz = 3600000
+
+[[freq_ranges.ranges.bands]]
+name = "40m"
+start_hz = 7000000
+end_hz = 7200000
+default_hz = 7100000
+
+[[freq_ranges.ranges.bands]]
+name = "30m"
+start_hz = 10100000
+end_hz = 10150000
+default_hz = 10125000
+
+[[freq_ranges.ranges.bands]]
+name = "20m"
+start_hz = 14000000
+end_hz = 14350000
+default_hz = 14200000
+
+[[freq_ranges.ranges.bands]]
+name = "17m"
+start_hz = 18068000
+end_hz = 18168000
+default_hz = 18100000
+
+[[freq_ranges.ranges.bands]]
+name = "15m"
+start_hz = 21000000
+end_hz = 21450000
+default_hz = 21200000
+
+[[freq_ranges.ranges.bands]]
+name = "12m"
+start_hz = 24890000
+end_hz = 24990000
+default_hz = 24940000
+
+[[freq_ranges.ranges.bands]]
+name = "10m"
+start_hz = 28000000
+end_hz = 29700000
+default_hz = 28500000
+
+[[freq_ranges.ranges.bands]]
+name = "6m"
+start_hz = 50000000
+end_hz = 54000000
+default_hz = 51000000
+
+[[freq_ranges.ranges]]
+label = "WFM"
+start_hz = 88000000
+end_hz = 108000000
+
+[[freq_ranges.ranges]]
+label = "Air"
+start_hz = 108000000
+end_hz = 136000000
+
+[commands]
+get_freq   = [0x03]
+set_freq   = [0x05]
+get_mode   = [0x04]
+set_mode   = [0x06]
+ptt_on     = [0x1C, 0x00, 0x01]
+ptt_off    = [0x1C, 0x00, 0x00]
+get_af_level = [0x14, 0x01]
+set_af_level = [0x14, 0x01]
+get_rf_gain  = [0x14, 0x02]
+set_rf_gain  = [0x14, 0x02]
+get_squelch  = [0x14, 0x03]
+set_squelch  = [0x14, 0x03]
+
+[commands.overrides]

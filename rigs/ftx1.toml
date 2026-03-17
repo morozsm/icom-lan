@@ -1,0 +1,223 @@
+# Rig Configuration — Yaesu FTX-1
+# Yaesu FT-X1 transceiver profile.
+# Protocol: Yaesu CAT (not CI-V)
+# Source: wfview FTX-1.rig, Yaesu FT-X1 CAT manual
+
+[radio]
+id = "yaesu_ftx1"
+model = "FTX-1"
+receiver_count = 2
+has_lan = false
+has_wifi = false
+default_baud = 38400
+
+[protocol]
+type = "yaesu_cat"
+
+[capabilities]
+features = [
+    "audio",
+    "dual_rx",
+    "af_level",
+    "rf_gain",
+    "squelch",
+    "attenuator",
+    "preamp",
+    "nb",
+    "nr",
+    "notch",
+    "filter_width",
+    "tx",
+    "split",
+    "vox",
+    "compressor",
+    "monitor",
+    "cw",
+    "rit",
+    "tuner",
+    "meters",
+    "repeater_tone",
+    "tsql",
+    "data_mode",
+    "scan",
+    "dial_lock",
+]
+
+[modes]
+list = [
+    "LSB", "USB", "CW-U", "FM", "AM",
+    "RTTY-L", "CW-L", "DATA-L", "RTTY-U", "DATA-FM",
+    "FM-N", "DATA-U", "AM-N", "PSK", "DATA-FM-N",
+    "C4FM-DN", "C4FM-VW",
+]
+
+[filters]
+list = ["FIL1", "FIL2", "FIL3"]
+
+[vfo]
+scheme = "ab_shared"
+
+[attenuator]
+values = [0, 1, 2, 3]
+
+[preamp]
+values = [0, 1, 2]
+
+[controls.attenuator]
+style = "selector"
+
+[controls.nb]
+style = "level_is_toggle"
+range_min = 0
+range_max = 10
+
+[controls.nr]
+style = "level_is_toggle"
+range_min = 1
+range_max = 15
+
+[[freq_ranges.ranges]]
+label = "HF"
+start_hz = 100000
+end_hz = 60000000
+
+[[freq_ranges.ranges.bands]]
+name = "160m"
+start_hz = 1800000
+end_hz = 2000000
+default_hz = 1825000
+
+[[freq_ranges.ranges.bands]]
+name = "80m"
+start_hz = 3500000
+end_hz = 3800000
+default_hz = 3600000
+
+[[freq_ranges.ranges.bands]]
+name = "60m"
+start_hz = 5351500
+end_hz = 5366500
+default_hz = 5357000
+
+[[freq_ranges.ranges.bands]]
+name = "40m"
+start_hz = 7000000
+end_hz = 7200000
+default_hz = 7100000
+
+[[freq_ranges.ranges.bands]]
+name = "30m"
+start_hz = 10100000
+end_hz = 10150000
+default_hz = 10125000
+
+[[freq_ranges.ranges.bands]]
+name = "20m"
+start_hz = 14000000
+end_hz = 14350000
+default_hz = 14200000
+
+[[freq_ranges.ranges.bands]]
+name = "17m"
+start_hz = 18068000
+end_hz = 18168000
+default_hz = 18100000
+
+[[freq_ranges.ranges.bands]]
+name = "15m"
+start_hz = 21000000
+end_hz = 21450000
+default_hz = 21200000
+
+[[freq_ranges.ranges.bands]]
+name = "12m"
+start_hz = 24890000
+end_hz = 24990000
+default_hz = 24940000
+
+[[freq_ranges.ranges.bands]]
+name = "10m"
+start_hz = 28000000
+end_hz = 29700000
+default_hz = 28500000
+
+[[freq_ranges.ranges]]
+label = "4m"
+start_hz = 70000000
+end_hz = 70500000
+
+[[freq_ranges.ranges]]
+label = "2m"
+start_hz = 144000000
+end_hz = 148000000
+
+[[freq_ranges.ranges]]
+label = "70cm"
+start_hz = 430000000
+end_hz = 450000000
+
+[[freq_ranges.ranges]]
+label = "Air"
+start_hz = 108000000
+end_hz = 137000000
+
+[[freq_ranges.ranges]]
+label = "WFM"
+start_hz = 88000000
+end_hz = 108000000
+
+[[freq_ranges.ranges]]
+label = "Gen"
+start_hz = 100000
+end_hz = 470000000
+
+[meters.s_meter]
+redline_raw = 130
+
+[[meters.s_meter.calibration]]
+raw = 0
+actual = -54.0
+label = "S0"
+
+[[meters.s_meter.calibration]]
+raw = 26
+actual = -48.0
+label = "S1"
+
+[[meters.s_meter.calibration]]
+raw = 52
+actual = -42.0
+label = "S3"
+
+[[meters.s_meter.calibration]]
+raw = 78
+actual = -36.0
+label = "S5"
+
+[[meters.s_meter.calibration]]
+raw = 103
+actual = -18.0
+label = "S7"
+
+[[meters.s_meter.calibration]]
+raw = 130
+actual = 0.0
+label = "S9"
+
+[[meters.s_meter.calibration]]
+raw = 165
+actual = 10.0
+label = "S9+10"
+
+[[meters.s_meter.calibration]]
+raw = 200
+actual = 20.0
+label = "S9+20"
+
+[[meters.s_meter.calibration]]
+raw = 240
+actual = 40.0
+label = "S9+40"
+
+[commands]
+# Yaesu CAT command mapping — TBD
