@@ -62,9 +62,12 @@ from icom_lan.rig_loader import discover_rigs
 
 rigs = discover_rigs(Path("rigs/"))
 for model, cfg in rigs.items():
-    print(f"{model}: {cfg.civ_addr:#04x}, receivers={cfg.receiver_count}")
-# IC-7300: 0x94, receivers=1
-# IC-7610: 0x98, receivers=2
+    print(f"{model}: protocol={cfg.protocol_type}, receivers={cfg.receiver_count}")
+# FTX-1: protocol=yaesu_cat, receivers=2
+# IC-7300: protocol=civ, receivers=1
+# IC-7610: protocol=civ, receivers=2
+# TX-500: protocol=kenwood_cat, receivers=1
+# X6100: protocol=civ, receivers=1
 ```
 
 ---
@@ -78,21 +81,33 @@ for model, cfg in rigs.items():
 class RigConfig:
     id: str
     model: str
-    civ_addr: int
+    civ_addr: int                            # 0 for non-CI-V radios
     receiver_count: int
     has_lan: bool
     has_wifi: bool
+    default_baud: int
     capabilities: tuple[str, ...]
     modes: tuple[str, ...]
     filters: tuple[str, ...]
-    vfo_scheme: str                          # "ab" | "main_sub"
+    vfo_scheme: str                          # "ab" | "main_sub" | "ab_shared" | "single"
     vfo_main_select: tuple[int, ...] | None
     vfo_sub_select: tuple[int, ...] | None
     vfo_swap: tuple[int, ...] | None
     freq_ranges: tuple[dict, ...]
-    commands: dict[str, tuple[int, ...]]
+    commands: dict[str, tuple[int, ...]]     # may be empty for non-CI-V
     cmd29_routes: tuple[tuple[int, int | None], ...]
     spectrum: dict[str, int] | None
+    att_values: tuple[int, ...] | None
+    pre_values: tuple[int, ...] | None
+    agc_modes: tuple[int, ...] | None
+    agc_labels: dict[str, str] | None
+    protocol_type: str = "civ"               # "civ" | "kenwood_cat" | "yaesu_cat"
+    protocol_address: int | None = None
+    protocol_baud: int | None = None
+    controls: dict[str, dict] | None = None  # {"attenuator": {"style": "stepped"}, ...}
+    meter_calibrations: dict[str, list[dict]] | None = None
+    meter_redlines: dict[str, int] | None = None
+    rules: tuple[dict, ...] = ()             # [{"kind": "mutex", "fields": [...]}, ...]
 ```
 
 Frozen dataclass. All values are immutable after construction.
@@ -193,10 +208,13 @@ except RigLoadError as e:
 | Valid TOML syntax | `failed to parse TOML: <detail>` |
 | Required sections present | `missing required section [<section>]` |
 | All `[radio]` fields present | `missing required field [radio].<field>` |
-| `civ_addr` in 0x00–0xFF | `[radio].civ_addr = X out of range` |
+| `civ_addr` in 0x00–0xFF (if present) | `[radio].civ_addr = X out of range` |
 | `[capabilities].features` non-empty | `[capabilities].features must not be empty` |
 | All capability strings known | `unknown capability 'xyz'. Known: [...]` |
-| `[vfo].scheme` is `"ab"` or `"main_sub"` | `[vfo].scheme must be one of ...` |
+| `[vfo].scheme` valid | `[vfo].scheme must be one of {'ab', 'main_sub', 'ab_shared', 'single'}` |
+| `[protocol].type` valid (if present) | `[protocol].type must be one of {'civ', 'kenwood_cat', 'yaesu_cat'}` |
+| `[controls.X].style` valid (if present) | `[controls.X].style must be one of {'toggle', 'stepped', ...}` |
+| `[[rules]].kind` valid (if present) | `rule kind must be one of {'mutex', 'disables', 'requires', 'value_limit'}` |
 | `[modes].list` non-empty | `[modes].list must not be empty` |
 | `[filters].list` non-empty | `[filters].list must not be empty` |
 

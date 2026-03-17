@@ -2,28 +2,48 @@
 
 ## Overview
 
-icom-lan uses **TOML rig files** to define radio capabilities, CI-V commands, and hardware
-parameters. Adding a new radio means adding a new `.toml` file — no Python changes required
-for most radios.
+icom-lan uses **TOML rig files** to define radio capabilities, protocol type, CI-V commands,
+and hardware parameters. Adding a new radio means adding a new `.toml` file — no Python
+changes required for most radios.
 
-Rig files live in `rigs/`. The two reference files are:
+Rig files live in `rigs/`. Reference files:
 
-- `rigs/ic7610.toml` — IC-7610 (dual receiver, LAN, full feature set)
-- `rigs/ic7300.toml` — IC-7300 (single receiver, USB serial, no DIGI-SEL/IP+)
+- `rigs/ic7610.toml` — IC-7610 (dual receiver, LAN, CI-V, full feature set)
+- `rigs/ic7300.toml` — IC-7300 (single receiver, USB serial, CI-V)
+- `rigs/ftx1.toml` — Yaesu FTX-1 (Yaesu CAT protocol, dual RX)
+- `rigs/x6100.toml` — Xiegu X6100 (CI-V, IC-705 compatible subset, QRP)
+- `rigs/tx500.toml` — Lab599 TX-500 (Kenwood CAT protocol, QRP)
 
 ## Quick Start
 
 ```bash
-# 1. Copy the reference rig file
-cp rigs/ic7610.toml rigs/ic9700.toml
+# 1. Copy the closest reference rig file
+cp rigs/ic7610.toml rigs/ic9700.toml   # for Icom CI-V
+cp rigs/tx500.toml rigs/ts890s.toml    # for Kenwood CAT
+cp rigs/ftx1.toml rigs/ft710.toml      # for Yaesu CAT
 
-# 2. Edit the [radio] section with correct values
-# 3. Update [capabilities] to match what your radio actually supports
-# 4. Update [commands] — most Icom HF radios share the same wire bytes
-# 5. Add [commands.overrides] for model-specific differences
+# 2. Edit [radio] and [protocol] sections
+# 3. Update [capabilities] to match your radio
+# 4. Update [commands] (CI-V radios) or leave empty (Kenwood/Yaesu CAT)
+# 5. Add [controls], [meters], [[rules]] as needed
 # 6. Run the loader tests
-uv run pytest tests/test_rig_loader.py -v
+uv run pytest tests/test_rig_loader.py tests/test_rig_multi_vendor.py -v
 ```
+
+## Supported Protocols
+
+| Protocol | Type string | Examples | Description |
+|----------|------------|----------|-------------|
+| Icom CI-V | `"civ"` | IC-7610, IC-7300, Xiegu X6100/X6200 | Binary CI-V frames |
+| Kenwood CAT | `"kenwood_cat"` | Lab599 TX-500, Kenwood TS-890S | Text `"CMD params;"` |
+| Yaesu CAT | `"yaesu_cat"` | Yaesu FTX-1, FT-710 | Yaesu text protocol |
+
+```toml
+[protocol]
+type = "civ"  # or "kenwood_cat" or "yaesu_cat"
+```
+
+For CI-V radios, `[radio].civ_addr` is required. For Kenwood/Yaesu, omit it.
 
 ## TOML Schema Reference
 
@@ -38,29 +58,26 @@ Below is a practical walkthrough.
 [radio]
 id = "icom_ic9700"        # unique snake_case ID
 model = "IC-9700"         # human-readable, used in UI and logs
-civ_addr = 0xA2           # default CI-V address
+civ_addr = 0xA2           # CI-V address (required for civ, omit for others)
 receiver_count = 2        # 1 or 2 independent receivers
 has_lan = true            # Ethernet port built-in?
 has_wifi = false          # WiFi built-in?
 default_baud = 115200     # optional: default serial baud rate
 ```
 
-`id` must be globally unique. Convention: `icom_<model_lower>` (e.g. `icom_ic7300`).
-`default_baud` is used by `--model` CLI auto-config for serial connections.
+`id` must be globally unique. Convention: `<vendor>_<model_lower>` (e.g. `icom_ic7300`,
+`yaesu_ftx1`, `lab599_tx500`).
 
-### `[spectrum]` — Scope Parameters
-
-Include only if the radio has a built-in spectrum scope:
+### `[protocol]` — Communication Protocol
 
 ```toml
-[spectrum]
-seq_max = 11
-amp_max = 160
-data_len_max = 475
+[protocol]
+type = "civ"       # "civ" | "kenwood_cat" | "yaesu_cat"
+address = 0xA2     # optional: override civ_addr for protocol
+baud = 115200      # optional: protocol-specific baud rate
 ```
 
-These values are the same for IC-7610 and IC-7300 — copy them verbatim unless your
-radio's scope frame format differs (check the CI-V reference manual).
+Omit this section entirely for CI-V radios — defaults to `type = "civ"`.
 
 ### `[capabilities]` — Feature Flags
 
@@ -69,65 +86,83 @@ radio's scope frame format differs (check the CI-V reference manual).
 features = [
     "audio",      # RX/TX audio streaming
     "scope",      # spectrum scope
-    "dual_rx",    # dual independent receivers (omit for single-receiver radios)
+    "dual_rx",    # dual independent receivers
     "meters",     # S-meter, SWR, ALC, etc.
     "tx",         # transmit capability
-    "cw",         # CW keying via CI-V
     "attenuator", # ATT control
     "preamp",     # preamplifier
-    "rf_gain",    # RF gain
-    "af_level",   # AF output level
-    "squelch",    # squelch
-    "nb",         # noise blanker
-    "nr",         # noise reduction
-    "digisel",    # DIGI-SEL (IC-7610 only, omit for IC-7300)
-    "ip_plus",    # IP+ (IC-7610 only, omit for IC-7300)
+    # ... see _schema.md for full list
 ]
 ```
 
-The capability list controls Web UI guards — features not listed will be hidden or
-disabled in the UI automatically.
+The capability list controls Web UI guards — features not listed are hidden.
 
-### `[attenuator]`, `[preamp]`, `[agc]` — RX Control Steps
+### `[controls]` — UI Control Styles (new)
 
-These optional sections define the available values for front-panel RX controls.
-The Web UI reads these to render cycle buttons with correct labels and step sizes.
+Defines **how** controls render in the UI. Each sub-table corresponds to a capability:
 
 ```toml
-[attenuator]
-values = [0, 20]  # IC-7300: OFF or 20 dB
-# values = [0, 6, 12, 18]  # IC-7610: 6 dB steps
+[controls.attenuator]
+style = "stepped"          # IC-7610: 16 discrete steps with stepper UI
 
-[preamp]
-values = [0, 1, 2]  # 0=OFF, 1=PRE1, 2=PRE2
-
-[agc]
-modes = [1, 2, 3]  # 1=FAST, 2=MID, 3=SLOW
-labels = { "1" = "FAST", "2" = "MID", "3" = "SLOW" }
+[controls.nb]
+style = "toggle_and_level" # IC-7610: separate ON/OFF + level slider
 ```
 
-**ATT and PRE are mutually exclusive** — the radio hardware enforces this, and the
-UI applies optimistic updates (enabling ATT clears PRE, and vice versa).
+Styles:
+- `toggle` — ON/OFF (IC-7300 ATT, X6100 ATT)
+- `stepped` — Discrete steps with [−][dropdown][+] (IC-7610 ATT)
+- `selector` — Dropdown/selector (FTX-1 ATT: 4 named levels)
+- `toggle_and_level` — Separate toggle + slider (IC-7610 NB/NR)
+- `level_is_toggle` — 0=OFF, >0=level (FTX-1 NB/NR)
 
-If these sections are omitted, the Web UI hides the corresponding buttons.
+### `[meters]` — Calibration Tables (new)
 
-### `[modes]` and `[filters]`
+Non-linear raw→actual calibration for meters. The frontend interpolates between points:
 
 ```toml
-[modes]
-list = ["USB", "LSB", "CW", "CW-R", "AM", "FM", "RTTY", "RTTY-R"]
+[meters.s_meter]
+redline_raw = 130   # where the red zone starts
 
-[filters]
-list = ["FIL1", "FIL2", "FIL3"]
+[[meters.s_meter.calibration]]
+raw = 0
+actual = -54.0
+label = "S0"
+
+[[meters.s_meter.calibration]]
+raw = 130
+actual = 0.0
+label = "S9"
 ```
 
-These populate the mode/filter selectors in the Web UI.
+### `[[rules]]` — Constraint Rules (new)
+
+Defines how capabilities interact (mutual exclusion, dependencies):
+
+```toml
+[[rules]]
+kind = "mutex"
+fields = ["attenuator", "preamp"]
+
+[[rules]]
+kind = "disables"
+when_active = "digisel"
+disables = ["preamp"]
+reason = "DIGI-SEL overrides preamp"
+```
+
+Rule kinds: `mutex`, `disables`, `requires`, `value_limit`.
 
 ### `[vfo]` — VFO Scheme
 
-Two schemes are supported:
+Four schemes supported:
 
-**`main_sub`** — for dual-receiver radios (IC-7610, IC-9700):
+| Scheme | Receivers | VFOs | Example |
+|--------|----------|------|---------|
+| `main_sub` | 2 | 2 | IC-7610 |
+| `ab` | 1 | 2 | IC-7300, X6100, TX-500 |
+| `ab_shared` | 2 | 1 | FTX-1 |
+| `single` | 1 | 1 | Simple QRP rigs |
 
 ```toml
 [vfo]
@@ -135,123 +170,31 @@ scheme = "main_sub"
 main_select = [0xD0]
 sub_select = [0xD1]
 swap = [0xB0]
+equal = [0xB1]
 ```
 
-**`ab`** — for single-receiver radios (IC-7300, IC-705):
+### `[commands]` — Wire Bytes
 
-```toml
-[vfo]
-scheme = "ab"
-main_select = [0x00]   # VFO A
-sub_select = [0x01]    # VFO B
-swap = [0xB0]
-```
-
-The `scheme` value drives VFO label rendering in the Web UI: `main_sub` → "MAIN"/"SUB",
-`ab` → "VFO A"/"VFO B".
-
-### `[[freq_ranges.ranges]]` — Frequency Coverage
-
-Each range entry defines a contiguous frequency span with optional amateur band definitions:
-
-```toml
-[[freq_ranges.ranges]]
-label = "HF"
-start_hz = 30_000
-end_hz = 60_000_000
-
-[[freq_ranges.ranges.bands]]
-name = "20m"
-start_hz = 14_000_000
-end_hz = 14_350_000
-default_hz = 14_200_000
-bsr_code = 0x05
-```
-
-For VHF/UHF radios, add additional ranges:
-
-```toml
-[[freq_ranges.ranges]]
-label = "2m"
-start_hz = 144_000_000
-end_hz = 148_000_000
-
-[[freq_ranges.ranges.bands]]
-name = "2m"
-start_hz = 144_000_000
-end_hz = 148_000_000
-default_hz = 146_520_000
-```
-
-`bsr_code` is optional but strongly recommended for bands that support Icom
-Band Stack Register recall (`CI-V 0x1A 0x01`):
-
-- **Present** `bsr_code`: Web UI can use `set_band` and restore last freq/mode
-  stored in radio memory for that band.
-- **Missing** `bsr_code`: UI should use `default_hz` fallback (`set_freq`).
-
-Notes:
-
-- Keep `bsr_code` values unique within one rig profile to avoid ambiguous mapping.
-- In built-in IC-7300/IC-7610 profiles, 60m intentionally has no `bsr_code`, so
-  it uses default-frequency fallback.
-
-### `[commands]` — CI-V Wire Bytes
-
-Each key maps a command name to its CI-V wire bytes as an integer array:
+Required for CI-V radios. Optional (may be empty) for Kenwood/Yaesu CAT:
 
 ```toml
 [commands]
-get_freq = [0x03]           # single command byte
-get_af_level = [0x14, 0x01] # command + sub-command
-set_af_level = [0x14, 0x01]
-```
+get_freq = [0x03]
+set_freq = [0x05]
+get_af_level = [0x14, 0x01]
+# ... full list in ic7610.toml
 
-Most Icom HF radios share the same command bytes as the IC-7610 — copy the IC-7610
-`[commands]` section and remove any commands your radio doesn't support.
-
-### `[commands.overrides]` — Model-Specific Wire Bytes
-
-Commands that differ from the IC-7610 defaults go here:
-
-```toml
 [commands.overrides]
-# IC-7300 uses a different register for S-meter squelch status
-get_s_meter_sql_status = [0x16, 0x43]
-
-# IC-7300-specific menu items
-acc1_mod_level = [0x1A, 0x05, 0x00, 0x64]
-usb_mod_level  = [0x1A, 0x05, 0x00, 0x65]
+# Model-specific differences
 ```
 
-Overrides are merged on top of `[commands]` at load time.
+For Kenwood/Yaesu radios, commands are handled by the protocol adapter, not CI-V bytes.
 
-### `[cmd29]` — Command 29 Routes (Dual-Receiver Only)
+### Other Sections
 
-Command 29 is a prefix used to route commands to a specific receiver on dual-receiver
-radios. **Omit this section entirely for single-receiver radios.**
-
-```toml
-[cmd29]
-routes = [
-    [0x11],           # ATT (sub=None)
-    [0x14, 0x01],     # AF Gain
-    [0x16, 0x02],     # PREAMP
-    [0x16, 0x40],     # NR
-    [0x16, 0x4E],     # DIGI-SEL
-    [0x16, 0x65],     # IP+
-]
-```
-
-Check the IC-7610 rig file for the full list. For other dual-receiver radios, consult
-your radio's CI-V reference manual for which commands support receiver targeting.
-
-## Finding Wire Bytes
-
-1. **Icom CI-V reference manual** — the authoritative source for your model
-2. **`docs/parity/ic7610_command_matrix.json`** — IC-7610 command matrix with verified wire bytes
-3. **`rigs/ic7610.toml`** — annotated reference (IC-7610 = the baseline)
-4. **wfview `.rig` files** — different format but same underlying CI-V addresses
+See the full schema for: `[attenuator]`, `[preamp]`, `[agc]`, `[spectrum]`,
+`[[freq_ranges.ranges]]`, `[cmd29]`, `[antenna]`, `[apf]`, `[notch]`,
+`[ssb_tx_bw]`, `[break_in]`, `[rit]`, `[cw]`, `[nb]`, `[power]`.
 
 ## Testing Your Rig File
 
@@ -261,58 +204,30 @@ uv run python -c "
 from pathlib import Path
 from icom_lan.rig_loader import load_rig
 cfg = load_rig(Path('rigs/ic9700.toml'))
-print(cfg.model, cfg.civ_addr, cfg.receiver_count)
+print(cfg.model, cfg.protocol_type, cfg.receiver_count)
 print('capabilities:', cfg.capabilities)
+print('controls:', cfg.controls)
+print('rules:', cfg.rules)
 "
 
-# Full test suite (must pass before opening a PR)
+# Full test suite
 uv run pytest tests/ -x -q
 
-# Loader-specific tests
-uv run pytest tests/test_rig_loader.py -v
+# Multi-vendor specific tests
+uv run pytest tests/test_rig_multi_vendor.py -v
 ```
-
-`load_rig()` validates all required sections and field types — errors include the
-filename and field path to make diagnosis easy.
 
 ## Common Mistakes
 
 | Mistake | Error message |
 |---------|--------------|
-| Missing `[capabilities].features` | `[capabilities].features must not be empty` |
-| Unknown capability string | `unknown capability 'xyz'. Known: [...]` |
-| `[vfo].scheme` not in `{"ab", "main_sub"}` | `[vfo].scheme must be one of ...` |
-| `[cmd29]` in a single-receiver rig | Works but wastes cycles — omit it |
-| Duplicate command keys | TOML parser error (last value wins in some parsers) |
-| CI-V address out of range | `[radio].civ_addr = X out of range 0x00–0xFF` |
-
-## Using a Rig File at Runtime
-
-```python
-from pathlib import Path
-from icom_lan.rig_loader import load_rig
-
-cfg = load_rig(Path("rigs/ic9700.toml"))
-profile = cfg.to_profile()          # RadioProfile for command routing
-cmd_map = cfg.to_command_map()      # CommandMap for CI-V wire bytes
-
-print(profile.receiver_count)       # 2
-print(profile.vfo_scheme)           # "main_sub"
-print(cmd_map.get("get_af_level"))  # (0x14, 0x01)
-```
-
-Or load all rigs at once:
-
-```python
-from pathlib import Path
-from icom_lan.rig_loader import discover_rigs
-
-rigs = discover_rigs(Path("rigs/"))
-for model, cfg in rigs.items():
-    print(model, cfg.civ_addr)
-# IC-7300 0x94
-# IC-7610 0x98
-```
+| Missing `[capabilities].features` | `features must not be empty` |
+| Unknown capability | `unknown capability 'xyz'. Known: [...]` |
+| Invalid VFO scheme | `scheme must be one of {'ab', 'main_sub', 'ab_shared', 'single'}` |
+| Invalid protocol type | `type must be one of {'civ', 'kenwood_cat', 'yaesu_cat'}` |
+| Invalid control style | `style must be one of {'toggle', 'stepped', ...}` |
+| Invalid rule kind | `kind must be one of {'mutex', 'disables', ...}` |
+| CI-V addr missing for CI-V radio | Parser defaults to 0 — may cause runtime errors |
 
 ## See Also
 

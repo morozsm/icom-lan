@@ -74,6 +74,36 @@ icom-lan --backend serial --serial-port /dev/tty.usbserial-XXXX freq
 The Web UI automatically hides DIGI-SEL and IP+ controls when connected to an IC-7300
 (capability-based UI guards). VFO labels switch to "VFO A" / "VFO B" automatically.
 
+## Non-Icom Radios (Planned)
+
+The TOML rig profile system supports multiple protocols. These profiles exist but
+backend adapters are not yet implemented:
+
+### Yaesu FTX-1
+
+- **Protocol:** Yaesu CAT (text)
+- **Rig profile:** `rigs/ftx1.toml`
+- **Features:** 17 modes (incl. C4FM), dual RX, ATT 4 levels, 2m/70cm/HF
+- **VFO scheme:** `ab_shared` (2 receivers, 1 VFO)
+- **Status:** Profile complete, needs Yaesu CAT protocol adapter
+
+### Xiegu X6100
+
+- **Protocol:** CI-V (IC-705 compatible subset)
+- **CI-V Address:** `0x70`
+- **Rig profile:** `rigs/x6100.toml`
+- **Features:** HF + 6m, QRP 8W, built-in ATU, WiFi
+- **VFO scheme:** `ab`
+- **Status:** Profile complete. Should work with existing CI-V backend (untested).
+
+### Lab599 TX-500
+
+- **Protocol:** Kenwood CAT (text)
+- **Rig profile:** `rigs/tx500.toml`
+- **Features:** HF + 6m, QRP 10W, built-in ATU, minimal CAT (ID FA FB MD FR FT PA RA)
+- **VFO scheme:** `ab`
+- **Status:** Profile complete, needs Kenwood CAT protocol adapter
+
 ## Should Work (Untested)
 
 These radios use the same Icom LAN protocol and should work out of the box. Community testing and reports welcome!
@@ -140,10 +170,14 @@ async with create_radio(config) as radio:
 See **[Adding a New Radio (Rig Profiles)](rig-profiles.md)** for the complete guide.
 In brief:
 
-1. Copy `rigs/ic7610.toml` as a template
-2. Update `[radio]` section with the correct CI-V address and capability flags
-3. Remove unsupported commands, add any model-specific overrides
-4. Run `uv run pytest tests/test_rig_loader.py -v` to validate
+1. Copy the closest reference rig file as a template:
+   - Icom CI-V → `rigs/ic7610.toml`
+   - Kenwood CAT → `rigs/tx500.toml`
+   - Yaesu CAT → `rigs/ftx1.toml`
+2. Update `[radio]` and `[protocol]` sections
+3. Update `[capabilities]`, `[controls]`, `[meters]`, `[[rules]]` as needed
+4. For CI-V radios: update `[commands]` section
+5. Run `uv run pytest tests/test_rig_loader.py tests/test_rig_multi_vendor.py -v` to validate
 
 The library is CI-V address agnostic — any radio that speaks the Icom LAN protocol should
 work. If you test with a new model:

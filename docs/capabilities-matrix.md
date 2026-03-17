@@ -182,17 +182,25 @@ main_sub_tracking, tx_inhibit, dpd, lcd_backlight
 
 ### Parameterized differences
 
-| Parameter | IC-7610 | IC-7300 | TOML section |
-|-----------|---------|---------|-------------|
-| ATT values | [0,3,6,9,12,15,18,21,24,27,30,33,36,39,42,45] | [0, 20] | `[attenuator]` |
-| PRE values | [0, 1, 2] | [0, 1, 2] | `[preamp]` |
-| AGC modes | [1, 2, 3] | [1, 2, 3] | `[agc]` |
-| TX antennas | 2 | 1 | `[antenna] tx_count` |
-| RX antenna | yes | no | `[antenna] has_rx_ant` |
-| Max power W | 100 | 100 | `[power] max_watts` |
-| NR mode | ON/OFF | ON/OFF | (both simple, no NR1/2/3 via CI-V) |
-| RIT range | ±9999 Hz | ±9999 Hz | `[rit] range_hz` |
-| CW pitch | 300-900 Hz | 300-900 Hz | `[cw] pitch_range` |
-| Receivers | 2 | 1 | `[radio] receiver_count` |
-| VFO scheme | main_sub | ab | `[vfo] scheme` |
-| Command29 | yes | no | `[cmd29]` section |
+| Parameter | IC-7610 | IC-7300 | FTX-1 | X6100 | TX-500 | TOML section |
+|-----------|---------|---------|-------|-------|--------|-------------|
+| Protocol | CI-V | CI-V | Yaesu CAT | CI-V | Kenwood CAT | `[protocol]` |
+| CI-V addr | 0x98 | 0x94 | — | 0x70 | — | `[radio] civ_addr` |
+| ATT values | [0,3,...,45] (16) | [0, 20] | [0,1,2,3] | [0, 1] | [0, 1] | `[attenuator]` |
+| ATT style | stepped | toggle | selector | toggle | toggle | `[controls.attenuator]` |
+| PRE values | [0, 1, 2] | [0, 1, 2] | [0, 1, 2] | [0, 1] | [0, 1] | `[preamp]` |
+| AGC modes | [1, 2, 3] | [1, 2, 3] | — | — | — | `[agc]` |
+| NB style | toggle+level | toggle+level | level_is_toggle | — | — | `[controls.nb]` |
+| NR style | toggle+level | toggle+level | level_is_toggle | — | — | `[controls.nr]` |
+| TX antennas | 2 | 1 | 1 | 1 | 1 | `[antenna] tx_count` |
+| RX antenna | yes | no | no | no | no | `[antenna] has_rx_ant` |
+| Max power W | 100 | 100 | 5-20 | 8 | 10 | `[power] max_watts` |
+| Modes | 10 | 9 | 17 | 8 | 7 | `[modes]` |
+| Receivers | 2 | 1 | 2 | 1 | 1 | `[radio] receiver_count` |
+| VFO scheme | main_sub | ab | ab_shared | ab | ab | `[vfo] scheme` |
+| Command29 | yes | no | no | no | no | `[cmd29]` section |
+| Meter cal | ✅ | — | ✅ | — | — | `[meters]` |
+| Rules | mutex, disables | — | — | — | — | `[[rules]]` |
+| Scope | ✅ | ✅ | — | — | — | `[spectrum]` |
+| LAN | ✅ | ❌ | ❌ | ❌ | ❌ | `[radio] has_lan` |
+| WiFi | ❌ | ❌ | ❌ | ✅ | ❌ | `[radio] has_wifi` |

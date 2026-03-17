@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Multi-vendor rig profile support** — TOML schema extended for non-Icom radios:
+  - `rigs/ftx1.toml` — Yaesu FTX-1 (Yaesu CAT, 17 modes, dual RX, meter calibration)
+  - `rigs/x6100.toml` — Xiegu X6100 (CI-V 0x70, IC-705 compatible, QRP 8W)
+  - `rigs/tx500.toml` — Lab599 TX-500 (Kenwood CAT, minimal command set, QRP 10W)
+- **`[protocol]` section** — `type = "civ" | "kenwood_cat" | "yaesu_cat"` (default: `"civ"`)
+- **`[controls]` section** — UI control styles: `toggle`, `stepped`, `selector`,
+  `toggle_and_level`, `level_is_toggle`
+- **`[meters]` section** — Non-linear calibration tables for S-meter and TX meters
+  with `redline_raw` threshold
+- **`[[rules]]` section** — Declarative constraint rules: `mutex`, `disables`,
+  `requires`, `value_limit`
+- **Extended VFO schemes** — added `"ab_shared"` (FTX-1) and `"single"` (simple QRP)
+- **`[commands]` now optional** — non-CI-V radios may have empty command maps
+- **`civ_addr` now optional** — defaults to 0 for Kenwood/Yaesu CAT radios
+- `RadioProfile` and `RigConfig` extended with `protocol_type`, `controls`,
+  `meter_calibrations`, `rules`
+- 42 new tests in `test_rig_multi_vendor.py` (139 total, 0 regressions)
+
 ## [0.12.0] — 2026-03-15
 
 ### Added
