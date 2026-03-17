@@ -3,6 +3,8 @@
 This document describes the format of `.toml` rig configuration files used by
 `icom-lan` to define radio profiles in a data-driven way.
 
+Adding a new radio = writing one TOML file, zero Python changes.
+
 ---
 
 ## `[radio]` — Model Identity
@@ -11,11 +13,62 @@ This document describes the format of `.toml` rig configuration files used by
 |------------------|--------|----------|-------------------------------------------------|
 | `id`             | string | yes      | Unique profile identifier (e.g. `"icom_ic7610"`) |
 | `model`          | string | yes      | Human-readable model name (e.g. `"IC-7610"`)    |
-| `civ_addr`       | int    | yes      | Default CI-V address (0x00–0xFF)                |
+| `civ_addr`       | int    | no       | Default CI-V address (0x00–0xFF). Required for `civ` protocol, default 0 for others. |
 | `receiver_count` | int    | yes      | Number of independent receivers (1 or 2)        |
 | `has_lan`        | bool   | yes      | Whether the radio has a LAN (Ethernet) port     |
 | `has_wifi`       | bool   | yes      | Whether the radio has built-in WiFi             |
 | `default_baud`   | int    | no       | Default serial baud rate (e.g. `115200`). Used by CLI `--model` auto-config. |
+
+## `[protocol]` — Communication Protocol
+
+Optional section. Defaults to `type = "civ"` if omitted.
+
+| Field     | Type   | Required | Description                                       |
+|-----------|--------|----------|---------------------------------------------------|
+| `type`    | string | no       | Protocol type: `"civ"`, `"kenwood_cat"`, or `"yaesu_cat"` |
+| `address` | int    | no       | Protocol-specific address (e.g. CI-V addr)        |
+| `baud`    | int    | no       | Override baud rate for this protocol              |
+
+Protocol types:
+- **`civ`** — Icom CI-V binary protocol (IC-7610, IC-7300, Xiegu X6100/X6200)
+- **`kenwood_cat`** — Kenwood text-based CAT (Lab599 TX-500, TS-890S). Commands: `"FA14200000;"`, `"MD2;"`
+- **`yaesu_cat`** — Yaesu text-based CAT (FTX-1, FT-710, FT-DX101)
+
+## `[capabilities]` — Feature Flags
+
+| Field      | Type     | Required | Description                    |
+|------------|----------|----------|--------------------------------|
+| `features` | string[] | yes      | List of supported capabilities |
+
+Known capability strings (grouped by area):
+
+**Receiver:** `audio`, `dual_rx`, `dual_watch`, `af_level`, `rf_gain`, `squelch`, `af_mute`
+
+**RF Front End:** `attenuator`, `preamp`, `digisel`, `ip_plus`
+
+**Antenna:** `antenna`, `rx_antenna`
+
+**DSP / Noise:** `nb`, `nr`, `notch`, `apf`, `twin_peak`
+
+**Filter:** `pbt`, `filter_width`, `filter_shape`
+
+**TX:** `tx`, `split`, `vox`, `compressor`, `monitor`, `drive_gain`, `ssb_tx_bw`, `tx_inhibit`, `dpd`
+
+**CW:** `cw`, `break_in`
+
+**RIT / XIT:** `rit`, `xit`
+
+**Tuner:** `tuner`
+
+**Metering:** `meters`
+
+**Scope:** `scope`
+
+**Tone:** `repeater_tone`, `tsql`
+
+**Data:** `data_mode`
+
+**System:** `power_control`, `dial_lock`, `scan`, `bsr`, `main_sub_tracking`, `lcd_backlight`
 
 ## `[attenuator]` — Attenuator Steps
 
@@ -23,11 +76,13 @@ Optional section. Defines available attenuator values for the radio.
 
 | Field    | Type  | Required | Description                                         |
 |----------|-------|----------|-----------------------------------------------------|
-| `values` | int[] | yes      | Available ATT values in dB (e.g. `[0, 6, 12, 18]`) |
+| `values` | int[] | yes      | Available ATT values in dB (e.g. `[0, 3, 6, 9, ...]`) |
 
 `0` = OFF, other values = attenuation in dB. The frontend cycles through these
-values in order. Different radios have different step sizes (IC-7610: 6 dB steps,
-IC-7300: single 20 dB step).
+values in order. Different radios have very different step sizes:
+- IC-7610: 16 steps × 3 dB = `[0, 3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36, 39, 42, 45]`
+- IC-7300: binary toggle = `[0, 20]`
+- FTX-1: 4 discrete levels = `[0, 1, 2, 3]`
 
 ## `[preamp]` — Preamplifier Steps
 
@@ -56,8 +111,108 @@ modes = [1, 2, 3]
 labels = { "1" = "FAST", "2" = "MID", "3" = "SLOW" }
 ```
 
-The frontend uses `labels` for button text and cycles through `modes` in order.
-Note: TOML table keys must be strings, so mode values are stringified (`"1"`, not `1`).
+## `[controls]` — Control Styles
+
+Optional section. Defines how UI controls render for each feature.
+Each sub-table is named after a feature (e.g. `[controls.attenuator]`).
+
+| Field       | Type   | Required | Description                                    |
+|-------------|--------|----------|------------------------------------------------|
+| `style`     | string | no       | Control rendering style (see below)            |
+| `range_min` | int    | no       | Minimum value (for level controls)             |
+| `range_max` | int    | no       | Maximum value (for level controls)             |
+
+Valid styles:
+- **`toggle`** — Simple ON/OFF (IC-7300 ATT, X6100 ATT)
+- **`stepped`** — Discrete steps with +/- buttons and dropdown (IC-7610 ATT)
+- **`selector`** — Named discrete levels (FTX-1 ATT: 0/1/2/3)
+- **`toggle_and_level`** — Separate ON/OFF toggle + level slider (IC-7610 NB/NR)
+- **`level_is_toggle`** — Level=0 is OFF, level>0 is ON+level (FTX-1 NB/NR)
+
+Example:
+
+```toml
+[controls.attenuator]
+style = "stepped"
+
+[controls.nb]
+style = "level_is_toggle"
+range_min = 0
+range_max = 10
+```
+
+## `[meters]` — Meter Calibration
+
+Optional section. Defines non-linear calibration tables for meters.
+Each sub-table is named after a meter source (e.g. `[meters.s_meter]`).
+
+| Field         | Type  | Required | Description                                  |
+|---------------|-------|----------|----------------------------------------------|
+| `redline_raw` | int   | no       | Raw value where meter enters "danger" zone   |
+| `calibration` | array | no       | Array of calibration points (see below)      |
+
+### `[[meters.<name>.calibration]]` — Calibration Points
+
+| Field    | Type   | Required | Description                          |
+|----------|--------|----------|--------------------------------------|
+| `raw`    | int    | yes      | Raw meter value (0–255)              |
+| `actual` | float  | yes      | Actual value (dBm, watts, etc.)      |
+| `label`  | string | yes      | Display label (e.g. `"S9"`, `"S9+20"`) |
+
+Example:
+
+```toml
+[meters.s_meter]
+redline_raw = 130
+
+[[meters.s_meter.calibration]]
+raw = 0
+actual = -54.0
+label = "S0"
+
+[[meters.s_meter.calibration]]
+raw = 130
+actual = 0.0
+label = "S9"
+```
+
+The frontend interpolates between calibration points for values not exactly matching.
+This handles both linear (Icom) and non-linear (Yaesu) meter scales.
+
+## `[[rules]]` — Constraint Rules
+
+Optional top-level array of tables. Defines interaction constraints between features.
+The rule engine evaluates these to enable/disable controls in the UI and prevent
+invalid hardware states.
+
+| Field         | Type     | Required | Description                              |
+|---------------|----------|----------|------------------------------------------|
+| `kind`        | string   | yes      | Rule type (see below)                    |
+| `fields`      | string[] | varies   | Affected feature fields                  |
+| `when_active` | string   | varies   | Triggering feature                       |
+| `disables`    | string[] | varies   | Features to disable                      |
+| `requires`    | string   | varies   | Required feature                         |
+| `reason`      | string   | no       | Human-readable explanation               |
+
+Valid rule kinds:
+- **`mutex`** — Mutual exclusion. Only one of `fields` can be active. Example: ATT + PREAMP on IC-7610.
+- **`disables`** — When `when_active` is on, `disables` features become unavailable. Example: DIGI-SEL disables PREAMP.
+- **`requires`** — Feature requires another to be active first.
+- **`value_limit`** — Limits values of a feature based on another feature's state.
+
+Example:
+
+```toml
+[[rules]]
+kind = "mutex"
+fields = ["attenuator", "preamp"]
+
+[[rules]]
+kind = "disables"
+when_active = "digisel"
+disables = ["preamp"]
+reason = "DIGI-SEL overrides preamp"
+```
 
 ## `[spectrum]` — Scope Parameters
 
@@ -68,30 +223,6 @@ Optional section for radios that support the spectrum scope.
 | `seq_max`      | int  | yes      | Maximum scope sequence number                |
 | `amp_max`      | int  | yes      | Maximum amplitude value in scope data        |
 | `data_len_max` | int  | yes      | Maximum number of data points per scope frame |
-
-## `[capabilities]` — Feature Flags
-
-| Field      | Type     | Required | Description                    |
-|------------|----------|----------|--------------------------------|
-| `features` | string[] | yes      | List of supported capabilities |
-
-Known capability strings:
-
-- `audio` — Audio streaming (RX/TX)
-- `scope` — Spectrum scope
-- `dual_rx` — Dual receiver operation
-- `meters` — Meter readings (S-meter, SWR, ALC, etc.)
-- `tx` — Transmit capability
-- `cw` — CW keying via CI-V
-- `attenuator` — Attenuator control
-- `preamp` — Preamplifier control
-- `rf_gain` — RF gain control
-- `af_level` — AF output level control
-- `squelch` — Squelch control
-- `nb` — Noise blanker
-- `nr` — Noise reduction
-- `digisel` — DIGI-SEL (digital IF preselector)
-- `ip_plus` — IP+ (intercept point improvement)
 
 ## `[modes]` — Operating Modes
 
@@ -105,18 +236,29 @@ Known capability strings:
 |--------|----------|----------|--------------------------------------------------|
 | `list` | string[] | yes      | Available IF filter names (e.g. `"FIL1"`)        |
 
+Additional optional fields:
+
+| Field            | Type   | Required | Description                                      |
+|------------------|--------|----------|--------------------------------------------------|
+| `style`          | string | no       | `"named_slots"` (default) or `"per_mode"`        |
+| `width_min_hz`   | int    | no       | Minimum IF filter width in Hz                    |
+| `width_max_hz`   | int    | no       | Maximum IF filter width in Hz                    |
+
 ## `[vfo]` — VFO Configuration
 
 | Field         | Type   | Required    | Description                                       |
 |---------------|--------|-------------|---------------------------------------------------|
-| `scheme`      | string | yes         | VFO scheme: `"ab"` or `"main_sub"`                |
+| `scheme`      | string | yes         | VFO scheme (see below)                            |
 | `main_select` | int[]  | if main_sub | Wire bytes to select Main VFO (e.g. `[0xD0]`)    |
 | `sub_select`  | int[]  | if main_sub | Wire bytes to select Sub VFO (e.g. `[0xD1]`)     |
-| `swap`        | int[]  | if main_sub | Wire bytes for VFO swap (e.g. `[0xB0]`)          |
+| `swap`        | int[]  | no          | Wire bytes for VFO swap (e.g. `[0xB0]`)          |
+| `equal`       | int[]  | no          | Wire bytes for VFO equalize (e.g. `[0xB1]`)      |
 
-For `scheme = "ab"`, `main_select`/`sub_select`/`swap` are typically `[0x00]`/`[0x01]`/`[0xB0]` (VFO A/B select via cmd 0x07).
-
-For `scheme = "main_sub"`, they use the Main/Sub select bytes specific to dual-receiver radios.
+Valid VFO schemes:
+- **`ab`** — 2 VFOs (A/B), 1 receiver (IC-7300, X6100, TX-500)
+- **`main_sub`** — 2 VFOs + 2 receivers (IC-7610, IC-R8600)
+- **`ab_shared`** — 1 VFO shared between 2 receivers (FTX-1)
+- **`single`** — 1 VFO, 1 receiver (simple QRP rigs)
 
 ## `[[freq_ranges.ranges]]` — Frequency Ranges
 
@@ -137,6 +279,7 @@ Array of tables, each defining a frequency coverage range.
 | `start_hz`   | int    | yes      | Band start frequency in Hz                  |
 | `end_hz`     | int    | yes      | Band end frequency in Hz                    |
 | `default_hz` | int    | yes      | Default tuning frequency in Hz (within band)|
+| `bsr_code`   | int    | no       | Band Stack Register code for CI-V 0x1A 0x01 |
 
 ## `[cmd29]` — Command 29 Routes
 
@@ -151,22 +294,10 @@ Each entry is a 1- or 2-element integer array:
 - `[0x11]` — command-only route (sub = None, e.g. ATT)
 - `[0x14, 0x01]` — command + sub-command route (e.g. AF Gain)
 
-Example:
+## `[commands]` — Wire Bytes
 
-```toml
-[cmd29]
-routes = [
-    [0x11],           # ATT (sub=None)
-    [0x14, 0x01],     # AF Gain
-    [0x16, 0x02],     # PREAMP
-]
-```
-
-## `[commands]` — CI-V Wire Bytes
-
-Each key maps a command name to its CI-V wire bytes as an integer array.
-Values represent the command byte and optional sub-command byte(s) used
-to build CI-V frames. For example:
+Optional section. Required for `civ` protocol radios, optional for others.
+Each key maps a command name to its wire bytes as an integer array.
 
 ```toml
 get_freq = [0x03]           # Single command byte
@@ -176,16 +307,31 @@ get_af_level = [0x14, 0x01] # Command + sub-command
 The command name follows the pattern `get_<param>` / `set_<param>` for
 read/write commands, or a verb like `ptt_on`, `scope_on`, `send_cw`.
 
+For `kenwood_cat` and `yaesu_cat` protocols, this section may be empty or
+contain protocol-specific command mappings (TBD).
+
 ### `[commands.overrides]` — Model-Specific Overrides
 
 Commands in this sub-table override the defaults for a specific radio model.
 Same format as `[commands]`: command names mapped to wire byte arrays.
-Empty if the radio uses all default command bytes.
+
+## Additional Parameterized Sections
+
+These optional sections provide detailed configuration for specific capabilities:
+
+| Section        | Description                                    |
+|----------------|------------------------------------------------|
+| `[antenna]`    | TX antenna count, RX antenna, antenna modes    |
+| `[apf]`        | Audio Peak Filter values and labels            |
+| `[notch]`      | Manual notch width values and labels           |
+| `[ssb_tx_bw]`  | SSB TX bandwidth values and labels             |
+| `[break_in]`   | CW break-in mode values and labels             |
+| `[rit]`        | RIT range in Hz                                |
+| `[cw]`         | CW pitch, speed, dash ratio ranges             |
+| `[nb]`         | Noise blanker depth and width ranges            |
+| `[power]`      | Maximum TX power in watts                      |
 
 ## Wire Byte Format
 
 All wire bytes are specified as arrays of integers in the range `0x00`–`0xFF`.
 TOML supports hex integer literals natively: `0x14` is the same as `20`.
-
-Example: `get_af_level = [0x14, 0x01]` means CI-V command byte `0x14`,
-sub-command `0x01`.

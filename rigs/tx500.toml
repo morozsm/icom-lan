@@ -1,0 +1,123 @@
+# Rig Configuration — Lab599 TX-500
+# Lab599 TX-500 QRP portable transceiver.
+# Protocol: Kenwood CAT (text-based)
+# Source: TX-500 CAT interface documentation
+
+[radio]
+id = "lab599_tx500"
+model = "TX-500"
+receiver_count = 1
+has_lan = false
+has_wifi = false
+default_baud = 38400
+
+[protocol]
+type = "kenwood_cat"
+
+[capabilities]
+features = [
+    "audio",
+    "af_level",
+    "rf_gain",
+    "squelch",
+    "attenuator",
+    "preamp",
+    "nb",
+    "nr",
+    "filter_width",
+    "tx",
+    "split",
+    "cw",
+    "rit",
+    "tuner",
+    "meters",
+    "scan",
+    "dial_lock",
+]
+
+[modes]
+list = ["LSB", "USB", "CW", "CW-R", "AM", "FM", "DIGI"]
+
+[filters]
+list = ["FIL1", "FIL2"]
+
+[vfo]
+scheme = "ab"
+
+[attenuator]
+values = [0, 1]
+
+[preamp]
+values = [0, 1]
+
+[controls.attenuator]
+style = "toggle"
+
+[[freq_ranges.ranges]]
+label = "HF"
+start_hz = 100000
+end_hz = 54000000
+
+[[freq_ranges.ranges.bands]]
+name = "160m"
+start_hz = 1800000
+end_hz = 2000000
+default_hz = 1825000
+
+[[freq_ranges.ranges.bands]]
+name = "80m"
+start_hz = 3500000
+end_hz = 3800000
+default_hz = 3600000
+
+[[freq_ranges.ranges.bands]]
+name = "40m"
+start_hz = 7000000
+end_hz = 7200000
+default_hz = 7100000
+
+[[freq_ranges.ranges.bands]]
+name = "30m"
+start_hz = 10100000
+end_hz = 10150000
+default_hz = 10125000
+
+[[freq_ranges.ranges.bands]]
+name = "20m"
+start_hz = 14000000
+end_hz = 14350000
+default_hz = 14200000
+
+[[freq_ranges.ranges.bands]]
+name = "17m"
+start_hz = 18068000
+end_hz = 18168000
+default_hz = 18100000
+
+[[freq_ranges.ranges.bands]]
+name = "15m"
+start_hz = 21000000
+end_hz = 21450000
+default_hz = 21200000
+
+[[freq_ranges.ranges.bands]]
+name = "12m"
+start_hz = 24890000
+end_hz = 24990000
+default_hz = 24940000
+
+[[freq_ranges.ranges.bands]]
+name = "10m"
+start_hz = 28000000
+end_hz = 29700000
+default_hz = 28500000
+
+[[freq_ranges.ranges.bands]]
+name = "6m"
+start_hz = 50000000
+end_hz = 54000000
+default_hz = 51000000
+
+[commands]
+# Kenwood CAT minimal command set
+# ID FA FB MD FR FT PA RA
