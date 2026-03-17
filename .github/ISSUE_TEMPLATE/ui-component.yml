@@ -1,0 +1,101 @@
+name: UI Component
+description: New Svelte UI component (atom or molecule)
+title: "feat(ui): "
+labels: ["enhancement", "area:web-ui"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## UI Component
+        Atomic Design: atom (no deps) or molecule (composed from atoms).
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What this component does, where it sits in the layout.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: level
+    attributes:
+      label: Atomic level
+      options:
+        - Atom (standalone, pure props)
+        - Molecule (composed from atoms)
+        - Organism (layout section)
+    validations:
+      required: true
+
+  - type: textarea
+    id: design-ref
+    attributes:
+      label: Design Reference
+      description: |
+        Mockup element name/id, colors, dimensions, fonts.
+        Reference: `mockups/web-ui/radio-panel.pen`
+
+  - type: textarea
+    id: props
+    attributes:
+      label: Props Interface
+      description: TypeScript interface for the component.
+      render: typescript
+
+  - type: textarea
+    id: files
+    attributes:
+      label: Files
+      description: Expected file paths.
+      value: |
+        - `frontend/src/components-v2/.../<Name>.svelte`
+        - `frontend/src/components-v2/.../__tests__/<Name>.test.ts`
+
+  - type: textarea
+    id: capability
+    attributes:
+      label: Capability Gating
+      description: |
+        Which capabilities control visibility?
+        Leave empty for atoms (no gating at atom level).
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      description: Checkboxes — each verifiable.
+      value: |
+        - [ ] Component renders correctly
+        - [ ] Compact mode (if applicable)
+        - [ ] Tests written and passing
+        - [ ] No store dependency (atoms only)
+        - [ ] No regressions
+    validations:
+      required: true
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies
+      description: "Parent epic, required atoms (e.g. #266, #268)"
+
+  - type: dropdown
+    id: size
+    attributes:
+      label: Size estimate
+      options:
+        - XS (< 1 hour)
+        - S (1-2 hours)
+        - M (half day)
+        - L (full day)
+    validations:
+      required: true
+
+  - type: textarea
+    id: result
+    attributes:
+      label: Result
+      description: |
+        Fill after completion: commit hash, lines added, tests count.
+        Updated by developer or agent after merge.
