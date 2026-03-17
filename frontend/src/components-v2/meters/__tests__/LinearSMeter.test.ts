@@ -1,0 +1,161 @@
+import { describe, it, expect } from 'vitest';
+import {
+  rawToSegments,
+  rawToSUnit,
+  rawToDbm,
+  formatDbm,
+} from '../smeter-scale';
+
+// ── rawToSegments ──────────────────────────────────────────────────────────
+
+describe('rawToSegments', () => {
+  it('maps S0 (raw 0) to 0 segments', () => {
+    expect(rawToSegments(0)).toBe(0);
+  });
+
+  it('maps S1 (raw 18) to ~1.22 segments', () => {
+    expect(rawToSegments(18)).toBeCloseTo((18 / 162) * 11, 5);
+  });
+
+  it('maps S9 (raw 162) to exactly 11 segments', () => {
+    expect(rawToSegments(162)).toBe(11);
+  });
+
+  it('maps S9+20 (raw 202) to ~14.87 segments', () => {
+    const expected = 11 + ((202 - 162) / (255 - 162)) * 9;
+    expect(rawToSegments(202)).toBeCloseTo(expected, 5);
+  });
+
+  it('maps max (raw 255) to exactly 20 segments', () => {
+    expect(rawToSegments(255)).toBe(20);
+  });
+
+  it('clamps values below 0', () => {
+    expect(rawToSegments(-10)).toBe(0);
+  });
+
+  it('clamps values above 255', () => {
+    expect(rawToSegments(300)).toBe(20);
+  });
+
+  it('returns fractional values for intermediate inputs', () => {
+    const v = rawToSegments(81); // midway in S0-S9 zone
+    expect(v).toBeGreaterThan(0);
+    expect(v).toBeLessThan(11);
+  });
+});
+
+// ── rawToSUnit ─────────────────────────────────────────────────────────────
+
+describe('rawToSUnit', () => {
+  it('returns S0 for raw 0', () => {
+    expect(rawToSUnit(0)).toBe('S0');
+  });
+
+  it('returns S1 for raw 18', () => {
+    expect(rawToSUnit(18)).toBe('S1');
+  });
+
+  it('returns S5 for raw 90', () => {
+    expect(rawToSUnit(90)).toBe('S5');
+  });
+
+  it('returns S9 for raw 162', () => {
+    expect(rawToSUnit(162)).toBe('S9');
+  });
+
+  it('returns S9 for raw just above S9 but below S9+10', () => {
+    expect(rawToSUnit(170)).toBe('S9');
+  });
+
+  it('returns S9+20 for raw 202', () => {
+    expect(rawToSUnit(202)).toBe('S9+20');
+  });
+
+  it('returns S9+40 for raw 241', () => {
+    expect(rawToSUnit(241)).toBe('S9+40');
+  });
+
+  it('returns S9+50 for raw 255', () => {
+    expect(rawToSUnit(255)).toBe('S9+50');
+  });
+
+  it('clamps out-of-range values', () => {
+    expect(rawToSUnit(-5)).toBe('S0');
+    expect(rawToSUnit(999)).toBe('S9+50');
+  });
+});
+
+// ── rawToDbm ──────────────────────────────────────────────────────────────
+
+describe('rawToDbm', () => {
+  it('returns -127 dBm at S0 (raw 0)', () => {
+    expect(rawToDbm(0)).toBe(-127);
+  });
+
+  it('returns -73 dBm at S9 (raw 162)', () => {
+    expect(rawToDbm(162)).toBe(-73);
+  });
+
+  it('returns -53 dBm at S9+20 (raw 202)', () => {
+    expect(rawToDbm(202)).toBe(-53);
+  });
+
+  it('returns -23 dBm at max (raw 255)', () => {
+    expect(rawToDbm(255)).toBe(-23);
+  });
+
+  it('interpolates between breakpoints', () => {
+    // raw 171 is halfway between 162 (-73) and 182 (-63) → raw 172 is t=0.5 → -68
+    const dbm = rawToDbm(172);
+    expect(dbm).toBeGreaterThanOrEqual(-73);
+    expect(dbm).toBeLessThanOrEqual(-63);
+  });
+});
+
+// ── formatDbm ─────────────────────────────────────────────────────────────
+
+describe('formatDbm', () => {
+  it('formats negative values with unicode minus', () => {
+    expect(formatDbm(-67)).toBe('\u221267 dBm');
+  });
+
+  it('formats -127 dBm', () => {
+    expect(formatDbm(-127)).toBe('\u2212127 dBm');
+  });
+
+  it('formats positive values with plus sign', () => {
+    expect(formatDbm(0)).toBe('+0 dBm');
+  });
+});
+
+// ── Segment rendering logic (segment count → active segments) ─────────────
+
+describe('segment rendering logic', () => {
+  it('0 active segments at S0 (raw 0)', () => {
+    expect(Math.floor(rawToSegments(0))).toBe(0);
+  });
+
+  it('~6 segments at S5 (raw 90)', () => {
+    const segs = rawToSegments(90);
+    expect(segs).toBeGreaterThan(6);
+    expect(segs).toBeLessThan(7);
+  });
+
+  it('11 full segments at S9 (raw 162)', () => {
+    expect(Math.floor(rawToSegments(162))).toBe(11);
+  });
+
+  it('14 full segments at S9+20 (raw 202)', () => {
+    expect(Math.floor(rawToSegments(202))).toBe(14);
+  });
+
+  it('20 full segments at max (raw 255)', () => {
+    expect(Math.floor(rawToSegments(255))).toBe(20);
+  });
+
+  it('fractional segment for mid-S-unit value', () => {
+    const segs = rawToSegments(27); // halfway between S1 and S2
+    expect(segs % 1).toBeGreaterThan(0);
+  });
+});

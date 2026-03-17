@@ -1,4 +1,5 @@
 /// <reference types="vitest/config" />
+import path from 'path'
 import { defineConfig } from 'vite'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
 // PWA disabled — Service Worker interferes with fetch on iOS Safari via Tailscale
@@ -9,6 +10,11 @@ export default defineConfig({
   plugins: [
     svelte(),
   ],
+  resolve: {
+    alias: {
+      '$lib': path.resolve(__dirname, './src/lib'),
+    },
+  },
   server: {
     proxy: {
       '/api/v1/ws': {
