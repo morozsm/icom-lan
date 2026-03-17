@@ -72,10 +72,13 @@ KNOWN_CAPABILITIES = frozenset(
     }
 )
 
-VALID_VFO_SCHEMES = {"ab", "main_sub"}
+VALID_VFO_SCHEMES = {"ab", "main_sub", "ab_shared", "single"}
+VALID_PROTOCOL_TYPES = {"civ", "kenwood_cat", "yaesu_cat"}
+VALID_CONTROL_STYLES = {"toggle", "stepped", "selector", "toggle_and_level", "level_is_toggle"}
+VALID_RULE_KINDS = {"mutex", "disables", "requires", "value_limit"}
 
-_REQUIRED_SECTIONS = ("radio", "capabilities", "modes", "filters", "vfo", "commands")
-_REQUIRED_RADIO_FIELDS = ("id", "model", "civ_addr", "receiver_count", "has_lan", "has_wifi")
+_REQUIRED_SECTIONS = ("radio", "capabilities", "modes", "filters", "vfo")
+_REQUIRED_RADIO_FIELDS = ("id", "model", "receiver_count", "has_lan", "has_wifi")
 
 
 class RigLoadError(Exception):
@@ -108,6 +111,13 @@ class RigConfig:
     pre_values: tuple[int, ...] | None
     agc_modes: tuple[int, ...] | None
     agc_labels: dict[str, str] | None
+    protocol_type: str = "civ"
+    protocol_address: int | None = None
+    protocol_baud: int | None = None
+    controls: dict[str, dict] | None = None
+    meter_calibrations: dict[str, list[dict]] | None = None
+    meter_redlines: dict[str, int] | None = None
+    rules: tuple[dict, ...] = ()
 
     def to_profile(self) -> RadioProfile:
         """Build a ``RadioProfile`` from this config."""
@@ -153,6 +163,10 @@ class RigConfig:
             pre_values=self.pre_values,
             agc_modes=self.agc_modes,
             agc_labels=self.agc_labels,
+            protocol_type=self.protocol_type,
+            controls=self.controls,
+            meter_calibrations=self.meter_calibrations,
+            rules=self.rules,
         )
 
     def to_command_map(self) -> CommandMap:
@@ -190,17 +204,21 @@ def load_rig(path: Path) -> RigConfig:
 
     # Validate [radio]
     radio = data["radio"]
-    for field in _REQUIRED_RADIO_FIELDS:
-        if field not in radio:
+    for field_name in _REQUIRED_RADIO_FIELDS:
+        if field_name not in radio:
             raise RigLoadError(
-                f"{filename}: missing required field [radio].{field}"
+                f"{filename}: missing required field [radio].{field_name}"
             )
 
-    civ_addr = radio["civ_addr"]
-    if not (0x00 <= civ_addr <= 0xFF):
-        raise RigLoadError(
-            f"{filename}: [radio].civ_addr = {civ_addr} out of range 0x00–0xFF"
-        )
+    # civ_addr is optional (default 0 for non-civ radios); validate range if present
+    if "civ_addr" in radio:
+        civ_addr = radio["civ_addr"]
+        if not (0x00 <= civ_addr <= 0xFF):
+            raise RigLoadError(
+                f"{filename}: [radio].civ_addr = {civ_addr} out of range 0x00–0xFF"
+            )
+    else:
+        civ_addr = 0
 
     # Validate [capabilities]
     features = data["capabilities"].get("features", [])
@@ -232,17 +250,29 @@ def load_rig(path: Path) -> RigConfig:
     if not filters:
         raise RigLoadError(f"{filename}: [filters].list must not be empty")
 
-    # Parse commands
-    commands_raw = data["commands"]
-    overrides = commands_raw.pop("overrides", {})
+    # Parse [protocol] (optional)
+    proto_section = data.get("protocol", {})
+    protocol_type = proto_section.get("type", "civ")
+    if protocol_type not in VALID_PROTOCOL_TYPES:
+        raise RigLoadError(
+            f"{filename}: [protocol].type must be one of {VALID_PROTOCOL_TYPES}, "
+            f"got {protocol_type!r}"
+        )
+    protocol_address = proto_section.get("address")
+    protocol_baud = proto_section.get("baud")
+
+    # Parse commands (optional for non-civ protocols)
     commands: dict[str, tuple[int, ...]] = {}
-    for key, value in commands_raw.items():
-        if isinstance(value, list):
-            commands[key] = tuple(value)
-    # Apply overrides
-    for key, value in overrides.items():
-        if isinstance(value, list):
-            commands[key] = tuple(value)
+    if "commands" in data:
+        commands_raw = dict(data["commands"])
+        overrides = commands_raw.pop("overrides", {})
+        for key, value in commands_raw.items():
+            if isinstance(value, list):
+                commands[key] = tuple(value)
+        # Apply overrides
+        for key, value in overrides.items():
+            if isinstance(value, list):
+                commands[key] = tuple(value)
 
     # Parse freq_ranges
     freq_ranges_data = data.get("freq_ranges", {}).get("ranges", [])
@@ -250,7 +280,7 @@ def load_rig(path: Path) -> RigConfig:
     # Parse VFO bytes
     vfo_main = tuple(vfo["main_select"]) if "main_select" in vfo else None
     vfo_sub = tuple(vfo["sub_select"]) if "sub_select" in vfo else None
-    vfo_swap = tuple(vfo["swap"]) if "swap" in vfo else None
+    vfo_swap_val = tuple(vfo["swap"]) if "swap" in vfo else None
 
     # Parse cmd29 routes
     cmd29_raw = data.get("cmd29", {}).get("routes", [])
@@ -275,6 +305,51 @@ def load_rig(path: Path) -> RigConfig:
     agc_modes = tuple(agc_section["modes"]) if "modes" in agc_section else None
     agc_labels = dict(agc_section["labels"]) if "labels" in agc_section else None
 
+    # Parse [controls] (optional)
+    controls_raw = data.get("controls")
+    controls: dict[str, dict] | None = None
+    if controls_raw is not None:
+        controls = {}
+        for ctrl_name, ctrl_data in controls_raw.items():
+            if isinstance(ctrl_data, dict):
+                style = ctrl_data.get("style")
+                if style is not None and style not in VALID_CONTROL_STYLES:
+                    raise RigLoadError(
+                        f"{filename}: [controls.{ctrl_name}].style must be one of "
+                        f"{VALID_CONTROL_STYLES}, got {style!r}"
+                    )
+                controls[ctrl_name] = dict(ctrl_data)
+
+    # Parse [meters] (optional)
+    meters_raw = data.get("meters")
+    meter_calibrations: dict[str, list[dict]] | None = None
+    meter_redlines: dict[str, int] | None = None
+    if meters_raw is not None:
+        meter_calibrations = {}
+        meter_redlines = {}
+        for meter_name, meter_data in meters_raw.items():
+            if isinstance(meter_data, dict):
+                if "calibration" in meter_data:
+                    meter_calibrations[meter_name] = list(meter_data["calibration"])
+                if "redline_raw" in meter_data:
+                    meter_redlines[meter_name] = meter_data["redline_raw"]
+        if not meter_calibrations:
+            meter_calibrations = None
+        if not meter_redlines:
+            meter_redlines = None
+
+    # Parse [[rules]] (optional)
+    rules_raw = data.get("rules", [])
+    rules: list[dict] = []
+    for rule in rules_raw:
+        kind = rule.get("kind")
+        if kind not in VALID_RULE_KINDS:
+            raise RigLoadError(
+                f"{filename}: rule kind must be one of {VALID_RULE_KINDS}, "
+                f"got {kind!r}"
+            )
+        rules.append(dict(rule))
+
     return RigConfig(
         id=radio["id"],
         model=radio["model"],
@@ -289,7 +364,7 @@ def load_rig(path: Path) -> RigConfig:
         vfo_scheme=scheme,
         vfo_main_select=vfo_main,
         vfo_sub_select=vfo_sub,
-        vfo_swap=vfo_swap,
+        vfo_swap=vfo_swap_val,
         freq_ranges=tuple(freq_ranges_data),
         commands=commands,
         cmd29_routes=tuple(cmd29_routes),
@@ -298,6 +373,13 @@ def load_rig(path: Path) -> RigConfig:
         pre_values=pre_values,
         agc_modes=agc_modes,
         agc_labels=agc_labels,
+        protocol_type=protocol_type,
+        protocol_address=protocol_address,
+        protocol_baud=protocol_baud,
+        controls=controls,
+        meter_calibrations=meter_calibrations,
+        meter_redlines=meter_redlines,
+        rules=tuple(rules),
     )
 
 

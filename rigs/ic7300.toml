@@ -480,3 +480,15 @@ nb_depth = [0x1A, 0x05, 0x01, 0x89]
 nb_width = [0x1A, 0x05, 0x01, 0x90]
 vox_delay = [0x1A, 0x05, 0x01, 0x91]     # NOT_IMPLEMENTED — 0-20 (0.0-2.0 sec)
 ref_adjust = [0x1A, 0x05, 0x00, 0x70]    # NOT_IMPLEMENTED — different address from IC-7610
+
+[protocol]
+type = "civ"
+
+[controls.attenuator]
+style = "toggle"
+
+[controls.nb]
+style = "toggle_and_level"
+
+[controls.nr]
+style = "toggle_and_level"

@@ -41,16 +41,19 @@ Direct connection to your radio — no wfview, hamlib, or RS-BA1 required.
 
 ## Supported Radios
 
-| Radio | LAN | USB Serial | CI-V Address | Notes |
-|-------|-----|------------|-------------|-------|
-| **IC-7610** | ✅ Tested | ✅ Tested | `0x98` | Dual receiver (MAIN/SUB) |
-| **IC-7300** | — | ✅ Tested | `0x94` | Single receiver (VFO A/B), USB-only |
-| IC-705 | Should work | — | `0xA4` | WiFi |
-| IC-9700 | Should work | — | `0xA2` | VHF/UHF/SHF |
-| IC-7851 | Should work | — | `0x8E` | |
-| IC-R8600 | Should work | — | `0x96` | RX only |
+| Radio | Protocol | LAN | USB Serial | Notes |
+|-------|----------|-----|------------|-------|
+| **IC-7610** | CI-V `0x98` | ✅ Tested | ✅ Tested | Dual receiver (MAIN/SUB) |
+| **IC-7300** | CI-V `0x94` | — | ✅ Tested | Single receiver (VFO A/B), USB-only |
+| **Yaesu FTX-1** | Yaesu CAT | — | Profile only | 17 modes, VHF/UHF, C4FM |
+| **Xiegu X6100** | CI-V `0x70` | — | Profile only | IC-705 compatible, QRP 8W, WiFi |
+| **Lab599 TX-500** | Kenwood CAT | — | Profile only | QRP 10W, minimal CAT |
+| IC-705 | CI-V `0xA4` | — | — | WiFi, should work |
+| IC-9700 | CI-V `0xA2` | — | — | VHF/UHF/SHF |
+| IC-7851 | CI-V `0x8E` | — | — | |
+| IC-R8600 | CI-V `0x96` | — | — | RX only |
 
-Radio capabilities are defined in `rigs/*.toml` — see [Adding a New Radio](https://morozsm.github.io/icom-lan/guide/rig-profiles/) for how to add support for untested models.
+Radio capabilities are defined in `rigs/*.toml` — see [Adding a New Radio](https://morozsm.github.io/icom-lan/guide/rig-profiles/) for how to add support for untested models. Three protocol types supported: CI-V (Icom binary), Kenwood CAT (text), and Yaesu CAT (text).
 
 **USB Serial Backend**: Tested with IC-7610 and IC-7300. See [IC-7610 USB Serial Backend Setup Guide](https://morozsm.github.io/icom-lan/guide/ic7610-usb-setup/) for setup instructions.
 
