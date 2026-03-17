@@ -1,0 +1,46 @@
+:root {
+  /* ── Colors: Backgrounds ─────────────────────────────────────────────────── */
+  --v2-bg-app: #0B0E12;
+  --v2-bg-card: #060A10;
+  --v2-bg-input: #0D1117;
+  --v2-border: #18202A;
+  --v2-border-subtle: #1E252C;
+
+  /* ── Colors: Accents ─────────────────────────────────────────────────────── */
+  --v2-accent-cyan: #00D4FF;
+  --v2-accent-orange: #FF6A00;
+  --v2-accent-red: #FF2020;
+  --v2-accent-green: #00CC66;
+  --v2-accent-yellow: #F2CF4A;
+
+  /* ── Colors: Text ────────────────────────────────────────────────────────── */
+  --v2-text-primary: #F0F5FA;
+  --v2-text-secondary: #8DA2B8;
+  --v2-text-muted: #4D6074;
+  --v2-text-header: #8CA0B8;
+
+  /* ── Typography ──────────────────────────────────────────────────────────── */
+  --v2-font-mono: 'Roboto Mono', monospace;
+  --v2-font-size-xs: 7px;
+  --v2-font-size-sm: 9px;
+  --v2-font-size-md: 11px;
+  --v2-font-size-lg: 15px;
+  --v2-font-size-xl: 18px;
+  --v2-font-size-2xl: 28px;
+  --v2-header-letter-spacing: 1.4px;
+  --v2-header-font-weight: 700;
+
+  /* ── Spacing ─────────────────────────────────────────────────────────────── */
+  --v2-gap-xs: 4px;
+  --v2-gap-sm: 8px;
+  --v2-gap-md: 12px;
+  --v2-gap-lg: 16px;
+  --v2-gap-xl: 24px;
+  --v2-panel-padding: 12px;
+  --v2-panel-radius: 10px;
+
+  /* ── Effects: Glows ──────────────────────────────────────────────────────── */
+  --v2-glow-cyan: 0 0 8px rgba(0, 212, 255, 0.15);
+  --v2-glow-orange: 0 0 8px rgba(255, 106, 0, 0.15);
+  --v2-glow-red: 0 0 8px rgba(255, 32, 32, 0.15);
+}
