@@ -1,0 +1,260 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { mount, unmount, flushSync } from 'svelte';
+import VfoPanel from '../VfoPanel.svelte';
+import { formatBadges, formatRitOffset } from '../vfo-utils';
+
+// ---------------------------------------------------------------------------
+// formatBadges
+// ---------------------------------------------------------------------------
+
+describe('formatBadges', () => {
+  it('returns empty array for empty input', () => {
+    expect(formatBadges({})).toEqual([]);
+  });
+
+  it('boolean true → label = uppercased key, active = true', () => {
+    const result = formatBadges({ nr: true });
+    expect(result).toEqual([{ label: 'NR', active: true, color: 'cyan' }]);
+  });
+
+  it('boolean false → label = uppercased key, active = false', () => {
+    const result = formatBadges({ nb: false });
+    expect(result).toEqual([{ label: 'NB', active: false, color: 'cyan' }]);
+  });
+
+  it('string value → label = value itself, active = true', () => {
+    const result = formatBadges({ pre: 'P1' });
+    expect(result).toEqual([{ label: 'P1', active: true, color: 'cyan' }]);
+  });
+
+  it('notch string value uses orange color', () => {
+    const result = formatBadges({ notch: 'AUTO' });
+    expect(result[0].color).toBe('orange');
+  });
+
+  it('atu key uses green color', () => {
+    const result = formatBadges({ atu: true });
+    expect(result[0].color).toBe('green');
+  });
+
+  it('handles mixed badges record', () => {
+    const result = formatBadges({ atu: true, pre: 'P1', nr: true, nb: false, notch: 'AUTO' });
+    expect(result).toHaveLength(5);
+    expect(result.find((b) => b.label === 'ATU')?.active).toBe(true);
+    expect(result.find((b) => b.label === 'P1')?.active).toBe(true);
+    expect(result.find((b) => b.label === 'NB')?.active).toBe(false);
+    expect(result.find((b) => b.label === 'AUTO')?.active).toBe(true);
+  });
+
+  it('unknown key defaults to cyan color', () => {
+    const result = formatBadges({ foo: true });
+    expect(result[0].color).toBe('cyan');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// formatRitOffset
+// ---------------------------------------------------------------------------
+
+describe('formatRitOffset', () => {
+  it('positive offset shows + sign', () => {
+    expect(formatRitOffset(120)).toBe('+120 Hz');
+  });
+
+  it('negative offset shows − sign', () => {
+    expect(formatRitOffset(-250)).toBe('−250 Hz');
+  });
+
+  it('zero offset shows + sign', () => {
+    expect(formatRitOffset(0)).toBe('+0 Hz');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// VfoPanel component
+// ---------------------------------------------------------------------------
+
+vi.mock('$lib/stores/capabilities.svelte', () => ({
+  vfoLabel: vi.fn((slot: 'A' | 'B') => (slot === 'A' ? 'MAIN' : 'SUB')),
+  hasDualReceiver: vi.fn(() => true),
+}));
+
+import { vfoLabel } from '$lib/stores/capabilities.svelte';
+
+let components: ReturnType<typeof mount>[] = [];
+
+function mountPanel(props: Record<string, unknown>) {
+  const t = document.createElement('div');
+  document.body.appendChild(t);
+  const component = mount(VfoPanel, { target: t, props });
+  flushSync();
+  components.push(component);
+  return t;
+}
+
+beforeEach(() => {
+  components = [];
+  vi.mocked(vfoLabel).mockImplementation((slot: 'A' | 'B') => (slot === 'A' ? 'MAIN' : 'SUB'));
+});
+
+afterEach(() => {
+  components.forEach((c) => unmount(c));
+  document.body.innerHTML = '';
+});
+
+const baseProps = {
+  receiver: 'main',
+  freq: 14074000,
+  mode: 'USB',
+  filter: '2.4k',
+  sValue: 100,
+  isActive: true,
+  badges: {},
+  onModeClick: vi.fn(),
+  onVfoClick: vi.fn(),
+};
+
+describe('panel structure', () => {
+  it('renders the VFO label MAIN for receiver=main', () => {
+    const t = mountPanel(baseProps);
+    expect(t.querySelector('.vfo-label')?.textContent?.trim()).toBe('MAIN');
+  });
+
+  it('renders the VFO label SUB for receiver=sub', () => {
+    const t = mountPanel({ ...baseProps, receiver: 'sub' });
+    expect(t.querySelector('.vfo-label')?.textContent?.trim()).toBe('SUB');
+  });
+
+  it('renders mode badge with correct mode text', () => {
+    const t = mountPanel(baseProps);
+    expect(t.querySelector('.mode-badge')?.textContent?.trim()).toBe('USB');
+  });
+
+  it('renders filter badge with correct filter text', () => {
+    const t = mountPanel(baseProps);
+    expect(t.querySelector('.filter-badge')?.textContent?.trim()).toBe('2.4k');
+  });
+
+  it('renders a .freq element (FrequencyDisplay)', () => {
+    const t = mountPanel(baseProps);
+    expect(t.querySelector('.freq')).not.toBeNull();
+  });
+
+  it('renders the S-meter svg', () => {
+    const t = mountPanel(baseProps);
+    expect(t.querySelector('svg')).not.toBeNull();
+  });
+});
+
+describe('active/inactive state', () => {
+  it('panel has active class when isActive=true', () => {
+    const t = mountPanel(baseProps);
+    expect(t.querySelector('.panel')?.classList.contains('active')).toBe(true);
+  });
+
+  it('panel does not have active class when isActive=false', () => {
+    const t = mountPanel({ ...baseProps, isActive: false });
+    expect(t.querySelector('.panel')?.classList.contains('active')).toBe(false);
+  });
+
+  it('FrequencyDisplay has inactive class when isActive=false', () => {
+    const t = mountPanel({ ...baseProps, isActive: false });
+    expect(t.querySelector('.freq')?.classList.contains('inactive')).toBe(true);
+  });
+
+  it('FrequencyDisplay does not have inactive class when isActive=true', () => {
+    const t = mountPanel(baseProps);
+    expect(t.querySelector('.freq')?.classList.contains('inactive')).toBe(false);
+  });
+});
+
+describe('RIT display', () => {
+  it('does not show rit-row when rit is undefined', () => {
+    const t = mountPanel(baseProps);
+    expect(t.querySelector('.rit-row')).toBeNull();
+  });
+
+  it('does not show rit-row when rit.active=false', () => {
+    const t = mountPanel({ ...baseProps, rit: { active: false, offset: 120 } });
+    expect(t.querySelector('.rit-row')).toBeNull();
+  });
+
+  it('shows rit-row when rit.active=true', () => {
+    const t = mountPanel({ ...baseProps, rit: { active: true, offset: 120 } });
+    expect(t.querySelector('.rit-row')).not.toBeNull();
+  });
+
+  it('shows formatted RIT offset when active', () => {
+    const t = mountPanel({ ...baseProps, rit: { active: true, offset: 120 } });
+    expect(t.querySelector('.rit-offset')?.textContent?.trim()).toBe('+120 Hz');
+  });
+
+  it('shows negative RIT offset correctly', () => {
+    const t = mountPanel({ ...baseProps, rit: { active: true, offset: -250 } });
+    expect(t.querySelector('.rit-offset')?.textContent?.trim()).toBe('−250 Hz');
+  });
+});
+
+describe('badge rendering', () => {
+  it('does not render badge-row when badges is empty', () => {
+    const t = mountPanel(baseProps);
+    expect(t.querySelector('.badge-row')).toBeNull();
+  });
+
+  it('renders badge-row when badges has entries', () => {
+    const t = mountPanel({ ...baseProps, badges: { nr: true } });
+    expect(t.querySelector('.badge-row')).not.toBeNull();
+  });
+
+  it('renders ATU badge when atu=true in badges', () => {
+    const t = mountPanel({ ...baseProps, badges: { atu: true } });
+    const badges = Array.from(t.querySelectorAll('.badge'));
+    expect(badges.some((el) => el.textContent?.trim() === 'ATU')).toBe(true);
+  });
+
+  it('renders NB badge as inactive when nb=false', () => {
+    const t = mountPanel({ ...baseProps, badges: { nb: false } });
+    const badge = t.querySelector('.badge[data-active="false"]');
+    expect(badge).not.toBeNull();
+  });
+
+  it('renders string badge value as label (pre="P1")', () => {
+    const t = mountPanel({ ...baseProps, badges: { pre: 'P1' } });
+    const badges = Array.from(t.querySelectorAll('.badge'));
+    expect(badges.some((el) => el.textContent?.trim() === 'P1')).toBe(true);
+  });
+});
+
+describe('callbacks', () => {
+  it('calls onVfoClick when panel is clicked', () => {
+    const onVfoClick = vi.fn();
+    const t = mountPanel({ ...baseProps, onVfoClick });
+    t.querySelector<HTMLElement>('.panel')?.click();
+    expect(onVfoClick).toHaveBeenCalledOnce();
+  });
+
+  it('calls onModeClick when mode badge is clicked', () => {
+    const onModeClick = vi.fn();
+    const t = mountPanel({ ...baseProps, onModeClick });
+    t.querySelector<HTMLElement>('.mode-badge')?.click();
+    expect(onModeClick).toHaveBeenCalledOnce();
+  });
+});
+
+describe('vfoLabel integration', () => {
+  it('uses vfoLabel("A") for receiver=main', () => {
+    mountPanel({ ...baseProps, receiver: 'main' });
+    expect(vi.mocked(vfoLabel)).toHaveBeenCalledWith('A');
+  });
+
+  it('uses vfoLabel("B") for receiver=sub', () => {
+    mountPanel({ ...baseProps, receiver: 'sub' });
+    expect(vi.mocked(vfoLabel)).toHaveBeenCalledWith('B');
+  });
+
+  it('shows "VFO A" label when vfoScheme returns "VFO A"', () => {
+    vi.mocked(vfoLabel).mockReturnValue('VFO A');
+    const t = mountPanel({ ...baseProps, receiver: 'main' });
+    expect(t.querySelector('.vfo-label')?.textContent?.trim()).toBe('VFO A');
+  });
+});
