@@ -1,0 +1,213 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { mount, unmount, flushSync } from 'svelte';
+import DspPanel from '../DspPanel.svelte';
+import { isCwMode, buildNrOptions, buildNotchOptions } from '../dsp-utils';
+
+// ---------------------------------------------------------------------------
+// isCwMode
+// ---------------------------------------------------------------------------
+
+describe('isCwMode', () => {
+  it('returns true for "CW"', () => {
+    expect(isCwMode('CW')).toBe(true);
+  });
+
+  it('returns true for "CW-R"', () => {
+    expect(isCwMode('CW-R')).toBe(true);
+  });
+
+  it('returns false for "USB"', () => {
+    expect(isCwMode('USB')).toBe(false);
+  });
+
+  it('returns false for "LSB"', () => {
+    expect(isCwMode('LSB')).toBe(false);
+  });
+
+  it('returns false for empty string', () => {
+    expect(isCwMode('')).toBe(false);
+  });
+
+  it('returns false for "AM"', () => {
+    expect(isCwMode('AM')).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// buildNrOptions
+// ---------------------------------------------------------------------------
+
+describe('buildNrOptions', () => {
+  it('returns 4 options', () => {
+    expect(buildNrOptions()).toHaveLength(4);
+  });
+
+  it('first option is OFF with value 0', () => {
+    expect(buildNrOptions()[0]).toEqual({ value: 0, label: 'OFF' });
+  });
+
+  it('second option is NR1 with value 1', () => {
+    expect(buildNrOptions()[1]).toEqual({ value: 1, label: 'NR1' });
+  });
+
+  it('returns options in order OFF/NR1/NR2/NR3', () => {
+    const labels = buildNrOptions().map((o) => o.label);
+    expect(labels).toEqual(['OFF', 'NR1', 'NR2', 'NR3']);
+  });
+
+  it('all option values are numbers', () => {
+    buildNrOptions().forEach((o) => expect(typeof o.value).toBe('number'));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// buildNotchOptions
+// ---------------------------------------------------------------------------
+
+describe('buildNotchOptions', () => {
+  it('returns 3 options', () => {
+    expect(buildNotchOptions()).toHaveLength(3);
+  });
+
+  it('first option is OFF with value "off"', () => {
+    expect(buildNotchOptions()[0]).toEqual({ value: 'off', label: 'OFF' });
+  });
+
+  it('second option is AUTO with value "auto"', () => {
+    expect(buildNotchOptions()[1]).toEqual({ value: 'auto', label: 'AUTO' });
+  });
+
+  it('third option is manual with value "manual"', () => {
+    expect(buildNotchOptions()[2]).toEqual({ value: 'manual', label: 'MAN' });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// DspPanel component
+// ---------------------------------------------------------------------------
+
+let components: ReturnType<typeof mount>[] = [];
+
+function mountPanel(props: Record<string, unknown>) {
+  const t = document.createElement('div');
+  document.body.appendChild(t);
+  const component = mount(DspPanel, { target: t, props });
+  flushSync();
+  components.push(component);
+  return t;
+}
+
+beforeEach(() => {
+  components = [];
+});
+
+afterEach(() => {
+  components.forEach((c) => unmount(c));
+  document.body.innerHTML = '';
+});
+
+const baseProps = {
+  nrMode: 0,
+  nrLevel: 128,
+  nbActive: false,
+  nbLevel: 128,
+  notchMode: 'off',
+  notchFreq: 1000,
+  cwAutoTune: false,
+  cwPitch: 600,
+  currentMode: 'USB',
+  onNrModeChange: vi.fn(),
+  onNrLevelChange: vi.fn(),
+  onNbToggle: vi.fn(),
+  onNbLevelChange: vi.fn(),
+  onNotchModeChange: vi.fn(),
+  onNotchFreqChange: vi.fn(),
+  onCwAutoTuneToggle: vi.fn(),
+  onCwPitchChange: vi.fn(),
+};
+
+describe('panel structure', () => {
+  it('renders the DSP header label', () => {
+    const t = mountPanel(baseProps);
+    expect(t.querySelector('.panel-header')?.textContent).toBe('DSP');
+  });
+
+  it('renders the Notch section', () => {
+    const t = mountPanel(baseProps);
+    const labels = Array.from(t.querySelectorAll('.section-label')).map((el) => el.textContent);
+    expect(labels).toContain('Notch');
+  });
+});
+
+describe('CW section visibility', () => {
+  it('does not render CW section when mode is USB', () => {
+    const t = mountPanel(baseProps);
+    const labels = Array.from(t.querySelectorAll('.slider-label')).map((el) => el.textContent);
+    expect(labels).not.toContain('CW Pitch');
+  });
+
+  it('renders CW section when mode is CW', () => {
+    const t = mountPanel({ ...baseProps, currentMode: 'CW' });
+    const labels = Array.from(t.querySelectorAll('.slider-label')).map((el) => el.textContent);
+    expect(labels).toContain('CW Pitch');
+  });
+
+  it('renders CW section when mode is CW-R', () => {
+    const t = mountPanel({ ...baseProps, currentMode: 'CW-R' });
+    const labels = Array.from(t.querySelectorAll('.slider-label')).map((el) => el.textContent);
+    expect(labels).toContain('CW Pitch');
+  });
+});
+
+describe('Notch freq slider visibility', () => {
+  it('does not render Notch Freq slider when notchMode is "off"', () => {
+    const t = mountPanel(baseProps);
+    const labels = Array.from(t.querySelectorAll('.slider-label')).map((el) => el.textContent);
+    expect(labels).not.toContain('Notch Freq');
+  });
+
+  it('does not render Notch Freq slider when notchMode is "auto"', () => {
+    const t = mountPanel({ ...baseProps, notchMode: 'auto' });
+    const labels = Array.from(t.querySelectorAll('.slider-label')).map((el) => el.textContent);
+    expect(labels).not.toContain('Notch Freq');
+  });
+
+  it('renders Notch Freq slider when notchMode is "manual"', () => {
+    const t = mountPanel({ ...baseProps, notchMode: 'manual' });
+    const labels = Array.from(t.querySelectorAll('.slider-label')).map((el) => el.textContent);
+    expect(labels).toContain('Notch Freq');
+  });
+});
+
+describe('CW Pitch slider constraints', () => {
+  it('CW Pitch slider has min=300, max=900', () => {
+    const t = mountPanel({ ...baseProps, currentMode: 'CW' });
+    const inputs = t.querySelectorAll<HTMLInputElement>('input[type="range"]');
+    const pitchInput = Array.from(inputs).at(-1)!;
+    expect(pitchInput.min).toBe('300');
+    expect(pitchInput.max).toBe('900');
+  });
+});
+
+describe('callbacks', () => {
+  it('calls onNotchModeChange when Notch segmented button changes', () => {
+    const onNotchModeChange = vi.fn();
+    const t = mountPanel({ ...baseProps, onNotchModeChange });
+    const buttons = t.querySelectorAll<HTMLButtonElement>('button');
+    // Click the AUTO button (second notch button)
+    const autoBtn = Array.from(buttons).find((b) => b.textContent?.trim() === 'AUTO');
+    autoBtn?.click();
+    flushSync();
+    expect(onNotchModeChange).toHaveBeenCalledWith('auto');
+  });
+
+  it('calls onCwPitchChange when CW Pitch slider changes', () => {
+    const onCwPitchChange = vi.fn();
+    const t = mountPanel({ ...baseProps, currentMode: 'CW', onCwPitchChange });
+    const inputs = t.querySelectorAll<HTMLInputElement>('input[type="range"]');
+    const pitchInput = Array.from(inputs).at(-1)!;
+    pitchInput.value = '700';
+    pitchInput.dispatchEvent(new Event('input', { bubbles: true }));
+    expect(onCwPitchChange).toHaveBeenCalledWith(700);
+  });
+});
