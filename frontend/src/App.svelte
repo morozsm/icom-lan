@@ -5,7 +5,9 @@
   import { setCapabilities } from './lib/stores/capabilities.svelte';
   import { setRadioState, getLastRevision } from './lib/stores/radio.svelte';
   import { setHttpConnected, markStateUpdated } from './lib/stores/connection.svelte';
+  import { initUiVersion, getUiVersion } from './lib/stores/ui-version.svelte';
   import AppShell from './components/layout/AppShell.svelte';
+  import RadioLayoutV2 from './components-v2/layout/RadioLayout.svelte';
   import './app.css';
 
   let backendError = $state<string | null>(null);
@@ -30,6 +32,9 @@
   }
 
   onMount(() => {
+    // Initialize UI version from URL param or localStorage
+    initUiVersion();
+
     startStatePoller();
 
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
@@ -62,6 +67,9 @@
       if (retryTimer) clearTimeout(retryTimer);
     };
   });
+
+  // Reactive UI version tracking
+  let uiVersion = $derived(getUiVersion());
 </script>
 
 {#if backendError}
@@ -78,7 +86,12 @@
     </div>
   </div>
 {/if}
-<AppShell />
+
+{#if uiVersion === 'v2'}
+  <RadioLayoutV2 />
+{:else}
+  <AppShell />
+{/if}
 
 <style>
   .error-overlay {

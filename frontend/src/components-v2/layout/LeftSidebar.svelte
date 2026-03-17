@@ -1,67 +1,91 @@
 <script lang="ts">
+  import { radio } from '$lib/stores/radio.svelte';
+  import { getCapabilities } from '$lib/stores/capabilities.svelte';
   import RfFrontEnd from '../panels/RfFrontEnd.svelte';
   import FilterPanel from '../panels/FilterPanel.svelte';
   import AgcPanel from '../panels/AgcPanel.svelte';
   import RitXitPanel from '../panels/RitXitPanel.svelte';
   import BandSelector from '../controls/BandSelector.svelte';
+  import {
+    toRfFrontEndProps,
+    toFilterProps,
+    toAgcProps,
+    toRitXitProps,
+    toBandSelectorProps,
+  } from '../wiring/state-adapter';
+  import {
+    makeRfFrontEndHandlers,
+    makeFilterHandlers,
+    makeAgcHandlers,
+    makeRitXitHandlers,
+    makeBandHandlers,
+  } from '../wiring/command-bus';
 
-  interface Props {
-    radioState: any;
-  }
+  // Reactive state + capabilities
+  let radioState = $derived(radio.current);
+  let caps = $derived(getCapabilities());
 
-  let { radioState }: Props = $props();
+  // Derived props via state adapter
+  let rfFrontEnd = $derived(toRfFrontEndProps(radioState, caps));
+  let filter = $derived(toFilterProps(radioState, caps));
+  let agc = $derived(toAgcProps(radioState, caps));
+  let ritXit = $derived(toRitXitProps(radioState, caps));
+  let band = $derived(toBandSelectorProps(radioState));
 
-  const noop = () => {};
-  const noopN = (_v: number) => {};
-  const noopS = (_v: string) => {};
+  // Command handlers via command-bus
+  const rfHandlers = makeRfFrontEndHandlers();
+  const filterHandlers = makeFilterHandlers();
+  const agcHandlers = makeAgcHandlers();
+  const ritXitHandlers = makeRitXitHandlers();
+  const bandHandlers = makeBandHandlers();
 </script>
 
 <aside class="left-sidebar">
   <RfFrontEnd
-    rfGain={radioState?.rfGain ?? 255}
-    att={radioState?.att ?? 0}
-    pre={radioState?.pre ?? 0}
-    onRfGainChange={noopN}
-    onAttChange={noopN}
-    onPreChange={noopN}
+    rfGain={rfFrontEnd.rfGain}
+    att={rfFrontEnd.att}
+    pre={rfFrontEnd.pre}
+    onRfGainChange={rfHandlers.onRfGainChange}
+    onAttChange={rfHandlers.onAttChange}
+    onPreChange={rfHandlers.onPreChange}
   />
 
   <FilterPanel
-    filterWidth={radioState?.filterWidth ?? 2400}
-    ifShift={radioState?.ifShift ?? 0}
-    hasPbt={radioState?.hasPbt ?? false}
-    pbtInner={radioState?.pbtInner ?? 0}
-    pbtOuter={radioState?.pbtOuter ?? 0}
-    onFilterWidthChange={noopN}
-    onIfShiftChange={noopN}
-    onPbtInnerChange={noopN}
-    onPbtOuterChange={noopN}
+    filterWidth={filter.filterWidth}
+    ifShift={filter.ifShift}
+    hasPbt={filter.hasPbt}
+    pbtInner={filter.pbtInner}
+    pbtOuter={filter.pbtOuter}
+    onFilterWidthChange={filterHandlers.onFilterWidthChange}
+    onIfShiftChange={filterHandlers.onIfShiftChange}
+    onPbtInnerChange={filterHandlers.onPbtInnerChange}
+    onPbtOuterChange={filterHandlers.onPbtOuterChange}
   />
 
   <AgcPanel
-    agcMode={radioState?.agcMode ?? 0}
-    agcGain={radioState?.agcGain ?? 128}
-    onAgcModeChange={noopN}
-    onAgcGainChange={noopN}
+    agcMode={agc.agcMode}
+    agcGain={agc.agcGain}
+    onAgcModeChange={agcHandlers.onAgcModeChange}
+    onAgcGainChange={agcHandlers.onAgcGainChange}
   />
 
   <RitXitPanel
-    ritActive={radioState?.ritActive ?? false}
-    ritOffset={radioState?.ritOffset ?? 0}
-    xitActive={radioState?.xitActive ?? false}
-    xitOffset={radioState?.xitOffset ?? 0}
-    hasRit={radioState?.hasRit ?? true}
-    hasXit={radioState?.hasXit ?? true}
-    onRitToggle={noop}
-    onXitToggle={noop}
-    onRitOffsetChange={noopN}
-    onXitOffsetChange={noopN}
-    onClear={noop}
+    ritActive={ritXit.ritActive}
+    ritOffset={ritXit.ritOffset}
+    xitActive={ritXit.xitActive}
+    xitOffset={ritXit.xitOffset}
+    hasRit={ritXit.hasRit}
+    hasXit={ritXit.hasXit}
+    onRitToggle={ritXitHandlers.onRitToggle}
+    onXitToggle={ritXitHandlers.onXitToggle}
+    onRitOffsetChange={ritXitHandlers.onRitOffsetChange}
+    onXitOffsetChange={ritXitHandlers.onXitOffsetChange}
+    onClear={ritXitHandlers.onClear}
   />
 
   <BandSelector
-    currentFreq={radioState?.main?.freq ?? 14074000}
-    onBandSelect={(_name: string, _freq: number) => {}}
+    currentFreq={band.currentFreq}
+    onBandSelect={bandHandlers.onBandSelect}
   />
 </aside>
 

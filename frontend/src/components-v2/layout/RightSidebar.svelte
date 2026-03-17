@@ -1,67 +1,82 @@
 <script lang="ts">
+  import { radio } from '$lib/stores/radio.svelte';
+  import { getCapabilities } from '$lib/stores/capabilities.svelte';
   import RxAudioPanel from '../panels/RxAudioPanel.svelte';
   import DspPanel from '../panels/DspPanel.svelte';
   import TxPanel from '../panels/TxPanel.svelte';
+  import {
+    toRxAudioProps,
+    toDspProps,
+    toTxProps,
+  } from '../wiring/state-adapter';
+  import {
+    makeRxAudioHandlers,
+    makeDspHandlers,
+    makeTxHandlers,
+  } from '../wiring/command-bus';
 
-  interface Props {
-    radioState: any;
-  }
+  // Reactive state + capabilities
+  let radioState = $derived(radio.current);
+  let caps = $derived(getCapabilities());
 
-  let { radioState }: Props = $props();
+  // Derived props via state adapter
+  let rxAudio = $derived(toRxAudioProps(radioState, caps));
+  let dsp = $derived(toDspProps(radioState, caps));
+  let tx = $derived(toTxProps(radioState, caps));
 
-  const noop = () => {};
-  const noopN = (_v: number) => {};
-  const noopS = (_v: string) => {};
-  const noopB = (_v: boolean) => {};
+  // Command handlers via command-bus
+  const rxAudioHandlers = makeRxAudioHandlers();
+  const dspHandlers = makeDspHandlers();
+  const txHandlers = makeTxHandlers();
 </script>
 
 <aside class="right-sidebar">
   <RxAudioPanel
-    monitorMode={radioState?.monitorMode ?? 'local'}
-    afLevel={radioState?.afLevel ?? 128}
-    hasLiveAudio={radioState?.capabilities?.audio ?? false}
-    onMonitorModeChange={noopS}
-    onAfLevelChange={noopN}
+    monitorMode={rxAudio.monitorMode}
+    afLevel={rxAudio.afLevel}
+    hasLiveAudio={rxAudio.hasLiveAudio}
+    onMonitorModeChange={rxAudioHandlers.onMonitorModeChange}
+    onAfLevelChange={rxAudioHandlers.onAfLevelChange}
   />
 
   <DspPanel
-    nrMode={radioState?.nrMode ?? 0}
-    nrLevel={radioState?.nrLevel ?? 0}
-    nbActive={radioState?.nbActive ?? false}
-    nbLevel={radioState?.nbLevel ?? 0}
-    notchMode={radioState?.notchMode ?? 'off'}
-    notchFreq={radioState?.notchFreq ?? 0}
-    cwAutoTune={radioState?.cwAutoTune ?? false}
-    cwPitch={radioState?.cwPitch ?? 600}
-    currentMode={radioState?.main?.mode ?? 'USB'}
-    onNrModeChange={noopN}
-    onNrLevelChange={noopN}
-    onNbToggle={noopB}
-    onNbLevelChange={noopN}
-    onNotchModeChange={noopS}
-    onNotchFreqChange={noopN}
-    onCwAutoTuneToggle={noopB}
-    onCwPitchChange={noopN}
+    nrMode={dsp.nrMode}
+    nrLevel={dsp.nrLevel}
+    nbActive={dsp.nbActive}
+    nbLevel={dsp.nbLevel}
+    notchMode={dsp.notchMode}
+    notchFreq={dsp.notchFreq}
+    cwAutoTune={dsp.cwAutoTune}
+    cwPitch={dsp.cwPitch}
+    currentMode={dsp.currentMode}
+    onNrModeChange={dspHandlers.onNrModeChange}
+    onNrLevelChange={dspHandlers.onNrLevelChange}
+    onNbToggle={dspHandlers.onNbToggle}
+    onNbLevelChange={dspHandlers.onNbLevelChange}
+    onNotchModeChange={dspHandlers.onNotchModeChange}
+    onNotchFreqChange={dspHandlers.onNotchFreqChange}
+    onCwAutoTuneToggle={dspHandlers.onCwAutoTuneToggle}
+    onCwPitchChange={dspHandlers.onCwPitchChange}
   />
 
   <TxPanel
-    txActive={radioState?.txActive ?? false}
-    micGain={radioState?.micGain ?? 128}
-    atuActive={radioState?.atuActive ?? false}
-    atuTuning={radioState?.atuTuning ?? false}
-    voxActive={radioState?.voxActive ?? false}
-    compActive={radioState?.compActive ?? false}
-    compLevel={radioState?.compLevel ?? 0}
-    monActive={radioState?.monActive ?? false}
-    monLevel={radioState?.monLevel ?? 0}
-    onMicGainChange={noopN}
-    onAtuToggle={noop}
-    onAtuTune={noop}
-    onVoxToggle={noop}
-    onCompToggle={noop}
-    onCompLevelChange={noopN}
-    onMonToggle={noop}
-    onMonLevelChange={noopN}
+    txActive={tx.txActive}
+    micGain={tx.micGain}
+    atuActive={tx.atuActive}
+    atuTuning={tx.atuTuning}
+    voxActive={tx.voxActive}
+    compActive={tx.compActive}
+    compLevel={tx.compLevel}
+    monActive={tx.monActive}
+    monLevel={tx.monLevel}
+    onMicGainChange={txHandlers.onMicGainChange}
+    onAtuToggle={txHandlers.onAtuToggle}
+    onAtuTune={txHandlers.onAtuTune}
+    onVoxToggle={txHandlers.onVoxToggle}
+    onCompToggle={txHandlers.onCompToggle}
+    onCompLevelChange={txHandlers.onCompLevelChange}
+    onMonToggle={txHandlers.onMonToggle}
+    onMonLevelChange={txHandlers.onMonLevelChange}
   />
 </aside>
 
