@@ -37,11 +37,11 @@
   .badge {
     display: inline-flex;
     align-items: center;
-    border-radius: 9999px;
+    border-radius: 3px;
     font-family: 'Roboto Mono', monospace;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.08em;
     white-space: nowrap;
     user-select: none;
     transition: background 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease;

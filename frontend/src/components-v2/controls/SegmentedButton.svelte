@@ -73,19 +73,19 @@
 
   .segmented-button:focus-visible {
     box-shadow: 0 0 0 2px var(--accent, #00D4FF);
-    border-radius: 6px;
+    border-radius: 4px;
   }
 
   .segment {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 5px 10px;
+    padding: 4px 8px;
     background-color: #0D1117;
     border: 1px solid #18202A;
     color: #6F8196;
     font-family: 'Roboto Mono', monospace;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.04em;
     cursor: pointer;
@@ -104,23 +104,23 @@
   }
 
   .segment.first {
-    border-radius: 4px 0 0 4px;
+    border-radius: 3px 0 0 3px;
   }
 
   .segment.last {
-    border-radius: 0 4px 4px 0;
+    border-radius: 0 3px 3px 0;
   }
 
   /* Single option: both sides rounded */
   .segment.first.last {
-    border-radius: 4px;
+    border-radius: 3px;
   }
 
   .segment.active {
-    background-color: color-mix(in srgb, var(--accent) 20%, #060A10);
+    background-color: color-mix(in srgb, var(--accent) 14%, #060A10);
     border-color: var(--accent, #00D4FF);
     color: #F0F5FA;
-    box-shadow: 0 0 6px 0 color-mix(in srgb, var(--accent) 35%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent);
     z-index: 1;
     position: relative;
   }
@@ -132,8 +132,8 @@
 
   /* Compact mode */
   .compact .segment {
-    padding: 3px 7px;
-    font-size: 10px;
+    padding: 2px 6px;
+    font-size: 9px;
   }
 
   /* Disabled state */

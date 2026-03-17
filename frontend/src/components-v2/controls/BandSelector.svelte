@@ -59,43 +59,43 @@
   .panel {
     background: #060A10;
     border: 1px solid #18202A;
-    border-radius: 10px;
-    padding: 8px 10px 10px;
+    border-radius: 4px;
+    padding: 6px 7px 7px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
   }
 
   .header {
     font-family: 'Roboto Mono', monospace;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
     color: #8CA0B8;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
   }
 
   .grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 4px;
+    gap: 3px;
   }
 
   .band-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border-radius: 9999px;
+    border-radius: 3px;
     font-family: 'Roboto Mono', monospace;
-    font-size: 9px;
+    font-size: 8px;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.08em;
     white-space: nowrap;
     user-select: none;
     cursor: pointer;
-    height: 22px;
-    padding: 0 8px;
+    height: 18px;
+    padding: 0 6px;
     transition: background 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
   }
 

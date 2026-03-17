@@ -173,7 +173,7 @@ export interface DspProps {
   nrLevel: number;
   nbActive: boolean;
   nbLevel: number;
-  notchMode: string;
+  notchMode: 'off' | 'auto' | 'manual';
   notchFreq: number;
   cwAutoTune: boolean;
   cwPitch: number;
@@ -187,7 +187,7 @@ export function toDspProps(
   const rx = state ? activeRx(state) : null;
 
   // Notch mode: off / auto / manual
-  let notchMode: string = 'off';
+  let notchMode: 'off' | 'auto' | 'manual' = 'off';
   if (rx?.autoNotch) notchMode = 'auto';
   else if (rx?.manualNotch) notchMode = 'manual';
 
@@ -251,23 +251,27 @@ export interface MeterProps {
 
 export function toMeterProps(state: ServerState | null): MeterProps {
   const mainRx = state?.main;
+  const txMeters = (state as (ServerState & {
+    tx?: { rfPower?: number; swr?: number; alc?: number };
+    meterSource?: string;
+  }) | null)?.tx;
   return {
     sValue: mainRx?.sMeter ?? 0,
-    rfPower: 0,   // Power meter comes from 0x15 0x11, stored separately
-    swr: 0,       // SWR from 0x15 0x12
-    alc: 0,       // ALC from 0x15 0x13
+    rfPower: txMeters?.rfPower ?? state?.powerLevel ?? 0,
+    swr: txMeters?.swr ?? 0,
+    alc: txMeters?.alc ?? 0,
     comp: state?.compMeter ?? 0,
     vd: state?.vdMeter ?? 0,
     id: state?.idMeter ?? 0,
     txActive: state?.ptt ?? false,
-    meterSource: 'S',
+    meterSource: (state as { meterSource?: string } | null)?.meterSource ?? 'S',
   };
 }
 
 /* ── RX Audio Panel ──────────────────────────────────────────── */
 
 export interface RxAudioProps {
-  monitorMode: string;
+  monitorMode: 'local' | 'live' | 'mute';
   afLevel: number;
   hasLiveAudio: boolean;
 }

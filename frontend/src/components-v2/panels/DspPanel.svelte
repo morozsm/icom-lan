@@ -82,7 +82,6 @@
           <StatusBadge
             label="NB"
             active={nbActive}
-            clickable
             onclick={() => onNbToggle(!nbActive)}
           />
         </div>
@@ -124,7 +123,6 @@
           <StatusBadge
             label="Auto Tune"
             active={cwAutoTune}
-            clickable
             onclick={() => onCwAutoTuneToggle(!cwAutoTune)}
           />
         </div>
@@ -147,15 +145,15 @@
   .panel {
     background: #060A10;
     border: 1px solid #18202A;
-    border-radius: 10px;
+    border-radius: 4px;
     overflow: hidden;
   }
 
   .panel-header {
-    padding: 6px 10px;
+    padding: 5px 8px;
     color: #8CA0B8;
     font-family: 'Roboto Mono', monospace;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.08em;
     border-bottom: 1px solid #18202A;
@@ -164,20 +162,20 @@
   .panel-body {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    padding: 10px;
+    gap: 8px;
+    padding: 7px 8px;
   }
 
   .section {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 5px;
   }
 
   .section-label {
     color: #8CA0B8;
     font-family: 'Roboto Mono', monospace;
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 700;
     letter-spacing: 0.08em;
   }

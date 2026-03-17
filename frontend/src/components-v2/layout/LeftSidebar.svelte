@@ -95,9 +95,10 @@
     flex-direction: column;
     gap: 8px;
     overflow-y: auto;
-    max-height: 100vh;
-    padding: 8px;
-    width: 220px;
+    height: 100%;
+    min-width: 0;
+    padding: 6px;
+    width: 100%;
     box-sizing: border-box;
   }
 </style>

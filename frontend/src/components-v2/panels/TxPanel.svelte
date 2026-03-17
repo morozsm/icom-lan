@@ -126,15 +126,15 @@
   .panel {
     background: #060A10;
     border: 1px solid #18202A;
-    border-radius: 10px;
+    border-radius: 4px;
     overflow: hidden;
     font-family: 'Roboto Mono', monospace;
   }
 
   .panel-header {
-    padding: 6px 10px;
+    padding: 5px 8px;
     color: #8CA0B8;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.08em;
     border-bottom: 1px solid #18202A;
@@ -143,8 +143,8 @@
   .panel-body {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding: 10px;
+    gap: 6px;
+    padding: 7px 8px;
   }
 
   .tx-indicator {
@@ -160,12 +160,12 @@
 
   .tune-button {
     font-family: 'Roboto Mono', monospace;
-    font-size: 11px;
+    font-size: 9px;
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    padding: 3px 10px;
-    border-radius: 9999px;
+    padding: 2px 8px;
+    border-radius: 3px;
     border: 1px solid;
     background: transparent;
     cursor: pointer;

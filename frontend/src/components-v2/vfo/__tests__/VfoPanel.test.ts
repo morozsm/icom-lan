@@ -76,10 +76,24 @@ describe('formatRitOffset', () => {
 
 vi.mock('$lib/stores/capabilities.svelte', () => ({
   vfoLabel: vi.fn((slot: 'A' | 'B') => (slot === 'A' ? 'MAIN' : 'SUB')),
+  getCapabilities: vi.fn(() => ({
+    freqRanges: [
+      {
+        start: 14000000,
+        end: 14350000,
+        bands: [{ name: '20m', start: 14000000, end: 14350000, default: 14074000 }],
+      },
+      {
+        start: 7000000,
+        end: 7300000,
+        bands: [{ name: '40m', start: 7000000, end: 7300000, default: 7074000 }],
+      },
+    ],
+  })),
   hasDualReceiver: vi.fn(() => true),
 }));
 
-import { vfoLabel } from '$lib/stores/capabilities.svelte';
+import { getCapabilities, vfoLabel } from '$lib/stores/capabilities.svelte';
 
 let components: ReturnType<typeof mount>[] = [];
 
@@ -144,6 +158,28 @@ describe('panel structure', () => {
     const t = mountPanel(baseProps);
     expect(t.querySelector('svg')).not.toBeNull();
   });
+
+  it('renders the active band label from capabilities', () => {
+    const t = mountPanel(baseProps);
+    expect(t.querySelector('.band-readout')?.textContent?.trim()).toBe('20m');
+  });
+
+  it('renders BAR and slot tags in the header', () => {
+    const t = mountPanel(baseProps);
+    const tags = Array.from(t.querySelectorAll('.header-tag')).map((node) => node.textContent?.trim());
+    expect(tags).toContain('BAR');
+    expect(tags).toContain('MAIN');
+  });
+
+  it('renders the control strip even when badges are empty', () => {
+    const t = mountPanel(baseProps);
+    expect(t.querySelector('.control-strip')).not.toBeNull();
+  });
+
+  it('renders slot tag inside the control strip', () => {
+    const t = mountPanel(baseProps);
+    expect(t.querySelector('.slot-readout')?.textContent?.trim()).toBe('MAIN');
+  });
 });
 
 describe('active/inactive state', () => {
@@ -198,12 +234,13 @@ describe('RIT display', () => {
 describe('badge rendering', () => {
   it('does not render badge-row when badges is empty', () => {
     const t = mountPanel(baseProps);
-    expect(t.querySelector('.badge-row')).toBeNull();
+    expect(t.querySelectorAll('.badge')).toHaveLength(0);
   });
 
   it('renders badge-row when badges has entries', () => {
     const t = mountPanel({ ...baseProps, badges: { nr: true } });
-    expect(t.querySelector('.badge-row')).not.toBeNull();
+    expect(t.querySelector('.control-strip')).not.toBeNull();
+    expect(t.querySelectorAll('.badge').length).toBeGreaterThan(0);
   });
 
   it('renders ATU badge when atu=true in badges', () => {
@@ -256,5 +293,10 @@ describe('vfoLabel integration', () => {
     vi.mocked(vfoLabel).mockReturnValue('VFO A');
     const t = mountPanel({ ...baseProps, receiver: 'main' });
     expect(t.querySelector('.vfo-label')?.textContent?.trim()).toBe('VFO A');
+  });
+
+  it('reads band ranges through getCapabilities()', () => {
+    mountPanel(baseProps);
+    expect(vi.mocked(getCapabilities)).toHaveBeenCalled();
   });
 });

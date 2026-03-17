@@ -46,15 +46,15 @@
   .panel {
     background: #060a10;
     border: 1px solid #18202a;
-    border-radius: 10px;
+    border-radius: 4px;
     overflow: hidden;
   }
 
   .panel-header {
-    padding: 6px 10px;
+    padding: 5px 8px;
     color: #8ca0b8;
     font-family: 'Roboto Mono', monospace;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.08em;
     border-bottom: 1px solid #18202a;
@@ -63,14 +63,14 @@
   .panel-body {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding: 10px;
+    gap: 6px;
+    padding: 7px 8px;
   }
 
   .output-indicator {
     color: #4a6080;
     font-family: 'Roboto Mono', monospace;
-    font-size: 10px;
+    font-size: 9px;
     letter-spacing: 0.04em;
     text-align: center;
   }

@@ -58,7 +58,7 @@
   .slider-wrapper {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 3px;
     width: 100%;
     font-family: 'Roboto Mono', monospace;
   }
@@ -67,12 +67,12 @@
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    font-size: 11px;
+    font-size: 10px;
     line-height: 1.4;
   }
 
   .compact .slider-header {
-    font-size: 10px;
+    font-size: 9px;
   }
 
   .slider-label {
@@ -96,8 +96,8 @@
     -webkit-appearance: none;
     appearance: none;
     width: 100%;
-    height: 4px;
-    border-radius: 2px;
+    height: 3px;
+    border-radius: 1px;
     outline: none;
     cursor: pointer;
     background: linear-gradient(
@@ -120,45 +120,45 @@
   .slider-input::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
     background: #ffffff;
-    border: 2px solid var(--accent);
+    border: 1px solid var(--accent);
     cursor: pointer;
-    box-shadow: 0 0 4px color-mix(in srgb, var(--accent) 50%, transparent);
+    box-shadow: none;
     transition: box-shadow 0.15s ease;
   }
 
   .compact .slider-input::-webkit-slider-thumb {
-    width: 8px;
-    height: 8px;
+    width: 7px;
+    height: 7px;
   }
 
   .slider-input::-webkit-slider-thumb:hover {
-    box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 70%, transparent);
+    box-shadow: none;
   }
 
   /* Moz thumb */
   .slider-input::-moz-range-thumb {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
     background: #ffffff;
-    border: 2px solid var(--accent);
+    border: 1px solid var(--accent);
     cursor: pointer;
-    box-shadow: 0 0 4px color-mix(in srgb, var(--accent) 50%, transparent);
+    box-shadow: none;
   }
 
   .compact .slider-input::-moz-range-thumb {
-    width: 8px;
-    height: 8px;
+    width: 7px;
+    height: 7px;
   }
 
   /* Moz track override (Firefox ignores background gradient on input) */
   .slider-input::-moz-range-track {
-    height: 4px;
-    border-radius: 2px;
+    height: 3px;
+    border-radius: 1px;
     background: #0D1117;
   }
 
@@ -167,8 +167,8 @@
   }
 
   .slider-input::-moz-range-progress {
-    height: 4px;
-    border-radius: 2px 0 0 2px;
+    height: 3px;
+    border-radius: 1px 0 0 1px;
     background: var(--accent);
   }
 

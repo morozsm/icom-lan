@@ -66,8 +66,10 @@
     display: flex;
     flex-direction: row;
     align-items: center;
-    gap: 6px;
-    padding: 4px 8px;
+    justify-content: center;
+    gap: 4px;
+    padding: 4px;
+    flex-wrap: wrap;
     font-family: 'Roboto Mono', monospace;
   }
 </style>

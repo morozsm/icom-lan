@@ -69,11 +69,11 @@
   .panel {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding: 10px 12px;
+    gap: 6px;
+    padding: 7px 8px;
     background-color: #060A10;
     border: 1px solid #18202A;
-    border-radius: 10px;
+    border-radius: 4px;
     font-family: 'Roboto Mono', monospace;
     width: 100%;
     box-sizing: border-box;
@@ -81,9 +81,9 @@
 
   .panel-header {
     color: #8CA0B8;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
-    letter-spacing: 1.4px;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
     line-height: 1;
   }
@@ -91,19 +91,19 @@
   .controls {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
   }
 
   .control-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: 6px;
   }
 
   .control-label {
     color: #6F8196;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.04em;
     flex-shrink: 0;

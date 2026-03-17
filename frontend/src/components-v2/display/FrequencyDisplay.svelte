@@ -24,24 +24,24 @@
     align-items: baseline;
     font-family: 'Roboto Mono', monospace;
     font-weight: 700;
-    font-size: 28px;
+    font-size: 24px;
     line-height: 1;
-    letter-spacing: 0.04em;
-    color: #F0F5FA;
+    letter-spacing: 0.035em;
+    color: #47ecff;
     white-space: nowrap;
     user-select: none;
   }
 
   .freq.compact {
-    font-size: 18px;
+    font-size: 14px;
   }
 
   .freq.inactive {
-    color: #4D6074;
+    color: #628297;
   }
 
   .sep {
-    opacity: 0.4;
+    opacity: 0.5;
     margin: 0 0.02em;
   }
 </style>

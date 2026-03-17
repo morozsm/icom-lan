@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mount, unmount, flushSync } from 'svelte';
+
+vi.mock('../../../components/spectrum/SpectrumPanel.svelte', async () => {
+  const stub = await import('./SpectrumPanelStub.svelte');
+  return { default: stub.default };
+});
+
 import RadioLayout from '../RadioLayout.svelte';
 import { extractVfoState, extractMeterState, hasLiveAudioFromState } from '../layout-utils';
 
@@ -184,57 +190,60 @@ describe('RadioLayout structure', () => {
     expect(t.querySelector('.radio-layout')).not.toBeNull();
   });
 
-  it('renders .left-sidebar', () => {
+  it('renders .receiver-deck', () => {
     const t = mountLayout();
-    expect(t.querySelector('.left-sidebar')).not.toBeNull();
+    expect(t.querySelector('.receiver-deck')).not.toBeNull();
   });
 
-  it('renders .center-column', () => {
+  it('renders .content-row', () => {
     const t = mountLayout();
-    expect(t.querySelector('.center-column')).not.toBeNull();
+    expect(t.querySelector('.content-row')).not.toBeNull();
   });
 
-  it('renders .right-sidebar', () => {
+  it('renders .left-sidebar inside .content-left', () => {
     const t = mountLayout();
-    expect(t.querySelector('.right-sidebar')).not.toBeNull();
+    expect(t.querySelector('.content-left .left-sidebar')).not.toBeNull();
   });
 
-  it('renders .spectrum-slot in center column', () => {
+  it('renders .right-sidebar inside .content-right', () => {
     const t = mountLayout();
-    expect(t.querySelector('.spectrum-slot')).not.toBeNull();
+    expect(t.querySelector('.content-right .right-sidebar')).not.toBeNull();
   });
 
-  it('spectrum-slot is inside center-column', () => {
+  it('renders .center-column and .spectrum-slot in the center area', () => {
     const t = mountLayout();
     const center = t.querySelector('.center-column');
+    expect(center).not.toBeNull();
     expect(center?.querySelector('.spectrum-slot')).not.toBeNull();
   });
 
-  it('renders .vfo-section in center column', () => {
+  it('renders the SpectrumPanel stub inside the spectrum slot', () => {
     const t = mountLayout();
-    const center = t.querySelector('.center-column');
-    expect(center?.querySelector('.vfo-section')).not.toBeNull();
+    expect(t.querySelector('.spectrum-panel-stub')).not.toBeNull();
+  });
+
+  it('renders .bottom-dock', () => {
+    const t = mountLayout();
+    expect(t.querySelector('.bottom-dock')).not.toBeNull();
+  });
+
+  it('renders .vfo-header inside .receiver-deck', () => {
+    const t = mountLayout();
+    expect(t.querySelector('.receiver-deck .vfo-header')).not.toBeNull();
   });
 });
 
-describe('MeterPanel capability gating', () => {
-  it('renders .meter-section when hasTx is true', () => {
+describe('Bottom dock meter gating', () => {
+  it('renders .dock-meter-card when hasTx is true', () => {
     vi.mocked(hasTx).mockReturnValue(true);
     const t = mountLayout();
-    expect(t.querySelector('.meter-section')).not.toBeNull();
+    expect(t.querySelector('.dock-meter-card')).not.toBeNull();
   });
 
-  it('does not render .meter-section when hasTx is false', () => {
+  it('does not render .dock-meter-card when hasTx is false', () => {
     vi.mocked(hasTx).mockReturnValue(false);
     const t = mountLayout();
-    expect(t.querySelector('.meter-section')).toBeNull();
-  });
-
-  it('meter-section is inside center-column', () => {
-    vi.mocked(hasTx).mockReturnValue(true);
-    const t = mountLayout();
-    const center = t.querySelector('.center-column');
-    expect(center?.querySelector('.meter-section')).not.toBeNull();
+    expect(t.querySelector('.dock-meter-card')).toBeNull();
   });
 });
 
@@ -242,7 +251,7 @@ describe('VfoHeader dual receiver', () => {
   it('renders only one .panel in vfo-header when hasDualReceiver is false', () => {
     vi.mocked(hasDualReceiver).mockReturnValue(false);
     const t = mountLayout();
-    const vfoHeader = t.querySelector('.vfo-header');
+    const vfoHeader = t.querySelector('.receiver-deck .vfo-header');
     const panels = vfoHeader?.querySelectorAll('.panel');
     expect(panels?.length).toBe(1);
   });
@@ -250,7 +259,7 @@ describe('VfoHeader dual receiver', () => {
   it('renders two .panel elements in vfo-header when hasDualReceiver is true', () => {
     vi.mocked(hasDualReceiver).mockReturnValue(true);
     const t = mountLayout();
-    const vfoHeader = t.querySelector('.vfo-header');
+    const vfoHeader = t.querySelector('.receiver-deck .vfo-header');
     const panels = vfoHeader?.querySelectorAll('.panel');
     expect(panels?.length).toBe(2);
   });
@@ -270,11 +279,9 @@ describe('RadioLayout with radioState', () => {
     expect(t.querySelector('.radio-layout')).not.toBeNull();
   });
 
-  it('spectrum-slot has min-height style of 300px', () => {
+  it('renders bottom receiver summary cards from the shell layout', () => {
     const t = mountLayout({ radioState: sampleState });
-    const slot = t.querySelector<HTMLElement>('.spectrum-slot');
-    expect(slot).not.toBeNull();
-    // Check that the element exists (CSS min-height is defined in <style>)
-    expect(slot?.classList.contains('spectrum-slot')).toBe(true);
+    const cards = t.querySelectorAll('.receiver-summary-card');
+    expect(cards.length).toBeGreaterThan(0);
   });
 });
