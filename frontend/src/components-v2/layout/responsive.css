@@ -1,0 +1,43 @@
+/* ── Responsive overrides for RadioLayout ────────────────────────────────── */
+/* Imported by RadioLayout.svelte. Uses !important to override Svelte-scoped  */
+/* component styles (which carry a .svelte-XXXXX specificity boost).          */
+
+/* ── Tablet: 768px – 1024px ──────────────────────────────────────────────── */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .radio-layout {
+    grid-template-columns: 1fr 1fr !important;
+    grid-template-rows: auto auto !important;
+  }
+
+  /* Center column spans both grid columns (spectrum + VFO on top) */
+  .radio-layout > main.center-column {
+    grid-column: 1 / -1 !important;
+    grid-row: 1 !important;
+  }
+
+  /* Sidebars sit side-by-side below the center column */
+  .radio-layout > aside.left-sidebar,
+  .radio-layout > aside.right-sidebar {
+    grid-row: 2 !important;
+    width: auto !important;
+    max-height: 50vh !important;
+  }
+}
+
+/* ── Mobile: < 768px ─────────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  .radio-layout {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Sidebars hidden — content surfaced via bottom tab navigation */
+  .radio-layout > aside.left-sidebar,
+  .radio-layout > aside.right-sidebar {
+    display: none !important;
+  }
+
+  /* Reserve space at the bottom for the fixed MobileNav bar */
+  .radio-layout > main.center-column {
+    padding-bottom: 64px !important;
+  }
+}
