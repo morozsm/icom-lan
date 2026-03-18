@@ -36,7 +36,7 @@ from .commands import (
     get_dash_ratio,
     get_digisel_shift,
     get_drive_gain,
-    get_frequency,
+    get_freq,
     get_break_in_delay,
     get_break_in,
     get_compressor_level,
@@ -55,7 +55,7 @@ from .commands import (
     get_nr_level,
     get_pbt_inner,
     get_pbt_outer,
-    get_power,
+    get_rf_power,
     get_s_meter_sql_status,
     get_overflow_status,
     get_agc,
@@ -130,7 +130,7 @@ from .commands import (
     scope_set_vbw as _scope_set_vbw_cmd,
     scope_main_sub as _scope_main_sub_cmd,
     scope_single_dual as _scope_single_dual_cmd,
-    select_vfo as _select_vfo_cmd,
+    set_vfo as _select_vfo_cmd,
     send_cw,
     set_af_mute,
     set_apf_type_level,
@@ -174,11 +174,11 @@ from .commands import (
     get_nr,
     get_ip_plus,
     set_ip_plus,
-    set_frequency,
+    set_freq,
     set_mode,
     set_vox_gain,
     set_anti_vox_gain,
-    set_power,
+    set_rf_power,
     get_rf_gain,
     set_rf_gain,
     get_af_level,
@@ -199,7 +199,7 @@ from .commands import (
     set_xfc_status,
     get_tx_freq_monitor,
     set_tx_freq_monitor,
-    speech,
+    get_speech,
     get_transceiver_id,
     get_rit_frequency,
     set_rit_frequency,
@@ -211,8 +211,8 @@ from .commands import (
     # VFO / Dual Watch / Scanning (#132)
     get_tuning_step,
     set_tuning_step,
-    start_scan,
-    stop_scan,
+    scan_start,
+    scan_stop,
     get_dual_watch,
     set_dual_watch,
     quick_dual_watch,
@@ -272,7 +272,7 @@ from .commands import (
     build_memory_to_vfo,
     build_memory_clear,
     build_memory_contents_set,
-    build_band_stack_set,
+    set_bsr,
 )
 from .exceptions import (
     CommandError,
@@ -732,7 +732,7 @@ class Icom7610CoreRadio:
         self, *, bypass_cache: bool = False, update_cache: bool = True
     ) -> int:
         """Read MAIN receiver frequency with optional cache updates."""
-        civ = get_frequency(to_addr=self._radio_addr)
+        civ = get_freq(to_addr=self._radio_addr)
         try:
             resp = await self._send_civ_raw(
                 civ,
@@ -760,7 +760,7 @@ class Icom7610CoreRadio:
         self, freq_hz: int, *, update_cache: bool = True
     ) -> None:
         """Set MAIN receiver frequency with optional cache updates."""
-        civ = set_frequency(freq_hz, to_addr=self._radio_addr, receiver=RECEIVER_MAIN)
+        civ = set_freq(freq_hz, to_addr=self._radio_addr, receiver=RECEIVER_MAIN)
         await self._send_civ_raw(civ, wait_response=False)
         if update_cache:
             self._last_freq_hz = freq_hz
@@ -1642,7 +1642,7 @@ class Icom7610CoreRadio:
             return
 
         if self._profile.supports_cmd29(0x05):
-            civ = set_frequency(freq_hz, to_addr=self._radio_addr, receiver=receiver)
+            civ = set_freq(freq_hz, to_addr=self._radio_addr, receiver=receiver)
             await self._send_civ_raw(civ, wait_response=False)
         else:
             await self._run_with_receiver_vfo_fallback(
@@ -1822,7 +1822,7 @@ class Icom7610CoreRadio:
         On timeout falls back to the state cache if populated.
         """
         self._check_connected()
-        civ = get_power(to_addr=self._radio_addr)
+        civ = get_rf_power(to_addr=self._radio_addr)
         try:
             resp = await self._send_civ_raw(civ, key="get_power", dedupe=True)
             assert resp is not None
@@ -1847,7 +1847,7 @@ class Icom7610CoreRadio:
             level: Power level 0-255.
         """
         self._check_connected()
-        civ = set_power(level, to_addr=self._radio_addr)
+        civ = set_rf_power(level, to_addr=self._radio_addr)
         await self._send_civ_raw(civ, wait_response=False)
         self._last_power = level
 
@@ -2698,7 +2698,7 @@ class Icom7610CoreRadio:
                   2 = mode.
         """
         self._check_connected()
-        civ = speech(what, to_addr=self._radio_addr)
+        civ = get_speech(what, to_addr=self._radio_addr)
         await self._send_civ_raw(civ, wait_response=False)
 
     async def get_transceiver_id(self) -> int:
@@ -2863,13 +2863,13 @@ class Icom7610CoreRadio:
     async def start_scan(self) -> None:
         """Start scanning (CI-V 0x0E 0x01). Fire-and-forget."""
         self._check_connected()
-        civ = start_scan(to_addr=self._radio_addr)
+        civ = scan_start(to_addr=self._radio_addr)
         await self._send_civ_raw(civ, wait_response=False)
 
     async def stop_scan(self) -> None:
         """Stop scanning (CI-V 0x0E 0x00). Fire-and-forget."""
         self._check_connected()
-        civ = stop_scan(to_addr=self._radio_addr)
+        civ = scan_stop(to_addr=self._radio_addr)
         await self._send_civ_raw(civ, wait_response=False)
 
     async def get_dual_watch(self) -> bool:
@@ -4188,7 +4188,7 @@ class Icom7610CoreRadio:
         if not 1 <= bsr.register <= 3:
             raise ValueError(f"Register must be 1-3, got {bsr.register}")
         await self._send_fire_and_forget(
-            build_band_stack_set(bsr, to_addr=self._radio_addr)
+            set_bsr(bsr, to_addr=self._radio_addr)
         )
 
 

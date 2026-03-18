@@ -7,12 +7,12 @@ from icom_lan.commands import (
     CONTROLLER_ADDR,
     build_civ_frame,
     parse_civ_frame,
-    get_frequency,
-    set_frequency,
+    get_freq,
+    set_freq,
     get_mode,
     set_mode,
-    get_power,
-    set_power,
+    get_rf_power,
+    set_rf_power,
     get_s_meter,
     get_swr,
     get_alc,
@@ -118,21 +118,21 @@ class TestFrequencyCommands:
     """Test frequency get/set commands."""
 
     def test_get_frequency(self) -> None:
-        frame = get_frequency()
+        frame = get_freq()
         assert frame == b"\xfe\xfe\x98\xe0\x03\xfd"
 
     def test_set_frequency_14mhz(self) -> None:
-        frame = set_frequency(14_074_000)
+        frame = set_freq(14_074_000)
         expected_bcd = b"\x00\x40\x07\x14\x00"
         assert frame == b"\xfe\xfe\x98\xe0\x05" + expected_bcd + b"\xfd"
 
     def test_set_frequency_7mhz(self) -> None:
-        frame = set_frequency(7_074_000)
+        frame = set_freq(7_074_000)
         expected_bcd = b"\x00\x40\x07\x07\x00"
         assert frame == b"\xfe\xfe\x98\xe0\x05" + expected_bcd + b"\xfd"
 
     def test_set_frequency_custom_addr(self) -> None:
-        frame = set_frequency(14_074_000, to_addr=0xA4, from_addr=0xE1)
+        frame = set_freq(14_074_000, to_addr=0xA4, from_addr=0xE1)
         assert frame[2] == 0xA4
         assert frame[3] == 0xE1
 
@@ -203,27 +203,27 @@ class TestPowerCommands:
     """Test RF power get/set commands."""
 
     def test_get_power(self) -> None:
-        frame = get_power()
+        frame = get_rf_power()
         assert frame == b"\xfe\xfe\x98\xe0\x14\x0a\xfd"
 
     def test_set_power(self) -> None:
         # Power level is 0-255 encoded as 2-byte BCD (00-02 55)
-        frame = set_power(128)
+        frame = set_rf_power(128)
         assert frame == b"\xfe\xfe\x98\xe0\x14\x0a\x01\x28\xfd"
 
     def test_set_power_zero(self) -> None:
-        frame = set_power(0)
+        frame = set_rf_power(0)
         assert frame == b"\xfe\xfe\x98\xe0\x14\x0a\x00\x00\xfd"
 
     def test_set_power_max(self) -> None:
-        frame = set_power(255)
+        frame = set_rf_power(255)
         assert frame == b"\xfe\xfe\x98\xe0\x14\x0a\x02\x55\xfd"
 
     def test_set_power_out_of_range(self) -> None:
         with pytest.raises(ValueError):
-            set_power(256)
+            set_rf_power(256)
         with pytest.raises(ValueError):
-            set_power(-1)
+            set_rf_power(-1)
 
 
 class TestMeterCommands:
@@ -426,15 +426,15 @@ class TestCmd29ReceiverRouting:
     """Test that per-receiver SET commands use cmd29 when receiver=SUB."""
 
     def test_set_frequency_main_no_cmd29(self) -> None:
-        from icom_lan.commands import set_frequency, RECEIVER_MAIN
+        from icom_lan.commands import set_freq, RECEIVER_MAIN
 
-        frame = set_frequency(14_074_000, receiver=RECEIVER_MAIN)
+        frame = set_freq(14_074_000, receiver=RECEIVER_MAIN)
         assert frame[4] == 0x05  # Direct freq set, no cmd29 prefix
 
     def test_set_frequency_sub_uses_cmd29(self) -> None:
-        from icom_lan.commands import set_frequency, RECEIVER_SUB
+        from icom_lan.commands import set_freq, RECEIVER_SUB
 
-        frame = set_frequency(14_074_000, receiver=RECEIVER_SUB)
+        frame = set_freq(14_074_000, receiver=RECEIVER_SUB)
         assert frame[4] == 0x29
         assert frame[5] == 0x01  # SUB receiver
         assert frame[6] == 0x05  # Freq set command
@@ -1572,7 +1572,7 @@ class TestToneTsqlCommands:
             build_band_stack_get(15, 4)
 
     def test_build_band_stack_set(self) -> None:
-        from icom_lan.commands import build_band_stack_set
+        from icom_lan.commands import set_bsr
         from icom_lan.types import BandStackRegister
 
         bsr = BandStackRegister(
@@ -1582,7 +1582,7 @@ class TestToneTsqlCommands:
             mode=1,  # USB
             filter=1,
         )
-        civ = build_band_stack_set(bsr)
+        civ = set_bsr(bsr)
         # FE FE 98 E0 1A 01 0F 01 <freq 5 bytes> <mode 1 byte> <filter 1 byte> FD
         assert civ[:8] == b"\xfe\xfe\x98\xe0\x1a\x01\x0f\x01"
         # freq 14.200 MHz = 00 00 20 14 00 (BCD little-endian)
@@ -2245,28 +2245,28 @@ class TestSystemConfigCommands:
     # --- Speech (0x13) ---
 
     def test_speech_all(self) -> None:
-        from icom_lan.commands import speech
+        from icom_lan.commands import get_speech
 
-        frame = speech(0)
+        frame = get_speech(0)
         assert frame == b"\xfe\xfe\x98\xe0\x13\x00\xfd"
 
     def test_speech_freq(self) -> None:
-        from icom_lan.commands import speech
+        from icom_lan.commands import get_speech
 
-        frame = speech(1)
+        frame = get_speech(1)
         assert b"\x13\x01" in frame
 
     def test_speech_mode(self) -> None:
-        from icom_lan.commands import speech
+        from icom_lan.commands import get_speech
 
-        frame = speech(2)
+        frame = get_speech(2)
         assert b"\x13\x02" in frame
 
     def test_speech_invalid(self) -> None:
-        from icom_lan.commands import speech
+        from icom_lan.commands import get_speech
 
         with pytest.raises(ValueError, match="0, 1, or 2"):
-            speech(3)
+            get_speech(3)
 
     # --- Transceiver ID (0x19 0x00) ---
 

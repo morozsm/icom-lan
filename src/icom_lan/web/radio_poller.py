@@ -1017,7 +1017,9 @@ class RadioPoller:
             case SetPbtInner(level=level, receiver=rx):
                 await radio.set_pbt_inner(level, receiver=rx)
                 if self._radio_state:
-                    target = self._radio_state.sub if rx != 0 else self._radio_state.main
+                    target = (
+                        self._radio_state.sub if rx != 0 else self._radio_state.main
+                    )
                     target.pbt_inner = level
                     self.bump_revision()
                 if self._on_state_event:
@@ -1027,7 +1029,9 @@ class RadioPoller:
             case SetPbtOuter(level=level, receiver=rx):
                 await radio.set_pbt_outer(level, receiver=rx)
                 if self._radio_state:
-                    target = self._radio_state.sub if rx != 0 else self._radio_state.main
+                    target = (
+                        self._radio_state.sub if rx != 0 else self._radio_state.main
+                    )
                     target.pbt_outer = level
                     self.bump_revision()
                 if self._on_state_event:
@@ -1037,25 +1041,33 @@ class RadioPoller:
             case SetNRLevel(level=level, receiver=rx):
                 await radio.set_nr_level(level, receiver=rx)
                 if self._radio_state:
-                    target = self._radio_state.sub if rx != 0 else self._radio_state.main
+                    target = (
+                        self._radio_state.sub if rx != 0 else self._radio_state.main
+                    )
                     target.nr_level = level
                     self.bump_revision()
             case SetNBLevel(level=level, receiver=rx):
                 await radio.set_nb_level(level, receiver=rx)
                 if self._radio_state:
-                    target = self._radio_state.sub if rx != 0 else self._radio_state.main
+                    target = (
+                        self._radio_state.sub if rx != 0 else self._radio_state.main
+                    )
                     target.nb_level = level
                     self.bump_revision()
             case SetAutoNotch(on=on, receiver=rx):
                 await radio.set_auto_notch(on, receiver=rx)
                 if self._radio_state:
-                    target = self._radio_state.sub if rx != 0 else self._radio_state.main
+                    target = (
+                        self._radio_state.sub if rx != 0 else self._radio_state.main
+                    )
                     target.auto_notch = on
                     self.bump_revision()
             case SetManualNotch(on=on, receiver=rx):
                 await radio.set_manual_notch(on, receiver=rx)
                 if self._radio_state:
-                    target = self._radio_state.sub if rx != 0 else self._radio_state.main
+                    target = (
+                        self._radio_state.sub if rx != 0 else self._radio_state.main
+                    )
                     target.manual_notch = on
                     self.bump_revision()
             case SetNotchFilter(level=level):
@@ -1066,7 +1078,9 @@ class RadioPoller:
             case SetAgcTimeConstant(value=value, receiver=rx):
                 await radio.set_agc_time_constant(value, receiver=rx)
                 if self._radio_state:
-                    target = self._radio_state.sub if rx != 0 else self._radio_state.main
+                    target = (
+                        self._radio_state.sub if rx != 0 else self._radio_state.main
+                    )
                     target.agc_time_constant = value
                     self.bump_revision()
             case SetCwPitch(value=value):

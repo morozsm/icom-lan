@@ -43,10 +43,18 @@ __all__ = [
     "build_civ_frame",
     "build_cmd29_frame",
     "parse_civ_frame",
+    # TOML canonical names (primary)
+    "get_freq",
+    "set_freq",
+    # Backward-compat aliases
     "get_frequency",
     "set_frequency",
     "get_mode",
     "set_mode",
+    # TOML canonical names
+    "get_rf_power",
+    "set_rf_power",
+    # Backward-compat aliases
     "get_power",
     "set_power",
     "get_s_meter",
@@ -111,6 +119,12 @@ __all__ = [
     "set_nb_width",
     "get_af_mute",
     "set_af_mute",
+    # Squelch (TOML canonical)
+    "get_squelch",
+    "set_squelch",
+    # Backward-compat aliases
+    "get_sql",
+    "set_sql",
     "get_s_meter_sql_status",
     "get_overflow_status",
     "get_agc",
@@ -129,12 +143,18 @@ __all__ = [
     "set_break_in",
     "get_manual_notch",
     "set_manual_notch",
+    # Manual notch width (TOML canonical)
+    "get_manual_notch_width",
+    "set_manual_notch_width",
     "get_twin_peak_filter",
     "set_twin_peak_filter",
     "get_dial_lock",
     "set_dial_lock",
     "get_filter_shape",
     "set_filter_shape",
+    # Filter width (TOML canonical)
+    "get_filter_width",
+    "set_filter_width",
     "get_ssb_tx_bandwidth",
     "set_ssb_tx_bandwidth",
     "get_main_sub_tracking",
@@ -208,9 +228,19 @@ __all__ = [
     "get_rit_tx_status",
     "set_rit_tx_status",
     "parse_rit_frequency_response",
+    # VFO (TOML canonical)
+    "get_vfo",
+    "set_vfo",
+    "get_main_sub_band",
+    # Backward-compat aliases
+    "select_vfo",
     # VFO / Dual Watch / Scanning (#132)
     "get_tuning_step",
     "set_tuning_step",
+    # Scanning (TOML canonical)
+    "scan_start",
+    "scan_stop",
+    # Backward-compat aliases
     "start_scan",
     "stop_scan",
     "set_dual_watch_off",
@@ -219,6 +249,15 @@ __all__ = [
     "set_dual_watch",
     "quick_dual_watch",
     "quick_split",
+    # Quick commands (TOML canonical)
+    "get_quick_dual_watch",
+    "set_quick_dual_watch",
+    "get_quick_split",
+    "set_quick_split",
+    # Speech (TOML canonical)
+    "get_speech",
+    # Backward-compat alias
+    "speech",
     # Tone/TSQL (#134)
     "get_repeater_tone",
     "set_repeater_tone",
@@ -239,6 +278,11 @@ __all__ = [
     "set_rx_antenna_ant1",
     "get_rx_antenna_ant2",
     "set_rx_antenna_ant2",
+    # Antenna aliases (TOML canonical)
+    "get_antenna",
+    "set_antenna",
+    "get_rx_antenna",
+    "set_rx_antenna",
     "get_acc1_mod_level",
     "set_acc1_mod_level",
     "get_usb_mod_level",
@@ -266,6 +310,12 @@ __all__ = [
     "get_utc_offset",
     "set_utc_offset",
     "parse_utc_offset_response",
+    # Band stacking (TOML canonical)
+    "get_bsr",
+    "set_bsr",
+    # Backward-compat aliases
+    "build_band_stack_get",
+    "build_band_stack_set",
 ]
 
 # CI-V addresses
@@ -557,7 +607,7 @@ def parse_civ_frame(data: bytes) -> CivFrame:
 # --- Frequency commands ---
 
 
-def get_frequency(
+def get_freq(
     to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -575,7 +625,7 @@ def get_frequency(
     return build_civ_frame(to_addr, from_addr, _CMD_FREQ_GET)
 
 
-def set_frequency(
+def set_freq(
     freq_hz: int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
@@ -1088,7 +1138,7 @@ def _key_speed_to_level(wpm: int) -> int:
     return round((wpm - 6) * 6.071)
 
 
-def get_power(
+def get_rf_power(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
@@ -1099,7 +1149,7 @@ def get_power(
     return build_civ_frame(to_addr, from_addr, _CMD_LEVEL, sub=_SUB_RF_POWER)
 
 
-def set_power(
+def set_rf_power(
     level: int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
@@ -1216,6 +1266,23 @@ def set_af_level(
             receiver=receiver,
         )
     return build_civ_frame(to_addr, from_addr, _CMD_LEVEL, sub=_SUB_AF_LEVEL, data=bcd)
+
+
+def get_squelch(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
+) -> bytes:
+    """Build a 'get squelch level' CI-V command (0x14 0x03)."""
+    return _build_level_get(
+        _SUB_SQL,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
+        command29=(receiver != RECEIVER_MAIN),
+        cmd_map=cmd_map, cmd_name="get_squelch",
+    )
 
 
 def set_squelch(
@@ -1810,10 +1877,12 @@ _SUB_MONITOR = 0x45
 _SUB_VOX = 0x46
 _SUB_BREAK_IN = 0x47
 _SUB_MANUAL_NOTCH = 0x48
+_SUB_MANUAL_NOTCH_WIDTH = 0x57  # Manual notch width (0x16 0x57)
 _SUB_DIGISEL_STATUS = 0x4E
 _SUB_TWIN_PEAK_FILTER = 0x4F
 _SUB_DIAL_LOCK = 0x50
 _SUB_FILTER_SHAPE = 0x56
+_SUB_FILTER_WIDTH = 0x03  # Filter width (0x1A 0x03, cmd29)
 _SUB_SSB_TX_BANDWIDTH = 0x58
 _SUB_NB = 0x22  # Noise Blanker on/off (0x16 0x22)
 _SUB_NR = 0x40  # Noise Reduction on/off (0x16 0x40)
@@ -1829,7 +1898,33 @@ _SUB_BAND_STACK = 0x01  # Band stacking register (0x1A 0x01)
 _SUB_AGC_TIME_CONSTANT = 0x04
 
 
-def select_vfo(
+def get_vfo(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+) -> bytes:
+    """Build a 'get VFO' CI-V command (0x07 read back current VFO)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_vfo", to_addr=to_addr, from_addr=from_addr)
+    return build_civ_frame(to_addr, from_addr, _CMD_VFO_SELECT)
+
+
+def get_main_sub_band(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+) -> bytes:
+    """Build a 'get main/sub band' CI-V command (0x07 0xD2).
+
+    Returns:
+        CI-V frame bytes. Response data: 0=MAIN, 1=SUB.
+    """
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_main_sub_band", to_addr=to_addr, from_addr=from_addr, data=b"\xd2")
+    return build_civ_frame(to_addr, from_addr, _CMD_VFO_SELECT, data=b"\xd2")
+
+
+def set_vfo(
     vfo: str = "A",
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
@@ -1928,7 +2023,7 @@ def set_tuning_step(
     )
 
 
-def start_scan(
+def scan_start(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
@@ -1939,7 +2034,7 @@ def start_scan(
     return build_civ_frame(to_addr, from_addr, _CMD_SCAN, data=b"\x01")
 
 
-def stop_scan(
+def scan_stop(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
@@ -2033,6 +2128,47 @@ def quick_split(
     return build_civ_frame(
         to_addr, from_addr, _CMD_CTL_MEM, sub=_SUB_CTL_MEM, data=_CTL_MEM_QUICK_SPLIT
     )
+
+
+# Aliases for TOML canonical names (get_/set_ prefix convention)
+def get_quick_split(
+    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+) -> bytes:
+    """Alias for quick_split — trigger quick split (0x1A 0x05 0x00 0x33)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_quick_split", to_addr=to_addr, from_addr=from_addr, data=_CTL_MEM_QUICK_SPLIT)
+    return build_civ_frame(to_addr, from_addr, _CMD_CTL_MEM, sub=_SUB_CTL_MEM, data=_CTL_MEM_QUICK_SPLIT)
+
+
+def set_quick_split(
+    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+) -> bytes:
+    """Alias for quick_split — trigger quick split (0x1A 0x05 0x00 0x33)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "set_quick_split", to_addr=to_addr, from_addr=from_addr, data=_CTL_MEM_QUICK_SPLIT)
+    return build_civ_frame(to_addr, from_addr, _CMD_CTL_MEM, sub=_SUB_CTL_MEM, data=_CTL_MEM_QUICK_SPLIT)
+
+
+def get_quick_dual_watch(
+    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+) -> bytes:
+    """Alias for quick_dual_watch — trigger quick dual watch (0x1A 0x05 0x00 0x32)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "get_quick_dual_watch", to_addr=to_addr, from_addr=from_addr, data=_CTL_MEM_QUICK_DUAL_WATCH)
+    return build_civ_frame(to_addr, from_addr, _CMD_CTL_MEM, sub=_SUB_CTL_MEM, data=_CTL_MEM_QUICK_DUAL_WATCH)
+
+
+def set_quick_dual_watch(
+    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+) -> bytes:
+    """Alias for quick_dual_watch — trigger quick dual watch (0x1A 0x05 0x00 0x32)."""
+    if cmd_map is not None:
+        return _build_from_map(cmd_map, "set_quick_dual_watch", to_addr=to_addr, from_addr=from_addr, data=_CTL_MEM_QUICK_DUAL_WATCH)
+    return build_civ_frame(to_addr, from_addr, _CMD_CTL_MEM, sub=_SUB_CTL_MEM, data=_CTL_MEM_QUICK_DUAL_WATCH)
 
 
 def _bcd_byte(value: int) -> int:
@@ -2761,6 +2897,56 @@ def set_manual_notch(
     )
 
 
+def get_manual_notch_width(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
+) -> bytes:
+    """Build a 'get manual notch width' CI-V command (0x16 0x57).
+
+    Returns:
+        CI-V frame bytes. Response: 0=WIDE, 1=MID, 2=NAR.
+    """
+    return _build_function_get(
+        _SUB_MANUAL_NOTCH_WIDTH,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
+        command29=True,
+        cmd_map=cmd_map, cmd_name="get_manual_notch_width",
+    )
+
+
+def set_manual_notch_width(
+    width: int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
+) -> bytes:
+    """Build a 'set manual notch width' CI-V command (0x16 0x57).
+
+    Args:
+        width: 0=WIDE, 1=MID, 2=NAR.
+        receiver: RECEIVER_MAIN (0x00) or RECEIVER_SUB (0x01).
+
+    Returns:
+        CI-V frame bytes.
+    """
+    return _build_function_value_set(
+        _SUB_MANUAL_NOTCH_WIDTH,
+        width,
+        minimum=0,
+        maximum=2,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
+        command29=True,
+        cmd_map=cmd_map, cmd_name="set_manual_notch_width",
+    )
+
+
 def get_twin_peak_filter(
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
@@ -2857,6 +3043,56 @@ def set_filter_shape(
         receiver=receiver,
         command29=True,
         cmd_map=cmd_map, cmd_name="set_filter_shape",
+    )
+
+
+def get_filter_width(
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
+) -> bytes:
+    """Build a 'get DSP IF filter width' CI-V command (0x1A 0x03, cmd29).
+
+    Returns:
+        CI-V frame bytes.
+    """
+    return _build_ctl_mem_single_bcd_get(
+        _SUB_FILTER_WIDTH,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
+        command29=True,
+        cmd_map=cmd_map, cmd_name="get_filter_width",
+    )
+
+
+def set_filter_width(
+    width_hz: int,
+    to_addr: int = IC_7610_ADDR,
+    from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
+    cmd_map: CommandMap | None = None,
+) -> bytes:
+    """Build a 'set DSP IF filter width' CI-V command (0x1A 0x03, cmd29).
+
+    Args:
+        width_hz: Filter width in Hz (50-10000).
+        receiver: RECEIVER_MAIN (0x00) or RECEIVER_SUB (0x01).
+
+    Returns:
+        CI-V frame bytes.
+    """
+    return _build_ctl_mem_single_bcd_set(
+        _SUB_FILTER_WIDTH,
+        width_hz,
+        minimum=50,
+        maximum=10000,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        receiver=receiver,
+        command29=True,
+        cmd_map=cmd_map, cmd_name="set_filter_width",
     )
 
 
@@ -4033,7 +4269,7 @@ def power_off(
 _CMD_SPEECH = 0x13
 
 
-def speech(
+def get_speech(
     what: int = 0,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
@@ -4795,7 +5031,7 @@ def parse_memory_contents_response(frame: CivFrame) -> "MemoryChannel":
     )
 
 
-def build_band_stack_get(
+def get_bsr(
     band: int,
     register: int,
     to_addr: int = IC_7610_ADDR,
@@ -4817,7 +5053,7 @@ def build_band_stack_get(
     )
 
 
-def build_band_stack_set(
+def set_bsr(
     bsr: "BandStackRegister",
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
@@ -5554,3 +5790,40 @@ def parse_ack_nak(frame: CivFrame) -> bool | None:
     if frame.command == _CMD_NAK:
         return False
     return None
+
+
+# ---------------------------------------------------------------------------
+# Backward-compat aliases — old names kept for existing callers
+# ---------------------------------------------------------------------------
+
+# Frequency
+get_frequency = get_freq
+set_frequency = set_freq
+
+# RF power
+get_power = get_rf_power
+set_power = set_rf_power
+
+# VFO
+select_vfo = set_vfo
+
+# Scanning
+start_scan = scan_start
+stop_scan = scan_stop
+
+# Speech
+speech = get_speech
+
+# Band stacking register
+build_band_stack_get = get_bsr
+build_band_stack_set = set_bsr
+
+# Squelch
+get_sql = get_squelch
+set_sql = set_squelch
+
+# Antenna aliases (TOML canonical pointing to the _ant1 variants)
+get_antenna = get_antenna_1
+set_antenna = set_antenna_1
+get_rx_antenna = get_rx_antenna_ant1
+set_rx_antenna = set_rx_antenna_ant1
