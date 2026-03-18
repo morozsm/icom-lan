@@ -43,10 +43,10 @@ export function makeVfoHandlers() {
           ? 'MAIN'
           : 'SUB';
       patchRadioState({ active: targetVfo });
-      cmd('select_vfo', { vfo: targetVfo });
+      cmd('set_vfo', { vfo: targetVfo });
     },
-    onMainVfoClick: () => cmd('select_vfo', { vfo: 'MAIN' }),
-    onSubVfoClick: () => cmd('select_vfo', { vfo: 'SUB' }),
+    onMainVfoClick: () => cmd('set_vfo', { vfo: 'MAIN' }),
+    onSubVfoClick: () => cmd('set_vfo', { vfo: 'SUB' }),
     onMainModeClick: () => {}, // Mode selection handled by mode popup
     onSubModeClick: () => {},
     onFreqChange: (freq: number, receiver: Receiver = 0) => {

@@ -195,7 +195,7 @@
           min="0"
           max="255"
           value={powerLevel}
-          onchange={(e) => sendCommand('set_power', { level: parseInt((e.currentTarget as HTMLInputElement).value) })}
+          onchange={(e) => sendCommand('set_rf_power', { level: parseInt((e.currentTarget as HTMLInputElement).value) })}
         />
         <span class="val">{powerLevel}</span>
       </label>
