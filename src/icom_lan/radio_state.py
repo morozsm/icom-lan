@@ -25,6 +25,7 @@ class ReceiverState:
     freq: int = 0
     mode: str = "USB"
     filter: int | None = None
+    filter_width: int | None = None
     data_mode: bool = False
     att: int = 0  # dB: 0, 3, 6, …, 45
     preamp: int = 0  # 0=off, 1=P1, 2=P2

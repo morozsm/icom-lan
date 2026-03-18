@@ -43,6 +43,7 @@ __all__ = [
     "RadioPoller",
     "CommandQueue",
     "SetAgcTimeConstant",
+    "SetFilterWidth",
     "SetPbtInner",
     "SetPbtOuter",
     "SetRitFrequency",
@@ -100,6 +101,12 @@ class SetMode:
 @dataclass(frozen=True, slots=True)
 class SetFilter:
     filter_num: int
+    receiver: int = 0
+
+
+@dataclass(frozen=True, slots=True)
+class SetFilterWidth:
+    width: int
     receiver: int = 0
 
 
@@ -399,6 +406,7 @@ Command = (
     SetFreq
     | SetMode
     | SetFilter
+    | SetFilterWidth
     | SetPower
     | SetRfGain
     | SetAfLevel
@@ -917,6 +925,32 @@ class RadioPoller:
                 if isinstance(radio, AdvancedControlCapable):
                     self._ensure_receiver_supported(rx, operation="set_filter")
                     await radio.set_filter(fn, receiver=rx)
+            case SetFilterWidth(width=width, receiver=rx):
+                self._ensure_receiver_supported(rx, operation="set_filter_width")
+                if not 50 <= width <= 10000:
+                    raise CommandError(
+                        f"set_filter_width value must be 50-10000 Hz, got {width}"
+                    )
+                bcd_payload = bytes(
+                    [
+                        (((width // 1000) % 10) << 4) | ((width // 100) % 10),
+                        (((width // 10) % 10) << 4) | (width % 10),
+                    ]
+                )
+                if self._profile.supports_cmd29(0x1A, 0x03):
+                    await self._civ(0x29, data=bytes([rx, 0x1A, 0x03]) + bcd_payload)
+                else:
+                    await self._civ(0x1A, sub=0x03, data=bcd_payload)
+                if self._radio_state:
+                    target = (
+                        self._radio_state.sub if rx != 0 else self._radio_state.main
+                    )
+                    target.filter_width = width
+                    self.bump_revision()
+                if self._on_state_event:
+                    self._on_state_event(
+                        "filter_width_changed", {"width": width, "receiver": rx}
+                    )
             case PttOn():
                 logger.info("poller: PTT ON")
                 # Start TX audio stream before PTT (LAN audio requires this)

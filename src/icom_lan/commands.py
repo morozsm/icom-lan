@@ -3480,17 +3480,26 @@ def set_filter_width(
     Returns:
         CI-V frame bytes.
     """
-    return _build_ctl_mem_single_bcd_set(
-        _SUB_FILTER_WIDTH,
-        width_hz,
-        minimum=50,
-        maximum=10000,
-        to_addr=to_addr,
-        from_addr=from_addr,
+    if not 50 <= width_hz <= 10000:
+        raise ValueError(f"Value must be 50-10000, got {width_hz}")
+    payload = _bcd_encode_value(width_hz, byte_count=2)
+    if cmd_map is not None:
+        return _build_from_map(
+            cmd_map,
+            "set_filter_width",
+            to_addr=to_addr,
+            from_addr=from_addr,
+            data=payload,
+            receiver=receiver,
+            command29=True,
+        )
+    return build_cmd29_frame(
+        to_addr,
+        from_addr,
+        _CMD_CTL_MEM,
+        sub=_SUB_FILTER_WIDTH,
+        data=payload,
         receiver=receiver,
-        command29=True,
-        cmd_map=cmd_map,
-        cmd_name="set_filter_width",
     )
 
 

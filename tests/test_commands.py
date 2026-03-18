@@ -3,25 +3,26 @@
 import pytest
 
 from icom_lan.commands import (
-    IC_7610_ADDR,
     CONTROLLER_ADDR,
+    IC_7610_ADDR,
     build_civ_frame,
-    parse_civ_frame,
+    get_alc,
     get_freq,
-    set_freq,
     get_mode,
-    set_mode,
     get_rf_power,
-    set_rf_power,
     get_s_meter,
     get_swr,
-    get_alc,
-    ptt_on,
-    ptt_off,
-    parse_frequency_response,
-    parse_mode_response,
-    parse_meter_response,
     parse_ack_nak,
+    parse_civ_frame,
+    parse_frequency_response,
+    parse_meter_response,
+    parse_mode_response,
+    ptt_off,
+    ptt_on,
+    set_filter_width,
+    set_freq,
+    set_mode,
+    set_rf_power,
 )
 from icom_lan.types import (
     AgcMode,
@@ -263,6 +264,18 @@ class TestMeterCommands:
         value = parse_meter_response(resp)
         assert value == 255
 
+
+class TestFilterWidthCommands:
+    """Test DSP IF filter width command encoding."""
+
+    def test_set_filter_width_cmd29_frame(self) -> None:
+        frame = set_filter_width(1500)
+        assert frame == b"\xfe\xfe\x98\xe0\x29\x00\x1a\x03\x15\x00\xfd"
+
+    def test_set_filter_width_sub_receiver_cmd29_frame(self) -> None:
+        frame = set_filter_width(2450, receiver=1)
+        assert frame == b"\xfe\xfe\x98\xe0\x29\x01\x1a\x03\x24\x50\xfd"
+
     def test_parse_meter_response_short_payload_raises(self) -> None:
         resp = CivFrame(
             to_addr=0xE0, from_addr=0x98, command=0x15, sub=0x02, data=b"\x01"
@@ -332,14 +345,14 @@ class TestCommand29:
     """Test Command29 framing for dual-receiver radios (IC-7610)."""
 
     def test_build_cmd29_frame_basic(self) -> None:
-        from icom_lan.commands import build_cmd29_frame, RECEIVER_MAIN
+        from icom_lan.commands import RECEIVER_MAIN, build_cmd29_frame
 
         frame = build_cmd29_frame(0x98, 0xE0, 0x16, sub=0x02, receiver=RECEIVER_MAIN)
         # FE FE 98 E0 29 00 16 02 FD
         assert frame == bytes.fromhex("fefe98e0 29 00 16 02 fd".replace(" ", ""))
 
     def test_cmd29_with_data(self) -> None:
-        from icom_lan.commands import build_cmd29_frame, RECEIVER_MAIN
+        from icom_lan.commands import RECEIVER_MAIN, build_cmd29_frame
 
         frame = build_cmd29_frame(
             0x98, 0xE0, 0x16, sub=0x02, data=b"\x01", receiver=RECEIVER_MAIN
@@ -347,7 +360,7 @@ class TestCommand29:
         assert frame == bytes.fromhex("fefe98e0 29 00 16 02 01 fd".replace(" ", ""))
 
     def test_cmd29_sub_receiver(self) -> None:
-        from icom_lan.commands import build_cmd29_frame, RECEIVER_SUB
+        from icom_lan.commands import RECEIVER_SUB, build_cmd29_frame
 
         frame = build_cmd29_frame(
             0x98, 0xE0, 0x16, sub=0x02, data=b"\x02", receiver=RECEIVER_SUB
@@ -355,14 +368,14 @@ class TestCommand29:
         assert frame == bytes.fromhex("fefe98e0 29 01 16 02 02 fd".replace(" ", ""))
 
     def test_cmd29_no_sub(self) -> None:
-        from icom_lan.commands import build_cmd29_frame, RECEIVER_MAIN
+        from icom_lan.commands import RECEIVER_MAIN, build_cmd29_frame
 
         # ATT command has no sub-byte
         frame = build_cmd29_frame(0x98, 0xE0, 0x11, receiver=RECEIVER_MAIN)
         assert frame == bytes.fromhex("fefe98e0 29 00 11 fd".replace(" ", ""))
 
     def test_cmd29_att_with_data(self) -> None:
-        from icom_lan.commands import build_cmd29_frame, RECEIVER_MAIN
+        from icom_lan.commands import RECEIVER_MAIN, build_cmd29_frame
 
         frame = build_cmd29_frame(
             0x98, 0xE0, 0x11, data=b"\x18", receiver=RECEIVER_MAIN
@@ -426,13 +439,13 @@ class TestCmd29ReceiverRouting:
     """Test that per-receiver SET commands use cmd29 when receiver=SUB."""
 
     def test_set_frequency_main_no_cmd29(self) -> None:
-        from icom_lan.commands import set_freq, RECEIVER_MAIN
+        from icom_lan.commands import RECEIVER_MAIN, set_freq
 
         frame = set_freq(14_074_000, receiver=RECEIVER_MAIN)
         assert frame[4] == 0x05  # Direct freq set, no cmd29 prefix
 
     def test_set_frequency_sub_uses_cmd29(self) -> None:
-        from icom_lan.commands import set_freq, RECEIVER_SUB
+        from icom_lan.commands import RECEIVER_SUB, set_freq
 
         frame = set_freq(14_074_000, receiver=RECEIVER_SUB)
         assert frame[4] == 0x29
@@ -440,14 +453,14 @@ class TestCmd29ReceiverRouting:
         assert frame[6] == 0x05  # Freq set command
 
     def test_set_mode_main_no_cmd29(self) -> None:
-        from icom_lan.commands import set_mode, RECEIVER_MAIN
+        from icom_lan.commands import RECEIVER_MAIN, set_mode
         from icom_lan.types import Mode
 
         frame = set_mode(Mode.USB, receiver=RECEIVER_MAIN)
         assert frame[4] == 0x06  # Direct mode set, no cmd29 prefix
 
     def test_set_mode_sub_uses_cmd29(self) -> None:
-        from icom_lan.commands import set_mode, RECEIVER_SUB
+        from icom_lan.commands import RECEIVER_SUB, set_mode
         from icom_lan.types import Mode
 
         frame = set_mode(Mode.USB, receiver=RECEIVER_SUB)
@@ -456,14 +469,14 @@ class TestCmd29ReceiverRouting:
         assert frame[6] == 0x06  # Mode set command
 
     def test_set_rf_gain_main_no_cmd29(self) -> None:
-        from icom_lan.commands import set_rf_gain, RECEIVER_MAIN
+        from icom_lan.commands import RECEIVER_MAIN, set_rf_gain
 
         frame = set_rf_gain(128, receiver=RECEIVER_MAIN)
         assert frame[4] == 0x14  # Direct level cmd, no cmd29 prefix
         assert frame[5] == 0x02  # RF gain sub
 
     def test_set_rf_gain_sub_uses_cmd29(self) -> None:
-        from icom_lan.commands import set_rf_gain, RECEIVER_SUB
+        from icom_lan.commands import RECEIVER_SUB, set_rf_gain
 
         frame = set_rf_gain(128, receiver=RECEIVER_SUB)
         assert frame[4] == 0x29
@@ -472,14 +485,14 @@ class TestCmd29ReceiverRouting:
         assert frame[7] == 0x02  # RF gain sub
 
     def test_set_af_level_main_no_cmd29(self) -> None:
-        from icom_lan.commands import set_af_level, RECEIVER_MAIN
+        from icom_lan.commands import RECEIVER_MAIN, set_af_level
 
         frame = set_af_level(200, receiver=RECEIVER_MAIN)
         assert frame[4] == 0x14
         assert frame[5] == 0x01  # AF level sub
 
     def test_set_af_level_sub_uses_cmd29(self) -> None:
-        from icom_lan.commands import set_af_level, RECEIVER_SUB
+        from icom_lan.commands import RECEIVER_SUB, set_af_level
 
         frame = set_af_level(200, receiver=RECEIVER_SUB)
         assert frame[4] == 0x29
@@ -488,14 +501,14 @@ class TestCmd29ReceiverRouting:
         assert frame[7] == 0x01  # AF level sub
 
     def test_set_squelch_main_no_cmd29(self) -> None:
-        from icom_lan.commands import set_squelch, RECEIVER_MAIN
+        from icom_lan.commands import RECEIVER_MAIN, set_squelch
 
         frame = set_squelch(100, receiver=RECEIVER_MAIN)
         assert frame[4] == 0x14
         assert frame[5] == 0x03  # SQL sub
 
     def test_set_squelch_sub_uses_cmd29(self) -> None:
-        from icom_lan.commands import set_squelch, RECEIVER_SUB
+        from icom_lan.commands import RECEIVER_SUB, set_squelch
 
         frame = set_squelch(100, receiver=RECEIVER_SUB)
         assert frame[4] == 0x29
@@ -504,14 +517,14 @@ class TestCmd29ReceiverRouting:
         assert frame[7] == 0x03  # SQL sub
 
     def test_set_nb_main_no_cmd29(self) -> None:
-        from icom_lan.commands import set_nb, RECEIVER_MAIN
+        from icom_lan.commands import RECEIVER_MAIN, set_nb
 
         frame = set_nb(True, receiver=RECEIVER_MAIN)
         assert frame[4] == 0x16  # Direct cmd, no cmd29
         assert frame[5] == 0x22  # NB sub
 
     def test_set_nb_sub_uses_cmd29(self) -> None:
-        from icom_lan.commands import set_nb, RECEIVER_SUB
+        from icom_lan.commands import RECEIVER_SUB, set_nb
 
         frame = set_nb(True, receiver=RECEIVER_SUB)
         assert frame[4] == 0x29
@@ -521,14 +534,14 @@ class TestCmd29ReceiverRouting:
         assert frame[8] == 0x01  # on=True
 
     def test_set_nr_main_no_cmd29(self) -> None:
-        from icom_lan.commands import set_nr, RECEIVER_MAIN
+        from icom_lan.commands import RECEIVER_MAIN, set_nr
 
         frame = set_nr(False, receiver=RECEIVER_MAIN)
         assert frame[4] == 0x16
         assert frame[5] == 0x40  # NR sub
 
     def test_set_nr_sub_uses_cmd29(self) -> None:
-        from icom_lan.commands import set_nr, RECEIVER_SUB
+        from icom_lan.commands import RECEIVER_SUB, set_nr
 
         frame = set_nr(False, receiver=RECEIVER_SUB)
         assert frame[4] == 0x29
@@ -538,14 +551,14 @@ class TestCmd29ReceiverRouting:
         assert frame[8] == 0x00  # on=False
 
     def test_set_ip_plus_main_no_cmd29(self) -> None:
-        from icom_lan.commands import set_ip_plus, RECEIVER_MAIN
+        from icom_lan.commands import RECEIVER_MAIN, set_ip_plus
 
         frame = set_ip_plus(True, receiver=RECEIVER_MAIN)
         assert frame[4] == 0x16
         assert frame[5] == 0x65  # IP+ sub
 
     def test_set_ip_plus_sub_uses_cmd29(self) -> None:
-        from icom_lan.commands import set_ip_plus, RECEIVER_SUB
+        from icom_lan.commands import RECEIVER_SUB, set_ip_plus
 
         frame = set_ip_plus(True, receiver=RECEIVER_SUB)
         assert frame[4] == 0x29
@@ -555,7 +568,7 @@ class TestCmd29ReceiverRouting:
         assert frame[8] == 0x01  # on=True
 
     def test_set_digisel_sub_uses_cmd29(self) -> None:
-        from icom_lan.commands import set_digisel, RECEIVER_SUB
+        from icom_lan.commands import RECEIVER_SUB, set_digisel
 
         frame = set_digisel(True, receiver=RECEIVER_SUB)
         assert frame[4] == 0x29
@@ -566,14 +579,14 @@ class TestCmd29ReceiverRouting:
     def test_backward_compat_no_receiver_arg(self) -> None:
         """All functions remain backward-compatible (no receiver arg = MAIN)."""
         from icom_lan.commands import (
-            set_frequency,
-            set_mode,
-            set_rf_gain,
             set_af_level,
-            set_squelch,
+            set_frequency,
+            set_ip_plus,
+            set_mode,
             set_nb,
             set_nr,
-            set_ip_plus,
+            set_rf_gain,
+            set_squelch,
         )
         from icom_lan.types import Mode
 
@@ -678,7 +691,7 @@ class TestDspLevelParityCommands:
         )
 
     def test_af_mute_builders(self) -> None:
-        from icom_lan.commands import get_af_mute, set_af_mute, RECEIVER_SUB
+        from icom_lan.commands import RECEIVER_SUB, get_af_mute, set_af_mute
 
         assert get_af_mute() == b"\xfe\xfe\x98\xe0\x29\x00\x1a\x09\xfd"
         assert (
@@ -1242,7 +1255,7 @@ class TestToneTsqlCommands:
     # --- Repeater Tone (0x16 0x42) ---
 
     def test_get_repeater_tone_main_uses_cmd29(self) -> None:
-        from icom_lan.commands import get_repeater_tone, RECEIVER_MAIN
+        from icom_lan.commands import RECEIVER_MAIN, get_repeater_tone
 
         frame = get_repeater_tone(receiver=RECEIVER_MAIN)
         assert frame[4] == 0x29
@@ -1251,7 +1264,7 @@ class TestToneTsqlCommands:
         assert frame[7] == 0x42
 
     def test_get_repeater_tone_sub_uses_cmd29(self) -> None:
-        from icom_lan.commands import get_repeater_tone, RECEIVER_SUB
+        from icom_lan.commands import RECEIVER_SUB, get_repeater_tone
 
         frame = get_repeater_tone(receiver=RECEIVER_SUB)
         assert frame[4] == 0x29
@@ -1260,7 +1273,7 @@ class TestToneTsqlCommands:
         assert frame[7] == 0x42
 
     def test_set_repeater_tone_on(self) -> None:
-        from icom_lan.commands import set_repeater_tone, RECEIVER_MAIN
+        from icom_lan.commands import RECEIVER_MAIN, set_repeater_tone
 
         frame = set_repeater_tone(True, receiver=RECEIVER_MAIN)
         assert frame[4] == 0x29
@@ -1269,7 +1282,7 @@ class TestToneTsqlCommands:
         assert frame[8] == 0x01
 
     def test_set_repeater_tone_off(self) -> None:
-        from icom_lan.commands import set_repeater_tone, RECEIVER_MAIN
+        from icom_lan.commands import RECEIVER_MAIN, set_repeater_tone
 
         frame = set_repeater_tone(False, receiver=RECEIVER_MAIN)
         assert frame[8] == 0x00
@@ -1277,7 +1290,7 @@ class TestToneTsqlCommands:
     # --- Repeater TSQL (0x16 0x43) ---
 
     def test_get_repeater_tsql_uses_cmd29(self) -> None:
-        from icom_lan.commands import get_repeater_tsql, RECEIVER_MAIN
+        from icom_lan.commands import RECEIVER_MAIN, get_repeater_tsql
 
         frame = get_repeater_tsql(receiver=RECEIVER_MAIN)
         assert frame[4] == 0x29
@@ -1285,7 +1298,7 @@ class TestToneTsqlCommands:
         assert frame[7] == 0x43
 
     def test_set_repeater_tsql_on_sub(self) -> None:
-        from icom_lan.commands import set_repeater_tsql, RECEIVER_SUB
+        from icom_lan.commands import RECEIVER_SUB, set_repeater_tsql
 
         frame = set_repeater_tsql(True, receiver=RECEIVER_SUB)
         assert frame[4] == 0x29
@@ -1340,7 +1353,7 @@ class TestToneTsqlCommands:
         assert _decode_tone_freq(bytes([0x01, 0x10, 0x09])) == pytest.approx(110.9)
 
     def test_decode_tone_freq_roundtrip(self) -> None:
-        from icom_lan.commands import _encode_tone_freq, _decode_tone_freq
+        from icom_lan.commands import _decode_tone_freq, _encode_tone_freq
 
         for freq in [67.0, 88.5, 100.0, 110.9, 127.3, 203.5, 254.1]:
             encoded = _encode_tone_freq(freq)
@@ -1349,7 +1362,7 @@ class TestToneTsqlCommands:
     # --- Tone Frequency command (0x1B 0x00) ---
 
     def test_get_tone_freq_uses_cmd29(self) -> None:
-        from icom_lan.commands import get_tone_freq, RECEIVER_MAIN
+        from icom_lan.commands import RECEIVER_MAIN, get_tone_freq
 
         frame = get_tone_freq(receiver=RECEIVER_MAIN)
         assert frame[4] == 0x29
@@ -1358,7 +1371,7 @@ class TestToneTsqlCommands:
         assert frame[7] == 0x00
 
     def test_set_tone_freq_encodes_bcd(self) -> None:
-        from icom_lan.commands import set_tone_freq, RECEIVER_MAIN
+        from icom_lan.commands import RECEIVER_MAIN, set_tone_freq
 
         frame = set_tone_freq(88.5, receiver=RECEIVER_MAIN)
         assert frame[4] == 0x29
@@ -1375,7 +1388,7 @@ class TestToneTsqlCommands:
     # --- TSQL Frequency command (0x1B 0x01) ---
 
     def test_get_tsql_freq_uses_cmd29(self) -> None:
-        from icom_lan.commands import get_tsql_freq, RECEIVER_SUB
+        from icom_lan.commands import RECEIVER_SUB, get_tsql_freq
 
         frame = get_tsql_freq(receiver=RECEIVER_SUB)
         assert frame[4] == 0x29
@@ -1384,7 +1397,7 @@ class TestToneTsqlCommands:
         assert frame[7] == 0x01
 
     def test_set_tsql_freq_encodes_bcd(self) -> None:
-        from icom_lan.commands import set_tsql_freq, RECEIVER_MAIN
+        from icom_lan.commands import RECEIVER_MAIN, set_tsql_freq
 
         frame = set_tsql_freq(110.9, receiver=RECEIVER_MAIN)
         assert frame[4] == 0x29
@@ -1396,12 +1409,12 @@ class TestToneTsqlCommands:
 
     def test_parse_tone_freq_response(self) -> None:
         from icom_lan.commands import (
+            CONTROLLER_ADDR,
+            IC_7610_ADDR,
+            RECEIVER_MAIN,
             build_cmd29_frame,
             parse_civ_frame,
             parse_tone_freq_response,
-            IC_7610_ADDR,
-            CONTROLLER_ADDR,
-            RECEIVER_MAIN,
         )
 
         civ = build_cmd29_frame(
@@ -1419,12 +1432,12 @@ class TestToneTsqlCommands:
 
     def test_parse_tsql_freq_response(self) -> None:
         from icom_lan.commands import (
+            CONTROLLER_ADDR,
+            IC_7610_ADDR,
+            RECEIVER_SUB,
             build_cmd29_frame,
             parse_civ_frame,
             parse_tsql_freq_response,
-            IC_7610_ADDR,
-            CONTROLLER_ADDR,
-            RECEIVER_SUB,
         )
 
         civ = build_cmd29_frame(
@@ -1441,9 +1454,7 @@ class TestToneTsqlCommands:
         assert freq == pytest.approx(110.9)
 
     def test_build_memory_mode_get(self) -> None:
-        from icom_lan.commands import (
-            build_memory_mode_get,
-        )
+        from icom_lan.commands import build_memory_mode_get
 
         civ = build_memory_mode_get()
         # FE FE 98 E0 08 FD
@@ -1591,7 +1602,7 @@ class TestToneTsqlCommands:
         assert civ[14] == 0x01  # filter
 
     def test_parse_band_stack_response(self) -> None:
-        from icom_lan.commands import parse_civ_frame, parse_band_stack_response
+        from icom_lan.commands import parse_band_stack_response, parse_civ_frame
 
         # Response: band=15, reg=1, freq=14.200 MHz, mode=1, filter=1
         payload = bytes([15, 1]) + b"\x00\x00\x20\x14\x00" + bytes([0x01, 0x01])
@@ -1657,9 +1668,9 @@ class TestSystemConfigCommands:
 
     def test_ref_adjust_roundtrip(self) -> None:
         from icom_lan.commands import (
-            set_ref_adjust,
             parse_civ_frame,
             parse_level_response,
+            set_ref_adjust,
         )
 
         for v in [0, 128, 256, 511]:
@@ -1721,9 +1732,9 @@ class TestSystemConfigCommands:
 
     def test_dash_ratio_roundtrip(self) -> None:
         from icom_lan.commands import (
-            set_dash_ratio,
             parse_civ_frame,
             parse_level_response,
+            set_dash_ratio,
         )
 
         for v in [28, 30, 35, 40, 45]:
@@ -1796,7 +1807,7 @@ class TestSystemConfigCommands:
         assert frame == b"\xfe\xfe\x98\xe0\x12\x13\x00\xfd"
 
     def test_parse_antenna_bool_response(self) -> None:
-        from icom_lan.commands import parse_civ_frame, parse_bool_response
+        from icom_lan.commands import parse_bool_response, parse_civ_frame
 
         # Radio responds: FE FE E0 98 12 00 01 FD (ANT1 = ON)
         civ = b"\xfe\xfe\xe0\x98\x12\x00\x01\xfd"
@@ -1805,7 +1816,7 @@ class TestSystemConfigCommands:
         assert result is True
 
     def test_parse_antenna_bool_response_off(self) -> None:
-        from icom_lan.commands import parse_civ_frame, parse_bool_response
+        from icom_lan.commands import parse_bool_response, parse_civ_frame
 
         civ = b"\xfe\xfe\xe0\x98\x12\x01\x00\xfd"
         frame = parse_civ_frame(civ)
@@ -1987,7 +1998,7 @@ class TestSystemConfigCommands:
         assert frame == b"\xfe\xfe\x98\xe0\x1a\x05\x01\x30\x01\xfd"
 
     def test_parse_civ_bool_response(self) -> None:
-        from icom_lan.commands import parse_civ_frame, parse_bool_response
+        from icom_lan.commands import parse_bool_response, parse_civ_frame
 
         # CI-V transceive = ON
         civ = b"\xfe\xfe\xe0\x98\x1a\x05\x01\x29\x01\xfd"
@@ -1996,7 +2007,7 @@ class TestSystemConfigCommands:
         assert result is True
 
     def test_parse_civ_output_ant_off_response(self) -> None:
-        from icom_lan.commands import parse_civ_frame, parse_bool_response
+        from icom_lan.commands import parse_bool_response, parse_civ_frame
 
         civ = b"\xfe\xfe\xe0\x98\x1a\x05\x01\x30\x00\xfd"
         frame = parse_civ_frame(civ)
@@ -2085,9 +2096,9 @@ class TestSystemConfigCommands:
 
     def test_system_date_roundtrip(self) -> None:
         from icom_lan.commands import (
-            set_system_date,
             parse_civ_frame,
             parse_system_date_response,
+            set_system_date,
         )
 
         frame = set_system_date(2025, 6, 15)
@@ -2148,9 +2159,9 @@ class TestSystemConfigCommands:
 
     def test_system_time_roundtrip(self) -> None:
         from icom_lan.commands import (
-            set_system_time,
             parse_civ_frame,
             parse_system_time_response,
+            set_system_time,
         )
 
         frame = set_system_time(9, 5)
@@ -2231,9 +2242,9 @@ class TestSystemConfigCommands:
 
     def test_utc_offset_roundtrip(self) -> None:
         from icom_lan.commands import (
-            set_utc_offset,
             parse_civ_frame,
             parse_utc_offset_response,
+            set_utc_offset,
         )
 
         frame = set_utc_offset(9, 45, True)

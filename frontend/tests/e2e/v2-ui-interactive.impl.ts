@@ -632,26 +632,12 @@ async function buildAuditCases(capabilities: Capabilities): Promise<AuditCase[]>
       expected: 'set_filter_width { width: 1500, receiver: 0 }',
       locate: (page) => page.getByRole('slider', { name: 'Width' }),
       act: async (_page, locator) => setRangeValue(locator, 1500),
-      verify: (_ctx, commands, caseErrors) => {
-        const commandOutcome = verifySingleCommand(
-          commands,
-          {
-            name: 'set_filter_width',
-            approx: { width: { expected: 1500 } },
-            params: { receiver: 0 },
-          },
-          'KNOWN FAIL',
-          'Known backend blocker: issue #304 tracks missing set_filter_width handling.',
-        );
-
-        return {
-          status: 'KNOWN FAIL',
-          actual: commandOutcome.actual,
-          details: caseErrors.length > 0
-            ? `Known backend failure (#304). Console errors: ${caseErrors.map((item) => item.text).join(' | ')}`
-            : 'Known backend failure (#304). Command emission observed without successful end-to-end confirmation.',
-        };
-      },
+      verify: (_ctx, commands) =>
+        verifySingleCommand(commands, {
+          name: 'set_filter_width',
+          approx: { width: { expected: 1500 } },
+          params: { receiver: 0 },
+        }),
       cleanup: async (ctx) => {
         if (typeof ctx.originalState.main.filterWidth === 'number') {
           await sendRestoreCommands(ctx.page, ctx.request, [
