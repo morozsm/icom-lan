@@ -29,9 +29,8 @@
     { name: '6m',   minHz: 50_000_000, maxHz: 54_000_000, color: '#ff8c00' },
   ];
 
-  // DX cluster spots use kHz conventionally
   function spotFreqHz(spot: DxSpot): number {
-    return spot.freq * 1_000;
+    return spot.freq;
   }
 
   function getBand(freqHz: number): BandDef | undefined {
@@ -52,13 +51,11 @@
   });
 
   function formatSpotFreq(spot: DxSpot): string {
-    // spot.freq is in kHz, show as MHz
-    return (spot.freq / 1_000).toFixed(3);
+    return (spot.freq / 1_000_000).toFixed(3);
   }
 
   function addSpot(spot: DxSpot) {
-    // Remove duplicate (same DX callsign + frequency), then prepend
-    spots = [spot, ...spots.filter((s) => !(s.dx === spot.dx && s.freq === spot.freq))].slice(
+    spots = [spot, ...spots.filter((s) => !(s.call === spot.call && s.freq === spot.freq))].slice(
       0,
       MAX_SPOTS,
     );
@@ -94,7 +91,7 @@
     <div class="dx-empty">No DX cluster data</div>
   {:else}
     <div class="dx-list" role="list">
-      {#each filteredSpots() as spot (spot.dx + spot.freq + spot.time)}
+      {#each filteredSpots as spot (spot.call + spot.freq + spot.timestamp)}
         {@const band = getBand(spotFreqHz(spot))}
         <button
           class="dx-spot"
@@ -103,11 +100,11 @@
           in:fade={{ duration: 200 }}
         >
           <span class="spot-call" style="color: {band?.color ?? 'var(--text)'}">
-            {spot.dx}
+            {spot.call}
           </span>
           <span class="spot-freq">{formatSpotFreq(spot)}</span>
           <span class="spot-band">{band?.name ?? '—'}</span>
-          <span class="spot-time">{spot.time}</span>
+          <span class="spot-time">{spot.time_utc}</span>
           <span class="spot-spotter">{spot.spotter}</span>
         </button>
       {/each}

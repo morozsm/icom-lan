@@ -34,14 +34,14 @@
 </script>
 
 <div class="dx-overlay" aria-hidden="true">
-  {#each positioned as { spot, pct } (`${spot.dx}@${spot.freq}@${spot.spotter}`)}
+  {#each positioned as { spot, pct } (`${spot.call}@${spot.freq}@${spot.spotter}`)}
     <button
       class="dx-badge"
       style="left: {pct}%"
       onclick={(e) => handleClick(spot, e)}
-      title="{spot.dx} — {spot.spotter}: {spot.comment}"
+      title="{spot.call} — {spot.spotter}: {spot.comment}"
     >
-      {spot.dx}
+      {spot.call}
     </button>
   {/each}
 </div>

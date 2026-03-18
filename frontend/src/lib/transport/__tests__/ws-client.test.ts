@@ -4,6 +4,9 @@ import type { WsCommand, WsMessage } from '../../types/protocol';
 // ─── Mock store before importing ws-client ──────────────────────────────────
 vi.mock('../../stores/connection.svelte', () => ({
   setWsConnected: vi.fn(),
+  setHttpConnected: vi.fn(),
+  markStateUpdated: vi.fn(),
+  setReconnecting: vi.fn(),
 }));
 
 import { setWsConnected } from '../../stores/connection.svelte';
@@ -169,8 +172,8 @@ describe('WsChannel', () => {
     expect(ch.state).toBe('disconnected');
     expect(instances).toHaveLength(1);
 
-    // 1st backoff = 1s
-    vi.advanceTimersByTime(1000);
+    // 1st backoff = 1s ± 20% jitter
+    vi.advanceTimersByTime(1300);
     expect(instances).toHaveLength(2);
     expect(ch.state).toBe('reconnecting');
 
@@ -191,7 +194,7 @@ describe('WsChannel', () => {
     expect(ch.state).toBe('disconnected');
   });
 
-  it('reconnects after heartbeat timeout (10s without data)', async () => {
+  it('keeps the connection alive by sending periodic ping frames', async () => {
     const { WsChannel } = await import('../ws-client');
     const ch = new WsChannel();
 
@@ -199,13 +202,16 @@ describe('WsChannel', () => {
     instances[0].simulateOpen();
     expect(ch.state).toBe('connected');
 
-    // advance past heartbeat timeout without any message
-    vi.advanceTimersByTime(10001);
+    // advance past two keepalive intervals without incoming messages
+    vi.advanceTimersByTime(30001);
 
-    // heartbeat timer should have fired and closed the socket
-    // reconnect timer fires at 1s ± 20% jitter (attempt 0) — advance 1.3s to cover max
-    vi.advanceTimersByTime(1300);
-    expect(instances.length).toBeGreaterThan(1);
+    const pingFrames = instances[0].sent
+      .map((data) => JSON.parse(data))
+      .filter((msg) => msg.type === 'ping');
+
+    expect(pingFrames.length).toBeGreaterThanOrEqual(2);
+    expect(ch.state).toBe('connected');
+    expect(instances).toHaveLength(1);
   });
 
   it('resets heartbeat timer on each incoming message', async () => {

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mount, unmount, flushSync } from 'svelte';
+import type { ComponentProps } from 'svelte';
 import Slider from '../Slider.svelte';
 
 const target = document.createElement('div');
@@ -7,7 +8,7 @@ document.body.appendChild(target);
 
 let components: ReturnType<typeof mount>[] = [];
 
-function mountSlider(props: Record<string, unknown>) {
+function mountSlider(props: ComponentProps<typeof Slider>) {
   const t = document.createElement('div');
   document.body.appendChild(t);
   const component = mount(Slider, { target: t, props });

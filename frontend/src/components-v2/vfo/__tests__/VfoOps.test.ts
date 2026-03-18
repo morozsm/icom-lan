@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mount, unmount, flushSync } from 'svelte';
+import type { ComponentProps } from 'svelte';
 import VfoOps from '../VfoOps.svelte';
 import { vfoSwapLabel, vfoCopyLabel, vfoEqualLabel, vfoTxLabel } from '../vfo-ops-utils';
 
@@ -73,7 +74,7 @@ import { hasDualReceiver, getVfoScheme } from '$lib/stores/capabilities.svelte';
 
 let components: ReturnType<typeof mount>[] = [];
 
-function mountComponent(props: Record<string, unknown>) {
+function mountComponent(props: ComponentProps<typeof VfoOps>) {
   const t = document.createElement('div');
   document.body.appendChild(t);
   const component = mount(VfoOps, { target: t, props });
@@ -82,7 +83,7 @@ function mountComponent(props: Record<string, unknown>) {
   return t;
 }
 
-const baseProps = {
+const baseProps: ComponentProps<typeof VfoOps> = {
   splitActive: false,
   txVfo: 'main',
   onSwap: vi.fn(),

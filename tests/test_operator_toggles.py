@@ -4,19 +4,14 @@ import pytest
 
 from icom_lan import commands
 from icom_lan.commands import (
-    IC_7610_ADDR,
     CONTROLLER_ADDR,
+    IC_7610_ADDR,
     RECEIVER_MAIN,
     RECEIVER_SUB,
     parse_bool_response,
     parse_level_response,
 )
-from icom_lan.types import (
-    AgcMode,
-    AudioPeakFilter,
-    BreakInMode,
-    CivFrame,
-)
+from icom_lan.types import AgcMode, AudioPeakFilter, BreakInMode, CivFrame
 
 # CI-V frame constants
 _PREAMBLE = b"\xfe\xfe"
@@ -105,6 +100,11 @@ class TestAGCStatus:
     def test_get_agc_builds_correct_frame(self) -> None:
         assert commands.get_agc() == _simple_get(_SUB_AGC)
 
+    def test_get_agc_sub_receiver_builds_cmd29_frame(self) -> None:
+        assert commands.get_agc(receiver=RECEIVER_SUB) == _cmd29_get(
+            _SUB_AGC, RECEIVER_SUB
+        )
+
     def test_set_agc_fast_builds_correct_frame(self) -> None:
         assert commands.set_agc(AgcMode.FAST) == _simple_set(_SUB_AGC, 0x01)
 
@@ -113,6 +113,11 @@ class TestAGCStatus:
 
     def test_set_agc_slow_builds_correct_frame(self) -> None:
         assert commands.set_agc(AgcMode.SLOW) == _simple_set(_SUB_AGC, 0x03)
+
+    def test_set_agc_sub_receiver_builds_cmd29_frame(self) -> None:
+        assert commands.set_agc(AgcMode.MID, receiver=RECEIVER_SUB) == _cmd29_set(
+            _SUB_AGC, 0x02, RECEIVER_SUB
+        )
 
     def test_set_agc_accepts_int(self) -> None:
         assert commands.set_agc(1) == commands.set_agc(AgcMode.FAST)

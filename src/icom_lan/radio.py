@@ -20,63 +20,117 @@ from typing import TYPE_CHECKING, AsyncGenerator, cast
 
 if TYPE_CHECKING:
     from typing import Any, Awaitable, Callable
+
     from ._runtime_protocols import ControlPhaseHost
 
+from ._audio_recovery import AudioRecoveryRuntime, AudioRecoveryState
+from ._audio_transcoder import PcmOpusTranscoder, create_pcm_opus_transcoder
+from ._civ_rx import CivRuntime
+
+# Import split modules
+from ._connection_state import RadioConnectionState
+from ._control_phase import (
+    CONNINFO_SIZE,  # noqa: F401 (re-export for tests)
+    OPENCLOSE_SIZE,  # noqa: F401 (re-export for tests)
+    STATUS_SIZE,  # noqa: F401 (re-export for tests)
+    TOKEN_ACK_SIZE,  # noqa: F401 (re-export for tests)
+    ControlPhaseRuntime,
+)
+from .audio import AudioPacket, AudioStats, AudioStream
+from .civ import CivEvent, CivRequestTracker
+from .commander import IcomCommander, Priority
 from .commands import (
+    _SUB_REPEATER_TONE,
+    _SUB_REPEATER_TSQL,
     CONTROLLER_ADDR,
     RECEIVER_MAIN,
     _level_bcd_decode,
     build_civ_frame,
-    get_alc,
+    build_memory_clear,
+    build_memory_contents_set,
+    build_memory_mode_set,
+    build_memory_to_vfo,
+    build_memory_write,
+    get_acc1_mod_level,
+    get_af_level,
     get_af_mute,
-    get_attenuator as get_attenuator_cmd,
+    get_agc,
+    get_agc_time_constant,
+    get_alc,
+    get_antenna_1,
+    get_antenna_2,
+    get_anti_vox_gain,
     get_apf_type_level,
+    get_audio_peak_filter,
+    get_auto_notch,
     get_band_edge_freq,
-    get_data_mode as get_data_mode_cmd,
+    get_break_in,
+    get_break_in_delay,
+    get_civ_output_ant,
+    get_civ_transceive,
+    get_comp_meter,
+    get_compressor,
+    get_compressor_level,
+    get_cw_pitch,
     get_dash_ratio,
+    get_data1_mod_input,
+    get_data2_mod_input,
+    get_data3_mod_input,
+    get_data_off_mod_input,
+    get_dial_lock,
+    get_digisel,
     get_digisel_shift,
     get_drive_gain,
+    get_dual_watch,
+    get_filter_shape,
     get_freq,
-    get_break_in_delay,
-    get_break_in,
-    get_compressor_level,
-    get_compressor,
-    get_cw_pitch,
-    get_dial_lock,
+    get_id_meter,
+    get_ip_plus,
     get_key_speed,
+    get_lan_mod_level,
+    get_manual_notch,
     get_mic_gain,
     get_mode,
-    get_monitor_gain,
     get_monitor,
+    get_monitor_gain,
+    get_nb,
     get_nb_depth,
     get_nb_level,
     get_nb_width,
     get_notch_filter,
+    get_nr,
     get_nr_level,
+    get_overflow_status,
     get_pbt_inner,
     get_pbt_outer,
-    get_rf_power,
-    get_s_meter_sql_status,
-    get_overflow_status,
-    get_agc,
-    get_audio_peak_filter,
-    get_auto_notch,
-    get_filter_shape,
-    get_digisel,
-    get_manual_notch,
-    get_preamp as get_preamp_cmd,
+    get_power_meter,
     get_ref_adjust,
+    get_rf_gain,
+    get_rf_power,
+    get_rit_frequency,
+    get_rit_status,
+    get_rit_tx_status,
+    get_rx_antenna_ant1,
+    get_rx_antenna_ant2,
     get_s_meter,
-    get_swr,
+    get_s_meter_sql_status,
+    get_speech,
     get_ssb_tx_bandwidth,
-    get_main_sub_tracking as _get_main_sub_tracking_cmd,
-    set_main_sub_tracking as _set_main_sub_tracking_cmd,
+    get_swr,
+    get_system_date,
+    get_system_time,
+    get_transceiver_id,
+    get_tuner_status,
+    get_tuning_step,
     get_twin_peak_filter,
-    get_agc_time_constant,
+    get_tx_freq_monitor,
+    get_usb_mod_level,
+    get_utc_offset,
     get_various_squelch,
+    get_vd_meter,
     get_vox,
     get_vox_gain,
-    get_anti_vox_gain,
+    get_xfc_status,
     parse_ack_nak,
     parse_bool_response,
     parse_civ_frame,
@@ -85,6 +139,7 @@ from .commands import (
     parse_level_response,
     parse_meter_response,
     parse_mode_response,
+    parse_rit_frequency_response,
     parse_scope_center_type_response,
     parse_scope_during_tx_response,
     parse_scope_edge_response,
@@ -98,62 +153,59 @@ from .commands import (
     parse_scope_span_response,
     parse_scope_speed_response,
     parse_scope_vbw_response,
+    parse_system_date_response,
+    parse_system_time_response,
+    parse_tone_freq_response,
+    parse_tsql_freq_response,
+    parse_utc_offset_response,
     power_off,
     power_on,
     ptt_off,
     ptt_on,
-    scope_data_output as _scope_data_output_cmd,
-    get_scope_center_type as _get_scope_center_type_cmd,
-    get_scope_during_tx as _get_scope_during_tx_cmd,
-    get_scope_edge as _get_scope_edge_cmd,
-    get_scope_fixed_edge as _get_scope_fixed_edge_cmd,
-    get_scope_hold as _get_scope_hold_cmd,
-    get_scope_main_sub as _get_scope_main_sub_cmd,
-    get_scope_mode as _get_scope_mode_cmd,
-    get_scope_rbw as _get_scope_rbw_cmd,
-    get_scope_ref as _get_scope_ref_cmd,
-    get_scope_single_dual as _get_scope_single_dual_cmd,
-    get_scope_span as _get_scope_span_cmd,
-    get_scope_speed as _get_scope_speed_cmd,
-    get_scope_vbw as _get_scope_vbw_cmd,
-    scope_on as _scope_on_cmd,
-    scope_set_center_type as _scope_set_center_type_cmd,
-    scope_set_during_tx as _scope_set_during_tx_cmd,
-    scope_set_edge as _scope_set_edge_cmd,
-    scope_set_fixed_edge as _scope_set_fixed_edge_cmd,
-    scope_set_hold as _scope_set_hold_cmd,
-    scope_set_mode as _scope_set_mode_cmd,
-    scope_set_rbw as _scope_set_rbw_cmd,
-    scope_set_ref as _scope_set_ref_cmd,
-    scope_set_span as _scope_set_span_cmd,
-    scope_set_speed as _scope_set_speed_cmd,
-    scope_set_vbw as _scope_set_vbw_cmd,
-    scope_main_sub as _scope_main_sub_cmd,
-    scope_single_dual as _scope_single_dual_cmd,
-    set_vfo as _select_vfo_cmd,
+    quick_dual_watch,
+    quick_split,
+    scan_start,
+    scan_stop,
     send_cw,
+    set_acc1_mod_level,
+    set_af_level,
     set_af_mute,
+    set_agc,
+    set_agc_time_constant,
+    set_antenna_1,
+    set_antenna_2,
+    set_anti_vox_gain,
     set_apf_type_level,
     set_attenuator,
     set_attenuator_level,
-    set_break_in_delay,
+    set_audio_peak_filter,
+    set_auto_notch,
     set_break_in,
-    set_compressor_level,
+    set_break_in_delay,
+    set_bsr,
+    set_civ_output_ant,
+    set_civ_transceive,
     set_compressor,
+    set_compressor_level,
     set_cw_pitch,
-    set_data_mode as set_data_mode_cmd,
     set_dash_ratio,
+    set_data1_mod_input,
+    set_data2_mod_input,
+    set_data3_mod_input,
+    set_data_off_mod_input,
     set_dial_lock,
     set_digisel,
     set_digisel_shift,
     set_drive_gain,
-    set_agc,
-    set_audio_peak_filter,
-    set_auto_notch,
+    set_dual_watch,
     set_filter_shape,
+    set_freq,
+    set_ip_plus,
     set_key_speed,
+    set_lan_mod_level,
     set_manual_notch,
     set_mic_gain,
+    set_mode,
     set_monitor,
     set_monitor_gain,
     set_nb,
@@ -165,159 +217,98 @@ from .commands import (
     set_nr_level,
     set_pbt_inner,
     set_pbt_outer,
-    set_ref_adjust,
-    set_ssb_tx_bandwidth,
-    set_twin_peak_filter,
-    set_agc_time_constant,
-    set_vox,
-    get_nb,
-    get_nr,
-    get_ip_plus,
-    set_ip_plus,
-    set_freq,
-    set_mode,
-    set_vox_gain,
-    set_anti_vox_gain,
-    set_rf_power,
-    get_rf_gain,
-    set_rf_gain,
-    get_af_level,
-    set_af_level,
     set_preamp,
+    set_ref_adjust,
+    set_rf_gain,
+    set_rf_power,
+    set_rit_frequency,
+    set_rit_status,
+    set_rit_tx_status,
+    set_rx_antenna_ant1,
+    set_rx_antenna_ant2,
     set_split,
+    set_ssb_tx_bandwidth,
+    set_system_date,
+    set_system_time,
+    set_tuner_status,
+    set_tuning_step,
+    set_twin_peak_filter,
+    set_tx_freq_monitor,
+    set_usb_mod_level,
+    set_utc_offset,
+    set_vox,
+    set_vox_gain,
+    set_xfc_status,
     stop_cw,
     vfo_a_equals_b,
     vfo_swap,
-    # Transceiver status family (#136)
-    get_power_meter,
-    get_comp_meter,
-    get_vd_meter,
-    get_id_meter,
-    get_tuner_status,
-    set_tuner_status,
-    get_xfc_status,
-    set_xfc_status,
-    get_tx_freq_monitor,
-    set_tx_freq_monitor,
-    get_speech,
-    get_transceiver_id,
-    get_rit_frequency,
-    set_rit_frequency,
-    get_rit_status,
-    set_rit_status,
-    get_rit_tx_status,
-    set_rit_tx_status,
-    parse_rit_frequency_response,
-    # VFO / Dual Watch / Scanning (#132)
-    get_tuning_step,
-    set_tuning_step,
-    scan_start,
-    scan_stop,
-    get_dual_watch,
-    set_dual_watch,
-    quick_dual_watch,
-    quick_split,
-    # Tone/TSQL (#134)
-    get_repeater_tone as _get_repeater_tone_cmd,
-    set_repeater_tone as _set_repeater_tone_cmd,
-    get_repeater_tsql as _get_repeater_tsql_cmd,
-    set_repeater_tsql as _set_repeater_tsql_cmd,
-    get_tone_freq as _get_tone_freq_cmd,
-    set_tone_freq as _set_tone_freq_cmd,
-    get_tsql_freq as _get_tsql_freq_cmd,
-    set_tsql_freq as _set_tsql_freq_cmd,
-    parse_tone_freq_response,
-    parse_tsql_freq_response,
-    _SUB_REPEATER_TONE,
-    _SUB_REPEATER_TSQL,
-    # System/Config commands (#135)
-    get_antenna_1,
-    set_antenna_1,
-    get_antenna_2,
-    set_antenna_2,
-    get_rx_antenna_ant1,
-    set_rx_antenna_ant1,
-    get_rx_antenna_ant2,
-    set_rx_antenna_ant2,
-    get_acc1_mod_level,
-    set_acc1_mod_level,
-    get_usb_mod_level,
-    set_usb_mod_level,
-    get_lan_mod_level,
-    set_lan_mod_level,
-    get_data_off_mod_input,
-    set_data_off_mod_input,
-    get_data1_mod_input,
-    set_data1_mod_input,
-    get_data2_mod_input,
-    set_data2_mod_input,
-    get_data3_mod_input,
-    set_data3_mod_input,
-    get_civ_transceive,
-    set_civ_transceive,
-    get_civ_output_ant,
-    set_civ_output_ant,
-    get_system_date,
-    set_system_date,
-    parse_system_date_response,
-    get_system_time,
-    set_system_time,
-    parse_system_time_response,
-    get_utc_offset,
-    set_utc_offset,
-    parse_utc_offset_response,
-    # Memory and band-stacking (#133)
-    build_memory_mode_set,
-    build_memory_write,
-    build_memory_to_vfo,
-    build_memory_clear,
-    build_memory_contents_set,
-    set_bsr,
 )
-from .exceptions import (
-    CommandError,
-    ConnectionError,
-    TimeoutError,
+from .commands import (
+    get_attenuator as get_attenuator_cmd,  # Transceiver status family (#136); VFO / Dual Watch / Scanning (#132); Tone/TSQL (#134); System/Config commands (#135); Memory and band-stacking (#133)
 )
+from .commands import get_data_mode as get_data_mode_cmd
+from .commands import get_main_sub_tracking as _get_main_sub_tracking_cmd
+from .commands import get_preamp as get_preamp_cmd
+from .commands import get_repeater_tone as _get_repeater_tone_cmd
+from .commands import get_repeater_tsql as _get_repeater_tsql_cmd
+from .commands import get_scope_center_type as _get_scope_center_type_cmd
+from .commands import get_scope_during_tx as _get_scope_during_tx_cmd
+from .commands import get_scope_edge as _get_scope_edge_cmd
+from .commands import get_scope_fixed_edge as _get_scope_fixed_edge_cmd
+from .commands import get_scope_hold as _get_scope_hold_cmd
+from .commands import get_scope_main_sub as _get_scope_main_sub_cmd
+from .commands import get_scope_mode as _get_scope_mode_cmd
+from .commands import get_scope_rbw as _get_scope_rbw_cmd
+from .commands import get_scope_ref as _get_scope_ref_cmd
+from .commands import get_scope_single_dual as _get_scope_single_dual_cmd
+from .commands import get_scope_span as _get_scope_span_cmd
+from .commands import get_scope_speed as _get_scope_speed_cmd
+from .commands import get_scope_vbw as _get_scope_vbw_cmd
+from .commands import get_tone_freq as _get_tone_freq_cmd
+from .commands import get_tsql_freq as _get_tsql_freq_cmd
+from .commands import scope_data_output as _scope_data_output_cmd
+from .commands import scope_main_sub as _scope_main_sub_cmd
+from .commands import scope_on as _scope_on_cmd
+from .commands import scope_set_center_type as _scope_set_center_type_cmd
+from .commands import scope_set_during_tx as _scope_set_during_tx_cmd
+from .commands import scope_set_edge as _scope_set_edge_cmd
+from .commands import scope_set_fixed_edge as _scope_set_fixed_edge_cmd
+from .commands import scope_set_hold as _scope_set_hold_cmd
+from .commands import scope_set_mode as _scope_set_mode_cmd
+from .commands import scope_set_rbw as _scope_set_rbw_cmd
+from .commands import scope_set_ref as _scope_set_ref_cmd
+from .commands import scope_set_span as _scope_set_span_cmd
+from .commands import scope_set_speed as _scope_set_speed_cmd
+from .commands import scope_set_vbw as _scope_set_vbw_cmd
+from .commands import scope_single_dual as _scope_single_dual_cmd
+from .commands import set_data_mode as set_data_mode_cmd
+from .commands import set_main_sub_tracking as _set_main_sub_tracking_cmd
+from .commands import set_repeater_tone as _set_repeater_tone_cmd
+from .commands import set_repeater_tsql as _set_repeater_tsql_cmd
+from .commands import set_tone_freq as _set_tone_freq_cmd
+from .commands import set_tsql_freq as _set_tsql_freq_cmd
+from .commands import set_vfo as _select_vfo_cmd
+from .exceptions import CommandError, ConnectionError, TimeoutError
 from .profiles import RadioProfile, resolve_radio_profile
-from ._audio_transcoder import PcmOpusTranscoder, create_pcm_opus_transcoder
-from .audio import AudioPacket, AudioStats, AudioStream
-from .commander import IcomCommander, Priority
-from .rigctld.state_cache import StateCache
-from .civ import (
-    CivEvent,
-    CivRequestTracker,
-)
 from .radio_state import RadioState, ScopeControlsState
+from .rigctld.state_cache import StateCache
 from .scope import ScopeAssembler, ScopeFrame
 from .transport import IcomTransport
 from .types import (
     AgcMode,
     AudioCapabilities,
-    AudioPeakFilter,
     AudioCodec,
+    AudioPeakFilter,
     BandStackRegister,
     BreakInMode,
     CivFrame,
     FilterShape,
     MemoryChannel,
     Mode,
-    ScopeFixedEdge,
     ScopeCompletionPolicy,
+    ScopeFixedEdge,
     SsbTxBandwidth,
     get_audio_capabilities,
-)
-
-# Import split modules
-from ._connection_state import RadioConnectionState
-from ._audio_recovery import AudioRecoveryRuntime, AudioRecoveryState
-from ._civ_rx import CivRuntime
-from ._control_phase import (
-    CONNINFO_SIZE,  # noqa: F401 (re-export for tests)
-    ControlPhaseRuntime,
-    OPENCLOSE_SIZE,  # noqa: F401 (re-export for tests)
-    STATUS_SIZE,  # noqa: F401 (re-export for tests)
-    TOKEN_ACK_SIZE,  # noqa: F401 (re-export for tests)
 )
 
 __all__ = [
@@ -475,7 +466,9 @@ class Icom7610CoreRadio:
             float(os.environ.get("ICOM_CIV_RETRY_SLICE_MS", "150")) / 1000.0
         )
         self._state_cache: StateCache = StateCache()
-        self._on_state_change: Callable[[str, dict[str, Any]], None] | None = None  # set by server
+        self._on_state_change: Callable[[str, dict[str, Any]], None] | None = (
+            None  # set by server
+        )
         self._radio_state: RadioState = RadioState()  # may be replaced by WebServer
         _ttl = {**_DEFAULT_CACHE_TTL, **(cache_ttl_s or {})}
         self._cache_ttl_freq: float = _ttl["freq"]
@@ -492,7 +485,9 @@ class Icom7610CoreRadio:
         self._civ_get_timeout: float = min(timeout, 2.0)
         # Composed runtimes (P0 decomposition); order: civ first so control_phase can call it.
         self._civ_runtime: CivRuntime = CivRuntime(self)
-        self._control_phase: ControlPhaseRuntime = ControlPhaseRuntime(cast("ControlPhaseHost", self))
+        self._control_phase: ControlPhaseRuntime = ControlPhaseRuntime(
+            cast("ControlPhaseHost", self)
+        )
         self._audio_runtime: AudioRecoveryRuntime = AudioRecoveryRuntime(self)
 
     # Host shims for ControlPhaseRuntime and Icom7610SerialRadio (delegate to civ_runtime)
@@ -1620,13 +1615,15 @@ class Icom7610CoreRadio:
         if receiver == RECEIVER_MAIN:
             return await self._get_frequency_main(bypass_cache=bypass_cache)
 
-        return int(await self._run_with_receiver_vfo_fallback(
-            receiver=receiver,
-            operation="get_freq",
-            action=lambda: self._get_frequency_main(
-                bypass_cache=bypass_cache, update_cache=False
-            ),
-        ))
+        return int(
+            await self._run_with_receiver_vfo_fallback(
+                receiver=receiver,
+                operation="get_freq",
+                action=lambda: self._get_frequency_main(
+                    bypass_cache=bypass_cache, update_cache=False
+                ),
+            )
+        )
 
     async def set_freq(self, freq_hz: int, receiver: int = 0) -> None:
         """Set the operating frequency.
@@ -2309,21 +2306,34 @@ class Icom7610CoreRadio:
             sub=0x07,
         )
 
-    async def get_agc(self) -> AgcMode:
+    async def get_agc(self, receiver: int = RECEIVER_MAIN) -> AgcMode:
         """Read AGC mode."""
+        self._require_receiver(receiver, operation="get_agc")
+        command29 = receiver != RECEIVER_MAIN
+        if command29:
+            self._require_cmd29_route(
+                0x16, 0x12, receiver=receiver, operation="get_agc"
+            )
         value = await self._get_bcd_level(
-            get_agc(to_addr=self._radio_addr),
-            key="get_agc",
+            get_agc(to_addr=self._radio_addr, receiver=receiver),
+            key=f"get_agc:{receiver}",
             command=0x16,
             sub=0x12,
             bcd_bytes=1,
         )
         return AgcMode(value)
 
-    async def set_agc(self, mode: AgcMode | int) -> None:
+    async def set_agc(self, mode: AgcMode | int, receiver: int = RECEIVER_MAIN) -> None:
         """Set AGC mode."""
+        self._require_receiver(receiver, operation="set_agc")
+        if receiver != RECEIVER_MAIN:
+            self._require_cmd29_route(
+                0x16, 0x12, receiver=receiver, operation="set_agc"
+            )
         agc = AgcMode(mode)
-        await self._send_fire_and_forget(set_agc(agc, to_addr=self._radio_addr))
+        await self._send_fire_and_forget(
+            set_agc(agc, to_addr=self._radio_addr, receiver=receiver)
+        )
 
     async def get_audio_peak_filter(
         self, receiver: int = RECEIVER_MAIN
@@ -4187,9 +4197,7 @@ class Icom7610CoreRadio:
             raise ValueError(f"Band must be 0-24, got {bsr.band}")
         if not 1 <= bsr.register <= 3:
             raise ValueError(f"Register must be 1-3, got {bsr.register}")
-        await self._send_fire_and_forget(
-            set_bsr(bsr, to_addr=self._radio_addr)
-        )
+        await self._send_fire_and_forget(set_bsr(bsr, to_addr=self._radio_addr))
 
     # ------------------------------------------------------------------
     # Backward-compat aliases — old names kept for existing callers
@@ -4233,15 +4241,15 @@ def _check_protocol_compliance() -> None:
     """
     from .radio_protocol import AudioCapable, DualReceiverCapable, Radio, ScopeCapable
 
-    assert isinstance(IcomRadio(host=""), Radio), (
-        "IcomRadio does not satisfy Radio protocol"
-    )
-    assert isinstance(IcomRadio(host=""), AudioCapable), (
-        "IcomRadio does not satisfy AudioCapable protocol"
-    )
-    assert isinstance(IcomRadio(host=""), ScopeCapable), (
-        "IcomRadio does not satisfy ScopeCapable protocol"
-    )
-    assert isinstance(IcomRadio(host=""), DualReceiverCapable), (
-        "IcomRadio does not satisfy DualReceiverCapable protocol"
-    )
+    assert isinstance(
+        IcomRadio(host=""), Radio
+    ), "IcomRadio does not satisfy Radio protocol"
+    assert isinstance(
+        IcomRadio(host=""), AudioCapable
+    ), "IcomRadio does not satisfy AudioCapable protocol"
+    assert isinstance(
+        IcomRadio(host=""), ScopeCapable
+    ), "IcomRadio does not satisfy ScopeCapable protocol"
+    assert isinstance(
+        IcomRadio(host=""), DualReceiverCapable
+    ), "IcomRadio does not satisfy DualReceiverCapable protocol"

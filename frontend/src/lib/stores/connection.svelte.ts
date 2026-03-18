@@ -11,10 +11,8 @@ let reconnecting = $state(false);
 
 if (typeof window !== 'undefined') {
   setInterval(() => {
-    const offline = (window as any).__RADIO_OFFLINE__ === true;
     const age = lastStateUpdate > 0 ? Date.now() - lastStateUpdate : 0;
-    staleState = offline || (lastStateUpdate > 0 && age > STALE_THRESHOLD_MS);
-    reconnecting = (window as any).__POLL_RECONNECTING__ === true;
+    staleState = lastStateUpdate > 0 && age > STALE_THRESHOLD_MS;
   }, 1000);
 }
 
@@ -31,6 +29,10 @@ export function setHttpConnected(v: boolean): void {
 
 export function setWsConnected(v: boolean): void {
   wsConnected = v;
+}
+
+export function setReconnecting(v: boolean): void {
+  reconnecting = v;
 }
 
 export function setLastResponseTime(ms: number): void {

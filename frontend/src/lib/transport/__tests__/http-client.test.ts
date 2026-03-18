@@ -201,6 +201,24 @@ describe('startPolling', () => {
     stop();
   });
 
+  it('clears reconnecting on successful poll', async () => {
+    const state = makeState(1);
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(state),
+    });
+
+    const { startPolling } = await import('../http-client');
+    const { isReconnecting, setReconnecting } = await import('../../stores/connection.svelte');
+
+    setReconnecting(true);
+    const stop = startPolling(() => {});
+    await flushMicrotasks();
+
+    expect(isReconnecting()).toBe(false);
+    stop();
+  });
+
   it('calls setHttpConnected(false) after 3 consecutive errors', async () => {
     globalThis.fetch = vi.fn().mockRejectedValue(new Error('network gone'));
 
@@ -217,6 +235,19 @@ describe('startPolling', () => {
     await flushMicrotasks();
 
     expect(getHttpConnected()).toBe(false);
+    stop();
+  });
+
+  it('marks reconnecting when polling errors repeat', async () => {
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('network gone'));
+
+    const { startPolling } = await import('../http-client');
+    const { isReconnecting } = await import('../../stores/connection.svelte');
+
+    const stop = startPolling(() => {}, 10);
+    await flushMicrotasks();
+
+    expect(isReconnecting()).toBe(true);
     stop();
   });
 

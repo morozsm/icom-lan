@@ -247,6 +247,7 @@ class SetDialLock:
 @dataclass(frozen=True, slots=True)
 class SetAgc:
     mode: int  # 1=FAST, 2=MID, 3=SLOW
+    receiver: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -674,6 +675,7 @@ class RadioPoller:
             if self._profile.model == "IC-7610":
                 for cmd_byte, sub_byte in (
                     (0x15, 0x01),  # S-meter squelch status
+                    (0x16, 0x12),  # AGC mode
                     (0x16, 0x32),  # Audio peak filter
                     (0x16, 0x41),  # Auto notch
                     (0x16, 0x48),  # Manual notch
@@ -699,13 +701,14 @@ class RadioPoller:
         )
         # Common feature queries (data-driven: if radio has the command, poll it)
         _COMMON_FEATURE_QUERIES = [
-            (0x16, 0x12),  # AGC mode
             (0x16, 0x44),  # Compressor status
             (0x16, 0x45),  # Monitor status
             (0x16, 0x46),  # VOX status
             (0x16, 0x47),  # Break-in mode
             (0x16, 0x50),  # Dial lock status
         ]
+        if not self._profile.supports_cmd29(0x16, 0x12):
+            _COMMON_FEATURE_QUERIES.insert(0, (0x16, 0x12))  # AGC mode
         # For serial: ALC/comp/VD/Id meters move to slow state queries
         # (they are NOT in _FAST_CMDS_SERIAL to keep S-meter responsive)
         if self._is_serial:
@@ -989,22 +992,44 @@ class RadioPoller:
                 if self._on_state_event:
                     self._on_state_event("ipplus_changed", {"on": on})
             case SetAttenuator(db=db, receiver=rx):
-                # Wire bytes from TOML: set_attenuator = [0x11]
-                bcd = ((db // 10) << 4) | (db % 10)
-                await self._send_cmd("set_attenuator", bytes([bcd]))
+                if hasattr(radio, "set_attenuator_level"):
+                    self._ensure_receiver_supported(rx, operation="set_attenuator")
+                    await radio.set_attenuator_level(db, receiver=rx)
+                else:
+                    # Wire bytes from TOML: set_attenuator = [0x11]
+                    bcd = ((db // 10) << 4) | (db % 10)
+                    await self._send_cmd("set_attenuator", bytes([bcd]))
                 if self._radio_state:
-                    self._radio_state.main.att = db
+                    target = (
+                        self._radio_state.sub if rx != 0 else self._radio_state.main
+                    )
+                    target.att = db
                     if db > 0:
-                        self._radio_state.main.preamp = 0
+                        target.preamp = 0
                     self.bump_revision()
+                if self._on_state_event:
+                    self._on_state_event(
+                        "attenuator_changed", {"db": db, "receiver": rx}
+                    )
             case SetPreamp(level=level, receiver=rx):
-                # Wire bytes from TOML: set_preamp = [0x16, 0x02]
-                await self._send_cmd("set_preamp", bytes([level]))
+                if hasattr(radio, "set_preamp"):
+                    self._ensure_receiver_supported(rx, operation="set_preamp")
+                    await radio.set_preamp(level, receiver=rx)
+                else:
+                    # Wire bytes from TOML: set_preamp = [0x16, 0x02]
+                    await self._send_cmd("set_preamp", bytes([level]))
                 if self._radio_state:
-                    self._radio_state.main.preamp = level
+                    target = (
+                        self._radio_state.sub if rx != 0 else self._radio_state.main
+                    )
+                    target.preamp = level
                     if level > 0:
-                        self._radio_state.main.att = 0
+                        target.att = 0
                     self.bump_revision()
+                if self._on_state_event:
+                    self._on_state_event(
+                        "preamp_changed", {"level": level, "receiver": rx}
+                    )
             case SetPbtInner(level=level, receiver=rx):
                 await radio.set_pbt_inner(level, receiver=rx)
                 if self._radio_state:
@@ -1109,12 +1134,21 @@ class RadioPoller:
                 if self._radio_state:
                     self._radio_state.dial_lock = on
                     self.bump_revision()
-            case SetAgc(mode=mode):
-                # Wire bytes from TOML: set_agc = [0x16, 0x12]
-                await self._send_cmd("set_agc", bytes([mode]))
+            case SetAgc(mode=mode, receiver=rx):
+                if hasattr(radio, "set_agc"):
+                    self._ensure_receiver_supported(rx, operation="set_agc")
+                    await radio.set_agc(mode, receiver=rx)
+                else:
+                    # Wire bytes from TOML: set_agc = [0x16, 0x12]
+                    await self._send_cmd("set_agc", bytes([mode]))
                 if self._radio_state:
-                    self._radio_state.main.agc = mode
+                    target = (
+                        self._radio_state.sub if rx != 0 else self._radio_state.main
+                    )
+                    target.agc = mode
                     self.bump_revision()
+                if self._on_state_event:
+                    self._on_state_event("agc_changed", {"mode": mode, "receiver": rx})
             case SetRitStatus(on=on):
                 await radio.set_rit_status(on)
                 if self._radio_state:

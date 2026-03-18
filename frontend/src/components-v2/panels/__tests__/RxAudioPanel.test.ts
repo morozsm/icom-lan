@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mount, unmount, flushSync } from 'svelte';
+import type { ComponentProps } from 'svelte';
 import { buildMonitorOptions, formatMonitorStatus } from '../audio-utils';
 import RxAudioPanel from '../RxAudioPanel.svelte';
 
@@ -90,7 +91,7 @@ describe('formatMonitorStatus', () => {
 
 let components: ReturnType<typeof mount>[] = [];
 
-function mountPanel(props: Record<string, unknown>) {
+function mountPanel(props: ComponentProps<typeof RxAudioPanel>) {
   const t = document.createElement('div');
   document.body.appendChild(t);
   const component = mount(RxAudioPanel, { target: t, props });
@@ -109,7 +110,7 @@ afterEach(() => {
   document.body.innerHTML = '';
 });
 
-const baseProps = {
+const baseProps: ComponentProps<typeof RxAudioPanel> = {
   monitorMode: 'local',
   afLevel: 128,
   hasLiveAudio: false,

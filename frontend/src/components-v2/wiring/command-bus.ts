@@ -24,6 +24,10 @@ function cmd(name: string, params: Record<string, unknown> = {}): void {
   sendCommand(name, params);
 }
 
+function activeReceiverParam(): Receiver {
+  return getRadioState()?.active === 'SUB' ? 1 : 0;
+}
+
 /* ── VFO Handlers ────────────────────────────────────────────── */
 
 export function makeVfoHandlers() {
@@ -31,7 +35,11 @@ export function makeVfoHandlers() {
     onSwap: () => cmd('vfo_swap'),
     onCopy: () => cmd('vfo_equalize'),
     onEqual: () => cmd('vfo_equalize'),
-    onSplitToggle: () => cmd('set_split', { on: true }), // toggle handled by backend
+    onSplitToggle: () => {
+      const next = !(getRadioState()?.split ?? false);
+      patchRadioState({ split: next });
+      cmd('set_split', { on: next });
+    },
     onTxVfoChange: (v: string) => {
       const state = getRadioState();
       const splitActive = state?.split ?? false;
@@ -70,15 +78,15 @@ export function makeRfFrontEndHandlers() {
   return {
     onAttChange: (db: number) => {
       patchActiveReceiver({ att: db });
-      cmd('set_attenuator', { db });
+      cmd('set_attenuator', { db, receiver: activeReceiverParam() });
     },
     onPreChange: (level: number) => {
       patchActiveReceiver({ preamp: level });
-      cmd('set_preamp', { level });
+      cmd('set_preamp', { level, receiver: activeReceiverParam() });
     },
     onRfGainChange: (level: number) => {
       patchActiveReceiver({ rfGain: level }, true);
-      cmd('set_rf_gain', { level });
+      cmd('set_rf_gain', { level, receiver: activeReceiverParam() });
     },
   };
 }
@@ -89,9 +97,10 @@ export function makeFilterHandlers() {
   return {
     onFilterWidthChange: (width: number) => {
       patchActiveReceiver({ filterWidth: width }, true);
-      cmd('set_filter_width', { width });
+      cmd('set_filter_width', { width, receiver: activeReceiverParam() });
     },
     onIfShiftChange: (value: number) => {
+      const receiver = activeReceiverParam();
       const activeRx = getActiveReceiver();
       const { pbtInner, pbtOuter } = mapIfShiftToPbt(
         value,
@@ -99,21 +108,22 @@ export function makeFilterHandlers() {
         activeRx?.pbtOuter ?? 0,
       );
       patchActiveReceiver({ pbtInner, pbtOuter }, true);
-      cmd('set_pbt_inner', { value: pbtInner });
-      cmd('set_pbt_outer', { value: pbtOuter });
+      cmd('set_pbt_inner', { value: pbtInner, receiver });
+      cmd('set_pbt_outer', { value: pbtOuter, receiver });
     },
     onPbtInnerChange: (value: number) => {
       patchActiveReceiver({ pbtInner: value }, true);
-      cmd('set_pbt_inner', { value });
+      cmd('set_pbt_inner', { value, receiver: activeReceiverParam() });
     },
     onPbtOuterChange: (value: number) => {
       patchActiveReceiver({ pbtOuter: value }, true);
-      cmd('set_pbt_outer', { value });
+      cmd('set_pbt_outer', { value, receiver: activeReceiverParam() });
     },
     onPbtReset: () => {
+      const receiver = activeReceiverParam();
       patchActiveReceiver({ pbtInner: 0, pbtOuter: 0 }, true);
-      cmd('set_pbt_inner', { value: 0 });
-      cmd('set_pbt_outer', { value: 0 });
+      cmd('set_pbt_inner', { value: 0, receiver });
+      cmd('set_pbt_outer', { value: 0, receiver });
     },
   };
 }
@@ -124,10 +134,10 @@ export function makeAgcHandlers() {
   return {
     onAgcModeChange: (mode: number) => {
       patchActiveReceiver({ agc: mode });
-      cmd('set_agc', { mode });
+      cmd('set_agc', { mode, receiver: activeReceiverParam() });
     },
     onAgcGainChange: (value: number) => {
-      cmd('set_agc_time_constant', { value });
+      cmd('set_agc_time_constant', { value, receiver: activeReceiverParam() });
     },
   };
 }
@@ -137,10 +147,14 @@ export function makeAgcHandlers() {
 export function makeRitXitHandlers() {
   return {
     onRitToggle: () => {
-      cmd('set_rit_status', { on: true }); // backend toggles
+      const next = !(getRadioState()?.ritOn ?? false);
+      patchRadioState({ ritOn: next });
+      cmd('set_rit_status', { on: next });
     },
     onXitToggle: () => {
-      cmd('set_rit_tx_status', { on: true }); // backend toggles
+      const next = !(getRadioState()?.ritTx ?? false);
+      patchRadioState({ ritTx: next });
+      cmd('set_rit_tx_status', { on: next });
     },
     onRitOffsetChange: (hz: number) => {
       patchRadioState({ ritFreq: hz });
@@ -164,36 +178,41 @@ export function makeDspHandlers() {
   return {
     onNrModeChange: (mode: number) => {
       const on = mode > 0;
+      const receiver = activeReceiverParam();
       patchActiveReceiver({ nr: on });
-      cmd('set_nr', { on });
+      cmd('set_nr', { on, receiver });
     },
     onNrLevelChange: (level: number) => {
+      const receiver = activeReceiverParam();
       patchActiveReceiver({ nrLevel: level }, true);
-      cmd('set_nr_level', { level });
+      cmd('set_nr_level', { level, receiver });
     },
     onNbToggle: (on: boolean) => {
+      const receiver = activeReceiverParam();
       patchActiveReceiver({ nb: on });
-      cmd('set_nb', { on });
+      cmd('set_nb', { on, receiver });
     },
     onNbLevelChange: (level: number) => {
+      const receiver = activeReceiverParam();
       patchActiveReceiver({ nbLevel: level }, true);
-      cmd('set_nb_level', { level });
+      cmd('set_nb_level', { level, receiver });
     },
     onNotchModeChange: (mode: string) => {
+      const receiver = activeReceiverParam();
       if (mode === 'auto') {
         patchActiveReceiver({ autoNotch: true, manualNotch: false });
-        cmd('set_auto_notch', { on: true });
+        cmd('set_auto_notch', { on: true, receiver });
       } else if (mode === 'manual') {
         patchActiveReceiver({ autoNotch: false, manualNotch: true });
-        cmd('set_manual_notch', { on: true });
+        cmd('set_manual_notch', { on: true, receiver });
       } else {
         patchActiveReceiver({ autoNotch: false, manualNotch: false });
-        cmd('set_auto_notch', { on: false });
-        cmd('set_manual_notch', { on: false });
+        cmd('set_auto_notch', { on: false, receiver });
+        cmd('set_manual_notch', { on: false, receiver });
       }
     },
     onNotchFreqChange: (value: number) => {
-      cmd('set_notch_filter', { value });
+      cmd('set_notch_filter', { value, receiver: activeReceiverParam() });
     },
     onCwAutoTuneToggle: (_on: boolean) => {
       // CW auto-tune not yet implemented
@@ -214,23 +233,31 @@ export function makeTxHandlers() {
       cmd('set_mic_gain', { level });
     },
     onAtuToggle: () => {
-      cmd('set_tuner_status', { value: 1 }); // Toggle
+      const next = (getRadioState()?.tunerStatus ?? 0) > 0 ? 0 : 1;
+      patchRadioState({ tunerStatus: next });
+      cmd('set_tuner_status', { value: next });
     },
     onAtuTune: () => {
       cmd('set_tuner_status', { value: 2 }); // Start tuning
     },
     onVoxToggle: () => {
-      cmd('set_vox', { on: true }); // backend toggles
+      const next = !(getRadioState()?.voxOn ?? false);
+      patchRadioState({ voxOn: next });
+      cmd('set_vox', { on: next });
     },
     onCompToggle: () => {
-      cmd('set_compressor', { on: true }); // backend toggles
+      const next = !(getRadioState()?.compressorOn ?? false);
+      patchRadioState({ compressorOn: next });
+      cmd('set_compressor', { on: next });
     },
     onCompLevelChange: (level: number) => {
       patchRadioState({ compressorLevel: level });
       cmd('set_compressor_level', { level });
     },
     onMonToggle: () => {
-      cmd('set_monitor', { on: true }); // backend toggles
+      const next = !(getRadioState()?.monitorOn ?? false);
+      patchRadioState({ monitorOn: next });
+      cmd('set_monitor', { on: next });
     },
     onMonLevelChange: (level: number) => {
       patchRadioState({ monitorGain: level });
@@ -255,7 +282,7 @@ export function makeRxAudioHandlers() {
     },
     onAfLevelChange: (level: number) => {
       patchActiveReceiver({ afLevel: level }, true);
-      cmd('set_af_level', { level });
+      cmd('set_af_level', { level, receiver: activeReceiverParam() });
     },
   };
 }

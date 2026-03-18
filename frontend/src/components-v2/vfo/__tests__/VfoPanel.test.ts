@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mount, unmount, flushSync } from 'svelte';
+import type { ComponentProps } from 'svelte';
 import VfoPanel from '../VfoPanel.svelte';
 import { formatBadges, formatRitOffset } from '../vfo-utils';
 
@@ -97,7 +98,7 @@ import { getCapabilities, vfoLabel } from '$lib/stores/capabilities.svelte';
 
 let components: ReturnType<typeof mount>[] = [];
 
-function mountPanel(props: Record<string, unknown>) {
+function mountPanel(props: ComponentProps<typeof VfoPanel>) {
   const t = document.createElement('div');
   document.body.appendChild(t);
   const component = mount(VfoPanel, { target: t, props });
@@ -116,7 +117,7 @@ afterEach(() => {
   document.body.innerHTML = '';
 });
 
-const baseProps = {
+const baseProps: ComponentProps<typeof VfoPanel> = {
   receiver: 'main',
   freq: 14074000,
   mode: 'USB',

@@ -9,8 +9,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from icom_lan.exceptions import CommandError
-from icom_lan.rigctld.state_cache import StateCache
 from icom_lan.profiles import resolve_radio_profile
+from icom_lan.radio_state import RadioState
+from icom_lan.rigctld.state_cache import StateCache
 from icom_lan.web.radio_poller import (
     CommandQueue,
     DisableScope,
@@ -19,6 +20,8 @@ from icom_lan.web.radio_poller import (
     PttOn,
     RadioPoller,
     SelectVfo,
+    SetAgc,
+    SetAttenuator,
     SetDigiSel,
     SetFreq,
     SetIpPlus,
@@ -26,6 +29,7 @@ from icom_lan.web.radio_poller import (
     SetNB,
     SetNR,
     SetPower,
+    SetPreamp,
     SwitchScopeReceiver,
     VfoSwap,
 )
@@ -53,6 +57,7 @@ def _make_radio(active: str = "MAIN") -> MagicMock:
     radio.set_ip_plus = AsyncMock()
     radio.set_attenuator_level = AsyncMock()
     radio.set_preamp = AsyncMock()
+    radio.set_agc = AsyncMock()
     radio.vfo_exchange = AsyncMock()
     radio.vfo_equalize = AsyncMock()
     radio.enable_scope = AsyncMock()
@@ -144,6 +149,81 @@ async def test_execute_event_emitting_commands_and_vfo_paths() -> None:
 
 
 @pytest.mark.asyncio
+async def test_execute_set_attenuator_updates_sub_receiver_state_and_radio_call() -> (
+    None
+):
+    events: list[tuple[str, dict]] = []
+    radio = _make_radio(active="MAIN")
+    state = RadioState()
+    state.main.preamp = 2
+    state.sub.preamp = 1
+    poller = RadioPoller(
+        radio,
+        StateCache(),
+        CommandQueue(),
+        on_state_event=lambda name, data: events.append((name, data)),
+        radio_state=state,
+    )
+
+    await poller._execute(SetAttenuator(12, receiver=1))  # noqa: SLF001
+
+    radio.set_attenuator_level.assert_awaited_once_with(12, receiver=1)
+    assert state.main.att == 0
+    assert state.main.preamp == 2
+    assert state.sub.att == 12
+    assert state.sub.preamp == 0
+    assert ("attenuator_changed", {"db": 12, "receiver": 1}) in events
+
+
+@pytest.mark.asyncio
+async def test_execute_set_preamp_updates_sub_receiver_state_and_radio_call() -> None:
+    events: list[tuple[str, dict]] = []
+    radio = _make_radio(active="MAIN")
+    state = RadioState()
+    state.main.att = 9
+    state.sub.att = 12
+    poller = RadioPoller(
+        radio,
+        StateCache(),
+        CommandQueue(),
+        on_state_event=lambda name, data: events.append((name, data)),
+        radio_state=state,
+    )
+
+    await poller._execute(SetPreamp(2, receiver=1))  # noqa: SLF001
+
+    radio.set_preamp.assert_awaited_once_with(2, receiver=1)
+    assert state.main.preamp == 0
+    assert state.main.att == 9
+    assert state.sub.preamp == 2
+    assert state.sub.att == 0
+    assert ("preamp_changed", {"level": 2, "receiver": 1}) in events
+
+
+@pytest.mark.asyncio
+async def test_execute_set_agc_updates_sub_receiver_state_and_radio_call() -> None:
+    events: list[tuple[str, dict]] = []
+    radio = _make_radio(active="MAIN")
+    state = RadioState()
+    state.main.agc = 1
+    state.sub.agc = 1
+    poller = RadioPoller(
+        radio,
+        StateCache(),
+        CommandQueue(),
+        on_state_event=lambda name, data: events.append((name, data)),
+        radio_state=state,
+    )
+
+    await poller._execute(SetAgc(2, receiver=1))  # noqa: SLF001
+
+    radio.set_agc.assert_awaited_once_with(2, receiver=1)
+    assert state.main.agc == 1
+    assert state.sub.agc == 2
+    assert ("agc_changed", {"mode": 2, "receiver": 1}) in events
+
+
+@pytest.mark.asyncio
 async def test_send_query_even_and_odd_branch_variants() -> None:
     radio = _make_radio()
     poller = RadioPoller(radio, StateCache(), CommandQueue())
@@ -185,8 +265,12 @@ async def test_run_backoff_and_query_error_paths() -> None:
     assert poller._send_query.await_count >= 2  # restore probe + normal query
 
     poller2 = RadioPoller(_make_radio(), StateCache(), CommandQueue())
-    poller2._send_query = AsyncMock(side_effect=RuntimeError("query failed"))  # noqa: SLF001
-    poller2._queue.wait = AsyncMock(side_effect=asyncio.CancelledError())  # noqa: SLF001
+    poller2._send_query = AsyncMock(
+        side_effect=RuntimeError("query failed")
+    )  # noqa: SLF001
+    poller2._queue.wait = AsyncMock(
+        side_effect=asyncio.CancelledError()
+    )  # noqa: SLF001
     with patch("icom_lan.web.radio_poller.asyncio.sleep", new=AsyncMock()):
         await poller2._run()  # noqa: SLF001
 
@@ -249,7 +333,9 @@ def test_state_queries_include_operator_toggle_reads_for_ic7610() -> None:
         (0x16, 0x58, None),
         (0x1A, 0x04, 0x00),
         (0x1A, 0x04, 0x01),
-    }.issubset(set(poller._STATE_QUERIES))  # noqa: SLF001
+    }.issubset(
+        set(poller._STATE_QUERIES)
+    )  # noqa: SLF001
 
 
 def test_state_queries_include_transceiver_status_reads_for_ic7610() -> None:
@@ -261,7 +347,9 @@ def test_state_queries_include_transceiver_status_reads_for_ic7610() -> None:
         (0x21, 0x00, None),
         (0x21, 0x01, None),
         (0x21, 0x02, None),
-    }.issubset(set(poller._STATE_QUERIES))  # noqa: SLF001
+    }.issubset(
+        set(poller._STATE_QUERIES)
+    )  # noqa: SLF001
 
 
 def test_fast_cmds_include_comp_meter_for_ic7610() -> None:
