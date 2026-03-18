@@ -156,6 +156,16 @@ list = ["USB", "LSB", "CW", "CW-R", "AM", "FM", "RTTY", "RTTY-R"]
 count = 1
 labels = { "0" = "OFF", "1" = "DATA" }
 
+# Modulation input sources
+# CI-V 0x1A 0x05 0x00 0x66-0x67: get/set mod input per DATA mode
+inputs = [
+    { value = 0, name = "MIC" },
+    { value = 1, name = "ACC" },
+    { value = 2, name = "MIC+ACC" },
+    { value = 3, name = "USB" },
+    { value = 4, name = "MIC+USB" },
+]
+
 [filters]
 list = ["FIL1", "FIL2", "FIL3"]
 # CI-V 0x1A 0x03: IF filter width 50-10000 Hz
