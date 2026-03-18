@@ -5,7 +5,7 @@
 
   interface Props {
     currentFreq: number;
-    onBandSelect: (bandName: string, freq: number) => void;
+    onBandSelect: (bandName: string, freq: number, bsrCode?: number) => void;
   }
 
   let { currentFreq, onBandSelect }: Props = $props();
@@ -13,8 +13,8 @@
   let bands = $derived(flattenBands(getCapabilities()?.freqRanges ?? []));
   let activeBand = $derived(findActiveBand(currentFreq, getCapabilities()?.freqRanges ?? []));
 
-  function handleClick(name: string, defaultFreq: number) {
-    onBandSelect(name, defaultFreq);
+  function handleClick(name: string, defaultFreq: number, bsrCode?: number) {
+    onBandSelect(name, defaultFreq, bsrCode);
   }
 
 </script>
@@ -31,7 +31,7 @@
         style="--control-accent:#00D4FF; --control-active-text:#FFFFFF"
         data-band={band.name}
         data-active={isActive}
-        onclick={() => handleClick(band.name, band.defaultFreq)}
+        onclick={() => handleClick(band.name, band.defaultFreq, band.bsrCode)}
       >
         {band.name}
       </button>
