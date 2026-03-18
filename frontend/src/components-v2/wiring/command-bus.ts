@@ -138,6 +138,10 @@ export function makeFilterHandlers() {
       patchActiveReceiver({ filterWidth: width }, true);
       cmd('set_filter_width', { width, receiver: activeReceiverParam() });
     },
+    onFilterShapeChange: (shape: number) => {
+      patchActiveReceiver({ filterShape: shape }, true);
+      cmd('set_filter_shape', { shape, receiver: activeReceiverParam() });
+    },
     onFilterPresetChange: (filter: number, width: number) => {
       const receiver = activeReceiverParam();
       const activeFilter = getActiveReceiver()?.filter ?? 1;

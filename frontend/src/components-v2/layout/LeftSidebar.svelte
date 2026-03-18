@@ -69,6 +69,7 @@
   <FilterPanel
     currentMode={filter.currentMode}
     currentFilter={filter.currentFilter}
+    filterShape={filter.filterShape}
     filterLabels={filter.filterLabels}
     filterWidth={filter.filterWidth}
     filterWidthMin={filter.filterWidthMin}
@@ -80,6 +81,7 @@
     pbtOuter={filter.pbtOuter}
     onFilterChange={filterHandlers.onFilterChange}
     onFilterWidthChange={filterHandlers.onFilterWidthChange}
+    onFilterShapeChange={filterHandlers.onFilterShapeChange}
     onFilterPresetChange={filterHandlers.onFilterPresetChange}
     onFilterDefaults={filterHandlers.onFilterDefaults}
     onIfShiftChange={filterHandlers.onIfShiftChange}

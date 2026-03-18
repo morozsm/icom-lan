@@ -24,6 +24,7 @@ from icom_lan.web.radio_poller import (
     SetAttenuator,
     SetDataMode,
     SetDigiSel,
+    SetFilterShape,
     SetFilterWidth,
     SetFreq,
     SetIpPlus,
@@ -48,6 +49,7 @@ def _make_radio(active: str = "MAIN") -> MagicMock:
     radio.set_freq = AsyncMock()
     radio.set_mode = AsyncMock()
     radio.set_filter = AsyncMock()
+    radio.set_filter_shape = AsyncMock()
     radio.set_ptt = AsyncMock()
     radio.set_rf_power = AsyncMock()
     radio.set_rf_gain = AsyncMock()
@@ -58,9 +60,33 @@ def _make_radio(active: str = "MAIN") -> MagicMock:
     radio.set_nr = AsyncMock()
     radio.set_digisel = AsyncMock()
     radio.set_ip_plus = AsyncMock()
+    radio.send_cw_text = AsyncMock()
+    radio.set_attenuator = AsyncMock()
     radio.set_attenuator_level = AsyncMock()
+    radio.get_attenuator_level = AsyncMock(return_value=0)
     radio.set_preamp = AsyncMock()
+    radio.get_preamp = AsyncMock(return_value=0)
     radio.set_agc = AsyncMock()
+    radio.set_antenna_1 = AsyncMock()
+    radio.set_antenna_2 = AsyncMock()
+    radio.set_rx_antenna_ant1 = AsyncMock()
+    radio.set_rx_antenna_ant2 = AsyncMock()
+    radio.get_antenna_1 = AsyncMock(return_value=False)
+    radio.get_antenna_2 = AsyncMock(return_value=False)
+    radio.get_rx_antenna_ant1 = AsyncMock(return_value=False)
+    radio.get_rx_antenna_ant2 = AsyncMock(return_value=False)
+    radio.set_system_date = AsyncMock()
+    radio.get_system_date = AsyncMock(return_value=(2026, 1, 1))
+    radio.set_system_time = AsyncMock()
+    radio.get_system_time = AsyncMock(return_value=(0, 0))
+    radio.set_dual_watch = AsyncMock()
+    radio.get_dual_watch = AsyncMock(return_value=False)
+    radio.set_tuner_status = AsyncMock()
+    radio.get_tuner_status = AsyncMock(return_value=0)
+    radio.set_acc1_mod_level = AsyncMock()
+    radio.set_usb_mod_level = AsyncMock()
+    radio.set_lan_mod_level = AsyncMock()
+    radio.set_compressor = AsyncMock()
     radio.vfo_exchange = AsyncMock()
     radio.vfo_equalize = AsyncMock()
     radio.enable_scope = AsyncMock()
@@ -287,6 +313,31 @@ async def test_execute_set_filter_width_updates_sub_receiver_state_and_sends_cmd
     assert state.main.filter_width is None
     assert state.sub.filter_width == 1500
     assert ("filter_width_changed", {"width": 1500, "receiver": 1}) in events
+
+
+@pytest.mark.asyncio
+async def test_execute_set_filter_shape_updates_sub_receiver_state_and_radio_call() -> (
+    None
+):
+    events: list[tuple[str, dict]] = []
+    radio = _make_radio(active="MAIN")
+    state = RadioState()
+    state.main.filter_shape = 0
+    state.sub.filter_shape = 0
+    poller = RadioPoller(
+        radio,
+        StateCache(),
+        CommandQueue(),
+        on_state_event=lambda name, data: events.append((name, data)),
+        radio_state=state,
+    )
+
+    await poller._execute(SetFilterShape(1, receiver=1))  # noqa: SLF001
+
+    radio.set_filter_shape.assert_awaited_once_with(1, receiver=1)
+    assert state.main.filter_shape == 0
+    assert state.sub.filter_shape == 1
+    assert ("filter_shape_changed", {"shape": 1, "receiver": 1}) in events
 
 
 @pytest.mark.asyncio

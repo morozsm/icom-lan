@@ -70,6 +70,7 @@ afterEach(() => {
 const baseProps: ComponentProps<typeof FilterPanel> = {
   currentMode: 'USB',
   currentFilter: 2,
+  filterShape: 0,
   filterLabels: ['FIL1', 'FIL2', 'FIL3'],
   filterWidth: 2400,
   filterConfig: {
@@ -82,6 +83,7 @@ const baseProps: ComponentProps<typeof FilterPanel> = {
   ifShift: 0,
   onFilterChange: vi.fn(),
   onFilterWidthChange: vi.fn(),
+  onFilterShapeChange: vi.fn(),
   onFilterPresetChange: vi.fn(),
   onFilterDefaults: vi.fn(),
   onIfShiftChange: vi.fn(),
@@ -244,6 +246,29 @@ describe('callbacks', () => {
     const button = Array.from(document.querySelectorAll('button')).find(el => el.textContent?.trim() === 'Restore Defaults') as HTMLButtonElement;
     button.click();
     expect(onFilterDefaults).toHaveBeenCalledWith([3000, 2400, 1800]);
+  });
+
+  it('shows SHARP and SOFT shape buttons in the modal', () => {
+    const t = mountPanel(baseProps);
+    const gear = t.querySelector('.settings-button') as HTMLButtonElement;
+    gear.click();
+    flushSync();
+
+    const buttons = Array.from(document.querySelectorAll('button')).map((el) => el.textContent?.trim());
+    expect(buttons).toContain('SHARP');
+    expect(buttons).toContain('SOFT');
+  });
+
+  it('calls onFilterShapeChange when the SOFT button is clicked in the modal', () => {
+    const onFilterShapeChange = vi.fn();
+    const t = mountPanel({ ...baseProps, onFilterShapeChange });
+    const gear = t.querySelector('.settings-button') as HTMLButtonElement;
+    gear.click();
+    flushSync();
+
+    const button = Array.from(document.querySelectorAll('button')).find((el) => el.textContent?.trim() === 'SOFT') as HTMLButtonElement;
+    button.click();
+    expect(onFilterShapeChange).toHaveBeenCalledWith(1);
   });
 });
 

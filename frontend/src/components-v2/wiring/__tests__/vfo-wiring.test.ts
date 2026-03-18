@@ -12,9 +12,9 @@ vi.mock('$lib/stores/radio.svelte', () => ({
 }));
 
 import { sendCommand } from '$lib/transport/ws-client';
-import { getRadioState, patchRadioState } from '$lib/stores/radio.svelte';
+import { getActiveReceiver, getRadioState, patchActiveReceiver, patchRadioState } from '$lib/stores/radio.svelte';
 import { toVfoOpsProps } from '../state-adapter';
-import { makeVfoHandlers, makeBandHandlers, makeRitXitHandlers, makeModeHandlers } from '../command-bus';
+import { makeBandHandlers, makeFilterHandlers, makeModeHandlers, makeRitXitHandlers, makeVfoHandlers } from '../command-bus';
 
 const originalDocumentQuerySelector = document.querySelector.bind(document);
 
@@ -222,5 +222,31 @@ describe('makeRitXitHandlers', () => {
 
     expect(patchRadioState).toHaveBeenCalledWith({ ritFreq: -450 });
     expect(sendCommand).toHaveBeenCalledWith('set_rit_frequency', { freq: -450 });
+  });
+});
+
+describe('makeFilterHandlers', () => {
+  beforeEach(() => {
+    vi.mocked(sendCommand).mockClear();
+    vi.mocked(patchActiveReceiver).mockClear();
+  });
+
+  it('emits set_filter_shape for the active receiver and patches optimistic state', () => {
+    vi.mocked(getRadioState).mockReturnValue({ active: 'SUB' } as any);
+
+    makeFilterHandlers().onFilterShapeChange?.(1);
+
+    expect(patchActiveReceiver).toHaveBeenCalledWith({ filterShape: 1 }, true);
+    expect(sendCommand).toHaveBeenCalledWith('set_filter_shape', { shape: 1, receiver: 1 });
+  });
+
+  it('restores the active filter width after resetting defaults', () => {
+    vi.mocked(getRadioState).mockReturnValue({ active: 'MAIN' } as any);
+    vi.mocked(getActiveReceiver).mockReturnValue({ filter: 2 } as any);
+
+    makeFilterHandlers().onFilterDefaults?.([3000, 2400, 1800]);
+
+    expect(sendCommand).toHaveBeenCalledWith('set_filter', { filter: 2, receiver: 0 });
+    expect(patchActiveReceiver).toHaveBeenCalledWith({ filterWidth: 2400 }, true);
   });
 });

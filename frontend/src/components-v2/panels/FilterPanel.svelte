@@ -8,6 +8,7 @@
   interface Props {
     currentMode: string;
     currentFilter: number;
+    filterShape: number;
     filterLabels?: string[];
     filterWidth: number;
     filterWidthMin?: number;
@@ -19,6 +20,7 @@
     hasPbt?: boolean;
     onFilterChange?: (filter: number) => void;
     onFilterWidthChange: (v: number) => void;
+    onFilterShapeChange?: (shape: number) => void;
     onFilterPresetChange?: (filter: number, width: number) => void;
     onFilterDefaults?: (defaults: number[]) => void;
     onIfShiftChange: (v: number) => void;
@@ -30,6 +32,7 @@
   let {
     currentMode,
     currentFilter,
+    filterShape,
     filterLabels = ['FIL1', 'FIL2', 'FIL3'],
     filterWidth,
     filterWidthMin = 50,
@@ -41,6 +44,7 @@
     hasPbt = false,
     onFilterChange,
     onFilterWidthChange,
+    onFilterShapeChange,
     onFilterPresetChange,
     onFilterDefaults,
     onIfShiftChange,
@@ -235,6 +239,30 @@
         </div>
       {/each}
 
+      <div class="shape-section">
+        <div class="shape-title">Shape</div>
+        <div class="shape-buttons">
+          <button
+            type="button"
+            class="shape-button v2-control-button"
+            class:active={filterShape === 0}
+            style="--control-accent:#00D4FF; --control-active-text:#FFFFFF"
+            onclick={() => onFilterShapeChange?.(0)}
+          >
+            SHARP
+          </button>
+          <button
+            type="button"
+            class="shape-button v2-control-button"
+            class:active={filterShape === 1}
+            style="--control-accent:#4ED37B; --control-active-text:#06110B"
+            onclick={() => onFilterShapeChange?.(1)}
+          >
+            SOFT
+          </button>
+        </div>
+      </div>
+
       {#if filterConfig?.fixed}
         <div class="modal-note">This mode uses fixed filter widths.</div>
       {:else}
@@ -397,6 +425,32 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
+  }
+
+  .shape-section {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-top: 2px;
+  }
+
+  .shape-title {
+    color: #8ca0b8;
+    font-family: 'Roboto Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .shape-buttons {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .shape-button {
+    min-width: 0;
   }
 
   .modal-filter-row {

@@ -138,6 +138,7 @@ export function toRfFrontEndProps(
 export interface FilterProps {
   currentMode: string;
   currentFilter: number;
+  filterShape: number;
   filterLabels: string[];
   filterWidth: number;
   filterWidthMin: number;
@@ -160,6 +161,7 @@ export function toFilterProps(
   return {
     currentMode: rx?.mode ?? 'USB',
     currentFilter: rx?.filter ?? 1,
+    filterShape: rx?.filterShape ?? 0,
     filterLabels: caps?.filters ?? ['FIL1', 'FIL2', 'FIL3'],
     filterWidth: rx?.filterWidth ?? 2400,
     filterWidthMin: filterConfig?.minHz ?? caps?.filterWidthMin ?? 50,

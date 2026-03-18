@@ -49,6 +49,7 @@ from .radio_poller import (
     SetDigiSel,
     SetDualWatch,
     SetFilter,
+    SetFilterShape,
     SetFilterWidth,
     SetFreq,
     SetIpPlus,
@@ -138,6 +139,7 @@ class ControlHandler:
             "set_mode",
             "set_filter",
             "set_filter_width",
+            "set_filter_shape",
             "ptt",
             "set_rf_power",
             "set_power",  # backward-compat alias for set_rf_power
@@ -693,6 +695,13 @@ class ControlHandler:
                 self._ensure_receiver_supported(rx)
                 q.put(SetFilterWidth(width, receiver=rx))
                 return {"width": width, "receiver": rx}
+            case "set_filter_shape":
+                shape = int(params["shape"])
+                rx = int(params.get("receiver", 0))
+                self._ensure_capability("filter_shape", "set_filter_shape")
+                self._ensure_receiver_supported(rx)
+                q.put(SetFilterShape(shape, receiver=rx))
+                return {"shape": shape, "receiver": rx}
             case "ptt":
                 on = bool(params["state"])
                 logger.info("handler: PTT %s received", "ON" if on else "OFF")

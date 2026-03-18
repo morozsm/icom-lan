@@ -46,6 +46,7 @@ __all__ = [
     "SetAgcTimeConstant",
     "SetDataMode",
     "SetFilterWidth",
+    "SetFilterShape",
     "SetPbtInner",
     "SetPbtOuter",
     "SetRitFrequency",
@@ -109,6 +110,12 @@ class SetFilter:
 @dataclass(frozen=True, slots=True)
 class SetFilterWidth:
     width: int
+    receiver: int = 0
+
+
+@dataclass(frozen=True, slots=True)
+class SetFilterShape:
+    shape: int
     receiver: int = 0
 
 
@@ -1005,6 +1012,27 @@ class RadioPoller:
                 if self._on_state_event:
                     self._on_state_event(
                         "filter_width_changed", {"width": width, "receiver": rx}
+                    )
+            case SetFilterShape(shape=shape, receiver=rx):
+                self._ensure_receiver_supported(rx, operation="set_filter_shape")
+                if shape not in (0, 1):
+                    raise CommandError(
+                        f"set_filter_shape value must be 0 or 1, got {shape}"
+                    )
+                if not isinstance(radio, AdvancedControlCapable):
+                    raise CommandError(
+                        "set_filter_shape is not supported by this backend"
+                    )
+                await radio.set_filter_shape(shape, receiver=rx)
+                if self._radio_state:
+                    target = (
+                        self._radio_state.sub if rx != 0 else self._radio_state.main
+                    )
+                    target.filter_shape = shape
+                    self.bump_revision()
+                if self._on_state_event:
+                    self._on_state_event(
+                        "filter_shape_changed", {"shape": shape, "receiver": rx}
                     )
             case PttOn():
                 logger.info("poller: PTT ON")
