@@ -3627,35 +3627,39 @@ def get_data_mode(
 
 
 def set_data_mode(
-    on: bool,
+    on: int | bool,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
-    """Build a 'set DATA mode' CI-V command (0x1A 0x06 <0x00|0x01>).
+    """Build a 'set DATA mode' CI-V command (0x1A 0x06 <0x00-0x03>).
 
     Args:
-        on: True to enable DATA1 mode, False to disable.
+        on: False/0 to disable, True/1 to enable DATA1, or an explicit DATA mode 0-3.
         to_addr: Radio CI-V address.
         from_addr: Controller CI-V address.
 
     Returns:
         CI-V frame bytes.
     """
+    mode_value = int(on) if isinstance(on, bool) else int(on)
+    if not 0 <= mode_value <= 3:
+        raise ValueError(f"DATA mode must be 0-3, got {mode_value}")
+
     if cmd_map is not None:
         return _build_from_map(
             cmd_map,
             "set_data_mode",
             to_addr=to_addr,
             from_addr=from_addr,
-            data=b"\x01" if on else b"\x00",
+            data=bytes([mode_value]),
         )
     return build_civ_frame(
         to_addr,
         from_addr,
         _CMD_CTL_MEM,
         sub=_SUB_DATA_MODE,
-        data=b"\x01" if on else b"\x00",
+        data=bytes([mode_value]),
     )
 
 

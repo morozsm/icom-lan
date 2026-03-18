@@ -10,7 +10,7 @@
     mode: string;
     filter: number;
     active: boolean;
-    dataMode?: boolean;
+    dataMode?: number | boolean;
     att?: number;
     preamp?: number;
     ontune?: (newFreq: number) => void;
@@ -22,7 +22,7 @@
     mode,
     filter,
     active,
-    dataMode = false,
+    dataMode = 0,
     att = 0,
     preamp = 0,
     ontune,

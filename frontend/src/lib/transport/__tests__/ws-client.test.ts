@@ -9,7 +9,14 @@ vi.mock('../../stores/connection.svelte', () => ({
   setReconnecting: vi.fn(),
 }));
 
+vi.mock('../../stores/radio.svelte', () => ({
+  patchActiveReceiver: vi.fn(),
+  patchRadioState: vi.fn(),
+  setRadioState: vi.fn(),
+}));
+
 import { setWsConnected } from '../../stores/connection.svelte';
+import { patchActiveReceiver } from '../../stores/radio.svelte';
 
 // ─── Minimal WebSocket mock ──────────────────────────────────────────────────
 type WsEventName = 'open' | 'message' | 'close' | 'error';
@@ -264,6 +271,14 @@ describe('control channel singleton', () => {
     globalThis.WebSocket = originalWebSocket;
     vi.useRealTimers();
     vi.resetModules();
+  });
+
+  it('applies optimistic data mode updates before sending', async () => {
+    const { sendCommand } = await import('../ws-client');
+
+    sendCommand('set_data_mode', { mode: 2, receiver: 0 });
+
+    expect(patchActiveReceiver).toHaveBeenCalledWith({ dataMode: 2 });
   });
 
   it('sendCommand returns false and queues when not connected', async () => {

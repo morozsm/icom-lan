@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('$lib/transport/ws-client', () => ({
   sendCommand: vi.fn(),
@@ -14,7 +14,9 @@ vi.mock('$lib/stores/radio.svelte', () => ({
 import { sendCommand } from '$lib/transport/ws-client';
 import { getRadioState, patchRadioState } from '$lib/stores/radio.svelte';
 import { toVfoOpsProps } from '../state-adapter';
-import { makeVfoHandlers, makeBandHandlers, makeRitXitHandlers } from '../command-bus';
+import { makeVfoHandlers, makeBandHandlers, makeRitXitHandlers, makeModeHandlers } from '../command-bus';
+
+const originalDocumentQuerySelector = document.querySelector.bind(document);
 
 describe('toVfoOpsProps', () => {
   it('uses the active VFO as TX VFO when split is off', () => {
@@ -76,6 +78,10 @@ describe('makeVfoHandlers', () => {
     vi.mocked(patchRadioState).mockClear();
   });
 
+  afterEach(() => {
+    document.querySelector = originalDocumentQuerySelector;
+  });
+
   it('maps TX→MAIN to SUB active receiver when split is on', () => {
     vi.mocked(getRadioState).mockReturnValue({ split: true } as any);
 
@@ -119,6 +125,64 @@ describe('makeVfoHandlers', () => {
 
     expect(patchRadioState).toHaveBeenCalledWith({ split: true });
     expect(sendCommand).toHaveBeenCalledWith('set_split', { on: true });
+  });
+
+  it('selects MAIN and scrolls the mode panel when the main mode badge is clicked', () => {
+    const scrollIntoView = vi.fn();
+    const modePanel = document.createElement('div');
+    modePanel.scrollIntoView = scrollIntoView;
+    document.querySelector = vi.fn((selector: string) => {
+      if (selector === '[data-mode-panel="true"]') {
+        return modePanel;
+      }
+      return originalDocumentQuerySelector(selector);
+    }) as typeof document.querySelector;
+
+    makeVfoHandlers().onMainModeClick();
+
+    expect(patchRadioState).toHaveBeenCalledWith({ active: 'MAIN' });
+    expect(sendCommand).toHaveBeenCalledWith('set_vfo', { vfo: 'MAIN' });
+    expect(scrollIntoView).toHaveBeenCalled();
+  });
+
+  it('selects SUB and scrolls the mode panel when the sub mode badge is clicked', () => {
+    const scrollIntoView = vi.fn();
+    const modePanel = document.createElement('div');
+    modePanel.scrollIntoView = scrollIntoView;
+    document.querySelector = vi.fn((selector: string) => {
+      if (selector === '[data-mode-panel="true"]') {
+        return modePanel;
+      }
+      return originalDocumentQuerySelector(selector);
+    }) as typeof document.querySelector;
+
+    makeVfoHandlers().onSubModeClick();
+
+    expect(patchRadioState).toHaveBeenCalledWith({ active: 'SUB' });
+    expect(sendCommand).toHaveBeenCalledWith('set_vfo', { vfo: 'SUB' });
+    expect(scrollIntoView).toHaveBeenCalled();
+  });
+});
+
+describe('makeModeHandlers', () => {
+  beforeEach(() => {
+    vi.mocked(sendCommand).mockClear();
+  });
+
+  it('emits set_mode for the active receiver', () => {
+    vi.mocked(getRadioState).mockReturnValue({ active: 'SUB' } as any);
+
+    makeModeHandlers().onModeChange('CW');
+
+    expect(sendCommand).toHaveBeenCalledWith('set_mode', { mode: 'CW', receiver: 1 });
+  });
+
+  it('emits numeric set_data_mode values for the active receiver', () => {
+    vi.mocked(getRadioState).mockReturnValue({ active: 'MAIN' } as any);
+
+    makeModeHandlers().onDataModeChange(3);
+
+    expect(sendCommand).toHaveBeenCalledWith('set_data_mode', { mode: 3, receiver: 0 });
   });
 });
 

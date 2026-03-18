@@ -4,7 +4,7 @@ export interface ReceiverState {
   freqHz: number;
   mode: string;
   filter: number;
-  dataMode: boolean;
+  dataMode: number;
   sMeter: number;
   att: number;
   preamp: number;

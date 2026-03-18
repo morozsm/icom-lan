@@ -43,6 +43,7 @@ __all__ = [
     "RadioPoller",
     "CommandQueue",
     "SetAgcTimeConstant",
+    "SetDataMode",
     "SetFilterWidth",
     "SetPbtInner",
     "SetPbtOuter",
@@ -219,6 +220,12 @@ class SetAgcTimeConstant:
 @dataclass(frozen=True, slots=True)
 class SetCwPitch:
     value: int
+
+
+@dataclass(frozen=True, slots=True)
+class SetDataMode:
+    mode: int
+    receiver: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -426,6 +433,7 @@ Command = (
     | SetNotchFilter
     | SetAgcTimeConstant
     | SetCwPitch
+    | SetDataMode
     | SetMicGain
     | SetVox
     | SetCompressorLevel
@@ -1138,6 +1146,17 @@ class RadioPoller:
                 if self._radio_state:
                     self._radio_state.cw_pitch = value
                     self.bump_revision()
+            case SetDataMode(mode=mode, receiver=rx):
+                self._ensure_receiver_supported(rx, operation="set_data_mode")
+                if not 0 <= mode <= 3:
+                    raise CommandError(f"set_data_mode mode must be 0-3, got {mode}")
+                await self._civ(0x1A, sub=0x06, data=bytes([mode]))
+                if self._radio_state:
+                    target = self._radio_state.sub if rx != 0 else self._radio_state.main
+                    target.data_mode = mode
+                    self.bump_revision()
+                if self._on_state_event:
+                    self._on_state_event("data_mode_changed", {"mode": mode, "receiver": rx})
             case SetMicGain(level=level):
                 await radio.set_mic_gain(level)
                 if self._radio_state:
