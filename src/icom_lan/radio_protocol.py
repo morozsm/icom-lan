@@ -149,8 +149,15 @@ class Radio(Protocol):
         """Whether DATA mode is active (e.g. USB-D for FT8/FT4)."""
         ...
 
-    async def set_data_mode(self, on: bool) -> None:
-        """Enable or disable DATA mode."""
+    async def set_data_mode(self, on: int | bool, receiver: int = 0) -> None:
+        """Set receiver DATA mode.
+
+        Args:
+            on: False/0 to disable, True/1 to enable DATA1, or an explicit
+                DATA mode value 0-3 when the radio supports multiple DATA
+                sub-modes.
+            receiver: 0 = main, 1 = sub.
+        """
         ...
 
     # -- TX ----------------------------------------------------------------

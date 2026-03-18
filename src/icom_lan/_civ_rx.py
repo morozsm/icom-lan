@@ -465,9 +465,14 @@ class CivRuntime:
     def _update_state_cache_from_frame(self, frame: CivFrame) -> None:
         """Best-effort update of state cache from an incoming CI-V frame."""
         host = self._host
-        # Use RadioState.main for per-receiver state (StateCache lacks .main)
         _rs = getattr(host, "_radio_state", None)
-        _rx = getattr(_rs, "main", None) if _rs is not None else None
+        _rx = None
+        if _rs is not None:
+            if frame.receiver is not None:
+                _rx_name = "MAIN" if frame.receiver == 0x00 else "SUB"
+            else:
+                _rx_name = _rs.active
+            _rx = _rs.receiver(_rx_name)
         try:
             if frame.command in (0x03, 0x00):
                 # Frequency: 0x03 = response to GET, 0x00 = unsolicited (e.g. VFO knob)

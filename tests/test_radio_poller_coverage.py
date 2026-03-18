@@ -53,6 +53,7 @@ def _make_radio(active: str = "MAIN") -> MagicMock:
     radio.set_rf_gain = AsyncMock()
     radio.set_af_level = AsyncMock()
     radio.set_squelch = AsyncMock()
+    radio.set_data_mode = AsyncMock()
     radio.set_nb = AsyncMock()
     radio.set_nr = AsyncMock()
     radio.set_digisel = AsyncMock()
@@ -90,9 +91,7 @@ async def test_execute_set_data_mode_updates_sub_receiver_state_and_sends_wire_v
 
     await poller._execute(SetDataMode(3, receiver=1))  # noqa: SLF001
 
-    radio.send_civ.assert_awaited_once_with(
-        0x1A, sub=0x06, data=b"\x03", wait_response=False
-    )
+    radio.set_data_mode.assert_awaited_once_with(3, receiver=1)
     assert state.main.data_mode == 0
     assert state.sub.data_mode == 3
     assert ("data_mode_changed", {"mode": 3, "receiver": 1}) in events
@@ -173,6 +172,43 @@ async def test_execute_event_emitting_commands_and_vfo_paths() -> None:
     radio.disable_scope.assert_awaited_once()
     with pytest.raises(CommandError, match="receiver=2"):
         await poller._execute(SwitchScopeReceiver(2))  # noqa: SLF001
+
+
+@pytest.mark.asyncio
+async def test_execute_receiver_routed_set_commands_use_backend_receiver_and_target_state() -> (
+    None
+):
+    events: list[tuple[str, dict]] = []
+    radio = _make_radio(active="MAIN")
+    state = RadioState()
+    state.main.nb = False
+    state.sub.nb = False
+    state.main.nr = True
+    state.sub.nr = False
+    poller = RadioPoller(
+        radio,
+        StateCache(),
+        CommandQueue(),
+        on_state_event=lambda name, data: events.append((name, data)),
+        radio_state=state,
+    )
+
+    await poller._execute(SetNB(True, receiver=1))  # noqa: SLF001
+    await poller._execute(SetNR(True, receiver=1))  # noqa: SLF001
+    await poller._execute(SetDataMode(3, receiver=1))  # noqa: SLF001
+
+    radio.set_nb.assert_awaited_once_with(True, receiver=1)
+    radio.set_nr.assert_awaited_once_with(True, receiver=1)
+    radio.set_data_mode.assert_awaited_once_with(3, receiver=1)
+    assert state.main.nb is False
+    assert state.sub.nb is True
+    assert state.main.nr is True
+    assert state.sub.nr is True
+    assert state.main.data_mode == 0
+    assert state.sub.data_mode == 3
+    assert ("nb_changed", {"on": True, "receiver": 1}) in events
+    assert ("nr_changed", {"on": True, "receiver": 1}) in events
+    assert ("data_mode_changed", {"mode": 3, "receiver": 1}) in events
 
 
 @pytest.mark.asyncio

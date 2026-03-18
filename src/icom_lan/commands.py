@@ -3634,6 +3634,7 @@ def set_data_mode(
     on: int | bool,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
+    receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
     """Build a 'set DATA mode' CI-V command (0x1A 0x06 <0x00-0x03>).
@@ -3657,6 +3658,17 @@ def set_data_mode(
             to_addr=to_addr,
             from_addr=from_addr,
             data=bytes([mode_value]),
+            receiver=receiver,
+            command29=(receiver != RECEIVER_MAIN),
+        )
+    if receiver != RECEIVER_MAIN:
+        return build_cmd29_frame(
+            to_addr,
+            from_addr,
+            _CMD_CTL_MEM,
+            sub=_SUB_DATA_MODE,
+            data=bytes([mode_value]),
+            receiver=receiver,
         )
     return build_civ_frame(
         to_addr,
@@ -6352,9 +6364,7 @@ def set_system_time(
         raise ValueError(f"Hour must be 0-23, got {hour}")
     if not 0 <= minute <= 59:
         raise ValueError(f"Minute must be 0-59, got {minute}")
-    bcd = bcd_encode_value(hour, byte_count=1) + bcd_encode_value(
-        minute, byte_count=1
-    )
+    bcd = bcd_encode_value(hour, byte_count=1) + bcd_encode_value(minute, byte_count=1)
     if cmd_map is not None:
         return _build_from_map(
             cmd_map, "system_time", to_addr=to_addr, from_addr=from_addr, data=bcd

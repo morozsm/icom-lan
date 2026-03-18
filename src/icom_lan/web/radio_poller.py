@@ -629,7 +629,13 @@ class RadioPoller:
             logger.debug("radio-poller: failed to load command map", exc_info=True)
         return {}
 
-    async def _send_cmd(self, cmd_name: str, data: bytes = b"") -> bool:
+    async def _send_cmd(
+        self,
+        cmd_name: str,
+        data: bytes = b"",
+        *,
+        receiver: int = 0,
+    ) -> bool:
         """Send a command using wire bytes from TOML profile.
 
         Returns True if command was found and sent, False otherwise.
@@ -641,7 +647,14 @@ class RadioPoller:
         cmd = wire[0]
         sub = wire[1] if len(wire) > 1 else None
         extra = bytes(wire[2:]) if len(wire) > 2 else b""
-        await self._civ(cmd, sub=sub, data=extra + data)
+        payload = extra + data
+        if receiver != 0 and self._profile.supports_cmd29(cmd, sub):
+            inner = bytes([receiver, cmd])
+            if sub is not None:
+                inner += bytes([sub])
+            await self._civ(0x29, data=inner + payload)
+        else:
+            await self._civ(cmd, sub=sub, data=payload)
         return True
 
     def _supports_capability(self, capability: str) -> bool:
@@ -1003,33 +1016,53 @@ class RadioPoller:
                     self._ensure_receiver_supported(rx, operation="set_squelch")
                     await radio.set_squelch(level, receiver=rx)
             case SetNB(on=on, receiver=rx):
-                # Wire bytes from TOML: set_nb = [0x16, 0x22]
-                await self._send_cmd("set_nb", bytes([0x01 if on else 0x00]))
+                self._ensure_receiver_supported(rx, operation="set_nb")
+                if hasattr(radio, "set_nb"):
+                    await radio.set_nb(on, receiver=rx)
+                else:
+                    await self._send_cmd(
+                        "set_nb",
+                        bytes([0x01 if on else 0x00]),
+                        receiver=rx,
+                    )
                 if self._radio_state:
-                    self._radio_state.main.nb = on
+                    target = (
+                        self._radio_state.sub if rx != 0 else self._radio_state.main
+                    )
+                    target.nb = on
                     self.bump_revision()
                 if self._on_state_event:
-                    self._on_state_event("nb_changed", {"on": on})
+                    self._on_state_event("nb_changed", {"on": on, "receiver": rx})
             case SetNR(on=on, receiver=rx):
-                # Wire bytes from TOML: set_nr = [0x16, 0x40]
-                await self._send_cmd("set_nr", bytes([0x01 if on else 0x00]))
+                self._ensure_receiver_supported(rx, operation="set_nr")
+                if hasattr(radio, "set_nr"):
+                    await radio.set_nr(on, receiver=rx)
+                else:
+                    await self._send_cmd(
+                        "set_nr",
+                        bytes([0x01 if on else 0x00]),
+                        receiver=rx,
+                    )
                 if self._radio_state:
-                    self._radio_state.main.nr = on
+                    target = (
+                        self._radio_state.sub if rx != 0 else self._radio_state.main
+                    )
+                    target.nr = on
                     self.bump_revision()
                 if self._on_state_event:
-                    self._on_state_event("nr_changed", {"on": on})
+                    self._on_state_event("nr_changed", {"on": on, "receiver": rx})
             case SetDigiSel(on=on, receiver=rx):
-                if isinstance(radio, AdvancedControlCapable):
+                if hasattr(radio, "set_digisel"):
                     self._ensure_receiver_supported(rx, operation="set_digisel")
                     await radio.set_digisel(on, receiver=rx)
                 if self._on_state_event:
-                    self._on_state_event("digisel_changed", {"on": on})
+                    self._on_state_event("digisel_changed", {"on": on, "receiver": rx})
             case SetIpPlus(on=on, receiver=rx):
-                if isinstance(radio, AdvancedControlCapable):
+                if hasattr(radio, "set_ip_plus"):
                     self._ensure_receiver_supported(rx, operation="set_ipplus")
                     await radio.set_ip_plus(on, receiver=rx)
                 if self._on_state_event:
-                    self._on_state_event("ipplus_changed", {"on": on})
+                    self._on_state_event("ipplus_changed", {"on": on, "receiver": rx})
             case SetAttenuator(db=db, receiver=rx):
                 if hasattr(radio, "set_attenuator_level"):
                     self._ensure_receiver_supported(rx, operation="set_attenuator")
@@ -1037,7 +1070,7 @@ class RadioPoller:
                 else:
                     # Wire bytes from TOML: set_attenuator = [0x11]
                     bcd = ((db // 10) << 4) | (db % 10)
-                    await self._send_cmd("set_attenuator", bytes([bcd]))
+                    await self._send_cmd("set_attenuator", bytes([bcd]), receiver=rx)
                 if self._radio_state:
                     target = (
                         self._radio_state.sub if rx != 0 else self._radio_state.main
@@ -1056,7 +1089,7 @@ class RadioPoller:
                     await radio.set_preamp(level, receiver=rx)
                 else:
                     # Wire bytes from TOML: set_preamp = [0x16, 0x02]
-                    await self._send_cmd("set_preamp", bytes([level]))
+                    await self._send_cmd("set_preamp", bytes([level]), receiver=rx)
                 if self._radio_state:
                     target = (
                         self._radio_state.sub if rx != 0 else self._radio_state.main
@@ -1147,7 +1180,7 @@ class RadioPoller:
                 self._ensure_receiver_supported(rx, operation="set_data_mode")
                 if not 0 <= mode <= 3:
                     raise CommandError(f"set_data_mode mode must be 0-3, got {mode}")
-                await self._civ(0x1A, sub=0x06, data=bytes([mode]))
+                await radio.set_data_mode(mode, receiver=rx)
                 if self._radio_state:
                     target = (
                         self._radio_state.sub if rx != 0 else self._radio_state.main
@@ -1194,7 +1227,7 @@ class RadioPoller:
                     await radio.set_agc(mode, receiver=rx)
                 else:
                     # Wire bytes from TOML: set_agc = [0x16, 0x12]
-                    await self._send_cmd("set_agc", bytes([mode]))
+                    await self._send_cmd("set_agc", bytes([mode]), receiver=rx)
                 if self._radio_state:
                     target = (
                         self._radio_state.sub if rx != 0 else self._radio_state.main

@@ -75,6 +75,10 @@ class TestSetDataModeCommand:
         frame = set_data_mode(3)
         assert frame == b"\xfe\xfe\x98\xe0\x1a\x06\x03\xfd"
 
+    def test_data3_sub_receiver_uses_cmd29(self) -> None:
+        frame = set_data_mode(3, receiver=1)
+        assert frame == b"\xfe\xfe\x98\xe0\x29\x01\x1a\x06\x03\xfd"
+
 
 class TestParseDataModeResponse:
     def _frame(self, data_byte: int) -> CivFrame:

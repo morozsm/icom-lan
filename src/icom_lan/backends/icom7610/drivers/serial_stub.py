@@ -296,9 +296,13 @@ class SerialMockRadio:
     async def get_data_mode(self) -> bool:
         return self._data_mode
 
-    async def set_data_mode(self, on: bool) -> None:
-        self._data_mode = on
-        self._state_cache.update_data_mode(on)
+    async def set_data_mode(self, on: int | bool, receiver: int = 0) -> None:
+        mode_value = int(on) if isinstance(on, bool) else int(on)
+        state = self._receiver_state(receiver, operation="set_data_mode")
+        state.data_mode = bool(mode_value)
+        self._data_mode = bool(mode_value)
+        if receiver == 0:
+            self._state_cache.update_data_mode(bool(mode_value))
 
     async def set_ptt(self, on: bool) -> None:
         self._ptt = on

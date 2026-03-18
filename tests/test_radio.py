@@ -7,21 +7,21 @@ from unittest.mock import patch
 import pytest
 
 from icom_lan.commands import (
+    _CMD_ACK,
+    _CMD_FREQ_GET,
+    _CMD_LEVEL,
+    _CMD_METER,
+    _CMD_MODE_GET,
+    _CMD_PTT,
+    _SUB_ALC_METER,
+    _SUB_PTT,
+    _SUB_RF_POWER,
+    _SUB_S_METER,
+    _SUB_SWR_METER,
     CONTROLLER_ADDR,
     IC_7610_ADDR,
     build_civ_frame,
     build_cmd29_frame,
-    _CMD_ACK,
-    _CMD_FREQ_GET,
-    _CMD_MODE_GET,
-    _CMD_METER,
-    _CMD_PTT,
-    _CMD_LEVEL,
-    _SUB_S_METER,
-    _SUB_SWR_METER,
-    _SUB_ALC_METER,
-    _SUB_RF_POWER,
-    _SUB_PTT,
 )
 from icom_lan.exceptions import ConnectionError, TimeoutError
 from icom_lan.radio import IcomRadio
@@ -36,7 +36,6 @@ from icom_lan.types import (
     SsbTxBandwidth,
     bcd_encode,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers — build fake radio responses as UDP packets wrapping CI-V frames
@@ -1655,6 +1654,14 @@ class TestDspLevelParity:
     ) -> None:
         await radio.set_af_mute(True, receiver=1)
         assert mock_transport.sent_packets[-1].endswith(b"\x29\x01\x1a\x09\x01\xfd")
+
+    @pytest.mark.asyncio
+    async def test_set_data_mode_sends_cmd29_for_sub_receiver(
+        self, radio: IcomRadio, mock_transport: MockTransport
+    ) -> None:
+        mock_transport.queue_response(_ack_response())
+        await radio.set_data_mode(3, receiver=1)
+        assert mock_transport.sent_packets[-1].endswith(b"\x29\x01\x1a\x06\x03\xfd")
 
     @pytest.mark.asyncio
     async def test_set_cw_pitch_rejects_out_of_range(

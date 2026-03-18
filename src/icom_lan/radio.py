@@ -1753,19 +1753,31 @@ class Icom7610CoreRadio:
         assert resp is not None
         return parse_data_mode_response(resp)
 
-    async def set_data_mode(self, on: bool) -> None:
-        """Set the IC-7610 DATA mode (command 0x1A 0x06).
+    async def set_data_mode(self, on: int | bool, receiver: int = 0) -> None:
+        """Set receiver DATA mode (command 0x1A 0x06).
 
         Args:
-            on: True to enable DATA1 mode, False to disable.
+            on: False/0 to disable, True/1 to enable DATA1 mode, or an explicit
+                DATA mode 0-3.
+            receiver: 0 = main, 1 = sub.
         """
         self._check_connected()
-        civ = set_data_mode_cmd(on, to_addr=self._radio_addr)
+        self._require_capability("data_mode", operation="set_data_mode")
+        self._require_receiver(receiver, operation="set_data_mode")
+        self._require_cmd29_route(
+            0x1A,
+            0x06,
+            receiver=receiver,
+            operation="set_data_mode",
+        )
+        civ = set_data_mode_cmd(on, to_addr=self._radio_addr, receiver=receiver)
         resp = await self._send_civ_raw(civ)
         assert resp is not None
         ack = parse_ack_nak(resp)
         if ack is False:
-            raise CommandError(f"Radio rejected set_data_mode({on})")
+            raise CommandError(
+                f"Radio rejected set_data_mode({on}, receiver={receiver})"
+            )
 
     def _parse_level(self, resp: "CivFrame") -> int:
         """Parse a level BCD response into an integer 0-255."""

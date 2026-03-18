@@ -530,10 +530,42 @@ def test_update_state_cache_level_af_level(radio: IcomRadio) -> None:
     radio._civ_runtime._update_state_cache_from_frame(frame)
 
 
+def test_update_state_cache_cmd29_sub_level_does_not_overwrite_main(
+    radio: IcomRadio,
+) -> None:
+    """SUB cmd29 level responses must update SUB state only."""
+    radio._radio_state = RadioState()
+    radio._radio_state.main.af_level = 10
+    radio._radio_state.sub.af_level = 20
+
+    frame = _make_frame(cmd=0x14, sub=0x01, data=_bcd2(150), receiver=0x01)
+
+    radio._civ_runtime._update_state_cache_from_frame(frame)
+
+    assert radio._radio_state.main.af_level == 10
+    assert radio._radio_state.sub.af_level == 150
+
+
 def test_update_state_cache_level_squelch(radio: IcomRadio) -> None:
     """cmd 0x14 sub 0x03 updates squelch (line 419-421)."""
     frame = _make_frame(cmd=0x14, sub=0x03, data=_bcd2(50))
     radio._civ_runtime._update_state_cache_from_frame(frame)
+
+
+def test_update_state_cache_cmd29_sub_bool_does_not_overwrite_main(
+    radio: IcomRadio,
+) -> None:
+    """SUB cmd29 boolean responses must update SUB indicators only."""
+    radio._radio_state = RadioState()
+    radio._radio_state.main.nb = False
+    radio._radio_state.sub.nb = False
+
+    frame = _make_frame(cmd=0x16, sub=0x22, data=bytes([0x01]), receiver=0x01)
+
+    radio._civ_runtime._update_state_cache_from_frame(frame)
+
+    assert radio._radio_state.main.nb is False
+    assert radio._radio_state.sub.nb is True
 
 
 def test_update_state_cache_ip_plus(radio: IcomRadio) -> None:

@@ -316,6 +316,7 @@ routes = [
     [0x16, 0x65],     # IP+
     [0x1A, 0x03],     # Filter Width
     [0x1A, 0x04],     # AGC Time Constant
+    [0x1A, 0x06],     # Data Mode
     [0x1A, 0x09],     # AF Mute
     [0x1B, 0x00],     # Tone Frequency
     [0x1B, 0x01],     # TSQL Frequency
