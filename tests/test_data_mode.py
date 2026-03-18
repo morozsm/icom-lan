@@ -16,8 +16,8 @@ import pytest
 
 from icom_lan.commands import (
     get_data_mode,
-    parse_data_mode_response,
     parse_civ_frame,
+    parse_data_mode_response,
     set_data_mode,
 )
 from icom_lan.rigctld.contract import RigctldCommand, RigctldConfig
@@ -25,7 +25,6 @@ from icom_lan.rigctld.handler import RigctldHandler
 from icom_lan.rigctld.poller import RadioPoller
 from icom_lan.rigctld.state_cache import StateCache
 from icom_lan.types import CivFrame, Mode
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -410,6 +409,7 @@ async def test_poller_data_mode_error_does_not_crash(
     poll_radio: AsyncMock,
 ) -> None:
     import asyncio
+
     from icom_lan.exceptions import TimeoutError as IcomTimeoutError
 
     poll_radio.get_data_mode.side_effect = IcomTimeoutError("timeout")

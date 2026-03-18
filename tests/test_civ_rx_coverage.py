@@ -35,6 +35,7 @@ import time
 from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 
 import pytest
+from test_radio import MockTransport, _wrap_civ_in_udp
 
 from icom_lan._civ_rx import CIV_HEADER_SIZE
 from icom_lan.commands import CONTROLLER_ADDR, IC_7610_ADDR, build_civ_frame
@@ -43,9 +44,6 @@ from icom_lan.radio import IcomRadio
 from icom_lan.radio_state import RadioState
 from icom_lan.scope import ScopeFrame
 from icom_lan.types import CivFrame, Mode, bcd_encode
-
-from test_radio import MockTransport, _wrap_civ_in_udp
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -365,7 +363,9 @@ async def test_civ_rx_loop_drains_extra_packets_from_queue(
     radio._civ_runtime.start_pump()
     assert radio._civ_rx_task is not None
 
-    with patch.object(radio._civ_runtime, "_route_civ_frame", side_effect=counting_route):
+    with patch.object(
+        radio._civ_runtime, "_route_civ_frame", side_effect=counting_route
+    ):
         # Let loop run for a short time, then cancel
         await asyncio.sleep(0.05)
         radio._civ_rx_task.cancel()
@@ -395,7 +395,9 @@ async def test_civ_rx_loop_skips_short_packets(
     async def counting_route(frame: CivFrame, *, generation: int) -> None:
         frames_routed[0] += 1
 
-    with patch.object(radio._civ_runtime, "_route_civ_frame", side_effect=counting_route):
+    with patch.object(
+        radio._civ_runtime, "_route_civ_frame", side_effect=counting_route
+    ):
         radio._civ_runtime.start_pump()
         await asyncio.sleep(0.1)
         if radio._civ_rx_task:
@@ -435,7 +437,9 @@ async def test_civ_rx_loop_skips_invalid_civ_frames(
     async def counting_route(frame: CivFrame, *, generation: int) -> None:
         frames_routed[0] += 1
 
-    with patch.object(radio._civ_runtime, "_route_civ_frame", side_effect=counting_route):
+    with patch.object(
+        radio._civ_runtime, "_route_civ_frame", side_effect=counting_route
+    ):
         radio._civ_runtime.start_pump()
         await asyncio.sleep(0.15)
         if radio._civ_rx_task:
@@ -457,7 +461,9 @@ async def test_civ_rx_loop_handles_route_exception(
     async def exploding_route(frame: CivFrame, *, generation: int) -> None:
         raise RuntimeError("route exploded")
 
-    with patch.object(radio._civ_runtime, "_route_civ_frame", side_effect=exploding_route):
+    with patch.object(
+        radio._civ_runtime, "_route_civ_frame", side_effect=exploding_route
+    ):
         radio._civ_runtime.start_pump()
         await asyncio.sleep(0.1)
         if radio._civ_rx_task:
@@ -624,7 +630,9 @@ def test_update_radio_state_cmd25_short_data_ignored(
 ) -> None:
     """cmd 0x25 with short data is ignored (condition: len >= 6)."""
     frame = _make_frame(cmd=0x25, data=bytes([0x00, 0x01, 0x02]))
-    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)  # should not raise
+    radio_with_state._civ_runtime._update_radio_state_from_frame(
+        frame
+    )  # should not raise
 
 
 def test_update_radio_state_cmd26_rx_mode(radio_with_state: IcomRadio) -> None:
@@ -1000,7 +1008,9 @@ def test_update_radio_state_exception_suppressed(radio_with_state: IcomRadio) ->
     mock_state.receiver = MagicMock(side_effect=RuntimeError("oops"))
     radio_with_state._radio_state = mock_state
     frame = _make_frame(cmd=0x03, data=bcd_encode(14_000_000))
-    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)  # should not raise
+    radio_with_state._civ_runtime._update_radio_state_from_frame(
+        frame
+    )  # should not raise
 
 
 def test_update_radio_state_with_receiver_field_set(

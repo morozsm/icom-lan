@@ -7,17 +7,12 @@ import logging
 import time
 from typing import TYPE_CHECKING, Any
 
-from .civ import (
-    CivEvent,
-    CivEventType,
-    iter_civ_frames,
-    request_key_from_frame,
-)
+from .civ import CivEvent, CivEventType, iter_civ_frames, request_key_from_frame
 from .commander import IcomCommander, Priority
 from .commands import (
     CONTROLLER_ADDR,
-    parse_civ_frame,
     parse_bool_response,
+    parse_civ_frame,
     parse_frequency_response,
     parse_level_response,
     parse_mode_response,
@@ -491,7 +486,12 @@ class CivRuntime:
                 # Attenuator response (plain CI-V, no cmd29)
                 val = frame.data[0]
                 _rx.att = ((val >> 4) & 0x0F) * 10 + (val & 0x0F)
-            elif frame.command == 0x14 and frame.data and len(frame.data) >= 2 and _rx is not None:
+            elif (
+                frame.command == 0x14
+                and frame.data
+                and len(frame.data) >= 2
+                and _rx is not None
+            ):
                 # Level response (plain CI-V, no cmd29)
                 sub = frame.sub or 0
                 raw = ((frame.data[0] >> 4) & 0x0F) * 100 + (frame.data[0] & 0x0F) * 10
