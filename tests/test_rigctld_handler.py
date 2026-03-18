@@ -6,14 +6,12 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from icom_lan.exceptions import (
-    ConnectionError as IcomConnectionError,
-    TimeoutError as IcomTimeoutError,
-)
+from icom_lan.exceptions import ConnectionError as IcomConnectionError
+from icom_lan.exceptions import TimeoutError as IcomTimeoutError
+from icom_lan.radio_state import RadioState
 from icom_lan.rigctld.contract import HamlibError, RigctldCommand, RigctldConfig
 from icom_lan.rigctld.handler import RigctldHandler
 from icom_lan.types import Mode
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -118,6 +116,21 @@ async def test_get_freq_served_from_cache(
 
 
 @pytest.mark.asyncio
+async def test_get_freq_prefers_radio_state(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    state = RadioState()
+    state.main.freq = 14_074_000
+    mock_radio.radio_state = state
+
+    resp = await handler.execute(get_cmd("get_freq"))
+
+    assert resp.ok
+    assert resp.values == ["14074000"]
+    mock_radio.get_frequency.assert_not_awaited()
+
+
+@pytest.mark.asyncio
 async def test_get_freq_cache_expires(mock_radio: AsyncMock) -> None:
     config = RigctldConfig(cache_ttl=0.0)  # zero TTL → always expired
     h = RigctldHandler(mock_radio, config)
@@ -146,12 +159,11 @@ async def test_set_freq_invalidates_cache(
     mock_radio.get_frequency.return_value = 14_074_000
     await handler.execute(get_cmd("get_freq"))  # populate cache
 
-    mock_radio.get_frequency.return_value = 7_050_000
-    await handler.execute(set_cmd("set_freq", "7050000"))  # invalidate
+    await handler.execute(set_cmd("set_freq", "7050000"))
 
-    resp = await handler.execute(get_cmd("get_freq"))  # re-fetch
+    resp = await handler.execute(get_cmd("get_freq"))
     assert resp.values == ["7050000"]
-    assert mock_radio.get_frequency.await_count == 2
+    assert mock_radio.get_frequency.await_count == 1
 
 
 @pytest.mark.asyncio
@@ -213,6 +225,24 @@ async def test_get_mode_served_from_cache(
     await handler.execute(cmd)
     await handler.execute(cmd)
     mock_radio.get_mode_info.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_get_mode_prefers_radio_state(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    state = RadioState()
+    state.main.freq = 14_074_000
+    state.main.mode = "USB"
+    state.main.filter = 2
+    state.main.data_mode = True
+    mock_radio.radio_state = state
+
+    resp = await handler.execute(get_cmd("get_mode"))
+
+    assert resp.ok
+    assert resp.values == ["PKTUSB", "2400"]
+    mock_radio.get_mode_info.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -305,6 +335,46 @@ async def test_set_mode_refreshes_cache_immediately(
     assert mock_radio.get_mode_info.await_count == 1
 
 
+@pytest.mark.asyncio
+async def test_get_freq_keeps_optimistic_value_until_radio_state_catches_up(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    state = RadioState()
+    state.main.freq = 14_074_000
+    mock_radio.radio_state = state
+
+    await handler.execute(set_cmd("set_freq", "7050000"))
+
+    resp = await handler.execute(get_cmd("get_freq"))
+    assert resp.values == ["7050000"]
+
+    state.main.freq = 7_050_000
+    resp = await handler.execute(get_cmd("get_freq"))
+    assert resp.values == ["7050000"]
+
+
+@pytest.mark.asyncio
+async def test_get_mode_keeps_optimistic_value_until_radio_state_catches_up(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    state = RadioState()
+    state.main.freq = 14_074_000
+    state.main.mode = "USB"
+    state.main.filter = 1
+    state.main.data_mode = False
+    mock_radio.radio_state = state
+
+    await handler.execute(set_cmd("set_mode", "LSB", "2400"))
+
+    resp = await handler.execute(get_cmd("get_mode"))
+    assert resp.values == ["LSB", "2400"]
+
+    state.main.mode = "LSB"
+    state.main.filter = 2
+    resp = await handler.execute(get_cmd("get_mode"))
+    assert resp.values == ["LSB", "2400"]
+
+
 # ---------------------------------------------------------------------------
 # get_ptt / set_ptt
 # ---------------------------------------------------------------------------
@@ -317,6 +387,20 @@ async def test_get_ptt_defaults_off(
     resp = await handler.execute(get_cmd("get_ptt"))
     assert resp.ok
     assert resp.values == ["0"]
+
+
+@pytest.mark.asyncio
+async def test_get_ptt_reads_radio_state(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    state = RadioState()
+    state.ptt = True
+    mock_radio.radio_state = state
+
+    resp = await handler.execute(get_cmd("get_ptt"))
+
+    assert resp.ok
+    assert resp.values == ["1"]
 
 
 @pytest.mark.asyncio
@@ -345,6 +429,23 @@ async def test_ptt_state_reflected_in_get(
     await handler.execute(set_cmd("set_ptt", "0"))
     resp = await handler.execute(get_cmd("get_ptt"))
     assert resp.values == ["0"]
+
+
+@pytest.mark.asyncio
+async def test_get_ptt_keeps_optimistic_state_until_radio_state_catches_up(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    state = RadioState()
+    state.ptt = False
+    mock_radio.radio_state = state
+
+    await handler.execute(set_cmd("set_ptt", "1"))
+    resp = await handler.execute(get_cmd("get_ptt"))
+    assert resp.values == ["1"]
+
+    state.ptt = True
+    resp = await handler.execute(get_cmd("get_ptt"))
+    assert resp.values == ["1"]
 
 
 @pytest.mark.asyncio
@@ -394,6 +495,22 @@ async def test_get_level_strength(
 
 
 @pytest.mark.asyncio
+async def test_get_level_strength_prefers_radio_state(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    state = RadioState()
+    state.main.freq = 14_074_000
+    state.main.s_meter = 120
+    mock_radio.radio_state = state
+
+    resp = await handler.execute(get_cmd("get_level", "STRENGTH"))
+
+    assert resp.ok
+    assert int(resp.values[0]) == pytest.approx(3, abs=1)
+    mock_radio.get_s_meter.assert_not_awaited()
+
+
+@pytest.mark.asyncio
 async def test_get_level_strength_s0(
     handler: RigctldHandler, mock_radio: AsyncMock
 ) -> None:
@@ -412,6 +529,22 @@ async def test_get_level_rfpower(
     assert resp.ok
     value = float(resp.values[0])
     assert abs(value - 1.0) < 0.001
+
+
+@pytest.mark.asyncio
+async def test_get_level_rfpower_prefers_radio_state(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    state = RadioState()
+    state.main.freq = 14_074_000
+    state.power_level = 128
+    mock_radio.radio_state = state
+
+    resp = await handler.execute(get_cmd("get_level", "RFPOWER"))
+
+    assert resp.ok
+    assert float(resp.values[0]) == pytest.approx(128 / 255.0, rel=1e-6)
+    mock_radio.get_power.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -469,6 +602,20 @@ async def test_get_split_vfo(handler: RigctldHandler, mock_radio: AsyncMock) -> 
     assert resp.ok
     assert resp.values[0] == "0"
     assert resp.values[1] == "VFOA"
+
+
+@pytest.mark.asyncio
+async def test_get_split_vfo_reads_radio_state(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    state = RadioState()
+    state.split = True
+    mock_radio.radio_state = state
+
+    resp = await handler.execute(get_cmd("get_split_vfo"))
+
+    assert resp.ok
+    assert resp.values == ["1", "VFOA"]
 
 
 @pytest.mark.asyncio
@@ -576,6 +723,20 @@ async def test_get_rit(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
     resp = await handler.execute(get_cmd("get_rit"))
     assert resp.ok
     assert resp.values == ["0"]
+
+
+@pytest.mark.asyncio
+async def test_get_rit_reads_radio_state(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    state = RadioState()
+    state.rit_freq = -250
+    mock_radio.radio_state = state
+
+    resp = await handler.execute(get_cmd("get_rit"))
+
+    assert resp.ok
+    assert resp.values == ["-250"]
 
 
 @pytest.mark.asyncio
@@ -760,4 +921,5 @@ def test_filter_to_passband_fil2() -> None:
 def test_filter_to_passband_fil3() -> None:
     from icom_lan.rigctld.handler import _filter_to_passband
 
+    assert _filter_to_passband(3) == 1800
     assert _filter_to_passband(3) == 1800

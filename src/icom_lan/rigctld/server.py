@@ -18,14 +18,12 @@ import asyncio
 import datetime
 import logging
 import time
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 from . import audit as _audit
 from .circuit_breaker import CircuitBreaker, CircuitState
 from .contract import ClientSession, HamlibError, RigctldConfig
-from .state_cache import StateCache
 from .utils import get_mode_reader
-from ..radio_protocol import StateCacheCapable
 
 if TYPE_CHECKING:
     from ..radio_protocol import Radio
@@ -135,25 +133,8 @@ class RigctldServer:
 
         if self._rig_handler is None:
             from . import handler as _handler_mod  # noqa: PLC0415
-            from .poller import RadioPoller  # noqa: PLC0415
 
-            cache = (
-                cast(StateCache, self._radio.state_cache)
-                if isinstance(self._radio, StateCacheCapable)
-                else StateCache()
-            )
-            self._rig_handler = _handler_mod.RigctldHandler(
-                self._radio, self._config, cache=cache
-            )
-            if self._poller is None:
-                if self._circuit_breaker is None:
-                    self._circuit_breaker = CircuitBreaker()
-                self._poller = RadioPoller(
-                    self._radio,
-                    cache,
-                    self._config,
-                    circuit_breaker=self._circuit_breaker,
-                )
+            self._rig_handler = _handler_mod.RigctldHandler(self._radio, self._config)
 
         self._server = await asyncio.start_server(
             self._accept_client,

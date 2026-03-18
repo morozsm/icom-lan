@@ -28,20 +28,18 @@ import mimetypes
 import pathlib
 import urllib.parse
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 from .. import __version__
 from ..radio_state import RadioState
-from ..rigctld.state_cache import StateCache
 from .dx_cluster import DXClusterClient, SpotBuffer
-from .handlers import (
-    AudioBroadcaster,
-    AudioHandler,
-    ControlHandler,
-    ScopeHandler,
-)
-from .runtime_helpers import radio_ready, runtime_capabilities
+from .handlers import AudioBroadcaster, AudioHandler, ControlHandler, ScopeHandler
 from .radio_poller import CommandQueue, DisableScope, EnableScope, RadioPoller
+from .runtime_helpers import (
+    build_public_state_payload,
+    radio_ready,
+    runtime_capabilities,
+)
 from .websocket import (
     WS_KEEPALIVE_INTERVAL,
     WebSocketConnection,
@@ -62,55 +60,6 @@ _DEFAULT_STATIC_DIR = pathlib.Path(__file__).parent / "static"
 _RADIO_MODEL = "IC-7610"
 
 # Mode/filter lists moved to RadioProfile (profiles.py)
-
-_RECEIVER_KEY_MAP = {"freq": "freqHz"}
-
-
-def _to_camel(s: str) -> str:
-    """Convert a snake_case identifier to camelCase."""
-    parts = s.split("_")
-    return parts[0] + "".join(p.capitalize() for p in parts[1:])
-
-
-def _camel_keys(d: dict[str, Any]) -> dict[str, Any]:
-    """Recursively convert all dict keys from snake_case to camelCase."""
-    return {
-        _to_camel(k): (_camel_keys(v) if isinstance(v, dict) else v)
-        for k, v in d.items()
-    }
-
-
-def _camel_case_state(d: dict[str, Any]) -> dict[str, Any]:
-    """Transform ``RadioState.to_dict()`` output to camelCase for the frontend.
-
-    - All snake_case keys become camelCase.
-    - ``freq`` inside receiver dicts (``main``, ``sub``) is renamed to
-      ``freqHz``.
-    - Flat ``connected`` / ``radio_ready`` / ``control_connected`` keys are
-      removed from the top level and wrapped in a nested ``connection`` object.
-    """
-    connection = {
-        "rigConnected": d.get("connected", False),
-        "radioReady": d.get("radio_ready", False),
-        "controlConnected": d.get("control_connected", False),
-    }
-    skip = {"connected", "radio_ready", "control_connected"}
-    result: dict[str, Any] = {}
-    for key, value in d.items():
-        if key in skip:
-            continue
-        if key in ("main", "sub") and isinstance(value, dict):
-            inner = {}
-            for k, v in value.items():
-                new_k = _RECEIVER_KEY_MAP.get(k, _to_camel(k))
-                inner[new_k] = _camel_keys(v) if isinstance(v, dict) else v
-            result[key] = inner
-        elif isinstance(value, dict):
-            result[_to_camel(key)] = _camel_keys(value)
-        else:
-            result[_to_camel(key)] = value
-    result["connection"] = connection
-    return result
 
 
 def _runtime_capabilities(radio: "Radio | None") -> set[str]:
@@ -173,16 +122,6 @@ class WebServer:
         self._scope_enabled = False
         self._scope_enable_lock: asyncio.Lock = asyncio.Lock()
         self._scope_disable_grace: float = 2.0
-        # RadioPoller: single CI-V serialiser
-        if radio is not None:
-            from ..radio_protocol import StateCacheCapable
-
-            if isinstance(radio, StateCacheCapable):
-                self._state_cache: StateCache = cast(StateCache, radio.state_cache)
-            else:
-                self._state_cache = StateCache()
-        else:
-            self._state_cache = StateCache()
         raw_radio_state = (
             getattr(radio, "radio_state", None) if radio is not None else None
         )
@@ -328,11 +267,6 @@ class WebServer:
     # ------------------------------------------------------------------
 
     @property
-    def state_cache(self) -> StateCache:
-        """Shared state cache (populated by RadioPoller)."""
-        return self._state_cache
-
-    @property
     def command_queue(self) -> CommandQueue:
         """Command queue consumed by RadioPoller."""
         return self._command_queue
@@ -363,27 +297,24 @@ class WebServer:
             return
         self._last_state_broadcast = now
 
-        d = self._radio_state.to_dict()
-        d["revision"] = (
-            self._radio_poller.revision if self._radio_poller is not None else 0
-        )
-        raw_connected = (
-            getattr(self._radio, "connected", False) if self._radio else False
-        )
-        d["connected"] = raw_connected if isinstance(raw_connected, bool) else False
-        d["radio_ready"] = self._radio_ready()
-        raw_control = (
-            getattr(self._radio, "control_connected", False) if self._radio else False
-        )
-        d["control_connected"] = raw_control if isinstance(raw_control, bool) else False
-
-        body = _camel_case_state(d)
+        body = self.build_public_state()
         event = {"type": "state_update", "data": body}
         for q in list(self._control_event_queues):
             try:
                 q.put_nowait(event)
             except asyncio.QueueFull:
-                pass
+                logger.warning("control state queue full; dropping state_update")
+
+    def build_public_state(self, *, updated_at: str | None = None) -> dict[str, Any]:
+        """Return the canonical public state payload for web consumers."""
+        revision = self._radio_poller.revision if self._radio_poller is not None else 0
+        return build_public_state_payload(
+            self._radio_state,
+            radio=self._radio,
+            revision=revision,
+            receiver_count=self._get_profile().receiver_count,
+            updated_at=updated_at,
+        )
 
     def broadcast_notification(
         self,
@@ -451,6 +382,7 @@ class WebServer:
                 self.broadcast_notification(
                     "warning", "Radio disconnected", "connection"
                 )
+
     def _on_radio_reconnect(self) -> None:
         """Called after soft_reconnect — re-enable scope if clients are connected."""
         if (
@@ -608,7 +540,6 @@ class WebServer:
                 self._radio.set_reconnect_callback(self._on_radio_reconnect)
             self._radio_poller = RadioPoller(
                 self._radio,
-                self._state_cache,
                 self._command_queue,
                 on_state_event=self._on_poller_state_event,
                 radio_state=self._radio_state,
@@ -973,14 +904,22 @@ class WebServer:
                     "hasDualReceiver": has_dual_rx,
                     "hasTuner": "tuner" in caps,
                     "hasCw": "cw" in caps,
-                    "maxReceivers": profile.receiver_count if self._radio is not None else (2 if has_dual_rx else 1),
+                    "maxReceivers": (
+                        profile.receiver_count
+                        if self._radio is not None
+                        else (2 if has_dual_rx else 1)
+                    ),
                     "tags": sorted(caps),
                     "modes": list(profile.modes),
                     "filters": list(profile.filters),
                     "vfoScheme": profile.vfo_scheme,
                     "hasLan": profile.has_lan,
-                    "attValues": list(profile.att_values) if profile.att_values else None,
-                    "preValues": list(profile.pre_values) if profile.pre_values else None,
+                    "attValues": (
+                        list(profile.att_values) if profile.att_values else None
+                    ),
+                    "preValues": (
+                        list(profile.pre_values) if profile.pre_values else None
+                    ),
                     "agcModes": list(profile.agc_modes) if profile.agc_modes else None,
                     "agcLabels": profile.agc_labels,
                 },
@@ -998,28 +937,9 @@ class WebServer:
     async def _serve_state(
         self, writer: asyncio.StreamWriter, headers: dict[str, str] | None = None
     ) -> None:
-        d = self._radio_state.to_dict()
-        raw_connected = (
-            getattr(self._radio, "connected", False) if self._radio else False
-        )
-        d["connected"] = raw_connected if isinstance(raw_connected, bool) else False
-        d["radio_ready"] = self._radio_ready()
-        raw_control_connected = (
-            getattr(self._radio, "control_connected", False) if self._radio else False
-        )
-        d["control_connected"] = (
-            raw_control_connected if isinstance(raw_control_connected, bool) else False
-        )
-        revision = self._radio_poller.revision if self._radio_poller is not None else 0
-        d["revision"] = revision
-        d["updatedAt"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
-
-        # Omit sub receiver state for single-receiver rigs
-        profile = self._get_profile()
-        if profile.receiver_count < 2:
-            d.pop("sub", None)
-
-        body = json.dumps(_camel_case_state(d), separators=(",", ":")).encode()
+        body_dict = self.build_public_state()
+        revision = int(body_dict.get("revision", 0))
+        body = json.dumps(body_dict, separators=(",", ":")).encode()
         await _send_json(writer, body, headers, etag=f'"{revision}"')
 
     async def _serve_capabilities(

@@ -615,7 +615,7 @@ class TestControlChannel:
             opcode, payload = await _ws_recv_frame(reader)
             assert opcode == WS_OP_TEXT
             msg = json.loads(payload)
-            assert msg["type"] == "state"
+            assert msg["type"] == "state_update"
             assert "data" in msg
         finally:
             await _close_ws(writer)
@@ -630,9 +630,10 @@ class TestControlChannel:
             )
             _, payload = await _ws_recv_frame(reader)
             data = json.loads(payload)["data"]
-            assert "freq_a" in data
-            assert "mode" in data
+            assert "active" in data
+            assert "main" in data
             assert "ptt" in data
+            assert "connection" in data
         finally:
             await _close_ws(writer)
 

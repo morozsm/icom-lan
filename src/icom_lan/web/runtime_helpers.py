@@ -1,13 +1,17 @@
 from __future__ import annotations
 
+import datetime
 from typing import TYPE_CHECKING, Any
 
 from ..radio_protocol import AudioCapable, DualReceiverCapable, ScopeCapable
+from ..radio_state import RadioState
 
 if TYPE_CHECKING:
     from ..radio_protocol import Radio
 
-__all__ = ["runtime_capabilities", "radio_ready"]
+__all__ = ["runtime_capabilities", "radio_ready", "build_public_state_payload"]
+
+_RECEIVER_KEY_MAP = {"freq": "freqHz"}
 
 
 def runtime_capabilities(radio: "Radio | None") -> set[str]:
@@ -62,3 +66,77 @@ def radio_ready(radio: "Radio | None") -> bool:
         return ready
     connected: Any = getattr(radio, "connected", False)
     return connected if isinstance(connected, bool) else False
+
+
+def _to_camel(s: str) -> str:
+    parts = s.split("_")
+    return parts[0] + "".join(p.capitalize() for p in parts[1:])
+
+
+def _camel_keys(d: dict[str, Any]) -> dict[str, Any]:
+    return {
+        _to_camel(k): (_camel_keys(v) if isinstance(v, dict) else v)
+        for k, v in d.items()
+    }
+
+
+def _camel_case_state(d: dict[str, Any]) -> dict[str, Any]:
+    connection = {
+        "rigConnected": d.get("connected", False),
+        "radioReady": d.get("radio_ready", False),
+        "controlConnected": d.get("control_connected", False),
+    }
+    skip = {"connected", "radio_ready", "control_connected"}
+    result: dict[str, Any] = {}
+    for key, value in d.items():
+        if key in skip:
+            continue
+        if key in ("main", "sub") and isinstance(value, dict):
+            inner = {}
+            for inner_key, inner_value in value.items():
+                new_key = _RECEIVER_KEY_MAP.get(inner_key, _to_camel(inner_key))
+                inner[new_key] = (
+                    _camel_keys(inner_value)
+                    if isinstance(inner_value, dict)
+                    else inner_value
+                )
+            result[key] = inner
+        elif isinstance(value, dict):
+            result[_to_camel(key)] = _camel_keys(value)
+        else:
+            result[_to_camel(key)] = value
+    result["connection"] = connection
+    return result
+
+
+def build_public_state_payload(
+    radio_state: RadioState,
+    *,
+    radio: "Radio | None",
+    revision: int,
+    receiver_count: int,
+    updated_at: str | None = None,
+) -> dict[str, Any]:
+    """Build the canonical public web state payload from RadioState.
+
+    This is the single web-facing state contract used by HTTP and WebSocket
+    consumers. During the migration away from StateCache, all public state
+    should be derived here.
+    """
+    state = radio_state.to_dict()
+    raw_connected = getattr(radio, "connected", False) if radio else False
+    state["connected"] = raw_connected if isinstance(raw_connected, bool) else False
+    state["radio_ready"] = radio_ready(radio)
+    raw_control_connected = (
+        getattr(radio, "control_connected", False) if radio else False
+    )
+    state["control_connected"] = (
+        raw_control_connected if isinstance(raw_control_connected, bool) else False
+    )
+    state["revision"] = revision
+    state["updated_at"] = (
+        updated_at or datetime.datetime.now(datetime.timezone.utc).isoformat()
+    )
+    if receiver_count < 2:
+        state.pop("sub", None)
+    return _camel_case_state(state)
