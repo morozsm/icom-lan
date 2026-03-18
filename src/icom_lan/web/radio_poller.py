@@ -1152,11 +1152,15 @@ class RadioPoller:
                     raise CommandError(f"set_data_mode mode must be 0-3, got {mode}")
                 await self._civ(0x1A, sub=0x06, data=bytes([mode]))
                 if self._radio_state:
-                    target = self._radio_state.sub if rx != 0 else self._radio_state.main
+                    target = (
+                        self._radio_state.sub if rx != 0 else self._radio_state.main
+                    )
                     target.data_mode = mode
                     self.bump_revision()
                 if self._on_state_event:
-                    self._on_state_event("data_mode_changed", {"mode": mode, "receiver": rx})
+                    self._on_state_event(
+                        "data_mode_changed", {"mode": mode, "receiver": rx}
+                    )
             case SetMicGain(level=level):
                 await radio.set_mic_gain(level)
                 if self._radio_state:

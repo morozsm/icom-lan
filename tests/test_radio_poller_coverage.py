@@ -22,6 +22,7 @@ from icom_lan.web.radio_poller import (
     SelectVfo,
     SetAgc,
     SetAttenuator,
+    SetDataMode,
     SetDigiSel,
     SetFilterWidth,
     SetFreq,
@@ -31,7 +32,6 @@ from icom_lan.web.radio_poller import (
     SetNR,
     SetPower,
     SetPreamp,
-    SetDataMode,
     SwitchScopeReceiver,
     VfoSwap,
 )
@@ -72,8 +72,11 @@ def _make_radio(active: str = "MAIN") -> MagicMock:
     radio.set_scope_fixed_edge = AsyncMock()
     return radio
 
+
 @pytest.mark.asyncio
-async def test_execute_set_data_mode_updates_sub_receiver_state_and_sends_wire_value() -> None:
+async def test_execute_set_data_mode_updates_sub_receiver_state_and_sends_wire_value() -> (
+    None
+):
     events: list[tuple[str, dict]] = []
     radio = _make_radio(active="MAIN")
     state = RadioState()
@@ -87,7 +90,9 @@ async def test_execute_set_data_mode_updates_sub_receiver_state_and_sends_wire_v
 
     await poller._execute(SetDataMode(3, receiver=1))  # noqa: SLF001
 
-    radio.send_civ.assert_awaited_once_with(0x1A, sub=0x06, data=b"\x03", wait_response=False)
+    radio.send_civ.assert_awaited_once_with(
+        0x1A, sub=0x06, data=b"\x03", wait_response=False
+    )
     assert state.main.data_mode == 0
     assert state.sub.data_mode == 3
     assert ("data_mode_changed", {"mode": 3, "receiver": 1}) in events
