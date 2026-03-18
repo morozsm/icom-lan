@@ -169,6 +169,32 @@ export function toRitXitProps(
   };
 }
 
+/* ── Mode Panel ──────────────────────────────────────────────── */
+
+export interface ModeProps {
+  currentMode: string;
+  modes: string[];
+  dataMode: number;
+  hasDataMode: boolean;
+  dataModeCount: number;
+  dataModeLabels: Record<string, string>;
+}
+
+export function toModeProps(
+  state: ServerState | null,
+  caps: Capabilities | null,
+): ModeProps {
+  const rx = state ? activeRx(state) : null;
+  return {
+    currentMode: rx?.mode ?? 'USB',
+    modes: caps?.modes ?? ['USB', 'LSB', 'CW', 'CW-R', 'AM', 'FM', 'RTTY', 'RTTY-R', 'PSK', 'PSK-R'],
+    dataMode: rx?.dataMode ?? 0,
+    hasDataMode: hasCap(caps, 'data_mode'),
+    dataModeCount: caps?.dataModeCount ?? 0,
+    dataModeLabels: caps?.dataModeLabels ?? { '0': 'OFF', '1': 'D1', '2': 'D2', '3': 'D3' },
+  };
+}
+
 /* ── DSP Panel ───────────────────────────────────────────────── */
 
 export interface DspProps {

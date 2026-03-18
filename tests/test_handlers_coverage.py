@@ -38,6 +38,7 @@ from icom_lan.web.radio_poller import (
     SetCompressor,
     SetCompressorLevel,
     SetCwPitch,
+    SetDataMode,
     SetDialLock,
     SetDigiSel,
     SetDualWatch,
@@ -146,6 +147,7 @@ def _capable_radio() -> SimpleNamespace:
         set_compressor=AsyncMock(),
         set_compressor_level=AsyncMock(),
         set_cw_pitch=AsyncMock(),
+        set_data_mode=AsyncMock(),
         set_dial_lock=AsyncMock(),
         set_mic_gain=AsyncMock(),
         set_monitor=AsyncMock(),
@@ -181,6 +183,20 @@ def _control_handler(
     if ws is None:
         ws = SimpleNamespace(send_text=AsyncMock(), recv=AsyncMock())
     return ControlHandler(ws, radio, "9.9.9", "IC-7610", server=server)
+
+
+@pytest.mark.asyncio
+async def test_handle_command_set_data_mode_enqueues_numeric_mode() -> None:
+    queue = _QueueRecorder()
+    server = SimpleNamespace(command_queue=queue)
+    handler = _control_handler(radio=_capable_radio(), server=server)
+
+    result = await handler._enqueue_command("set_data_mode", {"mode": 3, "receiver": 1})
+
+    assert result == {"mode": 3, "receiver": 1}
+    assert isinstance(queue.items[-1], SetDataMode)
+    assert queue.items[-1].mode == 3
+    assert queue.items[-1].receiver == 1
 
 
 def _scope_frame() -> ScopeFrame:

@@ -43,6 +43,8 @@ export interface Capabilities {
   preValues?: number[];   // Preamp levels: 0 = off, 1 = P1, 2 = P2, etc.
   agcModes?: number[];    // AGC mode values (e.g. [1,2,3] = FAST/MID/SLOW)
   agcLabels?: Record<string, string>;  // AGC mode labels (e.g. {"1":"FAST","2":"MID","3":"SLOW"})
+  dataModeCount?: number;
+  dataModeLabels?: Record<string, string>;
   antennas?: number;      // Number of antenna ports
   scopeConfig?: ScopeConfig;
   audioConfig?: AudioConfig;

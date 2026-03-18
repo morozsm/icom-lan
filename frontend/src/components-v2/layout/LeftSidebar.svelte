@@ -2,12 +2,14 @@
   import { radio } from '$lib/stores/radio.svelte';
   import { getCapabilities } from '$lib/stores/capabilities.svelte';
   import RfFrontEnd from '../panels/RfFrontEnd.svelte';
+  import ModePanel from '../panels/ModePanel.svelte';
   import FilterPanel from '../panels/FilterPanel.svelte';
   import AgcPanel from '../panels/AgcPanel.svelte';
   import RitXitPanel from '../panels/RitXitPanel.svelte';
   import BandSelector from '../controls/BandSelector.svelte';
   import {
     toRfFrontEndProps,
+    toModeProps,
     toFilterProps,
     toAgcProps,
     toRitXitProps,
@@ -15,6 +17,7 @@
   } from '../wiring/state-adapter';
   import {
     makeRfFrontEndHandlers,
+    makeModeHandlers,
     makeFilterHandlers,
     makeAgcHandlers,
     makeRitXitHandlers,
@@ -27,6 +30,7 @@
 
   // Derived props via state adapter
   let rfFrontEnd = $derived(toRfFrontEndProps(radioState, caps));
+  let mode = $derived(toModeProps(radioState, caps));
   let filter = $derived(toFilterProps(radioState, caps));
   let agc = $derived(toAgcProps(radioState, caps));
   let ritXit = $derived(toRitXitProps(radioState, caps));
@@ -34,6 +38,7 @@
 
   // Command handlers via command-bus
   const rfHandlers = makeRfFrontEndHandlers();
+  const modeHandlers = makeModeHandlers();
   const filterHandlers = makeFilterHandlers();
   const agcHandlers = makeAgcHandlers();
   const ritXitHandlers = makeRitXitHandlers();
@@ -48,6 +53,17 @@
     onRfGainChange={rfHandlers.onRfGainChange}
     onAttChange={rfHandlers.onAttChange}
     onPreChange={rfHandlers.onPreChange}
+  />
+
+  <ModePanel
+    currentMode={mode.currentMode}
+    modes={mode.modes}
+    dataMode={mode.dataMode}
+    hasDataMode={mode.hasDataMode}
+    dataModeCount={mode.dataModeCount}
+    dataModeLabels={mode.dataModeLabels}
+    onModeChange={modeHandlers.onModeChange}
+    onDataModeChange={modeHandlers.onDataModeChange}
   />
 
   <FilterPanel

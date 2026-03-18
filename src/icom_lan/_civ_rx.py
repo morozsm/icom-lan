@@ -600,7 +600,7 @@ class CivRuntime:
                     tgt = rs.receiver(which)
                     tgt.mode = Mode(frame.data[1]).name
                     if len(frame.data) >= 3:
-                        tgt.data_mode = bool(frame.data[2])
+                        tgt.data_mode = frame.data[2]
                     if len(frame.data) >= 4:
                         tgt.filter = frame.data[3]
 
@@ -777,7 +777,7 @@ class CivRuntime:
                             )
                             break
                 elif sub == 0x06 and frame.data:
-                    rx.data_mode = bool(frame.data[0])
+                    rx.data_mode = frame.data[0]
                 elif sub == 0x09:
                     rx.af_mute = parse_bool_response(frame, command=0x1A, sub=0x09)
 

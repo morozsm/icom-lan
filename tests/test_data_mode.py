@@ -68,6 +68,14 @@ class TestSetDataModeCommand:
         frame = set_data_mode(False)
         assert frame == b"\xfe\xfe\x98\xe0\x1a\x06\x00\xfd"
 
+    def test_data2(self) -> None:
+        frame = set_data_mode(2)
+        assert frame == b"\xfe\xfe\x98\xe0\x1a\x06\x02\xfd"
+
+    def test_data3(self) -> None:
+        frame = set_data_mode(3)
+        assert frame == b"\xfe\xfe\x98\xe0\x1a\x06\x03\xfd"
+
 
 class TestParseDataModeResponse:
     def _frame(self, data_byte: int) -> CivFrame:

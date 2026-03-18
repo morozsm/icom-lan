@@ -28,6 +28,24 @@ function activeReceiverParam(): Receiver {
   return getRadioState()?.active === 'SUB' ? 1 : 0;
 }
 
+function focusModePanel(vfo: 'MAIN' | 'SUB'): void {
+  patchRadioState({ active: vfo });
+  cmd('set_vfo', { vfo });
+
+  const modePanel = document.querySelector<HTMLElement>('[data-mode-panel="true"]');
+  if (!modePanel) {
+    return;
+  }
+
+  modePanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  modePanel.dataset.highlight = 'true';
+  window.setTimeout(() => {
+    if (modePanel.dataset.highlight === 'true') {
+      delete modePanel.dataset.highlight;
+    }
+  }, 1200);
+}
+
 /* ── VFO Handlers ────────────────────────────────────────────── */
 
 export function makeVfoHandlers() {
@@ -55,8 +73,8 @@ export function makeVfoHandlers() {
     },
     onMainVfoClick: () => cmd('set_vfo', { vfo: 'MAIN' }),
     onSubVfoClick: () => cmd('set_vfo', { vfo: 'SUB' }),
-    onMainModeClick: () => {}, // Mode selection handled by mode popup
-    onSubModeClick: () => {},
+    onMainModeClick: () => focusModePanel('MAIN'),
+    onSubModeClick: () => focusModePanel('SUB'),
     onFreqChange: (freq: number, receiver: Receiver = 0) => {
       patchActiveReceiver({ freqHz: freq }, true);
       cmd('set_freq', { freq, receiver });
@@ -69,6 +87,23 @@ export function makeVfoHandlers() {
       cmd('set_filter', { filter, receiver });
     },
     onDualWatchToggle: (on: boolean) => cmd('set_dual_watch', { on }),
+  };
+}
+
+/* ── Mode Handlers ───────────────────────────────────────────── */
+
+export function makeModeHandlers() {
+  return {
+    onModeChange: (mode: string) => {
+      const receiver = activeReceiverParam();
+      patchActiveReceiver({ mode }, true);
+      cmd('set_mode', { mode, receiver });
+    },
+    onDataModeChange: (mode: number) => {
+      const receiver = activeReceiverParam();
+      patchActiveReceiver({ dataMode: mode }, true);
+      cmd('set_data_mode', { mode, receiver });
+    },
   };
 }
 

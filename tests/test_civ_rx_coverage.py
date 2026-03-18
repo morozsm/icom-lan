@@ -646,9 +646,9 @@ def test_update_radio_state_cmd26_minimal(radio_with_state: IcomRadio) -> None:
 def test_update_radio_state_cmd26_with_data_mode(radio_with_state: IcomRadio) -> None:
     """cmd 0x26 with data_mode byte (line 516)."""
     rs = radio_with_state._radio_state
-    frame = _make_frame(cmd=0x26, data=bytes([0x00, Mode.USB.value, 0x01]))
+    frame = _make_frame(cmd=0x26, data=bytes([0x00, Mode.USB.value, 0x03]))
     radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
-    assert rs.main.data_mode is True
+    assert rs.main.data_mode == 3
 
 
 def test_update_radio_state_cmd15_smeter(radio_with_state: IcomRadio) -> None:
@@ -849,9 +849,9 @@ def test_update_radio_state_cmd1a_sub03_ignored(radio_with_state: IcomRadio) -> 
 def test_update_radio_state_cmd1a_sub06_data_mode(radio_with_state: IcomRadio) -> None:
     """cmd 0x1A sub 0x06 updates data_mode (lines 582-583)."""
     rs = radio_with_state._radio_state
-    frame = _make_frame(cmd=0x1A, sub=0x06, data=bytes([0x01]))
+    frame = _make_frame(cmd=0x1A, sub=0x06, data=bytes([0x02]))
     radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
-    assert rs.main.data_mode is True
+    assert rs.main.data_mode == 2
 
 
 @pytest.mark.parametrize(

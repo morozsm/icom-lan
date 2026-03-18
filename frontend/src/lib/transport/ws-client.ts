@@ -260,6 +260,9 @@ function _applyOptimistic(name: string, params: Record<string, unknown>): void {
     case 'set_mode':
       if (typeof params.mode === 'string') patchActiveReceiver({ mode: params.mode });
       break;
+    case 'set_data_mode':
+      if (typeof params.mode === 'number') patchActiveReceiver({ dataMode: params.mode });
+      break;
     case 'set_filter':
       if (typeof params.filter === 'string') {
         const n = parseInt((params.filter as string).replace('FIL', ''), 10);
