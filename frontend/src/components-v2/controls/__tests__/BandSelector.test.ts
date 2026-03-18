@@ -1,6 +1,34 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { mount, unmount, flushSync } from 'svelte';
+import type { ComponentProps } from 'svelte';
+
+vi.mock('$lib/stores/capabilities.svelte', () => ({
+  getCapabilities: vi.fn(() => ({ freqRanges: HF_RANGES })),
+}));
+
+import BandSelector from '../BandSelector.svelte';
 import { flattenBands, findActiveBand } from '../band-utils';
 import type { FreqRange } from '$lib/types/capabilities';
+
+let components: ReturnType<typeof mount>[] = [];
+
+function mountSelector(props: ComponentProps<typeof BandSelector>) {
+  const target = document.createElement('div');
+  document.body.appendChild(target);
+  const component = mount(BandSelector, { target, props });
+  flushSync();
+  components.push(component);
+  return target;
+}
+
+beforeEach(() => {
+  components = [];
+});
+
+afterEach(() => {
+  components.forEach((component) => unmount(component));
+  document.body.innerHTML = '';
+});
 
 // ── Fixtures ───────────────────────────────────────────────────────────────
 
@@ -13,7 +41,7 @@ const HF_RANGES: FreqRange[] = [
       { name: '160m', start: 1_800_000,  end: 2_000_000,  default: 1_900_000 },
       { name: '80m',  start: 3_500_000,  end: 4_000_000,  default: 3_700_000 },
       { name: '40m',  start: 7_000_000,  end: 7_300_000,  default: 7_100_000 },
-      { name: '20m',  start: 14_000_000, end: 14_350_000, default: 14_225_000 },
+      { name: '20m',  start: 14_000_000, end: 14_350_000, default: 14_225_000, bsrCode: 5 },
       { name: '15m',  start: 21_000_000, end: 21_450_000, default: 21_200_000 },
       { name: '10m',  start: 28_000_000, end: 29_700_000, default: 28_500_000 },
     ],
@@ -56,6 +84,11 @@ describe('flattenBands', () => {
   it('maps start and end correctly', () => {
     const result = flattenBands(HF_RANGES);
     expect(result[2]).toMatchObject({ name: '40m', start: 7_000_000, end: 7_300_000 });
+  });
+
+  it('preserves optional bsrCode metadata', () => {
+    const result = flattenBands(HF_RANGES);
+    expect(result[3]).toMatchObject({ name: '20m', bsrCode: 5 });
   });
 
   it('returns empty array for empty freqRanges', () => {
@@ -148,5 +181,21 @@ describe('findActiveBand', () => {
       },
     ];
     expect(findActiveBand(7_500_000, overlapping)).toBe('bandA');
+  });
+});
+
+describe('BandSelector component', () => {
+  it('forwards bsrCode when a band is selected', () => {
+    const onBandSelect = vi.fn();
+    const target = mountSelector({
+      currentFreq: 14_074_000,
+      onBandSelect,
+    });
+
+    const button = target.querySelector<HTMLButtonElement>('[data-band="20m"]');
+    button?.click();
+    flushSync();
+
+    expect(onBandSelect).toHaveBeenCalledWith('20m', 14_225_000, 5);
   });
 });

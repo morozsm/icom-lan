@@ -1,5 +1,42 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { mount, unmount, flushSync } from 'svelte';
+import type { ComponentProps } from 'svelte';
+import RitXitPanel from '../RitXitPanel.svelte';
 import { formatOffset, shouldShowPanel } from '../rit-utils';
+
+let components: ReturnType<typeof mount>[] = [];
+
+function mountPanel(props: ComponentProps<typeof RitXitPanel>) {
+  const target = document.createElement('div');
+  document.body.appendChild(target);
+  const component = mount(RitXitPanel, { target, props });
+  flushSync();
+  components.push(component);
+  return target;
+}
+
+beforeEach(() => {
+  components = [];
+});
+
+afterEach(() => {
+  components.forEach((component) => unmount(component));
+  document.body.innerHTML = '';
+});
+
+const baseProps: ComponentProps<typeof RitXitPanel> = {
+  ritActive: false,
+  ritOffset: 0,
+  xitActive: false,
+  xitOffset: 0,
+  hasRit: true,
+  hasXit: true,
+  onRitToggle: vi.fn(),
+  onXitToggle: vi.fn(),
+  onRitOffsetChange: vi.fn(),
+  onXitOffsetChange: vi.fn(),
+  onClear: vi.fn(),
+};
 
 // ---------------------------------------------------------------------------
 // formatOffset
@@ -66,5 +103,43 @@ describe('shouldShowPanel', () => {
 
   it('returns false when both hasRit and hasXit are false', () => {
     expect(shouldShowPanel(false, false)).toBe(false);
+  });
+});
+
+describe('RitXitPanel component', () => {
+  it('renders the Offset slider when visible', () => {
+    const target = mountPanel(baseProps);
+    const labels = Array.from(target.querySelectorAll('.slider-label')).map((el) => el.textContent);
+    expect(labels).toContain('Offset');
+  });
+
+  it('uses the shared offset constraints', () => {
+    const target = mountPanel(baseProps);
+    const input = target.querySelector<HTMLInputElement>('input[type="range"]');
+    expect(input?.min).toBe('-9999');
+    expect(input?.max).toBe('9999');
+    expect(input?.step).toBe('50');
+  });
+
+  it('calls onRitOffsetChange when the offset slider changes by default', () => {
+    const onRitOffsetChange = vi.fn();
+    const target = mountPanel({ ...baseProps, onRitOffsetChange });
+    const input = target.querySelector<HTMLInputElement>('input[type="range"]');
+    input!.value = '500';
+    input!.dispatchEvent(new Event('input', { bubbles: true }));
+    expect(onRitOffsetChange).toHaveBeenCalledWith(500);
+  });
+
+  it('calls onXitOffsetChange when only XIT is active', () => {
+    const onXitOffsetChange = vi.fn();
+    const target = mountPanel({
+      ...baseProps,
+      xitActive: true,
+      onXitOffsetChange,
+    });
+    const input = target.querySelector<HTMLInputElement>('input[type="range"]');
+    input!.value = '450';
+    input!.dispatchEvent(new Event('input', { bubbles: true }));
+    expect(onXitOffsetChange).toHaveBeenCalledWith(450);
   });
 });

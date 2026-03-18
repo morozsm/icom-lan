@@ -5,6 +5,7 @@ export interface FlatBand {
   defaultFreq: number;
   start: number;
   end: number;
+  bsrCode?: number;
 }
 
 /**
@@ -20,6 +21,7 @@ export function flattenBands(freqRanges: FreqRange[]): FlatBand[] {
         defaultFreq: band.default,
         start: band.start,
         end: band.end,
+        bsrCode: band.bsrCode,
       });
     }
   }

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Slider from '../controls/Slider.svelte';
   import StatusBadge from '../controls/StatusBadge.svelte';
   import { formatOffset, shouldShowPanel } from './rit-utils';
 
@@ -25,10 +26,21 @@
     hasXit,
     onRitToggle,
     onXitToggle,
+    onRitOffsetChange,
+    onXitOffsetChange,
     onClear,
   }: Props = $props();
 
   let visible = $derived(shouldShowPanel(hasRit, hasXit));
+  let offsetValue = $derived(xitActive && !ritActive ? xitOffset : ritOffset);
+
+  function handleOffsetChange(value: number) {
+    if (xitActive && !ritActive) {
+      onXitOffsetChange(value);
+      return;
+    }
+    onRitOffsetChange(value);
+  }
 </script>
 
 {#if visible}
@@ -47,6 +59,16 @@
           <span class="offset" class:active={xitActive}>{formatOffset(xitOffset)}</span>
         </div>
       {/if}
+      <Slider
+        label="Offset"
+        value={offsetValue}
+        min={-9999}
+        max={9999}
+        step={50}
+        unit="Hz"
+        accentColor="#00D4FF"
+        onchange={handleOffsetChange}
+      />
       <div class="clear-row">
         <StatusBadge label="CLEAR" active={false} color="muted" onclick={onClear} />
       </div>
