@@ -458,7 +458,6 @@ class CivRuntime:
         else:
             event = CivEvent(type=CivEventType.RESPONSE, frame=frame)
             self._update_state_cache_from_frame(frame)
-
         self._publish_civ_event(event)
         self._host._civ_request_tracker.resolve(event, generation=generation)
 
@@ -535,6 +534,36 @@ class CivRuntime:
                     )
                 elif data and sub == 0x65:
                     self._notify_change("ipplus_changed", {"on": bool(data[0])})
+            elif (
+                frame.command == 0x1A
+                and frame.sub == 0x03
+                and frame.data
+                and _rx is not None
+            ):
+                from .commands import _bcd_decode_value, filter_index_to_hz
+
+                filter_index = _bcd_decode_value(frame.data)
+                profile = getattr(host, "_profile", None)
+                if (
+                    profile is not None
+                    and getattr(profile, "filter_width_encoding", None)
+                    == "segmented_bcd_index"
+                ):
+                    rule = profile.resolve_filter_rule(
+                        getattr(_rx, "mode", None),
+                        data_mode=int(getattr(_rx, "data_mode", 0) or 0),
+                    )
+                    if rule is not None and rule.segments:
+                        decoded_width = filter_index_to_hz(
+                            filter_index, segments=rule.segments
+                        )
+                    else:
+                        decoded_width = filter_index
+                else:
+                    decoded_width = filter_index
+                _rx.filter_width = decoded_width
+                if getattr(frame, "receiver", None) in (None, 0x00):
+                    host._state_cache.filter_width = decoded_width
             elif frame.command == 0x07 and frame.data and len(frame.data) >= 2:
                 sub07 = frame.data[0]
                 val07 = frame.data[1]
@@ -762,7 +791,27 @@ class CivRuntime:
                         bcd_bytes=1,
                     )
                 if sub == 0x03 and frame.data:
-                    pass
+                    from .commands import _bcd_decode_value, filter_index_to_hz
+
+                    filter_index = _bcd_decode_value(frame.data)
+                    profile = getattr(self._host, "_profile", None)
+                    if (
+                        profile is not None
+                        and getattr(profile, "filter_width_encoding", None)
+                        == "segmented_bcd_index"
+                    ):
+                        rule = profile.resolve_filter_rule(
+                            rx.mode,
+                            data_mode=int(getattr(rx, "data_mode", 0) or 0),
+                        )
+                        if rule is not None and rule.segments:
+                            rx.filter_width = filter_index_to_hz(
+                                filter_index, segments=rule.segments
+                            )
+                        else:
+                            rx.filter_width = filter_index
+                    else:
+                        rx.filter_width = filter_index
                 elif sub == 0x05:
                     for prefix, (
                         field,

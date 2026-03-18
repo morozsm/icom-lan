@@ -42,13 +42,8 @@ def _parse_json_body(writer: _FakeWriter) -> dict:
 
 def _make_radio(model: str = "IC-7610", caps: set[str] | None = None):
     """Build a fake radio with a real RadioProfile resolved by model name."""
-    from icom_lan.radio_protocol import (
-        AudioCapable,
-        DualReceiverCapable,
-        ScopeCapable,
-    )
-
     from icom_lan.profiles import resolve_radio_profile
+    from icom_lan.radio_protocol import AudioCapable, DualReceiverCapable, ScopeCapable
 
     profile = resolve_radio_profile(model=model)
 
@@ -168,6 +163,18 @@ class TestCapabilitiesEndpoint:
         data = _parse_json_body(writer)
         assert data["receivers"] == 1
         assert data["vfoScheme"] == "ab"
+
+    @pytest.mark.asyncio
+    async def test_capabilities_include_filter_config(self):
+        radio = _make_radio("IC-7610")
+        srv = WebServer(radio)
+        writer = _FakeWriter()
+        await srv._serve_capabilities(writer)  # noqa: SLF001
+        data = _parse_json_body(writer)
+        assert data["filterConfig"]["USB"]["defaults"] == [3000, 2400, 1800]
+        assert data["filterConfig"]["USB-D"]["defaults"] == [3000, 1200, 500]
+        assert data["filterConfig"]["AM"]["stepHz"] == 200
+        assert data["filterConfig"]["FM"]["fixed"] is True
 
 
 # ── /api/v1/state tests ───────────────────────────────────────

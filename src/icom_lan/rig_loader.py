@@ -7,7 +7,13 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .command_map import CommandMap
-from .profiles import BandInfo, FreqRangeInfo, RadioProfile
+from .profiles import (
+    BandInfo,
+    FilterWidthRule,
+    FilterWidthSegment,
+    FreqRangeInfo,
+    RadioProfile,
+)
 
 __all__ = ["RigConfig", "RigLoadError", "load_rig", "discover_rigs"]
 
@@ -74,7 +80,13 @@ KNOWN_CAPABILITIES = frozenset(
 
 VALID_VFO_SCHEMES = {"ab", "main_sub", "ab_shared", "single"}
 VALID_PROTOCOL_TYPES = {"civ", "kenwood_cat", "yaesu_cat"}
-VALID_CONTROL_STYLES = {"toggle", "stepped", "selector", "toggle_and_level", "level_is_toggle"}
+VALID_CONTROL_STYLES = {
+    "toggle",
+    "stepped",
+    "selector",
+    "toggle_and_level",
+    "level_is_toggle",
+}
 VALID_RULE_KINDS = {"mutex", "disables", "requires", "value_limit"}
 
 _REQUIRED_SECTIONS = ("radio", "capabilities", "modes", "filters", "vfo")
@@ -113,6 +125,8 @@ class RigConfig:
     agc_labels: dict[str, str] | None
     filter_width_min: int = 50
     filter_width_max: int = 9999
+    filter_width_encoding: str = "direct_bcd_hz"
+    filter_config: dict[str, FilterWidthRule] | None = None
     data_mode_count: int = 0
     data_mode_labels: dict[str, str] | None = None
     protocol_type: str = "civ"
@@ -165,6 +179,8 @@ class RigConfig:
             filters=tuple(self.filters),
             filter_width_min=self.filter_width_min,
             filter_width_max=self.filter_width_max,
+            filter_width_encoding=self.filter_width_encoding,
+            filter_config=self.filter_config,
             att_values=self.att_values,
             pre_values=self.pre_values,
             agc_modes=self.agc_modes,
@@ -260,6 +276,35 @@ def load_rig(path: Path) -> RigConfig:
         raise RigLoadError(f"{filename}: [filters].list must not be empty")
     filter_width_min = int(filter_section.get("width_min_hz", 50))
     filter_width_max = int(filter_section.get("width_max_hz", 9999))
+    filter_width_encoding = str(filter_section.get("encoding", "direct_bcd_hz"))
+    filter_config_raw = filter_section.get("width", {})
+    filter_config: dict[str, FilterWidthRule] | None = None
+    if isinstance(filter_config_raw, dict) and filter_config_raw:
+        filter_config = {}
+        for mode_key, raw_rule in filter_config_raw.items():
+            if not isinstance(raw_rule, dict):
+                raise RigLoadError(
+                    f"{filename}: [filters.width].{mode_key} must be a table"
+                )
+            raw_segments = raw_rule.get("segments", [])
+            segments = tuple(
+                FilterWidthSegment(
+                    hz_min=int(segment["hz_min"]),
+                    hz_max=int(segment["hz_max"]),
+                    step_hz=int(segment["step_hz"]),
+                    index_min=int(segment["index_min"]),
+                )
+                for segment in raw_segments
+            )
+            defaults_raw = raw_rule.get("defaults", [])
+            filter_config[str(mode_key).upper()] = FilterWidthRule(
+                defaults=tuple(int(value) for value in defaults_raw),
+                fixed=bool(raw_rule.get("fixed", False)),
+                step_hz=(int(raw_rule["step_hz"]) if "step_hz" in raw_rule else None),
+                min_hz=(int(raw_rule["min_hz"]) if "min_hz" in raw_rule else None),
+                max_hz=(int(raw_rule["max_hz"]) if "max_hz" in raw_rule else None),
+                segments=segments,
+            )
 
     # Parse [protocol] (optional)
     proto_section = data.get("protocol", {})
@@ -322,7 +367,9 @@ def load_rig(path: Path) -> RigConfig:
     has_data_mode_feature = "data_mode" in features
     if data_mode_section:
         data_mode_count = int(data_mode_section.get("count", 0))
-        data_mode_labels = dict(data_mode_section["labels"]) if "labels" in data_mode_section else None
+        data_mode_labels = (
+            dict(data_mode_section["labels"]) if "labels" in data_mode_section else None
+        )
     elif has_data_mode_feature:
         data_mode_count = 1
         data_mode_labels = {"0": "OFF", "1": "DATA"}
@@ -388,6 +435,8 @@ def load_rig(path: Path) -> RigConfig:
         filters=tuple(filters),
         filter_width_min=filter_width_min,
         filter_width_max=filter_width_max,
+        filter_width_encoding=filter_width_encoding,
+        filter_config=filter_config,
         vfo_scheme=scheme,
         vfo_main_select=vfo_main,
         vfo_sub_select=vfo_sub,

@@ -277,11 +277,12 @@ async def test_execute_set_filter_width_updates_sub_receiver_state_and_sends_cmd
         on_state_event=lambda name, data: events.append((name, data)),
         radio_state=state,
     )
+    state.sub.mode = "USB"
 
     await poller._execute(SetFilterWidth(1500, receiver=1))  # noqa: SLF001
 
     radio.send_civ.assert_awaited_once_with(
-        0x29, sub=None, data=b"\x01\x1a\x03\x15\x00", wait_response=False
+        0x29, sub=None, data=b"\x01\x1a\x03\x00\x19", wait_response=False
     )
     assert state.main.filter_width is None
     assert state.sub.filter_width == 1500

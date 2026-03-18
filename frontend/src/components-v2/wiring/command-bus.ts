@@ -130,9 +130,37 @@ export function makeRfFrontEndHandlers() {
 
 export function makeFilterHandlers() {
   return {
+    onFilterChange: (filter: number) => {
+      patchActiveReceiver({ filter }, true);
+      cmd('set_filter', { filter, receiver: activeReceiverParam() });
+    },
     onFilterWidthChange: (width: number) => {
       patchActiveReceiver({ filterWidth: width }, true);
       cmd('set_filter_width', { width, receiver: activeReceiverParam() });
+    },
+    onFilterPresetChange: (filter: number, width: number) => {
+      const receiver = activeReceiverParam();
+      const activeFilter = getActiveReceiver()?.filter ?? 1;
+      cmd('set_filter', { filter, receiver });
+      cmd('set_filter_width', { width, receiver });
+      if (activeFilter !== filter) {
+        cmd('set_filter', { filter: activeFilter, receiver });
+      } else {
+        patchActiveReceiver({ filterWidth: width }, true);
+      }
+    },
+    onFilterDefaults: (defaults: number[]) => {
+      const receiver = activeReceiverParam();
+      const activeFilter = getActiveReceiver()?.filter ?? 1;
+      defaults.forEach((width, index) => {
+        const filter = index + 1;
+        cmd('set_filter', { filter, receiver });
+        cmd('set_filter_width', { width, receiver });
+      });
+      cmd('set_filter', { filter: activeFilter, receiver });
+      if (defaults[activeFilter - 1] !== undefined) {
+        patchActiveReceiver({ filterWidth: defaults[activeFilter - 1] }, true);
+      }
     },
     onIfShiftChange: (value: number) => {
       const receiver = activeReceiverParam();
