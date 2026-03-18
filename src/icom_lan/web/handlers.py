@@ -53,6 +53,9 @@ from .radio_poller import (
     SetPowerstat,
     SetPreamp,
     SetRfGain,
+    SetRitFrequency,
+    SetRitStatus,
+    SetRitTxStatus,
     SetRxAntennaAnt1,
     SetRxAntennaAnt2,
     SetScopeCenterType,
@@ -127,6 +130,9 @@ class ControlHandler:
             "set_att",
             "set_preamp",
             "set_agc",
+            "set_rit_status",
+            "set_rit_tx_status",
+            "set_rit_frequency",
             "set_split",
             "select_vfo",
             "vfo_swap",
@@ -742,6 +748,21 @@ class ControlHandler:
                 mode = int(params["mode"])
                 q.put(SetAgc(mode))
                 return {"mode": mode}
+            case "set_rit_status":
+                on = bool(params.get("on", False))
+                self._ensure_capability("rit", "set_rit_status")
+                q.put(SetRitStatus(on))
+                return {"on": on}
+            case "set_rit_tx_status":
+                on = bool(params.get("on", False))
+                self._ensure_capability("rit", "set_rit_tx_status")
+                q.put(SetRitTxStatus(on))
+                return {"on": on}
+            case "set_rit_frequency":
+                freq = int(params.get("freq", 0))
+                self._ensure_capability("rit", "set_rit_frequency")
+                q.put(SetRitFrequency(freq))
+                return {"freq": freq}
             case "set_split":
                 on = bool(params.get("on", False))
                 self._ensure_capability("split", "set_split")

@@ -2066,6 +2066,63 @@ class TestSwitchScopeReceiver:
         assert poller._radio_state.split is True
         assert poller.revision > 0
 
+    async def test_set_rit_status_updates_radio_and_state(self) -> None:
+        """SetRitStatus(on) calls radio.set_rit_status and updates RadioState.rit_on."""
+        from icom_lan.web.radio_poller import CommandQueue, RadioPoller, SetRitStatus
+
+        radio = self._make_radio()
+        radio.set_rit_status = AsyncMock()
+        queue = CommandQueue()
+        poller = RadioPoller(radio, StateCache(), queue, radio_state=RadioState())
+
+        poller.start()
+        queue.put(SetRitStatus(True))
+        await asyncio.sleep(0.15)
+        poller.stop()
+
+        radio.set_rit_status.assert_awaited_once_with(True)
+        assert poller._radio_state is not None
+        assert poller._radio_state.rit_on is True
+        assert poller.revision > 0
+
+    async def test_set_rit_tx_status_updates_radio_and_state(self) -> None:
+        """SetRitTxStatus(on) calls radio.set_rit_tx_status and updates RadioState.rit_tx."""
+        from icom_lan.web.radio_poller import CommandQueue, RadioPoller, SetRitTxStatus
+
+        radio = self._make_radio()
+        radio.set_rit_tx_status = AsyncMock()
+        queue = CommandQueue()
+        poller = RadioPoller(radio, StateCache(), queue, radio_state=RadioState())
+
+        poller.start()
+        queue.put(SetRitTxStatus(True))
+        await asyncio.sleep(0.15)
+        poller.stop()
+
+        radio.set_rit_tx_status.assert_awaited_once_with(True)
+        assert poller._radio_state is not None
+        assert poller._radio_state.rit_tx is True
+        assert poller.revision > 0
+
+    async def test_set_rit_frequency_updates_radio_and_state(self) -> None:
+        """SetRitFrequency(freq) calls radio.set_rit_frequency and updates RadioState.rit_freq."""
+        from icom_lan.web.radio_poller import CommandQueue, RadioPoller, SetRitFrequency
+
+        radio = self._make_radio()
+        radio.set_rit_frequency = AsyncMock()
+        queue = CommandQueue()
+        poller = RadioPoller(radio, StateCache(), queue, radio_state=RadioState())
+
+        poller.start()
+        queue.put(SetRitFrequency(-200))
+        await asyncio.sleep(0.15)
+        poller.stop()
+
+        radio.set_rit_frequency.assert_awaited_once_with(-200)
+        assert poller._radio_state is not None
+        assert poller._radio_state.rit_freq == -200
+        assert poller.revision > 0
+
 
 class TestSwitchScopeReceiverCommand:
     """ControlHandler handles 'switch_scope_receiver' command."""

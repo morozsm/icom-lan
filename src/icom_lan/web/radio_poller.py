@@ -45,6 +45,9 @@ if TYPE_CHECKING:
 __all__ = [
     "RadioPoller",
     "CommandQueue",
+    "SetRitFrequency",
+    "SetRitStatus",
+    "SetRitTxStatus",
     "SetSplit",
     "EnableScope",
     "DisableScope",
@@ -161,6 +164,21 @@ class SetPreamp:
 @dataclass(frozen=True, slots=True)
 class SetAgc:
     mode: int  # 1=FAST, 2=MID, 3=SLOW
+
+
+@dataclass(frozen=True, slots=True)
+class SetRitStatus:
+    on: bool
+
+
+@dataclass(frozen=True, slots=True)
+class SetRitTxStatus:
+    on: bool
+
+
+@dataclass(frozen=True, slots=True)
+class SetRitFrequency:
+    freq: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -308,6 +326,9 @@ Command = (
     | SetAttenuator
     | SetPreamp
     | SetAgc
+    | SetRitStatus
+    | SetRitTxStatus
+    | SetRitFrequency
     | SetSplit
     | PttOn
     | PttOff
@@ -899,6 +920,27 @@ class RadioPoller:
                 if self._radio_state:
                     self._radio_state.main.agc = mode
                     self.bump_revision()
+            case SetRitStatus(on=on):
+                await radio.set_rit_status(on)
+                if self._radio_state:
+                    self._radio_state.rit_on = on
+                    self.bump_revision()
+                if self._on_state_event:
+                    self._on_state_event("rit_changed", {"on": on})
+            case SetRitTxStatus(on=on):
+                await radio.set_rit_tx_status(on)
+                if self._radio_state:
+                    self._radio_state.rit_tx = on
+                    self.bump_revision()
+                if self._on_state_event:
+                    self._on_state_event("rit_tx_changed", {"on": on})
+            case SetRitFrequency(freq=freq):
+                await radio.set_rit_frequency(freq)
+                if self._radio_state:
+                    self._radio_state.rit_freq = freq
+                    self.bump_revision()
+                if self._on_state_event:
+                    self._on_state_event("rit_freq_changed", {"hz": freq})
             case SetSplit(on=on):
                 await radio.set_split_mode(on)
                 if self._radio_state:
