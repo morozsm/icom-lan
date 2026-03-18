@@ -1,8 +1,9 @@
 <script lang="ts">
   import Slider from '../controls/Slider.svelte';
+  import AttenuatorControl from '../controls/AttenuatorControl.svelte';
   import SegmentedButton from '../controls/SegmentedButton.svelte';
   import { hasCapability, getAttValues, getPreValues } from '$lib/stores/capabilities.svelte';
-  import { buildAttOptions, buildPreOptions, shouldShowPanel } from './rf-frontend-utils';
+  import { buildPreOptions, shouldShowPanel } from './rf-frontend-utils';
 
   interface Props {
     rfGain: number;
@@ -20,7 +21,7 @@
   let showPre = $derived(hasCapability('preamp'));
   let visible = $derived(shouldShowPanel(showRfGain, showAtt, showPre));
 
-  let attOptions = $derived(buildAttOptions(getAttValues()));
+  let attValues = $derived(getAttValues());
   let preOptions = $derived(buildPreOptions(getPreValues()));
 </script>
 
@@ -43,11 +44,7 @@
       {#if showAtt}
         <div class="control-row">
           <span class="control-label">ATT</span>
-          <SegmentedButton
-            options={attOptions}
-            selected={att}
-            onchange={(v) => onAttChange(v as number)}
-          />
+          <AttenuatorControl values={attValues} selected={att} onchange={onAttChange} />
         </div>
       {/if}
 
@@ -69,8 +66,8 @@
   .panel {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    padding: 7px 8px;
+    gap: 8px;
+    padding: 8px 10px 10px;
     background-color: #060A10;
     border: 1px solid #18202A;
     border-radius: 4px;
@@ -81,7 +78,7 @@
 
   .panel-header {
     color: #8CA0B8;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.14em;
     text-transform: uppercase;
@@ -91,22 +88,45 @@
   .controls {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
   }
 
   .control-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 6px;
+    gap: 10px;
+    min-width: 0;
   }
 
   .control-label {
     color: #6F8196;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 700;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.06em;
     flex-shrink: 0;
-    min-width: 28px;
+    min-width: 34px;
+  }
+
+  .control-row > :global(.segmented-button),
+  .control-row > :global(.att-control) {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .control-row :global(.segment),
+  .control-row :global(.more-button) {
+    min-height: 28px;
+    padding: 4px 8px;
+    font-size: 10px;
+  }
+
+  .control-row :global(.segmented-button) {
+    width: 100%;
+  }
+
+  .control-row :global(.segment) {
+    flex: 1 1 0;
+    min-width: 0;
   }
 </style>

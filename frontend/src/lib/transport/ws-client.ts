@@ -123,7 +123,7 @@ export class WsChannel {
   disconnect() {
     this.intentionalClose = true;
     this._clearTimers();
-    const ws = this.ws;
+    const { ws } = this;
     this.ws = null;
     ws?.close(); // onclose fires, sees intentionalClose=true, calls setState('disconnected')
     this.attempt = 0;
@@ -293,6 +293,12 @@ function _applyOptimistic(name: string, params: Record<string, unknown>): void {
       break;
     case 'set_dual_watch':
       if (typeof params.on === 'boolean') patchRadioState({ dualWatch: params.on });
+      break;
+    case 'select_vfo':
+      if (typeof params.vfo === 'string') {
+        const isSub = ['SUB', 'B'].includes(params.vfo.toUpperCase());
+        patchRadioState({ active: isSub ? 'SUB' : 'MAIN' });
+      }
       break;
   }
 }

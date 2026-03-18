@@ -245,6 +245,12 @@ describe('Bottom dock meter gating', () => {
     const t = mountLayout();
     expect(t.querySelector('.dock-meter-card')).toBeNull();
   });
+
+  it('renders a meter source selector in the bottom dock when hasTx is true', () => {
+    vi.mocked(hasTx).mockReturnValue(true);
+    const t = mountLayout();
+    expect(t.querySelector('.meter-source-selector')).not.toBeNull();
+  });
 });
 
 describe('VfoHeader dual receiver', () => {

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import '../controls/control-button.css';
+  import BipolarSlider from '../controls/BipolarSlider.svelte';
   import Slider from '../controls/Slider.svelte';
 
   interface Props {
@@ -11,6 +13,7 @@
     onIfShiftChange: (v: number) => void;
     onPbtInnerChange?: (v: number) => void;
     onPbtOuterChange?: (v: number) => void;
+    onPbtReset?: () => void;
   }
 
   let {
@@ -23,6 +26,7 @@
     onIfShiftChange,
     onPbtInnerChange,
     onPbtOuterChange,
+    onPbtReset,
   }: Props = $props();
 </script>
 
@@ -39,34 +43,48 @@
       accentColor="#00D4FF"
       onchange={onFilterWidthChange}
     />
-    <Slider
+    <BipolarSlider
       label="IF Shift"
       value={ifShift}
       min={-1200}
       max={1200}
       step={25}
       unit="Hz"
+      accentColor="#00D4FF"
       onchange={onIfShiftChange}
     />
     {#if hasPbt}
-      <Slider
+      <BipolarSlider
         label="PBT Inner"
         value={pbtInner}
         min={-1200}
         max={1200}
         step={25}
         unit="Hz"
+        accentColor="#00D4FF"
         onchange={onPbtInnerChange ?? (() => {})}
       />
-      <Slider
+      <BipolarSlider
         label="PBT Outer"
         value={pbtOuter}
         min={-1200}
         max={1200}
         step={25}
         unit="Hz"
+        accentColor="#4ED37B"
         onchange={onPbtOuterChange ?? (() => {})}
       />
+
+      <div class="filter-actions">
+        <button
+          type="button"
+          class="pbt-reset-button v2-control-button"
+          style="--control-accent:#4D6074; --control-active-text:#F0F5FA"
+          onclick={() => onPbtReset?.()}
+        >
+          Reset PBT
+        </button>
+      </div>
     {/if}
   </div>
 </div>
@@ -94,5 +112,15 @@
     flex-direction: column;
     gap: 6px;
     padding: 7px 8px;
+  }
+
+  .filter-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 2px;
+  }
+
+  .pbt-reset-button {
+    min-width: 88px;
   }
 </style>

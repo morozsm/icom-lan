@@ -14,9 +14,15 @@
   } from '../../lib/renderers/waterfall-renderer';
   import { getChannel, onMessage, sendCommand } from '../../lib/transport/ws-client';
   import { type DxSpot } from '../../lib/types/protocol';
-  import { radio } from '../../lib/stores/radio.svelte';
+  import { patchActiveReceiver, radio } from '../../lib/stores/radio.svelte';
   import { getFilterWidthHz } from '../../lib/utils/filter-width';
   import { snapToStep } from '../../lib/stores/tuning.svelte';
+  import { deriveIfShift } from '../../components-v2/panels/filter-controls';
+  import {
+    canResizeFromRightEdge,
+    getFilterWidthFromRightEdgePx,
+    getPassbandGeometry,
+  } from './passband-geometry';
 
   // --- Scope frame binary protocol ---
   interface ScopeFrame {
@@ -55,6 +61,10 @@
   let endFreq = $state(0);
   let fullscreen = $state(false);
   let dxSpots = $state<DxSpot[]>([]);
+  let spectrumArea: HTMLDivElement | null = null;
+  let waterfallContent: HTMLDivElement | null = null;
+  let resizingPassband = $state(false);
+  let resizingPointerId = $state<number | null>(null);
 
   let centerHz = $derived(
     startFreq > 0 && endFreq > startFreq ? (startFreq + endFreq) / 2 : 0,
@@ -65,7 +75,9 @@
   let rx = $derived(radio.current?.active === 'SUB' ? radio.current?.sub : radio.current?.main);
   let tuneHz = $derived(rx?.freqHz ?? 0);
   let rxMode = $derived(rx?.mode ?? '');
-  let passbandHz = $derived(getFilterWidthHz(rxMode, rx?.filter ?? 1));
+  let passbandHz = $derived(rx?.filterWidth ?? getFilterWidthHz(rxMode, rx?.filter ?? 1));
+  let passbandShiftHz = $derived(deriveIfShift(rx?.pbtInner ?? 0, rx?.pbtOuter ?? 0));
+  let canResizePassband = $derived(canResizeFromRightEdge(rxMode));
 
   let spectrumOptions = $derived<SpectrumOptions>({
     ...defaultSpectrumOptions,
@@ -73,6 +85,7 @@
     centerHz,
     tuneHz,
     passbandHz,
+    passbandShiftHz,
     mode: rxMode,
   });
 
@@ -110,16 +123,63 @@
       : [],
   );
 
-  // Passband overlay position — always centered in center scope mode
-  let tunePct = $derived(50); // center mode: VFO freq is always at center
-  let pbWidthPct = $derived(spanHz > 0 && passbandHz > 0 ? (passbandHz / spanHz) * 100 : 0);
-  let pbLeftPct = $derived(() => {
-    const m = rxMode?.toUpperCase() ?? '';
-    if (m === 'LSB') return tunePct - pbWidthPct;
-    if (m === 'CW' || m === 'CW-R' || m === 'RTTY' || m === 'RTTY-R' || m === 'AM')
-      return tunePct - pbWidthPct / 2;
-    return tunePct; // USB default
-  });
+  // Passband overlay position derived from the same geometry as the spectrum renderer.
+  let passbandOverlay = $derived(
+    getPassbandGeometry(rxMode, passbandHz, passbandShiftHz, spanHz, 100),
+  );
+  let pbWidthPct = $derived(passbandOverlay?.widthPx ?? 0);
+  let pbLeftPct = $derived(passbandOverlay?.leftPx ?? 0);
+  let pbRightPct = $derived(passbandOverlay?.rightPx ?? 0);
+
+  function applyFilterWidth(width: number): void {
+    if (width === passbandHz) {
+      return;
+    }
+
+    patchActiveReceiver({ filterWidth: width }, true);
+    sendCommand('set_filter_width', { width });
+  }
+
+  function handlePassbandResizeStart(event: PointerEvent): void {
+    if (!canResizePassband || !waterfallContent) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    resizingPassband = true;
+    resizingPointerId = event.pointerId;
+    (event.currentTarget as HTMLElement | null)?.setPointerCapture?.(event.pointerId);
+  }
+
+  function handleWindowPointerMove(event: PointerEvent): void {
+    if (!resizingPassband || resizingPointerId !== event.pointerId || !waterfallContent) {
+      return;
+    }
+
+    const rect = waterfallContent.getBoundingClientRect();
+    const relativeX = Math.max(0, Math.min(rect.width, event.clientX - rect.left));
+    const nextWidth = getFilterWidthFromRightEdgePx(
+      rxMode,
+      passbandShiftHz,
+      spanHz,
+      rect.width,
+      relativeX,
+    );
+
+    if (nextWidth !== null) {
+      applyFilterWidth(nextWidth);
+    }
+  }
+
+  function stopPassbandResize(event?: PointerEvent): void {
+    if (event && resizingPointerId !== null && event.pointerId !== resizingPointerId) {
+      return;
+    }
+
+    resizingPassband = false;
+    resizingPointerId = null;
+  }
 
   // --- Click-to-tune ---
   function handleTune(hz: number): void {
@@ -172,6 +232,8 @@
   });
 </script>
 
+<svelte:window onpointermove={handleWindowPointerMove} onpointerup={stopPassbandResize} onpointercancel={stopPassbandResize} />
+
 <div class="spectrum-panel" class:fullscreen>
   <div class="spectrum-with-scales">
     <div class="db-scale">
@@ -179,8 +241,19 @@
         <div class="tick" style="top: {tick.position}%">{tick.label}</div>
       {/each}
     </div>
-    <div class="spectrum-area">
+    <div class="spectrum-area" bind:this={spectrumArea}>
       <SpectrumCanvas data={scopePixels} options={spectrumOptions} {spanHz} {enableAvg} {enablePeakHold} onRegisterPush={(fn) => spectrumPush = fn} />
+      {#if spanHz > 0 && pbWidthPct > 0 && canResizePassband}
+        <button
+          type="button"
+          class="passband-resize-zone"
+          class:active={resizingPassband}
+          style="left:{pbRightPct}%"
+          onpointerdown={handlePassbandResizeStart}
+          aria-label="Resize filter width"
+          title="Drag to resize filter width"
+        ></button>
+      {/if}
     </div>
   </div>
   {#if freqTicks.length > 0}
@@ -192,13 +265,24 @@
   {/if}
   <div class="waterfall-area">
     <div class="waterfall-scale"></div>
-    <div class="waterfall-content">
+    <div class="waterfall-content" bind:this={waterfallContent}>
       <WaterfallCanvas options={waterfallOptions} onFreqClick={handleTune} onRegisterPush={(fn) => waterfallPush = fn} />
       <DxOverlay spots={dxSpots} {startFreq} {endFreq} onTune={handleTune} />
       <!-- Tuning + passband indicator overlays the waterfall -->
       {#if spanHz > 0}
         {#if pbWidthPct > 0}
-          <div class="passband-overlay" style="left:{pbLeftPct()}%;width:{pbWidthPct}%"></div>
+          <div class="passband-overlay" style="left:{pbLeftPct}%;width:{pbWidthPct}%"></div>
+          {#if canResizePassband}
+            <button
+              type="button"
+              class="passband-resize-zone"
+              class:active={resizingPassband}
+              style="left:{pbRightPct}%"
+              onpointerdown={handlePassbandResizeStart}
+              aria-label="Resize filter width"
+              title="Drag to resize filter width"
+            ></button>
+          {/if}
         {/if}
         <div class="tune-line" style="left:50%"></div>
       {/if}
@@ -288,6 +372,7 @@
     flex: 1;
     min-width: 0;
     min-height: 0;
+    position: relative;
   }
 
   .freq-axis {
@@ -460,5 +545,24 @@
     border-right: 1px dashed rgba(59, 130, 246, 0.4);
     pointer-events: none;
     z-index: 4;
+  }
+
+  .passband-resize-zone {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 14px;
+    transform: translateX(-50%);
+    cursor: ew-resize;
+    z-index: 6;
+    pointer-events: auto;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .passband-resize-zone:focus-visible {
+    outline: none;
   }
 </style>

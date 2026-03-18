@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import asyncio
-import time
 import struct
+import time
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from icom_lan.profiles import resolve_radio_profile
+from icom_lan.rigctld.state_cache import StateCache
 from icom_lan.scope import ScopeFrame
 from icom_lan.types import AudioCodec
 from icom_lan.web.handlers import (
@@ -41,13 +43,12 @@ from icom_lan.web.radio_poller import (
     SetPower,
     SetPreamp,
     SetRfGain,
+    SetSplit,
     SetSquelch,
     SwitchScopeReceiver,
     VfoEqualize,
     VfoSwap,
 )
-from icom_lan.profiles import resolve_radio_profile
-from icom_lan.rigctld.state_cache import StateCache
 from icom_lan.web.websocket import WS_OP_BINARY, WS_OP_TEXT
 
 
@@ -249,6 +250,8 @@ def _scope_frame() -> ScopeFrame:
             {"level": 2, "receiver": 1},
             {"level": 2, "receiver": 1},
         ),
+        ("set_split", {"on": True}, SetSplit, {"on": True}, {"on": True}),
+        ("set_split", {"on": False}, SetSplit, {"on": False}, {"on": False}),
         ("select_vfo", {"vfo": "SUB"}, SelectVfo, {"vfo": "SUB"}, {"vfo": "SUB"}),
         ("vfo_swap", {}, VfoSwap, {}, {}),
         ("vfo_equalize", {}, VfoEqualize, {}, {}),

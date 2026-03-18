@@ -62,6 +62,13 @@ describe('audio store', () => {
       store.toggleMute();
       expect(store.getAudioState().muted).toBe(false);
     });
+
+    it('setMuted forces muted state without toggling', () => {
+      store.setMuted(true);
+      expect(store.getAudioState().muted).toBe(true);
+      store.setMuted(false);
+      expect(store.getAudioState().muted).toBe(false);
+    });
   });
 
   describe('setRxEnabled / setTxEnabled', () => {

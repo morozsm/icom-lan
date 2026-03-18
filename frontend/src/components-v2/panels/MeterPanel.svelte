@@ -1,4 +1,5 @@
 <script lang="ts">
+  import '../controls/control-button.css';
   import BarGauge from '../meters/BarGauge.svelte';
   import NeedleGauge from '../meters/NeedleGauge.svelte';
   import { hasTx } from '$lib/stores/capabilities.svelte';
@@ -72,28 +73,28 @@
     </div>
 
     <div class="source-selector">
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <!-- svelte-ignore a11y_click_events_have_key_events -->
-      <span
-        class="source-btn"
+      <button
+        type="button"
+        class="source-btn v2-control-button"
         class:active={meterSource === 'S'}
+        style="--control-accent:#00D4FF; --control-active-text:#F0F5FA"
         onclick={() => onMeterSourceChange('S')}
-      >S</span>
+      >S</button>
       {#if hasTx()}
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <!-- svelte-ignore a11y_click_events_have_key_events -->
-        <span
-          class="source-btn"
+        <button
+          type="button"
+          class="source-btn v2-control-button"
           class:active={meterSource === 'SWR'}
+          style="--control-accent:#00D4FF; --control-active-text:#F0F5FA"
           onclick={() => onMeterSourceChange('SWR')}
-        >SWR</span>
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <!-- svelte-ignore a11y_click_events_have_key_events -->
-        <span
-          class="source-btn"
+        >SWR</button>
+        <button
+          type="button"
+          class="source-btn v2-control-button"
           class:active={meterSource === 'POWER'}
+          style="--control-accent:#00D4FF; --control-active-text:#F0F5FA"
           onclick={() => onMeterSourceChange('POWER')}
-        >Po</span>
+        >Po</button>
       {/if}
     </div>
 
@@ -122,30 +123,7 @@
 
 <style>
   .panel {
-    background: #060A10;
-    border: 1px solid #18202A;
-    border-radius: 10px;
-    overflow: hidden;
-    font-family: 'Roboto Mono', monospace;
-  }
-
-  .panel-header {
-    padding: 6px 10px;
-    color: #8CA0B8;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    border-bottom: 1px solid #18202A;
-  }
-
-  .panel-body {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 10px;
-  }
-
-  .needle-section {
+    min-width: 0;
     width: 100%;
   }
 

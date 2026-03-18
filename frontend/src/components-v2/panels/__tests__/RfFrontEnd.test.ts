@@ -3,7 +3,9 @@ import {
   formatAttLabel,
   formatPreLabel,
   buildAttOptions,
+  buildAttControlModel,
   buildPreOptions,
+  getAttOverflowLabel,
   shouldShowPanel,
 } from '../rf-frontend-utils';
 
@@ -71,6 +73,57 @@ describe('buildAttOptions', () => {
       { value: 0, label: 'OFF' },
       { value: 20, label: '20dB' },
     ]);
+  });
+});
+
+describe('buildAttControlModel', () => {
+  it('uses all values as quick options when there are only two ATT positions', () => {
+    const model = buildAttControlModel([0, 20]);
+
+    expect(model.quickOptions).toEqual([
+      { value: 0, label: 'OFF' },
+      { value: 20, label: '20dB' },
+    ]);
+    expect(model.overflowOptions).toEqual([]);
+  });
+
+  it('uses all values as quick options when there are up to four ATT positions', () => {
+    const model = buildAttControlModel([0, 6, 12, 18]);
+
+    expect(model.quickOptions.map((option) => option.value)).toEqual([0, 6, 12, 18]);
+    expect(model.overflowOptions).toEqual([]);
+  });
+
+  it('promotes OFF/6/12/18 to quick options and sends the rest to overflow for dense ATT ladders', () => {
+    const model = buildAttControlModel([0, 3, 6, 9, 12, 15, 18]);
+
+    expect(model.quickOptions.map((option) => option.value)).toEqual([0, 6, 12, 18]);
+    expect(model.overflowOptions.map((option) => option.value)).toEqual([3, 9, 15]);
+  });
+
+  it('fills remaining quick slots from the capabilities order when quick presets are missing', () => {
+    const model = buildAttControlModel([0, 10, 20, 30, 40]);
+
+    expect(model.quickOptions.map((option) => option.value)).toEqual([0, 10, 20, 30]);
+    expect(model.overflowOptions.map((option) => option.value)).toEqual([40]);
+  });
+});
+
+describe('getAttOverflowLabel', () => {
+  it('returns the selected overflow value label when ATT is on a non-quick step', () => {
+    expect(getAttOverflowLabel(15, [
+      { value: 3, label: '3dB' },
+      { value: 9, label: '9dB' },
+      { value: 15, label: '15dB' },
+    ])).toBe('15dB');
+  });
+
+  it('returns MORE when the selected ATT value is already covered by quick picks', () => {
+    expect(getAttOverflowLabel(12, [
+      { value: 3, label: '3dB' },
+      { value: 9, label: '9dB' },
+      { value: 15, label: '15dB' },
+    ])).toBe('MORE');
   });
 });
 

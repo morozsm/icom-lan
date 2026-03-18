@@ -1,0 +1,235 @@
+# Rig Configuration — Xiegu X6200
+# Portable HF/50MHz SDR transceiver with CI-V compatible protocol
+# Source: rigpix.com specs, Xiegu firmware release notes, wfview "limited support"
+#
+# X6100 is nearly identical (5W only, older firmware). Same TOML + power override.
+
+# ═══ Layer 0: PROTOCOL ═══════════════════════════════════════════
+
+[radio]
+id = "xiegu_x6200"
+model = "X6200"
+manufacturer = "Xiegu"
+civ_addr = 0x70              # Standard Xiegu CIV address
+default_baud = 115200
+receiver_count = 1
+has_lan = false
+has_wifi = true              # WLAN + Bluetooth
+has_ethernet = false
+
+[protocol]
+type = "civ"
+variant = "xiegu"            # CI-V compatible, subset of IC-705 commands
+# Key: supports 0x03-0x07, 0x11, 0x14, 0x16, 0x1A 0x01, 0x25, 0x26
+# Missing: 0x15 (meters via CI-V), 0x27 (scope data via CI-V)
+# Scope data comes from internal SDR, not CI-V
+
+# ═══ Layer 1: CAPABILITIES ═══════════════════════════════════════
+
+[capabilities]
+features = [
+    # Receiver
+    "audio",
+    "af_level",
+    "rf_gain",
+    "squelch",
+    # RF front end
+    "attenuator",
+    "preamp",
+    # DSP / Noise
+    "nb",
+    "nr",
+    "notch",
+    "apf",
+    # Filter
+    "filter_width",
+    # TX
+    "tx",
+    "split",
+    "vox",
+    "compressor",
+    # CW
+    "cw",
+    # RIT / XIT
+    "rit",
+    "xit",
+    # Tuner
+    "tuner",              # Built-in ATU
+    # Metering
+    "meters",
+    # Scope
+    "scope",              # SDR direct sampling — internal, not CI-V streamed
+    # Data
+    "data_mode",
+    # System
+    "power_control",
+    "bsr",
+    "memory_channels",
+]
+
+# ═══ Layer 2: CONTROLS ═══════════════════════════════════════════
+
+[controls.attenuator]
+style = "toggle"             # Simple ON/OFF (~20 dB)
+values = [0, 1]
+labels = { "0" = "OFF", "1" = "ON" }
+default = 0
+
+[controls.preamp]
+style = "selector"
+values = [0, 1, 2]
+labels = { "0" = "OFF", "1" = "AMP 1", "2" = "AMP 2" }
+default = 0
+
+[controls.nb]
+style = "toggle_with_level"
+level_range = [0, 10]
+default = false
+
+[controls.nr]
+style = "toggle_with_level"
+level_range = [0, 10]
+default = false
+
+[controls.notch]
+style = "toggle"             # Auto-notch
+default = false
+
+[controls.apf]
+style = "toggle"             # ON/OFF only (no WIDE/MID/NAR)
+values = [0, 1]
+labels = { "0" = "OFF", "1" = "ON" }
+default = 0
+
+[controls.rf_power]
+style = "slider"
+range = [1, 8]               # 8W max on external DC, 5W on battery
+unit = "W"
+default = 5
+
+[controls.filter_width]
+style = "continuous"          # SDR-based — arbitrary width selection
+range_hz = [50, 10000]
+
+[controls.cw_speed]
+style = "slider"
+range = [6, 48]
+unit = "WPM"
+default = 15
+
+# ═══ Layer 3: RULES ══════════════════════════════════════════════
+
+# ATT and PREAMP are mutually exclusive
+[[rules]]
+kind = "mutex"
+fields = ["attenuator", "preamp"]
+
+# ═══ METERS ══════════════════════════════════════════════════════
+
+[meters.s_meter]
+type = "linear"              # SDR — S-meter computed digitally, roughly linear
+raw_max = 255
+unit = "dBm"
+
+[meters.power]
+type = "linear"
+raw_max = 255
+max_watts = 8
+unit = "W"
+
+[meters.swr]
+type = "linear"
+raw_max = 255
+unit = ""
+
+# ═══ VFO ═════════════════════════════════════════════════════════
+
+[vfo]
+scheme = "ab"                # 2 VFOs (A/B), 1 receiver
+vfo_count = 2
+has_equal = true
+has_swap = true
+has_split = true
+
+# ═══ MODES ═══════════════════════════════════════════════════════
+
+[modes]
+list = ["USB", "LSB", "CW", "CW-R", "AM", "NFM", "RTTY", "WFM"]
+# WFM = RX only (88-108 MHz)
+
+# ═══ BANDS ═══════════════════════════════════════════════════════
+
+[[freq_ranges.ranges]]
+label = "160m"
+start_hz = 1_800_000
+end_hz = 2_000_000
+
+[[freq_ranges.ranges]]
+label = "80m"
+start_hz = 3_500_000
+end_hz = 4_000_000
+
+[[freq_ranges.ranges]]
+label = "60m"
+start_hz = 5_250_000
+end_hz = 5_450_000
+
+[[freq_ranges.ranges]]
+label = "40m"
+start_hz = 7_000_000
+end_hz = 7_300_000
+
+[[freq_ranges.ranges]]
+label = "30m"
+start_hz = 10_100_000
+end_hz = 10_150_000
+
+[[freq_ranges.ranges]]
+label = "20m"
+start_hz = 14_000_000
+end_hz = 14_350_000
+
+[[freq_ranges.ranges]]
+label = "17m"
+start_hz = 18_068_000
+end_hz = 18_168_000
+
+[[freq_ranges.ranges]]
+label = "15m"
+start_hz = 21_000_000
+end_hz = 21_450_000
+
+[[freq_ranges.ranges]]
+label = "12m"
+start_hz = 24_890_000
+end_hz = 24_990_000
+
+[[freq_ranges.ranges]]
+label = "10m"
+start_hz = 28_000_000
+end_hz = 29_700_000
+
+[[freq_ranges.ranges]]
+label = "6m"
+start_hz = 50_000_000
+end_hz = 54_000_000
+
+# RX-only ranges
+[[freq_ranges.ranges]]
+label = "WFM"
+start_hz = 88_000_000
+end_hz = 108_000_000
+rx_only = true
+
+[[freq_ranges.ranges]]
+label = "Air"
+start_hz = 108_000_000
+end_hz = 136_000_000
+rx_only = true
+
+# General coverage RX
+[[freq_ranges.ranges]]
+label = "Gen"
+start_hz = 500_000
+end_hz = 30_000_000
+rx_only = true

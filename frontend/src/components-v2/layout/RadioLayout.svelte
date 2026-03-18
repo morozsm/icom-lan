@@ -17,7 +17,7 @@
     type VfoLayoutScaleOverrides,
   } from './vfo-layout-tokens';
   import { toVfoProps, toVfoOpsProps, toMeterProps } from '../wiring/state-adapter';
-  import { makeVfoHandlers } from '../wiring/command-bus';
+  import { makeMeterHandlers, makeVfoHandlers } from '../wiring/command-bus';
 
   // Reactive state + capabilities
   let radioState = $derived(radio.current);
@@ -41,11 +41,18 @@
 
   // Command handlers via command-bus
   const vfoHandlers = makeVfoHandlers();
+  const meterHandlers = makeMeterHandlers();
 
   onMount(() => {
     manualVfoScaleOverrides = parseVfoLayoutScaleOverrides(window.location.search);
 
     if (!receiverDeckElement) {
+      return;
+    }
+
+    receiverDeckWidth = receiverDeckElement.getBoundingClientRect().width || receiverDeckElement.clientWidth || null;
+
+    if (typeof ResizeObserver === 'undefined') {
       return;
     }
 
@@ -132,10 +139,13 @@
 
     {#if txCapable}
       <DockMeterPanel
+        sValue={meter.sValue}
         rfPower={meter.rfPower}
         swr={meter.swr}
         alc={meter.alc}
         txActive={meter.txActive}
+        meterSource={meter.meterSource as 'S' | 'SWR' | 'POWER'}
+        onMeterSourceChange={meterHandlers.onMeterSourceChange}
       />
     {/if}
   </section>
@@ -179,7 +189,7 @@
 
   .content-row {
     display: grid;
-    grid-template-columns: 198px minmax(0, 1fr) 198px;
+    grid-template-columns: 228px minmax(0, 1fr) 228px;
     gap: 5px;
     min-height: 0;
   }
@@ -300,7 +310,7 @@
 
   @media (max-width: 1200px) {
     .content-row {
-      grid-template-columns: 186px minmax(0, 1fr) 186px;
+      grid-template-columns: 208px minmax(0, 1fr) 208px;
     }
   }
 

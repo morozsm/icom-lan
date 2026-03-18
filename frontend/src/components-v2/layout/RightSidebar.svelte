@@ -1,5 +1,6 @@
 <script lang="ts">
   import { radio } from '$lib/stores/radio.svelte';
+  import { getAudioState } from '$lib/stores/audio.svelte';
   import { getCapabilities } from '$lib/stores/capabilities.svelte';
   import RxAudioPanel from '../panels/RxAudioPanel.svelte';
   import DspPanel from '../panels/DspPanel.svelte';
@@ -17,10 +18,11 @@
 
   // Reactive state + capabilities
   let radioState = $derived(radio.current);
+  let audioState = $derived(getAudioState());
   let caps = $derived(getCapabilities());
 
   // Derived props via state adapter
-  let rxAudio = $derived(toRxAudioProps(radioState, caps));
+  let rxAudio = $derived(toRxAudioProps(radioState, caps, audioState));
   let dsp = $derived(toDspProps(radioState, caps));
   let tx = $derived(toTxProps(radioState, caps));
 

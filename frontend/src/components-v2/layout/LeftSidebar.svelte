@@ -60,6 +60,7 @@
     onIfShiftChange={filterHandlers.onIfShiftChange}
     onPbtInnerChange={filterHandlers.onPbtInnerChange}
     onPbtOuterChange={filterHandlers.onPbtOuterChange}
+    onPbtReset={filterHandlers.onPbtReset}
   />
 
   <AgcPanel

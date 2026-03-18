@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mount, unmount, flushSync } from 'svelte';
 import FilterPanel from '../FilterPanel.svelte';
 import { formatFilterWidth } from '../filter-utils';
+import { deriveIfShift } from '../filter-controls';
 
 // ---------------------------------------------------------------------------
 // formatFilterWidth
@@ -136,6 +137,12 @@ describe('PBT sliders visibility', () => {
     expect(labels).toContain('PBT Outer');
   });
 
+  it('renders Reset PBT button when hasPbt=true', () => {
+    const t = mountPanel({ ...baseProps, hasPbt: true, pbtInner: 100, pbtOuter: -50, onPbtReset: vi.fn() });
+    const buttons = Array.from(t.querySelectorAll('button')).map(el => el.textContent?.trim());
+    expect(buttons).toContain('Reset PBT');
+  });
+
   it('renders 4 sliders total when hasPbt=true', () => {
     const t = mountPanel({ ...baseProps, hasPbt: true, pbtInner: 0, pbtOuter: 0 });
     expect(t.querySelectorAll('input[type="range"]').length).toBe(4);
@@ -182,5 +189,19 @@ describe('callbacks', () => {
     inputs[3].value = '-100';
     inputs[3].dispatchEvent(new Event('input', { bubbles: true }));
     expect(onPbtOuterChange).toHaveBeenCalledWith(-100);
+  });
+
+  it('calls onPbtReset when the reset button is clicked', () => {
+    const onPbtReset = vi.fn();
+    const t = mountPanel({ ...baseProps, hasPbt: true, pbtInner: 100, pbtOuter: -100, onPbtReset });
+    const button = Array.from(t.querySelectorAll('button')).find(el => el.textContent?.trim() === 'Reset PBT') as HTMLButtonElement;
+    button.click();
+    expect(onPbtReset).toHaveBeenCalledOnce();
+  });
+});
+
+describe('IF Shift semantics', () => {
+  it('can be derived from current PBT offsets', () => {
+    expect(deriveIfShift(-150, 50)).toBe(-50);
   });
 });

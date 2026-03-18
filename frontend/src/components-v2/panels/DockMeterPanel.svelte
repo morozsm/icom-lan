@@ -1,14 +1,24 @@
 <script lang="ts">
-  import { formatAlc, formatPowerWatts, formatSwr, normalize } from './meter-utils';
+  import {
+    formatAlc,
+    formatPowerWatts,
+    formatSMeter,
+    formatSwr,
+    normalize,
+    type MeterSource,
+  } from './meter-utils';
 
   interface Props {
+    sValue: number;
     rfPower: number;
     swr: number;
     alc: number;
     txActive: boolean;
+    meterSource: MeterSource;
+    onMeterSourceChange: (v: string) => void;
   }
 
-  let { rfPower, swr, alc, txActive }: Props = $props();
+  let { sValue, rfPower, swr, alc, txActive, meterSource, onMeterSourceChange }: Props = $props();
 
   const scaleLabels = [
     { label: '0', left: '11%' },
@@ -19,9 +29,26 @@
     { label: '%', left: '97%' },
   ] as const;
 
+  let sourceSummary = $derived(
+    meterSource === 'S'
+      ? { label: 'S', value: formatSMeter(sValue) }
+      : meterSource === 'SWR'
+        ? { label: 'SWR', value: formatSwr(swr) }
+        : { label: 'Po', value: formatPowerWatts(rfPower) },
+  );
+
   let rows = $derived([
     {
-      key: 'po',
+      key: 'S',
+      label: 'S',
+      value: sValue,
+      display: formatSMeter(sValue),
+      fill: 'linear-gradient(90deg, #65d8ff 0%, #82f2ff 60%, #e6f7ff 100%)',
+      track: 'linear-gradient(90deg, rgba(21,82,97,0.38) 0%, rgba(34,116,135,0.26) 60%, rgba(230,247,255,0.14) 100%)',
+      valueClass: 's',
+    },
+    {
+      key: 'POWER',
       label: 'Po',
       value: rfPower,
       display: formatPowerWatts(rfPower),
@@ -30,7 +57,7 @@
       valueClass: 'po',
     },
     {
-      key: 'swr',
+      key: 'SWR',
       label: 'SWR',
       value: swr,
       display: formatSwr(swr),
@@ -59,14 +86,35 @@
       {/each}
     </div>
     <div class="dock-status">
-      <span class="status-tag swr">SWR {formatSwr(swr)}</span>
+      <span class="status-tag source" data-source={meterSource}>{sourceSummary.label} {sourceSummary.value}</span>
       <span class="status-tag tx" data-active={txActive}>{txActive ? 'TX' : 'RX'}</span>
     </div>
   </div>
 
+  <div class="meter-source-selector" role="group" aria-label="Meter source selector">
+    <button
+      type="button"
+      class="meter-source-btn"
+      class:active={meterSource === 'S'}
+      onclick={() => onMeterSourceChange('S')}
+    >S</button>
+    <button
+      type="button"
+      class="meter-source-btn"
+      class:active={meterSource === 'SWR'}
+      onclick={() => onMeterSourceChange('SWR')}
+    >SWR</button>
+    <button
+      type="button"
+      class="meter-source-btn"
+      class:active={meterSource === 'POWER'}
+      onclick={() => onMeterSourceChange('POWER')}
+    >Po</button>
+  </div>
+
   <div class="dock-rows">
     {#each rows as row (row.key)}
-      <div class="dock-row">
+      <div class="dock-row" data-active={row.key === meterSource}>
         <span class="dock-row-label">{row.label}</span>
         <div class="dock-bar" style:background={row.track}>
           <div class="dock-bar-fill" style:width={`${normalize(row.value) * 100}%`} style:background={row.fill}></div>
@@ -146,10 +194,22 @@
     letter-spacing: 0.08em;
   }
 
-  .status-tag.swr {
+  .status-tag.source {
+    border-color: #235873;
+    color: #92eaff;
+    background: rgba(12, 54, 76, 0.52);
+  }
+
+  .status-tag.source[data-source='SWR'] {
     border-color: #2c6d3f;
     color: #8ef7a8;
     background: rgba(18, 79, 35, 0.52);
+  }
+
+  .status-tag.source[data-source='POWER'] {
+    border-color: rgba(195, 146, 48, 0.82);
+    color: #ffdca0;
+    background: rgba(95, 60, 8, 0.48);
   }
 
   .status-tag.tx {
@@ -169,11 +229,53 @@
     gap: 6px;
   }
 
+  .meter-source-selector {
+    display: inline-flex;
+    align-self: flex-start;
+    gap: 6px;
+  }
+
+  .meter-source-btn {
+    min-height: 22px;
+    padding: 0 10px;
+    border: 1px solid #233241;
+    border-radius: 999px;
+    background: transparent;
+    color: #7f93a7;
+    font-family: 'Roboto Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: border-color 150ms ease, color 150ms ease, background 150ms ease;
+  }
+
+  .meter-source-btn:hover {
+    border-color: #3d556d;
+    color: #c8d8e8;
+  }
+
+  .meter-source-btn.active {
+    border-color: #5fdcff;
+    color: #effaff;
+    background: rgba(0, 180, 255, 0.14);
+  }
+
   .dock-row {
     display: grid;
     grid-template-columns: 30px minmax(0, 1fr) 48px;
     align-items: center;
     gap: 10px;
+  }
+
+  .dock-row[data-active='true'] .dock-row-label,
+  .dock-row[data-active='true'] .dock-row-value {
+    color: #eff8ff;
+  }
+
+  .dock-row[data-active='true'] .dock-bar {
+    border-color: #2d465e;
+    box-shadow: inset 0 0 0 1px rgba(111, 194, 255, 0.08);
   }
 
   .dock-row-label {
@@ -204,6 +306,10 @@
 
   .dock-row-value.po {
     color: #f8fafd;
+  }
+
+  .dock-row-value.s {
+    color: #9befff;
   }
 
   .dock-row-value.swr {

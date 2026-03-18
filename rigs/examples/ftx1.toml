@@ -1,0 +1,357 @@
+# Rig Configuration — Yaesu FTX-1
+# Example TOML for validating declarative rig config architecture
+# Protocol: CI-V (Icom-compatible, via wfview abstraction layer)
+# Source: wfview FTX-1.rig (v2.11)
+
+# ═══ Layer 0: PROTOCOL ═══════════════════════════════════════════
+
+[radio]
+id = "yaesu_ftx1"
+model = "FTX-1"
+manufacturer = "Yaesu"
+civ_addr = 0x0348           # 840 decimal
+default_baud = 38400
+receiver_count = 2           # 2 receivers, 1 VFO — unusual combo
+has_lan = false
+has_wifi = false
+has_ethernet = false
+
+[protocol]
+type = "civ"                 # CI-V compatible (via wfview)
+variant = "yaesu_enhanced"   # Yaesu extensions on top of CI-V
+# Yaesu uses CI-V framing but different sub-commands and data encoding
+# Key difference: mode registers are hex-string based (0x01-0x0I)
+
+[spectrum]
+seq_max = 0
+amp_max = 255
+data_len_max = 850
+modes = [
+    "3dss_center", "3dss_cursor", "3dss_fixed",
+    "center_expand", "center_normal", "center_expand2",
+    "cursor_expand", "cursor_normal", "cursor_expand2",
+    "fixed_expand", "fixed_normal",
+]
+
+# ═══ Layer 1: CAPABILITIES ═══════════════════════════════════════
+
+[capabilities]
+features = [
+    # Receiver
+    "audio",
+    "af_level",
+    "rf_gain",
+    "squelch",
+    "dual_watch",
+    # RF front end
+    "attenuator",
+    "preamp",
+    # DSP / Noise
+    "nb",
+    "nr",
+    "notch",
+    # Filter
+    "filter_width",
+    # TX
+    "tx",
+    "split",
+    "vox",
+    "compressor",
+    "monitor",
+    # CW
+    "cw",
+    "break_in",
+    # RIT / XIT
+    "rit",
+    "xit",
+    # Tuner
+    "tuner",
+    # Metering
+    "meters",
+    # Scope
+    "scope",
+    # Tone
+    "repeater_tone",
+    "tsql",
+    "dtcs",
+    # Data
+    "data_mode",
+    # System
+    "power_control",
+    "bsr",
+    "memory_channels",
+    "c4fm",               # Yaesu-specific: System Fusion
+]
+
+# ═══ Layer 2: CONTROLS ═══════════════════════════════════════════
+
+[controls.attenuator]
+style = "stepped"            # 0/6/12/18 dB (4 values: 0-3)
+values = [0, 6, 12, 18]
+unit = "dB"
+default = 0
+
+[controls.preamp]
+style = "selector"
+values = [0, 1, 2]
+labels = { "0" = "OFF", "1" = "AMP 1", "2" = "AMP 2" }
+default = 0
+
+[controls.nb]
+style = "level_is_toggle"    # 0 = OFF, 1-10 = ON at level
+range = [0, 10]
+default = 0
+
+[controls.nr]
+style = "level_is_toggle"    # 1-15 = ON at level (no explicit OFF)
+range = [1, 15]
+default = 0
+# NR level 0 is not valid; setting to 0 means "disabled"
+implicit_off_below = 1
+
+[controls.notch]
+style = "toggle"             # Auto-notch only
+default = false
+
+[controls.rf_power]
+style = "slider"
+range = [5, 100]
+unit = "W"
+default = 100
+
+[controls.compressor]
+style = "slider"
+range = [1, 100]
+unit = ""
+default = 50
+
+[controls.squelch]
+style = "slider"
+range = [0, 100]
+default = 0
+
+[controls.vox]
+style = "toggle_with_level"
+level_range = [0, 100]
+default = false
+
+[controls.monitor]
+style = "toggle_with_level"
+level_range = [0, 100]
+default = false
+
+# ── CW controls ──
+[controls.cw_pitch]
+style = "slider"
+range = [0, 75]              # Maps to actual Hz via calibration
+unit = "steps"
+default = 25
+
+[controls.cw_speed]
+style = "slider"
+range = [0, 60]
+unit = "WPM"
+default = 20
+
+# ── Filter ──
+[controls.filter_width]
+style = "per_mode"           # Width options depend on current mode
+
+[controls.filter_width.ssb]
+# 23 discrete widths for SSB (LSB/USB/DATA-U/DATA-L)
+widths_hz = [300, 400, 600, 850, 1100, 1200, 1500, 1650, 1800,
+             1950, 2100, 2250, 2400, 2450, 2500, 2600, 2700,
+             2800, 2900, 3000, 3200, 3500, 4000]
+
+[controls.filter_width.cw]
+# 21 discrete widths for CW/RTTY/PSK
+widths_hz = [50, 100, 150, 200, 250, 300, 350, 400, 450, 500,
+             600, 800, 1200, 1400, 1700, 2000, 2400, 3000,
+             3200, 3500, 4000]
+
+# ── Modulation sources (per-mode) ──
+[controls.mod_source]
+style = "per_mode"
+
+[controls.mod_source.ssb]
+sources = ["MIC", "REAR", "USB", "AUTO"]
+gain_range = [0, 100]
+
+[controls.mod_source.am]
+sources = ["MIC", "REAR", "USB", "AUTO"]
+gain_range = [0, 100]
+
+[controls.mod_source.fm]
+sources = ["MIC", "REAR", "USB", "AUTO"]
+gain_range = [0, 100]
+
+[controls.mod_source.data]
+sources = ["MIC", "REAR", "USB", "AUTO"]
+gain_range = [0, 100]
+
+# ═══ Layer 3: RULES ══════════════════════════════════════════════
+
+# ATT and PREAMP are mutually exclusive
+[[rules]]
+kind = "mutex"
+fields = ["attenuator", "preamp"]
+
+# ═══ METERS ══════════════════════════════════════════════════════
+
+[meters.s_meter]
+type = "lookup"              # Non-linear: raw → actual via calibration table
+unit = "dBm"
+[[meters.s_meter.calibration]]
+raw = [0, 12, 27, 40, 55, 65, 80, 95, 112, 130, 150, 172, 190, 220, 240, 255]
+actual_db = [-54, -48, -42, -36, -30, -24, -18, -12, -6, 0, 10, 20, 30, 40, 50, 60]
+redline_raw = 130            # S9 = 0 dBm
+
+[meters.power]
+type = "lookup"
+unit = "W"
+[[meters.power.calibration]]
+raw = [0, 27, 94, 147, 176, 205, 255]
+actual = [0, 0, 25, 50, 75, 100, 110]
+redline_raw = 205
+
+[meters.swr]
+type = "lookup"
+unit = ""
+[[meters.swr.calibration]]
+raw = [0, 26, 52, 89, 126, 173, 236, 255]
+actual = [1.0, 1.2, 1.5, 2.0, 3.0, 4.0, 5.0, 25.0]
+redline_raw = 126
+
+[meters.comp]
+type = "lookup"
+unit = "dB"
+[[meters.comp.calibration]]
+raw = [0, 40, 60, 85, 135, 150, 175, 195, 220]
+actual = [0, 2.5, 5, 7.5, 10, 12.5, 15, 17.5, 20]
+redline_raw = 135
+
+[meters.current]
+type = "lookup"
+unit = "A"
+[[meters.current.calibration]]
+raw = [0, 53, 65, 78, 86, 98, 107, 255]
+actual = [0, 5, 6, 7, 8, 9, 10, 26]
+redline_raw = 107
+
+[meters.voltage]
+type = "lookup"
+unit = "V"
+[[meters.voltage.calibration]]
+raw = [0, 192, 255]
+actual = [0, 13.8, 15]
+redline_raw = 192
+
+# ═══ VFO ═════════════════════════════════════════════════════════
+
+[vfo]
+scheme = "ab_shared"         # 2 receivers, 1 VFO set (A/B share receivers)
+vfo_count = 1
+has_equal = true
+has_swap = true
+has_split = true
+
+# ═══ MODES ═══════════════════════════════════════════════════════
+
+[modes]
+list = [
+    "LSB", "USB", "CW-U", "FM", "AM",
+    "RTTY-L", "CW-L", "DATA-L", "RTTY-U", "DATA-FM",
+    "FM-N", "DATA-U", "AM-N", "PSK", "DATA-FM-N",
+    "C4FM-DN", "C4FM-VW",
+]
+
+# ═══ TONES ═══════════════════════════════════════════════════════
+
+[tones]
+ctcss_count = 50
+dtcs_count = 104
+
+# ═══ BANDS ═══════════════════════════════════════════════════════
+
+[[freq_ranges.ranges]]
+label = "160m"
+start_hz = 1_800_000
+end_hz = 2_000_000
+
+[[freq_ranges.ranges]]
+label = "80m"
+start_hz = 3_500_000
+end_hz = 4_000_000
+
+[[freq_ranges.ranges]]
+label = "60m"
+start_hz = 5_250_000
+end_hz = 5_450_000
+
+[[freq_ranges.ranges]]
+label = "40m"
+start_hz = 7_000_000
+end_hz = 7_300_000
+
+[[freq_ranges.ranges]]
+label = "30m"
+start_hz = 10_100_000
+end_hz = 10_150_000
+
+[[freq_ranges.ranges]]
+label = "20m"
+start_hz = 14_000_000
+end_hz = 14_350_000
+
+[[freq_ranges.ranges]]
+label = "17m"
+start_hz = 18_068_000
+end_hz = 18_168_000
+
+[[freq_ranges.ranges]]
+label = "15m"
+start_hz = 21_000_000
+end_hz = 21_450_000
+
+[[freq_ranges.ranges]]
+label = "12m"
+start_hz = 24_890_000
+end_hz = 24_990_000
+
+[[freq_ranges.ranges]]
+label = "10m"
+start_hz = 28_000_000
+end_hz = 29_700_000
+
+[[freq_ranges.ranges]]
+label = "6m"
+start_hz = 50_000_000
+end_hz = 54_000_000
+
+[[freq_ranges.ranges]]
+label = "4m"
+start_hz = 70_000_000
+end_hz = 70_500_000
+
+[[freq_ranges.ranges]]
+label = "2m"
+start_hz = 144_000_000
+end_hz = 148_000_000
+
+[[freq_ranges.ranges]]
+label = "70cm"
+start_hz = 420_000_000
+end_hz = 450_000_000
+
+# RX-only ranges
+[[freq_ranges.ranges]]
+label = "Air"
+start_hz = 108_000_000
+end_hz = 137_000_000
+rx_only = true
+
+[[freq_ranges.ranges]]
+label = "WFM"
+start_hz = 74_800_000
+end_hz = 108_000_000
+rx_only = true

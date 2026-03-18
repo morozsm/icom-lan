@@ -1,4 +1,5 @@
 <script lang="ts">
+  import './control-button.css';
   import { getCapabilities } from '$lib/stores/capabilities.svelte';
   import { flattenBands, findActiveBand } from './band-utils';
 
@@ -16,22 +17,6 @@
     onBandSelect(name, defaultFreq);
   }
 
-  function buttonStyle(isActive: boolean): string {
-    if (isActive) {
-      return [
-        'background:#0D3B66',
-        'border:1px solid #00D4FF',
-        'color:#FFFFFF',
-        'box-shadow:0 0 6px 0 rgba(0,212,255,0.25)',
-      ].join(';');
-    }
-    return [
-      'background:transparent',
-      'border:1px solid #1A2028',
-      'color:#4D6074',
-      'box-shadow:none',
-    ].join(';');
-  }
 </script>
 
 <div class="panel">
@@ -39,18 +24,17 @@
   <div class="grid">
     {#each bands as band (band.name)}
       {@const isActive = activeBand === band.name}
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <!-- svelte-ignore a11y_click_events_have_key_events -->
-      <span
-        class="band-btn"
+      <button
+        type="button"
+        class="band-btn v2-control-button"
         class:active={isActive}
-        style={buttonStyle(isActive)}
+        style="--control-accent:#00D4FF; --control-active-text:#FFFFFF"
         data-band={band.name}
         data-active={isActive}
         onclick={() => handleClick(band.name, band.defaultFreq)}
       >
         {band.name}
-      </span>
+      </button>
     {/each}
   </div>
 </div>
@@ -82,24 +66,6 @@
   }
 
   .band-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 3px;
-    font-family: 'Roboto Mono', monospace;
-    font-size: 8px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    white-space: nowrap;
-    user-select: none;
-    cursor: pointer;
-    height: 18px;
-    padding: 0 6px;
-    transition: background 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
-  }
-
-  .band-btn:hover {
-    filter: brightness(1.2);
+    min-width: 0;
   }
 </style>

@@ -2,6 +2,8 @@
 // Data: Uint8Array of amplitude values (0–160), mapped to canvas width.
 // SpectrumRenderer class adds stateful averaging and peak hold on top.
 
+import { getPassbandGeometry } from '../../components/spectrum/passband-geometry';
+
 export interface SpectrumOptions {
   bgColor: string;
   lineColor: string;
@@ -15,6 +17,7 @@ export interface SpectrumOptions {
   // Passband overlay
   tuneHz: number;     // current tuned frequency (0 = hide)
   passbandHz: number; // filter passband width in Hz (0 = hide)
+  passbandShiftHz: number; // IF/PBT-derived passband offset from carrier
   mode: string;       // current mode (USB/LSB/CW/AM/FM) — affects passband placement
 }
 
@@ -30,6 +33,7 @@ export const defaultSpectrumOptions: SpectrumOptions = {
   lineWidth: 1.2,
   tuneHz: 0,
   passbandHz: 0,
+  passbandShiftHz: 0,
   mode: '',
 };
 
@@ -60,7 +64,7 @@ export function renderSpectrum(
   const n = data.length;
   if (!n || width <= 0 || height <= 0) return;
 
-  const { bgColor, lineColor, fillColor, gridColor, textColor, spanHz, centerHz, lineWidth, tuneHz, passbandHz } =
+  const { bgColor, lineColor, fillColor, gridColor, textColor, spanHz, centerHz, lineWidth, tuneHz, passbandHz, passbandShiftHz } =
     options;
 
   ctx.clearRect(0, 0, width, height);
@@ -152,38 +156,27 @@ export function renderSpectrum(
 
     // Draw passband rectangle
     if (passbandHz > 0) {
-      const bwPx = (passbandHz / spanHz) * width;
-      const mode = options.mode?.toUpperCase() ?? '';
-      let pbLeft: number, pbRight: number;
+      const geometry = getPassbandGeometry(options.mode ?? '', passbandHz, passbandShiftHz, spanHz, width);
 
-      if (mode === 'LSB') {
-        // Lower sideband: passband is below carrier
-        pbLeft = tunePx - bwPx;
-        pbRight = tunePx;
-      } else if (mode === 'CW' || mode === 'CW-R' || mode === 'RTTY' || mode === 'RTTY-R' || mode === 'AM') {
-        // Symmetric around carrier
-        pbLeft = tunePx - bwPx / 2;
-        pbRight = tunePx + bwPx / 2;
-      } else {
-        // USB and default: passband is above carrier
-        pbLeft = tunePx;
-        pbRight = tunePx + bwPx;
+      if (geometry && geometry.widthPx > 0) {
+        const pbLeft = geometry.leftPx;
+        const pbRight = geometry.rightPx;
+
+        ctx.fillStyle = 'rgba(59,130,246,0.15)';
+        ctx.fillRect(pbLeft, 0, pbRight - pbLeft, height);
+
+        // Passband edges
+        ctx.strokeStyle = 'rgba(59,130,246,0.4)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.moveTo(pbLeft, 0);
+        ctx.lineTo(pbLeft, height);
+        ctx.moveTo(pbRight, 0);
+        ctx.lineTo(pbRight, height);
+        ctx.stroke();
+        ctx.setLineDash([]);
       }
-
-      ctx.fillStyle = 'rgba(59,130,246,0.15)';
-      ctx.fillRect(pbLeft, 0, pbRight - pbLeft, height);
-
-      // Passband edges
-      ctx.strokeStyle = 'rgba(59,130,246,0.4)';
-      ctx.lineWidth = 1;
-      ctx.setLineDash([3, 3]);
-      ctx.beginPath();
-      ctx.moveTo(pbLeft, 0);
-      ctx.lineTo(pbLeft, height);
-      ctx.moveTo(pbRight, 0);
-      ctx.lineTo(pbRight, height);
-      ctx.stroke();
-      ctx.setLineDash([]);
     }
 
     // Center frequency line (carrier)

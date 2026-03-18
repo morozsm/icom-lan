@@ -1,5 +1,10 @@
 <script lang="ts">
-  import { badgeStyleString, type BadgeColor } from './status-badge-style';
+  import './control-button.css';
+  import {
+    badgeStyleString,
+    getBadgeControlButtonVars,
+    type BadgeColor,
+  } from './status-badge-style';
 
   interface Props {
     label: string;
@@ -17,21 +22,37 @@
     compact,
     clickable: !!onclick,
   }));
+  let buttonVars = $derived(getBadgeControlButtonVars(color));
 </script>
 
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<!-- svelte-ignore a11y_click_events_have_key_events -->
-<span
-  class="badge"
-  class:clickable={!!onclick}
-  {style}
-  {onclick}
-  data-active={active}
-  data-color={color}
-  data-compact={compact}
->
-  {label}
-</span>
+{#if onclick && !compact}
+  <button
+    type="button"
+    class="badge badge-button v2-control-button"
+    class:active={active}
+    style="--control-accent: {buttonVars.accent}; --control-active-text: {buttonVars.text};"
+    {onclick}
+    data-active={active}
+    data-color={color}
+    data-compact={compact}
+  >
+    {label}
+  </button>
+{:else}
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <span
+    class="badge"
+    class:clickable={!!onclick}
+    {style}
+    {onclick}
+    data-active={active}
+    data-color={color}
+    data-compact={compact}
+  >
+    {label}
+  </span>
+{/if}
 
 <style>
   .badge {
@@ -49,5 +70,9 @@
 
   .badge.clickable:hover {
     filter: brightness(1.2);
+  }
+
+  .badge-button {
+    border-radius: 3px;
   }
 </style>

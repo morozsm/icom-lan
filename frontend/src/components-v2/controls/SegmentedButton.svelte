@@ -1,4 +1,6 @@
 <script lang="ts">
+  import './control-button.css';
+
   interface Option {
     value: string | number;
     label: string;
@@ -48,7 +50,7 @@
     {@const isActive = option.value === selected}
     <button
       type="button"
-      class="segment"
+      class="segment v2-control-button"
       class:active={isActive}
       class:first={i === 0}
       class:last={i === options.length - 1}
@@ -77,26 +79,7 @@
   }
 
   .segment {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 4px 8px;
-    background-color: #0D1117;
-    border: 1px solid #18202A;
-    color: #6F8196;
-    font-family: 'Roboto Mono', monospace;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    cursor: pointer;
     border-radius: 0;
-    transition:
-      background-color 150ms ease,
-      border-color 150ms ease,
-      color 150ms ease,
-      box-shadow 150ms ease;
-    white-space: nowrap;
-    line-height: 1;
   }
 
   .segment:focus {
@@ -117,21 +100,13 @@
   }
 
   .segment.active {
-    background-color: color-mix(in srgb, var(--accent) 14%, #060A10);
-    border-color: var(--accent, #00D4FF);
-    color: #F0F5FA;
-    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent);
     z-index: 1;
     position: relative;
   }
 
-  .segment:not(.active):hover:not(.disabled *) {
-    background-color: #111820;
-    color: #8DA2B8;
-  }
-
   /* Compact mode */
   .compact .segment {
+    min-height: 22px;
     padding: 2px 6px;
     font-size: 9px;
   }

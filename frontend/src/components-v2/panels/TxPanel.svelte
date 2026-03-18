@@ -1,4 +1,5 @@
 <script lang="ts">
+  import '../controls/control-button.css';
   import StatusBadge from '../controls/StatusBadge.svelte';
   import Slider from '../controls/Slider.svelte';
   import { hasTx } from '$lib/stores/capabilities.svelte';
@@ -76,14 +77,13 @@
         color="green"
         onclick={onAtuToggle}
       />
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <!-- svelte-ignore a11y_click_events_have_key_events -->
-      <span
-        class="tune-button"
+      <button
+        type="button"
+        class="tune-button v2-control-button"
         class:tuning={atuTuning}
-        style="border-color: {tuneButtonColor}; color: {tuneButtonColor};"
+        style="--control-accent: {tuneButtonColor}; --control-active-text: {tuneButtonColor}; border-color: {tuneButtonColor}; color: {tuneButtonColor};"
         onclick={onAtuTune}
-      >TUNE</span>
+      >TUNE</button>
     </div>
 
     <div class="toggle-row">
@@ -159,26 +159,11 @@
   }
 
   .tune-button {
-    font-family: 'Roboto Mono', monospace;
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    padding: 2px 8px;
-    border-radius: 3px;
-    border: 1px solid;
     background: transparent;
-    cursor: pointer;
-    user-select: none;
-    transition: border-color 150ms ease, color 150ms ease, background 150ms ease;
   }
 
   .tune-button.tuning {
     background: rgba(255, 32, 32, 0.15);
-  }
-
-  .tune-button:hover {
-    filter: brightness(1.2);
   }
 
   .toggle-row {

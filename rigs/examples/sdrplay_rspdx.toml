@@ -1,0 +1,214 @@
+# Rig Configuration — SDRplay RSPdx
+# Wideband SDR receiver (RX only, no transmit)
+# Protocol: SDRplay API 3.x (native C library, NOT CAT/CI-V)
+# Source: sdrplay.com API docs, RSPdx datasheet
+#
+# NOTE: This is a fundamentally different device class.
+# No CAT/CI-V/Kenwood protocol — uses native USB API.
+# The TOML still describes capabilities declaratively so the UI
+# can render appropriate controls. The backend adapter translates
+# abstract commands to SDRplay API calls.
+#
+# Integration approach: SoapySDR abstraction layer, or direct API.
+# For icom-lan: would need a separate backend module (sdrplay_backend.py)
+# that implements the same Radio Protocol interface.
+
+# ═══ Layer 0: PROTOCOL ═══════════════════════════════════════════
+
+[radio]
+id = "sdrplay_rspdx"
+model = "RSPdx"
+manufacturer = "SDRplay"
+receiver_count = 1
+has_lan = false
+has_wifi = false
+has_ethernet = false
+
+[protocol]
+type = "sdrplay_api"         # Native C API, USB connection
+version = "3.15"             # Minimum API version
+# No serial/socket commands — USB bulk transfer
+# Control via sdrplay_api_Init(), sdrplay_api_Update(), etc.
+# IQ data via callback: sdrplay_api_StreamCallback_t
+
+# ═══ Layer 1: CAPABILITIES ═══════════════════════════════════════
+
+[capabilities]
+features = [
+    # Receiver (RX only — no TX features)
+    "audio",                 # Demodulated audio (from software)
+    "af_level",
+    "rf_gain",
+    "squelch",
+    # RF front end
+    "attenuator",            # Programmable 0-59 dB
+    "lna",                   # LNA states (discrete, not "preamp")
+    # DSP / Noise (in software, not hardware)
+    "nb",
+    "nr",
+    "notch",
+    # Filter
+    "filter_width",          # IF bandwidth selection
+    # Metering
+    "meters",
+    # Scope
+    "scope",                 # Native SDR — always has spectrum/waterfall
+    # System
+    "agc",
+    "bias_tee",              # DC bias on antenna for active antennas
+    "hdr_mode",              # RSPdx HDR mode (0-2 MHz enhanced dynamic range)
+    "antenna_select",        # 3 antenna ports: A, B, C (Hi-Z)
+]
+
+# ═══ Layer 2: CONTROLS ═══════════════════════════════════════════
+
+[controls.attenuator]
+style = "stepped"
+# RSPdx: RF attenuation is set per LNA state, actual values depend on band
+# Simplified: expose as dB steps
+values = [0, 3, 6, 9, 12, 15, 18, 21, 24, 27]
+unit = "dB"
+default = 0
+
+[controls.lna]
+style = "selector"
+# LNA state: number of states varies by band (up to 10 states for RSPdx)
+# Each state has a different gain reduction value
+# Band-dependent — see value_table below
+values = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+default = 0
+
+# Per-band LNA gain reduction tables (dB)
+# RSPdx has different gain tables per frequency range
+[controls.lna.gain_tables]
+"0-12MHz"   = [0, 3, 6, 9, 12, 15, 18, 21, 24, 27]
+"12-60MHz"  = [0, 3, 6, 9, 12, 15, 24, 27, 30, 33]
+"60-250MHz" = [0, 3, 6, 9, 12, 15, 18, 24, 27, 30]
+"250-420MHz" = [0, 3, 6, 9, 12, 15, 18, 21, 24, 27]
+"420-1000MHz" = [0, 7, 10, 13, 16, 19, 22, 25, 31, 34]
+"1000-2000MHz" = [0, 5, 8, 11, 14, 17, 20, 32, 35, 38]
+
+[controls.if_bandwidth]
+style = "selector"
+# Available IF bandwidths (kHz)
+values_khz = [200, 300, 600, 1536, 5000, 6000, 7000, 8000]
+default_khz = 1536
+
+[controls.agc]
+style = "selector"
+values = [0, 1, 2]
+labels = { "0" = "OFF", "1" = "5Hz", "2" = "50Hz", "3" = "100Hz" }
+default = 2
+
+[controls.bias_tee]
+style = "toggle"
+default = false
+
+[controls.hdr_mode]
+style = "toggle"
+default = false
+# Only works below 2 MHz — UI should grey out above 2 MHz
+
+[controls.antenna_select]
+style = "selector"
+values = ["A", "B", "C"]
+labels = { "A" = "Antenna A (SMA)", "B" = "Antenna B (SMA)", "C" = "Hi-Z (BNC)" }
+default = "A"
+# Hi-Z only works below 30 MHz
+
+[controls.sample_rate]
+style = "selector"
+values_mhz = [2.0, 4.0, 6.0, 8.0, 10.0]
+default_mhz = 2.0
+
+# ═══ Layer 3: RULES ══════════════════════════════════════════════
+
+# HDR mode only below 2 MHz
+[[rules]]
+kind = "value_limit"
+when = "frequency > 2000000"
+field = "hdr_mode"
+force = false
+reason = "HDR mode only available below 2 MHz"
+
+# Hi-Z antenna only below 30 MHz
+[[rules]]
+kind = "value_limit"
+when = "antenna_select == 'C'"
+field = "frequency"
+max = 30_000_000
+reason = "Hi-Z antenna only works below 30 MHz"
+
+# HDR mode disables antenna selection (uses dedicated input)
+[[rules]]
+kind = "disables"
+when_active = "hdr_mode"
+disables = ["antenna_select"]
+reason = "HDR mode uses dedicated input path"
+
+# ═══ METERS ══════════════════════════════════════════════════════
+
+[meters.s_meter]
+type = "computed"            # Computed from IQ signal level in software
+unit = "dBm"
+# No hardware S-meter — calculated from ADC levels
+
+[meters.signal_level]
+type = "linear"
+raw_max = 65535              # 16-bit ADC
+unit = "dBFS"
+
+# ═══ VFO ═════════════════════════════════════════════════════════
+
+[vfo]
+scheme = "single"            # 1 VFO, 1 receiver, no A/B
+vfo_count = 1
+has_equal = false
+has_swap = false
+has_split = false
+
+# ═══ MODES ═══════════════════════════════════════════════════════
+
+[modes]
+list = ["USB", "LSB", "CW", "AM", "NFM", "WFM", "RAW_IQ"]
+# All demodulation is in software — "modes" are demodulator types
+# RAW_IQ = no demodulation, pass-through for SDR apps
+
+# ═══ BANDS ═══════════════════════════════════════════════════════
+
+# RSPdx covers 1 kHz to 2 GHz continuous
+[[freq_ranges.ranges]]
+label = "LF"
+start_hz = 1_000
+end_hz = 30_000
+rx_only = true
+
+[[freq_ranges.ranges]]
+label = "MF"
+start_hz = 30_000
+end_hz = 300_000
+rx_only = true
+
+[[freq_ranges.ranges]]
+label = "HF"
+start_hz = 300_000
+end_hz = 30_000_000
+rx_only = true
+
+[[freq_ranges.ranges]]
+label = "VHF"
+start_hz = 30_000_000
+end_hz = 300_000_000
+rx_only = true
+
+[[freq_ranges.ranges]]
+label = "UHF"
+start_hz = 300_000_000
+end_hz = 1_000_000_000
+rx_only = true
+
+[[freq_ranges.ranges]]
+label = "L-Band"
+start_hz = 1_000_000_000
+end_hz = 2_000_000_000
+rx_only = true

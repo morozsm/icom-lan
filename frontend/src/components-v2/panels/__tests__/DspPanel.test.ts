@@ -3,6 +3,10 @@ import { mount, unmount, flushSync } from 'svelte';
 import DspPanel from '../DspPanel.svelte';
 import { isCwMode, buildNrOptions, buildNotchOptions } from '../dsp-utils';
 
+vi.mock('$lib/stores/capabilities.svelte', () => ({
+  hasCapability: vi.fn(() => true),
+}));
+
 // ---------------------------------------------------------------------------
 // isCwMode
 // ---------------------------------------------------------------------------
@@ -130,6 +134,18 @@ describe('panel structure', () => {
   it('renders the DSP header label', () => {
     const t = mountPanel(baseProps);
     expect(t.querySelector('.panel-header')?.textContent).toBe('DSP');
+  });
+
+  it('renders NB toggle as OFF when NB is inactive', () => {
+    const t = mountPanel(baseProps);
+    const buttons = Array.from(t.querySelectorAll('button')).map((el) => el.textContent?.trim());
+    expect(buttons).toContain('OFF');
+  });
+
+  it('renders NB toggle as ON when NB is active', () => {
+    const t = mountPanel({ ...baseProps, nbActive: true });
+    const buttons = Array.from(t.querySelectorAll('button')).map((el) => el.textContent?.trim());
+    expect(buttons).toContain('ON');
   });
 
   it('renders the Notch section', () => {

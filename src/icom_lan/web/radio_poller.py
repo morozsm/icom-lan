@@ -29,14 +29,14 @@ from __future__ import annotations
 
 import asyncio
 import logging
-
-from ..exceptions import CommandError, ConnectionError as RadioConnectionError
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Callable, cast
 
+from .._shared_state_runtime import DEFAULT_STATE_CACHE_TTL, is_cache_fresh
+from ..exceptions import CommandError
+from ..exceptions import ConnectionError as RadioConnectionError
 from ..profiles import RadioProfile, resolve_radio_profile
 from ..rigctld.state_cache import CacheField, StateCache
-from .._shared_state_runtime import DEFAULT_STATE_CACHE_TTL, is_cache_fresh
 
 if TYPE_CHECKING:
     from ..radio_protocol import Radio
@@ -45,6 +45,7 @@ if TYPE_CHECKING:
 __all__ = [
     "RadioPoller",
     "CommandQueue",
+    "SetSplit",
     "EnableScope",
     "DisableScope",
     "SwitchScopeReceiver",
@@ -160,6 +161,11 @@ class SetPreamp:
 @dataclass(frozen=True, slots=True)
 class SetAgc:
     mode: int  # 1=FAST, 2=MID, 3=SLOW
+
+
+@dataclass(frozen=True, slots=True)
+class SetSplit:
+    on: bool
 
 
 @dataclass(frozen=True, slots=True)
@@ -302,6 +308,7 @@ Command = (
     | SetAttenuator
     | SetPreamp
     | SetAgc
+    | SetSplit
     | PttOn
     | PttOff
     | SetBand
@@ -477,8 +484,9 @@ class RadioPoller:
     def _load_command_map(self) -> dict[str, tuple[int, ...]]:
         """Load command wire bytes from TOML rig profile."""
         try:
-            from ..rig_loader import discover_rigs
             from pathlib import Path
+
+            from ..rig_loader import discover_rigs
 
             for rig_dir in [
                 Path(__file__).resolve().parent.parent.parent.parent / "rigs",
@@ -591,12 +599,14 @@ class RadioPoller:
         # For serial: ALC/comp/VD/Id meters move to slow state queries
         # (they are NOT in _FAST_CMDS_SERIAL to keep S-meter responsive)
         if self._is_serial:
-            _COMMON_FEATURE_QUERIES.extend([
-                (0x15, 0x13),  # ALC meter
-                (0x15, 0x14),  # Compressor meter
-                (0x15, 0x15),  # VD (voltage)
-                (0x15, 0x16),  # Id (PA drain current)
-            ])
+            _COMMON_FEATURE_QUERIES.extend(
+                [
+                    (0x15, 0x13),  # ALC meter
+                    (0x15, 0x14),  # Compressor meter
+                    (0x15, 0x15),  # VD (voltage)
+                    (0x15, 0x16),  # Id (PA drain current)
+                ]
+            )
         for cmd, sub in _COMMON_FEATURE_QUERIES:
             queries.append((cmd, sub, None))
 
@@ -741,7 +751,9 @@ class RadioPoller:
                         await self._civ(0x07, data=bytes([self._profile.vfo_sub_code]))
                 # Optimistic state update for frequency
                 if self._radio_state:
-                    target = self._radio_state.sub if rx != 0 else self._radio_state.main
+                    target = (
+                        self._radio_state.sub if rx != 0 else self._radio_state.main
+                    )
                     if target:
                         target.freq_hz = freq
                     self.bump_revision()
@@ -778,7 +790,9 @@ class RadioPoller:
                         await self._civ(0x07, data=bytes([self._profile.vfo_sub_code]))
                 # Optimistic state update for mode
                 if self._radio_state:
-                    target = self._radio_state.sub if rx != 0 else self._radio_state.main
+                    target = (
+                        self._radio_state.sub if rx != 0 else self._radio_state.main
+                    )
                     if target:
                         target.mode = mode
                     self.bump_revision()
@@ -810,6 +824,7 @@ class RadioPoller:
                     try:
                         await radio.stop_audio_tx()
                         logger.info("poller: TX audio stream stopped")
+
                         # Restart RX audio after TX (IC-7610 doesn't support full duplex)
                         async def _noop_rx(_pkt: Any) -> None:
                             pass
@@ -884,6 +899,13 @@ class RadioPoller:
                 if self._radio_state:
                     self._radio_state.main.agc = mode
                     self.bump_revision()
+            case SetSplit(on=on):
+                await radio.set_split_mode(on)
+                if self._radio_state:
+                    self._radio_state.split = on
+                    self.bump_revision()
+                if self._on_state_event:
+                    self._on_state_event("split_changed", {"on": on})
             case SetBand(band=band):
                 # Band Stack Register recall: 0x1A 0x01 <bsr_code> <register>
                 # Read stored freq/mode from register 01 (latest)
@@ -893,10 +915,17 @@ class RadioPoller:
                 bsr_ok = False
                 try:
                     resp = await self._civ(
-                        0x1A, sub=0x01, data=bytes([band, 0x01]),
+                        0x1A,
+                        sub=0x01,
+                        data=bytes([band, 0x01]),
                         wait_response=True,
                     )
-                    if resp and hasattr(resp, "data") and resp.data and len(resp.data) >= 8:
+                    if (
+                        resp
+                        and hasattr(resp, "data")
+                        and resp.data
+                        and len(resp.data) >= 8
+                    ):
                         # BSR response: [1A 01 band reg] freq(5 BCD) mode filter ...
                         # Skip first 2 bytes (band + register) to get freq
                         freq = bcd_decode(resp.data[2:7])
@@ -908,7 +937,10 @@ class RadioPoller:
                             mode_name = "USB"
                         logger.info(
                             "BSR recall: band=%d freq=%d mode=%s fil=%d",
-                            band, freq, mode_name, filter_num,
+                            band,
+                            freq,
+                            mode_name,
+                            filter_num,
                         )
                         await radio.set_frequency(freq)
                         await asyncio.sleep(self._gap)
@@ -921,8 +953,12 @@ class RadioPoller:
                                 target.mode = mode_name
                             self.bump_revision()
                         if self._on_state_event:
-                            self._on_state_event("freq_changed", {"freq": freq, "receiver": 0})
-                            self._on_state_event("mode_changed", {"mode": mode_name, "receiver": 0})
+                            self._on_state_event(
+                                "freq_changed", {"freq": freq, "receiver": 0}
+                            )
+                            self._on_state_event(
+                                "mode_changed", {"mode": mode_name, "receiver": 0}
+                            )
                         bsr_ok = True
                 except Exception:
                     logger.debug("BSR recall failed", exc_info=True)
@@ -938,7 +974,9 @@ class RadioPoller:
                         if default_freq is not None:
                             break
                     if default_freq is not None:
-                        logger.info("BSR fallback: band=%d → freq=%d", band, default_freq)
+                        logger.info(
+                            "BSR fallback: band=%d → freq=%d", band, default_freq
+                        )
                         await radio.set_frequency(default_freq)
                     else:
                         logger.warning("set_band: unknown bsr_code=%d", band)
@@ -1102,4 +1140,3 @@ class RadioPoller:
     def _emit(self, name: str, data: dict[str, Any]) -> None:
         if self._on_state_event is not None:
             self._on_state_event(name, data)
-

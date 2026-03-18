@@ -15,12 +15,25 @@ interface ColorTokens {
 }
 
 const COLOR_ACTIVE: Record<BadgeColor, ColorTokens> = {
-  cyan:   { bg: '#123247', border: '#00D4FF', text: '#EAF7FF', glow: 'rgba(0,212,255,0.14)' },
-  orange: { bg: '#442506', border: '#FF8B2D', text: '#FFF0E4', glow: 'rgba(255,139,45,0.14)' },
-  red:    { bg: '#571812', border: '#FF5D46', text: '#FFF0ED', glow: 'rgba(255,93,70,0.14)' },
-  green:  { bg: '#143922', border: '#4ED37B', text: '#F0FFF6', glow: 'rgba(78,211,123,0.14)' },
-  muted:  { bg: '#151d27', border: '#384a5d', text: '#A6B7C8', glow: 'rgba(77,96,116,0.10)' },
+  cyan:   { bg: '#0D3B66', border: '#00D4FF', text: '#FFFFFF', glow: 'rgba(0,212,255,0.14)' },
+  orange: { bg: '#3D2200', border: '#FF6A00', text: '#FFF0E4', glow: 'rgba(255,106,0,0.14)' },
+  red:    { bg: '#3D0A0A', border: '#FF2020', text: '#FFF0ED', glow: 'rgba(255,32,32,0.14)' },
+  green:  { bg: '#0A3D1A', border: '#00CC66', text: '#F0FFF6', glow: 'rgba(0,204,102,0.14)' },
+  muted:  { bg: '#1A2028', border: '#4D6074', text: '#8DA2B8', glow: 'rgba(77,96,116,0.10)' },
 };
+
+export interface BadgeControlButtonVars {
+  accent: string;
+  text: string;
+}
+
+export function getBadgeControlButtonVars(color: BadgeColor): BadgeControlButtonVars {
+  const tokens = COLOR_ACTIVE[color];
+  return {
+    accent: tokens.border,
+    text: tokens.text,
+  };
+}
 
 export interface BadgeStyle {
   background: string;
@@ -39,11 +52,11 @@ export function computeBadgeStyle({ active, color, compact, clickable }: BadgePr
   return {
     background: active ? c.bg          : 'transparent',
     border:     active ? `1px solid ${c.border}` : '1px solid #1A2028',
-    color:      active ? c.text        : '#7C90A4',
+    color:      active ? c.text        : '#4D6074',
     boxShadow:  active ? `0 0 0 1px ${c.glow}` : 'none',
-    height:     compact ? '15px'       : '19px',
-    padding:    compact ? '0 4px'      : '0 7px',
-    fontSize:   compact ? '7px'        : '8px',
+    height:     compact ? '16px'       : '22px',
+    padding:    compact ? '0 5px'      : '0 8px',
+    fontSize:   compact ? '7px'        : '9px',
     cursor:     clickable ? 'pointer'  : 'default',
   };
 }

@@ -18,7 +18,6 @@ from .._shared_state_runtime import DEFAULT_STATE_CACHE_TTL, is_cache_fresh
 from ..profiles import RadioProfile
 from ..scope import ScopeFrame
 from ..types import AudioCodec
-from .runtime_helpers import radio_ready, runtime_capabilities
 from .protocol import (
     AUDIO_CODEC_OPUS,
     AUDIO_CODEC_PCM16,
@@ -33,40 +32,42 @@ from .radio_poller import (
     PttOff,
     PttOn,
     SelectVfo,
+    SetAcc1ModLevel,
     SetAfLevel,
-    SetBand,
+    SetAgc,
+    SetAntenna1,
+    SetAntenna2,
     SetAttenuator,
+    SetBand,
+    SetCompressor,
+    SetDigiSel,
+    SetDualWatch,
     SetFilter,
     SetFreq,
+    SetIpPlus,
+    SetLanModLevel,
     SetMode,
-    SetPower,
-    SetPreamp,
-    SetAgc,
-    SetRfGain,
-    SetSquelch,
     SetNB,
     SetNR,
-    SetDigiSel,
-    SetIpPlus,
+    SetPower,
     SetPowerstat,
+    SetPreamp,
+    SetRfGain,
+    SetRxAntennaAnt1,
+    SetRxAntennaAnt2,
     SetScopeCenterType,
     SetScopeDuringTx,
     SetScopeFixedEdge,
+    SetSplit,
+    SetSquelch,
+    SetSystemDate,
+    SetSystemTime,
+    SetUsbModLevel,
     SwitchScopeReceiver,
     VfoEqualize,
     VfoSwap,
-    SetAntenna1,
-    SetAntenna2,
-    SetRxAntennaAnt1,
-    SetRxAntennaAnt2,
-    SetSystemDate,
-    SetSystemTime,
-    SetAcc1ModLevel,
-    SetUsbModLevel,
-    SetLanModLevel,
-    SetDualWatch,
-    SetCompressor,
 )
+from .runtime_helpers import radio_ready, runtime_capabilities
 from .websocket import WS_OP_BINARY, WS_OP_TEXT, WebSocketConnection
 
 if TYPE_CHECKING:
@@ -126,6 +127,7 @@ class ControlHandler:
             "set_att",
             "set_preamp",
             "set_agc",
+            "set_split",
             "select_vfo",
             "vfo_swap",
             "vfo_equalize",
@@ -740,6 +742,11 @@ class ControlHandler:
                 mode = int(params["mode"])
                 q.put(SetAgc(mode))
                 return {"mode": mode}
+            case "set_split":
+                on = bool(params.get("on", False))
+                self._ensure_capability("split", "set_split")
+                q.put(SetSplit(on))
+                return {"on": on}
             case "select_vfo":
                 vfo = str(params.get("vfo", "A"))
                 q.put(SelectVfo(vfo))

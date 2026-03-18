@@ -1,8 +1,8 @@
 <script lang="ts">
   interface Props {
     value: number;
-    min?: number;
-    max?: number;
+    min: number;
+    max: number;
     step?: number;
     label: string;
     unit?: string;
@@ -14,8 +14,8 @@
 
   let {
     value,
-    min = 0,
-    max = 255,
+    min,
+    max,
     step = 1,
     label,
     unit = '',
@@ -25,11 +25,14 @@
     disabled = false,
   }: Props = $props();
 
-  let fillPercent = $derived(((value - min) / (max - min)) * 100);
-  let isBipolar = $derived(min < 0 && max > 0);
-  let centerPercent = $derived(((0 - min) / (max - min)) * 100);
-  let fillStartPercent = $derived(isBipolar ? Math.min(centerPercent, fillPercent) : 0);
-  let fillEndPercent = $derived(isBipolar ? Math.max(centerPercent, fillPercent) : fillPercent);
+  let safeRange = $derived(Math.max(max - min, 1));
+  let normalizedPercent = $derived(((value - min) / safeRange) * 100);
+  let centerPercent = $derived(((0 - min) / safeRange) * 100);
+  let fillStartPercent = $derived(Math.min(centerPercent, normalizedPercent));
+  let fillEndPercent = $derived(Math.max(centerPercent, normalizedPercent));
+  let displayValue = $derived(
+    value === 0 ? '0' : value > 0 ? `+${value}` : `${value}`,
+  );
 
   function handleInput(e: Event) {
     const target = e.target as HTMLInputElement;
@@ -38,23 +41,22 @@
 </script>
 
 <div
-  class="slider-wrapper"
+  class="bipolar-slider-wrapper"
   class:compact
   class:disabled
-  class:bipolar={isBipolar}
-  style="--accent: {accentColor}; --fill: {fillPercent}%; --center: {centerPercent}%; --fill-start: {fillStartPercent}%; --fill-end: {fillEndPercent}%;"
+  style="--accent: {accentColor}; --center: {centerPercent}%; --fill-start: {fillStartPercent}%; --fill-end: {fillEndPercent}%;"
 >
   <div class="slider-header">
     <span class="slider-label">{label}</span>
-    <span class="slider-value">{value}{unit ? '\u00a0' + unit : ''}</span>
+    <span class="slider-value">{displayValue}{unit ? '\u00a0' + unit : ''}</span>
   </div>
+
   <div class="slider-shell">
     <div class="slider-track" aria-hidden="true">
-      <div class="slider-track-base"></div>
-      {#if isBipolar}
+      <div class="slider-track-base">
+        <div class="slider-track-fill"></div>
         <div class="slider-track-center"></div>
-      {/if}
-      <div class="slider-track-fill"></div>
+      </div>
     </div>
     <input
       type="range"
@@ -71,10 +73,16 @@
       aria-valuenow={value}
     />
   </div>
+
+  <div class="slider-axis" aria-hidden="true">
+    <span class="axis-negative">-</span>
+    <span class="axis-zero">0</span>
+    <span class="axis-positive">+</span>
+  </div>
 </div>
 
 <style>
-  .slider-wrapper {
+  .bipolar-slider-wrapper {
     display: flex;
     flex-direction: column;
     gap: 3px;
@@ -95,13 +103,12 @@
   }
 
   .slider-label {
-    color: #6F8196;
+    color: #6f8196;
     text-align: left;
   }
 
   .slider-value {
-    color: #F0F5FA;
-    font-family: 'Roboto Mono', monospace;
+    color: #f0f5fa;
   }
 
   .disabled {
@@ -124,45 +131,47 @@
     pointer-events: none;
   }
 
-  .slider-track-base,
-  .slider-track-fill {
-    position: absolute;
-    border-radius: 999px;
-  }
-
   .slider-track-base {
+    position: absolute;
     inset-inline: 0;
     height: 4px;
+    border-radius: 999px;
     background: #0d1117;
+    overflow: hidden;
+  }
+
+  .slider-track-base::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      rgba(105, 121, 140, 0.04) 0%,
+      rgba(105, 121, 140, 0.02) 50%,
+      rgba(105, 121, 140, 0.04) 100%
+    );
   }
 
   .slider-track-fill {
+    position: absolute;
     left: var(--fill-start);
     width: calc(var(--fill-end) - var(--fill-start));
-    height: 4px;
+    height: 100%;
     background: var(--accent);
-    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 14%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 16%, transparent);
   }
 
   .slider-track-center {
     position: absolute;
     left: calc(var(--center) - 1px);
+    top: 50%;
     width: 2px;
-    height: 10px;
+    height: 12px;
+    transform: translateY(-50%);
     border-radius: 999px;
-    background: color-mix(in srgb, #d7e2ee 30%, #0d1117);
+    background: color-mix(in srgb, #d7e2ee 35%, #0d1117);
+    box-shadow: 0 0 0 1px rgba(215, 226, 238, 0.04);
   }
-
-  .compact .slider-track-base,
-  .compact .slider-track-fill {
-    height: 3px;
-  }
-
-  .compact .slider-track-center {
-    height: 8px;
-  }
-
-  /* --- range input reset + custom styling --- */
 
   .slider-input {
     -webkit-appearance: none;
@@ -180,11 +189,6 @@
     z-index: 1;
   }
 
-  .compact .slider-input {
-    height: 14px;
-  }
-
-  /* Webkit thumb */
   .slider-input::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
@@ -194,20 +198,9 @@
     background: #ffffff;
     border: 1px solid var(--accent);
     cursor: pointer;
-    box-shadow: none;
-    transition: box-shadow 0.15s ease;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 12%, transparent);
   }
 
-  .compact .slider-input::-webkit-slider-thumb {
-    width: 7px;
-    height: 7px;
-  }
-
-  .slider-input::-webkit-slider-thumb:hover {
-    box-shadow: none;
-  }
-
-  /* Moz thumb */
   .slider-input::-moz-range-thumb {
     width: 10px;
     height: 10px;
@@ -215,38 +208,65 @@
     background: #ffffff;
     border: 1px solid var(--accent);
     cursor: pointer;
-    box-shadow: none;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 12%, transparent);
   }
 
-  .compact .slider-input::-moz-range-thumb {
-    width: 7px;
-    height: 7px;
-  }
-
-  /* Moz track override (Firefox ignores background gradient on input) */
-  .slider-input::-moz-range-track {
-    height: 4px;
-    border-radius: 999px;
-    background: transparent;
-  }
-
-  .compact .slider-input::-moz-range-track {
-    height: 3px;
-  }
-
+  .slider-input::-moz-range-track,
   .slider-input::-moz-range-progress {
+    background: transparent;
     height: 4px;
     border-radius: 999px;
-    background: transparent;
-  }
-
-  .compact .slider-input::-moz-range-progress {
-    height: 3px;
   }
 
   .slider-input:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 3px;
-    border-radius: 2px;
+    border-radius: 3px;
+  }
+
+  .slider-axis {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    align-items: center;
+    color: #546578;
+    font-size: 8px;
+    letter-spacing: 0.06em;
+    line-height: 1;
+    user-select: none;
+  }
+
+  .axis-negative {
+    justify-self: start;
+  }
+
+  .axis-zero {
+    justify-self: center;
+    color: #7b8da1;
+  }
+
+  .axis-positive {
+    justify-self: end;
+  }
+
+  .compact .slider-track-base {
+    height: 3px;
+  }
+
+  .compact .slider-track-center {
+    height: 10px;
+  }
+
+  .compact .slider-input {
+    height: 14px;
+  }
+
+  .compact .slider-input::-webkit-slider-thumb,
+  .compact .slider-input::-moz-range-thumb {
+    width: 7px;
+    height: 7px;
+  }
+
+  .compact .slider-axis {
+    font-size: 7px;
   }
 </style>

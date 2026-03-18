@@ -77,11 +77,12 @@
 
     {#if showNb}
       <div class="section">
-        <div class="section-row">
-          <div class="section-label">NB</div>
+        <div class="section-label">NB</div>
+        <div class="single-control">
           <StatusBadge
-            label="NB"
+            label={nbActive ? 'ON' : 'OFF'}
             active={nbActive}
+            color="orange"
             onclick={() => onNbToggle(!nbActive)}
           />
         </div>
@@ -184,5 +185,11 @@
     display: flex;
     align-items: center;
     gap: 8px;
+  }
+
+  .single-control {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
   }
 </style>

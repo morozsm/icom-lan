@@ -10,7 +10,10 @@
  */
 
 import { sendCommand } from '$lib/transport/ws-client';
-import { patchActiveReceiver, patchRadioState } from '$lib/stores/radio.svelte';
+import { getActiveReceiver, getRadioState, patchActiveReceiver, patchRadioState } from '$lib/stores/radio.svelte';
+import { audioManager } from '$lib/audio/audio-manager';
+import { setMuted } from '$lib/stores/audio.svelte';
+import { mapIfShiftToPbt } from '../panels/filter-controls';
 
 /* ── Helpers ─────────────────────────────────────────────────── */
 
@@ -29,7 +32,19 @@ export function makeVfoHandlers() {
     onCopy: () => cmd('vfo_equalize'),
     onEqual: () => cmd('vfo_equalize'),
     onSplitToggle: () => cmd('set_split', { on: true }), // toggle handled by backend
-    onTxVfoChange: (v: string) => cmd('select_vfo', { vfo: v }),
+    onTxVfoChange: (v: string) => {
+      const state = getRadioState();
+      const splitActive = state?.split ?? false;
+      const targetVfo = splitActive
+        ? v === 'main'
+          ? 'SUB'
+          : 'MAIN'
+        : v === 'main'
+          ? 'MAIN'
+          : 'SUB';
+      patchRadioState({ active: targetVfo });
+      cmd('select_vfo', { vfo: targetVfo });
+    },
     onMainVfoClick: () => cmd('select_vfo', { vfo: 'MAIN' }),
     onSubVfoClick: () => cmd('select_vfo', { vfo: 'SUB' }),
     onMainModeClick: () => {}, // Mode selection handled by mode popup
@@ -73,10 +88,19 @@ export function makeRfFrontEndHandlers() {
 export function makeFilterHandlers() {
   return {
     onFilterWidthChange: (width: number) => {
+      patchActiveReceiver({ filterWidth: width }, true);
       cmd('set_filter_width', { width });
     },
-    onIfShiftChange: (_value: number) => {
-      // IF shift maps to PBT offset — not directly supported yet
+    onIfShiftChange: (value: number) => {
+      const activeRx = getActiveReceiver();
+      const { pbtInner, pbtOuter } = mapIfShiftToPbt(
+        value,
+        activeRx?.pbtInner ?? 0,
+        activeRx?.pbtOuter ?? 0,
+      );
+      patchActiveReceiver({ pbtInner, pbtOuter }, true);
+      cmd('set_pbt_inner', { value: pbtInner });
+      cmd('set_pbt_outer', { value: pbtOuter });
     },
     onPbtInnerChange: (value: number) => {
       patchActiveReceiver({ pbtInner: value }, true);
@@ -85,6 +109,11 @@ export function makeFilterHandlers() {
     onPbtOuterChange: (value: number) => {
       patchActiveReceiver({ pbtOuter: value }, true);
       cmd('set_pbt_outer', { value });
+    },
+    onPbtReset: () => {
+      patchActiveReceiver({ pbtInner: 0, pbtOuter: 0 }, true);
+      cmd('set_pbt_inner', { value: 0 });
+      cmd('set_pbt_outer', { value: 0 });
     },
   };
 }
@@ -214,8 +243,15 @@ export function makeTxHandlers() {
 
 export function makeRxAudioHandlers() {
   return {
-    onMonitorModeChange: (_mode: string) => {
-      // Local/remote audio toggle — handled by audio subsystem
+    onMonitorModeChange: (mode: string) => {
+      if (mode === 'live') {
+        setMuted(false);
+        audioManager.startRx();
+        return;
+      }
+
+      audioManager.stopRx();
+      setMuted(mode === 'mute');
     },
     onAfLevelChange: (level: number) => {
       patchActiveReceiver({ afLevel: level }, true);
@@ -240,8 +276,8 @@ export function makeBandHandlers() {
 
 export function makeMeterHandlers() {
   return {
-    onMeterSourceChange: (_source: string) => {
-      // Meter source selection is purely UI-side
+    onMeterSourceChange: (source: string) => {
+      patchRadioState({ meterSource: source as 'S' | 'SWR' | 'POWER' });
     },
   };
 }

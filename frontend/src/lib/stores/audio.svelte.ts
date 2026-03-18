@@ -20,6 +20,10 @@ export function toggleMute(): void {
   audioState.muted = !audioState.muted;
 }
 
+export function setMuted(v: boolean): void {
+  audioState.muted = v;
+}
+
 export function setRxEnabled(v: boolean): void {
   audioState.rxEnabled = v;
 }

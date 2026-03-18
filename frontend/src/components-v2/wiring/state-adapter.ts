@@ -10,6 +10,7 @@
 import type { ServerState, ReceiverState } from '$lib/types/state';
 import type { Capabilities } from '$lib/types/capabilities';
 import type { VfoStateProps } from '../layout/layout-utils';
+import { deriveIfShift } from '../panels/filter-controls';
 
 /* ── Helpers ─────────────────────────────────────────────────── */
 
@@ -110,12 +111,14 @@ export function toFilterProps(
   caps: Capabilities | null,
 ): FilterProps {
   const rx = state ? activeRx(state) : null;
+  const pbtInner = rx?.pbtInner ?? 0;
+  const pbtOuter = rx?.pbtOuter ?? 0;
   return {
-    filterWidth: 2400, // TODO: add to ServerState when filter_width polling is implemented
-    ifShift: 0,        // TODO: mapped from PBT offsets
+    filterWidth: rx?.filterWidth ?? 2400,
+    ifShift: deriveIfShift(pbtInner, pbtOuter),
     hasPbt: hasCap(caps, 'pbt'),
-    pbtInner: rx?.pbtInner ?? 0,
-    pbtOuter: rx?.pbtOuter ?? 0,
+    pbtInner,
+    pbtOuter,
   };
 }
 
@@ -276,15 +279,27 @@ export interface RxAudioProps {
   hasLiveAudio: boolean;
 }
 
+export interface AudioUiState {
+  muted: boolean;
+  rxEnabled: boolean;
+}
+
 export function toRxAudioProps(
   state: ServerState | null,
   caps: Capabilities | null,
+  audioState: AudioUiState,
 ): RxAudioProps {
   const rx = state ? activeRx(state) : null;
+  const hasLiveAudio = hasCap(caps, 'audio');
+  const monitorMode = audioState.muted
+    ? 'mute'
+    : audioState.rxEnabled && hasLiveAudio
+      ? 'live'
+      : 'local';
   return {
-    monitorMode: 'local',
+    monitorMode,
     afLevel: rx?.afLevel ?? 128,
-    hasLiveAudio: hasCap(caps, 'audio'),
+    hasLiveAudio,
   };
 }
 
@@ -315,9 +330,16 @@ export function toVfoOpsProps(
   state: ServerState | null,
   caps: Capabilities | null,
 ): VfoOpsProps {
+  const activeVfo = state?.active === 'SUB' ? 'sub' : 'main';
+  const txVfo = state?.split
+    ? activeVfo === 'main'
+      ? 'sub'
+      : 'main'
+    : activeVfo;
+
   return {
     splitActive: state?.split ?? false,
-    txVfo: 'main', // Currently not tracked in ServerState
+    txVfo,
     dualWatch: state?.dualWatch ?? false,
     mainSubTracking: state?.mainSubTracking ?? false,
   };

@@ -28,6 +28,7 @@ export interface ReceiverState {
   nrLevel?: number;
   pbtInner?: number;
   pbtOuter?: number;
+  filterWidth?: number;
   nbLevel?: number;
   digiselShift?: number;
   afMute?: boolean;
@@ -106,6 +107,7 @@ export interface ServerState {
   dashRatio?: number;
   nbDepth?: number;
   nbWidth?: number;
+  meterSource?: 'S' | 'SWR' | 'POWER';
   scopeControls?: ScopeControls;
 }
 

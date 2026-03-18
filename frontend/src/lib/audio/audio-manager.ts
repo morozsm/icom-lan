@@ -12,6 +12,7 @@ import { RxPlayer } from './rx-player';
 import { TxMic } from './tx-mic';
 import { setAudioConnected } from '../stores/connection.svelte';
 import { getRadioState } from '../stores/radio.svelte';
+import { setRxEnabled, setTxEnabled } from '../stores/audio.svelte';
 
 const BACKOFF_MIN = 500;
 const BACKOFF_MAX = 10000;
@@ -78,6 +79,7 @@ class AudioManager {
   startRx(): void {
     if (this._rxEnabled) return;
     this._rxEnabled = true;
+    setRxEnabled(true);
     this.rxPlayer.start();
     this.connect();
     this.notify();
@@ -86,6 +88,7 @@ class AudioManager {
   stopRx(): void {
     if (!this._rxEnabled) return;
     this._rxEnabled = false;
+    setRxEnabled(false);
     this.rxPlayer.stop();
     this.maybeDisconnect();
     this.notify();
@@ -102,6 +105,7 @@ class AudioManager {
     const err = await this.txMic.start();
     if (err) return err;
     this._txEnabled = true;
+    setTxEnabled(true);
     this.connect();
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify({ type: 'audio_start', direction: 'tx' }));
@@ -113,6 +117,7 @@ class AudioManager {
   stopTx(): void {
     if (!this._txEnabled) return;
     this._txEnabled = false;
+    setTxEnabled(false);
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify({ type: 'audio_stop', direction: 'tx' }));
     }

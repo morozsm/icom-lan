@@ -207,3 +207,30 @@ describe('fill percentage', () => {
     expect(style).toContain('--fill: 100%');
   });
 });
+
+describe('bipolar mode', () => {
+  it('marks the wrapper as bipolar when the range crosses zero', () => {
+    const t = mountSlider({ value: 0, min: -1200, max: 1200, label: 'IF Shift', onchange: vi.fn() });
+    expect(getWrapper(t).classList.contains('bipolar')).toBe(true);
+  });
+
+  it('does not mark the wrapper as bipolar for unipolar ranges', () => {
+    const t = mountSlider({ value: 2400, min: 50, max: 3600, label: 'Width', onchange: vi.fn() });
+    expect(getWrapper(t).classList.contains('bipolar')).toBe(false);
+  });
+
+  it('sets centered fill variables when the range is bipolar', () => {
+    const t = mountSlider({ value: -300, min: -1200, max: 1200, label: 'IF Shift', onchange: vi.fn() });
+    const style = getWrapper(t).getAttribute('style') ?? '';
+    expect(style).toContain('--center: 50%');
+    expect(style).toContain('--fill-start: 37.5%');
+    expect(style).toContain('--fill-end: 50%');
+  });
+
+  it('fills from the center toward the positive side for positive bipolar values', () => {
+    const t = mountSlider({ value: 600, min: -1200, max: 1200, label: 'PBT Inner', onchange: vi.fn() });
+    const style = getWrapper(t).getAttribute('style') ?? '';
+    expect(style).toContain('--fill-start: 50%');
+    expect(style).toContain('--fill-end: 75%');
+  });
+});

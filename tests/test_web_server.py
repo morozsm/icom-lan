@@ -22,9 +22,10 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from icom_lan.backends.icom7610.drivers.serial_stub import SerialMockRadio
+from icom_lan.radio_state import RadioState
 from icom_lan.rigctld.state_cache import StateCache
 from icom_lan.scope import ScopeFrame
-from icom_lan.backends.icom7610.drivers.serial_stub import SerialMockRadio
 from icom_lan.web.protocol import (
     MSG_TYPE_SCOPE,
     SCOPE_HEADER_SIZE,
@@ -42,7 +43,6 @@ from icom_lan.web.websocket import (
     make_accept_key,
     make_frame,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -933,6 +933,7 @@ class TestAudioFrameFormat:
 
     def test_audio_sequence_le(self) -> None:
         import struct
+
         from icom_lan.web.protocol import encode_audio_frame
 
         frame = encode_audio_frame(0x10, 0x01, 0x1234, 480, 1, 20, b"")
@@ -941,6 +942,7 @@ class TestAudioFrameFormat:
 
     def test_audio_sample_rate_le(self) -> None:
         import struct
+
         from icom_lan.web.protocol import encode_audio_frame
 
         frame = encode_audio_frame(0x10, 0x01, 0, 480, 1, 20, b"")
@@ -964,6 +966,7 @@ class TestAudioFrameFormat:
 
     def test_audio_sequence_wraps(self) -> None:
         import struct
+
         from icom_lan.web.protocol import encode_audio_frame
 
         frame = encode_audio_frame(0x10, 0x01, 0x10000, 480, 1, 20, b"")
@@ -1301,9 +1304,9 @@ class TestWsKeepalive:
         # Ping frame: FIN|PING (0x89), payload len 2 ("ka")
         all_bytes = b"".join(written)
         ping_frame = make_frame(WS_OP_PING, b"ka")
-        assert ping_frame in all_bytes, (
-            f"Expected ping frame {ping_frame!r} in written data {all_bytes!r}"
-        )
+        assert (
+            ping_frame in all_bytes
+        ), f"Expected ping frame {ping_frame!r} in written data {all_bytes!r}"
 
     async def test_keepalive_cancels_cleanly(self) -> None:
         """Cancelling keepalive_loop raises no unhandled exceptions."""
@@ -1383,9 +1386,9 @@ class TestScopeLifecycle:
         from icom_lan.web.radio_poller import DisableScope
 
         cmds = server._command_queue.drain()
-        assert any(isinstance(c, DisableScope) for c in cmds), (
-            "DisableScope should be in queue"
-        )
+        assert any(
+            isinstance(c, DisableScope) for c in cmds
+        ), "DisableScope should be in queue"
         assert not server._scope_enabled
 
     async def test_scope_flag_reset_on_disable(self) -> None:
@@ -1827,7 +1830,7 @@ class TestRadioPoller:
 
     async def test_command_queue_dedup(self) -> None:
         """Last-write-wins dedup for freq commands; PTT never deduped."""
-        from icom_lan.web.radio_poller import CommandQueue, SetFreq, PttOn, PttOff
+        from icom_lan.web.radio_poller import CommandQueue, PttOff, PttOn, SetFreq
 
         queue = CommandQueue()
         queue.put(SetFreq(14000000))
@@ -1946,7 +1949,7 @@ class TestSwitchScopeReceiver:
 
         radio = self._make_radio()
         queue = CommandQueue()
-        poller = RadioPoller(radio, StateCache(), queue)
+        poller = RadioPoller(radio, StateCache(), queue, radio_state=RadioState())
 
         poller.start()
         queue.put(SwitchScopeReceiver(0))
@@ -2000,17 +2003,13 @@ class TestSwitchScopeReceiver:
         poller.stop()
 
         scope_calls = [c for c in radio.send_civ.call_args_list if c[0][0] == 0x27]
-        assert not any(c.kwargs.get("sub") == 0x12 for c in scope_calls), (
-            "Expected invalid receiver to be rejected without CI-V send"
-        )
+        assert not any(
+            c.kwargs.get("sub") == 0x12 for c in scope_calls
+        ), "Expected invalid receiver to be rejected without CI-V send"
 
     async def test_select_vfo_sub_sends_swap(self) -> None:
         """SelectVfo("SUB") sends VFO swap (0x07 0xB0) when active=MAIN."""
-        from icom_lan.web.radio_poller import (
-            CommandQueue,
-            RadioPoller,
-            SelectVfo,
-        )
+        from icom_lan.web.radio_poller import CommandQueue, RadioPoller, SelectVfo
 
         radio = self._make_radio()
         queue = CommandQueue()
@@ -2030,11 +2029,7 @@ class TestSwitchScopeReceiver:
 
     async def test_select_vfo_main_no_swap_when_already_main(self) -> None:
         """SelectVfo("MAIN") does NOT swap when already on MAIN."""
-        from icom_lan.web.radio_poller import (
-            CommandQueue,
-            RadioPoller,
-            SelectVfo,
-        )
+        from icom_lan.web.radio_poller import CommandQueue, RadioPoller, SelectVfo
 
         radio = self._make_radio()
         queue = CommandQueue()
@@ -2051,6 +2046,25 @@ class TestSwitchScopeReceiver:
             if c[0][0] == 0x07 and c.kwargs.get("data") == bytes([0xB0])
         ]
         assert len(swap_calls) == 0, "Should NOT swap when already on MAIN"
+
+    async def test_set_split_updates_radio_and_state(self) -> None:
+        """SetSplit(on) calls radio.set_split_mode and updates RadioState.split."""
+        from icom_lan.web.radio_poller import CommandQueue, RadioPoller, SetSplit
+
+        radio = self._make_radio()
+        radio.set_split_mode = AsyncMock()
+        queue = CommandQueue()
+        poller = RadioPoller(radio, StateCache(), queue, radio_state=RadioState())
+
+        poller.start()
+        queue.put(SetSplit(True))
+        await asyncio.sleep(0.15)
+        poller.stop()
+
+        radio.set_split_mode.assert_awaited_once_with(True)
+        assert poller._radio_state is not None
+        assert poller._radio_state.split is True
+        assert poller.revision > 0
 
 
 class TestSwitchScopeReceiverCommand:
