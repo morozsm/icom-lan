@@ -119,7 +119,7 @@ class TestCapabilities:
         assert "ip_plus" not in profile.capabilities
 
     def test_capabilities_count(self, profile):
-        assert len(profile.capabilities) == 12
+        assert len(profile.capabilities) == 35
 
 
 # ── Command overrides ──────────────────────────────────────────
@@ -128,47 +128,47 @@ class TestCapabilities:
 class TestCommandOverrides:
     """14 commands differ from IC-7610; verify IC-7300-specific wire bytes."""
 
-    def test_acc1_mod_level(self, cmdmap):
-        assert cmdmap.get("acc1_mod_level") == (0x1A, 0x05, 0x00, 0x64)
+    def test_get_acc1_mod_level(self, cmdmap):
+        assert cmdmap.get("get_acc1_mod_level") == (0x1A, 0x05, 0x00, 0x64)
 
-    def test_usb_mod_level(self, cmdmap):
-        assert cmdmap.get("usb_mod_level") == (0x1A, 0x05, 0x00, 0x65)
+    def test_get_usb_mod_level(self, cmdmap):
+        assert cmdmap.get("get_usb_mod_level") == (0x1A, 0x05, 0x00, 0x65)
 
-    def test_data_off_mod_input(self, cmdmap):
-        assert cmdmap.get("data_off_mod_input") == (0x1A, 0x05, 0x00, 0x66)
+    def test_get_data_off_mod_input(self, cmdmap):
+        assert cmdmap.get("get_data_off_mod_input") == (0x1A, 0x05, 0x00, 0x66)
 
-    def test_data1_mod_input(self, cmdmap):
-        assert cmdmap.get("data1_mod_input") == (0x1A, 0x05, 0x00, 0x67)
+    def test_get_data1_mod_input(self, cmdmap):
+        assert cmdmap.get("get_data1_mod_input") == (0x1A, 0x05, 0x00, 0x67)
 
-    def test_civ_transceive(self, cmdmap):
-        assert cmdmap.get("civ_transceive") == (0x1A, 0x05, 0x00, 0x71)
+    def test_get_civ_transceive(self, cmdmap):
+        assert cmdmap.get("get_civ_transceive") == (0x1A, 0x05, 0x00, 0x71)
 
-    def test_system_date(self, cmdmap):
-        assert cmdmap.get("system_date") == (0x1A, 0x05, 0x00, 0x94)
+    def test_get_system_date(self, cmdmap):
+        assert cmdmap.get("get_system_date") == (0x1A, 0x05, 0x00, 0x94)
 
-    def test_system_time(self, cmdmap):
-        assert cmdmap.get("system_time") == (0x1A, 0x05, 0x00, 0x95)
+    def test_get_system_time(self, cmdmap):
+        assert cmdmap.get("get_system_time") == (0x1A, 0x05, 0x00, 0x95)
 
-    def test_utc_offset(self, cmdmap):
-        assert cmdmap.get("utc_offset") == (0x1A, 0x05, 0x00, 0x96)
+    def test_get_utc_offset(self, cmdmap):
+        assert cmdmap.get("get_utc_offset") == (0x1A, 0x05, 0x00, 0x96)
 
-    def test_quick_split(self, cmdmap):
-        assert cmdmap.get("quick_split") == (0x1A, 0x05, 0x00, 0x30)
+    def test_get_quick_split(self, cmdmap):
+        assert cmdmap.get("get_quick_split") == (0x1A, 0x05, 0x00, 0x30)
 
-    def test_nb_depth(self, cmdmap):
-        assert cmdmap.get("nb_depth") == (0x1A, 0x05, 0x01, 0x89)
+    def test_get_nb_depth(self, cmdmap):
+        assert cmdmap.get("get_nb_depth") == (0x1A, 0x05, 0x01, 0x89)
 
-    def test_nb_width(self, cmdmap):
-        assert cmdmap.get("nb_width") == (0x1A, 0x05, 0x01, 0x90)
+    def test_get_nb_width(self, cmdmap):
+        assert cmdmap.get("get_nb_width") == (0x1A, 0x05, 0x01, 0x90)
 
     def test_get_s_meter_sql_status(self, cmdmap):
-        assert cmdmap.get("get_s_meter_sql_status") == (0x16, 0x43)
+        assert cmdmap.get("get_s_meter_sql_status") == (0x15, 0x01)
 
-    def test_civ_output_ant(self, cmdmap):
-        assert cmdmap.get("civ_output_ant") == (0x1A, 0x05, 0x00, 0x61)
+    def test_get_civ_output_ant(self, cmdmap):
+        assert cmdmap.get("get_civ_output_ant") == (0x1A, 0x05, 0x00, 0x61)
 
     def test_agc_time_constant(self, cmdmap):
-        assert cmdmap.get("agc_time_constant") == (0x1A, 0x04)
+        assert cmdmap.get("get_agc_time_constant") == (0x1A, 0x04)
 
 
 # ── Shared commands (same wire bytes as IC-7610) ───────────────
