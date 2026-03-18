@@ -310,9 +310,18 @@ def load_rig(path: Path) -> RigConfig:
     agc_labels = dict(agc_section["labels"]) if "labels" in agc_section else None
 
     # Parse [data_mode] (optional)
+    # If data_mode is in features but no [data_mode] section, default to 1 mode (OFF/DATA)
     data_mode_section = data.get("data_mode", {})
-    data_mode_count = int(data_mode_section.get("count", 0))
-    data_mode_labels = dict(data_mode_section["labels"]) if "labels" in data_mode_section else None
+    has_data_mode_feature = "data_mode" in features
+    if data_mode_section:
+        data_mode_count = int(data_mode_section.get("count", 0))
+        data_mode_labels = dict(data_mode_section["labels"]) if "labels" in data_mode_section else None
+    elif has_data_mode_feature:
+        data_mode_count = 1
+        data_mode_labels = {"0": "OFF", "1": "DATA"}
+    else:
+        data_mode_count = 0
+        data_mode_labels = None
 
     # Parse [controls] (optional)
     controls_raw = data.get("controls")

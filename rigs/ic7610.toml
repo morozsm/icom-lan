@@ -165,6 +165,19 @@ list = ["USB", "LSB", "CW", "CW-R", "AM", "FM", "RTTY", "RTTY-R", "PSK", "PSK-R"
 count = 3
 labels = { "0" = "OFF", "1" = "D1", "2" = "D2", "3" = "D3" }
 
+# Modulation input sources available for each DATA mode
+# Each data mode (OFF, D1, D2, D3) can select from these inputs
+# CI-V 0x1A 0x05 0x00 0x91-0x94: get/set mod input per DATA mode
+# Values are CI-V register bytes sent as data payload
+inputs = [
+    { value = 0, name = "MIC" },
+    { value = 1, name = "ACC" },
+    { value = 3, name = "USB" },
+    { value = 5, name = "LAN" },
+    { value = 2, name = "MIC+ACC" },
+    { value = 4, name = "MIC+USB" },
+]
+
 [filters]
 list = ["FIL1", "FIL2", "FIL3"]
 # CI-V 0x1A 0x03: IF filter width 50-10000 Hz
