@@ -170,7 +170,7 @@ inputs = [
 list = ["FIL1", "FIL2", "FIL3"]
 # CI-V 0x1A 0x03: IF filter width 50-10000 Hz
 width_min_hz = 50
-width_max_hz = 10000
+width_max_hz = 9999
 
 [vfo]
 scheme = "ab"

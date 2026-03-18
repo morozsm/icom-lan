@@ -92,13 +92,21 @@ describe('panel structure', () => {
     expect(labels.some(el => el.textContent === 'IF Shift')).toBe(true);
   });
 
-  it('Width slider has min=50, max=3600, step=50', () => {
+  it('Width slider uses default min=50, max=9999, step=50', () => {
     const t = mountPanel(baseProps);
     const inputs = t.querySelectorAll<HTMLInputElement>('input[type="range"]');
     const widthInput = inputs[0];
     expect(widthInput.min).toBe('50');
-    expect(widthInput.max).toBe('3600');
+    expect(widthInput.max).toBe('9999');
     expect(widthInput.step).toBe('50');
+  });
+
+  it('Width slider respects custom filterWidthMin/Max', () => {
+    const t = mountPanel({ ...baseProps, filterWidthMin: 100, filterWidthMax: 4000 });
+    const inputs = t.querySelectorAll<HTMLInputElement>('input[type="range"]');
+    const widthInput = inputs[0];
+    expect(widthInput.min).toBe('100');
+    expect(widthInput.max).toBe('4000');
   });
 
   it('IF Shift slider has min=-1200, max=1200, step=25', () => {

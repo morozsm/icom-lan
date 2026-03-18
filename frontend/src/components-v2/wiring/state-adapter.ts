@@ -100,6 +100,8 @@ export function toRfFrontEndProps(
 
 export interface FilterProps {
   filterWidth: number;
+  filterWidthMin: number;
+  filterWidthMax: number;
   ifShift: number;
   hasPbt: boolean;
   pbtInner: number;
@@ -115,6 +117,8 @@ export function toFilterProps(
   const pbtOuter = rx?.pbtOuter ?? 0;
   return {
     filterWidth: rx?.filterWidth ?? 2400,
+    filterWidthMin: caps?.filterWidthMin ?? 50,
+    filterWidthMax: caps?.filterWidthMax ?? 9999,
     ifShift: deriveIfShift(pbtInner, pbtOuter),
     hasPbt: hasCap(caps, 'pbt'),
     pbtInner,

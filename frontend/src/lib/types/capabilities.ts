@@ -39,6 +39,8 @@ export interface Capabilities {
   freqRanges: FreqRange[];
   modes: string[];
   filters: string[];
+  filterWidthMin?: number;   // Min filter width in Hz (default 50)
+  filterWidthMax?: number;   // Max filter width in Hz (default 9999)
   attValues?: number[];   // Attenuator dB steps (e.g. [0,20] for IC-7300, [0,6,12,18] for IC-7610)
   preValues?: number[];   // Preamp levels: 0 = off, 1 = P1, 2 = P2, etc.
   agcModes?: number[];    // AGC mode values (e.g. [1,2,3] = FAST/MID/SLOW)

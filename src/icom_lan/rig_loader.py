@@ -111,6 +111,8 @@ class RigConfig:
     pre_values: tuple[int, ...] | None
     agc_modes: tuple[int, ...] | None
     agc_labels: dict[str, str] | None
+    filter_width_min: int = 50
+    filter_width_max: int = 9999
     data_mode_count: int = 0
     data_mode_labels: dict[str, str] | None = None
     protocol_type: str = "civ"
@@ -161,6 +163,8 @@ class RigConfig:
             freq_ranges=ranges,
             modes=tuple(self.modes),
             filters=tuple(self.filters),
+            filter_width_min=self.filter_width_min,
+            filter_width_max=self.filter_width_max,
             att_values=self.att_values,
             pre_values=self.pre_values,
             agc_modes=self.agc_modes,
@@ -250,9 +254,12 @@ def load_rig(path: Path) -> RigConfig:
         raise RigLoadError(f"{filename}: [modes].list must not be empty")
 
     # Validate [filters]
-    filters = data["filters"].get("list", [])
+    filter_section = data["filters"]
+    filters = filter_section.get("list", [])
     if not filters:
         raise RigLoadError(f"{filename}: [filters].list must not be empty")
+    filter_width_min = int(filter_section.get("width_min_hz", 50))
+    filter_width_max = int(filter_section.get("width_max_hz", 9999))
 
     # Parse [protocol] (optional)
     proto_section = data.get("protocol", {})
@@ -379,6 +386,8 @@ def load_rig(path: Path) -> RigConfig:
         capabilities=tuple(features),
         modes=tuple(modes),
         filters=tuple(filters),
+        filter_width_min=filter_width_min,
+        filter_width_max=filter_width_max,
         vfo_scheme=scheme,
         vfo_main_select=vfo_main,
         vfo_sub_select=vfo_sub,
