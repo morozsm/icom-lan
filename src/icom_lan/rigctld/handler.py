@@ -3,7 +3,7 @@
 Responsibilities:
 - Command dispatch table (long_cmd → async handler method)
 - Read-only gate (reject set commands with RPRT -22)
-- Frequency/mode cache with configurable TTL (via StateCache)
+- RadioState-first reads with a small handler-local fallback cache
 - Error translation (icom-lan exceptions → Hamlib error codes)
 
 This module receives RigctldCommand from protocol.py and returns
@@ -15,9 +15,12 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, cast
 
 from ..exceptions import ConnectionError, TimeoutError
+from ..radio_state import RadioState, ReceiverState
 from ..types import Mode
 from .contract import (
     CIV_TO_HAMLIB_MODE,
@@ -27,9 +30,7 @@ from .contract import (
     RigctldConfig,
     RigctldResponse,
 )
-from .state_cache import StateCache
 from .utils import get_mode_reader
-from .._shared_state_runtime import is_cache_fresh
 
 if TYPE_CHECKING:
     from ..radio_protocol import Radio
@@ -126,6 +127,72 @@ def _mode_to_hamlib_str(mode: object) -> str:
     return str(mode).upper()
 
 
+@dataclass(slots=True)
+class _PendingRigState:
+    """Local optimistic write-through state until RadioState catches up."""
+
+    freq: int | None = None
+    mode: str | None = None
+    filter_width: int | None = None
+    data_mode: bool | None = None
+
+
+@dataclass(slots=True)
+class _FallbackRigState:
+    """Handler-local fallback values used only until RadioState becomes valid."""
+
+    freq: int = 0
+    freq_ts: float = 0.0
+    mode: str = "USB"
+    filter_width: int | None = None
+    mode_ts: float = 0.0
+    data_mode: bool = False
+    data_mode_ts: float = 0.0
+    ptt: bool = False
+    ptt_ts: float = 0.0
+    s_meter: int | None = None
+    s_meter_ts: float = 0.0
+    rf_power: float | None = None
+    rf_power_ts: float = 0.0
+    swr: float | None = None
+    swr_ts: float = 0.0
+
+    def is_fresh(self, field: str, ttl: float | None) -> bool:
+        if ttl is None or ttl <= 0.0:
+            return False
+        ts = getattr(self, f"{field}_ts", 0.0)
+        return ts > 0.0 and (time.monotonic() - ts) < ttl
+
+    def update_freq(self, freq: int) -> None:
+        self.freq = freq
+        self.freq_ts = time.monotonic()
+
+    def update_mode(self, mode: str, filter_width: int | None) -> None:
+        self.mode = mode
+        self.filter_width = filter_width
+        self.mode_ts = time.monotonic()
+
+    def update_data_mode(self, on: bool) -> None:
+        self.data_mode = on
+        self.data_mode_ts = time.monotonic()
+
+    def update_ptt(self, on: bool) -> None:
+        self.ptt = on
+        self.ptt_ts = time.monotonic()
+
+    def update_s_meter(self, raw: int) -> None:
+        self.s_meter = raw
+        self.s_meter_ts = time.monotonic()
+
+    def update_rf_power(self, value: float) -> None:
+        self.rf_power = value
+        self.rf_power_ts = time.monotonic()
+
+    def update_swr(self, value: float) -> None:
+        self.swr = value
+        self.swr_ts = time.monotonic()
+
+
 # ---------------------------------------------------------------------------
 # Handler
 # ---------------------------------------------------------------------------
@@ -137,19 +204,72 @@ class RigctldHandler:
     Args:
         radio: Connected IcomRadio instance.
         config: Server configuration (read_only, cache_ttl, etc.).
-        cache: Shared state cache; a fresh private one is created if omitted.
     """
 
     def __init__(
         self,
         radio: "Radio",
         config: RigctldConfig,
-        cache: StateCache | None = None,
     ) -> None:
         self._radio = radio
         self._config = config
-        self._ptt_state: bool = False
-        self._cache: StateCache = cache if cache is not None else StateCache()
+        self._ptt_state: bool | None = None
+        self._cache = _FallbackRigState()
+        self._pending = _PendingRigState()
+
+    def _radio_state(self) -> RadioState | None:
+        state = getattr(self._radio, "radio_state", None)
+        return state if isinstance(state, RadioState) else None
+
+    def _main_receiver_state(self) -> ReceiverState | None:
+        state = self._radio_state()
+        if state is None or state.main.freq <= 0:
+            return None
+        return state.main
+
+    def _effective_pending_freq(self, main_state: ReceiverState | None) -> int | None:
+        pending_freq = self._pending.freq
+        if pending_freq is None:
+            return None
+        if main_state is not None and main_state.freq == pending_freq:
+            self._pending.freq = None
+            return None
+        return pending_freq
+
+    def _effective_pending_mode(
+        self, main_state: ReceiverState | None
+    ) -> tuple[str, int, bool] | None:
+        pending_mode = self._pending.mode
+        if pending_mode is None:
+            return None
+
+        pending_filter = self._pending.filter_width
+        pending_data_mode = self._pending.data_mode
+
+        if main_state is not None:
+            state_mode = main_state.mode.upper()
+            state_filter = main_state.filter
+            state_data_mode = main_state.data_mode
+            if (
+                state_mode == pending_mode
+                and state_filter == pending_filter
+                and (pending_data_mode is None or state_data_mode == pending_data_mode)
+            ):
+                self._pending.mode = None
+                self._pending.filter_width = None
+                self._pending.data_mode = None
+                return None
+
+        data_mode = (
+            pending_data_mode
+            if pending_data_mode is not None
+            else (
+                main_state.data_mode
+                if main_state is not None
+                else self._cache.data_mode
+            )
+        )
+        return pending_mode, _filter_to_passband(pending_filter), data_mode
 
     # ------------------------------------------------------------------
     # Public entry point
@@ -194,7 +314,15 @@ class RigctldHandler:
     # ------------------------------------------------------------------
 
     async def _cmd_get_freq(self, cmd: RigctldCommand) -> RigctldResponse:
-        if is_cache_fresh(self._cache, "freq", self._config.cache_ttl):
+        main_state = self._main_receiver_state()
+        pending_freq = self._effective_pending_freq(main_state)
+        if pending_freq is not None:
+            self._cache.update_freq(pending_freq)
+            return RigctldResponse(values=[str(pending_freq)])
+        if main_state is not None:
+            self._cache.update_freq(main_state.freq)
+            return RigctldResponse(values=[str(main_state.freq)])
+        if self._cache.is_fresh("freq", self._config.cache_ttl):
             return RigctldResponse(values=[str(self._cache.freq)])
         freq = await self._radio.get_frequency()
         self._cache.update_freq(freq)
@@ -208,7 +336,8 @@ class RigctldHandler:
         except ValueError:
             return _err(HamlibError.EINVAL)
         await self._radio.set_frequency(freq)
-        self._cache.invalidate_freq()
+        self._pending.freq = freq
+        self._cache.update_freq(freq)
         return _ok()
 
     # ------------------------------------------------------------------
@@ -216,7 +345,19 @@ class RigctldHandler:
     # ------------------------------------------------------------------
 
     async def _cmd_get_mode(self, cmd: RigctldCommand) -> RigctldResponse:
-        if is_cache_fresh(self._cache, "mode", self._config.cache_ttl):
+        main_state = self._main_receiver_state()
+        pending_mode = self._effective_pending_mode(main_state)
+        if pending_mode is not None:
+            mode_str, passband, data_mode = pending_mode
+            self._cache.update_mode(mode_str, self._pending.filter_width)
+            self._cache.update_data_mode(data_mode)
+        elif main_state is not None:
+            mode_str = main_state.mode.upper()
+            passband = _filter_to_passband(main_state.filter)
+            data_mode = main_state.data_mode
+            self._cache.update_mode(mode_str, main_state.filter)
+            self._cache.update_data_mode(data_mode)
+        elif self._cache.is_fresh("mode", self._config.cache_ttl):
             mode_str = self._cache.mode
             passband = _filter_to_passband(self._cache.filter_width)
             data_mode = self._cache.data_mode
@@ -294,6 +435,9 @@ class RigctldHandler:
             # Cache optimistic final state even if read-back lagged.
             self._cache.update_mode(base_mode_str, filter_width)
             self._cache.update_data_mode(True)
+            self._pending.mode = base_mode_str
+            self._pending.filter_width = filter_width
+            self._pending.data_mode = True
             if not synced:
                 logger.debug(
                     "set_mode(%s): packet read-back not fully synced yet; cached optimistic state",
@@ -303,6 +447,9 @@ class RigctldHandler:
             # For non-packet mode changes update mode cache, but preserve DATA
             # state (no forced DATA off side-effect).
             self._cache.update_mode(base_mode_str, filter_width)
+            self._pending.mode = base_mode_str
+            self._pending.filter_width = filter_width
+            self._pending.data_mode = None
 
         return _ok()
 
@@ -311,7 +458,16 @@ class RigctldHandler:
     # ------------------------------------------------------------------
 
     async def _cmd_get_ptt(self, cmd: RigctldCommand) -> RigctldResponse:
-        return RigctldResponse(values=[str(int(self._ptt_state))])
+        state = self._radio_state()
+        if state is not None:
+            self._cache.update_ptt(state.ptt)
+            if self._ptt_state is None:
+                return RigctldResponse(values=[str(int(state.ptt))])
+            if state.ptt == self._ptt_state:
+                self._ptt_state = None
+                return RigctldResponse(values=[str(int(state.ptt))])
+            return RigctldResponse(values=[str(int(self._ptt_state))])
+        return RigctldResponse(values=[str(int(bool(self._ptt_state)))])
 
     async def _cmd_set_ptt(self, cmd: RigctldCommand) -> RigctldResponse:
         if not cmd.args:
@@ -322,6 +478,7 @@ class RigctldHandler:
             return _err(HamlibError.EINVAL)
         await self._radio.set_ptt(on)
         self._ptt_state = on
+        self._cache.update_ptt(on)
         return _ok()
 
     # ------------------------------------------------------------------
@@ -345,6 +502,18 @@ class RigctldHandler:
         level = cmd.args[0].upper()
         if level not in ("STRENGTH", "RFPOWER", "SWR"):
             return _err(HamlibError.EINVAL)
+        main_state = self._main_receiver_state()
+        if level == "STRENGTH" and main_state is not None:
+            raw = main_state.s_meter
+            self._cache.update_s_meter(raw)
+            strength_db = round((raw / 241.0) * 114.0 - 54.0)
+            return RigctldResponse(values=[str(strength_db)])
+        if level == "RFPOWER":
+            state = self._radio_state()
+            if state is not None and main_state is not None:
+                raw_power = state.power_level / 255.0
+                self._cache.update_rf_power(raw_power)
+                return RigctldResponse(values=[f"{raw_power:.6f}"])
         if not isinstance(self._radio, MetersCapable):
             # Return cached values if available, else unimplemented
             if level == "STRENGTH" and self._cache.s_meter is not None:
@@ -358,12 +527,15 @@ class RigctldHandler:
             return _err(HamlibError.ENIMPL)
         if level == "STRENGTH":
             raw = await self._radio.get_s_meter()
+            self._cache.update_s_meter(raw)
             # IC-7610 S-meter: 0→S0(−54 dB), 120→S9(0 dB), 241→S9+60 dB
             strength_db = round((raw / 241.0) * 114.0 - 54.0)
             return RigctldResponse(values=[str(strength_db)])
         if level == "RFPOWER":
             raw = await self._radio.get_power()
-            return RigctldResponse(values=[f"{raw / 255.0:.6f}"])
+            normalized = raw / 255.0
+            self._cache.update_rf_power(normalized)
+            return RigctldResponse(values=[f"{normalized:.6f}"])
         if level == "SWR":
             raw_val = await self._radio.get_swr()
             # Protocol returns float; backend may return int
@@ -372,6 +544,7 @@ class RigctldHandler:
             )
             # Map 0-255 to 1.0-5.0
             swr = 1.0 + (raw_swr / 255.0) * 4.0
+            self._cache.update_swr(swr)
             return RigctldResponse(values=[f"{swr:.6f}"])
         return _err(HamlibError.EINVAL)
 
@@ -380,7 +553,9 @@ class RigctldHandler:
     # ------------------------------------------------------------------
 
     async def _cmd_get_split_vfo(self, cmd: RigctldCommand) -> RigctldResponse:
-        return RigctldResponse(values=["0", "VFOA"])
+        state = self._radio_state()
+        split = state.split if state is not None else False
+        return RigctldResponse(values=[str(int(split)), "VFOA"])
 
     async def _cmd_set_split_vfo(self, cmd: RigctldCommand) -> RigctldResponse:
         return _ok()
@@ -390,7 +565,9 @@ class RigctldHandler:
     # ------------------------------------------------------------------
 
     async def _cmd_get_rit(self, cmd: RigctldCommand) -> RigctldResponse:
-        return RigctldResponse(values=["0"])
+        state = self._radio_state()
+        rit = state.rit_freq if state is not None else 0
+        return RigctldResponse(values=[str(rit)])
 
     # ------------------------------------------------------------------
     # Info / control commands

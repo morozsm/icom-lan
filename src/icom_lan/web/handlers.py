@@ -14,8 +14,8 @@ from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any, Protocol, cast
 
 from .._audio_transcoder import PcmOpusTranscoder, create_pcm_opus_transcoder
-from .._shared_state_runtime import DEFAULT_STATE_CACHE_TTL, is_cache_fresh
 from ..profiles import RadioProfile
+from ..radio_state import RadioState
 from ..scope import ScopeFrame
 from ..types import AudioCodec
 from .protocol import (
@@ -58,13 +58,13 @@ from .radio_poller import (
     SetMonitorGain,
     SetNB,
     SetNBLevel,
+    SetNotchFilter,
     SetNR,
     SetNRLevel,
-    SetNotchFilter,
-    SetPower,
-    SetPowerstat,
     SetPbtInner,
     SetPbtOuter,
+    SetPower,
+    SetPowerstat,
     SetPreamp,
     SetRfGain,
     SetRitFrequency,
@@ -85,7 +85,11 @@ from .radio_poller import (
     VfoEqualize,
     VfoSwap,
 )
-from .runtime_helpers import radio_ready, runtime_capabilities
+from .runtime_helpers import (
+    build_public_state_payload,
+    radio_ready,
+    runtime_capabilities,
+)
 from .websocket import WS_OP_BINARY, WS_OP_TEXT, WebSocketConnection
 
 if TYPE_CHECKING:
@@ -493,47 +497,46 @@ class ControlHandler:
                 self._subscribed_streams.discard(str(s))
 
     async def _send_state_snapshot(self) -> None:
-        data: dict[str, Any] = {
-            "freq_a": 0,
-            "freq_b": 0,
-            "mode": "USB",
-            "filter": "FIL1",
-            "ptt": False,
-            "power": 0,
-            "smeter": 0,
-            "swr": 0,
-            "scope": {
-                "mode": 0,
-                "start_freq": 0,
-                "end_freq": 0,
-                "receiver": 0,
-            },
-        }
-        # Read from shared state cache — zero CI-V.  Use the same TTL
-        # semantics as rigctld so state projections stay consistent.
-        cache = self._server.state_cache if self._server is not None else None
-        if cache is None and self._radio is not None:
-            from ..radio_protocol import StateCacheCapable
-
-            if isinstance(self._radio, StateCacheCapable):
-                cache = self._radio.state_cache
-        if cache is not None:
+        payload: dict[str, Any] | None = None
+        builder = (
+            getattr(self._server, "build_public_state", None)
+            if self._server is not None
+            else None
+        )
+        if callable(builder):
             try:
-                ttl = getattr(
-                    getattr(self._server, "_config", None),
-                    "cache_ttl",
-                    DEFAULT_STATE_CACHE_TTL,
-                )
-                if is_cache_fresh(cache, "freq", ttl):
-                    data["freq_a"] = cache.freq
-                if is_cache_fresh(cache, "mode", ttl):
-                    data["mode"] = cache.mode
-                    if cache.filter_width is not None:
-                        data["filter"] = f"FIL{cache.filter_width}"
-                data["ptt"] = cache.ptt
+                payload = cast(dict[str, Any], builder())
             except Exception as exc:
-                logger.debug("control: state cache read failed: %s", exc)
-        msg_out = {"type": "state", "data": data, "radio_ready": self._radio_ready()}
+                logger.debug("control: public state build failed: %s", exc)
+
+        if payload is None:
+            raw_radio_state = (
+                getattr(self._radio, "radio_state", None)
+                if self._radio is not None
+                else None
+            )
+            radio_state = (
+                raw_radio_state
+                if isinstance(raw_radio_state, RadioState)
+                else RadioState()
+            )
+            raw_profile = (
+                getattr(self._radio, "profile", None)
+                if self._radio is not None
+                else None
+            )
+            if isinstance(raw_profile, RadioProfile):
+                receiver_count = raw_profile.receiver_count
+            else:
+                receiver_count = 2 if "dual_rx" in self._capabilities() else 1
+            payload = build_public_state_payload(
+                radio_state,
+                radio=self._radio,
+                revision=0,
+                receiver_count=receiver_count,
+            )
+
+        msg_out = {"type": "state_update", "data": payload}
         await self._ws.send_text(encode_json(msg_out))
         # Send current DX spots if available
         if self._server is not None and hasattr(self._server, "_spot_buffer"):

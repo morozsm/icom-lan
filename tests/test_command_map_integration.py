@@ -30,7 +30,7 @@ class TestGetterParity:
     """Calling getters with IC-7610 cmd_map must match hardcoded output."""
 
     def test_get_frequency(self, cmd_map):
-        assert commands.get_frequency(cmd_map=cmd_map) == commands.get_frequency()
+        assert commands.get_freq(cmd_map=cmd_map) == commands.get_freq()
 
     def test_get_mode(self, cmd_map):
         assert commands.get_mode(cmd_map=cmd_map) == commands.get_mode()
@@ -42,7 +42,7 @@ class TestGetterParity:
         assert commands.get_rf_gain(cmd_map=cmd_map) == commands.get_rf_gain()
 
     def test_get_power(self, cmd_map):
-        assert commands.get_power(cmd_map=cmd_map) == commands.get_power()
+        assert commands.get_rf_power(cmd_map=cmd_map) == commands.get_rf_power()
 
     def test_get_s_meter(self, cmd_map):
         assert commands.get_s_meter(cmd_map=cmd_map) == commands.get_s_meter()
@@ -88,10 +88,10 @@ class TestSetterParity:
     """Calling setters with IC-7610 cmd_map must match hardcoded output."""
 
     def test_set_frequency(self, cmd_map):
-        assert commands.set_frequency(14_200_000, cmd_map=cmd_map) == commands.set_frequency(14_200_000)
+        assert commands.set_freq(14_200_000, cmd_map=cmd_map) == commands.set_freq(14_200_000)
 
     def test_set_power(self, cmd_map):
-        assert commands.set_power(128, cmd_map=cmd_map) == commands.set_power(128)
+        assert commands.set_rf_power(128, cmd_map=cmd_map) == commands.set_rf_power(128)
 
     def test_set_af_level(self, cmd_map):
         assert commands.set_af_level(200, cmd_map=cmd_map) == commands.set_af_level(200)
@@ -121,10 +121,10 @@ class TestSetterParity:
         assert commands.stop_cw(cmd_map=cmd_map) == commands.stop_cw()
 
     def test_start_scan(self, cmd_map):
-        assert commands.start_scan(cmd_map=cmd_map) == commands.start_scan()
+        assert commands.scan_start(cmd_map=cmd_map) == commands.scan_start()
 
     def test_stop_scan(self, cmd_map):
-        assert commands.stop_scan(cmd_map=cmd_map) == commands.stop_scan()
+        assert commands.scan_stop(cmd_map=cmd_map) == commands.scan_stop()
 
 
 # ── Helper-delegating functions ─────────────────────────────────
@@ -222,14 +222,14 @@ class TestCommandMapOverride:
 
     def test_custom_single_byte_command(self):
         custom = CommandMap({"get_freq": (0xFF,)})
-        result = commands.get_frequency(cmd_map=custom)
+        result = commands.get_freq(cmd_map=custom)
         assert b"\xff" in result
-        assert result != commands.get_frequency()
+        assert result != commands.get_freq()
 
     def test_custom_setter(self):
         custom = CommandMap({"set_rf_power": (0x14, 0xFF)})
-        result = commands.set_power(128, cmd_map=custom)
-        hardcoded = commands.set_power(128)
+        result = commands.set_rf_power(128, cmd_map=custom)
+        hardcoded = commands.set_rf_power(128)
         assert result != hardcoded
         assert b"\x14\xff" in result
 

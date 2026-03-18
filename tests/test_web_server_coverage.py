@@ -689,7 +689,7 @@ async def test_info_endpoint_no_radio() -> None:
 # ---------------------------------------------------------------------------
 
 
-from icom_lan.web.server import _camel_case_state  # noqa: E402
+from icom_lan.web.runtime_helpers import _camel_case_state  # noqa: E402
 
 
 class TestCamelCaseState:

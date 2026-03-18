@@ -113,7 +113,7 @@ async def wire_server() -> RigctldServer:  # type: ignore[misc]
         command_timeout=1.0,
         cache_ttl=0.0,  # always fresh → deterministic radio calls
     )
-    handler = RigctldHandler(radio, cfg, cache=cache)
+    handler = RigctldHandler(radio, cfg)
     srv = RigctldServer(radio, cfg, _handler=handler, _poller=poller)
     async with srv:
         yield srv  # type: ignore[misc]
@@ -136,7 +136,7 @@ async def ro_wire_server() -> RigctldServer:  # type: ignore[misc]
         read_only=True,
         cache_ttl=0.0,
     )
-    handler = RigctldHandler(radio, cfg, cache=cache)
+    handler = RigctldHandler(radio, cfg)
     srv = RigctldServer(radio, cfg, _handler=handler, _poller=poller)
     async with srv:
         yield srv  # type: ignore[misc]

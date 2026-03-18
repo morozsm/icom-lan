@@ -160,40 +160,40 @@ class TestScanning:
     """Tests for start_scan / stop_scan."""
 
     def test_start_scan_builds_correct_frame(self) -> None:
-        assert commands.start_scan() == _frame(_CMD_SCANNING, 0x01)
+        assert commands.scan_start() == _frame(_CMD_SCANNING, 0x01)
 
     def test_stop_scan_builds_correct_frame(self) -> None:
-        assert commands.stop_scan() == _frame(_CMD_SCANNING, 0x00)
+        assert commands.scan_stop() == _frame(_CMD_SCANNING, 0x00)
 
     def test_start_scan_starts_with_preamble(self) -> None:
-        assert commands.start_scan().startswith(_PREAMBLE)
+        assert commands.scan_start().startswith(_PREAMBLE)
 
     def test_stop_scan_ends_with_terminator(self) -> None:
-        assert commands.stop_scan().endswith(_TERMINATOR)
+        assert commands.scan_stop().endswith(_TERMINATOR)
 
     def test_start_and_stop_scan_differ_only_in_data_byte(self) -> None:
-        start = commands.start_scan()
-        stop = commands.stop_scan()
+        start = commands.scan_start()
+        stop = commands.scan_stop()
         # Same command byte, different data
         assert start != stop
         assert start[4] == _CMD_SCANNING
         assert stop[4] == _CMD_SCANNING
 
     def test_start_scan_data_byte_is_one(self) -> None:
-        frame = commands.start_scan()
+        frame = commands.scan_start()
         assert frame[5] == 0x01
 
     def test_stop_scan_data_byte_is_zero(self) -> None:
-        frame = commands.stop_scan()
+        frame = commands.scan_stop()
         assert frame[5] == 0x00
 
     def test_start_scan_custom_addresses(self) -> None:
-        frame = commands.start_scan(to_addr=0xA4, from_addr=0xE1)
+        frame = commands.scan_start(to_addr=0xA4, from_addr=0xE1)
         assert frame[2] == 0xA4
         assert frame[3] == 0xE1
 
     def test_stop_scan_custom_addresses(self) -> None:
-        frame = commands.stop_scan(to_addr=0xA4, from_addr=0xE1)
+        frame = commands.scan_stop(to_addr=0xA4, from_addr=0xE1)
         assert frame[2] == 0xA4
         assert frame[3] == 0xE1
 
@@ -329,4 +329,4 @@ class TestCommandDistinctness:
 
     def test_scanning_distinct_from_tuning_step(self) -> None:
         """Scanning commands != tuning step commands."""
-        assert commands.start_scan() != commands.get_tuning_step()
+        assert commands.scan_start() != commands.get_tuning_step()

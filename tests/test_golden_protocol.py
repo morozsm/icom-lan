@@ -117,7 +117,7 @@ async def test_golden_protocol(fixture: dict) -> None:
         raw = mock_spec["get_swr"]
         swr_display = 1.0 + (float(raw) / 255.0) * 4.0
         cache.update_swr(swr_display)
-    handler = RigctldHandler(radio, config, cache=cache)
+    handler = RigctldHandler(radio, config)
 
     normal_session = ClientSession()
     extended_session = ClientSession(extended_mode=True)
