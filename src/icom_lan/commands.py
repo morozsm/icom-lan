@@ -879,7 +879,9 @@ def _build_ctl_mem_get(
     cmd_name: str | None = None,
 ) -> bytes:
     if cmd_map is not None and cmd_name is not None:
-        return _build_from_map(cmd_map, cmd_name, to_addr=to_addr, from_addr=from_addr, data=prefix)
+        # When using cmd_map, wire bytes already include the full command structure
+        # including any data prefix, so don't pass prefix as data
+        return _build_from_map(cmd_map, cmd_name, to_addr=to_addr, from_addr=from_addr, data=None)
     return build_civ_frame(
         to_addr,
         from_addr,
