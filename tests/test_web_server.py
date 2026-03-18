@@ -2161,6 +2161,261 @@ class TestSwitchScopeReceiver:
         assert poller._radio_state.main.pbt_outer == 200
         assert poller.revision > 0
 
+    async def test_set_nr_level_updates_radio_and_state(self) -> None:
+        """SetNRLevel(level) calls radio.set_nr_level and updates receiver state."""
+        from icom_lan.web.radio_poller import CommandQueue, RadioPoller, SetNRLevel
+
+        radio = self._make_radio()
+        radio.set_nr_level = AsyncMock()
+        queue = CommandQueue()
+        poller = RadioPoller(radio, StateCache(), queue, radio_state=RadioState())
+
+        poller.start()
+        queue.put(SetNRLevel(42, receiver=0))
+        await asyncio.sleep(0.15)
+        poller.stop()
+
+        radio.set_nr_level.assert_awaited_once_with(42, receiver=0)
+        assert poller._radio_state is not None
+        assert poller._radio_state.main.nr_level == 42
+        assert poller.revision > 0
+
+    async def test_set_nb_level_updates_radio_and_state(self) -> None:
+        """SetNBLevel(level) calls radio.set_nb_level and updates receiver state."""
+        from icom_lan.web.radio_poller import CommandQueue, RadioPoller, SetNBLevel
+
+        radio = self._make_radio()
+        radio.set_nb_level = AsyncMock()
+        queue = CommandQueue()
+        poller = RadioPoller(radio, StateCache(), queue, radio_state=RadioState())
+
+        poller.start()
+        queue.put(SetNBLevel(17, receiver=0))
+        await asyncio.sleep(0.15)
+        poller.stop()
+
+        radio.set_nb_level.assert_awaited_once_with(17, receiver=0)
+        assert poller._radio_state is not None
+        assert poller._radio_state.main.nb_level == 17
+        assert poller.revision > 0
+
+    async def test_set_auto_notch_updates_radio_and_state(self) -> None:
+        """SetAutoNotch(on) calls radio.set_auto_notch and updates receiver state."""
+        from icom_lan.web.radio_poller import CommandQueue, RadioPoller, SetAutoNotch
+
+        radio = self._make_radio()
+        radio.set_auto_notch = AsyncMock()
+        queue = CommandQueue()
+        poller = RadioPoller(radio, StateCache(), queue, radio_state=RadioState())
+
+        poller.start()
+        queue.put(SetAutoNotch(True, receiver=0))
+        await asyncio.sleep(0.15)
+        poller.stop()
+
+        radio.set_auto_notch.assert_awaited_once_with(True, receiver=0)
+        assert poller._radio_state is not None
+        assert poller._radio_state.main.auto_notch is True
+        assert poller.revision > 0
+
+    async def test_set_manual_notch_updates_radio_and_state(self) -> None:
+        """SetManualNotch(on) calls radio.set_manual_notch and updates receiver state."""
+        from icom_lan.web.radio_poller import CommandQueue, RadioPoller, SetManualNotch
+
+        radio = self._make_radio()
+        radio.set_manual_notch = AsyncMock()
+        queue = CommandQueue()
+        poller = RadioPoller(radio, StateCache(), queue, radio_state=RadioState())
+
+        poller.start()
+        queue.put(SetManualNotch(True, receiver=0))
+        await asyncio.sleep(0.15)
+        poller.stop()
+
+        radio.set_manual_notch.assert_awaited_once_with(True, receiver=0)
+        assert poller._radio_state is not None
+        assert poller._radio_state.main.manual_notch is True
+        assert poller.revision > 0
+
+    async def test_set_notch_filter_updates_radio_and_state(self) -> None:
+        """SetNotchFilter(level) calls radio.set_notch_filter and updates RadioState.notch_filter."""
+        from icom_lan.web.radio_poller import CommandQueue, RadioPoller, SetNotchFilter
+
+        radio = self._make_radio()
+        radio.set_notch_filter = AsyncMock()
+        queue = CommandQueue()
+        poller = RadioPoller(radio, StateCache(), queue, radio_state=RadioState())
+
+        poller.start()
+        queue.put(SetNotchFilter(91))
+        await asyncio.sleep(0.15)
+        poller.stop()
+
+        radio.set_notch_filter.assert_awaited_once_with(91)
+        assert poller._radio_state is not None
+        assert poller._radio_state.notch_filter == 91
+        assert poller.revision > 0
+
+    async def test_set_agc_time_constant_updates_radio_and_state(self) -> None:
+        """SetAgcTimeConstant(value) calls radio.set_agc_time_constant and updates receiver state."""
+        from icom_lan.web.radio_poller import (
+            CommandQueue,
+            RadioPoller,
+            SetAgcTimeConstant,
+        )
+
+        radio = self._make_radio()
+        radio.set_agc_time_constant = AsyncMock()
+        queue = CommandQueue()
+        poller = RadioPoller(radio, StateCache(), queue, radio_state=RadioState())
+
+        poller.start()
+        queue.put(SetAgcTimeConstant(9, receiver=0))
+        await asyncio.sleep(0.15)
+        poller.stop()
+
+        radio.set_agc_time_constant.assert_awaited_once_with(9, receiver=0)
+        assert poller._radio_state is not None
+        assert poller._radio_state.main.agc_time_constant == 9
+        assert poller.revision > 0
+
+    async def test_set_cw_pitch_updates_radio_and_state(self) -> None:
+        """SetCwPitch(value) calls radio.set_cw_pitch and updates RadioState.cw_pitch."""
+        from icom_lan.web.radio_poller import CommandQueue, RadioPoller, SetCwPitch
+
+        radio = self._make_radio()
+        radio.set_cw_pitch = AsyncMock()
+        queue = CommandQueue()
+        poller = RadioPoller(radio, StateCache(), queue, radio_state=RadioState())
+
+        poller.start()
+        queue.put(SetCwPitch(600))
+        await asyncio.sleep(0.15)
+        poller.stop()
+
+        radio.set_cw_pitch.assert_awaited_once_with(600)
+        assert poller._radio_state is not None
+        assert poller._radio_state.cw_pitch == 600
+        assert poller.revision > 0
+
+    async def test_set_mic_gain_updates_radio_and_state(self) -> None:
+        """SetMicGain(level) calls radio.set_mic_gain and updates RadioState.mic_gain."""
+        from icom_lan.web.radio_poller import CommandQueue, RadioPoller, SetMicGain
+
+        radio = self._make_radio()
+        radio.set_mic_gain = AsyncMock()
+        queue = CommandQueue()
+        poller = RadioPoller(radio, StateCache(), queue, radio_state=RadioState())
+
+        poller.start()
+        queue.put(SetMicGain(123))
+        await asyncio.sleep(0.15)
+        poller.stop()
+
+        radio.set_mic_gain.assert_awaited_once_with(123)
+        assert poller._radio_state is not None
+        assert poller._radio_state.mic_gain == 123
+        assert poller.revision > 0
+
+    async def test_set_vox_updates_radio_and_state(self) -> None:
+        """SetVox(on) calls radio.set_vox and updates RadioState.vox_on."""
+        from icom_lan.web.radio_poller import CommandQueue, RadioPoller, SetVox
+
+        radio = self._make_radio()
+        radio.set_vox = AsyncMock()
+        queue = CommandQueue()
+        poller = RadioPoller(radio, StateCache(), queue, radio_state=RadioState())
+
+        poller.start()
+        queue.put(SetVox(True))
+        await asyncio.sleep(0.15)
+        poller.stop()
+
+        radio.set_vox.assert_awaited_once_with(True)
+        assert poller._radio_state is not None
+        assert poller._radio_state.vox_on is True
+        assert poller.revision > 0
+
+    async def test_set_compressor_level_updates_radio_and_state(self) -> None:
+        """SetCompressorLevel(level) calls radio.set_compressor_level and updates RadioState.compressor_level."""
+        from icom_lan.web.radio_poller import (
+            CommandQueue,
+            RadioPoller,
+            SetCompressorLevel,
+        )
+
+        radio = self._make_radio()
+        radio.set_compressor_level = AsyncMock()
+        queue = CommandQueue()
+        poller = RadioPoller(radio, StateCache(), queue, radio_state=RadioState())
+
+        poller.start()
+        queue.put(SetCompressorLevel(88))
+        await asyncio.sleep(0.15)
+        poller.stop()
+
+        radio.set_compressor_level.assert_awaited_once_with(88)
+        assert poller._radio_state is not None
+        assert poller._radio_state.compressor_level == 88
+        assert poller.revision > 0
+
+    async def test_set_monitor_updates_radio_and_state(self) -> None:
+        """SetMonitor(on) calls radio.set_monitor and updates RadioState.monitor_on."""
+        from icom_lan.web.radio_poller import CommandQueue, RadioPoller, SetMonitor
+
+        radio = self._make_radio()
+        radio.set_monitor = AsyncMock()
+        queue = CommandQueue()
+        poller = RadioPoller(radio, StateCache(), queue, radio_state=RadioState())
+
+        poller.start()
+        queue.put(SetMonitor(True))
+        await asyncio.sleep(0.15)
+        poller.stop()
+
+        radio.set_monitor.assert_awaited_once_with(True)
+        assert poller._radio_state is not None
+        assert poller._radio_state.monitor_on is True
+        assert poller.revision > 0
+
+    async def test_set_monitor_gain_updates_radio_and_state(self) -> None:
+        """SetMonitorGain(level) calls radio.set_monitor_gain and updates RadioState.monitor_gain."""
+        from icom_lan.web.radio_poller import CommandQueue, RadioPoller, SetMonitorGain
+
+        radio = self._make_radio()
+        radio.set_monitor_gain = AsyncMock()
+        queue = CommandQueue()
+        poller = RadioPoller(radio, StateCache(), queue, radio_state=RadioState())
+
+        poller.start()
+        queue.put(SetMonitorGain(55))
+        await asyncio.sleep(0.15)
+        poller.stop()
+
+        radio.set_monitor_gain.assert_awaited_once_with(55)
+        assert poller._radio_state is not None
+        assert poller._radio_state.monitor_gain == 55
+        assert poller.revision > 0
+
+    async def test_set_dial_lock_updates_radio_and_state(self) -> None:
+        """SetDialLock(on) calls radio.set_dial_lock and updates RadioState.dial_lock."""
+        from icom_lan.web.radio_poller import CommandQueue, RadioPoller, SetDialLock
+
+        radio = self._make_radio()
+        radio.set_dial_lock = AsyncMock()
+        queue = CommandQueue()
+        poller = RadioPoller(radio, StateCache(), queue, radio_state=RadioState())
+
+        poller.start()
+        queue.put(SetDialLock(True))
+        await asyncio.sleep(0.15)
+        poller.stop()
+
+        radio.set_dial_lock.assert_awaited_once_with(True)
+        assert poller._radio_state is not None
+        assert poller._radio_state.dial_lock is True
+        assert poller.revision > 0
+
 
 class TestSwitchScopeReceiverCommand:
     """ControlHandler handles 'switch_scope_receiver' command."""

@@ -35,20 +35,32 @@ from .radio_poller import (
     SetAcc1ModLevel,
     SetAfLevel,
     SetAgc,
+    SetAgcTimeConstant,
     SetAntenna1,
     SetAntenna2,
     SetAttenuator,
+    SetAutoNotch,
     SetBand,
     SetCompressor,
+    SetCompressorLevel,
+    SetCwPitch,
+    SetDialLock,
     SetDigiSel,
     SetDualWatch,
     SetFilter,
     SetFreq,
     SetIpPlus,
     SetLanModLevel,
+    SetManualNotch,
+    SetMicGain,
     SetMode,
+    SetMonitor,
+    SetMonitorGain,
     SetNB,
+    SetNBLevel,
     SetNR,
+    SetNRLevel,
+    SetNotchFilter,
     SetPower,
     SetPowerstat,
     SetPbtInner,
@@ -68,6 +80,7 @@ from .radio_poller import (
     SetSystemDate,
     SetSystemTime,
     SetUsbModLevel,
+    SetVox,
     SwitchScopeReceiver,
     VfoEqualize,
     VfoSwap,
@@ -127,6 +140,11 @@ class ControlHandler:
             "set_squelch",
             "set_nb",
             "set_nr",
+            "set_nr_level",
+            "set_nb_level",
+            "set_auto_notch",
+            "set_manual_notch",
+            "set_notch_filter",
             "set_digisel",
             "set_ipplus",
             "set_att",
@@ -134,6 +152,14 @@ class ControlHandler:
             "set_preamp",
             "set_pbt_inner",
             "set_pbt_outer",
+            "set_cw_pitch",
+            "set_mic_gain",
+            "set_vox",
+            "set_compressor_level",
+            "set_monitor",
+            "set_monitor_gain",
+            "set_dial_lock",
+            "set_agc_time_constant",
             "set_agc",
             "set_rit_status",
             "set_rit_tx_status",
@@ -730,6 +756,39 @@ class ControlHandler:
                 self._ensure_receiver_supported(rx)
                 q.put(SetNR(on, receiver=rx))
                 return {"on": on, "receiver": rx}
+            case "set_nr_level":
+                level = int(params["level"])
+                rx = int(params.get("receiver", 0))
+                self._ensure_capability("nr", "set_nr_level")
+                self._ensure_receiver_supported(rx)
+                q.put(SetNRLevel(level, receiver=rx))
+                return {"level": level, "receiver": rx}
+            case "set_nb_level":
+                level = int(params["level"])
+                rx = int(params.get("receiver", 0))
+                self._ensure_capability("nb", "set_nb_level")
+                self._ensure_receiver_supported(rx)
+                q.put(SetNBLevel(level, receiver=rx))
+                return {"level": level, "receiver": rx}
+            case "set_auto_notch":
+                on = bool(params.get("on", False))
+                rx = int(params.get("receiver", 0))
+                self._ensure_capability("notch", "set_auto_notch")
+                self._ensure_receiver_supported(rx)
+                q.put(SetAutoNotch(on, receiver=rx))
+                return {"on": on, "receiver": rx}
+            case "set_manual_notch":
+                on = bool(params.get("on", False))
+                rx = int(params.get("receiver", 0))
+                self._ensure_capability("notch", "set_manual_notch")
+                self._ensure_receiver_supported(rx)
+                q.put(SetManualNotch(on, receiver=rx))
+                return {"on": on, "receiver": rx}
+            case "set_notch_filter":
+                level = int(params["value"])
+                self._ensure_capability("notch", "set_notch_filter")
+                q.put(SetNotchFilter(level))
+                return {"value": level}
             case "set_digisel":
                 on = bool(params.get("on", False))
                 rx = int(params.get("receiver", 0))
@@ -772,6 +831,45 @@ class ControlHandler:
                 self._ensure_receiver_supported(rx)
                 q.put(SetPbtOuter(level, receiver=rx))
                 return {"value": level, "receiver": rx}
+            case "set_cw_pitch":
+                value = int(params["value"])
+                self._ensure_capability("cw", "set_cw_pitch")
+                q.put(SetCwPitch(value))
+                return {"value": value}
+            case "set_mic_gain":
+                level = int(params["level"])
+                q.put(SetMicGain(level))
+                return {"level": level}
+            case "set_vox":
+                on = bool(params.get("on", False))
+                self._ensure_capability("vox", "set_vox")
+                q.put(SetVox(on))
+                return {"on": on}
+            case "set_compressor_level":
+                level = int(params["level"])
+                self._ensure_capability("compressor", "set_compressor_level")
+                q.put(SetCompressorLevel(level))
+                return {"level": level}
+            case "set_monitor":
+                on = bool(params.get("on", False))
+                self._ensure_capability("monitor", "set_monitor")
+                q.put(SetMonitor(on))
+                return {"on": on}
+            case "set_monitor_gain":
+                level = int(params["level"])
+                self._ensure_capability("monitor", "set_monitor_gain")
+                q.put(SetMonitorGain(level))
+                return {"level": level}
+            case "set_dial_lock":
+                on = bool(params.get("on", False))
+                q.put(SetDialLock(on))
+                return {"on": on}
+            case "set_agc_time_constant":
+                value = int(params["value"])
+                rx = int(params.get("receiver", 0))
+                self._ensure_receiver_supported(rx)
+                q.put(SetAgcTimeConstant(value, receiver=rx))
+                return {"value": value, "receiver": rx}
             case "set_agc":
                 mode = int(params["mode"])
                 q.put(SetAgc(mode))
