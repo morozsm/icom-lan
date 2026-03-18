@@ -16,7 +16,7 @@ Reference: wfview icomcommander.cpp, IC-7610.rig
 from __future__ import annotations
 
 import math
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Any, Callable, Sequence
 
 from .types import (
     AgcMode,
@@ -43,6 +43,8 @@ __all__ = [
     "build_civ_frame",
     "build_cmd29_frame",
     "bcd_encode_value",
+    "filter_hz_to_index",
+    "filter_index_to_hz",
     "parse_civ_frame",
     # TOML canonical names (primary)
     "get_freq",
@@ -822,6 +824,48 @@ def bcd_encode_value(value: int, *, byte_count: int) -> bytes:
         (int(text[index]) << 4) | int(text[index + 1])
         for index in range(0, len(text), 2)
     )
+
+
+def _segment_value(segment: Any, key: str) -> int:
+    if isinstance(segment, dict):
+        return int(segment[key])
+    return int(getattr(segment, key))
+
+
+def filter_hz_to_index(hz: int, *, segments: Sequence[Any]) -> int:
+    """Convert a filter width in Hz to a CI-V index using profile segments."""
+    for segment in segments:
+        hz_min = _segment_value(segment, "hz_min")
+        hz_max = _segment_value(segment, "hz_max")
+        step_hz = _segment_value(segment, "step_hz")
+        index_min = _segment_value(segment, "index_min")
+        if hz_min <= hz <= hz_max:
+            delta = hz - hz_min
+            if delta % step_hz != 0:
+                raise ValueError(
+                    f"Filter width {hz} is not aligned to {step_hz} Hz steps"
+                )
+            return index_min + (delta // step_hz)
+    raise ValueError(f"Filter width {hz} is outside the configured segments")
+
+
+def filter_index_to_hz(index: int, *, segments: Sequence[Any]) -> int:
+    """Convert a CI-V filter-width index to Hz using profile segments."""
+    ordered = sorted(segments, key=lambda segment: _segment_value(segment, "index_min"))
+    for offset, segment in enumerate(ordered):
+        hz_min = _segment_value(segment, "hz_min")
+        hz_max = _segment_value(segment, "hz_max")
+        step_hz = _segment_value(segment, "step_hz")
+        index_min = _segment_value(segment, "index_min")
+        step_count = ((hz_max - hz_min) // step_hz) + 1
+        next_index = (
+            _segment_value(ordered[offset + 1], "index_min")
+            if offset + 1 < len(ordered)
+            else index_min + step_count
+        )
+        if index_min <= index < next_index:
+            return hz_min + ((index - index_min) * step_hz)
+    raise ValueError(f"Filter width index {index} is outside the configured segments")
 
 
 def parse_level_response(
@@ -3466,7 +3510,7 @@ def get_filter_width(
 
 
 def set_filter_width(
-    width_hz: int,
+    filter_index: int,
     to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
@@ -3475,18 +3519,15 @@ def set_filter_width(
     """Build a 'set DSP IF filter width' CI-V command (0x1A 0x03, cmd29).
 
     Args:
-        width_hz: Filter width in Hz (50-9999).  Values above 9999 are
-            clamped because CI-V uses 2-byte BCD (4 digits, max 9999).
+        filter_index: Filter width index encoded by the active radio profile.
         receiver: RECEIVER_MAIN (0x00) or RECEIVER_SUB (0x01).
 
     Returns:
         CI-V frame bytes.
     """
-    if not 50 <= width_hz <= 10000:
-        raise ValueError(f"Value must be 50-10000, got {width_hz}")
-    # CI-V BCD is 2 bytes = 4 digits, max representable value is 9999
-    clamped = min(width_hz, 9999)
-    payload = bcd_encode_value(clamped, byte_count=2)
+    if filter_index < 0:
+        raise ValueError(f"Filter index must be non-negative, got {filter_index}")
+    payload = bcd_encode_value(filter_index, byte_count=2)
     if cmd_map is not None:
         return _build_from_map(
             cmd_map,

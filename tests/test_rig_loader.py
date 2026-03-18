@@ -87,12 +87,15 @@ class TestLoadRig:
         assert rig.model == "IC-7300"
 
     def test_missing_radio_section(self, tmp_path):
-        p = _write_toml(tmp_path, """\
+        p = _write_toml(
+            tmp_path,
+            """\
             [spectrum]
             seq_max = 1
             amp_max = 1
             data_len_max = 1
-        """)
+        """,
+        )
         with pytest.raises(RigLoadError, match="radio"):
             load_rig(p)
 
@@ -203,11 +206,29 @@ class TestToProfile:
 
     def test_modes(self):
         profile = load_rig(TEMPLATE_PATH).to_profile()
-        assert profile.modes == ("USB", "LSB", "CW", "CW-R", "AM", "FM", "RTTY", "RTTY-R", "PSK", "PSK-R")
+        assert profile.modes == (
+            "USB",
+            "LSB",
+            "CW",
+            "CW-R",
+            "AM",
+            "FM",
+            "RTTY",
+            "RTTY-R",
+            "PSK",
+            "PSK-R",
+        )
 
     def test_filters(self):
         profile = load_rig(TEMPLATE_PATH).to_profile()
         assert profile.filters == ("FIL1", "FIL2", "FIL3")
+
+    def test_filter_config(self):
+        profile = load_rig(TEMPLATE_PATH).to_profile()
+        assert profile.filter_config is not None
+        assert profile.filter_config["USB"].defaults == (3000, 2400, 1800)
+        assert profile.filter_config["USB-D"].defaults == (3000, 1200, 500)
+        assert profile.filter_config["FM"].fixed is True
 
     def test_model_and_id(self):
         profile = load_rig(TEMPLATE_PATH).to_profile()
@@ -312,4 +333,5 @@ class TestDiscoverRigs:
 
     def test_empty_directory(self, tmp_path):
         rigs = discover_rigs(tmp_path)
+        assert rigs == {}
         assert rigs == {}

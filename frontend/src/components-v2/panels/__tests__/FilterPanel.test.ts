@@ -68,9 +68,22 @@ afterEach(() => {
 });
 
 const baseProps: ComponentProps<typeof FilterPanel> = {
+  currentMode: 'USB',
+  currentFilter: 2,
+  filterLabels: ['FIL1', 'FIL2', 'FIL3'],
   filterWidth: 2400,
+  filterConfig: {
+    defaults: [3000, 2400, 1800],
+    fixed: false,
+    minHz: 50,
+    maxHz: 3600,
+    stepHz: 50,
+  },
   ifShift: 0,
+  onFilterChange: vi.fn(),
   onFilterWidthChange: vi.fn(),
+  onFilterPresetChange: vi.fn(),
+  onFilterDefaults: vi.fn(),
   onIfShiftChange: vi.fn(),
 };
 
@@ -80,10 +93,20 @@ describe('panel structure', () => {
     expect(t.querySelector('.panel-header')?.textContent).toBe('FILTER');
   });
 
-  it('renders the Width slider', () => {
+  it('renders filter selector buttons', () => {
     const t = mountPanel(baseProps);
-    const labels = Array.from(t.querySelectorAll('.slider-label'));
-    expect(labels.some(el => el.textContent === 'Width')).toBe(true);
+    const buttons = Array.from(t.querySelectorAll('button')).map((button) => button.textContent?.trim());
+    expect(buttons).toContain('FIL1');
+    expect(buttons).toContain('FIL2');
+    expect(buttons).toContain('FIL3');
+  });
+
+  it('renders a read-only BW display instead of a Width slider', () => {
+    const t = mountPanel(baseProps);
+    expect(t.querySelector('.bw-label')?.textContent).toBe('BW');
+    expect(t.querySelector('.bw-value')?.textContent).toBe('2.4kHz');
+    const labels = Array.from(t.querySelectorAll('.slider-label')).map((el) => el.textContent);
+    expect(labels).not.toContain('Width');
   });
 
   it('renders the IF Shift slider', () => {
@@ -92,27 +115,15 @@ describe('panel structure', () => {
     expect(labels.some(el => el.textContent === 'IF Shift')).toBe(true);
   });
 
-  it('Width slider uses default min=50, max=9999, step=50', () => {
+  it('renders the settings gear button', () => {
     const t = mountPanel(baseProps);
-    const inputs = t.querySelectorAll<HTMLInputElement>('input[type="range"]');
-    const widthInput = inputs[0];
-    expect(widthInput.min).toBe('50');
-    expect(widthInput.max).toBe('9999');
-    expect(widthInput.step).toBe('50');
-  });
-
-  it('Width slider respects custom filterWidthMin/Max', () => {
-    const t = mountPanel({ ...baseProps, filterWidthMin: 100, filterWidthMax: 4000 });
-    const inputs = t.querySelectorAll<HTMLInputElement>('input[type="range"]');
-    const widthInput = inputs[0];
-    expect(widthInput.min).toBe('100');
-    expect(widthInput.max).toBe('4000');
+    expect(t.querySelector('.settings-button')?.textContent?.trim()).toBe('⚙');
   });
 
   it('IF Shift slider has min=-1200, max=1200, step=25', () => {
     const t = mountPanel(baseProps);
     const inputs = t.querySelectorAll<HTMLInputElement>('input[type="range"]');
-    const ifShiftInput = inputs[1];
+    const ifShiftInput = inputs[0];
     expect(ifShiftInput.min).toBe('-1200');
     expect(ifShiftInput.max).toBe('1200');
     expect(ifShiftInput.step).toBe('25');
@@ -149,34 +160,33 @@ describe('PBT sliders visibility', () => {
   it('renders Reset PBT button when hasPbt=true', () => {
     const t = mountPanel({ ...baseProps, hasPbt: true, pbtInner: 100, pbtOuter: -50, onPbtReset: vi.fn() });
     const buttons = Array.from(t.querySelectorAll('button')).map(el => el.textContent?.trim());
-    expect(buttons).toContain('Reset PBT');
+    expect(buttons).toContain('Reset');
   });
 
-  it('renders 4 sliders total when hasPbt=true', () => {
+  it('renders 3 sliders total when hasPbt=true', () => {
     const t = mountPanel({ ...baseProps, hasPbt: true, pbtInner: 0, pbtOuter: 0 });
-    expect(t.querySelectorAll('input[type="range"]').length).toBe(4);
+    expect(t.querySelectorAll('input[type="range"]').length).toBe(3);
   });
 
-  it('renders 2 sliders total when hasPbt=false', () => {
+  it('renders 1 slider total when hasPbt=false', () => {
     const t = mountPanel(baseProps);
-    expect(t.querySelectorAll('input[type="range"]').length).toBe(2);
+    expect(t.querySelectorAll('input[type="range"]').length).toBe(1);
   });
 });
 
 describe('callbacks', () => {
-  it('calls onFilterWidthChange when Width slider changes', () => {
-    const onFilterWidthChange = vi.fn();
-    const t = mountPanel({ ...baseProps, onFilterWidthChange });
-    const input = t.querySelectorAll<HTMLInputElement>('input[type="range"]')[0];
-    input.value = '1800';
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-    expect(onFilterWidthChange).toHaveBeenCalledWith(1800);
+  it('calls onFilterChange when a filter button is clicked', () => {
+    const onFilterChange = vi.fn();
+    const t = mountPanel({ ...baseProps, onFilterChange });
+    const button = Array.from(t.querySelectorAll('button')).find(el => el.textContent?.trim() === 'FIL3') as HTMLButtonElement;
+    button.click();
+    expect(onFilterChange).toHaveBeenCalledWith(3);
   });
 
   it('calls onIfShiftChange when IF Shift slider changes', () => {
     const onIfShiftChange = vi.fn();
     const t = mountPanel({ ...baseProps, onIfShiftChange });
-    const input = t.querySelectorAll<HTMLInputElement>('input[type="range"]')[1];
+    const input = t.querySelectorAll<HTMLInputElement>('input[type="range"]')[0];
     input.value = '-300';
     input.dispatchEvent(new Event('input', { bubbles: true }));
     expect(onIfShiftChange).toHaveBeenCalledWith(-300);
@@ -186,8 +196,8 @@ describe('callbacks', () => {
     const onPbtInnerChange = vi.fn();
     const t = mountPanel({ ...baseProps, hasPbt: true, pbtInner: 0, pbtOuter: 0, onPbtInnerChange });
     const inputs = t.querySelectorAll<HTMLInputElement>('input[type="range"]');
-    inputs[2].value = '200';
-    inputs[2].dispatchEvent(new Event('input', { bubbles: true }));
+    inputs[1].value = '200';
+    inputs[1].dispatchEvent(new Event('input', { bubbles: true }));
     expect(onPbtInnerChange).toHaveBeenCalledWith(200);
   });
 
@@ -195,17 +205,45 @@ describe('callbacks', () => {
     const onPbtOuterChange = vi.fn();
     const t = mountPanel({ ...baseProps, hasPbt: true, pbtInner: 0, pbtOuter: 0, onPbtOuterChange });
     const inputs = t.querySelectorAll<HTMLInputElement>('input[type="range"]');
-    inputs[3].value = '-100';
-    inputs[3].dispatchEvent(new Event('input', { bubbles: true }));
+    inputs[2].value = '-100';
+    inputs[2].dispatchEvent(new Event('input', { bubbles: true }));
     expect(onPbtOuterChange).toHaveBeenCalledWith(-100);
   });
 
   it('calls onPbtReset when the reset button is clicked', () => {
     const onPbtReset = vi.fn();
     const t = mountPanel({ ...baseProps, hasPbt: true, pbtInner: 100, pbtOuter: -100, onPbtReset });
-    const button = Array.from(t.querySelectorAll('button')).find(el => el.textContent?.trim() === 'Reset PBT') as HTMLButtonElement;
+    const button = Array.from(t.querySelectorAll('button')).find(el => el.textContent?.trim() === 'Reset') as HTMLButtonElement;
     button.click();
     expect(onPbtReset).toHaveBeenCalledOnce();
+  });
+
+  it('opens the settings modal and calls onFilterPresetChange from a modal slider', () => {
+    const onFilterPresetChange = vi.fn();
+    const t = mountPanel({ ...baseProps, onFilterPresetChange });
+    const gear = t.querySelector('.settings-button') as HTMLButtonElement;
+    gear.click();
+    flushSync();
+
+    const modal = document.querySelector('.filter-modal');
+    expect(modal).not.toBeNull();
+
+    const inputs = modal?.querySelectorAll<HTMLInputElement>('input[type="range"]') ?? [];
+    inputs[0].value = '3200';
+    inputs[0].dispatchEvent(new Event('input', { bubbles: true }));
+    expect(onFilterPresetChange).toHaveBeenCalledWith(1, 3200);
+  });
+
+  it('calls onFilterDefaults when restore defaults is clicked in the modal', () => {
+    const onFilterDefaults = vi.fn();
+    const t = mountPanel({ ...baseProps, onFilterDefaults });
+    const gear = t.querySelector('.settings-button') as HTMLButtonElement;
+    gear.click();
+    flushSync();
+
+    const button = Array.from(document.querySelectorAll('button')).find(el => el.textContent?.trim() === 'Restore Defaults') as HTMLButtonElement;
+    button.click();
+    expect(onFilterDefaults).toHaveBeenCalledWith([3000, 2400, 1800]);
   });
 });
 

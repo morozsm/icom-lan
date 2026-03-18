@@ -67,14 +67,21 @@
   />
 
   <FilterPanel
+    currentMode={filter.currentMode}
+    currentFilter={filter.currentFilter}
+    filterLabels={filter.filterLabels}
     filterWidth={filter.filterWidth}
     filterWidthMin={filter.filterWidthMin}
     filterWidthMax={filter.filterWidthMax}
+    filterConfig={filter.filterConfig}
     ifShift={filter.ifShift}
     hasPbt={filter.hasPbt}
     pbtInner={filter.pbtInner}
     pbtOuter={filter.pbtOuter}
+    onFilterChange={filterHandlers.onFilterChange}
     onFilterWidthChange={filterHandlers.onFilterWidthChange}
+    onFilterPresetChange={filterHandlers.onFilterPresetChange}
+    onFilterDefaults={filterHandlers.onFilterDefaults}
     onIfShiftChange={filterHandlers.onIfShiftChange}
     onPbtInnerChange={filterHandlers.onPbtInnerChange}
     onPbtOuterChange={filterHandlers.onPbtOuterChange}

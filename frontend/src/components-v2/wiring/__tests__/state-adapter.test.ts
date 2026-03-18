@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { toModeProps, toVfoProps } from '../state-adapter';
+import { toFilterProps, toModeProps, toVfoProps } from '../state-adapter';
 
 describe('toModeProps', () => {
   it('derives the active receiver mode and numeric data mode from state', () => {
@@ -74,5 +74,30 @@ describe('toVfoProps', () => {
     );
 
     expect(props.badges).toMatchObject({ DATA: true });
+  });
+});
+
+describe('toFilterProps', () => {
+  it('resolves data-mode specific filter config for the active receiver', () => {
+    const props = toFilterProps(
+      {
+        active: 'MAIN',
+        main: { mode: 'USB', dataMode: 1, filter: 2, filterWidth: 1200, pbtInner: 0, pbtOuter: 0 },
+        sub: { mode: 'LSB', dataMode: 0, filter: 1, filterWidth: 2400, pbtInner: 0, pbtOuter: 0 },
+      } as any,
+      {
+        capabilities: ['pbt'],
+        filters: ['FIL1', 'FIL2', 'FIL3'],
+        filterConfig: {
+          'USB-D': { defaults: [3000, 1200, 500], fixed: false, minHz: 50, maxHz: 3600, stepHz: 50 },
+        },
+      } as any,
+    );
+
+    expect(props.currentFilter).toBe(2);
+    expect(props.filterLabels).toEqual(['FIL1', 'FIL2', 'FIL3']);
+    expect(props.filterConfig?.defaults).toEqual([3000, 1200, 500]);
+    expect(props.filterWidthMin).toBe(50);
+    expect(props.filterWidthMax).toBe(3600);
   });
 });

@@ -581,6 +581,17 @@ def test_update_state_cache_ip_plus(radio: IcomRadio) -> None:
     assert "ipplus_changed" in notify_calls
 
 
+def test_update_state_cache_filter_width_decodes_index_to_hz(radio: IcomRadio) -> None:
+    """Filter width response stores Hz decoded from the profile mapping."""
+    radio._radio_state = RadioState()
+    radio._radio_state.main.mode = "USB"
+    frame = _make_frame(cmd=0x1A, sub=0x03, data=b"\x00\x19", receiver=0x00)
+
+    radio._civ_runtime._update_state_cache_from_frame(frame)
+
+    assert radio._radio_state.main.filter_width == 1500
+
+
 def test_update_state_cache_exception_suppressed(radio: IcomRadio) -> None:
     """Exception in cache update is suppressed (lines 456-457)."""
     # StateCache uses slots=True, so replace the whole object with a MagicMock

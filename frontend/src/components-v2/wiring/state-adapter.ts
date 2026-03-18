@@ -8,7 +8,7 @@
  */
 
 import type { ServerState, ReceiverState } from '$lib/types/state';
-import type { Capabilities } from '$lib/types/capabilities';
+import type { Capabilities, FilterModeConfig } from '$lib/types/capabilities';
 import type { VfoStateProps } from '../layout/layout-utils';
 import { deriveIfShift } from '../panels/filter-controls';
 
@@ -22,6 +22,43 @@ function activeRx(state: ServerState): ReceiverState {
 /** Check capability presence (safe for null caps). */
 function hasCap(caps: Capabilities | null, name: string): boolean {
   return caps?.capabilities?.includes(name) ?? false;
+}
+
+function resolveFilterModeConfig(
+  caps: Capabilities | null,
+  mode: string | undefined,
+  dataMode: number | undefined,
+): FilterModeConfig | null {
+  const filterConfig = caps?.filterConfig;
+  const normalizedMode = mode?.toUpperCase();
+  const candidates: string[] = [];
+
+  if (normalizedMode) {
+    if ((dataMode ?? 0) > 0) {
+      candidates.push(`${normalizedMode}-D`);
+    }
+    candidates.push(normalizedMode);
+    if (normalizedMode === 'USB' || normalizedMode === 'LSB') {
+      if ((dataMode ?? 0) > 0) {
+        candidates.push('SSB-D');
+      }
+      candidates.push('SSB');
+    }
+    if (normalizedMode === 'CW-R') {
+      candidates.push('CW');
+    }
+    if (normalizedMode === 'RTTY-R') {
+      candidates.push('RTTY');
+    }
+  }
+
+  for (const candidate of candidates) {
+    const config = filterConfig?.[candidate];
+    if (config) {
+      return config;
+    }
+  }
+  return null;
 }
 
 /* ── VFO ─────────────────────────────────────────────────────── */
@@ -99,9 +136,13 @@ export function toRfFrontEndProps(
 /* ── Filter ──────────────────────────────────────────────────── */
 
 export interface FilterProps {
+  currentMode: string;
+  currentFilter: number;
+  filterLabels: string[];
   filterWidth: number;
   filterWidthMin: number;
   filterWidthMax: number;
+  filterConfig: FilterModeConfig | null;
   ifShift: number;
   hasPbt: boolean;
   pbtInner: number;
@@ -115,10 +156,15 @@ export function toFilterProps(
   const rx = state ? activeRx(state) : null;
   const pbtInner = rx?.pbtInner ?? 0;
   const pbtOuter = rx?.pbtOuter ?? 0;
+  const filterConfig = resolveFilterModeConfig(caps, rx?.mode, rx?.dataMode);
   return {
+    currentMode: rx?.mode ?? 'USB',
+    currentFilter: rx?.filter ?? 1,
+    filterLabels: caps?.filters ?? ['FIL1', 'FIL2', 'FIL3'],
     filterWidth: rx?.filterWidth ?? 2400,
-    filterWidthMin: caps?.filterWidthMin ?? 50,
-    filterWidthMax: caps?.filterWidthMax ?? 9999,
+    filterWidthMin: filterConfig?.minHz ?? caps?.filterWidthMin ?? 50,
+    filterWidthMax: filterConfig?.maxHz ?? caps?.filterWidthMax ?? 9999,
+    filterConfig,
     ifShift: deriveIfShift(pbtInner, pbtOuter),
     hasPbt: hasCap(caps, 'pbt'),
     pbtInner,

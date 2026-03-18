@@ -12,6 +12,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 __all__ = [
+    "FilterWidthSegment",
+    "FilterWidthRule",
     "RadioProfile",
     "get_radio_profile",
     "resolve_radio_profile",
@@ -46,6 +48,28 @@ class FreqRangeInfo:
 
 
 @dataclass(frozen=True, slots=True)
+class FilterWidthSegment:
+    """One linear segment of a filter-width index mapping."""
+
+    hz_min: int
+    hz_max: int
+    step_hz: int
+    index_min: int
+
+
+@dataclass(frozen=True, slots=True)
+class FilterWidthRule:
+    """Per-mode filter-width behavior loaded from rig TOML."""
+
+    defaults: tuple[int, ...] = ()
+    fixed: bool = False
+    step_hz: int | None = None
+    min_hz: int | None = None
+    max_hz: int | None = None
+    segments: tuple[FilterWidthSegment, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
 class RadioProfile:
     """Runtime radio profile used by command routing and capability checks."""
 
@@ -65,6 +89,8 @@ class RadioProfile:
     filters: tuple[str, ...] = ()
     filter_width_min: int = 50
     filter_width_max: int = 9999
+    filter_width_encoding: str = "direct_bcd_hz"
+    filter_config: dict[str, FilterWidthRule] | None = None
     att_values: tuple[int, ...] | None = None
     pre_values: tuple[int, ...] | None = None
     agc_modes: tuple[int, ...] | None = None
@@ -88,6 +114,30 @@ class RadioProfile:
             None,
         ) in self.cmd29_routes
 
+    def resolve_filter_rule(
+        self, mode: str | None, *, data_mode: int = 0
+    ) -> FilterWidthRule | None:
+        if not self.filter_config or not mode:
+            return None
+        base_mode = str(mode).upper()
+        candidates: list[str] = []
+        if data_mode > 0:
+            candidates.append(f"{base_mode}-D")
+        candidates.append(base_mode)
+        if base_mode in {"USB", "LSB"}:
+            if data_mode > 0:
+                candidates.append("SSB-D")
+            candidates.append("SSB")
+        if base_mode == "CW-R":
+            candidates.append("CW")
+        if base_mode == "RTTY-R":
+            candidates.append("RTTY")
+        for key in candidates:
+            rule = self.filter_config.get(key)
+            if rule is not None:
+                return rule
+        return None
+
 
 # ── TOML-driven profile registry ──────────────────────────────────
 
@@ -100,7 +150,7 @@ _by_civ_addr: dict[int, RadioProfile] = {}
 # Search paths for rig TOML files (first existing directory wins).
 _RIG_DIRS: list[Path] = [
     Path(__file__).resolve().parent.parent.parent / "rigs",  # dev: repo root/rigs/
-    Path(__file__).resolve().parent / "rigs",                 # installed: package/rigs/
+    Path(__file__).resolve().parent / "rigs",  # installed: package/rigs/
 ]
 
 

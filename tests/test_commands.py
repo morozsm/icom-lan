@@ -6,6 +6,8 @@ from icom_lan.commands import (
     CONTROLLER_ADDR,
     IC_7610_ADDR,
     build_civ_frame,
+    filter_hz_to_index,
+    filter_index_to_hz,
     get_alc,
     get_freq,
     get_mode,
@@ -268,13 +270,35 @@ class TestMeterCommands:
 class TestFilterWidthCommands:
     """Test DSP IF filter width command encoding."""
 
+    def test_filter_hz_to_index_uses_segmented_ssb_ranges(self) -> None:
+        segments = (
+            {"hz_min": 50, "hz_max": 500, "step_hz": 50, "index_min": 0},
+            {"hz_min": 600, "hz_max": 3600, "step_hz": 100, "index_min": 10},
+        )
+        assert filter_hz_to_index(50, segments=segments) == 0
+        assert filter_hz_to_index(500, segments=segments) == 9
+        assert filter_hz_to_index(600, segments=segments) == 10
+        assert filter_hz_to_index(1500, segments=segments) == 19
+        assert filter_hz_to_index(3600, segments=segments) == 40
+
+    def test_filter_index_to_hz_uses_segmented_ssb_ranges(self) -> None:
+        segments = (
+            {"hz_min": 50, "hz_max": 500, "step_hz": 50, "index_min": 0},
+            {"hz_min": 600, "hz_max": 3600, "step_hz": 100, "index_min": 10},
+        )
+        assert filter_index_to_hz(0, segments=segments) == 50
+        assert filter_index_to_hz(9, segments=segments) == 500
+        assert filter_index_to_hz(10, segments=segments) == 600
+        assert filter_index_to_hz(19, segments=segments) == 1500
+        assert filter_index_to_hz(40, segments=segments) == 3600
+
     def test_set_filter_width_cmd29_frame(self) -> None:
-        frame = set_filter_width(1500)
-        assert frame == b"\xfe\xfe\x98\xe0\x29\x00\x1a\x03\x15\x00\xfd"
+        frame = set_filter_width(19)
+        assert frame == b"\xfe\xfe\x98\xe0\x29\x00\x1a\x03\x00\x19\xfd"
 
     def test_set_filter_width_sub_receiver_cmd29_frame(self) -> None:
-        frame = set_filter_width(2450, receiver=1)
-        assert frame == b"\xfe\xfe\x98\xe0\x29\x01\x1a\x03\x24\x50\xfd"
+        frame = set_filter_width(19, receiver=1)
+        assert frame == b"\xfe\xfe\x98\xe0\x29\x01\x1a\x03\x00\x19\xfd"
 
     def test_parse_meter_response_short_payload_raises(self) -> None:
         resp = CivFrame(

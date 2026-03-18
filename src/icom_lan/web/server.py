@@ -62,6 +62,35 @@ _RADIO_MODEL = "IC-7610"
 # Mode/filter lists moved to RadioProfile (profiles.py)
 
 
+def _serialize_filter_config(profile: "RadioProfile") -> dict[str, dict[str, object]]:
+    config = profile.filter_config or {}
+    result: dict[str, dict[str, object]] = {}
+    for mode, rule in config.items():
+        result[mode] = {
+            "defaults": list(rule.defaults),
+            "fixed": rule.fixed,
+            **({"stepHz": rule.step_hz} if rule.step_hz is not None else {}),
+            **({"minHz": rule.min_hz} if rule.min_hz is not None else {}),
+            **({"maxHz": rule.max_hz} if rule.max_hz is not None else {}),
+            **(
+                {
+                    "segments": [
+                        {
+                            "hzMin": segment.hz_min,
+                            "hzMax": segment.hz_max,
+                            "stepHz": segment.step_hz,
+                            "indexMin": segment.index_min,
+                        }
+                        for segment in rule.segments
+                    ]
+                }
+                if rule.segments
+                else {}
+            ),
+        }
+    return result
+
+
 def _runtime_capabilities(radio: "Radio | None") -> set[str]:
     """Backward-compatible alias to shared runtime_capabilities helper."""
     return runtime_capabilities(radio)
@@ -914,6 +943,7 @@ class WebServer:
                     "filters": list(profile.filters),
                     "filterWidthMin": profile.filter_width_min,
                     "filterWidthMax": profile.filter_width_max,
+                    "filterConfig": _serialize_filter_config(profile),
                     "vfoScheme": profile.vfo_scheme,
                     "hasLan": profile.has_lan,
                     "attValues": (
@@ -991,12 +1021,15 @@ class WebServer:
                 "filters": list(profile.filters),
                 "filterWidthMin": profile.filter_width_min,
                 "filterWidthMax": profile.filter_width_max,
+                "filterConfig": _serialize_filter_config(profile),
                 "attValues": list(profile.att_values) if profile.att_values else [0],
                 "preValues": list(profile.pre_values) if profile.pre_values else [0],
                 "agcModes": list(profile.agc_modes) if profile.agc_modes else [],
                 "agcLabels": profile.agc_labels if profile.agc_labels else {},
                 "dataModeCount": profile.data_mode_count,
-                "dataModeLabels": profile.data_mode_labels if profile.data_mode_labels else {},
+                "dataModeLabels": (
+                    profile.data_mode_labels if profile.data_mode_labels else {}
+                ),
                 "scopeConfig": {
                     "centerMode": True,
                     "amplitudeMax": 160,

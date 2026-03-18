@@ -241,8 +241,28 @@ Additional optional fields:
 | Field            | Type   | Required | Description                                      |
 |------------------|--------|----------|--------------------------------------------------|
 | `style`          | string | no       | `"named_slots"` (default) or `"per_mode"`        |
+| `encoding`       | string | no       | `"direct_bcd_hz"` (default) or `"segmented_bcd_index"` |
 | `width_min_hz`   | int    | no       | Minimum IF filter width in Hz                    |
 | `width_max_hz`   | int    | no       | Maximum IF filter width in Hz                    |
+
+Profile-specific width contracts can be described under `[filters.width.<MODE>]`.
+
+```toml
+[filters]
+list = ["FIL1", "FIL2", "FIL3"]
+encoding = "segmented_bcd_index"
+
+[filters.width.USB]
+defaults = [3000, 2400, 1800]
+segments = [
+	{ hz_min = 50, hz_max = 500, step_hz = 50, index_min = 0 },
+	{ hz_min = 600, hz_max = 3600, step_hz = 100, index_min = 10 },
+]
+
+[filters.width.FM]
+fixed = true
+defaults = [15000, 10000, 7000]
+```
 
 ## `[vfo]` — VFO Configuration
 
