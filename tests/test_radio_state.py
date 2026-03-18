@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-
 from icom_lan.radio_state import RadioState, ReceiverState
-
 
 # ---------------------------------------------------------------------------
 # ReceiverState defaults
@@ -16,6 +14,7 @@ def test_receiver_state_defaults() -> None:
     assert rx.freq == 0
     assert rx.mode == "USB"
     assert rx.filter is None
+    assert rx.filter_width is None
     assert rx.data_mode is False
     assert rx.att == 0
     assert rx.preamp == 0
@@ -199,6 +198,7 @@ def test_to_dict_main_keys() -> None:
         "freq",
         "mode",
         "filter",
+        "filter_width",
         "data_mode",
         "att",
         "preamp",

@@ -23,6 +23,7 @@ from icom_lan.web.radio_poller import (
     SetAgc,
     SetAttenuator,
     SetDigiSel,
+    SetFilterWidth,
     SetFreq,
     SetIpPlus,
     SetMode,
@@ -198,6 +199,31 @@ async def test_execute_set_preamp_updates_sub_receiver_state_and_radio_call() ->
     assert state.sub.preamp == 2
     assert state.sub.att == 0
     assert ("preamp_changed", {"level": 2, "receiver": 1}) in events
+
+
+@pytest.mark.asyncio
+async def test_execute_set_filter_width_updates_sub_receiver_state_and_sends_cmd29() -> (
+    None
+):
+    events: list[tuple[str, dict]] = []
+    radio = _make_radio(active="MAIN")
+    state = RadioState()
+    poller = RadioPoller(
+        radio,
+        StateCache(),
+        CommandQueue(),
+        on_state_event=lambda name, data: events.append((name, data)),
+        radio_state=state,
+    )
+
+    await poller._execute(SetFilterWidth(1500, receiver=1))  # noqa: SLF001
+
+    radio.send_civ.assert_awaited_once_with(
+        0x29, sub=None, data=b"\x01\x1a\x03\x15\x00", wait_response=False
+    )
+    assert state.main.filter_width is None
+    assert state.sub.filter_width == 1500
+    assert ("filter_width_changed", {"width": 1500, "receiver": 1}) in events
 
 
 @pytest.mark.asyncio
