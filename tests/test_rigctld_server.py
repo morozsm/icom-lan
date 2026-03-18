@@ -328,7 +328,7 @@ class TestSemiIntegrationSerialMockRadio:
             data_after = await asyncio.wait_for(reader.read(4096), timeout=1.0)
             assert data_after == b"7050000\n"
 
-            freq_core = await radio.get_frequency()
+            freq_core = await radio.get_freq()
             assert freq_core == 7_050_000
         finally:
             await _close(writer)

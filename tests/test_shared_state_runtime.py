@@ -72,12 +72,12 @@ class _FakeRadio:
         self._raise_on_freq = raise_on_freq
         self._raise_on_mode = raise_on_mode
         self._raise_on_data_mode = raise_on_data_mode
-        self.get_frequency_calls = 0
+        self.get_freq_calls = 0
         self.get_mode_calls = 0
         self.get_data_mode_calls = 0
 
-    async def get_frequency(self, receiver: int = 0) -> int:
-        self.get_frequency_calls += 1
+    async def get_freq(self, receiver: int = 0) -> int:
+        self.get_freq_calls += 1
         if self._raise_on_freq is not None:
             raise self._raise_on_freq
         return self._freq
@@ -109,7 +109,7 @@ async def test_poll_frequency_returns_cached_when_fresh() -> None:
     result = await poll_frequency(radio, cache, DEFAULT_STATE_CACHE_TTL)
 
     assert result == 14_074_000
-    assert radio.get_frequency_calls == 0
+    assert radio.get_freq_calls == 0
 
 
 @pytest.mark.asyncio
@@ -121,7 +121,7 @@ async def test_poll_frequency_polls_radio_when_stale() -> None:
 
     assert result == 7_074_000
     assert cache.freq == 7_074_000
-    assert radio.get_frequency_calls == 1
+    assert radio.get_freq_calls == 1
 
 
 @pytest.mark.asyncio
@@ -208,7 +208,7 @@ async def test_poll_standard_fields_returns_all_expected_fields() -> None:
     assert result["mode"] == "USB"
     assert result["filter_width"] == 1
     assert result["data_mode"] is False
-    assert radio.get_frequency_calls == 1
+    assert radio.get_freq_calls == 1
     assert radio.get_mode_calls == 1
     assert radio.get_data_mode_calls == 1
 
@@ -226,7 +226,7 @@ async def test_poll_standard_fields_serves_fresh_cache() -> None:
     assert result["freq"] == 14_074_000
     assert result["mode"] == "CW"
     assert result["data_mode"] is True
-    assert radio.get_frequency_calls == 0
+    assert radio.get_freq_calls == 0
     assert radio.get_mode_calls == 0
     assert radio.get_data_mode_calls == 0
 

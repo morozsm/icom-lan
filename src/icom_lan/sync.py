@@ -8,8 +8,8 @@ Example::
     from icom_lan.sync import IcomRadio
 
     with IcomRadio("192.168.1.100", username="u", password="p") as radio:
-        print(radio.get_frequency())
-        radio.set_frequency(14_074_000)
+        print(radio.get_freq())
+        radio.set_freq(14_074_000)
 """
 
 import asyncio
@@ -110,13 +110,17 @@ class IcomRadio:
     # Frequency
     # ------------------------------------------------------------------
 
-    def get_frequency(self) -> int:
+    def get_freq(self) -> int:
         """Get the current operating frequency in Hz."""
-        return self._run(self._radio.get_frequency())
+        return self._run(self._radio.get_freq())
 
-    def set_frequency(self, freq_hz: int) -> None:
+    def set_freq(self, freq_hz: int) -> None:
         """Set the operating frequency in Hz."""
-        self._run(self._radio.set_frequency(freq_hz))
+        self._run(self._radio.set_freq(freq_hz))
+
+    # Backward-compat aliases
+    get_frequency = get_freq
+    set_frequency = set_freq
 
     # ------------------------------------------------------------------
     # Mode
@@ -146,21 +150,25 @@ class IcomRadio:
     # Power
     # ------------------------------------------------------------------
 
-    def get_power(self) -> int:
+    def get_rf_power(self) -> int:
         """Get the RF power level (0-255)."""
         if not isinstance(self._radio, MetersCapable):
             raise AttributeError(
-                "get_power requires a radio that implements MetersCapable"
+                "get_rf_power requires a radio that implements MetersCapable"
             )
-        return self._run(self._radio.get_power())
+        return self._run(self._radio.get_rf_power())
 
-    def set_power(self, level: int) -> None:
+    def set_rf_power(self, level: int) -> None:
         """Set the RF power level (0-255)."""
         if not isinstance(self._radio, PowerControlCapable):
             raise AttributeError(
-                "set_power requires a radio that implements PowerControlCapable"
+                "set_rf_power requires a radio that implements PowerControlCapable"
             )
-        self._run(self._radio.set_power(level))
+        self._run(self._radio.set_rf_power(level))
+
+    # Backward-compat aliases
+    get_power = get_rf_power
+    set_power = set_rf_power
 
     # ------------------------------------------------------------------
     # Meters
@@ -201,9 +209,12 @@ class IcomRadio:
     # VFO / Split
     # ------------------------------------------------------------------
 
-    def select_vfo(self, vfo: str = "A") -> None:
+    def set_vfo(self, vfo: str = "A") -> None:
         """Select VFO (A, B, MAIN, SUB)."""
-        self._run(self._radio.select_vfo(vfo))
+        self._run(self._radio.set_vfo(vfo))
+
+    # Backward-compat alias
+    select_vfo = set_vfo
 
     def vfo_equalize(self) -> None:
         """Copy VFO A to VFO B."""

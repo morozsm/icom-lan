@@ -383,14 +383,14 @@ class TestFrequency:
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
         mock_transport.queue_response(_freq_response(14_074_000))
-        freq = await radio.get_frequency()
+        freq = await radio.get_freq()
         assert freq == 14_074_000
 
     @pytest.mark.asyncio
     async def test_set_frequency(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
-        await radio.set_frequency(7_074_000)
+        await radio.set_freq(7_074_000)
         assert len(mock_transport.sent_packets) > 0
 
     @pytest.mark.asyncio
@@ -398,7 +398,7 @@ class TestFrequency:
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
         """set_frequency is fire-and-forget — completes without any radio response."""
-        await radio.set_frequency(14_074_000)
+        await radio.set_freq(14_074_000)
         assert radio._last_freq_hz == 14_074_000
 
 
@@ -472,14 +472,14 @@ class TestPower:
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
         mock_transport.queue_response(_power_response(128))
-        val = await radio.get_power()
+        val = await radio.get_rf_power()
         assert val == 128
 
     @pytest.mark.asyncio
     async def test_set_power(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
-        await radio.set_power(200)
+        await radio.set_rf_power(200)
         assert len(mock_transport.sent_packets) > 0
 
 
@@ -575,7 +575,7 @@ class TestTimeout:
         radio._civ_transport = mock_transport
         radio._connected = True
         with pytest.raises(TimeoutError):
-            await radio.get_frequency()
+            await radio.get_freq()
 
     @pytest.mark.asyncio
     async def test_deadline_timeout_does_not_always_send_three_attempts(
@@ -587,7 +587,7 @@ class TestTimeout:
         radio._connected = True
 
         with pytest.raises(TimeoutError):
-            await radio.get_frequency()
+            await radio.get_freq()
 
         # Deadline-based retries should stop when overall deadline is exhausted.
         assert len(mock_transport.sent_packets) < 3
@@ -600,13 +600,13 @@ class TestDisconnected:
     async def test_get_frequency_disconnected(self) -> None:
         radio = IcomRadio("192.168.1.100")
         with pytest.raises(ConnectionError):
-            await radio.get_frequency()
+            await radio.get_freq()
 
     @pytest.mark.asyncio
     async def test_set_frequency_disconnected(self) -> None:
         radio = IcomRadio("192.168.1.100")
         with pytest.raises(ConnectionError):
-            await radio.set_frequency(14_074_000)
+            await radio.set_freq(14_074_000)
 
     @pytest.mark.asyncio
     async def test_send_civ_disconnected(self) -> None:
@@ -649,7 +649,7 @@ class TestAckSinkRobustness:
         await radio._execute_civ_raw(ff, wait_response=False)
 
         # set_frequency is fire-and-forget — completes without any response.
-        await radio.set_frequency(7_074_000)
+        await radio.set_freq(7_074_000)
 
     @pytest.mark.asyncio
     async def test_fire_and_forget_send_failure_rolls_back_sink(self) -> None:
@@ -734,7 +734,7 @@ class TestScopeCallbackSafety:
         assert resp.command == _CMD_ACK
 
         # set_frequency is fire-and-forget — RX pump unaffected.
-        await radio.set_frequency(7_074_000)
+        await radio.set_freq(7_074_000)
 
 
 class TestAdvancedScopeControls:
@@ -950,14 +950,14 @@ class TestCivTimeoutIsolation:
 
         # First command: no response → times out
         with pytest.raises(TimeoutError):
-            await radio.get_frequency()
+            await radio.get_freq()
 
         # Tracker must be clean — no stale waiters
         assert radio._civ_request_tracker.pending_count == 0
 
         # Second command: queue response before calling
         mock_transport.queue_response(_freq_response(7_074_000))
-        freq = await radio.get_frequency()
+        freq = await radio.get_freq()
         assert freq == 7_074_000
 
     @pytest.mark.asyncio
@@ -973,13 +973,13 @@ class TestCivTimeoutIsolation:
         # Two timeouts in a row
         for _ in range(2):
             with pytest.raises(TimeoutError):
-                await radio.get_frequency()
+                await radio.get_freq()
 
         assert radio._civ_request_tracker.pending_count == 0
 
         # Then a successful command
         mock_transport.queue_response(_freq_response(14_074_000))
-        freq = await radio.get_frequency()
+        freq = await radio.get_freq()
         assert freq == 14_074_000
 
     @pytest.mark.asyncio
@@ -994,12 +994,12 @@ class TestCivTimeoutIsolation:
 
         # get_frequency times out
         with pytest.raises(TimeoutError):
-            await radio.get_frequency()
+            await radio.get_freq()
 
         assert radio._civ_request_tracker.pending_count == 0
 
         # set_frequency is fire-and-forget — succeeds without a response
-        await radio.set_frequency(14_074_000)  # must not raise
+        await radio.set_freq(14_074_000)  # must not raise
 
 
 # ---------------------------------------------------------------------------
@@ -1106,7 +1106,7 @@ class TestSpeechTransceiverIdXfc:
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
         """speech() is fire-and-forget — completes without response."""
-        await radio.speech(0)
+        await radio.get_speech(0)
         assert len(mock_transport.sent_packets) > 0
         assert b"\x13\x00" in mock_transport.sent_packets[-1]
 
@@ -1114,14 +1114,14 @@ class TestSpeechTransceiverIdXfc:
     async def test_speech_freq(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
-        await radio.speech(1)
+        await radio.get_speech(1)
         assert b"\x13\x01" in mock_transport.sent_packets[-1]
 
     @pytest.mark.asyncio
     async def test_speech_mode(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
-        await radio.speech(2)
+        await radio.get_speech(2)
         assert b"\x13\x02" in mock_transport.sent_packets[-1]
 
     @pytest.mark.asyncio
@@ -1269,7 +1269,7 @@ class TestGetFallbackToCache:
         radio._connected = True
         radio.state_cache.update_freq(7_200_000)
 
-        freq = await radio.get_frequency()
+        freq = await radio.get_freq()
         assert freq == 7_200_000
 
     @pytest.mark.asyncio
@@ -1283,7 +1283,7 @@ class TestGetFallbackToCache:
         radio._connected = True
 
         with pytest.raises(TimeoutError):
-            await radio.get_frequency()
+            await radio.get_freq()
 
     @pytest.mark.asyncio
     async def test_get_mode_info_returns_cache_on_timeout(
@@ -1336,7 +1336,7 @@ class TestGetFallbackCacheTTL:
         radio.state_cache.freq_ts = radio.state_cache.freq_ts - 20.0
 
         with pytest.raises(TimeoutError):
-            await radio.get_frequency()
+            await radio.get_freq()
 
     @pytest.mark.asyncio
     async def test_get_frequency_returns_cache_within_ttl(
@@ -1349,7 +1349,7 @@ class TestGetFallbackCacheTTL:
         radio._connected = True
         radio.state_cache.update_freq(7_200_000)
 
-        freq = await radio.get_frequency()
+        freq = await radio.get_freq()
         assert freq == 7_200_000
 
     @pytest.mark.asyncio
@@ -1395,7 +1395,7 @@ class TestGetFallbackCacheTTL:
         radio.state_cache.rf_power_ts = radio.state_cache.rf_power_ts - 60.0
 
         with pytest.raises(TimeoutError):
-            await radio.get_power()
+            await radio.get_rf_power()
 
     @pytest.mark.asyncio
     async def test_get_power_returns_cache_within_ttl(
@@ -1408,7 +1408,7 @@ class TestGetFallbackCacheTTL:
         radio._connected = True
         radio.state_cache.update_rf_power(128 / 255.0)
 
-        level = await radio.get_power()
+        level = await radio.get_rf_power()
         assert level == 128
 
     @pytest.mark.asyncio
@@ -1436,7 +1436,7 @@ class TestSetCommandsUpdateCache:
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
         """set_frequency updates the frequency cache immediately."""
-        await radio.set_frequency(21_074_000)
+        await radio.set_freq(21_074_000)
         assert radio.state_cache.freq == 21_074_000
         assert radio.state_cache.freq_ts > 0.0
 
@@ -1455,7 +1455,7 @@ class TestSetCommandsUpdateCache:
     ) -> None:
         """Rapid consecutive set_frequency calls are all fire-and-forget."""
         for freq in [7_000_000, 7_100_000, 7_200_000]:
-            await radio.set_frequency(freq)
+            await radio.set_freq(freq)
         # Cache holds the last value sent.
         assert radio.state_cache.freq == 7_200_000
 

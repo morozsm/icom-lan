@@ -98,12 +98,12 @@ def _add_capability_protocols(radio: MagicMock) -> MagicMock:
 @pytest.fixture
 def mock_radio():
     radio = AsyncMock()
-    radio.get_frequency = AsyncMock(return_value=14_074_000)
-    radio.set_frequency = AsyncMock()
+    radio.get_freq = AsyncMock(return_value=14_074_000)
+    radio.set_freq = AsyncMock()
     radio.get_mode = AsyncMock(return_value=("USB", None))
     radio.set_mode = AsyncMock()
-    radio.get_power = AsyncMock(return_value=128)
-    radio.set_power = AsyncMock()
+    radio.get_rf_power = AsyncMock(return_value=128)
+    radio.set_rf_power = AsyncMock()
     radio.get_s_meter = AsyncMock(return_value=120)
     radio.get_swr = AsyncMock(return_value=50)
     radio.get_alc = AsyncMock(return_value=30)
@@ -356,7 +356,7 @@ class TestCmdFreq:
         args = Namespace(value="7074000", json=False)
         rc = await _cmd_freq(mock_radio, args)
         assert rc == 0
-        mock_radio.set_frequency.assert_called_once_with(7_074_000)
+        mock_radio.set_freq.assert_called_once_with(7_074_000)
         out = capsys.readouterr().out
         assert "7,074,000" in out
 
@@ -365,7 +365,7 @@ class TestCmdFreq:
         args = Namespace(value="14.074m", json=False)
         rc = await _cmd_freq(mock_radio, args)
         assert rc == 0
-        mock_radio.set_frequency.assert_called_once_with(14_074_000)
+        mock_radio.set_freq.assert_called_once_with(14_074_000)
 
 
 # ---------------------------------------------------------------------------
@@ -423,7 +423,7 @@ class TestCmdPower:
         args = Namespace(value=200, json=False)
         rc = await _cmd_power(mock_radio, args)
         assert rc == 0
-        mock_radio.set_power.assert_called_once_with(200)
+        mock_radio.set_rf_power.assert_called_once_with(200)
 
 
 # ---------------------------------------------------------------------------

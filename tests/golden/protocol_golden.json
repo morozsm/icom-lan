@@ -3,7 +3,7 @@
     "id": "get_freq_short",
     "description": "Get frequency via short command 'f'",
     "input": "f",
-    "mock": {"get_frequency": 14074000, "get_data_mode": false},
+    "mock": {"get_freq": 14074000, "get_data_mode": false},
     "expected_output": "14074000\n",
     "extended_output": "get_freq:\n14074000\nRPRT 0\n"
   },
@@ -11,7 +11,7 @@
     "id": "get_freq_long",
     "description": "Get frequency via long command '\\get_freq'",
     "input": "\\get_freq",
-    "mock": {"get_frequency": 7050000, "get_data_mode": false},
+    "mock": {"get_freq": 7050000, "get_data_mode": false},
     "expected_output": "7050000\n",
     "extended_output": "get_freq:\n7050000\nRPRT 0\n"
   },
@@ -171,7 +171,7 @@
     "id": "get_level_rfpower",
     "description": "Get RFPOWER level — raw 255 → 1.000000 normalized",
     "input": "l RFPOWER",
-    "mock": {"get_power": 255},
+    "mock": {"get_rf_power": 255},
     "expected_output": "1.000000\n",
     "extended_output": "get_level:\n1.000000\nRPRT 0\n"
   },
@@ -360,7 +360,7 @@
     "id": "connection_error_get_freq",
     "description": "Radio ConnectionError on get_freq → RPRT -6 (EIO)",
     "input": "f",
-    "mock": {"get_frequency__exc": "ConnectionError"},
+    "mock": {"get_freq__exc": "ConnectionError"},
     "expected_output": "RPRT -6\n",
     "extended_output": "get_freq:\nRPRT -6\n"
   },
@@ -368,7 +368,7 @@
     "id": "timeout_error_get_freq",
     "description": "Radio TimeoutError on get_freq → RPRT -5 (ETIMEOUT)",
     "input": "f",
-    "mock": {"get_frequency__exc": "TimeoutError"},
+    "mock": {"get_freq__exc": "TimeoutError"},
     "expected_output": "RPRT -5\n",
     "extended_output": "get_freq:\nRPRT -5\n"
   }

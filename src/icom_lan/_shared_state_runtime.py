@@ -69,7 +69,7 @@ async def poll_frequency(
 
     If the ``"freq"`` field in *cache* is younger than *ttl* seconds,
     the cached value is returned immediately without hitting the radio.
-    Otherwise :meth:`Radio.get_frequency` is called, the result stored
+    Otherwise :meth:`Radio.get_freq` is called, the result stored
     in *cache*, and the fresh value returned.
 
     On any exception from the radio the cache is left unchanged and
@@ -87,7 +87,7 @@ async def poll_frequency(
     if is_cache_fresh(cache, "freq", ttl):
         return cache.freq
     try:
-        freq = await radio.get_frequency()
+        freq = await radio.get_freq()
         cache.update_freq(freq)
         return freq
     except Exception:

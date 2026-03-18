@@ -37,7 +37,7 @@ def cache() -> StateCache:
 @pytest.fixture
 def mock_radio() -> AsyncMock:
     radio = AsyncMock()
-    radio.get_frequency.return_value = 14_074_000
+    radio.get_freq.return_value = 14_074_000
     radio.get_mode_info.return_value = (Mode.USB, 1)
     radio.get_data_mode.return_value = False
     return radio
@@ -65,7 +65,7 @@ class _ContractModeRadio:
         self.data_mode = data_mode
         self.get_mode_calls = 0
 
-    async def get_frequency(self, receiver: int = 0) -> int:
+    async def get_freq(self, receiver: int = 0) -> int:
         assert receiver == 0
         return self.freq
 
@@ -125,7 +125,7 @@ async def test_poll_updates_freq_in_cache(
     cache: StateCache,
     mock_radio: AsyncMock,
 ) -> None:
-    mock_radio.get_frequency.return_value = 7_050_000
+    mock_radio.get_freq.return_value = 7_050_000
     await poller.start()
     # Wait long enough for at least one poll cycle.
     await asyncio.sleep(0.05)
@@ -169,7 +169,7 @@ async def test_poll_calls_radio_multiple_times(
     await asyncio.sleep(0.05)
     await poller.stop()
     # With interval=0.01s and sleep=0.05s, expect at least 3 cycles.
-    assert mock_radio.get_frequency.await_count >= 3
+    assert mock_radio.get_freq.await_count >= 3
 
 
 async def test_poll_falls_back_to_core_radio_mode_contract(
@@ -199,7 +199,7 @@ async def test_write_busy_skips_poll(
     await asyncio.sleep(0.05)
     await poller.stop()
     # Poller should not have called the radio at all while busy.
-    mock_radio.get_frequency.assert_not_awaited()
+    mock_radio.get_freq.assert_not_awaited()
 
 
 async def test_write_busy_released_resumes_polling(
@@ -207,7 +207,7 @@ async def test_write_busy_released_resumes_polling(
     cache: StateCache,
     mock_radio: AsyncMock,
 ) -> None:
-    mock_radio.get_frequency.return_value = 14_074_000
+    mock_radio.get_freq.return_value = 14_074_000
     poller.write_busy = True
     await poller.start()
     await asyncio.sleep(0.03)
@@ -229,7 +229,7 @@ async def test_timeout_on_get_frequency_does_not_crash(
     poller: RadioPoller,
     mock_radio: AsyncMock,
 ) -> None:
-    mock_radio.get_frequency.side_effect = IcomTimeoutError("timeout")
+    mock_radio.get_freq.side_effect = IcomTimeoutError("timeout")
     await poller.start()
     await asyncio.sleep(0.05)
     # Poller must still be running after timeout errors.
@@ -242,7 +242,7 @@ async def test_connection_error_on_get_frequency_does_not_crash(
     poller: RadioPoller,
     mock_radio: AsyncMock,
 ) -> None:
-    mock_radio.get_frequency.side_effect = IcomConnectionError("lost")
+    mock_radio.get_freq.side_effect = IcomConnectionError("lost")
     await poller.start()
     await asyncio.sleep(0.05)
     assert poller._task is not None
@@ -280,7 +280,7 @@ async def test_freq_error_does_not_prevent_mode_poll(
     mock_radio: AsyncMock,
 ) -> None:
     """Even if get_frequency fails, get_mode_info should still be called."""
-    mock_radio.get_frequency.side_effect = IcomTimeoutError("timeout")
+    mock_radio.get_freq.side_effect = IcomTimeoutError("timeout")
     mock_radio.get_mode_info.return_value = (Mode.AM, 2)
     await poller.start()
     await asyncio.sleep(0.05)
@@ -294,14 +294,14 @@ async def test_timeout_logs_warning(
     mock_radio: AsyncMock,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    mock_radio.get_frequency.side_effect = IcomTimeoutError("timed out")
+    mock_radio.get_freq.side_effect = IcomTimeoutError("timed out")
     import logging
 
     with caplog.at_level(logging.WARNING, logger="icom_lan.rigctld.poller"):
         await poller.start()
         await asyncio.sleep(0.05)
         await poller.stop()
-    assert any("get_frequency" in r.message for r in caplog.records)
+    assert any("get_freq" in r.message for r in caplog.records)
 
 
 # ---------------------------------------------------------------------------
@@ -326,10 +326,10 @@ async def test_no_more_polls_after_stop(
     await poller.start()
     await asyncio.sleep(0.03)
     await poller.stop()
-    count_after_stop = mock_radio.get_frequency.await_count
+    count_after_stop = mock_radio.get_freq.await_count
     # Give a couple more intervals; count must not increase.
     await asyncio.sleep(0.05)
-    assert mock_radio.get_frequency.await_count == count_after_stop
+    assert mock_radio.get_freq.await_count == count_after_stop
 
 
 # ---------------------------------------------------------------------------
@@ -348,7 +348,7 @@ async def test_poll_interval_is_respected(
     await asyncio.sleep(0.12)  # ~2 cycles at 0.05s
     await p.stop()
     # Expect 2 or 3 calls (timing-dependent but bounded).
-    count = mock_radio.get_frequency.await_count
+    count = mock_radio.get_freq.await_count
     assert 1 <= count <= 4, f"unexpected call count: {count}"
 
 
@@ -380,7 +380,7 @@ async def test_poller_skips_poll_when_circuit_open(
     await asyncio.sleep(0.05)
     await p.stop()
 
-    mock_radio.get_frequency.assert_not_awaited()
+    mock_radio.get_freq.assert_not_awaited()
 
 
 async def test_poller_records_success_on_successful_poll(
@@ -390,7 +390,7 @@ async def test_poller_records_success_on_successful_poll(
     cb: CircuitBreaker,
 ) -> None:
     """Successful get_frequency should keep/close the circuit."""
-    mock_radio.get_frequency.return_value = 14_074_000
+    mock_radio.get_freq.return_value = 14_074_000
     p = RadioPoller(mock_radio, cache, config, circuit_breaker=cb)
     await p.start()
     await asyncio.sleep(0.05)
@@ -407,7 +407,7 @@ async def test_poller_records_failure_on_timeout(
 ) -> None:
     """Consecutive timeouts should open the circuit."""
     cb = CircuitBreaker(failure_threshold=2, recovery_timeout=5.0)
-    mock_radio.get_frequency.side_effect = IcomTimeoutError("timeout")
+    mock_radio.get_freq.side_effect = IcomTimeoutError("timeout")
 
     p = RadioPoller(mock_radio, cache, config, circuit_breaker=cb)
     await p.start()
@@ -434,7 +434,7 @@ async def test_poller_probe_on_half_open_success(
     import time as _time
 
     future_now = _time.monotonic() + 10.0
-    mock_radio.get_frequency.return_value = 14_074_000
+    mock_radio.get_freq.return_value = 14_074_000
 
     p = RadioPoller(mock_radio, cache, config, circuit_breaker=cb)
 
@@ -462,7 +462,7 @@ async def test_poller_probe_on_half_open_failure_reopens(
     import time as _time
 
     future_now = _time.monotonic() + 10.0
-    mock_radio.get_frequency.side_effect = IcomTimeoutError("timeout")
+    mock_radio.get_freq.side_effect = IcomTimeoutError("timeout")
 
     p = RadioPoller(mock_radio, cache, config, circuit_breaker=cb)
 
@@ -489,7 +489,7 @@ async def test_poller_probe_does_not_poll_mode(
     import time as _time
 
     future_now = _time.monotonic() + 10.0
-    mock_radio.get_frequency.return_value = 14_074_000
+    mock_radio.get_freq.return_value = 14_074_000
 
     p = RadioPoller(mock_radio, cache, config, circuit_breaker=cb)
 
@@ -508,7 +508,7 @@ async def test_poller_without_circuit_breaker_still_works(
     config: RigctldConfig,
 ) -> None:
     """Poller with no circuit breaker should behave exactly as before."""
-    mock_radio.get_frequency.return_value = 7_000_000
+    mock_radio.get_freq.return_value = 7_000_000
     p = RadioPoller(mock_radio, cache, config)  # no circuit_breaker
     await p.start()
     await asyncio.sleep(0.05)
