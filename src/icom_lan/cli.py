@@ -1021,13 +1021,13 @@ def _print_audio_stats(stats: dict[str, bool | int | float | str]) -> None:
 
 
 async def _cmd_status(radio: Radio, args: argparse.Namespace) -> int:
-    freq = await radio.get_frequency()
+    freq = await radio.get_freq()
     mode_name, _filt = await radio.get_mode()
     s_meter: int | str = 0
     power: int | str = 0
     if isinstance(radio, MetersCapable):
         s_meter = await radio.get_s_meter()
-        power = await radio.get_power()
+        power = await radio.get_rf_power()
     else:
         s_meter = "n/a"
         power = "n/a"
@@ -1416,10 +1416,10 @@ async def _cmd_audio_loopback(radio: Radio, args: argparse.Namespace) -> int:
 async def _cmd_freq(radio: Radio, args: argparse.Namespace) -> int:
     if args.value is not None:
         freq_hz = _parse_frequency(args.value)
-        await radio.set_frequency(freq_hz)
+        await radio.set_freq(freq_hz)
         print(f"Set: {freq_hz:,} Hz ({freq_hz / 1e6:.6f} MHz)")
     else:
-        freq = await radio.get_frequency()
+        freq = await radio.get_freq()
         if args.json:
             import json
 
@@ -1456,7 +1456,7 @@ async def _cmd_power(radio: Radio, args: argparse.Namespace) -> int:
                 file=sys.stderr,
             )
             return 1
-        await radio.set_power(args.value)
+        await radio.set_rf_power(args.value)
         print(f"Set: {args.value}")
     else:
         if not isinstance(radio, MetersCapable):
@@ -1465,7 +1465,7 @@ async def _cmd_power(radio: Radio, args: argparse.Namespace) -> int:
                 file=sys.stderr,
             )
             return 1
-        power = await radio.get_power()
+        power = await radio.get_rf_power()
         if args.json:
             import json
 
@@ -1487,7 +1487,7 @@ async def _cmd_meter(radio: Radio, args: argparse.Namespace) -> int:
     results: dict[str, int | str] = {}
     meter_getters: list[tuple[str, Any]] = [
         ("s_meter", radio.get_s_meter),
-        ("power", radio.get_power),
+        ("power", radio.get_rf_power),
         ("swr", radio.get_swr),
     ]
     if hasattr(radio, "get_alc"):

@@ -136,7 +136,7 @@ class ControlHandler:
             "set_mode",
             "set_filter",
             "ptt",
-            "set_power",
+            "set_rf_power",
             "set_powerstat",
             "set_rf_gain",
             "set_af_level",
@@ -169,7 +169,7 @@ class ControlHandler:
             "set_rit_tx_status",
             "set_rit_frequency",
             "set_split",
-            "select_vfo",
+            "set_vfo",
             "ptt_on",
             "ptt_off",
             "vfo_swap",
@@ -691,10 +691,10 @@ class ControlHandler:
             case "ptt_off":
                 q.put(PttOff())
                 return {}
-            case "set_power":
+            case "set_rf_power":
                 if not isinstance(self._radio, PowerControlCapable):
                     raise ValueError(
-                        "command set_power is not supported by this radio "
+                        "command set_rf_power is not supported by this radio "
                         "(missing PowerControlCapable)"
                     )
                 level = int(params["level"])
@@ -897,7 +897,7 @@ class ControlHandler:
                 self._ensure_capability("split", "set_split")
                 q.put(SetSplit(on))
                 return {"on": on}
-            case "select_vfo":
+            case "set_vfo":
                 vfo = str(params.get("vfo", "A"))
                 q.put(SelectVfo(vfo))
                 return {"vfo": vfo}
