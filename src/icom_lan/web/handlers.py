@@ -51,6 +51,8 @@ from .radio_poller import (
     SetNR,
     SetPower,
     SetPowerstat,
+    SetPbtInner,
+    SetPbtOuter,
     SetPreamp,
     SetRfGain,
     SetRitFrequency,
@@ -128,13 +130,18 @@ class ControlHandler:
             "set_digisel",
             "set_ipplus",
             "set_att",
+            "set_attenuator",
             "set_preamp",
+            "set_pbt_inner",
+            "set_pbt_outer",
             "set_agc",
             "set_rit_status",
             "set_rit_tx_status",
             "set_rit_frequency",
             "set_split",
             "select_vfo",
+            "ptt_on",
+            "ptt_off",
             "vfo_swap",
             "vfo_equalize",
             "switch_scope_receiver",
@@ -157,6 +164,7 @@ class ControlHandler:
             "get_tuner_status",
             "set_tuner_status",
             "set_comp",
+            "set_compressor",
         ]
     )
 
@@ -648,6 +656,12 @@ class ControlHandler:
                 logger.info("handler: PTT %s received", "ON" if on else "OFF")
                 q.put(PttOn() if on else PttOff())
                 return {"state": on}
+            case "ptt_on":
+                q.put(PttOn())
+                return {}
+            case "ptt_off":
+                q.put(PttOff())
+                return {}
             case "set_power":
                 if not isinstance(self._radio, PowerControlCapable):
                     raise ValueError(
@@ -730,10 +744,10 @@ class ControlHandler:
                 self._ensure_receiver_supported(rx)
                 q.put(SetIpPlus(on, receiver=rx))
                 return {"on": on, "receiver": rx}
-            case "set_att":
+            case "set_att" | "set_attenuator":
                 db = int(params.get("level", params.get("db", 0)))
                 rx = int(params.get("receiver", 0))
-                self._ensure_capability("attenuator", "set_att")
+                self._ensure_capability("attenuator", name)
                 self._ensure_receiver_supported(rx)
                 q.put(SetAttenuator(db, receiver=rx))
                 return {"db": db, "receiver": rx}
@@ -744,6 +758,20 @@ class ControlHandler:
                 self._ensure_receiver_supported(rx)
                 q.put(SetPreamp(level, receiver=rx))
                 return {"level": level, "receiver": rx}
+            case "set_pbt_inner":
+                level = int(params["value"])
+                rx = int(params.get("receiver", 0))
+                self._ensure_capability("pbt", "set_pbt_inner")
+                self._ensure_receiver_supported(rx)
+                q.put(SetPbtInner(level, receiver=rx))
+                return {"value": level, "receiver": rx}
+            case "set_pbt_outer":
+                level = int(params["value"])
+                rx = int(params.get("receiver", 0))
+                self._ensure_capability("pbt", "set_pbt_outer")
+                self._ensure_receiver_supported(rx)
+                q.put(SetPbtOuter(level, receiver=rx))
+                return {"value": level, "receiver": rx}
             case "set_agc":
                 mode = int(params["mode"])
                 q.put(SetAgc(mode))
@@ -845,7 +873,7 @@ class ControlHandler:
                 self._ensure_capability("dual_rx", "set_dual_watch")
                 q.put(SetDualWatch(on))
                 return {"on": on}
-            case "set_comp":
+            case "set_comp" | "set_compressor":
                 on = bool(params.get("on", True))
                 q.put(SetCompressor(on))
                 return {"on": on}

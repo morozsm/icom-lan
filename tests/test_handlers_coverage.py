@@ -42,6 +42,8 @@ from icom_lan.web.radio_poller import (
     SetNR,
     SetPower,
     SetPreamp,
+    SetPbtInner,
+    SetPbtOuter,
     SetRfGain,
     SetRitFrequency,
     SetRitStatus,
@@ -247,11 +249,32 @@ def _scope_frame() -> ScopeFrame:
             {"db": 12, "receiver": 1},
         ),
         (
+            "set_attenuator",
+            {"db": 12, "receiver": 1},
+            SetAttenuator,
+            {"db": 12, "receiver": 1},
+            {"db": 12, "receiver": 1},
+        ),
+        (
             "set_preamp",
             {"level": 2, "receiver": 1},
             SetPreamp,
             {"level": 2, "receiver": 1},
             {"level": 2, "receiver": 1},
+        ),
+        (
+            "set_pbt_inner",
+            {"value": 150, "receiver": 1},
+            SetPbtInner,
+            {"level": 150, "receiver": 1},
+            {"value": 150, "receiver": 1},
+        ),
+        (
+            "set_pbt_outer",
+            {"value": 200, "receiver": 1},
+            SetPbtOuter,
+            {"level": 200, "receiver": 1},
+            {"value": 200, "receiver": 1},
         ),
         (
             "set_rit_status",
@@ -298,6 +321,8 @@ def _scope_frame() -> ScopeFrame:
         ("set_split", {"on": True}, SetSplit, {"on": True}, {"on": True}),
         ("set_split", {"on": False}, SetSplit, {"on": False}, {"on": False}),
         ("select_vfo", {"vfo": "SUB"}, SelectVfo, {"vfo": "SUB"}, {"vfo": "SUB"}),
+        ("ptt_on", {}, PttOn, {}, {}),
+        ("ptt_off", {}, PttOff, {}, {}),
         ("vfo_swap", {}, VfoSwap, {}, {}),
         ("vfo_equalize", {}, VfoEqualize, {}, {}),
         (
@@ -309,6 +334,7 @@ def _scope_frame() -> ScopeFrame:
         ),
         ("set_dual_watch", {"on": True}, SetDualWatch, {"on": True}, {"on": True}),
         ("set_dual_watch", {"on": False}, SetDualWatch, {"on": False}, {"on": False}),
+        ("set_compressor", {"on": True}, SetCompressor, {"on": True}, {"on": True}),
     ],
 )
 async def test_enqueue_command_variants(

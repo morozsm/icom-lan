@@ -2123,6 +2123,44 @@ class TestSwitchScopeReceiver:
         assert poller._radio_state.rit_freq == -200
         assert poller.revision > 0
 
+    async def test_set_pbt_inner_updates_radio_and_state(self) -> None:
+        """SetPbtInner(level) calls radio.set_pbt_inner and updates receiver state."""
+        from icom_lan.web.radio_poller import CommandQueue, RadioPoller, SetPbtInner
+
+        radio = self._make_radio()
+        radio.set_pbt_inner = AsyncMock()
+        queue = CommandQueue()
+        poller = RadioPoller(radio, StateCache(), queue, radio_state=RadioState())
+
+        poller.start()
+        queue.put(SetPbtInner(150, receiver=0))
+        await asyncio.sleep(0.15)
+        poller.stop()
+
+        radio.set_pbt_inner.assert_awaited_once_with(150, receiver=0)
+        assert poller._radio_state is not None
+        assert poller._radio_state.main.pbt_inner == 150
+        assert poller.revision > 0
+
+    async def test_set_pbt_outer_updates_radio_and_state(self) -> None:
+        """SetPbtOuter(level) calls radio.set_pbt_outer and updates receiver state."""
+        from icom_lan.web.radio_poller import CommandQueue, RadioPoller, SetPbtOuter
+
+        radio = self._make_radio()
+        radio.set_pbt_outer = AsyncMock()
+        queue = CommandQueue()
+        poller = RadioPoller(radio, StateCache(), queue, radio_state=RadioState())
+
+        poller.start()
+        queue.put(SetPbtOuter(200, receiver=0))
+        await asyncio.sleep(0.15)
+        poller.stop()
+
+        radio.set_pbt_outer.assert_awaited_once_with(200, receiver=0)
+        assert poller._radio_state is not None
+        assert poller._radio_state.main.pbt_outer == 200
+        assert poller.revision > 0
+
 
 class TestSwitchScopeReceiverCommand:
     """ControlHandler handles 'switch_scope_receiver' command."""

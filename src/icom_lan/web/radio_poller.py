@@ -45,6 +45,8 @@ if TYPE_CHECKING:
 __all__ = [
     "RadioPoller",
     "CommandQueue",
+    "SetPbtInner",
+    "SetPbtOuter",
     "SetRitFrequency",
     "SetRitStatus",
     "SetRitTxStatus",
@@ -157,6 +159,18 @@ class SetAttenuator:
 
 @dataclass(frozen=True, slots=True)
 class SetPreamp:
+    level: int
+    receiver: int = 0
+
+
+@dataclass(frozen=True, slots=True)
+class SetPbtInner:
+    level: int
+    receiver: int = 0
+
+
+@dataclass(frozen=True, slots=True)
+class SetPbtOuter:
     level: int
     receiver: int = 0
 
@@ -325,6 +339,8 @@ Command = (
     | SetIpPlus
     | SetAttenuator
     | SetPreamp
+    | SetPbtInner
+    | SetPbtOuter
     | SetAgc
     | SetRitStatus
     | SetRitTxStatus
@@ -914,6 +930,26 @@ class RadioPoller:
                     if level > 0:
                         self._radio_state.main.att = 0
                     self.bump_revision()
+            case SetPbtInner(level=level, receiver=rx):
+                await radio.set_pbt_inner(level, receiver=rx)
+                if self._radio_state:
+                    target = self._radio_state.sub if rx != 0 else self._radio_state.main
+                    target.pbt_inner = level
+                    self.bump_revision()
+                if self._on_state_event:
+                    self._on_state_event(
+                        "pbt_inner_changed", {"level": level, "receiver": rx}
+                    )
+            case SetPbtOuter(level=level, receiver=rx):
+                await radio.set_pbt_outer(level, receiver=rx)
+                if self._radio_state:
+                    target = self._radio_state.sub if rx != 0 else self._radio_state.main
+                    target.pbt_outer = level
+                    self.bump_revision()
+                if self._on_state_event:
+                    self._on_state_event(
+                        "pbt_outer_changed", {"level": level, "receiver": rx}
+                    )
             case SetAgc(mode=mode):
                 # Wire bytes from TOML: set_agc = [0x16, 0x12]
                 await self._send_cmd("set_agc", bytes([mode]))
