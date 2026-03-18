@@ -1,6 +1,6 @@
 import type { WsCommand, WsIncoming } from '../types/protocol';
 import { makeCommandId } from '../types/protocol';
-import { setWsConnected, setHttpConnected, markStateUpdated } from '../stores/connection.svelte';
+import { setWsConnected, setHttpConnected, markStateUpdated, setReconnecting } from '../stores/connection.svelte';
 import { patchActiveReceiver, patchRadioState, setRadioState } from '../stores/radio.svelte';
 
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'reconnecting';
@@ -211,7 +211,10 @@ export class WsChannel {
 // ─── Control channel singleton (backward-compat API) ───────────────────────
 
 const _ctrl = new WsChannel();
-_ctrl.onStateChange((s) => setWsConnected(s === 'connected'));
+_ctrl.onStateChange((s) => {
+  setWsConnected(s === 'connected');
+  setReconnecting(s === 'connecting' || s === 'reconnecting');
+});
 _ctrl.onMessage((msg) => {
   if (msg.type === 'state_update' && msg.data) {
     setRadioState(msg.data as any);
@@ -221,7 +224,9 @@ _ctrl.onMessage((msg) => {
 });
 
 export function connect(url: string = '/api/v1/ws') {
-  const token = localStorage.getItem('icom-lan-auth-token');
+  const token = typeof globalThis.localStorage?.getItem === 'function'
+    ? globalThis.localStorage.getItem('icom-lan-auth-token')
+    : null;
   const wsUrl = token ? `${url}?token=${encodeURIComponent(token)}` : url;
   _ctrl.connect(wsUrl);
 }
@@ -279,8 +284,15 @@ function _applyOptimistic(name: string, params: Record<string, unknown>): void {
     case 'set_att':
       if (typeof params.level === 'number') patchActiveReceiver({ att: params.level });
       break;
+    case 'set_attenuator':
+      if (typeof params.db === 'number') patchActiveReceiver({ att: params.db });
+      else if (typeof params.level === 'number') patchActiveReceiver({ att: params.level });
+      break;
     case 'set_preamp':
       if (typeof params.level === 'number') patchActiveReceiver({ preamp: params.level });
+      break;
+    case 'set_filter_width':
+      if (typeof params.width === 'number') patchActiveReceiver({ filterWidth: params.width });
       break;
     case 'set_digisel':
       if (typeof params.on === 'boolean') patchActiveReceiver({ digisel: params.on });
@@ -294,6 +306,40 @@ function _applyOptimistic(name: string, params: Record<string, unknown>): void {
       break;
     case 'set_dual_watch':
       if (typeof params.on === 'boolean') patchRadioState({ dualWatch: params.on });
+      break;
+    case 'set_split':
+      if (typeof params.on === 'boolean') patchRadioState({ split: params.on });
+      break;
+    case 'set_rit_status':
+      if (typeof params.on === 'boolean') patchRadioState({ ritOn: params.on });
+      break;
+    case 'set_rit_tx_status':
+      if (typeof params.on === 'boolean') patchRadioState({ ritTx: params.on });
+      break;
+    case 'set_rit_frequency':
+      if (typeof params.freq === 'number') patchRadioState({ ritFreq: params.freq });
+      break;
+    case 'set_tuner_status':
+      if (typeof params.value === 'number') patchRadioState({ tunerStatus: params.value });
+      break;
+    case 'set_mic_gain':
+      if (typeof params.level === 'number') patchRadioState({ micGain: params.level });
+      break;
+    case 'set_vox':
+      if (typeof params.on === 'boolean') patchRadioState({ voxOn: params.on });
+      break;
+    case 'set_compressor':
+    case 'set_comp':
+      if (typeof params.on === 'boolean') patchRadioState({ compressorOn: params.on });
+      break;
+    case 'set_compressor_level':
+      if (typeof params.level === 'number') patchRadioState({ compressorLevel: params.level });
+      break;
+    case 'set_monitor':
+      if (typeof params.on === 'boolean') patchRadioState({ monitorOn: params.on });
+      break;
+    case 'set_monitor_gain':
+      if (typeof params.level === 'number') patchRadioState({ monitorGain: params.level });
       break;
     case 'set_vfo':
     case 'select_vfo':  // backward-compat alias

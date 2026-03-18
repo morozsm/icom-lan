@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mount, unmount, flushSync } from 'svelte';
+import type { ComponentProps } from 'svelte';
 import SegmentedButton from '../SegmentedButton.svelte';
 
 // ---------------------------------------------------------------------------
@@ -20,7 +21,7 @@ const AGC_OPTIONS = [
   { value: 'SLOW', label: 'SLOW' },
 ];
 
-function mountComponent(props: Record<string, unknown>) {
+function mountComponent(props: ComponentProps<typeof SegmentedButton>) {
   const target = document.createElement('div');
   document.body.appendChild(target);
   const component = mount(SegmentedButton, { target, props });
@@ -52,7 +53,7 @@ afterEach(() => {
   document.body.innerHTML = '';
 });
 
-function mountAndTrack(props: Record<string, unknown>) {
+function mountAndTrack(props: ComponentProps<typeof SegmentedButton>) {
   const result = mountComponent(props);
   cleanup.push(() => {
     unmount(result.component);

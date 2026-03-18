@@ -12,9 +12,10 @@ export interface WsCommand {
 export interface DxSpot {
   spotter: string;
   freq: number;
-  dx: string;
+  call: string;
   comment: string;
-  time: string;
+  time_utc: string;
+  timestamp: number;
 }
 
 // Incoming JSON message union (scope_data is binary — handled via onBinary, not here)
@@ -28,11 +29,11 @@ export type WsIncoming =
   | { type: 'hello'; proto: number; server: string; version: string; radio: string; connected: boolean; capabilities: string[] }
   | { type: 'state'; data: Record<string, unknown> }
   | { type: 'state_update'; data: Record<string, unknown> }
-  | { type: 'event'; name: string; data: Record<string, unknown> };
+  | { type: 'event'; name?: string; event?: string; data?: Record<string, unknown>; connected?: boolean; radio_ready?: boolean };
 
 // Incoming: server → client (base interface for typed sub-interfaces)
 export interface WsMessage {
-  type: 'dx_spot' | 'dx_spots' | 'notification' | 'ack' | 'error' | 'response' | 'hello' | 'state' | 'event';
+  type: 'dx_spot' | 'dx_spots' | 'notification' | 'ack' | 'error' | 'response' | 'hello' | 'state' | 'state_update' | 'event';
   [key: string]: unknown;
 }
 

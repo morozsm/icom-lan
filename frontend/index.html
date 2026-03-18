@@ -17,63 +17,6 @@
           r.forEach(function(sw) { sw.unregister(); });
         });
       }
-
-      window.__RADIO_STATE__ = null;
-      window.__STATE_REV__ = -1;
-      window.__RADIO_OFFLINE__ = false;
-      window.__POLL_RECONNECTING__ = false;
-
-      var _pollErrors = 0;
-      var _pollInterval = 1000;  // WS is primary; this is the normal fallback interval
-      var _pollTimer = null;
-      // Backoff delays on consecutive errors: 200 → 500 → 1000 → 2000 → 5000 (cap)
-      var _BACKOFF_MS = [200, 500, 1000, 2000, 5000];
-
-      function pollState() {
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', '/api/v1/state', true);
-        xhr.timeout = 3000;
-        var token = localStorage.getItem('icom-lan-auth-token');
-        if (token) xhr.setRequestHeader('Authorization', 'Bearer ' + token);
-        xhr.onload = function() {
-          if (xhr.status === 401) {
-            var t = prompt('Enter auth token:');
-            if (t) { localStorage.setItem('icom-lan-auth-token', t); location.reload(); }
-            return;
-          }
-          try {
-            var state = JSON.parse(xhr.responseText);
-            window.__RADIO_STATE__ = state;
-            window.__STATE_REV__ = state.revision;
-            _pollErrors = 0;
-            _pollInterval = 1000;
-            window.__RADIO_OFFLINE__ = false;
-            window.__POLL_RECONNECTING__ = false;
-          } catch(e) {
-            _onPollError();
-          }
-        };
-        xhr.onerror = function() { _onPollError(); };
-        xhr.ontimeout = function() { _onPollError(); };
-        xhr.send();
-      }
-
-      function _onPollError() {
-        _pollErrors++;
-        if (_pollErrors >= 3) {
-          window.__RADIO_OFFLINE__ = true;
-        }
-        window.__POLL_RECONNECTING__ = true;
-        var idx = Math.min(_pollErrors - 1, _BACKOFF_MS.length - 1);
-        _pollInterval = _BACKOFF_MS[idx];
-      }
-
-      function _schedulePoll() {
-        pollState();
-        _pollTimer = setTimeout(_schedulePoll, _pollInterval);
-      }
-
-      _schedulePoll();
     </script>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>

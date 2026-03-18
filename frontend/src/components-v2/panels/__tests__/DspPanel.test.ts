@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mount, unmount, flushSync } from 'svelte';
+import type { ComponentProps } from 'svelte';
 import DspPanel from '../DspPanel.svelte';
 import { isCwMode, buildNrOptions, buildNotchOptions } from '../dsp-utils';
 
@@ -92,7 +93,7 @@ describe('buildNotchOptions', () => {
 
 let components: ReturnType<typeof mount>[] = [];
 
-function mountPanel(props: Record<string, unknown>) {
+function mountPanel(props: ComponentProps<typeof DspPanel>) {
   const t = document.createElement('div');
   document.body.appendChild(t);
   const component = mount(DspPanel, { target: t, props });
@@ -110,7 +111,7 @@ afterEach(() => {
   document.body.innerHTML = '';
 });
 
-const baseProps = {
+const baseProps: ComponentProps<typeof DspPanel> = {
   nrMode: 0,
   nrLevel: 128,
   nbActive: false,

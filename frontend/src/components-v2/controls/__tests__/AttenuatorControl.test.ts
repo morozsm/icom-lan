@@ -1,11 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mount, unmount, flushSync } from 'svelte';
+import type { ComponentProps } from 'svelte';
 
 import AttenuatorControl from '../AttenuatorControl.svelte';
 
 let components: ReturnType<typeof mount>[] = [];
 
-function mountControl(props: Record<string, unknown>) {
+function mountControl(props: ComponentProps<typeof AttenuatorControl>) {
   const target = document.createElement('div');
   document.body.appendChild(target);
   const component = mount(AttenuatorControl, { target, props });

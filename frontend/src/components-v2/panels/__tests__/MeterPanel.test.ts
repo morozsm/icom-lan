@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mount, unmount, flushSync } from 'svelte';
+import type { ComponentProps } from 'svelte';
 import MeterPanel from '../MeterPanel.svelte';
 import {
   normalize,
@@ -173,7 +174,7 @@ import { hasTx } from '$lib/stores/capabilities.svelte';
 
 let components: ReturnType<typeof mount>[] = [];
 
-function mountPanel(props: Record<string, unknown>) {
+function mountPanel(props: ComponentProps<typeof MeterPanel>) {
   const t = document.createElement('div');
   document.body.appendChild(t);
   const component = mount(MeterPanel, { target: t, props });
@@ -192,7 +193,7 @@ afterEach(() => {
   document.body.innerHTML = '';
 });
 
-const baseProps = {
+const baseProps: ComponentProps<typeof MeterPanel> = {
   sValue: 120,
   rfPower: 100,
   swr: 50,

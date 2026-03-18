@@ -142,6 +142,12 @@ describe('radio store', () => {
     expect(store.getRadioState()).toStrictEqual(s);
   });
 
+  it('accepts initial revision 0 state when store is empty', () => {
+    const s = makeState({ revision: 0 });
+    store.setRadioState(s);
+    expect(store.getRadioState()?.revision).toBe(0);
+  });
+
   it('ignores stale states (lower revision)', () => {
     store.setRadioState(makeState({ revision: 5 }));
     const stale = makeState({ revision: 3 });

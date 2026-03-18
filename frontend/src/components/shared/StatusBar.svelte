@@ -6,7 +6,7 @@
 
   let caps = $derived(getCapabilities());
   let status = $derived(getConnectionStatus());
-  let state = $derived(radio.current);
+  let radioState = $derived(radio.current);
   let active = $derived(radio.current?.active === 'SUB' ? (radio.current?.sub ?? null) : (radio.current?.main ?? null));
 
   let modelName = $derived(caps?.model ?? 'Radio');
@@ -14,7 +14,7 @@
   let reconnect = $derived(isReconnecting());
   let isConnected = $derived(status === 'connected');
   let isPartial = $derived(status === 'partial');
-  let isPtt = $derived(state?.ptt ?? false);
+  let isPtt = $derived(radioState?.ptt ?? false);
 
   // Brief green flash on status bar when connection becomes established
   let flashConnected = $state(false);

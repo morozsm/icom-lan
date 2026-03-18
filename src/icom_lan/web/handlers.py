@@ -878,8 +878,10 @@ class ControlHandler:
                 return {"value": value, "receiver": rx}
             case "set_agc":
                 mode = int(params["mode"])
-                q.put(SetAgc(mode))
-                return {"mode": mode}
+                rx = int(params.get("receiver", 0))
+                self._ensure_receiver_supported(rx)
+                q.put(SetAgc(mode, receiver=rx))
+                return {"mode": mode, "receiver": rx}
             case "set_rit_status":
                 on = bool(params.get("on", False))
                 self._ensure_capability("rit", "set_rit_status")

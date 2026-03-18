@@ -1,12 +1,20 @@
 import type { ServerState } from '../types/state';
 import type { Capabilities } from '../types/capabilities';
 import type { InfoResponse } from '../types/protocol';
-import { setHttpConnected } from '../stores/connection.svelte';
+import { markStateUpdated, setHttpConnected, setReconnecting } from '../stores/connection.svelte';
 
 const BASE = '/api/v1';
 
+function getStoredToken(): string | null {
+  const storage = globalThis.localStorage;
+  if (!storage || typeof storage.getItem !== 'function') {
+    return null;
+  }
+  return storage.getItem('icom-lan-auth-token');
+}
+
 function getAuthHeaders(): Record<string, string> {
-  const token = localStorage.getItem('icom-lan-auth-token');
+  const token = getStoredToken();
   if (token) return { Authorization: `Bearer ${token}` };
   return {};
 }
@@ -66,13 +74,16 @@ export function startPolling(
       try {
         const state = await fetchState();
         consecutiveErrors = 0;
+        setReconnecting(false);
         setHttpConnected(true);
+        markStateUpdated();
         if (state.revision > lastRevision) {
           lastRevision = state.revision;
           callback(state);
         }
       } catch {
         consecutiveErrors++;
+        setReconnecting(true);
         if (consecutiveErrors >= HTTP_ERROR_THRESHOLD) {
           setHttpConnected(false);
         }
@@ -89,6 +100,7 @@ export function startPolling(
 
   return () => {
     running = false;
+    setReconnecting(false);
     if (timer) clearTimeout(timer);
   };
 }

@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mount, unmount, flushSync } from 'svelte';
+import type { ComponentProps } from 'svelte';
 import BipolarSlider from '../BipolarSlider.svelte';
 
 let components: ReturnType<typeof mount>[] = [];
 
-function mountSlider(props: Record<string, unknown>) {
+function mountSlider(props: ComponentProps<typeof BipolarSlider>) {
   const target = document.createElement('div');
   document.body.appendChild(target);
   const component = mount(BipolarSlider, { target, props });

@@ -55,4 +55,16 @@ describe('connection store', () => {
     expect(store.getHttpConnected()).toBe(true);
     expect(store.getWsConnected()).toBe(false);
   });
+
+  it('tracks reconnecting flag explicitly', () => {
+    store.setReconnecting(true);
+    expect(store.isReconnecting()).toBe(true);
+    store.setReconnecting(false);
+    expect(store.isReconnecting()).toBe(false);
+  });
+
+  it('markStateUpdated clears stale state', () => {
+    store.markStateUpdated();
+    expect(store.isStale()).toBe(false);
+  });
 });

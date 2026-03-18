@@ -102,4 +102,22 @@ describe('makeVfoHandlers', () => {
     expect(patchRadioState).toHaveBeenCalledWith({ active: 'SUB' });
     expect(sendCommand).toHaveBeenCalledWith('set_vfo', { vfo: 'SUB' });
   });
+
+  it('sends explicit split=false when toggling from active split state', () => {
+    vi.mocked(getRadioState).mockReturnValue({ split: true } as any);
+
+    makeVfoHandlers().onSplitToggle();
+
+    expect(patchRadioState).toHaveBeenCalledWith({ split: false });
+    expect(sendCommand).toHaveBeenCalledWith('set_split', { on: false });
+  });
+
+  it('sends explicit split=true when toggling from inactive split state', () => {
+    vi.mocked(getRadioState).mockReturnValue({ split: false } as any);
+
+    makeVfoHandlers().onSplitToggle();
+
+    expect(patchRadioState).toHaveBeenCalledWith({ split: true });
+    expect(sendCommand).toHaveBeenCalledWith('set_split', { on: true });
+  });
 });

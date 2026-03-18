@@ -8,6 +8,7 @@ vi.mock('../../../components/spectrum/SpectrumPanel.svelte', async () => {
 
 import RadioLayout from '../RadioLayout.svelte';
 import { extractVfoState, extractMeterState, hasLiveAudioFromState } from '../layout-utils';
+import { radio } from '$lib/stores/radio.svelte';
 
 // ---------------------------------------------------------------------------
 // extractVfoState
@@ -164,10 +165,10 @@ import { hasTx, hasDualReceiver } from '$lib/stores/capabilities.svelte';
 
 let components: ReturnType<typeof mount>[] = [];
 
-function mountLayout(props: Record<string, unknown> = {}) {
+function mountLayout() {
   const t = document.createElement('div');
   document.body.appendChild(t);
-  const component = mount(RadioLayout, { target: t, props: { radioState: null, ...props } });
+  const component = mount(RadioLayout, { target: t });
   flushSync();
   components.push(component);
   return t;
@@ -175,6 +176,7 @@ function mountLayout(props: Record<string, unknown> = {}) {
 
 beforeEach(() => {
   components = [];
+  radio.current = null;
   vi.mocked(hasTx).mockReturnValue(true);
   vi.mocked(hasDualReceiver).mockReturnValue(false);
 });
@@ -273,20 +275,53 @@ describe('VfoHeader dual receiver', () => {
 
 describe('RadioLayout with radioState', () => {
   const sampleState = {
-    activeReceiver: 'main',
-    main: { freq: 14074000, mode: 'USB', filter: 'FIL1', sValue: 120, badges: {} },
-    sub: { freq: 7074000, mode: 'LSB', filter: 'FIL1', sValue: 60, badges: {} },
-    txActive: false,
-    meterSource: 'S',
+    revision: 1,
+    updatedAt: '2026-03-18T00:00:00Z',
+    active: 'MAIN',
+    ptt: false,
+    split: false,
+    dualWatch: false,
+    tunerStatus: 0,
+    main: {
+      freqHz: 14074000,
+      mode: 'USB',
+      filter: 1,
+      dataMode: false,
+      sMeter: 120,
+      att: 0,
+      preamp: 0,
+      nb: false,
+      nr: false,
+      afLevel: 128,
+      rfGain: 100,
+      squelch: 0,
+    },
+    sub: {
+      freqHz: 7074000,
+      mode: 'LSB',
+      filter: 1,
+      dataMode: false,
+      sMeter: 60,
+      att: 0,
+      preamp: 0,
+      nb: false,
+      nr: false,
+      afLevel: 128,
+      rfGain: 100,
+      squelch: 0,
+    },
+    connection: { rigConnected: true, radioReady: true, controlConnected: true },
   };
 
   it('renders without errors given a full radioState', () => {
-    const t = mountLayout({ radioState: sampleState });
+    radio.current = sampleState as any;
+    const t = mountLayout();
     expect(t.querySelector('.radio-layout')).not.toBeNull();
   });
 
   it('renders bottom receiver summary cards from the shell layout', () => {
-    const t = mountLayout({ radioState: sampleState });
+    radio.current = sampleState as any;
+    const t = mountLayout();
     const cards = t.querySelectorAll('.receiver-summary-card');
     expect(cards.length).toBeGreaterThan(0);
   });

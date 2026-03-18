@@ -1,10 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { fetchCapabilities } from './lib/transport/http-client';
+  import { fetchCapabilities, startPolling } from './lib/transport/http-client';
   import { connect, sendRaw } from './lib/transport/ws-client';
   import { setCapabilities } from './lib/stores/capabilities.svelte';
-  import { setRadioState, getLastRevision } from './lib/stores/radio.svelte';
-  import { setHttpConnected, markStateUpdated } from './lib/stores/connection.svelte';
+  import { setRadioState } from './lib/stores/radio.svelte';
   import { initUiVersion, getUiVersion } from './lib/stores/ui-version.svelte';
   import AppShell from './components/layout/AppShell.svelte';
   import RadioLayoutV2 from './components-v2/layout/RadioLayout.svelte';
@@ -16,26 +15,13 @@
   const MAX_RETRIES = 5;
   const RETRY_DELAYS = [3000, 5000, 10000, 20000, 30000];
 
-  // State poller: reads window.__RADIO_STATE__ written by index.html XHR
-  // (index.html XHR polling works reliably across all browsers including iOS Safari)
-  let pollInterval: ReturnType<typeof setInterval> | undefined;
-
-  function startStatePoller() {
-    pollInterval = setInterval(() => {
-      const s = (window as any).__RADIO_STATE__;
-      if (s && s.revision > getLastRevision()) {
-        setRadioState(s);
-        setHttpConnected(true);
-        markStateUpdated();
-      }
-    }, 1000);  // WS is primary, this is fallback
-  }
-
   onMount(() => {
     // Initialize UI version from URL param or localStorage
     initUiVersion();
 
-    startStatePoller();
+    const stopPolling = startPolling((state) => {
+      setRadioState(state);
+    }, 1000);
 
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -63,7 +49,7 @@
     })();
 
     return () => {
-      if (pollInterval) clearInterval(pollInterval);
+      stopPolling();
       if (retryTimer) clearTimeout(retryTimer);
     };
   });

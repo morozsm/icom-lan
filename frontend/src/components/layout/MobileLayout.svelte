@@ -21,10 +21,10 @@
   import { sendCommand } from '../../lib/transport/ws-client';
   import { applyModeDefault } from '../../lib/stores/tuning.svelte';
 
-  let state = $derived(radio.current);
+  let radioState = $derived(radio.current);
   let main = $derived(radio.current?.main ?? null);
   let active = $derived(radio.current?.active === 'SUB' ? (radio.current?.sub ?? null) : (radio.current?.main ?? null));
-  let activeRx = $derived(state?.active ?? 'MAIN');
+  let activeRx = $derived(radioState?.active ?? 'MAIN');
   let isDualRx = $derived(hasDualReceiver());
   let labelA = $derived(vfoLabel('A'));
   let labelB = $derived(vfoLabel('B'));
@@ -97,7 +97,7 @@
   }
 
   function handleDwToggle() {
-    sendCommand('set_dual_watch', { on: !(state?.dualWatch ?? false) });
+    sendCommand('set_dual_watch', { on: !(radioState?.dualWatch ?? false) });
   }
 
   function closeSpectrum() {
@@ -115,7 +115,7 @@
       title={connectionStatus}
     ></span>
     <span class="radio-name">{modelName}</span>
-    {#if state?.ptt}
+    {#if radioState?.ptt}
       <span class="tx-badge">TX</span>
     {/if}
     <span class="spacer"></span>
@@ -147,7 +147,7 @@
             dataMode={main.dataMode}
             ontune={handleTune}
           />
-        {:else if state}
+        {:else if radioState}
           <div class="vfo-placeholder">Loading VFO…</div>
         {:else}
           <div class="vfo-placeholder">Connecting…</div>
@@ -159,7 +159,7 @@
         <div class="receiver-row">
           <ReceiverSwitch
             active={activeRx}
-            dualWatch={state?.dualWatch ?? false}
+            dualWatch={radioState?.dualWatch ?? false}
             hasDualReceiver={isDualRx}
             onswitch={handleReceiverSwitch}
             ondwtoggle={handleDwToggle}
@@ -190,7 +190,7 @@
     <section class="controls-section">
       {#if main}
         <div class="smeter-row">
-          <SMeter value={main.sMeter} label="S" />
+          <SMeter value={main.sMeter} />
         </div>
       {/if}
 
@@ -408,10 +408,6 @@
     border-radius: var(--radius);
     padding: var(--space-2);
     flex-shrink: 0;
-  }
-
-  .smeter-row {
-    /* SMeter already has its own layout */
   }
 
   .selectors-row {

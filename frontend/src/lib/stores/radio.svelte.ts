@@ -11,7 +11,7 @@ class RadioStore {
 
 export const radio = new RadioStore();
 
-let lastRevision = 0;
+let lastRevision = -1;
 
 // Optimistic patches: field → { value, expires, serverValueAtPatch }
 // Kept until server confirms (value matches) OR hard timeout (5s)
@@ -76,12 +76,13 @@ function applyOptimistic(state: ServerState): ServerState {
 
 export function setRadioState(state: ServerState): void {
   const isReset = lastRevision > 10 && state.revision < lastRevision / 2;
+  const isInitial = radio.current === null;
   if (isReset) {
     console.warn(
       `Detected server restart: revision reset from ${lastRevision} to ${state.revision}`,
     );
   }
-  if (state.revision > lastRevision || isReset) {
+  if (isInitial || state.revision > lastRevision || isReset) {
     lastRevision = state.revision;
     radio.current = applyOptimistic(state);
   }

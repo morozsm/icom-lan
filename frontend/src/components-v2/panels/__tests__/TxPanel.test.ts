@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mount, unmount, flushSync } from 'svelte';
+import type { ComponentProps } from 'svelte';
 import TxPanel from '../TxPanel.svelte';
 import { txStatusColor } from '../tx-utils';
 
@@ -45,7 +46,7 @@ import { hasTx } from '$lib/stores/capabilities.svelte';
 
 let components: ReturnType<typeof mount>[] = [];
 
-function mountPanel(props: Record<string, unknown>) {
+function mountPanel(props: ComponentProps<typeof TxPanel>) {
   const t = document.createElement('div');
   document.body.appendChild(t);
   const component = mount(TxPanel, { target: t, props });
@@ -64,7 +65,7 @@ afterEach(() => {
   document.body.innerHTML = '';
 });
 
-const baseProps = {
+const baseProps: ComponentProps<typeof TxPanel> = {
   txActive: false,
   micGain: 128,
   atuActive: false,

@@ -7,11 +7,10 @@
   let visibleTabs = $derived(getVisibleTabs({ hasTx: hasTx() }));
 </script>
 
-<nav class="mobile-nav" role="tablist" aria-label="Radio navigation">
+<nav class="mobile-nav" aria-label="Radio navigation">
   {#each visibleTabs as tab (tab.id)}
     <button
-      role="tab"
-      aria-selected={activeTab === tab.id}
+      aria-current={activeTab === tab.id ? 'page' : undefined}
       class="nav-tab"
       class:active={activeTab === tab.id}
       onclick={() => { activeTab = tab.id; }}
