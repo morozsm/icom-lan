@@ -137,6 +137,7 @@ class ControlHandler:
             "set_filter",
             "ptt",
             "set_rf_power",
+            "set_power",  # backward-compat alias for set_rf_power
             "set_powerstat",
             "set_rf_gain",
             "set_af_level",
@@ -150,7 +151,8 @@ class ControlHandler:
             "set_manual_notch",
             "set_notch_filter",
             "set_digisel",
-            "set_ipplus",
+            "set_ip_plus",
+            "set_ipplus",  # backward-compat alias for set_ip_plus
             "set_att",
             "set_attenuator",
             "set_preamp",
@@ -170,6 +172,7 @@ class ControlHandler:
             "set_rit_frequency",
             "set_split",
             "set_vfo",
+            "select_vfo",  # backward-compat alias for set_vfo
             "ptt_on",
             "ptt_off",
             "vfo_swap",
@@ -691,7 +694,7 @@ class ControlHandler:
             case "ptt_off":
                 q.put(PttOff())
                 return {}
-            case "set_rf_power":
+            case "set_rf_power" | "set_power":
                 if not isinstance(self._radio, PowerControlCapable):
                     raise ValueError(
                         "command set_rf_power is not supported by this radio "
@@ -799,10 +802,10 @@ class ControlHandler:
                 self._ensure_receiver_supported(rx)
                 q.put(SetDigiSel(on, receiver=rx))
                 return {"on": on, "receiver": rx}
-            case "set_ipplus":
+            case "set_ip_plus" | "set_ipplus":
                 on = bool(params.get("on", False))
                 rx = int(params.get("receiver", 0))
-                self._ensure_capability("ip_plus", "set_ipplus")
+                self._ensure_capability("ip_plus", "set_ip_plus")
                 self._ensure_receiver_supported(rx)
                 q.put(SetIpPlus(on, receiver=rx))
                 return {"on": on, "receiver": rx}
@@ -897,7 +900,7 @@ class ControlHandler:
                 self._ensure_capability("split", "set_split")
                 q.put(SetSplit(on))
                 return {"on": on}
-            case "set_vfo":
+            case "set_vfo" | "select_vfo":
                 vfo = str(params.get("vfo", "A"))
                 q.put(SelectVfo(vfo))
                 return {"vfo": vfo}

@@ -304,7 +304,7 @@ def _scope_frame() -> ScopeFrame:
             {"on": True, "receiver": 1},
         ),
         (
-            "set_ipplus",
+            "set_ip_plus",
             {"on": True, "receiver": 1},
             SetIpPlus,
             {"on": True, "receiver": 1},

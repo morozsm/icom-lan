@@ -82,7 +82,7 @@ describe('makeVfoHandlers', () => {
     makeVfoHandlers().onTxVfoChange('main');
 
     expect(patchRadioState).toHaveBeenCalledWith({ active: 'SUB' });
-    expect(sendCommand).toHaveBeenCalledWith('select_vfo', { vfo: 'SUB' });
+    expect(sendCommand).toHaveBeenCalledWith('set_vfo', { vfo: 'SUB' });
   });
 
   it('maps TX→SUB to MAIN active receiver when split is on', () => {
@@ -91,7 +91,7 @@ describe('makeVfoHandlers', () => {
     makeVfoHandlers().onTxVfoChange('sub');
 
     expect(patchRadioState).toHaveBeenCalledWith({ active: 'MAIN' });
-    expect(sendCommand).toHaveBeenCalledWith('select_vfo', { vfo: 'MAIN' });
+    expect(sendCommand).toHaveBeenCalledWith('set_vfo', { vfo: 'MAIN' });
   });
 
   it('maps TX target directly when split is off', () => {
@@ -100,6 +100,6 @@ describe('makeVfoHandlers', () => {
     makeVfoHandlers().onTxVfoChange('sub');
 
     expect(patchRadioState).toHaveBeenCalledWith({ active: 'SUB' });
-    expect(sendCommand).toHaveBeenCalledWith('select_vfo', { vfo: 'SUB' });
+    expect(sendCommand).toHaveBeenCalledWith('set_vfo', { vfo: 'SUB' });
   });
 });
