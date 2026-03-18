@@ -922,6 +922,8 @@ class WebServer:
                     ),
                     "agcModes": list(profile.agc_modes) if profile.agc_modes else None,
                     "agcLabels": profile.agc_labels,
+                    "dataModeCount": profile.data_mode_count,
+                    "dataModeLabels": profile.data_mode_labels,
                 },
                 "connection": {
                     "rigConnected": connected,
@@ -989,6 +991,8 @@ class WebServer:
                 "preValues": list(profile.pre_values) if profile.pre_values else [0],
                 "agcModes": list(profile.agc_modes) if profile.agc_modes else [],
                 "agcLabels": profile.agc_labels if profile.agc_labels else {},
+                "dataModeCount": profile.data_mode_count,
+                "dataModeLabels": profile.data_mode_labels if profile.data_mode_labels else {},
                 "scopeConfig": {
                     "centerMode": True,
                     "amplitudeMax": 160,

@@ -67,6 +67,8 @@ class RadioProfile:
     pre_values: tuple[int, ...] | None = None
     agc_modes: tuple[int, ...] | None = None
     agc_labels: dict[str, str] | None = None
+    data_mode_count: int = 0
+    data_mode_labels: dict[str, str] | None = None
     protocol_type: str = "civ"
     controls: dict[str, dict] | None = None
     meter_calibrations: dict[str, list[dict]] | None = None

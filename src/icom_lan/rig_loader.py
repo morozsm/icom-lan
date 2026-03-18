@@ -111,6 +111,8 @@ class RigConfig:
     pre_values: tuple[int, ...] | None
     agc_modes: tuple[int, ...] | None
     agc_labels: dict[str, str] | None
+    data_mode_count: int = 0
+    data_mode_labels: dict[str, str] | None = None
     protocol_type: str = "civ"
     protocol_address: int | None = None
     protocol_baud: int | None = None
@@ -163,6 +165,8 @@ class RigConfig:
             pre_values=self.pre_values,
             agc_modes=self.agc_modes,
             agc_labels=self.agc_labels,
+            data_mode_count=self.data_mode_count,
+            data_mode_labels=self.data_mode_labels,
             protocol_type=self.protocol_type,
             controls=self.controls,
             meter_calibrations=self.meter_calibrations,
@@ -305,6 +309,11 @@ def load_rig(path: Path) -> RigConfig:
     agc_modes = tuple(agc_section["modes"]) if "modes" in agc_section else None
     agc_labels = dict(agc_section["labels"]) if "labels" in agc_section else None
 
+    # Parse [data_mode] (optional)
+    data_mode_section = data.get("data_mode", {})
+    data_mode_count = int(data_mode_section.get("count", 0))
+    data_mode_labels = dict(data_mode_section["labels"]) if "labels" in data_mode_section else None
+
     # Parse [controls] (optional)
     controls_raw = data.get("controls")
     controls: dict[str, dict] | None = None
@@ -373,6 +382,8 @@ def load_rig(path: Path) -> RigConfig:
         pre_values=pre_values,
         agc_modes=agc_modes,
         agc_labels=agc_labels,
+        data_mode_count=data_mode_count,
+        data_mode_labels=data_mode_labels,
         protocol_type=protocol_type,
         protocol_address=protocol_address,
         protocol_baud=protocol_baud,
