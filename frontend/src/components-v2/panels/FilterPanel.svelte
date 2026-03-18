@@ -5,6 +5,8 @@
 
   interface Props {
     filterWidth: number;
+    filterWidthMin?: number;
+    filterWidthMax?: number;
     ifShift: number;
     pbtInner?: number;
     pbtOuter?: number;
@@ -18,6 +20,8 @@
 
   let {
     filterWidth,
+    filterWidthMin = 50,
+    filterWidthMax = 9999,
     ifShift,
     pbtInner = 0,
     pbtOuter = 0,
@@ -36,8 +40,8 @@
     <Slider
       label="Width"
       value={filterWidth}
-      min={50}
-      max={3600}
+      min={filterWidthMin}
+      max={filterWidthMax}
       step={50}
       unit="Hz"
       accentColor="#00D4FF"

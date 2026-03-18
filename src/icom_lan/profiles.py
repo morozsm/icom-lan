@@ -63,6 +63,8 @@ class RadioProfile:
     freq_ranges: tuple[FreqRangeInfo, ...] = ()
     modes: tuple[str, ...] = ()
     filters: tuple[str, ...] = ()
+    filter_width_min: int = 50
+    filter_width_max: int = 9999
     att_values: tuple[int, ...] | None = None
     pre_values: tuple[int, ...] | None = None
     agc_modes: tuple[int, ...] | None = None

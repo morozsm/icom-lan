@@ -912,6 +912,8 @@ class WebServer:
                     "tags": sorted(caps),
                     "modes": list(profile.modes),
                     "filters": list(profile.filters),
+                    "filterWidthMin": profile.filter_width_min,
+                    "filterWidthMax": profile.filter_width_max,
                     "vfoScheme": profile.vfo_scheme,
                     "hasLan": profile.has_lan,
                     "attValues": (
@@ -987,6 +989,8 @@ class WebServer:
                 "freqRanges": freq_ranges,
                 "modes": list(profile.modes),
                 "filters": list(profile.filters),
+                "filterWidthMin": profile.filter_width_min,
+                "filterWidthMax": profile.filter_width_max,
                 "attValues": list(profile.att_values) if profile.att_values else [0],
                 "preValues": list(profile.pre_values) if profile.pre_values else [0],
                 "agcModes": list(profile.agc_modes) if profile.agc_modes else [],

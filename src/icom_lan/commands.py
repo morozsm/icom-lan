@@ -42,6 +42,7 @@ __all__ = [
     "RECEIVER_SUB",
     "build_civ_frame",
     "build_cmd29_frame",
+    "bcd_encode_value",
     "parse_civ_frame",
     # TOML canonical names (primary)
     "get_freq",
@@ -808,7 +809,7 @@ def _bcd_decode_value(data: bytes) -> int:
     return value
 
 
-def _bcd_encode_value(value: int, *, byte_count: int) -> bytes:
+def bcd_encode_value(value: int, *, byte_count: int) -> bytes:
     """Encode an integer as packed BCD using a fixed byte width."""
     if value < 0:
         raise ValueError(f"BCD value must be non-negative, got {value}")
@@ -978,7 +979,7 @@ def _build_ctl_mem_set(
     cmd_map: CommandMap | None = None,
     cmd_name: str | None = None,
 ) -> bytes:
-    data = prefix + _bcd_encode_value(value, byte_count=byte_count)
+    data = prefix + bcd_encode_value(value, byte_count=byte_count)
     if cmd_map is not None and cmd_name is not None:
         return _build_from_map(
             cmd_map, cmd_name, to_addr=to_addr, from_addr=from_addr, data=data
@@ -988,7 +989,7 @@ def _build_ctl_mem_set(
         from_addr,
         _CMD_CTL_MEM,
         sub=_SUB_CTL_MEM,
-        data=prefix + _bcd_encode_value(value, byte_count=byte_count),
+        data=prefix + bcd_encode_value(value, byte_count=byte_count),
     )
 
 
@@ -3474,7 +3475,8 @@ def set_filter_width(
     """Build a 'set DSP IF filter width' CI-V command (0x1A 0x03, cmd29).
 
     Args:
-        width_hz: Filter width in Hz (50-10000).
+        width_hz: Filter width in Hz (50-9999).  Values above 9999 are
+            clamped because CI-V uses 2-byte BCD (4 digits, max 9999).
         receiver: RECEIVER_MAIN (0x00) or RECEIVER_SUB (0x01).
 
     Returns:
@@ -3482,7 +3484,9 @@ def set_filter_width(
     """
     if not 50 <= width_hz <= 10000:
         raise ValueError(f"Value must be 50-10000, got {width_hz}")
-    payload = _bcd_encode_value(width_hz, byte_count=2)
+    # CI-V BCD is 2 bytes = 4 digits, max representable value is 9999
+    clamped = min(width_hz, 9999)
+    payload = bcd_encode_value(clamped, byte_count=2)
     if cmd_map is not None:
         return _build_from_map(
             cmd_map,
@@ -4419,8 +4423,8 @@ def scope_set_fixed_edge(
         else _validate_scope_range("scope fixed edge range", range_index, 1, 99)
     )
     payload = (
-        _bcd_encode_value(resolved_range, byte_count=1)
-        + _bcd_encode_value(edge, byte_count=1)
+        bcd_encode_value(resolved_range, byte_count=1)
+        + bcd_encode_value(edge, byte_count=1)
         + bcd_encode(start_hz)
         + bcd_encode(end_hz)
     )
@@ -5476,7 +5480,7 @@ def build_memory_mode_set(
     """
     if not 1 <= channel <= 101:
         raise ValueError(f"Channel must be 1-101, got {channel}")
-    data = _bcd_encode_value(channel, byte_count=2)
+    data = bcd_encode_value(channel, byte_count=2)
     return build_civ_frame(to_addr, from_addr, _CMD_MEMORY_MODE, data=data)
 
 
@@ -5510,7 +5514,7 @@ def build_memory_to_vfo(
     """
     if not 1 <= channel <= 101:
         raise ValueError(f"Channel must be 1-101, got {channel}")
-    data = _bcd_encode_value(channel, byte_count=2)
+    data = bcd_encode_value(channel, byte_count=2)
     return build_civ_frame(to_addr, from_addr, _CMD_MEMORY_TO_VFO, data=data)
 
 
@@ -5524,7 +5528,7 @@ def build_memory_clear(
     """
     if not 1 <= channel <= 101:
         raise ValueError(f"Channel must be 1-101, got {channel}")
-    data = _bcd_encode_value(channel, byte_count=2)
+    data = bcd_encode_value(channel, byte_count=2)
     return build_civ_frame(to_addr, from_addr, _CMD_MEMORY_CLEAR, data=data)
 
 
@@ -5538,7 +5542,7 @@ def build_memory_contents_get(
     """
     if not 1 <= channel <= 101:
         raise ValueError(f"Channel must be 1-101, got {channel}")
-    channel_bcd = _bcd_encode_value(channel, byte_count=2)
+    channel_bcd = bcd_encode_value(channel, byte_count=2)
     return build_civ_frame(
         to_addr, from_addr, _CMD_CTL_MEM, sub=_SUB_MEMORY_CONTENTS, data=channel_bcd
     )
@@ -5566,17 +5570,17 @@ def build_memory_contents_set(
     payload = bytearray(26)  # 28 - 2 (channel sent separately)
     payload[0] = mem.scan
     payload[1:6] = bcd_encode(mem.frequency_hz)
-    payload[6] = _bcd_encode_value(mem.mode, byte_count=1)[0]
-    payload[7] = _bcd_encode_value(mem.filter, byte_count=1)[0]
+    payload[6] = bcd_encode_value(mem.mode, byte_count=1)[0]
+    payload[7] = bcd_encode_value(mem.filter, byte_count=1)[0]
     payload[8] = (mem.datamode << 4) | (mem.tonemode & 0x0F)
     if mem.tone_freq_hz:
-        payload[9:12] = _bcd_encode_value(mem.tone_freq_hz, byte_count=3)
+        payload[9:12] = bcd_encode_value(mem.tone_freq_hz, byte_count=3)
     if mem.tsql_freq_hz:
-        payload[12:15] = _bcd_encode_value(mem.tsql_freq_hz, byte_count=3)
+        payload[12:15] = bcd_encode_value(mem.tsql_freq_hz, byte_count=3)
     name_bytes = mem.name.encode("ascii", errors="replace")[:10]
     payload[15 : 15 + len(name_bytes)] = name_bytes
 
-    channel_bcd = _bcd_encode_value(mem.channel, byte_count=2)
+    channel_bcd = bcd_encode_value(mem.channel, byte_count=2)
     return build_civ_frame(
         to_addr,
         from_addr,
@@ -5666,8 +5670,8 @@ def set_bsr(
     # Payload: band + reg + freq(5) + mode(1) + filter(1)
     payload = bytes([bsr.band, bsr.register])
     payload += bcd_encode(bsr.frequency_hz)
-    payload += _bcd_encode_value(bsr.mode, byte_count=1)
-    payload += _bcd_encode_value(bsr.filter, byte_count=1)
+    payload += bcd_encode_value(bsr.mode, byte_count=1)
+    payload += bcd_encode_value(bsr.filter, byte_count=1)
     return build_civ_frame(
         to_addr, from_addr, _CMD_CTL_MEM, sub=_SUB_BAND_STACK, data=payload
     )
@@ -6279,9 +6283,9 @@ def set_system_date(
     if not 1 <= day <= 31:
         raise ValueError(f"Day must be 1-31, got {day}")
     bcd = (
-        _bcd_encode_value(year, byte_count=2)
-        + _bcd_encode_value(month, byte_count=1)
-        + _bcd_encode_value(day, byte_count=1)
+        bcd_encode_value(year, byte_count=2)
+        + bcd_encode_value(month, byte_count=1)
+        + bcd_encode_value(day, byte_count=1)
     )
     if cmd_map is not None:
         return _build_from_map(
@@ -6348,7 +6352,7 @@ def set_system_time(
         raise ValueError(f"Hour must be 0-23, got {hour}")
     if not 0 <= minute <= 59:
         raise ValueError(f"Minute must be 0-59, got {minute}")
-    bcd = _bcd_encode_value(hour, byte_count=1) + _bcd_encode_value(
+    bcd = bcd_encode_value(hour, byte_count=1) + bcd_encode_value(
         minute, byte_count=1
     )
     if cmd_map is not None:
@@ -6418,8 +6422,8 @@ def set_utc_offset(
     if minutes not in (0, 15, 30, 45):
         raise ValueError(f"UTC offset minutes must be 0/15/30/45, got {minutes}")
     payload = (
-        _bcd_encode_value(hours, byte_count=1)
-        + _bcd_encode_value(minutes, byte_count=1)
+        bcd_encode_value(hours, byte_count=1)
+        + bcd_encode_value(minutes, byte_count=1)
         + (b"\x01" if is_negative else b"\x00")
     )
     if cmd_map is not None:

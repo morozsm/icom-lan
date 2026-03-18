@@ -31,6 +31,7 @@ import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Callable, cast
 
+from ..commands import bcd_encode_value
 from ..exceptions import CommandError
 from ..exceptions import ConnectionError as RadioConnectionError
 from ..profiles import RadioProfile, resolve_radio_profile
@@ -939,12 +940,8 @@ class RadioPoller:
                     raise CommandError(
                         f"set_filter_width value must be 50-10000 Hz, got {width}"
                     )
-                bcd_payload = bytes(
-                    [
-                        (((width // 1000) % 10) << 4) | ((width // 100) % 10),
-                        (((width // 10) % 10) << 4) | (width % 10),
-                    ]
-                )
+                clamped = min(width, 9999)
+                bcd_payload = bcd_encode_value(clamped, byte_count=2)
                 if self._profile.supports_cmd29(0x1A, 0x03):
                     await self._civ(0x29, data=bytes([rx, 0x1A, 0x03]) + bcd_payload)
                 else:

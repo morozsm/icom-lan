@@ -68,6 +68,8 @@
 
   <FilterPanel
     filterWidth={filter.filterWidth}
+    filterWidthMin={filter.filterWidthMin}
+    filterWidthMax={filter.filterWidthMax}
     ifShift={filter.ifShift}
     hasPbt={filter.hasPbt}
     pbtInner={filter.pbtInner}
