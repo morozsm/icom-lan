@@ -773,11 +773,11 @@ async def test_restore_state_calls_set_methods(
         set_power_called = True
 
     with (
-        patch.object(radio, "set_frequency", side_effect=mock_set_freq),
+        patch.object(radio, "set_freq", side_effect=mock_set_freq),
         patch.object(radio, "set_mode", side_effect=mock_set_mode),
-        patch.object(radio, "set_power", side_effect=mock_set_power),
+        patch.object(radio, "set_rf_power", side_effect=mock_set_power),
         patch.object(radio, "set_split_mode", new=AsyncMock()),
-        patch.object(radio, "select_vfo", new=AsyncMock()),
+        patch.object(radio, "set_vfo", new=AsyncMock()),
         patch.object(radio, "set_attenuator", new=AsyncMock()),
         patch.object(radio, "set_preamp", new=AsyncMock()),
     ):
@@ -805,11 +805,11 @@ async def test_restore_state_ignores_set_failure(
         raise ConnectionError("radio dead")
 
     with (
-        patch.object(radio, "set_frequency", side_effect=failing),
+        patch.object(radio, "set_freq", side_effect=failing),
         patch.object(radio, "set_mode", side_effect=failing),
-        patch.object(radio, "set_power", side_effect=failing),
+        patch.object(radio, "set_rf_power", side_effect=failing),
         patch.object(radio, "set_split_mode", side_effect=failing),
-        patch.object(radio, "select_vfo", side_effect=failing),
+        patch.object(radio, "set_vfo", side_effect=failing),
         patch.object(radio, "set_attenuator", side_effect=failing),
         patch.object(radio, "set_preamp", side_effect=failing),
     ):

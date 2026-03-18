@@ -3,9 +3,9 @@
 Usage::
 
     async with IcomRadio("192.168.1.100", username="u", password="p") as radio:
-        freq = await radio.get_frequency()
+        freq = await radio.get_freq()
         print(f"Freq: {freq / 1e6:.3f} MHz")
-        await radio.set_frequency(7_074_000)
+        await radio.set_freq(7_074_000)
         await radio.set_mode("USB")
 """
 
@@ -360,8 +360,8 @@ class Icom7610CoreRadio:
     Example::
 
         async with IcomRadio("192.168.1.100", username="u", password="p") as radio:
-            freq = await radio.get_frequency()
-            await radio.set_frequency(7_074_000)
+            freq = await radio.get_freq()
+            await radio.set_freq(7_074_000)
     """
 
     # Watchdog timing (used by _watchdog_loop)
@@ -709,7 +709,7 @@ class Icom7610CoreRadio:
                     f"{operation} receiver={receiver} is unsupported for profile "
                     f"{self._profile.model}: no MAIN VFO select code"
                 )
-            await self.select_vfo(target)
+            await self.set_vfo(target)
             self._radio_state.active = target
             switched = True
 
@@ -718,7 +718,7 @@ class Icom7610CoreRadio:
         finally:
             if switched:
                 try:
-                    await self.select_vfo(current)
+                    await self.set_vfo(current)
                     self._radio_state.active = current
                 except Exception:
                     logger.warning(
@@ -1602,7 +1602,7 @@ class Icom7610CoreRadio:
         )
         return await self._send_civ_raw(frame, wait_response=wait_response)
 
-    async def get_frequency(
+    async def get_freq(
         self, receiver: int = RECEIVER_MAIN, *, bypass_cache: bool = False
     ) -> int:
         """Get the current operating frequency in Hz.
@@ -1616,19 +1616,19 @@ class Icom7610CoreRadio:
         radio is busy streaming scope data.
         """
         self._check_connected()
-        self._require_receiver(receiver, operation="get_frequency")
+        self._require_receiver(receiver, operation="get_freq")
         if receiver == RECEIVER_MAIN:
             return await self._get_frequency_main(bypass_cache=bypass_cache)
 
         return int(await self._run_with_receiver_vfo_fallback(
             receiver=receiver,
-            operation="get_frequency",
+            operation="get_freq",
             action=lambda: self._get_frequency_main(
                 bypass_cache=bypass_cache, update_cache=False
             ),
         ))
 
-    async def set_frequency(self, freq_hz: int, receiver: int = 0) -> None:
+    async def set_freq(self, freq_hz: int, receiver: int = 0) -> None:
         """Set the operating frequency.
 
         Args:
@@ -1636,7 +1636,7 @@ class Icom7610CoreRadio:
             receiver: 0=MAIN, 1=SUB.
         """
         self._check_connected()
-        self._require_receiver(receiver, operation="set_frequency")
+        self._require_receiver(receiver, operation="set_freq")
         if receiver == RECEIVER_MAIN:
             await self._set_frequency_main(freq_hz)
             return
@@ -1647,7 +1647,7 @@ class Icom7610CoreRadio:
         else:
             await self._run_with_receiver_vfo_fallback(
                 receiver=receiver,
-                operation="set_frequency",
+                operation="set_freq",
                 action=lambda: self._set_frequency_main(freq_hz, update_cache=False),
             )
 
@@ -1816,7 +1816,7 @@ class Icom7610CoreRadio:
         self._check_connected()
         await self._send_civ_raw(civ, wait_response=False)
 
-    async def get_power(self) -> int:
+    async def get_rf_power(self) -> int:
         """Get the RF power level (0-255).
 
         On timeout falls back to the state cache if populated.
@@ -1824,7 +1824,7 @@ class Icom7610CoreRadio:
         self._check_connected()
         civ = get_rf_power(to_addr=self._radio_addr)
         try:
-            resp = await self._send_civ_raw(civ, key="get_power", dedupe=True)
+            resp = await self._send_civ_raw(civ, key="get_rf_power", dedupe=True)
             assert resp is not None
             level = _level_bcd_decode(resp.data)
             self._last_power = level
@@ -1836,11 +1836,11 @@ class Icom7610CoreRadio:
                 and self._state_cache.rf_power is not None
             ):
                 cached_level = round(self._state_cache.rf_power * 255)
-                logger.debug("get_power: timeout, returning cached %d", cached_level)
+                logger.debug("get_rf_power: timeout, returning cached %d", cached_level)
                 return cached_level
             raise
 
-    async def set_power(self, level: int) -> None:
+    async def set_rf_power(self, level: int) -> None:
         """Set the RF power level (0-255).
 
         Args:
@@ -2687,7 +2687,7 @@ class Icom7610CoreRadio:
         assert resp is not None
         return parse_meter_response(resp)
 
-    async def speech(self, what: int = 0) -> None:
+    async def get_speech(self, what: int = 0) -> None:
         """Trigger voice synthesizer announcement.
 
         Fire-and-forget.
@@ -2804,7 +2804,7 @@ class Icom7610CoreRadio:
     # VFO / Split
     # ------------------------------------------------------------------
 
-    async def select_vfo(self, vfo: str = "A") -> None:
+    async def set_vfo(self, vfo: str = "A") -> None:
         """Select VFO.
 
         Args:
@@ -2860,13 +2860,13 @@ class Icom7610CoreRadio:
         civ = set_tuning_step(step, to_addr=self._radio_addr)
         await self._send_civ_raw(civ, wait_response=False)
 
-    async def start_scan(self) -> None:
+    async def scan_start(self) -> None:
         """Start scanning (CI-V 0x0E 0x01). Fire-and-forget."""
         self._check_connected()
         civ = scan_start(to_addr=self._radio_addr)
         await self._send_civ_raw(civ, wait_response=False)
 
-    async def stop_scan(self) -> None:
+    async def scan_stop(self) -> None:
         """Stop scanning (CI-V 0x0E 0x00). Fire-and-forget."""
         self._check_connected()
         civ = scan_stop(to_addr=self._radio_addr)
@@ -3484,9 +3484,9 @@ class Icom7610CoreRadio:
         state: dict[str, object] = {}
 
         try:
-            state["frequency"] = await self.get_frequency()
+            state["frequency"] = await self.get_freq()
         except Exception:
-            logger.debug("snapshot: get_frequency failed, using cache", exc_info=True)
+            logger.debug("snapshot: get_freq failed, using cache", exc_info=True)
             if self._last_freq_hz is not None:
                 state["frequency"] = self._last_freq_hz
 
@@ -3503,9 +3503,9 @@ class Icom7610CoreRadio:
                 state["filter"] = self._filter_width
 
         try:
-            state["power"] = await self.get_power()
+            state["power"] = await self.get_rf_power()
         except Exception:
-            logger.debug("snapshot: get_power failed, using cache", exc_info=True)
+            logger.debug("snapshot: get_rf_power failed, using cache", exc_info=True)
             if self._last_power is not None:
                 state["power"] = self._last_power
 
@@ -3531,15 +3531,15 @@ class Icom7610CoreRadio:
                 logger.debug("restore_state: set_split_mode failed", exc_info=True)
         if "vfo" in state:
             try:
-                await self.select_vfo(str(state["vfo"]))
+                await self.set_vfo(str(state["vfo"]))
             except Exception:
-                logger.debug("restore_state: select_vfo failed", exc_info=True)
+                logger.debug("restore_state: set_vfo failed", exc_info=True)
 
         if "power" in state:
             try:
-                await self.set_power(int(cast(int, state["power"])))
+                await self.set_rf_power(int(cast(int, state["power"])))
             except Exception:
-                logger.debug("restore_state: set_power failed", exc_info=True)
+                logger.debug("restore_state: set_rf_power failed", exc_info=True)
 
         mode = state.get("mode")
         filt = state.get("filter")
@@ -3553,7 +3553,7 @@ class Icom7610CoreRadio:
 
         if "frequency" in state:
             try:
-                await self.set_frequency(int(cast(int, state["frequency"])))
+                await self.set_freq(int(cast(int, state["frequency"])))
             except Exception:
                 logger.debug("restore_state: set_frequency failed", exc_info=True)
 
@@ -4160,7 +4160,7 @@ class Icom7610CoreRadio:
             build_memory_contents_set(mem, to_addr=self._radio_addr)
         )
 
-    async def get_band_stack(self, band: int, register: int) -> BandStackRegister:
+    async def get_bsr(self, band: int, register: int) -> BandStackRegister:
         """Read band stacking register (band 0-24, register 1-3).
 
         Args:
@@ -4181,7 +4181,7 @@ class Icom7610CoreRadio:
             "Command 0x1A 0x01 GET is not documented in the CI-V Reference Manual."
         )
 
-    async def set_band_stack(self, bsr: BandStackRegister) -> None:
+    async def set_bsr(self, bsr: BandStackRegister) -> None:
         """Write band stacking register."""
         if not 0 <= bsr.band <= 24:
             raise ValueError(f"Band must be 0-24, got {bsr.band}")
@@ -4190,6 +4190,21 @@ class Icom7610CoreRadio:
         await self._send_fire_and_forget(
             set_bsr(bsr, to_addr=self._radio_addr)
         )
+
+    # ------------------------------------------------------------------
+    # Backward-compat aliases — old names kept for existing callers
+    # ------------------------------------------------------------------
+
+    get_frequency = get_freq
+    set_frequency = set_freq
+    get_power = get_rf_power
+    set_power = set_rf_power
+    select_vfo = set_vfo
+    start_scan = scan_start
+    stop_scan = scan_stop
+    speech = get_speech
+    get_band_stack = get_bsr
+    set_band_stack = set_bsr
 
 
 class IcomRadio(Icom7610CoreRadio):

@@ -117,14 +117,14 @@ class _MockLanTransport:
 
 
 class _ContractRadio(Protocol):
-    async def get_frequency(self, receiver: int = 0) -> int: ...
-    async def set_frequency(self, freq: int, receiver: int = 0) -> None: ...
+    async def get_freq(self, receiver: int = 0) -> int: ...
+    async def set_freq(self, freq: int, receiver: int = 0) -> None: ...
     async def get_mode(self, receiver: int = 0) -> tuple[str, int | None]: ...
     async def set_mode(
         self, mode: str, filter_width: int | None = None, receiver: int = 0
     ) -> None: ...
-    async def get_power(self) -> int: ...
-    async def set_power(self, level: int) -> None: ...
+    async def get_rf_power(self) -> int: ...
+    async def set_rf_power(self, level: int) -> None: ...
     async def set_ptt(self, on: bool) -> None: ...
     async def disconnect(self) -> None: ...
     @property
@@ -212,9 +212,9 @@ def backend_fixture(request: pytest.FixtureRequest) -> _BackendFixture:
 
 @pytest.mark.asyncio
 async def test_backend_contract_frequency(backend_fixture: _BackendFixture) -> None:
-    await backend_fixture.radio.set_frequency(7_074_000)
+    await backend_fixture.radio.set_freq(7_074_000)
     backend_fixture.arrange_freq_response(7_074_000)
-    assert await backend_fixture.radio.get_frequency() == 7_074_000
+    assert await backend_fixture.radio.get_freq() == 7_074_000
 
 
 @pytest.mark.asyncio
@@ -228,9 +228,9 @@ async def test_backend_contract_mode(backend_fixture: _BackendFixture) -> None:
 
 @pytest.mark.asyncio
 async def test_backend_contract_power(backend_fixture: _BackendFixture) -> None:
-    await backend_fixture.radio.set_power(150)
+    await backend_fixture.radio.set_rf_power(150)
     backend_fixture.arrange_power_response(150)
-    assert await backend_fixture.radio.get_power() == 150
+    assert await backend_fixture.radio.get_rf_power() == 150
 
 
 @pytest.mark.asyncio

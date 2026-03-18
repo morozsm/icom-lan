@@ -25,12 +25,12 @@ def config() -> RigctldConfig:
 
 @pytest.fixture
 def mock_radio() -> AsyncMock:
-    """Radio mock; implements MetersCapable (get_s_meter, get_swr, get_power) for get_level tests."""
+    """Radio mock; implements MetersCapable (get_s_meter, get_swr, get_rf_power) for get_level tests."""
     radio = AsyncMock()
     radio.get_data_mode.return_value = False
     radio.get_s_meter = AsyncMock(return_value=0)
     radio.get_swr = AsyncMock(return_value=0.0)
-    radio.get_power = AsyncMock(return_value=0)
+    radio.get_rf_power = AsyncMock(return_value=0)
     return radio
 
 
@@ -96,23 +96,23 @@ class _ContractModeRadio:
 async def test_get_freq_returns_frequency(
     handler: RigctldHandler, mock_radio: AsyncMock
 ) -> None:
-    mock_radio.get_frequency.return_value = 14_074_000
+    mock_radio.get_freq.return_value = 14_074_000
     resp = await handler.execute(get_cmd("get_freq"))
     assert resp.ok
     assert resp.values == ["14074000"]
-    mock_radio.get_frequency.assert_awaited_once()
+    mock_radio.get_freq.assert_awaited_once()
 
 
 @pytest.mark.asyncio
 async def test_get_freq_served_from_cache(
     handler: RigctldHandler, mock_radio: AsyncMock
 ) -> None:
-    mock_radio.get_frequency.return_value = 14_074_000
+    mock_radio.get_freq.return_value = 14_074_000
     cmd = get_cmd("get_freq")
     resp1 = await handler.execute(cmd)
     resp2 = await handler.execute(cmd)
     assert resp1.values == resp2.values
-    mock_radio.get_frequency.assert_awaited_once()  # only one real call
+    mock_radio.get_freq.assert_awaited_once()  # only one real call
 
 
 @pytest.mark.asyncio
@@ -127,20 +127,20 @@ async def test_get_freq_prefers_radio_state(
 
     assert resp.ok
     assert resp.values == ["14074000"]
-    mock_radio.get_frequency.assert_not_awaited()
+    mock_radio.get_freq.assert_not_awaited()
 
 
 @pytest.mark.asyncio
 async def test_get_freq_cache_expires(mock_radio: AsyncMock) -> None:
     config = RigctldConfig(cache_ttl=0.0)  # zero TTL → always expired
     h = RigctldHandler(mock_radio, config)
-    mock_radio.get_frequency.side_effect = [14_074_000, 7_050_000]
+    mock_radio.get_freq.side_effect = [14_074_000, 7_050_000]
     cmd = get_cmd("get_freq")
     r1 = await h.execute(cmd)
     r2 = await h.execute(cmd)
     assert r1.values == ["14074000"]
     assert r2.values == ["7050000"]
-    assert mock_radio.get_frequency.await_count == 2
+    assert mock_radio.get_freq.await_count == 2
 
 
 @pytest.mark.asyncio
@@ -149,21 +149,21 @@ async def test_set_freq_calls_radio(
 ) -> None:
     resp = await handler.execute(set_cmd("set_freq", "14074000"))
     assert resp.ok
-    mock_radio.set_frequency.assert_awaited_once_with(14_074_000)
+    mock_radio.set_freq.assert_awaited_once_with(14_074_000)
 
 
 @pytest.mark.asyncio
 async def test_set_freq_invalidates_cache(
     handler: RigctldHandler, mock_radio: AsyncMock
 ) -> None:
-    mock_radio.get_frequency.return_value = 14_074_000
+    mock_radio.get_freq.return_value = 14_074_000
     await handler.execute(get_cmd("get_freq"))  # populate cache
 
     await handler.execute(set_cmd("set_freq", "7050000"))
 
     resp = await handler.execute(get_cmd("get_freq"))
     assert resp.values == ["7050000"]
-    assert mock_radio.get_frequency.await_count == 1
+    assert mock_radio.get_freq.await_count == 1
 
 
 @pytest.mark.asyncio
@@ -172,7 +172,7 @@ async def test_set_freq_invalid_arg(
 ) -> None:
     resp = await handler.execute(set_cmd("set_freq", "not_a_number"))
     assert resp.error == HamlibError.EINVAL
-    mock_radio.set_frequency.assert_not_awaited()
+    mock_radio.set_freq.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -524,7 +524,7 @@ async def test_get_level_strength_s0(
 async def test_get_level_rfpower(
     handler: RigctldHandler, mock_radio: AsyncMock
 ) -> None:
-    mock_radio.get_power.return_value = 255
+    mock_radio.get_rf_power.return_value = 255
     resp = await handler.execute(get_cmd("get_level", "RFPOWER"))
     assert resp.ok
     value = float(resp.values[0])
@@ -544,14 +544,14 @@ async def test_get_level_rfpower_prefers_radio_state(
 
     assert resp.ok
     assert float(resp.values[0]) == pytest.approx(128 / 255.0, rel=1e-6)
-    mock_radio.get_power.assert_not_awaited()
+    mock_radio.get_rf_power.assert_not_awaited()
 
 
 @pytest.mark.asyncio
 async def test_get_level_rfpower_zero(
     handler: RigctldHandler, mock_radio: AsyncMock
 ) -> None:
-    mock_radio.get_power.return_value = 0
+    mock_radio.get_rf_power.return_value = 0
     resp = await handler.execute(get_cmd("get_level", "RFPOWER"))
     assert resp.ok
     assert float(resp.values[0]) == pytest.approx(0.0)
@@ -772,7 +772,7 @@ async def test_read_only_rejects_set_freq(mock_radio: AsyncMock) -> None:
     h = RigctldHandler(mock_radio, RigctldConfig(read_only=True))
     resp = await h.execute(set_cmd("set_freq", "14074000"))
     assert resp.error == HamlibError.EACCESS
-    mock_radio.set_frequency.assert_not_awaited()
+    mock_radio.set_freq.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -793,7 +793,7 @@ async def test_read_only_rejects_set_ptt(mock_radio: AsyncMock) -> None:
 @pytest.mark.asyncio
 async def test_read_only_allows_get_freq(mock_radio: AsyncMock) -> None:
     h = RigctldHandler(mock_radio, RigctldConfig(read_only=True))
-    mock_radio.get_frequency.return_value = 14_074_000
+    mock_radio.get_freq.return_value = 14_074_000
     resp = await h.execute(get_cmd("get_freq"))
     assert resp.ok
 
@@ -815,7 +815,7 @@ async def test_read_only_allows_get_mode(mock_radio: AsyncMock) -> None:
 async def test_connection_error_becomes_eio(
     handler: RigctldHandler, mock_radio: AsyncMock
 ) -> None:
-    mock_radio.get_frequency.side_effect = IcomConnectionError("lost")
+    mock_radio.get_freq.side_effect = IcomConnectionError("lost")
     resp = await handler.execute(get_cmd("get_freq"))
     assert resp.error == HamlibError.EIO
 
@@ -824,7 +824,7 @@ async def test_connection_error_becomes_eio(
 async def test_timeout_error_becomes_etimeout(
     handler: RigctldHandler, mock_radio: AsyncMock
 ) -> None:
-    mock_radio.get_frequency.side_effect = IcomTimeoutError("timeout")
+    mock_radio.get_freq.side_effect = IcomTimeoutError("timeout")
     resp = await handler.execute(get_cmd("get_freq"))
     assert resp.error == HamlibError.ETIMEOUT
 
@@ -833,7 +833,7 @@ async def test_timeout_error_becomes_etimeout(
 async def test_value_error_becomes_einval(
     handler: RigctldHandler, mock_radio: AsyncMock
 ) -> None:
-    mock_radio.get_frequency.side_effect = ValueError("bad value")
+    mock_radio.get_freq.side_effect = ValueError("bad value")
     resp = await handler.execute(get_cmd("get_freq"))
     assert resp.error == HamlibError.EINVAL
 
@@ -842,7 +842,7 @@ async def test_value_error_becomes_einval(
 async def test_unexpected_exception_becomes_einternal(
     handler: RigctldHandler, mock_radio: AsyncMock
 ) -> None:
-    mock_radio.get_frequency.side_effect = RuntimeError("unexpected")
+    mock_radio.get_freq.side_effect = RuntimeError("unexpected")
     resp = await handler.execute(get_cmd("get_freq"))
     assert resp.error == HamlibError.EINTERNAL
 
@@ -851,7 +851,7 @@ async def test_unexpected_exception_becomes_einternal(
 async def test_connection_error_on_set_freq_becomes_eio(
     handler: RigctldHandler, mock_radio: AsyncMock
 ) -> None:
-    mock_radio.set_frequency.side_effect = IcomConnectionError("lost")
+    mock_radio.set_freq.side_effect = IcomConnectionError("lost")
     resp = await handler.execute(set_cmd("set_freq", "14074000"))
     assert resp.error == HamlibError.EIO
 

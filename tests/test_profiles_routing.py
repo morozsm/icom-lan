@@ -23,7 +23,7 @@ def _dual_radio_mock() -> MagicMock:
     radio.capabilities = set(profile.capabilities)
     radio._radio_state = SimpleNamespace(active="MAIN")
     radio.send_civ = AsyncMock()
-    radio.set_frequency = AsyncMock()
+    radio.set_freq = AsyncMock()
     radio.set_mode = AsyncMock()
     return radio
 
@@ -36,7 +36,7 @@ def _single_radio_mock() -> MagicMock:
     radio.capabilities = set(profile.capabilities)
     radio._radio_state = SimpleNamespace(active="MAIN")
     radio.send_civ = AsyncMock()
-    radio.set_frequency = AsyncMock()
+    radio.set_freq = AsyncMock()
     radio.set_mode = AsyncMock()
     return radio
 
@@ -53,7 +53,7 @@ async def test_single_profile_receiver_guard_is_explicit() -> None:
     radio._check_connected = lambda: None  # type: ignore[method-assign]
 
     with pytest.raises(CommandError, match="receiver=1"):
-        await radio.set_frequency(14_074_000, receiver=1)
+        await radio.set_freq(14_074_000, receiver=1)
 
 
 @pytest.mark.asyncio
@@ -63,7 +63,7 @@ async def test_dual_profile_poller_routes_sub_freq_via_vfo_switch() -> None:
     await poller._execute(SetFreq(14_074_000, receiver=1))  # noqa: SLF001
 
     assert radio.send_civ.await_count >= 2
-    radio.set_frequency.assert_awaited_once_with(14_074_000)
+    radio.set_freq.assert_awaited_once_with(14_074_000)
 
 
 @pytest.mark.asyncio

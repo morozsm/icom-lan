@@ -262,13 +262,17 @@ class SerialMockRadio:
     async def disable_scope(self) -> None:
         self._scope_enabled = False
 
-    async def set_frequency(self, freq: int, receiver: int = 0) -> None:
-        self._receiver_state(receiver, operation="set_frequency").freq = freq
+    async def set_freq(self, freq: int, receiver: int = 0) -> None:
+        self._receiver_state(receiver, operation="set_freq").freq = freq
         if receiver == 0:
             self._state_cache.update_freq(freq)
 
-    async def get_frequency(self, receiver: int = 0) -> int:
-        return self._receiver_state(receiver, operation="get_frequency").freq
+    async def get_freq(self, receiver: int = 0) -> int:
+        return self._receiver_state(receiver, operation="get_freq").freq
+
+    # Backward-compat aliases
+    set_frequency = set_freq
+    get_frequency = get_freq
 
     async def set_mode(
         self, mode: Mode | str, filter_width: int | None = None, receiver: int = 0
@@ -300,12 +304,16 @@ class SerialMockRadio:
         self._ptt = on
         self._state_cache.update_ptt(on)
 
-    async def set_power(self, level: int) -> None:
+    async def set_rf_power(self, level: int) -> None:
         self._power = level
         self._state_cache.update_rf_power(level / 255.0)
 
-    async def get_power(self) -> int:
+    async def get_rf_power(self) -> int:
         return self._power
+
+    # Backward-compat aliases
+    set_power = set_rf_power
+    get_power = get_rf_power
 
     async def get_s_meter(self, receiver: int = 0) -> int:
         return 120
@@ -370,8 +378,11 @@ class SerialMockRadio:
     async def set_ip_plus(self, on: bool, receiver: int = 0) -> None:
         await self.set_ipplus(on, receiver=receiver)
 
-    async def select_vfo(self, vfo: str) -> None:
+    async def set_vfo(self, vfo: str) -> None:
         return None
+
+    # Backward-compat alias
+    select_vfo = set_vfo
 
     async def vfo_swap(self) -> None:
         return None

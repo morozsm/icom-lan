@@ -353,7 +353,7 @@ def poll_cache() -> StateCache:
 @pytest.fixture
 def poll_radio() -> AsyncMock:
     radio = AsyncMock()
-    radio.get_frequency.return_value = 14_074_000
+    radio.get_freq.return_value = 14_074_000
     radio.get_mode_info.return_value = (Mode.USB, 1)
     radio.get_data_mode.return_value = True
     return radio

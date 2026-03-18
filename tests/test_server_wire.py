@@ -71,13 +71,13 @@ async def _read_eof(reader: asyncio.StreamReader, *, timeout: float = 2.0) -> by
 def _make_mock_radio() -> AsyncMock:
     """AsyncMock radio with sensible default return values."""
     radio = AsyncMock()
-    radio.get_frequency.return_value = 14_074_000
+    radio.get_freq.return_value = 14_074_000
     radio.get_mode_info.return_value = (Mode.USB, 2)  # USB, FIL2 = 2400 Hz
     radio.get_data_mode.return_value = False
     radio.get_s_meter.return_value = 120
-    radio.get_power.return_value = 255
+    radio.get_rf_power.return_value = 255
     radio.get_swr.return_value = 0
-    radio.set_frequency.return_value = None
+    radio.set_freq.return_value = None
     radio.set_mode.return_value = None
     radio.set_data_mode.return_value = None
     radio.set_ptt.return_value = None

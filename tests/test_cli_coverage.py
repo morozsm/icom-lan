@@ -274,7 +274,7 @@ async def test_run_dispatches_power_on_off_and_unknown_paths(
 ) -> None:
     _, radio = _mock_radio_ctx()
     radio.set_powerstat = AsyncMock()
-    radio.set_power = AsyncMock()
+    radio.set_rf_power = AsyncMock()
     with patch("icom_lan.cli.create_radio", return_value=radio):
         rc_on = await _run(_run_args(command="power-on"))
         rc_off = await _run(_run_args(command="power-off"))
