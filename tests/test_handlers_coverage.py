@@ -583,70 +583,96 @@ async def test_subscribe_unsubscribe_and_subscribed_streams_property() -> None:
     await handler._handle_unsubscribe({"streams": "not-a-list"})
 
 
-async def test_send_state_snapshot_uses_server_cache() -> None:
+async def test_send_state_snapshot_uses_server_public_state() -> None:
     ws = SimpleNamespace(send_text=AsyncMock())
-    cache = StateCache(
-        freq=14_074_000,
-        freq_ts=time.monotonic(),
-        mode="USB",
-        mode_ts=time.monotonic(),
-        filter_width=2,
-        ptt=True,
-    )
+    payload = {
+        "revision": 7,
+        "updatedAt": "2026-03-17T12:00:00+00:00",
+        "active": "MAIN",
+        "ptt": True,
+        "split": False,
+        "dualWatch": False,
+        "tunerStatus": 0,
+        "main": {
+            "freqHz": 14_074_000,
+            "mode": "USB",
+            "filter": 2,
+            "dataMode": False,
+            "att": 0,
+            "preamp": 0,
+            "nb": False,
+            "nr": False,
+            "afLevel": 0,
+            "rfGain": 0,
+            "squelch": 0,
+            "sMeter": 0,
+        },
+        "sub": {
+            "freqHz": 7_074_000,
+            "mode": "LSB",
+            "filter": 1,
+            "dataMode": False,
+            "att": 0,
+            "preamp": 0,
+            "nb": False,
+            "nr": False,
+            "afLevel": 0,
+            "rfGain": 0,
+            "squelch": 0,
+            "sMeter": 0,
+        },
+        "connection": {
+            "rigConnected": True,
+            "radioReady": True,
+            "controlConnected": False,
+        },
+    }
     handler = _control_handler(
         ws=ws,
         radio=SimpleNamespace(connected=True, radio_ready=True),
-        server=SimpleNamespace(state_cache=cache),
+        server=SimpleNamespace(build_public_state=MagicMock(return_value=payload)),
     )
     await handler._send_state_snapshot()
     msg = decode_json(ws.send_text.await_args_list[-1].args[0])
-    assert msg["type"] == "state"
-    assert msg["data"]["freq_a"] == 14_074_000
-    assert msg["data"]["filter"] == "FIL2"
-    assert msg["data"]["ptt"] is True
-    assert msg["radio_ready"] is True
+    assert msg["type"] == "state_update"
+    assert msg["data"] == payload
 
 
-async def test_send_state_snapshot_uses_radio_cache_when_server_cache_missing() -> None:
+async def test_send_state_snapshot_uses_canonical_fallback_when_server_missing() -> (
+    None
+):
     ws = SimpleNamespace(send_text=AsyncMock())
     radio = SimpleNamespace(
+        connected=True,
         radio_ready=False,
-        state_cache=StateCache(
-            freq=7_074_000,
-            freq_ts=time.monotonic(),
-            mode="LSB",
-            mode_ts=time.monotonic(),
-            filter_width=None,
-            ptt=False,
-        ),
     )
     handler = _control_handler(
         ws=ws,
         radio=radio,
-        server=SimpleNamespace(state_cache=None),
+        server=None,
     )
     await handler._send_state_snapshot()
     msg = decode_json(ws.send_text.await_args_list[-1].args[0])
-    assert msg["data"]["freq_a"] == 7_074_000
-    assert msg["data"]["mode"] == "LSB"
-    assert msg["data"]["filter"] == "FIL1"
-    assert msg["radio_ready"] is False
+    assert msg["type"] == "state_update"
+    assert msg["data"]["active"] == "MAIN"
+    assert msg["data"]["connection"]["rigConnected"] is True
+    assert msg["data"]["connection"]["radioReady"] is False
+    assert "main" in msg["data"]
 
 
-async def test_send_state_snapshot_cache_errors_are_ignored() -> None:
+async def test_send_state_snapshot_builder_errors_are_ignored() -> None:
     ws = SimpleNamespace(send_text=AsyncMock())
-
-    class _BadCache:
-        @property
-        def freq_ts(self) -> float:
-            raise RuntimeError("boom")
-
-    handler = _control_handler(ws=ws, server=SimpleNamespace(state_cache=_BadCache()))
+    handler = _control_handler(
+        ws=ws,
+        server=SimpleNamespace(
+            build_public_state=MagicMock(side_effect=RuntimeError("boom"))
+        ),
+    )
     await handler._send_state_snapshot()
     msg = decode_json(ws.send_text.await_args_list[-1].args[0])
-    assert msg["data"]["freq_a"] == 0
-    assert msg["data"]["mode"] == "USB"
-    assert "radio_ready" in msg
+    assert msg["type"] == "state_update"
+    assert msg["data"]["active"] == "MAIN"
+    assert "connection" in msg["data"]
 
 
 async def test_handle_command_response_paths() -> None:

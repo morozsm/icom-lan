@@ -15,28 +15,25 @@ reply.
 
 How it works:
 1. RadioPoller sends fire-and-forget CI-V queries (get_freq, get_mode, etc.)
-2. The CI-V RX loop (_civ_rx.py) receives ALL packets and calls
-   _update_state_cache_from_frame() for every data frame.
-3. StateCache is the single source of truth.
-4. Clients read from the cache; broadcast events notify on changes.
+2. The CI-V RX loop receives all packets and projects them into RadioState.
+3. RadioState is the canonical source of truth for web consumers.
+4. Poll freshness stays local to the poller; broadcast events notify on changes.
 
 DO NOT add request-response (await get_frequency, await get_mode, etc.)
-to this module.  If you need new data, add parsing to
-_update_state_cache_from_frame() in _civ_rx.py instead.
+to this module. If you need new data, add parsing to the CI-V RX path instead.
 """
 
 from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Callable, cast
 
-from .._shared_state_runtime import DEFAULT_STATE_CACHE_TTL, is_cache_fresh
 from ..exceptions import CommandError
 from ..exceptions import ConnectionError as RadioConnectionError
 from ..profiles import RadioProfile, resolve_radio_profile
-from ..rigctld.state_cache import CacheField, StateCache
 
 if TYPE_CHECKING:
     from ..radio_protocol import Radio
@@ -76,6 +73,7 @@ logger = logging.getLogger(__name__)
 _GAP: float = 0.012
 _GAP_SERIAL: float = 0.050  # serial CI-V needs more breathing room
 _SEND_TIMEOUT: float = 1.0
+_DEFAULT_POLL_FIELD_TTL: float = 0.2
 _FAST_INTERVAL: float = 0.025  # meters — wfview queue interval for LAN (25ms)
 _FAST_INTERVAL_SERIAL: float = 0.100  # serial: 10 polls/sec for responsive meters
 _SLOW_INTERVAL: float = 0.25  # levels/settings — rarely change
@@ -503,27 +501,28 @@ class CommandQueue:
 class RadioPoller:
     """Fire-and-forget CI-V poller.
 
-    State is updated from CI-V RX stream (_civ_rx._update_state_cache_from_frame),
+    State is updated from the CI-V RX stream into RadioState,
     NOT from polling responses.
     """
 
     def __init__(
         self,
         radio: "Radio",
-        state_cache: StateCache,
         command_queue: CommandQueue,
+        legacy_queue: CommandQueue | None = None,
         *,
         on_state_event: Callable[[str, dict[str, Any]], None] | None = None,
         radio_state: "RadioState | None" = None,
     ) -> None:
+        queue = legacy_queue if legacy_queue is not None else command_queue
         self._radio = radio
-        self._cache = state_cache
         self._radio_state = radio_state
-        self._queue = command_queue
+        self._queue = queue
         self._on_state_event = on_state_event
         self._poll_index: int = 0
         self._revision: int = 0
         self._task: asyncio.Task[None] | None = None
+        self._last_polled: dict[str, float] = {}
         self._caps: set[str] = self._radio_capabilities()
         self._profile: RadioProfile = self._runtime_profile()
         self._cmd_map: dict[str, tuple[int, ...]] = self._load_command_map()
@@ -565,24 +564,14 @@ class RadioPoller:
         """Increment the revision counter (called on each state change)."""
         self._revision += 1
 
-    def state_is_fresh(
-        self,
-        field: CacheField,
-        ttl: float = DEFAULT_STATE_CACHE_TTL,
-    ) -> bool:
-        """Return True if *field* in the shared cache is still fresh.
+    def mark_polled(self, field: str) -> None:
+        """Record the last successful poll time for a logical field."""
+        self._last_polled[field] = time.monotonic()
 
-        Convenience wrapper around :func:`~icom_lan._shared_state_runtime.is_cache_fresh`
-        so callers that hold a :class:`RadioPoller` reference do not need to
-        import the lower-level helper directly.
-
-        Args:
-            field: Cache field name (e.g. ``"freq"``, ``"mode"``).
-            ttl: Maximum acceptable age in seconds (defaults to
-                :data:`~icom_lan._shared_state_runtime.DEFAULT_STATE_CACHE_TTL`).
-        """
-        result: bool = is_cache_fresh(self._cache, field, ttl)
-        return result
+    def state_is_fresh(self, field: str, ttl: float = _DEFAULT_POLL_FIELD_TTL) -> bool:
+        """Return True if *field* was polled recently enough to skip re-query."""
+        last = self._last_polled.get(field)
+        return last is not None and (time.monotonic() - last) < ttl
 
     def _radio_capabilities(self) -> set[str]:
         raw_caps = getattr(self._radio, "capabilities", None)
@@ -876,8 +865,9 @@ class RadioPoller:
                         self._radio_state.sub if rx != 0 else self._radio_state.main
                     )
                     if target:
-                        target.freq_hz = freq
+                        target.freq = freq
                     self.bump_revision()
+                    self.mark_polled("freq")
                 if self._on_state_event:
                     self._on_state_event("freq_changed", {"freq": freq, "receiver": rx})
             case SetMode(mode=mode, filter_width=fw, receiver=rx):
@@ -917,6 +907,7 @@ class RadioPoller:
                     if target:
                         target.mode = mode
                     self.bump_revision()
+                    self.mark_polled("mode")
                 if self._on_state_event:
                     self._on_state_event("mode_changed", {"mode": mode, "receiver": rx})
             case SetFilter(filter_num=fn, receiver=rx):
@@ -1198,6 +1189,8 @@ class RadioPoller:
                                 target.freq = freq
                                 target.mode = mode_name
                             self.bump_revision()
+                            self.mark_polled("freq")
+                            self.mark_polled("mode")
                         if self._on_state_event:
                             self._on_state_event(
                                 "freq_changed", {"freq": freq, "receiver": 0}

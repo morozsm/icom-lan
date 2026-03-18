@@ -16,6 +16,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from icom_lan.backends.icom7610.drivers.serial_stub import SerialMockRadio
 from icom_lan.rigctld.contract import (
     ClientSession,
     HamlibError,
@@ -25,8 +26,6 @@ from icom_lan.rigctld.contract import (
 )
 from icom_lan.rigctld.server import RigctldServer, run_rigctld_server
 from icom_lan.types import Mode
-from icom_lan.backends.icom7610.drivers.serial_stub import SerialMockRadio
-
 
 # ---------------------------------------------------------------------------
 # Canned objects shared across tests
@@ -201,7 +200,7 @@ class TestLifecycle:
         await srv.stop()
         await srv.stop()  # second call must not raise
 
-    async def test_start_reuses_radio_state_cache_when_available(
+    async def test_start_does_not_bind_backend_state_cache_by_default(
         self, cfg: RigctldConfig
     ) -> None:
         radio = SerialMockRadio()
@@ -209,9 +208,8 @@ class TestLifecycle:
         await srv.start()
         try:
             assert srv._rig_handler is not None
-            assert srv._poller is not None
-            assert srv._rig_handler._cache is radio.state_cache
-            assert srv._poller._cache is radio.state_cache
+            assert srv._poller is None
+            assert srv._rig_handler._cache is not radio.state_cache
         finally:
             await srv.stop()
 

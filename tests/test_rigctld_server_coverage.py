@@ -23,13 +23,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from icom_lan.rigctld.contract import (
-    RigctldCommand,
-    RigctldConfig,
-    RigctldResponse,
-)
+from icom_lan.rigctld.contract import RigctldCommand, RigctldConfig, RigctldResponse
 from icom_lan.rigctld.server import RigctldServer, _is_packet_mode_set
-
 
 # ---------------------------------------------------------------------------
 # Shared helpers
@@ -213,7 +208,7 @@ async def test_start_creates_protocol_and_handler_when_none(
     try:
         assert srv._protocol is not None
         assert srv._rig_handler is not None
-        assert srv._poller is not None
+        assert srv._poller is None
     finally:
         await srv.stop()
 
