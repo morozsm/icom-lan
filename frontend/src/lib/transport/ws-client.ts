@@ -286,6 +286,7 @@ function _applyOptimistic(name: string, params: Record<string, unknown>): void {
       if (typeof params.on === 'boolean') patchActiveReceiver({ digisel: params.on });
       break;
     case 'set_ip_plus':
+    case 'set_ipplus':  // backward-compat alias
       if (typeof params.on === 'boolean') patchActiveReceiver({ ipplus: params.on });
       break;
     case 'ptt':
@@ -294,7 +295,8 @@ function _applyOptimistic(name: string, params: Record<string, unknown>): void {
     case 'set_dual_watch':
       if (typeof params.on === 'boolean') patchRadioState({ dualWatch: params.on });
       break;
-    case 'select_vfo':
+    case 'set_vfo':
+    case 'select_vfo':  // backward-compat alias
       if (typeof params.vfo === 'string') {
         const isSub = ['SUB', 'B'].includes(params.vfo.toUpperCase());
         patchRadioState({ active: isSub ? 'SUB' : 'MAIN' });

@@ -93,7 +93,7 @@
   }
 
   function handleReceiverSwitch(receiver: 'MAIN' | 'SUB') {
-    sendCommand('select_vfo', { vfo: receiver === 'MAIN' ? 'A' : 'B' });
+    sendCommand('set_vfo', { vfo: receiver === 'MAIN' ? 'A' : 'B' });
   }
 
   function handleDwToggle() {
