@@ -203,16 +203,16 @@ class RadioPoller:
 
         # --- frequency --------------------------------------------------
         try:
-            freq = await self._radio.get_frequency()
+            freq = await self._radio.get_freq()
             self._cache.update_freq(freq)
             if cb is not None:
                 cb.record_success()
         except (IcomTimeoutError, IcomConnectionError) as exc:
-            logger.warning("RadioPoller: get_frequency failed: %s", exc)
+            logger.warning("RadioPoller: get_freq failed: %s", exc)
             if cb is not None:
                 cb.record_failure()
         except Exception as exc:  # pragma: no cover — unexpected
-            logger.warning("RadioPoller: get_frequency unexpected error: %s", exc)
+            logger.warning("RadioPoller: get_freq unexpected error: %s", exc)
 
         # HALF_OPEN probe: one command is enough to test connectivity.
         if is_probe:

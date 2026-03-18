@@ -834,7 +834,7 @@ class RadioPoller:
                 self._ensure_receiver_supported(rx, operation="set_freq")
                 current = self._current_active()
                 if rx != 0 and self._profile.supports_cmd29(0x05):
-                    await radio.set_frequency(freq, receiver=rx)
+                    await radio.set_freq(freq, receiver=rx)
                 elif rx != 0:
                     if (
                         self._profile.vfo_sub_code is None
@@ -847,7 +847,7 @@ class RadioPoller:
                     if current != "SUB":
                         await self._civ(0x07, data=bytes([self._profile.vfo_sub_code]))
                         await asyncio.sleep(self._gap)
-                    await radio.set_frequency(freq)
+                    await radio.set_freq(freq)
                     if current != "SUB":
                         await asyncio.sleep(self._gap)
                         await self._civ(0x07, data=bytes([self._profile.vfo_main_code]))
@@ -855,7 +855,7 @@ class RadioPoller:
                     if current != "MAIN" and self._profile.vfo_main_code is not None:
                         await self._civ(0x07, data=bytes([self._profile.vfo_main_code]))
                         await asyncio.sleep(self._gap)
-                    await radio.set_frequency(freq)
+                    await radio.set_freq(freq)
                     if current != "MAIN" and self._profile.vfo_sub_code is not None:
                         await asyncio.sleep(self._gap)
                         await self._civ(0x07, data=bytes([self._profile.vfo_sub_code]))
@@ -947,7 +947,7 @@ class RadioPoller:
                         logger.debug("poller: audio stream transition failed: %s", e)
             case SetPower(level=level):
                 if isinstance(radio, PowerControlCapable):
-                    await radio.set_power(level)
+                    await radio.set_rf_power(level)
             case SetRfGain(level=level, receiver=rx):
                 if isinstance(radio, LevelsCapable):
                     self._ensure_receiver_supported(rx, operation="set_rf_gain")
@@ -1179,7 +1179,7 @@ class RadioPoller:
                             mode_name,
                             filter_num,
                         )
-                        await radio.set_frequency(freq)
+                        await radio.set_freq(freq)
                         await asyncio.sleep(self._gap)
                         await radio.set_mode(mode_name, filter_num)
                         # Update local state immediately (don't wait for transceive echo)
@@ -1216,7 +1216,7 @@ class RadioPoller:
                         logger.info(
                             "BSR fallback: band=%d → freq=%d", band, default_freq
                         )
-                        await radio.set_frequency(default_freq)
+                        await radio.set_freq(default_freq)
                     else:
                         logger.warning("set_band: unknown bsr_code=%d", band)
             case SelectVfo(vfo=vfo):

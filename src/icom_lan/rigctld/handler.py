@@ -324,7 +324,7 @@ class RigctldHandler:
             return RigctldResponse(values=[str(main_state.freq)])
         if self._cache.is_fresh("freq", self._config.cache_ttl):
             return RigctldResponse(values=[str(self._cache.freq)])
-        freq = await self._radio.get_frequency()
+        freq = await self._radio.get_freq()
         self._cache.update_freq(freq)
         return RigctldResponse(values=[str(freq)])
 
@@ -335,7 +335,7 @@ class RigctldHandler:
             freq = int(float(cmd.args[0]))
         except ValueError:
             return _err(HamlibError.EINVAL)
-        await self._radio.set_frequency(freq)
+        await self._radio.set_freq(freq)
         self._pending.freq = freq
         self._cache.update_freq(freq)
         return _ok()
@@ -532,7 +532,7 @@ class RigctldHandler:
             strength_db = round((raw / 241.0) * 114.0 - 54.0)
             return RigctldResponse(values=[str(strength_db)])
         if level == "RFPOWER":
-            raw = await self._radio.get_power()
+            raw = await self._radio.get_rf_power()
             normalized = raw / 255.0
             self._cache.update_rf_power(normalized)
             return RigctldResponse(values=[f"{normalized:.6f}"])

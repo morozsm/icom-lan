@@ -85,25 +85,25 @@ class TestConnect:
 
 class TestFrequency:
     async def test_get_frequency_default(self, connected_radio: IcomRadio) -> None:
-        freq = await connected_radio.get_frequency()
+        freq = await connected_radio.get_freq()
         assert freq == 14_074_000
 
     async def test_set_and_get_frequency(
         self, connected_radio: IcomRadio, mock_radio: MockIcomRadio
     ) -> None:
-        await connected_radio.set_frequency(7_074_000)
+        await connected_radio.set_freq(7_074_000)
         await asyncio.sleep(
             0.05
         )  # fire-and-forget: give mock time to receive and process UDP
         assert mock_radio._frequency == 7_074_000
-        freq = await connected_radio.get_frequency()
+        freq = await connected_radio.get_freq()
         assert freq == 7_074_000
 
     async def test_set_frequency_updates_internal_state(
         self, connected_radio: IcomRadio
     ) -> None:
-        await connected_radio.set_frequency(3_573_000)
-        freq = await connected_radio.get_frequency()
+        await connected_radio.set_freq(3_573_000)
+        freq = await connected_radio.get_freq()
         assert freq == 3_573_000
 
 
@@ -142,22 +142,22 @@ class TestMode:
 
 class TestPower:
     async def test_get_power_default(self, connected_radio: IcomRadio) -> None:
-        power = await connected_radio.get_power()
+        power = await connected_radio.get_rf_power()
         assert power == 100
 
     async def test_set_and_get_power(self, connected_radio: IcomRadio) -> None:
-        await connected_radio.set_power(200)
-        power = await connected_radio.get_power()
+        await connected_radio.set_rf_power(200)
+        power = await connected_radio.get_rf_power()
         assert power == 200
 
     async def test_set_power_zero(self, connected_radio: IcomRadio) -> None:
-        await connected_radio.set_power(0)
-        power = await connected_radio.get_power()
+        await connected_radio.set_rf_power(0)
+        power = await connected_radio.get_rf_power()
         assert power == 0
 
     async def test_set_power_max(self, connected_radio: IcomRadio) -> None:
-        await connected_radio.set_power(255)
-        power = await connected_radio.get_power()
+        await connected_radio.set_rf_power(255)
+        power = await connected_radio.get_rf_power()
         assert power == 255
 
 

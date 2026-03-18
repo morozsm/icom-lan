@@ -75,7 +75,7 @@ def _make_radio(model: str = "IC-7610", active: str = "MAIN") -> MagicMock:
     radio.capabilities = set(profile.capabilities)
     radio._radio_state = SimpleNamespace(active=active)
     radio.send_civ = AsyncMock(return_value=None)
-    radio.set_frequency = AsyncMock()
+    radio.set_freq = AsyncMock()
     radio.set_mode = AsyncMock()
     radio.enable_scope = AsyncMock()
     radio.disable_scope = AsyncMock()
@@ -139,7 +139,7 @@ class TestSetBandBSRRecall:
 
         await poller._execute(SetBand(band=5))  # noqa: SLF001
 
-        radio.set_frequency.assert_awaited_once_with(14264000)
+        radio.set_freq.assert_awaited_once_with(14264000)
         radio.set_mode.assert_awaited_once_with("USB", 1)
 
     @pytest.mark.asyncio
@@ -219,8 +219,8 @@ class TestSetBandFallback:
         await poller._execute(SetBand(band=5))  # noqa: SLF001
 
         # Fallback: default 20m freq from ic7300.toml
-        radio.set_frequency.assert_awaited_once()
-        freq_arg = radio.set_frequency.call_args[0][0]
+        radio.set_freq.assert_awaited_once()
+        freq_arg = radio.set_freq.call_args[0][0]
         assert 13_900_000 <= freq_arg <= 14_500_000  # within 20m band
 
     @pytest.mark.asyncio
@@ -237,7 +237,7 @@ class TestSetBandFallback:
         poller = _make_poller(radio, model="IC-7300")
         await poller._execute(SetBand(band=5))  # noqa: SLF001
 
-        radio.set_frequency.assert_awaited_once()
+        radio.set_freq.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_fallback_when_send_civ_raises(self) -> None:
@@ -249,8 +249,8 @@ class TestSetBandFallback:
         await poller._execute(SetBand(band=3))  # noqa: SLF001
 
         # Fallback: default 40m freq
-        radio.set_frequency.assert_awaited_once()
-        freq_arg = radio.set_frequency.call_args[0][0]
+        radio.set_freq.assert_awaited_once()
+        freq_arg = radio.set_freq.call_args[0][0]
         assert 6_900_000 <= freq_arg <= 7_500_000  # within 40m band
 
     @pytest.mark.asyncio
@@ -264,7 +264,7 @@ class TestSetBandFallback:
         await poller._execute(SetBand(band=99))  # noqa: SLF001
 
         # No frequency set (unknown band, no fallback)
-        radio.set_frequency.assert_not_awaited()
+        radio.set_freq.assert_not_awaited()
 
 
 # ---------------------------------------------------------------------------

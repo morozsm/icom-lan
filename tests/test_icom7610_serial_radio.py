@@ -181,7 +181,7 @@ async def test_serial_radio_connect_disconnect_and_core_command_execution() -> N
     await radio.connect()
     assert radio.connected is True
     assert radio.control_connected is True
-    assert await radio.get_frequency() == 14_074_000
+    assert await radio.get_freq() == 14_074_000
     assert link.sent_frames
     assert radio.radio_ready is True
 
@@ -474,6 +474,6 @@ async def test_serial_scope_flood_does_not_starve_get_frequency() -> None:
     )
     await radio.connect()
     await radio.enable_scope(policy="fast")
-    assert await radio.get_frequency() == 14_074_000
+    assert await radio.get_freq() == 14_074_000
     await radio.disable_scope(policy="fast")
     await radio.disconnect()

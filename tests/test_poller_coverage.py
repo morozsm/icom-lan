@@ -43,7 +43,7 @@ def cache() -> StateCache:
 @pytest.fixture
 def mock_radio() -> AsyncMock:
     radio = AsyncMock()
-    radio.get_frequency.return_value = 14_074_000
+    radio.get_freq.return_value = 14_074_000
     radio.get_mode_info.return_value = (Mode.USB, 1)
     radio.get_data_mode.return_value = False
     return radio
@@ -104,7 +104,7 @@ async def test_run_skips_poll_during_hold_window(
     await poller.start()
     await asyncio.sleep(0.05)
     await poller.stop()
-    mock_radio.get_frequency.assert_not_awaited()
+    mock_radio.get_freq.assert_not_awaited()
 
 
 async def test_run_resumes_polling_after_hold_expires(
@@ -137,7 +137,7 @@ async def test_poll_once_exits_early_if_write_busy_set_after_freq(
         poller.write_busy = True
         return 14_074_000
 
-    mock_radio.get_frequency.side_effect = get_freq_and_set_busy
+    mock_radio.get_freq.side_effect = get_freq_and_set_busy
     await poller._poll_once()
     # Mode should not be polled because write_busy was set mid-poll
     mock_radio.get_mode_info.assert_not_awaited()

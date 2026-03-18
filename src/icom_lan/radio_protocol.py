@@ -10,7 +10,7 @@ Quick start::
     from icom_lan.radio_protocol import Radio, AudioCapable
 
     async def tune(radio: Radio) -> None:
-        await radio.set_frequency(14_074_000)
+        await radio.set_freq(14_074_000)
         mode, filt = await radio.get_mode()
         print(f"Mode: {mode}, filter: {filt}")
 
@@ -102,7 +102,7 @@ class Radio(Protocol):
 
     # -- Frequency ---------------------------------------------------------
 
-    async def get_frequency(self, receiver: int = 0) -> int:
+    async def get_freq(self, receiver: int = 0) -> int:
         """Get the current frequency in Hz.
 
         Args:
@@ -110,7 +110,7 @@ class Radio(Protocol):
         """
         ...
 
-    async def set_frequency(self, freq: int, receiver: int = 0) -> None:
+    async def set_freq(self, freq: int, receiver: int = 0) -> None:
         """Set the frequency in Hz.
 
         Args:
@@ -236,7 +236,7 @@ class MetersCapable(Protocol):
         """Get SWR reading (1.0 = perfect match)."""
         ...
 
-    async def get_power(self) -> int:
+    async def get_rf_power(self) -> int:
         """Get TX power level (0-255 normalised scale)."""
         ...
 
@@ -253,7 +253,7 @@ class PowerControlCapable(Protocol):
         """
         ...
 
-    async def set_power(self, level: int) -> None:
+    async def set_rf_power(self, level: int) -> None:
         """Set TX power level (0-255 normalised scale).
 
         Args:

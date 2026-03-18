@@ -59,7 +59,7 @@ class TestVFO:
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
         mock_transport.queue_response(_ack_response())
-        await radio.select_vfo("A")
+        await radio.set_vfo("A")
         assert len(mock_transport.sent_packets) > 0
 
     @pytest.mark.asyncio
@@ -67,14 +67,14 @@ class TestVFO:
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
         mock_transport.queue_response(_ack_response())
-        await radio.select_vfo("B")
+        await radio.set_vfo("B")
 
     @pytest.mark.asyncio
     async def test_select_vfo_main(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
         mock_transport.queue_response(_ack_response())
-        await radio.select_vfo("MAIN")
+        await radio.set_vfo("MAIN")
 
     @pytest.mark.asyncio
     async def test_select_vfo_nak(
@@ -82,7 +82,7 @@ class TestVFO:
     ) -> None:
         mock_transport.queue_response(_nak_response())
         with pytest.raises(CommandError):
-            await radio.select_vfo("A")
+            await radio.set_vfo("A")
 
     @pytest.mark.asyncio
     async def test_vfo_equalize(
@@ -104,7 +104,7 @@ class TestVFO:
     async def test_select_vfo_disconnected(self) -> None:
         r = IcomRadio("192.168.1.100")
         with pytest.raises(ConnectionError):
-            await r.select_vfo("A")
+            await r.set_vfo("A")
 
     @pytest.mark.asyncio
     async def test_vfo_equalize_disconnected(self) -> None:
@@ -300,7 +300,7 @@ class TestReceiverAwareContract:
     async def test_get_frequency_receiver_sub_uses_vfo_fallback(
         self, radio: IcomRadio
     ) -> None:
-        radio.select_vfo = AsyncMock()  # type: ignore[method-assign]
+        radio.set_vfo = AsyncMock()  # type: ignore[method-assign]
         expected = 7_074_000
         radio._send_civ_raw = AsyncMock(  # type: ignore[method-assign]
             return_value=CivFrame(
@@ -312,16 +312,16 @@ class TestReceiverAwareContract:
             )
         )
 
-        got = await radio.get_frequency(receiver=1)
+        got = await radio.get_freq(receiver=1)
 
         assert got == expected
-        radio.select_vfo.assert_has_awaits([call("SUB"), call("MAIN")])
+        radio.set_vfo.assert_has_awaits([call("SUB"), call("MAIN")])
 
     @pytest.mark.asyncio
     async def test_get_mode_receiver_sub_uses_vfo_fallback(
         self, radio: IcomRadio
     ) -> None:
-        radio.select_vfo = AsyncMock()  # type: ignore[method-assign]
+        radio.set_vfo = AsyncMock()  # type: ignore[method-assign]
         radio._send_civ_raw = AsyncMock(  # type: ignore[method-assign]
             return_value=CivFrame(
                 to_addr=CONTROLLER_ADDR,
@@ -336,30 +336,30 @@ class TestReceiverAwareContract:
 
         assert mode_name == "LSB"
         assert filt == 2
-        radio.select_vfo.assert_has_awaits([call("SUB"), call("MAIN")])
+        radio.set_vfo.assert_has_awaits([call("SUB"), call("MAIN")])
 
     @pytest.mark.asyncio
     async def test_set_frequency_receiver_sub_uses_vfo_fallback(
         self, radio: IcomRadio
     ) -> None:
-        radio.select_vfo = AsyncMock()  # type: ignore[method-assign]
+        radio.set_vfo = AsyncMock()  # type: ignore[method-assign]
         radio._send_civ_raw = AsyncMock(return_value=None)  # type: ignore[method-assign]
 
-        await radio.set_frequency(14_074_000, receiver=1)
+        await radio.set_freq(14_074_000, receiver=1)
 
-        radio.select_vfo.assert_has_awaits([call("SUB"), call("MAIN")])
+        radio.set_vfo.assert_has_awaits([call("SUB"), call("MAIN")])
         radio._send_civ_raw.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_set_mode_receiver_sub_uses_vfo_fallback(
         self, radio: IcomRadio
     ) -> None:
-        radio.select_vfo = AsyncMock()  # type: ignore[method-assign]
+        radio.set_vfo = AsyncMock()  # type: ignore[method-assign]
         radio._send_civ_raw = AsyncMock(return_value=None)  # type: ignore[method-assign]
 
         await radio.set_mode("USB", receiver=1)
 
-        radio.select_vfo.assert_has_awaits([call("SUB"), call("MAIN")])
+        radio.set_vfo.assert_has_awaits([call("SUB"), call("MAIN")])
         radio._send_civ_raw.assert_awaited_once()
 
     @pytest.mark.asyncio

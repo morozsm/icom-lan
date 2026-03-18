@@ -40,11 +40,11 @@ def test_sync_wrappers_delegate_and_return_values() -> None:
     r._radio._ctrl_transport._udp_transport = MagicMock()
     r._radio._civ_transport = MagicMock()
     r._radio._conn_state = RadioConnectionState.CONNECTED
-    r._radio.get_frequency = AsyncMock(return_value=7_100_000)
+    r._radio.get_freq = AsyncMock(return_value=7_100_000)
     r._radio.get_mode = AsyncMock(return_value=("USB", 2))
     r._radio.get_mode_info = AsyncMock(return_value=("USB", 2))
     r._radio.get_filter = AsyncMock(return_value=2)
-    r._radio.get_power = AsyncMock(return_value=200)
+    r._radio.get_rf_power = AsyncMock(return_value=200)
     r._radio.get_s_meter = AsyncMock(return_value=99)
     r._radio.get_swr = AsyncMock(return_value=10)
     r._radio.get_alc = AsyncMock(return_value=5)
@@ -54,12 +54,12 @@ def test_sync_wrappers_delegate_and_return_values() -> None:
     r._radio.get_digisel = AsyncMock(return_value=False)
     r._radio.snapshot_state = AsyncMock(return_value={"freq": 7100000})
 
-    r._radio.set_frequency = AsyncMock()
+    r._radio.set_freq = AsyncMock()
     r._radio.set_filter = AsyncMock()
     r._radio.set_mode = AsyncMock()
-    r._radio.set_power = AsyncMock()
+    r._radio.set_rf_power = AsyncMock()
     r._radio.set_ptt = AsyncMock()
-    r._radio.select_vfo = AsyncMock()
+    r._radio.set_vfo = AsyncMock()
     r._radio.vfo_equalize = AsyncMock()
     r._radio.vfo_exchange = AsyncMock()
     r._radio.set_split_mode = AsyncMock()
@@ -72,11 +72,11 @@ def test_sync_wrappers_delegate_and_return_values() -> None:
     r._radio.stop_cw_text = AsyncMock()
     r._radio.set_powerstat = AsyncMock()
 
-    assert r.get_frequency() == 7_100_000
+    assert r.get_freq() == 7_100_000
     assert r.get_mode() == ("USB", 2)
     assert r.get_mode_info() == ("USB", 2)
     assert r.get_filter() == 2
-    assert r.get_power() == 200
+    assert r.get_rf_power() == 200
     assert r.get_s_meter() == 99
     assert r.get_swr() == 10
     assert r.get_alc() == 5
@@ -86,12 +86,12 @@ def test_sync_wrappers_delegate_and_return_values() -> None:
     assert r.get_digisel() is False
     assert r.snapshot_state() == {"freq": 7100000}
 
-    r.set_frequency(7100000)
+    r.set_freq(7100000)
     r.set_filter(2)
     r.set_mode("LSB", 1)
-    r.set_power(150)
+    r.set_rf_power(150)
     r.set_ptt(True)
-    r.select_vfo("B")
+    r.set_vfo("B")
     r.vfo_equalize()
     r.vfo_exchange()
     r.set_split_mode(True)
@@ -104,12 +104,12 @@ def test_sync_wrappers_delegate_and_return_values() -> None:
     r.stop_cw_text()
     r.power_control(False)
 
-    r._radio.set_frequency.assert_awaited_once_with(7100000)
+    r._radio.set_freq.assert_awaited_once_with(7100000)
     r._radio.set_filter.assert_awaited_once_with(2)
     r._radio.set_mode.assert_awaited_once_with("LSB", 1)
-    r._radio.set_power.assert_awaited_once_with(150)
+    r._radio.set_rf_power.assert_awaited_once_with(150)
     r._radio.set_ptt.assert_awaited_once_with(True)
-    r._radio.select_vfo.assert_awaited_once_with("B")
+    r._radio.set_vfo.assert_awaited_once_with("B")
     r._radio.vfo_equalize.assert_awaited_once()
     r._radio.vfo_exchange.assert_awaited_once()
     r._radio.set_split_mode.assert_awaited_once_with(True)

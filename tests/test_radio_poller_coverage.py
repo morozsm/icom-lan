@@ -39,11 +39,11 @@ def _make_radio(active: str = "MAIN") -> MagicMock:
     radio.capabilities = set(profile.capabilities)
     radio._radio_state = SimpleNamespace(active=active)
     radio.send_civ = AsyncMock()
-    radio.set_frequency = AsyncMock()
+    radio.set_freq = AsyncMock()
     radio.set_mode = AsyncMock()
     radio.set_filter = AsyncMock()
     radio.set_ptt = AsyncMock()
-    radio.set_power = AsyncMock()
+    radio.set_rf_power = AsyncMock()
     radio.set_rf_gain = AsyncMock()
     radio.set_af_level = AsyncMock()
     radio.set_squelch = AsyncMock()
@@ -94,13 +94,13 @@ async def test_current_active_defaults_and_setfreq_setmode_branches() -> None:
     radio._radio_state.active = "MAIN"
     await poller._execute(SetFreq(14_074_000, receiver=1))  # noqa: SLF001
     assert radio.send_civ.await_count >= 2
-    radio.set_frequency.assert_awaited_once_with(14_074_000)
+    radio.set_freq.assert_awaited_once_with(14_074_000)
 
     radio2 = _make_radio(active="SUB")
     poller2 = RadioPoller(radio2, StateCache(), CommandQueue())
     await poller2._execute(SetFreq(7_074_000, receiver=0))  # noqa: SLF001
     assert radio2.send_civ.await_count >= 2
-    radio2.set_frequency.assert_awaited_once_with(7_074_000)
+    radio2.set_freq.assert_awaited_once_with(7_074_000)
 
     await poller._execute(SetMode("USB", filter_width=2, receiver=1))  # noqa: SLF001
     radio.set_mode.assert_awaited_once_with("USB", 2)

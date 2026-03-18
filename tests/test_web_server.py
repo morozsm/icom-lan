@@ -233,13 +233,13 @@ def mock_radio() -> MagicMock:
         "digisel",
         "ip_plus",
     }
-    radio.get_frequency = AsyncMock(return_value=14_074_000)
+    radio.get_freq = AsyncMock(return_value=14_074_000)
     radio.get_mode = AsyncMock(return_value=MagicMock(name="USB"))
     radio.get_mode.return_value.name = "USB"
     _mode_mock = MagicMock(name="USB")
     _mode_mock.name = "USB"
     radio.get_mode_info = AsyncMock(return_value=(_mode_mock, 1))
-    radio.get_power = AsyncMock(return_value=100)
+    radio.get_rf_power = AsyncMock(return_value=100)
     radio.get_filter = AsyncMock(return_value=1)
     radio.get_s_meter = AsyncMock(return_value=42)
     radio.get_swr = AsyncMock(return_value=10)
@@ -249,16 +249,16 @@ def mock_radio() -> MagicMock:
     radio.get_attenuator_level = AsyncMock(return_value=0)
     radio.get_preamp = AsyncMock(return_value=1)
     radio.get_data_mode = AsyncMock(return_value=False)
-    radio.set_frequency = AsyncMock()
+    radio.set_freq = AsyncMock()
     radio.set_mode = AsyncMock()
     radio.set_filter = AsyncMock()
-    radio.set_power = AsyncMock()
+    radio.set_rf_power = AsyncMock()
     radio.set_ptt = AsyncMock()
     radio.set_rf_gain = AsyncMock()
     radio.set_af_level = AsyncMock()
     radio.set_attenuator_level = AsyncMock()
     radio.set_preamp = AsyncMock()
-    radio.select_vfo = AsyncMock()
+    radio.set_vfo = AsyncMock()
     radio.vfo_swap = AsyncMock()
     radio.vfo_exchange = AsyncMock()
     radio.vfo_equalize = AsyncMock()
@@ -1770,10 +1770,10 @@ class TestRadioPoller:
         radio._radio_state = SimpleNamespace(active="MAIN")
         mode_mock = MagicMock()
         mode_mock.name = "USB"
-        radio.get_frequency = AsyncMock(return_value=14074000)
+        radio.get_freq = AsyncMock(return_value=14074000)
         radio.get_mode_info = AsyncMock(return_value=(mode_mock, 1))
         radio.get_s_meter = AsyncMock(return_value=42)
-        radio.get_power = AsyncMock(return_value=100)
+        radio.get_rf_power = AsyncMock(return_value=100)
         radio.get_swr = AsyncMock(return_value=10)
         radio.get_alc = AsyncMock(return_value=5)
         radio.get_rf_gain = AsyncMock(return_value=128)
@@ -1781,7 +1781,7 @@ class TestRadioPoller:
         radio.get_attenuator_level = AsyncMock(return_value=0)
         radio.get_preamp = AsyncMock(return_value=0)
         radio.get_data_mode = AsyncMock(return_value=False)
-        radio.set_frequency = AsyncMock()
+        radio.set_freq = AsyncMock()
         radio.set_mode = AsyncMock()
         radio.set_ptt = AsyncMock()
         radio.vfo_exchange = AsyncMock()
@@ -1861,7 +1861,7 @@ class TestRadioPoller:
         await asyncio.sleep(0.1)
         poller.stop()
 
-        radio.set_frequency.assert_awaited_with(7074000)
+        radio.set_freq.assert_awaited_with(7074000)
 
     async def test_poller_broadcasts_meter_readings(self) -> None:
         """RadioPoller polls meters via send_civ."""
@@ -1923,10 +1923,10 @@ class TestSwitchScopeReceiver:
         radio.state_cache = StateCache()
         radio.enable_scope = AsyncMock()
         radio.disable_scope = AsyncMock()
-        radio.set_frequency = AsyncMock()
+        radio.set_freq = AsyncMock()
         radio.set_mode = AsyncMock()
         radio.set_ptt = AsyncMock()
-        radio.set_power = AsyncMock()
+        radio.set_rf_power = AsyncMock()
         radio.set_rf_gain = AsyncMock()
         radio.set_af_level = AsyncMock()
         radio.set_attenuator_level = AsyncMock()
