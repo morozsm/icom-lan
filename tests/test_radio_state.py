@@ -15,7 +15,7 @@ def test_receiver_state_defaults() -> None:
     assert rx.mode == "USB"
     assert rx.filter is None
     assert rx.filter_width is None
-    assert rx.data_mode is False
+    assert rx.data_mode == 0
     assert rx.att == 0
     assert rx.preamp == 0
     assert rx.nb is False
