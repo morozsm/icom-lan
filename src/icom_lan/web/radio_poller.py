@@ -45,6 +45,7 @@ if TYPE_CHECKING:
 __all__ = [
     "RadioPoller",
     "CommandQueue",
+    "SetAgcTimeConstant",
     "SetPbtInner",
     "SetPbtOuter",
     "SetRitFrequency",
@@ -173,6 +174,76 @@ class SetPbtInner:
 class SetPbtOuter:
     level: int
     receiver: int = 0
+
+
+@dataclass(frozen=True, slots=True)
+class SetNRLevel:
+    level: int
+    receiver: int = 0
+
+
+@dataclass(frozen=True, slots=True)
+class SetNBLevel:
+    level: int
+    receiver: int = 0
+
+
+@dataclass(frozen=True, slots=True)
+class SetAutoNotch:
+    on: bool
+    receiver: int = 0
+
+
+@dataclass(frozen=True, slots=True)
+class SetManualNotch:
+    on: bool
+    receiver: int = 0
+
+
+@dataclass(frozen=True, slots=True)
+class SetNotchFilter:
+    level: int
+
+
+@dataclass(frozen=True, slots=True)
+class SetAgcTimeConstant:
+    value: int
+    receiver: int = 0
+
+
+@dataclass(frozen=True, slots=True)
+class SetCwPitch:
+    value: int
+
+
+@dataclass(frozen=True, slots=True)
+class SetMicGain:
+    level: int
+
+
+@dataclass(frozen=True, slots=True)
+class SetVox:
+    on: bool
+
+
+@dataclass(frozen=True, slots=True)
+class SetCompressorLevel:
+    level: int
+
+
+@dataclass(frozen=True, slots=True)
+class SetMonitor:
+    on: bool
+
+
+@dataclass(frozen=True, slots=True)
+class SetMonitorGain:
+    level: int
+
+
+@dataclass(frozen=True, slots=True)
+class SetDialLock:
+    on: bool
 
 
 @dataclass(frozen=True, slots=True)
@@ -341,6 +412,19 @@ Command = (
     | SetPreamp
     | SetPbtInner
     | SetPbtOuter
+    | SetNRLevel
+    | SetNBLevel
+    | SetAutoNotch
+    | SetManualNotch
+    | SetNotchFilter
+    | SetAgcTimeConstant
+    | SetCwPitch
+    | SetMicGain
+    | SetVox
+    | SetCompressorLevel
+    | SetMonitor
+    | SetMonitorGain
+    | SetDialLock
     | SetAgc
     | SetRitStatus
     | SetRitTxStatus
@@ -950,6 +1034,76 @@ class RadioPoller:
                     self._on_state_event(
                         "pbt_outer_changed", {"level": level, "receiver": rx}
                     )
+            case SetNRLevel(level=level, receiver=rx):
+                await radio.set_nr_level(level, receiver=rx)
+                if self._radio_state:
+                    target = self._radio_state.sub if rx != 0 else self._radio_state.main
+                    target.nr_level = level
+                    self.bump_revision()
+            case SetNBLevel(level=level, receiver=rx):
+                await radio.set_nb_level(level, receiver=rx)
+                if self._radio_state:
+                    target = self._radio_state.sub if rx != 0 else self._radio_state.main
+                    target.nb_level = level
+                    self.bump_revision()
+            case SetAutoNotch(on=on, receiver=rx):
+                await radio.set_auto_notch(on, receiver=rx)
+                if self._radio_state:
+                    target = self._radio_state.sub if rx != 0 else self._radio_state.main
+                    target.auto_notch = on
+                    self.bump_revision()
+            case SetManualNotch(on=on, receiver=rx):
+                await radio.set_manual_notch(on, receiver=rx)
+                if self._radio_state:
+                    target = self._radio_state.sub if rx != 0 else self._radio_state.main
+                    target.manual_notch = on
+                    self.bump_revision()
+            case SetNotchFilter(level=level):
+                await radio.set_notch_filter(level)
+                if self._radio_state:
+                    self._radio_state.notch_filter = level
+                    self.bump_revision()
+            case SetAgcTimeConstant(value=value, receiver=rx):
+                await radio.set_agc_time_constant(value, receiver=rx)
+                if self._radio_state:
+                    target = self._radio_state.sub if rx != 0 else self._radio_state.main
+                    target.agc_time_constant = value
+                    self.bump_revision()
+            case SetCwPitch(value=value):
+                await radio.set_cw_pitch(value)
+                if self._radio_state:
+                    self._radio_state.cw_pitch = value
+                    self.bump_revision()
+            case SetMicGain(level=level):
+                await radio.set_mic_gain(level)
+                if self._radio_state:
+                    self._radio_state.mic_gain = level
+                    self.bump_revision()
+            case SetVox(on=on):
+                await radio.set_vox(on)
+                if self._radio_state:
+                    self._radio_state.vox_on = on
+                    self.bump_revision()
+            case SetCompressorLevel(level=level):
+                await radio.set_compressor_level(level)
+                if self._radio_state:
+                    self._radio_state.compressor_level = level
+                    self.bump_revision()
+            case SetMonitor(on=on):
+                await radio.set_monitor(on)
+                if self._radio_state:
+                    self._radio_state.monitor_on = on
+                    self.bump_revision()
+            case SetMonitorGain(level=level):
+                await radio.set_monitor_gain(level)
+                if self._radio_state:
+                    self._radio_state.monitor_gain = level
+                    self.bump_revision()
+            case SetDialLock(on=on):
+                await radio.set_dial_lock(on)
+                if self._radio_state:
+                    self._radio_state.dial_lock = on
+                    self.bump_revision()
             case SetAgc(mode=mode):
                 # Wire bytes from TOML: set_agc = [0x16, 0x12]
                 await self._send_cmd("set_agc", bytes([mode]))
