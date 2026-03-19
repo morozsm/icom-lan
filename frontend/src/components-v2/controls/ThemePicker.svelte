@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { Palette } from 'lucide-svelte';
   import { getAvailableThemes, getTheme, setTheme, type ThemeInfo } from '../theme/theme-switcher';
 
   let isOpen = $state(false);
@@ -50,7 +51,7 @@
     bind:this={buttonElement}
     title="Choose theme"
   >
-    🎨
+    <Palette size={14} strokeWidth={1.5} />
   </button>
 
   {#if isOpen}
@@ -85,23 +86,26 @@
   }
 
   .theme-button {
-    width: 32px;
-    height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--v2-bg-input);
-    border: 1px solid var(--v2-border);
-    border-radius: 4px;
+    padding: 4px 8px;
+    background: var(--v2-bg-input, #1a1a2e);
+    border: 1px solid var(--v2-border, #2a2a3e);
+    border-radius: 3px;
+    color: var(--v2-text-dim, #888);
     cursor: pointer;
-    font-size: 16px;
     transition: all 0.15s ease;
   }
 
   .theme-button:hover {
-    background: var(--v2-bg-card);
-    border-color: var(--v2-accent-cyan);
-    box-shadow: var(--v2-glow-cyan);
+    background: var(--v2-bg-card, #252540);
+    border-color: var(--v2-accent-cyan, #06b6d4);
+    color: var(--v2-text-primary, #fff);
+  }
+
+  .theme-button:active {
+    transform: scale(0.95);
   }
 
   .theme-dropdown {

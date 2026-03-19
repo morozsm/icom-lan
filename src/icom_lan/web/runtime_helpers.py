@@ -116,6 +116,9 @@ def build_public_state_payload(
     revision: int,
     receiver_count: int,
     updated_at: str | None = None,
+    scope_clients: int = 0,
+    control_clients: int = 0,
+    audio_clients: int = 0,
 ) -> dict[str, Any]:
     """Build the canonical public web state payload from RadioState.
 
@@ -139,4 +142,21 @@ def build_public_state_payload(
     )
     if receiver_count < 2:
         state.pop("sub", None)
+
+    # Radio connection detail for status bar
+    conn_state_val = getattr(radio, "conn_state", None) if radio else None
+    radio_status: str = "disconnected"
+    if conn_state_val is not None and hasattr(conn_state_val, "value"):
+        raw_val = conn_state_val.value
+        if isinstance(raw_val, str):
+            radio_status = raw_val
+    state["radio_detail"] = {
+        "status": radio_status,
+    }
+    state["ws_clients"] = {
+        "scope": scope_clients,
+        "control": control_clients,
+        "audio": audio_clients,
+    }
+
     return _camel_case_state(state)

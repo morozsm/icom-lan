@@ -1,7 +1,7 @@
 import type { ServerState } from '../types/state';
 import type { Capabilities } from '../types/capabilities';
 import type { InfoResponse } from '../types/protocol';
-import { markStateUpdated, setHttpConnected, setReconnecting } from '../stores/connection.svelte';
+import { markStateUpdated, setHttpConnected, setRadioStatus, setReconnecting } from '../stores/connection.svelte';
 
 const BASE = '/api/v1';
 
@@ -77,6 +77,9 @@ export function startPolling(
         setReconnecting(false);
         setHttpConnected(true);
         markStateUpdated();
+        if (state.radioDetail?.status) {
+          setRadioStatus(state.radioDetail.status);
+        }
         if (state.revision > lastRevision) {
           lastRevision = state.revision;
           callback(state);

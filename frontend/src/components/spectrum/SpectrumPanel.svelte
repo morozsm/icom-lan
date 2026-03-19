@@ -13,6 +13,7 @@
     type ColorSchemeName,
   } from '../../lib/renderers/waterfall-renderer';
   import { getChannel, onMessage, sendCommand } from '../../lib/transport/ws-client';
+  import { setScopeConnected, markScopeFrame } from '../../lib/stores/connection.svelte';
   import { type DxSpot } from '../../lib/types/protocol';
   import { patchActiveReceiver, radio } from '../../lib/stores/radio.svelte';
   import { getFilterWidthHz } from '../../lib/utils/filter-width';
@@ -199,7 +200,11 @@
     // Scope data arrives on its own WebSocket channel
     const scopeCh = getChannel('scope');
     scopeCh.connect('/api/v1/scope');
+    const unsubState = scopeCh.onStateChange((s) => {
+      setScopeConnected(s === 'connected');
+    });
     const unsubBinary = scopeCh.onBinary((buf) => {
+      markScopeFrame();
       const frame = parseScopeFrame(buf);
       if (!frame) return;
       if (frame.startFreq !== startFreq || frame.endFreq !== endFreq) {
@@ -225,6 +230,7 @@
     });
 
     return () => {
+      unsubState();
       unsubBinary();
       unsubMsg();
       scopeCh.disconnect();
