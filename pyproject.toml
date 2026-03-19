@@ -66,12 +66,13 @@ asyncio_default_fixture_loop_scope = "function"
 markers = [
     "integration: tests requiring real radio hardware (skip if not configured)",
     "e2e: end-to-end tests for PCM API and CLI audio workflows",
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
 ]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = "-v --tb=short"
+addopts = "-v --tb=short -m 'not slow'"
 
 [tool.ruff]
 target-version = "py311"
