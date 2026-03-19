@@ -165,7 +165,7 @@ describe('accent color', () => {
   it('uses default cyan accent when not specified', () => {
     const t = mountSlider({ value: 50, label: 'X', onchange: vi.fn() });
     const style = getWrapper(t).getAttribute('style') ?? '';
-    expect(style).toContain('#00D4FF');
+    expect(style).toContain('var(--v2-accent-cyan)');
   });
 });
 

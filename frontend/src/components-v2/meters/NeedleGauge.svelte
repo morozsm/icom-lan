@@ -82,8 +82,8 @@
   <rect
     x="0" y="0" width={VW} height={VH}
     rx="8"
-    fill="#07090D"
-    stroke="#1E252C"
+    fill="var(--v2-bg-darkest)"
+    stroke="var(--v2-bg-panel)"
     stroke-width="1"
   />
 
@@ -91,7 +91,7 @@
   <path
     d={arcPath(CX, CY, R, GAUGE_START_DEG, GAUGE_END_DEG)}
     fill="none"
-    stroke="#1E252C"
+    stroke="var(--v2-bg-panel)"
     stroke-width={ARC_W + 2}
     stroke-linecap="round"
   />
@@ -101,7 +101,7 @@
     <path
       d={arcPath(CX, CY, R, GAUGE_START_DEG, greenEndAngle)}
       fill="none"
-      stroke="#14A665"
+      stroke="var(--v2-accent-green-dark)"
       stroke-width={ARC_W}
       stroke-linecap="round"
     />
@@ -112,7 +112,7 @@
     <path
       d={arcPath(CX, CY, R, yellowStartAngle, yellowEndAngle)}
       fill="none"
-      stroke="#F2CF4A"
+      stroke="var(--v2-accent-yellow)"
       stroke-width={ARC_W}
       stroke-linecap="round"
     />
@@ -123,7 +123,7 @@
     <path
       d={arcPath(CX, CY, R, redStartAngle, redEndAngle)}
       fill="none"
-      stroke="#F14C42"
+      stroke="var(--v2-accent-red-alt)"
       stroke-width={ARC_W}
       stroke-linecap="round"
     />
@@ -135,7 +135,7 @@
     {@const tickBase = polar(CX, CY, R, angle)}
     {@const tickTip  = polar(CX, CY, R_TICK_OUT, angle)}
     {@const labelPt  = polar(CX, CY, R_LABEL, angle)}
-    {@const color    = mark.color ?? '#6F8196'}
+    {@const color    = mark.color ?? 'var(--v2-text-dim)'}
 
     <line
       x1={tickBase.x} y1={tickBase.y}
@@ -162,13 +162,13 @@
   <line
     x1={CX}         y1={CY}
     x2={needleTip.x} y2={needleTip.y}
-    stroke="#F0F5FA"
+    stroke="var(--v2-text-bright)"
     stroke-width={compact ? 1.5 : 2}
     stroke-linecap="round"
   />
 
   <!-- Pivot circle -->
-  <circle cx={CX} cy={CY} r={PIVOT_R} fill="#6F8196" />
+  <circle cx={CX} cy={CY} r={PIVOT_R} fill="var(--v2-text-dim)" />
 
   <!-- Display value — large, centred inside the arc -->
   <text
@@ -179,7 +179,7 @@
     font-family="'Roboto Mono', monospace"
     font-size={DISP_FS}
     font-weight="700"
-    fill="#F0F5FA"
+    fill="var(--v2-text-bright)"
   >{displayValue}</text>
 
   <!-- Label name — small, muted, below pivot -->
@@ -191,7 +191,7 @@
     font-family="'Roboto Mono', monospace"
     font-size={LBL_FS}
     letter-spacing="1.5"
-    fill="#6F8196"
+    fill="var(--v2-text-dim)"
   >{label}</text>
 </svg>
 

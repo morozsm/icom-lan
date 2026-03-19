@@ -71,7 +71,7 @@
           max={255}
           step={1}
           renderer="hbar"
-          accentColor="#00D4FF"
+          accentColor="var(--v2-accent-cyan)"
           onChange={onNrLevelChange}
         />
       </div>
@@ -95,7 +95,7 @@
           max={255}
           step={1}
           renderer="hbar"
-          accentColor="#FFB800"
+          accentColor="var(--v2-accent-yellow)"
           onChange={onNbLevelChange}
         />
       </div>
@@ -117,7 +117,7 @@
           step={1}
           unit="Hz"
           renderer="hbar"
-          accentColor="#00D4FF"
+          accentColor="var(--v2-accent-cyan)"
           onChange={onNotchFreqChange}
         />
       {/if}
@@ -141,7 +141,7 @@
           step={1}
           unit="Hz"
           renderer="hbar"
-          accentColor="#00D4FF"
+          accentColor="var(--v2-accent-cyan)"
           onChange={onCwPitchChange}
         />
       </div>
@@ -152,8 +152,8 @@
 
 <style>
   .panel {
-    background: #060A10;
-    border: 1px solid #18202A;
+    background: var(--v2-bg-darker);
+    border: 1px solid var(--v2-border-dark);
     border-radius: 4px;
     overflow: hidden;
   }
@@ -165,7 +165,7 @@
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.08em;
-    border-bottom: 1px solid #18202A;
+    border-bottom: 1px solid var(--v2-border-dark);
   }
 
   .panel-body {

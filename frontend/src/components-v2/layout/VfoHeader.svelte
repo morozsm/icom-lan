@@ -122,7 +122,7 @@
     display: flex;
     align-items: stretch;
     justify-content: center;
-    border: 1px solid #18222d;
+    border: 1px solid var(--v2-border-panel);
     border-radius: 4px;
     background: linear-gradient(180deg, rgba(9, 14, 19, 0.96) 0%, rgba(6, 10, 15, 0.96) 100%);
     padding: 0 var(--vfo-bridge-pad-x, 4px);
@@ -168,14 +168,14 @@
   }
 
   .split-status-title {
-    color: #7d91a5;
+    color: var(--v2-text-muted);
     font-size: 7px;
     font-weight: 700;
     letter-spacing: 0.1em;
   }
 
   .split-status-row {
-    color: #aebed0;
+    color: var(--v2-text-secondary);
     font-size: 7px;
     font-weight: 700;
     letter-spacing: 0.08em;

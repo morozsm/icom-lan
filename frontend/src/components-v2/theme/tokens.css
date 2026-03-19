@@ -3,8 +3,16 @@
   --v2-bg-app: #121720;
   --v2-bg-card: #0E1420;
   --v2-bg-input: #151C28;
+  --v2-bg-darker: #060A10;
+  --v2-bg-darkest: #07090D;
+  --v2-bg-panel: #1E252C;
+  --v2-bg-gradient-start: #0d1117;
+  --v2-bg-gradient-panel: #1a1a2e;
   --v2-border: #243040;
   --v2-border-subtle: #2A3340;
+  --v2-border-dark: #18202A;
+  --v2-border-darker: #1a2734;
+  --v2-border-panel: #18222d;
 
   /* ── Colors: Accents ─────────────────────────────────────────────────────── */
   --v2-accent-cyan: #00D4FF;
@@ -12,12 +20,29 @@
   --v2-accent-red: #FF2020;
   --v2-accent-green: #00CC66;
   --v2-accent-yellow: #F2CF4A;
+  --v2-accent-green-bright: #4ED37B;
+  --v2-accent-green-medium: #18CC79;
+  --v2-accent-green-dark: #14A665;
+  --v2-accent-red-alt: #F14C42;
+  --v2-accent-orange-alt: #F08B31;
+  --v2-accent-cyan-bright: #7CFCE5;
+  --v2-accent-cyan-teal: #228899;
+  --v2-accent-cyan-alt: #00FFFF;
 
   /* ── Colors: Text (~10% brighter) ────────────────────────────────────── */
   --v2-text-primary: #F5F8FC;
   --v2-text-secondary: #A0B4C8;
   --v2-text-muted: #607890;
   --v2-text-header: #A0B8D0;
+  --v2-text-bright: #F0F5FA;
+  --v2-text-white: #FFFFFF;
+  --v2-text-light: #d8e3f0;
+  --v2-text-lighter: #EAF1F8;
+  --v2-text-dim: #6F8196;
+  --v2-text-dimmer: #546578;
+  --v2-text-disabled: #4D6074;
+  --v2-text-subdued: #8ca0b8;
+  --v2-text-subtle: #7b8da1;
 
   /* ── Typography ──────────────────────────────────────────────────────────── */
   --v2-font-mono: 'Roboto Mono', monospace;
@@ -43,4 +68,22 @@
   --v2-glow-cyan: 0 0 8px rgba(0, 212, 255, 0.15);
   --v2-glow-orange: 0 0 8px rgba(255, 106, 0, 0.15);
   --v2-glow-red: 0 0 8px rgba(255, 32, 32, 0.15);
+
+  /* ── Effects: Shadows ────────────────────────────────────────────────────── */
+  --v2-shadow-sm: 0 6px 18px rgba(0, 0, 0, 0.28);
+  --v2-shadow-md: 0 12px 24px rgba(0, 0, 0, 0.32);
+  --v2-shadow-lg: 0 32px 80px rgba(0, 0, 0, 0.46);
+
+  /* ── Effects: Overlays ───────────────────────────────────────────────────── */
+  --v2-overlay-dark: rgba(8, 14, 20, 0.94);
+  --v2-overlay-darker: rgba(5, 9, 14, 0.98);
+  --v2-overlay-medium: rgba(10, 16, 22, 0.9);
+  --v2-overlay-light: rgba(10, 16, 22, 0.72);
+
+  /* ── Effects: Borders with opacity ───────────────────────────────────────── */
+  --v2-border-soft: rgba(72, 96, 122, 0.42);
+  --v2-border-softer: rgba(72, 96, 122, 0.24);
+  --v2-border-subtle-soft: rgba(72, 96, 122, 0.18);
+  --v2-border-cyan: rgba(0, 212, 255, 0.24);
+  --v2-border-cyan-bright: rgba(0, 212, 255, 0.48);
 }

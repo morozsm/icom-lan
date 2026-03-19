@@ -402,7 +402,7 @@ describe('accent color', () => {
     const { target } = mountAndTrack({
       options: ATT_OPTIONS, selected: 0, onchange: vi.fn(),
     });
-    expect(getContainer(target).getAttribute('style')).toContain('--accent: #00D4FF');
+    expect(getContainer(target).getAttribute('style')).toContain('--accent: var(--v2-accent-cyan)');
   });
 
   it('applies a different accent color (green)', () => {

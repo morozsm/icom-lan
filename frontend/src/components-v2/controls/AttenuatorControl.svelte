@@ -19,7 +19,7 @@
     values,
     selected,
     onchange,
-    accentColor = '#00D4FF',
+    accentColor = 'var(--v2-accent-cyan)',
     shortcutHint = null,
     title = null,
   }: Props = $props();
@@ -110,8 +110,8 @@
 
   .more-button {
     width: 100%;
-    --control-accent: #00d4ff;
-    --control-active-text: #f0f5fa;
+    --control-accent: var(--v2-accent-cyan);
+    --control-active-text: var(--v2-text-bright);
     text-transform: none;
   }
 
@@ -132,15 +132,15 @@
     z-index: 41;
     min-width: min(220px, 100%);
     padding: 8px;
-    background: #0a1016;
-    border: 1px solid #1b2633;
+    background: var(--v2-bg-darkest);
+    border: 1px solid var(--v2-border-darker);
     border-radius: 4px;
     box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
   }
 
   .menu-title {
     margin-bottom: 6px;
-    color: #8ca0b8;
+    color: var(--v2-text-subdued);
     font-family: 'Roboto Mono', monospace;
     font-size: 10px;
     font-weight: 700;
@@ -155,8 +155,8 @@
   }
 
   .menu-item {
-    --control-accent: #00d4ff;
-    --control-active-text: #f0f5fa;
+    --control-accent: var(--v2-accent-cyan);
+    --control-active-text: var(--v2-text-bright);
     text-transform: none;
   }
 </style>

@@ -118,8 +118,8 @@
       var(--vfo-panel-meter-height, 58px)
       var(--vfo-panel-body-height, 64px);
     min-height: 100%;
-    background: linear-gradient(180deg, #0a1118 0%, #070c12 100%);
-    border: 1px solid #1a2734;
+    background: linear-gradient(180deg, var(--v2-bg-gradient-start) 0%, var(--v2-bg-darkest) 100%);
+    border: 1px solid var(--v2-border-darker);
     border-radius: 4px;
     overflow: hidden;
     font-family: 'Roboto Mono', monospace;
@@ -127,7 +127,7 @@
   }
 
   .panel.active {
-    border-color: rgba(0, 212, 255, 0.58);
+    border-color: var(--v2-border-cyan-bright);
     box-shadow: inset 0 0 0 1px rgba(0, 212, 255, 0.08);
   }
 
@@ -150,7 +150,7 @@
   }
 
   .vfo-label {
-    color: #9db0c4;
+    color: var(--v2-text-secondary);
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.14em;
@@ -164,7 +164,7 @@
     padding: 0 var(--vfo-header-badge-padding-x, 5px);
     border: 1px solid rgba(61, 110, 72, 0.9);
     border-radius: var(--vfo-panel-badge-radius, 3px);
-    color: #9ef6ac;
+    color: var(--v2-accent-green-bright);
     background: rgba(21, 74, 34, 0.68);
     font-size: var(--vfo-control-badge-font-size, 7px);
     font-weight: 700;
@@ -173,7 +173,7 @@
 
   .receiver-state[data-active='false'] {
     border-color: rgba(64, 81, 102, 0.86);
-    color: #8a9caf;
+    color: var(--v2-text-subdued);
     background: rgba(20, 27, 36, 0.74);
   }
 
@@ -197,15 +197,15 @@
   }
 
   .meter-tag {
-    border: 1px solid rgba(0, 212, 255, 0.54);
+    border: 1px solid var(--v2-border-cyan-bright);
     background: rgba(8, 53, 76, 0.62);
-    color: #12dfff;
+    color: var(--v2-accent-cyan);
   }
 
   .slot-tag {
-    border: 1px solid rgba(72, 91, 116, 0.56);
+    border: 1px solid var(--v2-border-soft);
     background: rgba(16, 23, 31, 0.8);
-    color: #8398ad;
+    color: var(--v2-text-muted);
   }
 
   .panel-meter {
@@ -224,8 +224,8 @@
     text-transform: uppercase;
     padding: 0 var(--vfo-control-badge-padding-x, 6px);
     border-radius: var(--vfo-panel-badge-radius, 3px);
-    border: 1px solid rgba(0, 212, 255, 0.45);
-    color: #eef6fc;
+    border: 1px solid var(--v2-border-cyan-bright);
+    color: var(--v2-text-primary);
     background: rgba(8, 58, 85, 0.66);
     cursor: pointer;
     user-select: none;
@@ -248,8 +248,8 @@
     text-transform: uppercase;
     padding: 0 var(--vfo-control-badge-padding-x, 6px);
     border-radius: var(--vfo-panel-badge-radius, 3px);
-    border: 1px solid rgba(61, 83, 105, 0.72);
-    color: #88a2ba;
+    border: 1px solid var(--v2-border-soft);
+    color: var(--v2-text-subdued);
     background: rgba(15, 24, 34, 0.86);
     user-select: none;
   }
@@ -304,13 +304,13 @@
     justify-content: center;
     min-height: 18px;
     padding: 0 7px;
-    border: 1px solid rgba(0, 212, 255, 0.48);
+    border: 1px solid var(--v2-border-cyan-bright);
     border-radius: 4px;
     background: rgba(9, 39, 56, 0.5);
     font-size: 9px;
     font-weight: 700;
     letter-spacing: 0.08em;
-    color: #00D4FF;
+    color: var(--v2-accent-cyan);
   }
 
   .rit-offset {
@@ -324,7 +324,7 @@
     background: rgba(62, 31, 7, 0.6);
     font-size: 10px;
     font-weight: 700;
-    color: #ffbf52;
+    color: var(--v2-accent-yellow);
   }
 
   .control-strip {
@@ -338,7 +338,7 @@
 
   .slot-readout,
   .band-readout {
-    color: #6f88a0;
+    color: var(--v2-text-muted);
     font-size: var(--vfo-control-badge-font-size, 7px);
     font-weight: 700;
     letter-spacing: 0.08em;

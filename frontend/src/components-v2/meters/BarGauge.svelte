@@ -62,8 +62,8 @@
   <rect
     x="0" y="0" width="300" height={TOTAL_HEIGHT}
     rx="6"
-    fill="#07090D"
-    stroke="#1E252C"
+    fill="var(--v2-bg-darkest)"
+    stroke="var(--v2-bg-panel)"
     stroke-width="1"
   />
 
@@ -75,7 +75,7 @@
     font-size={LABEL_FS}
     font-weight="700"
     letter-spacing="0.8"
-    fill="#6F8196"
+    fill="var(--v2-text-dim)"
     text-anchor="start"
     dominant-baseline="central"
   >{label}</text>
@@ -85,8 +85,8 @@
     x={BAR_X} y={TRACK_Y}
     width={BAR_WIDTH} height={TRACK_H}
     rx="1"
-    fill="#04070B"
-    stroke="#19212B"
+    fill="var(--v2-bg-darkest)"
+    stroke="var(--v2-bg-panel)"
     stroke-width="1"
   />
 
@@ -125,7 +125,7 @@
     font-family="'Roboto Mono', monospace"
     font-size={VALUE_FS}
     font-weight="700"
-    fill="#F0F5FA"
+    fill="var(--v2-text-bright)"
     text-anchor="start"
     dominant-baseline="central"
   >{displayValue}</text>

@@ -50,8 +50,8 @@
     displayFn,
     fillColor,
     fillGradient,
-    trackColor = '#2a2a3e',
-    accentColor = '#00D4FF',
+    trackColor = 'var(--v2-bg-panel)',
+    accentColor = 'var(--v2-accent-cyan)',
     showValue = true,
     showLabel = true,
     compact = false,
@@ -255,7 +255,7 @@
           y1={tick.y1}
           x2={tick.x2}
           y2={tick.y2}
-          stroke="#4D6074"
+          stroke="var(--v2-text-disabled)"
           stroke-width="1"
           class="vc-knob-tick"
         />
@@ -267,7 +267,7 @@
         y1={cy}
         x2={indicatorEnd.x}
         y2={indicatorEnd.y}
-        stroke="#ffffff"
+        stroke="var(--v2-text-white)"
         stroke-width="2"
         stroke-linecap="round"
         class="vc-knob-indicator"
@@ -278,8 +278,8 @@
         cx={cx}
         cy={cy}
         r="3"
-        fill="#1a1a2e"
-        stroke="#4D6074"
+        fill="var(--v2-bg-gradient-panel)"
+        stroke="var(--v2-text-disabled)"
         stroke-width="1"
         class="vc-knob-center"
       />
@@ -309,7 +309,7 @@
   }
 
   .vc-label {
-    color: var(--vc-text-label, #6F8196);
+    color: var(--vc-text-label, var(--v2-text-dim));
     font-size: 10px;
     text-align: center;
   }
@@ -363,7 +363,7 @@
     bottom: -2px;
     left: 50%;
     transform: translateX(-50%);
-    color: var(--vc-text-value, #F0F5FA);
+    color: var(--vc-text-value, var(--v2-text-bright));
     font-size: 10px;
     font-weight: 500;
     white-space: nowrap;
@@ -382,7 +382,7 @@
   }
 
   .vc-tick-label {
-    color: #546578;
+    color: var(--v2-text-dimmer);
     font-size: 8px;
   }
 </style>

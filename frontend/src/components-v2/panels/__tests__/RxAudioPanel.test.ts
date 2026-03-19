@@ -20,7 +20,16 @@ vi.mock('$lib/stores/capabilities.svelte', () => ({
 // ---------------------------------------------------------------------------
 
 describe('buildMonitorOptions', () => {
-  it('always includes LOCAL as first option', () => {
+  
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+it('always includes LOCAL as first option', () => {
     const options = buildMonitorOptions(false);
     expect(options[0]).toEqual({ value: 'local', label: 'LOCAL' });
   });
@@ -181,11 +190,22 @@ describe('monitor mode options', () => {
 });
 
 describe('callbacks', () => {
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('calls onAfLevelChange when AF Level slider changes', () => {
     const onAfLevelChange = vi.fn();
     const t = mountPanel({ ...baseProps, onAfLevelChange });
     const slider = t.querySelector<HTMLElement>('[role="slider"]');
     slider!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    vi.advanceTimersByTime(60);
+
     expect(onAfLevelChange).toHaveBeenCalled();
   });
 

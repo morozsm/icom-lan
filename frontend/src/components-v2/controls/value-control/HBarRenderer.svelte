@@ -44,8 +44,8 @@
     displayFn,
     fillColor,
     fillGradient,
-    trackColor = '#0d1117',
-    accentColor = '#00D4FF',
+    trackColor = 'var(--v2-bg-gradient-start)',
+    accentColor = 'var(--v2-accent-cyan)',
     showValue = true,
     showLabel = true,
     compact = false,
@@ -208,12 +208,12 @@
   }
 
   .vc-label {
-    color: var(--vc-text-label, #6F8196);
+    color: var(--vc-text-label, var(--v2-text-dim));
     text-align: left;
   }
 
   .vc-value {
-    color: var(--vc-text-value, #F0F5FA);
+    color: var(--vc-text-value, var(--v2-text-bright));
     font-family: 'Roboto Mono', monospace;
   }
 
@@ -259,7 +259,7 @@
   .vc-track-base {
     inset-inline: 0;
     height: var(--vc-bar-height, 4px);
-    background: var(--vc-track-color, #0d1117);
+    background: var(--vc-track-color, var(--v2-bg-gradient-start));
   }
 
   .compact .vc-track-base {
@@ -285,7 +285,7 @@
     width: var(--vc-thumb-size, 10px);
     height: var(--vc-thumb-size, 10px);
     border-radius: 2px;
-    background: #ffffff;
+    background: var(--v2-text-white);
     border: 1px solid var(--vc-accent);
     pointer-events: none;
     transition: box-shadow var(--vc-transition-fast);

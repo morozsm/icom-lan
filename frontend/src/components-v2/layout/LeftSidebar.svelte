@@ -159,7 +159,7 @@
     gap: 8px;
     padding: 8px 10px 10px;
     background: linear-gradient(180deg, rgba(8, 16, 24, 0.96), rgba(5, 11, 18, 0.96));
-    border: 1px solid #182a3a;
+    border: 1px solid var(--v2-border-darker);
     border-radius: 4px;
     font-family: 'Roboto Mono', monospace;
   }
@@ -173,18 +173,18 @@
 
   .step-header,
   .step-mode {
-    color: #8ca0b8;
+    color: var(--v2-text-subdued);
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.1em;
   }
 
   .step-mode {
-    color: #5fcfe8;
+    color: var(--v2-accent-cyan);
   }
 
   .step-value {
-    color: #eef7ff;
+    color: var(--v2-text-primary);
     font-size: 20px;
     font-weight: 700;
     letter-spacing: 0.03em;
@@ -201,10 +201,10 @@
     align-items: center;
     justify-content: center;
     min-height: 24px;
-    border: 1px solid #22364a;
+    border: 1px solid var(--v2-border);
     border-radius: 999px;
     background: rgba(10, 18, 26, 0.92);
-    color: #9cb3c9;
+    color: var(--v2-text-secondary);
     font-size: 9px;
     font-weight: 700;
     letter-spacing: 0.08em;

@@ -4,7 +4,7 @@
   interface Props {
     freq: number;       // frequency in Hz (e.g. 14235000)
     compact?: boolean;  // smaller variant (~18px vs ~28px)
-    active?: boolean;   // bright (#F0F5FA) vs dimmed (#4D6074)
+    active?: boolean;   // bright (var(--v2-text-bright)) vs dimmed (var(--v2-text-disabled))
   }
 
   let { freq, compact = false, active = true }: Props = $props();
@@ -27,7 +27,7 @@
     font-size: 24px;
     line-height: 1;
     letter-spacing: 0.035em;
-    color: #47ecff;
+    color: var(--v2-accent-cyan-bright);
     white-space: nowrap;
     user-select: none;
   }
@@ -37,7 +37,7 @@
   }
 
   .freq.inactive {
-    color: #628297;
+    color: var(--v2-text-muted);
   }
 
   .sep {

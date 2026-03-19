@@ -68,7 +68,7 @@
       max={255}
       step={1}
       renderer="hbar"
-      accentColor="#FF6A00"
+      accentColor="var(--v2-accent-orange)"
       onChange={onMicGainChange}
     />
 
@@ -103,7 +103,7 @@
         max={255}
         step={1}
         renderer="hbar"
-        accentColor="#FF6A00"
+        accentColor="var(--v2-accent-orange)"
         onChange={onCompLevelChange}
       />
     {/if}
@@ -119,7 +119,7 @@
         max={255}
         step={1}
         renderer="hbar"
-        accentColor="#FF6A00"
+        accentColor="var(--v2-accent-orange)"
         onChange={onMonLevelChange}
       />
     {/if}
@@ -130,8 +130,8 @@
 
 <style>
   .panel {
-    background: #060A10;
-    border: 1px solid #18202A;
+    background: var(--v2-bg-darker);
+    border: 1px solid var(--v2-border-dark);
     border-radius: 4px;
     overflow: hidden;
     font-family: 'Roboto Mono', monospace;
@@ -143,7 +143,7 @@
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.08em;
-    border-bottom: 1px solid #18202A;
+    border-bottom: 1px solid var(--v2-border-dark);
   }
 
   .panel-body {

@@ -36,7 +36,7 @@
         type="button"
         class="band-btn v2-control-button"
         class:active={isActive}
-        style="--control-accent:#00D4FF; --control-active-text:#FFFFFF"
+        style="--control-accent:var(--v2-accent-cyan); --control-active-text:var(--v2-text-white)"
         data-band={band.name}
         data-active={isActive}
         data-shortcut-hint={bandShortcut(band.bsrCode) ?? undefined}
@@ -51,8 +51,8 @@
 
 <style>
   .panel {
-    background: #060A10;
-    border: 1px solid #18202A;
+    background: var(--v2-bg-darker);
+    border: 1px solid var(--v2-border-dark);
     border-radius: 4px;
     padding: 6px 7px 7px;
     display: flex;
@@ -64,7 +64,7 @@
     font-family: 'Roboto Mono', monospace;
     font-size: 10px;
     font-weight: 700;
-    color: #8CA0B8;
+    color: var(--v2-text-subdued);
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }

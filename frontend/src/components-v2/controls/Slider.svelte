@@ -31,7 +31,7 @@
     label,
     unit = '',
     onchange,
-    accentColor = '#00D4FF',
+    accentColor = 'var(--v2-accent-cyan)',
     compact = false,
     disabled = false,
     shortcutHint = null,
@@ -110,12 +110,12 @@
   }
 
   .slider-label {
-    color: #6F8196;
+    color: var(--v2-text-dim);
     text-align: left;
   }
 
   .slider-value {
-    color: #F0F5FA;
+    color: var(--v2-text-bright);
     font-family: 'Roboto Mono', monospace;
   }
 
@@ -148,7 +148,7 @@
   .slider-track-base {
     inset-inline: 0;
     height: 4px;
-    background: #0d1117;
+    background: var(--v2-bg-gradient-start);
   }
 
   .slider-track-fill {
@@ -165,7 +165,7 @@
     width: 2px;
     height: 10px;
     border-radius: 999px;
-    background: color-mix(in srgb, #d7e2ee 30%, #0d1117);
+    background: color-mix(in srgb, var(--v2-text-light) 30%, var(--v2-bg-gradient-start));
   }
 
   .compact .slider-track-base,
@@ -206,7 +206,7 @@
     width: 10px;
     height: 10px;
     border-radius: 2px;
-    background: #ffffff;
+    background: var(--v2-text-white);
     border: 1px solid var(--accent);
     cursor: pointer;
     box-shadow: none;
@@ -227,7 +227,7 @@
     width: 10px;
     height: 10px;
     border-radius: 2px;
-    background: #ffffff;
+    background: var(--v2-text-white);
     border: 1px solid var(--accent);
     cursor: pointer;
     box-shadow: none;

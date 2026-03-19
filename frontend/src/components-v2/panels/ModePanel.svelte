@@ -52,7 +52,7 @@
           type="button"
           class="mode-button v2-control-button"
           class:active={currentMode === mode}
-          style="--control-accent:#00D4FF; --control-active-text:#FFFFFF"
+          style="--control-accent:var(--v2-accent-cyan); --control-active-text:var(--v2-text-white)"
           data-mode={mode}
           data-shortcut-hint={modeShortcut(mode) ?? undefined}
           title={modeShortcut(mode) ?? undefined}
@@ -71,7 +71,7 @@
             type="button"
             class="data-button v2-control-button"
             class:active={dataMode === option.value}
-            style="--control-accent:#00D4FF; --control-active-text:#FFFFFF"
+            style="--control-accent:var(--v2-accent-cyan); --control-active-text:var(--v2-text-white)"
             data-data-mode={option.value}
             data-shortcut-hint={dataShortcut ?? undefined}
             title={dataShortcut ?? undefined}
@@ -87,15 +87,15 @@
 
 <style>
   .panel {
-    background: #060A10;
-    border: 1px solid #18202A;
+    background: var(--v2-bg-darker);
+    border: 1px solid var(--v2-border-dark);
     border-radius: 4px;
     overflow: hidden;
     transition: box-shadow 180ms ease, border-color 180ms ease;
   }
 
   .panel[data-highlight='true'] {
-    border-color: #00D4FF;
+    border-color: var(--v2-accent-cyan);
     box-shadow: 0 0 0 1px rgba(0, 212, 255, 0.18);
   }
 
@@ -106,7 +106,7 @@
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.08em;
-    border-bottom: 1px solid #18202A;
+    border-bottom: 1px solid var(--v2-border-dark);
   }
 
   .panel-body {
@@ -124,7 +124,7 @@
   }
 
   .section-label {
-    color: #6F8196;
+    color: var(--v2-text-dim);
     font-family: 'Roboto Mono', monospace;
     font-size: 10px;
     font-weight: 700;

@@ -61,24 +61,24 @@
 
 <style>
   .demo-root {
-    background: #0B0E12;
+    background: var(--v2-bg-darkest);
     min-height: 100vh;
     padding: 24px 32px;
     font-family: 'Roboto Mono', monospace;
-    color: #C8D6E5;
+    color: var(--v2-text-light);
   }
 
   h1 {
     font-size: 20px;
     font-weight: 700;
-    color: #EAF1F8;
+    color: var(--v2-text-lighter);
     margin-bottom: 32px;
   }
 
   h2 {
     font-size: 13px;
     font-weight: 600;
-    color: #6F8196;
+    color: var(--v2-text-dim);
     margin-bottom: 12px;
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -98,7 +98,7 @@
   .row-label {
     width: 160px;
     font-size: 11px;
-    color: #4A5D70;
+    color: var(--v2-text-muted);
     flex-shrink: 0;
   }
 
@@ -116,12 +116,12 @@
   .slider {
     flex: 1;
     max-width: 400px;
-    accent-color: #18CC79;
+    accent-color: var(--v2-accent-green-medium);
   }
 
   .slider-val {
     font-size: 12px;
-    color: #6F8196;
+    color: var(--v2-text-dim);
     min-width: 64px;
   }
 
@@ -131,7 +131,7 @@
 
   .variant-label {
     font-size: 11px;
-    color: #4A5D70;
+    color: var(--v2-text-muted);
     margin-bottom: 4px;
   }
 </style>

@@ -42,7 +42,7 @@
           step={1}
           label="RF Gain"
           renderer="knob"
-          accentColor="#22C55E"
+          accentColor="var(--v2-accent-green)"
           shortcutHint={rfGainShortcut}
           title={rfGainShortcut}
           onChange={onRfGainChange}
@@ -77,8 +77,8 @@
     flex-direction: column;
     gap: 8px;
     padding: 8px 10px 10px;
-    background-color: #060A10;
-    border: 1px solid #18202A;
+    background-color: var(--v2-bg-darker);
+    border: 1px solid var(--v2-border-dark);
     border-radius: 4px;
     font-family: 'Roboto Mono', monospace;
     width: 100%;
@@ -109,7 +109,7 @@
   }
 
   .control-label {
-    color: #6F8196;
+    color: var(--v2-text-dim);
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.06em;

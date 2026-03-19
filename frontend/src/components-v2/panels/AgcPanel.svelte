@@ -29,7 +29,7 @@
       value={agcGain}
       min={0}
       max={255}
-      accentColor="#00D4FF"
+      accentColor="var(--v2-accent-cyan)"
       onchange={onAgcGainChange}
     />
   </div>
@@ -37,8 +37,8 @@
 
 <style>
   .panel {
-    background: #060A10;
-    border: 1px solid #18202A;
+    background: var(--v2-bg-darker);
+    border: 1px solid var(--v2-border-dark);
     border-radius: 4px;
     overflow: hidden;
   }
@@ -50,7 +50,7 @@
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.08em;
-    border-bottom: 1px solid #18202A;
+    border-bottom: 1px solid var(--v2-border-dark);
   }
 
   .panel-body {

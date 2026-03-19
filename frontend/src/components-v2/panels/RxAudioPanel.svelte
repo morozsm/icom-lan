@@ -29,7 +29,7 @@
       <SegmentedButton
         {options}
         selected={monitorMode}
-        accentColor="#00FFFF"
+        accentColor="var(--v2-accent-cyan-alt)"
         title={monitorShortcut}
         onchange={(v) => onMonitorModeChange(v as string)}
       />
@@ -40,7 +40,7 @@
         max={255}
         step={1}
         renderer="hbar"
-        accentColor="#00FFFF"
+        accentColor="var(--v2-accent-cyan-alt)"
         shortcutHint={afShortcut}
         title={afShortcut}
         onChange={onAfLevelChange}
@@ -52,20 +52,20 @@
 
 <style>
   .panel {
-    background: #060a10;
-    border: 1px solid #18202a;
+    background: var(--v2-bg-darker);
+    border: 1px solid var(--v2-border-dark);
     border-radius: 4px;
     overflow: hidden;
   }
 
   .panel-header {
     padding: 5px 8px;
-    color: #8ca0b8;
+    color: var(--v2-text-subdued);
     font-family: 'Roboto Mono', monospace;
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.08em;
-    border-bottom: 1px solid #18202a;
+    border-bottom: 1px solid var(--v2-border-dark);
   }
 
   .panel-body {
@@ -76,7 +76,7 @@
   }
 
   .output-indicator {
-    color: #4a6080;
+    color: var(--v2-text-muted);
     font-family: 'Roboto Mono', monospace;
     font-size: 9px;
     letter-spacing: 0.04em;

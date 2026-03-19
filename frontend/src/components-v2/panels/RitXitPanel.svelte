@@ -71,7 +71,7 @@
         step={50}
         unit="Hz"
         renderer="bipolar"
-        accentColor="#00D4FF"
+        accentColor="var(--v2-accent-cyan)"
         onChange={handleOffsetChange}
       />
       <div class="clear-row">
@@ -83,8 +83,8 @@
 
 <style>
   .panel {
-    background: #060A10;
-    border: 1px solid #18202A;
+    background: var(--v2-bg-darker);
+    border: 1px solid var(--v2-border-dark);
     border-radius: 4px;
     overflow: hidden;
   }
@@ -96,7 +96,7 @@
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.08em;
-    border-bottom: 1px solid #18202A;
+    border-bottom: 1px solid var(--v2-border-dark);
   }
 
   .panel-body {
@@ -115,12 +115,12 @@
   .offset {
     font-family: 'Roboto Mono', monospace;
     font-size: 10px;
-    color: #4D6074;
+    color: var(--v2-text-disabled);
     transition: color 150ms ease;
   }
 
   .offset.active {
-    color: #E0EAF4;
+    color: var(--v2-text-light);
   }
 
   .clear-row {

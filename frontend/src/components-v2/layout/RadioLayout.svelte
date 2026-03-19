@@ -170,8 +170,8 @@
     grid-template-rows: 156px minmax(0, 1fr) auto;
     min-height: 100vh;
     background:
-      linear-gradient(180deg, #0d0d14 0%, #090911 100%),
-      var(--v2-bg-app, #060a10);
+      linear-gradient(180deg, var(--v2-bg-gradient-start) 0%, var(--v2-bg-darkest) 100%),
+      var(--v2-bg-app, var(--v2-bg-darker));
     gap: 5px;
     padding: 5px;
     box-sizing: border-box;
@@ -182,18 +182,18 @@
   .content-right,
   .spectrum-frame,
   .receiver-summary-card {
-    border: 1px solid #1e2530;
+    border: 1px solid var(--v2-border-panel);
     border-radius: 4px;
     background:
       linear-gradient(180deg, rgba(20, 28, 38, 0.98) 0%, rgba(14, 20, 30, 0.98) 100%);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
+    box-shadow: var(--v2-shadow-sm);
   }
 
   .receiver-deck {
     overflow: hidden;
     padding: 5px;
     min-height: 0;
-    border-color: #18222d;
+    border-color: var(--v2-border-panel);
   }
 
   .receiver-deck :global(.vfo-header) {
@@ -231,8 +231,8 @@
     min-height: 0;
     min-width: 0;
     overflow: hidden;
-    background: #0E1420;
-    border-color: #1E2838;
+    background: var(--v2-bg-card);
+    border-color: var(--v2-border-darker);
   }
 
   .spectrum-frame :global(.spectrum-panel) {
@@ -267,13 +267,13 @@
   }
 
   .receiver-summary-card-main {
-    border-color: #0a627c;
-    background: linear-gradient(180deg, #122030 0%, #0E1828 100%);
+    border-color: var(--v2-border-cyan);
+    background: linear-gradient(180deg, var(--v2-bg-input) 0%, var(--v2-bg-card) 100%);
   }
 
   .receiver-summary-card-sub {
-    border-color: #253341;
-    background: linear-gradient(180deg, #111C28 0%, #0E1828 100%);
+    border-color: var(--v2-border);
+    background: linear-gradient(180deg, var(--v2-bg-input) 0%, var(--v2-bg-card) 100%);
   }
 
   .receiver-summary-header {
@@ -290,14 +290,14 @@
   }
 
   .receiver-summary-label {
-    color: #8ca0b8;
+    color: var(--v2-text-subdued);
     font-size: 8px;
     font-weight: 700;
     letter-spacing: 0.14em;
   }
 
   .receiver-summary-mode {
-    color: #5e7489;
+    color: var(--v2-text-muted);
     font-size: 8px;
     font-weight: 600;
     letter-spacing: 0.08em;

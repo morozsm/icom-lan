@@ -10,7 +10,16 @@ import { deriveIfShift } from '../filter-controls';
 // ---------------------------------------------------------------------------
 
 describe('formatFilterWidth', () => {
-  it('returns raw number string for values below 1000', () => {
+  
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+it('returns raw number string for values below 1000', () => {
     expect(formatFilterWidth(500)).toBe('500');
   });
 
@@ -176,6 +185,15 @@ describe('PBT sliders visibility', () => {
 });
 
 describe('callbacks', () => {
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('calls onFilterChange when a filter button is clicked', () => {
     const onFilterChange = vi.fn();
     const t = mountPanel({ ...baseProps, onFilterChange });
@@ -189,6 +207,8 @@ describe('callbacks', () => {
     const t = mountPanel({ ...baseProps, onIfShiftChange });
     const slider = t.querySelectorAll<HTMLElement>('[role="slider"]')[0];
     slider.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    vi.advanceTimersByTime(60);
+
     expect(onIfShiftChange).toHaveBeenCalled();
   });
 
@@ -197,6 +217,8 @@ describe('callbacks', () => {
     const t = mountPanel({ ...baseProps, hasPbt: true, pbtInner: 0, pbtOuter: 0, onPbtInnerChange });
     const sliders = t.querySelectorAll<HTMLElement>('[role="slider"]');
     sliders[1].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    vi.advanceTimersByTime(60);
+
     expect(onPbtInnerChange).toHaveBeenCalled();
   });
 
@@ -205,6 +227,8 @@ describe('callbacks', () => {
     const t = mountPanel({ ...baseProps, hasPbt: true, pbtInner: 0, pbtOuter: 0, onPbtOuterChange });
     const sliders = t.querySelectorAll<HTMLElement>('[role="slider"]');
     sliders[2].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    vi.advanceTimersByTime(60);
+
     expect(onPbtOuterChange).toHaveBeenCalled();
   });
 
@@ -228,6 +252,7 @@ describe('callbacks', () => {
 
     const sliders = modal?.querySelectorAll<HTMLElement>('[role="slider"]') ?? [];
     sliders[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    vi.advanceTimersByTime(60);
     expect(onFilterPresetChange).toHaveBeenCalled();
   });
 

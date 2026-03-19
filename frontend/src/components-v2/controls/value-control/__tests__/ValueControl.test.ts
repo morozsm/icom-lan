@@ -217,6 +217,7 @@ describe('HBarRenderer', () => {
       step: 10,
       label: 'Keyboard',
       renderer: 'hbar',
+      debounceMs: 0,
       onChange,
     });
     const slider = getSlider(target);
@@ -234,6 +235,7 @@ describe('HBarRenderer', () => {
       fineStepDivisor: 10,
       label: 'Fine',
       renderer: 'hbar',
+      debounceMs: 0,
       onChange,
     });
     const slider = getSlider(target);
@@ -251,6 +253,7 @@ describe('HBarRenderer', () => {
       defaultValue: 50,
       label: 'Reset',
       renderer: 'hbar',
+      debounceMs: 0,
       onChange,
     });
     const slider = getSlider(target);
@@ -267,6 +270,7 @@ describe('HBarRenderer', () => {
       step: 10,
       label: 'Legacy',
       renderer: 'hbar',
+      debounceMs: 0,
       onChange: undefined as any,
       onchange,
     });
@@ -345,6 +349,7 @@ describe('BipolarRenderer', () => {
       step: 1,
       label: 'Reset Zero',
       renderer: 'bipolar',
+      debounceMs: 0,
       onChange,
     });
     const slider = getSlider(target);
@@ -405,6 +410,7 @@ describe('KnobRenderer', () => {
       step: 10,
       label: 'Knob Key',
       renderer: 'knob',
+      debounceMs: 0,
       onChange,
     });
     const slider = getSlider(target);

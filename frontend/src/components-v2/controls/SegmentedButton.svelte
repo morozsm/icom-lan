@@ -20,7 +20,7 @@
     options,
     selected,
     onchange,
-    accentColor = '#00D4FF',
+    accentColor = 'var(--v2-accent-cyan)',
     compact = false,
     disabled = false,
     title = null,
@@ -78,7 +78,7 @@
   }
 
   .segmented-button:focus-visible {
-    box-shadow: 0 0 0 2px var(--accent, #00D4FF);
+    box-shadow: 0 0 0 2px var(--accent, var(--v2-accent-cyan));
     border-radius: 4px;
   }
 

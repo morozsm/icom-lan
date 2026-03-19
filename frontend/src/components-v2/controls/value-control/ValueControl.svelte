@@ -49,7 +49,7 @@
     fillColor,
     fillGradient,
     trackColor,
-    accentColor = '#00D4FF',
+    accentColor = 'var(--v2-accent-cyan)',
     showValue = true,
     showLabel = true,
     compact = false,

@@ -52,8 +52,8 @@
       label: 'Po',
       value: rfPower,
       display: formatPowerWatts(rfPower),
-      fill: 'linear-gradient(90deg, #f4f7fb 0%, #f4f7fb 35%, #e3ae3a 35%, #a63514 100%)',
-      track: 'linear-gradient(90deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.08) 35%, rgba(227,174,58,0.14) 35%, rgba(166,53,20,0.2) 100%)',
+      fill: 'linear-gradient(90deg, var(--v2-text-primary) 0%, var(--v2-text-primary) 35%, #e3ae3a 35%, #a63514 100%)',
+      track: 'linear-gradient(90deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.08) 35%, rgba(227,174,58,0.14) 35%, rgba(166,53,20,0.2) 100%)',
       valueClass: 'po',
     },
     {
@@ -132,9 +132,9 @@
     flex-direction: column;
     gap: 6px;
     padding: 8px;
-    border: 1px solid #1a2531;
+    border: 1px solid var(--v2-border-darker);
     border-radius: 4px;
-    background: linear-gradient(180deg, #091018 0%, #060b12 100%);
+    background: linear-gradient(180deg, var(--v2-bg-gradient-start) 0%, var(--v2-bg-darkest) 100%);
     box-sizing: border-box;
   }
 
@@ -154,7 +154,7 @@
   }
 
   .dock-title {
-    color: #dbe8f7;
+    color: var(--v2-text-light);
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.16em;
@@ -169,7 +169,7 @@
     position: absolute;
     top: 0;
     transform: translateX(-50%);
-    color: #d7e3f1;
+    color: var(--v2-text-light);
     font-size: 9px;
     font-weight: 700;
     opacity: 0.92;
@@ -238,10 +238,10 @@
   .meter-source-btn {
     min-height: 22px;
     padding: 0 10px;
-    border: 1px solid #233241;
+    border: 1px solid var(--v2-border);
     border-radius: 999px;
     background: transparent;
-    color: #7f93a7;
+    color: var(--v2-text-muted);
     font-family: 'Roboto Mono', monospace;
     font-size: 10px;
     font-weight: 700;
@@ -251,13 +251,13 @@
   }
 
   .meter-source-btn:hover {
-    border-color: #3d556d;
-    color: #c8d8e8;
+    border-color: var(--v2-border-soft);
+    color: var(--v2-text-secondary);
   }
 
   .meter-source-btn.active {
-    border-color: #5fdcff;
-    color: #effaff;
+    border-color: var(--v2-accent-cyan);
+    color: var(--v2-text-white);
     background: rgba(0, 180, 255, 0.14);
   }
 
@@ -270,16 +270,16 @@
 
   .dock-row[data-active='true'] .dock-row-label,
   .dock-row[data-active='true'] .dock-row-value {
-    color: #eff8ff;
+    color: var(--v2-text-white);
   }
 
   .dock-row[data-active='true'] .dock-bar {
-    border-color: #2d465e;
+    border-color: var(--v2-border);
     box-shadow: inset 0 0 0 1px rgba(111, 194, 255, 0.08);
   }
 
   .dock-row-label {
-    color: #eef4fc;
+    color: var(--v2-text-primary);
     font-size: 11px;
     font-weight: 700;
   }
@@ -287,7 +287,7 @@
   .dock-bar {
     position: relative;
     height: 8px;
-    border: 1px solid #17202a;
+    border: 1px solid var(--v2-border-dark);
     border-radius: 1px;
     overflow: hidden;
     background-size: 100% 100%;
@@ -305,19 +305,19 @@
   }
 
   .dock-row-value.po {
-    color: #f8fafd;
+    color: var(--v2-text-primary);
   }
 
   .dock-row-value.s {
-    color: #9befff;
+    color: var(--v2-accent-cyan-bright);
   }
 
   .dock-row-value.swr {
-    color: #57f0a5;
+    color: var(--v2-accent-green-bright);
   }
 
   .dock-row-value.alc {
-    color: #ffba4e;
+    color: var(--v2-accent-yellow);
   }
 
   @media (max-width: 1200px) {
