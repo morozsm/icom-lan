@@ -11,8 +11,6 @@
   let { title, panelId, collapsible = true, children }: Props = $props();
 
   let collapsed = $state(false);
-  let contentElement = $state<HTMLDivElement | null>(null);
-  let contentHeight = $state<number>(0);
 
   const STORAGE_KEY = 'icom-lan:panel-collapsed';
 
@@ -30,11 +28,6 @@
       }
     } catch (e) {
       // Ignore parsing errors
-    }
-
-    // Measure content height for smooth animation
-    if (contentElement) {
-      contentHeight = contentElement.scrollHeight;
     }
   });
 
@@ -75,8 +68,7 @@
   <div
     class="panel-content"
     class:collapsed
-    bind:this={contentElement}
-    style:max-height={collapsed ? '0' : `${contentHeight || 2000}px`}
+    style:max-height={collapsed ? '0' : '2000px'}
   >
     <div class="panel-content-inner">
       {@render children?.()}
