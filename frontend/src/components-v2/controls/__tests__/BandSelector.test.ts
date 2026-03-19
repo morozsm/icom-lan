@@ -4,6 +4,7 @@ import type { ComponentProps } from 'svelte';
 
 vi.mock('$lib/stores/capabilities.svelte', () => ({
   getCapabilities: vi.fn(() => ({ freqRanges: HF_RANGES })),
+  getKeyboardConfig: vi.fn(() => null),
 }));
 
 import BandSelector from '../BandSelector.svelte';

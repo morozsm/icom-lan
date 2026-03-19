@@ -456,6 +456,149 @@ export function makeKeyboardHandlers() {
           window.dispatchEvent(new CustomEvent('icom-lan:open-filter-settings'));
           return;
         }
+        case 'mode_select': {
+          const mode = action.params?.mode;
+          if (typeof mode === 'string') {
+            patchActiveReceiver({ mode }, true);
+            cmd('set_mode', { mode, receiver: activeReceiverParam() });
+          }
+          return;
+        }
+        case 'cycle_filter': {
+          const current = getActiveReceiver()?.filter ?? 1;
+          const direction = action.params?.direction;
+          let next: number;
+          if (direction === 'wider') {
+            next = current <= 1 ? 3 : current - 1;
+          } else if (direction === 'narrower') {
+            next = current >= 3 ? 1 : current + 1;
+          } else {
+            next = current >= 3 ? 1 : current + 1;
+          }
+          patchActiveReceiver({ filter: next }, true);
+          cmd('set_filter', { filter: next, receiver: activeReceiverParam() });
+          return;
+        }
+        case 'toggle_nr': {
+          const on = !(getActiveReceiver()?.nr ?? false);
+          patchActiveReceiver({ nr: on }, true);
+          cmd('set_nr', { on, receiver: activeReceiverParam() });
+          return;
+        }
+        case 'toggle_nb': {
+          const on = !(getActiveReceiver()?.nb ?? false);
+          patchActiveReceiver({ nb: on }, true);
+          cmd('set_nb', { on, receiver: activeReceiverParam() });
+          return;
+        }
+        case 'cycle_agc': {
+          const modes = getCapabilities()?.agcModes ?? [1, 2, 3];
+          const current = getActiveReceiver()?.agc ?? modes[0] ?? 1;
+          const mode = cycleValue(modes, current);
+          patchActiveReceiver({ agc: mode }, true);
+          cmd('set_agc', { mode, receiver: activeReceiverParam() });
+          return;
+        }
+        case 'cycle_att': {
+          const values = getCapabilities()?.attValues ?? [0];
+          const current = getActiveReceiver()?.att ?? 0;
+          const db = cycleValue(values, current);
+          patchActiveReceiver({ att: db }, true);
+          cmd('set_attenuator', { db, receiver: activeReceiverParam() });
+          return;
+        }
+        case 'toggle_auto_notch': {
+          const on = !(getActiveReceiver()?.autoNotch ?? false);
+          patchActiveReceiver({ autoNotch: on }, true);
+          cmd('set_auto_notch', { on, receiver: activeReceiverParam() });
+          return;
+        }
+        case 'toggle_monitor': {
+          const on = !(getRadioState()?.monitorOn ?? false);
+          patchRadioState({ monitorOn: on });
+          cmd('set_monitor', { on });
+          return;
+        }
+        case 'toggle_ip_plus': {
+          const on = !(getActiveReceiver()?.ipplus ?? false);
+          patchActiveReceiver({ ipplus: on }, true);
+          cmd('set_ip_plus', { on, receiver: activeReceiverParam() });
+          return;
+        }
+        case 'toggle_dial_lock': {
+          const on = !(getRadioState()?.dialLock ?? false);
+          patchRadioState({ dialLock: on });
+          cmd('set_dial_lock', { on });
+          return;
+        }
+        case 'toggle_rit': {
+          const on = !(getRadioState()?.ritOn ?? false);
+          patchRadioState({ ritOn: on });
+          cmd('set_rit', { on });
+          return;
+        }
+        case 'toggle_xit': {
+          const on = !(getRadioState()?.ritTx ?? false);
+          patchRadioState({ ritTx: on });
+          cmd('set_xit', { on });
+          return;
+        }
+        case 'clear_rit_xit': {
+          patchRadioState({ ritFreq: 0 });
+          cmd('set_rit_frequency', { freq: 0 });
+          return;
+        }
+        case 'adjust_af_level': {
+          const current = getActiveReceiver()?.afLevel ?? 128;
+          const delta = (action.params?.direction === 'down' ? -5 : 5);
+          const level = Math.max(0, Math.min(255, current + delta));
+          patchActiveReceiver({ afLevel: level }, true);
+          cmd('set_af_level', { level, receiver: activeReceiverParam() });
+          return;
+        }
+        case 'adjust_rf_gain': {
+          const current = getActiveReceiver()?.rfGain ?? 255;
+          const delta = (action.params?.direction === 'down' ? -5 : 5);
+          const level = Math.max(0, Math.min(255, current + delta));
+          patchActiveReceiver({ rfGain: level }, true);
+          cmd('set_rf_gain', { level, receiver: activeReceiverParam() });
+          return;
+        }
+        case 'vfo_swap': {
+          cmd('vfo_swap', {});
+          return;
+        }
+        case 'vfo_equalize': {
+          cmd('vfo_equalize', {});
+          return;
+        }
+        case 'switch_active_vfo': {
+          const state = getRadioState();
+          const next = state?.active === 'SUB' ? 'MAIN' : 'SUB';
+          patchRadioState({ active: next });
+          return;
+        }
+        case 'focus_target': {
+          const target = action.params?.target;
+          if (typeof target === 'string') {
+            const selectors: Record<string, string> = {
+              af: '[data-panel="rf-frontend"] [data-control="af-gain"]',
+              rf: '[data-panel="rf-frontend"] [data-control="rf-gain"]',
+              filter: '[data-panel="filter"]',
+              squelch: '[data-panel="rf-frontend"] [data-control="squelch"]',
+              mode: '[data-panel="mode"]',
+              pbt: '[data-panel="filter"] [data-control="pbt-inner"]',
+              waterfall: '[data-waterfall]',
+              vfo: '[data-vfo="main"] .freq-display',
+            };
+            const el = document.querySelector(selectors[target] ?? `[data-panel="${target}"]`);
+            if (el instanceof HTMLElement) {
+              el.focus();
+              el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            }
+          }
+          return;
+        }
         default:
           console.warn('[keyboard] unhandled action', action.action, action.params);
       }

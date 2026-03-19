@@ -7,6 +7,7 @@ vi.mock('$lib/stores/capabilities.svelte', () => ({
   hasAudio: vi.fn(() => false),
   hasSpectrum: vi.fn(() => false),
   hasCapability: vi.fn(() => false),
+  getKeyboardConfig: vi.fn(() => null),
   getVfoScheme: vi.fn(() => 'main_sub'),
   vfoLabel: vi.fn((slot: 'A' | 'B') => (slot === 'A' ? 'MAIN' : 'SUB')),
   getCapabilities: vi.fn(() => ({

@@ -289,9 +289,13 @@ def _parse_keyboard_config(
     )
 
 
-def _load_keyboard_file(path: Path, keyboard_path: Path) -> KeyboardConfig:
+def _load_keyboard_file(
+    path: Path, keyboard_path: Path, *, optional: bool = False
+) -> KeyboardConfig | None:
     include_name = keyboard_path.name
     if not keyboard_path.exists():
+        if optional:
+            return None
         raise RigLoadError(
             f"{path.name}: keyboard profile file not found: {keyboard_path.name}"
         )
@@ -309,8 +313,10 @@ def _load_keyboard_file(path: Path, keyboard_path: Path) -> KeyboardConfig:
     return _parse_keyboard_config(include_name, keyboard_section)
 
 
-def _load_default_keyboard_config(path: Path) -> KeyboardConfig:
-    return _load_keyboard_file(path, path.parent / DEFAULT_KEYBOARD_PROFILE_NAME)
+def _load_default_keyboard_config(path: Path) -> KeyboardConfig | None:
+    return _load_keyboard_file(
+        path, path.parent / DEFAULT_KEYBOARD_PROFILE_NAME, optional=True
+    )
 
 
 def _merge_keyboard_config(

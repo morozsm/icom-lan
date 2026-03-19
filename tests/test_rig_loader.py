@@ -174,7 +174,7 @@ fine = false
         assert rig.keyboard.help_title == "Custom Keyboard"
         assert rig.keyboard.leader_timeout_ms == 900
         assert rig.keyboard.alt_hints is True
-        assert any(binding.action == "toggle_help" for binding in rig.keyboard.bindings)
+        # Without _keyboard-default.toml in tmp_path, only the override binding is present
         binding = next(
             binding for binding in rig.keyboard.bindings if binding.id == "tune-up"
         )
@@ -186,9 +186,18 @@ fine = false
     def test_loads_default_keyboard_profile_without_ui_section(self, tmp_path):
         rig = load_rig(_write_toml(tmp_path, _MINIMAL_TOML))
 
-        assert rig.keyboard is not None
-        assert rig.keyboard.help_title == "Radio Keyboard"
-        assert any(binding.action == "toggle_help" for binding in rig.keyboard.bindings)
+        # Without _keyboard-default.toml in tmp_path, keyboard is None
+        assert rig.keyboard is None
+
+    def test_loads_default_keyboard_profile_with_file(self, tmp_path):
+        import shutil
+        default_kb = Path(__file__).resolve().parent.parent / "rigs" / "_keyboard-default.toml"
+        if default_kb.exists():
+            shutil.copy(default_kb, tmp_path / "_keyboard-default.toml")
+            rig = load_rig(_write_toml(tmp_path, _MINIMAL_TOML))
+            assert rig.keyboard is not None
+            assert rig.keyboard.help_title == "Radio Keyboard"
+            assert any(binding.action == "toggle_help" for binding in rig.keyboard.bindings)
 
 
 # ── RadioProfile building ───────────────────────────────────────

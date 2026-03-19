@@ -699,6 +699,7 @@ class RadioPoller:
                 ("nr", 0x16, 0x40),
                 ("digisel", 0x16, 0x4E),
                 ("ip_plus", 0x16, 0x65),
+                ("filter_width", 0x1A, 0x03),
             ]
             for cap, cmd_byte, sub_byte in _PER_RX_QUERIES:
                 if not self._supports_capability(cap):

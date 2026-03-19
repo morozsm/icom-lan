@@ -12,6 +12,7 @@ const mockHasAudio = vi.fn(() => true);
 
 vi.mock('$lib/stores/capabilities.svelte', () => ({
   hasAudio: () => mockHasAudio(),
+  getKeyboardConfig: vi.fn(() => null),
 }));
 
 // ---------------------------------------------------------------------------

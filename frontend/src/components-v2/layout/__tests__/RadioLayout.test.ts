@@ -158,6 +158,7 @@ vi.mock('$lib/stores/capabilities.svelte', () => ({
   getSupportedFilters: vi.fn(() => ['FIL1', 'FIL2', 'FIL3']),
   getAttValues: vi.fn(() => [0, 10, 20]),
   getPreValues: vi.fn(() => [0, 1, 2]),
+  getKeyboardConfig: vi.fn(() => null),
   getVfoScheme: vi.fn(() => 'ab'),
 }));
 
