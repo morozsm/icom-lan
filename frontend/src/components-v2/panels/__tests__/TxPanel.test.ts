@@ -86,11 +86,6 @@ const baseProps: ComponentProps<typeof TxPanel> = {
 };
 
 describe('panel structure', () => {
-  it('renders the TX header label', () => {
-    const t = mountPanel(baseProps);
-    expect(t.querySelector('.panel-header')?.textContent?.trim()).toBe('TX');
-  });
-
   it('renders TX IDLE badge when txActive is false', () => {
     const t = mountPanel(baseProps);
     const badge = t.querySelector('.tx-indicator .badge');
@@ -143,7 +138,7 @@ describe('hasTx gating', () => {
   it('renders panel content when hasTx returns true', () => {
     vi.mocked(hasTx).mockReturnValue(true);
     const t = mountPanel(baseProps);
-    expect(t.querySelector('.panel')).not.toBeNull();
+    expect(t.querySelector('.panel-body')).not.toBeNull();
   });
 
   it('hides panel content when hasTx returns false', () => {

@@ -132,11 +132,6 @@ const baseProps: ComponentProps<typeof DspPanel> = {
 };
 
 describe('panel structure', () => {
-  it('renders the DSP header label', () => {
-    const t = mountPanel(baseProps);
-    expect(t.querySelector('.panel-header')?.textContent).toBe('DSP');
-  });
-
   it('renders NB toggle as OFF when NB is inactive', () => {
     const t = mountPanel(baseProps);
     const buttons = Array.from(t.querySelectorAll('button')).map((el) => el.textContent?.trim());

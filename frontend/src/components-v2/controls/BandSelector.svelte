@@ -27,9 +27,7 @@
 
 </script>
 
-<div class="panel">
-  <div class="header">BAND</div>
-  <div class="grid">
+<div class="grid">
     {#each bands as band (band.name)}
       {@const isActive = activeBand === band.name}
       <button
@@ -47,29 +45,10 @@
       </button>
     {/each}
   </div>
-</div>
 
 <style>
-  .panel {
-    background: #060A10;
-    border: 1px solid #18202A;
-    border-radius: 4px;
-    padding: 6px 7px 7px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  .header {
-    font-family: 'Roboto Mono', monospace;
-    font-size: 10px;
-    font-weight: 700;
-    color: #8CA0B8;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
   .grid {
+    padding: 6px 7px 7px;
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 3px;

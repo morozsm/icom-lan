@@ -5,6 +5,7 @@
   import RxAudioPanel from '../panels/RxAudioPanel.svelte';
   import DspPanel from '../panels/DspPanel.svelte';
   import TxPanel from '../panels/TxPanel.svelte';
+  import CollapsiblePanel from '../controls/CollapsiblePanel.svelte';
   import {
     toRxAudioProps,
     toDspProps,
@@ -33,53 +34,59 @@
 </script>
 
 <aside class="right-sidebar">
-  <RxAudioPanel
-    monitorMode={rxAudio.monitorMode}
-    afLevel={rxAudio.afLevel}
-    hasLiveAudio={rxAudio.hasLiveAudio}
-    onMonitorModeChange={rxAudioHandlers.onMonitorModeChange}
-    onAfLevelChange={rxAudioHandlers.onAfLevelChange}
-  />
+  <CollapsiblePanel title="RX AUDIO" panelId="rx-audio">
+    <RxAudioPanel
+      monitorMode={rxAudio.monitorMode}
+      afLevel={rxAudio.afLevel}
+      hasLiveAudio={rxAudio.hasLiveAudio}
+      onMonitorModeChange={rxAudioHandlers.onMonitorModeChange}
+      onAfLevelChange={rxAudioHandlers.onAfLevelChange}
+    />
+  </CollapsiblePanel>
 
-  <DspPanel
-    nrMode={dsp.nrMode}
-    nrLevel={dsp.nrLevel}
-    nbActive={dsp.nbActive}
-    nbLevel={dsp.nbLevel}
-    notchMode={dsp.notchMode}
-    notchFreq={dsp.notchFreq}
-    cwAutoTune={dsp.cwAutoTune}
-    cwPitch={dsp.cwPitch}
-    currentMode={dsp.currentMode}
-    onNrModeChange={dspHandlers.onNrModeChange}
-    onNrLevelChange={dspHandlers.onNrLevelChange}
-    onNbToggle={dspHandlers.onNbToggle}
-    onNbLevelChange={dspHandlers.onNbLevelChange}
-    onNotchModeChange={dspHandlers.onNotchModeChange}
-    onNotchFreqChange={dspHandlers.onNotchFreqChange}
-    onCwAutoTuneToggle={dspHandlers.onCwAutoTuneToggle}
-    onCwPitchChange={dspHandlers.onCwPitchChange}
-  />
+  <CollapsiblePanel title="DSP" panelId="dsp">
+    <DspPanel
+      nrMode={dsp.nrMode}
+      nrLevel={dsp.nrLevel}
+      nbActive={dsp.nbActive}
+      nbLevel={dsp.nbLevel}
+      notchMode={dsp.notchMode}
+      notchFreq={dsp.notchFreq}
+      cwAutoTune={dsp.cwAutoTune}
+      cwPitch={dsp.cwPitch}
+      currentMode={dsp.currentMode}
+      onNrModeChange={dspHandlers.onNrModeChange}
+      onNrLevelChange={dspHandlers.onNrLevelChange}
+      onNbToggle={dspHandlers.onNbToggle}
+      onNbLevelChange={dspHandlers.onNbLevelChange}
+      onNotchModeChange={dspHandlers.onNotchModeChange}
+      onNotchFreqChange={dspHandlers.onNotchFreqChange}
+      onCwAutoTuneToggle={dspHandlers.onCwAutoTuneToggle}
+      onCwPitchChange={dspHandlers.onCwPitchChange}
+    />
+  </CollapsiblePanel>
 
-  <TxPanel
-    txActive={tx.txActive}
-    micGain={tx.micGain}
-    atuActive={tx.atuActive}
-    atuTuning={tx.atuTuning}
-    voxActive={tx.voxActive}
-    compActive={tx.compActive}
-    compLevel={tx.compLevel}
-    monActive={tx.monActive}
-    monLevel={tx.monLevel}
-    onMicGainChange={txHandlers.onMicGainChange}
-    onAtuToggle={txHandlers.onAtuToggle}
-    onAtuTune={txHandlers.onAtuTune}
-    onVoxToggle={txHandlers.onVoxToggle}
-    onCompToggle={txHandlers.onCompToggle}
-    onCompLevelChange={txHandlers.onCompLevelChange}
-    onMonToggle={txHandlers.onMonToggle}
-    onMonLevelChange={txHandlers.onMonLevelChange}
-  />
+  <CollapsiblePanel title="TX" panelId="tx">
+    <TxPanel
+      txActive={tx.txActive}
+      micGain={tx.micGain}
+      atuActive={tx.atuActive}
+      atuTuning={tx.atuTuning}
+      voxActive={tx.voxActive}
+      compActive={tx.compActive}
+      compLevel={tx.compLevel}
+      monActive={tx.monActive}
+      monLevel={tx.monLevel}
+      onMicGainChange={txHandlers.onMicGainChange}
+      onAtuToggle={txHandlers.onAtuToggle}
+      onAtuTune={txHandlers.onAtuTune}
+      onVoxToggle={txHandlers.onVoxToggle}
+      onCompToggle={txHandlers.onCompToggle}
+      onCompLevelChange={txHandlers.onCompLevelChange}
+      onMonToggle={txHandlers.onMonToggle}
+      onMonLevelChange={txHandlers.onMonLevelChange}
+    />
+  </CollapsiblePanel>
 </aside>
 
 <style>

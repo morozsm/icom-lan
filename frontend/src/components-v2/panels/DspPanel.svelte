@@ -52,9 +52,7 @@
   let notchOptions = $derived(buildNotchOptions());
 </script>
 
-<div class="panel">
-  <div class="panel-header">DSP</div>
-  <div class="panel-body">
+<div class="panel-body">
 
     {#if showNr}
       <div class="section">
@@ -148,26 +146,8 @@
     {/if}
 
   </div>
-</div>
 
 <style>
-  .panel {
-    background: #060A10;
-    border: 1px solid #18202A;
-    border-radius: 4px;
-    overflow: hidden;
-  }
-
-  .panel-header {
-    padding: 5px 8px;
-    color: #8CA0B8;
-    font-family: 'Roboto Mono', monospace;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    border-bottom: 1px solid #18202A;
-  }
-
   .panel-body {
     display: flex;
     flex-direction: column;

@@ -8,6 +8,7 @@
   import AgcPanel from '../panels/AgcPanel.svelte';
   import RitXitPanel from '../panels/RitXitPanel.svelte';
   import BandSelector from '../controls/BandSelector.svelte';
+  import CollapsiblePanel from '../controls/CollapsiblePanel.svelte';
   import { getShortcutHint } from './shortcut-hints';
   import {
     toRfFrontEndProps,
@@ -69,75 +70,87 @@
     </div>
   </section>
 
-  <RfFrontEnd
-    rfGain={rfFrontEnd.rfGain}
-    att={rfFrontEnd.att}
-    pre={rfFrontEnd.pre}
-    onRfGainChange={rfHandlers.onRfGainChange}
-    onAttChange={rfHandlers.onAttChange}
-    onPreChange={rfHandlers.onPreChange}
-  />
+  <CollapsiblePanel title="RF FRONT END" panelId="rf-front-end">
+    <RfFrontEnd
+      rfGain={rfFrontEnd.rfGain}
+      att={rfFrontEnd.att}
+      pre={rfFrontEnd.pre}
+      onRfGainChange={rfHandlers.onRfGainChange}
+      onAttChange={rfHandlers.onAttChange}
+      onPreChange={rfHandlers.onPreChange}
+    />
+  </CollapsiblePanel>
 
-  <ModePanel
-    currentMode={mode.currentMode}
-    modes={mode.modes}
-    dataMode={mode.dataMode}
-    hasDataMode={mode.hasDataMode}
-    dataModeCount={mode.dataModeCount}
-    dataModeLabels={mode.dataModeLabels}
-    onModeChange={modeHandlers.onModeChange}
-    onDataModeChange={modeHandlers.onDataModeChange}
-  />
+  <CollapsiblePanel title="MODE" panelId="mode">
+    <ModePanel
+      currentMode={mode.currentMode}
+      modes={mode.modes}
+      dataMode={mode.dataMode}
+      hasDataMode={mode.hasDataMode}
+      dataModeCount={mode.dataModeCount}
+      dataModeLabels={mode.dataModeLabels}
+      onModeChange={modeHandlers.onModeChange}
+      onDataModeChange={modeHandlers.onDataModeChange}
+    />
+  </CollapsiblePanel>
 
-  <FilterPanel
-    currentMode={filter.currentMode}
-    currentFilter={filter.currentFilter}
-    filterShape={filter.filterShape}
-    filterLabels={filter.filterLabels}
-    filterWidth={filter.filterWidth}
-    filterWidthMin={filter.filterWidthMin}
-    filterWidthMax={filter.filterWidthMax}
-    filterConfig={filter.filterConfig}
-    ifShift={filter.ifShift}
-    hasPbt={filter.hasPbt}
-    pbtInner={filter.pbtInner}
-    pbtOuter={filter.pbtOuter}
-    onFilterChange={filterHandlers.onFilterChange}
-    onFilterWidthChange={filterHandlers.onFilterWidthChange}
-    onFilterShapeChange={filterHandlers.onFilterShapeChange}
-    onFilterPresetChange={filterHandlers.onFilterPresetChange}
-    onFilterDefaults={filterHandlers.onFilterDefaults}
-    onIfShiftChange={filterHandlers.onIfShiftChange}
-    onPbtInnerChange={filterHandlers.onPbtInnerChange}
-    onPbtOuterChange={filterHandlers.onPbtOuterChange}
-    onPbtReset={filterHandlers.onPbtReset}
-  />
+  <CollapsiblePanel title="FILTER" panelId="filter">
+    <FilterPanel
+      currentMode={filter.currentMode}
+      currentFilter={filter.currentFilter}
+      filterShape={filter.filterShape}
+      filterLabels={filter.filterLabels}
+      filterWidth={filter.filterWidth}
+      filterWidthMin={filter.filterWidthMin}
+      filterWidthMax={filter.filterWidthMax}
+      filterConfig={filter.filterConfig}
+      ifShift={filter.ifShift}
+      hasPbt={filter.hasPbt}
+      pbtInner={filter.pbtInner}
+      pbtOuter={filter.pbtOuter}
+      onFilterChange={filterHandlers.onFilterChange}
+      onFilterWidthChange={filterHandlers.onFilterWidthChange}
+      onFilterShapeChange={filterHandlers.onFilterShapeChange}
+      onFilterPresetChange={filterHandlers.onFilterPresetChange}
+      onFilterDefaults={filterHandlers.onFilterDefaults}
+      onIfShiftChange={filterHandlers.onIfShiftChange}
+      onPbtInnerChange={filterHandlers.onPbtInnerChange}
+      onPbtOuterChange={filterHandlers.onPbtOuterChange}
+      onPbtReset={filterHandlers.onPbtReset}
+    />
+  </CollapsiblePanel>
 
-  <AgcPanel
-    agcMode={agc.agcMode}
-    agcGain={agc.agcGain}
-    onAgcModeChange={agcHandlers.onAgcModeChange}
-    onAgcGainChange={agcHandlers.onAgcGainChange}
-  />
+  <CollapsiblePanel title="AGC" panelId="agc">
+    <AgcPanel
+      agcMode={agc.agcMode}
+      agcGain={agc.agcGain}
+      onAgcModeChange={agcHandlers.onAgcModeChange}
+      onAgcGainChange={agcHandlers.onAgcGainChange}
+    />
+  </CollapsiblePanel>
 
-  <RitXitPanel
-    ritActive={ritXit.ritActive}
-    ritOffset={ritXit.ritOffset}
-    xitActive={ritXit.xitActive}
-    xitOffset={ritXit.xitOffset}
-    hasRit={ritXit.hasRit}
-    hasXit={ritXit.hasXit}
-    onRitToggle={ritXitHandlers.onRitToggle}
-    onXitToggle={ritXitHandlers.onXitToggle}
-    onRitOffsetChange={ritXitHandlers.onRitOffsetChange}
-    onXitOffsetChange={ritXitHandlers.onXitOffsetChange}
-    onClear={ritXitHandlers.onClear}
-  />
+  <CollapsiblePanel title="RIT / XIT" panelId="rit-xit">
+    <RitXitPanel
+      ritActive={ritXit.ritActive}
+      ritOffset={ritXit.ritOffset}
+      xitActive={ritXit.xitActive}
+      xitOffset={ritXit.xitOffset}
+      hasRit={ritXit.hasRit}
+      hasXit={ritXit.hasXit}
+      onRitToggle={ritXitHandlers.onRitToggle}
+      onXitToggle={ritXitHandlers.onXitToggle}
+      onRitOffsetChange={ritXitHandlers.onRitOffsetChange}
+      onXitOffsetChange={ritXitHandlers.onXitOffsetChange}
+      onClear={ritXitHandlers.onClear}
+    />
+  </CollapsiblePanel>
 
-  <BandSelector
-    currentFreq={band.currentFreq}
-    onBandSelect={bandHandlers.onBandSelect}
-  />
+  <CollapsiblePanel title="BAND" panelId="band">
+    <BandSelector
+      currentFreq={band.currentFreq}
+      onBandSelect={bandHandlers.onBandSelect}
+    />
+  </CollapsiblePanel>
 </aside>
 
 <style>

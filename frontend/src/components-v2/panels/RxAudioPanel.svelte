@@ -23,8 +23,6 @@
 </script>
 
 {#if hasAudio()}
-  <div class="panel">
-    <div class="panel-header">RX AUDIO</div>
     <div class="panel-body">
       <SegmentedButton
         {options}
@@ -47,27 +45,9 @@
       />
       <div class="output-indicator">{statusText}</div>
     </div>
-  </div>
 {/if}
 
 <style>
-  .panel {
-    background: #060a10;
-    border: 1px solid #18202a;
-    border-radius: 4px;
-    overflow: hidden;
-  }
-
-  .panel-header {
-    padding: 5px 8px;
-    color: #8ca0b8;
-    font-family: 'Roboto Mono', monospace;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    border-bottom: 1px solid #18202a;
-  }
-
   .panel-body {
     display: flex;
     flex-direction: column;
