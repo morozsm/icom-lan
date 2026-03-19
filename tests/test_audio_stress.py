@@ -81,6 +81,7 @@ class QueuedAudioTransport:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.slow
 @pytest.mark.asyncio
 async def test_audio_stress_slow_consumer_jitter_bounded() -> None:
     """High-frequency RX packets with slow consumer; jitter buffer pending must not grow unbounded."""

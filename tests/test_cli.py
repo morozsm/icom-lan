@@ -540,8 +540,10 @@ class TestBuildBackendConfig:
 class TestBackendAwareDiscover:
     def test_discover_serial_exits_with_error(self, capsys):
         with patch("sys.argv", ["icom-lan", "--backend", "serial", "discover"]):
-            with pytest.raises(SystemExit) as exc_info:
-                main()
+            with patch("icom_lan.discovery.discover_lan_radios", AsyncMock(return_value=[])):
+                with patch("icom_lan.discovery.discover_serial_radios", AsyncMock(return_value=[])):
+                    with pytest.raises(SystemExit) as exc_info:
+                        main()
         assert exc_info.value.code == 0
         captured = capsys.readouterr()
         assert "Scanning for Icom radios" in captured.out
@@ -549,8 +551,10 @@ class TestBackendAwareDiscover:
 
     def test_discover_serial_error_mentions_lan(self, capsys):
         with patch("sys.argv", ["icom-lan", "--backend", "serial", "discover"]):
-            with pytest.raises(SystemExit) as exc_info:
-                main()
+            with patch("icom_lan.discovery.discover_lan_radios", AsyncMock(return_value=[])):
+                with patch("icom_lan.discovery.discover_serial_radios", AsyncMock(return_value=[])):
+                    with pytest.raises(SystemExit) as exc_info:
+                        main()
         assert exc_info.value.code == 0
         captured = capsys.readouterr()
         assert "Scanning for Icom radios" in captured.out

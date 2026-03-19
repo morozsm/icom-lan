@@ -8,7 +8,8 @@ by observing the bytes returned to the TCP client.
 from __future__ import annotations
 
 import asyncio
-from unittest.mock import AsyncMock, MagicMock
+import time as _real_time
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -219,30 +220,37 @@ class TestOverLimit:
         handler: MagicMock,
     ) -> None:
         """After a rate-limit rejection, the connection stays open."""
+        t0 = _real_time.monotonic()
+        fake_now = [t0]
+
+        def _fake_monotonic() -> float:
+            return fake_now[0]
+
         srv = _make_server(mock_radio, proto, handler, rate_limit=1.0)
-        async with srv:
-            r, w = await _connect(srv)
+        with patch("icom_lan.rigctld.server.time.monotonic", _fake_monotonic):
+            async with srv:
+                r, w = await _connect(srv)
 
-            # Allow first.
-            w.write(b"f\n")
-            await w.drain()
-            data = await _read(r)
-            assert data == _OK_BYTES
+                # Allow first.
+                w.write(b"f\n")
+                await w.drain()
+                data = await _read(r)
+                assert data == _OK_BYTES
 
-            # Reject second.
-            w.write(b"f\n")
-            await w.drain()
-            rejected = await _read(r)
-            assert rejected == b"RPRT -6\n"
+                # Reject second.
+                w.write(b"f\n")
+                await w.drain()
+                rejected = await _read(r)
+                assert rejected == b"RPRT -6\n"
 
-            # Wait for window to expire, then succeed again.
-            await asyncio.sleep(1.1)
-            w.write(b"f\n")
-            await w.drain()
-            data = await _read(r)
-            assert data == _OK_BYTES
+                # Advance fake time by 2s instead of real sleep.
+                fake_now[0] = t0 + 2.0
+                w.write(b"f\n")
+                await w.drain()
+                data = await _read(r)
+                assert data == _OK_BYTES
 
-            await _close(w)
+                await _close(w)
 
 
 # ---------------------------------------------------------------------------
@@ -258,33 +266,40 @@ class TestWindowReset:
         handler: MagicMock,
     ) -> None:
         """After the 1-second window elapses, rate-limited commands are accepted."""
-        srv = _make_server(mock_radio, proto, handler, rate_limit=2.0)
-        async with srv:
-            r, w = await _connect(srv)
+        t0 = _real_time.monotonic()
+        fake_now = [t0]
 
-            # Saturate window (2 allowed).
-            for _ in range(2):
+        def _fake_monotonic() -> float:
+            return fake_now[0]
+
+        srv = _make_server(mock_radio, proto, handler, rate_limit=2.0)
+        with patch("icom_lan.rigctld.server.time.monotonic", _fake_monotonic):
+            async with srv:
+                r, w = await _connect(srv)
+
+                # Saturate window (2 allowed).
+                for _ in range(2):
+                    w.write(b"f\n")
+                    await w.drain()
+                    data = await _read(r)
+                    assert data == _OK_BYTES
+
+                # 3rd rejected.
+                w.write(b"f\n")
+                await w.drain()
+                data = await _read(r)
+                assert data == b"RPRT -6\n"
+
+                # Advance fake time by 2s instead of real sleep.
+                fake_now[0] = t0 + 2.0
+
+                # Should be allowed again.
                 w.write(b"f\n")
                 await w.drain()
                 data = await _read(r)
                 assert data == _OK_BYTES
 
-            # 3rd rejected.
-            w.write(b"f\n")
-            await w.drain()
-            data = await _read(r)
-            assert data == b"RPRT -6\n"
-
-            # Wait for window to reset.
-            await asyncio.sleep(1.1)
-
-            # Should be allowed again.
-            w.write(b"f\n")
-            await w.drain()
-            data = await _read(r)
-            assert data == _OK_BYTES
-
-            await _close(w)
+                await _close(w)
 
 
 # ---------------------------------------------------------------------------
