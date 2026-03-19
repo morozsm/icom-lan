@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any, Protocol, cast
 
@@ -224,6 +225,12 @@ class ControlHandler:
         self._event_queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue(
             maxsize=100,
         )
+        # Per-command rate limiting: command_name -> (last_time, drop_count)
+        self._cmd_last: dict[str, float] = {}
+        self._cmd_drops: dict[str, int] = {}
+        # Minimum interval between same command (seconds).
+        # Continuous slider/knob drag sends dozens of set_* per second.
+        self._CMD_MIN_INTERVAL = 0.05  # 50ms = max 20 commands/sec per client
 
     async def run(self) -> None:
         """Run the control channel lifecycle."""
@@ -556,6 +563,37 @@ class ControlHandler:
         cmd_id = msg.get("id", "")
         name = msg.get("name", "")
         params = msg.get("params", {})
+
+        # ── Server-side rate limiting (per client, per command) ──
+        # Only throttle SET commands (continuous slider/knob drag).
+        # GET and read-only commands pass through.
+        if name.startswith("set_"):
+            now = time.monotonic()
+            last = self._cmd_last.get(name, 0.0)
+            if now - last < self._CMD_MIN_INTERVAL:
+                drops = self._cmd_drops.get(name, 0) + 1
+                self._cmd_drops[name] = drops
+                if drops == 1 or drops % 50 == 0:
+                    logger.warning(
+                        "rate-limit: dropping %s (%.0fms since last, dropped=%d)",
+                        name,
+                        (now - last) * 1000,
+                        drops,
+                    )
+                # Still ACK the client so it doesn't stall
+                await self._ws.send_text(
+                    encode_json(
+                        {
+                            "type": "response",
+                            "id": cmd_id,
+                            "ok": True,
+                            "result": {"throttled": True},
+                        }
+                    )
+                )
+                return
+            self._cmd_last[name] = now
+            self._cmd_drops[name] = 0
 
         if name not in self._COMMANDS:
             await self._ws.send_text(

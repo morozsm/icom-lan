@@ -748,6 +748,8 @@ async def test_handle_command_response_paths() -> None:
     msg = decode_json(ws.send_text.await_args_list[-1].args[0])
     assert msg["ok"] is True and msg["result"]["freq"] == 123
 
+    # Reset rate limiter so second command isn't throttled
+    handler._cmd_last.clear()
     await handler._handle_command({"id": "d", "name": "set_freq", "params": {}})
     msg = decode_json(ws.send_text.await_args_list[-1].args[0])
     assert msg["ok"] is False and msg["error"] == "command_failed"
