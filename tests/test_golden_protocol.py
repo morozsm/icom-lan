@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
@@ -41,6 +42,7 @@ from icom_lan.rigctld.contract import (
 )
 from icom_lan.rigctld.handler import RigctldHandler
 from icom_lan.rigctld.protocol import format_error, format_response, parse_line
+from icom_lan.radio_protocol import MetersCapable
 from icom_lan.types import Mode
 
 # ---------------------------------------------------------------------------
@@ -61,8 +63,15 @@ _EXC_MAP: dict[str, Exception] = {
 }
 
 
-def _make_mock_radio(mock_spec: dict) -> AsyncMock:
-    """Build an AsyncMock radio from a fixture mock-spec dict.
+class _MockRadio(SimpleNamespace):
+    pass
+
+
+MetersCapable.register(_MockRadio)
+
+
+def _make_mock_radio(mock_spec: dict) -> _MockRadio:
+    """Build an explicit mock radio from a fixture mock-spec dict.
 
     Keys ending in ``__exc`` set a side_effect instead of a return_value.
     The ``get_mode_info`` key expects a [mode_int, filter_or_null] list which
@@ -70,24 +79,30 @@ def _make_mock_radio(mock_spec: dict) -> AsyncMock:
     Level getters (get_s_meter, get_power, get_swr) are set as AsyncMock so
     await in the handler returns the value.
     """
-    radio = AsyncMock()
+    radio = _MockRadio()
     # Sensible defaults so get_mode doesn't blow up when not explicitly mocked.
-    radio.get_data_mode.return_value = False
+    radio.get_freq = AsyncMock(return_value=14_074_000)
+    radio.set_freq = AsyncMock(return_value=None)
+    radio.get_mode_info = AsyncMock(return_value=(Mode.USB, None))
+    radio.set_mode = AsyncMock(return_value=None)
+    radio.get_data_mode = AsyncMock(return_value=False)
+    radio.set_data_mode = AsyncMock(return_value=None)
+    radio.set_ptt = AsyncMock(return_value=None)
 
-    _async_level_getters = {"get_s_meter", "get_power", "get_swr"}
+    _async_methods = {"get_s_meter", "get_rf_power", "get_swr", "get_data_mode"}
 
     for key, value in mock_spec.items():
         if key.endswith("__exc"):
             method = key[:-5]
             exc = _EXC_MAP[value]
-            getattr(radio, method).side_effect = exc
+            setattr(radio, method, AsyncMock(side_effect=exc))
         elif key == "get_mode_info":
             mode_int, filt = value[0], value[1]
-            getattr(radio, key).return_value = (Mode(mode_int), filt)
-        elif key in _async_level_getters:
+            setattr(radio, key, AsyncMock(return_value=(Mode(mode_int), filt)))
+        elif key in _async_methods:
             setattr(radio, key, AsyncMock(return_value=value))
         else:
-            getattr(radio, key).return_value = value
+            setattr(radio, key, AsyncMock(return_value=value))
 
     return radio
 

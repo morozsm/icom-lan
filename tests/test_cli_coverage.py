@@ -31,7 +31,21 @@ from icom_lan.cli import (
     _validate_audio_format_args,
     main,
 )
+from icom_lan.radio_protocol import AdvancedControlCapable, AudioCapable, ScopeCapable
 from icom_lan.scope import ScopeFrame
+
+
+class _CapableRadio(SimpleNamespace):
+    async def __aenter__(self) -> "_CapableRadio":
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb) -> None:
+        _ = (exc_type, exc, tb)
+
+
+AudioCapable.register(_CapableRadio)
+ScopeCapable.register(_CapableRadio)
+AdvancedControlCapable.register(_CapableRadio)
 
 
 def _run_args(**overrides: object) -> argparse.Namespace:
@@ -49,15 +63,13 @@ def _run_args(**overrides: object) -> argparse.Namespace:
     return argparse.Namespace(**base)
 
 
-def _make_full_capable_mock() -> AsyncMock:
-    """Return AsyncMock that satisfies AudioCapable and AdvancedControlCapable.
+def _make_full_capable_mock() -> _CapableRadio:
+    """Return explicit test double that satisfies capability protocols.
 
     All attrs must be explicitly set; Python 3.12+ runtime_checkable Protocol uses
     inspect.getattr_static which bypasses MagicMock.__getattr__.
     """
-    radio = AsyncMock()
-    radio.__aenter__.return_value = radio
-    radio.__aexit__.return_value = None
+    radio = _CapableRadio()
     # AudioCapable
     radio.audio_bus = MagicMock()
     radio.start_audio_rx_opus = AsyncMock()
@@ -115,7 +127,7 @@ def _make_full_capable_mock() -> AsyncMock:
     return radio
 
 
-def _mock_radio_ctx() -> tuple[MagicMock, AsyncMock]:
+def _mock_radio_ctx() -> tuple[MagicMock, _CapableRadio]:
     radio_cls = MagicMock()
     radio = _make_full_capable_mock()
     radio_cls.return_value = radio
