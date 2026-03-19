@@ -1,0 +1,40 @@
+[data-theme="amoled-black"] {
+  /* ── Colors: Backgrounds ──────────────────────────────── */
+  --v2-bg-app: #000000;
+  --v2-bg-card: #0a0a0a;
+  --v2-bg-input: #141414;
+  --v2-bg-darker: #000000;
+  --v2-bg-darkest: #000000;
+  --v2-bg-panel: #0f0f0f;
+  --v2-bg-gradient-start: #000000;
+  --v2-bg-gradient-panel: #0f0f0f;
+
+  /* ── Colors: Borders ────────────────────────────────────── */
+  --v2-border: #2a2a2a;
+  --v2-border-subtle: #1f1f1f;
+  --v2-border-dark: #141414;
+  --v2-border-darker: #0a0a0a;
+  --v2-border-panel: #2a2a2a;
+
+  /* ── Colors: Accents ─────────────────────────────────────── */
+  --v2-accent-cyan: #00e5ff;
+  --v2-accent-orange: #ff9500;
+  --v2-accent-red: #ff3b30;
+  --v2-accent-green: #34c759;
+  --v2-accent-yellow: #ffcc00;
+
+  /* ── Colors: Text ────────────────────────────────────── */
+  --v2-text-primary: #ffffff;
+  --v2-text-secondary: #e0e0e0;
+  --v2-text-muted: #808080;
+  --v2-text-header: #00e5ff;
+  --v2-text-bright: #ffffff;
+  --v2-text-dim: #909090;
+  --v2-text-disabled: #4a4a4a;
+  --v2-text-light: #e0e0e0;
+
+  /* ── Effects: Glows ──────────────────────────────────────── */
+  --v2-glow-cyan: 0 0 12px rgba(0, 229, 255, 0.3);
+  --v2-glow-orange: 0 0 12px rgba(255, 149, 0, 0.3);
+  --v2-glow-red: 0 0 12px rgba(255, 59, 48, 0.3);
+}
