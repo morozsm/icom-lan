@@ -56,19 +56,20 @@
 </script>
 
 <aside class="left-sidebar">
-  <section class="step-panel">
-    <div class="step-header-row">
-      <span class="step-header">TUNING STEP</span>
-      <span class="step-mode">{autoStep ? 'AUTO' : 'MANUAL'}</span>
+  <CollapsiblePanel title="TUNING STEP" panelId="tuning-step">
+    <div class="step-content">
+      <div class="step-header-row">
+        <span class="step-mode">{autoStep ? 'AUTO' : 'MANUAL'}</span>
+      </div>
+      <div class="step-value">{tuningStepLabel}</div>
+      <div class="step-hints">
+        <span class="step-chip" data-shortcut-hint={tuneLeftHint ?? undefined} title={tuneLeftHint ?? undefined}>LEFT</span>
+        <span class="step-chip" data-shortcut-hint={tuneRightHint ?? undefined} title={tuneRightHint ?? undefined}>RIGHT</span>
+        <span class="step-chip" data-shortcut-hint={stepDownHint ?? undefined} title={stepDownHint ?? undefined}>DOWN</span>
+        <span class="step-chip" data-shortcut-hint={stepUpHint ?? undefined} title={stepUpHint ?? undefined}>UP</span>
+      </div>
     </div>
-    <div class="step-value">{tuningStepLabel}</div>
-    <div class="step-hints">
-      <span class="step-chip" data-shortcut-hint={tuneLeftHint ?? undefined} title={tuneLeftHint ?? undefined}>LEFT</span>
-      <span class="step-chip" data-shortcut-hint={tuneRightHint ?? undefined} title={tuneRightHint ?? undefined}>RIGHT</span>
-      <span class="step-chip" data-shortcut-hint={stepDownHint ?? undefined} title={stepDownHint ?? undefined}>DOWN</span>
-      <span class="step-chip" data-shortcut-hint={stepUpHint ?? undefined} title={stepUpHint ?? undefined}>UP</span>
-    </div>
-  </section>
+  </CollapsiblePanel>
 
   <CollapsiblePanel title="RF FRONT END" panelId="rf-front-end">
     <RfFrontEnd
@@ -166,27 +167,22 @@
     box-sizing: border-box;
   }
 
-  .step-panel {
+  .step-content {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    padding: 8px 10px 10px;
-    background: linear-gradient(180deg, rgba(8, 16, 24, 0.96), rgba(5, 11, 18, 0.96));
-    border: 1px solid var(--v2-border-darker);
-    border-radius: 4px;
     font-family: 'Roboto Mono', monospace;
   }
 
   .step-header-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
     gap: 8px;
   }
 
-  .step-header,
   .step-mode {
-    color: var(--v2-text-subdued);
+    color: var(--v2-accent-cyan);
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.1em;
