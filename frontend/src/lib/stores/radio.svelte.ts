@@ -106,9 +106,17 @@ export function patchActiveReceiver(patch: Partial<ReceiverState>, lock = false)
   const currentRx = s[key];
   
   for (const [field, value] of Object.entries(patch)) {
+    // Skip updating locked fields from WS echo (preserve user input lock)
+    const lockKey = `${key}.${field}`;
+    const lockExpires = lockedFields.get(lockKey);
+    if (lockExpires && Date.now() < lockExpires && !lock) {
+      // Field is locked by user input, don't overwrite with WS echo
+      continue;
+    }
+    
     if (lock) {
       // Lock this field to prevent server updates for short duration (covers network lag)
-      lockedFields.set(`${key}.${field}`, Date.now() + 1500); // 1.5s lock for slider lag
+      lockedFields.set(lockKey, Date.now() + 1500); // 1.5s lock for slider lag
     }
     map.set(field, { value, expires, serverValueAtPatch: (currentRx as any)[field] });
   }
