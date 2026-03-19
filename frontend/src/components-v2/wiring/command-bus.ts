@@ -163,10 +163,17 @@ export function makeFilterHandlers() {
       patchActiveReceiver(patch, true);
       cmd('set_filter', { filter, receiver: activeReceiverParam() });
     },
-    onFilterWidthChange: (width: number) => {
-      patchActiveReceiver({ filterWidth: width }, true);
-      cmd('set_filter_width', { width, receiver: activeReceiverParam() });
-    },
+    onFilterWidthChange: (() => {
+      let timer: ReturnType<typeof setTimeout> | null = null;
+      return (width: number) => {
+        patchActiveReceiver({ filterWidth: width }, true);
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(() => {
+          timer = null;
+          cmd('set_filter_width', { width, receiver: activeReceiverParam() });
+        }, 200);
+      };
+    })(),
     onFilterShapeChange: (shape: number) => {
       patchActiveReceiver({ filterShape: shape }, true);
       cmd('set_filter_shape', { shape, receiver: activeReceiverParam() });
