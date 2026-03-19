@@ -159,7 +159,7 @@ class WebConfig:
 class ConnectionManager:
     """Track WebSocket connections per-IP per-channel; evict excess and reap zombies."""
 
-    MAX_PER_IP_PER_CHANNEL: int = 2
+    MAX_PER_IP_PER_CHANNEL: int = 6  # 3 tabs × 2 WS (control + scope)
 
     def __init__(self) -> None:
         self._connections: dict[tuple[str, str], list[WebSocketConnection]] = {}
@@ -174,6 +174,13 @@ class ConnectionManager:
         evicted: list[WebSocketConnection] = []
         while len(conns) > self.MAX_PER_IP_PER_CHANNEL:
             evicted.append(conns.pop(0))
+        # Debug: log current connection count per channel
+        if evicted:
+            from . import logger
+            logger.debug(
+                "conn_manager: %s from %s now has %d connections (evicted %d)",
+                channel, ip, len(conns), len(evicted)
+            )
         return evicted
 
     def unregister(self, ip: str, channel: str, ws: WebSocketConnection) -> None:

@@ -320,7 +320,7 @@ class WebSocketConnection:
                         await self.close(1001, "pong timeout")
                         break
                     await self._send_raw(make_frame(WS_OP_PING, b"ka"))
-                    self._last_pong = time.monotonic()
+                    # DO NOT reset _last_pong here — only on actual PONG receipt
         except asyncio.CancelledError:
             pass
         except Exception:
