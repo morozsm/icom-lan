@@ -360,6 +360,7 @@ export interface RxAudioProps {
 export interface AudioUiState {
   muted: boolean;
   rxEnabled: boolean;
+  volume: number;
 }
 
 export function toRxAudioProps(
@@ -374,9 +375,13 @@ export function toRxAudioProps(
     : audioState.rxEnabled && hasLiveAudio
       ? 'live'
       : 'local';
+  // In live mode, show browser volume; in radio mode, show radio AF level
+  const afLevel = monitorMode === 'live'
+    ? Math.round(audioState.volume / 100 * 255)
+    : (rx?.afLevel ?? 128);
   return {
     monitorMode,
-    afLevel: rx?.afLevel ?? 128,
+    afLevel,
     hasLiveAudio,
   };
 }

@@ -14,7 +14,7 @@ import { getActiveReceiver, getRadioState, patchActiveReceiver, patchRadioState 
 import { getCapabilities } from '$lib/stores/capabilities.svelte';
 import { adjustTuningStep, getTuningStep } from '$lib/stores/tuning.svelte';
 import { audioManager } from '$lib/audio/audio-manager';
-import { setMuted } from '$lib/stores/audio.svelte';
+import { setMuted, setVolume } from '$lib/stores/audio.svelte';
 import type { KeyboardActionConfig } from '../layout/keyboard-map';
 import { mapIfShiftToPbt } from '../panels/filter-controls';
 
@@ -387,25 +387,50 @@ export function makeTxHandlers() {
 
 /* ── RX Audio Handlers ───────────────────────────────────────── */
 
+let savedAfLevel: number | null = null;
+
 export function makeRxAudioHandlers() {
   return {
     onMonitorModeChange: (mode: string) => {
       if (mode === 'live') {
         setMuted(false);
+        // Restore radio AF if was muted
+        if (savedAfLevel !== null) {
+          cmd('set_af_level', { level: savedAfLevel, receiver: activeReceiverParam() });
+          savedAfLevel = null;
+        }
         audioManager.startRx();
         return;
       }
 
       audioManager.stopRx();
-      setMuted(mode === 'mute');
+
+      if (mode === 'mute') {
+        setMuted(true);
+        // Save current AF level and mute radio
+        const rx = getRadioState();
+        const key = rx?.active === 'SUB' ? 'sub' : 'main';
+        const currentAf = rx?.[key]?.afLevel ?? 128;
+        if (savedAfLevel === null) savedAfLevel = currentAf;
+        cmd('set_af_level', { level: 0, receiver: activeReceiverParam() });
+      } else {
+        // Radio mode — restore AF if was muted
+        setMuted(false);
+        if (savedAfLevel !== null) {
+          cmd('set_af_level', { level: savedAfLevel, receiver: activeReceiverParam() });
+          patchActiveReceiver({ afLevel: savedAfLevel }, true);
+          savedAfLevel = null;
+        }
+      }
     },
     onAfLevelChange: (level: number) => {
-      patchActiveReceiver({ afLevel: level }, true);
       if (audioManager.rxEnabled) {
         // Live mode: browser volume only
         audioManager.setRxVolume(level / 255);
+        setVolume(Math.round(level / 255 * 100));
       } else {
         // Radio mode: CI-V AF level
+        patchActiveReceiver({ afLevel: level }, true);
         cmd('set_af_level', { level, receiver: activeReceiverParam() });
       }
     },
