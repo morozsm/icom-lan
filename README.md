@@ -302,6 +302,45 @@ icom-lan uses an abstract **Radio Protocol** that enables support for multiple r
 
 📖 **Full protocol docs:** [Radio Protocol](docs/radio-protocol.md)
 
+## Development
+
+### Quick Start (Development Server)
+
+```bash
+./run-dev.sh
+```
+
+Starts the web server with:
+- `ICOM_DEBUG=1` — DEBUG level logging to console + file
+- Logs: `logs/icom-lan.log`
+- Radio: `192.168.55.40` (override with `ICOM_HOST=...`)
+- Web UI: `http://0.0.0.0:8080`
+
+### Debug Logging
+
+```bash
+# Enable debug logging (logs to logs/icom-lan.log)
+ICOM_DEBUG=1 uv run icom-lan web --host 0.0.0.0 --port 8080
+
+# Custom log file
+ICOM_DEBUG=1 ICOM_LOG_FILE=/tmp/debug.log uv run icom-lan web
+
+# Console only (no file)
+ICOM_DEBUG=1 ICOM_LOG_FILE= uv run icom-lan web
+```
+
+**Server crashed?** Check `logs/icom-lan.log` for traceback.
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ICOM_DEBUG` | `0` | Set to `1` for DEBUG logging + file output |
+| `ICOM_LOG_FILE` | `logs/icom-lan.log` | Log file path (auto-created in DEBUG mode) |
+| `ICOM_HOST` | `192.168.55.40` | Radio IP address |
+| `ICOM_USER` | `moroz` | Radio username |
+| `ICOM_PASS` | — | Radio password |
+
 ## Testing
 
 ```bash

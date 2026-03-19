@@ -26,6 +26,7 @@ references/wfview/rigs/*
 # Test artifacts
 *.pcap
 *.log
+logs/
 
 # Workspace / AI agent files (not for public repo)
 AGENTS.md

@@ -2037,18 +2037,47 @@ def main() -> None:
     args = parser.parse_args()
 
     # Enable debug logging with ICOM_DEBUG=1 or any truthy value
-    if os.environ.get("ICOM_DEBUG", "").strip() not in ("", "0", "false", "no"):
-        logging.basicConfig(
-            level=logging.DEBUG,
-            format="%(asctime)s %(name)s %(levelname)s %(message)s",
-            datefmt="%H:%M:%S",
+    # ICOM_LOG_FILE=/path/to/file.log — log to file (default: logs/icom-lan.log)
+    debug_mode = os.environ.get("ICOM_DEBUG", "").strip() not in ("", "0", "false", "no")
+    log_file = os.environ.get("ICOM_LOG_FILE", "")
+    
+    handlers: list[logging.Handler] = []
+    
+    # Console handler (always present)
+    console_handler = logging.StreamHandler()
+    if debug_mode:
+        console_handler.setFormatter(
+            logging.Formatter("%(asctime)s %(name)s %(levelname)s %(message)s", datefmt="%H:%M:%S")
         )
     else:
-        logging.basicConfig(
-            level=logging.INFO,
-            format="%(asctime)s %(levelname)s %(message)s",
-            datefmt="%H:%M:%S",
+        console_handler.setFormatter(
+            logging.Formatter("%(asctime)s %(levelname)s %(message)s", datefmt="%H:%M:%S")
         )
+    handlers.append(console_handler)
+    
+    # File handler (if log_file specified or debug mode)
+    if debug_mode and not log_file:
+        # Default log file in debug mode: logs/icom-lan.log
+        log_file = "logs/icom-lan.log"
+    
+    if log_file:
+        log_path = Path(log_file).expanduser().resolve()
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        file_handler = logging.FileHandler(log_path, mode='a')
+        file_handler.setFormatter(
+            logging.Formatter(
+                "%(asctime)s %(name)s [%(levelname)s] %(message)s",
+                datefmt="%Y-%m-%d %H:%M:%S"
+            )
+        )
+        handlers.append(file_handler)
+        print(f"Logging to {log_path}", file=sys.stderr)
+    
+    logging.basicConfig(
+        level=logging.DEBUG if debug_mode else logging.INFO,
+        handlers=handlers,
+        force=True,  # Override any existing config
+    )
 
     if getattr(args, "list_audio_devices", False):
         sys.exit(asyncio.run(_cmd_list_audio_devices(args)))
