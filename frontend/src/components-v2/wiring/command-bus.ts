@@ -134,7 +134,33 @@ export function makeRfFrontEndHandlers() {
 export function makeFilterHandlers() {
   return {
     onFilterChange: (filter: number) => {
-      patchActiveReceiver({ filter }, true);
+      const rx = getActiveReceiver();
+      const caps = getCapabilities();
+      const mode = rx?.mode?.toUpperCase();
+      const dataMode = rx?.dataMode ?? 0;
+      // Resolve per-mode filter config for optimistic BW update
+      let estimatedWidth: number | undefined;
+      if (mode && caps?.filterConfig) {
+        const candidates = [];
+        if (dataMode > 0) candidates.push(`${mode}-D`);
+        candidates.push(mode);
+        if (mode === 'USB' || mode === 'LSB') {
+          if (dataMode > 0) candidates.push('SSB-D');
+          candidates.push('SSB');
+        }
+        for (const c of candidates) {
+          const cfg = caps.filterConfig[c];
+          if (cfg?.defaults?.[filter - 1] != null) {
+            estimatedWidth = cfg.defaults[filter - 1];
+            break;
+          }
+        }
+      }
+      const patch: Record<string, unknown> = { filter };
+      if (estimatedWidth != null) {
+        patch.filterWidth = estimatedWidth;
+      }
+      patchActiveReceiver(patch, true);
       cmd('set_filter', { filter, receiver: activeReceiverParam() });
     },
     onFilterWidthChange: (width: number) => {
