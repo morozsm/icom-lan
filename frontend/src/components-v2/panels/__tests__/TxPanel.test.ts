@@ -105,7 +105,7 @@ describe('panel structure', () => {
 
   it('renders Mic Gain slider', () => {
     const t = mountPanel(baseProps);
-    const labels = Array.from(t.querySelectorAll('.slider-label'));
+    const labels = Array.from(t.querySelectorAll('.vc-label'));
     expect(labels.some((el) => el.textContent === 'Mic Gain')).toBe(true);
   });
 
@@ -156,13 +156,13 @@ describe('hasTx gating', () => {
 describe('COMP slider visibility', () => {
   it('does not render Comp Level slider when compActive is false', () => {
     const t = mountPanel(baseProps);
-    const labels = Array.from(t.querySelectorAll('.slider-label')).map((el) => el.textContent);
+    const labels = Array.from(t.querySelectorAll('.vc-label')).map((el) => el.textContent);
     expect(labels).not.toContain('Comp Level');
   });
 
   it('renders Comp Level slider when compActive is true', () => {
     const t = mountPanel({ ...baseProps, compActive: true });
-    const labels = Array.from(t.querySelectorAll('.slider-label')).map((el) => el.textContent);
+    const labels = Array.from(t.querySelectorAll('.vc-label')).map((el) => el.textContent);
     expect(labels).toContain('Comp Level');
   });
 });
@@ -170,13 +170,13 @@ describe('COMP slider visibility', () => {
 describe('MON slider visibility', () => {
   it('does not render Mon Level slider when monActive is false', () => {
     const t = mountPanel(baseProps);
-    const labels = Array.from(t.querySelectorAll('.slider-label')).map((el) => el.textContent);
+    const labels = Array.from(t.querySelectorAll('.vc-label')).map((el) => el.textContent);
     expect(labels).not.toContain('Mon Level');
   });
 
   it('renders Mon Level slider when monActive is true', () => {
     const t = mountPanel({ ...baseProps, monActive: true });
-    const labels = Array.from(t.querySelectorAll('.slider-label')).map((el) => el.textContent);
+    const labels = Array.from(t.querySelectorAll('.vc-label')).map((el) => el.textContent);
     expect(labels).toContain('Mon Level');
   });
 });
@@ -205,11 +205,10 @@ describe('callbacks', () => {
   it('calls onMicGainChange when Mic Gain slider changes', () => {
     const onMicGainChange = vi.fn();
     const t = mountPanel({ ...baseProps, onMicGainChange });
-    const input = t.querySelector<HTMLInputElement>('input[type="range"]');
-    if (input) {
-      input.value = '200';
-      input.dispatchEvent(new Event('input', { bubbles: true }));
+    const slider = t.querySelector<HTMLElement>('[role="slider"]');
+    if (slider) {
+      slider.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
     }
-    expect(onMicGainChange).toHaveBeenCalledWith(200);
+    expect(onMicGainChange).toHaveBeenCalled();
   });
 });

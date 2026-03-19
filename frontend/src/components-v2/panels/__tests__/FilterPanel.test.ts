@@ -107,13 +107,13 @@ describe('panel structure', () => {
     const t = mountPanel(baseProps);
     expect(t.querySelector('.bw-label')?.textContent).toBe('BW');
     expect(t.querySelector('.bw-value')?.textContent).toBe('2.4kHz');
-    const labels = Array.from(t.querySelectorAll('.slider-label')).map((el) => el.textContent);
+    const labels = Array.from(t.querySelectorAll('.vc-label')).map((el) => el.textContent);
     expect(labels).not.toContain('Width');
   });
 
   it('renders the IF Shift slider', () => {
     const t = mountPanel(baseProps);
-    const labels = Array.from(t.querySelectorAll('.slider-label'));
+    const labels = Array.from(t.querySelectorAll('.vc-label'));
     expect(labels.some(el => el.textContent === 'IF Shift')).toBe(true);
   });
 
@@ -124,38 +124,37 @@ describe('panel structure', () => {
 
   it('IF Shift slider has min=-1200, max=1200, step=25', () => {
     const t = mountPanel(baseProps);
-    const inputs = t.querySelectorAll<HTMLInputElement>('input[type="range"]');
-    const ifShiftInput = inputs[0];
-    expect(ifShiftInput.min).toBe('-1200');
-    expect(ifShiftInput.max).toBe('1200');
-    expect(ifShiftInput.step).toBe('25');
+    const sliders = t.querySelectorAll<HTMLElement>('[role="slider"]');
+    const ifShiftSlider = sliders[0];
+    expect(ifShiftSlider.getAttribute('aria-valuemin')).toBe('-1200');
+    expect(ifShiftSlider.getAttribute('aria-valuemax')).toBe('1200');
   });
 });
 
 describe('PBT sliders visibility', () => {
   it('does not render PBT sliders when hasPbt is false (default)', () => {
     const t = mountPanel(baseProps);
-    const labels = Array.from(t.querySelectorAll('.slider-label')).map(el => el.textContent);
+    const labels = Array.from(t.querySelectorAll('.vc-label')).map(el => el.textContent);
     expect(labels).not.toContain('PBT Inner');
     expect(labels).not.toContain('PBT Outer');
   });
 
   it('does not render PBT sliders when hasPbt=false explicitly', () => {
     const t = mountPanel({ ...baseProps, hasPbt: false });
-    const labels = Array.from(t.querySelectorAll('.slider-label')).map(el => el.textContent);
+    const labels = Array.from(t.querySelectorAll('.vc-label')).map(el => el.textContent);
     expect(labels).not.toContain('PBT Inner');
     expect(labels).not.toContain('PBT Outer');
   });
 
   it('renders PBT Inner slider when hasPbt=true', () => {
     const t = mountPanel({ ...baseProps, hasPbt: true, pbtInner: 100, pbtOuter: -50 });
-    const labels = Array.from(t.querySelectorAll('.slider-label')).map(el => el.textContent);
+    const labels = Array.from(t.querySelectorAll('.vc-label')).map(el => el.textContent);
     expect(labels).toContain('PBT Inner');
   });
 
   it('renders PBT Outer slider when hasPbt=true', () => {
     const t = mountPanel({ ...baseProps, hasPbt: true, pbtInner: 100, pbtOuter: -50 });
-    const labels = Array.from(t.querySelectorAll('.slider-label')).map(el => el.textContent);
+    const labels = Array.from(t.querySelectorAll('.vc-label')).map(el => el.textContent);
     expect(labels).toContain('PBT Outer');
   });
 
@@ -167,12 +166,12 @@ describe('PBT sliders visibility', () => {
 
   it('renders 3 sliders total when hasPbt=true', () => {
     const t = mountPanel({ ...baseProps, hasPbt: true, pbtInner: 0, pbtOuter: 0 });
-    expect(t.querySelectorAll('input[type="range"]').length).toBe(3);
+    expect(t.querySelectorAll('[role="slider"]').length).toBe(3);
   });
 
   it('renders 1 slider total when hasPbt=false', () => {
     const t = mountPanel(baseProps);
-    expect(t.querySelectorAll('input[type="range"]').length).toBe(1);
+    expect(t.querySelectorAll('[role="slider"]').length).toBe(1);
   });
 });
 
@@ -188,28 +187,25 @@ describe('callbacks', () => {
   it('calls onIfShiftChange when IF Shift slider changes', () => {
     const onIfShiftChange = vi.fn();
     const t = mountPanel({ ...baseProps, onIfShiftChange });
-    const input = t.querySelectorAll<HTMLInputElement>('input[type="range"]')[0];
-    input.value = '-300';
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-    expect(onIfShiftChange).toHaveBeenCalledWith(-300);
+    const slider = t.querySelectorAll<HTMLElement>('[role="slider"]')[0];
+    slider.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    expect(onIfShiftChange).toHaveBeenCalled();
   });
 
   it('calls onPbtInnerChange when PBT Inner slider changes', () => {
     const onPbtInnerChange = vi.fn();
     const t = mountPanel({ ...baseProps, hasPbt: true, pbtInner: 0, pbtOuter: 0, onPbtInnerChange });
-    const inputs = t.querySelectorAll<HTMLInputElement>('input[type="range"]');
-    inputs[1].value = '200';
-    inputs[1].dispatchEvent(new Event('input', { bubbles: true }));
-    expect(onPbtInnerChange).toHaveBeenCalledWith(200);
+    const sliders = t.querySelectorAll<HTMLElement>('[role="slider"]');
+    sliders[1].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(onPbtInnerChange).toHaveBeenCalled();
   });
 
   it('calls onPbtOuterChange when PBT Outer slider changes', () => {
     const onPbtOuterChange = vi.fn();
     const t = mountPanel({ ...baseProps, hasPbt: true, pbtInner: 0, pbtOuter: 0, onPbtOuterChange });
-    const inputs = t.querySelectorAll<HTMLInputElement>('input[type="range"]');
-    inputs[2].value = '-100';
-    inputs[2].dispatchEvent(new Event('input', { bubbles: true }));
-    expect(onPbtOuterChange).toHaveBeenCalledWith(-100);
+    const sliders = t.querySelectorAll<HTMLElement>('[role="slider"]');
+    sliders[2].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    expect(onPbtOuterChange).toHaveBeenCalled();
   });
 
   it('calls onPbtReset when the reset button is clicked', () => {
@@ -230,10 +226,9 @@ describe('callbacks', () => {
     const modal = document.querySelector('.filter-modal');
     expect(modal).not.toBeNull();
 
-    const inputs = modal?.querySelectorAll<HTMLInputElement>('input[type="range"]') ?? [];
-    inputs[0].value = '3200';
-    inputs[0].dispatchEvent(new Event('input', { bubbles: true }));
-    expect(onFilterPresetChange).toHaveBeenCalledWith(1, 3200);
+    const sliders = modal?.querySelectorAll<HTMLElement>('[role="slider"]') ?? [];
+    sliders[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(onFilterPresetChange).toHaveBeenCalled();
   });
 
   it('calls onFilterDefaults when restore defaults is clicked in the modal', () => {

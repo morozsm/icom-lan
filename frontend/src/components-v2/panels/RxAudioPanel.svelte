@@ -1,6 +1,6 @@
 <script lang="ts">
   import SegmentedButton from '../controls/SegmentedButton.svelte';
-  import Slider from '../controls/Slider.svelte';
+  import { ValueControl } from '../controls/value-control';
   import { hasAudio } from '$lib/stores/capabilities.svelte';
   import { buildMonitorOptions, formatMonitorStatus } from './audio-utils';
   import { getShortcutHint } from '../layout/shortcut-hints';
@@ -33,15 +33,17 @@
         title={monitorShortcut}
         onchange={(v) => onMonitorModeChange(v as string)}
       />
-      <Slider
+      <ValueControl
         label="AF Level"
         value={afLevel}
         min={0}
         max={255}
+        step={1}
+        renderer="hbar"
         accentColor="#00FFFF"
         shortcutHint={afShortcut}
         title={afShortcut}
-        onchange={onAfLevelChange}
+        onChange={onAfLevelChange}
       />
       <div class="output-indicator">{statusText}</div>
     </div>

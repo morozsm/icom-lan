@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Slider from '../controls/Slider.svelte';
+  import { ValueControl } from '../controls/value-control';
   import StatusBadge from '../controls/StatusBadge.svelte';
   import { formatOffset, shouldShowPanel } from './rit-utils';
   import { getShortcutHint } from '../layout/shortcut-hints';
@@ -63,15 +63,16 @@
           <span class="offset" class:active={xitActive}>{formatOffset(xitOffset)}</span>
         </div>
       {/if}
-      <Slider
+      <ValueControl
         label="Offset"
         value={offsetValue}
         min={-9999}
         max={9999}
         step={50}
         unit="Hz"
+        renderer="bipolar"
         accentColor="#00D4FF"
-        onchange={handleOffsetChange}
+        onChange={handleOffsetChange}
       />
       <div class="clear-row">
         <StatusBadge label="CLEAR" active={false} color="muted" onclick={onClear} shortcutHint={clearShortcut} title={clearShortcut} />

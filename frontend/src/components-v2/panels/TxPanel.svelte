@@ -1,7 +1,7 @@
 <script lang="ts">
   import '../controls/control-button.css';
   import StatusBadge from '../controls/StatusBadge.svelte';
-  import Slider from '../controls/Slider.svelte';
+  import { ValueControl } from '../controls/value-control';
   import { hasTx } from '$lib/stores/capabilities.svelte';
   import { txStatusColor } from './tx-utils';
 
@@ -61,13 +61,15 @@
       />
     </div>
 
-    <Slider
+    <ValueControl
       label="Mic Gain"
       value={micGain}
       min={0}
       max={255}
+      step={1}
+      renderer="hbar"
       accentColor="#FF6A00"
-      onchange={onMicGainChange}
+      onChange={onMicGainChange}
     />
 
     <div class="atu-row">
@@ -94,13 +96,15 @@
       <StatusBadge label="COMP" active={compActive} color="orange" onclick={onCompToggle} />
     </div>
     {#if compActive}
-      <Slider
+      <ValueControl
         label="Comp Level"
         value={compLevel}
         min={0}
         max={255}
+        step={1}
+        renderer="hbar"
         accentColor="#FF6A00"
-        onchange={onCompLevelChange}
+        onChange={onCompLevelChange}
       />
     {/if}
 
@@ -108,13 +112,15 @@
       <StatusBadge label="MON" active={monActive} color="orange" onclick={onMonToggle} />
     </div>
     {#if monActive}
-      <Slider
+      <ValueControl
         label="Mon Level"
         value={monLevel}
         min={0}
         max={255}
+        step={1}
+        renderer="hbar"
         accentColor="#FF6A00"
-        onchange={onMonLevelChange}
+        onChange={onMonLevelChange}
       />
     {/if}
 

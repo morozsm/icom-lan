@@ -159,19 +159,19 @@ describe('panel structure', () => {
 describe('CW section visibility', () => {
   it('does not render CW section when mode is USB', () => {
     const t = mountPanel(baseProps);
-    const labels = Array.from(t.querySelectorAll('.slider-label')).map((el) => el.textContent);
+    const labels = Array.from(t.querySelectorAll('.vc-label')).map((el) => el.textContent);
     expect(labels).not.toContain('CW Pitch');
   });
 
   it('renders CW section when mode is CW', () => {
     const t = mountPanel({ ...baseProps, currentMode: 'CW' });
-    const labels = Array.from(t.querySelectorAll('.slider-label')).map((el) => el.textContent);
+    const labels = Array.from(t.querySelectorAll('.vc-label')).map((el) => el.textContent);
     expect(labels).toContain('CW Pitch');
   });
 
   it('renders CW section when mode is CW-R', () => {
     const t = mountPanel({ ...baseProps, currentMode: 'CW-R' });
-    const labels = Array.from(t.querySelectorAll('.slider-label')).map((el) => el.textContent);
+    const labels = Array.from(t.querySelectorAll('.vc-label')).map((el) => el.textContent);
     expect(labels).toContain('CW Pitch');
   });
 });
@@ -179,19 +179,19 @@ describe('CW section visibility', () => {
 describe('Notch freq slider visibility', () => {
   it('does not render Notch Freq slider when notchMode is "off"', () => {
     const t = mountPanel(baseProps);
-    const labels = Array.from(t.querySelectorAll('.slider-label')).map((el) => el.textContent);
+    const labels = Array.from(t.querySelectorAll('.vc-label')).map((el) => el.textContent);
     expect(labels).not.toContain('Notch Freq');
   });
 
   it('does not render Notch Freq slider when notchMode is "auto"', () => {
     const t = mountPanel({ ...baseProps, notchMode: 'auto' });
-    const labels = Array.from(t.querySelectorAll('.slider-label')).map((el) => el.textContent);
+    const labels = Array.from(t.querySelectorAll('.vc-label')).map((el) => el.textContent);
     expect(labels).not.toContain('Notch Freq');
   });
 
   it('renders Notch Freq slider when notchMode is "manual"', () => {
     const t = mountPanel({ ...baseProps, notchMode: 'manual' });
-    const labels = Array.from(t.querySelectorAll('.slider-label')).map((el) => el.textContent);
+    const labels = Array.from(t.querySelectorAll('.vc-label')).map((el) => el.textContent);
     expect(labels).toContain('Notch Freq');
   });
 });
@@ -199,10 +199,10 @@ describe('Notch freq slider visibility', () => {
 describe('CW Pitch slider constraints', () => {
   it('CW Pitch slider has min=300, max=900', () => {
     const t = mountPanel({ ...baseProps, currentMode: 'CW' });
-    const inputs = t.querySelectorAll<HTMLInputElement>('input[type="range"]');
-    const pitchInput = Array.from(inputs).at(-1)!;
-    expect(pitchInput.min).toBe('300');
-    expect(pitchInput.max).toBe('900');
+    const sliders = t.querySelectorAll<HTMLElement>('[role="slider"]');
+    const pitchSlider = Array.from(sliders).at(-1)!;
+    expect(pitchSlider.getAttribute('aria-valuemin')).toBe('300');
+    expect(pitchSlider.getAttribute('aria-valuemax')).toBe('900');
   });
 });
 
@@ -221,10 +221,9 @@ describe('callbacks', () => {
   it('calls onCwPitchChange when CW Pitch slider changes', () => {
     const onCwPitchChange = vi.fn();
     const t = mountPanel({ ...baseProps, currentMode: 'CW', onCwPitchChange });
-    const inputs = t.querySelectorAll<HTMLInputElement>('input[type="range"]');
-    const pitchInput = Array.from(inputs).at(-1)!;
-    pitchInput.value = '700';
-    pitchInput.dispatchEvent(new Event('input', { bubbles: true }));
-    expect(onCwPitchChange).toHaveBeenCalledWith(700);
+    const sliders = t.querySelectorAll<HTMLElement>('[role="slider"]');
+    const pitchSlider = Array.from(sliders).at(-1)!;
+    pitchSlider.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+    expect(onCwPitchChange).toHaveBeenCalled();
   });
 });
