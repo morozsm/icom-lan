@@ -1,0 +1,200 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { mount, unmount, flushSync } from 'svelte';
+import CollapsiblePanel from '../CollapsiblePanel.svelte';
+
+// Mock localStorage
+const localStorageMock = (() => {
+  let store: Record<string, string> = {};
+  return {
+    getItem: (key: string) => store[key] || null,
+    setItem: (key: string, value: string) => {
+      store[key] = value;
+    },
+    clear: () => {
+      store = {};
+    },
+  };
+})();
+
+Object.defineProperty(globalThis, 'localStorage', {
+  value: localStorageMock,
+  writable: true,
+});
+
+let components: ReturnType<typeof mount>[] = [];
+
+function mountPanel(props: { title: string; panelId: string; collapsible?: boolean }) {
+  const target = document.createElement('div');
+  document.body.appendChild(target);
+  const component = mount(CollapsiblePanel, { target, props });
+  flushSync();
+  components.push(component);
+  return target;
+}
+
+beforeEach(() => {
+  components = [];
+  localStorageMock.clear();
+});
+
+afterEach(() => {
+  components.forEach((c) => unmount(c));
+  document.body.innerHTML = '';
+});
+
+describe('CollapsiblePanel', () => {
+  it('renders the title', () => {
+    const target = mountPanel({ title: 'Test Panel', panelId: 'test' });
+    const title = target.querySelector('.title');
+    expect(title?.textContent).toBe('Test Panel');
+  });
+
+  it('renders children in the content area', () => {
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+
+    const component = mount(CollapsiblePanel, {
+      target,
+      props: {
+        title: 'Test',
+        panelId: 'test',
+        children: (anchor: any, props: any) => {
+          const div = document.createElement('div');
+          div.className = 'test-child';
+          div.textContent = 'Child content';
+          anchor.before(div);
+          return {
+            update: () => {},
+            destroy: () => div.remove(),
+          };
+        },
+      },
+    });
+    flushSync();
+    components.push(component);
+
+    const child = target.querySelector('.test-child');
+    expect(child?.textContent).toBe('Child content');
+  });
+
+  it('shows expanded chevron (▾) by default', () => {
+    const target = mountPanel({ title: 'Test', panelId: 'test' });
+    const chevron = target.querySelector('.chevron');
+    expect(chevron?.textContent).toBe('▾');
+  });
+
+  it('has aria-expanded=true by default', () => {
+    const target = mountPanel({ title: 'Test', panelId: 'test' });
+    const header = target.querySelector('.panel-header') as HTMLButtonElement;
+    expect(header?.getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('toggles collapsed state on header click', () => {
+    const target = mountPanel({ title: 'Test', panelId: 'test' });
+    const header = target.querySelector('.panel-header') as HTMLButtonElement;
+    const chevron = target.querySelector('.chevron');
+
+    // Initially expanded
+    expect(chevron?.textContent).toBe('▾');
+    expect(header?.getAttribute('aria-expanded')).toBe('true');
+
+    // Click to collapse
+    header?.click();
+    flushSync();
+
+    expect(chevron?.textContent).toBe('▸');
+    expect(header?.getAttribute('aria-expanded')).toBe('false');
+
+    // Click to expand
+    header?.click();
+    flushSync();
+
+    expect(chevron?.textContent).toBe('▾');
+    expect(header?.getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('persists collapsed state to localStorage', () => {
+    const target = mountPanel({ title: 'Test', panelId: 'test-panel' });
+    const header = target.querySelector('.panel-header') as HTMLButtonElement;
+
+    header?.click();
+    flushSync();
+
+    const stored = localStorage.getItem('icom-lan:panel-collapsed');
+    expect(stored).not.toBeNull();
+    const data = JSON.parse(stored!);
+    expect(data['test-panel']).toBe(true);
+  });
+
+  it('restores collapsed state from localStorage', () => {
+    localStorage.setItem('icom-lan:panel-collapsed', JSON.stringify({ 'test-panel': true }));
+
+    const target = mountPanel({ title: 'Test', panelId: 'test-panel' });
+    const chevron = target.querySelector('.chevron');
+    const header = target.querySelector('.panel-header') as HTMLButtonElement;
+
+    expect(chevron?.textContent).toBe('▸');
+    expect(header?.getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('shows no chevron when collapsible=false', () => {
+    const target = mountPanel({ title: 'Test', panelId: 'test', collapsible: false });
+    const chevron = target.querySelector('.chevron');
+    expect(chevron).toBeNull();
+  });
+
+  it('does not toggle when collapsible=false', () => {
+    const target = mountPanel({ title: 'Test', panelId: 'test', collapsible: false });
+    const header = target.querySelector('.panel-header') as HTMLButtonElement;
+    const initialExpanded = header?.getAttribute('aria-expanded');
+
+    header?.click();
+    flushSync();
+
+    expect(header?.getAttribute('aria-expanded')).toBe(initialExpanded);
+  });
+
+  it('has disabled attribute when collapsible=false', () => {
+    const target = mountPanel({ title: 'Test', panelId: 'test', collapsible: false });
+    const header = target.querySelector('.panel-header') as HTMLButtonElement;
+    expect(header?.disabled).toBe(true);
+  });
+
+  it('adds collapsed class to content when collapsed', () => {
+    const target = mountPanel({ title: 'Test', panelId: 'test' });
+    const header = target.querySelector('.panel-header') as HTMLButtonElement;
+    const content = target.querySelector('.panel-content');
+
+    expect(content?.classList.contains('collapsed')).toBe(false);
+
+    header?.click();
+    flushSync();
+
+    expect(content?.classList.contains('collapsed')).toBe(true);
+  });
+
+  it('sets data-collapsed attribute on root element', () => {
+    const target = mountPanel({ title: 'Test', panelId: 'test' });
+    const panel = target.querySelector('.collapsible-panel');
+    const header = target.querySelector('.panel-header') as HTMLButtonElement;
+
+    expect(panel?.getAttribute('data-collapsed')).toBe('false');
+
+    header?.click();
+    flushSync();
+
+    expect(panel?.getAttribute('data-collapsed')).toBe('true');
+  });
+
+  it('has collapsible class on header when collapsible=true', () => {
+    const target = mountPanel({ title: 'Test', panelId: 'test', collapsible: true });
+    const header = target.querySelector('.panel-header');
+    expect(header?.classList.contains('collapsible')).toBe(true);
+  });
+
+  it('does not have collapsible class on header when collapsible=false', () => {
+    const target = mountPanel({ title: 'Test', panelId: 'test', collapsible: false });
+    const header = target.querySelector('.panel-header');
+    expect(header?.classList.contains('collapsible')).toBe(false);
+  });
+});

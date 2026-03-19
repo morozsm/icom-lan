@@ -43,9 +43,7 @@
   const dataShortcut = getShortcutHint('cycle_data_mode');
 </script>
 
-<div class="panel" data-mode-panel="true" data-highlight={undefined}>
-  <div class="panel-header">MODE</div>
-  <div class="panel-body">
+<div class="panel-body" data-mode-panel="true" data-highlight={undefined}>
     <div class="mode-grid">
       {#each visibleModes as mode}
         <button
@@ -83,32 +81,8 @@
       </div>
     {/if}
   </div>
-</div>
 
 <style>
-  .panel {
-    background: #060A10;
-    border: 1px solid #18202A;
-    border-radius: 4px;
-    overflow: hidden;
-    transition: box-shadow 180ms ease, border-color 180ms ease;
-  }
-
-  .panel[data-highlight='true'] {
-    border-color: #00D4FF;
-    box-shadow: 0 0 0 1px rgba(0, 212, 255, 0.18);
-  }
-
-  .panel-header {
-    padding: 5px 8px;
-    color: var(--v2-text-header);
-    font-family: 'Roboto Mono', monospace;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    border-bottom: 1px solid #18202A;
-  }
-
   .panel-body {
     display: flex;
     flex-direction: column;

@@ -90,11 +90,6 @@ const baseProps: ComponentProps<typeof FilterPanel> = {
 };
 
 describe('panel structure', () => {
-  it('renders the FILTER header label', () => {
-    const t = mountPanel(baseProps);
-    expect(t.querySelector('.panel-header')?.textContent).toBe('FILTER');
-  });
-
   it('renders filter selector buttons', () => {
     const t = mountPanel(baseProps);
     const buttons = Array.from(t.querySelectorAll('button')).map((button) => button.textContent?.trim());
