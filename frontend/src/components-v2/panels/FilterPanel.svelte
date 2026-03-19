@@ -308,7 +308,7 @@
   }
 
   .panel-header {
-    color: #8CA0B8;
+    color: var(--v2-text-header);
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.08em;

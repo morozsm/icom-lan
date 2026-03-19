@@ -150,7 +150,7 @@
   }
 
   .source-btn:hover {
-    color: #8CA0B8;
+    color: var(--v2-text-header);
     border-color: #4A6080;
   }
 

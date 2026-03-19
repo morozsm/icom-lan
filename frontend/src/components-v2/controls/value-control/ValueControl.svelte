@@ -57,7 +57,7 @@
     tickCount = 0,
     tickLabels = [],
     onChange,
-    debounceMs = 0,
+    debounceMs = 50,
     disabled = false,
     unit = '',
     shortcutHint = null,
