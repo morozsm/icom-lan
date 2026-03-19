@@ -178,7 +178,7 @@
     position: relative;
     display: grid;
     grid-template-rows: 156px minmax(0, 1fr) auto;
-    min-height: 100vh;
+    height: 100vh;
     background:
       linear-gradient(180deg, var(--v2-bg-gradient-start) 0%, var(--v2-bg-darkest) 100%),
       var(--v2-bg-app, var(--v2-bg-darker));
@@ -228,7 +228,6 @@
   .content-left,
   .content-right {
     min-height: 0;
-    max-height: 100%;
     overflow-y: auto;
     overflow-x: hidden;
   }
