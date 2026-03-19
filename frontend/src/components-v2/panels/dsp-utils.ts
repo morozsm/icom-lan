@@ -17,9 +17,7 @@ export function isCwMode(mode: string): boolean {
 export function buildNrOptions(): DspOption[] {
   return [
     { value: 0, label: 'OFF' },
-    { value: 1, label: 'NR1' },
-    { value: 2, label: 'NR2' },
-    { value: 3, label: 'NR3' },
+    { value: 1, label: 'ON' },
   ];
 }
 
