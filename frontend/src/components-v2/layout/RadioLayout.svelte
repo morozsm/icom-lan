@@ -223,6 +223,7 @@
     grid-template-columns: 228px minmax(0, 1fr) 228px;
     gap: 5px;
     min-height: 0;
+    overflow: hidden;
   }
 
   .content-left,
