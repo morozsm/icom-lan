@@ -221,6 +221,7 @@
   .content-row {
     display: grid;
     grid-template-columns: 228px minmax(0, 1fr) 228px;
+    grid-template-rows: minmax(0, 1fr);
     gap: 5px;
     min-height: 0;
     overflow: hidden;
@@ -229,6 +230,7 @@
   .content-left,
   .content-right {
     min-height: 0;
+    max-height: 100%;
     overflow-y: auto;
     overflow-x: hidden;
   }
