@@ -21,12 +21,12 @@ describe('inactive state', () => {
     }
   });
 
-  it('has dimmed border #1A2028', () => {
-    expect(computeBadgeStyle(inactive()).border).toBe('1px solid #1A2028');
+  it('has dimmed border via token', () => {
+    expect(computeBadgeStyle(inactive()).border).toBe('1px solid var(--v2-badge-inactive-border)');
   });
 
-  it('has dimmed text color #4D6074', () => {
-    expect(computeBadgeStyle(inactive()).color).toBe('#4D6074');
+  it('has dimmed text color via token', () => {
+    expect(computeBadgeStyle(inactive()).color).toBe('var(--v2-badge-inactive-text)');
   });
 
   it('has no box-shadow', () => {
@@ -37,88 +37,88 @@ describe('inactive state', () => {
 // ── Active state — cyan ────────────────────────────────────────────────────
 
 describe('active cyan', () => {
-  it('has background #0D3B66', () => {
-    expect(computeBadgeStyle(active('cyan')).background).toBe('#0D3B66');
+  it('has background via token', () => {
+    expect(computeBadgeStyle(active('cyan')).background).toBe('var(--v2-badge-cyan-bg)');
   });
 
-  it('has border #00D4FF', () => {
-    expect(computeBadgeStyle(active('cyan')).border).toBe('1px solid #00D4FF');
+  it('has border via token', () => {
+    expect(computeBadgeStyle(active('cyan')).border).toBe('1px solid var(--v2-badge-cyan-border)');
   });
 
-  it('has white text', () => {
-    expect(computeBadgeStyle(active('cyan')).color).toBe('#FFFFFF');
+  it('has text via token', () => {
+    expect(computeBadgeStyle(active('cyan')).color).toBe('var(--v2-badge-cyan-text)');
   });
 
-  it('has cyan glow', () => {
-    expect(computeBadgeStyle(active('cyan')).boxShadow).toContain('rgba(0,212,255');
+  it('has cyan glow via token', () => {
+    expect(computeBadgeStyle(active('cyan')).boxShadow).toContain('var(--v2-badge-cyan-glow)');
   });
 });
 
 // ── Active state — orange ──────────────────────────────────────────────────
 
 describe('active orange', () => {
-  it('has background #3D2200', () => {
-    expect(computeBadgeStyle(active('orange')).background).toBe('#3D2200');
+  it('has background via token', () => {
+    expect(computeBadgeStyle(active('orange')).background).toBe('var(--v2-badge-orange-bg)');
   });
 
-  it('has border #FF6A00', () => {
-    expect(computeBadgeStyle(active('orange')).border).toBe('1px solid #FF6A00');
+  it('has border via token', () => {
+    expect(computeBadgeStyle(active('orange')).border).toBe('1px solid var(--v2-badge-orange-border)');
   });
 
-  it('has orange glow', () => {
-    expect(computeBadgeStyle(active('orange')).boxShadow).toContain('rgba(255,106,0');
+  it('has orange glow via token', () => {
+    expect(computeBadgeStyle(active('orange')).boxShadow).toContain('var(--v2-badge-orange-glow)');
   });
 });
 
 // ── Active state — red ─────────────────────────────────────────────────────
 
 describe('active red', () => {
-  it('has background #3D0A0A', () => {
-    expect(computeBadgeStyle(active('red')).background).toBe('#3D0A0A');
+  it('has background via token', () => {
+    expect(computeBadgeStyle(active('red')).background).toBe('var(--v2-badge-red-bg)');
   });
 
-  it('has border #FF2020', () => {
-    expect(computeBadgeStyle(active('red')).border).toBe('1px solid #FF2020');
+  it('has border via token', () => {
+    expect(computeBadgeStyle(active('red')).border).toBe('1px solid var(--v2-badge-red-border)');
   });
 
-  it('has red glow', () => {
-    expect(computeBadgeStyle(active('red')).boxShadow).toContain('rgba(255,32,32');
+  it('has red glow via token', () => {
+    expect(computeBadgeStyle(active('red')).boxShadow).toContain('var(--v2-badge-red-glow)');
   });
 });
 
 // ── Active state — green ───────────────────────────────────────────────────
 
 describe('active green', () => {
-  it('has background #0A3D1A', () => {
-    expect(computeBadgeStyle(active('green')).background).toBe('#0A3D1A');
+  it('has background via token', () => {
+    expect(computeBadgeStyle(active('green')).background).toBe('var(--v2-badge-green-bg)');
   });
 
-  it('has border #00CC66', () => {
-    expect(computeBadgeStyle(active('green')).border).toBe('1px solid #00CC66');
+  it('has border via token', () => {
+    expect(computeBadgeStyle(active('green')).border).toBe('1px solid var(--v2-badge-green-border)');
   });
 
-  it('has green glow', () => {
-    expect(computeBadgeStyle(active('green')).boxShadow).toContain('rgba(0,204,102');
+  it('has green glow via token', () => {
+    expect(computeBadgeStyle(active('green')).boxShadow).toContain('var(--v2-badge-green-glow)');
   });
 });
 
 // ── Active state — muted ───────────────────────────────────────────────────
 
 describe('active muted', () => {
-  it('has background #1A2028', () => {
-    expect(computeBadgeStyle(active('muted')).background).toBe('#1A2028');
+  it('has background via token', () => {
+    expect(computeBadgeStyle(active('muted')).background).toBe('var(--v2-badge-muted-bg)');
   });
 
-  it('has border #4D6074', () => {
-    expect(computeBadgeStyle(active('muted')).border).toBe('1px solid #4D6074');
+  it('has border via token', () => {
+    expect(computeBadgeStyle(active('muted')).border).toBe('1px solid var(--v2-badge-muted-border)');
   });
 
-  it('has muted text color #8DA2B8', () => {
-    expect(computeBadgeStyle(active('muted')).color).toBe('#8DA2B8');
+  it('has muted text via token', () => {
+    expect(computeBadgeStyle(active('muted')).color).toBe('var(--v2-badge-muted-text)');
   });
 
-  it('has muted glow', () => {
-    expect(computeBadgeStyle(active('muted')).boxShadow).toContain('rgba(77,96,116');
+  it('has muted glow via token', () => {
+    expect(computeBadgeStyle(active('muted')).boxShadow).toContain('var(--v2-badge-muted-glow)');
   });
 });
 
@@ -182,9 +182,9 @@ describe('badgeStyleString', () => {
     expect(s).toContain('background:transparent');
   });
 
-  it('active cyan produces correct border in string', () => {
+  it('active cyan produces correct border token in string', () => {
     const s = badgeStyleString(active('cyan'));
-    expect(s).toContain('border:1px solid #00D4FF');
+    expect(s).toContain('border:1px solid var(--v2-badge-cyan-border)');
   });
 
   it('compact produces 16px height in string', () => {
