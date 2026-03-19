@@ -180,7 +180,7 @@
     position: absolute;
     inset: 0;
     border: 0;
-    background: rgba(2, 6, 10, 0.82);
+    background: var(--v2-modal-backdrop);
     backdrop-filter: blur(10px);
   }
 
@@ -192,8 +192,8 @@
     border: 1px solid var(--v2-border-soft);
     border-radius: 18px;
     background:
-      radial-gradient(circle at top left, rgba(0, 212, 255, 0.12), transparent 32%),
-      linear-gradient(180deg, rgba(8, 14, 20, 0.98), rgba(5, 9, 14, 0.98));
+      radial-gradient(circle at top left, var(--v2-modal-glow), transparent 32%),
+      linear-gradient(180deg, var(--v2-modal-bg-top), var(--v2-modal-bg-bottom));
     color: var(--v2-text-primary);
     box-shadow: var(--v2-shadow-lg);
   }
@@ -263,7 +263,7 @@
     justify-content: space-between;
     gap: 14px;
     padding: 12px 14px;
-    border-top: 1px solid rgba(72, 96, 122, 0.1);
+    border-top: 1px solid var(--v2-modal-section-border);
   }
 
   .keyboard-help-row:first-child {
@@ -290,13 +290,13 @@
   kbd {
     white-space: nowrap;
     border: 1px solid var(--v2-border-cyan);
-    border-bottom-color: rgba(0, 212, 255, 0.36);
+    border-bottom-color: var(--v2-modal-key-active-border);
     border-radius: 8px;
     background: var(--v2-overlay-dark);
     color: var(--v2-text-light);
     padding: 6px 9px;
     font: 600 11px/1 'Roboto Mono', monospace;
-    box-shadow: inset 0 -1px 0 rgba(0, 212, 255, 0.08);
+    box-shadow: inset 0 -1px 0 var(--v2-modal-key-active-glow);
   }
 
   @media (max-width: 640px) {
@@ -321,13 +321,13 @@
     transform: translateX(-50%);
     z-index: 1300;
     padding: 4px 7px;
-    border: 1px solid rgba(0, 212, 255, 0.26);
+    border: 1px solid var(--v2-modal-code-border);
     border-radius: 7px;
-    background: rgba(8, 14, 20, 0.97);
+    background: var(--v2-modal-code-bg);
     color: var(--v2-text-light);
     font: 600 10px/1 'Roboto Mono', monospace;
     white-space: nowrap;
     pointer-events: none;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.34);
+    box-shadow: 0 8px 20px var(--v2-modal-shadow);
   }
 </style>

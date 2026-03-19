@@ -171,7 +171,7 @@
     flex-direction: column;
     gap: 8px;
     padding: 8px 10px 10px;
-    background: linear-gradient(180deg, rgba(8, 16, 24, 0.96), rgba(5, 11, 18, 0.96));
+    background: linear-gradient(180deg, var(--v2-sidebar-gradient-top), var(--v2-sidebar-gradient-bottom));
     border: 1px solid var(--v2-border-darker);
     border-radius: 4px;
     font-family: 'Roboto Mono', monospace;
@@ -216,7 +216,7 @@
     min-height: 24px;
     border: 1px solid var(--v2-border);
     border-radius: 999px;
-    background: rgba(10, 18, 26, 0.92);
+    background: var(--v2-sidebar-footer-bg);
     color: var(--v2-text-secondary);
     font-size: 9px;
     font-weight: 700;

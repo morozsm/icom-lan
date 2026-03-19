@@ -193,7 +193,7 @@
     border: 1px solid var(--v2-border-panel);
     border-radius: 4px;
     background:
-      linear-gradient(180deg, rgba(20, 28, 38, 0.98) 0%, rgba(14, 20, 30, 0.98) 100%);
+      linear-gradient(180deg, var(--v2-panel-bg-gradient-top) 0%, var(--v2-panel-bg-gradient-bottom) 100%);
     box-shadow: var(--v2-shadow-sm);
   }
 

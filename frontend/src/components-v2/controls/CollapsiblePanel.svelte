@@ -88,8 +88,8 @@
   .collapsible-panel {
     display: flex;
     flex-direction: column;
-    background: #060a10;
-    border: 1px solid #18202a;
+    background: var(--v2-collapsible-bg);
+    border: 1px solid var(--v2-collapsible-border);
     border-radius: 4px;
     overflow: hidden;
     font-family: 'Roboto Mono', monospace;
@@ -101,10 +101,10 @@
     gap: 6px;
     width: 100%;
     padding: 5px 8px;
-    background: #1a1a2e;
+    background: var(--v2-collapsible-header-bg);
     border: none;
-    border-bottom: 1px solid #18202a;
-    color: #e0e0e0;
+    border-bottom: 1px solid var(--v2-collapsible-border);
+    color: var(--v2-collapsible-header-text);
     font-family: 'Roboto Mono', monospace;
     font-size: 10px;
     font-weight: 700;
@@ -120,12 +120,12 @@
   }
 
   .panel-header.collapsible:hover {
-    background: #222238;
+    background: var(--v2-collapsible-header-hover-bg);
   }
 
   .chevron {
     display: inline-block;
-    color: #888;
+    color: var(--v2-collapsible-chevron);
     font-size: 10px;
     line-height: 1;
     transition: color 0.15s ease;
@@ -133,7 +133,7 @@
   }
 
   .panel-header.collapsible:hover .chevron {
-    color: #00d4ff;
+    color: var(--v2-collapsible-chevron-hover);
   }
 
   .title {

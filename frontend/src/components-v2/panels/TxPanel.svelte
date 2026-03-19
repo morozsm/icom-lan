@@ -149,7 +149,7 @@
   }
 
   .tune-button.tuning {
-    background: rgba(255, 32, 32, 0.15);
+    background: var(--v2-tx-panel-glow);
   }
 
   .toggle-row {

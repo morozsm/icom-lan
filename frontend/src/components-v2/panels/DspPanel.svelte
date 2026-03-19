@@ -162,7 +162,7 @@
   }
 
   .section-label {
-    color: #8CA0B8;
+    color: var(--v2-text-header);
     font-family: 'Roboto Mono', monospace;
     font-size: 9px;
     font-weight: 700;

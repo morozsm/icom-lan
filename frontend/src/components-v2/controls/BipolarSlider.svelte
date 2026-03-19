@@ -161,9 +161,9 @@
     inset: 0;
     background: linear-gradient(
       90deg,
-      rgba(105, 121, 140, 0.04) 0%,
-      rgba(105, 121, 140, 0.02) 50%,
-      rgba(105, 121, 140, 0.04) 100%
+      var(--v2-bipolar-gradient-edge) 0%,
+      var(--v2-bipolar-gradient-center) 50%,
+      var(--v2-bipolar-gradient-edge) 100%
     );
   }
 
@@ -185,7 +185,7 @@
     transform: translateY(-50%);
     border-radius: 999px;
     background: color-mix(in srgb, var(--v2-text-light) 35%, var(--v2-bg-gradient-start));
-    box-shadow: 0 0 0 1px rgba(215, 226, 238, 0.04);
+    box-shadow: 0 0 0 1px var(--v2-bipolar-border);
   }
 
   .slider-input {
