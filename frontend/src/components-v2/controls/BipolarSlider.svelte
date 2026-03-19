@@ -1,3 +1,12 @@
+<!--
+  @deprecated Use ValueControl with renderer="bipolar" instead.
+  This component is kept for backwards compatibility only.
+
+  Migration:
+    <BipolarSlider value={x} min={-100} max={100} label="Label" onchange={fn} />
+    becomes:
+    <ValueControl value={x} min={-100} max={100} step={1} label="Label" renderer="bipolar" onChange={fn} />
+-->
 <script lang="ts">
   interface Props {
     value: number;

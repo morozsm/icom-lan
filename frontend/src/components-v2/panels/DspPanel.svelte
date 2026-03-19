@@ -1,6 +1,6 @@
 <script lang="ts">
   import SegmentedButton from '../controls/SegmentedButton.svelte';
-  import Slider from '../controls/Slider.svelte';
+  import { ValueControl } from '../controls/value-control';
   import StatusBadge from '../controls/StatusBadge.svelte';
   import { hasCapability } from '$lib/stores/capabilities.svelte';
   import { isCwMode, buildNrOptions, buildNotchOptions } from './dsp-utils';
@@ -64,13 +64,15 @@
           selected={nrMode}
           onchange={(v) => onNrModeChange(v as number)}
         />
-        <Slider
+        <ValueControl
           label="NR Level"
           value={nrLevel}
           min={0}
           max={255}
+          step={1}
+          renderer="hbar"
           accentColor="#00D4FF"
-          onchange={onNrLevelChange}
+          onChange={onNrLevelChange}
         />
       </div>
     {/if}
@@ -86,13 +88,15 @@
             onclick={() => onNbToggle(!nbActive)}
           />
         </div>
-        <Slider
+        <ValueControl
           label="NB Level"
           value={nbLevel}
           min={0}
           max={255}
+          step={1}
+          renderer="hbar"
           accentColor="#FFB800"
-          onchange={onNbLevelChange}
+          onChange={onNbLevelChange}
         />
       </div>
     {/if}
@@ -105,14 +109,16 @@
         onchange={(v) => onNotchModeChange(v as string)}
       />
       {#if notchMode === 'manual'}
-        <Slider
+        <ValueControl
           label="Notch Freq"
           value={notchFreq}
           min={0}
           max={3000}
+          step={1}
           unit="Hz"
+          renderer="hbar"
           accentColor="#00D4FF"
-          onchange={onNotchFreqChange}
+          onChange={onNotchFreqChange}
         />
       {/if}
     </div>
@@ -127,14 +133,16 @@
             onclick={() => onCwAutoTuneToggle(!cwAutoTune)}
           />
         </div>
-        <Slider
+        <ValueControl
           label="CW Pitch"
           value={cwPitch}
           min={300}
           max={900}
+          step={1}
           unit="Hz"
+          renderer="hbar"
           accentColor="#00D4FF"
-          onchange={onCwPitchChange}
+          onChange={onCwPitchChange}
         />
       </div>
     {/if}

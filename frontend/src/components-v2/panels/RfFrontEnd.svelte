@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Slider from '../controls/Slider.svelte';
+  import { ValueControl } from '../controls/value-control';
   import AttenuatorControl from '../controls/AttenuatorControl.svelte';
   import SegmentedButton from '../controls/SegmentedButton.svelte';
   import { hasCapability, getAttValues, getPreValues } from '$lib/stores/capabilities.svelte';
@@ -35,15 +35,17 @@
 
     <div class="controls">
       {#if showRfGain}
-        <Slider
+        <ValueControl
           value={rfGain}
           min={0}
           max={255}
+          step={1}
           label="RF Gain"
+          renderer="hbar"
           accentColor="#22C55E"
           shortcutHint={rfGainShortcut}
           title={rfGainShortcut}
-          onchange={onRfGainChange}
+          onChange={onRfGainChange}
         />
       {/if}
 

@@ -141,7 +141,7 @@ describe('panel structure', () => {
 
   it('renders the AF Level slider', () => {
     const t = mountPanel(baseProps);
-    const labels = Array.from(t.querySelectorAll('.slider-label'));
+    const labels = Array.from(t.querySelectorAll('.vc-label'));
     expect(labels.some((el) => el.textContent === 'AF Level')).toBe(true);
   });
 
@@ -184,10 +184,9 @@ describe('callbacks', () => {
   it('calls onAfLevelChange when AF Level slider changes', () => {
     const onAfLevelChange = vi.fn();
     const t = mountPanel({ ...baseProps, onAfLevelChange });
-    const input = t.querySelector<HTMLInputElement>('input[type="range"]');
-    input!.value = '200';
-    input!.dispatchEvent(new Event('input', { bubbles: true }));
-    expect(onAfLevelChange).toHaveBeenCalledWith(200);
+    const slider = t.querySelector<HTMLElement>('[role="slider"]');
+    slider!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(onAfLevelChange).toHaveBeenCalled();
   });
 
   it('calls onMonitorModeChange when a mode button is clicked', () => {

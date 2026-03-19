@@ -1,3 +1,12 @@
+<!--
+  @deprecated Use ValueControl with renderer="hbar" instead.
+  This component is kept for backwards compatibility only.
+
+  Migration:
+    <Slider value={x} min={0} max={100} label="Label" onchange={fn} />
+    becomes:
+    <ValueControl value={x} min={0} max={100} step={1} label="Label" renderer="hbar" onChange={fn} />
+-->
 <script lang="ts">
   interface Props {
     value: number;

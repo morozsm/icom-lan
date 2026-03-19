@@ -1,8 +1,7 @@
 <script lang="ts">
   import type { FilterModeConfig } from '$lib/types/capabilities';
   import '../controls/control-button.css';
-  import BipolarSlider from '../controls/BipolarSlider.svelte';
-  import Slider from '../controls/Slider.svelte';
+  import { ValueControl } from '../controls/value-control';
   import { formatFilterWidth } from './filter-utils';
   import { getShortcutHint, joinShortcutHints } from '../layout/shortcut-hints';
 
@@ -152,36 +151,39 @@
       <span class="bw-value">{formatWidthDisplay(filterWidth)}</span>
     </div>
 
-    <BipolarSlider
+    <ValueControl
       label="IF Shift"
       value={ifShift}
       min={-1200}
       max={1200}
       step={25}
       unit="Hz"
+      renderer="bipolar"
       accentColor="#00D4FF"
-      onchange={onIfShiftChange}
+      onChange={onIfShiftChange}
     />
     {#if hasPbt}
-      <BipolarSlider
+      <ValueControl
         label="PBT Inner"
         value={pbtInner}
         min={-1200}
         max={1200}
         step={25}
         unit="Hz"
+        renderer="bipolar"
         accentColor="#00D4FF"
-        onchange={onPbtInnerChange ?? (() => {})}
+        onChange={onPbtInnerChange ?? (() => {})}
       />
-      <BipolarSlider
+      <ValueControl
         label="PBT Outer"
         value={pbtOuter}
         min={-1200}
         max={1200}
         step={25}
         unit="Hz"
+        renderer="bipolar"
         accentColor="#4ED37B"
-        onchange={onPbtOuterChange ?? (() => {})}
+        onChange={onPbtOuterChange ?? (() => {})}
       />
     {/if}
 
@@ -235,15 +237,16 @@
           {#if filterConfig?.fixed}
             <div class="modal-fixed-value">{formatWidthDisplay(draftWidths[index] ?? visibleWidths[index] ?? factoryDefaults[index])}</div>
           {:else}
-            <Slider
+            <ValueControl
               label={label}
               value={draftWidths[index] ?? visibleWidths[index] ?? factoryDefaults[index]}
               min={modalMin}
               max={modalMax}
               step={modalStep}
               unit="Hz"
+              renderer="hbar"
               accentColor={currentFilter === index + 1 ? '#00D4FF' : '#4ED37B'}
-              onchange={(value) => handlePresetChange(index, value)}
+              onChange={(value) => handlePresetChange(index, value)}
             />
           {/if}
         </div>

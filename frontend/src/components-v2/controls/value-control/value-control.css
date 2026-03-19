@@ -1,0 +1,49 @@
+/**
+ * Shared CSS custom properties for ValueControl components.
+ * Dark theme matching existing UI.
+ */
+
+:root {
+  /* Core colors */
+  --vc-fill: #00D4FF;
+  --vc-track: #1a1a2e;
+  --vc-track-dark: #0d1117;
+  --vc-accent: #00D4FF;
+
+  /* Text colors */
+  --vc-text-primary: #e0e0e0;
+  --vc-text-secondary: #6F8196;
+  --vc-text-label: #6F8196;
+  --vc-text-value: #F0F5FA;
+
+  /* Glow effects */
+  --vc-glow-opacity: 0.14;
+  --vc-glow-strong: 0.25;
+
+  /* Focus */
+  --vc-focus-ring: #00D4FF;
+  --vc-focus-ring-width: 2px;
+
+  /* Spacing */
+  --vc-gap: 3px;
+  --vc-compact-gap: 2px;
+
+  /* Sizing */
+  --vc-bar-height: 4px;
+  --vc-bar-height-compact: 3px;
+  --vc-thumb-size: 10px;
+  --vc-thumb-size-compact: 7px;
+  --vc-center-height: 12px;
+  --vc-center-height-compact: 10px;
+
+  /* Knob specific */
+  --vc-knob-size: 64px;
+  --vc-knob-size-compact: 48px;
+  --vc-knob-bg: #1a1a2e;
+  --vc-knob-indicator: #ffffff;
+  --vc-knob-tick: #4D6074;
+
+  /* Animation */
+  --vc-transition-fast: 0.1s ease;
+  --vc-transition-normal: 0.15s ease;
+}

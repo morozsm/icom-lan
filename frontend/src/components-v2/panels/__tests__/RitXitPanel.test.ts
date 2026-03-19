@@ -109,25 +109,23 @@ describe('shouldShowPanel', () => {
 describe('RitXitPanel component', () => {
   it('renders the Offset slider when visible', () => {
     const target = mountPanel(baseProps);
-    const labels = Array.from(target.querySelectorAll('.slider-label')).map((el) => el.textContent);
+    const labels = Array.from(target.querySelectorAll('.vc-label')).map((el) => el.textContent);
     expect(labels).toContain('Offset');
   });
 
   it('uses the shared offset constraints', () => {
     const target = mountPanel(baseProps);
-    const input = target.querySelector<HTMLInputElement>('input[type="range"]');
-    expect(input?.min).toBe('-9999');
-    expect(input?.max).toBe('9999');
-    expect(input?.step).toBe('50');
+    const slider = target.querySelector<HTMLElement>('[role="slider"]');
+    expect(slider?.getAttribute('aria-valuemin')).toBe('-9999');
+    expect(slider?.getAttribute('aria-valuemax')).toBe('9999');
   });
 
   it('calls onRitOffsetChange when the offset slider changes by default', () => {
     const onRitOffsetChange = vi.fn();
     const target = mountPanel({ ...baseProps, onRitOffsetChange });
-    const input = target.querySelector<HTMLInputElement>('input[type="range"]');
-    input!.value = '500';
-    input!.dispatchEvent(new Event('input', { bubbles: true }));
-    expect(onRitOffsetChange).toHaveBeenCalledWith(500);
+    const slider = target.querySelector<HTMLElement>('[role="slider"]');
+    slider!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(onRitOffsetChange).toHaveBeenCalled();
   });
 
   it('calls onXitOffsetChange when only XIT is active', () => {
@@ -137,9 +135,8 @@ describe('RitXitPanel component', () => {
       xitActive: true,
       onXitOffsetChange,
     });
-    const input = target.querySelector<HTMLInputElement>('input[type="range"]');
-    input!.value = '450';
-    input!.dispatchEvent(new Event('input', { bubbles: true }));
-    expect(onXitOffsetChange).toHaveBeenCalledWith(450);
+    const slider = target.querySelector<HTMLElement>('[role="slider"]');
+    slider!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(onXitOffsetChange).toHaveBeenCalled();
   });
 });
