@@ -12,6 +12,8 @@
   import DockMeterPanel from '../panels/DockMeterPanel.svelte';
   import FrequencyDisplay from '../display/FrequencyDisplay.svelte';
   import LinearSMeter from '../meters/LinearSMeter.svelte';
+  import ThemePicker from '../controls/ThemePicker.svelte';
+  import { setTheme, getTheme } from '../theme/theme-switcher';
   import {
     parseVfoLayoutScaleOverrides,
     resolveVfoLayoutProfile,
@@ -55,6 +57,9 @@
   });
 
   onMount(() => {
+    // Apply saved theme on load
+    setTheme(getTheme());
+
     manualVfoScaleOverrides = parseVfoLayoutScaleOverrides(window.location.search);
 
     if (!receiverDeckElement) {
@@ -85,6 +90,9 @@
   <KeyboardHandler config={keyboardConfig} onAction={keyboardHandlers.dispatch} />
 
   <section class="receiver-deck" bind:this={receiverDeckElement} style={receiverDeckStyle}>
+    <div class="theme-picker-container">
+      <ThemePicker />
+    </div>
     <VfoHeader
       {mainVfo}
       {subVfo}
@@ -190,10 +198,18 @@
   }
 
   .receiver-deck {
+    position: relative;
     overflow: hidden;
     padding: 5px;
     min-height: 0;
     border-color: var(--v2-border-panel);
+  }
+
+  .theme-picker-container {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 100;
   }
 
   .receiver-deck :global(.vfo-header) {

@@ -1,0 +1,40 @@
+[data-theme="ayu-dark"] {
+  /* ── Colors: Backgrounds ──────────────────────────────── */
+  --v2-bg-app: #0d1017;
+  --v2-bg-card: #0a0d12;
+  --v2-bg-input: #151a21;
+  --v2-bg-darker: #080a0e;
+  --v2-bg-darkest: #050608;
+  --v2-bg-panel: #12161c;
+  --v2-bg-gradient-start: #0d1017;
+  --v2-bg-gradient-panel: #12161c;
+
+  /* ── Colors: Borders ────────────────────────────────────── */
+  --v2-border: #1f2430;
+  --v2-border-subtle: #1a1f29;
+  --v2-border-dark: #151a21;
+  --v2-border-darker: #0d1017;
+  --v2-border-panel: #1f2430;
+
+  /* ── Colors: Accents ─────────────────────────────────────── */
+  --v2-accent-cyan: #73d0ff;
+  --v2-accent-orange: #ff8f40;
+  --v2-accent-red: #f07178;
+  --v2-accent-green: #aad94c;
+  --v2-accent-yellow: #e6b450;
+
+  /* ── Colors: Text ────────────────────────────────────── */
+  --v2-text-primary: #bfbdb6;
+  --v2-text-secondary: #a6a49f;
+  --v2-text-muted: #626a73;
+  --v2-text-header: #73d0ff;
+  --v2-text-bright: #cccac2;
+  --v2-text-dim: #757b85;
+  --v2-text-disabled: #3e4451;
+  --v2-text-light: #a6a49f;
+
+  /* ── Effects: Glows ──────────────────────────────────────── */
+  --v2-glow-cyan: 0 0 8px rgba(115, 208, 255, 0.25);
+  --v2-glow-orange: 0 0 8px rgba(255, 143, 64, 0.25);
+  --v2-glow-red: 0 0 8px rgba(240, 113, 120, 0.25);
+}
