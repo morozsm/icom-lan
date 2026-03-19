@@ -112,13 +112,29 @@ export function getEventModifiers(event: {
   return modifiers;
 }
 
+/**
+ * Characters that are produced via Shift on a standard keyboard.
+ * When the binding key is one of these and doesn't explicitly list SHIFT
+ * in its modifiers, we ignore the implicit shiftKey from the event so
+ * that e.g. `key = "?"` matches without `modifiers = ["SHIFT"]`.
+ */
+const SHIFT_PRODUCED_CHARS = new Set('~!@#$%^&*()_+{}|:"<>?');
+
 function modifiersMatch(binding: KeyboardBindingConfig, event: { ctrlKey?: boolean; shiftKey?: boolean; altKey?: boolean; metaKey?: boolean }): boolean {
   const expected = [...(binding.modifiers ?? [])].map(normalizeModifier).sort();
   const actual = getEventModifiers(event).sort();
-  if (expected.length !== actual.length) {
+
+  // If the binding key is a Shift-produced character and the binding doesn't
+  // explicitly require SHIFT, strip implicit SHIFT from actual modifiers.
+  const bindingKey = binding.sequence?.[binding.sequence.length - 1] ?? '';
+  const implicitShift = SHIFT_PRODUCED_CHARS.has(bindingKey)
+    && !expected.includes('SHIFT');
+  const filtered = implicitShift ? actual.filter((m) => m !== 'SHIFT') : actual;
+
+  if (expected.length !== filtered.length) {
     return false;
   }
-  return expected.every((modifier, index) => modifier === actual[index]);
+  return expected.every((modifier, index) => modifier === filtered[index]);
 }
 
 export function resolveAction(
