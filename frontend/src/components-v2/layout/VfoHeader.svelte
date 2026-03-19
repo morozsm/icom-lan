@@ -124,7 +124,7 @@
     justify-content: center;
     border: 1px solid var(--v2-border-panel);
     border-radius: 4px;
-    background: linear-gradient(180deg, rgba(9, 14, 19, 0.96) 0%, rgba(6, 10, 15, 0.96) 100%);
+    background: linear-gradient(180deg, var(--v2-vfo-header-gradient-top) 0%, var(--v2-vfo-header-gradient-bottom) 100%);
     padding: 0 var(--vfo-bridge-pad-x, 4px);
     box-sizing: border-box;
   }
@@ -157,7 +157,7 @@
       var(--vfo-ops-secondary-padding-top, 4px)
       0
       0;
-    border-top: 1px solid rgba(24, 34, 45, 0.92);
+    border-top: 1px solid var(--v2-vfo-header-border);
     font-family: 'Roboto Mono', monospace;
     text-transform: uppercase;
     align-items: center;

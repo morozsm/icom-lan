@@ -6,7 +6,7 @@
  * @returns CSS color string
  */
 export function txStatusColor(active: boolean, tuning: boolean): string {
-  if (tuning) return '#FF2020';
-  if (active) return '#FF6A00';
-  return '#3A4A5A';
+  if (tuning) return 'var(--v2-tx-tuning)';
+  if (active) return 'var(--v2-tx-active)';
+  return 'var(--v2-tx-idle)';
 }

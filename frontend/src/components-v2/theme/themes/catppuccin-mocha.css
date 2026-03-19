@@ -37,4 +37,40 @@
   --v2-glow-cyan: 0 0 8px rgba(137, 180, 250, 0.25);
   --v2-glow-orange: 0 0 8px rgba(250, 179, 135, 0.25);
   --v2-glow-red: 0 0 8px rgba(243, 139, 168, 0.25);
+
+  /* ── Layer 2: Accents & Data Visualization ─────────────── */
+  /* Status Badges */
+  --v2-badge-cyan-bg: #1a2838;
+  --v2-badge-cyan-border: #89b4fa;
+  --v2-badge-cyan-glow: rgba(137, 180, 250, 0.18);
+  --v2-badge-orange-bg: #3a2a1e;
+  --v2-badge-orange-border: #fab387;
+  --v2-badge-orange-glow: rgba(250, 179, 135, 0.18);
+  --v2-badge-red-bg: #3a1e28;
+  --v2-badge-red-border: #f38ba8;
+  --v2-badge-red-glow: rgba(243, 139, 168, 0.18);
+  --v2-badge-green-bg: #1e3a26;
+  --v2-badge-green-border: #a6e3a1;
+  --v2-badge-green-glow: rgba(166, 227, 161, 0.18);
+
+  /* Meter Gradients */
+  --v2-meter-s-fill: linear-gradient(90deg, #89b4fa 0%, #a0c4fb 60%, #d5e5fd 100%);
+  --v2-meter-s-track: linear-gradient(90deg, rgba(137, 180, 250, 0.15) 0%, rgba(137, 180, 250, 0.1) 100%);
+  --v2-meter-power-fill: linear-gradient(90deg, #cdd6f4 0%, #cdd6f4 35%, #f9e2af 35%, #f38ba8 100%);
+  --v2-meter-power-track: linear-gradient(90deg, rgba(205, 214, 244, 0.1) 0%, rgba(249, 226, 175, 0.1) 35%, rgba(243, 139, 168, 0.15) 100%);
+  --v2-meter-swr-fill: linear-gradient(90deg, #a6e3a1 0%, #b8e8b5 52%, #f9e2af 68%, #f38ba8 100%);
+  --v2-meter-swr-track: linear-gradient(90deg, rgba(166, 227, 161, 0.15) 0%, rgba(249, 226, 175, 0.1) 68%, rgba(243, 139, 168, 0.15) 100%);
+  --v2-meter-alc-fill: linear-gradient(90deg, #a6e3a1 0%, #b8e8b5 32%, #f9e2af 58%, #f38ba8 100%);
+  --v2-meter-alc-track: linear-gradient(90deg, rgba(166, 227, 161, 0.15) 0%, rgba(249, 226, 175, 0.1) 58%, rgba(243, 139, 168, 0.15) 100%);
+
+  /* Meter Source Tags */
+  --v2-meter-source-s-bg: rgba(137, 180, 250, 0.12);
+  --v2-meter-source-s-border: #89b4fa;
+  --v2-meter-source-s-text: #d5e5fd;
+  --v2-meter-source-swr-bg: rgba(166, 227, 161, 0.12);
+  --v2-meter-source-swr-border: #a6e3a1;
+  --v2-meter-source-swr-text: #d8f3d6;
+  --v2-meter-source-power-bg: rgba(249, 226, 175, 0.12);
+  --v2-meter-source-power-border: #f9e2af;
+  --v2-meter-source-power-text: #fcf3db;
 }

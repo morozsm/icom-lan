@@ -43,8 +43,8 @@
       label: 'S',
       value: sValue,
       display: formatSMeter(sValue),
-      fill: 'linear-gradient(90deg, #65d8ff 0%, #82f2ff 60%, #e6f7ff 100%)',
-      track: 'linear-gradient(90deg, rgba(21,82,97,0.38) 0%, rgba(34,116,135,0.26) 60%, rgba(230,247,255,0.14) 100%)',
+      fill: 'var(--v2-meter-s-fill)',
+      track: 'var(--v2-meter-s-track)',
       valueClass: 's',
     },
     {
@@ -52,8 +52,8 @@
       label: 'Po',
       value: rfPower,
       display: formatPowerWatts(rfPower),
-      fill: 'linear-gradient(90deg, var(--v2-text-primary) 0%, var(--v2-text-primary) 35%, #e3ae3a 35%, #a63514 100%)',
-      track: 'linear-gradient(90deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.08) 35%, rgba(227,174,58,0.14) 35%, rgba(166,53,20,0.2) 100%)',
+      fill: 'var(--v2-meter-power-fill)',
+      track: 'var(--v2-meter-power-track)',
       valueClass: 'po',
     },
     {
@@ -61,8 +61,8 @@
       label: 'SWR',
       value: swr,
       display: formatSwr(swr),
-      fill: 'linear-gradient(90deg, #0f5a37 0%, #18c36f 52%, #a48712 68%, #7e180f 100%)',
-      track: 'linear-gradient(90deg, rgba(15,90,55,0.35) 0%, rgba(24,195,111,0.22) 52%, rgba(164,135,18,0.16) 68%, rgba(126,24,15,0.2) 100%)',
+      fill: 'var(--v2-meter-swr-fill)',
+      track: 'var(--v2-meter-swr-track)',
       valueClass: 'swr',
     },
     {
@@ -70,8 +70,8 @@
       label: 'ALC',
       value: alc,
       display: formatAlc(alc).replace('%', ''),
-      fill: 'linear-gradient(90deg, #0d4b31 0%, #3e8b29 32%, #e1b43c 58%, #9e2710 100%)',
-      track: 'linear-gradient(90deg, rgba(13,75,49,0.34) 0%, rgba(62,139,41,0.2) 32%, rgba(225,180,60,0.17) 58%, rgba(158,39,16,0.2) 100%)',
+      fill: 'var(--v2-meter-alc-fill)',
+      track: 'var(--v2-meter-alc-track)',
       valueClass: 'alc',
     },
   ]);
@@ -195,32 +195,32 @@
   }
 
   .status-tag.source {
-    border-color: #235873;
-    color: #92eaff;
-    background: rgba(12, 54, 76, 0.52);
+    border-color: var(--v2-meter-source-s-border);
+    color: var(--v2-meter-source-s-text);
+    background: var(--v2-meter-source-s-bg);
   }
 
   .status-tag.source[data-source='SWR'] {
-    border-color: #2c6d3f;
-    color: #8ef7a8;
-    background: rgba(18, 79, 35, 0.52);
+    border-color: var(--v2-meter-source-swr-border);
+    color: var(--v2-meter-source-swr-text);
+    background: var(--v2-meter-source-swr-bg);
   }
 
   .status-tag.source[data-source='POWER'] {
-    border-color: rgba(195, 146, 48, 0.82);
-    color: #ffdca0;
-    background: rgba(95, 60, 8, 0.48);
+    border-color: var(--v2-meter-source-power-border);
+    color: var(--v2-meter-source-power-text);
+    background: var(--v2-meter-source-power-bg);
   }
 
   .status-tag.tx {
-    border-color: rgba(189, 59, 29, 0.78);
-    color: #ffc4b8;
-    background: rgba(93, 20, 12, 0.5);
+    border-color: var(--v2-meter-tx-border);
+    color: var(--v2-meter-tx-text);
+    background: var(--v2-meter-tx-bg);
   }
 
   .status-tag.tx[data-active='true'] {
-    color: #fff2ed;
-    background: rgba(132, 25, 13, 0.82);
+    color: var(--v2-meter-tx-active-text);
+    background: var(--v2-meter-tx-active-bg);
   }
 
   .dock-rows {
@@ -258,7 +258,7 @@
   .meter-source-btn.active {
     border-color: var(--v2-accent-cyan);
     color: var(--v2-text-white);
-    background: rgba(0, 180, 255, 0.14);
+    background: var(--v2-meter-active-glow);
   }
 
   .dock-row {
@@ -275,7 +275,7 @@
 
   .dock-row[data-active='true'] .dock-bar {
     border-color: var(--v2-border);
-    box-shadow: inset 0 0 0 1px rgba(111, 194, 255, 0.08);
+    box-shadow: inset 0 0 0 1px var(--v2-meter-active-shadow);
   }
 
   .dock-row-label {
@@ -295,7 +295,7 @@
 
   .dock-bar-fill {
     height: 100%;
-    border-right: 1px solid rgba(255, 255, 255, 0.2);
+    border-right: 1px solid var(--v2-meter-bar-divider);
   }
 
   .dock-row-value {

@@ -169,6 +169,7 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
+
     font-family: 'Roboto Mono', monospace;
   }
 
@@ -210,7 +211,7 @@
     min-height: 24px;
     border: 1px solid var(--v2-border);
     border-radius: 999px;
-    background: rgba(10, 18, 26, 0.92);
+    background: var(--v2-sidebar-footer-bg);
     color: var(--v2-text-secondary);
     font-size: 9px;
     font-weight: 700;

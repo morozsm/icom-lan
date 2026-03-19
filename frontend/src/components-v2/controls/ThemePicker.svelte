@@ -166,7 +166,7 @@
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    border: 1px solid rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--v2-theme-picker-border);
   }
 
   .theme-name {

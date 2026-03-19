@@ -119,7 +119,7 @@
     position: fixed;
     inset: 0;
     z-index: 40;
-    background: rgba(3, 7, 12, 0.58);
+    background: var(--v2-attenuator-bg);
     border: 0;
     padding: 0;
     margin: 0;
@@ -135,7 +135,7 @@
     background: var(--v2-bg-darkest);
     border: 1px solid var(--v2-border-darker);
     border-radius: 4px;
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 10px 24px var(--v2-attenuator-shadow);
   }
 
   .menu-title {

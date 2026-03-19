@@ -359,7 +359,7 @@
     position: fixed;
     inset: 0;
     z-index: 60;
-    background: rgba(3, 7, 12, 0.62);
+    background: var(--v2-popup-bg);
     border: 0;
     padding: 0;
     margin: 0;
@@ -380,7 +380,7 @@
     background: linear-gradient(180deg, var(--v2-bg-gradient-start) 0%, var(--v2-bg-darkest) 100%);
     border: 1px solid var(--v2-border-darker);
     border-radius: 8px;
-    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+    box-shadow: 0 18px 48px var(--v2-popup-shadow);
     overflow: auto;
   }
 
@@ -455,7 +455,7 @@
 
   .modal-filter-row.active {
     border-color: var(--v2-border-soft);
-    box-shadow: 0 0 0 1px rgba(0, 212, 255, 0.12);
+    box-shadow: 0 0 0 1px var(--v2-popup-border-glow);
   }
 
   .modal-filter-meta {

@@ -86,4 +86,129 @@
   --v2-border-subtle-soft: rgba(72, 96, 122, 0.18);
   --v2-border-cyan: rgba(0, 212, 255, 0.24);
   --v2-border-cyan-bright: rgba(0, 212, 255, 0.48);
+
+  /* ── Layer 2: Accents & Data Visualization ───────────────────────────── */
+  /* These can be overridden independently from the base theme */
+
+  /* Status Badges */
+  --v2-badge-cyan-bg: #0D3B66;
+  --v2-badge-cyan-border: #00D4FF;
+  --v2-badge-cyan-text: #FFFFFF;
+  --v2-badge-cyan-glow: rgba(0, 212, 255, 0.14);
+  --v2-badge-orange-bg: #3D2200;
+  --v2-badge-orange-border: #FF6A00;
+  --v2-badge-orange-text: #FFF0E4;
+  --v2-badge-orange-glow: rgba(255, 106, 0, 0.14);
+  --v2-badge-red-bg: #3D0A0A;
+  --v2-badge-red-border: #FF2020;
+  --v2-badge-red-text: #FFF0ED;
+  --v2-badge-red-glow: rgba(255, 32, 32, 0.14);
+  --v2-badge-green-bg: #0A3D1A;
+  --v2-badge-green-border: #00CC66;
+  --v2-badge-green-text: #F0FFF6;
+  --v2-badge-green-glow: rgba(0, 204, 102, 0.14);
+  --v2-badge-muted-bg: #1A2028;
+  --v2-badge-muted-border: #4D6074;
+  --v2-badge-muted-text: #8DA2B8;
+  --v2-badge-muted-glow: rgba(77, 96, 116, 0.10);
+  --v2-badge-inactive-border: #1A2028;
+  --v2-badge-inactive-text: #4D6074;
+
+  /* VFO Indicators */
+  --v2-vfo-active-glow: rgba(0, 212, 255, 0.08);
+  --v2-vfo-badge-active-bg: rgba(21, 74, 34, 0.68);
+  --v2-vfo-badge-active-border: rgba(61, 110, 72, 0.9);
+  --v2-vfo-badge-standby-bg: rgba(20, 27, 36, 0.74);
+  --v2-vfo-badge-standby-border: rgba(64, 81, 102, 0.86);
+  --v2-vfo-meter-tag-bg: rgba(8, 53, 76, 0.62);
+  --v2-vfo-slot-tag-bg: rgba(16, 23, 31, 0.8);
+  --v2-vfo-mode-badge-bg: rgba(8, 58, 85, 0.66);
+  --v2-vfo-filter-badge-bg: rgba(15, 24, 34, 0.86);
+  --v2-vfo-rit-label-bg: rgba(9, 39, 56, 0.5);
+  --v2-vfo-rit-offset-bg: rgba(62, 31, 7, 0.6);
+  --v2-vfo-rit-offset-border: rgba(195, 126, 17, 0.82);
+
+  /* TX Indicators */
+  --v2-tx-tuning: #FF2020;
+  --v2-tx-active: #FF6A00;
+  --v2-tx-idle: #3A4A5A;
+  --v2-tx-panel-glow: rgba(255, 32, 32, 0.15);
+
+  /* Meter Gradients */
+  --v2-meter-s-fill: linear-gradient(90deg, #65d8ff 0%, #82f2ff 60%, #e6f7ff 100%);
+  --v2-meter-s-track: linear-gradient(90deg, rgba(21, 82, 97, 0.38) 0%, rgba(34, 116, 135, 0.26) 60%, rgba(230, 247, 255, 0.14) 100%);
+  --v2-meter-power-fill: linear-gradient(90deg, var(--v2-text-primary) 0%, var(--v2-text-primary) 35%, #e3ae3a 35%, #a63514 100%);
+  --v2-meter-power-track: linear-gradient(90deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.08) 35%, rgba(227, 174, 58, 0.14) 35%, rgba(166, 53, 20, 0.2) 100%);
+  --v2-meter-swr-fill: linear-gradient(90deg, #0f5a37 0%, #18c36f 52%, #a48712 68%, #7e180f 100%);
+  --v2-meter-swr-track: linear-gradient(90deg, rgba(15, 90, 55, 0.35) 0%, rgba(24, 195, 111, 0.22) 52%, rgba(164, 135, 18, 0.16) 68%, rgba(126, 24, 15, 0.2) 100%);
+  --v2-meter-alc-fill: linear-gradient(90deg, #0d4b31 0%, #3e8b29 32%, #e1b43c 58%, #9e2710 100%);
+  --v2-meter-alc-track: linear-gradient(90deg, rgba(13, 75, 49, 0.34) 0%, rgba(62, 139, 41, 0.2) 32%, rgba(225, 180, 60, 0.17) 58%, rgba(158, 39, 16, 0.2) 100%);
+
+  /* Meter Source Tags */
+  --v2-meter-source-s-bg: rgba(12, 54, 76, 0.52);
+  --v2-meter-source-s-border: #235873;
+  --v2-meter-source-s-text: #92eaff;
+  --v2-meter-source-swr-bg: rgba(18, 79, 35, 0.52);
+  --v2-meter-source-swr-border: #2c6d3f;
+  --v2-meter-source-swr-text: #8ef7a8;
+  --v2-meter-source-power-bg: rgba(95, 60, 8, 0.48);
+  --v2-meter-source-power-border: rgba(195, 146, 48, 0.82);
+  --v2-meter-source-power-text: #ffdca0;
+  --v2-meter-tx-bg: rgba(93, 20, 12, 0.5);
+  --v2-meter-tx-border: rgba(189, 59, 29, 0.78);
+  --v2-meter-tx-text: #ffc4b8;
+  --v2-meter-tx-active-bg: rgba(132, 25, 13, 0.82);
+  --v2-meter-tx-active-text: #fff2ed;
+  --v2-meter-active-glow: rgba(0, 180, 255, 0.14);
+  --v2-meter-active-shadow: rgba(111, 194, 255, 0.08);
+  --v2-meter-bar-divider: rgba(255, 255, 255, 0.2);
+
+  /* Panel Backgrounds & Overlays */
+  --v2-panel-bg-gradient-top: rgba(20, 28, 38, 0.98);
+  --v2-panel-bg-gradient-bottom: rgba(14, 20, 30, 0.98);
+  --v2-sidebar-gradient-top: rgba(8, 16, 24, 0.96);
+  --v2-sidebar-gradient-bottom: rgba(5, 11, 18, 0.96);
+  --v2-sidebar-footer-bg: rgba(10, 18, 26, 0.92);
+  --v2-vfo-header-gradient-top: rgba(9, 14, 19, 0.96);
+  --v2-vfo-header-gradient-bottom: rgba(6, 10, 15, 0.96);
+  --v2-vfo-header-border: rgba(24, 34, 45, 0.92);
+  --v2-meter-panel-glow: rgba(0, 212, 255, 0.08);
+
+  /* Keyboard Handler & Modal */
+  --v2-modal-backdrop: rgba(2, 6, 10, 0.82);
+  --v2-modal-bg-top: rgba(8, 14, 20, 0.98);
+  --v2-modal-bg-bottom: rgba(5, 9, 14, 0.98);
+  --v2-modal-glow: rgba(0, 212, 255, 0.12);
+  --v2-modal-section-border: rgba(72, 96, 122, 0.1);
+  --v2-modal-key-active-border: rgba(0, 212, 255, 0.36);
+  --v2-modal-key-active-glow: rgba(0, 212, 255, 0.08);
+  --v2-modal-code-border: rgba(0, 212, 255, 0.26);
+  --v2-modal-code-bg: rgba(8, 14, 20, 0.97);
+  --v2-modal-shadow: rgba(0, 0, 0, 0.34);
+
+  /* Popup & Dropdown Backgrounds */
+  --v2-popup-bg: rgba(3, 7, 12, 0.62);
+  --v2-popup-shadow: rgba(0, 0, 0, 0.45);
+  --v2-popup-border-glow: rgba(0, 212, 255, 0.12);
+  --v2-attenuator-bg: rgba(3, 7, 12, 0.58);
+  --v2-attenuator-shadow: rgba(0, 0, 0, 0.35);
+
+  /* Control Elements */
+  --v2-control-button-gradient-top: rgba(18, 24, 33, 0.98);
+  --v2-control-button-gradient-bottom: rgba(11, 16, 23, 0.98);
+  --v2-control-button-highlight: rgba(255, 255, 255, 0.03);
+  --v2-bipolar-gradient-edge: rgba(105, 121, 140, 0.04);
+  --v2-bipolar-gradient-center: rgba(105, 121, 140, 0.02);
+  --v2-bipolar-border: rgba(215, 226, 238, 0.04);
+  --v2-knob-shadow: rgba(255, 255, 255, 0.3);
+  --v2-theme-picker-border: rgba(0, 0, 0, 0.2);
+
+  /* CollapsiblePanel */
+  --v2-collapsible-bg: #060a10;
+  --v2-collapsible-border: #18202a;
+  --v2-collapsible-header-bg: #1a1a2e;
+  --v2-collapsible-header-hover-bg: #222238;
+  --v2-collapsible-header-text: #e0e0e0;
+  --v2-collapsible-chevron: #888;
+  --v2-collapsible-chevron-hover: #00d4ff;
 }

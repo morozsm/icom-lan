@@ -157,7 +157,7 @@
   .source-btn.active {
     color: var(--v2-accent-cyan);
     border-color: var(--v2-accent-cyan);
-    background: rgba(0, 212, 255, 0.08);
+    background: var(--v2-meter-panel-glow);
   }
 
   .tx-meters {

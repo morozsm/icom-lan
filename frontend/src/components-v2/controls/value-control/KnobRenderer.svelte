@@ -355,7 +355,7 @@
   }
 
   .vc-knob-indicator {
-    filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.3));
+    filter: drop-shadow(0 0 2px var(--v2-knob-shadow));
   }
 
   .vc-knob-value {

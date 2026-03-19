@@ -19,25 +19,25 @@ describe('txStatusColor', () => {
   });
 
 it('returns danger red when tuning', () => {
-    expect(txStatusColor(true, true)).toBe('#FF2020');
+    expect(txStatusColor(true, true)).toBe('var(--v2-tx-tuning)');
   });
 
   it('returns danger red when tuning even if active is false', () => {
-    expect(txStatusColor(false, true)).toBe('#FF2020');
+    expect(txStatusColor(false, true)).toBe('var(--v2-tx-tuning)');
   });
 
   it('returns TX orange when active and not tuning', () => {
-    expect(txStatusColor(true, false)).toBe('#FF6A00');
+    expect(txStatusColor(true, false)).toBe('var(--v2-tx-active)');
   });
 
   it('returns muted color when inactive and not tuning', () => {
-    expect(txStatusColor(false, false)).toBe('#3A4A5A');
+    expect(txStatusColor(false, false)).toBe('var(--v2-tx-idle)');
   });
 
   it('tuning takes priority over active', () => {
     // tuning=true always wins, regardless of active
-    expect(txStatusColor(true, true)).toBe('#FF2020');
-    expect(txStatusColor(false, true)).toBe('#FF2020');
+    expect(txStatusColor(true, true)).toBe('var(--v2-tx-tuning)');
+    expect(txStatusColor(false, true)).toBe('var(--v2-tx-tuning)');
   });
 });
 

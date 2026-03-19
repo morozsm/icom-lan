@@ -15,11 +15,11 @@ interface ColorTokens {
 }
 
 const COLOR_ACTIVE: Record<BadgeColor, ColorTokens> = {
-  cyan:   { bg: '#0D3B66', border: '#00D4FF', text: '#FFFFFF', glow: 'rgba(0,212,255,0.14)' },
-  orange: { bg: '#3D2200', border: '#FF6A00', text: '#FFF0E4', glow: 'rgba(255,106,0,0.14)' },
-  red:    { bg: '#3D0A0A', border: '#FF2020', text: '#FFF0ED', glow: 'rgba(255,32,32,0.14)' },
-  green:  { bg: '#0A3D1A', border: '#00CC66', text: '#F0FFF6', glow: 'rgba(0,204,102,0.14)' },
-  muted:  { bg: '#1A2028', border: '#4D6074', text: '#8DA2B8', glow: 'rgba(77,96,116,0.10)' },
+  cyan:   { bg: 'var(--v2-badge-cyan-bg)', border: 'var(--v2-badge-cyan-border)', text: 'var(--v2-badge-cyan-text)', glow: 'var(--v2-badge-cyan-glow)' },
+  orange: { bg: 'var(--v2-badge-orange-bg)', border: 'var(--v2-badge-orange-border)', text: 'var(--v2-badge-orange-text)', glow: 'var(--v2-badge-orange-glow)' },
+  red:    { bg: 'var(--v2-badge-red-bg)', border: 'var(--v2-badge-red-border)', text: 'var(--v2-badge-red-text)', glow: 'var(--v2-badge-red-glow)' },
+  green:  { bg: 'var(--v2-badge-green-bg)', border: 'var(--v2-badge-green-border)', text: 'var(--v2-badge-green-text)', glow: 'var(--v2-badge-green-glow)' },
+  muted:  { bg: 'var(--v2-badge-muted-bg)', border: 'var(--v2-badge-muted-border)', text: 'var(--v2-badge-muted-text)', glow: 'var(--v2-badge-muted-glow)' },
 };
 
 export interface BadgeControlButtonVars {
@@ -51,8 +51,8 @@ export function computeBadgeStyle({ active, color, compact, clickable }: BadgePr
 
   return {
     background: active ? c.bg          : 'transparent',
-    border:     active ? `1px solid ${c.border}` : '1px solid #1A2028',
-    color:      active ? c.text        : '#4D6074',
+    border:     active ? `1px solid ${c.border}` : '1px solid var(--v2-badge-inactive-border)',
+    color:      active ? c.text        : 'var(--v2-badge-inactive-text)',
     boxShadow:  active ? `0 0 0 1px ${c.glow}` : 'none',
     height:     compact ? '16px'       : '22px',
     padding:    compact ? '0 5px'      : '0 8px',
