@@ -35,6 +35,10 @@ export function getSupportedFilters(): string[] {
   return capabilities?.filters ?? [];
 }
 
+export function getKeyboardConfig() {
+  return capabilities?.keyboard ?? null;
+}
+
 export function getAttValues(): number[] {
   return capabilities?.attValues ?? [0, 6, 12, 18];
 }

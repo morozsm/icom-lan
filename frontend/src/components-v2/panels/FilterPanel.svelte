@@ -4,6 +4,7 @@
   import BipolarSlider from '../controls/BipolarSlider.svelte';
   import Slider from '../controls/Slider.svelte';
   import { formatFilterWidth } from './filter-utils';
+  import { getShortcutHint, joinShortcutHints } from '../layout/shortcut-hints';
 
   interface Props {
     currentMode: string;
@@ -74,6 +75,11 @@
   let modalMin = $derived(filterConfig?.minHz ?? filterWidthMin);
   let modalMax = $derived(filterConfig?.maxHz ?? filterWidthMax);
   let modalStep = $derived(filterConfig?.stepHz ?? filterConfig?.segments?.[0]?.stepHz ?? 50);
+  const cycleFilterShortcut = joinShortcutHints(
+    getShortcutHint('cycle_filter'),
+    getShortcutHint('cycle_filter', (binding) => Number(binding.params?.step ?? 0) === -1),
+  );
+  const filterSettingsShortcut = getShortcutHint('open_filter_settings');
 
   $effect(() => {
     if (!modalOpen) {
@@ -117,6 +123,8 @@
             class="filter-select-button v2-control-button"
             class:active={currentFilter === index + 1}
             style="--control-accent:#00D4FF; --control-active-text:#FFFFFF"
+            data-shortcut-hint={cycleFilterShortcut ?? undefined}
+            title={cycleFilterShortcut ?? undefined}
             onclick={() => onFilterChange?.(index + 1)}
           >
             {label}
@@ -131,6 +139,8 @@
         aria-label="Open filter settings"
         aria-haspopup="dialog"
         aria-expanded={modalOpen}
+        data-shortcut-hint={filterSettingsShortcut ?? undefined}
+        title={filterSettingsShortcut ?? undefined}
         onclick={openSettings}
       >
         ⚙

@@ -2,6 +2,7 @@
   import './control-button.css';
   import { getCapabilities } from '$lib/stores/capabilities.svelte';
   import { flattenBands, findActiveBand } from './band-utils';
+  import { getShortcutHint } from '../layout/shortcut-hints';
 
   interface Props {
     currentFreq: number;
@@ -15,6 +16,13 @@
 
   function handleClick(name: string, defaultFreq: number, bsrCode?: number) {
     onBandSelect(name, defaultFreq, bsrCode);
+  }
+
+  function bandShortcut(bsrCode?: number): string | null {
+    if (bsrCode === undefined) {
+      return null;
+    }
+    return getShortcutHint('band_select', (binding) => Number(binding.params?.index) === bsrCode);
   }
 
 </script>
@@ -31,6 +39,8 @@
         style="--control-accent:#00D4FF; --control-active-text:#FFFFFF"
         data-band={band.name}
         data-active={isActive}
+        data-shortcut-hint={bandShortcut(band.bsrCode) ?? undefined}
+        title={bandShortcut(band.bsrCode) ?? undefined}
         onclick={() => handleClick(band.name, band.defaultFreq, band.bsrCode)}
       >
         {band.name}

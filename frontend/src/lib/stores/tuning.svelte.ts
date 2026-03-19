@@ -5,6 +5,9 @@ import { radio } from './radio.svelte';
 /** Available tuning steps in Hz */
 export const TUNING_STEPS = [10, 50, 100, 500, 1_000, 5_000, 10_000, 25_000, 100_000] as const;
 
+const STORAGE_STEP_KEY = 'icom-lan.tuning-step-hz';
+const STORAGE_AUTO_KEY = 'icom-lan.tuning-step-auto';
+
 /** Mode-based default steps */
 const MODE_DEFAULTS: Record<string, number> = {
   'CW':     10,
@@ -18,20 +21,61 @@ const MODE_DEFAULTS: Record<string, number> = {
 
 const DEFAULT_STEP = 1_000;
 
-let _step = $state(DEFAULT_STEP);
-let _autoStep = $state(true); // auto-select step based on mode
+function _storage(): Storage | null {
+  return typeof globalThis.localStorage?.getItem === 'function' ? globalThis.localStorage : null;
+}
+
+function _readStoredStep(): number {
+  const raw = _storage()?.getItem(STORAGE_STEP_KEY);
+  if (!raw) {
+    return DEFAULT_STEP;
+  }
+  const parsed = Number(raw);
+  return (TUNING_STEPS as readonly number[]).includes(parsed) ? parsed : DEFAULT_STEP;
+}
+
+function _readStoredAutoStep(): boolean {
+  const raw = _storage()?.getItem(STORAGE_AUTO_KEY);
+  if (raw == null) {
+    return true;
+  }
+  return raw !== 'false';
+}
+
+function _persistState(): void {
+  const storage = _storage();
+  if (!storage) {
+    return;
+  }
+  storage.setItem(STORAGE_STEP_KEY, String(_step));
+  storage.setItem(STORAGE_AUTO_KEY, String(_autoStep));
+}
+
+let _step = $state(_readStoredStep());
+let _autoStep = $state(_readStoredAutoStep()); // auto-select step based on mode
 
 export function getTuningStep(): number {
   return _step;
 }
 
 export function setTuningStep(hz: number): void {
+  if (!(TUNING_STEPS as readonly number[]).includes(hz)) {
+    return;
+  }
   _step = hz;
   _autoStep = false; // manual override disables auto
+  _persistState();
 }
 
 export function setAutoStep(on: boolean): void {
   _autoStep = on;
+  if (on) {
+    const rx = radio.current?.active === 'SUB' ? radio.current?.sub : radio.current?.main;
+    if (rx?.mode) {
+      _step = MODE_DEFAULTS[rx.mode?.toUpperCase()] ?? DEFAULT_STEP;
+    }
+  }
+  _persistState();
 }
 
 export function isAutoStep(): boolean {
@@ -42,6 +86,21 @@ export function isAutoStep(): boolean {
 export function applyModeDefault(mode: string): void {
   if (!_autoStep) return;
   _step = MODE_DEFAULTS[mode?.toUpperCase()] ?? DEFAULT_STEP;
+  _persistState();
+}
+
+export function adjustTuningStep(direction: 'up' | 'down'): number {
+  const idx = (TUNING_STEPS as readonly number[]).indexOf(_step);
+  if (idx < 0) {
+    _step = DEFAULT_STEP;
+    _persistState();
+    return _step;
+  }
+  const nextIdx = direction === 'down'
+    ? Math.max(0, idx - 1)
+    : Math.min(TUNING_STEPS.length - 1, idx + 1);
+  setTuningStep(TUNING_STEPS[nextIdx]);
+  return _step;
 }
 
 /** Snap frequency to nearest step boundary 

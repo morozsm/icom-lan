@@ -3,6 +3,7 @@
   import Slider from '../controls/Slider.svelte';
   import { hasAudio } from '$lib/stores/capabilities.svelte';
   import { buildMonitorOptions, formatMonitorStatus } from './audio-utils';
+  import { getShortcutHint } from '../layout/shortcut-hints';
 
   interface Props {
     monitorMode: 'local' | 'live' | 'mute';
@@ -17,6 +18,8 @@
 
   let options = $derived(buildMonitorOptions(hasLiveAudio));
   let statusText = $derived(formatMonitorStatus(monitorMode));
+  const monitorShortcut = getShortcutHint('toggle_monitor');
+  const afShortcut = getShortcutHint('adjust_af_level');
 </script>
 
 {#if hasAudio()}
@@ -27,6 +30,7 @@
         {options}
         selected={monitorMode}
         accentColor="#00FFFF"
+        title={monitorShortcut}
         onchange={(v) => onMonitorModeChange(v as string)}
       />
       <Slider
@@ -35,6 +39,8 @@
         min={0}
         max={255}
         accentColor="#00FFFF"
+        shortcutHint={afShortcut}
+        title={afShortcut}
         onchange={onAfLevelChange}
       />
       <div class="output-indicator">{statusText}</div>

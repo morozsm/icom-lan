@@ -176,6 +176,21 @@ class TestCapabilitiesEndpoint:
         assert data["filterConfig"]["AM"]["stepHz"] == 200
         assert data["filterConfig"]["FM"]["fixed"] is True
 
+    @pytest.mark.asyncio
+    async def test_capabilities_include_keyboard_config(self):
+        radio = _make_radio("IC-7610")
+        srv = WebServer(radio)
+        writer = _FakeWriter()
+        await srv._serve_capabilities(writer)  # noqa: SLF001
+        data = _parse_json_body(writer)
+        assert data["keyboard"]["leaderKey"] == "g"
+        assert data["keyboard"]["leaderTimeoutMs"] == 1000
+        assert data["keyboard"]["altHints"] is True
+        assert any(
+            binding["action"] == "toggle_help"
+            for binding in data["keyboard"]["bindings"]
+        )
+
 
 # ── /api/v1/state tests ───────────────────────────────────────
 
@@ -252,4 +267,5 @@ class TestCommandGuards:
         handler._radio = radio
 
         # Should not raise
+        handler._ensure_capability("dual_rx", "set_dual_watch")
         handler._ensure_capability("dual_rx", "set_dual_watch")

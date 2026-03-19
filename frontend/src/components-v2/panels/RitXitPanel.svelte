@@ -2,6 +2,7 @@
   import Slider from '../controls/Slider.svelte';
   import StatusBadge from '../controls/StatusBadge.svelte';
   import { formatOffset, shouldShowPanel } from './rit-utils';
+  import { getShortcutHint } from '../layout/shortcut-hints';
 
   interface Props {
     ritActive: boolean;
@@ -33,6 +34,9 @@
 
   let visible = $derived(shouldShowPanel(hasRit, hasXit));
   let offsetValue = $derived(xitActive && !ritActive ? xitOffset : ritOffset);
+  const ritShortcut = getShortcutHint('toggle_rit');
+  const xitShortcut = getShortcutHint('toggle_xit');
+  const clearShortcut = getShortcutHint('clear_rit_xit');
 
   function handleOffsetChange(value: number) {
     if (xitActive && !ritActive) {
@@ -49,13 +53,13 @@
     <div class="panel-body">
       {#if hasRit}
         <div class="row">
-          <StatusBadge label="RIT" active={ritActive} color="cyan" onclick={onRitToggle} />
+          <StatusBadge label="RIT" active={ritActive} color="cyan" onclick={onRitToggle} shortcutHint={ritShortcut} title={ritShortcut} />
           <span class="offset" class:active={ritActive}>{formatOffset(ritOffset)}</span>
         </div>
       {/if}
       {#if hasXit}
         <div class="row">
-          <StatusBadge label="XIT" active={xitActive} color="orange" onclick={onXitToggle} />
+          <StatusBadge label="XIT" active={xitActive} color="orange" onclick={onXitToggle} shortcutHint={xitShortcut} title={xitShortcut} />
           <span class="offset" class:active={xitActive}>{formatOffset(xitOffset)}</span>
         </div>
       {/if}
@@ -70,7 +74,7 @@
         onchange={handleOffsetChange}
       />
       <div class="clear-row">
-        <StatusBadge label="CLEAR" active={false} color="muted" onclick={onClear} />
+        <StatusBadge label="CLEAR" active={false} color="muted" onclick={onClear} shortcutHint={clearShortcut} title={clearShortcut} />
       </div>
     </div>
   </div>

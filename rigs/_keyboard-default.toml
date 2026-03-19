@@ -1,0 +1,509 @@
+[keyboard]
+leader_key = "g"
+leader_timeout_ms = 1000
+alt_hints = true
+help_title = "Radio Keyboard"
+
+[[keyboard.bindings]]
+id = "step-up"
+section = "Tuning"
+label = "Increase tuning step"
+description = "Select the next tuning step value on the frontend."
+key = "ArrowUp"
+action = "adjust_tuning_step"
+[keyboard.bindings.params]
+direction = "up"
+
+[[keyboard.bindings]]
+id = "step-down"
+section = "Tuning"
+label = "Decrease tuning step"
+description = "Select the previous tuning step value on the frontend."
+key = "ArrowDown"
+action = "adjust_tuning_step"
+[keyboard.bindings.params]
+direction = "down"
+
+[[keyboard.bindings]]
+id = "nudge-left"
+section = "Tuning"
+label = "Tune down"
+description = "Tune the active receiver down by the current frontend tuning step."
+key = "ArrowLeft"
+action = "tune"
+repeatable = true
+[keyboard.bindings.params]
+direction = "down"
+fine = false
+
+[[keyboard.bindings]]
+id = "nudge-right"
+section = "Tuning"
+label = "Tune up"
+description = "Tune the active receiver up by the current frontend tuning step."
+key = "ArrowRight"
+action = "tune"
+repeatable = true
+[keyboard.bindings.params]
+direction = "up"
+fine = false
+
+[[keyboard.bindings]]
+id = "page-up"
+section = "Tuning"
+label = "Tune +1 kHz"
+description = "Jump the active receiver up by 1 kHz."
+key = "PageUp"
+action = "tune"
+repeatable = true
+[keyboard.bindings.params]
+deltaHz = 1000
+
+[[keyboard.bindings]]
+id = "page-down"
+section = "Tuning"
+label = "Tune -1 kHz"
+description = "Jump the active receiver down by 1 kHz."
+key = "PageDown"
+action = "tune"
+repeatable = true
+[keyboard.bindings.params]
+deltaHz = -1000
+
+[[keyboard.bindings]]
+id = "band-1"
+section = "Bands"
+label = "160m"
+key = "1"
+action = "band_select"
+[keyboard.bindings.params]
+index = 1
+
+[[keyboard.bindings]]
+id = "band-2"
+section = "Bands"
+label = "80m"
+key = "2"
+action = "band_select"
+[keyboard.bindings.params]
+index = 2
+
+[[keyboard.bindings]]
+id = "band-3"
+section = "Bands"
+label = "60m"
+key = "3"
+action = "band_select"
+[keyboard.bindings.params]
+index = 3
+
+[[keyboard.bindings]]
+id = "band-4"
+section = "Bands"
+label = "40m"
+key = "4"
+action = "band_select"
+[keyboard.bindings.params]
+index = 4
+
+[[keyboard.bindings]]
+id = "band-5"
+section = "Bands"
+label = "30m"
+key = "5"
+action = "band_select"
+[keyboard.bindings.params]
+index = 5
+
+[[keyboard.bindings]]
+id = "band-6"
+section = "Bands"
+label = "20m"
+key = "6"
+action = "band_select"
+[keyboard.bindings.params]
+index = 6
+
+[[keyboard.bindings]]
+id = "band-7"
+section = "Bands"
+label = "15m"
+key = "7"
+action = "band_select"
+[keyboard.bindings.params]
+index = 7
+
+[[keyboard.bindings]]
+id = "band-8"
+section = "Bands"
+label = "10m"
+key = "8"
+action = "band_select"
+[keyboard.bindings.params]
+index = 8
+
+[[keyboard.bindings]]
+id = "band-9"
+section = "Bands"
+label = "6m"
+key = "9"
+action = "band_select"
+[keyboard.bindings.params]
+index = 9
+
+[[keyboard.bindings]]
+id = "mode-lsb"
+section = "Modes"
+label = "LSB"
+key = "F1"
+action = "mode_select"
+[keyboard.bindings.params]
+mode = "LSB"
+
+[[keyboard.bindings]]
+id = "mode-usb"
+section = "Modes"
+label = "USB"
+key = "F2"
+action = "mode_select"
+[keyboard.bindings.params]
+mode = "USB"
+
+[[keyboard.bindings]]
+id = "mode-cw"
+section = "Modes"
+label = "CW"
+key = "F3"
+action = "mode_select"
+[keyboard.bindings.params]
+mode = "CW"
+
+[[keyboard.bindings]]
+id = "mode-cwr"
+section = "Modes"
+label = "CW-R"
+key = "F4"
+action = "mode_select"
+[keyboard.bindings.params]
+mode = "CW-R"
+
+[[keyboard.bindings]]
+id = "mode-am"
+section = "Modes"
+label = "AM"
+key = "F5"
+action = "mode_select"
+[keyboard.bindings.params]
+mode = "AM"
+
+[[keyboard.bindings]]
+id = "mode-fm"
+section = "Modes"
+label = "FM"
+key = "F6"
+action = "mode_select"
+[keyboard.bindings.params]
+mode = "FM"
+
+[[keyboard.bindings]]
+id = "mode-rtty"
+section = "Modes"
+label = "RTTY"
+key = "F7"
+action = "mode_select"
+[keyboard.bindings.params]
+mode = "RTTY"
+
+[[keyboard.bindings]]
+id = "mode-rttyr"
+section = "Modes"
+label = "RTTY-R"
+key = "F8"
+action = "mode_select"
+[keyboard.bindings.params]
+mode = "RTTY-R"
+
+[[keyboard.bindings]]
+id = "mode-psk"
+section = "Modes"
+label = "PSK"
+key = "F9"
+action = "mode_select"
+[keyboard.bindings.params]
+mode = "PSK"
+
+[[keyboard.bindings]]
+id = "mode-pskr"
+section = "Modes"
+label = "PSK-R"
+key = "F10"
+action = "mode_select"
+[keyboard.bindings.params]
+mode = "PSK-R"
+
+[[keyboard.bindings]]
+id = "cycle-data-mode"
+section = "Modes"
+label = "Cycle DATA"
+key = "d"
+action = "cycle_data_mode"
+
+[[keyboard.bindings]]
+id = "cycle-filter"
+section = "Filter"
+label = "Next filter"
+key = "f"
+action = "cycle_filter"
+[keyboard.bindings.params]
+step = 1
+
+[[keyboard.bindings]]
+id = "open-filter-settings"
+section = "Filter"
+label = "Filter settings"
+key = "F"
+action = "open_filter_settings"
+
+[[keyboard.bindings]]
+id = "wider-filter"
+section = "Filter"
+label = "Wider filter"
+key = "w"
+action = "cycle_filter"
+[keyboard.bindings.params]
+step = -1
+
+[[keyboard.bindings]]
+id = "narrower-filter"
+section = "Filter"
+label = "Narrower filter"
+key = "W"
+action = "cycle_filter"
+[keyboard.bindings.params]
+step = 1
+
+[[keyboard.bindings]]
+id = "swap-vfo"
+section = "VFO"
+label = "Swap VFO"
+key = "Tab"
+action = "vfo_swap"
+
+[[keyboard.bindings]]
+id = "equalize-vfo"
+section = "VFO"
+label = "Copy to other VFO"
+key = "="
+action = "vfo_equalize"
+
+[[keyboard.bindings]]
+id = "toggle-split"
+section = "VFO"
+label = "Toggle split"
+key = "s"
+action = "toggle_split"
+
+[[keyboard.bindings]]
+id = "switch-active-vfo"
+section = "VFO"
+label = "Switch active receiver"
+key = "v"
+action = "switch_active_vfo"
+
+[[keyboard.bindings]]
+id = "toggle-nr"
+section = "DSP"
+label = "Noise reduction"
+key = "n"
+action = "toggle_nr"
+
+[[keyboard.bindings]]
+id = "toggle-nb"
+section = "DSP"
+label = "Noise blanker"
+key = "b"
+action = "toggle_nb"
+
+[[keyboard.bindings]]
+id = "cycle-agc"
+section = "DSP"
+label = "Cycle AGC"
+key = "a"
+action = "cycle_agc"
+
+[[keyboard.bindings]]
+id = "cycle-preamp"
+section = "RF Front End"
+label = "Cycle preamp"
+key = "p"
+action = "cycle_preamp"
+
+[[keyboard.bindings]]
+id = "cycle-att"
+section = "RF Front End"
+label = "Cycle attenuator"
+key = "t"
+action = "cycle_att"
+
+[[keyboard.bindings]]
+id = "toggle-auto-notch"
+section = "DSP"
+label = "Auto notch"
+key = "o"
+action = "toggle_auto_notch"
+
+[[keyboard.bindings]]
+id = "toggle-monitor"
+section = "TX"
+label = "Monitor"
+key = "m"
+action = "toggle_monitor"
+
+[[keyboard.bindings]]
+id = "toggle-ip-plus"
+section = "DSP"
+label = "IP+"
+key = "i"
+action = "toggle_ip_plus"
+
+[[keyboard.bindings]]
+id = "toggle-dial-lock"
+section = "System"
+label = "Dial lock"
+key = "l"
+action = "toggle_dial_lock"
+
+[[keyboard.bindings]]
+id = "toggle-rit"
+section = "RIT/XIT"
+label = "RIT"
+key = "r"
+action = "toggle_rit"
+
+[[keyboard.bindings]]
+id = "toggle-xit"
+section = "RIT/XIT"
+label = "XIT"
+key = "x"
+action = "toggle_xit"
+
+[[keyboard.bindings]]
+id = "clear-rit-xit"
+section = "RIT/XIT"
+label = "Clear offset"
+key = "Escape"
+action = "clear_rit_xit"
+
+[[keyboard.bindings]]
+id = "af-level-up"
+section = "Levels"
+label = "AF gain up"
+key = "ArrowUp"
+modifiers = ["CTRL"]
+action = "adjust_af_level"
+repeatable = true
+[keyboard.bindings.params]
+delta = 5
+
+[[keyboard.bindings]]
+id = "af-level-down"
+section = "Levels"
+label = "AF gain down"
+key = "ArrowDown"
+modifiers = ["CTRL"]
+action = "adjust_af_level"
+repeatable = true
+[keyboard.bindings.params]
+delta = -5
+
+[[keyboard.bindings]]
+id = "rf-level-up"
+section = "Levels"
+label = "RF gain up"
+key = "ArrowUp"
+modifiers = ["CTRL", "SHIFT"]
+action = "adjust_rf_gain"
+repeatable = true
+[keyboard.bindings.params]
+delta = 5
+
+[[keyboard.bindings]]
+id = "rf-level-down"
+section = "Levels"
+label = "RF gain down"
+key = "ArrowDown"
+modifiers = ["CTRL", "SHIFT"]
+action = "adjust_rf_gain"
+repeatable = true
+[keyboard.bindings.params]
+delta = -5
+
+[[keyboard.bindings]]
+id = "help"
+section = "System"
+label = "Keyboard help"
+key = "?"
+action = "toggle_help"
+
+[[keyboard.bindings]]
+id = "focus-af"
+section = "Focus"
+label = "Go to AF"
+sequence = ["g", "a"]
+action = "focus_target"
+[keyboard.bindings.params]
+target = "af"
+
+[[keyboard.bindings]]
+id = "focus-rf"
+section = "Focus"
+label = "Go to RF"
+sequence = ["g", "r"]
+action = "focus_target"
+[keyboard.bindings.params]
+target = "rf"
+
+[[keyboard.bindings]]
+id = "focus-filter"
+section = "Focus"
+label = "Go to Filter"
+sequence = ["g", "f"]
+action = "focus_target"
+[keyboard.bindings.params]
+target = "filter"
+
+[[keyboard.bindings]]
+id = "focus-mode"
+section = "Focus"
+label = "Go to Mode"
+sequence = ["g", "m"]
+action = "focus_target"
+[keyboard.bindings.params]
+target = "mode"
+
+[[keyboard.bindings]]
+id = "focus-pbt"
+section = "Focus"
+label = "Go to PBT"
+sequence = ["g", "p"]
+action = "focus_target"
+[keyboard.bindings.params]
+target = "pbt"
+
+[[keyboard.bindings]]
+id = "focus-waterfall"
+section = "Focus"
+label = "Go to Waterfall"
+sequence = ["g", "w"]
+action = "focus_target"
+[keyboard.bindings.params]
+target = "waterfall"
+
+[[keyboard.bindings]]
+id = "focus-vfo"
+section = "Focus"
+label = "Go to VFO"
+sequence = ["g", "v"]
+action = "focus_target"
+[keyboard.bindings.params]
+target = "vfo"

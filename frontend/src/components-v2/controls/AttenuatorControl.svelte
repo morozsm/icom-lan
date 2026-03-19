@@ -11,6 +11,8 @@
     selected: number;
     onchange: (value: number) => void;
     accentColor?: string;
+    shortcutHint?: string | null;
+    title?: string | null;
   }
 
   let {
@@ -18,6 +20,8 @@
     selected,
     onchange,
     accentColor = '#00D4FF',
+    shortcutHint = null,
+    title = null,
   }: Props = $props();
 
   let menuOpen = $state(false);
@@ -35,7 +39,7 @@
   }
  </script>
 
-<div class="att-control">
+<div class="att-control" data-shortcut-hint={shortcutHint ?? undefined} title={title ?? shortcutHint ?? undefined}>
   <SegmentedButton
     options={controlModel.quickOptions}
     selected={selected}

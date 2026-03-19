@@ -2,11 +2,13 @@
   import { onMount } from 'svelte';
   import '../theme/index';
   import { radio } from '$lib/stores/radio.svelte';
-  import { getCapabilities, hasDualReceiver, hasTx } from '$lib/stores/capabilities.svelte';
+  import { applyModeDefault } from '$lib/stores/tuning.svelte';
+  import { getCapabilities, getKeyboardConfig, hasDualReceiver, hasTx } from '$lib/stores/capabilities.svelte';
   import SpectrumPanel from '../../components/spectrum/SpectrumPanel.svelte';
   import LeftSidebar from './LeftSidebar.svelte';
   import RightSidebar from './RightSidebar.svelte';
   import VfoHeader from './VfoHeader.svelte';
+  import KeyboardHandler from './KeyboardHandler.svelte';
   import DockMeterPanel from '../panels/DockMeterPanel.svelte';
   import FrequencyDisplay from '../display/FrequencyDisplay.svelte';
   import LinearSMeter from '../meters/LinearSMeter.svelte';
@@ -17,11 +19,13 @@
     type VfoLayoutScaleOverrides,
   } from './vfo-layout-tokens';
   import { toVfoProps, toVfoOpsProps, toMeterProps } from '../wiring/state-adapter';
-  import { makeMeterHandlers, makeVfoHandlers } from '../wiring/command-bus';
+  import { makeKeyboardHandlers, makeMeterHandlers, makeVfoHandlers } from '../wiring/command-bus';
 
   // Reactive state + capabilities
   let radioState = $derived(radio.current);
   let caps = $derived(getCapabilities());
+  let keyboardConfig = $derived(getKeyboardConfig());
+  let activeMode = $derived(radioState?.active === 'SUB' ? radioState?.sub?.mode : radioState?.main?.mode);
 
   // Derived props via state adapter
   let mainVfo = $derived(toVfoProps(radioState, 'main'));
@@ -42,6 +46,13 @@
   // Command handlers via command-bus
   const vfoHandlers = makeVfoHandlers();
   const meterHandlers = makeMeterHandlers();
+  const keyboardHandlers = makeKeyboardHandlers();
+
+  $effect(() => {
+    if (activeMode) {
+      applyModeDefault(activeMode);
+    }
+  });
 
   onMount(() => {
     manualVfoScaleOverrides = parseVfoLayoutScaleOverrides(window.location.search);
@@ -71,6 +82,8 @@
 </script>
 
 <div class="radio-layout">
+  <KeyboardHandler config={keyboardConfig} onAction={keyboardHandlers.dispatch} />
+
   <section class="receiver-deck" bind:this={receiverDeckElement} style={receiverDeckStyle}>
     <VfoHeader
       {mainVfo}

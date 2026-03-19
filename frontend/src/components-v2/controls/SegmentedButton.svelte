@@ -13,6 +13,7 @@
     accentColor?: string;
     compact?: boolean;
     disabled?: boolean;
+    title?: string | null;
   }
 
   let {
@@ -22,6 +23,7 @@
     accentColor = '#00D4FF',
     compact = false,
     disabled = false,
+    title = null,
   }: Props = $props();
 
   function handleKeydown(event: KeyboardEvent) {
@@ -44,6 +46,8 @@
   role="radiogroup"
   tabindex={disabled ? -1 : 0}
   style="--accent: {accentColor}"
+  title={title ?? undefined}
+  data-shortcut-hint={title ?? undefined}
   onkeydown={handleKeydown}
 >
   {#each options as option, i}

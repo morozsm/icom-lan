@@ -144,6 +144,52 @@ class TestLoadRig:
         with pytest.raises(RigLoadError):
             load_rig(p)
 
+    def test_merges_ui_keyboard_overrides_with_default_profile(self, tmp_path):
+        p = _write_toml(
+            tmp_path,
+            _MINIMAL_TOML
+            + """
+
+[ui.keyboard]
+help_title = "Custom Keyboard"
+leader_timeout_ms = 900
+alt_hints = true
+
+[[ui.keyboard.bindings]]
+id = "tune-up"
+section = "Tuning"
+label = "Tune up"
+key = "ArrowUp"
+action = "tune"
+repeatable = true
+[ui.keyboard.bindings.params]
+direction = "up"
+fine = false
+""",
+        )
+
+        rig = load_rig(p)
+
+        assert rig.keyboard is not None
+        assert rig.keyboard.help_title == "Custom Keyboard"
+        assert rig.keyboard.leader_timeout_ms == 900
+        assert rig.keyboard.alt_hints is True
+        assert any(binding.action == "toggle_help" for binding in rig.keyboard.bindings)
+        binding = next(
+            binding for binding in rig.keyboard.bindings if binding.id == "tune-up"
+        )
+        assert binding.id == "tune-up"
+        assert binding.sequence == ("ArrowUp",)
+        assert binding.action == "tune"
+        assert binding.params == {"direction": "up", "fine": False}
+
+    def test_loads_default_keyboard_profile_without_ui_section(self, tmp_path):
+        rig = load_rig(_write_toml(tmp_path, _MINIMAL_TOML))
+
+        assert rig.keyboard is not None
+        assert rig.keyboard.help_title == "Radio Keyboard"
+        assert any(binding.action == "toggle_help" for binding in rig.keyboard.bindings)
+
 
 # ── RadioProfile building ───────────────────────────────────────
 
@@ -234,6 +280,15 @@ class TestToProfile:
         profile = load_rig(TEMPLATE_PATH).to_profile()
         assert profile.model == "IC-7610"
         assert profile.id == "icom_ic7610"
+
+    def test_keyboard_config(self):
+        profile = load_rig(TEMPLATE_PATH).to_profile()
+        assert profile.keyboard is not None
+        assert profile.keyboard.leader_timeout_ms == 1000
+        assert profile.keyboard.alt_hints is True
+        assert any(
+            binding.action == "toggle_help" for binding in profile.keyboard.bindings
+        )
 
 
 # ── CommandMap ───────────────────────────────────────────────────
@@ -333,5 +388,6 @@ class TestDiscoverRigs:
 
     def test_empty_directory(self, tmp_path):
         rigs = discover_rigs(tmp_path)
+        assert rigs == {}
         assert rigs == {}
         assert rigs == {}

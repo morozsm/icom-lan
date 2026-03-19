@@ -206,6 +206,15 @@ class TestProfileParity:
     def test_filters(self, profile):
         assert profile.filters == ("FIL1", "FIL2", "FIL3")
 
+    def test_keyboard_config(self, profile):
+        assert profile.keyboard is not None
+        assert profile.keyboard.leader_key == "g"
+        assert profile.keyboard.leader_timeout_ms == 1000
+        assert profile.keyboard.alt_hints is True
+        assert any(
+            binding.action == "toggle_help" for binding in profile.keyboard.bindings
+        )
+
 
 # ── CommandMap parity ───────────────────────────────────────────
 

@@ -1,69 +1,199 @@
-export type KeyAction =
-  | { type: 'tune'; direction: 'up' | 'down'; fine: boolean }
-  | { type: 'bandSelect'; index: number }
-  | { type: 'modeSelect'; mode: string }
-  | { type: 'pttToggle' }
-  | { type: 'vfoSwap' }
-  | { type: 'ritClear' }
-  | { type: 'monitorToggle' }
-  | { type: 'nrToggle' }
-  | { type: 'nbToggle' };
+import type {
+  KeyboardBindingConfig as CapKeyboardBindingConfig,
+  KeyboardConfig as CapKeyboardConfig,
+} from '$lib/types/capabilities';
 
-interface KeyBinding {
-  key: string;
-  /** If defined, shift state must match exactly. If undefined, shift is ignored. */
-  shift?: boolean;
-  action: KeyAction;
+export type KeyboardBindingConfig = CapKeyboardBindingConfig;
+export type KeyboardConfig = CapKeyboardConfig;
+
+export interface KeyboardActionConfig {
+  id: string;
+  action: string;
+  params?: Record<string, unknown>;
+  section: string;
+  label?: string;
+  description?: string;
+  sequence: string[];
+  modifiers?: string[];
+  repeatable?: boolean;
 }
 
-export const KEYBOARD_BINDINGS: KeyBinding[] = [
-  // Tuning: Arrow Up/Down — coarse (no shift) or fine (shift)
-  { key: 'ArrowUp', shift: false, action: { type: 'tune', direction: 'up', fine: false } },
-  { key: 'ArrowUp', shift: true, action: { type: 'tune', direction: 'up', fine: true } },
-  { key: 'ArrowDown', shift: false, action: { type: 'tune', direction: 'down', fine: false } },
-  { key: 'ArrowDown', shift: true, action: { type: 'tune', direction: 'down', fine: true } },
-  // VFO nudge: Arrow Left/Right always fine
-  { key: 'ArrowLeft', action: { type: 'tune', direction: 'down', fine: true } },
-  { key: 'ArrowRight', action: { type: 'tune', direction: 'up', fine: true } },
-  // Band select: 1=160m, 2=80m, 3=60m, 4=40m, 5=30m, 6=20m, 7=15m, 8=10m, 9=6m
-  { key: '1', action: { type: 'bandSelect', index: 1 } },
-  { key: '2', action: { type: 'bandSelect', index: 2 } },
-  { key: '3', action: { type: 'bandSelect', index: 3 } },
-  { key: '4', action: { type: 'bandSelect', index: 4 } },
-  { key: '5', action: { type: 'bandSelect', index: 5 } },
-  { key: '6', action: { type: 'bandSelect', index: 6 } },
-  { key: '7', action: { type: 'bandSelect', index: 7 } },
-  { key: '8', action: { type: 'bandSelect', index: 8 } },
-  { key: '9', action: { type: 'bandSelect', index: 9 } },
-  // Mode select via F-keys
-  { key: 'F1', action: { type: 'modeSelect', mode: 'LSB' } },
-  { key: 'F2', action: { type: 'modeSelect', mode: 'USB' } },
-  { key: 'F3', action: { type: 'modeSelect', mode: 'CW' } },
-  { key: 'F4', action: { type: 'modeSelect', mode: 'AM' } },
-  // Controls
-  { key: ' ', action: { type: 'pttToggle' } },
-  { key: 'Tab', action: { type: 'vfoSwap' } },
-  { key: 'Escape', action: { type: 'ritClear' } },
-  // Toggle features
-  { key: 'm', action: { type: 'monitorToggle' } },
-  { key: 'n', action: { type: 'nrToggle' } },
-  { key: 'b', action: { type: 'nbToggle' } },
-];
+export const DEFAULT_KEYBOARD_CONFIG: KeyboardConfig = {
+  leaderKey: 'g',
+  leaderTimeoutMs: 1000,
+  altHints: true,
+  helpTitle: 'Keyboard Shortcuts',
+  bindings: [
+    {
+      id: 'step-up',
+      section: 'Tuning',
+      label: 'Increase tuning step',
+      sequence: ['ArrowUp'],
+      action: 'adjust_tuning_step',
+      params: { direction: 'up' },
+    },
+    {
+      id: 'step-down',
+      section: 'Tuning',
+      label: 'Decrease tuning step',
+      sequence: ['ArrowDown'],
+      action: 'adjust_tuning_step',
+      params: { direction: 'down' },
+    },
+    {
+      id: 'tune-down',
+      section: 'Tuning',
+      label: 'Tune down',
+      sequence: ['ArrowLeft'],
+      action: 'tune',
+      repeatable: true,
+      params: { direction: 'down', fine: false },
+    },
+    {
+      id: 'tune-up',
+      section: 'Tuning',
+      label: 'Tune up',
+      sequence: ['ArrowRight'],
+      action: 'tune',
+      repeatable: true,
+      params: { direction: 'up', fine: false },
+    },
+    {
+      id: 'help',
+      section: 'System',
+      label: 'Keyboard help',
+      sequence: ['?'],
+      action: 'toggle_help',
+    },
+  ],
+};
 
 /** Tags whose focused presence should suppress keyboard shortcuts. */
 export const IGNORED_TAGS = new Set(['INPUT', 'TEXTAREA', 'SELECT']);
 
-/**
- * Resolves a keyboard event to a KeyAction, or null if not mapped.
- * Handles shift-sensitive bindings (ArrowUp/Down) and shift-agnostic ones.
- */
-export function resolveAction(event: { key: string; shiftKey: boolean }): KeyAction | null {
-  for (const binding of KEYBOARD_BINDINGS) {
-    if (binding.key !== event.key) continue;
-    if (binding.shift !== undefined && binding.shift !== event.shiftKey) continue;
-    return binding.action;
+const MODIFIER_ORDER = ['CTRL', 'SHIFT', 'ALT', 'META'] as const;
+
+function normalizeModifier(modifier: string): string {
+  return modifier.trim().toUpperCase();
+}
+
+export function normalizeKeyboardConfig(config: KeyboardConfig | null | undefined): KeyboardConfig {
+  const source = config ?? DEFAULT_KEYBOARD_CONFIG;
+  return {
+    leaderKey: source.leaderKey || DEFAULT_KEYBOARD_CONFIG.leaderKey,
+    leaderTimeoutMs: source.leaderTimeoutMs || DEFAULT_KEYBOARD_CONFIG.leaderTimeoutMs,
+    altHints: source.altHints ?? DEFAULT_KEYBOARD_CONFIG.altHints,
+    helpTitle: source.helpTitle || DEFAULT_KEYBOARD_CONFIG.helpTitle,
+    bindings: (source.bindings?.length ? source.bindings : DEFAULT_KEYBOARD_CONFIG.bindings).map((binding) => ({
+      id: binding.id,
+      action: binding.action,
+      sequence: [...binding.sequence],
+      section: binding.section || 'General',
+      label: binding.label,
+      description: binding.description,
+      modifiers: binding.modifiers?.map(normalizeModifier),
+      repeatable: binding.repeatable ?? false,
+      params: binding.params,
+    })),
+  };
+}
+
+export function getEventModifiers(event: {
+  ctrlKey?: boolean;
+  shiftKey?: boolean;
+  altKey?: boolean;
+  metaKey?: boolean;
+}): string[] {
+  const modifiers: string[] = [];
+  if (event.ctrlKey) modifiers.push('CTRL');
+  if (event.shiftKey) modifiers.push('SHIFT');
+  if (event.altKey) modifiers.push('ALT');
+  if (event.metaKey) modifiers.push('META');
+  return modifiers;
+}
+
+function modifiersMatch(binding: KeyboardBindingConfig, event: { ctrlKey?: boolean; shiftKey?: boolean; altKey?: boolean; metaKey?: boolean }): boolean {
+  const expected = [...(binding.modifiers ?? [])].map(normalizeModifier).sort();
+  const actual = getEventModifiers(event).sort();
+  if (expected.length !== actual.length) {
+    return false;
   }
-  return null;
+  return expected.every((modifier, index) => modifier === actual[index]);
+}
+
+export function resolveAction(
+  event: { key: string; ctrlKey?: boolean; shiftKey?: boolean; altKey?: boolean; metaKey?: boolean },
+  config: KeyboardConfig | null | undefined = DEFAULT_KEYBOARD_CONFIG,
+): KeyboardActionConfig | null {
+  const normalized = normalizeKeyboardConfig(config);
+  const binding = normalized.bindings.find(
+    (candidate) => candidate.sequence.length === 1 && candidate.sequence[0] === event.key && modifiersMatch(candidate, event),
+  );
+  if (!binding) {
+    return null;
+  }
+  return {
+    id: binding.id,
+    action: binding.action,
+    params: binding.params,
+    section: binding.section,
+    label: binding.label,
+    description: binding.description,
+    sequence: binding.sequence,
+    modifiers: binding.modifiers,
+    repeatable: binding.repeatable,
+  };
+}
+
+export function resolveSequenceStart(
+  event: { key: string; ctrlKey?: boolean; shiftKey?: boolean; altKey?: boolean; metaKey?: boolean },
+  config: KeyboardConfig | null | undefined = DEFAULT_KEYBOARD_CONFIG,
+): KeyboardBindingConfig | null {
+  const normalized = normalizeKeyboardConfig(config);
+  return normalized.bindings.find(
+    (binding) => binding.sequence.length > 1 && binding.sequence[0] === event.key && modifiersMatch(binding, event),
+  ) ?? null;
+}
+
+export function resolveSequenceContinuation(
+  binding: KeyboardBindingConfig,
+  event: { key: string },
+): KeyboardActionConfig | null {
+  if (binding.sequence.length < 2 || binding.sequence[1] !== event.key) {
+    return null;
+  }
+  return {
+    id: binding.id,
+    action: binding.action,
+    params: binding.params,
+    section: binding.section,
+    label: binding.label,
+    description: binding.description,
+    sequence: binding.sequence,
+    modifiers: binding.modifiers,
+    repeatable: binding.repeatable,
+  };
+}
+
+export function formatShortcut(binding: KeyboardBindingConfig): string {
+  const sequence = binding.sequence.map((step, index) => {
+    const prefix = index === 0 && binding.modifiers?.length
+      ? [...binding.modifiers].map(normalizeModifier).sort((left, right) => {
+          return MODIFIER_ORDER.indexOf(left as (typeof MODIFIER_ORDER)[number]) - MODIFIER_ORDER.indexOf(right as (typeof MODIFIER_ORDER)[number]);
+        }).join('+') + '+'
+      : '';
+    return `${prefix}${step}`;
+  });
+  return sequence.join(' then ');
+}
+
+export function findBindingByAction(
+  config: KeyboardConfig | null | undefined,
+  action: string,
+  predicate?: (binding: KeyboardBindingConfig) => boolean,
+): KeyboardBindingConfig | null {
+  const normalized = normalizeKeyboardConfig(config);
+  return normalized.bindings.find((binding) => binding.action === action && (predicate ? predicate(binding) : true)) ?? null;
 }
 
 /**

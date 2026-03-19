@@ -12,9 +12,19 @@
     color?: BadgeColor;
     compact?: boolean;
     onclick?: () => void;
+    shortcutHint?: string | null;
+    title?: string | null;
   }
 
-  let { label, active = false, color = 'cyan', compact = false, onclick }: Props = $props();
+  let {
+    label,
+    active = false,
+    color = 'cyan',
+    compact = false,
+    onclick,
+    shortcutHint = null,
+    title = null,
+  }: Props = $props();
 
   let style = $derived(badgeStyleString({
     active,
@@ -31,6 +41,8 @@
     class="badge badge-button v2-control-button"
     class:active={active}
     style="--control-accent: {buttonVars.accent}; --control-active-text: {buttonVars.text};"
+    title={title ?? shortcutHint ?? undefined}
+    data-shortcut-hint={shortcutHint ?? undefined}
     {onclick}
     data-active={active}
     data-color={color}
@@ -45,6 +57,8 @@
     class="badge"
     class:clickable={!!onclick}
     {style}
+    title={title ?? shortcutHint ?? undefined}
+    data-shortcut-hint={shortcutHint ?? undefined}
     {onclick}
     data-active={active}
     data-color={color}

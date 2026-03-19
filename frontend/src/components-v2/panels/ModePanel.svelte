@@ -1,5 +1,6 @@
 <script lang="ts">
   import '../controls/control-button.css';
+  import { getShortcutHint } from '../layout/shortcut-hints';
 
   interface Props {
     currentMode: string;
@@ -34,6 +35,12 @@
       label: dataModeLabels[String(index)] ?? (index === 0 ? 'OFF' : `D${index}`),
     })),
   );
+
+  function modeShortcut(mode: string): string | null {
+    return getShortcutHint('mode_select', (binding) => binding.params?.mode === mode);
+  }
+
+  const dataShortcut = getShortcutHint('cycle_data_mode');
 </script>
 
 <div class="panel" data-mode-panel="true" data-highlight={undefined}>
@@ -47,6 +54,8 @@
           class:active={currentMode === mode}
           style="--control-accent:#00D4FF; --control-active-text:#FFFFFF"
           data-mode={mode}
+          data-shortcut-hint={modeShortcut(mode) ?? undefined}
+          title={modeShortcut(mode) ?? undefined}
           onclick={() => onModeChange(mode)}
         >
           {mode}
@@ -64,6 +73,8 @@
             class:active={dataMode === option.value}
             style="--control-accent:#00D4FF; --control-active-text:#FFFFFF"
             data-data-mode={option.value}
+            data-shortcut-hint={dataShortcut ?? undefined}
+            title={dataShortcut ?? undefined}
             onclick={() => onDataModeChange(option.value)}
           >
             {option.label}

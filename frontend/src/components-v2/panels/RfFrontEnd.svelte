@@ -4,6 +4,7 @@
   import SegmentedButton from '../controls/SegmentedButton.svelte';
   import { hasCapability, getAttValues, getPreValues } from '$lib/stores/capabilities.svelte';
   import { buildPreOptions, shouldShowPanel } from './rf-frontend-utils';
+  import { getShortcutHint } from '../layout/shortcut-hints';
 
   interface Props {
     rfGain: number;
@@ -23,6 +24,9 @@
 
   let attValues = $derived(getAttValues());
   let preOptions = $derived(buildPreOptions(getPreValues()));
+  const rfGainShortcut = getShortcutHint('adjust_rf_gain');
+  const attShortcut = getShortcutHint('cycle_att');
+  const preShortcut = getShortcutHint('cycle_preamp');
 </script>
 
 {#if visible}
@@ -37,23 +41,26 @@
           max={255}
           label="RF Gain"
           accentColor="#22C55E"
+          shortcutHint={rfGainShortcut}
+          title={rfGainShortcut}
           onchange={onRfGainChange}
         />
       {/if}
 
       {#if showAtt}
-        <div class="control-row">
+        <div class="control-row" data-shortcut-hint={attShortcut ?? undefined} title={attShortcut ?? undefined}>
           <span class="control-label">ATT</span>
-          <AttenuatorControl values={attValues} selected={att} onchange={onAttChange} />
+          <AttenuatorControl values={attValues} selected={att} onchange={onAttChange} shortcutHint={attShortcut} title={attShortcut} />
         </div>
       {/if}
 
       {#if showPre}
-        <div class="control-row">
+        <div class="control-row" data-shortcut-hint={preShortcut ?? undefined} title={preShortcut ?? undefined}>
           <span class="control-label">PRE</span>
           <SegmentedButton
             options={preOptions}
             selected={pre}
+            title={preShortcut}
             onchange={(v) => onPreChange(v as number)}
           />
         </div>

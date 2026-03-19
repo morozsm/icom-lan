@@ -17,6 +17,8 @@ __all__ = [
     "RadioProfile",
     "get_radio_profile",
     "resolve_radio_profile",
+    "KeyboardBinding",
+    "KeyboardConfig",
 ]
 
 logger = logging.getLogger(__name__)
@@ -70,6 +72,32 @@ class FilterWidthRule:
 
 
 @dataclass(frozen=True, slots=True)
+class KeyboardBinding:
+    """One keyboard shortcut binding loaded from rig TOML."""
+
+    id: str
+    action: str
+    sequence: tuple[str, ...]
+    section: str = "General"
+    label: str | None = None
+    description: str | None = None
+    modifiers: tuple[str, ...] = ()
+    repeatable: bool = False
+    params: dict[str, object] | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class KeyboardConfig:
+    """Keyboard shortcut configuration exposed to the web UI."""
+
+    leader_key: str = "g"
+    leader_timeout_ms: int = 1000
+    alt_hints: bool = True
+    help_title: str = "Keyboard Shortcuts"
+    bindings: tuple[KeyboardBinding, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
 class RadioProfile:
     """Runtime radio profile used by command routing and capability checks."""
 
@@ -101,6 +129,7 @@ class RadioProfile:
     controls: dict[str, dict] | None = None
     meter_calibrations: dict[str, list[dict]] | None = None
     rules: tuple[dict, ...] = ()
+    keyboard: KeyboardConfig | None = None
 
     def supports_capability(self, capability: str) -> bool:
         return capability in self.capabilities

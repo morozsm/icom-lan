@@ -43,6 +43,26 @@ export interface FilterModeConfig {
   segments?: FilterSegmentConfig[];
 }
 
+export interface KeyboardBindingConfig {
+  id: string;
+  action: string;
+  sequence: string[];
+  section: string;
+  label?: string;
+  description?: string;
+  modifiers?: string[];
+  repeatable?: boolean;
+  params?: Record<string, unknown>;
+}
+
+export interface KeyboardConfig {
+  leaderKey: string;
+  leaderTimeoutMs: number;
+  altHints: boolean;
+  helpTitle: string;
+  bindings: KeyboardBindingConfig[];
+}
+
 export interface Capabilities {
   model: string;
   scope: boolean;
@@ -64,6 +84,7 @@ export interface Capabilities {
   agcLabels?: Record<string, string>;  // AGC mode labels (e.g. {"1":"FAST","2":"MID","3":"SLOW"})
   dataModeCount?: number;
   dataModeLabels?: Record<string, string>;
+  keyboard?: KeyboardConfig | null;
   antennas?: number;      // Number of antenna ports
   scopeConfig?: ScopeConfig;
   audioConfig?: AudioConfig;

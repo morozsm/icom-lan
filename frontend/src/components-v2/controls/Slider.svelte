@@ -10,6 +10,8 @@
     accentColor?: string;
     compact?: boolean;
     disabled?: boolean;
+    shortcutHint?: string | null;
+    title?: string | null;
   }
 
   let {
@@ -23,6 +25,8 @@
     accentColor = '#00D4FF',
     compact = false,
     disabled = false,
+    shortcutHint = null,
+    title = null,
   }: Props = $props();
 
   let fillPercent = $derived(((value - min) / (max - min)) * 100);
@@ -42,6 +46,8 @@
   class:compact
   class:disabled
   class:bipolar={isBipolar}
+  data-shortcut-hint={shortcutHint ?? undefined}
+  title={title ?? shortcutHint ?? undefined}
   style="--accent: {accentColor}; --fill: {fillPercent}%; --center: {centerPercent}%; --fill-start: {fillStartPercent}%; --fill-end: {fillEndPercent}%;"
 >
   <div class="slider-header">

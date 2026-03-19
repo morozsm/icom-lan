@@ -12,6 +12,8 @@ from .profiles import (
     FilterWidthRule,
     FilterWidthSegment,
     FreqRangeInfo,
+    KeyboardBinding,
+    KeyboardConfig,
     RadioProfile,
 )
 
@@ -88,6 +90,8 @@ VALID_CONTROL_STYLES = {
     "level_is_toggle",
 }
 VALID_RULE_KINDS = {"mutex", "disables", "requires", "value_limit"}
+VALID_KEYBOARD_MODIFIERS = {"SHIFT", "CTRL", "ALT", "META"}
+DEFAULT_KEYBOARD_PROFILE_NAME = "_keyboard-default.toml"
 
 _REQUIRED_SECTIONS = ("radio", "capabilities", "modes", "filters", "vfo")
 _REQUIRED_RADIO_FIELDS = ("id", "model", "receiver_count", "has_lan", "has_wifi")
@@ -136,6 +140,7 @@ class RigConfig:
     meter_calibrations: dict[str, list[dict]] | None = None
     meter_redlines: dict[str, int] | None = None
     rules: tuple[dict, ...] = ()
+    keyboard: KeyboardConfig | None = None
 
     def to_profile(self) -> RadioProfile:
         """Build a ``RadioProfile`` from this config."""
@@ -191,11 +196,169 @@ class RigConfig:
             controls=self.controls,
             meter_calibrations=self.meter_calibrations,
             rules=self.rules,
+            keyboard=self.keyboard,
         )
 
     def to_command_map(self) -> CommandMap:
         """Build a ``CommandMap`` from this config's commands."""
         return CommandMap(self.commands)
+
+
+def _parse_keyboard_binding(
+    filename: str,
+    binding_raw: dict,
+    *,
+    index: int,
+) -> KeyboardBinding:
+    binding_id = str(binding_raw.get("id", f"binding-{index}"))
+    action = str(binding_raw.get("action", "")).strip()
+    if not action:
+        raise RigLoadError(
+            f"{filename}: [[ui.keyboard.bindings]].action must not be empty"
+        )
+    if "sequence" in binding_raw:
+        sequence_raw = binding_raw["sequence"]
+        if not isinstance(sequence_raw, list) or not sequence_raw:
+            raise RigLoadError(
+                f"{filename}: [[ui.keyboard.bindings]].sequence must be a non-empty list"
+            )
+        sequence = tuple(str(step) for step in sequence_raw)
+    elif "key" in binding_raw:
+        sequence = (str(binding_raw["key"]),)
+    else:
+        raise RigLoadError(
+            f"{filename}: [[ui.keyboard.bindings]] must define key or sequence"
+        )
+    modifiers_raw = binding_raw.get("modifiers", [])
+    if not isinstance(modifiers_raw, list):
+        raise RigLoadError(
+            f"{filename}: [[ui.keyboard.bindings]].modifiers must be a list"
+        )
+    modifiers = tuple(str(modifier).upper() for modifier in modifiers_raw)
+    invalid_modifiers = [m for m in modifiers if m not in VALID_KEYBOARD_MODIFIERS]
+    if invalid_modifiers:
+        raise RigLoadError(
+            f"{filename}: invalid keyboard modifiers {invalid_modifiers!r}; "
+            f"expected subset of {sorted(VALID_KEYBOARD_MODIFIERS)}"
+        )
+    params_raw = binding_raw.get("params")
+    params = dict(params_raw) if isinstance(params_raw, dict) else None
+    return KeyboardBinding(
+        id=binding_id,
+        action=action,
+        sequence=sequence,
+        section=str(binding_raw.get("section", "General")),
+        label=(
+            str(binding_raw["label"])
+            if "label" in binding_raw and binding_raw["label"] is not None
+            else None
+        ),
+        description=(
+            str(binding_raw["description"])
+            if "description" in binding_raw and binding_raw["description"] is not None
+            else None
+        ),
+        modifiers=modifiers,
+        repeatable=bool(binding_raw.get("repeatable", False)),
+        params=params,
+    )
+
+
+def _parse_keyboard_config(
+    filename: str,
+    keyboard_section: dict,
+) -> KeyboardConfig:
+    leader_key = str(keyboard_section.get("leader_key", "g"))
+    leader_timeout_ms = int(keyboard_section.get("leader_timeout_ms", 1000))
+    alt_hints = bool(keyboard_section.get("alt_hints", True))
+    help_title = str(keyboard_section.get("help_title", "Keyboard Shortcuts"))
+    bindings_raw = keyboard_section.get("bindings", [])
+    bindings: list[KeyboardBinding] = []
+    for index, binding_raw in enumerate(bindings_raw, start=1):
+        if not isinstance(binding_raw, dict):
+            raise RigLoadError(
+                f"{filename}: [[ui.keyboard.bindings]] entry #{index} must be a table"
+            )
+        bindings.append(_parse_keyboard_binding(filename, binding_raw, index=index))
+    return KeyboardConfig(
+        leader_key=leader_key,
+        leader_timeout_ms=leader_timeout_ms,
+        alt_hints=alt_hints,
+        help_title=help_title,
+        bindings=tuple(bindings),
+    )
+
+
+def _load_keyboard_file(path: Path, keyboard_path: Path) -> KeyboardConfig:
+    include_name = keyboard_path.name
+    if not keyboard_path.exists():
+        raise RigLoadError(
+            f"{path.name}: keyboard profile file not found: {keyboard_path.name}"
+        )
+    try:
+        data = tomllib.loads(keyboard_path.read_text())
+    except Exception as exc:
+        raise RigLoadError(
+            f"{path.name}: failed to parse keyboard profile {include_name}: {exc}"
+        ) from exc
+    keyboard_section = data.get("keyboard", data)
+    if not isinstance(keyboard_section, dict):
+        raise RigLoadError(
+            f"{path.name}: keyboard profile {include_name} must contain a [keyboard] table or root mapping"
+        )
+    return _parse_keyboard_config(include_name, keyboard_section)
+
+
+def _load_default_keyboard_config(path: Path) -> KeyboardConfig:
+    return _load_keyboard_file(path, path.parent / DEFAULT_KEYBOARD_PROFILE_NAME)
+
+
+def _merge_keyboard_config(
+    base: KeyboardConfig | None,
+    override_section: dict,
+    *,
+    filename: str,
+) -> KeyboardConfig | None:
+    if base is None and not override_section:
+        return None
+
+    leader_key = str(
+        override_section.get("leader_key", base.leader_key if base else "g")
+    )
+    leader_timeout_ms = int(
+        override_section.get(
+            "leader_timeout_ms",
+            base.leader_timeout_ms if base else 1000,
+        )
+    )
+    alt_hints = bool(
+        override_section.get("alt_hints", base.alt_hints if base else True)
+    )
+    help_title = str(
+        override_section.get(
+            "help_title", base.help_title if base else "Keyboard Shortcuts"
+        )
+    )
+
+    merged_bindings: dict[str, KeyboardBinding] = {
+        binding.id: binding for binding in (base.bindings if base else ())
+    }
+    bindings_raw = override_section.get("bindings", [])
+    for index, binding_raw in enumerate(bindings_raw, start=1):
+        if not isinstance(binding_raw, dict):
+            raise RigLoadError(
+                f"{filename}: [[ui.keyboard.bindings]] entry #{index} must be a table"
+            )
+        binding = _parse_keyboard_binding(filename, binding_raw, index=index)
+        merged_bindings[binding.id] = binding
+
+    return KeyboardConfig(
+        leader_key=leader_key,
+        leader_timeout_ms=leader_timeout_ms,
+        alt_hints=alt_hints,
+        help_title=help_title,
+        bindings=tuple(merged_bindings.values()),
+    )
 
 
 def load_rig(path: Path) -> RigConfig:
@@ -422,6 +585,19 @@ def load_rig(path: Path) -> RigConfig:
             )
         rules.append(dict(rule))
 
+    # Parse keyboard config: shared default profile + optional rig-local overrides.
+    ui_section = data.get("ui", {})
+    keyboard_section = (
+        ui_section.get("keyboard", {}) if isinstance(ui_section, dict) else {}
+    )
+    base_keyboard = _load_default_keyboard_config(path)
+    override_section = keyboard_section if isinstance(keyboard_section, dict) else {}
+    keyboard = _merge_keyboard_config(
+        base_keyboard,
+        override_section,
+        filename=filename,
+    )
+
     return RigConfig(
         id=radio["id"],
         model=radio["model"],
@@ -458,6 +634,7 @@ def load_rig(path: Path) -> RigConfig:
         meter_calibrations=meter_calibrations,
         meter_redlines=meter_redlines,
         rules=tuple(rules),
+        keyboard=keyboard,
     )
 
 

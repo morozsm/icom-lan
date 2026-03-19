@@ -11,8 +11,11 @@
 
 import { sendCommand } from '$lib/transport/ws-client';
 import { getActiveReceiver, getRadioState, patchActiveReceiver, patchRadioState } from '$lib/stores/radio.svelte';
+import { getCapabilities } from '$lib/stores/capabilities.svelte';
+import { adjustTuningStep, getTuningStep } from '$lib/stores/tuning.svelte';
 import { audioManager } from '$lib/audio/audio-manager';
 import { setMuted } from '$lib/stores/audio.svelte';
+import type { KeyboardActionConfig } from '../layout/keyboard-map';
 import { mapIfShiftToPbt } from '../panels/filter-controls';
 
 /* ── Helpers ─────────────────────────────────────────────────── */
@@ -384,5 +387,78 @@ export function makeSystemHandlers() {
     onPttOff: () => cmd('ptt_off'),
     onDialLock: (on: boolean) => cmd('set_dial_lock', { on }),
     onPowerOff: () => cmd('set_powerstat', { on: false }),
+  };
+}
+
+function cycleValue(values: number[], current: number): number {
+  if (values.length === 0) {
+    return current;
+  }
+  const idx = values.indexOf(current);
+  if (idx < 0 || idx === values.length - 1) {
+    return values[0];
+  }
+  return values[idx + 1];
+}
+
+export function makeKeyboardHandlers() {
+  return {
+    dispatch(action: KeyboardActionConfig): void {
+      switch (action.action) {
+        case 'tune': {
+          const rx = getActiveReceiver();
+          const baseFreq = rx?.freqHz ?? 0;
+          if (baseFreq <= 0) {
+            return;
+          }
+          const deltaHz = typeof action.params?.deltaHz === 'number'
+            ? action.params.deltaHz
+            : (action.params?.direction === 'down' ? -1 : 1) * getTuningStep();
+          const freq = baseFreq + deltaHz;
+          patchActiveReceiver({ freqHz: freq }, true);
+          cmd('set_freq', { freq, receiver: activeReceiverParam() });
+          return;
+        }
+        case 'adjust_tuning_step': {
+          adjustTuningStep(action.params?.direction === 'down' ? 'down' : 'up');
+          return;
+        }
+        case 'band_select': {
+          const index = Number(action.params?.index ?? 0);
+          if (index > 0) {
+            cmd('set_band', { band: index });
+          }
+          return;
+        }
+        case 'cycle_preamp': {
+          const values = getCapabilities()?.preValues ?? [0, 1];
+          const current = getActiveReceiver()?.preamp ?? values[0] ?? 0;
+          const level = cycleValue(values, current);
+          patchActiveReceiver({ preamp: level });
+          cmd('set_preamp', { level, receiver: activeReceiverParam() });
+          return;
+        }
+        case 'toggle_split': {
+          const next = !(getRadioState()?.split ?? false);
+          patchRadioState({ split: next });
+          cmd('set_split', { on: next });
+          return;
+        }
+        case 'cycle_data_mode': {
+          const max = getCapabilities()?.dataModeCount ?? 0;
+          const current = getActiveReceiver()?.dataMode ?? 0;
+          const mode = current >= max ? 0 : current + 1;
+          patchActiveReceiver({ dataMode: mode }, true);
+          cmd('set_data_mode', { mode, receiver: activeReceiverParam() });
+          return;
+        }
+        case 'open_filter_settings': {
+          window.dispatchEvent(new CustomEvent('icom-lan:open-filter-settings'));
+          return;
+        }
+        default:
+          console.warn('[keyboard] unhandled action', action.action, action.params);
+      }
+    },
   };
 }

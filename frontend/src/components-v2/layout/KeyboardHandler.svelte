@@ -1,74 +1,333 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte';
   import { getUiVersion } from '$lib/stores/ui-version.svelte';
-  import { resolveAction, shouldIgnoreEvent } from './keyboard-map';
-  import type { KeyAction } from './keyboard-map';
+  import {
+    normalizeKeyboardConfig,
+    resolveAction,
+    resolveSequenceContinuation,
+    resolveSequenceStart,
+    shouldIgnoreEvent,
+    formatShortcut,
+    type KeyboardActionConfig,
+    type KeyboardBindingConfig,
+    type KeyboardConfig,
+  } from './keyboard-map';
 
   interface Props {
-    onTune: (direction: 'up' | 'down', fine: boolean) => void;
-    onBandSelect: (index: number) => void;
-    onModeSelect: (mode: string) => void;
-    onPttToggle: () => void;
-    onVfoSwap: () => void;
-    onRitClear: () => void;
-    onMonitorToggle: () => void;
-    onNrToggle: () => void;
-    onNbToggle: () => void;
+    config?: KeyboardConfig | null;
+    onAction?: (action: KeyboardActionConfig) => void;
     enabled?: boolean;
   }
 
   let {
-    onTune,
-    onBandSelect,
-    onModeSelect,
-    onPttToggle,
-    onVfoSwap,
-    onRitClear,
-    onMonitorToggle,
-    onNrToggle,
-    onNbToggle,
+    config = null,
+    onAction = () => {},
     enabled = true,
   }: Props = $props();
 
-  function dispatch(action: KeyAction): void {
-    switch (action.type) {
-      case 'tune':
-        onTune(action.direction, action.fine);
-        break;
-      case 'bandSelect':
-        onBandSelect(action.index);
-        break;
-      case 'modeSelect':
-        onModeSelect(action.mode);
-        break;
-      case 'pttToggle':
-        onPttToggle();
-        break;
-      case 'vfoSwap':
-        onVfoSwap();
-        break;
-      case 'ritClear':
-        onRitClear();
-        break;
-      case 'monitorToggle':
-        onMonitorToggle();
-        break;
-      case 'nrToggle':
-        onNrToggle();
-        break;
-      case 'nbToggle':
-        onNbToggle();
-        break;
+  let keyboardConfig = $derived(normalizeKeyboardConfig(config));
+  let pendingSequence = $state<KeyboardBindingConfig | null>(null);
+  let leaderLabel = $state<string | null>(null);
+  let helpOpen = $state(false);
+  let leaderTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function groupBindings(bindings: KeyboardBindingConfig[]): Array<[string, KeyboardBindingConfig[]]> {
+    const groups = new Map<string, KeyboardBindingConfig[]>();
+    for (const binding of bindings) {
+      const section = binding.section || 'General';
+      const bucket = groups.get(section) ?? [];
+      bucket.push(binding);
+      groups.set(section, bucket);
     }
+    return [...groups.entries()];
+  }
+
+  let groupedBindings = $derived(groupBindings(keyboardConfig.bindings));
+
+  function clearLeaderState(): void {
+    pendingSequence = null;
+    leaderLabel = null;
+    if (leaderTimer) {
+      clearTimeout(leaderTimer);
+      leaderTimer = null;
+    }
+  }
+
+  function dispatch(action: KeyboardActionConfig): void {
+    if (action.action === 'toggle_help') {
+      helpOpen = !helpOpen;
+      return;
+    }
+    onAction(action);
   }
 
   function handleKeydown(event: KeyboardEvent): void {
     if (!enabled || getUiVersion() !== 'v2') return;
     if (shouldIgnoreEvent(document.activeElement)) return;
-    const action = resolveAction(event);
+
+    if (event.key === 'Alt' && keyboardConfig.altHints) {
+      document.body.dataset.shortcutHints = 'true';
+      return;
+    }
+
+    if (pendingSequence) {
+      const continuation = resolveSequenceContinuation(pendingSequence, event);
+      clearLeaderState();
+      if (continuation) {
+        event.preventDefault();
+        dispatch(continuation);
+      }
+      return;
+    }
+
+    const sequenceStart = resolveSequenceStart(event, keyboardConfig);
+    if (sequenceStart) {
+      event.preventDefault();
+      pendingSequence = sequenceStart;
+      leaderLabel = formatShortcut(sequenceStart);
+      leaderTimer = setTimeout(() => {
+        clearLeaderState();
+      }, keyboardConfig.leaderTimeoutMs);
+      return;
+    }
+
+    const action = resolveAction(event, keyboardConfig);
     if (!action) return;
     event.preventDefault();
     dispatch(action);
   }
+
+  function handleKeyup(event: KeyboardEvent): void {
+    if (event.key === 'Alt') {
+      delete document.body.dataset.shortcutHints;
+    }
+  }
+
+  onDestroy(() => {
+    clearLeaderState();
+    delete document.body.dataset.shortcutHints;
+  });
 </script>
 
-<svelte:window onkeydown={handleKeydown} />
+<svelte:window onkeydown={handleKeydown} onkeyup={handleKeyup} />
+
+{#if leaderLabel}
+  <div class="keyboard-leader-pill" aria-live="polite">
+    {leaderLabel}
+  </div>
+{/if}
+
+{#if helpOpen}
+  <div class="keyboard-help-overlay" role="dialog" aria-modal="true" aria-label={keyboardConfig.helpTitle}>
+    <button class="keyboard-help-backdrop" type="button" aria-label="Close keyboard help" onclick={() => (helpOpen = false)}></button>
+    <div class="keyboard-help-card">
+      <div class="keyboard-help-header">
+        <div>
+          <div class="keyboard-help-title">{keyboardConfig.helpTitle}</div>
+          <div class="keyboard-help-subtitle">Hold Alt to reveal inline shortcut hints on controls.</div>
+        </div>
+        <button class="keyboard-help-close" type="button" onclick={() => (helpOpen = false)}>Close</button>
+      </div>
+      <div class="keyboard-help-grid">
+        {#each groupedBindings as [section, bindings]}
+          <section class="keyboard-help-section">
+            <h3>{section}</h3>
+            <div class="keyboard-help-list">
+              {#each bindings as binding}
+                <div class="keyboard-help-row">
+                  <div class="keyboard-help-action">
+                    <span class="keyboard-help-label">{binding.label ?? binding.id}</span>
+                    {#if binding.description}
+                      <span class="keyboard-help-description">{binding.description}</span>
+                    {/if}
+                  </div>
+                  <kbd>{formatShortcut(binding)}</kbd>
+                </div>
+              {/each}
+            </div>
+          </section>
+        {/each}
+      </div>
+    </div>
+  </div>
+{/if}
+
+<style>
+  .keyboard-leader-pill {
+    position: fixed;
+    top: 14px;
+    right: 14px;
+    z-index: 1100;
+    padding: 8px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(0, 212, 255, 0.24);
+    background: rgba(8, 14, 20, 0.94);
+    color: #e6f6ff;
+    font: 600 12px/1.2 'Roboto Mono', monospace;
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.32);
+    backdrop-filter: blur(8px);
+  }
+
+  .keyboard-help-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    display: grid;
+    place-items: center;
+  }
+
+  .keyboard-help-backdrop {
+    position: absolute;
+    inset: 0;
+    border: 0;
+    background: rgba(2, 6, 10, 0.82);
+    backdrop-filter: blur(10px);
+  }
+
+  .keyboard-help-card {
+    position: relative;
+    width: min(1100px, calc(100vw - 32px));
+    max-height: calc(100vh - 40px);
+    overflow: auto;
+    border: 1px solid rgba(72, 96, 122, 0.42);
+    border-radius: 18px;
+    background:
+      radial-gradient(circle at top left, rgba(0, 212, 255, 0.12), transparent 32%),
+      linear-gradient(180deg, rgba(8, 14, 20, 0.98), rgba(5, 9, 14, 0.98));
+    color: #eef6ff;
+    box-shadow: 0 32px 80px rgba(0, 0, 0, 0.46);
+  }
+
+  .keyboard-help-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 24px 24px 18px;
+    border-bottom: 1px solid rgba(72, 96, 122, 0.24);
+  }
+
+  .keyboard-help-title {
+    font: 700 24px/1.1 'IBM Plex Sans', sans-serif;
+    letter-spacing: 0.01em;
+  }
+
+  .keyboard-help-subtitle {
+    margin-top: 8px;
+    color: #8fa9c2;
+    font: 500 13px/1.5 'Roboto Mono', monospace;
+  }
+
+  .keyboard-help-close {
+    border: 1px solid rgba(72, 96, 122, 0.42);
+    border-radius: 999px;
+    background: rgba(10, 16, 22, 0.9);
+    color: #e6f6ff;
+    padding: 8px 14px;
+    font: 600 12px/1 'Roboto Mono', monospace;
+    cursor: pointer;
+  }
+
+  .keyboard-help-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    padding: 20px 24px 24px;
+  }
+
+  .keyboard-help-section {
+    border: 1px solid rgba(72, 96, 122, 0.22);
+    border-radius: 14px;
+    background: rgba(10, 16, 22, 0.72);
+    overflow: hidden;
+  }
+
+  .keyboard-help-section h3 {
+    margin: 0;
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(72, 96, 122, 0.18);
+    color: #79dfff;
+    font: 700 12px/1 'Roboto Mono', monospace;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .keyboard-help-list {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .keyboard-help-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 12px 14px;
+    border-top: 1px solid rgba(72, 96, 122, 0.1);
+  }
+
+  .keyboard-help-row:first-child {
+    border-top: 0;
+  }
+
+  .keyboard-help-action {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .keyboard-help-label {
+    font: 600 13px/1.35 'IBM Plex Sans', sans-serif;
+    color: #f4f9ff;
+  }
+
+  .keyboard-help-description {
+    color: #89a0b6;
+    font: 500 11px/1.45 'Roboto Mono', monospace;
+  }
+
+  kbd {
+    white-space: nowrap;
+    border: 1px solid rgba(0, 212, 255, 0.24);
+    border-bottom-color: rgba(0, 212, 255, 0.36);
+    border-radius: 8px;
+    background: rgba(8, 14, 20, 0.94);
+    color: #dff7ff;
+    padding: 6px 9px;
+    font: 600 11px/1 'Roboto Mono', monospace;
+    box-shadow: inset 0 -1px 0 rgba(0, 212, 255, 0.08);
+  }
+
+  @media (max-width: 640px) {
+    .keyboard-help-header {
+      flex-direction: column;
+    }
+
+    .keyboard-help-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  :global(body[data-shortcut-hints='true'] [data-shortcut-hint]) {
+    position: relative;
+  }
+
+  :global(body[data-shortcut-hints='true'] [data-shortcut-hint]::after) {
+    content: attr(data-shortcut-hint);
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 6px);
+    transform: translateX(-50%);
+    z-index: 1300;
+    padding: 4px 7px;
+    border: 1px solid rgba(0, 212, 255, 0.26);
+    border-radius: 7px;
+    background: rgba(8, 14, 20, 0.97);
+    color: #dff7ff;
+    font: 600 10px/1 'Roboto Mono', monospace;
+    white-space: nowrap;
+    pointer-events: none;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.34);
+  }
+</style>

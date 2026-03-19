@@ -91,6 +91,32 @@ def _serialize_filter_config(profile: "RadioProfile") -> dict[str, dict[str, obj
     return result
 
 
+def _serialize_keyboard_config(profile: "RadioProfile") -> dict[str, object] | None:
+    keyboard = profile.keyboard
+    if keyboard is None:
+        return None
+    return {
+        "leaderKey": keyboard.leader_key,
+        "leaderTimeoutMs": keyboard.leader_timeout_ms,
+        "altHints": keyboard.alt_hints,
+        "helpTitle": keyboard.help_title,
+        "bindings": [
+            {
+                "id": binding.id,
+                "action": binding.action,
+                "sequence": list(binding.sequence),
+                "section": binding.section,
+                **({"label": binding.label} if binding.label else {}),
+                **({"description": binding.description} if binding.description else {}),
+                **({"modifiers": list(binding.modifiers)} if binding.modifiers else {}),
+                **({"repeatable": True} if binding.repeatable else {}),
+                **({"params": binding.params} if binding.params else {}),
+            }
+            for binding in keyboard.bindings
+        ],
+    }
+
+
 def _runtime_capabilities(radio: "Radio | None") -> set[str]:
     """Backward-compatible alias to shared runtime_capabilities helper."""
     return runtime_capabilities(radio)
@@ -956,6 +982,7 @@ class WebServer:
                     "agcLabels": profile.agc_labels,
                     "dataModeCount": profile.data_mode_count,
                     "dataModeLabels": profile.data_mode_labels,
+                    "keyboard": _serialize_keyboard_config(profile),
                 },
                 "connection": {
                     "rigConnected": connected,
@@ -1030,6 +1057,7 @@ class WebServer:
                 "dataModeLabels": (
                     profile.data_mode_labels if profile.data_mode_labels else {}
                 ),
+                "keyboard": _serialize_keyboard_config(profile),
                 "scopeConfig": {
                     "centerMode": True,
                     "amplitudeMax": 160,
