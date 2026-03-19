@@ -1,10 +1,10 @@
 :root {
-  /* ── Colors: Backgrounds ─────────────────────────────────────────────────── */
-  --v2-bg-app: #0B0E12;
-  --v2-bg-card: #060A10;
-  --v2-bg-input: #0D1117;
-  --v2-border: #18202A;
-  --v2-border-subtle: #1E252C;
+  /* ── Colors: Backgrounds (~10% brighter) ──────────────────────────────── */
+  --v2-bg-app: #121720;
+  --v2-bg-card: #0E1420;
+  --v2-bg-input: #151C28;
+  --v2-border: #243040;
+  --v2-border-subtle: #2A3340;
 
   /* ── Colors: Accents ─────────────────────────────────────────────────────── */
   --v2-accent-cyan: #00D4FF;
@@ -13,11 +13,11 @@
   --v2-accent-green: #00CC66;
   --v2-accent-yellow: #F2CF4A;
 
-  /* ── Colors: Text ────────────────────────────────────────────────────────── */
-  --v2-text-primary: #F0F5FA;
-  --v2-text-secondary: #8DA2B8;
-  --v2-text-muted: #4D6074;
-  --v2-text-header: #8CA0B8;
+  /* ── Colors: Text (~10% brighter) ────────────────────────────────────── */
+  --v2-text-primary: #F5F8FC;
+  --v2-text-secondary: #A0B4C8;
+  --v2-text-muted: #607890;
+  --v2-text-header: #A0B8D0;
 
   /* ── Typography ──────────────────────────────────────────────────────────── */
   --v2-font-mono: 'Roboto Mono', monospace;

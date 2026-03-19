@@ -185,7 +185,7 @@
     border: 1px solid #1e2530;
     border-radius: 4px;
     background:
-      linear-gradient(180deg, rgba(13, 17, 23, 0.98) 0%, rgba(9, 13, 18, 0.98) 100%);
+      linear-gradient(180deg, rgba(20, 28, 38, 0.98) 0%, rgba(14, 20, 30, 0.98) 100%);
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
   }
 
@@ -231,8 +231,8 @@
     min-height: 0;
     min-width: 0;
     overflow: hidden;
-    background: #05090f;
-    border-color: #111922;
+    background: #0E1420;
+    border-color: #1E2838;
   }
 
   .spectrum-frame :global(.spectrum-panel) {
@@ -268,12 +268,12 @@
 
   .receiver-summary-card-main {
     border-color: #0a627c;
-    background: linear-gradient(180deg, #0a1620 0%, #071019 100%);
+    background: linear-gradient(180deg, #122030 0%, #0E1828 100%);
   }
 
   .receiver-summary-card-sub {
     border-color: #253341;
-    background: linear-gradient(180deg, #091118 0%, #071018 100%);
+    background: linear-gradient(180deg, #111C28 0%, #0E1828 100%);
   }
 
   .receiver-summary-header {

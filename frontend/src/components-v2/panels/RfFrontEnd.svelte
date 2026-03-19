@@ -41,7 +41,7 @@
           max={255}
           step={1}
           label="RF Gain"
-          renderer="hbar"
+          renderer="knob"
           accentColor="#22C55E"
           shortcutHint={rfGainShortcut}
           title={rfGainShortcut}
@@ -86,7 +86,7 @@
   }
 
   .panel-header {
-    color: #8CA0B8;
+    color: var(--v2-text-header);
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.14em;
