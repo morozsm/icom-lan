@@ -89,10 +89,11 @@
 <div class="radio-layout">
   <KeyboardHandler config={keyboardConfig} onAction={keyboardHandlers.dispatch} />
 
+  <div class="theme-picker-container">
+    <ThemePicker />
+  </div>
+
   <section class="receiver-deck" bind:this={receiverDeckElement} style={receiverDeckStyle}>
-    <div class="theme-picker-container">
-      <ThemePicker />
-    </div>
     <VfoHeader
       {mainVfo}
       {subVfo}
@@ -174,6 +175,7 @@
 
 <style>
   .radio-layout {
+    position: relative;
     display: grid;
     grid-template-rows: 156px minmax(0, 1fr) auto;
     min-height: 100vh;
@@ -209,7 +211,7 @@
     position: absolute;
     top: 8px;
     right: 8px;
-    z-index: 100;
+    z-index: 1000;
   }
 
   .receiver-deck :global(.vfo-header) {
