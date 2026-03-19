@@ -307,9 +307,10 @@ async def test_execute_set_filter_width_updates_sub_receiver_state_and_sends_cmd
 
     await poller._execute(SetFilterWidth(1500, receiver=1))  # noqa: SLF001
 
-    # IC-7610: cmd29 SET for 0x1A 0x03 is silently ignored; use direct send
+    # IC-7610: cmd29 SET for 0x1A 0x03 is silently ignored; use direct send.
+    # Filter width index is 1-byte BCD (not 2-byte) per wfview reference.
     radio.send_civ.assert_awaited_once_with(
-        0x1A, sub=0x03, data=b"\x00\x19", wait_response=False
+        0x1A, sub=0x03, data=b"\x19", wait_response=False
     )
     assert state.main.filter_width is None
     assert state.sub.filter_width == 1500

@@ -999,7 +999,7 @@ class RadioPoller:
                     except ValueError as exc:
                         raise CommandError(str(exc)) from exc
 
-                bcd_payload = bcd_encode_value(payload_value, byte_count=2)
+                bcd_payload = bcd_encode_value(payload_value, byte_count=1)
                 logger.info(
                     "set_filter_width: mode=%s, width=%d Hz, index=%d, "
                     "bcd=0x%s, rx=%d, cmd29=%s",
