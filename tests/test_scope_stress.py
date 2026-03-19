@@ -145,6 +145,7 @@ def radio_with_mock() -> tuple[IcomRadio, MockTransport]:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.slow
 @pytest.mark.asyncio
 async def test_scope_stress_slow_consumer_queue_bounded(
     radio_with_mock: tuple[IcomRadio, MockTransport],

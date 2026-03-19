@@ -750,47 +750,13 @@ async def test_cmd_serve_and_cmd_web_paths(
 async def test_cmd_discover_found_and_not_found(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    class FakeLoop:
-        def __init__(self):
-            self.t = 0.0
-
-        def time(self):
-            self.t += 0.7
-            return self.t
-
-    class FakeSocket:
-        def __init__(self, responses):
-            self.responses = list(responses)
-            self.sent = []
-            self.closed = False
-
-        def setsockopt(self, *_args):
-            return None
-
-        def settimeout(self, *_args):
-            return None
-
-        def sendto(self, data, addr):
-            self.sent.append((data, addr))
-
-        def recvfrom(self, _n):
-            if self.responses:
-                result = self.responses.pop(0)
-                if isinstance(result, Exception):
-                    raise result
-                return result
-            raise socket.timeout
-
-        def close(self):
-            self.closed = True
-
-    pkt = bytearray(0x10)
-    struct.pack_into("<H", pkt, 4, 0x04)
-    struct.pack_into("<I", pkt, 8, 0x1234ABCD)
-    found_sock = FakeSocket([(bytes(pkt), ("192.168.1.9", 50001)), socket.timeout()])
+    # Mock discover functions to return immediately instead of waiting for real network timeouts
     with (
-        patch("asyncio.get_event_loop", return_value=FakeLoop()),
-        patch("socket.socket", return_value=found_sock),
+        patch(
+            "icom_lan.discovery.discover_lan_radios",
+            AsyncMock(return_value=[{"host": "192.168.1.9", "remote_id": 0x1234ABCD}]),
+        ),
+        patch("icom_lan.discovery.discover_serial_radios", AsyncMock(return_value=[])),
     ):
         rc_found = await _cmd_discover(None, None)
     assert rc_found == 0
@@ -799,10 +765,9 @@ async def test_cmd_discover_found_and_not_found(
     assert "LAN: 192.168.1.9" in out
     assert "Found 1 radio with 1 connection method:" in out
 
-    none_sock = FakeSocket([socket.timeout(), socket.timeout()])
     with (
-        patch("asyncio.get_event_loop", return_value=FakeLoop()),
-        patch("socket.socket", return_value=none_sock),
+        patch("icom_lan.discovery.discover_lan_radios", AsyncMock(return_value=[])),
+        patch("icom_lan.discovery.discover_serial_radios", AsyncMock(return_value=[])),
     ):
         rc_none = await _cmd_discover(None, None)
     assert rc_none == 0
