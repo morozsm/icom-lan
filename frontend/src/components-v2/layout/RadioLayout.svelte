@@ -226,7 +226,8 @@
   .content-left,
   .content-right {
     min-height: 0;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
   }
 
   .content-center {
