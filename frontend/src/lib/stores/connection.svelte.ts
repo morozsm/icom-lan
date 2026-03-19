@@ -2,6 +2,9 @@
 let httpConnected = $state(false);
 let wsConnected = $state(false);
 let audioConnected = $state(false);
+let scopeConnected = $state(false);
+let scopeLastFrame = $state(0);
+let radioStatus = $state<'connected' | 'connecting' | 'reconnecting' | 'disconnected'>('disconnected');
 let lastResponseTime = $state<number | null>(null);
 
 let lastStateUpdate = $state(0);
@@ -86,4 +89,27 @@ export function isStale(): boolean {
 
 export function isReconnecting(): boolean {
   return reconnecting;
+}
+
+export function setScopeConnected(v: boolean): void {
+  scopeConnected = v;
+}
+
+export function markScopeFrame(): void {
+  scopeLastFrame = Date.now();
+}
+
+export function isScopeConnected(): boolean {
+  return scopeConnected;
+}
+
+export function setRadioStatus(s: string): void {
+  const valid = ['connected', 'connecting', 'reconnecting', 'disconnected'] as const;
+  if (valid.includes(s as typeof valid[number])) {
+    radioStatus = s as typeof radioStatus;
+  }
+}
+
+export function getRadioStatus(): string {
+  return radioStatus;
 }

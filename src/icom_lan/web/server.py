@@ -432,6 +432,9 @@ class WebServer:
             revision=revision,
             receiver_count=self._get_profile().receiver_count,
             updated_at=updated_at,
+            scope_clients=len(self._scope_handlers),
+            control_clients=len(self._control_event_queues),
+            audio_clients=len(self._audio_broadcaster._clients),
         )
 
     def broadcast_notification(
@@ -965,7 +968,7 @@ class WebServer:
             ):
                 await self._handle_websocket(reader, writer, path, headers, query)
             else:
-                await self._handle_http(writer, method, path, headers)
+                await self._handle_http(writer, method, path, headers, reader)
         except asyncio.CancelledError:
             raise
         except Exception as exc:
@@ -987,11 +990,8 @@ class WebServer:
         method: str,
         path: str,
         headers: dict[str, str] | None = None,
+        reader: asyncio.StreamReader | None = None,
     ) -> None:
-        if method not in ("GET", "HEAD"):
-            await _send_response(writer, 405, "Method Not Allowed", b"", {})
-            return
-
         # Auth check for API endpoints
         if self._config.auth_token and path.startswith("/api/"):
             auth_header = (headers or {}).get("authorization", "")
@@ -1004,6 +1004,28 @@ class WebServer:
                     {"Content-Type": "application/json", "WWW-Authenticate": "Bearer"},
                 )
                 return
+
+        # Routes that accept POST/DELETE
+        if path == "/api/v1/bridge":
+            if method not in ("GET", "HEAD", "POST", "DELETE"):
+                await _send_response(writer, 405, "Method Not Allowed", b"", {})
+                return
+            await self._handle_bridge(method, writer)
+            return
+        if path in (
+            "/api/v1/radio/disconnect",
+            "/api/v1/radio/connect",
+            "/api/v1/radio/power",
+        ):
+            if method != "POST":
+                await _send_response(writer, 405, "Method Not Allowed", b"", {})
+                return
+            await self._handle_radio_control(path, writer, headers, reader)
+            return
+
+        if method not in ("GET", "HEAD"):
+            await _send_response(writer, 405, "Method Not Allowed", b"", {})
+            return
 
         # Nuclear SW cleanup: Clear-Site-Data on /?clearcache
         if path == "/clearcache":
@@ -1027,8 +1049,6 @@ class WebServer:
             await self._serve_capabilities(writer, headers)
         elif path == "/api/v1/dx/spots":
             await self._serve_dx_spots(writer)
-        elif path == "/api/v1/bridge":
-            await self._handle_bridge(method, writer)
         elif path == "/" or path == "/index.html":
             await self._serve_static(writer, "index.html")
         elif path.startswith("/"):
@@ -1193,6 +1213,84 @@ class WebServer:
         body = json.dumps({"spots": spots}, separators=(",", ":")).encode()
         await _send_response(
             writer, 200, "OK", body, {"Content-Type": "application/json"}
+        )
+
+    async def _handle_radio_control(
+        self,
+        path: str,
+        writer: asyncio.StreamWriter,
+        headers: dict[str, str] | None = None,
+        reader: asyncio.StreamReader | None = None,
+    ) -> None:
+        """Handle POST /api/v1/radio/{disconnect,connect,power}."""
+        radio = self._radio
+        if radio is None:
+            body = json.dumps(
+                {"error": "no_radio", "message": "No radio configured"},
+                separators=(",", ":"),
+            ).encode()
+            await _send_response(
+                writer, 503, "Service Unavailable", body,
+                {"Content-Type": "application/json"},
+            )
+            return
+
+        try:
+            if path == "/api/v1/radio/disconnect":
+                await radio.disconnect()
+                resp = {"status": "disconnected"}
+            elif path == "/api/v1/radio/connect":
+                await radio.connect()
+                resp = {"status": "connecting"}
+            elif path == "/api/v1/radio/power":
+                # Read JSON body for power state
+                body_bytes = b""
+                if reader is not None:
+                    cl = int((headers or {}).get("content-length", "0"))
+                    if cl > 0:
+                        body_bytes = await asyncio.wait_for(
+                            reader.readexactly(cl), timeout=5.0,
+                        )
+                if not body_bytes:
+                    err = json.dumps(
+                        {"error": "missing_body", "message": "JSON body with 'state' required"},
+                        separators=(",", ":"),
+                    ).encode()
+                    await _send_response(
+                        writer, 400, "Bad Request", err,
+                        {"Content-Type": "application/json"},
+                    )
+                    return
+                payload = json.loads(body_bytes)
+                power_state = payload.get("state")
+                if power_state not in ("on", "off"):
+                    err = json.dumps(
+                        {"error": "invalid_state", "message": "state must be 'on' or 'off'"},
+                        separators=(",", ":"),
+                    ).encode()
+                    await _send_response(
+                        writer, 400, "Bad Request", err,
+                        {"Content-Type": "application/json"},
+                    )
+                    return
+                await radio.set_powerstat(power_state == "on")
+                resp = {"status": "ok", "power": power_state}
+            else:
+                await _send_response(writer, 404, "Not Found", b"", {})
+                return
+        except Exception as exc:
+            body = json.dumps(
+                {"error": str(exc)}, separators=(",", ":"),
+            ).encode()
+            await _send_response(
+                writer, 500, "Internal Server Error", body,
+                {"Content-Type": "application/json"},
+            )
+            return
+
+        body = json.dumps(resp, separators=(",", ":")).encode()
+        await _send_response(
+            writer, 200, "OK", body, {"Content-Type": "application/json"},
         )
 
     async def _handle_bridge(

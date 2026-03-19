@@ -9,6 +9,7 @@
   import RightSidebar from './RightSidebar.svelte';
   import VfoHeader from './VfoHeader.svelte';
   import KeyboardHandler from './KeyboardHandler.svelte';
+  import StatusBar from './StatusBar.svelte';
   import DockMeterPanel from '../panels/DockMeterPanel.svelte';
   import FrequencyDisplay from '../display/FrequencyDisplay.svelte';
   import LinearSMeter from '../meters/LinearSMeter.svelte';
@@ -87,6 +88,7 @@
 </script>
 
 <div class="radio-layout">
+  <StatusBar />
   <KeyboardHandler config={keyboardConfig} onAction={keyboardHandlers.dispatch} />
 
   <div class="theme-picker-container">
@@ -177,7 +179,7 @@
   .radio-layout {
     position: relative;
     display: grid;
-    grid-template-rows: 156px minmax(0, 1fr) auto;
+    grid-template-rows: 28px 156px minmax(0, 1fr) auto;
     height: 100vh;
     background:
       linear-gradient(180deg, var(--v2-bg-gradient-start) 0%, var(--v2-bg-darkest) 100%),
@@ -352,7 +354,7 @@
 
   @media (max-width: 1024px) {
     .radio-layout {
-      grid-template-rows: auto minmax(0, auto) auto auto;
+      grid-template-rows: 28px auto minmax(0, auto) auto auto;
     }
 
     .content-row {
