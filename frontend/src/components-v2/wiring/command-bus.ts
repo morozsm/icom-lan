@@ -171,27 +171,43 @@ export function makeFilterHandlers() {
       patchActiveReceiver({ filterShape: shape }, true);
       cmd('set_filter_shape', { shape, receiver: activeReceiverParam() });
     },
-    onFilterPresetChange: (filter: number, width: number) => {
-      const receiver = activeReceiverParam();
-      const activeFilter = getActiveReceiver()?.filter ?? 1;
-      cmd('set_filter', { filter, receiver });
-      cmd('set_filter_width', { width, receiver });
-      if (activeFilter !== filter) {
-        cmd('set_filter', { filter: activeFilter, receiver });
-      } else {
-        patchActiveReceiver({ filterWidth: width }, true);
-      }
-    },
+    onFilterPresetChange: (() => {
+      let timer: ReturnType<typeof setTimeout> | null = null;
+      return (filter: number, width: number) => {
+        // Optimistic UI update immediately
+        const activeFilter = getActiveReceiver()?.filter ?? 1;
+        if (filter === activeFilter) {
+          patchActiveReceiver({ filterWidth: width }, true);
+        }
+        // Debounce CI-V commands to avoid flooding the radio
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(() => {
+          timer = null;
+          const receiver = activeReceiverParam();
+          const currentActive = getActiveReceiver()?.filter ?? 1;
+          if (filter !== currentActive) {
+            cmd('set_filter', { filter, receiver });
+          }
+          cmd('set_filter_width', { width, receiver });
+          if (filter !== currentActive) {
+            cmd('set_filter', { filter: currentActive, receiver });
+          }
+        }, 200);
+      };
+    })(),
     onFilterDefaults: (defaults: number[]) => {
       const receiver = activeReceiverParam();
       const activeFilter = getActiveReceiver()?.filter ?? 1;
-      defaults.forEach((width, index) => {
-        const filter = index + 1;
-        cmd('set_filter', { filter, receiver });
-        cmd('set_filter_width', { width, receiver });
-      });
-      cmd('set_filter', { filter: activeFilter, receiver });
-      if (defaults[activeFilter - 1] !== undefined) {
+      // Send all at once, sequentially — not per-tick
+      for (let i = 0; i < defaults.length; i++) {
+        const filter = i + 1;
+        if (filter !== activeFilter) {
+          cmd('set_filter', { filter, receiver });
+        }
+        cmd('set_filter_width', { width: defaults[i], receiver });
+      }
+      if (activeFilter <= defaults.length) {
+        cmd('set_filter', { filter: activeFilter, receiver });
         patchActiveReceiver({ filterWidth: defaults[activeFilter - 1] }, true);
       }
     },
