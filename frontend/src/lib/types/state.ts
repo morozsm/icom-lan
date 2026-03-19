@@ -74,6 +74,17 @@ export interface ServerState {
     controlConnected: boolean;
   };
 
+  radioDetail?: {
+    status: string;
+    uptimeSeconds: number;
+  };
+
+  wsClients?: {
+    scope: number;
+    control: number;
+    audio: number;
+  };
+
   // Extended fields — optional (not all radio models expose these)
   powerLevel?: number;
   scanning?: boolean;
