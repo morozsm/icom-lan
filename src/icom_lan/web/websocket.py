@@ -14,6 +14,7 @@ import asyncio
 import base64
 import hashlib
 import struct
+import time
 import zlib
 
 __all__ = [
@@ -184,11 +185,19 @@ class WebSocketConnection:
         self._deflate = deflate
         self._fragmented_opcode: int = 0
         self._fragments: list[bytes] = []
+        self._last_pong: float = time.monotonic()
+        self._pong_timeout: float = 60.0
 
     @property
     def deflate_enabled(self) -> bool:
         """True if permessage-deflate was negotiated."""
         return self._deflate
+
+    def is_alive(self) -> bool:
+        """True if connection is open and a pong was received recently enough."""
+        if self._closed:
+            return False
+        return (time.monotonic() - self._last_pong) < self._pong_timeout
 
     def _compress(self, data: bytes) -> bytes:
         """Compress payload per RFC 7692 §7.2.1."""
@@ -227,6 +236,7 @@ class WebSocketConnection:
                 continue
 
             if opcode == WS_OP_PONG:
+                self._last_pong = time.monotonic()
                 continue
 
             if opcode == WS_OP_CLOSE:
@@ -306,7 +316,11 @@ class WebSocketConnection:
             while not self._closed:
                 await asyncio.sleep(interval)
                 if not self._closed:
+                    if not self.is_alive():
+                        await self.close(1001, "pong timeout")
+                        break
                     await self._send_raw(make_frame(WS_OP_PING, b"ka"))
+                    self._last_pong = time.monotonic()
         except asyncio.CancelledError:
             pass
         except Exception:
