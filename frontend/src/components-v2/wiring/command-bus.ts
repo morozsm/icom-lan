@@ -401,9 +401,13 @@ export function makeRxAudioHandlers() {
     },
     onAfLevelChange: (level: number) => {
       patchActiveReceiver({ afLevel: level }, true);
-      cmd('set_af_level', { level, receiver: activeReceiverParam() });
-      // Also adjust browser audio volume when live streaming
-      audioManager.setRxVolume(level / 255);
+      if (audioManager.rxEnabled) {
+        // Live mode: browser volume only
+        audioManager.setRxVolume(level / 255);
+      } else {
+        // Radio mode: CI-V AF level
+        cmd('set_af_level', { level, receiver: activeReceiverParam() });
+      }
     },
   };
 }

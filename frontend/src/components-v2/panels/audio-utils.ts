@@ -10,7 +10,7 @@ export interface MonitorOption {
  * WebSocket audio stream is available.
  */
 export function buildMonitorOptions(hasLive: boolean): MonitorOption[] {
-  const options: MonitorOption[] = [{ value: 'local', label: 'LOCAL' }];
+  const options: MonitorOption[] = [{ value: 'local', label: 'RADIO' }];
   if (hasLive) {
     options.push({ value: 'live', label: 'LIVE' });
   }

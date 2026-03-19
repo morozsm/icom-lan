@@ -29,9 +29,9 @@ describe('buildMonitorOptions', () => {
     vi.useRealTimers();
   });
 
-it('always includes LOCAL as first option', () => {
+it('always includes RADIO as first option', () => {
     const options = buildMonitorOptions(false);
-    expect(options[0]).toEqual({ value: 'local', label: 'LOCAL' });
+    expect(options[0]).toEqual({ value: 'local', label: 'RADIO' });
   });
 
   it('always includes MUTE as last option when hasLive=false', () => {
@@ -62,7 +62,7 @@ it('always includes LOCAL as first option', () => {
     expect(buildMonitorOptions(true)).toHaveLength(3);
   });
 
-  it('LIVE appears between LOCAL and MUTE when hasLive=true', () => {
+  it('LIVE appears between RADIO and MUTE when hasLive=true', () => {
     const options = buildMonitorOptions(true);
     expect(options.map((o) => o.value)).toEqual(['local', 'live', 'mute']);
   });

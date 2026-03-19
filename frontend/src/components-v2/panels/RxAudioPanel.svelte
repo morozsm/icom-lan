@@ -20,6 +20,7 @@
   let statusText = $derived(formatMonitorStatus(monitorMode));
   const monitorShortcut = getShortcutHint('toggle_monitor');
   const afShortcut = getShortcutHint('adjust_af_level');
+  let isMuted = $derived(monitorMode === 'mute');
 </script>
 
 {#if hasAudio()}
@@ -41,6 +42,7 @@
         accentColor="var(--v2-accent-cyan-alt)"
         shortcutHint={afShortcut}
         title={afShortcut}
+        disabled={isMuted}
         onChange={onAfLevelChange}
       />
       <div class="output-indicator">{statusText}</div>
