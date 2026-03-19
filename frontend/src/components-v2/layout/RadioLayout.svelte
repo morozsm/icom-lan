@@ -226,6 +226,7 @@
   .content-left,
   .content-right {
     min-height: 0;
+    max-height: 100%;
     overflow-y: auto;
     overflow-x: hidden;
   }
@@ -261,7 +262,7 @@
 
   .content-left :global(.left-sidebar),
   .content-right :global(.right-sidebar) {
-    height: 100%;
+    min-height: 0;
   }
 
   .bottom-dock {

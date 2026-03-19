@@ -159,8 +159,6 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    overflow-y: auto;
-    height: 100%;
     min-width: 0;
     padding: 6px;
     width: 100%;
