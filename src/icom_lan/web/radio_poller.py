@@ -999,18 +999,29 @@ class RadioPoller:
                     except ValueError as exc:
                         raise CommandError(str(exc)) from exc
 
-                bcd_payload = bcd_encode_value(payload_value, byte_count=1)
+                bcd_index_byte = bcd_encode_value(payload_value, byte_count=1)
+                # CI-V 1A 03 SET format: <FIL_number> <width_index_BCD>
+                # FIL number: 01=FIL1, 02=FIL2, 03=FIL3
+                current_filter = 1
+                if self._radio_state:
+                    t = (
+                        self._radio_state.sub if rx != 0
+                        else self._radio_state.main
+                    )
+                    current_filter = getattr(t, "filter", 1) or 1
                 logger.info(
                     "set_filter_width: mode=%s, width=%d Hz, index=%d, "
-                    "bcd=0x%s, rx=%d, cmd29=%s",
+                    "bcd=0x%s, rx=%d",
                     mode_name, width, payload_value,
-                    bcd_payload.hex(), rx,
-                    self._profile.supports_cmd29(0x1A, 0x03),
+                    bcd_index_byte.hex(), rx,
                 )
-                # IC-7610: cmd29 SET for 0x1A 0x03 is silently ignored
-                # (same pattern as 0x05 freq, 0x06 mode). Use direct send.
-                # For SUB receiver: switch active → send → switch back.
-                await self._civ(0x1A, sub=0x03, data=bcd_payload)
+                # CI-V 1A 03: 1-byte BCD index, cmd29-wrapped for receiver
+                if self._profile.supports_cmd29(0x1A, 0x03):
+                    await self._civ(
+                        0x29, data=bytes([rx, 0x1A, 0x03]) + bcd_index_byte
+                    )
+                else:
+                    await self._civ(0x1A, sub=0x03, data=bcd_index_byte)
                 if self._radio_state:
                     target = (
                         self._radio_state.sub if rx != 0 else self._radio_state.main
