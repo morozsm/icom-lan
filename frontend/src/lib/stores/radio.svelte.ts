@@ -116,7 +116,7 @@ export function patchActiveReceiver(patch: Partial<ReceiverState>, lock = false)
     
     if (lock) {
       // Lock this field to prevent server updates for short duration (covers network lag)
-      lockedFields.set(lockKey, Date.now() + 1500); // 1.5s lock for slider lag
+      lockedFields.set(lockKey, Date.now() + 300); // 300ms lock - just cover network lag
     }
     map.set(field, { value, expires, serverValueAtPatch: (currentRx as any)[field] });
   }
