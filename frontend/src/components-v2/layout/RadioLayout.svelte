@@ -233,6 +233,7 @@
     max-height: 100%;
     overflow-y: auto;
     overflow-x: hidden;
+    padding-bottom: 4px;
   }
 
   .content-center {
