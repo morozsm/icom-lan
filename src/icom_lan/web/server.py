@@ -156,6 +156,52 @@ class WebConfig:
     auth_token: str = ""  # empty = no auth required
 
 
+class ConnectionManager:
+    """Track WebSocket connections per-IP per-channel; evict excess and reap zombies."""
+
+    MAX_PER_IP_PER_CHANNEL: int = 2
+
+    def __init__(self) -> None:
+        self._connections: dict[tuple[str, str], list[WebSocketConnection]] = {}
+
+    def register(
+        self, ip: str, channel: str, ws: WebSocketConnection
+    ) -> list[WebSocketConnection]:
+        """Register ws for (ip, channel) and return any evicted excess connections."""
+        key = (ip, channel)
+        conns = self._connections.setdefault(key, [])
+        conns.append(ws)
+        evicted: list[WebSocketConnection] = []
+        while len(conns) > self.MAX_PER_IP_PER_CHANNEL:
+            evicted.append(conns.pop(0))
+        return evicted
+
+    def unregister(self, ip: str, channel: str, ws: WebSocketConnection) -> None:
+        """Remove ws from (ip, channel) tracking."""
+        key = (ip, channel)
+        conns = self._connections.get(key, [])
+        try:
+            conns.remove(ws)
+        except ValueError:
+            pass
+        if not conns:
+            self._connections.pop(key, None)
+
+    def reap_dead(self) -> list[WebSocketConnection]:
+        """Remove and return all tracked connections where ws.is_alive() == False."""
+        dead: list[WebSocketConnection] = []
+        for key in list(self._connections):
+            conns = self._connections[key]
+            alive = [ws for ws in conns if ws.is_alive()]
+            dead_here = [ws for ws in conns if not ws.is_alive()]
+            dead.extend(dead_here)
+            if alive:
+                self._connections[key] = alive
+            else:
+                self._connections.pop(key, None)
+        return dead
+
+
 class WebServer:
     """Asyncio HTTP + WebSocket server for the icom-lan Web UI.
 
@@ -206,11 +252,21 @@ class WebServer:
         self._spot_buffer: SpotBuffer = SpotBuffer()
         self._dx_client: DXClusterClient | None = None
         self._dx_client_task: asyncio.Task[None] | None = None
+        # Connection manager and zombie reaper
+        self._conn_manager: ConnectionManager = ConnectionManager()
+        self._zombie_reaper_task: asyncio.Task[None] | None = None
 
     def __del__(self) -> None:
         """Emit WARN if instance is collected while server is still running (forgotten teardown)."""
         try:
-            if self._server is not None:
+            # Cancel zombie reaper to avoid RuntimeWarning on pending coroutine
+            task = getattr(self, "_zombie_reaper_task", None)
+            if task is not None:
+                task.cancel()
+            still_running = getattr(self, "_server", None) is not None or getattr(
+                self, "_server_was_running", False
+            )
+            if still_running:
                 logger.warning(
                     "WebServer collected while still running; "
                     "ensure stop() or async context manager is used."
@@ -571,6 +627,48 @@ class WebServer:
         except asyncio.CancelledError:
             pass
 
+    async def _zombie_reaper(self, interval: float = 30.0) -> None:
+        """Periodically reap dead WebSocket connections from scope/audio handlers."""
+        try:
+            while True:
+                await asyncio.sleep(interval)
+                dead_ws = self._conn_manager.reap_dead()
+
+                # Reap dead scope handlers
+                dead_scope = [
+                    h for h in list(self._scope_handlers) if not h._ws.is_alive()
+                ]
+                before = len(self._scope_handlers)
+                for h in dead_scope:
+                    self.unregister_scope_handler(h)
+                after = len(self._scope_handlers)
+                if dead_scope:
+                    logger.info(
+                        "zombie-reaper: reaped %d scope handlers (%d→%d active)",
+                        len(dead_scope),
+                        before,
+                        after,
+                    )
+
+                # Reap dead audio clients
+                reaped_audio = self._audio_broadcaster.reap_dead_clients()
+                if reaped_audio:
+                    logger.info(
+                        "zombie-reaper: reaped %d dead audio clients", reaped_audio
+                    )
+
+                if dead_ws or dead_scope or reaped_audio:
+                    logger.info(
+                        "zombie-reaper: found %d dead ws, %d dead scope, %d dead audio",
+                        len(dead_ws),
+                        len(dead_scope),
+                        reaped_audio,
+                    )
+                else:
+                    logger.debug("zombie-reaper: no dead connections found")
+        except asyncio.CancelledError:
+            pass
+
     def _on_poller_state_event(self, name: str, data: dict[str, Any]) -> None:
         """Callback from RadioPoller — forward event and push fresh state."""
         self.broadcast_event(name, data)
@@ -604,6 +702,9 @@ class WebServer:
                 self._scope_health_task = asyncio.get_running_loop().create_task(
                     self._scope_health_monitor(), name="scope-health"
                 )
+        self._zombie_reaper_task = asyncio.get_running_loop().create_task(
+            self._zombie_reaper(), name="zombie-reaper"
+        )
         if self._config.dx_cluster_host:
             self._dx_client = DXClusterClient(
                 self._config.dx_cluster_host,
@@ -691,6 +792,13 @@ class WebServer:
         # Stop audio bridge first
         if self._audio_bridge is not None:
             await self.stop_audio_bridge()
+        if self._zombie_reaper_task is not None:
+            self._zombie_reaper_task.cancel()
+            try:
+                await self._zombie_reaper_task
+            except asyncio.CancelledError:
+                pass
+            self._zombie_reaper_task = None
         if self._scope_health_task is not None:
             self._scope_health_task.cancel()
             self._scope_health_task = None
@@ -1240,6 +1348,19 @@ class WebServer:
             return
 
         peer = writer.get_extra_info("peername", ("?", 0))
+        ip = str(peer[0])
+
+        # Register with connection manager; evict oldest excess connections
+        evicted = self._conn_manager.register(ip, path, ws)
+        for old_ws in evicted:
+            logger.info(
+                "ws: evicting old connection from %s on %s (per-IP limit)", ip, path
+            )
+            try:
+                await old_ws.close(1001, "replaced by newer connection")
+            except Exception:
+                pass
+
         logger.info(
             "ws connect: %s %s:%s (active=%d)",
             path,
@@ -1260,6 +1381,7 @@ class WebServer:
                 await keepalive
             except asyncio.CancelledError:
                 pass
+            self._conn_manager.unregister(ip, path, ws)
             logger.info(
                 "ws disconnect: %s %s:%s (active=%d)",
                 path,

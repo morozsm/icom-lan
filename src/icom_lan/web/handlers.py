@@ -1178,6 +1178,7 @@ class AudioBroadcaster:
     def __init__(self, radio: "Radio | None") -> None:
         self._radio = radio
         self._clients: dict[int, asyncio.Queue[bytes]] = {}
+        self._client_ws: dict[int, WebSocketConnection] = {}
         self._subscription: _AudioSubscription | None = None
         self._relay_task: asyncio.Task[None] | None = None
         self._seq: int = 0
@@ -1186,12 +1187,16 @@ class AudioBroadcaster:
         self._channels: int = 1
         self._lock = asyncio.Lock()
 
-    async def subscribe(self) -> asyncio.Queue[bytes]:
+    async def subscribe(
+        self, ws: WebSocketConnection | None = None
+    ) -> asyncio.Queue[bytes]:
         """Register a new WebSocket client and start relaying if first."""
         queue: asyncio.Queue[bytes] = asyncio.Queue(maxsize=self.HIGH_WATERMARK)
         client_id = id(queue)
         async with self._lock:
             self._clients[client_id] = queue
+            if ws is not None:
+                self._client_ws[client_id] = ws
             if self._subscription is None and self._radio:
                 await self._start_relay()
         logger.info("audio-broadcaster: client added (total=%d)", len(self._clients))
@@ -1202,9 +1207,28 @@ class AudioBroadcaster:
         client_id = id(queue)
         async with self._lock:
             self._clients.pop(client_id, None)
+            self._client_ws.pop(client_id, None)
             if not self._clients and self._subscription is not None:
                 await self._stop_relay()
         logger.info("audio-broadcaster: client removed (total=%d)", len(self._clients))
+
+    def reap_dead_clients(self) -> int:
+        """Remove clients whose WebSocket is no longer alive. Returns count removed."""
+        dead_ids = [
+            cid
+            for cid, ws in list(self._client_ws.items())
+            if not ws.is_alive()
+        ]
+        for cid in dead_ids:
+            self._clients.pop(cid, None)
+            self._client_ws.pop(cid, None)
+        if dead_ids:
+            logger.info(
+                "audio-broadcaster: reaped %d dead clients (total=%d)",
+                len(dead_ids),
+                len(self._clients),
+            )
+        return len(dead_ids)
 
     async def _start_relay(self) -> None:
         from ..radio_protocol import AudioCapable
@@ -1288,7 +1312,12 @@ class AudioBroadcaster:
                     pkt.data,
                 )
                 self._seq = (self._seq + 1) & 0xFFFF
-                for q in list(self._clients.values()):
+                dead_ids: list[int] = []
+                for client_id, q in list(self._clients.items()):
+                    ws = self._client_ws.get(client_id)
+                    if ws is not None and not ws.is_alive():
+                        dead_ids.append(client_id)
+                        continue
                     try:
                         q.put_nowait(frame)
                     except asyncio.QueueFull:
@@ -1300,6 +1329,10 @@ class AudioBroadcaster:
                             q.put_nowait(frame)
                         except asyncio.QueueFull:
                             pass
+                for client_id in dead_ids:
+                    self._clients.pop(client_id, None)
+                    self._client_ws.pop(client_id, None)
+                    logger.info("audio-broadcaster: removed dead client during relay")
         except asyncio.CancelledError:
             pass
         except Exception:
@@ -1416,7 +1449,7 @@ class AudioHandler:
         if not self._broadcaster:
             return
         self._rx_active = True
-        self._frame_queue = await self._broadcaster.subscribe()
+        self._frame_queue = await self._broadcaster.subscribe(ws=self._ws)
         logger.info("audio: subscribed to RX broadcast")
 
     async def _stop_rx(self) -> None:
