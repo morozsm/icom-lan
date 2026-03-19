@@ -31,7 +31,7 @@
     label,
     unit = '',
     onchange,
-    accentColor = '#00D4FF',
+    accentColor = 'var(--v2-accent-cyan)',
     compact = false,
     disabled = false,
     shortcutHint = null,
@@ -118,12 +118,12 @@
   }
 
   .slider-label {
-    color: #6f8196;
+    color: var(--v2-text-dim);
     text-align: left;
   }
 
   .slider-value {
-    color: #f0f5fa;
+    color: var(--v2-text-bright);
   }
 
   .disabled {
@@ -151,7 +151,7 @@
     inset-inline: 0;
     height: 4px;
     border-radius: 999px;
-    background: #0d1117;
+    background: var(--v2-bg-gradient-start);
     overflow: hidden;
   }
 
@@ -184,7 +184,7 @@
     height: 12px;
     transform: translateY(-50%);
     border-radius: 999px;
-    background: color-mix(in srgb, #d7e2ee 35%, #0d1117);
+    background: color-mix(in srgb, var(--v2-text-light) 35%, var(--v2-bg-gradient-start));
     box-shadow: 0 0 0 1px rgba(215, 226, 238, 0.04);
   }
 
@@ -210,7 +210,7 @@
     width: 10px;
     height: 10px;
     border-radius: 2px;
-    background: #ffffff;
+    background: var(--v2-text-white);
     border: 1px solid var(--accent);
     cursor: pointer;
     box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 12%, transparent);
@@ -220,7 +220,7 @@
     width: 10px;
     height: 10px;
     border-radius: 2px;
-    background: #ffffff;
+    background: var(--v2-text-white);
     border: 1px solid var(--accent);
     cursor: pointer;
     box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 12%, transparent);
@@ -243,7 +243,7 @@
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
     align-items: center;
-    color: #546578;
+    color: var(--v2-text-dimmer);
     font-size: 8px;
     letter-spacing: 0.06em;
     line-height: 1;
@@ -256,7 +256,7 @@
 
   .axis-zero {
     justify-self: center;
-    color: #7b8da1;
+    color: var(--v2-text-subtle);
   }
 
   .axis-positive {

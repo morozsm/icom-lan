@@ -83,13 +83,13 @@
   }
 
   .bridge-button[data-color='cyan'] {
-    --control-accent: #00d4ff;
-    --control-active-text: #f0f5fa;
+    --control-accent: var(--v2-accent-cyan);
+    --control-active-text: var(--v2-text-bright);
   }
 
   .bridge-button[data-color='orange'] {
-    --control-accent: #ff8b2d;
-    --control-active-text: #fff1e5;
+    --control-accent: var(--v2-accent-orange-alt);
+    --control-active-text: var(--v2-text-bright);
   }
 
   .vfo-ops:not(.dual) {

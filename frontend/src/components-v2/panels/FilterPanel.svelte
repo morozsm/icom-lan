@@ -119,7 +119,7 @@
             type="button"
             class="filter-select-button v2-control-button"
             class:active={currentFilter === index + 1}
-            style="--control-accent:#00D4FF; --control-active-text:#FFFFFF"
+            style="--control-accent:var(--v2-accent-cyan); --control-active-text:var(--v2-text-white)"
             data-shortcut-hint={cycleFilterShortcut ?? undefined}
             title={cycleFilterShortcut ?? undefined}
             onclick={() => onFilterChange?.(index + 1)}
@@ -132,7 +132,7 @@
       <button
         type="button"
         class="settings-button v2-control-button"
-        style="--control-accent:#4D6074; --control-active-text:#F0F5FA"
+        style="--control-accent:var(--v2-text-disabled); --control-active-text:var(--v2-text-bright)"
         aria-label="Open filter settings"
         aria-haspopup="dialog"
         aria-expanded={modalOpen}
@@ -157,7 +157,7 @@
       step={25}
       unit="Hz"
       renderer="bipolar"
-      accentColor="#00D4FF"
+      accentColor="var(--v2-accent-cyan)"
       onChange={onIfShiftChange}
     />
     {#if hasPbt}
@@ -169,7 +169,7 @@
         step={25}
         unit="Hz"
         renderer="bipolar"
-        accentColor="#00D4FF"
+        accentColor="var(--v2-accent-cyan)"
         onChange={onPbtInnerChange ?? (() => {})}
       />
       <ValueControl
@@ -180,7 +180,7 @@
         step={25}
         unit="Hz"
         renderer="bipolar"
-        accentColor="#4ED37B"
+        accentColor="var(--v2-accent-green-bright)"
         onChange={onPbtOuterChange ?? (() => {})}
       />
     {/if}
@@ -189,7 +189,7 @@
       <button
         type="button"
         class="pbt-reset-button v2-control-button"
-        style="--control-accent:#4D6074; --control-active-text:#F0F5FA"
+        style="--control-accent:var(--v2-text-disabled); --control-active-text:var(--v2-text-bright)"
         onclick={() => onPbtReset?.()}
       >
         Reset
@@ -214,7 +214,7 @@
       <button
         type="button"
         class="modal-close v2-control-button"
-        style="--control-accent:#4D6074; --control-active-text:#F0F5FA"
+        style="--control-accent:var(--v2-text-disabled); --control-active-text:var(--v2-text-bright)"
         onclick={closeSettings}
       >
         Close
@@ -242,7 +242,7 @@
               step={modalStep}
               unit="Hz"
               renderer="hbar"
-              accentColor={currentFilter === index + 1 ? '#00D4FF' : '#4ED37B'}
+              accentColor={currentFilter === index + 1 ? 'var(--v2-accent-cyan)' : 'var(--v2-accent-green-bright)'}
               onChange={(value) => handlePresetChange(index, value)}
             />
           {/if}
@@ -256,7 +256,7 @@
             type="button"
             class="shape-button v2-control-button"
             class:active={filterShape === 0}
-            style="--control-accent:#00D4FF; --control-active-text:#FFFFFF"
+            style="--control-accent:var(--v2-accent-cyan); --control-active-text:var(--v2-text-white)"
             onclick={() => onFilterShapeChange?.(0)}
           >
             SHARP
@@ -265,7 +265,7 @@
             type="button"
             class="shape-button v2-control-button"
             class:active={filterShape === 1}
-            style="--control-accent:#4ED37B; --control-active-text:#06110B"
+            style="--control-accent:var(--v2-accent-green-bright); --control-active-text:var(--v2-bg-darkest)"
             onclick={() => onFilterShapeChange?.(1)}
           >
             SOFT
@@ -285,7 +285,7 @@
         <button
           type="button"
           class="defaults-button v2-control-button"
-          style="--control-accent:#4ED37B; --control-active-text:#06110B"
+          style="--control-accent:var(--v2-accent-green-bright); --control-active-text:var(--v2-bg-darkest)"
           onclick={handleRestoreDefaults}
         >
           Restore Defaults
@@ -329,12 +329,12 @@
     justify-content: space-between;
     gap: 8px;
     padding: 4px 2px 1px;
-    color: #d8e3f0;
+    color: var(--v2-text-light);
     font-family: 'Roboto Mono', monospace;
   }
 
   .bw-label {
-    color: #6f8196;
+    color: var(--v2-text-dim);
     font-size: 11px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -377,8 +377,8 @@
     flex-direction: column;
     gap: 12px;
     padding: 14px;
-    background: linear-gradient(180deg, #08111a 0%, #05090f 100%);
-    border: 1px solid #1b2633;
+    background: linear-gradient(180deg, var(--v2-bg-gradient-start) 0%, var(--v2-bg-darkest) 100%);
+    border: 1px solid var(--v2-border-darker);
     border-radius: 8px;
     box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
     overflow: auto;
@@ -402,14 +402,14 @@
   }
 
   .modal-title {
-    color: #d8e3f0;
+    color: var(--v2-text-light);
     font-size: 13px;
     font-weight: 700;
     letter-spacing: 0.08em;
   }
 
   .modal-subtitle {
-    color: #6f8196;
+    color: var(--v2-text-dim);
     font-size: 11px;
     margin-top: 3px;
   }
@@ -428,7 +428,7 @@
   }
 
   .shape-title {
-    color: #8ca0b8;
+    color: var(--v2-text-subdued);
     font-family: 'Roboto Mono', monospace;
     font-size: 11px;
     font-weight: 700;
@@ -447,14 +447,14 @@
   }
 
   .modal-filter-row {
-    border: 1px solid #16212c;
+    border: 1px solid var(--v2-border-darker);
     border-radius: 6px;
     padding: 8px;
-    background: rgba(8, 15, 23, 0.7);
+    background: var(--v2-overlay-light);
   }
 
   .modal-filter-row.active {
-    border-color: rgba(0, 212, 255, 0.42);
+    border-color: var(--v2-border-soft);
     box-shadow: 0 0 0 1px rgba(0, 212, 255, 0.12);
   }
 
@@ -467,14 +467,14 @@
   }
 
   .modal-filter-label {
-    color: #d8e3f0;
+    color: var(--v2-text-light);
     font-size: 12px;
     font-weight: 700;
     letter-spacing: 0.06em;
   }
 
   .modal-filter-active {
-    color: #00d4ff;
+    color: var(--v2-accent-cyan);
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.08em;
@@ -483,7 +483,7 @@
   .modal-fixed-value,
   .modal-note,
   .modal-range {
-    color: #8ca0b8;
+    color: var(--v2-text-subdued);
     font-size: 12px;
   }
 

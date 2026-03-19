@@ -66,7 +66,7 @@
       max={255}
       step={1}
       renderer="hbar"
-      accentColor="#FF6A00"
+      accentColor="var(--v2-accent-orange)"
       onChange={onMicGainChange}
     />
 
@@ -101,7 +101,7 @@
         max={255}
         step={1}
         renderer="hbar"
-        accentColor="#FF6A00"
+        accentColor="var(--v2-accent-orange)"
         onChange={onCompLevelChange}
       />
     {/if}
@@ -117,7 +117,7 @@
         max={255}
         step={1}
         renderer="hbar"
-        accentColor="#FF6A00"
+        accentColor="var(--v2-accent-orange)"
         onChange={onMonLevelChange}
       />
     {/if}

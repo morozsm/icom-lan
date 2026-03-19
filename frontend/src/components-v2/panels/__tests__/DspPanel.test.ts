@@ -13,7 +13,16 @@ vi.mock('$lib/stores/capabilities.svelte', () => ({
 // ---------------------------------------------------------------------------
 
 describe('isCwMode', () => {
-  it('returns true for "CW"', () => {
+  
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+it('returns true for "CW"', () => {
     expect(isCwMode('CW')).toBe(true);
   });
 
@@ -202,6 +211,15 @@ describe('CW Pitch slider constraints', () => {
 });
 
 describe('callbacks', () => {
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('calls onNotchModeChange when Notch segmented button changes', () => {
     const onNotchModeChange = vi.fn();
     const t = mountPanel({ ...baseProps, onNotchModeChange });
@@ -219,6 +237,8 @@ describe('callbacks', () => {
     const sliders = t.querySelectorAll<HTMLElement>('[role="slider"]');
     const pitchSlider = Array.from(sliders).at(-1)!;
     pitchSlider.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+    vi.advanceTimersByTime(60);
+
     expect(onCwPitchChange).toHaveBeenCalled();
   });
 });

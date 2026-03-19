@@ -27,7 +27,7 @@
       <SegmentedButton
         {options}
         selected={monitorMode}
-        accentColor="#00FFFF"
+        accentColor="var(--v2-accent-cyan-alt)"
         title={monitorShortcut}
         onchange={(v) => onMonitorModeChange(v as string)}
       />
@@ -38,7 +38,7 @@
         max={255}
         step={1}
         renderer="hbar"
-        accentColor="#00FFFF"
+        accentColor="var(--v2-accent-cyan-alt)"
         shortcutHint={afShortcut}
         title={afShortcut}
         onChange={onAfLevelChange}
@@ -56,7 +56,7 @@
   }
 
   .output-indicator {
-    color: #4a6080;
+    color: var(--v2-text-muted);
     font-family: 'Roboto Mono', monospace;
     font-size: 9px;
     letter-spacing: 0.04em;

@@ -77,7 +77,7 @@
         type="button"
         class="source-btn v2-control-button"
         class:active={meterSource === 'S'}
-        style="--control-accent:#00D4FF; --control-active-text:#F0F5FA"
+        style="--control-accent:var(--v2-accent-cyan); --control-active-text:var(--v2-text-bright)"
         onclick={() => onMeterSourceChange('S')}
       >S</button>
       {#if hasTx()}
@@ -85,14 +85,14 @@
           type="button"
           class="source-btn v2-control-button"
           class:active={meterSource === 'SWR'}
-          style="--control-accent:#00D4FF; --control-active-text:#F0F5FA"
+          style="--control-accent:var(--v2-accent-cyan); --control-active-text:var(--v2-text-bright)"
           onclick={() => onMeterSourceChange('SWR')}
         >SWR</button>
         <button
           type="button"
           class="source-btn v2-control-button"
           class:active={meterSource === 'POWER'}
-          style="--control-accent:#00D4FF; --control-active-text:#F0F5FA"
+          style="--control-accent:var(--v2-accent-cyan); --control-active-text:var(--v2-text-bright)"
           onclick={() => onMeterSourceChange('POWER')}
         >Po</button>
       {/if}
@@ -141,9 +141,9 @@
     text-transform: uppercase;
     padding: 2px 10px;
     border-radius: 9999px;
-    border: 1px solid #2A3A4A;
+    border: 1px solid var(--v2-border);
     background: transparent;
-    color: #5A7090;
+    color: var(--v2-text-muted);
     cursor: pointer;
     user-select: none;
     transition: color 150ms ease, border-color 150ms ease, background 150ms ease;
@@ -151,12 +151,12 @@
 
   .source-btn:hover {
     color: var(--v2-text-header);
-    border-color: #4A6080;
+    border-color: var(--v2-text-muted);
   }
 
   .source-btn.active {
-    color: #00D4FF;
-    border-color: #00D4FF;
+    color: var(--v2-accent-cyan);
+    border-color: var(--v2-accent-cyan);
     background: rgba(0, 212, 255, 0.08);
   }
 

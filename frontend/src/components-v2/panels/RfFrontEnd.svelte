@@ -84,7 +84,7 @@
   }
 
   .control-label {
-    color: #6F8196;
+    color: var(--v2-text-dim);
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.06em;

@@ -9,7 +9,16 @@ import { txStatusColor } from '../tx-utils';
 // ---------------------------------------------------------------------------
 
 describe('txStatusColor', () => {
-  it('returns danger red when tuning', () => {
+  
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+it('returns danger red when tuning', () => {
     expect(txStatusColor(true, true)).toBe('#FF2020');
   });
 
@@ -189,6 +198,15 @@ describe('tuning state', () => {
 });
 
 describe('callbacks', () => {
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('calls onAtuTune when TUNE button is clicked', () => {
     const onAtuTune = vi.fn();
     const t = mountPanel({ ...baseProps, onAtuTune });
@@ -204,6 +222,8 @@ describe('callbacks', () => {
     if (slider) {
       slider.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
     }
+    vi.advanceTimersByTime(60);
+
     expect(onMicGainChange).toHaveBeenCalled();
   });
 });

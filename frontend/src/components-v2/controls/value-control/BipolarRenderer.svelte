@@ -45,8 +45,8 @@
     displayFn,
     fillColor,
     fillGradient,
-    trackColor = '#0d1117',
-    accentColor = '#00D4FF',
+    trackColor = 'var(--v2-bg-gradient-start)',
+    accentColor = 'var(--v2-accent-cyan)',
     showValue = true,
     showLabel = true,
     compact = false,
@@ -215,12 +215,12 @@
   }
 
   .vc-label {
-    color: var(--vc-text-label, #6F8196);
+    color: var(--vc-text-label, var(--v2-text-dim));
     text-align: left;
   }
 
   .vc-value {
-    color: var(--vc-text-value, #F0F5FA);
+    color: var(--vc-text-value, var(--v2-text-bright));
     font-family: 'Roboto Mono', monospace;
   }
 
@@ -262,7 +262,7 @@
     inset-inline: 0;
     height: var(--vc-bar-height, 4px);
     border-radius: 999px;
-    background: var(--vc-track-color, #0d1117);
+    background: var(--vc-track-color, var(--v2-bg-gradient-start));
     overflow: hidden;
   }
 
@@ -299,7 +299,7 @@
     height: var(--vc-center-height, 12px);
     transform: translateY(-50%);
     border-radius: 999px;
-    background: color-mix(in srgb, #d7e2ee 35%, #0d1117);
+    background: color-mix(in srgb, var(--v2-text-light) 35%, var(--v2-bg-gradient-start));
     box-shadow: 0 0 0 1px rgba(215, 226, 238, 0.04);
   }
 
@@ -314,7 +314,7 @@
     width: var(--vc-thumb-size, 10px);
     height: var(--vc-thumb-size, 10px);
     border-radius: 2px;
-    background: #ffffff;
+    background: var(--v2-text-white);
     border: 1px solid var(--vc-accent);
     pointer-events: none;
     box-shadow: 0 0 0 1px color-mix(in srgb, var(--vc-accent) 12%, transparent);
@@ -334,7 +334,7 @@
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
     align-items: center;
-    color: #546578;
+    color: var(--v2-text-dimmer);
     font-size: 8px;
     letter-spacing: 0.06em;
     line-height: 1;
@@ -351,7 +351,7 @@
 
   .axis-zero {
     justify-self: center;
-    color: #7b8da1;
+    color: var(--v2-text-subtle);
   }
 
   .axis-positive {

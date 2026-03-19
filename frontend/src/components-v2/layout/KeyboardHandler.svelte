@@ -160,11 +160,11 @@
     z-index: 1100;
     padding: 8px 12px;
     border-radius: 999px;
-    border: 1px solid rgba(0, 212, 255, 0.24);
-    background: rgba(8, 14, 20, 0.94);
-    color: #e6f6ff;
+    border: 1px solid var(--v2-border-cyan);
+    background: var(--v2-overlay-dark);
+    color: var(--v2-text-primary);
     font: 600 12px/1.2 'Roboto Mono', monospace;
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.32);
+    box-shadow: var(--v2-shadow-md);
     backdrop-filter: blur(8px);
   }
 
@@ -189,13 +189,13 @@
     width: min(1100px, calc(100vw - 32px));
     max-height: calc(100vh - 40px);
     overflow: auto;
-    border: 1px solid rgba(72, 96, 122, 0.42);
+    border: 1px solid var(--v2-border-soft);
     border-radius: 18px;
     background:
       radial-gradient(circle at top left, rgba(0, 212, 255, 0.12), transparent 32%),
       linear-gradient(180deg, rgba(8, 14, 20, 0.98), rgba(5, 9, 14, 0.98));
-    color: #eef6ff;
-    box-shadow: 0 32px 80px rgba(0, 0, 0, 0.46);
+    color: var(--v2-text-primary);
+    box-shadow: var(--v2-shadow-lg);
   }
 
   .keyboard-help-header {
@@ -204,7 +204,7 @@
     justify-content: space-between;
     gap: 16px;
     padding: 24px 24px 18px;
-    border-bottom: 1px solid rgba(72, 96, 122, 0.24);
+    border-bottom: 1px solid var(--v2-border-softer);
   }
 
   .keyboard-help-title {
@@ -214,15 +214,15 @@
 
   .keyboard-help-subtitle {
     margin-top: 8px;
-    color: #8fa9c2;
+    color: var(--v2-text-secondary);
     font: 500 13px/1.5 'Roboto Mono', monospace;
   }
 
   .keyboard-help-close {
-    border: 1px solid rgba(72, 96, 122, 0.42);
+    border: 1px solid var(--v2-border-soft);
     border-radius: 999px;
-    background: rgba(10, 16, 22, 0.9);
-    color: #e6f6ff;
+    background: var(--v2-overlay-medium);
+    color: var(--v2-text-primary);
     padding: 8px 14px;
     font: 600 12px/1 'Roboto Mono', monospace;
     cursor: pointer;
@@ -236,17 +236,17 @@
   }
 
   .keyboard-help-section {
-    border: 1px solid rgba(72, 96, 122, 0.22);
+    border: 1px solid var(--v2-border-softer);
     border-radius: 14px;
-    background: rgba(10, 16, 22, 0.72);
+    background: var(--v2-overlay-light);
     overflow: hidden;
   }
 
   .keyboard-help-section h3 {
     margin: 0;
     padding: 12px 14px;
-    border-bottom: 1px solid rgba(72, 96, 122, 0.18);
-    color: #79dfff;
+    border-bottom: 1px solid var(--v2-border-subtle-soft);
+    color: var(--v2-accent-cyan-bright);
     font: 700 12px/1 'Roboto Mono', monospace;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -279,21 +279,21 @@
 
   .keyboard-help-label {
     font: 600 13px/1.35 'IBM Plex Sans', sans-serif;
-    color: #f4f9ff;
+    color: var(--v2-text-bright);
   }
 
   .keyboard-help-description {
-    color: #89a0b6;
+    color: var(--v2-text-secondary);
     font: 500 11px/1.45 'Roboto Mono', monospace;
   }
 
   kbd {
     white-space: nowrap;
-    border: 1px solid rgba(0, 212, 255, 0.24);
+    border: 1px solid var(--v2-border-cyan);
     border-bottom-color: rgba(0, 212, 255, 0.36);
     border-radius: 8px;
-    background: rgba(8, 14, 20, 0.94);
-    color: #dff7ff;
+    background: var(--v2-overlay-dark);
+    color: var(--v2-text-light);
     padding: 6px 9px;
     font: 600 11px/1 'Roboto Mono', monospace;
     box-shadow: inset 0 -1px 0 rgba(0, 212, 255, 0.08);
@@ -324,7 +324,7 @@
     border: 1px solid rgba(0, 212, 255, 0.26);
     border-radius: 7px;
     background: rgba(8, 14, 20, 0.97);
-    color: #dff7ff;
+    color: var(--v2-text-light);
     font: 600 10px/1 'Roboto Mono', monospace;
     white-space: nowrap;
     pointer-events: none;

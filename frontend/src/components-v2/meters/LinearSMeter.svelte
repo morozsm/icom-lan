@@ -35,9 +35,9 @@
 
   // ── Colors ──────────────────────────────────────────────────────────────────
   const ACTIVE_COLORS: ReadonlyArray<string> = [
-    '#0D633B', '#0F7445', '#118550', '#12935A', '#14A665',
-    '#16BA70', '#18CC79', '#1BE184', '#1EF18C', '#30F7A1',
-    '#7CFCE5',
+    '#0D633B', '#0F7445', '#118550', '#12935A', 'var(--v2-accent-green-dark)',
+    '#16BA70', 'var(--v2-accent-green-medium)', '#1BE184', '#1EF18C', '#30F7A1',
+    'var(--v2-accent-cyan-bright)',
     '#B8A430', '#C49A28', '#D08E20', '#DC7E18',
     '#E57010', '#EB6210', '#F05418', '#F44820', '#F83C28',
   ];
@@ -48,14 +48,14 @@
 
   // ── Label marks ─────────────────────────────────────────────────────────────
   const LABEL_MARKS: ReadonlyArray<{ raw: number; text: string; color: string }> = [
-    { raw: 18,  text: 'S1',  color: '#F0F5FA' },
-    { raw: 54,  text: 'S3',  color: '#F0F5FA' },
-    { raw: 90,  text: 'S5',  color: '#F0F5FA' },
-    { raw: 126, text: 'S7',  color: '#F0F5FA' },
-    { raw: 162, text: 'S9',  color: '#F0F5FA' },
-    { raw: 202, text: '+20', color: '#F2CF4A' },
-    { raw: 241, text: '+40', color: '#F08B31' },
-    { raw: 255, text: '+60', color: '#F14C42' },
+    { raw: 18,  text: 'S1',  color: 'var(--v2-text-bright)' },
+    { raw: 54,  text: 'S3',  color: 'var(--v2-text-bright)' },
+    { raw: 90,  text: 'S5',  color: 'var(--v2-text-bright)' },
+    { raw: 126, text: 'S7',  color: 'var(--v2-text-bright)' },
+    { raw: 162, text: 'S9',  color: 'var(--v2-text-bright)' },
+    { raw: 202, text: '+20', color: 'var(--v2-accent-yellow)' },
+    { raw: 241, text: '+40', color: 'var(--v2-accent-orange-alt)' },
+    { raw: 255, text: '+60', color: 'var(--v2-accent-red-alt)' },
   ];
 
   // ── Tick marks ──────────────────────────────────────────────────────────────
@@ -72,10 +72,10 @@
     const overAnchors = [162, 182, 202, 222, 241, 255];
 
     function colorForRaw(raw: number): string {
-      if (raw <= 162) return '#F0F5FA';
-      if (raw <= 210) return '#F2CF4A';
-      if (raw <= 245) return '#F08B31';
-      return '#F14C42';
+      if (raw <= 162) return 'var(--v2-text-bright)';
+      if (raw <= 210) return 'var(--v2-accent-yellow)';
+      if (raw <= 245) return 'var(--v2-accent-orange-alt)';
+      return 'var(--v2-accent-red-alt)';
     }
 
     function addSubdivisions(startRaw: number, endRaw: number) {
@@ -99,7 +99,7 @@
       addSubdivisions(overAnchors[i], overAnchors[i + 1]);
     }
     // Final tick at max
-    ticks.push({ raw: 255, kind: 'major', color: '#F14C42' });
+    ticks.push({ raw: 255, kind: 'major', color: 'var(--v2-accent-red-alt)' });
 
     return ticks;
   }
@@ -186,7 +186,7 @@
   let showPeak = $derived(peakSegs - smoother.value > 0.3);
 
   // Color of peak line based on zone
-  let peakColor = $derived(peakSegs <= 11 ? '#7CFCE5' : peakSegs <= 15 ? '#F2CF4A' : peakSegs <= 18 ? '#F08B31' : '#F14C42');
+  let peakColor = $derived(peakSegs <= 11 ? 'var(--v2-accent-cyan-bright)' : peakSegs <= 15 ? 'var(--v2-accent-yellow)' : peakSegs <= 18 ? 'var(--v2-accent-orange-alt)' : 'var(--v2-accent-red-alt)');
 
   // ── Reactive display values ─────────────────────────────────────────────────
   let fullSegs = $derived(Math.floor(smoother.value));
@@ -207,8 +207,8 @@
   <rect
     x="0" y="0" width="600" height={TOTAL_HEIGHT}
     rx="8"
-    fill="#07090D"
-    stroke="#1E252C"
+    fill="var(--v2-bg-darkest)"
+    stroke="var(--v2-bg-panel)"
     stroke-width="1"
   />
 
@@ -220,7 +220,7 @@
       font-size={TAG_FS}
       font-weight="700"
       letter-spacing="1.2"
-      fill="#6F8196"
+      fill="var(--v2-text-dim)"
       dominant-baseline="text-before-edge"
     >{label}</text>
   {/if}
@@ -260,8 +260,8 @@
     x={BAR_X} y={TRACK_Y}
     width={BAR_WIDTH} height={TRACK_H}
     rx="1"
-    fill="#04070B"
-    stroke="#19212B"
+    fill="var(--v2-bg-darkest)"
+    stroke="var(--v2-bg-panel)"
     stroke-width="1"
   />
 
@@ -310,7 +310,7 @@
     font-family="'Roboto Mono', monospace"
     font-size={S_UNIT_FS}
     font-weight="700"
-    fill="#EAF1F8"
+    fill="var(--v2-text-lighter)"
     text-anchor="middle"
     dominant-baseline="text-after-edge"
   >{displaySUnit}</text>
@@ -320,7 +320,7 @@
     y={TRACK_Y + TRACK_H / 2}
     font-family="'Roboto Mono', monospace"
     font-size={DBM_FS}
-    fill="#6F8196"
+    fill="var(--v2-text-dim)"
     text-anchor="middle"
     dominant-baseline="central"
   >{displayDbm}</text>

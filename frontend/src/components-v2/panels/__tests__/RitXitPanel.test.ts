@@ -43,7 +43,16 @@ const baseProps: ComponentProps<typeof RitXitPanel> = {
 // ---------------------------------------------------------------------------
 
 describe('formatOffset', () => {
-  it('returns "±0 Hz" for zero', () => {
+  
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+it('returns "±0 Hz" for zero', () => {
     expect(formatOffset(0)).toBe('±0 Hz');
   });
 
@@ -107,6 +116,15 @@ describe('shouldShowPanel', () => {
 });
 
 describe('RitXitPanel component', () => {
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('renders the Offset slider when visible', () => {
     const target = mountPanel(baseProps);
     const labels = Array.from(target.querySelectorAll('.vc-label')).map((el) => el.textContent);
@@ -125,6 +143,8 @@ describe('RitXitPanel component', () => {
     const target = mountPanel({ ...baseProps, onRitOffsetChange });
     const slider = target.querySelector<HTMLElement>('[role="slider"]');
     slider!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    vi.advanceTimersByTime(60);
+
     expect(onRitOffsetChange).toHaveBeenCalled();
   });
 
@@ -137,6 +157,8 @@ describe('RitXitPanel component', () => {
     });
     const slider = target.querySelector<HTMLElement>('[role="slider"]');
     slider!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    vi.advanceTimersByTime(60);
+
     expect(onXitOffsetChange).toHaveBeenCalled();
   });
 });

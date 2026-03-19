@@ -69,7 +69,7 @@
           max={255}
           step={1}
           renderer="hbar"
-          accentColor="#00D4FF"
+          accentColor="var(--v2-accent-cyan)"
           onChange={onNrLevelChange}
         />
       </div>
@@ -93,7 +93,7 @@
           max={255}
           step={1}
           renderer="hbar"
-          accentColor="#FFB800"
+          accentColor="var(--v2-accent-yellow)"
           onChange={onNbLevelChange}
         />
       </div>
@@ -115,7 +115,7 @@
           step={1}
           unit="Hz"
           renderer="hbar"
-          accentColor="#00D4FF"
+          accentColor="var(--v2-accent-cyan)"
           onChange={onNotchFreqChange}
         />
       {/if}
@@ -139,7 +139,7 @@
           step={1}
           unit="Hz"
           renderer="hbar"
-          accentColor="#00D4FF"
+          accentColor="var(--v2-accent-cyan)"
           onChange={onCwPitchChange}
         />
       </div>

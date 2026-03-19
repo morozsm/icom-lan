@@ -27,7 +27,7 @@
       value={agcGain}
       min={0}
       max={255}
-      accentColor="#00D4FF"
+      accentColor="var(--v2-accent-cyan)"
       onchange={onAgcGainChange}
     />
   </div>

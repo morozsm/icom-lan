@@ -69,7 +69,7 @@
         step={50}
         unit="Hz"
         renderer="bipolar"
-        accentColor="#00D4FF"
+        accentColor="var(--v2-accent-cyan)"
         onChange={handleOffsetChange}
       />
       <div class="clear-row">
@@ -95,12 +95,12 @@
   .offset {
     font-family: 'Roboto Mono', monospace;
     font-size: 10px;
-    color: #4D6074;
+    color: var(--v2-text-disabled);
     transition: color 150ms ease;
   }
 
   .offset.active {
-    color: #E0EAF4;
+    color: var(--v2-text-light);
   }
 
   .clear-row {
