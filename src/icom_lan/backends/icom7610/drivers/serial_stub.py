@@ -145,6 +145,7 @@ class _ReceiverState:
     freq: int = 14_074_000
     mode: Mode = Mode.USB
     filter_width: int | None = 1
+    data_mode: bool = False
     rf_gain: int = 255
     af_level: int = 200
     squelch: int = 0
