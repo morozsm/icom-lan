@@ -43,21 +43,21 @@ describe('isCwMode', () => {
 // ---------------------------------------------------------------------------
 
 describe('buildNrOptions', () => {
-  it('returns 4 options', () => {
-    expect(buildNrOptions()).toHaveLength(4);
+  it('returns 2 options (toggle)', () => {
+    expect(buildNrOptions()).toHaveLength(2);
   });
 
   it('first option is OFF with value 0', () => {
     expect(buildNrOptions()[0]).toEqual({ value: 0, label: 'OFF' });
   });
 
-  it('second option is NR1 with value 1', () => {
-    expect(buildNrOptions()[1]).toEqual({ value: 1, label: 'NR1' });
+  it('second option is ON with value 1', () => {
+    expect(buildNrOptions()[1]).toEqual({ value: 1, label: 'ON' });
   });
 
-  it('returns options in order OFF/NR1/NR2/NR3', () => {
+  it('returns options in order OFF/ON', () => {
     const labels = buildNrOptions().map((o) => o.label);
-    expect(labels).toEqual(['OFF', 'NR1', 'NR2', 'NR3']);
+    expect(labels).toEqual(['OFF', 'ON']);
   });
 
   it('all option values are numbers', () => {
