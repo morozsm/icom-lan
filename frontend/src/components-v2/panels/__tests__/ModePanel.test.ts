@@ -36,11 +36,6 @@ const baseProps: ComponentProps<typeof ModePanel> = {
 };
 
 describe('ModePanel', () => {
-  it('renders the MODE panel header', () => {
-    const target = mountPanel(baseProps);
-    expect(target.querySelector('.panel-header')?.textContent).toBe('MODE');
-  });
-
   it('renders mode buttons from capabilities', () => {
     const target = mountPanel(baseProps);
     const buttons = Array.from(target.querySelectorAll<HTMLButtonElement>('[data-mode]')).map((button) => button.textContent?.trim());

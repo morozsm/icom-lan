@@ -123,7 +123,7 @@ describe('panel visibility', () => {
   it('renders the panel when hasAudio() returns true', () => {
     mockHasAudio.mockReturnValue(true);
     const t = mountPanel(baseProps);
-    expect(t.querySelector('.panel')).not.toBeNull();
+    expect(t.querySelector('.panel-body')).not.toBeNull();
   });
 
   it('does not render the panel when hasAudio() returns false', () => {
@@ -134,11 +134,6 @@ describe('panel visibility', () => {
 });
 
 describe('panel structure', () => {
-  it('renders the RX AUDIO header', () => {
-    const t = mountPanel(baseProps);
-    expect(t.querySelector('.panel-header')?.textContent?.trim()).toBe('RX AUDIO');
-  });
-
   it('renders the AF Level slider', () => {
     const t = mountPanel(baseProps);
     const labels = Array.from(t.querySelectorAll('.vc-label'));

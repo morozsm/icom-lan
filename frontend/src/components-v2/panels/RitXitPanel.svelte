@@ -48,8 +48,6 @@
 </script>
 
 {#if visible}
-  <div class="panel">
-    <div class="panel-header">RIT / XIT</div>
     <div class="panel-body">
       {#if hasRit}
         <div class="row">
@@ -78,27 +76,9 @@
         <StatusBadge label="CLEAR" active={false} color="muted" onclick={onClear} shortcutHint={clearShortcut} title={clearShortcut} />
       </div>
     </div>
-  </div>
 {/if}
 
 <style>
-  .panel {
-    background: #060A10;
-    border: 1px solid #18202A;
-    border-radius: 4px;
-    overflow: hidden;
-  }
-
-  .panel-header {
-    padding: 5px 8px;
-    color: var(--v2-text-header);
-    font-family: 'Roboto Mono', monospace;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    border-bottom: 1px solid #18202A;
-  }
-
   .panel-body {
     display: flex;
     flex-direction: column;

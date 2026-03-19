@@ -49,8 +49,6 @@
 </script>
 
 {#if hasTx()}
-<div class="panel">
-  <div class="panel-header">TX</div>
   <div class="panel-body">
 
     <div class="tx-indicator">
@@ -125,27 +123,9 @@
     {/if}
 
   </div>
-</div>
 {/if}
 
 <style>
-  .panel {
-    background: #060A10;
-    border: 1px solid #18202A;
-    border-radius: 4px;
-    overflow: hidden;
-    font-family: 'Roboto Mono', monospace;
-  }
-
-  .panel-header {
-    padding: 5px 8px;
-    color: var(--v2-text-header);
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    border-bottom: 1px solid #18202A;
-  }
-
   .panel-body {
     display: flex;
     flex-direction: column;

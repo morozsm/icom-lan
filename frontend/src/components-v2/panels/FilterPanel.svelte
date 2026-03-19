@@ -111,9 +111,7 @@
   }
 </script>
 
-<div class="filter-panel">
-  <div class="panel-header">FILTER</div>
-  <div class="panel-body">
+<div class="panel-body">
     <div class="filter-top-row">
       <div class="filter-grid">
         {#each normalizedLabels as label, index}
@@ -198,7 +196,6 @@
       </button>
     </div>
   </div>
-</div>
 
 {#if modalOpen}
   <button
@@ -299,23 +296,6 @@
 {/if}
 
 <style>
-  .filter-panel {
-    background: #060A10;
-    border: 1px solid #18202A;
-    border-radius: 4px;
-    overflow: hidden;
-    font-family: 'Roboto Mono', monospace;
-  }
-
-  .panel-header {
-    color: var(--v2-text-header);
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    padding: 5px 8px 4px;
-    border-bottom: 1px solid #18202A;
-  }
-
   .panel-body {
     display: flex;
     flex-direction: column;

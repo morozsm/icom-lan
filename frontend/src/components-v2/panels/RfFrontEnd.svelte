@@ -30,71 +30,46 @@
 </script>
 
 {#if visible}
-  <div class="panel">
-    <span class="panel-header">RF FRONT END</span>
+  <div class="controls">
+    {#if showRfGain}
+      <ValueControl
+        value={rfGain}
+        min={0}
+        max={255}
+        step={1}
+        label="RF Gain"
+        renderer="hbar"
+        accentColor="#22C55E"
+        shortcutHint={rfGainShortcut}
+        title={rfGainShortcut}
+        onChange={onRfGainChange}
+      />
+    {/if}
 
-    <div class="controls">
-      {#if showRfGain}
-        <ValueControl
-          value={rfGain}
-          min={0}
-          max={255}
-          step={1}
-          label="RF Gain"
-          renderer="knob"
-          accentColor="#22C55E"
-          shortcutHint={rfGainShortcut}
-          title={rfGainShortcut}
-          onChange={onRfGainChange}
+    {#if showAtt}
+      <div class="control-row" data-shortcut-hint={attShortcut ?? undefined} title={attShortcut ?? undefined}>
+        <span class="control-label">ATT</span>
+        <AttenuatorControl values={attValues} selected={att} onchange={onAttChange} shortcutHint={attShortcut} title={attShortcut} />
+      </div>
+    {/if}
+
+    {#if showPre}
+      <div class="control-row" data-shortcut-hint={preShortcut ?? undefined} title={preShortcut ?? undefined}>
+        <span class="control-label">PRE</span>
+        <SegmentedButton
+          options={preOptions}
+          selected={pre}
+          title={preShortcut}
+          onchange={(v) => onPreChange(v as number)}
         />
-      {/if}
-
-      {#if showAtt}
-        <div class="control-row" data-shortcut-hint={attShortcut ?? undefined} title={attShortcut ?? undefined}>
-          <span class="control-label">ATT</span>
-          <AttenuatorControl values={attValues} selected={att} onchange={onAttChange} shortcutHint={attShortcut} title={attShortcut} />
-        </div>
-      {/if}
-
-      {#if showPre}
-        <div class="control-row" data-shortcut-hint={preShortcut ?? undefined} title={preShortcut ?? undefined}>
-          <span class="control-label">PRE</span>
-          <SegmentedButton
-            options={preOptions}
-            selected={pre}
-            title={preShortcut}
-            onchange={(v) => onPreChange(v as number)}
-          />
-        </div>
-      {/if}
-    </div>
+      </div>
+    {/if}
   </div>
 {/if}
 
 <style>
-  .panel {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 8px 10px 10px;
-    background-color: #060A10;
-    border: 1px solid #18202A;
-    border-radius: 4px;
-    font-family: 'Roboto Mono', monospace;
-    width: 100%;
-    box-sizing: border-box;
-  }
-
-  .panel-header {
-    color: var(--v2-text-header);
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    line-height: 1;
-  }
-
   .controls {
+    padding: 8px 10px 10px;
     display: flex;
     flex-direction: column;
     gap: 8px;
