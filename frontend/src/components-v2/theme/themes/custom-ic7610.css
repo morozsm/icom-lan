@@ -18,6 +18,20 @@
   --v2-receiver-main-accent: cyan;     /* MAIN receiver badges → cyan */
   --v2-receiver-sub-accent: orange;    /* SUB receiver badges → orange */
 
+  /* ── VFO Frequency Display Colors ───────────────────────── */
+  /* Per-receiver frequency digit colors */
+  --v2-vfo-main-freq-active: #7CFCE5;        /* MAIN active: bright cyan */
+  --v2-vfo-main-freq-inactive: #607890;      /* MAIN inactive: dimmed */
+  --v2-vfo-main-freq-hover: #FFFFFF;         /* MAIN hover: white */
+  --v2-vfo-main-freq-selected-bg: #00D4FF;   /* MAIN selected bg: cyan */
+  --v2-vfo-main-freq-selected-text: #FFFFFF; /* MAIN selected text: white */
+  
+  --v2-vfo-sub-freq-active: #FFB86C;         /* SUB active: orange */
+  --v2-vfo-sub-freq-inactive: #607890;       /* SUB inactive: dimmed */
+  --v2-vfo-sub-freq-hover: #FFFFFF;          /* SUB hover: white */
+  --v2-vfo-sub-freq-selected-bg: #FF6A00;    /* SUB selected bg: orange */
+  --v2-vfo-sub-freq-selected-text: #FFFFFF;  /* SUB selected text: white */
+
   /* ── Receiver-Specific Badge Colors ─────────────────────── */
   /* Override specific badges for one receiver only */
   --v2-badge-main-digi-sel-color: cyan;    /* MAIN DIGI-SEL → cyan */

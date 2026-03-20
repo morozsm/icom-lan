@@ -73,7 +73,7 @@
   <div class="panel-body">
     <div class="display-row">
       <div class="freq-row">
-        <FrequencyDisplayInteractive {freq} active={isActive} {onFreqChange} />
+        <FrequencyDisplayInteractive {freq} active={isActive} {receiver} {onFreqChange} />
       </div>
 
       {#if rit?.active}

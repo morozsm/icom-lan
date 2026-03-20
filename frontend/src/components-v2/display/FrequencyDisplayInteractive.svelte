@@ -5,6 +5,7 @@
     freq: number;
     compact?: boolean;
     active?: boolean;
+    receiver?: 'main' | 'sub';
     minFreq?: number;
     maxFreq?: number;
     onFreqChange?: (freq: number) => void;
@@ -14,10 +15,20 @@
     freq,
     compact = false,
     active = true,
+    receiver = 'main',
     minFreq = 0,
     maxFreq = 999_000_000,
     onFreqChange,
   }: Props = $props();
+  
+  // Receiver-aware CSS custom properties
+  let cssVars = $derived({
+    '--freq-active-color': `var(--v2-vfo-${receiver}-freq-active)`,
+    '--freq-inactive-color': `var(--v2-vfo-${receiver}-freq-inactive)`,
+    '--freq-hover-color': `var(--v2-vfo-${receiver}-freq-hover)`,
+    '--freq-selected-bg': `var(--v2-vfo-${receiver}-freq-selected-bg)`,
+    '--freq-selected-text': `var(--v2-vfo-${receiver}-freq-selected-text)`,
+  });
 
   let selectedDigitIndex = $state<number | null>(null);
   let hoveredDigitIndex = $state<number | null>(null);
@@ -56,7 +67,7 @@
   }
 </script>
 
-<div class="freq" class:compact class:inactive={!active}>
+<div class="freq" class:compact class:inactive={!active} style={Object.entries(cssVars).map(([k, v]) => `${k}:${v}`).join(';')}>
   {#each groups.mhz as digit}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -109,7 +120,7 @@
     font-size: 24px;
     line-height: 1;
     letter-spacing: 0.035em;
-    color: var(--v2-accent-cyan-bright);
+    color: var(--freq-active-color, var(--v2-accent-cyan-bright));
     white-space: nowrap;
     user-select: none;
   }
@@ -119,7 +130,7 @@
   }
 
   .freq.inactive {
-    color: var(--v2-text-muted);
+    color: var(--freq-inactive-color, var(--v2-text-muted));
   }
 
   .digit {
@@ -129,7 +140,7 @@
   }
 
   .digit:hover {
-    color: var(--v2-text-white, #ffffff);
+    color: var(--freq-hover-color, var(--v2-text-white, #ffffff));
   }
 
   .digit.hovered::after {
@@ -139,13 +150,13 @@
     left: 0;
     right: 0;
     height: 2px;
-    background: var(--v2-accent-cyan-bright);
+    background: var(--freq-active-color, var(--v2-accent-cyan-bright));
     opacity: 0.5;
   }
 
   .digit.selected {
-    color: var(--v2-text-white, #ffffff);
-    background: var(--v2-accent-cyan, #00b4d8);
+    color: var(--freq-selected-text, var(--v2-text-white, #ffffff));
+    background: var(--freq-selected-bg, var(--v2-accent-cyan, #00b4d8));
     border-radius: 2px;
     padding: 0 1px;
   }
