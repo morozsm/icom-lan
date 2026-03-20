@@ -1,7 +1,11 @@
 /**
- * Custom IC-7610 Theme — Badge Color Example
+ * Custom IC-7610 Theme — Per-Receiver Badge Color Example
  * 
- * Demonstrates per-badge color customization for personal preference.
+ * Demonstrates three customization levels:
+ * 1. Receiver-specific badge colors (MAIN vs SUB)
+ * 2. Shared badge colors (both receivers)
+ * 3. Receiver accent fallback (automatic MAIN/SUB distinction)
+ * 
  * Based on default dark theme with custom badge colors.
  */
 
@@ -9,18 +13,34 @@
   /* ── Base Theme (inherit from default dark) ────────────── */
   /* Most colors inherited from :root defaults */
 
-  /* ── Custom Badge Colors ────────────────────────────────── */
-  /* Override specific badges for visual distinction */
-  --v2-badge-digi-sel-color: green;    /* DIGI-SEL → green (easier to spot) */
-  --v2-badge-nr-color: orange;         /* NR → orange (warm) */
-  --v2-badge-comp-color: red;          /* COMP → red (warning color) */
-  --v2-badge-ip-plus-color: green;     /* IP+ → green (matching DIGI-SEL) */
-  --v2-badge-tune-color: red;          /* TUNE → red (critical) */
+  /* ── Receiver Accents ───────────────────────────────────── */
+  /* Default accent colors for badges without specific overrides */
+  --v2-receiver-main-accent: cyan;     /* MAIN receiver badges → cyan */
+  --v2-receiver-sub-accent: orange;    /* SUB receiver badges → orange */
+
+  /* ── Receiver-Specific Badge Colors ─────────────────────── */
+  /* Override specific badges for one receiver only */
+  --v2-badge-main-digi-sel-color: cyan;    /* MAIN DIGI-SEL → cyan */
+  --v2-badge-sub-digi-sel-color: green;    /* SUB DIGI-SEL → green (different!) */
   
-  /* All other badges use defaults:
-   * - ATU: green
-   * - PRE/ATT/NB/ANF: cyan
-   * - NOTCH/SPLIT/RIT/XIT: orange
-   * - Default: cyan
+  --v2-badge-main-nr-color: cyan;          /* MAIN NR → cyan */
+  --v2-badge-sub-nr-color: red;            /* SUB NR → red (different!) */
+
+  /* ── Shared Badge Colors (both receivers) ───────────────── */
+  /* These apply to both MAIN and SUB unless overridden above */
+  --v2-badge-comp-color: red;              /* COMP → red (both receivers) */
+  --v2-badge-ip-plus-color: green;         /* IP+ → green (both receivers) */
+  --v2-badge-tune-color: red;              /* TUNE → red (critical, both) */
+  
+  /* ── Fallback Behavior ───────────────────────────────────── */
+  /* Badges without specific color use receiver accent:
+   * - MAIN PRE/ATT/NB/ANF → cyan (from --v2-receiver-main-accent)
+   * - SUB PRE/ATT/NB/ANF → orange (from --v2-receiver-sub-accent)
+   * 
+   * Override chain:
+   * 1. --v2-badge-{receiver}-{type}-color (most specific)
+   * 2. --v2-badge-{type}-color (shared)
+   * 3. --v2-receiver-{receiver}-accent (automatic)
+   * 4. --v2-badge-default-color (fallback)
    */
 }
