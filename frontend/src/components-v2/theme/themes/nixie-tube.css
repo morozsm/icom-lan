@@ -15,21 +15,21 @@
   --v2-border: #332211;
 
   /* ── VFO Frequency Display ─────────────────────────────── */
-  /* MAIN: Orange glow (Nixie tube style) */
-  --v2-vfo-main-freq-active: #ff9933;
-  --v2-vfo-main-freq-inactive: #663311;
+  /* MAIN: Orange glow (Nixie tube style, brighter!) */
+  --v2-vfo-main-freq-active: #ffaa44;
+  --v2-vfo-main-freq-inactive: #cc7733;
   --v2-vfo-main-freq-hover: #ffbb66;
   --v2-vfo-main-freq-selected-bg: #ff6600;
   --v2-vfo-main-freq-selected-text: #000000;
-  --v2-vfo-main-freq-glow: 0 0 16px rgba(255, 153, 51, 0.8), 0 0 32px rgba(255, 102, 0, 0.4);
+  --v2-vfo-main-freq-glow: 0 0 16px rgba(255, 170, 68, 0.9), 0 0 32px rgba(255, 102, 0, 0.5);
   
-  /* SUB: Green glow (VFD style) */
-  --v2-vfo-sub-freq-active: #66ff99;
-  --v2-vfo-sub-freq-inactive: #226644;
+  /* SUB: Green glow (VFD style, brighter!) */
+  --v2-vfo-sub-freq-active: #77ffaa;
+  --v2-vfo-sub-freq-inactive: #55aa77;
   --v2-vfo-sub-freq-hover: #99ffcc;
   --v2-vfo-sub-freq-selected-bg: #33cc66;
   --v2-vfo-sub-freq-selected-text: #000000;
-  --v2-vfo-sub-freq-glow: 0 0 16px rgba(102, 255, 153, 0.8), 0 0 32px rgba(51, 204, 102, 0.4);
+  --v2-vfo-sub-freq-glow: 0 0 16px rgba(119, 255, 170, 0.9), 0 0 32px rgba(51, 204, 102, 0.5);
 
   /* 7-segment font */
   --v2-vfo-font-family: 'DSEG7 Classic', 'Roboto Mono', monospace;
