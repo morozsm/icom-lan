@@ -124,7 +124,7 @@
     border-bottom: 1px solid var(--v2-border-darker, #1a1a2e);
     font-family: 'Roboto Mono', monospace;
     font-size: 11px;
-    color: var(--v2-text-dim, #666);
+    color: var(--v2-text-primary, #fff);
     user-select: none;
   }
 
@@ -138,12 +138,11 @@
     display: flex;
     align-items: center;
     cursor: pointer;
-    opacity: 0.9;
-    transition: opacity 0.15s;
+    transition: transform 0.15s;
   }
 
   .indicator:hover {
-    opacity: 1;
+    transform: scale(1.1);
   }
 
   .status-info {
@@ -166,11 +165,11 @@
     background: var(--v2-bg-input, #1a1a2e);
     border: 1px solid var(--v2-border, #2a2a3e);
     border-radius: 3px;
-    color: var(--v2-text-dim, #888);
+    color: var(--v2-text-primary, #fff);
     cursor: pointer;
     transition: all 0.15s ease;
     font-size: 10px;
-    font-weight: 500;
+    font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
