@@ -408,3 +408,13 @@ Icom™ and the Icom logo are registered trademarks of [Icom Incorporated](https
 ---
 
 73 de KN4KYD 🏗️
+
+
+## Project Scope
+
+`icom-lan` remains the public MIT-licensed open core for radio control, transport, protocol support, and local-first tooling.
+
+Some future product planning, commercial exploration, or private implementation work may happen outside this repository in separate private repositories. That separation is intentional and does not change the open-source status of `icom-lan` itself.
+
+Public improvements that strengthen the core project may still be contributed here when appropriate.
+
