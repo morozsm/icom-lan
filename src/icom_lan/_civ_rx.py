@@ -41,6 +41,8 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 CIV_HEADER_SIZE = 0x15
+_SCOPE_BACKLOG_SHED_THRESHOLD = 256
+_SCOPE_BACKLOG_KEEP_LATEST = 64
 
 __all__ = ["CivRuntime", "CIV_HEADER_SIZE"]
 
@@ -376,6 +378,57 @@ class CivRuntime:
     # CI-V RX loop + routing (from mixin)
     # ------------------------------------------------------------------
 
+    def _is_scope_chunk_packet(self, pkt: bytes) -> bool:
+        """Return True when a UDP packet carries only scope chunk CI-V frame(s)."""
+        if len(pkt) <= CIV_HEADER_SIZE:
+            return False
+        payload = pkt[CIV_HEADER_SIZE:]
+        saw_frame = False
+        for frame_bytes in iter_civ_frames(payload):
+            saw_frame = True
+            try:
+                frame = parse_civ_frame(frame_bytes)
+            except ValueError:
+                return False
+            if not (
+                frame.command == 0x27 and frame.sub == 0x00 and len(frame.data) >= 3
+            ):
+                return False
+        return saw_frame
+
+    def _shed_scope_backlog(self, packets: list[bytes]) -> list[bytes]:
+        """Drop stale scope-only packets when RX backlog gets dangerously large.
+
+        Preserve all non-scope packets and keep only the newest scope packets.
+        This intentionally favors control/state freshness over perfectly complete
+        scope frames under overload conditions.
+        """
+        if len(packets) < _SCOPE_BACKLOG_SHED_THRESHOLD:
+            return packets
+
+        scope_packets: list[bytes] = []
+        non_scope_packets: list[bytes] = []
+        for pkt in packets:
+            if self._is_scope_chunk_packet(pkt):
+                scope_packets.append(pkt)
+            else:
+                non_scope_packets.append(pkt)
+
+        if len(scope_packets) <= _SCOPE_BACKLOG_KEEP_LATEST:
+            return packets
+
+        kept_scope = scope_packets[-_SCOPE_BACKLOG_KEEP_LATEST:]
+        dropped = len(scope_packets) - len(kept_scope)
+        logger.warning(
+            "civ-rx: shedding %d stale scope packet(s) under backlog pressure "
+            "(batch=%d, kept_scope=%d, non_scope=%d)",
+            dropped,
+            len(packets),
+            len(kept_scope),
+            len(non_scope_packets),
+        )
+        return non_scope_packets + kept_scope
+
     async def _civ_rx_loop(self, generation: int) -> None:
         """Continuously consume CI-V transport packets and route events."""
         assert self._host._civ_transport is not None
@@ -396,6 +449,8 @@ class CivRuntime:
                             packets.append(queue.get_nowait())
                         except asyncio.QueueEmpty:
                             break
+
+                packets = self._shed_scope_backlog(packets)
 
                 self._host._last_civ_data_received = time.monotonic()
                 self._host._civ_stream_ready = True
