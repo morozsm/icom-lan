@@ -1,7 +1,7 @@
 export interface ThemeInfo {
   id: string;
   name: string;
-  category: 'dark' | 'light';
+  category: 'dark' | 'light' | 'special';
   preview: string[]; // 5 colors for swatch
 }
 

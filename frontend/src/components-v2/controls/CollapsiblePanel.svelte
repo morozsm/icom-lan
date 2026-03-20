@@ -142,6 +142,6 @@
   }
 
   .panel-content-inner {
-    /* Content wrapper for proper spacing */
+    display: block;
   }
 </style>

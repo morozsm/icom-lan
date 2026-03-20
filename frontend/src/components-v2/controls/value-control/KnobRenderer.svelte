@@ -101,17 +101,18 @@
 
   // Gradient or solid fill
   let gradientId = $derived(`knob-gradient-${Math.random().toString(36).slice(2)}`);
-  let hasGradient = $derived(fillGradient && fillGradient.length > 1);
+  let hasGradient = $derived(Boolean(fillGradient && fillGradient.length > 1));
+  let safeFillGradient = $derived(fillGradient ?? []);
 
   // Display value
   let displayValue = $derived(displayFn ? displayFn(value) : `${value}${unit ? unit : ''}`);
 
   // Debounced change handler
-  let debouncedOnChange = $derived.by(() => {
+  let debouncedOnChange = $derived.by<(...args: unknown[]) => void>(() => {
     if (debounceMs > 0) {
-      return debounce((v: number) => onChange(v), debounceMs);
+      return debounce((v: number) => onChange(v), debounceMs) as (...args: unknown[]) => void;
     }
-    return (v: number) => onChange(v);
+    return ((v: number) => onChange(v)) as (...args: unknown[]) => void;
   });
 
   function emitChange(newValue: number) {
@@ -219,8 +220,8 @@
       {#if hasGradient}
         <defs>
           <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="0%">
-            {#each fillGradient as color, i}
-              <stop offset="{(i / (fillGradient.length - 1)) * 100}%" stop-color={color} />
+            {#each safeFillGradient as color, i}
+              <stop offset="{(i / (safeFillGradient.length - 1)) * 100}%" stop-color={color} />
             {/each}
           </linearGradient>
         </defs>
