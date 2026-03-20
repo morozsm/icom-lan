@@ -110,6 +110,8 @@
       onMainVfoClick={vfoHandlers.onMainVfoClick}
       onSubVfoClick={vfoHandlers.onSubVfoClick}
       onMainModeClick={vfoHandlers.onMainModeClick}
+      onMainFreqChange={vfoHandlers.onMainFreqChange}
+      onSubFreqChange={vfoHandlers.onSubFreqChange}
       onSubModeClick={vfoHandlers.onSubModeClick}
     />
   </section>

@@ -1,6 +1,6 @@
 <script lang="ts">
   import LinearSMeter from '../meters/LinearSMeter.svelte';
-  import FrequencyDisplay from '../display/FrequencyDisplay.svelte';
+  import FrequencyDisplayInteractive from '../display/FrequencyDisplayInteractive.svelte';
   import StatusBadge from '../controls/StatusBadge.svelte';
   import { getCapabilities, vfoLabel } from '$lib/stores/capabilities.svelte';
   import { findActiveBand } from '../controls/band-utils';
@@ -19,6 +19,7 @@
     layoutProfile?: VfoLayoutProfile;
     onModeClick?: () => void;
     onVfoClick?: () => void;
+    onFreqChange?: (freq: number) => void;
   }
 
   let {
@@ -33,6 +34,7 @@
     layoutProfile = 'baseline',
     onModeClick,
     onVfoClick,
+    onFreqChange,
   }: Props = $props();
 
   let slot = $derived<'A' | 'B'>(receiver === 'main' ? 'A' : 'B');
@@ -71,7 +73,7 @@
   <div class="panel-body">
     <div class="display-row">
       <div class="freq-row">
-        <FrequencyDisplay {freq} active={isActive} />
+        <FrequencyDisplayInteractive {freq} active={isActive} {onFreqChange} />
       </div>
 
       {#if rit?.active}

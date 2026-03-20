@@ -21,6 +21,8 @@
     onSubVfoClick?: () => void;
     onMainModeClick?: () => void;
     onSubModeClick?: () => void;
+    onMainFreqChange?: (freq: number) => void;
+    onSubFreqChange?: (freq: number) => void;
   }
 
   let {
@@ -38,6 +40,8 @@
     onSubVfoClick,
     onMainModeClick,
     onSubModeClick,
+    onMainFreqChange,
+    onSubFreqChange,
   }: Props = $props();
 
   let dualReceiver = $derived(hasDualReceiver());
@@ -58,6 +62,7 @@
       {layoutProfile}
       onVfoClick={onMainVfoClick}
       onModeClick={onMainModeClick}
+      onFreqChange={onMainFreqChange}
     />
   </div>
 
@@ -89,6 +94,7 @@
         {layoutProfile}
         onVfoClick={onSubVfoClick}
         onModeClick={onSubModeClick}
+        onFreqChange={onSubFreqChange}
       />
     </div>
   {/if}

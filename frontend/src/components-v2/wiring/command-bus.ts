@@ -78,6 +78,14 @@ export function makeVfoHandlers() {
     onSubVfoClick: () => cmd('set_vfo', { vfo: 'SUB' }),
     onMainModeClick: () => focusModePanel('MAIN'),
     onSubModeClick: () => focusModePanel('SUB'),
+    onMainFreqChange: (freq: number) => {
+      patchActiveReceiver({ freqHz: freq }, true);
+      cmd('set_freq', { freq, receiver: 0 });
+    },
+    onSubFreqChange: (freq: number) => {
+      patchActiveReceiver({ freqHz: freq }, true);
+      cmd('set_freq', { freq, receiver: 1 });
+    },
     onFreqChange: (freq: number, receiver: Receiver = 0) => {
       patchActiveReceiver({ freqHz: freq }, true);
       cmd('set_freq', { freq, receiver });
