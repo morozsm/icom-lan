@@ -22,6 +22,14 @@
   --v2-accent-red: #ff3b30;
   --v2-accent-green: #34c759;
   --v2-accent-yellow: #ffcc00;
+  --v2-accent-green-bright: #5ee085;
+  --v2-accent-green-medium: #30d960;
+  --v2-accent-green-dark: #28a745;
+  --v2-accent-red-alt: #ff5c50;
+  --v2-accent-orange-alt: #ffaa33;
+  --v2-accent-cyan-bright: #66f0ff;
+  --v2-accent-cyan-teal: #00a5bf;
+  --v2-accent-cyan-alt: #00ffff;
 
   /* ── Colors: Text ────────────────────────────────────── */
   --v2-text-primary: #ffffff;
@@ -29,29 +37,102 @@
   --v2-text-muted: #808080;
   --v2-text-header: #00e5ff;
   --v2-text-bright: #ffffff;
-  --v2-text-dim: #909090;
-  --v2-text-disabled: #4a4a4a;
+  --v2-text-white: #FFFFFF;
   --v2-text-light: #e0e0e0;
+  --v2-text-lighter: #f0f0f0;
+  --v2-text-dim: #909090;
+  --v2-text-dimmer: #707070;
+  --v2-text-disabled: #4a4a4a;
+  --v2-text-subdued: #b0b0b0;
+  --v2-text-subtle: #999999;
+
+  /* ── Typography ──────────────────────────────────────────── */
+  --v2-font-mono: 'Roboto Mono', monospace;
+  --v2-font-size-xs: 7px;
+  --v2-font-size-sm: 9px;
+  --v2-font-size-md: 11px;
+  --v2-font-size-lg: 15px;
+  --v2-font-size-xl: 18px;
+  --v2-font-size-2xl: 28px;
+  --v2-header-letter-spacing: 1.4px;
+  --v2-header-font-weight: 700;
+
+  /* ── Spacing ─────────────────────────────────────────────── */
+  --v2-gap-xs: 4px;
+  --v2-gap-sm: 8px;
+  --v2-gap-md: 12px;
+  --v2-gap-lg: 16px;
+  --v2-gap-xl: 24px;
+  --v2-panel-padding: 12px;
+  --v2-panel-radius: 10px;
 
   /* ── Effects: Glows ──────────────────────────────────────── */
   --v2-glow-cyan: 0 0 12px rgba(0, 229, 255, 0.3);
   --v2-glow-orange: 0 0 12px rgba(255, 149, 0, 0.3);
   --v2-glow-red: 0 0 12px rgba(255, 59, 48, 0.3);
 
+  /* ── Effects: Shadows ────────────────────────────────────── */
+  --v2-shadow-sm: 0 6px 18px rgba(0, 0, 0, 0.5);
+  --v2-shadow-md: 0 12px 24px rgba(0, 0, 0, 0.55);
+  --v2-shadow-lg: 0 32px 80px rgba(0, 0, 0, 0.7);
+
+  /* ── Effects: Overlays ───────────────────────────────────── */
+  --v2-overlay-dark: rgba(0, 0, 0, 0.96);
+  --v2-overlay-darker: rgba(0, 0, 0, 0.98);
+  --v2-overlay-medium: rgba(0, 0, 0, 0.92);
+  --v2-overlay-light: rgba(0, 0, 0, 0.75);
+
+  /* ── Effects: Borders with opacity ─────────────────────── */
+  --v2-border-soft: rgba(100, 100, 100, 0.42);
+  --v2-border-softer: rgba(100, 100, 100, 0.24);
+  --v2-border-subtle-soft: rgba(100, 100, 100, 0.18);
+  --v2-border-cyan: rgba(0, 229, 255, 0.28);
+  --v2-border-cyan-bright: rgba(0, 229, 255, 0.52);
+
   /* ── Layer 2: Accents & Data Visualization ─────────────── */
   /* Status Badges */
   --v2-badge-cyan-bg: #002a33;
   --v2-badge-cyan-border: #00e5ff;
+  --v2-badge-cyan-text: #FFFFFF;
   --v2-badge-cyan-glow: rgba(0, 229, 255, 0.22);
   --v2-badge-orange-bg: #331a00;
   --v2-badge-orange-border: #ff9500;
+  --v2-badge-orange-text: #FFF0E4;
   --v2-badge-orange-glow: rgba(255, 149, 0, 0.22);
   --v2-badge-red-bg: #330a0a;
   --v2-badge-red-border: #ff3b30;
+  --v2-badge-red-text: #FFF0ED;
   --v2-badge-red-glow: rgba(255, 59, 48, 0.22);
   --v2-badge-green-bg: #0a330f;
   --v2-badge-green-border: #34c759;
+  --v2-badge-green-text: #F0FFF6;
   --v2-badge-green-glow: rgba(52, 199, 89, 0.22);
+  --v2-badge-muted-bg: #141414;
+  --v2-badge-muted-border: #4a4a4a;
+  --v2-badge-muted-text: #b0b0b0;
+  --v2-badge-muted-glow: rgba(74, 74, 74, 0.10);
+  --v2-badge-inactive-border: #141414;
+  --v2-badge-inactive-text: #4a4a4a;
+
+  /* VFO Indicators */
+  --v2-vfo-active-glow: rgba(0, 229, 255, 0.10);
+  --v2-vfo-badge-active-bg: rgba(15, 60, 25, 0.72);
+  --v2-vfo-badge-active-border: rgba(52, 199, 89, 0.9);
+  --v2-vfo-badge-standby-bg: rgba(15, 15, 15, 0.78);
+  --v2-vfo-badge-standby-border: rgba(70, 70, 70, 0.86);
+  --v2-vfo-meter-tag-bg: rgba(0, 40, 60, 0.65);
+  --v2-vfo-slot-tag-bg: rgba(10, 10, 10, 0.85);
+  --v2-vfo-mode-badge-bg: rgba(0, 45, 68, 0.70);
+  --v2-vfo-filter-badge-bg: rgba(10, 10, 10, 0.88);
+  --v2-vfo-rit-label-bg: rgba(0, 35, 55, 0.55);
+  --v2-vfo-rit-offset-bg: rgba(60, 30, 0, 0.65);
+  --v2-vfo-rit-offset-border: rgba(255, 204, 0, 0.82);
+
+  /* TX Indicators */
+  --v2-tx-tuning: #ff3b30;
+  --v2-tx-active: #ff9500;
+  --v2-tx-idle: #333333;
+  --v2-tx-panel-glow: rgba(255, 59, 48, 0.18);
 
   /* Meter Gradients */
   --v2-meter-s-fill: linear-gradient(90deg, #00e5ff 0%, #33ebff 60%, #99f5ff 100%);
@@ -73,4 +154,61 @@
   --v2-meter-source-power-bg: rgba(255, 204, 0, 0.15);
   --v2-meter-source-power-border: #ffcc00;
   --v2-meter-source-power-text: #ffe680;
+  --v2-meter-tx-bg: rgba(100, 20, 15, 0.55);
+  --v2-meter-tx-border: rgba(255, 59, 48, 0.78);
+  --v2-meter-tx-text: #ffccc8;
+  --v2-meter-tx-active-bg: rgba(140, 30, 20, 0.85);
+  --v2-meter-tx-active-text: #fff2ed;
+  --v2-meter-active-glow: rgba(0, 229, 255, 0.16);
+  --v2-meter-active-shadow: rgba(0, 229, 255, 0.10);
+  --v2-meter-bar-divider: rgba(255, 255, 255, 0.25);
+
+  /* Panel Backgrounds & Overlays */
+  --v2-panel-bg-gradient-top: rgba(15, 15, 15, 0.98);
+  --v2-panel-bg-gradient-bottom: rgba(5, 5, 5, 0.98);
+  --v2-sidebar-gradient-top: rgba(0, 0, 0, 0.98);
+  --v2-sidebar-gradient-bottom: rgba(0, 0, 0, 0.98);
+  --v2-sidebar-footer-bg: rgba(5, 5, 5, 0.95);
+  --v2-vfo-header-gradient-top: rgba(5, 5, 5, 0.98);
+  --v2-vfo-header-gradient-bottom: rgba(0, 0, 0, 0.98);
+  --v2-vfo-header-border: rgba(42, 42, 42, 0.92);
+  --v2-meter-panel-glow: rgba(0, 229, 255, 0.10);
+
+  /* Keyboard Handler & Modal */
+  --v2-modal-backdrop: rgba(0, 0, 0, 0.88);
+  --v2-modal-bg-top: rgba(10, 10, 10, 0.98);
+  --v2-modal-bg-bottom: rgba(0, 0, 0, 0.98);
+  --v2-modal-glow: rgba(0, 229, 255, 0.14);
+  --v2-modal-section-border: rgba(100, 100, 100, 0.12);
+  --v2-modal-key-active-border: rgba(0, 229, 255, 0.40);
+  --v2-modal-key-active-glow: rgba(0, 229, 255, 0.10);
+  --v2-modal-code-border: rgba(0, 229, 255, 0.30);
+  --v2-modal-code-bg: rgba(5, 5, 5, 0.97);
+  --v2-modal-shadow: rgba(0, 0, 0, 0.50);
+
+  /* Popup & Dropdown Backgrounds */
+  --v2-popup-bg: rgba(0, 0, 0, 0.70);
+  --v2-popup-shadow: rgba(0, 0, 0, 0.60);
+  --v2-popup-border-glow: rgba(0, 229, 255, 0.14);
+  --v2-attenuator-bg: rgba(0, 0, 0, 0.65);
+  --v2-attenuator-shadow: rgba(0, 0, 0, 0.50);
+
+  /* Control Elements */
+  --v2-control-button-gradient-top: rgba(15, 15, 15, 0.98);
+  --v2-control-button-gradient-bottom: rgba(5, 5, 5, 0.98);
+  --v2-control-button-highlight: rgba(255, 255, 255, 0.04);
+  --v2-bipolar-gradient-edge: rgba(120, 120, 120, 0.04);
+  --v2-bipolar-gradient-center: rgba(120, 120, 120, 0.02);
+  --v2-bipolar-border: rgba(200, 200, 200, 0.04);
+  --v2-knob-shadow: rgba(255, 255, 255, 0.35);
+  --v2-theme-picker-border: rgba(0, 0, 0, 0.3);
+
+  /* CollapsiblePanel */
+  --v2-collapsible-bg: #000000;
+  --v2-collapsible-border: #2a2a2a;
+  --v2-collapsible-header-bg: #0f0f0f;
+  --v2-collapsible-header-hover-bg: #1a1a1a;
+  --v2-collapsible-header-text: #e0e0e0;
+  --v2-collapsible-chevron: #808080;
+  --v2-collapsible-chevron-hover: #00e5ff;
 }

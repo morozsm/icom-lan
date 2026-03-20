@@ -22,6 +22,14 @@
   --v2-accent-red: #dc322f;
   --v2-accent-green: #859900;
   --v2-accent-yellow: #b58900;
+  --v2-accent-green-bright: #a4b818;
+  --v2-accent-green-medium: #859900;
+  --v2-accent-green-dark: #667500;
+  --v2-accent-red-alt: #e05a4f;
+  --v2-accent-orange-alt: #d6682e;
+  --v2-accent-cyan-bright: #56c4ba;
+  --v2-accent-cyan-teal: #1a8078;
+  --v2-accent-cyan-alt: #35bdb3;
 
   /* ── Colors: Text ────────────────────────────────────── */
   --v2-text-primary: #93a1a1;
@@ -29,29 +37,102 @@
   --v2-text-muted: #586e75;
   --v2-text-header: #268bd2;
   --v2-text-bright: #fdf6e3;
-  --v2-text-dim: #657b83;
-  --v2-text-disabled: #073642;
+  --v2-text-white: #FFFFFF;
   --v2-text-light: #93a1a1;
+  --v2-text-lighter: #b0bebe;
+  --v2-text-dim: #657b83;
+  --v2-text-dimmer: #4d6168;
+  --v2-text-disabled: #073642;
+  --v2-text-subdued: #768e95;
+  --v2-text-subtle: #6a8188;
+
+  /* ── Typography ──────────────────────────────────────────── */
+  --v2-font-mono: 'Roboto Mono', monospace;
+  --v2-font-size-xs: 7px;
+  --v2-font-size-sm: 9px;
+  --v2-font-size-md: 11px;
+  --v2-font-size-lg: 15px;
+  --v2-font-size-xl: 18px;
+  --v2-font-size-2xl: 28px;
+  --v2-header-letter-spacing: 1.4px;
+  --v2-header-font-weight: 700;
+
+  /* ── Spacing ─────────────────────────────────────────────── */
+  --v2-gap-xs: 4px;
+  --v2-gap-sm: 8px;
+  --v2-gap-md: 12px;
+  --v2-gap-lg: 16px;
+  --v2-gap-xl: 24px;
+  --v2-panel-padding: 12px;
+  --v2-panel-radius: 10px;
 
   /* ── Effects: Glows ──────────────────────────────────────── */
   --v2-glow-cyan: 0 0 8px rgba(42, 161, 152, 0.25);
   --v2-glow-orange: 0 0 8px rgba(203, 75, 22, 0.25);
   --v2-glow-red: 0 0 8px rgba(220, 50, 47, 0.25);
 
+  /* ── Effects: Shadows ──────────────────────────────────── */
+  --v2-shadow-sm: 0 6px 18px rgba(0, 0, 0, 0.30);
+  --v2-shadow-md: 0 12px 24px rgba(0, 0, 0, 0.34);
+  --v2-shadow-lg: 0 32px 80px rgba(0, 0, 0, 0.48);
+
+  /* ── Effects: Overlays ─────────────────────────────────── */
+  --v2-overlay-dark: rgba(0, 26, 34, 0.94);
+  --v2-overlay-darker: rgba(0, 20, 26, 0.98);
+  --v2-overlay-medium: rgba(0, 33, 43, 0.9);
+  --v2-overlay-light: rgba(0, 33, 43, 0.72);
+
+  /* ── Effects: Borders with opacity ─────────────────────── */
+  --v2-border-soft: rgba(7, 54, 66, 0.52);
+  --v2-border-softer: rgba(7, 54, 66, 0.28);
+  --v2-border-subtle-soft: rgba(7, 54, 66, 0.18);
+  --v2-border-cyan: rgba(42, 161, 152, 0.24);
+  --v2-border-cyan-bright: rgba(42, 161, 152, 0.48);
+
   /* ── Layer 2: Accents & Data Visualization ─────────────── */
   /* Status Badges */
   --v2-badge-cyan-bg: #002e38;
   --v2-badge-cyan-border: #2aa198;
+  --v2-badge-cyan-text: #FFFFFF;
   --v2-badge-cyan-glow: rgba(42, 161, 152, 0.18);
   --v2-badge-orange-bg: #3a1a0a;
   --v2-badge-orange-border: #cb4b16;
+  --v2-badge-orange-text: #FFF0E4;
   --v2-badge-orange-glow: rgba(203, 75, 22, 0.18);
   --v2-badge-red-bg: #3a0e0e;
   --v2-badge-red-border: #dc322f;
+  --v2-badge-red-text: #FFF0ED;
   --v2-badge-red-glow: rgba(220, 50, 47, 0.18);
   --v2-badge-green-bg: #1a2e00;
   --v2-badge-green-border: #859900;
+  --v2-badge-green-text: #F0FFF6;
   --v2-badge-green-glow: rgba(133, 153, 0, 0.18);
+  --v2-badge-muted-bg: #073642;
+  --v2-badge-muted-border: #586e75;
+  --v2-badge-muted-text: #839496;
+  --v2-badge-muted-glow: rgba(88, 110, 117, 0.10);
+  --v2-badge-inactive-border: #073642;
+  --v2-badge-inactive-text: #586e75;
+
+  /* VFO Indicators */
+  --v2-vfo-active-glow: rgba(42, 161, 152, 0.08);
+  --v2-vfo-badge-active-bg: rgba(26, 70, 0, 0.68);
+  --v2-vfo-badge-active-border: rgba(80, 120, 20, 0.9);
+  --v2-vfo-badge-standby-bg: rgba(0, 33, 43, 0.74);
+  --v2-vfo-badge-standby-border: rgba(7, 54, 66, 0.86);
+  --v2-vfo-meter-tag-bg: rgba(7, 54, 66, 0.62);
+  --v2-vfo-slot-tag-bg: rgba(0, 26, 34, 0.8);
+  --v2-vfo-mode-badge-bg: rgba(10, 56, 70, 0.66);
+  --v2-vfo-filter-badge-bg: rgba(0, 33, 43, 0.86);
+  --v2-vfo-rit-label-bg: rgba(7, 54, 66, 0.5);
+  --v2-vfo-rit-offset-bg: rgba(80, 46, 8, 0.6);
+  --v2-vfo-rit-offset-border: rgba(181, 137, 0, 0.82);
+
+  /* TX Indicators */
+  --v2-tx-tuning: #dc322f;
+  --v2-tx-active: #cb4b16;
+  --v2-tx-idle: #073642;
+  --v2-tx-panel-glow: rgba(220, 50, 47, 0.15);
 
   /* Meter Gradients */
   --v2-meter-s-fill: linear-gradient(90deg, #2aa198 0%, #42b8ae 60%, #90d7d1 100%);
@@ -73,4 +154,61 @@
   --v2-meter-source-power-bg: rgba(181, 137, 0, 0.12);
   --v2-meter-source-power-border: #b58900;
   --v2-meter-source-power-text: #e8c852;
+  --v2-meter-tx-bg: rgba(220, 50, 47, 0.14);
+  --v2-meter-tx-border: rgba(220, 50, 47, 0.56);
+  --v2-meter-tx-text: #f5b0af;
+  --v2-meter-tx-active-bg: rgba(220, 50, 47, 0.52);
+  --v2-meter-tx-active-text: #fff2ed;
+  --v2-meter-active-glow: rgba(42, 161, 152, 0.14);
+  --v2-meter-active-shadow: rgba(42, 161, 152, 0.08);
+  --v2-meter-bar-divider: rgba(255, 255, 255, 0.2);
+
+  /* Panel Backgrounds & Overlays */
+  --v2-panel-bg-gradient-top: rgba(0, 43, 54, 0.98);
+  --v2-panel-bg-gradient-bottom: rgba(0, 33, 43, 0.98);
+  --v2-sidebar-gradient-top: rgba(0, 20, 26, 0.96);
+  --v2-sidebar-gradient-bottom: rgba(0, 14, 20, 0.96);
+  --v2-sidebar-footer-bg: rgba(0, 20, 26, 0.92);
+  --v2-vfo-header-gradient-top: rgba(0, 20, 26, 0.96);
+  --v2-vfo-header-gradient-bottom: rgba(0, 14, 20, 0.96);
+  --v2-vfo-header-border: rgba(7, 54, 66, 0.92);
+  --v2-meter-panel-glow: rgba(42, 161, 152, 0.08);
+
+  /* Keyboard Handler & Modal */
+  --v2-modal-backdrop: rgba(0, 14, 20, 0.82);
+  --v2-modal-bg-top: rgba(0, 33, 43, 0.98);
+  --v2-modal-bg-bottom: rgba(0, 20, 26, 0.98);
+  --v2-modal-glow: rgba(42, 161, 152, 0.12);
+  --v2-modal-section-border: rgba(7, 54, 66, 0.18);
+  --v2-modal-key-active-border: rgba(42, 161, 152, 0.36);
+  --v2-modal-key-active-glow: rgba(42, 161, 152, 0.08);
+  --v2-modal-code-border: rgba(42, 161, 152, 0.26);
+  --v2-modal-code-bg: rgba(0, 20, 26, 0.97);
+  --v2-modal-shadow: rgba(0, 0, 0, 0.36);
+
+  /* Popup & Dropdown Backgrounds */
+  --v2-popup-bg: rgba(0, 20, 26, 0.62);
+  --v2-popup-shadow: rgba(0, 0, 0, 0.48);
+  --v2-popup-border-glow: rgba(42, 161, 152, 0.12);
+  --v2-attenuator-bg: rgba(0, 20, 26, 0.58);
+  --v2-attenuator-shadow: rgba(0, 0, 0, 0.38);
+
+  /* Control Elements */
+  --v2-control-button-gradient-top: rgba(0, 43, 54, 0.98);
+  --v2-control-button-gradient-bottom: rgba(0, 33, 43, 0.98);
+  --v2-control-button-highlight: rgba(255, 255, 255, 0.03);
+  --v2-bipolar-gradient-edge: rgba(88, 110, 117, 0.04);
+  --v2-bipolar-gradient-center: rgba(88, 110, 117, 0.02);
+  --v2-bipolar-border: rgba(147, 161, 161, 0.04);
+  --v2-knob-shadow: rgba(255, 255, 255, 0.3);
+  --v2-theme-picker-border: rgba(0, 0, 0, 0.2);
+
+  /* CollapsiblePanel */
+  --v2-collapsible-bg: #00141a;
+  --v2-collapsible-border: #073642;
+  --v2-collapsible-header-bg: #0a3846;
+  --v2-collapsible-header-hover-bg: #0d4252;
+  --v2-collapsible-header-text: #93a1a1;
+  --v2-collapsible-chevron: #586e75;
+  --v2-collapsible-chevron-hover: #2aa198;
 }

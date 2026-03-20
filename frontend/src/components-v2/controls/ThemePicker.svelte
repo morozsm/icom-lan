@@ -58,22 +58,25 @@
     <div class="theme-dropdown" bind:this={dropdownElement}>
       <div class="theme-dropdown-header">Theme</div>
       <div class="theme-list">
-        {#each themes as theme}
-          <button
-            class="theme-option"
-            class:active={theme.id === currentTheme}
-            onclick={() => selectTheme(theme.id)}
-          >
-            <div class="theme-swatch">
-              {#each theme.preview as color}
-                <div class="swatch-dot" style="background: {color}"></div>
-              {/each}
-            </div>
-            <span class="theme-name">{theme.name}</span>
-            {#if theme.id === currentTheme}
-              <span class="theme-check">✓</span>
-            {/if}
-          </button>
+        {#each ['dark', 'light'] as category}
+          <div class="theme-category-label">{category === 'dark' ? 'Dark' : 'Light'}</div>
+          {#each themes.filter((t) => t.category === category) as theme}
+            <button
+              class="theme-option"
+              class:active={theme.id === currentTheme}
+              onclick={() => selectTheme(theme.id)}
+            >
+              <div class="theme-swatch">
+                {#each theme.preview as color}
+                  <div class="swatch-dot" style="background: {color}"></div>
+                {/each}
+              </div>
+              <span class="theme-name">{theme.name}</span>
+              {#if theme.id === currentTheme}
+                <span class="theme-check">✓</span>
+              {/if}
+            </button>
+          {/each}
         {/each}
       </div>
     </div>
@@ -136,6 +139,21 @@
   .theme-list {
     max-height: 400px;
     overflow-y: auto;
+  }
+
+  .theme-category-label {
+    padding: 6px 12px 4px;
+    font-family: var(--v2-font-mono);
+    font-size: var(--v2-font-size-xs);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--v2-text-muted);
+    border-top: 1px solid var(--v2-border-dark);
+  }
+
+  .theme-category-label:first-child {
+    border-top: none;
   }
 
   .theme-option {
