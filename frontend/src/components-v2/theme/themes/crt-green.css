@@ -15,21 +15,21 @@
   --v2-border: #001100;
 
   /* ── VFO Frequency Display ─────────────────────────────── */
-  /* MAIN: Classic green phosphor */
-  --v2-vfo-main-freq-active: #33ff33;
-  --v2-vfo-main-freq-inactive: #114411;
+  /* MAIN: Classic green phosphor (brighter!) */
+  --v2-vfo-main-freq-active: #44ff44;
+  --v2-vfo-main-freq-inactive: #338833;
   --v2-vfo-main-freq-hover: #66ff66;
   --v2-vfo-main-freq-selected-bg: #22aa22;
   --v2-vfo-main-freq-selected-text: #000000;
-  --v2-vfo-main-freq-glow: 0 0 10px rgba(51, 255, 51, 0.9), 0 0 20px rgba(51, 255, 51, 0.5), 0 0 30px rgba(51, 255, 51, 0.3);
+  --v2-vfo-main-freq-glow: 0 0 10px rgba(68, 255, 68, 1.0), 0 0 20px rgba(68, 255, 68, 0.6), 0 0 30px rgba(68, 255, 68, 0.4);
   
-  /* SUB: Amber phosphor (vintage variant) */
-  --v2-vfo-sub-freq-active: #ffaa33;
-  --v2-vfo-sub-freq-inactive: #443311;
+  /* SUB: Amber phosphor (brighter!) */
+  --v2-vfo-sub-freq-active: #ffbb44;
+  --v2-vfo-sub-freq-inactive: #aa7733;
   --v2-vfo-sub-freq-hover: #ffcc66;
   --v2-vfo-sub-freq-selected-bg: #cc8822;
   --v2-vfo-sub-freq-selected-text: #000000;
-  --v2-vfo-sub-freq-glow: 0 0 10px rgba(255, 170, 51, 0.9), 0 0 20px rgba(255, 170, 51, 0.5);
+  --v2-vfo-sub-freq-glow: 0 0 10px rgba(255, 187, 68, 1.0), 0 0 20px rgba(255, 187, 68, 0.6);
 
   /* VT323 font (retro terminal) */
   --v2-vfo-font-family: 'VT323', 'Courier New', monospace;
