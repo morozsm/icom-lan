@@ -213,8 +213,14 @@
   --v2-collapsible-chevron-hover: #00d4ff;
 }
 
+  /* ── Receiver Accent Colors ─────────────────────────────── */
+  /* Default accent colors for MAIN and SUB receivers */
+  --v2-receiver-main-accent: cyan;
+  --v2-receiver-sub-accent: orange;
+
   /* ── Badge Type Colors ──────────────────────────────────── */
   /* Per-badge color tokens for theme/radio-specific customization */
+  /* Fallback chain: --v2-badge-{receiver}-{type}-color → --v2-badge-{type}-color → --v2-receiver-{receiver}-accent */
   --v2-badge-atu-color: green;
   --v2-badge-pre-color: cyan;
   --v2-badge-att-color: cyan;

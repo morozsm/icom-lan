@@ -41,7 +41,7 @@
   let label = $derived(vfoLabel(slot));
   let slotTag = $derived(label.startsWith('VFO ') ? label.slice(4) : label);
   let activeBand = $derived(findActiveBand(freq, getCapabilities()?.freqRanges ?? []));
-  let badgeItems = $derived(formatBadges(badges));
+  let badgeItems = $derived(formatBadges(badges, receiver));
   let meterVariant = $derived(layoutProfile === 'wide' ? 'vfo-wide' : 'vfo');
 </script>
 
