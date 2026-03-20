@@ -112,25 +112,25 @@ const THEMES: ThemeInfo[] = [
   {
     id: 'custom-ic7610',
     name: 'Custom IC-7610',
-    category: 'dark',
+    category: 'special',
     preview: ['#121720', '#00D4FF', '#00CC66', '#FF6A00', '#FF2020'],
   },
   {
     id: 'nixie-tube',
     name: 'Nixie Tube',
-    category: 'dark',
+    category: 'special',
     preview: ['#0a0a0a', '#ff9933', '#ff6600', '#66ff99', '#33cc66'],
   },
   {
     id: 'lcd-blue',
     name: 'LCD Blue',
-    category: 'dark',
+    category: 'special',
     preview: ['#0a0f14', '#66ccff', '#3399cc', '#66ffcc', '#33cc99'],
   },
   {
     id: 'crt-green',
     name: 'CRT Green',
-    category: 'dark',
+    category: 'special',
     preview: ['#000000', '#33ff33', '#22aa22', '#ffaa33', '#cc8822'],
   },
 ];
