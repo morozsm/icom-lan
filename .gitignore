@@ -50,3 +50,5 @@ dist/
 site/
 docs/issues-dump.md
 references/
+
+.kombai/
