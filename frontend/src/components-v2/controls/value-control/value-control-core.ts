@@ -168,14 +168,14 @@ export function handleWheelStep(
 /**
  * Create a debounced function.
  */
-export function debounce<T extends (...args: unknown[]) => void>(
-  fn: T,
+export function debounce<TArgs extends unknown[]>(
+  fn: (...args: TArgs) => void,
   delay: number
-): T & { cancel: () => void; flush: () => void } {
+): ((...args: TArgs) => void) & { cancel: () => void; flush: () => void } {
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
-  let lastArgs: unknown[] | null = null;
+  let lastArgs: TArgs | null = null;
 
-  const debounced = ((...args: unknown[]) => {
+  const debounced = ((...args: TArgs) => {
     lastArgs = args;
     if (timeoutId !== null) {
       clearTimeout(timeoutId);
@@ -188,7 +188,7 @@ export function debounce<T extends (...args: unknown[]) => void>(
         fn(...savedArgs);
       }
     }, delay);
-  }) as T & { cancel: () => void; flush: () => void };
+  }) as ((...args: TArgs) => void) & { cancel: () => void; flush: () => void };
 
   debounced.cancel = () => {
     if (timeoutId !== null) {

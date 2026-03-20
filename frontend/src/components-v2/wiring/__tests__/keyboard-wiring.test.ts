@@ -42,6 +42,14 @@ import { getRadioState, getActiveReceiver, patchActiveReceiver, patchRadioState 
 import { adjustTuningStep } from '$lib/stores/tuning.svelte';
 import { makeKeyboardHandlers } from '../command-bus';
 
+const makeAction = (action: string, params?: Record<string, unknown>) => ({
+  id: `test-${action}`,
+  section: 'Test',
+  sequence: [],
+  action,
+  ...(params ? { params } : {}),
+});
+
 describe('makeKeyboardHandlers', () => {
   beforeEach(() => {
     vi.mocked(sendCommand).mockClear();
@@ -50,7 +58,7 @@ describe('makeKeyboardHandlers', () => {
   });
 
   it('cycles to the next band by index', () => {
-    makeKeyboardHandlers().dispatch({ action: 'band_select', params: { index: 2 } });
+    makeKeyboardHandlers().dispatch(makeAction('band_select', { index: 2 }));
 
     expect(sendCommand).toHaveBeenCalledWith('set_band', { band: 2 });
   });
@@ -59,7 +67,7 @@ describe('makeKeyboardHandlers', () => {
     vi.mocked(getRadioState).mockReturnValue({ active: 'MAIN' } as any);
     vi.mocked(getActiveReceiver).mockReturnValue({ preamp: 1 } as any);
 
-    makeKeyboardHandlers().dispatch({ action: 'cycle_preamp' });
+    makeKeyboardHandlers().dispatch(makeAction('cycle_preamp'));
 
     expect(sendCommand).toHaveBeenCalledWith('set_preamp', { level: 2, receiver: 0 });
   });
@@ -67,7 +75,7 @@ describe('makeKeyboardHandlers', () => {
   it('toggles split using radio state', () => {
     vi.mocked(getRadioState).mockReturnValue({ split: false } as any);
 
-    makeKeyboardHandlers().dispatch({ action: 'toggle_split' });
+    makeKeyboardHandlers().dispatch(makeAction('toggle_split'));
 
     expect(patchRadioState).toHaveBeenCalledWith({ split: true });
     expect(sendCommand).toHaveBeenCalledWith('set_split', { on: true });
@@ -77,7 +85,7 @@ describe('makeKeyboardHandlers', () => {
     vi.mocked(getRadioState).mockReturnValue({ active: 'MAIN' } as any);
     vi.mocked(getActiveReceiver).mockReturnValue({ dataMode: 3 } as any);
 
-    makeKeyboardHandlers().dispatch({ action: 'cycle_data_mode' });
+    makeKeyboardHandlers().dispatch(makeAction('cycle_data_mode'));
 
     expect(sendCommand).toHaveBeenCalledWith('set_data_mode', { mode: 0, receiver: 0 });
   });
@@ -86,7 +94,7 @@ describe('makeKeyboardHandlers', () => {
     const listener = vi.fn();
     window.addEventListener('icom-lan:open-filter-settings', listener as EventListener);
 
-    makeKeyboardHandlers().dispatch({ action: 'open_filter_settings' });
+    makeKeyboardHandlers().dispatch(makeAction('open_filter_settings'));
 
     expect(listener).toHaveBeenCalledTimes(1);
     window.removeEventListener('icom-lan:open-filter-settings', listener as EventListener);

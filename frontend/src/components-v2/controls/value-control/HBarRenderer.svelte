@@ -71,11 +71,11 @@
   let displayValue = $derived(displayFn ? displayFn(value) : `${value}${unit ? '\u00a0' + unit : ''}`);
 
   // Debounced change handler
-  let debouncedOnChange = $derived.by(() => {
+  let debouncedOnChange = $derived.by<(...args: unknown[]) => void>(() => {
     if (debounceMs > 0) {
-      return debounce((v: number) => onChange(v), debounceMs);
+      return debounce((v: number) => onChange(v), debounceMs) as (...args: unknown[]) => void;
     }
-    return (v: number) => onChange(v);
+    return ((v: number) => onChange(v)) as (...args: unknown[]) => void;
   });
 
   function emitChange(newValue: number) {
