@@ -412,3 +412,73 @@ describe('accent color', () => {
     expect(getContainer(target).getAttribute('style')).toContain('--accent: #00FF88');
   });
 });
+
+// ---------------------------------------------------------------------------
+// 8. Indicator styles
+// ---------------------------------------------------------------------------
+
+describe('indicator styles', () => {
+  it('defaults each segment to the backward-compatible ring indicator', () => {
+    const { target } = mountAndTrack({
+      options: ATT_OPTIONS, selected: 6, onchange: vi.fn(),
+    });
+    getSegments(target).forEach((segment) => {
+      expect(segment.getAttribute('data-indicator-style')).toBe('ring');
+    });
+  });
+
+  it('applies the configured indicator style to each segment', () => {
+    const { target } = mountAndTrack({
+      options: ATT_OPTIONS, selected: 6, onchange: vi.fn(), indicatorStyle: 'edge-bottom',
+    });
+    getSegments(target).forEach((segment) => {
+      expect(segment.getAttribute('data-indicator-style')).toBe('edge-bottom');
+    });
+  });
+
+  it('applies named indicator color tokens as data attributes', () => {
+    const { target } = mountAndTrack({
+      options: ATT_OPTIONS, selected: 6, onchange: vi.fn(), indicatorColor: 'amber',
+    });
+    getSegments(target).forEach((segment) => {
+      expect(segment.getAttribute('data-indicator-color')).toBe('amber');
+    });
+  });
+
+  it('uses a custom indicator color via --indicator-color CSS variable', () => {
+    const { target } = mountAndTrack({
+      options: ATT_OPTIONS,
+      selected: 6,
+      onchange: vi.fn(),
+      indicatorColor: '#ff88cc',
+    });
+    expect(getContainer(target).getAttribute('style')).toContain('--indicator-color: #ff88cc');
+    getSegments(target).forEach((segment) => {
+      expect(segment.hasAttribute('data-indicator-color')).toBe(false);
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 9. Pill variant
+// ---------------------------------------------------------------------------
+
+describe('pill variant', () => {
+  it('adds the pill class to each segment when pill=true', () => {
+    const { target } = mountAndTrack({
+      options: ATT_OPTIONS, selected: 0, onchange: vi.fn(), pill: true,
+    });
+    getSegments(target).forEach((segment) => {
+      expect(segment.classList.contains('v2-control-button--pill')).toBe(true);
+    });
+  });
+
+  it('does not add the pill class by default', () => {
+    const { target } = mountAndTrack({
+      options: ATT_OPTIONS, selected: 0, onchange: vi.fn(),
+    });
+    getSegments(target).forEach((segment) => {
+      expect(segment.classList.contains('v2-control-button--pill')).toBe(false);
+    });
+  });
+});

@@ -12,9 +12,14 @@
     onchange: (value: string | number) => void;
     accentColor?: string;
     compact?: boolean;
+    pill?: boolean;
     disabled?: boolean;
+    indicatorStyle?: 'ring' | 'dot' | 'edge-bottom' | 'edge-left' | 'edge-sides' | 'fill';
+    indicatorColor?: 'cyan' | 'green' | 'amber' | 'red' | 'orange' | 'white' | string | null;
     title?: string | null;
   }
+
+  const indicatorColorTokens = new Set(['cyan', 'green', 'amber', 'red', 'orange', 'white']);
 
   let {
     options,
@@ -22,9 +27,22 @@
     onchange,
     accentColor = 'var(--v2-accent-cyan)',
     compact = false,
+    pill = false,
     disabled = false,
+    indicatorStyle = 'ring',
+    indicatorColor = null,
     title = null,
   }: Props = $props();
+
+  let indicatorColorToken = $derived(
+    indicatorColor && indicatorColorTokens.has(indicatorColor) ? indicatorColor : null,
+  );
+  let customIndicatorColor = $derived(
+    indicatorColor && !indicatorColorTokens.has(indicatorColor) ? indicatorColor : null,
+  );
+  let styleValue = $derived(
+    `--accent: ${accentColor}; --control-accent: ${accentColor};${customIndicatorColor ? ` --indicator-color: ${customIndicatorColor};` : ''}`,
+  );
 
   function handleKeydown(event: KeyboardEvent) {
     if (disabled) return;
@@ -45,7 +63,7 @@
   class:disabled
   role="radiogroup"
   tabindex={disabled ? -1 : 0}
-  style="--accent: {accentColor}"
+  style={styleValue}
   title={title ?? undefined}
   data-shortcut-hint={title ?? undefined}
   onkeydown={handleKeydown}
@@ -58,9 +76,13 @@
       class:active={isActive}
       class:first={i === 0}
       class:last={i === options.length - 1}
+      class:v2-control-button--pill={pill}
       role="radio"
       aria-checked={isActive}
       tabindex="-1"
+      data-active={isActive}
+      data-indicator-style={indicatorStyle}
+      data-indicator-color={indicatorColorToken ?? undefined}
       onclick={() => { if (!disabled) onchange(option.value); }}
     >
       {option.label}
@@ -113,6 +135,10 @@
     min-height: 22px;
     padding: 2px 6px;
     font-size: 9px;
+  }
+
+  .compact .segment.v2-control-button--pill {
+    border-radius: 9999px;
   }
 
   /* Disabled state */

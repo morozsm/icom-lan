@@ -7,6 +7,7 @@
   import { initUiVersion, getUiVersion } from './lib/stores/ui-version.svelte';
   import AppShell from './components/layout/AppShell.svelte';
   import RadioLayoutV2 from './components-v2/layout/RadioLayout.svelte';
+  import ControlButtonDemo from './components-v2/controls/ControlButtonDemo.svelte';
   import './app.css';
 
   let backendError = $state<string | null>(null);
@@ -14,8 +15,15 @@
   let retryCount = 0;
   const MAX_RETRIES = 5;
   const RETRY_DELAYS = [3000, 5000, 10000, 20000, 30000];
+  const demoMode = typeof window !== 'undefined'
+    ? new URLSearchParams(window.location.search).get('demo')
+    : null;
 
   onMount(() => {
+    if (demoMode === 'control-buttons') {
+      return;
+    }
+
     // Initialize UI version from URL param or localStorage
     initUiVersion();
 
@@ -58,7 +66,9 @@
   let uiVersion = $derived(getUiVersion());
 </script>
 
-{#if backendError}
+{#if demoMode === 'control-buttons'}
+  <ControlButtonDemo />
+{:else if backendError}
   <div class="error-overlay" role="alert" aria-live="assertive">
     <div class="error-box">
       <div class="error-icon">⚠</div>
@@ -71,9 +81,7 @@
       {/if}
     </div>
   </div>
-{/if}
-
-{#if uiVersion === 'v2'}
+{:else if uiVersion === 'v2'}
   <RadioLayoutV2 />
 {:else}
   <AppShell />
