@@ -9,6 +9,28 @@ import { formatBadges, formatRitOffset } from '../vfo-utils';
 // ---------------------------------------------------------------------------
 
 describe('formatBadges', () => {
+  beforeEach(() => {
+    // Mock getComputedStyle to return badge colors from CSS custom properties
+    const mockGetPropertyValue = vi.fn((prop: string) => {
+      const badgeColors: Record<string, string> = {
+        '--v2-badge-atu-color': 'green',
+        '--v2-badge-notch-color': 'orange',
+        '--v2-badge-nr-color': 'cyan',
+        '--v2-badge-pre-color': 'cyan',
+        '--v2-badge-nb-color': 'cyan',
+        '--v2-badge-default-color': 'cyan',
+      };
+      return badgeColors[prop] || '';
+    });
+
+    global.getComputedStyle = vi.fn(() => ({
+      getPropertyValue: mockGetPropertyValue,
+    })) as any;
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
   it('returns empty array for empty input', () => {
     expect(formatBadges({})).toEqual([]);
   });
