@@ -10,6 +10,7 @@ import pytest
 from icom_lan.radio import IcomRadio  # noqa: TID251
 from icom_lan.types import HEADER_SIZE, PacketType
 
+from _perf_helpers import fast_connect
 from mock_server import MockIcomRadio
 
 # ---------------------------------------------------------------------------
@@ -167,6 +168,7 @@ async def connected_radio(mock_radio: MockIcomRadio) -> AsyncGenerator[IcomRadio
         password="testpass",
         timeout=5.0,
     )
-    await radio.connect()
+    with fast_connect():
+        await radio.connect()
     yield radio
     await radio.disconnect()

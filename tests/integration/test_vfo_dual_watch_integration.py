@@ -50,6 +50,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 pytestmark = pytest.mark.mock_integration
 
 from icom_lan.radio import IcomRadio  # noqa: E402, TID251
+from _perf_helpers import fast_connect  # noqa: E402
 from mock_server import MockIcomRadio  # noqa: E402
 
 # ---------------------------------------------------------------------------
@@ -195,7 +196,8 @@ async def vfo_radio(vfo_mock: VfoDualWatchMockRadio) -> AsyncGenerator[IcomRadio
         password="testpass",
         timeout=5.0,
     )
-    await radio.connect()
+    with fast_connect():
+        await radio.connect()
     yield radio
     await radio.disconnect()
 

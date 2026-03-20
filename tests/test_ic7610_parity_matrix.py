@@ -206,23 +206,25 @@ def test_parity_matrix_test_files_are_collectable() -> None:
     test_files = _unique_test_files_from_matrix(matrix)
     assert test_files, "Matrix has no test_patterns"
 
-    env = {**os.environ, "PYTHONPATH": str(ROOT / "src")}
-    for rel_path in sorted(test_files):
+    sorted_files = sorted(test_files)
+    for rel_path in sorted_files:
         path = ROOT / rel_path
         assert path.exists(), f"Matrix references missing test file: {rel_path}"
-        result = subprocess.run(
-            [sys.executable, "-m", "pytest", "--collect-only", "-q", rel_path],
-            cwd=ROOT,
-            env=env,
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
-        assert result.returncode == 0, (
-            f"pytest --collect-only {rel_path} failed (exit {result.returncode}): "
-            f"{result.stderr or result.stdout}"
-        )
-        # Ensure at least one collectible item (module may contain only fixtures; that's ok)
-        assert "test session starts" in (result.stdout or "") or "collected" in (
-            result.stdout or ""
-        ), f"pytest did not collect anything from {rel_path}"
+
+    # Batch all files into a single subprocess call instead of one per file
+    env = {**os.environ, "PYTHONPATH": str(ROOT / "src")}
+    result = subprocess.run(
+        [sys.executable, "-m", "pytest", "--collect-only", "-q", *sorted_files],
+        cwd=ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode == 0, (
+        f"pytest --collect-only failed (exit {result.returncode}): "
+        f"{result.stderr or result.stdout}"
+    )
+    assert "test session starts" in (result.stdout or "") or "collected" in (
+        result.stdout or ""
+    ), "pytest did not collect any tests from matrix files"
