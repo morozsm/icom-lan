@@ -193,7 +193,7 @@ describe('VfoHeader visual regression', () => {
         "panels": [
           {
             "filter": "FIL1",
-            "frequency": "14.214.000",
+            "frequency": "14 . 214 . 000",
             "label": "MAIN",
             "meterVariant": "vfo",
             "mode": "USB",
@@ -201,7 +201,7 @@ describe('VfoHeader visual regression', () => {
           },
           {
             "filter": "FIL1",
-            "frequency": "7.170.000",
+            "frequency": "7 . 170 . 000",
             "label": "SUB",
             "meterVariant": "vfo",
             "mode": "LSB",
@@ -265,7 +265,7 @@ describe('VfoHeader visual regression', () => {
         "panels": [
           {
             "filter": "FIL1",
-            "frequency": "14.214.000",
+            "frequency": "14 . 214 . 000",
             "label": "MAIN",
             "meterVariant": "vfo-wide",
             "mode": "USB",
@@ -273,7 +273,7 @@ describe('VfoHeader visual regression', () => {
           },
           {
             "filter": "FIL1",
-            "frequency": "7.170.000",
+            "frequency": "7 . 170 . 000",
             "label": "SUB",
             "meterVariant": "vfo-wide",
             "mode": "LSB",
