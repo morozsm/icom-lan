@@ -1,6 +1,13 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import '../theme/index';
+  import { setTheme, getTheme } from '../theme/theme-switcher';
+  
+  // Apply saved theme immediately (before any component renders)
+  if (typeof window !== 'undefined') {
+    setTheme(getTheme());
+  }
+  
   import { radio } from '$lib/stores/radio.svelte';
   import { applyModeDefault } from '$lib/stores/tuning.svelte';
   import { getCapabilities, getKeyboardConfig, hasDualReceiver, hasTx } from '$lib/stores/capabilities.svelte';
@@ -14,7 +21,6 @@
   import FrequencyDisplay from '../display/FrequencyDisplay.svelte';
   import LinearSMeter from '../meters/LinearSMeter.svelte';
   import ThemePicker from '../controls/ThemePicker.svelte';
-  import { setTheme, getTheme } from '../theme/theme-switcher';
   import {
     parseVfoLayoutScaleOverrides,
     resolveVfoLayoutProfile,
@@ -58,9 +64,7 @@
   });
 
   onMount(() => {
-    // Apply saved theme on load
-    setTheme(getTheme());
-
+    // Theme already applied at module load
     manualVfoScaleOverrides = parseVfoLayoutScaleOverrides(window.location.search);
 
     if (!receiverDeckElement) {
