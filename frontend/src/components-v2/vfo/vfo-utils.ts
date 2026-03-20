@@ -4,15 +4,35 @@ export interface BadgeItem {
   color: string;
 }
 
+/**
+ * Returns the badge color for a given badge key by reading from CSS custom properties.
+ * Falls back to 'cyan' if token not defined.
+ * 
+ * Theme files can override per-badge colors, e.g.:
+ *   --v2-badge-digi-sel-color: green;
+ *   --v2-badge-nr-color: red;
+ */
 function _badgeColor(key: string): string {
-  switch (key.toLowerCase()) {
-    case 'atu':   return 'green';
-    case 'pre':   return 'cyan';
-    case 'nr':    return 'cyan';
-    case 'nb':    return 'cyan';
-    case 'notch': return 'orange';
-    default:      return 'cyan';
+  // Normalize key: "DIGI-SEL" → "digi-sel", "IP+" → "ip-plus"
+  const normalizedKey = key.toLowerCase().replace(/\+/g, '-plus');
+  const tokenName = `--v2-badge-${normalizedKey}-color`;
+  
+  // Read from CSS (browser resolves theme overrides)
+  if (typeof window !== 'undefined' && document.documentElement) {
+    const color = getComputedStyle(document.documentElement)
+      .getPropertyValue(tokenName)
+      .trim();
+    if (color) {
+      return color;
+    }
   }
+  
+  // Fallback to default token if specific badge token missing
+  const defaultColor = getComputedStyle(document.documentElement)
+    .getPropertyValue('--v2-badge-default-color')
+    .trim();
+  
+  return defaultColor || 'cyan';
 }
 
 /**

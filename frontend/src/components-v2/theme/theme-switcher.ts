@@ -62,6 +62,11 @@ const THEMES: ThemeInfo[] = [
     name: 'High Contrast',
     preview: ['#000000', '#00ffff', '#ffaa00', '#00ff00', '#ffff00'],
   },
+  {
+    id: 'custom-ic7610',
+    name: 'Custom IC-7610',
+    preview: ['#121720', '#00D4FF', '#00CC66', '#FF6A00', '#FF2020'],
+  },
 ];
 
 export function getAvailableThemes(): ThemeInfo[] {
