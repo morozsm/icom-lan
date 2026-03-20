@@ -67,6 +67,21 @@ const THEMES: ThemeInfo[] = [
     name: 'Custom IC-7610',
     preview: ['#121720', '#00D4FF', '#00CC66', '#FF6A00', '#FF2020'],
   },
+  {
+    id: 'nixie-tube',
+    name: 'Nixie Tube',
+    preview: ['#0a0a0a', '#ff9933', '#ff6600', '#66ff99', '#33cc66'],
+  },
+  {
+    id: 'lcd-blue',
+    name: 'LCD Blue',
+    preview: ['#0a0f14', '#66ccff', '#3399cc', '#66ffcc', '#33cc99'],
+  },
+  {
+    id: 'crt-green',
+    name: 'CRT Green',
+    preview: ['#000000', '#33ff33', '#22aa22', '#ffaa33', '#cc8822'],
+  },
 ];
 
 export function getAvailableThemes(): ThemeInfo[] {

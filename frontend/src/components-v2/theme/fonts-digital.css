@@ -1,0 +1,37 @@
+/**
+ * Digital/7-Segment Fonts for VFO Display
+ * 
+ * DSEG7 Classic: 7-segment LCD/LED style (free, OFL)
+ * Source: https://github.com/keshikan/DSEG
+ */
+
+@font-face {
+  font-family: 'DSEG7 Classic';
+  src: url('https://cdn.jsdelivr.net/gh/keshikan/DSEG@master/fonts/DSEG7-Classic/DSEG7Classic-Regular.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'DSEG7 Classic';
+  src: url('https://cdn.jsdelivr.net/gh/keshikan/DSEG@master/fonts/DSEG7-Classic/DSEG7Classic-Bold.woff2') format('woff2');
+  font-weight: bold;
+  font-style: normal;
+  font-display: swap;
+}
+
+/**
+ * Orbitron: Futuristic geometric sans (Google Fonts)
+ */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+
+/**
+ * Share Tech Mono: Monospace digital style (Google Fonts)
+ */
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+/**
+ * VT323: Retro CRT terminal (Google Fonts)
+ */
+@import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');

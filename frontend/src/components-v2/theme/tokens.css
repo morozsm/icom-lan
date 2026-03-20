@@ -260,3 +260,13 @@
   --v2-vfo-sub-freq-hover: var(--v2-text-white);
   --v2-vfo-sub-freq-selected-bg: var(--v2-accent-orange);
   --v2-vfo-sub-freq-selected-text: var(--v2-text-white);
+
+  /* VFO Frequency Glow Effects (lamp/LED/tube style) */
+  --v2-vfo-main-freq-glow: 0 0 12px rgba(124, 252, 229, 0.5);
+  --v2-vfo-sub-freq-glow: 0 0 12px rgba(255, 106, 0, 0.5);
+  --v2-vfo-freq-glow-intensity: 1.0;  /* 0.0-2.0, multiplier for glow strength */
+  
+  /* VFO Font Customization (7-segment, digital, retro) */
+  --v2-vfo-font-family: 'Roboto Mono', monospace;  /* Default: monospace */
+  --v2-vfo-font-weight: 700;
+  --v2-vfo-font-style: normal;

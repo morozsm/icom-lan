@@ -28,6 +28,9 @@
     '--freq-hover-color': `var(--v2-vfo-${receiver}-freq-hover)`,
     '--freq-selected-bg': `var(--v2-vfo-${receiver}-freq-selected-bg)`,
     '--freq-selected-text': `var(--v2-vfo-${receiver}-freq-selected-text)`,
+    '--freq-glow': `var(--v2-vfo-${receiver}-freq-glow)`,
+    '--freq-font-family': `var(--v2-vfo-font-family)`,
+    '--freq-font-weight': `var(--v2-vfo-font-weight)`,
   });
 
   let selectedDigitIndex = $state<number | null>(null);
@@ -115,12 +118,13 @@
   .freq {
     display: inline-flex;
     align-items: baseline;
-    font-family: 'Roboto Mono', monospace;
-    font-weight: 700;
+    font-family: var(--freq-font-family, 'Roboto Mono', monospace);
+    font-weight: var(--freq-font-weight, 700);
     font-size: 24px;
     line-height: 1;
     letter-spacing: 0.035em;
     color: var(--freq-active-color, var(--v2-accent-cyan-bright));
+    text-shadow: var(--freq-glow, none);
     white-space: nowrap;
     user-select: none;
   }
