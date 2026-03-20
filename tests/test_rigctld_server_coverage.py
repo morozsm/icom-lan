@@ -433,7 +433,7 @@ async def test_max_clients_rejected(mock_radio: MagicMock) -> None:
     handler = _make_handler()
 
     async def slow_execute(cmd: RigctldCommand) -> RigctldResponse:
-        await asyncio.sleep(1.0)
+        await asyncio.sleep(0.05)
         return _FREQ_RESP
 
     handler.execute = slow_execute

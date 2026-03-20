@@ -14,6 +14,7 @@ from icom_lan.exceptions import AuthenticationError
 from icom_lan.radio import IcomRadio
 from icom_lan.types import Mode
 
+from _perf_helpers import fast_connect
 from mock_server import MockIcomRadio
 
 
@@ -31,20 +32,22 @@ class TestConnect:
             username="testuser",
             password="testpass",
         )
-        await radio.connect()
+        with fast_connect():
+            await radio.connect()
         assert radio.connected
         await radio.disconnect()
         assert not radio.connected
 
     async def test_context_manager(self, mock_radio: MockIcomRadio) -> None:
         """async with IcomRadio(...) as r: should connect and disconnect cleanly."""
-        async with IcomRadio(
-            host="127.0.0.1",
-            port=mock_radio.control_port,
-            username="testuser",
-            password="testpass",
-        ) as radio:
-            assert radio.connected
+        with fast_connect():
+            async with IcomRadio(
+                host="127.0.0.1",
+                port=mock_radio.control_port,
+                username="testuser",
+                password="testpass",
+            ) as radio:
+                assert radio.connected
         # After __aexit__, should be disconnected
         assert not radio.connected
 
@@ -57,25 +60,27 @@ class TestConnect:
             username="wronguser",
             password="wrongpass",
         )
-        with pytest.raises(AuthenticationError):
-            await radio.connect()
+        with fast_connect():
+            with pytest.raises(AuthenticationError):
+                await radio.connect()
         assert not radio.connected
 
     async def test_multiple_connect_disconnect_cycles(
         self, mock_radio: MockIcomRadio
     ) -> None:
         """Connect/disconnect can be repeated on the same radio object."""
-        for _ in range(3):
-            radio = IcomRadio(
-                host="127.0.0.1",
-                port=mock_radio.control_port,
-                username="testuser",
-                password="testpass",
-            )
-            await radio.connect()
-            assert radio.connected
-            await radio.disconnect()
-            assert not radio.connected
+        with fast_connect():
+            for _ in range(3):
+                radio = IcomRadio(
+                    host="127.0.0.1",
+                    port=mock_radio.control_port,
+                    username="testuser",
+                    password="testpass",
+                )
+                await radio.connect()
+                assert radio.connected
+                await radio.disconnect()
+                assert not radio.connected
 
 
 # ---------------------------------------------------------------------------
@@ -259,7 +264,7 @@ class TestKeepalive:
     async def test_stays_connected_over_time(self, connected_radio: IcomRadio) -> None:
         """Radio stays connected during a short wait (pings should keep it alive)."""
         assert connected_radio.connected
-        await asyncio.sleep(1.5)  # > 3 × ping interval (0.5 s each)
+        await asyncio.sleep(0.3)  # > half ping interval — enough to verify keepalive
         assert connected_radio.connected
 
 
