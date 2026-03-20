@@ -36,10 +36,10 @@
   --v2-vfo-font-weight: 400;
   
   /* Receiver accents */
-  --v2-receiver-main-accent: green;
-  --v2-receiver-sub-accent: orange;
+  --v2-receiver-main-accent: #00CC66;
+  --v2-receiver-sub-accent: #FF6A00;
   
   /* Badge colors */
-  --v2-badge-atu-color: green;
-  --v2-badge-default-color: green;
+  --v2-badge-atu-color: #00CC66;
+  --v2-badge-default-color: #00CC66;
 }

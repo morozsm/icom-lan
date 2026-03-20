@@ -36,6 +36,6 @@
   --v2-vfo-font-weight: 700;
   
   /* Receiver accents */
-  --v2-receiver-main-accent: cyan;
-  --v2-receiver-sub-accent: green;
+  --v2-receiver-main-accent: #00D4FF;
+  --v2-receiver-sub-accent: #00CC66;
 }
