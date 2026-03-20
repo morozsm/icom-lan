@@ -101,7 +101,7 @@
     background: var(--v2-bg-input, #1a1a2e);
     border: 1px solid var(--v2-border, #2a2a3e);
     border-radius: 3px;
-    color: var(--v2-text-dim, #888);
+    color: var(--v2-text-primary, #fff);
     cursor: pointer;
     transition: all 0.15s ease;
   }
