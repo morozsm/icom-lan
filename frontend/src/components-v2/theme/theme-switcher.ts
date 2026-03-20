@@ -6,6 +6,7 @@ export interface ThemeInfo {
 }
 
 const STORAGE_KEY = 'icom-lan:theme';
+const VFO_STORAGE_KEY = 'icom-lan:vfo-theme';
 
 const THEMES: ThemeInfo[] = [
   // Dark themes
@@ -173,5 +174,40 @@ export function setTheme(id: string): void {
     delete document.documentElement.dataset.theme;
   } else {
     document.documentElement.dataset.theme = id;
+  }
+}
+
+export function getVfoTheme(): string | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  try {
+    return localStorage.getItem(VFO_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setVfoTheme(id: string | null): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  // Store preference
+  try {
+    if (id === null) {
+      localStorage.removeItem(VFO_STORAGE_KEY);
+    } else {
+      localStorage.setItem(VFO_STORAGE_KEY, id);
+    }
+  } catch (err) {
+    console.warn('Failed to save VFO theme preference:', err);
+  }
+
+  // Apply to DOM
+  if (id === null) {
+    delete document.documentElement.dataset.vfoTheme;
+  } else {
+    document.documentElement.dataset.vfoTheme = id;
   }
 }
