@@ -465,7 +465,16 @@ async def test_cmd_audio_loopback_queue_full_and_worker_error(
         json=True,
         stats=False,
     )
-    rc = await _cmd_audio_loopback(radio, args)
+    # Patch asyncio.sleep to skip tx_worker frame-interval delays (0.02s × N frames)
+    _real_sleep = asyncio.sleep
+
+    async def _no_frame_sleep(delay, *a, **kw):
+        if delay <= 0.02:
+            return
+        return await _real_sleep(delay, *a, **kw)
+
+    with patch("asyncio.sleep", _no_frame_sleep):
+        rc = await _cmd_audio_loopback(radio, args)
     assert rc == 0
     payload = json.loads(capsys.readouterr().out)
     assert payload["dropped_frames"] > 0

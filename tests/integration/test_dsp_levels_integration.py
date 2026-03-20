@@ -40,6 +40,7 @@ pytestmark = pytest.mark.mock_integration
 from icom_lan.commands import RECEIVER_MAIN, RECEIVER_SUB  # noqa: E402
 from icom_lan.radio import IcomRadio  # noqa: E402, TID251
 from icom_lan.types import FilterShape, SsbTxBandwidth  # noqa: E402
+from _perf_helpers import fast_connect  # noqa: E402
 from mock_server import MockIcomRadio  # noqa: E402
 
 # ---------------------------------------------------------------------------
@@ -329,7 +330,8 @@ async def dsp_radio(dsp_mock: DspLevelsMockRadio) -> AsyncGenerator[IcomRadio, N
         password="testpass",
         timeout=5.0,
     )
-    await radio.connect()
+    with fast_connect():
+        await radio.connect()
     yield radio
     await radio.disconnect()
 

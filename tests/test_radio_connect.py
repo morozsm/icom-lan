@@ -169,6 +169,13 @@ class TestReceiveCivPort:
     async def test_timeout_returns_zero(self) -> None:
         radio = IcomRadio("192.168.1.100", timeout=0.2)
         mt = ConnectMockTransport()
+        # Cap receive_packet timeout so the 2.0s deadline loop iterates fast
+        _orig_recv = mt.receive_packet
+
+        async def _fast_recv(timeout=5.0):
+            return await _orig_recv(timeout=min(timeout, 0.02))
+
+        mt.receive_packet = _fast_recv  # type: ignore[assignment]
         radio._ctrl_transport = mt
         port = await radio._control_phase._receive_civ_port()
         assert port == 0
@@ -260,6 +267,13 @@ class TestWaitForPacket:
     async def test_timeout(self) -> None:
         radio = IcomRadio("192.168.1.100", timeout=0.1)
         mt = ConnectMockTransport()
+        # Cap receive_packet timeout so the 2.0s deadline is reached quickly
+        _orig_recv = mt.receive_packet
+
+        async def _fast_recv(timeout=5.0):
+            return await _orig_recv(timeout=min(timeout, 0.02))
+
+        mt.receive_packet = _fast_recv  # type: ignore[assignment]
         with pytest.raises(TimeoutError, match="test timed out"):
             await radio._control_phase._wait_for_packet(mt, size=0x60, label="test")
 

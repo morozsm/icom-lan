@@ -38,6 +38,7 @@ pytestmark = pytest.mark.mock_integration
 from icom_lan.commands import RECEIVER_MAIN, RECEIVER_SUB  # noqa: E402
 from icom_lan.radio import IcomRadio  # noqa: E402, TID251
 from icom_lan.types import AgcMode, AudioPeakFilter, BreakInMode  # noqa: E402
+from _perf_helpers import fast_connect  # noqa: E402
 from mock_server import MockIcomRadio  # noqa: E402
 
 # ---------------------------------------------------------------------------
@@ -351,7 +352,8 @@ async def toggle_radio(toggle_mock: ToggleMockRadio) -> AsyncGenerator[IcomRadio
         password="testpass",
         timeout=5.0,
     )
-    await radio.connect()
+    with fast_connect():
+        await radio.connect()
     yield radio
     await radio.disconnect()
 
@@ -900,7 +902,8 @@ class TestNakHandling:
                 password="testpass",
                 timeout=1.0,
             )
-            await nak_radio.connect()
+            with fast_connect():
+                await nak_radio.connect()
             try:
                 with pytest.raises((ValueError, IcomTimeoutError, Exception)):
                     await nak_radio.get_agc()
