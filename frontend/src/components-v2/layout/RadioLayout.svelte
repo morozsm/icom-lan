@@ -20,7 +20,6 @@
   import DockMeterPanel from '../panels/DockMeterPanel.svelte';
   import FrequencyDisplay from '../display/FrequencyDisplay.svelte';
   import LinearSMeter from '../meters/LinearSMeter.svelte';
-  import ThemePicker from '../controls/ThemePicker.svelte';
   import {
     parseVfoLayoutScaleOverrides,
     resolveVfoLayoutProfile,
@@ -94,10 +93,6 @@
 <div class="radio-layout">
   <StatusBar />
   <KeyboardHandler config={keyboardConfig} onAction={keyboardHandlers.dispatch} />
-
-  <div class="theme-picker-container">
-    <ThemePicker />
-  </div>
 
   <section class="receiver-deck" bind:this={receiverDeckElement} style={receiverDeckStyle}>
     <VfoHeader
@@ -213,13 +208,6 @@
     padding: 5px;
     min-height: 0;
     border-color: var(--v2-border-panel);
-  }
-
-  .theme-picker-container {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    z-index: 1000;
   }
 
   .receiver-deck :global(.vfo-header) {

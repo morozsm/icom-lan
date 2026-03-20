@@ -70,19 +70,19 @@
 <div class="status-bar">
   <div class="status-indicators">
     <span class="indicator" title="Radio ↔ Server: {radioState}">
-      <Radio size={14} color={stateColor(radioState)} strokeWidth={1.5} />
+      <Radio size={14} color={stateColor(radioState)} strokeWidth={2} />
     </span>
     <span class="indicator" title="Control WebSocket: {controlState}">
-      <Cable size={14} color={stateColor(controlState)} strokeWidth={1.5} />
+      <Cable size={14} color={stateColor(controlState)} strokeWidth={2} />
     </span>
     <span class="indicator" title="Scope WebSocket: {scopeState}">
-      <Activity size={14} color={stateColor(scopeState)} strokeWidth={1.5} />
+      <Activity size={14} color={stateColor(scopeState)} strokeWidth={2} />
     </span>
     <span class="indicator" title="Audio WebSocket: {audioState}">
-      <Volume2 size={14} color={stateColor(audioState)} strokeWidth={1.5} />
+      <Volume2 size={14} color={stateColor(audioState)} strokeWidth={2} />
     </span>
     <span class="indicator" title="State HTTP: {httpState}">
-      <ArrowDownUp size={14} color={stateColor(httpState)} strokeWidth={1.5} />
+      <ArrowDownUp size={14} color={stateColor(httpState)} strokeWidth={2} />
     </span>
   </div>
 
@@ -98,7 +98,7 @@
       onclick={handleConnectionToggle}
       title={radioState === 'connected' ? 'Disconnect from radio' : 'Connect to radio'}
     >
-      <Unplug size={14} strokeWidth={1.5} />
+      <Unplug size={14} strokeWidth={2} />
       <span class="btn-label">{radioState === 'connected' ? 'Disconnect' : 'Connect'}</span>
     </button>
     <button
@@ -107,7 +107,7 @@
       onclick={handlePowerToggle}
       title={radioState === 'connected' ? 'Power OFF radio' : 'Power ON radio'}
     >
-      <Power size={14} strokeWidth={1.5} />
+      <Power size={14} strokeWidth={2} />
       <span class="btn-label">{radioState === 'connected' ? 'OFF' : 'ON'}</span>
     </button>
   </div>
