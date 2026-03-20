@@ -378,6 +378,30 @@ async def test_civ_rx_loop_drains_extra_packets_from_queue(
     assert radio._civ_rx_task is None or radio._civ_rx_task.done()
 
 
+async def test_civ_rx_loop_sheds_stale_scope_backlog_but_keeps_control_packets(
+    radio: IcomRadio, transport: MockTransport
+) -> None:
+    """Under heavy backlog, stale scope-only packets are shed but control survives."""
+    runtime = radio._civ_runtime
+
+    scope_data = b"\x00\x01\x02"
+    scope_civ = build_civ_frame(
+        CONTROLLER_ADDR, IC_7610_ADDR, 0x27, sub=0x00, data=scope_data
+    )
+    scope_udp = _wrap_civ_in_udp(scope_civ)
+
+    freq_data = bcd_encode(14_074_000)
+    freq_civ = build_civ_frame(CONTROLLER_ADDR, IC_7610_ADDR, 0x03, data=freq_data)
+    freq_udp = _wrap_civ_in_udp(freq_civ)
+
+    packets = [scope_udp] * 300 + [freq_udp]
+    shed = runtime._shed_scope_backlog(packets)
+
+    assert len(shed) < len(packets)
+    assert freq_udp in shed
+    assert sum(1 for pkt in shed if pkt == scope_udp) == 64
+
+
 async def test_civ_rx_loop_skips_short_packets(
     radio: IcomRadio, transport: MockTransport
 ) -> None:
