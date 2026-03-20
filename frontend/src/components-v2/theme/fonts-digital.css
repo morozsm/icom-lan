@@ -1,3 +1,7 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
 /**
  * Digital/7-Segment Fonts for VFO Display
  * 
@@ -21,17 +25,10 @@
   font-display: swap;
 }
 
-/**
- * Orbitron: Futuristic geometric sans (Google Fonts)
+/*
+ * Imported above because CSS @import must precede all other rules.
+ * Fonts used by digital/VFO themes:
+ * - Orbitron: futuristic geometric sans
+ * - Share Tech Mono: digital monospace
+ * - VT323: retro CRT terminal
  */
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
-
-/**
- * Share Tech Mono: Monospace digital style (Google Fonts)
- */
-@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
-
-/**
- * VT323: Retro CRT terminal (Google Fonts)
- */
-@import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
