@@ -15,21 +15,21 @@
   --v2-border: #1a3040;
 
   /* ── VFO Frequency Display ─────────────────────────────── */
-  /* MAIN: Blue LCD glow */
-  --v2-vfo-main-freq-active: #66ccff;
-  --v2-vfo-main-freq-inactive: #2a4a5a;
+  /* MAIN: Blue LCD glow (brighter!) */
+  --v2-vfo-main-freq-active: #77ddff;
+  --v2-vfo-main-freq-inactive: #5588aa;
   --v2-vfo-main-freq-hover: #99ddff;
   --v2-vfo-main-freq-selected-bg: #3399cc;
   --v2-vfo-main-freq-selected-text: #ffffff;
-  --v2-vfo-main-freq-glow: 0 0 8px rgba(102, 204, 255, 0.6);
+  --v2-vfo-main-freq-glow: 0 0 10px rgba(119, 221, 255, 0.8);
   
-  /* SUB: Cyan LCD glow */
-  --v2-vfo-sub-freq-active: #66ffcc;
-  --v2-vfo-sub-freq-inactive: #2a5a4a;
+  /* SUB: Cyan LCD glow (brighter!) */
+  --v2-vfo-sub-freq-active: #77ffdd;
+  --v2-vfo-sub-freq-inactive: #55aa88;
   --v2-vfo-sub-freq-hover: #99ffdd;
   --v2-vfo-sub-freq-selected-bg: #33cc99;
   --v2-vfo-sub-freq-selected-text: #ffffff;
-  --v2-vfo-sub-freq-glow: 0 0 8px rgba(102, 255, 204, 0.6);
+  --v2-vfo-sub-freq-glow: 0 0 10px rgba(119, 255, 221, 0.8);
 
   /* Orbitron font (futuristic) */
   --v2-vfo-font-family: 'Orbitron', 'Roboto Mono', monospace;
