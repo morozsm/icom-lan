@@ -37,7 +37,7 @@
   --v2-text-muted: #8c8fa1;
   --v2-text-header: #1e66f5;
   --v2-text-bright: #2c2d3f;
-  --v2-text-white: #FFFFFF;
+  --v2-text-white: #000000;
   --v2-text-light: #5c5f77;
   --v2-text-lighter: #4c4f69;
   --v2-text-dim: #7c7f93;
@@ -93,7 +93,7 @@
   /* Status Badges */
   --v2-badge-cyan-bg: #d5e2fc;
   --v2-badge-cyan-border: #1e66f5;
-  --v2-badge-cyan-text: #FFFFFF;
+  --v2-badge-cyan-text: #004455;
   --v2-badge-cyan-glow: rgba(30, 102, 245, 0.10);
   --v2-badge-orange-bg: #fee0cc;
   --v2-badge-orange-border: #fe640b;
