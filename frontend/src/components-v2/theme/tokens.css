@@ -246,3 +246,17 @@
   --v2-badge-lock-color: orange;
   --v2-badge-scope-color: cyan;
   --v2-badge-default-color: cyan;
+
+  /* ── VFO Frequency Display Colors ───────────────────────── */
+  /* Per-receiver frequency display customization */
+  --v2-vfo-main-freq-active: var(--v2-accent-cyan-bright);
+  --v2-vfo-main-freq-inactive: var(--v2-text-muted);
+  --v2-vfo-main-freq-hover: var(--v2-text-white);
+  --v2-vfo-main-freq-selected-bg: var(--v2-accent-cyan);
+  --v2-vfo-main-freq-selected-text: var(--v2-text-white);
+  
+  --v2-vfo-sub-freq-active: var(--v2-accent-orange);
+  --v2-vfo-sub-freq-inactive: var(--v2-text-muted);
+  --v2-vfo-sub-freq-hover: var(--v2-text-white);
+  --v2-vfo-sub-freq-selected-bg: var(--v2-accent-orange);
+  --v2-vfo-sub-freq-selected-text: var(--v2-text-white);
