@@ -212,3 +212,31 @@
   --v2-collapsible-chevron: #888;
   --v2-collapsible-chevron-hover: #00d4ff;
 }
+
+  /* ── Badge Type Colors ──────────────────────────────────── */
+  /* Per-badge color tokens for theme/radio-specific customization */
+  --v2-badge-atu-color: green;
+  --v2-badge-pre-color: cyan;
+  --v2-badge-att-color: cyan;
+  --v2-badge-nr-color: cyan;
+  --v2-badge-nb-color: cyan;
+  --v2-badge-anf-color: cyan;
+  --v2-badge-notch-color: orange;
+  --v2-badge-comp-color: cyan;
+  --v2-badge-vox-color: cyan;
+  --v2-badge-bkin-color: cyan;
+  --v2-badge-apf-color: cyan;
+  --v2-badge-digi-sel-color: cyan;
+  --v2-badge-ip-plus-color: cyan;
+  --v2-badge-split-color: orange;
+  --v2-badge-dual-watch-color: cyan;
+  --v2-badge-data-color: cyan;
+  --v2-badge-pbt-color: cyan;
+  --v2-badge-agc-color: cyan;
+  --v2-badge-rit-color: orange;
+  --v2-badge-xit-color: orange;
+  --v2-badge-mon-color: cyan;
+  --v2-badge-tune-color: red;
+  --v2-badge-lock-color: orange;
+  --v2-badge-scope-color: cyan;
+  --v2-badge-default-color: cyan;

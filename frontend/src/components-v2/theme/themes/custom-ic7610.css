@@ -1,0 +1,26 @@
+/**
+ * Custom IC-7610 Theme — Badge Color Example
+ * 
+ * Demonstrates per-badge color customization for personal preference.
+ * Based on default dark theme with custom badge colors.
+ */
+
+[data-theme="custom-ic7610"] {
+  /* ── Base Theme (inherit from default dark) ────────────── */
+  /* Most colors inherited from :root defaults */
+
+  /* ── Custom Badge Colors ────────────────────────────────── */
+  /* Override specific badges for visual distinction */
+  --v2-badge-digi-sel-color: green;    /* DIGI-SEL → green (easier to spot) */
+  --v2-badge-nr-color: orange;         /* NR → orange (warm) */
+  --v2-badge-comp-color: red;          /* COMP → red (warning color) */
+  --v2-badge-ip-plus-color: green;     /* IP+ → green (matching DIGI-SEL) */
+  --v2-badge-tune-color: red;          /* TUNE → red (critical) */
+  
+  /* All other badges use defaults:
+   * - ATU: green
+   * - PRE/ATT/NB/ANF: cyan
+   * - NOTCH/SPLIT/RIT/XIT: orange
+   * - Default: cyan
+   */
+}
