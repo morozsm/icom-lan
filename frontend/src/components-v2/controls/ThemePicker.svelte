@@ -58,9 +58,13 @@
     <div class="theme-dropdown" bind:this={dropdownElement}>
       <div class="theme-dropdown-header">Theme</div>
       <div class="theme-list">
-        {#each ['dark', 'light'] as category}
-          <div class="theme-category-label">{category === 'dark' ? 'Dark' : 'Light'}</div>
-          {#each themes.filter((t) => t.category === category) as theme}
+        {#each ['dark', 'light', 'special'] as category}
+          {@const categoryThemes = themes.filter((t) => t.category === category)}
+          {#if categoryThemes.length > 0}
+            <div class="theme-category-label">
+              {category === 'dark' ? 'Dark' : category === 'light' ? 'Light' : 'Special'}
+            </div>
+            {#each categoryThemes as theme}
             <button
               class="theme-option"
               class:active={theme.id === currentTheme}
@@ -76,7 +80,8 @@
                 <span class="theme-check">✓</span>
               {/if}
             </button>
-          {/each}
+            {/each}
+          {/if}
         {/each}
       </div>
     </div>
