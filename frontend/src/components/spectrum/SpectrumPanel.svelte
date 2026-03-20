@@ -19,6 +19,8 @@
   import { getFilterWidthHz } from '../../lib/utils/filter-width';
   import { snapToStep } from '../../lib/stores/tuning.svelte';
   import { deriveIfShift } from '../../components-v2/panels/filter-controls';
+  import { getCapabilities } from '../../lib/stores/capabilities.svelte';
+  import { resolveFilterModeConfig } from '../../components-v2/wiring/state-adapter';
   import {
     canResizeFromRightEdge,
     getFilterWidthFromRightEdgePx,
@@ -79,6 +81,9 @@
   let passbandHz = $derived(rx?.filterWidth ?? getFilterWidthHz(rxMode, rx?.filter ?? 1));
   let passbandShiftHz = $derived(deriveIfShift(rx?.pbtInner ?? 0, rx?.pbtOuter ?? 0));
   let canResizePassband = $derived(canResizeFromRightEdge(rxMode));
+  let filterConfig = $derived(resolveFilterModeConfig(getCapabilities(), rxMode, rx?.dataMode));
+  let filterMaxHz = $derived(filterConfig?.maxHz ?? 10000);
+  let filterStepHz = $derived(filterConfig?.stepHz ?? filterConfig?.segments?.[0]?.stepHz ?? 100);
 
   let spectrumOptions = $derived<SpectrumOptions>({
     ...defaultSpectrumOptions,
@@ -166,6 +171,8 @@
       spanHz,
       rect.width,
       relativeX,
+      filterMaxHz,
+      filterStepHz,
     );
 
     if (nextWidth !== null) {

@@ -32,12 +32,21 @@ describe('mapIfShiftToPbt', () => {
 });
 
 describe('clampFilterWidth', () => {
-  it('snaps width to the nearest 50 Hz step', () => {
+  it('snaps width to the nearest 50 Hz step (default)', () => {
     expect(clampFilterWidth(2430)).toBe(2450);
   });
 
-  it('clamps width to the allowed range', () => {
+  it('clamps width to the default allowed range (3600 Hz)', () => {
     expect(clampFilterWidth(0)).toBe(50);
     expect(clampFilterWidth(99999)).toBe(3600);
+  });
+
+  it('clamps width to custom maxHz (AM 10kHz)', () => {
+    expect(clampFilterWidth(99999, 10000, 200)).toBe(10000);
+    expect(clampFilterWidth(5500, 10000, 200)).toBe(5600);
+  });
+
+  it('clamps width to custom maxHz (FM 15kHz)', () => {
+    expect(clampFilterWidth(99999, 15000, 1000)).toBe(15000);
   });
 });
