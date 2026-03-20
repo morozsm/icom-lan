@@ -211,12 +211,15 @@
   --v2-collapsible-header-text: #e0e0e0;
   --v2-collapsible-chevron: #888;
   --v2-collapsible-chevron-hover: #00d4ff;
-}
-
   /* ── Receiver Accent Colors ─────────────────────────────── */
   /* Default accent colors for MAIN and SUB receivers */
   --v2-receiver-main-accent: #00D4FF;
-  --v2-receiver-sub-accent: #FF6A00;
+  --v2-receiver-sub-accent: #FFFFFF;
+
+  --v2-vfo-main-control-border: rgba(0, 212, 255, 0.48);
+  --v2-vfo-sub-control-border: rgba(255, 255, 255, 0.52);
+  --v2-vfo-main-control-glow: rgba(0, 212, 255, 0.08);
+  --v2-vfo-sub-control-glow: rgba(255, 255, 255, 0.10);
 
   /* ── Badge Type Colors ──────────────────────────────────── */
   /* Per-badge color tokens for theme/radio-specific customization */
@@ -255,18 +258,19 @@
   --v2-vfo-main-freq-selected-bg: var(--v2-accent-cyan);
   --v2-vfo-main-freq-selected-text: var(--v2-text-white);
   
-  --v2-vfo-sub-freq-active: var(--v2-accent-orange);
+  --v2-vfo-sub-freq-active: var(--v2-text-white);
   --v2-vfo-sub-freq-inactive: var(--v2-text-muted);
   --v2-vfo-sub-freq-hover: var(--v2-text-white);
-  --v2-vfo-sub-freq-selected-bg: var(--v2-accent-orange);
-  --v2-vfo-sub-freq-selected-text: var(--v2-text-white);
+  --v2-vfo-sub-freq-selected-bg: rgba(255, 255, 255, 0.92);
+  --v2-vfo-sub-freq-selected-text: var(--v2-bg-darkest);
 
   /* VFO Frequency Glow Effects (lamp/LED/tube style) */
   --v2-vfo-main-freq-glow: 0 0 12px rgba(124, 252, 229, 0.5);
-  --v2-vfo-sub-freq-glow: 0 0 12px rgba(255, 106, 0, 0.5);
+  --v2-vfo-sub-freq-glow: 0 0 12px rgba(255, 255, 255, 0.42);
   --v2-vfo-freq-glow-intensity: 1.0;  /* 0.0-2.0, multiplier for glow strength */
   
   /* VFO Font Customization (7-segment, digital, retro) */
   --v2-vfo-font-family: 'Roboto Mono', monospace;  /* Default: monospace */
   --v2-vfo-font-weight: 700;
   --v2-vfo-font-style: normal;
+}

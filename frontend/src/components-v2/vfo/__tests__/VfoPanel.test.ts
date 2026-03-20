@@ -19,11 +19,13 @@ describe('formatBadges', () => {
         '--v2-badge-pre-color': 'cyan',
         '--v2-badge-nb-color': 'cyan',
         '--v2-badge-default-color': 'cyan',
+        '--v2-receiver-main-accent': 'cyan',
+        '--v2-receiver-sub-accent': 'white',
       };
       return badgeColors[prop] || '';
     });
 
-    global.getComputedStyle = vi.fn(() => ({
+    globalThis.getComputedStyle = vi.fn(() => ({
       getPropertyValue: mockGetPropertyValue,
     })) as any;
   });
@@ -72,6 +74,11 @@ describe('formatBadges', () => {
   it('unknown key defaults to cyan color', () => {
     const result = formatBadges({ foo: true });
     expect(result[0].color).toBe('cyan');
+  });
+
+  it('unknown key falls back to the SUB receiver accent when no badge token exists', () => {
+    const result = formatBadges({ foo: true }, 'sub');
+    expect(result[0].color).toBe('white');
   });
 });
 
@@ -224,6 +231,20 @@ describe('active/inactive state', () => {
   it('FrequencyDisplay does not have inactive class when isActive=true', () => {
     const t = mountPanel(baseProps);
     expect(t.querySelector('.freq')?.classList.contains('inactive')).toBe(false);
+  });
+
+  it('MAIN panel exposes cyan receiver accent vars for control chrome', () => {
+    const t = mountPanel(baseProps);
+    const style = t.querySelector('.panel')?.getAttribute('style') ?? '';
+    expect(style).toContain('--receiver-accent: var(--v2-receiver-main-accent)');
+    expect(style).toContain('--receiver-control-border: var(--v2-vfo-main-control-border)');
+  });
+
+  it('SUB panel exposes white receiver accent vars for control chrome', () => {
+    const t = mountPanel({ ...baseProps, receiver: 'sub' });
+    const style = t.querySelector('.panel')?.getAttribute('style') ?? '';
+    expect(style).toContain('--receiver-accent: var(--v2-receiver-sub-accent)');
+    expect(style).toContain('--receiver-control-border: var(--v2-vfo-sub-control-border)');
   });
 });
 

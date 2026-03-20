@@ -43,6 +43,11 @@
   let activeBand = $derived(findActiveBand(freq, getCapabilities()?.freqRanges ?? []));
   let badgeItems = $derived(formatBadges(badges, receiver));
   let meterVariant = $derived(layoutProfile === 'wide' ? 'vfo-wide' : 'vfo');
+  let receiverChromeVars = $derived({
+    '--receiver-accent': `var(--v2-receiver-${receiver}-accent)`,
+    '--receiver-control-border': `var(--v2-vfo-${receiver}-control-border)`,
+    '--receiver-control-glow': `var(--v2-vfo-${receiver}-control-glow)`,
+  });
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -53,6 +58,7 @@
   onclick={onVfoClick}
   role={onVfoClick ? 'button' : undefined}
   data-layout-profile={layoutProfile}
+  style={Object.entries(receiverChromeVars).map(([key, value]) => `${key}:${value}`).join(';')}
 >
   <div class="panel-header">
     <div class="header-title-group">
@@ -129,8 +135,8 @@
   }
 
   .panel.active {
-    border-color: var(--v2-border-cyan-bright);
-    box-shadow: inset 0 0 0 1px var(--v2-vfo-active-glow);
+    border-color: var(--receiver-control-border);
+    box-shadow: inset 0 0 0 1px var(--receiver-control-glow);
   }
 
   .panel-header {
@@ -199,9 +205,9 @@
   }
 
   .meter-tag {
-    border: 1px solid var(--v2-border-cyan-bright);
+    border: 1px solid var(--receiver-control-border);
     background: var(--v2-vfo-meter-tag-bg);
-    color: var(--v2-accent-cyan);
+    color: var(--receiver-accent);
   }
 
   .slot-tag {
@@ -226,7 +232,7 @@
     text-transform: uppercase;
     padding: 0 var(--vfo-control-badge-padding-x, 6px);
     border-radius: var(--vfo-panel-badge-radius, 3px);
-    border: 1px solid var(--v2-border-cyan-bright);
+    border: 1px solid var(--receiver-control-border);
     color: var(--v2-text-primary);
     background: var(--v2-vfo-mode-badge-bg);
     cursor: pointer;
@@ -306,13 +312,13 @@
     justify-content: center;
     min-height: 18px;
     padding: 0 7px;
-    border: 1px solid var(--v2-border-cyan-bright);
+    border: 1px solid var(--receiver-control-border);
     border-radius: 4px;
     background: var(--v2-vfo-rit-label-bg);
     font-size: 9px;
     font-weight: 700;
     letter-spacing: 0.08em;
-    color: var(--v2-accent-cyan);
+    color: var(--receiver-accent);
   }
 
   .rit-offset {
