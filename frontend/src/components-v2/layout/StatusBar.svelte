@@ -69,20 +69,25 @@
 
 <div class="status-bar">
   <div class="status-indicators">
-    <span class="indicator" title="Radio ↔ Server: {radioState}">
-      <Radio size={14} color={stateColor(radioState)} strokeWidth={2} />
+    <span class="indicator" title="Radio ↔ Server: {radioState}" style="--indicator-color: {stateColor(radioState)}">
+      <span class="indicator-dot"></span>
+      <Radio size={12} color="currentColor" strokeWidth={2.5} />
     </span>
-    <span class="indicator" title="Control WebSocket: {controlState}">
-      <Cable size={14} color={stateColor(controlState)} strokeWidth={2} />
+    <span class="indicator" title="Control WebSocket: {controlState}" style="--indicator-color: {stateColor(controlState)}">
+      <span class="indicator-dot"></span>
+      <Cable size={12} color="currentColor" strokeWidth={2.5} />
     </span>
-    <span class="indicator" title="Scope WebSocket: {scopeState}">
-      <Activity size={14} color={stateColor(scopeState)} strokeWidth={2} />
+    <span class="indicator" title="Scope WebSocket: {scopeState}" style="--indicator-color: {stateColor(scopeState)}">
+      <span class="indicator-dot"></span>
+      <Activity size={12} color="currentColor" strokeWidth={2.5} />
     </span>
-    <span class="indicator" title="Audio WebSocket: {audioState}">
-      <Volume2 size={14} color={stateColor(audioState)} strokeWidth={2} />
+    <span class="indicator" title="Audio WebSocket: {audioState}" style="--indicator-color: {stateColor(audioState)}">
+      <span class="indicator-dot"></span>
+      <Volume2 size={12} color="currentColor" strokeWidth={2.5} />
     </span>
-    <span class="indicator" title="State HTTP: {httpState}">
-      <ArrowDownUp size={14} color={stateColor(httpState)} strokeWidth={2} />
+    <span class="indicator" title="State HTTP: {httpState}" style="--indicator-color: {stateColor(httpState)}">
+      <span class="indicator-dot"></span>
+      <ArrowDownUp size={12} color="currentColor" strokeWidth={2.5} />
     </span>
   </div>
 
@@ -135,14 +140,28 @@
   }
 
   .indicator {
+    position: relative;
     display: flex;
     align-items: center;
     cursor: pointer;
+    color: var(--indicator-color);
     transition: transform 0.15s;
   }
 
   .indicator:hover {
-    transform: scale(1.1);
+    transform: scale(1.15);
+  }
+
+  .indicator-dot {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--indicator-color);
+    box-shadow: 0 0 8px var(--indicator-color);
+    top: -2px;
+    right: -2px;
+    pointer-events: none;
   }
 
   .status-info {
