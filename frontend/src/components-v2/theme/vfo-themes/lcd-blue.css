@@ -1,0 +1,23 @@
+/* VFO Theme: LCD Blue (VFO-only overlay) */
+:root[data-vfo-theme="lcd-blue"] {
+  /* MAIN: Blue LCD */
+  --v2-vfo-main-freq-active: #77ddff;
+  --v2-vfo-main-freq-inactive: #5588aa;
+  --v2-vfo-main-freq-hover: #99ddff;
+  --v2-vfo-main-freq-selected-bg: #3399cc;
+  --v2-vfo-main-freq-selected-text: #ffffff;
+  --v2-vfo-main-freq-glow: 0 0 10px rgba(119, 221, 255, 0.8);
+
+  /* SUB: Cyan LCD */
+  --v2-vfo-sub-freq-active: #77ffdd;
+  --v2-vfo-sub-freq-inactive: #55aa88;
+  --v2-vfo-sub-freq-hover: #99ffdd;
+  --v2-vfo-sub-freq-selected-bg: #33cc99;
+  --v2-vfo-sub-freq-selected-text: #ffffff;
+  --v2-vfo-sub-freq-glow: 0 0 10px rgba(119, 255, 221, 0.8);
+
+  /* Font: Orbitron */
+  --v2-vfo-font-family: 'Orbitron', 'Roboto Mono', sans-serif;
+  --v2-vfo-font-weight: 700;
+  --v2-vfo-font-style: normal;
+}

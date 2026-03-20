@@ -1,17 +1,24 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { Palette } from 'lucide-svelte';
-  import { getAvailableThemes, getTheme, setTheme, type ThemeInfo } from '../theme/theme-switcher';
+  import { getAvailableThemes, getTheme, setTheme, getVfoTheme, setVfoTheme, type ThemeInfo } from '../theme/theme-switcher';
 
   let isOpen = $state(false);
   let currentTheme = $state('default');
+  let currentVfoTheme = $state<string | null>(null);
   let dropdownElement = $state<HTMLElement | null>(null);
   let buttonElement = $state<HTMLElement | null>(null);
 
   const themes = getAvailableThemes();
+  const vfoThemeOptions = [
+    { id: 'nixie-tube', name: 'Nixie Tube' },
+    { id: 'lcd-blue', name: 'LCD Blue' },
+    { id: 'crt-green', name: 'CRT Green' },
+  ];
 
   onMount(() => {
     currentTheme = getTheme();
+    currentVfoTheme = getVfoTheme();
 
     function handleClickOutside(event: MouseEvent) {
       if (
@@ -37,6 +44,11 @@
     currentTheme = themeId;
     setTheme(themeId);
     isOpen = false;
+  }
+
+  function selectVfoTheme(vfoId: string | null) {
+    currentVfoTheme = vfoId;
+    setVfoTheme(vfoId);
   }
 
   function getCurrentThemeName(): string {
@@ -83,6 +95,31 @@
             {/each}
           {/if}
         {/each}
+
+        <!-- VFO Theme Selector -->
+        <div class="vfo-theme-section">
+          <div class="vfo-theme-label">VFO Display</div>
+          <div class="vfo-theme-buttons">
+            <button
+              class="vfo-theme-btn"
+              class:active={currentVfoTheme === null}
+              onclick={() => selectVfoTheme(null)}
+              title="Use main theme for VFO"
+            >
+              Default
+            </button>
+            {#each vfoThemeOptions as vfo}
+              <button
+                class="vfo-theme-btn"
+                class:active={currentVfoTheme === vfo.id}
+                onclick={() => selectVfoTheme(vfo.id)}
+                title="Apply {vfo.name} style to VFO only"
+              >
+                {vfo.name}
+              </button>
+            {/each}
+          </div>
+        </div>
       </div>
     </div>
   {/if}
@@ -208,6 +245,55 @@
     color: var(--v2-accent-cyan);
     font-size: 14px;
     flex-shrink: 0;
+  }
+
+  .vfo-theme-section {
+    border-top: 1px solid var(--v2-border-dark);
+    padding: 10px 12px;
+    background: var(--v2-bg-darker);
+  }
+
+  .vfo-theme-label {
+    font-family: var(--v2-font-mono);
+    font-size: var(--v2-font-size-xs);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--v2-text-muted);
+    margin-bottom: 8px;
+  }
+
+  .vfo-theme-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .vfo-theme-btn {
+    padding: 6px 12px;
+    background: var(--v2-bg-input);
+    border: 1px solid var(--v2-border);
+    border-radius: 3px;
+    font-family: var(--v2-font-mono);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--v2-text-muted);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .vfo-theme-btn:hover {
+    background: var(--v2-bg-card);
+    border-color: var(--v2-accent-cyan);
+    color: var(--v2-text-primary);
+  }
+
+  .vfo-theme-btn.active {
+    background: var(--v2-accent-cyan);
+    border-color: var(--v2-accent-cyan);
+    color: var(--v2-text-white);
   }
 
   /* Scrollbar styling */

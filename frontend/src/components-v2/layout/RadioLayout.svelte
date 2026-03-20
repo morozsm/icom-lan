@@ -1,11 +1,15 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import '../theme/index';
-  import { setTheme, getTheme } from '../theme/theme-switcher';
+  import { setTheme, getTheme, setVfoTheme, getVfoTheme } from '../theme/theme-switcher';
   
-  // Apply saved theme immediately (before any component renders)
+  // Apply saved themes immediately (before any component renders)
   if (typeof window !== 'undefined') {
     setTheme(getTheme());
+    const vfoTheme = getVfoTheme();
+    if (vfoTheme) {
+      setVfoTheme(vfoTheme);
+    }
   }
   
   import { radio } from '$lib/stores/radio.svelte';
