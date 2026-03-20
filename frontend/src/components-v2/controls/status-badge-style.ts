@@ -47,7 +47,7 @@ export interface BadgeStyle {
 }
 
 export function computeBadgeStyle({ active, color, compact, clickable }: BadgeProps): BadgeStyle {
-  const c = COLOR_ACTIVE[color];
+  const c = COLOR_ACTIVE[color] || COLOR_ACTIVE['cyan']; // Fallback to cyan if invalid color
 
   return {
     background: active ? c.bg          : 'transparent',
