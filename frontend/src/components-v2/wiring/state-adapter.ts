@@ -24,7 +24,7 @@ function hasCap(caps: Capabilities | null, name: string): boolean {
   return caps?.capabilities?.includes(name) ?? false;
 }
 
-function resolveFilterModeConfig(
+export function resolveFilterModeConfig(
   caps: Capabilities | null,
   mode: string | undefined,
   dataMode: number | undefined,

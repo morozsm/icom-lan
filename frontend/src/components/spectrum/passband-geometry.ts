@@ -81,6 +81,8 @@ export function getFilterWidthFromRightEdgePx(
   spanHz: number,
   widthPx: number,
   rightEdgePx: number,
+  maxHz?: number,
+  stepHz?: number,
 ): number | null {
   if (spanHz <= 0 || widthPx <= 0 || !canResizeFromRightEdge(mode)) {
     return null;
@@ -103,5 +105,5 @@ export function getFilterWidthFromRightEdgePx(
     widthHz = rightEdgeHz - shiftHz;
   }
 
-  return clampFilterWidth(widthHz);
+  return clampFilterWidth(widthHz, maxHz, stepHz);
 }

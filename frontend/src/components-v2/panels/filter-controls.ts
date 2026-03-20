@@ -8,9 +8,13 @@ function clampToBipolarRange(value: number): number {
   return Math.max(FILTER_BIPOLAR_MIN, Math.min(FILTER_BIPOLAR_MAX, Math.round(value)));
 }
 
-export function clampFilterWidth(value: number): number {
-  const clamped = Math.max(FILTER_WIDTH_MIN, Math.min(FILTER_WIDTH_MAX, value));
-  return Math.round(clamped / FILTER_WIDTH_STEP) * FILTER_WIDTH_STEP;
+export function clampFilterWidth(
+  value: number,
+  maxHz: number = FILTER_WIDTH_MAX,
+  stepHz: number = FILTER_WIDTH_STEP
+): number {
+  const clamped = Math.max(FILTER_WIDTH_MIN, Math.min(maxHz, value));
+  return Math.round(clamped / stepHz) * stepHz;
 }
 
 export function deriveIfShift(pbtInner: number, pbtOuter: number): number {
