@@ -234,6 +234,14 @@
     overflow-y: auto;
     overflow-x: hidden;
     padding-bottom: 4px;
+    /* Hide scrollbar but keep scroll functionality */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+  }
+
+  .content-left::-webkit-scrollbar,
+  .content-right::-webkit-scrollbar {
+    display: none; /* Chrome/Safari/Opera */
   }
 
   .content-center {
