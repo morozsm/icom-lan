@@ -20,6 +20,7 @@
     showValue?: boolean;
     showLabel?: boolean;
     compact?: boolean;
+    variant?: 'modern' | 'hardware' | 'hardware-illuminated';
     // Knob-specific
     arcAngle?: number;
     tickCount?: number;
@@ -53,6 +54,7 @@
     showValue = true,
     showLabel = true,
     compact = false,
+    variant = 'modern',
     arcAngle = 270,
     tickCount = 0,
     tickLabels = [],
@@ -85,6 +87,7 @@
     showValue,
     showLabel,
     compact,
+    variant,
     onChange: effectiveOnChange,
     debounceMs,
     disabled,

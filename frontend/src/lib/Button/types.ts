@@ -4,7 +4,7 @@
 
 export type IndicatorColor = 'cyan' | 'green' | 'amber' | 'red' | 'orange' | 'white';
 
-export type IndicatorStyle = 'ring' | 'dot' | 'edge-bottom' | 'edge-left' | 'edge-sides' | 'fill';
+export type IndicatorStyle = 'ring' | 'dot' | 'edge-bottom' | 'edge-left' | 'fill';
 
 export type GlowVariant = 'color' | 'white' | 'warm';
 

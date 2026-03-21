@@ -1,7 +1,7 @@
 <script lang="ts">
   import { ValueControl } from '../controls/value-control';
   import AttenuatorControl from '../controls/AttenuatorControl.svelte';
-  import SegmentedButton from '../controls/SegmentedButton.svelte';
+  import { SegmentedControl } from '$lib/SegmentedControl';
   import { hasCapability, getAttValues, getPreValues } from '$lib/stores/capabilities.svelte';
   import { buildPreOptions, shouldShowPanel } from './rf-frontend-utils';
   import { getShortcutHint } from '../layout/shortcut-hints';
@@ -56,7 +56,7 @@
     {#if showPre}
       <div class="control-row" data-shortcut-hint={preShortcut ?? undefined} title={preShortcut ?? undefined}>
         <span class="control-label">PRE</span>
-        <SegmentedButton
+        <SegmentedControl
           options={preOptions}
           selected={pre}
           title={preShortcut}
