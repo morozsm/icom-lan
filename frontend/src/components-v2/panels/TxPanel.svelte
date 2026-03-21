@@ -1,6 +1,6 @@
 <script lang="ts">
   import '../controls/control-button.css';
-  import StatusBadge from '../controls/StatusBadge.svelte';
+  import { StatusIndicator, FillButton } from '$lib/Button';
   import { ValueControl } from '../controls/value-control';
   import { hasTx } from '$lib/stores/capabilities.svelte';
   import { txStatusColor } from './tx-utils';
@@ -52,7 +52,7 @@
   <div class="panel-body">
 
     <div class="tx-indicator">
-      <StatusBadge
+      <StatusIndicator
         label={txActive ? 'TX ACTIVE' : 'TX IDLE'}
         active={txActive}
         color={txActive ? 'red' : 'muted'}
@@ -71,12 +71,8 @@
     />
 
     <div class="atu-row">
-      <StatusBadge
-        label="ATU"
-        active={atuActive}
-        color="green"
-        onclick={onAtuToggle}
-      />
+      <!-- status-toggle: sustained on/off state, current visual candidate: fill -->
+      <FillButton active={atuActive} color="green" onclick={() => onAtuToggle()}>ATU</FillButton>
       <button
         type="button"
         class="tune-button v2-control-button"
@@ -87,11 +83,13 @@
     </div>
 
     <div class="toggle-row">
-      <StatusBadge label="VOX" active={voxActive} color="orange" onclick={onVoxToggle} />
+      <!-- status-toggle -->
+      <FillButton active={voxActive} color="orange" onclick={() => onVoxToggle()}>VOX</FillButton>
     </div>
 
     <div class="toggle-row">
-      <StatusBadge label="COMP" active={compActive} color="orange" onclick={onCompToggle} />
+      <!-- status-toggle -->
+      <FillButton active={compActive} color="orange" onclick={() => onCompToggle()}>COMP</FillButton>
     </div>
     {#if compActive}
       <ValueControl
@@ -107,7 +105,8 @@
     {/if}
 
     <div class="toggle-row">
-      <StatusBadge label="MON" active={monActive} color="orange" onclick={onMonToggle} />
+      <!-- status-toggle -->
+      <FillButton active={monActive} color="orange" onclick={() => onMonToggle()}>MON</FillButton>
     </div>
     {#if monActive}
       <ValueControl

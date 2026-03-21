@@ -1,21 +1,22 @@
+@import './button-tokens.css';
+
 .v2-control-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   position: relative;
-  min-height: 28px;
-  padding: 4px 8px;
+  min-height: var(--btn-min-height);
+  padding: var(--btn-padding-block) var(--btn-padding-inline);
   appearance: none;
   -webkit-appearance: none;
-  background:
-    linear-gradient(180deg, var(--v2-control-button-gradient-top) 0%, var(--v2-control-button-gradient-bottom) 100%);
-  border: 1px solid var(--v2-border-dark);
-  border-radius: 3px;
+  background: var(--btn-bg-idle);
+  border: 1px solid var(--btn-border-idle);
+  border-radius: var(--btn-border-radius);
   color: var(--v2-text-dim);
   font-family: 'Roboto Mono', monospace;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  font-size: var(--btn-font-size);
+  font-weight: var(--btn-font-weight);
+  letter-spacing: var(--btn-letter-spacing);
   line-height: 1;
   text-transform: uppercase;
   white-space: nowrap;
@@ -26,21 +27,20 @@
     color 150ms ease,
     box-shadow 150ms ease;
   box-sizing: border-box;
-  box-shadow: inset 0 1px 0 var(--v2-control-button-highlight);
+  box-shadow: inset 0 1px 0 var(--btn-highlight);
   margin: 0;
   text-decoration: none;
   isolation: isolate;
   overflow: hidden;
-  --indicator-color: var(--control-accent, var(--v2-accent-cyan));
-  --indicator-glow: color-mix(in srgb, var(--indicator-color) 34%, transparent);
-  --indicator-dim: color-mix(in srgb, var(--indicator-color) 26%, var(--v2-border-dark));
-  --indicator-thickness: 2px;
-  --indicator-dot-size: 8px;
-  --indicator-dot-offset: 7px;
+  --indicator-color: var(--control-accent, var(--indicator-cyan));
+  --indicator-glow: color-mix(in srgb, var(--indicator-color) 58%, transparent);
+  --indicator-dim: color-mix(in srgb, var(--indicator-color) 26%, var(--btn-border-idle));
+  --indicator-dot-reserve: calc(var(--indicator-dot-offset) + var(--indicator-dot-size) + var(--indicator-dot-gap));
+  --glow-color: var(--indicator-color);
 }
 
 .v2-control-button:hover {
-  background-color: var(--v2-bg-gradient-start);
+  background-color: var(--btn-bg-hover);
   color: var(--v2-text-subdued);
 }
 
@@ -50,42 +50,48 @@
 
 .v2-control-button.active,
 .v2-control-button[data-active='true'] {
-  background-color: color-mix(in srgb, var(--control-accent, var(--v2-accent-cyan)) 14%, var(--v2-bg-darker));
-  border-color: var(--control-accent, var(--v2-accent-cyan));
+  background-color: color-mix(in srgb, var(--glow-color) var(--btn-active-bg-tint), var(--v2-bg-darker));
+  border-color: color-mix(in srgb, var(--glow-color) var(--glow-border-opacity), transparent);
   color: var(--control-active-text, var(--v2-text-bright));
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--control-accent, var(--v2-accent-cyan)) 20%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--glow-color) var(--glow-ring-1-opacity), transparent),
+    0 0 var(--glow-blur-tight) color-mix(in srgb, var(--glow-color) var(--glow-ring-2-opacity), transparent),
+    0 0 var(--glow-blur-wide) color-mix(in srgb, var(--glow-color) var(--glow-ring-3-opacity), transparent),
+    inset 0 1px 0 var(--btn-highlight);
 }
 
 .v2-control-button[data-indicator-color='cyan'] {
-  --indicator-color: var(--v2-indicator-cyan, var(--v2-accent-cyan));
+  --indicator-color: var(--indicator-cyan);
 }
 
 .v2-control-button[data-indicator-color='green'] {
-  --indicator-color: var(--v2-indicator-green, var(--v2-accent-green));
+  --indicator-color: var(--indicator-green);
 }
 
 .v2-control-button[data-indicator-color='amber'] {
-  --indicator-color: var(--v2-indicator-amber, var(--v2-accent-yellow));
+  --indicator-color: var(--indicator-amber);
 }
 
 .v2-control-button[data-indicator-color='red'] {
-  --indicator-color: var(--v2-indicator-red, var(--v2-accent-red));
+  --indicator-color: var(--indicator-red);
 }
 
 .v2-control-button[data-indicator-color='orange'] {
-  --indicator-color: var(--v2-indicator-orange, var(--v2-accent-orange));
+  --indicator-color: var(--indicator-orange);
 }
 
 .v2-control-button[data-indicator-color='white'] {
-  --indicator-color: var(--v2-indicator-white, var(--v2-text-white));
+  --indicator-color: var(--indicator-white);
 }
 
 .v2-control-button[data-indicator-style='ring'].active,
 .v2-control-button[data-indicator-style='ring'][data-active='true'] {
+  border-color: color-mix(in srgb, var(--glow-color) var(--glow-border-opacity), transparent);
   box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--indicator-color) 24%, transparent),
-    0 0 14px color-mix(in srgb, var(--indicator-color) 12%, transparent),
-    inset 0 1px 0 var(--v2-control-button-highlight);
+    0 0 0 1px color-mix(in srgb, var(--glow-color) var(--glow-ring-1-opacity), transparent),
+    0 0 var(--glow-blur-medium) color-mix(in srgb, var(--glow-color) var(--glow-ring-2-opacity), transparent),
+    0 0 16px color-mix(in srgb, var(--glow-color) var(--glow-ring-3-opacity), transparent),
+    inset 0 1px 0 var(--btn-highlight);
 }
 
 .v2-control-button[data-indicator-style='dot']::before,
@@ -106,22 +112,41 @@
 .v2-control-button[data-indicator-style='dot']::before {
   width: var(--indicator-dot-size);
   height: var(--indicator-dot-size);
-  top: var(--indicator-dot-offset);
-  right: var(--indicator-dot-offset);
+  left: var(--indicator-dot-offset);
+  top: 50%;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--indicator-color) 44%, var(--v2-border-dark));
+  transform: translateY(-50%);
+  border: 1px solid color-mix(in srgb, var(--indicator-color) 52%, var(--v2-border-dark));
   background: transparent;
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--v2-bg-card) 72%, transparent);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--v2-bg-card) 72%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--indicator-color) 10%, transparent);
   opacity: 0.9;
+}
+
+.v2-control-button[data-indicator-style='dot'] {
+  padding-left: calc(var(--indicator-dot-reserve) + 2px);
+  padding-right: 10px;
 }
 
 .v2-control-button[data-indicator-style='dot'].active::before,
 .v2-control-button[data-indicator-style='dot'][data-active='true']::before {
   background: var(--indicator-color);
   border-color: var(--indicator-color);
+  transform: translateY(-50%) scale(1.02);
   box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--indicator-color) 36%, transparent),
-    0 0 10px var(--indicator-glow);
+    0 0 0 1px color-mix(in srgb, var(--indicator-color) var(--dot-glow-ring-1-opacity), transparent),
+    0 0 var(--dot-glow-blur-tight) color-mix(in srgb, var(--indicator-color) var(--dot-glow-ring-2-opacity), transparent),
+    0 0 var(--dot-glow-blur-medium) color-mix(in srgb, var(--indicator-color) var(--dot-glow-ring-3-opacity), transparent);
+}
+
+/* Glow color variants */
+.v2-control-button[data-glow='white'] {
+  --glow-color: var(--glow-white);
+}
+
+.v2-control-button[data-glow='warm'] {
+  --glow-color: var(--glow-warm);
 }
 
 .v2-control-button[data-indicator-style='edge-bottom']::before {
@@ -137,7 +162,7 @@
     color-mix(in srgb, var(--indicator-color) 28%, transparent) 100%
   );
   opacity: 0;
-  transform: scaleX(0.6);
+  transform: scaleX(0.72);
 }
 
 .v2-control-button[data-indicator-style='edge-left']::before {
@@ -153,7 +178,7 @@
     color-mix(in srgb, var(--indicator-color) 28%, transparent) 100%
   );
   opacity: 0;
-  transform: scaleY(0.7);
+  transform: scaleY(0.78);
 }
 
 .v2-control-button[data-indicator-style='edge-sides']::before {
@@ -172,7 +197,7 @@
       color-mix(in srgb, var(--indicator-color) 28%, transparent) 100%
     ) right / var(--indicator-thickness) 100% no-repeat;
   opacity: 0;
-  transform: scaleY(0.72);
+  transform: scaleY(0.8);
 }
 
 .v2-control-button[data-indicator-style='edge-bottom'].active::before,
@@ -183,7 +208,25 @@
 .v2-control-button[data-indicator-style='edge-sides'][data-active='true']::before {
   opacity: 1;
   transform: scale(1);
-  box-shadow: 0 0 10px var(--indicator-glow);
+  box-shadow:
+    0 0 8px color-mix(in srgb, var(--glow-color) 36%, transparent),
+    0 0 14px color-mix(in srgb, var(--glow-color) 20%, transparent),
+    0 0 22px color-mix(in srgb, var(--glow-color) 10%, transparent);
+}
+
+
+
+.v2-control-button[data-indicator-style='edge-bottom'].active,
+.v2-control-button[data-indicator-style='edge-bottom'][data-active='true'],
+.v2-control-button[data-indicator-style='edge-left'].active,
+.v2-control-button[data-indicator-style='edge-left'][data-active='true'],
+.v2-control-button[data-indicator-style='edge-sides'].active,
+.v2-control-button[data-indicator-style='edge-sides'][data-active='true'] {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--glow-color) var(--edge-glow-ring-1-opacity), transparent),
+    0 0 var(--edge-glow-blur-tight) color-mix(in srgb, var(--glow-color) var(--edge-glow-ring-2-opacity), transparent),
+    inset 0 0 var(--edge-glow-blur-tight) color-mix(in srgb, var(--glow-color) var(--edge-glow-inset-opacity), transparent),
+    inset 0 1px 0 var(--btn-highlight);
 }
 
 .v2-control-button[data-indicator-style='fill'].active,
@@ -191,21 +234,167 @@
   background:
     linear-gradient(
       180deg,
-      color-mix(in srgb, var(--indicator-color) 22%, var(--v2-control-button-gradient-top)) 0%,
-      color-mix(in srgb, var(--indicator-color) 12%, var(--v2-control-button-gradient-bottom)) 100%
+      color-mix(in srgb, var(--indicator-color) var(--fill-bg-tint-top), var(--v2-control-button-gradient-top)) 0%,
+      color-mix(in srgb, var(--indicator-color) var(--fill-bg-tint-bottom), var(--v2-control-button-gradient-bottom)) 100%
     );
-  border-color: color-mix(in srgb, var(--indicator-color) 78%, var(--v2-border-dark));
+  border-color: color-mix(in srgb, var(--indicator-color) var(--glow-border-opacity), transparent);
   box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--indicator-color) 18%, transparent),
-    0 0 14px color-mix(in srgb, var(--indicator-color) 10%, transparent);
+    0 0 0 1px color-mix(in srgb, var(--indicator-color) var(--glow-ring-1-opacity), transparent),
+    0 0 var(--glow-blur-tight) color-mix(in srgb, var(--indicator-color) var(--glow-ring-2-opacity), transparent),
+    0 0 var(--glow-blur-wide) color-mix(in srgb, var(--indicator-color) var(--glow-ring-3-opacity), transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--indicator-color) var(--fill-inset-ring-opacity), transparent);
+}
+
+.v2-control-button[data-surface='hardware'] {
+  background:
+    linear-gradient(
+      180deg,
+      var(--hw-gradient-top-1) 0%,
+      var(--hw-gradient-top-2) 14%,
+      var(--hw-gradient-mid) 52%,
+      var(--hw-gradient-bottom) 100%
+    );
+  border-color: var(--hw-border);
+  box-shadow:
+    inset 0 1px 0 var(--hw-shadow-top),
+    inset 0 -1px 0 var(--hw-shadow-bottom),
+    inset 1px 0 0 var(--hw-shadow-left),
+    inset -1px 0 0 var(--hw-shadow-right),
+    0 1px 0 var(--hw-shadow-outer-top),
+    0 4px 10px var(--hw-shadow-outer-bottom);
+}
+
+.v2-control-button[data-surface='hardware']:hover {
+  background:
+    linear-gradient(
+      180deg,
+      var(--hw-gradient-top-1-hover) 0%,
+      var(--hw-gradient-top-2-hover) 16%,
+      var(--hw-gradient-mid-hover) 56%,
+      var(--hw-gradient-bottom-hover) 100%
+    );
+}
+
+.v2-control-button[data-surface='hardware'].active,
+.v2-control-button[data-surface='hardware'][data-active='true'] {
+  background:
+    linear-gradient(
+      180deg,
+      var(--hw-gradient-top-1) 0%,
+      var(--hw-gradient-top-2) 14%,
+      var(--hw-gradient-mid) 52%,
+      var(--hw-gradient-bottom) 100%
+    );
+  border-color: var(--hw-border);
+  color: var(--v2-text-bright);
+  box-shadow:
+    inset 0 1px 0 var(--hw-shadow-top),
+    inset 0 -1px 0 var(--hw-shadow-bottom),
+    inset 1px 0 0 var(--hw-shadow-left),
+    inset -1px 0 0 var(--hw-shadow-right),
+    0 1px 0 var(--hw-shadow-outer-top),
+    0 4px 10px var(--hw-shadow-outer-bottom);
+}
+
+/* Hardware glow variants */
+.v2-control-button[data-surface='hardware'][data-glow='white'].active,
+.v2-control-button[data-surface='hardware'][data-glow='white'][data-active='true'],
+.v2-control-button[data-surface='hardware'][data-glow='warm'].active,
+.v2-control-button[data-surface='hardware'][data-glow='warm'][data-active='true'] {
+  border-color: color-mix(in srgb, var(--glow-color) var(--glow-border-opacity), transparent);
+  box-shadow:
+    inset 0 1px 0 var(--hw-shadow-top),
+    inset 0 -1px 0 var(--hw-shadow-bottom),
+    inset 1px 0 0 var(--hw-shadow-left),
+    inset -1px 0 0 var(--hw-shadow-right),
+    0 0 0 1px color-mix(in srgb, var(--glow-color) var(--glow-ring-1-opacity), transparent),
+    0 0 var(--glow-blur-tight) color-mix(in srgb, var(--glow-color) var(--glow-ring-2-opacity), transparent),
+    0 0 var(--glow-blur-wide) color-mix(in srgb, var(--glow-color) var(--glow-ring-3-opacity), transparent),
+    0 1px 0 var(--hw-shadow-outer-top);
 }
 
 .v2-control-button--compact {
-  min-height: 22px;
-  padding: 2px 6px;
-  font-size: 9px;
+  min-height: var(--btn-compact-min-height);
+  padding: var(--btn-compact-padding-block) var(--btn-compact-padding-inline);
+  font-size: var(--btn-compact-font-size);
+}
+
+.v2-control-button--compact[data-indicator-style='dot'] {
+  padding-left: calc(var(--indicator-dot-reserve) - 2px);
+  padding-right: 8px;
 }
 
 .v2-control-button--pill {
   border-radius: 9999px;
+}
+
+/* === StatusIndicator (display-only, non-interactive) ===
+ * CSS-class approach replacing inline style computation from status-badge-style.ts.
+ * Use for read-only status/mode badges (TX state, VFO header mode/filter badges).
+ * For interactive toggles, use FillButton from $lib/Button instead.
+ */
+.v2-status-indicator {
+  display: inline-flex;
+  align-items: center;
+  height: var(--btn-compact-min-height);
+  padding: var(--btn-compact-padding-block) var(--btn-compact-padding-inline);
+  border-radius: var(--btn-border-radius);
+  font-family: 'Roboto Mono', monospace;
+  font-size: var(--btn-compact-font-size);
+  font-weight: var(--btn-font-weight);
+  letter-spacing: var(--btn-letter-spacing);
+  text-transform: uppercase;
+  white-space: nowrap;
+  user-select: none;
+  background: transparent;
+  border: 1px solid var(--v2-badge-inactive-border);
+  color: var(--v2-badge-inactive-text);
+  box-shadow: none;
+  transition:
+    background 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+/* XS variant for very compact display contexts (VFO header row) */
+.v2-status-indicator--xs {
+  height: 16px;
+  font-size: 7px;
+  padding: 0 5px;
+}
+
+.v2-status-indicator[data-active='true'][data-color='cyan'] {
+  background: var(--v2-badge-cyan-bg);
+  border-color: var(--v2-badge-cyan-border);
+  color: var(--v2-badge-cyan-text);
+  box-shadow: 0 0 0 1px var(--v2-badge-cyan-glow);
+}
+
+.v2-status-indicator[data-active='true'][data-color='orange'] {
+  background: var(--v2-badge-orange-bg);
+  border-color: var(--v2-badge-orange-border);
+  color: var(--v2-badge-orange-text);
+  box-shadow: 0 0 0 1px var(--v2-badge-orange-glow);
+}
+
+.v2-status-indicator[data-active='true'][data-color='red'] {
+  background: var(--v2-badge-red-bg);
+  border-color: var(--v2-badge-red-border);
+  color: var(--v2-badge-red-text);
+  box-shadow: 0 0 0 1px var(--v2-badge-red-glow);
+}
+
+.v2-status-indicator[data-active='true'][data-color='green'] {
+  background: var(--v2-badge-green-bg);
+  border-color: var(--v2-badge-green-border);
+  color: var(--v2-badge-green-text);
+  box-shadow: 0 0 0 1px var(--v2-badge-green-glow);
+}
+
+.v2-status-indicator[data-active='true'][data-color='muted'] {
+  background: var(--v2-badge-muted-bg);
+  border-color: var(--v2-badge-muted-border);
+  color: var(--v2-badge-muted-text);
+  box-shadow: 0 0 0 1px var(--v2-badge-muted-glow);
 }

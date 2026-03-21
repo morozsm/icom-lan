@@ -1,7 +1,7 @@
 <script lang="ts">
   import SegmentedButton from '../controls/SegmentedButton.svelte';
   import { ValueControl } from '../controls/value-control';
-  import StatusBadge from '../controls/StatusBadge.svelte';
+  import { FillButton } from '$lib/Button';
   import { hasCapability } from '$lib/stores/capabilities.svelte';
   import { isCwMode, buildNrOptions, buildNotchOptions } from './dsp-utils';
 
@@ -78,13 +78,13 @@
     {#if showNb}
       <div class="section">
         <div class="section-label">NB</div>
+        <!-- status-toggle: NB on/off -->
         <div class="single-control">
-          <StatusBadge
-            label={nbActive ? 'ON' : 'OFF'}
+          <FillButton
             active={nbActive}
             color="orange"
             onclick={() => onNbToggle(!nbActive)}
-          />
+          >{nbActive ? 'ON' : 'OFF'}</FillButton>
         </div>
         <ValueControl
           label="NB Level"
@@ -125,11 +125,12 @@
       <div class="section">
         <div class="section-row">
           <div class="section-label">CW</div>
-          <StatusBadge
-            label="Auto Tune"
-            active={cwAutoTune}
-            onclick={() => onCwAutoTuneToggle(!cwAutoTune)}
-          />
+          <!-- action-button: CW auto tune command (not sustained state; not yet implemented in command-bus/state) -->
+          <button
+            type="button"
+            class="v2-control-button"
+            onclick={() => onCwAutoTuneToggle(true)}
+          >Auto Tune</button>
         </div>
         <ValueControl
           label="CW Pitch"

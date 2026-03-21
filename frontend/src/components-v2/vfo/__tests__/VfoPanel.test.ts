@@ -278,30 +278,30 @@ describe('RIT display', () => {
 describe('badge rendering', () => {
   it('does not render badge-row when badges is empty', () => {
     const t = mountPanel(baseProps);
-    expect(t.querySelectorAll('.badge')).toHaveLength(0);
+    expect(t.querySelectorAll('.v2-status-indicator')).toHaveLength(0);
   });
 
   it('renders badge-row when badges has entries', () => {
     const t = mountPanel({ ...baseProps, badges: { nr: true } });
     expect(t.querySelector('.control-strip')).not.toBeNull();
-    expect(t.querySelectorAll('.badge').length).toBeGreaterThan(0);
+    expect(t.querySelectorAll('.v2-status-indicator').length).toBeGreaterThan(0);
   });
 
   it('renders ATU badge when atu=true in badges', () => {
     const t = mountPanel({ ...baseProps, badges: { atu: true } });
-    const badges = Array.from(t.querySelectorAll('.badge'));
+    const badges = Array.from(t.querySelectorAll('.v2-status-indicator'));
     expect(badges.some((el) => el.textContent?.trim() === 'ATU')).toBe(true);
   });
 
   it('renders NB badge as inactive when nb=false', () => {
     const t = mountPanel({ ...baseProps, badges: { nb: false } });
-    const badge = t.querySelector('.badge[data-active="false"]');
+    const badge = t.querySelector('.v2-status-indicator[data-active="false"]');
     expect(badge).not.toBeNull();
   });
 
   it('renders string badge value as label (pre="P1")', () => {
     const t = mountPanel({ ...baseProps, badges: { pre: 'P1' } });
-    const badges = Array.from(t.querySelectorAll('.badge'));
+    const badges = Array.from(t.querySelectorAll('.v2-status-indicator'));
     expect(badges.some((el) => el.textContent?.trim() === 'P1')).toBe(true);
   });
 });

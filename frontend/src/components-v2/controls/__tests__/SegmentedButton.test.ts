@@ -460,7 +460,31 @@ describe('indicator styles', () => {
 });
 
 // ---------------------------------------------------------------------------
-// 9. Pill variant
+// 9. Surface variants
+// ---------------------------------------------------------------------------
+
+describe('surface variants', () => {
+  it('keeps the default flat surface backward-compatible', () => {
+    const { target } = mountAndTrack({
+      options: ATT_OPTIONS, selected: 0, onchange: vi.fn(),
+    });
+    getSegments(target).forEach((segment) => {
+      expect(segment.hasAttribute('data-surface')).toBe(false);
+    });
+  });
+
+  it('applies the hardware surface to each segment when requested', () => {
+    const { target } = mountAndTrack({
+      options: ATT_OPTIONS, selected: 0, onchange: vi.fn(), surface: 'hardware',
+    });
+    getSegments(target).forEach((segment) => {
+      expect(segment.getAttribute('data-surface')).toBe('hardware');
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 10. Pill variant
 // ---------------------------------------------------------------------------
 
 describe('pill variant', () => {

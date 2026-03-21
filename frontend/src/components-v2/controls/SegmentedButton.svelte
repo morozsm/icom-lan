@@ -15,6 +15,7 @@
     pill?: boolean;
     disabled?: boolean;
     indicatorStyle?: 'ring' | 'dot' | 'edge-bottom' | 'edge-left' | 'edge-sides' | 'fill';
+    surface?: 'flat' | 'hardware';
     indicatorColor?: 'cyan' | 'green' | 'amber' | 'red' | 'orange' | 'white' | string | null;
     title?: string | null;
   }
@@ -30,6 +31,7 @@
     pill = false,
     disabled = false,
     indicatorStyle = 'ring',
+    surface = 'flat',
     indicatorColor = null,
     title = null,
   }: Props = $props();
@@ -82,6 +84,7 @@
       tabindex="-1"
       data-active={isActive}
       data-indicator-style={indicatorStyle}
+      data-surface={surface === 'hardware' ? surface : undefined}
       data-indicator-color={indicatorColorToken ?? undefined}
       onclick={() => { if (!disabled) onchange(option.value); }}
     >

@@ -115,6 +115,30 @@ describe('shouldShowPanel', () => {
   });
 });
 
+describe('CLEAR button', () => {
+  it('renders a CLEAR action button', () => {
+    const target = mountPanel(baseProps);
+    const btn = target.querySelector<HTMLButtonElement>('.clear-button');
+    expect(btn).not.toBeNull();
+    expect(btn?.textContent?.trim()).toBe('CLEAR');
+  });
+
+  it('CLEAR button is never data-active (action-button, not a toggle)', () => {
+    const target = mountPanel(baseProps);
+    const btn = target.querySelector<HTMLButtonElement>('.clear-button');
+    expect(btn?.dataset.active).toBeUndefined();
+  });
+
+  it('calls onClear when CLEAR button is clicked', () => {
+    const onClear = vi.fn();
+    const target = mountPanel({ ...baseProps, onClear });
+    const btn = target.querySelector<HTMLButtonElement>('.clear-button');
+    btn?.click();
+    flushSync();
+    expect(onClear).toHaveBeenCalledOnce();
+  });
+});
+
 describe('RitXitPanel component', () => {
 
   beforeEach(() => {

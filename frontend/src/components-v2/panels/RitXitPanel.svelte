@@ -1,6 +1,6 @@
 <script lang="ts">
   import { ValueControl } from '../controls/value-control';
-  import StatusBadge from '../controls/StatusBadge.svelte';
+  import { FillButton } from '../../lib/Button';
   import { formatOffset, shouldShowPanel } from './rit-utils';
   import { getShortcutHint } from '../layout/shortcut-hints';
 
@@ -51,13 +51,13 @@
     <div class="panel-body">
       {#if hasRit}
         <div class="row">
-          <StatusBadge label="RIT" active={ritActive} color="cyan" onclick={onRitToggle} shortcutHint={ritShortcut} title={ritShortcut} />
+          <FillButton active={ritActive} color="cyan" onclick={onRitToggle} shortcutHint={ritShortcut} title={ritShortcut}>RIT</FillButton>
           <span class="offset" class:active={ritActive}>{formatOffset(ritOffset)}</span>
         </div>
       {/if}
       {#if hasXit}
         <div class="row">
-          <StatusBadge label="XIT" active={xitActive} color="orange" onclick={onXitToggle} shortcutHint={xitShortcut} title={xitShortcut} />
+          <FillButton active={xitActive} color="orange" onclick={onXitToggle} shortcutHint={xitShortcut} title={xitShortcut}>XIT</FillButton>
           <span class="offset" class:active={xitActive}>{formatOffset(xitOffset)}</span>
         </div>
       {/if}
@@ -73,7 +73,14 @@
         onChange={handleOffsetChange}
       />
       <div class="clear-row">
-        <StatusBadge label="CLEAR" active={false} color="muted" onclick={onClear} shortcutHint={clearShortcut} title={clearShortcut} />
+        <!-- action-button: momentary command, no sustained state -->
+        <button
+          type="button"
+          class="v2-control-button clear-button"
+          title={clearShortcut ?? undefined}
+          data-shortcut-hint={clearShortcut ?? undefined}
+          onclick={onClear}
+        >CLEAR</button>
       </div>
     </div>
 {/if}
@@ -107,5 +114,9 @@
     display: flex;
     justify-content: flex-end;
     padding-top: 2px;
+  }
+
+  .clear-button {
+    background: transparent;
   }
 </style>
