@@ -2,6 +2,7 @@
   import '../theme/index';
   import './control-button.css';
   import { DotButton, FillButton, HardwareButton, HardwarePlainButton, StatusIndicator } from '$lib/Button';
+  import { PRESET_MAPPINGS, type RoleMapping } from '$lib/Button/roleMapping';
 
   const indicatorStyles = [
     { value: 'ring', label: 'Ring' },
@@ -52,7 +53,7 @@
     setTimeout(() => { actionFlash[key] = false; }, 180);
   }
 
-  // StatusBadge migration lab — status-toggle role, multiple visual families
+  // StatusBadge migration reference — status-toggle role across multiple visual families
   const statusToggleButtons = [
     { label: 'NB',   color: 'orange' },
     { label: 'ATU',  color: 'green'  },
@@ -71,6 +72,16 @@
 
   function toggle(map: Record<string, boolean>, key: string) {
     map[key] = !map[key];
+  }
+
+  // Theme mapping proof — role → family preset selector
+  let activeMapping: RoleMapping = $state(PRESET_MAPPINGS[0]);
+  let mappingToggleStates: Record<string, boolean> = $state({});
+  let mappingActionFlash: Record<string, boolean> = $state({});
+
+  function fireMappingAction(key: string) {
+    mappingActionFlash[key] = true;
+    setTimeout(() => { mappingActionFlash[key] = false; }, 180);
   }
 </script>
 
@@ -237,10 +248,10 @@
 
   <hr style="margin: 32px 0; border: 0; border-top: 1px solid var(--v2-border-panel);">
 
-  <!-- ── StatusBadge Migration Lab (issue #336) ───────────────────────────── -->
+  <!-- ── StatusBadge migration reference ─────────────────────────────────── -->
 
   <section class="demo-card">
-    <h2>StatusBadge Migration Lab <span class="hint">(exploration — issue #336)</span></h2>
+    <h2>StatusBadge Migration Reference <span class="hint">(semantic split + visual candidates)</span></h2>
     <p class="lab-note">
       <code>StatusBadge</code> is legacy/transitional. It conflates two separate concerns that must split:<br/><br/>
       <strong>Display path</strong> → <code>StatusIndicator</code> — a read-only display primitive (CSS class, <code>&lt;span&gt;</code>).
@@ -386,7 +397,7 @@
   <!-- ── action-button role exploration ───────────────────────────────────── -->
 
   <section class="demo-card">
-    <h2>Action Button Role <span class="hint">(exploration — issue #336)</span></h2>
+    <h2>Action Button Role <span class="hint">(approved semantic role reference)</span></h2>
     <p class="lab-note">
       <strong>action-button</strong> is a semantic role for momentary command-style controls.<br/><br/>
       Key distinction vs <code>status-toggle</code>: an action-button <em>does not maintain sustained on/off state</em>.
@@ -516,6 +527,112 @@
   <hr style="margin: 32px 0; border: 0; border-top: 1px solid var(--v2-border-panel);">
 
   <!-- ── Display path: StatusIndicator primitive ── -->
+
+  <hr style="margin: 32px 0; border: 0; border-top: 1px solid var(--v2-border-panel);">
+
+  <!-- ── Theme Mapping Proof ──────────────────────────────────────────────── -->
+
+  <section class="demo-card">
+    <h2>Theme Mapping Proof <span class="hint">(role → family preset)</span></h2>
+    <p class="lab-note">
+      Select a preset mapping. Both semantic roles — <code>status-toggle</code> and <code>action-button</code> —
+      render via the mapped visual family. The <strong>mixed</strong> preset is most instructive:
+      it assigns different families to each role, making the semantic distinction visually legible.<br/><br/>
+      Mapping lives in <code>$lib/Button/roleMapping.ts</code>. No production panels changed.
+    </p>
+    <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px;">
+      {#each PRESET_MAPPINGS as preset}
+        <button
+          type="button"
+          class="v2-control-button"
+          data-active={activeMapping.name === preset.name}
+          data-indicator-style="fill"
+          data-indicator-color="cyan"
+          onclick={() => { activeMapping = preset; mappingToggleStates = {}; mappingActionFlash = {}; }}
+        >
+          {preset.name}
+        </button>
+      {/each}
+    </div>
+
+    <p class="lab-note" style="margin-bottom: 8px;">
+      <strong>status-toggle</strong> → <code>{activeMapping.statusToggle}</code>
+    </p>
+    <div class="demo-grid" style="margin-bottom: 20px;">
+      {#if activeMapping.statusToggle === 'fill'}
+        {#each statusToggleButtons as btn}
+          <FillButton
+            active={mappingToggleStates[btn.label] ?? false}
+            color={btn.color}
+            onclick={() => toggle(mappingToggleStates, btn.label)}
+          >{btn.label}</FillButton>
+        {/each}
+      {:else if activeMapping.statusToggle === 'dot'}
+        {#each statusToggleButtons as btn}
+          <DotButton
+            active={mappingToggleStates[btn.label] ?? false}
+            color={btn.color}
+            onclick={() => toggle(mappingToggleStates, btn.label)}
+          >{btn.label}</DotButton>
+        {/each}
+      {:else if activeMapping.statusToggle === 'hardware-plain'}
+        {#each statusToggleButtons as btn}
+          <HardwarePlainButton
+            active={mappingToggleStates[btn.label] ?? false}
+            onclick={() => toggle(mappingToggleStates, btn.label)}
+          >{btn.label}</HardwarePlainButton>
+        {/each}
+      {:else if activeMapping.statusToggle === 'hardware'}
+        {#each statusToggleButtons as btn}
+          <HardwareButton
+            active={mappingToggleStates[btn.label] ?? false}
+            indicator="edge-left"
+            color={btn.color}
+            onclick={() => toggle(mappingToggleStates, btn.label)}
+          >{btn.label}</HardwareButton>
+        {/each}
+      {/if}
+    </div>
+
+    <p class="lab-note" style="margin-bottom: 8px;">
+      <strong>action-button</strong> → <code>{activeMapping.actionButton}</code>
+    </p>
+    <div class="demo-grid">
+      {#if activeMapping.actionButton === 'fill'}
+        {#each actionButtons as btn}
+          <FillButton
+            active={mappingActionFlash[btn.label] ?? false}
+            color={btn.color}
+            onclick={() => fireMappingAction(btn.label)}
+          >{btn.label}</FillButton>
+        {/each}
+      {:else if activeMapping.actionButton === 'dot'}
+        {#each actionButtons as btn}
+          <DotButton
+            active={mappingActionFlash[btn.label] ?? false}
+            color={btn.color}
+            onclick={() => fireMappingAction(btn.label)}
+          >{btn.label}</DotButton>
+        {/each}
+      {:else if activeMapping.actionButton === 'hardware-plain'}
+        {#each actionButtons as btn}
+          <HardwarePlainButton
+            active={mappingActionFlash[btn.label] ?? false}
+            onclick={() => fireMappingAction(btn.label)}
+          >{btn.label}</HardwarePlainButton>
+        {/each}
+      {:else if activeMapping.actionButton === 'hardware'}
+        {#each actionButtons as btn}
+          <HardwareButton
+            active={mappingActionFlash[btn.label] ?? false}
+            indicator="edge-bottom"
+            color={btn.color}
+            onclick={() => fireMappingAction(btn.label)}
+          >{btn.label}</HardwareButton>
+        {/each}
+      {/if}
+    </div>
+  </section>
 
   <section class="demo-card">
     <h2>StatusIndicator <span class="hint">(display-only component)</span></h2>

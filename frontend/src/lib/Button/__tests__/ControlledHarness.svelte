@@ -5,7 +5,7 @@
   import HardwareButton from '../HardwareButton.svelte';
   import HardwarePlainButton from '../HardwarePlainButton.svelte';
 
-  type Family = 'control' | 'fill' | 'dot' | 'hardware' | 'hardware-plain';
+  export type Family = 'control' | 'fill' | 'dot' | 'hardware' | 'hardware-plain';
 
   interface Props {
     family?: Family;

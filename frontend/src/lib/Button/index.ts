@@ -26,3 +26,12 @@ export type {
   HardwareButtonProps,
   HardwarePlainButtonProps,
 } from './types';
+
+export type { VisualFamily, RoleMapping } from './roleMapping';
+export {
+  MAPPING_DEFAULT,
+  MAPPING_HARDWARE,
+  MAPPING_MINIMAL,
+  MAPPING_MIXED,
+  PRESET_MAPPINGS,
+} from './roleMapping';

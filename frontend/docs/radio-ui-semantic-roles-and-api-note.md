@@ -77,7 +77,7 @@ Characteristics:
 Examples:
 - CLEAR
 - TUNE
-- AUTO TUNE
+- CW Auto Tune (current `DspPanel` wiring is command-style, not sustained state)
 - RESET
 - CENTER
 

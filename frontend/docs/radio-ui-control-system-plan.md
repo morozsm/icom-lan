@@ -1,5 +1,7 @@
 # Radio UI Control System — Plan
 
+> Status note: the first production migration phase from legacy `StatusBadge` into the Radio UI Control System is now complete in `TxPanel`, `VfoPanel`, `DspPanel`, and `RitXitPanel`. The related semantic-split docs and migration issues were completed alongside that implementation. This document remains the architecture/migration reference for broader follow-up control-system work.
+
 ## Purpose
 Define the target design-system direction for the v2 frontend and the migration path from current ad-hoc controls to a coherent reusable control system.
 
@@ -149,8 +151,8 @@ Candidates:
 - `FillButton`
 - `HardwareButton`
 - `HardwarePlainButton`
-- future semantic role: `StatusToggle`
-- future semantic role: `ActionButton`
+- semantic role: `status-toggle`
+- semantic role: `action-button`
 
 Important distinction:
 - `StatusToggle` should be treated as a **semantic role** first

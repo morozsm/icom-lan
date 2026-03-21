@@ -77,19 +77,20 @@ These usages are not indicators and not sustained toggles. They are momentary co
 
 ---
 
-## Migration priority
+## Migration status
 
-### Priority 1 — easiest, least ambiguous
+### Completed production migrations
 1. `TxPanel`: `TX ACTIVE / TX IDLE` -> `StatusIndicator`
 2. `VfoPanel`: compact display badges -> `StatusIndicator`
-
-### Priority 2 — interactive split
 3. `TxPanel`: `ATU`, `VOX`, `COMP`, `MON` -> status-toggle
-4. `DspPanel`: `NB`, `Auto Tune` -> status-toggle
+4. `DspPanel`: `NB` -> status-toggle
 5. `RitXitPanel`: `RIT`, `XIT` -> status-toggle
+6. `RitXitPanel`: `CLEAR` -> action-button
 
-### Priority 3 — explicit review case
-6. `RitXitPanel`: `CLEAR` -> decide as action control
+### Semantic correction completed during migration
+7. `DspPanel`: `Auto Tune` was reviewed and explicitly kept out of `status-toggle`
+   because current wiring does not expose sustained server-backed state.
+   It is treated as an `action-button` case / command-style placeholder.
 
 ---
 

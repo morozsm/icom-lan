@@ -6,6 +6,7 @@ import DotButton from '../DotButton.svelte';
 import HardwareButton from '../HardwareButton.svelte';
 import HardwarePlainButton from '../HardwarePlainButton.svelte';
 import ControlledHarness from './ControlledHarness.svelte';
+import type { Family } from './ControlledHarness.svelte';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -34,7 +35,7 @@ afterEach(() => {
 });
 
 // Mount a controlled harness and return handles to the tested button and parent toggle
-function mountHarness(family: string, initial: boolean) {
+function mountHarness(family: Family, initial: boolean) {
   const target = document.createElement('div');
   document.body.appendChild(target);
   const component = mount(ControlledHarness, { target, props: { family, initial } });
@@ -107,7 +108,7 @@ describe('ControlButton', () => {
 
 function makeControlledWrapperTests(
   name: string,
-  family: string,
+  family: Family,
   Component: Parameters<typeof mount>[0],
 ) {
   describe(`${name} — controlled state`, () => {

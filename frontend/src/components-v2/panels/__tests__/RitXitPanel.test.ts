@@ -118,21 +118,21 @@ describe('shouldShowPanel', () => {
 describe('CLEAR button', () => {
   it('renders a CLEAR action button', () => {
     const target = mountPanel(baseProps);
-    const btn = target.querySelector<HTMLButtonElement>('.clear-button');
+    const btn = target.querySelector<HTMLButtonElement>('.clear-row button');
     expect(btn).not.toBeNull();
     expect(btn?.textContent?.trim()).toBe('CLEAR');
   });
 
-  it('CLEAR button is never data-active (action-button, not a toggle)', () => {
+  it('CLEAR button is never data-active="true" (action-button, not a toggle)', () => {
     const target = mountPanel(baseProps);
-    const btn = target.querySelector<HTMLButtonElement>('.clear-button');
-    expect(btn?.dataset.active).toBeUndefined();
+    const btn = target.querySelector<HTMLButtonElement>('.clear-row button');
+    expect(btn?.dataset.active).not.toBe('true');
   });
 
   it('calls onClear when CLEAR button is clicked', () => {
     const onClear = vi.fn();
     const target = mountPanel({ ...baseProps, onClear });
-    const btn = target.querySelector<HTMLButtonElement>('.clear-button');
+    const btn = target.querySelector<HTMLButtonElement>('.clear-row button');
     btn?.click();
     flushSync();
     expect(onClear).toHaveBeenCalledOnce();

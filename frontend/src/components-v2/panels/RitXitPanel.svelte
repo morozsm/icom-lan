@@ -1,6 +1,6 @@
 <script lang="ts">
   import { ValueControl } from '../controls/value-control';
-  import { FillButton } from '../../lib/Button';
+  import { FillButton, HardwarePlainButton } from '../../lib/Button';
   import { formatOffset, shouldShowPanel } from './rit-utils';
   import { getShortcutHint } from '../layout/shortcut-hints';
 
@@ -74,13 +74,7 @@
       />
       <div class="clear-row">
         <!-- action-button: momentary command, no sustained state -->
-        <button
-          type="button"
-          class="v2-control-button clear-button"
-          title={clearShortcut ?? undefined}
-          data-shortcut-hint={clearShortcut ?? undefined}
-          onclick={onClear}
-        >CLEAR</button>
+        <HardwarePlainButton onclick={onClear} title={clearShortcut} shortcutHint={clearShortcut}>CLEAR</HardwarePlainButton>
       </div>
     </div>
 {/if}
@@ -116,7 +110,4 @@
     padding-top: 2px;
   }
 
-  .clear-button {
-    background: transparent;
-  }
 </style>

@@ -1,14 +1,15 @@
 # Radio UI Theme Mapping Note
 
 ## Purpose
-Define the future direction for **theme mapping** in the Radio UI Control System.
+Define the model for **theme mapping** in the Radio UI Control System.
 
 Theme mapping answers this question:
 
 > Given a semantic role, which visual family should render it in this theme?
 
-This note is intentionally architectural / planning-oriented.
-It does not require full implementation yet.
+**Status (as of #343):** A minimal first-pass mapping model is now implemented in
+`src/lib/Button/roleMapping.ts` and validated in the control-lab demo.
+This note doubles as the architecture reference for that implementation.
 
 ---
 
@@ -42,27 +43,41 @@ So theme mapping is conceptually:
 
 ---
 
-## Example mapping model
+## Mapping shape (implemented)
 
-Illustrative examples only:
+```typescript
+// src/lib/Button/roleMapping.ts
+interface RoleMapping {
+  name: string;
+  statusToggle: VisualFamily;   // how to render status-toggle controls
+  actionButton: VisualFamily;   // how to render action-button controls
+}
+type VisualFamily = 'fill' | 'dot' | 'hardware-plain' | 'hardware';
+```
 
-### Theme: default-modern
-- `status-toggle` -> Fill
-- `action-button` -> HardwarePlain
-- `status-indicator` -> StatusIndicator tokens (modern)
+Exported from `$lib/Button`.
 
-### Theme: minimal-lab
-- `status-toggle` -> Dot
-- `action-button` -> Fill
-- `status-indicator` -> flat compact chips
+## Preset mappings (implemented)
 
-### Theme: vintage-radio
-- `status-toggle` -> HardwarePlain
-- `action-button` -> HardwarePlain or Hardware
-- `status-indicator` -> warmer, lower-contrast indicator tokens
+| Name | status-toggle | action-button | Notes |
+|---|---|---|---|
+| `default` | `fill` | `fill` | Recommended post-StatusBadge default |
+| `hardware` | `hardware-plain` | `hardware-plain` | Vintage incandescent / skeuomorphic |
+| `minimal` | `dot` | `dot` | Low visual weight, compact |
+| `mixed` | `fill` | `dot` | Different families per role — clearest semantic proof |
 
-The exact mapping does not need to be implemented yet.
-The important point is to preserve the possibility.
+The **mixed** preset is most architecturally significant: it proves the role split is real by
+assigning distinct visual families to `status-toggle` and `action-button` simultaneously.
+
+## Demo proof (implemented)
+
+`ControlButtonDemo.svelte` → "Theme Mapping Proof" section:
+- preset selector row (4 buttons)
+- renders `statusToggleButtons` via `activeMapping.statusToggle`
+- renders `actionButtons` via `activeMapping.actionButton`
+- switches live on preset selection
+
+No production panels were changed.
 
 ---
 
@@ -102,24 +117,37 @@ The exact implementation can wait until more families stabilize.
 ---
 
 ## Immediate practical rule
-Until theme mapping is fully implemented:
-- document the semantic role clearly
-- avoid making assumptions that block remapping later
-- use the current best visual candidate without claiming it is permanently canonical
+The mapping shape is now real but a runtime theme system is not.
+
+Until a runtime theme system is needed:
+- new controls use the `default` mapping (Fill for toggle, Fill for action) unless a specific design calls otherwise
+- the mapping shape in `roleMapping.ts` is the authoritative definition of "which families are valid"
+- avoid per-component `if theme === ...` branches — if theme switching is needed, thread the `RoleMapping` via context
 
 Example:
-- it is fine to use `FillButton` as the current default visual candidate for a status-toggle migration
+- it is fine to use `FillButton` as the current default candidate for a status-toggle migration
 - it is **not** fine to encode the architecture as if Fill were the only valid future rendering
 
 ---
 
+## What is intentionally deferred
+
+| Item | Why deferred |
+|---|---|
+| Runtime theme switching in production panels | Demo proof is sufficient; no production need yet |
+| Per-theme semantic wrapper components (`VintageStatusToggle` etc.) | Component proliferation without benefit |
+| `hardware` preset with per-button indicator/color sub-config | Requires richer `RoleMapping` shape; wait for real hardware theme |
+| Token-layer integration | Separate concern from role→family mapping |
+| `selector` and `value-control` in the mapping | Not button-family controls; extend shape when needed |
+
 ## Suggested future issue areas
 Theme mapping will likely need follow-up work in these areas:
-1. role-to-family mapping rules
-2. token packs per theme
-3. demo/control-lab theme preview support
+1. ~~role-to-family mapping rules~~ — **done (#343)**
+2. ~~demo/control-lab theme preview support~~ — **done (#343)**
+3. token packs per theme
 4. semantic wrapper strategy vs direct primitive usage
-5. migration safety for switching family mappings later
+5. production panel context/store for active mapping
+6. migration safety for switching family mappings later
 
 ---
 
