@@ -14,7 +14,7 @@
     compact?: boolean;
     pill?: boolean;
     disabled?: boolean;
-    indicatorStyle?: 'ring' | 'dot' | 'edge-bottom' | 'edge-left' | 'edge-sides' | 'fill';
+    indicatorStyle?: 'ring' | 'dot' | 'edge-bottom' | 'edge-left' | 'fill';
     surface?: 'flat' | 'hardware';
     indicatorColor?: 'cyan' | 'green' | 'amber' | 'red' | 'orange' | 'white' | string | null;
     title?: string | null;

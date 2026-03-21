@@ -1,5 +1,5 @@
 <script lang="ts">
-  import SegmentedButton from '../controls/SegmentedButton.svelte';
+  import { SegmentedControl } from '$lib/SegmentedControl';
   import { ValueControl } from '../controls/value-control';
   import { FillButton } from '$lib/Button';
   import { hasCapability } from '$lib/stores/capabilities.svelte';
@@ -57,7 +57,7 @@
     {#if showNr}
       <div class="section">
         <div class="section-label">NR</div>
-        <SegmentedButton
+        <SegmentedControl
           options={nrOptions}
           selected={nrMode}
           onchange={(v) => onNrModeChange(v as number)}
@@ -101,7 +101,7 @@
 
     <div class="section">
       <div class="section-label">Notch</div>
-      <SegmentedButton
+      <SegmentedControl
         options={notchOptions}
         selected={notchMode}
         onchange={(v) => onNotchModeChange(v as string)}

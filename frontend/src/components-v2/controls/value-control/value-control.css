@@ -12,8 +12,8 @@
 
   /* Text colors */
   --vc-text-primary: var(--v2-text-light);
-  --vc-text-secondary: var(--v2-text-dim);
-  --vc-text-label: var(--v2-text-dim);
+  --vc-text-secondary: var(--v2-text-subdued);
+  --vc-text-label: var(--v2-text-subdued);   /* was text-dim — bumped for dark-bg readability */
   --vc-text-value: var(--v2-text-bright);
 
   /* Glow effects */

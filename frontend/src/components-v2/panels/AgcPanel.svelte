@@ -1,5 +1,5 @@
 <script lang="ts">
-  import SegmentedButton from '../controls/SegmentedButton.svelte';
+  import { SegmentedControl } from '$lib/SegmentedControl';
   import Slider from '../controls/Slider.svelte';
   import { getAgcModes, getAgcLabels } from '$lib/stores/capabilities.svelte';
   import { buildAgcOptions } from './agc-utils';
@@ -17,7 +17,7 @@
 </script>
 
 <div class="panel-body">
-    <SegmentedButton
+    <SegmentedControl
       options={options}
       selected={agcMode}
       onchange={(v) => onAgcModeChange(v as number)}

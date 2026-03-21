@@ -34,7 +34,8 @@
         type="button"
         class="band-btn v2-control-button"
         class:active={isActive}
-        style="--control-accent:var(--v2-accent-cyan); --control-active-text:var(--v2-text-white)"
+        data-indicator-style="fill"
+        data-indicator-color="cyan"
         data-band={band.name}
         data-active={isActive}
         data-shortcut-hint={bandShortcut(band.bsrCode) ?? undefined}

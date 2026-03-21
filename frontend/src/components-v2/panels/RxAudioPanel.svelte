@@ -1,5 +1,5 @@
 <script lang="ts">
-  import SegmentedButton from '../controls/SegmentedButton.svelte';
+  import { SegmentedControl } from '$lib/SegmentedControl';
   import { ValueControl } from '../controls/value-control';
   import { hasAudio } from '$lib/stores/capabilities.svelte';
   import { buildMonitorOptions, formatMonitorStatus } from './audio-utils';
@@ -25,7 +25,7 @@
 
 {#if hasAudio()}
     <div class="panel-body">
-      <SegmentedButton
+      <SegmentedControl
         {options}
         selected={monitorMode}
         accentColor="var(--v2-accent-cyan-alt)"
