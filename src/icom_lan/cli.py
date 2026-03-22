@@ -16,6 +16,7 @@ Usage:
     icom-lan antenna [--ant1 on|off] [--ant2 on|off] [--rx-ant1 on|off] [--rx-ant2 on|off]
     icom-lan date [YYYY-MM-DD]
     icom-lan time [HH:MM]
+    icom-lan levels [--nr 0-255] [--nb 0-255] [--mic-gain 0-255] [--drive-gain 0-255] [--comp-level 0-255]
     icom-lan discover
 """
 
@@ -42,10 +43,12 @@ from .backends.factory import create_radio  # noqa: E402
 from .radio_protocol import (  # noqa: E402
     AdvancedControlCapable,
     AudioCapable,
+    LevelsCapable,
     MetersCapable,
     PowerControlCapable,
     Radio,
     ScopeCapable,
+    TransceiverStatusCapable,
 )
 from .types import Mode, get_audio_capabilities  # noqa: E402
 
@@ -438,6 +441,16 @@ def _build_parser() -> argparse.ArgumentParser:
         help="on=enable, off=disable, tune=start tune cycle (get if omitted)",
     )
     _add_json(tuner_p)
+
+    # levels (M4 dsp_levels family)
+    levels_p = sub.add_parser("levels", help="Get or set M4 DSP/audio levels")
+    levels_p.add_argument("--nr", type=int, metavar="0-255", help="Noise reduction level")
+    levels_p.add_argument("--nb", type=int, metavar="0-255", help="Noise blanker level")
+    levels_p.add_argument("--mic-gain", type=int, metavar="0-255", help="Microphone gain")
+    levels_p.add_argument("--drive-gain", type=int, metavar="0-255", help="Drive gain / TX power adjust")
+    levels_p.add_argument("--comp-level", type=int, metavar="0-255", help="Speech compressor level")
+    levels_p.add_argument("--receiver", type=int, default=0, choices=[0, 1], help="Receiver (0=main, 1=sub)")
+    _add_json(levels_p)
 
     # discover
     discover_p = sub.add_parser(
@@ -909,6 +922,11 @@ async def _run(args: argparse.Namespace) -> int:
                     print("Error: this radio does not support tuner control.", file=sys.stderr)
                     return 1
                 return await _cmd_tuner(radio, args)
+            elif args.command == "levels":
+                if not isinstance(radio, LevelsCapable):
+                    print("Error: this radio does not support level controls.", file=sys.stderr)
+                    return 1
+                return await _cmd_levels(radio, args)
             elif args.command == "web":
                 return await _cmd_web(radio, args)
             elif args.command == "scope":
@@ -1676,6 +1694,47 @@ async def _cmd_tuner(radio: AdvancedControlCapable, args: argparse.Namespace) ->
             print(json.dumps({"tuner_status": status, "label": label}))
         else:
             print(f"Tuner: {label}")
+    return 0
+
+
+async def _cmd_levels(radio: LevelsCapable, args: argparse.Namespace) -> int:
+    """Get or set M4 DSP/audio levels (NR, NB, mic gain, drive, compressor)."""
+    receiver = args.receiver
+    result = {}
+
+    # Set levels if provided
+    if args.nr is not None:
+        await radio.set_nr_level(args.nr, receiver)
+        result["nr_level"] = args.nr
+    if args.nb is not None:
+        await radio.set_nb_level(args.nb, receiver)
+        result["nb_level"] = args.nb
+    if args.mic_gain is not None:
+        await radio.set_mic_gain(args.mic_gain)
+        result["mic_gain"] = args.mic_gain
+    if args.drive_gain is not None:
+        await radio.set_drive_gain(args.drive_gain)
+        result["drive_gain"] = args.drive_gain
+    if args.comp_level is not None:
+        await radio.set_compressor_level(args.comp_level)
+        result["compressor_level"] = args.comp_level
+
+    # Get current levels (always show current state)
+    result["nr_level"] = await radio.get_nr_level(receiver)
+    result["nb_level"] = await radio.get_nb_level(receiver)
+    result["mic_gain"] = await radio.get_mic_gain()
+    result["drive_gain"] = await radio.get_drive_gain()
+    result["compressor_level"] = await radio.get_compressor_level()
+
+    if getattr(args, "json", False):
+        print(json.dumps(result))
+    else:
+        print(f"NR Level: {result['nr_level']}")
+        print(f"NB Level: {result['nb_level']}")
+        print(f"Mic Gain: {result['mic_gain']}")
+        print(f"Drive Gain: {result['drive_gain']}")
+        print(f"Compressor Level: {result['compressor_level']}")
+
     return 0
 
 
