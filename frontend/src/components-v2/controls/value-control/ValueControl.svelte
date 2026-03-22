@@ -13,9 +13,6 @@
     label: string;
     displayFn?: (v: number) => string;
     renderer: 'hbar' | 'bipolar' | 'knob';
-    fillColor?: string;
-    fillGradient?: string[];
-    trackColor?: string;
     accentColor?: string;
     showValue?: boolean;
     showLabel?: boolean;
@@ -47,9 +44,6 @@
     label,
     displayFn,
     renderer,
-    fillColor,
-    fillGradient,
-    trackColor,
     accentColor = 'var(--v2-accent-cyan)',
     showValue = true,
     showLabel = true,
@@ -80,9 +74,6 @@
     fineStepDivisor,
     label,
     displayFn,
-    fillColor,
-    fillGradient,
-    trackColor,
     accentColor,
     showValue,
     showLabel,
