@@ -47,8 +47,8 @@ class ReceiverState:
     s_meter: int = 0  # raw 0-241
     apf_type_level: int = 0  # 0-255
     nr_level: int = 0  # 0-255
-    pbt_inner: int = 0  # 0-255
-    pbt_outer: int = 0  # 0-255
+    pbt_inner: int = 128  # 0-255, 128=center
+    pbt_outer: int = 128  # 0-255, 128=center
     nb_level: int = 0  # 0-255
     digisel_shift: int = 0  # 0-255
     af_mute: bool = False

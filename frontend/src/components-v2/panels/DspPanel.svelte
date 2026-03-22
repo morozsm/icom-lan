@@ -71,6 +71,7 @@
           renderer="hbar"
           accentColor="var(--v2-accent-cyan)"
           onChange={onNrLevelChange}
+        variant="hardware-illuminated"
         />
       </div>
     {/if}
@@ -95,6 +96,7 @@
           renderer="hbar"
           accentColor="var(--v2-accent-yellow)"
           onChange={onNbLevelChange}
+        variant="hardware-illuminated"
         />
       </div>
     {/if}
@@ -117,6 +119,7 @@
           renderer="hbar"
           accentColor="var(--v2-accent-cyan)"
           onChange={onNotchFreqChange}
+        variant="hardware-illuminated"
         />
       {/if}
     </div>
@@ -142,6 +145,7 @@
           renderer="hbar"
           accentColor="var(--v2-accent-cyan)"
           onChange={onCwPitchChange}
+        variant="hardware-illuminated"
         />
       </div>
     {/if}
@@ -152,14 +156,14 @@
   .panel-body {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding: 7px 8px;
+    gap: 10px;
+    padding: 8px 8px;
   }
 
   .section {
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 7px;
   }
 
   .section-label {

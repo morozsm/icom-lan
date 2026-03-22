@@ -150,7 +150,7 @@
     </div>
 
     <ValueControl
-      label="IF Shift"
+      label={hasPbt ? "IF Shift (derived)" : "IF Shift"}
       value={ifShift}
       min={-1200}
       max={1200}
@@ -158,7 +158,9 @@
       unit="Hz"
       renderer="bipolar"
       accentColor="var(--v2-accent-cyan)"
+      disabled={hasPbt}
       onChange={onIfShiftChange}
+      variant="hardware-illuminated"
     />
     {#if hasPbt}
       <ValueControl
@@ -171,6 +173,7 @@
         renderer="bipolar"
         accentColor="var(--v2-accent-cyan)"
         onChange={onPbtInnerChange ?? (() => {})}
+        variant="hardware-illuminated"
       />
       <ValueControl
         label="PBT Outer"
@@ -182,6 +185,7 @@
         renderer="bipolar"
         accentColor="var(--v2-accent-green-bright)"
         onChange={onPbtOuterChange ?? (() => {})}
+        variant="hardware-illuminated"
       />
     {/if}
 
@@ -244,6 +248,7 @@
               renderer="hbar"
               accentColor={currentFilter === index + 1 ? 'var(--v2-accent-cyan)' : 'var(--v2-accent-green-bright)'}
               onChange={(value) => handlePresetChange(index, value)}
+            variant="hardware-illuminated"
             />
           {/if}
         </div>
@@ -299,21 +304,21 @@
   .panel-body {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    padding: 7px 8px;
+    gap: 8px;
+    padding: 8px 8px;
   }
 
   .filter-top-row {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
-    gap: 6px;
+    gap: 8px;
     align-items: start;
   }
 
   .filter-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 4px;
+    gap: 6px;
   }
 
   .filter-select-button,
@@ -345,10 +350,15 @@
     font-weight: 700;
   }
 
+  /* Extra separation for stacked illuminated sliders */
+  .panel-body :global(.vc-bipolar) {
+    margin-block: 4px;
+  }
+
   .filter-actions {
     display: flex;
     justify-content: flex-end;
-    margin-top: 2px;
+    margin-top: 4px;
   }
 
   .pbt-reset-button {
@@ -417,14 +427,14 @@
   .modal-body {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
   }
 
   .shape-section {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    padding-top: 2px;
+    gap: 8px;
+    padding-top: 4px;
   }
 
   .shape-title {
@@ -439,7 +449,7 @@
   .shape-buttons {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 6px;
+    gap: 8px;
   }
 
   .shape-button {
@@ -449,7 +459,7 @@
   .modal-filter-row {
     border: 1px solid var(--v2-border-darker);
     border-radius: 6px;
-    padding: 8px;
+    padding: 10px;
     background: var(--v2-overlay-light);
   }
 

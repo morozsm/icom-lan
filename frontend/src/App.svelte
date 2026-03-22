@@ -8,6 +8,7 @@
   import AppShell from './components/layout/AppShell.svelte';
   import RadioLayoutV2 from './components-v2/layout/RadioLayout.svelte';
   import ControlButtonDemo from './components-v2/controls/ControlButtonDemo.svelte';
+  import HBarVariantsDemo from './components-v2/controls/HBarVariantsDemo.svelte';
   import './app.css';
 
   let backendError = $state<string | null>(null);
@@ -68,6 +69,8 @@
 
 {#if demoMode === 'control-buttons'}
   <ControlButtonDemo />
+{:else if demoMode === 'hbar-variants'}
+  <HBarVariantsDemo />
 {:else if backendError}
   <div class="error-overlay" role="alert" aria-live="assertive">
     <div class="error-box">

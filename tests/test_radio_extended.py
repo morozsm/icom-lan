@@ -4,10 +4,10 @@ from unittest.mock import AsyncMock, MagicMock, call
 
 import pytest
 
+from icom_lan import IC_7610_ADDR
 from icom_lan.commands import (
     CONTROLLER_ADDR,
-    IC_7610_ADDR,
-    build_civ_frame,
+    build_civ_frame
 )
 from icom_lan.commander import Priority
 from icom_lan.exceptions import ConnectionError, CommandError

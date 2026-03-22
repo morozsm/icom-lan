@@ -71,6 +71,7 @@
         renderer="bipolar"
         accentColor="var(--v2-accent-cyan)"
         onChange={handleOffsetChange}
+      variant="hardware-illuminated"
       />
       <div class="clear-row">
         <!-- action-button: momentary command, no sustained state -->
@@ -83,8 +84,8 @@
   .panel-body {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    padding: 7px 8px;
+    gap: 8px;
+    padding: 8px 8px;
   }
 
   .row {

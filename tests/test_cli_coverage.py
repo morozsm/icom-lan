@@ -5,8 +5,6 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
-import socket
-import struct
 import types
 import wave
 from types import SimpleNamespace

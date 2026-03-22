@@ -161,28 +161,20 @@
   let micGainKnob = $state(50);
 
   // ── #350 — Modern Accent vs Hardware family comparison ───────────────────
-  let vc350modAf = $state(128);
-  let vc350modRf = $state(200);
-  let vc350modNr = $state(64);
-  let vc350hwAf = $state(128);
-  let vc350hwRf = $state(200);
-  let vc350hwNr = $state(64);
-  let vc350modRit = $state(1200);
-  let vc350modXit = $state(-400);
-  let vc350hwRit = $state(1200);
-  let vc350hwXit = $state(-400);
-  let vc350modKnob1 = $state(180);
-  let vc350modKnob2 = $state(80);
-  let vc350modKnob3 = $state(600);
-  let vc350hwKnob1 = $state(180);
-  let vc350hwKnob2 = $state(80);
-  let vc350hwKnob3 = $state(600);
+
 
   // ── Hardware Illuminated demo (5-layer) ─────────────────────────────────
+  let vcHwCurrentAf = $state(128);
+  let vcHwCurrentRf = $state(200);
+  let vcHwCurrentNr = $state(64);
+  let vcHwCurrentRit = $state(1200);
+  let vcHwCurrentXit = $state(-400);
+
   let vcIllumAf = $state(128);
   let vcIllumRf = $state(200);
   let vcIllumNr = $state(64);
   let vcIllumRit = $state(1200);
+  let vcIsolatedBipolar = $state(0);
   let vcIllumXit = $state(-400);
 </script>
 
@@ -1256,264 +1248,6 @@
 
   <hr style="margin: 32px 0; border: 0; border-top: 1px solid var(--v2-border-panel);">
 
-  <!-- ── #350 — Value Control Visual Families: Modern Accent vs Hardware ── -->
-
-  <section class="demo-card">
-    <h2>Value Control Visual Families — #350 <span class="hint">(Pass 2: Modern Accent vs Hardware)</span></h2>
-    <p class="lab-note">
-      Second-pass visual refinement. Same controls, same data, different treatment.<br/><br/>
-      <strong>Modern Accent</strong> (left) — glow significantly subdued (fill ring 14%→6%, thumb hover 20%→10%).
-      Demo accent colors dialled back from neon to instrument-grade muted tones. Labels brightened
-      from text-dim to text-subdued for better dark-background readability.<br/><br/>
-      <strong>Hardware</strong> (right) — thumb widened (5px→8px) with a warm machined-metal gradient
-      (incandescent peak at 52% rather than flat cool-grey). Fill dimmed to 70%. Calibration tick marks
-      now layered: fine every 12px + coarser brighter marks every 60px. Labels brightened from dark olive
-      to lighter sage. Knob: adds a radial-gradient cap circle inside the scale ring (convex dark material).
-      Indicator strengthened to 3px ivory stroke.
-    </p>
-  </section>
-
-  <!-- ── HBar: Modern vs Hardware ─────────────────────────────────────────── -->
-
-  <div class="vc-family-compare">
-    <section class="demo-card">
-      <h2>HBar / Modern Accent <span class="hint">(pass 2: subdued glow, muted tones)</span></h2>
-      <p class="lab-note">
-        Glow ring reduced to near-zero. Accent colors dialled to instrument-grade muted tones
-        (neon cyan→steel blue, neon green→muted sage, neon yellow→muted amber).
-      </p>
-      <div class="vc-demo-grid">
-        <ValueControl
-          label="AF Level"
-          value={vc350modAf}
-          min={0} max={255} step={1}
-          renderer="hbar"
-          accentColor="#1890b8"
-          onChange={(v) => { vc350modAf = v; }}
-        />
-        <ValueControl
-          label="RF Gain"
-          value={vc350modRf}
-          min={0} max={255} step={1}
-          renderer="hbar"
-          accentColor="#2a9060"
-          onChange={(v) => { vc350modRf = v; }}
-        />
-        <ValueControl
-          label="NR Level"
-          value={vc350modNr}
-          min={0} max={255} step={1}
-          renderer="hbar"
-          accentColor="#b89c28"
-          onChange={(v) => { vc350modNr = v; }}
-        />
-      </div>
-    </section>
-
-    <section class="demo-card vc-hw-panel">
-      <h2>HBar / Hardware <span class="hint">(pass 2: wider handle, layered ticks)</span></h2>
-      <p class="lab-note">
-        Thumb widened to 8px with warm machined-metal gradient. Fill dimmed to 70%.
-        Layered calibration marks: fine 12px + coarser 60px. Labels brightened to sage.
-      </p>
-      <div class="vc-demo-grid">
-        <ValueControl
-          label="AF Level"
-          value={vc350hwAf}
-          min={0} max={255} step={1}
-          renderer="hbar"
-          variant="hardware"
-          accentColor="#c8a840"
-          fillColor="#b89030"
-          onChange={(v) => { vc350hwAf = v; }}
-        />
-        <ValueControl
-          label="RF Gain"
-          value={vc350hwRf}
-          min={0} max={255} step={1}
-          renderer="hbar"
-          variant="hardware"
-          accentColor="#7aaa60"
-          fillColor="#6a9a50"
-          onChange={(v) => { vc350hwRf = v; }}
-        />
-        <ValueControl
-          label="NR Level"
-          value={vc350hwNr}
-          min={0} max={255} step={1}
-          renderer="hbar"
-          variant="hardware"
-          accentColor="#c8a840"
-          fillColor="#a88030"
-          onChange={(v) => { vc350hwNr = v; }}
-        />
-      </div>
-    </section>
-  </div>
-
-  <!-- ── Bipolar: Modern vs Hardware ──────────────────────────────────────── -->
-
-  <div class="vc-family-compare">
-    <section class="demo-card">
-      <h2>Bipolar / Modern Accent <span class="hint">(pass 2: subdued glow, muted tones)</span></h2>
-      <p class="lab-note">
-        Glow ring reduced. Accent colors dialled to muted instrument tones. Same stylistic direction as HBar modern.
-      </p>
-      <div class="vc-demo-grid">
-        <ValueControl
-          label="RIT"
-          value={vc350modRit}
-          min={-9999} max={9999} step={1}
-          defaultValue={0}
-          renderer="bipolar"
-          accentColor="#1890b8"
-          displayFn={(v) => (v >= 0 ? `+${v}` : `${v}`) + '\u00a0Hz'}
-          onChange={(v) => { vc350modRit = v; }}
-        />
-        <ValueControl
-          label="XIT"
-          value={vc350modXit}
-          min={-9999} max={9999} step={1}
-          defaultValue={0}
-          renderer="bipolar"
-          accentColor="#c86030"
-          displayFn={(v) => (v >= 0 ? `+${v}` : `${v}`) + '\u00a0Hz'}
-          onChange={(v) => { vc350modXit = v; }}
-        />
-      </div>
-    </section>
-
-    <section class="demo-card vc-hw-panel">
-      <h2>Bipolar / Hardware <span class="hint">(pass 2: thumb aligned with HBar, layered ticks)</span></h2>
-      <p class="lab-note">
-        Matches HBar hardware: wider warm-metal thumb, layered calibration ticks, dimmed fill, brighter sage labels.
-        Shadow bug fixed (was overriding own box-shadow to none).
-      </p>
-      <div class="vc-demo-grid">
-        <ValueControl
-          label="RIT"
-          value={vc350hwRit}
-          min={-9999} max={9999} step={1}
-          defaultValue={0}
-          renderer="bipolar"
-          variant="hardware"
-          accentColor="#c8a840"
-          fillColor="#a88030"
-          displayFn={(v) => (v >= 0 ? `+${v}` : `${v}`) + '\u00a0Hz'}
-          onChange={(v) => { vc350hwRit = v; }}
-        />
-        <ValueControl
-          label="XIT"
-          value={vc350hwXit}
-          min={-9999} max={9999} step={1}
-          defaultValue={0}
-          renderer="bipolar"
-          variant="hardware"
-          accentColor="#c87820"
-          fillColor="#a06010"
-          displayFn={(v) => (v >= 0 ? `+${v}` : `${v}`) + '\u00a0Hz'}
-          onChange={(v) => { vc350hwXit = v; }}
-        />
-      </div>
-    </section>
-  </div>
-
-  <!-- ── Knob: Modern vs Hardware ──────────────────────────────────────────── -->
-
-  <div class="vc-family-compare">
-    <section class="demo-card">
-      <h2>Knob / Modern Accent <span class="hint">(pass 2: glow reduced)</span></h2>
-      <p class="lab-note">
-        Fill arc drop-shadow reduced (50%→28% opacity). Accent colors dialled to muted instrument tones.
-      </p>
-      <div class="vc-knob-row">
-        <ValueControl
-          label="RF Gain"
-          value={vc350modKnob1}
-          min={0} max={255} step={1}
-          renderer="knob"
-          tickCount={5}
-          tickLabels={['0', '', '', '', 'MAX']}
-          accentColor="#2a9060"
-          onChange={(v) => { vc350modKnob1 = v; }}
-        />
-        <ValueControl
-          label="Squelch"
-          value={vc350modKnob2}
-          min={0} max={255} step={1}
-          renderer="knob"
-          tickCount={5}
-          accentColor="#1890b8"
-          onChange={(v) => { vc350modKnob2 = v; }}
-        />
-        <ValueControl
-          label="CW Pitch"
-          value={vc350modKnob3}
-          min={300} max={900} step={1}
-          unit="Hz"
-          renderer="knob"
-          tickCount={5}
-          tickLabels={['300', '', '', '', '900']}
-          accentColor="#b89c28"
-          onChange={(v) => { vc350modKnob3 = v; }}
-        />
-      </div>
-    </section>
-
-    <section class="demo-card vc-hw-panel">
-      <h2>Knob / Hardware <span class="hint">(pass 2: body cap, stronger pointer — exploratory)</span></h2>
-      <p class="lab-note">
-        <strong>Direction exploration:</strong> adds a radial-gradient cap circle (dark convex material) inside
-        the scale ring. Track thinned to 3px engraved groove. Indicator strengthened to 3px ivory.
-        <strong>Still unresolved:</strong> the cap gradient needs stronger 3D illusion; tick marks outside
-        the cap risk floating (physical knobs have marks on the panel, not the cap). Next iteration
-        should consider panel-silk-screen scale vs. knob-face approach.
-      </p>
-      <div class="vc-knob-row">
-        <ValueControl
-          label="RF Gain"
-          value={vc350hwKnob1}
-          min={0} max={255} step={1}
-          renderer="knob"
-          variant="hardware"
-          tickCount={5}
-          tickLabels={['0', '', '', '', 'MAX']}
-          accentColor="#7aaa60"
-          fillColor="#5a8a44"
-          trackColor="#0a0c0e"
-          onChange={(v) => { vc350hwKnob1 = v; }}
-        />
-        <ValueControl
-          label="Squelch"
-          value={vc350hwKnob2}
-          min={0} max={255} step={1}
-          renderer="knob"
-          variant="hardware"
-          tickCount={5}
-          accentColor="#c8a840"
-          fillColor="#a08030"
-          trackColor="#0a0c0e"
-          onChange={(v) => { vc350hwKnob2 = v; }}
-        />
-        <ValueControl
-          label="CW Pitch"
-          value={vc350hwKnob3}
-          min={300} max={900} step={1}
-          unit="Hz"
-          renderer="knob"
-          variant="hardware"
-          tickCount={5}
-          tickLabels={['300', '', '', '', '900']}
-          accentColor="#c87820"
-          fillColor="#985a14"
-          trackColor="#0a0c0e"
-          onChange={(v) => { vc350hwKnob3 = v; }}
-        />
-      </div>
-    </section>
-  </div>
-
-  <hr style="margin: 32px 0; border: 0; border-top: 1px solid var(--v2-border-panel);">
 
   <!-- ── Hardware Illuminated Slider (5-layer exploratory) ───────────────── -->
 
@@ -1532,46 +1266,47 @@
     </p>
   </section>
 
-  <div class="vc-family-compare">
-    <section class="demo-card vc-hw-panel">
-      <h2>HBar / Hardware (current) <span class="hint">(pass 2 reference)</span></h2>
-      <p class="lab-note">Current hardware variant for comparison.</p>
-      <div class="vc-demo-grid">
-        <ValueControl
-          label="AF Level"
-          value={vc350hwAf}
-          min={0} max={255} step={1}
-          renderer="hbar"
-          variant="hardware"
-          accentColor="#c8a840"
-          fillColor="#b89030"
-          onChange={(v) => { vc350hwAf = v; }}
-        />
-        <ValueControl
-          label="RF Gain"
-          value={vc350hwRf}
-          min={0} max={255} step={1}
-          renderer="hbar"
-          variant="hardware"
-          accentColor="#7aaa60"
-          fillColor="#6a9a50"
-          onChange={(v) => { vc350hwRf = v; }}
-        />
-        <ValueControl
-          label="NR Level"
-          value={vc350hwNr}
-          min={0} max={255} step={1}
-          renderer="hbar"
-          variant="hardware"
-          accentColor="#c8a840"
-          fillColor="#a88030"
-          onChange={(v) => { vc350hwNr = v; }}
-        />
-      </div>
-    </section>
+  <!-- ── Hardware Illuminated Slider ──────────────────────────────────────── -->
 
-    <section class="demo-card vc-hw-panel">
-      <h2>HBar / Hardware Illuminated <span class="hint">(5-layer exploratory)</span></h2>
+  <section class="demo-card vc-hw-panel">
+    <h2>HBar / Hardware (current)</h2>
+    <p class="lab-note">Current hardware variant for comparison.</p>
+    <div class="vc-demo-grid">
+      <ValueControl
+        label="AF Level"
+        value={vcHwCurrentAf}
+        min={0} max={255} step={1}
+        renderer="hbar"
+        variant="hardware"
+        accentColor="#c8a840"
+        fillColor="#b89030"
+        onChange={(v) => { vcHwCurrentAf = v; }}
+      />
+      <ValueControl
+        label="RF Gain"
+        value={vcHwCurrentRf}
+        min={0} max={255} step={1}
+        renderer="hbar"
+        variant="hardware"
+        accentColor="#7aaa60"
+        fillColor="#6a9a50"
+        onChange={(v) => { vcHwCurrentRf = v; }}
+      />
+      <ValueControl
+        label="NR Level"
+        value={vcHwCurrentNr}
+        min={0} max={255} step={1}
+        renderer="hbar"
+        variant="hardware"
+        accentColor="#c8a840"
+        fillColor="#a88030"
+        onChange={(v) => { vcHwCurrentNr = v; }}
+      />
+    </div>
+  </section>
+
+  <section class="demo-card vc-hw-panel">
+    <h2>HBar / Hardware Illuminated</h2>
       <p class="lab-note">
         New illuminated slider concept with diffuser frame and light slot.
         Drag to see brightness variation in slot and slit.
@@ -1602,43 +1337,41 @@
           onChange={(v) => { vcIllumNr = v; }}
         />
       </div>
-    </section>
-  </div>
+  </section>
 
-  <div class="vc-family-compare">
-    <section class="demo-card vc-hw-panel">
-      <h2>Bipolar / Hardware (current) <span class="hint">(pass 2 reference)</span></h2>
-      <p class="lab-note">Current hardware variant for comparison.</p>
-      <div class="vc-demo-grid">
-        <ValueControl
-          label="RIT"
-          value={vc350hwRit}
-          min={-9999} max={9999} step={1}
-          defaultValue={0}
-          renderer="bipolar"
-          variant="hardware"
-          accentColor="#c8a840"
-          fillColor="#a88030"
-          displayFn={(v) => (v >= 0 ? `+${v}` : `${v}`) + '\u00a0Hz'}
-          onChange={(v) => { vc350hwRit = v; }}
-        />
-        <ValueControl
-          label="XIT"
-          value={vc350hwXit}
-          min={-9999} max={9999} step={1}
-          defaultValue={0}
-          renderer="bipolar"
-          variant="hardware"
-          accentColor="#c87820"
-          fillColor="#a06010"
-          displayFn={(v) => (v >= 0 ? `+${v}` : `${v}`) + '\u00a0Hz'}
-          onChange={(v) => { vc350hwXit = v; }}
-        />
-      </div>
-    </section>
+  <section class="demo-card vc-hw-panel">
+    <h2>Bipolar / Hardware (current)</h2>
+    <p class="lab-note">Current hardware variant for comparison.</p>
+    <div class="vc-demo-grid">
+      <ValueControl
+        label="RIT"
+        value={vcHwCurrentRit}
+        min={-9999} max={9999} step={1}
+        defaultValue={0}
+        renderer="bipolar"
+        variant="hardware"
+        accentColor="#c8a840"
+        fillColor="#a88030"
+        displayFn={(v) => (v >= 0 ? `+${v}` : `${v}`) + '\u00a0Hz'}
+        onChange={(v) => { vcHwCurrentRit = v; }}
+      />
+      <ValueControl
+        label="XIT"
+        value={vcHwCurrentXit}
+        min={-9999} max={9999} step={1}
+        defaultValue={0}
+        renderer="bipolar"
+        variant="hardware"
+        accentColor="#c87820"
+        fillColor="#a06010"
+        displayFn={(v) => (v >= 0 ? `+${v}` : `${v}`) + '\u00a0Hz'}
+        onChange={(v) => { vcHwCurrentXit = v; }}
+      />
+    </div>
+  </section>
 
-    <section class="demo-card vc-hw-panel">
-      <h2>Bipolar / Hardware Illuminated <span class="hint">(5-layer exploratory)</span></h2>
+  <section class="demo-card vc-hw-panel">
+    <h2>Bipolar / Hardware Illuminated</h2>
       <p class="lab-note">
         Center-origin illuminated slider. Slot fills from center outward.
         Slit glows regardless of direction.
@@ -1665,8 +1398,25 @@
           onChange={(v) => { vcIllumXit = v; }}
         />
       </div>
-    </section>
-  </div>
+  </section>
+
+  <!-- ========== ISOLATED WHEEL DEBUG ========== -->
+  <section class="demo-section">
+    <h2>🧪 Isolated Bipolar (no radio, local state only)</h2>
+    <p style="color: #888; font-size: 12px;">value: {vcIsolatedBipolar}</p>
+      <div class="vc-grid" style="max-width: 320px;">
+        <ValueControl
+          label="TEST PBT"
+          value={vcIsolatedBipolar}
+          min={-1200} max={1200} step={25}
+          defaultValue={0}
+          renderer="bipolar"
+          variant="hardware-illuminated"
+          displayFn={(v) => `${v} Hz`}
+          onChange={(v) => { console.log('[ISOLATED] onChange', v); vcIsolatedBipolar = v; }}
+        />
+      </div>
+  </section>
 
 </div>
 

@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 import pytest
 
+from icom_lan import IC_7610_ADDR
 from icom_lan.commands import (
     _CMD_ACK,
     _CMD_FREQ_GET,
@@ -19,7 +20,6 @@ from icom_lan.commands import (
     _SUB_S_METER,
     _SUB_SWR_METER,
     CONTROLLER_ADDR,
-    IC_7610_ADDR,
     build_civ_frame,
     build_cmd29_frame,
 )

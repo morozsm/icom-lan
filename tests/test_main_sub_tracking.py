@@ -1,10 +1,17 @@
 """Tests for Main/Sub Tracking command (CI-V 0x16 0x5E)."""
 
+import icom_lan.commands as raw_commands
+
+from icom_lan import IC_7610_ADDR
 from icom_lan.commands import (
     get_main_sub_tracking,
     set_main_sub_tracking,
-    parse_civ_frame,
+    parse_civ_frame
 )
+from _command_test_helpers import bind_default_addr_globals, bind_default_addr_module
+
+bind_default_addr_module(raw_commands, to_addr=IC_7610_ADDR)
+bind_default_addr_globals(globals(), to_addr=IC_7610_ADDR)
 
 
 class TestGetMainSubTracking:

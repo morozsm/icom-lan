@@ -65,17 +65,50 @@
 
   let containerEl: HTMLDivElement | null = $state(null);
   let isDragging = $state(false);
+  let wheelLocked = $state(false);
+  let wheelUnlockTimer: ReturnType<typeof setTimeout> | null = null;
+  let localValue = $state(value);
+
+  function markWheelActive() {
+    wheelLocked = true;
+    if (wheelUnlockTimer) clearTimeout(wheelUnlockTimer);
+    wheelUnlockTimer = setTimeout(() => {
+      wheelLocked = false;
+      wheelUnlockTimer = null;
+    }, 300);
+  }
+
+  // Sync from parent value ONLY when idle (no drag, no wheel)
+  let prevValue = value;
+  $effect(() => {
+    const v = value;
+    if (v !== prevValue) {
+      prevValue = v;
+      if (!isDragging && !wheelLocked) {
+        localValue = v;
+      }
+    }
+  });
 
   // Derived values
   let centerPercent = $derived(getCenterPercent(min, max));
-  let currentPercent = $derived(valueToPosition(value, min, max) * 100);
-  let bipolarFill = $derived(getBipolarFill(value, min, max));
+  let currentPercent = $derived(valueToPosition(localValue, min, max) * 100);
+  let bipolarFill = $derived(getBipolarFill(localValue, min, max));
   let effectiveFill = $derived(fillGradient
     ? `linear-gradient(90deg, ${fillGradient.join(', ')})`
     : (fillColor ?? accentColor));
   let displayValue = $derived(displayFn
-    ? displayFn(value)
-    : `${formatBipolarValue(value)}${unit ? '\u00a0' + unit : ''}`);
+    ? displayFn(localValue)
+    : `${formatBipolarValue(localValue)}${unit ? '\u00a0' + unit : ''}`);
+  
+  // Absolute deviation from center for illuminated variant
+  // 0 at center, 1.0 at either extreme
+  let absDeviationRatio = $derived(Math.abs(localValue - defaultValue) / Math.max(Math.abs(max - defaultValue), Math.abs(min - defaultValue)));
+  
+  // Bipolar wheel: 1 step per tick by default (fine control).
+  // Only scale up for very large ranges (>500 steps) to stay usable.
+  let stepsInRange = $derived(Math.max(1, (max - min) / step));
+  let adaptiveWheelMultiplier = $derived(stepsInRange > 500 ? Math.round(stepsInRange / 240) : 1);
 
   // Debounced change handler
   let debouncedOnChange = $derived.by<(...args: unknown[]) => void>(() => {
@@ -85,7 +118,19 @@
     return ((v: number) => onChange(v)) as (...args: unknown[]) => void;
   });
 
+  let wheelCommitTimer: ReturnType<typeof setTimeout> | null = $state(null);
+  function scheduleWheelCommit(v: number) {
+    if (wheelCommitTimer) clearTimeout(wheelCommitTimer);
+    wheelCommitTimer = setTimeout(() => {
+      wheelCommitTimer = null;
+      onChange(v);
+    }, 90);
+  }
+
   function emitChange(newValue: number, immediate = false) {
+    if (newValue !== localValue) {
+      localValue = newValue;
+    }
     if (newValue !== value) {
       if (immediate) {
         onChange(newValue);
@@ -130,21 +175,24 @@
     if (disabled) return;
     e.preventDefault();
 
-    const wheelMultiplier = e.shiftKey ? 1 : 4;
+    // Use adaptive multiplier for consistent scroll speed across ranges
+    const wheelMultiplier = e.shiftKey ? 1 : adaptiveWheelMultiplier;
     const effectiveStep = e.shiftKey ? step / fineStepDivisor : step * wheelMultiplier;
     const direction = e.deltaY > 0 ? -1 : 1;
     const newValue = clamp(
-      snapToStep(value + direction * effectiveStep, effectiveStep, min),
+      snapToStep(localValue + direction * effectiveStep, effectiveStep, min),
       min,
       max,
     );
-    emitChange(newValue, true);
+    localValue = newValue;
+    markWheelActive();
+    onChange(newValue);
   }
 
   function handleKeyDown(e: KeyboardEvent) {
     if (disabled) return;
 
-    const newValue = handleKeyboardStep(value, e.key, step, fineStepDivisor, min, max, e.shiftKey);
+    const newValue = handleKeyboardStep(localValue, e.key, step, fineStepDivisor, min, max, e.shiftKey);
     if (newValue !== null) {
       e.preventDefault();
       emitChange(newValue);
@@ -166,7 +214,7 @@
   bind:this={containerEl}
   data-shortcut-hint={shortcutHint ?? undefined}
   title={title ?? shortcutHint ?? undefined}
-  style="--vc-accent: {accentColor}; --vc-fill-color: {effectiveFill}; --vc-track-color: {trackColor}; --vc-center: {centerPercent}%; --vc-fill-start: {bipolarFill.fillStart}%; --vc-fill-end: {bipolarFill.fillEnd}%; --vc-current: {currentPercent}%;"
+  style="--vc-accent: {accentColor}; --vc-fill-color: {effectiveFill}; --vc-track-color: {trackColor}; --vc-center: {centerPercent}%; --vc-fill-start: {bipolarFill.fillStart}%; --vc-fill-end: {bipolarFill.fillEnd}%; --vc-current: {currentPercent}%; --vc-abs-deviation: {absDeviationRatio};"
 >
   {#if showLabel || showValue}
     <div class="vc-header">
@@ -207,6 +255,13 @@
       <div class="hil-thumb" aria-hidden="true">
         <div class="hil-slit"></div>
       </div>
+    {:else if variant === 'hardware'}
+      <!-- Hardware bipolar with illuminated-style positioning -->
+      <div class="hw-channel" aria-hidden="true">
+        <div class="hw-slot"></div>
+        <div class="hw-center-mark"></div>
+      </div>
+      <div class="hw-thumb" aria-hidden="true"></div>
     {:else}
       <div class="vc-track" aria-hidden="true">
         <div class="vc-track-base">
@@ -243,7 +298,7 @@
   }
 
   .compact .vc-header {
-    font-size: 9px;
+    font-size: var(--vc-label-size);
   }
 
   .vc-label {
@@ -269,6 +324,8 @@
     cursor: pointer;
     outline: none;
     touch-action: none;
+    isolation: isolate;
+    overflow: hidden;
   }
 
   .compact .vc-track-container {
@@ -362,194 +419,221 @@
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--vc-accent) 10%, transparent);
   }
 
-  /* ── Hardware variant ─────────────────────────────────────────────────── */
+  /* ── Hardware variant (illuminated-style structure) ──────────────────── */
+
+  .hardware .vc-track-container {
+    min-height: var(--vc-control-height);
+  }
 
   /* Recessed groove */
-  .hardware .vc-track-base {
-    height: 6px;
-    border-radius: 1px;
-    background: #060a0d;
+  .hardware .hw-channel {
+    position: absolute;
+    inset: var(--vc-channel-inset);
+    border-radius: var(--vc-channel-radius);
+    background: var(--vc-hw-channel-bg);
     box-shadow:
-      inset 0 2px 3px rgba(0, 0, 0, 0.9),
-      inset 0 0 0 1px rgba(0, 0, 0, 0.5),
-      0 1px 0 rgba(255, 255, 255, 0.04);
+      inset 0 2px 4px var(--vc-hw-channel-shadow-1),
+      inset 0 -1px 2px var(--vc-hw-channel-shadow-2),
+      inset 0 0 0 1px var(--vc-hw-channel-border);
   }
 
-  .hardware.compact .vc-track-base {
-    height: 5px;
+  /* Illuminated slot (fills from center) */
+  .hardware .hw-slot {
+    position: absolute;
+    top: 50%;
+    left: var(--vc-slot-inset-x);
+    right: var(--vc-slot-inset-x);
+    height: var(--vc-illum-slot-height);
+    transform: translateY(-50%);
+    border-radius: var(--vc-slot-radius);
+    background: linear-gradient(
+      90deg,
+      var(--vc-hw-slot-dark) 0%,
+      var(--vc-hw-slot-edge) calc(var(--vc-fill-start) - 1%),
+      color-mix(in srgb, var(--vc-illum-glow-primary) calc(28% + 0.47 * var(--vc-abs-deviation, 0.5) * 100%), transparent) var(--vc-fill-start),
+      color-mix(in srgb, var(--vc-illum-glow-secondary) calc(38% + 0.95 * var(--vc-abs-deviation, 0.5) * 100%), transparent) calc(var(--vc-center)),
+      color-mix(in srgb, var(--vc-illum-glow-primary) calc(28% + 0.47 * var(--vc-abs-deviation, 0.5) * 100%), transparent) var(--vc-fill-end),
+      var(--vc-hw-slot-edge) calc(var(--vc-fill-end) + 1%),
+      var(--vc-hw-slot-dark) 100%
+    );
+    box-shadow:
+      0 0 7px color-mix(in srgb, var(--vc-illum-glow-primary) calc(18% + 0.55 * var(--vc-abs-deviation, 0.5) * 100%), transparent),
+      0 0 14px color-mix(in srgb, var(--vc-illum-glow-primary) calc(9% + 0.28 * var(--vc-abs-deviation, 0.5) * 100%), transparent);
   }
 
-  /* Remove the modern bipolar gradient overlay */
-  .hardware .vc-track-base::before {
-    display: none;
-  }
-
-  /* Flat fill — no glow, dimmed */
-  .hardware .vc-track-fill {
-    box-shadow: none;
-    opacity: 0.7;
-  }
-
-  /* Zero mark — more prominent calibration stop */
-  .hardware .vc-track-center {
+  /* Center mark */
+  .hardware .hw-center-mark {
+    position: absolute;
+    left: var(--vc-center);
+    top: 0;
+    bottom: 0;
     width: 2px;
-    height: 14px;
-    background: rgba(200, 210, 185, 0.55);
-    box-shadow: none;
-    border-radius: 0;
-    border: none;
+    transform: translateX(-50%);
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 1px;
   }
 
-  .hardware.compact .vc-track-center {
-    height: 12px;
-  }
-
-  /* Calibration tick marks — fine + coarser every 5th */
+  /* Calibration scale marks — double frequency + incandescent glow */
   .hardware .vc-track-container::after {
     content: '';
     position: absolute;
     inset-inline: 0;
     bottom: 0px;
-    height: 8px;
+    height: var(--vc-tick-height);
     pointer-events: none;
+    /* Fine tick every 6px (was 12px), major every 30px (was 60px) */
     background:
       repeating-linear-gradient(
         90deg,
-        rgba(255, 255, 255, 0.22) 0px,
-        rgba(255, 255, 255, 0.22) 1px,
-        transparent 1px,
-        transparent 60px
+        color-mix(in srgb, var(--vc-hw-tick-color) calc(var(--vc-hw-tick-major-opacity) * 100%), transparent) 0px,
+        color-mix(in srgb, var(--vc-hw-tick-color) calc(var(--vc-hw-tick-major-opacity) * 100%), transparent) var(--vc-tick-major-width),
+        transparent var(--vc-tick-major-width),
+        transparent var(--vc-tick-major-spacing)
       ),
       repeating-linear-gradient(
         90deg,
-        rgba(255, 255, 255, 0.09) 0px,
-        rgba(255, 255, 255, 0.09) 1px,
-        transparent 1px,
-        transparent 12px
+        color-mix(in srgb, var(--vc-hw-tick-color) calc(var(--vc-hw-tick-minor-opacity) * 100%), transparent) 0px,
+        color-mix(in srgb, var(--vc-hw-tick-color) calc(var(--vc-hw-tick-minor-opacity) * 100%), transparent) var(--vc-tick-minor-width),
+        transparent var(--vc-tick-minor-width),
+        transparent var(--vc-tick-minor-spacing)
       );
+    filter: drop-shadow(0 0 2px color-mix(in srgb, var(--vc-hw-tick-color) calc(var(--vc-hw-tick-glow-opacity) * 100%), transparent));
   }
 
-  /* Physical handle — matches HBar: wide, warm machined-metal gradient */
-  .hardware .vc-thumb {
-    width: 8px;
-    height: 22px;
-    border-radius: 2px;
+  /* Volumetric thumb */
+  .hardware .hw-thumb {
+    position: absolute;
+    left: var(--vc-current);
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: var(--vc-illum-thumb-width);
+    height: var(--vc-illum-thumb-height);
+    border-radius: 3px;
     background: linear-gradient(
       to right,
-      #505860 0%,
-      #8a9298 18%,
-      #c8d0d4 40%,
-      #ece8de 52%,
-      #ccc4b8 64%,
-      #90888c 82%,
-      #484c52 100%
+      var(--vc-illum-thumb-grad-dark) 0%,
+      var(--vc-illum-thumb-grad-mid-1) 8%,
+      var(--vc-illum-thumb-grad-mid-2) 20%,
+      var(--vc-illum-thumb-grad-bright-1) 35%,
+      var(--vc-illum-thumb-grad-bright-2) 45%,
+      var(--vc-illum-thumb-grad-center) 50%,
+      var(--vc-illum-thumb-grad-bright-2) 55%,
+      var(--vc-illum-thumb-grad-bright-1) 65%,
+      var(--vc-illum-thumb-grad-mid-2) 80%,
+      var(--vc-illum-thumb-grad-mid-1) 92%,
+      var(--vc-illum-thumb-grad-dark) 100%
     );
-    border: 1px solid rgba(0, 0, 0, 0.7);
+    border: 1px solid var(--vc-illum-thumb-border);
     box-shadow:
-      0 2px 5px rgba(0, 0, 0, 0.8),
-      inset 0 1px 0 rgba(255, 255, 255, 0.5),
-      inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+      var(--vc-illum-thumb-shadow-deep),
+      var(--vc-illum-thumb-shadow-mid),
+      var(--vc-illum-thumb-shadow-close),
+      var(--vc-illum-thumb-highlight-top),
+      var(--vc-illum-thumb-shadow-bottom),
+      var(--vc-illum-thumb-highlight-sides),
+      calc(var(--vc-illum-thumb-highlight-sides) * -1),
+      var(--vc-illum-thumb-outline);
   }
 
-  .hardware.compact .vc-thumb {
-    width: 6px;
-    height: 16px;
-  }
-
-  .hardware .vc-track-container:hover .vc-thumb {
+  .hardware .vc-track-container:hover .hw-thumb {
     box-shadow:
-      0 2px 5px rgba(0, 0, 0, 0.8),
-      inset 0 1px 0 rgba(255, 255, 255, 0.5),
-      inset 0 -1px 0 rgba(0, 0, 0, 0.3),
-      0 0 0 1px rgba(255, 248, 220, 0.12);
+      var(--vc-illum-thumb-shadow-deep),
+      var(--vc-illum-thumb-shadow-mid),
+      var(--vc-illum-thumb-shadow-close),
+      var(--vc-illum-thumb-hover-highlight-top),
+      var(--vc-illum-thumb-shadow-bottom),
+      var(--vc-illum-thumb-hover-highlight-sides),
+      calc(var(--vc-illum-thumb-hover-highlight-sides) * -1),
+      var(--vc-illum-thumb-outline),
+      var(--vc-illum-thumb-hover-ring);
   }
 
-  /* Hardware axis labels — warmer, slightly brighter */
+  /* Hardware axis labels */
   .hardware .vc-axis {
-    color: #7a8870;
+    color: var(--vc-hw-axis-color);
   }
 
   .hardware .axis-zero {
-    color: #96a886;
+    color: var(--vc-hw-axis-zero-color);
   }
 
   .hardware .vc-label {
-    color: var(--vc-text-label, #8a9e78);
-    letter-spacing: 0.04em;
+    color: var(--vc-hw-label-color, var(--vc-text-label));
+    letter-spacing: var(--vc-label-tracking);
     text-transform: uppercase;
-    font-size: 9px;
+    font-size: var(--vc-label-size);
   }
 
   .hardware .vc-value {
-    color: var(--vc-text-value, #c8d8a8);
+    color: var(--vc-hw-value-color, var(--vc-text-value));
   }
-
   /* ── Hardware Illuminated variant (5-layer) ──────────────────────────── */
 
   .hw-illum .vc-label {
-    color: var(--vc-text-label, #8a9e78);
-    letter-spacing: 0.04em;
+    color: var(--vc-illum-label-color, var(--vc-theme-label-color));
+    letter-spacing: var(--vc-label-tracking);
     text-transform: uppercase;
-    font-size: 9px;
+    font-size: var(--vc-label-size);
   }
 
   .hw-illum .vc-value {
-    color: var(--vc-text-value, #c8d8a8);
+    color: var(--vc-illum-value-color, var(--vc-theme-value-color));
   }
 
   .hw-illum .vc-track-container {
-    min-height: 28px;
+    min-height: var(--vc-control-height);
   }
 
-  /* Layer 1: Outer diffuser frame */
+  /* Frame — color-mix с --vc-abs-deviation (как процент) */
   .hw-illum .hil-frame {
     position: absolute;
     inset: 2px 0;
     border-radius: 14px;
-    border: 2px solid rgba(180, 140, 90, 0.15);
+    border: 2px solid var(--vc-illum-frame-border);
     background: transparent;
     box-shadow:
-      0 0 8px rgba(210, 165, 110, 0.12),
-      0 0 16px rgba(210, 165, 110, 0.06),
-      inset 0 0 6px rgba(210, 165, 110, 0.04);
+      0 0 14px color-mix(in srgb, var(--vc-illum-glow-primary) calc(14% + 0.21 * var(--vc-abs-deviation, 0.5) * 100%), transparent),
+      0 0 28px color-mix(in srgb, var(--vc-illum-glow-primary) calc(7% + 0.11 * var(--vc-abs-deviation, 0.5) * 100%), transparent),
+      inset 0 0 10px color-mix(in srgb, var(--vc-illum-glow-primary) calc(6% + 0.09 * var(--vc-abs-deviation, 0.5) * 100%), transparent),
+      inset 0 1px 0 var(--vc-illum-frame-inset-highlight),
+      inset 0 -1px 0 var(--vc-illum-frame-inset-shadow);
     pointer-events: none;
   }
 
-  /* Layer 2: Recessed milled channel */
+  /* Channel */
   .hw-illum .hil-channel {
     position: absolute;
-    inset: 4px 8px;
-    border-radius: 3px;
-    background: #050708;
+    inset: var(--vc-channel-inset);
+    border-radius: var(--vc-channel-radius);
+    background: var(--vc-illum-channel-bg-sem);
     box-shadow:
-      inset 0 2px 4px rgba(0, 0, 0, 0.95),
-      inset 0 -1px 2px rgba(0, 0, 0, 0.6),
-      inset 0 0 0 1px rgba(0, 0, 0, 0.5);
+      inset 0 2px 4px var(--vc-illum-channel-shadow-1-sem),
+      inset 0 -1px 2px var(--vc-illum-channel-shadow-2-sem),
+      inset 0 0 0 1px var(--vc-illum-channel-border-sem);
   }
 
-  /* Layer 3: Illuminated slot — fills from center outward */
+  /* Slot — fills from center, brightness scales with deviation */
   .hw-illum .hil-slot {
     position: absolute;
     top: 50%;
-    left: 4px;
-    right: 4px;
-    height: 3px;
+    left: var(--vc-slot-inset-x);
+    right: var(--vc-slot-inset-x);
+    height: var(--vc-illum-slot-height);
     transform: translateY(-50%);
-    border-radius: 1.5px;
-    /* Use fill-start/fill-end from bipolar to light from center outward */
+    border-radius: var(--vc-slot-radius);
     background: linear-gradient(
       90deg,
-      rgba(120, 90, 60, 0.04) 0%,
-      rgba(180, 140, 90, 0.06) calc(var(--vc-fill-start) - 1%),
-      rgba(220, 175, 120, 0.55) var(--vc-fill-start),
-      rgba(220, 175, 120, 0.65) calc(var(--vc-center)),
-      rgba(220, 175, 120, 0.55) var(--vc-fill-end),
-      rgba(180, 140, 90, 0.06) calc(var(--vc-fill-end) + 1%),
-      rgba(120, 90, 60, 0.04) 100%
+      var(--vc-illum-slot-dark-sem) 0%,
+      var(--vc-illum-slot-edge-sem) calc(var(--vc-fill-start) - 1%),
+      color-mix(in srgb, var(--vc-illum-glow-primary) calc(28% + 0.47 * var(--vc-abs-deviation, 0.5) * 100%), transparent) var(--vc-fill-start),
+      color-mix(in srgb, var(--vc-illum-glow-secondary) calc(38% + 0.95 * var(--vc-abs-deviation, 0.5) * 100%), transparent) calc(var(--vc-center)),
+      color-mix(in srgb, var(--vc-illum-glow-primary) calc(28% + 0.47 * var(--vc-abs-deviation, 0.5) * 100%), transparent) var(--vc-fill-end),
+      var(--vc-illum-slot-edge-sem) calc(var(--vc-fill-end) + 1%),
+      var(--vc-illum-slot-dark-sem) 100%
     );
     box-shadow:
-      0 0 4px rgba(210, 165, 110, 0.2),
-      0 0 8px rgba(210, 165, 110, 0.1);
+      0 0 7px color-mix(in srgb, var(--vc-illum-glow-primary) calc(18% + 0.55 * var(--vc-abs-deviation, 0.5) * 100%), transparent),
+      0 0 14px color-mix(in srgb, var(--vc-illum-glow-primary) calc(9% + 0.28 * var(--vc-abs-deviation, 0.5) * 100%), transparent);
   }
 
   /* Center mark — always visible reference point */
@@ -565,62 +649,68 @@
     border-radius: 1px;
   }
 
-  /* Layer 4: Wide thumb carriage */
+  /* Thumb — volumetric gradient + shadows */
   .hw-illum .hil-thumb {
     position: absolute;
     left: var(--vc-current);
     top: 50%;
     transform: translate(-50%, -50%);
-    width: 24px;
-    height: 26px;
+    width: var(--vc-illum-thumb-width);
+    height: var(--vc-illum-thumb-height);
     border-radius: 3px;
     pointer-events: none;
     background: linear-gradient(
       to right,
-      #3a3e44 0%,
-      #585c62 8%,
-      #6a6e74 20%,
-      #787c82 35%,
-      #848890 50%,
-      #787c82 65%,
-      #6a6e74 80%,
-      #585c62 92%,
-      #3a3e44 100%
+      var(--vc-illum-thumb-grad-dark) 0%,
+      var(--vc-illum-thumb-grad-mid-1) 8%,
+      var(--vc-illum-thumb-grad-mid-2) 20%,
+      var(--vc-illum-thumb-grad-bright-1) 35%,
+      var(--vc-illum-thumb-grad-bright-2) 45%,
+      var(--vc-illum-thumb-grad-center) 50%,
+      var(--vc-illum-thumb-grad-bright-2) 55%,
+      var(--vc-illum-thumb-grad-bright-1) 65%,
+      var(--vc-illum-thumb-grad-mid-2) 80%,
+      var(--vc-illum-thumb-grad-mid-1) 92%,
+      var(--vc-illum-thumb-grad-dark) 100%
     );
-    border: 1px solid rgba(0, 0, 0, 0.8);
+    border: 1px solid var(--vc-illum-thumb-border);
     box-shadow:
-      0 3px 8px rgba(0, 0, 0, 0.9),
-      0 1px 3px rgba(0, 0, 0, 0.7),
-      inset 0 1px 0 rgba(255, 255, 255, 0.25),
-      inset 0 -1px 0 rgba(0, 0, 0, 0.4),
-      inset 1px 0 0 rgba(255, 255, 255, 0.08),
-      inset -1px 0 0 rgba(255, 255, 255, 0.08);
+      var(--vc-illum-thumb-shadow-deep),
+      var(--vc-illum-thumb-shadow-mid),
+      var(--vc-illum-thumb-shadow-close),
+      var(--vc-illum-thumb-highlight-top),
+      var(--vc-illum-thumb-shadow-bottom),
+      var(--vc-illum-thumb-highlight-sides),
+      calc(var(--vc-illum-thumb-highlight-sides) * -1),
+      var(--vc-illum-thumb-outline);
   }
 
-  /* Layer 5: Center slit — lamp light through carriage */
+  /* Slit — brightness scales with deviation */
   .hw-illum .hil-slit {
     position: absolute;
     top: 3px;
     bottom: 3px;
     left: 50%;
-    width: 2px;
+    width: var(--vc-illum-slit-width);
     transform: translateX(-50%);
     border-radius: 1px;
-    background: rgba(220, 175, 120, 0.6);
+    background: color-mix(in srgb, var(--vc-illum-glow-secondary) calc(55% + 0.95 * var(--vc-abs-deviation, 0.5) * 100%), transparent);
     box-shadow:
-      0 0 4px rgba(210, 165, 110, 0.4),
-      0 0 8px rgba(210, 165, 110, 0.2);
+      0 0 7px color-mix(in srgb, var(--vc-illum-glow-primary) calc(35% + 0.75 * var(--vc-abs-deviation, 0.5) * 100%), transparent),
+      0 0 14px color-mix(in srgb, var(--vc-illum-glow-primary) calc(18% + 0.38 * var(--vc-abs-deviation, 0.5) * 100%), transparent);
   }
 
   .hw-illum .vc-track-container:hover .hil-thumb {
     box-shadow:
-      0 3px 8px rgba(0, 0, 0, 0.9),
-      0 1px 3px rgba(0, 0, 0, 0.7),
-      inset 0 1px 0 rgba(255, 255, 255, 0.3),
-      inset 0 -1px 0 rgba(0, 0, 0, 0.4),
-      inset 1px 0 0 rgba(255, 255, 255, 0.12),
-      inset -1px 0 0 rgba(255, 255, 255, 0.12),
-      0 0 0 1px rgba(210, 165, 110, 0.15);
+      var(--vc-illum-thumb-shadow-deep),
+      var(--vc-illum-thumb-shadow-mid),
+      var(--vc-illum-thumb-shadow-close),
+      var(--vc-illum-thumb-hover-highlight-top),
+      var(--vc-illum-thumb-shadow-bottom),
+      var(--vc-illum-thumb-hover-highlight-sides),
+      calc(var(--vc-illum-thumb-hover-highlight-sides) * -1),
+      var(--vc-illum-thumb-outline),
+      var(--vc-illum-thumb-hover-ring);
   }
 
   /* Hide standard axis for illuminated — use same hardware axis style */

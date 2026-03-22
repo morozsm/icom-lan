@@ -43,6 +43,7 @@
         shortcutHint={rfGainShortcut}
         title={rfGainShortcut}
         onChange={onRfGainChange}
+      variant="hardware-illuminated"
       />
     {/if}
 

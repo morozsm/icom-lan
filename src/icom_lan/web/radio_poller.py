@@ -700,6 +700,8 @@ class RadioPoller:
                 ("digisel", 0x16, 0x4E),
                 ("ip_plus", 0x16, 0x65),
                 ("filter_width", 0x1A, 0x03),
+                ("pbt", 0x14, 0x07),  # PBT Inner
+                ("pbt", 0x14, 0x08),  # PBT Outer
             ]
             for cap, cmd_byte, sub_byte in _PER_RX_QUERIES:
                 if not self._supports_capability(cap):
@@ -1002,13 +1004,6 @@ class RadioPoller:
                 bcd_index_byte = bcd_encode_value(payload_value, byte_count=1)
                 # CI-V 1A 03 SET format: <FIL_number> <width_index_BCD>
                 # FIL number: 01=FIL1, 02=FIL2, 03=FIL3
-                current_filter = 1
-                if self._radio_state:
-                    t = (
-                        self._radio_state.sub if rx != 0
-                        else self._radio_state.main
-                    )
-                    current_filter = getattr(t, "filter", 1) or 1
                 logger.info(
                     "set_filter_width: mode=%s, width=%d Hz, index=%d, "
                     "bcd=0x%s, rx=%d",

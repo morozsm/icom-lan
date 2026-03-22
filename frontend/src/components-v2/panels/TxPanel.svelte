@@ -68,6 +68,7 @@
       renderer="hbar"
       accentColor="var(--v2-accent-orange)"
       onChange={onMicGainChange}
+    variant="hardware-illuminated"
     />
 
     <div class="atu-row">
@@ -101,6 +102,7 @@
         renderer="hbar"
         accentColor="var(--v2-accent-orange)"
         onChange={onCompLevelChange}
+      variant="hardware-illuminated"
       />
     {/if}
 
@@ -118,6 +120,7 @@
         renderer="hbar"
         accentColor="var(--v2-accent-orange)"
         onChange={onMonLevelChange}
+      variant="hardware-illuminated"
       />
     {/if}
 
@@ -128,8 +131,8 @@
   .panel-body {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    padding: 7px 8px;
+    gap: 8px;
+    padding: 8px 8px;
   }
 
   .tx-indicator {

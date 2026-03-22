@@ -15,7 +15,6 @@ from icom_lan.profiles import RadioProfile
 from icom_lan.rig_loader import (
     VALID_CONTROL_STYLES,
     VALID_PROTOCOL_TYPES,
-    VALID_RULE_KINDS,
     VALID_VFO_SCHEMES,
     RigConfig,
     RigLoadError,

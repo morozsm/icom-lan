@@ -125,7 +125,16 @@ export class WsChannel {
     this._clearTimers();
     const { ws } = this;
     this.ws = null;
-    ws?.close(); // onclose fires, sees intentionalClose=true, calls setState('disconnected')
+    if (ws) {
+      if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CLOSING) {
+        ws.close();
+      } else if (ws.readyState === WebSocket.CONNECTING) {
+        // WS not yet open — close silently after open to avoid console error
+        ws.onopen = () => ws.close();
+        ws.onerror = () => {}; // suppress error log
+      }
+    }
+    this.setState('disconnected');
     this.attempt = 0;
   }
 

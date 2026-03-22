@@ -2,14 +2,12 @@ from __future__ import annotations
 
 import asyncio
 import struct
-import time
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from icom_lan.profiles import resolve_radio_profile
-from icom_lan.rigctld.state_cache import StateCache
 from icom_lan.scope import ScopeFrame
 from icom_lan.types import AudioCodec
 from icom_lan.web.handlers import (

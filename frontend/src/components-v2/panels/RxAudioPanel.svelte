@@ -44,6 +44,7 @@
         title={afShortcut}
         disabled={isMuted}
         onChange={onAfLevelChange}
+      variant="hardware-illuminated"
       />
       <div class="output-indicator">{statusText}</div>
     </div>

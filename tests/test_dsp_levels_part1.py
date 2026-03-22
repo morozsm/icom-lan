@@ -3,14 +3,17 @@
 import pytest
 
 from icom_lan import commands
+from icom_lan import IC_7610_ADDR
 from icom_lan.commands import (
-    IC_7610_ADDR,
     CONTROLLER_ADDR,
     RECEIVER_MAIN,
     RECEIVER_SUB,
-    parse_level_response,
+    parse_level_response
 )
 from icom_lan.types import CivFrame
+from _command_test_helpers import bind_default_addr_globals
+
+bind_default_addr_globals(globals(), to_addr=IC_7610_ADDR)
 
 # CI-V frame constants
 _PREAMBLE = b"\xfe\xfe"

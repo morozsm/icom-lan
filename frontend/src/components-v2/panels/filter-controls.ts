@@ -4,6 +4,19 @@ export const FILTER_WIDTH_MIN = 50;
 export const FILTER_WIDTH_MAX = 3600;
 export const FILTER_WIDTH_STEP = 50;
 
+// PBT raw (0-255, 128=center) <-> Hz (-1200..+1200)
+const PBT_RAW_CENTER = 128;
+const PBT_RAW_MAX = 255;
+const PBT_HZ_MAX = 1200;
+
+export function pbtRawToHz(raw: number): number {
+  return Math.round((raw - PBT_RAW_CENTER) * (PBT_HZ_MAX / PBT_RAW_CENTER));
+}
+
+export function pbtHzToRaw(hz: number): number {
+  return Math.round(hz * (PBT_RAW_CENTER / PBT_HZ_MAX) + PBT_RAW_CENTER);
+}
+
 function clampToBipolarRange(value: number): number {
   return Math.max(FILTER_BIPOLAR_MIN, Math.min(FILTER_BIPOLAR_MAX, Math.round(value)));
 }

@@ -10,7 +10,6 @@ from pathlib import Path
 
 import pytest
 
-from icom_lan.profiles import RadioProfile
 from icom_lan.rig_loader import load_rig
 
 RIGS_DIR = Path(__file__).resolve().parent.parent / "rigs"

@@ -63,16 +63,43 @@
 
   let containerEl: HTMLDivElement | null = $state(null);
   let isDragging = $state(false);
+  let wheelLocked = $state(false);
+  let wheelUnlockTimer: ReturnType<typeof setTimeout> | null = null;
   let dragStartValue = $state(0);
   let dragStartX = $state(0);
+  let localValue = $state(value);
+
+  function markWheelActive() {
+    wheelLocked = true;
+    if (wheelUnlockTimer) clearTimeout(wheelUnlockTimer);
+    wheelUnlockTimer = setTimeout(() => {
+      wheelLocked = false;
+      wheelUnlockTimer = null;
+    }, 300);
+  }
+
+  // Sync from parent value ONLY when idle (no drag, no wheel)
+  let prevValue = value;
+  $effect(() => {
+    const v = value;
+    if (v !== prevValue) {
+      prevValue = v;
+      if (!isDragging && !wheelLocked) {
+        localValue = v;
+      }
+    }
+  });
 
   // Derived values
-  let fillPercent = $derived(getFillPercent(value, min, max));
+  let fillPercent = $derived(getFillPercent(localValue, min, max));
   let effectiveDefault = $derived(defaultValue ?? min);
   let effectiveFill = $derived(fillGradient
     ? `linear-gradient(90deg, ${fillGradient.join(', ')})`
     : (fillColor ?? accentColor));
-  let displayValue = $derived(displayFn ? displayFn(value) : `${value}${unit ? '\u00a0' + unit : ''}`);
+  let displayValue = $derived(displayFn ? displayFn(localValue) : `${localValue}${unit ? '\u00a0' + unit : ''}`);
+  
+  // Adaptive wheel multiplier based on range (normalize to ~255 baseline)
+  let adaptiveWheelMultiplier = $derived(Math.max(1, Math.ceil((max - min) / 255)));
 
   // Debounced change handler
   let debouncedOnChange = $derived.by<(...args: unknown[]) => void>(() => {
@@ -82,7 +109,19 @@
     return ((v: number) => onChange(v)) as (...args: unknown[]) => void;
   });
 
+  let wheelCommitTimer: ReturnType<typeof setTimeout> | null = $state(null);
+  function scheduleWheelCommit(v: number) {
+    if (wheelCommitTimer) clearTimeout(wheelCommitTimer);
+    wheelCommitTimer = setTimeout(() => {
+      wheelCommitTimer = null;
+      onChange(v);
+    }, 90);
+  }
+
   function emitChange(newValue: number, immediate = false) {
+    if (newValue !== localValue) {
+      localValue = newValue;
+    }
     if (newValue !== value) {
       if (immediate) {
         onChange(newValue);
@@ -129,21 +168,24 @@
     if (disabled) return;
     e.preventDefault();
 
-    const wheelMultiplier = e.shiftKey ? 1 : 4;
+    // Use adaptive multiplier for consistent scroll speed across ranges
+    const wheelMultiplier = e.shiftKey ? 1 : (4 * adaptiveWheelMultiplier);
     const effectiveStep = e.shiftKey ? step / fineStepDivisor : step * wheelMultiplier;
     const direction = e.deltaY > 0 ? -1 : 1;
     const newValue = clamp(
-      snapToStep(value + direction * effectiveStep, effectiveStep, min),
+      snapToStep(localValue + direction * effectiveStep, effectiveStep, min),
       min,
       max,
     );
-    emitChange(newValue, true);
+    localValue = newValue;
+    markWheelActive();
+    onChange(newValue);
   }
 
   function handleKeyDown(e: KeyboardEvent) {
     if (disabled) return;
 
-    const newValue = handleKeyboardStep(value, e.key, step, fineStepDivisor, min, max, e.shiftKey);
+    const newValue = handleKeyboardStep(localValue, e.key, step, fineStepDivisor, min, max, e.shiftKey);
     if (newValue !== null) {
       e.preventDefault();
       emitChange(newValue);
@@ -205,6 +247,12 @@
       <div class="hil-thumb" aria-hidden="true">
         <div class="hil-slit"></div>
       </div>
+    {:else if variant === 'hardware'}
+      <!-- Hardware slider with illuminated-style positioning -->
+      <div class="hw-channel" aria-hidden="true">
+        <div class="hw-slot"></div>
+      </div>
+      <div class="hw-thumb" aria-hidden="true"></div>
     {:else}
       <div class="vc-track" aria-hidden="true">
         <div class="vc-track-base"></div>
@@ -233,7 +281,7 @@
   }
 
   .compact .vc-header {
-    font-size: 9px;
+    font-size: var(--vc-label-size);
   }
 
   .vc-label {
@@ -259,6 +307,8 @@
     cursor: pointer;
     outline: none;
     touch-action: none;
+    isolation: isolate;
+    overflow: hidden;
   }
 
   .compact .vc-track-container {
@@ -330,224 +380,262 @@
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--vc-accent) 10%, transparent);
   }
 
-  /* ── Hardware variant ─────────────────────────────────────────────────── */
+  /* ── Hardware variant (illuminated-style structure) ──────────────────── */
 
-  /* Recessed groove track */
-  .hardware .vc-track-base {
-    height: 6px;
-    border-radius: 1px;
-    background: #060a0d;
+  .hardware .vc-track-container {
+    min-height: var(--vc-control-height);
+  }
+
+  /* Recessed groove */
+  .hardware .hw-channel {
+    position: absolute;
+    inset: var(--vc-channel-inset);
+    border-radius: var(--vc-channel-radius);
+    background: var(--vc-hw-channel-bg);
     box-shadow:
-      inset 0 2px 3px rgba(0, 0, 0, 0.9),
-      inset 0 0 0 1px rgba(0, 0, 0, 0.5),
-      0 1px 0 rgba(255, 255, 255, 0.04);
+      inset 0 2px 4px var(--vc-hw-channel-shadow-1),
+      inset 0 -1px 2px var(--vc-hw-channel-shadow-2),
+      inset 0 0 0 1px var(--vc-hw-channel-border);
   }
 
-  .hardware.compact .vc-track-base {
-    height: 5px;
+  /* Illuminated slot */
+  .hardware .hw-slot {
+    position: absolute;
+    top: 50%;
+    left: var(--vc-slot-inset-x);
+    right: var(--vc-slot-inset-x);
+    height: var(--vc-illum-slot-height);
+    transform: translateY(-50%);
+    border-radius: var(--vc-slot-radius);
+    background: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--vc-illum-glow-primary) calc(28% + 0.47 * var(--vc-fill-ratio, 0.5) * 100%), transparent) 0%,
+      color-mix(in srgb, var(--vc-illum-glow-secondary) calc(38% + 0.95 * var(--vc-fill-ratio, 0.5) * 100%), transparent) var(--vc-fill-percent),
+      var(--vc-hw-slot-edge) calc(var(--vc-fill-percent) + 2%),
+      var(--vc-hw-slot-dark) 100%
+    );
+    box-shadow:
+      0 0 7px color-mix(in srgb, var(--vc-illum-glow-primary) calc(18% + 0.55 * var(--vc-fill-ratio, 0.5) * 100%), transparent),
+      0 0 14px color-mix(in srgb, var(--vc-illum-glow-primary) calc(9% + 0.28 * var(--vc-fill-ratio, 0.5) * 100%), transparent);
   }
 
-  /* Flat warm fill — no glow, slightly dimmed */
-  .hardware .vc-track-fill {
-    border-radius: 0;
-    box-shadow: none;
-    opacity: 0.7;
-  }
 
-  /* Calibration scale marks — fine ticks + coarser every 5th */
+
+  /* Calibration scale marks — double frequency + incandescent glow */
   .hardware .vc-track-container::after {
     content: '';
     position: absolute;
     inset-inline: 0;
     bottom: 0px;
-    height: 8px;
+    height: var(--vc-tick-height);
     pointer-events: none;
-    /* Fine tick every 12px, brighter every 60px (5th) via layered gradients */
+    /* Fine tick every 6px (was 12px), major every 30px (was 60px) */
     background:
       repeating-linear-gradient(
         90deg,
-        rgba(255, 255, 255, 0.22) 0px,
-        rgba(255, 255, 255, 0.22) 1px,
-        transparent 1px,
-        transparent 60px
+        color-mix(in srgb, var(--vc-hw-tick-color) calc(var(--vc-hw-tick-major-opacity) * 100%), transparent) 0px,
+        color-mix(in srgb, var(--vc-hw-tick-color) calc(var(--vc-hw-tick-major-opacity) * 100%), transparent) var(--vc-tick-major-width),
+        transparent var(--vc-tick-major-width),
+        transparent var(--vc-tick-major-spacing)
       ),
       repeating-linear-gradient(
         90deg,
-        rgba(255, 255, 255, 0.09) 0px,
-        rgba(255, 255, 255, 0.09) 1px,
-        transparent 1px,
-        transparent 12px
+        color-mix(in srgb, var(--vc-hw-tick-color) calc(var(--vc-hw-tick-minor-opacity) * 100%), transparent) 0px,
+        color-mix(in srgb, var(--vc-hw-tick-color) calc(var(--vc-hw-tick-minor-opacity) * 100%), transparent) var(--vc-tick-minor-width),
+        transparent var(--vc-tick-minor-width),
+        transparent var(--vc-tick-minor-spacing)
       );
+    filter: drop-shadow(0 0 2px color-mix(in srgb, var(--vc-hw-tick-color) calc(var(--vc-hw-tick-glow-opacity) * 100%), transparent));
     border-radius: 0 0 1px 1px;
   }
 
-  /* Physical slider handle — wider, rounder, tactile */
-  .hardware .vc-thumb {
-    width: 8px;
-    height: 22px;
-    border-radius: 2px;
-    /* Warm machined-metal gradient: cool shadow edges, warm incandescent peak */
+  /* Volumetric thumb */
+  .hardware .hw-thumb {
+    position: absolute;
+    left: var(--vc-fill-percent);
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: var(--vc-illum-thumb-width);
+    height: var(--vc-illum-thumb-height);
+    border-radius: 3px;
     background: linear-gradient(
       to right,
-      #505860 0%,
-      #8a9298 18%,
-      #c8d0d4 40%,
-      #ece8de 52%,
-      #ccc4b8 64%,
-      #90888c 82%,
-      #484c52 100%
+      var(--vc-illum-thumb-grad-dark) 0%,
+      var(--vc-illum-thumb-grad-mid-1) 8%,
+      var(--vc-illum-thumb-grad-mid-2) 20%,
+      var(--vc-illum-thumb-grad-bright-1) 35%,
+      var(--vc-illum-thumb-grad-bright-2) 45%,
+      var(--vc-illum-thumb-grad-center) 50%,
+      var(--vc-illum-thumb-grad-bright-2) 55%,
+      var(--vc-illum-thumb-grad-bright-1) 65%,
+      var(--vc-illum-thumb-grad-mid-2) 80%,
+      var(--vc-illum-thumb-grad-mid-1) 92%,
+      var(--vc-illum-thumb-grad-dark) 100%
     );
-    border: 1px solid rgba(0, 0, 0, 0.7);
+    border: 1px solid var(--vc-illum-thumb-border);
     box-shadow:
-      0 2px 5px rgba(0, 0, 0, 0.8),
-      inset 0 1px 0 rgba(255, 255, 255, 0.5),
-      inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+      var(--vc-illum-thumb-shadow-deep),
+      var(--vc-illum-thumb-shadow-mid),
+      var(--vc-illum-thumb-shadow-close),
+      var(--vc-illum-thumb-highlight-top),
+      var(--vc-illum-thumb-shadow-bottom),
+      var(--vc-illum-thumb-highlight-sides),
+      calc(var(--vc-illum-thumb-highlight-sides) * -1),
+      var(--vc-illum-thumb-outline);
   }
 
-  .hardware.compact .vc-thumb {
-    width: 6px;
-    height: 16px;
-  }
-
-  .hardware .vc-track-container:hover .vc-thumb {
+  .hardware .vc-track-container:hover .hw-thumb {
     box-shadow:
-      0 2px 5px rgba(0, 0, 0, 0.8),
-      inset 0 1px 0 rgba(255, 255, 255, 0.5),
-      inset 0 -1px 0 rgba(0, 0, 0, 0.3),
-      0 0 0 1px rgba(255, 248, 220, 0.12);
+      var(--vc-illum-thumb-shadow-deep),
+      var(--vc-illum-thumb-shadow-mid),
+      var(--vc-illum-thumb-shadow-close),
+      var(--vc-illum-thumb-hover-highlight-top),
+      var(--vc-illum-thumb-shadow-bottom),
+      var(--vc-illum-thumb-hover-highlight-sides),
+      calc(var(--vc-illum-thumb-hover-highlight-sides) * -1),
+      var(--vc-illum-thumb-outline),
+      var(--vc-illum-thumb-hover-ring);
   }
 
   /* Warmer/brighter label text in hardware context */
   .hardware .vc-label {
-    color: var(--vc-text-label, #8a9e78);
-    letter-spacing: 0.04em;
+    color: var(--vc-hw-label-color, var(--vc-text-label));
+    letter-spacing: var(--vc-label-tracking);
     text-transform: uppercase;
-    font-size: 9px;
+    font-size: var(--vc-label-size);
   }
 
   .hardware .vc-value {
-    color: var(--vc-text-value, #c8d8a8);
+    color: var(--vc-hw-value-color, var(--vc-text-value));
   }
 
   /* ── Hardware Illuminated variant (5-layer) ──────────────────────────── */
 
   .hw-illum .vc-label {
-    color: var(--vc-text-label, #8a9e78);
-    letter-spacing: 0.04em;
+    color: var(--vc-illum-label-color, var(--vc-theme-label-color));
+    letter-spacing: var(--vc-label-tracking);
     text-transform: uppercase;
-    font-size: 9px;
+    font-size: var(--vc-label-size);
   }
 
   .hw-illum .vc-value {
-    color: var(--vc-text-value, #c8d8a8);
+    color: var(--vc-illum-value-color, var(--vc-theme-value-color));
   }
 
   .hw-illum .vc-track-container {
-    min-height: 28px;
+    min-height: var(--vc-control-height);
   }
 
-  /* Layer 1: Outer diffuser frame — oval backlit plastic bezel */
+  /* Frame — используем color-mix для динамической яркости */
   .hw-illum .hil-frame {
     position: absolute;
     inset: 2px 0;
     border-radius: 14px;
-    border: 2px solid rgba(180, 140, 90, 0.15);
+    border: 2px solid var(--vc-illum-frame-border);
     background: transparent;
     box-shadow:
-      0 0 8px rgba(210, 165, 110, calc(0.08 + 0.12 * var(--vc-fill-ratio, 0.5))),
-      0 0 16px rgba(210, 165, 110, calc(0.04 + 0.06 * var(--vc-fill-ratio, 0.5))),
-      inset 0 0 6px rgba(210, 165, 110, calc(0.03 + 0.05 * var(--vc-fill-ratio, 0.5)));
+      0 0 14px color-mix(in srgb, var(--vc-illum-glow-primary) calc(14% + 0.21 * var(--vc-fill-ratio, 0.5) * 100%), transparent),
+      0 0 28px color-mix(in srgb, var(--vc-illum-glow-primary) calc(7% + 0.11 * var(--vc-fill-ratio, 0.5) * 100%), transparent),
+      inset 0 0 10px color-mix(in srgb, var(--vc-illum-glow-primary) calc(6% + 0.09 * var(--vc-fill-ratio, 0.5) * 100%), transparent),
+      inset 0 1px 0 var(--vc-illum-frame-inset-highlight),
+      inset 0 -1px 0 var(--vc-illum-frame-inset-shadow);
     pointer-events: none;
   }
 
-  /* Layer 2: Recessed milled channel */
+  /* Channel */
   .hw-illum .hil-channel {
     position: absolute;
-    inset: 4px 8px;
-    border-radius: 3px;
-    background: #050708;
+    inset: var(--vc-channel-inset);
+    border-radius: var(--vc-channel-radius);
+    background: var(--vc-illum-channel-bg-sem);
     box-shadow:
-      inset 0 2px 4px rgba(0, 0, 0, 0.95),
-      inset 0 -1px 2px rgba(0, 0, 0, 0.6),
-      inset 0 0 0 1px rgba(0, 0, 0, 0.5);
+      inset 0 2px 4px var(--vc-illum-channel-shadow-1-sem),
+      inset 0 -1px 2px var(--vc-illum-channel-shadow-2-sem),
+      inset 0 0 0 1px var(--vc-illum-channel-border-sem);
   }
 
-  /* Layer 3: Illuminated slot — light through opening */
+  /* Slot — color-mix для динамической яркости */
   .hw-illum .hil-slot {
     position: absolute;
     top: 50%;
-    left: 4px;
-    right: 4px;
-    height: 3px;
+    left: var(--vc-slot-inset-x);
+    right: var(--vc-slot-inset-x);
+    height: var(--vc-illum-slot-height);
     transform: translateY(-50%);
-    border-radius: 1.5px;
+    border-radius: var(--vc-slot-radius);
     background: linear-gradient(
       90deg,
-      rgba(210, 165, 110, calc(0.15 + 0.25 * var(--vc-fill-ratio, 0.5))) 0%,
-      rgba(220, 175, 120, calc(0.2 + 0.5 * var(--vc-fill-ratio, 0.5))) var(--vc-fill-percent),
-      rgba(180, 140, 90, 0.06) calc(var(--vc-fill-percent) + 2%),
-      rgba(120, 90, 60, 0.03) 100%
+      color-mix(in srgb, var(--vc-illum-glow-primary) calc(28% + 0.47 * var(--vc-fill-ratio, 0.5) * 100%), transparent) 0%,
+      color-mix(in srgb, var(--vc-illum-glow-secondary) calc(38% + 0.95 * var(--vc-fill-ratio, 0.5) * 100%), transparent) var(--vc-fill-percent),
+      var(--vc-illum-slot-edge-sem) calc(var(--vc-fill-percent) + 2%),
+      var(--vc-illum-slot-dark-sem) 100%
     );
     box-shadow:
-      0 0 4px rgba(210, 165, 110, calc(0.1 + 0.3 * var(--vc-fill-ratio, 0.5))),
-      0 0 8px rgba(210, 165, 110, calc(0.05 + 0.15 * var(--vc-fill-ratio, 0.5)));
+      0 0 7px color-mix(in srgb, var(--vc-illum-glow-primary) calc(18% + 0.55 * var(--vc-fill-ratio, 0.5) * 100%), transparent),
+      0 0 14px color-mix(in srgb, var(--vc-illum-glow-primary) calc(9% + 0.28 * var(--vc-fill-ratio, 0.5) * 100%), transparent);
   }
 
-  /* Layer 4: Wide thumb carriage — machined metal, raised */
+  /* Thumb — volumetric gradient + shadows */
   .hw-illum .hil-thumb {
     position: absolute;
     left: var(--vc-fill-percent);
     top: 50%;
     transform: translate(-50%, -50%);
-    width: 24px;
-    height: 26px;
+    width: var(--vc-illum-thumb-width);
+    height: var(--vc-illum-thumb-height);
     border-radius: 3px;
     pointer-events: none;
     background: linear-gradient(
       to right,
-      #3a3e44 0%,
-      #585c62 8%,
-      #6a6e74 20%,
-      #787c82 35%,
-      #848890 50%,
-      #787c82 65%,
-      #6a6e74 80%,
-      #585c62 92%,
-      #3a3e44 100%
+      var(--vc-illum-thumb-grad-dark) 0%,
+      var(--vc-illum-thumb-grad-mid-1) 8%,
+      var(--vc-illum-thumb-grad-mid-2) 20%,
+      var(--vc-illum-thumb-grad-bright-1) 35%,
+      var(--vc-illum-thumb-grad-bright-2) 45%,
+      var(--vc-illum-thumb-grad-center) 50%,
+      var(--vc-illum-thumb-grad-bright-2) 55%,
+      var(--vc-illum-thumb-grad-bright-1) 65%,
+      var(--vc-illum-thumb-grad-mid-2) 80%,
+      var(--vc-illum-thumb-grad-mid-1) 92%,
+      var(--vc-illum-thumb-grad-dark) 100%
     );
-    border: 1px solid rgba(0, 0, 0, 0.8);
+    border: 1px solid var(--vc-illum-thumb-border);
     box-shadow:
-      0 3px 8px rgba(0, 0, 0, 0.9),
-      0 1px 3px rgba(0, 0, 0, 0.7),
-      inset 0 1px 0 rgba(255, 255, 255, 0.25),
-      inset 0 -1px 0 rgba(0, 0, 0, 0.4),
-      inset 1px 0 0 rgba(255, 255, 255, 0.08),
-      inset -1px 0 0 rgba(255, 255, 255, 0.08);
+      var(--vc-illum-thumb-shadow-deep),
+      var(--vc-illum-thumb-shadow-mid),
+      var(--vc-illum-thumb-shadow-close),
+      var(--vc-illum-thumb-highlight-top),
+      var(--vc-illum-thumb-shadow-bottom),
+      var(--vc-illum-thumb-highlight-sides),
+      calc(var(--vc-illum-thumb-highlight-sides) * -1),
+      var(--vc-illum-thumb-outline);
   }
 
-  /* Layer 5: Center slit — lamp light transmitted through carriage */
+  /* Slit — color-mix для динамической яркости */
   .hw-illum .hil-slit {
     position: absolute;
     top: 3px;
     bottom: 3px;
     left: 50%;
-    width: 2px;
+    width: var(--vc-illum-slit-width);
     transform: translateX(-50%);
     border-radius: 1px;
-    background: rgba(220, 175, 120, calc(0.3 + 0.5 * var(--vc-fill-ratio, 0.5)));
+    background: color-mix(in srgb, var(--vc-illum-glow-secondary) calc(55% + 0.95 * var(--vc-fill-ratio, 0.5) * 100%), transparent);
     box-shadow:
-      0 0 4px rgba(210, 165, 110, calc(0.2 + 0.4 * var(--vc-fill-ratio, 0.5))),
-      0 0 8px rgba(210, 165, 110, calc(0.1 + 0.2 * var(--vc-fill-ratio, 0.5)));
+      0 0 7px color-mix(in srgb, var(--vc-illum-glow-primary) calc(35% + 0.75 * var(--vc-fill-ratio, 0.5) * 100%), transparent),
+      0 0 14px color-mix(in srgb, var(--vc-illum-glow-primary) calc(18% + 0.38 * var(--vc-fill-ratio, 0.5) * 100%), transparent);
   }
 
   .hw-illum .vc-track-container:hover .hil-thumb {
     box-shadow:
-      0 3px 8px rgba(0, 0, 0, 0.9),
-      0 1px 3px rgba(0, 0, 0, 0.7),
-      inset 0 1px 0 rgba(255, 255, 255, 0.3),
-      inset 0 -1px 0 rgba(0, 0, 0, 0.4),
-      inset 1px 0 0 rgba(255, 255, 255, 0.12),
-      inset -1px 0 0 rgba(255, 255, 255, 0.12),
-      0 0 0 1px rgba(210, 165, 110, 0.15);
+      var(--vc-illum-thumb-shadow-deep),
+      var(--vc-illum-thumb-shadow-mid),
+      var(--vc-illum-thumb-shadow-close),
+      var(--vc-illum-thumb-hover-highlight-top),
+      var(--vc-illum-thumb-shadow-bottom),
+      var(--vc-illum-thumb-hover-highlight-sides),
+      calc(var(--vc-illum-thumb-hover-highlight-sides) * -1),
+      var(--vc-illum-thumb-outline),
+      var(--vc-illum-thumb-hover-ring);
   }
 </style>

@@ -131,11 +131,9 @@ async def wire_server() -> RigctldServer:  # type: ignore[misc]
 async def ro_wire_server() -> RigctldServer:  # type: ignore[misc]
     """Read-only RigctldServer for testing that setters are rejected."""
     from icom_lan.rigctld.handler import RigctldHandler
-    from icom_lan.rigctld.state_cache import StateCache
 
     radio = _make_mock_radio()
     poller = _make_mock_poller()
-    cache = StateCache()  # Real cache to avoid AsyncMock.state_cache confusion
     cfg = RigctldConfig(
         host="127.0.0.1",
         port=0,

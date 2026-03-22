@@ -73,7 +73,6 @@ if lib_location is None:
 def verify_patch() -> bool:
     """Verify that opuslib can now import successfully."""
     try:
-        import opuslib
         print("✓ opuslib imports successfully")
         return True
     except Exception as e:

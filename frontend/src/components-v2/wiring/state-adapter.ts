@@ -10,7 +10,7 @@
 import type { ServerState, ReceiverState } from '$lib/types/state';
 import type { Capabilities, FilterModeConfig } from '$lib/types/capabilities';
 import type { VfoStateProps } from '../layout/layout-utils';
-import { deriveIfShift } from '../panels/filter-controls';
+import { deriveIfShift, pbtRawToHz } from '../panels/filter-controls';
 
 /* ── Helpers ─────────────────────────────────────────────────── */
 
@@ -155,8 +155,8 @@ export function toFilterProps(
   caps: Capabilities | null,
 ): FilterProps {
   const rx = state ? activeRx(state) : null;
-  const pbtInner = rx?.pbtInner ?? 0;
-  const pbtOuter = rx?.pbtOuter ?? 0;
+  const pbtInner = pbtRawToHz(rx?.pbtInner ?? 128);
+  const pbtOuter = pbtRawToHz(rx?.pbtOuter ?? 128);
   const filterConfig = resolveFilterModeConfig(caps, rx?.mode, rx?.dataMode);
   return {
     currentMode: rx?.mode ?? 'USB',
