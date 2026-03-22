@@ -175,6 +175,11 @@
   --vc-illum-thumb-hover-highlight-sides: inset 2.5px 0 0 rgba(255, 255, 255, 0.22);
   --vc-illum-thumb-hover-ring: 0 0 0 2px rgba(210, 165, 110, 0.30);
   
+  /* Center mark */
+  --vc-illum-center-mark-bg: rgba(220, 180, 130, 0.4);
+  --vc-illum-center-mark-glow: rgba(210, 165, 110, 0.3);
+  --vc-hw-center-mark-bg: rgba(255, 255, 255, 0.2);
+  
   /* Slit */
   --vc-illum-slit-width: 2px;
 }

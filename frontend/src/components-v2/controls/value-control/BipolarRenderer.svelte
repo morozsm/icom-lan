@@ -460,7 +460,7 @@
     bottom: 0;
     width: 2px;
     transform: translateX(-50%);
-    background: rgba(255, 255, 255, 0.2);
+    background: var(--vc-hw-center-mark-bg);
     border-radius: 1px;
   }
 
@@ -635,8 +635,8 @@
     width: 2px;
     height: 14px;
     transform: translateY(-50%);
-    background: rgba(220, 180, 130, 0.4);
-    box-shadow: 0 0 3px rgba(210, 165, 110, 0.3);
+    background: var(--vc-illum-center-mark-bg);
+    box-shadow: 0 0 3px var(--vc-illum-center-mark-glow);
     border-radius: 1px;
   }
 
@@ -706,11 +706,11 @@
 
   /* Hide standard axis for illuminated — use same hardware axis style */
   .hw-illum .vc-axis {
-    color: #7a8870;
+    color: var(--vc-illum-axis-color);
   }
 
   .hw-illum .axis-zero {
-    color: #96a886;
+    color: var(--vc-illum-axis-zero-color);
   }
 
   .vc-axis {
