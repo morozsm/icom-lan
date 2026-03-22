@@ -59,14 +59,16 @@ Based on wfview and IC-705.rig file:
 
 ### Audio Codec Support
 
-#### Opus Codec
-- **IC-7610:** ✅ Opus over LAN (confirmed in production)
-- **IC-705:** ❓ **Needs verification** — likely Opus (same generation radio)
-- **Action:** Check wfview audio codec negotiation for IC-705
+#### Codec Finding (✅ RESOLVED 2026-03-22)
+- **IC-7610:** Uses **PCM 1ch 16bit** (codec 0x04) over LAN — NOT native Opus
+- **IC-705:** Same as IC-7610 → **PCM 1ch 16bit** (codec 0x04)
+- **wfview evidence:** Real Icom radios report `connection_type != "WFVIEW"`, which forces PCM fallback
+- **icom-lan implementation:** Transcodes PCM ↔ Opus at application level via `PcmOpusTranscoder`
+- **Conclusion:** IC-705 audio codec support is **IDENTICAL** to IC-7610
 
 #### Sample Rates
-- IC-7610: 8/16/24 kHz Opus
-- IC-705: TBD (likely same, but verify)
+- IC-7610: 8/16/24 kHz PCM (typical: 16 kHz)
+- IC-705: Same as IC-7610 (8/16/24 kHz PCM, typical: 16 kHz)
 
 ### Scope/Waterfall (0x27)
 
@@ -96,7 +98,8 @@ Command 0x27 format verification:
 - [ ] Verify existing `Icom7610LanRadio` works with IC-705 (should be profile-driven)
 - [ ] Test connection/auth with IC-705 hardware (when available)
 - [ ] Verify CI-V command compatibility
-- [ ] Test audio streaming (Opus codec)
+- [x] Audio codec verified: PCM 1ch 16bit, same as IC-7610 ✅ 2026-03-22
+- [ ] Test audio streaming with IC-705 hardware
 - [ ] Verify scope/waterfall data
 
 ### Phase 3: Serial Backend
@@ -114,10 +117,14 @@ Command 0x27 format verification:
 
 ## Research Questions
 
-### Q1: Opus Codec on IC-705 LAN?
-- **Status:** Needs verification
-- **Method:** Check wfview `icomudpaudio.cpp` for IC-705 codec negotiation
-- **Expected:** Yes (same generation, same firmware architecture)
+### Q1: Audio Codec on IC-705 LAN?
+- **Status:** ✅ RESOLVED (2026-03-22)
+- **Finding:** IC-705 uses **PCM 1ch 16bit** (codec 0x04), same as IC-7610
+- **Evidence:**
+  - wfview code shows real Icom radios (`connection_type != "WFVIEW"`) force PCM fallback
+  - Native Opus (0x40/0x41) is only available for wfview-to-wfview connections
+  - Our `icom-lan` library transcodes PCM → Opus at application level
+- **Impact:** IC-705 audio stack will be **identical** to IC-7610 (no changes needed)
 
 ### Q2: Command 29 Alternatives for IC-705
 - **Status:** ✅ RESOLVED
@@ -164,12 +171,12 @@ Command 0x27 format verification:
 2. ✅ Create `rigs/ic705.toml` profile (draft created)
 3. ✅ Deep-dive Command 29 audit (resolved: not needed for single receiver)
 4. ✅ Extract VFO codes from wfview (documented: 0x07 0x00/0x01/0xA0/0xB0)
-5. ⏭️ Verify audio codec in wfview source (likely Opus, needs hardware confirm)
+5. ✅ Verify audio codec (resolved: PCM 1ch 16bit, same as IC-7610)
 6. ✅ Document frequency ranges with band plan (HF+6m+2m+70cm defined)
-7. ⏭️ Hardware verification phase (requires IC-705 acquisition)
-8. ⏭️ LAN backend compatibility testing
-9. ⏭️ Serial backend implementation
-10. ⏭️ Integration test suite expansion
+7. ⏭️ **Hardware verification phase (requires IC-705 acquisition) — BLOCKER**
+8. ⏭️ LAN backend compatibility testing (needs hardware)
+9. ⏭️ Serial backend implementation (needs hardware)
+10. ⏭️ Integration test suite expansion (needs hardware)
 
 ## References
 

@@ -69,6 +69,7 @@ KNOWN_CAPABILITIES = frozenset(
         # Tone
         "repeater_tone",
         "tsql",
+        "dtcs",
         # Data
         "data_mode",
         # System
