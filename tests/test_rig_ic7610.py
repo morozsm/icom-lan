@@ -128,7 +128,6 @@ class TestProfileParity:
                 (0x14, 0x06),
                 (0x14, 0x07),
                 (0x14, 0x08),
-                (0x14, 0x0D),
                 (0x14, 0x12),
                 (0x14, 0x13),
                 (0x15, 0x01),
@@ -149,7 +148,6 @@ class TestProfileParity:
                 (0x16, 0x65),
                 (0x1A, 0x03),
                 (0x1A, 0x04),
-                (0x1A, 0x06),
                 (0x1A, 0x09),
                 (0x1B, 0x00),
                 (0x1B, 0x01),
@@ -158,7 +156,7 @@ class TestProfileParity:
         assert profile.cmd29_routes == expected
 
     def test_cmd29_routes_count(self, profile):
-        assert len(profile.cmd29_routes) == 34
+        assert len(profile.cmd29_routes) == 32
 
     def test_vfo_main_code(self, profile):
         assert profile.vfo_main_code == 0xD0
@@ -205,6 +203,13 @@ class TestProfileParity:
     def test_filters(self, profile):
         assert profile.filters == ("FIL1", "FIL2", "FIL3")
 
+    def test_spectrum_matches_wfview_rig(self, rig):
+        assert rig.spectrum == {
+            "seq_max": 15,
+            "amp_max": 200,
+            "data_len_max": 689,
+        }
+
     def test_keyboard_config(self, profile):
         assert profile.keyboard is not None
         assert profile.keyboard.leader_key == "g"
@@ -245,11 +250,26 @@ class TestCommandMapParity:
     def test_scope_on(self, cmdmap):
         assert cmdmap.get("scope_on") == (0x27, 0x10)
 
+    def test_get_split(self, cmdmap):
+        assert cmdmap.get("get_split") == (0x0F,)
+
+    def test_get_scope_wave(self, cmdmap):
+        assert cmdmap.get("get_scope_wave") == (0x27, 0x00)
+        assert cmdmap.get("set_scope_wave") == (0x27, 0x00)
+
+    def test_main_sub_prefix(self, cmdmap):
+        assert cmdmap.get("get_main_sub_prefix") == (0x29,)
+        assert cmdmap.get("set_main_sub_prefix") == (0x29,)
+
+    def test_get_civ_output_ant_wfview_1c04(self, cmdmap):
+        assert cmdmap.get("get_civ_output_ant") == (0x1C, 0x04)
+        assert cmdmap.get("set_civ_output_ant") == (0x1C, 0x04)
+
     def test_send_cw(self, cmdmap):
         assert cmdmap.get("send_cw") == (0x17,)
 
     def test_command_count_minimum(self, cmdmap):
-        assert len(cmdmap) >= 90
+        assert len(cmdmap) >= 95
 
 
 # ── cmd29 route detail checks ──────────────────────────────────

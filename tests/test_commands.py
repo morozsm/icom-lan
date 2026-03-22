@@ -2321,6 +2321,17 @@ class TestSystemConfigCommands:
         with pytest.raises(ValueError, match="0, 1, or 2"):
             get_speech(3)
 
+    def test_speech_cmd_map_prefers_set_speech_key(self) -> None:
+        """Rig profiles may expose set_speech (wfview Set-only) instead of get_speech."""
+        from icom_lan import IC_7610_ADDR
+        from icom_lan.command_map import CommandMap
+        from icom_lan.commands import get_speech
+
+        cm = CommandMap({"set_speech": (0x13,)})
+        assert get_speech(0, to_addr=IC_7610_ADDR, cmd_map=cm) == get_speech(
+            0, to_addr=IC_7610_ADDR
+        )
+
     # --- Transceiver ID (0x19 0x00) ---
 
     def test_get_transceiver_id(self) -> None:

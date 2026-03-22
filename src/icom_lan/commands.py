@@ -4851,9 +4851,10 @@ def get_speech(
         ValueError: If *what* is not 0, 1, or 2.
     """
     if cmd_map is not None:
+        speech_key = "set_speech" if cmd_map.has("set_speech") else "get_speech"
         return _build_from_map(
             cmd_map,
-            "get_speech",
+            speech_key,
             to_addr=to_addr,
             from_addr=from_addr,
             data=bytes([what]),

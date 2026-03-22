@@ -83,7 +83,7 @@ class TestVFOScheme:
 
 
 class TestCapabilities:
-    """IC-7300 capabilities: no dual_rx, digisel, ip_plus."""
+    """IC-7300 capabilities: no dual_rx, digisel; includes ip_plus per wfview."""
 
     def test_has_audio(self, profile):
         assert "audio" in profile.capabilities
@@ -115,18 +115,18 @@ class TestCapabilities:
     def test_no_digisel(self, profile):
         assert "digisel" not in profile.capabilities
 
-    def test_no_ip_plus(self, profile):
-        assert "ip_plus" not in profile.capabilities
+    def test_has_ip_plus(self, profile):
+        assert "ip_plus" in profile.capabilities
 
     def test_capabilities_count(self, profile):
-        assert len(profile.capabilities) == 35
+        assert len(profile.capabilities) == 36
 
 
 # ── Command overrides ──────────────────────────────────────────
 
 
 class TestCommandOverrides:
-    """14 commands differ from IC-7610; verify IC-7300-specific wire bytes."""
+    """IC-7300-specific wire bytes (base [commands] + merged [commands.overrides])."""
 
     def test_get_acc1_mod_level(self, cmdmap):
         assert cmdmap.get("get_acc1_mod_level") == (0x1A, 0x05, 0x00, 0x64)
@@ -163,6 +163,34 @@ class TestCommandOverrides:
 
     def test_get_s_meter_sql_status(self, cmdmap):
         assert cmdmap.get("get_s_meter_sql_status") == (0x15, 0x01)
+
+    def test_get_s_meter_sql_status_04(self, cmdmap):
+        assert cmdmap.get("get_s_meter_sql_status_04") == (0x15, 0x04)
+
+    def test_get_split_opcode(self, cmdmap):
+        assert cmdmap.get("get_split") == (0x0F,)
+
+    def test_get_ip_plus(self, cmdmap):
+        assert cmdmap.get("get_ip_plus") == (0x16, 0x65)
+
+    def test_set_speech_not_get_speech(self, cmdmap):
+        assert cmdmap.get("set_speech") == (0x13,)
+        assert not cmdmap.has("get_speech")
+
+    def test_get_scope_wave(self, cmdmap):
+        assert cmdmap.get("get_scope_wave") == (0x27, 0x00)
+
+    def test_get_speech_cmd_map_uses_set_speech(self, cmdmap):
+        """Profile exposes set_speech; get_speech() must resolve the same opcode."""
+        from icom_lan.commands import get_speech
+
+        with_map = get_speech(2, to_addr=0x94, cmd_map=cmdmap)
+        bare = get_speech(2, to_addr=0x94)
+        assert with_map == bare
+
+    def test_scope_edge3_6mhz_is_0x20_not_sequential(self, cmdmap):
+        """wfview uses 0x18, 0x19, 0x20 for 6 MHz edges (skip 0x1A-0x1F)."""
+        assert cmdmap.get("get_scope_edge3_6mhz") == (0x1A, 0x05, 0x01, 0x20)
 
     def test_get_civ_output_ant(self, cmdmap):
         assert cmdmap.get("get_civ_output_ant") == (0x1A, 0x05, 0x00, 0x61)
@@ -202,10 +230,6 @@ class TestRemovedCommands:
     def test_no_digisel(self, cmdmap):
         assert not cmdmap.has("get_digisel")
         assert not cmdmap.has("set_digisel")
-
-    def test_no_ip_plus(self, cmdmap):
-        assert not cmdmap.has("get_ip_plus")
-        assert not cmdmap.has("set_ip_plus")
 
     def test_no_digisel_shift(self, cmdmap):
         assert not cmdmap.has("get_digisel_shift")

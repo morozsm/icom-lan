@@ -1656,12 +1656,15 @@ class TestDspLevelParity:
         assert mock_transport.sent_packets[-1].endswith(b"\x29\x01\x1a\x09\x01\xfd")
 
     @pytest.mark.asyncio
-    async def test_set_data_mode_sends_cmd29_for_sub_receiver(
+    async def test_set_data_mode_sub_receiver_plain_when_no_cmd29_route(
         self, radio: IcomRadio, mock_transport: MockTransport
     ) -> None:
+        # IC-7610 profile omits 0x1A 0x06 from cmd29 (wfview Command29=false): sub
+        # DATA mode uses VFO select + plain 0x1A 0x06. Active SUB avoids extra VFO traffic.
+        radio._radio_state.active = "SUB"
         mock_transport.queue_response(_ack_response())
         await radio.set_data_mode(3, receiver=1)
-        assert mock_transport.sent_packets[-1].endswith(b"\x29\x01\x1a\x06\x03\xfd")
+        assert mock_transport.sent_packets[-1].endswith(b"\x1a\x06\x03\xfd")
 
     @pytest.mark.asyncio
     async def test_set_cw_pitch_rejects_out_of_range(

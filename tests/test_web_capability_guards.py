@@ -247,16 +247,15 @@ class TestCommandGuards:
         with pytest.raises(ValueError, match="digisel"):
             handler._ensure_capability("digisel", "set_digisel")
 
-    def test_ip_plus_guard_ic7300(self):
-        """set_ipplus on IC-7300 (no ip_plus) should raise ValueError."""
+    def test_ip_plus_allowed_ic7300(self):
+        """IC-7300 profile includes ip_plus (wfview CI-V 0x16 0x65)."""
         from icom_lan.web.handlers import ControlHandler
 
         radio = _make_radio("IC-7300")
         handler = ControlHandler.__new__(ControlHandler)
         handler._radio = radio
 
-        with pytest.raises(ValueError, match="ip_plus"):
-            handler._ensure_capability("ip_plus", "set_ipplus")
+        handler._ensure_capability("ip_plus", "set_ip_plus")
 
     def test_capability_passes_when_supported(self):
         """_ensure_capability does NOT raise for supported capabilities."""
