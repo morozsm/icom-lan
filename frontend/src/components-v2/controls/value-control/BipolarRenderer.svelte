@@ -118,15 +118,6 @@
     return ((v: number) => onChange(v)) as (...args: unknown[]) => void;
   });
 
-  let wheelCommitTimer: ReturnType<typeof setTimeout> | null = $state(null);
-  function scheduleWheelCommit(v: number) {
-    if (wheelCommitTimer) clearTimeout(wheelCommitTimer);
-    wheelCommitTimer = setTimeout(() => {
-      wheelCommitTimer = null;
-      onChange(v);
-    }, 90);
-  }
-
   function emitChange(newValue: number, immediate = false) {
     if (newValue !== localValue) {
       localValue = newValue;

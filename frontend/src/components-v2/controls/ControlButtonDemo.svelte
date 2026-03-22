@@ -174,7 +174,7 @@
   let vcIllumRf = $state(200);
   let vcIllumNr = $state(64);
   let vcIllumRit = $state(1200);
-  let vcIsolatedBipolar = $state(0);
+
   let vcIllumXit = $state(-400);
 </script>
 
@@ -1396,24 +1396,6 @@
           variant="hardware-illuminated"
           displayFn={(v) => (v >= 0 ? `+${v}` : `${v}`) + '\u00a0Hz'}
           onChange={(v) => { vcIllumXit = v; }}
-        />
-      </div>
-  </section>
-
-  <!-- ========== ISOLATED WHEEL DEBUG ========== -->
-  <section class="demo-section">
-    <h2>🧪 Isolated Bipolar (no radio, local state only)</h2>
-    <p style="color: #888; font-size: 12px;">value: {vcIsolatedBipolar}</p>
-      <div class="vc-grid" style="max-width: 320px;">
-        <ValueControl
-          label="TEST PBT"
-          value={vcIsolatedBipolar}
-          min={-1200} max={1200} step={25}
-          defaultValue={0}
-          renderer="bipolar"
-          variant="hardware-illuminated"
-          displayFn={(v) => `${v} Hz`}
-          onChange={(v) => { console.log('[ISOLATED] onChange', v); vcIsolatedBipolar = v; }}
         />
       </div>
   </section>
