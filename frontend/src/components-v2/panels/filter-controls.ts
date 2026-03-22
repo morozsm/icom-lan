@@ -8,13 +8,19 @@ export const FILTER_WIDTH_STEP = 50;
 // Reads range from capabilities if available, falls back to IC-7610 defaults
 import { getControlRange } from '$lib/stores/capabilities.svelte';
 
+// Default PBT range (IC-7610 / standard CI-V)
+const PBT_DEFAULTS = { rawCenter: 128, displayMin: -1200, displayMax: 1200 } as const;
+
 function pbtRange() {
-  const ctrl = getControlRange('pbt_inner');
-  if (ctrl && ctrl.raw_center !== undefined && ctrl.display_min !== undefined && ctrl.display_max !== undefined) {
-    return { rawCenter: ctrl.raw_center, displayMin: ctrl.display_min, displayMax: ctrl.display_max };
+  try {
+    const ctrl = getControlRange('pbt_inner');
+    if (ctrl && ctrl.raw_center !== undefined && ctrl.display_min !== undefined && ctrl.display_max !== undefined) {
+      return { rawCenter: ctrl.raw_center, displayMin: ctrl.display_min, displayMax: ctrl.display_max };
+    }
+  } catch {
+    // capabilities store not available (e.g. in tests)
   }
-  // Fallback: IC-7610 defaults
-  return { rawCenter: 128, displayMin: -1200, displayMax: 1200 };
+  return PBT_DEFAULTS;
 }
 
 export function pbtRawToHz(raw: number): number {
