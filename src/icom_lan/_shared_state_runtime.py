@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """Shared state polling/cache helpers used by web and rigctld.
 
 This module centralises:
@@ -16,11 +14,13 @@ semantics when deciding whether to serve cached values or hit the
 radio again.
 """
 
+from __future__ import annotations
+
 import logging
 from collections.abc import Awaitable, Callable
-from typing import TYPE_CHECKING, Final  # noqa: E402
+from typing import TYPE_CHECKING, Final
 
-from .rigctld.state_cache import CacheField, StateCache  # noqa: E402
+from .rigctld.state_cache import CacheField, StateCache
 
 if TYPE_CHECKING:
     from .radio_protocol import Radio

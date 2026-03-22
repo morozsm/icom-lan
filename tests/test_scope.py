@@ -13,10 +13,11 @@ import struct
 from unittest.mock import patch
 
 import pytest
+import icom_lan.commands as raw_commands
 
+from icom_lan import IC_7610_ADDR
 from icom_lan.commands import (
     CONTROLLER_ADDR,
-    IC_7610_ADDR,
     build_civ_frame,
     get_scope_center_type,
     get_scope_during_tx,
@@ -47,11 +48,15 @@ from icom_lan.commands import (
     scope_set_span,
     scope_set_speed,
     scope_set_vbw,
-    scope_single_dual,
+    scope_single_dual
 )
 from icom_lan.scope import ScopeAssembler, ScopeFrame
 from icom_lan.types import bcd_encode, PacketType
 from icom_lan.radio import IcomRadio
+from _command_test_helpers import bind_default_addr_globals, bind_default_addr_module
+
+bind_default_addr_module(raw_commands, to_addr=IC_7610_ADDR)
+bind_default_addr_globals(globals(), to_addr=IC_7610_ADDR)
 
 
 # ---------------------------------------------------------------------------

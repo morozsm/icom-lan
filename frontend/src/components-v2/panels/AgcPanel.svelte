@@ -1,6 +1,6 @@
 <script lang="ts">
-  import SegmentedButton from '../controls/SegmentedButton.svelte';
-  import Slider from '../controls/Slider.svelte';
+  import { SegmentedControl } from '$lib/SegmentedControl';
+  import ValueControl from '../controls/value-control/ValueControl.svelte';
   import { getAgcModes, getAgcLabels } from '$lib/stores/capabilities.svelte';
   import { buildAgcOptions } from './agc-utils';
 
@@ -17,18 +17,20 @@
 </script>
 
 <div class="panel-body">
-    <SegmentedButton
+    <SegmentedControl
       options={options}
       selected={agcMode}
       onchange={(v) => onAgcModeChange(v as number)}
     />
-    <Slider
+    <ValueControl
       label="Decay"
       value={agcGain}
       min={0}
       max={255}
-      accentColor="var(--v2-accent-cyan)"
-      onchange={onAgcGainChange}
+      step={1}
+      renderer="hbar"
+      variant="hardware-illuminated"
+      onChange={onAgcGainChange}
     />
   </div>
 

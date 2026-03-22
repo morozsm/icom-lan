@@ -63,6 +63,16 @@ export interface KeyboardConfig {
   bindings: KeyboardBindingConfig[];
 }
 
+export interface ControlRange {
+  raw_min: number;
+  raw_max: number;
+  raw_center?: number;
+  display_min?: number;
+  display_max?: number;
+  display_unit?: string;
+  style?: string;
+}
+
 export interface Capabilities {
   model: string;
   scope: boolean;
@@ -88,4 +98,5 @@ export interface Capabilities {
   antennas?: number;      // Number of antenna ports
   scopeConfig?: ScopeConfig;
   audioConfig?: AudioConfig;
+  controls?: Record<string, ControlRange>;
 }

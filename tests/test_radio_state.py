@@ -36,8 +36,8 @@ def test_receiver_state_defaults() -> None:
     assert rx.s_meter == 0
     assert rx.apf_type_level == 0
     assert rx.nr_level == 0
-    assert rx.pbt_inner == 0
-    assert rx.pbt_outer == 0
+    assert rx.pbt_inner == 128
+    assert rx.pbt_outer == 128
     assert rx.nb_level == 0
     assert rx.digisel_shift == 0
     assert rx.af_mute is False

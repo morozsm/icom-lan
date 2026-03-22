@@ -12,8 +12,8 @@
 
   /* Text colors */
   --vc-text-primary: var(--v2-text-light);
-  --vc-text-secondary: var(--v2-text-dim);
-  --vc-text-label: var(--v2-text-dim);
+  --vc-text-secondary: var(--v2-text-subdued);
+  --vc-text-label: var(--v2-text-subdued);   /* was text-dim — bumped for dark-bg readability */
   --vc-text-value: var(--v2-text-bright);
 
   /* Glow effects */
@@ -35,6 +35,44 @@
   --vc-thumb-size-compact: 7px;
   --vc-center-height: 12px;
   --vc-center-height-compact: 10px;
+  
+  /* Shared control sizing / typography */
+  --vc-control-height: 28px;
+  --vc-track-inset-x: 8px;
+  --vc-track-inset-y: 4px;
+  --vc-label-size: 9px;
+  --vc-label-tracking: 0.04em;
+  --vc-theme-label-color: var(--vc-text-label);
+  --vc-theme-value-color: var(--vc-text-value);
+  --vc-theme-axis-color: var(--vc-text-secondary);
+  --vc-theme-axis-zero-color: var(--vc-text-primary);
+
+  /* Shared tick styling */
+  --vc-tick-height: 8px;
+  --vc-tick-minor-spacing: 6px;
+  --vc-tick-major-spacing: 30px;
+  --vc-tick-minor-width: 1px;
+  --vc-tick-major-width: 1px;
+  --vc-tick-minor-opacity: 0.22;
+  --vc-tick-major-opacity: 0.45;
+  --vc-tick-glow-opacity: 0.20;
+
+  /* Shared channel / slot geometry */
+  --vc-channel-radius: 3px;
+  --vc-channel-inset: 4px 8px;
+  --vc-slot-inset-x: 4px;
+  --vc-slot-radius: 1.5px;
+  --vc-thumb-radius: 3px;
+  --vc-theme-channel-bg: var(--vc-track-dark);
+  --vc-theme-channel-shadow-1: rgba(0, 0, 0, 0.9);
+  --vc-theme-channel-shadow-2: rgba(0, 0, 0, 0.5);
+  --vc-theme-channel-border: rgba(0, 0, 0, 0.4);
+  --vc-theme-slot-dark: color-mix(in srgb, var(--vc-accent) 8%, transparent);
+  --vc-theme-slot-edge: color-mix(in srgb, var(--vc-accent) 14%, transparent);
+  --vc-theme-tick-color: var(--vc-accent);
+  --vc-theme-tick-minor-opacity: var(--vc-tick-minor-opacity);
+  --vc-theme-tick-major-opacity: var(--vc-tick-major-opacity);
+  --vc-theme-tick-glow-opacity: var(--vc-tick-glow-opacity);
 
   /* Knob specific */
   --vc-knob-size: 64px;
@@ -46,4 +84,102 @@
   /* Animation */
   --vc-transition-fast: 0.1s ease;
   --vc-transition-normal: 0.15s ease;
+
+  /* ── Modern / base theme tokens ─────────────────────────────────────── */
+
+  --vc-modern-label-color: var(--vc-text-label);
+  --vc-modern-value-color: var(--vc-text-value);
+  --vc-modern-axis-color: var(--vc-text-secondary);
+  --vc-modern-axis-zero-color: var(--vc-text-primary);
+
+  /* ── Hardware (current) theme tokens ────────────────────────────────── */
+
+  --vc-hw-label-color: #8a9e78;
+  --vc-hw-value-color: #c8d8a8;
+  --vc-hw-axis-color: #7a8870;
+  --vc-hw-axis-zero-color: #96a886;
+  --vc-hw-tick-color: var(--vc-illum-glow-primary);
+  --vc-hw-tick-minor-opacity: 0.22;
+  --vc-hw-tick-major-opacity: 0.45;
+  --vc-hw-tick-glow-opacity: 0.20;
+  --vc-hw-channel-bg: var(--vc-illum-channel-bg);
+  --vc-hw-channel-shadow-1: var(--vc-illum-channel-shadow-1);
+  --vc-hw-channel-shadow-2: var(--vc-illum-channel-shadow-2);
+  --vc-hw-channel-border: var(--vc-illum-channel-border);
+  --vc-hw-slot-dark: var(--vc-illum-slot-color-dark);
+  --vc-hw-slot-edge: var(--vc-illum-slot-color-edge);
+
+  /* ── Hardware Illuminated semantic theme tokens ─────────────────────── */
+
+  --vc-illum-label-color: #8a9e78;
+  --vc-illum-value-color: #c8d8a8;
+  --vc-illum-axis-color: #7a8870;
+  --vc-illum-axis-zero-color: #96a886;
+  --vc-illum-tick-color: var(--vc-illum-glow-primary);
+  --vc-illum-tick-minor-opacity: 0.22;
+  --vc-illum-tick-major-opacity: 0.45;
+  --vc-illum-tick-glow-opacity: 0.20;
+  --vc-illum-channel-bg-sem: #070b0e;
+  --vc-illum-channel-shadow-1-sem: rgba(0, 0, 0, 0.95);
+  --vc-illum-channel-shadow-2-sem: rgba(0, 0, 0, 0.6);
+  --vc-illum-channel-border-sem: rgba(0, 0, 0, 0.5);
+  --vc-illum-slot-dark-sem: rgba(120, 90, 60, 0.06);
+  --vc-illum-slot-edge-sem: rgba(180, 140, 90, 0.11);
+
+  /* ── Hardware Illuminated variant tokens ────────────────────────────── */
+  
+  /* Glow colors (base rgba values) */
+  --vc-illum-glow-primary: rgba(210, 165, 110, 1);
+  --vc-illum-glow-secondary: rgba(220, 175, 120, 1);
+  
+  /* Frame */
+  --vc-illum-frame-border: rgba(180, 140, 90, 0.30);
+  --vc-illum-frame-inset-highlight: rgba(255, 255, 255, 0.08);
+  --vc-illum-frame-inset-shadow: rgba(0, 0, 0, 0.3);
+  
+  /* Channel */
+  --vc-illum-channel-bg: #070b0e;
+  --vc-illum-channel-shadow-1: rgba(0, 0, 0, 0.95);
+  --vc-illum-channel-shadow-2: rgba(0, 0, 0, 0.6);
+  --vc-illum-channel-border: rgba(0, 0, 0, 0.5);
+  
+  /* Slot */
+  --vc-illum-slot-height: 3px;
+  --vc-illum-slot-color-dark: rgba(120, 90, 60, 0.06);
+  --vc-illum-slot-color-edge: rgba(180, 140, 90, 0.11);
+  
+  /* Thumb */
+  --vc-theme-thumb-width: 24px;
+  --vc-theme-thumb-height: 26px;
+  --vc-illum-thumb-width: var(--vc-theme-thumb-width);
+  --vc-illum-thumb-height: var(--vc-theme-thumb-height);
+  --vc-illum-thumb-border: rgba(0, 0, 0, 0.85);
+  --vc-illum-thumb-grad-dark: #555964;
+  --vc-illum-thumb-grad-mid-1: #737782;
+  --vc-illum-thumb-grad-mid-2: #858994;
+  --vc-illum-thumb-grad-bright-1: #9397a2;
+  --vc-illum-thumb-grad-bright-2: #9fa3ae;
+  --vc-illum-thumb-grad-center: #adb1bc;
+  
+  /* Thumb shadows (6-layer volumetric) */
+  --vc-illum-thumb-shadow-deep: 0 6px 14px rgba(0, 0, 0, 1.0);
+  --vc-illum-thumb-shadow-mid: 0 3px 6px rgba(0, 0, 0, 0.9);
+  --vc-illum-thumb-shadow-close: 0 1px 3px rgba(0, 0, 0, 0.8);
+  --vc-illum-thumb-highlight-top: inset 0 2.5px 0 rgba(255, 255, 255, 0.50);
+  --vc-illum-thumb-shadow-bottom: inset 0 -2.5px 0 rgba(0, 0, 0, 0.65);
+  --vc-illum-thumb-highlight-sides: inset 2.5px 0 0 rgba(255, 255, 255, 0.18);
+  --vc-illum-thumb-outline: 0 0 0 1px rgba(0, 0, 0, 0.4);
+  
+  /* Thumb hover */
+  --vc-illum-thumb-hover-highlight-top: inset 0 2.5px 0 rgba(255, 255, 255, 0.55);
+  --vc-illum-thumb-hover-highlight-sides: inset 2.5px 0 0 rgba(255, 255, 255, 0.22);
+  --vc-illum-thumb-hover-ring: 0 0 0 2px rgba(210, 165, 110, 0.30);
+  
+  /* Center mark */
+  --vc-illum-center-mark-bg: rgba(220, 180, 130, 0.4);
+  --vc-illum-center-mark-glow: rgba(210, 165, 110, 0.3);
+  --vc-hw-center-mark-bg: rgba(255, 255, 255, 0.2);
+  
+  /* Slit */
+  --vc-illum-slit-width: 2px;
 }

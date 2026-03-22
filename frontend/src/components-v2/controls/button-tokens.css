@@ -1,0 +1,120 @@
+/**
+ * Control Button Design Tokens
+ * 
+ * Organized by category for easy theming:
+ * - Base: core button structure
+ * - Indicators: dot/edge/fill sizes and behavior
+ * - Colors: semantic color assignments
+ * - Glow: lighting effects
+ * - Hardware: skeuomorphic surface styling
+ */
+
+:root {
+  /* === Base Button === */
+  --btn-min-height: 28px;
+  --btn-padding-block: 4px;
+  --btn-padding-inline: 10px;
+  --btn-border-radius: 3px;
+  --btn-font-size: 10px;
+  --btn-font-weight: 700;
+  --btn-letter-spacing: 0.04em;
+  
+  /* Compact variant */
+  --btn-compact-min-height: 22px;
+  --btn-compact-padding-block: 2px;
+  --btn-compact-padding-inline: 6px;
+  --btn-compact-font-size: 9px;
+
+  /* === Indicator Sizes === */
+  --indicator-thickness: 3px;
+  --indicator-dot-size: 5.12px;
+  --indicator-dot-offset: 8px;
+  --indicator-dot-gap: 8px;
+
+  /* === Glow Effects === */
+  /* Warm glow (incandescent lamp) */
+  --glow-warm: rgba(255, 228, 180, 0.82);
+  /* White glow (LED) */
+  --glow-white: rgba(220, 235, 255, 0.85);
+  
+  /* Glow intensity levels */
+  --glow-border-opacity: 48%;
+  --glow-ring-1-opacity: 12%;
+  --glow-ring-2-opacity: 7%;
+  --glow-ring-3-opacity: 4%;
+  
+  /* Glow blur radii */
+  --glow-blur-tight: 8px;
+  --glow-blur-medium: 10px;
+  --glow-blur-wide: 14px;
+  
+  /* Dot glow (stronger, focused) */
+  --dot-glow-ring-1-opacity: 20%;
+  --dot-glow-ring-2-opacity: 30%;
+  --dot-glow-ring-3-opacity: 18%;
+  --dot-glow-blur-tight: 6px;
+  --dot-glow-blur-medium: 12px;
+
+  /* Edge indicator glow */
+  --edge-glow-ring-1-opacity: 15%;
+  --edge-glow-ring-2-opacity: 10%;
+  --edge-glow-ring-3-opacity: 6%;
+  --edge-glow-blur-tight: 10px;
+  --edge-glow-inset-opacity: 6%;
+
+  /* === Semantic Colors === */
+  /* Indicator colors */
+  --indicator-cyan: var(--v2-accent-cyan);
+  --indicator-green: var(--v2-accent-green);
+  --indicator-amber: var(--v2-accent-yellow);
+  --indicator-red: var(--v2-accent-red);
+  --indicator-orange: var(--v2-accent-orange);
+  --indicator-white: var(--v2-text-white);
+
+  /* Button states */
+  --btn-bg-idle: linear-gradient(180deg, var(--v2-control-button-gradient-top) 0%, var(--v2-control-button-gradient-bottom) 100%);
+  --btn-bg-hover: var(--v2-bg-gradient-start);
+  --btn-border-idle: var(--v2-border-dark);
+  --btn-highlight: var(--v2-control-button-highlight);
+  
+  /* Active state background tint */
+  --btn-active-bg-tint: 14%;
+
+  /* === Hardware Surface === */
+  /* Gradient stops for 3D skeuomorphic effect */
+  --hw-gradient-top-1: color-mix(in srgb, var(--v2-text-white) 10%, var(--v2-control-button-gradient-top));
+  --hw-gradient-top-2: color-mix(in srgb, var(--v2-text-white) 4%, var(--v2-control-button-gradient-top));
+  --hw-gradient-mid: color-mix(in srgb, var(--v2-bg-card) 28%, var(--v2-control-button-gradient-bottom));
+  --hw-gradient-bottom: color-mix(in srgb, var(--v2-bg-darkest) 18%, var(--v2-control-button-gradient-bottom));
+  
+  /* Hover state (slightly brighter) */
+  --hw-gradient-top-1-hover: color-mix(in srgb, var(--v2-text-white) 14%, var(--v2-control-button-gradient-top));
+  --hw-gradient-top-2-hover: color-mix(in srgb, var(--v2-text-white) 6%, var(--v2-control-button-gradient-top));
+  --hw-gradient-mid-hover: color-mix(in srgb, var(--v2-bg-card) 34%, var(--v2-control-button-gradient-bottom));
+  --hw-gradient-bottom-hover: color-mix(in srgb, var(--v2-bg-darkest) 20%, var(--v2-control-button-gradient-bottom));
+
+  /* Hardware border & shadows */
+  --hw-border: color-mix(in srgb, var(--v2-text-white) 10%, var(--v2-border-dark));
+  --hw-shadow-top: color-mix(in srgb, var(--v2-text-white) 16%, transparent);
+  --hw-shadow-bottom: color-mix(in srgb, var(--v2-bg-darkest) 48%, transparent);
+  --hw-shadow-left: color-mix(in srgb, var(--v2-text-white) 6%, transparent);
+  --hw-shadow-right: color-mix(in srgb, var(--v2-bg-darkest) 20%, transparent);
+  --hw-shadow-outer-top: color-mix(in srgb, var(--v2-text-white) 4%, transparent);
+  --hw-shadow-outer-bottom: color-mix(in srgb, var(--v2-bg-darkest) 48%, transparent);
+
+  /* === Fill Indicator === */
+  --fill-bg-tint-top: 22%;
+  --fill-bg-tint-bottom: 12%;
+  --fill-inset-ring-opacity: 12%;
+}
+
+/**
+ * Theme: Vintage (example for future)
+ * Warmer tones, stronger glow, larger indicators
+ */
+[data-theme="vintage"] {
+  --indicator-dot-size: 6.4px;
+  --glow-warm: rgba(255, 200, 120, 0.9);
+  --glow-ring-2-opacity: 10%;
+  --glow-ring-3-opacity: 6%;
+}

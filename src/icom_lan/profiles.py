@@ -252,8 +252,11 @@ def resolve_radio_profile(
         return get_radio_profile(model)
     if radio_addr is not None and radio_addr in _by_civ_addr:
         return _by_civ_addr[radio_addr]
-    # Default fallback — first profile with has_lan=True, or first available
+    # Default fallback — prefer IC-7610 (primary LAN reference rig), then any LAN profile
     profiles = _ensure_loaded()
+    ic7610 = profiles.get("IC-7610")
+    if ic7610 is not None and ic7610.has_lan:
+        return ic7610
     for p in profiles.values():
         if p.has_lan:
             return p

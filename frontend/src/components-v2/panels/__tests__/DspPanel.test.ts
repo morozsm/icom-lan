@@ -231,6 +231,47 @@ describe('callbacks', () => {
     expect(onNotchModeChange).toHaveBeenCalledWith('auto');
   });
 
+  it('calls onNbToggle with true when NB button is clicked while inactive', () => {
+    const onNbToggle = vi.fn();
+    const t = mountPanel({ ...baseProps, nbActive: false, onNbToggle });
+    // .single-control wraps only the NB toggle; avoids matching NR segmented OFF button
+    const btn = t.querySelector<HTMLButtonElement>('.single-control button');
+    btn?.click();
+    flushSync();
+    expect(onNbToggle).toHaveBeenCalledWith(true);
+  });
+
+  it('calls onNbToggle with false when NB button is clicked while active', () => {
+    const onNbToggle = vi.fn();
+    const t = mountPanel({ ...baseProps, nbActive: true, onNbToggle });
+    const btn = t.querySelector<HTMLButtonElement>('.single-control button');
+    btn?.click();
+    flushSync();
+    expect(onNbToggle).toHaveBeenCalledWith(false);
+  });
+
+  it('calls onCwAutoTuneToggle with true when Auto Tune button is clicked while inactive', () => {
+    const onCwAutoTuneToggle = vi.fn();
+    const t = mountPanel({ ...baseProps, currentMode: 'CW', cwAutoTune: false, onCwAutoTuneToggle });
+    const btn = Array.from(t.querySelectorAll<HTMLButtonElement>('button')).find(
+      (b) => b.textContent?.trim() === 'Auto Tune'
+    );
+    btn?.click();
+    flushSync();
+    expect(onCwAutoTuneToggle).toHaveBeenCalledWith(true);
+  });
+
+  it('calls onCwAutoTuneToggle with true when Auto Tune button is clicked while active', () => {
+    const onCwAutoTuneToggle = vi.fn();
+    const t = mountPanel({ ...baseProps, currentMode: 'CW', cwAutoTune: true, onCwAutoTuneToggle });
+    const btn = Array.from(t.querySelectorAll<HTMLButtonElement>('button')).find(
+      (b) => b.textContent?.trim() === 'Auto Tune'
+    );
+    btn?.click();
+    flushSync();
+    expect(onCwAutoTuneToggle).toHaveBeenCalledWith(true);
+  });
+
   it('calls onCwPitchChange when CW Pitch slider changes', () => {
     const onCwPitchChange = vi.fn();
     const t = mountPanel({ ...baseProps, currentMode: 'CW', onCwPitchChange });

@@ -1,10 +1,13 @@
 """Tests for CI-V command encoding and decoding."""
 
-import pytest
+import inspect
 
+import pytest
+import icom_lan.commands as raw_commands
+
+from icom_lan import IC_7610_ADDR
 from icom_lan.commands import (
     CONTROLLER_ADDR,
-    IC_7610_ADDR,
     build_civ_frame,
     filter_hz_to_index,
     filter_index_to_hz,
@@ -24,7 +27,7 @@ from icom_lan.commands import (
     set_filter_width,
     set_freq,
     set_mode,
-    set_rf_power,
+    set_rf_power
 )
 from icom_lan.types import (
     AgcMode,
@@ -35,6 +38,11 @@ from icom_lan.types import (
     Mode,
     SsbTxBandwidth,
 )
+from _command_test_helpers import bind_default_addr_globals, bind_default_addr_module
+
+_ORIGINAL_COMMANDS = {name: getattr(raw_commands, name) for name in raw_commands.__all__}
+bind_default_addr_module(raw_commands, to_addr=IC_7610_ADDR)
+bind_default_addr_globals(globals(), to_addr=IC_7610_ADDR)
 
 
 class TestConstants:
@@ -45,6 +53,16 @@ class TestConstants:
 
     def test_controller_addr(self) -> None:
         assert CONTROLLER_ADDR == 0xE0
+
+    def test_public_builders_require_explicit_to_addr(self) -> None:
+        for name, obj in _ORIGINAL_COMMANDS.items():
+            if not callable(obj):
+                continue
+            signature = inspect.signature(obj)
+            to_addr = signature.parameters.get("to_addr")
+            if to_addr is None:
+                continue
+            assert to_addr.default is inspect.Signature.empty, name
 
 
 class TestBuildCivFrame:
@@ -1432,9 +1450,9 @@ class TestToneTsqlCommands:
     # --- Response parsers ---
 
     def test_parse_tone_freq_response(self) -> None:
+        from icom_lan import IC_7610_ADDR
         from icom_lan.commands import (
             CONTROLLER_ADDR,
-            IC_7610_ADDR,
             RECEIVER_MAIN,
             build_cmd29_frame,
             parse_civ_frame,
@@ -1455,9 +1473,9 @@ class TestToneTsqlCommands:
         assert freq == pytest.approx(88.5)
 
     def test_parse_tsql_freq_response(self) -> None:
+        from icom_lan import IC_7610_ADDR
         from icom_lan.commands import (
             CONTROLLER_ADDR,
-            IC_7610_ADDR,
             RECEIVER_SUB,
             build_cmd29_frame,
             parse_civ_frame,
@@ -2302,6 +2320,17 @@ class TestSystemConfigCommands:
 
         with pytest.raises(ValueError, match="0, 1, or 2"):
             get_speech(3)
+
+    def test_speech_cmd_map_prefers_set_speech_key(self) -> None:
+        """Rig profiles may expose set_speech (wfview Set-only) instead of get_speech."""
+        from icom_lan import IC_7610_ADDR
+        from icom_lan.command_map import CommandMap
+        from icom_lan.commands import get_speech
+
+        cm = CommandMap({"set_speech": (0x13,)})
+        assert get_speech(0, to_addr=IC_7610_ADDR, cmd_map=cm) == get_speech(
+            0, to_addr=IC_7610_ADDR
+        )
 
     # --- Transceiver ID (0x19 0x00) ---
 

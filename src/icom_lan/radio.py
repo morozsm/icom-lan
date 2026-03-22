@@ -1764,6 +1764,29 @@ class Icom7610CoreRadio:
         self._check_connected()
         self._require_capability("data_mode", operation="set_data_mode")
         self._require_receiver(receiver, operation="set_data_mode")
+
+        if receiver != RECEIVER_MAIN and not self._profile.supports_cmd29(
+            0x1A, 0x06
+        ):
+            async def _action() -> None:
+                civ = set_data_mode_cmd(
+                    on, to_addr=self._radio_addr, receiver=RECEIVER_MAIN
+                )
+                resp = await self._send_civ_raw(civ)
+                assert resp is not None
+                ack = parse_ack_nak(resp)
+                if ack is False:
+                    raise CommandError(
+                        f"Radio rejected set_data_mode({on}, receiver={receiver})"
+                    )
+
+            await self._run_with_receiver_vfo_fallback(
+                receiver=receiver,
+                operation="set_data_mode",
+                action=_action,
+            )
+            return
+
         self._require_cmd29_route(
             0x1A,
             0x06,

@@ -6,9 +6,12 @@ Reference: wfview rigs/*.rig files and rigidentities.h.
 import logging
 from dataclasses import dataclass
 
-__all__ = ["RadioModel", "RADIOS", "SERIAL_RADIO_MAP", "identify_radio"]
+__all__ = ["RadioModel", "RADIOS", "SERIAL_RADIO_MAP", "identify_radio", "IC_7610_ADDR"]
 
 logger = logging.getLogger(__name__)
+
+# Convenience constant for IC-7610 CI-V address (used extensively in tests)
+IC_7610_ADDR = 0x98
 
 
 @dataclass(frozen=True, slots=True)

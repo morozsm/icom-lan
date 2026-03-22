@@ -36,7 +36,6 @@ if TYPE_CHECKING:
     from .types import BandStackRegister, MemoryChannel
 
 __all__ = [
-    "IC_7610_ADDR",
     "CONTROLLER_ADDR",
     "RECEIVER_MAIN",
     "RECEIVER_SUB",
@@ -322,7 +321,6 @@ __all__ = [
 ]
 
 # CI-V addresses
-IC_7610_ADDR = 0x98
 CONTROLLER_ADDR = 0xE0
 
 # Receiver IDs for Command29 (dual-receiver radios)
@@ -502,7 +500,7 @@ def build_cmd29_frame(
 def _build_from_map(
     cmd_map: CommandMap,
     name: str,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     data: bytes | None = None,
     receiver: int = RECEIVER_MAIN,
@@ -610,7 +608,7 @@ def parse_civ_frame(data: bytes) -> CivFrame:
 
 
 def get_freq(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -632,7 +630,7 @@ def get_freq(
 
 def set_freq(
     freq_hz: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -692,7 +690,7 @@ def parse_frequency_response(frame: CivFrame) -> int:
 
 
 def get_mode(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -707,7 +705,8 @@ def get_mode(
 def set_mode(
     mode: Mode,
     filter_width: int | None = None,
-    to_addr: int = IC_7610_ADDR,
+    *,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -928,7 +927,7 @@ def parse_bool_response(
 def _build_level_get(
     sub: int,
     *,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     command29: bool = False,
@@ -959,7 +958,7 @@ def _build_level_set(
     sub: int,
     value: int,
     *,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     command29: bool = False,
@@ -967,6 +966,7 @@ def _build_level_set(
     cmd_map: CommandMap | None = None,
     cmd_name: str | None = None,
 ) -> bytes:
+    payload = encoder(value)
     if cmd_map is not None and cmd_name is not None:
         return _build_from_map(
             cmd_map,
@@ -977,7 +977,6 @@ def _build_level_set(
             receiver=receiver,
             command29=command29,
         )
-    payload = encoder(value)
     if command29:
         return build_cmd29_frame(
             to_addr,
@@ -993,7 +992,7 @@ def _build_level_set(
 def _build_ctl_mem_get(
     prefix: bytes,
     *,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
     cmd_name: str | None = None,
@@ -1017,7 +1016,7 @@ def _build_ctl_mem_set(
     prefix: bytes,
     value: int,
     *,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     byte_count: int,
     cmd_map: CommandMap | None = None,
@@ -1040,7 +1039,7 @@ def _build_ctl_mem_set(
 def _build_meter_bool_get(
     sub: int,
     *,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     command29: bool = False,
@@ -1070,7 +1069,7 @@ def _build_meter_bool_get(
 def _build_function_get(
     sub: int,
     *,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     command29: bool = False,
@@ -1101,13 +1100,14 @@ def _build_function_bool_set(
     sub: int,
     on: bool,
     *,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     command29: bool = False,
     cmd_map: CommandMap | None = None,
     cmd_name: str | None = None,
 ) -> bytes:
+    payload = b"\x01" if on else b"\x00"
     if cmd_map is not None and cmd_name is not None:
         return _build_from_map(
             cmd_map,
@@ -1118,7 +1118,6 @@ def _build_function_bool_set(
             receiver=receiver,
             command29=command29,
         )
-    payload = b"\x01" if on else b"\x00"
     if command29:
         return build_cmd29_frame(
             to_addr,
@@ -1137,13 +1136,16 @@ def _build_function_value_set(
     *,
     minimum: int,
     maximum: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     command29: bool = False,
     cmd_map: CommandMap | None = None,
     cmd_name: str | None = None,
 ) -> bytes:
+    if not minimum <= value <= maximum:
+        raise ValueError(f"Value must be {minimum}-{maximum}, got {value}")
+    payload = bytes([_bcd_byte(value)])
     if cmd_map is not None and cmd_name is not None:
         return _build_from_map(
             cmd_map,
@@ -1154,9 +1156,6 @@ def _build_function_value_set(
             receiver=receiver,
             command29=command29,
         )
-    if not minimum <= value <= maximum:
-        raise ValueError(f"Value must be {minimum}-{maximum}, got {value}")
-    payload = bytes([_bcd_byte(value)])
     if command29:
         return build_cmd29_frame(
             to_addr,
@@ -1172,7 +1171,7 @@ def _build_function_value_set(
 def _build_ctl_mem_single_bcd_get(
     sub: int,
     *,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     command29: bool = False,
@@ -1205,13 +1204,16 @@ def _build_ctl_mem_single_bcd_set(
     *,
     minimum: int,
     maximum: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     command29: bool = False,
     cmd_map: CommandMap | None = None,
     cmd_name: str | None = None,
 ) -> bytes:
+    if not minimum <= value <= maximum:
+        raise ValueError(f"Value must be {minimum}-{maximum}, got {value}")
+    payload = bytes([_bcd_byte(value)])
     if cmd_map is not None and cmd_name is not None:
         return _build_from_map(
             cmd_map,
@@ -1222,9 +1224,6 @@ def _build_ctl_mem_single_bcd_set(
             receiver=receiver,
             command29=command29,
         )
-    if not minimum <= value <= maximum:
-        raise ValueError(f"Value must be {minimum}-{maximum}, got {value}")
-    payload = bytes([_bcd_byte(value)])
     if command29:
         return build_cmd29_frame(
             to_addr,
@@ -1258,7 +1257,7 @@ def _key_speed_to_level(wpm: int) -> int:
 
 
 def get_rf_power(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -1272,7 +1271,7 @@ def get_rf_power(
 
 def set_rf_power(
     level: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -1300,7 +1299,7 @@ def set_rf_power(
 
 
 def get_rf_gain(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -1314,7 +1313,7 @@ def get_rf_gain(
 
 def set_rf_gain(
     level: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -1349,7 +1348,7 @@ def set_rf_gain(
 
 
 def get_af_level(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -1363,7 +1362,7 @@ def get_af_level(
 
 def set_af_level(
     level: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -1398,7 +1397,7 @@ def set_af_level(
 
 
 def get_squelch(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -1417,7 +1416,7 @@ def get_squelch(
 
 def set_squelch(
     level: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -1447,7 +1446,7 @@ def set_squelch(
 
 
 def get_apf_type_level(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -1466,7 +1465,7 @@ def get_apf_type_level(
 
 def set_apf_type_level(
     level: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -1485,7 +1484,7 @@ def set_apf_type_level(
 
 
 def get_nr_level(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -1504,7 +1503,7 @@ def get_nr_level(
 
 def set_nr_level(
     level: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -1523,7 +1522,7 @@ def set_nr_level(
 
 
 def get_pbt_inner(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -1542,7 +1541,7 @@ def get_pbt_inner(
 
 def set_pbt_inner(
     level: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -1561,7 +1560,7 @@ def set_pbt_inner(
 
 
 def get_pbt_outer(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -1580,7 +1579,7 @@ def get_pbt_outer(
 
 def set_pbt_outer(
     level: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -1599,7 +1598,7 @@ def set_pbt_outer(
 
 
 def get_cw_pitch(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -1615,7 +1614,7 @@ def get_cw_pitch(
 
 def set_cw_pitch(
     pitch_hz: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -1631,7 +1630,7 @@ def set_cw_pitch(
 
 
 def get_mic_gain(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -1647,7 +1646,7 @@ def get_mic_gain(
 
 def set_mic_gain(
     level: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -1663,7 +1662,7 @@ def set_mic_gain(
 
 
 def get_key_speed(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -1679,7 +1678,7 @@ def get_key_speed(
 
 def set_key_speed(
     wpm: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -1695,7 +1694,7 @@ def set_key_speed(
 
 
 def get_notch_filter(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -1711,7 +1710,7 @@ def get_notch_filter(
 
 def set_notch_filter(
     level: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -1727,7 +1726,7 @@ def set_notch_filter(
 
 
 def get_compressor_level(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -1743,7 +1742,7 @@ def get_compressor_level(
 
 def set_compressor_level(
     level: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -1759,7 +1758,7 @@ def set_compressor_level(
 
 
 def get_break_in_delay(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -1775,7 +1774,7 @@ def get_break_in_delay(
 
 def set_break_in_delay(
     level: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -1791,7 +1790,7 @@ def set_break_in_delay(
 
 
 def get_nb_level(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -1810,7 +1809,7 @@ def get_nb_level(
 
 def set_nb_level(
     level: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -1829,7 +1828,7 @@ def set_nb_level(
 
 
 def get_digisel_shift(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -1848,7 +1847,7 @@ def get_digisel_shift(
 
 def set_digisel_shift(
     level: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -1867,7 +1866,7 @@ def set_digisel_shift(
 
 
 def get_drive_gain(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -1883,7 +1882,7 @@ def get_drive_gain(
 
 def set_drive_gain(
     level: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -1899,7 +1898,7 @@ def set_drive_gain(
 
 
 def get_monitor_gain(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -1915,7 +1914,7 @@ def get_monitor_gain(
 
 def set_monitor_gain(
     level: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -1931,7 +1930,7 @@ def set_monitor_gain(
 
 
 def get_vox_gain(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -1947,7 +1946,7 @@ def get_vox_gain(
 
 def set_vox_gain(
     level: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -1963,7 +1962,7 @@ def set_vox_gain(
 
 
 def get_anti_vox_gain(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -1979,7 +1978,7 @@ def get_anti_vox_gain(
 
 def set_anti_vox_gain(
     level: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -1998,7 +1997,7 @@ def set_anti_vox_gain(
 
 
 def get_s_meter(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -2011,7 +2010,7 @@ def get_s_meter(
 
 
 def get_swr(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -2022,7 +2021,7 @@ def get_swr(
 
 
 def get_alc(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -2058,7 +2057,7 @@ def parse_meter_response(frame: CivFrame) -> int:
 
 
 def ptt_on(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -2071,7 +2070,7 @@ def ptt_on(
 
 
 def ptt_off(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -2130,7 +2129,7 @@ _SUB_AGC_TIME_CONSTANT = 0x04
 
 
 def get_vfo(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -2141,7 +2140,7 @@ def get_vfo(
 
 
 def get_main_sub_band(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -2163,7 +2162,8 @@ def get_main_sub_band(
 
 def set_vfo(
     vfo: str = "A",
-    to_addr: int = IC_7610_ADDR,
+    *,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -2184,7 +2184,7 @@ def set_vfo(
 
 
 def vfo_a_equals_b(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -2197,7 +2197,7 @@ def vfo_a_equals_b(
 
 
 def vfo_swap(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -2211,7 +2211,7 @@ def vfo_swap(
 
 def set_split(
     on: bool,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -2230,7 +2230,7 @@ def set_split(
 
 
 def get_tuning_step(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -2248,7 +2248,7 @@ def get_tuning_step(
 
 def set_tuning_step(
     step: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -2276,7 +2276,7 @@ def set_tuning_step(
 
 
 def scan_start(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -2289,7 +2289,7 @@ def scan_start(
 
 
 def scan_stop(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -2302,7 +2302,7 @@ def scan_stop(
 
 
 def set_dual_watch_off(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -2321,7 +2321,7 @@ def set_dual_watch_off(
 
 
 def set_dual_watch_on(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -2340,7 +2340,7 @@ def set_dual_watch_on(
 
 
 def get_dual_watch(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -2360,7 +2360,7 @@ def get_dual_watch(
 
 def set_dual_watch(
     on: bool,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -2373,14 +2373,14 @@ def set_dual_watch(
         CI-V frame bytes.
     """
     return (
-        set_dual_watch_on(to_addr, from_addr, cmd_map=cmd_map)
+        set_dual_watch_on(to_addr=to_addr, from_addr=from_addr, cmd_map=cmd_map)
         if on
-        else set_dual_watch_off(to_addr, from_addr, cmd_map=cmd_map)
+        else set_dual_watch_off(to_addr=to_addr, from_addr=from_addr, cmd_map=cmd_map)
     )
 
 
 def quick_dual_watch(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -2403,7 +2403,7 @@ def quick_dual_watch(
 
 
 def quick_split(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -2423,7 +2423,7 @@ def quick_split(
 
 # Aliases for TOML canonical names (get_/set_ prefix convention)
 def get_quick_split(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -2442,7 +2442,7 @@ def get_quick_split(
 
 
 def set_quick_split(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -2461,7 +2461,7 @@ def set_quick_split(
 
 
 def get_quick_dual_watch(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -2484,7 +2484,7 @@ def get_quick_dual_watch(
 
 
 def set_quick_dual_watch(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -2514,7 +2514,7 @@ def _bcd_byte(value: int) -> int:
 
 
 def get_attenuator(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -2534,7 +2534,7 @@ def get_attenuator(
 
 def set_attenuator_level(
     db: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -2564,7 +2564,7 @@ def set_attenuator_level(
 
 def set_attenuator(
     on: bool,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -2584,7 +2584,7 @@ def set_attenuator(
 
 
 def get_preamp(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -2610,7 +2610,8 @@ def get_preamp(
 
 def set_preamp(
     level: int = 1,
-    to_addr: int = IC_7610_ADDR,
+    *,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -2640,7 +2641,7 @@ def set_preamp(
 
 
 def get_digisel(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -2666,7 +2667,7 @@ def get_digisel(
 
 def set_digisel(
     on: bool,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -2696,7 +2697,7 @@ def set_digisel(
 
 
 def get_nb(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -2708,7 +2709,7 @@ def get_nb(
 
 def set_nb(
     on: bool,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -2733,7 +2734,7 @@ def set_nb(
 
 
 def get_nr(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -2745,7 +2746,7 @@ def get_nr(
 
 def set_nr(
     on: bool,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -2770,7 +2771,7 @@ def set_nr(
 
 
 def get_ip_plus(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -2784,7 +2785,7 @@ def get_ip_plus(
 
 def set_ip_plus(
     on: bool,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -2814,7 +2815,7 @@ def set_ip_plus(
 
 
 def get_ref_adjust(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -2830,7 +2831,7 @@ def get_ref_adjust(
 
 def set_ref_adjust(
     value: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -2849,7 +2850,7 @@ def set_ref_adjust(
 
 
 def get_dash_ratio(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -2865,7 +2866,7 @@ def get_dash_ratio(
 
 def set_dash_ratio(
     value: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -2884,7 +2885,7 @@ def set_dash_ratio(
 
 
 def get_nb_depth(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -2900,7 +2901,7 @@ def get_nb_depth(
 
 def set_nb_depth(
     value: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -2919,7 +2920,7 @@ def set_nb_depth(
 
 
 def get_nb_width(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -2935,7 +2936,7 @@ def get_nb_width(
 
 def set_nb_width(
     value: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -2954,7 +2955,7 @@ def set_nb_width(
 
 
 def get_af_mute(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -2980,7 +2981,7 @@ def get_af_mute(
 
 def set_af_mute(
     on: bool,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -3007,7 +3008,7 @@ def set_af_mute(
 
 
 def get_s_meter_sql_status(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -3025,7 +3026,7 @@ def get_s_meter_sql_status(
 
 
 def get_overflow_status(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -3040,7 +3041,7 @@ def get_overflow_status(
 
 
 def get_agc(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -3059,7 +3060,7 @@ def get_agc(
 
 def set_agc(
     mode: AgcMode | int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -3080,7 +3081,7 @@ def set_agc(
 
 
 def get_audio_peak_filter(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -3099,7 +3100,7 @@ def get_audio_peak_filter(
 
 def set_audio_peak_filter(
     mode: AudioPeakFilter | int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -3120,7 +3121,7 @@ def set_audio_peak_filter(
 
 
 def get_auto_notch(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -3139,7 +3140,7 @@ def get_auto_notch(
 
 def set_auto_notch(
     on: bool,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -3158,7 +3159,7 @@ def set_auto_notch(
 
 
 def get_compressor(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -3174,7 +3175,7 @@ def get_compressor(
 
 def set_compressor(
     on: bool,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -3190,7 +3191,7 @@ def set_compressor(
 
 
 def get_monitor(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -3206,7 +3207,7 @@ def get_monitor(
 
 def set_monitor(
     on: bool,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -3222,7 +3223,7 @@ def set_monitor(
 
 
 def get_vox(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -3238,7 +3239,7 @@ def get_vox(
 
 def set_vox(
     on: bool,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -3254,7 +3255,7 @@ def set_vox(
 
 
 def get_break_in(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -3270,7 +3271,7 @@ def get_break_in(
 
 def set_break_in(
     mode: BreakInMode | int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -3288,7 +3289,7 @@ def set_break_in(
 
 
 def get_manual_notch(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -3307,7 +3308,7 @@ def get_manual_notch(
 
 def set_manual_notch(
     on: bool,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -3326,7 +3327,7 @@ def set_manual_notch(
 
 
 def get_manual_notch_width(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -3349,7 +3350,7 @@ def get_manual_notch_width(
 
 def set_manual_notch_width(
     width: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -3378,7 +3379,7 @@ def set_manual_notch_width(
 
 
 def get_twin_peak_filter(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -3397,7 +3398,7 @@ def get_twin_peak_filter(
 
 def set_twin_peak_filter(
     on: bool,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -3416,7 +3417,7 @@ def set_twin_peak_filter(
 
 
 def get_dial_lock(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -3432,7 +3433,7 @@ def get_dial_lock(
 
 def set_dial_lock(
     on: bool,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -3448,7 +3449,7 @@ def set_dial_lock(
 
 
 def get_filter_shape(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -3467,7 +3468,7 @@ def get_filter_shape(
 
 def set_filter_shape(
     shape: FilterShape | int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -3488,7 +3489,7 @@ def set_filter_shape(
 
 
 def get_filter_width(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -3511,7 +3512,7 @@ def get_filter_width(
 
 def set_filter_width(
     filter_index: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -3549,7 +3550,7 @@ def set_filter_width(
 
 
 def get_ssb_tx_bandwidth(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -3565,7 +3566,7 @@ def get_ssb_tx_bandwidth(
 
 def set_ssb_tx_bandwidth(
     bandwidth: SsbTxBandwidth | int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -3583,7 +3584,7 @@ def set_ssb_tx_bandwidth(
 
 
 def get_main_sub_tracking(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -3599,7 +3600,7 @@ def get_main_sub_tracking(
 
 def set_main_sub_tracking(
     on: bool,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -3615,7 +3616,7 @@ def set_main_sub_tracking(
 
 
 def get_agc_time_constant(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -3634,7 +3635,7 @@ def get_agc_time_constant(
 
 def set_agc_time_constant(
     value: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -3655,7 +3656,7 @@ def set_agc_time_constant(
 
 
 def get_data_mode(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -3673,7 +3674,7 @@ def get_data_mode(
 
 def set_data_mode(
     on: int | bool,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -3809,7 +3810,7 @@ def _scope_payload(value: bytes, receiver: int | None = None) -> bytes:
 def _scope_query(
     sub: int,
     *,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int | None = None,
 ) -> bytes:
@@ -3882,7 +3883,7 @@ def _decode_scope_bcd_value(
 
 
 def scope_on(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -3897,7 +3898,7 @@ def scope_on(
 
 
 def scope_off(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -3913,7 +3914,7 @@ def scope_off(
 
 def scope_data_output(
     on: bool,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -3940,7 +3941,7 @@ def scope_data_output(
 
 
 def get_scope_main_sub(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -3953,7 +3954,7 @@ def get_scope_main_sub(
 
 
 def get_scope_single_dual(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -3966,7 +3967,7 @@ def get_scope_single_dual(
 
 
 def get_scope_mode(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
     *,
@@ -3987,7 +3988,7 @@ def get_scope_mode(
 
 def scope_set_mode(
     mode: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
     *,
@@ -4017,7 +4018,7 @@ def scope_set_mode(
 
 
 def get_scope_span(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
     *,
@@ -4038,7 +4039,7 @@ def get_scope_span(
 
 def scope_set_span(
     span: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
     *,
@@ -4068,7 +4069,7 @@ def scope_set_span(
 
 
 def get_scope_edge(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
     *,
@@ -4089,7 +4090,7 @@ def get_scope_edge(
 
 def scope_set_edge(
     edge: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
     *,
@@ -4119,7 +4120,7 @@ def scope_set_edge(
 
 
 def get_scope_hold(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
     *,
@@ -4140,7 +4141,7 @@ def get_scope_hold(
 
 def scope_set_hold(
     on: bool,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
     *,
@@ -4194,7 +4195,7 @@ def _scope_ref_encode(ref: float) -> bytes:
 
 
 def get_scope_ref(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
     *,
@@ -4215,7 +4216,7 @@ def get_scope_ref(
 
 def scope_set_ref(
     ref: float,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
     *,
@@ -4244,7 +4245,7 @@ def scope_set_ref(
 
 
 def get_scope_speed(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
     *,
@@ -4265,7 +4266,7 @@ def get_scope_speed(
 
 def scope_set_speed(
     speed: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
     *,
@@ -4295,7 +4296,7 @@ def scope_set_speed(
 
 
 def get_scope_during_tx(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -4309,7 +4310,7 @@ def get_scope_during_tx(
 
 def scope_set_during_tx(
     on: bool,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -4332,7 +4333,7 @@ def scope_set_during_tx(
 
 
 def get_scope_center_type(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
     *,
@@ -4353,7 +4354,7 @@ def get_scope_center_type(
 
 def scope_set_center_type(
     center_type: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
     *,
@@ -4379,7 +4380,7 @@ def scope_set_center_type(
 
 
 def get_scope_vbw(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
     *,
@@ -4400,7 +4401,7 @@ def get_scope_vbw(
 
 def scope_set_vbw(
     narrow: bool,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
     *,
@@ -4440,7 +4441,7 @@ def _resolve_scope_fixed_edge_range(start_hz: int) -> int:
 
 
 def get_scope_fixed_edge(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -4457,8 +4458,8 @@ def scope_set_fixed_edge(
     edge: int,
     start_hz: int,
     end_hz: int,
+    to_addr: int,
     range_index: int | None = None,
-    to_addr: int = IC_7610_ADDR,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -4499,7 +4500,7 @@ def scope_set_fixed_edge(
 
 
 def get_scope_rbw(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
     *,
@@ -4520,7 +4521,7 @@ def get_scope_rbw(
 
 def scope_set_rbw(
     rbw: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
     *,
@@ -4553,7 +4554,7 @@ def scope_set_rbw(
 
 
 def scope_data_output_on(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -4570,7 +4571,7 @@ def scope_data_output_on(
 
 
 def scope_data_output_off(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -4588,7 +4589,7 @@ def scope_data_output_off(
 
 def scope_main_sub(
     receiver: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -4616,7 +4617,7 @@ def scope_main_sub(
 
 def scope_single_dual(
     dual: bool,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -4743,7 +4744,7 @@ _CMD_SEND_CW = 0x17
 
 def send_cw(
     text: str,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> list[bytes]:
@@ -4777,7 +4778,7 @@ def send_cw(
 
 
 def stop_cw(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -4795,7 +4796,7 @@ _CMD_POWER_CTRL = 0x18
 
 
 def power_on(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -4808,7 +4809,7 @@ def power_on(
 
 
 def power_off(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -4827,7 +4828,8 @@ _CMD_SPEECH = 0x13
 
 def get_speech(
     what: int = 0,
-    to_addr: int = IC_7610_ADDR,
+    *,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -4849,9 +4851,10 @@ def get_speech(
         ValueError: If *what* is not 0, 1, or 2.
     """
     if cmd_map is not None:
+        speech_key = "set_speech" if cmd_map.has("set_speech") else "get_speech"
         return _build_from_map(
             cmd_map,
-            "get_speech",
+            speech_key,
             to_addr=to_addr,
             from_addr=from_addr,
             data=bytes([what]),
@@ -4868,7 +4871,7 @@ _SUB_TRANSCEIVER_ID = 0x00
 
 
 def get_transceiver_id(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -4902,7 +4905,7 @@ _SUB_RIT_TX_STATUS = 0x02
 
 
 def get_band_edge_freq(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -4918,7 +4921,7 @@ def get_band_edge_freq(
 
 
 def get_various_squelch(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -4936,7 +4939,7 @@ def get_various_squelch(
 
 
 def get_power_meter(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -4949,7 +4952,7 @@ def get_power_meter(
 
 
 def get_comp_meter(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -4962,7 +4965,7 @@ def get_comp_meter(
 
 
 def get_vd_meter(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -4975,7 +4978,7 @@ def get_vd_meter(
 
 
 def get_id_meter(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -4988,7 +4991,7 @@ def get_id_meter(
 
 
 def get_tuner_status(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -5005,7 +5008,7 @@ def get_tuner_status(
 
 def set_tuner_status(
     value: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -5030,7 +5033,7 @@ def set_tuner_status(
 
 
 def get_xfc_status(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -5047,7 +5050,7 @@ def get_xfc_status(
 
 def set_xfc_status(
     on: bool,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -5074,7 +5077,7 @@ def set_xfc_status(
 
 
 def get_tx_freq_monitor(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -5088,7 +5091,7 @@ def get_tx_freq_monitor(
 
 def set_tx_freq_monitor(
     on: bool,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -5111,7 +5114,7 @@ def set_tx_freq_monitor(
 
 
 def get_rit_frequency(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -5129,7 +5132,7 @@ def get_rit_frequency(
 
 def set_rit_frequency(
     offset_hz: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -5179,7 +5182,7 @@ def parse_rit_frequency_response(data: bytes) -> int:
 
 
 def get_rit_status(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -5193,7 +5196,7 @@ def get_rit_status(
 
 def set_rit_status(
     on: bool,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -5216,7 +5219,7 @@ def set_rit_status(
 
 
 def get_rit_tx_status(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -5230,7 +5233,7 @@ def get_rit_tx_status(
 
 def set_rit_tx_status(
     on: bool,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -5302,7 +5305,7 @@ def _decode_tone_freq(data: bytes) -> float:
 
 
 def get_repeater_tone(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -5321,7 +5324,7 @@ def get_repeater_tone(
 
 def set_repeater_tone(
     on: bool,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -5340,7 +5343,7 @@ def set_repeater_tone(
 
 
 def get_repeater_tsql(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -5359,7 +5362,7 @@ def get_repeater_tsql(
 
 def set_repeater_tsql(
     on: bool,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -5378,7 +5381,7 @@ def set_repeater_tsql(
 
 
 def get_tone_freq(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -5400,7 +5403,7 @@ def get_tone_freq(
 
 def set_tone_freq(
     freq_hz: float,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -5431,7 +5434,7 @@ def set_tone_freq(
 
 
 def get_tsql_freq(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -5453,7 +5456,7 @@ def get_tsql_freq(
 
 def set_tsql_freq(
     freq_hz: float,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     receiver: int = RECEIVER_MAIN,
     cmd_map: CommandMap | None = None,
@@ -5517,14 +5520,14 @@ def parse_tsql_freq_response(frame: CivFrame) -> tuple[int | None, float]:
 
 
 def build_memory_mode_get(
-    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
+    to_addr: int, from_addr: int = CONTROLLER_ADDR
 ) -> bytes:
     """Build CI-V frame to get current memory mode (0x08)."""
     return build_civ_frame(to_addr, from_addr, _CMD_MEMORY_MODE)
 
 
 def build_memory_mode_set(
-    channel: int, to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
+    channel: int, to_addr: int, from_addr: int = CONTROLLER_ADDR
 ) -> bytes:
     """Build CI-V frame to set memory mode (0x08).
 
@@ -5551,14 +5554,14 @@ def parse_memory_mode_response(frame: CivFrame) -> int:
 
 
 def build_memory_write(
-    to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
+    to_addr: int, from_addr: int = CONTROLLER_ADDR
 ) -> bytes:
     """Build CI-V frame to write VFO to memory (0x09)."""
     return build_civ_frame(to_addr, from_addr, _CMD_MEMORY_WRITE)
 
 
 def build_memory_to_vfo(
-    channel: int, to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
+    channel: int, to_addr: int, from_addr: int = CONTROLLER_ADDR
 ) -> bytes:
     """Build CI-V frame to load memory to VFO (0x0A).
 
@@ -5572,7 +5575,7 @@ def build_memory_to_vfo(
 
 
 def build_memory_clear(
-    channel: int, to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
+    channel: int, to_addr: int, from_addr: int = CONTROLLER_ADDR
 ) -> bytes:
     """Build CI-V frame to clear memory channel (0x0B).
 
@@ -5586,7 +5589,7 @@ def build_memory_clear(
 
 
 def build_memory_contents_get(
-    channel: int, to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
+    channel: int, to_addr: int, from_addr: int = CONTROLLER_ADDR
 ) -> bytes:
     """Build CI-V frame to get memory contents (0x1A 0x00).
 
@@ -5602,7 +5605,7 @@ def build_memory_contents_get(
 
 
 def build_memory_contents_set(
-    mem: "MemoryChannel", to_addr: int = IC_7610_ADDR, from_addr: int = CONTROLLER_ADDR
+    mem: "MemoryChannel", to_addr: int, from_addr: int = CONTROLLER_ADDR
 ) -> bytes:
     """Build CI-V frame to set memory contents (0x1A 0x00).
 
@@ -5682,7 +5685,7 @@ def parse_memory_contents_response(frame: CivFrame) -> "MemoryChannel":
 def get_bsr(
     band: int,
     register: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
 ) -> bytes:
     """Build CI-V frame to get band stacking register (0x1A 0x01).
@@ -5703,7 +5706,7 @@ def get_bsr(
 
 def set_bsr(
     bsr: "BandStackRegister",
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
 ) -> bytes:
     """Build CI-V frame to set band stacking register (0x1A 0x01).
@@ -5759,7 +5762,7 @@ def parse_band_stack_response(frame: CivFrame) -> "BandStackRegister":
 
 
 def get_antenna_1(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -5777,7 +5780,7 @@ def get_antenna_1(
 
 def set_antenna_1(
     enabled: bool,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -5804,7 +5807,7 @@ def set_antenna_1(
 
 
 def get_antenna_2(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -5822,7 +5825,7 @@ def get_antenna_2(
 
 def set_antenna_2(
     enabled: bool,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -5849,7 +5852,7 @@ def set_antenna_2(
 
 
 def get_rx_antenna_ant1(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -5867,7 +5870,7 @@ def get_rx_antenna_ant1(
 
 def set_rx_antenna_ant1(
     enabled: bool,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -5894,7 +5897,7 @@ def set_rx_antenna_ant1(
 
 
 def get_rx_antenna_ant2(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -5908,7 +5911,7 @@ def get_rx_antenna_ant2(
 
 def set_rx_antenna_ant2(
     enabled: bool,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -5938,7 +5941,7 @@ def set_rx_antenna_ant2(
 
 
 def get_acc1_mod_level(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -5952,7 +5955,7 @@ def get_acc1_mod_level(
 
 def set_acc1_mod_level(
     level: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -5979,7 +5982,7 @@ def set_acc1_mod_level(
 
 
 def get_usb_mod_level(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -5993,7 +5996,7 @@ def get_usb_mod_level(
 
 def set_usb_mod_level(
     level: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -6020,7 +6023,7 @@ def set_usb_mod_level(
 
 
 def get_lan_mod_level(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -6034,7 +6037,7 @@ def get_lan_mod_level(
 
 def set_lan_mod_level(
     level: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -6064,7 +6067,7 @@ def set_lan_mod_level(
 
 
 def get_data_off_mod_input(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -6080,7 +6083,7 @@ def get_data_off_mod_input(
 
 def set_data_off_mod_input(
     source: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -6103,7 +6106,7 @@ def set_data_off_mod_input(
 
 
 def get_data1_mod_input(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -6119,7 +6122,7 @@ def get_data1_mod_input(
 
 def set_data1_mod_input(
     source: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -6142,7 +6145,7 @@ def set_data1_mod_input(
 
 
 def get_data2_mod_input(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -6158,7 +6161,7 @@ def get_data2_mod_input(
 
 def set_data2_mod_input(
     source: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -6181,7 +6184,7 @@ def set_data2_mod_input(
 
 
 def get_data3_mod_input(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -6197,7 +6200,7 @@ def get_data3_mod_input(
 
 def set_data3_mod_input(
     source: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -6223,7 +6226,7 @@ def set_data3_mod_input(
 
 
 def get_civ_transceive(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -6239,7 +6242,7 @@ def get_civ_transceive(
 
 def set_civ_transceive(
     enabled: bool,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -6260,7 +6263,7 @@ def set_civ_transceive(
 
 
 def get_civ_output_ant(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -6276,7 +6279,7 @@ def get_civ_output_ant(
 
 def set_civ_output_ant(
     enabled: bool,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -6300,7 +6303,7 @@ def set_civ_output_ant(
 
 
 def get_system_date(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -6318,7 +6321,7 @@ def set_system_date(
     year: int,
     month: int,
     day: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -6374,7 +6377,7 @@ def parse_system_date_response(frame: CivFrame) -> tuple[int, int, int]:
 
 
 def get_system_time(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -6391,7 +6394,7 @@ def get_system_time(
 def set_system_time(
     hour: int,
     minute: int,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -6439,7 +6442,7 @@ def parse_system_time_response(frame: CivFrame) -> tuple[int, int]:
 
 
 def get_utc_offset(
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
@@ -6457,7 +6460,7 @@ def set_utc_offset(
     hours: int,
     minutes: int,
     is_negative: bool,
-    to_addr: int = IC_7610_ADDR,
+    to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:

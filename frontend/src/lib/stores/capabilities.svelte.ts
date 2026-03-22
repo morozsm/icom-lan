@@ -1,4 +1,4 @@
-import type { Capabilities } from '../types/capabilities';
+import type { Capabilities, ControlRange } from '../types/capabilities';
 
 // Capabilities fetched once from GET /api/v1/capabilities
 let capabilities = $state<Capabilities | null>(null);
@@ -71,4 +71,8 @@ export function vfoLabel(slot: 'A' | 'B'): string {
   const scheme = capabilities?.vfoScheme ?? 'main_sub';
   if (scheme === 'ab') return slot === 'A' ? 'VFO A' : 'VFO B';
   return slot === 'A' ? 'MAIN' : 'SUB';
+}
+
+export function getControlRange(name: string): ControlRange | null {
+  return capabilities?.controls?.[name] ?? null;
 }

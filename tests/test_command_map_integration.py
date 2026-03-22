@@ -10,11 +10,14 @@ from pathlib import Path
 
 import pytest
 
-from icom_lan import commands
+from icom_lan import commands, IC_7610_ADDR
 from icom_lan.command_map import CommandMap
 from icom_lan.rig_loader import load_rig
+from _command_test_helpers import bind_default_addr_globals
 
 RIG_DIR = Path(__file__).resolve().parents[1] / "rigs"
+
+bind_default_addr_globals(globals(), to_addr=IC_7610_ADDR)
 
 
 @pytest.fixture()

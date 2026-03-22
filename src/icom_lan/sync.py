@@ -16,12 +16,12 @@ import asyncio
 import warnings
 from typing import Any, Callable, Coroutine, TypeVar
 
-T = TypeVar("T")
-
 from .audio import AudioPacket
 from .radio import IcomRadio as _AsyncIcomRadio  # noqa: TID251
 from .radio_protocol import MetersCapable, PowerControlCapable
 from .types import AudioCapabilities, AudioCodec, Mode
+
+T = TypeVar("T")
 
 __all__ = ["IcomRadio"]
 

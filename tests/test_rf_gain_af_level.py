@@ -1,14 +1,20 @@
 """Tests for RF Gain and AF Level CI-V commands."""
 
 import pytest
+import icom_lan.commands as raw_commands
 
+from icom_lan import IC_7610_ADDR
 from icom_lan.commands import (
     get_rf_gain,
     set_rf_gain,
     get_af_level,
     set_af_level,
-    build_civ_frame,
+    build_civ_frame
 )
+from _command_test_helpers import bind_default_addr_globals, bind_default_addr_module
+
+bind_default_addr_module(raw_commands, to_addr=IC_7610_ADDR)
+bind_default_addr_globals(globals(), to_addr=IC_7610_ADDR)
 
 
 class TestRfGainCommands:

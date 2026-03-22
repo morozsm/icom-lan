@@ -1,7 +1,9 @@
 """Extended tests for commands module — VFO, split, att, preamp, CW, power."""
 
+import icom_lan.commands as raw_commands
+
+from icom_lan import IC_7610_ADDR
 from icom_lan.commands import (
-    IC_7610_ADDR,
     CONTROLLER_ADDR,
     build_civ_frame,
     parse_civ_frame,
@@ -15,8 +17,12 @@ from icom_lan.commands import (
     stop_cw,
     power_on,
     power_off,
-    parse_ack_nak,
+    parse_ack_nak
 )
+from _command_test_helpers import bind_default_addr_globals, bind_default_addr_module
+
+bind_default_addr_module(raw_commands, to_addr=IC_7610_ADDR)
+bind_default_addr_globals(globals(), to_addr=IC_7610_ADDR)
 
 
 class TestSelectVfo:

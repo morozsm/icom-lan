@@ -56,10 +56,10 @@ function applyOptimistic(state: ServerState): ServerState {
         }
       }
 
-      if (!confirmed && entry.serverValueAtPatch !== undefined) {
-        // Server value changed from what it was when we patched = radio processed our command
-        confirmed = serverVal !== entry.serverValueAtPatch;
-      }
+      // NOTE: Do NOT treat "server value changed from patch-time value" as confirmation.
+      // With rapid discrete input (wheel/keyboard), a stale intermediate poll can differ from the
+      // previous optimistic value while still not matching the latest target, which causes a false
+      // confirmation and visible snap-back. We only clear on exact confirmation/tolerance or timeout.
 
       if (confirmed) {
         map.delete(field);
@@ -89,6 +89,7 @@ export function setRadioState(state: ServerState): void {
 }
 
 const OPTIMISTIC_TTL = 5000; // hard timeout — normally cleared by server confirmation
+const INPUT_LOCK_TTL = 1500; // cover command latency / polling lag for discrete inputs like wheel
 
 /**
  * Optimistic update — instantly patch the active receiver's state
@@ -115,8 +116,9 @@ export function patchActiveReceiver(patch: Partial<ReceiverState>, lock = false)
     }
     
     if (lock) {
-      // Lock this field to prevent server updates for short duration (covers network lag)
-      lockedFields.set(lockKey, Date.now() + 300); // 300ms lock - just cover network lag
+      // Lock this field long enough to survive normal command latency + poll lag.
+      // Drag keeps refreshing the lock continuously; wheel/keyboard are discrete and need longer.
+      lockedFields.set(lockKey, Date.now() + INPUT_LOCK_TTL);
     }
     map.set(field, { value, expires, serverValueAtPatch: (currentRx as any)[field] });
   }

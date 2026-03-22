@@ -28,6 +28,7 @@
     showValue?: boolean;
     showLabel?: boolean;
     compact?: boolean;
+    variant?: 'modern' | 'hardware';
     arcAngle?: number;
     tickCount?: number;
     tickLabels?: string[];
@@ -55,6 +56,7 @@
     showValue = true,
     showLabel = true,
     compact = false,
+    variant = 'modern',
     arcAngle = 270,
     tickCount = 0,
     tickLabels = [],
@@ -115,9 +117,13 @@
     return ((v: number) => onChange(v)) as (...args: unknown[]) => void;
   });
 
-  function emitChange(newValue: number) {
+  function emitChange(newValue: number, immediate = false) {
     if (newValue !== value) {
-      debouncedOnChange(newValue);
+      if (immediate) {
+        onChange(newValue);
+      } else {
+        debouncedOnChange(newValue);
+      }
     }
   }
 
@@ -136,9 +142,10 @@
   function handlePointerMove(e: PointerEvent) {
     if (!isDragging || disabled) return;
 
-    // Vertical drag: up = increase, down = decrease
+    // Vertical drag with adaptive coarse/fine feel:
+    // default = coarse enough to move quickly, Shift = precision mode.
     const deltaY = dragStartY - e.clientY;
-    const sensitivity = e.shiftKey ? 0.5 : 2; // pixels per step
+    const sensitivity = e.shiftKey ? 12 : 0.5; // px per step; lower = faster movement
     const stepDelta = Math.round(deltaY / sensitivity);
     const effectiveStep = e.shiftKey ? step / fineStepDivisor : step;
     const newValue = clamp(
@@ -146,7 +153,7 @@
       min,
       max
     );
-    emitChange(newValue);
+    emitChange(newValue, true);
   }
 
   function handlePointerUp(e: PointerEvent) {
@@ -161,8 +168,15 @@
     if (disabled) return;
     e.preventDefault();
 
-    const newValue = handleWheelStep(value, e.deltaY, step, fineStepDivisor, min, max, e.shiftKey);
-    emitChange(newValue);
+    const wheelMultiplier = e.shiftKey ? 1 : 4;
+    const effectiveStep = e.shiftKey ? step / fineStepDivisor : step * wheelMultiplier;
+    const direction = e.deltaY > 0 ? -1 : 1;
+    const newValue = clamp(
+      snapToStep(value + direction * effectiveStep, effectiveStep, min),
+      min,
+      max,
+    );
+    emitChange(newValue, true);
   }
 
   function handleKeyDown(e: KeyboardEvent) {
@@ -185,6 +199,7 @@
   class="vc-knob"
   class:compact
   class:disabled
+  class:hardware={variant === 'hardware'}
   bind:this={containerEl}
   data-shortcut-hint={shortcutHint ?? undefined}
   title={title ?? shortcutHint ?? undefined}
@@ -217,13 +232,23 @@
       viewBox="0 0 {size} {size}"
       class="vc-knob-svg"
     >
-      {#if hasGradient}
+      {#if hasGradient || variant === 'hardware'}
         <defs>
-          <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="0%">
-            {#each safeFillGradient as color, i}
-              <stop offset="{(i / (safeFillGradient.length - 1)) * 100}%" stop-color={color} />
-            {/each}
-          </linearGradient>
+          {#if hasGradient}
+            <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="0%">
+              {#each safeFillGradient as color, i}
+                <stop offset="{(i / (safeFillGradient.length - 1)) * 100}%" stop-color={color} />
+              {/each}
+            </linearGradient>
+          {/if}
+          {#if variant === 'hardware'}
+            <!-- Radial gradient for knob cap — convex dark material feel -->
+            <radialGradient id="hw-body-{gradientId}" cx="40%" cy="35%" r="65%">
+              <stop offset="0%" stop-color="#2c3840" />
+              <stop offset="60%" stop-color="#161e24" />
+              <stop offset="100%" stop-color="#0a0e12" />
+            </radialGradient>
+          {/if}
         </defs>
       {/if}
 
@@ -261,6 +286,19 @@
           class="vc-knob-tick"
         />
       {/each}
+
+      <!-- Hardware: knob body cap — sits inside the track ring, above ticks -->
+      {#if variant === 'hardware'}
+        <circle
+          cx={cx}
+          cy={cy}
+          r={radius - trackWidth - 1}
+          fill="url(#hw-body-{gradientId})"
+          stroke="#1e2830"
+          stroke-width="1"
+          class="vc-knob-body"
+        />
+      {/if}
 
       <!-- Indicator line -->
       <line
@@ -352,7 +390,7 @@
   }
 
   .vc-knob-fill {
-    filter: drop-shadow(0 0 3px color-mix(in srgb, var(--vc-accent) 50%, transparent));
+    filter: drop-shadow(0 0 2px color-mix(in srgb, var(--vc-accent) 28%, transparent));
   }
 
   .vc-knob-indicator {
@@ -385,5 +423,54 @@
   .vc-tick-label {
     color: var(--v2-text-dimmer);
     font-size: 8px;
+  }
+
+  /* ── Hardware variant ─────────────────────────────────────────────────── */
+
+  /* Recessed track arc — thin engraved groove */
+  .hardware .vc-knob-track {
+    opacity: 1;
+    stroke-width: 3;
+  }
+
+  /* Flat muted fill — no glow, slightly dim */
+  .hardware .vc-knob-fill {
+    filter: none;
+    opacity: 0.85;
+    stroke-width: 3;
+  }
+
+  /* Tick marks more visible, outside body cap */
+  .hardware .vc-knob-tick {
+    opacity: 0.65;
+  }
+
+  /* Ivory pointer — stronger, warmer than modern */
+  .hardware .vc-knob-indicator {
+    filter: none;
+    stroke: #e8dcc8;
+    stroke-width: 3;
+  }
+
+  /* Center pivot — darker well to anchor the pointer */
+  .hardware .vc-knob-center {
+    fill: #0a0c10;
+    stroke: #2a3440;
+  }
+
+  /* Warmer/brighter label text */
+  .hardware .vc-label {
+    color: #8a9e78;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-size: 9px;
+  }
+
+  .hardware .vc-knob-value {
+    color: #c8d8a8;
+  }
+
+  .hardware .vc-tick-label {
+    color: #728062;
   }
 </style>

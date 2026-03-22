@@ -9,10 +9,10 @@ from typing import Protocol
 
 import pytest
 
+from icom_lan import IC_7610_ADDR
 from icom_lan.backends.icom7610.drivers.serial_stub import SerialMockRadio
 from icom_lan.commands import (
     CONTROLLER_ADDR,
-    IC_7610_ADDR,
     _CMD_LEVEL,
     _CMD_MODE_GET,
     _CMD_FREQ_GET,

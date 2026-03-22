@@ -97,13 +97,13 @@ const baseProps: ComponentProps<typeof TxPanel> = {
 describe('panel structure', () => {
   it('renders TX IDLE badge when txActive is false', () => {
     const t = mountPanel(baseProps);
-    const badge = t.querySelector('.tx-indicator .badge');
+    const badge = t.querySelector('.tx-indicator .v2-status-indicator');
     expect(badge?.textContent?.trim()).toBe('TX IDLE');
   });
 
   it('renders TX ACTIVE badge when txActive is true', () => {
     const t = mountPanel({ ...baseProps, txActive: true });
-    const badge = t.querySelector('.tx-indicator .badge');
+    const badge = t.querySelector('.tx-indicator .v2-status-indicator');
     expect(badge?.textContent?.trim()).toBe('TX ACTIVE');
   });
 
@@ -113,10 +113,10 @@ describe('panel structure', () => {
     expect(labels.some((el) => el.textContent === 'Mic Gain')).toBe(true);
   });
 
-  it('renders ATU badge', () => {
+  it('renders ATU toggle', () => {
     const t = mountPanel(baseProps);
-    const badges = Array.from(t.querySelectorAll('.badge'));
-    expect(badges.some((el) => el.textContent?.trim() === 'ATU')).toBe(true);
+    const buttons = Array.from(t.querySelectorAll('.v2-control-button'));
+    expect(buttons.some((el) => el.textContent?.trim() === 'ATU')).toBe(true);
   });
 
   it('renders TUNE button', () => {
@@ -124,22 +124,22 @@ describe('panel structure', () => {
     expect(t.querySelector('.tune-button')?.textContent?.trim()).toBe('TUNE');
   });
 
-  it('renders VOX badge', () => {
+  it('renders VOX toggle', () => {
     const t = mountPanel(baseProps);
-    const badges = Array.from(t.querySelectorAll('.badge'));
-    expect(badges.some((el) => el.textContent?.trim() === 'VOX')).toBe(true);
+    const buttons = Array.from(t.querySelectorAll('.v2-control-button'));
+    expect(buttons.some((el) => el.textContent?.trim() === 'VOX')).toBe(true);
   });
 
-  it('renders COMP badge', () => {
+  it('renders COMP toggle', () => {
     const t = mountPanel(baseProps);
-    const badges = Array.from(t.querySelectorAll('.badge'));
-    expect(badges.some((el) => el.textContent?.trim() === 'COMP')).toBe(true);
+    const buttons = Array.from(t.querySelectorAll('.v2-control-button'));
+    expect(buttons.some((el) => el.textContent?.trim() === 'COMP')).toBe(true);
   });
 
-  it('renders MON badge', () => {
+  it('renders MON toggle', () => {
     const t = mountPanel(baseProps);
-    const badges = Array.from(t.querySelectorAll('.badge'));
-    expect(badges.some((el) => el.textContent?.trim() === 'MON')).toBe(true);
+    const buttons = Array.from(t.querySelectorAll('.v2-control-button'));
+    expect(buttons.some((el) => el.textContent?.trim() === 'MON')).toBe(true);
   });
 });
 

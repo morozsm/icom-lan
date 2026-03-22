@@ -13,13 +13,11 @@
     label: string;
     displayFn?: (v: number) => string;
     renderer: 'hbar' | 'bipolar' | 'knob';
-    fillColor?: string;
-    fillGradient?: string[];
-    trackColor?: string;
     accentColor?: string;
     showValue?: boolean;
     showLabel?: boolean;
     compact?: boolean;
+    variant?: 'modern' | 'hardware' | 'hardware-illuminated';
     // Knob-specific
     arcAngle?: number;
     tickCount?: number;
@@ -46,13 +44,11 @@
     label,
     displayFn,
     renderer,
-    fillColor,
-    fillGradient,
-    trackColor,
     accentColor = 'var(--v2-accent-cyan)',
     showValue = true,
     showLabel = true,
     compact = false,
+    variant = 'modern',
     arcAngle = 270,
     tickCount = 0,
     tickLabels = [],
@@ -78,13 +74,11 @@
     fineStepDivisor,
     label,
     displayFn,
-    fillColor,
-    fillGradient,
-    trackColor,
     accentColor,
     showValue,
     showLabel,
     compact,
+    variant,
     onChange: effectiveOnChange,
     debounceMs,
     disabled,

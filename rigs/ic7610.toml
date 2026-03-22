@@ -16,9 +16,9 @@ has_lan = true
 has_wifi = false
 
 [spectrum]
-seq_max = 11
-amp_max = 160
-data_len_max = 475
+seq_max = 15
+amp_max = 200
+data_len_max = 689
 
 # ── Capabilities ─────────────────────────────────────────────────
 # Feature tags determine which UI panels and controls are rendered.
@@ -102,7 +102,7 @@ labels = { "1" = "FAST", "2" = "MID", "3" = "SLOW" }
 [antenna]
 # CI-V 0x12: 0x00=ANT1, 0x01=ANT2 (each with RX ANT sub-data)
 # CI-V 0x16 0x53: RX-I/O antenna connector (separate)
-# CI-V 0x1A 0x05 0x02 0x89: Antenna mode (OFF/Manual/Auto)
+# ant_modes (OFF/Manual/Auto) are UI labels. Do not confuse with 0x1A 0x05 0x00 0x89 — that menu address is USB Mod Level (wfview IC-7610.rig).
 tx_count = 2
 has_rx_ant = true
 ant_modes = ["off", "manual", "auto"]
@@ -369,6 +369,7 @@ bsr_code = 0x0A
 # Commands that use the Command29 prefix for dual-receiver targeting.
 # Each entry: [command_byte, sub_byte] or [command_byte] for cmd-only.
 # Source: wfview IC-7610.rig Command29=true entries
+# Excluded (wfview Command29=false): 0x14 0x0D Notch Filter, 0x1A 0x06 Data Mode — use plain CI-V / VFO select for sub-receiver.
 
 [cmd29]
 routes = [
@@ -381,7 +382,6 @@ routes = [
     [0x14, 0x06],     # NR Level
     [0x14, 0x07],     # PBT Inner
     [0x14, 0x08],     # PBT Outer
-    [0x14, 0x0D],     # Notch Filter position
     [0x14, 0x12],     # NB Level
     [0x14, 0x13],     # DIGI-SEL Shift
     [0x15, 0x01],     # S-meter squelch status
@@ -402,7 +402,6 @@ routes = [
     [0x16, 0x65],     # IP+
     [0x1A, 0x03],     # Filter Width
     [0x1A, 0x04],     # AGC Time Constant
-    [0x1A, 0x06],     # Data Mode
     [0x1A, 0x09],     # AF Mute
     [0x1B, 0x00],     # Tone Frequency
     [0x1B, 0x01],     # TSQL Frequency
@@ -428,6 +427,7 @@ get_band_edge_freq = [0x02]
 # ── VFO / Dual Receiver ──
 get_vfo = [0x07]
 set_vfo = [0x07]
+get_split = [0x0F]
 set_split = [0x0F]
 get_dual_watch = [0x07, 0xC2]             # 0=OFF, 1=ON
 set_dual_watch_on = [0x07, 0xC1]
@@ -595,6 +595,8 @@ get_data_mode = [0x1A, 0x06]
 set_data_mode = [0x1A, 0x06]
 
 # ── Scope ──
+get_scope_wave = [0x27, 0x00]
+set_scope_wave = [0x27, 0x00]
 scope_on = [0x27, 0x10]
 scope_off = [0x27, 0x10]
 scope_data_output = [0x27, 0x11]
@@ -611,6 +613,10 @@ get_scope_center_type = [0x27, 0x1C]
 get_scope_vbw = [0x27, 0x1D]
 get_scope_fixed_edge = [0x27, 0x1E]
 get_scope_rbw = [0x27, 0x1F]
+
+# Main/Sub Prefix (CI-V 0x29) — wfview slot #132; distinct from cmd29 framing
+get_main_sub_prefix = [0x29]
+set_main_sub_prefix = [0x29]
 
 # ── Scan ──
 scan_start = [0x0E]
@@ -677,8 +683,6 @@ get_dash_ratio = [0x1A, 0x05, 0x02, 0x28]
 set_dash_ratio = [0x1A, 0x05, 0x02, 0x28]
 get_vox_delay = [0x1A, 0x05, 0x02, 0x92]     # NOT_IMPLEMENTED — 0-20 (0.0-2.0 sec)
 set_vox_delay = [0x1A, 0x05, 0x02, 0x92]     # NOT_IMPLEMENTED — 0-20 (0.0-2.0 sec)
-get_civ_output_ant = [0x1A, 0x05, 0x01, 0x14]
-set_civ_output_ant = [0x1A, 0x05, 0x01, 0x14]
 
 [protocol]
 type = "civ"
@@ -691,6 +695,79 @@ style = "toggle_and_level"
 
 [controls.nr]
 style = "toggle_and_level"
+
+# Level control ranges — raw CI-V values and display mapping
+# raw_min/raw_max = CI-V BCD range (0-255 typical)
+# raw_center = center/default position (for bipolar controls)
+# display_min/display_max = human-readable range
+# display_unit = unit label
+
+[controls.pbt_inner]
+raw_min = 0
+raw_max = 255
+raw_center = 128
+display_min = -1200
+display_max = 1200
+display_unit = "Hz"
+
+[controls.pbt_outer]
+raw_min = 0
+raw_max = 255
+raw_center = 128
+display_min = -1200
+display_max = 1200
+display_unit = "Hz"
+
+[controls.af_level]
+raw_min = 0
+raw_max = 255
+
+[controls.rf_gain]
+raw_min = 0
+raw_max = 255
+
+[controls.squelch]
+raw_min = 0
+raw_max = 255
+
+[controls.nr_level]
+raw_min = 0
+raw_max = 255
+
+[controls.nb_level]
+raw_min = 0
+raw_max = 255
+
+[controls.mic_gain]
+raw_min = 0
+raw_max = 255
+
+[controls.rf_power]
+raw_min = 0
+raw_max = 255
+
+[controls.monitor_gain]
+raw_min = 0
+raw_max = 255
+
+[controls.compressor_level]
+raw_min = 0
+raw_max = 255
+
+[controls.cw_pitch]
+raw_min = 0
+raw_max = 255
+display_min = 300
+display_max = 900
+display_unit = "Hz"
+
+[controls.rit]
+raw_min = -9999
+raw_max = 9999
+raw_center = 0
+display_min = -9999
+display_max = 9999
+display_unit = "Hz"
 
 [meters.s_meter]
 redline_raw = 130

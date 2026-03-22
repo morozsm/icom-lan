@@ -20,7 +20,6 @@ command dispatch and scope data delivery.
 from __future__ import annotations
 
 import asyncio
-import datetime
 import gzip as _gzip
 import json
 import logging
@@ -28,10 +27,11 @@ import mimetypes
 import pathlib
 import urllib.parse
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from .. import __version__
 from ..radio_state import RadioState
+from ..radio_protocol import AudioCapable
 from .dx_cluster import DXClusterClient, SpotBuffer
 from .handlers import AudioBroadcaster, AudioHandler, ControlHandler, ScopeHandler
 from .radio_poller import CommandQueue, DisableScope, EnableScope, RadioPoller
@@ -50,7 +50,7 @@ from .websocket import (
 if TYPE_CHECKING:
     from ..audio_bridge import AudioBridge
     from ..profiles import RadioProfile
-    from ..radio_protocol import AudioCapable, Radio
+    from ..radio_protocol import Radio
 
 __all__ = ["WebConfig", "WebServer", "run_web_server"]
 
@@ -763,7 +763,7 @@ class WebServer:
             )
 
         self._audio_bridge = AudioBridge(
-            cast("AudioCapable", self._radio),
+            cast(AudioCapable, self._radio),
             device_name=device_name,
             tx_device_name=tx_device_name,
             tx_enabled=tx_enabled,
@@ -1118,6 +1118,7 @@ class WebServer:
                     "dataModeCount": profile.data_mode_count,
                     "dataModeLabels": profile.data_mode_labels,
                     "keyboard": _serialize_keyboard_config(profile),
+                    **({"controls": profile.controls} if profile.controls else {}),
                 },
                 "connection": {
                     "rigConnected": connected,
@@ -1203,6 +1204,7 @@ class WebServer:
                     "channels": 1,
                     "codecs": ["opus"],
                 },
+                **({"controls": profile.controls} if profile.controls else {}),
             },
             separators=(",", ":"),
         ).encode()

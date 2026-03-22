@@ -16,7 +16,7 @@ import { adjustTuningStep, getTuningStep } from '$lib/stores/tuning.svelte';
 import { audioManager } from '$lib/audio/audio-manager';
 import { setMuted, setVolume } from '$lib/stores/audio.svelte';
 import type { KeyboardActionConfig } from '../layout/keyboard-map';
-import { mapIfShiftToPbt } from '../panels/filter-controls';
+import { mapIfShiftToPbt, pbtHzToRaw } from '../panels/filter-controls';
 
 /* ── Helpers ─────────────────────────────────────────────────── */
 
@@ -131,8 +131,9 @@ export function makeRfFrontEndHandlers() {
       cmd('set_preamp', { level, receiver: activeReceiverParam() });
     },
     onRfGainChange: (level: number) => {
+      const receiver = activeReceiverParam();
       patchActiveReceiver({ rfGain: level }, true);
-      cmd('set_rf_gain', { level, receiver: activeReceiverParam() });
+      cmd('set_rf_gain', { level, receiver });
     },
   };
 }
@@ -234,23 +235,26 @@ export function makeFilterHandlers() {
         activeRx?.pbtInner ?? 0,
         activeRx?.pbtOuter ?? 0,
       );
-      patchActiveReceiver({ pbtInner, pbtOuter }, true);
-      cmd('set_pbt_inner', { value: pbtInner, receiver });
-      cmd('set_pbt_outer', { value: pbtOuter, receiver });
+      patchActiveReceiver({ pbtInner: pbtHzToRaw(pbtInner), pbtOuter: pbtHzToRaw(pbtOuter) }, true);
+      cmd('set_pbt_inner', { value: pbtHzToRaw(pbtInner), receiver });
+      cmd('set_pbt_outer', { value: pbtHzToRaw(pbtOuter), receiver });
     },
     onPbtInnerChange: (value: number) => {
-      patchActiveReceiver({ pbtInner: value }, true);
-      cmd('set_pbt_inner', { value, receiver: activeReceiverParam() });
+      const receiver = activeReceiverParam();
+      patchActiveReceiver({ pbtInner: pbtHzToRaw(value) }, true);
+      cmd('set_pbt_inner', { value: pbtHzToRaw(value), receiver });
     },
     onPbtOuterChange: (value: number) => {
-      patchActiveReceiver({ pbtOuter: value }, true);
-      cmd('set_pbt_outer', { value, receiver: activeReceiverParam() });
+      const receiver = activeReceiverParam();
+      patchActiveReceiver({ pbtOuter: pbtHzToRaw(value) }, true);
+      cmd('set_pbt_outer', { value: pbtHzToRaw(value), receiver });
     },
     onPbtReset: () => {
       const receiver = activeReceiverParam();
-      patchActiveReceiver({ pbtInner: 0, pbtOuter: 0 }, true);
-      cmd('set_pbt_inner', { value: 0, receiver });
-      cmd('set_pbt_outer', { value: 0, receiver });
+      const center = pbtHzToRaw(0);
+      patchActiveReceiver({ pbtInner: center, pbtOuter: center }, true);
+      cmd('set_pbt_inner', { value: center, receiver });
+      cmd('set_pbt_outer', { value: center, receiver });
     },
   };
 }
@@ -264,7 +268,8 @@ export function makeAgcHandlers() {
       cmd('set_agc', { mode, receiver: activeReceiverParam() });
     },
     onAgcGainChange: (value: number) => {
-      cmd('set_agc_time_constant', { value, receiver: activeReceiverParam() });
+      const receiver = activeReceiverParam();
+      cmd('set_agc_time_constant', { value, receiver });
     },
   };
 }
@@ -339,7 +344,8 @@ export function makeDspHandlers() {
       }
     },
     onNotchFreqChange: (value: number) => {
-      cmd('set_notch_filter', { value, receiver: activeReceiverParam() });
+      const receiver = activeReceiverParam();
+      cmd('set_notch_filter', { value, receiver });
     },
     onCwAutoTuneToggle: (_on: boolean) => {
       // CW auto-tune not yet implemented
@@ -438,8 +444,9 @@ export function makeRxAudioHandlers() {
         setVolume(Math.round(level / 255 * 100));
       } else {
         // Radio mode: CI-V AF level
+        const receiver = activeReceiverParam();
         patchActiveReceiver({ afLevel: level }, true);
-        cmd('set_af_level', { level, receiver: activeReceiverParam() });
+        cmd('set_af_level', { level, receiver });
       }
     },
   };

@@ -182,19 +182,19 @@ Each UDP packet has a fixed-format header (see `packettypes.h` in wfview):
 - [x] `#149` rigctld backend-neutral integration
 - [x] `#151` Docs/migration/capability matrix (2026-03-06)
 
-### Phase 9 — IC-7610 wfview Command Parity (M4) ⏳ IN PROGRESS
+### Phase 9 — IC-7610 wfview Command Parity (M4) ✅ COMPLETE
 **Goal:** Close the remaining IC-7610 command parity gap against wfview using a maintained command matrix and regression gate.
 
 - [x] `#139` parity matrix + regression gate (`docs/parity/ic7610_command_matrix.json`)
 - [x] `#130` DSP / level command family
 - [x] `#131` operator toggles / status family
-- [ ] `#132` VFO / dual-watch / scanning family
-- [ ] `#133` memory + band-stacking family
-- [ ] `#134` repeater / tone family
-- [ ] `#135` system / configuration family
-- [ ] `#136` transceiver / RIT / TX status family
+- [x] `#132` VFO / dual-watch / scanning family (10 commands)
+- [x] `#133` memory + band-stacking family (6 commands)
+- [x] `#134` repeater / tone family (4 commands)
+- [x] `#135` system / configuration family (16 commands)
+- [x] `#136` transceiver / RIT / TX status family (11 commands)
 - [x] `#137` advanced scope controls
-- [ ] `#138` cross-surface exposure (API / CLI / Web / rigctld)
+- [x] `#138` cross-surface exposure (API / CLI / Web / rigctld) — Phase A complete (49 Protocol methods + exemplar CLI); follow-up surfaces (Web UI, additional CLI, rigctld, docs) deferred as optional incremental work
 
 ### Current Status
 **Package version in `pyproject.toml`: `0.11.0`.**
@@ -208,6 +208,7 @@ Each UDP packet has a fixed-format header (see `packettypes.h` in wfview):
 - **M3 rigctld integration (issue #149, 2026-03-06):** rigctld startup now reuses the shared factory/config path for `--backend lan` and `--backend serial`, shares backend-provided state cache when available, prefers backend-native mode introspection via `radio_protocol.ModeInfoCapable` while falling back to the core `Radio.get_mode()/set_mode(str, ...)` contract, and adds serial TCP smoke coverage for read/write rigctld commands while keeping audit logging and circuit-breaker behavior unchanged.
 - **M3 documentation (issue #151, 2026-03-06):** comprehensive IC-7610 USB serial backend setup guide (macOS-first), backend capability matrix (LAN vs Serial), migration/backward-compatibility section, troubleshooting for serial CI-V and USB audio, and critical hardware finding (`CI-V USB Port` must be `Link to [CI-V]`, not `[REMOTE]`) documented across guide/radios.md, guide/troubleshooting.md, radio-protocol.md, and new guide/ic7610-usb-setup.md.
 - **M3 status:** complete (epic #152 closed-out).
+- **M4 status:** complete (2026-03-22); all 134 IC-7610 parity commands implemented; Protocol interface exposure delivered (49 methods); optional surface expansion (Web UI, CLI, rigctld, docs) deferred as incremental follow-up work.
 - **State contract unification (issue #301, 2026-03-17):** web HTTP/WS public state and the web runtime path now derive from canonical `RadioState` without a web-side `StateCache` runtime dependency; default `rigctld` reads are `RadioState`-first with only handler-local fallback/optimistic state, and default server startup no longer binds consumer layers to backend-shared `StateCache`/poller state.
 - **M4 advanced scope parity (issue #137, 2026-03-06):** `advanced_scope` is now fully implemented in maintained library/runtime surfaces, including receiver select, single/dual, mode/span/edge/hold/ref/speed, during-TX, center type, VBW/RBW, fixed-edge bounds, and receive-side projection into `RadioState.scope_controls`.
 - **IC-7610 parity matrix (issue #139, 2026-03-07): 134 implemented, 0 partial, 0 missing (100%)**; source of truth is `docs/parity/ic7610_command_matrix.json`, and the explicit parity smoke profile is `pytest -m "integration and ic7610_parity" tests/integration`.

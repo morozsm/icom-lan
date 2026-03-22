@@ -14,10 +14,10 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from icom_lan import IC_7610_ADDR
 from icom_lan.commands import (
     CONTROLLER_ADDR,
-    IC_7610_ADDR,
-    build_civ_frame,
+    build_civ_frame
 )
 from icom_lan.radio import IcomRadio
 from icom_lan.scope import ScopeFrame

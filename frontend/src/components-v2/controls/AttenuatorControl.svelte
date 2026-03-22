@@ -1,6 +1,6 @@
 <script lang="ts">
   import './control-button.css';
-  import SegmentedButton from './SegmentedButton.svelte';
+  import { SegmentedControl } from '$lib/SegmentedControl';
   import {
     buildAttControlModel,
     getAttOverflowLabel,
@@ -39,8 +39,8 @@
   }
  </script>
 
-<div class="att-control" data-shortcut-hint={shortcutHint ?? undefined} title={title ?? shortcutHint ?? undefined}>
-  <SegmentedButton
+<div class="att-control" style="--control-accent: {accentColor};" data-shortcut-hint={shortcutHint ?? undefined} title={title ?? shortcutHint ?? undefined}>
+  <SegmentedControl
     options={controlModel.quickOptions}
     selected={selected}
     onchange={handleQuickChange}
@@ -110,8 +110,6 @@
 
   .more-button {
     width: 100%;
-    --control-accent: var(--v2-accent-cyan);
-    --control-active-text: var(--v2-text-bright);
     text-transform: none;
   }
 
@@ -155,8 +153,6 @@
   }
 
   .menu-item {
-    --control-accent: var(--v2-accent-cyan);
-    --control-active-text: var(--v2-text-bright);
     text-transform: none;
   }
 </style>

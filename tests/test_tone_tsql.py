@@ -14,16 +14,19 @@ from __future__ import annotations
 import pytest
 
 from icom_lan import commands
+from icom_lan import IC_7610_ADDR
 from icom_lan.commands import (
-    IC_7610_ADDR,
     CONTROLLER_ADDR,
     RECEIVER_MAIN,
     RECEIVER_SUB,
     parse_bool_response,
     parse_tone_freq_response,
-    parse_tsql_freq_response,
+    parse_tsql_freq_response
 )
 from icom_lan.types import CivFrame
+from _command_test_helpers import bind_default_addr_globals
+
+bind_default_addr_globals(globals(), to_addr=IC_7610_ADDR)
 
 # ---------------------------------------------------------------------------
 # Frame-level constants

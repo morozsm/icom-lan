@@ -8,8 +8,8 @@ correct receiver in RadioState.
 from __future__ import annotations
 
 
+from icom_lan import IC_7610_ADDR
 from icom_lan.commands import (
-    IC_7610_ADDR,
     CONTROLLER_ADDR,
     RECEIVER_MAIN,
     RECEIVER_SUB,

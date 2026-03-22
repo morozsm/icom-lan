@@ -1,7 +1,7 @@
 <script lang="ts">
   import LinearSMeter from '../meters/LinearSMeter.svelte';
   import FrequencyDisplayInteractive from '../display/FrequencyDisplayInteractive.svelte';
-  import StatusBadge from '../controls/StatusBadge.svelte';
+  import { StatusIndicator } from '$lib/Button';
   import { getCapabilities, vfoLabel } from '$lib/stores/capabilities.svelte';
   import { findActiveBand } from '../controls/band-utils';
   import { formatBadges, formatRitOffset } from './vfo-utils';
@@ -107,11 +107,11 @@
       <span class="filter-badge">{filter}</span>
 
       {#each badgeItems as item (item.label)}
-        <StatusBadge
+        <StatusIndicator
           label={item.label}
           active={item.active}
           color={item.color as 'cyan' | 'green' | 'orange' | 'red' | 'muted'}
-          compact
+          size="xs"
         />
       {/each}
     </div>
@@ -353,7 +353,7 @@
     text-transform: uppercase;
   }
 
-  .control-strip :global(.badge) {
+  .control-strip :global(.v2-status-indicator) {
     min-height: var(--vfo-control-badge-min-height, 16px);
   }
 

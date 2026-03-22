@@ -1,7 +1,7 @@
 <script lang="ts">
-  import SegmentedButton from '../controls/SegmentedButton.svelte';
+  import { SegmentedControl } from '$lib/SegmentedControl';
   import { ValueControl } from '../controls/value-control';
-  import StatusBadge from '../controls/StatusBadge.svelte';
+  import { FillButton } from '$lib/Button';
   import { hasCapability } from '$lib/stores/capabilities.svelte';
   import { isCwMode, buildNrOptions, buildNotchOptions } from './dsp-utils';
 
@@ -57,7 +57,7 @@
     {#if showNr}
       <div class="section">
         <div class="section-label">NR</div>
-        <SegmentedButton
+        <SegmentedControl
           options={nrOptions}
           selected={nrMode}
           onchange={(v) => onNrModeChange(v as number)}
@@ -71,6 +71,7 @@
           renderer="hbar"
           accentColor="var(--v2-accent-cyan)"
           onChange={onNrLevelChange}
+        variant="hardware-illuminated"
         />
       </div>
     {/if}
@@ -78,13 +79,13 @@
     {#if showNb}
       <div class="section">
         <div class="section-label">NB</div>
+        <!-- status-toggle: NB on/off -->
         <div class="single-control">
-          <StatusBadge
-            label={nbActive ? 'ON' : 'OFF'}
+          <FillButton
             active={nbActive}
             color="orange"
             onclick={() => onNbToggle(!nbActive)}
-          />
+          >{nbActive ? 'ON' : 'OFF'}</FillButton>
         </div>
         <ValueControl
           label="NB Level"
@@ -95,13 +96,14 @@
           renderer="hbar"
           accentColor="var(--v2-accent-yellow)"
           onChange={onNbLevelChange}
+        variant="hardware-illuminated"
         />
       </div>
     {/if}
 
     <div class="section">
       <div class="section-label">Notch</div>
-      <SegmentedButton
+      <SegmentedControl
         options={notchOptions}
         selected={notchMode}
         onchange={(v) => onNotchModeChange(v as string)}
@@ -117,6 +119,7 @@
           renderer="hbar"
           accentColor="var(--v2-accent-cyan)"
           onChange={onNotchFreqChange}
+        variant="hardware-illuminated"
         />
       {/if}
     </div>
@@ -125,11 +128,12 @@
       <div class="section">
         <div class="section-row">
           <div class="section-label">CW</div>
-          <StatusBadge
-            label="Auto Tune"
-            active={cwAutoTune}
-            onclick={() => onCwAutoTuneToggle(!cwAutoTune)}
-          />
+          <!-- action-button: CW auto tune command (not sustained state; not yet implemented in command-bus/state) -->
+          <button
+            type="button"
+            class="v2-control-button"
+            onclick={() => onCwAutoTuneToggle(true)}
+          >Auto Tune</button>
         </div>
         <ValueControl
           label="CW Pitch"
@@ -141,6 +145,7 @@
           renderer="hbar"
           accentColor="var(--v2-accent-cyan)"
           onChange={onCwPitchChange}
+        variant="hardware-illuminated"
         />
       </div>
     {/if}
@@ -151,14 +156,14 @@
   .panel-body {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding: 7px 8px;
+    gap: 10px;
+    padding: 8px 8px;
   }
 
   .section {
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 7px;
   }
 
   .section-label {

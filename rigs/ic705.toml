@@ -1,0 +1,709 @@
+# Rig Configuration — IC-705
+# This file defines the IC-705 radio profile in TOML format.
+# See _schema.md for field documentation.
+#
+# Source of truth: references/wfview/rigs/IC-705.rig (v2.10)
+# Cross-check: IC-7300.rig / IC-7610.rig (differences called out in NOTE comments)
+# docs/research/ic705-research.md
+#
+# Non-CI-V features: built-in GPS, Bluetooth, and WiFi are hardware/UI managed.
+# [radio].has_wifi reflects WiFi; no separate CI-V opcodes for GPS/BT in wfview IC-705.rig.
+
+[radio]
+id = "icom_ic705"
+model = "IC-705"
+civ_addr = 0xA4
+default_baud = 115200  # Required for scope data over serial CI-V
+receiver_count = 1
+has_lan = true
+has_wifi = true
+
+[spectrum]
+seq_max = 11
+amp_max = 160
+data_len_max = 475
+
+# ── Capabilities ─────────────────────────────────────────────────
+
+[capabilities]
+features = [
+    # Receiver
+    "audio",
+    "af_level",
+    "rf_gain",
+    "squelch",
+    # RF front end
+    "attenuator",
+    "preamp",
+    "digisel",       # wfview: DIGI-SEL Shift (0x14 0x13) only — no 0x16 0x4E toggle in IC-705.rig
+    # Antenna
+    "antenna",
+    "rx_antenna",    # wfview: RX Antenna 0x16 0x53 (IC-7300.rig omits this command)
+    # DSP / Noise
+    "nb",
+    "nr",
+    "notch",
+    "apf",
+    "twin_peak",
+    # Filter
+    "pbt",
+    "filter_width",
+    "filter_shape",
+    # TX
+    "tx",
+    "split",
+    "vox",
+    "compressor",
+    "monitor",
+    "drive_gain",    # wfview IC-705: 0x14 0x14 (not in IC-7300.rig)
+    "ssb_tx_bw",
+    # CW
+    "cw",
+    "break_in",
+    # RIT / XIT
+    "rit",
+    "xit",
+    # Tuner
+    "tuner",
+    # Metering
+    "meters",
+    # Scope
+    "scope",
+    # Tone / FM
+    "repeater_tone",
+    "tsql",
+    "dtcs",
+    "csql",
+    "voice_tx",      # wfview: Voice TX 0x28 (Max=8) — D-STAR voice; not on IC-7300.rig
+    # Data
+    "data_mode",
+    # System
+    "power_control",
+    "dial_lock",
+    "scan",
+    "bsr",
+]
+
+# ── Parameterized Capabilities ───────────────────────────────────
+
+[attenuator]
+# CI-V 0x11: binary toggle (wfview Max=20)
+values = [0, 20]
+
+[preamp]
+# CI-V 0x16 0x02: 0=OFF, 1=P.AMP1, 2=P.AMP2
+values = [0, 1, 2]
+
+[agc]
+# CI-V 0x16 0x12: wfview Type=AGC Time Constant, Min=1 Max=3 (FAST/MID/SLOW)
+modes = [1, 2, 3]
+labels = { "1" = "FAST", "2" = "MID", "3" = "SLOW" }
+
+[antenna]
+# CI-V 0x12: single antenna path; RX antenna separate command 0x16 0x53
+tx_count = 1
+has_rx_ant = true
+
+[apf]
+# CI-V 0x16 0x32: wfview Max=3 (WIDE/MID/NAR style); 0x14 0x05 APF Type Level also present on IC-705
+values = [0, 1, 2, 3]
+labels = { "0" = "OFF", "1" = "WIDE", "2" = "MID", "3" = "NAR" }
+
+[notch]
+# NOTE: IC-7300.rig includes Manual Notch Width 0x16 0x57; IC-705.rig does NOT list it.
+# Width labels kept for UI parity; no CI-V mapping in [commands] for IC-705.
+width_values = [0, 1, 2]
+width_labels = { "0" = "WIDE", "1" = "MID", "2" = "NAR" }
+
+[ssb_tx_bw]
+values = [0, 1, 2]
+labels = { "0" = "WIDE", "1" = "MID", "2" = "NAR" }
+
+[break_in]
+# CI-V 0x16 0x47: wfview IC-705 Max=2 (IC-7300.rig Max=1 — 705 adds full break-in)
+values = [0, 1, 2]
+labels = { "0" = "OFF", "1" = "SEMI", "2" = "FULL" }
+
+[rit]
+range_hz = 9999
+
+[cw]
+pitch_min_hz = 300
+pitch_max_hz = 900
+speed_min_wpm = 6
+speed_max_wpm = 48
+# wfview IC-705: Dash Ratio 0x1A 0x05 0x02 0x52, Min=28 Max=45
+dash_ratio_min = 28
+dash_ratio_max = 45
+
+[nb]
+# NB on/off + level 0x14 0x12. wfview IC-705 has NO NB Depth/Width menu cmds (IC-7300 uses 0x01 0x89 / 0x01 0x90).
+depth_min = 0
+depth_max = 9
+width_min = 0
+width_max = 255
+
+[power]
+max_watts = 10
+
+[modes]
+# wfview Modes: LSB, USB, AM, CW, RTTY, FM, CW-R, RTTY-R, DV, WFM
+list = ["USB", "LSB", "CW", "CW-R", "AM", "FM", "WFM", "RTTY", "RTTY-R", "DV"]
+
+[data_mode]
+count = 1
+labels = { "0" = "OFF", "1" = "DATA" }
+
+# wfview Inputs: MIC, USB, M/U, WLAN — Data Off / DATA1 mod Max=3 per IC-705.rig
+inputs = [
+    { value = 0, name = "MIC" },
+    { value = 1, name = "USB" },
+    { value = 2, name = "M/U" },
+    { value = 3, name = "WLAN" },
+]
+
+[filters]
+list = ["FIL1", "FIL2", "FIL3"]
+# wfview Filter Width: Min=50 Max=10000
+width_min_hz = 50
+width_max_hz = 10000
+
+[vfo]
+scheme = "ab"
+main_select = [0x00]
+sub_select = [0x01]
+swap = [0xB0]
+equal = [0xA0]
+
+# ── Frequency Ranges (BSR from wfview IC-705.rig Bands\*) ───────
+
+[[freq_ranges.ranges]]
+label = "HF"
+start_hz = 30_000
+end_hz = 60_000_000
+
+[[freq_ranges.ranges.bands]]
+name = "2200m"
+start_hz = 135_000
+end_hz = 138_000
+default_hz = 136_000
+bsr_code = 0x00
+
+[[freq_ranges.ranges.bands]]
+name = "630m"
+start_hz = 472_000
+end_hz = 479_000
+default_hz = 475_000
+bsr_code = 0x00
+
+[[freq_ranges.ranges.bands]]
+name = "160m"
+start_hz = 1_800_000
+end_hz = 2_000_000
+default_hz = 1_825_000
+bsr_code = 0x01
+
+[[freq_ranges.ranges.bands]]
+name = "80m"
+start_hz = 3_500_000
+end_hz = 4_000_000
+default_hz = 3_700_000
+bsr_code = 0x02
+
+[[freq_ranges.ranges.bands]]
+name = "60m"
+start_hz = 5_250_000
+end_hz = 5_450_000
+default_hz = 5_357_000
+bsr_code = 0x00
+
+[[freq_ranges.ranges.bands]]
+name = "40m"
+start_hz = 7_000_000
+end_hz = 7_300_000
+default_hz = 7_100_000
+bsr_code = 0x03
+
+[[freq_ranges.ranges.bands]]
+name = "30m"
+start_hz = 10_100_000
+end_hz = 10_150_000
+default_hz = 10_130_000
+bsr_code = 0x04
+
+[[freq_ranges.ranges.bands]]
+name = "20m"
+start_hz = 14_000_000
+end_hz = 14_350_000
+default_hz = 14_200_000
+bsr_code = 0x05
+
+[[freq_ranges.ranges.bands]]
+name = "17m"
+start_hz = 18_068_000
+end_hz = 18_168_000
+default_hz = 18_120_000
+bsr_code = 0x06
+
+[[freq_ranges.ranges.bands]]
+name = "15m"
+start_hz = 21_000_000
+end_hz = 21_450_000
+default_hz = 21_200_000
+bsr_code = 0x07
+
+[[freq_ranges.ranges.bands]]
+name = "12m"
+start_hz = 24_890_000
+end_hz = 24_990_000
+default_hz = 24_940_000
+bsr_code = 0x08
+
+[[freq_ranges.ranges.bands]]
+name = "10m"
+start_hz = 28_000_000
+end_hz = 29_700_000
+default_hz = 28_500_000
+bsr_code = 0x09
+
+[[freq_ranges.ranges]]
+label = "6m"
+start_hz = 50_000_000
+end_hz = 54_000_000
+
+[[freq_ranges.ranges.bands]]
+name = "6m"
+start_hz = 50_000_000
+end_hz = 54_000_000
+default_hz = 50_125_000
+bsr_code = 0x0A
+
+[[freq_ranges.ranges]]
+label = "WFM RX"
+start_hz = 74_800_000
+end_hz = 108_000_000
+
+[[freq_ranges.ranges.bands]]
+name = "WFM"
+start_hz = 74_800_000
+end_hz = 108_000_000
+default_hz = 100_000_000
+bsr_code = 0x0B
+
+[[freq_ranges.ranges]]
+label = "Air RX"
+start_hz = 108_000_000
+end_hz = 137_000_000
+
+[[freq_ranges.ranges.bands]]
+name = "Air"
+start_hz = 108_000_000
+end_hz = 137_000_000
+default_hz = 121_500_000
+bsr_code = 0x00
+
+[[freq_ranges.ranges]]
+label = "2m"
+start_hz = 144_000_000
+end_hz = 148_000_000
+
+[[freq_ranges.ranges.bands]]
+name = "2m"
+start_hz = 144_000_000
+end_hz = 148_000_000
+default_hz = 146_520_000
+bsr_code = 0x0D
+
+[[freq_ranges.ranges]]
+label = "70cm"
+start_hz = 430_000_000
+end_hz = 450_000_000
+
+[[freq_ranges.ranges.bands]]
+name = "70cm"
+start_hz = 430_000_000
+end_hz = 450_000_000
+default_hz = 446_000_000
+bsr_code = 0x0E
+
+[[freq_ranges.ranges]]
+label = "General coverage RX"
+start_hz = 10_000
+end_hz = 470_000_000
+
+[[freq_ranges.ranges.bands]]
+name = "Gen"
+start_hz = 10_000
+end_hz = 470_000_000
+default_hz = 14_200_000
+bsr_code = 0x0F
+
+# ── CI-V Commands ────────────────────────────────────────────────
+# Every opcode from wfview IC-705.rig Commands\1–124 (excluding TRX placeholders 0x00/0x01).
+# NOTE lines: IC-7300.rig has the feature but IC-705.rig does not (or uses different bytes).
+
+[commands]
+
+# ── Frequency / Mode ──
+get_band_edge_freq = [0x02]
+get_freq = [0x03]
+get_mode = [0x04]
+set_freq = [0x05]
+set_mode = [0x06]
+
+# ── VFO ──
+get_vfo = [0x07]
+set_vfo = [0x07]
+
+# ── Memory (wfview MemStart=0, Max=99; Memory Contents Max=101) ──
+get_memory_mode = [0x08]
+set_memory_mode = [0x08]
+set_memory_group = [0x08, 0xA0]
+get_memory_write = [0x09]
+set_memory_write = [0x09]
+get_memory_to_vfo = [0x0A]
+set_memory_to_vfo = [0x0A]
+get_memory_clear = [0x0B]
+set_memory_clear = [0x0B]
+
+# ── Offset / Scan / Split ──
+get_freq_offset = [0x0D]
+set_freq_offset = [0x0D]
+get_scan = [0x0E]
+set_scan = [0x0E]
+set_split = [0x0F]
+
+# ── Tuning ──
+get_tuning_step = [0x10]
+set_tuning_step = [0x10]
+
+# ── RF front end ──
+get_attenuator = [0x11]
+set_attenuator = [0x11]
+# NOTE: IC-7300.rig has no DIGI-SEL Shift; IC-705 has 0x14 0x13. No 0x16 0x4E on IC-705.rig.
+get_digisel_shift = [0x14, 0x13]
+set_digisel_shift = [0x14, 0x13]
+get_speech = [0x13]
+set_speech = [0x13]
+
+# ── Levels ──
+get_af_level = [0x14, 0x01]
+set_af_level = [0x14, 0x01]
+get_rf_gain = [0x14, 0x02]
+set_rf_gain = [0x14, 0x02]
+get_squelch = [0x14, 0x03]
+set_squelch = [0x14, 0x03]
+get_apf_type_level = [0x14, 0x05]
+set_apf_type_level = [0x14, 0x05]
+get_nr_level = [0x14, 0x06]
+set_nr_level = [0x14, 0x06]
+get_pbt_inner = [0x14, 0x07]
+set_pbt_inner = [0x14, 0x07]
+get_pbt_outer = [0x14, 0x08]
+set_pbt_outer = [0x14, 0x08]
+get_cw_pitch = [0x14, 0x09]
+set_cw_pitch = [0x14, 0x09]
+get_rf_power = [0x14, 0x0A]
+set_rf_power = [0x14, 0x0A]
+get_mic_gain = [0x14, 0x0B]
+set_mic_gain = [0x14, 0x0B]
+get_key_speed = [0x14, 0x0C]
+set_key_speed = [0x14, 0x0C]
+get_compressor_level = [0x14, 0x0E]
+set_compressor_level = [0x14, 0x0E]
+get_break_in_delay = [0x14, 0x0F]
+set_break_in_delay = [0x14, 0x0F]
+get_nb_level = [0x14, 0x12]
+set_nb_level = [0x14, 0x12]
+get_drive_gain = [0x14, 0x14]
+set_drive_gain = [0x14, 0x14]
+get_monitor_gain = [0x14, 0x15]
+set_monitor_gain = [0x14, 0x15]
+get_vox_gain = [0x14, 0x16]
+set_vox_gain = [0x14, 0x16]
+get_anti_vox_gain = [0x14, 0x17]
+set_anti_vox_gain = [0x14, 0x17]
+# NOTE: IC-7300.rig: Notch Filter 0x14 0x0D — NOT in IC-705.rig
+
+# ── Meters ──
+get_s_meter_sql_status = [0x15, 0x01]
+set_s_meter_sql_status = [0x15, 0x01]
+get_s_meter = [0x15, 0x02]
+set_s_meter = [0x15, 0x02]
+get_various_squelch = [0x15, 0x05]
+set_various_squelch = [0x15, 0x05]
+get_overflow_status = [0x15, 0x07]
+set_overflow_status = [0x15, 0x07]
+get_power_meter = [0x15, 0x11]
+set_power_meter = [0x15, 0x11]
+get_swr = [0x15, 0x12]
+set_swr = [0x15, 0x12]
+get_alc = [0x15, 0x13]
+set_alc = [0x15, 0x13]
+get_comp_meter = [0x15, 0x14]
+set_comp_meter = [0x15, 0x14]
+get_vd_meter = [0x15, 0x15]
+set_vd_meter = [0x15, 0x15]
+get_id_meter = [0x15, 0x16]
+set_id_meter = [0x15, 0x16]
+# NOTE: IC-7300.rig duplicates 0x15 0x04 / 0x16 0x43 S-meter entries; IC-705.rig does not
+
+# ── Features 0x16 ──
+get_preamp = [0x16, 0x02]
+set_preamp = [0x16, 0x02]
+get_agc = [0x16, 0x12]
+set_agc = [0x16, 0x12]
+get_nb = [0x16, 0x22]
+set_nb = [0x16, 0x22]
+get_audio_peak_filter = [0x16, 0x32]
+set_audio_peak_filter = [0x16, 0x32]
+get_nr = [0x16, 0x40]
+set_nr = [0x16, 0x40]
+get_auto_notch = [0x16, 0x41]
+set_auto_notch = [0x16, 0x41]
+get_repeater_tone = [0x16, 0x42]
+set_repeater_tone = [0x16, 0x42]
+get_repeater_tsql = [0x16, 0x43]
+set_repeater_tsql = [0x16, 0x43]
+get_compressor = [0x16, 0x44]
+set_compressor = [0x16, 0x44]
+get_monitor = [0x16, 0x45]
+set_monitor = [0x16, 0x45]
+get_vox = [0x16, 0x46]
+set_vox = [0x16, 0x46]
+get_break_in = [0x16, 0x47]
+set_break_in = [0x16, 0x47]
+get_manual_notch = [0x16, 0x48]
+set_manual_notch = [0x16, 0x48]
+get_twin_peak_filter = [0x16, 0x4F]
+set_twin_peak_filter = [0x16, 0x4F]
+get_dial_lock = [0x16, 0x50]
+set_dial_lock = [0x16, 0x50]
+get_rx_antenna = [0x16, 0x53]
+set_rx_antenna = [0x16, 0x53]
+get_filter_shape = [0x16, 0x56]
+set_filter_shape = [0x16, 0x56]
+get_ssb_tx_bandwidth = [0x16, 0x58]
+set_ssb_tx_bandwidth = [0x16, 0x58]
+get_tone_squelch_type = [0x16, 0x5D]
+set_tone_squelch_type = [0x16, 0x5D]
+# NOTE: IC-7300.rig: IP+ 0x16 0x65 — NOT in IC-705.rig
+# NOTE: IC-7300.rig: Manual Notch Width 0x16 0x57 — NOT in IC-705.rig
+
+# ── CW / power / ID ──
+send_cw = [0x17]
+stop_cw = [0x17]
+power_on = [0x18]
+power_off = [0x18]
+get_transceiver_id = [0x19, 0x00]
+set_transceiver_id = [0x19, 0x00]
+
+# ── 0x1A ──
+get_memory_contents = [0x1A, 0x00]
+set_memory_contents = [0x1A, 0x00]
+get_bsr = [0x1A, 0x01]
+set_bsr = [0x1A, 0x01]
+get_filter_width = [0x1A, 0x03]
+set_filter_width = [0x1A, 0x03]
+# NOTE: IC-7300.rig: AGC Time Constant 0x1A 0x04 — NOT in IC-705.rig
+get_data_mode = [0x1A, 0x06]
+set_data_mode = [0x1A, 0x06]
+
+# ── Tone / DTCS / CSQL ──
+get_tone_freq = [0x1B, 0x00]
+set_tone_freq = [0x1B, 0x00]
+get_tsql_freq = [0x1B, 0x01]
+set_tsql_freq = [0x1B, 0x01]
+get_dtcs = [0x1B, 0x02]
+set_dtcs = [0x1B, 0x02]
+get_csql = [0x1B, 0x07]
+set_csql = [0x1B, 0x07]
+
+# ── Status / TX / CI-V output ──
+ptt_on = [0x1C, 0x00]
+ptt_off = [0x1C, 0x00]
+get_transceiver_status = [0x1C, 0x00]
+set_transceiver_status = [0x1C, 0x00]
+get_tuner_status = [0x1C, 0x01]
+set_tuner_status = [0x1C, 0x01]
+get_xfc_status = [0x1C, 0x02]
+set_xfc_status = [0x1C, 0x02]
+get_tx_freq_monitor = [0x1C, 0x03]
+set_tx_freq_monitor = [0x1C, 0x03]
+get_civ_output = [0x1C, 0x04]
+set_civ_output = [0x1C, 0x04]
+# NOTE: IC-7610 maps 0x1C 0x04 under antenna context; IC-705.rig labels it "CI-V Output"
+
+# ── RIT / XIT ──
+get_rit_frequency = [0x21, 0x00]
+set_rit_frequency = [0x21, 0x00]
+get_rit_status = [0x21, 0x01]
+set_rit_status = [0x21, 0x01]
+get_rit_tx_status = [0x21, 0x02]
+set_rit_tx_status = [0x21, 0x02]
+
+# ── Selected / unselected VFO ──
+get_selected_freq = [0x25, 0x00]
+set_selected_freq = [0x25, 0x00]
+get_unselected_freq = [0x25, 0x01]
+set_unselected_freq = [0x25, 0x01]
+get_selected_mode = [0x26, 0x00]
+set_selected_mode = [0x26, 0x00]
+get_unselected_mode = [0x26, 0x01]
+set_unselected_mode = [0x26, 0x01]
+
+# ── Scope ──
+get_scope_wave = [0x27, 0x00]
+set_scope_wave = [0x27, 0x00]
+scope_on = [0x27, 0x10]
+scope_off = [0x27, 0x10]
+scope_data_output = [0x27, 0x11]
+get_scope_main_sub = [0x27, 0x12]
+set_scope_main_sub = [0x27, 0x12]
+get_scope_single_dual = [0x27, 0x13]
+set_scope_single_dual = [0x27, 0x13]
+get_scope_mode = [0x27, 0x14]
+set_scope_mode = [0x27, 0x14]
+get_scope_span = [0x27, 0x15]
+set_scope_span = [0x27, 0x15]
+get_scope_edge = [0x27, 0x16]
+set_scope_edge = [0x27, 0x16]
+get_scope_hold = [0x27, 0x17]
+set_scope_hold = [0x27, 0x17]
+get_scope_ref = [0x27, 0x19]
+set_scope_ref = [0x27, 0x19]
+get_scope_speed = [0x27, 0x1A]
+set_scope_speed = [0x27, 0x1A]
+get_scope_during_tx = [0x27, 0x1B]
+set_scope_during_tx = [0x27, 0x1B]
+get_scope_center_type = [0x27, 0x1C]
+set_scope_center_type = [0x27, 0x1C]
+get_scope_vbw = [0x27, 0x1D]
+set_scope_vbw = [0x27, 0x1D]
+get_scope_fixed_edge = [0x27, 0x1E]
+set_scope_fixed_edge = [0x27, 0x1E]
+get_scope_rbw = [0x27, 0x1F]
+set_scope_rbw = [0x27, 0x1F]
+
+# ── D-STAR voice / protocol ack ──
+get_voice_tx = [0x28]
+set_voice_tx = [0x28]
+get_command_error_fa = [0xFA]
+set_command_error_fa = [0xFA]
+get_command_ok_fb = [0xFB]
+set_command_ok_fb = [0xFB]
+
+# ── Antenna (0x12) — after overrides merge; base from IC-7300 class ──
+get_antenna = [0x12]
+set_antenna = [0x12]
+
+# ── Scan alias (same opcode as get_scan) ──
+scan_start = [0x0E]
+scan_stop = [0x0E]
+
+# ── Menu / misc (0x1A 0x05 …) — IC-705-specific sub-addresses from wfview ──
+
+[commands.overrides]
+get_quick_split = [0x1A, 0x05, 0x00, 0x45]
+set_quick_split = [0x1A, 0x05, 0x00, 0x45]
+get_ref_adjust = [0x1A, 0x05, 0x00, 0x89]
+set_ref_adjust = [0x1A, 0x05, 0x00, 0x89]
+get_civ_transceive = [0x1A, 0x05, 0x01, 0x12]
+set_civ_transceive = [0x1A, 0x05, 0x01, 0x12]
+get_usb_mod_level = [0x1A, 0x05, 0x01, 0x16]
+set_usb_mod_level = [0x1A, 0x05, 0x01, 0x16]
+get_lan_mod_level = [0x1A, 0x05, 0x01, 0x17]
+set_lan_mod_level = [0x1A, 0x05, 0x01, 0x17]
+get_data_off_mod_input = [0x1A, 0x05, 0x01, 0x18]
+set_data_off_mod_input = [0x1A, 0x05, 0x01, 0x18]
+get_data1_mod_input = [0x1A, 0x05, 0x01, 0x19]
+set_data1_mod_input = [0x1A, 0x05, 0x01, 0x19]
+get_system_date = [0x1A, 0x05, 0x01, 0x65]
+set_system_date = [0x1A, 0x05, 0x01, 0x65]
+get_system_time = [0x1A, 0x05, 0x01, 0x66]
+set_system_time = [0x1A, 0x05, 0x01, 0x66]
+get_utc_offset = [0x1A, 0x05, 0x01, 0x70]
+set_utc_offset = [0x1A, 0x05, 0x01, 0x70]
+get_dash_ratio = [0x1A, 0x05, 0x02, 0x52]
+set_dash_ratio = [0x1A, 0x05, 0x02, 0x52]
+# NOTE: IC-7300.rig ACC1 Mod 0x00 0x64, CI-V Output (ANT) 0x00 0x61, NB depth/width, scope edge tables — not in IC-705.rig
+# NOTE: IC-7300.rig VOX delay 0x01 0x91 — not listed for IC-705 in wfview
+
+[protocol]
+type = "civ"
+
+[controls.attenuator]
+style = "toggle"
+
+[controls.nb]
+style = "toggle_and_level"
+
+[controls.nr]
+style = "toggle_and_level"
+
+[controls.pbt_inner]
+raw_min = 0
+raw_max = 255
+raw_center = 128
+display_min = -1200
+display_max = 1200
+display_unit = "Hz"
+
+[controls.pbt_outer]
+raw_min = 0
+raw_max = 255
+raw_center = 128
+display_min = -1200
+display_max = 1200
+display_unit = "Hz"
+
+[controls.af_level]
+raw_min = 0
+raw_max = 255
+
+[controls.rf_gain]
+raw_min = 0
+raw_max = 255
+
+[controls.squelch]
+raw_min = 0
+raw_max = 255
+
+[controls.nr_level]
+raw_min = 0
+raw_max = 255
+
+[controls.nb_level]
+raw_min = 0
+raw_max = 255
+
+[controls.mic_gain]
+raw_min = 0
+raw_max = 255
+
+[controls.rf_power]
+raw_min = 0
+raw_max = 255
+
+[controls.monitor_gain]
+raw_min = 0
+raw_max = 255
+
+[controls.compressor_level]
+raw_min = 0
+raw_max = 255
+
+[controls.cw_pitch]
+raw_min = 0
+raw_max = 255
+display_min = 300
+display_max = 900
+display_unit = "Hz"
+
+[controls.rit]
+raw_min = -9999
+raw_max = 9999
+raw_center = 0
+display_min = -9999
+display_max = 9999
+display_unit = "Hz"

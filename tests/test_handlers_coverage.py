@@ -2,14 +2,12 @@ from __future__ import annotations
 
 import asyncio
 import struct
-import time
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from icom_lan.profiles import resolve_radio_profile
-from icom_lan.rigctld.state_cache import StateCache
 from icom_lan.scope import ScopeFrame
 from icom_lan.types import AudioCodec
 from icom_lan.web.handlers import (
@@ -109,6 +107,12 @@ def _capable_radio() -> SimpleNamespace:
         set_rf_gain=AsyncMock(),
         set_af_level=AsyncMock(),
         set_squelch=AsyncMock(),
+        get_nr_level=AsyncMock(return_value=0),
+        get_nb_level=AsyncMock(return_value=0),
+        get_mic_gain=AsyncMock(return_value=0),
+        get_drive_gain=AsyncMock(return_value=0),
+        set_drive_gain=AsyncMock(),
+        get_compressor_level=AsyncMock(return_value=0),
         # ScopeCapable protocol attrs (all required for isinstance check)
         enable_scope=AsyncMock(),
         disable_scope=AsyncMock(),
@@ -164,8 +168,37 @@ def _capable_radio() -> SimpleNamespace:
         set_filter_shape=AsyncMock(),
         set_auto_notch=AsyncMock(),
         set_manual_notch=AsyncMock(),
+        get_auto_notch=AsyncMock(return_value=False),
+        get_manual_notch=AsyncMock(return_value=False),
         set_agc_time_constant=AsyncMock(),
         set_vox=AsyncMock(),
+        get_vox=AsyncMock(return_value=False),
+        get_dial_lock=AsyncMock(return_value=False),
+        get_monitor=AsyncMock(return_value=False),
+        get_cw_pitch=AsyncMock(return_value=600),
+        get_vox_gain=AsyncMock(return_value=128),
+        set_vox_gain=AsyncMock(),
+        get_anti_vox_gain=AsyncMock(return_value=128),
+        set_anti_vox_gain=AsyncMock(),
+        get_monitor_gain=AsyncMock(return_value=128),
+        get_pbt_inner=AsyncMock(return_value=128),
+        set_pbt_inner=AsyncMock(),
+        get_pbt_outer=AsyncMock(return_value=128),
+        set_pbt_outer=AsyncMock(),
+        get_scope_receiver=AsyncMock(return_value=0),
+        set_scope_receiver=AsyncMock(),
+        get_scope_dual=AsyncMock(return_value=False),
+        set_scope_dual=AsyncMock(),
+        get_scope_mode=AsyncMock(return_value=0),
+        set_scope_mode=AsyncMock(),
+        get_scope_span=AsyncMock(return_value=0),
+        set_scope_span=AsyncMock(),
+        get_scope_speed=AsyncMock(return_value=0),
+        set_scope_speed=AsyncMock(),
+        get_scope_ref=AsyncMock(return_value=0),
+        set_scope_ref=AsyncMock(),
+        get_scope_hold=AsyncMock(return_value=False),
+        set_scope_hold=AsyncMock(),
     )
 
 

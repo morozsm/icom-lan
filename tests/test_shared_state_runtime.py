@@ -1,17 +1,17 @@
-from __future__ import annotations
-
 """Tests for icom_lan._shared_state_runtime helpers."""
+
+from __future__ import annotations
 
 import pytest
 
-from icom_lan._shared_state_runtime import (  # noqa: E402
+from icom_lan._shared_state_runtime import (
     DEFAULT_STATE_CACHE_TTL,
     is_cache_fresh,
     poll_frequency,
     poll_mode,
     poll_standard_fields,
 )
-from icom_lan.rigctld.state_cache import StateCache  # noqa: E402
+from icom_lan.rigctld.state_cache import StateCache
 
 
 # ---------------------------------------------------------------------------
