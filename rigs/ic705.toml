@@ -1,0 +1,279 @@
+# Rig Configuration — IC-705
+# This file defines the IC-705 radio profile in TOML format.
+# See _schema.md for field documentation.
+#
+# Source: IC-705 CI-V Reference Guide
+#         wfview IC-705.rig (v2.10)
+#         Research: docs/research/ic705-research.md
+#
+# DRAFT STATUS: Research phase (M5.1)
+# Hardware testing: Pending IC-705 acquisition
+# Based on: IC-7300 profile (single receiver) + IC-7610 LAN features
+
+[radio]
+id = "icom_ic705"
+model = "IC-705"
+civ_addr = 0xA4  # 164 decimal
+default_baud = 115200
+receiver_count = 1  # Single receiver (vs IC-7610's dual)
+has_lan = true      # WiFi LAN support
+has_wifi = true     # Built-in WiFi (vs IC-7610's Ethernet)
+
+[spectrum]
+# Smaller scope buffer than IC-7610 (475 vs 689)
+seq_max = 11
+amp_max = 160
+data_len_max = 475
+
+# ── Capabilities ─────────────────────────────────────────────────
+# Feature tags determine which UI panels and controls are rendered.
+# Based on IC-7300 (single RX) with LAN features from IC-7610.
+
+[capabilities]
+features = [
+    # Receiver
+    "audio",
+    "af_level",
+    "rf_gain",
+    "squelch",
+    # RF front end
+    "attenuator",
+    "preamp",
+    # NOTE: Verify if IC-705 has digisel/ip_plus (likely no, like IC-7300)
+    # Antenna
+    "antenna",
+    # NOTE: IC-705 likely single antenna like IC-7300, verify RX antenna
+    # DSP / Noise
+    "nb",
+    "nr",
+    "notch",
+    "apf",
+    "twin_peak",
+    # Filter
+    "pbt",
+    "filter_width",
+    "filter_shape",
+    # TX
+    "tx",
+    "split",
+    "vox",
+    "compressor",
+    "monitor",
+    # NOTE: Verify if IC-705 has drive_gain (QRP radio, likely simplified)
+    "ssb_tx_bw",
+    # CW
+    "cw",
+    "break_in",
+    # RIT / XIT
+    "rit",
+    "xit",
+    # Tuner
+    "tuner",  # Built-in ATU on IC-705
+    # Metering
+    "meters",
+    # Scope
+    "scope",
+    # Tone (VHF/UHF repeater features)
+    "repeater_tone",
+    "tsql",
+    "dtcs",  # IC-705 has DCS/DTCS (digital tone squelch)
+    # Data
+    "data_mode",
+    # System
+    "power_control",
+    "dial_lock",
+    "scan",
+    "bsr",
+    # NOTE: No dual_rx, dual_watch, main_sub_tracking (single receiver)
+]
+
+# ── Parameterized Capabilities ───────────────────────────────────
+# TODO: Verify all values with IC-705 hardware/manual
+
+[attenuator]
+# CI-V 0x11: Likely simpler than IC-7610's 16 steps
+# IC-7300 has binary toggle (0/20dB)
+# TODO: Check IC-705 manual for attenuator range
+values = [0, 10, 20]  # Placeholder: verify actual values
+
+[preamp]
+# CI-V 0x16 0x02: Likely same as IC-7300/IC-7610
+# 0=OFF, 1=P.AMP1, 2=P.AMP2
+values = [0, 1, 2]
+
+[agc]
+# CI-V 0x16 0x12: Standard Icom AGC modes
+modes = [1, 2, 3]
+labels = { "1" = "FAST", "2" = "MID", "3" = "SLOW" }
+
+[antenna]
+# TODO: Verify IC-705 antenna configuration
+# Likely single antenna for portable use, but may have ANT1/ANT2 selection
+tx_count = 1
+has_rx_ant = false  # Placeholder, verify
+
+[apf]
+# CI-V 0x16 0x32: Audio Peak Filter
+# TODO: Verify if IC-705 has simple toggle or WIDE/MID/NAR like IC-7610
+values = [0, 1]  # Placeholder (simple toggle like IC-7300)
+labels = { "0" = "OFF", "1" = "ON" }
+
+[notch]
+# CI-V 0x16 0x57: Manual notch width (likely standard Icom)
+width_values = [0, 1, 2]
+width_labels = { "0" = "WIDE", "1" = "MID", "2" = "NAR" }
+
+[ssb_tx_bw]
+# CI-V 0x16 0x58: SSB TX bandwidth (standard Icom)
+values = [0, 1, 2]
+labels = { "0" = "WIDE", "1" = "MID", "2" = "NAR" }
+
+[break_in]
+# CI-V 0x16 0x47: CW break-in (standard Icom)
+values = [0, 1, 2]
+labels = { "0" = "OFF", "1" = "SEMI", "2" = "FULL" }
+
+[rit]
+# CI-V 0x21 0x00: RIT range (likely standard ±9.999 kHz)
+range_hz = 9999
+
+[cw]
+# CI-V 0x14 0x09: CW pitch (standard Icom range)
+# CI-V 0x14 0x0C: Key speed (standard Icom range)
+pitch_min_hz = 300
+pitch_max_hz = 900
+speed_min_wpm = 6
+speed_max_wpm = 48
+# TODO: Verify if IC-705 has dash_ratio parameter
+
+[nb]
+# CI-V 0x1A 0x05 ...: Noise blanker
+# Standard Icom NB depth/width
+depth_min = 0
+depth_max = 9
+width_min = 0
+width_max = 255
+
+[power]
+# IC-705 is QRP: 5W (2m/70cm), 10W (HF/6m) max
+# Different power levels per band
+max_watts = 10  # HF/6m max
+
+[modes]
+# IC-705 supports all standard modes + D-STAR
+# TODO: Verify complete mode list from manual
+list = ["USB", "LSB", "CW", "CW-R", "AM", "FM", "WFM", "RTTY", "RTTY-R", "PSK", "PSK-R", "DV"]
+
+[data_mode]
+# CI-V 0x1A 0x06: DATA sub-mode
+# TODO: Verify IC-705 data mode count (likely 1 or 2, not 3 like IC-7610)
+count = 2  # Placeholder
+labels = { "0" = "OFF", "1" = "D1", "2" = "D2" }
+
+# TODO: Verify modulation input sources for IC-705
+# Portable radio likely has: MIC, USB, BT
+inputs = [
+    { value = 0, name = "MIC" },
+    { value = 3, name = "USB" },
+]
+
+[filters]
+# IC-705 has 3 filter slots like IC-7610
+list = ["FIL1", "FIL2", "FIL3"]
+encoding = "segmented_bcd_index"
+width_min_hz = 50
+width_max_hz = 9999
+
+# TODO: Define filter width segments per mode (copy from IC-7300/IC-7610 as baseline)
+[filters.width.USB]
+min_hz = 50
+max_hz = 3600
+defaults = [2400, 1800, 1200]
+segments = [
+    { hz_min = 50, hz_max = 500, step_hz = 50, index_min = 0 },
+    { hz_min = 600, hz_max = 3600, step_hz = 100, index_min = 10 },
+]
+
+[filters.width.LSB]
+min_hz = 50
+max_hz = 3600
+defaults = [2400, 1800, 1200]
+segments = [
+    { hz_min = 50, hz_max = 500, step_hz = 50, index_min = 0 },
+    { hz_min = 600, hz_max = 3600, step_hz = 100, index_min = 10 },
+]
+
+# ── Frequency Ranges ─────────────────────────────────────────────
+# IC-705 is multi-band: HF + 50MHz + 144MHz + 430MHz
+
+[[freq_ranges]]
+label = "HF"
+start = 30_000       # 0.03 MHz RX lower limit
+end = 29_700_000     # 29.7 MHz RX upper limit
+bands = [
+    { name = "160m", start = 1_800_000, end = 2_000_000, default = 1_840_000, bsr_code = 0 },
+    { name = "80m", start = 3_500_000, end = 4_000_000, default = 3_573_000, bsr_code = 1 },
+    { name = "60m", start = 5_250_000, end = 5_450_000, default = 5_357_000, bsr_code = 2 },
+    { name = "40m", start = 7_000_000, end = 7_300_000, default = 7_074_000, bsr_code = 3 },
+    { name = "30m", start = 10_100_000, end = 10_150_000, default = 10_136_000, bsr_code = 4 },
+    { name = "20m", start = 14_000_000, end = 14_350_000, default = 14_074_000, bsr_code = 5 },
+    { name = "17m", start = 18_068_000, end = 18_168_000, default = 18_100_000, bsr_code = 6 },
+    { name = "15m", start = 21_000_000, end = 21_450_000, default = 21_074_000, bsr_code = 7 },
+    { name = "12m", start = 24_890_000, end = 24_990_000, default = 24_915_000, bsr_code = 8 },
+    { name = "10m", start = 28_000_000, end = 29_700_000, default = 28_074_000, bsr_code = 9 },
+]
+
+[[freq_ranges]]
+label = "6m"
+start = 50_000_000
+end = 54_000_000
+bands = [
+    { name = "6m", start = 50_000_000, end = 54_000_000, default = 50_313_000, bsr_code = 10 },
+]
+
+[[freq_ranges]]
+label = "2m"
+start = 144_000_000
+end = 148_000_000
+bands = [
+    { name = "2m", start = 144_000_000, end = 148_000_000, default = 146_520_000, bsr_code = 11 },
+]
+
+[[freq_ranges]]
+label = "70cm"
+start = 430_000_000
+end = 450_000_000
+bands = [
+    { name = "70cm", start = 430_000_000, end = 450_000_000, default = 446_000_000, bsr_code = 12 },
+]
+
+# ── VFO Configuration ────────────────────────────────────────────
+# IC-705 uses VFO A/B paradigm (vs IC-7610's Main/Sub receiver)
+
+[vfo]
+scheme = "vfo_ab"
+# CI-V 0x07 VFO selection codes (from wfview IC-705.rig)
+vfo_a_code = 0x00    # 0x07 0x00
+vfo_b_code = 0x01    # 0x07 0x01
+vfo_swap_code = 0xB0 # 0x07 0xB0
+vfo_equal_code = 0xA0 # 0x07 0xA0 (copy A to B)
+
+# ── TODO: Research Phase Items ──────────────────────────────────
+# This profile is a DRAFT. Verify with IC-705 hardware:
+#
+# 1. Audio codec support (Opus? PCM?)
+# 2. Attenuator values (binary? stepped?)
+# 3. APF values (toggle? WIDE/MID/NAR?)
+# 4. Data mode count and input sources
+# 5. Filter width segments per mode
+# 6. Drive gain support (or N/A for QRP?)
+# 7. Antenna configuration (single? dual?)
+# 8. RX antenna support
+# 9. DIGISEL/IP+ support
+# 10. Complete mode list (especially D-STAR "DV" mode)
+# 11. Power control per band (5W vs 10W)
+# 12. Repeater tone/DTCS parameters
+# 13. GPS integration (if exposed via CI-V)
+# 14. Bluetooth features (if CI-V accessible)
+#
+# Reference: docs/research/ic705-research.md
