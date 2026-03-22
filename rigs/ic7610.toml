@@ -692,6 +692,79 @@ style = "toggle_and_level"
 [controls.nr]
 style = "toggle_and_level"
 
+# Level control ranges — raw CI-V values and display mapping
+# raw_min/raw_max = CI-V BCD range (0-255 typical)
+# raw_center = center/default position (for bipolar controls)
+# display_min/display_max = human-readable range
+# display_unit = unit label
+
+[controls.pbt_inner]
+raw_min = 0
+raw_max = 255
+raw_center = 128
+display_min = -1200
+display_max = 1200
+display_unit = "Hz"
+
+[controls.pbt_outer]
+raw_min = 0
+raw_max = 255
+raw_center = 128
+display_min = -1200
+display_max = 1200
+display_unit = "Hz"
+
+[controls.af_level]
+raw_min = 0
+raw_max = 255
+
+[controls.rf_gain]
+raw_min = 0
+raw_max = 255
+
+[controls.squelch]
+raw_min = 0
+raw_max = 255
+
+[controls.nr_level]
+raw_min = 0
+raw_max = 255
+
+[controls.nb_level]
+raw_min = 0
+raw_max = 255
+
+[controls.mic_gain]
+raw_min = 0
+raw_max = 255
+
+[controls.rf_power]
+raw_min = 0
+raw_max = 255
+
+[controls.monitor_gain]
+raw_min = 0
+raw_max = 255
+
+[controls.compressor_level]
+raw_min = 0
+raw_max = 255
+
+[controls.cw_pitch]
+raw_min = 0
+raw_max = 255
+display_min = 300
+display_max = 900
+display_unit = "Hz"
+
+[controls.rit]
+raw_min = -9999
+raw_max = 9999
+raw_center = 0
+display_min = -9999
+display_max = 9999
+display_unit = "Hz"
+
 [meters.s_meter]
 redline_raw = 130
 

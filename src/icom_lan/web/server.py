@@ -1118,6 +1118,7 @@ class WebServer:
                     "dataModeCount": profile.data_mode_count,
                     "dataModeLabels": profile.data_mode_labels,
                     "keyboard": _serialize_keyboard_config(profile),
+                    **({"controls": profile.controls} if profile.controls else {}),
                 },
                 "connection": {
                     "rigConnected": connected,
@@ -1203,6 +1204,7 @@ class WebServer:
                     "channels": 1,
                     "codecs": ["opus"],
                 },
+                **({"controls": profile.controls} if profile.controls else {}),
             },
             separators=(",", ":"),
         ).encode()

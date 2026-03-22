@@ -4,16 +4,28 @@ export const FILTER_WIDTH_MIN = 50;
 export const FILTER_WIDTH_MAX = 3600;
 export const FILTER_WIDTH_STEP = 50;
 
-// PBT raw (0-255, 128=center) <-> Hz (-1200..+1200)
-const PBT_RAW_CENTER = 128;
-const PBT_HZ_MAX = 1200;
+// PBT raw <-> display conversion
+// Reads range from capabilities if available, falls back to IC-7610 defaults
+import { getControlRange } from '$lib/stores/capabilities.svelte';
+
+function pbtRange() {
+  const ctrl = getControlRange('pbt_inner');
+  if (ctrl && ctrl.raw_center !== undefined && ctrl.display_min !== undefined && ctrl.display_max !== undefined) {
+    return { rawCenter: ctrl.raw_center, displayMin: ctrl.display_min, displayMax: ctrl.display_max };
+  }
+  // Fallback: IC-7610 defaults
+  return { rawCenter: 128, displayMin: -1200, displayMax: 1200 };
+}
 
 export function pbtRawToHz(raw: number): number {
-  return Math.round((raw - PBT_RAW_CENTER) * (PBT_HZ_MAX / PBT_RAW_CENTER));
+  const { rawCenter, displayMax } = pbtRange();
+  return Math.round((raw - rawCenter) * (displayMax / rawCenter));
 }
 
 export function pbtHzToRaw(hz: number): number {
-  return Math.round(hz * (PBT_RAW_CENTER / PBT_HZ_MAX) + PBT_RAW_CENTER);
+  const { rawCenter, displayMax } = pbtRange();
+  const raw = Math.round(hz * (rawCenter / displayMax) + rawCenter);
+  return Math.max(0, Math.min(255, raw));
 }
 
 function clampToBipolarRange(value: number): number {
