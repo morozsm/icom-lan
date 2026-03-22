@@ -251,9 +251,10 @@ export function makeFilterHandlers() {
     },
     onPbtReset: () => {
       const receiver = activeReceiverParam();
-      patchActiveReceiver({ pbtInner: 128, pbtOuter: 128 }, true);
-      cmd('set_pbt_inner', { value: 128, receiver });
-      cmd('set_pbt_outer', { value: 128, receiver });
+      const center = pbtHzToRaw(0);
+      patchActiveReceiver({ pbtInner: center, pbtOuter: center }, true);
+      cmd('set_pbt_inner', { value: center, receiver });
+      cmd('set_pbt_outer', { value: center, receiver });
     },
   };
 }
