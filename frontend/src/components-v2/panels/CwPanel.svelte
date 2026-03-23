@@ -75,29 +75,23 @@
       variant="hardware-illuminated"
     />
 
-    {#if showBreakIn}
-      <div class="toggle-row">
+    <div class="toggle-row">
+      {#if showBreakIn}
         <FillButton active={breakInActive} color="cyan" onclick={() => onBreakInToggle()}>
-          BREAK-IN
+          BK-IN
         </FillButton>
-      </div>
-    {/if}
-
-    {#if showApf}
-      <div class="toggle-row">
+      {/if}
+      {#if showApf}
         <FillButton active={apfActive} color="cyan" onclick={() => onApfChange(apfActive ? 0 : 2)}>
           APF
         </FillButton>
-      </div>
-    {/if}
-
-    {#if showTwinPeak}
-      <div class="toggle-row">
+      {/if}
+      {#if showTwinPeak}
         <FillButton active={twinPeak} color="cyan" onclick={() => onTwinPeakToggle()}>
-          TWIN PK
+          TPF
         </FillButton>
-      </div>
-    {/if}
+      {/if}
+    </div>
 
     <div class="toggle-row">
       <button type="button" class="auto-tune-btn v2-control-button" onclick={onAutoTune}>
