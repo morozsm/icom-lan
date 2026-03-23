@@ -82,13 +82,19 @@ export function toVfoProps(
   const rx = state[receiver];
   const isActive = (state.active === 'SUB') === (receiver === 'sub');
 
-  const badges: Record<string, boolean | string> = {};
-  if (rx.nb) badges['NB'] = true;
-  if (rx.nr) badges['NR'] = true;
-  if (rx.digisel) badges['DIGI-SEL'] = true;
-  if (rx.ipplus) badges['IP+'] = true;
-  if (rx.autoNotch) badges['ANF'] = true;
-  if (rx.manualNotch) badges['NOTCH'] = true;
+  // Always show all possible badges, active state determines if they light up
+  const badges: Record<string, boolean | string> = {
+    'NB': rx.nb ?? false,
+    'NR': rx.nr ?? false,
+    'DIGI-SEL': rx.digisel ?? false,
+    'IP+': rx.ipplus ?? false,
+    'ANF': rx.autoNotch ?? false,
+    'NOTCH': rx.manualNotch ?? false,
+    'ATT': rx.att > 0,
+    'PRE': rx.preamp > 0,
+  };
+  
+  // Dynamic badges (only show when active)
   if (rx.dataMode) badges['DATA'] = true;
   if (state.split) badges['SPLIT'] = true;
 
