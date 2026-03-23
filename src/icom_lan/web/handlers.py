@@ -330,6 +330,12 @@ class ControlHandler:
                 return
         if capability in caps:
             return
+        logger.debug(
+            "Skipping %s: capability '%s' not supported by %s",
+            command_name,
+            capability,
+            getattr(self, "_radio_model", "unknown"),
+        )
         raise ValueError(
             f"command {command_name!r} is not supported by active profile "
             f"(missing capability: {capability})"

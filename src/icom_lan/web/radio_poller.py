@@ -752,6 +752,12 @@ class RadioPoller:
             ]
             for cap, cmd_byte, sub_byte in _PER_RX_QUERIES:
                 if not self._supports_capability(cap):
+                    logger.debug(
+                        "Skipping %s: capability '%s' not supported by %s",
+                        f"query 0x{cmd_byte:02X}/0x{sub_byte:02X}" if sub_byte is not None else f"query 0x{cmd_byte:02X}",
+                        cap,
+                        self._profile.model,
+                    )
                     continue
                 if self._profile.supports_cmd29(cmd_byte, sub_byte):
                     # Dual-receiver: cmd29-wrapped with receiver byte
