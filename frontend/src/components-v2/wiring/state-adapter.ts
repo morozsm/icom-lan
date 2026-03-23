@@ -92,6 +92,8 @@ export function toVfoProps(
     'NOTCH': rx.manualNotch ?? false,
     'ATT': rx.att > 0,
     'PRE': rx.preamp > 0,
+    'RFG': (rx.rfGain ?? 255) < 255,  // RF Gain reduced from max
+    'SQL': (rx.squelch ?? 0) > 0,     // Squelch active
   };
   
   // Dynamic badges (only show when active)

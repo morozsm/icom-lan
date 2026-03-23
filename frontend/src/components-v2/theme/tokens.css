@@ -128,13 +128,17 @@
   --v2-badge-nr-color: amber;
   --v2-badge-nb-color: amber;
   --v2-badge-notch-color: amber;
+  --v2-badge-anf-color: amber;
   --v2-badge-digi-sel-color: green;
   --v2-badge-ip-plus-color: cyan;
   --v2-badge-att-color: green;
-  --v2-badge-preamp-color: green;
+  --v2-badge-pre-color: green;
+  --v2-badge-rfg-color: amber;
+  --v2-badge-sql-color: green;
   --v2-badge-split-color: amber;
   --v2-badge-rit-color: amber;
   --v2-badge-xit-color: amber;
+  --v2-badge-data-color: cyan;
   --v2-badge-default-color: cyan;
 
   /* Receiver accent (MAIN/SUB distinction) */
@@ -242,16 +246,8 @@
   --v2-collapsible-header-text: #e0e0e0;
   --v2-collapsible-chevron: #888;
   --v2-collapsible-chevron-hover: #00d4ff;
-  /* ── Receiver Accent Colors ─────────────────────────────── */
-  /* Default accent colors for MAIN and SUB receivers */
-  --v2-receiver-main-accent: #00D4FF;
-  --v2-receiver-sub-accent: #FFFFFF;
 
-  --v2-vfo-main-control-border: rgba(0, 212, 255, 0.48);
-  --v2-vfo-sub-control-border: rgba(255, 255, 255, 0.52);
-  --v2-vfo-main-control-glow: rgba(0, 212, 255, 0.08);
-  --v2-vfo-sub-control-glow: rgba(255, 255, 255, 0.10);
-
+  /* ── Receiver Accent Colors (REMOVED - duplicates semantic tokens at lines 145-152) ── */
   /* ── Badge Type Colors (REMOVED - duplicates semantic tokens above) ── */
   /* Semantic badge colors are now defined above (lines 128-138) using color names */
 
