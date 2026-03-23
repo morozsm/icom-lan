@@ -58,7 +58,10 @@
 ## Recommendations
 
 ### Priority 1 (High ROI, Low Effort)
-- [ ] Cache compiled poller command sequences (reduces TOML parsing per cycle)
+- [x] Cache compiled poller command sequences ✅ ALREADY IMPLEMENTED
+  - `_STATE_QUERIES` built once at init (line 607)
+  - `_cmd_map` loaded once at init (line 597)
+  - No per-cycle TOML parsing overhead
 - [ ] Add performance regression tests
 - [ ] Profile CI-V command pipeline latency
 
