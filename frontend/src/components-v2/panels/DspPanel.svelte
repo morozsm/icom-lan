@@ -1,6 +1,6 @@
 <script lang="ts">
   import { SegmentedControl } from '$lib/SegmentedControl';
-  import { ValueControl } from '../controls/value-control';
+  import { ValueControl, rawToPercentDisplay } from '../controls/value-control';
   import { FillButton } from '$lib/Button';
   import { hasCapability } from '$lib/stores/capabilities.svelte';
   import { isCwMode, buildNrOptions, buildNotchOptions } from './dsp-utils';
@@ -69,6 +69,7 @@
           max={255}
           step={1}
           renderer="hbar"
+          displayFn={rawToPercentDisplay}
           accentColor="var(--v2-accent-cyan)"
           onChange={onNrLevelChange}
         variant="hardware-illuminated"
@@ -94,6 +95,7 @@
           max={255}
           step={1}
           renderer="hbar"
+          displayFn={rawToPercentDisplay}
           accentColor="var(--v2-accent-yellow)"
           onChange={onNbLevelChange}
         variant="hardware-illuminated"

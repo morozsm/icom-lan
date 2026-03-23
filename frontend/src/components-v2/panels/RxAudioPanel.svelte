@@ -1,6 +1,6 @@
 <script lang="ts">
   import { SegmentedControl } from '$lib/SegmentedControl';
-  import { ValueControl } from '../controls/value-control';
+  import { ValueControl, rawToPercentDisplay } from '../controls/value-control';
   import { hasAudio } from '$lib/stores/capabilities.svelte';
   import { buildMonitorOptions, formatMonitorStatus } from './audio-utils';
   import { getShortcutHint } from '../layout/shortcut-hints';
@@ -39,6 +39,7 @@
         max={255}
         step={1}
         renderer="hbar"
+        displayFn={rawToPercentDisplay}
         accentColor="var(--v2-accent-cyan-alt)"
         shortcutHint={afShortcut}
         title={afShortcut}

@@ -1,7 +1,7 @@
 <script lang="ts">
   import '../controls/control-button.css';
   import { StatusIndicator, FillButton } from '$lib/Button';
-  import { ValueControl } from '../controls/value-control';
+  import { ValueControl, rawToPercentDisplay } from '../controls/value-control';
   import { hasTx } from '$lib/stores/capabilities.svelte';
   import { txStatusColor } from './tx-utils';
 
@@ -66,6 +66,7 @@
       max={255}
       step={1}
       renderer="hbar"
+      displayFn={rawToPercentDisplay}
       accentColor="var(--v2-accent-orange)"
       onChange={onMicGainChange}
     variant="hardware-illuminated"
@@ -100,6 +101,7 @@
         max={255}
         step={1}
         renderer="hbar"
+        displayFn={rawToPercentDisplay}
         accentColor="var(--v2-accent-orange)"
         onChange={onCompLevelChange}
       variant="hardware-illuminated"
@@ -118,6 +120,7 @@
         max={255}
         step={1}
         renderer="hbar"
+        displayFn={rawToPercentDisplay}
         accentColor="var(--v2-accent-orange)"
         onChange={onMonLevelChange}
       variant="hardware-illuminated"

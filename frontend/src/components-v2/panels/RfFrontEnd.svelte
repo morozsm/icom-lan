@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ValueControl } from '../controls/value-control';
+  import { ValueControl, rawToPercentDisplay } from '../controls/value-control';
   import DualParamRenderer from '../controls/value-control/DualParamRenderer.svelte';
   import AttenuatorControl from '../controls/AttenuatorControl.svelte';
   import { SegmentedControl } from '$lib/SegmentedControl';
@@ -69,6 +69,7 @@
           step={1}
           label="RF Gain"
           renderer="hbar"
+          displayFn={rawToPercentDisplay}
           accentColor="#22C55E"
           shortcutHint={rfGainShortcut}
           title={rfGainShortcut}

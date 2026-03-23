@@ -411,3 +411,13 @@ export function generateTickPositions(
 
   return ticks;
 }
+
+/**
+ * Display function for raw 0–255 CI-V levels → "0%" … "100%".
+ * Pass as `displayFn` to ValueControl / HBarRenderer.
+ */
+export function rawToPercentDisplay(v: number, min = 0, max = 255): string {
+  const range = max - min;
+  if (range === 0) return '0%';
+  return `${Math.round(((v - min) / range) * 100)}%`;
+}
