@@ -150,6 +150,7 @@ async def test_bridge_tx_loop_uses_custom_executor():
 
     executor_used: list = []
     custom_executor = MagicMock()
+    executor_called = asyncio.Event()
 
     radio = MagicMock()
     radio.start_audio_rx_opus = AsyncMock()
@@ -188,6 +189,7 @@ async def test_bridge_tx_loop_uses_custom_executor():
 
     def capture_executor(executor, fn, *args):
         executor_used.append(executor)
+        executor_called.set()
         return original_run_in_executor(executor, fn, *args)
 
     with patch.dict("sys.modules", {"sounddevice": mock_sd, "opuslib": mock_opuslib}):
@@ -199,8 +201,8 @@ async def test_bridge_tx_loop_uses_custom_executor():
                 tx_executor=custom_executor,
             )
             await bridge.start()
-            # Allow TX loop at least one run_in_executor call
-            await asyncio.sleep(0.08)
+            # Wait until TX loop has made at least one run_in_executor call
+            await asyncio.wait_for(executor_called.wait(), timeout=2.0)
             await bridge.stop()
 
     assert len(executor_used) >= 1
@@ -260,7 +262,6 @@ async def test_bridge_start_stop_rx_only():
 
         await bridge.stop()
         assert not bridge._running
-        await asyncio.sleep(0.05)
         assert bus.subscriber_count == 0
         mock_output_stream.stop.assert_called_once()
         mock_output_stream.close.assert_called_once()
@@ -340,14 +341,11 @@ async def test_bridge_rx_via_bus():
         packet.data = b"\x01\x02\x03"
         bus._on_opus_packet(packet)
 
-        # Give rx_loop a chance to process
-        await asyncio.sleep(0.05)
-        # Subscription should have received it
+        # deliver() increments _received synchronously
         assert bridge._subscription._received == 1
 
         # Feed None (gap)
         bus._on_opus_packet(None)
-        await asyncio.sleep(0.05)
         assert bridge._subscription._received == 2
 
         await bridge.stop()
