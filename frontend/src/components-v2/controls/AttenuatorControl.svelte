@@ -139,7 +139,7 @@
   .menu {
     position: fixed;
     z-index: 10001;
-    min-width: 220px;
+    min-width: min(220px, calc(100vw - 32px));
     padding: 8px;
     background: var(--v2-bg-darkest);
     border: 1px solid var(--v2-border-darker);

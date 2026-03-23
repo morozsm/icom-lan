@@ -427,8 +427,8 @@
     position: fixed;
     z-index: 10001;
     box-sizing: border-box;
-    min-width: 200px;
-    max-width: 240px;
+    min-width: min(200px, calc(100vw - 32px));
+    max-width: min(240px, calc(100vw - 32px));
     padding: 8px;
     background: var(--v2-bg-darkest);
     border: 1px solid var(--v2-border-darker);

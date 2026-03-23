@@ -157,7 +157,7 @@
     position: absolute;
     top: calc(100% + 4px);
     right: 0;
-    width: 240px;
+    width: min(240px, calc(100vw - 32px));
     background: var(--v2-bg-card);
     border: 1px solid var(--v2-border);
     border-radius: 6px;
