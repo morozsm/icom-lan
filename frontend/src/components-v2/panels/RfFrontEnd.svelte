@@ -42,7 +42,7 @@
   let showSquelch = $derived(hasCapability('squelch'));
   let showAtt = $derived(hasCapability('attenuator'));
   let showPre = $derived(hasCapability('preamp'));
-  let showDigiSel = $derived(hasCapability('digi_sel'));
+  let showDigiSel = $derived(hasCapability('digisel'));
   let showIpPlus = $derived(hasCapability('ip_plus'));
   let showRfSqlDual = $derived(showRfGain && showSquelch);
   let visible = $derived(shouldShowPanel(showRfGain, showAtt, showPre, showSquelch));
