@@ -699,6 +699,9 @@ class RadioPoller:
                 ("nr", 0x16, 0x40),
                 ("digisel", 0x16, 0x4E),
                 ("ip_plus", 0x16, 0x65),
+                ("nr", 0x14, 0x06),  # NR Level
+                ("nb", 0x14, 0x12),  # NB Level
+                ("notch", 0x14, 0x0D),  # Notch position
                 ("filter_width", 0x1A, 0x03),
                 ("pbt", 0x14, 0x07),  # PBT Inner
                 ("pbt", 0x14, 0x08),  # PBT Outer
@@ -731,6 +734,11 @@ class RadioPoller:
                 (0x1C, 0x01, None),  # Tuner/ATU status
                 (0x1C, 0x03, None),  # TX frequency monitor
                 (0x14, 0x0A, None),  # Power level (global)
+                (0x14, 0x0B, None),  # Mic gain (global)
+                (0x14, 0x0E, None),  # Compressor level (global)
+                (0x14, 0x15, None),  # Monitor gain (global)
+                (0x14, 0x09, None),  # CW pitch (global)
+                (0x14, 0x0C, None),  # Key speed (global)
                 (0x0F, None, None),  # Split (global)
                 (0x07, 0xD2, None),  # Active receiver
                 (0x07, 0xC2, None),  # Dual Watch status
