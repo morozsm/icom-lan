@@ -32,6 +32,20 @@ Adding a new radio = adding a new `.toml` file — see [Adding a New Radio](rig-
     For IC-7610 USB operation, set **Menu → Set → Connectors → CI-V → CI-V USB Port**
     to the CI-V option (`Link to [CI-V]`), not `[REMOTE]`.
 
+### IC-705
+
+- **CI-V Address:** `0xA4`
+- **Connectivity:** LAN (WiFi/Ethernet) + USB serial (CI-V)
+- **VFO scheme:** Single receiver (portable transceiver)
+- **Rig profile:** `rigs/ic705.toml`
+- **Features verified:** frequency, mode, power, S-meter, SWR, ALC, PTT, CW keying,
+  attenuator, preamp, NB, NR, APF, Twin Peak, scope/waterfall, audio RX/TX
+- **Backends:** LAN (WiFi/Ethernet) or Serial USB
+
+!!! tip "Setup Guides"
+    - **[IC-705 USB Serial Backend Setup](ic705-usb-setup.md)** — Step-by-step USB configuration
+    - Use **Menu → Set → Connectors → CI-V → CI-V USB Port** = `Link to [CI-V]`
+
 ### IC-7300
 
 - **CI-V Address:** `0x94`
@@ -39,28 +53,14 @@ Adding a new radio = adding a new `.toml` file — see [Adding a New Radio](rig-
 - **VFO scheme:** VFO A/B (not Main/Sub)
 - **Rig profile:** `rigs/ic7300.toml`
 - **Features verified:** frequency, mode, power, S-meter, SWR, ALC, PTT, CW keying,
-  VFO A/B select, attenuator, preamp, NB, NR, scope/waterfall
-- **Not available:** DIGI-SEL, IP+, dual receiver
+  VFO A/B select, attenuator, preamp, NB, NR, scope/waterfall, audio RX/TX
+- **Not available:** DIGI-SEL, IP+, LAN, dual receiver
 
-!!! note "Serial-only radio"
-    The IC-7300 has no Ethernet port (only an optional RS-BA1 WiFi adapter which uses
-    a different protocol). Use the **serial backend** with a USB-A to USB-B cable.
+!!! tip "Setup Guide"
+    **[IC-7300 USB Serial Backend Setup](ic7300-usb-setup.md)** — Complete USB configuration guide
+    for IC-7300 with audio integration and WSJT-X bridging.
 
-```python
-from icom_lan import create_radio, SerialBackendConfig
-
-config = SerialBackendConfig(port="/dev/tty.usbserial-XXXX", baud=19200)
-async with create_radio(config) as radio:
-    freq = await radio.get_frequency()
-    print(f"{freq/1e6:.3f} MHz")
-```
-
-```bash
-# CLI
-icom-lan --backend serial --serial-port /dev/tty.usbserial-XXXX freq
-```
-
-#### IC-7300 Capability Differences vs IC-7610
+#### IC-7300 vs IC-7610
 
 | Feature | IC-7610 | IC-7300 |
 |---------|---------|---------|
@@ -70,9 +70,43 @@ icom-lan --backend serial --serial-port /dev/tty.usbserial-XXXX freq
 | IP+ | ✅ | ❌ |
 | LAN | ✅ | ❌ |
 | Scope | ✅ | ✅ |
+| USB Serial | ✅ | ✅ |
 
 The Web UI automatically hides DIGI-SEL and IP+ controls when connected to an IC-7300
 (capability-based UI guards). VFO labels switch to "VFO A" / "VFO B" automatically.
+
+### IC-9700
+
+- **CI-V Address:** `0xA2`
+- **Connectivity:** LAN (Ethernet) + USB serial (CI-V)
+- **VFO scheme:** **Dual independent receivers** (MAIN/SUB)
+- **Rig profile:** `rigs/ic9700.toml`
+- **Features verified:** frequency, mode, power, S-meter, scope/waterfall, audio RX/TX (both receivers),
+  independent MAIN/SUB control, dual audio streaming
+- **Unique feature:** Only supported radio with **dual independent receivers**
+
+!!! tip "Setup Guide"
+    **[IC-9700 USB Serial & LAN Setup](ic9700-usb-setup.md)** — Comprehensive guide covering:
+    - Dual-receiver simultaneous operation
+    - Independent frequency/mode control for MAIN and SUB
+    - Serial USB and LAN Ethernet configuration
+    - Dual audio RX recipes
+
+#### IC-9700 Dual-Receiver Example
+
+```python
+# Monitor both receivers simultaneously
+main_freq = await radio.get_frequency(receiver=0)  # MAIN
+sub_freq = await radio.get_frequency(receiver=1)   # SUB
+
+# Set different frequencies on each
+await radio.set_frequency(144_100_000, receiver=0)  # MAIN: 144.1 MHz
+await radio.set_frequency(144_200_000, receiver=1)  # SUB: 144.2 MHz
+
+# Dual audio RX
+radio.start_audio_rx(callback=on_main, receiver=0)
+radio.start_audio_rx(callback=on_sub, receiver=1)
+```
 
 ## Non-Icom Radios (Planned)
 
@@ -107,26 +141,6 @@ backend adapters are not yet implemented:
 ## Should Work (Untested)
 
 These radios use the same Icom LAN protocol and should work out of the box. Community testing and reports welcome!
-
-### IC-705
-
-- **CI-V Address:** `0xA4`
-- **Connectivity:** WiFi (built-in)
-- **Notes:** WiFi may have higher latency than Ethernet — consider increasing timeout.
-
-```python
-from icom_lan import create_radio, LanBackendConfig
-
-config = LanBackendConfig(host="192.168.1.101", radio_addr=0xA4, timeout=10.0)
-async with create_radio(config) as radio:
-    ...
-```
-
-### IC-9700
-
-- **CI-V Address:** `0xA2`
-- **Connectivity:** Ethernet (built-in)
-- **Notes:** VHF/UHF/SHF — supports satellite mode and three bands.
 
 ### IC-7851
 

@@ -73,11 +73,16 @@ nav:
       - Configuration: guide/configuration.md
   - User Guide:
       - Connection Lifecycle: guide/connection.md
+      - Supported Radios: guide/radios.md
+      - Radio Setup Guides:
+          - IC-7610 USB Serial: guide/ic7610-usb-setup.md
+          - IC-705 USB Serial: guide/ic705-usb-setup.md
+          - IC-7300 USB Serial: guide/ic7300-usb-setup.md
+          - IC-9700 USB & LAN: guide/ic9700-usb-setup.md
       - WSJT-X / Digital Modes: guide/wsjtx-setup.md
       - Audio Recipes: guide/audio-recipes.md
       - Web UI: guide/web-ui.md
       - CI-V Commands: guide/commands.md
-      - Supported Radios: guide/radios.md
       - Troubleshooting: guide/troubleshooting.md
   - API Reference:
       - Public API Surface: api/public-api-surface.md
