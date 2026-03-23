@@ -10,6 +10,7 @@ Rig files live in `rigs/`. Reference files:
 
 - `rigs/ic7610.toml` — IC-7610 (dual receiver, LAN, CI-V, full feature set)
 - `rigs/ic7300.toml` — IC-7300 (single receiver, USB serial, CI-V)
+- `rigs/ic705.toml` — IC-705 (single receiver, LAN/WiFi, CI-V, wide HF/VHF/UHF profile)
 - `rigs/ftx1.toml` — Yaesu FTX-1 (Yaesu CAT protocol, dual RX)
 - `rigs/x6100.toml` — Xiegu X6100 (CI-V, IC-705 compatible subset, QRP)
 - `rigs/tx500.toml` — Lab599 TX-500 (Kenwood CAT protocol, QRP)
@@ -160,7 +161,7 @@ Four schemes supported:
 | Scheme | Receivers | VFOs | Example |
 |--------|----------|------|---------|
 | `main_sub` | 2 | 2 | IC-7610 |
-| `ab` | 1 | 2 | IC-7300, X6100, TX-500 |
+| `ab` | 1 | 2 | IC-7300, IC-705, X6100, TX-500 |
 | `ab_shared` | 2 | 1 | FTX-1 |
 | `single` | 1 | 1 | Simple QRP rigs |
 
@@ -172,6 +173,9 @@ sub_select = [0xD1]
 swap = [0xB0]
 equal = [0xB1]
 ```
+
+For single-receiver `ab` rigs (IC-7300/IC-705 style), `main_select` and `sub_select`
+typically map to VFO A/B (`0x00` / `0x01`), and `[cmd29]` is usually omitted.
 
 ### `[commands]` — Wire Bytes
 

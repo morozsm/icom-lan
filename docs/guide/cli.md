@@ -21,6 +21,8 @@ All commands accept these options:
 | `--rx-device` | `ICOM_USB_RX_DEVICE` | auto | USB audio RX device name (`--backend serial`) |
 | `--tx-device` | `ICOM_USB_TX_DEVICE` | auto | USB audio TX device name (`--backend serial`) |
 | `--list-audio-devices` | — | — | List USB audio devices and exit |
+| `--model` | — | — | Radio model preset (for example `IC-7610`, `IC-7300`, `IC-705`) |
+| `--radio-addr` | — | — | CI-V address override (hex like `0x94` or decimal like `148`) |
 | `--version` | — | — | Print version and exit |
 
 !!! tip "Use Environment Variables"
@@ -180,6 +182,37 @@ ALC      n/a
 
 !!! info
     SWR and ALC are only available during TX. They show `n/a` when receiving.
+
+### `levels`
+
+Get or set DSP/audio levels (M4 level controls).
+
+```bash
+# Read current values
+icom-lan levels
+icom-lan levels --json
+
+# Set one or more values, then print the current state
+icom-lan levels --nr 120 --nb 90
+icom-lan levels --mic-gain 140 --drive-gain 110 --comp-level 80 --json
+
+# Receiver-scoped controls (0=main, 1=sub) for NR/NB
+icom-lan levels --receiver 1 --nr 100
+```
+
+| Flag | Range | Description |
+|------|-------|-------------|
+| `--nr` | `0..255` | Noise reduction level |
+| `--nb` | `0..255` | Noise blanker level |
+| `--mic-gain` | `0..255` | Microphone gain |
+| `--drive-gain` | `0..255` | Drive gain / TX power adjust |
+| `--comp-level` | `0..255` | Speech compressor level |
+| `--receiver` | `0` or `1` | Receiver index for receiver-scoped controls (`NR`, `NB`) |
+
+!!! note
+    `levels` always prints the current radio state after applying any requested updates.
+    If the selected backend/model does not implement level controls, the command exits with
+    `Error: this radio does not support level controls.`
 
 ### `audio caps`
 

@@ -63,7 +63,7 @@ Direct connection to your radio — no wfview, hamlib, or RS-BA1 required.
 | Radio | Status | CI-V Address |
 |-------|--------|-------------|
 | IC-7610 | :white_check_mark: Tested | `0x98` |
-| IC-705 | :material-help-circle: Should work | `0xA4` |
+| IC-705 | :material-progress-clock: Profile complete (hardware validation pending) | `0xA4` |
 | IC-7300 | :material-help-circle: Should work | `0x94` |
 | IC-9700 | :material-help-circle: Should work | `0xA2` |
 | IC-7851 | :material-help-circle: Should work | `0x8E` |
@@ -80,7 +80,7 @@ from icom_lan import create_radio, LanBackendConfig
 async def main():
     config = LanBackendConfig(host="192.168.1.100", username="user", password="pass")
     async with create_radio(config) as radio:
-        freq = await radio.get_frequency()
+        freq = await radio.get_freq()
         print(f"{freq / 1e6:.3f} MHz")
 
 asyncio.run(main())

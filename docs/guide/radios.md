@@ -49,9 +49,9 @@ Adding a new radio = adding a new `.toml` file — see [Adding a New Radio](rig-
 ```python
 from icom_lan import create_radio, SerialBackendConfig
 
-config = SerialBackendConfig(port="/dev/tty.usbserial-XXXX", baud=19200)
+config = SerialBackendConfig(device="/dev/ttyUSB0", baudrate=115200)
 async with create_radio(config) as radio:
-    freq = await radio.get_frequency()
+    freq = await radio.get_freq()
     print(f"{freq/1e6:.3f} MHz")
 ```
 
@@ -73,6 +73,34 @@ icom-lan --backend serial --serial-port /dev/tty.usbserial-XXXX freq
 
 The Web UI automatically hides DIGI-SEL and IP+ controls when connected to an IC-7300
 (capability-based UI guards). VFO labels switch to "VFO A" / "VFO B" automatically.
+
+### IC-705 (profile-complete, hardware validation pending)
+
+- **CI-V Address:** `0xA4`
+- **Connectivity:** LAN + WiFi (built-in)
+- **VFO scheme:** VFO A/B (`ab`, single receiver)
+- **Rig profile:** `rigs/ic705.toml`
+- **Status:** exhaustive profile from wfview parity; runtime/hardware validation is still pending
+- **Not available:** dual receiver (`Command29` routes are empty), `ip_plus`, `main_sub_tracking`
+
+The profile includes IC-705-specific controls like `drive_gain`, `voice_tx`, wide
+frequency coverage (HF/6m/2m/70cm + general RX), and default serial baud set to
+`115200` for reliable scope traffic over serial CI-V.
+
+```bash
+# Resolve profile by model name
+icom-lan --model IC-705 status
+icom-lan --model IC-705 levels --nr 110 --nb 80 --json
+```
+
+```python
+from icom_lan import create_radio, LanBackendConfig
+
+config = LanBackendConfig(host="192.168.1.101", timeout=10.0, model="IC-705")
+async with create_radio(config) as radio:
+    freq = await radio.get_freq()
+    print(freq)
+```
 
 ## Non-Icom Radios (Planned)
 
@@ -107,20 +135,6 @@ backend adapters are not yet implemented:
 ## Should Work (Untested)
 
 These radios use the same Icom LAN protocol and should work out of the box. Community testing and reports welcome!
-
-### IC-705
-
-- **CI-V Address:** `0xA4`
-- **Connectivity:** WiFi (built-in)
-- **Notes:** WiFi may have higher latency than Ethernet — consider increasing timeout.
-
-```python
-from icom_lan import create_radio, LanBackendConfig
-
-config = LanBackendConfig(host="192.168.1.101", radio_addr=0xA4, timeout=10.0)
-async with create_radio(config) as radio:
-    ...
-```
 
 ### IC-9700
 
