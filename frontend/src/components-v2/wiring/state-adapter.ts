@@ -113,6 +113,7 @@ export function toVfoProps(
 
 export interface RfFrontEndProps {
   rfGain: number;
+  squelch: number;
   att: number;
   pre: number;
   attValues: number[];
@@ -126,6 +127,7 @@ export function toRfFrontEndProps(
   const rx = state ? activeRx(state) : null;
   return {
     rfGain: rx?.rfGain ?? 255,
+    squelch: rx?.squelch ?? 0,
     att: rx?.att ?? 0,
     pre: rx?.preamp ?? 0,
     attValues: caps?.attValues ?? [0, 6, 12, 18],

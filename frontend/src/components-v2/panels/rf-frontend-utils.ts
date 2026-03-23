@@ -71,8 +71,13 @@ export function buildPreOptions(values: number[]): PreOption[] {
 
 /**
  * Determine whether the RF Front End panel should be visible at all.
- * The panel is hidden when none of its three controls are available.
+ * The panel is hidden when none of its controls are available.
  */
-export function shouldShowPanel(hasRfGain: boolean, hasAtt: boolean, hasPre: boolean): boolean {
-  return hasRfGain || hasAtt || hasPre;
+export function shouldShowPanel(
+  hasRfGain: boolean,
+  hasAtt: boolean,
+  hasPre: boolean,
+  hasSquelch = false,
+): boolean {
+  return hasRfGain || hasSquelch || hasAtt || hasPre;
 }

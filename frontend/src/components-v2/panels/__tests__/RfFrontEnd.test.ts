@@ -147,22 +147,26 @@ describe('buildPreOptions', () => {
 
 describe('shouldShowPanel', () => {
   it('returns false when all capabilities are absent', () => {
-    expect(shouldShowPanel(false, false, false)).toBe(false);
+    expect(shouldShowPanel(false, false, false, false)).toBe(false);
   });
 
   it('returns true when rf_gain is present', () => {
-    expect(shouldShowPanel(true, false, false)).toBe(true);
+    expect(shouldShowPanel(true, false, false, false)).toBe(true);
+  });
+
+  it('returns true when squelch is present', () => {
+    expect(shouldShowPanel(false, false, false, true)).toBe(true);
   });
 
   it('returns true when attenuator is present', () => {
-    expect(shouldShowPanel(false, true, false)).toBe(true);
+    expect(shouldShowPanel(false, true, false, false)).toBe(true);
   });
 
   it('returns true when preamp is present', () => {
-    expect(shouldShowPanel(false, false, true)).toBe(true);
+    expect(shouldShowPanel(false, false, true, false)).toBe(true);
   });
 
   it('returns true when all capabilities are present', () => {
-    expect(shouldShowPanel(true, true, true)).toBe(true);
+    expect(shouldShowPanel(true, true, true, true)).toBe(true);
   });
 });

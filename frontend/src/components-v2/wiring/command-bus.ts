@@ -135,6 +135,11 @@ export function makeRfFrontEndHandlers() {
       patchActiveReceiver({ rfGain: level }, true);
       cmd('set_rf_gain', { level, receiver });
     },
+    onSquelchChange: (level: number) => {
+      const receiver = activeReceiverParam();
+      patchActiveReceiver({ squelch: level }, true);
+      cmd('set_squelch', { level, receiver });
+    },
   };
 }
 
@@ -678,9 +683,11 @@ export function makeKeyboardHandlers() {
           if (typeof target === 'string') {
             const selectors: Record<string, string> = {
               af: '[data-panel="rf-frontend"] [data-control="af-gain"]',
-              rf: '[data-panel="rf-frontend"] [data-control="rf-gain"]',
+              rf:
+                '[data-panel="rf-frontend"] [data-control="rf-sql-dual"], [data-panel="rf-frontend"] [data-control="rf-gain"]',
               filter: '[data-panel="filter"]',
-              squelch: '[data-panel="rf-frontend"] [data-control="squelch"]',
+              squelch:
+                '[data-panel="rf-frontend"] [data-control="rf-sql-dual"], [data-panel="rf-frontend"] [data-control="squelch"]',
               mode: '[data-panel="mode"]',
               pbt: '[data-panel="filter"] [data-control="pbt-inner"]',
               waterfall: '[data-waterfall]',

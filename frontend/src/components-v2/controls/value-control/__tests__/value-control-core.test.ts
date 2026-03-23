@@ -13,6 +13,14 @@ import {
   handleWheelStep,
   debounce,
   formatBipolarValue,
+  DUAL_PARAM_DEAD_LOW,
+  DUAL_PARAM_DEAD_HIGH,
+  dualParamZone,
+  dualParamRfFromX,
+  dualParamSqlFromX,
+  dualParamRfThumbPercent,
+  dualParamSqlThumbPercent,
+  dualParamPickSide,
   calculateArcPath,
   calculateIndicatorPosition,
   generateTickPositions,
@@ -274,6 +282,42 @@ describe('debounce', () => {
     debounced('arg');
     debounced.flush();
     expect(fn).toHaveBeenCalledWith('arg');
+  });
+});
+
+describe('dual RF/SQL bar mapping', () => {
+  it('places dead zone between configured edges', () => {
+    expect(dualParamZone(0.2)).toBe('rf');
+    expect(dualParamZone(0.5)).toBe('dead');
+    expect(dualParamZone(0.9)).toBe('sql');
+  });
+
+  it('maps RF with max at left (x=0 → max)', () => {
+    expect(dualParamRfFromX(0, 0, 255, 1)).toBe(255);
+    expect(dualParamRfFromX(DUAL_PARAM_DEAD_LOW, 0, 255, 1)).toBe(0);
+  });
+
+  it('maps SQL with max at right', () => {
+    expect(dualParamSqlFromX(DUAL_PARAM_DEAD_HIGH, 0, 255, 1)).toBe(0);
+    expect(dualParamSqlFromX(1, 0, 255, 1)).toBe(255);
+  });
+
+  it('thumb percents align with inner zone edges', () => {
+    expect(dualParamRfThumbPercent(255, 0, 255)).toBeCloseTo(0, 5);
+    expect(dualParamRfThumbPercent(0, 0, 255)).toBeCloseTo(DUAL_PARAM_DEAD_LOW * 100, 5);
+    expect(dualParamSqlThumbPercent(0, 0, 255)).toBeCloseTo(DUAL_PARAM_DEAD_HIGH * 100, 5);
+    expect(dualParamSqlThumbPercent(255, 0, 255)).toBe(100);
+  });
+
+  it('picks closer side in dead zone', () => {
+    const midDead = (DUAL_PARAM_DEAD_LOW + DUAL_PARAM_DEAD_HIGH) / 2;
+    expect(midDead).toBeGreaterThan(DUAL_PARAM_DEAD_LOW);
+    expect(midDead).toBeLessThan(DUAL_PARAM_DEAD_HIGH);
+    // Thumbs at inner edges (RF min, SQL min): equidistant from center → RF wins on tie.
+    expect(dualParamPickSide(midDead, 0, 0, 0, 255)).toBe('rf');
+    // Nudge toward the SQL leg: SQL thumb is closer.
+    expect(dualParamPickSide(0.51, 255, 255, 0, 255)).toBe('sql');
+    expect(dualParamPickSide(0.49, 255, 255, 0, 255)).toBe('rf');
   });
 });
 

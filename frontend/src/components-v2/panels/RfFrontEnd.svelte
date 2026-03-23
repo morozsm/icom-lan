@@ -1,5 +1,6 @@
 <script lang="ts">
   import { ValueControl } from '../controls/value-control';
+  import DualParamRenderer from '../controls/value-control/DualParamRenderer.svelte';
   import AttenuatorControl from '../controls/AttenuatorControl.svelte';
   import { SegmentedControl } from '$lib/SegmentedControl';
   import { hasCapability, getAttValues, getPreValues } from '$lib/stores/capabilities.svelte';
@@ -8,19 +9,32 @@
 
   interface Props {
     rfGain: number;
+    squelch: number;
     att: number;
     pre: number;
     onRfGainChange: (v: number) => void;
+    onSquelchChange: (v: number) => void;
     onAttChange: (v: number) => void;
     onPreChange: (v: number) => void;
   }
 
-  let { rfGain, att, pre, onRfGainChange, onAttChange, onPreChange }: Props = $props();
+  let {
+    rfGain,
+    squelch,
+    att,
+    pre,
+    onRfGainChange,
+    onSquelchChange,
+    onAttChange,
+    onPreChange,
+  }: Props = $props();
 
   let showRfGain = $derived(hasCapability('rf_gain'));
+  let showSquelch = $derived(hasCapability('squelch'));
   let showAtt = $derived(hasCapability('attenuator'));
   let showPre = $derived(hasCapability('preamp'));
-  let visible = $derived(shouldShowPanel(showRfGain, showAtt, showPre));
+  let showRfSqlDual = $derived(showRfGain && showSquelch);
+  let visible = $derived(shouldShowPanel(showRfGain, showAtt, showPre, showSquelch));
 
   let attValues = $derived(getAttValues());
   let preOptions = $derived(buildPreOptions(getPreValues()));
@@ -31,20 +45,37 @@
 
 {#if visible}
   <div class="controls">
-    {#if showRfGain}
-      <ValueControl
-        value={rfGain}
+    {#if showRfSqlDual}
+      <DualParamRenderer
+        rfValue={rfGain}
+        sqlValue={squelch}
         min={0}
         max={255}
         step={1}
-        label="RF Gain"
-        renderer="hbar"
-        accentColor="#22C55E"
+        rfAccentColor="#22C55E"
+        sqlAccentColor="#F59E0B"
         shortcutHint={rfGainShortcut}
         title={rfGainShortcut}
-        onChange={onRfGainChange}
-      variant="hardware-illuminated"
+        onRfChange={onRfGainChange}
+        onSqlChange={onSquelchChange}
+        variant="hardware-illuminated"
       />
+    {:else if showRfGain}
+      <div data-control="rf-gain">
+        <ValueControl
+          value={rfGain}
+          min={0}
+          max={255}
+          step={1}
+          label="RF Gain"
+          renderer="hbar"
+          accentColor="#22C55E"
+          shortcutHint={rfGainShortcut}
+          title={rfGainShortcut}
+          onChange={onRfGainChange}
+          variant="hardware-illuminated"
+        />
+      </div>
     {/if}
 
     {#if showAtt}

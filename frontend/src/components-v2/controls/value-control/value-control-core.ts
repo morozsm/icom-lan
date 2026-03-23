@@ -221,6 +221,82 @@ export function formatBipolarValue(value: number): string {
   return value > 0 ? `+${value}` : `${value}`;
 }
 
+/** Normalized X (0–1) where the RF zone ends and dead zone begins. */
+export const DUAL_PARAM_DEAD_LOW = 0.475;
+
+/** Normalized X where dead zone ends and SQL zone begins. */
+export const DUAL_PARAM_DEAD_HIGH = 0.525;
+
+export type DualParamZone = 'rf' | 'sql' | 'dead';
+
+export function dualParamZone(normX: number): DualParamZone {
+  if (normX < DUAL_PARAM_DEAD_LOW) return 'rf';
+  if (normX > DUAL_PARAM_DEAD_HIGH) return 'sql';
+  return 'dead';
+}
+
+/**
+ * RF leg: hardware max at left. normX is 0 at track left, `DUAL_PARAM_DEAD_LOW` at inner edge.
+ */
+export function dualParamRfFromX(
+  normX: number,
+  min: number,
+  max: number,
+  step: number,
+): number {
+  const span = DUAL_PARAM_DEAD_LOW;
+  const t = clamp(normX / span, 0, 1);
+  const raw = max - t * (max - min);
+  return snapToStep(clamp(raw, min, max), step, min);
+}
+
+/**
+ * SQL leg: max at right. normX from `DUAL_PARAM_DEAD_HIGH` to 1.
+ */
+export function dualParamSqlFromX(
+  normX: number,
+  min: number,
+  max: number,
+  step: number,
+): number {
+  const span = 1 - DUAL_PARAM_DEAD_HIGH;
+  const t = clamp((normX - DUAL_PARAM_DEAD_HIGH) / span, 0, 1);
+  const raw = min + t * (max - min);
+  return snapToStep(clamp(raw, min, max), step, min);
+}
+
+/** Thumb center position along full track (0–100%). */
+export function dualParamRfThumbPercent(value: number, min: number, max: number): number {
+  const range = max - min;
+  if (range === 0) return 0;
+  const t = (value - min) / range;
+  return (1 - t) * DUAL_PARAM_DEAD_LOW * 100;
+}
+
+export function dualParamSqlThumbPercent(value: number, min: number, max: number): number {
+  const range = max - min;
+  if (range === 0) return DUAL_PARAM_DEAD_HIGH * 100;
+  const t = (value - min) / range;
+  return (DUAL_PARAM_DEAD_HIGH + t * (1 - DUAL_PARAM_DEAD_HIGH)) * 100;
+}
+
+/**
+ * When clicking the dead zone, pick the closer thumb leg (normalized coordinates).
+ */
+export function dualParamPickSide(
+  normX: number,
+  rfValue: number,
+  sqlValue: number,
+  min: number,
+  max: number,
+): 'rf' | 'sql' {
+  const rfN = dualParamRfThumbPercent(rfValue, min, max) / 100;
+  const sqlN = dualParamSqlThumbPercent(sqlValue, min, max) / 100;
+  const dRf = Math.abs(normX - rfN);
+  const dSql = Math.abs(normX - sqlN);
+  return dRf <= dSql ? 'rf' : 'sql';
+}
+
 /**
  * Calculate SVG arc path for knob renderer.
  */

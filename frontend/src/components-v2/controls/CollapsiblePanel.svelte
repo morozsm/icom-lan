@@ -5,10 +5,12 @@
     title: string;
     panelId: string;
     collapsible?: boolean;
+    /** Optional `data-panel` attribute for keyboard focus targets (e.g. rf-frontend). */
+    dataPanel?: string;
     children?: any;
   }
 
-  let { title, panelId, collapsible = true, children }: Props = $props();
+  let { title, panelId, collapsible = true, dataPanel, children }: Props = $props();
 
   let collapsed = $state(false);
 
@@ -50,7 +52,12 @@
   }
 </script>
 
-<div class="collapsible-panel" data-panel-id={panelId} data-collapsed={collapsed}>
+<div
+  class="collapsible-panel"
+  data-panel-id={panelId}
+  data-panel={dataPanel}
+  data-collapsed={collapsed}
+>
   <button
     type="button"
     class="panel-header"

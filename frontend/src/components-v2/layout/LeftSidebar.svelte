@@ -71,12 +71,14 @@
     </div>
   </CollapsiblePanel>
 
-  <CollapsiblePanel title="RF FRONT END" panelId="rf-front-end">
+  <CollapsiblePanel title="RF FRONT END" panelId="rf-front-end" dataPanel="rf-frontend">
     <RfFrontEnd
       rfGain={rfFrontEnd.rfGain}
+      squelch={rfFrontEnd.squelch}
       att={rfFrontEnd.att}
       pre={rfFrontEnd.pre}
       onRfGainChange={rfHandlers.onRfGainChange}
+      onSquelchChange={rfHandlers.onSquelchChange}
       onAttChange={rfHandlers.onAttChange}
       onPreChange={rfHandlers.onPreChange}
     />
