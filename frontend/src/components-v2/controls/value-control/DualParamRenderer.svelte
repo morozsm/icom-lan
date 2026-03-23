@@ -92,6 +92,10 @@
 
   let thumbPct = $derived(dualParamThumbPercent(localRf, localSql, min, max));
   let absDeviation = $derived(dualParamDeviationFromValues(localRf, localSql, min, max));
+
+  /** Display values as 0–100% instead of raw 0–255. */
+  let displayRf = $derived(max > min ? Math.round((localRf - min) / (max - min) * 100) : 0);
+  let displaySql = $derived(max > min ? Math.round((localSql - min) / (max - min) * 100) : 0);
   let fillRatio = $derived(absDeviation);
   let rfFillWidth = $derived(Math.max(0, 50 - thumbPct));
   let sqlFillWidth = $derived(Math.max(0, thumbPct - 50));
@@ -228,8 +232,8 @@
 >
   {#if showValues}
     <div class="vc-header">
-      <span class="vc-label-rf">{rfLabel}<span class="vc-num">{localRf}</span></span>
-      <span class="vc-label-sql"><span class="vc-num">{localSql}</span>{sqlLabel}</span>
+      <span class="vc-label-rf">{rfLabel}<span class="vc-num">{displayRf}%</span></span>
+      <span class="vc-label-sql"><span class="vc-num">{displaySql}%</span>{sqlLabel}</span>
     </div>
   {/if}
 
@@ -242,7 +246,7 @@
     aria-valuemin={0}
     aria-valuemax={100}
     aria-valuenow={ariaNow}
-    aria-valuetext="RF {localRf}, squelch {localSql}"
+    aria-valuetext="RF {displayRf}%, squelch {displaySql}%"
     aria-disabled={disabled}
     onpointerdown={handlePointerDown}
     onpointermove={handlePointerMove}
