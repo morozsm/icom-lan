@@ -5,11 +5,16 @@ from __future__ import annotations
 from ..radio import IcomRadio  # noqa: TID251
 from ..radio_protocol import Radio
 from .config import BackendConfig, LanBackendConfig, SerialBackendConfig
+from .ic705.serial import Ic705SerialRadio
 from .icom7610.serial import Icom7610SerialRadio
 
 
 def create_radio(config: BackendConfig) -> Radio:
-    """Create a radio instance for the selected backend config."""
+    """Create a radio instance for the selected backend config.
+
+    Routes to model-specific backends for serial connections.
+    For LAN, uses profile-driven routing (model parameter handled by IcomRadio).
+    """
     if isinstance(config, LanBackendConfig):
         return IcomRadio(
             host=config.host,
@@ -30,7 +35,15 @@ def create_radio(config: BackendConfig) -> Radio:
             model=config.model,
         )
     if isinstance(config, SerialBackendConfig):
-        return Icom7610SerialRadio(
+        # Route to model-specific serial backend
+        model = config.model or "IC-7610"
+        if model.upper() == "IC-705":
+            serial_class = Ic705SerialRadio
+        else:
+            # Default to IC-7610 for compatibility
+            serial_class = Icom7610SerialRadio
+
+        return serial_class(
             device=config.device,
             baudrate=config.baudrate,
             radio_addr=config.radio_addr,
