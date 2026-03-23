@@ -261,6 +261,28 @@ Each UDP packet has a fixed-format header (see `packettypes.h` in wfview):
 - [x] 3384 tests passing (+11 audio codec tests)
 - **Result:** Web audio streaming now supports all Icom audio codecs; resolves issue with ulaw-returning radios
 
+#### M6.2 Extended Response Protocol Support 🔍 IN PROGRESS
+- [ ] Research complete: documented 5 possible interpretations and existing implementation status
+- [ ] Finding: Current codebase already implements most response handling (134 IC-7610 commands, multi-frame scope/audio, profile-driven extended commands)
+- [ ] Blockers: Awaiting hardware testing or clarification on specific gaps to address
+- **Status:** Research phase (`docs/EXTENDED_PROTOCOL_RESEARCH.md`)
+
+#### M6.3 Performance Analysis & Regression Tests ✅ COMPLETE (2026-03-23)
+- [x] Comprehensive performance baseline (514 unit tests in 1.88s, 3.6ms median)
+- [x] Full test suite profiling (3384 tests in ~79s, 23ms median)
+- [x] Identified 5 optimization areas with ROI/effort analysis
+- [x] Performance regression test suite (`test_performance_regressions.py`) with 7 tests covering:
+  - CI-V frame parsing latency
+  - BCD encoding performance
+  - Frame building performance
+  - End-to-end CI-V pipeline SLO validation
+- [x] Documentation: `docs/PERFORMANCE.md` with SLO definitions and recommendations
+- [x] Confirmed: Current performance already strong; pytest-xdist incompatible with asyncio
+- **Result:** Established performance baselines, regression guards, and optimization roadmap
+- **Regression testing:** Parity smoke profile `integration and ic7610_parity` covers baseline_core and advanced_scope lifecycle on LAN/serial backends; profiles defined in `tests/integration/conftest.py` with explicit markers (`@pytest.mark.ic7610_parity`) in regression test files
+
+IC-7610 parity matrix (issue #139, 2026-03-06): 134 implemented, 0 partial, 0 missing
+
 #### M6.3 Performance Analysis ✅ COMPLETE (2026-03-23)
 - [x] Comprehensive performance baseline (514 unit tests in 1.88s)
 - [x] Full test suite profiling (3384 tests in ~79s, 23ms median)
