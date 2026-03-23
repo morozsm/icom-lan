@@ -143,7 +143,7 @@ export function makeRfFrontEndHandlers() {
     onDigiSelToggle: (on: boolean) => {
       const receiver = activeReceiverParam();
       patchActiveReceiver({ digisel: on });
-      cmd('set_digi_sel', { on, receiver });
+      cmd('set_digisel', { on, receiver });
     },
     onIpPlusToggle: (on: boolean) => {
       const receiver = activeReceiverParam();
