@@ -51,8 +51,14 @@
   let windowWidth = $state(typeof window !== 'undefined' ? window.innerWidth : 1200);
   let isMobile = $derived(windowWidth < 640);
   let isLandscape = $state(false);
-  let spectrumLandscape = $derived(isMobile && isLandscape);
+  let landscapeSpectrumDismissed = $state(false);
+  let spectrumLandscape = $derived(isMobile && isLandscape && !landscapeSpectrumDismissed);
   let activeTab = $state<TabId>(DEFAULT_TAB);
+
+  let activeReceiverLabel = $derived(radioState?.active === 'SUB' ? 'SUB' : 'MAIN');
+  let activeModeLabel = $derived(radioState?.active === 'SUB' ? (radioState?.sub?.mode ?? '') : (radioState?.main?.mode ?? ''));
+  let activeFilterLabel = $derived(radioState?.active === 'SUB' ? (radioState?.sub?.filter ?? '') : (radioState?.main?.filter ?? ''));
+  let activeFreq = $derived(radioState?.active === 'SUB' ? (radioState?.sub?.freqHz ?? 0) : (radioState?.main?.freqHz ?? 0));
   let receiverDeckElement = $state<HTMLElement | null>(null);
   let receiverDeckWidth = $state<number | null>(null);
   let manualVfoScaleOverrides = $state<VfoLayoutScaleOverrides>({});
@@ -70,6 +76,12 @@
   $effect(() => {
     if (activeMode) {
       applyModeDefault(activeMode);
+    }
+  });
+
+  $effect(() => {
+    if (!isLandscape) {
+      landscapeSpectrumDismissed = false;
     }
   });
 
@@ -128,6 +140,32 @@
 
 {#if spectrumLandscape}
   <div class="spectrum-landscape" aria-label="Spectrum landscape">
+    <div class="spectrum-hud" aria-label="Spectrum HUD">
+      <button
+        type="button"
+        class="hud-btn"
+        onclick={() => { landscapeSpectrumDismissed = true; }}
+        aria-label="Exit fullscreen spectrum"
+      >
+        Back
+      </button>
+
+      <div class="hud-center">
+        <div class="hud-freq">
+          <FrequencyDisplay freq={activeFreq} compact active />
+        </div>
+        <div class="hud-meta">
+          <span class="hud-rx">{activeReceiverLabel}</span>
+          <span class="hud-sep">·</span>
+          <span class="hud-mode">{activeModeLabel}</span>
+          <span class="hud-sep">·</span>
+          <span class="hud-filter">{activeFilterLabel}</span>
+        </div>
+      </div>
+
+      <div class="hud-spacer"></div>
+    </div>
+
     <div class="spectrum-landscape-frame">
       <SpectrumPanel />
     </div>
@@ -572,6 +610,80 @@
       env(safe-area-inset-left, 0px);
     box-sizing: border-box;
     display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .spectrum-hud {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 8px;
+    border: 1px solid var(--v2-border-panel);
+    border-radius: 4px;
+    background: linear-gradient(180deg, var(--v2-panel-bg-gradient-top) 0%, var(--v2-panel-bg-gradient-bottom) 100%);
+    box-shadow: var(--v2-shadow-sm);
+    min-height: 36px;
+    box-sizing: border-box;
+  }
+
+  .hud-btn {
+    height: 28px;
+    padding: 0 10px;
+    border-radius: 4px;
+    border: 1px solid var(--v2-border-darker);
+    background: var(--v2-bg-card);
+    color: var(--v2-text-secondary);
+    font-family: 'Roboto Mono', monospace;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+
+  .hud-btn:active {
+    transform: translateY(1px);
+  }
+
+  .hud-center {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .hud-freq {
+    line-height: 1;
+  }
+
+  .hud-meta {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-family: 'Roboto Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--v2-text-muted);
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .hud-rx {
+    color: var(--v2-text-secondary);
+  }
+
+  .hud-sep {
+    opacity: 0.6;
+  }
+
+  .hud-spacer {
+    flex: 1;
   }
 
   .spectrum-landscape-frame {
