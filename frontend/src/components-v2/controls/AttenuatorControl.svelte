@@ -25,6 +25,8 @@
   }: Props = $props();
 
   let menuOpen = $state(false);
+  let menuStyle = $state('');
+  let moreButtonEl: HTMLButtonElement | undefined = $state();
   let controlModel = $derived(buildAttControlModel(values));
   let overflowSelected = $derived(controlModel.overflowOptions.some((option) => option.value === selected));
   let overflowLabel = $derived(getAttOverflowLabel(selected, controlModel.overflowOptions));
@@ -36,6 +38,18 @@
   function handleOverflowSelect(value: number): void {
     onchange(value);
     menuOpen = false;
+  }
+
+  function openMenu(): void {
+    if (moreButtonEl) {
+      const rect = moreButtonEl.getBoundingClientRect();
+      const menuWidth = 220;
+      let left = rect.right - menuWidth;
+      if (left < 8) left = 8;
+      const top = rect.bottom + 6;
+      menuStyle = `top: ${top}px; left: ${left}px;`;
+    }
+    menuOpen = true;
   }
  </script>
 
@@ -52,7 +66,8 @@
       type="button"
       class="more-button v2-control-button"
       class:active={overflowSelected}
-      onclick={() => (menuOpen = true)}
+      bind:this={moreButtonEl}
+      onclick={openMenu}
       aria-haspopup="dialog"
       aria-expanded={menuOpen}
       aria-label="More attenuator values"
@@ -69,7 +84,7 @@
       onclick={() => (menuOpen = false)}
     ></button>
 
-    <div class="menu" role="dialog" aria-label="More attenuator values">
+    <div class="menu" role="dialog" aria-label="More attenuator values" style={menuStyle}>
       <div class="menu-title">ATT Values</div>
       <div class="menu-grid">
         {#each controlModel.overflowOptions as option}
@@ -116,7 +131,7 @@
   .menu-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 40;
+    z-index: 10000;
     background: var(--v2-attenuator-bg);
     border: 0;
     padding: 0;
@@ -124,11 +139,9 @@
   }
 
   .menu {
-    position: absolute;
-    top: calc(100% + 6px);
-    right: 0;
-    z-index: 41;
-    min-width: min(220px, 100%);
+    position: fixed;
+    z-index: 10001;
+    min-width: 220px;
     padding: 8px;
     background: var(--v2-bg-darkest);
     border: 1px solid var(--v2-border-darker);

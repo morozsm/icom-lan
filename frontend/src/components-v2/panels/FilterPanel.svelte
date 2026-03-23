@@ -368,7 +368,7 @@
   .modal-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 60;
+    z-index: 10000;
     background: var(--v2-popup-bg);
     border: 0;
     padding: 0;
@@ -379,7 +379,7 @@
     position: fixed;
     top: 50%;
     left: 50%;
-    z-index: 61;
+    z-index: 10001;
     width: min(560px, calc(100vw - 24px));
     max-height: min(88vh, 720px);
     transform: translate(-50%, -50%);
