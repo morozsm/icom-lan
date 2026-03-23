@@ -283,14 +283,6 @@ Each UDP packet has a fixed-format header (see `packettypes.h` in wfview):
 
 IC-7610 parity matrix (issue #139, 2026-03-06): 134 implemented, 0 partial, 0 missing
 
-#### M6.3 Performance Analysis ✅ COMPLETE (2026-03-23)
-- [x] Comprehensive performance baseline (514 unit tests in 1.88s)
-- [x] Full test suite profiling (3384 tests in ~79s, 23ms median)
-- [x] Identified 5 optimization areas with ROI/effort analysis
-- [x] Documentation: `docs/PERFORMANCE.md` with recommendations
-- [x] Confirmed: Current performance already strong; pytest-xdist incompatible with asyncio
-- **Result:** Established performance baseline and optimization roadmap for future releases
-
 ### Reliability Test Expansion (2026-03-05)
 - Added extended integration coverage scaffolding for:
   - transport sequence wrap-around and ACK mixed stress,
