@@ -150,9 +150,6 @@
 
   // DiscreteRenderer examples — stepped controls
   let discreteNrLevel = $state(8);
-  let discreteKeySpeed = $state(18);
-  let discretePreamp = $state(1);
-  let discreteAgc = $state(2);
 
   // Bipolar examples — real radio parameters
   let ritOffset = $state(0);         // RIT offset: -9999..+9999 Hz
@@ -1089,12 +1086,14 @@
   </section>
 
   <section class="demo-card">
-    <h2>DiscreteRenderer (stepped/snapped slider)</h2>
+    <h2>DiscreteRenderer — Tick Styles</h2>
     <p class="lab-note">
-      Snaps to discrete steps with tick marks and optional per-step labels. Same hardware-illuminated
-      chrome as <code>HBarRenderer</code>. Wheel adjusts by one step (Shift = fine). Double-click resets
-      when <code>defaultValue</code> is set.
+      Three ways to show discrete steps without tick marks fighting the illuminated slot glow.
+      All rows share one value — drag any control to compare styles.
     </p>
+
+    <h3 class="vc-tickstyle-sub">Style A: Ruler (ticks below track)</h3>
+    <p class="lab-note">NR Level 0–15, tickStyle='ruler', hardware-illuminated</p>
     <div class="vc-demo-grid">
       <ValueControl
         label="NR Level"
@@ -1105,54 +1104,50 @@
         defaultValue={0}
         renderer="discrete"
         variant="hardware-illuminated"
+        tickStyle="ruler"
         accentColor="var(--v2-accent-cyan)"
         onChange={(v) => {
           discreteNrLevel = v;
         }}
       />
+    </div>
+
+    <h3 class="vc-tickstyle-sub">Style B: LED segments</h3>
+    <p class="lab-note">NR Level 0–15, tickStyle='led', hardware-illuminated</p>
+    <div class="vc-demo-grid">
       <ValueControl
-        label="Key Speed"
-        value={discreteKeySpeed}
-        min={6}
-        max={48}
-        step={1}
-        defaultValue={18}
-        unit="WPM"
-        renderer="discrete"
-        variant="hardware-illuminated"
-        accentColor="var(--v2-accent-orange)"
-        onChange={(v) => {
-          discreteKeySpeed = v;
-        }}
-      />
-      <ValueControl
-        label="Preamp"
-        value={discretePreamp}
+        label="NR Level"
+        value={discreteNrLevel}
         min={0}
-        max={2}
+        max={15}
         step={1}
         defaultValue={0}
-        tickLabels={['OFF', '1', '2']}
         renderer="discrete"
         variant="hardware-illuminated"
-        accentColor="var(--v2-accent-green-bright)"
-        onChange={(v) => {
-          discretePreamp = v;
-        }}
-      />
-      <ValueControl
-        label="AGC"
-        value={discreteAgc}
-        min={1}
-        max={3}
-        step={1}
-        defaultValue={2}
-        tickLabels={['FAST', 'MID', 'SLOW']}
-        renderer="discrete"
-        variant="hardware-illuminated"
+        tickStyle="led"
         accentColor="var(--v2-accent-cyan)"
         onChange={(v) => {
-          discreteAgc = v;
+          discreteNrLevel = v;
+        }}
+      />
+    </div>
+
+    <h3 class="vc-tickstyle-sub">Style C: Notch (cuts in fill)</h3>
+    <p class="lab-note">NR Level 0–15, tickStyle='notch', hardware-illuminated</p>
+    <div class="vc-demo-grid">
+      <ValueControl
+        label="NR Level"
+        value={discreteNrLevel}
+        min={0}
+        max={15}
+        step={1}
+        defaultValue={0}
+        renderer="discrete"
+        variant="hardware-illuminated"
+        tickStyle="notch"
+        accentColor="var(--v2-accent-cyan)"
+        onChange={(v) => {
+          discreteNrLevel = v;
         }}
       />
     </div>
@@ -1504,6 +1499,20 @@
     font-size: 12px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
+  }
+
+  h3.vc-tickstyle-sub {
+    margin: 14px 0 6px;
+    color: var(--v2-text-bright);
+    font-family: var(--v2-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+    text-transform: none;
+  }
+
+  h3.vc-tickstyle-sub:first-of-type {
+    margin-top: 0;
   }
 
   .hint {

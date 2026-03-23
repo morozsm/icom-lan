@@ -25,6 +25,8 @@
     tickLabels?: string[];
     /** Discrete renderer: when false, only draw ticks for the first tickLabels.length steps from min. */
     showAllTicks?: boolean;
+    /** Discrete renderer: how step marks are drawn (default ruler). */
+    tickStyle?: 'ruler' | 'led' | 'notch';
     // Behavior
     onChange: (value: number) => void;
     debounceMs?: number;
@@ -56,6 +58,7 @@
     tickCount = 0,
     tickLabels = [],
     showAllTicks = true,
+    tickStyle = 'ruler',
     onChange,
     debounceMs = 50,
     disabled = false,
@@ -103,6 +106,7 @@
     ...commonProps,
     tickLabels,
     showAllTicks,
+    tickStyle,
   });
 </script>
 

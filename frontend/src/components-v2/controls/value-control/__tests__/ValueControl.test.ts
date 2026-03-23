@@ -433,6 +433,56 @@ describe('KnobRenderer', () => {
   });
 });
 
+describe('DiscreteRenderer', () => {
+  it('renders LED strip when tickStyle is led', () => {
+    const target = mountControl({
+      value: 4,
+      min: 0,
+      max: 8,
+      step: 1,
+      label: 'LED',
+      renderer: 'discrete',
+      variant: 'hardware-illuminated',
+      tickStyle: 'led',
+      onChange: vi.fn(),
+    });
+    expect(target.querySelector('.vc-discrete-led-strip--hw')).toBeTruthy();
+    expect(target.querySelector('.hil-thumb')).toBeFalsy();
+  });
+
+  it('renders ruler ticks below track when tickStyle is ruler', () => {
+    const target = mountControl({
+      value: 2,
+      min: 0,
+      max: 8,
+      step: 1,
+      label: 'Ruler',
+      renderer: 'discrete',
+      variant: 'hardware-illuminated',
+      tickStyle: 'ruler',
+      onChange: vi.fn(),
+    });
+    expect(target.querySelector('.vc-discrete-ruler--below')).toBeTruthy();
+    expect(target.querySelector('.vc-discrete-ruler-tick')).toBeTruthy();
+  });
+
+  it('renders notch layer when tickStyle is notch', () => {
+    const target = mountControl({
+      value: 3,
+      min: 0,
+      max: 8,
+      step: 1,
+      label: 'Notch',
+      renderer: 'discrete',
+      variant: 'hardware-illuminated',
+      tickStyle: 'notch',
+      onChange: vi.fn(),
+    });
+    expect(target.querySelector('.vc-discrete-notch-layer--slot')).toBeTruthy();
+    expect(target.querySelector('.vc-discrete-notch')).toBeTruthy();
+  });
+});
+
 describe('fill percentage', () => {
   it('sets correct fill at min value', () => {
     const target = mountControl({

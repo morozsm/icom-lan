@@ -37,6 +37,8 @@
     tickLabels?: string[];
     /** When false, only render ticks for the first tickLabels.length steps from min. */
     showAllTicks?: boolean;
+    /** Visual style for discrete step marks. */
+    tickStyle?: 'ruler' | 'led' | 'notch';
   }
 
   let {
@@ -64,6 +66,7 @@
     title = null,
     tickLabels = [],
     showAllTicks = true,
+    tickStyle = 'ruler',
   }: Props = $props();
 
   let containerEl: HTMLDivElement | null = $state(null);
@@ -105,10 +108,11 @@
         value: v,
         percent: valueToPosition(v, min, max) * 100,
         label: tickLabels[i] ?? '',
+        rulerMajor: i % 5 === 0,
       }));
     }
     const labels = tickLabels;
-    const out: Array<{ value: number; percent: number; label: string }> = [];
+    const out: Array<{ value: number; percent: number; label: string; rulerMajor: boolean }> = [];
     for (let i = 0; i < labels.length; i++) {
       const v = snapToStep(min + i * step, step, min);
       if (v > max + 1e-9) break;
@@ -116,7 +120,19 @@
         value: v,
         percent: valueToPosition(v, min, max) * 100,
         label: labels[i] ?? '',
+        rulerMajor: i % 5 === 0,
       });
+    }
+    return out;
+  });
+
+  /** Midpoints between consecutive steps — vertical notches between segments. */
+  let notchPercents = $derived.by(() => {
+    const items = tickItems;
+    if (items.length < 2) return [];
+    const out: number[] = [];
+    for (let i = 0; i < items.length - 1; i++) {
+      out.push((items[i].percent + items[i + 1].percent) / 2);
     }
     return out;
   });
@@ -224,7 +240,10 @@
   bind:this={containerEl}
   data-shortcut-hint={shortcutHint ?? undefined}
   title={title ?? shortcutHint ?? undefined}
-  style="--vc-accent: {accentColor}; --vc-fill-color: {effectiveFill}; --vc-track-color: {trackColor}; --vc-fill-percent: {fillPercent}%; --vc-fill-ratio: {fillPercent / 100};"
+  style="--vc-accent: {accentColor}; --vc-fill-color: {effectiveFill}; --vc-track-color: {trackColor}; --vc-fill-percent: {fillPercent}%; --vc-fill-ratio: {fillPercent / 100}; --vc-led-count: {tickItems.length};"
+  class:tick-ruler={tickStyle === 'ruler'}
+  class:tick-led={tickStyle === 'led'}
+  class:tick-notch={tickStyle === 'notch'}
 >
   {#if showLabel || showValue}
     <div class="vc-header">
@@ -257,50 +276,121 @@
     {#if variant === 'hardware-illuminated'}
       <div class="hil-frame" aria-hidden="true">
         <div class="hil-channel">
-          <div class="hil-slot"></div>
+          {#if tickStyle === 'led'}
+            <div class="vc-discrete-led-strip vc-discrete-led-strip--hw" aria-hidden="true">
+              {#each tickItems as t (t.value)}
+                <div
+                  class="vc-discrete-led-segment"
+                  class:active={t.value <= localValue + 1e-9}
+                ></div>
+              {/each}
+            </div>
+          {:else}
+            <div class="hil-slot"></div>
+            {#if tickStyle === 'notch'}
+              <div class="vc-discrete-notch-layer vc-discrete-notch-layer--slot" aria-hidden="true">
+                {#each notchPercents as p, i (i)}
+                  <div class="vc-discrete-notch" style:left="{p}%"></div>
+                {/each}
+              </div>
+            {/if}
+          {/if}
         </div>
       </div>
-      <div class="vc-discrete-tick-rail" aria-hidden="true">
-        {#each tickItems as t (t.value)}
-          <div
-            class="vc-discrete-tick"
-            class:active={t.value <= localValue + 1e-9}
-            style:left="{t.percent}%"
-          ></div>
-        {/each}
-      </div>
-      <div class="hil-thumb" aria-hidden="true">
-        <div class="hil-slit"></div>
-      </div>
+      {#if tickStyle !== 'led'}
+        <div class="hil-thumb" aria-hidden="true">
+          <div class="hil-slit"></div>
+        </div>
+      {/if}
+      {#if tickStyle === 'ruler'}
+        <div class="vc-discrete-ruler vc-discrete-ruler--below" aria-hidden="true">
+          {#each tickItems as t (t.value)}
+            <div
+              class="vc-discrete-ruler-tick"
+              class:active={t.value <= localValue + 1e-9}
+              class:major={t.rulerMajor}
+              style:left="{t.percent}%"
+            ></div>
+          {/each}
+        </div>
+      {/if}
     {:else if variant === 'hardware'}
       <div class="hw-channel" aria-hidden="true">
-        <div class="hw-slot"></div>
+        {#if tickStyle === 'led'}
+          <div class="vc-discrete-led-strip vc-discrete-led-strip--hw" aria-hidden="true">
+            {#each tickItems as t (t.value)}
+              <div
+                class="vc-discrete-led-segment"
+                class:active={t.value <= localValue + 1e-9}
+              ></div>
+            {/each}
+          </div>
+        {:else}
+          <div class="hw-slot"></div>
+          {#if tickStyle === 'notch'}
+            <div class="vc-discrete-notch-layer vc-discrete-notch-layer--slot" aria-hidden="true">
+              {#each notchPercents as p, i (i)}
+                <div class="vc-discrete-notch" style:left="{p}%"></div>
+              {/each}
+            </div>
+          {/if}
+        {/if}
       </div>
-      <div class="vc-discrete-tick-rail" aria-hidden="true">
-        {#each tickItems as t (t.value)}
-          <div
-            class="vc-discrete-tick"
-            class:active={t.value <= localValue + 1e-9}
-            style:left="{t.percent}%"
-          ></div>
-        {/each}
-      </div>
-      <div class="hw-thumb" aria-hidden="true"></div>
+      {#if tickStyle !== 'led'}
+        <div class="hw-thumb" aria-hidden="true"></div>
+      {/if}
+      {#if tickStyle === 'ruler'}
+        <div class="vc-discrete-ruler vc-discrete-ruler--below" aria-hidden="true">
+          {#each tickItems as t (t.value)}
+            <div
+              class="vc-discrete-ruler-tick"
+              class:active={t.value <= localValue + 1e-9}
+              class:major={t.rulerMajor}
+              style:left="{t.percent}%"
+            ></div>
+          {/each}
+        </div>
+      {/if}
     {:else}
-      <div class="vc-track" aria-hidden="true">
+      <div class="vc-track" class:vc-track--led={tickStyle === 'led'} aria-hidden="true">
         <div class="vc-track-base"></div>
-        <div class="vc-track-fill"></div>
+        {#if tickStyle === 'led'}
+          <div class="vc-discrete-led-strip vc-discrete-led-strip--modern" aria-hidden="true">
+            {#each tickItems as t (t.value)}
+              <div
+                class="vc-discrete-led-segment"
+                class:active={t.value <= localValue + 1e-9}
+              ></div>
+            {/each}
+          </div>
+        {:else if tickStyle === 'notch'}
+          <div class="vc-track-fill-layer">
+            <div class="vc-track-fill"></div>
+            <div class="vc-discrete-notch-layer vc-discrete-notch-layer--modern" aria-hidden="true">
+              {#each notchPercents as p, i (i)}
+                <div class="vc-discrete-notch" style:left="{p}%"></div>
+              {/each}
+            </div>
+          </div>
+        {:else}
+          <div class="vc-track-fill"></div>
+        {/if}
       </div>
-      <div class="vc-discrete-tick-rail vc-discrete-tick-rail--modern" aria-hidden="true">
-        {#each tickItems as t (t.value)}
-          <div
-            class="vc-discrete-tick"
-            class:active={t.value <= localValue + 1e-9}
-            style:left="{t.percent}%"
-          ></div>
-        {/each}
-      </div>
-      <div class="vc-thumb" aria-hidden="true"></div>
+      {#if tickStyle === 'ruler'}
+        <div class="vc-discrete-ruler vc-discrete-ruler--below vc-discrete-ruler--modern-bar" aria-hidden="true">
+          {#each tickItems as t (t.value)}
+            <div
+              class="vc-discrete-ruler-tick"
+              class:active={t.value <= localValue + 1e-9}
+              class:major={t.rulerMajor}
+              style:left="{t.percent}%"
+            ></div>
+          {/each}
+        </div>
+      {/if}
+      {#if tickStyle !== 'led'}
+        <div class="vc-thumb" aria-hidden="true"></div>
+      {/if}
     {/if}
   </div>
 
@@ -433,46 +523,156 @@
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--vc-accent) 10%, transparent);
   }
 
-  /* Discrete tick rail — aligned with slot / track */
-  .vc-discrete-tick-rail {
+  /* Ruler: reserve space below the slot / bar for scale ticks */
+  .tick-ruler .vc-track-container {
+    padding-bottom: 10px;
+  }
+
+  /* Ruler ticks — below track, not inside the glow */
+  .vc-discrete-ruler--below {
     position: absolute;
     left: var(--vc-slot-inset-x);
     right: var(--vc-slot-inset-x);
-    bottom: 2px;
-    height: var(--vc-tick-height, 8px);
+    top: calc(50% + var(--vc-illum-slot-height) / 2 + 2px);
+    height: 8px;
     pointer-events: none;
     z-index: 1;
   }
 
-  .vc-discrete-tick-rail--modern {
+  .vc-discrete-ruler--modern-bar {
     left: 0;
     right: 0;
-    bottom: 0;
-    height: 10px;
+    top: calc(50% + var(--vc-bar-height, 4px) / 2 + 2px);
   }
 
-  .hardware .vc-discrete-tick-rail,
-  .hw-illum .vc-discrete-tick-rail {
-    bottom: 3px;
+  .compact .vc-discrete-ruler--modern-bar {
+    top: calc(50% + var(--vc-bar-height-compact, 3px) / 2 + 2px);
   }
 
-  .vc-discrete-tick {
+  .vc-discrete-ruler-tick {
     position: absolute;
     bottom: 0;
     width: 1px;
-    height: 100%;
+    height: 6px;
     transform: translateX(-50%);
     border-radius: 1px;
-    background: color-mix(in srgb, var(--vc-hw-tick-color, var(--vc-accent)) calc(var(--vc-tick-minor-opacity, 0.22) * 100%), transparent);
-    box-shadow: 0 0 2px color-mix(in srgb, var(--vc-hw-tick-color, var(--vc-accent)) calc(var(--vc-tick-glow-opacity, 0.2) * 100%), transparent);
-    transition: background 0.12s ease, box-shadow 0.12s ease;
+    background: color-mix(in srgb, var(--v2-text-disabled) 30%, transparent);
+    transition: background 0.12s ease;
   }
 
-  .vc-discrete-tick.active {
-    background: color-mix(in srgb, var(--vc-accent) 78%, transparent);
+  .vc-discrete-ruler-tick.major {
+    height: 8px;
+  }
+
+  .vc-discrete-ruler-tick.active {
+    background: color-mix(in srgb, var(--vc-accent) 60%, transparent);
+  }
+
+  /* LED segments — discrete lit/unlit bars */
+  .vc-discrete-led-strip--hw {
+    position: absolute;
+    top: 50%;
+    left: var(--vc-slot-inset-x);
+    right: var(--vc-slot-inset-x);
+    transform: translateY(-50%);
+    display: grid;
+    grid-template-columns: repeat(var(--vc-led-count, 16), 1fr);
+    gap: 2px;
+    height: max(4px, var(--vc-illum-slot-height));
+    z-index: 1;
+  }
+
+  .vc-discrete-led-strip--modern {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    display: grid;
+    grid-template-columns: repeat(var(--vc-led-count, 16), 1fr);
+    gap: 2px;
+    height: var(--vc-bar-height, 4px);
+    z-index: 1;
+  }
+
+  .compact .vc-discrete-led-strip--modern {
+    height: var(--vc-bar-height-compact, 3px);
+  }
+
+  .vc-discrete-led-segment {
+    border-radius: 1px;
+    background: color-mix(in srgb, var(--v2-bg-gradient-start) 40%, var(--v2-bg-darkest));
+    opacity: 0.35;
+    box-sizing: border-box;
+    transition:
+      background 0.12s ease,
+      opacity 0.12s ease,
+      box-shadow 0.12s ease;
+  }
+
+  .vc-discrete-led-segment.active {
+    opacity: 1;
+    background: color-mix(in srgb, var(--vc-accent) 88%, var(--v2-bg-darkest));
     box-shadow:
-      0 0 3px color-mix(in srgb, var(--vc-accent) 45%, transparent),
-      0 0 6px color-mix(in srgb, var(--vc-accent) 22%, transparent);
+      inset 0 0 5px color-mix(in srgb, var(--vc-accent) 50%, transparent),
+      0 0 5px color-mix(in srgb, var(--vc-accent) 28%, transparent),
+      0 0 10px color-mix(in srgb, var(--vc-accent) 12%, transparent);
+  }
+
+  /* Notch — dark cuts between step midpoints */
+  .vc-discrete-notch-layer--slot {
+    position: absolute;
+    top: 50%;
+    left: var(--vc-slot-inset-x);
+    right: var(--vc-slot-inset-x);
+    height: var(--vc-illum-slot-height);
+    transform: translateY(-50%);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .vc-discrete-notch-layer--modern {
+    position: absolute;
+    inset-inline: 0;
+    top: 50%;
+    height: var(--vc-bar-height, 4px);
+    transform: translateY(-50%);
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  .compact .vc-discrete-notch-layer--modern {
+    height: var(--vc-bar-height-compact, 3px);
+  }
+
+  .vc-discrete-notch {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    transform: translateX(-50%);
+    background: var(--v2-bg-darkest);
+    box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.75);
+    border-radius: 0.5px;
+    pointer-events: none;
+  }
+
+  .vc-track-fill-layer {
+    position: absolute;
+    inset-inline: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    height: var(--vc-bar-height, 4px);
+    pointer-events: none;
+  }
+
+  .compact .vc-track-fill-layer {
+    height: var(--vc-bar-height-compact, 3px);
+  }
+
+  .vc-track-fill-layer .vc-track-fill {
+    top: 0;
+    height: 100%;
   }
 
   .vc-discrete-label-row {
