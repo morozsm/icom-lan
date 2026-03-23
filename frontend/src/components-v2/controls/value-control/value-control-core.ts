@@ -21,6 +21,23 @@ export function snapToStep(value: number, step: number, min: number): number {
 }
 
 /**
+ * All discrete values from min to max inclusive, spaced by step.
+ */
+export function enumerateDiscreteValues(min: number, max: number, step: number): number[] {
+  if (step <= 0) {
+    return [clamp(min, min, max)];
+  }
+  const out: number[] = [];
+  const n = Math.floor((max - min) / step + 1e-9) + 1;
+  for (let i = 0; i < n; i++) {
+    const v = snapToStep(min + i * step, step, min);
+    if (v > max + 1e-9) break;
+    out.push(v);
+  }
+  return out;
+}
+
+/**
  * Convert a normalized position (0-1) to a value within range.
  */
 export function positionToValue(

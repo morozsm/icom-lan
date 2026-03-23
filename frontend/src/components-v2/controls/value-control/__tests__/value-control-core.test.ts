@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   clamp,
   snapToStep,
+  enumerateDiscreteValues,
   positionToValue,
   valueToPosition,
   getFillPercent,
@@ -60,6 +61,23 @@ describe('snapToStep', () => {
 
   it('handles zero step', () => {
     expect(snapToStep(5.5, 0, 0)).toBe(5.5);
+  });
+});
+
+describe('enumerateDiscreteValues', () => {
+  it('lists integer steps from min to max inclusive', () => {
+    expect(enumerateDiscreteValues(0, 15, 1)).toEqual([
+      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+    ]);
+    expect(enumerateDiscreteValues(1, 3, 1)).toEqual([1, 2, 3]);
+  });
+
+  it('handles a single step range', () => {
+    expect(enumerateDiscreteValues(5, 5, 1)).toEqual([5]);
+  });
+
+  it('returns min when step is zero', () => {
+    expect(enumerateDiscreteValues(3, 10, 0)).toEqual([3]);
   });
 });
 

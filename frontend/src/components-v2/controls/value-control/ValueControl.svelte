@@ -2,6 +2,7 @@
   import HBarRenderer from './HBarRenderer.svelte';
   import BipolarRenderer from './BipolarRenderer.svelte';
   import KnobRenderer from './KnobRenderer.svelte';
+  import DiscreteRenderer from './DiscreteRenderer.svelte';
 
   interface Props {
     value: number;
@@ -12,7 +13,7 @@
     fineStepDivisor?: number;
     label: string;
     displayFn?: (v: number) => string;
-    renderer: 'hbar' | 'bipolar' | 'knob';
+    renderer: 'hbar' | 'bipolar' | 'knob' | 'discrete';
     accentColor?: string;
     showValue?: boolean;
     showLabel?: boolean;
@@ -22,6 +23,8 @@
     arcAngle?: number;
     tickCount?: number;
     tickLabels?: string[];
+    /** Discrete renderer: when false, only draw ticks for the first tickLabels.length steps from min. */
+    showAllTicks?: boolean;
     // Behavior
     onChange: (value: number) => void;
     debounceMs?: number;
@@ -52,6 +55,7 @@
     arcAngle = 270,
     tickCount = 0,
     tickLabels = [],
+    showAllTicks = true,
     onChange,
     debounceMs = 50,
     disabled = false,
@@ -94,6 +98,12 @@
     tickCount,
     tickLabels,
   });
+
+  let discreteProps = $derived({
+    ...commonProps,
+    tickLabels,
+    showAllTicks,
+  });
 </script>
 
 {#if renderer === 'hbar'}
@@ -102,4 +112,6 @@
   <BipolarRenderer {...commonProps} />
 {:else if renderer === 'knob'}
   <KnobRenderer {...knobProps} />
+{:else if renderer === 'discrete'}
+  <DiscreteRenderer {...discreteProps} />
 {/if}

@@ -148,6 +148,12 @@
   // HBar disabled example
   let afLevelDisabled = $state(80);
 
+  // DiscreteRenderer examples — stepped controls
+  let discreteNrLevel = $state(8);
+  let discreteKeySpeed = $state(18);
+  let discretePreamp = $state(1);
+  let discreteAgc = $state(2);
+
   // Bipolar examples — real radio parameters
   let ritOffset = $state(0);         // RIT offset: -9999..+9999 Hz
   let xitOffset = $state(0);         // XIT offset
@@ -1078,6 +1084,76 @@
         disabled
         accentColor="var(--v2-accent-green)"
         onChange={() => {}}
+      />
+    </div>
+  </section>
+
+  <section class="demo-card">
+    <h2>DiscreteRenderer (stepped/snapped slider)</h2>
+    <p class="lab-note">
+      Snaps to discrete steps with tick marks and optional per-step labels. Same hardware-illuminated
+      chrome as <code>HBarRenderer</code>. Wheel adjusts by one step (Shift = fine). Double-click resets
+      when <code>defaultValue</code> is set.
+    </p>
+    <div class="vc-demo-grid">
+      <ValueControl
+        label="NR Level"
+        value={discreteNrLevel}
+        min={0}
+        max={15}
+        step={1}
+        defaultValue={0}
+        renderer="discrete"
+        variant="hardware-illuminated"
+        accentColor="var(--v2-accent-cyan)"
+        onChange={(v) => {
+          discreteNrLevel = v;
+        }}
+      />
+      <ValueControl
+        label="Key Speed"
+        value={discreteKeySpeed}
+        min={6}
+        max={48}
+        step={1}
+        defaultValue={18}
+        unit="WPM"
+        renderer="discrete"
+        variant="hardware-illuminated"
+        accentColor="var(--v2-accent-orange)"
+        onChange={(v) => {
+          discreteKeySpeed = v;
+        }}
+      />
+      <ValueControl
+        label="Preamp"
+        value={discretePreamp}
+        min={0}
+        max={2}
+        step={1}
+        defaultValue={0}
+        tickLabels={['OFF', '1', '2']}
+        renderer="discrete"
+        variant="hardware-illuminated"
+        accentColor="var(--v2-accent-green-bright)"
+        onChange={(v) => {
+          discretePreamp = v;
+        }}
+      />
+      <ValueControl
+        label="AGC"
+        value={discreteAgc}
+        min={1}
+        max={3}
+        step={1}
+        defaultValue={2}
+        tickLabels={['FAST', 'MID', 'SLOW']}
+        renderer="discrete"
+        variant="hardware-illuminated"
+        accentColor="var(--v2-accent-cyan)"
+        onChange={(v) => {
+          discreteAgc = v;
+        }}
       />
     </div>
   </section>
