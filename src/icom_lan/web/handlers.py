@@ -14,6 +14,7 @@ import time
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any, Protocol, cast
 
+from .._audio_codecs import decode_ulaw_to_pcm16
 from .._audio_transcoder import PcmOpusTranscoder, create_pcm_opus_transcoder
 from ..profiles import RadioProfile
 from ..radio_state import RadioState
@@ -1229,6 +1230,7 @@ class AudioBroadcaster:
         self._relay_task: asyncio.Task[None] | None = None
         self._seq: int = 0
         self._web_codec: int = AUDIO_CODEC_PCM16
+        self._radio_codec: AudioCodec | None = None
         self._sample_rate: int = 48000
         self._channels: int = 1
         self._lock = asyncio.Lock()
@@ -1286,6 +1288,7 @@ class AudioBroadcaster:
         _codec = getattr(self._radio, "audio_codec", None)
         if isinstance(_codec, AudioCodec):
             # Map radio codec → web transport codec
+            # For ulaw codecs, we transcode to PCM16 in _relay_loop
             _CODEC_MAP = {
                 AudioCodec.OPUS_1CH: AUDIO_CODEC_OPUS,
                 AudioCodec.OPUS_2CH: AUDIO_CODEC_OPUS,
@@ -1293,10 +1296,12 @@ class AudioBroadcaster:
                 AudioCodec.PCM_2CH_16BIT: AUDIO_CODEC_PCM16,
                 AudioCodec.PCM_1CH_8BIT: AUDIO_CODEC_PCM16,  # upcast in future
                 AudioCodec.PCM_2CH_8BIT: AUDIO_CODEC_PCM16,
-                AudioCodec.ULAW_1CH: AUDIO_CODEC_PCM16,  # TODO: decode ulaw→pcm
-                AudioCodec.ULAW_2CH: AUDIO_CODEC_PCM16,
+                AudioCodec.ULAW_1CH: AUDIO_CODEC_PCM16,  # decoded in _relay_loop
+                AudioCodec.ULAW_2CH: AUDIO_CODEC_PCM16,  # decoded in _relay_loop
             }
             self._web_codec = _CODEC_MAP.get(_codec, AUDIO_CODEC_PCM16)
+            # Store original codec for decoding logic
+            self._radio_codec = _codec
             if _codec in (
                 AudioCodec.PCM_2CH_8BIT,
                 AudioCodec.PCM_2CH_16BIT,
@@ -1348,6 +1353,19 @@ class AudioBroadcaster:
                         self._web_codec,
                         len(pkt.data),
                     )
+
+                # Decode audio data if needed
+                audio_data = pkt.data
+                if self._radio_codec in (AudioCodec.ULAW_1CH, AudioCodec.ULAW_2CH):
+                    try:
+                        audio_data = decode_ulaw_to_pcm16(audio_data)
+                    except Exception as e:
+                        logger.warning(
+                            "audio: failed to decode ulaw data: %s", e
+                        )
+                        # Fall back to original data
+                        audio_data = pkt.data
+
                 frame = encode_audio_frame(
                     MSG_TYPE_AUDIO_RX,
                     self._web_codec,
@@ -1355,7 +1373,7 @@ class AudioBroadcaster:
                     self._sample_rate // 100,
                     self._channels,
                     20,
-                    pkt.data,
+                    audio_data,
                 )
                 self._seq = (self._seq + 1) & 0xFFFF
                 dead_ids: list[int] = []
