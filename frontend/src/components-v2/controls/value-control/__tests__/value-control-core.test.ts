@@ -13,14 +13,12 @@ import {
   handleWheelStep,
   debounce,
   formatBipolarValue,
-  DUAL_PARAM_DEAD_LOW,
-  DUAL_PARAM_DEAD_HIGH,
-  dualParamZone,
-  dualParamRfFromX,
-  dualParamSqlFromX,
-  dualParamRfThumbPercent,
-  dualParamSqlThumbPercent,
-  dualParamPickSide,
+  DUAL_PARAM_CENTER_NORM,
+  dualParamValuesFromNormX,
+  dualParamNormXFromValues,
+  dualParamThumbPercent,
+  dualParamDeviationFromValues,
+  dualParamStepAlongAxis,
   calculateArcPath,
   calculateIndicatorPosition,
   generateTickPositions,
@@ -285,39 +283,43 @@ describe('debounce', () => {
   });
 });
 
-describe('dual RF/SQL bar mapping', () => {
-  it('places dead zone between configured edges', () => {
-    expect(dualParamZone(0.2)).toBe('rf');
-    expect(dualParamZone(0.5)).toBe('dead');
-    expect(dualParamZone(0.9)).toBe('sql');
+describe('dual RF/SQL single-thumb mapping', () => {
+  it('exposes center constant at 0.5', () => {
+    expect(DUAL_PARAM_CENTER_NORM).toBe(0.5);
   });
 
-  it('maps RF with max at left (x=0 → max)', () => {
-    expect(dualParamRfFromX(0, 0, 255, 1)).toBe(255);
-    expect(dualParamRfFromX(DUAL_PARAM_DEAD_LOW, 0, 255, 1)).toBe(0);
+  it('maps norm X to RF/SQL (left = RF min, center = RF max SQL min, right = both max)', () => {
+    expect(dualParamValuesFromNormX(0, 0, 255, 1)).toEqual({ rf: 0, sql: 0 });
+    expect(dualParamValuesFromNormX(0.5, 0, 255, 1)).toEqual({ rf: 255, sql: 0 });
+    expect(dualParamValuesFromNormX(1, 0, 255, 1)).toEqual({ rf: 255, sql: 255 });
+    expect(dualParamValuesFromNormX(0.25, 0, 255, 1)).toEqual({ rf: 128, sql: 0 });
+    expect(dualParamValuesFromNormX(0.75, 0, 255, 1)).toEqual({ rf: 255, sql: 128 });
   });
 
-  it('maps SQL with max at right', () => {
-    expect(dualParamSqlFromX(DUAL_PARAM_DEAD_HIGH, 0, 255, 1)).toBe(0);
-    expect(dualParamSqlFromX(1, 0, 255, 1)).toBe(255);
+  it('inverts values to norm X (SQL leg wins when SQL > min)', () => {
+    expect(dualParamNormXFromValues(0, 0, 0, 255)).toBeCloseTo(0, 5);
+    expect(dualParamNormXFromValues(255, 0, 0, 255)).toBeCloseTo(0.5, 5);
+    expect(dualParamNormXFromValues(255, 255, 0, 255)).toBeCloseTo(1, 5);
+    expect(dualParamNormXFromValues(100, 50, 0, 255)).toBeCloseTo(0.5 + 0.5 * (50 / 255), 5);
   });
 
-  it('thumb percents align with inner zone edges', () => {
-    expect(dualParamRfThumbPercent(255, 0, 255)).toBeCloseTo(0, 5);
-    expect(dualParamRfThumbPercent(0, 0, 255)).toBeCloseTo(DUAL_PARAM_DEAD_LOW * 100, 5);
-    expect(dualParamSqlThumbPercent(0, 0, 255)).toBeCloseTo(DUAL_PARAM_DEAD_HIGH * 100, 5);
-    expect(dualParamSqlThumbPercent(255, 0, 255)).toBe(100);
+  it('thumb percent follows norm X', () => {
+    expect(dualParamThumbPercent(0, 0, 0, 255)).toBeCloseTo(0, 5);
+    expect(dualParamThumbPercent(255, 0, 0, 255)).toBeCloseTo(50, 5);
+    expect(dualParamThumbPercent(255, 255, 0, 255)).toBeCloseTo(100, 5);
   });
 
-  it('picks closer side in dead zone', () => {
-    const midDead = (DUAL_PARAM_DEAD_LOW + DUAL_PARAM_DEAD_HIGH) / 2;
-    expect(midDead).toBeGreaterThan(DUAL_PARAM_DEAD_LOW);
-    expect(midDead).toBeLessThan(DUAL_PARAM_DEAD_HIGH);
-    // Thumbs at inner edges (RF min, SQL min): equidistant from center → RF wins on tie.
-    expect(dualParamPickSide(midDead, 0, 0, 0, 255)).toBe('rf');
-    // Nudge toward the SQL leg: SQL thumb is closer.
-    expect(dualParamPickSide(0.51, 255, 255, 0, 255)).toBe('sql');
-    expect(dualParamPickSide(0.49, 255, 255, 0, 255)).toBe('rf');
+  it('deviation is zero at center and one at extremes', () => {
+    expect(dualParamDeviationFromValues(255, 0, 0, 255)).toBeCloseTo(0, 5);
+    expect(dualParamDeviationFromValues(0, 0, 0, 255)).toBeCloseTo(1, 5);
+    expect(dualParamDeviationFromValues(255, 255, 0, 255)).toBeCloseTo(1, 5);
+  });
+
+  it('steps along axis from center (keyboard-style)', () => {
+    expect(dualParamStepAlongAxis(255, 0, -1, 1, 10, 0, 255, false)).toEqual({ rf: 254, sql: 0 });
+    expect(dualParamStepAlongAxis(255, 0, 1, 1, 10, 0, 255, false)).toEqual({ rf: 255, sql: 1 });
+    expect(dualParamStepAlongAxis(255, 5, -1, 1, 10, 0, 255, false)).toEqual({ rf: 255, sql: 4 });
+    expect(dualParamStepAlongAxis(100, 0, 1, 1, 10, 0, 255, false)).toEqual({ rf: 101, sql: 0 });
   });
 });
 

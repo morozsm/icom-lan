@@ -3,16 +3,11 @@
   import {
     clamp,
     snapToStep,
-    handleKeyboardStep,
     debounce,
-    DUAL_PARAM_DEAD_LOW,
-    DUAL_PARAM_DEAD_HIGH,
-    dualParamZone,
-    dualParamRfFromX,
-    dualParamSqlFromX,
-    dualParamRfThumbPercent,
-    dualParamSqlThumbPercent,
-    dualParamPickSide,
+    dualParamValuesFromNormX,
+    dualParamThumbPercent,
+    dualParamDeviationFromValues,
+    dualParamStepAlongAxis,
   } from './value-control-core';
 
   interface Props {
@@ -61,7 +56,6 @@
 
   let containerEl: HTMLDivElement | null = $state(null);
   let isDragging = $state(false);
-  let dragSide = $state<'rf' | 'sql' | null>(null);
   let wheelLocked = $state(false);
   let wheelUnlockTimer: ReturnType<typeof setTimeout> | null = null;
   let localRf = $state(rfValue);
@@ -96,16 +90,14 @@
     }
   });
 
-  let rfThumbPct = $derived(dualParamRfThumbPercent(localRf, min, max));
-  let sqlThumbPct = $derived(dualParamSqlThumbPercent(localSql, min, max));
-  let deadLowPct = $derived(DUAL_PARAM_DEAD_LOW * 100);
-  let deadHighPct = $derived(DUAL_PARAM_DEAD_HIGH * 100);
-  let absDeviation = $derived(
-    Math.max(
-      Math.abs(localRf - min) / Math.max(max - min, 1),
-      Math.abs(localSql - min) / Math.max(max - min, 1),
-    ),
-  );
+  let thumbPct = $derived(dualParamThumbPercent(localRf, localSql, min, max));
+  let absDeviation = $derived(dualParamDeviationFromValues(localRf, localSql, min, max));
+  let fillRatio = $derived(absDeviation);
+  let rfFillWidth = $derived(Math.max(0, 50 - thumbPct));
+  let sqlFillWidth = $derived(Math.max(0, thumbPct - 50));
+  let slitAccent = $derived(thumbPct <= 50 ? rfAccentColor : sqlAccentColor);
+
+  let adaptiveWheelMultiplier = $derived(Math.max(1, Math.ceil((max - min) / 255)));
 
   let debouncedRf = $derived.by<(...args: unknown[]) => void>(() => {
     if (debounceMs > 0) {
@@ -121,19 +113,16 @@
     return ((v: number) => onSqlChange(v)) as (...args: unknown[]) => void;
   });
 
-  function emitRf(newVal: number, immediate: boolean) {
-    if (newVal !== localRf) localRf = newVal;
-    if (newVal !== rfValue) {
-      if (immediate) onRfChange(newVal);
-      else debouncedRf(newVal);
+  function emitPair(nextRf: number, nextSql: number, immediate: boolean) {
+    if (nextRf !== localRf) localRf = nextRf;
+    if (nextSql !== localSql) localSql = nextSql;
+    if (nextRf !== rfValue) {
+      if (immediate) onRfChange(nextRf);
+      else debouncedRf(nextRf);
     }
-  }
-
-  function emitSql(newVal: number, immediate: boolean) {
-    if (newVal !== localSql) localSql = newVal;
-    if (newVal !== sqlValue) {
-      if (immediate) onSqlChange(newVal);
-      else debouncedSql(newVal);
+    if (nextSql !== sqlValue) {
+      if (immediate) onSqlChange(nextSql);
+      else debouncedSql(nextSql);
     }
   }
 
@@ -143,21 +132,9 @@
     return clamp((clientX - rect.left) / rect.width, 0, 1);
   }
 
-  function applyPointerAt(clientX: number, side: 'rf' | 'sql', immediate: boolean) {
-    const nx = normX(clientX);
-    if (side === 'rf') {
-      emitRf(dualParamRfFromX(nx, min, max, step), immediate);
-    } else {
-      emitSql(dualParamSqlFromX(nx, min, max, step), immediate);
-    }
-  }
-
-  function resolveDragSide(clientX: number): 'rf' | 'sql' {
-    const nx = normX(clientX);
-    const z = dualParamZone(nx);
-    if (z === 'rf') return 'rf';
-    if (z === 'sql') return 'sql';
-    return dualParamPickSide(nx, localRf, localSql, min, max);
+  function applyNormX(nx: number, immediate: boolean) {
+    const { rf, sql } = dualParamValuesFromNormX(nx, min, max, step);
+    emitPair(rf, sql, immediate);
   }
 
   function handlePointerDown(e: PointerEvent) {
@@ -166,13 +143,12 @@
     const target = e.currentTarget as HTMLElement;
     target.setPointerCapture(e.pointerId);
     isDragging = true;
-    dragSide = resolveDragSide(e.clientX);
-    applyPointerAt(e.clientX, dragSide, true);
+    applyNormX(normX(e.clientX), true);
   }
 
   function handlePointerMove(e: PointerEvent) {
-    if (!isDragging || disabled || !containerEl || !dragSide) return;
-    applyPointerAt(e.clientX, dragSide, true);
+    if (!isDragging || disabled || !containerEl) return;
+    applyNormX(normX(e.clientX), true);
   }
 
   function handlePointerUp(e: PointerEvent) {
@@ -180,63 +156,56 @@
     const target = e.currentTarget as HTMLElement;
     target.releasePointerCapture(e.pointerId);
     isDragging = false;
-    dragSide = null;
   }
 
   function handleWheel(e: WheelEvent) {
     if (disabled || !containerEl) return;
     e.preventDefault();
-    const side = resolveDragSide(e.clientX);
-    const wheelMultiplier = e.shiftKey ? 1 : 4;
-    const effectiveStep = e.shiftKey ? step / fineStepDivisor : step * wheelMultiplier;
-    const direction = e.deltaY > 0 ? -1 : 1;
-    if (side === 'rf') {
-      const next = clamp(
-        snapToStep(localRf + direction * effectiveStep, effectiveStep, min),
-        min,
-        max,
-      );
-      localRf = next;
-      markWheelActive();
-      onRfChange(next);
-    } else {
-      const next = clamp(
-        snapToStep(localSql + direction * effectiveStep, effectiveStep, min),
-        min,
-        max,
-      );
-      localSql = next;
-      markWheelActive();
-      onSqlChange(next);
-    }
+    const wheelMultiplier = e.shiftKey ? 1 : 4 * adaptiveWheelMultiplier;
+    const wheelStep = e.shiftKey ? step / fineStepDivisor : step * wheelMultiplier;
+    const direction = (e.deltaY > 0 ? -1 : 1) as 1 | -1;
+    const { rf, sql } = dualParamStepAlongAxis(
+      localRf,
+      localSql,
+      direction,
+      wheelStep,
+      fineStepDivisor,
+      min,
+      max,
+      false,
+    );
+    localRf = rf;
+    localSql = sql;
+    markWheelActive();
+    if (rf !== rfValue) onRfChange(rf);
+    if (sql !== sqlValue) onSqlChange(sql);
   }
 
   function handleKeyDown(e: KeyboardEvent) {
     if (disabled) return;
-    // Horizontal arrows: RF (left zone). Vertical arrows: squelch (right zone).
-    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-      const next = handleKeyboardStep(localRf, e.key, step, fineStepDivisor, min, max, e.shiftKey);
-      if (next !== null) {
-        e.preventDefault();
-        emitRf(next, false);
-      }
-      return;
-    }
-    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-      const key = e.key === 'ArrowUp' ? 'ArrowRight' : 'ArrowLeft';
-      const next = handleKeyboardStep(localSql, key, step, fineStepDivisor, min, max, e.shiftKey);
-      if (next !== null) {
-        e.preventDefault();
-        emitSql(next, false);
-      }
-    }
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    const direction = (e.key === 'ArrowRight' ? 1 : -1) as 1 | -1;
+    const { rf, sql } = dualParamStepAlongAxis(
+      localRf,
+      localSql,
+      direction,
+      step,
+      fineStepDivisor,
+      min,
+      max,
+      e.shiftKey,
+    );
+    if (rf === localRf && sql === localSql) return;
+    e.preventDefault();
+    emitPair(rf, sql, false);
   }
 
   function handleDoubleClick() {
     if (disabled) return;
-    emitRf(max, true);
-    emitSql(min, true);
+    emitPair(max, min, true);
   }
+
+  let ariaNow = $derived(Math.round(thumbPct));
 </script>
 
 <div
@@ -251,11 +220,10 @@
     --vc-rf-accent: {rfAccentColor};
     --vc-sql-accent: {sqlAccentColor};
     --vc-track-color: {trackColor};
-    --vc-dead-low: {deadLowPct}%;
-    --vc-dead-high: {deadHighPct}%;
-    --vc-rf-thumb: {rfThumbPct}%;
-    --vc-sql-thumb: {sqlThumbPct}%;
+    --vc-thumb-pct: {thumbPct}%;
+    --vc-fill-ratio: {fillRatio};
     --vc-abs-deviation: {absDeviation};
+    --vc-slit-accent: {slitAccent};
   "
 >
   {#if showValues}
@@ -267,10 +235,13 @@
 
   <div
     class="vc-track-container"
-    role="group"
+    role="slider"
     tabindex={disabled ? -1 : 0}
     data-control="rf-sql-dual"
-    aria-label="RF gain and squelch. Arrow left and right adjust RF; arrow up and down adjust squelch."
+    aria-label="RF gain and squelch (single control). Center is default; left reduces RF; right adds squelch."
+    aria-valuemin={0}
+    aria-valuemax={100}
+    aria-valuenow={ariaNow}
     aria-valuetext="RF {localRf}, squelch {localSql}"
     aria-disabled={disabled}
     onpointerdown={handlePointerDown}
@@ -285,26 +256,32 @@
       <div class="hil-frame" aria-hidden="true">
         <div class="hil-channel">
           <div class="hil-slot-base"></div>
-          <div class="hil-fill-rf"></div>
-          <div class="hil-dead"></div>
-          <div class="hil-fill-sql"></div>
+          <div
+            class="hil-fill-rf"
+            style="left: {thumbPct}%; width: {rfFillWidth}%; opacity: {rfFillWidth > 0 ? 1 : 0};"
+          ></div>
+          <div
+            class="hil-fill-sql"
+            style="left: 50%; width: {sqlFillWidth}%; opacity: {sqlFillWidth > 0 ? 1 : 0};"
+          ></div>
         </div>
       </div>
-      <div class="hil-thumb hil-thumb-rf" aria-hidden="true">
-        <div class="hil-slit hil-slit-rf"></div>
-      </div>
-      <div class="hil-thumb hil-thumb-sql" aria-hidden="true">
-        <div class="hil-slit hil-slit-sql"></div>
+      <div class="hil-thumb" aria-hidden="true">
+        <div class="hil-slit"></div>
       </div>
     {:else}
       <div class="vc-track" aria-hidden="true">
         <div class="vc-track-base"></div>
-        <div class="hil-fill-rf vc-fill-fallback"></div>
-        <div class="hil-dead vc-fill-fallback"></div>
-        <div class="hil-fill-sql vc-fill-fallback"></div>
+        <div
+          class="vc-fill-rf"
+          style="left: {thumbPct}%; width: {rfFillWidth}%; opacity: {rfFillWidth > 0 ? 1 : 0};"
+        ></div>
+        <div
+          class="vc-fill-sql"
+          style="left: 50%; width: {sqlFillWidth}%; opacity: {sqlFillWidth > 0 ? 1 : 0};"
+        ></div>
       </div>
-      <div class="vc-thumb vc-thumb-rf" aria-hidden="true"></div>
-      <div class="vc-thumb vc-thumb-sql" aria-hidden="true"></div>
+      <div class="vc-thumb" aria-hidden="true"></div>
     {/if}
   </div>
 
@@ -380,9 +357,9 @@
     border: 2px solid var(--vc-illum-frame-border);
     background: transparent;
     box-shadow:
-      0 0 14px color-mix(in srgb, var(--vc-illum-glow-primary) calc(14% + 0.21 * var(--vc-abs-deviation, 0.5) * 100%), transparent),
-      0 0 28px color-mix(in srgb, var(--vc-illum-glow-primary) calc(7% + 0.11 * var(--vc-abs-deviation, 0.5) * 100%), transparent),
-      inset 0 0 10px color-mix(in srgb, var(--vc-illum-glow-primary) calc(6% + 0.09 * var(--vc-abs-deviation, 0.5) * 100%), transparent),
+      0 0 14px color-mix(in srgb, var(--vc-illum-glow-primary) calc(14% + 0.21 * var(--vc-abs-deviation, 0) * 100%), transparent),
+      0 0 28px color-mix(in srgb, var(--vc-illum-glow-primary) calc(7% + 0.11 * var(--vc-abs-deviation, 0) * 100%), transparent),
+      inset 0 0 10px color-mix(in srgb, var(--vc-illum-glow-primary) calc(6% + 0.09 * var(--vc-abs-deviation, 0) * 100%), transparent),
       inset 0 1px 0 var(--vc-illum-frame-inset-highlight),
       inset 0 -1px 0 var(--vc-illum-frame-inset-shadow);
     pointer-events: none;
@@ -414,13 +391,11 @@
   .hw-illum .hil-fill-rf {
     position: absolute;
     top: 50%;
-    left: var(--vc-rf-thumb);
-    width: calc(var(--vc-dead-low) - var(--vc-rf-thumb));
     height: var(--vc-illum-slot-height);
     transform: translateY(-50%);
     border-radius: var(--vc-slot-radius, 1.5px);
     background: linear-gradient(
-      90deg,
+      270deg,
       color-mix(in srgb, var(--vc-rf-accent) calc(55% + 40% * var(--vc-abs-deviation)), transparent),
       color-mix(in srgb, var(--vc-rf-accent) calc(28% + 35% * var(--vc-abs-deviation)), transparent)
     );
@@ -428,13 +403,12 @@
       0 0 8px color-mix(in srgb, var(--vc-rf-accent) calc(22% + 50% * var(--vc-abs-deviation)), transparent),
       0 0 14px color-mix(in srgb, var(--vc-rf-accent) calc(10% + 25% * var(--vc-abs-deviation)), transparent);
     pointer-events: none;
+    transition: opacity 0.08s ease-out;
   }
 
   .hw-illum .hil-fill-sql {
     position: absolute;
     top: 50%;
-    left: var(--vc-dead-high);
-    width: calc(var(--vc-sql-thumb) - var(--vc-dead-high));
     height: var(--vc-illum-slot-height);
     transform: translateY(-50%);
     border-radius: var(--vc-slot-radius, 1.5px);
@@ -447,23 +421,12 @@
       0 0 8px color-mix(in srgb, var(--vc-sql-accent) calc(22% + 50% * var(--vc-abs-deviation)), transparent),
       0 0 14px color-mix(in srgb, var(--vc-sql-accent) calc(10% + 25% * var(--vc-abs-deviation)), transparent);
     pointer-events: none;
-  }
-
-  .hw-illum .hil-dead {
-    position: absolute;
-    top: 50%;
-    left: var(--vc-dead-low);
-    width: calc(var(--vc-dead-high) - var(--vc-dead-low));
-    height: var(--vc-illum-slot-height);
-    transform: translateY(-50%);
-    border-radius: 1px;
-    background: color-mix(in srgb, var(--v2-bg-gradient-start) 88%, transparent);
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--v2-text-light) 12%, transparent);
-    pointer-events: none;
+    transition: opacity 0.08s ease-out;
   }
 
   .hw-illum .hil-thumb {
     position: absolute;
+    left: var(--vc-thumb-pct);
     top: 50%;
     transform: translate(-50%, -50%);
     width: var(--vc-illum-thumb-width);
@@ -484,7 +447,11 @@
       var(--vc-illum-thumb-grad-mid-1) 92%,
       var(--vc-illum-thumb-grad-dark) 100%
     );
-    border: 1px solid var(--vc-illum-thumb-border);
+    border: 1px solid color-mix(
+      in srgb,
+      var(--vc-slit-accent) 40%,
+      var(--vc-illum-thumb-border)
+    );
     box-shadow:
       var(--vc-illum-thumb-shadow-deep),
       var(--vc-illum-thumb-shadow-mid),
@@ -496,16 +463,6 @@
       var(--vc-illum-thumb-outline);
   }
 
-  .hw-illum .hil-thumb-rf {
-    left: var(--vc-rf-thumb);
-    border-color: color-mix(in srgb, var(--vc-rf-accent) 55%, var(--vc-illum-thumb-border));
-  }
-
-  .hw-illum .hil-thumb-sql {
-    left: var(--vc-sql-thumb);
-    border-color: color-mix(in srgb, var(--vc-sql-accent) 55%, var(--vc-illum-thumb-border));
-  }
-
   .hw-illum .hil-slit {
     position: absolute;
     top: 3px;
@@ -515,16 +472,8 @@
     transform: translateX(-50%);
     border-radius: 1px;
     pointer-events: none;
-  }
-
-  .hw-illum .hil-slit-rf {
-    background: color-mix(in srgb, var(--vc-rf-accent) calc(50% + 45% * var(--vc-abs-deviation)), transparent);
-    box-shadow: 0 0 6px color-mix(in srgb, var(--vc-rf-accent) 35%, transparent);
-  }
-
-  .hw-illum .hil-slit-sql {
-    background: color-mix(in srgb, var(--vc-sql-accent) calc(50% + 45% * var(--vc-abs-deviation)), transparent);
-    box-shadow: 0 0 6px color-mix(in srgb, var(--vc-sql-accent) 35%, transparent);
+    background: color-mix(in srgb, var(--vc-slit-accent) calc(50% + 45% * var(--vc-abs-deviation)), transparent);
+    box-shadow: 0 0 6px color-mix(in srgb, var(--vc-slit-accent) 35%, transparent);
   }
 
   .hw-illum .vc-track-container:hover .hil-thumb {
@@ -583,26 +532,30 @@
     background: var(--vc-track-color);
   }
 
-  .vc-fill-fallback.hil-fill-rf {
+  .vc-fill-rf,
+  .vc-fill-sql {
+    position: absolute;
     top: 50%;
     height: var(--vc-bar-height, 4px);
     transform: translateY(-50%);
+    border-radius: 999px;
+    pointer-events: none;
+    transition: opacity 0.08s ease-out;
   }
 
-  .vc-fill-fallback.hil-fill-sql {
-    top: 50%;
-    height: var(--vc-bar-height, 4px);
-    transform: translateY(-50%);
+  .vc-fill-rf {
+    background: var(--vc-rf-accent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--vc-rf-accent) 25%, transparent);
   }
 
-  .vc-fill-fallback.hil-dead {
-    top: 50%;
-    height: var(--vc-bar-height, 4px);
-    transform: translateY(-50%);
+  .vc-fill-sql {
+    background: var(--vc-sql-accent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--vc-sql-accent) 25%, transparent);
   }
 
   .vc-thumb {
     position: absolute;
+    left: var(--vc-thumb-pct);
     top: 50%;
     transform: translate(-50%, -50%);
     width: var(--vc-thumb-size, 10px);
@@ -610,16 +563,12 @@
     border-radius: 2px;
     background: var(--v2-text-white);
     pointer-events: none;
+    border: 1px solid color-mix(in srgb, var(--vc-slit-accent) 55%, var(--v2-text-dim));
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--vc-slit-accent) 8%, transparent);
   }
 
-  .vc-thumb-rf {
-    left: var(--vc-rf-thumb);
-    border: 1px solid var(--vc-rf-accent);
-  }
-
-  .vc-thumb-sql {
-    left: var(--vc-sql-thumb);
-    border: 1px solid var(--vc-sql-accent);
+  .hardware .vc-track-container {
+    min-height: var(--vc-control-height, 28px);
   }
 
   .vc-axis {

@@ -221,80 +221,117 @@ export function formatBipolarValue(value: number): string {
   return value > 0 ? `+${value}` : `${value}`;
 }
 
-/** Normalized X (0–1) where the RF zone ends and dead zone begins. */
-export const DUAL_PARAM_DEAD_LOW = 0.475;
+/**
+ * Single-thumb RF / SQL track: normalized X (0 = far left, 0.5 = center default, 1 = far right).
+ *
+ * - [0, 0.5]: RF sweeps min→max, SQL stays at min.
+ * - [0.5, 1]: RF stays at max, SQL sweeps min→max.
+ */
 
-/** Normalized X where dead zone ends and SQL zone begins. */
-export const DUAL_PARAM_DEAD_HIGH = 0.525;
-
-export type DualParamZone = 'rf' | 'sql' | 'dead';
-
-export function dualParamZone(normX: number): DualParamZone {
-  if (normX < DUAL_PARAM_DEAD_LOW) return 'rf';
-  if (normX > DUAL_PARAM_DEAD_HIGH) return 'sql';
-  return 'dead';
-}
+/** Center position (RF at max, SQL at min). */
+export const DUAL_PARAM_CENTER_NORM = 0.5;
 
 /**
- * RF leg: hardware max at left. normX is 0 at track left, `DUAL_PARAM_DEAD_LOW` at inner edge.
+ * Map pointer position to RF and SQL. At center: RF=max, SQL=min.
  */
-export function dualParamRfFromX(
+export function dualParamValuesFromNormX(
   normX: number,
   min: number,
   max: number,
   step: number,
-): number {
-  const span = DUAL_PARAM_DEAD_LOW;
-  const t = clamp(normX / span, 0, 1);
-  const raw = max - t * (max - min);
-  return snapToStep(clamp(raw, min, max), step, min);
+): { rf: number; sql: number } {
+  const nx = clamp(normX, 0, 1);
+  const range = max - min;
+  if (range === 0) {
+    const v = snapToStep(min, step, min);
+    return { rf: v, sql: v };
+  }
+  if (nx <= DUAL_PARAM_CENTER_NORM) {
+    const t = nx / DUAL_PARAM_CENTER_NORM;
+    const rf = snapToStep(min + t * range, step, min);
+    return { rf: clamp(rf, min, max), sql: min };
+  }
+  const t = (nx - DUAL_PARAM_CENTER_NORM) / DUAL_PARAM_CENTER_NORM;
+  const sql = snapToStep(min + t * range, step, min);
+  return { rf: max, sql: clamp(sql, min, max) };
 }
 
 /**
- * SQL leg: max at right. normX from `DUAL_PARAM_DEAD_HIGH` to 1.
+ * Inverse mapping for display. If SQL is above min, assume right leg (RF forced to max).
  */
-export function dualParamSqlFromX(
-  normX: number,
+export function dualParamNormXFromValues(
+  rf: number,
+  sql: number,
   min: number,
   max: number,
+): number {
+  const range = max - min;
+  if (range === 0) return DUAL_PARAM_CENTER_NORM;
+  if (sql > min) {
+    const t = clamp((sql - min) / range, 0, 1);
+    return DUAL_PARAM_CENTER_NORM + DUAL_PARAM_CENTER_NORM * t;
+  }
+  const t = clamp((rf - min) / range, 0, 1);
+  return DUAL_PARAM_CENTER_NORM * t;
+}
+
+/** Thumb center along track (0–100%). */
+export function dualParamThumbPercent(rf: number, sql: number, min: number, max: number): number {
+  return dualParamNormXFromValues(rf, sql, min, max) * 100;
+}
+
+/**
+ * Glow / emphasis: 0 at center (default), 1 at either end.
+ */
+export function dualParamDeviationFromValues(
+  rf: number,
+  sql: number,
+  min: number,
+  max: number,
+): number {
+  const nx = dualParamNormXFromValues(rf, sql, min, max);
+  return clamp(Math.abs(nx - DUAL_PARAM_CENTER_NORM) * 2, 0, 1);
+}
+
+/**
+ * Move one step along the combined axis (wheel / ← →). Scroll-up convention: direction +1.
+ */
+export function dualParamStepAlongAxis(
+  rf: number,
+  sql: number,
+  direction: 1 | -1,
   step: number,
-): number {
-  const span = 1 - DUAL_PARAM_DEAD_HIGH;
-  const t = clamp((normX - DUAL_PARAM_DEAD_HIGH) / span, 0, 1);
-  const raw = min + t * (max - min);
-  return snapToStep(clamp(raw, min, max), step, min);
-}
-
-/** Thumb center position along full track (0–100%). */
-export function dualParamRfThumbPercent(value: number, min: number, max: number): number {
-  const range = max - min;
-  if (range === 0) return 0;
-  const t = (value - min) / range;
-  return (1 - t) * DUAL_PARAM_DEAD_LOW * 100;
-}
-
-export function dualParamSqlThumbPercent(value: number, min: number, max: number): number {
-  const range = max - min;
-  if (range === 0) return DUAL_PARAM_DEAD_HIGH * 100;
-  const t = (value - min) / range;
-  return (DUAL_PARAM_DEAD_HIGH + t * (1 - DUAL_PARAM_DEAD_HIGH)) * 100;
-}
-
-/**
- * When clicking the dead zone, pick the closer thumb leg (normalized coordinates).
- */
-export function dualParamPickSide(
-  normX: number,
-  rfValue: number,
-  sqlValue: number,
+  fineStepDivisor: number,
   min: number,
   max: number,
-): 'rf' | 'sql' {
-  const rfN = dualParamRfThumbPercent(rfValue, min, max) / 100;
-  const sqlN = dualParamSqlThumbPercent(sqlValue, min, max) / 100;
-  const dRf = Math.abs(normX - rfN);
-  const dSql = Math.abs(normX - sqlN);
-  return dRf <= dSql ? 'rf' : 'sql';
+  shiftKey: boolean,
+): { rf: number; sql: number } {
+  const effStep = shiftKey ? step / fineStepDivisor : step;
+  if (effStep <= 0) {
+    return { rf, sql };
+  }
+
+  if (sql > min) {
+    const newSql = clamp(snapToStep(sql + direction * effStep, effStep, min), min, max);
+    return { rf: max, sql: newSql };
+  }
+
+  if (direction > 0) {
+    if (rf < max) {
+      const newRf = clamp(snapToStep(rf + effStep, effStep, min), min, max);
+      return { rf: newRf, sql: min };
+    }
+    const newSql = clamp(snapToStep(sql + effStep, effStep, min), min, max);
+    return { rf: max, sql: newSql };
+  }
+
+  if (rf < max) {
+    const newRf = clamp(snapToStep(rf - effStep, effStep, min), min, max);
+    return { rf: newRf, sql: min };
+  }
+
+  const newRf = clamp(snapToStep(rf - effStep, effStep, min), min, max);
+  return { rf: newRf, sql: min };
 }
 
 /**
