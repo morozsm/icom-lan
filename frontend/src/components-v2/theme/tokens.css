@@ -252,34 +252,8 @@
   --v2-vfo-main-control-glow: rgba(0, 212, 255, 0.08);
   --v2-vfo-sub-control-glow: rgba(255, 255, 255, 0.10);
 
-  /* ── Badge Type Colors ──────────────────────────────────── */
-  /* Per-badge color tokens for theme/radio-specific customization */
-  /* Fallback chain: --v2-badge-{receiver}-{type}-color → --v2-badge-{type}-color → --v2-receiver-{receiver}-accent */
-  --v2-badge-atu-color: #00CC66;
-  --v2-badge-pre-color: #00D4FF;
-  --v2-badge-att-color: #00D4FF;
-  --v2-badge-nr-color: #00D4FF;
-  --v2-badge-nb-color: #00D4FF;
-  --v2-badge-anf-color: #00D4FF;
-  --v2-badge-notch-color: #FF6A00;
-  --v2-badge-comp-color: #00D4FF;
-  --v2-badge-vox-color: #00D4FF;
-  --v2-badge-bkin-color: #00D4FF;
-  --v2-badge-apf-color: #00D4FF;
-  --v2-badge-digi-sel-color: #00D4FF;
-  --v2-badge-ip-plus-color: #00D4FF;
-  --v2-badge-split-color: #FF6A00;
-  --v2-badge-dual-watch-color: #00D4FF;
-  --v2-badge-data-color: #00D4FF;
-  --v2-badge-pbt-color: #00D4FF;
-  --v2-badge-agc-color: #00D4FF;
-  --v2-badge-rit-color: #FF6A00;
-  --v2-badge-xit-color: #FF6A00;
-  --v2-badge-mon-color: #00D4FF;
-  --v2-badge-tune-color: #FF2020;
-  --v2-badge-lock-color: #FF6A00;
-  --v2-badge-scope-color: #00D4FF;
-  --v2-badge-default-color: #00D4FF;
+  /* ── Badge Type Colors (REMOVED - duplicates semantic tokens above) ── */
+  /* Semantic badge colors are now defined above (lines 128-138) using color names */
 
   /* ── VFO Frequency Display Colors ───────────────────────── */
   /* Per-receiver frequency display customization */
