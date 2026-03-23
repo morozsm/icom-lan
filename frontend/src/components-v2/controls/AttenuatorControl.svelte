@@ -1,6 +1,5 @@
 <script lang="ts">
-  import './control-button.css';
-  import { SegmentedControl } from '$lib/SegmentedControl';
+  import { HardwareButton } from '$lib/Button';
   import {
     buildAttControlModel,
     getAttOverflowLabel,
@@ -54,26 +53,30 @@
  </script>
 
 <div class="att-control" style="--control-accent: {accentColor};" data-shortcut-hint={shortcutHint ?? undefined} title={title ?? shortcutHint ?? undefined}>
-  <SegmentedControl
-    options={controlModel.quickOptions}
-    selected={selected}
-    onchange={handleQuickChange}
-    accentColor={accentColor}
-  />
+  <div class="button-grid">
+    {#each controlModel.quickOptions as option}
+      <HardwareButton
+        active={selected === option.value}
+        indicator="edge-left"
+        color="cyan"
+        onclick={() => handleQuickChange(option.value)}
+      >
+        {option.label}
+      </HardwareButton>
+    {/each}
+  </div>
 
   {#if controlModel.overflowOptions.length > 0}
-    <button
-      type="button"
-      class="more-button v2-control-button"
-      class:active={overflowSelected}
-      bind:this={moreButtonEl}
-      onclick={openMenu}
-      aria-haspopup="dialog"
-      aria-expanded={menuOpen}
-      aria-label="More attenuator values"
-    >
-      {overflowLabel}
-    </button>
+    <div bind:this={moreButtonEl}>
+      <HardwareButton
+        active={overflowSelected}
+        indicator="edge-left"
+        color="cyan"
+        onclick={openMenu}
+      >
+        {overflowLabel}
+      </HardwareButton>
+    </div>
   {/if}
 
   {#if menuOpen}
@@ -88,14 +91,14 @@
       <div class="menu-title">ATT Values</div>
       <div class="menu-grid">
         {#each controlModel.overflowOptions as option}
-          <button
-            type="button"
-            class="menu-item v2-control-button"
-            class:active={option.value === selected}
+          <HardwareButton
+            active={option.value === selected}
+            indicator="edge-left"
+            color="cyan"
             onclick={() => handleOverflowSelect(option.value)}
           >
             {option.label}
-          </button>
+          </HardwareButton>
         {/each}
       </div>
     </div>
@@ -113,19 +116,14 @@
     width: 100%;
   }
 
-  .att-control :global(.segmented-button) {
-    width: 100%;
+  .button-grid {
+    display: flex;
+    gap: 4px;
   }
 
-  .att-control :global(.segment) {
+  .button-grid > :global(button) {
     flex: 1 1 0;
     min-width: 0;
-    text-transform: none;
-  }
-
-  .more-button {
-    width: 100%;
-    text-transform: none;
   }
 
   .menu-backdrop {
@@ -165,7 +163,7 @@
     gap: 6px;
   }
 
-  .menu-item {
-    text-transform: none;
+  .menu-grid > :global(button) {
+    min-width: 0;
   }
 </style>
