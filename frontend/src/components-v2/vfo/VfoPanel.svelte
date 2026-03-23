@@ -178,7 +178,7 @@
     border-radius: var(--vfo-panel-badge-radius, 3px);
     color: var(--v2-accent-green-bright);
     background: var(--v2-vfo-badge-active-bg);
-    font-size: var(--vfo-control-badge-font-size, 7px);
+    font-size: var(--vfo-header-badge-font-size, 7px);
     font-weight: 700;
     letter-spacing: 0.08em;
   }
