@@ -732,7 +732,7 @@ raw_max = 255
 
 [controls.nr_level]
 raw_min = 0
-raw_max = 255
+raw_max = 15
 
 [controls.nb_level]
 raw_min = 0

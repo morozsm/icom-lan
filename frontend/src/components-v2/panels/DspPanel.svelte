@@ -297,10 +297,9 @@
       label="NR Level"
       value={nrLevel}
       min={0}
-      max={255}
+      max={15}
       step={1}
       renderer="hbar"
-      displayFn={rawToPercentDisplay}
       accentColor="var(--v2-accent-cyan)"
       onChange={onNrLevelChange}
       variant="hardware-illuminated"
