@@ -1,6 +1,5 @@
 <script lang="ts">
   import { radio } from '$lib/stores/radio.svelte';
-  import { formatStep, getTuningStep, isAutoStep } from '$lib/stores/tuning.svelte';
   import { getCapabilities } from '$lib/stores/capabilities.svelte';
   import RfFrontEnd from '../panels/RfFrontEnd.svelte';
   import ModePanel from '../panels/ModePanel.svelte';
@@ -9,7 +8,6 @@
   import RitXitPanel from '../panels/RitXitPanel.svelte';
   import BandSelector from '../controls/BandSelector.svelte';
   import CollapsiblePanel from '../controls/CollapsiblePanel.svelte';
-  import { getShortcutHint } from './shortcut-hints';
   import {
     toRfFrontEndProps,
     toModeProps,
@@ -39,14 +37,6 @@
   let agc = $derived(toAgcProps(radioState, caps));
   let ritXit = $derived(toRitXitProps(radioState, caps));
   let band = $derived(toBandSelectorProps(radioState));
-  let tuningStep = $derived(getTuningStep());
-  let tuningStepLabel = $derived(formatStep(tuningStep));
-  let autoStep = $derived(isAutoStep());
-  const stepUpHint = getShortcutHint('adjust_tuning_step', (binding) => binding.params?.direction === 'up');
-  const stepDownHint = getShortcutHint('adjust_tuning_step', (binding) => binding.params?.direction === 'down');
-  const tuneLeftHint = getShortcutHint('tune', (binding) => binding.sequence?.[0] === 'ArrowLeft');
-  const tuneRightHint = getShortcutHint('tune', (binding) => binding.sequence?.[0] === 'ArrowRight');
-
   // Command handlers via command-bus
   const rfHandlers = makeRfFrontEndHandlers();
   const modeHandlers = makeModeHandlers();
@@ -58,21 +48,6 @@
 </script>
 
 <aside class="left-sidebar">
-  <CollapsiblePanel title="TUNING STEP" panelId="tuning-step">
-    <div class="step-content">
-      <div class="step-header-row">
-        <span class="step-mode">{autoStep ? 'AUTO' : 'MANUAL'}</span>
-      </div>
-      <div class="step-value">{tuningStepLabel}</div>
-      <div class="step-hints">
-        <span class="step-chip" data-shortcut-hint={tuneLeftHint ?? undefined} title={tuneLeftHint ?? undefined}>LEFT</span>
-        <span class="step-chip" data-shortcut-hint={tuneRightHint ?? undefined} title={tuneRightHint ?? undefined}>RIGHT</span>
-        <span class="step-chip" data-shortcut-hint={stepDownHint ?? undefined} title={stepDownHint ?? undefined}>DOWN</span>
-        <span class="step-chip" data-shortcut-hint={stepUpHint ?? undefined} title={stepUpHint ?? undefined}>UP</span>
-      </div>
-    </div>
-  </CollapsiblePanel>
-
   <CollapsiblePanel title="RF FRONT END" panelId="rf-front-end" dataPanel="rf-frontend">
     <RfFrontEnd
       rfGain={rfFrontEnd.rfGain}
@@ -172,56 +147,5 @@
     box-sizing: border-box;
   }
 
-  .step-content {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
 
-    font-family: 'Roboto Mono', monospace;
-  }
-
-  .step-header-row {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 8px;
-  }
-
-  .step-mode {
-    color: var(--v2-accent-cyan);
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-  }
-
-  .step-mode {
-    color: var(--v2-accent-cyan);
-  }
-
-  .step-value {
-    color: var(--v2-text-primary);
-    font-size: 20px;
-    font-weight: 700;
-    letter-spacing: 0.03em;
-  }
-
-  .step-hints {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 4px;
-  }
-
-  .step-chip {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 24px;
-    border: 1px solid var(--v2-border);
-    border-radius: 999px;
-    background: var(--v2-sidebar-footer-bg);
-    color: var(--v2-text-secondary);
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-  }
 </style>

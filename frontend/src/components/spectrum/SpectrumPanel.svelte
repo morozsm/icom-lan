@@ -18,6 +18,7 @@
   import { patchActiveReceiver, radio } from '../../lib/stores/radio.svelte';
   import { getFilterWidthHz } from '../../lib/utils/filter-width';
   import { snapToStep } from '../../lib/stores/tuning.svelte';
+  import SpectrumToolbar from './SpectrumToolbar.svelte';
   import { deriveIfShift } from '../../components-v2/panels/filter-controls';
   import { getCapabilities } from '../../lib/stores/capabilities.svelte';
   import { resolveFilterModeConfig } from '../../components-v2/wiring/state-adapter';
@@ -197,11 +198,6 @@
     sendCommand('set_freq', { freq, receiver });
   }
 
-  // --- Fullscreen toggle ---
-  function toggleFullscreen(): void {
-    fullscreen = !fullscreen;
-  }
-
   // --- Lifecycle: connect scope WS + subscribe to DX spots ---
   onMount(() => {
     // Scope data arrives on its own WebSocket channel
@@ -248,6 +244,7 @@
 <svelte:window onpointermove={handleWindowPointerMove} onpointerup={stopPassbandResize} onpointercancel={stopPassbandResize} />
 
 <div class="spectrum-panel" class:fullscreen>
+  <SpectrumToolbar bind:enableAvg bind:enablePeakHold bind:refLevel bind:colorScheme bind:fullscreen />
   <div class="spectrum-with-scales">
     <div class="db-scale">
       {#each DB_TICKS as tick}
@@ -301,39 +298,6 @@
       {/if}
     </div>
   </div>
-  <div class="spectrum-controls">
-    <label class="spectrum-option">
-      <input type="checkbox" bind:checked={enableAvg} />
-      Avg
-    </label>
-    <label class="spectrum-option">
-      <input type="checkbox" bind:checked={enablePeakHold} />
-      Peak
-    </label>
-    <label class="ref-level-control">
-      Ref
-      <input
-        type="range"
-        min="-30"
-        max="30"
-        step="5"
-        value={refLevel}
-        oninput={(e) => (refLevel = +(e.target as HTMLInputElement).value)}
-      />
-      <span class="value">{refLevel > 0 ? '+' : ''}{refLevel}</span>
-    </label>
-    <label class="color-scheme-selector">
-      Colors
-      <select bind:value={colorScheme}>
-        <option value="classic">Classic</option>
-        <option value="thermal">Thermal</option>
-        <option value="grayscale">Gray</option>
-      </select>
-    </label>
-  </div>
-  <button class="fullscreen-btn" onclick={toggleFullscreen} title="Toggle fullscreen">
-    {fullscreen ? '✕' : '⛶'}
-  </button>
 </div>
 
 <style>
@@ -430,111 +394,6 @@
     flex: 1 1 auto;
     min-width: 0;
     position: relative;
-  }
-
-  .spectrum-controls {
-    position: absolute;
-    top: var(--space-2);
-    right: 36px;
-    z-index: 10;
-    display: flex;
-    gap: var(--space-2);
-  }
-
-  .spectrum-option {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    cursor: pointer;
-    background: rgba(0, 0, 0, 0.5);
-    border: 1px solid var(--panel-border);
-    border-radius: var(--radius);
-    padding: 2px 6px;
-    user-select: none;
-  }
-
-  .spectrum-option:hover {
-    color: var(--text);
-  }
-
-  .spectrum-option input[type='checkbox'] {
-    margin: 0;
-    cursor: pointer;
-  }
-
-  .ref-level-control {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    background: rgba(0, 0, 0, 0.5);
-    border: 1px solid var(--panel-border);
-    border-radius: var(--radius);
-    padding: 2px 6px;
-  }
-
-  .ref-level-control input[type='range'] {
-    width: 60px;
-    cursor: pointer;
-    accent-color: var(--accent);
-  }
-
-  .ref-level-control .value {
-    min-width: 28px;
-    text-align: right;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .color-scheme-selector {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    background: rgba(0, 0, 0, 0.5);
-    border: 1px solid var(--panel-border);
-    border-radius: var(--radius);
-    padding: 2px 6px;
-  }
-
-  .color-scheme-selector select {
-    background: transparent;
-    border: none;
-    color: var(--text-muted);
-    font-size: 0.75rem;
-    cursor: pointer;
-    padding: 0;
-  }
-
-  .color-scheme-selector select:focus {
-    outline: none;
-  }
-
-  .fullscreen-btn {
-    position: absolute;
-    top: var(--space-2);
-    right: var(--space-2);
-    z-index: 10;
-    background: rgba(0, 0, 0, 0.5);
-    border: 1px solid var(--panel-border);
-    border-radius: var(--radius);
-    color: var(--text-muted);
-    font-size: 0.875rem;
-    width: 28px;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    padding: 0;
-  }
-
-  .fullscreen-btn:hover {
-    color: var(--text);
-    border-color: var(--accent);
   }
 
   /* Tuning line + passband overlay on waterfall */
