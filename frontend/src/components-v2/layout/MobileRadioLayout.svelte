@@ -414,47 +414,34 @@
       <section class="m-section">
         <CollapsiblePanel title="TX" panelId="m-tx" collapsible={true}>
           <div class="m-tx-compact">
-            <!-- Left: info + controls -->
-            <div class="m-tx-left">
-              <!-- Power readout -->
-              <div class="m-tx-info">
-                <div class="m-tx-power">
-                  <span class="m-tx-power-label">PWR</span>
-                  <span class="m-tx-power-value">{formatPower(tx.rfPower)}</span>
-                </div>
-                {#if tx.txActive || pttActive}
-                  <div class="m-tx-swr">
-                    <span class="m-tx-power-label">SWR</span>
-                    <span class="m-tx-power-value">{meter.swr > 0 ? (meter.swr / 10).toFixed(1) : '—'}</span>
-                  </div>
-                {/if}
-              </div>
-
-              <div class="m-tx-buttons">
-                <!-- ATU: short tap = toggle, long press = tune -->
-                <button
-                  class="m-atu-btn"
-                  class:m-atu-on={atuStatus === 'on'}
-                  class:m-atu-tuning={atuStatus === 'tuning'}
-                  ontouchstart={atuTouchStart}
-                  ontouchend={atuTouchEnd}
-                  ontouchcancel={atuTouchEnd}
-                  onmousedown={atuTouchStart}
-                  onmouseup={atuTouchEnd}
-                >
-                  <RadioIcon size={14} />
-                  <span>ATU</span>
-                </button>
-
-                <!-- TX settings -->
-                <button class="m-tx-settings-btn" onclick={() => (txSettingsOpen = true)}>
-                  <Sliders size={14} />
-                  <span>SET</span>
-                </button>
-              </div>
+            <!-- Power readout -->
+            <div class="m-tx-info">
+              <span class="m-tx-power-value">{formatPower(tx.rfPower)}</span>
+              {#if tx.txActive || pttActive}
+                <span class="m-tx-swr-value">SWR {meter.swr > 0 ? (meter.swr / 10).toFixed(1) : '—'}</span>
+              {/if}
             </div>
 
-            <!-- Right: big PTT button -->
+            <!-- ATU -->
+            <button
+              class="m-atu-btn"
+              class:m-atu-on={atuStatus === 'on'}
+              class:m-atu-tuning={atuStatus === 'tuning'}
+              ontouchstart={atuTouchStart}
+              ontouchend={atuTouchEnd}
+              ontouchcancel={atuTouchEnd}
+              onmousedown={atuTouchStart}
+              onmouseup={atuTouchEnd}
+            >
+              ATU
+            </button>
+
+            <!-- TX settings -->
+            <button class="m-tx-settings-btn" onclick={() => (txSettingsOpen = true)}>
+              <Sliders size={14} />
+            </button>
+
+            <!-- PTT (wider) -->
             <button
               class="m-ptt-btn"
               class:m-ptt-held={pttMode === 'held'}
@@ -467,14 +454,13 @@
               onmouseleave={() => { if (pttMode === 'held') pttUp(); }}
             >
               {#if pttMode === 'latched'}
-                <MicOff size={24} />
-                <span>TX LOCK</span>
+                <MicOff size={18} />
+                TX LOCK
               {:else if pttMode === 'held'}
-                <Mic size={24} />
-                <span>TX</span>
+                TX
               {:else}
-                <Mic size={24} />
-                <span>PTT</span>
+                <Mic size={18} />
+                PTT
               {/if}
             </button>
           </div>
@@ -941,34 +927,22 @@
   .m-tx-compact {
     display: flex;
     align-items: stretch;
-    gap: 8px;
-    padding: 8px;
-  }
-
-  .m-tx-left {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    flex: 1;
-    min-width: 0;
-  }
-
-  .m-tx-buttons {
-    display: flex;
     gap: 4px;
+    padding: 8px;
+    min-height: 44px;
   }
+
+  
 
   .m-ptt-btn {
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 4px;
-    min-width: 90px;
-    width: 90px;
-    min-height: 72px;
-    padding: 8px 12px;
-    border-radius: 8px;
+    gap: 6px;
+    flex: 1.5;
+    min-height: 44px;
+    padding: 4px 16px;
+    border-radius: 4px;
     border: 2px solid var(--v2-accent-red, #ef4444);
     background: rgba(239, 68, 68, 0.15);
     color: var(--v2-accent-red, #ef4444);
@@ -1006,33 +980,27 @@
 
   .m-tx-info {
     display: flex;
-    align-items: baseline;
-    gap: 12px;
-    min-width: 0;
-  }
-
-  .m-tx-power,
-  .m-tx-swr {
-    display: flex;
-    align-items: baseline;
-    gap: 6px;
-  }
-
-  .m-tx-power-label {
-    font-family: 'Roboto Mono', monospace;
-    font-size: 9px;
-    font-weight: 700;
-    color: var(--v2-text-dim, #555);
-    letter-spacing: 0.08em;
-    min-width: 28px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    padding: 0 4px;
   }
 
   .m-tx-power-value {
     font-family: 'Roboto Mono', monospace;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 700;
     color: var(--v2-text-primary, #ddd);
     letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+
+  .m-tx-swr-value {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 9px;
+    color: var(--v2-text-dim, #888);
+    white-space: nowrap;
   }
 
   .m-atu-btn {
@@ -1040,9 +1008,9 @@
     align-items: center;
     justify-content: center;
     gap: 4px;
-    flex: 1;
-    min-height: 36px;
-    padding: 4px 8px;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 4px 10px;
     border-radius: 4px;
     border: 1px solid var(--v2-text-dim, #444);
     background: var(--v2-bg-input, #1a1a2e);
@@ -1078,9 +1046,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 4px;
-    flex: 1;
-    min-height: 36px;
+    min-width: 44px;
+    min-height: 44px;
     padding: 4px 8px;
     border-radius: 4px;
     border: 1px solid var(--v2-border-darker, #333);
