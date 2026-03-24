@@ -251,7 +251,7 @@
 
 {#if visible && segments().length > 0}
 <div class="bandplan-overlay" aria-hidden="true" bind:clientWidth={containerWidth}>
-  {#each segments() as seg (seg.start + seg.layer)}
+  {#each segments() as seg, idx (seg.start + ':' + seg.layer + ':' + idx)}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
       class="band-segment"

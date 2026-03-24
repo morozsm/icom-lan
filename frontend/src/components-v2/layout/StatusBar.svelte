@@ -82,8 +82,10 @@
     if (!freq || Math.abs(freq - lastIdentifiedFreq) < 500) return;
 
     // Debounce: wait 800ms after freq stops changing
+    // Don't update while popup is expanded (prevents flicker)
     if (identifyTimer) clearTimeout(identifyTimer);
     identifyTimer = setTimeout(async () => {
+      if (nowPlayingExpanded) return;
       lastIdentifiedFreq = freq;
       try {
         const resp = await fetch(`/api/v1/eibi/identify?freq=${freq}`);
@@ -151,23 +153,39 @@
       <div class="now-playing" onclick={() => (nowPlayingExpanded = !nowPlayingExpanded)}>
         <span class="np-icon">📻</span>
         <span class="np-station">{nowPlaying.station}</span>
-        <span class="np-lang">{nowPlaying.language_name}</span>
+        <span class="np-lang">{nowPlaying.city ? `${nowPlaying.city}, ${nowPlaying.state}` : nowPlaying.language_name}</span>
         {#if nowPlaying.on_air}<span class="np-live">LIVE</span>{/if}
       </div>
       {#if nowPlayingExpanded}
         <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <div class="np-detail" onclick={(e) => { if (e.target === e.currentTarget) nowPlayingExpanded = false; }}>
-          <div class="np-detail-grid">
-            <span class="np-label">Station:</span><span>{nowPlaying.station}</span>
-            <span class="np-label">Frequency:</span><span>{nowPlaying.freq_khz} kHz</span>
-            <span class="np-label">Language:</span><span>{nowPlaying.language_name}</span>
-            <span class="np-label">Country:</span><span>{nowPlaying.country}</span>
-            <span class="np-label">Target:</span><span>{nowPlaying.target}</span>
-            <span class="np-label">Schedule:</span><span>{nowPlaying.time_str} UTC {nowPlaying.days || '(daily)'}</span>
-            <span class="np-label">Band:</span><span>{nowPlaying.band}</span>
-            {#if nowPlaying.remarks}
-              <span class="np-label">TX Site:</span><span>{nowPlaying.remarks}</span>
-            {/if}
+        <div class="np-backdrop" onclick={() => (nowPlayingExpanded = false)}>
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div class="np-detail" onclick={(e) => e.stopPropagation()}>
+            <div class="np-detail-header">
+              <span>📻 {nowPlaying.station}</span>
+              <button class="np-close" onclick={() => (nowPlayingExpanded = false)}>✕</button>
+            </div>
+            <div class="np-detail-grid">
+              <span class="np-label">Frequency:</span><span>{nowPlaying.freq_khz} kHz</span>
+              {#if nowPlaying.city}
+                <span class="np-label">Location:</span><span>{nowPlaying.city}, {nowPlaying.state}</span>
+              {/if}
+              <span class="np-label">Language:</span><span>{nowPlaying.language_name}</span>
+              {#if !nowPlaying.city}
+                <span class="np-label">Country:</span><span>{nowPlaying.country}</span>
+                <span class="np-label">Target:</span><span>{nowPlaying.target}</span>
+              {/if}
+              {#if nowPlaying.time_str !== 'local'}
+                <span class="np-label">Schedule:</span><span>{nowPlaying.time_str} UTC {nowPlaying.days || '(daily)'}</span>
+              {/if}
+              <span class="np-label">Band:</span><span>{nowPlaying.band}</span>
+              {#if nowPlaying.remarks}
+                <span class="np-label">Details:</span><span>{nowPlaying.remarks}</span>
+              {/if}
+              {#if nowPlaying.source}
+                <span class="np-label">Source:</span><span class="np-source">{nowPlaying.source}</span>
+              {/if}
+            </div>
           </div>
         </div>
       {/if}
@@ -368,26 +386,61 @@
     flex-shrink: 0;
   }
 
+  .np-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+  }
+
   .np-detail {
-    position: absolute;
-    bottom: 100%;
+    position: fixed;
+    top: 36px;
     left: 50%;
     transform: translateX(-50%);
-    margin-bottom: 6px;
     background: var(--v2-bg-primary, #0f0f1a);
-    border: 1px solid rgba(192, 132, 252, 0.3);
-    border-radius: 6px;
-    padding: 10px 14px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-    z-index: 100;
-    min-width: 250px;
-    white-space: nowrap;
+    border: 1px solid rgba(192, 132, 252, 0.4);
+    border-radius: 8px;
+    padding: 0;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+    z-index: 1000;
+    min-width: 280px;
+    max-width: 400px;
+  }
+
+  .np-detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(192, 132, 252, 0.2);
+    font-size: 13px;
+    font-weight: 600;
+    color: #C084FC;
+  }
+
+  .np-close {
+    background: none;
+    border: none;
+    color: var(--v2-text-dim, #666);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0 2px;
+  }
+
+  .np-close:hover {
+    color: #ff4444;
+  }
+
+  .np-source {
+    font-size: 9px;
+    color: var(--v2-text-dim, #555);
   }
 
   .np-detail-grid {
     display: grid;
     grid-template-columns: auto 1fr;
-    gap: 3px 10px;
+    gap: 4px 12px;
+    padding: 10px 12px;
     font-size: 11px;
     color: var(--v2-text-primary, #ccc);
   }
