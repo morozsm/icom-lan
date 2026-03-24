@@ -36,12 +36,12 @@
   <button
     class="band-tab"
     class:active={bandMode === 'ham'}
-    onclick={() => { bandMode = 'ham'; }}
+    onclick={(e: MouseEvent) => { bandMode = 'ham'; (e.currentTarget as HTMLElement)?.blur(); }}
   >HAM</button>
   <button
     class="band-tab"
     class:active={bandMode === 'broadcast'}
-    onclick={() => { bandMode = 'broadcast'; }}
+    onclick={(e: MouseEvent) => { bandMode = 'broadcast'; (e.currentTarget as HTMLElement)?.blur(); }}
   >SWL</button>
 </div>
 
@@ -98,6 +98,13 @@
     text-transform: uppercase;
     cursor: pointer;
     transition: color 0.15s, border-color 0.15s;
+    -webkit-tap-highlight-color: transparent;
+    outline: none;
+  }
+
+  .band-tab:focus-visible {
+    outline: 1px solid var(--v2-accent-cyan);
+    outline-offset: -1px;
   }
 
   .band-tab:hover {
