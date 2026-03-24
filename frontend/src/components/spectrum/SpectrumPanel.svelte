@@ -200,6 +200,64 @@
     sendCommand('set_freq', { freq, receiver });
   }
 
+  // --- Drag-to-pan (grab and slide the spectrum window) ---
+  let dragging = $state(false);
+  let dragStartX = $state(0);
+  let dragStartFreq = $state(0);
+  let dragPointerId = $state<number | null>(null);
+  let lastDragSendTime = 0;
+  const DRAG_THROTTLE_MS = 50; // limit set_freq rate during drag
+
+  function handleDragStart(event: PointerEvent): void {
+    // Only left button, skip if resizing passband
+    if (event.button !== 0 || resizingPassband) return;
+    // Don't start drag if clicking a button/control inside the area
+    if ((event.target as HTMLElement).closest('button, select, input')) return;
+
+    dragStartX = event.clientX;
+    dragStartFreq = tuneHz;
+    dragPointerId = event.pointerId;
+    // Don't set dragging=true yet — wait for threshold
+  }
+
+  const DRAG_THRESHOLD_PX = 5; // min pixels before drag activates (allows click-through)
+
+  function handleDragMove(event: PointerEvent): void {
+    if (dragPointerId === null || dragPointerId !== event.pointerId) return;
+    if (spanHz <= 0 || !spectrumArea) return;
+
+    const dx = event.clientX - dragStartX;
+
+    // Activate drag only after threshold (so clicks still work for click-to-tune)
+    if (!dragging) {
+      if (Math.abs(dx) < DRAG_THRESHOLD_PX) return;
+      dragging = true;
+      (event.target as HTMLElement)?.closest('.spectrum-area, .waterfall-content')
+        ?.setPointerCapture?.(event.pointerId);
+    }
+
+    const rect = spectrumArea.getBoundingClientRect();
+    // Drag left = freq goes up (spectrum window slides right)
+    const hzPerPx = spanHz / rect.width;
+    const deltaHz = -dx * hzPerPx;
+    const newFreq = snapToStep(Math.round(dragStartFreq + deltaHz));
+
+    if (newFreq <= 0 || newFreq === tuneHz) return;
+
+    const now = performance.now();
+    if (now - lastDragSendTime < DRAG_THROTTLE_MS) return;
+    lastDragSendTime = now;
+
+    const receiver = radio.current?.active === 'SUB' ? 1 : 0;
+    sendCommand('set_freq', { freq: newFreq, receiver });
+  }
+
+  function handleDragEnd(event: PointerEvent): void {
+    if (dragPointerId !== null && event.pointerId !== dragPointerId) return;
+    dragging = false;
+    dragPointerId = null;
+  }
+
   // --- Lifecycle: connect scope WS + subscribe to DX spots ---
   onMount(() => {
     // Scope data arrives on its own WebSocket channel
@@ -243,7 +301,11 @@
   });
 </script>
 
-<svelte:window onpointermove={handleWindowPointerMove} onpointerup={stopPassbandResize} onpointercancel={stopPassbandResize} />
+<svelte:window
+  onpointermove={(e) => { handleWindowPointerMove(e); handleDragMove(e); }}
+  onpointerup={(e) => { stopPassbandResize(e); handleDragEnd(e); }}
+  onpointercancel={(e) => { stopPassbandResize(e); handleDragEnd(e); }}
+/>
 
 <div class="spectrum-panel" class:fullscreen>
   <SpectrumToolbar bind:enableAvg bind:enablePeakHold bind:refLevel bind:colorScheme bind:fullscreen bind:showBandPlan />
@@ -253,7 +315,7 @@
         <div class="tick" style="top: {tick.position}%">{tick.label}</div>
       {/each}
     </div>
-    <div class="spectrum-area" bind:this={spectrumArea}>
+    <div class="spectrum-area" class:panning={dragging} bind:this={spectrumArea} onpointerdown={handleDragStart}>
       <BandPlanOverlay {startFreq} {endFreq} visible={showBandPlan} />
       <SpectrumCanvas data={scopePixels} options={spectrumOptions} {spanHz} {enableAvg} {enablePeakHold} onRegisterPush={(fn) => spectrumPush = fn} />
       {#if spanHz > 0 && pbWidthPct > 0 && canResizePassband}
@@ -278,7 +340,7 @@
   {/if}
   <div class="waterfall-area">
     <div class="waterfall-scale"></div>
-    <div class="waterfall-content" bind:this={waterfallContent}>
+    <div class="waterfall-content" class:panning={dragging} bind:this={waterfallContent} onpointerdown={handleDragStart}>
       <WaterfallCanvas options={waterfallOptions} onFreqClick={handleTune} onRegisterPush={(fn) => waterfallPush = fn} />
       <DxOverlay spots={dxSpots} {startFreq} {endFreq} onTune={handleTune} />
       <!-- Tuning + passband indicator overlays the waterfall -->
@@ -353,6 +415,11 @@
     min-width: 0;
     min-height: 0;
     position: relative;
+    cursor: grab;
+  }
+
+  .spectrum-area.panning {
+    cursor: grabbing;
   }
 
   .freq-axis {
@@ -397,6 +464,11 @@
     flex: 1 1 auto;
     min-width: 0;
     position: relative;
+    cursor: grab;
+  }
+
+  .waterfall-content.panning {
+    cursor: grabbing;
   }
 
   /* Tuning line + passband overlay on waterfall */
