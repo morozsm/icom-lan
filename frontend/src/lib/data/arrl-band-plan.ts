@@ -151,8 +151,24 @@ export const ARRL_HF_BANDS: BandPlan[] = [
   },
 ];
 
-/** ITU Shortwave broadcast bands */
+/** ITU Broadcast bands (LW + MW + SW) */
 export const BROADCAST_SW_BANDS: BandPlan[] = [
+  {
+    band: 'LW BC',
+    startHz: 148_500,
+    endHz: 283_500,
+    segments: [
+      { startHz: 148_500, endHz: 283_500, mode: 'broadcast', label: 'LW' },
+    ],
+  },
+  {
+    band: 'MW BC',
+    startHz: 526_500,
+    endHz: 1_606_500,
+    segments: [
+      { startHz: 526_500, endHz: 1_606_500, mode: 'broadcast', label: 'MW' },
+    ],
+  },
   {
     band: '120m BC',
     startHz: 2_300_000,
