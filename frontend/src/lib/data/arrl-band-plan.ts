@@ -1,4 +1,4 @@
-export type BandSegmentMode = 'cw' | 'digital' | 'phone' | 'beacon';
+export type BandSegmentMode = 'cw' | 'digital' | 'phone' | 'beacon' | 'broadcast';
 
 export interface BandSegment {
   /** Start frequency in Hz */
@@ -24,26 +24,29 @@ export interface BandPlan {
 
 /** Segment colors for rendering */
 export const SEGMENT_COLORS: Record<BandSegmentMode, string> = {
-  cw:      'rgba(255, 106, 0, 0.20)',     // orange
-  digital: 'rgba(74, 222, 128, 0.20)',     // green
-  phone:   'rgba(96, 165, 250, 0.20)',     // blue
-  beacon:  'rgba(250, 204, 21, 0.20)',     // yellow
+  cw:        'rgba(255, 106, 0, 0.20)',      // orange
+  digital:   'rgba(74, 222, 128, 0.20)',      // green
+  phone:     'rgba(96, 165, 250, 0.20)',      // blue
+  beacon:    'rgba(250, 204, 21, 0.20)',      // yellow
+  broadcast: 'rgba(192, 132, 252, 0.20)',     // purple
 };
 
 /** Border colors (slightly more opaque for segment boundaries) */
 export const SEGMENT_BORDER_COLORS: Record<BandSegmentMode, string> = {
-  cw:      'rgba(255, 106, 0, 0.5)',
-  digital: 'rgba(74, 222, 128, 0.5)',
-  phone:   'rgba(96, 165, 250, 0.5)',
-  beacon:  'rgba(250, 204, 21, 0.5)',
+  cw:        'rgba(255, 106, 0, 0.5)',
+  digital:   'rgba(74, 222, 128, 0.5)',
+  phone:     'rgba(96, 165, 250, 0.5)',
+  beacon:    'rgba(250, 204, 21, 0.5)',
+  broadcast: 'rgba(192, 132, 252, 0.5)',
 };
 
 /** Label colors */
 export const SEGMENT_LABEL_COLORS: Record<BandSegmentMode, string> = {
-  cw:      'rgb(255, 150, 50)',
-  digital: 'rgb(74, 222, 128)',
-  phone:   'rgb(96, 165, 250)',
-  beacon:  'rgb(250, 204, 21)',
+  cw:        'rgb(255, 150, 50)',
+  digital:   'rgb(74, 222, 128)',
+  phone:     'rgb(96, 165, 250)',
+  beacon:    'rgb(250, 204, 21)',
+  broadcast: 'rgb(192, 132, 252)',
 };
 
 export const ARRL_HF_BANDS: BandPlan[] = [
@@ -148,14 +151,132 @@ export const ARRL_HF_BANDS: BandPlan[] = [
   },
 ];
 
+/** ITU Shortwave broadcast bands */
+export const BROADCAST_SW_BANDS: BandPlan[] = [
+  {
+    band: '120m BC',
+    startHz: 2_300_000,
+    endHz: 2_495_000,
+    segments: [
+      { startHz: 2_300_000, endHz: 2_495_000, mode: 'broadcast', label: '120m' },
+    ],
+  },
+  {
+    band: '90m BC',
+    startHz: 3_200_000,
+    endHz: 3_400_000,
+    segments: [
+      { startHz: 3_200_000, endHz: 3_400_000, mode: 'broadcast', label: '90m' },
+    ],
+  },
+  {
+    band: '75m BC',
+    startHz: 3_900_000,
+    endHz: 4_000_000,
+    segments: [
+      { startHz: 3_900_000, endHz: 4_000_000, mode: 'broadcast', label: '75m' },
+    ],
+  },
+  {
+    band: '60m BC',
+    startHz: 4_750_000,
+    endHz: 5_060_000,
+    segments: [
+      { startHz: 4_750_000, endHz: 5_060_000, mode: 'broadcast', label: '60m' },
+    ],
+  },
+  {
+    band: '49m BC',
+    startHz: 5_900_000,
+    endHz: 6_200_000,
+    segments: [
+      { startHz: 5_900_000, endHz: 6_200_000, mode: 'broadcast', label: '49m' },
+    ],
+  },
+  {
+    band: '41m BC',
+    startHz: 7_200_000,
+    endHz: 7_450_000,
+    segments: [
+      { startHz: 7_200_000, endHz: 7_450_000, mode: 'broadcast', label: '41m' },
+    ],
+  },
+  {
+    band: '31m BC',
+    startHz: 9_400_000,
+    endHz: 9_900_000,
+    segments: [
+      { startHz: 9_400_000, endHz: 9_900_000, mode: 'broadcast', label: '31m' },
+    ],
+  },
+  {
+    band: '25m BC',
+    startHz: 11_600_000,
+    endHz: 12_100_000,
+    segments: [
+      { startHz: 11_600_000, endHz: 12_100_000, mode: 'broadcast', label: '25m' },
+    ],
+  },
+  {
+    band: '22m BC',
+    startHz: 13_570_000,
+    endHz: 13_870_000,
+    segments: [
+      { startHz: 13_570_000, endHz: 13_870_000, mode: 'broadcast', label: '22m' },
+    ],
+  },
+  {
+    band: '19m BC',
+    startHz: 15_100_000,
+    endHz: 15_800_000,
+    segments: [
+      { startHz: 15_100_000, endHz: 15_800_000, mode: 'broadcast', label: '19m' },
+    ],
+  },
+  {
+    band: '16m BC',
+    startHz: 17_480_000,
+    endHz: 17_900_000,
+    segments: [
+      { startHz: 17_480_000, endHz: 17_900_000, mode: 'broadcast', label: '16m' },
+    ],
+  },
+  {
+    band: '15m BC',
+    startHz: 18_900_000,
+    endHz: 19_020_000,
+    segments: [
+      { startHz: 18_900_000, endHz: 19_020_000, mode: 'broadcast', label: '15m BC' },
+    ],
+  },
+  {
+    band: '13m BC',
+    startHz: 21_450_000,
+    endHz: 21_850_000,
+    segments: [
+      { startHz: 21_450_000, endHz: 21_850_000, mode: 'broadcast', label: '13m' },
+    ],
+  },
+  {
+    band: '11m BC',
+    startHz: 25_600_000,
+    endHz: 26_100_000,
+    segments: [
+      { startHz: 25_600_000, endHz: 26_100_000, mode: 'broadcast', label: '11m' },
+    ],
+  },
+];
+
+/** All band plans combined */
+const ALL_BANDS: BandPlan[] = [...ARRL_HF_BANDS, ...BROADCAST_SW_BANDS];
+
 /** Find all segments visible in the given frequency range */
 export function getVisibleSegments(
   startHz: number,
   endHz: number,
 ): { segment: BandSegment; band: string }[] {
   const result: { segment: BandSegment; band: string }[] = [];
-  for (const band of ARRL_HF_BANDS) {
-    // Quick range check: skip entire band if no overlap
+  for (const band of ALL_BANDS) {
     if (band.endHz < startHz || band.startHz > endHz) continue;
     for (const seg of band.segments) {
       if (seg.endHz > startHz && seg.startHz < endHz) {
