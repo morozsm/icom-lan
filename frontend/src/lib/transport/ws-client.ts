@@ -224,11 +224,46 @@ _ctrl.onStateChange((s) => {
   setWsConnected(s === 'connected');
   setReconnecting(s === 'connecting' || s === 'reconnecting');
 });
+// Delta state tracking for incremental updates
+let _fullState: Record<string, unknown> = {};
+
+function applyDeltaEnvelope(envelope: Record<string, unknown>): Record<string, unknown> | null {
+  const deltaType = envelope.type as string;
+
+  if (deltaType === 'full') {
+    // Full state refresh — replace everything
+    _fullState = { ...(envelope.data as Record<string, unknown>) };
+    // Carry revision at top level for setRadioState
+    _fullState.revision = envelope.revision as number;
+    return _fullState;
+  }
+
+  if (deltaType === 'delta') {
+    // Incremental update — apply changed fields, remove deleted keys
+    const changed = (envelope.changed ?? {}) as Record<string, unknown>;
+    const removed = (envelope.removed ?? []) as string[];
+
+    Object.assign(_fullState, changed);
+    for (const key of removed) {
+      delete _fullState[key];
+    }
+    // Update revision
+    _fullState.revision = envelope.revision as number;
+    return _fullState;
+  }
+
+  // Legacy format (no delta envelope) — plain state object
+  return envelope;
+}
+
 _ctrl.onMessage((msg) => {
   if (msg.type === 'state_update' && msg.data) {
-    setRadioState(msg.data as any);
-    setHttpConnected(true);
-    markStateUpdated();
+    const state = applyDeltaEnvelope(msg.data as Record<string, unknown>);
+    if (state) {
+      setRadioState(state as any);
+      setHttpConnected(true);
+      markStateUpdated();
+    }
   }
 });
 
