@@ -430,9 +430,10 @@ class WebServer:
 
         body = self.build_public_state()
 
-        # Encode state as delta to reduce bandwidth
-        delta = self._delta_encoder.encode(body)
-        event = {"type": "state_update", "data": delta}
+        # NOTE: Delta encoding disabled — frontend does not support it yet.
+        # When the frontend ws-client.ts handles {type: "delta", changed: {...}},
+        # re-enable: delta = self._delta_encoder.encode(body)
+        event = {"type": "state_update", "data": body}
 
         for q in list(self._control_event_queues):
             try:
