@@ -49,7 +49,12 @@
   let txCapable = $derived(hasTx());
   let dualReceiver = $derived(hasDualReceiver());
   let windowWidth = $state(typeof window !== 'undefined' ? window.innerWidth : 1200);
-  let isMobile = $derived(windowWidth < 640);
+  let windowHeight = $state(typeof window !== 'undefined' ? window.innerHeight : 800);
+  // Mobile = narrow portrait OR short landscape (touch device rotated)
+  let isMobile = $derived(
+    Math.min(windowWidth, windowHeight) < 640 ||
+    ('ontouchstart' in globalThis && Math.min(windowWidth, windowHeight) < 500)
+  );
   let isLandscape = $state(false);
   let landscapeSpectrumDismissed = $state(false);
   let landscapeAutoLocked = $state(false);
@@ -93,6 +98,7 @@
 
     const handleResize = () => {
       windowWidth = window.innerWidth;
+      windowHeight = window.innerHeight;
     };
     window.addEventListener('resize', handleResize);
 
