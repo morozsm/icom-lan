@@ -2,6 +2,12 @@
   import { getTuningStep, adjustTuningStep, isAutoStep, formatStep } from '../../lib/stores/tuning.svelte';
   import { type ColorSchemeName } from '../../lib/renderers/waterfall-renderer';
 
+  interface LayerInfo {
+    name: string;
+    layer: string;
+    file: string;
+  }
+
   let {
     enableAvg = $bindable(true),
     enablePeakHold = $bindable(true),
@@ -9,7 +15,39 @@
     colorScheme = $bindable('classic' as ColorSchemeName),
     fullscreen = $bindable(false),
     showBandPlan = $bindable(true),
+    hiddenLayers = $bindable([] as string[]),
   } = $props();
+
+  let layerDropdownOpen = $state(false);
+  let availableLayers = $state<LayerInfo[]>([]);
+
+  // Fetch available layers from REST API
+  async function fetchLayers() {
+    try {
+      const resp = await fetch('/api/v1/band-plan/layers');
+      if (resp.ok) {
+        const data = await resp.json();
+        availableLayers = data.layers ?? [];
+      }
+    } catch { /* ignore */ }
+  }
+
+  // Load on mount
+  if (typeof window !== 'undefined') {
+    fetchLayers();
+  }
+
+  function toggleLayer(layer: string) {
+    if (hiddenLayers.includes(layer)) {
+      hiddenLayers = hiddenLayers.filter(l => l !== layer);
+    } else {
+      hiddenLayers = [...hiddenLayers, layer];
+    }
+  }
+
+  function isLayerVisible(layer: string): boolean {
+    return !hiddenLayers.includes(layer);
+  }
 
   let stepHz = $derived(getTuningStep());
   let stepLabel = $derived(formatStep(stepHz));
@@ -60,9 +98,33 @@
     </select>
   </div>
   <div class="toolbar-separator"></div>
-  <button class="toolbar-btn" class:active={showBandPlan} onclick={() => (showBandPlan = !showBandPlan)} title="Show/hide band plan overlay">
-    BANDS
-  </button>
+  <div class="toolbar-group bands-group">
+    <button class="toolbar-btn" class:active={showBandPlan} onclick={() => (showBandPlan = !showBandPlan)} title="Show/hide band plan overlay">
+      BANDS
+    </button>
+    {#if showBandPlan && availableLayers.length > 1}
+      <button
+        class="toolbar-btn small layer-toggle-btn"
+        onclick={() => (layerDropdownOpen = !layerDropdownOpen)}
+        title="Select visible layers"
+      >▾</button>
+      {#if layerDropdownOpen}
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <div class="layer-dropdown" onmouseleave={() => (layerDropdownOpen = false)}>
+          {#each availableLayers as layer}
+            <label class="layer-option">
+              <input
+                type="checkbox"
+                checked={isLayerVisible(layer.layer)}
+                onchange={() => toggleLayer(layer.layer)}
+              />
+              <span class="layer-name">{layer.name}</span>
+            </label>
+          {/each}
+        </div>
+      {/if}
+    {/if}
+  </div>
   <div class="toolbar-spacer"></div>
   <button class="toolbar-btn icon-btn" onclick={() => (fullscreen = !fullscreen)} title="Toggle fullscreen">
     {fullscreen ? '✕' : '⛶'}
@@ -185,5 +247,54 @@
     height: 22px;
     justify-content: center;
     padding: 0;
+  }
+
+  .bands-group {
+    position: relative;
+  }
+
+  .layer-toggle-btn {
+    padding: 2px 3px !important;
+    min-width: 16px !important;
+    font-size: 9px !important;
+  }
+
+  .layer-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 100;
+    min-width: 160px;
+    background: var(--v2-bg-darkest, #0a0a0f);
+    border: 1px solid var(--v2-border, #2a2a3e);
+    border-radius: 4px;
+    padding: 4px 0;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+    margin-top: 2px;
+  }
+
+  .layer-option {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    cursor: pointer;
+    color: var(--v2-text-primary, #e0e0e0);
+    font-size: 10px;
+    white-space: nowrap;
+  }
+
+  .layer-option:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .layer-option input[type="checkbox"] {
+    accent-color: #00d4ff;
+    width: 12px;
+    height: 12px;
+  }
+
+  .layer-name {
+    font-family: 'Roboto Mono', monospace;
   }
 </style>

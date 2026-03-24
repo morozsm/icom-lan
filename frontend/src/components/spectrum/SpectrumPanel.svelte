@@ -66,6 +66,17 @@
   let endFreq = $state(0);
   let fullscreen = $state(false);
   let showBandPlan = $state(true);
+  let hiddenLayers = $state<string[]>(
+    typeof localStorage !== 'undefined'
+      ? JSON.parse(localStorage.getItem('icom-lan-hidden-layers') || '[]')
+      : []
+  );
+  // Persist hidden layers to localStorage
+  $effect(() => {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('icom-lan-hidden-layers', JSON.stringify(hiddenLayers));
+    }
+  });
   let dxSpots = $state<DxSpot[]>([]);
   let spectrumArea: HTMLDivElement | null = null;
   let waterfallContent: HTMLDivElement | null = null;
@@ -353,7 +364,7 @@
 />
 
 <div class="spectrum-panel" class:fullscreen>
-  <SpectrumToolbar bind:enableAvg bind:enablePeakHold bind:refLevel bind:colorScheme bind:fullscreen bind:showBandPlan />
+  <SpectrumToolbar bind:enableAvg bind:enablePeakHold bind:refLevel bind:colorScheme bind:fullscreen bind:showBandPlan bind:hiddenLayers />
   <div class="spectrum-with-scales">
     <div class="db-scale">
       {#each DB_TICKS as tick}
@@ -361,7 +372,7 @@
       {/each}
     </div>
     <div class="spectrum-area" class:panning={dragging} bind:this={spectrumArea} onpointerdown={handleDragStart}>
-      <BandPlanOverlay {startFreq} {endFreq} visible={showBandPlan} />
+      <BandPlanOverlay {startFreq} {endFreq} visible={showBandPlan} {hiddenLayers} />
       <SpectrumCanvas data={scopePixels} options={spectrumOptions} {spanHz} {enableAvg} {enablePeakHold} onRegisterPush={(fn) => spectrumPush = fn} />
       {#if spanHz > 0 && pbWidthPct > 0 && canResizePassband}
         <button
