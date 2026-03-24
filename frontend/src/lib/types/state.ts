@@ -60,6 +60,7 @@ export interface ServerState {
   updatedAt: string;
 
   active: 'MAIN' | 'SUB';
+  powerOn?: boolean;
   ptt: boolean;
   split: boolean;
   dualWatch: boolean;

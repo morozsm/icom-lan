@@ -25,6 +25,7 @@ CacheField = Literal[
     "s_meter",
     "rf_power",
     "data_mode",
+    "powerstat",
     "swr",
     "alc",
     "rf_gain",
@@ -89,6 +90,10 @@ class StateCache:
     data_mode: bool = False
     data_mode_ts: float = 0.0
 
+    # Power status (on/off)
+    powerstat: bool = True
+    powerstat_ts: float = 0.0
+
     # SWR (raw 0–255)
     swr: float | None = None
     swr_ts: float = 0.0
@@ -147,6 +152,8 @@ class StateCache:
                 ts = self.rf_power_ts
             case "data_mode":
                 ts = self.data_mode_ts
+            case "powerstat":
+                ts = self.powerstat_ts
             case "swr":
                 ts = self.swr_ts
             case "alc":
@@ -216,6 +223,15 @@ class StateCache:
     def invalidate_data_mode(self) -> None:
         """Mark DATA mode as stale (forces the next read to hit radio)."""
         self.data_mode_ts = 0.0
+
+    def update_powerstat(self, on: bool) -> None:
+        """Store a new power status and record the current timestamp."""
+        self.powerstat = on
+        self.powerstat_ts = time.monotonic()
+
+    def invalidate_powerstat(self) -> None:
+        """Mark power status as stale (forces the next read to hit radio)."""
+        self.powerstat_ts = 0.0
 
     def update_swr(self, value: float) -> None:
         """Store a new SWR meter value and record the current timestamp."""

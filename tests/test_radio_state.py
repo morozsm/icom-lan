@@ -144,6 +144,7 @@ def test_to_dict_structure() -> None:
     d = rs.to_dict()
     assert set(d.keys()) == {
         "active",
+        "power_on",
         "ptt",
         "power_level",
         "split",

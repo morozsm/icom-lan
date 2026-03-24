@@ -305,6 +305,14 @@ class MetersCapable(Protocol):
 class PowerControlCapable(Protocol):
     """Radio supports power on/off and TX power level control."""
 
+    async def get_powerstat(self) -> bool:
+        """Get the current radio power state.
+
+        Returns:
+            True if radio is powered on, False if powered off.
+        """
+        ...
+
     async def set_powerstat(self, on: bool) -> None:
         """Power the radio on or off.
 

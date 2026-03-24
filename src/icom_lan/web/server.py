@@ -1357,7 +1357,14 @@ class WebServer:
                     except Exception as conn_err:
                         logger.warning("power-on: reconnect failed: %s", conn_err)
                         # Try anyway — some radios accept CI-V on stale transport
-                await cast(PowerControlCapable, radio).set_powerstat(power_state == "on")
+                is_on = power_state == "on"
+                await cast(PowerControlCapable, radio).set_powerstat(is_on)
+                # Optimistic state update: radio won't respond to polls when off
+                if self._radio_state is not None:
+                    self._radio_state.power_on = is_on
+                self._on_radio_state_change(
+                    "powerstat_changed", {"power_on": is_on}
+                )
                 resp = {"status": "ok", "power": power_state}
             else:
                 await _send_response(writer, 404, "Not Found", b"", {})

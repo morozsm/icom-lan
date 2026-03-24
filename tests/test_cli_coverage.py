@@ -29,7 +29,7 @@ from icom_lan.cli import (
     _validate_audio_format_args,
     main,
 )
-from icom_lan.radio_protocol import AdvancedControlCapable, AudioCapable, ScopeCapable
+from icom_lan.radio_protocol import AdvancedControlCapable, AudioCapable, PowerControlCapable, ScopeCapable
 from icom_lan.scope import ScopeFrame
 
 
@@ -44,6 +44,7 @@ class _CapableRadio(SimpleNamespace):
 AudioCapable.register(_CapableRadio)
 ScopeCapable.register(_CapableRadio)
 AdvancedControlCapable.register(_CapableRadio)
+PowerControlCapable.register(_CapableRadio)
 
 
 def _run_args(**overrides: object) -> argparse.Namespace:
@@ -283,6 +284,7 @@ async def test_run_dispatches_power_on_off_and_unknown_paths(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     _, radio = _mock_radio_ctx()
+    radio.get_powerstat = AsyncMock(return_value=True)
     radio.set_powerstat = AsyncMock()
     radio.set_rf_power = AsyncMock()
     with patch("icom_lan.cli.create_radio", return_value=radio):

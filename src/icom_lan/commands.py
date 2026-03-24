@@ -4796,6 +4796,19 @@ def stop_cw(
 _CMD_POWER_CTRL = 0x18
 
 
+def get_powerstat(
+    to_addr: int,
+    from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+) -> bytes:
+    """Build CI-V frame to query radio power status (0x18 GET)."""
+    if cmd_map is not None:
+        return _build_from_map(
+            cmd_map, "get_powerstat", to_addr=to_addr, from_addr=from_addr, data=b""
+        )
+    return build_civ_frame(to_addr, from_addr, _CMD_POWER_CTRL, data=b"")
+
+
 def power_on(
     to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
@@ -4820,6 +4833,32 @@ def power_off(
             cmd_map, "power_off", to_addr=to_addr, from_addr=from_addr, data=b"\x00"
         )
     return build_civ_frame(to_addr, from_addr, _CMD_POWER_CTRL, data=b"\x00")
+
+
+def parse_powerstat(frame: CivFrame) -> bool:
+    """Parse power status response (0x18 GET).
+
+    Args:
+        frame: CI-V response frame.
+
+    Returns:
+        True if powered on (data=0x01), False if powered off (data=0x00).
+
+    Raises:
+        ValueError: If response format is invalid.
+    """
+    if frame.cmd != _CMD_POWER_CTRL:
+        raise ValueError(
+            f"Expected power control response (0x18), got 0x{frame.cmd:02X}"
+        )
+    if len(frame.data) != 1:
+        raise ValueError(
+            f"Expected 1 byte power status, got {len(frame.data)} bytes"
+        )
+    val = frame.data[0]
+    if val not in (0x00, 0x01):
+        raise ValueError(f"Invalid power status value: 0x{val:02X} (expected 0x00 or 0x01)")
+    return val == 0x01
 
 
 # --- Speech (0x13) ---

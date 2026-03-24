@@ -541,6 +541,13 @@ class CivRuntime:
                     host._filter_width = filt
             elif frame.command == 0x1C and frame.sub == 0x00 and frame.data:
                 host._state_cache.update_ptt(bool(frame.data[0]))
+            elif frame.command == 0x18 and frame.data and len(frame.data) == 1:
+                # Power status response (0x18): 0x00=off, 0x01=on
+                power_on = bool(frame.data[0])
+                host._state_cache.update_powerstat(power_on)
+                if _rs is not None:
+                    _rs.power_on = power_on
+                self._notify_change("powerstat_changed", {"power_on": power_on})
             elif frame.command == 0x11 and frame.data and _rx is not None:
                 # Attenuator response (plain CI-V, no cmd29)
                 val = frame.data[0]

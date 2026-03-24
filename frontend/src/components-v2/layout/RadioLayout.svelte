@@ -13,7 +13,7 @@
   }
   
   import { radio } from '$lib/stores/radio.svelte';
-  import { getConnectionStatus } from '$lib/stores/connection.svelte';
+  import { getConnectionStatus, getRadioPowerOn } from '$lib/stores/connection.svelte';
   import { applyModeDefault } from '$lib/stores/tuning.svelte';
   import { getCapabilities, getKeyboardConfig, hasDualReceiver, hasTx } from '$lib/stores/capabilities.svelte';
   import SpectrumPanel from '../../components/spectrum/SpectrumPanel.svelte';
@@ -383,6 +383,19 @@
 </div>
 {/if}
 
+{#if getRadioPowerOn() === false}
+  <div class="power-off-overlay" aria-label="Radio is powered off">
+    <div class="power-off-content">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
+        <line x1="12" y1="2" x2="12" y2="12" />
+      </svg>
+      <span class="power-off-label">Radio is powered off</span>
+      <span class="power-off-hint">Use the ON button in the status bar to power up</span>
+    </div>
+  </div>
+{/if}
+
 <style>
   .radio-layout {
     position: relative;
@@ -744,5 +757,45 @@
     border: none;
     border-radius: 0;
     box-shadow: none;
+  }
+
+  /* Power-off overlay */
+  .power-off-overlay {
+    position: fixed;
+    inset: 28px 0 0 0; /* below status bar */
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+
+  .power-off-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    color: var(--v2-accent-red, #ef4444);
+    animation: pulse-dim 2s ease-in-out infinite;
+  }
+
+  .power-off-label {
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--v2-text-primary, #fff);
+  }
+
+  .power-off-hint {
+    font-size: 13px;
+    color: var(--v2-text-dim, #888);
+    letter-spacing: 0.02em;
+  }
+
+  @keyframes pulse-dim {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
   }
 </style>

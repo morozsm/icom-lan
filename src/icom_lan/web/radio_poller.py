@@ -785,6 +785,7 @@ class RadioPoller:
                         queries.append((cmd_byte, sub_byte, receiver))
         queries.extend(
             [
+                (0x18, None, None),  # Power status (on/off)
                 (0x1C, 0x00, None),  # PTT (global)
                 (0x1C, 0x01, None),  # Tuner/ATU status
                 (0x1C, 0x03, None),  # TX frequency monitor
@@ -1592,6 +1593,11 @@ class RadioPoller:
             case SetPowerstat(on=on):
                 if isinstance(radio, PowerControlCapable):
                     await radio.set_powerstat(on)
+                    # Optimistic update: radio won't respond to polls when off
+                    if self._radio_state is not None:
+                        self._radio_state.power_on = on
+                    self._emit("powerstat_changed", {"power_on": on})
+                    self.bump_revision()
                     logger.info("radio-poller: power %s", "ON" if on else "OFF")
             case SetAntenna1(on=on):
                 if isinstance(radio, AdvancedControlCapable):

@@ -1,4 +1,5 @@
 import type { ServerState, ReceiverState } from '../types/state';
+import { setRadioPowerOn } from './connection.svelte';
 
 /**
  * Shared radio state — class-based $state pattern for cross-module reactivity.
@@ -85,6 +86,10 @@ export function setRadioState(state: ServerState): void {
   if (isInitial || state.revision > lastRevision || isReset) {
     lastRevision = state.revision;
     radio.current = applyOptimistic(state);
+    // Sync power status to connection store
+    if (state.powerOn !== undefined) {
+      setRadioPowerOn(state.powerOn);
+    }
   }
 }
 

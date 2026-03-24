@@ -5,6 +5,7 @@ let audioConnected = $state(false);
 let scopeConnected = $state(false);
 let scopeLastFrame = $state(0);
 let radioStatus = $state<'connected' | 'connecting' | 'reconnecting' | 'disconnected'>('disconnected');
+let radioPowerOn = $state<boolean | null>(null);
 let lastResponseTime = $state<number | null>(null);
 
 let lastStateUpdate = $state(0);
@@ -112,4 +113,12 @@ export function setRadioStatus(s: string): void {
 
 export function getRadioStatus(): string {
   return radioStatus;
+}
+
+export function setRadioPowerOn(v: boolean | null): void {
+  radioPowerOn = v;
+}
+
+export function getRadioPowerOn(): boolean | null {
+  return radioPowerOn;
 }

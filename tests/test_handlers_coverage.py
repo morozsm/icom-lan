@@ -106,6 +106,7 @@ def _capable_radio() -> SimpleNamespace:
         },
         profile=resolve_radio_profile(model="IC-7610"),
         set_rf_power=AsyncMock(),
+        get_powerstat=AsyncMock(return_value=True),
         set_powerstat=AsyncMock(),
         set_rf_gain=AsyncMock(),
         set_af_level=AsyncMock(),

@@ -7,13 +7,18 @@
     isScopeConnected,
     isAudioConnected,
     getHttpConnected,
+    getRadioPowerOn,
   } from '$lib/stores/connection.svelte';
 
-  let radioState = $derived(getRadioStatus());
-  let controlState = $derived(getConnectionStatus());
-  let scopeState = $derived(isScopeConnected() ? 'connected' : 'disconnected');
-  let audioState = $derived(isAudioConnected() ? 'connected' : 'disconnected');
-  let httpState = $derived(getHttpConnected() ? 'connected' : 'disconnected');
+  let radioPowerOn = $derived(getRadioPowerOn());
+  let isPoweredOff = $derived(radioPowerOn === false);
+
+  // When radio is powered off, override statuses that depend on the radio
+  let radioState = $derived(isPoweredOff ? 'disconnected' : getRadioStatus());
+  let controlState = $derived(getConnectionStatus()); // server link — always real
+  let scopeState = $derived(isPoweredOff ? 'disconnected' : (isScopeConnected() ? 'connected' : 'disconnected'));
+  let audioState = $derived(isPoweredOff ? 'disconnected' : (isAudioConnected() ? 'connected' : 'disconnected'));
+  let httpState = $derived(getHttpConnected() ? 'connected' : 'disconnected'); // server link — always real
 
   function stateColor(state: string): string {
     switch (state) {
@@ -126,6 +131,7 @@
       class="control-btn power-on-btn"
       onclick={handlePowerOn}
       title="Power ON radio"
+      disabled={radioPowerOn === true}
     >
       <Power size={14} strokeWidth={2} />
       <span class="btn-label">ON</span>
@@ -135,7 +141,7 @@
       class="control-btn power-off-btn"
       onclick={handlePowerOff}
       title="Power OFF radio"
-      disabled={radioState !== 'connected'}
+      disabled={radioPowerOn !== true}
     >
       <Power size={14} strokeWidth={2} />
       <span class="btn-label">OFF</span>

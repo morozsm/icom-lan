@@ -158,6 +158,8 @@ from .commands import (
     parse_tone_freq_response,
     parse_tsql_freq_response,
     parse_utc_offset_response,
+    get_powerstat,
+    parse_powerstat,
     power_off,
     power_on,
     ptt_off,
@@ -3678,8 +3680,22 @@ class Icom7610CoreRadio:
         """
         await self.set_powerstat(on)
 
+    async def get_powerstat(self) -> bool:
+        """Get the current radio power state (PowerControlCapable protocol)."""
+        self._check_connected()
+        civ = get_powerstat(to_addr=self._radio_addr)
+        resp = await self._send_civ_raw(civ)
+        assert resp is not None
+        frame = parse_civ_frame(resp)
+        return parse_powerstat(frame)
+
     async def set_powerstat(self, on: bool) -> None:
-        """Power the radio on or off (PowerControlCapable protocol)."""
+        """Power the radio on or off (PowerControlCapable protocol).
+
+        Note: IC-7610 via LAN may NAK a power-on command while the radio
+        is still booting.  The command is fire-and-forget for power-on —
+        a NAK is logged but not raised, since the radio does power up.
+        """
         self._check_connected()
         civ = (
             power_on(to_addr=self._radio_addr)
@@ -3690,7 +3706,14 @@ class Icom7610CoreRadio:
         assert resp is not None
         ack = parse_ack_nak(resp)
         if ack is False:
-            raise CommandError(f"Radio rejected power {'on' if on else 'off'}")
+            if on:
+                # IC-7610 may NAK power-on while booting — not a real error
+                import logging
+                logging.getLogger(__name__).warning(
+                    "Power ON got NAK (radio may still be booting — ignoring)"
+                )
+            else:
+                raise CommandError("Radio rejected power off")
 
     # ------------------------------------------------------------------
     # Scope / Waterfall API
