@@ -147,6 +147,12 @@
   // ── Quick modes (SSB operation essentials) ──
   const QUICK_MODES = ['LSB', 'USB', 'CW', 'AM'];
 
+  // ── Landscape detection ──
+  let isLandscape = $state(false);
+  function checkOrientation() {
+    isLandscape = window.innerWidth > window.innerHeight && window.innerHeight < 500;
+  }
+
   // ── Screen Wake Lock ──
   let wakeLock: WakeLockSentinel | null = null;
   let wakeLockRequested = false;
@@ -173,6 +179,10 @@
   }
 
   onMount(() => {
+    // Orientation
+    checkOrientation();
+    window.addEventListener('resize', checkOrientation);
+
     // Try immediately (works on Chrome/Android)
     requestWakeLock();
     // Re-acquire on visibility change
@@ -214,6 +224,7 @@
     }
 
     return () => {
+      window.removeEventListener('resize', checkOrientation);
       document.removeEventListener('visibilitychange', handleVisibility);
       document.removeEventListener('touchstart', handleInteraction);
       document.removeEventListener('click', handleInteraction);
@@ -348,6 +359,63 @@
   let atuStatus = $derived(tx.atuActive ? (tx.atuTuning ? 'tuning' : 'on') : 'off');
 </script>
 
+{#if isLandscape}
+<!-- ═══ LANDSCAPE: fullscreen spectrum + VFO overlay ═══ -->
+<div class="m-landscape">
+  <KeyboardHandler config={keyboardConfig} onAction={keyboardHandlers.dispatch} />
+  <div class="m-ls-spectrum">
+    <SpectrumPanel />
+  </div>
+  <div class="m-ls-overlay">
+    <div class="m-ls-vfo">
+      <FrequencyDisplay freq={mainVfo.freq} compact active />
+      <span class="m-ls-mode">{mainVfo.mode}</span>
+      <span class="m-ls-filter">{mainVfo.filter}</span>
+    </div>
+    <div class="m-ls-meter">
+      <span class="m-ls-smeter">{formatSValue(meter.signal)}</span>
+      <span class="m-ls-dbm">{formatDbm(meter.signal)}</span>
+    </div>
+    <div class="m-ls-controls">
+      <button class="m-ls-step-btn" onclick={() => (stepPickerOpen = !stepPickerOpen)}>
+        {formatStep(tuningStep)}
+      </button>
+      <button class="m-ls-tune-btn" onclick={() => tuneBy(-1)}>
+        <ChevronLeft size={20} />
+      </button>
+      <button class="m-ls-tune-btn" onclick={() => tuneBy(1)}>
+        <ChevronRight size={20} />
+      </button>
+      {#if txCapable}
+        <button
+          class="m-ls-ptt"
+          class:m-ptt-held={pttMode === 'held'}
+          class:m-ptt-latched={pttMode === 'latched'}
+          ontouchstart={(e) => { e.preventDefault(); pttDown(); }}
+          ontouchend={(e) => { e.preventDefault(); pttUp(); }}
+          ontouchcancel={() => pttUp()}
+        >
+          {pttMode === 'latched' ? 'TX🔒' : pttMode === 'held' ? 'TX' : 'PTT'}
+        </button>
+      {/if}
+    </div>
+  </div>
+  {#if stepPickerOpen}
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div class="m-step-picker-backdrop" onclick={() => (stepPickerOpen = false)}></div>
+    <div class="m-ls-step-picker">
+      {#each modeSteps as step}
+        <button
+          class="m-step-option"
+          class:m-step-active={step === tuningStep}
+          onclick={() => { tuningStep = step; stepPickerOpen = false; }}
+        >{formatStep(step)}</button>
+      {/each}
+    </div>
+  {/if}
+</div>
+{:else}
+<!-- ═══ PORTRAIT: normal mobile layout ═══ -->
 <div class="m-layout">
   <KeyboardHandler config={keyboardConfig} onAction={keyboardHandlers.dispatch} />
 
@@ -866,8 +934,179 @@
     </div>
   {/if}
 </div>
+{/if}
 
 <style>
+  /* ── Landscape layout ── */
+  .m-landscape {
+    position: fixed;
+    inset: 0;
+    background: #000;
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .m-ls-spectrum {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+  }
+
+  .m-ls-spectrum > :global(.spectrum-panel) {
+    height: 100% !important;
+    border: none !important;
+    border-radius: 0 !important;
+  }
+
+  .m-ls-overlay {
+    position: absolute;
+    top: env(safe-area-inset-top, 0px);
+    left: env(safe-area-inset-left, 0px);
+    right: env(safe-area-inset-right, 0px);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 4px 8px;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 60;
+    pointer-events: auto;
+  }
+
+  .m-ls-vfo {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .m-ls-vfo > :global(:first-child) {
+    flex-shrink: 0;
+  }
+
+  .m-ls-mode, .m-ls-filter {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 3px;
+    letter-spacing: 0.06em;
+  }
+
+  .m-ls-mode {
+    background: rgba(0, 212, 255, 0.2);
+    color: #00d4ff;
+  }
+
+  .m-ls-filter {
+    background: rgba(156, 163, 175, 0.15);
+    color: #9ca3af;
+  }
+
+  .m-ls-meter {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+  }
+
+  .m-ls-smeter {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    color: #4ade80;
+  }
+
+  .m-ls-dbm {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 10px;
+    color: #9ca3af;
+  }
+
+  .m-ls-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .m-ls-step-btn {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    color: #e0e0e0;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    padding: 4px 8px;
+    cursor: pointer;
+    min-height: 32px;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .m-ls-tune-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 32px;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.08);
+    color: #e0e0e0;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .m-ls-tune-btn:active {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .m-ls-ptt {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    min-width: 52px;
+    min-height: 32px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    border: 2px solid var(--v2-accent-red, #ef4444);
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--v2-accent-red, #ef4444);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .m-ls-ptt.m-ptt-held {
+    background: var(--v2-accent-red, #ef4444);
+    color: #fff;
+    box-shadow: 0 0 16px rgba(239, 68, 68, 0.5);
+  }
+
+  .m-ls-ptt.m-ptt-latched {
+    background: #dc2626;
+    color: #fff;
+    box-shadow: 0 0 20px rgba(220, 38, 38, 0.6);
+    animation: ptt-latch-pulse 1s ease-in-out infinite;
+  }
+
+  .m-ls-step-picker {
+    position: fixed;
+    bottom: 50%;
+    right: env(safe-area-inset-right, 8px);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    background: rgba(10, 10, 15, 0.95);
+    border: 1px solid rgba(42, 42, 62, 0.8);
+    border-radius: 6px;
+    padding: 4px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+  }
+
   /* ── Base layout ── */
   .m-layout {
     display: flex;
