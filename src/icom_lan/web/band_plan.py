@@ -7,11 +7,58 @@ indexes segments for fast frequency-range queries.
 from __future__ import annotations
 
 import logging
+import re
 import tomllib
 from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
+# ── Sanitization ──
+
+_HEX_COLOR_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
+_MAX_STR_LEN = 200  # max length for label/notes/station fields
+_VALID_MODES = frozenset(
+    {"cw", "digital", "phone", "beacon", "broadcast", "utility", "military", "other"}
+)
+
+
+def _sanitize_str(val: Any, max_len: int = _MAX_STR_LEN) -> str | None:
+    """Return a safe string or None. Strips HTML tags and control chars."""
+    if val is None:
+        return None
+    s = str(val)[:max_len]
+    # Strip HTML tags
+    s = re.sub(r"<[^>]*>", "", s)
+    # Strip control characters (keep printable + common whitespace)
+    s = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", s)
+    return s.strip() or None
+
+
+def _sanitize_color(val: Any) -> str | None:
+    """Return a valid hex color or None."""
+    if not isinstance(val, str):
+        return None
+    return val if _HEX_COLOR_RE.match(val) else None
+
+
+def _sanitize_freq(val: Any) -> int:
+    """Return a non-negative integer frequency in Hz."""
+    try:
+        freq = int(val)
+    except (TypeError, ValueError):
+        return 0
+    return max(0, min(freq, 500_000_000))  # 0 – 500 MHz
+
+
+def _sanitize_opacity(val: Any, default: float = 0.20) -> float:
+    """Return opacity clamped to 0.0–1.0."""
+    try:
+        o = float(val)
+    except (TypeError, ValueError):
+        return default
+    return max(0.0, min(1.0, o))
+
 
 # Default mode colors (hex) — used when TOML doesn't specify a color
 MODE_COLORS: dict[str, str] = {
@@ -93,26 +140,46 @@ class BandPlanRegistry:
 
         bands = data.get("band", [])
         for band in bands:
-            band_name = band.get("name", "?")
+            band_name = _sanitize_str(band.get("name", "?"), max_len=40) or "?"
             for seg in band.get("segment", []):
-                mode = seg.get("mode", "other")
+                start = _sanitize_freq(seg.get("start"))
+                end = _sanitize_freq(seg.get("end"))
+                if start == 0 and end == 0:
+                    logger.warning(
+                        "band-plan: skipping segment with no frequency in %s/%s",
+                        path.name,
+                        band_name,
+                    )
+                    continue
+                if end < start:
+                    start, end = end, start  # swap
+
+                raw_mode = str(seg.get("mode", "other")).lower()
+                mode = raw_mode if raw_mode in _VALID_MODES else "other"
+
+                raw_color = _sanitize_color(seg.get("color"))
+                color = raw_color or MODE_COLORS.get(mode, "#9CA3AF")
+
                 self._segments.append(
                     {
-                        "start": seg["start"],
-                        "end": seg["end"],
+                        "start": start,
+                        "end": end,
                         "mode": mode,
-                        "label": seg.get("label", mode.upper()),
-                        "color": seg.get("color", MODE_COLORS.get(mode, "#9CA3AF")),
-                        "opacity": seg.get("opacity", DEFAULT_OPACITY),
+                        "label": _sanitize_str(seg.get("label"), max_len=30)
+                        or mode.upper(),
+                        "color": color,
+                        "opacity": _sanitize_opacity(
+                            seg.get("opacity"), DEFAULT_OPACITY
+                        ),
                         "band": band_name,
                         "layer": layer,
                         "priority": priority,
-                        "url": seg.get("url"),
-                        "notes": seg.get("notes"),
-                        "station": seg.get("station"),
-                        "language": seg.get("language"),
-                        "schedule": seg.get("schedule"),
-                        "license": seg.get("license"),
+                        "url": _sanitize_str(seg.get("url"), max_len=500),
+                        "notes": _sanitize_str(seg.get("notes")),
+                        "station": _sanitize_str(seg.get("station"), max_len=80),
+                        "language": _sanitize_str(seg.get("language"), max_len=20),
+                        "schedule": _sanitize_str(seg.get("schedule"), max_len=100),
+                        "license": _sanitize_str(seg.get("license"), max_len=40),
                     }
                 )
 
