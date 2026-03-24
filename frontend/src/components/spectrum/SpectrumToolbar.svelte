@@ -20,6 +20,14 @@
   } = $props();
 
   let layerDropdownOpen = $state(false);
+  let layerToggleBtn = $state<HTMLElement | null>(null);
+  let dropdownStyle = $derived.by(() => {
+    if (!layerDropdownOpen || !layerToggleBtn) return '';
+    const rect = layerToggleBtn.getBoundingClientRect();
+    const top = rect.bottom + 4;
+    const right = window.innerWidth - rect.right;
+    return `top: ${top}px; right: ${right}px;`;
+  });
   let availableLayers = $state<LayerInfo[]>([]);
   let currentRegion = $state('US');
   let availableRegions = $state<string[]>([]);
@@ -131,12 +139,15 @@
     {#if showBandPlan && availableLayers.length > 1}
       <button
         class="toolbar-btn small layer-toggle-btn"
+        bind:this={layerToggleBtn}
         onclick={() => (layerDropdownOpen = !layerDropdownOpen)}
         title="Select visible layers"
       >▾</button>
       {#if layerDropdownOpen}
         <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <div class="layer-dropdown" onmouseleave={() => (layerDropdownOpen = false)}>
+        <div class="layer-dropdown-backdrop" onclick={() => (layerDropdownOpen = false)}></div>
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <div class="layer-dropdown" style={dropdownStyle}>
           {#if availableRegions.length > 1}
             <div class="dropdown-section-label">Region</div>
             <div class="region-selector">
@@ -304,18 +315,23 @@
     font-size: 9px !important;
   }
 
+  .layer-dropdown-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+  }
+
   .layer-dropdown {
-    position: absolute;
-    top: 100%;
-    right: 0;
-    z-index: 100;
-    min-width: 160px;
+    position: fixed;
+    z-index: 1000;
+    min-width: 180px;
+    max-height: 70vh;
+    overflow-y: auto;
     background: var(--v2-bg-darkest, #0a0a0f);
     border: 1px solid var(--v2-border, #2a2a3e);
-    border-radius: 4px;
+    border-radius: 6px;
     padding: 4px 0;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
-    margin-top: 2px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
   }
 
   .layer-option {
