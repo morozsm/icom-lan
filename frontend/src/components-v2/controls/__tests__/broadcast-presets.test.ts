@@ -1,9 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { BROADCAST_SW_BANDS, findActiveBroadcastBand } from '../broadcast-presets';
+import { BROADCAST_SW_BANDS, BROADCAST_LW_MW_BANDS, findActiveBroadcastBand } from '../broadcast-presets';
 
 describe('BROADCAST_SW_BANDS', () => {
-  it('has 14 bands', () => {
-    expect(BROADCAST_SW_BANDS).toHaveLength(14);
+  it('has 10 SW bands', () => {
+    expect(BROADCAST_SW_BANDS).toHaveLength(10);
+  });
+
+  it('BROADCAST_LW_MW_BANDS has 6 bands (LW + MW + 120m-60m)', () => {
+    expect(BROADCAST_LW_MW_BANDS).toHaveLength(6);
   });
 
   it('all bands have valid freq within start/end range', () => {
@@ -43,8 +47,12 @@ describe('findActiveBroadcastBand', () => {
     expect(findActiveBroadcastBand(6200000)).toBe('49m');
   });
 
+  it('returns MW for 1 MHz (inside MW band)', () => {
+    expect(findActiveBroadcastBand(1000000)).toBe('MW');
+  });
+
   it('returns null for a frequency below all bands', () => {
-    expect(findActiveBroadcastBand(1000000)).toBeNull();
+    expect(findActiveBroadcastBand(100000)).toBeNull();
   });
 
   it('returns null for a frequency above all bands', () => {

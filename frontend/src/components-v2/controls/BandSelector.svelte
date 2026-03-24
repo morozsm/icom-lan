@@ -3,7 +3,7 @@
   import { getCapabilities } from '$lib/stores/capabilities.svelte';
   import { flattenBands, findActiveBand } from './band-utils';
   import { getShortcutHint } from '../layout/shortcut-hints';
-  import { BROADCAST_SW_BANDS, findActiveBroadcastBand } from './broadcast-presets';
+  import { BROADCAST_SW_BANDS, BROADCAST_LW_MW_BANDS, findActiveBroadcastBand } from './broadcast-presets';
 
   interface Props {
     currentFreq: number;
@@ -13,7 +13,7 @@
 
   let { currentFreq, onBandSelect, onPresetSelect }: Props = $props();
 
-  let bandMode = $state<'ham' | 'broadcast'>('ham');
+  let bandMode = $state<'ham' | 'broadcast' | 'lwmw'>('ham');
 
   let bands = $derived(flattenBands(getCapabilities()?.freqRanges ?? []));
   let activeBand = $derived(findActiveBand(currentFreq, getCapabilities()?.freqRanges ?? []));
@@ -40,6 +40,11 @@
   >HAM</button>
   <button
     class="band-tab"
+    class:active={bandMode === 'lwmw'}
+    onclick={(e: MouseEvent) => { bandMode = 'lwmw'; (e.currentTarget as HTMLElement)?.blur(); }}
+  >LW/MW</button>
+  <button
+    class="band-tab"
     class:active={bandMode === 'broadcast'}
     onclick={(e: MouseEvent) => { bandMode = 'broadcast'; (e.currentTarget as HTMLElement)?.blur(); }}
   >SWL</button>
@@ -58,6 +63,20 @@
         onclick={() => handleClick(band.name, band.defaultFreq, band.bsrCode)}
       >
         {band.name}
+      </HardwareButton>
+    {/each}
+  </div>
+{:else if bandMode === 'lwmw'}
+  <div class="grid">
+    {#each BROADCAST_LW_MW_BANDS as preset (preset.name)}
+      {@const isActive = activeBroadcast === preset.name}
+      <HardwareButton
+        active={isActive}
+        indicator="edge-left"
+        color="amber"
+        onclick={() => onPresetSelect?.(preset.freq, preset.mode)}
+      >
+        {preset.name}
       </HardwareButton>
     {/each}
   </div>

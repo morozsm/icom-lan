@@ -42,7 +42,7 @@ describe('getVisibleSegments', () => {
   });
 
   it('returns empty for out-of-range frequencies (below all bands)', () => {
-    const result = getVisibleSegments(500_000, 1_000_000);
+    const result = getVisibleSegments(50_000, 100_000);
     expect(result).toHaveLength(0);
   });
 
