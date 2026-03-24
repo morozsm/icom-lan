@@ -42,7 +42,7 @@
     class="band-tab"
     class:active={bandMode === 'broadcast'}
     onclick={() => { bandMode = 'broadcast'; }}
-  >BC</button>
+  >SWL</button>
 </div>
 
 {#if bandMode === 'ham'}

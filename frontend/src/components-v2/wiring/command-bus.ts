@@ -506,18 +506,21 @@ export function makeRxAudioHandlers() {
 
 export function makePresetHandlers() {
   return {
-    onPresetSelect: (freq: number, mode: string) => {
+    onPresetSelect: (freq: number, mode: string, filter?: number) => {
       cmd('set_freq', { freq, receiver: 0 });
-      cmd('set_mode', { mode, receiver: 0 });
+      cmd('set_mode', { mode, filter: filter ?? 1, receiver: 0 });
     },
   };
 }
 
 export function makeBandHandlers() {
   return {
-    onBandSelect: (_name: string, _freq: number, bsrCode?: number) => {
+    onBandSelect: (_name: string, freq: number, bsrCode?: number) => {
       if (bsrCode !== undefined) {
         cmd('set_band', { band: bsrCode });
+      } else {
+        // Bands without BSR code (e.g. 60m) — fall back to direct freq set
+        cmd('set_freq', { freq, receiver: 0 });
       }
     },
   };
