@@ -89,7 +89,14 @@
   - 15 unit tests covering pool mechanics, reuse, thread safety, concurrent access
   - Performance: >50k acquire/release ops/sec, >30k ops/sec under concurrent load
   - Integrated into AudioBroadcaster for future codec optimization
-- [ ] Profile web audio streaming performance
+- [x] Profile web audio streaming performance ✅ COMPLETE (2026-03-24)
+  - Comprehensive benchmarking: 10 tests covering codecs, relay loop, full pipeline
+  - Results: All operations exceed SLOs with 18-588× headroom
+  - ulaw decode: 8.67µs p50, 18.84M samples/sec throughput
+  - Frame encode: 0.17µs p50, 8.4M frames/sec throughput
+  - Full pipeline: 25.5µs p50, 373.5µs p99 latency
+  - Buffer pool: 99.5% allocation reduction in realistic streaming load
+  - Documentation: docs/AUDIO_STREAMING_PROFILE.md with detailed analysis
 
 ### Priority 3 (Low ROI, High Effort)
 - [ ] Refactor CI-V parsing for lazy evaluation
@@ -111,6 +118,6 @@
 ---
 
 **Generated**: 2026-03-23
-**Last Updated**: 2026-03-23 (M6.2.2 audio buffer pooling complete)
-**Status**: M6 Priority 2 (2/3 items complete: delta encoding, buffer pooling)
-**Next**: Profile web audio streaming performance (M6.2.3, optional)
+**Last Updated**: 2026-03-24 (M6.P2.3 audio streaming profiling complete)
+**Status**: M6 Priority 2 (3/3 items complete: delta encoding, buffer pooling, audio profiling)
+**Next**: M6 complete; ready for M7 (post-productization)

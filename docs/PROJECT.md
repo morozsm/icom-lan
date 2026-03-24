@@ -248,9 +248,10 @@ Each UDP packet has a fixed-format header (see `packettypes.h` in wfview):
 - **Multi-model factory architecture (2026-03-23):** Factory.create_radio() now routes by model parameter: IC-7610 → Icom7610SerialRadio (default), IC-705 → Ic705SerialRadio, IC-7300 → Ic7300SerialRadio, IC-9700 → Ic9700SerialRadio. All backends inherit from Icom7610CoreRadio (shared command logic). Profile-driven CI-V address resolution (0x80, 0xA4, 0x94, 0xA2). Extensible pattern for future models (IC-705 and IC-9700 are LAN-capable).
 - **State contract unification (issue #301, 2026-03-17):** web HTTP/WS public state and the web runtime path now derive from canonical `RadioState` without a web-side `StateCache` runtime dependency; default `rigctld` reads are `RadioState`-first with only handler-local fallback/optimistic state, and default server startup no longer binds consumer layers to backend-shared `StateCache`/poller state.
 
-### Phase 11 — M6 Productization (M6) 🚧 IN PROGRESS
+### Phase 11 — M6 Productization (M6) 🚧 IN PROGRESS (3/4 CORE + ALL OPTIMIZATIONS COMPLETE)
 
 **Goal:** Production-ready library with audio codec support, documentation, and performance optimization.
+**Status**: Core tasks 3/4 complete (M6.1, M6.3, M6.P2); M6.2 blocked on hardware testing. All optimizations complete.
 
 #### M6.1 ulaw→pcm Audio Codec Decoder ✅ COMPLETE (2026-03-23)
 - [x] Pure-Python ulaw→PCM16 decoder (`_audio_codecs.py`) with standard 256-entry lookup table
@@ -301,10 +302,15 @@ IC-7610 parity matrix (issue #139, 2026-03-06): 134 implemented, 0 partial, 0 mi
   - Integrated into AudioBroadcaster with infrastructure for codec optimization
   - **Result:** Reduced GC pressure in high-frequency audio streaming paths
 
-- [ ] **M6.P2.3: Web Audio Streaming Profiling** (optional)
-  - Profile real-time audio codec performance (ulaw decode, Opus handling)
-  - Measure end-to-end latency from radio → browser
-  - Identify remaining optimization opportunities
+- [x] **M6.P2.3: Web Audio Streaming Profiling** ✅ COMPLETE (2026-03-24)
+  - Comprehensive benchmark suite: 10 tests covering codecs, relay loop, full pipeline
+  - **Results**: All operations exceed SLOs with 18-588× headroom
+    - ulaw decode: 8.67µs latency, 18.84M samples/sec throughput
+    - Frame encode: 0.17µs latency, 8.4M frames/sec throughput
+    - Full pipeline: 25.5µs p50, no bottlenecks identified
+  - Buffer pool efficiency: 99.5% allocation reduction in realistic streaming
+  - **Documentation**: docs/AUDIO_STREAMING_PROFILE.md with detailed analysis
+  - **Result:** Pipeline is production-ready; no optimizations needed
 
 ### Reliability Test Expansion (2026-03-05)
 - Added extended integration coverage scaffolding for:

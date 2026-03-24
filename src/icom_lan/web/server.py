@@ -1066,6 +1066,10 @@ class WebServer:
             await self._serve_capabilities(writer, headers)
         elif path == "/api/v1/dx/spots":
             await self._serve_dx_spots(writer)
+        elif path == "/api/v1/band-plan/segments":
+            await self._serve_band_plan_segments(writer, query)
+        elif path == "/api/v1/band-plan/layers":
+            await self._serve_band_plan_layers(writer)
         elif path == "/" or path == "/index.html":
             await self._serve_static(writer, "index.html")
         elif path.startswith("/"):
