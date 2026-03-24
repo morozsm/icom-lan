@@ -19,6 +19,7 @@
   import { getFilterWidthHz } from '../../lib/utils/filter-width';
   import { snapToStep } from '../../lib/stores/tuning.svelte';
   import SpectrumToolbar from './SpectrumToolbar.svelte';
+  import BandPlanOverlay from './BandPlanOverlay.svelte';
   import { deriveIfShift } from '../../components-v2/panels/filter-controls';
   import { getCapabilities } from '../../lib/stores/capabilities.svelte';
   import { resolveFilterModeConfig } from '../../components-v2/wiring/state-adapter';
@@ -64,6 +65,7 @@
   let startFreq = $state(0);
   let endFreq = $state(0);
   let fullscreen = $state(false);
+  let showBandPlan = $state(true);
   let dxSpots = $state<DxSpot[]>([]);
   let spectrumArea: HTMLDivElement | null = null;
   let waterfallContent: HTMLDivElement | null = null;
@@ -244,7 +246,7 @@
 <svelte:window onpointermove={handleWindowPointerMove} onpointerup={stopPassbandResize} onpointercancel={stopPassbandResize} />
 
 <div class="spectrum-panel" class:fullscreen>
-  <SpectrumToolbar bind:enableAvg bind:enablePeakHold bind:refLevel bind:colorScheme bind:fullscreen />
+  <SpectrumToolbar bind:enableAvg bind:enablePeakHold bind:refLevel bind:colorScheme bind:fullscreen bind:showBandPlan />
   <div class="spectrum-with-scales">
     <div class="db-scale">
       {#each DB_TICKS as tick}
@@ -277,6 +279,7 @@
     <div class="waterfall-scale"></div>
     <div class="waterfall-content" bind:this={waterfallContent}>
       <WaterfallCanvas options={waterfallOptions} onFreqClick={handleTune} onRegisterPush={(fn) => waterfallPush = fn} />
+      <BandPlanOverlay {startFreq} {endFreq} visible={showBandPlan} />
       <DxOverlay spots={dxSpots} {startFreq} {endFreq} onTune={handleTune} />
       <!-- Tuning + passband indicator overlays the waterfall -->
       {#if spanHz > 0}

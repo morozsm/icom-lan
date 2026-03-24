@@ -8,6 +8,7 @@
     refLevel = $bindable(0),
     colorScheme = $bindable('classic' as ColorSchemeName),
     fullscreen = $bindable(false),
+    showBandPlan = $bindable(true),
   } = $props();
 
   let stepHz = $derived(getTuningStep());
@@ -58,6 +59,10 @@
       <option value="grayscale">Gray</option>
     </select>
   </div>
+  <div class="toolbar-separator"></div>
+  <button class="toolbar-btn" class:active={showBandPlan} onclick={() => (showBandPlan = !showBandPlan)} title="Show/hide band plan overlay">
+    BANDS
+  </button>
   <div class="toolbar-spacer"></div>
   <button class="toolbar-btn icon-btn" onclick={() => (fullscreen = !fullscreen)} title="Toggle fullscreen">
     {fullscreen ? '✕' : '⛶'}
