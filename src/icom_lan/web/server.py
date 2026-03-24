@@ -1109,6 +1109,15 @@ class WebServer:
             freq = int((query or {}).get("freq", ["0"])[0])
             tol = int((query or {}).get("tolerance", ["5000"])[0])
             matches = self._eibi.identify(freq, tol)
+
+            # Fallback to FCC for US AM stations if no EiBi match
+            if not matches and 530_000 <= freq <= 1_700_000:
+                try:
+                    from .eibi import fcc_identify
+                    matches = await fcc_identify(freq, tol)
+                except Exception:
+                    logger.debug("fcc identify fallback failed")
+
             body = json.dumps(
                 {"stations": matches, "freq_hz": freq}, separators=(",", ":"),
             ).encode()

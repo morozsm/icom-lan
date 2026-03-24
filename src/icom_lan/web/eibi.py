@@ -225,11 +225,101 @@ class EiBiStation:
         }
 
 
-def _download_url(url: str) -> bytes:
+def _download_url(url: str, ua: str = "icom-lan/1.0") -> bytes:
     """Blocking download helper (run in a thread)."""
-    req = Request(url, headers={"User-Agent": "icom-lan/1.0"})
+    req = Request(url, headers={"User-Agent": ua})
     with urlopen(req, timeout=_FETCH_TIMEOUT) as resp:
         return resp.read()
+
+
+# ── FCC AM/FM lookup ──
+
+_FCC_AM_URL = "https://transition.fcc.gov/fcc-bin/amq"
+_FCC_FM_URL = "https://transition.fcc.gov/fcc-bin/fmq"
+# Cache: freq_khz → list of station dicts, TTL 24h
+_fcc_cache: dict[int, tuple[float, list[dict[str, Any]]]] = {}
+_FCC_CACHE_TTL = 86400
+
+
+def _parse_fcc_pipe(raw: str) -> list[dict[str, Any]]:
+    """Parse FCC pipe-delimited AM/FM query results."""
+    results: list[dict[str, Any]] = []
+    seen: set[str] = set()  # dedupe by callsign
+    for line in raw.split("\n"):
+        parts = [p.strip() for p in line.split("|")]
+        if len(parts) < 12:
+            continue
+        call = parts[1].strip()
+        if not call or call in seen:
+            continue
+        seen.add(call)
+        freq_str = parts[2].replace("kHz", "").strip()
+        try:
+            freq_khz = float(freq_str)
+        except ValueError:
+            continue
+        city = parts[10].strip()
+        state = parts[11].strip()
+        owner = parts[26].strip() if len(parts) > 26 else ""
+        power_str = parts[14].strip() if len(parts) > 14 else ""
+
+        results.append({
+            "freq_khz": freq_khz,
+            "freq_hz": int(freq_khz * 1000),
+            "station": call,
+            "city": city,
+            "state": state,
+            "country": "USA",
+            "language": "E",
+            "language_name": "English",
+            "target": f"{city}, {state}",
+            "remarks": f"{power_str} — {owner}" if owner else power_str,
+            "band": "MW" if freq_khz < 1700 else "FM",
+            "time_str": "local",
+            "days": "",
+            "on_air": True,
+            "source": "FCC",
+        })
+    return results
+
+
+def _curl_download(url: str) -> str:
+    """Download via curl subprocess (more reliable for FCC)."""
+    import subprocess
+    result = subprocess.run(
+        ["curl", "-sL", "--max-time", "15", "-H", "User-Agent: Mozilla/5.0 (icom-lan)", url],
+        capture_output=True, text=True, timeout=20,
+    )
+    return result.stdout
+
+
+async def fcc_identify(freq_hz: int, tolerance_hz: int = 1000) -> list[dict[str, Any]]:
+    """Look up US AM stations by frequency via FCC AM Query."""
+    freq_khz = round(freq_hz / 1000)
+
+    # Check cache
+    if freq_khz in _fcc_cache:
+        ts, cached = _fcc_cache[freq_khz]
+        if time.time() - ts < _FCC_CACHE_TTL:
+            return cached
+
+    # Only query AM band (530-1700 kHz)
+    if not (530 <= freq_khz <= 1700):
+        return []
+
+    url = (
+        f"{_FCC_AM_URL}?call=&ession=&state=&city="
+        f"&freq={freq_khz}&fre2={freq_khz}&type=1&list=4"
+    )
+    try:
+        text = await asyncio.to_thread(_curl_download, url)
+        results = _parse_fcc_pipe(text)
+        _fcc_cache[freq_khz] = (time.time(), results)
+        logger.info("fcc: found %d stations on %d kHz", len(results), freq_khz)
+        return results
+    except Exception as exc:
+        logger.warning("fcc: lookup failed for %d kHz: %s", freq_khz, exc)
+        return []
 
 
 class EiBiProvider:
