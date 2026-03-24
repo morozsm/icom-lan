@@ -486,18 +486,18 @@
               NB
             </HardwareButton>
             <HardwareButton
-              active={dsp.nrActive}
+              active={dsp.nrMode > 0}
               indicator="edge-left"
-              color={dsp.nrActive ? 'green' : 'muted'}
-              onclick={() => dspHandlers.onNrToggle(!dsp.nrActive)}
+              color={dsp.nrMode > 0 ? 'green' : 'muted'}
+              onclick={() => dspHandlers.onNrModeChange(dsp.nrMode > 0 ? 0 : 1)}
             >
               NR
             </HardwareButton>
             <HardwareButton
-              active={dsp.notchActive}
+              active={dsp.notchMode !== 'off'}
               indicator="edge-left"
-              color={dsp.notchActive ? 'green' : 'muted'}
-              onclick={() => dspHandlers.onNotchToggle(!dsp.notchActive)}
+              color={dsp.notchMode !== 'off' ? 'green' : 'muted'}
+              onclick={() => dspHandlers.onNotchModeChange(dsp.notchMode !== 'off' ? 'off' : 'auto')}
             >
               NOTCH
             </HardwareButton>
