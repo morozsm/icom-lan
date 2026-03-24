@@ -201,26 +201,41 @@
   }
 
   // --- Drag-to-pan (grab and slide the spectrum window) ---
+  //
+  // Visual feedback: CSS translateX moves spectrum/waterfall instantly.
+  // CI-V commands: adaptive rate limit based on drag speed.
+  //   - Slow drag (< 200 px/sec): send every 300ms — feels real-time
+  //   - Medium drag (200–600 px/sec): send every 500ms — smooth updates
+  //   - Fast swipe (> 600 px/sec): no intermediate sends — only on release
+  // Final frequency always sent on mouse release.
+  //
   let dragging = $state(false);
   let dragStartX = $state(0);
   let dragStartFreq = $state(0);
   let dragPointerId = $state<number | null>(null);
-  let dragFreq = $state(0); // computed freq during drag (sent only on release)
-  let dragOffsetPx = $state(0); // visual CSS offset during drag
+  let dragFreq = $state(0);
+  let dragOffsetPx = $state(0);
+  let lastDragSendTime = 0;
+  let lastDragSendFreq = 0;
+  let lastMoveTime = 0;
+  let lastMoveX = 0;
+  let dragSpeed = 0; // px/sec, smoothed
 
   function handleDragStart(event: PointerEvent): void {
-    // Only left button, skip if resizing passband
     if (event.button !== 0 || resizingPassband) return;
-    // Don't start drag if clicking a button/control inside the area
     if ((event.target as HTMLElement).closest('button, select, input')) return;
 
     dragStartX = event.clientX;
     dragStartFreq = tuneHz;
     dragPointerId = event.pointerId;
-    // Don't set dragging=true yet — wait for threshold
+    lastDragSendTime = 0;
+    lastDragSendFreq = 0;
+    lastMoveTime = performance.now();
+    lastMoveX = event.clientX;
+    dragSpeed = 0;
   }
 
-  const DRAG_THRESHOLD_PX = 5; // min pixels before drag activates (allows click-through)
+  const DRAG_THRESHOLD_PX = 5;
 
   function handleDragMove(event: PointerEvent): void {
     if (dragPointerId === null || dragPointerId !== event.pointerId) return;
@@ -228,7 +243,6 @@
 
     const dx = event.clientX - dragStartX;
 
-    // Activate drag only after threshold (so clicks still work for click-to-tune)
     if (!dragging) {
       if (Math.abs(dx) < DRAG_THRESHOLD_PX) return;
       dragging = true;
@@ -236,8 +250,17 @@
         ?.setPointerCapture?.(event.pointerId);
     }
 
+    // Track drag speed (exponential smoothing)
+    const now = performance.now();
+    const dt = now - lastMoveTime;
+    if (dt > 0) {
+      const instantSpeed = (Math.abs(event.clientX - lastMoveX) / dt) * 1000; // px/sec
+      dragSpeed = dragSpeed * 0.7 + instantSpeed * 0.3; // smooth
+    }
+    lastMoveTime = now;
+    lastMoveX = event.clientX;
+
     const rect = spectrumArea.getBoundingClientRect();
-    // Drag left = freq goes up (spectrum window slides right)
     const hzPerPx = spanHz / rect.width;
     const deltaHz = -dx * hzPerPx;
     const newFreq = snapToStep(Math.round(dragStartFreq + deltaHz));
@@ -245,13 +268,31 @@
     if (newFreq <= 0) return;
     dragFreq = newFreq;
     dragOffsetPx = dx;
+
+    // Adaptive rate limit: slow drag → more updates, fast swipe → skip
+    let intervalMs: number;
+    if (dragSpeed > 600) {
+      return; // fast swipe — visual only, send on release
+    } else if (dragSpeed > 200) {
+      intervalMs = 500;
+    } else {
+      intervalMs = 300;
+    }
+
+    if (now - lastDragSendTime < intervalMs) return;
+    if (newFreq === lastDragSendFreq) return;
+
+    lastDragSendTime = now;
+    lastDragSendFreq = newFreq;
+    const receiver = radio.current?.active === 'SUB' ? 1 : 0;
+    sendCommand('set_freq', { freq: newFreq, receiver });
   }
 
   function handleDragEnd(event: PointerEvent): void {
     if (dragPointerId !== null && event.pointerId !== dragPointerId) return;
 
-    // Send frequency ONCE on release
-    if (dragging && dragFreq > 0) {
+    // Always send final frequency on release
+    if (dragging && dragFreq > 0 && dragFreq !== lastDragSendFreq) {
       const receiver = radio.current?.active === 'SUB' ? 1 : 0;
       sendCommand('set_freq', { freq: dragFreq, receiver });
     }
@@ -260,6 +301,7 @@
     dragPointerId = null;
     dragFreq = 0;
     dragOffsetPx = 0;
+    dragSpeed = 0;
   }
 
   // --- Lifecycle: connect scope WS + subscribe to DX spots ---
