@@ -574,4 +574,25 @@
   .passband-resize-zone:focus-visible {
     outline: none;
   }
+
+  /* Mobile: hide dB scale and waterfall scale to maximize spectrum width */
+  @media (max-width: 640px) {
+    .db-scale {
+      flex: 0 0 0px;
+      width: 0;
+      overflow: hidden;
+      border: none;
+    }
+
+    .waterfall-scale {
+      flex: 0 0 0px;
+      width: 0;
+      overflow: hidden;
+      border: none;
+    }
+
+    .freq-axis .tick {
+      padding-left: 0;
+    }
+  }
 </style>
