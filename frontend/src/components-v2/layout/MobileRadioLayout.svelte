@@ -98,20 +98,42 @@
   let txSettingsOpen = $state(false);
 
   // ── Tuning strip ──
+  // Mode-aware step presets
+  const SSB_STEPS = [10, 50, 100, 500, 1000];
+  const CW_STEPS  = [10, 50, 100, 500];
+  const AM_STEPS  = [1000, 5000, 9000, 10000];
+  const FM_STEPS  = [5000, 10000, 12500, 25000];
+  const DEFAULT_STEPS = [10, 50, 100, 500, 1000, 5000, 10000, 100000];
+
+  function getStepsForMode(m: string): number[] {
+    const upper = (m || '').toUpperCase();
+    if (upper === 'USB' || upper === 'LSB') return SSB_STEPS;
+    if (upper === 'CW' || upper === 'CW-R') return CW_STEPS;
+    if (upper === 'AM') return AM_STEPS;
+    if (upper === 'FM') return FM_STEPS;
+    return DEFAULT_STEPS;
+  }
+
+  let availableSteps = $derived(getStepsForMode(mode.currentMode));
   let tuningStep = $state(1000); // Hz
-  const STEPS = [10, 50, 100, 500, 1000, 5000, 10000, 100000];
+  let stepPickerOpen = $state(false);
+
+  // Reset step when mode changes and current step is not in new mode's list
+  $effect(() => {
+    const steps = getStepsForMode(mode.currentMode);
+    if (!steps.includes(tuningStep)) {
+      tuningStep = steps[Math.floor(steps.length / 2)] ?? 1000;
+    }
+  });
 
   function tuneBy(delta: number) {
     const freq = mainVfo.freq + delta * tuningStep;
     vfoHandlers.onMainFreqChange(freq);
   }
 
-  function cycleStep(direction: number) {
-    const idx = STEPS.indexOf(tuningStep);
-    const next = idx + direction;
-    if (next >= 0 && next < STEPS.length) {
-      tuningStep = STEPS[next];
-    }
+  function selectStep(hz: number) {
+    tuningStep = hz;
+    stepPickerOpen = false;
   }
 
   function formatStep(hz: number): string {
@@ -305,6 +327,26 @@
       </CollapsiblePanel>
     </section>
 
+    <!-- RF Front End (ATT / PRE / DIGI-SEL / IP+) -->
+    <section class="m-section">
+      <CollapsiblePanel title="RF" panelId="m-rf-quick" collapsible={true}>
+        <RfFrontEnd
+          rfGain={rfFrontEnd.rfGain}
+          squelch={rfFrontEnd.squelch}
+          att={rfFrontEnd.att}
+          pre={rfFrontEnd.pre}
+          digiSel={rfFrontEnd.digiSel}
+          ipPlus={rfFrontEnd.ipPlus}
+          onRfGainChange={rfHandlers.onRfGainChange}
+          onSquelchChange={rfHandlers.onSquelchChange}
+          onAttChange={rfHandlers.onAttChange}
+          onPreChange={rfHandlers.onPreChange}
+          onDigiSelToggle={rfHandlers.onDigiSelToggle}
+          onIpPlusToggle={rfHandlers.onIpPlusToggle}
+        />
+      </CollapsiblePanel>
+    </section>
+
     <!-- TX (compact: PTT + Power readout + ATU) -->
     {#if txCapable}
       <section class="m-section">
@@ -380,9 +422,26 @@
     <button class="m-tune-btn" onclick={() => tuneBy(-1)}>
       <ChevronLeft size={22} />
     </button>
-    <button class="m-tune-step" onclick={() => cycleStep(1)} oncontextmenu={(e) => { e.preventDefault(); cycleStep(-1); }}>
-      {formatStep(tuningStep)}
-    </button>
+    <div class="m-tune-step-wrapper">
+      <button class="m-tune-step" onclick={() => (stepPickerOpen = !stepPickerOpen)}>
+        {formatStep(tuningStep)}
+      </button>
+      {#if stepPickerOpen}
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <div class="m-step-picker-backdrop" onclick={() => (stepPickerOpen = false)}></div>
+        <div class="m-step-picker">
+          {#each availableSteps as s}
+            <button
+              class="m-step-option"
+              class:m-step-active={s === tuningStep}
+              onclick={() => selectStep(s)}
+            >
+              {formatStep(s)}
+            </button>
+          {/each}
+        </div>
+      {/if}
+    </div>
     <button class="m-tune-btn" onclick={() => tuneBy(1)}>
       <ChevronRight size={22} />
     </button>
@@ -996,6 +1055,67 @@
 
   .m-tune-step:active {
     background: var(--v2-bg-input, #1a1a2e);
+  }
+
+  .m-tune-step-wrapper {
+    position: relative;
+    flex: 1.2;
+    display: flex;
+  }
+
+  .m-tune-step-wrapper .m-tune-step {
+    flex: 1;
+  }
+
+  .m-step-picker-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 149;
+  }
+
+  .m-step-picker {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    background: var(--v2-bg-primary, #0f0f1a);
+    border: 1px solid var(--v2-border-panel, #333);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.5);
+    z-index: 150;
+    min-width: 100px;
+  }
+
+  .m-step-option {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 16px;
+    background: var(--v2-bg-card, #111);
+    border: none;
+    color: var(--v2-text-primary, #ddd);
+    font-family: 'Roboto Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    min-height: 44px;
+  }
+
+  .m-step-option:active {
+    background: var(--v2-bg-input, #1a1a2e);
+  }
+
+  .m-step-active {
+    color: var(--v2-accent-cyan, #22d3ee);
+    background: rgba(34, 211, 238, 0.1);
+    font-weight: 700;
   }
 
   /* ── Bottom sheets ── */
