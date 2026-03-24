@@ -140,60 +140,7 @@
   });
 </script>
 
-{#if spectrumLandscape}
-  <div class="spectrum-landscape" aria-label="Spectrum landscape">
-    <div class="spectrum-hud" aria-label="Spectrum HUD">
-      <button
-        type="button"
-        class="hud-btn"
-        onclick={() => { landscapeSpectrumDismissed = true; }}
-        aria-label="Exit fullscreen spectrum"
-      >
-        Back
-      </button>
-
-      <div class="hud-center">
-        <div class="hud-freq">
-          <FrequencyDisplay freq={activeFreq} compact active />
-        </div>
-        <div class="hud-meta">
-          <span class="hud-rx">{activeReceiverLabel}</span>
-          <span class="hud-sep">·</span>
-          <span class="hud-mode">{activeModeLabel}</span>
-          <span class="hud-sep">·</span>
-          <span class="hud-filter">{activeFilterLabel}</span>
-        </div>
-      </div>
-
-      <div class="hud-spacer"></div>
-
-      <div class="hud-status" title={connectionStatus}>
-        <span
-          class="hud-dot"
-          style="background: {connectionStatus === 'connected' ? 'var(--v2-accent-green, #4ade80)' : connectionStatus === 'disconnected' ? 'var(--v2-accent-red, #ef4444)' : 'var(--v2-accent-yellow, #facc15)'}"
-        ></span>
-      </div>
-
-      <button
-        type="button"
-        class="hud-btn"
-        class:hud-btn--active={landscapeAutoLocked}
-        onclick={() => {
-          landscapeAutoLocked = !landscapeAutoLocked;
-          if (landscapeAutoLocked) landscapeSpectrumDismissed = false;
-        }}
-        aria-label={landscapeAutoLocked ? 'Unlock landscape auto-fullscreen' : 'Lock landscape auto-fullscreen off'}
-        title={landscapeAutoLocked ? 'Auto-spectrum locked OFF' : 'Lock OFF'}
-      >
-        {landscapeAutoLocked ? '🔒' : '🔓'}
-      </button>
-    </div>
-
-    <div class="spectrum-landscape-frame">
-      <SpectrumPanel />
-    </div>
-  </div>
-{:else if isMobile}
+{#if isMobile}
   <MobileRadioLayout />
 {:else}
 <div class="radio-layout">
