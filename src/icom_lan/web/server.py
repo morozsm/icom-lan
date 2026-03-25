@@ -1238,8 +1238,9 @@ class WebServer:
                     **({"controls": profile.controls} if profile.controls else {}),
                     "txBands": [
                         {"name": b.name, "start": b.start, "end": b.end}
-                        for b in profile.bands
-                    ] if profile.bands else None,
+                        for fr in profile.freq_ranges
+                        for b in fr.bands
+                    ] or None,
                 },
                 "connection": {
                     "rigConnected": connected,
@@ -1328,8 +1329,9 @@ class WebServer:
                 **({"controls": profile.controls} if profile.controls else {}),
                 "txBands": [
                     {"name": b.name, "start": b.start, "end": b.end}
-                    for b in profile.bands
-                ] if profile.bands else None,
+                    for fr in profile.freq_ranges
+                    for b in fr.bands
+                ] or None,
             },
             separators=(",", ":"),
         ).encode()
