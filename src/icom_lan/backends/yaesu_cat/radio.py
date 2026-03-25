@@ -308,3 +308,424 @@ class YaesuCatRadio:
         else:
             self._state.sub.s_meter = raw
         return raw
+
+    # -- D1: RX Audio Controls ----------------------------------------------
+
+    async def get_af_level(self, receiver: int = 0) -> int:
+        """Get the AF (audio) level (0–255).
+
+        Args:
+            receiver: 0 = main (sub not yet supported by TOML profile).
+        """
+        result = await self._query("get_af_level")
+        return result["level"]
+
+    async def set_af_level(self, level: int, receiver: int = 0) -> None:
+        """Set the AF (audio) level (0–255)."""
+        await self._write("set_af_level", level=level)
+
+    async def get_rf_gain(self, receiver: int = 0) -> int:
+        """Get the RF gain (0–255)."""
+        result = await self._query("get_rf_gain")
+        return result["level"]
+
+    async def set_rf_gain(self, level: int, receiver: int = 0) -> None:
+        """Set the RF gain (0–255)."""
+        await self._write("set_rf_gain", level=level)
+
+    async def get_squelch(self, receiver: int = 0) -> int:
+        """Get the squelch level (0–255)."""
+        result = await self._query("get_squelch")
+        return result["level"]
+
+    async def set_squelch(self, level: int, receiver: int = 0) -> None:
+        """Set the squelch level (0–255)."""
+        await self._write("set_squelch", level=level)
+
+    # -- D2: RF Front-End ---------------------------------------------------
+
+    async def get_attenuator(self, receiver: int = 0) -> int:
+        """Get attenuator state (0 = OFF, 1 = ON)."""
+        result = await self._query("get_attenuator")
+        return int(result["state"])
+
+    async def set_attenuator(self, state: int, receiver: int = 0) -> None:
+        """Set attenuator state (0 = OFF, 1 = ON)."""
+        await self._write("set_attenuator", state=str(state))
+
+    async def get_preamp(self, band: int = 0) -> int:
+        """Get preamp setting (0–2).
+
+        Args:
+            band: 0 = HF/50 MHz (PA0). Sub-band variants not yet supported.
+        """
+        result = await self._query("get_preamp")
+        return int(result["value"])
+
+    async def set_preamp(self, value: int, band: int = 0) -> None:
+        """Set preamp setting.
+
+        Args:
+            value: Preamp level (0–2).
+            band: 0 = HF/50 MHz, 1 = VHF, 2 = UHF.
+        """
+        await self._write("set_preamp", band=str(band), value=str(value))
+
+    # -- D3: DSP (NB/NR/Notch) ----------------------------------------------
+
+    async def get_nb_level(self, receiver: int = 0) -> int:
+        """Get noise blanker level (0 = OFF, 1–10 = level)."""
+        result = await self._query("get_nb_level")
+        return result["level"]
+
+    async def set_nb_level(self, level: int, receiver: int = 0) -> None:
+        """Set noise blanker level (0 = OFF, 1–10 = level)."""
+        await self._write("set_nb_level", level=level)
+
+    async def get_nr_level(self, receiver: int = 0) -> int:
+        """Get noise reduction level (0 = OFF, 1–15 = level)."""
+        result = await self._query("get_nr_level")
+        return result["level"]
+
+    async def set_nr_level(self, level: int, receiver: int = 0) -> None:
+        """Set noise reduction level (0 = OFF, 1–15 = level)."""
+        await self._write("set_nr_level", level=level)
+
+    async def get_auto_notch(self, receiver: int = 0) -> bool:
+        """Get auto notch state (True = ON)."""
+        result = await self._query("get_auto_notch")
+        return result["state"] == "1"
+
+    async def set_auto_notch(self, state: bool, receiver: int = 0) -> None:
+        """Set auto notch state."""
+        await self._write("set_auto_notch", state="1" if state else "0")
+
+    async def get_manual_notch(self, receiver: int = 0) -> tuple[bool, int]:
+        """Get manual notch state and frequency index.
+
+        Returns:
+            Tuple of (enabled: bool, freq_index: int 0–255).
+        """
+        state_result = await self._query("get_manual_notch")
+        freq_result = await self._query("get_manual_notch_freq")
+        return bool(state_result["state"]), freq_result["freq"]
+
+    async def set_manual_notch(self, state: bool, receiver: int = 0) -> None:
+        """Set manual notch ON/OFF (BP00)."""
+        await self._write("set_manual_notch", state=1 if state else 0)
+
+    async def set_manual_notch_freq(self, freq: int, receiver: int = 0) -> None:
+        """Set manual notch frequency index (0–255, BP01)."""
+        await self._write("set_manual_notch_freq", freq=freq)
+
+    # -- D4: Filters --------------------------------------------------------
+
+    async def get_filter_width(self, receiver: int = 0) -> int:
+        """Get filter width index (SH00)."""
+        result = await self._query("get_filter_width")
+        return result["value"]
+
+    async def set_filter_width(self, value: int, receiver: int = 0) -> None:
+        """Set filter width index (SH00)."""
+        await self._write("set_filter_width", value=value)
+
+    async def get_filter_shift(self, receiver: int = 0) -> int:
+        """Get filter shift index (SH01)."""
+        result = await self._query("get_filter_shift")
+        return result["value"]
+
+    async def set_filter_shift(self, value: int, receiver: int = 0) -> None:
+        """Set filter shift index (SH01)."""
+        await self._write("set_filter_shift", value=value)
+
+    async def get_if_shift(self, receiver: int = 0) -> int:
+        """Get IF shift offset in Hz (signed, IS0).
+
+        Returns:
+            Signed offset in Hz (negative = downshift).
+        """
+        result = await self._query("get_if_shift")
+        offset: int = result["offset"]
+        return -offset if result["sign"] == "-" else offset
+
+    async def set_if_shift(self, offset: int, receiver: int = 0) -> None:
+        """Set IF shift offset in Hz (signed, IS0)."""
+        sign = "+" if offset >= 0 else "-"
+        await self._write("set_if_shift", sign=sign, offset=abs(offset))
+
+    async def get_narrow(self, receiver: int = 0) -> bool:
+        """Get narrow filter state (True = narrow)."""
+        result = await self._query("get_narrow")
+        return result["state"] == "1"
+
+    async def set_narrow(self, state: bool, receiver: int = 0) -> None:
+        """Set narrow filter state."""
+        await self._write("set_narrow", state="1" if state else "0")
+
+    # -- D5: Split/Dual Watch -----------------------------------------------
+
+    async def get_rx_func(self) -> int:
+        """Get RX function (0 = Dual RX, 1 = Single RX)."""
+        result = await self._query("get_rx_func")
+        return result["mode"]
+
+    async def set_rx_func(self, mode: int) -> None:
+        """Set RX function (0 = Dual RX, 1 = Single RX)."""
+        await self._write("set_rx_func", mode=mode)
+
+    async def get_tx_func(self) -> int:
+        """Get TX function (0 = MAIN TX, 1 = SUB TX)."""
+        result = await self._query("get_tx_func")
+        return int(result["vfo"])
+
+    async def set_tx_func(self, vfo: int) -> None:
+        """Set TX function (0 = MAIN, 1 = SUB)."""
+        await self._write("set_tx_func", vfo=str(vfo))
+
+    async def get_split(self) -> bool:
+        """Get split operation state."""
+        result = await self._query("get_split")
+        return result["state"] == "1"
+
+    async def set_split(self, state: bool) -> None:
+        """Set split operation state."""
+        await self._write("set_split", state="1" if state else "0")
+
+    async def get_vfo_select(self) -> int:
+        """Get VFO selection (0 = MAIN, 1 = SUB)."""
+        result = await self._query("get_vfo_select")
+        return int(result["vfo"])
+
+    async def set_vfo_select(self, vfo: int) -> None:
+        """Set VFO selection (0 = MAIN, 1 = SUB)."""
+        await self._write("set_vfo_select", vfo=str(vfo))
+
+    async def vfo_a_to_b(self) -> None:
+        """Copy VFO-A to VFO-B."""
+        await self._write("vfo_a_to_b")
+
+    async def vfo_b_to_a(self) -> None:
+        """Copy VFO-B to VFO-A."""
+        await self._write("vfo_b_to_a")
+
+    # -- D6: TX Stack -------------------------------------------------------
+
+    async def get_power(self) -> tuple[int, int]:
+        """Get TX power setting.
+
+        Returns:
+            Tuple of (head: int, watts: int).
+        """
+        result = await self._query("get_power")
+        return int(result["head"]), result["watts"]
+
+    async def set_power(self, watts: int, head: int = 2) -> None:
+        """Set TX power.
+
+        Args:
+            watts: Power in watts.
+            head: Head selector (default 2).
+        """
+        await self._write("set_power", head=str(head), watts=watts)
+
+    async def get_mic_gain(self) -> int:
+        """Get microphone gain (0–100)."""
+        result = await self._query("get_mic_gain")
+        return result["level"]
+
+    async def set_mic_gain(self, level: int) -> None:
+        """Set microphone gain (0–100)."""
+        await self._write("set_mic_gain", level=level)
+
+    async def get_processor(self) -> bool:
+        """Get speech processor state."""
+        result = await self._query("get_processor")
+        return result["state"] == "1"
+
+    async def set_processor(self, state: bool) -> None:
+        """Set speech processor state."""
+        await self._write("set_processor", state="1" if state else "0")
+
+    async def get_processor_level(self) -> int:
+        """Get processor level (0–3)."""
+        result = await self._query("get_processor_level")
+        return result["level"]
+
+    async def set_processor_level(self, level: int) -> None:
+        """Set processor level (0–3)."""
+        await self._write("set_processor_level", level=level)
+
+    async def get_monitor_level(self) -> int:
+        """Get monitor level (0–255)."""
+        result = await self._query("get_monitor_level")
+        return result["level"]
+
+    async def set_monitor_level(self, level: int) -> None:
+        """Set monitor level (0–255)."""
+        await self._write("set_monitor_level", level=level)
+
+    # -- D7: CW -------------------------------------------------------------
+
+    async def get_keyer_speed(self) -> int:
+        """Get CW keyer speed in WPM (4–60)."""
+        result = await self._query("get_keyer_speed")
+        return result["wpm"]
+
+    async def set_keyer_speed(self, wpm: int) -> None:
+        """Set CW keyer speed in WPM (4–60)."""
+        await self._write("set_keyer_speed", wpm=wpm)
+
+    async def get_key_pitch(self) -> int:
+        """Get CW pitch index (0–75, maps to 300–1050 Hz)."""
+        result = await self._query("get_key_pitch")
+        return result["idx"]
+
+    async def set_key_pitch(self, idx: int) -> None:
+        """Set CW pitch index (0–75)."""
+        await self._write("set_key_pitch", idx=idx)
+
+    async def get_break_in(self) -> bool:
+        """Get CW break-in state."""
+        result = await self._query("get_break_in")
+        return result["state"] == "1"
+
+    async def set_break_in(self, state: bool) -> None:
+        """Set CW break-in state."""
+        await self._write("set_break_in", state="1" if state else "0")
+
+    async def get_cw_spot(self) -> bool:
+        """Get CW spot tone state."""
+        result = await self._query("get_cw_spot")
+        return result["state"] == "1"
+
+    async def set_cw_spot(self, state: bool) -> None:
+        """Set CW spot tone state."""
+        await self._write("set_cw_spot", state="1" if state else "0")
+
+    async def send_cw(self, msg_type: str, mem: str) -> None:
+        """Send a CW message (KY command).
+
+        Args:
+            msg_type: Message type character.
+            mem: CW message text to send.
+        """
+        await self._write("send_cw", type=msg_type, mem=mem)
+
+    async def get_break_in_delay(self) -> int:
+        """Get CW break-in delay in milliseconds (30–3000)."""
+        result = await self._query("get_break_in_delay")
+        return result["delay"]
+
+    async def set_break_in_delay(self, delay: int) -> None:
+        """Set CW break-in delay in milliseconds (30–3000)."""
+        await self._write("set_break_in_delay", delay=delay)
+
+    # -- D8: Clarifier (RIT/XIT) --------------------------------------------
+
+    async def get_clarifier(self, receiver: int = 0) -> tuple[bool, bool]:
+        """Get clarifier state (CF000).
+
+        Returns:
+            Tuple of (rx_clar: bool, tx_clar: bool).
+        """
+        result = await self._query("get_clarifier")
+        return result["rx"] == "1", result["tx"] == "1"
+
+    async def set_clarifier(
+        self, rx_clar: bool, tx_clar: bool, receiver: int = 0
+    ) -> None:
+        """Set clarifier RX/TX state (CF000)."""
+        await self._write(
+            "set_clarifier",
+            rx="1" if rx_clar else "0",
+            tx="1" if tx_clar else "0",
+            pad=0,
+        )
+
+    async def get_clarifier_freq(self, receiver: int = 0) -> int:
+        """Get clarifier offset frequency in Hz (signed, CF001)."""
+        result = await self._query("get_clarifier_freq")
+        offset: int = result["offset"]
+        return -offset if result["sign"] == "-" else offset
+
+    async def set_clarifier_freq(self, offset: int, receiver: int = 0) -> None:
+        """Set clarifier offset frequency in Hz (signed, CF001)."""
+        sign = "+" if offset >= 0 else "-"
+        await self._write("set_clarifier_freq", sign=sign, offset=abs(offset))
+
+    # -- D9: Tone/TSQL ------------------------------------------------------
+
+    async def get_sql_type(self, receiver: int = 0) -> int:
+        """Get squelch type code (CT0)."""
+        result = await self._query("get_sql_type")
+        return result["type"]
+
+    async def set_sql_type(self, type_code: int, receiver: int = 0) -> None:
+        """Set squelch type code (CT0)."""
+        await self._write("set_sql_type", type=type_code)
+
+    # -- D10: System --------------------------------------------------------
+
+    async def get_id(self) -> str:
+        """Get radio model ID string (e.g. '0840')."""
+        result = await self._query("get_id")
+        return str(result["model"]).zfill(4)
+
+    async def get_auto_info(self) -> bool:
+        """Get auto-info (AI) state."""
+        result = await self._query("get_auto_info")
+        return result["state"] == "1"
+
+    async def set_auto_info(self, state: bool) -> None:
+        """Set auto-info (AI) state."""
+        await self._write("set_auto_info", state="1" if state else "0")
+
+    async def get_vox(self) -> bool:
+        """Get VOX state."""
+        result = await self._query("get_vox")
+        return result["state"] == "1"
+
+    async def set_vox(self, state: bool) -> None:
+        """Set VOX state."""
+        await self._write("set_vox", state="1" if state else "0")
+
+    async def get_lock(self) -> bool:
+        """Get dial lock state."""
+        result = await self._query("get_lock")
+        return result["state"] == "1"
+
+    async def set_lock(self, state: bool) -> None:
+        """Set dial lock state."""
+        await self._write("set_lock", state="1" if state else "0")
+
+    async def get_band(self, receiver: int = 0) -> int:
+        """Get current band index (BS0)."""
+        result = await self._query("get_band")
+        return result["band"]
+
+    async def set_band(self, band: int, receiver: int = 0) -> None:
+        """Set current band by index (BS0)."""
+        await self._write("set_band", band=band)
+
+    async def band_up(self, receiver: int = 0) -> None:
+        """Step up one band (BU0)."""
+        await self._write("band_up")
+
+    async def band_down(self, receiver: int = 0) -> None:
+        """Step down one band (BD0)."""
+        await self._write("band_down")
+
+    # -- AGC ----------------------------------------------------------------
+
+    async def get_agc(self, receiver: int = 0) -> int:
+        """Get AGC mode (GT0).
+
+        Returns:
+            0=OFF, 1=FAST, 2=MID, 3=SLOW, 4=AUTO-F, 5=AUTO-M, 6=AUTO-S.
+        """
+        result = await self._query("get_agc")
+        return int(result["mode"])
+
+    async def set_agc(self, mode: int, receiver: int = 0) -> None:
+        """Set AGC mode (GT0, 0–6)."""
+        await self._write("set_agc", mode=str(mode))
