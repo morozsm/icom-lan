@@ -568,22 +568,22 @@ class YaesuCatRadio:
     # -- D4: Filters --------------------------------------------------------
 
     async def get_filter_width(self, receiver: int = 0) -> int:
-        """Get filter width index (SH00)."""
-        result = await self._query("get_filter_width")
-        return result["value"]
+        """Get filter width index (SH0/SH1).
+
+        Args:
+            receiver: 0=MAIN, 1=SUB.
+
+        Returns:
+            Width index (0-255, mode-dependent mapping).
+        """
+        cmd = "get_filter_width" if receiver == 0 else "get_filter_width_sub"
+        result = await self._query(cmd)
+        return result["level"]
 
     async def set_filter_width(self, value: int, receiver: int = 0) -> None:
-        """Set filter width index (SH00)."""
-        await self._write("set_filter_width", value=value)
-
-    async def get_filter_shift(self, receiver: int = 0) -> int:
-        """Get filter shift index (SH01)."""
-        result = await self._query("get_filter_shift")
-        return result["value"]
-
-    async def set_filter_shift(self, value: int, receiver: int = 0) -> None:
-        """Set filter shift index (SH01)."""
-        await self._write("set_filter_shift", value=value)
+        """Set filter width index (SH0/SH1)."""
+        cmd = "set_filter_width" if receiver == 0 else "set_filter_width_sub"
+        await self._write(cmd, level=value)
 
     async def get_if_shift(self, receiver: int = 0) -> int:
         """Get IF shift offset in Hz (signed, IS0).
@@ -702,13 +702,22 @@ class YaesuCatRadio:
         """Set processor level (0–3)."""
         await self._write("set_processor_level", level=level)
 
+    async def get_monitor_on(self) -> bool:
+        """Get monitor ON/OFF state (ML0)."""
+        result = await self._query("get_monitor_on")
+        return result["level"] != 0
+
+    async def set_monitor_on(self, state: bool) -> None:
+        """Set monitor ON/OFF (ML0)."""
+        await self._write("set_monitor_on", level=1 if state else 0)
+
     async def get_monitor_level(self) -> int:
-        """Get monitor level (0–255)."""
+        """Get monitor level (0–100, ML1)."""
         result = await self._query("get_monitor_level")
         return result["level"]
 
     async def set_monitor_level(self, level: int) -> None:
-        """Set monitor level (0–255)."""
+        """Set monitor level (0–100, ML1)."""
         await self._write("set_monitor_level", level=level)
 
     # -- D7: CW -------------------------------------------------------------
@@ -845,14 +854,16 @@ class YaesuCatRadio:
         """Set dial lock state."""
         await self._write("set_lock", state="1" if state else "0")
 
-    async def get_band(self, receiver: int = 0) -> int:
-        """Get current band index (BS0)."""
-        result = await self._query("get_band")
-        return result["band"]
-
     async def set_band(self, band: int, receiver: int = 0) -> None:
-        """Set current band by index (BS0)."""
-        await self._write("set_band", band=band)
+        """Set current band by index (BS, write-only on FTX-1).
+
+        Note: FTX-1 does not support BS read (returns ?;).
+        Band values: 00=1.8M, 01=3.5M, 02=5M, 03=7M, 04=10M,
+        05=14M, 06=18M, 07=21M, 08=24.5M, 09=28M, 10=50M,
+        11=70M/GEN, 12=AIR, 13=144M, 14=430M.
+        """
+        cmd = "set_band" if receiver == 0 else "set_band_sub"
+        await self._write(cmd, band=band)
 
     async def band_up(self, receiver: int = 0) -> None:
         """Step up one band (BU0)."""
