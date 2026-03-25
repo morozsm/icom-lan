@@ -97,6 +97,19 @@ def _make_radio(active: str = "MAIN") -> MagicMock:
     radio.set_scope_during_tx = AsyncMock()
     radio.set_scope_center_type = AsyncMock()
     radio.set_scope_fixed_edge = AsyncMock()
+    # DSP toggles (needed for AdvancedControlCapable protocol)
+    radio.get_auto_notch = AsyncMock(return_value=False)
+    radio.set_auto_notch = AsyncMock()
+    radio.get_manual_notch = AsyncMock(return_value=False)
+    radio.set_manual_notch = AsyncMock()
+    radio.get_cw_pitch = AsyncMock(return_value=600)
+    radio.set_cw_pitch = AsyncMock()
+    radio.get_dial_lock = AsyncMock(return_value=False)
+    radio.set_dial_lock = AsyncMock()
+    radio.get_anti_vox_gain = AsyncMock(return_value=0)
+    radio.set_anti_vox_gain = AsyncMock()
+    radio.get_monitor = AsyncMock(return_value=False)
+    radio.set_monitor = AsyncMock()
     return radio
 
 
