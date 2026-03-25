@@ -220,4 +220,123 @@ actual = 40.0
 label = "S9+40"
 
 [commands]
-# Yaesu CAT command mapping — TBD
+# ── Frequency / Mode ──
+get_freq       = { cat = { read = "FA;", parse = "FA{freq:09d};" } }
+set_freq       = { cat = { write = "FA{freq:09d};" } }
+get_freq_sub   = { cat = { read = "FB;", parse = "FB{freq:09d};" } }
+set_freq_sub   = { cat = { write = "FB{freq:09d};" } }
+get_mode       = { cat = { read = "MD0;", parse = "MD0{mode};" } }
+set_mode       = { cat = { write = "MD0{mode};" } }
+get_mode_sub   = { cat = { read = "MD1;", parse = "MD1{mode};" } }
+set_mode_sub   = { cat = { write = "MD1{mode};" } }
+
+# ── VFO / Band ──
+get_vfo_select = { cat = { read = "VS;", parse = "VS{vfo};" } }
+set_vfo_select = { cat = { write = "VS{vfo};" } }
+vfo_a_to_b     = { cat = { write = "AB;" } }
+vfo_b_to_a     = { cat = { write = "BA;" } }
+get_band       = { cat = { read = "BS0;", parse = "BS0{band:02d};" } }
+set_band       = { cat = { write = "BS0{band:02d};" } }
+band_up        = { cat = { write = "BU0;" } }
+band_down      = { cat = { write = "BD0;" } }
+
+# ── RX / TX Routing ──
+get_rx_func    = { cat = { read = "FR;", parse = "FR{mode:02d};" } }
+set_rx_func    = { cat = { write = "FR{mode:02d};" } }
+get_tx_func    = { cat = { read = "FT;", parse = "FT{vfo};" } }
+set_tx_func    = { cat = { write = "FT{vfo};" } }
+get_split      = { cat = { read = "ST;", parse = "ST{state};" } }
+set_split      = { cat = { write = "ST{state};" } }
+
+# ── PTT / TX ──
+get_ptt        = { cat = { read = "TX;", parse = "TX{state};" } }
+set_ptt        = { cat = { write = "TX{state};" } }
+
+# ── Meters ──
+get_s_meter    = { cat = { read = "SM0;", parse = "SM0{raw:03d};" } }
+get_s_meter_sub = { cat = { read = "SM1;", parse = "SM1{raw:03d};" } }
+get_meter      = { cat = { read = "RM{type};", parse = "RM{type}{main:03d}{sub:03d};" } }
+
+# ── Audio / RF Controls ──
+get_af_level   = { cat = { read = "AG0;", parse = "AG0{level:03d};" } }
+set_af_level   = { cat = { write = "AG0{level:03d};" } }
+get_rf_gain    = { cat = { read = "RG0;", parse = "RG0{level:03d};" } }
+set_rf_gain    = { cat = { write = "RG0{level:03d};" } }
+get_squelch    = { cat = { read = "SQ0;", parse = "SQ0{level:03d};" } }
+set_squelch    = { cat = { write = "SQ0{level:03d};" } }
+get_monitor_level = { cat = { read = "ML;", parse = "ML{level:03d};" } }
+set_monitor_level = { cat = { write = "ML{level:03d};" } }
+
+# ── RF Front End ──
+get_attenuator = { cat = { read = "RA0;", parse = "RA0{state};" } }
+set_attenuator = { cat = { write = "RA0{state};" } }
+get_preamp     = { cat = { read = "PA0;", parse = "PA0{value};" } }
+set_preamp     = { cat = { write = "PA{band}{value};" } }
+
+# ── DSP / Noise ──
+get_nb_level   = { cat = { read = "NL0;", parse = "NL0{level:03d};" } }
+set_nb_level   = { cat = { write = "NL0{level:03d};" } }
+get_nr_level   = { cat = { read = "RL0;", parse = "RL0{level:02d};" } }
+set_nr_level   = { cat = { write = "RL0{level:02d};" } }
+get_auto_notch = { cat = { read = "BC0;", parse = "BC0{state};" } }
+set_auto_notch = { cat = { write = "BC0{state};" } }
+get_manual_notch = { cat = { read = "BP00;", parse = "BP00{state:03d};" } }
+set_manual_notch = { cat = { write = "BP00{state:03d};" } }
+get_manual_notch_freq = { cat = { read = "BP01;", parse = "BP01{freq:03d};" } }
+set_manual_notch_freq = { cat = { write = "BP01{freq:03d};" } }
+
+# ── AGC ──
+get_agc        = { cat = { read = "GT0;", parse = "GT0{mode};" } }
+set_agc        = { cat = { write = "GT0{mode};" } }
+
+# ── Filter / IF ──
+get_filter_width = { cat = { read = "SH00;", parse = "SH00{value:02d};" } }
+set_filter_width = { cat = { write = "SH00{value:02d};" } }
+get_filter_shift = { cat = { read = "SH01;", parse = "SH01{value:02d};" } }
+set_filter_shift = { cat = { write = "SH01{value:02d};" } }
+get_if_shift   = { cat = { read = "IS0;", parse = "IS00{sign}{offset:04d};" } }
+set_if_shift   = { cat = { write = "IS00{sign}{offset:04d};" } }
+get_narrow     = { cat = { read = "NA0;", parse = "NA0{state};" } }
+set_narrow     = { cat = { write = "NA0{state};" } }
+
+# ── TX / Power ──
+get_power      = { cat = { read = "PC;", parse = "PC{head}{watts:03d};" } }
+set_power      = { cat = { write = "PC{head}{watts:03d};" } }
+get_mic_gain   = { cat = { read = "MG;", parse = "MG{level:03d};" } }
+set_mic_gain   = { cat = { write = "MG{level:03d};" } }
+get_processor  = { cat = { read = "PR0;", parse = "PR0{state};" } }
+set_processor  = { cat = { write = "PR0{state};" } }
+get_processor_level = { cat = { read = "PL;", parse = "PL{level:03d};" } }
+set_processor_level = { cat = { write = "PL{level:03d};" } }
+
+# ── CW ──
+get_keyer_speed = { cat = { read = "KS;", parse = "KS{wpm:03d};" } }
+set_keyer_speed = { cat = { write = "KS{wpm:03d};" } }
+get_key_pitch  = { cat = { read = "KP;", parse = "KP{idx:02d};" } }
+set_key_pitch  = { cat = { write = "KP{idx:02d};" } }
+get_break_in   = { cat = { read = "BI;", parse = "BI{state};" } }
+set_break_in   = { cat = { write = "BI{state};" } }
+get_cw_spot    = { cat = { read = "CS;", parse = "CS{state};" } }
+set_cw_spot    = { cat = { write = "CS{state};" } }
+send_cw        = { cat = { write = "KY{type}{mem};" } }
+get_break_in_delay = { cat = { read = "SD;", parse = "SD{delay:04d};" } }
+set_break_in_delay = { cat = { write = "SD{delay:04d};" } }
+
+# ── Clarifier (RIT/XIT) ──
+get_clarifier  = { cat = { read = "CF000;", parse = "CF000{rx}{tx}{pad:03d};" } }
+set_clarifier  = { cat = { write = "CF000{rx}{tx}{pad:03d};" } }
+get_clarifier_freq = { cat = { read = "CF001;", parse = "CF001{sign}{offset:04d};" } }
+set_clarifier_freq = { cat = { write = "CF001{sign}{offset:04d};" } }
+
+# ── Tone / CTCSS ──
+get_sql_type   = { cat = { read = "CT0;", parse = "CT0{type:02d};" } }
+set_sql_type   = { cat = { write = "CT0{type:02d};" } }
+
+# ── System ──
+get_id         = { cat = { read = "ID;", parse = "ID{model:04d};" } }
+get_auto_info  = { cat = { read = "AI;", parse = "AI{state};" } }
+set_auto_info  = { cat = { write = "AI{state};" } }
+get_vox        = { cat = { read = "VX;", parse = "VX{state};" } }
+set_vox        = { cat = { write = "VX{state};" } }
+get_lock       = { cat = { read = "LK;", parse = "LK{state};" } }
+set_lock       = { cat = { write = "LK{state};" } }
