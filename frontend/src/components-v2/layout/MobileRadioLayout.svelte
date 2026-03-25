@@ -396,8 +396,15 @@
   <div class="m-ls-overlay">
     <div class="m-ls-vfo">
       <FrequencyDisplay freq={mainVfo.freq} compact active />
-      <span class="m-ls-mode">{mainVfo.mode}</span>
-      <span class="m-ls-filter">{mainVfo.filter}</span>
+    </div>
+    <div class="m-ls-quick-modes">
+      {#each QUICK_MODES as m}
+        <button
+          class="m-ls-mode-btn"
+          class:m-ls-mode-active={mainVfo.mode === m}
+          onclick={() => modeHandlers.onModeChange(m)}
+        >{m}</button>
+      {/each}
     </div>
     <div class="m-ls-meter">
       <span class="m-ls-smeter">{formatSValue(meter.signal)}</span>
@@ -413,6 +420,7 @@
       <button class="m-ls-tune-btn" onclick={() => tuneBy(1)}>
         <ChevronRight size={20} />
       </button>
+      <span class="m-ls-filter">{mainVfo.filter}</span>
       {#if txCapable}
         <button
           class="m-ls-ptt"
@@ -460,6 +468,9 @@
     <div class="m-vfo-meta">
       <span class="m-vfo-mode">{mainVfo.mode}</span>
       <span class="m-vfo-filter">{mainVfo.filter}</span>
+      {#if hasDualReceiver() && subVfo.freq > 0}
+        <span class="m-vfo-sub">{(subVfo.freq / 1_000_000).toFixed(3)}</span>
+      {/if}
     </div>
   </header>
 
@@ -671,6 +682,19 @@
               {/if}
             </button>
           </div>
+          {#if tx.txActive || pttActive}
+            <div class="m-tx-meter">
+              <DockMeterPanel
+                sValue={mainVfo.sValue}
+                rfPower={meter.rfPower ?? 0}
+                swr={meter.swr}
+                alc={meter.alc ?? 0}
+                txActive={true}
+                meterSource="po"
+                onMeterSourceChange={() => {}}
+              />
+            </div>
+          {/if}
         </CollapsiblePanel>
       </section>
     {/if}
@@ -1034,23 +1058,41 @@
     flex-shrink: 0;
   }
 
-  .m-ls-mode, .m-ls-filter {
+  .m-ls-quick-modes {
+    display: flex;
+    gap: 2px;
+  }
+
+  .m-ls-mode-btn {
     font-family: 'Roboto Mono', monospace;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
-    padding: 2px 6px;
+    padding: 3px 8px;
     border-radius: 3px;
+    border: 1px solid rgba(0, 212, 255, 0.3);
+    background: transparent;
+    color: rgba(0, 212, 255, 0.6);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: all 0.15s;
     letter-spacing: 0.06em;
   }
 
-  .m-ls-mode {
-    background: rgba(0, 212, 255, 0.2);
+  .m-ls-mode-active {
+    background: rgba(0, 212, 255, 0.25);
     color: #00d4ff;
+    border-color: #00d4ff;
   }
 
   .m-ls-filter {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 6px;
+    border-radius: 3px;
     background: rgba(156, 163, 175, 0.15);
     color: #9ca3af;
+    letter-spacing: 0.06em;
   }
 
   .m-ls-meter {
@@ -1242,6 +1284,22 @@
     font-size: 11px;
   }
 
+  .m-vfo-sub {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 10px;
+    color: var(--v2-text-dim, #666);
+    margin-left: auto;
+    letter-spacing: 0.02em;
+  }
+
+  .m-vfo-sub::before {
+    content: 'SUB ';
+    font-size: 8px;
+    font-weight: 700;
+    color: var(--v2-text-dim, #555);
+    letter-spacing: 0.08em;
+  }
+
   /* ── S-meter bar (full width, below VFO) ── */
   .m-vfo-ops-row {
     display: flex;
@@ -1253,6 +1311,11 @@
     flex: 1 1 0;
     min-width: 0;
     min-height: 36px;
+  }
+
+  .m-tx-meter {
+    padding: 4px 8px 0;
+    border-top: 1px solid var(--v2-border-darker, #1a1a2e);
   }
 
   .m-smeter-bar {
