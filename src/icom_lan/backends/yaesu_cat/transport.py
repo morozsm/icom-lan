@@ -254,7 +254,7 @@ class YaesuCatTransport:
                 timeout = self._timeout
             
             # Read response(s), skipping echoes and mismatched stale lines
-            max_attempts = 4  # safety valve
+            max_attempts = 6  # safety valve — allow skipping echoes + stale auto-info
             for attempt in range(max_attempts):
                 response = await self.readline(timeout=timeout)
                 
@@ -264,7 +264,22 @@ class YaesuCatTransport:
                         logger.debug("CAT: echo detected, reading actual response")
                     continue
                 
-                # Accept this response (it's not an echo)
+                # Stale / auto-info suppression: if the response doesn't start
+                # with the expected command prefix, it's a leftover auto-info
+                # notification (e.g. LK0; while we asked SM0;).  Skip it.
+                if expected_prefix and not response.startswith(expected_prefix):
+                    logger.info(
+                        "CAT: flushed %d stale bytes from RX buffer",
+                        len(response),
+                    )
+                    if self._debug_logging:
+                        logger.debug(
+                            "CAT: skipping mismatched response %r (expected prefix %r)",
+                            response, expected_prefix,
+                        )
+                    continue
+                
+                # Accept this response (matches expected prefix)
                 return response
             
             # Exhausted attempts — all were echoes (shouldn't happen)

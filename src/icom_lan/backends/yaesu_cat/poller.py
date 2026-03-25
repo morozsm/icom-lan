@@ -395,6 +395,11 @@ class YaesuCatPoller:
                     return
 
             logger.info("CMD: %s", name)
+            # Give the radio time to process the write command and send any
+            # echo / auto-info response before the next query.  Without this
+            # delay, stale echo bytes may arrive *after* flush_rx() in the
+            # subsequent query and corrupt the response.
+            await asyncio.sleep(0.05)
 
         except Exception:
             logger.warning("CMD: %s failed", name, exc_info=True)
