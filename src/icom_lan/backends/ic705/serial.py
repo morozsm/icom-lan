@@ -20,7 +20,7 @@ from ...radio import Icom7610CoreRadio
 from ...types import AudioCodec, ScopeCompletionPolicy, get_audio_capabilities
 from ..icom7610.drivers.serial_civ_link import SerialCivLink
 from ..icom7610.drivers.serial_session import SerialSessionDriver
-from ..icom7610.drivers.usb_audio import UsbAudioDriver
+from ...audio.usb_driver import UsbAudioDriver
 
 if TYPE_CHECKING:
     from ...profiles import RadioProfile

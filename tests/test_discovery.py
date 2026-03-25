@@ -9,12 +9,16 @@ import pytest
 
 from icom_lan.discovery import (
     CivProbeResult,
+    RadioDiscoveryResult,
     SerialPortCandidate,
     _is_candidate,
     _parse_probe_response,
+    _parse_yaesu_id_response,
     dedupe_radios,
+    discover_serial_radios,
     enumerate_serial_ports,
     probe_serial_civ,
+    probe_serial_yaesu_cat,
 )
 
 
@@ -396,3 +400,299 @@ class TestDedupeRadios:
         assert "model" in result[0]
         assert "lan" in result[0]
         assert "serial" in result[0]
+
+
+# ---------------------------------------------------------------------------
+# Fake Yaesu CAT transport helpers
+# ---------------------------------------------------------------------------
+
+
+class _FakeCatTransport:
+    """Minimal fake of YaesuCatTransport for probe tests."""
+
+    def __init__(self, response: str | None, *, fail_connect: bool = False) -> None:
+        self._response = response
+        self._fail_connect = fail_connect
+        self.connected = False
+        self.closed = False
+        self.queries: list[str] = []
+
+    async def connect(self) -> None:
+        if self._fail_connect:
+            raise OSError("Resource busy")
+        self.connected = True
+
+    async def close(self) -> None:
+        self.closed = True
+
+    async def query(self, command: str, *, timeout: float | None = None) -> str:
+        self.queries.append(command)
+        if self._response is None:
+            from icom_lan.backends.yaesu_cat.transport import CatTimeoutError
+            raise CatTimeoutError("timeout")
+        return self._response
+
+
+def _make_yaesu_factory(response: str | None, *, fail_connect: bool = False):
+    """Return a transport factory producing a _FakeCatTransport."""
+    instances: list[_FakeCatTransport] = []
+
+    def factory(**kwargs: object) -> _FakeCatTransport:
+        t = _FakeCatTransport(response, fail_connect=fail_connect)
+        instances.append(t)
+        return t
+
+    factory.instances = instances  # type: ignore[attr-defined]
+    return factory
+
+
+# ---------------------------------------------------------------------------
+# _parse_yaesu_id_response tests
+# ---------------------------------------------------------------------------
+
+
+class TestParseYaesuIdResponse:
+    def test_known_ftx1(self) -> None:
+        result = _parse_yaesu_id_response("/dev/ttyUSB0", 38400, "ID0840")
+        assert result is not None
+        assert result.model == "FTX-1"
+        assert result.profile_id == "yaesu_ftx1"
+        assert result.protocol == "yaesu_cat"
+        assert result.address == "0840"
+        assert result.baudrate == 38400
+        assert result.port == "/dev/ttyUSB0"
+
+    def test_unknown_model_id(self) -> None:
+        result = _parse_yaesu_id_response("/dev/ttyUSB0", 38400, "ID9999")
+        assert result is not None
+        assert result.model == "Yaesu (9999)"
+        assert result.profile_id == ""
+        assert result.address == "9999"
+
+    def test_too_short(self) -> None:
+        assert _parse_yaesu_id_response("/dev/x", 38400, "ID084") is None
+
+    def test_too_long(self) -> None:
+        assert _parse_yaesu_id_response("/dev/x", 38400, "ID08401") is None
+
+    def test_wrong_prefix(self) -> None:
+        assert _parse_yaesu_id_response("/dev/x", 38400, "FA0840") is None
+
+    def test_empty_response(self) -> None:
+        assert _parse_yaesu_id_response("/dev/x", 38400, "") is None
+
+
+# ---------------------------------------------------------------------------
+# probe_serial_yaesu_cat tests
+# ---------------------------------------------------------------------------
+
+
+class TestProbeSerialYaesuCat:
+    @pytest.mark.asyncio
+    async def test_success_ftx1(self) -> None:
+        factory = _make_yaesu_factory("ID0840")
+        result = await probe_serial_yaesu_cat(
+            "/dev/ttyUSB0",
+            baud_rates=[38400],
+            timeout=0.1,
+            _transport_factory=factory,
+        )
+        assert isinstance(result, RadioDiscoveryResult)
+        assert result.model == "FTX-1"
+        assert result.protocol == "yaesu_cat"
+        assert result.baudrate == 38400
+        assert result.address == "0840"
+
+    @pytest.mark.asyncio
+    async def test_success_at_second_baud(self) -> None:
+        call_count = 0
+
+        def factory(**kwargs: object) -> _FakeCatTransport:
+            nonlocal call_count
+            call_count += 1
+            baud = kwargs.get("baudrate")
+            if baud == 38400:
+                return _FakeCatTransport(None)  # timeout
+            return _FakeCatTransport("ID0840")
+
+        result = await probe_serial_yaesu_cat(
+            "/dev/ttyUSB0",
+            baud_rates=[38400, 9600],
+            timeout=0.1,
+            _transport_factory=factory,
+        )
+        assert result is not None
+        assert result.baudrate == 9600
+        assert call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_timeout_returns_none(self) -> None:
+        factory = _make_yaesu_factory(None)  # all timeouts
+        result = await probe_serial_yaesu_cat(
+            "/dev/ttyUSB0",
+            baud_rates=[38400, 9600],
+            timeout=0.1,
+            _transport_factory=factory,
+        )
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_port_busy_returns_none(self) -> None:
+        factory = _make_yaesu_factory("ID0840", fail_connect=True)
+        result = await probe_serial_yaesu_cat(
+            "/dev/ttyUSB0",
+            baud_rates=[38400],
+            timeout=0.1,
+            _transport_factory=factory,
+        )
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_invalid_response_returns_none(self) -> None:
+        factory = _make_yaesu_factory("GARBAGE")
+        result = await probe_serial_yaesu_cat(
+            "/dev/ttyUSB0",
+            baud_rates=[38400],
+            timeout=0.1,
+            _transport_factory=factory,
+        )
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_sends_id_command(self) -> None:
+        factory = _make_yaesu_factory("ID0840")
+        await probe_serial_yaesu_cat(
+            "/dev/ttyUSB0",
+            baud_rates=[38400],
+            timeout=0.1,
+            _transport_factory=factory,
+        )
+        assert factory.instances[0].queries == ["ID;"]
+
+    @pytest.mark.asyncio
+    async def test_closes_transport_after_success(self) -> None:
+        factory = _make_yaesu_factory("ID0840")
+        await probe_serial_yaesu_cat(
+            "/dev/ttyUSB0",
+            baud_rates=[38400],
+            timeout=0.1,
+            _transport_factory=factory,
+        )
+        assert factory.instances[0].closed is True
+
+    @pytest.mark.asyncio
+    async def test_closes_transport_on_timeout(self) -> None:
+        factory = _make_yaesu_factory(None)
+        await probe_serial_yaesu_cat(
+            "/dev/ttyUSB0",
+            baud_rates=[38400],
+            timeout=0.1,
+            _transport_factory=factory,
+        )
+        assert factory.instances[0].closed is True
+
+    @pytest.mark.asyncio
+    async def test_default_baud_rates(self) -> None:
+        seen_bauds: list[int] = []
+
+        def factory(**kwargs: object) -> _FakeCatTransport:
+            seen_bauds.append(int(str(kwargs["baudrate"])))
+            return _FakeCatTransport(None)
+
+        await probe_serial_yaesu_cat("/dev/ttyUSB0", timeout=0.01, _transport_factory=factory)
+        assert seen_bauds == [38400, 9600, 115200]
+
+
+# ---------------------------------------------------------------------------
+# discover_serial_radios multi-protocol tests
+# ---------------------------------------------------------------------------
+
+
+class TestDiscoverSerialRadios:
+    @pytest.mark.asyncio
+    async def test_civ_radio_detected(self) -> None:
+        reader = _FakeReader([_IC7610_RESPONSE])
+        writer = _FakeWriter()
+
+        port = _make_port("/dev/ttyUSB0", "USB Serial", "USB VID:PID=10C4:EA60")
+        with patch("serial.tools.list_ports.comports", return_value=[port]):
+            results = await discover_serial_radios(
+                _open_serial=_make_open(reader, writer),
+            )
+
+        assert len(results) == 1
+        r = results[0]
+        assert isinstance(r, RadioDiscoveryResult)
+        assert r.protocol == "civ"
+        assert r.model == "IC-7610"
+        assert r.profile_id == "icom_ic7610"
+        assert r.address == 0x98
+
+    @pytest.mark.asyncio
+    async def test_yaesu_radio_detected(self) -> None:
+        # CI-V probe times out, Yaesu CAT succeeds
+        async def _civ_open(*, url: str, baudrate: int, **_kw: object):
+            return _FakeReader([]), _FakeWriter()
+
+        yaesu_factory = _make_yaesu_factory("ID0840")
+
+        port = _make_port("/dev/ttyUSB0", "USB Serial", "USB VID:PID=0403:6001")
+        with patch("serial.tools.list_ports.comports", return_value=[port]):
+            results = await discover_serial_radios(
+                _open_serial=_civ_open,
+                _yaesu_transport_factory=yaesu_factory,
+            )
+
+        assert len(results) == 1
+        r = results[0]
+        assert r.protocol == "yaesu_cat"
+        assert r.model == "FTX-1"
+        assert r.profile_id == "yaesu_ftx1"
+
+    @pytest.mark.asyncio
+    async def test_no_radio_on_port(self) -> None:
+        async def _civ_open(*, url: str, baudrate: int, **_kw: object):
+            return _FakeReader([]), _FakeWriter()
+
+        yaesu_factory = _make_yaesu_factory(None)
+
+        port = _make_port("/dev/ttyUSB0", "USB Serial", "USB VID:PID=0403:6001")
+        with patch("serial.tools.list_ports.comports", return_value=[port]):
+            results = await discover_serial_radios(
+                _open_serial=_civ_open,
+                _yaesu_transport_factory=yaesu_factory,
+            )
+
+        assert results == []
+
+    @pytest.mark.asyncio
+    async def test_mixed_civ_and_yaesu(self) -> None:
+        # Two ports: one CI-V, one Yaesu
+        civ_reader = _FakeReader([_IC7610_RESPONSE])
+        civ_writer = _FakeWriter()
+
+        call_n = 0
+
+        async def _civ_open(*, url: str, baudrate: int, **_kw: object):
+            nonlocal call_n
+            call_n += 1
+            # Second port group: all CI-V bauds timeout
+            if url == "/dev/ttyUSB1":
+                return _FakeReader([]), _FakeWriter()
+            return civ_reader, civ_writer
+
+        yaesu_factory = _make_yaesu_factory("ID0840")
+
+        ports = [
+            _make_port("/dev/ttyUSB0", "USB Serial"),
+            _make_port("/dev/ttyUSB1", "USB Serial"),
+        ]
+        with patch("serial.tools.list_ports.comports", return_value=ports):
+            results = await discover_serial_radios(
+                _open_serial=_civ_open,
+                _yaesu_transport_factory=yaesu_factory,
+            )
+
+        assert len(results) == 2
+        protocols = {r.protocol for r in results}
+        assert protocols == {"civ", "yaesu_cat"}

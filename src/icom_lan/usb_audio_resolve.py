@@ -271,12 +271,13 @@ def _find_audio_codec_locations(ioreg_text: str) -> list[int]:
 
 
 def _is_usb_audio_codec(name: str) -> bool:
-    """Check if a device name matches the USB Audio CODEC pattern.
+    """Check if a device name matches a USB audio device pattern.
 
-    Uses a broad match to support various Icom models that all use
-    the same Burr-Brown/TI USB audio chip with identical naming.
+    Uses a broad match to support Icom, Yaesu, and Kenwood radios that
+    expose USB Audio Class devices.
     """
-    return "usb audio codec" in name.lower()
+    lowered = name.lower()
+    return any(p in lowered for p in ("usb audio codec", "usb audio", "yaesu", "kenwood"))
 
 
 def _safe_int(value: object, default: int = 0) -> int:

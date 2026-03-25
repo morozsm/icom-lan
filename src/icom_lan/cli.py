@@ -797,7 +797,7 @@ async def _cmd_list_audio_devices(args: argparse.Namespace) -> int:
             file=sys.stderr,
         )
         return 1
-    from .backends.icom7610.drivers.usb_audio import list_usb_audio_devices
+    from .audio.usb_driver import list_usb_audio_devices
 
     devices = list_usb_audio_devices(_sd)
     if getattr(args, "json", False):

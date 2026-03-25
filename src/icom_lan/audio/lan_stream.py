@@ -12,8 +12,8 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Callable
 
-from .transport import IcomTransport
-from .types import PacketType
+from ..transport import IcomTransport
+from ..types import PacketType
 
 __all__ = [
     "AudioStream",
