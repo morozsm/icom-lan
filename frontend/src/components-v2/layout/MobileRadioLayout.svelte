@@ -465,13 +465,7 @@
 
   <!-- ═══ S-METER BAR ═══ -->
   <div class="m-smeter-bar">
-    <div class="m-smeter-track">
-      <LinearSMeter value={mainVfo.sValue} compact label="" />
-    </div>
-    <div class="m-smeter-readout">
-      <span class="m-smeter-s">{formatSValue(mainVfo.sValue)}</span>
-      <span class="m-smeter-dbm">{formatDbm(mainVfo.sValue)}</span>
-    </div>
+    <LinearSMeter value={mainVfo.sValue} compact label="" />
   </div>
 
   <!-- ═══ SCROLLABLE CONTENT ═══ -->
@@ -730,29 +724,52 @@
         <div class="m-sheet-handle"></div>
         <div class="m-sheet-title">SETTINGS</div>
         <div class="m-sheet-content">
+          <CollapsiblePanel title="VFO / BAND" panelId="m-vfo-ops">
+            <div class="m-vfo-ops-row">
+              <HardwareButton
+                active={vfoOps.splitActive}
+                indicator="edge-left"
+                color={vfoOps.splitActive ? 'yellow' : 'muted'}
+                onclick={vfoHandlers.onSplitToggle}
+              >
+                SPLIT
+              </HardwareButton>
+              <HardwareButton
+                indicator="edge-left"
+                color="cyan"
+                onclick={vfoHandlers.onSwap}
+              >
+                A↔B
+              </HardwareButton>
+              <HardwareButton
+                indicator="edge-left"
+                color="cyan"
+                onclick={vfoHandlers.onEqual}
+              >
+                A=B
+              </HardwareButton>
+            </div>
+            <BandSelector
+              currentFreq={band.currentFreq}
+              onBandSelect={bandHandlers.onBandSelect}
+              onFreqPreset={presetHandlers.onFreqPreset}
+            />
+          </CollapsiblePanel>
+
           <CollapsiblePanel title="DSP" panelId="m-dsp">
             <DspPanel
-              nrActive={dsp.nrActive}
+              nrMode={dsp.nrMode}
               nrLevel={dsp.nrLevel}
               nbActive={dsp.nbActive}
               nbLevel={dsp.nbLevel}
-              nbDepth={dsp.nbDepth}
-              nbWidth={dsp.nbWidth}
-              notchActive={dsp.notchActive}
-              notchWidth={dsp.notchWidth}
-              notchPos={dsp.notchPos}
-              hasNotchWidth={dsp.hasNotchWidth}
-              hasNbDepth={dsp.hasNbDepth}
-              hasNbWidth={dsp.hasNbWidth}
-              onNrToggle={dspHandlers.onNrToggle}
+              notchMode={dsp.notchMode}
+              notchFreq={dsp.notchFreq}
+              onNrModeChange={dspHandlers.onNrModeChange}
               onNrLevelChange={dspHandlers.onNrLevelChange}
               onNbToggle={dspHandlers.onNbToggle}
               onNbLevelChange={dspHandlers.onNbLevelChange}
-              onNbDepthChange={dspHandlers.onNbDepthChange}
-              onNbWidthChange={dspHandlers.onNbWidthChange}
-              onNotchToggle={dspHandlers.onNotchToggle}
-              onNotchWidthChange={dspHandlers.onNotchWidthChange}
-              onNotchPosChange={dspHandlers.onNotchPosChange}
+              onNotchModeChange={dspHandlers.onNotchModeChange}
+              onNotchFreqChange={dspHandlers.onNotchFreqChange}
             />
           </CollapsiblePanel>
 
@@ -1226,42 +1243,23 @@
   }
 
   /* ── S-meter bar (full width, below VFO) ── */
+  .m-vfo-ops-row {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 8px;
+  }
+
+  .m-vfo-ops-row > :global(button) {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 36px;
+  }
+
   .m-smeter-bar {
     flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 3px 10px;
+    padding: 2px 4px;
     background: var(--v2-bg-darker, #0a0a14);
     border-bottom: 1px solid var(--v2-border-darker, #1a1a2e);
-  }
-
-  .m-smeter-track {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .m-smeter-readout {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    flex-shrink: 0;
-    min-width: 52px;
-  }
-
-  .m-smeter-s {
-    font-family: 'Roboto Mono', monospace;
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--v2-text-primary, #eee);
-    letter-spacing: 0.04em;
-  }
-
-  .m-smeter-dbm {
-    font-family: 'Roboto Mono', monospace;
-    font-size: 9px;
-    color: var(--v2-text-dim, #555);
-    letter-spacing: 0.02em;
   }
 
   /* ── Scrollable content ── */
