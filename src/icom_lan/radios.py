@@ -6,7 +6,7 @@ Reference: wfview rigs/*.rig files and rigidentities.h.
 import logging
 from dataclasses import dataclass
 
-__all__ = ["RadioModel", "RADIOS", "SERIAL_RADIO_MAP", "identify_radio", "IC_7610_ADDR"]
+__all__ = ["RadioModel", "RADIOS", "SERIAL_RADIO_MAP", "CIV_PROFILE_MAP", "identify_radio", "IC_7610_ADDR"]
 
 logger = logging.getLogger(__name__)
 
@@ -76,6 +76,18 @@ SERIAL_RADIO_MAP: dict[int, tuple[str, bytes]] = {
     0xA2: ("IC-9700", b"\x01\x20"),
     0x8E: ("IC-7851", b"\x01\x35"),
     0x96: ("IC-R8600", b"\x01\x26"),
+}
+
+
+#: Mapping from CI-V address to rig profile ID (matches ``id`` in ``rigs/*.toml``).
+#: Empty string means no matching profile file exists yet.
+CIV_PROFILE_MAP: dict[int, str] = {
+    0x98: "icom_ic7610",
+    0xA4: "icom_ic705",
+    0x94: "icom_ic7300",
+    0xA2: "icom_ic9700",
+    0x8E: "",  # IC-7851 — no profile file yet
+    0x96: "",  # IC-R8600 — no profile file yet
 }
 
 
