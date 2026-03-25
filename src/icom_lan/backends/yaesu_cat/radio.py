@@ -9,14 +9,19 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any, Callable
 
+from ...audio import AudioPacket
+from ...audio.usb_driver import UsbAudioDriver
 from ...command_spec import CatCommandSpec
-from ...exceptions import CommandError
+from ...exceptions import AudioFormatError, CommandError
 from ...exceptions import ConnectionError as RadioConnectionError
 from ...radio_state import RadioState
 from .parser import CatCommandParser, format_command
 from .transport import YaesuCatTransport
+
+if TYPE_CHECKING:
+    from ...audio_bus import AudioBus
 
 __all__ = ["YaesuCatRadio"]
 
@@ -60,6 +65,10 @@ class YaesuCatRadio:
         device: str,
         baudrate: int = 38400,
         profile: str | Any = "ftx1",
+        rx_device: str | None = None,
+        tx_device: str | None = None,
+        audio_sample_rate: int = 48000,
+        audio_driver: UsbAudioDriver | None = None,
     ) -> None:
         """Create a YaesuCatRadio instance.
 
@@ -67,10 +76,25 @@ class YaesuCatRadio:
             device: Serial port path (e.g. ``"/dev/cu.usbserial-01AE340D0"``).
             baudrate: Serial baud rate (default 38400 for FTX-1).
             profile: Rig profile name (``"ftx1"``) or a loaded ``RigConfig``.
+            rx_device: USB audio input device name for RX audio capture.
+            tx_device: USB audio output device name for TX audio playback.
+            audio_sample_rate: Audio sample rate in Hz (default 48000).
+            audio_driver: Optional pre-constructed UsbAudioDriver (for testing).
         """
         self._config = _load_config(profile)
         self._transport = YaesuCatTransport(device=device, baudrate=baudrate)
         self._state = RadioState()
+        self._audio_bus: AudioBus | None = None
+        self._audio_seq = 0
+        self._opus_rx_user_callback: Callable[[AudioPacket | None], None] | None = None
+        self._pcm_rx_user_callback: Callable[[bytes | None], None] | None = None
+        self._audio_driver: UsbAudioDriver = audio_driver or UsbAudioDriver(
+            serial_port=device,
+            rx_device=rx_device,
+            tx_device=tx_device,
+            sample_rate=audio_sample_rate,
+            channels=1,
+        )
 
         # Build bidirectional mode code ↔ name maps.
         # FTX-1 CAT codes are 1-based: index 0 in modes list → code "1".
@@ -101,6 +125,8 @@ class YaesuCatRadio:
 
     async def disconnect(self) -> None:
         """Close the serial port."""
+        await self._audio_driver.stop_rx()
+        await self._audio_driver.stop_tx()
         await self._transport.close()
 
     async def __aenter__(self) -> "YaesuCatRadio":
@@ -134,6 +160,127 @@ class YaesuCatRadio:
     def radio_state(self) -> RadioState:
         """Live radio state snapshot (updated by get_* calls)."""
         return self._state
+
+    @property
+    def audio_bus(self) -> "AudioBus":
+        """AudioBus instance for pub/sub audio distribution."""
+        if self._audio_bus is None:
+            from ...audio_bus import AudioBus
+            self._audio_bus = AudioBus(self)
+        return self._audio_bus
+
+    # -- AudioCapable methods -----------------------------------------------
+
+    async def start_audio_rx_opus(
+        self,
+        callback: Callable[[AudioPacket | None], None],
+        *,
+        jitter_depth: int = 5,
+    ) -> None:
+        if not callable(callback):
+            raise TypeError("callback must be callable and accept AudioPacket | None.")
+        if isinstance(jitter_depth, bool) or not isinstance(jitter_depth, int):
+            raise TypeError(
+                f"jitter_depth must be an int, got {type(jitter_depth).__name__}."
+            )
+        if jitter_depth < 0:
+            raise ValueError(f"jitter_depth must be >= 0, got {jitter_depth}.")
+        self._require_connected()
+
+        self._opus_rx_user_callback = callback
+
+        def _on_pcm_frame(pcm_frame: bytes) -> None:
+            packet = AudioPacket(
+                ident=0x9781,
+                send_seq=self._audio_seq,
+                data=pcm_frame,
+            )
+            self._audio_seq = (self._audio_seq + 1) & 0xFFFF
+            callback(packet)
+
+        await self._audio_driver.start_rx(_on_pcm_frame)
+
+    async def stop_audio_rx_opus(self) -> None:
+        self._opus_rx_user_callback = None
+        await self._audio_driver.stop_rx()
+
+    async def start_audio_rx_pcm(
+        self,
+        callback: Callable[[bytes | None], None],
+        *,
+        sample_rate: int = 48000,
+        channels: int = 1,
+        frame_ms: int = 20,
+        jitter_depth: int = 5,
+    ) -> None:
+        if not callable(callback):
+            raise TypeError("callback must be callable and accept bytes | None.")
+        for name, value in (
+            ("sample_rate", sample_rate),
+            ("channels", channels),
+            ("frame_ms", frame_ms),
+            ("jitter_depth", jitter_depth),
+        ):
+            if isinstance(value, bool) or not isinstance(value, int):
+                raise TypeError(f"{name} must be an int, got {type(value).__name__}.")
+        if jitter_depth < 0:
+            raise ValueError(f"jitter_depth must be >= 0, got {jitter_depth}.")
+        if (sample_rate * frame_ms) % 1000 != 0:
+            raise AudioFormatError(
+                "sample_rate * frame_ms must produce an integer frame size."
+            )
+
+        self._require_connected()
+        self._pcm_rx_user_callback = callback
+
+        await self._audio_driver.start_rx(
+            callback,
+            sample_rate=sample_rate,
+            channels=channels,
+            frame_ms=frame_ms,
+        )
+
+    async def stop_audio_rx_pcm(self) -> None:
+        self._pcm_rx_user_callback = None
+        await self._audio_driver.stop_rx()
+
+    async def start_audio_tx_pcm(
+        self,
+        *,
+        sample_rate: int = 48000,
+        channels: int = 1,
+        frame_ms: int = 20,
+    ) -> None:
+        for name, value in (
+            ("sample_rate", sample_rate),
+            ("channels", channels),
+            ("frame_ms", frame_ms),
+        ):
+            if isinstance(value, bool) or not isinstance(value, int):
+                raise TypeError(f"{name} must be an int, got {type(value).__name__}.")
+        if (sample_rate * frame_ms) % 1000 != 0:
+            raise AudioFormatError(
+                "sample_rate * frame_ms must produce an integer frame size."
+            )
+
+        self._require_connected()
+        await self._audio_driver.start_tx(
+            sample_rate=sample_rate,
+            channels=channels,
+            frame_ms=frame_ms,
+        )
+
+    async def stop_audio_tx_pcm(self) -> None:
+        await self._audio_driver.stop_tx()
+
+    async def push_pcm_tx(self, frame: bytes) -> None:
+        if not isinstance(frame, bytes):
+            raise TypeError(f"frame must be bytes, got {type(frame).__name__}.")
+        if len(frame) == 0:
+            raise ValueError("frame must not be empty.")
+
+        self._require_connected()
+        await self._audio_driver.push_tx_pcm(frame)
 
     # -- Internal helpers ---------------------------------------------------
 
