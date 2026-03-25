@@ -2056,10 +2056,14 @@ async def _cmd_discover(_radio: Radio, args: argparse.Namespace) -> int:
     else:
         lan_result, serial_result = results[0], []
 
+    import dataclasses
+
     lan_radios: list[dict[str, Any]] = lan_result if not isinstance(lan_result, BaseException) else []
-    serial_radios: list[dict[str, Any]] = (
-        serial_result if not isinstance(serial_result, BaseException) else []
-    )
+    _serial_raw = serial_result if not isinstance(serial_result, BaseException) else []
+    serial_radios: list[dict[str, Any]] = [
+        dataclasses.asdict(r) if dataclasses.is_dataclass(r) and not isinstance(r, type) else r
+        for r in _serial_raw
+    ]
 
     if isinstance(lan_result, BaseException):
         print(f"  Warning: LAN discovery failed — {lan_result}", file=sys.stderr)
@@ -2085,7 +2089,8 @@ async def _cmd_discover(_radio: Radio, args: argparse.Namespace) -> int:
         for lan in radio["lan"]:
             print(f"  \u2022 LAN: {lan['host']}")
         for serial in radio["serial"]:
-            print(f"  \u2022 Serial: {serial['port']} ({serial['baud']} baud)")
+            baud = serial.get("baudrate") or serial.get("baud", "?")
+            print(f"  \u2022 Serial: {serial['port']} ({baud} baud)")
     return 0
 
 

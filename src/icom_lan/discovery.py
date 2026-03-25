@@ -1,4 +1,4 @@
-"""Serial port enumeration, candidate filtering, and CI-V probing for Icom radio discovery."""
+"""Serial port enumeration, candidate filtering, and multi-protocol radio discovery."""
 
 from __future__ import annotations
 
@@ -10,12 +10,15 @@ from typing import Any
 
 __all__ = [
     "CivProbeResult",
+    "RadioDiscoveryResult",
     "SerialPortCandidate",
     "dedupe_radios",
     "discover_lan_radios",
     "discover_serial_radios",
     "enumerate_serial_ports",
     "probe_serial_civ",
+    "probe_serial_kenwood_cat",
+    "probe_serial_yaesu_cat",
 ]
 
 _CIV_PROBE_CMD = bytes([0xFE, 0xFE, 0x00, 0xE0, 0x19, 0x00, 0xFD])
@@ -41,6 +44,27 @@ class SerialPortCandidate:
     device: str
     description: str
     hwid: str | None
+
+
+@dataclass
+class RadioDiscoveryResult:
+    """Result of a successful multi-protocol serial radio probe.
+
+    Attributes:
+        port: OS device path, e.g. ``/dev/ttyUSB0``.
+        protocol: Protocol detected: ``"civ"``, ``"yaesu_cat"``, or ``"kenwood_cat"``.
+        model: Human-readable model name, e.g. ``"IC-7610"`` or ``"FTX-1"``.
+        profile_id: Rig profile identifier, e.g. ``"icom_ic7610"`` or ``"yaesu_ftx1"``.
+        baudrate: Baud rate at which the radio was detected.
+        address: CI-V address (``int``) for Icom radios; CAT model ID string for others.
+    """
+
+    port: str
+    protocol: str
+    model: str
+    profile_id: str
+    baudrate: int
+    address: int | str
 
 
 @dataclass
@@ -222,6 +246,163 @@ def _parse_probe_response(port: str, baud: int, data: bytes) -> CivProbeResult |
     return CivProbeResult(port=port, baud=baud, address=address, model_id=model_id)
 
 
+# ---------------------------------------------------------------------------
+# Yaesu CAT probe
+# ---------------------------------------------------------------------------
+
+#: Mapping from 4-digit hex model ID string to (model_name, profile_id).
+_YAESU_CAT_MODEL_MAP: dict[str, tuple[str, str]] = {
+    "0840": ("FTX-1", "yaesu_ftx1"),
+}
+
+_YAESU_CAT_PROBE_BAUDS = [38400, 9600, 115200]
+_KENWOOD_CAT_PROBE_BAUDS = [9600, 38400, 115200]
+
+_YaesuTransportFactory = Callable[..., Any]
+
+
+def _default_yaesu_transport_factory() -> _YaesuTransportFactory:
+    """Return YaesuCatTransport class, or raise ImportError with hint."""
+    from .backends.yaesu_cat.transport import YaesuCatTransport  # type: ignore[import-untyped]
+
+    return YaesuCatTransport  # type: ignore[return-value]
+
+
+async def probe_serial_yaesu_cat(
+    port: str,
+    baud_rates: list[int] | None = None,
+    timeout: float = 0.5,
+    *,
+    _transport_factory: _YaesuTransportFactory | None = None,
+) -> RadioDiscoveryResult | None:
+    """Probe a serial port for a Yaesu CAT radio, trying multiple baud rates.
+
+    Sends ``ID;`` at each baud rate and parses the ``ID<model_id>;`` response.
+
+    Args:
+        port: Serial device path (e.g. ``/dev/ttyUSB0``).
+        baud_rates: Baud rates to try, in order. Defaults to
+            ``[38400, 9600, 115200]``.
+        timeout: Per-baud timeout in seconds.
+        _transport_factory: Override for ``YaesuCatTransport`` constructor
+            (used in tests).
+
+    Returns:
+        :class:`RadioDiscoveryResult` on success, or ``None`` if no Yaesu radio responded.
+    """
+    if baud_rates is None:
+        baud_rates = _YAESU_CAT_PROBE_BAUDS
+
+    try:
+        factory = _transport_factory or _default_yaesu_transport_factory()
+    except ImportError:
+        logger.debug("probe_serial_yaesu_cat: Yaesu CAT backend not available")
+        return None
+
+    for baud in baud_rates:
+        result = await _try_yaesu_baud(port, baud, timeout, factory)
+        if result is not None:
+            return result
+    return None
+
+
+async def _try_yaesu_baud(
+    port: str,
+    baud: int,
+    timeout: float,
+    factory: _YaesuTransportFactory,
+) -> RadioDiscoveryResult | None:
+    """Open *port* at *baud* via Yaesu CAT, send ``ID;``, return result or None."""
+    transport = factory(device=port, baudrate=baud, timeout=timeout, echo_suppression=True)
+    try:
+        await transport.connect()
+    except Exception:
+        logger.debug("probe_serial_yaesu_cat: cannot open %s @ %d", port, baud)
+        return None
+
+    try:
+        response = await transport.query("ID;", timeout=timeout)
+        return _parse_yaesu_id_response(port, baud, response)
+    except Exception:
+        logger.debug("probe_serial_yaesu_cat: timeout/error at %s @ %d", port, baud)
+        return None
+    finally:
+        try:
+            await transport.close()
+        except Exception:
+            pass
+
+
+def _parse_yaesu_id_response(port: str, baud: int, response: str) -> RadioDiscoveryResult | None:
+    """Parse Yaesu CAT ``ID;`` response into a :class:`RadioDiscoveryResult`.
+
+    Expected response (semicolon already stripped by transport): ``ID0840``
+
+    Args:
+        port: Serial device path (for building result).
+        baud: Baud rate (for building result).
+        response: Response string with trailing ``;`` stripped.
+
+    Returns:
+        :class:`RadioDiscoveryResult` if response is valid, else ``None``.
+    """
+    if not response.startswith("ID") or len(response) != 6:
+        logger.debug(
+            "probe_serial_yaesu_cat: unexpected ID response %r from %s", response, port
+        )
+        return None
+
+    model_id_str = response[2:]  # "0840"
+    entry = _YAESU_CAT_MODEL_MAP.get(model_id_str)
+    if entry is None:
+        model_name = f"Yaesu ({model_id_str})"
+        profile_id = ""
+    else:
+        model_name, profile_id = entry
+
+    logger.info(
+        "probe_serial_yaesu_cat: found radio at %s @ %d — model=%s id=%s",
+        port,
+        baud,
+        model_name,
+        model_id_str,
+    )
+    return RadioDiscoveryResult(
+        port=port,
+        protocol="yaesu_cat",
+        model=model_name,
+        profile_id=profile_id,
+        baudrate=baud,
+        address=model_id_str,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Kenwood CAT probe (future use)
+# ---------------------------------------------------------------------------
+
+
+async def probe_serial_kenwood_cat(
+    port: str,
+    baud_rates: list[int] | None = None,
+    timeout: float = 0.5,
+    *,
+    _transport_factory: Any | None = None,
+) -> RadioDiscoveryResult | None:
+    """Probe a serial port for a Kenwood CAT radio (reserved for future use).
+
+    Args:
+        port: Serial device path.
+        baud_rates: Baud rates to try (currently unused).
+        timeout: Per-baud timeout in seconds (currently unused).
+        _transport_factory: Transport factory override (currently unused).
+
+    Returns:
+        Always ``None`` until Kenwood CAT transport is implemented.
+    """
+    return None
+
+
 def enumerate_serial_ports() -> list[SerialPortCandidate]:
     """Enumerate candidate USB serial ports for Icom radios.
 
@@ -301,28 +482,61 @@ async def discover_lan_radios(timeout: float = 3.0) -> list[dict[str, object]]:
     return _scan()
 
 
-async def discover_serial_radios() -> list[dict[str, object]]:
-    """Discover Icom radios connected via USB serial (CI-V).
+async def discover_serial_radios(
+    *,
+    _open_serial: _OpenSerial | None = None,
+    _yaesu_transport_factory: _YaesuTransportFactory | None = None,
+) -> list[RadioDiscoveryResult]:
+    """Discover radios connected via USB serial (CI-V, Yaesu CAT, Kenwood CAT).
+
+    Probes each candidate port in sequence: CI-V → Yaesu CAT → Kenwood CAT.
+    Stops after the first successful match for each port.
+
+    Args:
+        _open_serial: Override for ``serial_asyncio.open_serial_connection``
+            passed through to :func:`probe_serial_civ` (used in tests).
+        _yaesu_transport_factory: Override for ``YaesuCatTransport`` constructor
+            passed through to :func:`probe_serial_yaesu_cat` (used in tests).
 
     Returns:
-        List of dicts with keys ``model``, ``address``, ``port``, ``baud``.
+        List of :class:`RadioDiscoveryResult` for all detected radios.
     """
-    from .radios import identify_radio
+    from .radios import CIV_PROFILE_MAP, identify_radio
 
     candidates = enumerate_serial_ports()
-    results: list[dict[str, object]] = []
+    results: list[RadioDiscoveryResult] = []
     for port in candidates:
-        probe = await probe_serial_civ(port.device)
-        if probe:
-            model = identify_radio(probe.address, probe.model_id)
+        # --- CI-V probe ---
+        civ = await probe_serial_civ(port.device, _open_serial=_open_serial)
+        if civ:
+            model = identify_radio(civ.address, civ.model_id)
+            profile_id = CIV_PROFILE_MAP.get(civ.address, "")
             results.append(
-                {
-                    "model": model,
-                    "address": probe.address,
-                    "port": probe.port,
-                    "baud": probe.baud,
-                }
+                RadioDiscoveryResult(
+                    port=civ.port,
+                    protocol="civ",
+                    model=model,
+                    profile_id=profile_id,
+                    baudrate=civ.baud,
+                    address=civ.address,
+                )
             )
+            continue
+
+        # --- Yaesu CAT probe ---
+        yaesu = await probe_serial_yaesu_cat(
+            port.device,
+            _transport_factory=_yaesu_transport_factory,
+        )
+        if yaesu:
+            results.append(yaesu)
+            continue
+
+        # --- Kenwood CAT probe ---
+        kenwood = await probe_serial_kenwood_cat(port.device)
+        if kenwood:
+            results.append(kenwood)
+
     return results
 
 
