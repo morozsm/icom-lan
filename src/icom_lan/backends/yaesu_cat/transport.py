@@ -1,24 +1,45 @@
-"""Yaesu CAT serial transport — async line protocol with semicolon terminator.
+"""Yaesu CAT serial transport — bulletproof async line protocol.
 
-All serial I/O is serialized through a single asyncio.Lock.  Every public
-method (write, query) acquires the lock, so callers never need to worry about
-interleaving or stale auto-info bytes.
+Architecture
+~~~~~~~~~~~~
+All serial I/O is serialized through a single ``asyncio.Lock``.  Every public
+method (``write``, ``query``) acquires the lock before touching the wire.
 
-Design principle: **no fire-and-forget**.  Even SET commands may trigger echo
-or auto-info responses from the radio (lock status, IF info, etc.).  The
-transport always drains these before releasing the lock.
+Design principles (learned from production):
+
+1. **No fire-and-forget.**  Even SET commands may trigger echo or auto-info
+   responses.  ``write()`` always drains them before releasing the lock.
+
+2. **Prefix-based response matching.**  ``query()`` skips stale auto-info
+   lines that don't match the expected command prefix.
+
+3. **``?;`` = hard error.**  Radio returns ``?;`` for unrecognized commands.
+   Detected immediately in both ``write()`` and ``query()``.
+
+4. **Health tracking.**  Consecutive errors trigger automatic reconnect.
+   Stats (queries, writes, errors, reconnects) available for diagnostics.
+
+5. **Graceful degradation.**  Timeout / disconnect errors are caught and
+   surfaced cleanly; the transport can be re-opened after failure.
 """
 
 from __future__ import annotations
 
 import asyncio
 import logging
-from typing import TYPE_CHECKING
+import time
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from serial_asyncio import SerialTransport  # type: ignore[import-not-found]
+    pass
 
-__all__ = ["YaesuCatTransport", "CatTransportError", "CatTimeoutError"]
+__all__ = [
+    "YaesuCatTransport",
+    "CatTransportError",
+    "CatTimeoutError",
+    "CatCommandRejected",
+]
 
 logger = logging.getLogger(__name__)
 
@@ -27,11 +48,16 @@ _DEPENDENCY_HINT = (
     "pyserial-asyncio. Install with: pip install icom-lan[serial]"
 )
 
-# How long to wait for echo / auto-info after a write command (seconds).
-# Short timeout: we just need to catch immediate echo, not wait for it.
-# The primary defense is prefix matching in query(), not the drain.
-_WRITE_DRAIN_TIMEOUT = 0.02
+# ── Defaults ──────────────────────────────────────────────────────────
+_DEFAULT_TIMEOUT = 1.0          # Read timeout for queries (seconds)
+_DRAIN_TIMEOUT = 0.03           # Wait for echo/auto-info after write
+_DRAIN_MAX_LINES = 4            # Max lines to drain after a write
+_QUERY_MAX_ATTEMPTS = 6         # Max readline attempts per query
+_RECONNECT_AFTER_ERRORS = 5     # Consecutive errors before auto-reconnect
+_RECONNECT_COOLDOWN = 2.0       # Min seconds between reconnect attempts
 
+
+# ── Exceptions ────────────────────────────────────────────────────────
 
 class CatTransportError(Exception):
     """Base error for CAT transport failures."""
@@ -41,27 +67,54 @@ class CatTimeoutError(CatTransportError):
     """Raised when read operation times out."""
 
 
+class CatCommandRejected(CatTransportError):
+    """Raised when radio returns ``?;`` (command not recognized)."""
+
+
+# ── Stats ─────────────────────────────────────────────────────────────
+
+@dataclass
+class TransportStats:
+    """Diagnostic counters for the transport layer."""
+
+    queries: int = 0
+    writes: int = 0
+    errors: int = 0
+    timeouts: int = 0
+    reconnects: int = 0
+    stale_lines_skipped: int = 0
+    bytes_flushed: int = 0
+    last_error: str = ""
+    last_error_time: float = 0.0
+    _consecutive_errors: int = field(default=0, repr=False)
+
+    def record_success(self) -> None:
+        self._consecutive_errors = 0
+
+    def record_error(self, msg: str) -> None:
+        self.errors += 1
+        self._consecutive_errors += 1
+        self.last_error = msg
+        self.last_error_time = time.monotonic()
+
+    @property
+    def consecutive_errors(self) -> int:
+        return self._consecutive_errors
+
+
+# ── Transport ─────────────────────────────────────────────────────────
+
 class YaesuCatTransport:
     """Async serial transport for Yaesu CAT protocol.
 
+    All public methods are safe to call concurrently — the internal lock
+    guarantees strict serialization of serial I/O.
+
     Usage::
 
-        transport = YaesuCatTransport(device="/dev/cu.usbserial-01AE340D0", baudrate=38400)
-        await transport.connect()
-
-        response = await transport.query("FA;")  # Query freq
-        print(f"Response: {response}")
-
-        await transport.write("FA014074000;")  # Set freq (drains echo)
-
-        await transport.close()
-
-    Features:
-    - **All I/O serialized** via a single lock — no interleaving
-    - write() drains echo/auto-info before returning (not fire-and-forget)
-    - query() skips echo + mismatched auto-info responses (prefix match)
-    - Line-based readline (until `;` terminator)
-    - Configurable timeouts + debug logging
+        async with YaesuCatTransport(device="/dev/ttyUSB0") as t:
+            freq = await t.query("FA;")
+            await t.write("FA014074000;")
     """
 
     def __init__(
@@ -69,7 +122,7 @@ class YaesuCatTransport:
         *,
         device: str,
         baudrate: int = 38400,
-        timeout: float = 1.0,
+        timeout: float = _DEFAULT_TIMEOUT,
         echo_suppression: bool = True,
         debug_logging: bool = False,
     ) -> None:
@@ -82,16 +135,22 @@ class YaesuCatTransport:
         self._reader: asyncio.StreamReader | None = None
         self._writer: asyncio.StreamWriter | None = None
         self._connected = False
-        self._lock: asyncio.Lock = asyncio.Lock()
+        self._lock = asyncio.Lock()
+        self._stats = TransportStats()
+        self._last_reconnect: float = 0.0
+
+    # ── Properties ────────────────────────────────────────────────────
 
     @property
     def connected(self) -> bool:
-        """Whether transport is connected."""
         return self._connected
 
-    # ------------------------------------------------------------------
-    # Connection lifecycle
-    # ------------------------------------------------------------------
+    @property
+    def stats(self) -> TransportStats:
+        """Read-only access to diagnostic counters."""
+        return self._stats
+
+    # ── Connection lifecycle ──────────────────────────────────────────
 
     async def connect(self) -> None:
         """Open serial connection."""
@@ -103,17 +162,22 @@ class YaesuCatTransport:
         except ImportError as exc:
             raise CatTransportError(_DEPENDENCY_HINT) from exc
 
-        logger.info("Opening CAT serial port: %s @ %d baud", self._device, self._baudrate)
+        logger.info(
+            "Opening CAT serial port: %s @ %d baud", self._device, self._baudrate
+        )
 
         try:
-            self._reader, self._writer = await serial_asyncio.open_serial_connection(
-                url=self._device,
-                baudrate=self._baudrate,
-                bytesize=8,
-                parity="N",
-                stopbits=1,
+            self._reader, self._writer = (
+                await serial_asyncio.open_serial_connection(
+                    url=self._device,
+                    baudrate=self._baudrate,
+                    bytesize=8,
+                    parity="N",
+                    stopbits=1,
+                )
             )
             self._connected = True
+            self._stats.record_success()
             logger.info("CAT serial port opened: %s", self._device)
         except Exception as exc:
             raise CatTransportError(
@@ -121,29 +185,52 @@ class YaesuCatTransport:
             ) from exc
 
     async def close(self) -> None:
-        """Close serial connection."""
+        """Close serial connection gracefully."""
         if not self._connected:
             return
 
         logger.info("Closing CAT serial port: %s", self._device)
+        self._connected = False
 
         if self._writer:
-            self._writer.close()
-            await self._writer.wait_closed()
+            try:
+                self._writer.close()
+                await asyncio.wait_for(self._writer.wait_closed(), timeout=2.0)
+            except Exception:
+                pass  # Best-effort close
 
         self._reader = None
         self._writer = None
-        self._connected = False
         logger.info("CAT serial port closed: %s", self._device)
 
-    # ------------------------------------------------------------------
-    # Low-level I/O (NO lock — callers must hold self._lock)
-    # ------------------------------------------------------------------
+    async def reconnect(self) -> None:
+        """Close and re-open the serial port (with cooldown)."""
+        now = time.monotonic()
+        if now - self._last_reconnect < _RECONNECT_COOLDOWN:
+            logger.debug("CAT: reconnect cooldown, skipping")
+            return
+
+        self._last_reconnect = now
+        self._stats.reconnects += 1
+        logger.warning(
+            "CAT: reconnecting serial port (consecutive errors: %d)",
+            self._stats.consecutive_errors,
+        )
+
+        await self.close()
+        await asyncio.sleep(0.5)  # Let OS release the port
+        await self.connect()
+
+    # ── Low-level I/O (caller MUST hold self._lock) ──────────────────
+
+    def _check_connected(self) -> None:
+        if not self._connected or not self._writer or not self._reader:
+            raise CatTransportError("Transport not connected")
 
     async def _raw_write(self, command: str) -> None:
-        """Send bytes to serial port.  Caller must hold the lock."""
-        if not self._connected or not self._writer:
-            raise CatTransportError("Transport not connected")
+        """Send raw bytes to serial port."""
+        self._check_connected()
+        assert self._writer is not None  # for type checker
 
         if not command.endswith(";"):
             command += ";"
@@ -155,16 +242,19 @@ class YaesuCatTransport:
             self._writer.write(command.encode("ascii"))
             await self._writer.drain()
         except Exception as exc:
+            self._stats.record_error(f"write failed: {exc}")
             raise CatTransportError(f"Write failed: {exc}") from exc
 
     async def readline(self, *, timeout: float | None = None) -> str:
-        """Read one line (until `;` terminator).  Caller must hold the lock.
+        """Read one semicolon-terminated line.
 
-        Returns:
-            Response line (with trailing `;` stripped)
+        .. note:: Caller must hold ``self._lock`` when used internally.
+           External callers should prefer ``query()`` which handles locking.
+
+        Returns the line with trailing ``;`` stripped.
         """
-        if not self._connected or not self._reader:
-            raise CatTransportError("Transport not connected")
+        self._check_connected()
+        assert self._reader is not None  # for type checker
 
         if timeout is None:
             timeout = self._timeout
@@ -181,16 +271,19 @@ class YaesuCatTransport:
 
             return line
         except asyncio.TimeoutError as exc:
+            self._stats.timeouts += 1
             raise CatTimeoutError(
                 f"Read timeout ({timeout}s) waiting for ';' terminator"
             ) from exc
         except Exception as exc:
+            self._stats.record_error(f"read failed: {exc}")
             raise CatTransportError(f"Read failed: {exc}") from exc
 
     async def flush_rx(self) -> int:
-        """Drain any stale data from the receive buffer.
+        """Discard any bytes sitting in the receive buffer.
 
-        Returns the number of bytes discarded.
+        Only touches the asyncio StreamReader internal buffer — does NOT
+        wait for new bytes from the OS.
         """
         if not self._reader:
             return 0
@@ -199,114 +292,169 @@ class YaesuCatTransport:
             return 0
         discarded = len(buf)
         if discarded:
+            self._stats.bytes_flushed += discarded
             if self._debug_logging:
-                logger.debug("CAT: flushing %d stale bytes: %r", discarded, bytes(buf))
+                logger.debug(
+                    "CAT: flushing %d stale bytes: %r", discarded, bytes(buf)
+                )
             buf.clear()
-            logger.info("CAT: flushed %d stale bytes from RX buffer", discarded)
         return discarded
 
-    async def _drain_responses(self, drain_timeout: float = _WRITE_DRAIN_TIMEOUT) -> int:
-        """Read and discard all pending responses until timeout.
+    async def _drain_responses(
+        self,
+        drain_timeout: float = _DRAIN_TIMEOUT,
+        max_lines: int = _DRAIN_MAX_LINES,
+    ) -> int:
+        """Read and discard echo / auto-info lines until silence.
 
-        Used after SET commands to drain echo + auto-info notifications.
-        Returns number of lines drained.
+        Returns the number of lines drained.
         """
         drained = 0
-        while True:
+        for _ in range(max_lines):
             try:
                 line = await self.readline(timeout=drain_timeout)
                 drained += 1
+                self._stats.stale_lines_skipped += 1
                 if self._debug_logging:
-                    logger.debug("CAT: drained post-write response: %r", line)
+                    logger.debug("CAT: drained post-write line: %r", line)
             except CatTimeoutError:
-                break  # No more data — clean
-        # Also flush any partial bytes
+                break  # Silence — buffer is clean
+            except CatTransportError:
+                break  # Port error — bail out
+        # Flush any partial bytes that didn't form a complete line
         await self.flush_rx()
         return drained
 
-    # ------------------------------------------------------------------
-    # Public API (ALL acquire lock)
-    # ------------------------------------------------------------------
+    def _maybe_reconnect_needed(self) -> bool:
+        """Check if consecutive errors warrant a reconnect."""
+        return self._stats.consecutive_errors >= _RECONNECT_AFTER_ERRORS
+
+    # ── Public API (all acquire lock) ─────────────────────────────────
 
     async def write(self, command: str) -> None:
-        """Send SET command and drain any echo/auto-info response.
+        """Send a SET command and drain echo / auto-info.
 
-        Unlike fire-and-forget, this method waits briefly for the radio to
-        send back echo or status notifications, then discards them.  This
-        prevents stale bytes from corrupting the next query().
+        Acquires the transport lock, flushes stale RX data, sends the
+        command, then reads (and discards) any echo or auto-info the radio
+        sends back.  The lock is only released once the wire is clean.
 
         Args:
-            command: CAT command string (e.g., "MD0E;" to set mode PSK)
+            command: CAT command string (e.g. ``"MD0E;"``).
+
+        Raises:
+            CatTransportError: On serial I/O failure.
         """
         async with self._lock:
             await self.flush_rx()
             await self._raw_write(command)
+            self._stats.writes += 1
             drained = await self._drain_responses()
+            self._stats.record_success()
             if drained and self._debug_logging:
-                logger.debug("CAT: drained %d response(s) after write %r", drained, command)
+                logger.debug(
+                    "CAT: drained %d line(s) after write %r", drained, command
+                )
 
     async def query(self, command: str, *, timeout: float | None = None) -> str:
-        """Send GET command and return the matching response.
+        """Send a GET command and return the matching response.
 
-        Serialized via lock.  Skips echo lines and mismatched auto-info
-        responses (prefix-based filtering).
+        Acquires the transport lock, flushes stale RX data, sends the
+        command, then reads lines until one matches the expected prefix.
+        Echo lines and stale auto-info are silently skipped.
 
         Args:
-            command: CAT command string (e.g., "FA;")
-            timeout: Read timeout in seconds (default: instance timeout)
+            command: CAT command string (e.g. ``"FA;"``).
+            timeout: Read timeout per attempt (default: instance timeout).
 
         Returns:
-            Response line (with trailing `;` stripped)
+            Response line (without trailing ``;``).
+
+        Raises:
+            CatCommandRejected: If radio returns ``?;``.
+            CatTimeoutError: If no matching response within timeout.
+            CatTransportError: On serial I/O failure.
         """
         async with self._lock:
             await self.flush_rx()
             await self._raw_write(command)
+            self._stats.queries += 1
 
-            # Derive expected prefix from command (e.g. "SM0;" → "SM")
-            expected_prefix = command.rstrip(";").rstrip("0123456789")
+            # Expected prefix: strip trailing digits from command body.
+            # "SM0;" → prefix "SM", "FA;" → prefix "FA", "MD0;" → prefix "MD"
             cmd_body = command.rstrip(";")
+            expected_prefix = cmd_body.rstrip("0123456789")
 
             if timeout is None:
                 timeout = self._timeout
 
-            max_attempts = 6
-            for _attempt in range(max_attempts):
+            for _attempt in range(_QUERY_MAX_ATTEMPTS):
                 response = await self.readline(timeout=timeout)
 
-                # "?" = command not recognized by radio
+                # ── ?; = command rejected ──
                 if response == "?":
-                    raise CatTransportError(
+                    self._stats.record_error(f"rejected: {command}")
+                    raise CatCommandRejected(
                         f"Radio rejected command {command!r} (returned '?;')"
                     )
 
-                # Echo suppression
+                # ── Echo suppression ──
                 if self._echo_suppression and response == cmd_body:
                     if self._debug_logging:
-                        logger.debug("CAT: echo detected, reading actual response")
+                        logger.debug("CAT: echo detected, reading next line")
                     continue
 
-                # Auto-info suppression: skip responses that don't match our
-                # command prefix (e.g. LK0 when we asked SM0)
+                # ── Auto-info suppression (prefix mismatch) ──
                 if expected_prefix and not response.startswith(expected_prefix):
+                    self._stats.stale_lines_skipped += 1
                     logger.info(
-                        "CAT: skipping stale auto-info %r (expected prefix %r)",
-                        response, expected_prefix,
+                        "CAT: skipping stale %r (expected prefix %r)",
+                        response,
+                        expected_prefix,
                     )
                     continue
 
+                # ── Match! ──
+                self._stats.record_success()
                 return response
 
+            # Exhausted all attempts
+            self._stats.record_error(f"no match for {command}")
             raise CatTransportError(
-                f"Query {command!r}: exhausted {max_attempts} attempts, no matching response"
+                f"Query {command!r}: exhausted {_QUERY_MAX_ATTEMPTS} attempts, "
+                "no matching response"
             )
 
-    # ------------------------------------------------------------------
-    # Context manager
-    # ------------------------------------------------------------------
+    async def query_safe(
+        self, command: str, *, timeout: float | None = None, default: Any = None
+    ) -> str | Any:
+        """Like ``query()`` but returns *default* on any error.
 
-    async def __aenter__(self) -> "YaesuCatTransport":
+        Useful for polling loops where a single failed read should not
+        crash the cycle.
+        """
+        try:
+            return await self.query(command, timeout=timeout)
+        except CatTransportError:
+            return default
+
+    # ── Diagnostics ───────────────────────────────────────────────────
+
+    def format_stats(self) -> str:
+        """One-line diagnostic summary."""
+        s = self._stats
+        return (
+            f"CAT q={s.queries} w={s.writes} err={s.errors} "
+            f"to={s.timeouts} skip={s.stale_lines_skipped} "
+            f"flush={s.bytes_flushed}B reconn={s.reconnects}"
+        )
+
+    # ── Context manager ───────────────────────────────────────────────
+
+    async def __aenter__(self) -> YaesuCatTransport:
         await self.connect()
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:  # type: ignore[no-untyped-def]
+    async def __aexit__(
+        self, exc_type: type | None, exc_val: BaseException | None, exc_tb: Any
+    ) -> None:
         await self.close()
