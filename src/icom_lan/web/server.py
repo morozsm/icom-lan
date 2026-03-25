@@ -31,7 +31,8 @@ from typing import TYPE_CHECKING, Any, cast
 
 from .. import __version__
 from ..radio_state import RadioState
-from ..radio_protocol import AudioCapable, PowerControlCapable
+from ..radio_protocol import AudioCapable, PowerControlCapable, ScopeCapable
+from ..audio_fft_scope import AudioFftScope
 from ._delta_encoder import DeltaEncoder
 from .dx_cluster import DXClusterClient, SpotBuffer
 from .handlers import AudioBroadcaster, AudioHandler, ControlHandler, ScopeHandler
@@ -237,6 +238,13 @@ class WebServer:
             raw_radio_state if isinstance(raw_radio_state, RadioState) else RadioState()
         )
         self._audio_broadcaster = AudioBroadcaster(radio)
+        # Audio FFT scope: auto-enable when radio has audio but no hardware scope
+        self._audio_fft_scope: AudioFftScope | None = None
+        if radio is not None and isinstance(radio, AudioCapable) and not isinstance(radio, ScopeCapable):
+            self._audio_fft_scope = AudioFftScope(fft_size=2048, fps=20, avg_count=4)
+            self._audio_fft_scope.on_frame(self._broadcast_scope)
+            self._audio_broadcaster.set_pcm_tap(self._audio_fft_scope.feed_audio)
+            logger.info("Audio FFT scope enabled (no hardware scope, audio available)")
         self._command_queue: CommandQueue = CommandQueue()
         self._radio_poller: RadioPoller | None = None
         # Control handler event queues
@@ -326,11 +334,20 @@ class WebServer:
         """Register a scope handler and enable scope on radio if needed.
 
         Scope enable goes through the RadioPoller command queue to avoid
-        concurrent CI-V access.
+        concurrent CI-V access.  For audio FFT scope, no hardware enable
+        is needed — frames are generated from the audio stream.
         """
         async with self._scope_enable_lock:
             self._scope_handlers.add(handler)
             if self._radio is not None:
+                # Audio FFT scope: no hardware enable needed, just register handler
+                if self._audio_fft_scope is not None:
+                    logger.info(
+                        "scope: audio FFT scope active (%d handlers)",
+                        len(self._scope_handlers),
+                    )
+                    self._update_fft_scope_freq()
+                    return
                 if not _supports_scope(self._radio):
                     logger.info(
                         "scope: active radio does not expose runtime scope support"
@@ -397,6 +414,16 @@ class WebServer:
         # Scope health: track whether frames carry real data
         self._scope_health_check(frame)
 
+    def _update_fft_scope_freq(self) -> None:
+        """Sync AudioFftScope center frequency from current radio state."""
+        if self._audio_fft_scope is None:
+            return
+        main = getattr(self._radio_state, "main", None)
+        if main is not None:
+            freq = getattr(main, "freq", 0)
+            if isinstance(freq, int) and freq > 0:
+                self._audio_fft_scope.set_center_freq(freq)
+
     # ------------------------------------------------------------------
     # RadioPoller integration
     # ------------------------------------------------------------------
@@ -435,6 +462,9 @@ class WebServer:
         if now - self._last_state_broadcast < 0.05:
             return
         self._last_state_broadcast = now
+
+        # Keep audio FFT scope center freq in sync with VFO
+        self._update_fft_scope_freq()
 
         body = self.build_public_state()
 
@@ -1316,10 +1346,16 @@ class WebServer:
                     profile.data_mode_labels if profile.data_mode_labels else {}
                 ),
                 "keyboard": _serialize_keyboard_config(profile),
+                "scopeSource": (
+                    "audio_fft" if self._audio_fft_scope is not None
+                    else ("hardware" if "scope" in caps else None)
+                ),
                 "scopeConfig": {
                     "centerMode": True,
                     "amplitudeMax": 160,
-                    "defaultSpan": 500000,
+                    "defaultSpan": (
+                        48000 if self._audio_fft_scope is not None else 500000
+                    ),
                 },
                 "audioConfig": {
                     "sampleRate": 48000,

@@ -197,7 +197,10 @@ def test_select_usb_audio_devices_explicit_overrides_take_precedence() -> None:
     assert selected_tx.name == "A"
 
 
-def test_select_usb_audio_devices_auto_detect_prefers_icom_like_name() -> None:
+def test_select_usb_audio_devices_auto_detect_prefers_usb_audio_codec() -> None:
+    # Generic "USB Audio CODEC" now ranks above vendor-specific names so the
+    # driver works equally well for Icom, Yaesu and Kenwood radios (all use
+    # the same Burr-Brown/TI USB Audio Class chip with this name).
     devices = [
         UsbAudioDevice(
             index=0,
@@ -220,8 +223,8 @@ def test_select_usb_audio_devices_auto_detect_prefers_icom_like_name() -> None:
         ),
     ]
     selected_rx, selected_tx = select_usb_audio_devices(devices)
-    assert selected_rx.name == "IC-7610 USB Audio"
-    assert selected_tx.name == "IC-7610 USB Audio"
+    assert selected_rx.name == "USB Audio CODEC"
+    assert selected_tx.name == "USB Audio CODEC"
 
 
 def test_select_usb_audio_devices_invalid_override_raises_clear_error() -> None:

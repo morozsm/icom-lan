@@ -12,7 +12,7 @@ import asyncio
 import logging
 import time
 from collections.abc import AsyncIterator
-from typing import TYPE_CHECKING, Any, Protocol, cast
+from typing import TYPE_CHECKING, Any, Callable, Protocol, cast
 
 from .._audio_buffer_pool import AudioBufferPool
 from .._audio_codecs import decode_ulaw_to_pcm16
@@ -1246,6 +1246,8 @@ class AudioBroadcaster:
         self._sample_rate: int = 48000
         self._channels: int = 1
         self._lock = asyncio.Lock()
+        # PCM tap for audio FFT scope (called with decoded PCM16 bytes)
+        self._pcm_tap: Callable[[bytes], None] | None = None
         # Buffer pool for audio encoding/decoding operations
         # Pre-allocates buffers for common audio frame sizes (20ms @ 16kHz stereo = 1280 bytes)
         self._buffer_pool = AudioBufferPool(buffer_size=1280, max_buffers=5, name="audio-broadcaster")
@@ -1274,6 +1276,18 @@ class AudioBroadcaster:
             if not self._clients and self._subscription is not None:
                 await self._stop_relay()
         logger.info("audio-broadcaster: client removed (total=%d)", len(self._clients))
+
+    def set_pcm_tap(self, callback: "Callable[[bytes], None] | None") -> None:
+        """Register a tap that receives decoded PCM16 audio data.
+
+        Used by AudioFftScope to derive spectrum from audio stream.
+        The callback is called synchronously in the relay loop with
+        PCM16 mono/stereo bytes after any codec decoding.
+
+        Args:
+            callback: Function receiving PCM16 bytes, or None to unregister.
+        """
+        self._pcm_tap = callback
 
     def reap_dead_clients(self) -> int:
         """Remove clients whose WebSocket is no longer alive. Returns count removed."""
@@ -1380,6 +1394,14 @@ class AudioBroadcaster:
                         )
                         # Fall back to original data
                         audio_data = pkt.data
+
+                # Tee PCM data to audio FFT scope if registered
+                pcm_tap = self._pcm_tap
+                if pcm_tap is not None and self._web_codec == AUDIO_CODEC_PCM16:
+                    try:
+                        pcm_tap(audio_data)
+                    except Exception:
+                        logger.debug("audio: pcm_tap error", exc_info=True)
 
                 frame = encode_audio_frame(
                     MSG_TYPE_AUDIO_RX,

@@ -484,7 +484,7 @@ async def test_set_manual_notch_freq(connected_radio):
 async def test_get_filter_width(connected_radio):
     connected_radio._transport.query = AsyncMock(return_value="SH0010")
     assert await connected_radio.get_filter_width() == 10
-    connected_radio._transport.query.assert_called_once_with("SH00;")
+    connected_radio._transport.query.assert_called_once_with("SH0;")
 
 
 @pytest.mark.asyncio
@@ -624,17 +624,42 @@ async def test_get_processor(connected_radio):
 
 
 @pytest.mark.asyncio
+async def test_get_monitor_on(connected_radio):
+    """ML0 sub-command: monitor on/off state."""
+    connected_radio._transport.query = AsyncMock(return_value="ML0001")
+    assert await connected_radio.get_monitor_on() is True
+    connected_radio._transport.query.assert_called_once_with("ML0;")
+
+
+@pytest.mark.asyncio
+async def test_get_monitor_on_off(connected_radio):
+    """ML0 sub-command: monitor off."""
+    connected_radio._transport.query = AsyncMock(return_value="ML0000")
+    assert await connected_radio.get_monitor_on() is False
+
+
+@pytest.mark.asyncio
+async def test_set_monitor_on(connected_radio):
+    """ML0 sub-command: set monitor on."""
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_monitor_on(True)
+    connected_radio._transport.write.assert_called_once_with("ML0001;")
+
+
+@pytest.mark.asyncio
 async def test_get_monitor_level(connected_radio):
-    connected_radio._transport.query = AsyncMock(return_value="ML100")
+    """ML1 sub-command: monitor gain level."""
+    connected_radio._transport.query = AsyncMock(return_value="ML1100")
     assert await connected_radio.get_monitor_level() == 100
-    connected_radio._transport.query.assert_called_once_with("ML;")
+    connected_radio._transport.query.assert_called_once_with("ML1;")
 
 
 @pytest.mark.asyncio
 async def test_set_monitor_level(connected_radio):
+    """ML1 sub-command: set monitor gain level."""
     connected_radio._transport.write = AsyncMock()
     await connected_radio.set_monitor_level(128)
-    connected_radio._transport.write.assert_called_once_with("ML128;")
+    connected_radio._transport.write.assert_called_once_with("ML1128;")
 
 
 # ---------------------------------------------------------------------------
@@ -817,10 +842,9 @@ async def test_set_lock(connected_radio):
 
 
 @pytest.mark.asyncio
-async def test_get_band(connected_radio):
-    connected_radio._transport.query = AsyncMock(return_value="BS005")
-    assert await connected_radio.get_band() == 5
-    connected_radio._transport.query.assert_called_once_with("BS0;")
+async def test_get_band_not_supported(connected_radio):
+    """FTX-1 does not support BS read (write-only)."""
+    assert not hasattr(connected_radio, "get_band")
 
 
 @pytest.mark.asyncio
