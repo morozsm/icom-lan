@@ -33,14 +33,14 @@
 | Cmd | Description | SET format | READ format | Parameters |
 |-----|-------------|-----------|-------------|------------|
 | TX | Transmit | `TX{mode};` | `TX;` | 0=OFF(RX), 1=ON(TX), 2=Tuner TX |
-| PC | RF Power | `PC{head}{pwr:03d};` | `PC;` | head: 1=FTX-1 field head (5-10W), 2=SPA-1 (5-100W); answer: `PC{head}{pwr:03d};` |
+| PC | RF Power | `PC{pwr:03d};` | `PC;` | 000-100 (watts percentage) |
 | MG | Mic Gain | `MG{gain:03d};` | `MG;` | 000-100 |
 
 ### Meters
 | Cmd | Description | SET format | READ format | Parameters |
 |-----|-------------|-----------|-------------|------------|
 | SM | S-Meter | — | `SM{rx};` | rx: 0=MAIN,1=SUB; answer: `SM{rx}{raw:03d};` raw 000-255 |
-| RM | Read Meter | — | `RM{type};` | type: 1=S(MAIN),2=S(SUB),3=COMP,4=ALC,5=PO,6=SWR,7=IDD,8=VDD; answer: `RM{type}{main:03d}{sub:03d};` (6 digits: MAIN+SUB readings) |
+| RM | Various Meters | — | `RM{meter};` | meter: 1=COMP,2=ALC,3=PO,4=SWR,5=IDD,6=VDD; answer: `RM{meter}{raw:03d};` raw 000-255 |
 
 ### Audio / AF / RF
 | Cmd | Description | SET format | READ format | Parameters |
@@ -53,18 +53,18 @@
 ### RF Front End
 | Cmd | Description | SET format | READ format | Parameters |
 |-----|-------------|-----------|-------------|------------|
-| RA | Attenuator | `RA0{state};` | `RA0;` | P1=0 (fixed); state: 0=OFF,1=ON |
-| PA | Preamp | `PA{band}{pre};` | `PA{band};` | band: 0=HF/50,1=VHF,2=UHF; pre varies by band: HF(0=IPO,1=AMP1,2=AMP2), VHF/UHF(0=OFF,1=ON) |
+| RA | Attenuator | `RA{rx}{att:02d};` | `RA{rx};` | rx: 0=MAIN,1=SUB; att: 00=OFF,01-03=levels |
+| PA | Preamp | `PA{rx}{pre};` | `PA{rx};` | rx: 0=MAIN,1=SUB; pre: 0=OFF,1=IPO,2=AMP1,3=AMP2 |
 
 ### DSP / Noise
 | Cmd | Description | SET format | READ format | Parameters |
 |-----|-------------|-----------|-------------|------------|
-| NL | NB Level (ON/OFF + level) | `NL{rx}{level:03d};` | `NL{rx};` | rx: 0=MAIN,1=SUB; level: 000=OFF, 001-010=ON+level |
-| RL | NR Level (ON/OFF + level) | `RL{rx}{level:02d};` | `RL{rx};` | rx: 0=MAIN,1=SUB; level: 00=OFF, 01-10=ON+level |
+| NB | Noise Blanker | `NB{rx}{state};` | `NB{rx};` | rx: 0=MAIN,1=SUB; state: 0=OFF,1=ON |
+| NL | NB Level | `NL{rx}{level:03d};` | `NL{rx};` | rx: 0=MAIN,1=SUB; level: 000-010 |
+| NR | Noise Reduction | `NR{rx}{state};` | `NR{rx};` | rx: 0=MAIN,1=SUB; state: 0=OFF,1=ON |
+| RL | NR Level | `RL{rx}{level:02d};` | `RL{rx};` | rx: 0=MAIN,1=SUB; level: 01-15 |
 | BC | Auto Notch (DNF) | `BC{rx}{state};` | `BC{rx};` | rx: 0=MAIN,1=SUB; state: 0=OFF,1=ON |
 | BP | Manual Notch | `BP{rx}{func}{val:03d};` | `BP{rx}{func};` | rx: 0/1; func: 0=ON/OFF(000/001),1=freq(001-320 = x10Hz) |
-
-**NOTE:** FTX-1 has NO separate NB/NR on/off commands! Use NL (level=000 for OFF) and RL (level=00 for OFF).
 
 ### Filter / IF
 | Cmd | Description | SET format | READ format | Parameters |
