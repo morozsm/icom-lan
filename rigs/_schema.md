@@ -314,26 +314,65 @@ Each entry is a 1- or 2-element integer array:
 - `[0x11]` — command-only route (sub = None, e.g. ATT)
 - `[0x14, 0x01]` — command + sub-command route (e.g. AF Gain)
 
-## `[commands]` — Wire Bytes
+## `[commands]` — Command Definitions
 
 Optional section. Required for `civ` protocol radios, optional for others.
-Each key maps a command name to its wire bytes as an integer array.
+Each key maps a command name to its specification. The format depends on the
+protocol type.
+
+### Format 1: CI-V Wire Bytes (Icom)
+
+For `civ` protocol radios, commands are arrays of bytes:
 
 ```toml
 get_freq = [0x03]           # Single command byte
 get_af_level = [0x14, 0x01] # Command + sub-command
 ```
 
+All byte values must be integers in the range `0x00`–`0xFF`.
+
+### Format 2: CAT Command Spec (Yaesu/Kenwood)
+
+For `yaesu_cat` and `kenwood_cat` protocols, commands are inline tables with a
+`cat` key containing template strings:
+
+```toml
+# Read-only command (query + parse response)
+get_freq = { cat = { read = "FA;", parse = "FA{freq:09d};" } }
+
+# Write-only command (set value)
+set_freq = { cat = { write = "FA{freq:09d};" } }
+
+# Read + write command (both query and set)
+get_ptt = { cat = { read = "TX;", write = "TX{state};", parse = "TX{state};" } }
+```
+
+CAT spec fields:
+
+| Field   | Type   | Required | Description                                      |
+|---------|--------|----------|--------------------------------------------------|
+| `read`  | string | no*      | Template for READ query (e.g. `"FA;"`)           |
+| `write` | string | no*      | Template for WRITE/SET (e.g. `"FA{freq:09d};"`) |
+| `parse` | string | no       | Template for parsing response (defaults to `read`) |
+
+\* At least one of `read` or `write` must be present.
+
+Template placeholders use Python-style format specs: `{name:format}`.
+
+### Mixed Protocols
+
+A single rig file uses only one format (CI-V or CAT), matching its `[protocol].type`.
+The loader validates both formats uniformly.
+
+### Naming Convention
+
 The command name follows the pattern `get_<param>` / `set_<param>` for
 read/write commands, or a verb like `ptt_on`, `scope_on`, `send_cw`.
-
-For `kenwood_cat` and `yaesu_cat` protocols, this section may be empty or
-contain protocol-specific command mappings (TBD).
 
 ### `[commands.overrides]` — Model-Specific Overrides
 
 Commands in this sub-table override the defaults for a specific radio model.
-Same format as `[commands]`: command names mapped to wire byte arrays.
+Same format as `[commands]`: CI-V byte arrays or CAT inline tables.
 
 ## Additional Parameterized Sections
 

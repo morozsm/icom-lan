@@ -680,7 +680,9 @@ class RadioPoller:
                     rigs = discover_rigs(rig_dir)
                     for _model, rig_config in rigs.items():
                         if rig_config.model == self._profile.model:
-                            return rig_config.commands
+                            # Convert CommandSpec to CI-V wire bytes (filters CAT commands)
+                            cmd_map = rig_config.to_command_map()
+                            return {name: cmd_map.get(name) for name in cmd_map}
         except Exception:
             logger.debug("radio-poller: failed to load command map", exc_info=True)
         return {}

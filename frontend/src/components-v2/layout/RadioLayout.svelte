@@ -31,9 +31,26 @@
     vfoLayoutStyleVars,
     type VfoLayoutScaleOverrides,
   } from './vfo-layout-tokens';
-  import { toVfoProps, toVfoOpsProps, toMeterProps } from '../wiring/state-adapter';
-  import { makeKeyboardHandlers, makeMeterHandlers, makeVfoHandlers } from '../wiring/command-bus';
+  import {
+    toVfoProps, toVfoOpsProps, toMeterProps,
+    toRfFrontEndProps, toAgcProps, toRitXitProps,
+    toBandSelectorProps, toDspProps, toCwProps,
+  } from '../wiring/state-adapter';
+  import {
+    makeKeyboardHandlers, makeMeterHandlers, makeVfoHandlers,
+    makeRfFrontEndHandlers, makeAgcHandlers, makeRitXitHandlers,
+    makeBandHandlers, makePresetHandlers, makeDspHandlers, makeCwPanelHandlers,
+  } from '../wiring/command-bus';
   import MobileRadioLayout from './MobileRadioLayout.svelte';
+  import CollapsiblePanel from '../controls/CollapsiblePanel.svelte';
+  import BandSelector from '../controls/BandSelector.svelte';
+  import DspPanel from '../panels/DspPanel.svelte';
+  import AgcPanel from '../panels/AgcPanel.svelte';
+  import RfFrontEnd from '../panels/RfFrontEnd.svelte';
+  import RitXitPanel from '../panels/RitXitPanel.svelte';
+  import CwPanel from '../panels/CwPanel.svelte';
+  import { HardwareButton } from '$lib/Button';
+  import { Settings } from 'lucide-svelte';
 
   // Reactive state + capabilities
   let radioState = $derived(radio.current);
@@ -75,10 +92,28 @@
     overrides: manualVfoScaleOverrides,
   }));
 
+  // Derived props for settings modal
+  let rfFrontEnd = $derived(toRfFrontEndProps(radioState, caps));
+  let agc = $derived(toAgcProps(radioState, caps));
+  let ritXit = $derived(toRitXitProps(radioState, caps));
+  let band = $derived(toBandSelectorProps(radioState));
+  let dsp = $derived(toDspProps(radioState, caps));
+  let cw = $derived(toCwProps(radioState, caps));
+
   // Command handlers via command-bus
   const vfoHandlers = makeVfoHandlers();
   const meterHandlers = makeMeterHandlers();
   const keyboardHandlers = makeKeyboardHandlers();
+  const rfHandlers = makeRfFrontEndHandlers();
+  const agcHandlers = makeAgcHandlers();
+  const ritXitHandlers = makeRitXitHandlers();
+  const bandHandlers = makeBandHandlers();
+  const presetHandlers = makePresetHandlers();
+  const dspHandlers = makeDspHandlers();
+  const cwHandlers = makeCwPanelHandlers();
+
+  // Settings modal state
+  let settingsOpen = $state(false);
 
   $effect(() => {
     if (activeMode) {
@@ -151,6 +186,9 @@
 {:else}
 <div class="radio-layout">
   <StatusBar />
+  <button class="settings-button" onclick={() => (settingsOpen = true)} title="Settings">
+    <Settings size={20} />
+  </button>
   <KeyboardHandler config={keyboardConfig} onAction={keyboardHandlers.dispatch} />
 
   <section class="receiver-deck" bind:this={receiverDeckElement} style={receiverDeckStyle}>
@@ -249,6 +287,127 @@
       <span class="power-off-hint">Use the ON button in the status bar to power up</span>
     </div>
   </div>
+
+  <!-- ═══ SETTINGS MODAL ═══ -->
+  {#if settingsOpen}
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div class="settings-backdrop" onclick={() => (settingsOpen = false)}>
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div class="settings-modal" onclick={(e) => e.stopPropagation()}>
+        <div class="settings-header">
+          <span class="settings-title">SETTINGS</span>
+          <button class="settings-close" onclick={() => (settingsOpen = false)}>✕</button>
+        </div>
+        <div class="settings-content">
+          <CollapsiblePanel title="VFO / BAND" panelId="desktop-vfo-ops">
+            <div class="settings-vfo-ops-row">
+              <HardwareButton
+                active={vfoOps.splitActive}
+                indicator="edge-left"
+                color={vfoOps.splitActive ? 'yellow' : 'gray'}
+                onclick={vfoHandlers.onSplitToggle}
+              >
+                SPLIT
+              </HardwareButton>
+              <HardwareButton
+                indicator="edge-left"
+                color="cyan"
+                onclick={vfoHandlers.onSwap}
+              >
+                A↔B
+              </HardwareButton>
+              <HardwareButton
+                indicator="edge-left"
+                color="cyan"
+                onclick={vfoHandlers.onEqual}
+              >
+                A=B
+              </HardwareButton>
+            </div>
+            <BandSelector
+              currentFreq={band.currentFreq}
+              onBandSelect={bandHandlers.onBandSelect}
+              onPresetSelect={presetHandlers.onPresetSelect}
+            />
+          </CollapsiblePanel>
+
+          <CollapsiblePanel title="DSP" panelId="desktop-dsp">
+            <DspPanel
+              nrMode={dsp.nrMode}
+              nrLevel={dsp.nrLevel}
+              nbActive={dsp.nbActive}
+              nbLevel={dsp.nbLevel}
+              notchMode={dsp.notchMode}
+              notchFreq={dsp.notchFreq}
+              onNrModeChange={dspHandlers.onNrModeChange}
+              onNrLevelChange={dspHandlers.onNrLevelChange}
+              onNbToggle={dspHandlers.onNbToggle}
+              onNbLevelChange={dspHandlers.onNbLevelChange}
+              onNotchModeChange={dspHandlers.onNotchModeChange}
+              onNotchFreqChange={dspHandlers.onNotchFreqChange}
+            />
+          </CollapsiblePanel>
+
+          <CollapsiblePanel title="AGC" panelId="desktop-agc">
+            <AgcPanel
+              agcMode={agc.agcMode}
+              onAgcModeChange={agcHandlers.onAgcModeChange}
+            />
+          </CollapsiblePanel>
+
+          <CollapsiblePanel title="RF FRONT END" panelId="desktop-rf">
+            <RfFrontEnd
+              rfGain={rfFrontEnd.rfGain}
+              squelch={rfFrontEnd.squelch}
+              att={rfFrontEnd.att}
+              pre={rfFrontEnd.pre}
+              digiSel={rfFrontEnd.digiSel}
+              ipPlus={rfFrontEnd.ipPlus}
+              onRfGainChange={rfHandlers.onRfGainChange}
+              onSquelchChange={rfHandlers.onSquelchChange}
+              onAttChange={rfHandlers.onAttChange}
+              onPreChange={rfHandlers.onPreChange}
+              onDigiSelToggle={rfHandlers.onDigiSelToggle}
+              onIpPlusToggle={rfHandlers.onIpPlusToggle}
+            />
+          </CollapsiblePanel>
+
+          <CollapsiblePanel title="RIT / XIT" panelId="desktop-rit">
+            <RitXitPanel
+              ritActive={ritXit.ritActive}
+              ritOffset={ritXit.ritOffset}
+              xitActive={ritXit.xitActive}
+              xitOffset={ritXit.xitOffset}
+              hasRit={ritXit.hasRit}
+              hasXit={ritXit.hasXit}
+              onRitToggle={ritXitHandlers.onRitToggle}
+              onXitToggle={ritXitHandlers.onXitToggle}
+              onRitOffsetChange={ritXitHandlers.onRitOffsetChange}
+              onXitOffsetChange={ritXitHandlers.onXitOffsetChange}
+              onClear={ritXitHandlers.onClear}
+            />
+          </CollapsiblePanel>
+
+          <CollapsiblePanel title="CW" panelId="desktop-cw">
+            <CwPanel
+              cwPitch={cw.cwPitch}
+              keySpeed={cw.keySpeed}
+              breakIn={cw.breakIn}
+              apfMode={cw.apfMode}
+              twinPeak={cw.twinPeak}
+              currentMode={radioState?.active === 'SUB' ? (radioState?.sub?.mode ?? '') : (radioState?.main?.mode ?? '')}
+              onCwPitchChange={cwHandlers.onCwPitchChange}
+              onKeySpeedChange={cwHandlers.onKeySpeedChange}
+              onBreakInToggle={cwHandlers.onBreakInToggle}
+              onApfChange={cwHandlers.onApfChange}
+              onTwinPeakToggle={cwHandlers.onTwinPeakToggle}
+              onAutoTune={cwHandlers.onAutoTune}
+            />
+          </CollapsiblePanel>
+        </div>
+      </div>
+    </div>
+  {/if}
 {/if}
 
 <style>
@@ -610,5 +769,116 @@
   @keyframes pulse-dim {
     0%, 100% { opacity: 0.6; }
     50% { opacity: 1; }
+  }
+
+  /* ── Settings Button ── */
+  .settings-button {
+    position: fixed;
+    top: 36px;
+    right: 16px;
+    z-index: 100;
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--v2-border-panel, #333);
+    border-radius: 6px;
+    background: var(--v2-bg-card, #1a1a2e);
+    color: var(--v2-text-secondary, #aaa);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 150ms;
+  }
+
+  .settings-button:hover {
+    background: var(--v2-bg-panel, #252540);
+    color: var(--v2-accent-cyan, #00d4ff);
+    border-color: var(--v2-accent-cyan, #00d4ff);
+  }
+
+  .settings-button:active {
+    transform: scale(0.95);
+  }
+
+  /* ── Settings Modal ── */
+  .settings-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(3px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .settings-modal {
+    width: 90%;
+    max-width: 700px;
+    max-height: 85vh;
+    background: var(--v2-bg-primary, #0f0f1a);
+    border: 1px solid var(--v2-border-panel, #333);
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  }
+
+  .settings-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--v2-border-darker, #222);
+    background: var(--v2-bg-darker, #16162a);
+  }
+
+  .settings-title {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--v2-text-secondary, #aaa);
+  }
+
+  .settings-close {
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--v2-border-panel, #333);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--v2-text-dim, #666);
+    font-size: 18px;
+    cursor: pointer;
+    transition: all 150ms;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .settings-close:hover {
+    background: var(--v2-accent-red, #ef4444);
+    color: white;
+    border-color: var(--v2-accent-red, #ef4444);
+  }
+
+  .settings-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .settings-vfo-ops-row {
+    display: flex;
+    gap: 8px;
+    padding: 8px 0;
+  }
+
+  .settings-vfo-ops-row button {
+    flex: 1;
   }
 </style>

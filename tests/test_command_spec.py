@@ -1,0 +1,298 @@
+"""Tests for CommandSpec (CI-V + CAT command specifications)."""
+
+from __future__ import annotations
+
+import textwrap
+from pathlib import Path
+
+import pytest
+
+from icom_lan.command_spec import CatCommandSpec, CivCommandSpec
+from icom_lan.rig_loader import RigLoadError, load_rig
+
+
+def _write_toml(tmp_path: Path, content: str, name: str = "test.toml") -> Path:
+    """Write a TOML string to a temp file and return the path."""
+    p = tmp_path / name
+    p.write_text(textwrap.dedent(content))
+    return p
+
+
+_MINIMAL_CIV_TOML = """\
+[radio]
+id = "icom_ic7300"
+model = "IC-7300"
+civ_addr = 0x94
+receiver_count = 1
+has_lan = true
+has_wifi = false
+
+[capabilities]
+features = ["audio", "scope", "meters", "tx"]
+
+[modes]
+list = ["USB", "LSB", "CW"]
+
+[filters]
+list = ["FIL1", "FIL2"]
+
+[vfo]
+scheme = "ab"
+
+[[freq_ranges.ranges]]
+label = "HF"
+start_hz = 30000
+end_hz = 60000000
+
+[commands]
+get_freq = [0x03]
+set_freq = [0x05]
+get_mode = [0x04]
+set_mode = [0x06]
+"""
+
+
+_MINIMAL_CAT_TOML = """\
+[radio]
+id = "yaesu_ftx1"
+model = "FTX-1"
+receiver_count = 2
+has_lan = false
+has_wifi = false
+default_baud = 38400
+
+[protocol]
+type = "yaesu_cat"
+
+[capabilities]
+features = ["audio", "dual_rx", "meters", "tx"]
+
+[modes]
+list = ["USB", "LSB", "CW-U", "FM"]
+
+[filters]
+list = ["FIL1", "FIL2"]
+
+[vfo]
+scheme = "ab_shared"
+
+[[freq_ranges.ranges]]
+label = "HF"
+start_hz = 30000
+end_hz = 60000000
+
+[commands]
+get_freq = { cat = { read = "FA;", parse = "FA{freq:09d};" } }
+set_freq = { cat = { write = "FA{freq:09d};" } }
+get_mode = { cat = { read = "MD0;", parse = "MD0{mode};" } }
+set_mode = { cat = { write = "MD0{mode};" } }
+"""
+
+
+_MIXED_COMMANDS_TOML = """\
+[radio]
+id = "mixed_test"
+model = "Mixed Test"
+receiver_count = 1
+has_lan = false
+has_wifi = false
+
+[capabilities]
+features = ["meters"]
+
+[modes]
+list = ["USB"]
+
+[filters]
+list = ["FIL1"]
+
+[vfo]
+scheme = "single"
+
+[[freq_ranges.ranges]]
+label = "HF"
+start_hz = 30000
+end_hz = 60000000
+
+[commands]
+# CI-V style
+get_freq = [0x03]
+# CAT style
+get_mode = { cat = { read = "MD0;" } }
+"""
+
+
+class TestCivCommandSpec:
+    """Tests for CI-V command specifications (existing format)."""
+
+    def test_load_civ_commands(self, tmp_path):
+        """CI-V commands load as CivCommandSpec."""
+        p = _write_toml(tmp_path, _MINIMAL_CIV_TOML)
+        rig = load_rig(p)
+        
+        assert "get_freq" in rig.commands
+        assert isinstance(rig.commands["get_freq"], CivCommandSpec)
+        assert rig.commands["get_freq"].bytes == (0x03,)
+        
+        assert "set_freq" in rig.commands
+        assert isinstance(rig.commands["set_freq"], CivCommandSpec)
+        assert rig.commands["set_freq"].bytes == (0x05,)
+    
+    def test_civ_multi_byte_command(self, tmp_path):
+        """Multi-byte CI-V commands parse correctly."""
+        toml = _MINIMAL_CIV_TOML + "\nget_rf_gain = [0x14, 0x02]\n"
+        p = _write_toml(tmp_path, toml)
+        rig = load_rig(p)
+        
+        assert isinstance(rig.commands["get_rf_gain"], CivCommandSpec)
+        assert rig.commands["get_rf_gain"].bytes == (0x14, 0x02)
+    
+    def test_civ_empty_list_rejected(self, tmp_path):
+        """Empty CI-V byte list is rejected."""
+        toml = _MINIMAL_CIV_TOML + "\nget_invalid = []\n"
+        p = _write_toml(tmp_path, toml)
+        
+        with pytest.raises(RigLoadError, match="empty list not allowed"):
+            load_rig(p)
+    
+    def test_civ_invalid_byte_value_rejected(self, tmp_path):
+        """CI-V byte values outside 0x00–0xFF are rejected."""
+        toml = _MINIMAL_CIV_TOML + "\nget_invalid = [0x03, 0x100]\n"
+        p = _write_toml(tmp_path, toml)
+        
+        with pytest.raises(RigLoadError, match="0x00–0xFF"):
+            load_rig(p)
+    
+    def test_civ_non_integer_rejected(self, tmp_path):
+        """CI-V byte list with non-integers is rejected."""
+        toml = _MINIMAL_CIV_TOML + '\nget_invalid = [0x03, "bad"]\n'
+        p = _write_toml(tmp_path, toml)
+        
+        with pytest.raises(RigLoadError, match="must be all integers"):
+            load_rig(p)
+
+
+class TestCatCommandSpec:
+    """Tests for Yaesu CAT command specifications (new format)."""
+
+    def test_load_cat_commands(self, tmp_path):
+        """CAT commands load as CatCommandSpec."""
+        p = _write_toml(tmp_path, _MINIMAL_CAT_TOML)
+        rig = load_rig(p)
+        
+        assert "get_freq" in rig.commands
+        spec = rig.commands["get_freq"]
+        assert isinstance(spec, CatCommandSpec)
+        assert spec.read == "FA;"
+        assert spec.parse == "FA{freq:09d};"
+        assert spec.write is None
+    
+    def test_cat_write_only_command(self, tmp_path):
+        """CAT write-only command (no read)."""
+        p = _write_toml(tmp_path, _MINIMAL_CAT_TOML)
+        rig = load_rig(p)
+        
+        spec = rig.commands["set_freq"]
+        assert isinstance(spec, CatCommandSpec)
+        assert spec.write == "FA{freq:09d};"
+        assert spec.read is None
+        assert spec.parse is None
+    
+    def test_cat_read_write_command(self, tmp_path):
+        """CAT command with both read and write."""
+        toml = _MINIMAL_CAT_TOML + """
+get_ptt = { cat = { read = "TX;", write = "TX{state};", parse = "TX{state};" } }
+"""
+        p = _write_toml(tmp_path, toml)
+        rig = load_rig(p)
+        
+        spec = rig.commands["get_ptt"]
+        assert isinstance(spec, CatCommandSpec)
+        assert spec.read == "TX;"
+        assert spec.write == "TX{state};"
+        assert spec.parse == "TX{state};"
+    
+    def test_cat_missing_both_read_write_rejected(self, tmp_path):
+        """CAT command without read or write is rejected."""
+        toml = _MINIMAL_CAT_TOML + """
+get_invalid = { cat = { parse = "FA{freq:09d};" } }
+"""
+        p = _write_toml(tmp_path, toml)
+        
+        with pytest.raises(RigLoadError, match="at least one of 'read' or 'write'"):
+            load_rig(p)
+    
+    def test_cat_dict_without_cat_key_rejected(self, tmp_path):
+        """Command dict without 'cat' key is rejected."""
+        toml = _MINIMAL_CAT_TOML + """
+get_invalid = { read = "FA;" }
+"""
+        p = _write_toml(tmp_path, toml)
+        
+        with pytest.raises(RigLoadError, match="must have 'cat' key"):
+            load_rig(p)
+    
+    def test_cat_non_string_values_rejected(self, tmp_path):
+        """CAT command with non-string values is rejected."""
+        toml = _MINIMAL_CAT_TOML + """
+get_invalid = { cat = { read = 123 } }
+"""
+        p = _write_toml(tmp_path, toml)
+        
+        with pytest.raises(RigLoadError, match="read must be a string"):
+            load_rig(p)
+
+
+class TestMixedCommands:
+    """Tests for rigs with both CI-V and CAT commands."""
+
+    def test_mixed_commands_load(self, tmp_path):
+        """Rig with both CI-V and CAT commands loads correctly."""
+        p = _write_toml(tmp_path, _MIXED_COMMANDS_TOML)
+        rig = load_rig(p)
+        
+        # CI-V command
+        assert isinstance(rig.commands["get_freq"], CivCommandSpec)
+        assert rig.commands["get_freq"].bytes == (0x03,)
+        
+        # CAT command
+        assert isinstance(rig.commands["get_mode"], CatCommandSpec)
+        assert rig.commands["get_mode"].read == "MD0;"
+    
+    def test_command_map_filters_civ_only(self, tmp_path):
+        """CommandMap only includes CI-V commands, not CAT."""
+        p = _write_toml(tmp_path, _MIXED_COMMANDS_TOML)
+        rig = load_rig(p)
+        
+        cmd_map = rig.to_command_map()
+        
+        # CI-V command is included
+        assert cmd_map.has("get_freq")
+        assert cmd_map.get("get_freq") == (0x03,)
+        
+        # CAT command is NOT included
+        assert not cmd_map.has("get_mode")
+
+
+class TestBackwardCompatibility:
+    """Ensure existing CI-V rigs load unchanged."""
+
+    def test_ic7610_loads_unchanged(self):
+        """IC-7610 rig loads with CI-V commands as before."""
+        rigs_dir = Path(__file__).resolve().parent.parent / "rigs"
+        p = rigs_dir / "ic7610.toml"
+        
+        if not p.exists():
+            pytest.skip("ic7610.toml not found")
+        
+        rig = load_rig(p)
+        
+        # All commands should be CivCommandSpec
+        for name, spec in rig.commands.items():
+            assert isinstance(spec, CivCommandSpec), \
+                f"Command {name} is not CivCommandSpec"
+        
+        # CommandMap should work as before
+        cmd_map = rig.to_command_map()
+        assert cmd_map.has("get_freq")
+        assert cmd_map.has("set_freq")

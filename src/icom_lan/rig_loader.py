@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .command_map import CommandMap
+from .command_spec import CatCommandSpec, CivCommandSpec, CommandSpec
 from .profiles import (
     BandInfo,
     FilterWidthRule,
@@ -124,7 +125,7 @@ class RigConfig:
     vfo_sub_select: tuple[int, ...] | None
     vfo_swap: tuple[int, ...] | None
     freq_ranges: tuple[dict[str, Any], ...]
-    commands: dict[str, tuple[int, ...]]
+    commands: dict[str, CommandSpec]
     cmd29_routes: tuple[tuple[int, int | None], ...]
     spectrum: dict[str, int] | None
     att_values: tuple[int, ...] | None
@@ -204,8 +205,15 @@ class RigConfig:
         )
 
     def to_command_map(self) -> CommandMap:
-        """Build a ``CommandMap`` from this config's commands."""
-        return CommandMap(self.commands)
+        """Build a ``CommandMap`` from this config's CI-V commands.
+        
+        Only CivCommandSpec entries are included; CatCommandSpec entries are ignored.
+        """
+        civ_commands: dict[str, tuple[int, ...]] = {}
+        for name, spec in self.commands.items():
+            if isinstance(spec, CivCommandSpec):
+                civ_commands[name] = spec.bytes
+        return CommandMap(civ_commands)
 
 
 def _parse_keyboard_binding(
@@ -320,6 +328,94 @@ def _load_keyboard_file(
 def _load_default_keyboard_config(path: Path) -> KeyboardConfig | None:
     return _load_keyboard_file(
         path, path.parent / DEFAULT_KEYBOARD_PROFILE_NAME, optional=True
+    )
+
+
+def _parse_command_value(
+    filename: str,
+    command_name: str,
+    value: Any,
+) -> CommandSpec:
+    """Parse a single command value from TOML.
+    
+    Supports two formats:
+    1. CI-V wire bytes (list): [0x03] or [0x14, 0x01]
+    2. CAT command spec (dict): { cat = { read = "FA;", parse = "FA{freq:09d};" } }
+    
+    Args:
+        filename: Source TOML filename (for error messages).
+        command_name: Command name (for error messages).
+        value: Raw TOML value to parse.
+    
+    Returns:
+        Parsed CommandSpec (either CivCommandSpec or CatCommandSpec).
+    
+    Raises:
+        RigLoadError: If the value format is invalid.
+    """
+    # Format 1: CI-V wire bytes (list of integers)
+    if isinstance(value, list):
+        if not value:
+            raise RigLoadError(
+                f"{filename}: [commands].{command_name} = [] (empty list not allowed)"
+            )
+        if not all(isinstance(byte, int) for byte in value):
+            raise RigLoadError(
+                f"{filename}: [commands].{command_name} must be all integers, "
+                f"got {value!r}"
+            )
+        if not all(0x00 <= byte <= 0xFF for byte in value):
+            raise RigLoadError(
+                f"{filename}: [commands].{command_name} bytes must be 0x00–0xFF, "
+                f"got {value!r}"
+            )
+        return CivCommandSpec(bytes=tuple(value))
+    
+    # Format 2: CAT command spec (dict with 'cat' key)
+    if isinstance(value, dict):
+        if "cat" not in value:
+            raise RigLoadError(
+                f"{filename}: [commands].{command_name} dict must have 'cat' key, "
+                f"got keys: {sorted(value.keys())}"
+            )
+        cat_spec = value["cat"]
+        if not isinstance(cat_spec, dict):
+            raise RigLoadError(
+                f"{filename}: [commands].{command_name}.cat must be a dict, "
+                f"got {type(cat_spec).__name__}"
+            )
+        
+        read_cmd = cat_spec.get("read")
+        write_cmd = cat_spec.get("write")
+        parse_template = cat_spec.get("parse")
+        
+        # Validate types
+        if read_cmd is not None and not isinstance(read_cmd, str):
+            raise RigLoadError(
+                f"{filename}: [commands].{command_name}.cat.read must be a string"
+            )
+        if write_cmd is not None and not isinstance(write_cmd, str):
+            raise RigLoadError(
+                f"{filename}: [commands].{command_name}.cat.write must be a string"
+            )
+        if parse_template is not None and not isinstance(parse_template, str):
+            raise RigLoadError(
+                f"{filename}: [commands].{command_name}.cat.parse must be a string"
+            )
+        
+        # At least one of read/write must be present
+        if read_cmd is None and write_cmd is None:
+            raise RigLoadError(
+                f"{filename}: [commands].{command_name}.cat must have "
+                f"at least one of 'read' or 'write'"
+            )
+        
+        return CatCommandSpec(read=read_cmd, write=write_cmd, parse=parse_template)
+    
+    # Unknown format
+    raise RigLoadError(
+        f"{filename}: [commands].{command_name} must be a list (CI-V bytes) "
+        f"or dict (CAT spec), got {type(value).__name__}"
     )
 
 
@@ -491,17 +587,18 @@ def load_rig(path: Path) -> RigConfig:
     protocol_baud = proto_section.get("baud")
 
     # Parse commands (optional for non-civ protocols)
-    commands: dict[str, tuple[int, ...]] = {}
+    commands: dict[str, CommandSpec] = {}
     if "commands" in data:
         commands_raw = dict(data["commands"])
         overrides = commands_raw.pop("overrides", {})
+        
+        # Parse main commands
         for key, value in commands_raw.items():
-            if isinstance(value, list):
-                commands[key] = tuple(value)
+            commands[key] = _parse_command_value(filename, key, value)
+        
         # Apply overrides
         for key, value in overrides.items():
-            if isinstance(value, list):
-                commands[key] = tuple(value)
+            commands[key] = _parse_command_value(filename, key, value)
 
     # Parse freq_ranges
     freq_ranges_data = data.get("freq_ranges", {}).get("ranges", [])
