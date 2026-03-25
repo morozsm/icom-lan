@@ -240,7 +240,13 @@ class WebServer:
         self._audio_broadcaster = AudioBroadcaster(radio)
         # Audio FFT scope: auto-enable when radio has audio but no hardware scope
         self._audio_fft_scope: AudioFftScope | None = None
-        if radio is not None and isinstance(radio, AudioCapable) and not isinstance(radio, ScopeCapable):
+        _has_audio = (
+            isinstance(radio, AudioCapable)
+            or (hasattr(radio, "capabilities") and isinstance(radio.capabilities, set)
+                and "audio" in radio.capabilities)
+        ) if radio is not None else False
+        _has_scope = isinstance(radio, ScopeCapable) if radio is not None else False
+        if radio is not None and _has_audio and not _has_scope:
             self._audio_fft_scope = AudioFftScope(fft_size=2048, fps=20, avg_count=4)
             self._audio_fft_scope.on_frame(self._broadcast_scope)
             self._audio_broadcaster.set_pcm_tap(self._audio_fft_scope.feed_audio)
