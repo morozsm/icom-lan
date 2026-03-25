@@ -336,3 +336,528 @@ def test_radio_state_initially_default(radio):
     assert isinstance(radio.radio_state, RadioState)
     assert radio.radio_state.ptt is False
     assert radio.radio_state.main.freq == 0
+
+
+# ---------------------------------------------------------------------------
+# D1: RX Audio Controls
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_get_af_level(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="AG0128")
+    level = await connected_radio.get_af_level()
+    assert level == 128
+    connected_radio._transport.query.assert_called_once_with("AG0;")
+
+
+@pytest.mark.asyncio
+async def test_set_af_level(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_af_level(200)
+    connected_radio._transport.write.assert_called_once_with("AG0200;")
+
+
+@pytest.mark.asyncio
+async def test_get_rf_gain(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="RG0255")
+    assert await connected_radio.get_rf_gain() == 255
+    connected_radio._transport.query.assert_called_once_with("RG0;")
+
+
+@pytest.mark.asyncio
+async def test_set_squelch(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_squelch(50)
+    connected_radio._transport.write.assert_called_once_with("SQ0050;")
+
+
+# ---------------------------------------------------------------------------
+# D2: RF Front-End
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_get_attenuator_off(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="RA00")
+    state = await connected_radio.get_attenuator()
+    assert state == 0
+    connected_radio._transport.query.assert_called_once_with("RA0;")
+
+
+@pytest.mark.asyncio
+async def test_set_attenuator_on(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_attenuator(1)
+    connected_radio._transport.write.assert_called_once_with("RA01;")
+
+
+@pytest.mark.asyncio
+async def test_get_preamp(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="PA01")
+    assert await connected_radio.get_preamp() == 1
+    connected_radio._transport.query.assert_called_once_with("PA0;")
+
+
+@pytest.mark.asyncio
+async def test_set_preamp(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_preamp(2, band=0)
+    connected_radio._transport.write.assert_called_once_with("PA02;")
+
+
+# ---------------------------------------------------------------------------
+# D3: DSP (NB/NR/Notch)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_get_nb_level(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="NL0005")
+    assert await connected_radio.get_nb_level() == 5
+    connected_radio._transport.query.assert_called_once_with("NL0;")
+
+
+@pytest.mark.asyncio
+async def test_set_nb_level(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_nb_level(3)
+    connected_radio._transport.write.assert_called_once_with("NL0003;")
+
+
+@pytest.mark.asyncio
+async def test_get_nr_level(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="RL007")
+    assert await connected_radio.get_nr_level() == 7
+    connected_radio._transport.query.assert_called_once_with("RL0;")
+
+
+@pytest.mark.asyncio
+async def test_get_auto_notch_on(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="BC01")
+    assert await connected_radio.get_auto_notch() is True
+
+
+@pytest.mark.asyncio
+async def test_get_auto_notch_off(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="BC00")
+    assert await connected_radio.get_auto_notch() is False
+
+
+@pytest.mark.asyncio
+async def test_set_auto_notch(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_auto_notch(True)
+    connected_radio._transport.write.assert_called_once_with("BC01;")
+
+
+@pytest.mark.asyncio
+async def test_get_manual_notch(connected_radio):
+    """get_manual_notch calls both BP00 and BP01 queries."""
+    responses = iter(["BP00001", "BP01120"])
+    connected_radio._transport.query = AsyncMock(side_effect=responses)
+    enabled, freq = await connected_radio.get_manual_notch()
+    assert enabled is True
+    assert freq == 120
+
+
+@pytest.mark.asyncio
+async def test_set_manual_notch(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_manual_notch(True)
+    connected_radio._transport.write.assert_called_once_with("BP00001;")
+
+
+@pytest.mark.asyncio
+async def test_set_manual_notch_freq(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_manual_notch_freq(80)
+    connected_radio._transport.write.assert_called_once_with("BP01080;")
+
+
+# ---------------------------------------------------------------------------
+# D4: Filters
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_get_filter_width(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="SH0010")
+    assert await connected_radio.get_filter_width() == 10
+    connected_radio._transport.query.assert_called_once_with("SH00;")
+
+
+@pytest.mark.asyncio
+async def test_set_filter_width(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_filter_width(5)
+    connected_radio._transport.write.assert_called_once_with("SH0005;")
+
+
+@pytest.mark.asyncio
+async def test_get_if_shift_positive(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="IS00+0500")
+    offset = await connected_radio.get_if_shift()
+    assert offset == 500
+
+
+@pytest.mark.asyncio
+async def test_get_if_shift_negative(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="IS00-0200")
+    offset = await connected_radio.get_if_shift()
+    assert offset == -200
+
+
+@pytest.mark.asyncio
+async def test_set_if_shift_positive(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_if_shift(300)
+    connected_radio._transport.write.assert_called_once_with("IS00+0300;")
+
+
+@pytest.mark.asyncio
+async def test_set_if_shift_negative(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_if_shift(-150)
+    connected_radio._transport.write.assert_called_once_with("IS00-0150;")
+
+
+@pytest.mark.asyncio
+async def test_get_narrow(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="NA01")
+    assert await connected_radio.get_narrow() is True
+
+
+@pytest.mark.asyncio
+async def test_set_narrow(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_narrow(False)
+    connected_radio._transport.write.assert_called_once_with("NA00;")
+
+
+# ---------------------------------------------------------------------------
+# D5: Split/Dual Watch
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_get_split_on(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="ST1")
+    assert await connected_radio.get_split() is True
+    connected_radio._transport.query.assert_called_once_with("ST;")
+
+
+@pytest.mark.asyncio
+async def test_set_split(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_split(True)
+    connected_radio._transport.write.assert_called_once_with("ST1;")
+
+
+@pytest.mark.asyncio
+async def test_get_rx_func(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="FR00")
+    assert await connected_radio.get_rx_func() == 0
+    connected_radio._transport.query.assert_called_once_with("FR;")
+
+
+@pytest.mark.asyncio
+async def test_get_tx_func(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="FT1")
+    assert await connected_radio.get_tx_func() == 1
+    connected_radio._transport.query.assert_called_once_with("FT;")
+
+
+@pytest.mark.asyncio
+async def test_get_vfo_select(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="VS0")
+    assert await connected_radio.get_vfo_select() == 0
+    connected_radio._transport.query.assert_called_once_with("VS;")
+
+
+@pytest.mark.asyncio
+async def test_vfo_a_to_b(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.vfo_a_to_b()
+    connected_radio._transport.write.assert_called_once_with("AB;")
+
+
+@pytest.mark.asyncio
+async def test_vfo_b_to_a(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.vfo_b_to_a()
+    connected_radio._transport.write.assert_called_once_with("BA;")
+
+
+# ---------------------------------------------------------------------------
+# D6: TX Stack
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_get_power(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="PC2100")
+    head, watts = await connected_radio.get_power()
+    assert head == 2
+    assert watts == 100
+    connected_radio._transport.query.assert_called_once_with("PC;")
+
+
+@pytest.mark.asyncio
+async def test_set_power(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_power(50, head=2)
+    connected_radio._transport.write.assert_called_once_with("PC2050;")
+
+
+@pytest.mark.asyncio
+async def test_get_mic_gain(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="MG050")
+    assert await connected_radio.get_mic_gain() == 50
+    connected_radio._transport.query.assert_called_once_with("MG;")
+
+
+@pytest.mark.asyncio
+async def test_get_processor(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="PR01")
+    assert await connected_radio.get_processor() is True
+
+
+@pytest.mark.asyncio
+async def test_get_monitor_level(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="ML100")
+    assert await connected_radio.get_monitor_level() == 100
+    connected_radio._transport.query.assert_called_once_with("ML;")
+
+
+@pytest.mark.asyncio
+async def test_set_monitor_level(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_monitor_level(128)
+    connected_radio._transport.write.assert_called_once_with("ML128;")
+
+
+# ---------------------------------------------------------------------------
+# D7: CW
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_get_keyer_speed(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="KS020")
+    assert await connected_radio.get_keyer_speed() == 20
+    connected_radio._transport.query.assert_called_once_with("KS;")
+
+
+@pytest.mark.asyncio
+async def test_set_keyer_speed(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_keyer_speed(25)
+    connected_radio._transport.write.assert_called_once_with("KS025;")
+
+
+@pytest.mark.asyncio
+async def test_get_key_pitch(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="KP30")
+    assert await connected_radio.get_key_pitch() == 30
+    connected_radio._transport.query.assert_called_once_with("KP;")
+
+
+@pytest.mark.asyncio
+async def test_send_cw(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.send_cw("0", "CQ DE W1ABC")
+    connected_radio._transport.write.assert_called_once_with("KY0CQ DE W1ABC;")
+
+
+@pytest.mark.asyncio
+async def test_get_break_in_delay(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="SD0300")
+    assert await connected_radio.get_break_in_delay() == 300
+    connected_radio._transport.query.assert_called_once_with("SD;")
+
+
+@pytest.mark.asyncio
+async def test_set_break_in_delay(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_break_in_delay(500)
+    connected_radio._transport.write.assert_called_once_with("SD0500;")
+
+
+@pytest.mark.asyncio
+async def test_get_break_in(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="BI1")
+    assert await connected_radio.get_break_in() is True
+
+
+@pytest.mark.asyncio
+async def test_get_cw_spot(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="CS0")
+    assert await connected_radio.get_cw_spot() is False
+
+
+# ---------------------------------------------------------------------------
+# D8: Clarifier (RIT/XIT)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_get_clarifier_both_off(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="CF00000000")
+    rx, tx = await connected_radio.get_clarifier()
+    assert rx is False
+    assert tx is False
+    connected_radio._transport.query.assert_called_once_with("CF000;")
+
+
+@pytest.mark.asyncio
+async def test_get_clarifier_rx_on(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="CF00010000")
+    rx, tx = await connected_radio.get_clarifier()
+    assert rx is True
+    assert tx is False
+
+
+@pytest.mark.asyncio
+async def test_set_clarifier(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_clarifier(True, False)
+    connected_radio._transport.write.assert_called_once_with("CF00010000;")
+
+
+@pytest.mark.asyncio
+async def test_get_clarifier_freq_positive(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="CF001+0600")
+    assert await connected_radio.get_clarifier_freq() == 600
+    connected_radio._transport.query.assert_called_once_with("CF001;")
+
+
+@pytest.mark.asyncio
+async def test_get_clarifier_freq_negative(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="CF001-0400")
+    assert await connected_radio.get_clarifier_freq() == -400
+
+
+@pytest.mark.asyncio
+async def test_set_clarifier_freq(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_clarifier_freq(-250)
+    connected_radio._transport.write.assert_called_once_with("CF001-0250;")
+
+
+# ---------------------------------------------------------------------------
+# D9: Tone/TSQL
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_get_sql_type(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="CT002")
+    assert await connected_radio.get_sql_type() == 2
+    connected_radio._transport.query.assert_called_once_with("CT0;")
+
+
+@pytest.mark.asyncio
+async def test_set_sql_type(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_sql_type(3)
+    connected_radio._transport.write.assert_called_once_with("CT003;")
+
+
+# ---------------------------------------------------------------------------
+# D10: System
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_get_id(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="ID0840")
+    model_id = await connected_radio.get_id()
+    assert model_id == "0840"
+    connected_radio._transport.query.assert_called_once_with("ID;")
+
+
+@pytest.mark.asyncio
+async def test_get_auto_info(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="AI0")
+    assert await connected_radio.get_auto_info() is False
+
+
+@pytest.mark.asyncio
+async def test_set_auto_info(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_auto_info(True)
+    connected_radio._transport.write.assert_called_once_with("AI1;")
+
+
+@pytest.mark.asyncio
+async def test_get_vox(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="VX1")
+    assert await connected_radio.get_vox() is True
+
+
+@pytest.mark.asyncio
+async def test_set_vox(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_vox(False)
+    connected_radio._transport.write.assert_called_once_with("VX0;")
+
+
+@pytest.mark.asyncio
+async def test_get_lock(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="LK0")
+    assert await connected_radio.get_lock() is False
+
+
+@pytest.mark.asyncio
+async def test_set_lock(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_lock(True)
+    connected_radio._transport.write.assert_called_once_with("LK1;")
+
+
+@pytest.mark.asyncio
+async def test_get_band(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="BS005")
+    assert await connected_radio.get_band() == 5
+    connected_radio._transport.query.assert_called_once_with("BS0;")
+
+
+@pytest.mark.asyncio
+async def test_set_band(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_band(3)
+    connected_radio._transport.write.assert_called_once_with("BS003;")
+
+
+@pytest.mark.asyncio
+async def test_band_up(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.band_up()
+    connected_radio._transport.write.assert_called_once_with("BU0;")
+
+
+@pytest.mark.asyncio
+async def test_band_down(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.band_down()
+    connected_radio._transport.write.assert_called_once_with("BD0;")
+
+
+# ---------------------------------------------------------------------------
+# AGC
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_get_agc(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="GT03")
+    assert await connected_radio.get_agc() == 3
+    connected_radio._transport.query.assert_called_once_with("GT0;")
+
+
+@pytest.mark.asyncio
+async def test_set_agc(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_agc(2)
+    connected_radio._transport.write.assert_called_once_with("GT02;")

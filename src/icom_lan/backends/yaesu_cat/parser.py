@@ -6,12 +6,31 @@ Templates use Python format-string style placeholders, e.g. ``FA{freq:09d};``.
 Supported placeholders
 ----------------------
 {freq:09d}    Frequency in Hz, 9 digits zero-padded
+{freq:03d}    Frequency index, 3 digits zero-padded
 {mode}        Mode code, single character (e.g. '2' for USB)
+{mode:02d}    Mode code, 2 digits zero-padded (e.g. RX function)
 {raw:03d}     Meter raw value, 3 digits zero-padded
 {level:03d}   Level value, 3 digits zero-padded (0-255)
+{level:02d}   Level value, 2 digits zero-padded (0-15)
 {state}       Binary state character ('0' or '1')
+{state:03d}   Binary state, 3 digits zero-padded (e.g. manual notch)
 {sign}        Sign character ('+' or '-')
 {offset:04d}  Frequency offset, 4 digits zero-padded
+{value}       Generic single-character value
+{value:02d}   Generic value, 2 digits zero-padded
+{vfo}         VFO selector, single character ('0' or '1')
+{band:02d}    Band index, 2 digits zero-padded
+{wpm:03d}     CW speed in WPM, 3 digits zero-padded
+{idx:02d}     Index value, 2 digits zero-padded
+{delay:04d}   Delay in milliseconds, 4 digits zero-padded
+{head}        Head selector, single character
+{watts:03d}   Power in watts, 3 digits zero-padded
+{model:04d}   Radio model ID, 4 digits zero-padded
+{rx}          RX clarifier state, single character
+{tx}          TX clarifier state, single character
+{pad:03d}     Padding zeros, 3 digits
+{type:02d}    Type/code value, 2 digits zero-padded
+{mem}         CW message text (write-only)
 
 Usage
 -----
@@ -49,6 +68,20 @@ _ALLOWED_PLACEHOLDERS: frozenset[str] = frozenset(
         "state",
         "sign",
         "offset",
+        "value",
+        "vfo",
+        "band",
+        "wpm",
+        "idx",
+        "delay",
+        "head",
+        "watts",
+        "model",
+        "rx",
+        "tx",
+        "pad",
+        "type",
+        "mem",
     }
 )
 
@@ -60,12 +93,30 @@ _ALLOWED_PLACEHOLDERS: frozenset[str] = frozenset(
 # Each entry: (name_prefix, regex_pattern, type_converter)
 _PLACEHOLDER_REGEX: dict[str, tuple[str, Any]] = {
     "freq:09d": (r"(?P<freq>\d{9})", int),
+    "freq:03d": (r"(?P<freq>\d{3})", int),
     "raw:03d": (r"(?P<raw>\d{3})", int),
     "level:03d": (r"(?P<level>\d{3})", int),
+    "level:02d": (r"(?P<level>\d{2})", int),
     "offset:04d": (r"(?P<offset>\d{4})", int),
     "mode": (r"(?P<mode>.)", str),
+    "mode:02d": (r"(?P<mode>\d{2})", int),
     "state": (r"(?P<state>.)", str),
+    "state:03d": (r"(?P<state>\d{3})", int),
     "sign": (r"(?P<sign>[+\-])", str),
+    "value": (r"(?P<value>.)", str),
+    "value:02d": (r"(?P<value>\d{2})", int),
+    "vfo": (r"(?P<vfo>.)", str),
+    "band:02d": (r"(?P<band>\d{2})", int),
+    "wpm:03d": (r"(?P<wpm>\d{3})", int),
+    "idx:02d": (r"(?P<idx>\d{2})", int),
+    "delay:04d": (r"(?P<delay>\d{4})", int),
+    "head": (r"(?P<head>.)", str),
+    "watts:03d": (r"(?P<watts>\d{3})", int),
+    "model:04d": (r"(?P<model>\d{4})", int),
+    "rx": (r"(?P<rx>.)", str),
+    "tx": (r"(?P<tx>.)", str),
+    "pad:03d": (r"(?P<pad>\d{3})", int),
+    "type:02d": (r"(?P<type>\d{2})", int),
 }
 
 
