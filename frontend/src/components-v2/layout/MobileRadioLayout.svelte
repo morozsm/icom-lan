@@ -28,6 +28,7 @@
     resolveVfoLayoutProfile,
     vfoLayoutStyleVars,
   } from './vfo-layout-tokens';
+  import { getTxPermit } from '$lib/utils/tx-permit';
   import {
     toVfoProps, toVfoOpsProps, toMeterProps,
     toRfFrontEndProps, toModeProps, toFilterProps, toAgcProps, toRitXitProps,
@@ -50,6 +51,12 @@
   let keyboardConfig = $derived(getKeyboardConfig());
   let audioState = $derived(getAudioState());
   let txCapable = $derived(hasTx());
+  let txPermit = $derived(getTxPermit(mainVfo.freq));
+  let txIndicatorColor = $derived(
+    (tx.txActive || pttActive) ? 'var(--v2-accent-red, #ef4444)' :
+    txPermit === 'allowed' ? 'var(--v2-accent-green, #4ade80)' :
+    'var(--v2-text-dim, #555)'
+  );
 
   // ── VFO props ──
   let mainVfo = $derived(toVfoProps(radioState, 'main'));
@@ -395,6 +402,7 @@
   </div>
   <div class="m-ls-overlay">
     <div class="m-ls-vfo">
+      <span class="m-tx-indicator" style="background: {txIndicatorColor}"></span>
       <FrequencyDisplay freq={mainVfo.freq} compact active />
     </div>
     <div class="m-ls-quick-modes">
@@ -457,6 +465,7 @@
   <!-- ═══ STICKY VFO HEADER ═══ -->
   <header class="m-vfo-bar" bind:this={receiverDeckElement} style={receiverDeckStyle}>
     <div class="m-vfo-row">
+      <span class="m-tx-indicator" style="background: {txIndicatorColor}" title={txPermit === 'allowed' ? 'TX allowed' : 'TX not allowed (out of band)'}></span>
       <div class="m-vfo-freq">
         <FrequencyDisplay freq={mainVfo.freq} compact active />
       </div>
@@ -1217,6 +1226,15 @@
     background: var(--v2-bg-card, #111);
     border-bottom: 1px solid var(--v2-border-panel, #333);
     z-index: 10;
+  }
+
+  .m-tx-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    transition: background 0.2s, box-shadow 0.2s;
   }
 
   .m-vfo-row {
