@@ -235,8 +235,11 @@ get_vfo_select = { cat = { read = "VS;", parse = "VS{vfo};" } }
 set_vfo_select = { cat = { write = "VS{vfo};" } }
 vfo_a_to_b     = { cat = { write = "AB;" } }
 vfo_b_to_a     = { cat = { write = "BA;" } }
-get_band       = { cat = { read = "BS0;", parse = "BS0{band:02d};" } }
+# BS: FTX-1 does NOT support BS read (returns ?;)
+# Band select is write-only. BD/BU are fire-and-forget (no response).
+# BS format: BS + P1(rx 0/1) + P2P2(band 00-14)
 set_band       = { cat = { write = "BS0{band:02d};" } }
+set_band_sub   = { cat = { write = "BS1{band:02d};" } }
 band_up        = { cat = { write = "BU0;" } }
 band_down      = { cat = { write = "BD0;" } }
 
@@ -264,8 +267,13 @@ get_rf_gain    = { cat = { read = "RG0;", parse = "RG0{level:03d};" } }
 set_rf_gain    = { cat = { write = "RG0{level:03d};" } }
 get_squelch    = { cat = { read = "SQ0;", parse = "SQ0{level:03d};" } }
 set_squelch    = { cat = { write = "SQ0{level:03d};" } }
-get_monitor_level = { cat = { read = "ML;", parse = "ML{level:03d};" } }
-set_monitor_level = { cat = { write = "ML{level:03d};" } }
+# ML: P1=0 (MONI ON/OFF), P1=1 (MONI Level)
+# ML0; → ML0000 (OFF) or ML0001 (ON)
+# ML1; → ML1050 (level=50)
+get_monitor_on     = { cat = { read = "ML0;", parse = "ML0{level:03d};" } }
+set_monitor_on     = { cat = { write = "ML0{level:03d};" } }
+get_monitor_level  = { cat = { read = "ML1;", parse = "ML1{level:03d};" } }
+set_monitor_level  = { cat = { write = "ML1{level:03d};" } }
 
 # ── RF Front End ──
 get_attenuator = { cat = { read = "RA0;", parse = "RA0{state};" } }
@@ -290,10 +298,13 @@ get_agc        = { cat = { read = "GT0;", parse = "GT0{mode};" } }
 set_agc        = { cat = { write = "GT0{mode};" } }
 
 # ── Filter / IF ──
-get_filter_width = { cat = { read = "SH00;", parse = "SH00{value:02d};" } }
-set_filter_width = { cat = { write = "SH00{value:02d};" } }
-get_filter_shift = { cat = { read = "SH01;", parse = "SH01{value:02d};" } }
-set_filter_shift = { cat = { write = "SH01{value:02d};" } }
+# SH: P1=rx (0=MAIN,1=SUB), P2P2P2=value (3 digits)
+# SH0; reads MAIN width, SH1; reads SUB width
+# Response: SH0020 = MAIN, value 020
+get_filter_width = { cat = { read = "SH0;", parse = "SH0{level:03d};" } }
+set_filter_width = { cat = { write = "SH0{level:03d};" } }
+get_filter_width_sub = { cat = { read = "SH1;", parse = "SH1{level:03d};" } }
+set_filter_width_sub = { cat = { write = "SH1{level:03d};" } }
 get_if_shift   = { cat = { read = "IS0;", parse = "IS00{sign}{offset:04d};" } }
 set_if_shift   = { cat = { write = "IS00{sign}{offset:04d};" } }
 get_narrow     = { cat = { read = "NA0;", parse = "NA0{state};" } }
