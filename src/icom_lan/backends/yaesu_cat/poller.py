@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import Awaitable
 from typing import TYPE_CHECKING, Any, Callable
 
 if TYPE_CHECKING:
@@ -78,6 +79,7 @@ class YaesuCatPoller:
         # Clear = paused, set = running.
         self._paused: asyncio.Event = asyncio.Event()
         self._paused.set()
+        self._reconnecting = False
 
         self._tasks: list[asyncio.Task[None]] = []
 
@@ -140,42 +142,64 @@ class YaesuCatPoller:
     # Polling loops
     # ------------------------------------------------------------------
 
-    async def _fast_loop(self) -> None:
+    async def _try_reconnect(self) -> None:
+        """Attempt serial reconnect if transport reports too many errors.
+
+        Only one reconnect runs at a time.  Other loops sleep while
+        reconnect is in progress.
+        """
+        transport = getattr(self._radio, "_transport", None)
+        if transport is None:
+            return
+        if not getattr(transport, "_maybe_reconnect_needed", lambda: False)():
+            return
+        if self._reconnecting:
+            return  # Another loop is already reconnecting
+
+        self._reconnecting = True
+        try:
+            logger.warning("YaesuCatPoller: triggering auto-reconnect")
+            await transport.reconnect()
+            logger.info("YaesuCatPoller: reconnected successfully")
+        except Exception:
+            logger.error("YaesuCatPoller: reconnect failed", exc_info=True)
+        finally:
+            self._reconnecting = False
+
+    async def _run_poll_cycle(
+        self,
+        name: str,
+        coro_fn: Callable[[], Awaitable[None]],
+        interval: float,
+    ) -> None:
+        """Generic poll loop with auto-reconnect on persistent errors."""
         while True:
             await self._paused.wait()
+            if self._reconnecting:
+                await asyncio.sleep(interval)
+                continue
             try:
                 async with self._lock:
-                    await self._poll_fast()
+                    await coro_fn()
             except asyncio.CancelledError:
                 raise
             except Exception:
-                logger.warning("YaesuCatPoller: fast poll error", exc_info=True)
-            await asyncio.sleep(self._fast_interval)
+                logger.warning("YaesuCatPoller: %s poll error", name, exc_info=True)
+                await self._try_reconnect()
+            await asyncio.sleep(interval)
+
+    async def _fast_loop(self) -> None:
+        await self._run_poll_cycle("fast", self._poll_fast, self._fast_interval)
 
     async def _medium_loop(self) -> None:
-        while True:
-            await self._paused.wait()
-            try:
-                async with self._lock:
-                    await self._drain_commands()
-                    await self._poll_medium()
-            except asyncio.CancelledError:
-                raise
-            except Exception:
-                logger.warning("YaesuCatPoller: medium poll error", exc_info=True)
-            await asyncio.sleep(self._medium_interval)
+        async def _medium() -> None:
+            await self._drain_commands()
+            await self._poll_medium()
+
+        await self._run_poll_cycle("medium", _medium, self._medium_interval)
 
     async def _slow_loop(self) -> None:
-        while True:
-            await self._paused.wait()
-            try:
-                async with self._lock:
-                    await self._poll_slow()
-            except asyncio.CancelledError:
-                raise
-            except Exception:
-                logger.warning("YaesuCatPoller: slow poll error", exc_info=True)
-            await asyncio.sleep(self._slow_interval)
+        await self._run_poll_cycle("slow", self._poll_slow, self._slow_interval)
 
     # ------------------------------------------------------------------
     # Command queue drain
