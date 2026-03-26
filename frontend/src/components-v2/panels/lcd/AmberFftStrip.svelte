@@ -15,12 +15,11 @@
   let visible = true;
   let latestPixels: Uint8Array | null = null;
 
-  // Amber LCD color palette
-  const AMBER = 'rgb(255, 140, 0)';
-  const AMBER_DIM = 'rgba(255, 140, 0, 0.15)';
-  const AMBER_GLOW = 'rgba(255, 140, 0, 0.4)';
-  const BG = '#0C0A00';
-  const GRID_COLOR = 'rgba(255, 140, 0, 0.06)';
+  // LCD color palette: amber backlight, dark pixels
+  const LINE_COLOR = '#1A1000';
+  const LINE_DIM = 'rgba(26, 16, 0, 0.15)';
+  const BG = '#C8A030';
+  const GRID_COLOR = 'rgba(0, 0, 0, 0.05)';
 
   function draw(): void {
     if (!visible) { rafId = 0; return; }
@@ -54,7 +53,7 @@
 
     if (!pixels || pixels.length === 0) {
       // No data — draw flat baseline
-      ctx.strokeStyle = AMBER_DIM;
+      ctx.strokeStyle = LINE_DIM;
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(0, h - 2);
@@ -67,26 +66,23 @@
     const step = w / len;
     const maxVal = 160; // scope data range 0-160
 
-    // Filled area (dim amber)
+    // Filled area under curve (subtle dark fill)
     ctx.beginPath();
     ctx.moveTo(0, h);
     for (let i = 0; i < len; i++) {
       const x = i * step;
       const amp = Math.min(pixels[i], maxVal) / maxVal;
       const y = h - amp * (h - 4);
-      if (i === 0) ctx.lineTo(x, y);
-      else ctx.lineTo(x, y);
+      ctx.lineTo(x, y);
     }
     ctx.lineTo(w, h);
     ctx.closePath();
-    ctx.fillStyle = 'rgba(255, 140, 0, 0.08)';
+    ctx.fillStyle = 'rgba(26, 16, 0, 0.08)';
     ctx.fill();
 
-    // Main line — "LCD pixel" look with slight glow
-    ctx.strokeStyle = AMBER;
+    // Main line — dark on amber, like real LCD pixels
+    ctx.strokeStyle = LINE_COLOR;
     ctx.lineWidth = 1.5;
-    ctx.shadowColor = AMBER_GLOW;
-    ctx.shadowBlur = 4;
     ctx.beginPath();
     for (let i = 0; i < len; i++) {
       const x = i * step;
@@ -96,10 +92,9 @@
       else ctx.lineTo(x, y);
     }
     ctx.stroke();
-    ctx.shadowBlur = 0;
 
     // Center marker (tuned freq)
-    ctx.strokeStyle = 'rgba(255, 140, 0, 0.3)';
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.15)';
     ctx.lineWidth = 1;
     ctx.setLineDash([3, 3]);
     ctx.beginPath();
@@ -109,7 +104,7 @@
     ctx.setLineDash([]);
 
     // Bandwidth label
-    ctx.fillStyle = 'rgba(255, 140, 0, 0.3)';
+    ctx.fillStyle = 'rgba(26, 16, 0, 0.3)';
     ctx.font = '9px monospace';
     ctx.textAlign = 'right';
     ctx.fillText('48 kHz', w - 4, 10);

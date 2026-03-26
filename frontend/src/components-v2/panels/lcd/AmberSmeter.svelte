@@ -61,7 +61,7 @@
     height: 12px;
     font-family: 'JetBrains Mono', 'Courier New', monospace;
     font-size: 9px;
-    color: rgba(255, 140, 0, 0.5);
+    color: rgba(26, 16, 0, 0.45);
   }
 
   .tick {
@@ -71,14 +71,14 @@
   }
 
   .tick.over-s9 {
-    color: rgba(255, 60, 0, 0.6);
+    color: rgba(60, 10, 0, 0.7);
   }
 
   .meter-bar-bg {
     position: relative;
     height: 12px;
-    background: rgba(255, 140, 0, 0.08);
-    border: 1px solid rgba(255, 140, 0, 0.2);
+    background: rgba(0, 0, 0, 0.06);
+    border: 1px solid rgba(0, 0, 0, 0.15);
     border-radius: 2px;
     overflow: hidden;
   }
@@ -87,28 +87,26 @@
     height: 100%;
     background: linear-gradient(
       to right,
-      rgba(255, 140, 0, 0.6) 0%,
-      rgba(255, 140, 0, 0.9) 100%
+      rgba(26, 16, 0, 0.5) 0%,
+      rgba(26, 16, 0, 0.85) 100%
     );
     transition: width 60ms linear;
-    box-shadow: 0 0 6px rgba(255, 140, 0, 0.4);
   }
 
   .meter-bar-fill.over-s9 {
     background: linear-gradient(
       to right,
-      rgba(255, 140, 0, 0.6) 0%,
-      rgba(255, 140, 0, 0.9) 62%,
-      rgba(255, 60, 0, 0.9) 100%
+      rgba(26, 16, 0, 0.5) 0%,
+      rgba(26, 16, 0, 0.85) 62%,
+      rgba(80, 10, 0, 0.9) 100%
     );
-    box-shadow: 0 0 8px rgba(255, 60, 0, 0.5);
   }
 
   .meter-bar-fill.tx-fill {
     background: linear-gradient(
       to right,
-      rgba(255, 30, 0, 0.5) 0%,
-      rgba(255, 60, 0, 0.9) 100%
+      rgba(80, 10, 0, 0.5) 0%,
+      rgba(80, 10, 0, 0.9) 100%
     );
   }
 
@@ -117,6 +115,6 @@
     top: 0;
     bottom: 0;
     width: 1px;
-    background: rgba(255, 140, 0, 0.4);
+    background: rgba(0, 0, 0, 0.2);
   }
 </style>

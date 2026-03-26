@@ -124,8 +124,8 @@
   .lcd-screen {
     position: relative;
     width: 100%;
-    background: #0C0A00;
-    border: 2px solid #3A3000;
+    background: #C8A030;
+    border: 2px solid #8A7020;
     border-radius: 6px;
     padding: 12px 16px;
     display: flex;
@@ -133,7 +133,7 @@
     gap: 6px;
     overflow: hidden;
     box-shadow:
-      inset 0 0 30px rgba(255, 140, 0, 0.05),
+      inset 0 0 40px rgba(0, 0, 0, 0.1),
       0 0 8px rgba(0, 0, 0, 0.6);
   }
 
@@ -147,8 +147,8 @@
       to bottom,
       transparent 0px,
       transparent 2px,
-      rgba(0, 0, 0, 0.15) 2px,
-      rgba(0, 0, 0, 0.15) 4px
+      rgba(0, 0, 0, 0.06) 2px,
+      rgba(0, 0, 0, 0.06) 4px
     );
   }
 
@@ -171,27 +171,27 @@
   }
 
   .lcd-badge-tx {
-    background: #FF2200;
-    color: #000;
+    background: #3A0800;
+    color: #C8A030;
   }
 
   .lcd-badge-rit {
-    background: rgba(255, 140, 0, 0.2);
-    color: #FF8C00;
-    border: 1px solid rgba(255, 140, 0, 0.4);
+    background: rgba(0, 0, 0, 0.15);
+    color: #2A2000;
+    border: 1px solid rgba(0, 0, 0, 0.2);
   }
 
   .lcd-badge-split {
-    background: rgba(255, 140, 0, 0.2);
-    color: #FF8C00;
-    border: 1px solid rgba(255, 140, 0, 0.4);
+    background: rgba(0, 0, 0, 0.15);
+    color: #2A2000;
+    border: 1px solid rgba(0, 0, 0, 0.2);
   }
 
   .lcd-mode {
     font-family: 'JetBrains Mono', 'Courier New', monospace;
     font-size: 14px;
     font-weight: 700;
-    color: #FF8C00;
+    color: #1A1000;
     margin-left: auto;
     letter-spacing: 1px;
   }
@@ -218,14 +218,14 @@
     z-index: 2;
     height: 64px;
     flex-shrink: 0;
-    border-top: 1px solid rgba(255, 140, 0, 0.15);
+    border-top: 1px solid rgba(0, 0, 0, 0.12);
     padding-top: 4px;
   }
 
   .tx-active .lcd-screen {
-    border-color: #5A1000;
+    border-color: #5A2000;
     box-shadow:
-      inset 0 0 40px rgba(255, 30, 0, 0.08),
-      0 0 12px rgba(255, 30, 0, 0.3);
+      inset 0 0 40px rgba(180, 30, 0, 0.1),
+      0 0 12px rgba(180, 30, 0, 0.2);
   }
 </style>

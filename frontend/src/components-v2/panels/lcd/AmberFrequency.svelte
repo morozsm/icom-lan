@@ -36,8 +36,7 @@
     align-items: baseline;
     gap: 0;
     font-family: 'JetBrains Mono', 'Courier New', monospace;
-    color: #FF8C00;
-    text-shadow: 0 0 12px rgba(255, 140, 0, 0.6), 0 0 4px rgba(255, 140, 0, 0.3);
+    color: #1A1000;
     user-select: none;
   }
 
@@ -50,7 +49,7 @@
   .freq-dot {
     font-size: clamp(28px, 4vw, 48px);
     font-weight: 400;
-    color: rgba(255, 140, 0, 0.6);
+    color: rgba(26, 16, 0, 0.5);
     margin: 0 1px;
   }
 
@@ -64,13 +63,13 @@
     font-size: clamp(24px, 3.5vw, 40px);
     font-weight: 500;
     letter-spacing: 2px;
-    opacity: 0.7;
+    opacity: 0.6;
   }
 
   .freq-unit {
     font-size: 12px;
     font-weight: 400;
-    color: rgba(255, 140, 0, 0.4);
+    color: rgba(26, 16, 0, 0.35);
     margin-left: 6px;
     align-self: flex-end;
     padding-bottom: 4px;
