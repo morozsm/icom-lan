@@ -1,65 +1,52 @@
 <script lang="ts">
+  import { getCalibrationPoints, getS9Raw, rawToSUnit, rawToDbm } from '../../meters/smeter-scale';
+
   interface Props {
-    value: number;      // Raw S-meter 0-260
+    value: number;      // Raw S-meter 0-255
     txActive?: boolean;
   }
 
   let { value, txActive = false }: Props = $props();
 
-  // FTX-1 calibration: 0-255, S9=130, S9+40=240
   const MAX_RAW = 255;
   const SEGMENTS = 192;
-  const S9_RAW = 130;
-  const S9_SEG = Math.round((S9_RAW / MAX_RAW) * SEGMENTS);
 
-  // Major ticks from FTX-1 calibration table
-  const MAJOR_TICKS = [
-    { label: '1', raw: 26 },
-    { label: '3', raw: 52 },
-    { label: '5', raw: 78 },
-    { label: '7', raw: 103 },
-    { label: '9', raw: 130 },
-    { label: '+10', raw: 165 },
-    { label: '+20', raw: 200 },
-    { label: '+40', raw: 240 },
-  ];
+  let s9Raw = $derived(getS9Raw());
+  let s9Seg = $derived(Math.round((s9Raw / MAX_RAW) * SEGMENTS));
 
-  // Medium ticks: S2, S4, S6, S8
-  const MEDIUM_TICKS = [
-    { raw: 39 },   // S2
-    { raw: 65 },   // S4
-    { raw: 91 },   // S6
-    { raw: 117 },  // S8
-  ];
+  // Build ticks from calibration
+  let calPoints = $derived(getCalibrationPoints());
 
-  // Minor ticks: every 4.5 raw units (~quarter S-unit) for dense scale
-  const MINOR_TICKS: number[] = [];
-  for (let raw = 4; raw < MAX_RAW; raw += 4.5) {
-    const r = Math.round(raw);
-    // Skip positions that overlap with major/medium ticks
-    const isMajor = MAJOR_TICKS.some(t => Math.abs(t.raw - r) < 3);
-    const isMedium = MEDIUM_TICKS.some(t => Math.abs(t.raw - r) < 3);
-    if (!isMajor && !isMedium) MINOR_TICKS.push(r);
-  }
+  let majorTicks = $derived(
+    calPoints
+      .filter(p => /^S[13579]$|^S9\+/.test(p.label))
+      .map(p => ({ label: p.label.replace('S9+', '+').replace(/^S/, ''), raw: p.raw }))
+  );
+
+  let mediumTicks = $derived(
+    calPoints
+      .filter(p => /^S[2468]$/.test(p.label))
+      .map(p => ({ raw: p.raw }))
+  );
+
+  // Minor ticks: subdivisions between cal points
+  let minorTicks = $derived((() => {
+    const ticks: number[] = [];
+    for (let raw = 4; raw < MAX_RAW; raw += 4.5) {
+      const r = Math.round(raw);
+      const isMajor = majorTicks.some((t: any) => Math.abs(t.raw - r) < 3);
+      const isMedium = mediumTicks.some((t: any) => Math.abs(t.raw - r) < 3);
+      if (!isMajor && !isMedium) ticks.push(r);
+    }
+    return ticks;
+  })());
 
   let filledSegs = $derived(Math.round(Math.min(SEGMENTS, Math.max(0, (value / MAX_RAW) * SEGMENTS))));
 
-  let sReadout = $derived(computeReadout(value));
-
-  // FTX-1 calibration: S0=-54dBm, each S-unit ~6dB, S9=0dBm (relative)
-  function computeReadout(raw: number): { sUnit: string; dbm: string } {
-    if (raw <= 0) return { sUnit: 'S0', dbm: '-54' };
-    if (raw <= S9_RAW) {
-      // Linear interpolation: raw 0→S0, raw 130→S9
-      const sFloat = (raw / S9_RAW) * 9;
-      const sInt = Math.min(9, Math.floor(sFloat));
-      const dbm = Math.round(-54 + sFloat * 6);
-      return { sUnit: `S${sInt}`, dbm: dbm.toString() };
-    }
-    // Over S9: 130→S9(0dBm), 165→+10, 200→+20, 240→+40
-    const overDb = Math.round(((raw - S9_RAW) / (MAX_RAW - S9_RAW)) * 40);
-    return { sUnit: `9+${overDb}`, dbm: `+${overDb}` };
-  }
+  let sReadout = $derived({
+    sUnit: rawToSUnit(value),
+    dbm: rawToDbm(value).toString(),
+  });
 </script>
 
 <div class="lcd-smeter">
@@ -70,7 +57,7 @@
         <div
           class="seg"
           class:filled={i < filledSegs}
-          class:over-s9={i >= S9_SEG}
+          class:over-s9={i >= s9Seg}
           class:tx={txActive}
         ></div>
       {/each}
@@ -78,23 +65,23 @@
 
     <!-- Scale below bar -->
     <div class="meter-scale">
-      {#each MINOR_TICKS as raw}
+      {#each minorTicks as raw}
         <div class="tick tick-minor" style="left: {(raw / MAX_RAW) * 100}%"></div>
       {/each}
-      {#each MEDIUM_TICKS as tick}
+      {#each mediumTicks as tick}
         <div class="tick tick-medium" style="left: {(tick.raw / MAX_RAW) * 100}%"></div>
       {/each}
-      {#each MAJOR_TICKS as tick}
+      {#each majorTicks as tick}
         <div
           class="tick tick-major"
-          class:over-s9={tick.raw > S9_RAW}
+          class:over-s9={tick.raw > s9Raw}
           style="left: {(tick.raw / MAX_RAW) * 100}%"
         >
           <span class="tick-label">{tick.label}</span>
         </div>
       {/each}
       <span class="scale-s-label">S</span>
-      <span class="scale-db-zone" style="left: {(S9_RAW / MAX_RAW) * 100}%">dB</span>
+      <span class="scale-db-zone" style="left: {(s9Raw / MAX_RAW) * 100}%">dB</span>
     </div>
   </div>
 
@@ -155,7 +142,6 @@
   .meter-scale {
     position: relative;
     height: 36px;
-    /* Thick baseline under bargraph — ticks hang from it */
     border-top: 4px solid rgba(26, 16, 0, 0.5);
     margin-top: 1px;
   }

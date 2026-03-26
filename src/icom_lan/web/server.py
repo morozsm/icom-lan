@@ -1327,6 +1327,30 @@ class WebServer:
         body = json.dumps(body_dict, separators=(",", ":")).encode()
         await _send_json(writer, body, headers, etag=f'"{revision}"')
 
+    def _get_meter_cal_payload(self) -> dict[str, Any]:
+        """Extract meter calibration from radio backend or profile."""
+        result: dict[str, Any] = {}
+        # Try radio._config (Yaesu CAT backend)
+        radio_config = getattr(self._radio, "_config", None) if self._radio else None
+        if radio_config is not None:
+            mc = getattr(radio_config, "meter_calibrations", None)
+            mr = getattr(radio_config, "meter_redlines", None)
+            if mc:
+                result["meterCalibrations"] = mc
+            if mr:
+                result["meterRedlines"] = mr
+            if result:
+                return result
+        # Fallback to profile
+        profile = self._get_profile()
+        mc = getattr(profile, "meter_calibrations", None)
+        if mc:
+            result["meterCalibrations"] = mc
+        mr = getattr(profile, "meter_redlines", None)
+        if mr:
+            result["meterRedlines"] = mr
+        return result
+
     async def _serve_capabilities(
         self, writer: asyncio.StreamWriter, headers: dict[str, str] | None = None
     ) -> None:
@@ -1404,6 +1428,7 @@ class WebServer:
                     for fr in profile.freq_ranges
                     for b in fr.bands
                 ] or None,
+                **self._get_meter_cal_payload(),
             },
             separators=(",", ":"),
         ).encode()

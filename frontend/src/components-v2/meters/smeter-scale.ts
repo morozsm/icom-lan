@@ -1,62 +1,93 @@
 /**
  * S-meter scale mapping utilities.
  *
- * FTX-1 calibration (from ftx1.toml):
- *   raw 0=S0, 26=S1, 52=S3, 78=S5, 103=S7, 130=S9
- *   165=S9+10, 200=S9+20, 240=S9+40, 255=max
- *
- * TODO: Load calibration from /api/v1/capabilities instead of hardcoding.
+ * Calibration loaded from /api/v1/capabilities → meterCalibrations.s_meter.
+ * Falls back to IC-7610 defaults if no calibration available.
  */
 
-const S9_RAW = 130;
+import { getSmeterCalibration, getSmeterRedline } from '$lib/stores/capabilities.svelte';
+
+interface CalPoint {
+  raw: number;
+  actual: number;
+  label: string;
+}
+
+// IC-7610 fallback (original hardcoded values)
+const DEFAULT_CAL: CalPoint[] = [
+  { raw: 0, actual: -54, label: 'S0' },
+  { raw: 18, actual: -48, label: 'S1' },
+  { raw: 36, actual: -42, label: 'S2' },
+  { raw: 54, actual: -36, label: 'S3' },
+  { raw: 72, actual: -30, label: 'S4' },
+  { raw: 90, actual: -24, label: 'S5' },
+  { raw: 108, actual: -18, label: 'S6' },
+  { raw: 126, actual: -12, label: 'S7' },
+  { raw: 144, actual: -6, label: 'S8' },
+  { raw: 162, actual: 0, label: 'S9' },
+  { raw: 182, actual: 10, label: 'S9+10' },
+  { raw: 202, actual: 20, label: 'S9+20' },
+  { raw: 222, actual: 30, label: 'S9+30' },
+  { raw: 241, actual: 40, label: 'S9+40' },
+];
+
 const MAX_RAW = 255;
 
-const CAL_POINTS: ReadonlyArray<{ raw: number; sUnit: number }> = [
-  { raw: 0, sUnit: 0 },
-  { raw: 26, sUnit: 1 },
-  { raw: 39, sUnit: 2 },
-  { raw: 52, sUnit: 3 },
-  { raw: 65, sUnit: 4 },
-  { raw: 78, sUnit: 5 },
-  { raw: 91, sUnit: 6 },
-  { raw: 103, sUnit: 7 },
-  { raw: 117, sUnit: 8 },
-  { raw: 130, sUnit: 9 },
-];
+function getCal(): CalPoint[] {
+  return getSmeterCalibration() ?? DEFAULT_CAL;
+}
 
-const S9_PLUS_BREAKPOINTS: ReadonlyArray<{ raw: number; label: string; db: number }> = [
-  { raw: 130, label: 'S9', db: 0 },
-  { raw: 165, label: 'S9+10', db: 10 },
-  { raw: 200, label: 'S9+20', db: 20 },
-  { raw: 240, label: 'S9+40', db: 40 },
-  { raw: 255, label: 'S9+50', db: 50 },
-];
+/** Find S9 raw value from calibration. */
+export function getS9Raw(): number {
+  const cal = getCal();
+  const s9 = cal.find(p => p.label === 'S9');
+  return s9?.raw ?? 162;
+}
 
-const DBM_BREAKPOINTS: ReadonlyArray<{ raw: number; dbm: number }> = [
-  { raw: 0, dbm: -54 },
-  { raw: 26, dbm: -48 },
-  { raw: 52, dbm: -42 },
-  { raw: 78, dbm: -36 },
-  { raw: 103, dbm: -18 },
-  { raw: 130, dbm: 0 },
-  { raw: 165, dbm: 10 },
-  { raw: 200, dbm: 20 },
-  { raw: 240, dbm: 40 },
-  { raw: 255, dbm: 50 },
-];
+/** Get redline raw value. */
+export function getRedlineRaw(): number {
+  return getSmeterRedline() ?? getS9Raw();
+}
 
-/** Map raw 0-255 to fractional S-unit (0.0 - 9.0 for S0-S9). */
-function rawToSFloat(raw: number): number {
+/** Piecewise linear interpolation over calibration table. */
+function interpolate(raw: number, table: CalPoint[], outKey: 'actual'): number;
+function interpolate(raw: number, table: CalPoint[], outKey: 'actual'): number {
   const v = Math.max(0, Math.min(MAX_RAW, raw));
-  if (v <= 0) return 0;
-  if (v >= S9_RAW) return 9;
-  // Piecewise linear interpolation through calibration points
-  for (let i = 0; i < CAL_POINTS.length - 1; i++) {
-    const p0 = CAL_POINTS[i];
-    const p1 = CAL_POINTS[i + 1];
+  if (table.length === 0) return 0;
+  if (v <= table[0].raw) return table[0][outKey];
+  for (let i = 0; i < table.length - 1; i++) {
+    const p0 = table[i];
+    const p1 = table[i + 1];
     if (v <= p1.raw) {
       const t = (v - p0.raw) / (p1.raw - p0.raw);
-      return p0.sUnit + t * (p1.sUnit - p0.sUnit);
+      return p0[outKey] + t * (p1[outKey] - p0[outKey]);
+    }
+  }
+  return table[table.length - 1][outKey];
+}
+
+/** Map raw to fractional S-unit (0.0 - 9.0+ range). */
+function rawToSFloat(raw: number): number {
+  const cal = getCal();
+  const s9Raw = getS9Raw();
+  const v = Math.max(0, Math.min(MAX_RAW, raw));
+
+  // Find S-unit points (labels like S0..S9)
+  const sPoints = cal.filter(p => /^S\d$/.test(p.label));
+  if (sPoints.length < 2) {
+    // Fallback: linear
+    return (v / s9Raw) * 9;
+  }
+
+  // Interpolate through S-unit points
+  for (let i = 0; i < sPoints.length - 1; i++) {
+    const p0 = sPoints[i];
+    const p1 = sPoints[i + 1];
+    const s0 = parseInt(p0.label.slice(1));
+    const s1 = parseInt(p1.label.slice(1));
+    if (v <= p1.raw) {
+      const t = Math.max(0, (v - p0.raw) / (p1.raw - p0.raw));
+      return s0 + t * (s1 - s0);
     }
   }
   return 9;
@@ -64,48 +95,49 @@ function rawToSFloat(raw: number): number {
 
 /** Map raw 0-255 to fractional segment count 0-20. */
 export function rawToSegments(raw: number): number {
+  const s9Raw = getS9Raw();
   const v = Math.max(0, Math.min(MAX_RAW, raw));
-  if (v <= S9_RAW) {
-    // S0-S9 maps to 0-11 segments
+  if (v <= s9Raw) {
     return (rawToSFloat(v) / 9) * 11;
   }
-  // S9+ maps to 11-20 segments
-  return 11 + ((v - S9_RAW) / (MAX_RAW - S9_RAW)) * 9;
+  return 11 + ((v - s9Raw) / (MAX_RAW - s9Raw)) * 9;
 }
 
 /** Map raw 0-255 to S-unit string, e.g. "S7", "S9+20". */
 export function rawToSUnit(raw: number): string {
+  const cal = getCal();
+  const s9Raw = getS9Raw();
   const v = Math.max(0, Math.min(MAX_RAW, raw));
-  if (v <= S9_RAW) {
+
+  if (v <= s9Raw) {
     const s = Math.floor(rawToSFloat(v));
     return `S${Math.min(9, s)}`;
   }
-  let label = 'S9+50';
-  for (let i = S9_PLUS_BREAKPOINTS.length - 1; i >= 0; i--) {
-    if (v >= S9_PLUS_BREAKPOINTS[i].raw) {
-      label = S9_PLUS_BREAKPOINTS[i].label;
+
+  // Over S9: find matching calibration label
+  const overPoints = cal.filter(p => p.raw > s9Raw);
+  let label = 'S9+';
+  for (let i = overPoints.length - 1; i >= 0; i--) {
+    if (v >= overPoints[i].raw) {
+      label = overPoints[i].label;
       break;
     }
   }
   return label;
 }
 
-/** Map raw 0-255 to dBm value (linear interpolation between breakpoints). */
+/** Map raw 0-255 to dBm value (linear interpolation between calibration points). */
 export function rawToDbm(raw: number): number {
-  const v = Math.max(0, Math.min(MAX_RAW, raw));
-  for (let i = 0; i < DBM_BREAKPOINTS.length - 1; i++) {
-    const p0 = DBM_BREAKPOINTS[i];
-    const p1 = DBM_BREAKPOINTS[i + 1];
-    if (v <= p1.raw) {
-      const t = (v - p0.raw) / (p1.raw - p0.raw);
-      return Math.round(p0.dbm + t * (p1.dbm - p0.dbm));
-    }
-  }
-  return DBM_BREAKPOINTS[DBM_BREAKPOINTS.length - 1].dbm;
+  return Math.round(interpolate(raw, getCal(), 'actual'));
 }
 
 /** Format dBm value as display string, e.g. "−67 dBm". Uses Unicode minus. */
 export function formatDbm(dbm: number): string {
   const sign = dbm < 0 ? '\u2212' : '+';
   return `${sign}${Math.abs(dbm)} dBm`;
+}
+
+/** Get full calibration table for rendering scale ticks. */
+export function getCalibrationPoints(): CalPoint[] {
+  return getCal();
 }

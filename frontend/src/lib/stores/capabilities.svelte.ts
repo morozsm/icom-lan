@@ -89,3 +89,11 @@ export function vfoLabel(slot: 'A' | 'B'): string {
 export function getControlRange(name: string): ControlRange | null {
   return capabilities?.controls?.[name] ?? null;
 }
+
+export function getSmeterCalibration(): { raw: number; actual: number; label: string }[] | null {
+  return capabilities?.meterCalibrations?.s_meter ?? null;
+}
+
+export function getSmeterRedline(): number | null {
+  return capabilities?.meterRedlines?.s_meter ?? null;
+}

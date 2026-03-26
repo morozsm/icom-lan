@@ -101,4 +101,12 @@ export interface Capabilities {
   audioConfig?: AudioConfig;
   controls?: Record<string, ControlRange>;
   txBands?: { name: string; start: number; end: number }[];
+  meterCalibrations?: Record<string, MeterCalPoint[]>;
+  meterRedlines?: Record<string, number>;
+}
+
+export interface MeterCalPoint {
+  raw: number;
+  actual: number;
+  label: string;
 }

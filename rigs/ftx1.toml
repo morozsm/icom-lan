@@ -180,9 +180,19 @@ actual = -54.0
 label = "S0"
 
 [[meters.s_meter.calibration]]
+raw = 13
+actual = -51.0
+label = "S0.5"
+
+[[meters.s_meter.calibration]]
 raw = 26
 actual = -48.0
 label = "S1"
+
+[[meters.s_meter.calibration]]
+raw = 39
+actual = -45.0
+label = "S2"
 
 [[meters.s_meter.calibration]]
 raw = 52
@@ -190,14 +200,29 @@ actual = -42.0
 label = "S3"
 
 [[meters.s_meter.calibration]]
+raw = 65
+actual = -39.0
+label = "S4"
+
+[[meters.s_meter.calibration]]
 raw = 78
 actual = -36.0
 label = "S5"
 
 [[meters.s_meter.calibration]]
+raw = 91
+actual = -33.0
+label = "S6"
+
+[[meters.s_meter.calibration]]
 raw = 103
 actual = -18.0
 label = "S7"
+
+[[meters.s_meter.calibration]]
+raw = 117
+actual = -9.0
+label = "S8"
 
 [[meters.s_meter.calibration]]
 raw = 130
