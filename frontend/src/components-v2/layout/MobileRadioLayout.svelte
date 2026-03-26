@@ -1,6 +1,6 @@
 <script lang="ts">
   import { radio } from '$lib/stores/radio.svelte';
-  import { getCapabilities, hasTx, hasDualReceiver } from '$lib/stores/capabilities.svelte';
+  import { getCapabilities, hasTx, hasDualReceiver, hasAnyScope } from '$lib/stores/capabilities.svelte';
   import { getConnectionStatus, getRadioPowerOn } from '$lib/stores/connection.svelte';
   import { getAudioState } from '$lib/stores/audio.svelte';
   import { HardwareButton } from '$lib/Button';
@@ -399,9 +399,11 @@
 <!-- ═══ LANDSCAPE: fullscreen spectrum + VFO overlay ═══ -->
 <div class="m-landscape">
   <KeyboardHandler config={keyboardConfig} onAction={keyboardHandlers.dispatch} />
-  <div class="m-ls-spectrum">
-    <SpectrumPanel />
-  </div>
+  {#if hasAnyScope()}
+    <div class="m-ls-spectrum">
+      <SpectrumPanel />
+    </div>
+  {/if}
   <div class="m-ls-overlay">
     <div class="m-ls-vfo">
       <span class="m-tx-indicator" style="background: {txIndicatorColor}"></span>
@@ -494,9 +496,11 @@
   <main class="m-content">
 
     <!-- Spectrum / Waterfall -->
-    <section class="m-spectrum">
-      <SpectrumPanel />
-    </section>
+    {#if hasAnyScope()}
+      <section class="m-spectrum">
+        <SpectrumPanel />
+      </section>
+    {/if}
 
     <!-- Band -->
     <section class="m-section">

@@ -15,6 +15,19 @@ export function hasSpectrum(): boolean {
   return capabilities?.scope ?? false;
 }
 
+export function hasAnyScope(): boolean {
+  // True if hardware scope OR audio FFT scope available
+  return (capabilities?.scope ?? false) || getScopeSource() === 'audio_fft';
+}
+
+export function getScopeSource(): string | null {
+  return capabilities?.scopeSource ?? null;
+}
+
+export function isAudioFftScope(): boolean {
+  return getScopeSource() === 'audio_fft';
+}
+
 export function hasAudio(): boolean {
   return capabilities?.audio ?? false;
 }

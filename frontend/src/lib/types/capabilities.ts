@@ -96,6 +96,7 @@ export interface Capabilities {
   dataModeLabels?: Record<string, string>;
   keyboard?: KeyboardConfig | null;
   antennas?: number;      // Number of antenna ports
+  scopeSource?: string | null;  // "hardware", "audio_fft", or null
   scopeConfig?: ScopeConfig;
   audioConfig?: AudioConfig;
   controls?: Record<string, ControlRange>;

@@ -2,7 +2,7 @@
   import '../controls/control-button.css';
   import { StatusIndicator, HardwareButton } from '$lib/Button';
   import { ValueControl, rawToPercentDisplay } from '../controls/value-control';
-  import { hasTx } from '$lib/stores/capabilities.svelte';
+  import { hasTx, hasCapability } from '$lib/stores/capabilities.svelte';
   import { txStatusColor } from './tx-utils';
 
   interface Props {
@@ -93,17 +93,19 @@
     variant="hardware-illuminated"
     />
 
-    <div class="atu-row">
-      <!-- status-toggle: sustained on/off state, current visual candidate: fill -->
-      <HardwareButton indicator="edge-left" active={atuActive} color="green" onclick={() => onAtuToggle()}>ATU</HardwareButton>
-      <button
-        type="button"
-        class="tune-button v2-control-button"
-        class:tuning={atuTuning}
-        style="--control-accent: {tuneButtonColor}; --control-active-text: {tuneButtonColor}; border-color: {tuneButtonColor}; color: {tuneButtonColor};"
-        onclick={onAtuTune}
-      >TUNE</button>
-    </div>
+    {#if hasCapability('tuner')}
+      <div class="atu-row">
+        <!-- status-toggle: sustained on/off state, current visual candidate: fill -->
+        <HardwareButton indicator="edge-left" active={atuActive} color="green" onclick={() => onAtuToggle()}>ATU</HardwareButton>
+        <button
+          type="button"
+          class="tune-button v2-control-button"
+          class:tuning={atuTuning}
+          style="--control-accent: {tuneButtonColor}; --control-active-text: {tuneButtonColor}; border-color: {tuneButtonColor}; color: {tuneButtonColor};"
+          onclick={onAtuTune}
+        >TUNE</button>
+      </div>
+    {/if}
 
     <div class="toggle-row">
       <!-- status-toggle -->

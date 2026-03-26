@@ -10,6 +10,7 @@
     getRadioPowerOn,
   } from '$lib/stores/connection.svelte';
   import { getFrequency } from '$lib/stores/radio.svelte';
+  import { hasAnyScope, hasAudio } from '$lib/stores/capabilities.svelte';
 
   let radioPowerOn = $derived(getRadioPowerOn());
   let isPoweredOff = $derived(radioPowerOn === false);
@@ -133,14 +134,18 @@
       <span class="indicator-dot"></span>
       <Cable size={12} color="currentColor" strokeWidth={2.5} />
     </span>
-    <span class="indicator" title="Scope WebSocket: {scopeState}" style="--indicator-color: {stateColor(scopeState)}">
-      <span class="indicator-dot"></span>
-      <Activity size={12} color="currentColor" strokeWidth={2.5} />
-    </span>
-    <span class="indicator" title="Audio WebSocket: {audioState}" style="--indicator-color: {stateColor(audioState)}">
-      <span class="indicator-dot"></span>
-      <Volume2 size={12} color="currentColor" strokeWidth={2.5} />
-    </span>
+    {#if hasAnyScope()}
+      <span class="indicator" title="Scope WebSocket: {scopeState}" style="--indicator-color: {stateColor(scopeState)}">
+        <span class="indicator-dot"></span>
+        <Activity size={12} color="currentColor" strokeWidth={2.5} />
+      </span>
+    {/if}
+    {#if hasAudio()}
+      <span class="indicator" title="Audio WebSocket: {audioState}" style="--indicator-color: {stateColor(audioState)}">
+        <span class="indicator-dot"></span>
+        <Volume2 size={12} color="currentColor" strokeWidth={2.5} />
+      </span>
+    {/if}
     <span class="indicator" title="State HTTP: {httpState}" style="--indicator-color: {stateColor(httpState)}">
       <span class="indicator-dot"></span>
       <ArrowDownUp size={12} color="currentColor" strokeWidth={2.5} />
