@@ -19,7 +19,8 @@
 
 @font-face {
   font-family: 'DSEG7 Classic';
-  src: url('https://cdn.jsdelivr.net/npm/dseg@0.46.0/fonts/DSEG7-Classic/DSEG7Classic-Bold.woff2') format('woff2');
+  src: url('/fonts/DSEG7Classic-Bold.woff2') format('woff2'),
+       url('https://cdn.jsdelivr.net/npm/dseg@0.46.0/fonts/DSEG7-Classic/DSEG7Classic-Bold.woff2') format('woff2');
   font-weight: bold;
   font-style: normal;
   font-display: swap;

@@ -5,7 +5,7 @@
 
   let { freqHz }: Props = $props();
 
-  // Format: 14.294.000 with digit grouping
+  // Format: 14.195.000 — KX3 style grouping
   let formatted = $derived(formatFreq(freqHz));
 
   function formatFreq(hz: number): { mhz: string; khz: string; hertz: string } {
@@ -21,57 +21,77 @@
   }
 </script>
 
-<div class="amber-freq">
-  <span class="freq-mhz">{formatted.mhz}</span>
-  <span class="freq-dot">.</span>
-  <span class="freq-khz">{formatted.khz}</span>
-  <span class="freq-dot">.</span>
-  <span class="freq-hz">{formatted.hertz}</span>
-  <span class="freq-unit">MHz</span>
+<div class="lcd-freq">
+  <!-- Ghost segments (all-8s background for LCD look) -->
+  <div class="lcd-freq-ghost" aria-hidden="true">
+    <span class="seg-mhz">{formatted.mhz.replace(/./g, '8')}</span>
+    <span class="seg-dot">.</span>
+    <span class="seg-khz">888</span>
+    <span class="seg-dot">.</span>
+    <span class="seg-hz">888</span>
+  </div>
+  <!-- Active segments -->
+  <div class="lcd-freq-active">
+    <span class="seg-mhz">{formatted.mhz}</span>
+    <span class="seg-dot">.</span>
+    <span class="seg-khz">{formatted.khz}</span>
+    <span class="seg-dot">.</span>
+    <span class="seg-hz">{formatted.hertz}</span>
+  </div>
 </div>
 
 <style>
-  .amber-freq {
-    display: flex;
-    align-items: baseline;
-    gap: 0;
-    font-family: 'JetBrains Mono', 'Courier New', monospace;
-    color: #1A1000;
+  .lcd-freq {
+    position: relative;
+    display: inline-flex;
     user-select: none;
   }
 
-  .freq-mhz {
-    font-size: clamp(32px, 5vw, 56px);
-    font-weight: 700;
+  /* Ghost layer: faint "all segments on" for LCD realism */
+  .lcd-freq-ghost {
+    display: flex;
+    align-items: baseline;
+    font-family: 'DSEG7 Classic', monospace;
+    font-weight: bold;
+    color: rgba(0, 0, 0, 0.06);
+  }
+
+  /* Active layer: real digits overlaid on ghost */
+  .lcd-freq-active {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: baseline;
+    font-family: 'DSEG7 Classic', monospace;
+    font-weight: bold;
+    color: #1A1000;
+  }
+
+  .seg-mhz {
+    font-size: clamp(36px, 6vw, 64px);
     letter-spacing: 2px;
   }
 
-  .freq-dot {
+  .seg-dot {
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
     font-size: clamp(28px, 4vw, 48px);
-    font-weight: 400;
-    color: rgba(26, 16, 0, 0.5);
-    margin: 0 1px;
-  }
-
-  .freq-khz {
-    font-size: clamp(32px, 5vw, 56px);
+    color: rgba(26, 16, 0, 0.7);
+    margin: 0 2px;
     font-weight: 700;
+  }
+
+  .seg-khz {
+    font-size: clamp(36px, 6vw, 64px);
     letter-spacing: 2px;
   }
 
-  .freq-hz {
-    font-size: clamp(24px, 3.5vw, 40px);
-    font-weight: 500;
+  .seg-hz {
+    font-size: clamp(28px, 4.5vw, 48px);
     letter-spacing: 2px;
-    opacity: 0.6;
+    opacity: 0.7;
   }
 
-  .freq-unit {
-    font-size: 12px;
-    font-weight: 400;
-    color: rgba(26, 16, 0, 0.35);
-    margin-left: 6px;
-    align-self: flex-end;
-    padding-bottom: 4px;
+  .lcd-freq-ghost .seg-dot {
+    color: rgba(0, 0, 0, 0.04);
   }
 </style>
