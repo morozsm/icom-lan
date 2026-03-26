@@ -1,11 +1,11 @@
 <script lang="ts">
   interface Props {
     freqHz: number;
+    size?: 'large' | 'small';
   }
 
-  let { freqHz }: Props = $props();
+  let { freqHz, size = 'large' }: Props = $props();
 
-  // Format: 14.195.000 — KX3 style grouping
   let formatted = $derived(formatFreq(freqHz));
 
   function formatFreq(hz: number): { mhz: string; khz: string; hertz: string } {
@@ -21,17 +21,17 @@
   }
 </script>
 
-<div class="lcd-freq">
-  <!-- Ghost segments (all-8s background for LCD look) -->
-  <div class="lcd-freq-ghost" aria-hidden="true">
+<div class="lcd-freq" class:lcd-freq-large={size === 'large'} class:lcd-freq-small={size === 'small'}>
+  <!-- Ghost segments (all-8s) for LCD look -->
+  <div class="freq-ghost" aria-hidden="true">
     <span class="seg-mhz">{formatted.mhz.replace(/./g, '8')}</span>
     <span class="seg-dot">.</span>
     <span class="seg-khz">888</span>
     <span class="seg-dot">.</span>
     <span class="seg-hz">888</span>
   </div>
-  <!-- Active segments -->
-  <div class="lcd-freq-active">
+  <!-- Active digits -->
+  <div class="freq-active">
     <span class="seg-mhz">{formatted.mhz}</span>
     <span class="seg-dot">.</span>
     <span class="seg-khz">{formatted.khz}</span>
@@ -47,51 +47,73 @@
     user-select: none;
   }
 
-  /* Ghost layer: faint "all segments on" for LCD realism */
-  .lcd-freq-ghost {
+  .freq-ghost, .freq-active {
     display: flex;
     align-items: baseline;
     font-family: 'DSEG7 Classic', monospace;
     font-weight: bold;
+  }
+
+  .freq-ghost {
     color: rgba(0, 0, 0, 0.06);
   }
 
-  /* Active layer: real digits overlaid on ghost */
-  .lcd-freq-active {
+  .freq-active {
     position: absolute;
     inset: 0;
-    display: flex;
-    align-items: baseline;
-    font-family: 'DSEG7 Classic', monospace;
-    font-weight: bold;
     color: #1A1000;
-  }
-
-  .seg-mhz {
-    font-size: clamp(36px, 6vw, 64px);
-    letter-spacing: 2px;
   }
 
   .seg-dot {
     font-family: 'JetBrains Mono', 'Courier New', monospace;
-    font-size: clamp(28px, 4vw, 48px);
     color: rgba(26, 16, 0, 0.7);
-    margin: 0 2px;
     font-weight: 700;
+    margin: 0 1px;
   }
 
-  .seg-khz {
-    font-size: clamp(36px, 6vw, 64px);
-    letter-spacing: 2px;
+  .freq-ghost .seg-dot {
+    color: rgba(0, 0, 0, 0.04);
   }
 
   .seg-hz {
-    font-size: clamp(28px, 4.5vw, 48px);
-    letter-spacing: 2px;
-    opacity: 0.7;
+    opacity: 0.6;
   }
 
-  .lcd-freq-ghost .seg-dot {
-    color: rgba(0, 0, 0, 0.04);
+  /* ── Large (main VFO) ── */
+  .lcd-freq-large .seg-mhz,
+  .lcd-freq-large .seg-khz {
+    font-size: clamp(48px, 8vw, 80px);
+    letter-spacing: 3px;
+  }
+
+  .lcd-freq-large .seg-hz {
+    font-size: clamp(36px, 6vw, 60px);
+    letter-spacing: 2px;
+  }
+
+  .lcd-freq-large .seg-dot {
+    font-size: clamp(36px, 5vw, 56px);
+    margin: 0 2px;
+  }
+
+  /* ── Small (sub VFO) ── */
+  .lcd-freq-small .seg-mhz,
+  .lcd-freq-small .seg-khz {
+    font-size: clamp(20px, 3vw, 32px);
+    letter-spacing: 2px;
+  }
+
+  .lcd-freq-small .seg-hz {
+    font-size: clamp(16px, 2.5vw, 24px);
+    letter-spacing: 1px;
+  }
+
+  .lcd-freq-small .seg-dot {
+    font-size: clamp(16px, 2vw, 24px);
+    margin: 0 1px;
+  }
+
+  .lcd-freq-small .freq-active {
+    color: rgba(26, 16, 0, 0.5);
   }
 </style>
