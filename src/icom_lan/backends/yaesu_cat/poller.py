@@ -539,4 +539,27 @@ class YaesuCatPoller:
         except Exception:
             logger.debug("YaesuCatPoller: get_lock failed", exc_info=True)
 
+        # -- ATT / Preamp --
+        try:
+            state.main.att = await radio.get_attenuator(0)
+        except Exception:
+            logger.debug("YaesuCatPoller: get_attenuator failed", exc_info=True)
+
+        try:
+            state.main.preamp = await radio.get_preamp(0)
+        except Exception:
+            logger.debug("YaesuCatPoller: get_preamp failed", exc_info=True)
+
+        # -- Antenna tuner --
+        try:
+            state.tuner_status = await radio.get_tuner()
+        except Exception:
+            logger.debug("YaesuCatPoller: get_tuner failed", exc_info=True)
+
+        # -- Contour / S-DX --
+        try:
+            state.main.contour = await radio.get_contour(0)
+        except Exception:
+            logger.debug("YaesuCatPoller: get_contour failed", exc_info=True)
+
         self._callback(state)

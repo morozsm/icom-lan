@@ -52,6 +52,7 @@ class ReceiverState:
     nb_level: int = 0  # 0-255
     digisel_shift: int = 0  # 0-255
     af_mute: bool = False
+    contour: int = 0  # 0=off, >0=on (S-DX / contour DSP)
 
 
 @dataclass(slots=True)

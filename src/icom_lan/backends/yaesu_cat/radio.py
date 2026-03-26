@@ -945,6 +945,36 @@ class YaesuCatRadio:
         """Set dial lock state."""
         await self._write("set_lock", state="1" if state else "0")
 
+    # -- Tuner (AC) --------------------------------------------------------
+
+    async def get_tuner(self) -> int:
+        """Get antenna tuner state (AC).
+
+        Returns:
+            0=OFF, 1=ON, 2=tuning, 3=tune-start.
+        """
+        result = await self._query("get_tuner")
+        return int(result["state"])
+
+    async def set_tuner(self, state: int, src: int = 0, typ: int = 0) -> None:
+        """Set antenna tuner (AC). state: 0=OFF, 1=ON, 2=tune."""
+        await self._write("set_tuner", src=str(src), type=str(typ), state=str(state))
+
+    # -- Contour / S-DX (CO) -----------------------------------------------
+
+    async def get_contour(self, receiver: int = 0) -> int:
+        """Get contour (S-DX) on/off state (CO rx 0).
+
+        Returns:
+            0=OFF, >0 = ON (value).
+        """
+        result = await self._query("get_contour")
+        return int(result["val"])
+
+    async def set_contour(self, val: int, receiver: int = 0) -> None:
+        """Set contour (S-DX) on/off. 0=OFF, 1=ON."""
+        await self._write("set_contour", val=val)
+
     async def set_band(self, band: int, receiver: int = 0) -> None:
         """Set current band by index (BS, write-only on FTX-1).
 

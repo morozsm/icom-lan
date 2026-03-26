@@ -39,6 +39,7 @@
   let voxActive = $derived(state?.voxOn ?? false);
   let atuActive = $derived((state?.tunerStatus ?? 0) > 0);
   let preamp = $derived(rx?.preamp ?? 0);
+  let attActive = $derived((rx?.att ?? 0) > 0);
   // FTX-1: no separate NB/NR on/off — level > 0 means active
   let nbLevel = $derived(rx?.nbLevel ?? 0);
   let nrLevel = $derived(rx?.nrLevel ?? 0);
@@ -48,6 +49,7 @@
   let notchActive = $derived(rx?.autoNotch ?? false);
   let compActive = $derived(state?.compressorOn ?? false);
   let lockActive = $derived(state?.dialLock ?? false);
+  let contourActive = $derived((rx?.contour ?? 0) > 0);
   let activeVfo = $derived(state?.active === 'SUB' ? 'B' : 'A');
 
   let subRx = $derived(state?.active === 'SUB' ? state?.main : state?.sub);
@@ -104,9 +106,11 @@
       <span class="lcd-ind" class:active={voxActive}>VOX</span>
       <span class="lcd-ind" class:active={compActive}>COMP</span>
       <span class="lcd-ind" class:active={atuActive}>ATU</span>
-      <span class="lcd-ind" class:active={preamp > 0}>PRE</span>
+      <span class="lcd-ind" class:active={attActive}>ATT</span>
+      <span class="lcd-ind active">{preamp === 0 ? 'IPO' : preamp === 1 ? 'AMP1' : 'AMP2'}</span>
       <span class="lcd-ind" class:active={nbActive}>NB{nbActive ? ` ${nbLevel}` : ''}</span>
       <span class="lcd-ind" class:active={nrActive}>NR{nrActive ? ` ${nrLevel}` : ''}</span>
+      <span class="lcd-ind" class:active={contourActive}>CONT</span>
       <span class="lcd-ind" class:active={notchActive}>NOTCH</span>
       <span class="lcd-ind" class:active={ritActive}>RIT</span>
       <span class="lcd-ind" class:active={splitActive}>SPLIT</span>
