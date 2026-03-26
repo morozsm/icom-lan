@@ -268,6 +268,7 @@
   .lcd-vfo-main {
     flex: 1;
     min-height: 0;
+    align-items: center;
   }
 
   .vfo-tag {
@@ -291,7 +292,7 @@
   }
 
   .vfo-freq {
-    flex: 1;
+    flex: 0 1 auto;
     display: flex;
     align-items: center;
     min-width: 0;

@@ -6,29 +6,30 @@
 
   let { value, txActive = false }: Props = $props();
 
-  const MAX_RAW = 260;
+  // FTX-1 calibration: 0-255, S9=130, S9+40=240
+  const MAX_RAW = 255;
   const SEGMENTS = 192;
-  const S9_RAW = 162;
+  const S9_RAW = 130;
   const S9_SEG = Math.round((S9_RAW / MAX_RAW) * SEGMENTS);
 
-  // Major ticks: S-units + dB over S9
+  // Major ticks from FTX-1 calibration table
   const MAJOR_TICKS = [
-    { label: '1', raw: 18 },
-    { label: '3', raw: 54 },
-    { label: '5', raw: 90 },
-    { label: '7', raw: 126 },
-    { label: '9', raw: 162 },
-    { label: '+20', raw: 198 },
-    { label: '+40', raw: 234 },
-    { label: '+60', raw: 260 },
+    { label: '1', raw: 26 },
+    { label: '3', raw: 52 },
+    { label: '5', raw: 78 },
+    { label: '7', raw: 103 },
+    { label: '9', raw: 130 },
+    { label: '+10', raw: 165 },
+    { label: '+20', raw: 200 },
+    { label: '+40', raw: 240 },
   ];
 
-  // Medium ticks: every S-unit
+  // Medium ticks: S2, S4, S6, S8
   const MEDIUM_TICKS = [
-    { raw: 36 },  // S2
-    { raw: 72 },  // S4
-    { raw: 108 }, // S6
-    { raw: 144 }, // S8
+    { raw: 39 },   // S2
+    { raw: 65 },   // S4
+    { raw: 91 },   // S6
+    { raw: 117 },  // S8
   ];
 
   // Minor ticks: every 4.5 raw units (~quarter S-unit) for dense scale
@@ -45,16 +46,19 @@
 
   let sReadout = $derived(computeReadout(value));
 
+  // FTX-1 calibration: S0=-54dBm, each S-unit ~6dB, S9=0dBm (relative)
   function computeReadout(raw: number): { sUnit: string; dbm: string } {
-    if (raw <= 0) return { sUnit: 'S0', dbm: '-127' };
-    const sFloat = Math.min(9, (raw / S9_RAW) * 9);
-    const sInt = Math.floor(sFloat);
+    if (raw <= 0) return { sUnit: 'S0', dbm: '-54' };
     if (raw <= S9_RAW) {
-      const dbm = -127 + sInt * 6;
+      // Linear interpolation: raw 0→S0, raw 130→S9
+      const sFloat = (raw / S9_RAW) * 9;
+      const sInt = Math.min(9, Math.floor(sFloat));
+      const dbm = Math.round(-54 + sFloat * 6);
       return { sUnit: `S${sInt}`, dbm: dbm.toString() };
     }
-    const overDb = Math.round(((raw - S9_RAW) / (MAX_RAW - S9_RAW)) * 60);
-    return { sUnit: `9+${overDb}`, dbm: (-73 + overDb).toString() };
+    // Over S9: 130→S9(0dBm), 165→+10, 200→+20, 240→+40
+    const overDb = Math.round(((raw - S9_RAW) / (MAX_RAW - S9_RAW)) * 40);
+    return { sUnit: `9+${overDb}`, dbm: `+${overDb}` };
   }
 </script>
 
