@@ -15,8 +15,9 @@
   import { radio } from '$lib/stores/radio.svelte';
   import { getConnectionStatus, getRadioPowerOn } from '$lib/stores/connection.svelte';
   import { applyModeDefault } from '$lib/stores/tuning.svelte';
-  import { getCapabilities, getKeyboardConfig, hasDualReceiver, hasTx, hasAnyScope } from '$lib/stores/capabilities.svelte';
+  import { getCapabilities, getKeyboardConfig, hasDualReceiver, hasTx, hasAnyScope, hasSpectrum } from '$lib/stores/capabilities.svelte';
   import SpectrumPanel from '../../components/spectrum/SpectrumPanel.svelte';
+  import AmberLcdDisplay from '../panels/lcd/AmberLcdDisplay.svelte';
   import LeftSidebar from './LeftSidebar.svelte';
   import RightSidebar from './RightSidebar.svelte';
   import VfoHeader from './VfoHeader.svelte';
@@ -220,15 +221,17 @@
     </div>
 
     <main class="content-center center-column">
-      {#if hasAnyScope()}
+      {#if hasSpectrum()}
         <div class="spectrum-slot">
           <div class="spectrum-frame">
             <SpectrumPanel />
           </div>
         </div>
       {:else}
-        <div class="no-scope-placeholder">
-          <span class="no-scope-label">No spectrum available</span>
+        <div class="spectrum-slot">
+          <div class="spectrum-frame">
+            <AmberLcdDisplay />
+          </div>
         </div>
       {/if}
     </main>
@@ -509,16 +512,7 @@
     box-shadow: none;
   }
 
-  .no-scope-placeholder {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    min-height: 200px;
-    color: var(--text-secondary, #666);
-    font-size: 14px;
-    opacity: 0.5;
-  }
+
 
   .content-left :global(.left-sidebar),
   .content-right :global(.right-sidebar) {

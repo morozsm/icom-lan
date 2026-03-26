@@ -1,10 +1,11 @@
 <script lang="ts">
   import { radio } from '$lib/stores/radio.svelte';
-  import { getCapabilities, hasTx, hasDualReceiver, hasAnyScope } from '$lib/stores/capabilities.svelte';
+  import { getCapabilities, hasTx, hasDualReceiver, hasAnyScope, hasSpectrum } from '$lib/stores/capabilities.svelte';
   import { getConnectionStatus, getRadioPowerOn } from '$lib/stores/connection.svelte';
   import { getAudioState } from '$lib/stores/audio.svelte';
   import { HardwareButton } from '$lib/Button';
   import SpectrumPanel from '../../components/spectrum/SpectrumPanel.svelte';
+  import AmberLcdDisplay from '../panels/lcd/AmberLcdDisplay.svelte';
   import FrequencyDisplay from '../display/FrequencyDisplay.svelte';
   import LinearSMeter from '../meters/LinearSMeter.svelte';
   import CollapsiblePanel from '../controls/CollapsiblePanel.svelte';
@@ -399,9 +400,13 @@
 <!-- ═══ LANDSCAPE: fullscreen spectrum + VFO overlay ═══ -->
 <div class="m-landscape">
   <KeyboardHandler config={keyboardConfig} onAction={keyboardHandlers.dispatch} />
-  {#if hasAnyScope()}
+  {#if hasSpectrum()}
     <div class="m-ls-spectrum">
       <SpectrumPanel />
+    </div>
+  {:else}
+    <div class="m-ls-spectrum">
+      <AmberLcdDisplay />
     </div>
   {/if}
   <div class="m-ls-overlay">
@@ -495,10 +500,14 @@
   <!-- ═══ SCROLLABLE CONTENT ═══ -->
   <main class="m-content">
 
-    <!-- Spectrum / Waterfall -->
-    {#if hasAnyScope()}
+    <!-- Spectrum / Waterfall / LCD -->
+    {#if hasSpectrum()}
       <section class="m-spectrum">
         <SpectrumPanel />
+      </section>
+    {:else}
+      <section class="m-spectrum">
+        <AmberLcdDisplay />
       </section>
     {/if}
 
