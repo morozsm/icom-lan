@@ -529,7 +529,7 @@ class YaesuCatPoller:
 
         # -- VOX --
         try:
-            state.vox = await radio.get_vox()
+            state.vox_on = await radio.get_vox()
         except Exception:
             logger.debug("YaesuCatPoller: get_vox failed", exc_info=True)
 
@@ -538,6 +538,17 @@ class YaesuCatPoller:
             state.dial_lock = await radio.get_lock()
         except Exception:
             logger.debug("YaesuCatPoller: get_lock failed", exc_info=True)
+
+        # -- Speech processor (COMP/PROC) --
+        try:
+            state.compressor_on = await radio.get_processor()
+        except Exception:
+            logger.debug("YaesuCatPoller: get_processor failed", exc_info=True)
+
+        try:
+            state.compressor_level = await radio.get_processor_level()
+        except Exception:
+            logger.debug("YaesuCatPoller: get_processor_level failed", exc_info=True)
 
         # -- ATT / Preamp --
         try:

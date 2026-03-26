@@ -48,6 +48,7 @@
   let agcMode = $derived(rx?.agc ?? 0);
   let notchActive = $derived(rx?.autoNotch ?? false);
   let compActive = $derived(state?.compressorOn ?? false);
+  let compLevel = $derived(state?.compressorLevel ?? 0);
   let lockActive = $derived(state?.dialLock ?? false);
   let contourActive = $derived((rx?.contour ?? 0) > 0);
   let activeVfo = $derived(state?.active === 'SUB' ? 'B' : 'A');
@@ -100,22 +101,35 @@
       <AmberSmeter value={sValue} {txActive} />
     </div>
 
-    <!-- ═══ Indicators (below S-meter) ═══ -->
+    <!-- ═══ Indicators (below S-meter) — grouped by function ═══ -->
     <div class="lcd-ind-row">
+      <!-- TX group -->
       <span class="lcd-ind" class:active={txActive} class:ind-tx={txActive}>TX</span>
       <span class="lcd-ind" class:active={voxActive}>VOX</span>
-      <span class="lcd-ind" class:active={compActive}>COMP</span>
-      <span class="lcd-ind" class:active={atuActive}>ATU</span>
+      <span class="lcd-ind" class:active={compActive}>PROC{compActive ? ` ${compLevel}` : ''}</span>
+
+      <span class="ind-sep"></span>
+
+      <!-- RF front-end -->
       <span class="lcd-ind" class:active={attActive}>ATT</span>
       <span class="lcd-ind active">{preamp === 0 ? 'IPO' : preamp === 1 ? 'AMP1' : 'AMP2'}</span>
+      <span class="lcd-ind" class:active={atuActive}>ATU</span>
+
+      <span class="ind-sep"></span>
+
+      <!-- DSP / filters -->
       <span class="lcd-ind" class:active={nbActive}>NB{nbActive ? ` ${nbLevel}` : ''}</span>
       <span class="lcd-ind" class:active={nrActive}>NR{nrActive ? ` ${nrLevel}` : ''}</span>
       <span class="lcd-ind" class:active={contourActive}>CONT</span>
       <span class="lcd-ind" class:active={notchActive}>NOTCH</span>
+      <span class="lcd-ind active">AGC {agcLabel(agcMode)}</span>
+
+      <span class="ind-sep"></span>
+
+      <!-- VFO / system -->
       <span class="lcd-ind" class:active={ritActive}>RIT</span>
       <span class="lcd-ind" class:active={splitActive}>SPLIT</span>
       <span class="lcd-ind" class:active={lockActive}>LOCK</span>
-      <span class="lcd-ind active">AGC {agcLabel(agcMode)}</span>
     </div>
 
     <!-- ═══ VFO A: main frequency ═══ -->
@@ -124,12 +138,7 @@
       <div class="vfo-freq">
         <AmberFrequency {freqHz} size="large" />
       </div>
-      <div class="vfo-mode-col">
-        <span class="vfo-mode">{mode}</span>
-        {#if filter}
-          <span class="vfo-filter">FIL{filter}</span>
-        {/if}
-      </div>
+      <span class="vfo-mode-box">{mode}{filter ? ` ${filter}` : ''}</span>
     </div>
 
     <!-- ═══ VFO B: sub frequency ═══ -->
@@ -208,12 +217,20 @@
   /* ── Indicators ── */
   .lcd-ind-row {
     display: flex;
-    gap: 14px;
+    gap: 8px;
     align-items: center;
     flex-wrap: wrap;
     position: relative;
     z-index: 2;
     padding: 2px 0;
+  }
+
+  .ind-sep {
+    width: 1px;
+    height: 16px;
+    background: rgba(26, 16, 0, 0.15);
+    margin: 0 4px;
+    flex-shrink: 0;
   }
 
   .lcd-ind {
@@ -280,30 +297,21 @@
     min-width: 0;
   }
 
-  .vfo-mode-col {
+  .vfo-mode-box {
     flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 2px;
-  }
-
-  .vfo-mode {
     font-family: 'JetBrains Mono', 'Courier New', monospace;
     font-size: 18px;
     font-weight: 700;
     color: #1A1000;
     letter-spacing: 1px;
+    border: 2px solid rgba(26, 16, 0, 0.4);
+    border-radius: 4px;
+    padding: 2px 8px;
+    margin-left: 6px;
   }
 
   .vfo-mode-sub {
     font-size: 13px;
-    color: rgba(26, 16, 0, 0.45);
-  }
-
-  .vfo-filter {
-    font-family: 'JetBrains Mono', 'Courier New', monospace;
-    font-size: 12px;
     color: rgba(26, 16, 0, 0.45);
   }
 
