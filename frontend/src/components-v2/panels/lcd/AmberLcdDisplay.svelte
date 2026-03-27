@@ -4,6 +4,7 @@
   import AmberFrequency from './AmberFrequency.svelte';
   import AmberSmeter from './AmberSmeter.svelte';
   import AmberFftStrip from './AmberFftStrip.svelte';
+  import AmberAfScope from './AmberAfScope.svelte';
   import { getChannel } from '$lib/transport/ws-client';
   import { setScopeConnected, markScopeFrame } from '$lib/stores/connection.svelte';
   import { onMount } from 'svelte';
@@ -51,6 +52,10 @@
   let compLevel = $derived(state?.compressorLevel ?? 0);
   let lockActive = $derived(state?.dialLock ?? false);
   let contourActive = $derived((rx?.contour ?? 0) > 0);
+  let contourLevel = $derived(rx?.contour ?? 0);
+  let filterWidthHz = $derived(rx?.filterWidth ?? 2400);
+  let manualNotchOn = $derived(rx?.manualNotch ?? false);
+  let notchFreqRaw = $derived(state?.notchFilter ?? 0);
   let activeVfo = $derived(state?.active === 'SUB' ? 'B' : 'A');
 
   let subRx = $derived(state?.active === 'SUB' ? state?.main : state?.sub);
@@ -162,12 +167,18 @@
       </div>
     {/if}
 
-    <!-- ═══ Audio FFT strip ═══ -->
+    <!-- ═══ Audio AF Scope (LCD-style filter/FFT display) ═══ -->
     {#if showFft}
       <div class="lcd-fft-area">
-        <AmberFftStrip
+        <AmberAfScope
           data={fftPixels}
           onRegisterPush={(fn) => { fftPush = fn; }}
+          filterWidth={filterWidthHz}
+          contour={contourLevel}
+          manualNotch={manualNotchOn}
+          notchFreq={notchFreqRaw}
+          autoNotch={notchActive}
+          {mode}
         />
       </div>
     {/if}
@@ -355,7 +366,7 @@
   .lcd-fft-area {
     position: relative;
     z-index: 2;
-    height: 70px;
+    height: 120px;
     flex-shrink: 0;
     border-top: 1px solid rgba(0, 0, 0, 0.08);
     padding-top: 3px;
