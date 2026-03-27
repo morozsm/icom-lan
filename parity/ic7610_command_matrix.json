@@ -1172,7 +1172,7 @@
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_power_meter",
-        "tests/test_web_server.py::METER_POWER"
+        "tests/test_web_server.py::test_poller_broadcasts_meter_readings"
       ],
       "notes": ""
     },
@@ -1255,7 +1255,7 @@
       "test_patterns": [
         "tests/test_commands.py::test_get_vd_meter",
         "tests/test_civ_rx_coverage.py::test_update_radio_state_vd_meter",
-        "tests/test_web_server.py::METER_VD"
+        "tests/test_web_server.py::test_poller_broadcasts_meter_readings"
       ],
       "notes": ""
     },

@@ -13,10 +13,10 @@
         <link rel="canonical" href="https://morozsm.github.io/icom-lan/guide/radios/">
       
       
-        <link rel="prev" href="../commands/">
+        <link rel="prev" href="../connection/">
       
       
-        <link rel="next" href="../troubleshooting/">
+        <link rel="next" href="../rig-profiles/">
       
       
         
@@ -656,6 +656,565 @@
                 
   
   
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Supported Radios
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Supported Radios
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#tested" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tested
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tested">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ic-7610" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IC-7610
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="IC-7610">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#backend-comparison" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Backend Comparison
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ic-7300" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IC-7300
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="IC-7300">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ic-7300-vs-ic-7610" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IC-7300 vs IC-7610
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#yaesu-ftx-1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Yaesu FTX-1
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#non-icom-radios-profile-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Non-Icom Radios (Profile Only)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Non-Icom Radios (Profile Only)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#xiegu-x6100" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Xiegu X6100
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#lab599-tx-500" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lab599 TX-500
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#has-rig-profile-not-yet-backend-tested" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Has Rig Profile (Not Yet Backend-Tested)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Has Rig Profile (Not Yet Backend-Tested)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ic-705" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IC-705
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ic-9700" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IC-9700
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#should-work-untested" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Should Work (Untested)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Should Work (Untested)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ic-7851" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IC-7851
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ic-r8600" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IC-R8600
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#using-presets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using Presets
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#custom-ci-v-address" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom CI-V Address
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adding-support-for-new-radios" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding Support for New Radios
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Adding Support for New Radios">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#finding-your-radios-ci-v-address" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Finding Your Radio's CI-V Address
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../rig-profiles/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rig Profiles
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_4" id="__nav_3_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Radio Setup Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Radio Setup Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ic7610-usb-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IC-7610 USB Serial
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ic705-usb-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IC-705 USB Serial
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ic7300-usb-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IC-7300 USB Serial
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ic9700-usb-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IC-9700 USB & LAN
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../opuslib-macos-fix/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    opuslib macOS Fix
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
   
   
     <li class="md-nav__item">
@@ -759,248 +1318,6 @@
   
 
       </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-    
-  
-  
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Supported Radios
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Supported Radios
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#tested" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Tested
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Tested">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#ic-7610" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        IC-7610
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="IC-7610">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#backend-comparison" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Backend Comparison
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#should-work-untested" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Should Work (Untested)
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Should Work (Untested)">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#ic-705" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        IC-705
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#ic-7300" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        IC-7300
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#ic-9700" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        IC-9700
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#ic-7851" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        IC-7851
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#ic-r8600" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        IC-R8600
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#using-presets" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Using Presets
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#custom-ci-v-address" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Custom CI-V Address
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#adding-support-for-new-radios" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Adding Support for New Radios
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Adding Support for New Radios">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#finding-your-radios-ci-v-address" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Finding Your Radio's CI-V Address
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1403,6 +1720,174 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/backends/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Backends
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/backends-icom7610/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Icom 7610 Backend
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/rig-loader/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rig Loader
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/rigctld/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    rigctld
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/scope/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Scope
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/web/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Web
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1527,6 +2012,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../radio-protocol/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Radio Protocol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../internals/reliability-semantics/" class="md-nav__link">
         
   
@@ -1535,6 +2048,34 @@
     
   
     Reliability semantics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../capabilities-matrix/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Capabilities Matrix
   
 
     
@@ -1591,6 +2132,62 @@
     
   
     CLI design
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PERFORMANCE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Performance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../AUDIO_STREAMING_PROFILE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audio Streaming Profile
   
 
     
@@ -1761,21 +2358,99 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#ic-7300" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IC-7300
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="IC-7300">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ic-7300-vs-ic-7610" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IC-7300 vs IC-7610
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#yaesu-ftx-1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Yaesu FTX-1
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#should-work-untested" class="md-nav__link">
+  <a href="#non-icom-radios-profile-only" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Should Work (Untested)
+        Non-Icom Radios (Profile Only)
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Should Work (Untested)">
+    <nav class="md-nav" aria-label="Non-Icom Radios (Profile Only)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#xiegu-x6100" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Xiegu X6100
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#lab599-tx-500" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lab599 TX-500
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#has-rig-profile-not-yet-backend-tested" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Has Rig Profile (Not Yet Backend-Tested)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Has Rig Profile (Not Yet Backend-Tested)">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1783,17 +2458,6 @@
     <span class="md-ellipsis">
       
         IC-705
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#ic-7300" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        IC-7300
       
     </span>
   </a>
@@ -1810,6 +2474,23 @@
   </a>
   
 </li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#should-work-untested" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Should Work (Untested)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Should Work (Untested)">
+      <ul class="md-nav__list">
         
           <li class="md-nav__item">
   <a href="#ic-7851" class="md-nav__link">
@@ -1909,6 +2590,8 @@
 
 
 <h1 id="supported-radios">Supported Radios<a class="headerlink" href="#supported-radios" title="Permanent link">&para;</a></h1>
+<p>Radio support in icom-lan is defined by <strong>TOML rig profiles</strong> in <code>rigs/</code>.
+Adding a new radio = adding a new <code>.toml</code> file — see <a href="../rig-profiles/">Adding a New Radio</a>.</p>
 <h2 id="tested">Tested<a class="headerlink" href="#tested" title="Permanent link">&para;</a></h2>
 <h3 id="ic-7610">IC-7610<a class="headerlink" href="#ic-7610" title="Permanent link">&para;</a></h3>
 <ul>
@@ -1981,32 +2664,144 @@
 For IC-7610 USB operation, set <strong>Menu → Set → Connectors → CI-V → CI-V USB Port</strong>
 to the CI-V option (<code>Link to [CI-V]</code>), not <code>[REMOTE]</code>.</p>
 </div>
-<h2 id="should-work-untested">Should Work (Untested)<a class="headerlink" href="#should-work-untested" title="Permanent link">&para;</a></h2>
-<p>These radios use the same Icom LAN protocol and should work out of the box. Community testing and reports welcome!</p>
-<h3 id="ic-705">IC-705<a class="headerlink" href="#ic-705" title="Permanent link">&para;</a></h3>
-<ul>
-<li><strong>CI-V Address:</strong> <code>0xA4</code></li>
-<li><strong>Connectivity:</strong> WiFi (built-in)</li>
-<li><strong>Notes:</strong> WiFi may have higher latency than Ethernet — consider increasing timeout.</li>
-</ul>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan</span><span class="w"> </span><span class="kn">import</span> <span class="n">create_radio</span><span class="p">,</span> <span class="n">LanBackendConfig</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">config</span> <span class="o">=</span> <span class="n">LanBackendConfig</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="s2">&quot;192.168.1.101&quot;</span><span class="p">,</span> <span class="n">radio_addr</span><span class="o">=</span><span class="mh">0xA4</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mf">10.0</span><span class="p">)</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="k">async</span> <span class="k">with</span> <span class="n">create_radio</span><span class="p">(</span><span class="n">config</span><span class="p">)</span> <span class="k">as</span> <span class="n">radio</span><span class="p">:</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="o">...</span>
-</code></pre></div>
 <h3 id="ic-7300">IC-7300<a class="headerlink" href="#ic-7300" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>CI-V Address:</strong> <code>0x94</code></li>
-<li><strong>Connectivity:</strong> Ethernet (optional LAN module)</li>
-<li><strong>Notes:</strong> Requires optional LAN interface module.</li>
+<li><strong>Connectivity:</strong> USB serial (CI-V) — no built-in LAN</li>
+<li><strong>VFO scheme:</strong> VFO A/B (not Main/Sub)</li>
+<li><strong>Rig profile:</strong> <code>rigs/ic7300.toml</code></li>
+<li><strong>Features verified:</strong> frequency, mode, power, S-meter, SWR, ALC, PTT, CW keying,
+  VFO A/B select, attenuator, preamp, NB, NR, scope/waterfall, audio RX/TX</li>
+<li><strong>Not available:</strong> DIGI-SEL, IP+, LAN, dual receiver</li>
 </ul>
+<div class="admonition tip">
+<p class="admonition-title">Setup Guide</p>
+<p><strong><a href="../ic7300-usb-setup/">IC-7300 USB Serial Backend Setup</a></strong> — Complete USB configuration guide
+for IC-7300 with audio integration and WSJT-X bridging.</p>
+</div>
+<h4 id="ic-7300-vs-ic-7610">IC-7300 vs IC-7610<a class="headerlink" href="#ic-7300-vs-ic-7610" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>IC-7610</th>
+<th>IC-7300</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Receivers</td>
+<td>2 (MAIN/SUB)</td>
+<td>1 (VFO A/B)</td>
+</tr>
+<tr>
+<td>VFO labels</td>
+<td>MAIN / SUB</td>
+<td>VFO A / VFO B</td>
+</tr>
+<tr>
+<td>DIGI-SEL</td>
+<td>✅</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>IP+</td>
+<td>✅</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>LAN</td>
+<td>✅</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>Scope</td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>USB Serial</td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+</tbody>
+</table>
+<p>The Web UI automatically hides DIGI-SEL and IP+ controls when connected to an IC-7300
+(capability-based UI guards). VFO labels switch to "VFO A" / "VFO B" automatically.</p>
+<h3 id="yaesu-ftx-1">Yaesu FTX-1<a class="headerlink" href="#yaesu-ftx-1" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Protocol:</strong> Yaesu CAT (text)</li>
+<li><strong>Connectivity:</strong> USB serial</li>
+<li><strong>Rig profile:</strong> <code>rigs/ftx1.toml</code></li>
+<li><strong>Features:</strong> 17 modes (incl. C4FM), dual RX, ATT 4 levels, 2m/70cm/HF</li>
+<li><strong>VFO scheme:</strong> <code>ab_shared</code> (2 receivers, 1 VFO)</li>
+<li><strong>Backends:</strong> Serial (Yaesu CAT) — full working backend</li>
+<li><strong>Web UI:</strong> Full spectrum/waterfall via Audio FFT Scope, controls, audio RX/TX</li>
+<li><strong>Audio:</strong> USB audio RX/TX supported; Audio FFT Scope provides real-time IF waterfall</li>
+</ul>
+<div class="admonition tip">
+<p class="admonition-title">Yaesu CAT Backend</p>
+<p>The FTX-1 uses the Yaesu CAT text protocol over USB serial.
+Full frequency, mode, PTT, and audio control is working.
+The Web UI uses the Audio FFT Scope for spectrum display (no hardware panadapter on FTX-1).</p>
+</div>
+<h2 id="non-icom-radios-profile-only">Non-Icom Radios (Profile Only)<a class="headerlink" href="#non-icom-radios-profile-only" title="Permanent link">&para;</a></h2>
+<p>The TOML rig profile system supports multiple protocols. These profiles exist but
+backend adapters are not yet implemented or tested:</p>
+<h3 id="xiegu-x6100">Xiegu X6100<a class="headerlink" href="#xiegu-x6100" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Protocol:</strong> CI-V (IC-705 compatible subset)</li>
+<li><strong>CI-V Address:</strong> <code>0x70</code></li>
+<li><strong>Rig profile:</strong> <code>rigs/x6100.toml</code></li>
+<li><strong>Features:</strong> HF + 6m, QRP 8W, built-in ATU, WiFi</li>
+<li><strong>VFO scheme:</strong> <code>ab</code></li>
+<li><strong>Status:</strong> Profile only. May work with CI-V backend (untested).</li>
+</ul>
+<h3 id="lab599-tx-500">Lab599 TX-500<a class="headerlink" href="#lab599-tx-500" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Protocol:</strong> Kenwood CAT (text)</li>
+<li><strong>Rig profile:</strong> <code>rigs/tx500.toml</code></li>
+<li><strong>Features:</strong> HF + 6m, QRP 10W, built-in ATU, minimal CAT (ID FA FB MD FR FT PA RA)</li>
+<li><strong>VFO scheme:</strong> <code>ab</code></li>
+<li><strong>Status:</strong> Profile only. Kenwood CAT backend not yet implemented.</li>
+</ul>
+<h2 id="has-rig-profile-not-yet-backend-tested">Has Rig Profile (Not Yet Backend-Tested)<a class="headerlink" href="#has-rig-profile-not-yet-backend-tested" title="Permanent link">&para;</a></h2>
+<p>These radios have complete rig profiles and the CI-V backend should support them, but they
+have not been tested by the maintainers. Community testing and reports welcome!</p>
+<h3 id="ic-705">IC-705<a class="headerlink" href="#ic-705" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>CI-V Address:</strong> <code>0xA4</code></li>
+<li><strong>Connectivity:</strong> LAN (WiFi/Ethernet) + USB serial (CI-V)</li>
+<li><strong>VFO scheme:</strong> Single receiver (portable transceiver)</li>
+<li><strong>Rig profile:</strong> <code>rigs/ic705.toml</code></li>
+<li><strong>Expected features:</strong> frequency, mode, power, S-meter, SWR, ALC, PTT, CW keying,
+  attenuator, preamp, NB, NR, APF, Twin Peak, scope/waterfall, audio RX/TX</li>
+<li><strong>Status:</strong> Profile complete. Backend untested — reports welcome.</li>
+</ul>
+<div class="admonition tip">
+<p class="admonition-title">Setup Guides</p>
+<ul>
+<li><strong><a href="../ic705-usb-setup/">IC-705 USB Serial Backend Setup</a></strong> — Step-by-step USB configuration</li>
+<li>Use <strong>Menu → Set → Connectors → CI-V → CI-V USB Port</strong> = <code>Link to [CI-V]</code></li>
+</ul>
+</div>
 <h3 id="ic-9700">IC-9700<a class="headerlink" href="#ic-9700" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>CI-V Address:</strong> <code>0xA2</code></li>
-<li><strong>Connectivity:</strong> Ethernet (built-in)</li>
-<li><strong>Notes:</strong> VHF/UHF/SHF — supports satellite mode and three bands.</li>
+<li><strong>Connectivity:</strong> LAN (Ethernet) + USB serial (CI-V)</li>
+<li><strong>VFO scheme:</strong> Dual independent receivers (MAIN/SUB)</li>
+<li><strong>Rig profile:</strong> <code>rigs/ic9700.toml</code></li>
+<li><strong>Expected features:</strong> frequency, mode, power, S-meter, scope/waterfall, audio RX/TX,
+  independent MAIN/SUB control, dual audio streaming</li>
+<li><strong>Status:</strong> Profile complete. Backend untested — reports welcome.</li>
 </ul>
+<div class="admonition tip">
+<p class="admonition-title">Setup Guide</p>
+<p><strong><a href="../ic9700-usb-setup/">IC-9700 USB Serial &amp; LAN Setup</a></strong> — Setup guide covering
+serial USB and LAN Ethernet configuration.</p>
+</div>
+<h2 id="should-work-untested">Should Work (Untested)<a class="headerlink" href="#should-work-untested" title="Permanent link">&para;</a></h2>
+<p>These radios use the same Icom LAN protocol and should work out of the box. Community testing and reports welcome!</p>
 <h3 id="ic-7851">IC-7851<a class="headerlink" href="#ic-7851" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>CI-V Address:</strong> <code>0x8E</code></li>
@@ -2020,27 +2815,40 @@ to the CI-V option (<code>Link to [CI-V]</code>), not <code>[REMOTE]</code>.</p>
 </ul>
 <h2 id="using-presets">Using Presets<a class="headerlink" href="#using-presets" title="Permanent link">&para;</a></h2>
 <p>Instead of remembering CI-V addresses, use the built-in presets:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan</span><span class="w"> </span><span class="kn">import</span> <span class="n">create_radio</span><span class="p">,</span> <span class="n">LanBackendConfig</span><span class="p">,</span> <span class="n">get_civ_addr</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="c1"># Look up by model name and pass to config</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">addr</span> <span class="o">=</span> <span class="n">get_civ_addr</span><span class="p">(</span><span class="s2">&quot;IC-705&quot;</span><span class="p">)</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">config</span> <span class="o">=</span> <span class="n">LanBackendConfig</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="s2">&quot;192.168.1.100&quot;</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="s2">&quot;u&quot;</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="s2">&quot;p&quot;</span><span class="p">,</span> <span class="n">radio_addr</span><span class="o">=</span><span class="n">addr</span><span class="p">)</span>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="k">async</span> <span class="k">with</span> <span class="n">create_radio</span><span class="p">(</span><span class="n">config</span><span class="p">)</span> <span class="k">as</span> <span class="n">radio</span><span class="p">:</span>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>    <span class="o">...</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan</span><span class="w"> </span><span class="kn">import</span> <span class="n">create_radio</span><span class="p">,</span> <span class="n">LanBackendConfig</span><span class="p">,</span> <span class="n">get_civ_addr</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="c1"># Look up by model name and pass to config</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">addr</span> <span class="o">=</span> <span class="n">get_civ_addr</span><span class="p">(</span><span class="s2">&quot;IC-705&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">config</span> <span class="o">=</span> <span class="n">LanBackendConfig</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="s2">&quot;192.168.1.100&quot;</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="s2">&quot;u&quot;</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="s2">&quot;p&quot;</span><span class="p">,</span> <span class="n">radio_addr</span><span class="o">=</span><span class="n">addr</span><span class="p">)</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="k">async</span> <span class="k">with</span> <span class="n">create_radio</span><span class="p">(</span><span class="n">config</span><span class="p">)</span> <span class="k">as</span> <span class="n">radio</span><span class="p">:</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="o">...</span>
 </code></pre></div>
 <p>For LAN-only scripts you can still use <code>IcomRadio(host, radio_addr=get_civ_addr("IC-705"), ...)</code> — see <a href="../../api/radio/">API Reference</a>.</p>
 <h2 id="custom-ci-v-address">Custom CI-V Address<a class="headerlink" href="#custom-ci-v-address" title="Permanent link">&para;</a></h2>
 <p>If you've changed your radio's CI-V address in the menu, specify it explicitly in the backend config:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">config</span> <span class="o">=</span> <span class="n">LanBackendConfig</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="s2">&quot;192.168.1.100&quot;</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="s2">&quot;u&quot;</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="s2">&quot;p&quot;</span><span class="p">,</span> <span class="n">radio_addr</span><span class="o">=</span><span class="mh">0x42</span><span class="p">)</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="k">async</span> <span class="k">with</span> <span class="n">create_radio</span><span class="p">(</span><span class="n">config</span><span class="p">)</span> <span class="k">as</span> <span class="n">radio</span><span class="p">:</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    <span class="o">...</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">config</span> <span class="o">=</span> <span class="n">LanBackendConfig</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="s2">&quot;192.168.1.100&quot;</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="s2">&quot;u&quot;</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="s2">&quot;p&quot;</span><span class="p">,</span> <span class="n">radio_addr</span><span class="o">=</span><span class="mh">0x42</span><span class="p">)</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="k">async</span> <span class="k">with</span> <span class="n">create_radio</span><span class="p">(</span><span class="n">config</span><span class="p">)</span> <span class="k">as</span> <span class="n">radio</span><span class="p">:</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    <span class="o">...</span>
 </code></pre></div>
 <h2 id="adding-support-for-new-radios">Adding Support for New Radios<a class="headerlink" href="#adding-support-for-new-radios" title="Permanent link">&para;</a></h2>
-<p>The library is CI-V address agnostic — any radio that speaks the Icom LAN protocol should work by specifying the correct <code>radio_addr</code>. If you test with a new model:</p>
+<p>See <strong><a href="../rig-profiles/">Adding a New Radio (Rig Profiles)</a></strong> for the complete guide.
+In brief:</p>
 <ol>
-<li>Try connecting with the model's default CI-V address</li>
+<li>Copy the closest reference rig file as a template:</li>
+<li>Icom CI-V → <code>rigs/ic7610.toml</code></li>
+<li>Kenwood CAT → <code>rigs/tx500.toml</code></li>
+<li>Yaesu CAT → <code>rigs/ftx1.toml</code></li>
+<li>Update <code>[radio]</code> and <code>[protocol]</code> sections</li>
+<li>Update <code>[capabilities]</code>, <code>[controls]</code>, <code>[meters]</code>, <code>[[rules]]</code> as needed</li>
+<li>For CI-V radios: update <code>[commands]</code> section</li>
+<li>Run <code>uv run pytest tests/test_rig_loader.py tests/test_rig_multi_vendor.py -v</code> to validate</li>
+</ol>
+<p>The library is CI-V address agnostic — any radio that speaks the Icom LAN protocol should
+work. If you test with a new model:</p>
+<ol>
+<li>Connect with the model's default CI-V address</li>
 <li>Verify basic operations (frequency, mode, meters)</li>
-<li><a href="https://github.com/morozsm/icom-lan/issues">Open an issue</a> or PR with your findings</li>
+<li><a href="https://github.com/morozsm/icom-lan/issues">Open an issue</a> or PR with your rig file</li>
 </ol>
 <h3 id="finding-your-radios-ci-v-address">Finding Your Radio's CI-V Address<a class="headerlink" href="#finding-your-radios-ci-v-address" title="Permanent link">&para;</a></h3>
 <ul>
