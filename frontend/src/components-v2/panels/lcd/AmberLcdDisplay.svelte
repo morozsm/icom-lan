@@ -79,23 +79,17 @@
 
   $effect(() => {
     const wantScope = isAudioFftScope();
-    console.log('[LCD] $effect scope: wantScope=', wantScope);
     if (!wantScope) return;
 
     const scopeCh = getChannel('scope');
     scopeCh.connect('/api/v1/scope');
-    let frameCount = 0;
     const unsubState = scopeCh.onStateChange((s) => {
-      console.log('[LCD] scope state:', s);
       setScopeConnected(s === 'connected');
     });
     const unsubBinary = scopeCh.onBinary((buf) => {
-      frameCount++;
-      if (frameCount <= 3) console.log(`[LCD] scope binary frame#${frameCount} len=${buf.byteLength} fftPush=${!!fftPush}`);
       markScopeFrame();
       const frame = parseScopeFrame(buf);
-      if (!frame) { if (frameCount <= 3) console.log('[LCD] parseScopeFrame returned null!'); return; }
-      if (frameCount <= 3) console.log(`[LCD] frame pixels len=${frame.pixels?.length}`);
+      if (!frame) return;
       fftPixels = frame.pixels;
       fftPush?.(frame.pixels);
     });

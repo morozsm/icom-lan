@@ -65,14 +65,9 @@
   let prevTargetFilter = filterWidth;
   let adaptiveLerp = 0.12;
 
-  let _drawCount = 0;
   function draw(): void {
     if (!visible) { rafId = 0; return; }
     const pixels = latestPixels ?? data;
-    if (_drawCount < 3) {
-      _drawCount++;
-      console.log(`[AF-SCOPE draw#${_drawCount}] pixels=${pixels ? pixels.length : 'null'} latestPixels=${latestPixels ? latestPixels.length : 'null'} data=${data ? data.length : 'null'} w=${cssWidth} h=${cssHeight} canvas=${!!canvas}`);
-    }
     let w = cssWidth;
     let h = cssHeight;
     if ((w <= 1 || h <= 1) && canvas) {
@@ -287,21 +282,6 @@
     const nyquist = sampleRate / 2;
     const passbandFrac = Math.min(1, passbandHz / nyquist);
 
-    // DEBUG: log first frame's data
-    if (pixels && pixels.length > 0 && !drawFft._logged) {
-      drawFft._logged = true;
-      const dcIdx = Math.floor(pixels.length / 2);
-      const first20pos = Array.from(pixels.slice(dcIdx, dcIdx + 20));
-      const first20neg = Array.from(pixels.slice(0, 20));
-      const mid20 = Array.from(pixels.slice(dcIdx - 10, dcIdx + 10));
-      const max = Math.max(...Array.from(pixels));
-      const avg = Array.from(pixels).reduce((a, b) => a + b, 0) / pixels.length;
-      console.log(`[AF-SCOPE] len=${pixels.length} dcIdx=${dcIdx} max=${max} avg=${avg.toFixed(1)}`);
-      console.log(`[AF-SCOPE] first20neg=`, first20neg);
-      console.log(`[AF-SCOPE] around_dc=`, mid20);
-      console.log(`[AF-SCOPE] first20pos=`, first20pos);
-      console.log(`[AF-SCOPE] passbandHz=${passbandHz} passbandFrac=${passbandFrac.toFixed(4)} numBars=${numBars}`);
-    }
 
     for (let i = 0; i < numBars; i++) {
       const x = startX + i * step;
