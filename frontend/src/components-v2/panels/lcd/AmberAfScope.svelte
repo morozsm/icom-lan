@@ -229,8 +229,27 @@
       ctx.stroke();
     }
 
+    // ── Auto-gain AGC ──
+    const nyquist = sampleRate / 2;
+    const passbandFrac = Math.min(1, filterHz / nyquist);
+    let peakVal = 1;
+    if (pixels && pixels.length > 0) {
+      const dcIdx = Math.floor(pixels.length / 2);
+      const endBin = dcIdx + Math.ceil(passbandFrac * (pixels.length - dcIdx));
+      for (let j = dcIdx; j < endBin && j < pixels.length; j++) {
+        if (pixels[j] > peakVal) peakVal = pixels[j];
+      }
+    }
+    if (peakVal > agcPeak) {
+      agcPeak += (peakVal - agcPeak) * AGC_ATTACK;
+    } else {
+      agcPeak += (peakVal - agcPeak) * AGC_RELEASE;
+    }
+    agcPeak = Math.max(10, agcPeak);
+    const gain = 160 / agcPeak;
+
     // ── FFT bars INSIDE trapezoid — only passband portion of spectrum ──
-    drawFft(ctx, pixels, w, h, trapTop, trapH, cx, topHalfW, slopeExtra, filterHz, gainMultiplier);
+    drawFft(ctx, pixels, w, h, trapTop, trapH, cx, topHalfW, slopeExtra, filterHz, gain);
   }
 
   function drawFft(
@@ -267,24 +286,6 @@
     // Only show FFT bins within the passband (0 → passbandHz)
     const nyquist = sampleRate / 2;
     const passbandFrac = Math.min(1, passbandHz / nyquist);
-
-    // Auto-gain AGC: find peak in passband, smooth it, normalize bars
-    let peakVal = 1;
-    if (pixels && pixels.length > 0) {
-      const dcIdx = Math.floor(pixels.length / 2);
-      const endBin = dcIdx + Math.ceil(passbandFrac * (pixels.length - dcIdx));
-      for (let j = dcIdx; j < endBin && j < pixels.length; j++) {
-        if (pixels[j] > peakVal) peakVal = pixels[j];
-      }
-    }
-    // Smooth the peak (fast attack, slow release — like real AGC)
-    if (peakVal > agcPeak) {
-      agcPeak += (peakVal - agcPeak) * AGC_ATTACK;
-    } else {
-      agcPeak += (peakVal - agcPeak) * AGC_RELEASE;
-    }
-    agcPeak = Math.max(10, agcPeak); // floor to avoid division issues
-    const gainMultiplier = maxVal / agcPeak;
 
     // DEBUG: log first frame's data
     if (pixels && pixels.length > 0 && !drawFft._logged) {
