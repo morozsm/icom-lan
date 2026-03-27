@@ -113,7 +113,7 @@
     h: number,
   ): void {
     const halfBw = sampleRate / 2;
-    const labelH = 14; // space for filter width label at top
+    const labelH = 18; // space for filter width label at top
     const trapTop = labelH;
     const trapH = h - labelH;
 
@@ -148,18 +148,34 @@
     const whiskerLeft = cx - totalHalfW;
     const whiskerRight = cx + totalHalfW;
 
-    // ── Filter width label (segment font + "kHz") ──
-    const filterHz = 200 + (animatedFilterWidth / 36) * 3800;
-    const filterKhz = (filterHz / 1000).toFixed(1);
-    ctx.font = "bold 12px 'DSEG7 Classic', monospace";
+    // ── Filter width label: "Filter: 3000Hz" ──
+    const filterHz = Math.round(200 + (animatedFilterWidth / 36) * 3800);
     ctx.fillStyle = INK;
     ctx.textAlign = 'center';
-    const numW = ctx.measureText(filterKhz).width;
-    ctx.fillText(filterKhz, cx - 8, labelH - 1);
-    ctx.font = "bold 8px 'JetBrains Mono', 'Courier New', monospace";
-    ctx.fillStyle = `${INK_A} 0.55)`;
+    // "Filter:" in regular font
+    ctx.font = "bold 10px 'JetBrains Mono', 'Courier New', monospace";
+    const prefix = 'Filter: ';
+    const prefixW = ctx.measureText(prefix).width;
+    // Number in segment font
+    ctx.font = "bold 14px 'DSEG7 Classic', monospace";
+    const numStr = String(filterHz);
+    const numW = ctx.measureText(numStr).width;
+    // "Hz" in regular font
+    ctx.font = "bold 10px 'JetBrains Mono', 'Courier New', monospace";
+    const hzW = ctx.measureText('Hz').width;
+    const totalW = prefixW + numW + hzW;
+    const startX = cx - totalW / 2;
+    // Draw prefix
     ctx.textAlign = 'left';
-    ctx.fillText('kHz', cx + numW / 2 - 5, labelH - 1);
+    ctx.font = "bold 10px 'JetBrains Mono', 'Courier New', monospace";
+    ctx.fillText(prefix, startX, labelH - 4);
+    // Draw number (segment font)
+    ctx.font = "bold 14px 'DSEG7 Classic', monospace";
+    ctx.fillText(numStr, startX + prefixW, labelH - 4);
+    // Draw "Hz"
+    ctx.font = "bold 10px 'JetBrains Mono', 'Courier New', monospace";
+    ctx.fillStyle = `${INK_A} 0.6)`;
+    ctx.fillText('Hz', startX + prefixW + numW, labelH - 4);
 
     // ── Draw trapezoid + whiskers (thick LCD ink) ──
     ctx.strokeStyle = INK;

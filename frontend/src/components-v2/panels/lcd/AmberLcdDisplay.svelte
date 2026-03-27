@@ -390,7 +390,7 @@
     position: relative;
     z-index: 2;
     flex: 0 0 30%;
-    height: 68px;
+    height: 74px;
   }
 
   /* ── TX glow ── */
