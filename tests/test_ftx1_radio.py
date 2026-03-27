@@ -885,3 +885,66 @@ async def test_set_agc(connected_radio):
     connected_radio._transport.write = AsyncMock()
     await connected_radio.set_agc(2)
     connected_radio._transport.write.assert_called_once_with("GT02;")
+
+
+# ---------------------------------------------------------------------------
+# set_nb / set_nr — level_is_toggle (FTX-1 has no set_nb/set_nr commands)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_set_nb_on_calls_set_nb_level_with_default_when_current_is_zero(
+    connected_radio,
+):
+    """set_nb(True) uses midpoint default (5) when nb_level is 0."""
+    connected_radio._transport.write = AsyncMock()
+    assert connected_radio._state.main.nb_level == 0
+    await connected_radio.set_nb(True)
+    connected_radio._transport.write.assert_called_once_with("NL0005;")
+
+
+@pytest.mark.asyncio
+async def test_set_nb_on_keeps_existing_level(connected_radio):
+    """set_nb(True) keeps the current level when nb_level > 0."""
+    connected_radio._transport.write = AsyncMock()
+    connected_radio._state.main.nb_level = 3
+    await connected_radio.set_nb(True)
+    connected_radio._transport.write.assert_called_once_with("NL0003;")
+
+
+@pytest.mark.asyncio
+async def test_set_nb_off_sends_level_zero(connected_radio):
+    """set_nb(False) sends level 0 (= OFF for FTX-1)."""
+    connected_radio._transport.write = AsyncMock()
+    connected_radio._state.main.nb_level = 5
+    await connected_radio.set_nb(False)
+    connected_radio._transport.write.assert_called_once_with("NL0000;")
+
+
+@pytest.mark.asyncio
+async def test_set_nr_on_calls_set_nr_level_with_default_when_current_is_zero(
+    connected_radio,
+):
+    """set_nr(True) uses midpoint default (7) when nr_level is 0."""
+    connected_radio._transport.write = AsyncMock()
+    assert connected_radio._state.main.nr_level == 0
+    await connected_radio.set_nr(True)
+    connected_radio._transport.write.assert_called_once_with("RL007;")
+
+
+@pytest.mark.asyncio
+async def test_set_nr_on_keeps_existing_level(connected_radio):
+    """set_nr(True) keeps the current level when nr_level > 0."""
+    connected_radio._transport.write = AsyncMock()
+    connected_radio._state.main.nr_level = 4
+    await connected_radio.set_nr(True)
+    connected_radio._transport.write.assert_called_once_with("RL004;")
+
+
+@pytest.mark.asyncio
+async def test_set_nr_off_sends_level_zero(connected_radio):
+    """set_nr(False) sends level 0 (= OFF for FTX-1)."""
+    connected_radio._transport.write = AsyncMock()
+    connected_radio._state.main.nr_level = 7
+    await connected_radio.set_nr(False)
+    connected_radio._transport.write.assert_called_once_with("RL000;")

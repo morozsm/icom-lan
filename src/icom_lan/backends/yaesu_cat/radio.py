@@ -333,21 +333,39 @@ class YaesuCatRadio:
 
     # -- Optional commands (profile-dependent) ------------------------------
 
-    async def set_nb(self, on: bool) -> None:
+    async def set_nb(self, on: bool, receiver: int = 0) -> None:
         """Enable or disable the noise blanker.
 
-        No-op if the rig profile does not define a ``set_nb`` command.
+        For radios with ``level_is_toggle`` (e.g. FTX-1), translates to
+        ``set_nb_level(0)`` for off and ``set_nb_level(default)`` for on.
+        No-op if neither ``set_nb`` nor ``set_nb_level`` is defined.
         """
         if self.has_write_command("set_nb"):
             await self._write("set_nb", state="1" if on else "0")
+        elif self.has_write_command("set_nb_level"):
+            if on:
+                current = self._state.main.nb_level
+                level = current if current > 0 else self._default_nb_level()
+                await self.set_nb_level(level, receiver=receiver)
+            else:
+                await self.set_nb_level(0, receiver=receiver)
 
-    async def set_nr(self, on: bool) -> None:
+    async def set_nr(self, on: bool, receiver: int = 0) -> None:
         """Enable or disable noise reduction.
 
-        No-op if the rig profile does not define a ``set_nr`` command.
+        For radios with ``level_is_toggle`` (e.g. FTX-1), translates to
+        ``set_nr_level(0)`` for off and ``set_nr_level(default)`` for on.
+        No-op if neither ``set_nr`` nor ``set_nr_level`` is defined.
         """
         if self.has_write_command("set_nr"):
             await self._write("set_nr", state="1" if on else "0")
+        elif self.has_write_command("set_nr_level"):
+            if on:
+                current = self._state.main.nr_level
+                level = current if current > 0 else self._default_nr_level()
+                await self.set_nr_level(level, receiver=receiver)
+            else:
+                await self.set_nr_level(0, receiver=receiver)
 
     async def set_dual_watch(self, on: bool) -> None:
         """Enable or disable dual watch.
@@ -372,6 +390,18 @@ class YaesuCatRadio:
             and isinstance(spec, CatCommandSpec)
             and spec.write is not None
         )
+
+    def _default_nb_level(self) -> int:
+        """Default NB level for turning on when current level is 0."""
+        ctrl = (self._config.controls or {}).get("nb", {})
+        range_max = ctrl.get("range_max", 10)
+        return max(1, range_max // 2)
+
+    def _default_nr_level(self) -> int:
+        """Default NR level for turning on when current level is 0."""
+        ctrl = (self._config.controls or {}).get("nr", {})
+        range_max = ctrl.get("range_max", 15)
+        return max(1, range_max // 2)
 
     # -- Internal helpers ---------------------------------------------------
 
