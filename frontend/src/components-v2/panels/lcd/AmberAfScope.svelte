@@ -77,12 +77,18 @@
         canvas.getContext('2d')?.setTransform(dpr, 0, 0, dpr, 0, 0);
       }
     }
-    // Detect how fast the knob is turning (jump size since last frame)
+    // Detect how fast the knob is turning
     if (filterWidth !== prevTargetFilter) {
       const jump = Math.abs(filterWidth - prevTargetFilter);
-      // Big jump (>3 steps) → snap fast. Small jump → smooth
-      adaptiveLerp = jump > 3 ? 0.5 : jump > 1 ? 0.25 : 0.12;
       prevTargetFilter = filterWidth;
+      if (jump > 2) {
+        // Fast turning — snap instantly, no lag
+        animatedFilterWidth = filterWidth;
+        adaptiveLerp = 0.5;
+      } else {
+        // Slow/single step — animate smoothly
+        adaptiveLerp = 0.15;
+      }
     }
 
     // Animate trapezoid toward target filter width
