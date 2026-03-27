@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Radio, Cable, Activity, Volume2, ArrowDownUp, Power, Unplug, Palette } from 'lucide-svelte';
+  import { Radio, Cable, Activity, Volume2, ArrowDownUp, Power, Unplug, Palette, Monitor, Tv } from 'lucide-svelte';
   import ThemePicker from '../controls/ThemePicker.svelte';
   import {
     getRadioStatus,
@@ -10,7 +10,13 @@
     getRadioPowerOn,
   } from '$lib/stores/connection.svelte';
   import { getFrequency } from '$lib/stores/radio.svelte';
-  import { hasAnyScope, hasAudio } from '$lib/stores/capabilities.svelte';
+  import { hasAnyScope, hasAudio, hasSpectrum } from '$lib/stores/capabilities.svelte';
+  import { getLayoutMode, cycleLayoutMode } from '$lib/stores/layout.svelte';
+
+  let layoutMode = $derived(getLayoutMode());
+  let hasHwSpectrum = $derived(hasSpectrum());
+  const layoutLabels: Record<string, string> = { auto: 'AUTO', lcd: 'LCD', spectrum: 'SCOPE' };
+  const layoutTitles: Record<string, string> = { auto: 'Auto (LCD or Spectrum)', lcd: 'Force LCD layout', spectrum: 'Force Spectrum layout' };
 
   let radioPowerOn = $derived(getRadioPowerOn());
   let isPoweredOff = $derived(radioPowerOn === false);
@@ -198,6 +204,19 @@
   </div>
 
   <div class="status-controls">
+    <button
+      type="button"
+      class="control-btn layout-btn"
+      onclick={() => cycleLayoutMode(hasHwSpectrum)}
+      title={layoutTitles[layoutMode]}
+    >
+      {#if layoutMode === 'lcd'}
+        <Tv size={14} strokeWidth={2} />
+      {:else}
+        <Monitor size={14} strokeWidth={2} />
+      {/if}
+      <span class="btn-label">{layoutLabels[layoutMode]}</span>
+    </button>
     <ThemePicker />
     <button
       type="button"

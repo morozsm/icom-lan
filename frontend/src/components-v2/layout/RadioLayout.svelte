@@ -16,6 +16,7 @@
   import { getConnectionStatus, getRadioPowerOn } from '$lib/stores/connection.svelte';
   import { applyModeDefault } from '$lib/stores/tuning.svelte';
   import { getCapabilities, getKeyboardConfig, hasDualReceiver, hasTx, hasAnyScope, hasSpectrum } from '$lib/stores/capabilities.svelte';
+  import { useLcdLayout } from '$lib/stores/layout.svelte';
   import SpectrumPanel from '../../components/spectrum/SpectrumPanel.svelte';
   import AmberLcdDisplay from '../panels/lcd/AmberLcdDisplay.svelte';
   import LeftSidebar from './LeftSidebar.svelte';
@@ -43,6 +44,7 @@
     makeBandHandlers, makePresetHandlers, makeDspHandlers, makeCwPanelHandlers,
   } from '../wiring/command-bus';
   import MobileRadioLayout from './MobileRadioLayout.svelte';
+  import LcdLayout from './LcdLayout.svelte';
   import CollapsiblePanel from '../controls/CollapsiblePanel.svelte';
   import BandSelector from '../controls/BandSelector.svelte';
   import DspPanel from '../panels/DspPanel.svelte';
@@ -184,6 +186,8 @@
 
 {#if isMobile}
   <MobileRadioLayout />
+{:else if useLcdLayout(hasSpectrum())}
+  <LcdLayout />
 {:else}
 <div class="radio-layout">
   <StatusBar />
@@ -221,19 +225,11 @@
     </div>
 
     <main class="content-center center-column">
-      {#if hasSpectrum()}
-        <div class="spectrum-slot">
-          <div class="spectrum-frame">
-            <SpectrumPanel />
-          </div>
+      <div class="spectrum-slot">
+        <div class="spectrum-frame">
+          <SpectrumPanel />
         </div>
-      {:else}
-        <div class="spectrum-slot">
-          <div class="spectrum-frame">
-            <AmberLcdDisplay />
-          </div>
-        </div>
-      {/if}
+      </div>
     </main>
 
     <div class="content-right">
@@ -451,6 +447,10 @@
     padding: 5px;
     min-height: 0;
     border-color: var(--v2-border-panel);
+  }
+
+  .receiver-deck.hidden-vfo {
+    display: none;
   }
 
   .receiver-deck :global(.vfo-header) {

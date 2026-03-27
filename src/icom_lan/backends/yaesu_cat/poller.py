@@ -26,6 +26,8 @@ import logging
 from collections.abc import Awaitable
 from typing import TYPE_CHECKING, Any, Callable
 
+from ...commands import hz_to_table_index, table_index_to_hz
+
 if TYPE_CHECKING:
     from ...radio_state import RadioState
     from ...web.radio_poller import CommandQueue
@@ -86,6 +88,43 @@ class YaesuCatPoller:
         # EMA state per receiver (None until first sample).
         self._ema_s_main: float | None = None
         self._ema_s_sub: float | None = None
+
+    # ------------------------------------------------------------------
+    # Filter width table helpers
+
+    def _get_filter_table(self) -> tuple[int, ...] | None:
+        """Return the filter-width table for the current mode, or None."""
+        profile = self._radio.profile
+        if profile.filter_width_encoding != "table_index":
+            return None
+        mode = self._radio.radio_state.main.mode
+        rule = profile.resolve_filter_rule(mode)
+        if rule and rule.table:
+            return rule.table
+        return None
+
+    def _index_to_hz(self, index: int) -> int:
+        """Convert a raw filter index to Hz (pass-through if no table)."""
+        profile = self._radio.profile
+        mode = self._radio.radio_state.main.mode
+        rule = profile.resolve_filter_rule(mode) if profile.filter_width_encoding == "table_index" else None
+        if rule and rule.fixed and rule.defaults:
+            return rule.defaults[0]
+        table = self._get_filter_table()
+        if table is None:
+            return index
+        try:
+            return table_index_to_hz(index, table=table)
+        except ValueError:
+            logger.debug("filter index %d outside table, returning raw", index)
+            return index
+
+    def _hz_to_index(self, hz: int) -> int:
+        """Convert Hz to a filter index (pass-through if no table)."""
+        table = self._get_filter_table()
+        if table is None:
+            return hz
+        return hz_to_table_index(hz, table=table)
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -266,6 +305,7 @@ class YaesuCatPoller:
             SetFilterShape,
             SetFilterWidth,
             SetFreq,
+            SetIfShift,
             SetIpPlus,
             SetKeySpeed,
             SetManualNotch,
@@ -290,6 +330,7 @@ class YaesuCatPoller:
             SetSquelch,
             SetTwinPeak,
             SetVox,
+            SetTunerStatus,
             VfoSwap,
         )
 
@@ -333,10 +374,10 @@ class YaesuCatPoller:
                     await radio.set_drive_gain(level)
 
                 # ── RF Front End ──
-                case SetAttenuator(state=state):
-                    await radio.set_attenuator(state)
-                case SetPreamp(band=band, value=value):
-                    await radio.set_preamp(band, value)
+                case SetAttenuator(db=db):
+                    await radio.set_attenuator_level(db)
+                case SetPreamp(level=level, receiver=receiver):
+                    await radio.set_preamp(level, receiver)
 
                 # ── DSP / Noise ──
                 case SetAgc(mode=mode):
@@ -360,11 +401,15 @@ class YaesuCatPoller:
                 case SetFilter(filter_num=num):
                     pass  # FTX-1 uses filter_width, not discrete filter numbers
                 case SetFilterWidth(width=width):
-                    await radio.set_filter_width(width)
+                    await radio.set_filter_width(self._hz_to_index(width))
                 case SetFilterShape(shape=shape):
                     pass  # Not available on FTX-1
                 case SetPbtInner() | SetPbtOuter():
                     pass  # Not available on FTX-1
+
+                # ── IF Shift ──
+                case SetIfShift(offset=offset):
+                    await radio.set_if_shift(offset)
 
                 # ── CW ──
                 case SetKeySpeed(speed=speed):
@@ -381,6 +426,8 @@ class YaesuCatPoller:
                     await radio.set_processor_level(level)
                 case SetVox(on=on):
                     await radio.set_vox(on)
+                case SetTunerStatus(value=value):
+                    await radio.set_tuner(value)
                 case SetMonitor(on=on):
                     await radio.set_monitor_on(on)
                 case SetMonitorGain(level=level):
@@ -460,7 +507,8 @@ class YaesuCatPoller:
 
         # Filter width — in medium poll for responsive knob tracking
         try:
-            self._radio.radio_state.main.filter_width = await self._radio.get_filter_width(0)
+            raw_index = await self._radio.get_filter_width(0)
+            self._radio.radio_state.main.filter_width = self._index_to_hz(raw_index)
         except Exception:
             logger.debug("YaesuCatPoller: get_filter_width failed", exc_info=True)
 
@@ -579,5 +627,11 @@ class YaesuCatPoller:
             state.main.contour = await radio.get_contour(0)
         except Exception:
             logger.debug("YaesuCatPoller: get_contour failed", exc_info=True)
+
+        # -- IF Shift --
+        try:
+            state.main.if_shift = await radio.get_if_shift(0)
+        except Exception:
+            logger.debug("YaesuCatPoller: get_if_shift failed", exc_info=True)
 
         self._callback(state)

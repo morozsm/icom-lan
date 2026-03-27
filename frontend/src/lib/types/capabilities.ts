@@ -41,6 +41,7 @@ export interface FilterModeConfig {
   minHz?: number;
   maxHz?: number;
   segments?: FilterSegmentConfig[];
+  table?: number[];
 }
 
 export interface KeyboardBindingConfig {

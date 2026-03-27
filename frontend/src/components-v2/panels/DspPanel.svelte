@@ -177,90 +177,61 @@
 </script>
 
 <div class="dsp-panel">
-  <div class="dsp-toggle-row">
-    {#if showNr}
-      <div class="dsp-toggle-cell" bind:this={nrAnchorEl}>
-        <div
-          class="dsp-toggle-hit"
-          role="presentation"
-          onpointerdown={() => startLongPress('nr')}
-          onpointerup={endLongPressPointer}
-          onpointercancel={endLongPressPointer}
-          onpointerleave={endLongPressPointer}
-        >
-          <HardwareButton indicator="edge-left"
-            compact
-            active={nrActive}
-            color="cyan"
-            title="NR — click to toggle; long-press or ⚙ for settings"
-            onclick={onNrClick}
-          >NR</HardwareButton>
-        </div>
-        <button
-          type="button"
-          class="dsp-settings-btn"
-          aria-label="NR settings"
-          onclick={() => openModalFor('nr')}
-        >
-          <span class="dsp-settings-icon" aria-hidden="true">⚙</span>
-        </button>
-      </div>
-    {/if}
-
+  <div class="dsp-button-grid">
     {#if showNb}
-      <div class="dsp-toggle-cell" bind:this={nbAnchorEl}>
-        <div
-          class="dsp-toggle-hit"
-          role="presentation"
+      <div class="dsp-btn-wrap" bind:this={nbAnchorEl}>
+        <HardwareButton
+          active={nbActive}
+          indicator="edge-left"
+          color="orange"
+          title="NB — click to toggle; long-press for settings"
+          onclick={onNbClick}
           onpointerdown={() => startLongPress('nb')}
           onpointerup={endLongPressPointer}
           onpointercancel={endLongPressPointer}
           onpointerleave={endLongPressPointer}
-        >
-          <HardwareButton indicator="edge-left"
-            compact
-            active={nbActive}
-            color="orange"
-            title="NB — click to toggle; long-press or ⚙ for settings"
-            onclick={onNbClick}
-          >NB</HardwareButton>
-        </div>
-        <button
-          type="button"
-          class="dsp-settings-btn"
-          aria-label="NB settings"
-          onclick={() => openModalFor('nb')}
-        >
-          <span class="dsp-settings-icon" aria-hidden="true">⚙</span>
-        </button>
+        >NB{nbActive ? ` ${nbLevel}` : ''}</HardwareButton>
       </div>
     {/if}
 
-    <div class="dsp-toggle-cell" bind:this={notchAnchorEl}>
-      <div
-        class="dsp-toggle-hit"
-        role="presentation"
+    {#if showNr}
+      <div class="dsp-btn-wrap" bind:this={nrAnchorEl}>
+        <HardwareButton
+          active={nrActive}
+          indicator="edge-left"
+          color="cyan"
+          title="NR — click to toggle; long-press for settings"
+          onclick={onNrClick}
+          onpointerdown={() => startLongPress('nr')}
+          onpointerup={endLongPressPointer}
+          onpointercancel={endLongPressPointer}
+          onpointerleave={endLongPressPointer}
+        >NR{nrActive ? ` ${nrLevel}` : ''}</HardwareButton>
+      </div>
+    {/if}
+
+    <div class="dsp-btn-wrap" bind:this={notchAnchorEl}>
+      <HardwareButton
+        active={notchMode === 'manual'}
+        indicator="edge-left"
+        color="cyan"
+        title="Manual Notch — click to toggle; long-press for settings"
+        onclick={onNotchClick}
         onpointerdown={() => startLongPress('notch')}
         onpointerup={endLongPressPointer}
         onpointercancel={endLongPressPointer}
         onpointerleave={endLongPressPointer}
-      >
-        <HardwareButton indicator="edge-left"
-          compact
-          active={notchToggleActive}
-          color="cyan"
-          title="Notch — click: off ↔ auto; long-press or ⚙ for settings"
-          onclick={onNotchClick}
-        >NOTCH</HardwareButton>
-      </div>
-      <button
-        type="button"
-        class="dsp-settings-btn"
-        aria-label="Notch settings"
-        onclick={() => openModalFor('notch')}
-      >
-        <span class="dsp-settings-icon" aria-hidden="true">⚙</span>
-      </button>
+      >NOTCH</HardwareButton>
+    </div>
+
+    <div class="dsp-btn-wrap">
+      <HardwareButton
+        active={notchMode === 'auto'}
+        indicator="edge-left"
+        color="green"
+        title="Auto Notch"
+        onclick={() => onNotchModeChange(notchMode === 'auto' ? 'off' : 'auto')}
+      >A-NOTCH</HardwareButton>
     </div>
   </div>
 </div>
@@ -370,47 +341,21 @@
     padding: 8px 8px;
   }
 
-  .dsp-toggle-row {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
+  .dsp-button-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 6px;
   }
 
-  .dsp-toggle-cell {
+  .dsp-btn-wrap {
     display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 4px;
+    min-width: 0;
   }
 
-  .dsp-toggle-hit {
-    display: inline-flex;
-  }
-
-  .dsp-settings-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 22px;
-    min-height: 22px;
-    padding: 0;
-    border: 1px solid var(--v2-border);
-    border-radius: 4px;
-    background: var(--v2-sidebar-footer-bg);
-    color: var(--v2-text-secondary);
-    cursor: pointer;
-  }
-
-  .dsp-settings-btn:hover {
-    color: var(--v2-text-primary);
-    border-color: var(--v2-border-darker);
-  }
-
-  .dsp-settings-icon {
+  .dsp-btn-wrap > :global(button) {
+    flex: 1;
+    min-height: 34px;
     font-size: 12px;
-    line-height: 1;
   }
 
   .menu-backdrop {

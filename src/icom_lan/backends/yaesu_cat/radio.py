@@ -715,16 +715,16 @@ class YaesuCatRadio:
             receiver: 0=MAIN, 1=SUB.
 
         Returns:
-            Width index (0-255, mode-dependent mapping).
+            Width index (0-22, mode-dependent mapping).
         """
         cmd = "get_filter_width" if receiver == 0 else "get_filter_width_sub"
         result = await self._query(cmd)
-        return result["level"]
+        return result["code"]
 
     async def set_filter_width(self, value: int, receiver: int = 0) -> None:
         """Set filter width index (SH0/SH1)."""
         cmd = "set_filter_width" if receiver == 0 else "set_filter_width_sub"
-        await self._write(cmd, level=value)
+        await self._write(cmd, code=value)
 
     async def get_if_shift(self, receiver: int = 0) -> int:
         """Get IF shift offset in Hz (signed, IS0).
@@ -835,13 +835,15 @@ class YaesuCatRadio:
         await self._write("set_processor", state="1" if state else "0")
 
     async def get_processor_level(self) -> int:
-        """Get processor level (0–3)."""
+        """Get processor level (PL: drive + comp level, 0-100 each)."""
         result = await self._query("get_processor_level")
+        self._last_drive_gain = result.get("drive", 0)
         return result["level"]
 
     async def set_processor_level(self, level: int) -> None:
-        """Set processor level (0–3)."""
-        await self._write("set_processor_level", level=level)
+        """Set processor level (0-100). Preserves current drive gain."""
+        drive = getattr(self, "_last_drive_gain", 50)
+        await self._write("set_processor_level", drive=drive, level=level)
 
     async def get_monitor_on(self) -> bool:
         """Get monitor ON/OFF state (ML0)."""
@@ -849,8 +851,9 @@ class YaesuCatRadio:
         return result["level"] != 0
 
     async def set_monitor_on(self, state: bool) -> None:
-        """Set monitor ON/OFF (ML0)."""
-        await self._write("set_monitor_on", level=1 if state else 0)
+        """Set monitor ON/OFF.  ML is a single 0-255 value; 0=off, >0=on."""
+        # ON → set to a reasonable default (50); OFF → 0
+        await self._write("set_monitor_on", level=50 if state else 0)
 
     async def get_monitor_level(self) -> int:
         """Get monitor level (0–100, ML1)."""

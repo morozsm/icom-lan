@@ -70,6 +70,7 @@ class FilterWidthRule:
     min_hz: int | None = None
     max_hz: int | None = None
     segments: tuple[FilterWidthSegment, ...] = ()
+    table: tuple[int, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -121,7 +122,9 @@ class RadioProfile:
     filter_width_encoding: str = "direct_bcd_hz"
     filter_config: dict[str, FilterWidthRule] | None = None
     att_values: tuple[int, ...] | None = None
+    att_labels: dict[str, str] | None = None
     pre_values: tuple[int, ...] | None = None
+    pre_labels: dict[str, str] | None = None
     agc_modes: tuple[int, ...] | None = None
     agc_labels: dict[str, str] | None = None
     data_mode_count: int = 0

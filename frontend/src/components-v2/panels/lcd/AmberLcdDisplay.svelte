@@ -1,6 +1,7 @@
 <script lang="ts">
   import { radio } from '$lib/stores/radio.svelte';
-  import { isAudioFftScope, hasDualReceiver } from '$lib/stores/capabilities.svelte';
+  import { isAudioFftScope, hasDualReceiver, getCapabilities } from '$lib/stores/capabilities.svelte';
+  import { resolveFilterModeConfig } from '../../wiring/state-adapter';
   import AmberFrequency from './AmberFrequency.svelte';
   import AmberSmeter from './AmberSmeter.svelte';
   import AmberAfScope from './AmberAfScope.svelte';
@@ -26,9 +27,38 @@
     return { receiver, startFreq, endFreq, pixels: new Uint8Array(buf, 16, pixelCount) };
   }
 
+  // Band lookup by frequency
+  const BANDS: [string, number, number][] = [
+    ['160m', 1800000, 2000000],
+    ['80m',  3500000, 4000000],
+    ['60m',  5351500, 5366500],
+    ['40m',  7000000, 7300000],
+    ['30m',  10100000, 10150000],
+    ['20m',  14000000, 14350000],
+    ['17m',  18068000, 18168000],
+    ['15m',  21000000, 21450000],
+    ['12m',  24890000, 24990000],
+    ['10m',  28000000, 29700000],
+    ['6m',   50000000, 54000000],
+    ['4m',   70000000, 70500000],
+    ['2m',   144000000, 148000000],
+    ['70cm', 420000000, 450000000],
+    ['MW',   530000, 1710000],
+    ['SW',   2300000, 30000000],
+  ];
+  function freqToBand(hz: number): string {
+    for (const [name, lo, hi] of BANDS) {
+      if (hz >= lo && hz <= hi) return name;
+    }
+    if (hz >= 88000000 && hz <= 108000000) return 'FM';
+    if (hz >= 108000000 && hz <= 137000000) return 'AIR';
+    return '';
+  }
+
   let state = $derived(radio.current);
   let rx = $derived(state?.active === 'SUB' ? state?.sub : state?.main);
   let freqHz = $derived(rx?.freqHz ?? 0);
+  let bandLabel = $derived(freqToBand(freqHz));
   let mode = $derived(rx?.mode ?? '---');
   let filter = $derived(rx?.filter ?? '');
   let sValue = $derived(rx?.sMeter ?? 0);
@@ -53,6 +83,13 @@
   let contourActive = $derived((rx?.contour ?? 0) > 0);
   let contourLevel = $derived(rx?.contour ?? 0);
   let filterWidthHz = $derived(rx?.filterWidth ?? 2400);
+  let filterWidthMax = $derived.by(() => {
+    const caps = getCapabilities();
+    const config = resolveFilterModeConfig(caps, rx?.mode, rx?.dataMode);
+    if (config?.table?.length) return config.table[config.table.length - 1];
+    return config?.maxHz ?? caps?.filterWidthMax ?? 4000;
+  });
+  let ifShiftHz = $derived(rx?.ifShift ?? 0);
   let manualNotchOn = $derived(rx?.manualNotch ?? false);
   let notchFreqRaw = $derived(state?.notchFilter ?? 0);
   let activeVfo = $derived(state?.active === 'SUB' ? 'B' : 'A');
@@ -155,6 +192,9 @@
           <AmberFrequency {freqHz} size="large" />
         </div>
         <span class="vfo-mode-box">{mode}{filter ? ` ${filter}` : ''}</span>
+        {#if bandLabel}
+          <span class="vfo-band-box">{bandLabel}</span>
+        {/if}
       </div>
       {#if showFft}
         <div class="lcd-scope-strip">
@@ -162,7 +202,8 @@
             data={fftPixels}
             onRegisterPush={(fn) => { fftPush = fn; }}
             filterWidth={filterWidthHz}
-          filterWidthMax={36}
+            filterWidthMax={filterWidthMax}
+            ifShift={ifShiftHz}
             contour={contourLevel}
             manualNotch={manualNotchOn}
             notchFreq={notchFreqRaw}
@@ -332,6 +373,20 @@
     min-width: 0;
   }
 
+  .vfo-band-box {
+    flex-shrink: 0;
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    font-size: 18px;
+    font-weight: 700;
+    color: #1A1000;
+    letter-spacing: 1px;
+    border: 2px solid rgba(26, 16, 0, 0.4);
+    border-radius: 4px;
+    padding: 2px 8px;
+    margin-left: 6px;
+    background: rgba(26, 16, 0, 0.06);
+  }
+
   .vfo-mode-box {
     flex-shrink: 0;
     font-family: 'JetBrains Mono', 'Courier New', monospace;
@@ -390,7 +445,7 @@
     position: relative;
     z-index: 2;
     flex: 0 0 30%;
-    height: 78px;
+    height: 96px;
   }
 
   /* ── TX glow ── */

@@ -48,6 +48,8 @@ KNOWN_CAPABILITIES = frozenset(
         "pbt",
         "filter_width",
         "filter_shape",
+        "if_shift",
+        "contour",
         # TX
         "tx",
         "split",
@@ -129,7 +131,9 @@ class RigConfig:
     cmd29_routes: tuple[tuple[int, int | None], ...]
     spectrum: dict[str, int] | None
     att_values: tuple[int, ...] | None
+    att_labels: dict[str, str] | None
     pre_values: tuple[int, ...] | None
+    pre_labels: dict[str, str] | None
     agc_modes: tuple[int, ...] | None
     agc_labels: dict[str, str] | None
     filter_width_min: int = 50
@@ -192,7 +196,9 @@ class RigConfig:
             filter_width_encoding=self.filter_width_encoding,
             filter_config=self.filter_config,
             att_values=self.att_values,
+            att_labels=self.att_labels,
             pre_values=self.pre_values,
+            pre_labels=self.pre_labels,
             agc_modes=self.agc_modes,
             agc_labels=self.agc_labels,
             data_mode_count=self.data_mode_count,
@@ -566,6 +572,7 @@ def load_rig(path: Path) -> RigConfig:
                 for segment in raw_segments
             )
             defaults_raw = raw_rule.get("defaults", [])
+            table_raw = raw_rule.get("table", [])
             filter_config[str(mode_key).upper()] = FilterWidthRule(
                 defaults=tuple(int(value) for value in defaults_raw),
                 fixed=bool(raw_rule.get("fixed", False)),
@@ -573,6 +580,7 @@ def load_rig(path: Path) -> RigConfig:
                 min_hz=(int(raw_rule["min_hz"]) if "min_hz" in raw_rule else None),
                 max_hz=(int(raw_rule["max_hz"]) if "max_hz" in raw_rule else None),
                 segments=segments,
+                table=tuple(int(v) for v in table_raw),
             )
 
     # Parse [protocol] (optional)
@@ -623,9 +631,11 @@ def load_rig(path: Path) -> RigConfig:
     # Parse attenuator/preamp/agc (optional sections)
     att_section = data.get("attenuator", {})
     att_values = tuple(att_section["values"]) if "values" in att_section else None
+    att_labels = dict(att_section["labels"]) if "labels" in att_section else None
 
     pre_section = data.get("preamp", {})
     pre_values = tuple(pre_section["values"]) if "values" in pre_section else None
+    pre_labels = dict(pre_section["labels"]) if "labels" in pre_section else None
 
     agc_section = data.get("agc", {})
     agc_modes = tuple(agc_section["modes"]) if "modes" in agc_section else None
@@ -729,7 +739,9 @@ def load_rig(path: Path) -> RigConfig:
         cmd29_routes=tuple(cmd29_routes),
         spectrum=spectrum,
         att_values=att_values,
+        att_labels=att_labels,
         pre_values=pre_values,
+        pre_labels=pre_labels,
         agc_modes=agc_modes,
         agc_labels=agc_labels,
         data_mode_count=data_mode_count,

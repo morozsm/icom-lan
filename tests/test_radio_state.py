@@ -227,6 +227,7 @@ def test_to_dict_main_keys() -> None:
         "digisel_shift",
         "af_mute",
         "contour",
+        "if_shift",
     }
     assert set(main.keys()) == expected_keys
 

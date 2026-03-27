@@ -9,6 +9,7 @@
     values: number[];
     selected: number;
     onchange: (value: number) => void;
+    labels?: Record<string, string>;
     accentColor?: string;
     shortcutHint?: string | null;
     title?: string | null;
@@ -18,6 +19,7 @@
     values,
     selected,
     onchange,
+    labels = {},
     accentColor = 'var(--v2-accent-cyan)',
     shortcutHint = null,
     title = null,
@@ -26,7 +28,7 @@
   let menuOpen = $state(false);
   let menuStyle = $state('');
   let moreButtonEl: HTMLElement | undefined = $state();
-  let controlModel = $derived(buildAttControlModel(values));
+  let controlModel = $derived(buildAttControlModel(values, Object.keys(labels).length ? labels : undefined));
   let overflowSelected = $derived(controlModel.overflowOptions.some((option) => option.value === selected));
   let overflowLabel = $derived(getAttOverflowLabel(selected, controlModel.overflowOptions));
 

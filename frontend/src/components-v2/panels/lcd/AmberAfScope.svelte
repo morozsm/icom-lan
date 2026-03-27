@@ -118,7 +118,8 @@
     h: number,
   ): void {
     const halfBw = sampleRate / 2;
-    const labelH = 22; // space for filter width label at top
+    const hasShift = ifShift !== 0;
+    const labelH = 40; // always reserve space for two label rows
     const trapTop = labelH;
     const trapH = h - labelH;
 
@@ -130,10 +131,15 @@
     // The trapezoid (filter passband) grows/shrinks inside.
     // When filter narrows → trapezoid shrinks, whiskers extend.
     // When filter widens → trapezoid grows, whiskers shrink.
-    const cx = w / 2 + (ifShift / halfBw) * (w / 2);
 
-    // Fixed outer endpoints of the whiskers (total construct width)
+    // Fixed outer endpoints of the whiskers — always centered at w/2
     const totalHalfW = w * 0.42;
+    const whiskerLeft = w / 2 - totalHalfW;
+    const whiskerRight = w / 2 + totalHalfW;
+
+    // Trapezoid center shifts with IF shift; whiskers stay fixed
+    const shiftRef = Math.max(animatedFilterWidth, filterWidthMax * 0.5);
+    const cx = w / 2 + (ifShift / shiftRef) * totalHalfW * 0.8;
 
     // Slope: how much the legs flare outward
     const slopeExtra = trapH * 0.35;
@@ -149,39 +155,42 @@
     const bl = cx - topHalfW - slopeExtra;
     const br = cx + topHalfW + slopeExtra;
 
-    // Fixed whisker outer endpoints
-    const whiskerLeft = cx - totalHalfW;
-    const whiskerRight = cx + totalHalfW;
+    // ── Labels: fixed anchor so digits don't jump ──
+    // Prefix ("Filter:") right-aligned to anchor, digits left-aligned from anchor
+    const monoFont = "bold 12px 'JetBrains Mono', 'Courier New', monospace";
+    const segFont = "bold 14px 'DSEG7 Classic', monospace";
+    // Anchor: right edge of longest prefix ("Filter: ")
+    ctx.font = monoFont;
+    const anchorX = w / 2 - ctx.measureText('0000').width / 2; // digits roughly centered
 
-    // ── Filter width label: "Filter: 3000Hz" ──
-    const filterHz = Math.round(200 + (animatedFilterWidth / 36) * 3800);
-    ctx.fillStyle = INK;
-    ctx.textAlign = 'center';
-    // "Filter:" in regular font (slightly smaller than digits)
-    ctx.font = "bold 12px 'JetBrains Mono', 'Courier New', monospace";
-    const prefix = 'Filter: ';
-    const prefixW = ctx.measureText(prefix).width;
-    // Number in segment font
-    ctx.font = "bold 14px 'DSEG7 Classic', monospace";
-    const numStr = String(filterHz);
-    const numW = ctx.measureText(numStr).width;
-    // "Hz" in regular font
-    ctx.font = "bold 12px 'JetBrains Mono', 'Courier New', monospace";
-    const hzW = ctx.measureText('Hz').width;
-    const totalW = prefixW + numW + hzW;
-    const startX = cx - totalW / 2;
-    const baseY = labelH - 6;
-    // Draw prefix
-    ctx.textAlign = 'left';
-    ctx.font = "bold 12px 'JetBrains Mono', 'Courier New', monospace";
-    ctx.fillText(prefix, startX, baseY);
-    // Draw number (segment font)
-    ctx.font = "bold 14px 'DSEG7 Classic', monospace";
-    ctx.fillText(numStr, startX + prefixW, baseY);
-    // Draw "Hz"
-    ctx.font = "bold 12px 'JetBrains Mono', 'Courier New', monospace";
-    ctx.fillStyle = `${INK_A} 0.6)`;
-    ctx.fillText('Hz', startX + prefixW + numW, baseY);
+    function drawRow(label: string, value: string, y: number, dimmed = false, ghost = false): void {
+      const alpha = ghost ? 0.12 : dimmed ? 0.7 : 1;
+      const hzAlpha = ghost ? 0.08 : 0.6;
+      ctx.textAlign = 'right';
+      ctx.font = monoFont;
+      ctx.fillStyle = `${INK_A} ${alpha})`;
+      ctx.fillText(label, anchorX, y);
+      ctx.textAlign = 'left';
+      ctx.font = segFont;
+      ctx.fillText(value, anchorX, y);
+      const segValW = ctx.measureText(value).width;
+      ctx.font = monoFont;
+      ctx.fillStyle = `${INK_A} ${hzAlpha})`;
+      ctx.fillText('Hz', anchorX + segValW + 2, y);
+    }
+
+    // ── Shift label (top row — always visible, dim when inactive) ──
+    if (hasShift) {
+      const shiftSign = ifShift > 0 ? '+' : '';
+      drawRow('Shift: ', `${shiftSign}${ifShift}`, 16, true);
+    } else {
+      // Ghost LCD segments: show "+0000" in very dim ink
+      drawRow('Shift: ', '+0000', 16, false, true);
+    }
+
+    // ── Filter label (bottom row) ──
+    const filterHz = Math.round(animatedFilterWidth);
+    drawRow('Filter: ', String(filterHz), labelH - 6);
 
     // ── Draw trapezoid + whiskers (thick LCD ink) ──
     ctx.strokeStyle = INK;

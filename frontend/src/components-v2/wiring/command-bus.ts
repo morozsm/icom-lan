@@ -244,15 +244,23 @@ export function makeFilterHandlers() {
     },
     onIfShiftChange: (value: number) => {
       const receiver = activeReceiverParam();
-      const activeRx = getActiveReceiver();
-      const { pbtInner, pbtOuter } = mapIfShiftToPbt(
-        value,
-        activeRx?.pbtInner ?? 0,
-        activeRx?.pbtOuter ?? 0,
-      );
-      patchActiveReceiver({ pbtInner: pbtHzToRaw(pbtInner), pbtOuter: pbtHzToRaw(pbtOuter) }, true);
-      cmd('set_pbt_inner', { value: pbtHzToRaw(pbtInner), receiver });
-      cmd('set_pbt_outer', { value: pbtHzToRaw(pbtOuter), receiver });
+      const caps = getCapabilities();
+      if (caps?.capabilities?.includes('if_shift')) {
+        // Native IF shift (Yaesu CAT)
+        patchActiveReceiver({ ifShift: value }, true);
+        cmd('set_if_shift', { offset: value, receiver });
+      } else {
+        // Emulate via PBT (Icom CI-V)
+        const activeRx = getActiveReceiver();
+        const { pbtInner, pbtOuter } = mapIfShiftToPbt(
+          value,
+          activeRx?.pbtInner ?? 0,
+          activeRx?.pbtOuter ?? 0,
+        );
+        patchActiveReceiver({ pbtInner: pbtHzToRaw(pbtInner), pbtOuter: pbtHzToRaw(pbtOuter) }, true);
+        cmd('set_pbt_inner', { value: pbtHzToRaw(pbtInner), receiver });
+        cmd('set_pbt_outer', { value: pbtHzToRaw(pbtOuter), receiver });
+      }
     },
     onPbtInnerChange: (value: number) => {
       const receiver = activeReceiverParam();

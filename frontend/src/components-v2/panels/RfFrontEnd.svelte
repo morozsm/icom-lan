@@ -3,7 +3,7 @@
   import DualParamRenderer from '../controls/value-control/DualParamRenderer.svelte';
   import AttenuatorControl from '../controls/AttenuatorControl.svelte';
   import { HardwareButton } from '$lib/Button';
-  import { hasCapability, getAttValues, getPreValues } from '$lib/stores/capabilities.svelte';
+  import { hasCapability, getAttValues, getAttLabels, getPreValues, getPreLabels } from '$lib/stores/capabilities.svelte';
   import { buildPreOptions, shouldShowPanel } from './rf-frontend-utils';
   import { getShortcutHint } from '../layout/shortcut-hints';
 
@@ -47,7 +47,8 @@
   let visible = $derived(shouldShowPanel(showRfGain, showAtt, showPre, showSquelch));
 
   let attValues = $derived(getAttValues());
-  let preOptions = $derived(buildPreOptions(getPreValues()));
+  let attLabels = $derived(getAttLabels());
+  let preOptions = $derived(buildPreOptions(getPreValues(), getPreLabels()));
   const rfGainShortcut = getShortcutHint('adjust_rf_gain');
   const attShortcut = getShortcutHint('cycle_att');
   const preShortcut = getShortcutHint('cycle_preamp');
@@ -90,10 +91,23 @@
     {/if}
 
     {#if showAtt}
-      <div class="control-row" data-shortcut-hint={attShortcut ?? undefined} title={attShortcut ?? undefined}>
-        <span class="control-label">ATT</span>
-        <AttenuatorControl values={attValues} selected={att} onchange={onAttChange} shortcutHint={attShortcut} title={attShortcut} />
-      </div>
+      {#if attValues.length <= 2}
+        <HardwareButton
+          active={att > 0}
+          indicator="edge-left"
+          color="amber"
+          title={attShortcut}
+          shortcutHint={attShortcut}
+          onclick={() => onAttChange(att > 0 ? 0 : 1)}
+        >
+          ATT
+        </HardwareButton>
+      {:else}
+        <div class="control-row" data-shortcut-hint={attShortcut ?? undefined} title={attShortcut ?? undefined}>
+          <span class="control-label">ATT</span>
+          <AttenuatorControl values={attValues} selected={att} onchange={onAttChange} labels={attLabels} shortcutHint={attShortcut} title={attShortcut} />
+        </div>
+      {/if}
     {/if}
 
     {#if showPre}

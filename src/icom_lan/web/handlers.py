@@ -60,6 +60,7 @@ from .radio_poller import (
     SetFilterShape,
     SetFilterWidth,
     SetFreq,
+    SetIfShift,
     SetIpPlus,
     SetLanModLevel,
     SetManualNotch,
@@ -150,6 +151,7 @@ class ControlHandler:
             "set_filter",
             "set_filter_width",
             "set_filter_shape",
+            "set_if_shift",
             "ptt",
             "set_rf_power",
             "set_power",  # backward-compat alias for set_rf_power
@@ -717,16 +719,21 @@ class ControlHandler:
             label = {0: "OFF", 1: "ON", 2: "TUNING"}.get(status, "UNKNOWN")
             return {"status": status, "label": label}
         if name == "set_tuner_status":
-            if self._radio is None:
-                raise RuntimeError("radio connection not available")
-            if not isinstance(self._radio, AdvancedControlCapable):
-                raise RuntimeError("radio does not support this command")
             if "value" not in params:
                 raise ValueError("missing required 'value' parameter")
             value = int(params["value"])
             if value not in (0, 1, 2):
                 raise ValueError(f"tuner value must be 0, 1, or 2, got {value}")
-            await self._radio.set_tuner_status(value)
+            # Try direct call for AdvancedControlCapable radios
+            if self._radio is not None and isinstance(self._radio, AdvancedControlCapable):
+                await self._radio.set_tuner_status(value)
+            else:
+                # Route through command queue (Yaesu CAT etc.)
+                from .radio_poller import SetTunerStatus
+                q = self._server.command_queue if self._server is not None else None
+                if q is None:
+                    raise RuntimeError("no command queue available")
+                q.put(SetTunerStatus(value))
             label = {0: "OFF", 1: "ON", 2: "TUNING"}[value]
             return {"value": value, "label": label}
 
@@ -771,6 +778,13 @@ class ControlHandler:
                 self._ensure_receiver_supported(rx)
                 q.put(SetFilterShape(shape, receiver=rx))
                 return {"shape": shape, "receiver": rx}
+            case "set_if_shift":
+                offset = int(params["offset"])
+                rx = int(params.get("receiver", 0))
+                self._ensure_capability("if_shift", "set_if_shift")
+                self._ensure_receiver_supported(rx)
+                q.put(SetIfShift(offset, receiver=rx))
+                return {"offset": offset, "receiver": rx}
             case "ptt":
                 on = bool(params["state"])
                 logger.info("handler: PTT %s received", "ON" if on else "OFF")

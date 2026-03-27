@@ -89,6 +89,7 @@ def _serialize_filter_config(profile: "RadioProfile") -> dict[str, dict[str, obj
                 if rule.segments
                 else {}
             ),
+            **({"table": list(rule.table)} if rule.table else {}),
         }
     return result
 
@@ -1300,9 +1301,11 @@ class WebServer:
                     "attValues": (
                         list(profile.att_values) if profile.att_values else None
                     ),
+                    "attLabels": profile.att_labels,
                     "preValues": (
                         list(profile.pre_values) if profile.pre_values else None
                     ),
+                    "preLabels": profile.pre_labels,
                     "agcModes": list(profile.agc_modes) if profile.agc_modes else None,
                     "agcLabels": profile.agc_labels,
                     "dataModeCount": profile.data_mode_count,
@@ -1406,7 +1409,9 @@ class WebServer:
                 "filterWidthMax": profile.filter_width_max,
                 "filterConfig": _serialize_filter_config(profile),
                 "attValues": list(profile.att_values) if profile.att_values else [0],
+                "attLabels": profile.att_labels if profile.att_labels else {},
                 "preValues": list(profile.pre_values) if profile.pre_values else [0],
+                "preLabels": profile.pre_labels if profile.pre_labels else {},
                 "agcModes": list(profile.agc_modes) if profile.agc_modes else [],
                 "agcLabels": profile.agc_labels if profile.agc_labels else {},
                 "dataModeCount": profile.data_mode_count,

@@ -19,28 +19,30 @@ export interface AttControlModel {
 
 const ATT_QUICK_VALUES = [0, 6, 12, 18];
 
-/** Format an ATT value in dB to a display label. */
-export function formatAttLabel(dB: number): string {
-  return dB === 0 ? 'OFF' : `${dB}dB`;
+/** Format an ATT value to a display label, using custom labels if provided. */
+export function formatAttLabel(value: number, labels?: Record<string, string>): string {
+  if (labels && String(value) in labels) return labels[String(value)];
+  return value === 0 ? 'OFF' : `${value}dB`;
 }
 
-/** Format a PRE level to a display label (0=OFF, 1=P1, 2=P2, …). */
-export function formatPreLabel(level: number): string {
+/** Format a PRE level to a display label, using custom labels if provided. */
+export function formatPreLabel(level: number, labels?: Record<string, string>): string {
+  if (labels && String(level) in labels) return labels[String(level)];
   return level === 0 ? 'OFF' : `P${level}`;
 }
 
-/** Build SegmentedButton options for the ATT control from a list of dB values. */
-export function buildAttOptions(values: number[]): AttOption[] {
-  return values.map((v) => ({ value: v, label: formatAttLabel(v) }));
+/** Build SegmentedButton options for the ATT control from a list of values. */
+export function buildAttOptions(values: number[], labels?: Record<string, string>): AttOption[] {
+  return values.map((v) => ({ value: v, label: formatAttLabel(v, labels) }));
 }
 
 /** Build a hybrid ATT control model with quick picks and overflow values. */
-export function buildAttControlModel(values: number[]): AttControlModel {
+export function buildAttControlModel(values: number[], labels?: Record<string, string>): AttControlModel {
   const normalized = [...new Set(values)];
 
   if (normalized.length <= ATT_QUICK_VALUES.length) {
     return {
-      quickOptions: buildAttOptions(normalized),
+      quickOptions: buildAttOptions(normalized, labels),
       overflowOptions: [],
     };
   }
@@ -54,8 +56,8 @@ export function buildAttControlModel(values: number[]): AttControlModel {
   const quickSet = new Set(quickValues);
 
   return {
-    quickOptions: buildAttOptions(quickValues),
-    overflowOptions: buildAttOptions(normalized.filter((value) => !quickSet.has(value))),
+    quickOptions: buildAttOptions(quickValues, labels),
+    overflowOptions: buildAttOptions(normalized.filter((value) => !quickSet.has(value)), labels),
   };
 }
 
@@ -65,8 +67,8 @@ export function getAttOverflowLabel(selected: number, overflowOptions: AttOption
 }
 
 /** Build SegmentedButton options for the PRE control from a list of levels. */
-export function buildPreOptions(values: number[]): PreOption[] {
-  return values.map((v) => ({ value: v, label: formatPreLabel(v) }));
+export function buildPreOptions(values: number[], labels?: Record<string, string>): PreOption[] {
+  return values.map((v) => ({ value: v, label: formatPreLabel(v, labels) }));
 }
 
 /**

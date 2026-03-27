@@ -56,8 +56,16 @@ export function getAttValues(): number[] {
   return capabilities?.attValues ?? [0, 6, 12, 18];
 }
 
+export function getAttLabels(): Record<string, string> {
+  return capabilities?.attLabels ?? {};
+}
+
 export function getPreValues(): number[] {
   return capabilities?.preValues ?? [0, 1];
+}
+
+export function getPreLabels(): Record<string, string> {
+  return capabilities?.preLabels ?? {};
 }
 
 export function getAgcModes(): number[] {

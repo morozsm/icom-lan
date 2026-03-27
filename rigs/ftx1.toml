@@ -26,12 +26,14 @@ features = [
     "nb",
     "nr",
     "notch",
+    "if_shift",
+    "contour",
     "filter_width",
     "tx",
     "split",
     "vox",
     "compressor",
-    "monitor",
+    # "monitor",  # ML; rejected by FTX-1 (not supported via CAT)
     "cw",
     "rit",
     "tuner",
@@ -53,15 +55,57 @@ list = [
 
 [filters]
 list = ["FIL1", "FIL2", "FIL3"]
+encoding = "table_index"
+width_min_hz = 50
+width_max_hz = 4500
+
+[filters.width.SSB]
+defaults = [2400, 1800, 300]
+# 24 entries, codes 00-23. Code 23 not in official PDF; assumed 4500 Hz.
+table = [300, 400, 600, 850, 1100, 1200, 1500, 1650, 1800, 1950, 2100, 2250, 2400, 2450, 2500, 2600, 2700, 2800, 2900, 3000, 3200, 3500, 4000, 4500]
+
+[filters.width.CW]
+defaults = [500, 300, 50]
+# 22 entries, codes 00-21. Code 21 not in official PDF; assumed 4500 Hz.
+table = [50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 800, 1200, 1400, 1700, 2000, 2400, 3000, 3200, 3500, 4000, 4500]
+
+[filters.width.DATA]
+defaults = [3000, 500, 50]
+# 22 entries, codes 00-21. Code 21 not in official PDF; assumed 4500 Hz.
+table = [50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 800, 1200, 1400, 1700, 2000, 2400, 3000, 3200, 3500, 4000, 4500]
+
+[filters.width.RTTY]
+defaults = [500, 300, 50]
+# 22 entries, codes 00-21. Code 21 not in official PDF; assumed 4500 Hz.
+table = [50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 800, 1200, 1400, 1700, 2000, 2400, 3000, 3200, 3500, 4000, 4500]
+
+[filters.width.AM]
+fixed = true
+defaults = [9000]
+table = [9000]
+
+[filters.width.FM]
+fixed = true
+defaults = [12500]
+table = [12500]
 
 [vfo]
 scheme = "ab_shared"
 
 [attenuator]
-values = [0, 1, 2, 3]
+values = [0, 1]
+
+[attenuator.labels]
+"0" = "OFF"
+"1" = "ON"
 
 [preamp]
 values = [0, 1, 2]
+
+[preamp.labels]
+"0" = "IPO"
+"1" = "AMP1"
+"2" = "AMP2"
 
 [controls.attenuator]
 style = "selector"
@@ -244,6 +288,18 @@ raw = 240
 actual = 40.0
 label = "S9+40"
 
+[agc]
+modes = [0, 1, 2, 3, 4, 5, 6]
+
+[agc.labels]
+"0" = "OFF"
+"1" = "FAST"
+"2" = "MID"
+"3" = "SLOW"
+"4" = "A-FAST"
+"5" = "A-MID"
+"6" = "A-SLOW"
+
 [commands]
 # ── Frequency / Mode ──
 get_freq       = { cat = { read = "FA;", parse = "FA{freq:09d};" } }
@@ -295,10 +351,8 @@ set_squelch    = { cat = { write = "SQ0{level:03d};" } }
 # ML: P1=0 (MONI ON/OFF), P1=1 (MONI Level)
 # ML0; → ML0000 (OFF) or ML0001 (ON)
 # ML1; → ML1050 (level=50)
-get_monitor_on     = { cat = { read = "ML0;", parse = "ML0{level:03d};" } }
-set_monitor_on     = { cat = { write = "ML0{level:03d};" } }
-get_monitor_level  = { cat = { read = "ML1;", parse = "ML1{level:03d};" } }
-set_monitor_level  = { cat = { write = "ML1{level:03d};" } }
+# ML: NOT supported on FTX-1 (returns ?;)
+# Monitor is controlled via the radio's EX menu, not CAT
 
 # ── RF Front End ──
 get_attenuator = { cat = { read = "RA0;", parse = "RA0{state};" } }
@@ -326,10 +380,10 @@ set_agc        = { cat = { write = "GT0{mode};" } }
 # SH: P1=rx (0=MAIN,1=SUB), P2P2P2=value (3 digits)
 # SH0; reads MAIN width, SH1; reads SUB width
 # Response: SH0020 = MAIN, value 020
-get_filter_width = { cat = { read = "SH0;", parse = "SH0{level:03d};" } }
-set_filter_width = { cat = { write = "SH0{level:03d};" } }
-get_filter_width_sub = { cat = { read = "SH1;", parse = "SH1{level:03d};" } }
-set_filter_width_sub = { cat = { write = "SH1{level:03d};" } }
+get_filter_width = { cat = { read = "SH0;", parse = "SH0{code:03d};" } }
+set_filter_width = { cat = { write = "SH0{code:03d};" } }
+get_filter_width_sub = { cat = { read = "SH1;", parse = "SH1{code:03d};" } }
+set_filter_width_sub = { cat = { write = "SH1{code:03d};" } }
 get_if_shift   = { cat = { read = "IS0;", parse = "IS00{sign}{offset:04d};" } }
 set_if_shift   = { cat = { write = "IS00{sign}{offset:04d};" } }
 get_narrow     = { cat = { read = "NA0;", parse = "NA0{state};" } }
@@ -340,8 +394,10 @@ get_power      = { cat = { read = "PC;", parse = "PC{head}{watts:03d};" } }
 set_power      = { cat = { write = "PC{head}{watts:03d};" } }
 get_mic_gain   = { cat = { read = "MG;", parse = "MG{level:03d};" } }
 set_mic_gain   = { cat = { write = "MG{level:03d};" } }
+# PR: PR{func}{state}; func: 0=speech proc, 1=parametric EQ; state: 0=OFF,1=ON
 get_processor  = { cat = { read = "PR0;", parse = "PR0{state};" } }
 set_processor  = { cat = { write = "PR0{state};" } }
+# PL: single 3-digit level (live trace: PL003; = level 3)
 get_processor_level = { cat = { read = "PL;", parse = "PL{level:03d};" } }
 set_processor_level = { cat = { write = "PL{level:03d};" } }
 

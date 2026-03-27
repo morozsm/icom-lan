@@ -49,6 +49,7 @@ __all__ = [
     "SetFilterShape",
     "SetPbtInner",
     "SetPbtOuter",
+    "SetIfShift",
     "SetRitFrequency",
     "SetRitStatus",
     "SetRitTxStatus",
@@ -196,6 +197,12 @@ class SetPbtOuter:
 
 
 @dataclass(frozen=True, slots=True)
+class SetIfShift:
+    offset: int  # signed Hz
+    receiver: int = 0
+
+
+@dataclass(frozen=True, slots=True)
 class SetNRLevel:
     level: int
     receiver: int = 0
@@ -286,6 +293,12 @@ class SetMicGain:
 @dataclass(frozen=True, slots=True)
 class SetVox:
     on: bool
+
+
+@dataclass(frozen=True, slots=True)
+class SetTunerStatus:
+    """0=OFF, 1=ON, 2=tune."""
+    value: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -476,6 +489,7 @@ Command = (
     | SetPreamp
     | SetPbtInner
     | SetPbtOuter
+    | SetIfShift
     | SetNRLevel
     | SetNBLevel
     | SetAutoNotch
@@ -1248,6 +1262,18 @@ class RadioPoller:
                 if self._on_state_event:
                     self._on_state_event(
                         "pbt_outer_changed", {"level": level, "receiver": rx}
+                    )
+            case SetIfShift(offset=offset, receiver=rx):
+                await _r.set_if_shift(offset, receiver=rx)
+                if self._radio_state:
+                    target = (
+                        self._radio_state.sub if rx != 0 else self._radio_state.main
+                    )
+                    target.if_shift = offset
+                    self.bump_revision()
+                if self._on_state_event:
+                    self._on_state_event(
+                        "if_shift_changed", {"offset": offset, "receiver": rx}
                     )
             case SetNRLevel(level=level, receiver=rx):
                 await _r.set_nr_level(level, receiver=rx)

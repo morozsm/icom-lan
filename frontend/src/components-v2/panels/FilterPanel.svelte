@@ -71,9 +71,43 @@
     values[activeIndex] = filterWidth;
     return values;
   });
-  let modalMin = $derived(filterConfig?.minHz ?? filterWidthMin);
-  let modalMax = $derived(filterConfig?.maxHz ?? filterWidthMax);
-  let modalStep = $derived(filterConfig?.stepHz ?? filterConfig?.segments?.[0]?.stepHz ?? 50);
+  let isTableMode = $derived(!!(filterConfig?.table?.length));
+  let modalMin = $derived(
+    filterConfig?.minHz ?? (isTableMode ? filterConfig!.table![0] : filterWidthMin)
+  );
+  let modalMax = $derived(
+    filterConfig?.maxHz ?? (isTableMode ? filterConfig!.table![filterConfig!.table!.length - 1] : filterWidthMax)
+  );
+  let modalStep = $derived(
+    isTableMode ? 1 : (filterConfig?.stepHz ?? filterConfig?.segments?.[0]?.stepHz ?? 50)
+  );
+
+  function snapToTable(hz: number, table: number[]): number {
+    let closest = table[0];
+    let minDist = Math.abs(hz - table[0]);
+    for (let i = 1; i < table.length; i++) {
+      const dist = Math.abs(hz - table[i]);
+      if (dist < minDist) { minDist = dist; closest = table[i]; }
+    }
+    return closest;
+  }
+
+  function tableIndexToHz(idx: number): number {
+    const table = filterConfig?.table ?? [];
+    return table[Math.max(0, Math.min(table.length - 1, Math.round(idx)))] ?? idx;
+  }
+
+  function hzToTableIndex(hz: number): number {
+    const table = filterConfig?.table ?? [];
+    if (!table.length) return hz;
+    let closest = 0;
+    let minDist = Math.abs(hz - table[0]);
+    for (let i = 1; i < table.length; i++) {
+      const dist = Math.abs(hz - table[i]);
+      if (dist < minDist) { minDist = dist; closest = i; }
+    }
+    return closest;
+  }
   const cycleFilterShortcut = joinShortcutHints(
     getShortcutHint('cycle_filter'),
     getShortcutHint('cycle_filter', (binding) => Number(binding.params?.step ?? 0) === -1),
@@ -109,9 +143,56 @@
     draftWidths = [...factoryDefaults];
     onFilterDefaults?.([...factoryDefaults]);
   }
+
+  function handleTableReset(): void {
+    const defaultWidth = 3200;
+    onFilterWidthChange(defaultWidth);
+    onIfShiftChange(0);
+  }
 </script>
 
-<div class="panel-body">
+{#if isTableMode}
+  <div class="panel-body">
+    <ValueControl
+      label="WIDTH"
+      value={hzToTableIndex(filterWidth)}
+      min={0}
+      max={(filterConfig?.table?.length ?? 1) - 1}
+      step={1}
+      unit="Hz"
+      renderer="hbar"
+      accentColor="var(--v2-accent-cyan)"
+      displayFn={(idx) => formatWidthDisplay(tableIndexToHz(idx))}
+      onChange={(idx) => onFilterWidthChange(tableIndexToHz(idx))}
+      variant="hardware-illuminated"
+    />
+
+    <ValueControl
+      label="IF SHIFT"
+      value={ifShift}
+      min={-1200}
+      max={1200}
+      step={20}
+      unit="Hz"
+      renderer="bipolar"
+      accentColor="var(--v2-accent-cyan)"
+      onChange={onIfShiftChange}
+      variant="hardware-illuminated"
+    />
+
+    <div class="filter-actions">
+      <button
+        type="button"
+        class="pbt-reset-button v2-control-button"
+        style="--control-accent:var(--v2-text-disabled); --control-active-text:var(--v2-text-bright)"
+        onclick={handleTableReset}
+      >
+        Reset
+      </button>
+    </div>
+  </div>
+{:else}
+  <div class="panel-body">
     <div class="filter-top-row">
       <div class="filter-grid">
         {#each normalizedLabels as label, index}
@@ -199,6 +280,7 @@
       </button>
     </div>
   </div>
+{/if}
 
 {#if modalOpen}
   <button
@@ -236,6 +318,20 @@
 
           {#if filterConfig?.fixed}
             <div class="modal-fixed-value">{formatWidthDisplay(draftWidths[index] ?? visibleWidths[index] ?? factoryDefaults[index])}</div>
+          {:else if isTableMode}
+            <ValueControl
+              label={label}
+              value={hzToTableIndex(draftWidths[index] ?? visibleWidths[index] ?? factoryDefaults[index])}
+              min={0}
+              max={(filterConfig?.table?.length ?? 1) - 1}
+              step={1}
+              unit="Hz"
+              renderer="hbar"
+              accentColor={currentFilter === index + 1 ? 'var(--v2-accent-cyan)' : 'var(--v2-accent-green-bright)'}
+              onChange={(idx) => handlePresetChange(index, tableIndexToHz(idx))}
+              variant="hardware-illuminated"
+              displayFn={(idx) => formatWidthDisplay(tableIndexToHz(idx))}
+            />
           {:else}
             <ValueControl
               label={label}
@@ -247,7 +343,7 @@
               renderer="hbar"
               accentColor={currentFilter === index + 1 ? 'var(--v2-accent-cyan)' : 'var(--v2-accent-green-bright)'}
               onChange={(value) => handlePresetChange(index, value)}
-            variant="hardware-illuminated"
+              variant="hardware-illuminated"
             />
           {/if}
         </div>
@@ -279,6 +375,8 @@
 
       {#if filterConfig?.fixed}
         <div class="modal-note">This mode uses fixed filter widths.</div>
+      {:else if isTableMode}
+        <div class="modal-range">Discrete: {filterConfig?.table?.length} steps, {modalMin} - {modalMax} Hz</div>
       {:else}
         <div class="modal-range">Range: {modalMin} - {modalMax} Hz · Step: {modalStep} Hz</div>
       {/if}

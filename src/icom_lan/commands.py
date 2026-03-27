@@ -45,6 +45,8 @@ __all__ = [
     "bcd_encode_value",
     "filter_hz_to_index",
     "filter_index_to_hz",
+    "table_index_to_hz",
+    "hz_to_table_index",
     "parse_civ_frame",
     # TOML canonical names (primary)
     "get_freq",
@@ -866,6 +868,36 @@ def filter_index_to_hz(index: int, *, segments: Sequence[Any]) -> int:
         if index_min <= index < next_index:
             return hz_min + ((index - index_min) * step_hz)
     raise ValueError(f"Filter width index {index} is outside the configured segments")
+
+
+def table_index_to_hz(index: int, *, table: Sequence[int]) -> int:
+    """Convert a table-based filter-width index to Hz.
+
+    Used by rigs like FTX-1 where a 2-digit code maps directly to a
+    position in a mode-dependent lookup table.
+    """
+    if not (0 <= index < len(table)):
+        raise ValueError(
+            f"Filter width index {index} is outside the table (0–{len(table) - 1})"
+        )
+    return table[index]
+
+
+def hz_to_table_index(hz: int, *, table: Sequence[int]) -> int:
+    """Convert Hz to the closest table-based filter-width index.
+
+    Returns the index whose table entry is closest to *hz*.
+    """
+    if not table:
+        raise ValueError("Filter width table is empty")
+    best_idx = 0
+    best_diff = abs(table[0] - hz)
+    for idx, entry in enumerate(table):
+        diff = abs(entry - hz)
+        if diff < best_diff:
+            best_diff = diff
+            best_idx = idx
+    return best_idx
 
 
 def parse_level_response(

@@ -68,7 +68,18 @@
       {/each}
     </div>
 
-    {#if hasDataMode && dataOptions.length > 1}
+    {#if hasDataMode && dataOptions.length === 2}
+      <HardwareButton
+        active={dataMode > 0}
+        indicator="edge-left"
+        color="red"
+        title={dataShortcut}
+        shortcutHint={dataShortcut}
+        onclick={() => onDataModeChange(dataMode > 0 ? 0 : 1)}
+      >
+        DATA
+      </HardwareButton>
+    {:else if hasDataMode && dataOptions.length > 2}
       <div class="section-label">DATA</div>
       <div class="data-grid">
         {#each dataOptions as option}
