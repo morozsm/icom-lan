@@ -1339,13 +1339,14 @@ class WebServer:
         """Extract meter calibration from radio backend or profile."""
         result: dict[str, Any] = {}
         # Try radio._config (Yaesu CAT backend)
+        # Guard: getattr on MagicMock returns MagicMock, not None — use isinstance checks
         radio_config = getattr(self._radio, "_config", None) if self._radio else None
         if radio_config is not None:
             mc = getattr(radio_config, "meter_calibrations", None)
             mr = getattr(radio_config, "meter_redlines", None)
-            if mc:
+            if isinstance(mc, dict):
                 result["meterCalibrations"] = mc
-            if mr:
+            if isinstance(mr, dict):
                 result["meterRedlines"] = mr
             if result:
                 return result
