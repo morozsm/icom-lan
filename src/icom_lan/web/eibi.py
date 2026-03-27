@@ -14,7 +14,7 @@ import json
 import logging
 import re
 import time
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -229,7 +229,9 @@ def _download_url(url: str, ua: str = "icom-lan/1.0") -> bytes:
     """Blocking download helper (run in a thread)."""
     req = Request(url, headers={"User-Agent": ua})
     with urlopen(req, timeout=_FETCH_TIMEOUT) as resp:
-        return resp.read()
+        data = resp.read()
+        assert isinstance(data, bytes)
+        return data
 
 
 # ── FCC AM/FM lookup ──
@@ -384,7 +386,9 @@ class EiBiProvider:
             with open(meta_path) as f:
                 meta = json.load(f)
             ts = meta.get("fetched_at", 0)
-            return (time.time() - ts) < _CACHE_TTL
+            age_valid = (time.time() - ts) < _CACHE_TTL
+            assert isinstance(age_valid, bool)
+            return age_valid
         except Exception:
             return False
 
@@ -447,7 +451,9 @@ class EiBiProvider:
         # Parse
         count = self._parse_csv(raw.decode("latin-1", errors="replace"))
         self._season = season
-        self._last_updated = meta["fetched_iso"]
+        fetched_iso = meta["fetched_iso"]
+        assert isinstance(fetched_iso, str)
+        self._last_updated = fetched_iso
         self._loaded = True
 
         logger.info("eibi: loaded %d stations from %s", count, season)

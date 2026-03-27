@@ -248,7 +248,7 @@ class BandPlanRegistry:
         """Return all loaded layers with metadata."""
         return sorted(
             self._layers.values(),
-            key=lambda l: -l.get("priority", 0),
+            key=lambda layer: -layer.get("priority", 0),
         )
 
     @property

@@ -757,7 +757,6 @@ class WebServer:
     async def start(self) -> None:
         """Start the HTTP/WS listener and RadioPoller (if radio is connected)."""
         # Load band plan TOML files
-        import importlib.resources
         # Try project-level band-plans/ directory first, then package fallback
         from pathlib import Path
         project_bp = Path(__file__).resolve().parents[3] / "band-plans"
@@ -804,7 +803,7 @@ class WebServer:
                     self._broadcast_state_update()
 
                 self._yaesu_poller = YaesuCatPoller(
-                    self._radio,  # type: ignore[arg-type]
+                    self._radio,
                     callback=_yaesu_state_cb,
                     command_queue=self._command_queue,
                 )
@@ -1505,7 +1504,7 @@ class WebServer:
         )
 
         # Sort by priority desc
-        layers = sorted(layers, key=lambda l: -l.get("priority", 0))
+        layers = sorted(layers, key=lambda layer: -layer.get("priority", 0))
 
         body = json.dumps(
             {"layers": layers}, separators=(",", ":")

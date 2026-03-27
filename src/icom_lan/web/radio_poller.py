@@ -38,7 +38,7 @@ from ..profiles import RadioProfile, resolve_radio_profile
 
 if TYPE_CHECKING:
     from ..radio_protocol import Radio
-    from ..radio_state import RadioState, ReceiverState
+    from ..radio_state import RadioState
 
 __all__ = [
     "RadioPoller",
