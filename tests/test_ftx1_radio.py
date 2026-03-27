@@ -885,3 +885,24 @@ async def test_set_agc(connected_radio):
     connected_radio._transport.write = AsyncMock()
     await connected_radio.set_agc(2)
     connected_radio._transport.write.assert_called_once_with("GT02;")
+
+
+# ---------------------------------------------------------------------------
+# Profile property (issue #392)
+# ---------------------------------------------------------------------------
+
+
+def test_profile_property_returns_radio_profile(radio):
+    """YaesuCatRadio.profile returns a RadioProfile instance."""
+    from icom_lan.profiles import RadioProfile
+
+    p = radio.profile
+    assert isinstance(p, RadioProfile)
+    assert p.model == "FTX-1"
+
+
+def test_profile_property_nb_nr_controls(radio):
+    """YaesuCatRadio.profile exposes NB/NR as level_is_toggle (FTX-1)."""
+    p = radio.profile
+    assert p.controls["nb"]["style"] == "level_is_toggle"
+    assert p.controls["nr"]["style"] == "level_is_toggle"

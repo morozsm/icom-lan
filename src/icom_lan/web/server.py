@@ -317,6 +317,14 @@ class WebServer:
         raw_profile = getattr(self._radio, "profile", None) if self._radio else None
         if isinstance(raw_profile, RadioProfile):
             return raw_profile
+        # Try resolving from the radio's own model name
+        radio_model = getattr(self._radio, "model", None) if self._radio else None
+        if isinstance(radio_model, str):
+            try:
+                return resolve_radio_profile(model=radio_model)
+            except KeyError:
+                pass
+        # Last resort: config default
         try:
             return resolve_radio_profile(model=self._config.radio_model)
         except KeyError:

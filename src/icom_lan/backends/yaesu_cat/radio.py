@@ -160,6 +160,11 @@ class YaesuCatRadio:
         return set(self._config.capabilities)
 
     @property
+    def profile(self) -> "RadioProfile":
+        """RadioProfile for this rig (from TOML config)."""
+        return self._config.to_profile()
+
+    @property
     def radio_state(self) -> RadioState:
         """Live radio state snapshot (updated by get_* calls)."""
         return self._state

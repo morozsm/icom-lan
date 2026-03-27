@@ -1976,6 +1976,7 @@ async def _cmd_web(radio: Radio, args: argparse.Namespace) -> int:
     if auth_token:
         config_kwargs["auth_token"] = auth_token
 
+    config_kwargs["radio_model"] = getattr(radio, "model", "IC-7610")
     config = WebConfig(**config_kwargs)
     server = WebServer(radio, config)
     if dx_cluster:

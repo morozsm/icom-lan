@@ -2708,3 +2708,52 @@ class TestScopeAdvancedCommands:
             )
         finally:
             await _close_ws(writer)
+
+
+# ---------------------------------------------------------------------------
+# _get_profile() routing tests (issue #392)
+# ---------------------------------------------------------------------------
+
+
+class TestGetProfileRouting:
+    """Unit tests for WebServer._get_profile()."""
+
+    def _make_server(self, radio=None, radio_model="IC-7610"):
+        config = WebConfig(host="127.0.0.1", port=0, radio_model=radio_model)
+        return WebServer(radio, config)
+
+    def test_resolves_ftx1_from_radio_model(self):
+        """_get_profile() uses radio.model when radio has no .profile property."""
+        from icom_lan.profiles import RadioProfile
+
+        radio = SimpleNamespace(model="FTX-1")  # no .profile attribute
+        srv = self._make_server(radio)
+        profile = srv._get_profile()
+
+        assert isinstance(profile, RadioProfile)
+        assert profile.model == "FTX-1"
+        assert profile.controls["nb"]["style"] == "level_is_toggle"
+        assert profile.controls["nr"]["style"] == "level_is_toggle"
+
+    def test_icom_radio_profile_property_takes_precedence(self):
+        """_get_profile() uses radio.profile directly when present (regression)."""
+        from icom_lan.profiles import RadioProfile, resolve_radio_profile
+
+        ic7610_profile = resolve_radio_profile(model="IC-7610")
+        # Simulate IcomRadio: has .profile (RadioProfile) but .model would differ
+        radio = SimpleNamespace(profile=ic7610_profile, model="WRONG")
+        srv = self._make_server(radio)
+        profile = srv._get_profile()
+
+        assert isinstance(profile, RadioProfile)
+        assert "IC-7610" in profile.model
+
+    def test_config_fallback_when_no_radio(self):
+        """_get_profile() falls back to config radio_model when radio is None."""
+        from icom_lan.profiles import RadioProfile
+
+        srv = self._make_server(radio=None, radio_model="IC-7610")
+        profile = srv._get_profile()
+
+        assert isinstance(profile, RadioProfile)
+        assert "IC-7610" in profile.model
