@@ -64,8 +64,8 @@ describe('rawToSUnit', () => {
     expect(rawToSUnit(162)).toBe('S9');
   });
 
-  it('returns S9 for raw just above S9 but below S9+10', () => {
-    expect(rawToSUnit(170)).toBe('S9');
+  it('returns S9+ for raw just above S9 but below S9+10', () => {
+    expect(rawToSUnit(170)).toBe('S9+');
   });
 
   it('returns S9+20 for raw 202', () => {
@@ -76,40 +76,40 @@ describe('rawToSUnit', () => {
     expect(rawToSUnit(241)).toBe('S9+40');
   });
 
-  it('returns S9+50 for raw 255', () => {
-    expect(rawToSUnit(255)).toBe('S9+50');
+  it('returns S9+40 for raw 255 (max in default cal)', () => {
+    expect(rawToSUnit(255)).toBe('S9+40');
   });
 
   it('clamps out-of-range values', () => {
     expect(rawToSUnit(-5)).toBe('S0');
-    expect(rawToSUnit(999)).toBe('S9+50');
+    expect(rawToSUnit(999)).toBe('S9+40');
   });
 });
 
 // ── rawToDbm ──────────────────────────────────────────────────────────────
 
 describe('rawToDbm', () => {
-  it('returns -127 dBm at S0 (raw 0)', () => {
-    expect(rawToDbm(0)).toBe(-127);
+  it('returns -54 dBm at S0 (raw 0)', () => {
+    expect(rawToDbm(0)).toBe(-54);
   });
 
-  it('returns -73 dBm at S9 (raw 162)', () => {
-    expect(rawToDbm(162)).toBe(-73);
+  it('returns 0 dBm at S9 (raw 162)', () => {
+    expect(rawToDbm(162)).toBe(0);
   });
 
-  it('returns -53 dBm at S9+20 (raw 202)', () => {
-    expect(rawToDbm(202)).toBe(-53);
+  it('returns 20 dBm at S9+20 (raw 202)', () => {
+    expect(rawToDbm(202)).toBe(20);
   });
 
-  it('returns -23 dBm at max (raw 255)', () => {
-    expect(rawToDbm(255)).toBe(-23);
+  it('returns 40 dBm at max (raw 255)', () => {
+    expect(rawToDbm(255)).toBe(40);
   });
 
   it('interpolates between breakpoints', () => {
-    // raw 171 is halfway between 162 (-73) and 182 (-63) → raw 172 is t=0.5 → -68
+    // raw 172 is halfway between 162 (0) and 182 (10) → t=0.5 → 5
     const dbm = rawToDbm(172);
-    expect(dbm).toBeGreaterThanOrEqual(-73);
-    expect(dbm).toBeLessThanOrEqual(-63);
+    expect(dbm).toBeGreaterThanOrEqual(0);
+    expect(dbm).toBeLessThanOrEqual(10);
   });
 });
 

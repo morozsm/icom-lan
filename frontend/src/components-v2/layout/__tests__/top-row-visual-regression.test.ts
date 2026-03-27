@@ -30,6 +30,10 @@ vi.mock('$lib/stores/capabilities.svelte', () => ({
   getSupportedFilters: vi.fn(() => ['FIL1', 'FIL2', 'FIL3']),
   getAttValues: vi.fn(() => [0, 10, 20]),
   getPreValues: vi.fn(() => [0, 1, 2]),
+  getSmeterCalibration: vi.fn(() => null),
+  getSmeterRedline: vi.fn(() => null),
+  hasAnyScope: vi.fn(() => false),
+  isAudioFftScope: vi.fn(() => false),
 }));
 
 vi.mock('../../../components/spectrum/SpectrumPanel.svelte', async () => {

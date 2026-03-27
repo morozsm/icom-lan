@@ -121,6 +121,8 @@ vi.mock('$lib/stores/capabilities.svelte', () => ({
     ],
   })),
   hasDualReceiver: vi.fn(() => true),
+  getSmeterCalibration: vi.fn(() => null),
+  getSmeterRedline: vi.fn(() => null),
 }));
 
 import { getCapabilities, vfoLabel } from '$lib/stores/capabilities.svelte';

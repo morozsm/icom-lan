@@ -148,7 +148,7 @@ vi.mock('$lib/stores/capabilities.svelte', () => ({
   hasTx: vi.fn(() => true),
   hasDualReceiver: vi.fn(() => false),
   hasAudio: vi.fn(() => false),
-  hasSpectrum: vi.fn(() => false),
+  hasSpectrum: vi.fn(() => true),
   hasCapability: vi.fn(() => false),
   vfoLabel: vi.fn((slot: 'A' | 'B') => (slot === 'A' ? 'MAIN' : 'SUB')),
   getCapabilities: vi.fn(() => ({ freqRanges: [], modes: [], filters: [] })),
@@ -160,6 +160,10 @@ vi.mock('$lib/stores/capabilities.svelte', () => ({
   getPreValues: vi.fn(() => [0, 1, 2]),
   getKeyboardConfig: vi.fn(() => null),
   getVfoScheme: vi.fn(() => 'ab'),
+  getSmeterCalibration: vi.fn(() => null),
+  getSmeterRedline: vi.fn(() => null),
+  hasAnyScope: vi.fn(() => false),
+  isAudioFftScope: vi.fn(() => false),
 }));
 
 import { hasTx, hasDualReceiver } from '$lib/stores/capabilities.svelte';
