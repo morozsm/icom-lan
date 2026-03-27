@@ -113,7 +113,7 @@
     h: number,
   ): void {
     const halfBw = sampleRate / 2;
-    const labelH = 18; // space for filter width label at top
+    const labelH = 22; // space for filter width label at top
     const trapTop = labelH;
     const trapH = h - labelH;
 
@@ -152,8 +152,8 @@
     const filterHz = Math.round(200 + (animatedFilterWidth / 36) * 3800);
     ctx.fillStyle = INK;
     ctx.textAlign = 'center';
-    // "Filter:" in regular font
-    ctx.font = "bold 10px 'JetBrains Mono', 'Courier New', monospace";
+    // "Filter:" in regular font (slightly smaller than digits)
+    ctx.font = "bold 12px 'JetBrains Mono', 'Courier New', monospace";
     const prefix = 'Filter: ';
     const prefixW = ctx.measureText(prefix).width;
     // Number in segment font
@@ -161,21 +161,22 @@
     const numStr = String(filterHz);
     const numW = ctx.measureText(numStr).width;
     // "Hz" in regular font
-    ctx.font = "bold 10px 'JetBrains Mono', 'Courier New', monospace";
+    ctx.font = "bold 12px 'JetBrains Mono', 'Courier New', monospace";
     const hzW = ctx.measureText('Hz').width;
     const totalW = prefixW + numW + hzW;
     const startX = cx - totalW / 2;
+    const baseY = labelH - 6;
     // Draw prefix
     ctx.textAlign = 'left';
-    ctx.font = "bold 10px 'JetBrains Mono', 'Courier New', monospace";
-    ctx.fillText(prefix, startX, labelH - 4);
+    ctx.font = "bold 12px 'JetBrains Mono', 'Courier New', monospace";
+    ctx.fillText(prefix, startX, baseY);
     // Draw number (segment font)
     ctx.font = "bold 14px 'DSEG7 Classic', monospace";
-    ctx.fillText(numStr, startX + prefixW, labelH - 4);
+    ctx.fillText(numStr, startX + prefixW, baseY);
     // Draw "Hz"
-    ctx.font = "bold 10px 'JetBrains Mono', 'Courier New', monospace";
+    ctx.font = "bold 12px 'JetBrains Mono', 'Courier New', monospace";
     ctx.fillStyle = `${INK_A} 0.6)`;
-    ctx.fillText('Hz', startX + prefixW + numW, labelH - 4);
+    ctx.fillText('Hz', startX + prefixW + numW, baseY);
 
     // ── Draw trapezoid + whiskers (thick LCD ink) ──
     ctx.strokeStyle = INK;
