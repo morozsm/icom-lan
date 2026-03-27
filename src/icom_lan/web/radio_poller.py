@@ -1163,14 +1163,7 @@ class RadioPoller:
                     await radio.set_squelch(level, receiver=rx)
             case SetNB(on=on, receiver=rx):
                 self._ensure_receiver_supported(rx, operation="set_nb")
-                if hasattr(radio, "set_nb"):
-                    await radio.set_nb(on, receiver=rx)
-                else:
-                    await self._send_cmd(
-                        "set_nb",
-                        bytes([0x01 if on else 0x00]),
-                        receiver=rx,
-                    )
+                await radio.set_nb(on, receiver=rx)
                 if self._radio_state:
                     target = (
                         self._radio_state.sub if rx != 0 else self._radio_state.main
@@ -1181,14 +1174,7 @@ class RadioPoller:
                     self._on_state_event("nb_changed", {"on": on, "receiver": rx})
             case SetNR(on=on, receiver=rx):
                 self._ensure_receiver_supported(rx, operation="set_nr")
-                if hasattr(radio, "set_nr"):
-                    await radio.set_nr(on, receiver=rx)
-                else:
-                    await self._send_cmd(
-                        "set_nr",
-                        bytes([0x01 if on else 0x00]),
-                        receiver=rx,
-                    )
+                await radio.set_nr(on, receiver=rx)
                 if self._radio_state:
                     target = (
                         self._radio_state.sub if rx != 0 else self._radio_state.main
