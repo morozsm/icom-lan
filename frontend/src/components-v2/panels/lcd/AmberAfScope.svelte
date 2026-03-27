@@ -10,16 +10,16 @@
     filterWidth?: number;
     /** IF shift in Hz */
     ifShift?: number;
+    /** Contour level 0=off, >0=active */
+    contour?: number;
+    /** Contour center frequency offset (0-255) */
+    contourFreq?: number;
     /** Manual notch active */
     manualNotch?: boolean;
     /** Manual notch frequency (0-255 raw) */
     notchFreq?: number;
     /** Audio sample rate */
     sampleRate?: number;
-    /** Current mode */
-    mode?: string;
-    /** Compact mode (embedded in LCD) */
-    compact?: boolean;
   }
 
   let {
@@ -27,11 +27,11 @@
     onRegisterPush,
     filterWidth = 2400,
     ifShift = 0,
+    contour = 0,
+    contourFreq = 128,
     manualNotch = false,
     notchFreq = 128,
     sampleRate = 48000,
-    mode = 'USB',
-    compact = false,
   }: Props = $props();
 
   let canvas: HTMLCanvasElement;
@@ -41,18 +41,14 @@
   let visible = true;
   let latestPixels: Uint8Array | null = null;
 
-  // ── Dark scope palette (like real FTX-1 scope) ──
-  const SCOPE_BG = '#0C0C0C';
-  const BAR_COLOR_LO = 'rgba(160, 165, 170, 0.6)';   // gray bars (low)
-  const BAR_COLOR_HI = 'rgba(200, 205, 210, 0.85)';   // brighter bars (high)
-  const FILTER_ARC_COLOR = '#FFD700';                   // golden yellow
-  const FILTER_GLOW = 'rgba(255, 160, 0, 0.15)';       // orange glow under arc
-  const BORDER_COLOR = 'rgba(140, 150, 160, 0.3)';     // subtle border highlight
+  // LCD dark ink color
+  const INK = '#1A1000';
+  const INK_A = 'rgba(26, 16, 0,';
 
-  // ── Smoothing ──
+  // Smoothing
   let smoothed: Float32Array | null = null;
-  const SMOOTH_ATTACK = 0.35;
-  const SMOOTH_DECAY = 0.12;
+  const ATTACK = 0.4;
+  const DECAY = 0.15;
 
   function draw(): void {
     if (!visible) { rafId = 0; return; }
@@ -68,149 +64,170 @@
         const dpr = window.devicePixelRatio || 1;
         canvas.width = Math.round(w * dpr);
         canvas.height = Math.round(h * dpr);
-        const ctx = canvas.getContext('2d');
-        ctx?.setTransform(dpr, 0, 0, dpr, 0, 0);
+        canvas.getContext('2d')?.setTransform(dpr, 0, 0, dpr, 0, 0);
       }
     }
     if (canvas && w > 1 && h > 1) {
       const ctx = canvas.getContext('2d');
-      if (ctx) renderScope(ctx, pixels, w, h);
+      if (ctx) render(ctx, pixels, w, h);
     }
     rafId = requestAnimationFrame(draw);
   }
 
-  function renderScope(
+  function render(
     ctx: CanvasRenderingContext2D,
     pixels: Uint8Array | null,
     w: number,
     h: number,
   ): void {
-    const maxVal = 160;
     const halfBw = sampleRate / 2;
 
-    // ── Dark background ──
-    ctx.fillStyle = SCOPE_BG;
-    ctx.fillRect(0, 0, w, h);
+    // Clear to transparent (amber LCD shines through)
+    ctx.clearRect(0, 0, w, h);
 
-    // ── Subtle border highlight ──
-    ctx.strokeStyle = BORDER_COLOR;
-    ctx.lineWidth = 0.5;
-    ctx.strokeRect(0.5, 0.5, w - 1, h - 1);
+    // ── Trapezoid geometry ──
+    // Center of filter in pixel coords
+    const cx = w / 2 + (ifShift / halfBw) * (w / 2);
+    // Half-width of passband at TOP (flat top of trapezoid)
+    const topHalfW = (filterWidth / 2 / halfBw) * (w / 2);
+    // Slope: edges flare outward going down. ~30° angle
+    const slopeExtra = h * 0.55; // how much wider at bottom vs top
 
-    // ── Filter passband arc (golden U-shape at top) ──
-    const filterCenterX = w / 2 + (ifShift / halfBw) * (w / 2);
-    const filterHalfW = (filterWidth / 2 / halfBw) * (w / 2);
+    // 4 points: topLeft, topRight (flat top), botLeft, botRight (open bottom)
+    const tl = cx - topHalfW;
+    const tr = cx + topHalfW;
+    const bl = cx - topHalfW - slopeExtra;
+    const br = cx + topHalfW + slopeExtra;
 
-    // Arc: U-shape hanging from top
-    const arcLeft = filterCenterX - filterHalfW;
-    const arcRight = filterCenterX + filterHalfW;
-    const arcDepth = h * 0.35; // how deep the U dips
-
-    // Glow fill under the arc
-    const glowGrad = ctx.createLinearGradient(0, 0, 0, arcDepth + 5);
-    glowGrad.addColorStop(0, FILTER_GLOW);
-    glowGrad.addColorStop(1, 'transparent');
-    ctx.fillStyle = glowGrad;
+    // ── Draw trapezoid outline (no bottom edge) ──
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.moveTo(arcLeft, 0);
-    ctx.quadraticCurveTo(filterCenterX, arcDepth * 2, arcRight, 0);
-    ctx.lineTo(arcRight, 0);
-    ctx.closePath();
-    ctx.fill();
-
-    // Arc line
-    ctx.strokeStyle = FILTER_ARC_COLOR;
-    ctx.lineWidth = 2;
-    ctx.shadowColor = 'rgba(255, 200, 0, 0.4)';
-    ctx.shadowBlur = 4;
-    ctx.beginPath();
-    ctx.moveTo(arcLeft, 0);
-    ctx.quadraticCurveTo(filterCenterX, arcDepth * 2, arcRight, 0);
-    ctx.stroke();
-    ctx.shadowBlur = 0;
-
-    // Edges from arc down to bottom (angled sides)
-    ctx.strokeStyle = 'rgba(255, 215, 0, 0.3)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(arcLeft, 0);
-    ctx.lineTo(arcLeft - w * 0.03, h);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(arcRight, 0);
-    ctx.lineTo(arcRight + w * 0.03, h);
+    ctx.moveTo(bl, h);            // bottom-left
+    ctx.lineTo(tl, 0);            // up to top-left
+    ctx.lineTo(tr, 0);            // across top
+    ctx.lineTo(br, h);            // down to bottom-right
+    // NO closePath — open bottom
     ctx.stroke();
 
-    // ── Manual notch (sharp V) ──
-    if (manualNotch) {
-      const notchX = (notchFreq / 255) * w;
-      const notchDepth = h * 0.5;
-      ctx.strokeStyle = 'rgba(255, 80, 80, 0.7)';
+    // ── Contour (U-shape dip from top) ──
+    if (contour > 0) {
+      // Map contourFreq (0-255) to position within the top edge
+      const contourX = tl + (contourFreq / 255) * (tr - tl);
+      const depth = (contour / 255) * h * 0.4;
+      const cWidth = (tr - tl) * 0.25; // width of the U
+
+      ctx.strokeStyle = `${INK_A} 0.6)`;
       ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.moveTo(notchX - w * 0.015, 0);
-      ctx.lineTo(notchX, notchDepth);
-      ctx.lineTo(notchX + w * 0.015, 0);
+      ctx.moveTo(contourX - cWidth, 0);
+      ctx.quadraticCurveTo(contourX, depth * 2, contourX + cWidth, 0);
       ctx.stroke();
     }
 
-    // ── FFT Spectrum bars ──
-    drawFftBars(ctx, pixels, w, h, maxVal);
+    // ── Manual notch (sharp V from top) ──
+    if (manualNotch) {
+      const notchX = tl + (notchFreq / 255) * (tr - tl);
+      const depth = h * 0.55;
+      const nHalfW = (tr - tl) * 0.06;
 
-    // ── Thin baseline ──
-    ctx.strokeStyle = 'rgba(160, 165, 170, 0.2)';
-    ctx.lineWidth = 0.5;
-    ctx.beginPath();
-    ctx.moveTo(0, h - 1);
-    ctx.lineTo(w, h - 1);
-    ctx.stroke();
+      ctx.strokeStyle = `${INK_A} 0.75)`;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(notchX - nHalfW, 0);
+      ctx.lineTo(notchX, depth);
+      ctx.lineTo(notchX + nHalfW, 0);
+      ctx.stroke();
+    }
+
+    // ── FFT bars INSIDE trapezoid only ──
+    drawFft(ctx, pixels, w, h, cx, topHalfW, slopeExtra);
   }
 
-  function drawFftBars(
+  function drawFft(
     ctx: CanvasRenderingContext2D,
     pixels: Uint8Array | null,
     w: number,
     h: number,
-    maxVal: number,
+    cx: number,
+    topHalfW: number,
+    slopeExtra: number,
   ): void {
-    const barWidth = 1;
-    const barGap = 1;
-    const barStep = barWidth + barGap;
-    const numBars = Math.floor(w / barStep);
+    const maxVal = 160;
+    const barW = 2;
+    const gap = 1;
+    const step = barW + gap;
+
+    // Determine bar range: only inside trapezoid at bottom
+    const botLeft = cx - topHalfW - slopeExtra;
+    const botRight = cx + topHalfW + slopeExtra;
+    const startX = Math.max(0, Math.floor(botLeft));
+    const endX = Math.min(w, Math.ceil(botRight));
+    const numBars = Math.floor((endX - startX) / step);
+
+    if (numBars <= 0) return;
 
     if (!smoothed || smoothed.length !== numBars) {
       smoothed = new Float32Array(numBars);
     }
 
     for (let i = 0; i < numBars; i++) {
-      const x = i * barStep;
+      const x = startX + i * step;
+      const barCenterX = x + barW / 2;
 
+      // Get raw amplitude
       let rawAmp: number;
       if (pixels && pixels.length > 0) {
-        const pixIdx = Math.floor((i / numBars) * pixels.length);
-        rawAmp = Math.min(pixels[pixIdx], maxVal) / maxVal;
+        // Map bar position to FFT bin
+        const frac = (barCenterX - startX) / (endX - startX);
+        const pixIdx = Math.floor(frac * pixels.length);
+        const clamped = Math.max(0, Math.min(pixels.length - 1, pixIdx));
+        rawAmp = Math.min(pixels[clamped], maxVal) / maxVal;
       } else {
-        // No data: random low noise floor
-        rawAmp = Math.random() * 0.08 + 0.02;
+        rawAmp = Math.random() * 0.06 + 0.02;
       }
 
       // Smooth
       const prev = smoothed[i];
-      if (rawAmp > prev) {
-        smoothed[i] = prev + (rawAmp - prev) * SMOOTH_ATTACK;
-      } else {
-        smoothed[i] = prev + (rawAmp - prev) * SMOOTH_DECAY;
-      }
+      smoothed[i] = rawAmp > prev
+        ? prev + (rawAmp - prev) * ATTACK
+        : prev + (rawAmp - prev) * DECAY;
 
       const amp = smoothed[i];
-      const barH = amp * h * 0.85;
+
+      // Max bar height = clipped by trapezoid at this X
+      // At position x, the trapezoid edge is at:
+      //   left edge: y = h * (x - botLeft) / (topLeft - botLeft + slopeExtra) ... 
+      // Simpler: at x, how high is the trapezoid?
+      const distFromCenter = Math.abs(barCenterX - cx);
+      // At bottom (y=h): allowed if distFromCenter <= topHalfW + slopeExtra
+      // At top (y=0): allowed if distFromCenter <= topHalfW
+      // The trapezoid boundary at height y from bottom:
+      //   maxDist(y) = topHalfW + slopeExtra * (1 - y/h)
+      // Invert: max height for this x:
+      //   if distFromCenter <= topHalfW: full height
+      //   else: maxY = h * (1 - (distFromCenter - topHalfW) / slopeExtra)
+      let maxH: number;
+      if (distFromCenter <= topHalfW) {
+        maxH = h;
+      } else if (distFromCenter <= topHalfW + slopeExtra) {
+        maxH = h * (1 - (distFromCenter - topHalfW) / slopeExtra);
+      } else {
+        continue; // outside trapezoid
+      }
+
+      const barH = Math.min(amp * h * 0.85, maxH);
       if (barH < 1) continue;
 
       const y = h - barH;
 
-      // Color: brighter for taller bars
-      ctx.fillStyle = amp > 0.4 ? BAR_COLOR_HI : BAR_COLOR_LO;
-      ctx.fillRect(x, y, barWidth, barH);
+      // Snap to 2px grid for pixelated LCD look
+      const snapY = Math.round(y / 2) * 2;
+      const snapH = h - snapY;
+
+      const alpha = 0.35 + amp * 0.5;
+      ctx.fillStyle = `${INK_A} ${alpha})`;
+      ctx.fillRect(x, snapY, barW, snapH);
     }
   }
 
@@ -235,8 +252,7 @@
       const dpr = window.devicePixelRatio || 1;
       canvas.width = Math.round(cssWidth * dpr);
       canvas.height = Math.round(cssHeight * dpr);
-      const ctx = canvas.getContext('2d');
-      ctx?.setTransform(dpr, 0, 0, dpr, 0, 0);
+      canvas.getContext('2d')?.setTransform(dpr, 0, 0, dpr, 0, 0);
     });
     ro.observe(canvas);
 
@@ -249,17 +265,15 @@
   });
 </script>
 
-<div class="amber-af-scope">
+<div class="af-scope">
   <canvas bind:this={canvas}></canvas>
 </div>
 
 <style>
-  .amber-af-scope {
+  .af-scope {
     width: 100%;
     height: 100%;
     position: relative;
-    background: #0C0C0C;
-    border-radius: 2px;
   }
 
   canvas {

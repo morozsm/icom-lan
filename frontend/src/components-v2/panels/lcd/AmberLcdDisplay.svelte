@@ -384,15 +384,12 @@
     color: rgba(26, 16, 0, 0.6);
   }
 
-  /* ── AF Scope strip (next to VFO freq, dark like real radio) ── */
+  /* ── AF Scope strip (next to VFO freq) ── */
   .lcd-scope-strip {
     position: relative;
     z-index: 2;
     flex: 0 0 30%;
     height: 54px;
-    border: 1px solid rgba(80, 85, 90, 0.4);
-    border-radius: 3px;
-    overflow: hidden;
   }
 
   /* ── TX glow ── */
