@@ -314,10 +314,28 @@ function _applyOptimistic(name: string, params: Record<string, unknown>): void {
       }
       break;
     case 'set_nb':
-      if (typeof params.on === 'boolean') patchActiveReceiver({ nb: params.on });
+      if (typeof params.on === 'boolean') {
+        const patch: Record<string, unknown> = { nb: params.on };
+        if (!params.on) patch.nbLevel = 0;
+        patchActiveReceiver(patch);
+      }
       break;
     case 'set_nr':
-      if (typeof params.on === 'boolean') patchActiveReceiver({ nr: params.on });
+      if (typeof params.on === 'boolean') {
+        const patch: Record<string, unknown> = { nr: params.on };
+        if (!params.on) patch.nrLevel = 0;
+        patchActiveReceiver(patch);
+      }
+      break;
+    case 'set_nb_level':
+      if (typeof params.level === 'number') {
+        patchActiveReceiver({ nbLevel: params.level, nb: params.level > 0 });
+      }
+      break;
+    case 'set_nr_level':
+      if (typeof params.level === 'number') {
+        patchActiveReceiver({ nrLevel: params.level, nr: params.level > 0 });
+      }
       break;
     case 'set_af_level':
       if (typeof params.level === 'number') patchActiveReceiver({ afLevel: params.level });
