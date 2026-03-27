@@ -16,42 +16,77 @@ venv/
 .DS_Store
 Thumbs.db
 
-# Reference code (large, cloned separately)
-references/wfview/*
-# But keep IC-7610.rig for parity matrix tests
-!references/wfview/rigs/
-references/wfview/rigs/*
-!references/wfview/rigs/IC-7610.rig
+# Environment
+.env
+.env.*
+.coverage
+coverage.json
 
 # Test artifacts
 *.pcap
 *.log
-logs/
-
-# Workspace / AI agent files (not for public repo)
-AGENTS.md
-CLAUDE.md
-.claude/
-
-# Internal development docs (plans, strategy, project notes)
-docs/PROJECT.md
-docs/STRATEGY.md
-docs/ROADMAP.md
-ROADMAP.md
-ROADMAP_TESTING.md
-
-# Environment files
-.env
-.env.*
-.coverage
-dist/
 
 # MkDocs build output
 site/
+
+# Node
+node_modules/
+
+# Local config & tools
+config/
+.claude/
+.kombai/
+.firecrawl/
+.playwright-mcp/
+.copilot-tmp/
+
+# Backups (local safety copies, not for repo)
+.backups/
+rigs/.backups/
+
+# Internal dev artifacts (AI agent workspace, plans, strategies)
+AGENTS.md
+CLAUDE.md
+ROADMAP_TESTING.md
+
+# Internal docs (development-only, not published)
+docs/PROJECT.md
+docs/STRATEGY.md
+docs/ROADMAP.md
+docs/RELEASE_READINESS.md
+docs/plans/
+docs/sprints/
+docs/sessions/
+docs/reviews/
+docs/testing/
+docs/audits/
+docs/research/
 docs/issues-dump.md
+
+# Reference materials (large, cloned separately or local-only)
 references/
 
-.kombai/
+# Mockups (design artifacts, not runtime)
+mockups/
 
-.firecrawl/
-config/
+# Scripts (internal dev tools)
+scripts/
+
+# Local RAG / AI tooling
+.rag-update.sh
+.githooks/
+
+# Release process docs (internal)
+PYPI_RELEASE_CHECKLIST.md
+RELEASE_NOTES.md
+
+# Frontend internal docs
+frontend/docs/
+frontend/TOKENIZATION_SUMMARY.md
+frontend/TROUBLESHOOTING.md
+
+# Dev scripts with local credentials
+run-dev.sh
+
+# Logs
+logs/
