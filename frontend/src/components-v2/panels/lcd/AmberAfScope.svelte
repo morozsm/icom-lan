@@ -93,13 +93,13 @@
 
     // Map filter width to visual width: full audio BW = full scope width
     // But clamp so a 2.4kHz filter on 48kHz SR doesn't look tiny
-    const minTopFrac = 0.35; // minimum top width as fraction of scope
+    const minTopFrac = 0.25; // minimum top width as fraction of scope
     const rawFrac = filterWidth / sampleRate;
-    const topFrac = Math.max(minTopFrac, Math.min(0.9, rawFrac * 8));
+    const topFrac = Math.max(minTopFrac, Math.min(0.65, rawFrac * 5.5));
     const topHalfW = (topFrac * w) / 2;
 
     // Slope: legs flare outward ~30°
-    const slopeExtra = h * 0.5;
+    const slopeExtra = h * 0.35;
 
     const tl = cx - topHalfW;
     const tr = cx + topHalfW;
