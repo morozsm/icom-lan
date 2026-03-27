@@ -224,6 +224,5 @@ Unknown sections or extra fields are silently ignored (forward-compatible).
 
 ## See Also
 
-- [`rigs/_schema.md`](../../rigs/_schema.md) — complete TOML schema reference
-- [`docs/guide/rig-profiles.md`](../guide/rig-profiles.md) — guide for adding new radios
+- [`docs/guide/rig-profiles.md`](../guide/rig-profiles.md) — complete TOML schema reference and guide for adding new radios
 - [`docs/api/commands.md`](commands.md) — using `CommandMap` with command functions

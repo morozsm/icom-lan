@@ -47,8 +47,7 @@ For CI-V radios, `[radio].civ_addr` is required. For Kenwood/Yaesu, omit it.
 
 ## TOML Schema Reference
 
-See [`rigs/_schema.md`](../../rigs/_schema.md) for complete field documentation.
-Below is a practical walkthrough.
+The sections below provide complete field documentation.
 
 ## Section-by-Section Walkthrough
 
@@ -111,7 +110,7 @@ style = "toggle_and_level" # IC-7610: separate ON/OFF + level slider
 
 Styles:
 - `toggle` — ON/OFF (IC-7300 ATT, X6100 ATT)
-- `stepped` — Discrete steps with [−][dropdown][+] (IC-7610 ATT)
+- `stepped` — Discrete steps with \[−\]\[dropdown\]\[+\] (IC-7610 ATT)
 - `selector` — Dropdown/selector (FTX-1 ATT: 4 named levels)
 - `toggle_and_level` — Separate toggle + slider (IC-7610 NB/NR)
 - `level_is_toggle` — 0=OFF, >0=level (FTX-1 NB/NR)
@@ -231,7 +230,6 @@ uv run pytest tests/test_rig_multi_vendor.py -v
 
 ## See Also
 
-- [`rigs/_schema.md`](../../rigs/_schema.md) — complete TOML schema specification
 - [`docs/api/rig-loader.md`](../api/rig-loader.md) — `load_rig()` / `discover_rigs()` API
 - [`docs/guide/radios.md`](radios.md) — supported radios and backend comparison
 - [`docs/api/commands.md`](../api/commands.md) — using `CommandMap` with command functions

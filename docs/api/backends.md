@@ -12,5 +12,5 @@ The `backends` package contains radio-specific implementations of the abstract `
 
 ## See Also
 
-- [Radio Protocol](radio-protocol.md)
+- [Radio Protocol](../radio-protocol.md)
 - [Public API Surface](public-api-surface.md)

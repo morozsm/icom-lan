@@ -32,20 +32,6 @@ Adding a new radio = adding a new `.toml` file — see [Adding a New Radio](rig-
     For IC-7610 USB operation, set **Menu → Set → Connectors → CI-V → CI-V USB Port**
     to the CI-V option (`Link to [CI-V]`), not `[REMOTE]`.
 
-### IC-705
-
-- **CI-V Address:** `0xA4`
-- **Connectivity:** LAN (WiFi/Ethernet) + USB serial (CI-V)
-- **VFO scheme:** Single receiver (portable transceiver)
-- **Rig profile:** `rigs/ic705.toml`
-- **Features verified:** frequency, mode, power, S-meter, SWR, ALC, PTT, CW keying,
-  attenuator, preamp, NB, NR, APF, Twin Peak, scope/waterfall, audio RX/TX
-- **Backends:** LAN (WiFi/Ethernet) or Serial USB
-
-!!! tip "Setup Guides"
-    - **[IC-705 USB Serial Backend Setup](ic705-usb-setup.md)** — Step-by-step USB configuration
-    - Use **Menu → Set → Connectors → CI-V → CI-V USB Port** = `Link to [CI-V]`
-
 ### IC-7300
 
 - **CI-V Address:** `0x94`
@@ -75,51 +61,26 @@ Adding a new radio = adding a new `.toml` file — see [Adding a New Radio](rig-
 The Web UI automatically hides DIGI-SEL and IP+ controls when connected to an IC-7300
 (capability-based UI guards). VFO labels switch to "VFO A" / "VFO B" automatically.
 
-### IC-9700
-
-- **CI-V Address:** `0xA2`
-- **Connectivity:** LAN (Ethernet) + USB serial (CI-V)
-- **VFO scheme:** **Dual independent receivers** (MAIN/SUB)
-- **Rig profile:** `rigs/ic9700.toml`
-- **Features verified:** frequency, mode, power, S-meter, scope/waterfall, audio RX/TX (both receivers),
-  independent MAIN/SUB control, dual audio streaming
-- **Unique feature:** Only supported radio with **dual independent receivers**
-
-!!! tip "Setup Guide"
-    **[IC-9700 USB Serial & LAN Setup](ic9700-usb-setup.md)** — Comprehensive guide covering:
-    - Dual-receiver simultaneous operation
-    - Independent frequency/mode control for MAIN and SUB
-    - Serial USB and LAN Ethernet configuration
-    - Dual audio RX recipes
-
-#### IC-9700 Dual-Receiver Example
-
-```python
-# Monitor both receivers simultaneously
-main_freq = await radio.get_frequency(receiver=0)  # MAIN
-sub_freq = await radio.get_frequency(receiver=1)   # SUB
-
-# Set different frequencies on each
-await radio.set_frequency(144_100_000, receiver=0)  # MAIN: 144.1 MHz
-await radio.set_frequency(144_200_000, receiver=1)  # SUB: 144.2 MHz
-
-# Dual audio RX
-radio.start_audio_rx(callback=on_main, receiver=0)
-radio.start_audio_rx(callback=on_sub, receiver=1)
-```
-
-## Non-Icom Radios (Planned)
-
-The TOML rig profile system supports multiple protocols. These profiles exist but
-backend adapters are not yet implemented:
-
 ### Yaesu FTX-1
 
 - **Protocol:** Yaesu CAT (text)
+- **Connectivity:** USB serial
 - **Rig profile:** `rigs/ftx1.toml`
 - **Features:** 17 modes (incl. C4FM), dual RX, ATT 4 levels, 2m/70cm/HF
 - **VFO scheme:** `ab_shared` (2 receivers, 1 VFO)
-- **Status:** Profile complete, needs Yaesu CAT protocol adapter
+- **Backends:** Serial (Yaesu CAT) — full working backend
+- **Web UI:** Full spectrum/waterfall via Audio FFT Scope, controls, audio RX/TX
+- **Audio:** USB audio RX/TX supported; Audio FFT Scope provides real-time IF waterfall
+
+!!! tip "Yaesu CAT Backend"
+    The FTX-1 uses the Yaesu CAT text protocol over USB serial.
+    Full frequency, mode, PTT, and audio control is working.
+    The Web UI uses the Audio FFT Scope for spectrum display (no hardware panadapter on FTX-1).
+
+## Non-Icom Radios (Profile Only)
+
+The TOML rig profile system supports multiple protocols. These profiles exist but
+backend adapters are not yet implemented or tested:
 
 ### Xiegu X6100
 
@@ -128,7 +89,7 @@ backend adapters are not yet implemented:
 - **Rig profile:** `rigs/x6100.toml`
 - **Features:** HF + 6m, QRP 8W, built-in ATU, WiFi
 - **VFO scheme:** `ab`
-- **Status:** Profile complete. Should work with existing CI-V backend (untested).
+- **Status:** Profile only. May work with CI-V backend (untested).
 
 ### Lab599 TX-500
 
@@ -136,7 +97,40 @@ backend adapters are not yet implemented:
 - **Rig profile:** `rigs/tx500.toml`
 - **Features:** HF + 6m, QRP 10W, built-in ATU, minimal CAT (ID FA FB MD FR FT PA RA)
 - **VFO scheme:** `ab`
-- **Status:** Profile complete, needs Kenwood CAT protocol adapter
+- **Status:** Profile only. Kenwood CAT backend not yet implemented.
+
+## Has Rig Profile (Not Yet Backend-Tested)
+
+These radios have complete rig profiles and the CI-V backend should support them, but they
+have not been tested by the maintainers. Community testing and reports welcome!
+
+### IC-705
+
+- **CI-V Address:** `0xA4`
+- **Connectivity:** LAN (WiFi/Ethernet) + USB serial (CI-V)
+- **VFO scheme:** Single receiver (portable transceiver)
+- **Rig profile:** `rigs/ic705.toml`
+- **Expected features:** frequency, mode, power, S-meter, SWR, ALC, PTT, CW keying,
+  attenuator, preamp, NB, NR, APF, Twin Peak, scope/waterfall, audio RX/TX
+- **Status:** Profile complete. Backend untested — reports welcome.
+
+!!! tip "Setup Guides"
+    - **[IC-705 USB Serial Backend Setup](ic705-usb-setup.md)** — Step-by-step USB configuration
+    - Use **Menu → Set → Connectors → CI-V → CI-V USB Port** = `Link to [CI-V]`
+
+### IC-9700
+
+- **CI-V Address:** `0xA2`
+- **Connectivity:** LAN (Ethernet) + USB serial (CI-V)
+- **VFO scheme:** Dual independent receivers (MAIN/SUB)
+- **Rig profile:** `rigs/ic9700.toml`
+- **Expected features:** frequency, mode, power, S-meter, scope/waterfall, audio RX/TX,
+  independent MAIN/SUB control, dual audio streaming
+- **Status:** Profile complete. Backend untested — reports welcome.
+
+!!! tip "Setup Guide"
+    **[IC-9700 USB Serial & LAN Setup](ic9700-usb-setup.md)** — Setup guide covering
+    serial USB and LAN Ethernet configuration.
 
 ## Should Work (Untested)
 

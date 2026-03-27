@@ -349,7 +349,7 @@ ls -l /dev/cu.*
 ## See Also
 
 - [IC-7610 USB Setup](ic7610-usb-setup.md) — Similar setup for base station model
-- [Radio Protocol](../internals/radio-protocol.md) — Backend abstraction details
+- [Radio Protocol](../radio-protocol.md) — Backend abstraction details
 - [Troubleshooting](troubleshooting.md) — Common issues and solutions
 - [Backend Capabilities](radios.md) — Full capability matrix
 

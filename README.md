@@ -2,9 +2,9 @@
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-3446%20passed-brightgreen.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-3929%20passed-brightgreen.svg)](#testing)
 [![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen.svg)](#testing)
-[![Type Safety](https://img.shields.io/badge/mypy-0%20errors-blue.svg)](#testing)
+[![Type Safety](https://img.shields.io/badge/mypy-59%20errors-yellow.svg)](#testing)
 
 **Python library for controlling Icom transceivers over LAN (UDP) or USB serial.**
 
@@ -34,7 +34,8 @@ Direct connection to your radio — no wfview, hamlib, or RS-BA1 required.
 - 📡 **DX cluster integration** — real-time spot overlays on the waterfall with click-to-tune (`icom-lan web --dx-cluster dxc.nc7j.com:7373 --callsign KN4KYD`)
 - 🔌 **Hamlib NET rigctld server** — drop-in replacement for `rigctld`, works with WSJT-X, JS8Call, fldigi
 - 🎛️ **Dual-receiver support** — MAIN/SUB via Command29 (IC-7610)
-- 🎤 **Browser audio TX** — transmit from browser microphone
+- 📊 **Audio FFT Scope** — real-time FFT on USB/LAN audio for radios without hardware spectrum (Yaesu FTX-1, etc.)
+- 🖥️ **LCD display mode** — Web UI shows LCD-style layout for radios without a hardware scope
 - 📡 **UDP relay proxy** — remote access via VPN/Tailscale
 - 🔒 **Zero dependencies** — pure Python, stdlib only
 - 📝 **Type-annotated** — full `py.typed` support
@@ -45,7 +46,7 @@ Direct connection to your radio — no wfview, hamlib, or RS-BA1 required.
 |-------|----------|-----|------------|-------|
 | **IC-7610** | CI-V `0x98` | ✅ Tested | ✅ Tested | Dual receiver (MAIN/SUB) |
 | **IC-7300** | CI-V `0x94` | — | ✅ Tested | Single receiver (VFO A/B), USB-only |
-| **Yaesu FTX-1** | Yaesu CAT | — | Profile only | 17 modes, VHF/UHF, C4FM |
+| **Yaesu FTX-1** | Yaesu CAT | — | ✅ Tested | 17 modes, VHF/UHF, C4FM, Audio FFT Scope |
 | **Xiegu X6100** | CI-V `0x70` | — | Profile only | IC-705 compatible, QRP 8W, WiFi |
 | **Lab599 TX-500** | Kenwood CAT | — | Profile only | QRP 10W, minimal CAT |
 | IC-705 | CI-V `0xA4` | — | — | WiFi, should work |
@@ -344,7 +345,7 @@ ICOM_DEBUG=1 ICOM_LOG_FILE= uv run icom-lan web
 ## Testing
 
 ```bash
-# Unit tests (no radio required) — 3173 tests, 95% coverage
+# Unit tests (no radio required) — 3929 tests, 95% coverage
 pytest tests/test_*.py
 
 # Mock integration tests (full UDP protocol, no radio required)
@@ -367,9 +368,9 @@ pytest -m integration tests/integration/test_radio_integration.py::TestSoak::tes
 
 ### Test Suite Quality
 
-- **3173 tests** across 109 files (89 unit, 20 integration)
+- **3929 tests** (3929 passed, 56 skipped) across unit, integration, and mock-integration suites
 - **95% code coverage** — comprehensive protocol and runtime coverage
-- **0 mypy errors** — full type safety with protocol-based architecture
+- **59 mypy errors** — type safety regression noted; under active remediation
 - **Epic #140 complete** — 100% CI-V command coverage (134/134 commands)
 - **Epic #215 complete** — post-audit cleanup: type safety, dead code removal, API surface definition
 
