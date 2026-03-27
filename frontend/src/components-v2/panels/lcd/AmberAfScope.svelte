@@ -53,9 +53,12 @@
   const ATTACK = 0.4;
   const DECAY = 0.15;
 
-  // Trapezoid animation — smooth lerp toward target filterWidth
+  // Trapezoid animation — adaptive lerp toward target filterWidth
+  // Big jumps (fast knob turning) → fast animation to keep up
+  // Small jumps (fine tuning) → smooth slow animation for polish
   let animatedFilterWidth = $state(filterWidth);
-  const TRAP_LERP = 0.16; // lower = slower/smoother animation
+  let prevTargetFilter = filterWidth;
+  let adaptiveLerp = 0.12;
 
   function draw(): void {
     if (!visible) { rafId = 0; return; }
@@ -74,10 +77,18 @@
         canvas.getContext('2d')?.setTransform(dpr, 0, 0, dpr, 0, 0);
       }
     }
+    // Detect how fast the knob is turning (jump size since last frame)
+    if (filterWidth !== prevTargetFilter) {
+      const jump = Math.abs(filterWidth - prevTargetFilter);
+      // Big jump (>3 steps) → snap fast. Small jump → smooth
+      adaptiveLerp = jump > 3 ? 0.5 : jump > 1 ? 0.25 : 0.12;
+      prevTargetFilter = filterWidth;
+    }
+
     // Animate trapezoid toward target filter width
     const diff = filterWidth - animatedFilterWidth;
     if (Math.abs(diff) > 0.01) {
-      animatedFilterWidth += diff * TRAP_LERP;
+      animatedFilterWidth += diff * adaptiveLerp;
     } else {
       animatedFilterWidth = filterWidth;
     }
