@@ -458,6 +458,12 @@ class YaesuCatPoller:
 
         await self._radio.get_ptt()
 
+        # Filter width — in medium poll for responsive knob tracking
+        try:
+            self._radio.radio_state.main.filter_width = await self._radio.get_filter_width(0)
+        except Exception:
+            logger.debug("YaesuCatPoller: get_filter_width failed", exc_info=True)
+
         self._callback(self._radio.radio_state)
 
     async def _poll_slow(self) -> None:
@@ -507,11 +513,7 @@ class YaesuCatPoller:
         except Exception:
             logger.debug("YaesuCatPoller: get_auto_notch failed", exc_info=True)
 
-        # -- Filter width --
-        try:
-            state.main.filter_width = await radio.get_filter_width(0)
-        except Exception:
-            logger.debug("YaesuCatPoller: get_filter_width failed", exc_info=True)
+        # Filter width moved to _poll_medium for faster knob response
 
         # -- TX power --
         try:
