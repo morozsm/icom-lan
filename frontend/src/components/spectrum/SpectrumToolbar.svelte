@@ -99,7 +99,12 @@
 </script>
 
 <div class="spectrum-toolbar">
-  <div class="toolbar-group">
+  <div class="toolbar-group step-group">
+    <button
+      class="toolbar-btn small step-arrow"
+      onclick={cycleStepDown}
+      title="Decrease tuning step"
+    >◀</button>
     <button
       class="toolbar-btn step-control"
       onclick={cycleStep}
@@ -110,6 +115,11 @@
       <span class="toolbar-value">{stepLabel}</span>
       {#if autoStep}<span class="auto-badge">A</span>{/if}
     </button>
+    <button
+      class="toolbar-btn small step-arrow"
+      onclick={cycleStep}
+      title="Increase tuning step"
+    >▶</button>
   </div>
   <div class="toolbar-separator"></div>
   <div class="toolbar-group">
@@ -273,6 +283,24 @@
     color: #fbbf24;
     font-size: 9px;
     font-weight: 600;
+  }
+
+  .step-group {
+    gap: 0 !important;
+  }
+
+  .step-arrow {
+    font-size: 8px !important;
+    padding: 2px 3px !important;
+    min-width: 16px !important;
+    color: var(--text-muted) !important;
+    opacity: 0.6;
+    transition: opacity 0.15s;
+  }
+
+  .step-arrow:hover {
+    opacity: 1;
+    color: #00d4ff !important;
   }
 
   .toolbar-select {

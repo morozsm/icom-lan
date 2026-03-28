@@ -3,7 +3,7 @@
 import { radio } from './radio.svelte';
 
 /** Available tuning steps in Hz */
-export const TUNING_STEPS = [10, 50, 100, 500, 1_000, 5_000, 10_000, 25_000, 100_000] as const;
+export const TUNING_STEPS = [10, 50, 100, 250, 500, 1_000, 5_000, 10_000, 25_000, 100_000] as const;
 
 const STORAGE_STEP_KEY = 'icom-lan.tuning-step-hz';
 const STORAGE_AUTO_KEY = 'icom-lan.tuning-step-auto';
