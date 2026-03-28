@@ -1177,7 +1177,7 @@ class RadioPoller:
                     await radio.set_squelch(level, receiver=rx)
             case SetNB(on=on, receiver=rx):
                 self._ensure_receiver_supported(rx, operation="set_nb")
-                if isinstance(radio, AdvancedControlCapable):
+                if hasattr(radio, "set_nb"):
                     await radio.set_nb(on, receiver=rx)
                 if self._radio_state:
                     target = (
@@ -1189,7 +1189,7 @@ class RadioPoller:
                     self._on_state_event("nb_changed", {"on": on, "receiver": rx})
             case SetNR(on=on, receiver=rx):
                 self._ensure_receiver_supported(rx, operation="set_nr")
-                if isinstance(radio, AdvancedControlCapable):
+                if hasattr(radio, "set_nr"):
                     await radio.set_nr(on, receiver=rx)
                 if self._radio_state:
                     target = (
@@ -1213,7 +1213,7 @@ class RadioPoller:
                     self._on_state_event("ipplus_changed", {"on": on, "receiver": rx})
             case SetAttenuator(db=db, receiver=rx):
                 self._ensure_receiver_supported(rx, operation="set_attenuator")
-                if isinstance(radio, AdvancedControlCapable):
+                if hasattr(radio, "set_attenuator_level"):
                     await radio.set_attenuator_level(db, receiver=rx)
                 if self._radio_state:
                     target = (
@@ -1229,7 +1229,7 @@ class RadioPoller:
                     )
             case SetPreamp(level=level, receiver=rx):
                 self._ensure_receiver_supported(rx, operation="set_preamp")
-                if isinstance(radio, AdvancedControlCapable):
+                if hasattr(radio, "set_preamp"):
                     await radio.set_preamp(level, receiver=rx)
                 if self._radio_state:
                     target = (

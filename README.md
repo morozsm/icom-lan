@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-3929%20passed-brightgreen.svg)](#testing)
 [![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen.svg)](#testing)
-[![Type Safety](https://img.shields.io/badge/mypy-59%20errors-yellow.svg)](#testing)
+[![Type Safety](https://img.shields.io/badge/mypy-0%20errors-blue.svg)](#testing)
 
 **Python library for controlling Icom transceivers over LAN (UDP) or USB serial.**
 
@@ -370,7 +370,7 @@ pytest -m integration tests/integration/test_radio_integration.py::TestSoak::tes
 
 - **3929 tests** (3929 passed, 56 skipped) across unit, integration, and mock-integration suites
 - **95% code coverage** — comprehensive protocol and runtime coverage
-- **59 mypy errors** — type safety regression noted; under active remediation
+- **0 mypy errors** — full type safety with protocol-based architecture
 - **Epic #140 complete** — 100% CI-V command coverage (134/134 commands)
 - **Epic #215 complete** — post-audit cleanup: type safety, dead code removal, API surface definition
 
