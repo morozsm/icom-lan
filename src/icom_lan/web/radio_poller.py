@@ -60,6 +60,12 @@ __all__ = [
     "SetScopeDuringTx",
     "SetScopeCenterType",
     "SetScopeFixedEdge",
+    "SetScopeDual",
+    "SetScopeMode",
+    "SetScopeSpan",
+    "SetScopeSpeed",
+    "SetScopeRef",
+    "SetScopeHold",
     "SetAntenna1",
     "SetAntenna2",
     "SetRxAntennaAnt1",
@@ -425,6 +431,36 @@ class SetScopeFixedEdge:
 
 
 @dataclass(frozen=True, slots=True)
+class SetScopeDual:
+    dual: bool
+
+
+@dataclass(frozen=True, slots=True)
+class SetScopeMode:
+    mode: int
+
+
+@dataclass(frozen=True, slots=True)
+class SetScopeSpan:
+    span: int
+
+
+@dataclass(frozen=True, slots=True)
+class SetScopeSpeed:
+    speed: int
+
+
+@dataclass(frozen=True, slots=True)
+class SetScopeRef:
+    ref: int
+
+
+@dataclass(frozen=True, slots=True)
+class SetScopeHold:
+    on: bool
+
+
+@dataclass(frozen=True, slots=True)
 class SetPowerstat:
     on: bool
 
@@ -626,6 +662,12 @@ Command = (
     | SetScopeDuringTx
     | SetScopeCenterType
     | SetScopeFixedEdge
+    | SetScopeDual
+    | SetScopeMode
+    | SetScopeSpan
+    | SetScopeSpeed
+    | SetScopeRef
+    | SetScopeHold
     | SetPowerstat
     | SetAntenna1
     | SetAntenna2
@@ -1712,6 +1754,24 @@ class RadioPoller:
                         start_hz=start_hz,
                         end_hz=end_hz,
                     )
+            case SetScopeDual(dual=dual):
+                if isinstance(radio, AdvancedControlCapable):
+                    await radio.set_scope_dual(dual)
+            case SetScopeMode(mode=mode):
+                if isinstance(radio, AdvancedControlCapable):
+                    await radio.set_scope_mode(mode)
+            case SetScopeSpan(span=span):
+                if isinstance(radio, AdvancedControlCapable):
+                    await radio.set_scope_span(span)
+            case SetScopeSpeed(speed=speed):
+                if isinstance(radio, AdvancedControlCapable):
+                    await radio.set_scope_speed(speed)
+            case SetScopeRef(ref=ref):
+                if isinstance(radio, AdvancedControlCapable):
+                    await radio.set_scope_ref(ref)
+            case SetScopeHold(on=on):
+                if isinstance(radio, AdvancedControlCapable):
+                    await radio.set_scope_hold(on)
             case SetPowerstat(on=on):
                 if isinstance(radio, PowerControlCapable):
                     await radio.set_powerstat(on)

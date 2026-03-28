@@ -87,6 +87,12 @@ from .radio_poller import (
     SetScopeCenterType,
     SetScopeDuringTx,
     SetScopeFixedEdge,
+    SetScopeDual,
+    SetScopeMode,
+    SetScopeSpan,
+    SetScopeSpeed,
+    SetScopeRef,
+    SetScopeHold,
     SetSplit,
     SetSquelch,
     SetSystemDate,
@@ -221,6 +227,12 @@ class ControlHandler:
             "set_scope_during_tx",
             "set_scope_center_type",
             "set_scope_fixed_edge",
+            "set_scope_dual",
+            "set_scope_mode",
+            "set_scope_span",
+            "set_scope_speed",
+            "set_scope_ref",
+            "set_scope_hold",
             "set_antenna_1",
             "set_antenna_2",
             "set_rx_antenna_ant1",
@@ -1111,6 +1123,36 @@ class ControlHandler:
                 self._ensure_capability("scope", "set_scope_fixed_edge")
                 q.put(SetScopeFixedEdge(edge, start_hz, end_hz))
                 return {"edge": edge, "start_hz": start_hz, "end_hz": end_hz}
+            case "set_scope_dual":
+                dual = bool(params["dual"])
+                self._ensure_capability("scope", "set_scope_dual")
+                q.put(SetScopeDual(dual))
+                return {"dual": dual}
+            case "set_scope_mode":
+                mode = int(params["mode"])
+                self._ensure_capability("scope", "set_scope_mode")
+                q.put(SetScopeMode(mode))
+                return {"mode": mode}
+            case "set_scope_span":
+                span = int(params["span"])
+                self._ensure_capability("scope", "set_scope_span")
+                q.put(SetScopeSpan(span))
+                return {"span": span}
+            case "set_scope_speed":
+                speed = int(params["speed"])
+                self._ensure_capability("scope", "set_scope_speed")
+                q.put(SetScopeSpeed(speed))
+                return {"speed": speed}
+            case "set_scope_ref":
+                ref = int(params["ref"])
+                self._ensure_capability("scope", "set_scope_ref")
+                q.put(SetScopeRef(ref))
+                return {"ref": ref}
+            case "set_scope_hold":
+                on = bool(params["on"])
+                self._ensure_capability("scope", "set_scope_hold")
+                q.put(SetScopeHold(on))
+                return {"on": on}
             case "set_antenna_1":
                 on = bool(params.get("on", False))
                 q.put(SetAntenna1(on))
