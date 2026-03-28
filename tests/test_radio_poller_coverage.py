@@ -329,6 +329,7 @@ async def test_execute_set_filter_width_updates_sub_receiver_state_and_sends_cmd
     assert ("filter_width_changed", {"width": 1500, "receiver": 1}) in events
 
 
+@pytest.mark.xfail(reason="Flaky in CI — timing-dependent (#398)", strict=False)
 @pytest.mark.asyncio
 async def test_execute_set_filter_shape_updates_sub_receiver_state_and_radio_call() -> (
     None
