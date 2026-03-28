@@ -1757,21 +1757,39 @@ class RadioPoller:
             case SetScopeDual(dual=dual):
                 if isinstance(radio, AdvancedControlCapable):
                     await radio.set_scope_dual(dual)
+                    if self._radio_state:
+                        self._radio_state.scope_controls.dual = dual
+                    self.bump_revision()
             case SetScopeMode(mode=mode):
                 if isinstance(radio, AdvancedControlCapable):
                     await radio.set_scope_mode(mode)
+                    if self._radio_state:
+                        self._radio_state.scope_controls.mode = mode
+                    self.bump_revision()
             case SetScopeSpan(span=span):
                 if isinstance(radio, AdvancedControlCapable):
                     await radio.set_scope_span(span)
+                    if self._radio_state:
+                        self._radio_state.scope_controls.span = span
+                    self.bump_revision()
             case SetScopeSpeed(speed=speed):
                 if isinstance(radio, AdvancedControlCapable):
                     await radio.set_scope_speed(speed)
+                    if self._radio_state:
+                        self._radio_state.scope_controls.speed = speed
+                    self.bump_revision()
             case SetScopeRef(ref=ref):
                 if isinstance(radio, AdvancedControlCapable):
                     await radio.set_scope_ref(ref)
+                    if self._radio_state:
+                        self._radio_state.scope_controls.ref_db = float(ref)
+                    self.bump_revision()
             case SetScopeHold(on=on):
                 if isinstance(radio, AdvancedControlCapable):
                     await radio.set_scope_hold(on)
+                    if self._radio_state:
+                        self._radio_state.scope_controls.hold = on
+                    self.bump_revision()
             case SetPowerstat(on=on):
                 if isinstance(radio, PowerControlCapable):
                     await radio.set_powerstat(on)
