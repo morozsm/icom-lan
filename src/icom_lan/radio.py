@@ -3615,6 +3615,22 @@ class Icom7610CoreRadio:
             state["attenuator"] = self._attenuator_state
         if self._preamp_level is not None:
             state["preamp"] = self._preamp_level
+        try:
+            state["vox"] = await self.get_vox()
+        except Exception:
+            logger.debug("snapshot: get_vox failed", exc_info=True)
+        try:
+            state["data_mode"] = await self.get_data_mode()
+        except Exception:
+            logger.debug("snapshot: get_data_mode failed", exc_info=True)
+        try:
+            state["data_off_mod_input"] = await self.get_data_off_mod_input()
+        except Exception:
+            logger.debug("snapshot: get_data_off_mod_input failed", exc_info=True)
+        try:
+            state["data1_mod_input"] = await self.get_data1_mod_input()
+        except Exception:
+            logger.debug("snapshot: get_data1_mod_input failed", exc_info=True)
 
         return state
 
@@ -3666,6 +3682,34 @@ class Icom7610CoreRadio:
                 await self.set_preamp(int(cast(int, state["preamp"])))
             except Exception:
                 logger.debug("restore_state: set_preamp failed", exc_info=True)
+        if "vox" in state:
+            try:
+                await self.set_vox(bool(state["vox"]))
+            except Exception:
+                logger.debug("restore_state: set_vox failed", exc_info=True)
+        if "data_mode" in state:
+            try:
+                await self.set_data_mode(bool(state["data_mode"]))
+            except Exception:
+                logger.debug("restore_state: set_data_mode failed", exc_info=True)
+        if "data_off_mod_input" in state:
+            try:
+                await self.set_data_off_mod_input(
+                    int(cast(int, state["data_off_mod_input"]))
+                )
+            except Exception:
+                logger.debug(
+                    "restore_state: set_data_off_mod_input failed", exc_info=True
+                )
+        if "data1_mod_input" in state:
+            try:
+                await self.set_data1_mod_input(
+                    int(cast(int, state["data1_mod_input"]))
+                )
+            except Exception:
+                logger.debug(
+                    "restore_state: set_data1_mod_input failed", exc_info=True
+                )
 
     async def run_state_transaction(
         self,

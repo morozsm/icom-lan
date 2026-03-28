@@ -747,6 +747,25 @@ async def test_snapshot_state_uses_cache_on_failure(
     assert snap.get("power") == 100
 
 
+async def test_snapshot_state_includes_packet_data_settings(
+    radio: IcomRadio, mock_transport: MockTransport
+) -> None:
+    radio.get_freq = AsyncMock(return_value=14_074_000)
+    radio.get_mode_info = AsyncMock(return_value=(Mode.FM, 1))
+    radio.get_rf_power = AsyncMock(return_value=25)
+    radio.get_vox = AsyncMock(return_value=False)
+    radio.get_data_mode = AsyncMock(return_value=True)
+    radio.get_data_off_mod_input = AsyncMock(return_value=3)
+    radio.get_data1_mod_input = AsyncMock(return_value=4)
+
+    snap = await radio.snapshot_state()
+
+    assert snap["vox"] is False
+    assert snap["data_mode"] is True
+    assert snap["data_off_mod_input"] == 3
+    assert snap["data1_mod_input"] == 4
+
+
 # ---------------------------------------------------------------------------
 # restore_state() (lines 1514-1559)
 # ---------------------------------------------------------------------------
@@ -759,6 +778,10 @@ async def test_restore_state_calls_set_methods(
     set_freq_called = False
     set_mode_called = False
     set_power_called = False
+    set_vox_called = False
+    set_data_mode_called = False
+    set_data_off_called = False
+    set_data1_called = False
 
     async def mock_set_freq(hz: int) -> None:
         nonlocal set_freq_called
@@ -772,6 +795,22 @@ async def test_restore_state_calls_set_methods(
         nonlocal set_power_called
         set_power_called = True
 
+    async def mock_set_vox(on: bool) -> None:
+        nonlocal set_vox_called
+        set_vox_called = True
+
+    async def mock_set_data_mode(on: bool) -> None:
+        nonlocal set_data_mode_called
+        set_data_mode_called = True
+
+    async def mock_set_data_off(source: int) -> None:
+        nonlocal set_data_off_called
+        set_data_off_called = True
+
+    async def mock_set_data1(source: int) -> None:
+        nonlocal set_data1_called
+        set_data1_called = True
+
     with (
         patch.object(radio, "set_freq", side_effect=mock_set_freq),
         patch.object(radio, "set_mode", side_effect=mock_set_mode),
@@ -780,6 +819,10 @@ async def test_restore_state_calls_set_methods(
         patch.object(radio, "set_vfo", new=AsyncMock()),
         patch.object(radio, "set_attenuator", new=AsyncMock()),
         patch.object(radio, "set_preamp", new=AsyncMock()),
+        patch.object(radio, "set_vox", side_effect=mock_set_vox),
+        patch.object(radio, "set_data_mode", side_effect=mock_set_data_mode),
+        patch.object(radio, "set_data_off_mod_input", side_effect=mock_set_data_off),
+        patch.object(radio, "set_data1_mod_input", side_effect=mock_set_data1),
     ):
         state = {
             "frequency": 14_074_000,
@@ -788,12 +831,20 @@ async def test_restore_state_calls_set_methods(
             "power": 128,
             "split": False,
             "vfo": "VFOA",
+            "vox": False,
+            "data_mode": True,
+            "data_off_mod_input": 3,
+            "data1_mod_input": 4,
         }
         await radio.restore_state(state)
 
     assert set_freq_called
     assert set_mode_called
     assert set_power_called
+    assert set_vox_called
+    assert set_data_mode_called
+    assert set_data_off_called
+    assert set_data1_called
 
 
 async def test_restore_state_ignores_set_failure(
@@ -812,6 +863,10 @@ async def test_restore_state_ignores_set_failure(
         patch.object(radio, "set_vfo", side_effect=failing),
         patch.object(radio, "set_attenuator", side_effect=failing),
         patch.object(radio, "set_preamp", side_effect=failing),
+        patch.object(radio, "set_vox", side_effect=failing),
+        patch.object(radio, "set_data_mode", side_effect=failing),
+        patch.object(radio, "set_data_off_mod_input", side_effect=failing),
+        patch.object(radio, "set_data1_mod_input", side_effect=failing),
     ):
         state = {
             "frequency": 14_074_000,
@@ -822,6 +877,10 @@ async def test_restore_state_ignores_set_failure(
             "vfo": "VFOA",
             "attenuator": True,
             "preamp": 1,
+            "vox": True,
+            "data_mode": True,
+            "data_off_mod_input": 3,
+            "data1_mod_input": 4,
         }
         # Must not raise
         await radio.restore_state(state)
