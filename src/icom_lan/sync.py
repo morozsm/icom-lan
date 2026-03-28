@@ -17,9 +17,13 @@ import warnings
 from typing import Any, Callable, Coroutine, TypeVar
 
 from .audio import AudioPacket
+from .ic705 import (
+    prepare_ic705_data_profile as _prepare_ic705_data_profile,
+    restore_ic705_data_profile as _restore_ic705_data_profile,
+)
 from .radio import IcomRadio as _AsyncIcomRadio  # noqa: TID251
 from .radio_protocol import MetersCapable, PowerControlCapable
-from .types import AudioCapabilities, AudioCodec, Mode
+from .types import AudioCapabilities, AudioCodec, Mode, ScopeCompletionPolicy
 
 T = TypeVar("T")
 
@@ -275,6 +279,45 @@ class IcomRadio:
     def restore_state(self, state: dict[str, object]) -> None:
         """Best-effort restore of snapshot_state()."""
         self._run(self._radio.restore_state(state))
+
+    def prepare_ic705_data_profile(
+        self,
+        *,
+        frequency_hz: int,
+        mode: str = "FM",
+        data_off_mod_input: int | None = None,
+        data1_mod_input: int | None = None,
+        disable_vox: bool = True,
+        squelch_level: int | None = 0,
+        enable_scope: bool = False,
+        scope_output: bool = False,
+        scope_policy: ScopeCompletionPolicy | str = ScopeCompletionPolicy.FAST,
+        scope_timeout: float = 5.0,
+        scope_mode: int | None = 0,
+        scope_span: int | None = 7,
+    ) -> dict[str, object]:
+        """Prepare the radio for IC-705 data/packet workflows and return a snapshot."""
+        return self._run(
+            _prepare_ic705_data_profile(
+                self._radio,
+                frequency_hz=frequency_hz,
+                mode=mode,
+                data_off_mod_input=data_off_mod_input,
+                data1_mod_input=data1_mod_input,
+                disable_vox=disable_vox,
+                squelch_level=squelch_level,
+                enable_scope=enable_scope,
+                scope_output=scope_output,
+                scope_policy=scope_policy,
+                scope_timeout=scope_timeout,
+                scope_mode=scope_mode,
+                scope_span=scope_span,
+            )
+        )
+
+    def restore_ic705_data_profile(self, snapshot: dict[str, object]) -> None:
+        """Restore a snapshot from :meth:`prepare_ic705_data_profile`."""
+        self._run(_restore_ic705_data_profile(self._radio, snapshot))
 
     # ------------------------------------------------------------------
     # CW

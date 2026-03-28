@@ -53,6 +53,7 @@ from .radio_protocol import (
 from .radio_state import RadioState
 from .profiles import RadioProfile, get_radio_profile, resolve_radio_profile
 from .radios import RADIOS, RadioModel, get_civ_addr, IC_7610_ADDR
+from .ic705 import prepare_ic705_data_profile, restore_ic705_data_profile
 from .backends import BackendConfig, LanBackendConfig, SerialBackendConfig, create_radio
 from .commands import (
     CONTROLLER_ADDR,
@@ -165,6 +166,8 @@ __all__ = [
     "RadioModel",
     "get_civ_addr",
     "IC_7610_ADDR",
+    "prepare_ic705_data_profile",
+    "restore_ic705_data_profile",
     # --- Capability protocols ---
     "AudioCapable",
     "ScopeCapable",
