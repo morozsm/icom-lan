@@ -50,7 +50,6 @@ CLAUDE.md
 ROADMAP_TESTING.md
 
 # Internal docs (development-only, not published)
-docs/PROJECT.md
 docs/STRATEGY.md
 docs/ROADMAP.md
 docs/RELEASE_READINESS.md
@@ -61,7 +60,6 @@ docs/reviews/
 docs/testing/
 docs/audits/
 docs/research/
-docs/parity/
 docs/releases/
 docs/issues-dump.md
 
