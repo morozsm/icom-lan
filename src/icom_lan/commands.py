@@ -122,6 +122,8 @@ __all__ = [
     "set_nb_depth",
     "get_nb_width",
     "set_nb_width",
+    "get_vox_delay",
+    "set_vox_delay",
     "get_af_mute",
     "set_af_mute",
     # Squelch (TOML canonical)
@@ -398,6 +400,7 @@ _CTL_MEM_REF_ADJUST = b"\x00\x70"
 _CTL_MEM_DASH_RATIO = b"\x02\x28"
 _CTL_MEM_NB_DEPTH = b"\x02\x90"
 _CTL_MEM_NB_WIDTH = b"\x02\x91"
+_CTL_MEM_VOX_DELAY = b"\x02\x92"
 _CTL_MEM_DATA_OFF_MOD_INPUT = b"\x00\x91"
 _CTL_MEM_DATA1_MOD_INPUT = b"\x00\x92"
 _CTL_MEM_DATA2_MOD_INPUT = b"\x00\x93"
@@ -2984,6 +2987,49 @@ def set_nb_width(
         byte_count=2,
         cmd_map=cmd_map,
         cmd_name="set_nb_width",
+    )
+
+
+def get_vox_delay(
+    to_addr: int,
+    from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+) -> bytes:
+    """Build a read VOX Delay command (0x1A 0x05 0x02 0x92).
+
+    Returns:
+        CI-V frame bytes. Response value: 0-20 (0.0-2.0 sec in 0.1s steps).
+    """
+    return _build_ctl_mem_get(
+        _CTL_MEM_VOX_DELAY,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        cmd_map=cmd_map,
+        cmd_name="get_vox_delay",
+    )
+
+
+def set_vox_delay(
+    value: int,
+    to_addr: int,
+    from_addr: int = CONTROLLER_ADDR,
+    cmd_map: CommandMap | None = None,
+) -> bytes:
+    """Build a set VOX Delay command (0x1A 0x05 0x02 0x92).
+
+    Args:
+        value: Delay value 0-20 (0.0-2.0 sec in 0.1s steps).
+    """
+    if not 0 <= value <= 20:
+        raise ValueError(f"VOX Delay must be 0-20, got {value}")
+    return _build_ctl_mem_set(
+        _CTL_MEM_VOX_DELAY,
+        value,
+        to_addr=to_addr,
+        from_addr=from_addr,
+        byte_count=1,
+        cmd_map=cmd_map,
+        cmd_name="set_vox_delay",
     )
 
 

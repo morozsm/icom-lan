@@ -89,6 +89,7 @@ from .commands import (
     get_key_speed,
     get_lan_mod_level,
     get_manual_notch,
+    get_manual_notch_width,
     get_mic_gain,
     get_mode,
     get_monitor,
@@ -129,6 +130,7 @@ from .commands import (
     get_various_squelch,
     get_vd_meter,
     get_vox,
+    get_vox_delay,
     get_vox_gain,
     get_xfc_status,
     parse_ack_nak,
@@ -206,6 +208,7 @@ from .commands import (
     set_key_speed,
     set_lan_mod_level,
     set_manual_notch,
+    set_manual_notch_width,
     set_mic_gain,
     set_mode,
     set_monitor,
@@ -239,6 +242,7 @@ from .commands import (
     set_usb_mod_level,
     set_utc_offset,
     set_vox,
+    set_vox_delay,
     set_vox_gain,
     set_xfc_status,
     stop_cw,
@@ -2301,6 +2305,23 @@ class Icom7610CoreRadio:
         """Set NB width (0-255)."""
         await self._send_fire_and_forget(set_nb_width(value, to_addr=self._radio_addr))
 
+    async def get_vox_delay(self) -> int:
+        """Read VOX delay (0-20, units of 0.1s)."""
+        return await self._get_bcd_level(
+            get_vox_delay(to_addr=self._radio_addr),
+            key="get_vox_delay",
+            command=0x1A,
+            sub=0x05,
+            prefix=b"\x02\x92",
+            bcd_bytes=1,
+        )
+
+    async def set_vox_delay(self, level: int) -> None:
+        """Set VOX delay (0-20, units of 0.1s)."""
+        await self._send_fire_and_forget(
+            set_vox_delay(level, to_addr=self._radio_addr)
+        )
+
     async def get_af_mute(self, receiver: int = RECEIVER_MAIN) -> bool:
         """Read AF mute status."""
         self._require_receiver(receiver, operation="get_af_mute")
@@ -2502,6 +2523,33 @@ class Icom7610CoreRadio:
         )
         await self._send_fire_and_forget(
             set_manual_notch(on, to_addr=self._radio_addr, receiver=receiver)
+        )
+
+    async def get_manual_notch_width(self, receiver: int = RECEIVER_MAIN) -> int:
+        """Read manual notch width (0=WIDE, 1=MID, 2=NAR)."""
+        self._require_receiver(receiver, operation="get_manual_notch_width")
+        self._require_cmd29_route(
+            0x16, 0x57, receiver=receiver, operation="get_manual_notch_width"
+        )
+        civ = get_manual_notch_width(to_addr=self._radio_addr, receiver=receiver)
+        return await self._get_bcd_level(
+            civ,
+            key=f"get_manual_notch_width:{receiver}",
+            command=0x16,
+            sub=0x57,
+            bcd_bytes=1,
+        )
+
+    async def set_manual_notch_width(
+        self, value: int, receiver: int = RECEIVER_MAIN
+    ) -> None:
+        """Set manual notch width (0=WIDE, 1=MID, 2=NAR)."""
+        self._require_receiver(receiver, operation="set_manual_notch_width")
+        self._require_cmd29_route(
+            0x16, 0x57, receiver=receiver, operation="set_manual_notch_width"
+        )
+        await self._send_fire_and_forget(
+            set_manual_notch_width(value, to_addr=self._radio_addr, receiver=receiver)
         )
 
     async def get_twin_peak_filter(self, receiver: int = RECEIVER_MAIN) -> bool:

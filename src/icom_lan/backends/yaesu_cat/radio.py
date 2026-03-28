@@ -1061,3 +1061,118 @@ class YaesuCatRadio:
     async def set_agc(self, mode: int, receiver: int = 0) -> None:
         """Set AGC mode (GT0, 0–6)."""
         await self._write("set_agc", mode=str(mode))
+
+    # -- Key speed (KS) -------------------------------------------------------
+
+    async def get_key_speed(self) -> int:
+        """Get CW keyer speed in WPM (KS)."""
+        result = await self._query("get_keyer_speed")
+        return int(result["wpm"])
+
+    async def set_key_speed(self, speed: int) -> None:
+        """Set CW keyer speed in WPM (KS)."""
+        await self._write("set_keyer_speed", wpm=speed)
+
+    # -- APF / Twin Peak (not supported on Yaesu) -----------------------------
+
+    async def set_audio_peak_filter(self, mode: int, receiver: int = 0) -> None:
+        raise NotImplementedError("APF not supported on Yaesu radios")
+
+    async def get_audio_peak_filter(self, receiver: int = 0) -> int:
+        raise NotImplementedError("APF not supported on Yaesu radios")
+
+    async def set_twin_peak_filter(self, on: bool, receiver: int = 0) -> None:
+        raise NotImplementedError("Twin Peak not supported on Yaesu radios")
+
+    async def get_twin_peak_filter(self, receiver: int = 0) -> bool:
+        raise NotImplementedError("Twin Peak not supported on Yaesu radios")
+
+    # -- SSB TX bandwidth (not supported) -------------------------------------
+
+    async def set_ssb_tx_bandwidth(self, value: int) -> None:
+        raise NotImplementedError("SSB TX bandwidth not supported on this radio")
+
+    async def get_ssb_tx_bandwidth(self) -> int:
+        raise NotImplementedError("SSB TX bandwidth not supported on this radio")
+
+    # -- Manual notch width (not supported) -----------------------------------
+
+    async def set_manual_notch_width(self, value: int, receiver: int = 0) -> None:
+        raise NotImplementedError("Manual notch width not supported on this radio")
+
+    async def get_manual_notch_width(self, receiver: int = 0) -> int:
+        raise NotImplementedError("Manual notch width not supported on this radio")
+
+    # -- VOX delay (not supported) --------------------------------------------
+
+    async def set_vox_delay(self, level: int) -> None:
+        raise NotImplementedError("VOX delay not supported on this radio")
+
+    async def get_vox_delay(self) -> int:
+        raise NotImplementedError("VOX delay not supported on this radio")
+
+    # -- NB depth / width (not supported) -------------------------------------
+
+    async def set_nb_depth(self, level: int, receiver: int = 0) -> None:
+        raise NotImplementedError("NB depth not supported on this radio")
+
+    async def get_nb_depth(self, receiver: int = 0) -> int:
+        raise NotImplementedError("NB depth not supported on this radio")
+
+    async def set_nb_width(self, level: int, receiver: int = 0) -> None:
+        raise NotImplementedError("NB width not supported on this radio")
+
+    async def get_nb_width(self, receiver: int = 0) -> int:
+        raise NotImplementedError("NB width not supported on this radio")
+
+    # -- CW dash ratio (not supported) ----------------------------------------
+
+    async def set_dash_ratio(self, value: int) -> None:
+        raise NotImplementedError("CW dash ratio not supported on this radio")
+
+    async def get_dash_ratio(self) -> int:
+        raise NotImplementedError("CW dash ratio not supported on this radio")
+
+    # -- Repeater tone / TSQL toggles (not supported as direct on/off) --------
+
+    async def set_repeater_tone(self, on: bool, receiver: int = 0) -> None:
+        raise NotImplementedError("Repeater tone not supported on this radio")
+
+    async def get_repeater_tone(self, receiver: int = 0) -> bool:
+        raise NotImplementedError("Repeater tone not supported on this radio")
+
+    async def set_repeater_tsql(self, on: bool, receiver: int = 0) -> None:
+        raise NotImplementedError("TSQL not supported on this radio")
+
+    async def get_repeater_tsql(self, receiver: int = 0) -> bool:
+        raise NotImplementedError("TSQL not supported on this radio")
+
+    # -- Tone / TSQL frequencies (not supported) ------------------------------
+
+    async def set_tone_freq(self, freq_hz: int, receiver: int = 0) -> None:
+        raise NotImplementedError("Tone frequency not supported on this radio")
+
+    async def get_tone_freq(self, receiver: int = 0) -> int:
+        raise NotImplementedError("Tone frequency not supported on this radio")
+
+    async def set_tsql_freq(self, freq_hz: int, receiver: int = 0) -> None:
+        raise NotImplementedError("TSQL frequency not supported on this radio")
+
+    async def get_tsql_freq(self, receiver: int = 0) -> int:
+        raise NotImplementedError("TSQL frequency not supported on this radio")
+
+    # -- Main/Sub tracking (single-receiver Yaesu) ----------------------------
+
+    async def set_main_sub_tracking(self, on: bool) -> None:
+        raise NotImplementedError("Main/Sub tracking not supported on this radio")
+
+    async def get_main_sub_tracking(self) -> bool:
+        raise NotImplementedError("Main/Sub tracking not supported on this radio")
+
+    # -- Scan (no CAT scan commands in FTX-1 profile) -------------------------
+
+    async def scan_start(self, mode: int = 0) -> None:
+        raise NotImplementedError("Scan not supported on this radio")
+
+    async def scan_stop(self) -> None:
+        raise NotImplementedError("Scan not supported on this radio")
