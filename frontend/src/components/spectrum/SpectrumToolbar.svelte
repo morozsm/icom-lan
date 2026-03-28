@@ -100,12 +100,11 @@
     adjustTuningStep('down');
   }
 
-  // Scope controls
   const SPAN_LABELS: Record<number, string> = {
     0: '±2.5k', 1: '±5k', 2: '±10k', 3: '±25k',
     4: '±50k', 5: '±100k', 6: '±250k', 7: '±500k',
   };
-  const SPEED_LABELS: Record<number, string> = { 0: 'SLO', 1: 'MID', 2: 'FST' };
+  const SPEED_LABELS: Record<number, string> = { 0: 'FST', 1: 'MID', 2: 'SLO' };
 
   let scopeControls = $derived(radio.current?.scopeControls);
 
@@ -114,24 +113,14 @@
     sendCommand('set_scope_mode', { mode: cur === 0 ? 1 : 0 });
   }
 
-  function cycleSpanUp() {
-    const cur = scopeControls?.span ?? 0;
-    sendCommand('set_scope_span', { span: Math.min(7, cur + 1) });
+  function cycleSpan(delta: -1 | 1) {
+    const cur = scopeControls?.span ?? 3;
+    sendCommand('set_scope_span', { span: Math.max(0, Math.min(7, cur + delta)) });
   }
 
-  function cycleSpanDown() {
-    const cur = scopeControls?.span ?? 0;
-    sendCommand('set_scope_span', { span: Math.max(0, cur - 1) });
-  }
-
-  function cycleSpeedUp() {
+  function cycleSpeed(delta: -1 | 1) {
     const cur = scopeControls?.speed ?? 1;
-    sendCommand('set_scope_speed', { speed: Math.min(2, cur + 1) });
-  }
-
-  function cycleSpeedDown() {
-    const cur = scopeControls?.speed ?? 1;
-    sendCommand('set_scope_speed', { speed: Math.max(0, cur - 1) });
+    sendCommand('set_scope_speed', { speed: Math.max(0, Math.min(2, cur + delta)) });
   }
 
   function toggleHold() {
@@ -143,7 +132,8 @@
   }
 
   function switchReceiver() {
-    sendCommand('switch_scope_receiver', {});
+    const next = (scopeControls?.receiver ?? 0) === 1 ? 0 : 1;
+    sendCommand('switch_scope_receiver', { receiver: next });
   }
 </script>
 
@@ -188,21 +178,21 @@
       <button class="toolbar-btn" onclick={toggleScopeMode} title="Toggle scope mode">
         {scopeControls?.mode === 1 ? 'FIX' : 'CTR'}
       </button>
-      <button class="toolbar-btn small step-arrow" onclick={cycleSpanDown} title="Decrease span">◀</button>
-      <button class="toolbar-btn step-control" onclick={cycleSpanUp} oncontextmenu={(e) => { e.preventDefault(); cycleSpanDown(); }} title="Scope span">
+      <button class="toolbar-btn small step-arrow" onclick={() => cycleSpan(-1)} title="Decrease span">◀</button>
+      <button class="toolbar-btn step-control" onclick={() => cycleSpan(1)} title="Scope span">
         <span class="toolbar-label">SPAN</span>
         <span class="toolbar-value">{SPAN_LABELS[scopeControls?.span ?? 3] ?? '±25k'}</span>
       </button>
-      <button class="toolbar-btn small step-arrow" onclick={cycleSpanUp} title="Increase span">▶</button>
+      <button class="toolbar-btn small step-arrow" onclick={() => cycleSpan(1)} title="Increase span">▶</button>
     </div>
     <div class="toolbar-separator"></div>
     <div class="toolbar-group step-group">
-      <button class="toolbar-btn small step-arrow" onclick={cycleSpeedDown} title="Decrease speed">◀</button>
-      <button class="toolbar-btn step-control" onclick={cycleSpeedUp} oncontextmenu={(e) => { e.preventDefault(); cycleSpeedDown(); }} title="Scope sweep speed">
+      <button class="toolbar-btn small step-arrow" onclick={() => cycleSpeed(-1)} title="Decrease speed">◀</button>
+      <button class="toolbar-btn step-control" onclick={() => cycleSpeed(1)} title="Scope sweep speed">
         <span class="toolbar-label">SPD</span>
         <span class="toolbar-value">{SPEED_LABELS[scopeControls?.speed ?? 1] ?? 'MID'}</span>
       </button>
-      <button class="toolbar-btn small step-arrow" onclick={cycleSpeedUp} title="Increase speed">▶</button>
+      <button class="toolbar-btn small step-arrow" onclick={() => cycleSpeed(1)} title="Increase speed">▶</button>
       <button class="toolbar-btn" class:active={scopeControls?.hold ?? false} onclick={toggleHold} title="Scope hold">HOLD</button>
     </div>
     {#if hasDualReceiver()}
@@ -210,7 +200,7 @@
       <div class="toolbar-group">
         <button class="toolbar-btn" class:active={scopeControls?.dual ?? false} onclick={toggleDual} title="Dual scope">DUAL</button>
         <button class="toolbar-btn" onclick={switchReceiver} title="Switch scope receiver">
-          {scopeControls?.receiver === 1 ? 'S' : 'M'}
+          {scopeControls?.receiver === 1 ? 'SUB' : 'MAIN'}
         </button>
       </div>
     {/if}

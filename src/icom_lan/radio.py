@@ -3910,8 +3910,9 @@ class Icom7610CoreRadio:
     async def set_scope_dual(self, dual: bool) -> None:
         """Enable or disable dual scope mode."""
         self._check_connected()
+        receiver = self._scope_controls().receiver
         await self._send_civ_raw(
-            _scope_single_dual_cmd(dual, to_addr=self._radio_addr),
+            _scope_single_dual_cmd(dual, to_addr=self._radio_addr, receiver=receiver),
             wait_response=False,
         )
         self._scope_controls().dual = dual
@@ -3929,8 +3930,9 @@ class Icom7610CoreRadio:
     async def set_scope_mode(self, mode: int) -> None:
         """Set the scope mode (0=center, 1=fixed, 2=scroll-C, 3=scroll-F)."""
         self._check_connected()
+        receiver = self._scope_controls().receiver
         await self._send_civ_raw(
-            _scope_set_mode_cmd(mode, to_addr=self._radio_addr),
+            _scope_set_mode_cmd(mode, to_addr=self._radio_addr, receiver=receiver),
             wait_response=False,
         )
         self._scope_controls().mode = mode
@@ -3948,8 +3950,9 @@ class Icom7610CoreRadio:
     async def set_scope_span(self, span: int) -> None:
         """Set the scope span preset index (0..7)."""
         self._check_connected()
+        receiver = self._scope_controls().receiver
         await self._send_civ_raw(
-            _scope_set_span_cmd(span, to_addr=self._radio_addr),
+            _scope_set_span_cmd(span, to_addr=self._radio_addr, receiver=receiver),
             wait_response=False,
         )
         self._scope_controls().span = span
@@ -3967,8 +3970,9 @@ class Icom7610CoreRadio:
     async def set_scope_edge(self, edge: int) -> None:
         """Set the fixed-edge selection (1..4)."""
         self._check_connected()
+        receiver = self._scope_controls().receiver
         await self._send_civ_raw(
-            _scope_set_edge_cmd(edge, to_addr=self._radio_addr),
+            _scope_set_edge_cmd(edge, to_addr=self._radio_addr, receiver=receiver),
             wait_response=False,
         )
         self._scope_controls().edge = edge
@@ -3986,8 +3990,9 @@ class Icom7610CoreRadio:
     async def set_scope_hold(self, on: bool) -> None:
         """Enable or disable scope hold."""
         self._check_connected()
+        receiver = self._scope_controls().receiver
         await self._send_civ_raw(
-            _scope_set_hold_cmd(on, to_addr=self._radio_addr),
+            _scope_set_hold_cmd(on, to_addr=self._radio_addr, receiver=receiver),
             wait_response=False,
         )
         self._scope_controls().hold = on
@@ -4005,8 +4010,9 @@ class Icom7610CoreRadio:
     async def set_scope_ref(self, ref: float) -> None:
         """Set the scope reference level in dB."""
         self._check_connected()
+        receiver = self._scope_controls().receiver
         await self._send_civ_raw(
-            _scope_set_ref_cmd(ref, to_addr=self._radio_addr),
+            _scope_set_ref_cmd(ref, to_addr=self._radio_addr, receiver=receiver),
             wait_response=False,
         )
         self._scope_controls().ref_db = ref
@@ -4024,8 +4030,9 @@ class Icom7610CoreRadio:
     async def set_scope_speed(self, speed: int) -> None:
         """Set the scope speed preset (0=fast, 1=mid, 2=slow)."""
         self._check_connected()
+        receiver = self._scope_controls().receiver
         await self._send_civ_raw(
-            _scope_set_speed_cmd(speed, to_addr=self._radio_addr),
+            _scope_set_speed_cmd(speed, to_addr=self._radio_addr, receiver=receiver),
             wait_response=False,
         )
         self._scope_controls().speed = speed

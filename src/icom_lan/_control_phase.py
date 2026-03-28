@@ -63,6 +63,8 @@ class ControlPhaseRuntime:
         h._civ_recovering = False
         h._last_status_error = 0
         h._last_status_disconnected = False
+        # Re-enable queue during setup — we need status packets from radio
+        h._ctrl_transport._discard_data_packets = False
 
         _reconnect = getattr(h, "_has_connected_once", False)
         try:
@@ -211,6 +213,9 @@ class ControlPhaseRuntime:
             h._start_civ_worker()
         h._conn_state = RadioConnectionState.CONNECTED
         h._ctrl_transport.state = ConnectionState.CONNECTED
+        # Control transport queue has no consumer after setup — discard
+        # incoming data packets to prevent unbounded queue growth.
+        h._ctrl_transport._discard_data_packets = True
         self._start_token_renewal()
         if h._auto_reconnect:
             self._start_watchdog()

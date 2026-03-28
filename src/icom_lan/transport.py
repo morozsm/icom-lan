@@ -113,6 +113,13 @@ class IcomTransport:
         # Optional fast-path callback for scope data — bypasses packet queue
         self._scope_fast_path: Callable[[bytes], None] | None = None
         self._scope_dropped: int = 0  # scope packets dropped under queue pressure
+        # When True, data packets (ptype=0x00) are silently discarded instead
+        # of being queued.  Used for the control transport after connection
+        # setup completes — the radio keeps sending periodic status packets on
+        # the control port, but nobody ever reads the queue after handshake.
+        # Without this flag the queue fills up in ~27 minutes (4096 / ~2.5 pkt/s)
+        # causing a cascade of eviction warnings and watchdog reconnects.
+        self._discard_data_packets: bool = False
 
     def _default_raw_send(self, data: bytes) -> None:
         """Send raw bytes via UDP transport."""
@@ -490,6 +497,11 @@ class IcomTransport:
         # Track sequence for data packets
         if ptype == 0x00 and seq != 0:
             self._record_rx_seq(seq)
+
+        # Discard data packets when queue consumer is absent (control transport
+        # after setup).  Pings and retransmits are already handled above.
+        if self._discard_data_packets and ptype == 0x00:
+            return
 
         # Update remote_id if needed
         if self.remote_id == 0 and sender_id != 0:

@@ -4699,8 +4699,10 @@ def scope_single_dual(
     to_addr: int,
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
+    *,
+    receiver: int | None = None,
 ) -> bytes:
-    """Select scope single/dual mode (0x27 0x13 <0x00|0x01>).
+    """Select scope single/dual mode (0x27 0x13 <receiver> <0x00|0x01>).
 
     Args:
         dual: True for dual scope, False for single.
@@ -4711,14 +4713,14 @@ def scope_single_dual(
             "get_scope_single_dual",
             to_addr=to_addr,
             from_addr=from_addr,
-            data=b"\x01" if dual else b"\x00",
+            data=_scope_payload(b"\x01" if dual else b"\x00", receiver),
         )
     return build_civ_frame(
         to_addr,
         from_addr,
         _CMD_SCOPE,
         sub=_SUB_SCOPE_SINGLE_DUAL,
-        data=b"\x01" if dual else b"\x00",
+        data=_scope_payload(b"\x01" if dual else b"\x00", receiver),
     )
 
 
