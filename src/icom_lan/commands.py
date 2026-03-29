@@ -4128,22 +4128,28 @@ def scope_set_span(
 
     Args:
         span: 0–7 (span index, radio-model dependent).
+
+    The IC-7610 expects 5 BCD-encoded bytes representing the span
+    frequency in Hz (e.g. 25000 Hz → 0x00 0x02 0x50 0x00 0x00),
+    not a single index byte.
     """
     _validate_scope_range("scope span", span, 0, 7)
+    span_hz = _SCOPE_SPAN_PRESETS_HZ[span]
+    span_bcd = bcd_encode(span_hz)
     if cmd_map is not None:
         return _build_from_map(
             cmd_map,
             "get_scope_span",
             to_addr=to_addr,
             from_addr=from_addr,
-            data=_scope_payload(bytes([span]), receiver),
+            data=_scope_payload(span_bcd, receiver),
         )
     return build_civ_frame(
         to_addr,
         from_addr,
         _CMD_SCOPE,
         sub=_SUB_SCOPE_SPAN,
-        data=_scope_payload(bytes([span]), receiver),
+        data=_scope_payload(span_bcd, receiver),
     )
 
 

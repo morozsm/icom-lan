@@ -626,10 +626,11 @@ class TestScopeCommandBuilders:
         assert frame[6] == 0x02
 
     def test_scope_set_span(self) -> None:
-        frame = scope_set_span(3)
+        frame = scope_set_span(3)  # index 3 = 25000 Hz
         assert frame[4] == 0x27
         assert frame[5] == 0x15
-        assert frame[6] == 0x03
+        # BCD-encoded 25000 Hz (little-endian): 00 50 02 00 00
+        assert frame[6:11] == bytes([0x00, 0x50, 0x02, 0x00, 0x00])
 
     def test_scope_set_edge(self) -> None:
         frame = scope_set_edge(4)

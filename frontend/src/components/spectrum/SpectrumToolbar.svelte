@@ -119,8 +119,10 @@
   }
 
   function cycleSpeed(delta: -1 | 1) {
+    // speed: 0=FST, 1=MID, 2=SLO — ◀ should speed up (decrease), ▶ slow down (increase)
+    // But visually ▶ means "more/faster", so invert: ▶ = decrease speed value
     const cur = scopeControls?.speed ?? 1;
-    sendCommand('set_scope_speed', { speed: Math.max(0, Math.min(2, cur + delta)) });
+    sendCommand('set_scope_speed', { speed: Math.max(0, Math.min(2, cur - delta)) });
   }
 
   function toggleHold() {
