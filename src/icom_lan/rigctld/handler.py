@@ -19,6 +19,7 @@ import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, cast
 
+from ..commands import build_civ_frame
 from ..exceptions import ConnectionError, TimeoutError
 from ..radio_state import RadioState, ReceiverState
 from ..types import Mode
@@ -271,6 +272,45 @@ class _FallbackRigState:
     def update_swr(self, value: float) -> None:
         self.swr = value
         self.swr_ts = time.monotonic()
+
+
+# ---------------------------------------------------------------------------
+# Raw CI-V helpers
+# ---------------------------------------------------------------------------
+
+
+def _parse_raw_hex(args: tuple[str, ...]) -> bytes:
+    """Parse hex bytes from hamlib 'w' command args.
+
+    Supports two input formats:
+    - Space-separated tokens: args = ("FE", "FE", "98", "E0", "03", "FD")
+    - Backslash-escaped single arg: args = ("\\xFE\\xFE\\x98\\xE0\\x03\\xFD",)
+    """
+    if len(args) == 1 and "\\x" in args[0]:
+        # Backslash-escaped: \xFE\xFE\x98\xE0\x03\xFD
+        raw = args[0]
+        result = bytearray()
+        i = 0
+        while i < len(raw):
+            if raw[i : i + 2] == "\\x":
+                result.append(int(raw[i + 2 : i + 4], 16))
+                i += 4
+            else:
+                raise ValueError(f"Unexpected char at position {i} in {raw!r}")
+        return bytes(result)
+    # Space-separated hex tokens: FE FE 98 E0 03 FD
+    return bytes(int(h, 16) for h in args)
+
+
+def _civ_frame_to_bytes(frame: Any) -> bytes:
+    """Reconstruct raw CI-V frame bytes from a parsed CivFrame."""
+    return build_civ_frame(
+        frame.to_addr,
+        frame.from_addr,
+        frame.command,
+        sub=frame.sub,
+        data=frame.data if frame.data else None,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -818,6 +858,42 @@ class RigctldHandler:
         return RigctldResponse(values=["0"])
 
     # ------------------------------------------------------------------
+    # Raw CI-V passthrough (hamlib 'w' command)
+    # ------------------------------------------------------------------
+
+    async def _cmd_send_raw(self, cmd: RigctldCommand) -> RigctldResponse:
+        """Send raw CI-V bytes to the radio and return the raw response.
+
+        Input: space-separated hex tokens or a single backslash-escaped hex string.
+        Output: space-separated uppercase hex bytes of the radio's response,
+                or an empty response on timeout.
+        """
+        if not cmd.args:
+            return _err(HamlibError.EINVAL)
+
+        try:
+            frame_bytes = _parse_raw_hex(cmd.args)
+        except (ValueError, IndexError):
+            return _err(HamlibError.EINVAL)
+
+        send_fn = getattr(self._radio, "_send_civ_raw", None)
+        if send_fn is None:
+            return _err(HamlibError.ENIMPL)
+
+        try:
+            resp = await send_fn(frame_bytes)
+        except (TimeoutError, asyncio.TimeoutError):
+            logger.debug("send_raw: timeout — returning empty response")
+            return RigctldResponse(values=[])
+
+        if resp is None:
+            return RigctldResponse(values=[])
+
+        raw = _civ_frame_to_bytes(resp)
+        hex_str = " ".join(f"{b:02X}" for b in raw)
+        return RigctldResponse(values=[hex_str])
+
+    # ------------------------------------------------------------------
     # Dispatch table (populated after method definitions)
     # ------------------------------------------------------------------
 
@@ -850,4 +926,5 @@ RigctldHandler._DISPATCH = {
     "power2mW": RigctldHandler._cmd_power2mw,
     "mW2power": RigctldHandler._cmd_mw2power,
     "get_lock_mode": RigctldHandler._cmd_get_lock_mode,
+    "send_raw": RigctldHandler._cmd_send_raw,
 }

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from unittest.mock import AsyncMock
 
 import pytest
@@ -11,7 +12,7 @@ from icom_lan.exceptions import TimeoutError as IcomTimeoutError
 from icom_lan.radio_state import RadioState
 from icom_lan.rigctld.contract import HamlibError, RigctldCommand, RigctldConfig
 from icom_lan.rigctld.handler import RigctldHandler
-from icom_lan.types import Mode
+from icom_lan.types import CivFrame, Mode
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -1443,3 +1444,119 @@ async def test_set_func_invalid_value(
 ) -> None:
     resp = await handler.execute(set_cmd("set_func", "NB", "notanint"))
     assert resp.error == HamlibError.EINVAL
+
+
+# ---------------------------------------------------------------------------
+# send_raw ('w' command) — raw CI-V passthrough
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_send_raw_space_separated_hex(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    """Space-separated hex tokens are parsed and sent as raw bytes."""
+    response = CivFrame(to_addr=0xE0, from_addr=0x98, command=0x03, data=b"\x00\x60\x00\x00\x00")
+    mock_radio._send_civ_raw = AsyncMock(return_value=response)
+
+    resp = await handler.execute(get_cmd("send_raw", "FE", "FE", "98", "E0", "03", "FD"))
+
+    assert resp.ok
+    mock_radio._send_civ_raw.assert_awaited_once_with(b"\xFE\xFE\x98\xE0\x03\xFD")
+
+
+@pytest.mark.asyncio
+async def test_send_raw_backslash_escaped_hex(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    """Backslash-escaped single-arg hex is parsed and sent as raw bytes."""
+    response = CivFrame(to_addr=0xE0, from_addr=0x98, command=0x03, data=b"")
+    mock_radio._send_civ_raw = AsyncMock(return_value=response)
+
+    resp = await handler.execute(get_cmd("send_raw", "\\xFE\\xFE\\x98\\xE0\\x03\\xFD"))
+
+    assert resp.ok
+    mock_radio._send_civ_raw.assert_awaited_once_with(b"\xFE\xFE\x98\xE0\x03\xFD")
+
+
+@pytest.mark.asyncio
+async def test_send_raw_returns_hex_response(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    """Response CivFrame bytes are returned as space-separated uppercase hex."""
+    response = CivFrame(to_addr=0xE0, from_addr=0x98, command=0x03, data=b"\x00\x60\x00\x00\x00")
+    mock_radio._send_civ_raw = AsyncMock(return_value=response)
+
+    resp = await handler.execute(get_cmd("send_raw", "FE", "FE", "98", "E0", "03", "FD"))
+
+    assert resp.ok
+    assert resp.values == ["FE FE E0 98 03 00 60 00 00 00 FD"]
+
+
+@pytest.mark.asyncio
+async def test_send_raw_icom_timeout_returns_empty(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    """IcomTimeoutError produces empty ok response (not ETIMEOUT)."""
+    mock_radio._send_civ_raw = AsyncMock(side_effect=IcomTimeoutError("timeout"))
+
+    resp = await handler.execute(get_cmd("send_raw", "FE", "FE", "98", "E0", "03", "FD"))
+
+    assert resp.ok
+    assert resp.values == []
+
+
+@pytest.mark.asyncio
+async def test_send_raw_asyncio_timeout_returns_empty(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    """asyncio.TimeoutError also produces empty ok response."""
+    mock_radio._send_civ_raw = AsyncMock(side_effect=asyncio.TimeoutError())
+
+    resp = await handler.execute(get_cmd("send_raw", "FE", "FE", "98", "E0", "03", "FD"))
+
+    assert resp.ok
+    assert resp.values == []
+
+
+@pytest.mark.asyncio
+async def test_send_raw_none_response_returns_empty(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    """None response (fire-and-forget or no response) returns empty ok."""
+    mock_radio._send_civ_raw = AsyncMock(return_value=None)
+
+    resp = await handler.execute(get_cmd("send_raw", "FE", "FE", "98", "E0", "17", "FD"))
+
+    assert resp.ok
+    assert resp.values == []
+
+
+@pytest.mark.asyncio
+async def test_send_raw_no_args_returns_einval(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    """Missing args returns EINVAL."""
+    resp = await handler.execute(get_cmd("send_raw"))
+    assert resp.error == HamlibError.EINVAL
+
+
+@pytest.mark.asyncio
+async def test_send_raw_invalid_hex_returns_einval(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    """Malformed hex token returns EINVAL."""
+    resp = await handler.execute(get_cmd("send_raw", "GG"))
+    assert resp.error == HamlibError.EINVAL
+
+
+@pytest.mark.asyncio
+async def test_send_raw_no_send_civ_raw_returns_enimpl(config: RigctldConfig) -> None:
+    """Radio without _send_civ_raw attribute returns ENIMPL."""
+
+    class _NoRawRadio:
+        pass
+
+    handler = RigctldHandler(_NoRawRadio(), config)  # type: ignore[arg-type]
+    resp = await handler.execute(get_cmd("send_raw", "FE", "FE", "98", "E0", "03", "FD"))
+    assert resp.error == HamlibError.ENIMPL
