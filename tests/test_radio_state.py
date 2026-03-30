@@ -176,6 +176,7 @@ def test_to_dict_structure() -> None:
         "vox_on",
         "vox_gain",
         "anti_vox_gain",
+        "vox_delay",
         "ssb_tx_bandwidth",
         "ref_adjust",
         "dash_ratio",
@@ -228,6 +229,10 @@ def test_to_dict_main_keys() -> None:
         "af_mute",
         "contour",
         "if_shift",
+        "repeater_tone",
+        "repeater_tsql",
+        "tone_freq",
+        "tsql_freq",
     }
     assert set(main.keys()) == expected_keys
 

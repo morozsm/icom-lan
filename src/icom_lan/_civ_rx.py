@@ -73,6 +73,8 @@ _CMD16_RECEIVER_BOOL_FIELDS = {
     0x22: "nb",
     0x40: "nr",
     0x41: "auto_notch",
+    0x42: "repeater_tone",
+    0x43: "repeater_tsql",
     0x48: "manual_notch",
     0x4E: "digisel",
     0x4F: "twin_peak_filter",
@@ -104,6 +106,8 @@ _CMD16_NOTIFY_EVENTS = {
     0x32: "audio_peak_filter_changed",
     0x56: "filter_shape_changed",
     0x41: "auto_notch_changed",
+    0x42: "repeater_tone_changed",
+    0x43: "repeater_tsql_changed",
     0x48: "manual_notch_changed",
     0x4F: "twin_peak_filter_changed",
     0x44: "compressor_changed",
@@ -120,6 +124,7 @@ _CMD1A_CTL_MEM_LEVEL_FIELDS = {
     b"\x02\x28": ("dash_ratio", 1),
     b"\x02\x90": ("nb_depth", 1),
     b"\x02\x91": ("nb_width", 2),
+    b"\x02\x92": ("vox_delay", 1),
 }
 
 # CI-V data watchdog (wfview icomudpcivdata::watchdog)
@@ -896,6 +901,17 @@ class CivRuntime:
                     rx.data_mode = frame.data[0]
                 elif sub == 0x09:
                     rx.af_mute = parse_bool_response(frame, command=0x1A, sub=0x09)
+
+            elif cmd == 0x1B:
+                if len(frame.data) >= 3:
+                    from .commands import _decode_tone_freq
+
+                    freq_hz = _decode_tone_freq(frame.data)
+                    freq_centihz = round(freq_hz * 100)
+                    if frame.sub == 0x00:
+                        rx.tone_freq = freq_centihz
+                    elif frame.sub == 0x01:
+                        rx.tsql_freq = freq_centihz
 
             elif cmd == 0x1C and frame.sub == 0x00:
                 if frame.data:
