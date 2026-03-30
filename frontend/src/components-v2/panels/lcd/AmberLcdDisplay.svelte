@@ -99,6 +99,7 @@
   let subMode = $derived(subRx?.mode ?? '');
 
   let fftPixels = $state<Uint8Array | null>(null);
+  let fftBandwidth = $state<number | undefined>(undefined);
   let fftPush: ((data: Uint8Array) => void) | null = null;
   let showFft = $derived(isAudioFftScope());
 
@@ -128,6 +129,7 @@
       const frame = parseScopeFrame(buf);
       if (!frame) return;
       fftPixels = frame.pixels;
+      fftBandwidth = frame.endFreq > frame.startFreq ? frame.endFreq - frame.startFreq : undefined;
       fftPush?.(frame.pixels);
     });
 
@@ -208,6 +210,7 @@
             manualNotch={manualNotchOn}
             notchFreq={notchFreqRaw}
             autoNotch={notchActive}
+            bandwidth={fftBandwidth}
             {mode}
             compact
           />

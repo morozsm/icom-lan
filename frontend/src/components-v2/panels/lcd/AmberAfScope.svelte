@@ -22,6 +22,8 @@
     notchFreq?: number;
     /** Audio sample rate */
     sampleRate?: number;
+    /** Actual Hz width of the received FFT data (defaults to sampleRate) */
+    bandwidth?: number;
   }
 
   let {
@@ -35,7 +37,11 @@
     manualNotch = false,
     notchFreq = 128,
     sampleRate = 48000,
+    bandwidth,
   }: Props = $props();
+
+  // Effective bandwidth: use provided bandwidth, fall back to sampleRate
+  let effectiveBandwidth = $derived(bandwidth ?? sampleRate);
 
   let canvas: HTMLCanvasElement;
   let cssWidth = $state(1);
@@ -117,7 +123,6 @@
     w: number,
     h: number,
   ): void {
-    const halfBw = sampleRate / 2;
     const hasShift = ifShift !== 0;
     const labelH = 40; // always reserve space for two label rows
     const trapTop = labelH;
@@ -234,8 +239,8 @@
     }
 
     // ── Auto-gain AGC ──
-    const nyquist = sampleRate / 2;
-    const passbandFrac = Math.min(1, filterHz / nyquist);
+    const halfBandwidth = effectiveBandwidth / 2;
+    const passbandFrac = Math.min(1, filterHz / halfBandwidth);
     let peakVal = 1;
     if (pixels && pixels.length > 0) {
       const dcIdx = Math.floor(pixels.length / 2);
@@ -288,8 +293,8 @@
     }
 
     // Only show FFT bins within the passband (0 → passbandHz)
-    const nyquist = sampleRate / 2;
-    const passbandFrac = Math.min(1, passbandHz / nyquist);
+    const halfBandwidth = effectiveBandwidth / 2;
+    const passbandFrac = Math.min(1, passbandHz / halfBandwidth);
 
 
     for (let i = 0; i < numBars; i++) {
