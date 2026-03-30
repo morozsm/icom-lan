@@ -81,6 +81,7 @@ class AudioFftScope:
         self._avg_count = max(1, avg_count)
         self._sample_rate = sample_rate
         self._center_freq: int = 0
+        self._crop_max_hz: int | None = None
         self._callback: Callable[[ScopeFrame], None] | None = None
 
         # Pre-compute window function
@@ -129,6 +130,22 @@ class AudioFftScope:
             freq_hz: Center frequency in Hz.
         """
         self._center_freq = freq_hz
+
+    def set_mode_bandwidth(self, max_hz: int | None) -> None:
+        """Set the maximum bandwidth for cropping the FFT output.
+
+        When set, the scope will only emit bins within ±max_hz/2 of the
+        center frequency. Pass None or 0 for full 48 kHz spectrum.
+
+        Args:
+            max_hz: Maximum bandwidth in Hz, or None/0 for no crop.
+        """
+        new_val = max_hz if max_hz else None
+        if new_val != self._crop_max_hz:
+            self._crop_max_hz = new_val
+            self._avg_buf.clear()
+            self._last_frame_time = 0.0  # emit next frame immediately
+            _log.info("AudioFftScope: mode bandwidth set to %s Hz", new_val)
 
     def set_sample_rate(self, rate: int) -> None:
         """Update the audio sample rate.
@@ -228,10 +245,21 @@ class AudioFftScope:
         dc = pixels_uint8[0:1]
         symmetric = np.concatenate([negative, dc, positive])
 
-        # RF frequency mapping
-        half_bw = self._sample_rate // 2
-        start_freq = self._center_freq - half_bw
-        end_freq = self._center_freq + half_bw
+        # RF frequency mapping — optionally cropped to mode bandwidth
+        if self._crop_max_hz:
+            bin_res = self._sample_rate / self._fft_size
+            crop_half_bins = int((self._crop_max_hz / 2) / bin_res)
+            center = len(symmetric) // 2
+            lo = max(0, center - crop_half_bins)
+            hi = min(len(symmetric), center + crop_half_bins + 1)
+            symmetric = symmetric[lo:hi]
+            actual_half_hz = int(crop_half_bins * bin_res)
+            start_freq = self._center_freq - actual_half_hz
+            end_freq = self._center_freq + actual_half_hz
+        else:
+            half_bw = self._sample_rate // 2
+            start_freq = self._center_freq - half_bw
+            end_freq = self._center_freq + half_bw
 
         frame = ScopeFrame(
             receiver=0,
@@ -271,6 +299,11 @@ class AudioFftScope:
     def bin_count(self) -> int:
         """Number of pixels in output (symmetric spectrum)."""
         return self._fft_size  # rfft gives fft_size//2+1, symmetric = 2*(N/2) + 1 ≈ N
+
+    @property
+    def bandwidth_hz(self) -> int | None:
+        """Current mode bandwidth crop in Hz, or None for full spectrum."""
+        return self._crop_max_hz
 
     @property
     def frequency_resolution(self) -> float:

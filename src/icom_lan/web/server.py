@@ -440,6 +440,22 @@ class WebServer:
             if isinstance(freq, int) and freq > 0:
                 self._audio_fft_scope.set_center_freq(freq)
 
+    def _update_fft_scope_mode(self) -> None:
+        """Sync AudioFftScope bandwidth from current radio mode via rig profile."""
+        if self._audio_fft_scope is None:
+            return
+        main = getattr(self._radio_state, "main", None)
+        if main is None:
+            return
+        mode = getattr(main, "mode", None)
+        data_mode = getattr(main, "data_mode", 0)
+        profile = self._get_profile()
+        rule = profile.resolve_filter_rule(mode, data_mode=data_mode)
+        if rule is not None and rule.max_hz is not None:
+            self._audio_fft_scope.set_mode_bandwidth(rule.max_hz)
+        else:
+            self._audio_fft_scope.set_mode_bandwidth(None)
+
     # ------------------------------------------------------------------
     # RadioPoller integration
     # ------------------------------------------------------------------
@@ -479,8 +495,9 @@ class WebServer:
             return
         self._last_state_broadcast = now
 
-        # Keep audio FFT scope center freq in sync with VFO
+        # Keep audio FFT scope center freq and mode bandwidth in sync
         self._update_fft_scope_freq()
+        self._update_fft_scope_mode()
 
         body = self.build_public_state()
 
@@ -1428,7 +1445,9 @@ class WebServer:
                     "centerMode": True,
                     "amplitudeMax": 160,
                     "defaultSpan": (
-                        48000 if self._audio_fft_scope is not None else 500000
+                        (self._audio_fft_scope.bandwidth_hz or 48000)
+                        if self._audio_fft_scope is not None
+                        else 500000
                     ),
                 },
                 "audioConfig": {

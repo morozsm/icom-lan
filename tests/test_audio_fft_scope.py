@@ -389,3 +389,168 @@ class TestAudioFftScopeProtocolCompat:
 
         scope.feed_audio(pcm)
         assert len(frames) == count  # No new frames after stop
+
+
+# ── Mode bandwidth cropping ─────────────────────────────────────────────────
+
+
+class TestAudioFftScopeModeBandwidth:
+    """Test mode-bandwidth cropping via set_mode_bandwidth()."""
+
+    def _get_frame(self, scope: AudioFftScope, fft_size: int) -> ScopeFrame:
+        """Feed one FFT window of noise and return the first frame."""
+        frames: list[ScopeFrame] = []
+        scope.on_frame(frames.append)
+        pcm = _make_pcm_noise(fft_size * 2)
+        scope.feed_audio(pcm)
+        assert len(frames) >= 1, "No frames produced"
+        return frames[0]
+
+    def test_no_crop_by_default(self):
+        """Without set_mode_bandwidth, output is full symmetric spectrum."""
+        fft_size = 1024
+        scope = AudioFftScope(fft_size=fft_size, fps=100, avg_count=1)
+        scope.set_center_freq(14_074_000)
+        frame = self._get_frame(scope, fft_size)
+        expected = 2 * (fft_size // 2) + 1
+        assert len(frame.pixels) == expected
+
+    def test_bandwidth_none_means_full_spectrum(self):
+        """set_mode_bandwidth(None) is backward compatible — no crop."""
+        fft_size = 1024
+        scope = AudioFftScope(fft_size=fft_size, fps=100, avg_count=1)
+        scope.set_center_freq(14_074_000)
+        scope.set_mode_bandwidth(None)
+        frame = self._get_frame(scope, fft_size)
+        expected = 2 * (fft_size // 2) + 1
+        assert len(frame.pixels) == expected
+
+    def test_bandwidth_zero_means_full_spectrum(self):
+        """set_mode_bandwidth(0) is backward compatible — no crop."""
+        fft_size = 1024
+        scope = AudioFftScope(fft_size=fft_size, fps=100, avg_count=1)
+        scope.set_center_freq(14_074_000)
+        scope.set_mode_bandwidth(0)
+        frame = self._get_frame(scope, fft_size)
+        expected = 2 * (fft_size // 2) + 1
+        assert len(frame.pixels) == expected
+
+    def test_bandwidth_usb_3600hz(self):
+        """USB mode max_hz=3600 → ~153 bins (±76 bins × 23.4 Hz/bin)."""
+        fft_size = 2048
+        sample_rate = 48000
+        scope = AudioFftScope(fft_size=fft_size, fps=100, avg_count=1, sample_rate=sample_rate)
+        scope.set_center_freq(14_074_000)
+        scope.set_mode_bandwidth(3600)
+        frame = self._get_frame(scope, fft_size)
+
+        bin_res = sample_rate / fft_size
+        crop_half_bins = int((3600 / 2) / bin_res)
+        expected_bins = 2 * crop_half_bins + 1
+        assert len(frame.pixels) == expected_bins
+
+    def test_bandwidth_am_10000hz(self):
+        """AM mode max_hz=10000 → ~427 bins."""
+        fft_size = 2048
+        sample_rate = 48000
+        scope = AudioFftScope(fft_size=fft_size, fps=100, avg_count=1, sample_rate=sample_rate)
+        scope.set_center_freq(7_200_000)
+        scope.set_mode_bandwidth(10000)
+        frame = self._get_frame(scope, fft_size)
+
+        bin_res = sample_rate / fft_size
+        crop_half_bins = int((10000 / 2) / bin_res)
+        expected_bins = 2 * crop_half_bins + 1
+        assert len(frame.pixels) == expected_bins
+
+    def test_cropped_freq_range(self):
+        """start_freq_hz and end_freq_hz should reflect the crop."""
+        fft_size = 2048
+        sample_rate = 48000
+        center = 14_074_000
+        max_hz = 3600
+
+        scope = AudioFftScope(fft_size=fft_size, fps=100, avg_count=1, sample_rate=sample_rate)
+        scope.set_center_freq(center)
+        scope.set_mode_bandwidth(max_hz)
+        frame = self._get_frame(scope, fft_size)
+
+        bin_res = sample_rate / fft_size
+        crop_half_bins = int((max_hz / 2) / bin_res)
+        actual_half_hz = int(crop_half_bins * bin_res)
+
+        assert frame.start_freq_hz == center - actual_half_hz
+        assert frame.end_freq_hz == center + actual_half_hz
+
+    def test_full_spectrum_freq_range_unchanged(self):
+        """Without crop, start/end freq span full ±24kHz."""
+        fft_size = 1024
+        sample_rate = 48000
+        center = 14_074_000
+
+        scope = AudioFftScope(fft_size=fft_size, fps=100, avg_count=1, sample_rate=sample_rate)
+        scope.set_center_freq(center)
+        frame = self._get_frame(scope, fft_size)
+
+        assert frame.start_freq_hz == center - sample_rate // 2
+        assert frame.end_freq_hz == center + sample_rate // 2
+
+    def test_mode_switch_changes_bin_count(self):
+        """Changing bandwidth mid-stream produces frames with new bin count."""
+        fft_size = 2048
+        sample_rate = 48000
+        scope = AudioFftScope(fft_size=fft_size, fps=100, avg_count=1, sample_rate=sample_rate)
+        scope.set_center_freq(14_074_000)
+
+        frames: list[ScopeFrame] = []
+        scope.on_frame(frames.append)
+
+        # First: USB bandwidth
+        scope.set_mode_bandwidth(3600)
+        scope.feed_audio(_make_pcm_noise(fft_size * 2))
+        assert len(frames) >= 1
+        bin_res = sample_rate / fft_size
+        usb_bins = 2 * int((3600 / 2) / bin_res) + 1
+        assert len(frames[0].pixels) == usb_bins
+
+        # Switch to AM bandwidth
+        frames.clear()
+        scope.set_mode_bandwidth(10000)
+        scope.feed_audio(_make_pcm_noise(fft_size * 2))
+        assert len(frames) >= 1
+        am_bins = 2 * int((10000 / 2) / bin_res) + 1
+        assert len(frames[0].pixels) == am_bins
+
+    def test_bandwidth_hz_property(self):
+        """bandwidth_hz property reflects current setting."""
+        scope = AudioFftScope()
+        assert scope.bandwidth_hz is None
+
+        scope.set_mode_bandwidth(3600)
+        assert scope.bandwidth_hz == 3600
+
+        scope.set_mode_bandwidth(None)
+        assert scope.bandwidth_hz is None
+
+    def test_avg_buf_reset_on_bandwidth_change(self):
+        """Changing bandwidth clears averaging buffer to avoid bin-count mismatch."""
+        fft_size = 2048
+        sample_rate = 48000
+        scope = AudioFftScope(fft_size=fft_size, fps=100, avg_count=4, sample_rate=sample_rate)
+        scope.set_center_freq(14_074_000)
+
+        frames: list[ScopeFrame] = []
+        scope.on_frame(frames.append)
+
+        # Build up avg buffer
+        scope.feed_audio(_make_pcm_noise(fft_size * 5))
+
+        # Change bandwidth — avg_buf should be cleared, no crash
+        scope.set_mode_bandwidth(3600)
+        frames.clear()
+        scope.feed_audio(_make_pcm_noise(fft_size * 2))
+        assert len(frames) >= 1
+
+        bin_res = sample_rate / fft_size
+        expected = 2 * int((3600 / 2) / bin_res) + 1
+        assert len(frames[0].pixels) == expected
