@@ -131,6 +131,16 @@ from .radio_poller import (
     SetData3ModInput,
     SetAudioPeakFilter,
     SetDigiselShift,
+    SetRefAdjust,
+    SetCivTransceive,
+    SetCivOutputAnt,
+    SetAfMute,
+    SetTuningStep,
+    SetXfcStatus,
+    SetTxFreqMonitor,
+    SetUtcOffset,
+    QuickSplit,
+    QuickDualWatch,
 )
 from .runtime_helpers import (
     build_public_state_payload,
@@ -142,7 +152,7 @@ from .websocket import WS_OP_BINARY, WS_OP_TEXT, WebSocketConnection
 if TYPE_CHECKING:
     from ..radio_protocol import Radio
 
-from ..radio_protocol import AdvancedControlCapable, LevelsCapable, MemoryCapable, PowerControlCapable
+from ..radio_protocol import AdvancedControlCapable, LevelsCapable, MemoryCapable, PowerControlCapable, TransceiverStatusCapable
 
 __all__ = [
     "HIGH_WATERMARK",
@@ -300,6 +310,29 @@ class ControlHandler:
             "set_data3_mod_input",
             "set_audio_peak_filter",
             "set_digisel_shift",
+            # Issue #410 — system/config
+            "get_ref_adjust",
+            "set_ref_adjust",
+            "get_civ_transceive",
+            "set_civ_transceive",
+            "get_civ_output_ant",
+            "set_civ_output_ant",
+            "get_af_mute",
+            "set_af_mute",
+            "get_tuning_step",
+            "set_tuning_step",
+            "get_utc_offset",
+            "set_utc_offset",
+            # Issue #411 — band/split advanced
+            "get_band_edge_freq",
+            "get_xfc_status",
+            "set_xfc_status",
+            "get_tx_freq_monitor",
+            "set_tx_freq_monitor",
+            "get_quick_split",
+            "set_quick_split",
+            "get_quick_dual_watch",
+            "set_quick_dual_watch",
         ]
     )
 
@@ -863,6 +896,71 @@ class ControlHandler:
                 q.put(SetTunerStatus(value))
             label = {0: "OFF", 1: "ON", 2: "TUNING"}[value]
             return {"value": value, "label": label}
+        if name == "get_ref_adjust":
+            if self._radio is None:
+                raise RuntimeError("radio connection not available")
+            if not isinstance(self._radio, AdvancedControlCapable):
+                raise RuntimeError("radio does not support this command")
+            value = await self._radio.get_ref_adjust()
+            return {"value": value}
+        if name == "get_civ_transceive":
+            if self._radio is None:
+                raise RuntimeError("radio connection not available")
+            if not isinstance(self._radio, AdvancedControlCapable):
+                raise RuntimeError("radio does not support this command")
+            on = await self._radio.get_civ_transceive()
+            return {"on": on}
+        if name == "get_civ_output_ant":
+            if self._radio is None:
+                raise RuntimeError("radio connection not available")
+            if not isinstance(self._radio, AdvancedControlCapable):
+                raise RuntimeError("radio does not support this command")
+            on = await self._radio.get_civ_output_ant()
+            return {"on": on}
+        if name == "get_af_mute":
+            if self._radio is None:
+                raise RuntimeError("radio connection not available")
+            if not isinstance(self._radio, AdvancedControlCapable):
+                raise RuntimeError("radio does not support this command")
+            rx = int(params.get("receiver", 0))
+            self._ensure_receiver_supported(rx)
+            on = await self._radio.get_af_mute(receiver=rx)
+            return {"on": on, "receiver": rx}
+        if name == "get_tuning_step":
+            if self._radio is None:
+                raise RuntimeError("radio connection not available")
+            if not isinstance(self._radio, AdvancedControlCapable):
+                raise RuntimeError("radio does not support this command")
+            step = await self._radio.get_tuning_step()
+            return {"step": step}
+        if name == "get_utc_offset":
+            if self._radio is None:
+                raise RuntimeError("radio connection not available")
+            if not isinstance(self._radio, AdvancedControlCapable):
+                raise RuntimeError("radio does not support this command")
+            hours, minutes, is_negative = await self._radio.get_utc_offset()
+            return {"hours": hours, "minutes": minutes, "is_negative": is_negative}
+        if name == "get_band_edge_freq":
+            if self._radio is None:
+                raise RuntimeError("radio connection not available")
+            if not isinstance(self._radio, AdvancedControlCapable):
+                raise RuntimeError("radio does not support this command")
+            freq = await self._radio.get_band_edge_freq()
+            return {"freq": freq}
+        if name == "get_xfc_status":
+            if self._radio is None:
+                raise RuntimeError("radio connection not available")
+            if not isinstance(self._radio, AdvancedControlCapable):
+                raise RuntimeError("radio does not support this command")
+            on = await self._radio.get_xfc_status()
+            return {"on": on}
+        if name == "get_tx_freq_monitor":
+            if self._radio is None:
+                raise RuntimeError("radio connection not available")
+            if not isinstance(self._radio, TransceiverStatusCapable):
+                raise RuntimeError("radio does not support this command")
+            on = await self._radio.get_tx_freq_monitor()
+            return {"on": on}
 
         q = self._server.command_queue if self._server is not None else None
         if q is None:
@@ -1467,6 +1565,50 @@ class ControlHandler:
                 self._ensure_receiver_supported(rx)
                 q.put(SetDigiselShift(level, receiver=rx))
                 return {"level": level, "receiver": rx}
+            # Issue #410 — system/config SET commands
+            case "set_ref_adjust":
+                value = int(params["value"])
+                q.put(SetRefAdjust(value))
+                return {"value": value}
+            case "set_civ_transceive":
+                on = bool(params["on"])
+                q.put(SetCivTransceive(on))
+                return {"on": on}
+            case "set_civ_output_ant":
+                on = bool(params["on"])
+                q.put(SetCivOutputAnt(on))
+                return {"on": on}
+            case "set_af_mute":
+                on = bool(params["on"])
+                rx = int(params.get("receiver", 0))
+                self._ensure_receiver_supported(rx)
+                q.put(SetAfMute(on, receiver=rx))
+                return {"on": on, "receiver": rx}
+            case "set_tuning_step":
+                step = int(params["step"])
+                q.put(SetTuningStep(step))
+                return {"step": step}
+            case "set_utc_offset":
+                hours = int(params["hours"])
+                minutes = int(params["minutes"])
+                is_negative = bool(params["is_negative"])
+                q.put(SetUtcOffset(hours, minutes, is_negative))
+                return {"hours": hours, "minutes": minutes, "is_negative": is_negative}
+            # Issue #411 — band/split advanced SET commands
+            case "set_xfc_status":
+                on = bool(params["on"])
+                q.put(SetXfcStatus(on))
+                return {"on": on}
+            case "set_tx_freq_monitor":
+                on = bool(params["on"])
+                q.put(SetTxFreqMonitor(on))
+                return {"on": on}
+            case "get_quick_split" | "set_quick_split":
+                q.put(QuickSplit())
+                return {}
+            case "get_quick_dual_watch" | "set_quick_dual_watch":
+                q.put(QuickDualWatch())
+                return {}
             case _:
                 raise ValueError(f"unhandled command: {name!r}")
 
