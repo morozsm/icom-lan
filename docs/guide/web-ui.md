@@ -42,6 +42,28 @@ The backend manages reconnect and recovery when the radio link drops; scope enab
 | `GET` | `/api/v1/dx/spots` | Buffered DX spots |
 | `GET` | `/api/v1/bridge` | Audio bridge status |
 
+### Advanced operational HTTP endpoints
+
+These are primarily used by automation, deployment scripts, and operator tooling:
+
+| Method | Path | Purpose |
+|-------|------|---------|
+| `POST` | `/api/v1/radio/connect` | Trigger backend connect/reconnect |
+| `POST` | `/api/v1/radio/disconnect` | Trigger backend disconnect |
+| `POST` | `/api/v1/radio/power` | CI-V power control (`{"state":"on" \| "off"}`) |
+| `POST` | `/api/v1/bridge` | Start audio bridge |
+| `DELETE` | `/api/v1/bridge` | Stop audio bridge |
+| `GET` | `/api/v1/band-plan/config` | Active band-plan region |
+| `POST` | `/api/v1/band-plan/config` | Change region + reload band plans |
+| `GET` | `/api/v1/band-plan/layers` | Loaded overlay layers |
+| `GET` | `/api/v1/band-plan/segments?...` | Band-plan segments for selected range |
+| `POST` | `/api/v1/eibi/fetch` | Download/refresh EiBi DB |
+| `GET` | `/api/v1/eibi/status` | EiBi loader status |
+| `GET` | `/api/v1/eibi/stations` | EiBi station list (paged/filterable) |
+| `GET` | `/api/v1/eibi/segments?...` | EiBi overlay segments |
+| `GET` | `/api/v1/eibi/identify?...` | Broadcast station identification |
+| `GET` | `/api/v1/eibi/bands` | EiBi band list |
+
 ### Auth behavior (`--auth-token`)
 
 - `GET /api/*` requires `Authorization: Bearer <token>`.
@@ -76,6 +98,25 @@ Server response:
 ```json
 {"type":"response","id":"42","ok":true,"result":{"freq":14074000,"receiver":0}}
 ```
+
+### `state_update` payload formats
+
+The backend emits `state_update` in two shapes:
+
+1. Full snapshot:
+
+```json
+{"type":"state_update","data":{"type":"full","data":{"main":{"freqHz":14074000}},"revision":1}}
+```
+
+2. Delta update (only changed fields):
+
+```json
+{"type":"state_update","data":{"type":"delta","changed":{"main":{"freqHz":14074100}},"revision":2}}
+```
+
+Client integrations should support both formats. Assuming only full snapshots causes
+state drift when delta updates are enabled.
 
 ### Connection control messages
 

@@ -1,29 +1,75 @@
-# Web Server
+# Web Server API
 
-Built-in web UI and REST API.
+Built-in HTTP + WebSocket interface used by the browser UI and automation clients.
 
-## REST API — Endpoint Reference
+## Auth Model
 
-### `GET /api/v1/info`
+If web server is started with `--auth-token`, all `/api/*` HTTP routes require:
 
-Version, model, connection status, and runtime capability summary.
+```
+Authorization: Bearer <token>
+```
+
+WebSocket routes additionally allow query token:
+
+```
+ws://host:8080/api/v1/ws?token=<token>
+```
+
+## HTTP Endpoints
+
+### Read Endpoints
+
+| Method | Path | Purpose |
+|-------|------|---------|
+| `GET` | `/api/v1/info` | Runtime model/capability summary |
+| `GET` | `/api/v1/state` | Canonical current state snapshot |
+| `GET` | `/api/v1/capabilities` | Full profile-backed capabilities |
+| `GET` | `/api/v1/dx/spots` | Buffered DX spots |
+| `GET` | `/api/v1/bridge` | Audio bridge status |
+| `GET` | `/api/v1/band-plan/config` | Active band-plan region |
+| `GET` | `/api/v1/band-plan/layers` | Band-plan layers metadata |
+| `GET` | `/api/v1/band-plan/segments?start=<hz>&end=<hz>&layers=<csv>` | Band-plan overlay segments |
+| `GET` | `/api/v1/eibi/status` | EiBi loader status |
+| `GET` | `/api/v1/eibi/stations` | EiBi station list (paged/filterable) |
+| `GET` | `/api/v1/eibi/segments?start=<hz>&end=<hz>&on_air=true` | EiBi overlay segments |
+| `GET` | `/api/v1/eibi/identify?freq=<hz>&tolerance=<hz>` | Identify probable broadcast stations |
+| `GET` | `/api/v1/eibi/bands` | EiBi frequency bands |
+
+### Control Endpoints
+
+| Method | Path | Purpose |
+|-------|------|---------|
+| `POST` | `/api/v1/radio/connect` | Connect/reconnect radio control path |
+| `POST` | `/api/v1/radio/disconnect` | Disconnect radio control path |
+| `POST` | `/api/v1/radio/power` | Power on/off via CI-V power control |
+| `POST` | `/api/v1/bridge` | Start audio bridge |
+| `DELETE` | `/api/v1/bridge` | Stop audio bridge |
+| `POST` | `/api/v1/band-plan/config` | Change active region and reload band plans |
+| `POST` | `/api/v1/eibi/fetch` | Fetch/refresh EiBi dataset |
+
+---
+
+## `GET /api/v1/info`
+
+Version, model, capability summary, and connection metadata.
 
 ```json
 {
+  "server": "icom-lan",
   "version": "0.12.0",
+  "proto": 1,
   "radio": "IC-7300",
   "model": "IC-7300",
   "capabilities": {
     "hasSpectrum": true,
     "hasAudio": true,
     "hasTx": true,
-    "hasDualRx": false,
-    "hasAttenuator": true,
-    "hasPreamp": true,
+    "hasDualReceiver": false,
     "hasTuner": false,
     "hasCw": true,
     "maxReceivers": 1,
-    "tags": ["attenuator", "audio", "cw", "meters", "nb", "nr", "preamp", "rf_gain", "scope", "tx"],
+    "tags": ["audio", "cw", "meters", "scope", "tx"],
     "modes": ["USB", "LSB", "CW", "CW-R", "AM", "FM", "RTTY", "RTTY-R"],
     "filters": ["FIL1", "FIL2", "FIL3"],
     "vfoScheme": "ab",
@@ -32,120 +78,160 @@ Version, model, connection status, and runtime capability summary.
   "connection": {
     "rigConnected": true,
     "radioReady": true,
+    "controlConnected": true,
+    "wsClients": 2
+  }
+}
+```
+
+## `GET /api/v1/state`
+
+Canonical full state payload for web consumers (camelCase keys).
+
+- Includes `revision` + `updatedAt`.
+- Includes `connection` object (`rigConnected`, `radioReady`, `controlConnected`).
+- For single-receiver profiles, `sub` key is omitted.
+- Supports `ETag` based on `revision` for conditional requests.
+
+```json
+{
+  "main": { "freqHz": 14074000, "mode": "USB", "filter": 1 },
+  "revision": 42,
+  "updatedAt": "2026-03-15T10:00:00+00:00",
+  "radioDetail": { "status": "connected" },
+  "wsClients": { "scope": 1, "control": 1, "audio": 0 },
+  "connection": {
+    "rigConnected": true,
+    "radioReady": true,
     "controlConnected": true
   }
 }
 ```
 
-#### New fields (Epic #251)
+## `GET /api/v1/capabilities`
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `capabilities.vfoScheme` | `"ab"` \| `"main_sub"` | VFO labeling scheme. `"ab"` → VFO A/B; `"main_sub"` → MAIN/SUB |
-| `capabilities.hasLan` | `bool` | Whether the radio has a LAN (Ethernet) port |
-| `capabilities.maxReceivers` | `int` | Number of independent receivers (1 or 2) |
-| `capabilities.modes` | `string[]` | Supported operating modes from rig profile |
-| `capabilities.filters` | `string[]` | Supported IF filter names from rig profile |
+Profile-backed capabilities used to build dynamic UI.
 
----
+Notable fields:
 
-### `GET /api/v1/state`
+| Field | Type | Notes |
+|------|------|-------|
+| `receivers` | `int` | Receiver count from active profile |
+| `vfoScheme` | `"ab"` \| `"main_sub"` | VFO label scheme |
+| `freqRanges[].bands[].bsrCode` | `int` (optional) | Band Stack Register code for `set_band` |
+| `scopeSource` | `"hardware"` \| `"audio_fft"` \| `null` | Spectrum data source |
+| `scopeConfig.defaultSpan` | `int` | Hardware scope span or audio FFT bandwidth |
+| `audioConfig` | object | Web audio transport defaults |
 
-Current radio state snapshot. All keys are camelCase.
-
-**Behavior change (Epic #251):** For single-receiver radios (`receiver_count < 2`),
-the `sub` key is omitted from the response entirely. Dual-receiver radios (IC-7610)
-still return both `main` and `sub`.
-
-```json
-{
-  "main": { "freqHz": 14074000, "mode": "USB", "filter": 1, ... },
-  "revision": 42,
-  "updatedAt": "2026-03-15T10:00:00Z",
-  "connection": { "rigConnected": true, "radioReady": true, "controlConnected": true }
-}
-```
-
-Single-receiver response (IC-7300):
-
-```json
-{
-  "main": { "freqHz": 7074000, "mode": "USB", "filter": 1, ... },
-  "revision": 7,
-  "updatedAt": "2026-03-15T10:00:00Z",
-  "connection": { ... }
-}
-```
+When radio has audio but no hardware scope support, backend enables `AudioFftScope`
+and reports `scopeSource: "audio_fft"`.
 
 ---
 
-### `GET /api/v1/capabilities`
+## WebSocket Endpoints
 
-Full capabilities object including rig profile data.
+| Path | Direction | Payload |
+|------|-----------|---------|
+| `/api/v1/ws` | bi-directional | JSON commands/events/state updates |
+| `/api/v1/scope` | server -> client | Binary scope frames |
+| `/api/v1/audio` | bi-directional | JSON control + binary audio frames |
+
+### `/api/v1/ws` command envelope
 
 ```json
-{
-  "scope": true,
-  "audio": true,
-  "tx": true,
-  "capabilities": ["attenuator", "audio", "cw", "meters", "nb", "nr", ...],
-  "receivers": 1,
-  "vfoScheme": "ab",
-  "freqRanges": [
-    {
-      "label": "HF",
-      "start": 30000,
-      "end": 60000000,
-      "bands": [
-        { "name": "20m", "start": 14000000, "end": 14350000, "default": 14200000, "bsrCode": 5 },
-        { "name": "60m", "start": 5250000, "end": 5450000, "default": 5357000 }
-      ]
-    }
-  ],
-  "modes": ["USB", "LSB", "CW", ...],
-  "filters": ["FIL1", "FIL2", "FIL3"]
-}
+{"type":"cmd","id":"42","name":"set_freq","params":{"freq":14074000,"receiver":0}}
 ```
 
-#### New fields (Epic #251)
+Response:
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `receivers` | `int` | Receiver count from rig profile (1 or 2) |
-| `vfoScheme` | `"ab"` \| `"main_sub"` | VFO labeling scheme |
-| `freqRanges[].bands[].bsrCode` | `int` (optional) | Band Stack Register code used by Web UI `set_band` workflow |
+```json
+{"type":"response","id":"42","ok":true,"result":{"freq":14074000,"receiver":0}}
+```
+
+Error response:
+
+```json
+{"type":"response","id":"42","ok":false,"error":"command_failed","message":"..."}
+```
+
+Rate-limited high-frequency `set_*` commands are ACKed with:
+
+```json
+{"type":"response","id":"42","ok":true,"result":{"throttled":true}}
+```
+
+### State update stream (`/api/v1/ws`)
+
+Server publishes `state_update` messages in two shapes:
+
+- Full snapshot:
+  ```json
+  {"type":"state_update","data":{"type":"full","data":{...},"revision":1}}
+  ```
+- Delta update:
+  ```json
+  {"type":"state_update","data":{"type":"delta","changed":{"main":{"freqHz":14075000}},"revision":2}}
+  ```
+
+### `set_band` workflow (`/api/v1/ws`)
+
+```json
+{"type":"cmd","id":"73","name":"set_band","params":{"band":5}}
+```
+
+`band` is BSR code from `freqRanges[].bands[].bsrCode`.
+Backend path:
+
+1. Try BSR recall (`0x1A 0x01 <band> 0x01`).
+2. If recall fails, fallback to profile `default_hz` for matching `bsr_code`.
+3. If profile has no matching `bsr_code`, command is acknowledged but no retune happens.
 
 ---
 
-### `set_band` command (WebSocket `/api/v1/ws`)
+## Operational Runbook
 
-Control payload:
+### Power on/off through HTTP
 
-```json
-{"type":"cmd","id":"42","name":"set_band","params":{"band":5}}
+```bash
+curl -X POST http://127.0.0.1:8080/api/v1/radio/power \
+  -H "Content-Type: application/json" \
+  -d '{"state":"on"}'
 ```
 
-`band` is the numeric BSR code (typically from `freqRanges[].bands[].bsrCode`).
-Backend behavior:
+### Audio bridge start/status/stop
 
-1. Attempts BSR recall (`0x1A 0x01 <band> 0x01`) and applies recalled freq/mode.
-2. On recall failure, falls back to profile `default_hz` for matching `bsr_code`.
-3. If no matching `bsr_code` exists, command acknowledges but no retune is applied.
+```bash
+curl -X POST http://127.0.0.1:8080/api/v1/bridge
+curl http://127.0.0.1:8080/api/v1/bridge
+curl -X DELETE http://127.0.0.1:8080/api/v1/bridge
+```
+
+### Change band-plan region
+
+```bash
+curl -X POST http://127.0.0.1:8080/api/v1/band-plan/config \
+  -H "Content-Type: application/json" \
+  -d '{"region":"IARU-R1"}'
+```
+
+### Refresh EiBi cache
+
+```bash
+curl -X POST http://127.0.0.1:8080/api/v1/eibi/fetch \
+  -H "Content-Type: application/json" \
+  -d '{"force":true}'
+```
 
 ## Modules
 
-- `server.py` — asyncio HTTP/WebSocket server
-- `handlers.py` — WebSocket command handlers
-- `radio_poller.py` — State polling for /api/v1/state endpoint
-- `websocket.py` — WebSocket connection management
-- `protocol.py` — Web protocol types and messages
-- `dx_cluster.py` — DX cluster integration
-
-## REST API
-
-See [Web UI Guide](../guide/web-ui.md) for endpoint documentation.
+- `server.py` — asyncio HTTP/WebSocket server, endpoint routing
+- `handlers.py` — control/scope/audio channel handlers
+- `radio_poller.py` — state polling and command queue execution
+- `runtime_helpers.py` — canonical public state/capability shaping
+- `dx_cluster.py` — DX spot ingest and buffering
 
 ## See Also
 
+- [Web UI Guide](../guide/web-ui.md)
 - [Audio](audio.md)
 - [Scope](scope.md)

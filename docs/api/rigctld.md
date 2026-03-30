@@ -252,12 +252,15 @@ dispatch table, and translates exceptions:
 | `M` | `set_mode` | SET | Mode string + optional passband |
 | `t` | `get_ptt` | GET | PTT state (0/1) |
 | `T` | `set_ptt` | SET | PTT on/off |
-| `v` | `get_vfo` | GET | Current VFO name |
-| `V` | `set_vfo` | SET | Select VFO |
-| `j` | `get_rit` | GET | RIT offset (always 0) |
-| `l` | `get_level` | GET | Level: `STRENGTH`, `RFPOWER`, `SWR` |
+| `v` | `get_vfo` | GET | Current VFO name (`VFOA`) |
+| `V` | `set_vfo` | SET | Accepted/ACKed; current backend keeps single-VFO operation |
+| `j` | `get_rit` | GET | RIT offset from live radio state |
+| `l` | `get_level` | GET | Level read (`STRENGTH`, `RFPOWER`, `SWR`, `AF`, `RF`, etc.) |
+| `L` | `set_level` | SET | Level write (`RFPOWER`, `AF`, `RF`, `NR`, `NB`, etc.) |
+| `u` | `get_func` | GET | Function read (`NB`, `NR`, `COMP`, `VOX`, etc.) |
+| `U` | `set_func` | SET | Function write (`NB`, `NR`, `COMP`, `VOX`, etc.) |
 | `s` | `get_split_vfo` | GET | Split VFO status |
-| `S` | `set_split_vfo` | SET | Split VFO |
+| `S` | `set_split_vfo` | SET | Accepted/ACKed (compat path) |
 | `q` | `quit` | CTL | Close connection |
 | `\dump_state` | `dump_state` | CTL | IC-7610 capability block |
 | `1` | `dump_caps` | CTL | Alias for `dump_state` |
@@ -267,6 +270,7 @@ dispatch table, and translates exceptions:
 | `\power2mW` | `power2mW` | CTL | Normalised power → milliwatts |
 | `\mW2power` | `mW2power` | CTL | Milliwatts → normalised power |
 | `\get_lock_mode` | `get_lock_mode` | CTL | Lock mode (always 0) |
+| `w` | `send_raw` | CTL | Raw CI-V passthrough (hex in, hex out) |
 
 **Mode strings** accepted/returned by `get_mode`/`set_mode`:
 `USB`, `LSB`, `CW`, `CWR`, `RTTY`, `RTTYR`, `AM`, `FM`, `WFM`,
@@ -279,6 +283,46 @@ dispatch table, and translates exceptions:
 | `STRENGTH` | S-meter in dBm (−54 to +60) | −54 … +60 |
 | `RFPOWER` | Normalised RF power | 0.0 … 1.0 |
 | `SWR` | SWR ratio | 1.0 … 5.0 |
+| `AF`, `RF`, `NR`, `NB`, `COMP`, `MICGAIN`, `MONITOR_GAIN` | Normalised float | 0.0 … 1.0 |
+| `RFPOWER_METER`, `COMP_METER`, `ID_METER`, `VD_METER` | Normalised float | 0.0 … 1.0 |
+| `KEYSPD` | Key speed (WPM) | radio-dependent int |
+| `CWPITCH` | CW pitch (Hz) | radio-dependent int |
+| `PREAMP` | Preamp level in dB | 0 / 12 / 20 |
+| `ATT` | Attenuator in dB | 0 / 6 / 12 / 18 |
+
+**Writable levels** for `set_level`:
+
+`RFPOWER`, `AF`, `RF`, `NR`, `NB`, `COMP`, `MICGAIN`, `MONITOR_GAIN`,
+`KEYSPD`, `CWPITCH`, `PREAMP`, `ATT`.
+
+**Function names** for `get_func` / `set_func`:
+
+`NB`, `NR`, `COMP`, `VOX`, `TONE`, `TSQL`, `ANF`, `LOCK`, `MON`, `APF`.
+
+### `w` / `send_raw` passthrough
+
+Send raw CI-V bytes and return raw response bytes (space-separated uppercase hex).
+
+Accepted input formats:
+
+1. Space-separated tokens:
+
+   ```text
+   w FE FE 98 E0 03 FD
+   ```
+
+2. Single escaped argument:
+
+   ```text
+   w \xFE\xFE\x98\xE0\x03\xFD
+   ```
+
+Behavior details:
+
+- If backend exposes `_send_civ_raw`, command forwards bytes as-is.
+- On transport timeout (`icom_lan.exceptions.TimeoutError` or `asyncio.TimeoutError`),
+  handler returns **successful empty response** (not `RPRT -5`).
+- If backend does not implement `_send_civ_raw`, returns `ENIMPL` (`RPRT -4`).
 
 ---
 
