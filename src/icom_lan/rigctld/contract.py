@@ -159,7 +159,15 @@ _register(
         is_set=False,
         min_args=1,
         max_args=1,
-        description="Get level (STRENGTH, RFPOWER, SWR, etc.)",
+        description="Get level (STRENGTH, RFPOWER, SWR, AF, RF, NR, NB, COMP, etc.)",
+    ),
+    CommandDef(
+        "u",
+        "get_func",
+        is_set=False,
+        min_args=1,
+        max_args=1,
+        description="Get function (NB, NR, COMP, VOX, TONE, TSQL, ANF, LOCK, MON, APF)",
     ),
     CommandDef("s", "get_split_vfo", is_set=False, description="Get split VFO status"),
     # Set commands
@@ -189,6 +197,22 @@ _register(
     ),
     CommandDef(
         "V", "set_vfo", is_set=True, min_args=1, max_args=1, description="Set VFO"
+    ),
+    CommandDef(
+        "L",
+        "set_level",
+        is_set=True,
+        min_args=2,
+        max_args=2,
+        description="Set level (RFPOWER, AF, RF, NR, NB, COMP, MICGAIN, KEYSPD, etc.)",
+    ),
+    CommandDef(
+        "U",
+        "set_func",
+        is_set=True,
+        min_args=2,
+        max_args=2,
+        description="Set function (NB, NR, COMP, VOX, TONE, TSQL, ANF, LOCK, MON, APF)",
     ),
     CommandDef(
         "S",

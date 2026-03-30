@@ -51,9 +51,23 @@ logger = logging.getLogger(__name__)
 #                          FM=0x20 WFM=0x40 CWR=0x80 RTTYR=0x100
 # 0x1ff = all nine modes above
 #
-# has_get_level: RIG_LEVEL_STRENGTH(0x40000000) | RIG_LEVEL_SWR(0x10000000)
-#              | RIG_LEVEL_ALC(0x04000000) | RIG_LEVEL_RFPOWER(0x00001000)
-#              = 0x54001000
+# has_get_level (32-bit):
+#   RIG_LEVEL_PREAMP(0x1) | RIG_LEVEL_ATT(0x2) | RIG_LEVEL_AF(0x8)
+#   | RIG_LEVEL_RF(0x10) | RIG_LEVEL_NR(0x100) | RIG_LEVEL_CWPITCH(0x800)
+#   | RIG_LEVEL_RFPOWER(0x1000) | RIG_LEVEL_MICGAIN(0x2000)
+#   | RIG_LEVEL_KEYSPD(0x4000) | RIG_LEVEL_COMP(0x10000)
+#   | RIG_LEVEL_RAWSTR(0x04000000) | RIG_LEVEL_SWR(0x10000000)
+#   | RIG_LEVEL_STRENGTH(0x40000000)
+#   = 0x5401791B
+#   (NB, MONITOR_GAIN, RFPOWER_METER, COMP_METER, ID_METER, VD_METER use
+#    64-bit level bits above bit 31 and are handled but not declared here)
+#
+# has_get_func (32-bit):
+#   RIG_FUNC_NB(0x2) | RIG_FUNC_COMP(0x4) | RIG_FUNC_VOX(0x8)
+#   | RIG_FUNC_TONE(0x10) | RIG_FUNC_TSQL(0x20) | RIG_FUNC_ANF(0x100)
+#   | RIG_FUNC_NR(0x200) | RIG_FUNC_APF(0x800) | RIG_FUNC_MON(0x1000)
+#   | RIG_FUNC_LOCK(0x10000)
+#   = 0x00011B3E
 _IC7610_DUMP_STATE: list[str] = [
     "0",  # protocol version
     "3078",  # rig model (IC-7610)
@@ -74,13 +88,79 @@ _IC7610_DUMP_STATE: list[str] = [
     "0",  # announces
     "12 20 0",  # preamp (dB values, 0-terminated)
     "6 12 18 0",  # attenuator (dB values, 0-terminated)
-    "0",  # has_get_func
-    "0",  # has_set_func
-    "0x54001000",  # has_get_level (STRENGTH|SWR|ALC|RFPOWER)
-    "0x00001000",  # has_set_level (RFPOWER)
+    "0x00011B3E",  # has_get_func
+    "0x00011B3E",  # has_set_func
+    "0x5401791B",  # has_get_level
+    "0x0001791B",  # has_set_level
     "0",  # has_get_parm
     "0",  # has_set_parm
 ]
+
+# ---------------------------------------------------------------------------
+# Level and function lookup tables
+# ---------------------------------------------------------------------------
+
+# Levels that return raw/255.0 as float (0.0-1.0)
+_GET_LEVEL_FLOAT: dict[str, str] = {
+    "AF": "get_af_level",
+    "RF": "get_rf_gain",
+    "NR": "get_nr_level",
+    "NB": "get_nb_level",
+    "COMP": "get_compressor_level",
+    "MICGAIN": "get_mic_gain",
+    "MONITOR_GAIN": "get_monitor_gain",
+    "RFPOWER_METER": "get_power_meter",
+    "COMP_METER": "get_comp_meter",
+    "ID_METER": "get_id_meter",
+    "VD_METER": "get_vd_meter",
+}
+
+# Levels that return an integer value as-is (WPM, Hz)
+_GET_LEVEL_INT: dict[str, str] = {
+    "KEYSPD": "get_key_speed",
+    "CWPITCH": "get_cw_pitch",
+}
+
+# Writable float levels: hamlib 0.0-1.0 → raw 0-255
+_SET_LEVEL_FLOAT: dict[str, str] = {
+    "AF": "set_af_level",
+    "RF": "set_rf_gain",
+    "NR": "set_nr_level",
+    "NB": "set_nb_level",
+    "COMP": "set_compressor_level",
+    "MICGAIN": "set_mic_gain",
+    "MONITOR_GAIN": "set_monitor_gain",
+}
+
+# Preamp: level index → dB (matches dump_state "12 20 0")
+_PREAMP_IDX_TO_DB: list[int] = [0, 12, 20]
+
+# Functions: hamlib name → get/set method names
+_FUNC_GET: dict[str, str] = {
+    "NB": "get_nb",
+    "NR": "get_nr",
+    "COMP": "get_compressor",
+    "VOX": "get_vox",
+    "TONE": "get_repeater_tone",
+    "TSQL": "get_repeater_tsql",
+    "ANF": "get_auto_notch",
+    "LOCK": "get_dial_lock",
+    "MON": "get_monitor",
+    "APF": "get_audio_peak_filter",
+}
+
+_FUNC_SET: dict[str, str] = {
+    "NB": "set_nb",
+    "NR": "set_nr",
+    "COMP": "set_compressor",
+    "VOX": "set_vox",
+    "TONE": "set_repeater_tone",
+    "TSQL": "set_repeater_tsql",
+    "ANF": "set_auto_notch",
+    "LOCK": "set_dial_lock",
+    "MON": "set_monitor",
+    "APF": "set_audio_peak_filter",
+}
 
 # Filter number → approximate passband in Hz (IC-7610 USB defaults)
 _FILTER_TO_PASSBAND: dict[int, int] = {1: 3000, 2: 2400, 3: 1800}
@@ -500,53 +580,158 @@ class RigctldHandler:
         if not cmd.args:
             return _err(HamlibError.EINVAL)
         level = cmd.args[0].upper()
-        if level not in ("STRENGTH", "RFPOWER", "SWR"):
+        all_levels = (
+            {"STRENGTH", "RFPOWER", "SWR", "PREAMP", "ATT", "KEYSPD", "CWPITCH"}
+            | set(_GET_LEVEL_FLOAT)
+            | set(_GET_LEVEL_INT)
+        )
+        if level not in all_levels:
             return _err(HamlibError.EINVAL)
         main_state = self._main_receiver_state()
-        if level == "STRENGTH" and main_state is not None:
-            raw = main_state.s_meter
+
+        # STRENGTH — prefer RadioState, then meter call
+        if level == "STRENGTH":
+            if main_state is not None:
+                raw = main_state.s_meter
+                self._cache.update_s_meter(raw)
+                return RigctldResponse(values=[str(round((raw / 241.0) * 114.0 - 54.0))])
+            if not isinstance(self._radio, MetersCapable):
+                if self._cache.s_meter is not None:
+                    raw = self._cache.s_meter
+                    return RigctldResponse(
+                        values=[str(round((raw / 241.0) * 114.0 - 54.0))]
+                    )
+                return _err(HamlibError.ENIMPL)
+            raw = await self._radio.get_s_meter()
             self._cache.update_s_meter(raw)
-            strength_db = round((raw / 241.0) * 114.0 - 54.0)
-            return RigctldResponse(values=[str(strength_db)])
+            # IC-7610 S-meter: 0→S0(−54 dB), 120→S9(0 dB), 241→S9+60 dB
+            return RigctldResponse(values=[str(round((raw / 241.0) * 114.0 - 54.0))])
+
+        # RFPOWER — prefer RadioState, then meter call
         if level == "RFPOWER":
             state = self._radio_state()
             if state is not None and main_state is not None:
                 raw_power = state.power_level / 255.0
                 self._cache.update_rf_power(raw_power)
                 return RigctldResponse(values=[f"{raw_power:.6f}"])
-        if not isinstance(self._radio, MetersCapable):
-            # Return cached values if available, else unimplemented
-            if level == "STRENGTH" and self._cache.s_meter is not None:
-                raw = self._cache.s_meter
-                strength_db = round((raw / 241.0) * 114.0 - 54.0)
-                return RigctldResponse(values=[str(strength_db)])
-            if level == "RFPOWER" and self._cache.rf_power is not None:
-                return RigctldResponse(values=[f"{self._cache.rf_power:.6f}"])
-            if level == "SWR" and self._cache.swr is not None:
-                return RigctldResponse(values=[f"{self._cache.swr:.6f}"])
-            return _err(HamlibError.ENIMPL)
-        if level == "STRENGTH":
-            raw = await self._radio.get_s_meter()
-            self._cache.update_s_meter(raw)
-            # IC-7610 S-meter: 0→S0(−54 dB), 120→S9(0 dB), 241→S9+60 dB
-            strength_db = round((raw / 241.0) * 114.0 - 54.0)
-            return RigctldResponse(values=[str(strength_db)])
-        if level == "RFPOWER":
+            if not isinstance(self._radio, MetersCapable):
+                if self._cache.rf_power is not None:
+                    return RigctldResponse(values=[f"{self._cache.rf_power:.6f}"])
+                return _err(HamlibError.ENIMPL)
             raw = await self._radio.get_rf_power()
             normalized = raw / 255.0
             self._cache.update_rf_power(normalized)
             return RigctldResponse(values=[f"{normalized:.6f}"])
+
+        # SWR — meter call
         if level == "SWR":
+            if not isinstance(self._radio, MetersCapable):
+                if self._cache.swr is not None:
+                    return RigctldResponse(values=[f"{self._cache.swr:.6f}"])
+                return _err(HamlibError.ENIMPL)
             raw_val = await self._radio.get_swr()
-            # Protocol returns float; backend may return int
-            raw_swr: float = (
-                float(raw_val) if isinstance(raw_val, (int, float)) else float(raw_val)
-            )
+            raw_swr = float(raw_val)
             # Map 0-255 to 1.0-5.0
             swr = 1.0 + (raw_swr / 255.0) * 4.0
             self._cache.update_swr(swr)
             return RigctldResponse(values=[f"{swr:.6f}"])
+
+        # Simple 0-255 → 0.0-1.0 float levels
+        if level in _GET_LEVEL_FLOAT:
+            raw = await getattr(self._radio, _GET_LEVEL_FLOAT[level])()
+            return RigctldResponse(values=[f"{raw / 255.0:.6f}"])
+
+        # Integer levels (WPM, Hz)
+        if level in _GET_LEVEL_INT:
+            val = await getattr(self._radio, _GET_LEVEL_INT[level])()
+            return RigctldResponse(values=[str(val)])
+
+        # PREAMP — returns dB (0, 12, 20)
+        if level == "PREAMP":
+            idx = await self._radio.get_preamp()
+            db = _PREAMP_IDX_TO_DB[idx] if 0 <= idx < len(_PREAMP_IDX_TO_DB) else 0
+            return RigctldResponse(values=[str(db)])
+
+        # ATT — returns dB directly (0, 6, 12, 18)
+        if level == "ATT":
+            db = await self._radio.get_attenuator_level()
+            return RigctldResponse(values=[str(db)])
+
         return _err(HamlibError.EINVAL)
+
+    async def _cmd_set_level(self, cmd: RigctldCommand) -> RigctldResponse:
+        if len(cmd.args) < 2:
+            return _err(HamlibError.EINVAL)
+        level = cmd.args[0].upper()
+        try:
+            value = float(cmd.args[1])
+        except ValueError:
+            return _err(HamlibError.EINVAL)
+
+        if level == "RFPOWER":
+            await self._radio.set_rf_power(round(value * 255))
+            return _ok()
+
+        if level in _SET_LEVEL_FLOAT:
+            raw = max(0, min(255, round(value * 255)))
+            await getattr(self._radio, _SET_LEVEL_FLOAT[level])(raw)
+            return _ok()
+
+        if level == "KEYSPD":
+            await self._radio.set_key_speed(round(value))
+            return _ok()
+
+        if level == "CWPITCH":
+            await self._radio.set_cw_pitch(round(value))
+            return _ok()
+
+        if level == "PREAMP":
+            db = round(value)
+            # Find nearest supported dB (0, 12, 20)
+            idx = min(range(len(_PREAMP_IDX_TO_DB)), key=lambda i: abs(_PREAMP_IDX_TO_DB[i] - db))
+            await self._radio.set_preamp(idx)
+            return _ok()
+
+        if level == "ATT":
+            # Find nearest supported dB (0, 6, 12, 18)
+            _att_steps = [0, 6, 12, 18]
+            db = round(value)
+            nearest = min(_att_steps, key=lambda x: abs(x - db))
+            await self._radio.set_attenuator_level(nearest)
+            return _ok()
+
+        return _err(HamlibError.EINVAL)
+
+    # ------------------------------------------------------------------
+    # Function commands
+    # ------------------------------------------------------------------
+
+    async def _cmd_get_func(self, cmd: RigctldCommand) -> RigctldResponse:
+        if not cmd.args:
+            return _err(HamlibError.EINVAL)
+        func = cmd.args[0].upper()
+        if func not in _FUNC_GET:
+            return _err(HamlibError.EINVAL)
+        result = await getattr(self._radio, _FUNC_GET[func])()
+        # APF returns AudioPeakFilter int enum (0=off); others return bool
+        return RigctldResponse(values=[str(int(bool(result)))])
+
+    async def _cmd_set_func(self, cmd: RigctldCommand) -> RigctldResponse:
+        if len(cmd.args) < 2:
+            return _err(HamlibError.EINVAL)
+        func = cmd.args[0].upper()
+        if func not in _FUNC_SET:
+            return _err(HamlibError.EINVAL)
+        try:
+            on = bool(int(cmd.args[1]))
+        except ValueError:
+            return _err(HamlibError.EINVAL)
+        if func == "APF":
+            # APF takes an int mode: 0=off, 1=soft
+            await self._radio.set_audio_peak_filter(1 if on else 0)
+        else:
+            await getattr(self._radio, _FUNC_SET[func])(on)
+        return _ok()
 
     # ------------------------------------------------------------------
     # Split VFO commands
@@ -650,6 +835,9 @@ RigctldHandler._DISPATCH = {
     "get_vfo": RigctldHandler._cmd_get_vfo,
     "set_vfo": RigctldHandler._cmd_set_vfo,
     "get_level": RigctldHandler._cmd_get_level,
+    "set_level": RigctldHandler._cmd_set_level,
+    "get_func": RigctldHandler._cmd_get_func,
+    "set_func": RigctldHandler._cmd_set_func,
     "get_split_vfo": RigctldHandler._cmd_get_split_vfo,
     "set_split_vfo": RigctldHandler._cmd_set_split_vfo,
     "get_rit": RigctldHandler._cmd_get_rit,

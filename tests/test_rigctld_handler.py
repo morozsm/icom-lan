@@ -671,11 +671,10 @@ async def test_dump_state(handler: RigctldHandler, mock_radio: AsyncMock) -> Non
     assert lines[17] == "12 20 0"
     assert lines[18] == "6 12 18 0"
     # Lines 19-24: capability bitmasks — bare hex/int, no label prefix
-    assert lines[19] == "0"  # has_get_func
-    assert lines[20] == "0"  # has_set_func
-    # has_get_level must include RIG_LEVEL_STRENGTH (0x40000000)
-    assert lines[21] == "0x54001000"  # STRENGTH|SWR|ALC|RFPOWER
-    assert lines[22] == "0x00001000"  # has_set_level (RFPOWER)
+    assert lines[19] == "0x00011B3E"  # has_get_func
+    assert lines[20] == "0x00011B3E"  # has_set_func
+    assert lines[21] == "0x5401791B"  # has_get_level
+    assert lines[22] == "0x0001791B"  # has_set_level
     assert lines[23] == "0"  # has_get_parm
     assert lines[24] == "0"  # has_set_parm
     assert len(lines) == 25
@@ -926,3 +925,521 @@ def test_filter_to_passband_fil3() -> None:
 
     assert _filter_to_passband(3) == 1800
     assert _filter_to_passband(3) == 1800
+
+
+# ---------------------------------------------------------------------------
+# get_level — new levels (AF, RF, NR, NB, COMP, MICGAIN, MONITOR_GAIN,
+#              KEYSPD, CWPITCH, PREAMP, ATT, RFPOWER_METER, COMP_METER,
+#              ID_METER, VD_METER)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_get_level_af(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    mock_radio.get_af_level = AsyncMock(return_value=128)
+    resp = await handler.execute(get_cmd("get_level", "AF"))
+    assert resp.ok
+    assert float(resp.values[0]) == pytest.approx(128 / 255.0, rel=1e-6)
+
+
+@pytest.mark.asyncio
+async def test_get_level_rf_gain(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    mock_radio.get_rf_gain = AsyncMock(return_value=255)
+    resp = await handler.execute(get_cmd("get_level", "RF"))
+    assert resp.ok
+    assert float(resp.values[0]) == pytest.approx(1.0)
+
+
+@pytest.mark.asyncio
+async def test_get_level_nr(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    mock_radio.get_nr_level = AsyncMock(return_value=0)
+    resp = await handler.execute(get_cmd("get_level", "NR"))
+    assert resp.ok
+    assert float(resp.values[0]) == pytest.approx(0.0)
+
+
+@pytest.mark.asyncio
+async def test_get_level_nb(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    mock_radio.get_nb_level = AsyncMock(return_value=51)  # 51/255 ≈ 0.2
+    resp = await handler.execute(get_cmd("get_level", "NB"))
+    assert resp.ok
+    assert float(resp.values[0]) == pytest.approx(51 / 255.0, rel=1e-5)
+
+
+@pytest.mark.asyncio
+async def test_get_level_comp(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    mock_radio.get_compressor_level = AsyncMock(return_value=255)
+    resp = await handler.execute(get_cmd("get_level", "COMP"))
+    assert resp.ok
+    assert float(resp.values[0]) == pytest.approx(1.0)
+
+
+@pytest.mark.asyncio
+async def test_get_level_micgain(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    mock_radio.get_mic_gain = AsyncMock(return_value=0)
+    resp = await handler.execute(get_cmd("get_level", "MICGAIN"))
+    assert resp.ok
+    assert float(resp.values[0]) == pytest.approx(0.0)
+
+
+@pytest.mark.asyncio
+async def test_get_level_monitor_gain(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    mock_radio.get_monitor_gain = AsyncMock(return_value=128)
+    resp = await handler.execute(get_cmd("get_level", "MONITOR_GAIN"))
+    assert resp.ok
+    assert float(resp.values[0]) == pytest.approx(128 / 255.0, rel=1e-5)
+
+
+@pytest.mark.asyncio
+async def test_get_level_keyspd(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    mock_radio.get_key_speed = AsyncMock(return_value=20)
+    resp = await handler.execute(get_cmd("get_level", "KEYSPD"))
+    assert resp.ok
+    assert resp.values[0] == "20"
+
+
+@pytest.mark.asyncio
+async def test_get_level_cwpitch(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    mock_radio.get_cw_pitch = AsyncMock(return_value=600)
+    resp = await handler.execute(get_cmd("get_level", "CWPITCH"))
+    assert resp.ok
+    assert resp.values[0] == "600"
+
+
+@pytest.mark.asyncio
+async def test_get_level_preamp_off(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    mock_radio.get_preamp = AsyncMock(return_value=0)
+    resp = await handler.execute(get_cmd("get_level", "PREAMP"))
+    assert resp.ok
+    assert resp.values[0] == "0"
+
+
+@pytest.mark.asyncio
+async def test_get_level_preamp_1(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    mock_radio.get_preamp = AsyncMock(return_value=1)
+    resp = await handler.execute(get_cmd("get_level", "PREAMP"))
+    assert resp.ok
+    assert resp.values[0] == "12"
+
+
+@pytest.mark.asyncio
+async def test_get_level_preamp_2(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    mock_radio.get_preamp = AsyncMock(return_value=2)
+    resp = await handler.execute(get_cmd("get_level", "PREAMP"))
+    assert resp.ok
+    assert resp.values[0] == "20"
+
+
+@pytest.mark.asyncio
+async def test_get_level_att_off(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    mock_radio.get_attenuator_level = AsyncMock(return_value=0)
+    resp = await handler.execute(get_cmd("get_level", "ATT"))
+    assert resp.ok
+    assert resp.values[0] == "0"
+
+
+@pytest.mark.asyncio
+async def test_get_level_att_18db(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    mock_radio.get_attenuator_level = AsyncMock(return_value=18)
+    resp = await handler.execute(get_cmd("get_level", "ATT"))
+    assert resp.ok
+    assert resp.values[0] == "18"
+
+
+@pytest.mark.asyncio
+async def test_get_level_rfpower_meter(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    mock_radio.get_power_meter = AsyncMock(return_value=255)
+    resp = await handler.execute(get_cmd("get_level", "RFPOWER_METER"))
+    assert resp.ok
+    assert float(resp.values[0]) == pytest.approx(1.0)
+
+
+@pytest.mark.asyncio
+async def test_get_level_comp_meter(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    mock_radio.get_comp_meter = AsyncMock(return_value=128)
+    resp = await handler.execute(get_cmd("get_level", "COMP_METER"))
+    assert resp.ok
+    assert float(resp.values[0]) == pytest.approx(128 / 255.0, rel=1e-5)
+
+
+@pytest.mark.asyncio
+async def test_get_level_id_meter(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    mock_radio.get_id_meter = AsyncMock(return_value=0)
+    resp = await handler.execute(get_cmd("get_level", "ID_METER"))
+    assert resp.ok
+    assert float(resp.values[0]) == pytest.approx(0.0)
+
+
+@pytest.mark.asyncio
+async def test_get_level_vd_meter(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    mock_radio.get_vd_meter = AsyncMock(return_value=200)
+    resp = await handler.execute(get_cmd("get_level", "VD_METER"))
+    assert resp.ok
+    assert float(resp.values[0]) == pytest.approx(200 / 255.0, rel=1e-5)
+
+
+# ---------------------------------------------------------------------------
+# set_level (L command)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_set_level_af(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    resp = await handler.execute(set_cmd("set_level", "AF", "0.500000"))
+    assert resp.ok
+    mock_radio.set_af_level.assert_awaited_once_with(128)
+
+
+@pytest.mark.asyncio
+async def test_set_level_rf(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    resp = await handler.execute(set_cmd("set_level", "RF", "1.000000"))
+    assert resp.ok
+    mock_radio.set_rf_gain.assert_awaited_once_with(255)
+
+
+@pytest.mark.asyncio
+async def test_set_level_nr(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    resp = await handler.execute(set_cmd("set_level", "NR", "0.000000"))
+    assert resp.ok
+    mock_radio.set_nr_level.assert_awaited_once_with(0)
+
+
+@pytest.mark.asyncio
+async def test_set_level_nb(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    resp = await handler.execute(set_cmd("set_level", "NB", "0.200000"))
+    assert resp.ok
+    mock_radio.set_nb_level.assert_awaited_once_with(51)
+
+
+@pytest.mark.asyncio
+async def test_set_level_comp(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    resp = await handler.execute(set_cmd("set_level", "COMP", "1.0"))
+    assert resp.ok
+    mock_radio.set_compressor_level.assert_awaited_once_with(255)
+
+
+@pytest.mark.asyncio
+async def test_set_level_micgain(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    resp = await handler.execute(set_cmd("set_level", "MICGAIN", "0.0"))
+    assert resp.ok
+    mock_radio.set_mic_gain.assert_awaited_once_with(0)
+
+
+@pytest.mark.asyncio
+async def test_set_level_keyspd(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    resp = await handler.execute(set_cmd("set_level", "KEYSPD", "25"))
+    assert resp.ok
+    mock_radio.set_key_speed.assert_awaited_once_with(25)
+
+
+@pytest.mark.asyncio
+async def test_set_level_cwpitch(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    resp = await handler.execute(set_cmd("set_level", "CWPITCH", "700"))
+    assert resp.ok
+    mock_radio.set_cw_pitch.assert_awaited_once_with(700)
+
+
+@pytest.mark.asyncio
+async def test_set_level_preamp_off(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    resp = await handler.execute(set_cmd("set_level", "PREAMP", "0"))
+    assert resp.ok
+    mock_radio.set_preamp.assert_awaited_once_with(0)
+
+
+@pytest.mark.asyncio
+async def test_set_level_preamp_12db(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    resp = await handler.execute(set_cmd("set_level", "PREAMP", "12"))
+    assert resp.ok
+    mock_radio.set_preamp.assert_awaited_once_with(1)
+
+
+@pytest.mark.asyncio
+async def test_set_level_preamp_20db(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    resp = await handler.execute(set_cmd("set_level", "PREAMP", "20"))
+    assert resp.ok
+    mock_radio.set_preamp.assert_awaited_once_with(2)
+
+
+@pytest.mark.asyncio
+async def test_set_level_att(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    resp = await handler.execute(set_cmd("set_level", "ATT", "18"))
+    assert resp.ok
+    mock_radio.set_attenuator_level.assert_awaited_once_with(18)
+
+
+@pytest.mark.asyncio
+async def test_set_level_att_rounds_to_nearest(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    # 10 dB is closest to 12 dB
+    resp = await handler.execute(set_cmd("set_level", "ATT", "10"))
+    assert resp.ok
+    mock_radio.set_attenuator_level.assert_awaited_once_with(12)
+
+
+@pytest.mark.asyncio
+async def test_set_level_rfpower(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    resp = await handler.execute(set_cmd("set_level", "RFPOWER", "1.0"))
+    assert resp.ok
+    mock_radio.set_rf_power.assert_awaited_once_with(255)
+
+
+@pytest.mark.asyncio
+async def test_set_level_no_args(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    resp = await handler.execute(set_cmd("set_level"))
+    assert resp.error == HamlibError.EINVAL
+
+
+@pytest.mark.asyncio
+async def test_set_level_unknown(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    resp = await handler.execute(set_cmd("set_level", "NOSUCHLEVEL", "1.0"))
+    assert resp.error == HamlibError.EINVAL
+
+
+@pytest.mark.asyncio
+async def test_set_level_invalid_value(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    resp = await handler.execute(set_cmd("set_level", "AF", "notafloat"))
+    assert resp.error == HamlibError.EINVAL
+
+
+# ---------------------------------------------------------------------------
+# get_func / set_func (u/U commands)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_get_func_nb_off(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    mock_radio.get_nb = AsyncMock(return_value=False)
+    resp = await handler.execute(get_cmd("get_func", "NB"))
+    assert resp.ok
+    assert resp.values[0] == "0"
+
+
+@pytest.mark.asyncio
+async def test_get_func_nb_on(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    mock_radio.get_nb = AsyncMock(return_value=True)
+    resp = await handler.execute(get_cmd("get_func", "NB"))
+    assert resp.ok
+    assert resp.values[0] == "1"
+
+
+@pytest.mark.asyncio
+async def test_get_func_nr(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    mock_radio.get_nr = AsyncMock(return_value=True)
+    resp = await handler.execute(get_cmd("get_func", "NR"))
+    assert resp.ok
+    assert resp.values[0] == "1"
+
+
+@pytest.mark.asyncio
+async def test_get_func_comp(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    mock_radio.get_compressor = AsyncMock(return_value=False)
+    resp = await handler.execute(get_cmd("get_func", "COMP"))
+    assert resp.ok
+    assert resp.values[0] == "0"
+
+
+@pytest.mark.asyncio
+async def test_get_func_vox(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    mock_radio.get_vox = AsyncMock(return_value=True)
+    resp = await handler.execute(get_cmd("get_func", "VOX"))
+    assert resp.ok
+    assert resp.values[0] == "1"
+
+
+@pytest.mark.asyncio
+async def test_get_func_tone(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    mock_radio.get_repeater_tone = AsyncMock(return_value=False)
+    resp = await handler.execute(get_cmd("get_func", "TONE"))
+    assert resp.ok
+    assert resp.values[0] == "0"
+
+
+@pytest.mark.asyncio
+async def test_get_func_tsql(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    mock_radio.get_repeater_tsql = AsyncMock(return_value=True)
+    resp = await handler.execute(get_cmd("get_func", "TSQL"))
+    assert resp.ok
+    assert resp.values[0] == "1"
+
+
+@pytest.mark.asyncio
+async def test_get_func_anf(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    mock_radio.get_auto_notch = AsyncMock(return_value=False)
+    resp = await handler.execute(get_cmd("get_func", "ANF"))
+    assert resp.ok
+    assert resp.values[0] == "0"
+
+
+@pytest.mark.asyncio
+async def test_get_func_lock(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    mock_radio.get_dial_lock = AsyncMock(return_value=True)
+    resp = await handler.execute(get_cmd("get_func", "LOCK"))
+    assert resp.ok
+    assert resp.values[0] == "1"
+
+
+@pytest.mark.asyncio
+async def test_get_func_mon(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    mock_radio.get_monitor = AsyncMock(return_value=False)
+    resp = await handler.execute(get_cmd("get_func", "MON"))
+    assert resp.ok
+    assert resp.values[0] == "0"
+
+
+@pytest.mark.asyncio
+async def test_get_func_apf_off(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    mock_radio.get_audio_peak_filter = AsyncMock(return_value=0)
+    resp = await handler.execute(get_cmd("get_func", "APF"))
+    assert resp.ok
+    assert resp.values[0] == "0"
+
+
+@pytest.mark.asyncio
+async def test_get_func_apf_on(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    mock_radio.get_audio_peak_filter = AsyncMock(return_value=1)
+    resp = await handler.execute(get_cmd("get_func", "APF"))
+    assert resp.ok
+    assert resp.values[0] == "1"
+
+
+@pytest.mark.asyncio
+async def test_get_func_no_args(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    resp = await handler.execute(get_cmd("get_func"))
+    assert resp.error == HamlibError.EINVAL
+
+
+@pytest.mark.asyncio
+async def test_get_func_unknown(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    resp = await handler.execute(get_cmd("get_func", "NOSUCHFUNC"))
+    assert resp.error == HamlibError.EINVAL
+
+
+@pytest.mark.asyncio
+async def test_set_func_nb_on(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    resp = await handler.execute(set_cmd("set_func", "NB", "1"))
+    assert resp.ok
+    mock_radio.set_nb.assert_awaited_once_with(True)
+
+
+@pytest.mark.asyncio
+async def test_set_func_nb_off(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    resp = await handler.execute(set_cmd("set_func", "NB", "0"))
+    assert resp.ok
+    mock_radio.set_nb.assert_awaited_once_with(False)
+
+
+@pytest.mark.asyncio
+async def test_set_func_nr(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    resp = await handler.execute(set_cmd("set_func", "NR", "1"))
+    assert resp.ok
+    mock_radio.set_nr.assert_awaited_once_with(True)
+
+
+@pytest.mark.asyncio
+async def test_set_func_comp(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    resp = await handler.execute(set_cmd("set_func", "COMP", "0"))
+    assert resp.ok
+    mock_radio.set_compressor.assert_awaited_once_with(False)
+
+
+@pytest.mark.asyncio
+async def test_set_func_vox(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    resp = await handler.execute(set_cmd("set_func", "VOX", "1"))
+    assert resp.ok
+    mock_radio.set_vox.assert_awaited_once_with(True)
+
+
+@pytest.mark.asyncio
+async def test_set_func_tone(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    resp = await handler.execute(set_cmd("set_func", "TONE", "1"))
+    assert resp.ok
+    mock_radio.set_repeater_tone.assert_awaited_once_with(True)
+
+
+@pytest.mark.asyncio
+async def test_set_func_tsql(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    resp = await handler.execute(set_cmd("set_func", "TSQL", "0"))
+    assert resp.ok
+    mock_radio.set_repeater_tsql.assert_awaited_once_with(False)
+
+
+@pytest.mark.asyncio
+async def test_set_func_anf(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    resp = await handler.execute(set_cmd("set_func", "ANF", "1"))
+    assert resp.ok
+    mock_radio.set_auto_notch.assert_awaited_once_with(True)
+
+
+@pytest.mark.asyncio
+async def test_set_func_lock(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    resp = await handler.execute(set_cmd("set_func", "LOCK", "0"))
+    assert resp.ok
+    mock_radio.set_dial_lock.assert_awaited_once_with(False)
+
+
+@pytest.mark.asyncio
+async def test_set_func_mon(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    resp = await handler.execute(set_cmd("set_func", "MON", "1"))
+    assert resp.ok
+    mock_radio.set_monitor.assert_awaited_once_with(True)
+
+
+@pytest.mark.asyncio
+async def test_set_func_apf_on(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    resp = await handler.execute(set_cmd("set_func", "APF", "1"))
+    assert resp.ok
+    mock_radio.set_audio_peak_filter.assert_awaited_once_with(1)
+
+
+@pytest.mark.asyncio
+async def test_set_func_apf_off(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    resp = await handler.execute(set_cmd("set_func", "APF", "0"))
+    assert resp.ok
+    mock_radio.set_audio_peak_filter.assert_awaited_once_with(0)
+
+
+@pytest.mark.asyncio
+async def test_set_func_no_args(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    resp = await handler.execute(set_cmd("set_func"))
+    assert resp.error == HamlibError.EINVAL
+
+
+@pytest.mark.asyncio
+async def test_set_func_unknown(handler: RigctldHandler, mock_radio: AsyncMock) -> None:
+    resp = await handler.execute(set_cmd("set_func", "NOSUCHFUNC", "1"))
+    assert resp.error == HamlibError.EINVAL
+
+
+@pytest.mark.asyncio
+async def test_set_func_invalid_value(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    resp = await handler.execute(set_cmd("set_func", "NB", "notanint"))
+    assert resp.error == HamlibError.EINVAL
