@@ -263,6 +263,14 @@ _register(
         is_set=False,
         description="Get lock mode (always 0)",
     ),
+    CommandDef(
+        "w",
+        "send_raw",
+        is_set=False,
+        min_args=1,
+        max_args=128,
+        description="Send raw CI-V bytes to radio, return raw response",
+    ),
 )
 
 
