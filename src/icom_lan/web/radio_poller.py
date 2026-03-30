@@ -955,6 +955,10 @@ class RadioPoller:
                 ("nr", 0x16, 0x40),
                 ("digisel", 0x16, 0x4E),
                 ("ip_plus", 0x16, 0x65),
+                ("repeater_tone", 0x16, 0x42),
+                ("tsql", 0x16, 0x43),
+                ("repeater_tone", 0x1B, 0x00),  # Tone frequency
+                ("tsql", 0x1B, 0x01),  # TSQL frequency
                 ("nr", 0x14, 0x06),  # NR Level
                 ("nb", 0x14, 0x12),  # NB Level
                 ("notch", 0x14, 0x0D),  # Notch position
@@ -1017,6 +1021,8 @@ class RadioPoller:
             (0x16, 0x46),  # VOX status
             (0x16, 0x47),  # Break-in mode
             (0x16, 0x50),  # Dial lock status
+            (0x14, 0x16),  # VOX gain
+            (0x14, 0x17),  # Anti-VOX gain
         ]
         if not self._profile.supports_cmd29(0x16, 0x12):
             _COMMON_FEATURE_QUERIES.insert(0, (0x16, 0x12))  # AGC mode
@@ -1879,12 +1885,18 @@ class RadioPoller:
                 self._ensure_receiver_supported(rx, operation="set_tone_freq")
                 if isinstance(radio, AdvancedControlCapable):
                     await radio.set_tone_freq(freq, receiver=rx)
-                self.bump_revision()
+                if self._radio_state:
+                    target = self._radio_state.sub if rx != 0 else self._radio_state.main
+                    target.tone_freq = freq
+                    self.bump_revision()
             case SetTsqlFreq(freq_hz=freq, receiver=rx):
                 self._ensure_receiver_supported(rx, operation="set_tsql_freq")
                 if isinstance(radio, AdvancedControlCapable):
                     await radio.set_tsql_freq(freq, receiver=rx)
-                self.bump_revision()
+                if self._radio_state:
+                    target = self._radio_state.sub if rx != 0 else self._radio_state.main
+                    target.tsql_freq = freq
+                    self.bump_revision()
             case SetMainSubTracking(on=on):
                 if isinstance(radio, AdvancedControlCapable):
                     await radio.set_main_sub_tracking(on)
@@ -1923,7 +1935,9 @@ class RadioPoller:
             case SetVoxDelay(level=level):
                 if isinstance(radio, AdvancedControlCapable):
                     await radio.set_vox_delay(level)
-                self.bump_revision()
+                if self._radio_state:
+                    self._radio_state.vox_delay = level
+                    self.bump_revision()
             case SetNbDepth(level=level, receiver=rx):
                 self._ensure_receiver_supported(rx, operation="set_nb_depth")
                 if isinstance(radio, AdvancedControlCapable):
@@ -1948,12 +1962,18 @@ class RadioPoller:
                 self._ensure_receiver_supported(rx, operation="set_repeater_tone")
                 if isinstance(radio, AdvancedControlCapable):
                     await radio.set_repeater_tone(on, receiver=rx)
-                self.bump_revision()
+                if self._radio_state:
+                    target = self._radio_state.sub if rx != 0 else self._radio_state.main
+                    target.repeater_tone = on
+                    self.bump_revision()
             case SetRepeaterTsql(on=on, receiver=rx):
                 self._ensure_receiver_supported(rx, operation="set_repeater_tsql")
                 if isinstance(radio, AdvancedControlCapable):
                     await radio.set_repeater_tsql(on, receiver=rx)
-                self.bump_revision()
+                if self._radio_state:
+                    target = self._radio_state.sub if rx != 0 else self._radio_state.main
+                    target.repeater_tsql = on
+                    self.bump_revision()
             case SetRxAntenna(antenna=antenna, on=on):
                 if isinstance(radio, AdvancedControlCapable):
                     if antenna == 1:

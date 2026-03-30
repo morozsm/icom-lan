@@ -114,13 +114,13 @@ def _make_radio(active: str = "MAIN") -> MagicMock:
     # instance attributes so isinstance() succeeds on Python 3.12+ where
     # __getattr__-based attribute access no longer satisfies runtime-checkable
     # protocol isinstance checks.
-    from icom_lan.radio_protocol import AdvancedControlCapable as _ACC
+    from icom_lan.radio_protocol import AdvancedControlCapable as _ACC, ScopeCapable as _SC
     try:
         from typing import get_protocol_members as _gpm  # Python 3.13+
-        _proto_attrs = _gpm(_ACC)
+        _proto_attrs = _gpm(_ACC) | _gpm(_SC)
     except ImportError:
         import typing as _typing
-        _proto_attrs = _typing._get_protocol_attrs(_ACC)  # type: ignore[attr-defined]
+        _proto_attrs = _typing._get_protocol_attrs(_ACC) | _typing._get_protocol_attrs(_SC)  # type: ignore[attr-defined]
     for _attr in _proto_attrs:
         if _attr not in vars(radio):
             setattr(radio, _attr, AsyncMock())

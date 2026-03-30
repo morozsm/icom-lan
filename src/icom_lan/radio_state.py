@@ -54,6 +54,10 @@ class ReceiverState:
     af_mute: bool = False
     contour: int = 0  # 0=off, >0=on (S-DX / contour DSP)
     if_shift: int = 0  # signed Hz, e.g. -1200..+1200
+    repeater_tone: bool = False
+    repeater_tsql: bool = False
+    tone_freq: int = 0  # centihz, e.g. 8850 = 88.50 Hz
+    tsql_freq: int = 0  # centihz, e.g. 8850 = 88.50 Hz
 
 
 @dataclass(slots=True)
@@ -121,6 +125,7 @@ class RadioState:
     vox_on: bool = False
     vox_gain: int = 0  # 0-255
     anti_vox_gain: int = 0  # 0-255
+    vox_delay: int = 0  # 0-20 (0.0-2.0 sec in 0.1s steps)
     ssb_tx_bandwidth: int = 0  # 0=wide, 1=mid, 2=nar
     ref_adjust: int = 0  # 0-511
     dash_ratio: int = 0  # 28-45
@@ -164,6 +169,7 @@ class RadioState:
             "vox_on": self.vox_on,
             "vox_gain": self.vox_gain,
             "anti_vox_gain": self.anti_vox_gain,
+            "vox_delay": self.vox_delay,
             "ssb_tx_bandwidth": self.ssb_tx_bandwidth,
             "ref_adjust": self.ref_adjust,
             "dash_ratio": self.dash_ratio,
