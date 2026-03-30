@@ -1106,7 +1106,7 @@ class CivRuntime:
     @staticmethod
     def _civ_expects_response(frame: CivFrame) -> bool:
         """Determine if a CI-V frame expects a data RESPONSE or just an ACK/NAK."""
-        if frame.command in (0x03, 0x04):
+        if frame.command in (0x03, 0x04, 0x25, 0x26):
             return True
         if frame.command == 0x07 and frame.data == b"\xc2":
             return True

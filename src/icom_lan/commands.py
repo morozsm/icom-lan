@@ -157,6 +157,15 @@ __all__ = [
     "set_twin_peak_filter",
     "get_dial_lock",
     "set_dial_lock",
+    # Selected/unselected receiver freq & mode (0x25/0x26)
+    "get_selected_freq",
+    "get_unselected_freq",
+    "parse_selected_freq_response",
+    "get_selected_mode",
+    "get_unselected_mode",
+    "parse_selected_mode_response",
+    "_CMD_SELECTED_FREQ",
+    "_CMD_SELECTED_MODE",
     "get_filter_shape",
     "set_filter_shape",
     # Filter width (TOML canonical)
@@ -349,6 +358,8 @@ _CMD_MEMORY_MODE = 0x08  # Memory mode (select channel)
 _CMD_MEMORY_WRITE = 0x09  # Memory write
 _CMD_MEMORY_TO_VFO = 0x0A  # Memory to VFO
 _CMD_MEMORY_CLEAR = 0x0B  # Memory clear
+_CMD_SELECTED_FREQ = 0x25  # Selected/Unselected receiver frequency
+_CMD_SELECTED_MODE = 0x26  # Selected/Unselected receiver mode
 _CMD_ACK = 0xFB
 _CMD_NAK = 0xFA
 
@@ -771,6 +782,105 @@ def parse_mode_response(frame: CivFrame) -> tuple[Mode, int | None]:
     mode = Mode(frame.data[0])
     filt = frame.data[1] if len(frame.data) > 1 else None
     return mode, filt
+
+
+# --- Selected / Unselected receiver freq & mode (0x25/0x26) ---
+
+
+def get_selected_freq(
+    to_addr: int,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a 'get selected receiver frequency' CI-V command (0x25 0x00).
+
+    Returns:
+        CI-V frame bytes.
+    """
+    return build_civ_frame(to_addr, from_addr, _CMD_SELECTED_FREQ, data=bytes([0x00]))
+
+
+def get_unselected_freq(
+    to_addr: int,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a 'get unselected receiver frequency' CI-V command (0x25 0x01).
+
+    Returns:
+        CI-V frame bytes.
+    """
+    return build_civ_frame(to_addr, from_addr, _CMD_SELECTED_FREQ, data=bytes([0x01]))
+
+
+def parse_selected_freq_response(frame: CivFrame) -> tuple[int, int]:
+    """Parse a 0x25 selected/unselected frequency response.
+
+    Args:
+        frame: Parsed CivFrame (command 0x25 with receiver + 5-byte BCD data).
+
+    Returns:
+        Tuple of (receiver_byte, frequency_hz).
+
+    Raises:
+        ValueError: If frame is not a 0x25 response or payload too short.
+    """
+    if frame.command != _CMD_SELECTED_FREQ:
+        raise ValueError(f"Not a 0x25 response: command 0x{frame.command:02x}")
+    if len(frame.data) < 6:
+        raise ValueError(
+            f"0x25 response payload too short: expected >=6 bytes, got {len(frame.data)}"
+        )
+    receiver_byte = frame.data[0]
+    freq = bcd_decode(frame.data[1:6])
+    return receiver_byte, freq
+
+
+def get_selected_mode(
+    to_addr: int,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a 'get selected receiver mode' CI-V command (0x26 0x00).
+
+    Returns:
+        CI-V frame bytes.
+    """
+    return build_civ_frame(to_addr, from_addr, _CMD_SELECTED_MODE, data=bytes([0x00]))
+
+
+def get_unselected_mode(
+    to_addr: int,
+    from_addr: int = CONTROLLER_ADDR,
+) -> bytes:
+    """Build a 'get unselected receiver mode' CI-V command (0x26 0x01).
+
+    Returns:
+        CI-V frame bytes.
+    """
+    return build_civ_frame(to_addr, from_addr, _CMD_SELECTED_MODE, data=bytes([0x01]))
+
+
+def parse_selected_mode_response(frame: CivFrame) -> tuple[int, Mode, int | None, int | None]:
+    """Parse a 0x26 selected/unselected mode response.
+
+    Args:
+        frame: Parsed CivFrame (command 0x26 with receiver + mode + optional data_mode + filter).
+
+    Returns:
+        Tuple of (receiver_byte, mode, data_mode_or_None, filter_or_None).
+
+    Raises:
+        ValueError: If frame is not a 0x26 response or payload too short.
+    """
+    if frame.command != _CMD_SELECTED_MODE:
+        raise ValueError(f"Not a 0x26 response: command 0x{frame.command:02x}")
+    if len(frame.data) < 2:
+        raise ValueError(
+            f"0x26 response payload too short: expected >=2 bytes, got {len(frame.data)}"
+        )
+    receiver_byte = frame.data[0]
+    mode = Mode(frame.data[1])
+    data_mode = frame.data[2] if len(frame.data) >= 3 else None
+    filt = frame.data[3] if len(frame.data) >= 4 else None
+    return receiver_byte, mode, data_mode, filt
 
 
 # --- Power commands ---

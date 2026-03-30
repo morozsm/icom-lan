@@ -435,10 +435,10 @@ set_dual_watch_off = [0x07, 0xC0]
 get_main_sub_band = [0x07, 0xD2]          # 0=MAIN, 1=SUB
 get_main_sub_tracking = [0x16, 0x5E]      # 0=OFF, 1=ON
 set_main_sub_tracking = [0x16, 0x5E]
-get_selected_freq = [0x25, 0x00]          # NOT_IMPLEMENTED — Read selected band freq
-get_unselected_freq = [0x25, 0x01]        # NOT_IMPLEMENTED — Read unselected band freq
-get_selected_mode = [0x26, 0x00]          # NOT_IMPLEMENTED — Read selected band mode
-get_unselected_mode = [0x26, 0x01]        # NOT_IMPLEMENTED — Read unselected band mode
+get_selected_freq = [0x25, 0x00]          # Read selected band freq
+get_unselected_freq = [0x25, 0x01]        # Read unselected band freq
+get_selected_mode = [0x26, 0x00]          # Read selected band mode
+get_unselected_mode = [0x26, 0x01]        # Read unselected band mode
 
 # ── Tuning ──
 get_tuning_step = [0x10]

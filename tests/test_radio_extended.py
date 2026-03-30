@@ -297,38 +297,35 @@ class TestCW:
 
 class TestReceiverAwareContract:
     @pytest.mark.asyncio
-    async def test_get_frequency_receiver_sub_uses_vfo_fallback(
+    async def test_get_frequency_receiver_sub_uses_cmd25(
         self, radio: IcomRadio
     ) -> None:
-        radio.set_vfo = AsyncMock()  # type: ignore[method-assign]
         expected = 7_074_000
         radio._send_civ_raw = AsyncMock(  # type: ignore[method-assign]
             return_value=CivFrame(
                 to_addr=CONTROLLER_ADDR,
                 from_addr=IC_7610_ADDR,
-                command=0x03,
+                command=0x25,
                 sub=None,
-                data=bcd_encode(expected),
+                data=bytes([0x01]) + bcd_encode(expected),
             )
         )
 
         got = await radio.get_freq(receiver=1)
 
         assert got == expected
-        radio.set_vfo.assert_has_awaits([call("SUB"), call("MAIN")])
 
     @pytest.mark.asyncio
-    async def test_get_mode_receiver_sub_uses_vfo_fallback(
+    async def test_get_mode_receiver_sub_uses_cmd26(
         self, radio: IcomRadio
     ) -> None:
-        radio.set_vfo = AsyncMock()  # type: ignore[method-assign]
         radio._send_civ_raw = AsyncMock(  # type: ignore[method-assign]
             return_value=CivFrame(
                 to_addr=CONTROLLER_ADDR,
                 from_addr=IC_7610_ADDR,
-                command=0x04,
+                command=0x26,
                 sub=None,
-                data=bytes([Mode.LSB, 2]),
+                data=bytes([0x01, Mode.LSB, 0x00, 2]),
             )
         )
 
@@ -336,7 +333,6 @@ class TestReceiverAwareContract:
 
         assert mode_name == "LSB"
         assert filt == 2
-        radio.set_vfo.assert_has_awaits([call("SUB"), call("MAIN")])
 
     @pytest.mark.asyncio
     async def test_set_frequency_receiver_sub_uses_vfo_fallback(

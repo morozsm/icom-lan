@@ -293,6 +293,12 @@ from .commands import set_repeater_tone as _set_repeater_tone_cmd
 from .commands import set_repeater_tsql as _set_repeater_tsql_cmd
 from .commands import set_tone_freq as _set_tone_freq_cmd
 from .commands import set_tsql_freq as _set_tsql_freq_cmd
+from .commands import get_selected_freq as _get_selected_freq_cmd
+from .commands import get_unselected_freq as _get_unselected_freq_cmd
+from .commands import parse_selected_freq_response as _parse_selected_freq_response
+from .commands import get_selected_mode as _get_selected_mode_cmd
+from .commands import get_unselected_mode as _get_unselected_mode_cmd
+from .commands import parse_selected_mode_response as _parse_selected_mode_response
 from .commands import set_vfo as _select_vfo_cmd
 from .exceptions import CommandError, ConnectionError, TimeoutError
 from .profiles import RadioProfile, resolve_radio_profile
@@ -819,6 +825,42 @@ class Icom7610CoreRadio:
                 filter_width if filter_width is not None else self._filter_width
             )
             self._state_cache.update_mode(mode.name, cached_filter)
+
+    # ------------------------------------------------------------------
+    # Selected / Unselected receiver freq & mode (0x25 / 0x26)
+    # ------------------------------------------------------------------
+
+    async def _get_selected_freq(self) -> int:
+        """Read the selected (active) receiver frequency via CI-V 0x25 0x00."""
+        civ = _get_selected_freq_cmd(to_addr=self._radio_addr)
+        resp = await self._send_civ_raw(civ)
+        assert resp is not None
+        _rcvr, freq = _parse_selected_freq_response(resp)
+        return freq
+
+    async def _get_unselected_freq(self) -> int:
+        """Read the unselected (inactive) receiver frequency via CI-V 0x25 0x01."""
+        civ = _get_unselected_freq_cmd(to_addr=self._radio_addr)
+        resp = await self._send_civ_raw(civ)
+        assert resp is not None
+        _rcvr, freq = _parse_selected_freq_response(resp)
+        return freq
+
+    async def _get_selected_mode(self) -> tuple[Mode, int | None]:
+        """Read the selected (active) receiver mode via CI-V 0x26 0x00."""
+        civ = _get_selected_mode_cmd(to_addr=self._radio_addr)
+        resp = await self._send_civ_raw(civ)
+        assert resp is not None
+        _rcvr, mode, _data_mode, filt = _parse_selected_mode_response(resp)
+        return mode, filt
+
+    async def _get_unselected_mode(self) -> tuple[Mode, int | None]:
+        """Read the unselected (inactive) receiver mode via CI-V 0x26 0x01."""
+        civ = _get_unselected_mode_cmd(to_addr=self._radio_addr)
+        resp = await self._send_civ_raw(civ)
+        assert resp is not None
+        _rcvr, mode, _data_mode, filt = _parse_selected_mode_response(resp)
+        return mode, filt
 
     @staticmethod
     def _coerce_mode(mode: Mode | str) -> Mode:
@@ -1624,15 +1666,8 @@ class Icom7610CoreRadio:
         if receiver == RECEIVER_MAIN:
             return await self._get_frequency_main(bypass_cache=bypass_cache)
 
-        return int(
-            await self._run_with_receiver_vfo_fallback(
-                receiver=receiver,
-                operation="get_freq",
-                action=lambda: self._get_frequency_main(
-                    bypass_cache=bypass_cache, update_cache=False
-                ),
-            )
-        )
+        # Use 0x25 0x01 (unselected receiver freq) — no VFO swap needed.
+        return await self._get_unselected_freq()
 
     async def set_freq(self, freq_hz: int, receiver: int = 0) -> None:
         """Set the operating frequency.
@@ -1693,12 +1728,8 @@ class Icom7610CoreRadio:
         if receiver == RECEIVER_MAIN:
             return await self._get_mode_info_main(update_cache=True)
 
-        result = await self._run_with_receiver_vfo_fallback(
-            receiver=receiver,
-            operation="get_mode_info",
-            action=lambda: self._get_mode_info_main(update_cache=False),
-        )
-        return cast("tuple[Mode, int | None]", result)
+        # Use 0x26 0x01 (unselected receiver mode) — no VFO swap needed.
+        return await self._get_unselected_mode()
 
     async def get_filter(self) -> int | None:
         """Get current mode filter number (1-3) when available."""
