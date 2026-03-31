@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import asyncio
-from dataclasses import fields
-from unittest.mock import AsyncMock, call
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -194,6 +192,12 @@ class TestApplyProfileFull:
         radio.set_squelch.assert_not_awaited()
 
     @pytest.mark.asyncio()
+    async def test_filter_width_without_mode_is_ignored(self, radio: AsyncMock) -> None:
+        """filter_width only applies as an arg to set_mode; alone it does nothing."""
+        await apply_profile(radio, OperatingProfile(filter_width=500))
+        radio.set_mode.assert_not_awaited()
+
+    @pytest.mark.asyncio()
     async def test_full_profile_applies_all(self, radio: AsyncMock) -> None:
         profile = OperatingProfile(
             frequency_hz=14_074_000,
@@ -247,14 +251,21 @@ class TestApplyProfileMinimal:
         assert snapshot == {"freq": 7_000_000}
 
     @pytest.mark.asyncio()
-    async def test_unsupported_setters_not_called(self) -> None:
+    async def test_unsupported_fields_skipped_without_error(self) -> None:
+        """apply_profile must not raise when the radio lacks setters."""
         radio = _minimal_radio()
-        await apply_profile(radio, OperatingProfile(
-            vox=False, split=True, data_mode=True,
-        ))
-        assert not hasattr(radio, "set_vox")
-        assert not hasattr(radio, "set_split_mode")
-        assert not hasattr(radio, "set_data_mode")
+        profile = OperatingProfile(
+            frequency_hz=14_074_000,
+            vox=False,
+            split=True,
+            data_mode=True,
+            squelch_level=0,
+        )
+        # Should complete without AttributeError
+        snapshot = await apply_profile(radio, profile)
+        assert isinstance(snapshot, dict)
+        # Only the supported setter was called
+        radio.set_freq.assert_awaited_with(14_074_000)
 
 
 # ---------------------------------------------------------------------------

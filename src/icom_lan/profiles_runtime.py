@@ -209,7 +209,6 @@ async def apply_profile(radio: Any, profile: OperatingProfile) -> dict[str, obje
         if hasattr(radio, "set_vfo"):
             await radio.set_vfo(profile.vfo)
 
-
     return snapshot
 
 
