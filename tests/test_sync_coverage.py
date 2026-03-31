@@ -44,6 +44,7 @@ def test_sync_wrappers_delegate_and_return_values() -> None:
     r._radio.get_mode = AsyncMock(return_value=("USB", 2))
     r._radio.get_mode_info = AsyncMock(return_value=("USB", 2))
     r._radio.get_filter = AsyncMock(return_value=2)
+    r._radio.get_data_mode = AsyncMock(return_value=True)
     r._radio.get_rf_power = AsyncMock(return_value=200)
     r._radio.get_s_meter = AsyncMock(return_value=99)
     r._radio.get_swr = AsyncMock(return_value=10)
@@ -52,11 +53,15 @@ def test_sync_wrappers_delegate_and_return_values() -> None:
     r._radio.get_attenuator = AsyncMock(return_value=True)
     r._radio.get_preamp = AsyncMock(return_value=1)
     r._radio.get_digisel = AsyncMock(return_value=False)
+    r._radio.get_data_off_mod_input = AsyncMock(return_value=3)
+    r._radio.get_data1_mod_input = AsyncMock(return_value=4)
+    r._radio.get_vox = AsyncMock(return_value=True)
     r._radio.snapshot_state = AsyncMock(return_value={"freq": 7100000})
 
     r._radio.set_freq = AsyncMock()
     r._radio.set_filter = AsyncMock()
     r._radio.set_mode = AsyncMock()
+    r._radio.set_data_mode = AsyncMock()
     r._radio.set_rf_power = AsyncMock()
     r._radio.set_ptt = AsyncMock()
     r._radio.set_vfo = AsyncMock()
@@ -67,15 +72,23 @@ def test_sync_wrappers_delegate_and_return_values() -> None:
     r._radio.set_attenuator = AsyncMock()
     r._radio.set_preamp = AsyncMock()
     r._radio.set_digisel = AsyncMock()
+    r._radio.set_squelch = AsyncMock()
+    r._radio.set_data_off_mod_input = AsyncMock()
+    r._radio.set_data1_mod_input = AsyncMock()
+    r._radio.set_vox = AsyncMock()
     r._radio.restore_state = AsyncMock()
     r._radio.send_cw_text = AsyncMock()
     r._radio.stop_cw_text = AsyncMock()
     r._radio.set_powerstat = AsyncMock()
+    r._radio.enable_scope = AsyncMock()
+    r._radio.set_scope_mode = AsyncMock()
+    r._radio.set_scope_span = AsyncMock()
 
     assert r.get_freq() == 7_100_000
     assert r.get_mode() == ("USB", 2)
     assert r.get_mode_info() == ("USB", 2)
     assert r.get_filter() == 2
+    assert r.get_data_mode() is True
     assert r.get_rf_power() == 200
     assert r.get_s_meter() == 99
     assert r.get_swr() == 10
@@ -84,11 +97,15 @@ def test_sync_wrappers_delegate_and_return_values() -> None:
     assert r.get_attenuator() is True
     assert r.get_preamp() == 1
     assert r.get_digisel() is False
+    assert r.get_data_off_mod_input() == 3
+    assert r.get_data1_mod_input() == 4
+    assert r.get_vox() is True
     assert r.snapshot_state() == {"freq": 7100000}
 
     r.set_freq(7100000)
     r.set_filter(2)
     r.set_mode("LSB", 1)
+    r.set_data_mode(True)
     r.set_rf_power(150)
     r.set_ptt(True)
     r.set_vfo("B")
@@ -99,14 +116,22 @@ def test_sync_wrappers_delegate_and_return_values() -> None:
     r.set_attenuator(True)
     r.set_preamp(2)
     r.set_digisel(True)
+    r.set_squelch(100, receiver=1)
+    r.set_data_off_mod_input(2)
+    r.set_data1_mod_input(1)
+    r.set_vox(True)
     r.restore_state({"freq": 7000000})
     r.send_cw_text("TEST")
     r.stop_cw_text()
     r.power_control(False)
+    r.enable_scope(output=False, policy="fast", timeout=1.5)
+    r.set_scope_mode(3)
+    r.set_scope_span(6)
 
     r._radio.set_freq.assert_awaited_once_with(7100000)
     r._radio.set_filter.assert_awaited_once_with(2)
     r._radio.set_mode.assert_awaited_once_with("LSB", 1)
+    r._radio.set_data_mode.assert_awaited_once_with(True, receiver=0)
     r._radio.set_rf_power.assert_awaited_once_with(150)
     r._radio.set_ptt.assert_awaited_once_with(True)
     r._radio.set_vfo.assert_awaited_once_with("B")
@@ -117,10 +142,19 @@ def test_sync_wrappers_delegate_and_return_values() -> None:
     r._radio.set_attenuator.assert_awaited_once_with(True)
     r._radio.set_preamp.assert_awaited_once_with(2)
     r._radio.set_digisel.assert_awaited_once_with(True)
+    r._radio.set_squelch.assert_awaited_once_with(100, receiver=1)
+    r._radio.set_data_off_mod_input.assert_awaited_once_with(2)
+    r._radio.set_data1_mod_input.assert_awaited_once_with(1)
+    r._radio.set_vox.assert_awaited_once_with(True)
     r._radio.restore_state.assert_awaited_once_with({"freq": 7000000})
     r._radio.send_cw_text.assert_awaited_once_with("TEST")
     r._radio.stop_cw_text.assert_awaited_once()
     r._radio.set_powerstat.assert_awaited_once_with(False)
+    r._radio.enable_scope.assert_awaited_once_with(
+        output=False, policy="fast", timeout=1.5
+    )
+    r._radio.set_scope_mode.assert_awaited_once_with(3)
+    r._radio.set_scope_span.assert_awaited_once_with(6)
     r._loop.close()
 
 

@@ -150,6 +150,14 @@ class IcomRadio:
         """Set the operating mode."""
         self._run(self._radio.set_mode(mode, filter_width))
 
+    def get_data_mode(self) -> bool:
+        """Read whether DATA mode is enabled."""
+        return self._run(self._radio.get_data_mode())
+
+    def set_data_mode(self, on: int | bool, receiver: int = 0) -> None:
+        """Set DATA mode for the selected receiver."""
+        self._run(self._radio.set_data_mode(on, receiver=receiver))
+
     # ------------------------------------------------------------------
     # Power
     # ------------------------------------------------------------------
@@ -268,6 +276,34 @@ class IcomRadio:
         """Set DIGI-SEL status."""
         self._run(self._radio.set_digisel(on))
 
+    def set_squelch(self, level: int, receiver: int = 0) -> None:
+        """Set squelch level (0-255, 0=open)."""
+        self._run(self._radio.set_squelch(level, receiver=receiver))
+
+    def get_data_off_mod_input(self) -> int:
+        """Read the Data Off modulation input source."""
+        return self._run(self._radio.get_data_off_mod_input())
+
+    def set_data_off_mod_input(self, source: int) -> None:
+        """Set the Data Off modulation input source."""
+        self._run(self._radio.set_data_off_mod_input(source))
+
+    def get_data1_mod_input(self) -> int:
+        """Read the DATA1 modulation input source."""
+        return self._run(self._radio.get_data1_mod_input())
+
+    def set_data1_mod_input(self, source: int) -> None:
+        """Set the DATA1 modulation input source."""
+        self._run(self._radio.set_data1_mod_input(source))
+
+    def get_vox(self) -> bool:
+        """Read VOX status."""
+        return self._run(self._radio.get_vox())
+
+    def set_vox(self, on: bool) -> None:
+        """Set VOX status."""
+        self._run(self._radio.set_vox(on))
+
     # ------------------------------------------------------------------
     # State snapshot/restore
     # ------------------------------------------------------------------
@@ -342,6 +378,28 @@ class IcomRadio:
                 "power_control requires a radio that implements PowerControlCapable"
             )
         self._run(self._radio.set_powerstat(on))
+
+    # ------------------------------------------------------------------
+    # Scope
+    # ------------------------------------------------------------------
+
+    def enable_scope(
+        self,
+        *,
+        output: bool = True,
+        policy: str = "verify",
+        timeout: float = 5.0,
+    ) -> None:
+        """Enable scope display and optional wave data output."""
+        self._run(self._radio.enable_scope(output=output, policy=policy, timeout=timeout))
+
+    def set_scope_mode(self, mode: int) -> None:
+        """Set the scope mode."""
+        self._run(self._radio.set_scope_mode(mode))
+
+    def set_scope_span(self, span: int) -> None:
+        """Set the scope span preset index."""
+        self._run(self._radio.set_scope_span(span))
 
     # ------------------------------------------------------------------
     # Audio
