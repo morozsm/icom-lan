@@ -81,6 +81,7 @@ nav:
           - IC-7300 USB Serial: guide/ic7300-usb-setup.md
           - IC-9700 USB & LAN: guide/ic9700-usb-setup.md
           - opuslib macOS Fix: opuslib-macos-fix.md
+      - Radio Profiles: guide/profiles.md
       - WSJT-X / Digital Modes: guide/wsjtx-setup.md
       - Audio Recipes: guide/audio-recipes.md
       - Web UI: guide/web-ui.md

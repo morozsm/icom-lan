@@ -2,7 +2,7 @@
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-3929%20passed-brightgreen.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-4264%20passed-brightgreen.svg)](#testing)
 [![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen.svg)](#testing)
 [![Type Safety](https://img.shields.io/badge/mypy-0%20errors-blue.svg)](#testing)
 
@@ -427,7 +427,7 @@ parameters while running icom-lan remotely over WireGuard to his IC-7610.*
 ## Testing
 
 ```bash
-# Unit tests (no radio required) — 3929 tests, 95% coverage
+# Unit tests (no radio required) — 4264 tests, 95% coverage
 pytest tests/test_*.py
 
 # Mock integration tests (full UDP protocol, no radio required)
@@ -450,7 +450,7 @@ pytest -m integration tests/integration/test_radio_integration.py::TestSoak::tes
 
 ### Test Suite Quality
 
-- **3929 tests** (3929 passed, 56 skipped) across unit, integration, and mock-integration suites
+- **4264 tests** (3929 passed, 56 skipped) across unit, integration, and mock-integration suites
 - **95% code coverage** — comprehensive protocol and runtime coverage
 - **0 mypy errors** — full type safety with protocol-based architecture
 - **Epic #140 complete** — 100% CI-V command coverage (134/134 commands)
