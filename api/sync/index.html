@@ -914,6 +914,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../guide/profiles/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Radio Profiles
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../guide/wsjtx-setup/" class="md-nav__link">
         
   
@@ -1466,6 +1494,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#icom_lan.sync.IcomRadio.prepare_ic705_data_profile" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        prepare_ic705_data_profile
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#icom_lan.sync.IcomRadio.push_audio_tx" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1481,6 +1520,17 @@
     <span class="md-ellipsis">
       
         push_audio_tx_opus
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#icom_lan.sync.IcomRadio.restore_ic705_data_profile" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        restore_ic705_data_profile
       
     </span>
   </a>
@@ -2859,6 +2909,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#icom_lan.sync.IcomRadio.prepare_ic705_data_profile" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        prepare_ic705_data_profile
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#icom_lan.sync.IcomRadio.push_audio_tx" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2874,6 +2935,17 @@
     <span class="md-ellipsis">
       
         push_audio_tx_opus
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#icom_lan.sync.IcomRadio.restore_ic705_data_profile" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        restore_ic705_data_profile
       
     </span>
   </a>
@@ -3774,6 +3846,24 @@ event loop. All methods block until the operation completes.</p>
 <div class="doc doc-object doc-function">
 
 
+<h4 id="icom_lan.sync.IcomRadio.prepare_ic705_data_profile" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">prepare_ic705_data_profile</span><span class="p">(</span><span class="o">*</span><span class="p">,</span> <span class="n">frequency_hz</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;FM&#39;</span><span class="p">,</span> <span class="n">data_off_mod_input</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">data1_mod_input</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">disable_vox</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">squelch_level</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">enable_scope</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">scope_output</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">scope_policy</span><span class="o">=</span><span class="n">ScopeCompletionPolicy</span><span class="o">.</span><span class="n">FAST</span><span class="p">,</span> <span class="n">scope_timeout</span><span class="o">=</span><span class="mf">5.0</span><span class="p">,</span> <span class="n">scope_mode</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">scope_span</span><span class="o">=</span><span class="mi">7</span><span class="p">)</span></code>
+
+<a href="#icom_lan.sync.IcomRadio.prepare_ic705_data_profile" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Prepare the radio for IC-705 data/packet workflows and return a snapshot.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
 <h4 id="icom_lan.sync.IcomRadio.push_audio_tx" class="doc doc-heading">
             <code class="highlight language-python"><span class="n">push_audio_tx</span><span class="p">(</span><span class="n">opus_data</span><span class="p">)</span></code>
 
@@ -3801,6 +3891,24 @@ event loop. All methods block until the operation completes.</p>
     <div class="doc doc-contents ">
 
         <p>Send an Opus audio frame to the radio.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="icom_lan.sync.IcomRadio.restore_ic705_data_profile" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">restore_ic705_data_profile</span><span class="p">(</span><span class="n">snapshot</span><span class="p">)</span></code>
+
+<a href="#icom_lan.sync.IcomRadio.restore_ic705_data_profile" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Restore a snapshot from :meth:<code>prepare_ic705_data_profile</code>.</p>
 
 
     </div>

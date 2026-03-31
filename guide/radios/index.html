@@ -842,15 +842,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#has-rig-profile-not-yet-backend-tested" class="md-nav__link">
+  <a href="#community-validated-maintainer-hardware-pending" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Has Rig Profile (Not Yet Backend-Tested)
+        Community-Validated / Maintainer Hardware Pending
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Has Rig Profile (Not Yet Backend-Tested)">
+    <nav class="md-nav" aria-label="Community-Validated / Maintainer Hardware Pending">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -863,6 +863,23 @@
   </a>
   
 </li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#has-rig-profile-not-yet-backend-tested" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Has Rig Profile (Not Yet Backend-Tested)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Has Rig Profile (Not Yet Backend-Tested)">
+      <ul class="md-nav__list">
         
           <li class="md-nav__item">
   <a href="#ic-9700" class="md-nav__link">
@@ -1206,6 +1223,34 @@
           </ul>
         </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../profiles/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Radio Profiles
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -2442,15 +2487,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#has-rig-profile-not-yet-backend-tested" class="md-nav__link">
+  <a href="#community-validated-maintainer-hardware-pending" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Has Rig Profile (Not Yet Backend-Tested)
+        Community-Validated / Maintainer Hardware Pending
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Has Rig Profile (Not Yet Backend-Tested)">
+    <nav class="md-nav" aria-label="Community-Validated / Maintainer Hardware Pending">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2463,6 +2508,23 @@
   </a>
   
 </li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#has-rig-profile-not-yet-backend-tested" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Has Rig Profile (Not Yet Backend-Tested)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Has Rig Profile (Not Yet Backend-Tested)">
+      <ul class="md-nav__list">
         
           <li class="md-nav__item">
   <a href="#ic-9700" class="md-nav__link">
@@ -2765,18 +2827,19 @@ backend adapters are not yet implemented or tested:</p>
 <li><strong>VFO scheme:</strong> <code>ab</code></li>
 <li><strong>Status:</strong> Profile only. Kenwood CAT backend not yet implemented.</li>
 </ul>
-<h2 id="has-rig-profile-not-yet-backend-tested">Has Rig Profile (Not Yet Backend-Tested)<a class="headerlink" href="#has-rig-profile-not-yet-backend-tested" title="Permanent link">&para;</a></h2>
-<p>These radios have complete rig profiles and the CI-V backend should support them, but they
-have not been tested by the maintainers. Community testing and reports welcome!</p>
+<h2 id="community-validated-maintainer-hardware-pending">Community-Validated / Maintainer Hardware Pending<a class="headerlink" href="#community-validated-maintainer-hardware-pending" title="Permanent link">&para;</a></h2>
+<p>These radios have working field reports and validated user integrations, but the
+maintainer has not yet completed first-party hardware validation in this repo.</p>
 <h3 id="ic-705">IC-705<a class="headerlink" href="#ic-705" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>CI-V Address:</strong> <code>0xA4</code></li>
 <li><strong>Connectivity:</strong> LAN (WiFi/Ethernet) + USB serial (CI-V)</li>
 <li><strong>VFO scheme:</strong> Single receiver (portable transceiver)</li>
 <li><strong>Rig profile:</strong> <code>rigs/ic705.toml</code></li>
-<li><strong>Expected features:</strong> frequency, mode, power, S-meter, SWR, ALC, PTT, CW keying,
-  attenuator, preamp, NB, NR, APF, Twin Peak, scope/waterfall, audio RX/TX</li>
-<li><strong>Status:</strong> Profile complete. Backend untested — reports welcome.</li>
+<li><strong>Validated features:</strong> LAN connect/disconnect, reconnect, frequency, mode,
+  PTT, and audio path integrations on the WiFi backend</li>
+<li><strong>Status:</strong> Community-validated on LAN/WiFi. First-party maintainer hardware
+  validation is still pending.</li>
 </ul>
 <div class="admonition tip">
 <p class="admonition-title">Setup Guides</p>
@@ -2785,6 +2848,9 @@ have not been tested by the maintainers. Community testing and reports welcome!<
 <li>Use <strong>Menu → Set → Connectors → CI-V → CI-V USB Port</strong> = <code>Link to [CI-V]</code></li>
 </ul>
 </div>
+<h2 id="has-rig-profile-not-yet-backend-tested">Has Rig Profile (Not Yet Backend-Tested)<a class="headerlink" href="#has-rig-profile-not-yet-backend-tested" title="Permanent link">&para;</a></h2>
+<p>These radios have complete rig profiles and the CI-V backend should support them, but they
+have not been tested by the maintainers. Community testing and reports welcome!</p>
 <h3 id="ic-9700">IC-9700<a class="headerlink" href="#ic-9700" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>CI-V Address:</strong> <code>0xA2</code></li>
