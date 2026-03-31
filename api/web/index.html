@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#web-server" class="md-skip">
+        <a href="#web-server-api" class="md-skip">
           Skip to content
         </a>
       
@@ -1654,34 +1654,44 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#rest-api-endpoint-reference" class="md-nav__link">
+  <a href="#auth-model" class="md-nav__link">
     <span class="md-ellipsis">
       
-        REST API — Endpoint Reference
+        Auth Model
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="REST API — Endpoint Reference">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#get-apiv1info" class="md-nav__link">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#http-endpoints" class="md-nav__link">
     <span class="md-ellipsis">
       
-        GET /api/v1/info
+        HTTP Endpoints
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="GET /api/v1/info">
+    <nav class="md-nav" aria-label="HTTP Endpoints">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#new-fields-epic-251" class="md-nav__link">
+  <a href="#read-endpoints" class="md-nav__link">
     <span class="md-ellipsis">
       
-        New fields (Epic #251)
+        Read Endpoints
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#control-endpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Control Endpoints
       
     </span>
   </a>
@@ -1692,8 +1702,19 @@
     </nav>
   
 </li>
-        
-          <li class="md-nav__item">
+      
+        <li class="md-nav__item">
+  <a href="#get-apiv1info" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /api/v1/info
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#get-apiv1state" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1703,8 +1724,8 @@
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
+      
+        <li class="md-nav__item">
   <a href="#get-apiv1capabilities" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1713,14 +1734,47 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="GET /api/v1/capabilities">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#websocket-endpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        WebSocket Endpoints
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="WebSocket Endpoints">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#new-fields-epic-251_1" class="md-nav__link">
+  <a href="#apiv1ws-command-envelope" class="md-nav__link">
     <span class="md-ellipsis">
       
-        New fields (Epic #251)
+        /api/v1/ws command envelope
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#state-update-stream-apiv1ws" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        State update stream (/api/v1/ws)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#set_band-workflow-apiv1ws" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        set_band workflow (/api/v1/ws)
       
     </span>
   </a>
@@ -1731,12 +1785,57 @@
     </nav>
   
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#set_band-command-websocket-apiv1ws" class="md-nav__link">
+      
+        <li class="md-nav__item">
+  <a href="#operational-runbook" class="md-nav__link">
     <span class="md-ellipsis">
       
-        set_band command (WebSocket /api/v1/ws)
+        Operational Runbook
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Operational Runbook">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#power-onoff-through-http" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Power on/off through HTTP
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#audio-bridge-startstatusstop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Audio bridge start/status/stop
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#change-band-plan-region" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Change band-plan region
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#refresh-eibi-cache" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Refresh EiBi cache
       
     </span>
   </a>
@@ -1753,17 +1852,6 @@
     <span class="md-ellipsis">
       
         Modules
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#rest-api" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        REST API
       
     </span>
   </a>
@@ -2221,34 +2309,44 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#rest-api-endpoint-reference" class="md-nav__link">
+  <a href="#auth-model" class="md-nav__link">
     <span class="md-ellipsis">
       
-        REST API — Endpoint Reference
+        Auth Model
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="REST API — Endpoint Reference">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#get-apiv1info" class="md-nav__link">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#http-endpoints" class="md-nav__link">
     <span class="md-ellipsis">
       
-        GET /api/v1/info
+        HTTP Endpoints
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="GET /api/v1/info">
+    <nav class="md-nav" aria-label="HTTP Endpoints">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#new-fields-epic-251" class="md-nav__link">
+  <a href="#read-endpoints" class="md-nav__link">
     <span class="md-ellipsis">
       
-        New fields (Epic #251)
+        Read Endpoints
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#control-endpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Control Endpoints
       
     </span>
   </a>
@@ -2259,8 +2357,19 @@
     </nav>
   
 </li>
-        
-          <li class="md-nav__item">
+      
+        <li class="md-nav__item">
+  <a href="#get-apiv1info" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /api/v1/info
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#get-apiv1state" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2270,8 +2379,8 @@
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
+      
+        <li class="md-nav__item">
   <a href="#get-apiv1capabilities" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2280,14 +2389,47 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="GET /api/v1/capabilities">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#websocket-endpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        WebSocket Endpoints
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="WebSocket Endpoints">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#new-fields-epic-251_1" class="md-nav__link">
+  <a href="#apiv1ws-command-envelope" class="md-nav__link">
     <span class="md-ellipsis">
       
-        New fields (Epic #251)
+        /api/v1/ws command envelope
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#state-update-stream-apiv1ws" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        State update stream (/api/v1/ws)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#set_band-workflow-apiv1ws" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        set_band workflow (/api/v1/ws)
       
     </span>
   </a>
@@ -2298,12 +2440,57 @@
     </nav>
   
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#set_band-command-websocket-apiv1ws" class="md-nav__link">
+      
+        <li class="md-nav__item">
+  <a href="#operational-runbook" class="md-nav__link">
     <span class="md-ellipsis">
       
-        set_band command (WebSocket /api/v1/ws)
+        Operational Runbook
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Operational Runbook">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#power-onoff-through-http" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Power on/off through HTTP
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#audio-bridge-startstatusstop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Audio bridge start/status/stop
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#change-band-plan-region" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Change band-plan region
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#refresh-eibi-cache" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Refresh EiBi cache
       
     </span>
   </a>
@@ -2320,17 +2507,6 @@
     <span class="md-ellipsis">
       
         Modules
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#rest-api" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        REST API
       
     </span>
   </a>
@@ -2368,173 +2544,331 @@
   
 
 
-<h1 id="web-server">Web Server<a class="headerlink" href="#web-server" title="Permanent link">&para;</a></h1>
-<p>Built-in web UI and REST API.</p>
-<h2 id="rest-api-endpoint-reference">REST API — Endpoint Reference<a class="headerlink" href="#rest-api-endpoint-reference" title="Permanent link">&para;</a></h2>
-<h3 id="get-apiv1info"><code>GET /api/v1/info</code><a class="headerlink" href="#get-apiv1info" title="Permanent link">&para;</a></h3>
-<p>Version, model, connection status, and runtime capability summary.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="p">{</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0.12.0&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">&quot;radio&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;IC-7300&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">&quot;model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;IC-7300&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="nt">&quot;capabilities&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="nt">&quot;hasSpectrum&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="nt">&quot;hasAudio&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">    </span><span class="nt">&quot;hasTx&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">    </span><span class="nt">&quot;hasDualRx&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">    </span><span class="nt">&quot;hasAttenuator&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">    </span><span class="nt">&quot;hasPreamp&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">    </span><span class="nt">&quot;hasTuner&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
-<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">    </span><span class="nt">&quot;hasCw&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">    </span><span class="nt">&quot;maxReceivers&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
-<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">    </span><span class="nt">&quot;tags&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;attenuator&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;audio&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;cw&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;meters&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;nb&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;nr&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;preamp&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;rf_gain&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;scope&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;tx&quot;</span><span class="p">],</span>
-<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="w">    </span><span class="nt">&quot;modes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;USB&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;LSB&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;CW&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;CW-R&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;AM&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;FM&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;RTTY&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;RTTY-R&quot;</span><span class="p">],</span>
-<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="w">    </span><span class="nt">&quot;filters&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;FIL1&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;FIL2&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;FIL3&quot;</span><span class="p">],</span>
-<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="w">    </span><span class="nt">&quot;vfoScheme&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ab&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="w">    </span><span class="nt">&quot;hasLan&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
-<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="w">  </span><span class="p">},</span>
-<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="w">  </span><span class="nt">&quot;connection&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a><span class="w">    </span><span class="nt">&quot;rigConnected&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a><span class="w">    </span><span class="nt">&quot;radioReady&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a><span class="w">    </span><span class="nt">&quot;controlConnected&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
-<a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a><span class="w">  </span><span class="p">}</span>
-<a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a><span class="p">}</span>
+<h1 id="web-server-api">Web Server API<a class="headerlink" href="#web-server-api" title="Permanent link">&para;</a></h1>
+<p>Built-in HTTP + WebSocket interface used by the browser UI and automation clients.</p>
+<h2 id="auth-model">Auth Model<a class="headerlink" href="#auth-model" title="Permanent link">&para;</a></h2>
+<p>If web server is started with <code>--auth-token</code>, all <code>/api/*</code> HTTP routes require:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Authorization: Bearer &lt;token&gt;
 </code></pre></div>
-<h4 id="new-fields-epic-251">New fields (Epic #251)<a class="headerlink" href="#new-fields-epic-251" title="Permanent link">&para;</a></h4>
+<p>WebSocket routes additionally allow query token:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>ws://host:8080/api/v1/ws?token=&lt;token&gt;
+</code></pre></div>
+<h2 id="http-endpoints">HTTP Endpoints<a class="headerlink" href="#http-endpoints" title="Permanent link">&para;</a></h2>
+<h3 id="read-endpoints">Read Endpoints<a class="headerlink" href="#read-endpoints" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
 <tr>
-<th>Field</th>
-<th>Type</th>
-<th>Description</th>
+<th>Method</th>
+<th>Path</th>
+<th>Purpose</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>capabilities.vfoScheme</code></td>
-<td><code>"ab"</code> | <code>"main_sub"</code></td>
-<td>VFO labeling scheme. <code>"ab"</code> → VFO A/B; <code>"main_sub"</code> → MAIN/SUB</td>
+<td><code>GET</code></td>
+<td><code>/api/v1/info</code></td>
+<td>Runtime model/capability summary</td>
 </tr>
 <tr>
-<td><code>capabilities.hasLan</code></td>
-<td><code>bool</code></td>
-<td>Whether the radio has a LAN (Ethernet) port</td>
+<td><code>GET</code></td>
+<td><code>/api/v1/state</code></td>
+<td>Canonical current state snapshot</td>
 </tr>
 <tr>
-<td><code>capabilities.maxReceivers</code></td>
-<td><code>int</code></td>
-<td>Number of independent receivers (1 or 2)</td>
+<td><code>GET</code></td>
+<td><code>/api/v1/capabilities</code></td>
+<td>Full profile-backed capabilities</td>
 </tr>
 <tr>
-<td><code>capabilities.modes</code></td>
-<td><code>string[]</code></td>
-<td>Supported operating modes from rig profile</td>
+<td><code>GET</code></td>
+<td><code>/api/v1/dx/spots</code></td>
+<td>Buffered DX spots</td>
 </tr>
 <tr>
-<td><code>capabilities.filters</code></td>
-<td><code>string[]</code></td>
-<td>Supported IF filter names from rig profile</td>
+<td><code>GET</code></td>
+<td><code>/api/v1/bridge</code></td>
+<td>Audio bridge status</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/v1/band-plan/config</code></td>
+<td>Active band-plan region</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/v1/band-plan/layers</code></td>
+<td>Band-plan layers metadata</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/v1/band-plan/segments?start=&lt;hz&gt;&amp;end=&lt;hz&gt;&amp;layers=&lt;csv&gt;</code></td>
+<td>Band-plan overlay segments</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/v1/eibi/status</code></td>
+<td>EiBi loader status</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/v1/eibi/stations</code></td>
+<td>EiBi station list (paged/filterable)</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/v1/eibi/segments?start=&lt;hz&gt;&amp;end=&lt;hz&gt;&amp;on_air=true</code></td>
+<td>EiBi overlay segments</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/v1/eibi/identify?freq=&lt;hz&gt;&amp;tolerance=&lt;hz&gt;</code></td>
+<td>Identify probable broadcast stations</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/v1/eibi/bands</code></td>
+<td>EiBi frequency bands</td>
+</tr>
+</tbody>
+</table>
+<h3 id="control-endpoints">Control Endpoints<a class="headerlink" href="#control-endpoints" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/v1/radio/connect</code></td>
+<td>Connect/reconnect radio control path</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/v1/radio/disconnect</code></td>
+<td>Disconnect radio control path</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/v1/radio/power</code></td>
+<td>Power on/off via CI-V power control</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/v1/bridge</code></td>
+<td>Start audio bridge</td>
+</tr>
+<tr>
+<td><code>DELETE</code></td>
+<td><code>/api/v1/bridge</code></td>
+<td>Stop audio bridge</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/v1/band-plan/config</code></td>
+<td>Change active region and reload band plans</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/v1/eibi/fetch</code></td>
+<td>Fetch/refresh EiBi dataset</td>
 </tr>
 </tbody>
 </table>
 <hr />
-<h3 id="get-apiv1state"><code>GET /api/v1/state</code><a class="headerlink" href="#get-apiv1state" title="Permanent link">&para;</a></h3>
-<p>Current radio state snapshot. All keys are camelCase.</p>
-<p><strong>Behavior change (Epic #251):</strong> For single-receiver radios (<code>receiver_count &lt; 2</code>),
-the <code>sub</code> key is omitted from the response entirely. Dual-receiver radios (IC-7610)
-still return both <code>main</code> and <code>sub</code>.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="p">{</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">&quot;main&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;freqHz&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">14074000</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;USB&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;filter&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="err">...</span><span class="w"> </span><span class="p">},</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="nt">&quot;revision&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">42</span><span class="p">,</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span><span class="nt">&quot;updatedAt&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-03-15T10:00:00Z&quot;</span><span class="p">,</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span><span class="nt">&quot;connection&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;rigConnected&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;radioReady&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;controlConnected&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w"> </span><span class="p">}</span>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="p">}</span>
-</code></pre></div>
-<p>Single-receiver response (IC-7300):</p>
+<h2 id="get-apiv1info"><code>GET /api/v1/info</code><a class="headerlink" href="#get-apiv1info" title="Permanent link">&para;</a></h2>
+<p>Version, model, capability summary, and connection metadata.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="p">{</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">&quot;main&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;freqHz&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7074000</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;USB&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;filter&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="err">...</span><span class="w"> </span><span class="p">},</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nt">&quot;revision&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="p">,</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="nt">&quot;updatedAt&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-03-15T10:00:00Z&quot;</span><span class="p">,</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span><span class="nt">&quot;connection&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="err">...</span><span class="w"> </span><span class="p">}</span>
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="p">}</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">&quot;server&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;icom-lan&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0.12.0&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="nt">&quot;proto&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span><span class="nt">&quot;radio&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;IC-7300&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span><span class="nt">&quot;model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;IC-7300&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span><span class="nt">&quot;capabilities&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">    </span><span class="nt">&quot;hasSpectrum&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">    </span><span class="nt">&quot;hasAudio&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">    </span><span class="nt">&quot;hasTx&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">    </span><span class="nt">&quot;hasDualReceiver&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">    </span><span class="nt">&quot;hasTuner&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">    </span><span class="nt">&quot;hasCw&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">    </span><span class="nt">&quot;maxReceivers&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="w">    </span><span class="nt">&quot;tags&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;audio&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;cw&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;meters&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;scope&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;tx&quot;</span><span class="p">],</span>
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="w">    </span><span class="nt">&quot;modes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;USB&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;LSB&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;CW&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;CW-R&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;AM&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;FM&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;RTTY&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;RTTY-R&quot;</span><span class="p">],</span>
+<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="w">    </span><span class="nt">&quot;filters&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;FIL1&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;FIL2&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;FIL3&quot;</span><span class="p">],</span>
+<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a><span class="w">    </span><span class="nt">&quot;vfoScheme&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ab&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="w">    </span><span class="nt">&quot;hasLan&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
+<a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a><span class="w">  </span><span class="p">},</span>
+<a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a><span class="w">  </span><span class="nt">&quot;connection&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a><span class="w">    </span><span class="nt">&quot;rigConnected&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a><span class="w">    </span><span class="nt">&quot;radioReady&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a><span class="w">    </span><span class="nt">&quot;controlConnected&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a><span class="w">    </span><span class="nt">&quot;wsClients&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span>
+<a id="__codelineno-2-26" name="__codelineno-2-26" href="#__codelineno-2-26"></a><span class="w">  </span><span class="p">}</span>
+<a id="__codelineno-2-27" name="__codelineno-2-27" href="#__codelineno-2-27"></a><span class="p">}</span>
 </code></pre></div>
-<hr />
-<h3 id="get-apiv1capabilities"><code>GET /api/v1/capabilities</code><a class="headerlink" href="#get-apiv1capabilities" title="Permanent link">&para;</a></h3>
-<p>Full capabilities object including rig profile data.</p>
+<h2 id="get-apiv1state"><code>GET /api/v1/state</code><a class="headerlink" href="#get-apiv1state" title="Permanent link">&para;</a></h2>
+<p>Canonical full state payload for web consumers (camelCase keys).</p>
+<ul>
+<li>Includes <code>revision</code> + <code>updatedAt</code>.</li>
+<li>Includes <code>connection</code> object (<code>rigConnected</code>, <code>radioReady</code>, <code>controlConnected</code>).</li>
+<li>For single-receiver profiles, <code>sub</code> key is omitted.</li>
+<li>Supports <code>ETag</code> based on <code>revision</code> for conditional requests.</li>
+</ul>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p">{</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">&quot;scope&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nt">&quot;audio&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="nt">&quot;tx&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span><span class="nt">&quot;capabilities&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;attenuator&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;audio&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;cw&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;meters&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;nb&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;nr&quot;</span><span class="p">,</span><span class="w"> </span><span class="err">...</span><span class="p">],</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span><span class="nt">&quot;receivers&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span><span class="nt">&quot;vfoScheme&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ab&quot;</span><span class="p">,</span>
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">  </span><span class="nt">&quot;freqRanges&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">    </span><span class="p">{</span>
-<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">      </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;HF&quot;</span><span class="p">,</span>
-<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">      </span><span class="nt">&quot;start&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">30000</span><span class="p">,</span>
-<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">      </span><span class="nt">&quot;end&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">60000000</span><span class="p">,</span>
-<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="w">      </span><span class="nt">&quot;bands&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="w">        </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;20m&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;start&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">14000000</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;end&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">14350000</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;default&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">14200000</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;bsrCode&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="w"> </span><span class="p">},</span>
-<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="w">        </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;60m&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;start&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5250000</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;end&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5450000</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;default&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5357000</span><span class="w"> </span><span class="p">}</span>
-<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="w">      </span><span class="p">]</span>
-<a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a><span class="w">  </span><span class="p">],</span>
-<a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a><span class="w">  </span><span class="nt">&quot;modes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;USB&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;LSB&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;CW&quot;</span><span class="p">,</span><span class="w"> </span><span class="err">...</span><span class="p">],</span>
-<a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a><span class="w">  </span><span class="nt">&quot;filters&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;FIL1&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;FIL2&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;FIL3&quot;</span><span class="p">]</span>
-<a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a><span class="p">}</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">&quot;main&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;freqHz&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">14074000</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;USB&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;filter&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="p">},</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nt">&quot;revision&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">42</span><span class="p">,</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="nt">&quot;updatedAt&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-03-15T10:00:00+00:00&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span><span class="nt">&quot;radioDetail&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;connected&quot;</span><span class="w"> </span><span class="p">},</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span><span class="nt">&quot;wsClients&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;scope&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;control&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;audio&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">},</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span><span class="nt">&quot;connection&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">    </span><span class="nt">&quot;rigConnected&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">    </span><span class="nt">&quot;radioReady&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">    </span><span class="nt">&quot;controlConnected&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">  </span><span class="p">}</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="p">}</span>
 </code></pre></div>
-<h4 id="new-fields-epic-251_1">New fields (Epic #251)<a class="headerlink" href="#new-fields-epic-251_1" title="Permanent link">&para;</a></h4>
+<h2 id="get-apiv1capabilities"><code>GET /api/v1/capabilities</code><a class="headerlink" href="#get-apiv1capabilities" title="Permanent link">&para;</a></h2>
+<p>Profile-backed capabilities used to build dynamic UI.</p>
+<p>Notable fields:</p>
 <table>
 <thead>
 <tr>
 <th>Field</th>
 <th>Type</th>
-<th>Description</th>
+<th>Notes</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>receivers</code></td>
 <td><code>int</code></td>
-<td>Receiver count from rig profile (1 or 2)</td>
+<td>Receiver count from active profile</td>
 </tr>
 <tr>
 <td><code>vfoScheme</code></td>
 <td><code>"ab"</code> | <code>"main_sub"</code></td>
-<td>VFO labeling scheme</td>
+<td>VFO label scheme</td>
 </tr>
 <tr>
 <td><code>freqRanges[].bands[].bsrCode</code></td>
 <td><code>int</code> (optional)</td>
-<td>Band Stack Register code used by Web UI <code>set_band</code> workflow</td>
+<td>Band Stack Register code for <code>set_band</code></td>
+</tr>
+<tr>
+<td><code>scopeSource</code></td>
+<td><code>"hardware"</code> | <code>"audio_fft"</code> | <code>null</code></td>
+<td>Spectrum data source</td>
+</tr>
+<tr>
+<td><code>scopeConfig.defaultSpan</code></td>
+<td><code>int</code></td>
+<td>Hardware scope span or audio FFT bandwidth</td>
+</tr>
+<tr>
+<td><code>audioConfig</code></td>
+<td>object</td>
+<td>Web audio transport defaults</td>
 </tr>
 </tbody>
 </table>
+<p>When radio has audio but no hardware scope support, backend enables <code>AudioFftScope</code>
+and reports <code>scopeSource: "audio_fft"</code>.</p>
 <hr />
-<h3 id="set_band-command-websocket-apiv1ws"><code>set_band</code> command (WebSocket <code>/api/v1/ws</code>)<a class="headerlink" href="#set_band-command-websocket-apiv1ws" title="Permanent link">&para;</a></h3>
-<p>Control payload:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p">{</span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="s2">&quot;cmd&quot;</span><span class="p">,</span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="s2">&quot;42&quot;</span><span class="p">,</span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="s2">&quot;set_band&quot;</span><span class="p">,</span><span class="nt">&quot;params&quot;</span><span class="p">:{</span><span class="nt">&quot;band&quot;</span><span class="p">:</span><span class="mi">5</span><span class="p">}}</span>
+<h2 id="websocket-endpoints">WebSocket Endpoints<a class="headerlink" href="#websocket-endpoints" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Path</th>
+<th>Direction</th>
+<th>Payload</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/api/v1/ws</code></td>
+<td>bi-directional</td>
+<td>JSON commands/events/state updates</td>
+</tr>
+<tr>
+<td><code>/api/v1/scope</code></td>
+<td>server -&gt; client</td>
+<td>Binary scope frames</td>
+</tr>
+<tr>
+<td><code>/api/v1/audio</code></td>
+<td>bi-directional</td>
+<td>JSON control + binary audio frames</td>
+</tr>
+</tbody>
+</table>
+<h3 id="apiv1ws-command-envelope"><code>/api/v1/ws</code> command envelope<a class="headerlink" href="#apiv1ws-command-envelope" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p">{</span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="s2">&quot;cmd&quot;</span><span class="p">,</span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="s2">&quot;42&quot;</span><span class="p">,</span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="s2">&quot;set_freq&quot;</span><span class="p">,</span><span class="nt">&quot;params&quot;</span><span class="p">:{</span><span class="nt">&quot;freq&quot;</span><span class="p">:</span><span class="mi">14074000</span><span class="p">,</span><span class="nt">&quot;receiver&quot;</span><span class="p">:</span><span class="mi">0</span><span class="p">}}</span>
 </code></pre></div>
-<p><code>band</code> is the numeric BSR code (typically from <code>freqRanges[].bands[].bsrCode</code>).
-Backend behavior:</p>
+<p>Response:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="p">{</span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="s2">&quot;response&quot;</span><span class="p">,</span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="s2">&quot;42&quot;</span><span class="p">,</span><span class="nt">&quot;ok&quot;</span><span class="p">:</span><span class="kc">true</span><span class="p">,</span><span class="nt">&quot;result&quot;</span><span class="p">:{</span><span class="nt">&quot;freq&quot;</span><span class="p">:</span><span class="mi">14074000</span><span class="p">,</span><span class="nt">&quot;receiver&quot;</span><span class="p">:</span><span class="mi">0</span><span class="p">}}</span>
+</code></pre></div>
+<p>Error response:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="p">{</span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="s2">&quot;response&quot;</span><span class="p">,</span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="s2">&quot;42&quot;</span><span class="p">,</span><span class="nt">&quot;ok&quot;</span><span class="p">:</span><span class="kc">false</span><span class="p">,</span><span class="nt">&quot;error&quot;</span><span class="p">:</span><span class="s2">&quot;command_failed&quot;</span><span class="p">,</span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="s2">&quot;...&quot;</span><span class="p">}</span>
+</code></pre></div>
+<p>Rate-limited high-frequency <code>set_*</code> commands are ACKed with:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="p">{</span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="s2">&quot;response&quot;</span><span class="p">,</span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="s2">&quot;42&quot;</span><span class="p">,</span><span class="nt">&quot;ok&quot;</span><span class="p">:</span><span class="kc">true</span><span class="p">,</span><span class="nt">&quot;result&quot;</span><span class="p">:{</span><span class="nt">&quot;throttled&quot;</span><span class="p">:</span><span class="kc">true</span><span class="p">}}</span>
+</code></pre></div>
+<h3 id="state-update-stream-apiv1ws">State update stream (<code>/api/v1/ws</code>)<a class="headerlink" href="#state-update-stream-apiv1ws" title="Permanent link">&para;</a></h3>
+<p>Server publishes <code>state_update</code> messages in two shapes:</p>
+<ul>
+<li>Full snapshot:
+  <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="p">{</span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="s2">&quot;state_update&quot;</span><span class="p">,</span><span class="nt">&quot;data&quot;</span><span class="p">:{</span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="s2">&quot;full&quot;</span><span class="p">,</span><span class="nt">&quot;data&quot;</span><span class="p">:{</span><span class="err">...</span><span class="p">},</span><span class="nt">&quot;revision&quot;</span><span class="p">:</span><span class="mi">1</span><span class="p">}}</span>
+</code></pre></div></li>
+<li>Delta update:
+  <div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="p">{</span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="s2">&quot;state_update&quot;</span><span class="p">,</span><span class="nt">&quot;data&quot;</span><span class="p">:{</span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="s2">&quot;delta&quot;</span><span class="p">,</span><span class="nt">&quot;changed&quot;</span><span class="p">:{</span><span class="nt">&quot;main&quot;</span><span class="p">:{</span><span class="nt">&quot;freqHz&quot;</span><span class="p">:</span><span class="mi">14075000</span><span class="p">}},</span><span class="nt">&quot;revision&quot;</span><span class="p">:</span><span class="mi">2</span><span class="p">}}</span>
+</code></pre></div></li>
+</ul>
+<h3 id="set_band-workflow-apiv1ws"><code>set_band</code> workflow (<code>/api/v1/ws</code>)<a class="headerlink" href="#set_band-workflow-apiv1ws" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="p">{</span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="s2">&quot;cmd&quot;</span><span class="p">,</span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="s2">&quot;73&quot;</span><span class="p">,</span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="s2">&quot;set_band&quot;</span><span class="p">,</span><span class="nt">&quot;params&quot;</span><span class="p">:{</span><span class="nt">&quot;band&quot;</span><span class="p">:</span><span class="mi">5</span><span class="p">}}</span>
+</code></pre></div>
+<p><code>band</code> is BSR code from <code>freqRanges[].bands[].bsrCode</code>.
+Backend path:</p>
 <ol>
-<li>Attempts BSR recall (<code>0x1A 0x01 &lt;band&gt; 0x01</code>) and applies recalled freq/mode.</li>
-<li>On recall failure, falls back to profile <code>default_hz</code> for matching <code>bsr_code</code>.</li>
-<li>If no matching <code>bsr_code</code> exists, command acknowledges but no retune is applied.</li>
+<li>Try BSR recall (<code>0x1A 0x01 &lt;band&gt; 0x01</code>).</li>
+<li>If recall fails, fallback to profile <code>default_hz</code> for matching <code>bsr_code</code>.</li>
+<li>If profile has no matching <code>bsr_code</code>, command is acknowledged but no retune happens.</li>
 </ol>
+<hr />
+<h2 id="operational-runbook">Operational Runbook<a class="headerlink" href="#operational-runbook" title="Permanent link">&para;</a></h2>
+<h3 id="power-onoff-through-http">Power on/off through HTTP<a class="headerlink" href="#power-onoff-through-http" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://127.0.0.1:8080/api/v1/radio/power<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;state&quot;:&quot;on&quot;}&#39;</span>
+</code></pre></div>
+<h3 id="audio-bridge-startstatusstop">Audio bridge start/status/stop<a class="headerlink" href="#audio-bridge-startstatusstop" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://127.0.0.1:8080/api/v1/bridge
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>curl<span class="w"> </span>http://127.0.0.1:8080/api/v1/bridge
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>curl<span class="w"> </span>-X<span class="w"> </span>DELETE<span class="w"> </span>http://127.0.0.1:8080/api/v1/bridge
+</code></pre></div>
+<h3 id="change-band-plan-region">Change band-plan region<a class="headerlink" href="#change-band-plan-region" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://127.0.0.1:8080/api/v1/band-plan/config<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;region&quot;:&quot;IARU-R1&quot;}&#39;</span>
+</code></pre></div>
+<h3 id="refresh-eibi-cache">Refresh EiBi cache<a class="headerlink" href="#refresh-eibi-cache" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://127.0.0.1:8080/api/v1/eibi/fetch<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;force&quot;:true}&#39;</span>
+</code></pre></div>
 <h2 id="modules">Modules<a class="headerlink" href="#modules" title="Permanent link">&para;</a></h2>
 <ul>
-<li><code>server.py</code> — asyncio HTTP/WebSocket server</li>
-<li><code>handlers.py</code> — WebSocket command handlers</li>
-<li><code>radio_poller.py</code> — State polling for /api/v1/state endpoint</li>
-<li><code>websocket.py</code> — WebSocket connection management</li>
-<li><code>protocol.py</code> — Web protocol types and messages</li>
-<li><code>dx_cluster.py</code> — DX cluster integration</li>
+<li><code>server.py</code> — asyncio HTTP/WebSocket server, endpoint routing</li>
+<li><code>handlers.py</code> — control/scope/audio channel handlers</li>
+<li><code>radio_poller.py</code> — state polling and command queue execution</li>
+<li><code>runtime_helpers.py</code> — canonical public state/capability shaping</li>
+<li><code>dx_cluster.py</code> — DX spot ingest and buffering</li>
 </ul>
-<h2 id="rest-api">REST API<a class="headerlink" href="#rest-api" title="Permanent link">&para;</a></h2>
-<p>See <a href="../../guide/web-ui/">Web UI Guide</a> for endpoint documentation.</p>
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
+<li><a href="../../guide/web-ui/">Web UI Guide</a></li>
 <li><a href="../audio/">Audio</a></li>
 <li><a href="../scope/">Scope</a></li>
 </ul>

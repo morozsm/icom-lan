@@ -1098,6 +1098,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#advanced-operational-http-endpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Advanced operational HTTP endpoints
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#auth-behavior-auth-token" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1141,6 +1152,17 @@
     <span class="md-ellipsis">
       
         Command envelope
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#state_update-payload-formats" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        state_update payload formats
       
     </span>
   </a>
@@ -2424,6 +2446,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#advanced-operational-http-endpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Advanced operational HTTP endpoints
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#auth-behavior-auth-token" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2467,6 +2500,17 @@
     <span class="md-ellipsis">
       
         Command envelope
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#state_update-payload-formats" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        state_update payload formats
       
     </span>
   </a>
@@ -2789,6 +2833,94 @@ public interfaces, and operational workflows.</p>
 </tr>
 </tbody>
 </table>
+<h3 id="advanced-operational-http-endpoints">Advanced operational HTTP endpoints<a class="headerlink" href="#advanced-operational-http-endpoints" title="Permanent link">&para;</a></h3>
+<p>These are primarily used by automation, deployment scripts, and operator tooling:</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/v1/radio/connect</code></td>
+<td>Trigger backend connect/reconnect</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/v1/radio/disconnect</code></td>
+<td>Trigger backend disconnect</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/v1/radio/power</code></td>
+<td>CI-V power control (<code>{"state":"on" \| "off"}</code>)</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/v1/bridge</code></td>
+<td>Start audio bridge</td>
+</tr>
+<tr>
+<td><code>DELETE</code></td>
+<td><code>/api/v1/bridge</code></td>
+<td>Stop audio bridge</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/v1/band-plan/config</code></td>
+<td>Active band-plan region</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/v1/band-plan/config</code></td>
+<td>Change region + reload band plans</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/v1/band-plan/layers</code></td>
+<td>Loaded overlay layers</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/v1/band-plan/segments?...</code></td>
+<td>Band-plan segments for selected range</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/v1/eibi/fetch</code></td>
+<td>Download/refresh EiBi DB</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/v1/eibi/status</code></td>
+<td>EiBi loader status</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/v1/eibi/stations</code></td>
+<td>EiBi station list (paged/filterable)</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/v1/eibi/segments?...</code></td>
+<td>EiBi overlay segments</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/v1/eibi/identify?...</code></td>
+<td>Broadcast station identification</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/v1/eibi/bands</code></td>
+<td>EiBi band list</td>
+</tr>
+</tbody>
+</table>
 <h3 id="auth-behavior-auth-token">Auth behavior (<code>--auth-token</code>)<a class="headerlink" href="#auth-behavior-auth-token" title="Permanent link">&para;</a></h3>
 <ul>
 <li><code>GET /api/*</code> requires <code>Authorization: Bearer &lt;token&gt;</code>.</li>
@@ -2846,13 +2978,27 @@ public interfaces, and operational workflows.</p>
 <p>Server response:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="p">{</span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="s2">&quot;response&quot;</span><span class="p">,</span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="s2">&quot;42&quot;</span><span class="p">,</span><span class="nt">&quot;ok&quot;</span><span class="p">:</span><span class="kc">true</span><span class="p">,</span><span class="nt">&quot;result&quot;</span><span class="p">:{</span><span class="nt">&quot;freq&quot;</span><span class="p">:</span><span class="mi">14074000</span><span class="p">,</span><span class="nt">&quot;receiver&quot;</span><span class="p">:</span><span class="mi">0</span><span class="p">}}</span>
 </code></pre></div>
+<h3 id="state_update-payload-formats"><code>state_update</code> payload formats<a class="headerlink" href="#state_update-payload-formats" title="Permanent link">&para;</a></h3>
+<p>The backend emits <code>state_update</code> in two shapes:</p>
+<ol>
+<li>Full snapshot:</li>
+</ol>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p">{</span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="s2">&quot;state_update&quot;</span><span class="p">,</span><span class="nt">&quot;data&quot;</span><span class="p">:{</span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="s2">&quot;full&quot;</span><span class="p">,</span><span class="nt">&quot;data&quot;</span><span class="p">:{</span><span class="nt">&quot;main&quot;</span><span class="p">:{</span><span class="nt">&quot;freqHz&quot;</span><span class="p">:</span><span class="mi">14074000</span><span class="p">}},</span><span class="nt">&quot;revision&quot;</span><span class="p">:</span><span class="mi">1</span><span class="p">}}</span>
+</code></pre></div>
+<ol>
+<li>Delta update (only changed fields):</li>
+</ol>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p">{</span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="s2">&quot;state_update&quot;</span><span class="p">,</span><span class="nt">&quot;data&quot;</span><span class="p">:{</span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="s2">&quot;delta&quot;</span><span class="p">,</span><span class="nt">&quot;changed&quot;</span><span class="p">:{</span><span class="nt">&quot;main&quot;</span><span class="p">:{</span><span class="nt">&quot;freqHz&quot;</span><span class="p">:</span><span class="mi">14074100</span><span class="p">}},</span><span class="nt">&quot;revision&quot;</span><span class="p">:</span><span class="mi">2</span><span class="p">}}</span>
+</code></pre></div>
+<p>Client integrations should support both formats. Assuming only full snapshots causes
+state drift when delta updates are enabled.</p>
 <h3 id="connection-control-messages">Connection control messages<a class="headerlink" href="#connection-control-messages" title="Permanent link">&para;</a></h3>
 <ul>
 <li><code>{"type":"radio_connect","id":"..."}</code></li>
 <li><code>{"type":"radio_disconnect","id":"..."}</code></li>
 </ul>
 <p>If backend recovery is already in progress, <code>radio_connect</code> returns:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p">{</span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="s2">&quot;response&quot;</span><span class="p">,</span><span class="nt">&quot;ok&quot;</span><span class="p">:</span><span class="kc">false</span><span class="p">,</span><span class="nt">&quot;error&quot;</span><span class="p">:</span><span class="s2">&quot;backend_recovering&quot;</span><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="p">{</span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="s2">&quot;response&quot;</span><span class="p">,</span><span class="nt">&quot;ok&quot;</span><span class="p">:</span><span class="kc">false</span><span class="p">,</span><span class="nt">&quot;error&quot;</span><span class="p">:</span><span class="s2">&quot;backend_recovering&quot;</span><span class="p">}</span>
 </code></pre></div>
 <h3 id="common-commands">Common commands<a class="headerlink" href="#common-commands" title="Permanent link">&para;</a></h3>
 <ul>
@@ -2865,20 +3011,20 @@ public interfaces, and operational workflows.</p>
 <h3 id="band-switching-with-set_band-bsrcode-workflow">Band switching with <code>set_band</code> (<code>bsrCode</code> workflow)<a class="headerlink" href="#band-switching-with-set_band-bsrcode-workflow" title="Permanent link">&para;</a></h3>
 <p><code>set_band</code> is intended for profile bands that expose <code>bsrCode</code> in
 <code>GET /api/v1/capabilities</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p">{</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">&quot;freqRanges&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="p">{</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">      </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;HF&quot;</span><span class="p">,</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">      </span><span class="nt">&quot;bands&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">        </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;20m&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;default&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">14200000</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;bsrCode&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="w"> </span><span class="p">},</span>
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">        </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;60m&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;default&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5357000</span><span class="w"> </span><span class="p">}</span>
-<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">      </span><span class="p">]</span>
-<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">  </span><span class="p">]</span>
-<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="p">{</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">&quot;freqRanges&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="p">{</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">      </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;HF&quot;</span><span class="p">,</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">      </span><span class="nt">&quot;bands&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">        </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;20m&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;default&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">14200000</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;bsrCode&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="w"> </span><span class="p">},</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">        </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;60m&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;default&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5357000</span><span class="w"> </span><span class="p">}</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">      </span><span class="p">]</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">  </span><span class="p">]</span>
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="p">}</span>
 </code></pre></div>
 <p>Control command:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="p">{</span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="s2">&quot;cmd&quot;</span><span class="p">,</span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="s2">&quot;73&quot;</span><span class="p">,</span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="s2">&quot;set_band&quot;</span><span class="p">,</span><span class="nt">&quot;params&quot;</span><span class="p">:{</span><span class="nt">&quot;band&quot;</span><span class="p">:</span><span class="mi">5</span><span class="p">}}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="p">{</span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="s2">&quot;cmd&quot;</span><span class="p">,</span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="s2">&quot;73&quot;</span><span class="p">,</span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="s2">&quot;set_band&quot;</span><span class="p">,</span><span class="nt">&quot;params&quot;</span><span class="p">:{</span><span class="nt">&quot;band&quot;</span><span class="p">:</span><span class="mi">5</span><span class="p">}}</span>
 </code></pre></div>
 <p>Backend flow (<code>src/icom_lan/web/radio_poller.py</code>):</p>
 <ol>
@@ -2950,14 +3096,14 @@ public interfaces, and operational workflows.</p>
 </table>
 <h2 id="operations-runbook">Operations Runbook<a class="headerlink" href="#operations-runbook" title="Permanent link">&para;</a></h2>
 <h3 id="run-with-dx-cluster-overlays">Run with DX cluster overlays<a class="headerlink" href="#run-with-dx-cluster-overlays" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>icom-lan<span class="w"> </span>web<span class="w"> </span>--dx-cluster<span class="w"> </span>dxc.nc7j.com:7373<span class="w"> </span>--callsign<span class="w"> </span>YOURCALL
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>icom-lan<span class="w"> </span>web<span class="w"> </span>--dx-cluster<span class="w"> </span>dxc.nc7j.com:7373<span class="w"> </span>--callsign<span class="w"> </span>YOURCALL
 </code></pre></div>
 <h3 id="run-with-custom-ui-assets">Run with custom UI assets<a class="headerlink" href="#run-with-custom-ui-assets" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>icom-lan<span class="w"> </span>web<span class="w"> </span>--static-dir<span class="w"> </span>/opt/icom-ui/dist
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>icom-lan<span class="w"> </span>web<span class="w"> </span>--static-dir<span class="w"> </span>/opt/icom-ui/dist
 </code></pre></div>
 <h3 id="quick-health-checks">Quick health checks<a class="headerlink" href="#quick-health-checks" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>curl<span class="w"> </span>http://127.0.0.1:8080/api/v1/info
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>curl<span class="w"> </span>http://127.0.0.1:8080/api/v1/state
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>curl<span class="w"> </span>http://127.0.0.1:8080/api/v1/info
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>curl<span class="w"> </span>http://127.0.0.1:8080/api/v1/state
 </code></pre></div>
 <h2 id="dynamic-ui-radio-aware-controls">Dynamic UI — Radio-Aware Controls<a class="headerlink" href="#dynamic-ui-radio-aware-controls" title="Permanent link">&para;</a></h2>
 <p>The Web UI adapts to the active radio's capabilities. Capabilities are fetched once
@@ -2990,11 +3136,11 @@ from <code>GET /api/v1/capabilities</code> on startup and cached in
 </tbody>
 </table>
 <p>The <code>vfoLabel()</code> function in the capabilities store drives this:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1">// Returns &quot;MAIN&quot; or &quot;VFO A&quot; depending on active profile</span>
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="nx">vfoLabel</span><span class="p">(</span><span class="s1">&#39;A&#39;</span><span class="p">)</span>
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="c1">// Returns &quot;SUB&quot; or &quot;VFO B&quot;</span>
-<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="nx">vfoLabel</span><span class="p">(</span><span class="s1">&#39;B&#39;</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1">// Returns &quot;MAIN&quot; or &quot;VFO A&quot; depending on active profile</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="nx">vfoLabel</span><span class="p">(</span><span class="s1">&#39;A&#39;</span><span class="p">)</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="c1">// Returns &quot;SUB&quot; or &quot;VFO B&quot;</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="nx">vfoLabel</span><span class="p">(</span><span class="s1">&#39;B&#39;</span><span class="p">)</span>
 </code></pre></div>
 <h3 id="capability-based-ui-guards">Capability-Based UI Guards<a class="headerlink" href="#capability-based-ui-guards" title="Permanent link">&para;</a></h3>
 <p>Controls that depend on hardware features are automatically hidden or disabled when the
@@ -3048,19 +3194,19 @@ active radio profile doesn't support them:</p>
 </tbody>
 </table>
 <p>Use <code>hasCapability(name)</code> to check for a capability in Svelte components:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">hasCapability</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">&#39;$lib/stores/capabilities.svelte&#39;</span><span class="p">;</span>
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="c1">// In a Svelte component template:</span>
-<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="c1">// {#if hasCapability(&#39;digisel&#39;)}</span>
-<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="c1">//   &lt;DigiSelControl /&gt;</span>
-<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="c1">// {/if}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">hasCapability</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">&#39;$lib/stores/capabilities.svelte&#39;</span><span class="p">;</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="c1">// In a Svelte component template:</span>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="c1">// {#if hasCapability(&#39;digisel&#39;)}</span>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="c1">//   &lt;DigiSelControl /&gt;</span>
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="c1">// {/if}</span>
 </code></pre></div>
 <h3 id="state-endpoint-and-receiver-count">State Endpoint and Receiver Count<a class="headerlink" href="#state-endpoint-and-receiver-count" title="Permanent link">&para;</a></h3>
 <p><code>GET /api/v1/state</code> omits the <code>sub</code> receiver for single-receiver radios.
 Frontend code should guard against the missing <code>sub</code> key rather than assuming it is
 always present.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1">// Safe receiver access</span>
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="kd">const</span><span class="w"> </span><span class="nx">sub</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">state</span><span class="p">.</span><span class="nx">sub</span><span class="w"> </span><span class="o">??</span><span class="w"> </span><span class="kc">null</span><span class="p">;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1">// Safe receiver access</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="kd">const</span><span class="w"> </span><span class="nx">sub</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">state</span><span class="p">.</span><span class="nx">sub</span><span class="w"> </span><span class="o">??</span><span class="w"> </span><span class="kc">null</span><span class="p">;</span>
 </code></pre></div>
 <h2 id="common-pitfalls-for-developers">Common Pitfalls for Developers<a class="headerlink" href="#common-pitfalls-for-developers" title="Permanent link">&para;</a></h2>
 <ul>

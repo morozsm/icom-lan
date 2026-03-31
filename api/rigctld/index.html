@@ -1848,6 +1848,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#w-send_raw-passthrough" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        w / send_raw passthrough
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -3027,6 +3038,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#w-send_raw-passthrough" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        w / send_raw passthrough
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -3869,25 +3891,43 @@ dispatch table, and translates exceptions:</p>
 <td><code>v</code></td>
 <td><code>get_vfo</code></td>
 <td>GET</td>
-<td>Current VFO name</td>
+<td>Current VFO name (<code>VFOA</code>)</td>
 </tr>
 <tr>
 <td><code>V</code></td>
 <td><code>set_vfo</code></td>
 <td>SET</td>
-<td>Select VFO</td>
+<td>Accepted/ACKed; current backend keeps single-VFO operation</td>
 </tr>
 <tr>
 <td><code>j</code></td>
 <td><code>get_rit</code></td>
 <td>GET</td>
-<td>RIT offset (always 0)</td>
+<td>RIT offset from live radio state</td>
 </tr>
 <tr>
 <td><code>l</code></td>
 <td><code>get_level</code></td>
 <td>GET</td>
-<td>Level: <code>STRENGTH</code>, <code>RFPOWER</code>, <code>SWR</code></td>
+<td>Level read (<code>STRENGTH</code>, <code>RFPOWER</code>, <code>SWR</code>, <code>AF</code>, <code>RF</code>, etc.)</td>
+</tr>
+<tr>
+<td><code>L</code></td>
+<td><code>set_level</code></td>
+<td>SET</td>
+<td>Level write (<code>RFPOWER</code>, <code>AF</code>, <code>RF</code>, <code>NR</code>, <code>NB</code>, etc.)</td>
+</tr>
+<tr>
+<td><code>u</code></td>
+<td><code>get_func</code></td>
+<td>GET</td>
+<td>Function read (<code>NB</code>, <code>NR</code>, <code>COMP</code>, <code>VOX</code>, etc.)</td>
+</tr>
+<tr>
+<td><code>U</code></td>
+<td><code>set_func</code></td>
+<td>SET</td>
+<td>Function write (<code>NB</code>, <code>NR</code>, <code>COMP</code>, <code>VOX</code>, etc.)</td>
 </tr>
 <tr>
 <td><code>s</code></td>
@@ -3899,7 +3939,7 @@ dispatch table, and translates exceptions:</p>
 <td><code>S</code></td>
 <td><code>set_split_vfo</code></td>
 <td>SET</td>
-<td>Split VFO</td>
+<td>Accepted/ACKed (compat path)</td>
 </tr>
 <tr>
 <td><code>q</code></td>
@@ -3955,6 +3995,12 @@ dispatch table, and translates exceptions:</p>
 <td>CTL</td>
 <td>Lock mode (always 0)</td>
 </tr>
+<tr>
+<td><code>w</code></td>
+<td><code>send_raw</code></td>
+<td>CTL</td>
+<td>Raw CI-V passthrough (hex in, hex out)</td>
+</tr>
 </tbody>
 </table>
 <p><strong>Mode strings</strong> accepted/returned by <code>get_mode</code>/<code>set_mode</code>:
@@ -3985,34 +4031,89 @@ dispatch table, and translates exceptions:</p>
 <td>SWR ratio</td>
 <td>1.0 … 5.0</td>
 </tr>
+<tr>
+<td><code>AF</code>, <code>RF</code>, <code>NR</code>, <code>NB</code>, <code>COMP</code>, <code>MICGAIN</code>, <code>MONITOR_GAIN</code></td>
+<td>Normalised float</td>
+<td>0.0 … 1.0</td>
+</tr>
+<tr>
+<td><code>RFPOWER_METER</code>, <code>COMP_METER</code>, <code>ID_METER</code>, <code>VD_METER</code></td>
+<td>Normalised float</td>
+<td>0.0 … 1.0</td>
+</tr>
+<tr>
+<td><code>KEYSPD</code></td>
+<td>Key speed (WPM)</td>
+<td>radio-dependent int</td>
+</tr>
+<tr>
+<td><code>CWPITCH</code></td>
+<td>CW pitch (Hz)</td>
+<td>radio-dependent int</td>
+</tr>
+<tr>
+<td><code>PREAMP</code></td>
+<td>Preamp level in dB</td>
+<td>0 / 12 / 20</td>
+</tr>
+<tr>
+<td><code>ATT</code></td>
+<td>Attenuator in dB</td>
+<td>0 / 6 / 12 / 18</td>
+</tr>
 </tbody>
 </table>
+<p><strong>Writable levels</strong> for <code>set_level</code>:</p>
+<p><code>RFPOWER</code>, <code>AF</code>, <code>RF</code>, <code>NR</code>, <code>NB</code>, <code>COMP</code>, <code>MICGAIN</code>, <code>MONITOR_GAIN</code>,
+<code>KEYSPD</code>, <code>CWPITCH</code>, <code>PREAMP</code>, <code>ATT</code>.</p>
+<p><strong>Function names</strong> for <code>get_func</code> / <code>set_func</code>:</p>
+<p><code>NB</code>, <code>NR</code>, <code>COMP</code>, <code>VOX</code>, <code>TONE</code>, <code>TSQL</code>, <code>ANF</code>, <code>LOCK</code>, <code>MON</code>, <code>APF</code>.</p>
+<h3 id="w-send_raw-passthrough"><code>w</code> / <code>send_raw</code> passthrough<a class="headerlink" href="#w-send_raw-passthrough" title="Permanent link">&para;</a></h3>
+<p>Send raw CI-V bytes and return raw response bytes (space-separated uppercase hex).</p>
+<p>Accepted input formats:</p>
+<ol>
+<li>Space-separated tokens:</li>
+</ol>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>w FE FE 98 E0 03 FD
+</code></pre></div>
+<ol>
+<li>Single escaped argument:</li>
+</ol>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>w \xFE\xFE\x98\xE0\x03\xFD
+</code></pre></div>
+<p>Behavior details:</p>
+<ul>
+<li>If backend exposes <code>_send_civ_raw</code>, command forwards bytes as-is.</li>
+<li>On transport timeout (<code>icom_lan.exceptions.TimeoutError</code> or <code>asyncio.TimeoutError</code>),
+  handler returns <strong>successful empty response</strong> (not <code>RPRT -5</code>).</li>
+<li>If backend does not implement <code>_send_civ_raw</code>, returns <code>ENIMPL</code> (<code>RPRT -4</code>).</li>
+</ul>
 <hr />
 <h2 id="radiopoller"><code>RadioPoller</code><a class="headerlink" href="#radiopoller" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan.rigctld.poller</span><span class="w"> </span><span class="kn">import</span> <span class="n">RadioPoller</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan.rigctld.poller</span><span class="w"> </span><span class="kn">import</span> <span class="n">RadioPoller</span>
 </code></pre></div>
 <p>Background asyncio task that periodically polls the radio (frequency, mode, DATA
 mode) and updates a shared <code>StateCache</code>. Started and stopped automatically by
 <code>RigctldServer</code> based on whether any clients are connected.</p>
 <h3 id="constructor_2">Constructor<a class="headerlink" href="#constructor_2" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="n">RadioPoller</span><span class="p">(</span>
-<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>    <span class="n">radio</span><span class="p">:</span> <span class="n">Radio</span><span class="p">,</span>
-<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>    <span class="n">cache</span><span class="p">:</span> <span class="n">StateCache</span><span class="p">,</span>
-<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a>    <span class="n">config</span><span class="p">:</span> <span class="n">RigctldConfig</span><span class="p">,</span>
-<a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a>    <span class="n">circuit_breaker</span><span class="p">:</span> <span class="n">CircuitBreaker</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="n">RadioPoller</span><span class="p">(</span>
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>    <span class="n">radio</span><span class="p">:</span> <span class="n">Radio</span><span class="p">,</span>
+<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>    <span class="n">cache</span><span class="p">:</span> <span class="n">StateCache</span><span class="p">,</span>
+<a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a>    <span class="n">config</span><span class="p">:</span> <span class="n">RigctldConfig</span><span class="p">,</span>
+<a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a>    <span class="n">circuit_breaker</span><span class="p">:</span> <span class="n">CircuitBreaker</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a><span class="p">)</span>
 </code></pre></div>
 <h3 id="methods_2">Methods<a class="headerlink" href="#methods_2" title="Permanent link">&para;</a></h3>
 <h4 id="start_1"><code>start()</code><a class="headerlink" href="#start_1" title="Permanent link">&para;</a></h4>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">start</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">start</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre></div>
 <p>Start the background poll loop. Idempotent.</p>
 <h4 id="stop_1"><code>stop()</code><a class="headerlink" href="#stop_1" title="Permanent link">&para;</a></h4>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">stop</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">stop</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre></div>
 <p>Cancel the background poll loop and wait for it to finish. Idempotent.</p>
 <h4 id="hold_for"><code>hold_for()</code><a class="headerlink" href="#hold_for" title="Permanent link">&para;</a></h4>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">hold_for</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">seconds</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">hold_for</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">seconds</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre></div>
 <p>Suppress polling for <code>seconds</code> seconds. Used internally to avoid CI-V
 interleaving during DATA mode transitions (USB → PKT modes).</p>
@@ -4035,17 +4136,17 @@ interleaving during DATA mode transitions (USB → PKT modes).</p>
 </table>
 <hr />
 <h2 id="circuitbreaker"><code>CircuitBreaker</code><a class="headerlink" href="#circuitbreaker" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan.rigctld.circuit_breaker</span><span class="w"> </span><span class="kn">import</span> <span class="n">CircuitBreaker</span><span class="p">,</span> <span class="n">CircuitState</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan.rigctld.circuit_breaker</span><span class="w"> </span><span class="kn">import</span> <span class="n">CircuitBreaker</span><span class="p">,</span> <span class="n">CircuitState</span>
 </code></pre></div>
 <p>State-machine circuit breaker wrapping CI-V command execution. Prevents
 cascading failures when the radio stops responding.</p>
 <h3 id="states">States<a class="headerlink" href="#states" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>stateDiagram-v2
-<a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>    [*] --&gt; CLOSED
-<a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a>    CLOSED --&gt; OPEN : failure_threshold consecutive failures
-<a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a>    OPEN --&gt; HALF_OPEN : recovery_timeout elapsed
-<a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a>    HALF_OPEN --&gt; CLOSED : probe success
-<a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a>    HALF_OPEN --&gt; OPEN : probe failure
+<div class="highlight"><pre><span></span><code><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>stateDiagram-v2
+<a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a>    [*] --&gt; CLOSED
+<a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a>    CLOSED --&gt; OPEN : failure_threshold consecutive failures
+<a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a>    OPEN --&gt; HALF_OPEN : recovery_timeout elapsed
+<a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a>    HALF_OPEN --&gt; CLOSED : probe success
+<a id="__codelineno-24-6" name="__codelineno-24-6" href="#__codelineno-24-6"></a>    HALF_OPEN --&gt; OPEN : probe failure
 </code></pre></div>
 <h3 id="circuitstate-enum"><code>CircuitState</code> enum<a class="headerlink" href="#circuitstate-enum" title="Permanent link">&para;</a></h3>
 <table>
@@ -4071,10 +4172,10 @@ cascading failures when the radio stops responding.</p>
 </tbody>
 </table>
 <h3 id="constructor_3">Constructor<a class="headerlink" href="#constructor_3" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="n">CircuitBreaker</span><span class="p">(</span>
-<a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>    <span class="n">failure_threshold</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
-<a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a>    <span class="n">recovery_timeout</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">5.0</span><span class="p">,</span>
-<a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="n">CircuitBreaker</span><span class="p">(</span>
+<a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>    <span class="n">failure_threshold</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
+<a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>    <span class="n">recovery_timeout</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">5.0</span><span class="p">,</span>
+<a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a><span class="p">)</span>
 </code></pre></div>
 <table>
 <thead>
@@ -4103,15 +4204,15 @@ cascading failures when the radio stops responding.</p>
 <p><strong>Raises:</strong> <code>ValueError</code> if <code>failure_threshold &lt; 1</code> or <code>recovery_timeout &lt;= 0</code>.</p>
 <h3 id="methods_3">Methods<a class="headerlink" href="#methods_3" title="Permanent link">&para;</a></h3>
 <h4 id="allow_request"><code>allow_request()</code><a class="headerlink" href="#allow_request" title="Permanent link">&para;</a></h4>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">allow_request</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">allow_request</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span>
 </code></pre></div>
 <p>Return <code>True</code> if a command may proceed. Returns <code>False</code> only when OPEN.</p>
 <h4 id="record_success"><code>record_success()</code><a class="headerlink" href="#record_success" title="Permanent link">&para;</a></h4>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">record_success</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">record_success</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre></div>
 <p>Record a successful command. Resets failure counter and closes the circuit.</p>
 <h4 id="record_failure"><code>record_failure()</code><a class="headerlink" href="#record_failure" title="Permanent link">&para;</a></h4>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">record_failure</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">record_failure</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre></div>
 <p>Record a failed command. Increments the counter (CLOSED) or re-opens (HALF_OPEN).</p>
 <h3 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">&para;</a></h3>
@@ -4148,7 +4249,7 @@ cascading failures when the radio stops responding.</p>
 </table>
 <hr />
 <h2 id="statecache"><code>StateCache</code><a class="headerlink" href="#statecache" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan.rigctld.state_cache</span><span class="w"> </span><span class="kn">import</span> <span class="n">StateCache</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan.rigctld.state_cache</span><span class="w"> </span><span class="kn">import</span> <span class="n">StateCache</span>
 </code></pre></div>
 <p>Last-known radio state with per-field monotonic timestamps. Shared between
 <code>RigctldHandler</code> (reads) and <code>RadioPoller</code> (writes). Not thread-safe; all
@@ -4239,11 +4340,11 @@ access must occur on the same asyncio event loop.</p>
 <code>0.0</code> means the field has never been written.</p>
 <h3 id="key-methods">Key Methods<a class="headerlink" href="#key-methods" title="Permanent link">&para;</a></h3>
 <h4 id="is_fresh"><code>is_fresh()</code><a class="headerlink" href="#is_fresh" title="Permanent link">&para;</a></h4>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">is_fresh</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">field</span><span class="p">:</span> <span class="n">CacheField</span><span class="p">,</span> <span class="n">max_age_s</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">is_fresh</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">field</span><span class="p">:</span> <span class="n">CacheField</span><span class="p">,</span> <span class="n">max_age_s</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span>
 </code></pre></div>
 <p>Return <code>True</code> if <code>field</code> was updated within <code>max_age_s</code> seconds.</p>
 <h4 id="snapshot"><code>snapshot()</code><a class="headerlink" href="#snapshot" title="Permanent link">&para;</a></h4>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">snapshot</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">object</span><span class="p">]</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">snapshot</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">object</span><span class="p">]</span>
 </code></pre></div>
 <p>Return all cached values and their ages (<code>&lt;field&gt;_age</code> in seconds, or <code>None</code> if
 never written).</p>
@@ -4321,30 +4422,30 @@ never written).</p>
 <hr />
 <h2 id="protocol-internals">Protocol Internals<a class="headerlink" href="#protocol-internals" title="Permanent link">&para;</a></h2>
 <h3 id="parse_line"><code>parse_line()</code><a class="headerlink" href="#parse_line" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan.rigctld.protocol</span><span class="w"> </span><span class="kn">import</span> <span class="n">parse_line</span>
-<a id="__codelineno-30-2" name="__codelineno-30-2" href="#__codelineno-30-2"></a>
-<a id="__codelineno-30-3" name="__codelineno-30-3" href="#__codelineno-30-3"></a><span class="k">def</span><span class="w"> </span><span class="nf">parse_line</span><span class="p">(</span><span class="n">line</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">RigctldCommand</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan.rigctld.protocol</span><span class="w"> </span><span class="kn">import</span> <span class="n">parse_line</span>
+<a id="__codelineno-32-2" name="__codelineno-32-2" href="#__codelineno-32-2"></a>
+<a id="__codelineno-32-3" name="__codelineno-32-3" href="#__codelineno-32-3"></a><span class="k">def</span><span class="w"> </span><span class="nf">parse_line</span><span class="p">(</span><span class="n">line</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">RigctldCommand</span>
 </code></pre></div>
 <p>Parse a raw rigctld command line into a <code>RigctldCommand</code>. Raises <code>ValueError</code> on
 unknown commands or wrong argument counts.</p>
 <h3 id="format_response"><code>format_response()</code><a class="headerlink" href="#format_response" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">format_response</span><span class="p">(</span>
-<a id="__codelineno-31-2" name="__codelineno-31-2" href="#__codelineno-31-2"></a>    <span class="n">cmd</span><span class="p">:</span> <span class="n">RigctldCommand</span><span class="p">,</span>
-<a id="__codelineno-31-3" name="__codelineno-31-3" href="#__codelineno-31-3"></a>    <span class="n">resp</span><span class="p">:</span> <span class="n">RigctldResponse</span><span class="p">,</span>
-<a id="__codelineno-31-4" name="__codelineno-31-4" href="#__codelineno-31-4"></a>    <span class="n">session</span><span class="p">:</span> <span class="n">ClientSession</span><span class="p">,</span>
-<a id="__codelineno-31-5" name="__codelineno-31-5" href="#__codelineno-31-5"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">format_response</span><span class="p">(</span>
+<a id="__codelineno-33-2" name="__codelineno-33-2" href="#__codelineno-33-2"></a>    <span class="n">cmd</span><span class="p">:</span> <span class="n">RigctldCommand</span><span class="p">,</span>
+<a id="__codelineno-33-3" name="__codelineno-33-3" href="#__codelineno-33-3"></a>    <span class="n">resp</span><span class="p">:</span> <span class="n">RigctldResponse</span><span class="p">,</span>
+<a id="__codelineno-33-4" name="__codelineno-33-4" href="#__codelineno-33-4"></a>    <span class="n">session</span><span class="p">:</span> <span class="n">ClientSession</span><span class="p">,</span>
+<a id="__codelineno-33-5" name="__codelineno-33-5" href="#__codelineno-33-5"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span>
 </code></pre></div>
 <p>Format a response for wire transmission. Respects <code>session.extended_mode</code> —
 normal mode returns bare values or <code>RPRT &lt;code&gt;</code>, extended mode echoes the
 command name and always appends <code>RPRT &lt;code&gt;</code>.</p>
 <h3 id="format_error"><code>format_error()</code><a class="headerlink" href="#format_error" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">format_error</span><span class="p">(</span><span class="n">code</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">format_error</span><span class="p">(</span><span class="n">code</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span>
 </code></pre></div>
 <p>Format a bare Hamlib error response, e.g. <code>b'RPRT -1\n'</code>.</p>
 <hr />
 <h2 id="shared-dataclasses">Shared Dataclasses<a class="headerlink" href="#shared-dataclasses" title="Permanent link">&para;</a></h2>
 <h3 id="rigctldcommand"><code>RigctldCommand</code><a class="headerlink" href="#rigctldcommand" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan.rigctld.contract</span><span class="w"> </span><span class="kn">import</span> <span class="n">RigctldCommand</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-35-1" name="__codelineno-35-1" href="#__codelineno-35-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan.rigctld.contract</span><span class="w"> </span><span class="kn">import</span> <span class="n">RigctldCommand</span>
 </code></pre></div>
 <p>Frozen dataclass representing a parsed client command.</p>
 <table>
@@ -4379,7 +4480,7 @@ command name and always appends <code>RPRT &lt;code&gt;</code>.</p>
 </tbody>
 </table>
 <h3 id="rigctldresponse"><code>RigctldResponse</code><a class="headerlink" href="#rigctldresponse" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan.rigctld.contract</span><span class="w"> </span><span class="kn">import</span> <span class="n">RigctldResponse</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-36-1" name="__codelineno-36-1" href="#__codelineno-36-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan.rigctld.contract</span><span class="w"> </span><span class="kn">import</span> <span class="n">RigctldResponse</span>
 </code></pre></div>
 <p>Mutable dataclass representing the response to send back to the client.</p>
 <table>
@@ -4416,7 +4517,7 @@ command name and always appends <code>RPRT &lt;code&gt;</code>.</p>
 <hr />
 <h2 id="audit-logging">Audit Logging<a class="headerlink" href="#audit-logging" title="Permanent link">&para;</a></h2>
 <h3 id="auditrecord"><code>AuditRecord</code><a class="headerlink" href="#auditrecord" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-35-1" name="__codelineno-35-1" href="#__codelineno-35-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan.rigctld.audit</span><span class="w"> </span><span class="kn">import</span> <span class="n">AuditRecord</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-37-1" name="__codelineno-37-1" href="#__codelineno-37-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan.rigctld.audit</span><span class="w"> </span><span class="kn">import</span> <span class="n">AuditRecord</span>
 </code></pre></div>
 <p>Immutable dataclass capturing a single command execution.</p>
 <table>
@@ -4476,23 +4577,23 @@ command name and always appends <code>RPRT &lt;code&gt;</code>.</p>
 </tbody>
 </table>
 <h3 id="rigctldauditformatter"><code>RigctldAuditFormatter</code><a class="headerlink" href="#rigctldauditformatter" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-36-1" name="__codelineno-36-1" href="#__codelineno-36-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan.rigctld.audit</span><span class="w"> </span><span class="kn">import</span> <span class="n">RigctldAuditFormatter</span><span class="p">,</span> <span class="n">AUDIT_LOGGER_NAME</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-38-1" name="__codelineno-38-1" href="#__codelineno-38-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan.rigctld.audit</span><span class="w"> </span><span class="kn">import</span> <span class="n">RigctldAuditFormatter</span><span class="p">,</span> <span class="n">AUDIT_LOGGER_NAME</span>
 </code></pre></div>
 <p><code>logging.Formatter</code> subclass that serialises <code>AuditRecord</code> entries as a single
 JSON line. Attach it to a handler on the <code>icom_lan.rigctld.audit</code> logger:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-37-1" name="__codelineno-37-1" href="#__codelineno-37-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
-<a id="__codelineno-37-2" name="__codelineno-37-2" href="#__codelineno-37-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan.rigctld.audit</span><span class="w"> </span><span class="kn">import</span> <span class="n">AUDIT_LOGGER_NAME</span><span class="p">,</span> <span class="n">RigctldAuditFormatter</span>
-<a id="__codelineno-37-3" name="__codelineno-37-3" href="#__codelineno-37-3"></a>
-<a id="__codelineno-37-4" name="__codelineno-37-4" href="#__codelineno-37-4"></a><span class="n">fh</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">FileHandler</span><span class="p">(</span><span class="s2">&quot;audit.jsonl&quot;</span><span class="p">)</span>
-<a id="__codelineno-37-5" name="__codelineno-37-5" href="#__codelineno-37-5"></a><span class="n">fh</span><span class="o">.</span><span class="n">setFormatter</span><span class="p">(</span><span class="n">RigctldAuditFormatter</span><span class="p">())</span>
-<a id="__codelineno-37-6" name="__codelineno-37-6" href="#__codelineno-37-6"></a><span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">AUDIT_LOGGER_NAME</span><span class="p">)</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">fh</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-39-1" name="__codelineno-39-1" href="#__codelineno-39-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<a id="__codelineno-39-2" name="__codelineno-39-2" href="#__codelineno-39-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan.rigctld.audit</span><span class="w"> </span><span class="kn">import</span> <span class="n">AUDIT_LOGGER_NAME</span><span class="p">,</span> <span class="n">RigctldAuditFormatter</span>
+<a id="__codelineno-39-3" name="__codelineno-39-3" href="#__codelineno-39-3"></a>
+<a id="__codelineno-39-4" name="__codelineno-39-4" href="#__codelineno-39-4"></a><span class="n">fh</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">FileHandler</span><span class="p">(</span><span class="s2">&quot;audit.jsonl&quot;</span><span class="p">)</span>
+<a id="__codelineno-39-5" name="__codelineno-39-5" href="#__codelineno-39-5"></a><span class="n">fh</span><span class="o">.</span><span class="n">setFormatter</span><span class="p">(</span><span class="n">RigctldAuditFormatter</span><span class="p">())</span>
+<a id="__codelineno-39-6" name="__codelineno-39-6" href="#__codelineno-39-6"></a><span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">AUDIT_LOGGER_NAME</span><span class="p">)</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">fh</span><span class="p">)</span>
 </code></pre></div>
 <p>Example output line:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-38-1" name="__codelineno-38-1" href="#__codelineno-38-1"></a><span class="p">{</span><span class="nt">&quot;timestamp&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-03-03T12:00:00.000Z&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;client_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;peername&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;127.0.0.1:54321&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;cmd&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;F&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;long_cmd&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;set_freq&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;args&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;14074000&quot;</span><span class="p">],</span><span class="w"> </span><span class="nt">&quot;duration_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">18.4</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;rprt&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;is_set&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-40-1" name="__codelineno-40-1" href="#__codelineno-40-1"></a><span class="p">{</span><span class="nt">&quot;timestamp&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-03-03T12:00:00.000Z&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;client_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;peername&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;127.0.0.1:54321&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;cmd&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;F&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;long_cmd&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;set_freq&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;args&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;14074000&quot;</span><span class="p">],</span><span class="w"> </span><span class="nt">&quot;duration_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">18.4</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;rprt&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;is_set&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">}</span>
 </code></pre></div>
 <hr />
 <h2 id="hamliberror"><code>HamlibError</code><a class="headerlink" href="#hamliberror" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-39-1" name="__codelineno-39-1" href="#__codelineno-39-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan.rigctld.contract</span><span class="w"> </span><span class="kn">import</span> <span class="n">HamlibError</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-41-1" name="__codelineno-41-1" href="#__codelineno-41-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan.rigctld.contract</span><span class="w"> </span><span class="kn">import</span> <span class="n">HamlibError</span>
 </code></pre></div>
 <p><code>IntEnum</code> of standard Hamlib error codes.</p>
 <table>
@@ -4623,13 +4724,13 @@ JSON line. Attach it to a handler on the <code>icom_lan.rigctld.audit</code> log
 </table>
 <hr />
 <h2 id="run_rigctld_server"><code>run_rigctld_server()</code><a class="headerlink" href="#run_rigctld_server" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-40-1" name="__codelineno-40-1" href="#__codelineno-40-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan.rigctld.server</span><span class="w"> </span><span class="kn">import</span> <span class="n">run_rigctld_server</span>
-<a id="__codelineno-40-2" name="__codelineno-40-2" href="#__codelineno-40-2"></a>
-<a id="__codelineno-40-3" name="__codelineno-40-3" href="#__codelineno-40-3"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">run_rigctld_server</span><span class="p">(</span><span class="n">radio</span><span class="p">:</span> <span class="n">Radio</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-42-1" name="__codelineno-42-1" href="#__codelineno-42-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">icom_lan.rigctld.server</span><span class="w"> </span><span class="kn">import</span> <span class="n">run_rigctld_server</span>
+<a id="__codelineno-42-2" name="__codelineno-42-2" href="#__codelineno-42-2"></a>
+<a id="__codelineno-42-3" name="__codelineno-42-3" href="#__codelineno-42-3"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">run_rigctld_server</span><span class="p">(</span><span class="n">radio</span><span class="p">:</span> <span class="n">Radio</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre></div>
 <p>Convenience coroutine: create a <code>RigctldServer</code> from keyword arguments (forwarded
 to <code>RigctldConfig</code>) and run it forever.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-41-1" name="__codelineno-41-1" href="#__codelineno-41-1"></a><span class="k">await</span> <span class="n">run_rigctld_server</span><span class="p">(</span><span class="n">radio</span><span class="p">,</span> <span class="n">host</span><span class="o">=</span><span class="s2">&quot;0.0.0.0&quot;</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">4532</span><span class="p">,</span> <span class="n">read_only</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-43-1" name="__codelineno-43-1" href="#__codelineno-43-1"></a><span class="k">await</span> <span class="n">run_rigctld_server</span><span class="p">(</span><span class="n">radio</span><span class="p">,</span> <span class="n">host</span><span class="o">=</span><span class="s2">&quot;0.0.0.0&quot;</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">4532</span><span class="p">,</span> <span class="n">read_only</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </code></pre></div>
 
 
