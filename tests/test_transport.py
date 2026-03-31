@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import struct
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -72,6 +73,43 @@ def transport() -> IcomTransport:
     return t
 
 
+class _FakeDatagramTransport:
+    def __init__(self, sockname: tuple[str, int]) -> None:
+        self._sockname = sockname
+
+    def get_extra_info(self, name: str):
+        if name == "sockname":
+            return self._sockname
+        return None
+
+    def sendto(self, data: bytes) -> None:
+        return None
+
+
+class _FakeLoop:
+    def __init__(self, sockname: tuple[str, int]) -> None:
+        self.sockname = sockname
+        self.calls: list[dict[str, object]] = []
+
+    async def create_datagram_endpoint(
+        self,
+        protocol_factory,
+        *,
+        remote_addr=None,
+        local_addr=None,
+    ):
+        transport = _FakeDatagramTransport(self.sockname)
+        protocol = protocol_factory()
+        protocol.connection_made(transport)
+        self.calls.append(
+            {
+                "remote_addr": remote_addr,
+                "local_addr": local_addr,
+            }
+        )
+        return transport, protocol
+
+
 # ---------------------------------------------------------------------------
 # Connection state
 # ---------------------------------------------------------------------------
@@ -88,6 +126,54 @@ class TestConnectionState:
         assert ConnectionState.DISCONNECTED == "disconnected"
         assert ConnectionState.CONNECTING == "connecting"
         assert ConnectionState.CONNECTED == "connected"
+
+    @pytest.mark.asyncio
+    async def test_connect_binds_to_specific_local_host_and_port(self) -> None:
+        t = IcomTransport()
+        loop = _FakeLoop(("192.168.2.194", 50002))
+
+        with (
+            patch("icom_lan.transport.asyncio.get_event_loop", return_value=loop),
+            patch.object(t, "_discover", new=AsyncMock()),
+            patch.object(t, "_ready_handshake", new=AsyncMock()),
+        ):
+            await t.connect(
+                "192.168.2.1",
+                50001,
+                local_host="192.168.2.194",
+                local_port=50002,
+            )
+
+        assert loop.calls == [
+            {
+                "remote_addr": ("192.168.2.1", 50001),
+                "local_addr": ("192.168.2.194", 50002),
+            }
+        ]
+
+    @pytest.mark.asyncio
+    async def test_reconnect_binds_to_specific_local_host(self) -> None:
+        t = IcomTransport()
+        t.remote_id = 0xAABBCCDD
+        t.my_id = 0x0001C352
+        loop = _FakeLoop(("192.168.2.194", 50001))
+
+        with (
+            patch("icom_lan.transport.asyncio.get_event_loop", return_value=loop),
+            patch.object(t, "_ready_handshake", new=AsyncMock()),
+        ):
+            await t.reconnect(
+                "192.168.2.1",
+                50001,
+                local_host="192.168.2.194",
+            )
+
+        assert loop.calls == [
+            {
+                "remote_addr": ("192.168.2.1", 50001),
+                "local_addr": ("192.168.2.194", 0),
+            }
+        ]
 
 
 # ---------------------------------------------------------------------------

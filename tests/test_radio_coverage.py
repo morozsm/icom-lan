@@ -1710,6 +1710,7 @@ async def test_ensure_audio_transport_creates_transport(radio: IcomRadio) -> Non
     """_ensure_audio_transport connects audio transport (lines 993-1013)."""
 
     radio._audio_port = 50001  # non-zero port
+    radio._local_bind_host = "192.168.2.194"
 
     fake_transport = MagicMock()
     fake_transport.connect = AsyncMock()
@@ -1722,7 +1723,12 @@ async def test_ensure_audio_transport_creates_transport(radio: IcomRadio) -> Non
         await radio._ensure_audio_transport()
 
     assert radio._audio_transport is fake_transport
-    fake_transport.connect.assert_awaited_once()
+    fake_transport.connect.assert_awaited_once_with(
+        radio._host,
+        50001,
+        local_host="192.168.2.194",
+        local_port=0,
+    )
 
 
 async def test_ensure_audio_transport_noop_when_stream_exists(radio: IcomRadio) -> None:

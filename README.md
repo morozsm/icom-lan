@@ -49,7 +49,7 @@ Direct connection to your radio — no wfview, hamlib, or RS-BA1 required.
 | **Yaesu FTX-1** | Yaesu CAT | — | ✅ Tested | 17 modes, VHF/UHF, C4FM, Audio FFT Scope |
 | **Xiegu X6100** | CI-V `0x70` | — | Profile only | IC-705 compatible, QRP 8W, WiFi |
 | **Lab599 TX-500** | Kenwood CAT | — | Profile only | QRP 10W, minimal CAT |
-| IC-705 | CI-V `0xA4` | — | — | WiFi, should work |
+| IC-705 | CI-V `0xA4` | ✅ Validated | — | WiFi; community-validated LAN control path |
 | IC-9700 | CI-V `0xA2` | — | — | VHF/UHF/SHF |
 | IC-7851 | CI-V `0x8E` | — | — | |
 | IC-R8600 | CI-V `0x96` | — | — | RX only |
@@ -446,4 +446,3 @@ Icom™ and the Icom logo are registered trademarks of [Icom Incorporated](https
 Some future product planning, commercial exploration, or private implementation work may happen outside this repository in separate private repositories. That separation is intentional and does not change the open-source status of `icom-lan` itself.
 
 Public improvements that strengthen the core project may still be contributed here when appropriate.
-

@@ -417,6 +417,7 @@ class Icom7610CoreRadio:
         self._auth_seq: int = 0
         self._civ_port: int = 0
         self._audio_port: int = 0
+        self._local_bind_host: str | None = None
         self._civ_send_seq: int = 0
         self._audio_send_seq: int = 0
         self._civ_lock = asyncio.Lock()
@@ -1601,6 +1602,7 @@ class Icom7610CoreRadio:
             await self._audio_transport.connect(
                 self._host,
                 self._audio_port,
+                local_host=getattr(self, "_local_bind_host", None),
                 local_port=getattr(self, "_audio_local_port", 0),
             )
         except OSError as exc:

@@ -125,6 +125,7 @@ class ControlPhaseHost(Protocol):
     _audio_port: int
     _civ_local_port: int
     _audio_local_port: int
+    _local_bind_host: str | None
 
     # Auth / token state
     _token: int

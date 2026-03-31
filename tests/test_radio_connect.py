@@ -33,14 +33,45 @@ class ConnectMockTransport(MockTransport):
         super().__init__()
         self.state = ConnectionState.DISCONNECTED
 
-    async def connect(self, host: str, port: int) -> None:
+    async def connect(
+        self,
+        host: str,
+        port: int,
+        *,
+        local_host: str | None = None,
+        local_port: int = 0,
+    ) -> None:
         self.connected = True
         self.state = ConnectionState.CONNECTING
+        self.connect_args = {
+            "host": host,
+            "port": port,
+            "local_host": local_host,
+            "local_port": local_port,
+        }
+
+    async def reconnect(
+        self,
+        host: str,
+        port: int,
+        *,
+        local_host: str | None = None,
+    ) -> None:
+        self.connected = True
+        self.state = ConnectionState.CONNECTING
+        self.reconnect_args = {
+            "host": host,
+            "port": port,
+            "local_host": local_host,
+        }
 
     def start_ping_loop(self) -> None:
         pass
 
     def start_retransmit_loop(self) -> None:
+        pass
+
+    def start_idle_loop(self) -> None:
         pass
 
 
@@ -369,6 +400,83 @@ class TestConnectSessionRejection:
                 await radio.connect()
 
         assert mt.disconnected is True
+
+
+class _FakeSocket:
+    def __init__(self, sockname: tuple[str, int]) -> None:
+        self.sockname = sockname
+        self.bound: tuple[str, int] | None = None
+        self.connected: tuple[str, int] | None = None
+
+    def connect(self, addr: tuple[str, int]) -> None:
+        self.connected = addr
+
+    def bind(self, addr: tuple[str, int]) -> None:
+        self.bound = addr
+
+    def getsockname(self) -> tuple[str, int]:
+        return self.sockname
+
+    def close(self) -> None:
+        return None
+
+
+class TestWifiBindBehavior:
+    @pytest.mark.asyncio
+    async def test_connect_uses_routed_local_bind_host_for_control_and_civ(self) -> None:
+        radio = IcomRadio("192.168.2.1", username="u", password="p")
+        mt = ConnectMockTransport()
+        radio._ctrl_transport = mt
+
+        probe_sock = _FakeSocket(("192.168.2.194", 40000))
+        civ_sock = _FakeSocket(("192.168.2.194", 50002))
+        audio_sock = _FakeSocket(("192.168.2.194", 50003))
+
+        fake_civ_transport = ConnectMockTransport()
+
+        with (
+            patch(
+                "icom_lan._control_phase._socket.socket",
+                side_effect=[probe_sock, civ_sock, audio_sock],
+            ),
+            patch.object(
+                radio._control_phase,
+                "_wait_for_packet",
+                new=AsyncMock(return_value=_build_login_response()),
+            ),
+            patch.object(radio._control_phase, "_send_token_ack", new=AsyncMock()),
+            patch.object(
+                radio._control_phase,
+                "_receive_guid",
+                new=AsyncMock(return_value=b"\x00" * 16),
+            ),
+            patch.object(radio._control_phase, "_send_conninfo", new=AsyncMock()),
+            patch.object(
+                radio._control_phase,
+                "_receive_civ_port",
+                new=AsyncMock(return_value=50002),
+            ),
+            patch.object(radio._control_phase, "_start_token_renewal"),
+            patch.object(radio._control_phase, "_start_watchdog"),
+            patch.object(radio._control_phase, "_send_open_close", new=AsyncMock()),
+            patch.object(radio._control_phase, "_flush_queue", new=AsyncMock(return_value=0)),
+            patch.object(radio._civ_runtime, "start_pump"),
+            patch.object(radio._civ_runtime, "start_data_watchdog"),
+            patch.object(radio._civ_runtime, "start_worker"),
+            patch("icom_lan.transport.IcomTransport", return_value=fake_civ_transport),
+        ):
+            await radio.connect()
+
+        assert probe_sock.connected == ("192.168.2.1", 50001)
+        assert civ_sock.bound == ("192.168.2.194", 0)
+        assert audio_sock.bound == ("192.168.2.194", 0)
+        assert mt.connect_args["local_host"] == "192.168.2.194"
+        assert fake_civ_transport.connect_args == {
+            "host": "192.168.2.1",
+            "port": 50002,
+            "local_host": "192.168.2.194",
+            "local_port": 50002,
+        }
 
     @pytest.mark.asyncio
     async def test_connect_raises_on_persistent_civ_port_zero_without_error_flag(self) -> None:

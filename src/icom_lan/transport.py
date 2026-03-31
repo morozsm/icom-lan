@@ -126,7 +126,14 @@ class IcomTransport:
         if self._udp_transport is not None:
             self._udp_transport.sendto(data)
 
-    async def connect(self, host: str, port: int, *, local_port: int = 0) -> None:
+    async def connect(
+        self,
+        host: str,
+        port: int,
+        *,
+        local_host: str | None = None,
+        local_port: int = 0,
+    ) -> None:
         """Open UDP connection and perform discovery handshake.
 
         Sends "Are You There" until the radio replies with "I Am Here",
@@ -135,6 +142,9 @@ class IcomTransport:
         Args:
             host: Radio IP address or hostname.
             port: Radio control port.
+            local_host: Local interface IP to bind to when reserving a port.
+                When omitted, the transport keeps the previous wildcard/default
+                bind behavior.
             local_port: Local UDP port to bind to (0 = random).
                 wfview binds CI-V/audio sockets to the same port sent in
                 conninfo so the radio knows where to send data.
@@ -144,7 +154,9 @@ class IcomTransport:
         """
         self.state = ConnectionState.CONNECTING
         loop = asyncio.get_event_loop()
-        local_addr = ("0.0.0.0", local_port) if local_port else None
+        local_addr = None
+        if local_port or local_host:
+            local_addr = (local_host or "0.0.0.0", local_port)
         await loop.create_datagram_endpoint(
             lambda: _UdpProtocol(self),
             remote_addr=(host, port),
@@ -166,7 +178,13 @@ class IcomTransport:
 
         logger.info("Discovery complete, remote_id=0x%08X", self.remote_id)
 
-    async def reconnect(self, host: str, port: int) -> None:
+    async def reconnect(
+        self,
+        host: str,
+        port: int,
+        *,
+        local_host: str | None = None,
+    ) -> None:
         """Reconnect to a known radio, skipping discovery.
 
         Reuses the previously learned ``remote_id`` and skips the
@@ -175,15 +193,17 @@ class IcomTransport:
         """
         if self.remote_id == 0:
             # No cached remote_id — do full connect
-            await self.connect(host, port)
+            await self.connect(host, port, local_host=local_host)
             return
 
         saved_remote_id = self.remote_id
         self.state = ConnectionState.CONNECTING
         loop = asyncio.get_event_loop()
+        local_addr = (local_host, 0) if local_host else None
         await loop.create_datagram_endpoint(
             lambda: _UdpProtocol(self),
             remote_addr=(host, port),
+            local_addr=local_addr,
         )
         saved_my_id = self.my_id
         if self._udp_transport is not None:

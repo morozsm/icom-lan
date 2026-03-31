@@ -85,7 +85,7 @@ Direct connection to your radio — no wfview, hamlib, or RS-BA1 required.
 | IC-7610 | CI-V `0x98` | :white_check_mark: Tested (LAN + USB) |
 | IC-7300 | CI-V `0x94` | :white_check_mark: Tested (USB) |
 | Yaesu FTX-1 | Yaesu CAT | :white_check_mark: Tested (USB) |
-| IC-705 | CI-V `0xA4` | :material-help-circle: Profile — not yet tested |
+| IC-705 | CI-V `0xA4` | :white_check_mark: Validated (LAN/WiFi community-tested) |
 | IC-9700 | CI-V `0xA2` | :material-help-circle: Profile — not yet tested |
 | Xiegu X6100 | CI-V `0x70` | :material-help-circle: Profile only |
 | Lab599 TX-500 | Kenwood CAT | :material-help-circle: Profile only |

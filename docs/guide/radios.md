@@ -99,10 +99,10 @@ backend adapters are not yet implemented or tested:
 - **VFO scheme:** `ab`
 - **Status:** Profile only. Kenwood CAT backend not yet implemented.
 
-## Has Rig Profile (Not Yet Backend-Tested)
+## Community-Validated / Maintainer Hardware Pending
 
-These radios have complete rig profiles and the CI-V backend should support them, but they
-have not been tested by the maintainers. Community testing and reports welcome!
+These radios have working field reports and validated user integrations, but the
+maintainer has not yet completed first-party hardware validation in this repo.
 
 ### IC-705
 
@@ -110,13 +110,19 @@ have not been tested by the maintainers. Community testing and reports welcome!
 - **Connectivity:** LAN (WiFi/Ethernet) + USB serial (CI-V)
 - **VFO scheme:** Single receiver (portable transceiver)
 - **Rig profile:** `rigs/ic705.toml`
-- **Expected features:** frequency, mode, power, S-meter, SWR, ALC, PTT, CW keying,
-  attenuator, preamp, NB, NR, APF, Twin Peak, scope/waterfall, audio RX/TX
-- **Status:** Profile complete. Backend untested — reports welcome.
+- **Validated features:** LAN connect/disconnect, reconnect, frequency, mode,
+  PTT, and audio path integrations on the WiFi backend
+- **Status:** Community-validated on LAN/WiFi. First-party maintainer hardware
+  validation is still pending.
 
 !!! tip "Setup Guides"
     - **[IC-705 USB Serial Backend Setup](ic705-usb-setup.md)** — Step-by-step USB configuration
     - Use **Menu → Set → Connectors → CI-V → CI-V USB Port** = `Link to [CI-V]`
+
+## Has Rig Profile (Not Yet Backend-Tested)
+
+These radios have complete rig profiles and the CI-V backend should support them, but they
+have not been tested by the maintainers. Community testing and reports welcome!
 
 ### IC-9700
 
