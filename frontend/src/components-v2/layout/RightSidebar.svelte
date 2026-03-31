@@ -18,6 +18,7 @@
     makeDspHandlers,
     makeTxHandlers,
     makeCwPanelHandlers,
+    makeSystemHandlers,
   } from '../wiring/command-bus';
 
   // Reactive state + capabilities
@@ -36,6 +37,7 @@
   const dspHandlers = makeDspHandlers();
   const txHandlers = makeTxHandlers();
   const cwHandlers = makeCwPanelHandlers();
+  const systemHandlers = makeSystemHandlers();
 
   type RightSidebarMode = 'all' | 'rx' | 'tx';
 
@@ -103,6 +105,8 @@
         onMonToggle={txHandlers.onMonToggle}
         onMonLevelChange={txHandlers.onMonLevelChange}
         onDriveGainChange={txHandlers.onDriveGainChange}
+        onPttOn={systemHandlers.onPttOn}
+        onPttOff={systemHandlers.onPttOff}
       />
     </CollapsiblePanel>
 

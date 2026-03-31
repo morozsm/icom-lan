@@ -26,6 +26,8 @@
     onMonToggle: () => void;
     onMonLevelChange: (v: number) => void;
     onDriveGainChange: (v: number) => void;
+    onPttOn?: () => void;
+    onPttOff?: () => void;
   }
 
   let {
@@ -36,10 +38,46 @@
     onAtuToggle, onAtuTune, onVoxToggle,
     onCompToggle, onCompLevelChange,
     onMonToggle, onMonLevelChange, onDriveGainChange,
+    onPttOn, onPttOff,
   }: Props = $props();
 
   let tuneButtonColor = $derived(txStatusColor(atuActive, atuTuning));
   let showMon = $derived(hasCapability('monitor'));
+
+  // ── PTT (hold-to-talk + double-tap latch) ──
+  const PTT_DOUBLE_TAP_MS = 300;
+  const PTT_SAFETY_MS = 3 * 60 * 1000;
+  let pttMode = $state<'idle' | 'held' | 'latched'>('idle');
+  let lastPttDown = 0;
+  let pttSafetyTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function startPttSafety() {
+    clearPttSafety();
+    pttSafetyTimer = setTimeout(() => { pttMode = 'idle'; onPttOff?.(); }, PTT_SAFETY_MS);
+  }
+  function clearPttSafety() {
+    if (pttSafetyTimer) { clearTimeout(pttSafetyTimer); pttSafetyTimer = null; }
+  }
+
+  function pttDown() {
+    const now = Date.now();
+    if (pttMode === 'latched') { pttMode = 'idle'; onPttOff?.(); clearPttSafety(); return; }
+    if (now - lastPttDown < PTT_DOUBLE_TAP_MS && pttMode === 'held') {
+      pttMode = 'latched'; startPttSafety(); lastPttDown = 0; return;
+    }
+    lastPttDown = now;
+    pttMode = 'held';
+    onPttOn?.();
+    startPttSafety();
+  }
+
+  function pttUp() {
+    if (pttMode === 'held') {
+      setTimeout(() => {
+        if (pttMode === 'held') { pttMode = 'idle'; onPttOff?.(); clearPttSafety(); }
+      }, PTT_DOUBLE_TAP_MS);
+    }
+  }
 
   // Settings modal
   let settingsOpen = $state(false);
@@ -82,6 +120,19 @@
     <div class="tx-strip" class:tx-active={txActive}>
       {txActive ? '● TX' : '○ RX'}
     </div>
+
+    {#if onPttOn}
+      <button
+        class="ptt-button"
+        class:ptt-held={pttMode === 'held'}
+        class:ptt-latched={pttMode === 'latched'}
+        onpointerdown={(e) => { e.preventDefault(); pttDown(); }}
+        onpointerup={(e) => { e.preventDefault(); pttUp(); }}
+        onpointerleave={() => { if (pttMode === 'held') pttUp(); }}
+      >
+        {pttMode === 'latched' ? 'TX 🔒' : pttMode === 'held' ? 'TX' : 'PTT'}
+      </button>
+    {/if}
 
     <div class="tx-button-grid">
       {#if hasCapability('tuner')}
@@ -184,6 +235,34 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 6px;
+  }
+
+  .ptt-button {
+    width: 100%;
+    padding: 10px 0;
+    border: 2px solid var(--v2-accent-red, #ef4444);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--v2-accent-red, #ef4444);
+    font-family: 'Roboto Mono', monospace;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    user-select: none;
+    touch-action: none;
+    transition: all 0.15s;
+  }
+
+  .ptt-button:hover {
+    background: rgba(239, 68, 68, 0.08);
+  }
+
+  .ptt-button.ptt-held,
+  .ptt-button.ptt-latched {
+    background: var(--v2-accent-red, #ef4444);
+    color: #fff;
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);
   }
 
   .tx-button-grid > :global(button) {
