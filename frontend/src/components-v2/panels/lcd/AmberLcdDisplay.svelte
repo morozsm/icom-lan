@@ -1,12 +1,12 @@
 <script lang="ts">
   import { radio } from '$lib/stores/radio.svelte';
-  import { isAudioFftScope, hasDualReceiver, getCapabilities } from '$lib/stores/capabilities.svelte';
+  import { isAudioFftScope, hasAudioFft, hasDualReceiver, getCapabilities } from '$lib/stores/capabilities.svelte';
   import { resolveFilterModeConfig } from '../../wiring/state-adapter';
   import AmberFrequency from './AmberFrequency.svelte';
   import AmberSmeter from './AmberSmeter.svelte';
   import AmberAfScope from './AmberAfScope.svelte';
   import { getChannel } from '$lib/transport/ws-client';
-  import { setScopeConnected, markScopeFrame } from '$lib/stores/connection.svelte';
+  import { markScopeFrame } from '$lib/stores/connection.svelte';
 
 
   interface ScopeFrame {
@@ -101,7 +101,7 @@
   let fftPixels = $state<Uint8Array | null>(null);
   let fftBandwidth = $state<number | undefined>(undefined);
   let fftPush: ((data: Uint8Array) => void) | null = null;
-  let showFft = $derived(isAudioFftScope());
+  let showFft = $derived(hasAudioFft());
 
   // FTX-1 AGC: 0=OFF, 1=FAST, 2=MID, 3=SLOW, 4=AUTO-F, 5=AUTO-M, 6=AUTO-S
   const AGC_LABELS: Record<number, string> = {
@@ -116,14 +116,11 @@
   let scopeCleanup: (() => void) | null = null;
 
   $effect(() => {
-    const wantScope = isAudioFftScope();
+    const wantScope = hasAudioFft();
     if (!wantScope) return;
 
-    const scopeCh = getChannel('scope');
-    scopeCh.connect('/api/v1/scope');
-    const unsubState = scopeCh.onStateChange((s) => {
-      setScopeConnected(s === 'connected');
-    });
+    const scopeCh = getChannel('audio-scope');
+    scopeCh.connect('/api/v1/audio-scope');
     const unsubBinary = scopeCh.onBinary((buf) => {
       markScopeFrame();
       const frame = parseScopeFrame(buf);
@@ -134,7 +131,6 @@
     });
 
     scopeCleanup = () => {
-      unsubState();
       unsubBinary();
       scopeCh.disconnect();
       scopeCleanup = null;
