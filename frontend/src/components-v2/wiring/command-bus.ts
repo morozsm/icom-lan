@@ -404,6 +404,31 @@ export function makeCwPanelHandlers() {
     onAutoTune: () => {
       cmd('set_tuner_status', { value: 2 });
     },
+    onWpmChange: (speed: number) => {
+      patchRadioState({ keySpeed: speed });
+      cmd('set_key_speed', { speed });
+    },
+    onBreakInDelayChange: (delay: number) => {
+      patchRadioState({ breakInDelay: delay });
+      cmd('set_break_in_delay', { delay });
+    },
+    onSidetonePitchChange: (value: number) => {
+      patchRadioState({ cwPitch: value });
+      cmd('set_cw_pitch', { value });
+    },
+    onSidetoneLevelChange: (level: number) => {
+      patchRadioState({ monitorGain: level });
+      cmd('set_monitor_gain', { level });
+    },
+    onReversePaddleToggle: () => {
+      const current = getRadioState()?.dashRatio ?? 0;
+      const next = current < 0 ? 0 : -1;
+      patchRadioState({ dashRatio: next });
+      cmd('set_dash_ratio', { ratio: next });
+    },
+    onKeyerTypeChange: (type: number) => {
+      cmd('set_keyer_type', { type });
+    },
   };
 }
 
@@ -515,6 +540,10 @@ export function makeRxAudioHandlers() {
 export function makePresetHandlers() {
   return {
     onPresetSelect: (freq: number, mode: string, filter?: number) => {
+      cmd('set_freq', { freq, receiver: 0 });
+      cmd('set_mode', { mode, filter: filter ?? 1, receiver: 0 });
+    },
+    onFreqPreset: (freq: number, mode: string, filter?: number) => {
       cmd('set_freq', { freq, receiver: 0 });
       cmd('set_mode', { mode, filter: filter ?? 1, receiver: 0 });
     },

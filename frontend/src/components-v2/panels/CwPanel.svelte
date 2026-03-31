@@ -5,33 +5,54 @@
   import { hasCapability } from '$lib/stores/capabilities.svelte';
 
   interface Props {
-    cwPitch: number;
-    keySpeed: number;
-    breakIn: number;
-    apfMode: number;
-    twinPeak: boolean;
-    currentMode: string;
-    onCwPitchChange: (v: number) => void;
-    onKeySpeedChange: (v: number) => void;
-    onBreakInToggle: () => void;
-    onApfChange: (mode: number) => void;
-    onTwinPeakToggle: () => void;
-    onAutoTune: () => void;
+    cwPitch?: number;
+    keySpeed?: number;
+    breakIn?: number;
+    apfMode?: number;
+    twinPeak?: boolean;
+    currentMode?: string;
+    // Mobile CW panel props
+    wpm?: number;
+    breakInActive?: boolean;
+    breakInDelay?: number;
+    sidetonePitch?: number;
+    sidetoneLevel?: number;
+    reversePaddle?: boolean;
+    keyerType?: number;
+    hasCw?: boolean;
+    onCwPitchChange?: (v: number) => void;
+    onKeySpeedChange?: (v: number) => void;
+    onBreakInToggle?: () => void;
+    onApfChange?: (mode: number) => void;
+    onTwinPeakToggle?: () => void;
+    onAutoTune?: () => void;
+    // Mobile CW handlers
+    onWpmChange?: (v: number) => void;
+    onBreakInDelayChange?: (v: number) => void;
+    onSidetonePitchChange?: (v: number) => void;
+    onSidetoneLevelChange?: (v: number) => void;
+    onReversePaddleToggle?: () => void;
+    onKeyerTypeChange?: (v: number) => void;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  const noop = () => {};
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  const noopN = (_v: number) => {};
+
   let {
-    cwPitch,
-    keySpeed,
-    breakIn,
-    apfMode,
-    twinPeak,
-    currentMode,
-    onCwPitchChange,
-    onKeySpeedChange,
-    onBreakInToggle,
-    onApfChange,
-    onTwinPeakToggle,
-    onAutoTune,
+    cwPitch = 600,
+    keySpeed = 12,
+    breakIn = 0,
+    apfMode = 0,
+    twinPeak = false,
+    currentMode = 'CW',
+    onCwPitchChange = noopN,
+    onKeySpeedChange = noopN,
+    onBreakInToggle = noop,
+    onApfChange = noopN,
+    onTwinPeakToggle = noop,
+    onAutoTune = noop,
   }: Props = $props();
 
   let showBreakIn = $derived(hasCapability('break_in'));

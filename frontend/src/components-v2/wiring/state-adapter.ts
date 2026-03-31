@@ -335,20 +335,38 @@ export interface CwProps {
   apfMode: number;
   twinPeak: boolean;
   currentMode: string;
+  // Mobile CW panel props
+  wpm: number;
+  breakInActive: boolean;
+  breakInDelay: number;
+  sidetonePitch: number;
+  sidetoneLevel: number;
+  reversePaddle: boolean;
+  keyerType: number;
+  hasCw: boolean;
 }
 
 export function toCwProps(
   state: ServerState | null,
-  _caps: Capabilities | null,
+  caps: Capabilities | null,
 ): CwProps {
   const rx = state ? activeRx(state) : null;
+  const breakInVal = state?.breakIn ?? 0;
   return {
     cwPitch: state?.cwPitch ?? 600,
     keySpeed: state?.keySpeed ?? 12,
-    breakIn: state?.breakIn ?? 0,
+    breakIn: breakInVal,
     apfMode: rx?.apfTypeLevel ?? 0,
     twinPeak: rx?.twinPeakFilter ?? false,
     currentMode: rx?.mode ?? 'USB',
+    wpm: state?.keySpeed ?? 12,
+    breakInActive: breakInVal > 0,
+    breakInDelay: state?.breakInDelay ?? 0,
+    sidetonePitch: state?.cwPitch ?? 600,
+    sidetoneLevel: state?.monitorGain ?? 128,
+    reversePaddle: (state?.dashRatio ?? 0) < 0,
+    keyerType: 0,
+    hasCw: caps?.capabilities?.includes('cw') ?? false,
   };
 }
 
@@ -356,6 +374,7 @@ export function toCwProps(
 
 export interface MeterProps {
   sValue: number;
+  signal: number;
   rfPower: number;
   swr: number;
   alc: number;
@@ -374,6 +393,7 @@ export function toMeterProps(state: ServerState | null): MeterProps {
   }) | null)?.tx;
   return {
     sValue: mainRx?.sMeter ?? 0,
+    signal: mainRx?.sMeter ?? 0,
     rfPower: txMeters?.rfPower ?? state?.powerLevel ?? 0,
     swr: txMeters?.swr ?? 0,
     alc: txMeters?.alc ?? 0,

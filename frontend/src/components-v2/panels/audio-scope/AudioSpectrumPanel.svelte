@@ -28,8 +28,8 @@
 
   // ── Radio state extraction ──
 
-  let state = $derived(radio.current);
-  let rx = $derived(state?.active === 'SUB' ? state?.sub : state?.main);
+  let radioState = $derived(radio.current);
+  let rx = $derived(radioState?.active === 'SUB' ? radioState?.sub : radioState?.main);
 
   let filterWidthHz = $derived(rx?.filterWidth ?? 2400);
   let filterWidthMax = $derived.by(() => {
@@ -42,8 +42,8 @@
   let pbtInner = $derived(rx?.pbtInner ?? 128);
   let pbtOuter = $derived(rx?.pbtOuter ?? 128);
   let manualNotchOn = $derived(rx?.manualNotch ?? false);
-  let notchFreqRaw = $derived(state?.notchFilter ?? 0);
-  let contourLevel = $derived((rx as any)?.contour ?? 0);
+  let notchFreqRaw = $derived(radioState?.notchFilter ?? 0);
+  let contourLevel = $derived(rx?.contour ?? 0);
   let contourFreqRaw = $derived(128); // Default center; contourFreq not exposed in state yet
 
   // ── Scope WS connection ──

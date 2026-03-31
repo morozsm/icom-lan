@@ -1,4 +1,4 @@
-export type MeterSource = 'S' | 'SWR' | 'POWER';
+export type MeterSource = 'S' | 'SWR' | 'POWER' | 'po';
 
 export interface Mark {
   pos: number;
@@ -101,6 +101,7 @@ export function getNeedleMarks(source: MeterSource): Mark[] {
         { pos: 0.75, label: '∞' },
       ];
     case 'POWER':
+    case 'po':
       return [
         { pos: 0.0, label: '0' },
         { pos: 0.25, label: '25' },

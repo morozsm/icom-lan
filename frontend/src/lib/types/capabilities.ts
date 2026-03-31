@@ -90,7 +90,9 @@ export interface Capabilities {
   filterWidthMax?: number;   // Max filter width in Hz (default 9999)
   filterConfig?: Record<string, FilterModeConfig>;
   attValues?: number[];   // Attenuator dB steps (e.g. [0,20] for IC-7300, [0,6,12,18] for IC-7610)
+  attLabels?: Record<string, string>;  // Attenuator labels (e.g. {"0":"OFF","6":"6dB"})
   preValues?: number[];   // Preamp levels: 0 = off, 1 = P1, 2 = P2, etc.
+  preLabels?: Record<string, string>;  // Preamp labels (e.g. {"0":"OFF","1":"P1","2":"P2"})
   agcModes?: number[];    // AGC mode values (e.g. [1,2,3] = FAST/MID/SLOW)
   agcLabels?: Record<string, string>;  // AGC mode labels (e.g. {"1":"FAST","2":"MID","3":"SLOW"})
   dataModeCount?: number;

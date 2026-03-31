@@ -8,10 +8,11 @@
   interface Props {
     currentFreq: number;
     onBandSelect: (bandName: string, freq: number, bsrCode?: number) => void;
-    onPresetSelect?: (freq: number, mode: string) => void;
+    onPresetSelect?: (freq: number, mode: string, filter?: number) => void;
+    onFreqPreset?: (freq: number, mode: string, filter?: number) => void;
   }
 
-  let { currentFreq, onBandSelect, onPresetSelect }: Props = $props();
+  let { currentFreq, onBandSelect, onPresetSelect, onFreqPreset }: Props = $props();
 
   let bandMode = $state<'ham' | 'broadcast' | 'lwmw'>('ham');
 

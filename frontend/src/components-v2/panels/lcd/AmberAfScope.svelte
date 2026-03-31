@@ -20,10 +20,16 @@
     manualNotch?: boolean;
     /** Manual notch frequency (0-255 raw) */
     notchFreq?: number;
+    /** Auto notch active */
+    autoNotch?: boolean;
+    /** Current mode string (e.g. 'USB', 'CW') */
+    mode?: string;
     /** Audio sample rate */
     sampleRate?: number;
     /** Actual Hz width of the received FFT data (defaults to sampleRate) */
     bandwidth?: number;
+    /** Compact display mode */
+    compact?: boolean;
   }
 
   let {

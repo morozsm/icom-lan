@@ -29,6 +29,8 @@ export interface ReceiverState {
   pbtInner?: number;
   pbtOuter?: number;
   filterWidth?: number;
+  ifShift?: number;
+  contour?: number;
   nbLevel?: number;
   digiselShift?: number;
   afMute?: boolean;

@@ -52,12 +52,6 @@
   let keyboardConfig = $derived(getKeyboardConfig());
   let audioState = $derived(getAudioState());
   let txCapable = $derived(hasTx());
-  let txPermit = $derived(getTxPermit(mainVfo.freq, caps?.txBands));
-  let txIndicatorColor = $derived(
-    (tx.txActive || pttActive) ? 'var(--v2-accent-red, #ef4444)' :
-    txPermit === 'allowed' ? 'var(--v2-accent-green, #4ade80)' :
-    'var(--v2-text-dim, #555)'
-  );
 
   // ── VFO props ──
   let mainVfo = $derived(toVfoProps(radioState, 'main'));
@@ -277,6 +271,14 @@
   // Modes: 'idle' | 'held' (touch held down) | 'latched' (double-tap locked)
   let pttMode = $state<'idle' | 'held' | 'latched'>('idle');
   let pttActive = $derived(pttMode !== 'idle');
+
+  // ── TX color (depends on mainVfo, tx, pttActive — declared above) ──
+  let txPermit = $derived(getTxPermit(mainVfo.freq, caps?.txBands));
+  let txIndicatorColor = $derived(
+    (tx.txActive || pttActive) ? 'var(--v2-accent-red, #ef4444)' :
+    txPermit === 'allowed' ? 'var(--v2-accent-green, #4ade80)' :
+    'var(--v2-text-dim, #555)'
+  );
   let lastPttDown = 0;
   const DOUBLE_TAP_MS = 350;
   const PTT_SAFETY_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes
@@ -456,7 +458,7 @@
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div class="m-step-picker-backdrop" onclick={() => (stepPickerOpen = false)}></div>
     <div class="m-ls-step-picker">
-      {#each modeSteps as step}
+      {#each availableSteps as step}
         <button
           class="m-step-option"
           class:m-step-active={step === tuningStep}

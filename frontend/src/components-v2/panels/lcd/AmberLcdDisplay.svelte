@@ -55,19 +55,19 @@
     return '';
   }
 
-  let state = $derived(radio.current);
-  let rx = $derived(state?.active === 'SUB' ? state?.sub : state?.main);
+  let radioState = $derived(radio.current);
+  let rx = $derived(radioState?.active === 'SUB' ? radioState?.sub : radioState?.main);
   let freqHz = $derived(rx?.freqHz ?? 0);
   let bandLabel = $derived(freqToBand(freqHz));
   let mode = $derived(rx?.mode ?? '---');
   let filter = $derived(rx?.filter ?? '');
   let sValue = $derived(rx?.sMeter ?? 0);
-  let txActive = $derived(state?.ptt ?? false);
-  let ritActive = $derived(state?.ritOn ?? false);
-  let ritOffset = $derived(state?.ritFreq ?? 0);
-  let splitActive = $derived(state?.split ?? false);
-  let voxActive = $derived(state?.voxOn ?? false);
-  let atuActive = $derived((state?.tunerStatus ?? 0) > 0);
+  let txActive = $derived(radioState?.ptt ?? false);
+  let ritActive = $derived(radioState?.ritOn ?? false);
+  let ritOffset = $derived(radioState?.ritFreq ?? 0);
+  let splitActive = $derived(radioState?.split ?? false);
+  let voxActive = $derived(radioState?.voxOn ?? false);
+  let atuActive = $derived((radioState?.tunerStatus ?? 0) > 0);
   let preamp = $derived(rx?.preamp ?? 0);
   let attActive = $derived((rx?.att ?? 0) > 0);
   // FTX-1: no separate NB/NR on/off — level > 0 means active
@@ -77,9 +77,9 @@
   let nrActive = $derived((rx?.nr ?? false) || nrLevel > 0);
   let agcMode = $derived(rx?.agc ?? 0);
   let notchActive = $derived(rx?.autoNotch ?? false);
-  let compActive = $derived(state?.compressorOn ?? false);
-  let compLevel = $derived(state?.compressorLevel ?? 0);
-  let lockActive = $derived(state?.dialLock ?? false);
+  let compActive = $derived(radioState?.compressorOn ?? false);
+  let compLevel = $derived(radioState?.compressorLevel ?? 0);
+  let lockActive = $derived(radioState?.dialLock ?? false);
   let contourActive = $derived((rx?.contour ?? 0) > 0);
   let contourLevel = $derived(rx?.contour ?? 0);
   let filterWidthHz = $derived(rx?.filterWidth ?? 2400);
@@ -91,10 +91,10 @@
   });
   let ifShiftHz = $derived(rx?.ifShift ?? 0);
   let manualNotchOn = $derived(rx?.manualNotch ?? false);
-  let notchFreqRaw = $derived(state?.notchFilter ?? 0);
-  let activeVfo = $derived(state?.active === 'SUB' ? 'B' : 'A');
+  let notchFreqRaw = $derived(radioState?.notchFilter ?? 0);
+  let activeVfo = $derived(radioState?.active === 'SUB' ? 'B' : 'A');
 
-  let subRx = $derived(state?.active === 'SUB' ? state?.main : state?.sub);
+  let subRx = $derived(radioState?.active === 'SUB' ? radioState?.main : radioState?.sub);
   let subFreqHz = $derived(subRx?.freqHz ?? 0);
   let subMode = $derived(subRx?.mode ?? '');
 

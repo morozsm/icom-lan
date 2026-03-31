@@ -2,7 +2,7 @@
  * Control Button Types
  */
 
-export type IndicatorColor = 'cyan' | 'green' | 'amber' | 'red' | 'orange' | 'white';
+export type IndicatorColor = 'cyan' | 'green' | 'amber' | 'red' | 'orange' | 'white' | 'yellow' | 'muted' | 'gray';
 
 export type IndicatorStyle = 'ring' | 'dot' | 'edge-bottom' | 'edge-left' | 'fill';
 
@@ -25,6 +25,11 @@ export interface BaseButtonProps {
   shortcutHint?: string | null;
   /** Click handler */
   onclick?: (event: MouseEvent) => void;
+  /** Pointer event handlers */
+  onpointerdown?: (event: PointerEvent) => void;
+  onpointerup?: (event: PointerEvent) => void;
+  onpointercancel?: (event: PointerEvent) => void;
+  onpointerleave?: (event: PointerEvent) => void;
 }
 
 export interface DotButtonProps extends BaseButtonProps {
