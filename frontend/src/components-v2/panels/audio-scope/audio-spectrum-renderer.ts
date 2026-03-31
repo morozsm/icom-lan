@@ -1,18 +1,20 @@
 /**
- * Pure rendering functions for the AudioSpectrum canvas.
- * No Svelte dependency — testable with mock contexts.
+ * Audio spectrum renderer — draws FFT data INSIDE a filter trapezoid.
+ *
+ * The trapezoid represents the filter passband. Spectrum line + gradient fill
+ * are clipped to the trapezoid shape. Outside the passband nothing is shown.
  */
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
 export interface SpectrumState {
-  /** FFT bin amplitudes (0-160 range, symmetric around DC) */
+  /** FFT bin amplitudes (0-160 range) */
   pixels: Uint8Array | null;
   /** Effective bandwidth of the FFT data in Hz */
   bandwidth: number;
   /** Filter passband width in Hz */
   filterWidth: number;
-  /** Max filter width in Hz (for PBT normalization) */
+  /** Max filter width in Hz (for normalization) */
   filterWidthMax: number;
   /** PBT inner raw value (0-255, center=128) */
   pbtInner: number;
@@ -28,139 +30,53 @@ export interface SpectrumState {
   contourFreq: number;
 }
 
-export interface GridLabel {
-  /** X position as fraction 0..1 of canvas width */
-  xFrac: number;
-  /** Label text, e.g. "-1.0k", "0", "+1.5k" */
-  text: string;
-}
-
-export interface TrapezoidGeometry {
-  /** Left edge of flat top (x fraction 0..1) */
-  leftX: number;
-  /** Right edge of flat top (x fraction 0..1) */
-  rightX: number;
-  /** Slope width as fraction of canvas width */
-  slopeWidth: number;
-}
-
-export interface PbtOverlay {
-  inner: TrapezoidGeometry;
-  outer: TrapezoidGeometry;
-  /** Intersection of inner and outer (effective passband) */
-  intersection: { leftX: number; rightX: number; slopeWidth: number };
-}
-
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const SPECTRUM_LINE_COLOR = 'rgba(0, 220, 220, 0.9)';
-const GRID_LINE_COLOR = 'rgba(255, 255, 255, 0.08)';
-const GRID_LABEL_COLOR = 'rgba(255, 255, 255, 0.4)';
-const NOTCH_COLOR = 'rgba(255, 80, 40, 0.35)';
-const CONTOUR_COLOR = 'rgba(180, 140, 255, 0.3)';
-const PBT_INNER_COLOR = 'rgba(60, 130, 255, 0.15)';
-const PBT_OUTER_COLOR = 'rgba(60, 200, 100, 0.15)';
-const PBT_INTERSECTION_COLOR = 'rgba(100, 200, 255, 0.2)';
-
 const MAX_AMPLITUDE = 160;
-const GRID_MARGIN_BOTTOM = 16;
+const TOP_LABEL_H = 18;    // "Filter: XXXX Hz" at top
+const BOTTOM_LABEL_H = 16; // frequency ticks at bottom
 
-// ── PBT math ─────────────────────────────────────────────────────────────────
+const SPECTRUM_STROKE = 'rgba(0, 220, 220, 0.9)';
+const TRAPEZOID_STROKE = 'rgba(240, 240, 240, 0.8)';
+const TRAPEZOID_FILL = 'rgba(40, 100, 140, 0.08)';
+const NOTCH_COLOR = 'rgba(255, 80, 40, 0.5)';
+const CONTOUR_COLOR = 'rgba(180, 140, 255, 0.4)';
+const GRID_LINE_COLOR = 'rgba(255, 255, 255, 0.06)';
+const GRID_LABEL_COLOR = 'rgba(255, 255, 255, 0.35)';
+const FILTER_LABEL_COLOR = 'rgba(180, 220, 255, 0.7)';
+
+// Smoothing
+const ATTACK = 0.4;
+const DECAY = 0.15;
+
+// AGC with fixed ceiling — noise stays low, signal peaks at ~75%
+const AGC_CEILING = 0.75;
+const AGC_ATTACK_RATE = 0.15;
+const AGC_RELEASE_RATE = 0.008;
+
+// ── Module state ─────────────────────────────────────────────────────────────
+
+let smoothed: Float32Array | null = null;
+let agcPeak = 60;
+let animFilterWidth = 0;
 
 /** Convert PBT raw (0-255, center=128) to Hz offset. */
 export function pbtRawToHz(raw: number, center = 128, maxHz = 1200): number {
   return Math.round((raw - center) * (maxHz / center));
 }
 
-/**
- * Compute PBT trapezoid geometry for inner and outer PBT.
- * Returns positions as fractions of the canvas width (0..1).
- *
- * The passband center is at 0.5 (DC/center frequency).
- * PBT shifts the filter edges relative to center.
- */
-export function computePbtOverlay(
-  pbtInner: number,
-  pbtOuter: number,
-  filterWidth: number,
-  bandwidth: number,
-): PbtOverlay {
-  const halfBw = bandwidth / 2;
-  const halfFilter = filterWidth / 2;
-
-  const innerHz = pbtRawToHz(pbtInner);
-  const outerHz = pbtRawToHz(pbtOuter);
-
-  // Inner PBT shifts one edge, outer shifts the other
-  const innerLeft = (-halfFilter + innerHz) / halfBw * 0.5 + 0.5;
-  const innerRight = (halfFilter + innerHz) / halfBw * 0.5 + 0.5;
-  const outerLeft = (-halfFilter + outerHz) / halfBw * 0.5 + 0.5;
-  const outerRight = (halfFilter + outerHz) / halfBw * 0.5 + 0.5;
-
-  const slopeWidth = 0.03; // 3% of width for trapezoid slope
-
-  const inner: TrapezoidGeometry = {
-    leftX: Math.max(0, Math.min(1, innerLeft)),
-    rightX: Math.max(0, Math.min(1, innerRight)),
-    slopeWidth,
-  };
-  const outer: TrapezoidGeometry = {
-    leftX: Math.max(0, Math.min(1, outerLeft)),
-    rightX: Math.max(0, Math.min(1, outerRight)),
-    slopeWidth,
-  };
-
-  // Intersection: overlap region
-  const intLeft = Math.max(inner.leftX, outer.leftX);
-  const intRight = Math.min(inner.rightX, outer.rightX);
-
-  return {
-    inner,
-    outer,
-    intersection: {
-      leftX: intLeft,
-      rightX: Math.max(intLeft, intRight),
-      slopeWidth,
-    },
-  };
+/** Reset smoothing buffers */
+export function resetSmoothing(): void {
+  smoothed = null;
+  agcPeak = 60;
+  animFilterWidth = 0;
 }
 
-// ── Frequency grid ───────────────────────────────────────────────────────────
-
-/**
- * Generate frequency grid labels for the given bandwidth.
- * Labels show +-Hz from center.
- */
-export function generateGridLabels(bandwidth: number): GridLabel[] {
-  const halfBw = bandwidth / 2;
-  // Choose a nice step: 500, 1000, 2000, 5000, 10000 Hz
-  const steps = [100, 200, 500, 1000, 2000, 5000, 10000];
-  let step = steps[0];
-  for (const s of steps) {
-    if (halfBw / s >= 2 && halfBw / s <= 8) {
-      step = s;
-      break;
-    }
-  }
-
-  const labels: GridLabel[] = [];
-  // Center label
-  labels.push({ xFrac: 0.5, text: '0' });
-
-  for (let hz = step; hz <= halfBw; hz += step) {
-    const frac = hz / halfBw * 0.5;
-    // Positive side
-    labels.push({ xFrac: 0.5 + frac, text: formatHz(hz) });
-    // Negative side
-    labels.push({ xFrac: 0.5 - frac, text: formatHz(-hz) });
-  }
-
-  return labels.sort((a, b) => a.xFrac - b.xFrac);
-}
+// ── Frequency label helpers ──────────────────────────────────────────────────
 
 function formatHz(hz: number): string {
   const abs = Math.abs(hz);
-  const sign = hz < 0 ? '-' : '+';
+  const sign = hz < 0 ? '−' : '+';
   if (abs >= 1000) {
     const k = abs / 1000;
     return `${sign}${k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)}k`;
@@ -168,62 +84,17 @@ function formatHz(hz: number): string {
   return `${sign}${abs}`;
 }
 
-// ── Spectrum line coordinates ────────────────────────────────────────────────
-
-/**
- * Compute spectrum line Y coordinates from FFT data.
- * Returns an array of {x, y} normalized to canvas dimensions.
- */
-export function computeSpectrumLine(
-  pixels: Uint8Array,
-  width: number,
-  height: number,
-  gain: number = 1,
-): { x: number; y: number }[] {
-  const points: { x: number; y: number }[] = [];
-  const usableHeight = height - GRID_MARGIN_BOTTOM;
-  const len = pixels.length;
-  if (len === 0) return points;
-
-  for (let i = 0; i < width; i++) {
-    // Map canvas x to pixel index
-    const pixIdx = Math.floor((i / width) * len);
-    const clamped = Math.max(0, Math.min(len - 1, pixIdx));
-    const raw = Math.min(pixels[clamped] * gain, MAX_AMPLITUDE);
-    const normalized = raw / MAX_AMPLITUDE;
-    const y = usableHeight * (1 - normalized);
-    points.push({ x: i, y });
+function chooseGridStep(halfBw: number): number {
+  const steps = [100, 200, 500, 1000, 2000, 5000, 10000];
+  for (const s of steps) {
+    const n = halfBw / s;
+    if (n >= 2 && n <= 8) return s;
   }
-  return points;
-}
-
-// ── Notch position ───────────────────────────────────────────────────────────
-
-/**
- * Compute notch X position as fraction 0..1 of canvas width.
- * notchFreq is raw 0-255, mapped across the bandwidth.
- */
-export function computeNotchX(notchFreq: number, bandwidth: number): number {
-  // 0-255 raw maps linearly across the passband
-  // 0 = left edge of bandwidth, 255 = right edge, 128 = center
-  return notchFreq / 255;
+  return steps[steps.length - 1];
 }
 
 // ── Main render ──────────────────────────────────────────────────────────────
 
-/** Smoothed amplitude buffer — reused across frames */
-let smoothed: Float32Array | null = null;
-const ATTACK = 0.4;
-const DECAY = 0.15;
-
-/** Auto-gain AGC state */
-let agcPeak = 40;
-const AGC_ATTACK = 0.3;
-const AGC_RELEASE = 0.02;
-
-/**
- * Full render pass: background, grid, PBT overlays, spectrum, notch, contour.
- */
 export function renderAudioSpectrum(
   ctx: CanvasRenderingContext2D,
   width: number,
@@ -235,66 +106,185 @@ export function renderAudioSpectrum(
 
   // Clear
   ctx.clearRect(0, 0, width, height);
-
-  // Background
-  ctx.fillStyle = 'rgba(11, 15, 20, 0.95)';
+  ctx.fillStyle = 'rgba(8, 12, 18, 0.95)';
   ctx.fillRect(0, 0, width, height);
 
-  const usableH = height - GRID_MARGIN_BOTTOM;
+  const trapTop = TOP_LABEL_H;
+  const trapBottom = height - BOTTOM_LABEL_H;
+  const trapH = trapBottom - trapTop;
+  if (trapH < 10) return;
 
-  // ── Grid lines + labels ──
-  const labels = generateGridLabels(bandwidth);
-  ctx.strokeStyle = GRID_LINE_COLOR;
-  ctx.lineWidth = 1;
-  ctx.font = '10px system-ui, sans-serif';
+  // ── Animate filter width ──
+  if (animFilterWidth === 0) animFilterWidth = filterWidth;
+  const fwDiff = filterWidth - animFilterWidth;
+  animFilterWidth += fwDiff * (Math.abs(fwDiff) > 200 ? 0.5 : 0.15);
+  if (Math.abs(fwDiff) <= 1) animFilterWidth = filterWidth;
+
+  // ── Trapezoid geometry ──
+  const totalHalfW = width * 0.45;
+  const whiskerLeft = width / 2 - totalHalfW;
+  const whiskerRight = width / 2 + totalHalfW;
+
+  const avgPbtHz = pbtRawToHz(Math.round((pbtInner + pbtOuter) / 2));
+  const shiftRef = Math.max(animFilterWidth, filterWidthMax * 0.5);
+  const cx = width / 2 + (avgPbtHz / shiftRef) * totalHalfW * 0.6;
+
+  const slopeExtra = trapH * 0.35;
+  const filterRatio = Math.max(0.05, Math.min(1, animFilterWidth / Math.max(1, filterWidthMax))) * 0.75;
+  const maxTopHalfW = totalHalfW - slopeExtra;
+  const topHalfW = Math.max(trapH * 0.08, maxTopHalfW * filterRatio);
+
+  const tl = cx - topHalfW;
+  const tr = cx + topHalfW;
+  const bl = cx - topHalfW - slopeExtra;
+  const br = cx + topHalfW + slopeExtra;
+
+  // ── Filter label (top) ──
+  ctx.font = '11px system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = FILTER_LABEL_COLOR;
+  ctx.fillText(`Filter: ${Math.round(animFilterWidth)} Hz`, width / 2, TOP_LABEL_H - 5);
+
+  // ── Frequency grid labels (bottom) ──
+  const halfBw = bandwidth / 2;
+  const step = chooseGridStep(halfBw);
+  ctx.font = '9px system-ui, sans-serif';
   ctx.textAlign = 'center';
   ctx.fillStyle = GRID_LABEL_COLOR;
 
-  for (const label of labels) {
-    const x = Math.round(label.xFrac * width);
+  // Center label
+  ctx.fillText('0', width / 2, height - 3);
+  ctx.strokeStyle = GRID_LINE_COLOR;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(cx, trapTop);
+  ctx.lineTo(cx, trapBottom);
+  ctx.stroke();
+
+  for (let hz = step; hz <= halfBw; hz += step) {
+    const frac = hz / halfBw;
+    const xPlus = width / 2 + frac * (width / 2);
+    const xMinus = width / 2 - frac * (width / 2);
+    ctx.fillText(formatHz(hz), xPlus, height - 3);
+    ctx.fillText(formatHz(-hz), xMinus, height - 3);
+    // Grid lines (subtle)
     ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, usableH);
+    ctx.moveTo(xPlus, trapTop);
+    ctx.lineTo(xPlus, trapBottom);
     ctx.stroke();
-    ctx.fillText(label.text, x, height - 3);
+    ctx.beginPath();
+    ctx.moveTo(xMinus, trapTop);
+    ctx.lineTo(xMinus, trapBottom);
+    ctx.stroke();
   }
 
-  // ── PBT overlays ──
-  if (pbtInner !== 128 || pbtOuter !== 128 || filterWidth < filterWidthMax) {
-    const pbt = computePbtOverlay(pbtInner, pbtOuter, filterWidth, bandwidth);
-    drawTrapezoid(ctx, pbt.inner, width, usableH, PBT_INNER_COLOR);
-    drawTrapezoid(ctx, pbt.outer, width, usableH, PBT_OUTER_COLOR);
-    drawTrapezoid(ctx, pbt.intersection, width, usableH, PBT_INTERSECTION_COLOR);
+  // ── Draw trapezoid outline + whiskers ──
+  const pbtActive = pbtInner !== 128 || pbtOuter !== 128;
+
+  if (pbtActive) {
+    // Twin PBT: draw two separate trapezoids with distinct colors
+    const innerHz = pbtRawToHz(pbtInner);
+    const outerHz = pbtRawToHz(pbtOuter);
+
+    // Inner PBT trapezoid (cyan/blue)
+    const innerCx = width / 2 + (innerHz / shiftRef) * totalHalfW * 0.6;
+    const iTl = innerCx - topHalfW;
+    const iTr = innerCx + topHalfW;
+    const iBl = innerCx - topHalfW - slopeExtra;
+    const iBr = innerCx + topHalfW + slopeExtra;
+
+    ctx.strokeStyle = 'rgba(80, 180, 255, 0.7)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(whiskerLeft, trapBottom);
+    ctx.lineTo(iBl, trapBottom);
+    ctx.lineTo(iTl, trapTop);
+    ctx.lineTo(iTr, trapTop);
+    ctx.lineTo(iBr, trapBottom);
+    ctx.lineTo(whiskerRight, trapBottom);
+    ctx.stroke();
+
+    // Outer PBT trapezoid (orange)
+    const outerCx = width / 2 + (outerHz / shiftRef) * totalHalfW * 0.6;
+    const oTl = outerCx - topHalfW;
+    const oTr = outerCx + topHalfW;
+    const oBl = outerCx - topHalfW - slopeExtra;
+    const oBr = outerCx + topHalfW + slopeExtra;
+
+    ctx.strokeStyle = 'rgba(255, 160, 60, 0.7)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(oBl, trapBottom);
+    ctx.lineTo(oTl, trapTop);
+    ctx.lineTo(oTr, trapTop);
+    ctx.lineTo(oBr, trapBottom);
+    ctx.stroke();
+  } else {
+    // No PBT: single white trapezoid
+    ctx.strokeStyle = TRAPEZOID_STROKE;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(whiskerLeft, trapBottom);
+    ctx.lineTo(bl, trapBottom);
+    ctx.lineTo(tl, trapTop);
+    ctx.lineTo(tr, trapTop);
+    ctx.lineTo(br, trapBottom);
+    ctx.lineTo(whiskerRight, trapBottom);
+    ctx.stroke();
   }
 
-  // ── Spectrum line ──
+  // Light fill inside trapezoid
+  ctx.fillStyle = TRAPEZOID_FILL;
+  ctx.beginPath();
+  ctx.moveTo(bl, trapBottom);
+  ctx.lineTo(tl, trapTop);
+  ctx.lineTo(tr, trapTop);
+  ctx.lineTo(br, trapBottom);
+  ctx.closePath();
+  ctx.fill();
+
+  // ── AGC ──
+  const filterHz = Math.round(animFilterWidth);
+  const passbandFrac = Math.min(1, filterHz / halfBw);
+  let peakVal = 1;
   if (pixels && pixels.length > 0) {
-    // AGC
-    let peakVal = 1;
-    for (let i = 0; i < pixels.length; i++) {
-      if (pixels[i] > peakVal) peakVal = pixels[i];
+    const dcIdx = Math.floor(pixels.length / 2);
+    const endBin = dcIdx + Math.ceil(passbandFrac * (pixels.length - dcIdx));
+    for (let j = dcIdx; j < endBin && j < pixels.length; j++) {
+      if (pixels[j] > peakVal) peakVal = pixels[j];
     }
-    if (peakVal > agcPeak) {
-      agcPeak += (peakVal - agcPeak) * AGC_ATTACK;
-    } else {
-      agcPeak += (peakVal - agcPeak) * AGC_RELEASE;
-    }
-    agcPeak = Math.max(10, agcPeak);
-    const gain = MAX_AMPLITUDE / agcPeak;
+  }
+  if (peakVal > agcPeak) {
+    agcPeak += (peakVal - agcPeak) * AGC_ATTACK_RATE;
+  } else {
+    agcPeak += (peakVal - agcPeak) * AGC_RELEASE_RATE;
+  }
+  agcPeak = Math.max(15, Math.min(MAX_AMPLITUDE, agcPeak));
+  const gain = (MAX_AMPLITUDE * AGC_CEILING) / agcPeak;
 
-    // Smooth
-    const numPoints = width;
+  // ── Spectrum: gradient fill + line, clipped to trapezoid ──
+  if (pixels && pixels.length > 0) {
+    const botLeft = Math.max(0, Math.floor(bl));
+    const botRight = Math.min(width, Math.ceil(br));
+    const numPoints = botRight - botLeft;
+    if (numPoints <= 0) return;
+
     if (!smoothed || smoothed.length !== numPoints) {
       smoothed = new Float32Array(numPoints);
     }
 
-    // Draw spectrum line with gradient fill
-    ctx.beginPath();
-    ctx.moveTo(0, usableH);
+    // Build spectrum line points (only inside trapezoid)
+    const points: number[] = new Array(numPoints);
+    const dcIdx = Math.floor(pixels.length / 2);
+    const positiveLen = pixels.length - dcIdx;
 
     for (let i = 0; i < numPoints; i++) {
-      const pixIdx = Math.floor((i / numPoints) * pixels.length);
-      const clamped = Math.max(0, Math.min(pixels.length - 1, pixIdx));
+      const x = botLeft + i;
+
+      // Map x position to passband FFT bin
+      const barFrac = i / numPoints;
+      const pixIdx = dcIdx + Math.floor(barFrac * passbandFrac * positiveLen);
+      const clamped = Math.max(dcIdx, Math.min(pixels.length - 1, pixIdx));
       const rawAmp = Math.min(pixels[clamped] * gain, MAX_AMPLITUDE) / MAX_AMPLITUDE;
 
       // Smooth
@@ -303,106 +293,87 @@ export function renderAudioSpectrum(
         ? prev + (rawAmp - prev) * ATTACK
         : prev + (rawAmp - prev) * DECAY;
 
-      const y = usableH * (1 - smoothed[i]);
-      ctx.lineTo(i, y);
+      // Clip to trapezoid height at this x
+      const distFromCenter = Math.abs(x - cx);
+      let maxFrac: number;
+      if (distFromCenter <= topHalfW) {
+        maxFrac = 1;
+      } else if (distFromCenter <= topHalfW + slopeExtra) {
+        maxFrac = 1 - (distFromCenter - topHalfW) / slopeExtra;
+      } else {
+        maxFrac = 0;
+      }
+
+      const amp = Math.min(smoothed[i], maxFrac);
+      points[i] = trapBottom - amp * trapH;
     }
 
-    // Close path for fill
-    ctx.lineTo(width, usableH);
+    // Clip rendering to trapezoid shape
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(bl, trapBottom);
+    ctx.lineTo(tl, trapTop);
+    ctx.lineTo(tr, trapTop);
+    ctx.lineTo(br, trapBottom);
+    ctx.closePath();
+    ctx.clip();
+
+    // Gradient fill under spectrum line
+    ctx.beginPath();
+    ctx.moveTo(botLeft, trapBottom);
+    for (let i = 0; i < numPoints; i++) {
+      ctx.lineTo(botLeft + i, points[i]);
+    }
+    ctx.lineTo(botRight, trapBottom);
     ctx.closePath();
 
-    // Gradient fill
-    const grad = ctx.createLinearGradient(0, 0, 0, usableH);
-    grad.addColorStop(0, 'rgba(0, 220, 180, 0.4)');
-    grad.addColorStop(0.5, 'rgba(0, 180, 220, 0.2)');
+    const grad = ctx.createLinearGradient(0, trapTop, 0, trapBottom);
+    grad.addColorStop(0, 'rgba(0, 220, 180, 0.45)');
+    grad.addColorStop(0.4, 'rgba(0, 180, 220, 0.25)');
     grad.addColorStop(1, 'rgba(0, 120, 200, 0.05)');
     ctx.fillStyle = grad;
     ctx.fill();
 
     // Spectrum line on top
     ctx.beginPath();
-    ctx.moveTo(0, usableH);
-    for (let i = 0; i < numPoints; i++) {
-      const y = usableH * (1 - smoothed[i]);
-      ctx.lineTo(i, y);
+    ctx.moveTo(botLeft, points[0]);
+    for (let i = 1; i < numPoints; i++) {
+      ctx.lineTo(botLeft + i, points[i]);
     }
-    ctx.strokeStyle = SPECTRUM_LINE_COLOR;
+    ctx.strokeStyle = SPECTRUM_STROKE;
     ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    ctx.restore(); // remove clip
+
+  }
+
+  // ── Contour (inside trapezoid) ──
+  if (contour > 0) {
+    const contourX = tl + (contourFreq / 255) * (tr - tl);
+    const depth = (contour / 255) * trapH * 0.4;
+    const cWidth = (tr - tl) * 0.25;
+
+    ctx.strokeStyle = CONTOUR_COLOR;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(contourX - cWidth, trapTop);
+    ctx.quadraticCurveTo(contourX, trapTop + depth * 2, contourX + cWidth, trapTop);
     ctx.stroke();
   }
 
-  // ── Manual notch (V-shape) ──
+  // ── Manual notch (inside trapezoid) ──
   if (manualNotch) {
-    const nx = computeNotchX(notchFreq, bandwidth) * width;
-    const nHalfW = width * 0.03;
-    const depth = usableH * 0.6;
+    const notchX = tl + (notchFreq / 255) * (tr - tl);
+    const depth = trapH * 0.55;
+    const nHalfW = (tr - tl) * 0.06;
 
     ctx.fillStyle = NOTCH_COLOR;
     ctx.beginPath();
-    ctx.moveTo(nx - nHalfW * 2, 0);
-    ctx.lineTo(nx, depth);
-    ctx.lineTo(nx + nHalfW * 2, 0);
-    ctx.closePath();
-    ctx.fill();
-
-    // Notch frequency label
-    const notchHz = Math.round((notchFreq / 255 - 0.5) * bandwidth);
-    ctx.fillStyle = 'rgba(255, 100, 60, 0.7)';
-    ctx.font = '9px system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(`${notchHz > 0 ? '+' : ''}${notchHz} Hz`, nx, depth + 12);
-  }
-
-  // ── Contour (U-shape dip) ──
-  if (contour > 0) {
-    const cx = (contourFreq / 255) * width;
-    const depth = (contour / 255) * usableH * 0.4;
-    const cWidth = width * 0.12;
-
-    ctx.strokeStyle = CONTOUR_COLOR;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(cx - cWidth, 0);
-    ctx.quadraticCurveTo(cx, depth * 2, cx + cWidth, 0);
-    ctx.stroke();
-
-    // Fill the contour area
-    ctx.fillStyle = 'rgba(180, 140, 255, 0.08)';
-    ctx.beginPath();
-    ctx.moveTo(cx - cWidth, 0);
-    ctx.quadraticCurveTo(cx, depth * 2, cx + cWidth, 0);
+    ctx.moveTo(notchX - nHalfW, trapTop);
+    ctx.lineTo(notchX, trapTop + depth);
+    ctx.lineTo(notchX + nHalfW, trapTop);
     ctx.closePath();
     ctx.fill();
   }
-}
-
-/** Reset smoothing buffers (e.g. on resize or mode change) */
-export function resetSmoothing(): void {
-  smoothed = null;
-  agcPeak = 40;
-}
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-function drawTrapezoid(
-  ctx: CanvasRenderingContext2D,
-  geom: TrapezoidGeometry,
-  width: number,
-  height: number,
-  color: string,
-): void {
-  const { leftX, rightX, slopeWidth } = geom;
-  const l = leftX * width;
-  const r = rightX * width;
-  const sw = slopeWidth * width;
-
-  ctx.fillStyle = color;
-  ctx.beginPath();
-  // Trapezoid: wider at bottom (passband base), narrower at top (filter slope)
-  ctx.moveTo(l - sw, height);
-  ctx.lineTo(l, 0);
-  ctx.lineTo(r, 0);
-  ctx.lineTo(r + sw, height);
-  ctx.closePath();
-  ctx.fill();
 }

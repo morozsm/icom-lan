@@ -2006,15 +2006,45 @@ class AudioHandler:
             logger.debug("audio: TX transcoder unavailable (opus codec missing?)")
 
     async def run(self) -> None:
-        """Run the audio channel lifecycle."""
-        sender = asyncio.create_task(self._sender_loop())
+        """Run the audio channel lifecycle.
+
+        Reader and sender run as concurrent tasks. When EITHER exits
+        (WS close, send timeout, error), the other is cancelled and
+        cleanup (unsubscribe from broadcaster) runs unconditionally.
+        """
+        reader = asyncio.create_task(self._reader_loop(), name="audio-reader")
+        sender = asyncio.create_task(self._sender_loop(), name="audio-sender")
         try:
-            await self._reader_loop()
+            # Wait for the first task to finish — then cancel the other
+            done, pending = await asyncio.wait(
+                {reader, sender}, return_when=asyncio.FIRST_COMPLETED
+            )
+            # Log which task exited first
+            for task in done:
+                exc = task.exception() if not task.cancelled() else None
+                if exc:
+                    logger.warning("audio: %s exited with error: %s", task.get_name(), exc)
+                else:
+                    logger.debug("audio: %s exited normally", task.get_name())
+            # Cancel the remaining task and close WS to unblock any stuck recv()
+            for task in pending:
+                task.cancel()
+            # Close WS to ensure recv() in reader raises EOF
+            try:
+                await self._ws.close(1001, "peer task exited")
+            except Exception:
+                pass
+            for task in pending:
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
         except Exception:
             logger.exception("audio: handler error")
+            reader.cancel()
+            sender.cancel()
         finally:
             self._done.set()
-            sender.cancel()
             await self._stop_rx()
             logger.info("audio: handler finished")
 
