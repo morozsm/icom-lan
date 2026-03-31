@@ -162,7 +162,7 @@ class WebConfig:
 class ConnectionManager:
     """Track WebSocket connections per-IP per-channel; evict excess and reap zombies."""
 
-    MAX_PER_IP_PER_CHANNEL: int = 6  # 3 tabs × 2 WS (control + scope)
+    MAX_PER_IP_PER_CHANNEL: int = 9  # 3 tabs × 3 WS (control + scope + audio-scope)
 
     def __init__(self) -> None:
         self._connections: dict[tuple[str, str], list[WebSocketConnection]] = {}
@@ -229,6 +229,7 @@ class WebServer:
         self._server: asyncio.Server | None = None
         self._client_tasks: set[asyncio.Task[None]] = set()
         self._scope_handlers: set["ScopeHandler"] = set()
+        self._audio_scope_handlers: set["ScopeHandler"] = set()
         self._scope_enabled = False
         self._scope_enable_lock: asyncio.Lock = asyncio.Lock()
         self._scope_disable_grace: float = 2.0
@@ -239,7 +240,10 @@ class WebServer:
             raw_radio_state if isinstance(raw_radio_state, RadioState) else RadioState()
         )
         self._audio_broadcaster = AudioBroadcaster(radio)
-        # Audio FFT scope: auto-enable when radio has audio but no hardware scope
+        # Audio FFT scope: available when radio has audio capability.
+        # For non-hardware-scope radios, also feeds /api/v1/scope (legacy).
+        # For hardware-scope radios, audio FFT is ONLY on /api/v1/audio-scope.
+        # PCM tap is lazy — enabled only when audio-scope clients connect.
         self._audio_fft_scope: AudioFftScope | None = None
         _has_audio = (
             isinstance(radio, AudioCapable)
@@ -247,11 +251,14 @@ class WebServer:
                 and "audio" in radio.capabilities)
         ) if radio is not None else False
         _has_scope = isinstance(radio, ScopeCapable) if radio is not None else False
-        if radio is not None and _has_audio and not _has_scope:
+        if radio is not None and _has_audio:
             self._audio_fft_scope = AudioFftScope(fft_size=2048, fps=20, avg_count=4)
-            self._audio_fft_scope.on_frame(self._broadcast_scope)
-            self._audio_broadcaster.set_pcm_tap(self._audio_fft_scope.feed_audio)
-            logger.info("Audio FFT scope enabled (no hardware scope, audio available)")
+            self._audio_fft_scope.on_frame(self._broadcast_audio_scope)
+            if not _has_scope:
+                # No hardware scope — audio FFT also feeds /api/v1/scope
+                self._audio_fft_scope.on_frame(self._broadcast_scope)
+                self._audio_broadcaster.set_pcm_tap(self._audio_fft_scope.feed_audio)
+            logger.info("Audio FFT scope available (has_audio=%s, has_hw_scope=%s)", _has_audio, _has_scope)
         self._command_queue: CommandQueue = CommandQueue()
         self._radio_poller: RadioPoller | None = None
         self._yaesu_poller: Any | None = None  # YaesuCatPoller (lazy)
@@ -356,14 +363,7 @@ class WebServer:
         async with self._scope_enable_lock:
             self._scope_handlers.add(handler)
             if self._radio is not None:
-                # Audio FFT scope: no hardware enable needed, just register handler
-                if self._audio_fft_scope is not None:
-                    logger.info(
-                        "scope: audio FFT scope active (%d handlers)",
-                        len(self._scope_handlers),
-                    )
-                    self._update_fft_scope_freq()
-                    return
+
                 if not _supports_scope(self._radio):
                     logger.info(
                         "scope: active radio does not expose runtime scope support"
@@ -429,6 +429,34 @@ class WebServer:
             h.enqueue_frame(frame)
         # Scope health: track whether frames carry real data
         self._scope_health_check(frame)
+
+    def _broadcast_audio_scope(self, frame: Any) -> None:
+        """Broadcast audio FFT scope frame to /api/v1/audio-scope handlers only."""
+        for h in list(self._audio_scope_handlers):
+            h.enqueue_frame(frame)
+
+    async def ensure_audio_scope_enabled(self, handler: "ScopeHandler") -> None:
+        """Register an audio scope handler. Lazy PCM tap enable."""
+        was_empty = not self._audio_scope_handlers
+        self._audio_scope_handlers.add(handler)
+        if self._audio_fft_scope is not None:
+            self._update_fft_scope_freq()
+            self._update_fft_scope_mode()
+            if was_empty:
+                self._audio_broadcaster.set_pcm_tap(self._audio_fft_scope.feed_audio)
+                logger.info("audio-scope: PCM tap enabled (first client)")
+        logger.info("audio-scope: handler registered (%d total)", len(self._audio_scope_handlers))
+
+    def unregister_audio_scope_handler(self, handler: "ScopeHandler") -> None:
+        """Unregister an audio scope handler. Disable PCM tap when last client leaves."""
+        self._audio_scope_handlers.discard(handler)
+        if not self._audio_scope_handlers and self._audio_fft_scope is not None:
+            # Only disable tap for hardware-scope radios (non-hw radios keep tap always on)
+            _has_scope = isinstance(self._radio, ScopeCapable) if self._radio is not None else False
+            if _has_scope:
+                self._audio_broadcaster.set_pcm_tap(None)
+                logger.info("audio-scope: PCM tap disabled (no clients)")
+        logger.info("audio-scope: handler unregistered (%d remaining)", len(self._audio_scope_handlers))
 
     def _update_fft_scope_freq(self) -> None:
         """Sync AudioFftScope center frequency from current radio state."""
@@ -1438,9 +1466,10 @@ class WebServer:
                 ),
                 "keyboard": _serialize_keyboard_config(profile),
                 "scopeSource": (
-                    "audio_fft" if self._audio_fft_scope is not None
-                    else ("hardware" if "scope" in caps else None)
+                    "hardware" if "scope" in caps
+                    else ("audio_fft" if self._audio_fft_scope is not None else None)
                 ),
+                "audioFftAvailable": self._audio_fft_scope is not None,
                 "scopeConfig": {
                     "centerMode": True,
                     "amplitudeMax": 160,
@@ -1989,6 +2018,11 @@ class WebServer:
             )
         elif path == "/api/v1/scope":
             handler = ScopeHandler(ws, self._radio, server=self)
+        elif path == "/api/v1/audio-scope":
+            if self._audio_fft_scope is None:
+                await ws.close(1008, "audio FFT scope not available")
+                return
+            handler = ScopeHandler(ws, self._radio, server=self, audio_mode=True)
         elif path == "/api/v1/audio":
             handler = AudioHandler(ws, self._radio, self._audio_broadcaster)
         else:

@@ -1,10 +1,9 @@
 <script lang="ts">
   import { radio } from '$lib/stores/radio.svelte';
-  import { isAudioFftScope } from '$lib/stores/capabilities.svelte';
   import { resolveFilterModeConfig } from '../../wiring/state-adapter';
   import { getCapabilities } from '$lib/stores/capabilities.svelte';
   import { getChannel } from '$lib/transport/ws-client';
-  import { setScopeConnected, markScopeFrame } from '$lib/stores/connection.svelte';
+  import { markScopeFrame } from '$lib/stores/connection.svelte';
   import AudioSpectrumCanvas from './AudioSpectrumCanvas.svelte';
 
   // ── Scope frame parser (same as AmberLcdDisplay) ──
@@ -54,14 +53,8 @@
   let fftPush: ((data: Uint8Array) => void) | null = null;
 
   $effect(() => {
-    const wantScope = isAudioFftScope();
-    if (!wantScope) return;
-
-    const scopeCh = getChannel('scope');
-    scopeCh.connect('/api/v1/scope');
-    const unsubState = scopeCh.onStateChange((s) => {
-      setScopeConnected(s === 'connected');
-    });
+    const scopeCh = getChannel('audio-scope');
+    scopeCh.connect('/api/v1/audio-scope');
     const unsubBinary = scopeCh.onBinary((buf) => {
       markScopeFrame();
       const frame = parseScopeFrame(buf);
@@ -74,7 +67,6 @@
     });
 
     return () => {
-      unsubState();
       unsubBinary();
       scopeCh.disconnect();
     };

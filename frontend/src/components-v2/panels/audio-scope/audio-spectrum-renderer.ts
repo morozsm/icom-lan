@@ -398,11 +398,11 @@ function drawTrapezoid(
 
   ctx.fillStyle = color;
   ctx.beginPath();
-  // Trapezoid: wider at top (y=0), narrower slope at bottom
-  ctx.moveTo(l - sw, 0);
-  ctx.lineTo(l, height);
-  ctx.lineTo(r, height);
-  ctx.lineTo(r + sw, 0);
+  // Trapezoid: wider at bottom (passband base), narrower at top (filter slope)
+  ctx.moveTo(l - sw, height);
+  ctx.lineTo(l, 0);
+  ctx.lineTo(r, 0);
+  ctx.lineTo(r + sw, height);
   ctx.closePath();
   ctx.fill();
 }

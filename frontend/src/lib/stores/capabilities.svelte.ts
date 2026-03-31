@@ -28,6 +28,10 @@ export function isAudioFftScope(): boolean {
   return getScopeSource() === 'audio_fft';
 }
 
+export function hasAudioFft(): boolean {
+  return capabilities?.audioFftAvailable ?? false;
+}
+
 export function hasAudio(): boolean {
   return capabilities?.audio ?? false;
 }

@@ -4359,6 +4359,7 @@ class Icom7610CoreRadio:
     speech = get_speech
     get_band_stack = get_bsr
     set_band_stack = set_bsr
+    set_band = set_bsr  # BSR is the IC-7610's band select mechanism
 
 
 class IcomRadio(Icom7610CoreRadio):

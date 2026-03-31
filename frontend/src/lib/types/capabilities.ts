@@ -98,6 +98,7 @@ export interface Capabilities {
   keyboard?: KeyboardConfig | null;
   antennas?: number;      // Number of antenna ports
   scopeSource?: string | null;  // "hardware", "audio_fft", or null
+  audioFftAvailable?: boolean;  // true when audio FFT scope is available (even with hardware scope)
   scopeConfig?: ScopeConfig;
   audioConfig?: AudioConfig;
   controls?: Record<string, ControlRange>;

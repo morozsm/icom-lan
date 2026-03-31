@@ -15,7 +15,7 @@
   import { radio } from '$lib/stores/radio.svelte';
   import { getConnectionStatus, getRadioPowerOn } from '$lib/stores/connection.svelte';
   import { applyModeDefault } from '$lib/stores/tuning.svelte';
-  import { getCapabilities, getKeyboardConfig, hasDualReceiver, hasTx, hasAnyScope, hasSpectrum, isAudioFftScope } from '$lib/stores/capabilities.svelte';
+  import { getCapabilities, getKeyboardConfig, hasDualReceiver, hasTx, hasAnyScope, hasSpectrum, hasAudioFft } from '$lib/stores/capabilities.svelte';
   import { useLcdLayout } from '$lib/stores/layout.svelte';
   import SpectrumPanel from '../../components/spectrum/SpectrumPanel.svelte';
   import AudioSpectrumPanel from '../panels/audio-scope/AudioSpectrumPanel.svelte';
@@ -83,7 +83,7 @@
   let connectionStatus = $derived(getConnectionStatus());
   // (mobile activeTab removed — MobileRadioLayout handles its own state)
 
-  let isAudioFft = $derived(isAudioFftScope());
+  let isAudioFft = $derived(hasAudioFft());
   let activeReceiverLabel = $derived(radioState?.active === 'SUB' ? 'SUB' : 'MAIN');
   let activeModeLabel = $derived(radioState?.active === 'SUB' ? (radioState?.sub?.mode ?? '') : (radioState?.main?.mode ?? ''));
   let activeFilterLabel = $derived(radioState?.active === 'SUB' ? (radioState?.sub?.filter ?? '') : (radioState?.main?.filter ?? ''));
@@ -227,11 +227,7 @@
     </div>
 
     <main class="content-center center-column">
-      {#if isAudioFft}
-        <div class="audio-scope-slot">
-          <AudioSpectrumPanel />
-        </div>
-      {:else}
+      {#if hasSpectrum()}
         <div class="spectrum-slot">
           <div class="spectrum-frame">
             <SpectrumPanel />
@@ -259,7 +255,11 @@
       </div>
     </article>
 
-    {#if dualReceiver}
+    {#if isAudioFft}
+      <article class="receiver-summary-card audio-scope-dock-card">
+        <AudioSpectrumPanel />
+      </article>
+    {:else if dualReceiver}
       <article class="receiver-summary-card receiver-summary-card-sub">
         <div class="receiver-summary-header">
           <span class="receiver-summary-label">RX 2</span>
@@ -504,16 +504,10 @@
     display: flex;
   }
 
-  .audio-scope-slot {
-    flex: 1;
-    min-height: 0;
-    min-width: 0;
-    display: flex;
-    border: 1px solid var(--v2-border-panel);
-    border-radius: 4px;
-    background: var(--v2-bg-card);
-    box-shadow: var(--v2-shadow-sm);
+  .audio-scope-dock-card {
+    padding: 0 !important;
     overflow: hidden;
+    max-height: 160px;
   }
 
   .spectrum-frame {

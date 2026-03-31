@@ -1635,10 +1635,12 @@ class ScopeHandler:
         ws: WebSocketConnection,
         radio: "Radio | None",
         server: Any = None,
+        audio_mode: bool = False,
     ) -> None:
         self._ws = ws
         self._radio = radio
         self._server = server
+        self._audio_mode = audio_mode
         self._seq: int = 0
         self._frame_queue: asyncio.Queue[bytes] = asyncio.Queue(
             maxsize=HIGH_WATERMARK * 2
@@ -1666,7 +1668,10 @@ class ScopeHandler:
         self._running = True
         # Register with server — server handles enable_scope() once
         if self._server is not None:
-            await self._server.ensure_scope_enabled(self)
+            if self._audio_mode:
+                await self._server.ensure_audio_scope_enabled(self)
+            else:
+                await self._server.ensure_scope_enabled(self)
         try:
             sender_task = asyncio.create_task(self._sender())
             try:
@@ -1685,7 +1690,10 @@ class ScopeHandler:
         finally:
             self._running = False
             if self._server is not None:
-                self._server.unregister_scope_handler(self)
+                if self._audio_mode:
+                    self._server.unregister_audio_scope_handler(self)
+                else:
+                    self._server.unregister_scope_handler(self)
 
     def _handle_control(self, text: str) -> None:
         """Handle optional JSON control messages on the scope channel."""
