@@ -3,6 +3,8 @@
 from dataclasses import dataclass
 from enum import IntEnum, StrEnum
 
+from icom_lan.env_config import get_audio_sample_rate
+
 __all__ = [
     "PacketType",
     "Mode",
@@ -211,7 +213,7 @@ def _build_audio_capabilities() -> AudioCapabilities:
         if implied_default_channels in supported_channels
         else supported_channels[0]
     )
-    default_sample_rate_hz = max(_SUPPORTED_AUDIO_SAMPLE_RATES_HZ)
+    default_sample_rate_hz = get_audio_sample_rate()
     return AudioCapabilities(
         supported_codecs=_SUPPORTED_AUDIO_CODECS,
         supported_sample_rates_hz=_SUPPORTED_AUDIO_SAMPLE_RATES_HZ,

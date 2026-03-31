@@ -341,6 +341,34 @@ ICOM_DEBUG=1 ICOM_LOG_FILE= uv run icom-lan web
 | `ICOM_HOST` | `192.168.55.40` | Radio IP address |
 | `ICOM_USER` | `moroz` | Radio username |
 | `ICOM_PASS` | — | Radio password |
+| `ICOM_AUDIO_SAMPLE_RATE` | `48000` | Default PCM sample rate in Hz — must be one of 8000, 16000, 24000, 48000 |
+| `ICOM_AUDIO_BUFFER_POOL_SIZE` | `5` | Pre-allocated audio buffer pool size in the broadcaster |
+| `ICOM_AUDIO_BROADCASTER_HIGH_WATERMARK` | `10` | Max queued frames in the broadcaster before dropping (per-client queue) |
+| `ICOM_AUDIO_CLIENT_HIGH_WATERMARK` | `10` | Max queued audio frames per WebSocket client before dropping |
+
+#### Tuning for High-Latency Links (VPN, Cloud VMs)
+
+On constrained links — e.g. a cloud VM behind WireGuard or Tailscale — the default
+audio parameters can cause CI-V queue overflow and audio glitches. The following values
+have been validated on a 1/8 OCPU Oracle Free Tier VM with ~60 ms WireGuard RTT:
+
+```env
+# Lower sample rate reduces bandwidth: 48 kHz ≈ 768 kbps → 16 kHz ≈ 256 kbps
+ICOM_AUDIO_SAMPLE_RATE=16000
+
+# Larger pool prevents GC pauses from buffer exhaustion
+ICOM_AUDIO_BUFFER_POOL_SIZE=15
+
+# Higher watermarks absorb tunnel jitter spikes (~500 ms at 20 ms/frame)
+ICOM_AUDIO_BROADCASTER_HIGH_WATERMARK=25
+ICOM_AUDIO_CLIENT_HIGH_WATERMARK=25
+```
+
+These defaults are intentionally conservative for local LAN use. Increase them only
+when you observe CI-V queue overflow warnings in the logs.
+
+*Thanks to Leon Toorenburg (WW0R, Nederland CO) for reporting and testing these
+parameters while running icom-lan remotely over WireGuard to his IC-7610.*
 
 ## Testing
 

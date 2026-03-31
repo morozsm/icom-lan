@@ -17,6 +17,11 @@ from typing import TYPE_CHECKING, Any, Callable, Protocol, cast
 from .._audio_buffer_pool import AudioBufferPool
 from .._audio_codecs import decode_ulaw_to_pcm16
 from .._audio_transcoder import PcmOpusTranscoder, create_pcm_opus_transcoder
+from ..env_config import (
+    get_audio_broadcaster_high_watermark,
+    get_audio_buffer_pool_size,
+    get_audio_client_high_watermark,
+)
 from ..profiles import RadioProfile
 from ..radio_state import RadioState
 from ..scope import ScopeFrame
@@ -1746,6 +1751,7 @@ class AudioBroadcaster:
     HIGH_WATERMARK: int = 10
 
     def __init__(self, radio: "Radio | None") -> None:
+        self.HIGH_WATERMARK = get_audio_broadcaster_high_watermark()
         self._radio = radio
         self._clients: dict[int, asyncio.Queue[bytes]] = {}
         self._client_ws: dict[int, WebSocketConnection] = {}
@@ -1761,7 +1767,7 @@ class AudioBroadcaster:
         self._pcm_tap: Callable[[bytes], None] | None = None
         # Buffer pool for audio encoding/decoding operations
         # Pre-allocates buffers for common audio frame sizes (20ms @ 16kHz stereo = 1280 bytes)
-        self._buffer_pool = AudioBufferPool(buffer_size=1280, max_buffers=5, name="audio-broadcaster")
+        self._buffer_pool = AudioBufferPool(buffer_size=1280, max_buffers=get_audio_buffer_pool_size(), name="audio-broadcaster")
 
     async def subscribe(
         self, ws: WebSocketConnection | None = None
@@ -2001,6 +2007,7 @@ class AudioHandler:
         radio: "Radio | None",
         broadcaster: "AudioBroadcaster | None" = None,
     ) -> None:
+        self.HIGH_WATERMARK = get_audio_client_high_watermark()
         self._ws = ws
         self._radio = radio
         self._broadcaster = broadcaster
