@@ -76,6 +76,9 @@ class YaesuCatPoller:
         self._slow_interval = slow_interval
         self._ema_alpha = ema_alpha
 
+        # Capability set from TOML — used to gate poll items.
+        self._caps: set[str] = getattr(radio, "capabilities", set())
+
         # Shared serial access lock — one request in flight at a time.
         self._lock: asyncio.Lock = asyncio.Lock()
         # Clear = paused, set = running.
@@ -482,13 +485,15 @@ class YaesuCatPoller:
         self._ema_s_main = self._apply_ema(raw_main, self._ema_s_main)
         state.main.s_meter = int(round(self._ema_s_main))
 
-        try:
-            raw_sub = await self._radio.get_s_meter(1)
-            self._ema_s_sub = self._apply_ema(raw_sub, self._ema_s_sub)
-            state.sub.s_meter = int(round(self._ema_s_sub))
-        except Exception:
-            # Sub receiver S-meter may not be supported on all rigs.
-            logger.debug("YaesuCatPoller: sub S-meter unavailable", exc_info=True)
+        if "dual_rx" in self._caps:
+            try:
+                raw_sub = await self._radio.get_s_meter(1)
+                self._ema_s_sub = self._apply_ema(raw_sub, self._ema_s_sub)
+                state.sub.s_meter = int(round(self._ema_s_sub))
+            except NotImplementedError:
+                pass
+            except Exception:
+                logger.debug("YaesuCatPoller: sub S-meter unavailable", exc_info=True)
 
         self._callback(state)
 
@@ -497,173 +502,230 @@ class YaesuCatPoller:
         await self._radio.get_freq(0)
         await self._radio.get_mode(0)
 
-        try:
+        if "dual_rx" in self._caps:
             await self._radio.get_freq(1)
             await self._radio.get_mode(1)
-        except Exception:
-            logger.debug("YaesuCatPoller: sub freq/mode unavailable", exc_info=True)
 
         await self._radio.get_ptt()
 
         # Filter width — in medium poll for responsive knob tracking
-        try:
+        if "filter_width" in self._caps:
             raw_index = await self._radio.get_filter_width(0)
             self._radio.radio_state.main.filter_width = self._index_to_hz(raw_index)
-        except Exception:
-            logger.debug("YaesuCatPoller: get_filter_width failed", exc_info=True)
 
         self._callback(self._radio.radio_state)
 
     async def _poll_slow(self) -> None:
-        """Slow group: AGC, levels, DSP, TX settings."""
+        """Slow group: AGC, levels, DSP, TX settings.
+
+        Only polls parameters declared in the rig's TOML capabilities.
+        Core items (AGC, mic gain) are always polled; feature-specific
+        items are gated by ``self._caps`` to avoid hitting methods
+        that raise ``NotImplementedError``.
+        """
         state = self._radio.radio_state
         radio = self._radio
+        caps = self._caps
 
-        # -- Levels --
+        # -- AGC (always) --
         try:
             state.main.agc = await radio.get_agc(0)
+        except NotImplementedError:
+            pass
         except Exception:
             logger.debug("YaesuCatPoller: get_agc failed", exc_info=True)
 
-        try:
-            state.main.af_level = await radio.get_af_level(0)
-        except Exception:
-            logger.debug("YaesuCatPoller: get_af_level failed", exc_info=True)
+        # -- AF level --
+        if "af_level" in caps:
+            try:
+                state.main.af_level = await radio.get_af_level(0)
+            except NotImplementedError:
+                pass
+            except Exception:
+                logger.debug("YaesuCatPoller: get_af_level failed", exc_info=True)
 
-        try:
-            state.main.rf_gain = await radio.get_rf_gain(0)
-        except Exception:
-            logger.debug("YaesuCatPoller: get_rf_gain failed", exc_info=True)
+        # -- RF gain --
+        if "rf_gain" in caps:
+            try:
+                state.main.rf_gain = await radio.get_rf_gain(0)
+            except NotImplementedError:
+                pass
+            except Exception:
+                logger.debug("YaesuCatPoller: get_rf_gain failed", exc_info=True)
 
-        try:
-            state.main.squelch = await radio.get_squelch(0)
-        except Exception:
-            logger.debug("YaesuCatPoller: get_squelch failed", exc_info=True)
+        # -- Squelch --
+        if "squelch" in caps:
+            try:
+                state.main.squelch = await radio.get_squelch(0)
+            except NotImplementedError:
+                pass
+            except Exception:
+                logger.debug("YaesuCatPoller: get_squelch failed", exc_info=True)
 
         # -- DSP: NB/NR levels, auto notch --
-        # For level_is_toggle radios (e.g. FTX-1), level > 0 means active.
-        try:
-            nb_level = await radio.get_nb_level(0)
-            state.main.nb_level = nb_level
-            state.main.nb = nb_level > 0
-        except Exception:
-            logger.debug("YaesuCatPoller: get_nb_level failed", exc_info=True)
+        if "nb" in caps:
+            try:
+                nb_level = await radio.get_nb_level(0)
+                state.main.nb_level = nb_level
+                state.main.nb = nb_level > 0
+            except NotImplementedError:
+                pass
+            except Exception:
+                logger.debug("YaesuCatPoller: get_nb_level failed", exc_info=True)
 
-        try:
-            nr_level = await radio.get_nr_level(0)
-            state.main.nr_level = nr_level
-            state.main.nr = nr_level > 0
-        except Exception:
-            logger.debug("YaesuCatPoller: get_nr_level failed", exc_info=True)
+        if "nr" in caps:
+            try:
+                nr_level = await radio.get_nr_level(0)
+                state.main.nr_level = nr_level
+                state.main.nr = nr_level > 0
+            except NotImplementedError:
+                pass
+            except Exception:
+                logger.debug("YaesuCatPoller: get_nr_level failed", exc_info=True)
 
-        try:
-            state.main.auto_notch = await radio.get_auto_notch(0)
-        except Exception:
-            logger.debug("YaesuCatPoller: get_auto_notch failed", exc_info=True)
-
-        # Filter width moved to _poll_medium for faster knob response
+        if "notch" in caps:
+            try:
+                state.main.auto_notch = await radio.get_auto_notch(0)
+            except NotImplementedError:
+                pass
+            except Exception:
+                logger.debug("YaesuCatPoller: get_auto_notch failed", exc_info=True)
 
         # -- TX power --
-        try:
-            _, watts = await radio.get_power()
-            state.power_level = watts
-        except Exception:
-            logger.debug("YaesuCatPoller: get_power failed", exc_info=True)
+        if "tx" in caps:
+            try:
+                _, watts = await radio.get_power()
+                state.power_level = watts
+            except NotImplementedError:
+                pass
+            except Exception:
+                logger.debug("YaesuCatPoller: get_power failed", exc_info=True)
 
-        # -- Mic gain --
+        # -- Mic gain (always) --
         try:
             state.mic_gain = await radio.get_mic_gain()
+        except NotImplementedError:
+            pass
         except Exception:
             logger.debug("YaesuCatPoller: get_mic_gain failed", exc_info=True)
 
         # -- Split --
-        try:
-            state.split = await radio.get_split()
-        except Exception:
-            logger.debug("YaesuCatPoller: get_split failed", exc_info=True)
+        if "split" in caps:
+            try:
+                state.split = await radio.get_split()
+            except NotImplementedError:
+                pass
+            except Exception:
+                logger.debug("YaesuCatPoller: get_split failed", exc_info=True)
 
         # -- VOX --
-        try:
-            state.vox_on = await radio.get_vox()
-        except Exception:
-            logger.debug("YaesuCatPoller: get_vox failed", exc_info=True)
+        if "vox" in caps:
+            try:
+                state.vox_on = await radio.get_vox()
+            except NotImplementedError:
+                pass
+            except Exception:
+                logger.debug("YaesuCatPoller: get_vox failed", exc_info=True)
 
         # -- Dial lock --
-        try:
-            state.dial_lock = await radio.get_lock()
-        except Exception:
-            logger.debug("YaesuCatPoller: get_lock failed", exc_info=True)
+        if "dial_lock" in caps:
+            try:
+                state.dial_lock = await radio.get_lock()
+            except NotImplementedError:
+                pass
+            except Exception:
+                logger.debug("YaesuCatPoller: get_lock failed", exc_info=True)
 
         # -- Speech processor (COMP/PROC) --
-        try:
-            state.compressor_on = await radio.get_processor()
-        except Exception:
-            logger.debug("YaesuCatPoller: get_processor failed", exc_info=True)
-
-        try:
-            state.compressor_level = await radio.get_processor_level()
-        except Exception:
-            logger.debug("YaesuCatPoller: get_processor_level failed", exc_info=True)
+        if "compressor" in caps:
+            try:
+                state.compressor_on = await radio.get_processor()
+                state.compressor_level = await radio.get_processor_level()
+            except NotImplementedError:
+                pass
+            except Exception:
+                logger.debug("YaesuCatPoller: get_processor failed", exc_info=True)
 
         # -- ATT / Preamp --
-        try:
-            state.main.att = await radio.get_attenuator(0)
-        except Exception:
-            logger.debug("YaesuCatPoller: get_attenuator failed", exc_info=True)
+        if "attenuator" in caps:
+            try:
+                state.main.att = await radio.get_attenuator(0)
+            except NotImplementedError:
+                pass
+            except Exception:
+                logger.debug("YaesuCatPoller: get_attenuator failed", exc_info=True)
 
-        try:
-            state.main.preamp = await radio.get_preamp(0)
-        except Exception:
-            logger.debug("YaesuCatPoller: get_preamp failed", exc_info=True)
+        if "preamp" in caps:
+            try:
+                state.main.preamp = await radio.get_preamp(0)
+            except NotImplementedError:
+                pass
+            except Exception:
+                logger.debug("YaesuCatPoller: get_preamp failed", exc_info=True)
 
         # -- Antenna tuner --
-        try:
-            state.tuner_status = await radio.get_tuner()
-        except Exception:
-            logger.debug("YaesuCatPoller: get_tuner failed", exc_info=True)
+        if "tuner" in caps:
+            try:
+                state.tuner_status = await radio.get_tuner()
+            except NotImplementedError:
+                pass
+            except Exception:
+                logger.debug("YaesuCatPoller: get_tuner failed", exc_info=True)
 
         # -- Contour / S-DX --
-        try:
-            state.main.contour = await radio.get_contour(0)
-        except Exception:
-            logger.debug("YaesuCatPoller: get_contour failed", exc_info=True)
+        if "contour" in caps:
+            try:
+                state.main.contour = await radio.get_contour(0)
+            except NotImplementedError:
+                pass
+            except Exception:
+                logger.debug("YaesuCatPoller: get_contour failed", exc_info=True)
 
         # -- IF Shift --
-        try:
-            state.main.if_shift = await radio.get_if_shift(0)
-        except Exception:
-            logger.debug("YaesuCatPoller: get_if_shift failed", exc_info=True)
+        if "if_shift" in caps:
+            try:
+                state.main.if_shift = await radio.get_if_shift(0)
+            except NotImplementedError:
+                pass
+            except Exception:
+                logger.debug("YaesuCatPoller: get_if_shift failed", exc_info=True)
 
         # -- Clarifier (RIT/XIT) --
-        try:
-            rx_clar, tx_clar = await radio.get_clarifier()
-            state.rit_on = rx_clar
-            state.rit_tx = tx_clar
-        except Exception:
-            logger.debug("YaesuCatPoller: get_clarifier failed", exc_info=True)
-
-        try:
-            state.rit_freq = await radio.get_clarifier_freq()
-        except Exception:
-            logger.debug("YaesuCatPoller: get_clarifier_freq failed", exc_info=True)
+        if "rit" in caps:
+            try:
+                rx_clar, tx_clar = await radio.get_clarifier()
+                state.rit_on = rx_clar
+                state.rit_tx = tx_clar
+                state.rit_freq = await radio.get_clarifier_freq()
+            except NotImplementedError:
+                pass
+            except Exception:
+                logger.debug("YaesuCatPoller: get_clarifier failed", exc_info=True)
 
         # -- Manual notch state + freq --
-        try:
-            notch_on, notch_freq = await radio.get_manual_notch()
-            state.main.manual_notch = notch_on
-            state.main.manual_notch_freq = notch_freq
-        except Exception:
-            logger.debug("YaesuCatPoller: get_manual_notch failed", exc_info=True)
+        if "notch" in caps:
+            try:
+                notch_on, notch_freq = await radio.get_manual_notch()
+                state.main.manual_notch = notch_on
+                state.main.manual_notch_freq = notch_freq
+            except NotImplementedError:
+                pass
+            except Exception:
+                logger.debug("YaesuCatPoller: get_manual_notch failed", exc_info=True)
 
-        # -- Narrow filter mode --
+        # -- Narrow filter mode (always — lightweight query) --
         try:
             state.main.narrow = await radio.get_narrow()
+        except NotImplementedError:
+            pass
         except Exception:
             logger.debug("YaesuCatPoller: get_narrow failed", exc_info=True)
 
-        # -- VFO select --
+        # -- VFO select (always) --
         try:
             state.vfo_select = await radio.get_vfo_select()
+        except NotImplementedError:
+            pass
         except Exception:
             logger.debug("YaesuCatPoller: get_vfo_select failed", exc_info=True)
 

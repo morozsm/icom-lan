@@ -38,6 +38,13 @@ def make_radio(
     """Return a mock YaesuCatRadio with sensible defaults."""
     radio = MagicMock()
     radio.radio_state = RadioState()
+    radio.capabilities = {
+        "audio", "dual_rx", "af_level", "rf_gain", "squelch",
+        "attenuator", "preamp", "nb", "nr", "notch", "if_shift",
+        "contour", "filter_width", "tx", "split", "vox", "compressor",
+        "cw", "rit", "tuner", "meters", "repeater_tone", "tsql",
+        "data_mode", "scan", "dial_lock",
+    }
 
     radio.get_s_meter = AsyncMock(side_effect=lambda r=0: s_meter_main if r == 0 else s_meter_sub)
     radio.get_freq = AsyncMock(side_effect=lambda r=0: freq_main if r == 0 else freq_sub)
