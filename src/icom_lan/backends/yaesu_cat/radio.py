@@ -1162,6 +1162,111 @@ class YaesuCatRadio:
         """Stop CW sending by clearing the keyer buffer."""
         await self.send_cw(" ", "")
 
+    # -- Icom-only stubs (AdvancedControlCapable conformance) -----------------
+    # Yaesu does not support these features; methods exist for protocol compat.
+
+    async def get_antenna_1(self) -> bool:
+        raise NotImplementedError("Antenna switching not supported on Yaesu radios")
+
+    async def set_antenna_1(self, on: bool) -> None:
+        raise NotImplementedError("Antenna switching not supported on Yaesu radios")
+
+    async def get_antenna_2(self) -> bool:
+        raise NotImplementedError("Antenna switching not supported on Yaesu radios")
+
+    async def set_antenna_2(self, on: bool) -> None:
+        raise NotImplementedError("Antenna switching not supported on Yaesu radios")
+
+    async def get_rx_antenna_ant1(self) -> bool:
+        raise NotImplementedError("RX antenna switching not supported on Yaesu radios")
+
+    async def set_rx_antenna_ant1(self, on: bool) -> None:
+        raise NotImplementedError("RX antenna switching not supported on Yaesu radios")
+
+    async def get_rx_antenna_ant2(self) -> bool:
+        raise NotImplementedError("RX antenna switching not supported on Yaesu radios")
+
+    async def set_rx_antenna_ant2(self, on: bool) -> None:
+        raise NotImplementedError("RX antenna switching not supported on Yaesu radios")
+
+    async def get_pbt_inner(self, receiver: int = 0) -> int:
+        raise NotImplementedError("PBT (Icom) not supported on Yaesu radios")
+
+    async def set_pbt_inner(self, level: int, receiver: int = 0) -> None:
+        raise NotImplementedError("PBT (Icom) not supported on Yaesu radios")
+
+    async def get_pbt_outer(self, receiver: int = 0) -> int:
+        raise NotImplementedError("PBT (Icom) not supported on Yaesu radios")
+
+    async def set_pbt_outer(self, level: int, receiver: int = 0) -> None:
+        raise NotImplementedError("PBT (Icom) not supported on Yaesu radios")
+
+    async def set_digisel(self, on: bool, receiver: int = 0) -> None:
+        raise NotImplementedError("DIGI-SEL (Icom) not supported on Yaesu radios")
+
+    async def set_ip_plus(self, on: bool, receiver: int = 0) -> None:
+        raise NotImplementedError("IP+ (Icom) not supported on Yaesu radios")
+
+    async def set_filter(self, filter_num: int, receiver: int = 0) -> None:
+        raise NotImplementedError("Filter select (Icom) not supported on Yaesu radios")
+
+    async def set_filter_shape(self, shape: int, receiver: int = 0) -> None:
+        raise NotImplementedError("Filter shape (Icom) not supported on Yaesu radios")
+
+    async def get_attenuator_level(self, receiver: int = 0) -> int:
+        raise NotImplementedError("Attenuator level (Icom) not supported on Yaesu radios")
+
+    async def set_acc1_mod_level(self, level: int) -> None:
+        raise NotImplementedError("ACC1 mod level (Icom) not supported on Yaesu radios")
+
+    async def set_usb_mod_level(self, level: int) -> None:
+        raise NotImplementedError("USB mod level (Icom) not supported on Yaesu radios")
+
+    async def set_lan_mod_level(self, level: int) -> None:
+        raise NotImplementedError("LAN mod level (Icom) not supported on Yaesu radios")
+
+    async def get_system_date(self) -> tuple[int, int, int]:
+        raise NotImplementedError("System clock (Icom) not supported on Yaesu radios")
+
+    async def set_system_date(self, year: int, month: int, day: int) -> None:
+        raise NotImplementedError("System clock (Icom) not supported on Yaesu radios")
+
+    async def get_system_time(self) -> tuple[int, int]:
+        raise NotImplementedError("System clock (Icom) not supported on Yaesu radios")
+
+    async def set_system_time(self, hour: int, minute: int) -> None:
+        raise NotImplementedError("System clock (Icom) not supported on Yaesu radios")
+
+    async def get_vox_gain(self) -> int:
+        raise NotImplementedError("VOX gain not supported on this radio")
+
+    async def set_vox_gain(self, level: int) -> None:
+        raise NotImplementedError("VOX gain not supported on this radio")
+
+    async def get_anti_vox_gain(self) -> int:
+        raise NotImplementedError("Anti-VOX gain not supported on this radio")
+
+    async def set_anti_vox_gain(self, level: int) -> None:
+        raise NotImplementedError("Anti-VOX gain not supported on this radio")
+
+    async def get_monitor(self) -> bool:
+        raise NotImplementedError("Monitor (Icom) not supported on Yaesu radios")
+
+    async def set_monitor(self, on: bool) -> None:
+        raise NotImplementedError("Monitor (Icom) not supported on Yaesu radios")
+
+    async def get_monitor_gain(self) -> int:
+        raise NotImplementedError("Monitor gain (Icom) not supported on Yaesu radios")
+
+    async def set_monitor_gain(self, level: int) -> None:
+        raise NotImplementedError("Monitor gain (Icom) not supported on Yaesu radios")
+
+    async def get_dual_watch(self) -> bool:
+        raise NotImplementedError("Dual watch query not supported on Yaesu radios")
+
+    async def set_dual_watch(self, on: bool) -> None:
+        raise NotImplementedError("Dual watch not supported on Yaesu radios")
+
     # -- APF / Twin Peak (not supported on Yaesu) -----------------------------
 
     async def set_audio_peak_filter(self, mode: int, receiver: int = 0) -> None:
