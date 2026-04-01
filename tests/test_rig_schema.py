@@ -11,6 +11,8 @@ from pathlib import Path
 
 import pytest
 
+from icom_lan.capabilities import KNOWN_CAPABILITIES
+
 RIGS_DIR = Path(__file__).resolve().parent.parent / "rigs"
 TEMPLATE_PATH = RIGS_DIR / "ic7610.toml"
 SCHEMA_PATH = RIGS_DIR / "_schema.md"
@@ -25,67 +27,6 @@ REQUIRED_SECTIONS = [
     "vfo",
     "commands",
 ]
-
-KNOWN_CAPABILITIES = frozenset(
-    {
-        # Receiver
-        "audio",
-        "dual_rx",
-        "dual_watch",
-        "af_level",
-        "rf_gain",
-        "squelch",
-        # RF front end
-        "attenuator",
-        "preamp",
-        "digisel",
-        "ip_plus",
-        # Antenna
-        "antenna",
-        "rx_antenna",
-        # DSP / Noise
-        "nb",
-        "nr",
-        "notch",
-        "apf",
-        "twin_peak",
-        # Filter
-        "pbt",
-        "filter_width",
-        "filter_shape",
-        # TX
-        "tx",
-        "split",
-        "vox",
-        "compressor",
-        "monitor",
-        "drive_gain",
-        "ssb_tx_bw",
-        # CW
-        "cw",
-        "break_in",
-        # RIT / XIT
-        "rit",
-        "xit",
-        # Tuner
-        "tuner",
-        # Metering
-        "meters",
-        # Scope
-        "scope",
-        # Tone
-        "repeater_tone",
-        "tsql",
-        # Data
-        "data_mode",
-        # System
-        "power_control",
-        "dial_lock",
-        "scan",
-        "bsr",
-        "main_sub_tracking",
-    }
-)
 
 VALID_VFO_SCHEMES = {"ab", "main_sub"}
 

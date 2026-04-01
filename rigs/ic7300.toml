@@ -79,6 +79,11 @@ features = [
     "dial_lock",
     "scan",
     "bsr",
+    # AGC
+    "agc",
+    "tuning_step",
+    "band_edge",
+    "xfc",
 ]
 
 # ── Parameterized Capabilities ───────────────────────────────────

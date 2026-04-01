@@ -7,7 +7,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from .capabilities import KNOWN_CAPABILITIES
 from .command_map import CommandMap
+
+__all__ = ["RigConfig", "RigLoadError", "load_rig", "discover_rigs"]
 from .command_spec import CatCommandSpec, CivCommandSpec, CommandSpec
 from .profiles import (
     BandInfo,
@@ -17,74 +20,6 @@ from .profiles import (
     KeyboardBinding,
     KeyboardConfig,
     RadioProfile,
-)
-
-__all__ = ["RigConfig", "RigLoadError", "load_rig", "discover_rigs"]
-
-KNOWN_CAPABILITIES = frozenset(
-    {
-        # Receiver
-        "audio",
-        "dual_rx",
-        "dual_watch",
-        "af_level",
-        "rf_gain",
-        "squelch",
-        # RF front end
-        "attenuator",
-        "preamp",
-        "digisel",
-        "ip_plus",
-        # Antenna
-        "antenna",
-        "rx_antenna",
-        # DSP / Noise
-        "nb",
-        "nr",
-        "notch",
-        "apf",
-        "twin_peak",
-        # Filter
-        "pbt",
-        "filter_width",
-        "filter_shape",
-        "if_shift",
-        "contour",
-        # TX
-        "tx",
-        "split",
-        "vox",
-        "compressor",
-        "monitor",
-        "drive_gain",
-        "ssb_tx_bw",
-        # CW
-        "cw",
-        "break_in",
-        # RIT / XIT
-        "rit",
-        "xit",
-        # Tuner
-        "tuner",
-        # Metering
-        "meters",
-        # Scope
-        "scope",
-        # Tone
-        "repeater_tone",
-        "tsql",
-        "dtcs",
-        "csql",
-        "voice_tx",
-        # Data
-        "data_mode",
-        # System
-        "power_control",
-        "dial_lock",
-        "scan",
-        "bsr",
-        "main_sub_tracking",
-    }
 )
 
 VALID_VFO_SCHEMES = {"ab", "main_sub", "ab_shared", "single"}

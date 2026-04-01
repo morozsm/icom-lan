@@ -76,12 +76,17 @@ features = [
     "tsql",
     # Data
     "data_mode",
+    # AGC
+    "agc",
     # System
     "power_control",
     "dial_lock",
     "scan",
     "bsr",
     "main_sub_tracking",
+    "tuning_step",
+    "band_edge",
+    "xfc",
 ]
 
 # ── Parameterized Capabilities ───────────────────────────────────
