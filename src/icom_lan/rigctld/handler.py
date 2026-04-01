@@ -38,6 +38,14 @@ if TYPE_CHECKING:
 
 from ..radio_protocol import MetersCapable
 
+def _is_yaesu_radio(radio: object) -> bool:
+    """Check if radio is a YaesuCatRadio (lazy import to avoid circular deps)."""
+    try:
+        from ..backends.yaesu_cat.radio import YaesuCatRadio
+    except ImportError:
+        return False
+    return isinstance(radio, YaesuCatRadio)
+
 __all__ = ["RigctldHandler"]
 
 logger = logging.getLogger(__name__)
@@ -93,6 +101,54 @@ _IC7610_DUMP_STATE: list[str] = [
     "0x00011B3E",  # has_set_func
     "0x5401791B",  # has_get_level
     "0x0001791B",  # has_set_level
+    "0",  # has_get_parm
+    "0",  # has_set_parm
+]
+
+# ---------------------------------------------------------------------------
+# Yaesu dump_state (FTDX10 / FT-710 style)
+# ---------------------------------------------------------------------------
+# has_get_level (32-bit):
+#   RIG_LEVEL_PREAMP(0x1) | RIG_LEVEL_ATT(0x2) | RIG_LEVEL_AF(0x8)
+#   | RIG_LEVEL_RF(0x10) | RIG_LEVEL_SQL(0x20) | RIG_LEVEL_NR(0x100)
+#   | RIG_LEVEL_NB(0x200) | RIG_LEVEL_CWPITCH(0x800)
+#   | RIG_LEVEL_RFPOWER(0x1000) | RIG_LEVEL_MICGAIN(0x2000)
+#   | RIG_LEVEL_KEYSPD(0x4000) | RIG_LEVEL_NOTCHF(0x8000)
+#   | RIG_LEVEL_COMP(0x10000) | RIG_LEVEL_MONITOR_GAIN(0x40000)
+#   | RIG_LEVEL_IFSHIFT(0x80000)
+#   | RIG_LEVEL_RAWSTR(0x04000000) | RIG_LEVEL_SWR(0x10000000)
+#   | RIG_LEVEL_STRENGTH(0x40000000)
+#   = 0x540DFB3B
+#
+# has_get_func (32-bit):
+#   RIG_FUNC_NB(0x2) | RIG_FUNC_COMP(0x4) | RIG_FUNC_VOX(0x8)
+#   | RIG_FUNC_NR(0x200) | RIG_FUNC_MON(0x1000) | RIG_FUNC_LOCK(0x10000)
+#   | RIG_FUNC_TUNER(0x40000)
+#   = 0x00051A0E  (SPLIT, AGC handled via dedicated commands)
+_YAESU_DUMP_STATE: list[str] = [
+    "0",  # protocol version
+    "2028",  # rig model (generic Yaesu)
+    "1",  # ITU region
+    "30000.000000 56000000.000000 0x1ff -1 -1 0x3 0xf",  # RX range
+    "0 0 0 0 0 0 0",  # end of RX ranges
+    "1800000.000000 54000000.000000 0x1ff 5000 100000 0x3 0xf",  # TX range
+    "0 0 0 0 0 0 0",  # end of TX ranges
+    "0x1ff 1",  # tuning step (all modes, 1 Hz)
+    "0 0",  # end of tuning steps
+    "0x1ff 3000",  # filter: wide 3000 Hz
+    "0x1ff 2400",  # filter: normal 2400 Hz
+    "0x1ff 1800",  # filter: narrow 1800 Hz
+    "0 0",  # end of filters
+    "9999",  # max_rit (Yaesu clarifier)
+    "9999",  # max_xit
+    "0",  # max_ifshift
+    "0",  # announces
+    "0",  # preamp (dB values, 0-terminated — varies by model)
+    "0",  # attenuator (dB values, 0-terminated)
+    "0x00051A0E",  # has_get_func
+    "0x00051A0E",  # has_set_func
+    "0x540DFB3B",  # has_get_level
+    "0x000DFB3B",  # has_set_level
     "0",  # has_get_parm
     "0",  # has_set_parm
 ]
@@ -620,6 +676,10 @@ class RigctldHandler:
         if not cmd.args:
             return _err(HamlibError.EINVAL)
         level = cmd.args[0].upper()
+
+        if _is_yaesu_radio(self._radio):
+            return await self._yaesu_get_level(level)
+
         all_levels = (
             {"STRENGTH", "RFPOWER", "SWR", "PREAMP", "ATT", "KEYSPD", "CWPITCH"}
             | set(_GET_LEVEL_FLOAT)
@@ -708,6 +768,9 @@ class RigctldHandler:
         except ValueError:
             return _err(HamlibError.EINVAL)
 
+        if _is_yaesu_radio(self._radio):
+            return await self._yaesu_set_level(level, value)
+
         if level == "RFPOWER":
             await self._radio.set_rf_power(round(value * 255))
             return _ok()
@@ -750,6 +813,10 @@ class RigctldHandler:
         if not cmd.args:
             return _err(HamlibError.EINVAL)
         func = cmd.args[0].upper()
+
+        if _is_yaesu_radio(self._radio):
+            return await self._yaesu_get_func(func)
+
         if func not in _FUNC_GET:
             return _err(HamlibError.EINVAL)
         result = await getattr(self._radio, _FUNC_GET[func])()
@@ -760,11 +827,15 @@ class RigctldHandler:
         if len(cmd.args) < 2:
             return _err(HamlibError.EINVAL)
         func = cmd.args[0].upper()
-        if func not in _FUNC_SET:
-            return _err(HamlibError.EINVAL)
         try:
             on = bool(int(cmd.args[1]))
         except ValueError:
+            return _err(HamlibError.EINVAL)
+
+        if _is_yaesu_radio(self._radio):
+            return await self._yaesu_set_func(func, on)
+
+        if func not in _FUNC_SET:
             return _err(HamlibError.EINVAL)
         if func == "APF":
             # APF takes an int mode: 0=off, 1=soft
@@ -799,6 +870,8 @@ class RigctldHandler:
     # ------------------------------------------------------------------
 
     async def _cmd_dump_state(self, cmd: RigctldCommand) -> RigctldResponse:
+        if _is_yaesu_radio(self._radio):
+            return RigctldResponse(values=list(_YAESU_DUMP_STATE))
         return RigctldResponse(values=list(_IC7610_DUMP_STATE))
 
     async def _cmd_dump_caps(self, cmd: RigctldCommand) -> RigctldResponse:
@@ -807,6 +880,8 @@ class RigctldHandler:
     async def _cmd_get_info(self, cmd: RigctldCommand) -> RigctldResponse:
         raw_model = getattr(self._radio, "model", "IC-7610")
         model = raw_model if isinstance(raw_model, str) and raw_model else "IC-7610"
+        if _is_yaesu_radio(self._radio):
+            return RigctldResponse(values=[f"Yaesu {model} (icom-lan)"])
         return RigctldResponse(values=[f"Icom {model} (icom-lan)"])
 
     async def _cmd_chk_vfo(self, cmd: RigctldCommand) -> RigctldResponse:
@@ -856,6 +931,245 @@ class RigctldHandler:
     async def _cmd_get_lock_mode(self, cmd: RigctldCommand) -> RigctldResponse:
         """Get lock mode — always unlocked."""
         return RigctldResponse(values=["0"])
+
+    # ------------------------------------------------------------------
+    # Yaesu-specific level/func routing
+    # ------------------------------------------------------------------
+
+    # Yaesu CW pitch: index 0–75 maps to 300–1050 Hz in 10 Hz steps
+    _YAESU_CW_PITCH_BASE: int = 300
+    _YAESU_CW_PITCH_STEP: int = 10
+
+    async def _yaesu_get_level(self, level: str) -> RigctldResponse:
+        """Dispatch get_level for YaesuCatRadio."""
+        radio = self._radio
+
+        if level == "STRENGTH":
+            raw = await radio.get_s_meter()
+            self._cache.update_s_meter(raw)
+            # Yaesu S-meter 0–255 → approximate dB scale (-54 to +60)
+            return RigctldResponse(values=[str(round((raw / 255.0) * 114.0 - 54.0))])
+
+        if level == "RAWSTR":
+            raw = await radio.get_s_meter()
+            self._cache.update_s_meter(raw)
+            return RigctldResponse(values=[str(raw)])
+
+        if level == "RFPOWER":
+            raw = await radio.get_rf_power()
+            normalized = raw / self._MAX_POWER_W
+            self._cache.update_rf_power(normalized)
+            return RigctldResponse(values=[f"{normalized:.6f}"])
+
+        if level == "SWR":
+            swr = float(await radio.get_swr())
+            self._cache.update_swr(swr)
+            return RigctldResponse(values=[f"{swr:.6f}"])
+
+        # 0–255 float levels (same scale as Icom)
+        if level in ("AF", "RF", "SQL"):
+            method = {"AF": "get_af_level", "RF": "get_rf_gain", "SQL": "get_squelch"}[level]
+            raw = await getattr(radio, method)()
+            return RigctldResponse(values=[f"{raw / 255.0:.6f}"])
+
+        # 0–100 float levels
+        if level == "MICGAIN":
+            raw = await radio.get_mic_gain()
+            return RigctldResponse(values=[f"{raw / 100.0:.6f}"])
+
+        if level == "MONITOR_GAIN":
+            raw = await radio.get_monitor_level()
+            return RigctldResponse(values=[f"{raw / 100.0:.6f}"])
+
+        if level == "COMP":
+            raw = await radio.get_compressor_level()
+            return RigctldResponse(values=[f"{raw / 100.0:.6f}"])
+
+        # NB: 0–10 → 0.0–1.0
+        if level == "NB":
+            raw = await radio.get_nb_level()
+            return RigctldResponse(values=[f"{raw / 10.0:.6f}"])
+
+        # NR: 0–15 → 0.0–1.0
+        if level == "NR":
+            raw = await radio.get_nr_level()
+            return RigctldResponse(values=[f"{raw / 15.0:.6f}"])
+
+        # NOTCHF: manual notch frequency index (0–255)
+        if level == "NOTCHF":
+            _enabled, freq_idx = await radio.get_manual_notch()
+            return RigctldResponse(values=[str(freq_idx)])
+
+        # IF shift: signed Hz
+        if level == "IFSHIFT":
+            offset = await radio.get_if_shift()
+            return RigctldResponse(values=[str(offset)])
+
+        # CW pitch: convert Yaesu index (0–75) to Hz (300–1050)
+        if level == "CWPITCH":
+            idx = await radio.get_cw_pitch()
+            hz = self._YAESU_CW_PITCH_BASE + idx * self._YAESU_CW_PITCH_STEP
+            return RigctldResponse(values=[str(hz)])
+
+        # Key speed: WPM (pass through)
+        if level == "KEYSPD":
+            wpm = await radio.get_key_speed()
+            return RigctldResponse(values=[str(wpm)])
+
+        # Meters
+        if level == "COMP_METER":
+            raw = await radio.get_comp_meter()
+            return RigctldResponse(values=[f"{raw / 255.0:.6f}"])
+
+        if level == "ID_METER":
+            raw = await radio.get_id_meter()
+            return RigctldResponse(values=[f"{raw / 255.0:.6f}"])
+
+        if level == "VD_METER":
+            raw = await radio.get_vd_meter()
+            return RigctldResponse(values=[f"{raw / 255.0:.6f}"])
+
+        # PREAMP / ATT
+        if level == "PREAMP":
+            idx = await radio.get_preamp()
+            return RigctldResponse(values=[str(idx)])
+
+        if level == "ATT":
+            val = await radio.get_attenuator()
+            return RigctldResponse(values=[str(val)])
+
+        return _err(HamlibError.EINVAL)
+
+    async def _yaesu_set_level(self, level: str, value: float) -> RigctldResponse:
+        """Dispatch set_level for YaesuCatRadio."""
+        radio = self._radio
+
+        if level == "RFPOWER":
+            await radio.set_power(round(value * self._MAX_POWER_W))
+            return _ok()
+
+        # 0–255 float levels (same scale as Icom)
+        if level in ("AF", "RF", "SQL"):
+            method = {"AF": "set_af_level", "RF": "set_rf_gain", "SQL": "set_squelch"}[level]
+            await getattr(radio, method)(max(0, min(255, round(value * 255))))
+            return _ok()
+
+        # 0–100 float levels
+        if level == "MICGAIN":
+            await radio.set_mic_gain(max(0, min(100, round(value * 100))))
+            return _ok()
+
+        if level == "MONITOR_GAIN":
+            await radio.set_monitor_level(max(0, min(100, round(value * 100))))
+            return _ok()
+
+        if level == "COMP":
+            await radio.set_compressor_level(max(0, min(100, round(value * 100))))
+            return _ok()
+
+        # NB: 0.0–1.0 → 0–10
+        if level == "NB":
+            await radio.set_nb_level(max(0, min(10, round(value * 10))))
+            return _ok()
+
+        # NR: 0.0–1.0 → 0–15
+        if level == "NR":
+            await radio.set_nr_level(max(0, min(15, round(value * 15))))
+            return _ok()
+
+        # NOTCHF: frequency index (integer)
+        if level == "NOTCHF":
+            await radio.set_manual_notch_freq(round(value))
+            return _ok()
+
+        # IF shift: signed Hz (integer)
+        if level == "IFSHIFT":
+            await radio.set_if_shift(round(value))
+            return _ok()
+
+        # CW pitch: Hz → Yaesu index
+        if level == "CWPITCH":
+            idx = max(0, min(75, round((value - self._YAESU_CW_PITCH_BASE) / self._YAESU_CW_PITCH_STEP)))
+            await radio.set_cw_pitch(idx)
+            return _ok()
+
+        # Key speed: WPM
+        if level == "KEYSPD":
+            await radio.set_key_speed(round(value))
+            return _ok()
+
+        # PREAMP / ATT
+        if level == "PREAMP":
+            await radio.set_preamp(round(value))
+            return _ok()
+
+        if level == "ATT":
+            await radio.set_attenuator(round(value))
+            return _ok()
+
+        return _err(HamlibError.EINVAL)
+
+    async def _yaesu_get_func(self, func: str) -> RigctldResponse:
+        """Dispatch get_func for YaesuCatRadio."""
+        radio = self._radio
+
+        if func == "VOX":
+            return RigctldResponse(values=[str(int(await radio.get_vox()))])
+        if func == "TUNER":
+            # get_tuner() returns int: 0=OFF, >=1=ON/tuning
+            return RigctldResponse(values=[str(int(await radio.get_tuner() > 0))])
+        if func == "COMP":
+            return RigctldResponse(values=[str(int(await radio.get_processor()))])
+        if func == "NB":
+            return RigctldResponse(values=[str(int(await radio.get_nb_level() > 0))])
+        if func == "NR":
+            return RigctldResponse(values=[str(int(await radio.get_nr_level() > 0))])
+        if func == "LOCK":
+            return RigctldResponse(values=[str(int(await radio.get_lock()))])
+        if func == "SPLIT":
+            return RigctldResponse(values=[str(int(await radio.get_split()))])
+        if func == "AGC":
+            # AGC: 0=OFF, >0=some AGC mode active
+            return RigctldResponse(values=[str(int(await radio.get_agc() > 0))])
+        if func == "MON":
+            return RigctldResponse(values=[str(int(await radio.get_monitor_on()))])
+
+        return _err(HamlibError.EINVAL)
+
+    async def _yaesu_set_func(self, func: str, on: bool) -> RigctldResponse:
+        """Dispatch set_func for YaesuCatRadio."""
+        radio = self._radio
+
+        if func == "VOX":
+            await radio.set_vox(on)
+            return _ok()
+        if func == "TUNER":
+            await radio.set_tuner(1 if on else 0)
+            return _ok()
+        if func == "COMP":
+            await radio.set_processor(on)
+            return _ok()
+        if func == "NB":
+            await radio.set_nb(on)
+            return _ok()
+        if func == "NR":
+            await radio.set_nr(on)
+            return _ok()
+        if func == "LOCK":
+            await radio.set_lock(on)
+            return _ok()
+        if func == "SPLIT":
+            await radio.set_split(on)
+            return _ok()
+        if func == "AGC":
+            # ON → FAST (1), OFF → 0
+            await radio.set_agc(1 if on else 0)
+            return _ok()
+        if func == "MON":
+            await radio.set_monitor_on(on)
+            return _ok()
+
+        return _err(HamlibError.EINVAL)
 
     # ------------------------------------------------------------------
     # Raw CI-V passthrough (hamlib 'w' command)

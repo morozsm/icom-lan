@@ -1560,3 +1560,543 @@ async def test_send_raw_no_send_civ_raw_returns_enimpl(config: RigctldConfig) ->
     handler = RigctldHandler(_NoRawRadio(), config)  # type: ignore[arg-type]
     resp = await handler.execute(get_cmd("send_raw", "FE", "FE", "98", "E0", "03", "FD"))
     assert resp.error == HamlibError.ENIMPL
+
+
+# ---------------------------------------------------------------------------
+# Yaesu-specific level/func routing
+# ---------------------------------------------------------------------------
+
+from icom_lan.backends.yaesu_cat.radio import YaesuCatRadio
+
+
+class _FakeYaesuRadio(YaesuCatRadio):
+    """A YaesuCatRadio subclass that bypasses __init__ for testing."""
+
+    def __init__(self) -> None:
+        # Skip real __init__ — we only need isinstance() to pass
+        pass
+
+
+@pytest.fixture
+def yaesu_radio() -> AsyncMock:
+    """AsyncMock that isinstance-checks as YaesuCatRadio."""
+    mock = AsyncMock(spec=_FakeYaesuRadio)
+    return mock
+
+
+@pytest.fixture
+def yaesu_handler(yaesu_radio: AsyncMock, config: RigctldConfig) -> RigctldHandler:
+    return RigctldHandler(yaesu_radio, config)
+
+
+# -- Yaesu get_level ----------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_yaesu_get_level_strength(
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
+) -> None:
+    yaesu_radio.get_s_meter.return_value = 128
+    resp = await yaesu_handler.execute(get_cmd("get_level", "STRENGTH"))
+    assert resp.ok
+    db = int(resp.values[0])
+    assert -60 <= db <= 70
+    yaesu_radio.get_s_meter.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_yaesu_get_level_rawstr(
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
+) -> None:
+    yaesu_radio.get_s_meter.return_value = 200
+    resp = await yaesu_handler.execute(get_cmd("get_level", "RAWSTR"))
+    assert resp.ok
+    assert resp.values == ["200"]
+
+
+@pytest.mark.asyncio
+async def test_yaesu_get_level_rfpower(
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
+) -> None:
+    yaesu_radio.get_rf_power.return_value = 50  # 50 watts
+    resp = await yaesu_handler.execute(get_cmd("get_level", "RFPOWER"))
+    assert resp.ok
+    assert float(resp.values[0]) == pytest.approx(0.5, abs=0.01)
+
+
+@pytest.mark.asyncio
+async def test_yaesu_get_level_swr(
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
+) -> None:
+    yaesu_radio.get_swr.return_value = 2.5
+    resp = await yaesu_handler.execute(get_cmd("get_level", "SWR"))
+    assert resp.ok
+    assert float(resp.values[0]) == pytest.approx(2.5)
+
+
+@pytest.mark.asyncio
+async def test_yaesu_get_level_af(
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
+) -> None:
+    yaesu_radio.get_af_level.return_value = 128
+    resp = await yaesu_handler.execute(get_cmd("get_level", "AF"))
+    assert resp.ok
+    assert float(resp.values[0]) == pytest.approx(128 / 255.0, abs=0.001)
+
+
+@pytest.mark.asyncio
+async def test_yaesu_get_level_micgain(
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
+) -> None:
+    yaesu_radio.get_mic_gain.return_value = 75  # 0-100 scale
+    resp = await yaesu_handler.execute(get_cmd("get_level", "MICGAIN"))
+    assert resp.ok
+    assert float(resp.values[0]) == pytest.approx(0.75, abs=0.01)
+
+
+@pytest.mark.asyncio
+async def test_yaesu_get_level_nb(
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
+) -> None:
+    yaesu_radio.get_nb_level.return_value = 5  # 0-10 scale
+    resp = await yaesu_handler.execute(get_cmd("get_level", "NB"))
+    assert resp.ok
+    assert float(resp.values[0]) == pytest.approx(0.5, abs=0.01)
+
+
+@pytest.mark.asyncio
+async def test_yaesu_get_level_nr(
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
+) -> None:
+    yaesu_radio.get_nr_level.return_value = 8  # 0-15 scale
+    resp = await yaesu_handler.execute(get_cmd("get_level", "NR"))
+    assert resp.ok
+    assert float(resp.values[0]) == pytest.approx(8 / 15.0, abs=0.001)
+
+
+@pytest.mark.asyncio
+async def test_yaesu_get_level_cwpitch(
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
+) -> None:
+    yaesu_radio.get_cw_pitch.return_value = 40  # index → 300 + 40*10 = 700 Hz
+    resp = await yaesu_handler.execute(get_cmd("get_level", "CWPITCH"))
+    assert resp.ok
+    assert resp.values == ["700"]
+
+
+@pytest.mark.asyncio
+async def test_yaesu_get_level_keyspd(
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
+) -> None:
+    yaesu_radio.get_key_speed.return_value = 25
+    resp = await yaesu_handler.execute(get_cmd("get_level", "KEYSPD"))
+    assert resp.ok
+    assert resp.values == ["25"]
+
+
+@pytest.mark.asyncio
+async def test_yaesu_get_level_notchf(
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
+) -> None:
+    yaesu_radio.get_manual_notch.return_value = (True, 150)
+    resp = await yaesu_handler.execute(get_cmd("get_level", "NOTCHF"))
+    assert resp.ok
+    assert resp.values == ["150"]
+
+
+@pytest.mark.asyncio
+async def test_yaesu_get_level_ifshift(
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
+) -> None:
+    yaesu_radio.get_if_shift.return_value = -200
+    resp = await yaesu_handler.execute(get_cmd("get_level", "IFSHIFT"))
+    assert resp.ok
+    assert resp.values == ["-200"]
+
+
+@pytest.mark.asyncio
+async def test_yaesu_get_level_monitor_gain(
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
+) -> None:
+    yaesu_radio.get_monitor_level.return_value = 50  # 0-100
+    resp = await yaesu_handler.execute(get_cmd("get_level", "MONITOR_GAIN"))
+    assert resp.ok
+    assert float(resp.values[0]) == pytest.approx(0.5, abs=0.01)
+
+
+@pytest.mark.asyncio
+async def test_yaesu_get_level_unknown_returns_einval(
+    yaesu_handler: RigctldHandler,
+) -> None:
+    resp = await yaesu_handler.execute(get_cmd("get_level", "PBT_IN"))
+    assert resp.error == HamlibError.EINVAL
+
+
+# -- Yaesu set_level ----------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_yaesu_set_level_rfpower(
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
+) -> None:
+    resp = await yaesu_handler.execute(set_cmd("set_level", "RFPOWER", "0.5"))
+    assert resp.ok
+    yaesu_radio.set_power.assert_awaited_once_with(50)  # 0.5 * 100W
+
+
+@pytest.mark.asyncio
+async def test_yaesu_set_level_af(
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
+) -> None:
+    resp = await yaesu_handler.execute(set_cmd("set_level", "AF", "0.5"))
+    assert resp.ok
+    yaesu_radio.set_af_level.assert_awaited_once_with(128)  # 0.5 * 255 rounded
+
+
+@pytest.mark.asyncio
+async def test_yaesu_set_level_micgain(
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
+) -> None:
+    resp = await yaesu_handler.execute(set_cmd("set_level", "MICGAIN", "0.75"))
+    assert resp.ok
+    yaesu_radio.set_mic_gain.assert_awaited_once_with(75)  # 0.75 * 100
+
+
+@pytest.mark.asyncio
+async def test_yaesu_set_level_nb(
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
+) -> None:
+    resp = await yaesu_handler.execute(set_cmd("set_level", "NB", "0.5"))
+    assert resp.ok
+    yaesu_radio.set_nb_level.assert_awaited_once_with(5)  # 0.5 * 10
+
+
+@pytest.mark.asyncio
+async def test_yaesu_set_level_nr(
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
+) -> None:
+    resp = await yaesu_handler.execute(set_cmd("set_level", "NR", "0.5"))
+    assert resp.ok
+    yaesu_radio.set_nr_level.assert_awaited_once_with(8)  # round(0.5 * 15)
+
+
+@pytest.mark.asyncio
+async def test_yaesu_set_level_cwpitch(
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
+) -> None:
+    resp = await yaesu_handler.execute(set_cmd("set_level", "CWPITCH", "700"))
+    assert resp.ok
+    yaesu_radio.set_cw_pitch.assert_awaited_once_with(40)  # (700 - 300) / 10
+
+
+@pytest.mark.asyncio
+async def test_yaesu_set_level_keyspd(
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
+) -> None:
+    resp = await yaesu_handler.execute(set_cmd("set_level", "KEYSPD", "30"))
+    assert resp.ok
+    yaesu_radio.set_key_speed.assert_awaited_once_with(30)
+
+
+@pytest.mark.asyncio
+async def test_yaesu_set_level_notchf(
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
+) -> None:
+    resp = await yaesu_handler.execute(set_cmd("set_level", "NOTCHF", "150"))
+    assert resp.ok
+    yaesu_radio.set_manual_notch_freq.assert_awaited_once_with(150)
+
+
+@pytest.mark.asyncio
+async def test_yaesu_set_level_ifshift(
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
+) -> None:
+    resp = await yaesu_handler.execute(set_cmd("set_level", "IFSHIFT", "-200"))
+    assert resp.ok
+    yaesu_radio.set_if_shift.assert_awaited_once_with(-200)
+
+
+@pytest.mark.asyncio
+async def test_yaesu_set_level_unknown_returns_einval(
+    yaesu_handler: RigctldHandler,
+) -> None:
+    resp = await yaesu_handler.execute(set_cmd("set_level", "PBT_IN", "0.5"))
+    assert resp.error == HamlibError.EINVAL
+
+
+# -- Yaesu get_func -----------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_yaesu_get_func_vox(
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
+) -> None:
+    yaesu_radio.get_vox.return_value = True
+    resp = await yaesu_handler.execute(get_cmd("get_func", "VOX"))
+    assert resp.ok
+    assert resp.values == ["1"]
+
+
+@pytest.mark.asyncio
+async def test_yaesu_get_func_tuner(
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
+) -> None:
+    yaesu_radio.get_tuner.return_value = 1  # ON
+    resp = await yaesu_handler.execute(get_cmd("get_func", "TUNER"))
+    assert resp.ok
+    assert resp.values == ["1"]
+
+
+@pytest.mark.asyncio
+async def test_yaesu_get_func_tuner_off(
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
+) -> None:
+    yaesu_radio.get_tuner.return_value = 0  # OFF
+    resp = await yaesu_handler.execute(get_cmd("get_func", "TUNER"))
+    assert resp.ok
+    assert resp.values == ["0"]
+
+
+@pytest.mark.asyncio
+async def test_yaesu_get_func_comp(
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
+) -> None:
+    yaesu_radio.get_processor.return_value = True
+    resp = await yaesu_handler.execute(get_cmd("get_func", "COMP"))
+    assert resp.ok
+    assert resp.values == ["1"]
+
+
+@pytest.mark.asyncio
+async def test_yaesu_get_func_nb(
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
+) -> None:
+    yaesu_radio.get_nb_level.return_value = 5  # > 0 means ON
+    resp = await yaesu_handler.execute(get_cmd("get_func", "NB"))
+    assert resp.ok
+    assert resp.values == ["1"]
+
+
+@pytest.mark.asyncio
+async def test_yaesu_get_func_nb_off(
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
+) -> None:
+    yaesu_radio.get_nb_level.return_value = 0
+    resp = await yaesu_handler.execute(get_cmd("get_func", "NB"))
+    assert resp.ok
+    assert resp.values == ["0"]
+
+
+@pytest.mark.asyncio
+async def test_yaesu_get_func_nr(
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
+) -> None:
+    yaesu_radio.get_nr_level.return_value = 3
+    resp = await yaesu_handler.execute(get_cmd("get_func", "NR"))
+    assert resp.ok
+    assert resp.values == ["1"]
+
+
+@pytest.mark.asyncio
+async def test_yaesu_get_func_lock(
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
+) -> None:
+    yaesu_radio.get_lock.return_value = True
+    resp = await yaesu_handler.execute(get_cmd("get_func", "LOCK"))
+    assert resp.ok
+    assert resp.values == ["1"]
+
+
+@pytest.mark.asyncio
+async def test_yaesu_get_func_split(
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
+) -> None:
+    yaesu_radio.get_split.return_value = True
+    resp = await yaesu_handler.execute(get_cmd("get_func", "SPLIT"))
+    assert resp.ok
+    assert resp.values == ["1"]
+
+
+@pytest.mark.asyncio
+async def test_yaesu_get_func_agc(
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
+) -> None:
+    yaesu_radio.get_agc.return_value = 3  # SLOW, > 0 means active
+    resp = await yaesu_handler.execute(get_cmd("get_func", "AGC"))
+    assert resp.ok
+    assert resp.values == ["1"]
+
+
+@pytest.mark.asyncio
+async def test_yaesu_get_func_mon(
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
+) -> None:
+    yaesu_radio.get_monitor_on.return_value = True
+    resp = await yaesu_handler.execute(get_cmd("get_func", "MON"))
+    assert resp.ok
+    assert resp.values == ["1"]
+
+
+@pytest.mark.asyncio
+async def test_yaesu_get_func_unknown_returns_einval(
+    yaesu_handler: RigctldHandler,
+) -> None:
+    resp = await yaesu_handler.execute(get_cmd("get_func", "APF"))
+    assert resp.error == HamlibError.EINVAL
+
+
+# -- Yaesu set_func -----------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_yaesu_set_func_vox(
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
+) -> None:
+    resp = await yaesu_handler.execute(set_cmd("set_func", "VOX", "1"))
+    assert resp.ok
+    yaesu_radio.set_vox.assert_awaited_once_with(True)
+
+
+@pytest.mark.asyncio
+async def test_yaesu_set_func_tuner(
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
+) -> None:
+    resp = await yaesu_handler.execute(set_cmd("set_func", "TUNER", "1"))
+    assert resp.ok
+    yaesu_radio.set_tuner.assert_awaited_once_with(1)
+
+
+@pytest.mark.asyncio
+async def test_yaesu_set_func_comp(
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
+) -> None:
+    resp = await yaesu_handler.execute(set_cmd("set_func", "COMP", "1"))
+    assert resp.ok
+    yaesu_radio.set_processor.assert_awaited_once_with(True)
+
+
+@pytest.mark.asyncio
+async def test_yaesu_set_func_nb(
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
+) -> None:
+    resp = await yaesu_handler.execute(set_cmd("set_func", "NB", "1"))
+    assert resp.ok
+    yaesu_radio.set_nb.assert_awaited_once_with(True)
+
+
+@pytest.mark.asyncio
+async def test_yaesu_set_func_nr(
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
+) -> None:
+    resp = await yaesu_handler.execute(set_cmd("set_func", "NR", "0"))
+    assert resp.ok
+    yaesu_radio.set_nr.assert_awaited_once_with(False)
+
+
+@pytest.mark.asyncio
+async def test_yaesu_set_func_lock(
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
+) -> None:
+    resp = await yaesu_handler.execute(set_cmd("set_func", "LOCK", "1"))
+    assert resp.ok
+    yaesu_radio.set_lock.assert_awaited_once_with(True)
+
+
+@pytest.mark.asyncio
+async def test_yaesu_set_func_split(
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
+) -> None:
+    resp = await yaesu_handler.execute(set_cmd("set_func", "SPLIT", "1"))
+    assert resp.ok
+    yaesu_radio.set_split.assert_awaited_once_with(True)
+
+
+@pytest.mark.asyncio
+async def test_yaesu_set_func_agc_on(
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
+) -> None:
+    resp = await yaesu_handler.execute(set_cmd("set_func", "AGC", "1"))
+    assert resp.ok
+    yaesu_radio.set_agc.assert_awaited_once_with(1)  # ON → FAST
+
+
+@pytest.mark.asyncio
+async def test_yaesu_set_func_agc_off(
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
+) -> None:
+    resp = await yaesu_handler.execute(set_cmd("set_func", "AGC", "0"))
+    assert resp.ok
+    yaesu_radio.set_agc.assert_awaited_once_with(0)
+
+
+@pytest.mark.asyncio
+async def test_yaesu_set_func_mon(
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
+) -> None:
+    resp = await yaesu_handler.execute(set_cmd("set_func", "MON", "1"))
+    assert resp.ok
+    yaesu_radio.set_monitor_on.assert_awaited_once_with(True)
+
+
+@pytest.mark.asyncio
+async def test_yaesu_set_func_unknown_returns_einval(
+    yaesu_handler: RigctldHandler,
+) -> None:
+    resp = await yaesu_handler.execute(set_cmd("set_func", "APF", "1"))
+    assert resp.error == HamlibError.EINVAL
+
+
+# -- Yaesu dump_state / get_info ----------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_yaesu_dump_state(
+    yaesu_handler: RigctldHandler,
+) -> None:
+    resp = await yaesu_handler.execute(get_cmd("dump_state"))
+    assert resp.ok
+    assert resp.values[1] == "2028"  # Yaesu rig model
+
+
+@pytest.mark.asyncio
+async def test_yaesu_get_info(
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
+) -> None:
+    yaesu_radio.model = "FTDX10"
+    resp = await yaesu_handler.execute(get_cmd("get_info"))
+    assert resp.ok
+    assert "Yaesu" in resp.values[0]
+    assert "FTDX10" in resp.values[0]
+
+
+# -- Verify Icom routing is NOT broken ----------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_icom_get_level_still_works(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    """Ensure adding Yaesu branches didn't break Icom routing."""
+    mock_radio.get_s_meter.return_value = 120
+    resp = await handler.execute(get_cmd("get_level", "STRENGTH"))
+    assert resp.ok
+
+
+@pytest.mark.asyncio
+async def test_icom_get_func_still_works(
+    handler: RigctldHandler, mock_radio: AsyncMock
+) -> None:
+    """Ensure adding Yaesu branches didn't break Icom func routing."""
+    mock_radio.get_vox.return_value = True
+    resp = await handler.execute(get_cmd("get_func", "VOX"))
+    assert resp.ok
+    assert resp.values == ["1"]
+
+
+@pytest.mark.asyncio
+async def test_icom_dump_state_unchanged(
+    handler: RigctldHandler,
+) -> None:
+    resp = await handler.execute(get_cmd("dump_state"))
+    assert resp.ok
+    assert resp.values[1] == "3078"  # IC-7610 model
