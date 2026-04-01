@@ -3,6 +3,7 @@
   import { ValueControl, rawToPercentDisplay } from '../controls/value-control';
   import { hasTx, hasCapability } from '$lib/stores/capabilities.svelte';
   import { txStatusColor } from './tx-utils';
+  import { audioManager } from '$lib/audio/audio-manager';
 
   interface Props {
     txActive: boolean;
@@ -53,7 +54,7 @@
 
   function startPttSafety() {
     clearPttSafety();
-    pttSafetyTimer = setTimeout(() => { pttMode = 'idle'; onPttOff?.(); }, PTT_SAFETY_MS);
+    pttSafetyTimer = setTimeout(() => { pttMode = 'idle'; onPttOff?.(); audioManager.stopTx(); }, PTT_SAFETY_MS);
   }
   function clearPttSafety() {
     if (pttSafetyTimer) { clearTimeout(pttSafetyTimer); pttSafetyTimer = null; }
@@ -61,20 +62,21 @@
 
   function pttDown() {
     const now = Date.now();
-    if (pttMode === 'latched') { pttMode = 'idle'; onPttOff?.(); clearPttSafety(); return; }
+    if (pttMode === 'latched') { pttMode = 'idle'; onPttOff?.(); audioManager.stopTx(); clearPttSafety(); return; }
     if (now - lastPttDown < PTT_DOUBLE_TAP_MS && pttMode === 'held') {
       pttMode = 'latched'; startPttSafety(); lastPttDown = 0; return;
     }
     lastPttDown = now;
     pttMode = 'held';
     onPttOn?.();
+    audioManager.startTx();
     startPttSafety();
   }
 
   function pttUp() {
     if (pttMode === 'held') {
       setTimeout(() => {
-        if (pttMode === 'held') { pttMode = 'idle'; onPttOff?.(); clearPttSafety(); }
+        if (pttMode === 'held') { pttMode = 'idle'; onPttOff?.(); audioManager.stopTx(); clearPttSafety(); }
       }, PTT_DOUBLE_TAP_MS);
     }
   }
