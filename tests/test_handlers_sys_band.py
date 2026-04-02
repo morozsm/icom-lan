@@ -13,6 +13,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from _caps import FULL_ICOM_CAPS
 from icom_lan.profiles import resolve_radio_profile
 from icom_lan.web.handlers import ControlHandler
 from icom_lan.web.radio_poller import (
@@ -37,15 +38,7 @@ from icom_lan.web.radio_poller import (
 def _capable_radio() -> SimpleNamespace:
     """Radio mock satisfying AdvancedControlCapable + TransceiverStatusCapable."""
     return SimpleNamespace(
-        capabilities={
-            "audio", "scope", "meters", "power_control", "af_level", "rf_gain",
-            "squelch", "cw", "attenuator", "preamp", "antenna", "rx_antenna",
-            "system_settings", "dual_watch", "tuner", "data_mode", "nb", "nr",
-            "ip_plus", "digisel", "vox", "compressor", "break_in", "notch",
-            "apf", "repeater_tone", "tsql", "main_sub_tracking", "ssb_tx_bw",
-            "filter_width", "filter_shape", "tx", "dual_rx", "agc",
-            "tuning_step", "band_edge", "xfc",
-        },
+        capabilities=set(FULL_ICOM_CAPS),
         profile=resolve_radio_profile(model="IC-7610"),
         # ScopeCapable attrs required for isinstance check
         enable_scope=AsyncMock(),
