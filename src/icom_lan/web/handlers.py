@@ -157,7 +157,25 @@ from .websocket import WS_OP_BINARY, WS_OP_TEXT, WebSocketConnection
 if TYPE_CHECKING:
     from ..radio_protocol import Radio
 
-from ..radio_protocol import AdvancedControlCapable, LevelsCapable, MemoryCapable, PowerControlCapable, TransceiverStatusCapable
+from ..capabilities import (
+    CAP_AF_LEVEL,
+    CAP_ANTENNA,
+    CAP_AUDIO,
+    CAP_BAND_EDGE,
+    CAP_BREAK_IN,
+    CAP_CW,
+    CAP_DATA_MODE,
+    CAP_DUAL_WATCH,
+    CAP_POWER_CONTROL,
+    CAP_RF_GAIN,
+    CAP_SQUELCH,
+    CAP_SYSTEM_SETTINGS,
+    CAP_TUNER,
+    CAP_TUNING_STEP,
+    CAP_TX,
+    CAP_XFC,
+)
+from ..radio_protocol import MemoryCapable
 
 __all__ = [
     "HIGH_WATERMARK",
@@ -807,67 +825,67 @@ class ControlHandler:
         if name == "get_system_date":
             if self._radio is None:
                 raise RuntimeError("radio connection not available")
-            if not isinstance(self._radio, AdvancedControlCapable):
+            if CAP_SYSTEM_SETTINGS not in self._radio.capabilities:
                 raise RuntimeError("radio does not support this command")
-            year, month, day = await self._radio.get_system_date()
+            year, month, day = await self._radio.get_system_date()  # type: ignore[union-attr]
             return {"year": year, "month": month, "day": day}
         if name == "get_system_time":
             if self._radio is None:
                 raise RuntimeError("radio connection not available")
-            if not isinstance(self._radio, AdvancedControlCapable):
+            if CAP_SYSTEM_SETTINGS not in self._radio.capabilities:
                 raise RuntimeError("radio does not support this command")
-            hour, minute = await self._radio.get_system_time()
+            hour, minute = await self._radio.get_system_time()  # type: ignore[union-attr]
             return {"hour": hour, "minute": minute}
         if name == "get_dual_watch":
             if self._radio is None:
                 raise RuntimeError("radio connection not available")
-            if not isinstance(self._radio, AdvancedControlCapable):
+            if CAP_DUAL_WATCH not in self._radio.capabilities:
                 raise RuntimeError("radio does not support this command")
-            on = await self._radio.get_dual_watch()
+            on = await self._radio.get_dual_watch()  # type: ignore[union-attr]
             return {"on": on}
         if name == "get_tuner_status":
             if self._radio is None:
                 raise RuntimeError("radio connection not available")
-            if not isinstance(self._radio, AdvancedControlCapable):
+            if CAP_TUNER not in self._radio.capabilities:
                 raise RuntimeError("radio does not support this command")
-            status = await self._radio.get_tuner_status()
+            status = await self._radio.get_tuner_status()  # type: ignore[union-attr]
             label = {0: "OFF", 1: "ON", 2: "TUNING"}.get(status, "UNKNOWN")
             return {"status": status, "label": label}
         if name == "send_cw_text":
             if self._radio is None:
                 raise RuntimeError("radio connection not available")
-            if not isinstance(self._radio, AdvancedControlCapable):
+            if CAP_CW not in self._radio.capabilities:
                 raise RuntimeError("radio does not support this command")
             text = str(params.get("text", ""))
             if len(text) > 30:
                 raise ValueError(f"CW text too long: max 30 characters, got {len(text)}")
-            await self._radio.send_cw_text(text)
+            await self._radio.send_cw_text(text)  # type: ignore[union-attr]
             return {"text": text}
         if name == "stop_cw_text":
             if self._radio is None:
                 raise RuntimeError("radio connection not available")
-            if not isinstance(self._radio, AdvancedControlCapable):
+            if CAP_CW not in self._radio.capabilities:
                 raise RuntimeError("radio does not support this command")
-            await self._radio.stop_cw_text()
+            await self._radio.stop_cw_text()  # type: ignore[union-attr]
             return {}
         if name == "get_break_in_delay":
             if self._radio is None:
                 raise RuntimeError("radio connection not available")
-            if not isinstance(self._radio, AdvancedControlCapable):
+            if CAP_BREAK_IN not in self._radio.capabilities:
                 raise RuntimeError("radio does not support this command")
-            level = await self._radio.get_break_in_delay()
+            level = await self._radio.get_break_in_delay()  # type: ignore[union-attr]
             return {"level": level}
         if name == "get_dash_ratio":
             if self._radio is None:
                 raise RuntimeError("radio connection not available")
-            if not isinstance(self._radio, AdvancedControlCapable):
+            if CAP_CW not in self._radio.capabilities:
                 raise RuntimeError("radio does not support this command")
-            value = await self._radio.get_dash_ratio()
+            value = await self._radio.get_dash_ratio()  # type: ignore[union-attr]
             return {"value": value}
         if name in ("get_acc1_mod_level", "get_usb_mod_level", "get_lan_mod_level"):
             if self._radio is None:
                 raise RuntimeError("radio connection not available")
-            if not isinstance(self._radio, AdvancedControlCapable):
+            if CAP_DATA_MODE not in self._radio.capabilities:
                 raise RuntimeError("radio does not support this command")
             level = await getattr(self._radio, name)()
             return {"level": level}
@@ -879,7 +897,7 @@ class ControlHandler:
         ):
             if self._radio is None:
                 raise RuntimeError("radio connection not available")
-            if not isinstance(self._radio, AdvancedControlCapable):
+            if CAP_DATA_MODE not in self._radio.capabilities:
                 raise RuntimeError("radio does not support this command")
             source = await getattr(self._radio, name)()
             return {"source": source}
@@ -890,8 +908,8 @@ class ControlHandler:
             if value not in (0, 1, 2):
                 raise ValueError(f"tuner value must be 0, 1, or 2, got {value}")
             # Try direct call if the radio has the method
-            if self._radio is not None and isinstance(self._radio, AdvancedControlCapable):
-                await self._radio.set_tuner_status(value)
+            if self._radio is not None and CAP_TUNER in self._radio.capabilities:
+                await self._radio.set_tuner_status(value)  # type: ignore[union-attr]
             else:
                 # Route through command queue
                 from .radio_poller import SetTunerStatus
@@ -904,67 +922,67 @@ class ControlHandler:
         if name == "get_ref_adjust":
             if self._radio is None:
                 raise RuntimeError("radio connection not available")
-            if not isinstance(self._radio, AdvancedControlCapable):
+            if CAP_SYSTEM_SETTINGS not in self._radio.capabilities:
                 raise RuntimeError("radio does not support this command")
-            value = await self._radio.get_ref_adjust()
+            value = await self._radio.get_ref_adjust()  # type: ignore[union-attr]
             return {"value": value}
         if name == "get_civ_transceive":
             if self._radio is None:
                 raise RuntimeError("radio connection not available")
-            if not isinstance(self._radio, AdvancedControlCapable):
+            if CAP_SYSTEM_SETTINGS not in self._radio.capabilities:
                 raise RuntimeError("radio does not support this command")
-            on = await self._radio.get_civ_transceive()
+            on = await self._radio.get_civ_transceive()  # type: ignore[union-attr]
             return {"on": on}
         if name == "get_civ_output_ant":
             if self._radio is None:
                 raise RuntimeError("radio connection not available")
-            if not isinstance(self._radio, AdvancedControlCapable):
+            if CAP_ANTENNA not in self._radio.capabilities:
                 raise RuntimeError("radio does not support this command")
-            on = await self._radio.get_civ_output_ant()
+            on = await self._radio.get_civ_output_ant()  # type: ignore[union-attr]
             return {"on": on}
         if name == "get_af_mute":
             if self._radio is None:
                 raise RuntimeError("radio connection not available")
-            if not isinstance(self._radio, AdvancedControlCapable):
+            if CAP_AF_LEVEL not in self._radio.capabilities:
                 raise RuntimeError("radio does not support this command")
             rx = int(params.get("receiver", 0))
             self._ensure_receiver_supported(rx)
-            on = await self._radio.get_af_mute(receiver=rx)
+            on = await self._radio.get_af_mute(receiver=rx)  # type: ignore[union-attr]
             return {"on": on, "receiver": rx}
         if name == "get_tuning_step":
             if self._radio is None:
                 raise RuntimeError("radio connection not available")
-            if not isinstance(self._radio, AdvancedControlCapable):
+            if CAP_TUNING_STEP not in self._radio.capabilities:
                 raise RuntimeError("radio does not support this command")
-            step = await self._radio.get_tuning_step()
+            step = await self._radio.get_tuning_step()  # type: ignore[union-attr]
             return {"step": step}
         if name == "get_utc_offset":
             if self._radio is None:
                 raise RuntimeError("radio connection not available")
-            if not isinstance(self._radio, AdvancedControlCapable):
+            if CAP_SYSTEM_SETTINGS not in self._radio.capabilities:
                 raise RuntimeError("radio does not support this command")
-            hours, minutes, is_negative = await self._radio.get_utc_offset()
+            hours, minutes, is_negative = await self._radio.get_utc_offset()  # type: ignore[union-attr]
             return {"hours": hours, "minutes": minutes, "is_negative": is_negative}
         if name == "get_band_edge_freq":
             if self._radio is None:
                 raise RuntimeError("radio connection not available")
-            if not isinstance(self._radio, AdvancedControlCapable):
+            if CAP_BAND_EDGE not in self._radio.capabilities:
                 raise RuntimeError("radio does not support this command")
-            freq = await self._radio.get_band_edge_freq()
+            freq = await self._radio.get_band_edge_freq()  # type: ignore[union-attr]
             return {"freq": freq}
         if name == "get_xfc_status":
             if self._radio is None:
                 raise RuntimeError("radio connection not available")
-            if not isinstance(self._radio, AdvancedControlCapable):
+            if CAP_XFC not in self._radio.capabilities:
                 raise RuntimeError("radio does not support this command")
-            on = await self._radio.get_xfc_status()
+            on = await self._radio.get_xfc_status()  # type: ignore[union-attr]
             return {"on": on}
         if name == "get_tx_freq_monitor":
             if self._radio is None:
                 raise RuntimeError("radio connection not available")
-            if not isinstance(self._radio, TransceiverStatusCapable):
+            if CAP_TX not in self._radio.capabilities:
                 raise RuntimeError("radio does not support this command")
-            on = await self._radio.get_tx_freq_monitor()
+            on = await self._radio.get_tx_freq_monitor()  # type: ignore[union-attr]
             return {"on": on}
 
         q = self._server.command_queue if self._server is not None else None
@@ -1027,28 +1045,28 @@ class ControlHandler:
                 q.put(PttOff())
                 return {}
             case "set_rf_power" | "set_power":
-                if not isinstance(self._radio, PowerControlCapable):
+                if CAP_POWER_CONTROL not in self._radio.capabilities:
                     raise ValueError(
                         "command set_rf_power is not supported by this radio "
-                        "(missing PowerControlCapable)"
+                        "(missing power_control capability)"
                     )
                 level = int(params["level"])
                 q.put(SetPower(level))
                 return {"level": level}
             case "set_powerstat":
-                if not isinstance(self._radio, PowerControlCapable):
+                if CAP_POWER_CONTROL not in self._radio.capabilities:
                     raise ValueError(
                         "command set_powerstat is not supported by this radio "
-                        "(missing PowerControlCapable)"
+                        "(missing power_control capability)"
                     )
                 on = bool(params.get("on", True))
                 q.put(SetPowerstat(on))
                 return {"on": on}
             case "set_rf_gain":
-                if not isinstance(self._radio, LevelsCapable):
+                if CAP_RF_GAIN not in self._radio.capabilities:
                     raise ValueError(
                         "command set_rf_gain is not supported by this radio "
-                        "(missing LevelsCapable)"
+                        "(missing rf_gain capability)"
                     )
                 level = int(params["level"])
                 rx = int(params.get("receiver", 0))
@@ -1057,10 +1075,10 @@ class ControlHandler:
                 q.put(SetRfGain(level, receiver=rx))
                 return {"level": level, "receiver": rx}
             case "set_af_level":
-                if not isinstance(self._radio, LevelsCapable):
+                if CAP_AF_LEVEL not in self._radio.capabilities:
                     raise ValueError(
                         "command set_af_level is not supported by this radio "
-                        "(missing LevelsCapable)"
+                        "(missing af_level capability)"
                     )
                 level = int(params["level"])
                 rx = int(params.get("receiver", 0))
@@ -1069,10 +1087,10 @@ class ControlHandler:
                 q.put(SetAfLevel(level, receiver=rx))
                 return {"level": level, "receiver": rx}
             case "set_sql" | "set_squelch":
-                if not isinstance(self._radio, LevelsCapable):
+                if CAP_SQUELCH not in self._radio.capabilities:
                     raise ValueError(
                         f"command {name!r} is not supported by this radio "
-                        "(missing LevelsCapable)"
+                        "(missing squelch capability)"
                     )
                 level = int(params["level"])
                 rx = int(params.get("receiver", 0))
@@ -1838,9 +1856,7 @@ class AudioBroadcaster:
         return len(dead_ids)
 
     async def _start_relay(self) -> None:
-        from ..radio_protocol import AudioCapable
-
-        if not self._radio or not isinstance(self._radio, AudioCapable):
+        if not self._radio or CAP_AUDIO not in self._radio.capabilities:
             return
 
         # Negotiate web codec from radio's actual audio codec
@@ -2132,11 +2148,9 @@ class AudioHandler:
         if not self._radio:
             logger.warning("audio: TX frame ignored (no radio), size=%d", len(payload))
             return
-        from ..radio_protocol import AudioCapable
-
-        if not isinstance(self._radio, AudioCapable):
+        if CAP_AUDIO not in self._radio.capabilities:
             logger.warning(
-                "audio: TX frame ignored (radio not AudioCapable), size=%d",
+                "audio: TX frame ignored (radio missing audio capability), size=%d",
                 len(payload),
             )
             return

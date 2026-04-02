@@ -14,6 +14,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from _caps import FULL_ICOM_CAPS
 from icom_lan.cli import (
     _cmd_audio_caps,
     _cmd_audio_loopback,
@@ -46,6 +47,7 @@ def _add_audio_capable(radio: MagicMock) -> MagicMock:
 def mock_radio():
     """Fully-mocked Radio (AudioCapable) for CLI handler tests."""
     radio = AsyncMock()
+    radio.capabilities = set(FULL_ICOM_CAPS)
     radio.start_audio_rx_pcm = AsyncMock()
     radio.stop_audio_rx_pcm = AsyncMock()
     radio.start_audio_tx_pcm = AsyncMock()

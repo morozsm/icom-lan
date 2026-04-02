@@ -12,6 +12,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from _caps import FULL_ICOM_CAPS
 from icom_lan.backends.config import SerialBackendConfig
 from icom_lan.cli import (
     _cmd_att,
@@ -69,6 +70,7 @@ def _make_full_capable_mock() -> _CapableRadio:
     inspect.getattr_static which bypasses MagicMock.__getattr__.
     """
     radio = _CapableRadio()
+    radio.capabilities = set(FULL_ICOM_CAPS)
     # AudioCapable
     radio.audio_bus = MagicMock()
     radio.start_audio_rx_opus = AsyncMock()
@@ -334,6 +336,7 @@ def _make_audio_capable_mock(base: MagicMock | None = None) -> MagicMock:
     inspect.getattr_static which bypasses MagicMock.__getattr__.
     """
     radio = base if base is not None else AsyncMock()
+    radio.capabilities = set(FULL_ICOM_CAPS)
     radio.audio_bus = MagicMock()
     radio.start_audio_rx_opus = AsyncMock()
     radio.stop_audio_rx_opus = AsyncMock()
@@ -533,6 +536,7 @@ def _make_scope_capable_mock(base: MagicMock | None = None) -> MagicMock:
     inspect.getattr_static which bypasses MagicMock.__getattr__.
     """
     radio = base if base is not None else AsyncMock()
+    radio.capabilities = set(FULL_ICOM_CAPS)
     radio.enable_scope = AsyncMock()
     radio.disable_scope = AsyncMock()
     radio.on_scope_data = MagicMock()

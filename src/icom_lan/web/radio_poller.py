@@ -29,11 +29,44 @@ import asyncio
 import logging
 import time
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Callable, cast
+from typing import TYPE_CHECKING, Any, Callable
 
 from ..commands import bcd_encode_value, filter_hz_to_index
 from ..exceptions import CommandError
 from ..exceptions import ConnectionError as RadioConnectionError
+from ..capabilities import (
+    CAP_AF_LEVEL,
+    CAP_AGC,
+    CAP_ANTENNA,
+    CAP_APF,
+    CAP_ATTENUATOR,
+    CAP_AUDIO,
+    CAP_BREAK_IN,
+    CAP_COMPRESSOR,
+    CAP_CW,
+    CAP_DATA_MODE,
+    CAP_DIGISEL,
+    CAP_DUAL_RX,
+    CAP_DUAL_WATCH,
+    CAP_FILTER_SHAPE,
+    CAP_FILTER_WIDTH,
+    CAP_IP_PLUS,
+    CAP_MAIN_SUB_TRACKING,
+    CAP_NB,
+    CAP_NOTCH,
+    CAP_NR,
+    CAP_POWER_CONTROL,
+    CAP_PREAMP,
+    CAP_REPEATER_TONE,
+    CAP_RF_GAIN,
+    CAP_RX_ANTENNA,
+    CAP_SCOPE,
+    CAP_SQUELCH,
+    CAP_SSB_TX_BW,
+    CAP_SYSTEM_SETTINGS,
+    CAP_TSQL,
+    CAP_VOX,
+)
 from ..profiles import RadioProfile, resolve_radio_profile
 
 if TYPE_CHECKING:
@@ -1259,12 +1292,7 @@ class RadioPoller:
         radio = self._radio
         _r: Any = radio  # cast for capability methods not on base Radio protocol
         from ..radio_protocol import (
-            AdvancedControlCapable,
-            DualReceiverCapable,
-            LevelsCapable,
             MemoryCapable,
-            PowerControlCapable,
-            ScopeCapable,
         )
 
         match cmd:
@@ -1349,7 +1377,7 @@ class RadioPoller:
                 if self._on_state_event:
                     self._on_state_event("mode_changed", {"mode": mode, "receiver": rx})
             case SetFilter(filter_num=fn, receiver=rx):
-                if isinstance(radio, AdvancedControlCapable):
+                if CAP_FILTER_WIDTH in self._caps:
                     self._ensure_receiver_supported(rx, operation="set_filter")
                     await radio.set_filter(fn, receiver=rx)
             case SetFilterWidth(width=width, receiver=rx):
@@ -1429,7 +1457,7 @@ class RadioPoller:
                     raise CommandError(
                         f"set_filter_shape value must be 0 or 1, got {shape}"
                     )
-                if not isinstance(radio, AdvancedControlCapable):
+                if CAP_FILTER_SHAPE not in self._caps:
                     raise CommandError(
                         "set_filter_shape is not supported by this backend"
                     )
@@ -1447,9 +1475,7 @@ class RadioPoller:
             case PttOn():
                 logger.info("poller: PTT ON")
                 # Start TX audio stream before PTT (LAN audio requires this)
-                from ..radio_protocol import AudioCapable
-
-                if isinstance(radio, AudioCapable):
+                if CAP_AUDIO in self._caps:
                     try:
                         await radio.start_audio_tx_opus()
                         logger.info("poller: TX audio stream started")
@@ -1460,9 +1486,7 @@ class RadioPoller:
                 logger.info("poller: PTT OFF")
                 await radio.set_ptt(False)
                 # Stop TX audio stream after PTT, then restart RX
-                from ..radio_protocol import AudioCapable
-
-                if isinstance(radio, AudioCapable):
+                if CAP_AUDIO in self._caps:
                     try:
                         await radio.stop_audio_tx()
                         logger.info("poller: TX audio stream stopped")
@@ -1476,23 +1500,23 @@ class RadioPoller:
                     except Exception as e:
                         logger.debug("poller: audio stream transition failed: %s", e)
             case SetPower(level=level):
-                if isinstance(radio, PowerControlCapable):
+                if CAP_POWER_CONTROL in self._caps:
                     await radio.set_rf_power(level)
             case SetRfGain(level=level, receiver=rx):
-                if isinstance(radio, LevelsCapable):
+                if CAP_RF_GAIN in self._caps:
                     self._ensure_receiver_supported(rx, operation="set_rf_gain")
                     await radio.set_rf_gain(level, receiver=rx)
             case SetAfLevel(level=level, receiver=rx):
-                if isinstance(radio, LevelsCapable):
+                if CAP_AF_LEVEL in self._caps:
                     self._ensure_receiver_supported(rx, operation="set_af_level")
                     await radio.set_af_level(level, receiver=rx)
             case SetSquelch(level=level, receiver=rx):
-                if isinstance(radio, LevelsCapable):
+                if CAP_SQUELCH in self._caps:
                     self._ensure_receiver_supported(rx, operation="set_squelch")
                     await radio.set_squelch(level, receiver=rx)
             case SetNB(on=on, receiver=rx):
                 self._ensure_receiver_supported(rx, operation="set_nb")
-                if hasattr(radio, "set_nb"):
+                if CAP_NB in self._caps:
                     await radio.set_nb(on, receiver=rx)
                 if self._radio_state:
                     target = (
@@ -1504,7 +1528,7 @@ class RadioPoller:
                     self._on_state_event("nb_changed", {"on": on, "receiver": rx})
             case SetNR(on=on, receiver=rx):
                 self._ensure_receiver_supported(rx, operation="set_nr")
-                if hasattr(radio, "set_nr"):
+                if CAP_NR in self._caps:
                     await radio.set_nr(on, receiver=rx)
                 if self._radio_state:
                     target = (
@@ -1515,20 +1539,20 @@ class RadioPoller:
                 if self._on_state_event:
                     self._on_state_event("nr_changed", {"on": on, "receiver": rx})
             case SetDigiSel(on=on, receiver=rx):
-                if hasattr(radio, "set_digisel"):
+                if CAP_DIGISEL in self._caps:
                     self._ensure_receiver_supported(rx, operation="set_digisel")
                     await radio.set_digisel(on, receiver=rx)
                 if self._on_state_event:
                     self._on_state_event("digisel_changed", {"on": on, "receiver": rx})
             case SetIpPlus(on=on, receiver=rx):
-                if hasattr(radio, "set_ip_plus"):
+                if CAP_IP_PLUS in self._caps:
                     self._ensure_receiver_supported(rx, operation="set_ipplus")
                     await radio.set_ip_plus(on, receiver=rx)
                 if self._on_state_event:
                     self._on_state_event("ipplus_changed", {"on": on, "receiver": rx})
             case SetAttenuator(db=db, receiver=rx):
                 self._ensure_receiver_supported(rx, operation="set_attenuator")
-                if hasattr(radio, "set_attenuator_level"):
+                if CAP_ATTENUATOR in self._caps:
                     await radio.set_attenuator_level(db, receiver=rx)
                 if self._radio_state:
                     target = (
@@ -1544,7 +1568,7 @@ class RadioPoller:
                     )
             case SetPreamp(level=level, receiver=rx):
                 self._ensure_receiver_supported(rx, operation="set_preamp")
-                if hasattr(radio, "set_preamp"):
+                if CAP_PREAMP in self._caps:
                     await radio.set_preamp(level, receiver=rx)
                 if self._radio_state:
                     target = (
@@ -1729,7 +1753,7 @@ class RadioPoller:
                     self._radio_state.dial_lock = on
                     self.bump_revision()
             case SetAgc(mode=mode, receiver=rx):
-                if hasattr(radio, "set_agc"):
+                if CAP_AGC in self._caps:
                     self._ensure_receiver_supported(rx, operation="set_agc")
                     await radio.set_agc(mode, receiver=rx)
                 else:
@@ -1874,21 +1898,21 @@ class RadioPoller:
                 if self._on_state_event:
                     self._on_state_event("vfo_changed", {"vfo": vfo})
             case VfoSwap():
-                if isinstance(radio, DualReceiverCapable):
-                    await cast(DualReceiverCapable, radio).vfo_exchange()
+                if CAP_DUAL_RX in self._caps:
+                    await radio.vfo_exchange()  # type: ignore[union-attr]
                 # After swap, active VFO stays same but freqs are exchanged
                 if self._on_state_event:
                     self._on_state_event("vfo_swapped", {})
             case VfoEqualize():
-                if isinstance(radio, DualReceiverCapable):
-                    await cast(DualReceiverCapable, radio).vfo_equalize()
+                if CAP_DUAL_RX in self._caps:
+                    await radio.vfo_equalize()  # type: ignore[union-attr]
             case EnableScope(policy=policy):
-                if isinstance(radio, ScopeCapable):
-                    await cast(ScopeCapable, radio).enable_scope(policy=policy)
+                if CAP_SCOPE in self._caps:
+                    await radio.enable_scope(policy=policy)  # type: ignore[union-attr]
                     logger.info("radio-poller: scope enabled")
             case DisableScope():
-                if isinstance(radio, ScopeCapable):
-                    await cast(ScopeCapable, radio).disable_scope()
+                if CAP_SCOPE in self._caps:
+                    await radio.disable_scope()  # type: ignore[union-attr]
                     logger.info("radio-poller: scope disabled")
             case SwitchScopeReceiver(receiver=receiver):
                 # Fire-and-forget scope receiver select (0x27 0x12)
@@ -1902,56 +1926,56 @@ class RadioPoller:
                     "SUB" if receiver else "MAIN",
                 )
             case SetScopeDuringTx(on=on):
-                if isinstance(radio, ScopeCapable):
+                if CAP_SCOPE in self._caps:
                     await radio.set_scope_during_tx(on)
             case SetScopeCenterType(center_type=center_type):
-                if isinstance(radio, ScopeCapable):
+                if CAP_SCOPE in self._caps:
                     await radio.set_scope_center_type(center_type)
             case SetScopeFixedEdge(edge=edge, start_hz=start_hz, end_hz=end_hz):
-                if isinstance(radio, ScopeCapable):
+                if CAP_SCOPE in self._caps:
                     await radio.set_scope_fixed_edge(
                         edge=edge,
                         start_hz=start_hz,
                         end_hz=end_hz,
                     )
             case SetScopeDual(dual=dual):
-                if isinstance(radio, ScopeCapable):
+                if CAP_SCOPE in self._caps:
                     await radio.set_scope_dual(dual)
                     if self._radio_state:
                         self._radio_state.scope_controls.dual = dual
                     self.bump_revision()
             case SetScopeMode(mode=mode):
-                if isinstance(radio, ScopeCapable):
+                if CAP_SCOPE in self._caps:
                     await radio.set_scope_mode(mode)
                     if self._radio_state:
                         self._radio_state.scope_controls.mode = mode
                     self.bump_revision()
             case SetScopeSpan(span=span):
-                if isinstance(radio, ScopeCapable):
+                if CAP_SCOPE in self._caps:
                     await radio.set_scope_span(span)
                     if self._radio_state:
                         self._radio_state.scope_controls.span = span
                     self.bump_revision()
             case SetScopeSpeed(speed=speed):
-                if isinstance(radio, ScopeCapable):
+                if CAP_SCOPE in self._caps:
                     await radio.set_scope_speed(speed)
                     if self._radio_state:
                         self._radio_state.scope_controls.speed = speed
                     self.bump_revision()
             case SetScopeRef(ref=ref):
-                if isinstance(radio, ScopeCapable):
+                if CAP_SCOPE in self._caps:
                     await radio.set_scope_ref(ref)
                     if self._radio_state:
                         self._radio_state.scope_controls.ref_db = float(ref)
                     self.bump_revision()
             case SetScopeHold(on=on):
-                if isinstance(radio, ScopeCapable):
+                if CAP_SCOPE in self._caps:
                     await radio.set_scope_hold(on)
                     if self._radio_state:
                         self._radio_state.scope_controls.hold = on
                     self.bump_revision()
             case SetPowerstat(on=on):
-                if isinstance(radio, PowerControlCapable):
+                if CAP_POWER_CONTROL in self._caps:
                     await radio.set_powerstat(on)
                     # Optimistic update: radio won't respond to polls when off
                     if self._radio_state is not None:
@@ -1960,41 +1984,41 @@ class RadioPoller:
                     self.bump_revision()
                     logger.info("radio-poller: power %s", "ON" if on else "OFF")
             case SetAntenna1(on=on):
-                if isinstance(radio, AdvancedControlCapable):
+                if CAP_ANTENNA in self._caps:
                     await radio.set_antenna_1(on)
             case SetAntenna2(on=on):
-                if isinstance(radio, AdvancedControlCapable):
+                if CAP_ANTENNA in self._caps:
                     await radio.set_antenna_2(on)
             case SetRxAntennaAnt1(on=on):
-                if isinstance(radio, AdvancedControlCapable):
+                if CAP_RX_ANTENNA in self._caps:
                     await radio.set_rx_antenna_ant1(on)
             case SetRxAntennaAnt2(on=on):
-                if isinstance(radio, AdvancedControlCapable):
+                if CAP_RX_ANTENNA in self._caps:
                     await radio.set_rx_antenna_ant2(on)
             case SetSystemDate(year=year, month=month, day=day):
-                if isinstance(radio, AdvancedControlCapable):
+                if CAP_SYSTEM_SETTINGS in self._caps:
                     await radio.set_system_date(year, month, day)
             case SetSystemTime(hour=hour, minute=minute):
-                if isinstance(radio, AdvancedControlCapable):
+                if CAP_SYSTEM_SETTINGS in self._caps:
                     await radio.set_system_time(hour, minute)
             case SetAcc1ModLevel(level=level):
-                if isinstance(radio, AdvancedControlCapable):
+                if CAP_DATA_MODE in self._caps:
                     await radio.set_acc1_mod_level(level)
             case SetUsbModLevel(level=level):
-                if isinstance(radio, AdvancedControlCapable):
+                if CAP_DATA_MODE in self._caps:
                     await radio.set_usb_mod_level(level)
             case SetLanModLevel(level=level):
-                if isinstance(radio, AdvancedControlCapable):
+                if CAP_DATA_MODE in self._caps:
                     await radio.set_lan_mod_level(level)
             case SetDualWatch(on=on):
-                if isinstance(radio, AdvancedControlCapable):
+                if CAP_DUAL_WATCH in self._caps:
                     await radio.set_dual_watch(on)
             case SetCompressor(on=on):
-                if isinstance(radio, AdvancedControlCapable):
+                if CAP_COMPRESSOR in self._caps:
                     await radio.set_compressor(on)
             case SetToneFreq(freq_hz=freq, receiver=rx):
                 self._ensure_receiver_supported(rx, operation="set_tone_freq")
-                if isinstance(radio, AdvancedControlCapable):
+                if CAP_REPEATER_TONE in self._caps:
                     await radio.set_tone_freq(freq, receiver=rx)
                 if self._radio_state:
                     target = self._radio_state.sub if rx != 0 else self._radio_state.main
@@ -2002,76 +2026,76 @@ class RadioPoller:
                     self.bump_revision()
             case SetTsqlFreq(freq_hz=freq, receiver=rx):
                 self._ensure_receiver_supported(rx, operation="set_tsql_freq")
-                if isinstance(radio, AdvancedControlCapable):
+                if CAP_TSQL in self._caps:
                     await radio.set_tsql_freq(freq, receiver=rx)
                 if self._radio_state:
                     target = self._radio_state.sub if rx != 0 else self._radio_state.main
                     target.tsql_freq = freq
                     self.bump_revision()
             case SetMainSubTracking(on=on):
-                if isinstance(radio, AdvancedControlCapable):
+                if CAP_MAIN_SUB_TRACKING in self._caps:
                     await radio.set_main_sub_tracking(on)
                 if self._radio_state:
                     self._radio_state.main_sub_tracking = on
                     self.bump_revision()
             case SetSsbTxBandwidth(value=value):
-                if isinstance(radio, AdvancedControlCapable):
+                if CAP_SSB_TX_BW in self._caps:
                     await radio.set_ssb_tx_bandwidth(value)
                 if self._radio_state:
                     self._radio_state.ssb_tx_bandwidth = value
                     self.bump_revision()
             case SetManualNotchWidth(value=value, receiver=rx):
                 self._ensure_receiver_supported(rx, operation="set_manual_notch_width")
-                if isinstance(radio, AdvancedControlCapable):
+                if CAP_NOTCH in self._caps:
                     await radio.set_manual_notch_width(value, receiver=rx)
                 self.bump_revision()
             case SetBreakInDelay(level=level):
-                if isinstance(radio, AdvancedControlCapable):
+                if CAP_BREAK_IN in self._caps:
                     await radio.set_break_in_delay(level)
                 if self._radio_state:
                     self._radio_state.break_in_delay = level
                     self.bump_revision()
             case SetVoxGain(level=level):
-                if isinstance(radio, AdvancedControlCapable):
+                if CAP_VOX in self._caps:
                     await radio.set_vox_gain(level)
                 if self._radio_state:
                     self._radio_state.vox_gain = level
                     self.bump_revision()
             case SetAntiVoxGain(level=level):
-                if isinstance(radio, AdvancedControlCapable):
+                if CAP_VOX in self._caps:
                     await radio.set_anti_vox_gain(level)
                 if self._radio_state:
                     self._radio_state.anti_vox_gain = level
                     self.bump_revision()
             case SetVoxDelay(level=level):
-                if isinstance(radio, AdvancedControlCapable):
+                if CAP_VOX in self._caps:
                     await radio.set_vox_delay(level)
                 if self._radio_state:
                     self._radio_state.vox_delay = level
                     self.bump_revision()
             case SetNbDepth(level=level, receiver=rx):
                 self._ensure_receiver_supported(rx, operation="set_nb_depth")
-                if isinstance(radio, AdvancedControlCapable):
+                if CAP_NB in self._caps:
                     await radio.set_nb_depth(level, receiver=rx)
                 if self._radio_state:
                     self._radio_state.nb_depth = level
                     self.bump_revision()
             case SetNbWidth(level=level, receiver=rx):
                 self._ensure_receiver_supported(rx, operation="set_nb_width")
-                if isinstance(radio, AdvancedControlCapable):
+                if CAP_NB in self._caps:
                     await radio.set_nb_width(level, receiver=rx)
                 if self._radio_state:
                     self._radio_state.nb_width = level
                     self.bump_revision()
             case SetDashRatio(value=value):
-                if isinstance(radio, AdvancedControlCapable):
+                if CAP_CW in self._caps:
                     await radio.set_dash_ratio(value)
                 if self._radio_state:
                     self._radio_state.dash_ratio = value
                     self.bump_revision()
             case SetRepeaterTone(on=on, receiver=rx):
                 self._ensure_receiver_supported(rx, operation="set_repeater_tone")
-                if isinstance(radio, AdvancedControlCapable):
+                if CAP_REPEATER_TONE in self._caps:
                     await radio.set_repeater_tone(on, receiver=rx)
                 if self._radio_state:
                     target = self._radio_state.sub if rx != 0 else self._radio_state.main
@@ -2079,14 +2103,14 @@ class RadioPoller:
                     self.bump_revision()
             case SetRepeaterTsql(on=on, receiver=rx):
                 self._ensure_receiver_supported(rx, operation="set_repeater_tsql")
-                if isinstance(radio, AdvancedControlCapable):
+                if CAP_TSQL in self._caps:
                     await radio.set_repeater_tsql(on, receiver=rx)
                 if self._radio_state:
                     target = self._radio_state.sub if rx != 0 else self._radio_state.main
                     target.repeater_tsql = on
                     self.bump_revision()
             case SetRxAntenna(antenna=antenna, on=on):
-                if isinstance(radio, AdvancedControlCapable):
+                if CAP_RX_ANTENNA in self._caps:
                     if antenna == 1:
                         await radio.set_rx_antenna_ant1(on)
                     else:
@@ -2111,24 +2135,24 @@ class RadioPoller:
                 if isinstance(radio, MemoryCapable):
                     await radio.set_bsr(bsr)
             case SetDataOffModInput(source=source):
-                if isinstance(radio, AdvancedControlCapable):
+                if CAP_DATA_MODE in self._caps:
                     await radio.set_data_off_mod_input(source)
             case SetData1ModInput(source=source):
-                if isinstance(radio, AdvancedControlCapable):
+                if CAP_DATA_MODE in self._caps:
                     await radio.set_data1_mod_input(source)
             case SetData2ModInput(source=source):
-                if isinstance(radio, AdvancedControlCapable):
+                if CAP_DATA_MODE in self._caps:
                     await radio.set_data2_mod_input(source)
             case SetData3ModInput(source=source):
-                if isinstance(radio, AdvancedControlCapable):
+                if CAP_DATA_MODE in self._caps:
                     await radio.set_data3_mod_input(source)
             case SetAudioPeakFilter(on=on, receiver=rx):
                 self._ensure_receiver_supported(rx, operation="set_audio_peak_filter")
-                if isinstance(radio, AdvancedControlCapable):
+                if CAP_APF in self._caps:
                     await radio.set_audio_peak_filter(int(on), receiver=rx)
             case SetDigiselShift(level=level, receiver=rx):
                 self._ensure_receiver_supported(rx, operation="set_digisel_shift")
-                if isinstance(radio, AdvancedControlCapable):
+                if CAP_DIGISEL in self._caps:
                     await radio.set_digisel_shift(level, receiver=rx)
             case SetRefAdjust(value=value):
                 await _r.set_ref_adjust(value)

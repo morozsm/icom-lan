@@ -22,7 +22,7 @@ from .ic705 import (
     restore_ic705_data_profile as _restore_ic705_data_profile,
 )
 from .radio import IcomRadio as _AsyncIcomRadio  # noqa: TID251
-from .radio_protocol import MetersCapable, PowerControlCapable
+from .capabilities import CAP_METERS, CAP_POWER_CONTROL
 from .types import AudioCapabilities, AudioCodec, Mode, ScopeCompletionPolicy
 
 T = TypeVar("T")
@@ -164,7 +164,7 @@ class IcomRadio:
 
     def get_rf_power(self) -> int:
         """Get the RF power level (0-255)."""
-        if not isinstance(self._radio, MetersCapable):
+        if CAP_METERS not in self._radio.capabilities:
             raise AttributeError(
                 "get_rf_power requires a radio that implements MetersCapable"
             )
@@ -172,7 +172,7 @@ class IcomRadio:
 
     def set_rf_power(self, level: int) -> None:
         """Set the RF power level (0-255)."""
-        if not isinstance(self._radio, PowerControlCapable):
+        if CAP_POWER_CONTROL not in self._radio.capabilities:
             raise AttributeError(
                 "set_rf_power requires a radio that implements PowerControlCapable"
             )
@@ -188,7 +188,7 @@ class IcomRadio:
 
     def get_s_meter(self) -> int:
         """Read the S-meter value (0-255)."""
-        if not isinstance(self._radio, MetersCapable):
+        if CAP_METERS not in self._radio.capabilities:
             raise AttributeError(
                 "get_s_meter requires a radio that implements MetersCapable"
             )
@@ -196,7 +196,7 @@ class IcomRadio:
 
     def get_swr(self) -> int:
         """Read the SWR meter (0-255)."""
-        if not isinstance(self._radio, MetersCapable):
+        if CAP_METERS not in self._radio.capabilities:
             raise AttributeError(
                 "get_swr requires a radio that implements MetersCapable"
             )
@@ -205,7 +205,7 @@ class IcomRadio:
 
     def get_alc(self) -> int:
         """Read the ALC meter (0-255)."""
-        if not hasattr(self._radio, "get_alc"):
+        if CAP_METERS not in self._radio.capabilities:
             raise AttributeError("get_alc is not supported by this radio")
         return self._run(self._radio.get_alc())
 
@@ -373,7 +373,7 @@ class IcomRadio:
 
     def power_control(self, on: bool) -> None:
         """Power on/off the radio."""
-        if not isinstance(self._radio, PowerControlCapable):
+        if CAP_POWER_CONTROL not in self._radio.capabilities:
             raise AttributeError(
                 "power_control requires a radio that implements PowerControlCapable"
             )

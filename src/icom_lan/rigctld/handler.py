@@ -36,7 +36,7 @@ from .utils import get_mode_reader
 if TYPE_CHECKING:
     from ..radio_protocol import Radio
 
-from ..radio_protocol import MetersCapable
+from ..capabilities import CAP_METERS
 from .routing import create_routing
 
 __all__ = ["RigctldHandler"]
@@ -644,7 +644,7 @@ class RigctldHandler:
                 raw = main_state.s_meter
                 self._cache.update_s_meter(raw)
                 return RigctldResponse(values=[str(round((raw / 241.0) * 114.0 - 54.0))])
-            if not isinstance(self._radio, MetersCapable):
+            if CAP_METERS not in self._radio.capabilities:
                 if self._cache.s_meter is not None:
                     raw = self._cache.s_meter
                     return RigctldResponse(
@@ -663,7 +663,7 @@ class RigctldHandler:
                 raw_power = state.power_level / 255.0
                 self._cache.update_rf_power(raw_power)
                 return RigctldResponse(values=[f"{raw_power:.6f}"])
-            if not isinstance(self._radio, MetersCapable):
+            if CAP_METERS not in self._radio.capabilities:
                 if self._cache.rf_power is not None:
                     return RigctldResponse(values=[f"{self._cache.rf_power:.6f}"])
                 return _err(HamlibError.ENIMPL)
@@ -674,7 +674,7 @@ class RigctldHandler:
 
         # SWR — meter call
         if level == "SWR":
-            if not isinstance(self._radio, MetersCapable):
+            if CAP_METERS not in self._radio.capabilities:
                 if self._cache.swr is not None:
                     return RigctldResponse(values=[f"{self._cache.swr:.6f}"])
                 return _err(HamlibError.ENIMPL)

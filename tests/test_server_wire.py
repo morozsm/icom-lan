@@ -21,6 +21,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from _caps import FULL_ICOM_CAPS
 from icom_lan.radio_protocol import MetersCapable
 from icom_lan.rigctld.contract import RigctldConfig
 from icom_lan.rigctld.server import RigctldServer
@@ -79,6 +80,7 @@ async def _read_eof(reader: asyncio.StreamReader, *, timeout: float = 2.0) -> by
 def _make_mock_radio() -> _MockRadio:
     """Explicit mock radio with sensible default return values."""
     radio = _MockRadio()
+    radio.capabilities = set(FULL_ICOM_CAPS)
     radio.get_freq = AsyncMock(return_value=14_074_000)
     radio.get_mode_info = AsyncMock(return_value=(Mode.USB, 2))  # USB, FIL2 = 2400 Hz
     radio.get_data_mode = AsyncMock(return_value=False)

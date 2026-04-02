@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from _caps import FULL_ICOM_CAPS
 from icom_lan.cli import (
     _cmd_audio_caps,
     _cmd_audio_loopback,
@@ -32,11 +33,13 @@ from icom_lan.exceptions import TimeoutError as IcomTimeout
 
 
 def _add_capability_protocols(radio: MagicMock) -> MagicMock:
-    """Add minimal attributes so mock satisfies isinstance(..., AudioCapable) and ScopeCapable.
+    """Add minimal attributes so mock satisfies capability tag checks.
 
     All attrs must be explicitly set; Python 3.12+ runtime_checkable Protocol uses
     inspect.getattr_static which bypasses MagicMock.__getattr__.
     """
+    # Capability tags — superset of all tags the mock supports
+    radio.capabilities = set(FULL_ICOM_CAPS)
     # AudioCapable
     radio.audio_bus = MagicMock()
     radio.start_audio_rx_opus = AsyncMock()

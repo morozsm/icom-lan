@@ -163,11 +163,11 @@ async def poll_powerstat(
     Returns:
         True if powered on, False if powered off, or ``None`` if the radio call failed.
     """
-    from .radio_protocol import PowerControlCapable
+    from .capabilities import CAP_POWER_CONTROL
 
     if is_cache_fresh(cache, "powerstat", ttl):
         return cache.powerstat
-    if not isinstance(radio, PowerControlCapable):
+    if CAP_POWER_CONTROL not in radio.capabilities:
         return None
     try:
         power_on = await radio.get_powerstat()

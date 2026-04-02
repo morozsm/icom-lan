@@ -40,16 +40,23 @@ from . import __version__  # noqa: E402
 from .audio import AudioStats  # noqa: E402
 from .backends.config import LanBackendConfig, SerialBackendConfig  # noqa: E402
 from .backends.factory import create_radio  # noqa: E402
-from .radio_protocol import (  # noqa: E402
-    AdvancedControlCapable,
-    AudioCapable,
-    LevelsCapable,
-    MetersCapable,
-    PowerControlCapable,
-    Radio,
-    ScopeCapable,
-    TransceiverStatusCapable,
+from .capabilities import (  # noqa: E402
+    CAP_AF_LEVEL,
+    CAP_ANTENNA,
+    CAP_ATTENUATOR,
+    CAP_AUDIO,
+    CAP_CW,
+    CAP_DUAL_WATCH,
+    CAP_METERS,
+    CAP_POWER_CONTROL,
+    CAP_PREAMP,
+    CAP_RF_GAIN,
+    CAP_SCOPE,
+    CAP_SQUELCH,
+    CAP_SYSTEM_SETTINGS,
+    CAP_TUNER,
 )
+from .radio_protocol import Radio  # noqa: E402
 from .types import Mode, get_audio_capabilities  # noqa: E402
 
 _AUDIO_FRAME_MS = 20
@@ -921,7 +928,7 @@ async def _run(args: argparse.Namespace) -> int:
     try:
         async with radio:
             if args.command == "audio" and args.audio_command == "caps":
-                if not isinstance(radio, AudioCapable):
+                if CAP_AUDIO not in radio.capabilities:
                     print(
                         "Error: audio caps with --stats requires a radio that supports audio (e.g. LAN or serial with audio).",
                         file=sys.stderr,
@@ -953,47 +960,47 @@ async def _run(args: argparse.Namespace) -> int:
             elif args.command == "ptt":
                 return await _cmd_ptt(radio, args)
             elif args.command == "cw":
-                if not isinstance(radio, AdvancedControlCapable):
+                if CAP_CW not in radio.capabilities:
                     print("Error: this radio does not support CW control.", file=sys.stderr)
                     return 1
                 return await _cmd_cw(radio, args)
             elif args.command == "att":
-                if not isinstance(radio, AdvancedControlCapable):
+                if CAP_ATTENUATOR not in radio.capabilities:
                     print("Error: this radio does not support attenuator control.", file=sys.stderr)
                     return 1
                 return await _cmd_att(radio, args)
             elif args.command == "preamp":
-                if not isinstance(radio, AdvancedControlCapable):
+                if CAP_PREAMP not in radio.capabilities:
                     print("Error: this radio does not support preamp control.", file=sys.stderr)
                     return 1
                 return await _cmd_preamp(radio, args)
             elif args.command == "antenna":
-                if not isinstance(radio, AdvancedControlCapable):
+                if CAP_ANTENNA not in radio.capabilities:
                     print("Error: this radio does not support antenna control.", file=sys.stderr)
                     return 1
                 return await _cmd_antenna(radio, args)
             elif args.command == "date":
-                if not isinstance(radio, AdvancedControlCapable):
+                if CAP_SYSTEM_SETTINGS not in radio.capabilities:
                     print("Error: this radio does not support date control.", file=sys.stderr)
                     return 1
                 return await _cmd_date(radio, args)
             elif args.command == "time":
-                if not isinstance(radio, AdvancedControlCapable):
+                if CAP_SYSTEM_SETTINGS not in radio.capabilities:
                     print("Error: this radio does not support time control.", file=sys.stderr)
                     return 1
                 return await _cmd_time(radio, args)
             elif args.command == "dualwatch":
-                if not isinstance(radio, AdvancedControlCapable):
+                if CAP_DUAL_WATCH not in radio.capabilities:
                     print("Error: this radio does not support dual watch.", file=sys.stderr)
                     return 1
                 return await _cmd_dualwatch(radio, args)
             elif args.command == "tuner":
-                if not isinstance(radio, AdvancedControlCapable):
+                if CAP_TUNER not in radio.capabilities:
                     print("Error: this radio does not support tuner control.", file=sys.stderr)
                     return 1
                 return await _cmd_tuner(radio, args)
             elif args.command == "levels":
-                if not isinstance(radio, LevelsCapable):
+                if CAP_AF_LEVEL not in radio.capabilities:
                     print("Error: this radio does not support level controls.", file=sys.stderr)
                     return 1
                 return await _cmd_levels(radio, args)
@@ -1015,23 +1022,23 @@ async def _run(args: argparse.Namespace) -> int:
                 print("Error: unknown audio command", file=sys.stderr)
                 return 1
             elif args.command == "power-on":
-                if not isinstance(radio, PowerControlCapable):
+                if CAP_POWER_CONTROL not in radio.capabilities:
                     print(
                         "Error: this radio does not support power on/off.",
                         file=sys.stderr,
                     )
                     return 1
-                await radio.set_powerstat(True)
+                await radio.set_powerstat(True)  # type: ignore[union-attr]
                 print("Power ON")
                 return 0
             elif args.command == "power-off":
-                if not isinstance(radio, PowerControlCapable):
+                if CAP_POWER_CONTROL not in radio.capabilities:
                     print(
                         "Error: this radio does not support power on/off.",
                         file=sys.stderr,
                     )
                     return 1
-                await radio.set_powerstat(False)
+                await radio.set_powerstat(False)  # type: ignore[union-attr]
                 print("Power OFF")
                 return 0
             else:
@@ -1113,9 +1120,9 @@ async def _cmd_status(radio: Radio, args: argparse.Namespace) -> int:
     mode_name, _filt = await radio.get_mode()
     s_meter: int | str = 0
     power: int | str = 0
-    if isinstance(radio, MetersCapable):
-        s_meter = await radio.get_s_meter()
-        power = await radio.get_rf_power()
+    if CAP_METERS in radio.capabilities:
+        s_meter = await radio.get_s_meter()  # type: ignore[union-attr]
+        power = await radio.get_rf_power()  # type: ignore[union-attr]
     else:
         s_meter = "n/a"
         power = "n/a"
@@ -1191,7 +1198,7 @@ async def _cmd_audio_caps(
 
 
 async def _cmd_audio_rx(radio: Radio, args: argparse.Namespace) -> int:
-    if not isinstance(radio, AudioCapable):
+    if CAP_AUDIO not in radio.capabilities:
         print(
             "Error: this command requires a radio that supports audio (e.g. LAN or serial with audio).",
             file=sys.stderr,
@@ -1284,7 +1291,7 @@ def _load_wav_pcm(input_file: str) -> tuple[int, int, int, bytes]:
 
 
 async def _cmd_audio_tx(radio: Radio, args: argparse.Namespace) -> int:
-    if not isinstance(radio, AudioCapable):
+    if CAP_AUDIO not in radio.capabilities:
         print(
             "Error: this command requires a radio that supports audio (e.g. LAN or serial with audio).",
             file=sys.stderr,
@@ -1387,7 +1394,7 @@ async def _cmd_audio_tx(radio: Radio, args: argparse.Namespace) -> int:
 
 
 async def _cmd_audio_loopback(radio: Radio, args: argparse.Namespace) -> int:
-    if not isinstance(radio, AudioCapable):
+    if CAP_AUDIO not in radio.capabilities:
         print(
             "Error: this command requires a radio that supports audio (e.g. LAN or serial with audio).",
             file=sys.stderr,
@@ -1538,16 +1545,16 @@ async def _cmd_mode(radio: Radio, args: argparse.Namespace) -> int:
 
 async def _cmd_power(radio: Radio, args: argparse.Namespace) -> int:
     if args.value is not None:
-        if not isinstance(radio, PowerControlCapable):
+        if CAP_POWER_CONTROL not in radio.capabilities:
             print(
                 "Error: this radio does not support setting power level.",
                 file=sys.stderr,
             )
             return 1
-        await radio.set_rf_power(args.value)
+        await radio.set_rf_power(args.value)  # type: ignore[union-attr]
         print(f"Set: {args.value}")
     else:
-        if not isinstance(radio, MetersCapable):
+        if CAP_METERS not in radio.capabilities:
             print(
                 "Error: this radio does not support reading power level.",
                 file=sys.stderr,
@@ -1566,7 +1573,7 @@ async def _cmd_power(radio: Radio, args: argparse.Namespace) -> int:
 async def _cmd_meter(radio: Radio, args: argparse.Namespace) -> int:
     from .exceptions import TimeoutError as IcomTimeout
 
-    if not isinstance(radio, MetersCapable):
+    if CAP_METERS not in radio.capabilities:
         print(
             "Error: this radio does not support meters (S-meter, SWR, power).",
             file=sys.stderr,
@@ -1574,12 +1581,12 @@ async def _cmd_meter(radio: Radio, args: argparse.Namespace) -> int:
         return 1
     results: dict[str, int | str] = {}
     meter_getters: list[tuple[str, Any]] = [
-        ("s_meter", radio.get_s_meter),
-        ("power", radio.get_rf_power),
-        ("swr", radio.get_swr),
+        ("s_meter", radio.get_s_meter),  # type: ignore[union-attr]
+        ("power", radio.get_rf_power),  # type: ignore[union-attr]
+        ("swr", radio.get_swr),  # type: ignore[union-attr]
     ]
-    if hasattr(radio, "get_alc"):
-        meter_getters.append(("alc", radio.get_alc))
+    if CAP_METERS in radio.capabilities:
+        meter_getters.append(("alc", radio.get_alc))  # type: ignore[union-attr]
     for name, getter in meter_getters:
         try:
             results[name] = await getter()
@@ -1604,13 +1611,13 @@ async def _cmd_ptt(radio: Radio, args: argparse.Namespace) -> int:
     return 0
 
 
-async def _cmd_cw(radio: AdvancedControlCapable, args: argparse.Namespace) -> int:
+async def _cmd_cw(radio: Radio, args: argparse.Namespace) -> int:
     await radio.send_cw_text(args.text)
     print(f"CW: {args.text}")
     return 0
 
 
-async def _cmd_att(radio: AdvancedControlCapable, args: argparse.Namespace) -> int:
+async def _cmd_att(radio: Radio, args: argparse.Namespace) -> int:
     if args.value is not None:
         val = args.value.strip().lower()
         if val == "on":
@@ -1640,7 +1647,7 @@ async def _cmd_att(radio: AdvancedControlCapable, args: argparse.Namespace) -> i
 _PREAMP_NAMES = {0: "OFF", 1: "PRE1", 2: "PRE2"}
 
 
-async def _cmd_preamp(radio: AdvancedControlCapable, args: argparse.Namespace) -> int:
+async def _cmd_preamp(radio: Radio, args: argparse.Namespace) -> int:
     if args.value is not None:
         val = args.value.strip().lower()
         if val == "off":
@@ -1667,7 +1674,7 @@ async def _cmd_preamp(radio: AdvancedControlCapable, args: argparse.Namespace) -
     return 0
 
 
-async def _cmd_antenna(radio: AdvancedControlCapable, args: argparse.Namespace) -> int:
+async def _cmd_antenna(radio: Radio, args: argparse.Namespace) -> int:
     acted = False
     if args.ant1 is not None:
         on = args.ant1 == "on"
@@ -1701,7 +1708,7 @@ async def _cmd_antenna(radio: AdvancedControlCapable, args: argparse.Namespace) 
     return 0
 
 
-async def _cmd_date(radio: AdvancedControlCapable, args: argparse.Namespace) -> int:
+async def _cmd_date(radio: Radio, args: argparse.Namespace) -> int:
     if args.date is not None:
         try:
             year, month, day = map(int, args.date.split("-"))
@@ -1719,7 +1726,7 @@ async def _cmd_date(radio: AdvancedControlCapable, args: argparse.Namespace) -> 
     return 0
 
 
-async def _cmd_time(radio: AdvancedControlCapable, args: argparse.Namespace) -> int:
+async def _cmd_time(radio: Radio, args: argparse.Namespace) -> int:
     if args.time is not None:
         try:
             hour, minute = map(int, args.time.split(":"))
@@ -1737,7 +1744,7 @@ async def _cmd_time(radio: AdvancedControlCapable, args: argparse.Namespace) -> 
     return 0
 
 
-async def _cmd_dualwatch(radio: AdvancedControlCapable, args: argparse.Namespace) -> int:
+async def _cmd_dualwatch(radio: Radio, args: argparse.Namespace) -> int:
     if args.state is not None:
         on = args.state == "on"
         await radio.set_dual_watch(on)
@@ -1748,7 +1755,7 @@ async def _cmd_dualwatch(radio: AdvancedControlCapable, args: argparse.Namespace
     return 0
 
 
-async def _cmd_tuner(radio: AdvancedControlCapable, args: argparse.Namespace) -> int:
+async def _cmd_tuner(radio: Radio, args: argparse.Namespace) -> int:
     if args.action is not None:
         value = {"on": 1, "off": 0, "tune": 2}[args.action]
         await radio.set_tuner_status(value)
@@ -1767,7 +1774,7 @@ async def _cmd_tuner(radio: AdvancedControlCapable, args: argparse.Namespace) ->
     return 0
 
 
-async def _cmd_levels(radio: LevelsCapable, args: argparse.Namespace) -> int:
+async def _cmd_levels(radio: Radio, args: argparse.Namespace) -> int:
     """Get or set M4 DSP/audio levels (NR, NB, mic gain, drive, compressor)."""
     receiver = args.receiver
     result = {}
@@ -1809,7 +1816,7 @@ async def _cmd_levels(radio: LevelsCapable, args: argparse.Namespace) -> int:
 
 
 async def _cmd_scope(radio: Radio, args: argparse.Namespace) -> int:
-    if not isinstance(radio, ScopeCapable):
+    if CAP_SCOPE not in radio.capabilities:
         print(
             "Error: scope requires a radio that supports scope/waterfall (e.g. LAN or serial).",
             file=sys.stderr,
@@ -1903,7 +1910,7 @@ async def _cmd_audio_bridge(radio: Radio, args: argparse.Namespace) -> int:
     """Bridge radio audio to a virtual audio device."""
     from .audio_bridge import AudioBridge, list_audio_devices
 
-    if not args.list_devices and not isinstance(radio, AudioCapable):
+    if not args.list_devices and CAP_AUDIO not in radio.capabilities:
         print(
             "Error: audio bridge requires a radio that supports audio (e.g. LAN or serial with audio).",
             file=sys.stderr,
@@ -1930,7 +1937,7 @@ async def _cmd_audio_bridge(radio: Radio, args: argparse.Namespace) -> int:
             print(f"  [{idx}] {name}  (in={max_in}, out={max_out}){marker}")
         return 0
 
-    if not isinstance(radio, AudioCapable):
+    if CAP_AUDIO not in radio.capabilities:
         print("Error: audio bridge requires a radio that supports audio.", file=sys.stderr)
         return 1
     try:

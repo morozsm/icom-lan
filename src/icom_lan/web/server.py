@@ -31,7 +31,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 from .. import __version__
 from ..radio_state import RadioState
-from ..radio_protocol import AudioCapable, PowerControlCapable, ScopeCapable
+from ..capabilities import CAP_AUDIO, CAP_POWER_CONTROL, CAP_SCOPE
 from ..audio_fft_scope import AudioFftScope
 from ._delta_encoder import DeltaEncoder
 from .dx_cluster import DXClusterClient, SpotBuffer
@@ -249,11 +249,11 @@ class WebServer:
         # PCM tap is lazy — enabled only when audio-scope clients connect.
         self._audio_fft_scope: AudioFftScope | None = None
         _has_audio = (
-            isinstance(radio, AudioCapable)
-            or (hasattr(radio, "capabilities") and isinstance(radio.capabilities, set)
-                and "audio" in radio.capabilities)
+            CAP_AUDIO in radio.capabilities
         ) if radio is not None else False
-        _has_scope = isinstance(radio, ScopeCapable) if radio is not None else False
+        _has_scope = (
+            CAP_SCOPE in radio.capabilities
+        ) if radio is not None else False
         if radio is not None and _has_audio:
             self._audio_fft_scope = AudioFftScope(fft_size=2048, fps=20, avg_count=4)
             self._audio_fft_scope.on_frame(self._broadcast_audio_scope)
@@ -347,9 +347,7 @@ class WebServer:
 
     def _set_scope_data_callback(self, callback: Any) -> None:
         """Set the scope data callback on the radio if it supports it."""
-        from ..radio_protocol import ScopeCapable
-
-        if self._radio is not None and isinstance(self._radio, ScopeCapable):
+        if self._radio is not None and CAP_SCOPE in self._radio.capabilities:
             self._radio.on_scope_data(callback)
 
     # ------------------------------------------------------------------
@@ -455,7 +453,7 @@ class WebServer:
         self._audio_scope_handlers.discard(handler)
         if not self._audio_scope_handlers and self._audio_fft_scope is not None:
             # Only disable tap for hardware-scope radios (non-hw radios keep tap always on)
-            _has_scope = isinstance(self._radio, ScopeCapable) if self._radio is not None else False
+            _has_scope = CAP_SCOPE in self._radio.capabilities if self._radio is not None else False
             if _has_scope:
                 self._audio_broadcaster.set_pcm_tap(None)
                 logger.info("audio-scope: PCM tap disabled (no clients)")
@@ -941,7 +939,7 @@ class WebServer:
             )
 
         self._audio_bridge = AudioBridge(
-            cast(AudioCapable, self._radio),
+            self._radio,  # type: ignore[arg-type]
             device_name=device_name,
             tx_device_name=tx_device_name,
             tx_enabled=tx_enabled,
@@ -1853,7 +1851,7 @@ class WebServer:
                         logger.warning("power-on: reconnect failed: %s", conn_err)
                         # Try anyway — some radios accept CI-V on stale transport
                 is_on = power_state == "on"
-                await cast(PowerControlCapable, radio).set_powerstat(is_on)
+                await radio.set_powerstat(is_on)  # type: ignore[union-attr]
                 # Optimistic state update: radio won't respond to polls when off
                 if self._radio_state is not None:
                     self._radio_state.power_on = is_on

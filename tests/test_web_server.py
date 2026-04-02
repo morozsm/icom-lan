@@ -1258,6 +1258,7 @@ class TestAudioHandlerCodecDetection:
 
         mock_ws = MagicMock(spec=WebSocketConnection)
         mock_radio = MagicMock(spec=AudioCapable)
+        mock_radio.capabilities = {"audio"}
         mock_radio.audio_codec = audio_codec
         mock_radio.audio_sample_rate = sample_rate
         mock_radio.start_audio_rx_opus = AsyncMock()
@@ -2726,7 +2727,7 @@ class TestGetProfileRouting:
         """_get_profile() uses radio.model when radio has no .profile property."""
         from icom_lan.profiles import RadioProfile
 
-        radio = SimpleNamespace(model="FTX-1")  # no .profile attribute
+        radio = SimpleNamespace(model="FTX-1", capabilities={"audio", "scope"})  # no .profile attribute
         srv = self._make_server(radio)
         profile = srv._get_profile()
 
@@ -2741,7 +2742,7 @@ class TestGetProfileRouting:
 
         ic7610_profile = resolve_radio_profile(model="IC-7610")
         # Simulate IcomRadio: has .profile (RadioProfile) but .model would differ
-        radio = SimpleNamespace(profile=ic7610_profile, model="WRONG")
+        radio = SimpleNamespace(profile=ic7610_profile, model="WRONG", capabilities={"audio", "scope"})
         srv = self._make_server(radio)
         profile = srv._get_profile()
 

@@ -13,6 +13,8 @@ from icom_lan.types import HEADER_SIZE, PacketType
 from _perf_helpers import fast_connect
 from mock_server import MockIcomRadio
 
+from _caps import FULL_ICOM_CAPS as FULL_ICOM_CAPS  # noqa: F401 — re-export
+
 # ---------------------------------------------------------------------------
 # Patch for missing IcomRadio._handle_raw_civ_packet
 # radio.py:268 sets civ_transport.on_raw_packet to this method, but the

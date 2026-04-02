@@ -38,10 +38,13 @@ def _capable_radio() -> SimpleNamespace:
     """Radio mock satisfying AdvancedControlCapable + TransceiverStatusCapable."""
     return SimpleNamespace(
         capabilities={
-            "dual_rx",
-            "cw",
-            "break_in",
-            "vox",
+            "audio", "scope", "meters", "power_control", "af_level", "rf_gain",
+            "squelch", "cw", "attenuator", "preamp", "antenna", "rx_antenna",
+            "system_settings", "dual_watch", "tuner", "data_mode", "nb", "nr",
+            "ip_plus", "digisel", "vox", "compressor", "break_in", "notch",
+            "apf", "repeater_tone", "tsql", "main_sub_tracking", "ssb_tx_bw",
+            "filter_width", "filter_shape", "tx", "dual_rx", "agc",
+            "tuning_step", "band_edge", "xfc",
         },
         profile=resolve_radio_profile(model="IC-7610"),
         # ScopeCapable attrs required for isinstance check

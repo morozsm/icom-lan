@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from _caps import FULL_ICOM_CAPS
 from icom_lan.exceptions import ConnectionError as IcomConnectionError
 from icom_lan.exceptions import TimeoutError as IcomTimeoutError
 from icom_lan.radio_state import RadioState
@@ -28,6 +29,7 @@ def config() -> RigctldConfig:
 def mock_radio() -> AsyncMock:
     """Radio mock; implements MetersCapable (get_s_meter, get_swr, get_rf_power) for get_level tests."""
     radio = AsyncMock()
+    radio.capabilities = set(FULL_ICOM_CAPS)
     radio.get_data_mode.return_value = False
     radio.get_s_meter = AsyncMock(return_value=0)
     radio.get_swr = AsyncMock(return_value=0.0)

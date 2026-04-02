@@ -30,6 +30,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from _caps import FULL_ICOM_CAPS
 from icom_lan.exceptions import ConnectionError as IcomConnectionError
 from icom_lan.exceptions import TimeoutError as IcomTimeoutError
 from icom_lan.radio_protocol import MetersCapable
@@ -78,6 +79,7 @@ def _make_mock_radio(mock_spec: dict) -> _MockRadio:
     await in the handler returns the value.
     """
     radio = _MockRadio()
+    radio.capabilities = set(FULL_ICOM_CAPS)
     # Sensible defaults so get_mode doesn't blow up when not explicitly mocked.
     radio.get_freq = AsyncMock(return_value=14_074_000)
     radio.set_freq = AsyncMock(return_value=None)

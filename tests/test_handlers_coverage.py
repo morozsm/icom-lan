@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from _caps import FULL_ICOM_CAPS
 from icom_lan.profiles import resolve_radio_profile
 from icom_lan.scope import ScopeFrame
 from icom_lan.types import AudioCodec
@@ -82,28 +83,7 @@ def _capable_radio() -> SimpleNamespace:
     runtime_checkable Protocol uses inspect.getattr_static which does not call __getattr__.
     """
     return SimpleNamespace(
-        capabilities={
-            "rf_gain",
-            "af_level",
-            "squelch",
-            "tx",
-            "dual_rx",
-            "scope",
-            "nb",
-            "nr",
-            "notch",
-            "pbt",
-            "rit",
-            "digisel",
-            "ip_plus",
-            "attenuator",
-            "preamp",
-            "cw",
-            "break_in",
-            "vox",
-            "compressor",
-            "monitor",
-        },
+        capabilities=set(FULL_ICOM_CAPS),
         profile=resolve_radio_profile(model="IC-7610"),
         set_rf_power=AsyncMock(),
         get_powerstat=AsyncMock(return_value=True),
@@ -1026,6 +1006,7 @@ async def test_audio_broadcaster_subscribe_unsubscribe_lifecycle() -> None:
     from icom_lan.audio_bus import AudioBus
 
     radio = SimpleNamespace(
+        capabilities={"audio"},
         audio_codec=AudioCodec.PCM_1CH_16BIT,
         audio_sample_rate=48_000,
         start_audio_rx_opus=AsyncMock(),
@@ -1061,6 +1042,7 @@ async def test_audio_broadcaster_codec_and_frame_metadata() -> None:
     from icom_lan.audio_bus import AudioBus
 
     radio = SimpleNamespace(
+        capabilities={"audio"},
         audio_codec=AudioCodec.OPUS_2CH,
         audio_sample_rate=96_000,
         start_audio_rx_opus=AsyncMock(),
@@ -1099,6 +1081,7 @@ async def test_audio_broadcaster_start_relay_failure() -> None:
     from icom_lan.audio_bus import AudioBus
 
     failing_radio = SimpleNamespace(
+        capabilities={"audio"},
         audio_codec=AudioCodec.OPUS_1CH,
         audio_sample_rate=48_000,
         start_audio_rx_opus=AsyncMock(side_effect=RuntimeError("start fail")),
@@ -1132,6 +1115,7 @@ async def test_audio_handler_reader_control_tx_and_sender_paths(
     )
     # Mock radio needs to pass isinstance(AudioCapable) check
     radio = MagicMock(spec=AudioCapable)
+    radio.capabilities = {"audio"}
     radio.push_audio_tx_opus = AsyncMock()
     ws = SimpleNamespace(
         recv=AsyncMock(
@@ -1203,6 +1187,7 @@ async def test_audio_handler_control_and_tx_guard_paths() -> None:
     from icom_lan.radio_protocol import AudioCapable
 
     class _FakeAudioRadio(AudioCapable):
+        capabilities = {"audio"}
         push_audio_tx_opus = AsyncMock(side_effect=RuntimeError("boom"))
         start_audio_rx_opus = AsyncMock()
         stop_audio_rx_opus = AsyncMock()
