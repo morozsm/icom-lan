@@ -365,6 +365,49 @@ class TestDisconnect:
         assert not radio.connected
 
 
+class TestConnectReadiness:
+    @pytest.mark.asyncio
+    async def test_connect_raises_when_radio_never_becomes_ready(self) -> None:
+        radio = IcomRadio("192.168.1.100", username="u", password="p", timeout=0.2)
+        mt = ConnectMockTransport()
+        radio._ctrl_transport = mt
+
+        fake_civ_transport = ConnectMockTransport()
+
+        with (
+            patch.object(
+                radio._control_phase,
+                "_wait_for_packet",
+                new=AsyncMock(return_value=_build_login_response()),
+            ),
+            patch.object(radio._control_phase, "_send_token_ack", new=AsyncMock()),
+            patch.object(
+                radio._control_phase,
+                "_receive_guid",
+                new=AsyncMock(return_value=b"\x00" * 16),
+            ),
+            patch.object(radio._control_phase, "_send_conninfo", new=AsyncMock()),
+            patch.object(
+                radio._control_phase,
+                "_receive_civ_port",
+                new=AsyncMock(return_value=50002),
+            ),
+            patch.object(radio._control_phase, "_flush_queue", new=AsyncMock(return_value=0)),
+            patch.object(radio._control_phase, "_start_token_renewal"),
+            patch.object(radio._control_phase, "_start_watchdog"),
+            patch.object(radio._civ_runtime, "start_pump"),
+            patch.object(radio._civ_runtime, "start_data_watchdog"),
+            patch.object(radio._civ_runtime, "start_worker"),
+            patch("icom_lan.transport.IcomTransport", return_value=fake_civ_transport),
+            patch("icom_lan._control_phase.asyncio.sleep", new=AsyncMock()),
+        ):
+            radio._civ_ready_idle_timeout = 0.0
+            with pytest.raises(ConnectionError, match="radio connect aborted"):
+                await radio.connect()
+
+        assert mt.disconnected is True
+
+
 class TestConnectSessionRejection:
     @pytest.mark.asyncio
     async def test_connect_raises_on_status_rejection_after_retries(self) -> None:
@@ -433,6 +476,13 @@ class TestWifiBindBehavior:
         audio_sock = _FakeSocket(("192.168.2.194", 50003))
 
         fake_civ_transport = ConnectMockTransport()
+        mt._udp_transport = object()
+        fake_civ_transport._udp_transport = object()
+
+        async def _mark_ready(_transport: object) -> int:
+            radio._civ_stream_ready = True
+            radio._last_civ_data_received = time.monotonic()
+            return 0
 
         with (
             patch(
@@ -459,7 +509,7 @@ class TestWifiBindBehavior:
             patch.object(radio._control_phase, "_start_token_renewal"),
             patch.object(radio._control_phase, "_start_watchdog"),
             patch.object(radio._control_phase, "_send_open_close", new=AsyncMock()),
-            patch.object(radio._control_phase, "_flush_queue", new=AsyncMock(return_value=0)),
+            patch.object(radio._control_phase, "_flush_queue", new=AsyncMock(side_effect=_mark_ready)),
             patch.object(radio._civ_runtime, "start_pump"),
             patch.object(radio._civ_runtime, "start_data_watchdog"),
             patch.object(radio._civ_runtime, "start_worker"),

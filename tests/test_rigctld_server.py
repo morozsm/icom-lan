@@ -96,7 +96,11 @@ class _ContractPrewarmRadio:
 
 @pytest.fixture
 def mock_radio() -> MagicMock:
-    return MagicMock(name="radio")
+    radio = MagicMock(name="radio")
+    radio.connected = True
+    radio.radio_ready = True
+    radio.control_connected = True
+    return radio
 
 
 @pytest.fixture
@@ -204,6 +208,7 @@ class TestLifecycle:
         self, cfg: RigctldConfig
     ) -> None:
         radio = SerialMockRadio()
+        await radio.connect()
         srv = RigctldServer(radio, cfg)
         await srv.start()
         try:

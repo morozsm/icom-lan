@@ -169,10 +169,9 @@ async def test_start_aborts_before_listening_when_radio_not_ready() -> None:
     srv = WebServer(radio, WebConfig(host="127.0.0.1", port=0))
 
     with (
-        patch.object(
-            srv,
-            "ensure_startup_ready",
-            new=AsyncMock(side_effect=RuntimeError("web startup aborted")),
+        patch(
+            "icom_lan.web.server.assert_radio_startup_ready",
+            side_effect=RuntimeError("web startup aborted"),
         ),
         patch("icom_lan.web.server.asyncio.start_server", new=AsyncMock()) as start_server,
     ):

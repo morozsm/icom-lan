@@ -20,6 +20,7 @@ import logging
 import time
 from typing import TYPE_CHECKING, Any
 
+from ..startup_checks import assert_radio_startup_ready
 from . import audit as _audit
 from .circuit_breaker import CircuitBreaker, CircuitState
 from .contract import ClientSession, HamlibError, RigctldConfig
@@ -126,6 +127,8 @@ class RigctldServer:
 
     async def start(self) -> None:
         """Start the TCP listener and initialise the command handler."""
+        assert_radio_startup_ready(self._radio, component="rigctld startup")
+
         if self._protocol is None:
             from . import protocol as _proto_mod  # noqa: PLC0415
 

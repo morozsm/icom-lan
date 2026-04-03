@@ -19,7 +19,7 @@ Covers:
 from __future__ import annotations
 
 import asyncio
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -95,7 +95,11 @@ def cfg() -> RigctldConfig:
 
 @pytest.fixture
 def mock_radio() -> MagicMock:
-    return MagicMock(name="radio")
+    radio = MagicMock(name="radio")
+    radio.connected = True
+    radio.radio_ready = True
+    radio.control_connected = True
+    return radio
 
 
 @pytest.fixture
@@ -106,6 +110,21 @@ async def server(mock_radio: MagicMock, cfg: RigctldConfig) -> RigctldServer:  #
     await srv.start()
     yield srv  # type: ignore[misc]
     await srv.stop()
+
+
+@pytest.mark.asyncio
+async def test_start_aborts_before_listening_when_radio_not_ready() -> None:
+    radio = MagicMock(name="radio")
+    radio.connected = False
+    radio.radio_ready = False
+    radio.control_connected = False
+    cfg = RigctldConfig(host="127.0.0.1", port=0)
+    srv = RigctldServer(radio, cfg, _protocol=_make_proto(), _handler=_make_handler())
+
+    with patch("icom_lan.rigctld.server.asyncio.start_server", new=AsyncMock()) as start_server:
+        with pytest.raises(RuntimeError, match="startup aborted"):
+            await srv.start()
+    start_server.assert_not_awaited()
 
 
 # ---------------------------------------------------------------------------

@@ -18,6 +18,7 @@ import hashlib
 import json
 import struct
 from types import SimpleNamespace
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -284,6 +285,8 @@ def _add_scope_capable_attrs(radio: MagicMock) -> MagicMock:
 def mock_radio() -> MagicMock:
     radio = MagicMock(name="radio")
     radio.connected = True
+    radio.radio_ready = True
+    radio.control_connected = True
     radio.model = "IC-7610"
     radio.capabilities = {
         "audio",

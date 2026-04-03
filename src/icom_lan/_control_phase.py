@@ -17,6 +17,7 @@ from .auth import (
 )
 from ._connection_state import RadioConnectionState
 from .exceptions import AuthenticationError, ConnectionError, TimeoutError
+from .startup_checks import wait_for_radio_startup_ready
 from .transport import ConnectionState, IcomTransport
 
 if TYPE_CHECKING:
@@ -257,6 +258,17 @@ class ControlPhaseRuntime:
         self._start_token_renewal()
         if h._auto_reconnect:
             self._start_watchdog()
+
+        try:
+            await wait_for_radio_startup_ready(
+                h,
+                timeout=getattr(h, "_timeout", 5.0),
+                component="radio connect",
+            )
+        except RuntimeError as exc:
+            await h.disconnect()
+            raise ConnectionError(str(exc)) from exc
+
         h._has_connected_once = True
         logger.info(
             "Connected to %s (control=%d, civ=%d)",
