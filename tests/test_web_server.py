@@ -244,6 +244,8 @@ def _add_scope_capable_attrs(radio: MagicMock) -> MagicMock:
 
     Python 3.12+ runtime_checkable Protocol uses inspect.getattr_static which
     bypasses MagicMock.__getattr__, so all attrs must be set in __dict__.
+
+    NOTE: Keep this in sync with `ScopeCapable` Protocol in `radio_protocol.py`.
     """
     radio.on_scope_data = MagicMock()
     radio.enable_scope = AsyncMock()
@@ -253,6 +255,23 @@ def _add_scope_capable_attrs(radio: MagicMock) -> MagicMock:
     radio.set_scope_during_tx = AsyncMock()
     radio.set_scope_center_type = AsyncMock()
     radio.set_scope_fixed_edge = AsyncMock()
+
+    # Scope control settings (0x27 sub-commands)
+    radio.get_scope_receiver = AsyncMock(return_value=0)
+    radio.set_scope_receiver = AsyncMock()
+    radio.get_scope_dual = AsyncMock(return_value=False)
+    radio.set_scope_dual = AsyncMock()
+    radio.get_scope_mode = AsyncMock(return_value=0)
+    radio.set_scope_mode = AsyncMock()
+    radio.get_scope_span = AsyncMock(return_value=0)
+    radio.set_scope_span = AsyncMock()
+    radio.get_scope_speed = AsyncMock(return_value=0)
+    radio.set_scope_speed = AsyncMock()
+    radio.get_scope_ref = AsyncMock(return_value=0)
+    radio.set_scope_ref = AsyncMock()
+    radio.get_scope_hold = AsyncMock(return_value=False)
+    radio.set_scope_hold = AsyncMock()
+
     return radio
 
 
@@ -283,6 +302,7 @@ def mock_radio() -> MagicMock:
         "digisel",
         "ip_plus",
     }
+    _add_scope_capable_attrs(radio)
     radio.get_freq = AsyncMock(return_value=14_074_000)
     radio.get_mode = AsyncMock(return_value=MagicMock(name="USB"))
     radio.get_mode.return_value.name = "USB"
@@ -313,6 +333,8 @@ def mock_radio() -> MagicMock:
     radio.vfo_exchange = AsyncMock()
     radio.vfo_equalize = AsyncMock()
     radio.vfo_a_equals_b = AsyncMock()
+    radio.set_main_sub_tracking = AsyncMock()
+    radio.get_main_sub_tracking = AsyncMock(return_value=False)
     # ScopeCapable protocol attrs (all required for isinstance check in Python 3.12+)
     radio.on_scope_data = MagicMock()
     radio.enable_scope = AsyncMock()

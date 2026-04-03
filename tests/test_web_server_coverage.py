@@ -71,6 +71,8 @@ def _scope_radio(*, ready: bool = True, connected: bool = True) -> MagicMock:
     radio.radio_ready = ready
     radio.connected = connected
     radio.capabilities = {"scope"}
+
+    # ScopeCapable protocol attrs (Python 3.12+ runtime_checkable)
     radio.on_scope_data = MagicMock()
     radio.enable_scope = AsyncMock()
     radio.disable_scope = AsyncMock()
@@ -79,6 +81,23 @@ def _scope_radio(*, ready: bool = True, connected: bool = True) -> MagicMock:
     radio.set_scope_during_tx = AsyncMock()
     radio.set_scope_center_type = AsyncMock()
     radio.set_scope_fixed_edge = AsyncMock()
+
+    # Scope control settings (0x27 sub-commands)
+    radio.get_scope_receiver = AsyncMock(return_value=0)
+    radio.set_scope_receiver = AsyncMock()
+    radio.get_scope_dual = AsyncMock(return_value=False)
+    radio.set_scope_dual = AsyncMock()
+    radio.get_scope_mode = AsyncMock(return_value=0)
+    radio.set_scope_mode = AsyncMock()
+    radio.get_scope_span = AsyncMock(return_value=0)
+    radio.set_scope_span = AsyncMock()
+    radio.get_scope_speed = AsyncMock(return_value=0)
+    radio.set_scope_speed = AsyncMock()
+    radio.get_scope_ref = AsyncMock(return_value=0)
+    radio.set_scope_ref = AsyncMock()
+    radio.get_scope_hold = AsyncMock(return_value=False)
+    radio.set_scope_hold = AsyncMock()
+
     return radio
 
 
