@@ -5994,7 +5994,14 @@ def parse_band_stack_response(frame: CivFrame) -> "BandStackRegister":
     )
 
 
-# --- Antenna Selection (0x12) ---
+# --- Antenna Selection / RX-ANT (0x12) ---
+#
+# IC-7610 CI-V Reference:
+#   Cmd 0x12 Sub 0x00: Select/read ANT1 selection (data: 00=RX ANT OFF, 01=RX ANT ON)
+#   Cmd 0x12 Sub 0x01: Select/read ANT2 selection (data: 00=RX ANT OFF, 01=RX ANT ON)
+#
+# In practice, sending 0x12 <sub> can have side-effects (it selects ANT1/ANT2).
+# Avoid polling these commands.
 
 
 def get_antenna_1(
@@ -6002,7 +6009,7 @@ def get_antenna_1(
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
-    """Build read ANT1 selection command (0x12 0x00)."""
+    """Build ANT1 select/read command (0x12 0x00) WITHOUT data byte."""
     if cmd_map is not None:
         return _build_from_map(
             cmd_map,
@@ -6020,10 +6027,12 @@ def set_antenna_1(
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
-    """Build set ANT1 selection command (0x12 0x00).
+    """Build ANT1 select command (0x12 0x00 <00|01>).
+
+    IC-7610 CI-V reference: data byte encodes RX ANT OFF/ON.
 
     Args:
-        enabled: True to select ANT1, False to deselect.
+        enabled: True = RX ANT ON, False = RX ANT OFF (while selecting ANT1).
     """
     if cmd_map is not None:
         return _build_from_map(
@@ -6047,7 +6056,7 @@ def get_antenna_2(
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
-    """Build read ANT2 selection command (0x12 0x01)."""
+    """Build ANT2 select/read command (0x12 0x01) WITHOUT data byte."""
     if cmd_map is not None:
         return _build_from_map(
             cmd_map,
@@ -6065,10 +6074,12 @@ def set_antenna_2(
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
-    """Build set ANT2 selection command (0x12 0x01).
+    """Build ANT2 select command (0x12 0x01 <00|01>).
+
+    IC-7610 CI-V reference: data byte encodes RX ANT OFF/ON.
 
     Args:
-        enabled: True to select ANT2, False to deselect.
+        enabled: True = RX ANT ON, False = RX ANT OFF (while selecting ANT2).
     """
     if cmd_map is not None:
         return _build_from_map(
@@ -6092,16 +6103,19 @@ def get_rx_antenna_ant1(
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
-    """Build read RX antenna on ANT1 command (0x12 0x12)."""
+    """Build read RX ANT state for ANT1 (0x12 0x00).
+
+    Warning: On IC-7610 this also selects ANT1.
+    """
     if cmd_map is not None:
         return _build_from_map(
             cmd_map,
             "get_antenna",
             to_addr=to_addr,
             from_addr=from_addr,
-            data=bytes([_SUB_RX_ANT_ANT1]),
+            data=bytes([_SUB_ANT1]),
         )
-    return build_civ_frame(to_addr, from_addr, _CMD_ANTENNA, sub=_SUB_RX_ANT_ANT1)
+    return build_civ_frame(to_addr, from_addr, _CMD_ANTENNA, sub=_SUB_ANT1)
 
 
 def set_rx_antenna_ant1(
@@ -6110,10 +6124,12 @@ def set_rx_antenna_ant1(
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
-    """Build set RX antenna on ANT1 command (0x12 0x12).
+    """Build set RX ANT state for ANT1 (0x12 0x00 <00|01>).
+
+    Warning: On IC-7610 this also selects ANT1.
 
     Args:
-        enabled: True to enable RX antenna on ANT1.
+        enabled: True to enable dedicated RX antenna.
     """
     if cmd_map is not None:
         return _build_from_map(
@@ -6121,13 +6137,13 @@ def set_rx_antenna_ant1(
             "set_antenna",
             to_addr=to_addr,
             from_addr=from_addr,
-            data=bytes([_SUB_RX_ANT_ANT1]) + (b"\x01" if enabled else b"\x00"),
+            data=bytes([_SUB_ANT1]) + (b"\x01" if enabled else b"\x00"),
         )
     return build_civ_frame(
         to_addr,
         from_addr,
         _CMD_ANTENNA,
-        sub=_SUB_RX_ANT_ANT1,
+        sub=_SUB_ANT1,
         data=b"\x01" if enabled else b"\x00",
     )
 
@@ -6137,12 +6153,19 @@ def get_rx_antenna_ant2(
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
-    """Build read RX antenna on ANT2 command (0x12 0x13)."""
+    """Build read RX ANT state for ANT2 (0x12 0x01).
+
+    Warning: On IC-7610 this also selects ANT2.
+    """
     if cmd_map is not None:
         return _build_from_map(
-            cmd_map, "get_rx_antenna_ant2", to_addr=to_addr, from_addr=from_addr
+            cmd_map,
+            "get_rx_antenna_ant2",
+            to_addr=to_addr,
+            from_addr=from_addr,
+            data=bytes([_SUB_ANT2]),
         )
-    return build_civ_frame(to_addr, from_addr, _CMD_ANTENNA, sub=_SUB_RX_ANT_ANT2)
+    return build_civ_frame(to_addr, from_addr, _CMD_ANTENNA, sub=_SUB_ANT2)
 
 
 def set_rx_antenna_ant2(
@@ -6151,10 +6174,12 @@ def set_rx_antenna_ant2(
     from_addr: int = CONTROLLER_ADDR,
     cmd_map: CommandMap | None = None,
 ) -> bytes:
-    """Build set RX antenna on ANT2 command (0x12 0x13).
+    """Build set RX ANT state for ANT2 (0x12 0x01 <00|01>).
+
+    Warning: On IC-7610 this also selects ANT2.
 
     Args:
-        enabled: True to enable RX antenna on ANT2.
+        enabled: True to enable dedicated RX antenna.
     """
     if cmd_map is not None:
         return _build_from_map(
@@ -6162,13 +6187,13 @@ def set_rx_antenna_ant2(
             "set_rx_antenna_ant2",
             to_addr=to_addr,
             from_addr=from_addr,
-            data=b"\x01" if enabled else b"\x00",
+            data=bytes([_SUB_ANT2]) + (b"\x01" if enabled else b"\x00"),
         )
     return build_civ_frame(
         to_addr,
         from_addr,
         _CMD_ANTENNA,
-        sub=_SUB_RX_ANT_ANT2,
+        sub=_SUB_ANT2,
         data=b"\x01" if enabled else b"\x00",
     )
 

@@ -558,22 +558,18 @@ class CivRuntime:
                 val = frame.data[0]
                 _rx.att = ((val >> 4) & 0x0F) * 10 + (val & 0x0F)
             elif frame.command == 0x12 and frame.data and _rs is not None:
-                # Antenna selection / RX antenna status (plain CI-V)
-                # 0x12 0x00: ANT1 selection status (data: 0x00|0x01)
-                # 0x12 0x01: ANT2 selection status (data: 0x00|0x01)
-                # 0x12 0x12: RX ANT (on ANT1) status (data: 0x00|0x01)
-                # 0x12 0x13: RX ANT (on ANT2) status (data: 0x00|0x01)
+                # Antenna select / RX-ANT state (plain CI-V)
+                # IC-7610 CI-V reference:
+                #   0x12 0x00 <00|01> = select ANT1, data = RX ANT OFF/ON
+                #   0x12 0x01 <00|01> = select ANT2, data = RX ANT OFF/ON
+                # NOTE: This command is NOT safe to poll.
                 sub = frame.sub or 0
                 val = bool(frame.data[0])
                 if sub == 0x00:
-                    if val:
-                        _rs.tx_antenna = 1
-                elif sub == 0x01:
-                    if val:
-                        _rs.tx_antenna = 2
-                elif sub == 0x12:
+                    _rs.tx_antenna = 1
                     _rs.rx_antenna_1 = val
-                elif sub == 0x13:
+                elif sub == 0x01:
+                    _rs.tx_antenna = 2
                     _rs.rx_antenna_2 = val
             elif (
                 frame.command == 0x14
@@ -968,20 +964,16 @@ class CivRuntime:
                     rs.rit_tx = bool(frame.data[0])
 
             elif cmd == 0x12:
-                # Antenna selection / RX antenna status (cmd29 path)
-                # Mirror the plain CI-V logic above.
+                # Antenna select / RX-ANT state (cmd29 path)
+                # IC-7610: 0x12 0x00/0x01 with data byte controls RX ANT.
                 sub = frame.sub or 0
                 if frame.data:
                     val = bool(frame.data[0])
                     if sub == 0x00:
-                        if val:
-                            rs.tx_antenna = 1
-                    elif sub == 0x01:
-                        if val:
-                            rs.tx_antenna = 2
-                    elif sub == 0x12:
+                        rs.tx_antenna = 1
                         rs.rx_antenna_1 = val
-                    elif sub == 0x13:
+                    elif sub == 0x01:
+                        rs.tx_antenna = 2
                         rs.rx_antenna_2 = val
 
             elif cmd == 0x0E:

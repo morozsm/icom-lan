@@ -870,14 +870,12 @@
             <CollapsiblePanel title="ANTENNA" panelId="m-antenna">
               <AntennaPanel
                 txAntenna={antenna.txAntenna}
-                rxAnt1={antenna.rxAnt1}
-                rxAnt2={antenna.rxAnt2}
+                rxAnt={antenna.rxAnt}
                 antennaCount={antenna.antennaCount}
                 hasRxAntenna={antenna.hasRxAntenna}
                 onSelectAnt1={antennaHandlers.onSelectAnt1}
                 onSelectAnt2={antennaHandlers.onSelectAnt2}
-                onToggleRxAnt1={antennaHandlers.onToggleRxAnt1}
-                onToggleRxAnt2={antennaHandlers.onToggleRxAnt2}
+                onToggleRxAnt={antennaHandlers.onToggleRxAnt}
               />
             </CollapsiblePanel>
           {/if}

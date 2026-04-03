@@ -3,26 +3,22 @@
 
   interface Props {
     txAntenna: number;
-    rxAnt1: boolean;
-    rxAnt2: boolean;
+    rxAnt: boolean;
     antennaCount: number;
     hasRxAntenna: boolean;
     onSelectAnt1: () => void;
     onSelectAnt2: () => void;
-    onToggleRxAnt1: () => void;
-    onToggleRxAnt2: () => void;
+    onToggleRxAnt: () => void;
   }
 
   let {
     txAntenna,
-    rxAnt1,
-    rxAnt2,
+    rxAnt,
     antennaCount,
     hasRxAntenna,
     onSelectAnt1,
     onSelectAnt2,
-    onToggleRxAnt1,
-    onToggleRxAnt2,
+    onToggleRxAnt,
   }: Props = $props();
 </script>
 
@@ -55,20 +51,12 @@
         <span class="control-label">RX</span>
         <div class="button-group">
           <HardwareButton
-            active={rxAnt1}
+            active={rxAnt}
             indicator="edge-left"
             color="green"
-            onclick={onToggleRxAnt1}
+            onclick={onToggleRxAnt}
           >
-            RX ANT1
-          </HardwareButton>
-          <HardwareButton
-            active={rxAnt2}
-            indicator="edge-left"
-            color="green"
-            onclick={onToggleRxAnt2}
-          >
-            RX ANT2
+            RX ANT
           </HardwareButton>
         </div>
       </div>

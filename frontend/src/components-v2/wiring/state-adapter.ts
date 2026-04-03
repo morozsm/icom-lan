@@ -460,8 +460,7 @@ export function toBandSelectorProps(
 
 export interface AntennaProps {
   txAntenna: number;
-  rxAnt1: boolean;
-  rxAnt2: boolean;
+  rxAnt: boolean;
   antennaCount: number;
   hasRxAntenna: boolean;
 }
@@ -470,10 +469,14 @@ export function toAntennaProps(
   state: ServerState | null,
   caps: Capabilities | null,
 ): AntennaProps {
+  const txAntenna = state?.txAntenna ?? 1;
+  const rxAnt = txAntenna === 2
+    ? (state?.rxAntenna2 ?? false)
+    : (state?.rxAntenna1 ?? false);
+
   return {
-    txAntenna: state?.txAntenna ?? 1,
-    rxAnt1: state?.rxAntenna1 ?? false,
-    rxAnt2: state?.rxAntenna2 ?? false,
+    txAntenna,
+    rxAnt,
     antennaCount: caps?.antennas ?? 1,
     hasRxAntenna: hasCap(caps, 'rx_antenna'),
   };

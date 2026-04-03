@@ -3489,10 +3489,11 @@ class Icom7610CoreRadio:
         )
 
     async def set_antenna_1(self, enabled: bool) -> None:
-        """Set ANT1 selection (0x12 0x00)."""
-        await self._send_fire_and_forget(
-            set_antenna_1(enabled, to_addr=self._radio_addr)
-        )
+        """Select ANT1 (0x12 0x00 <00|01>).
+
+        IC-7610: data byte encodes RX-ANT OFF/ON.
+        """
+        await self._send_fire_and_forget(set_antenna_1(enabled, to_addr=self._radio_addr))
 
     async def get_antenna_2(self) -> bool:
         """Read ANT2 selection status (0x12 0x01)."""
@@ -3504,40 +3505,43 @@ class Icom7610CoreRadio:
         )
 
     async def set_antenna_2(self, enabled: bool) -> None:
-        """Set ANT2 selection (0x12 0x01)."""
-        await self._send_fire_and_forget(
-            set_antenna_2(enabled, to_addr=self._radio_addr)
-        )
+        """Select ANT2 (0x12 0x01 <00|01>).
+
+        IC-7610: data byte encodes RX-ANT OFF/ON.
+        """
+        await self._send_fire_and_forget(set_antenna_2(enabled, to_addr=self._radio_addr))
 
     async def get_rx_antenna_ant1(self) -> bool:
-        """Read RX antenna on ANT1 status (0x12 0x12)."""
+        """Read RX ANT state for ANT1.
+
+        NOTE: On IC-7610 this is implemented via 0x12 0x00 and may select ANT1.
+        """
         return await self._get_bool_value(
             get_rx_antenna_ant1(to_addr=self._radio_addr),
             key="get_rx_antenna_ant1",
             command=0x12,
-            sub=0x12,
+            sub=0x00,
         )
 
     async def set_rx_antenna_ant1(self, enabled: bool) -> None:
-        """Set RX antenna on ANT1 (0x12 0x12)."""
-        await self._send_fire_and_forget(
-            set_rx_antenna_ant1(enabled, to_addr=self._radio_addr)
-        )
+        """Set RX ANT state for ANT1 (0x12 0x00 <00|01>)."""
+        await self._send_fire_and_forget(set_rx_antenna_ant1(enabled, to_addr=self._radio_addr))
 
     async def get_rx_antenna_ant2(self) -> bool:
-        """Read RX antenna on ANT2 status (0x12 0x13)."""
+        """Read RX ANT state for ANT2.
+
+        NOTE: On IC-7610 this is implemented via 0x12 0x01 and may select ANT2.
+        """
         return await self._get_bool_value(
             get_rx_antenna_ant2(to_addr=self._radio_addr),
             key="get_rx_antenna_ant2",
             command=0x12,
-            sub=0x13,
+            sub=0x01,
         )
 
     async def set_rx_antenna_ant2(self, enabled: bool) -> None:
-        """Set RX antenna on ANT2 (0x12 0x13)."""
-        await self._send_fire_and_forget(
-            set_rx_antenna_ant2(enabled, to_addr=self._radio_addr)
-        )
+        """Set RX ANT state for ANT2 (0x12 0x01 <00|01>)."""
+        await self._send_fire_and_forget(set_rx_antenna_ant2(enabled, to_addr=self._radio_addr))
 
     async def get_acc1_mod_level(self) -> int:
         """Read ACC1 modulation level (0-255)."""

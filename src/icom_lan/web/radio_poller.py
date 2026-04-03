@@ -1990,17 +1990,34 @@ class RadioPoller:
                     self.bump_revision()
                     logger.info("radio-poller: power %s", "ON" if on else "OFF")
             case SetAntenna1(on=on):
+                # IC-7610: 0x12 0x00 selects ANT1, data byte encodes RX-ANT OFF/ON.
                 if CAP_ANTENNA in self._caps:
                     await radio.set_antenna_1(on)
+                    self._radio_state.tx_antenna = 1
+                    self._radio_state.rx_antenna_1 = on
+                    self.bump_revision()
             case SetAntenna2(on=on):
                 if CAP_ANTENNA in self._caps:
                     await radio.set_antenna_2(on)
+                    self._radio_state.tx_antenna = 2
+                    self._radio_state.rx_antenna_2 = on
+                    self.bump_revision()
             case SetRxAntennaAnt1(on=on):
-                if CAP_RX_ANTENNA in self._caps:
+                # IC-7610 RX-ANT is encoded as data byte on 0x12 0x00.
+                # WARNING: This selects ANT1 as TX.
+                if CAP_ANTENNA in self._caps:
                     await radio.set_rx_antenna_ant1(on)
+                    self._radio_state.tx_antenna = 1
+                    self._radio_state.rx_antenna_1 = on
+                    self.bump_revision()
             case SetRxAntennaAnt2(on=on):
-                if CAP_RX_ANTENNA in self._caps:
+                # IC-7610 RX-ANT is encoded as data byte on 0x12 0x01.
+                # WARNING: This selects ANT2 as TX.
+                if CAP_ANTENNA in self._caps:
                     await radio.set_rx_antenna_ant2(on)
+                    self._radio_state.tx_antenna = 2
+                    self._radio_state.rx_antenna_2 = on
+                    self.bump_revision()
             case SetSystemDate(year=year, month=month, day=day):
                 if CAP_SYSTEM_SETTINGS in self._caps:
                     await radio.set_system_date(year, month, day)

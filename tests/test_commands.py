@@ -1828,25 +1828,27 @@ class TestSystemConfigCommands:
         from icom_lan.commands import get_rx_antenna_ant1
 
         frame = get_rx_antenna_ant1()
-        assert frame == b"\xfe\xfe\x98\xe0\x12\x12\xfd"
+        # IC-7610 CI-V: RX-ANT is encoded as data byte on 0x12 0x00 (ANT1)
+        assert frame == b"\xfe\xfe\x98\xe0\x12\x00\xfd"
 
     def test_set_rx_antenna_ant1_on(self) -> None:
         from icom_lan.commands import set_rx_antenna_ant1
 
         frame = set_rx_antenna_ant1(True)
-        assert frame == b"\xfe\xfe\x98\xe0\x12\x12\x01\xfd"
+        assert frame == b"\xfe\xfe\x98\xe0\x12\x00\x01\xfd"
 
     def test_get_rx_antenna_ant2_frame(self) -> None:
         from icom_lan.commands import get_rx_antenna_ant2
 
         frame = get_rx_antenna_ant2()
-        assert frame == b"\xfe\xfe\x98\xe0\x12\x13\xfd"
+        # IC-7610 CI-V: RX-ANT is encoded as data byte on 0x12 0x01 (ANT2)
+        assert frame == b"\xfe\xfe\x98\xe0\x12\x01\xfd"
 
     def test_set_rx_antenna_ant2_off(self) -> None:
         from icom_lan.commands import set_rx_antenna_ant2
 
         frame = set_rx_antenna_ant2(False)
-        assert frame == b"\xfe\xfe\x98\xe0\x12\x13\x00\xfd"
+        assert frame == b"\xfe\xfe\x98\xe0\x12\x01\x00\xfd"
 
     def test_parse_antenna_bool_response(self) -> None:
         from icom_lan.commands import parse_bool_response, parse_civ_frame
