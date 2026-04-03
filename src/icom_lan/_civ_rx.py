@@ -557,6 +557,24 @@ class CivRuntime:
                 # Attenuator response (plain CI-V, no cmd29)
                 val = frame.data[0]
                 _rx.att = ((val >> 4) & 0x0F) * 10 + (val & 0x0F)
+            elif frame.command == 0x12 and frame.data and _rs is not None:
+                # Antenna selection / RX antenna status (plain CI-V)
+                # 0x12 0x00: ANT1 selection status (data: 0x00|0x01)
+                # 0x12 0x01: ANT2 selection status (data: 0x00|0x01)
+                # 0x12 0x12: RX ANT (on ANT1) status (data: 0x00|0x01)
+                # 0x12 0x13: RX ANT (on ANT2) status (data: 0x00|0x01)
+                sub = frame.sub or 0
+                val = bool(frame.data[0])
+                if sub == 0x00:
+                    if val:
+                        _rs.tx_antenna = 1
+                elif sub == 0x01:
+                    if val:
+                        _rs.tx_antenna = 2
+                elif sub == 0x12:
+                    _rs.rx_antenna_1 = val
+                elif sub == 0x13:
+                    _rs.rx_antenna_2 = val
             elif (
                 frame.command == 0x14
                 and frame.data
@@ -757,6 +775,20 @@ class CivRuntime:
                     val = frame.data[0]
                     rx.att = ((val >> 4) & 0x0F) * 10 + (val & 0x0F)
 
+            elif cmd == 0x12:
+                # CI-V 0x12: antenna selection
+                # Sub 0x00 → ANT1, 0x01 → ANT2
+                # Data byte: 0x00 = RX ANT OFF, 0x01 = RX ANT ON
+                sub12 = frame.sub
+                if sub12 in (0x00, 0x01):
+                    rs.tx_antenna = sub12 + 1  # 0x00→1, 0x01→2
+                    if frame.data:
+                        rx_ant_on = bool(frame.data[0])
+                        if sub12 == 0x00:
+                            rs.rx_antenna_1 = rx_ant_on
+                        else:
+                            rs.rx_antenna_2 = rx_ant_on
+
             elif cmd == 0x16:
                 sub = frame.sub or 0
                 data = frame.data
@@ -934,6 +966,23 @@ class CivRuntime:
                     rs.rit_on = bool(frame.data[0])
                 elif frame.sub == 0x02 and frame.data:
                     rs.rit_tx = bool(frame.data[0])
+
+            elif cmd == 0x12:
+                # Antenna selection / RX antenna status (cmd29 path)
+                # Mirror the plain CI-V logic above.
+                sub = frame.sub or 0
+                if frame.data:
+                    val = bool(frame.data[0])
+                    if sub == 0x00:
+                        if val:
+                            rs.tx_antenna = 1
+                    elif sub == 0x01:
+                        if val:
+                            rs.tx_antenna = 2
+                    elif sub == 0x12:
+                        rs.rx_antenna_1 = val
+                    elif sub == 0x13:
+                        rs.rx_antenna_2 = val
 
             elif cmd == 0x0E:
                 if frame.data:

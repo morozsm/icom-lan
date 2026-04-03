@@ -422,6 +422,19 @@ function _applyOptimistic(name: string, params: Record<string, unknown>): void {
         patchRadioState({ active: isSub ? 'SUB' : 'MAIN' });
       }
       break;
+
+    case 'set_antenna_1':
+      if (params.on === true) patchRadioState({ txAntenna: 1 });
+      break;
+    case 'set_antenna_2':
+      if (params.on === true) patchRadioState({ txAntenna: 2 });
+      break;
+    case 'set_rx_antenna_ant1':
+      if (typeof params.on === 'boolean') patchRadioState({ rxAntenna1: params.on });
+      break;
+    case 'set_rx_antenna_ant2':
+      if (typeof params.on === 'boolean') patchRadioState({ rxAntenna2: params.on });
+      break;
   }
 }
 

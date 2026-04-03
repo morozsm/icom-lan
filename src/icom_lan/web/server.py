@@ -1366,6 +1366,7 @@ class WebServer:
                     "preLabels": profile.pre_labels,
                     "agcModes": list(profile.agc_modes) if profile.agc_modes else None,
                     "agcLabels": profile.agc_labels,
+                    "antennas": profile.antenna_tx_count,
                     "dataModeCount": profile.data_mode_count,
                     "dataModeLabels": profile.data_mode_labels,
                     "keyboard": _serialize_keyboard_config(profile),
@@ -1496,6 +1497,7 @@ class WebServer:
                     "channels": 1,
                     "codecs": ["opus"],
                 },
+                "antennas": profile.antenna_tx_count,
                 **({"controls": profile.controls} if profile.controls else {}),
                 "txBands": [
                     {"name": b.name, "start": b.start, "end": b.end}

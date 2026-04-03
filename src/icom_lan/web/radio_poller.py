@@ -1168,6 +1168,21 @@ class RadioPoller:
             (0x14, 0x16),  # VOX gain
             (0x14, 0x17),  # Anti-VOX gain
         ]
+        # Antenna status (if supported)
+        if self._profile.supports_capability("antenna"):
+            _COMMON_FEATURE_QUERIES.extend(
+                [
+                    (0x12, 0x00),  # ANT1 selection status
+                    (0x12, 0x01),  # ANT2 selection status
+                ]
+            )
+        if self._profile.supports_capability("rx_antenna"):
+            _COMMON_FEATURE_QUERIES.extend(
+                [
+                    (0x12, 0x12),  # RX ANT1 status
+                    (0x12, 0x13),  # RX ANT2 status
+                ]
+            )
         if not self._profile.supports_cmd29(0x16, 0x12):
             _COMMON_FEATURE_QUERIES.insert(0, (0x16, 0x12))  # AGC mode
         # For serial: ALC/comp/VD/Id meters move to slow state queries

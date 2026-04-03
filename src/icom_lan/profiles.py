@@ -134,6 +134,7 @@ class RadioProfile:
     meter_calibrations: dict[str, list[dict[str, Any]]] | None = None
     rules: tuple[dict[str, Any], ...] = ()
     keyboard: KeyboardConfig | None = None
+    antenna_tx_count: int = 1
 
     def supports_capability(self, capability: str) -> bool:
         return capability in self.capabilities

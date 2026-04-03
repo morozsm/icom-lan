@@ -17,6 +17,7 @@
   import AgcPanel from '../panels/AgcPanel.svelte';
   import RfFrontEnd from '../panels/RfFrontEnd.svelte';
   import RitXitPanel from '../panels/RitXitPanel.svelte';
+  import AntennaPanel from '../panels/AntennaPanel.svelte';
   import CwPanel from '../panels/CwPanel.svelte';
   import DockMeterPanel from '../panels/DockMeterPanel.svelte';
   import KeyboardHandler from './KeyboardHandler.svelte';
@@ -33,14 +34,14 @@
   import {
     toVfoProps, toVfoOpsProps, toMeterProps,
     toRfFrontEndProps, toModeProps, toFilterProps, toAgcProps, toRitXitProps,
-    toBandSelectorProps, toRxAudioProps, toDspProps, toTxProps, toCwProps,
+    toBandSelectorProps, toRxAudioProps, toDspProps, toTxProps, toCwProps, toAntennaProps,
   } from '../wiring/state-adapter';
   import {
     makeVfoHandlers, makeMeterHandlers, makeKeyboardHandlers,
     makeRfFrontEndHandlers, makeModeHandlers, makeFilterHandlers,
     makeAgcHandlers, makeRitXitHandlers, makeBandHandlers, makePresetHandlers,
     makeRxAudioHandlers, makeDspHandlers, makeTxHandlers, makeCwPanelHandlers,
-    makeSystemHandlers,
+    makeSystemHandlers, makeAntennaHandlers,
   } from '../wiring/command-bus';
   import { getKeyboardConfig } from '$lib/stores/capabilities.svelte';
   import { audioManager } from '$lib/audio/audio-manager';
@@ -68,6 +69,7 @@
   let ritXit = $derived(toRitXitProps(radioState, caps));
   let dsp = $derived(toDspProps(radioState, caps));
   let cw = $derived(toCwProps(radioState, caps));
+  let antenna = $derived(toAntennaProps(radioState, caps));
 
   // ── Handlers ──
   const vfoHandlers = makeVfoHandlers();
@@ -84,6 +86,7 @@
   const ritXitHandlers = makeRitXitHandlers();
   const dspHandlers = makeDspHandlers();
   const cwHandlers = makeCwPanelHandlers();
+  const antennaHandlers = makeAntennaHandlers();
   const systemHandlers = makeSystemHandlers();
 
   // ── VFO layout ──
@@ -862,6 +865,22 @@
               onClear={ritXitHandlers.onClear}
             />
           </CollapsiblePanel>
+
+          {#if antenna.antennaCount > 1}
+            <CollapsiblePanel title="ANTENNA" panelId="m-antenna">
+              <AntennaPanel
+                txAntenna={antenna.txAntenna}
+                rxAnt1={antenna.rxAnt1}
+                rxAnt2={antenna.rxAnt2}
+                antennaCount={antenna.antennaCount}
+                hasRxAntenna={antenna.hasRxAntenna}
+                onSelectAnt1={antennaHandlers.onSelectAnt1}
+                onSelectAnt2={antennaHandlers.onSelectAnt2}
+                onToggleRxAnt1={antennaHandlers.onToggleRxAnt1}
+                onToggleRxAnt2={antennaHandlers.onToggleRxAnt2}
+              />
+            </CollapsiblePanel>
+          {/if}
 
           <CollapsiblePanel title="CW" panelId="m-cw">
             <CwPanel

@@ -563,6 +563,33 @@ export function makeBandHandlers() {
   };
 }
 
+/* ── Antenna Handlers ────────────────────────────────────────── */
+
+export function makeAntennaHandlers() {
+  return {
+    onSelectAnt1: () => {
+      patchRadioState({ txAntenna: 1 });
+      cmd('set_antenna_1', { on: true });
+    },
+    onSelectAnt2: () => {
+      patchRadioState({ txAntenna: 2 });
+      cmd('set_antenna_2', { on: true });
+    },
+    onToggleRxAnt1: () => {
+      const current = (getRadioState() as any)?.rxAntenna1 ?? false;
+      const next = !current;
+      patchRadioState({ rxAntenna1: next });
+      cmd('set_rx_antenna_ant1', { on: next });
+    },
+    onToggleRxAnt2: () => {
+      const current = (getRadioState() as any)?.rxAntenna2 ?? false;
+      const next = !current;
+      patchRadioState({ rxAntenna2: next });
+      cmd('set_rx_antenna_ant2', { on: next });
+    },
+  };
+}
+
 /* ── Meter Handlers ──────────────────────────────────────────── */
 
 export function makeMeterHandlers() {

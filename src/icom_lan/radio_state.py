@@ -135,6 +135,9 @@ class RadioState:
     dash_ratio: int = 0  # 28-45
     nb_depth: int = 0  # 0-9
     nb_width: int = 0  # 0-255
+    tx_antenna: int = 1  # 1 or 2
+    rx_antenna_1: bool = False
+    rx_antenna_2: bool = False
     scope_controls: ScopeControlsState = field(default_factory=ScopeControlsState)
 
     def to_dict(self) -> dict[str, object]:
@@ -180,6 +183,9 @@ class RadioState:
             "dash_ratio": self.dash_ratio,
             "nb_depth": self.nb_depth,
             "nb_width": self.nb_width,
+            "tx_antenna": self.tx_antenna,
+            "rx_antenna_1": self.rx_antenna_1,
+            "rx_antenna_2": self.rx_antenna_2,
             "scope_controls": asdict(self.scope_controls),
             "main": asdict(self.main),
             "sub": asdict(self.sub),

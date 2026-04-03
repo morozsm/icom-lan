@@ -826,6 +826,24 @@ def test_update_radio_state_cmd11_attenuator(radio_with_state: IcomRadio) -> Non
     assert rs.main.att == 18
 
 
+def test_update_radio_state_cmd12_antenna_ant1(radio_with_state: IcomRadio) -> None:
+    """cmd 0x12 sub 0x00 selects ANT1 with RX ANT OFF."""
+    rs = radio_with_state._radio_state
+    frame = _make_frame(cmd=0x12, sub=0x00, data=bytes([0x00]))
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
+    assert rs.tx_antenna == 1
+    assert rs.rx_antenna_1 is False
+
+
+def test_update_radio_state_cmd12_antenna_ant2_rx_on(radio_with_state: IcomRadio) -> None:
+    """cmd 0x12 sub 0x01 selects ANT2 with RX ANT ON."""
+    rs = radio_with_state._radio_state
+    frame = _make_frame(cmd=0x12, sub=0x01, data=bytes([0x01]))
+    radio_with_state._civ_runtime._update_radio_state_from_frame(frame)
+    assert rs.tx_antenna == 2
+    assert rs.rx_antenna_2 is True
+
+
 def test_update_radio_state_cmd16_preamp(radio_with_state: IcomRadio) -> None:
     """cmd 0x16 sub 0x02 updates preamp (lines 554-565)."""
     rs = radio_with_state._radio_state

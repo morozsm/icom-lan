@@ -85,6 +85,8 @@ class RigConfig:
     meter_redlines: dict[str, int] | None = None
     rules: tuple[dict[str, Any], ...] = ()
     keyboard: KeyboardConfig | None = None
+    antenna_tx_count: int = 1
+    antenna_has_rx_ant: bool = False
 
     def to_profile(self) -> RadioProfile:
         """Build a ``RadioProfile`` from this config."""
@@ -143,6 +145,7 @@ class RigConfig:
             meter_calibrations=self.meter_calibrations,
             rules=self.rules,
             keyboard=self.keyboard,
+            antenna_tx_count=self.antenna_tx_count,
         )
 
     def to_command_map(self) -> CommandMap:
@@ -637,6 +640,11 @@ def load_rig(path: Path) -> RigConfig:
             )
         rules.append(dict(rule))
 
+    # Parse [antenna] (optional)
+    antenna_section = data.get("antenna", {})
+    antenna_tx_count = int(antenna_section.get("tx_count", 1))
+    antenna_has_rx_ant = bool(antenna_section.get("has_rx_ant", False))
+
     # Parse keyboard config: shared default profile + optional rig-local overrides.
     ui_section = data.get("ui", {})
     keyboard_section = (
@@ -689,6 +697,8 @@ def load_rig(path: Path) -> RigConfig:
         meter_redlines=meter_redlines,
         rules=tuple(rules),
         keyboard=keyboard,
+        antenna_tx_count=antenna_tx_count,
+        antenna_has_rx_ant=antenna_has_rx_ant,
     )
 
 

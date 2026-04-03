@@ -121,6 +121,9 @@ export interface ServerState {
   dashRatio?: number;
   nbDepth?: number;
   nbWidth?: number;
+  txAntenna?: number;
+  rxAntenna1?: boolean;
+  rxAntenna2?: boolean;
   meterSource?: 'S' | 'SWR' | 'POWER';
   scopeControls?: ScopeControls;
 }

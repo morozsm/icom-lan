@@ -191,6 +191,24 @@ class TestCapabilitiesEndpoint:
             for binding in data["keyboard"]["bindings"]
         )
 
+    @pytest.mark.asyncio
+    async def test_capabilities_include_antenna_count(self):
+        radio = _make_radio("IC-7610")
+        srv = WebServer(radio)
+        writer = _FakeWriter()
+        await srv._serve_capabilities(writer)  # noqa: SLF001
+        data = _parse_json_body(writer)
+        assert data["antennas"] == 2
+
+    @pytest.mark.asyncio
+    async def test_capabilities_single_antenna_default(self):
+        radio = _make_radio("IC-7300")
+        srv = WebServer(radio)
+        writer = _FakeWriter()
+        await srv._serve_capabilities(writer)  # noqa: SLF001
+        data = _parse_json_body(writer)
+        assert data["antennas"] == 1
+
 
 # ── /api/v1/state tests ───────────────────────────────────────
 
