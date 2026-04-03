@@ -31,7 +31,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 from .. import __version__
 from ..radio_state import RadioState
-from ..capabilities import CAP_AUDIO, CAP_POWER_CONTROL, CAP_SCOPE
+from ..capabilities import CAP_AUDIO, CAP_SCOPE
 from ..audio_fft_scope import AudioFftScope
 from ._delta_encoder import DeltaEncoder
 from .dx_cluster import DXClusterClient, SpotBuffer
