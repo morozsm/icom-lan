@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Yaesu CAT backend and CLI factory routing** — `--backend yaesu-cat`, capability-based polling,
+  rigctl routing strategy, Web ControlHandler support, meters/advanced-control conformance,
+  and follow-up code review fixes for issues #427-#445.
+- **Universal radio profile system** — declarative `OperatingProfile` / `apply_profile()` /
+  `PRESETS`, packet/data profile helpers for IC-705, and additional sync control methods.
+- **TLS/HTTPS for Web UI** — HTTPS listener support with automatic self-signed certificates (#205).
+- **Audio FFT UI work** — full-color `AudioSpectrumPanel`, standard-layout integration, audio-scope
+  WebSocket channel, variable FFT bandwidth handling, and audio spectrum rendering fixes.
+- **Expanded Web/rigctld command coverage** — raw CI-V passthrough, levels/functions support,
+  data mode inputs/levels, VOX, tone/TSQL, CW text/stop, band/split, system/config,
+  selected/unselected freq+mode, memory API support, and scope toolbar controls.
+- **Capability/tag cleanup** — extracted `capabilities.py`, added `system_settings` tag,
+  `supports_command()` on the Radio protocol, and removed remaining protocol abstraction gaps.
+- **Issue #448 UI/antenna work** — v2 antenna panel, capability/state tracking, corrected IC-7610
+  TX ANT vs RX ANT semantics, and startup readiness checks split between connect-time validation
+  and server-side guards.
+
+### Changed
+- **Connection readiness contract** — `radio.connect()` now owns bounded wait-for-ready and fails
+  if the radio never becomes usable; Web UI and rigctld startup now perform instant guards only.
+- **Protocol/capability routing** — replaced several `isinstance(AdvancedControlCapable)` checks with
+  capability tags and centralized capability constants.
+- **Frontend/test hygiene** — resolved Svelte/type issues, fixed frontend redesign regressions,
+  refreshed API docs and badges, and updated test fixtures for stricter protocol mocks.
+
+### Fixed
+- **Startup fail-fast** — added pre-flight port check (#422), fail-fast on `civ_port=0` (#424),
+  and eliminated half-working Web/rigctld startups when the radio transport is not actually ready.
+- **IC-705 Wi-Fi binding** — hardened routed local bind handling and validated LAN support.
+- **Audio/runtime stability** — fixed broadcaster restart behavior, audio handler lifecycle,
+  control transport queue overflow after long runs, and Python 3.13 flaky tests (#398).
+- **Scope/UI correctness** — fixed scope dispatch capability checks, scope polling/state updates,
+  step-control width, BCD span payloads, speed arrow direction, PTT TX wiring, and optimistic
+  state sync for antenna/scope controls.
+- **Type-check/test regressions** — resolved web-boundary mypy/ruff issues and updated protocol mocks
+  (`ScopeCapable`, `DualReceiverCapable`, etc.) for Python 3.13 runtime-checkable Protocols.
+
+### Documentation
+- Added/updated Radio Profiles guide, web/rigctld API references, and test badges/documentation sync.
+
 ## [0.14.2] — 2026-03-27
 
 ### Changed
