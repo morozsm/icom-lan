@@ -116,6 +116,9 @@ async def test_start_and_stop_with_radio_sets_callbacks() -> None:
     radio = _StateNotifyRadio()
     radio.state_cache = MagicMock()
     radio.disconnect = AsyncMock()
+    radio.connected = True
+    radio.radio_ready = True
+    radio.control_connected = True
     fake_server = _FakeAsyncServer()
     fake_poller = MagicMock()
 
@@ -158,6 +161,24 @@ async def test_stop_handles_disconnect_failure_and_cancels_client_tasks() -> Non
     srv._client_tasks.add(task)
     await srv.stop()
     assert task.cancelled() or task.done()
+
+
+@pytest.mark.asyncio
+async def test_start_aborts_before_listening_when_radio_not_ready() -> None:
+    radio = MagicMock()
+    srv = WebServer(radio, WebConfig(host="127.0.0.1", port=0))
+
+    with (
+        patch.object(
+            srv,
+            "ensure_startup_ready",
+            new=AsyncMock(side_effect=RuntimeError("web startup aborted")),
+        ),
+        patch("icom_lan.web.server.asyncio.start_server", new=AsyncMock()) as start_server,
+    ):
+        with pytest.raises(RuntimeError, match="web startup aborted"):
+            await srv.start()
+    start_server.assert_not_awaited()
 
 
 @pytest.mark.asyncio

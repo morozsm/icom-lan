@@ -345,6 +345,50 @@ class WebServer:
         """Backend view of radio readiness (CI-V healthy)."""
         return radio_ready(self._radio)
 
+    async def ensure_startup_ready(self, timeout: float = 5.0) -> None:
+        """Wait for the attached radio to be fully ready before exposing the server.
+
+        Web UI startup is strict: if a radio is attached, we refuse to expose
+        HTTP/WebSocket endpoints until the backend reports a real connected and
+        ready state. This prevents "half-working" server starts when the radio
+        session is partially connected or stalled.
+        """
+        if self._radio is None:
+            return
+
+        import time
+
+        timeout = max(float(timeout), 0.0)
+        deadline = time.monotonic() + timeout
+        control_connected: bool | None = None
+        connected = False
+        ready = False
+        while True:
+            raw_connected = getattr(self._radio, "connected", False)
+            connected = raw_connected if isinstance(raw_connected, bool) else False
+            ready = radio_ready(self._radio)
+            raw_control = getattr(self._radio, "control_connected", None)
+            control_connected = (
+                raw_control if isinstance(raw_control, bool) else None
+            )
+            if connected and ready and control_connected is not False:
+                return
+            if time.monotonic() >= deadline:
+                break
+            await asyncio.sleep(0.1)
+
+        details = [
+            f"connected={connected}",
+            f"radio_ready={ready}",
+        ]
+        if control_connected is not None:
+            details.append(f"control_connected={control_connected}")
+        raise RuntimeError(
+            "web startup aborted: radio is not fully ready after "
+            f"{timeout:.1f}s ({', '.join(details)}). "
+            "Refusing to start a half-working server."
+        )
+
     def _set_scope_data_callback(self, callback: Any) -> None:
         """Set the scope data callback on the radio if it supports it."""
         if self._radio is not None and CAP_SCOPE in self._radio.capabilities:
@@ -832,6 +876,8 @@ class WebServer:
                 cert_path=self._config.tls_cert or None,
                 key_path=self._config.tls_key or None,
             )
+
+        await self.ensure_startup_ready()
 
         self._server = await asyncio.start_server(
             self._accept_client,

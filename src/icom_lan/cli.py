@@ -2081,6 +2081,13 @@ async def _cmd_web(radio: Radio, args: argparse.Namespace) -> int:
     config_kwargs["radio_model"] = getattr(radio, "model", "IC-7610")
     config = WebConfig(**config_kwargs)
     server = WebServer(radio, config)
+
+    try:
+        await server.ensure_startup_ready(timeout=float(getattr(args, "timeout", 5.0)))
+    except RuntimeError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+
     if dx_cluster:
         print(
             f"DX cluster: {dx_cluster} (callsign: {config_kwargs.get('dx_callsign', '')})"
