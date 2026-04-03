@@ -821,8 +821,6 @@ class ControlHandler:
         """Build a Command dataclass, enqueue it, and return the ack result."""
         logger.info("enqueue_command: %s params=%s", name, params)
         radio = self._radio
-        if radio is None:
-            raise RuntimeError("radio connection not available")
 
         # Read-only commands — no command queue needed
         if name == "get_system_date":
@@ -1048,6 +1046,8 @@ class ControlHandler:
                 q.put(PttOff())
                 return {}
             case "set_rf_power" | "set_power":
+                if radio is None:
+                    raise RuntimeError("radio connection not available")
                 if CAP_POWER_CONTROL not in radio.capabilities:
                     raise ValueError(
                         "command set_rf_power is not supported by this radio "
@@ -1057,6 +1057,8 @@ class ControlHandler:
                 q.put(SetPower(level))
                 return {"level": level}
             case "set_powerstat":
+                if radio is None:
+                    raise RuntimeError("radio connection not available")
                 if CAP_POWER_CONTROL not in radio.capabilities:
                     raise ValueError(
                         "command set_powerstat is not supported by this radio "
@@ -1066,6 +1068,8 @@ class ControlHandler:
                 q.put(SetPowerstat(on))
                 return {"on": on}
             case "set_rf_gain":
+                if radio is None:
+                    raise RuntimeError("radio connection not available")
                 if CAP_RF_GAIN not in radio.capabilities:
                     raise ValueError(
                         "command set_rf_gain is not supported by this radio "
@@ -1078,6 +1082,8 @@ class ControlHandler:
                 q.put(SetRfGain(level, receiver=rx))
                 return {"level": level, "receiver": rx}
             case "set_af_level":
+                if radio is None:
+                    raise RuntimeError("radio connection not available")
                 if CAP_AF_LEVEL not in radio.capabilities:
                     raise ValueError(
                         "command set_af_level is not supported by this radio "
@@ -1090,6 +1096,8 @@ class ControlHandler:
                 q.put(SetAfLevel(level, receiver=rx))
                 return {"level": level, "receiver": rx}
             case "set_sql" | "set_squelch":
+                if radio is None:
+                    raise RuntimeError("radio connection not available")
                 if CAP_SQUELCH not in radio.capabilities:
                     raise ValueError(
                         f"command {name!r} is not supported by this radio "
