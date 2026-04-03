@@ -939,7 +939,7 @@ class WebServer:
             )
 
         self._audio_bridge = AudioBridge(
-            self._radio,  # type: ignore[arg-type]
+            self._radio,
             device_name=device_name,
             tx_device_name=tx_device_name,
             tx_enabled=tx_enabled,
@@ -1853,7 +1853,7 @@ class WebServer:
                         logger.warning("power-on: reconnect failed: %s", conn_err)
                         # Try anyway — some radios accept CI-V on stale transport
                 is_on = power_state == "on"
-                await radio.set_powerstat(is_on)  # type: ignore[union-attr]
+                await radio.set_powerstat(is_on)
                 # Optimistic state update: radio won't respond to polls when off
                 if self._radio_state is not None:
                     self._radio_state.power_on = is_on

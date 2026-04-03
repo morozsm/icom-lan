@@ -95,3 +95,7 @@ follow_imports = "skip"
 module = ["icom_lan.web.*"]
 strict = true
 follow_imports = "skip"
+
+[[tool.mypy.overrides]]
+module = ["cryptography", "cryptography.*"]
+ignore_missing_imports = true
