@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any, Callable
+from typing import Callable
 from unittest.mock import AsyncMock
 
 import pytest
@@ -80,6 +80,8 @@ class FakeAudioDriver:
         self._tx_queue = asyncio.Queue(maxsize=64)
 
     async def push_tx_pcm(self, frame: bytes) -> None:
+        if not self.tx_running:
+            raise RuntimeError("Audio TX stream is not started.")
         await self._tx_queue.put(frame)
 
     def inject_rx_frame(self, data: bytes) -> None:
@@ -268,6 +270,15 @@ class TestTxAudio:
         assert fake_driver.tx_running
         await radio.stop_audio_tx_pcm()
         assert not fake_driver.tx_running
+
+    @pytest.mark.asyncio
+    async def test_push_tx_without_start_raises(
+        self, radio: YaesuCatRadio, fake_driver: FakeAudioDriver
+    ) -> None:
+        await radio.connect()
+        assert not fake_driver.tx_running
+        with pytest.raises(RuntimeError, match="not started"):
+            await fake_driver.push_tx_pcm(b"\x00" * 960)
 
     @pytest.mark.asyncio
     async def test_push_pcm_tx_rejects_non_bytes(self, radio: YaesuCatRadio) -> None:
