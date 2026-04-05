@@ -925,6 +925,7 @@ class WebServer:
         device_name: str | None = None,
         tx_device_name: str | None = None,
         tx_enabled: bool = True,
+        label: str | None = None,
     ) -> None:
         """Start the audio bridge to a virtual audio device.
 
@@ -933,6 +934,7 @@ class WebServer:
             tx_device_name: Separate device for TX (e.g. "BlackHole 16ch").
                             Required for bidirectional audio to avoid feedback.
             tx_enabled: Whether to bridge TX (device → radio).
+            label: Descriptive label for log messages. If ``None``, derived from radio model.
         """
         from ..audio_bridge import AudioBridge
 
@@ -946,11 +948,19 @@ class WebServer:
                 "Audio bridge is unavailable: active radio does not support audio streaming."
             )
 
+        if label is None:
+            model = getattr(self._radio, "model", None)
+            if isinstance(model, str) and model:
+                label = f"icom-lan ({model})"
+            else:
+                label = "icom-lan"
+
         self._audio_bridge = AudioBridge(
             self._radio,
             device_name=device_name,
             tx_device_name=tx_device_name,
             tx_enabled=tx_enabled,
+            label=label,
         )
         await self._audio_bridge.start()
         self.broadcast_notification("success", "Audio bridge started", "bridge")
