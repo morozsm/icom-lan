@@ -367,6 +367,13 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="List available audio devices and exit",
     )
+    audio_bridge_p.add_argument(
+        "--label",
+        dest="bridge_label",
+        default=None,
+        metavar="LABEL",
+        help="Descriptive label for log messages (default: auto from radio model)",
+    )
 
     # ptt
     ptt_p = sub.add_parser("ptt", help="PTT control")
@@ -589,6 +596,13 @@ def _build_parser() -> argparse.ArgumentParser:
         dest="web_bridge_rx_only",
         action="store_true",
         help="Bridge RX only (no TX from virtual device to radio)",
+    )
+    web_p.add_argument(
+        "--bridge-label",
+        dest="web_bridge_label",
+        default=None,
+        metavar="LABEL",
+        help="Descriptive label for audio bridge log messages (default: auto from radio model)",
     )
     web_p.add_argument(
         "--dx-cluster",
@@ -1953,11 +1967,21 @@ async def _cmd_audio_bridge(radio: Radio, args: argparse.Namespace) -> int:
     if CAP_AUDIO not in radio.capabilities:
         print("Error: audio bridge requires a radio that supports audio.", file=sys.stderr)
         return 1
+    # Derive label from CLI arg or radio model
+    bridge_label = getattr(args, "bridge_label", None)
+    if bridge_label is None:
+        model = getattr(radio, "model", None)
+        if isinstance(model, str) and model:
+            bridge_label = f"icom-lan ({model})"
+        else:
+            bridge_label = "icom-lan"
+
     try:
         bridge = AudioBridge(
             radio,
             device_name=args.device,
             tx_enabled=not args.rx_only,
+            label=bridge_label,
         )
         await bridge.start()
     except ImportError as exc:
@@ -2093,11 +2117,13 @@ async def _cmd_web(radio: Radio, args: argparse.Namespace) -> int:
         device_name = None if bridge_device == "auto" else bridge_device
         tx_device_name = getattr(args, "web_bridge_tx_device", None)
         rx_only = getattr(args, "web_bridge_rx_only", False)
+        bridge_label = getattr(args, "web_bridge_label", None)
         try:
             await server.start_audio_bridge(
                 device_name=device_name,
                 tx_device_name=tx_device_name,
                 tx_enabled=not rx_only,
+                label=bridge_label,
             )
             direction = "RX only" if rx_only else "RX+TX"
             print(f"Audio bridge active ({direction})")

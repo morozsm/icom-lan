@@ -412,3 +412,43 @@ def test_latency_buffer_capped_at_100():
 
     assert len(bridge._rx_latency_samples) == 100
     assert bridge.stats["buffer_size"] == 100
+
+
+# ---------------------------------------------------------------------------
+# Label parameter
+# ---------------------------------------------------------------------------
+
+
+def test_bridge_label_default():
+    """Default label is 'icom-lan'."""
+    radio = MagicMock()
+    bridge = AudioBridge(radio)
+    assert bridge.label == "icom-lan"
+
+
+def test_bridge_label_custom():
+    """Custom label is stored and accessible."""
+    radio = MagicMock()
+    bridge = AudioBridge(radio, label="icom-lan (IC-7610)")
+    assert bridge.label == "icom-lan (IC-7610)"
+
+
+def test_bridge_label_in_log_messages(caplog):
+    """Label appears in log messages instead of hardcoded 'audio-bridge'."""
+    import logging
+
+    radio = MagicMock()
+    bridge = AudioBridge(radio, label="icom-lan (IC-905)")
+
+    with caplog.at_level(logging.WARNING):
+        # Trigger the "already running" warning by setting _running=True
+        bridge._running = True
+        import asyncio
+
+        loop = asyncio.new_event_loop()
+        try:
+            loop.run_until_complete(bridge.start())
+        finally:
+            loop.close()
+
+    assert "icom-lan (IC-905): already running" in caplog.text

@@ -110,6 +110,9 @@ class AudioBridge:
             thread pool is used. For heavy usage or multiple bridge instances,
             pass a dedicated :class:`concurrent.futures.ThreadPoolExecutor` (e.g.
             ``max_workers=1`` or ``2``) to isolate TX I/O and avoid contention.
+        label: Descriptive label used in log messages (default ``"icom-lan"``).
+            When the radio model is known, callers typically pass
+            ``"icom-lan (IC-7610)"`` so logs clearly identify the radio.
     """
 
     def __init__(
@@ -123,8 +126,10 @@ class AudioBridge:
         frame_ms: int = FRAME_MS,
         tx_enabled: bool = True,
         tx_executor: Executor | None = None,
+        label: str = "icom-lan",
     ) -> None:
         self._radio = radio
+        self._label = label
         self._device_name = device_name
         self._tx_device_name = (
             tx_device_name  # separate TX device (if None, same as RX)
@@ -155,6 +160,11 @@ class AudioBridge:
         self._last_rx_time: float = 0.0
         self._last_tx_time: float = 0.0
         self._start_time: float = 0.0
+
+    @property
+    def label(self) -> str:
+        """Descriptive label used in log messages."""
+        return self._label
 
     @property
     def running(self) -> bool:
@@ -198,7 +208,7 @@ class AudioBridge:
         import sounddevice as sd  # noqa: F401
 
         if self._running:
-            logger.warning("audio-bridge: already running")
+            logger.warning("%s: already running", self._label)
             return
 
         self._start_time = time.monotonic()
@@ -215,7 +225,7 @@ class AudioBridge:
 
         dev_index = dev["index"]
         dev_name = dev["name"]
-        logger.info("audio-bridge: using device %r (index %d)", dev_name, dev_index)
+        logger.info("%s: using device %r (index %d)", self._label, dev_name, dev_index)
 
         samples_per_frame = self._sample_rate * self._frame_ms // 1000
 
@@ -253,10 +263,10 @@ class AudioBridge:
                     "Install with: pip install icom-lan[bridge]"
                 ) from None
             self._decoder = opuslib.Decoder(self._sample_rate, self._channels)
-            logger.info("audio-bridge: using Opus decoder")
+            logger.info("%s: using Opus decoder", self._label)
         else:
             self._decoder = None
-            logger.info("audio-bridge: PCM mode (no decode needed)")
+            logger.info("%s: PCM mode (no decode needed)", self._label)
 
         bus = self._radio.audio_bus
         self._subscription = bus.subscribe(name="audio-bridge")
@@ -277,13 +287,15 @@ class AudioBridge:
                 tx_dev = find_loopback_device(self._tx_device_name)
                 if tx_dev is None:
                     logger.warning(
-                        "audio-bridge: TX device %r not found, using RX device",
+                        "%s: TX device %r not found, using RX device",
+                        self._label,
                         self._tx_device_name,
                     )
                 else:
                     tx_dev_index = tx_dev["index"]
                     logger.info(
-                        "audio-bridge: TX device %r (index %d)",
+                        "%s: TX device %r (index %d)",
+                        self._label,
                         tx_dev["name"],
                         tx_dev_index,
                     )
@@ -304,7 +316,8 @@ class AudioBridge:
         self._running = True
         direction = "RX+TX" if self._tx_enabled else "RX only"
         logger.info(
-            "audio-bridge: started (%s, %dHz, %dch, %dms frames)",
+            "%s: started (%s, %dHz, %dch, %dms frames)",
+            self._label,
             direction,
             self._sample_rate,
             self._channels,
@@ -321,7 +334,7 @@ class AudioBridge:
                     self._rx_drops += 1
                     if self._rx_drops <= 3:
                         logger.debug(
-                            "audio-bridge: None packet (gap) #%d", self._rx_drops
+                            "%s: None packet (gap) #%d", self._label, self._rx_drops
                         )
                     if self._rx_stream and self._rx_stream.active:
                         self._rx_stream.write(self._silence)
@@ -356,7 +369,8 @@ class AudioBridge:
                     self._rx_drops += 1
                     if self._rx_drops <= 5 or self._rx_drops % 1000 == 0:
                         logger.warning(
-                            "audio-bridge: decode error #%d: %s (data=%d bytes)",
+                            "%s: decode error #%d: %s (data=%d bytes)",
+                            self._label,
                             self._rx_drops,
                             exc,
                             len(opus_data),
@@ -364,11 +378,11 @@ class AudioBridge:
         except asyncio.CancelledError:
             pass
         except Exception:
-            logger.error("audio-bridge: RX loop error", exc_info=True)
+            logger.error("%s: RX loop error", self._label, exc_info=True)
             # Try to restart after a brief pause
             await asyncio.sleep(1.0)
             if self._running and self._subscription:
-                logger.info("audio-bridge: restarting RX loop")
+                logger.info("%s: restarting RX loop", self._label)
                 self._rx_task = asyncio.create_task(self._rx_loop(np))
 
     async def _tx_loop(self) -> None:
@@ -389,7 +403,7 @@ class AudioBridge:
                     lambda: self._tx_stream.read(samples_per_frame),
                 )
                 if overflowed:
-                    logger.debug("audio-bridge: TX input overflow")
+                    logger.debug("%s: TX input overflow", self._label)
 
                 # Simple noise gate — don't TX silence
                 if np.max(np.abs(data)) < silence_threshold:
@@ -408,7 +422,8 @@ class AudioBridge:
                 if self._tx_frames <= 3 or self._tx_frames % 1000 == 0:
                     peak = int(np.max(np.abs(data)))
                     logger.info(
-                        "audio-bridge: TX frame #%d, %d bytes, peak=%d",
+                        "%s: TX frame #%d, %d bytes, peak=%d",
+                        self._label,
                         self._tx_frames,
                         len(pcm_bytes),
                         peak,
@@ -423,14 +438,14 @@ class AudioBridge:
                         await self._radio.push_audio_tx_opus(pcm_bytes)
                 except Exception:
                     if self._tx_frames <= 5:
-                        logger.warning("audio-bridge: TX push error", exc_info=True)
+                        logger.warning("%s: TX push error", self._label, exc_info=True)
                     else:
-                        logger.debug("audio-bridge: TX push error", exc_info=True)
+                        logger.debug("%s: TX push error", self._label, exc_info=True)
 
         except asyncio.CancelledError:
             pass
         except Exception:
-            logger.error("audio-bridge: TX loop error", exc_info=True)
+            logger.error("%s: TX loop error", self._label, exc_info=True)
 
     async def stop(self) -> None:
         """Stop the audio bridge and release resources."""
@@ -479,10 +494,11 @@ class AudioBridge:
             try:
                 await self._radio.stop_audio_tx_pcm()
             except Exception:
-                logger.debug("audio-bridge: stop TX error", exc_info=True)
+                logger.debug("%s: stop TX error", self._label, exc_info=True)
 
         logger.info(
-            "audio-bridge: stopped (rx=%d frames, tx=%d frames, drops=%d)",
+            "%s: stopped (rx=%d frames, tx=%d frames, drops=%d)",
+            self._label,
             self._rx_frames,
             self._tx_frames,
             self._rx_drops,
