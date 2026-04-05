@@ -197,4 +197,59 @@ describe('CollapsiblePanel', () => {
     const header = target.querySelector('.panel-header');
     expect(header?.classList.contains('collapsible')).toBe(false);
   });
+
+  it('renders drag handle when draggable=true', () => {
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+    const component = mount(CollapsiblePanel, {
+      target,
+      props: { title: 'Test', panelId: 'test', draggable: true },
+    });
+    flushSync();
+    components.push(component);
+
+    const handle = target.querySelector('.drag-handle');
+    expect(handle).not.toBeNull();
+    expect(handle?.textContent).toBe('⠿');
+    expect(handle?.getAttribute('aria-label')).toBe('Drag to reorder');
+  });
+
+  it('does not render drag handle when draggable is not set', () => {
+    const target = mountPanel({ title: 'Test', panelId: 'test' });
+    const handle = target.querySelector('.drag-handle');
+    expect(handle).toBeNull();
+  });
+
+  it('calls onDragStart when drag handle receives pointerdown', () => {
+    const onDragStart = vi.fn();
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+    const component = mount(CollapsiblePanel, {
+      target,
+      props: { title: 'Test', panelId: 'drag-test', draggable: true, onDragStart },
+    });
+    flushSync();
+    components.push(component);
+
+    const handle = target.querySelector('.drag-handle') as HTMLElement;
+    const event = new PointerEvent('pointerdown', { bubbles: true });
+    handle.setPointerCapture = vi.fn();
+    handle.dispatchEvent(event);
+
+    expect(onDragStart).toHaveBeenCalledWith('drag-test', expect.any(PointerEvent));
+  });
+
+  it('applies style attribute to root element', () => {
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+    const component = mount(CollapsiblePanel, {
+      target,
+      props: { title: 'Test', panelId: 'test', style: 'order:3' },
+    });
+    flushSync();
+    components.push(component);
+
+    const panel = target.querySelector('.collapsible-panel') as HTMLElement;
+    expect(panel?.style.order).toBe('3');
+  });
 });

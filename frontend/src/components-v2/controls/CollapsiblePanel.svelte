@@ -5,12 +5,16 @@
     title: string;
     panelId: string;
     collapsible?: boolean;
+    draggable?: boolean;
     /** Optional `data-panel` attribute for keyboard focus targets (e.g. rf-frontend). */
     dataPanel?: string;
+    /** Style attribute for CSS order (used during drag reorder). */
+    style?: string;
+    onDragStart?: (panelId: string, event: PointerEvent) => void;
     children?: any;
   }
 
-  let { title, panelId, collapsible = true, dataPanel, children }: Props = $props();
+  let { title, panelId, collapsible = true, draggable = false, dataPanel, style, onDragStart, children }: Props = $props();
 
   let collapsed = $state(false);
 
@@ -57,20 +61,31 @@
   data-panel-id={panelId}
   data-panel={dataPanel}
   data-collapsed={collapsed}
+  {style}
 >
-  <button
-    type="button"
-    class="panel-header"
-    class:collapsible
-    aria-expanded={!collapsed}
-    onclick={toggle}
-    disabled={!collapsible}
-  >
-    {#if collapsible}
-      <span class="chevron" aria-hidden="true">{collapsed ? '▸' : '▾'}</span>
+  <div class="panel-header-row">
+    {#if draggable}
+      <button
+        type="button"
+        class="drag-handle"
+        aria-label="Drag to reorder"
+        onpointerdown={(e) => onDragStart?.(panelId, e)}
+      >⠿</button>
     {/if}
-    <span class="title">{title}</span>
-  </button>
+    <button
+      type="button"
+      class="panel-header"
+      class:collapsible
+      aria-expanded={!collapsed}
+      onclick={toggle}
+      disabled={!collapsible}
+    >
+      {#if collapsible}
+        <span class="chevron" aria-hidden="true">{collapsed ? '▸' : '▾'}</span>
+      {/if}
+      <span class="title">{title}</span>
+    </button>
+  </div>
 
   <div
     class="panel-content"
@@ -94,15 +109,48 @@
     font-family: 'Roboto Mono', monospace;
   }
 
+  .panel-header-row {
+    display: flex;
+    align-items: stretch;
+    background: var(--v2-collapsible-header-bg);
+    border-bottom: 1px solid var(--v2-collapsible-border);
+  }
+
+  .drag-handle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    padding: 0;
+    margin: 0;
+    background: none;
+    border: none;
+    border-right: 1px solid var(--v2-collapsible-border);
+    color: var(--v2-collapsible-chevron);
+    font-size: 10px;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    transition: color 0.15s ease, background 0.15s ease;
+  }
+
+  .drag-handle:hover {
+    color: var(--v2-collapsible-chevron-hover);
+    background: var(--v2-collapsible-header-hover-bg);
+  }
+
+  .drag-handle:active {
+    cursor: grabbing;
+  }
+
   .panel-header {
     display: flex;
     align-items: center;
     gap: 6px;
-    width: 100%;
+    flex: 1;
     padding: 5px 8px;
-    background: var(--v2-collapsible-header-bg);
+    background: none;
     border: none;
-    border-bottom: 1px solid var(--v2-collapsible-border);
     color: var(--v2-collapsible-header-text);
     font-family: 'Roboto Mono', monospace;
     font-size: 10px;
