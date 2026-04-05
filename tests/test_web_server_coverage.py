@@ -827,3 +827,58 @@ class TestCamelCaseState:
         assert "tunerStatus" in data
         assert "connection" in data
         assert "rigConnected" in data["connection"]
+
+
+# ---------------------------------------------------------------------------
+# ETag / 304 behaviour for /api/v1/state (#248)
+# ---------------------------------------------------------------------------
+
+class TestStateEtag:
+    """Backend ETag/304 support for /api/v1/state."""
+
+    @pytest.mark.asyncio
+    async def test_state_response_includes_etag(self) -> None:
+        """GET /api/v1/state returns an ETag header."""
+        srv = WebServer(None)
+        writer = _FakeWriter()
+        await srv._serve_state(writer)
+        text = writer.buffer.decode("ascii", errors="replace")
+        header_block = text[: text.index("\r\n\r\n")]
+        assert "ETag:" in header_block, f"No ETag in response headers:\n{header_block}"
+
+    @pytest.mark.asyncio
+    async def test_state_304_when_etag_matches(self) -> None:
+        """GET /api/v1/state with matching If-None-Match returns 304 and empty body."""
+        import json as _json
+
+        # First request — get the ETag
+        srv = WebServer(None)
+        writer = _FakeWriter()
+        await srv._serve_state(writer)
+        text = writer.buffer.decode("ascii", errors="replace")
+        header_block = text[: text.index("\r\n\r\n")]
+        etag_line = next(l for l in header_block.splitlines() if l.startswith("ETag:"))
+        etag = etag_line.split(":", 1)[1].strip()
+
+        # Second request — send If-None-Match with the same ETag
+        writer2 = _FakeWriter()
+        fake_headers = {"if-none-match": etag}
+        await srv._serve_state(writer2, fake_headers)
+        text2 = writer2.buffer.decode("ascii", errors="replace")
+        status_line = text2.split("\r\n", 1)[0]
+        assert "304" in status_line, f"Expected 304, got: {status_line}"
+        body_start = text2.index("\r\n\r\n") + 4
+        assert text2[body_start:] == "", "304 response must have empty body"
+
+    @pytest.mark.asyncio
+    async def test_state_200_when_etag_differs(self) -> None:
+        """GET /api/v1/state with stale If-None-Match returns 200 with full body."""
+        srv = WebServer(None)
+        writer = _FakeWriter()
+        fake_headers = {"if-none-match": '"stale-etag-999"'}
+        await srv._serve_state(writer, fake_headers)
+        text = writer.buffer.decode("ascii", errors="replace")
+        status_line = text.split("\r\n", 1)[0]
+        assert "200" in status_line, f"Expected 200, got: {status_line}"
+        body_start = text.index("\r\n\r\n") + 4
+        assert len(text[body_start:]) > 0, "200 response must have a body"
