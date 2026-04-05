@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Any, Callable
 from ...audio import AudioPacket
 from ...audio.usb_driver import UsbAudioDriver
 from ...command_spec import CatCommandSpec
+from ...types import AudioCodec
 from ...exceptions import AudioFormatError, CommandError
 from ...exceptions import ConnectionError as RadioConnectionError
 from ...radio_state import RadioState
@@ -174,6 +175,11 @@ class YaesuCatRadio:
         return self._state
 
     @property
+    def audio_codec(self) -> AudioCodec:
+        """Audio codec used by USB audio (always PCM 16-bit mono)."""
+        return AudioCodec.PCM_1CH_16BIT
+
+    @property
     def audio_bus(self) -> "AudioBus":
         """AudioBus instance for pub/sub audio distribution."""
         if self._audio_bus is None:
@@ -317,8 +323,8 @@ class YaesuCatRadio:
     async def get_audio_stats(self) -> dict[str, Any]:
         """Return basic audio stats."""
         return {
-            "rx_active": self._audio_driver._rx_active,  # type: ignore[attr-defined]
-            "tx_active": self._audio_driver._tx_active,  # type: ignore[attr-defined]
+            "rx_active": self._audio_driver.rx_running,
+            "tx_active": self._audio_driver.tx_running,
             "sample_rate": self._audio_sample_rate,
         }
 
