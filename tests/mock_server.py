@@ -428,8 +428,16 @@ class MockIcomRadio:
             proto.send(self._ping_reply(data, sender_id), addr)
             return
 
-        # OpenClose (0x16 bytes) → no response needed
+        # OpenClose (0x16 bytes)
+        #
+        # Real radios typically begin streaming CI-V data soon after an OpenClose(open)
+        # which makes the client "radio_ready" quickly. Our tests use startup readiness
+        # checks (radio_ready), so we emit a tiny unsolicited CI-V frame on open to mark
+        # the stream as active for mock-based integration tests.
         if n == 0x16:
+            if data[0x15] == 0x04:  # open_stream
+                civ = self._civ_frame(to=0x00, frm=self._radio_addr, cmd=0x00)
+                proto.send(self._wrap_civ(civ, sender_id), addr)
             return
 
         # Disconnect
