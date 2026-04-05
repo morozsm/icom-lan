@@ -60,6 +60,8 @@ describe('fetchState', () => {
     const state = makeState(1);
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
+      status: 200,
+      headers: { get: () => '"1"' },
       json: () => Promise.resolve(state),
     });
 
@@ -70,9 +72,21 @@ describe('fetchState', () => {
   });
 
   it('throws on non-ok response', async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue({ ok: false, status: 503 });
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: false, status: 503, headers: { get: () => null } });
     const { fetchState } = await import('../http-client');
     await expect(fetchState()).rejects.toThrow('fetchState: 503');
+  });
+
+  it('returns null on 304 Not Modified', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 304,
+      headers: { get: () => '"1"' },
+    });
+
+    const { fetchState } = await import('../http-client');
+    const result = await fetchState();
+    expect(result).toBeNull();
   });
 });
 
@@ -129,7 +143,7 @@ describe('startPolling', () => {
   it('calls callback with state when revision advances', async () => {
     let rev = 1;
     globalThis.fetch = vi.fn().mockImplementation(() =>
-      Promise.resolve({ ok: true, json: () => Promise.resolve(makeState(rev++)) }),
+      Promise.resolve({ ok: true, status: 200, headers: { get: () => '"' + (rev - 1) + '"' }, json: () => Promise.resolve(makeState(rev++)) }),
     );
 
     const { startPolling } = await import('../http-client');
@@ -149,6 +163,8 @@ describe('startPolling', () => {
     const fixed = makeState(42);
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
+      status: 200,
+      headers: { get: () => '"42"' },
       json: () => Promise.resolve(fixed),
     });
 
@@ -188,6 +204,8 @@ describe('startPolling', () => {
     const state = makeState(1);
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
+      status: 200,
+      headers: { get: () => '"1"' },
       json: () => Promise.resolve(state),
     });
 
@@ -205,6 +223,8 @@ describe('startPolling', () => {
     const state = makeState(1);
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
+      status: 200,
+      headers: { get: () => '"1"' },
       json: () => Promise.resolve(state),
     });
 
@@ -255,7 +275,7 @@ describe('startPolling', () => {
     let callCount = 0;
     globalThis.fetch = vi.fn().mockImplementation(() => {
       callCount++;
-      return Promise.resolve({ ok: true, json: () => Promise.resolve(makeState(callCount)) });
+      return Promise.resolve({ ok: true, status: 200, headers: { get: () => '"' + callCount + '"' }, json: () => Promise.resolve(makeState(callCount)) });
     });
 
     const { startPolling } = await import('../http-client');
@@ -283,7 +303,7 @@ describe('startPolling', () => {
       callCount++;
       return new Promise<{ ok: boolean; json: () => Promise<ServerState> }>((resolve) => {
         resolvePending = () =>
-          resolve({ ok: true, json: () => Promise.resolve(makeState(callCount)) });
+          resolve({ ok: true, status: 200, headers: { get: () => '"' + callCount + '"' }, json: () => Promise.resolve(makeState(callCount)) });
       });
     });
 

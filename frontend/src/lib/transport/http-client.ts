@@ -5,6 +5,8 @@ import { markStateUpdated, setHttpConnected, setRadioStatus, setReconnecting } f
 
 const BASE = '/api/v1';
 
+let lastStateEtag: string | null = null;
+
 function getStoredToken(): string | null {
   const storage = globalThis.localStorage;
   if (!storage || typeof storage.getItem !== 'function') {
@@ -27,10 +29,25 @@ function handleUnauthorized(): void {
   }
 }
 
-export async function fetchState(): Promise<ServerState> {
-  const res = await fetch(`${BASE}/state`, { headers: getAuthHeaders() });
-  if (res.status === 401) { handleUnauthorized(); throw new Error('Unauthorized'); }
+export async function fetchState(): Promise<ServerState | null> {
+  const headers: Record<string, string> = { ...getAuthHeaders() };
+  if (lastStateEtag) {
+    headers['If-None-Match'] = lastStateEtag;
+  }
+
+  const res = await fetch(`${BASE}/state`, { headers });
+  if (res.status === 401) {
+    handleUnauthorized();
+    throw new Error('Unauthorized');
+  }
+
+  if (res.status === 304) {
+    return null;
+  }
+
   if (!res.ok) throw new Error(`fetchState: ${res.status}`);
+
+  lastStateEtag = res.headers.get('ETag');
   return res.json() as Promise<ServerState>;
 }
 
@@ -77,16 +94,20 @@ export function startPolling(
         setReconnecting(false);
         setHttpConnected(true);
         markStateUpdated();
-        if (state.radioDetail?.status) {
+
+        // A 304 response maps to `null` here. It's still a successful poll.
+        if (state?.radioDetail?.status) {
           setRadioStatus(state.radioDetail.status);
         }
-        if (state.revision > lastRevision) {
+        if (state && state.revision > lastRevision) {
           lastRevision = state.revision;
           callback(state);
         }
       } catch {
         consecutiveErrors++;
         setReconnecting(true);
+        // Force a fresh 200 after transient errors.
+        lastStateEtag = null;
         if (consecutiveErrors >= HTTP_ERROR_THRESHOLD) {
           setHttpConnected(false);
         }
