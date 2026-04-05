@@ -54,6 +54,48 @@
       // Ignore storage errors
     }
   }
+
+  // --- Swipe gesture tracking ---
+  const SWIPE_THRESHOLD = 30;
+  let swipeStartY = 0;
+  let swipeStartX = 0;
+  let swipeHandled = false;
+
+  function onHeaderPointerDown(e: PointerEvent) {
+    swipeStartX = e.clientX;
+    swipeStartY = e.clientY;
+    swipeHandled = false;
+  }
+
+  function onHeaderPointerMove(e: PointerEvent) {
+    if (!collapsible || swipeHandled) return;
+    const dy = e.clientY - swipeStartY;
+    const dx = e.clientX - swipeStartX;
+    const absDy = Math.abs(dy);
+    const absDx = Math.abs(dx);
+
+    // If predominantly vertical movement exceeds threshold, mark as swipe
+    if (absDy > SWIPE_THRESHOLD && absDy > absDx * 2) {
+      swipeHandled = true;
+      // Swipe down → collapse (only if expanded)
+      if (dy > 0 && !collapsed) {
+        toggle();
+      }
+      // Swipe up → expand (only if collapsed)
+      if (dy < 0 && collapsed) {
+        toggle();
+      }
+    }
+  }
+
+  function onHeaderClick(e: MouseEvent) {
+    if (swipeHandled) {
+      e.preventDefault();
+      swipeHandled = false;
+      return;
+    }
+    toggle();
+  }
 </script>
 
 <div
@@ -77,7 +119,9 @@
       class="panel-header"
       class:collapsible
       aria-expanded={!collapsed}
-      onclick={toggle}
+      onclick={onHeaderClick}
+      onpointerdown={onHeaderPointerDown}
+      onpointermove={onHeaderPointerMove}
       disabled={!collapsible}
     >
       {#if collapsible}

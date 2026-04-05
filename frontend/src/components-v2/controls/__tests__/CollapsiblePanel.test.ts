@@ -252,4 +252,147 @@ describe('CollapsiblePanel', () => {
     const panel = target.querySelector('.collapsible-panel') as HTMLElement;
     expect(panel?.style.order).toBe('3');
   });
+
+  describe('swipe gestures', () => {
+    function simulateSwipe(header: HTMLElement, dy: number, dx = 0) {
+      const startX = 100;
+      const startY = 100;
+
+      header.dispatchEvent(
+        new PointerEvent('pointerdown', { clientX: startX, clientY: startY, bubbles: true }),
+      );
+      header.dispatchEvent(
+        new PointerEvent('pointermove', {
+          clientX: startX + dx,
+          clientY: startY + dy,
+          bubbles: true,
+        }),
+      );
+      // pointerup is not strictly needed since toggle happens on pointermove
+    }
+
+    it('swipe-down collapses an expanded panel', () => {
+      const target = mountPanel({ title: 'Test', panelId: 'swipe-test' });
+      const header = target.querySelector('.panel-header') as HTMLElement;
+      const chevron = target.querySelector('.chevron');
+
+      // Initially expanded
+      expect(chevron?.textContent).toBe('▾');
+
+      // Swipe down (dy=40 > threshold of 30)
+      simulateSwipe(header, 40);
+      flushSync();
+
+      expect(chevron?.textContent).toBe('▸');
+    });
+
+    it('swipe-up expands a collapsed panel', () => {
+      const target = mountPanel({ title: 'Test', panelId: 'swipe-test' });
+      const header = target.querySelector('.panel-header') as HTMLElement;
+      const chevron = target.querySelector('.chevron');
+
+      // Collapse first via click
+      header.click();
+      flushSync();
+      expect(chevron?.textContent).toBe('▸');
+
+      // Swipe up (dy=-40)
+      simulateSwipe(header, -40);
+      flushSync();
+
+      expect(chevron?.textContent).toBe('▾');
+    });
+
+    it('small movements do not trigger swipe (click still works)', () => {
+      const target = mountPanel({ title: 'Test', panelId: 'swipe-test' });
+      const header = target.querySelector('.panel-header') as HTMLElement;
+      const chevron = target.querySelector('.chevron');
+
+      // Small movement below threshold
+      simulateSwipe(header, 10);
+      flushSync();
+
+      // Should still be expanded (no swipe triggered)
+      expect(chevron?.textContent).toBe('▾');
+
+      // Click should still work normally
+      header.click();
+      flushSync();
+      expect(chevron?.textContent).toBe('▸');
+    });
+
+    it('non-collapsible panels ignore swipe', () => {
+      const target = mountPanel({ title: 'Test', panelId: 'swipe-test', collapsible: false });
+      const header = target.querySelector('.panel-header') as HTMLElement;
+
+      simulateSwipe(header, 40);
+      flushSync();
+
+      // aria-expanded should remain true (no toggle)
+      expect(header.getAttribute('aria-expanded')).toBe('true');
+    });
+
+    it('swipe-down on already-collapsed panel does nothing', () => {
+      const target = mountPanel({ title: 'Test', panelId: 'swipe-test' });
+      const header = target.querySelector('.panel-header') as HTMLElement;
+      const chevron = target.querySelector('.chevron');
+
+      // Collapse first
+      header.click();
+      flushSync();
+      expect(chevron?.textContent).toBe('▸');
+
+      // Swipe down on collapsed panel should not toggle
+      simulateSwipe(header, 40);
+      flushSync();
+
+      expect(chevron?.textContent).toBe('▸');
+    });
+
+    it('swipe-up on already-expanded panel does nothing', () => {
+      const target = mountPanel({ title: 'Test', panelId: 'swipe-test' });
+      const chevron = target.querySelector('.chevron');
+      const header = target.querySelector('.panel-header') as HTMLElement;
+
+      // Initially expanded
+      expect(chevron?.textContent).toBe('▾');
+
+      // Swipe up should not toggle (already expanded)
+      simulateSwipe(header, -40);
+      flushSync();
+
+      expect(chevron?.textContent).toBe('▾');
+    });
+
+    it('horizontal swipe does not trigger collapse', () => {
+      const target = mountPanel({ title: 'Test', panelId: 'swipe-test' });
+      const header = target.querySelector('.panel-header') as HTMLElement;
+      const chevron = target.querySelector('.chevron');
+
+      // Mostly horizontal movement (dx=40, dy=10)
+      simulateSwipe(header, 10, 40);
+      flushSync();
+
+      // Should remain expanded
+      expect(chevron?.textContent).toBe('▾');
+    });
+
+    it('swipe prevents click from also firing', () => {
+      const target = mountPanel({ title: 'Test', panelId: 'swipe-test' });
+      const header = target.querySelector('.panel-header') as HTMLElement;
+      const chevron = target.querySelector('.chevron');
+
+      // Swipe down to collapse
+      simulateSwipe(header, 40);
+      flushSync();
+      expect(chevron?.textContent).toBe('▸');
+
+      // Simulate click that would follow a swipe — should be suppressed
+      header.click();
+      flushSync();
+
+      // Should remain collapsed (click was suppressed by swipeHandled flag)
+      expect(chevron?.textContent).toBe('▸');
+    });
+  });
 });

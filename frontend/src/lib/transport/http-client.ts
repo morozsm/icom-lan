@@ -74,6 +74,11 @@ export async function fetchInfo(): Promise<InfoResponse> {
  */
 const HTTP_ERROR_THRESHOLD = 3;
 
+/** Clear the cached ETag so the next poll forces a fresh 200 response. */
+export function clearEtag(): void {
+  lastStateEtag = null;
+}
+
 export function startPolling(
   callback: (state: ServerState) => void,
   intervalMs = 200,

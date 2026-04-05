@@ -9,6 +9,7 @@
   import FrequencyDisplay from '../display/FrequencyDisplay.svelte';
   import LinearSMeter from '../meters/LinearSMeter.svelte';
   import CollapsiblePanel from '../controls/CollapsiblePanel.svelte';
+  import BottomSheet from '../controls/BottomSheet.svelte';
   import BandSelector from '../controls/BandSelector.svelte';
   import FilterPanel from '../panels/FilterPanel.svelte';
   import RxAudioPanel from '../panels/RxAudioPanel.svelte';
@@ -769,14 +770,7 @@
   </nav>
 
   <!-- ═══ SETTINGS BOTTOM SHEET ═══ -->
-  {#if settingsOpen}
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="m-sheet-backdrop" onclick={() => (settingsOpen = false)}>
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <div class="m-sheet" onclick={(e) => e.stopPropagation()}>
-        <div class="m-sheet-handle"></div>
-        <div class="m-sheet-title">SETTINGS</div>
-        <div class="m-sheet-content">
+  <BottomSheet bind:open={settingsOpen} title="SETTINGS">
           <CollapsiblePanel title="VFO / BAND" panelId="m-vfo-ops">
             <div class="m-vfo-ops-row">
               <HardwareButton
@@ -899,10 +893,7 @@
               onKeyerTypeChange={cwHandlers.onKeyerTypeChange}
             />
           </CollapsiblePanel>
-        </div>
-      </div>
-    </div>
-  {/if}
+  </BottomSheet>
 
   <!-- ═══ MODE MODAL ═══ -->
   {#if modeModalOpen}
