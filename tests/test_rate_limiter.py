@@ -68,7 +68,12 @@ async def _read(reader: asyncio.StreamReader, *, timeout: float = 1.0) -> bytes:
 
 @pytest.fixture
 def mock_radio() -> MagicMock:
-    return MagicMock(name="radio")
+    m = MagicMock(name="radio")
+    # Required by assert_radio_startup_ready (startup_checks.py)
+    m.connected = True
+    m.radio_ready = True
+    m.control_connected = True
+    return m
 
 
 @pytest.fixture

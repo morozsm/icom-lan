@@ -81,6 +81,10 @@ def _make_mock_radio() -> _MockRadio:
     """Explicit mock radio with sensible default return values."""
     radio = _MockRadio()
     radio.capabilities = set(FULL_ICOM_CAPS)
+    # Required by assert_radio_startup_ready (startup_checks.py)
+    radio.connected = True
+    radio.radio_ready = True
+    radio.control_connected = True
     radio.get_freq = AsyncMock(return_value=14_074_000)
     radio.get_mode_info = AsyncMock(return_value=(Mode.USB, 2))  # USB, FIL2 = 2400 Hz
     radio.get_data_mode = AsyncMock(return_value=False)

@@ -159,6 +159,7 @@ async def test_rigctld_server_gc_while_running_logs_warning(
 ) -> None:
     """When RigctldServer is collected while TCP server is still active, a WARN is emitted."""
     radio = SerialMockRadio()
+    await radio.connect()  # required by assert_radio_startup_ready
     with caplog.at_level(logging.WARNING, logger="icom_lan.rigctld.server"):
         server = RigctldServer(radio, RigctldConfig(port=0))
         await server.start()
@@ -180,6 +181,7 @@ async def test_rigctld_server_gc_after_stop_does_not_log_warning(
 ) -> None:
     """When RigctldServer is stopped before GC, no WARN is emitted."""
     radio = SerialMockRadio()
+    await radio.connect()  # required by assert_radio_startup_ready
     with caplog.at_level(logging.WARNING, logger="icom_lan.rigctld.server"):
         server = RigctldServer(radio, RigctldConfig(port=0))
         await server.start()

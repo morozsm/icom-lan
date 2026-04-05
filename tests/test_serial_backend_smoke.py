@@ -223,6 +223,7 @@ async def _close_writer(writer: asyncio.StreamWriter) -> None:
 @pytest.mark.asyncio
 async def test_web_server_smoke_with_serial_mock_backend() -> None:
     radio = SerialMockRadio()
+    await radio.connect()  # WebServer requires a ready radio before start()
     server = WebServer(
         radio,
         WebConfig(host="127.0.0.1", port=0, keepalive_interval=9999.0),
@@ -235,15 +236,15 @@ async def test_web_server_smoke_with_serial_mock_backend() -> None:
         status, _, body = await _http_get(host, port, "/api/v1/state")
         assert status == 200
         state = json.loads(body.decode("utf-8"))
-        assert state["connection"]["rigConnected"] is False
+        assert state["connection"]["rigConnected"] is True
 
         reader, writer = await _ws_connect(host, port, "/api/v1/ws")
         try:
             _op, payload = await _ws_recv_frame(reader)
             hello = json.loads(payload.decode("utf-8"))
             assert hello["type"] == "hello"
-            assert hello["connected"] is False
-            assert hello["radio_ready"] is False
+            assert hello["connected"] is True
+            assert hello["radio_ready"] is True
 
             # Skip initial state_update pushed after hello
             _op, _payload = await _ws_recv_frame(reader)
@@ -251,6 +252,7 @@ async def test_web_server_smoke_with_serial_mock_backend() -> None:
             if _msg.get("type") == "state_update":
                 pass  # consumed initial state
 
+            # Verify radio_connect WS command works (re-connect while already connected)
             await _ws_send_text(
                 writer,
                 json.dumps({"type": "radio_connect", "id": "connect-1"}),
