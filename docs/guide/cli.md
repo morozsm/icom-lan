@@ -14,12 +14,12 @@ All commands accept these options:
 | `--pass` | `ICOM_PASS` | `""` | Password (LAN backend) |
 | `--timeout` | — | `5.0` | Timeout in seconds |
 | `--json` | — | `false` | Emit JSON when supported by the selected command |
-| `--backend` | — | `lan` | Backend type: `lan` or `serial` |
-| `--serial-port` | `ICOM_SERIAL_DEVICE` | — | Serial device path (`--backend serial`) |
-| `--serial-baud` | `ICOM_SERIAL_BAUDRATE` | `115200` | Serial baud rate (`--backend serial`) |
+| `--backend` | — | `lan` | Backend type: `lan`, `serial`, or `yaesu-cat` |
+| `--serial-port` | `ICOM_SERIAL_DEVICE` | — | Serial device path (`--backend serial` / `--backend yaesu-cat`) |
+| `--serial-baud` | `ICOM_SERIAL_BAUDRATE` | env or backend default | Serial baud (`115200` for `serial`, `38400` for `yaesu-cat` when env is unset) |
 | `--serial-ptt-mode` | `ICOM_SERIAL_PTT_MODE` | `civ` | Serial PTT mode (`civ` currently supported) |
-| `--rx-device` | `ICOM_USB_RX_DEVICE` | auto | USB audio RX device name (`--backend serial`) |
-| `--tx-device` | `ICOM_USB_TX_DEVICE` | auto | USB audio TX device name (`--backend serial`) |
+| `--rx-device` | `ICOM_USB_RX_DEVICE` | auto | USB audio RX device name (serial/CAT profiles with audio support) |
+| `--tx-device` | `ICOM_USB_TX_DEVICE` | auto | USB audio TX device name (serial/CAT profiles with audio support) |
 | `--list-audio-devices` | — | — | List USB audio devices and exit |
 | `--version` | — | — | Print version and exit |
 
@@ -35,7 +35,8 @@ All commands accept these options:
 
 ## Backend Selection
 
-icom-lan supports two backends: **LAN** (default) and **serial** (USB CI-V + audio).
+icom-lan supports three backends: **LAN** (default), **serial** (USB CI-V), and
+**yaesu-cat** (text CAT over serial).
 
 ### LAN backend (default)
 
@@ -59,6 +60,24 @@ Set via environment variable to avoid repeating:
 export ICOM_SERIAL_DEVICE=/dev/tty.usbmodem-IC7610
 icom-lan --backend serial status
 ```
+
+### Yaesu CAT backend
+
+```bash
+# Connects via Yaesu CAT serial protocol (for example FTX-1 / FT-710 profiles)
+icom-lan --backend yaesu-cat --serial-port /dev/tty.usbserial-FTX1 status
+icom-lan --backend yaesu-cat --serial-port /dev/tty.usbserial-FTX1 freq
+```
+
+`--serial-port` is required for both `serial` and `yaesu-cat` backends (or set
+`ICOM_SERIAL_DEVICE` in the environment).
+
+### Serial baud defaults by backend
+
+If `--serial-baud` and `ICOM_SERIAL_BAUDRATE` are both unset:
+
+- `--backend serial` defaults to `115200`
+- `--backend yaesu-cat` defaults to `38400`
 
 ### Audio device selection (serial backend)
 

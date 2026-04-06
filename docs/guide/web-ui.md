@@ -196,6 +196,54 @@ Practical rule:
 - If audio send blocks for too long, server closes stale audio WS path and client
   reconnect logic re-establishes the stream.
 
+## Frontend Runtime Workflow (Current Implementation)
+
+The browser app startup path is implemented in `frontend/src/App.svelte` and
+`frontend/src/lib/transport/http-client.ts`.
+
+### Boot sequence
+
+1. Initialize UI version selector (`?ui=v1|v2` takes priority over localStorage).
+2. Register MediaSession handlers (when API is available).
+3. Start HTTP polling loop for `/api/v1/state` (interval set to `1000ms` in app bootstrap).
+4. Start battery monitor (progressive enhancement) and adjust polling multiplier.
+5. Fetch capabilities once from `/api/v1/capabilities`.
+6. Connect control WebSocket (`/api/v1/ws`) and subscribe to events.
+
+### State polling and conditional requests
+
+- Polling uses `If-None-Match` with the previous `ETag`.
+- `304 Not Modified` is treated as a successful poll with no state payload.
+- On transient HTTP errors, cached ETag is cleared to force a fresh `200` response.
+- After repeated HTTP failures, the connection store marks HTTP as disconnected until recovery.
+
+### Battery-aware polling behavior
+
+`frontend/src/lib/utils/battery.ts` adjusts polling interval multiplier:
+
+| Battery state | Multiplier | Effective poll interval (base 1000ms) |
+|---|---:|---:|
+| Charging or >20% | `1x` | `1000ms` |
+| 10–20% and not charging | `2x` | `2000ms` |
+| <=10% and not charging | `4x` | `4000ms` |
+
+If the Battery Status API is unavailable, multiplier stays at `1x`.
+
+### MediaSession mappings (mobile/headset controls)
+
+When `navigator.mediaSession` is supported:
+
+- `previoustrack` -> tune down one step (`set_freq`)
+- `nexttrack` -> tune up one step (`set_freq`)
+- `play` -> `ptt` ON
+- `pause` -> `ptt` OFF
+
+Implementation path: `frontend/src/lib/media/media-session.ts`.
+
+!!! note "Receiver routing in MediaSession tuning"
+    MediaSession tuning currently sends `set_freq` with `receiver: 0`
+    (MAIN receiver).
+
 ## Keyboard Shortcuts (Desktop)
 
 | Key | Action |
@@ -206,6 +254,50 @@ Practical rule:
 | `ArrowDown` / `ArrowLeft` | Tune down by current step |
 | `Space` | Toggle PTT |
 | `Escape` | Close frequency-entry modal |
+
+## Mobile v2 Interaction Model
+
+Mobile-first interaction logic is implemented in:
+
+- `frontend/src/components-v2/layout/RadioLayout.svelte`
+- `frontend/src/components-v2/layout/MobileRadioLayout.svelte`
+- `frontend/src/components-v2/controls/BottomSheet.svelte`
+- `frontend/src/components-v2/controls/CollapsiblePanel.svelte`
+
+### Enabling v2 UI
+
+`v2` can be selected with `?ui=v2` (or stored in localStorage by the app).
+Without selection, UI version defaults to `v1`.
+
+### Mobile layout switching
+
+In v2, mobile layout is selected automatically for narrow/short viewports and touch-centric form factors.
+
+### Bottom sheet gestures
+
+Bottom sheets support swipe-to-dismiss:
+
+- drag starts from the handle, or from content when scroll is at top
+- downward dismiss triggers when either:
+  - drag distance is >30% of sheet height, or
+  - swipe velocity is >0.5 px/ms
+
+### Collapsible panel swipe gestures
+
+Panel headers support vertical swipe:
+
+- swipe down collapses an expanded panel
+- swipe up expands a collapsed panel
+- threshold: 30px, with vertical-dominant movement guard
+
+### Mobile PTT workflow
+
+Mobile PTT button behavior:
+
+- press-and-hold -> TX while held
+- double-tap within 350ms -> latch TX lock
+- tap while latched -> unlock and return to idle
+- safety timeout forcibly disengages TX after 3 minutes
 
 ## Operations Runbook
 
@@ -303,6 +395,12 @@ const sub = state.sub ?? null;
   UI updates can be overwritten by server state.
 - **Scope recovery behavior:** scope enable/re-enable is deferred until `radio_ready=true`;
   all-zero scope frames trigger automatic re-enable attempts.
+- **UI version assumptions:** mobile v2 interactions (sheet/panel swipe, touch-first PTT flow)
+  require `?ui=v2` or previously stored v2 selection; default is v1.
+- **Battery API availability:** polling slowdown on low battery is best-effort; browsers without
+  `navigator.getBattery()` remain on normal polling cadence.
+- **MediaSession availability:** headset/lock-screen controls are enabled only when
+  `navigator.mediaSession` exists.
 
 ## Related Docs
 

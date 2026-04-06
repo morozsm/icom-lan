@@ -126,6 +126,42 @@ requests are rejected intentionally.
 **Fix:** Wait for `radio_ready=true` in state updates before retrying manual connect.
 Do not spam reconnect requests from frontend automation loops.
 
+### Mobile headset/lock-screen controls do nothing
+
+**Symptom:** Volume/media buttons do not tune frequency and play/pause does not toggle PTT.
+
+**Cause:** Browser does not expose the MediaSession API (`navigator.mediaSession`), so handlers are not registered.
+
+**Fixes:**
+
+1. Verify behavior in a browser/platform with MediaSession support.
+2. Use on-screen controls as fallback (expected behavior on unsupported browsers).
+
+### Web UI polling appears slower on low battery
+
+**Symptom:** State updates arrive less frequently on mobile devices with low battery.
+
+**Cause:** Frontend intentionally increases `/api/v1/state` polling interval when battery is low and not charging:
+
+- 10–20% -> 2x interval
+- <=10% -> 4x interval
+
+**Fixes / Notes:**
+
+1. Charge device to restore normal polling cadence.
+2. This optimization is skipped automatically on browsers without Battery Status API support.
+
+### Mobile v2 gestures are not available
+
+**Symptom:** Swipe-to-dismiss bottom sheets and touch-first mobile layout are missing.
+
+**Cause:** UI version defaults to v1 unless v2 is selected.
+
+**Fixes:**
+
+1. Open Web UI with `?ui=v2` query parameter.
+2. Keep v2 selected in localStorage for subsequent sessions.
+
 ## Command Issues
 
 ### "Radio rejected set_frequency"
