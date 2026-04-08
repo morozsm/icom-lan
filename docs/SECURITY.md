@@ -13,8 +13,8 @@ The library is designed for use on **trusted local networks** (home LAN, shack n
 - ✅ **No credential storage** — credentials are passed as parameters or environment variables, never written to disk by the library
 - ✅ **No hardcoded secrets** — no default passwords or keys in the codebase
 - ✅ **Clean exception handling** — errors don't leak credentials in tracebacks
-- ✅ **Minimal attack surface** — zero external dependencies (stdlib only)
-- ✅ **No network listeners** — the library only initiates outbound UDP connections
+- ✅ **Minimal attack surface** — core requires only `pyserial`; optional extras are well-scoped
+- ✅ **Controlled network listeners** — the library initiates outbound UDP connections; the optional web server (`icom-lan web`) and rigctld server (`icom-lan serve`) bind to configurable addresses and support auth tokens
 
 ### What the Icom protocol does NOT provide
 
@@ -88,9 +88,7 @@ The library processes binary protocol data with fixed-format parsing (struct.unp
 
 ### Dependencies
 
-Runtime: **zero external dependencies** (Python stdlib only).
-
-This eliminates supply-chain risks from third-party packages.
+Runtime: **`pyserial`** and **`pyserial-asyncio`** (core); optional extras (`opuslib`, `sounddevice`, `numpy`, `pillow`, `cryptography`) installed only when requested. Minimal supply-chain surface.
 
 ## Reporting Vulnerabilities
 

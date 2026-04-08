@@ -74,9 +74,9 @@ Direct connection to your radio — no wfview, hamlib, or RS-BA1 required.
 - :white_check_mark: **Built-in Web UI** — spectrum, waterfall, controls, meters, audio in browser; LCD layout for non-scope radios
 - :white_check_mark: **Async + Sync API** — async by default, blocking wrapper available
 - :white_check_mark: **Auto-reconnect** — watchdog + exponential backoff (opt-in)
-- :white_check_mark: **Zero dependencies** — pure Python, stdlib only
+- :white_check_mark: **Minimal dependencies** — core requires only `pyserial`; no web frameworks or heavy libraries
 - :white_check_mark: **Type-annotated** — full `py.typed` support for IDE autocompletion
-- :white_check_mark: **3929+ tests** — high coverage with golden protocol fixtures, UDP wire tests, and real-radio integration suite
+- :white_check_mark: **4492 tests** — high coverage with golden protocol fixtures, UDP wire tests, and real-radio integration suite
 
 ## Supported Radios
 

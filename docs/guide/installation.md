@@ -3,7 +3,7 @@
 ## Requirements
 
 - **Python 3.11+**
-- An Icom radio with LAN/WiFi connectivity (IC-7610, IC-705, IC-7300, IC-9700, etc.)
+- An Icom radio with LAN/WiFi connectivity (IC-7610, IC-705, IC-9700, etc.) or USB serial (IC-7300, IC-7610, etc.)
 - Network access to the radio (same LAN/subnet)
 
 ## Install from PyPI
@@ -30,15 +30,16 @@ cd icom-lan
 pip install -e ".[dev]"
 ```
 
-## Optional: Audio Support
-
-For Opus codec audio streaming:
+## Optional Dependencies
 
 ```bash
-pip install icom-lan[audio]
+pip install icom-lan[audio]    # Opus codec (opuslib)
+pip install icom-lan[bridge]   # Audio bridge (opuslib, sounddevice, numpy)
+pip install icom-lan[scope]    # Scope PNG rendering (pillow)
+pip install icom-lan[tls]      # HTTPS with auto-generated certs (cryptography)
 ```
 
-This installs `opuslib` for Opus codec support. Not required for PCM/uLaw audio.
+Audio support (`[audio]`) installs `opuslib` for Opus codec. Not required for PCM/uLaw audio.
 
 ## Verify Installation
 
@@ -69,8 +70,13 @@ Before connecting, ensure your radio is configured for LAN control:
 
 ### IC-7300
 
-1. Requires the **optional LAN module** or use via IC-7610's second CI-V port
-2. Same network settings menu structure
+The IC-7300 does **not** have LAN/WiFi connectivity. Use the **USB serial backend** instead:
+
+```bash
+icom-lan --backend serial --model IC-7300 --serial-port /dev/cu.usbserial-XXXXX status
+```
+
+See the [IC-7300 USB Setup guide](ic7300-usb-setup.md) for details.
 
 !!! tip "Static IP Recommended"
     Assign a static IP to your radio to avoid connection issues after DHCP lease changes.

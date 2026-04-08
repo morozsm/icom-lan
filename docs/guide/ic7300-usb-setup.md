@@ -79,7 +79,7 @@ from icom_lan import IcomRadio
 
 async def main():
     # Create serial radio for IC-7300
-    radio = IcomRadio(backend="serial", model="IC-7300", device="/dev/cu.usbserial-A602RVAV")
+    radio = IcomRadio(backend="serial", model="IC-7300", serial_port="/dev/cu.usbserial-A602RVAV")
 
     async with radio:
         # Read frequency
@@ -105,19 +105,19 @@ asyncio.run(main())
 
 ```bash
 # Check connection
-icom-lan --backend serial --model IC-7300 --device /dev/cu.usbserial-A602RVAV status
+icom-lan --backend serial --model IC-7300 --serial-port /dev/cu.usbserial-A602RVAV status
 
 # Set frequency
-icom-lan --backend serial --model IC-7300 --device /dev/cu.usbserial-A602RVAV freq 7074000
+icom-lan --backend serial --model IC-7300 --serial-port /dev/cu.usbserial-A602RVAV freq 7074000
 
 # Monitor metrics
-icom-lan --backend serial --model IC-7300 --device /dev/cu.usbserial-A602RVAV meters
+icom-lan --backend serial --model IC-7300 --serial-port /dev/cu.usbserial-A602RVAV meters
 ```
 
 ### 5. Web UI
 
 ```bash
-icom-lan web --backend serial --model IC-7300 --device /dev/cu.usbserial-A602RVAV
+icom-lan web --backend serial --model IC-7300 --serial-port /dev/cu.usbserial-A602RVAV
 # Open http://localhost:8000
 ```
 
@@ -167,7 +167,7 @@ Use macOS BlackHole (or Loopback) to bridge icom-lan audio to WSJT-X:
    - Add "IC-7300" input + "BlackHole 2ch" output
 3. **Start audio bridge**:
    ```bash
-   icom-lan audio bridge --device ic-7300-usb-in --loopback "BlackHole 2ch"
+   icom-lan audio bridge --serial-port ic-7300-usb-in --loopback "BlackHole 2ch"
    ```
 4. **WSJT-X settings**:
    - Input Device: "IC-7300 Bridge"
@@ -220,7 +220,7 @@ If commands are arriving too fast, adjust the minimum interval between CI-V comm
 radio = IcomRadio(
     backend="serial",
     model="IC-7300",
-    device="/dev/cu.usbserial-A602RVAV",
+    serial_port="/dev/cu.usbserial-A602RVAV",
 )
 # Set 100ms minimum between CI-V commands (default is 50ms)
 import os

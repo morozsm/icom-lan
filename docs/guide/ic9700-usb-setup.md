@@ -19,7 +19,7 @@ The IC-9700 is the only supported radio with **dual independent receivers**:
 | **Receivers** | 2 | 1 | 1 | **2** ✨ |
 | **LAN Backend** | ✅ | ✅ | ❌ | ✅ |
 | **Serial Backend** | ✅ | ✅ | ✅ | ✅ |
-| **CI-V Address** | 0x80 | 0xA4 | 0x94 | **0xA2** |
+| **CI-V Address** | 0x98 | 0xA4 | 0x94 | **0xA2** |
 
 ## Hardware Requirements
 
@@ -105,7 +105,7 @@ async def main():
     radio = IcomRadio(
         backend="serial",
         model="IC-9700",
-        device="/dev/cu.usbserial-A602RVBV"
+        serial_port="/dev/cu.usbserial-A602RVBV"
     )
 
     async with radio:
@@ -135,23 +135,23 @@ asyncio.run(main())
 
 ```bash
 # Check connection
-icom-lan --backend serial --model IC-9700 --device /dev/cu.usbserial-A602RVBV status
+icom-lan --backend serial --model IC-9700 --serial-port /dev/cu.usbserial-A602RVBV status
 
 # MAIN receiver (default)
-icom-lan --backend serial --model IC-9700 --device /dev/cu.usbserial-A602RVBV freq 144100000
+icom-lan --backend serial --model IC-9700 --serial-port /dev/cu.usbserial-A602RVBV freq 144100000
 
 # SUB receiver
-icom-lan --backend serial --model IC-9700 --device /dev/cu.usbserial-A602RVBV \
+icom-lan --backend serial --model IC-9700 --serial-port /dev/cu.usbserial-A602RVBV \
     --receiver 1 freq 144200000
 
 # Monitor both
-icom-lan --backend serial --model IC-9700 --device /dev/cu.usbserial-A602RVBV meters
+icom-lan --backend serial --model IC-9700 --serial-port /dev/cu.usbserial-A602RVBV meters
 ```
 
 ### 5. Web UI (Serial)
 
 ```bash
-icom-lan web --backend serial --model IC-9700 --device /dev/cu.usbserial-A602RVBV
+icom-lan web --backend serial --model IC-9700 --serial-port /dev/cu.usbserial-A602RVBV
 # Open http://localhost:8000
 # Use MAIN/SUB selector in web UI
 ```

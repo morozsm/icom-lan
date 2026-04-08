@@ -124,10 +124,10 @@ await radio.set_ptt(False)
 
 ```python
 # Select VFO
-await radio.select_vfo("A")     # VFO A (simpler radios)
-await radio.select_vfo("B")     # VFO B
-await radio.select_vfo("MAIN")  # Main receiver (IC-7610)
-await radio.select_vfo("SUB")   # Sub receiver (IC-7610)
+await radio.set_vfo("A")     # VFO A (simpler radios)
+await radio.set_vfo("B")     # VFO B
+await radio.set_vfo("MAIN")  # Main receiver (IC-7610)
+await radio.set_vfo("SUB")   # Sub receiver (IC-7610)
 
 # A=B command (semantics can vary on MAIN/SUB radios; use with care)
 await radio.vfo_equalize()

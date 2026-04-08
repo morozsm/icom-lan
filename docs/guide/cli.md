@@ -343,6 +343,68 @@ JSON output:
 }
 ```
 
+### `antenna`
+
+Get or set antenna selection.
+
+```bash
+# Get current antenna state
+icom-lan antenna
+
+# Set antenna
+icom-lan antenna --ant1 on
+icom-lan antenna --ant2 on
+icom-lan antenna --rx-ant1 on
+icom-lan antenna --rx-ant2 off
+```
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--ant1` | — | Set ANT1 (`on`/`off`) |
+| `--ant2` | — | Set ANT2 (`on`/`off`) |
+| `--rx-ant1` | — | Set RX antenna on ANT1 (`on`/`off`) |
+| `--rx-ant2` | — | Set RX antenna on ANT2 (`on`/`off`) |
+
+### `date`
+
+Get or set the radio's internal date.
+
+```bash
+icom-lan date
+```
+
+### `time`
+
+Get or set the radio's internal time.
+
+```bash
+icom-lan time
+```
+
+### `dualwatch`
+
+Get or set dual watch mode.
+
+```bash
+icom-lan dualwatch
+```
+
+### `tuner`
+
+Control the antenna tuner.
+
+```bash
+icom-lan tuner
+```
+
+### `levels`
+
+Get or set radio levels (AF, RF, squelch, etc.).
+
+```bash
+icom-lan levels
+```
+
 ### `ptt`
 
 Toggle Push-To-Talk.
@@ -614,10 +676,8 @@ These flags apply to **every** command and must come before the subcommand name.
 |------|---------|---------|-------------|
 | `--version` | *(global)* | — | Print version and exit |
 | `--control-port PORT` | *(global)* | `50001` (`$ICOM_PORT`) | Radio UDP control port; `--port` is a deprecated alias |
-| `--ant1` | *(global)* | — | Select antenna 1 (main transceiver antenna) |
-| `--ant2` | *(global)* | — | Select antenna 2 (alternate antenna) |
-| `--rx-ant1` | *(global)* | — | Select receive antenna 1 |
-| `--rx-ant2` | *(global)* | — | Select receive antenna 2 |
+| `--model MODEL` | *(global)* | — | Radio model (e.g. `IC-7300`); resolves from `rigs/*.toml` |
+| `--radio-addr ADDR` | *(global)* | — | CI-V address override (hex or decimal) |
 
 ```bash
 # Print installed version
@@ -626,11 +686,8 @@ icom-lan --version
 # Connect to a radio on a non-default port
 icom-lan --control-port 50002 status
 
-# Select main antenna
-icom-lan --ant1 status
-
-# Use alternate receive antenna
-icom-lan --rx-ant2 freq
+# Specify radio model explicitly
+icom-lan --model IC-7300 --backend serial --serial-port /dev/cu.usbserial-XXX status
 ```
 
 ### `serve` flags
@@ -693,6 +750,12 @@ icom-lan proxy --radio 192.168.1.100 --listen 10.8.0.1
 | `--dx-cluster HOST:PORT` | `web` | *(none)* | Connect to a DX cluster server for real-time spot overlays |
 | `--callsign CALL` | `web` | *(none)* | Your callsign for DX cluster login (required with `--dx-cluster`) |
 | `--auth-token TOKEN` | `web` | *(none)* | Require Bearer auth for API/WS endpoints |
+| `--tls` | `web` | off | Enable HTTPS with auto-generated self-signed certificate |
+| `--tls-cert PATH` | `web` | *(none)* | Path to TLS certificate PEM file |
+| `--tls-key PATH` | `web` | *(none)* | Path to TLS private key PEM file |
+| `--bridge-label LABEL` | `web` | *(none)* | Descriptive label for audio bridge log messages |
+| `--no-rigctld` | `web` | off | Disable built-in rigctld server |
+| `--rigctld-port PORT` | `web` | `4532` | Rigctld listen port |
 
 ```bash
 # Bidirectional bridge: RX from BlackHole 2ch, TX through BlackHole 16ch

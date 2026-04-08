@@ -25,9 +25,9 @@ Open `http://<server-ip>:8080` (or your custom port).
 
 | Layer | Implementation | Notes |
 |------|----------------|-------|
-| HTTP + WebSocket server | `src/icom_lan/web/server.py` | Pure asyncio, no external web framework |
-| WS handlers | `src/icom_lan/web/handlers.py` | Per-channel handlers for control/scope/meters/audio |
-| Frontend app | `frontend/` (Svelte + TypeScript) | Built assets are served from `icom_lan.web.static` by default |
+| HTTP + WebSocket server | Python asyncio | Pure asyncio, no external web framework |
+| WS handlers | Per-channel handlers | Control, scope, meters, and audio channels |
+| Frontend app | Svelte + TypeScript | Built assets served from package by default |
 
 The backend manages reconnect and recovery when the radio link drops; scope enable is deferred until `radio_ready` is true.
 
@@ -406,5 +406,4 @@ const sub = state.sub ?? null;
 
 - [CLI Reference](cli.md#web)
 - [Troubleshooting](troubleshooting.md)
-- [Web UI Protocol RFC (historical draft)](../internals/rfc-web-ui-v1.md)
 - [Reliability semantics](../internals/reliability-semantics.md) — timeouts, cache TTLs, and `radio_ready` / connection state behavior.

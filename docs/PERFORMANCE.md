@@ -4,7 +4,7 @@
 
 ### Test Suite Performance
 - **Unit tests (test_commands, test_civ, test_radio)**: 514 tests in 1.88s (3.6ms per test)
-- **Full test suite**: 3384 tests in ~79s (23ms per test)
+- **Full test suite**: 4492 tests (23ms median per test)
 - **Slowest tests**:
   - `test_multiple_timeouts_followed_by_success`: 0.21s (timeout simulation)
   - `test_deadline_timeout_does_not_always_send_three_attempts`: 0.20s (timeout simulation)

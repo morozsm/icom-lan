@@ -119,12 +119,12 @@ snapshot = await apply_profile(radio, contest_20m)
 
 ## Sync API (Synchronous Wrapper)
 
-For non-async code, use the `SyncIcomRadio` wrapper:
+For non-async code, use the synchronous `IcomRadio` wrapper:
 
 ```python
-from icom_lan.sync import SyncIcomRadio
+from icom_lan.sync import IcomRadio
 
-radio = SyncIcomRadio(config)
+radio = IcomRadio(config)
 snapshot = radio.prepare_ic705_data_profile(frequency_hz=145_500_000)
 # ... operate ...
 radio.restore_ic705_data_profile(snapshot)

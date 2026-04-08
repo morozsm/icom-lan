@@ -46,7 +46,7 @@ icom-lan discover
 1. **CI-V port negotiation failed** — this usually means the conninfo exchange didn't complete properly
 2. **Radio busy** — another application may be holding the CI-V stream
 3. **Network congestion** — try increasing the timeout
-4. **Command pacing too aggressive for current link/rig state** — increase `ICOM_CIV_MIN_INTERVAL_MS` (e.g., 50-80)
+4. **Command pacing too aggressive for current link/rig state** — increase `ICOM_CIV_MIN_INTERVAL_MS` (e.g., 50-80) for LAN, or `ICOM_SERIAL_CIV_MIN_INTERVAL_MS` for serial backend
 
 **Debug:**
 
@@ -59,7 +59,7 @@ logging.basicConfig(level=logging.DEBUG)
 # This will show the full handshake sequence
 config = LanBackendConfig(host="192.168.1.100", username="u", password="p")
 async with create_radio(config) as radio:
-    freq = await radio.get_frequency()
+    freq = await radio.get_freq()
 ```
 
 Look for:

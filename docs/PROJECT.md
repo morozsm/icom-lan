@@ -11,13 +11,12 @@ No intermediary software (wfview, RS-BA1, hamlib) is required for supported path
 ### Objectives
 - Connect to Icom over network (authentication, keep-alive)
 - Send/receive CI-V commands (frequency, mode, power, meters)
-- Receive/transmit audio stream (Opus)
+- Receive/transmit audio stream (PCM default, Opus optional)
 - Simple Pythonic API (sync + async)
 - Keep one `Radio` contract for API/CLI/Web/rigctld consumers
 - Support IC-7610 first, then expand to other models/families via backend/profile architecture
 
 ### Non-goals (for now)
-- GUI
 - Full wfview replacement
 - Non-IC-7610 serial expansion before IC-7610 USB MVP is stable
 - Cross-platform USB/audio polish beyond macOS-first rollout
@@ -60,7 +59,7 @@ Icom uses a proprietary UDP protocol for LAN connectivity. Not officially docume
 |------|---------|
 | 50001 | Control — authentication, connection management |
 | 50002 | CI-V Serial — CI-V command passthrough |
-| 50003 | Audio — bidirectional audio stream (Opus) |
+| 50003 | Audio — bidirectional audio stream (PCM default, Opus optional) |
 
 ### Connection Phases
 1. **Discovery** — optional, searching for radios on the network
@@ -68,7 +67,7 @@ Icom uses a proprietary UDP protocol for LAN connectivity. Not officially docume
 3. **Auth** — receiving token/confirmation
 4. **Keep-alive** — periodic ping (~500ms), otherwise the radio drops the connection
 5. **CI-V** — sending/receiving CI-V commands via UDP wrapper
-6. **Audio** — audio streaming (Opus codec, 8/16/24 kHz)
+6. **Audio** — audio streaming (PCM default, Opus optional; 8/16/24/48 kHz)
 7. **Disconnect** — graceful shutdown
 
 ### Packet Structure
@@ -230,7 +229,7 @@ Each UDP packet has a fixed-format header (see `packettypes.h` in wfview):
 - 3365 tests passing (+16 multi-model tests)
 
 ### Current Status
-**Package version in `pyproject.toml`: `0.11.0`.**
+**Package version in `pyproject.toml`: `0.14.2`.**
 **Reliability integration backlog (items 1-13) completed on 2026-03-05.**
 **Latest full regression (local, 2026-03-06):** green; exact counts are tracked in issue comments because the total moves as the parity/integration suite grows.
 - **M2 Platform Foundation (step #141):** extracted shared IC-7610 executable core (`Icom7610CoreRadio`) with LAN compatibility wrapper (`IcomRadio`) and no behavior changes.

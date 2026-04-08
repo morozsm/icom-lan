@@ -77,7 +77,7 @@ to lock down the wire format.
 - **Type annotations** on all public functions
 - **Docstrings** on all public classes and methods (Google/NumPy style)
 - Follow existing code patterns
-- No external dependencies for the core library (stdlib only)
+- Core library depends only on `pyserial`/`pyserial-asyncio`; avoid adding other runtime dependencies
 
 ## Commit Messages
 
