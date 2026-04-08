@@ -1117,6 +1117,8 @@ async def test_audio_handler_reader_control_tx_and_sender_paths(
     radio = MagicMock(spec=AudioCapable)
     radio.capabilities = {"audio"}
     radio.push_audio_tx_opus = AsyncMock()
+    radio.start_audio_tx_opus = AsyncMock()
+    radio.stop_audio_tx = AsyncMock()
     ws = SimpleNamespace(
         recv=AsyncMock(
             side_effect=[
@@ -1149,7 +1151,9 @@ async def test_audio_handler_reader_control_tx_and_sender_paths(
     await handler._reader_loop()
     assert handler._rx_active is True
     assert handler._tx_active is False
+    radio.start_audio_tx_opus.assert_awaited_once()
     radio.push_audio_tx_opus.assert_awaited_once_with(b"\x11\x22")
+    radio.stop_audio_tx.assert_awaited_once()
 
     handler._done.clear()
     frame = b"frame"
@@ -1191,6 +1195,8 @@ async def test_audio_handler_control_and_tx_guard_paths() -> None:
         push_audio_tx_opus = AsyncMock(side_effect=RuntimeError("boom"))
         start_audio_rx_opus = AsyncMock()
         stop_audio_rx_opus = AsyncMock()
+        start_audio_tx_opus = AsyncMock()
+        stop_audio_tx = AsyncMock()
         audio_bus = None
 
     radio = _FakeAudioRadio()
@@ -1211,11 +1217,15 @@ async def test_audio_handler_control_and_tx_guard_paths() -> None:
     await handler_no_broadcast._stop_rx()
 
     await handler._handle_tx_audio(b"\x00")
-    handler._tx_active = True
+    await handler._handle_control({"type": "audio_start", "direction": "tx"})
+    radio.start_audio_tx_opus.assert_awaited_once()
     await handler._handle_tx_audio(b"\x00" * (AUDIO_HEADER_SIZE - 1))
     await handler._handle_tx_audio(b"\x00" * AUDIO_HEADER_SIZE)
     await handler._handle_tx_audio(b"\x00" * AUDIO_HEADER_SIZE + b"\x99")
     radio.push_audio_tx_opus.assert_awaited_once_with(b"\x99")
+    await handler._handle_control({"type": "audio_stop", "direction": "tx"})
+    radio.stop_audio_tx.assert_awaited_once()
+    assert handler._tx_active is False
 
 
 async def test_audio_handler_run_calls_stop_rx_on_exit() -> None:

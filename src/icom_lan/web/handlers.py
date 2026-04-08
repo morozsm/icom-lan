@@ -2124,12 +2124,16 @@ class AudioHandler:
             if direction == "rx":
                 await self._start_rx()
             elif direction == "tx":
+                if self._radio and CAP_AUDIO in self._radio.capabilities:
+                    await self._radio.start_audio_tx_opus()
                 self._tx_active = True
                 logger.info("audio: TX active")
         elif msg_type == "audio_stop":
             if direction == "rx":
                 await self._stop_rx()
             elif direction == "tx":
+                if self._radio and CAP_AUDIO in self._radio.capabilities:
+                    await self._radio.stop_audio_tx()
                 self._tx_active = False
                 logger.info("audio: TX stopped")
 
