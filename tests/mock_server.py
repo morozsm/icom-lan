@@ -777,5 +777,7 @@ class MockIcomRadio:
         struct.pack_into("<I", pkt, 0x08, self.radio_id)
         struct.pack_into("<I", pkt, 0x0C, sender_id)
         struct.pack_into(">H", pkt, 0x42, self._actual_civ_port)
-        struct.pack_into(">H", pkt, 0x46, self._actual_civ_port + 1)  # dummy audio port
+        # Dummy audio port: keep within uint16 range even if OS assigns civ_port=65535.
+        audio_port = self._actual_civ_port + 1 if self._actual_civ_port < 65535 else 65534
+        struct.pack_into(">H", pkt, 0x46, audio_port)
         return bytes(pkt)
