@@ -99,7 +99,7 @@ async def handle_rtc_offer(
 
     # --- aiortc is available; create a peer connection ---
     try:
-        from aiortc import (  # type: ignore[import-untyped]
+        from aiortc import (  # type: ignore[import-not-found,import-untyped]
             RTCPeerConnection,
             RTCSessionDescription,
         )
