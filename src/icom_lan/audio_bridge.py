@@ -221,12 +221,12 @@ class AudioBridge:
             RuntimeError: If virtual audio device not found.
             ConnectionError: If radio is not connected.
         """
-        import numpy as np
-        import sounddevice as sd  # noqa: F401
-
         if self._running:
             logger.warning("%s: already running", self._label)
             return
+
+        import numpy as np
+        import sounddevice as sd  # noqa: F401
 
         self._start_time = time.monotonic()
         self._loop = asyncio.get_running_loop()
