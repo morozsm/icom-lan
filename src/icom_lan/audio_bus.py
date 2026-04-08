@@ -102,7 +102,8 @@ class AudioSubscription:
         if not self._active:
             return
         self._active = False
-        self._bus._remove_subscriber(self)
+        # Schedule async removal; we can't await in sync context
+        asyncio.create_task(self._bus._remove_subscriber(self))
 
     def deliver(self, packet: AudioPacket | None) -> None:
         """Called by the bus to deliver a packet (non-blocking)."""
@@ -214,20 +215,22 @@ class AudioBus:
             if not self._rx_active and len(self._subscribers) > 0:
                 await self._start_rx()
 
-    def _remove_subscriber(self, sub: AudioSubscription) -> None:
-        """Unregister a subscriber.  Schedules RX stop if no subscribers remain."""
-        try:
-            self._subscribers.remove(sub)
-        except ValueError:
-            pass
-        logger.info(
-            "audio-bus: -subscriber %r (%d remaining)",
-            sub.name,
-            len(self._subscribers),
-        )
-        if self._rx_active and len(self._subscribers) == 0:
-            # Schedule stop in a task to avoid blocking the caller
-            asyncio.ensure_future(self._stop_rx())
+    async def _remove_subscriber(self, sub: AudioSubscription) -> None:
+        """Unregister a subscriber. Stops RX if no subscribers remain."""
+        async with self._lock:
+            try:
+                self._subscribers.remove(sub)
+            except ValueError:
+                pass
+            logger.info(
+                "audio-bus: -subscriber %r (%d remaining)",
+                sub.name,
+                len(self._subscribers),
+            )
+            if self._rx_active and len(self._subscribers) == 0:
+                # Stop RX synchronously while holding the lock
+                # to prevent new subscribers from seeing a dying stream
+                await self._stop_rx()
 
     async def _start_rx(self) -> None:
         """Start receiving audio from the radio."""

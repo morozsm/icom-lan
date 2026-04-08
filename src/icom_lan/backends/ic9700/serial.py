@@ -451,4 +451,4 @@ class Ic9700SerialRadio(Icom7610CoreRadio):
         pass
 
 
-__all__ = ["Ic7300SerialRadio"]
+__all__ = ["Ic9700SerialRadio"]
