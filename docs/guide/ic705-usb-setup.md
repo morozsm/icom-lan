@@ -319,7 +319,7 @@ ls -l /dev/cu.*
 
 **Symptoms:** `CommandError: does not support receiver=1`
 
-**This is expected behavior** — IC-705 has a single receiver (receiver=0 only). The dual-receiver APIs inherited from `Icom7610CoreRadio` will fail for `receiver=1` operations. Use `receiver=0` (or omit the parameter, as 0 is the default).
+**This is expected behavior** — IC-705 has a single receiver (receiver=0 only). The dual-receiver APIs inherited from `CoreRadio` will fail for `receiver=1` operations. Use `receiver=0` (or omit the parameter, as 0 is the default).
 
 ## Capability Matrix: IC-705 vs IC-7610
 

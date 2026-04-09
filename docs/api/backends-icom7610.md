@@ -4,13 +4,13 @@ LAN and serial implementations for Icom IC-7610.
 
 ## Modules
 
-- `core.py` — Shared `Icom7610CoreRadio` (commander, state, CI-V routing)
+- `core.py` — Shared `CoreRadio` (commander, state, CI-V routing)
 - `lan.py` — `Icom7610LanRadio` (UDP control/audio/CI-V)
 - `serial.py` — `Icom7610SerialRadio` (USB serial CI-V + audio devices)
 
 ## Key Classes
 
-- `Icom7610CoreRadio` — Shared logic for both backends
+- `CoreRadio` — Shared logic for both backends
 - `Icom7610LanRadio` — LAN backend (implements `Radio`, `AudioCapable`, `ScopeCapable`)
 - `Icom7610SerialRadio` — Serial backend (implements `Radio`, `AudioCapable`)
 

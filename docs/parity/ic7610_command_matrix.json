@@ -185,7 +185,7 @@
       "status": "implemented",
       "runtime_symbols": [
         "icom_lan.commands:get_frequency",
-        "icom_lan.radio:Icom7610CoreRadio.get_frequency"
+        "icom_lan.radio:CoreRadio.get_frequency"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_frequency"
@@ -203,7 +203,7 @@
       "status": "implemented",
       "runtime_symbols": [
         "icom_lan.commands:get_mode",
-        "icom_lan.radio:Icom7610CoreRadio.get_mode"
+        "icom_lan.radio:CoreRadio.get_mode"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_mode"
@@ -221,7 +221,7 @@
       "status": "implemented",
       "runtime_symbols": [
         "icom_lan.commands:set_frequency",
-        "icom_lan.radio:Icom7610CoreRadio.set_frequency"
+        "icom_lan.radio:CoreRadio.set_frequency"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_set_frequency_14mhz"
@@ -239,7 +239,7 @@
       "status": "implemented",
       "runtime_symbols": [
         "icom_lan.commands:set_mode",
-        "icom_lan.radio:Icom7610CoreRadio.set_mode"
+        "icom_lan.radio:CoreRadio.set_mode"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_set_mode_usb"
@@ -257,7 +257,7 @@
       "status": "implemented",
       "runtime_symbols": [
         "icom_lan.commands:select_vfo",
-        "icom_lan.radio:Icom7610CoreRadio.select_vfo"
+        "icom_lan.radio:CoreRadio.select_vfo"
       ],
       "test_patterns": [
         "tests/test_commands_extended.py::test_vfo_main"
@@ -275,7 +275,7 @@
       "status": "implemented",
       "runtime_symbols": [
         "icom_lan.commands:vfo_swap",
-        "icom_lan.radio:Icom7610CoreRadio.vfo_exchange"
+        "icom_lan.radio:CoreRadio.vfo_exchange"
       ],
       "test_patterns": [
         "tests/test_commands_extended.py::test_vfo_swap"
@@ -293,7 +293,7 @@
       "status": "implemented",
       "runtime_symbols": [
         "icom_lan.commands:vfo_a_equals_b",
-        "icom_lan.radio:Icom7610CoreRadio.vfo_equalize"
+        "icom_lan.radio:CoreRadio.vfo_equalize"
       ],
       "test_patterns": [
         "tests/test_commands_extended.py::test_vfo_a_equals_b"
@@ -365,7 +365,7 @@
       "status": "implemented",
       "runtime_symbols": [
         "icom_lan.commands:select_vfo",
-        "icom_lan.radio:Icom7610CoreRadio.select_vfo"
+        "icom_lan.radio:CoreRadio.select_vfo"
       ],
       "test_patterns": [
         "tests/test_commands_extended.py::test_vfo_main"
@@ -383,7 +383,7 @@
       "status": "implemented",
       "runtime_symbols": [
         "icom_lan.commands:select_vfo",
-        "icom_lan.radio:Icom7610CoreRadio.select_vfo"
+        "icom_lan.radio:CoreRadio.select_vfo"
       ],
       "test_patterns": [
         "tests/test_commands_extended.py::test_vfo_sub"
@@ -510,7 +510,7 @@
       "status": "implemented",
       "runtime_symbols": [
         "icom_lan.commands:set_split",
-        "icom_lan.radio:Icom7610CoreRadio.set_split_mode",
+        "icom_lan.radio:CoreRadio.set_split_mode",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -550,8 +550,8 @@
       "runtime_symbols": [
         "icom_lan.commands:get_attenuator",
         "icom_lan.commands:set_attenuator_level",
-        "icom_lan.radio:Icom7610CoreRadio.get_attenuator_level",
-        "icom_lan.radio:Icom7610CoreRadio.set_attenuator_level"
+        "icom_lan.radio:CoreRadio.get_attenuator_level",
+        "icom_lan.radio:CoreRadio.set_attenuator_level"
       ],
       "test_patterns": [
         "tests/test_commands.py::get_attenuator",
@@ -613,8 +613,8 @@
       "runtime_symbols": [
         "icom_lan.commands:get_af_level",
         "icom_lan.commands:set_af_level",
-        "icom_lan.radio:Icom7610CoreRadio.get_af_level",
-        "icom_lan.radio:Icom7610CoreRadio.set_af_level"
+        "icom_lan.radio:CoreRadio.get_af_level",
+        "icom_lan.radio:CoreRadio.set_af_level"
       ],
       "test_patterns": [
         "tests/test_rf_gain_af_level.py::get_af_level",
@@ -634,8 +634,8 @@
       "runtime_symbols": [
         "icom_lan.commands:get_rf_gain",
         "icom_lan.commands:set_rf_gain",
-        "icom_lan.radio:Icom7610CoreRadio.get_rf_gain",
-        "icom_lan.radio:Icom7610CoreRadio.set_rf_gain"
+        "icom_lan.radio:CoreRadio.get_rf_gain",
+        "icom_lan.radio:CoreRadio.set_rf_gain"
       ],
       "test_patterns": [
         "tests/test_rf_gain_af_level.py::get_rf_gain",
@@ -654,7 +654,7 @@
       "status": "implemented",
       "runtime_symbols": [
         "icom_lan.commands:set_squelch",
-        "icom_lan.radio:Icom7610CoreRadio.set_squelch",
+        "icom_lan.radio:CoreRadio.set_squelch",
         "icom_lan._civ_rx:_CivRxMixin._update_state_cache_from_frame"
       ],
       "test_patterns": [
@@ -674,8 +674,8 @@
       "runtime_symbols": [
         "icom_lan.commands:get_apf_type_level",
         "icom_lan.commands:set_apf_type_level",
-        "icom_lan.radio:Icom7610CoreRadio.get_apf_type_level",
-        "icom_lan.radio:Icom7610CoreRadio.set_apf_type_level",
+        "icom_lan.radio:CoreRadio.get_apf_type_level",
+        "icom_lan.radio:CoreRadio.set_apf_type_level",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -698,8 +698,8 @@
       "runtime_symbols": [
         "icom_lan.commands:get_nr_level",
         "icom_lan.commands:set_nr_level",
-        "icom_lan.radio:Icom7610CoreRadio.get_nr_level",
-        "icom_lan.radio:Icom7610CoreRadio.set_nr_level",
+        "icom_lan.radio:CoreRadio.get_nr_level",
+        "icom_lan.radio:CoreRadio.set_nr_level",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -722,8 +722,8 @@
       "runtime_symbols": [
         "icom_lan.commands:get_pbt_inner",
         "icom_lan.commands:set_pbt_inner",
-        "icom_lan.radio:Icom7610CoreRadio.get_pbt_inner",
-        "icom_lan.radio:Icom7610CoreRadio.set_pbt_inner",
+        "icom_lan.radio:CoreRadio.get_pbt_inner",
+        "icom_lan.radio:CoreRadio.set_pbt_inner",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -746,8 +746,8 @@
       "runtime_symbols": [
         "icom_lan.commands:get_pbt_outer",
         "icom_lan.commands:set_pbt_outer",
-        "icom_lan.radio:Icom7610CoreRadio.get_pbt_outer",
-        "icom_lan.radio:Icom7610CoreRadio.set_pbt_outer",
+        "icom_lan.radio:CoreRadio.get_pbt_outer",
+        "icom_lan.radio:CoreRadio.set_pbt_outer",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -770,8 +770,8 @@
       "runtime_symbols": [
         "icom_lan.commands:get_cw_pitch",
         "icom_lan.commands:set_cw_pitch",
-        "icom_lan.radio:Icom7610CoreRadio.get_cw_pitch",
-        "icom_lan.radio:Icom7610CoreRadio.set_cw_pitch",
+        "icom_lan.radio:CoreRadio.get_cw_pitch",
+        "icom_lan.radio:CoreRadio.set_cw_pitch",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -794,8 +794,8 @@
       "runtime_symbols": [
         "icom_lan.commands:get_power",
         "icom_lan.commands:set_power",
-        "icom_lan.radio:Icom7610CoreRadio.get_power",
-        "icom_lan.radio:Icom7610CoreRadio.set_power"
+        "icom_lan.radio:CoreRadio.get_power",
+        "icom_lan.radio:CoreRadio.set_power"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_power",
@@ -815,8 +815,8 @@
       "runtime_symbols": [
         "icom_lan.commands:get_mic_gain",
         "icom_lan.commands:set_mic_gain",
-        "icom_lan.radio:Icom7610CoreRadio.get_mic_gain",
-        "icom_lan.radio:Icom7610CoreRadio.set_mic_gain",
+        "icom_lan.radio:CoreRadio.get_mic_gain",
+        "icom_lan.radio:CoreRadio.set_mic_gain",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -839,8 +839,8 @@
       "runtime_symbols": [
         "icom_lan.commands:get_key_speed",
         "icom_lan.commands:set_key_speed",
-        "icom_lan.radio:Icom7610CoreRadio.get_key_speed",
-        "icom_lan.radio:Icom7610CoreRadio.set_key_speed",
+        "icom_lan.radio:CoreRadio.get_key_speed",
+        "icom_lan.radio:CoreRadio.set_key_speed",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -863,8 +863,8 @@
       "runtime_symbols": [
         "icom_lan.commands:get_notch_filter",
         "icom_lan.commands:set_notch_filter",
-        "icom_lan.radio:Icom7610CoreRadio.get_notch_filter",
-        "icom_lan.radio:Icom7610CoreRadio.set_notch_filter",
+        "icom_lan.radio:CoreRadio.get_notch_filter",
+        "icom_lan.radio:CoreRadio.set_notch_filter",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -887,8 +887,8 @@
       "runtime_symbols": [
         "icom_lan.commands:get_compressor_level",
         "icom_lan.commands:set_compressor_level",
-        "icom_lan.radio:Icom7610CoreRadio.get_compressor_level",
-        "icom_lan.radio:Icom7610CoreRadio.set_compressor_level",
+        "icom_lan.radio:CoreRadio.get_compressor_level",
+        "icom_lan.radio:CoreRadio.set_compressor_level",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -911,8 +911,8 @@
       "runtime_symbols": [
         "icom_lan.commands:get_break_in_delay",
         "icom_lan.commands:set_break_in_delay",
-        "icom_lan.radio:Icom7610CoreRadio.get_break_in_delay",
-        "icom_lan.radio:Icom7610CoreRadio.set_break_in_delay",
+        "icom_lan.radio:CoreRadio.get_break_in_delay",
+        "icom_lan.radio:CoreRadio.set_break_in_delay",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -935,8 +935,8 @@
       "runtime_symbols": [
         "icom_lan.commands:get_nb_level",
         "icom_lan.commands:set_nb_level",
-        "icom_lan.radio:Icom7610CoreRadio.get_nb_level",
-        "icom_lan.radio:Icom7610CoreRadio.set_nb_level",
+        "icom_lan.radio:CoreRadio.get_nb_level",
+        "icom_lan.radio:CoreRadio.set_nb_level",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -959,8 +959,8 @@
       "runtime_symbols": [
         "icom_lan.commands:get_digisel_shift",
         "icom_lan.commands:set_digisel_shift",
-        "icom_lan.radio:Icom7610CoreRadio.get_digisel_shift",
-        "icom_lan.radio:Icom7610CoreRadio.set_digisel_shift",
+        "icom_lan.radio:CoreRadio.get_digisel_shift",
+        "icom_lan.radio:CoreRadio.set_digisel_shift",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -983,8 +983,8 @@
       "runtime_symbols": [
         "icom_lan.commands:get_drive_gain",
         "icom_lan.commands:set_drive_gain",
-        "icom_lan.radio:Icom7610CoreRadio.get_drive_gain",
-        "icom_lan.radio:Icom7610CoreRadio.set_drive_gain",
+        "icom_lan.radio:CoreRadio.get_drive_gain",
+        "icom_lan.radio:CoreRadio.set_drive_gain",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -1007,8 +1007,8 @@
       "runtime_symbols": [
         "icom_lan.commands:get_monitor_gain",
         "icom_lan.commands:set_monitor_gain",
-        "icom_lan.radio:Icom7610CoreRadio.get_monitor_gain",
-        "icom_lan.radio:Icom7610CoreRadio.set_monitor_gain",
+        "icom_lan.radio:CoreRadio.get_monitor_gain",
+        "icom_lan.radio:CoreRadio.set_monitor_gain",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -1031,8 +1031,8 @@
       "runtime_symbols": [
         "icom_lan.commands:get_vox_gain",
         "icom_lan.commands:set_vox_gain",
-        "icom_lan.radio:Icom7610CoreRadio.get_vox_gain",
-        "icom_lan.radio:Icom7610CoreRadio.set_vox_gain",
+        "icom_lan.radio:CoreRadio.get_vox_gain",
+        "icom_lan.radio:CoreRadio.set_vox_gain",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -1055,8 +1055,8 @@
       "runtime_symbols": [
         "icom_lan.commands:get_anti_vox_gain",
         "icom_lan.commands:set_anti_vox_gain",
-        "icom_lan.radio:Icom7610CoreRadio.get_anti_vox_gain",
-        "icom_lan.radio:Icom7610CoreRadio.set_anti_vox_gain",
+        "icom_lan.radio:CoreRadio.get_anti_vox_gain",
+        "icom_lan.radio:CoreRadio.set_anti_vox_gain",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -1079,7 +1079,7 @@
       "runtime_symbols": [
         "icom_lan.commands:get_s_meter_sql_status",
         "icom_lan.commands:parse_bool_response",
-        "icom_lan.radio:Icom7610CoreRadio.get_s_meter_sql_status",
+        "icom_lan.radio:CoreRadio.get_s_meter_sql_status",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -1102,7 +1102,7 @@
       "runtime_symbols": [
         "icom_lan.commands:get_s_meter",
         "icom_lan.commands:parse_meter_response",
-        "icom_lan.radio:Icom7610CoreRadio.get_s_meter"
+        "icom_lan.radio:CoreRadio.get_s_meter"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_s_meter",
@@ -1144,7 +1144,7 @@
       "runtime_symbols": [
         "icom_lan.commands:get_overflow_status",
         "icom_lan.commands:parse_bool_response",
-        "icom_lan.radio:Icom7610CoreRadio.get_overflow_status",
+        "icom_lan.radio:CoreRadio.get_overflow_status",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -1188,7 +1188,7 @@
       "status": "implemented",
       "runtime_symbols": [
         "icom_lan.commands:get_swr",
-        "icom_lan.radio:Icom7610CoreRadio.get_swr"
+        "icom_lan.radio:CoreRadio.get_swr"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_swr"
@@ -1206,7 +1206,7 @@
       "status": "implemented",
       "runtime_symbols": [
         "icom_lan.commands:get_alc",
-        "icom_lan.radio:Icom7610CoreRadio.get_alc"
+        "icom_lan.radio:CoreRadio.get_alc"
       ],
       "test_patterns": [
         "tests/test_commands.py::test_get_alc"
@@ -1293,8 +1293,8 @@
       "runtime_symbols": [
         "icom_lan.commands:get_preamp",
         "icom_lan.commands:set_preamp",
-        "icom_lan.radio:Icom7610CoreRadio.get_preamp",
-        "icom_lan.radio:Icom7610CoreRadio.set_preamp"
+        "icom_lan.radio:CoreRadio.get_preamp",
+        "icom_lan.radio:CoreRadio.set_preamp"
       ],
       "test_patterns": [
         "tests/test_commands.py::get_preamp",
@@ -1315,8 +1315,8 @@
         "icom_lan.commands:get_agc",
         "icom_lan.commands:set_agc",
         "icom_lan.commands:parse_level_response",
-        "icom_lan.radio:Icom7610CoreRadio.get_agc",
-        "icom_lan.radio:Icom7610CoreRadio.set_agc",
+        "icom_lan.radio:CoreRadio.get_agc",
+        "icom_lan.radio:CoreRadio.set_agc",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -1342,8 +1342,8 @@
       "runtime_symbols": [
         "icom_lan.commands:get_nb",
         "icom_lan.commands:set_nb",
-        "icom_lan.radio:Icom7610CoreRadio.get_nb",
-        "icom_lan.radio:Icom7610CoreRadio.set_nb"
+        "icom_lan.radio:CoreRadio.get_nb",
+        "icom_lan.radio:CoreRadio.set_nb"
       ],
       "test_patterns": [
         "tests/test_radio_coverage.py::get_nb"
@@ -1363,8 +1363,8 @@
         "icom_lan.commands:get_audio_peak_filter",
         "icom_lan.commands:set_audio_peak_filter",
         "icom_lan.commands:parse_level_response",
-        "icom_lan.radio:Icom7610CoreRadio.get_audio_peak_filter",
-        "icom_lan.radio:Icom7610CoreRadio.set_audio_peak_filter",
+        "icom_lan.radio:CoreRadio.get_audio_peak_filter",
+        "icom_lan.radio:CoreRadio.set_audio_peak_filter",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -1388,8 +1388,8 @@
       "runtime_symbols": [
         "icom_lan.commands:get_nr",
         "icom_lan.commands:set_nr",
-        "icom_lan.radio:Icom7610CoreRadio.get_nr",
-        "icom_lan.radio:Icom7610CoreRadio.set_nr"
+        "icom_lan.radio:CoreRadio.get_nr",
+        "icom_lan.radio:CoreRadio.set_nr"
       ],
       "test_patterns": [
         "tests/test_radio_coverage.py::get_nr"
@@ -1409,8 +1409,8 @@
         "icom_lan.commands:get_auto_notch",
         "icom_lan.commands:set_auto_notch",
         "icom_lan.commands:parse_bool_response",
-        "icom_lan.radio:Icom7610CoreRadio.get_auto_notch",
-        "icom_lan.radio:Icom7610CoreRadio.set_auto_notch",
+        "icom_lan.radio:CoreRadio.get_auto_notch",
+        "icom_lan.radio:CoreRadio.set_auto_notch",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -1474,8 +1474,8 @@
         "icom_lan.commands:get_compressor",
         "icom_lan.commands:set_compressor",
         "icom_lan.commands:parse_bool_response",
-        "icom_lan.radio:Icom7610CoreRadio.get_compressor",
-        "icom_lan.radio:Icom7610CoreRadio.set_compressor",
+        "icom_lan.radio:CoreRadio.get_compressor",
+        "icom_lan.radio:CoreRadio.set_compressor",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -1501,8 +1501,8 @@
         "icom_lan.commands:get_monitor",
         "icom_lan.commands:set_monitor",
         "icom_lan.commands:parse_bool_response",
-        "icom_lan.radio:Icom7610CoreRadio.get_monitor",
-        "icom_lan.radio:Icom7610CoreRadio.set_monitor",
+        "icom_lan.radio:CoreRadio.get_monitor",
+        "icom_lan.radio:CoreRadio.set_monitor",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -1527,8 +1527,8 @@
         "icom_lan.commands:get_vox",
         "icom_lan.commands:set_vox",
         "icom_lan.commands:parse_bool_response",
-        "icom_lan.radio:Icom7610CoreRadio.get_vox",
-        "icom_lan.radio:Icom7610CoreRadio.set_vox",
+        "icom_lan.radio:CoreRadio.get_vox",
+        "icom_lan.radio:CoreRadio.set_vox",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -1553,8 +1553,8 @@
         "icom_lan.commands:get_break_in",
         "icom_lan.commands:set_break_in",
         "icom_lan.commands:parse_level_response",
-        "icom_lan.radio:Icom7610CoreRadio.get_break_in",
-        "icom_lan.radio:Icom7610CoreRadio.set_break_in",
+        "icom_lan.radio:CoreRadio.get_break_in",
+        "icom_lan.radio:CoreRadio.set_break_in",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -1579,8 +1579,8 @@
         "icom_lan.commands:get_manual_notch",
         "icom_lan.commands:set_manual_notch",
         "icom_lan.commands:parse_bool_response",
-        "icom_lan.radio:Icom7610CoreRadio.get_manual_notch",
-        "icom_lan.radio:Icom7610CoreRadio.set_manual_notch",
+        "icom_lan.radio:CoreRadio.get_manual_notch",
+        "icom_lan.radio:CoreRadio.set_manual_notch",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -1604,8 +1604,8 @@
       "runtime_symbols": [
         "icom_lan.commands:get_digisel",
         "icom_lan.commands:set_digisel",
-        "icom_lan.radio:Icom7610CoreRadio.get_digisel",
-        "icom_lan.radio:Icom7610CoreRadio.set_digisel"
+        "icom_lan.radio:CoreRadio.get_digisel",
+        "icom_lan.radio:CoreRadio.set_digisel"
       ],
       "test_patterns": [
         "tests/test_radio_coverage.py::get_digisel"
@@ -1625,8 +1625,8 @@
         "icom_lan.commands:get_twin_peak_filter",
         "icom_lan.commands:set_twin_peak_filter",
         "icom_lan.commands:parse_bool_response",
-        "icom_lan.radio:Icom7610CoreRadio.get_twin_peak_filter",
-        "icom_lan.radio:Icom7610CoreRadio.set_twin_peak_filter",
+        "icom_lan.radio:CoreRadio.get_twin_peak_filter",
+        "icom_lan.radio:CoreRadio.set_twin_peak_filter",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -1651,8 +1651,8 @@
         "icom_lan.commands:get_dial_lock",
         "icom_lan.commands:set_dial_lock",
         "icom_lan.commands:parse_bool_response",
-        "icom_lan.radio:Icom7610CoreRadio.get_dial_lock",
-        "icom_lan.radio:Icom7610CoreRadio.set_dial_lock",
+        "icom_lan.radio:CoreRadio.get_dial_lock",
+        "icom_lan.radio:CoreRadio.set_dial_lock",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -1696,8 +1696,8 @@
         "icom_lan.commands:get_filter_shape",
         "icom_lan.commands:set_filter_shape",
         "icom_lan.commands:parse_level_response",
-        "icom_lan.radio:Icom7610CoreRadio.get_filter_shape",
-        "icom_lan.radio:Icom7610CoreRadio.set_filter_shape",
+        "icom_lan.radio:CoreRadio.get_filter_shape",
+        "icom_lan.radio:CoreRadio.set_filter_shape",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -1723,8 +1723,8 @@
         "icom_lan.commands:get_ssb_tx_bandwidth",
         "icom_lan.commands:set_ssb_tx_bandwidth",
         "icom_lan.commands:parse_level_response",
-        "icom_lan.radio:Icom7610CoreRadio.get_ssb_tx_bandwidth",
-        "icom_lan.radio:Icom7610CoreRadio.set_ssb_tx_bandwidth",
+        "icom_lan.radio:CoreRadio.get_ssb_tx_bandwidth",
+        "icom_lan.radio:CoreRadio.set_ssb_tx_bandwidth",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -1767,8 +1767,8 @@
       "runtime_symbols": [
         "icom_lan.commands:get_ip_plus",
         "icom_lan.commands:set_ip_plus",
-        "icom_lan.radio:Icom7610CoreRadio.get_ip_plus",
-        "icom_lan.radio:Icom7610CoreRadio.set_ip_plus"
+        "icom_lan.radio:CoreRadio.get_ip_plus",
+        "icom_lan.radio:CoreRadio.set_ip_plus"
       ],
       "test_patterns": [
         "tests/test_radio_coverage.py::get_ip_plus"
@@ -1787,8 +1787,8 @@
       "runtime_symbols": [
         "icom_lan.commands:send_cw",
         "icom_lan.commands:stop_cw",
-        "icom_lan.radio:Icom7610CoreRadio.send_cw_text",
-        "icom_lan.radio:Icom7610CoreRadio.stop_cw_text"
+        "icom_lan.radio:CoreRadio.send_cw_text",
+        "icom_lan.radio:CoreRadio.stop_cw_text"
       ],
       "test_patterns": [
         "tests/test_commands_extended.py::test_send_short",
@@ -1808,7 +1808,7 @@
       "runtime_symbols": [
         "icom_lan.commands:power_on",
         "icom_lan.commands:power_off",
-        "icom_lan.radio:Icom7610CoreRadio.power_control"
+        "icom_lan.radio:CoreRadio.power_control"
       ],
       "test_patterns": [
         "tests/test_commands_extended.py::test_power_on",
@@ -1882,8 +1882,8 @@
       "family": "baseline_core",
       "status": "implemented",
       "runtime_symbols": [
-        "icom_lan.radio:Icom7610CoreRadio.get_filter",
-        "icom_lan.radio:Icom7610CoreRadio.set_filter"
+        "icom_lan.radio:CoreRadio.get_filter",
+        "icom_lan.radio:CoreRadio.set_filter"
       ],
       "test_patterns": [
         "tests/test_radio_coverage.py::get_filter",
@@ -1940,8 +1940,8 @@
         "icom_lan.commands:get_ref_adjust",
         "icom_lan.commands:set_ref_adjust",
         "icom_lan.commands:parse_level_response",
-        "icom_lan.radio:Icom7610CoreRadio.get_ref_adjust",
-        "icom_lan.radio:Icom7610CoreRadio.set_ref_adjust",
+        "icom_lan.radio:CoreRadio.get_ref_adjust",
+        "icom_lan.radio:CoreRadio.set_ref_adjust",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -2174,8 +2174,8 @@
         "icom_lan.commands:get_dash_ratio",
         "icom_lan.commands:set_dash_ratio",
         "icom_lan.commands:parse_level_response",
-        "icom_lan.radio:Icom7610CoreRadio.get_dash_ratio",
-        "icom_lan.radio:Icom7610CoreRadio.set_dash_ratio",
+        "icom_lan.radio:CoreRadio.get_dash_ratio",
+        "icom_lan.radio:CoreRadio.set_dash_ratio",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -2199,8 +2199,8 @@
         "icom_lan.commands:get_nb_depth",
         "icom_lan.commands:set_nb_depth",
         "icom_lan.commands:parse_level_response",
-        "icom_lan.radio:Icom7610CoreRadio.get_nb_depth",
-        "icom_lan.radio:Icom7610CoreRadio.set_nb_depth",
+        "icom_lan.radio:CoreRadio.get_nb_depth",
+        "icom_lan.radio:CoreRadio.set_nb_depth",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -2224,8 +2224,8 @@
         "icom_lan.commands:get_nb_width",
         "icom_lan.commands:set_nb_width",
         "icom_lan.commands:parse_level_response",
-        "icom_lan.radio:Icom7610CoreRadio.get_nb_width",
-        "icom_lan.radio:Icom7610CoreRadio.set_nb_width",
+        "icom_lan.radio:CoreRadio.get_nb_width",
+        "icom_lan.radio:CoreRadio.set_nb_width",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -2250,8 +2250,8 @@
       "runtime_symbols": [
         "icom_lan.commands:get_data_mode",
         "icom_lan.commands:set_data_mode",
-        "icom_lan.radio:Icom7610CoreRadio.get_data_mode",
-        "icom_lan.radio:Icom7610CoreRadio.set_data_mode"
+        "icom_lan.radio:CoreRadio.get_data_mode",
+        "icom_lan.radio:CoreRadio.set_data_mode"
       ],
       "test_patterns": [
         "tests/test_data_mode.py::get_data_mode",
@@ -2272,8 +2272,8 @@
         "icom_lan.commands:get_af_mute",
         "icom_lan.commands:set_af_mute",
         "icom_lan.commands:parse_bool_response",
-        "icom_lan.radio:Icom7610CoreRadio.get_af_mute",
-        "icom_lan.radio:Icom7610CoreRadio.set_af_mute",
+        "icom_lan.radio:CoreRadio.get_af_mute",
+        "icom_lan.radio:CoreRadio.set_af_mute",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -2297,8 +2297,8 @@
         "icom_lan.commands:get_agc_time_constant",
         "icom_lan.commands:set_agc_time_constant",
         "icom_lan.commands:parse_level_response",
-        "icom_lan.radio:Icom7610CoreRadio.get_agc_time_constant",
-        "icom_lan.radio:Icom7610CoreRadio.set_agc_time_constant",
+        "icom_lan.radio:CoreRadio.get_agc_time_constant",
+        "icom_lan.radio:CoreRadio.set_agc_time_constant",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -2361,7 +2361,7 @@
       "runtime_symbols": [
         "icom_lan.commands:ptt_on",
         "icom_lan.commands:ptt_off",
-        "icom_lan.radio:Icom7610CoreRadio.set_ptt",
+        "icom_lan.radio:CoreRadio.set_ptt",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -2596,7 +2596,7 @@
       "status": "implemented",
       "runtime_symbols": [
         "icom_lan.scope:ScopeAssembler",
-        "icom_lan.radio:Icom7610CoreRadio.scope_stream"
+        "icom_lan.radio:CoreRadio.scope_stream"
       ],
       "test_patterns": [
         "tests/test_scope.py::assembles_complete_frame",
@@ -2616,8 +2616,8 @@
       "runtime_symbols": [
         "icom_lan.commands:scope_on",
         "icom_lan.commands:scope_off",
-        "icom_lan.radio:Icom7610CoreRadio.enable_scope",
-        "icom_lan.radio:Icom7610CoreRadio.disable_scope"
+        "icom_lan.radio:CoreRadio.enable_scope",
+        "icom_lan.radio:CoreRadio.disable_scope"
       ],
       "test_patterns": [
         "tests/test_scope.py::test_scope_on",
@@ -2638,8 +2638,8 @@
       "status": "implemented",
       "runtime_symbols": [
         "icom_lan.commands:scope_data_output",
-        "icom_lan.radio:Icom7610CoreRadio.enable_scope",
-        "icom_lan.radio:Icom7610CoreRadio.disable_scope"
+        "icom_lan.radio:CoreRadio.enable_scope",
+        "icom_lan.radio:CoreRadio.disable_scope"
       ],
       "test_patterns": [
         "tests/test_scope.py::scope_data_output_on",
@@ -2660,8 +2660,8 @@
         "icom_lan.commands:get_scope_main_sub",
         "icom_lan.commands:scope_main_sub",
         "icom_lan.commands:parse_scope_main_sub_response",
-        "icom_lan.radio:Icom7610CoreRadio.get_scope_receiver",
-        "icom_lan.radio:Icom7610CoreRadio.set_scope_receiver",
+        "icom_lan.radio:CoreRadio.get_scope_receiver",
+        "icom_lan.radio:CoreRadio.set_scope_receiver",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -2685,8 +2685,8 @@
         "icom_lan.commands:get_scope_single_dual",
         "icom_lan.commands:scope_single_dual",
         "icom_lan.commands:parse_scope_single_dual_response",
-        "icom_lan.radio:Icom7610CoreRadio.get_scope_dual",
-        "icom_lan.radio:Icom7610CoreRadio.set_scope_dual",
+        "icom_lan.radio:CoreRadio.get_scope_dual",
+        "icom_lan.radio:CoreRadio.set_scope_dual",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -2711,8 +2711,8 @@
         "icom_lan.commands:get_scope_mode",
         "icom_lan.commands:scope_set_mode",
         "icom_lan.commands:parse_scope_mode_response",
-        "icom_lan.radio:Icom7610CoreRadio.get_scope_mode",
-        "icom_lan.radio:Icom7610CoreRadio.set_scope_mode",
+        "icom_lan.radio:CoreRadio.get_scope_mode",
+        "icom_lan.radio:CoreRadio.set_scope_mode",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -2738,8 +2738,8 @@
         "icom_lan.commands:get_scope_span",
         "icom_lan.commands:scope_set_span",
         "icom_lan.commands:parse_scope_span_response",
-        "icom_lan.radio:Icom7610CoreRadio.get_scope_span",
-        "icom_lan.radio:Icom7610CoreRadio.set_scope_span",
+        "icom_lan.radio:CoreRadio.get_scope_span",
+        "icom_lan.radio:CoreRadio.set_scope_span",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -2765,8 +2765,8 @@
         "icom_lan.commands:get_scope_edge",
         "icom_lan.commands:scope_set_edge",
         "icom_lan.commands:parse_scope_edge_response",
-        "icom_lan.radio:Icom7610CoreRadio.get_scope_edge",
-        "icom_lan.radio:Icom7610CoreRadio.set_scope_edge",
+        "icom_lan.radio:CoreRadio.get_scope_edge",
+        "icom_lan.radio:CoreRadio.set_scope_edge",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -2791,8 +2791,8 @@
         "icom_lan.commands:get_scope_hold",
         "icom_lan.commands:scope_set_hold",
         "icom_lan.commands:parse_scope_hold_response",
-        "icom_lan.radio:Icom7610CoreRadio.get_scope_hold",
-        "icom_lan.radio:Icom7610CoreRadio.set_scope_hold",
+        "icom_lan.radio:CoreRadio.get_scope_hold",
+        "icom_lan.radio:CoreRadio.set_scope_hold",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -2817,8 +2817,8 @@
         "icom_lan.commands:get_scope_ref",
         "icom_lan.commands:scope_set_ref",
         "icom_lan.commands:parse_scope_ref_response",
-        "icom_lan.radio:Icom7610CoreRadio.get_scope_ref",
-        "icom_lan.radio:Icom7610CoreRadio.set_scope_ref",
+        "icom_lan.radio:CoreRadio.get_scope_ref",
+        "icom_lan.radio:CoreRadio.set_scope_ref",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -2844,8 +2844,8 @@
         "icom_lan.commands:get_scope_speed",
         "icom_lan.commands:scope_set_speed",
         "icom_lan.commands:parse_scope_speed_response",
-        "icom_lan.radio:Icom7610CoreRadio.get_scope_speed",
-        "icom_lan.radio:Icom7610CoreRadio.set_scope_speed",
+        "icom_lan.radio:CoreRadio.get_scope_speed",
+        "icom_lan.radio:CoreRadio.set_scope_speed",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -2870,8 +2870,8 @@
         "icom_lan.commands:get_scope_during_tx",
         "icom_lan.commands:scope_set_during_tx",
         "icom_lan.commands:parse_scope_during_tx_response",
-        "icom_lan.radio:Icom7610CoreRadio.get_scope_during_tx",
-        "icom_lan.radio:Icom7610CoreRadio.set_scope_during_tx",
+        "icom_lan.radio:CoreRadio.get_scope_during_tx",
+        "icom_lan.radio:CoreRadio.set_scope_during_tx",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -2897,8 +2897,8 @@
         "icom_lan.commands:get_scope_center_type",
         "icom_lan.commands:scope_set_center_type",
         "icom_lan.commands:parse_scope_center_type_response",
-        "icom_lan.radio:Icom7610CoreRadio.get_scope_center_type",
-        "icom_lan.radio:Icom7610CoreRadio.set_scope_center_type",
+        "icom_lan.radio:CoreRadio.get_scope_center_type",
+        "icom_lan.radio:CoreRadio.set_scope_center_type",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -2924,8 +2924,8 @@
         "icom_lan.commands:get_scope_vbw",
         "icom_lan.commands:scope_set_vbw",
         "icom_lan.commands:parse_scope_vbw_response",
-        "icom_lan.radio:Icom7610CoreRadio.get_scope_vbw",
-        "icom_lan.radio:Icom7610CoreRadio.set_scope_vbw",
+        "icom_lan.radio:CoreRadio.get_scope_vbw",
+        "icom_lan.radio:CoreRadio.set_scope_vbw",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -2950,8 +2950,8 @@
         "icom_lan.commands:get_scope_fixed_edge",
         "icom_lan.commands:scope_set_fixed_edge",
         "icom_lan.commands:parse_scope_fixed_edge_response",
-        "icom_lan.radio:Icom7610CoreRadio.get_scope_fixed_edge",
-        "icom_lan.radio:Icom7610CoreRadio.set_scope_fixed_edge",
+        "icom_lan.radio:CoreRadio.get_scope_fixed_edge",
+        "icom_lan.radio:CoreRadio.set_scope_fixed_edge",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -2977,8 +2977,8 @@
         "icom_lan.commands:get_scope_rbw",
         "icom_lan.commands:scope_set_rbw",
         "icom_lan.commands:parse_scope_rbw_response",
-        "icom_lan.radio:Icom7610CoreRadio.get_scope_rbw",
-        "icom_lan.radio:Icom7610CoreRadio.set_scope_rbw",
+        "icom_lan.radio:CoreRadio.get_scope_rbw",
+        "icom_lan.radio:CoreRadio.set_scope_rbw",
         "icom_lan._civ_rx:_CivRxMixin._update_radio_state_from_frame"
       ],
       "test_patterns": [
@@ -3002,7 +3002,7 @@
       "status": "implemented",
       "runtime_symbols": [
         "icom_lan.commands:build_cmd29_frame",
-        "icom_lan.radio:Icom7610CoreRadio._require_cmd29_route"
+        "icom_lan.radio:CoreRadio._require_cmd29_route"
       ],
       "test_patterns": [
         "tests/test_commands.py::build_cmd29_frame",

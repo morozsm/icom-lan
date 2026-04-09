@@ -8,19 +8,19 @@ from unittest.mock import AsyncMock
 import pytest
 
 from icom_lan.backends.yaesu_cat.radio import YaesuCatRadio
-from icom_lan.radio import Icom7610CoreRadio
+from icom_lan.radio import CoreRadio
 from icom_lan.rig_loader import load_rig
 
 _RIGS_DIR = Path(__file__).parents[1] / "rigs"
 
 
 # ---------------------------------------------------------------------------
-# Icom7610CoreRadio (base for all Icom LAN + serial backends)
+# CoreRadio (base for all Icom LAN + serial backends)
 # ---------------------------------------------------------------------------
 
 
 class TestIcomSupportsCommand:
-    """Icom7610CoreRadio.supports_command checks _KNOWN_COMMANDS."""
+    """CoreRadio.supports_command checks _KNOWN_COMMANDS."""
 
     def test_known_commands_return_true(self):
         known = [
@@ -33,8 +33,8 @@ class TestIcomSupportsCommand:
             "send_civ",
         ]
         for cmd in known:
-            assert Icom7610CoreRadio.supports_command(
-                Icom7610CoreRadio, cmd,  # type: ignore[arg-type]
+            assert CoreRadio.supports_command(
+                CoreRadio, cmd,  # type: ignore[arg-type]
             ), f"{cmd} should be supported"
 
     def test_unknown_commands_return_false(self):
@@ -43,14 +43,14 @@ class TestIcomSupportsCommand:
             "set_hyperdrive", "", "GET_FREQ",
         ]
         for cmd in unknown:
-            assert not Icom7610CoreRadio.supports_command(
-                Icom7610CoreRadio, cmd,  # type: ignore[arg-type]
+            assert not CoreRadio.supports_command(
+                CoreRadio, cmd,  # type: ignore[arg-type]
             ), f"{cmd!r} should NOT be supported"
 
     def test_known_commands_match_public_async_methods(self):
         """Every entry in _KNOWN_COMMANDS must correspond to an actual method."""
-        for cmd in Icom7610CoreRadio._KNOWN_COMMANDS:
-            assert hasattr(Icom7610CoreRadio, cmd), (
+        for cmd in CoreRadio._KNOWN_COMMANDS:
+            assert hasattr(CoreRadio, cmd), (
                 f"_KNOWN_COMMANDS lists {cmd!r} but no such method exists"
             )
 
@@ -93,29 +93,29 @@ class TestYaesuSupportsCommand:
 
 
 # ---------------------------------------------------------------------------
-# Serial Icom backends (all inherit Icom7610CoreRadio)
+# Serial Icom backends (all inherit CoreRadio)
 # ---------------------------------------------------------------------------
 
 
 class TestSerialBackendsSupportsCommand:
-    """Serial backends inherit supports_command from Icom7610CoreRadio."""
+    """Serial backends inherit supports_command from CoreRadio."""
 
     def test_ic7300_serial(self):
         from icom_lan.backends.ic7300.serial import Ic7300SerialRadio
         assert hasattr(Ic7300SerialRadio, "supports_command")
-        assert Ic7300SerialRadio.supports_command is Icom7610CoreRadio.supports_command
+        assert Ic7300SerialRadio.supports_command is CoreRadio.supports_command
 
     def test_ic705_serial(self):
         from icom_lan.backends.ic705.serial import Ic705SerialRadio
         assert hasattr(Ic705SerialRadio, "supports_command")
-        assert Ic705SerialRadio.supports_command is Icom7610CoreRadio.supports_command
+        assert Ic705SerialRadio.supports_command is CoreRadio.supports_command
 
     def test_ic9700_serial(self):
         from icom_lan.backends.ic9700.serial import Ic9700SerialRadio
         assert hasattr(Ic9700SerialRadio, "supports_command")
-        assert Ic9700SerialRadio.supports_command is Icom7610CoreRadio.supports_command
+        assert Ic9700SerialRadio.supports_command is CoreRadio.supports_command
 
     def test_icom7610_serial(self):
         from icom_lan.backends.icom7610.serial import Icom7610SerialRadio
         assert hasattr(Icom7610SerialRadio, "supports_command")
-        assert Icom7610SerialRadio.supports_command is Icom7610CoreRadio.supports_command
+        assert Icom7610SerialRadio.supports_command is CoreRadio.supports_command

@@ -36,7 +36,7 @@ No intermediary software (wfview, RS-BA1, hamlib) is required for supported path
 │            backends.factory.create_radio()                   │
 │                 │                                            │
 │                 ▼                                            │
-│     Icom7610CoreRadio (shared commander/state/civ routing)   │
+│     CoreRadio (shared commander/state/civ routing)   │
 │          ┌───────────────────────────────┴─────────────────┐ │
 │          ▼                                                 ▼ │
 │  Icom7610LanRadio                                Icom7610SerialRadio
@@ -164,7 +164,7 @@ Each UDP packet has a fixed-format header (see `packettypes.h` in wfview):
 ### Phase 7 — Platform Foundation (M2) ✅ COMPLETE
 **Goal:** Backend-neutral architecture for stable platform evolution.
 
-- [x] Extract shared IC-7610 executable core (`Icom7610CoreRadio`) with LAN compatibility wrapper
+- [x] Extract shared IC-7610 executable core (`CoreRadio`) with LAN compatibility wrapper
 - [x] Introduce profile-driven model/capability abstraction (`RadioProfile`)
 - [x] Establish backend factory/config wiring (`create_radio`, backend config objects)
 - [x] Add serial CI-V link foundation + deterministic serial test matrix
@@ -196,25 +196,25 @@ Each UDP packet has a fixed-format header (see `packettypes.h` in wfview):
 - [x] `#138` cross-surface exposure (API / CLI / Web / rigctld) — Phase A complete (49 Protocol methods + exemplar CLI); follow-up surfaces (Web UI, additional CLI, rigctld, docs) deferred as optional incremental work
 
 ### Phase 10 — Multi-Radio Expansion (M5) 🚧 IN PROGRESS
-**Goal:** Establish backend architecture and implementations for IC-705, IC-7300, IC-9700 radios using shared Icom7610CoreRadio foundation.
+**Goal:** Establish backend architecture and implementations for IC-705, IC-7300, IC-9700 radios using shared CoreRadio foundation.
 
 #### M5.1 IC-705 Backend ✅ COMPLETE (2026-03-23)
 - [x] Profile research (ic705.toml with full capabilities)
-- [x] Ic705SerialRadio class (inherits Icom7610CoreRadio)
+- [x] Ic705SerialRadio class (inherits CoreRadio)
 - [x] Factory routing (model="IC-705" detection)
 - [x] Test suite (5 tests: factory, profile, inheritance)
 - **Blocker:** IC-705 hardware not yet procured
 
 #### M5.2 IC-7300 Backend ✅ COMPLETE (2026-03-23)
 - [x] Profile research (ic7300.toml with full capabilities)
-- [x] Ic7300SerialRadio class (inherits Icom7610CoreRadio)
+- [x] Ic7300SerialRadio class (inherits CoreRadio)
 - [x] Factory routing (case-insensitive model routing)
 - [x] Test suite (5 tests: factory, profile, case-insensitive routing)
 - **Blocker:** IC-7300 hardware not yet procured
 
 #### M5.3 IC-9700 Backend ✅ COMPLETE (2026-03-23)
 - [x] Profile research + TOML definition (ic9700.toml, CI-V addr 0xA2, dual-receiver)
-- [x] Ic9700SerialRadio class (inherits Icom7610CoreRadio)
+- [x] Ic9700SerialRadio class (inherits CoreRadio)
 - [x] Factory routing (model="IC-9700" detection, case-insensitive)
 - [x] Test suite (6 tests: factory, profile, dual-receiver, case-insensitive, inheritance)
 - **Blocker:** IC-9700 hardware not yet procured
@@ -222,7 +222,7 @@ Each UDP packet has a fixed-format header (see `packettypes.h` in wfview):
 #### Multi-Model Architecture Features ✅
 - Factory.create_radio() routes by model parameter
 - Profile-driven CI-V address resolution
-- Shared command logic (Icom7610CoreRadio base)
+- Shared command logic (CoreRadio base)
 - Case-insensitive model matching
 - Extensible pattern for future models
 - Zero code duplication (drivers reused)
@@ -232,7 +232,7 @@ Each UDP packet has a fixed-format header (see `packettypes.h` in wfview):
 **Package version in `pyproject.toml`: `0.14.2`.**
 **Reliability integration backlog (items 1-13) completed on 2026-03-05.**
 **Latest full regression (local, 2026-03-06):** green; exact counts are tracked in issue comments because the total moves as the parity/integration suite grows.
-- **M2 Platform Foundation (step #141):** extracted shared IC-7610 executable core (`Icom7610CoreRadio`) with LAN compatibility wrapper (`IcomRadio`) and no behavior changes.
+- **M2 Platform Foundation (step #141):** extracted shared IC-7610 executable core (`CoreRadio`) with LAN compatibility wrapper (`IcomRadio`) and no behavior changes.
 - **M2 profile abstraction (issue #119):** runtime `RadioProfile` matrix added for multi-model behavior; `model`/`capabilities` and receiver/cmd29 routing are now profile-driven with explicit unsupported-operation guards.
 - **M3 serial scope guardrails (issue #146, 2026-03-06):** serial backend keeps the shared error contract in disconnected state (`ConnectionError` before low-baud guardrail evaluation), includes deterministic low-baud guardrail with explicit override (`allow_low_baud_scope` / `ICOM_SERIAL_SCOPE_ALLOW_LOW_BAUD`), and now has dedicated serial integration scope profile/gating (`ICOM_SERIAL_DEVICE`, `ICOM_SERIAL_BAUDRATE`, `ICOM_SERIAL_RADIO_ADDR`) alongside serial-specific CI-V pacing (`ICOM_SERIAL_CIV_MIN_INTERVAL_MS`) while LAN scope behavior remains unchanged.
 - **M3 CLI integration (issue #147, 2026-03-06):** unified CLI backend selection now routes through `create_radio(...)`, includes serial/audio flags, supports JSON audio-device listing, and preserves backward-compatible LAN defaults.
@@ -244,7 +244,7 @@ Each UDP packet has a fixed-format header (see `packettypes.h` in wfview):
 - **M5.1 IC-705 Multi-Radio Backend (2026-03-23):** IC-705 serial backend complete with Ic705SerialRadio class, profile-driven routing (ic705.toml, CI-V addr 0xA4), factory integration, and 5 new backend tests. Commit 2e10765. **Blocked on hardware procurement** (research complete).
 - **M5.2 IC-7300 Multi-Radio Backend (2026-03-23):** IC-7300 serial backend complete with Ic7300SerialRadio class, case-insensitive model routing, factory update (dual-model support validated), and 5 new backend tests. Commit 01dfb1b. **Blocked on hardware procurement** (research complete).
 - **M5.3 IC-9700 Multi-Radio Backend (2026-03-23):** IC-9700 serial backend complete with Ic9700SerialRadio class, dual-receiver support (receiver_count=2, unique to IC-9700), LAN-capable profile (ic9700.toml, CI-V addr 0xA2), factory routing with case-insensitive matching, and 6 new backend tests validating dual-receiver capability. **Blocked on hardware procurement** (research and profile complete).
-- **Multi-model factory architecture (2026-03-23):** Factory.create_radio() now routes by model parameter: IC-7610 → Icom7610SerialRadio (default), IC-705 → Ic705SerialRadio, IC-7300 → Ic7300SerialRadio, IC-9700 → Ic9700SerialRadio. All backends inherit from Icom7610CoreRadio (shared command logic). Profile-driven CI-V address resolution (0x80, 0xA4, 0x94, 0xA2). Extensible pattern for future models (IC-705 and IC-9700 are LAN-capable).
+- **Multi-model factory architecture (2026-03-23):** Factory.create_radio() now routes by model parameter: IC-7610 → Icom7610SerialRadio (default), IC-705 → Ic705SerialRadio, IC-7300 → Ic7300SerialRadio, IC-9700 → Ic9700SerialRadio. All backends inherit from CoreRadio (shared command logic). Profile-driven CI-V address resolution (0x80, 0xA4, 0x94, 0xA2). Extensible pattern for future models (IC-705 and IC-9700 are LAN-capable).
 - **State contract unification (issue #301, 2026-03-17):** web HTTP/WS public state and the web runtime path now derive from canonical `RadioState` without a web-side `StateCache` runtime dependency; default `rigctld` reads are `RadioState`-first with only handler-local fallback/optimistic state, and default server startup no longer binds consumer layers to backend-shared `StateCache`/poller state.
 
 ### Phase 11 — M6 Productization (M6) 🚧 IN PROGRESS (3/4 CORE + ALL OPTIMIZATIONS COMPLETE)

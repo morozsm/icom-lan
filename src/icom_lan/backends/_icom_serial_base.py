@@ -17,7 +17,7 @@ from .._connection_state import RadioConnectionState
 from ..audio import AudioPacket
 from ..commands import parse_ack_nak, scope_off as _scope_off_cmd
 from ..exceptions import AudioFormatError, CommandError, ConnectionError
-from ..radio import Icom7610CoreRadio
+from ..radio import CoreRadio
 from ..types import AudioCodec, ScopeCompletionPolicy, get_audio_capabilities
 if TYPE_CHECKING:
     from .icom7610.drivers.serial_civ_link import SerialCivLink
@@ -73,7 +73,7 @@ class _SerialAudioDriver(Protocol):
     def tx_running(self) -> bool: ...
 
 
-class _IcomSerialRadioBase(Icom7610CoreRadio):
+class _IcomSerialRadioBase(CoreRadio):
     """Base for all Icom serial-backend radios.
 
     Subclasses must set ``_DEFAULT_MODEL`` as a class variable.

@@ -109,7 +109,7 @@ icom-lan now uses a **shared-core backend-neutral architecture**. Consumers (CLI
 │    └─────────┬──────────┘                    │                         │
 │              │                               │                         │
 │              │       ┌───────────────────────┴──────────────┐          │
-│              │       │      Icom7610CoreRadio               │          │
+│              │       │      CoreRadio                       │          │
 │              └───────►      (shared executable core)        │          │
 │                      │  - Commander (priority queue)        │          │
 │                      │  - CI-V RX routing                   │          │
@@ -130,7 +130,7 @@ icom-lan now uses a **shared-core backend-neutral architecture**. Consumers (CLI
 1. **Consumers** (CLI/Web/rigctld) — program against `Radio` + capability protocols
 2. **Backend Factory** — `create_radio(config)` wires typed config → concrete radio
 3. **Backend Adapters** — thin adapters for LAN (UDP) and serial (USB CI-V + audio)
-4. **Shared Core** — `Icom7610CoreRadio` with commander, state, CI-V routing, scope assembly
+4. **Shared Core** — `CoreRadio` with commander, state, CI-V routing, scope assembly
 5. **Transports** — LAN uses UDP sockets, serial uses `SerialCivLink` + `UsbAudioDriver`
 6. **USB Audio Resolver** — `usb_audio_resolve.py` maps a serial port to the correct `sounddevice` indices via macOS IORegistry topology (used by `UsbAudioDriver` when `serial_port` is provided)
 
