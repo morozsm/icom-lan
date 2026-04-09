@@ -29,8 +29,8 @@ from typing import TYPE_CHECKING, Any, Callable
 from ...commands import hz_to_table_index, table_index_to_hz
 
 if TYPE_CHECKING:
+    from ..._poller_types import CommandQueue
     from ...radio_state import RadioState
-    from ...web.radio_poller import CommandQueue
     from .radio import YaesuCatRadio
 
 __all__ = ["YaesuCatPoller"]
@@ -285,7 +285,7 @@ class YaesuCatPoller:
         all command types; unsupported commands for this radio are silently
         dropped.
         """
-        from ...web.radio_poller import (
+        from ..._poller_types import (
             PttOff,
             PttOn,
             SelectVfo,
