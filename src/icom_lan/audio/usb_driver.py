@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import sys
 from dataclasses import dataclass
 from typing import Any, Callable
 
@@ -51,6 +52,7 @@ class UsbAudioDevice:
     default_samplerate: int = 48_000
     is_default_input: bool = False
     is_default_output: bool = False
+    platform_uid: str = ""
 
     @property
     def supports_rx(self) -> bool:
@@ -187,6 +189,19 @@ def select_usb_audio_devices(
     return selected_rx, selected_tx
 
 
+def _get_uid_map() -> dict[str, str]:
+    """Return CoreAudio name→UID map on macOS, empty dict elsewhere."""
+    if sys.platform != "darwin":
+        return {}
+    try:
+        from icom_lan.audio._macos_uid import get_device_uid_map
+
+        return get_device_uid_map()
+    except Exception:
+        logger.debug("CoreAudio UID lookup unavailable", exc_info=True)
+        return {}
+
+
 def list_usb_audio_devices(sounddevice_module: Any) -> list[UsbAudioDevice]:
     """Return normalized system audio devices."""
     raw_devices = list(sounddevice_module.query_devices())
@@ -197,13 +212,16 @@ def list_usb_audio_devices(sounddevice_module: Any) -> list[UsbAudioDevice]:
         default_input_idx = _safe_int(default_raw[0], default=-1)
         default_output_idx = _safe_int(default_raw[1], default=-1)
 
+    uid_map = _get_uid_map()
+
     normalized: list[UsbAudioDevice] = []
     for idx, raw in enumerate(raw_devices):
         index = _safe_int(raw.get("index", idx), default=idx)
+        name = str(raw.get("name", f"device-{index}"))
         normalized.append(
             UsbAudioDevice(
                 index=index,
-                name=str(raw.get("name", f"device-{index}")),
+                name=name,
                 input_channels=_safe_int(raw.get("max_input_channels")),
                 output_channels=_safe_int(raw.get("max_output_channels")),
                 default_samplerate=_safe_int(
@@ -215,6 +233,7 @@ def list_usb_audio_devices(sounddevice_module: Any) -> list[UsbAudioDevice]:
                 is_default_output=(
                     default_output_idx is not None and index == default_output_idx
                 ),
+                platform_uid=uid_map.get(name, ""),
             )
         )
     return normalized
