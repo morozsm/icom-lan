@@ -1,9 +1,12 @@
 """Tests for watchdog and auto-reconnect."""
 
 import asyncio
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
+from icom_lan._connection_state import RadioConnectionState
+from icom_lan.exceptions import AuthenticationError
 from icom_lan.radio import IcomRadio
 
 from test_radio import MockTransport
@@ -124,3 +127,64 @@ class TestAutoReconnectConfig:
         assert r._reconnect_delay == 5.0
         assert r._reconnect_max_delay == 120.0
         assert r._watchdog_timeout == 15.0
+
+
+class TestReconnectPermanentErrors:
+    """Reconnect should abort immediately on permanent errors (#472)."""
+
+    @pytest.mark.asyncio
+    async def test_auth_error_aborts_reconnect(self, radio: IcomRadio) -> None:
+        """AuthenticationError should stop reconnect immediately."""
+        radio._connected = False
+        radio._intentional_disconnect = False
+        with patch.object(radio, "connect", new_callable=AsyncMock) as mock_connect:
+            mock_connect.side_effect = AuthenticationError("wrong password")
+            radio._reconnect_task = asyncio.create_task(radio._reconnect_loop())
+            await asyncio.sleep(0.15)
+            assert radio._reconnect_task.done()
+            assert radio._conn_state == RadioConnectionState.DISCONNECTED
+            # Should have tried only once
+            assert mock_connect.call_count == 1
+
+    @pytest.mark.asyncio
+    async def test_value_error_aborts_reconnect(self, radio: IcomRadio) -> None:
+        """ValueError should stop reconnect immediately."""
+        radio._connected = False
+        radio._intentional_disconnect = False
+        with patch.object(radio, "connect", new_callable=AsyncMock) as mock_connect:
+            mock_connect.side_effect = ValueError("invalid config")
+            radio._reconnect_task = asyncio.create_task(radio._reconnect_loop())
+            await asyncio.sleep(0.15)
+            assert radio._reconnect_task.done()
+            assert radio._conn_state == RadioConnectionState.DISCONNECTED
+            assert mock_connect.call_count == 1
+
+    @pytest.mark.asyncio
+    async def test_type_error_aborts_reconnect(self, radio: IcomRadio) -> None:
+        """TypeError should stop reconnect immediately."""
+        radio._connected = False
+        radio._intentional_disconnect = False
+        with patch.object(radio, "connect", new_callable=AsyncMock) as mock_connect:
+            mock_connect.side_effect = TypeError("bad arg")
+            radio._reconnect_task = asyncio.create_task(radio._reconnect_loop())
+            await asyncio.sleep(0.15)
+            assert radio._reconnect_task.done()
+            assert radio._conn_state == RadioConnectionState.DISCONNECTED
+            assert mock_connect.call_count == 1
+
+    @pytest.mark.asyncio
+    async def test_transient_error_retries(self, radio: IcomRadio) -> None:
+        """Transient errors (OSError) should still retry."""
+        radio._connected = False
+        radio._intentional_disconnect = False
+        with patch.object(radio, "connect", new_callable=AsyncMock) as mock_connect:
+            mock_connect.side_effect = OSError("network unreachable")
+            radio._reconnect_task = asyncio.create_task(radio._reconnect_loop())
+            # Let it retry a few times (delay starts at 0.1)
+            await asyncio.sleep(0.35)
+            assert mock_connect.call_count >= 2
+            assert radio._conn_state == RadioConnectionState.RECONNECTING
+            # Clean up
+            radio._intentional_disconnect = True
+            radio._control_phase._stop_reconnect()
+            await asyncio.sleep(0.05)

@@ -263,6 +263,7 @@ async def test_bridge_start_stop_rx_only():
 
         await bridge.stop()
         assert not bridge._running
+        await asyncio.sleep(0.05)
         assert bus.subscriber_count == 0
         mock_output_stream.stop.assert_called_once()
         mock_output_stream.close.assert_called_once()

@@ -300,7 +300,7 @@ from .commands import get_selected_mode as _get_selected_mode_cmd
 from .commands import get_unselected_mode as _get_unselected_mode_cmd
 from .commands import parse_selected_mode_response as _parse_selected_mode_response
 from .commands import set_vfo as _select_vfo_cmd
-from .exceptions import CommandError, ConnectionError, TimeoutError
+from .exceptions import AuthenticationError, CommandError, ConnectionError, TimeoutError
 from .profiles import RadioProfile, resolve_radio_profile
 from .radio_state import RadioState, ScopeControlsState
 from .rigctld.state_cache import StateCache
@@ -1303,6 +1303,14 @@ class Icom7610CoreRadio:
                     logger.info("Reconnected successfully after %d attempts", attempt)
                     if self._auto_recover_audio and audio_snapshot is not None:
                         await self._audio_runtime.recover(audio_snapshot)
+                    return
+                except (AuthenticationError, ValueError, TypeError) as exc:
+                    logger.error(
+                        "Reconnect aborted — permanent error after %d attempt(s): %s",
+                        attempt,
+                        exc,
+                    )
+                    self._conn_state = RadioConnectionState.DISCONNECTED
                     return
                 except Exception as exc:
                     self._conn_state = RadioConnectionState.RECONNECTING
