@@ -1,7 +1,6 @@
 """Tests for IcomRadio high-level API."""
 
 import asyncio
-import struct
 from unittest.mock import patch
 
 import pytest
@@ -32,55 +31,18 @@ from icom_lan.types import (
     CivFrame,
     FilterShape,
     Mode,
-    PacketType,
     SsbTxBandwidth,
     bcd_encode,
 )
 
+from _helpers import ack_response as _ack_response
+from _helpers import freq_response as _freq_response
+from _helpers import mode_response as _mode_response
+from _helpers import wrap_civ_in_udp as _wrap_civ_in_udp
+
 # ---------------------------------------------------------------------------
 # Helpers — build fake radio responses as UDP packets wrapping CI-V frames
 # ---------------------------------------------------------------------------
-
-
-def _wrap_civ_in_udp(
-    civ_data: bytes,
-    sender_id: int = 0xDEADBEEF,
-    receiver_id: int = 0x00010001,
-    seq: int = 1,
-) -> bytes:
-    """Wrap a CI-V frame in a minimal UDP data packet."""
-    # Data packet layout: 16-byte header + payload
-    # For CIV data packets, after the 16-byte header there's a small sub-header
-    # We'll use a simplified format that the radio module will parse
-    total_len = 0x15 + len(civ_data)
-    pkt = bytearray(total_len)
-    struct.pack_into("<I", pkt, 0, total_len)
-    struct.pack_into("<H", pkt, 4, PacketType.DATA)
-    struct.pack_into("<H", pkt, 6, seq)
-    struct.pack_into("<I", pkt, 8, sender_id)
-    struct.pack_into("<I", pkt, 0x0C, receiver_id)
-    # Sub-header at 0x10: type(1) + datalen(2) + sendseq(2)
-    pkt[0x10] = 0x00
-    struct.pack_into("<H", pkt, 0x11, len(civ_data))
-    struct.pack_into("<H", pkt, 0x13, 0)
-    pkt[0x15:] = civ_data
-    return bytes(pkt)
-
-
-def _freq_response(freq_hz: int) -> bytes:
-    """Build a CI-V frequency response wrapped in UDP."""
-    civ = build_civ_frame(
-        CONTROLLER_ADDR, IC_7610_ADDR, _CMD_FREQ_GET, data=bcd_encode(freq_hz)
-    )
-    return _wrap_civ_in_udp(civ)
-
-
-def _mode_response(mode: Mode, filt: int = 1) -> bytes:
-    """Build a CI-V mode response wrapped in UDP."""
-    civ = build_civ_frame(
-        CONTROLLER_ADDR, IC_7610_ADDR, _CMD_MODE_GET, data=bytes([mode, filt])
-    )
-    return _wrap_civ_in_udp(civ)
 
 
 def _meter_response(sub: int, value: int) -> bytes:
@@ -92,12 +54,6 @@ def _meter_response(sub: int, value: int) -> bytes:
     civ = build_civ_frame(
         CONTROLLER_ADDR, IC_7610_ADDR, _CMD_METER, sub=sub, data=bytes([b0, b1])
     )
-    return _wrap_civ_in_udp(civ)
-
-
-def _ack_response() -> bytes:
-    """Build a CI-V ACK wrapped in UDP."""
-    civ = build_civ_frame(CONTROLLER_ADDR, IC_7610_ADDR, _CMD_ACK)
     return _wrap_civ_in_udp(civ)
 
 

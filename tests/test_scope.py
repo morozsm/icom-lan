@@ -9,7 +9,6 @@ Tests cover:
 from __future__ import annotations
 
 import asyncio
-import struct
 from unittest.mock import patch
 
 import pytest
@@ -51,9 +50,10 @@ from icom_lan.commands import (
     scope_single_dual
 )
 from icom_lan.scope import ScopeAssembler, ScopeFrame
-from icom_lan.types import bcd_encode, PacketType
+from icom_lan.types import bcd_encode
 from icom_lan.radio import IcomRadio
 from _command_test_helpers import bind_default_addr_globals, bind_default_addr_module
+from _helpers import wrap_civ_in_udp as _wrap_civ_in_udp
 
 bind_default_addr_module(raw_commands, to_addr=IC_7610_ADDR)
 bind_default_addr_globals(globals(), to_addr=IC_7610_ADDR)
@@ -116,23 +116,6 @@ def _scope_civ_frame(
         sub=0x00,
         data=bytes([receiver]) + payload_after_receiver,
     )
-
-
-def _wrap_civ_in_udp(civ_data: bytes, seq: int = 1) -> bytes:
-    """Wrap a CI-V frame in a minimal UDP data packet."""
-    CIV_HEADER_SIZE = 0x15
-    total_len = CIV_HEADER_SIZE + len(civ_data)
-    pkt = bytearray(total_len)
-    struct.pack_into("<I", pkt, 0, total_len)
-    struct.pack_into("<H", pkt, 4, PacketType.DATA)
-    struct.pack_into("<H", pkt, 6, seq)
-    struct.pack_into("<I", pkt, 8, 0xDEADBEEF)
-    struct.pack_into("<I", pkt, 0x0C, 0x00010001)
-    pkt[0x10] = 0x00
-    struct.pack_into("<H", pkt, 0x11, len(civ_data))
-    struct.pack_into("<H", pkt, 0x13, 0)
-    pkt[CIV_HEADER_SIZE:] = civ_data
-    return bytes(pkt)
 
 
 # ---------------------------------------------------------------------------

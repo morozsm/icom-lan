@@ -14,12 +14,15 @@ __all__ = ["RigConfig", "RigLoadError", "load_rig", "discover_rigs"]
 from .command_spec import CatCommandSpec, CivCommandSpec, CommandSpec
 from .profiles import (
     BandInfo,
+    ControlSpec,
     FilterWidthRule,
     FilterWidthSegment,
     FreqRangeInfo,
     KeyboardBinding,
     KeyboardConfig,
+    MeterCalibrationPoint,
     RadioProfile,
+    RuleSpec,
 )
 
 VALID_VFO_SCHEMES = {"ab", "main_sub", "ab_shared", "single"}
@@ -80,10 +83,10 @@ class RigConfig:
     protocol_type: str = "civ"
     protocol_address: int | None = None
     protocol_baud: int | None = None
-    controls: dict[str, dict[str, Any]] | None = None
-    meter_calibrations: dict[str, list[dict[str, Any]]] | None = None
+    controls: dict[str, ControlSpec] | None = None
+    meter_calibrations: dict[str, list[MeterCalibrationPoint]] | None = None
     meter_redlines: dict[str, int] | None = None
-    rules: tuple[dict[str, Any], ...] = ()
+    rules: tuple[RuleSpec, ...] = ()
     keyboard: KeyboardConfig | None = None
     antenna_tx_count: int = 1
     antenna_has_rx_ant: bool = False
@@ -597,7 +600,7 @@ def load_rig(path: Path) -> RigConfig:
 
     # Parse [controls] (optional)
     controls_raw = data.get("controls")
-    controls: dict[str, dict[str, Any]] | None = None
+    controls: dict[str, ControlSpec] | None = None
     if controls_raw is not None:
         controls = {}
         for ctrl_name, ctrl_data in controls_raw.items():
@@ -608,11 +611,11 @@ def load_rig(path: Path) -> RigConfig:
                         f"{filename}: [controls.{ctrl_name}].style must be one of "
                         f"{VALID_CONTROL_STYLES}, got {style!r}"
                     )
-                controls[ctrl_name] = dict(ctrl_data)
+                controls[ctrl_name] = dict(ctrl_data)  # type: ignore[assignment]
 
     # Parse [meters] (optional)
     meters_raw = data.get("meters")
-    meter_calibrations: dict[str, list[dict[str, Any]]] | None = None
+    meter_calibrations: dict[str, list[MeterCalibrationPoint]] | None = None
     meter_redlines: dict[str, int] | None = None
     if meters_raw is not None:
         meter_calibrations = {}
@@ -630,7 +633,7 @@ def load_rig(path: Path) -> RigConfig:
 
     # Parse [[rules]] (optional)
     rules_raw = data.get("rules", [])
-    rules: list[dict[str, Any]] = []
+    rules: list[RuleSpec] = []
     for rule in rules_raw:
         kind = rule.get("kind")
         if kind not in VALID_RULE_KINDS:

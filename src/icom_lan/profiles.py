@@ -10,12 +10,15 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Required, TypedDict
 
 __all__ = [
+    "ControlSpec",
     "FilterWidthSegment",
     "FilterWidthRule",
+    "MeterCalibrationPoint",
     "RadioProfile",
+    "RuleSpec",
     "get_radio_profile",
     "resolve_radio_profile",
     "KeyboardBinding",
@@ -23,6 +26,36 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
+
+
+class ControlSpec(TypedDict, total=False):
+    """Specification for a single radio control (from TOML ``[controls.*]``)."""
+
+    style: str
+    raw_min: int
+    raw_max: int
+    raw_center: int
+    display_min: int
+    display_max: int
+    display_unit: str
+
+
+class MeterCalibrationPoint(TypedDict):
+    """One calibration point for a meter (from TOML ``[[meters.*.calibration]]``)."""
+
+    raw: int
+    actual: float
+    label: str
+
+
+class RuleSpec(TypedDict, total=False):
+    """Inter-control rule (from TOML ``[[rules]]``)."""
+
+    kind: Required[str]
+    fields: list[str]
+    when_active: str
+    disables: list[str]
+    reason: str
 
 
 def _normalize(value: str) -> str:
@@ -130,9 +163,9 @@ class RadioProfile:
     data_mode_count: int = 0
     data_mode_labels: dict[str, str] | None = None
     protocol_type: str = "civ"
-    controls: dict[str, dict[str, Any]] | None = None
-    meter_calibrations: dict[str, list[dict[str, Any]]] | None = None
-    rules: tuple[dict[str, Any], ...] = ()
+    controls: dict[str, ControlSpec] | None = None
+    meter_calibrations: dict[str, list[MeterCalibrationPoint]] | None = None
+    rules: tuple[RuleSpec, ...] = ()
     keyboard: KeyboardConfig | None = None
     antenna_tx_count: int = 1
 

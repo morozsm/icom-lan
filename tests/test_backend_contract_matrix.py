@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import struct
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -14,42 +13,15 @@ from icom_lan.backends.icom7610.drivers.serial_stub import SerialMockRadio
 from icom_lan.commands import (
     CONTROLLER_ADDR,
     _CMD_LEVEL,
-    _CMD_MODE_GET,
-    _CMD_FREQ_GET,
     _SUB_RF_POWER,
     build_civ_frame,
 )
 from icom_lan.radio import IcomRadio
-from icom_lan.types import Mode, PacketType, bcd_encode
+from icom_lan.types import Mode
 
-
-def _wrap_civ_in_udp(civ_data: bytes, *, seq: int = 1) -> bytes:
-    total_len = 0x15 + len(civ_data)
-    pkt = bytearray(total_len)
-    struct.pack_into("<I", pkt, 0, total_len)
-    struct.pack_into("<H", pkt, 4, PacketType.DATA)
-    struct.pack_into("<H", pkt, 6, seq)
-    struct.pack_into("<I", pkt, 8, 0xDEADBEEF)
-    struct.pack_into("<I", pkt, 0x0C, 0x00010001)
-    pkt[0x10] = 0x00
-    struct.pack_into("<H", pkt, 0x11, len(civ_data))
-    struct.pack_into("<H", pkt, 0x13, 0)
-    pkt[0x15:] = civ_data
-    return bytes(pkt)
-
-
-def _freq_response(freq_hz: int) -> bytes:
-    civ = build_civ_frame(
-        CONTROLLER_ADDR, IC_7610_ADDR, _CMD_FREQ_GET, data=bcd_encode(freq_hz)
-    )
-    return _wrap_civ_in_udp(civ)
-
-
-def _mode_response(mode: Mode, filt: int = 1) -> bytes:
-    civ = build_civ_frame(
-        CONTROLLER_ADDR, IC_7610_ADDR, _CMD_MODE_GET, data=bytes([mode, filt])
-    )
-    return _wrap_civ_in_udp(civ)
+from _helpers import freq_response as _freq_response
+from _helpers import mode_response as _mode_response
+from _helpers import wrap_civ_in_udp as _wrap_civ_in_udp
 
 
 def _power_response(level: int) -> bytes:

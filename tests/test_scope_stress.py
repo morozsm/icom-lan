@@ -9,7 +9,6 @@ Uses mock transport and scope helpers; no real hardware.
 from __future__ import annotations
 
 import asyncio
-import struct
 from typing import TYPE_CHECKING
 
 import pytest
@@ -21,13 +20,14 @@ from icom_lan.commands import (
 )
 from icom_lan.radio import IcomRadio
 from icom_lan.scope import ScopeFrame
-from icom_lan.types import bcd_encode, PacketType
+from icom_lan.types import bcd_encode
+
+from _helpers import wrap_civ_in_udp as _wrap_civ_in_udp
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
 # Reuse scope payload building (single-packet LAN mode: seq=1, seq_max=1).
-CIV_HEADER_SIZE = 0x15
 
 
 def _bcd_byte(value: int) -> int:
@@ -63,21 +63,6 @@ def _scope_civ_frame(receiver: int, payload_after_receiver: bytes) -> bytes:
         sub=0x00,
         data=bytes([receiver]) + payload_after_receiver,
     )
-
-
-def _wrap_civ_in_udp(civ_data: bytes, seq: int = 1) -> bytes:
-    total_len = CIV_HEADER_SIZE + len(civ_data)
-    pkt = bytearray(total_len)
-    struct.pack_into("<I", pkt, 0, total_len)
-    struct.pack_into("<H", pkt, 4, PacketType.DATA)
-    struct.pack_into("<H", pkt, 6, seq)
-    struct.pack_into("<I", pkt, 8, 0xDEADBEEF)
-    struct.pack_into("<I", pkt, 0x0C, 0x00010001)
-    pkt[0x10] = 0x00
-    struct.pack_into("<H", pkt, 0x11, len(civ_data))
-    struct.pack_into("<H", pkt, 0x13, 0)
-    pkt[CIV_HEADER_SIZE:] = civ_data
-    return bytes(pkt)
 
 
 class MockTransport:

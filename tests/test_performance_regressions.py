@@ -12,57 +12,20 @@ All tests use mocked UDP transport to isolate command processing from network la
 from __future__ import annotations
 
 import time
-from struct import pack_into
 
 import pytest
 
 from icom_lan import IC_7610_ADDR
 from icom_lan.commands import (
-    _CMD_ACK,
     _CMD_FREQ_GET,
-    _CMD_MODE_GET,
     CONTROLLER_ADDR,
     build_civ_frame,
 )
-from icom_lan.types import Mode, PacketType, bcd_encode
+from icom_lan.types import Mode, bcd_encode
 
-
-def _wrap_civ_in_udp(civ_data: bytes, seq: int = 1) -> bytes:
-    """Wrap CI-V frame in UDP packet."""
-    total_len = 0x15 + len(civ_data)
-    pkt = bytearray(total_len)
-    pack_into("<I", pkt, 0, total_len)
-    pack_into("<H", pkt, 4, PacketType.DATA)
-    pack_into("<H", pkt, 6, seq)
-    pack_into("<I", pkt, 8, 0xDEADBEEF)
-    pack_into("<I", pkt, 0x0C, 0x00010001)
-    pkt[0x10] = 0x00
-    pack_into("<H", pkt, 0x11, len(civ_data))
-    pack_into("<H", pkt, 0x13, 0)
-    pkt[0x15:] = civ_data
-    return bytes(pkt)
-
-
-def _freq_response(freq_hz: int) -> bytes:
-    """Build frequency response."""
-    civ = build_civ_frame(
-        CONTROLLER_ADDR, IC_7610_ADDR, _CMD_FREQ_GET, data=bcd_encode(freq_hz)
-    )
-    return _wrap_civ_in_udp(civ)
-
-
-def _mode_response(mode: Mode, filt: int = 1) -> bytes:
-    """Build mode response."""
-    civ = build_civ_frame(
-        CONTROLLER_ADDR, IC_7610_ADDR, _CMD_MODE_GET, data=bytes([mode, filt])
-    )
-    return _wrap_civ_in_udp(civ)
-
-
-def _ack_response() -> bytes:
-    """Build ACK response."""
-    civ = build_civ_frame(CONTROLLER_ADDR, IC_7610_ADDR, _CMD_ACK)
-    return _wrap_civ_in_udp(civ)
+from _helpers import freq_response as _freq_response
+from _helpers import mode_response as _mode_response
+from _helpers import wrap_civ_in_udp as _wrap_civ_in_udp
 
 
 # =============================================================================
