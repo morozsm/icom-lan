@@ -29,7 +29,6 @@ from __future__ import annotations
 
 import logging
 import threading
-from typing import Deque
 from collections import deque
 
 __all__ = ["AudioBufferPool", "BufferExhausted", "ContextManagedBuffer"]
@@ -70,7 +69,7 @@ class AudioBufferPool:
         self._max_buffers = max_buffers
         self._name = name
         self._lock = threading.Lock()
-        self._available: Deque[bytearray] = deque()
+        self._available: deque[bytearray] = deque()
         self._in_use: set[int] = set()
         self._total_pre_allocated = max_buffers
 
@@ -152,16 +151,6 @@ class AudioBufferPool:
                 "total_allocated": self._total_pre_allocated,
             }
 
-    def __enter__(self) -> bytearray:
-        """Context manager support for buffer acquisition."""
-        return self.acquire()
-
-    def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: object) -> None:
-        """Context manager support for buffer release."""
-        # Note: This is a simplified version; in practice we'd need to track
-        # which buffer was acquired in __enter__. For now, this is just
-        # documentation of the intended pattern.
-        pass
 
 
 class ContextManagedBuffer:
