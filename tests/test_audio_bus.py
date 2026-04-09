@@ -61,9 +61,9 @@ async def test_subscription_stop_unregisters(bus, mock_radio):
     await sub.start()
     sub.stop()
     assert not sub.active
-    assert bus.subscriber_count == 0
     # Give the scheduled stop task a chance to run
     await asyncio.sleep(0.05)
+    assert bus.subscriber_count == 0
     mock_radio.stop_audio_rx_opus.assert_awaited_once()
     assert not bus.rx_active
 
@@ -81,6 +81,7 @@ async def test_subscription_double_stop(bus, mock_radio):
     await sub.start()
     sub.stop()
     sub.stop()  # no-op
+    await asyncio.sleep(0.05)
     assert bus.subscriber_count == 0
 
 
@@ -218,7 +219,8 @@ async def test_context_manager(bus, mock_radio):
         result = sub.get_nowait()
         assert result is pkt
 
-    # After exit, unsubscribed
+    # After exit, unsubscribed (removal is async, need one event loop tick)
+    await asyncio.sleep(0.05)
     assert not sub.active
     assert bus.subscriber_count == 0
 
@@ -235,6 +237,7 @@ async def test_bus_stop_all(bus, mock_radio):
     await s2.start()
 
     await bus.stop()
+    await asyncio.sleep(0.05)
     assert not s1.active
     assert not s2.active
     assert bus.subscriber_count == 0
@@ -307,4 +310,4 @@ async def test_get_with_timeout(bus, mock_radio):
 async def test_remove_nonexistent_subscriber(bus):
     sub = AudioSubscription(bus, name="ghost")
     # Should not raise
-    bus._remove_subscriber(sub)
+    await bus._remove_subscriber(sub)
