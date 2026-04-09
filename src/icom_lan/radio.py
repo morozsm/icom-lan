@@ -14,6 +14,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import socket as _socket
 import time
 from typing import TYPE_CHECKING, cast
 
@@ -634,6 +635,8 @@ class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
         self._civ_port: int = 0
         self._audio_port: int = 0
         self._local_bind_host: str | None = None
+        self._civ_sock_pending: _socket.socket | None = None
+        self._audio_sock_pending: _socket.socket | None = None
         self._civ_send_seq: int = 0
         self._audio_send_seq: int = 0
         self._last_civ_send_monotonic: float = 0.0

@@ -241,11 +241,21 @@ class ControlPhaseRuntime:
                 sock=civ_sock,
             )
         except OSError as exc:
+            # create_datagram_endpoint never ran — safe to close both sockets.
             self._close_pending_sockets()
             await h._ctrl_transport.disconnect()
             raise ConnectionError(
                 f"Failed to connect CI-V port {h._civ_port}: {exc}"
             ) from exc
+        except Exception:
+            # asyncio consumed civ_sock — don't double-close it.
+            h._civ_sock_pending = None
+            # audio socket is still ours — clean it up.
+            audio_sock = getattr(h, "_audio_sock_pending", None)
+            if audio_sock is not None:
+                audio_sock.close()
+                h._audio_sock_pending = None
+            raise
         else:
             # Socket consumed by asyncio — no longer ours to close.
             h._civ_sock_pending = None

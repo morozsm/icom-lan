@@ -178,6 +178,10 @@ class TestConnectionState:
         assert call["local_addr"] is None
         assert call["sock"] is sock
 
+        # Verify socket was connected and set non-blocking before handoff
+        assert sock.getblocking() is False
+        assert sock.getpeername() == ("192.168.2.1", 50001)
+
     @pytest.mark.asyncio
     async def test_reconnect_binds_to_specific_local_host(self) -> None:
         t = IcomTransport()
