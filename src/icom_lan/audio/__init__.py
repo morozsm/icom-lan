@@ -20,6 +20,19 @@ from .lan_stream import (  # noqa: F401
     parse_audio_packet,
 )
 
+# Audio backend abstraction (protocol + implementations)
+from .backend import (  # noqa: F401
+    AudioBackend,
+    AudioDeviceId,
+    AudioDeviceInfo,
+    FakeAudioBackend,
+    FakeRxStream,
+    FakeTxStream,
+    PortAudioBackend,
+    RxStream,
+    TxStream,
+)
+
 # USB audio driver (moved from icom7610/drivers/)
 from .usb_driver import (  # noqa: F401
     AudioDeviceSelectionError,
@@ -31,6 +44,16 @@ from .usb_driver import (  # noqa: F401
 )
 
 __all__ = [
+    # Audio backend abstraction
+    "AudioBackend",
+    "AudioDeviceId",
+    "AudioDeviceInfo",
+    "FakeAudioBackend",
+    "FakeRxStream",
+    "FakeTxStream",
+    "PortAudioBackend",
+    "RxStream",
+    "TxStream",
     # LAN audio
     "AUDIO_HEADER_SIZE",
     "AudioPacket",
