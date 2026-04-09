@@ -15,8 +15,7 @@ import asyncio
 import logging
 import os
 import time
-import warnings
-from typing import TYPE_CHECKING, AsyncGenerator, cast
+from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     from typing import Any, Awaitable, Callable
@@ -24,8 +23,11 @@ if TYPE_CHECKING:
     from ._runtime_protocols import ControlPhaseHost
 
 from ._audio_recovery import AudioRecoveryRuntime, AudioRecoveryState
-from ._audio_transcoder import PcmOpusTranscoder, create_pcm_opus_transcoder
+from ._audio_runtime_mixin import AudioRuntimeMixin
+from ._audio_transcoder import PcmOpusTranscoder
 from ._civ_rx import CivRuntime
+from ._dual_rx_runtime import DualRxRuntimeMixin
+from ._scope_runtime import ScopeRuntimeMixin
 
 # Import split modules
 from ._connection_state import RadioConnectionState
@@ -36,7 +38,7 @@ from ._control_phase import (
     TOKEN_ACK_SIZE,  # noqa: F401 (re-export for tests)
     ControlPhaseRuntime,
 )
-from .audio import AudioPacket, AudioStats, AudioStream
+from .audio import AudioPacket, AudioStream
 from .civ import CivEvent, CivRequestTracker
 from .commander import IcomCommander, Priority
 from .commands import (
@@ -83,7 +85,6 @@ from .commands import (
     get_drive_gain,
     get_dual_watch,
     get_filter_shape,
-    get_freq,
     get_id_meter,
     get_ip_plus,
     get_key_speed,
@@ -91,7 +92,6 @@ from .commands import (
     get_manual_notch,
     get_manual_notch_width,
     get_mic_gain,
-    get_mode,
     get_monitor,
     get_monitor_gain,
     get_nb,
@@ -135,26 +135,11 @@ from .commands import (
     get_xfc_status,
     parse_ack_nak,
     parse_bool_response,
-    parse_civ_frame,
     parse_data_mode_response,
     parse_frequency_response,
     parse_level_response,
     parse_meter_response,
-    parse_mode_response,
     parse_rit_frequency_response,
-    parse_scope_center_type_response,
-    parse_scope_during_tx_response,
-    parse_scope_edge_response,
-    parse_scope_fixed_edge_response,
-    parse_scope_hold_response,
-    parse_scope_main_sub_response,
-    parse_scope_mode_response,
-    parse_scope_rbw_response,
-    parse_scope_ref_response,
-    parse_scope_single_dual_response,
-    parse_scope_span_response,
-    parse_scope_speed_response,
-    parse_scope_vbw_response,
     parse_system_date_response,
     parse_system_time_response,
     parse_tone_freq_response,
@@ -257,58 +242,23 @@ from .commands import get_main_sub_tracking as _get_main_sub_tracking_cmd
 from .commands import get_preamp as get_preamp_cmd
 from .commands import get_repeater_tone as _get_repeater_tone_cmd
 from .commands import get_repeater_tsql as _get_repeater_tsql_cmd
-from .commands import get_scope_center_type as _get_scope_center_type_cmd
-from .commands import get_scope_during_tx as _get_scope_during_tx_cmd
-from .commands import get_scope_edge as _get_scope_edge_cmd
-from .commands import get_scope_fixed_edge as _get_scope_fixed_edge_cmd
-from .commands import get_scope_hold as _get_scope_hold_cmd
-from .commands import get_scope_main_sub as _get_scope_main_sub_cmd
-from .commands import get_scope_mode as _get_scope_mode_cmd
-from .commands import get_scope_rbw as _get_scope_rbw_cmd
-from .commands import get_scope_ref as _get_scope_ref_cmd
-from .commands import get_scope_single_dual as _get_scope_single_dual_cmd
-from .commands import get_scope_span as _get_scope_span_cmd
-from .commands import get_scope_speed as _get_scope_speed_cmd
-from .commands import get_scope_vbw as _get_scope_vbw_cmd
 from .commands import get_tone_freq as _get_tone_freq_cmd
 from .commands import get_tsql_freq as _get_tsql_freq_cmd
-from .commands import scope_data_output as _scope_data_output_cmd
-from .commands import scope_main_sub as _scope_main_sub_cmd
-from .commands import scope_on as _scope_on_cmd
-from .commands import scope_set_center_type as _scope_set_center_type_cmd
-from .commands import scope_set_during_tx as _scope_set_during_tx_cmd
-from .commands import scope_set_edge as _scope_set_edge_cmd
-from .commands import scope_set_fixed_edge as _scope_set_fixed_edge_cmd
-from .commands import scope_set_hold as _scope_set_hold_cmd
-from .commands import scope_set_mode as _scope_set_mode_cmd
-from .commands import scope_set_rbw as _scope_set_rbw_cmd
-from .commands import scope_set_ref as _scope_set_ref_cmd
-from .commands import scope_set_span as _scope_set_span_cmd
-from .commands import scope_set_speed as _scope_set_speed_cmd
-from .commands import scope_set_vbw as _scope_set_vbw_cmd
-from .commands import scope_single_dual as _scope_single_dual_cmd
 from .commands import set_data_mode as set_data_mode_cmd
 from .commands import set_main_sub_tracking as _set_main_sub_tracking_cmd
 from .commands import set_repeater_tone as _set_repeater_tone_cmd
 from .commands import set_repeater_tsql as _set_repeater_tsql_cmd
 from .commands import set_tone_freq as _set_tone_freq_cmd
 from .commands import set_tsql_freq as _set_tsql_freq_cmd
-from .commands import get_selected_freq as _get_selected_freq_cmd
-from .commands import get_unselected_freq as _get_unselected_freq_cmd
-from .commands import parse_selected_freq_response as _parse_selected_freq_response
-from .commands import get_selected_mode as _get_selected_mode_cmd
-from .commands import get_unselected_mode as _get_unselected_mode_cmd
-from .commands import parse_selected_mode_response as _parse_selected_mode_response
 from .commands import set_vfo as _select_vfo_cmd
-from .exceptions import AuthenticationError, CommandError, ConnectionError, TimeoutError
+from .exceptions import AuthenticationError, CommandError, TimeoutError
 from .profiles import RadioProfile, resolve_radio_profile
-from .radio_state import RadioState, ScopeControlsState
+from .radio_state import RadioState
 from ._state_cache import StateCache
 from .scope import ScopeAssembler, ScopeFrame
 from .transport import IcomTransport
 from .types import (
     AgcMode,
-    AudioCapabilities,
     AudioCodec,
     AudioPeakFilter,
     BandStackRegister,
@@ -318,7 +268,6 @@ from .types import (
     MemoryChannel,
     Mode,
     ScopeCompletionPolicy,
-    ScopeFixedEdge,
     SsbTxBandwidth,
     get_audio_capabilities,
 )
@@ -344,7 +293,7 @@ _DEFAULT_AUDIO_SAMPLE_RATE = _AUDIO_CAPABILITIES.default_sample_rate_hz
 _DEFAULT_CACHE_TTL: dict[str, float] = {"freq": 10.0, "mode": 10.0, "rf_power": 30.0}
 
 
-class CoreRadio:
+class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
     """High-level async interface for controlling an Icom transceiver over LAN.
 
     Manages two UDP connections:
@@ -372,134 +321,267 @@ class CoreRadio:
     _WATCHDOG_HEALTH_LOG_INTERVAL = 30.0
 
     # All public commands supported by Icom CI-V backends.
-    _KNOWN_COMMANDS: frozenset[str] = frozenset({
-        # Frequency / mode / data
-        "get_freq", "set_freq", "get_mode", "set_mode",
-        "get_data_mode", "set_data_mode", "get_mode_enum", "get_mode_info",
-        # TX
-        "set_ptt",
-        # Filter / DSP
-        "get_filter", "set_filter", "get_filter_shape", "set_filter_shape",
-        "set_nb", "get_nb", "set_nr", "get_nr",
-        "set_digisel", "get_digisel", "set_ip_plus", "get_ip_plus",
-        "set_agc", "get_agc",
-        "get_auto_notch", "set_auto_notch",
-        "get_manual_notch", "set_manual_notch",
-        "get_manual_notch_width", "set_manual_notch_width",
-        "get_audio_peak_filter", "set_audio_peak_filter",
-        "get_twin_peak_filter", "set_twin_peak_filter",
-        # Levels
-        "set_af_level", "get_af_level", "set_rf_gain", "get_rf_gain",
-        "set_squelch",
-        "get_nr_level", "set_nr_level", "get_nb_level", "set_nb_level",
-        "get_mic_gain", "set_mic_gain", "get_drive_gain", "set_drive_gain",
-        "get_compressor_level", "set_compressor_level",
-        "get_monitor_gain", "set_monitor_gain",
-        "get_vox_gain", "set_vox_gain", "get_anti_vox_gain", "set_anti_vox_gain",
-        "get_apf_type_level", "set_apf_type_level",
-        "get_pbt_inner", "set_pbt_inner", "get_pbt_outer", "set_pbt_outer",
-        "get_cw_pitch", "set_cw_pitch",
-        "get_notch_filter", "set_notch_filter",
-        "get_ref_adjust", "set_ref_adjust",
-        "get_digisel_shift", "set_digisel_shift",
-        "get_nb_depth", "set_nb_depth", "get_nb_width", "set_nb_width",
-        "get_dash_ratio", "set_dash_ratio",
-        "get_break_in_delay", "set_break_in_delay",
-        "get_vox_delay", "set_vox_delay",
-        "get_af_mute", "set_af_mute",
-        "get_agc_time_constant", "set_agc_time_constant",
-        # Meters
-        "get_s_meter", "get_swr", "get_alc", "get_rf_power", "set_rf_power",
-        "get_power_meter", "get_comp_meter", "get_vd_meter", "get_id_meter",
-        "get_s_meter_sql_status", "get_overflow_status",
-        # CW
-        "send_cw_text", "stop_cw_text",
-        "get_key_speed", "set_key_speed",
-        "get_break_in", "set_break_in",
-        # Attenuator / preamp
-        "get_attenuator", "set_attenuator",
-        "get_attenuator_level", "set_attenuator_level",
-        "get_preamp", "set_preamp",
-        # Antenna
-        "get_antenna_1", "set_antenna_1", "get_antenna_2", "set_antenna_2",
-        "get_rx_antenna_ant1", "set_rx_antenna_ant1",
-        "get_rx_antenna_ant2", "set_rx_antenna_ant2",
-        # Toggles
-        "get_compressor", "set_compressor",
-        "get_monitor", "set_monitor",
-        "get_vox", "set_vox",
-        "get_dial_lock", "set_dial_lock",
-        "get_dual_watch", "set_dual_watch",
-        # VFO / split / scan
-        "set_vfo", "vfo_equalize", "vfo_exchange",
-        "set_split_mode",
-        "get_tuning_step", "set_tuning_step",
-        "scan_start", "scan_stop",
-        # Repeater tone
-        "get_repeater_tone", "set_repeater_tone",
-        "get_repeater_tsql", "set_repeater_tsql",
-        "get_tone_freq", "set_tone_freq",
-        "get_tsql_freq", "set_tsql_freq",
-        # RIT / XIT
-        "get_rit_frequency", "set_rit_frequency",
-        "get_rit_status", "set_rit_status",
-        "get_rit_tx_status", "set_rit_tx_status",
-        "get_tx_freq_monitor", "set_tx_freq_monitor",
-        # Tuner
-        "get_tuner_status", "set_tuner_status",
-        "get_xfc_status", "set_xfc_status",
-        # Mod levels / input
-        "get_acc1_mod_level", "set_acc1_mod_level",
-        "get_usb_mod_level", "set_usb_mod_level",
-        "get_lan_mod_level", "set_lan_mod_level",
-        "get_data_off_mod_input", "set_data_off_mod_input",
-        "get_data1_mod_input", "set_data1_mod_input",
-        "get_data2_mod_input", "set_data2_mod_input",
-        "get_data3_mod_input", "set_data3_mod_input",
-        # System
-        "get_system_date", "set_system_date",
-        "get_system_time", "set_system_time",
-        "get_utc_offset", "set_utc_offset",
-        "get_civ_transceive", "set_civ_transceive",
-        "get_civ_output_ant", "set_civ_output_ant",
-        "get_powerstat", "set_powerstat",
-        "get_transceiver_id", "get_speech",
-        "get_band_edge_freq", "get_various_squelch",
-        "set_band",
-        # SSB TX bandwidth
-        "get_ssb_tx_bandwidth", "set_ssb_tx_bandwidth",
-        # Dual receiver
-        "get_main_sub_tracking", "set_main_sub_tracking",
-        # Memory
-        "get_memory_mode", "set_memory_mode",
-        "memory_write", "memory_to_vfo", "memory_clear",
-        "get_memory_contents", "set_memory_contents",
-        "get_bsr", "set_bsr",
-        # Scope
-        "enable_scope", "disable_scope",
-        "get_scope_receiver", "set_scope_receiver",
-        "get_scope_dual", "set_scope_dual",
-        "get_scope_mode", "set_scope_mode",
-        "get_scope_span", "set_scope_span",
-        "get_scope_edge", "set_scope_edge",
-        "get_scope_hold", "set_scope_hold",
-        "get_scope_ref", "set_scope_ref",
-        "get_scope_speed", "set_scope_speed",
-        "get_scope_during_tx", "set_scope_during_tx",
-        "get_scope_center_type", "set_scope_center_type",
-        "get_scope_vbw", "set_scope_vbw",
-        "get_scope_fixed_edge", "set_scope_fixed_edge",
-        "get_scope_rbw", "set_scope_rbw",
-        "capture_scope_frame", "capture_scope_frames",
-        # Audio
-        "start_audio_rx_opus", "stop_audio_rx_opus",
-        "start_audio_rx_pcm", "stop_audio_rx_pcm",
-        "start_audio_tx_opus", "stop_audio_tx_opus",
-        "start_audio_tx_pcm", "stop_audio_tx_pcm",
-        "push_audio_tx_opus", "push_audio_tx_pcm",
-        # CI-V raw
-        "send_civ",
-    })
+    _KNOWN_COMMANDS: frozenset[str] = frozenset(
+        {
+            # Frequency / mode / data
+            "get_freq",
+            "set_freq",
+            "get_mode",
+            "set_mode",
+            "get_data_mode",
+            "set_data_mode",
+            "get_mode_enum",
+            "get_mode_info",
+            # TX
+            "set_ptt",
+            # Filter / DSP
+            "get_filter",
+            "set_filter",
+            "get_filter_shape",
+            "set_filter_shape",
+            "set_nb",
+            "get_nb",
+            "set_nr",
+            "get_nr",
+            "set_digisel",
+            "get_digisel",
+            "set_ip_plus",
+            "get_ip_plus",
+            "set_agc",
+            "get_agc",
+            "get_auto_notch",
+            "set_auto_notch",
+            "get_manual_notch",
+            "set_manual_notch",
+            "get_manual_notch_width",
+            "set_manual_notch_width",
+            "get_audio_peak_filter",
+            "set_audio_peak_filter",
+            "get_twin_peak_filter",
+            "set_twin_peak_filter",
+            # Levels
+            "set_af_level",
+            "get_af_level",
+            "set_rf_gain",
+            "get_rf_gain",
+            "set_squelch",
+            "get_nr_level",
+            "set_nr_level",
+            "get_nb_level",
+            "set_nb_level",
+            "get_mic_gain",
+            "set_mic_gain",
+            "get_drive_gain",
+            "set_drive_gain",
+            "get_compressor_level",
+            "set_compressor_level",
+            "get_monitor_gain",
+            "set_monitor_gain",
+            "get_vox_gain",
+            "set_vox_gain",
+            "get_anti_vox_gain",
+            "set_anti_vox_gain",
+            "get_apf_type_level",
+            "set_apf_type_level",
+            "get_pbt_inner",
+            "set_pbt_inner",
+            "get_pbt_outer",
+            "set_pbt_outer",
+            "get_cw_pitch",
+            "set_cw_pitch",
+            "get_notch_filter",
+            "set_notch_filter",
+            "get_ref_adjust",
+            "set_ref_adjust",
+            "get_digisel_shift",
+            "set_digisel_shift",
+            "get_nb_depth",
+            "set_nb_depth",
+            "get_nb_width",
+            "set_nb_width",
+            "get_dash_ratio",
+            "set_dash_ratio",
+            "get_break_in_delay",
+            "set_break_in_delay",
+            "get_vox_delay",
+            "set_vox_delay",
+            "get_af_mute",
+            "set_af_mute",
+            "get_agc_time_constant",
+            "set_agc_time_constant",
+            # Meters
+            "get_s_meter",
+            "get_swr",
+            "get_alc",
+            "get_rf_power",
+            "set_rf_power",
+            "get_power_meter",
+            "get_comp_meter",
+            "get_vd_meter",
+            "get_id_meter",
+            "get_s_meter_sql_status",
+            "get_overflow_status",
+            # CW
+            "send_cw_text",
+            "stop_cw_text",
+            "get_key_speed",
+            "set_key_speed",
+            "get_break_in",
+            "set_break_in",
+            # Attenuator / preamp
+            "get_attenuator",
+            "set_attenuator",
+            "get_attenuator_level",
+            "set_attenuator_level",
+            "get_preamp",
+            "set_preamp",
+            # Antenna
+            "get_antenna_1",
+            "set_antenna_1",
+            "get_antenna_2",
+            "set_antenna_2",
+            "get_rx_antenna_ant1",
+            "set_rx_antenna_ant1",
+            "get_rx_antenna_ant2",
+            "set_rx_antenna_ant2",
+            # Toggles
+            "get_compressor",
+            "set_compressor",
+            "get_monitor",
+            "set_monitor",
+            "get_vox",
+            "set_vox",
+            "get_dial_lock",
+            "set_dial_lock",
+            "get_dual_watch",
+            "set_dual_watch",
+            # VFO / split / scan
+            "set_vfo",
+            "vfo_equalize",
+            "vfo_exchange",
+            "set_split_mode",
+            "get_tuning_step",
+            "set_tuning_step",
+            "scan_start",
+            "scan_stop",
+            # Repeater tone
+            "get_repeater_tone",
+            "set_repeater_tone",
+            "get_repeater_tsql",
+            "set_repeater_tsql",
+            "get_tone_freq",
+            "set_tone_freq",
+            "get_tsql_freq",
+            "set_tsql_freq",
+            # RIT / XIT
+            "get_rit_frequency",
+            "set_rit_frequency",
+            "get_rit_status",
+            "set_rit_status",
+            "get_rit_tx_status",
+            "set_rit_tx_status",
+            "get_tx_freq_monitor",
+            "set_tx_freq_monitor",
+            # Tuner
+            "get_tuner_status",
+            "set_tuner_status",
+            "get_xfc_status",
+            "set_xfc_status",
+            # Mod levels / input
+            "get_acc1_mod_level",
+            "set_acc1_mod_level",
+            "get_usb_mod_level",
+            "set_usb_mod_level",
+            "get_lan_mod_level",
+            "set_lan_mod_level",
+            "get_data_off_mod_input",
+            "set_data_off_mod_input",
+            "get_data1_mod_input",
+            "set_data1_mod_input",
+            "get_data2_mod_input",
+            "set_data2_mod_input",
+            "get_data3_mod_input",
+            "set_data3_mod_input",
+            # System
+            "get_system_date",
+            "set_system_date",
+            "get_system_time",
+            "set_system_time",
+            "get_utc_offset",
+            "set_utc_offset",
+            "get_civ_transceive",
+            "set_civ_transceive",
+            "get_civ_output_ant",
+            "set_civ_output_ant",
+            "get_powerstat",
+            "set_powerstat",
+            "get_transceiver_id",
+            "get_speech",
+            "get_band_edge_freq",
+            "get_various_squelch",
+            "set_band",
+            # SSB TX bandwidth
+            "get_ssb_tx_bandwidth",
+            "set_ssb_tx_bandwidth",
+            # Dual receiver
+            "get_main_sub_tracking",
+            "set_main_sub_tracking",
+            # Memory
+            "get_memory_mode",
+            "set_memory_mode",
+            "memory_write",
+            "memory_to_vfo",
+            "memory_clear",
+            "get_memory_contents",
+            "set_memory_contents",
+            "get_bsr",
+            "set_bsr",
+            # Scope
+            "enable_scope",
+            "disable_scope",
+            "get_scope_receiver",
+            "set_scope_receiver",
+            "get_scope_dual",
+            "set_scope_dual",
+            "get_scope_mode",
+            "set_scope_mode",
+            "get_scope_span",
+            "set_scope_span",
+            "get_scope_edge",
+            "set_scope_edge",
+            "get_scope_hold",
+            "set_scope_hold",
+            "get_scope_ref",
+            "set_scope_ref",
+            "get_scope_speed",
+            "set_scope_speed",
+            "get_scope_during_tx",
+            "set_scope_during_tx",
+            "get_scope_center_type",
+            "set_scope_center_type",
+            "get_scope_vbw",
+            "set_scope_vbw",
+            "get_scope_fixed_edge",
+            "set_scope_fixed_edge",
+            "get_scope_rbw",
+            "set_scope_rbw",
+            "capture_scope_frame",
+            "capture_scope_frames",
+            # Audio
+            "start_audio_rx_opus",
+            "stop_audio_rx_opus",
+            "start_audio_rx_pcm",
+            "stop_audio_rx_pcm",
+            "start_audio_tx_opus",
+            "stop_audio_tx_opus",
+            "start_audio_tx_pcm",
+            "stop_audio_tx_pcm",
+            "push_audio_tx_opus",
+            "push_audio_tx_pcm",
+            # CI-V raw
+            "send_civ",
+        }
+    )
 
     def supports_command(self, command: str) -> bool:
         """Check if this radio supports a specific command."""
@@ -782,214 +864,6 @@ class CoreRadio:
         ``tx``, ``cw``.
         """
         return set(self._profile.capabilities)
-
-    def _require_receiver(self, receiver: int, *, operation: str) -> None:
-        """Validate receiver index against active profile."""
-        if self._profile.supports_receiver(receiver):
-            return
-        raise CommandError(
-            f"{operation} does not support receiver={receiver} for profile "
-            f"{self._profile.model} (receivers={self._profile.receiver_count})"
-        )
-
-    def _require_capability(self, capability: str, *, operation: str) -> None:
-        """Ensure a profile capability exists before executing operation."""
-        if self._profile.supports_capability(capability):
-            return
-        raise CommandError(
-            f"{operation} is not supported by profile {self._profile.model} "
-            f"(missing capability: {capability})"
-        )
-
-    def _require_cmd29_route(
-        self,
-        command: int,
-        sub: int | None,
-        *,
-        receiver: int,
-        operation: str,
-    ) -> None:
-        """Require Command29 support for per-receiver command routing."""
-        if receiver == RECEIVER_MAIN:
-            return
-        if self._profile.supports_cmd29(command, sub):
-            return
-        raise CommandError(
-            f"{operation} receiver={receiver} is unsupported for profile "
-            f"{self._profile.model}: command 0x{command:02X}"
-            + (f"/0x{sub:02X}" if sub is not None else "")
-            + " has no cmd29 route"
-        )
-
-    def _active_receiver_name(self) -> str:
-        """Best-effort active receiver name for VFO-routing fallbacks."""
-        active = getattr(self._radio_state, "active", None)
-        if active in {"MAIN", "SUB"}:
-            return str(active)
-        if self._last_vfo in {"SUB", "B"}:
-            return "SUB"
-        return "MAIN"
-
-    async def _run_with_receiver_vfo_fallback(
-        self,
-        *,
-        receiver: int,
-        operation: str,
-        action: "Callable[[], Awaitable[Any]]",
-    ) -> Any:
-        """Run an operation for a receiver using temporary MAIN/SUB VFO switching."""
-        target = "MAIN" if receiver == RECEIVER_MAIN else "SUB"
-        current = self._active_receiver_name()
-        switched = False
-
-        if current != target:
-            if target == "SUB" and self._profile.vfo_sub_code is None:
-                raise CommandError(
-                    f"{operation} receiver={receiver} is unsupported for profile "
-                    f"{self._profile.model}: no SUB VFO select code"
-                )
-            if target == "MAIN" and self._profile.vfo_main_code is None:
-                raise CommandError(
-                    f"{operation} receiver={receiver} is unsupported for profile "
-                    f"{self._profile.model}: no MAIN VFO select code"
-                )
-            await self.set_vfo(target)
-            self._radio_state.active = target
-            switched = True
-
-        try:
-            return await action()
-        finally:
-            if switched:
-                try:
-                    await self.set_vfo(current)
-                    self._radio_state.active = current
-                except Exception:
-                    logger.warning(
-                        "%s: failed to restore VFO receiver to %s",
-                        operation,
-                        current,
-                        exc_info=True,
-                    )
-
-    async def _get_frequency_main(
-        self, *, bypass_cache: bool = False, update_cache: bool = True
-    ) -> int:
-        """Read MAIN receiver frequency with optional cache updates."""
-        civ = get_freq(to_addr=self._radio_addr)
-        try:
-            resp = await self._send_civ_expect(
-                civ,
-                key="get_frequency",
-                dedupe=not bypass_cache,
-                label="get_frequency",
-            )
-            freq = parse_frequency_response(resp)
-            if update_cache:
-                self._last_freq_hz = freq
-                self._state_cache.update_freq(freq)
-            return freq
-        except TimeoutError:
-            if update_cache and self._state_cache.is_fresh(
-                "freq", self._cache_ttl_freq
-            ):
-                logger.debug(
-                    "get_frequency: timeout, returning cached %d Hz",
-                    self._state_cache.freq,
-                )
-                return self._state_cache.freq
-            raise
-
-    async def _set_frequency_main(
-        self, freq_hz: int, *, update_cache: bool = True
-    ) -> None:
-        """Set MAIN receiver frequency with optional cache updates."""
-        civ = set_freq(freq_hz, to_addr=self._radio_addr, receiver=RECEIVER_MAIN)
-        await self._send_civ_raw(civ, wait_response=False)
-        if update_cache:
-            self._last_freq_hz = freq_hz
-            self._state_cache.update_freq(freq_hz)
-
-    async def _get_mode_info_main(
-        self, *, update_cache: bool = True
-    ) -> tuple[Mode, int | None]:
-        """Read MAIN receiver mode/filter with optional cache updates."""
-        civ = get_mode(to_addr=self._radio_addr)
-        try:
-            resp = await self._send_civ_expect(civ, label="get_mode_info_main")
-            mode, filt = parse_mode_response(resp)
-            if update_cache:
-                self._last_mode = mode
-                if filt is not None:
-                    self._filter_width = filt
-                self._state_cache.update_mode(mode.name, filt)
-            return mode, filt
-        except TimeoutError:
-            if update_cache and self._state_cache.is_fresh(
-                "mode", self._cache_ttl_mode
-            ):
-                logger.debug(
-                    "get_mode_info: timeout, returning cached %s",
-                    self._state_cache.mode,
-                )
-                return Mode[self._state_cache.mode], self._state_cache.filter_width
-            raise
-
-    async def _set_mode_main(
-        self,
-        mode: Mode,
-        *,
-        filter_width: int | None = None,
-        update_cache: bool = True,
-    ) -> None:
-        """Set MAIN receiver mode/filter with optional cache updates."""
-        civ = set_mode(
-            mode,
-            filter_width=filter_width,
-            to_addr=self._radio_addr,
-            receiver=RECEIVER_MAIN,
-        )
-        await self._send_civ_raw(civ, wait_response=False)
-        self._last_mode = mode
-        if update_cache:
-            if filter_width is not None:
-                self._filter_width = filter_width
-            cached_filter = (
-                filter_width if filter_width is not None else self._filter_width
-            )
-            self._state_cache.update_mode(mode.name, cached_filter)
-
-    # ------------------------------------------------------------------
-    # Selected / Unselected receiver freq & mode (0x25 / 0x26)
-    # ------------------------------------------------------------------
-
-    async def _get_selected_freq(self) -> int:
-        """Read the selected (active) receiver frequency via CI-V 0x25 0x00."""
-        civ = _get_selected_freq_cmd(to_addr=self._radio_addr)
-        resp = await self._send_civ_expect(civ, label="get_selected_freq")
-        _rcvr, freq = _parse_selected_freq_response(resp)
-        return freq
-
-    async def _get_unselected_freq(self) -> int:
-        """Read the unselected (inactive) receiver frequency via CI-V 0x25 0x01."""
-        civ = _get_unselected_freq_cmd(to_addr=self._radio_addr)
-        resp = await self._send_civ_expect(civ, label="get_unselected_freq")
-        _rcvr, freq = _parse_selected_freq_response(resp)
-        return freq
-
-    async def _get_selected_mode(self) -> tuple[Mode, int | None]:
-        """Read the selected (active) receiver mode via CI-V 0x26 0x00."""
-        civ = _get_selected_mode_cmd(to_addr=self._radio_addr)
-        resp = await self._send_civ_expect(civ, label="get_selected_mode")
-        _rcvr, mode, _data_mode, filt = _parse_selected_mode_response(resp)
-        return mode, filt
-
-    async def _get_unselected_mode(self) -> tuple[Mode, int | None]:
-        """Read the unselected (inactive) receiver mode via CI-V 0x26 0x01."""
-        civ = _get_unselected_mode_cmd(to_addr=self._radio_addr)
-        resp = await self._send_civ_expect(civ, label="get_unselected_mode")
-        _rcvr, mode, _data_mode, filt = _parse_selected_mode_response(resp)
-        return mode, filt
 
     @staticmethod
     def _coerce_mode(mode: Mode | str) -> Mode:
@@ -1337,449 +1211,6 @@ class CoreRadio:
             logger.info("Reconnect cancelled")
 
     # ------------------------------------------------------------------
-    # Audio streaming
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def _warn_audio_alias(old_name: str, replacement: str) -> None:
-        warnings.warn(
-            (
-                f"IcomRadio.{old_name}() is deprecated and will be removed after two "
-                f"minor releases; use IcomRadio.{replacement}() instead."
-            ),
-            DeprecationWarning,
-            stacklevel=2,
-        )
-
-    async def start_audio_rx_opus(
-        self,
-        callback: "Callable[[AudioPacket | None], None]",
-        *,
-        jitter_depth: int = 5,
-    ) -> None:
-        """Start receiving Opus audio from the radio.
-
-        Connects the audio transport if not already connected,
-        then begins streaming RX audio to the callback.
-
-        Args:
-            callback: Called with each :class:`AudioPacket`.
-            jitter_depth: Jitter buffer depth (0 to disable, default 5).
-
-        Raises:
-            ConnectionError: If not connected or audio port unavailable.
-        """
-        self._check_connected()
-        await self._ensure_audio_transport()
-        assert self._audio_stream is not None
-        self._opus_rx_user_callback = callback
-        self._opus_rx_jitter_depth = jitter_depth
-        await self._audio_stream.start_rx(callback, jitter_depth=jitter_depth)
-
-    async def start_audio_rx_pcm(
-        self,
-        callback: "Callable[[bytes | None], None]",
-        *,
-        sample_rate: int = 48000,
-        channels: int = 1,
-        frame_ms: int = 20,
-        jitter_depth: int = 5,
-    ) -> None:
-        """Start receiving decoded PCM audio from the radio.
-
-        This high-level API decodes incoming Opus RX frames to fixed-size
-        PCM frames and delivers them to ``callback``. Gap placeholders are
-        passed through as ``None`` when jitter buffering detects loss.
-
-        Args:
-            callback: Called with decoded PCM frame bytes, or ``None`` for gaps.
-            sample_rate: PCM sample rate in Hz (Opus-supported values only).
-            channels: PCM channels (1 or 2).
-            frame_ms: Frame duration in ms (10/20/40/60).
-            jitter_depth: Jitter buffer depth (0 to disable, default 5).
-
-        Raises:
-            ConnectionError: If not connected or audio port unavailable.
-            TypeError: If callback is not callable or numeric args are not ints.
-            ValueError: If ``jitter_depth`` is negative.
-            AudioCodecBackendError: If Opus backend is unavailable.
-            AudioFormatError: If PCM format is unsupported.
-        """
-        if not callable(callback):
-            raise TypeError("callback must be callable and accept bytes | None.")
-
-        for name, value in (
-            ("sample_rate", sample_rate),
-            ("channels", channels),
-            ("frame_ms", frame_ms),
-            ("jitter_depth", jitter_depth),
-        ):
-            if isinstance(value, bool) or not isinstance(value, int):
-                raise TypeError(f"{name} must be an int, got {type(value).__name__}.")
-        if jitter_depth < 0:
-            raise ValueError(f"jitter_depth must be >= 0, got {jitter_depth}.")
-
-        self._check_connected()
-
-        # Validate codec/backend and PCM format before stream startup.
-        self._get_pcm_transcoder(
-            sample_rate=sample_rate,
-            channels=channels,
-            frame_ms=frame_ms,
-        )
-        self._pcm_rx_user_callback = callback
-        self._pcm_rx_jitter_depth = jitter_depth
-        await self.start_audio_rx_opus(
-            self._build_pcm_rx_callback(
-                callback,
-                sample_rate=sample_rate,
-                channels=channels,
-                frame_ms=frame_ms,
-            ),
-            jitter_depth=jitter_depth,
-        )
-
-    async def stop_audio_rx_pcm(self) -> None:
-        """Stop receiving decoded PCM audio from the radio."""
-        self._pcm_rx_user_callback = None
-        await self.stop_audio_rx_opus()
-
-    async def stop_audio_rx_opus(self) -> None:
-        """Stop receiving Opus audio from the radio."""
-        self._opus_rx_user_callback = None
-        if self._audio_stream is not None:
-            await self._audio_stream.stop_rx()
-
-    def _add_opus_rx_tap(
-        self,
-        callback: "Callable[[AudioPacket | None], None]",
-    ) -> None:
-        """Add an additional opus RX listener (non-exclusive, parallel to main callback)."""
-        if self._audio_stream is not None:
-            self._audio_stream.add_rx_tap(callback)
-
-    def _remove_opus_rx_tap(
-        self,
-        callback: "Callable[[AudioPacket | None], None]",
-    ) -> None:
-        """Remove an opus RX tap."""
-        if self._audio_stream is not None:
-            self._audio_stream.remove_rx_tap(callback)
-
-    async def start_audio_tx_opus(self) -> None:
-        """Start transmitting Opus audio to the radio.
-
-        Connects the audio transport if not already connected.
-
-        Raises:
-            ConnectionError: If not connected or audio port unavailable.
-        """
-        self._check_connected()
-        await self._ensure_audio_transport()
-        assert self._audio_stream is not None
-        await self._audio_stream.start_tx()
-
-    async def start_audio_tx_pcm(
-        self,
-        *,
-        sample_rate: int = 48000,
-        channels: int = 1,
-        frame_ms: int = 20,
-    ) -> None:
-        """Start transmitting PCM audio to the radio.
-
-        This high-level API validates PCM format settings, initializes
-        the Opus transcoder backend, and starts the underlying Opus TX stream.
-
-        Args:
-            sample_rate: PCM sample rate in Hz (Opus-supported values only).
-            channels: PCM channels (1 or 2).
-            frame_ms: Frame duration in ms (10/20/40/60).
-
-        Raises:
-            ConnectionError: If not connected or audio port unavailable.
-            TypeError: If numeric args are not ints.
-            AudioCodecBackendError: If Opus backend is unavailable.
-            AudioFormatError: If PCM format is unsupported.
-        """
-        for name, value in (
-            ("sample_rate", sample_rate),
-            ("channels", channels),
-            ("frame_ms", frame_ms),
-        ):
-            if isinstance(value, bool) or not isinstance(value, int):
-                raise TypeError(f"{name} must be an int, got {type(value).__name__}.")
-
-        self._check_connected()
-
-        # Validate codec/backend and PCM format before stream startup.
-        self._get_pcm_transcoder(
-            sample_rate=sample_rate,
-            channels=channels,
-            frame_ms=frame_ms,
-        )
-        await self.start_audio_tx_opus()
-        self._pcm_tx_fmt = (sample_rate, channels, frame_ms)
-
-    async def push_audio_tx_opus(self, opus_data: bytes) -> None:
-        """Send an Opus-encoded audio frame to the radio.
-
-        Args:
-            opus_data: Opus-encoded audio data.
-
-        Raises:
-            ConnectionError: If not connected.
-            RuntimeError: If audio TX not started.
-        """
-        self._check_connected()
-        if self._audio_stream is None:
-            raise RuntimeError("Audio TX not started")
-        await self._audio_stream.push_tx(opus_data)
-
-    async def push_audio_tx_pcm(
-        self,
-        pcm_bytes: bytes | bytearray | memoryview,
-    ) -> None:
-        """Encode and send one PCM audio frame to the radio.
-
-        Args:
-            pcm_bytes: One fixed-size PCM frame (s16le, interleaved).
-
-        Raises:
-            ConnectionError: If not connected.
-            RuntimeError: If PCM TX not started with :meth:`start_audio_tx_pcm`.
-            AudioFormatError: If frame type/size is invalid.
-            AudioTranscodeError: If encode operation fails.
-        """
-        self._check_connected()
-        if self._pcm_tx_fmt is None:
-            raise RuntimeError(
-                "PCM TX not started; call start_audio_tx_pcm() before push_audio_tx_pcm()."
-            )
-        sample_rate, channels, frame_ms = self._pcm_tx_fmt
-        await self._push_audio_tx_pcm_internal(
-            pcm_bytes,
-            sample_rate=sample_rate,
-            channels=channels,
-            frame_ms=frame_ms,
-        )
-
-    async def stop_audio_tx_pcm(self) -> None:
-        """Stop transmitting PCM audio to the radio."""
-        await self.stop_audio_tx_opus()
-
-    async def stop_audio_tx_opus(self) -> None:
-        """Stop transmitting Opus audio to the radio."""
-        if self._audio_stream is not None:
-            await self._audio_stream.stop_tx()
-        self._pcm_tx_fmt = None
-
-    async def start_audio_opus(
-        self,
-        rx_callback: "Callable[[AudioPacket | None], None]",
-        *,
-        tx_enabled: bool = True,
-        jitter_depth: int = 5,
-    ) -> None:
-        """Start full-duplex Opus audio (RX + optional TX).
-
-        Convenience method that starts both RX and TX audio streams
-        on the same transport.
-
-        Args:
-            rx_callback: Called with each :class:`AudioPacket` (or None for gaps).
-            tx_enabled: Whether to also enable TX (default True).
-            jitter_depth: Jitter buffer depth (0 to disable, default 5).
-
-        Raises:
-            ConnectionError: If not connected or audio port unavailable.
-        """
-        await self.start_audio_rx_opus(rx_callback, jitter_depth=jitter_depth)
-        if tx_enabled:
-            assert self._audio_stream is not None
-            await self._audio_stream.start_tx()
-
-    async def stop_audio_opus(self) -> None:
-        """Stop all Opus audio streams (RX and TX)."""
-        await self.stop_audio_tx_opus()
-        await self.stop_audio_rx_opus()
-
-    async def start_audio_rx(
-        self, callback: "Callable[[AudioPacket | None], None]"
-    ) -> None:
-        """Deprecated alias for :meth:`start_audio_rx_opus`."""
-        self._warn_audio_alias("start_audio_rx", "start_audio_rx_opus")
-        await self.start_audio_rx_opus(callback)
-
-    async def stop_audio_rx(self) -> None:
-        """Deprecated alias for :meth:`stop_audio_rx_opus`."""
-        self._warn_audio_alias("stop_audio_rx", "stop_audio_rx_opus")
-        await self.stop_audio_rx_opus()
-
-    async def start_audio_tx(self) -> None:
-        """Deprecated alias for :meth:`start_audio_tx_opus`."""
-        self._warn_audio_alias("start_audio_tx", "start_audio_tx_opus")
-        await self.start_audio_tx_opus()
-
-    async def push_audio_tx(self, opus_data: bytes) -> None:
-        """Deprecated alias for :meth:`push_audio_tx_opus`."""
-        self._warn_audio_alias("push_audio_tx", "push_audio_tx_opus")
-        await self.push_audio_tx_opus(opus_data)
-
-    async def stop_audio_tx(self) -> None:
-        """Deprecated alias for :meth:`stop_audio_tx_opus`."""
-        self._warn_audio_alias("stop_audio_tx", "stop_audio_tx_opus")
-        await self.stop_audio_tx_opus()
-
-    async def start_audio(
-        self,
-        rx_callback: "Callable[[AudioPacket | None], None]",
-        *,
-        tx_enabled: bool = True,
-    ) -> None:
-        """Deprecated alias for :meth:`start_audio_opus`."""
-        self._warn_audio_alias("start_audio", "start_audio_opus")
-        await self.start_audio_opus(rx_callback, tx_enabled=tx_enabled)
-
-    def get_audio_stats(self) -> dict[str, bool | int | float | str]:
-        """Return runtime audio stats for the active stream.
-
-        Returns a JSON-friendly dictionary with packet/loss/jitter/buffer/latency
-        metrics. If no audio stream is active, returns a zeroed idle snapshot.
-        """
-        if self._audio_stream is None:
-            return AudioStats.inactive().to_dict()
-        return self._audio_stream.get_audio_stats()
-
-    async def stop_audio(self) -> None:
-        """Deprecated alias for :meth:`stop_audio_opus`."""
-        self._warn_audio_alias("stop_audio", "stop_audio_opus")
-        await self.stop_audio_opus()
-
-    def _get_pcm_transcoder(
-        self,
-        *,
-        sample_rate: int = 48000,
-        channels: int = 1,
-        frame_ms: int = 20,
-    ) -> PcmOpusTranscoder:
-        """Get/create cached PCM<->Opus transcoder for internal PCM hooks."""
-        key = (sample_rate, channels, frame_ms)
-        if self._pcm_transcoder is not None and self._pcm_transcoder_fmt == key:
-            return self._pcm_transcoder
-        self._pcm_transcoder = create_pcm_opus_transcoder(
-            sample_rate=sample_rate,
-            channels=channels,
-            frame_ms=frame_ms,
-        )
-        self._pcm_transcoder_fmt = key
-        return self._pcm_transcoder
-
-    def _build_pcm_rx_callback(
-        self,
-        callback: "Callable[[bytes | None], None]",
-        *,
-        sample_rate: int = 48000,
-        channels: int = 1,
-        frame_ms: int = 20,
-    ) -> "Callable[[AudioPacket | None], None]":
-        """Internal adapter: AudioPacket callback -> PCM callback."""
-
-        def _on_audio_packet(packet: AudioPacket | None) -> None:
-            if packet is None:
-                callback(None)
-                return
-            pcm_frame = self._decode_audio_packet_to_pcm(
-                packet,
-                sample_rate=sample_rate,
-                channels=channels,
-                frame_ms=frame_ms,
-            )
-            callback(pcm_frame)
-
-        return _on_audio_packet
-
-    def _decode_audio_packet_to_pcm(
-        self,
-        packet: AudioPacket,
-        *,
-        sample_rate: int = 48000,
-        channels: int = 1,
-        frame_ms: int = 20,
-    ) -> bytes:
-        """Internal helper for future high-level RX PCM APIs."""
-        transcoder = self._get_pcm_transcoder(
-            sample_rate=sample_rate,
-            channels=channels,
-            frame_ms=frame_ms,
-        )
-        return transcoder.opus_to_pcm(packet.data)
-
-    async def _push_audio_tx_pcm_internal(
-        self,
-        pcm_data: bytes | bytearray | memoryview,
-        *,
-        sample_rate: int = 48000,
-        channels: int = 1,
-        frame_ms: int = 20,
-    ) -> None:
-        """Internal helper for future high-level TX PCM APIs."""
-        transcoder = self._get_pcm_transcoder(
-            sample_rate=sample_rate,
-            channels=channels,
-            frame_ms=frame_ms,
-        )
-        opus_data = transcoder.pcm_to_opus(pcm_data)
-        await self.push_audio_tx_opus(opus_data)
-
-    @property
-    def audio_codec(self) -> "AudioCodec":
-        """Configured audio codec."""
-        return self._audio_codec
-
-    @property
-    def audio_sample_rate(self) -> int:
-        """Configured audio sample rate in Hz."""
-        return self._audio_sample_rate
-
-    @staticmethod
-    def audio_capabilities() -> AudioCapabilities:
-        """Return icom-lan audio capabilities and deterministic defaults."""
-        return get_audio_capabilities()
-
-    async def _ensure_audio_transport(self) -> None:
-        """Connect the audio transport if not already connected."""
-        if self._audio_stream is not None:
-            return
-
-        if self._audio_port == 0:
-            raise ConnectionError("Audio port not available")
-
-        self._audio_transport = IcomTransport()
-        try:
-            await self._audio_transport.connect(
-                self._host,
-                self._audio_port,
-                local_host=getattr(self, "_local_bind_host", None),
-                local_port=getattr(self, "_audio_local_port", 0),
-            )
-        except OSError as exc:
-            self._audio_transport = None
-            raise ConnectionError(
-                f"Failed to connect audio port {self._audio_port}: {exc}"
-            ) from exc
-
-        self._audio_transport.start_ping_loop()
-        self._audio_transport.start_retransmit_loop()
-        self._audio_transport.start_idle_loop()
-
-        # Per wfview, audio stream also uses OpenClose on its own UDP channel.
-        await self._send_audio_open_close(open_stream=True)
-
-        self._audio_stream = AudioStream(self._audio_transport)
-        logger.info("Audio transport connected on port %d", self._audio_port)
-
-    # ------------------------------------------------------------------
     # Public CI-V API
     # ------------------------------------------------------------------
 
@@ -1964,9 +1395,8 @@ class CoreRadio:
         self._require_capability("data_mode", operation="set_data_mode")
         self._require_receiver(receiver, operation="set_data_mode")
 
-        if receiver != RECEIVER_MAIN and not self._profile.supports_cmd29(
-            0x1A, 0x06
-        ):
+        if receiver != RECEIVER_MAIN and not self._profile.supports_cmd29(0x1A, 0x06):
+
             async def _action() -> None:
                 civ = set_data_mode_cmd(
                     on, to_addr=self._radio_addr, receiver=RECEIVER_MAIN
@@ -2015,7 +1445,9 @@ class CoreRadio:
     ) -> int:
         """Send a GET command and parse a BCD-encoded integer response."""
         self._check_connected()
-        resp = await self._send_civ_expect(civ, key=key, dedupe=True, label="get_bcd_level")
+        resp = await self._send_civ_expect(
+            civ, key=key, dedupe=True, label="get_bcd_level"
+        )
         return parse_level_response(
             resp,
             command=command,
@@ -2035,7 +1467,9 @@ class CoreRadio:
     ) -> bool:
         """Send a GET command and parse a boolean response."""
         self._check_connected()
-        resp = await self._send_civ_expect(civ, key=key, dedupe=True, label="get_bool_value")
+        resp = await self._send_civ_expect(
+            civ, key=key, dedupe=True, label="get_bool_value"
+        )
         return parse_bool_response(resp, command=command, sub=sub, prefix=prefix)
 
     async def _send_fire_and_forget(self, civ: bytes) -> None:
@@ -2051,7 +1485,9 @@ class CoreRadio:
         self._check_connected()
         civ = get_rf_power(to_addr=self._radio_addr)
         try:
-            resp = await self._send_civ_expect(civ, key="get_rf_power", dedupe=True, label="get_rf_power")
+            resp = await self._send_civ_expect(
+                civ, key="get_rf_power", dedupe=True, label="get_rf_power"
+            )
             level = _level_bcd_decode(resp.data)
             self._last_power = level
             self._state_cache.update_rf_power(level / 255.0)
@@ -2082,7 +1518,9 @@ class CoreRadio:
         self._check_connected()
         civ = get_rf_gain(to_addr=self._radio_addr)
         try:
-            resp = await self._send_civ_expect(civ, key="get_rf_gain", dedupe=True, label="get_rf_gain")
+            resp = await self._send_civ_expect(
+                civ, key="get_rf_gain", dedupe=True, label="get_rf_gain"
+            )
             return self._parse_level(resp)
         except TimeoutError:
             raise
@@ -2108,7 +1546,9 @@ class CoreRadio:
         self._check_connected()
         civ = get_af_level(to_addr=self._radio_addr)
         try:
-            resp = await self._send_civ_expect(civ, key="get_af_level", dedupe=True, label="get_af_level")
+            resp = await self._send_civ_expect(
+                civ, key="get_af_level", dedupe=True, label="get_af_level"
+            )
             return self._parse_level(resp)
         except TimeoutError:
             raise
@@ -2501,9 +1941,7 @@ class CoreRadio:
 
     async def set_vox_delay(self, level: int) -> None:
         """Set VOX delay (0-20, units of 0.1s)."""
-        await self._send_fire_and_forget(
-            set_vox_delay(level, to_addr=self._radio_addr)
-        )
+        await self._send_fire_and_forget(set_vox_delay(level, to_addr=self._radio_addr))
 
     async def get_af_mute(self, receiver: int = RECEIVER_MAIN) -> bool:
         """Read AF mute status."""
@@ -2915,7 +2353,9 @@ class CoreRadio:
         """Read the current band-edge frequency in Hz."""
         self._check_connected()
         civ = get_band_edge_freq(to_addr=self._radio_addr)
-        resp = await self._send_civ_expect(civ, key="get_band_edge_freq", dedupe=True, label="get_band_edge_freq")
+        resp = await self._send_civ_expect(
+            civ, key="get_band_edge_freq", dedupe=True, label="get_band_edge_freq"
+        )
         return parse_frequency_response(resp)
 
     async def get_various_squelch(self, receiver: int = RECEIVER_MAIN) -> bool:
@@ -3481,7 +2921,9 @@ class CoreRadio:
 
         IC-7610: data byte encodes RX-ANT OFF/ON.
         """
-        await self._send_fire_and_forget(set_antenna_1(enabled, to_addr=self._radio_addr))
+        await self._send_fire_and_forget(
+            set_antenna_1(enabled, to_addr=self._radio_addr)
+        )
 
     async def get_antenna_2(self) -> bool:
         """Read ANT2 selection status (0x12 0x01)."""
@@ -3497,7 +2939,9 @@ class CoreRadio:
 
         IC-7610: data byte encodes RX-ANT OFF/ON.
         """
-        await self._send_fire_and_forget(set_antenna_2(enabled, to_addr=self._radio_addr))
+        await self._send_fire_and_forget(
+            set_antenna_2(enabled, to_addr=self._radio_addr)
+        )
 
     async def get_rx_antenna_ant1(self) -> bool:
         """Read RX ANT state for ANT1.
@@ -3513,7 +2957,9 @@ class CoreRadio:
 
     async def set_rx_antenna_ant1(self, enabled: bool) -> None:
         """Set RX ANT state for ANT1 (0x12 0x00 <00|01>)."""
-        await self._send_fire_and_forget(set_rx_antenna_ant1(enabled, to_addr=self._radio_addr))
+        await self._send_fire_and_forget(
+            set_rx_antenna_ant1(enabled, to_addr=self._radio_addr)
+        )
 
     async def get_rx_antenna_ant2(self) -> bool:
         """Read RX ANT state for ANT2.
@@ -3529,7 +2975,9 @@ class CoreRadio:
 
     async def set_rx_antenna_ant2(self, enabled: bool) -> None:
         """Set RX ANT state for ANT2 (0x12 0x01 <00|01>)."""
-        await self._send_fire_and_forget(set_rx_antenna_ant2(enabled, to_addr=self._radio_addr))
+        await self._send_fire_and_forget(
+            set_rx_antenna_ant2(enabled, to_addr=self._radio_addr)
+        )
 
     async def get_acc1_mod_level(self) -> int:
         """Read ACC1 modulation level (0-255)."""
@@ -3680,7 +3128,9 @@ class CoreRadio:
         """Read system date as (year, month, day)."""
         self._check_connected()
         civ = get_system_date(to_addr=self._radio_addr)
-        resp = await self._send_civ_expect(civ, key="get_system_date", dedupe=True, label="get_system_date")
+        resp = await self._send_civ_expect(
+            civ, key="get_system_date", dedupe=True, label="get_system_date"
+        )
         return parse_system_date_response(resp)
 
     async def set_system_date(self, year: int, month: int, day: int) -> None:
@@ -3699,7 +3149,9 @@ class CoreRadio:
         """Read system time as (hour, minute)."""
         self._check_connected()
         civ = get_system_time(to_addr=self._radio_addr)
-        resp = await self._send_civ_expect(civ, key="get_system_time", dedupe=True, label="get_system_time")
+        resp = await self._send_civ_expect(
+            civ, key="get_system_time", dedupe=True, label="get_system_time"
+        )
         return parse_system_time_response(resp)
 
     async def set_system_time(self, hour: int, minute: int) -> None:
@@ -3717,7 +3169,9 @@ class CoreRadio:
         """Read UTC offset as (hours, minutes, is_negative)."""
         self._check_connected()
         civ = get_utc_offset(to_addr=self._radio_addr)
-        resp = await self._send_civ_expect(civ, key="get_utc_offset", dedupe=True, label="get_utc_offset")
+        resp = await self._send_civ_expect(
+            civ, key="get_utc_offset", dedupe=True, label="get_utc_offset"
+        )
         return parse_utc_offset_response(resp)
 
     async def set_utc_offset(self, hours: int, minutes: int, is_negative: bool) -> None:
@@ -3859,13 +3313,9 @@ class CoreRadio:
                 )
         if "data1_mod_input" in state:
             try:
-                await self.set_data1_mod_input(
-                    int(cast(int, state["data1_mod_input"]))
-                )
+                await self.set_data1_mod_input(int(cast(int, state["data1_mod_input"])))
             except Exception:
-                logger.debug(
-                    "restore_state: set_data1_mod_input failed", exc_info=True
-                )
+                logger.debug("restore_state: set_data1_mod_input failed", exc_info=True)
 
     async def run_state_transaction(
         self,
@@ -3953,456 +3403,12 @@ class CoreRadio:
             if on:
                 # IC-7610 may NAK power-on while booting — not a real error
                 import logging
+
                 logging.getLogger(__name__).warning(
                     "Power ON got NAK (radio may still be booting — ignoring)"
                 )
             else:
                 raise CommandError("Radio rejected power off")
-
-    # ------------------------------------------------------------------
-    # Scope / Waterfall API
-    # ------------------------------------------------------------------
-
-    def on_scope_data(self, callback: "Callable[[ScopeFrame], None] | None") -> None:
-        """Register a callback for completed scope frames.
-
-        Args:
-            callback: Function taking a ScopeFrame, or None to unregister.
-        """
-        self._scope_callback = callback
-
-    def _scope_controls(self) -> ScopeControlsState:
-        """Return the mutable scope-control state bucket."""
-        return self._radio_state.scope_controls
-
-    def _apply_scope_receiver_hint(self, receiver: int | None) -> None:
-        if receiver is not None:
-            self._scope_controls().receiver = receiver
-
-    async def scope_stream(self) -> AsyncGenerator[ScopeFrame, None]:
-        """Consume scope frames asynchronously.
-
-        Yields:
-            ScopeFrame objects as they are assembled.
-            Stops yielding if the radio disconnects.
-
-        Note:
-            Uses a bounded queue (maxsize=64) that drops oldest frames if not
-            consumed fast enough. Call enable_scope() separately to start data.
-        """
-        while self._connected:
-            try:
-                frame = await asyncio.wait_for(
-                    self._scope_frame_queue.get(), timeout=1.0
-                )
-                yield frame
-                self._scope_frame_queue.task_done()
-            except asyncio.TimeoutError:
-                continue
-
-    async def enable_scope(
-        self,
-        *,
-        output: bool = True,
-        policy: ScopeCompletionPolicy | str = ScopeCompletionPolicy.VERIFY,
-        timeout: float = 5.0,
-    ) -> None:
-        """Enable scope display and data output on the radio.
-
-        Args:
-            output: Also enable wave data output (default True).
-            policy: Completion policy (strict, fast, verify).
-            timeout: Verification timeout in seconds.
-
-        Raises:
-            CommandError: If the radio rejects the command (in strict mode).
-            TimeoutError: If verification times out (in verify mode).
-        """
-        self._check_connected()
-        pol = ScopeCompletionPolicy(policy)
-        wait_resp = pol == ScopeCompletionPolicy.STRICT
-
-        if pol == ScopeCompletionPolicy.VERIFY:
-            self._scope_activity_event.clear()
-
-        resp = await self._send_civ_raw(
-            _scope_on_cmd(to_addr=self._radio_addr), wait_response=wait_resp
-        )
-        if wait_resp and resp is not None:
-            if parse_ack_nak(resp) is False:
-                raise CommandError("Radio rejected scope enable")
-        if output:
-            resp = await self._send_civ_raw(
-                _scope_data_output_cmd(True, to_addr=self._radio_addr),
-                wait_response=wait_resp,
-            )
-            if wait_resp and resp is not None:
-                if parse_ack_nak(resp) is False:
-                    raise CommandError("Radio rejected scope data output enable")
-
-        if pol == ScopeCompletionPolicy.VERIFY:
-            try:
-                await asyncio.wait_for(
-                    self._scope_activity_event.wait(), timeout=timeout
-                )
-            except asyncio.TimeoutError:
-                raise TimeoutError("Scope enable verification timed out (no data seen)")
-
-    async def disable_scope(
-        self, *, policy: ScopeCompletionPolicy | str = ScopeCompletionPolicy.FAST
-    ) -> None:
-        """Disable scope data output on the radio.
-
-        Args:
-            policy: Completion policy, usually fast.
-
-        Raises:
-            CommandError: If the radio rejects the command (strict mode).
-        """
-        self._check_connected()
-        pol = ScopeCompletionPolicy(policy)
-        wait_resp = pol == ScopeCompletionPolicy.STRICT
-
-        resp = await self._send_civ_raw(
-            _scope_data_output_cmd(False, to_addr=self._radio_addr),
-            wait_response=wait_resp,
-        )
-        if wait_resp and resp is not None:
-            if parse_ack_nak(resp) is False:
-                raise CommandError("Radio rejected scope data output disable")
-
-    async def get_scope_receiver(self) -> int:
-        """Read the selected scope receiver (0=MAIN, 1=SUB)."""
-        self._check_connected()
-        resp = await self._send_civ_expect(
-            _get_scope_main_sub_cmd(to_addr=self._radio_addr),
-            label="get_scope_receiver",
-        )
-        receiver = parse_scope_main_sub_response(resp)
-        self._scope_controls().receiver = receiver
-        return receiver
-
-    async def set_scope_receiver(self, receiver: int) -> None:
-        """Select the scope receiver (0=MAIN, 1=SUB)."""
-        self._check_connected()
-        if receiver not in (0, 1):
-            raise ValueError(f"scope receiver must be 0 or 1, got {receiver}")
-        await self._send_civ_raw(
-            _scope_main_sub_cmd(receiver, to_addr=self._radio_addr),
-            wait_response=False,
-        )
-        self._scope_controls().receiver = receiver
-
-    async def get_scope_dual(self) -> bool:
-        """Read whether the scope is in dual-display mode."""
-        self._check_connected()
-        resp = await self._send_civ_expect(
-            _get_scope_single_dual_cmd(to_addr=self._radio_addr),
-            label="get_scope_dual",
-        )
-        dual = parse_scope_single_dual_response(resp)
-        self._scope_controls().dual = dual
-        return dual
-
-    async def set_scope_dual(self, dual: bool) -> None:
-        """Enable or disable dual scope mode."""
-        self._check_connected()
-        receiver = self._scope_controls().receiver
-        await self._send_civ_raw(
-            _scope_single_dual_cmd(dual, to_addr=self._radio_addr, receiver=receiver),
-            wait_response=False,
-        )
-        self._scope_controls().dual = dual
-
-    async def get_scope_mode(self) -> int:
-        """Read the current scope mode (0=center, 1=fixed, 2=scroll-C, 3=scroll-F)."""
-        self._check_connected()
-        resp = await self._send_civ_expect(_get_scope_mode_cmd(to_addr=self._radio_addr), label="get_scope_mode")
-        receiver, mode = parse_scope_mode_response(resp)
-        self._apply_scope_receiver_hint(receiver)
-        self._scope_controls().mode = mode
-        return mode
-
-    async def set_scope_mode(self, mode: int) -> None:
-        """Set the scope mode (0=center, 1=fixed, 2=scroll-C, 3=scroll-F)."""
-        self._check_connected()
-        receiver = self._scope_controls().receiver
-        await self._send_civ_raw(
-            _scope_set_mode_cmd(mode, to_addr=self._radio_addr, receiver=receiver),
-            wait_response=False,
-        )
-        self._scope_controls().mode = mode
-
-    async def get_scope_span(self) -> int:
-        """Read the scope span preset index (0..7)."""
-        self._check_connected()
-        resp = await self._send_civ_expect(_get_scope_span_cmd(to_addr=self._radio_addr), label="get_scope_span")
-        receiver, span = parse_scope_span_response(resp)
-        self._apply_scope_receiver_hint(receiver)
-        self._scope_controls().span = span
-        return span
-
-    async def set_scope_span(self, span: int) -> None:
-        """Set the scope span preset index (0..7)."""
-        self._check_connected()
-        receiver = self._scope_controls().receiver
-        await self._send_civ_raw(
-            _scope_set_span_cmd(span, to_addr=self._radio_addr, receiver=receiver),
-            wait_response=False,
-        )
-        self._scope_controls().span = span
-
-    async def get_scope_edge(self) -> int:
-        """Read the fixed-edge selection (1..4)."""
-        self._check_connected()
-        resp = await self._send_civ_expect(_get_scope_edge_cmd(to_addr=self._radio_addr), label="get_scope_edge")
-        receiver, edge = parse_scope_edge_response(resp)
-        self._apply_scope_receiver_hint(receiver)
-        self._scope_controls().edge = edge
-        return edge
-
-    async def set_scope_edge(self, edge: int) -> None:
-        """Set the fixed-edge selection (1..4)."""
-        self._check_connected()
-        receiver = self._scope_controls().receiver
-        await self._send_civ_raw(
-            _scope_set_edge_cmd(edge, to_addr=self._radio_addr, receiver=receiver),
-            wait_response=False,
-        )
-        self._scope_controls().edge = edge
-
-    async def get_scope_hold(self) -> bool:
-        """Read whether scope hold is enabled."""
-        self._check_connected()
-        resp = await self._send_civ_expect(_get_scope_hold_cmd(to_addr=self._radio_addr), label="get_scope_hold")
-        receiver, hold = parse_scope_hold_response(resp)
-        self._apply_scope_receiver_hint(receiver)
-        self._scope_controls().hold = hold
-        return hold
-
-    async def set_scope_hold(self, on: bool) -> None:
-        """Enable or disable scope hold."""
-        self._check_connected()
-        receiver = self._scope_controls().receiver
-        await self._send_civ_raw(
-            _scope_set_hold_cmd(on, to_addr=self._radio_addr, receiver=receiver),
-            wait_response=False,
-        )
-        self._scope_controls().hold = on
-
-    async def get_scope_ref(self) -> float:
-        """Read the scope reference level in dB."""
-        self._check_connected()
-        resp = await self._send_civ_expect(_get_scope_ref_cmd(to_addr=self._radio_addr), label="get_scope_ref")
-        receiver, ref_db = parse_scope_ref_response(resp)
-        self._apply_scope_receiver_hint(receiver)
-        self._scope_controls().ref_db = ref_db
-        return ref_db
-
-    async def set_scope_ref(self, ref: float) -> None:
-        """Set the scope reference level in dB."""
-        self._check_connected()
-        receiver = self._scope_controls().receiver
-        await self._send_civ_raw(
-            _scope_set_ref_cmd(ref, to_addr=self._radio_addr, receiver=receiver),
-            wait_response=False,
-        )
-        self._scope_controls().ref_db = ref
-
-    async def get_scope_speed(self) -> int:
-        """Read the scope speed preset (0=fast, 1=mid, 2=slow)."""
-        self._check_connected()
-        resp = await self._send_civ_expect(_get_scope_speed_cmd(to_addr=self._radio_addr), label="get_scope_speed")
-        receiver, speed = parse_scope_speed_response(resp)
-        self._apply_scope_receiver_hint(receiver)
-        self._scope_controls().speed = speed
-        return speed
-
-    async def set_scope_speed(self, speed: int) -> None:
-        """Set the scope speed preset (0=fast, 1=mid, 2=slow)."""
-        self._check_connected()
-        receiver = self._scope_controls().receiver
-        await self._send_civ_raw(
-            _scope_set_speed_cmd(speed, to_addr=self._radio_addr, receiver=receiver),
-            wait_response=False,
-        )
-        self._scope_controls().speed = speed
-
-    async def get_scope_during_tx(self) -> bool:
-        """Read whether the scope remains visible during transmit."""
-        self._check_connected()
-        resp = await self._send_civ_expect(
-            _get_scope_during_tx_cmd(to_addr=self._radio_addr),
-            label="get_scope_during_tx",
-        )
-        during_tx = parse_scope_during_tx_response(resp)
-        self._scope_controls().during_tx = during_tx
-        return during_tx
-
-    async def set_scope_during_tx(self, on: bool) -> None:
-        """Enable or disable scope during transmit."""
-        self._check_connected()
-        await self._send_civ_raw(
-            _scope_set_during_tx_cmd(on, to_addr=self._radio_addr),
-            wait_response=False,
-        )
-        self._scope_controls().during_tx = on
-
-    async def get_scope_center_type(self) -> int:
-        """Read the scope center-type setting (0..2)."""
-        self._check_connected()
-        resp = await self._send_civ_expect(
-            _get_scope_center_type_cmd(to_addr=self._radio_addr),
-            label="get_scope_center_type",
-        )
-        receiver, center_type = parse_scope_center_type_response(resp)
-        self._apply_scope_receiver_hint(receiver)
-        self._scope_controls().center_type = center_type
-        return center_type
-
-    async def set_scope_center_type(self, center_type: int) -> None:
-        """Set the scope center-type setting (0..2)."""
-        self._check_connected()
-        await self._send_civ_raw(
-            _scope_set_center_type_cmd(center_type, to_addr=self._radio_addr),
-            wait_response=False,
-        )
-        self._scope_controls().center_type = center_type
-
-    async def get_scope_vbw(self) -> bool:
-        """Read whether narrow scope VBW is enabled."""
-        self._check_connected()
-        resp = await self._send_civ_expect(_get_scope_vbw_cmd(to_addr=self._radio_addr), label="get_scope_vbw")
-        receiver, narrow = parse_scope_vbw_response(resp)
-        self._apply_scope_receiver_hint(receiver)
-        self._scope_controls().vbw_narrow = narrow
-        return narrow
-
-    async def set_scope_vbw(self, narrow: bool) -> None:
-        """Enable or disable narrow scope VBW."""
-        self._check_connected()
-        await self._send_civ_raw(
-            _scope_set_vbw_cmd(narrow, to_addr=self._radio_addr),
-            wait_response=False,
-        )
-        self._scope_controls().vbw_narrow = narrow
-
-    async def get_scope_fixed_edge(self) -> ScopeFixedEdge:
-        """Read the fixed-edge scope bounds."""
-        self._check_connected()
-        resp = await self._send_civ_expect(
-            _get_scope_fixed_edge_cmd(to_addr=self._radio_addr),
-            label="get_scope_fixed_edge",
-        )
-        fixed_edge = parse_scope_fixed_edge_response(resp)
-        self._scope_controls().fixed_edge = fixed_edge
-        self._scope_controls().edge = fixed_edge.edge
-        return fixed_edge
-
-    async def set_scope_fixed_edge(
-        self,
-        *,
-        edge: int,
-        start_hz: int,
-        end_hz: int,
-        range_index: int | None = None,
-    ) -> None:
-        """Set the fixed-edge scope bounds."""
-        self._check_connected()
-        civ = _scope_set_fixed_edge_cmd(
-            edge=edge,
-            start_hz=start_hz,
-            end_hz=end_hz,
-            range_index=range_index,
-            to_addr=self._radio_addr,
-        )
-        await self._send_civ_raw(
-            civ,
-            wait_response=False,
-        )
-        # Re-parse the frame we just built to recover the resolved range_index
-        # (computed inside scope_set_fixed_edge_cmd) without duplicating logic.
-        fixed_edge = parse_scope_fixed_edge_response(parse_civ_frame(civ))
-        self._scope_controls().fixed_edge = fixed_edge
-        self._scope_controls().edge = fixed_edge.edge
-
-    async def get_scope_rbw(self) -> int:
-        """Read the scope RBW preset (0=wide, 1=mid, 2=narrow)."""
-        self._check_connected()
-        resp = await self._send_civ_expect(_get_scope_rbw_cmd(to_addr=self._radio_addr), label="get_scope_rbw")
-        receiver, rbw = parse_scope_rbw_response(resp)
-        self._apply_scope_receiver_hint(receiver)
-        self._scope_controls().rbw = rbw
-        return rbw
-
-    async def set_scope_rbw(self, rbw: int) -> None:
-        """Set the scope RBW preset (0=wide, 1=mid, 2=narrow)."""
-        self._check_connected()
-        await self._send_civ_raw(
-            _scope_set_rbw_cmd(rbw, to_addr=self._radio_addr),
-            wait_response=False,
-        )
-        self._scope_controls().rbw = rbw
-
-    async def capture_scope_frame(self, timeout: float = 5.0) -> ScopeFrame:
-        """Enable scope and capture one complete frame.
-
-        Does NOT disable scope after — caller decides when to stop.
-
-        Args:
-            timeout: Maximum time to wait for a frame in seconds.
-
-        Returns:
-            First complete ScopeFrame received.
-
-        Raises:
-            TimeoutError: If no frame is received within timeout.
-        """
-        frames = await self.capture_scope_frames(count=1, timeout=timeout)
-        return frames[0]
-
-    async def capture_scope_frames(
-        self, count: int = 50, timeout: float = 10.0
-    ) -> list[ScopeFrame]:
-        """Enable scope and capture *count* complete frames.
-
-        Does NOT disable scope after — caller decides when to stop.
-
-        Args:
-            count: Number of complete frames to capture.
-            timeout: Maximum time to wait in seconds.
-
-        Returns:
-            List of ScopeFrame objects, oldest first.
-
-        Raises:
-            TimeoutError: If fewer than *count* frames arrive within timeout.
-        """
-        self._check_connected()
-
-        collected: list[ScopeFrame] = []
-        frame_ready = asyncio.Event()
-
-        def _on_frame(frame: ScopeFrame) -> None:
-            collected.append(frame)
-            if len(collected) >= count:
-                frame_ready.set()
-
-        old_callback = self._scope_callback
-        self.on_scope_data(_on_frame)
-        try:
-            await self.enable_scope(
-                policy=ScopeCompletionPolicy.VERIFY, timeout=timeout
-            )
-            try:
-                await asyncio.wait_for(frame_ready.wait(), timeout=timeout)
-            except asyncio.TimeoutError:
-                raise TimeoutError(
-                    f"Scope capture timed out: received {len(collected)}/{count} frames"
-                )
-        finally:
-            self.on_scope_data(old_callback)
-        return collected[:count]
 
     # --- Memory Commands ---
 
@@ -4546,15 +3552,15 @@ def _check_protocol_compliance() -> None:
     """
     from .radio_protocol import AudioCapable, DualReceiverCapable, Radio, ScopeCapable
 
-    assert isinstance(
-        IcomRadio(host=""), Radio
-    ), "IcomRadio does not satisfy Radio protocol"
-    assert isinstance(
-        IcomRadio(host=""), AudioCapable
-    ), "IcomRadio does not satisfy AudioCapable protocol"
-    assert isinstance(
-        IcomRadio(host=""), ScopeCapable
-    ), "IcomRadio does not satisfy ScopeCapable protocol"
-    assert isinstance(
-        IcomRadio(host=""), DualReceiverCapable
-    ), "IcomRadio does not satisfy DualReceiverCapable protocol"
+    assert isinstance(IcomRadio(host=""), Radio), (
+        "IcomRadio does not satisfy Radio protocol"
+    )
+    assert isinstance(IcomRadio(host=""), AudioCapable), (
+        "IcomRadio does not satisfy AudioCapable protocol"
+    )
+    assert isinstance(IcomRadio(host=""), ScopeCapable), (
+        "IcomRadio does not satisfy ScopeCapable protocol"
+    )
+    assert isinstance(IcomRadio(host=""), DualReceiverCapable), (
+        "IcomRadio does not satisfy DualReceiverCapable protocol"
+    )
