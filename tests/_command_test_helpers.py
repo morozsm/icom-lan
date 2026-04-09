@@ -60,7 +60,8 @@ def bind_default_addr_globals(namespace: dict[str, Any], *, to_addr: int) -> Non
         if isinstance(value, ModuleType) and value.__name__ == "icom_lan.commands":
             namespace[name] = CommandModuleProxy(value, to_addr=to_addr)
             continue
-        if getattr(value, "__module__", None) != "icom_lan.commands":
+        mod = getattr(value, "__module__", None) or ""
+        if not mod.startswith("icom_lan.commands"):
             continue
         if not callable(value):
             continue
