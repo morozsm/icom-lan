@@ -479,7 +479,7 @@ async def discover_lan_radios(timeout: float = 3.0) -> list[dict[str, object]]:
         sock.close()
         return list(found.values())
 
-    return _scan()
+    return await asyncio.get_running_loop().run_in_executor(None, _scan)
 
 
 async def discover_serial_radios(

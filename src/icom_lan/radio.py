@@ -554,7 +554,6 @@ class CoreRadio:
         self._local_bind_host: str | None = None
         self._civ_send_seq: int = 0
         self._audio_send_seq: int = 0
-        self._civ_lock = asyncio.Lock()
         self._last_civ_send_monotonic: float = 0.0
         self._civ_min_interval: float = (
             float(os.environ.get("ICOM_CIV_MIN_INTERVAL_MS", "35")) / 1000.0
