@@ -41,10 +41,15 @@ Standard capability tags:
 
 from __future__ import annotations
 
-from typing import Any, Awaitable, Callable, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Protocol, runtime_checkable
 
 from .radio_state import RadioState
 from .types import Mode
+
+if TYPE_CHECKING:
+    from ._state_cache import StateCache
+    from .audio_bus import AudioBus
+    from .scope import ScopeFrame
 
 __all__ = [
     "Radio",
@@ -393,7 +398,7 @@ class AudioCapable(Protocol):
     """
 
     @property
-    def audio_bus(self) -> Any:
+    def audio_bus(self) -> "AudioBus":
         """AudioBus instance for pub/sub audio distribution.
 
         Returns an :class:`~icom_lan.audio_bus.AudioBus` that manages
@@ -496,7 +501,7 @@ class ScopeCapable(Protocol):
     async def set_scope_fixed_edge(
         self, *, edge: int, start_hz: int, end_hz: int
     ) -> None: ...
-    async def capture_scope_frame(self, *, timeout: float = 10.0) -> Any: ...
+    async def capture_scope_frame(self, *, timeout: float = 10.0) -> "ScopeFrame": ...
     async def capture_scope_frames(
         self, *, count: int, timeout: float = 15.0
     ) -> list[Any]: ...
@@ -544,7 +549,7 @@ class StateCacheCapable(Protocol):
     """Radio exposes a shared state cache for server-side snapshots."""
 
     @property
-    def state_cache(self) -> Any:
+    def state_cache(self) -> "StateCache":
         """Shared state cache object."""
         ...
 
