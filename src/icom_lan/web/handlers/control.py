@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, Any, cast
 
 from ...profiles import RadioProfile
 from ...radio_state import RadioState
-from ...types import AudioCodec
 from ..protocol import (
     decode_json,
     encode_json,
@@ -138,7 +137,6 @@ if TYPE_CHECKING:
 from ...capabilities import (
     CAP_AF_LEVEL,
     CAP_ANTENNA,
-    CAP_AUDIO,
     CAP_BAND_EDGE,
     CAP_BREAK_IN,
     CAP_CW,

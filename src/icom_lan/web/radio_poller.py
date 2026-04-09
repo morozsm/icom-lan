@@ -259,7 +259,6 @@ from .._poller_types import (  # noqa: E402
     SetSystemTime,
     SetToneFreq,
     SetTsqlFreq,
-    SetTunerStatus,
     SetTuningStep,
     SetTwinPeak,
     SetTxFreqMonitor,
