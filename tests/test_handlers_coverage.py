@@ -976,7 +976,7 @@ async def test_scope_sender_timeout_and_error_branches(
             coro.close()
         raise RuntimeError("stop")
 
-    monkeypatch.setattr("icom_lan.web.handlers.asyncio.wait_for", _fake_wait_for)
+    monkeypatch.setattr("icom_lan.web.handlers.scope.asyncio.wait_for", _fake_wait_for)
     await handler._sender()
     assert ws.send_binary.await_count == 0
 
@@ -1182,7 +1182,7 @@ async def test_audio_handler_reader_control_tx_and_sender_paths(
     ws.send_binary = AsyncMock(side_effect=EOFError("closed"))
     handler._done.clear()
     await handler._frame_queue.put(b"x")
-    monkeypatch.setattr("icom_lan.web.handlers.asyncio.wait_for", _fake_wait_for)
+    monkeypatch.setattr("icom_lan.web.handlers.audio.asyncio.wait_for", _fake_wait_for)
     await handler._sender_loop()
 
 
