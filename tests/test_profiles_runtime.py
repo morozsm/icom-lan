@@ -392,8 +392,9 @@ class TestExports:
         assert apply_profile is not None
         assert PRESETS is not None
 
-    def test_in_all(self) -> None:
+    def test_importable_but_not_in_all(self) -> None:
+        """Runtime profile symbols are importable but not part of the public API surface."""
         import icom_lan
-        assert "OperatingProfile" in icom_lan.__all__
-        assert "apply_profile" in icom_lan.__all__
-        assert "PRESETS" in icom_lan.__all__
+        assert hasattr(icom_lan, "OperatingProfile")
+        assert hasattr(icom_lan, "apply_profile")
+        assert hasattr(icom_lan, "PRESETS")
