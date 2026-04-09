@@ -818,11 +818,54 @@ class ControlHandler:
     async def _enqueue_command(
         self, name: str, params: dict[str, Any]
     ) -> dict[str, Any]:
-        """Build a Command dataclass, enqueue it, and return the ack result."""
+        """Build a Command dataclass, enqueue it, and return the ack result.
+
+        Delegates to group-specific handlers to keep each branch focused.
+        """
         logger.info("enqueue_command: %s params=%s", name, params)
         radio = self._radio
 
-        # Read-only commands — no command queue needed
+        # Read-only commands — bypass command queue
+        result = await self._enqueue_read_only(name, params, radio)
+        if result is not None:
+            return result
+
+        q = self._server.command_queue if self._server is not None else None
+        if q is None:
+            raise RuntimeError("no command queue available")
+
+        # Dispatch to group handlers
+        for handler in (
+            self._enqueue_rc_frequency,
+            self._enqueue_rc_power,
+            self._enqueue_rc_dsp,
+            self._enqueue_rc_audio,
+            self._enqueue_rc_scope,
+            self._enqueue_rc_antenna,
+            self._enqueue_rc_system,
+            self._enqueue_rc_memory,
+            self._enqueue_rc_misc,
+        ):
+            result = handler(name, params, q, radio)
+            if result is not None:
+                return result
+
+        raise ValueError(f"unhandled command: {name!r}")
+
+    # ------------------------------------------------------------------
+    # Read-only commands (no command queue needed)
+    # ------------------------------------------------------------------
+
+    async def _enqueue_read_only(
+        self,
+        name: str,
+        params: dict[str, Any],
+        radio: "Radio | None",
+    ) -> dict[str, Any] | None:
+        """Handle get_* and CW text commands that bypass the command queue.
+
+        Returns None if *name* is not a read-only command.
+        """
         if name == "get_system_date":
             if radio is None:
                 raise RuntimeError("radio connection not available")
@@ -985,11 +1028,15 @@ class ControlHandler:
                 raise RuntimeError("radio does not support this command")
             on = await radio.get_tx_freq_monitor()
             return {"on": on}
+        return None
 
-        q = self._server.command_queue if self._server is not None else None
-        if q is None:
-            raise RuntimeError("no command queue available")
+    # ------------------------------------------------------------------
+    # Frequency / mode / band / VFO / RIT / split
+    # ------------------------------------------------------------------
 
+    def _enqueue_rc_frequency(
+        self, name: str, params: dict[str, Any], q: Any, radio: "Radio | None",
+    ) -> dict[str, Any] | None:
         match name:
             case "set_band":
                 band = int(params["band"])
@@ -1034,6 +1081,54 @@ class ControlHandler:
                 self._ensure_receiver_supported(rx)
                 q.put(SetIfShift(offset, receiver=rx))
                 return {"offset": offset, "receiver": rx}
+            case "set_rit_status":
+                on = bool(params.get("on", False))
+                self._ensure_capability("rit", "set_rit_status")
+                q.put(SetRitStatus(on))
+                return {"on": on}
+            case "set_rit_tx_status":
+                on = bool(params.get("on", False))
+                self._ensure_capability("rit", "set_rit_tx_status")
+                q.put(SetRitTxStatus(on))
+                return {"on": on}
+            case "set_rit_frequency":
+                freq = int(params.get("freq", 0))
+                self._ensure_capability("rit", "set_rit_frequency")
+                q.put(SetRitFrequency(freq))
+                return {"freq": freq}
+            case "set_split":
+                on = bool(params.get("on", False))
+                self._ensure_capability("split", "set_split")
+                q.put(SetSplit(on))
+                return {"on": on}
+            case "set_vfo" | "select_vfo":
+                vfo = str(params.get("vfo", "A"))
+                q.put(SelectVfo(vfo))
+                return {"vfo": vfo}
+            case "vfo_swap":
+                q.put(VfoSwap())
+                return {}
+            case "vfo_equalize":
+                q.put(VfoEqualize())
+                return {}
+            case "set_data_mode":
+                dm = int(params["mode"])
+                rx = int(params.get("receiver", 0))
+                self._ensure_capability("data_mode", "set_data_mode")
+                self._ensure_receiver_supported(rx)
+                q.put(SetDataMode(dm, receiver=rx))
+                return {"mode": dm, "receiver": rx}
+            case _:
+                return None
+
+    # ------------------------------------------------------------------
+    # Power / PTT / RF power
+    # ------------------------------------------------------------------
+
+    def _enqueue_rc_power(
+        self, name: str, params: dict[str, Any], q: Any, radio: "Radio | None",
+    ) -> dict[str, Any] | None:
+        match name:
             case "ptt":
                 on = bool(params["state"])
                 logger.info("handler: PTT %s received", "ON" if on else "OFF")
@@ -1067,6 +1162,169 @@ class ControlHandler:
                 on = bool(params.get("on", True))
                 q.put(SetPowerstat(on))
                 return {"on": on}
+            case "set_drive_gain":
+                level = int(params["level"])
+                self._ensure_capability("drive_gain", "set_drive_gain")
+                q.put(SetDriveGain(level))
+                return {"level": level}
+            case _:
+                return None
+
+    # ------------------------------------------------------------------
+    # DSP: NR / NB / AGC / notch / PBT / IF-shift / digisel / IP+
+    # ------------------------------------------------------------------
+
+    def _enqueue_rc_dsp(
+        self, name: str, params: dict[str, Any], q: Any, radio: "Radio | None",
+    ) -> dict[str, Any] | None:
+        match name:
+            case "set_nb":
+                on = bool(params.get("on", False))
+                rx = int(params.get("receiver", 0))
+                self._ensure_capability("nb", "set_nb")
+                self._ensure_receiver_supported(rx)
+                q.put(SetNB(on, receiver=rx))
+                return {"on": on, "receiver": rx}
+            case "set_nr":
+                on = bool(params.get("on", False))
+                rx = int(params.get("receiver", 0))
+                self._ensure_capability("nr", "set_nr")
+                self._ensure_receiver_supported(rx)
+                q.put(SetNR(on, receiver=rx))
+                return {"on": on, "receiver": rx}
+            case "set_nr_level":
+                level = int(params["level"])
+                rx = int(params.get("receiver", 0))
+                self._ensure_capability("nr", "set_nr_level")
+                self._ensure_receiver_supported(rx)
+                q.put(SetNRLevel(level, receiver=rx))
+                return {"level": level, "receiver": rx}
+            case "set_nb_level":
+                level = int(params["level"])
+                rx = int(params.get("receiver", 0))
+                self._ensure_capability("nb", "set_nb_level")
+                self._ensure_receiver_supported(rx)
+                q.put(SetNBLevel(level, receiver=rx))
+                return {"level": level, "receiver": rx}
+            case "set_nb_depth":
+                level = int(params["level"])
+                rx = int(params.get("receiver", 0))
+                self._ensure_capability("nb", "set_nb_depth")
+                self._ensure_receiver_supported(rx)
+                q.put(SetNbDepth(level, receiver=rx))
+                return {"level": level, "receiver": rx}
+            case "set_nb_width":
+                level = int(params["level"])
+                rx = int(params.get("receiver", 0))
+                self._ensure_capability("nb", "set_nb_width")
+                self._ensure_receiver_supported(rx)
+                q.put(SetNbWidth(level, receiver=rx))
+                return {"level": level, "receiver": rx}
+            case "set_auto_notch":
+                on = bool(params.get("on", False))
+                rx = int(params.get("receiver", 0))
+                self._ensure_capability("notch", "set_auto_notch")
+                self._ensure_receiver_supported(rx)
+                q.put(SetAutoNotch(on, receiver=rx))
+                return {"on": on, "receiver": rx}
+            case "set_manual_notch":
+                on = bool(params.get("on", False))
+                rx = int(params.get("receiver", 0))
+                self._ensure_capability("notch", "set_manual_notch")
+                self._ensure_receiver_supported(rx)
+                q.put(SetManualNotch(on, receiver=rx))
+                return {"on": on, "receiver": rx}
+            case "set_notch_filter":
+                level = int(params["value"])
+                self._ensure_capability("notch", "set_notch_filter")
+                q.put(SetNotchFilter(level))
+                return {"value": level}
+            case "set_manual_notch_width":
+                value = int(params["value"])
+                rx = int(params.get("receiver", 0))
+                self._ensure_capability("notch", "set_manual_notch_width")
+                self._ensure_receiver_supported(rx)
+                q.put(SetManualNotchWidth(value, receiver=rx))
+                return {"value": value, "receiver": rx}
+            case "set_digisel":
+                on = bool(params.get("on", False))
+                rx = int(params.get("receiver", 0))
+                self._ensure_capability("digisel", "set_digisel")
+                self._ensure_receiver_supported(rx)
+                q.put(SetDigiSel(on, receiver=rx))
+                return {"on": on, "receiver": rx}
+            case "set_digisel_shift":
+                level = int(params["level"])
+                rx = int(params.get("receiver", 0))
+                self._ensure_capability("digisel", "set_digisel_shift")
+                self._ensure_receiver_supported(rx)
+                q.put(SetDigiselShift(level, receiver=rx))
+                return {"level": level, "receiver": rx}
+            case "set_ip_plus" | "set_ipplus":
+                on = bool(params.get("on", False))
+                rx = int(params.get("receiver", 0))
+                self._ensure_capability("ip_plus", "set_ip_plus")
+                self._ensure_receiver_supported(rx)
+                q.put(SetIpPlus(on, receiver=rx))
+                return {"on": on, "receiver": rx}
+            case "set_pbt_inner":
+                level = int(params["value"])
+                rx = int(params.get("receiver", 0))
+                self._ensure_capability("pbt", "set_pbt_inner")
+                self._ensure_receiver_supported(rx)
+                q.put(SetPbtInner(level, receiver=rx))
+                return {"value": level, "receiver": rx}
+            case "set_pbt_outer":
+                level = int(params["value"])
+                rx = int(params.get("receiver", 0))
+                self._ensure_capability("pbt", "set_pbt_outer")
+                self._ensure_receiver_supported(rx)
+                q.put(SetPbtOuter(level, receiver=rx))
+                return {"value": level, "receiver": rx}
+            case "set_agc_time_constant":
+                value = int(params["value"])
+                rx = int(params.get("receiver", 0))
+                self._ensure_receiver_supported(rx)
+                q.put(SetAgcTimeConstant(value, receiver=rx))
+                return {"value": value, "receiver": rx}
+            case "set_agc":
+                agc_mode = int(params["mode"])
+                rx = int(params.get("receiver", 0))
+                self._ensure_receiver_supported(rx)
+                q.put(SetAgc(agc_mode, receiver=rx))
+                return {"mode": agc_mode, "receiver": rx}
+            case "set_apf":
+                apf_mode = int(params["mode"])
+                rx = int(params.get("receiver", 0))
+                self._ensure_capability("apf", "set_apf")
+                self._ensure_receiver_supported(rx)
+                q.put(SetApf(apf_mode, receiver=rx))
+                return {"mode": apf_mode, "receiver": rx}
+            case "set_audio_peak_filter":
+                on = bool(params.get("on", False))
+                rx = int(params.get("receiver", 0))
+                self._ensure_capability("apf", "set_audio_peak_filter")
+                self._ensure_receiver_supported(rx)
+                q.put(SetAudioPeakFilter(on, receiver=rx))
+                return {"on": on, "receiver": rx}
+            case "set_twin_peak":
+                on = bool(params.get("on", False))
+                rx = int(params.get("receiver", 0))
+                self._ensure_capability("twin_peak", "set_twin_peak")
+                self._ensure_receiver_supported(rx)
+                q.put(SetTwinPeak(on, receiver=rx))
+                return {"on": on, "receiver": rx}
+            case _:
+                return None
+
+    # ------------------------------------------------------------------
+    # Audio: AF level / squelch / monitor / mute / mic / compressor
+    # ------------------------------------------------------------------
+
+    def _enqueue_rc_audio(
+        self, name: str, params: dict[str, Any], q: Any, radio: "Radio | None",
+    ) -> dict[str, Any] | None:
+        match name:
             case "set_rf_gain":
                 if radio is None:
                     raise RuntimeError("radio connection not available")
@@ -1109,158 +1367,19 @@ class ControlHandler:
                 self._ensure_receiver_supported(rx)
                 q.put(SetSquelch(level, receiver=rx))
                 return {"level": level, "receiver": rx}
-            case "set_nb":
-                on = bool(params.get("on", False))
-                rx = int(params.get("receiver", 0))
-                self._ensure_capability("nb", "set_nb")
-                self._ensure_receiver_supported(rx)
-                q.put(SetNB(on, receiver=rx))
-                return {"on": on, "receiver": rx}
-            case "set_nr":
-                on = bool(params.get("on", False))
-                rx = int(params.get("receiver", 0))
-                self._ensure_capability("nr", "set_nr")
-                self._ensure_receiver_supported(rx)
-                q.put(SetNR(on, receiver=rx))
-                return {"on": on, "receiver": rx}
-            case "set_nr_level":
-                level = int(params["level"])
-                rx = int(params.get("receiver", 0))
-                self._ensure_capability("nr", "set_nr_level")
-                self._ensure_receiver_supported(rx)
-                q.put(SetNRLevel(level, receiver=rx))
-                return {"level": level, "receiver": rx}
-            case "set_nb_level":
-                level = int(params["level"])
-                rx = int(params.get("receiver", 0))
-                self._ensure_capability("nb", "set_nb_level")
-                self._ensure_receiver_supported(rx)
-                q.put(SetNBLevel(level, receiver=rx))
-                return {"level": level, "receiver": rx}
-            case "set_auto_notch":
-                on = bool(params.get("on", False))
-                rx = int(params.get("receiver", 0))
-                self._ensure_capability("notch", "set_auto_notch")
-                self._ensure_receiver_supported(rx)
-                q.put(SetAutoNotch(on, receiver=rx))
-                return {"on": on, "receiver": rx}
-            case "set_manual_notch":
-                on = bool(params.get("on", False))
-                rx = int(params.get("receiver", 0))
-                self._ensure_capability("notch", "set_manual_notch")
-                self._ensure_receiver_supported(rx)
-                q.put(SetManualNotch(on, receiver=rx))
-                return {"on": on, "receiver": rx}
-            case "set_notch_filter":
-                level = int(params["value"])
-                self._ensure_capability("notch", "set_notch_filter")
-                q.put(SetNotchFilter(level))
-                return {"value": level}
-            case "set_digisel":
-                on = bool(params.get("on", False))
-                rx = int(params.get("receiver", 0))
-                self._ensure_capability("digisel", "set_digisel")
-                self._ensure_receiver_supported(rx)
-                q.put(SetDigiSel(on, receiver=rx))
-                return {"on": on, "receiver": rx}
-            case "set_ip_plus" | "set_ipplus":
-                on = bool(params.get("on", False))
-                rx = int(params.get("receiver", 0))
-                self._ensure_capability("ip_plus", "set_ip_plus")
-                self._ensure_receiver_supported(rx)
-                q.put(SetIpPlus(on, receiver=rx))
-                return {"on": on, "receiver": rx}
-            case "set_att" | "set_attenuator":
-                db = int(params.get("level", params.get("db", 0)))
-                rx = int(params.get("receiver", 0))
-                self._ensure_capability("attenuator", name)
-                self._ensure_receiver_supported(rx)
-                q.put(SetAttenuator(db, receiver=rx))
-                return {"db": db, "receiver": rx}
-            case "set_preamp":
-                level = int(params["level"])
-                rx = int(params.get("receiver", 0))
-                self._ensure_capability("preamp", "set_preamp")
-                self._ensure_receiver_supported(rx)
-                q.put(SetPreamp(level, receiver=rx))
-                return {"level": level, "receiver": rx}
-            case "set_pbt_inner":
-                level = int(params["value"])
-                rx = int(params.get("receiver", 0))
-                self._ensure_capability("pbt", "set_pbt_inner")
-                self._ensure_receiver_supported(rx)
-                q.put(SetPbtInner(level, receiver=rx))
-                return {"value": level, "receiver": rx}
-            case "set_pbt_outer":
-                level = int(params["value"])
-                rx = int(params.get("receiver", 0))
-                self._ensure_capability("pbt", "set_pbt_outer")
-                self._ensure_receiver_supported(rx)
-                q.put(SetPbtOuter(level, receiver=rx))
-                return {"value": level, "receiver": rx}
-            case "set_cw_pitch":
-                value = int(params["value"])
-                self._ensure_capability("cw", "set_cw_pitch")
-                q.put(SetCwPitch(value))
-                return {"value": value}
-            case "set_key_speed":
-                speed = int(params["speed"])
-                self._ensure_capability("cw", "set_key_speed")
-                q.put(SetKeySpeed(speed))
-                return {"speed": speed}
-            case "set_break_in":
-                break_in_mode = int(params["mode"])
-                self._ensure_capability("break_in", "set_break_in")
-                q.put(SetBreakIn(break_in_mode))
-                return {"mode": break_in_mode}
-            case "set_apf":
-                apf_mode = int(params["mode"])
-                rx = int(params.get("receiver", 0))
-                self._ensure_capability("apf", "set_apf")
-                self._ensure_receiver_supported(rx)
-                q.put(SetApf(apf_mode, receiver=rx))
-                return {"mode": apf_mode, "receiver": rx}
-            case "set_twin_peak":
-                on = bool(params.get("on", False))
-                rx = int(params.get("receiver", 0))
-                self._ensure_capability("twin_peak", "set_twin_peak")
-                self._ensure_receiver_supported(rx)
-                q.put(SetTwinPeak(on, receiver=rx))
-                return {"on": on, "receiver": rx}
-            case "set_drive_gain":
-                level = int(params["level"])
-                self._ensure_capability("drive_gain", "set_drive_gain")
-                q.put(SetDriveGain(level))
-                return {"level": level}
-            case "scan_start":
-                self._ensure_capability("scan", "scan_start")
-                q.put(ScanStart())
-                return {}
-            case "scan_stop":
-                self._ensure_capability("scan", "scan_stop")
-                q.put(ScanStop())
-                return {}
-            case "set_data_mode":
-                dm = int(params["mode"])
-                rx = int(params.get("receiver", 0))
-                self._ensure_capability("data_mode", "set_data_mode")
-                self._ensure_receiver_supported(rx)
-                q.put(SetDataMode(dm, receiver=rx))
-                return {"mode": dm, "receiver": rx}
             case "set_mic_gain":
                 level = int(params["level"])
                 q.put(SetMicGain(level))
                 return {"level": level}
-            case "set_vox":
-                on = bool(params.get("on", False))
-                self._ensure_capability("vox", "set_vox")
-                q.put(SetVox(on))
-                return {"on": on}
             case "set_compressor_level":
                 level = int(params["level"])
                 self._ensure_capability("compressor", "set_compressor_level")
                 q.put(SetCompressorLevel(level))
                 return {"level": level}
+            case "set_comp" | "set_compressor":
+                on = bool(params.get("on", True))
+                q.put(SetCompressor(on))
+                return {"on": on}
             case "set_monitor":
                 on = bool(params.get("on", False))
                 self._ensure_capability("monitor", "set_monitor")
@@ -1271,52 +1390,56 @@ class ControlHandler:
                 self._ensure_capability("monitor", "set_monitor_gain")
                 q.put(SetMonitorGain(level))
                 return {"level": level}
-            case "set_dial_lock":
-                on = bool(params.get("on", False))
-                q.put(SetDialLock(on))
-                return {"on": on}
-            case "set_agc_time_constant":
+            case "set_af_mute":
+                on = bool(params["on"])
+                rx = int(params.get("receiver", 0))
+                self._ensure_receiver_supported(rx)
+                q.put(SetAfMute(on, receiver=rx))
+                return {"on": on, "receiver": rx}
+            case "set_acc1_mod_level":
+                level = int(params["level"])
+                q.put(SetAcc1ModLevel(level))
+                return {"level": level}
+            case "set_usb_mod_level":
+                level = int(params["level"])
+                q.put(SetUsbModLevel(level))
+                return {"level": level}
+            case "set_lan_mod_level":
+                level = int(params["level"])
+                q.put(SetLanModLevel(level))
+                return {"level": level}
+            case "set_data_off_mod_input":
+                source = int(params["source"])
+                q.put(SetDataOffModInput(source))
+                return {"source": source}
+            case "set_data1_mod_input":
+                source = int(params["source"])
+                q.put(SetData1ModInput(source))
+                return {"source": source}
+            case "set_data2_mod_input":
+                source = int(params["source"])
+                q.put(SetData2ModInput(source))
+                return {"source": source}
+            case "set_data3_mod_input":
+                source = int(params["source"])
+                q.put(SetData3ModInput(source))
+                return {"source": source}
+            case "set_ssb_tx_bw":
                 value = int(params["value"])
-                rx = int(params.get("receiver", 0))
-                self._ensure_receiver_supported(rx)
-                q.put(SetAgcTimeConstant(value, receiver=rx))
-                return {"value": value, "receiver": rx}
-            case "set_agc":
-                agc_mode = int(params["mode"])
-                rx = int(params.get("receiver", 0))
-                self._ensure_receiver_supported(rx)
-                q.put(SetAgc(agc_mode, receiver=rx))
-                return {"mode": agc_mode, "receiver": rx}
-            case "set_rit_status":
-                on = bool(params.get("on", False))
-                self._ensure_capability("rit", "set_rit_status")
-                q.put(SetRitStatus(on))
-                return {"on": on}
-            case "set_rit_tx_status":
-                on = bool(params.get("on", False))
-                self._ensure_capability("rit", "set_rit_tx_status")
-                q.put(SetRitTxStatus(on))
-                return {"on": on}
-            case "set_rit_frequency":
-                freq = int(params.get("freq", 0))
-                self._ensure_capability("rit", "set_rit_frequency")
-                q.put(SetRitFrequency(freq))
-                return {"freq": freq}
-            case "set_split":
-                on = bool(params.get("on", False))
-                self._ensure_capability("split", "set_split")
-                q.put(SetSplit(on))
-                return {"on": on}
-            case "set_vfo" | "select_vfo":
-                vfo = str(params.get("vfo", "A"))
-                q.put(SelectVfo(vfo))
-                return {"vfo": vfo}
-            case "vfo_swap":
-                q.put(VfoSwap())
-                return {}
-            case "vfo_equalize":
-                q.put(VfoEqualize())
-                return {}
+                self._ensure_capability("ssb_tx_bw", "set_ssb_tx_bw")
+                q.put(SetSsbTxBandwidth(value))
+                return {"value": value}
+            case _:
+                return None
+
+    # ------------------------------------------------------------------
+    # Scope commands
+    # ------------------------------------------------------------------
+
+    def _enqueue_rc_scope(
+        self, name: str, params: dict[str, Any], q: Any, radio: "Radio | None",
+    ) -> dict[str, Any] | None:
+        match name:
             case "switch_scope_receiver":
                 receiver = int(params.get("receiver", 0))
                 self._ensure_capability("scope", "switch_scope_receiver")
@@ -1370,6 +1493,31 @@ class ControlHandler:
                 self._ensure_capability("scope", "set_scope_hold")
                 q.put(SetScopeHold(on))
                 return {"on": on}
+            case _:
+                return None
+
+    # ------------------------------------------------------------------
+    # Antenna: attenuator / preamp / antenna select
+    # ------------------------------------------------------------------
+
+    def _enqueue_rc_antenna(
+        self, name: str, params: dict[str, Any], q: Any, radio: "Radio | None",
+    ) -> dict[str, Any] | None:
+        match name:
+            case "set_att" | "set_attenuator":
+                db = int(params.get("level", params.get("db", 0)))
+                rx = int(params.get("receiver", 0))
+                self._ensure_capability("attenuator", name)
+                self._ensure_receiver_supported(rx)
+                q.put(SetAttenuator(db, receiver=rx))
+                return {"db": db, "receiver": rx}
+            case "set_preamp":
+                level = int(params["level"])
+                rx = int(params.get("receiver", 0))
+                self._ensure_capability("preamp", "set_preamp")
+                self._ensure_receiver_supported(rx)
+                q.put(SetPreamp(level, receiver=rx))
+                return {"level": level, "receiver": rx}
             case "set_antenna_1":
                 on = bool(params.get("on", False))
                 q.put(SetAntenna1(on))
@@ -1386,6 +1534,27 @@ class ControlHandler:
                 on = bool(params.get("on", False))
                 q.put(SetRxAntennaAnt2(on))
                 return {"on": on}
+            case "set_rx_antenna":
+                antenna = int(params["antenna"])
+                on = bool(params.get("on", False))
+                self._ensure_capability("rx_antenna", "set_rx_antenna")
+                q.put(SetRxAntenna(antenna, on))
+                return {"antenna": antenna, "on": on}
+            case "set_civ_output_ant":
+                on = bool(params["on"])
+                q.put(SetCivOutputAnt(on))
+                return {"on": on}
+            case _:
+                return None
+
+    # ------------------------------------------------------------------
+    # System: date/time / CW / VOX / dial-lock / dual-watch / scan
+    # ------------------------------------------------------------------
+
+    def _enqueue_rc_system(
+        self, name: str, params: dict[str, Any], q: Any, radio: "Radio | None",
+    ) -> dict[str, Any] | None:
+        match name:
             case "set_system_date":
                 year = int(params["year"])
                 month = int(params["month"])
@@ -1397,63 +1566,36 @@ class ControlHandler:
                 minute = int(params["minute"])
                 q.put(SetSystemTime(hour, minute))
                 return {"hour": hour, "minute": minute}
-            case "set_acc1_mod_level":
-                level = int(params["level"])
-                q.put(SetAcc1ModLevel(level))
-                return {"level": level}
-            case "set_usb_mod_level":
-                level = int(params["level"])
-                q.put(SetUsbModLevel(level))
-                return {"level": level}
-            case "set_lan_mod_level":
-                level = int(params["level"])
-                q.put(SetLanModLevel(level))
-                return {"level": level}
-            case "set_dual_watch":
-                on = bool(params.get("on", False))
-                self._ensure_capability("dual_rx", "set_dual_watch")
-                q.put(SetDualWatch(on))
-                return {"on": on}
-            case "set_comp" | "set_compressor":
-                on = bool(params.get("on", True))
-                q.put(SetCompressor(on))
-                return {"on": on}
-            case "set_tone_freq":
-                freq = int(params["freq"])
-                rx = int(params.get("receiver", 0))
-                self._ensure_capability("repeater_tone", "set_tone_freq")
-                self._ensure_receiver_supported(rx)
-                q.put(SetToneFreq(freq, receiver=rx))
-                return {"freq": freq, "receiver": rx}
-            case "set_tsql_freq":
-                freq = int(params["freq"])
-                rx = int(params.get("receiver", 0))
-                self._ensure_capability("tsql", "set_tsql_freq")
-                self._ensure_receiver_supported(rx)
-                q.put(SetTsqlFreq(freq, receiver=rx))
-                return {"freq": freq, "receiver": rx}
-            case "set_main_sub_tracking":
-                on = bool(params.get("on", False))
-                self._ensure_capability("main_sub_tracking", "set_main_sub_tracking")
-                q.put(SetMainSubTracking(on))
-                return {"on": on}
-            case "set_ssb_tx_bw":
+            case "set_cw_pitch":
                 value = int(params["value"])
-                self._ensure_capability("ssb_tx_bw", "set_ssb_tx_bw")
-                q.put(SetSsbTxBandwidth(value))
+                self._ensure_capability("cw", "set_cw_pitch")
+                q.put(SetCwPitch(value))
                 return {"value": value}
-            case "set_manual_notch_width":
-                value = int(params["value"])
-                rx = int(params.get("receiver", 0))
-                self._ensure_capability("notch", "set_manual_notch_width")
-                self._ensure_receiver_supported(rx)
-                q.put(SetManualNotchWidth(value, receiver=rx))
-                return {"value": value, "receiver": rx}
+            case "set_key_speed":
+                speed = int(params["speed"])
+                self._ensure_capability("cw", "set_key_speed")
+                q.put(SetKeySpeed(speed))
+                return {"speed": speed}
+            case "set_break_in":
+                break_in_mode = int(params["mode"])
+                self._ensure_capability("break_in", "set_break_in")
+                q.put(SetBreakIn(break_in_mode))
+                return {"mode": break_in_mode}
             case "set_break_in_delay":
                 level = int(params["level"])
                 self._ensure_capability("break_in", "set_break_in_delay")
                 q.put(SetBreakInDelay(level))
                 return {"level": level}
+            case "set_dash_ratio":
+                value = int(params["value"])
+                self._ensure_capability("cw", "set_dash_ratio")
+                q.put(SetDashRatio(value))
+                return {"value": value}
+            case "set_vox":
+                on = bool(params.get("on", False))
+                self._ensure_capability("vox", "set_vox")
+                q.put(SetVox(on))
+                return {"on": on}
             case "set_vox_gain":
                 level = int(params["level"])
                 self._ensure_capability("vox", "set_vox_gain")
@@ -1469,25 +1611,28 @@ class ControlHandler:
                 self._ensure_capability("vox", "set_vox_delay")
                 q.put(SetVoxDelay(level))
                 return {"level": level}
-            case "set_nb_depth":
-                level = int(params["level"])
-                rx = int(params.get("receiver", 0))
-                self._ensure_capability("nb", "set_nb_depth")
-                self._ensure_receiver_supported(rx)
-                q.put(SetNbDepth(level, receiver=rx))
-                return {"level": level, "receiver": rx}
-            case "set_nb_width":
-                level = int(params["level"])
-                rx = int(params.get("receiver", 0))
-                self._ensure_capability("nb", "set_nb_width")
-                self._ensure_receiver_supported(rx)
-                q.put(SetNbWidth(level, receiver=rx))
-                return {"level": level, "receiver": rx}
-            case "set_dash_ratio":
-                value = int(params["value"])
-                self._ensure_capability("cw", "set_dash_ratio")
-                q.put(SetDashRatio(value))
-                return {"value": value}
+            case "set_dial_lock":
+                on = bool(params.get("on", False))
+                q.put(SetDialLock(on))
+                return {"on": on}
+            case "set_dual_watch":
+                on = bool(params.get("on", False))
+                self._ensure_capability("dual_rx", "set_dual_watch")
+                q.put(SetDualWatch(on))
+                return {"on": on}
+            case "set_main_sub_tracking":
+                on = bool(params.get("on", False))
+                self._ensure_capability("main_sub_tracking", "set_main_sub_tracking")
+                q.put(SetMainSubTracking(on))
+                return {"on": on}
+            case "scan_start":
+                self._ensure_capability("scan", "scan_start")
+                q.put(ScanStart())
+                return {}
+            case "scan_stop":
+                self._ensure_capability("scan", "scan_stop")
+                q.put(ScanStop())
+                return {}
             case "set_repeater_tone":
                 on = bool(params.get("on", False))
                 rx = int(params.get("receiver", 0))
@@ -1495,6 +1640,13 @@ class ControlHandler:
                 self._ensure_receiver_supported(rx)
                 q.put(SetRepeaterTone(on, receiver=rx))
                 return {"on": on, "receiver": rx}
+            case "set_tone_freq":
+                freq = int(params["freq"])
+                rx = int(params.get("receiver", 0))
+                self._ensure_capability("repeater_tone", "set_tone_freq")
+                self._ensure_receiver_supported(rx)
+                q.put(SetToneFreq(freq, receiver=rx))
+                return {"freq": freq, "receiver": rx}
             case "set_repeater_tsql":
                 on = bool(params.get("on", False))
                 rx = int(params.get("receiver", 0))
@@ -1502,12 +1654,42 @@ class ControlHandler:
                 self._ensure_receiver_supported(rx)
                 q.put(SetRepeaterTsql(on, receiver=rx))
                 return {"on": on, "receiver": rx}
-            case "set_rx_antenna":
-                antenna = int(params["antenna"])
-                on = bool(params.get("on", False))
-                self._ensure_capability("rx_antenna", "set_rx_antenna")
-                q.put(SetRxAntenna(antenna, on))
-                return {"antenna": antenna, "on": on}
+            case "set_tsql_freq":
+                freq = int(params["freq"])
+                rx = int(params.get("receiver", 0))
+                self._ensure_capability("tsql", "set_tsql_freq")
+                self._ensure_receiver_supported(rx)
+                q.put(SetTsqlFreq(freq, receiver=rx))
+                return {"freq": freq, "receiver": rx}
+            case "set_ref_adjust":
+                value = int(params["value"])
+                q.put(SetRefAdjust(value))
+                return {"value": value}
+            case "set_civ_transceive":
+                on = bool(params["on"])
+                q.put(SetCivTransceive(on))
+                return {"on": on}
+            case "set_tuning_step":
+                step = int(params["step"])
+                q.put(SetTuningStep(step))
+                return {"step": step}
+            case "set_utc_offset":
+                hours = int(params["hours"])
+                minutes = int(params["minutes"])
+                is_negative = bool(params["is_negative"])
+                q.put(SetUtcOffset(hours, minutes, is_negative))
+                return {"hours": hours, "minutes": minutes, "is_negative": is_negative}
+            case _:
+                return None
+
+    # ------------------------------------------------------------------
+    # Memory channels / BSR
+    # ------------------------------------------------------------------
+
+    def _enqueue_rc_memory(
+        self, name: str, params: dict[str, Any], q: Any, radio: "Radio | None",
+    ) -> dict[str, Any] | None:
+        match name:
             case "set_memory_mode":
                 if not isinstance(radio, MemoryCapable):
                     raise ValueError(
@@ -1569,66 +1751,17 @@ class ControlHandler:
                 bsr = BandStackRegister(**params)
                 q.put(SetBsr(bsr))
                 return {"band": bsr.band, "register": bsr.register}
-            case "set_data_off_mod_input":
-                source = int(params["source"])
-                q.put(SetDataOffModInput(source))
-                return {"source": source}
-            case "set_data1_mod_input":
-                source = int(params["source"])
-                q.put(SetData1ModInput(source))
-                return {"source": source}
-            case "set_data2_mod_input":
-                source = int(params["source"])
-                q.put(SetData2ModInput(source))
-                return {"source": source}
-            case "set_data3_mod_input":
-                source = int(params["source"])
-                q.put(SetData3ModInput(source))
-                return {"source": source}
-            case "set_audio_peak_filter":
-                on = bool(params.get("on", False))
-                rx = int(params.get("receiver", 0))
-                self._ensure_capability("apf", "set_audio_peak_filter")
-                self._ensure_receiver_supported(rx)
-                q.put(SetAudioPeakFilter(on, receiver=rx))
-                return {"on": on, "receiver": rx}
-            case "set_digisel_shift":
-                level = int(params["level"])
-                rx = int(params.get("receiver", 0))
-                self._ensure_capability("digisel", "set_digisel_shift")
-                self._ensure_receiver_supported(rx)
-                q.put(SetDigiselShift(level, receiver=rx))
-                return {"level": level, "receiver": rx}
-            # Issue #410 — system/config SET commands
-            case "set_ref_adjust":
-                value = int(params["value"])
-                q.put(SetRefAdjust(value))
-                return {"value": value}
-            case "set_civ_transceive":
-                on = bool(params["on"])
-                q.put(SetCivTransceive(on))
-                return {"on": on}
-            case "set_civ_output_ant":
-                on = bool(params["on"])
-                q.put(SetCivOutputAnt(on))
-                return {"on": on}
-            case "set_af_mute":
-                on = bool(params["on"])
-                rx = int(params.get("receiver", 0))
-                self._ensure_receiver_supported(rx)
-                q.put(SetAfMute(on, receiver=rx))
-                return {"on": on, "receiver": rx}
-            case "set_tuning_step":
-                step = int(params["step"])
-                q.put(SetTuningStep(step))
-                return {"step": step}
-            case "set_utc_offset":
-                hours = int(params["hours"])
-                minutes = int(params["minutes"])
-                is_negative = bool(params["is_negative"])
-                q.put(SetUtcOffset(hours, minutes, is_negative))
-                return {"hours": hours, "minutes": minutes, "is_negative": is_negative}
-            # Issue #411 — band/split advanced SET commands
+            case _:
+                return None
+
+    # ------------------------------------------------------------------
+    # Misc: XFC / TX freq monitor / quick split / quick dual watch
+    # ------------------------------------------------------------------
+
+    def _enqueue_rc_misc(
+        self, name: str, params: dict[str, Any], q: Any, radio: "Radio | None",
+    ) -> dict[str, Any] | None:
+        match name:
             case "set_xfc_status":
                 on = bool(params["on"])
                 q.put(SetXfcStatus(on))
@@ -1644,7 +1777,7 @@ class ControlHandler:
                 q.put(QuickDualWatch())
                 return {}
             case _:
-                raise ValueError(f"unhandled command: {name!r}")
+                return None
 
     @property
     def subscribed_streams(self) -> frozenset[str]:
