@@ -2,7 +2,7 @@
 
 **Date:** 2026-04-09
 **Status:** Design (not implemented)
-**Scope:** Variant A (near-term) + Variant B extension seam
+**Scope:** Variant A (near-term) — smarter bridge on top of existing system audio devices (e.g., BlackHole/Loopback/VB-Cable via PortAudio/sounddevice)
 
 ---
 
@@ -13,7 +13,7 @@ The current `AudioBridge` (`audio_bridge.py`) routes PCM between the radio and a
 ### Device-name coupling
 - `find_loopback_device()` does substring matching on display names (`"BlackHole"`, `"Loopback"`, `"VB-Audio"`, `"Virtual"`).
 - Display names are locale-dependent and change across OS updates. A user who upgrades macOS or installs a second virtual device may silently get the wrong device.
-- There is no concept of a **stable device ID** (CoreAudio UID, PipeWire object-id, WASAPI endpoint-id) — only the integer `index` returned by `sounddevice.query_devices()`, which is session-ephemeral.
+- There is no concept of a **stable device ID** (e.g., CoreAudio device UID on macOS) — only the integer `index` returned by `sounddevice.query_devices()`, which is session-ephemeral.
 
 ### No auto-detect / auto-connect
 - If the device disappears mid-session (e.g. BlackHole unloaded), the bridge crashes with a sounddevice `PortAudioError`. No reconnect.
@@ -53,9 +53,9 @@ from typing import Protocol, runtime_checkable, Callable, AsyncIterator
 class AudioDeviceId:
     """Stable, platform-specific device identifier.
 
-    Wraps the native persistent ID (CoreAudio UID string, PipeWire
-    object-id, WASAPI endpoint-id) alongside the ephemeral integer index
-    used by sounddevice/PortAudio.
+    Wraps a native persistent ID when available (e.g. CoreAudio device UID
+    on macOS) alongside the ephemeral integer index used by
+    sounddevice/PortAudio.
     """
     __slots__ = ("platform_uid", "index", "display_name")
 
@@ -177,27 +177,12 @@ class AudioBackend(Protocol):
 - Virtual device detection: check name against known patterns + check `hostapi` for loopback-class APIs.
 - This replaces both `find_loopback_device()` in `audio_bridge.py` and `list_usb_audio_devices()` in `usb_driver.py` with a single implementation.
 
-#### `CoreAudioLoopbackBackend` (macOS, future Variant A enhancement)
+#### `CoreAudioLoopbackBackend` (macOS, Variant A enhancement)
 
-- Not a new driver — just a `PortAudioBackend` subclass that filters to virtual/loopback devices and uses CoreAudio-native UIDs for stable identification.
-- Can query `kAudioDevicePropertyDeviceIsAlive` for hotplug detection.
-- Can read/set device sample rate via `kAudioDevicePropertyNominalSampleRate`.
+- This is still the same PortAudio/sounddevice backend, but with **better device identification** on macOS by pulling the CoreAudio device UID.
+- It can also optionally read device sample-rate / “device alive” properties to improve auto-reconnect behavior.
 
-#### Future placeholders (Variant B extension seam)
-
-```python
-# These are NOT implemented — only the Protocol seam exists.
-
-class PipeWireBackend:
-    """Linux: native PipeWire integration (avoids PortAudio overhead)."""
-    name = "pipewire"
-    # Would use pw-cli / libpipewire via ctypes or subprocess
-
-class WasapiBackend:
-    """Windows: native WASAPI loopback capture."""
-    name = "wasapi"
-    # Would use comtypes or pyaudiowpatch
-```
+(We intentionally do **not** design or discuss any native virtual-device drivers in this document.)
 
 ### 2.3 Backend Registry and Selection
 
@@ -238,8 +223,8 @@ def get_backend(name: str | None = None) -> AudioBackend:
                            │
           ┌────────────────┼────────────────────┐
           │                │                    │
-  PortAudioBackend   CoreAudioBackend    (PipeWire/WASAPI)
-  (sounddevice)      (macOS loopback)     future stubs
+  PortAudioBackend   CoreAudioBackend
+  (sounddevice)      (macOS UID helpers)
 ```
 
 Both `AudioBridge` (LAN path) and `UsbAudioDriver` (serial path) would use the same `AudioBackend` interface, eliminating the duplicated device enumeration and stream management code.
@@ -527,7 +512,7 @@ pytestmark = pytest.mark.skipif(
 
 ## 7. Risks / Non-Goals
 
-**Repo boundary note:** Any future **native virtual audio device** implementation (HAL/PipeWire/WASAPI) can be kept proprietary in `icom-lan-pro`. `icom-lan` should only define the backend abstraction + integration seam, and continue to support existing third-party virtual devices (BlackHole/Loopback/VB-Cable) as backends.
+(Note: this design intentionally scopes to Variant A only — improving robustness on top of existing virtual audio devices like BlackHole/Loopback/VB-Cable.)
 
 ### Risks
 
@@ -541,7 +526,7 @@ pytestmark = pytest.mark.skipif(
 
 ### Non-Goals
 
-- **Writing a virtual audio driver** (HAL plugin, PipeWire module, WASAPI loopback capture driver). We only define the integration seam (`AudioBackend` protocol) for a future implementation.
+- Writing a brand-new OS-level virtual audio device. This document is strictly about improving the bridge on top of existing virtual devices.
 - **Multi-radio bridge** (bridging multiple radios to different virtual devices simultaneously). Out of scope — would require a bridge manager.
 - **Audio effects** (EQ, compression, DSP beyond normalization). The pipeline is extensible but we only implement gate + normalizer + limiter.
 - **Replacing sounddevice** with a different PortAudio binding. `sounddevice` is mature and well-maintained.
