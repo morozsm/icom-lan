@@ -10,7 +10,7 @@ from typing import Any
 from ....exceptions import CommandError
 from ....profiles import RadioProfile, resolve_radio_profile
 from ....radio_state import RadioState
-from ....rigctld.state_cache import StateCache
+from ...._state_cache import StateCache
 from ....types import Mode
 
 

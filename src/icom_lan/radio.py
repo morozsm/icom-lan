@@ -303,7 +303,7 @@ from .commands import set_vfo as _select_vfo_cmd
 from .exceptions import AuthenticationError, CommandError, ConnectionError, TimeoutError
 from .profiles import RadioProfile, resolve_radio_profile
 from .radio_state import RadioState, ScopeControlsState
-from .rigctld.state_cache import StateCache
+from ._state_cache import StateCache
 from .scope import ScopeAssembler, ScopeFrame
 from .transport import IcomTransport
 from .types import (

@@ -20,7 +20,7 @@ import logging
 from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING, Final
 
-from .rigctld.state_cache import CacheField, StateCache
+from ._state_cache import CacheField, StateCache
 
 if TYPE_CHECKING:
     from .radio_protocol import Radio

@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from .civ import CivEvent, CivRequestTracker
     from .commander import IcomCommander
     from ._civ_rx import CivRuntime
-    from .rigctld.state_cache import StateCache
+    from ._state_cache import StateCache
     from .radio_state import RadioState
     from .scope import ScopeAssembler, ScopeFrame
     from .transport import IcomTransport
