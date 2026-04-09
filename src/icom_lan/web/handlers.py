@@ -1828,7 +1828,7 @@ class ScopeHandler:
         try:
             self._frame_queue.put_nowait(encoded)
         except asyncio.QueueFull:
-            pass
+            logger.debug("ScopeHandler: frame queue full, dropping frame")
 
     async def run(self) -> None:
         """Run the scope channel lifecycle."""

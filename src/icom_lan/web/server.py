@@ -525,7 +525,7 @@ class WebServer:
             try:
                 q.put_nowait(event)
             except asyncio.QueueFull:
-                pass
+                logger.debug("broadcast_event: queue full, dropping event=%s", name)
 
     def _broadcast_state_update(self) -> None:
         """Broadcast current state to all control WS clients (throttled).
@@ -593,7 +593,7 @@ class WebServer:
             try:
                 q.put_nowait(notification)
             except asyncio.QueueFull:
-                pass
+                logger.debug("broadcast_notification: queue full, dropping notification")
 
     def _broadcast_dx_spot(self, spot: Any) -> None:
         """Add DX spot to buffer and push dx_spot message to all control clients."""
