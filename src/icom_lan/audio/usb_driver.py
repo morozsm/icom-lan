@@ -279,11 +279,7 @@ def list_usb_audio_devices(sounddevice_module: Any) -> list[UsbAudioDevice]:
 def _extract_sounddevice_module(backend: AudioBackend) -> Any | None:
     """Extract the underlying sounddevice module from a PortAudioBackend."""
     if isinstance(backend, PortAudioBackend):
-        try:
-            sd, _ = backend._ensure_deps()
-            return sd
-        except ImportError:
-            return None
+        return backend.sounddevice_module
     return None
 
 

@@ -84,6 +84,25 @@ def test_resampler_clipping():
     assert np.max(out) == 32767
 
 
+def test_resampler_anti_aliasing_attenuates_high_freq():
+    """Downsampling applies anti-aliasing filter to reduce aliasing."""
+    from_rate = 48000
+    to_rate = 16000  # 3:1 decimation — aliasing would be severe without filter
+    n_in = 960
+
+    # Generate a tone at 10kHz (above Nyquist of 8kHz for 16kHz output)
+    t = np.arange(n_in) / from_rate
+    high_tone = (np.sin(2 * np.pi * 10000 * t) * 16000).astype(np.int16)
+
+    r = PcmResampler(from_rate, to_rate)
+    pcm_out = r.process(high_tone.tobytes())
+    out = np.frombuffer(pcm_out, dtype=np.int16)
+
+    # The 10kHz tone should be significantly attenuated after AA filter
+    # (without the filter, aliasing would fold it into the passband)
+    assert np.max(np.abs(out)) < 8000  # >50% attenuation
+
+
 def test_resampler_invalid_rates():
     with pytest.raises(ValueError, match="positive"):
         PcmResampler(0, 48000)

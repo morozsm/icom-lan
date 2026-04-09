@@ -720,7 +720,16 @@ class AudioBridge:
 
         try:
             while self._running:
-                pcm_bytes = await self._tx_queue.get()
+                # Check TX capture stream health periodically
+                if self._tx_stream is not None and not self._tx_stream.running:
+                    raise OSError("TX capture stream stopped unexpectedly")
+
+                try:
+                    pcm_bytes = await asyncio.wait_for(
+                        self._tx_queue.get(), timeout=1.0
+                    )
+                except asyncio.TimeoutError:
+                    continue
 
                 frame_array = np.frombuffer(pcm_bytes, dtype=np.int16)
                 if np.max(np.abs(frame_array)) < silence_threshold:

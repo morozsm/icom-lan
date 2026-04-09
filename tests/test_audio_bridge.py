@@ -39,6 +39,43 @@ _BH_DEVICE = AudioDeviceInfo(
 )
 
 
+class _StateWaiter:
+    """Test helper — waits for specific BridgeState transitions via callback."""
+
+    def __init__(self) -> None:
+        self.events: list[BridgeStateChange] = []
+        self._waiters: dict[BridgeState, asyncio.Event] = {}
+
+    def __call__(self, change: BridgeStateChange) -> None:
+        self.events.append(change)
+        ev = self._waiters.get(change.current)
+        if ev is not None:
+            ev.set()
+
+    async def wait_for(
+        self, state: BridgeState, *, after: int = 0, timeout: float = 2.0
+    ) -> None:
+        """Wait until the bridge enters *state*.
+
+        Args:
+            state: Target state.
+            after: Only consider events at index >= *after* in the event
+                list. Use ``len(waiter.events)`` before triggering an
+                action to skip earlier transitions.
+            timeout: Maximum wait in seconds.
+        """
+        # Already reached after the cutoff?
+        if any(e.current == state for e in self.events[after:]):
+            return
+        # Need a fresh event — clear any previous one to avoid stale signal
+        ev = asyncio.Event()
+        self._waiters[state] = ev
+        # Check again after registering (race window)
+        if any(e.current == state for e in self.events[after:]):
+            return
+        await asyncio.wait_for(ev.wait(), timeout=timeout)
+
+
 def _bridge_backend(
     devices: list[AudioDeviceInfo] | None = None,
 ) -> FakeAudioBackend:
@@ -374,10 +411,10 @@ async def test_on_state_changed_callback_fires():
 
 
 async def test_reconnect_on_stream_write_failure():
-    """When the RX TxStream write fails, bridge enters RECONNECTING."""
+    """When the RX TxStream write fails, bridge reconnects."""
     radio = _make_radio()
     backend = _bridge_backend()
-    events: list[BridgeStateChange] = []
+    waiter = _StateWaiter()
     bridge = AudioBridge(
         radio,
         device_name="BlackHole",
@@ -385,25 +422,20 @@ async def test_reconnect_on_stream_write_failure():
         backend=backend,
         max_retries=2,
         retry_base_delay=0.01,
-        on_state_changed=events.append,
+        on_state_changed=waiter,
     )
     await bridge.start()
-    assert bridge.bridge_state == BridgeState.RUNNING
+    checkpoint = len(waiter.events)  # skip initial RUNNING
 
-    # Inject a write failure on the TxStream
     backend.tx_streams[0].fail_on_write = OSError("device removed")
-
-    # Deliver a packet to trigger the write
     packet = MagicMock()
     packet.data = b"\x01\x02\x03" * 100
     radio.audio_bus._on_opus_packet(packet)
 
-    # Give the RX loop time to hit the error and trigger reconnect
-    await asyncio.sleep(0.15)
-
-    # Should have reconnected (device is still in the backend list)
+    # Wait for reconnect to complete (event-based, no timing assumption)
+    await waiter.wait_for(BridgeState.RUNNING, after=checkpoint, timeout=2.0)
     assert bridge.bridge_state == BridgeState.RUNNING
-    assert any(e.reason == "reconnected" for e in events)
+    assert any(e.reason == "reconnected" for e in waiter.events)
 
     await bridge.stop()
 
@@ -412,7 +444,7 @@ async def test_reconnect_succeeds_when_device_returns():
     """Device removed then re-added — bridge reconnects."""
     radio = _make_radio()
     backend = _bridge_backend()
-    events: list[BridgeStateChange] = []
+    waiter = _StateWaiter()
     bridge = AudioBridge(
         radio,
         device_name="BlackHole",
@@ -420,12 +452,11 @@ async def test_reconnect_succeeds_when_device_returns():
         backend=backend,
         max_retries=5,
         retry_base_delay=0.01,
-        on_state_changed=events.append,
+        on_state_changed=waiter,
     )
     await bridge.start()
-    assert bridge.bridge_state == BridgeState.RUNNING
+    checkpoint = len(waiter.events)
 
-    # Simulate device loss
     backend.tx_streams[0].fail_on_write = OSError("device removed")
     backend.remove_devices()
 
@@ -433,15 +464,16 @@ async def test_reconnect_succeeds_when_device_returns():
     packet.data = b"\xAA" * 100
     radio.audio_bus._on_opus_packet(packet)
 
-    await asyncio.sleep(0.05)
-    assert bridge.bridge_state == BridgeState.RECONNECTING
+    # Wait for RECONNECTING state
+    await waiter.wait_for(BridgeState.RECONNECTING, after=checkpoint, timeout=2.0)
 
-    # Bring device back
+    # Bring device back — reconnect loop will find it on next retry
     backend.add_device(_BH_DEVICE)
-    await asyncio.sleep(0.2)
 
+    # Wait for successful reconnect
+    await waiter.wait_for(BridgeState.RUNNING, after=checkpoint, timeout=2.0)
     assert bridge.bridge_state == BridgeState.RUNNING
-    assert any(e.reason == "reconnected" for e in events)
+    assert any(e.reason == "reconnected" for e in waiter.events)
 
     await bridge.stop()
 
@@ -450,7 +482,7 @@ async def test_failed_state_after_max_retries():
     """Bridge enters FAILED when device never comes back."""
     radio = _make_radio()
     backend = _bridge_backend()
-    events: list[BridgeStateChange] = []
+    waiter = _StateWaiter()
     bridge = AudioBridge(
         radio,
         device_name="BlackHole",
@@ -458,11 +490,10 @@ async def test_failed_state_after_max_retries():
         backend=backend,
         max_retries=2,
         retry_base_delay=0.01,
-        on_state_changed=events.append,
+        on_state_changed=waiter,
     )
     await bridge.start()
 
-    # Permanently remove device
     backend.tx_streams[0].fail_on_write = OSError("gone")
     backend.remove_devices()
 
@@ -470,17 +501,17 @@ async def test_failed_state_after_max_retries():
     packet.data = b"\xBB" * 100
     radio.audio_bus._on_opus_packet(packet)
 
-    # Wait for all retries to exhaust (2 retries at 0.01s base, ~0.03s total)
-    await asyncio.sleep(0.3)
-
+    # Wait for FAILED state (event-based — no timing assumption)
+    await waiter.wait_for(BridgeState.FAILED, timeout=2.0)
     assert bridge.bridge_state == BridgeState.FAILED
-    assert any(e.reason == "max_retries" for e in events)
+    assert any(e.reason == "max_retries" for e in waiter.events)
 
 
 async def test_stop_cancels_reconnect_task():
     """Calling stop() during reconnect cancels the reconnect loop."""
     radio = _make_radio()
     backend = _bridge_backend()
+    waiter = _StateWaiter()
     bridge = AudioBridge(
         radio,
         device_name="BlackHole",
@@ -488,10 +519,10 @@ async def test_stop_cancels_reconnect_task():
         backend=backend,
         max_retries=10,
         retry_base_delay=1.0,  # long delay so reconnect is in progress
+        on_state_changed=waiter,
     )
     await bridge.start()
 
-    # Trigger reconnect
     backend.tx_streams[0].fail_on_write = OSError("gone")
     backend.remove_devices()
 
@@ -499,8 +530,8 @@ async def test_stop_cancels_reconnect_task():
     packet.data = b"\xCC" * 100
     radio.audio_bus._on_opus_packet(packet)
 
-    await asyncio.sleep(0.05)
-    assert bridge.bridge_state == BridgeState.RECONNECTING
+    # Wait for RECONNECTING (event-based)
+    await waiter.wait_for(BridgeState.RECONNECTING, timeout=2.0)
 
     # Stop should cancel the long backoff reconnect
     await bridge.stop()

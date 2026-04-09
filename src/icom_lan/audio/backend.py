@@ -331,6 +331,15 @@ class PortAudioBackend:
         self._np: Any = None
         self._dependency_loader = dependency_loader
 
+    @property
+    def sounddevice_module(self) -> Any | None:
+        """Return the underlying sounddevice module, or None if not loaded."""
+        try:
+            sd, _ = self._ensure_deps()
+            return sd
+        except ImportError:
+            return None
+
     def _ensure_deps(self) -> tuple[Any, Any]:
         if self._sd is not None and self._np is not None:
             return self._sd, self._np
