@@ -87,7 +87,6 @@ def rig_toml(request: pytest.FixtureRequest) -> Path:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.xfail(reason="Pending: epic #295 naming standardization", strict=False)
 def test_overrides_have_prefix(rig_toml: Path) -> None:
     """All [commands.overrides] entries must start with get_ or set_."""
     with open(rig_toml, "rb") as f:
