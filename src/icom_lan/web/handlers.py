@@ -189,11 +189,6 @@ logger = logging.getLogger(__name__)
 HIGH_WATERMARK = 5  # Max queued scope/meter frames before dropping
 
 
-def _runtime_capabilities(radio: "Radio | None") -> set[str]:
-    """Backward-compatible alias to shared runtime_capabilities helper."""
-    return runtime_capabilities(radio)
-
-
 class ControlHandler:
     """Handles the /api/v1/ws control WebSocket channel.
 
