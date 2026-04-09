@@ -371,6 +371,11 @@ class UsbAudioDriver:
         """Attempt topology-based audio device resolution from serial port."""
         sd_module = _extract_sounddevice_module(self._backend)
         if sd_module is None:
+            logger.debug(
+                "usb-audio: topology resolution skipped — backend %s "
+                "is not PortAudioBackend; falling back to name-based selection",
+                type(self._backend).__name__,
+            )
             return None
 
         from ..usb_audio_resolve import resolve_audio_for_serial_port
@@ -451,9 +456,8 @@ class UsbAudioDriver:
         async with self._rx_lock:
             stream = self._rx_stream
             self._rx_stream = None
-
-        if stream is not None and stream.running:
-            await stream.stop()
+            if stream is not None and stream.running:
+                await stream.stop()
 
     async def start_tx(
         self,
@@ -497,9 +501,8 @@ class UsbAudioDriver:
         async with self._tx_lock:
             stream = self._tx_stream
             self._tx_stream = None
-
-        if stream is not None and stream.running:
-            await stream.stop()
+            if stream is not None and stream.running:
+                await stream.stop()
 
 
 __all__ = [

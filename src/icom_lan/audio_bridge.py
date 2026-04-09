@@ -206,6 +206,7 @@ class AudioBridge:
         self._channels = channels
         self._frame_ms = frame_ms
         self._tx_enabled = tx_enabled
+        self._tx_started = False
         self._tx_executor = tx_executor
         self._backend: AudioBackend = backend or PortAudioBackend()
 
@@ -403,6 +404,7 @@ class AudioBridge:
                 channels=self._channels,
                 frame_ms=self._frame_ms,
             )
+            self._tx_started = True
 
             tx_dev_id = dev_id
             if self._tx_device_name:
@@ -591,6 +593,9 @@ class AudioBridge:
             return
 
         self._running = False
+        # Immediately leave RUNNING to prevent _on_stream_error from
+        # scheduling new reconnect tasks while we tear down.
+        self._set_state(BridgeState.IDLE, "stopped")
 
         # Cancel reconnect if in progress
         if self._reconnect_task and not self._reconnect_task.done():
@@ -603,13 +608,12 @@ class AudioBridge:
 
         await self._teardown_streams()
 
-        if self._tx_enabled:
+        if self._tx_started:
+            self._tx_started = False
             try:
                 await self._radio.stop_audio_tx_pcm()
             except Exception:
                 logger.debug("%s: stop TX error", self._label, exc_info=True)
-
-        self._set_state(BridgeState.IDLE, "stopped")
 
         logger.info(
             "%s: stopped (rx=%d frames, tx=%d frames, drops=%d)",
@@ -634,7 +638,17 @@ class AudioBridge:
                 )
 
     def _on_tx_capture(self, frame: bytes) -> None:
-        """Callback from RxStream — enqueue captured audio for TX processing."""
+        """Callback from RxStream — enqueue captured audio for TX processing.
+
+        May be called from a worker thread (PortAudioBackend), so we
+        schedule the enqueue on the event loop to avoid data races.
+        """
+        loop = self._loop
+        if loop is not None and loop.is_running():
+            loop.call_soon_threadsafe(self._enqueue_tx, frame)
+
+    def _enqueue_tx(self, frame: bytes) -> None:
+        """Thread-safe target for _on_tx_capture — runs on the event loop."""
         try:
             self._tx_queue.put_nowait(frame)
         except asyncio.QueueFull:
@@ -734,9 +748,9 @@ class AudioBridge:
 
                 try:
                     if self._is_opus:
-                        await self._radio.push_audio_tx_pcm(pcm_bytes)
-                    else:
                         await self._radio.push_audio_tx_opus(pcm_bytes)
+                    else:
+                        await self._radio.push_audio_tx_pcm(pcm_bytes)
                 except Exception:
                     if self._tx_frames <= 5:
                         logger.warning("%s: TX push error", self._label, exc_info=True)

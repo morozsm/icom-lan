@@ -187,16 +187,20 @@ def save_audio_config(config: AudioConfig, path: Path | str) -> None:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
 
+    def _esc(s: str) -> str:
+        """Escape a string for TOML double-quoted value."""
+        return s.replace("\\", "\\\\").replace('"', '\\"')
+
     lines: list[str] = []
     lines.append("[bridge]")
     if config.bridge.device:
-        lines.append(f'device = "{config.bridge.device}"')
+        lines.append(f'device = "{_esc(config.bridge.device)}"')
     if config.bridge.tx_device:
-        lines.append(f'tx_device = "{config.bridge.tx_device}"')
+        lines.append(f'tx_device = "{_esc(config.bridge.tx_device)}"')
     if config.bridge.rx_only:
         lines.append("rx_only = true")
     if config.bridge.label:
-        lines.append(f'label = "{config.bridge.label}"')
+        lines.append(f'label = "{_esc(config.bridge.label)}"')
     lines.append("")
     lines.append("[bridge.reconnect]")
     lines.append(f"max_retries = {config.bridge.reconnect.max_retries}")
@@ -204,13 +208,13 @@ def save_audio_config(config: AudioConfig, path: Path | str) -> None:
     lines.append("")
     lines.append("[usb]")
     if config.usb.rx_device:
-        lines.append(f'rx_device = "{config.usb.rx_device}"')
+        lines.append(f'rx_device = "{_esc(config.usb.rx_device)}"')
     if config.usb.tx_device:
-        lines.append(f'tx_device = "{config.usb.tx_device}"')
+        lines.append(f'tx_device = "{_esc(config.usb.tx_device)}"')
     if config.usb.last_rx_uid:
-        lines.append(f'last_rx_uid = "{config.usb.last_rx_uid}"')
+        lines.append(f'last_rx_uid = "{_esc(config.usb.last_rx_uid)}"')
     if config.usb.last_tx_uid:
-        lines.append(f'last_tx_uid = "{config.usb.last_tx_uid}"')
+        lines.append(f'last_tx_uid = "{_esc(config.usb.last_tx_uid)}"')
     lines.append("")
 
     path.write_text("\n".join(lines))

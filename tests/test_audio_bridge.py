@@ -303,7 +303,8 @@ async def test_bridge_tx_path_uses_backend_rx_stream():
     await asyncio.sleep(0.05)
     await bridge.stop()
 
-    assert radio.push_audio_tx_opus.called or bridge._tx_frames > 0
+    # PCM session (no opus codec) → push_audio_tx_pcm is called
+    assert radio.push_audio_tx_pcm.called or bridge._tx_frames > 0
 
 
 # ---------------------------------------------------------------------------

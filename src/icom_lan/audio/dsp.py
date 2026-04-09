@@ -76,8 +76,10 @@ class RmsNormalizer:
 
     Args:
         target_db: Target RMS level in dB relative to full scale (default -20dB).
-        attack_ms: Attack time in ms — how quickly gain increases (default 5ms).
-        release_ms: Release time in ms — how quickly gain decreases (default 50ms).
+        attack_ms: Attack time in ms — how quickly the envelope reacts to louder
+            audio (gain decreases). Short = fast compression (default 5ms).
+        release_ms: Release time in ms — how quickly the envelope recovers after
+            a loud transient (gain increases). Long = smooth recovery (default 50ms).
         max_gain_db: Maximum gain to prevent amplifying noise (default 30dB).
     """
 

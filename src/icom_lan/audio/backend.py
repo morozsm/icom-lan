@@ -479,7 +479,7 @@ class FakeTxStream:
         self.started_count = 0
         self.stopped_count = 0
         self.written_frames: list[bytes] = []
-        self.fail_on_write: Exception | None = None
+        self.fail_on_write: OSError | None = None
 
     @property
     def running(self) -> bool:

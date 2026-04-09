@@ -119,3 +119,16 @@ def test_save_minimal_config(tmp_path: Path):
     assert "[bridge]" in content
     assert "[usb]" in content
     assert "max_retries = 5" in content
+
+
+def test_save_escapes_special_characters(tmp_path: Path):
+    """Device names with quotes/backslashes survive save+load roundtrip."""
+    cfg = AudioConfig(
+        bridge=BridgeConfig(device='Black"Hole'),
+        usb=UsbConfig(rx_device='path\\with\\backslash'),
+    )
+    path = tmp_path / "audio.toml"
+    save_audio_config(cfg, path)
+    loaded = load_audio_config(path)
+    assert loaded.bridge.device == 'Black"Hole'
+    assert loaded.usb.rx_device == 'path\\with\\backslash'
