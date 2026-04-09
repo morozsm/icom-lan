@@ -83,6 +83,7 @@ def test_audio_driver_default_construction():
             tx_device="hw:1,1",
             sample_rate=48000,
             channels=1,
+            backend=None,
         )
 
 

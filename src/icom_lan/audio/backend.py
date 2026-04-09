@@ -96,6 +96,25 @@ class AudioBackend(Protocol):
 
     def list_devices(self) -> list[AudioDeviceInfo]: ...
 
+    def check_sample_rate(
+        self,
+        device: AudioDeviceId,
+        sample_rate: int,
+        *,
+        direction: str = "rx",
+    ) -> bool:
+        """Check whether *device* supports *sample_rate* for the given direction.
+
+        Args:
+            device: Target device id.
+            sample_rate: Desired rate in Hz.
+            direction: ``"rx"`` (capture) or ``"tx"`` (playback).
+
+        Returns:
+            ``True`` if the rate is supported, ``False`` otherwise.
+        """
+        ...
+
     def open_rx(
         self,
         device: AudioDeviceId,
@@ -352,6 +371,24 @@ class PortAudioBackend:
             )
         return result
 
+    def check_sample_rate(
+        self,
+        device: AudioDeviceId,
+        sample_rate: int,
+        *,
+        direction: str = "rx",
+    ) -> bool:
+        sd, _ = self._ensure_deps()
+        idx = int(device)
+        try:
+            if direction == "rx":
+                sd.check_input_settings(device=idx, samplerate=sample_rate)
+            else:
+                sd.check_output_settings(device=idx, samplerate=sample_rate)
+            return True
+        except Exception:
+            return False
+
     def open_rx(
         self,
         device: AudioDeviceId,
@@ -403,6 +440,7 @@ class FakeRxStream:
         self._callback: Callable[[bytes], None] | None = None
         self.started_count = 0
         self.stopped_count = 0
+        self.fail_on_inject: Exception | None = None
 
     @property
     def running(self) -> bool:
@@ -421,7 +459,14 @@ class FakeRxStream:
         self.stopped_count += 1
 
     def inject_frame(self, frame: bytes) -> None:
-        """Push a frame to the registered callback (test helper)."""
+        """Push a frame to the registered callback (test helper).
+
+        If *fail_on_inject* is set, raises it once and clears the flag.
+        """
+        exc = self.fail_on_inject
+        if exc is not None:
+            self.fail_on_inject = None
+            raise exc
         if self._callback is not None:
             self._callback(frame)
 
@@ -434,6 +479,7 @@ class FakeTxStream:
         self.started_count = 0
         self.stopped_count = 0
         self.written_frames: list[bytes] = []
+        self.fail_on_write: Exception | None = None
 
     @property
     def running(self) -> bool:
@@ -452,6 +498,10 @@ class FakeTxStream:
     async def write(self, frame: bytes) -> None:
         if not self._running:
             raise RuntimeError("FakeTxStream is not running.")
+        exc = self.fail_on_write
+        if exc is not None:
+            self.fail_on_write = None
+            raise exc
         self.written_frames.append(frame)
 
 
@@ -461,13 +511,35 @@ class FakeAudioBackend:
     def __init__(
         self,
         devices: list[AudioDeviceInfo] | None = None,
+        *,
+        supported_sample_rates: set[int] | None = None,
     ) -> None:
         self._devices: list[AudioDeviceInfo] = devices or []
+        self._supported_rates: set[int] = supported_sample_rates or {
+            8_000, 16_000, 44_100, 48_000, 96_000,
+        }
         self.rx_streams: list[FakeRxStream] = []
         self.tx_streams: list[FakeTxStream] = []
 
     def list_devices(self) -> list[AudioDeviceInfo]:
         return list(self._devices)
+
+    def check_sample_rate(
+        self,
+        device: AudioDeviceId,
+        sample_rate: int,
+        *,
+        direction: str = "rx",
+    ) -> bool:
+        return sample_rate in self._supported_rates
+
+    def add_device(self, device: AudioDeviceInfo) -> None:
+        """Add a device (test helper — simulates hotplug)."""
+        self._devices.append(device)
+
+    def remove_devices(self) -> None:
+        """Remove all devices (test helper — simulates device loss)."""
+        self._devices.clear()
 
     def open_rx(
         self,

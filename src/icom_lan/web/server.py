@@ -934,6 +934,8 @@ class WebServer:
         tx_device_name: str | None = None,
         tx_enabled: bool = True,
         label: str | None = None,
+        max_retries: int = 5,
+        retry_base_delay: float = 1.0,
     ) -> None:
         """Start the audio bridge to a virtual audio device.
 
@@ -964,6 +966,8 @@ class WebServer:
             tx_device_name=tx_device_name,
             tx_enabled=tx_enabled,
             label=label,
+            max_retries=max_retries,
+            retry_base_delay=retry_base_delay,
         )
         await self._audio_bridge.start()
         self.broadcast_notification("success", "Audio bridge started", "bridge")

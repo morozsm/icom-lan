@@ -152,6 +152,7 @@ class _IcomSerialRadioBase(CoreRadio):
             sample_rate=audio_sample_rate,
             channels=self._serial_audio_channels_for_codec(),
             frame_ms=20,
+            backend=None,  # default PortAudioBackend
         )
         self._serial_audio_seq = 0
 

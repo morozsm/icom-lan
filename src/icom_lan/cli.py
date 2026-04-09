@@ -358,6 +358,12 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Audio device name (default: auto-detect BlackHole/Loopback)",
     )
     audio_bridge_p.add_argument(
+        "--tx-device",
+        type=str,
+        default=None,
+        help="Separate TX capture device name (default: same as --device)",
+    )
+    audio_bridge_p.add_argument(
         "--rx-only",
         action="store_true",
         help="RX only (don't bridge TX from device to radio)",
@@ -373,6 +379,20 @@ def _build_parser() -> argparse.ArgumentParser:
         default=None,
         metavar="LABEL",
         help="Descriptive label for log messages (default: auto from radio model)",
+    )
+    audio_bridge_p.add_argument(
+        "--max-retries",
+        type=int,
+        default=5,
+        metavar="N",
+        help="Max reconnect attempts on device loss (0=infinite, default: 5)",
+    )
+    audio_bridge_p.add_argument(
+        "--retry-delay",
+        type=float,
+        default=1.0,
+        metavar="SEC",
+        help="Initial reconnect backoff delay in seconds (default: 1.0)",
     )
 
     # ptt
@@ -603,6 +623,22 @@ def _build_parser() -> argparse.ArgumentParser:
         default=None,
         metavar="LABEL",
         help="Descriptive label for audio bridge log messages (default: auto from radio model)",
+    )
+    web_p.add_argument(
+        "--bridge-max-retries",
+        dest="web_bridge_max_retries",
+        type=int,
+        default=5,
+        metavar="N",
+        help="Bridge max reconnect attempts on device loss (0=infinite, default: 5)",
+    )
+    web_p.add_argument(
+        "--bridge-retry-delay",
+        dest="web_bridge_retry_delay",
+        type=float,
+        default=1.0,
+        metavar="SEC",
+        help="Bridge initial reconnect backoff delay in seconds (default: 1.0)",
     )
     web_p.add_argument(
         "--dx-cluster",
@@ -1973,8 +2009,11 @@ async def _cmd_audio_bridge(radio: Radio, args: argparse.Namespace) -> int:
         bridge = AudioBridge(
             radio,
             device_name=args.device,
+            tx_device_name=getattr(args, "tx_device", None),
             tx_enabled=not args.rx_only,
             label=bridge_label,
+            max_retries=getattr(args, "max_retries", 5),
+            retry_base_delay=getattr(args, "retry_delay", 1.0),
         )
         await bridge.start()
     except ImportError as exc:
@@ -2117,6 +2156,8 @@ async def _cmd_web(radio: Radio, args: argparse.Namespace) -> int:
                 tx_device_name=tx_device_name,
                 tx_enabled=not rx_only,
                 label=bridge_label,
+                max_retries=getattr(args, "web_bridge_max_retries", 5),
+                retry_base_delay=getattr(args, "web_bridge_retry_delay", 1.0),
             )
             direction = "RX only" if rx_only else "RX+TX"
             print(f"Audio bridge active ({direction})")

@@ -98,6 +98,7 @@ class YaesuCatRadio:
             tx_device=tx_device,
             sample_rate=audio_sample_rate,
             channels=1,
+            backend=None,  # default PortAudioBackend
         )
 
         # Build bidirectional mode code ↔ name maps.

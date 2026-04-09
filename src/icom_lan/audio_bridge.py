@@ -8,7 +8,7 @@ virtual audio device as their sound card.
 
 Architecture::
 
-    Radio ←(LAN/Opus)→ icom-lan ←(PCM)→ sounddevice ←(CoreAudio)→ BlackHole ←→ WSJT-X
+    Radio ←(LAN/Opus)→ icom-lan ←(PCM)→ AudioBackend ←(CoreAudio)→ BlackHole ←→ WSJT-X
 
 Requirements:
     - ``sounddevice`` and ``numpy`` (``pip install icom-lan[bridge]``)
@@ -28,14 +28,34 @@ import asyncio
 import logging
 import time
 from concurrent.futures import Executor
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Callable
+
+import math
+
+from ._bridge_metrics import BridgeMetrics
+from ._bridge_state import BridgeState, BridgeStateChange
+from .audio.backend import (
+    AudioBackend,
+    AudioDeviceId,
+    AudioDeviceInfo,
+    PortAudioBackend,
+    RxStream,
+    TxStream,
+)
 
 if TYPE_CHECKING:
     from .radio_protocol import AudioCapable
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["AudioBridge", "derive_bridge_label", "find_loopback_device"]
+__all__ = [
+    "AudioBridge",
+    "BridgeMetrics",
+    "BridgeState",
+    "BridgeStateChange",
+    "derive_bridge_label",
+    "find_loopback_device",
+]
 
 # Audio format constants — must match radio PCM settings
 SAMPLE_RATE = 48000
@@ -44,6 +64,31 @@ FRAME_MS = 20
 SAMPLES_PER_FRAME = SAMPLE_RATE * FRAME_MS // 1000  # 960
 BYTES_PER_SAMPLE = 2  # s16le
 FRAME_BYTES = SAMPLES_PER_FRAME * CHANNELS * BYTES_PER_SAMPLE  # 1920
+
+# Virtual loopback device name candidates for auto-detection
+_LOOPBACK_CANDIDATES = ("BlackHole", "Loopback", "VB-Audio", "Virtual")
+
+_INT16_MAX = 32767.0
+
+
+def _std_dev(values: list[float]) -> float:
+    """Compute standard deviation of a list of floats."""
+    if len(values) < 2:
+        return 0.0
+    mean = sum(values) / len(values)
+    variance = sum((v - mean) ** 2 for v in values) / (len(values) - 1)
+    return math.sqrt(variance)
+
+
+def _rms_dbfs(pcm: bytes) -> float:
+    """Compute RMS level of PCM s16le data in dBFS."""
+    import numpy as np
+
+    samples = np.frombuffer(pcm, dtype=np.int16).astype(np.float64)
+    rms = float(np.sqrt(np.mean(samples ** 2)))
+    if rms < 1.0:
+        return -96.0
+    return 20.0 * math.log10(rms / _INT16_MAX)
 
 
 def derive_bridge_label(radio: Any, explicit: str | None = None) -> str:
@@ -65,12 +110,9 @@ def derive_bridge_label(radio: Any, explicit: str | None = None) -> str:
 def find_loopback_device(name: str | None = None) -> dict[str, Any] | None:
     """Find a virtual loopback audio device by name.
 
-    Args:
-        name: Device name substring to match (e.g. "BlackHole").
-              If ``None``, searches for common virtual device names.
-
-    Returns:
-        A ``sounddevice`` device info dict, or ``None`` if not found.
+    .. deprecated::
+        Use :class:`AudioBridge` with an :class:`AudioBackend` instead.
+        This function is kept for backward compatibility.
     """
     try:
         import sounddevice as sd  # type: ignore[import-untyped]  # noqa: F401
@@ -81,8 +123,7 @@ def find_loopback_device(name: str | None = None) -> dict[str, Any] | None:
         ) from None
 
     devices = sd.query_devices()
-    candidates = ["BlackHole", "Loopback", "VB-Audio", "Virtual"]
-    search_names = [name] if name else candidates
+    search_names = [name] if name else list(_LOOPBACK_CANDIDATES)
 
     for dev in devices:
         dev_name = dev.get("name", "")
@@ -93,11 +134,7 @@ def find_loopback_device(name: str | None = None) -> dict[str, Any] | None:
 
 
 def list_audio_devices() -> list[dict[str, Any]]:
-    """List all available audio devices.
-
-    Returns:
-        List of device info dicts from sounddevice.
-    """
+    """List all available audio devices."""
     try:
         import sounddevice as sd  # noqa: F401
     except ImportError:
@@ -108,27 +145,38 @@ def list_audio_devices() -> list[dict[str, Any]]:
     return list(sd.query_devices())
 
 
+def _find_device_in_backend(
+    backend: AudioBackend,
+    name: str | None,
+) -> AudioDeviceInfo | None:
+    """Find a virtual loopback device using the backend's device list."""
+    devices = backend.list_devices()
+    search_names = [name] if name else list(_LOOPBACK_CANDIDATES)
+
+    for dev in devices:
+        for search in search_names:
+            if search.lower() in dev.name.lower():
+                return dev
+    return None
+
+
 class AudioBridge:
     """Bidirectional PCM audio bridge between radio and a system audio device.
 
     Args:
-        radio: A connected radio instance implementing :class:`Radio` +
-               :class:`AudioCapable` protocols.
+        radio: A connected radio instance implementing :class:`AudioCapable`.
         device_name: Name (or substring) of the audio device to use.
-                     Defaults to auto-detection of common virtual devices.
         sample_rate: PCM sample rate (default 48000).
         channels: Number of audio channels (default 1, mono).
         frame_ms: PCM frame duration in milliseconds (default 20).
         tx_enabled: Whether to bridge TX audio (device → radio). Default True.
-        tx_executor: Optional executor for blocking TX reads (device → radio).
-            The TX path runs ``sounddevice.InputStream.read()`` in a thread to avoid
-            blocking the event loop. If ``None`` (default), the loop's default
-            thread pool is used. For heavy usage or multiple bridge instances,
-            pass a dedicated :class:`concurrent.futures.ThreadPoolExecutor` (e.g.
-            ``max_workers=1`` or ``2``) to isolate TX I/O and avoid contention.
+        tx_executor: Deprecated — backend now owns threading.
         label: Descriptive label used in log messages (default ``"icom-lan"``).
-            When the radio model is known, callers typically pass
-            ``"icom-lan (IC-7610)"`` so logs clearly identify the radio.
+        backend: Audio backend for device discovery and stream I/O.
+        max_retries: Maximum reconnect attempts (0 = infinite).
+        retry_base_delay: Initial backoff delay in seconds.
+        retry_max_delay: Maximum backoff delay in seconds.
+        on_state_changed: Callback fired on every state transition.
     """
 
     def __init__(
@@ -143,53 +191,82 @@ class AudioBridge:
         tx_enabled: bool = True,
         tx_executor: Executor | None = None,
         label: str = "icom-lan",
+        backend: AudioBackend | None = None,
+        max_retries: int = 5,
+        retry_base_delay: float = 1.0,
+        retry_max_delay: float = 30.0,
+        on_state_changed: Callable[[BridgeStateChange], None] | None = None,
+        on_metrics: Callable[[BridgeMetrics], None] | None = None,
     ) -> None:
         self._radio = radio
         self._label = label
         self._device_name = device_name
-        self._tx_device_name = (
-            tx_device_name  # separate TX device (if None, same as RX)
-        )
+        self._tx_device_name = tx_device_name
         self._sample_rate = sample_rate
         self._channels = channels
         self._frame_ms = frame_ms
         self._tx_enabled = tx_enabled
         self._tx_executor = tx_executor
+        self._backend: AudioBackend = backend or PortAudioBackend()
+
+        # State machine
+        self._bridge_state: BridgeState = BridgeState.IDLE
+        self._max_retries = max_retries
+        self._retry_base_delay = retry_base_delay
+        self._retry_max_delay = retry_max_delay
+        self._on_state_changed = on_state_changed
+        self._reconnect_task: asyncio.Task[None] | None = None
+        self._reconnect_attempt: int = 0
 
         self._running = False
-        self._rx_stream: Any = None  # sounddevice OutputStream (radio → device)
-        self._tx_stream: Any = None  # sounddevice InputStream (device → radio)
+        self._rx_stream: TxStream | None = None  # radio → device (playback)
+        self._tx_stream: RxStream | None = None  # device → radio (capture)
         self._rx_task: asyncio.Task[None] | None = None
         self._tx_task: asyncio.Task[None] | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
         self._decoder: Any = None
         self._subscription: Any = None
         self._samples_per_frame = sample_rate * frame_ms // 1000
+        self._tx_queue: asyncio.Queue[bytes] = asyncio.Queue(maxsize=64)
 
-        # Stats
+        # Metrics
         self._rx_frames = 0
         self._tx_frames = 0
         self._rx_drops = 0
-        # Timing
+        self._rx_underruns = 0
+        self._tx_overruns = 0
         self._rx_latency_samples: list[float] = []
         self._tx_latency_samples: list[float] = []
         self._last_rx_time: float = 0.0
         self._last_tx_time: float = 0.0
         self._start_time: float = 0.0
+        self._last_rx_level_dbfs: float = -96.0
+        self._last_tx_level_dbfs: float = -96.0
+        self._on_metrics = on_metrics
+
+        # Silence frame (raw PCM bytes)
+        frame_bytes = self._samples_per_frame * channels * BYTES_PER_SAMPLE
+        self._silence_bytes: bytes = b"\x00" * frame_bytes
+
+    # ------------------------------------------------------------------
+    # Properties
+    # ------------------------------------------------------------------
 
     @property
     def label(self) -> str:
-        """Descriptive label used in log messages."""
         return self._label
 
     @property
     def running(self) -> bool:
-        """Whether the bridge is currently active."""
         return self._running
 
     @property
-    def stats(self) -> dict[str, Any]:
-        """Bridge statistics."""
+    def bridge_state(self) -> BridgeState:
+        return self._bridge_state
+
+    @property
+    def metrics(self) -> BridgeMetrics:
+        """Structured bridge telemetry snapshot."""
         uptime = time.monotonic() - self._start_time if self._running else 0.0
         rx_avg = (
             sum(self._rx_latency_samples) / len(self._rx_latency_samples)
@@ -201,38 +278,76 @@ class AudioBridge:
             if self._tx_latency_samples
             else 0.0
         )
-        return {
-            "running": self._running,
-            "label": self._label,
-            "rx_frames": self._rx_frames,
-            "tx_frames": self._tx_frames,
-            "rx_drops": self._rx_drops,
-            "uptime_seconds": round(uptime, 1),
-            "rx_interval_ms": round(rx_avg * 1000, 1),
-            "tx_interval_ms": round(tx_avg * 1000, 1),
-            "buffer_size": len(self._rx_latency_samples),
-        }
+        rx_jitter = _std_dev(self._rx_latency_samples) * 1000 if self._rx_latency_samples else 0.0
+        tx_jitter = _std_dev(self._tx_latency_samples) * 1000 if self._tx_latency_samples else 0.0
+        return BridgeMetrics(
+            running=self._running,
+            label=self._label,
+            bridge_state=self._bridge_state.value,
+            reconnect_attempt=self._reconnect_attempt,
+            rx_frames=self._rx_frames,
+            tx_frames=self._tx_frames,
+            rx_drops=self._rx_drops,
+            rx_underruns=self._rx_underruns,
+            tx_overruns=self._tx_overruns,
+            uptime_seconds=round(uptime, 1),
+            rx_interval_ms=round(rx_avg * 1000, 1),
+            tx_interval_ms=round(tx_avg * 1000, 1),
+            rx_jitter_ms=round(rx_jitter, 2),
+            tx_jitter_ms=round(tx_jitter, 2),
+            rx_level_dbfs=round(self._last_rx_level_dbfs, 1),
+            tx_level_dbfs=round(self._last_tx_level_dbfs, 1),
+            buffer_size=len(self._rx_latency_samples),
+        )
 
-    async def start(self) -> None:
-        """Start the audio bridge.
+    @property
+    def stats(self) -> dict[str, Any]:
+        """Bridge statistics as a dict (backward-compatible)."""
+        return self.metrics.to_dict()
 
-        Raises:
-            ImportError: If sounddevice/numpy not installed.
-            RuntimeError: If virtual audio device not found.
-            ConnectionError: If radio is not connected.
-        """
-        if self._running:
-            logger.warning("%s: already running", self._label)
+    # ------------------------------------------------------------------
+    # State machine
+    # ------------------------------------------------------------------
+
+    def _set_state(
+        self, new: BridgeState, reason: str, attempt: int = 0
+    ) -> None:
+        prev = self._bridge_state
+        if prev == new:
             return
+        self._bridge_state = new
+        logger.info(
+            "%s: state %s → %s (reason=%s, attempt=%d)",
+            self._label,
+            prev.value,
+            new.value,
+            reason,
+            attempt,
+        )
+        if self._on_state_changed is not None:
+            try:
+                self._on_state_changed(
+                    BridgeStateChange(
+                        previous=prev, current=new, reason=reason, attempt=attempt
+                    )
+                )
+            except Exception:
+                logger.debug(
+                    "%s: on_state_changed callback error",
+                    self._label,
+                    exc_info=True,
+                )
 
-        import numpy as np
-        import sounddevice as sd  # noqa: F401
+    # ------------------------------------------------------------------
+    # Stream setup / teardown (extracted for reconnect reuse)
+    # ------------------------------------------------------------------
 
-        self._start_time = time.monotonic()
-        self._loop = asyncio.get_running_loop()
+    async def _setup_streams(self) -> None:
+        """Find device, open streams, subscribe to bus, create tasks.
 
-        # Find the device
-        dev = find_loopback_device(self._device_name)
+        Raises on failure (RuntimeError, ValueError, OSError, etc.).
+        """
+        dev = _find_device_in_backend(self._backend, self._device_name)
         if dev is None:
             searched = self._device_name or "BlackHole/Loopback/VB-Audio"
             raise RuntimeError(
@@ -240,29 +355,21 @@ class AudioBridge:
                 f"Install one, e.g.: brew install blackhole-2ch"
             )
 
-        dev_index = dev["index"]
-        dev_name = dev["name"]
-        logger.info("%s: using device %r (index %d)", self._label, dev_name, dev_index)
-
-        samples_per_frame = self._sample_rate * self._frame_ms // 1000
+        dev_id = dev.id
+        logger.info(
+            "%s: using device %r (id %d)", self._label, dev.name, int(dev_id)
+        )
 
         # --- RX path: radio → virtual device output ---
-        # We open an OutputStream and write decoded PCM into it.
-        self._rx_stream = sd.OutputStream(
-            samplerate=self._sample_rate,
+        self._rx_stream = self._backend.open_tx(
+            dev_id,
+            sample_rate=self._sample_rate,
             channels=self._channels,
-            dtype="int16",
-            device=dev_index,
-            blocksize=samples_per_frame,
-            latency="low",
+            frame_ms=self._frame_ms,
         )
-        self._rx_stream.start()
+        await self._rx_stream.start()
 
-        # Silence frame for gap filling
-        self._silence: Any = np.zeros((samples_per_frame, self._channels), dtype=np.int16)
-
-        # --- RX: subscribe to AudioBus for audio packets ---
-        # Detect codec to decide if we need opus decoding
+        # Codec detection
         from .types import AudioCodec
 
         _codec = getattr(self._radio, "audio_codec", None)
@@ -280,15 +387,14 @@ class AudioBridge:
                     "Install with: pip install icom-lan[bridge]"
                 ) from None
             self._decoder = opuslib.Decoder(self._sample_rate, self._channels)
-            logger.info("%s: using Opus decoder", self._label)
         else:
             self._decoder = None
-            logger.info("%s: PCM mode (no decode needed)", self._label)
 
+        # Subscribe to AudioBus
         bus = self._radio.audio_bus
         self._subscription = bus.subscribe(name="audio-bridge")
         await self._subscription.start()
-        self._rx_task = asyncio.create_task(self._rx_loop(np))
+        self._rx_task = asyncio.create_task(self._rx_loop())
 
         # --- TX path: virtual device input → radio ---
         if self._tx_enabled:
@@ -298,10 +404,11 @@ class AudioBridge:
                 frame_ms=self._frame_ms,
             )
 
-            # Use separate TX device if specified, otherwise same as RX
-            tx_dev_index = dev_index
+            tx_dev_id = dev_id
             if self._tx_device_name:
-                tx_dev = find_loopback_device(self._tx_device_name)
+                tx_dev = _find_device_in_backend(
+                    self._backend, self._tx_device_name
+                )
                 if tx_dev is None:
                     logger.warning(
                         "%s: TX device %r not found, using RX device",
@@ -309,181 +416,24 @@ class AudioBridge:
                         self._tx_device_name,
                     )
                 else:
-                    tx_dev_index = tx_dev["index"]
-                    logger.info(
-                        "%s: TX device %r (index %d)",
-                        self._label,
-                        tx_dev["name"],
-                        tx_dev_index,
-                    )
+                    tx_dev_id = tx_dev.id
 
-            # TX uses a blocking InputStream read in a thread
-            self._tx_stream = sd.InputStream(
-                samplerate=self._sample_rate,
+            self._tx_queue = asyncio.Queue(maxsize=64)
+            self._tx_stream = self._backend.open_rx(
+                tx_dev_id,
+                sample_rate=self._sample_rate,
                 channels=self._channels,
-                dtype="int16",
-                device=tx_dev_index,
-                blocksize=samples_per_frame,
-                latency="low",
+                frame_ms=self._frame_ms,
             )
-            self._tx_stream.start()
-
+            await self._tx_stream.start(self._on_tx_capture)
             self._tx_task = asyncio.create_task(self._tx_loop())
 
-        self._running = True
-        direction = "RX+TX" if self._tx_enabled else "RX only"
-        logger.info(
-            "%s: started (%s, %dHz, %dch, %dms frames)",
-            self._label,
-            direction,
-            self._sample_rate,
-            self._channels,
-            self._frame_ms,
-        )
+    async def _teardown_streams(self) -> None:
+        """Cancel tasks and stop streams.
 
-    async def _rx_loop(self, np: Any) -> None:
-        """Read opus packets from AudioBus subscription, decode, write to device."""
-        try:
-            async for packet in self._subscription:
-                if not self._running:
-                    break
-                if packet is None:
-                    self._rx_drops += 1
-                    if self._rx_drops <= 3:
-                        logger.debug(
-                            "%s: None packet (gap) #%d", self._label, self._rx_drops
-                        )
-                    if self._rx_stream and self._rx_stream.active:
-                        self._rx_stream.write(self._silence)
-                    continue
-
-                opus_data = getattr(packet, "data", None)
-                if opus_data is None:
-                    continue
-
-                try:
-                    if self._is_opus:
-                        pcm_data = self._decoder.decode(
-                            opus_data, self._samples_per_frame
-                        )
-                    else:
-                        # PCM — data is already raw PCM bytes
-                        pcm_data = opus_data
-                    now = time.monotonic()
-                    if self._last_rx_time > 0:
-                        delta = now - self._last_rx_time
-                        self._rx_latency_samples.append(delta)
-                        if len(self._rx_latency_samples) > 100:
-                            self._rx_latency_samples.pop(0)
-                    self._last_rx_time = now
-                    self._rx_frames += 1
-                    if self._rx_stream and self._rx_stream.active:
-                        frame = np.frombuffer(pcm_data, dtype=np.int16).reshape(
-                            -1, self._channels
-                        )
-                        self._rx_stream.write(frame)
-                except Exception as exc:
-                    self._rx_drops += 1
-                    if self._rx_drops <= 5 or self._rx_drops % 1000 == 0:
-                        logger.warning(
-                            "%s: decode error #%d: %s (data=%d bytes)",
-                            self._label,
-                            self._rx_drops,
-                            exc,
-                            len(opus_data),
-                        )
-        except asyncio.CancelledError:
-            pass
-        except Exception:
-            logger.error("%s: RX loop error", self._label, exc_info=True)
-            # Try to restart after a brief pause, but cap restarts to avoid infinite loops
-            self._rx_restart_count = getattr(self, "_rx_restart_count", 0) + 1
-            if self._running and self._subscription and self._rx_restart_count <= 5:
-                logger.info(
-                    "%s: restarting RX loop (attempt %d/5)",
-                    self._label,
-                    self._rx_restart_count,
-                )
-                await asyncio.sleep(1.0)
-                self._rx_task = asyncio.create_task(self._rx_loop(np))
-            else:
-                logger.error(
-                    "%s: RX loop gave up after %d restarts — stopping bridge",
-                    self._label,
-                    self._rx_restart_count,
-                )
-                self._running = False
-
-    async def _tx_loop(self) -> None:
-        """Read audio from the virtual device and push to the radio."""
-        import numpy as np
-
-        loop = asyncio.get_running_loop()
-        samples_per_frame = self._sample_rate * self._frame_ms // 1000
-
-        # Threshold: skip silent frames (noise gate)
-        silence_threshold = 10  # ~-70dB for int16
-
-        try:
-            while self._running and self._tx_stream and self._tx_stream.active:
-                # Read from sounddevice in a thread to avoid blocking the loop
-                data, overflowed = await loop.run_in_executor(
-                    self._tx_executor,
-                    lambda: self._tx_stream.read(samples_per_frame),
-                )
-                if overflowed:
-                    logger.debug("%s: TX input overflow", self._label)
-
-                # Simple noise gate — don't TX silence
-                if np.max(np.abs(data)) < silence_threshold:
-                    continue
-
-                pcm_bytes = data.astype(np.int16).tobytes()
-                now = time.monotonic()
-                if self._last_tx_time > 0:
-                    delta = now - self._last_tx_time
-                    self._tx_latency_samples.append(delta)
-                    if len(self._tx_latency_samples) > 100:
-                        self._tx_latency_samples.pop(0)
-                self._last_tx_time = now
-                self._tx_frames += 1
-
-                if self._tx_frames <= 3 or self._tx_frames % 1000 == 0:
-                    peak = int(np.max(np.abs(data)))
-                    logger.info(
-                        "%s: TX frame #%d, %d bytes, peak=%d",
-                        self._label,
-                        self._tx_frames,
-                        len(pcm_bytes),
-                        peak,
-                    )
-
-                try:
-                    if self._is_opus:
-                        # PCM → Opus transcode, then send
-                        await self._radio.push_audio_tx_pcm(pcm_bytes)
-                    else:
-                        # PCM codec — send raw PCM directly (no transcode)
-                        await self._radio.push_audio_tx_opus(pcm_bytes)
-                except Exception:
-                    if self._tx_frames <= 5:
-                        logger.warning("%s: TX push error", self._label, exc_info=True)
-                    else:
-                        logger.debug("%s: TX push error", self._label, exc_info=True)
-
-        except asyncio.CancelledError:
-            pass
-        except Exception:
-            logger.error("%s: TX loop error", self._label, exc_info=True)
-
-    async def stop(self) -> None:
-        """Stop the audio bridge and release resources."""
-        if not self._running:
-            return
-
-        self._running = False
-
-        # Stop RX subscription
+        Does NOT call ``radio.stop_audio_tx_pcm()`` — that belongs in
+        :meth:`stop` only.
+        """
         if self._rx_task and not self._rx_task.done():
             self._rx_task.cancel()
             try:
@@ -496,7 +446,6 @@ class AudioBridge:
             self._subscription.stop()
             self._subscription = None
 
-        # Stop TX
         if self._tx_task and not self._tx_task.done():
             self._tx_task.cancel()
             try:
@@ -505,25 +454,162 @@ class AudioBridge:
                 pass
         self._tx_task = None
 
-        if self._tx_stream:
-            self._tx_stream.stop()
-            self._tx_stream.close()
+        if self._tx_stream is not None:
+            try:
+                await self._tx_stream.stop()
+            except Exception:
+                logger.debug(
+                    "%s: TX stream stop error", self._label, exc_info=True
+                )
             self._tx_stream = None
 
-        # Stop RX
-        if self._rx_stream:
-            self._rx_stream.stop()
-            self._rx_stream.close()
+        if self._rx_stream is not None:
+            try:
+                await self._rx_stream.stop()
+            except Exception:
+                logger.debug(
+                    "%s: RX stream stop error", self._label, exc_info=True
+                )
             self._rx_stream = None
 
-        # No need to stop radio RX — AudioBus handles that automatically
-        # when last subscriber disconnects
+    # ------------------------------------------------------------------
+    # Reconnect
+    # ------------------------------------------------------------------
+
+    def _on_stream_error(self, exc: Exception) -> None:
+        """Called from _rx_loop/_tx_loop on stream failure.
+
+        Idempotent — only the first call triggers reconnect.
+        """
+        if self._bridge_state != BridgeState.RUNNING:
+            return
+        logger.warning(
+            "%s: stream error, will reconnect: %s", self._label, exc
+        )
+        self._running = False
+        self._set_state(BridgeState.RECONNECTING, "device_lost")
+        if self._reconnect_task is None or self._reconnect_task.done():
+            self._reconnect_task = asyncio.create_task(
+                self._reconnect_loop(), name="bridge-reconnect"
+            )
+
+    async def _reconnect_loop(self) -> None:
+        self._reconnect_attempt = 0
+        while self._max_retries == 0 or self._reconnect_attempt < self._max_retries:
+            delay = min(
+                self._retry_base_delay * (2 ** self._reconnect_attempt),
+                self._retry_max_delay,
+            )
+            self._reconnect_attempt += 1
+            logger.info(
+                "%s: reconnect attempt %d (delay=%.1fs)",
+                self._label,
+                self._reconnect_attempt,
+                delay,
+            )
+            await asyncio.sleep(delay)
+
+            # If stop() was called while we were sleeping, bail out
+            if self._bridge_state not in (
+                BridgeState.RECONNECTING,
+                BridgeState.CONNECTING,
+            ):
+                return
+
+            try:
+                await self._teardown_streams()
+                self._set_state(
+                    BridgeState.CONNECTING, "retry", self._reconnect_attempt
+                )
+                await self._setup_streams()
+                self._running = True
+                self._set_state(
+                    BridgeState.RUNNING, "reconnected", self._reconnect_attempt
+                )
+                self._reconnect_attempt = 0
+                return
+            except Exception as exc:
+                logger.warning(
+                    "%s: reconnect attempt %d failed: %s",
+                    self._label,
+                    self._reconnect_attempt,
+                    exc,
+                )
+                self._set_state(
+                    BridgeState.RECONNECTING, "retry_failed", self._reconnect_attempt
+                )
+
+        # Exhausted retries
+        logger.error(
+            "%s: max_retries=%d exhausted, giving up",
+            self._label,
+            self._max_retries,
+        )
+        self._set_state(BridgeState.FAILED, "max_retries", self._reconnect_attempt)
+
+    # ------------------------------------------------------------------
+    # Public start / stop
+    # ------------------------------------------------------------------
+
+    async def start(self) -> None:
+        """Start the audio bridge.
+
+        Raises:
+            ImportError: If sounddevice/numpy not installed.
+            RuntimeError: If virtual audio device not found.
+        """
+        if self._running:
+            logger.warning("%s: already running", self._label)
+            return
+
+        self._start_time = time.monotonic()
+        self._loop = asyncio.get_running_loop()
+
+        self._set_state(BridgeState.CONNECTING, "start")
+        try:
+            await self._setup_streams()
+        except Exception:
+            self._set_state(BridgeState.IDLE, "start_failed")
+            raise
+
+        self._running = True
+        self._set_state(BridgeState.RUNNING, "started")
+
+        direction = "RX+TX" if self._tx_enabled else "RX only"
+        logger.info(
+            "%s: started (%s, %dHz, %dch, %dms frames)",
+            self._label,
+            direction,
+            self._sample_rate,
+            self._channels,
+            self._frame_ms,
+        )
+
+    async def stop(self) -> None:
+        """Stop the audio bridge and release resources."""
+        if self._bridge_state == BridgeState.IDLE:
+            return
+
+        self._running = False
+
+        # Cancel reconnect if in progress
+        if self._reconnect_task and not self._reconnect_task.done():
+            self._reconnect_task.cancel()
+            try:
+                await self._reconnect_task
+            except asyncio.CancelledError:
+                pass
+        self._reconnect_task = None
+
+        await self._teardown_streams()
 
         if self._tx_enabled:
             try:
                 await self._radio.stop_audio_tx_pcm()
             except Exception:
                 logger.debug("%s: stop TX error", self._label, exc_info=True)
+
+        self._set_state(BridgeState.IDLE, "stopped")
 
         logger.info(
             "%s: stopped (rx=%d frames, tx=%d frames, drops=%d)",
@@ -532,3 +618,133 @@ class AudioBridge:
             self._tx_frames,
             self._rx_drops,
         )
+
+    # ------------------------------------------------------------------
+    # Audio loops
+    # ------------------------------------------------------------------
+
+    def _emit_metrics(self) -> None:
+        """Fire on_metrics callback with current telemetry."""
+        if self._on_metrics is not None:
+            try:
+                self._on_metrics(self.metrics)
+            except Exception:
+                logger.debug(
+                    "%s: on_metrics callback error", self._label, exc_info=True
+                )
+
+    def _on_tx_capture(self, frame: bytes) -> None:
+        """Callback from RxStream — enqueue captured audio for TX processing."""
+        try:
+            self._tx_queue.put_nowait(frame)
+        except asyncio.QueueFull:
+            self._tx_overruns += 1
+
+    async def _rx_loop(self) -> None:
+        """Read packets from AudioBus subscription, decode, write to device."""
+        try:
+            async for packet in self._subscription:
+                if not self._running:
+                    break
+                if packet is None:
+                    self._rx_drops += 1
+                    if self._rx_drops <= 3:
+                        logger.debug(
+                            "%s: None packet (gap) #%d", self._label, self._rx_drops
+                        )
+                    if self._rx_stream and self._rx_stream.running:
+                        await self._rx_stream.write(self._silence_bytes)
+                    continue
+
+                opus_data = getattr(packet, "data", None)
+                if opus_data is None:
+                    continue
+
+                try:
+                    if self._is_opus:
+                        pcm_data = self._decoder.decode(
+                            opus_data, self._samples_per_frame
+                        )
+                    else:
+                        pcm_data = opus_data
+                    now = time.monotonic()
+                    if self._last_rx_time > 0:
+                        delta = now - self._last_rx_time
+                        self._rx_latency_samples.append(delta)
+                        if len(self._rx_latency_samples) > 100:
+                            self._rx_latency_samples.pop(0)
+                    self._last_rx_time = now
+                    self._rx_frames += 1
+                    self._last_rx_level_dbfs = _rms_dbfs(pcm_data)
+                    if self._rx_frames % 50 == 0:
+                        self._emit_metrics()
+                    if self._rx_stream and self._rx_stream.running:
+                        await self._rx_stream.write(pcm_data)
+                except OSError:
+                    raise  # device-level error → outer handler → reconnect
+                except Exception as exc:
+                    self._rx_drops += 1
+                    if self._rx_drops <= 5 or self._rx_drops % 1000 == 0:
+                        logger.warning(
+                            "%s: decode error #%d: %s (data=%d bytes)",
+                            self._label,
+                            self._rx_drops,
+                            exc,
+                            len(opus_data),
+                        )
+        except asyncio.CancelledError:
+            pass
+        except Exception as exc:
+            logger.error("%s: RX loop error", self._label, exc_info=True)
+            self._on_stream_error(exc)
+
+    async def _tx_loop(self) -> None:
+        """Read captured audio from TX queue and push to the radio."""
+        import numpy as np
+
+        silence_threshold = 10  # ~-70dB for int16
+
+        try:
+            while self._running:
+                pcm_bytes = await self._tx_queue.get()
+
+                frame_array = np.frombuffer(pcm_bytes, dtype=np.int16)
+                if np.max(np.abs(frame_array)) < silence_threshold:
+                    continue
+
+                now = time.monotonic()
+                if self._last_tx_time > 0:
+                    delta = now - self._last_tx_time
+                    self._tx_latency_samples.append(delta)
+                    if len(self._tx_latency_samples) > 100:
+                        self._tx_latency_samples.pop(0)
+                self._last_tx_time = now
+                self._tx_frames += 1
+                self._last_tx_level_dbfs = _rms_dbfs(pcm_bytes)
+
+                if self._tx_frames <= 3 or self._tx_frames % 1000 == 0:
+                    peak = int(np.max(np.abs(frame_array)))
+                    logger.info(
+                        "%s: TX frame #%d, %d bytes, peak=%d",
+                        self._label,
+                        self._tx_frames,
+                        len(pcm_bytes),
+                        peak,
+                    )
+
+                try:
+                    if self._is_opus:
+                        await self._radio.push_audio_tx_pcm(pcm_bytes)
+                    else:
+                        await self._radio.push_audio_tx_opus(pcm_bytes)
+                except Exception:
+                    if self._tx_frames <= 5:
+                        logger.warning("%s: TX push error", self._label, exc_info=True)
+                    else:
+                        logger.debug("%s: TX push error", self._label, exc_info=True)
+
+        except asyncio.CancelledError:
+            pass
+        except Exception as exc:
+            logger.error("%s: TX loop error", self._label, exc_info=True)
+            self._on_stream_error(exc)

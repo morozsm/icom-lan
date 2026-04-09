@@ -33,6 +33,29 @@ from .backend import (  # noqa: F401
     TxStream,
 )
 
+# Configuration
+from .config import (  # noqa: F401
+    AudioConfig,
+    load_audio_config,
+    save_audio_config,
+)
+
+# DSP pipeline
+from .dsp import (  # noqa: F401
+    DspPipeline,
+    DspStage,
+    Limiter,
+    NoiseGate,
+    RmsNormalizer,
+)
+
+# Resampling
+from .resample import (  # noqa: F401
+    PcmResampler,
+    SampleRateNegotiation,
+    negotiate_sample_rate,
+)
+
 # USB audio driver (moved from icom7610/drivers/)
 from .usb_driver import (  # noqa: F401
     AudioDeviceSelectionError,
@@ -66,6 +89,16 @@ __all__ = [
     "build_audio_packet",
     "parse_audio_packet",
     "TX_IDENT",
+    # DSP
+    "DspPipeline",
+    "DspStage",
+    "Limiter",
+    "NoiseGate",
+    "RmsNormalizer",
+    # Resampling
+    "PcmResampler",
+    "SampleRateNegotiation",
+    "negotiate_sample_rate",
     # USB audio
     "AudioDeviceSelectionError",
     "AudioDriverLifecycleError",

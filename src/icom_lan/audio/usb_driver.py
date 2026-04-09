@@ -17,6 +17,15 @@ import sys
 from dataclasses import dataclass
 from typing import Any, Callable
 
+from .backend import (
+    AudioBackend,
+    AudioDeviceId,
+    AudioDeviceInfo,
+    PortAudioBackend,
+    RxStream,
+    TxStream,
+)
+
 logger = logging.getLogger(__name__)
 
 _DEPENDENCY_HINT = (
@@ -202,8 +211,36 @@ def _get_uid_map() -> dict[str, str]:
         return {}
 
 
+def _device_info_to_usb(
+    info: AudioDeviceInfo,
+    uid_map: dict[str, str],
+) -> UsbAudioDevice:
+    """Convert an :class:`AudioDeviceInfo` to a :class:`UsbAudioDevice`."""
+    return UsbAudioDevice(
+        index=int(info.id),
+        name=info.name,
+        input_channels=info.input_channels,
+        output_channels=info.output_channels,
+        default_samplerate=info.default_samplerate,
+        is_default_input=info.is_default_input,
+        is_default_output=info.is_default_output,
+        platform_uid=uid_map.get(info.name, ""),
+    )
+
+
+def _devices_from_backend(backend: AudioBackend) -> list[UsbAudioDevice]:
+    """List devices from a backend, enriching with platform UIDs."""
+    uid_map = _get_uid_map()
+    return [_device_info_to_usb(info, uid_map) for info in backend.list_devices()]
+
+
 def list_usb_audio_devices(sounddevice_module: Any) -> list[UsbAudioDevice]:
-    """Return normalized system audio devices."""
+    """Return normalized system audio devices.
+
+    .. deprecated::
+        Prefer :func:`_devices_from_backend` with an :class:`AudioBackend`.
+        This function is kept for backward compatibility with CLI code.
+    """
     raw_devices = list(sounddevice_module.query_devices())
     default_input_idx: int | None = None
     default_output_idx: int | None = None
@@ -239,8 +276,23 @@ def list_usb_audio_devices(sounddevice_module: Any) -> list[UsbAudioDevice]:
     return normalized
 
 
+def _extract_sounddevice_module(backend: AudioBackend) -> Any | None:
+    """Extract the underlying sounddevice module from a PortAudioBackend."""
+    if isinstance(backend, PortAudioBackend):
+        try:
+            sd, _ = backend._ensure_deps()
+            return sd
+        except ImportError:
+            return None
+    return None
+
+
 class UsbAudioDriver:
-    """Stateful USB audio driver with deterministic device selection."""
+    """Stateful USB audio driver with deterministic device selection.
+
+    Delegates stream I/O to an :class:`AudioBackend` while retaining
+    the USB-specific device selection heuristics and topology resolution.
+    """
 
     _BYTES_PER_SAMPLE = 2  # s16le
 
@@ -253,7 +305,7 @@ class UsbAudioDriver:
         sample_rate: int = 48_000,
         channels: int = 1,
         frame_ms: int = 20,
-        dependency_loader: Callable[[], tuple[Any, Any]] | None = None,
+        backend: AudioBackend | None = None,
     ) -> None:
         self._rx_device_override = rx_device
         self._tx_device_override = tx_device
@@ -261,30 +313,24 @@ class UsbAudioDriver:
         self._sample_rate = sample_rate
         self._channels = channels
         self._frame_ms = frame_ms
-        self._dependency_loader = dependency_loader
+        self._backend: AudioBackend = backend or PortAudioBackend()
 
-        self._sd: Any = None
-        self._np: Any = None
         self._selected_rx: UsbAudioDevice | None = None
         self._selected_tx: UsbAudioDevice | None = None
 
-        self._rx_stream: Any = None
-        self._tx_stream: Any = None
-        self._rx_callback: Callable[[bytes], None] | None = None
-        self._rx_task: asyncio.Task[None] | None = None
-        self._tx_task: asyncio.Task[None] | None = None
-        self._tx_queue: asyncio.Queue[bytes] = asyncio.Queue(maxsize=64)
+        self._rx_stream: RxStream | None = None
+        self._tx_stream: TxStream | None = None
 
         self._rx_lock = asyncio.Lock()
         self._tx_lock = asyncio.Lock()
 
     @property
     def rx_running(self) -> bool:
-        return self._rx_task is not None and not self._rx_task.done()
+        return self._rx_stream is not None and self._rx_stream.running
 
     @property
     def tx_running(self) -> bool:
-        return self._tx_task is not None and not self._tx_task.done()
+        return self._tx_stream is not None and self._tx_stream.running
 
     @property
     def selected_rx_device(self) -> UsbAudioDevice | None:
@@ -294,47 +340,8 @@ class UsbAudioDriver:
     def selected_tx_device(self) -> UsbAudioDevice | None:
         return self._selected_tx
 
-    @staticmethod
-    def _stop_and_close_stream(stream: Any, *, direction: str) -> None:
-        if stream is None:
-            return
-        try:
-            stream.stop()
-        except Exception:
-            logger.debug("usb-audio: %s stream stop failed", direction, exc_info=True)
-        try:
-            stream.close()
-        except Exception:
-            logger.debug("usb-audio: %s stream close failed", direction, exc_info=True)
-
-    def _ensure_dependencies(self) -> tuple[Any, Any]:
-        if self._sd is not None and self._np is not None:
-            return self._sd, self._np
-
-        if self._dependency_loader is not None:
-            try:
-                sounddevice_module, numpy_module = self._dependency_loader()
-            except ImportError as exc:
-                raise ImportError(_DEPENDENCY_HINT) from exc
-        else:
-            try:
-                import sounddevice as sd_module  # type: ignore[import-untyped]  # noqa: F401
-            except ImportError as exc:
-                raise ImportError(_DEPENDENCY_HINT) from exc
-            try:
-                import numpy as np_module
-            except ImportError as exc:
-                raise ImportError(_DEPENDENCY_HINT) from exc
-            sounddevice_module = sd_module
-            numpy_module = np_module
-
-        self._sd = sounddevice_module
-        self._np = numpy_module
-        return self._sd, self._np
-
     def _ensure_selected_devices(self) -> tuple[UsbAudioDevice, UsbAudioDevice]:
-        sounddevice_module, _ = self._ensure_dependencies()
-        devices = list_usb_audio_devices(sounddevice_module)
+        devices = _devices_from_backend(self._backend)
 
         # If serial_port is set and no explicit rx/tx overrides, try
         # topology-based resolution to find the correct audio pair.
@@ -343,7 +350,7 @@ class UsbAudioDriver:
             and self._rx_device_override is None
             and self._tx_device_override is None
         ):
-            resolved = self._try_resolve_from_serial(sounddevice_module, devices)
+            resolved = self._try_resolve_from_serial(devices)
             if resolved is not None:
                 self._selected_rx, self._selected_tx = resolved
                 return resolved
@@ -359,19 +366,18 @@ class UsbAudioDriver:
 
     def _try_resolve_from_serial(
         self,
-        sounddevice_module: Any,
         devices: list[UsbAudioDevice],
     ) -> tuple[UsbAudioDevice, UsbAudioDevice] | None:
-        """Attempt topology-based audio device resolution from serial port.
+        """Attempt topology-based audio device resolution from serial port."""
+        sd_module = _extract_sounddevice_module(self._backend)
+        if sd_module is None:
+            return None
 
-        Returns a (rx, tx) device pair, or ``None`` to fall back to
-        name-based selection.
-        """
         from ..usb_audio_resolve import resolve_audio_for_serial_port
 
         mapping = resolve_audio_for_serial_port(
             self._serial_port,  # type: ignore[arg-type]
-            sounddevice_module=sounddevice_module,
+            sounddevice_module=sd_module,
         )
         if mapping is None:
             return None
@@ -404,8 +410,7 @@ class UsbAudioDriver:
 
     def list_devices(self) -> list[UsbAudioDevice]:
         """List normalized devices from the active audio backend."""
-        sounddevice_module, _ = self._ensure_dependencies()
-        return list_usb_audio_devices(sounddevice_module)
+        return _devices_from_backend(self._backend)
 
     async def start_rx(
         self,
@@ -425,7 +430,6 @@ class UsbAudioDriver:
             if self.rx_running:
                 raise AudioDriverLifecycleError("RX stream already started.")
 
-            sounddevice_module, _ = self._ensure_dependencies()
             selected_rx, _ = self._ensure_selected_devices()
             sr = self._sample_rate if sample_rate is None else sample_rate
             ch = self._channels if channels is None else channels
@@ -434,38 +438,22 @@ class UsbAudioDriver:
                 raise AudioDriverLifecycleError(
                     "Invalid RX frame format: sample_rate * frame_ms must be divisible by 1000."
                 )
-            blocksize = (sr * fm) // 1000
-            self._rx_callback = callback
-            self._rx_stream = sounddevice_module.InputStream(
-                samplerate=sr,
+            self._rx_stream = self._backend.open_rx(
+                AudioDeviceId(selected_rx.index),
+                sample_rate=sr,
                 channels=ch,
-                dtype="int16",
-                device=selected_rx.index,
-                blocksize=blocksize,
-                latency="low",
+                frame_ms=fm,
             )
-            self._rx_stream.start()
-            self._rx_task = asyncio.create_task(
-                self._rx_loop(blocksize),
-                name="usb-audio-rx-loop",
-            )
+            await self._rx_stream.start(callback)
 
     async def stop_rx(self) -> None:
         """Stop capture loop and close RX stream."""
         async with self._rx_lock:
-            task = self._rx_task
             stream = self._rx_stream
-            self._rx_task = None
             self._rx_stream = None
-            self._rx_callback = None
 
-        if task is not None and not task.done():
-            task.cancel()
-            try:
-                await task
-            except asyncio.CancelledError:
-                pass
-        self._stop_and_close_stream(stream, direction="RX")
+        if stream is not None and stream.running:
+            await stream.stop()
 
     async def start_tx(
         self,
@@ -479,7 +467,6 @@ class UsbAudioDriver:
             if self.tx_running:
                 raise AudioDriverLifecycleError("TX stream already started.")
 
-            sounddevice_module, _ = self._ensure_dependencies()
             _, selected_tx = self._ensure_selected_devices()
             sr = self._sample_rate if sample_rate is None else sample_rate
             ch = self._channels if channels is None else channels
@@ -488,21 +475,13 @@ class UsbAudioDriver:
                 raise AudioDriverLifecycleError(
                     "Invalid TX frame format: sample_rate * frame_ms must be divisible by 1000."
                 )
-            blocksize = (sr * fm) // 1000
-            self._tx_stream = sounddevice_module.OutputStream(
-                samplerate=sr,
+            self._tx_stream = self._backend.open_tx(
+                AudioDeviceId(selected_tx.index),
+                sample_rate=sr,
                 channels=ch,
-                dtype="int16",
-                device=selected_tx.index,
-                blocksize=blocksize,
-                latency="low",
+                frame_ms=fm,
             )
-            self._tx_stream.start()
-            self._tx_queue = asyncio.Queue(maxsize=64)
-            self._tx_task = asyncio.create_task(
-                self._tx_loop(ch),
-                name="usb-audio-tx-loop",
-            )
+            await self._tx_stream.start()
 
     async def push_tx_pcm(self, frame: bytes) -> None:
         """Queue one PCM frame for playback."""
@@ -510,100 +489,17 @@ class UsbAudioDriver:
             raise AudioDriverLifecycleError("Audio TX stream is not started.")
         if not isinstance(frame, (bytes, bytearray, memoryview)):
             raise TypeError("PCM TX frame must be bytes-like.")
-        await self._tx_queue.put(bytes(frame))
+        assert self._tx_stream is not None
+        await self._tx_stream.write(bytes(frame))
 
     async def stop_tx(self) -> None:
         """Stop playback loop and close TX stream."""
         async with self._tx_lock:
-            task = self._tx_task
             stream = self._tx_stream
-            self._tx_task = None
             self._tx_stream = None
-            self._tx_queue = asyncio.Queue(maxsize=64)
 
-        if task is not None and not task.done():
-            task.cancel()
-            try:
-                await task
-            except asyncio.CancelledError:
-                pass
-        self._stop_and_close_stream(stream, direction="TX")
-
-    async def _cleanup_rx_after_loop(
-        self,
-        stream: Any,
-        *,
-        owner_task: asyncio.Task[None] | None,
-    ) -> None:
-        close_stream = False
-        async with self._rx_lock:
-            if self._rx_stream is stream:
-                self._rx_stream = None
-                self._rx_callback = None
-                close_stream = True
-            if self._rx_task is owner_task:
-                self._rx_task = None
-                self._rx_callback = None
-        if close_stream:
-            self._stop_and_close_stream(stream, direction="RX")
-
-    async def _cleanup_tx_after_loop(
-        self,
-        stream: Any,
-        *,
-        owner_task: asyncio.Task[None] | None,
-    ) -> None:
-        close_stream = False
-        async with self._tx_lock:
-            if self._tx_stream is stream:
-                self._tx_stream = None
-                close_stream = True
-            if self._tx_task is owner_task:
-                self._tx_task = None
-            if close_stream or self._tx_task is None:
-                self._tx_queue = asyncio.Queue(maxsize=64)
-        if close_stream:
-            self._stop_and_close_stream(stream, direction="TX")
-
-    async def _rx_loop(self, blocksize: int) -> None:
-        assert self._rx_stream is not None
-        stream = self._rx_stream
-        owner_task = asyncio.current_task()
-        try:
-            while True:
-                data, _overflowed = await asyncio.to_thread(stream.read, blocksize)
-                callback = self._rx_callback
-                if callback is None:
-                    continue
-                if hasattr(data, "tobytes"):
-                    pcm_frame = bytes(data.tobytes())
-                else:
-                    pcm_frame = bytes(data)
-                callback(pcm_frame)
-        except asyncio.CancelledError:
-            pass
-        except Exception:
-            logger.warning("usb-audio: RX loop failed", exc_info=True)
-        finally:
-            await self._cleanup_rx_after_loop(stream, owner_task=owner_task)
-
-    async def _tx_loop(self, channels: int) -> None:
-        assert self._tx_stream is not None
-        stream = self._tx_stream
-        owner_task = asyncio.current_task()
-        _, np_module = self._ensure_dependencies()
-        try:
-            while True:
-                pcm_frame = await self._tx_queue.get()
-                frame_array = np_module.frombuffer(pcm_frame, dtype=np_module.int16)
-                frame_array = frame_array.reshape(-1, channels)
-                await asyncio.to_thread(stream.write, frame_array)
-        except asyncio.CancelledError:
-            pass
-        except Exception:
-            logger.warning("usb-audio: TX loop failed", exc_info=True)
-        finally:
-            await self._cleanup_tx_after_loop(stream, owner_task=owner_task)
+        if stream is not None and stream.running:
+            await stream.stop()
 
 
 __all__ = [

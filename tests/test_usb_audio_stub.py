@@ -3,12 +3,17 @@
 from __future__ import annotations
 
 import asyncio
-from dataclasses import dataclass
-from types import SimpleNamespace
 from typing import Callable
 
 import pytest
 
+from icom_lan.audio.backend import (
+    AudioDeviceId,
+    AudioDeviceInfo,
+    FakeAudioBackend,
+    FakeRxStream,
+    FakeTxStream,
+)
 from icom_lan.backends.icom7610.drivers.usb_audio import (
     AudioDeviceSelectionError,
     AudioDriverLifecycleError,
@@ -18,169 +23,40 @@ from icom_lan.backends.icom7610.drivers.usb_audio import (
 )
 
 
-@dataclass(slots=True)
-class _FakeArray:
-    raw: bytes
-
-    def reshape(self, _rows: int, _cols: int) -> "_FakeArray":
-        return self
-
-    def tobytes(self) -> bytes:
-        return self.raw
-
-
-class _FakeNumpy:
-    int16 = "int16"
-
-    @staticmethod
-    def frombuffer(data: bytes, dtype: object) -> _FakeArray:
-        _ = dtype
-        return _FakeArray(bytes(data))
-
-
-class _RaiseOnceNumpy(_FakeNumpy):
-    def __init__(self) -> None:
-        self._raised = False
-
-    def frombuffer(self, data: bytes, dtype: object) -> _FakeArray:
-        if not self._raised:
-            self._raised = True
-            raise RuntimeError("injected numpy.frombuffer failure")
-        return super().frombuffer(data, dtype)
-
-
-class _FakeInputStream:
-    def __init__(
-        self, backend: "_FakeSoundDevice", channels: int, blocksize: int
-    ) -> None:
-        self._backend = backend
-        self._channels = channels
-        self._blocksize = blocksize
-        self.active = False
-        self.stopped = False
-        self.closed = False
-
-    def start(self) -> None:
-        self.active = True
-
-    def stop(self) -> None:
-        self.active = False
-        self.stopped = True
-
-    def close(self) -> None:
-        self.closed = True
-
-    def read(self, _frames: int) -> tuple[_FakeArray, bool]:
-        if self._backend.rx_frames:
-            frame = self._backend.rx_frames.pop(0)
-            return _FakeArray(frame), False
-        silence = b"\x00\x00" * self._blocksize * self._channels
-        return _FakeArray(silence), False
-
-
-class _FakeOutputStream:
-    def __init__(self, backend: "_FakeSoundDevice") -> None:
-        self._backend = backend
-        self.active = False
-        self.stopped = False
-        self.closed = False
-
-    def start(self) -> None:
-        self.active = True
-
-    def stop(self) -> None:
-        self.active = False
-        self.stopped = True
-
-    def close(self) -> None:
-        self.closed = True
-
-    def write(self, data: _FakeArray) -> None:
-        self._backend.tx_frames.append(data.tobytes())
-
-
-class _FakeSoundDevice:
-    def __init__(
-        self,
-        devices: list[dict[str, object]],
-        *,
-        default_input: int,
-        default_output: int,
-    ) -> None:
-        self._devices = list(devices)
-        self.default = SimpleNamespace(device=(default_input, default_output))
-        self.rx_frames: list[bytes] = []
-        self.tx_frames: list[bytes] = []
-        self.input_streams: list[_FakeInputStream] = []
-        self.output_streams: list[_FakeOutputStream] = []
-
-    def query_devices(self) -> list[dict[str, object]]:
-        return list(self._devices)
-
-    def InputStream(  # noqa: N802
-        self,
-        *,
-        samplerate: int,
-        channels: int,
-        dtype: str,
-        device: int,
-        blocksize: int,
-        latency: str,
-    ) -> _FakeInputStream:
-        _ = (samplerate, dtype, device, latency)
-        stream = _FakeInputStream(self, channels=channels, blocksize=blocksize)
-        self.input_streams.append(stream)
-        return stream
-
-    def OutputStream(  # noqa: N802
-        self,
-        *,
-        samplerate: int,
-        channels: int,
-        dtype: str,
-        device: int,
-        blocksize: int,
-        latency: str,
-    ) -> _FakeOutputStream:
-        _ = (samplerate, channels, dtype, device, blocksize, latency)
-        stream = _FakeOutputStream(self)
-        self.output_streams.append(stream)
-        return stream
-
-
-async def _wait_until(predicate: Callable[[], bool], *, timeout: float = 1.0) -> None:
-    loop = asyncio.get_running_loop()
-    deadline = loop.time() + timeout
-    while not predicate():
-        if loop.time() >= deadline:
-            raise AssertionError("Timed out waiting for condition")
-        await asyncio.sleep(0.01)
-
-
-def _devices_fixture() -> list[dict[str, object]]:
+def _fake_devices() -> list[AudioDeviceInfo]:
     return [
-        {
-            "index": 0,
-            "name": "MacBook Pro Speakers",
-            "max_input_channels": 0,
-            "max_output_channels": 2,
-            "default_samplerate": 48_000,
-        },
-        {
-            "index": 1,
-            "name": "USB Audio CODEC",
-            "max_input_channels": 2,
-            "max_output_channels": 2,
-            "default_samplerate": 48_000,
-        },
-        {
-            "index": 2,
-            "name": "IC-7610 USB Audio",
-            "max_input_channels": 2,
-            "max_output_channels": 2,
-            "default_samplerate": 48_000,
-        },
+        AudioDeviceInfo(
+            id=AudioDeviceId(0),
+            name="MacBook Pro Speakers",
+            input_channels=0,
+            output_channels=2,
+            default_samplerate=48_000,
+        ),
+        AudioDeviceInfo(
+            id=AudioDeviceId(1),
+            name="USB Audio CODEC",
+            input_channels=2,
+            output_channels=2,
+            default_samplerate=48_000,
+            is_default_input=True,
+            is_default_output=True,
+        ),
+        AudioDeviceInfo(
+            id=AudioDeviceId(2),
+            name="IC-7610 USB Audio",
+            input_channels=2,
+            output_channels=2,
+            default_samplerate=48_000,
+        ),
     ]
+
+
+def _make_driver(
+    devices: list[AudioDeviceInfo] | None = None,
+) -> tuple[UsbAudioDriver, FakeAudioBackend]:
+    backend = FakeAudioBackend(devices or _fake_devices())
+    driver = UsbAudioDriver(backend=backend)
+    return driver, backend
 
 
 def test_select_usb_audio_devices_explicit_overrides_take_precedence() -> None:
@@ -249,51 +125,41 @@ def test_select_usb_audio_devices_missing_directional_capability_raises() -> Non
 
 @pytest.mark.asyncio
 async def test_usb_audio_driver_lifecycle_start_stop_and_io() -> None:
-    fake_sd = _FakeSoundDevice(
-        _devices_fixture(),
-        default_input=1,
-        default_output=1,
-    )
-    fake_np = _FakeNumpy()
-    driver = UsbAudioDriver(
-        dependency_loader=lambda: (fake_sd, fake_np),
-    )
+    driver, backend = _make_driver()
 
     received_frames: list[bytes] = []
     pcm_frame = b"\x11\x22" * 960
-    fake_sd.rx_frames.append(pcm_frame)
 
     await driver.start_rx(received_frames.append)
-    await asyncio.sleep(0.05)
     assert driver.rx_running is True
-    assert received_frames
-    assert received_frames[0] == pcm_frame
+    assert len(backend.rx_streams) == 1
+    rx_stream = backend.rx_streams[0]
+    assert rx_stream.running is True
+
+    # Inject a frame via the fake stream
+    rx_stream.inject_frame(pcm_frame)
+    assert received_frames == [pcm_frame]
 
     await driver.start_tx()
-    await driver.push_tx_pcm(pcm_frame)
-    await asyncio.sleep(0.05)
     assert driver.tx_running is True
-    assert fake_sd.tx_frames
-    assert fake_sd.tx_frames[0] == pcm_frame
+    assert len(backend.tx_streams) == 1
+    tx_stream = backend.tx_streams[0]
+    assert tx_stream.running is True
+
+    await driver.push_tx_pcm(pcm_frame)
+    assert tx_stream.written_frames == [pcm_frame]
 
     await driver.stop_tx()
     await driver.stop_rx()
     assert driver.rx_running is False
     assert driver.tx_running is False
-    assert fake_sd.input_streams[0].closed is True
-    assert fake_sd.output_streams[0].closed is True
+    assert rx_stream.stopped_count == 1
+    assert tx_stream.stopped_count == 1
 
 
 @pytest.mark.asyncio
 async def test_usb_audio_driver_double_start_and_missing_tx_guardrails() -> None:
-    fake_sd = _FakeSoundDevice(
-        _devices_fixture(),
-        default_input=1,
-        default_output=1,
-    )
-    driver = UsbAudioDriver(
-        dependency_loader=lambda: (fake_sd, _FakeNumpy()),
-    )
+    driver, _ = _make_driver()
     await driver.start_rx(lambda _frame: None)
     with pytest.raises(AudioDriverLifecycleError, match="already started"):
         await driver.start_rx(lambda _frame: None)
@@ -306,74 +172,34 @@ async def test_usb_audio_driver_double_start_and_missing_tx_guardrails() -> None
 
 
 @pytest.mark.asyncio
-async def test_usb_audio_driver_missing_optional_dependencies_is_actionable() -> None:
+async def test_usb_audio_driver_missing_backend_dependencies_is_actionable() -> None:
+    from icom_lan.audio.backend import PortAudioBackend
+
     def _missing_sounddevice() -> tuple[object, object]:
         raise ImportError("No module named 'sounddevice'")
 
-    driver = UsbAudioDriver(dependency_loader=_missing_sounddevice)
+    backend = PortAudioBackend(dependency_loader=_missing_sounddevice)
+    driver = UsbAudioDriver(backend=backend)
     with pytest.raises(ImportError, match="pip install icom-lan\\[bridge\\]"):
         await driver.start_rx(lambda _frame: None)
 
 
 @pytest.mark.asyncio
-async def test_usb_audio_driver_rx_loop_crash_cleans_up_and_supports_restart() -> None:
-    fake_sd = _FakeSoundDevice(
-        _devices_fixture(),
-        default_input=1,
-        default_output=1,
-    )
-    driver = UsbAudioDriver(
-        dependency_loader=lambda: (fake_sd, _FakeNumpy()),
-    )
-
-    first_frame = b"\x33\x44" * 960
-    fake_sd.rx_frames.append(first_frame)
-
-    def _boom_callback(_frame: bytes) -> None:
-        raise RuntimeError("injected callback crash")
-
-    await driver.start_rx(_boom_callback)
-    await _wait_until(lambda: driver.rx_running is False)
-
-    assert fake_sd.input_streams[0].closed is True
-    assert driver._rx_stream is None
-    assert driver._rx_task is None
-    assert driver._rx_callback is None
-
-    received_frames: list[bytes] = []
-    second_frame = b"\x55\x66" * 960
-    fake_sd.rx_frames.append(second_frame)
-    await driver.start_rx(received_frames.append)
-    await _wait_until(lambda: bool(received_frames))
-    assert received_frames[0] == second_frame
-    assert driver.rx_running is True
-    await driver.stop_rx()
+async def test_usb_audio_driver_list_devices_returns_usb_audio_devices() -> None:
+    driver, _ = _make_driver()
+    devices = driver.list_devices()
+    assert len(devices) == 3
+    assert all(isinstance(d, UsbAudioDevice) for d in devices)
+    assert devices[1].name == "USB Audio CODEC"
+    assert devices[1].index == 1
 
 
 @pytest.mark.asyncio
-async def test_usb_audio_driver_tx_loop_crash_cleans_up_and_supports_restart() -> None:
-    fake_sd = _FakeSoundDevice(
-        _devices_fixture(),
-        default_input=1,
-        default_output=1,
-    )
-    driver = UsbAudioDriver(
-        dependency_loader=lambda: (fake_sd, _RaiseOnceNumpy()),
-    )
-
-    first_frame = b"\x77\x88" * 960
-    await driver.start_tx()
-    await driver.push_tx_pcm(first_frame)
-    await _wait_until(lambda: driver.tx_running is False)
-
-    assert fake_sd.output_streams[0].closed is True
-    assert driver._tx_stream is None
-    assert driver._tx_task is None
-
-    second_frame = b"\x99\xaa" * 960
-    await driver.start_tx()
-    await driver.push_tx_pcm(second_frame)
-    await _wait_until(lambda: bool(fake_sd.tx_frames))
-    assert fake_sd.tx_frames[-1] == second_frame
-    assert driver.tx_running is True
-    await driver.stop_tx()
+async def test_usb_audio_driver_selected_devices_populated_after_start() -> None:
+    driver, _ = _make_driver()
+    assert driver.selected_rx_device is None
+    assert driver.selected_tx_device is None
+    await driver.start_rx(lambda _: None)
+    assert driver.selected_rx_device is not None
+    assert driver.selected_rx_device.name == "USB Audio CODEC"
+    await driver.stop_rx()
