@@ -449,7 +449,7 @@ class ControlPhaseRuntime:
             username=h._username,
             token=h._token,
             tok_request=h._tok_request,
-            radio_name="IC-7610",
+            radio_name=getattr(h, "model", "IC-7610"),
             mac_address=b"\x00" * 6,
             auth_seq=h._auth_seq,
             guid=guid,
