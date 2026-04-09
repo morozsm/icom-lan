@@ -325,7 +325,7 @@ from .types import (
 
 __all__ = [
     "AudioRecoveryState",
-    "Icom7610CoreRadio",
+    "CoreRadio",
     "IcomRadio",
     "RadioProfile",
     "AudioCodec",
@@ -344,7 +344,7 @@ _DEFAULT_AUDIO_SAMPLE_RATE = _AUDIO_CAPABILITIES.default_sample_rate_hz
 _DEFAULT_CACHE_TTL: dict[str, float] = {"freq": 10.0, "mode": 10.0, "rf_power": 30.0}
 
 
-class Icom7610CoreRadio:
+class CoreRadio:
     """High-level async interface for controlling an Icom transceiver over LAN.
 
     Manages two UDP connections:
@@ -1039,7 +1039,7 @@ class Icom7610CoreRadio:
         """
         await self._control_phase.connect()
 
-    async def __aenter__(self) -> "Icom7610CoreRadio":
+    async def __aenter__(self) -> "CoreRadio":
         await self.connect()
         return self
 
@@ -4554,7 +4554,7 @@ class Icom7610CoreRadio:
     set_band = set_bsr  # BSR is the IC-7610's band select mechanism
 
 
-class IcomRadio(Icom7610CoreRadio):
+class IcomRadio(CoreRadio):
     """LAN adapter for IC-7610 built on top of the shared executable core."""
 
     @staticmethod

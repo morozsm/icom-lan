@@ -2,7 +2,7 @@
 
 These Protocols describe the attributes and methods that the composed
 runtimes (CivRuntime, ControlPhaseRuntime, AudioRecoveryRuntime) expect
-from their host (Icom7610CoreRadio). State remains on the host; runtimes
+from their host (CoreRadio). State remains on the host; runtimes
 access it via self._host.
 
 They are not part of the public API.

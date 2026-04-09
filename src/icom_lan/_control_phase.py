@@ -43,7 +43,7 @@ __all__ = [
 class ControlPhaseRuntime:
     """Composed control-phase runtime: connect, disconnect, token renewal, watchdog.
 
-    Holds a reference to the host (Icom7610CoreRadio); all state remains on the host.
+    Holds a reference to the host (CoreRadio); all state remains on the host.
     """
 
     TOKEN_RENEWAL_INTERVAL = 60.0

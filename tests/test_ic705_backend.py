@@ -47,7 +47,7 @@ def test_ic705_profile_loading():
 
 
 def test_ic705_serial_inherits_from_core():
-    """Ic705SerialRadio should inherit from Icom7610CoreRadio."""
+    """Ic705SerialRadio should inherit from CoreRadio."""
     radio = Ic705SerialRadio(device="/dev/ttyUSB0")
     # Verify it has the expected methods and properties
     assert hasattr(radio, "connect")

@@ -58,7 +58,7 @@ def test_ic9700_dual_receiver_capability():
 
 
 def test_ic9700_serial_inherits_from_core():
-    """Ic9700SerialRadio should inherit from Icom7610CoreRadio."""
+    """Ic9700SerialRadio should inherit from CoreRadio."""
     radio = Ic9700SerialRadio(device="/dev/ttyUSB0")
     # Verify it has the expected methods and properties
     assert hasattr(radio, "connect")

@@ -1,12 +1,11 @@
 """Regression tests for issue #141 (IC-7610 core extraction)."""
 
-from icom_lan.backends.icom7610 import Icom7610CoreRadio
-from icom_lan.radio import IcomRadio
+from icom_lan.radio import CoreRadio, IcomRadio
 
 
-def test_icom_radio_is_thin_wrapper_over_icom7610_core() -> None:
+def test_icom_radio_is_thin_wrapper_over_core() -> None:
     """Public IcomRadio must remain source-compatible wrapper over shared core."""
-    assert issubclass(IcomRadio, Icom7610CoreRadio)
+    assert issubclass(IcomRadio, CoreRadio)
 
 
 def test_wrapper_constructor_signature_is_compatible() -> None:
