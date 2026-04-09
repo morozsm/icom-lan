@@ -18,6 +18,7 @@ import asyncio
 import datetime
 import logging
 import time
+from collections.abc import Coroutine
 from typing import TYPE_CHECKING, Any
 
 from ..startup_checks import assert_radio_startup_ready
@@ -98,6 +99,15 @@ class RigctldServer:
         self._circuit_breaker: CircuitBreaker | None = _circuit_breaker
         # Per-client sliding window for rate limiting: client_id → timestamps
         self._rate_windows: dict[int, list[float]] = {}
+        # prevent GC of fire-and-forget tasks
+        self._bg_tasks: set[asyncio.Task[Any]] = set()
+
+    def _spawn(self, coro: Coroutine[Any, Any, Any]) -> asyncio.Task[Any]:
+        """Create a background task and prevent GC from collecting it."""
+        task = asyncio.get_running_loop().create_task(coro)
+        self._bg_tasks.add(task)
+        task.add_done_callback(self._bg_tasks.discard)
+        return task
 
     def __del__(self) -> None:
         """Emit WARN if instance is collected while TCP server/poller is still active."""
@@ -239,13 +249,13 @@ class RigctldServer:
 
         # Start poller when the first client connects.
         if self._poller is not None and self._client_count == 1:
-            loop.create_task(self._poller.start())
+            self._spawn(self._poller.start())
 
         # Optional WSJT-X compatibility pre-warm for first client:
         # if radio is in USB/LSB/RTTY with DATA off, enable DATA mode upfront
         # to avoid long CAT/PTT latency on first TX sequence.
         if self._client_count == 1 and self._config.wsjtx_compat:
-            loop.create_task(self._wsjtx_compat_prewarm())
+            self._spawn(self._wsjtx_compat_prewarm())
 
         task.add_done_callback(self._on_client_done)
 
@@ -257,8 +267,7 @@ class RigctldServer:
         if self._poller is not None and self._client_count <= 0:
             self._client_count = 0
             try:
-                loop = asyncio.get_running_loop()
-                loop.create_task(self._poller.stop())
+                self._spawn(self._poller.stop())
             except RuntimeError:
                 # Loop already closed during shutdown.
                 pass
