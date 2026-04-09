@@ -878,12 +878,12 @@ class CoreRadio:
         """Read MAIN receiver frequency with optional cache updates."""
         civ = get_freq(to_addr=self._radio_addr)
         try:
-            resp = await self._send_civ_raw(
+            resp = await self._send_civ_expect(
                 civ,
                 key="get_frequency",
                 dedupe=not bypass_cache,
+                label="get_frequency",
             )
-            assert resp is not None
             freq = parse_frequency_response(resp)
             if update_cache:
                 self._last_freq_hz = freq
@@ -916,8 +916,7 @@ class CoreRadio:
         """Read MAIN receiver mode/filter with optional cache updates."""
         civ = get_mode(to_addr=self._radio_addr)
         try:
-            resp = await self._send_civ_raw(civ)
-            assert resp is not None
+            resp = await self._send_civ_expect(civ, label="get_mode_info_main")
             mode, filt = parse_mode_response(resp)
             if update_cache:
                 self._last_mode = mode
@@ -967,32 +966,28 @@ class CoreRadio:
     async def _get_selected_freq(self) -> int:
         """Read the selected (active) receiver frequency via CI-V 0x25 0x00."""
         civ = _get_selected_freq_cmd(to_addr=self._radio_addr)
-        resp = await self._send_civ_raw(civ)
-        assert resp is not None
+        resp = await self._send_civ_expect(civ, label="get_selected_freq")
         _rcvr, freq = _parse_selected_freq_response(resp)
         return freq
 
     async def _get_unselected_freq(self) -> int:
         """Read the unselected (inactive) receiver frequency via CI-V 0x25 0x01."""
         civ = _get_unselected_freq_cmd(to_addr=self._radio_addr)
-        resp = await self._send_civ_raw(civ)
-        assert resp is not None
+        resp = await self._send_civ_expect(civ, label="get_unselected_freq")
         _rcvr, freq = _parse_selected_freq_response(resp)
         return freq
 
     async def _get_selected_mode(self) -> tuple[Mode, int | None]:
         """Read the selected (active) receiver mode via CI-V 0x26 0x00."""
         civ = _get_selected_mode_cmd(to_addr=self._radio_addr)
-        resp = await self._send_civ_raw(civ)
-        assert resp is not None
+        resp = await self._send_civ_expect(civ, label="get_selected_mode")
         _rcvr, mode, _data_mode, filt = _parse_selected_mode_response(resp)
         return mode, filt
 
     async def _get_unselected_mode(self) -> tuple[Mode, int | None]:
         """Read the unselected (inactive) receiver mode via CI-V 0x26 0x01."""
         civ = _get_unselected_mode_cmd(to_addr=self._radio_addr)
-        resp = await self._send_civ_raw(civ)
-        assert resp is not None
+        resp = await self._send_civ_expect(civ, label="get_unselected_mode")
         _rcvr, mode, _data_mode, filt = _parse_selected_mode_response(resp)
         return mode, filt
 
@@ -1176,6 +1171,28 @@ class CoreRadio:
             wait_response=wait_response,
             timeout=timeout,
         )
+
+    async def _send_civ_expect(
+        self,
+        civ_frame: bytes,
+        *,
+        label: str = "command",
+        priority: Priority = Priority.NORMAL,
+        key: str | None = None,
+        dedupe: bool = False,
+        timeout: float | None = None,
+    ) -> CivFrame:
+        """Send a CIV frame and raise CommandError if no response."""
+        resp = await self._send_civ_raw(
+            civ_frame,
+            priority=priority,
+            key=key,
+            dedupe=dedupe,
+            timeout=timeout,
+        )
+        if resp is None:
+            raise CommandError(f"No response for {label}")
+        return resp
 
     async def _send_audio_open_close(self, *, open_stream: bool) -> None:
         """Delegate to control-phase runtime."""
@@ -1932,8 +1949,7 @@ class CoreRadio:
         """
         self._check_connected()
         civ = get_data_mode_cmd(to_addr=self._radio_addr)
-        resp = await self._send_civ_raw(civ)
-        assert resp is not None
+        resp = await self._send_civ_expect(civ, label="get_data_mode")
         return parse_data_mode_response(resp)
 
     async def set_data_mode(self, on: int | bool, receiver: int = 0) -> None:
@@ -1955,8 +1971,7 @@ class CoreRadio:
                 civ = set_data_mode_cmd(
                     on, to_addr=self._radio_addr, receiver=RECEIVER_MAIN
                 )
-                resp = await self._send_civ_raw(civ)
-                assert resp is not None
+                resp = await self._send_civ_expect(civ, label="action")
                 ack = parse_ack_nak(resp)
                 if ack is False:
                     raise CommandError(
@@ -1977,8 +1992,7 @@ class CoreRadio:
             operation="set_data_mode",
         )
         civ = set_data_mode_cmd(on, to_addr=self._radio_addr, receiver=receiver)
-        resp = await self._send_civ_raw(civ)
-        assert resp is not None
+        resp = await self._send_civ_expect(civ, label="action")
         ack = parse_ack_nak(resp)
         if ack is False:
             raise CommandError(
@@ -2001,8 +2015,7 @@ class CoreRadio:
     ) -> int:
         """Send a GET command and parse a BCD-encoded integer response."""
         self._check_connected()
-        resp = await self._send_civ_raw(civ, key=key, dedupe=True)
-        assert resp is not None
+        resp = await self._send_civ_expect(civ, key=key, dedupe=True, label="get_bcd_level")
         return parse_level_response(
             resp,
             command=command,
@@ -2022,8 +2035,7 @@ class CoreRadio:
     ) -> bool:
         """Send a GET command and parse a boolean response."""
         self._check_connected()
-        resp = await self._send_civ_raw(civ, key=key, dedupe=True)
-        assert resp is not None
+        resp = await self._send_civ_expect(civ, key=key, dedupe=True, label="get_bool_value")
         return parse_bool_response(resp, command=command, sub=sub, prefix=prefix)
 
     async def _send_fire_and_forget(self, civ: bytes) -> None:
@@ -2039,8 +2051,7 @@ class CoreRadio:
         self._check_connected()
         civ = get_rf_power(to_addr=self._radio_addr)
         try:
-            resp = await self._send_civ_raw(civ, key="get_rf_power", dedupe=True)
-            assert resp is not None
+            resp = await self._send_civ_expect(civ, key="get_rf_power", dedupe=True, label="get_rf_power")
             level = _level_bcd_decode(resp.data)
             self._last_power = level
             self._state_cache.update_rf_power(level / 255.0)
@@ -2071,8 +2082,7 @@ class CoreRadio:
         self._check_connected()
         civ = get_rf_gain(to_addr=self._radio_addr)
         try:
-            resp = await self._send_civ_raw(civ, key="get_rf_gain", dedupe=True)
-            assert resp is not None
+            resp = await self._send_civ_expect(civ, key="get_rf_gain", dedupe=True, label="get_rf_gain")
             return self._parse_level(resp)
         except TimeoutError:
             raise
@@ -2098,8 +2108,7 @@ class CoreRadio:
         self._check_connected()
         civ = get_af_level(to_addr=self._radio_addr)
         try:
-            resp = await self._send_civ_raw(civ, key="get_af_level", dedupe=True)
-            assert resp is not None
+            resp = await self._send_civ_expect(civ, key="get_af_level", dedupe=True, label="get_af_level")
             return self._parse_level(resp)
         except TimeoutError:
             raise
@@ -2862,24 +2871,21 @@ class CoreRadio:
         """Read the S-meter value (0-255)."""
         self._check_connected()
         civ = get_s_meter(to_addr=self._radio_addr)
-        resp = await self._send_civ_raw(civ)
-        assert resp is not None
+        resp = await self._send_civ_expect(civ, label="get_s_meter")
         return parse_meter_response(resp)
 
     async def get_swr(self) -> int:
         """Read the SWR meter value (0-255)."""
         self._check_connected()
         civ = get_swr(to_addr=self._radio_addr)
-        resp = await self._send_civ_raw(civ)
-        assert resp is not None
+        resp = await self._send_civ_expect(civ, label="get_swr")
         return parse_meter_response(resp)
 
     async def get_alc(self) -> int:
         """Read the ALC meter value (0-255)."""
         self._check_connected()
         civ = get_alc(to_addr=self._radio_addr)
-        resp = await self._send_civ_raw(civ)
-        assert resp is not None
+        resp = await self._send_civ_expect(civ, label="get_alc")
         return parse_meter_response(resp)
 
     async def set_ptt(self, on: bool) -> None:
@@ -2909,8 +2915,7 @@ class CoreRadio:
         """Read the current band-edge frequency in Hz."""
         self._check_connected()
         civ = get_band_edge_freq(to_addr=self._radio_addr)
-        resp = await self._send_civ_raw(civ, key="get_band_edge_freq", dedupe=True)
-        assert resp is not None
+        resp = await self._send_civ_expect(civ, key="get_band_edge_freq", dedupe=True, label="get_band_edge_freq")
         return parse_frequency_response(resp)
 
     async def get_various_squelch(self, receiver: int = RECEIVER_MAIN) -> bool:
@@ -2931,32 +2936,28 @@ class CoreRadio:
         """Read the RF power meter (0-255 raw BCD)."""
         self._check_connected()
         civ = get_power_meter(to_addr=self._radio_addr)
-        resp = await self._send_civ_raw(civ)
-        assert resp is not None
+        resp = await self._send_civ_expect(civ, label="get_power_meter")
         return parse_meter_response(resp)
 
     async def get_comp_meter(self) -> int:
         """Read the compressor meter (0-255 raw BCD)."""
         self._check_connected()
         civ = get_comp_meter(to_addr=self._radio_addr)
-        resp = await self._send_civ_raw(civ)
-        assert resp is not None
+        resp = await self._send_civ_expect(civ, label="get_comp_meter")
         return parse_meter_response(resp)
 
     async def get_vd_meter(self) -> int:
         """Read the Vd supply voltage meter (0-255 raw BCD)."""
         self._check_connected()
         civ = get_vd_meter(to_addr=self._radio_addr)
-        resp = await self._send_civ_raw(civ)
-        assert resp is not None
+        resp = await self._send_civ_expect(civ, label="get_vd_meter")
         return parse_meter_response(resp)
 
     async def get_id_meter(self) -> int:
         """Read the Id drain current meter (0-255 raw BCD)."""
         self._check_connected()
         civ = get_id_meter(to_addr=self._radio_addr)
-        resp = await self._send_civ_raw(civ)
-        assert resp is not None
+        resp = await self._send_civ_expect(civ, label="get_id_meter")
         return parse_meter_response(resp)
 
     async def get_speech(self, what: int = 0) -> None:
@@ -2977,8 +2978,7 @@ class CoreRadio:
         """Read the transceiver model ID (IC-7610 = 0x98)."""
         self._check_connected()
         civ = get_transceiver_id(to_addr=self._radio_addr)
-        resp = await self._send_civ_raw(civ)
-        assert resp is not None
+        resp = await self._send_civ_expect(civ, label="get_transceiver_id")
         if resp.data:
             return resp.data[0]
         return 0
@@ -2987,8 +2987,7 @@ class CoreRadio:
         """Read the tuner/ATU status (0=off, 1=on, 2=tuning)."""
         self._check_connected()
         civ = get_tuner_status(to_addr=self._radio_addr)
-        resp = await self._send_civ_raw(civ)
-        assert resp is not None
+        resp = await self._send_civ_expect(civ, label="get_tuner_status")
         if resp.data:
             return resp.data[0]
         return 0
@@ -3006,8 +3005,7 @@ class CoreRadio:
         """Read XFC (transmit frequency correction) status."""
         self._check_connected()
         civ = get_xfc_status(to_addr=self._radio_addr)
-        resp = await self._send_civ_raw(civ)
-        assert resp is not None
+        resp = await self._send_civ_expect(civ, label="get_xfc_status")
         return bool(resp.data[0]) if resp.data else False
 
     async def set_xfc_status(self, on: bool) -> None:
@@ -3020,8 +3018,7 @@ class CoreRadio:
         """Read TX frequency monitor status."""
         self._check_connected()
         civ = get_tx_freq_monitor(to_addr=self._radio_addr)
-        resp = await self._send_civ_raw(civ)
-        assert resp is not None
+        resp = await self._send_civ_expect(civ, label="get_tx_freq_monitor")
         return bool(resp.data[0]) if resp.data else False
 
     async def set_tx_freq_monitor(self, on: bool) -> None:
@@ -3034,8 +3031,7 @@ class CoreRadio:
         """Read the RIT frequency offset in Hz (±9999)."""
         self._check_connected()
         civ = get_rit_frequency(to_addr=self._radio_addr)
-        resp = await self._send_civ_raw(civ)
-        assert resp is not None
+        resp = await self._send_civ_expect(civ, label="get_rit_frequency")
         return parse_rit_frequency_response(resp.data)
 
     async def set_rit_frequency(self, offset_hz: int) -> None:
@@ -3048,8 +3044,7 @@ class CoreRadio:
         """Read RIT on/off status."""
         self._check_connected()
         civ = get_rit_status(to_addr=self._radio_addr)
-        resp = await self._send_civ_raw(civ)
-        assert resp is not None
+        resp = await self._send_civ_expect(civ, label="get_rit_status")
         return bool(resp.data[0]) if resp.data else False
 
     async def set_rit_status(self, on: bool) -> None:
@@ -3062,8 +3057,7 @@ class CoreRadio:
         """Read RIT TX status."""
         self._check_connected()
         civ = get_rit_tx_status(to_addr=self._radio_addr)
-        resp = await self._send_civ_raw(civ)
-        assert resp is not None
+        resp = await self._send_civ_expect(civ, label="get_rit_tx_status")
         return bool(resp.data[0]) if resp.data else False
 
     async def set_rit_tx_status(self, on: bool) -> None:
@@ -3085,8 +3079,7 @@ class CoreRadio:
         """
         self._check_connected()
         civ = _select_vfo_cmd(vfo, to_addr=self._radio_addr)
-        resp = await self._send_civ_raw(civ)
-        assert resp is not None
+        resp = await self._send_civ_expect(civ, label="set_vfo")
         ack = parse_ack_nak(resp)
         if ack is False:
             raise CommandError(f"Radio rejected VFO select {vfo}")
@@ -3108,8 +3101,7 @@ class CoreRadio:
         """Enable or disable split mode."""
         self._check_connected()
         civ = set_split(on, to_addr=self._radio_addr)
-        resp = await self._send_civ_raw(civ)
-        assert resp is not None
+        resp = await self._send_civ_expect(civ, label="set_split_mode")
         ack = parse_ack_nak(resp)
         if ack is False:
             raise CommandError(f"Radio rejected split {'on' if on else 'off'}")
@@ -3119,8 +3111,7 @@ class CoreRadio:
         """Read the tuning step index (0-8, BCD-encoded per IC-7610, CI-V 0x10)."""
         self._check_connected()
         civ = get_tuning_step(to_addr=self._radio_addr)
-        resp = await self._send_civ_raw(civ)
-        assert resp is not None
+        resp = await self._send_civ_expect(civ, label="get_tuning_step")
         if resp.data:
             b = resp.data[0]
             return ((b >> 4) & 0x0F) * 10 + (b & 0x0F)
@@ -3152,8 +3143,7 @@ class CoreRadio:
         """
         self._check_connected()
         civ = get_dual_watch(to_addr=self._radio_addr)
-        resp = await self._send_civ_raw(civ)
-        assert resp is not None
+        resp = await self._send_civ_expect(civ, label="get_dual_watch")
         # Response: cmd=0x07, data=[0xC2, <value>]
         if resp.data and len(resp.data) >= 2 and resp.data[0] == 0xC2:
             return bool(resp.data[1])
@@ -3193,8 +3183,7 @@ class CoreRadio:
             )
         civ = get_attenuator_cmd(to_addr=self._radio_addr, receiver=receiver)
         try:
-            resp = await self._send_civ_raw(civ)
-            assert resp is not None
+            resp = await self._send_civ_expect(civ, label="get_attenuator_level")
             if resp.data:
                 raw = resp.data[0]
                 val = ((raw >> 4) & 0x0F) * 10 + (raw & 0x0F)
@@ -3268,8 +3257,7 @@ class CoreRadio:
             )
         civ = get_preamp_cmd(to_addr=self._radio_addr, receiver=receiver)
         try:
-            resp = await self._send_civ_raw(civ)
-            assert resp is not None
+            resp = await self._send_civ_expect(civ, label="get_preamp")
             if resp.data:
                 raw = resp.data[0]
                 self._preamp_level = ((raw >> 4) & 0x0F) * 10 + (raw & 0x0F)
@@ -3334,8 +3322,7 @@ class CoreRadio:
                 "no cmd29 route for command 0x16/0x4E"
             )
         civ = get_digisel(to_addr=self._radio_addr)
-        resp = await self._send_civ_raw(civ)
-        assert resp is not None
+        resp = await self._send_civ_expect(civ, label="get_digisel")
         if not resp.data:
             raise CommandError("Radio returned empty DIGI-SEL response")
         raw = resp.data[0]
@@ -3354,8 +3341,7 @@ class CoreRadio:
             operation="set_digisel",
         )
         civ = set_digisel(on, to_addr=self._radio_addr, receiver=receiver)
-        resp = await self._send_civ_raw(civ)
-        assert resp is not None
+        resp = await self._send_civ_expect(civ, label="set_digisel")
         ack = parse_ack_nak(resp)
         if ack is False:
             raise CommandError(f"Radio rejected DIGI-SEL {'on' if on else 'off'}")
@@ -3364,8 +3350,7 @@ class CoreRadio:
         """Read Noise Blanker status."""
         self._check_connected()
         civ = get_nb(to_addr=self._radio_addr)
-        resp = await self._send_civ_raw(civ)
-        assert resp is not None
+        resp = await self._send_civ_expect(civ, label="get_nb")
         return resp.data[0] == 0x01 if resp.data else False
 
     async def set_nb(self, on: bool, receiver: int = 0) -> None:
@@ -3386,8 +3371,7 @@ class CoreRadio:
         """Read Noise Reduction status."""
         self._check_connected()
         civ = get_nr(to_addr=self._radio_addr)
-        resp = await self._send_civ_raw(civ)
-        assert resp is not None
+        resp = await self._send_civ_expect(civ, label="get_nr")
         return resp.data[0] == 0x01 if resp.data else False
 
     async def set_nr(self, on: bool, receiver: int = 0) -> None:
@@ -3408,8 +3392,7 @@ class CoreRadio:
         """Read IP+ status."""
         self._check_connected()
         civ = get_ip_plus(to_addr=self._radio_addr)
-        resp = await self._send_civ_raw(civ)
-        assert resp is not None
+        resp = await self._send_civ_expect(civ, label="get_ip_plus")
         return resp.data[0] == 0x01 if resp.data else False
 
     async def set_ip_plus(self, on: bool, receiver: int = 0) -> None:
@@ -3456,8 +3439,7 @@ class CoreRadio:
         """Read CTCSS tone frequency in Hz (0x1B 0x00)."""
         self._check_connected()
         civ = _get_tone_freq_cmd(to_addr=self._radio_addr, receiver=receiver)
-        resp = await self._send_civ_raw(civ)
-        assert resp is not None
+        resp = await self._send_civ_expect(civ, label="get_tone_freq")
         _, freq = parse_tone_freq_response(resp)
         return freq
 
@@ -3471,8 +3453,7 @@ class CoreRadio:
         """Read TSQL frequency in Hz (0x1B 0x01)."""
         self._check_connected()
         civ = _get_tsql_freq_cmd(to_addr=self._radio_addr, receiver=receiver)
-        resp = await self._send_civ_raw(civ)
-        assert resp is not None
+        resp = await self._send_civ_expect(civ, label="get_tsql_freq")
         _, freq = parse_tsql_freq_response(resp)
         return freq
 
@@ -3699,8 +3680,7 @@ class CoreRadio:
         """Read system date as (year, month, day)."""
         self._check_connected()
         civ = get_system_date(to_addr=self._radio_addr)
-        resp = await self._send_civ_raw(civ, key="get_system_date", dedupe=True)
-        assert resp is not None
+        resp = await self._send_civ_expect(civ, key="get_system_date", dedupe=True, label="get_system_date")
         return parse_system_date_response(resp)
 
     async def set_system_date(self, year: int, month: int, day: int) -> None:
@@ -3719,8 +3699,7 @@ class CoreRadio:
         """Read system time as (hour, minute)."""
         self._check_connected()
         civ = get_system_time(to_addr=self._radio_addr)
-        resp = await self._send_civ_raw(civ, key="get_system_time", dedupe=True)
-        assert resp is not None
+        resp = await self._send_civ_expect(civ, key="get_system_time", dedupe=True, label="get_system_time")
         return parse_system_time_response(resp)
 
     async def set_system_time(self, hour: int, minute: int) -> None:
@@ -3738,8 +3717,7 @@ class CoreRadio:
         """Read UTC offset as (hours, minutes, is_negative)."""
         self._check_connected()
         civ = get_utc_offset(to_addr=self._radio_addr)
-        resp = await self._send_civ_raw(civ, key="get_utc_offset", dedupe=True)
-        assert resp is not None
+        resp = await self._send_civ_expect(civ, key="get_utc_offset", dedupe=True, label="get_utc_offset")
         return parse_utc_offset_response(resp)
 
     async def set_utc_offset(self, hours: int, minutes: int, is_negative: bool) -> None:
@@ -3929,8 +3907,7 @@ class CoreRadio:
         self._check_connected()
         frames = send_cw(text, to_addr=self._radio_addr)
         for frame in frames:
-            resp = await self._send_civ_raw(frame)
-            assert resp is not None
+            resp = await self._send_civ_expect(frame, label="send_cw_text")
             ack = parse_ack_nak(resp)
             if ack is False:
                 raise CommandError("Radio rejected CW text")
@@ -3954,8 +3931,7 @@ class CoreRadio:
         """Get the current radio power state (PowerControlCapable protocol)."""
         self._check_connected()
         civ = get_powerstat(to_addr=self._radio_addr)
-        resp = await self._send_civ_raw(civ)
-        assert resp is not None
+        resp = await self._send_civ_expect(civ, label="get_powerstat")
         return parse_powerstat(resp)
 
     async def set_powerstat(self, on: bool) -> None:
@@ -3971,8 +3947,7 @@ class CoreRadio:
             if on
             else power_off(to_addr=self._radio_addr)
         )
-        resp = await self._send_civ_raw(civ)
-        assert resp is not None
+        resp = await self._send_civ_expect(civ, label="set_powerstat")
         ack = parse_ack_nak(resp)
         if ack is False:
             if on:
@@ -4099,10 +4074,10 @@ class CoreRadio:
     async def get_scope_receiver(self) -> int:
         """Read the selected scope receiver (0=MAIN, 1=SUB)."""
         self._check_connected()
-        resp = await self._send_civ_raw(
-            _get_scope_main_sub_cmd(to_addr=self._radio_addr)
+        resp = await self._send_civ_expect(
+            _get_scope_main_sub_cmd(to_addr=self._radio_addr),
+            label="get_scope_receiver",
         )
-        assert resp is not None
         receiver = parse_scope_main_sub_response(resp)
         self._scope_controls().receiver = receiver
         return receiver
@@ -4121,10 +4096,10 @@ class CoreRadio:
     async def get_scope_dual(self) -> bool:
         """Read whether the scope is in dual-display mode."""
         self._check_connected()
-        resp = await self._send_civ_raw(
-            _get_scope_single_dual_cmd(to_addr=self._radio_addr)
+        resp = await self._send_civ_expect(
+            _get_scope_single_dual_cmd(to_addr=self._radio_addr),
+            label="get_scope_dual",
         )
-        assert resp is not None
         dual = parse_scope_single_dual_response(resp)
         self._scope_controls().dual = dual
         return dual
@@ -4142,8 +4117,7 @@ class CoreRadio:
     async def get_scope_mode(self) -> int:
         """Read the current scope mode (0=center, 1=fixed, 2=scroll-C, 3=scroll-F)."""
         self._check_connected()
-        resp = await self._send_civ_raw(_get_scope_mode_cmd(to_addr=self._radio_addr))
-        assert resp is not None
+        resp = await self._send_civ_expect(_get_scope_mode_cmd(to_addr=self._radio_addr), label="get_scope_mode")
         receiver, mode = parse_scope_mode_response(resp)
         self._apply_scope_receiver_hint(receiver)
         self._scope_controls().mode = mode
@@ -4162,8 +4136,7 @@ class CoreRadio:
     async def get_scope_span(self) -> int:
         """Read the scope span preset index (0..7)."""
         self._check_connected()
-        resp = await self._send_civ_raw(_get_scope_span_cmd(to_addr=self._radio_addr))
-        assert resp is not None
+        resp = await self._send_civ_expect(_get_scope_span_cmd(to_addr=self._radio_addr), label="get_scope_span")
         receiver, span = parse_scope_span_response(resp)
         self._apply_scope_receiver_hint(receiver)
         self._scope_controls().span = span
@@ -4182,8 +4155,7 @@ class CoreRadio:
     async def get_scope_edge(self) -> int:
         """Read the fixed-edge selection (1..4)."""
         self._check_connected()
-        resp = await self._send_civ_raw(_get_scope_edge_cmd(to_addr=self._radio_addr))
-        assert resp is not None
+        resp = await self._send_civ_expect(_get_scope_edge_cmd(to_addr=self._radio_addr), label="get_scope_edge")
         receiver, edge = parse_scope_edge_response(resp)
         self._apply_scope_receiver_hint(receiver)
         self._scope_controls().edge = edge
@@ -4202,8 +4174,7 @@ class CoreRadio:
     async def get_scope_hold(self) -> bool:
         """Read whether scope hold is enabled."""
         self._check_connected()
-        resp = await self._send_civ_raw(_get_scope_hold_cmd(to_addr=self._radio_addr))
-        assert resp is not None
+        resp = await self._send_civ_expect(_get_scope_hold_cmd(to_addr=self._radio_addr), label="get_scope_hold")
         receiver, hold = parse_scope_hold_response(resp)
         self._apply_scope_receiver_hint(receiver)
         self._scope_controls().hold = hold
@@ -4222,8 +4193,7 @@ class CoreRadio:
     async def get_scope_ref(self) -> float:
         """Read the scope reference level in dB."""
         self._check_connected()
-        resp = await self._send_civ_raw(_get_scope_ref_cmd(to_addr=self._radio_addr))
-        assert resp is not None
+        resp = await self._send_civ_expect(_get_scope_ref_cmd(to_addr=self._radio_addr), label="get_scope_ref")
         receiver, ref_db = parse_scope_ref_response(resp)
         self._apply_scope_receiver_hint(receiver)
         self._scope_controls().ref_db = ref_db
@@ -4242,8 +4212,7 @@ class CoreRadio:
     async def get_scope_speed(self) -> int:
         """Read the scope speed preset (0=fast, 1=mid, 2=slow)."""
         self._check_connected()
-        resp = await self._send_civ_raw(_get_scope_speed_cmd(to_addr=self._radio_addr))
-        assert resp is not None
+        resp = await self._send_civ_expect(_get_scope_speed_cmd(to_addr=self._radio_addr), label="get_scope_speed")
         receiver, speed = parse_scope_speed_response(resp)
         self._apply_scope_receiver_hint(receiver)
         self._scope_controls().speed = speed
@@ -4262,10 +4231,10 @@ class CoreRadio:
     async def get_scope_during_tx(self) -> bool:
         """Read whether the scope remains visible during transmit."""
         self._check_connected()
-        resp = await self._send_civ_raw(
-            _get_scope_during_tx_cmd(to_addr=self._radio_addr)
+        resp = await self._send_civ_expect(
+            _get_scope_during_tx_cmd(to_addr=self._radio_addr),
+            label="get_scope_during_tx",
         )
-        assert resp is not None
         during_tx = parse_scope_during_tx_response(resp)
         self._scope_controls().during_tx = during_tx
         return during_tx
@@ -4282,10 +4251,10 @@ class CoreRadio:
     async def get_scope_center_type(self) -> int:
         """Read the scope center-type setting (0..2)."""
         self._check_connected()
-        resp = await self._send_civ_raw(
-            _get_scope_center_type_cmd(to_addr=self._radio_addr)
+        resp = await self._send_civ_expect(
+            _get_scope_center_type_cmd(to_addr=self._radio_addr),
+            label="get_scope_center_type",
         )
-        assert resp is not None
         receiver, center_type = parse_scope_center_type_response(resp)
         self._apply_scope_receiver_hint(receiver)
         self._scope_controls().center_type = center_type
@@ -4303,8 +4272,7 @@ class CoreRadio:
     async def get_scope_vbw(self) -> bool:
         """Read whether narrow scope VBW is enabled."""
         self._check_connected()
-        resp = await self._send_civ_raw(_get_scope_vbw_cmd(to_addr=self._radio_addr))
-        assert resp is not None
+        resp = await self._send_civ_expect(_get_scope_vbw_cmd(to_addr=self._radio_addr), label="get_scope_vbw")
         receiver, narrow = parse_scope_vbw_response(resp)
         self._apply_scope_receiver_hint(receiver)
         self._scope_controls().vbw_narrow = narrow
@@ -4322,10 +4290,10 @@ class CoreRadio:
     async def get_scope_fixed_edge(self) -> ScopeFixedEdge:
         """Read the fixed-edge scope bounds."""
         self._check_connected()
-        resp = await self._send_civ_raw(
-            _get_scope_fixed_edge_cmd(to_addr=self._radio_addr)
+        resp = await self._send_civ_expect(
+            _get_scope_fixed_edge_cmd(to_addr=self._radio_addr),
+            label="get_scope_fixed_edge",
         )
-        assert resp is not None
         fixed_edge = parse_scope_fixed_edge_response(resp)
         self._scope_controls().fixed_edge = fixed_edge
         self._scope_controls().edge = fixed_edge.edge
@@ -4361,8 +4329,7 @@ class CoreRadio:
     async def get_scope_rbw(self) -> int:
         """Read the scope RBW preset (0=wide, 1=mid, 2=narrow)."""
         self._check_connected()
-        resp = await self._send_civ_raw(_get_scope_rbw_cmd(to_addr=self._radio_addr))
-        assert resp is not None
+        resp = await self._send_civ_expect(_get_scope_rbw_cmd(to_addr=self._radio_addr), label="get_scope_rbw")
         receiver, rbw = parse_scope_rbw_response(resp)
         self._apply_scope_receiver_hint(receiver)
         self._scope_controls().rbw = rbw
