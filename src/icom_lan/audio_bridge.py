@@ -396,11 +396,23 @@ class AudioBridge:
             pass
         except Exception:
             logger.error("%s: RX loop error", self._label, exc_info=True)
-            # Try to restart after a brief pause
-            await asyncio.sleep(1.0)
-            if self._running and self._subscription:
-                logger.info("%s: restarting RX loop", self._label)
+            # Try to restart after a brief pause, but cap restarts to avoid infinite loops
+            self._rx_restart_count = getattr(self, "_rx_restart_count", 0) + 1
+            if self._running and self._subscription and self._rx_restart_count <= 5:
+                logger.info(
+                    "%s: restarting RX loop (attempt %d/5)",
+                    self._label,
+                    self._rx_restart_count,
+                )
+                await asyncio.sleep(1.0)
                 self._rx_task = asyncio.create_task(self._rx_loop(np))
+            else:
+                logger.error(
+                    "%s: RX loop gave up after %d restarts — stopping bridge",
+                    self._label,
+                    self._rx_restart_count,
+                )
+                self._running = False
 
     async def _tx_loop(self) -> None:
         """Read audio from the virtual device and push to the radio."""
