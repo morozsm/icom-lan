@@ -27,6 +27,7 @@ import mimetypes
 import pathlib
 import urllib.parse
 from dataclasses import dataclass, field
+from collections.abc import Coroutine
 from typing import TYPE_CHECKING, Any, cast
 
 from .. import __version__
@@ -284,6 +285,8 @@ class WebServer:
         self._scope_reenable_task: asyncio.Task[None] | None = None
         self._scope_reenable_poll_interval: float = 0.5
         self._scope_reenable_timeout: float = 30.0
+        # prevent GC of fire-and-forget tasks
+        self._bg_tasks: set[asyncio.Task[Any]] = set()
         self._scope_health_max_retries: int = 3  # give up after N failed re-enables
         # Band plan registry
         from .band_plan import BandPlanRegistry
@@ -318,6 +321,13 @@ class WebServer:
                 )
         except Exception:
             pass  # avoid raising in destructor
+
+    def _spawn(self, coro: Coroutine[Any, Any, Any]) -> asyncio.Task[Any]:
+        """Create a background task and prevent GC from collecting it."""
+        task = asyncio.get_running_loop().create_task(coro)
+        self._bg_tasks.add(task)
+        task.add_done_callback(self._bg_tasks.discard)
+        return task
 
     # ------------------------------------------------------------------
     # Helpers for scope callback operations
@@ -403,8 +413,7 @@ class WebServer:
         ):
             self._set_scope_data_callback(None)
             if self._scope_enabled:
-                loop = asyncio.get_event_loop()
-                loop.create_task(self._disable_scope_async())
+                self._spawn(self._disable_scope_async())
 
     async def _disable_scope_async(self) -> None:
         """Disable scope on the radio when no more handlers are connected."""
@@ -875,9 +884,7 @@ class WebServer:
                     callback=_yaesu_state_cb,
                     command_queue=self._command_queue,
                 )
-                asyncio.get_running_loop().create_task(
-                    self._yaesu_poller.start(), name="yaesu-poller"
-                )
+                self._spawn(self._yaesu_poller.start())
                 logger.info("Yaesu CAT poller started")
             else:
                 # --- Icom CI-V backend: fire-and-forget RadioPoller ---
