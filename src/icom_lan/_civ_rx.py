@@ -308,9 +308,13 @@ class CivRuntime:
                     if elapsed_recovery < _OPENCLOSE_DEADLINE:
                         try:
                             await self._host._send_open_close(open_stream=True)
-                        except Exception:
+                        except (ConnectionError, TimeoutError, OSError) as exc:
                             logger.debug(
-                                "civ-data-watchdog: open_close failed",
+                                "civ-data-watchdog: open_close failed: %s", exc,
+                            )
+                        except Exception:
+                            logger.warning(
+                                "civ-data-watchdog: unexpected error in open_close",
                                 exc_info=True,
                             )
                     else:
@@ -330,9 +334,14 @@ class CivRuntime:
                                 await self._host.disconnect()
                                 await asyncio.sleep(reconnect_pause)
                                 await self._host.connect()
-                            except Exception:
+                            except (ConnectionError, TimeoutError, OSError):
                                 logger.error(
                                     "civ-data-watchdog: full reconnect failed",
+                                    exc_info=True,
+                                )
+                            except Exception:
+                                logger.error(
+                                    "civ-data-watchdog: unexpected error in full reconnect",
                                     exc_info=True,
                                 )
                             return
@@ -349,7 +358,7 @@ class CivRuntime:
                             await self._host._force_cleanup_civ()
                             await asyncio.sleep(reconnect_pause)
                             await self._host.soft_reconnect()
-                        except Exception:
+                        except (ConnectionError, TimeoutError, OSError):
                             logger.error(
                                 "civ-data-watchdog: soft_reconnect failed, "
                                 "falling back to full reconnect",
@@ -359,11 +368,21 @@ class CivRuntime:
                                 await self._host.disconnect()
                                 await asyncio.sleep(reconnect_pause)
                                 await self._host.connect()
-                            except Exception:
+                            except (ConnectionError, TimeoutError, OSError):
                                 logger.error(
                                     "civ-data-watchdog: full reconnect also failed",
                                     exc_info=True,
                                 )
+                            except Exception:
+                                logger.error(
+                                    "civ-data-watchdog: unexpected error in full reconnect fallback",
+                                    exc_info=True,
+                                )
+                        except Exception:
+                            logger.error(
+                                "civ-data-watchdog: unexpected error in soft_reconnect",
+                                exc_info=True,
+                            )
                         return
                 else:
                     if recovering:
@@ -669,8 +688,10 @@ class CivRuntime:
                 b = frame.data[0]
                 step = ((b >> 4) & 0x0F) * 10 + (b & 0x0F)
                 self._notify_change("tuning_step_changed", {"step": step})
+        except (ValueError, IndexError, KeyError, AttributeError, TypeError) as exc:
+            logger.debug("civ-rx: cache update failed: %s", exc)
         except Exception:
-            logger.debug("civ-rx: cache update failed", exc_info=True)
+            logger.warning("civ-rx: unexpected error in cache update", exc_info=True)
         self._update_radio_state_from_frame(frame)
 
     def _update_radio_state_from_frame(self, frame: CivFrame) -> None:
@@ -1010,8 +1031,10 @@ class CivRuntime:
                             )
                             self._notify_change("dual_watch_changed", {"on": new_dw})
 
+        except (ValueError, IndexError, KeyError, AttributeError, TypeError) as exc:
+            logger.debug("civ-rx: state update failed: %s", exc)
         except Exception:
-            logger.debug("civ-rx: state update failed", exc_info=True)
+            logger.warning("civ-rx: unexpected error in state update", exc_info=True)
 
     def _notify_change(self, event_name: str, data: dict[str, Any]) -> None:
         """Notify server of state change (best-effort)."""
@@ -1093,17 +1116,25 @@ class CivRuntime:
                         if civ_t2 is None and ctrl_alive:
                             try:
                                 await self._host.soft_reconnect()
-                            except Exception:
+                            except (ConnectionError, TimeoutError, OSError) as exc:
                                 logger.debug(
-                                    "Fast CI-V soft_reconnect attempt failed",
+                                    "Fast CI-V soft_reconnect attempt failed: %s", exc,
+                                )
+                            except Exception:
+                                logger.warning(
+                                    "Fast CI-V soft_reconnect: unexpected error",
                                     exc_info=True,
                                 )
                 else:
                     try:
                         await self._host.soft_reconnect()
-                    except Exception:
+                    except (ConnectionError, TimeoutError, OSError) as exc:
                         logger.debug(
-                            "Fast CI-V soft_reconnect attempt failed",
+                            "Fast CI-V soft_reconnect attempt failed: %s", exc,
+                        )
+                    except Exception:
+                        logger.warning(
+                            "Fast CI-V soft_reconnect: unexpected error",
                             exc_info=True,
                         )
 
