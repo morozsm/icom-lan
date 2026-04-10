@@ -1174,3 +1174,61 @@ class TestCapabilitiesNoFalseAdvertising:
         """Regression: removing false caps must not break real ones."""
         for cap in ("audio", "dual_rx", "compressor", "meters", "tx", "cw"):
             assert cap in radio.capabilities, f"{cap!r} should be in capabilities"
+
+
+# ---------------------------------------------------------------------------
+# SUB receiver level routing (#562)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_get_af_level_main_sends_ag0(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="AG0128")
+    level = await connected_radio.get_af_level(0)
+    assert level == 128
+    connected_radio._transport.query.assert_called_once_with("AG0;")
+
+
+@pytest.mark.asyncio
+async def test_get_af_level_sub_sends_ag1(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="AG1200")
+    level = await connected_radio.get_af_level(1)
+    assert level == 200
+    connected_radio._transport.query.assert_called_once_with("AG1;")
+
+
+@pytest.mark.asyncio
+async def test_set_af_level_sub_sends_ag1(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_af_level(150, receiver=1)
+    connected_radio._transport.write.assert_called_once_with("AG1150;")
+
+
+@pytest.mark.asyncio
+async def test_get_rf_gain_sub_sends_rg1(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="RG1180")
+    level = await connected_radio.get_rf_gain(1)
+    assert level == 180
+    connected_radio._transport.query.assert_called_once_with("RG1;")
+
+
+@pytest.mark.asyncio
+async def test_get_squelch_sub_sends_sq1(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="SQ1050")
+    level = await connected_radio.get_squelch(1)
+    assert level == 50
+    connected_radio._transport.query.assert_called_once_with("SQ1;")
+
+
+@pytest.mark.asyncio
+async def test_set_rf_gain_sub_sends_rg1(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_rf_gain(180, receiver=1)
+    connected_radio._transport.write.assert_called_once_with("RG1180;")
+
+
+@pytest.mark.asyncio
+async def test_set_squelch_sub_sends_sq1(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_squelch(50, receiver=1)
+    connected_radio._transport.write.assert_called_once_with("SQ1050;")

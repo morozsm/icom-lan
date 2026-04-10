@@ -657,35 +657,52 @@ class YaesuCatRadio:
     # -- D1: RX Audio Controls ----------------------------------------------
 
     async def get_af_level(self, receiver: int = 0) -> int:
-        """Get the AF (audio) level (0–255).
-
-        Args:
-            receiver: 0 = main (sub not yet supported by TOML profile).
-        """
-        result = await self._query("get_af_level")
-        return int(result["level"])
+        """Get the AF (audio) level (0–255)."""
+        cmd = "get_af_level" if receiver == 0 else "get_af_level_sub"
+        result = await self._query(cmd)
+        level = int(result["level"])
+        rx = self._state.main if receiver == 0 else self._state.sub
+        rx.af_level = level
+        return level
 
     async def set_af_level(self, level: int, receiver: int = 0) -> None:
         """Set the AF (audio) level (0–255)."""
-        await self._write("set_af_level", level=level)
+        cmd = "set_af_level" if receiver == 0 else "set_af_level_sub"
+        await self._write(cmd, level=level)
+        rx = self._state.main if receiver == 0 else self._state.sub
+        rx.af_level = level
 
     async def get_rf_gain(self, receiver: int = 0) -> int:
         """Get the RF gain (0–255)."""
-        result = await self._query("get_rf_gain")
-        return int(result["level"])
+        cmd = "get_rf_gain" if receiver == 0 else "get_rf_gain_sub"
+        result = await self._query(cmd)
+        level = int(result["level"])
+        rx = self._state.main if receiver == 0 else self._state.sub
+        rx.rf_gain = level
+        return level
 
     async def set_rf_gain(self, level: int, receiver: int = 0) -> None:
         """Set the RF gain (0–255)."""
-        await self._write("set_rf_gain", level=level)
+        cmd = "set_rf_gain" if receiver == 0 else "set_rf_gain_sub"
+        await self._write(cmd, level=level)
+        rx = self._state.main if receiver == 0 else self._state.sub
+        rx.rf_gain = level
 
     async def get_squelch(self, receiver: int = 0) -> int:
         """Get the squelch level (0–255)."""
-        result = await self._query("get_squelch")
-        return int(result["level"])
+        cmd = "get_squelch" if receiver == 0 else "get_squelch_sub"
+        result = await self._query(cmd)
+        level = int(result["level"])
+        rx = self._state.main if receiver == 0 else self._state.sub
+        rx.squelch = level
+        return level
 
     async def set_squelch(self, level: int, receiver: int = 0) -> None:
         """Set the squelch level (0–255)."""
-        await self._write("set_squelch", level=level)
+        cmd = "set_squelch" if receiver == 0 else "set_squelch_sub"
+        await self._write(cmd, level=level)
+        rx = self._state.main if receiver == 0 else self._state.sub
+        rx.squelch = level
 
     # -- D2: RF Front-End ---------------------------------------------------
 
