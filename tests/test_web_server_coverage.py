@@ -140,7 +140,9 @@ async def test_start_and_stop_with_radio_sets_callbacks() -> None:
         await srv.stop()
 
     fake_poller.stop.assert_called_once()
-    radio.disconnect.assert_awaited_once()
+    # radio.disconnect is NOT called by WebServer.stop() — it's the caller's
+    # responsibility via the context manager (async with radio:).
+    radio.disconnect.assert_not_awaited()
     assert fake_server.closed is True
 
 

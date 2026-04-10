@@ -1949,11 +1949,12 @@ class TestRadioPoller:
         poller = RadioPoller(radio, cache, queue)
 
         poller.start()
-        await asyncio.sleep(0.15)  # 25ms × 6 cycles = 150ms
+        # 25ms × 8 cycles = 200ms; +2 eager scope queries at startup.
+        await asyncio.sleep(0.25)
         poller.stop()
 
         # Interleaved design: even cycles = meter, odd cycles = state.
-        # In 150ms at 25ms/cycle ≈ 6 cycles → ~3 meter + ~3 state queries.
+        # Eager fetch adds 2 scope queries before the main loop.
         assert radio.send_civ.await_count >= 4
         meter_calls = [
             c for c in radio.send_civ.call_args_list if c[0][0] == 0x15

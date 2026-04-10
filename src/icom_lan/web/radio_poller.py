@@ -564,9 +564,34 @@ class RadioPoller:
             )
         return queries
 
+    async def _eager_fetch_scope_controls(self) -> None:
+        """Fetch scope control state once at startup for immediate UI accuracy.
+
+        Only runs for radios that have scope queries in the poll rotation
+        (currently IC-7610).  Without this, the SPAN control shows the Python
+        default (0 = ±2.5k) until the slow rotation reaches 0x27 0x15.
+        """
+        if self._profile.model not in ("IC-7610",):
+            return
+        _SCOPE_QUERIES = [
+            (0x27, 0x14),  # Scope mode (center/fixed)
+            (0x27, 0x15),  # Scope span
+        ]
+        for cmd, sub in _SCOPE_QUERIES:
+            try:
+                await self._civ(cmd, sub=sub, data=b"")
+                await asyncio.sleep(self._gap)
+            except Exception:
+                pass
+
     async def _run(self) -> None:
         _backoff = 0.0
         _MAX_BACKOFF = 5.0  # max pause when radio is disconnected
+
+        # Eager-fetch scope controls so the UI shows correct values immediately
+        # instead of waiting for the slow query rotation to reach them.
+        await self._eager_fetch_scope_controls()
+
         try:
             while True:
                 # 1. Drain command queue (fire-and-forget writes)
