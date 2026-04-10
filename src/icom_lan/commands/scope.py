@@ -374,6 +374,8 @@ def parse_scope_ref_response(frame: CivFrame) -> tuple[int | None, float]:
     ref = absolute_tenths / 10.0
     if payload[2]:
         ref *= -1
+    # Clamp to valid IC-7610 range; malformed BCD can produce wild values
+    ref = max(-30.0, min(10.0, ref))
     return receiver, ref
 
 

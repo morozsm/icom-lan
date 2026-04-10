@@ -46,6 +46,7 @@
       fill: 'var(--v2-meter-s-fill)',
       track: 'var(--v2-meter-s-track)',
       valueClass: 's',
+      relevant: !txActive,
     },
     {
       key: 'POWER',
@@ -55,6 +56,7 @@
       fill: 'var(--v2-meter-power-fill)',
       track: 'var(--v2-meter-power-track)',
       valueClass: 'po',
+      relevant: txActive,
     },
     {
       key: 'SWR',
@@ -64,6 +66,7 @@
       fill: 'var(--v2-meter-swr-fill)',
       track: 'var(--v2-meter-swr-track)',
       valueClass: 'swr',
+      relevant: txActive,
     },
     {
       key: 'alc',
@@ -73,6 +76,7 @@
       fill: 'var(--v2-meter-alc-fill)',
       track: 'var(--v2-meter-alc-track)',
       valueClass: 'alc',
+      relevant: txActive,
     },
   ]);
 </script>
@@ -114,7 +118,7 @@
 
   <div class="dock-rows">
     {#each rows as row (row.key)}
-      <div class="dock-row" data-active={row.key === meterSource}>
+      <div class="dock-row" data-active={row.key === meterSource} data-relevant={row.relevant}>
         <span class="dock-row-label">{row.label}</span>
         <div class="dock-bar" style:background={row.track}>
           <div class="dock-bar-fill" style:width={`${normalize(row.value) * 100}%`} style:background={row.fill}></div>
@@ -266,6 +270,11 @@
     grid-template-columns: 30px minmax(0, 1fr) 48px;
     align-items: center;
     gap: 10px;
+    transition: opacity 200ms ease;
+  }
+
+  .dock-row[data-relevant='false'] {
+    opacity: 0.3;
   }
 
   .dock-row[data-active='true'] .dock-row-label,

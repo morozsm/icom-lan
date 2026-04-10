@@ -116,10 +116,10 @@
   let filterMaxHz = $derived(filterConfig?.maxHz ?? 10000);
   let filterStepHz = $derived(filterConfig?.stepHz ?? filterConfig?.segments?.[0]?.stepHz ?? 100);
 
-  // Combined ref level: local brightness (BRT) + radio scope REF.
-  // The radio REF command (0x27/0x19) may not affect LAN scope data,
-  // so the frontend must apply the refDb shift to the display.
-  let refLevel = $derived(brtLevel + (radio.current?.scopeControls?.refDb ?? 0));
+  // Local brightness only — the radio REF command (0x27/0x19) shifts the
+  // scope data that the IC-7610 sends over LAN, so applying refDb here
+  // would double-shift. BRT is the frontend-only display adjustment.
+  let refLevel = $derived(brtLevel);
 
   let spectrumOptions = $derived<SpectrumOptions>({
     ...defaultSpectrumOptions,

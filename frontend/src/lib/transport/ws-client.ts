@@ -444,6 +444,13 @@ function _applyOptimistic(name: string, params: Record<string, unknown>): void {
       }
       break;
     }
+    case 'set_scope_ref': {
+      const sr = getRadioState();
+      if (sr?.scopeControls && typeof params.ref === 'number') {
+        patchRadioState({ scopeControls: { ...sr.scopeControls, refDb: params.ref } });
+      }
+      break;
+    }
 
     case 'set_antenna_1':
       // IC-7610: 0x12 0x00 selects ANT1 and the data byte encodes RX-ANT.
