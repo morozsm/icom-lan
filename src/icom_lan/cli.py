@@ -995,7 +995,11 @@ def check_ports_available(ports: list[int]) -> None:
 
     for port in ports:
         with _sock.socket(_sock.AF_INET, _sock.SOCK_STREAM) as s:
-            s.setsockopt(_sock.SOL_SOCKET, _sock.SO_REUSEADDR, 0)
+            # Allow binding even if port is in TIME_WAIT from a recent shutdown.
+            # Only fail if another process is actively listening.
+            s.setsockopt(_sock.SOL_SOCKET, _sock.SO_REUSEADDR, 1)
+            if hasattr(_sock, "SO_REUSEPORT"):
+                s.setsockopt(_sock.SOL_SOCKET, _sock.SO_REUSEPORT, 1)
             try:
                 s.bind(("", port))
             except OSError:

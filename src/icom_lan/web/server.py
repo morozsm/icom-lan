@@ -864,6 +864,7 @@ class WebServer:
             port=self._config.port,
             ssl=ssl_ctx,
             reuse_address=True,
+            reuse_port=True,
         )
         addr = self._server.sockets[0].getsockname()
         scheme = "https" if ssl_ctx else "http"
