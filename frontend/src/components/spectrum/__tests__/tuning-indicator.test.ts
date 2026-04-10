@@ -21,14 +21,16 @@ function clamp(value: number, min: number, max: number): number {
 /**
  * Compute tuning indicator position as percentage (0–100).
  * Mirrors tuneLinePct from SpectrumPanel.svelte.
+ * CTR/SCROLL-C → always 50% (center). FIX/SCROLL-F → proportional.
  */
 function computeTuneLinePct(
   tuneHz: number,
   startFreq: number,
   endFreq: number,
+  isFixedScope: boolean,
 ): number {
   const spanHz = endFreq - startFreq;
-  if (spanHz > 0 && tuneHz > 0 && tuneHz >= startFreq && tuneHz <= endFreq) {
+  if (isFixedScope && spanHz > 0 && tuneHz > 0 && tuneHz >= startFreq && tuneHz <= endFreq) {
     return ((tuneHz - startFreq) / spanHz) * 100;
   }
   return 50;
@@ -37,14 +39,16 @@ function computeTuneLinePct(
 /**
  * Compute tuning indicator position in pixels (0–width).
  * Mirrors tunePx from spectrum-renderer.ts.
+ * CTR/SCROLL-C → width/2. FIX/SCROLL-F → proportional.
  */
 function computeTunePx(
   tuneHz: number,
   centerHz: number,
   spanHz: number,
   width: number,
+  isFixedScope: boolean,
 ): number {
-  if (tuneHz > 0 && spanHz > 0) {
+  if (isFixedScope && tuneHz > 0 && spanHz > 0) {
     const startHz = centerHz - spanHz / 2;
     return clamp(((tuneHz - startHz) / spanHz) * width, 0, width);
   }
@@ -127,108 +131,68 @@ describe('scope frame parsing — mode byte', () => {
   });
 });
 
-describe('tuning indicator — proportional positioning (#552)', () => {
-  // CTR mode with centerType=Filter: scope centers on filter midpoint,
-  // not on carrier. The indicator must show the CARRIER position.
-
-  it('CTR + Filter center: USB carrier is LEFT of scope center', () => {
-    // USB mode, filter 3200 Hz: carrier at 14.173, filter center at 14.1746
+describe('tuning indicator — CTR mode = center, FIX mode = proportional', () => {
+  it('CTR mode: indicator always at 50% regardless of tuneHz', () => {
     const carrier = 14_173_000;
-    const filterWidth = 3200;
-    const filterCenter = carrier + filterWidth / 2;  // 14_174_600
+    const startFreq = 14_164_600;
+    const endFreq = 14_184_600;
 
-    // Scope in CTR/Filter mode centers on filter center
-    const scopeCenter = filterCenter;
-    const halfSpan = 10_000;  // ±10 kHz
-    const startFreq = scopeCenter - halfSpan;
-    const endFreq = scopeCenter + halfSpan;
-
-    const pct = computeTuneLinePct(carrier, startFreq, endFreq);
-    // Carrier should be to the LEFT of center (~42%)
-    expect(pct).toBeCloseTo(42, 0);
-    expect(pct).toBeLessThan(50);
+    const pct = computeTuneLinePct(carrier, startFreq, endFreq, false);
+    expect(pct).toBe(50);
   });
 
-  it('CTR + Filter center: LSB carrier is RIGHT of scope center', () => {
-    // LSB mode, filter 2400 Hz: carrier at 7.050, filter center at 7.04880
-    const carrier = 7_050_000;
-    const filterWidth = 2400;
-    const filterCenter = carrier - filterWidth / 2;  // 7_048_800
-
-    const scopeCenter = filterCenter;
-    const halfSpan = 10_000;
-    const startFreq = scopeCenter - halfSpan;
-    const endFreq = scopeCenter + halfSpan;
-
-    const pct = computeTuneLinePct(carrier, startFreq, endFreq);
-    // Carrier should be to the RIGHT of center (~56%)
-    expect(pct).toBeGreaterThan(50);
-    expect(pct).toBeCloseTo(56, 0);
-  });
-
-  it('CTR + Carrier center: indicator is exactly at 50%', () => {
-    // centerType=Carrier: scope center === VFO frequency
-    const carrier = 14_074_000;
-    const halfSpan = 25_000;
-    const startFreq = carrier - halfSpan;
-    const endFreq = carrier + halfSpan;
-
-    const pct = computeTuneLinePct(carrier, startFreq, endFreq);
+  it('CTR mode: even with offset carrier, still 50%', () => {
+    const pct = computeTuneLinePct(14_074_000, 14_049_000, 14_099_000, false);
     expect(pct).toBe(50);
   });
 
   it('FIX mode: indicator at correct proportional position', () => {
-    // Fixed scope 14.000–14.350, VFO at 14.074
     const startFreq = 14_000_000;
     const endFreq = 14_350_000;
     const carrier = 14_074_000;
 
-    const pct = computeTuneLinePct(carrier, startFreq, endFreq);
+    const pct = computeTuneLinePct(carrier, startFreq, endFreq, true);
     expect(pct).toBeCloseTo((74_000 / 350_000) * 100, 1);
   });
 
-  it('tuneHz outside scope range falls back to 50%', () => {
-    // VFO at 21 MHz but scope shows 14 MHz band
-    const pct = computeTuneLinePct(21_000_000, 14_000_000, 14_350_000);
+  it('FIX mode: tuneHz outside scope range falls back to 50%', () => {
+    const pct = computeTuneLinePct(21_000_000, 14_000_000, 14_350_000, true);
     expect(pct).toBe(50);
   });
 
   it('tuneHz=0 falls back to 50%', () => {
-    expect(computeTuneLinePct(0, 14_000_000, 14_350_000)).toBe(50);
+    expect(computeTuneLinePct(0, 14_000_000, 14_350_000, true)).toBe(50);
+    expect(computeTuneLinePct(0, 14_000_000, 14_350_000, false)).toBe(50);
   });
 });
 
 describe('tunePx — pixel-level indicator (renderer)', () => {
   const width = 1000;
 
-  it('CTR + Filter center: pixel position matches filter offset', () => {
-    const carrier = 14_173_000;
-    const filterCenter = 14_174_600;  // carrier + 1600 Hz (USB 3200)
-    const spanHz = 20_000;
-
-    const px = computeTunePx(carrier, filterCenter, spanHz, width);
-    // (14173000 - 14164600) / 20000 * 1000 = 420
-    expect(px).toBeCloseTo(420, 0);
-    expect(px).toBeLessThan(width / 2);  // LEFT of center
-  });
-
-  it('CTR + Carrier center: pixel is exactly at center', () => {
-    const carrier = 14_074_000;
-    const px = computeTunePx(carrier, carrier, 50_000, width);
+  it('CTR mode: always center regardless of tuneHz', () => {
+    const px = computeTunePx(14_173_000, 14_174_600, 20_000, width, false);
     expect(px).toBe(width / 2);
   });
 
-  it('clamps to 0 when tuneHz is below scope range', () => {
-    const px = computeTunePx(14_000_000, 14_200_000, 10_000, width);
+  it('FIX mode: proportional position', () => {
+    // scope center 14.175, span 350kHz, carrier at 14.074
+    const px = computeTunePx(14_074_000, 14_175_000, 350_000, width, true);
+    const expected = ((14_074_000 - (14_175_000 - 175_000)) / 350_000) * width;
+    expect(px).toBeCloseTo(expected, 0);
+  });
+
+  it('FIX mode: clamps to 0 when tuneHz is below scope range', () => {
+    const px = computeTunePx(14_000_000, 14_200_000, 10_000, width, true);
     expect(px).toBe(0);
   });
 
-  it('clamps to width when tuneHz is above scope range', () => {
-    const px = computeTunePx(14_400_000, 14_200_000, 10_000, width);
+  it('FIX mode: clamps to width when tuneHz is above scope range', () => {
+    const px = computeTunePx(14_400_000, 14_200_000, 10_000, width, true);
     expect(px).toBe(width);
   });
 
   it('tuneHz=0 falls back to center', () => {
-    expect(computeTunePx(0, 14_074_000, 50_000, width)).toBe(width / 2);
+    expect(computeTunePx(0, 14_074_000, 50_000, width, true)).toBe(width / 2);
+    expect(computeTunePx(0, 14_074_000, 50_000, width, false)).toBe(width / 2);
   });
 });

@@ -152,11 +152,10 @@ export function renderSpectrum(
 
   // Tuning indicator + passband overlay
   if (spanHz > 0) {
+    // scopeMode: 0=CTR, 1=FIX, 2=SCROLL-C, 3=SCROLL-F
+    const isFixedScope = options.scopeMode === 1 || options.scopeMode === 3;
     const startHz = centerHz - spanHz / 2;
-    // Always compute indicator proportionally — in CTR mode the scope may
-    // center on the filter midpoint (centerType=Filter), not the carrier,
-    // so hardcoding width/2 would place the indicator at the wrong freq.
-    const tunePx = (tuneHz > 0 && spanHz > 0)
+    const tunePx = (isFixedScope && tuneHz > 0)
       ? clamp(((tuneHz - startHz) / spanHz) * width, 0, width)
       : width / 2;
 

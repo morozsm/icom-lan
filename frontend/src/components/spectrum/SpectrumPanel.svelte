@@ -104,11 +104,10 @@
   // Scope mode from binary frame header — always in sync with pixel data.
   // Falls back to control state if no frame received yet.
   let scopeMode = $derived(frameScopeMode ?? (radio.current?.scopeControls?.mode ?? 0));
-  // Always compute indicator proportionally — in CTR mode the scope may
-  // center on the filter midpoint (centerType=Filter), not the carrier,
-  // so hardcoding 50% would place the indicator at the wrong frequency.
+  // Tuning indicator: center for CTR/SCROLL-C, proportional for FIX/SCROLL-F
+  let isFixedScope = $derived(scopeMode === 1 || scopeMode === 3);
   let tuneLinePct = $derived(
-    spanHz > 0 && tuneHz > 0 && tuneHz >= startFreq && tuneHz <= endFreq
+    isFixedScope && spanHz > 0 && tuneHz > 0 && tuneHz >= startFreq && tuneHz <= endFreq
       ? ((tuneHz - startFreq) / spanHz) * 100
       : 50
   );
@@ -168,9 +167,10 @@
   );
 
   // Passband overlay position derived from the same geometry as the spectrum renderer.
-  // Pass tuneLinePct as tunePx so passband follows the carrier indicator.
+  // In FIX mode pass tuneLinePct so passband follows the carrier indicator.
   let passbandOverlay = $derived(
-    getPassbandGeometry(rxMode, passbandHz, passbandShiftHz, spanHz, 100, tuneLinePct),
+    getPassbandGeometry(rxMode, passbandHz, passbandShiftHz, spanHz, 100,
+      isFixedScope ? tuneLinePct : undefined),
   );
   let pbWidthPct = $derived(passbandOverlay?.widthPx ?? 0);
   let pbLeftPct = $derived(passbandOverlay?.leftPx ?? 0);
