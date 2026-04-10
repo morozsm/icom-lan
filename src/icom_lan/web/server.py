@@ -488,25 +488,20 @@ class WebServer:
                 self._audio_fft_scope.set_center_freq(freq)
 
     def _update_fft_scope_mode(self) -> None:
-        """Sync AudioFftScope bandwidth from current filter width."""
+        """Sync AudioFftScope bandwidth from current radio mode via rig profile."""
         if self._audio_fft_scope is None:
             return
         main = getattr(self._radio_state, "main", None)
         if main is None:
             return
-        # Use actual filter width if available, otherwise fall back to mode max
-        filter_width = getattr(main, "filter_width", None)
-        if isinstance(filter_width, int) and filter_width > 0:
-            self._audio_fft_scope.set_mode_bandwidth(filter_width)
+        mode = getattr(main, "mode", None)
+        data_mode = getattr(main, "data_mode", 0)
+        profile = self._get_profile()
+        rule = profile.resolve_filter_rule(mode, data_mode=data_mode)
+        if rule is not None and rule.max_hz is not None:
+            self._audio_fft_scope.set_mode_bandwidth(rule.max_hz)
         else:
-            mode = getattr(main, "mode", None)
-            data_mode = getattr(main, "data_mode", 0)
-            profile = self._get_profile()
-            rule = profile.resolve_filter_rule(mode, data_mode=data_mode)
-            if rule is not None and rule.max_hz is not None:
-                self._audio_fft_scope.set_mode_bandwidth(rule.max_hz)
-            else:
-                self._audio_fft_scope.set_mode_bandwidth(None)
+            self._audio_fft_scope.set_mode_bandwidth(None)
 
     # ------------------------------------------------------------------
     # RadioPoller integration
