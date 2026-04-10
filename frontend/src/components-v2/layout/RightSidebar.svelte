@@ -6,7 +6,6 @@
   import DspPanel from '../panels/DspPanel.svelte';
   import TxPanel from '../panels/TxPanel.svelte';
   import CwPanel from '../panels/CwPanel.svelte';
-  import VoxPanel from '../panels/VoxPanel.svelte';
   import MemoryPanel from '../panels/MemoryPanel.svelte';
   import CollapsiblePanel from '../controls/CollapsiblePanel.svelte';
   import {
@@ -14,14 +13,12 @@
     toDspProps,
     toTxProps,
     toCwProps,
-    toVoxProps,
   } from '../wiring/state-adapter';
   import {
     makeRxAudioHandlers,
     makeDspHandlers,
     makeTxHandlers,
     makeCwPanelHandlers,
-    makeVoxHandlers,
     makeSystemHandlers,
   } from '../wiring/command-bus';
 
@@ -35,14 +32,12 @@
   let dsp = $derived(toDspProps(radioState, caps));
   let tx = $derived(toTxProps(radioState, caps));
   let cw = $derived(toCwProps(radioState, caps));
-  let vox = $derived(toVoxProps(radioState));
 
   // Command handlers via command-bus
   const rxAudioHandlers = makeRxAudioHandlers();
   const dspHandlers = makeDspHandlers();
   const txHandlers = makeTxHandlers();
   const cwHandlers = makeCwPanelHandlers();
-  const voxHandlers = makeVoxHandlers();
   const systemHandlers = makeSystemHandlers();
 
   type RightSidebarMode = 'all' | 'rx' | 'tx';
@@ -123,21 +118,6 @@
         onPttOff={systemHandlers.onPttOff}
       />
     </CollapsiblePanel>
-
-    {#if hasCapability('vox')}
-      <CollapsiblePanel title="VOX" panelId="vox">
-        <VoxPanel
-          voxOn={vox.voxOn}
-          voxGain={vox.voxGain}
-          antiVoxGain={vox.antiVoxGain}
-          voxDelay={vox.voxDelay}
-          onVoxToggle={voxHandlers.onVoxToggle}
-          onVoxGainChange={voxHandlers.onVoxGainChange}
-          onAntiVoxGainChange={voxHandlers.onAntiVoxGainChange}
-          onVoxDelayChange={voxHandlers.onVoxDelayChange}
-        />
-      </CollapsiblePanel>
-    {/if}
 
     {#if hasCapability('cw')}
       <CollapsiblePanel title="CW" panelId="cw">
