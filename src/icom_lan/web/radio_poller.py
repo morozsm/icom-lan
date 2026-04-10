@@ -64,6 +64,7 @@ from ..capabilities import (
     CAP_SSB_TX_BW,
     CAP_SYSTEM_SETTINGS,
     CAP_TSQL,
+    CAP_TUNER,
     CAP_VOX,
 )
 from ..profiles import RadioProfile, resolve_radio_profile
@@ -133,6 +134,7 @@ __all__ = [
     "SetCivTransceive",
     "SetCivOutputAnt",
     "SetAfMute",
+    "SetTunerStatus",
     "SetTuningStep",
     "SetXfcStatus",
     "SetTxFreqMonitor",
@@ -259,6 +261,7 @@ from .._poller_types import (  # noqa: E402
     SetSystemTime,
     SetToneFreq,
     SetTsqlFreq,
+    SetTunerStatus,
     SetTuningStep,
     SetTwinPeak,
     SetTxFreqMonitor,
@@ -1373,6 +1376,13 @@ class RadioPoller:
                     self._emit("powerstat_changed", {"power_on": on})
                     self.bump_revision()
                     logger.info("radio-poller: power %s", "ON" if on else "OFF")
+            case SetTunerStatus(value=value):
+                if CAP_TUNER in self._caps:
+                    await radio.set_tuner_status(value)
+                    if self._radio_state is not None:
+                        self._radio_state.tuner_status = value
+                    self._emit("tuner_changed", {"value": value})
+                    self.bump_revision()
             case SetAntenna1(on=on):
                 # IC-7610: 0x12 0x00 selects ANT1, data byte encodes RX-ANT OFF/ON.
                 if CAP_ANTENNA in self._caps:
