@@ -8,6 +8,7 @@ Free to use per EiBi license terms.
 from __future__ import annotations
 
 import asyncio
+import bisect
 import csv
 import io
 import json
@@ -656,10 +657,11 @@ class EiBiProvider:
         end_khz = end_hz / 1000
 
         result: list[dict[str, Any]] = []
-        for s in self._by_freq:
-            if s.freq_khz < start_khz - 3:
-                continue
-            if s.freq_khz > end_khz + 3:
+        lo = start_khz - 3
+        hi = end_khz + 3
+        start_idx = bisect.bisect_left(self._by_freq, lo, key=lambda s: s.freq_khz)
+        for s in self._by_freq[start_idx:]:
+            if s.freq_khz > hi:
                 break
             if on_air_only and not s.is_on_air(utc_now):
                 continue
@@ -679,10 +681,11 @@ class EiBiProvider:
         tol_khz = tolerance_hz / 1000
 
         candidates: list[tuple[float, EiBiStation]] = []
-        for s in self._by_freq:
-            if s.freq_khz < freq_khz - tol_khz:
-                continue
-            if s.freq_khz > freq_khz + tol_khz:
+        lo = freq_khz - tol_khz
+        hi = freq_khz + tol_khz
+        start_idx = bisect.bisect_left(self._by_freq, lo, key=lambda s: s.freq_khz)
+        for s in self._by_freq[start_idx:]:
+            if s.freq_khz > hi:
                 break
             if s.is_on_air(utc_now):
                 dist = abs(s.freq_khz - freq_khz)

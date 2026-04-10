@@ -77,6 +77,17 @@ class TestFormatCommand:
         # Commands like "AB;" have no parameters
         assert format_command("AB;") == "AB;"
 
+    def test_wrong_type_for_format_spec_raises(self):
+        # Passing a string for an integer format spec causes ValueError/TypeError
+        # which should be wrapped as CatFormatError (line 211 branch)
+        with pytest.raises(CatFormatError):
+            format_command("FA{freq:09d};", freq="not_an_int")
+
+    def test_none_value_for_format_spec_raises(self):
+        # Passing None for a format spec that expects a number triggers TypeError
+        with pytest.raises(CatFormatError):
+            format_command("FA{freq:09d};", freq=None)
+
 
 # ---------------------------------------------------------------------------
 # CatCommandParser — basic parsing

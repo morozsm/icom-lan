@@ -1220,6 +1220,87 @@ class TestAdvancedScopeParsers:
         assert receiver == 1
         assert rbw == 2
 
+    def test_parse_scope_speed_response_with_receiver(self) -> None:
+        from icom_lan.commands import parse_scope_speed_response
+
+        # sub=0x1A, receiver=0, speed=1
+        frame = CivFrame(0xE0, 0x98, 0x27, 0x1A, b"\x00\x01")
+        receiver, speed = parse_scope_speed_response(frame)
+        assert receiver == 0
+        assert speed == 1
+
+    def test_parse_scope_speed_response_sub_receiver(self) -> None:
+        from icom_lan.commands import parse_scope_speed_response
+
+        # sub=0x1A, receiver=1 (sub), speed=2
+        frame = CivFrame(0xE0, 0x98, 0x27, 0x1A, b"\x01\x02")
+        receiver, speed = parse_scope_speed_response(frame)
+        assert receiver == 1
+        assert speed == 2
+
+    def test_parse_scope_speed_response_no_receiver(self) -> None:
+        from icom_lan.commands import parse_scope_speed_response
+
+        # sub=0x1A, no receiver prefix, speed=0
+        frame = CivFrame(0xE0, 0x98, 0x27, 0x1A, b"\x00")
+        receiver, speed = parse_scope_speed_response(frame)
+        assert receiver is None
+        assert speed == 0
+
+    def test_parse_scope_hold_response_true(self) -> None:
+        from icom_lan.commands import parse_scope_hold_response
+
+        # sub=0x17, receiver=0, hold=True (0x01)
+        frame = CivFrame(0xE0, 0x98, 0x27, 0x17, b"\x00\x01")
+        receiver, hold = parse_scope_hold_response(frame)
+        assert receiver == 0
+        assert hold is True
+
+    def test_parse_scope_hold_response_false(self) -> None:
+        from icom_lan.commands import parse_scope_hold_response
+
+        # sub=0x17, receiver=1, hold=False (0x00)
+        frame = CivFrame(0xE0, 0x98, 0x27, 0x17, b"\x01\x00")
+        receiver, hold = parse_scope_hold_response(frame)
+        assert receiver == 1
+        assert hold is False
+
+    def test_parse_scope_hold_response_no_receiver(self) -> None:
+        from icom_lan.commands import parse_scope_hold_response
+
+        # sub=0x17, no receiver prefix, hold=True
+        frame = CivFrame(0xE0, 0x98, 0x27, 0x17, b"\x01")
+        receiver, hold = parse_scope_hold_response(frame)
+        assert receiver is None
+        assert hold is True
+
+    def test_parse_scope_vbw_response_true(self) -> None:
+        from icom_lan.commands import parse_scope_vbw_response
+
+        # sub=0x1D, receiver=0, vbw=True (0x01)
+        frame = CivFrame(0xE0, 0x98, 0x27, 0x1D, b"\x00\x01")
+        receiver, vbw = parse_scope_vbw_response(frame)
+        assert receiver == 0
+        assert vbw is True
+
+    def test_parse_scope_vbw_response_false(self) -> None:
+        from icom_lan.commands import parse_scope_vbw_response
+
+        # sub=0x1D, receiver=1, vbw=False (0x00)
+        frame = CivFrame(0xE0, 0x98, 0x27, 0x1D, b"\x01\x00")
+        receiver, vbw = parse_scope_vbw_response(frame)
+        assert receiver == 1
+        assert vbw is False
+
+    def test_parse_scope_vbw_response_no_receiver(self) -> None:
+        from icom_lan.commands import parse_scope_vbw_response
+
+        # sub=0x1D, no receiver prefix, vbw=False
+        frame = CivFrame(0xE0, 0x98, 0x27, 0x1D, b"\x00")
+        receiver, vbw = parse_scope_vbw_response(frame)
+        assert receiver is None
+        assert vbw is False
+
 
 class TestAdvancedScopeValidation:
     """Negative tests for scope builder input validation."""
