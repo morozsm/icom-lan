@@ -858,6 +858,7 @@ class WebServer:
             host=self._config.host,
             port=self._config.port,
             ssl=ssl_ctx,
+            reuse_address=True,
         )
         addr = self._server.sockets[0].getsockname()
         scheme = "https" if ssl_ctx else "http"
@@ -1070,17 +1071,22 @@ class WebServer:
 
         loop = asyncio.get_running_loop()
         stop_event = asyncio.Event()
-        _shutting_down = False
+        _signal_count = 0
 
         def _on_signal() -> None:
-            nonlocal _shutting_down
-            if _shutting_down:
-                logger.info("forced shutdown (second signal)")
+            nonlocal _signal_count
+            _signal_count += 1
+            if _signal_count == 1:
+                logger.info("received shutdown signal")
+                stop_event.set()
+            elif _signal_count == 2:
+                logger.info("second signal — cancelling all tasks")
+                for task in asyncio.all_tasks(loop):
+                    task.cancel()
+            else:
+                logger.info("forced exit")
                 import os
                 os._exit(1)
-            logger.info("received shutdown signal")
-            _shutting_down = True
-            stop_event.set()
 
         for sig in (_signal.SIGTERM, _signal.SIGINT):
             loop.add_signal_handler(sig, _on_signal)
