@@ -223,19 +223,6 @@
     sendCommand('set_freq', { freq, receiver });
   }
 
-  // Click-to-tune on spectrum or waterfall area (fires only when not dragging)
-  function handleAreaClick(event: MouseEvent): void {
-    if (dragging || spanHz <= 0) return;
-    // Suppress click events that fire immediately after a drag ends
-    if (performance.now() - dragEndTime < 100) return;
-    // Don't tune if clicking on a button or control
-    if ((event.target as HTMLElement).closest('button, .toolbar-btn, select, input')) return;
-    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
-    const relX = event.clientX - rect.left;
-    const hz = startFreq + (relX / rect.width) * spanHz;
-    handleTune(hz);
-  }
-
   // --- Scroll-to-tune (mouse wheel on spectrum/waterfall) ---
   function handleWheel(event: WheelEvent): void {
     event.preventDefault();
@@ -335,13 +322,27 @@
   function handleDragEnd(event: PointerEvent): void {
     if (dragPointerId !== null && event.pointerId !== dragPointerId) return;
 
-    // Always send final frequency on release
-    if (dragging && dragFreq > 0 && dragFreq !== lastDragSendFreq) {
-      const receiver = radio.current?.active === 'SUB' ? 1 : 0;
-      sendCommand('set_freq', { freq: dragFreq, receiver });
+    if (dragging) {
+      // Drag-to-pan: send final frequency on release
+      if (dragFreq > 0 && dragFreq !== lastDragSendFreq) {
+        const receiver = radio.current?.active === 'SUB' ? 1 : 0;
+        sendCommand('set_freq', { freq: dragFreq, receiver });
+      }
+      dragEndTime = performance.now();
+    } else if (spanHz > 0 && dragPointerId !== null) {
+      // Tap (no drag threshold crossed): click-to-tune
+      const target = event.target as HTMLElement;
+      if (!target.closest('button, .toolbar-btn, select, input')) {
+        const area = target.closest('.spectrum-area, .waterfall-content') as HTMLElement | null;
+        if (area) {
+          const rect = area.getBoundingClientRect();
+          const relX = event.clientX - rect.left;
+          const hz = startFreq + (relX / rect.width) * spanHz;
+          handleTune(hz);
+        }
+      }
     }
 
-    if (dragging) dragEndTime = performance.now();
     dragging = false;
     dragPointerId = null;
     dragFreq = 0;
@@ -405,7 +406,7 @@
         <div class="tick" style="top: {tick.position}%">{tick.label}</div>
       {/each}
     </div>
-    <div class="spectrum-area" class:panning={dragging} bind:this={spectrumArea} onpointerdown={handleDragStart} onclick={handleAreaClick}>
+    <div class="spectrum-area" class:panning={dragging} bind:this={spectrumArea} onpointerdown={handleDragStart}>
       <BandPlanOverlay {startFreq} {endFreq} visible={showBandPlan} {hiddenLayers} />
       <SpectrumCanvas data={scopePixels} options={spectrumOptions} {spanHz} {enableAvg} {enablePeakHold} onRegisterPush={(fn) => spectrumPush = fn} />
       {#if spanHz > 0 && pbWidthPct > 0 && canResizePassband}
@@ -430,7 +431,7 @@
   {/if}
   <div class="waterfall-area">
     <div class="waterfall-scale"></div>
-    <div class="waterfall-content" class:panning={dragging} bind:this={waterfallContent} onpointerdown={handleDragStart} onclick={handleAreaClick}>
+    <div class="waterfall-content" class:panning={dragging} bind:this={waterfallContent} onpointerdown={handleDragStart}>
       <WaterfallCanvas options={waterfallOptions} onRegisterPush={(fn) => waterfallPush = fn} />
       <DxOverlay spots={dxSpots} {startFreq} {endFreq} onTune={handleTune} />
       <!-- Tuning + passband indicator overlays the waterfall -->
