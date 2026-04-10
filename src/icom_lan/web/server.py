@@ -1028,16 +1028,19 @@ class WebServer:
         self._scope_health_task = None
         self._scope_reenable_task = None
 
-        # 5. Close TCP listener (stops accepting new connections)
+        # 5. Cancel all background + client tasks first
+        all_tasks = list(self._bg_tasks) + list(self._client_tasks)
+        for task in all_tasks:
+            task.cancel()
+
+        # 6. Close TCP listener (now that client tasks are cancelled,
+        #    wait_closed() won't block on open connections)
         if self._server is not None:
             self._server.close()
             await self._server.wait_closed()
             self._server = None
 
-        # 6. Cancel all background + client tasks with timeout
-        all_tasks = list(self._bg_tasks) + list(self._client_tasks)
-        for task in all_tasks:
-            task.cancel()
+        # 7. Wait for cancelled tasks to finish (with timeout)
         if all_tasks:
             try:
                 await asyncio.wait_for(
