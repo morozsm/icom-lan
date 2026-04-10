@@ -8,6 +8,7 @@
   import CwPanel from '../panels/CwPanel.svelte';
   import MemoryPanel from '../panels/MemoryPanel.svelte';
   import CollapsiblePanel from '../controls/CollapsiblePanel.svelte';
+  import { createDragReorder } from '$lib/drag-reorder.svelte';
   import {
     toRxAudioProps,
     toDspProps,
@@ -51,99 +52,17 @@
   let showRx = $derived(mode === 'all' || mode === 'rx');
   let showTx = $derived(mode === 'all' || mode === 'tx');
 
-  // --- Panel reorder ---
-  const PANEL_ORDER_KEY = 'icom-lan:right-panel-order';
-  const DEFAULT_ORDER = ['rx-audio', 'dsp', 'tx', 'cw', 'memory'];
-
-  function loadPanelOrder(): string[] {
-    try {
-      const stored = localStorage.getItem(PANEL_ORDER_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length === DEFAULT_ORDER.length &&
-            DEFAULT_ORDER.every((id) => parsed.includes(id))) {
-          return parsed;
-        }
-      }
-    } catch { /* ignore */ }
-    return [...DEFAULT_ORDER];
-  }
-
-  let panelOrder = $state(loadPanelOrder());
-
-  $effect(() => {
-    try { localStorage.setItem(PANEL_ORDER_KEY, JSON.stringify(panelOrder)); }
-    catch { /* ignore */ }
+  // --- Panel reorder (shared logic) ---
+  const drag = createDragReorder({
+    storageKey: 'icom-lan:right-panel-order',
+    defaults: ['rx-audio', 'dsp', 'tx', 'cw', 'memory'],
+    containerSelector: '.right-sidebar',
   });
-
-  function orderOf(panelId: string): number {
-    return panelOrder.indexOf(panelId);
-  }
-
-  // --- Drag state ---
-  let dragPanelId = $state<string | null>(null);
-  let dropTargetIndex = $state<number>(-1);
-
-  function handleDragStart(panelId: string, event: PointerEvent) {
-    const handle = event.currentTarget as HTMLElement;
-    handle.setPointerCapture(event.pointerId);
-    dragPanelId = panelId;
-    dropTargetIndex = panelOrder.indexOf(panelId);
-
-    const sidebar = handle.closest('.right-sidebar') as HTMLElement;
-    if (!sidebar) return;
-
-    const panels = Array.from(sidebar.querySelectorAll<HTMLElement>('[data-panel-id]'));
-    const rects = new Map<string, DOMRect>();
-    for (const p of panels) {
-      rects.set(p.dataset.panelId!, p.getBoundingClientRect());
-    }
-
-    function onMove(e: PointerEvent) {
-      let closest = 0;
-      let minDist = Infinity;
-      for (let i = 0; i < panelOrder.length; i++) {
-        const rect = rects.get(panelOrder[i]);
-        if (!rect) continue;
-        const dist = Math.abs(e.clientY - (rect.top + rect.height / 2));
-        if (dist < minDist) { minDist = dist; closest = i; }
-      }
-      dropTargetIndex = closest;
-    }
-
-    function onUp() {
-      if (dragPanelId && dropTargetIndex >= 0) {
-        const fromIndex = panelOrder.indexOf(dragPanelId);
-        if (fromIndex !== dropTargetIndex) {
-          const newOrder = [...panelOrder];
-          const [moved] = newOrder.splice(fromIndex, 1);
-          newOrder.splice(dropTargetIndex, 0, moved);
-          panelOrder = newOrder;
-        }
-      }
-      dragPanelId = null;
-      dropTargetIndex = -1;
-      handle.removeEventListener('pointermove', onMove);
-      handle.removeEventListener('pointerup', onUp);
-      handle.removeEventListener('pointercancel', onUp);
-    }
-
-    handle.addEventListener('pointermove', onMove);
-    handle.addEventListener('pointerup', onUp);
-    handle.addEventListener('pointercancel', onUp);
-  }
-
-  function dragStyle(panelId: string): string {
-    const order = `order:${orderOf(panelId)};`;
-    if (dragPanelId === panelId) return order + 'opacity:0.5;transform:scale(0.98);';
-    if (dragPanelId && orderOf(panelId) === dropTargetIndex) return order + 'border-top:2px solid var(--v2-accent, #4af);';
-    return order;
-  }
 </script>
 
 <aside class="right-sidebar">
   {#if showRx}
-    <CollapsiblePanel title="RX AUDIO" panelId="rx-audio" draggable onDragStart={handleDragStart} style={dragStyle('rx-audio')}>
+    <CollapsiblePanel title="RX AUDIO" panelId="rx-audio" draggable onDragStart={drag.handleDragStart} style={drag.dragStyle('rx-audio')}>
       <RxAudioPanel
         monitorMode={rxAudio.monitorMode}
         afLevel={rxAudio.afLevel}
@@ -153,7 +72,7 @@
       />
     </CollapsiblePanel>
 
-    <CollapsiblePanel title="DSP" panelId="dsp" draggable onDragStart={handleDragStart} style={dragStyle('dsp')}>
+    <CollapsiblePanel title="DSP" panelId="dsp" draggable onDragStart={drag.handleDragStart} style={drag.dragStyle('dsp')}>
       <DspPanel
         nrMode={dsp.nrMode}
         nrLevel={dsp.nrLevel}
@@ -180,7 +99,7 @@
   {/if}
 
   {#if showTx}
-    <CollapsiblePanel title="TX" panelId="tx" draggable onDragStart={handleDragStart} style={dragStyle('tx')}>
+    <CollapsiblePanel title="TX" panelId="tx" draggable onDragStart={drag.handleDragStart} style={drag.dragStyle('tx')}>
       <TxPanel
         txActive={tx.txActive}
         rfPower={tx.rfPower}
@@ -209,7 +128,7 @@
     </CollapsiblePanel>
 
     {#if hasCapability('cw')}
-      <CollapsiblePanel title="CW" panelId="cw" draggable onDragStart={handleDragStart} style={dragStyle('cw')}>
+      <CollapsiblePanel title="CW" panelId="cw" draggable onDragStart={drag.handleDragStart} style={drag.dragStyle('cw')}>
         <CwPanel
           cwPitch={cw.cwPitch}
           keySpeed={cw.keySpeed}
@@ -231,7 +150,7 @@
     {/if}
   {/if}
 
-  <CollapsiblePanel title="MEMORY" panelId="memory" draggable onDragStart={handleDragStart} style={dragStyle('memory')}>
+  <CollapsiblePanel title="MEMORY" panelId="memory" draggable onDragStart={drag.handleDragStart} style={drag.dragStyle('memory')}>
     <MemoryPanel />
   </CollapsiblePanel>
 </aside>
