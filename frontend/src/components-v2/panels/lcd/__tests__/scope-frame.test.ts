@@ -11,6 +11,7 @@ import { describe, it, expect } from 'vitest';
 
 interface ScopeFrame {
   receiver: number;
+  mode: number;
   startFreq: number;
   endFreq: number;
   pixels: Uint8Array;
@@ -20,11 +21,12 @@ function parseScopeFrame(buf: ArrayBuffer): ScopeFrame | null {
   const view = new DataView(buf);
   if (view.byteLength < 16 || view.getUint8(0) !== 0x01) return null;
   const receiver = view.getUint8(1);
+  const mode = view.getUint8(2);
   const startFreq = view.getUint32(3, true);
   const endFreq = view.getUint32(7, true);
   const pixelCount = view.getUint16(14, true);
   if (16 + pixelCount > view.byteLength) return null;
-  return { receiver, startFreq, endFreq, pixels: new Uint8Array(buf, 16, pixelCount) };
+  return { receiver, mode, startFreq, endFreq, pixels: new Uint8Array(buf, 16, pixelCount) };
 }
 
 /** Encode a scope frame in the binary wire format. */
@@ -38,7 +40,7 @@ function encodeFrame(
   const view = new DataView(buf);
   view.setUint8(0, 0x01);            // MSG_TYPE_SCOPE
   view.setUint8(1, receiver);
-  // byte 2 reserved
+  view.setUint8(2, 0);               // mode (0=CTR default for this test helper)
   view.setUint32(3, startFreq, true);
   view.setUint32(7, endFreq, true);
   // bytes 11-13 reserved

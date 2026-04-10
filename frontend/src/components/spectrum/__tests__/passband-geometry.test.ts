@@ -51,6 +51,43 @@ describe('getPassbandGeometry', () => {
   });
 });
 
+describe('getPassbandGeometry with tunePx offset (#552)', () => {
+  it('centers passband on tunePx when provided', () => {
+    // USB 2400 Hz passband, 12 kHz span, 600px width, indicator at 240px (40%)
+    const geo = getPassbandGeometry('USB', 2400, 0, 12000, 600, 240);
+    expect(geo).not.toBeNull();
+    // USB passband is to the right of carrier: left=carrier, right=carrier+2400
+    // At 600px/12000Hz = 0.05 px/Hz, 2400Hz = 120px
+    expect(geo!.leftPx).toBe(240);   // carrier position
+    expect(geo!.rightPx).toBe(360);  // carrier + 120px
+    expect(geo!.widthPx).toBe(120);
+  });
+
+  it('defaults to center when tunePx is omitted', () => {
+    const geo = getPassbandGeometry('USB', 2400, 0, 12000, 600);
+    expect(geo).not.toBeNull();
+    expect(geo!.leftPx).toBe(300);   // center of 600px
+    expect(geo!.rightPx).toBe(420);
+  });
+
+  it('passband follows carrier left of center in CTR+Filter mode', () => {
+    // Carrier at 42% of scope (filter center offset), 100px width
+    const tunePx = 42;
+    const geo = getPassbandGeometry('USB', 2400, 0, 20000, 100, tunePx);
+    expect(geo).not.toBeNull();
+    expect(geo!.leftPx).toBe(42);    // carrier position
+    expect(geo!.rightPx).toBe(54);   // 42 + 2400/20000*100 = 42 + 12
+  });
+
+  it('LSB passband extends left from carrier', () => {
+    const geo = getPassbandGeometry('LSB', 2400, 0, 12000, 600, 360);
+    expect(geo).not.toBeNull();
+    // LSB: passband below carrier. left=carrier-2400Hz, right=carrier
+    expect(geo!.leftPx).toBe(240);   // 360 - 120px
+    expect(geo!.rightPx).toBe(360);  // carrier position
+  });
+});
+
 describe('getFilterWidthFromRightEdgePx', () => {
   it('derives USB width from the dragged right edge', () => {
     expect(getFilterWidthFromRightEdgePx('USB', 0, 12000, 600, 420)).toBe(2400);

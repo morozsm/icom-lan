@@ -33,6 +33,7 @@
   // --- Scope frame binary protocol ---
   interface ScopeFrame {
     receiver: number;
+    mode: number;       // 0=CTR, 1=FIX, 2=SCROLL-C, 3=SCROLL-F
     startFreq: number;
     endFreq: number;
     pixels: Uint8Array;
@@ -43,12 +44,14 @@
     // Magic byte 0x01, minimum 16-byte header
     if (view.byteLength < 16 || view.getUint8(0) !== 0x01) return null;
     const receiver = view.getUint8(1);
+    const mode = view.getUint8(2);
     const startFreq = view.getUint32(3, true);
     const endFreq = view.getUint32(7, true);
     const pixelCount = view.getUint16(14, true);
     if (16 + pixelCount > view.byteLength) return null;
     return {
       receiver,
+      mode,
       startFreq,
       endFreq,
       pixels: new Uint8Array(buf, 16, pixelCount),
@@ -65,6 +68,7 @@
   let waterfallPush: ((data: Uint8Array) => void) | null = null;
   let startFreq = $state(0);
   let endFreq = $state(0);
+  let frameScopeMode = $state(0);  // scope mode from binary frame header (authoritative)
   let fullscreen = $state(false);
   let showBandPlan = $state(true);
   let showEiBi = $state(false);
@@ -97,18 +101,25 @@
   let passbandHz = $derived(rx?.filterWidth ?? getFilterWidthHz(rxMode, rx?.filter ?? 1));
   let passbandShiftHz = $derived(deriveIfShift(rx?.pbtInner ?? 0, rx?.pbtOuter ?? 0));
   let canResizePassband = $derived(canResizeFromRightEdge(rxMode));
-  // Scope mode: 0=CTR, 1=FIX, 2=SCROLL-C, 3=SCROLL-F
-  let scopeMode = $derived(radio.current?.scopeControls?.mode ?? 0);
-  // Tuning indicator: fixed at center for CTR/SCROLL-C, proportional for FIX/SCROLL-F
-  let isFixedScope = $derived(scopeMode === 1 || scopeMode === 3);
+  // Scope mode from binary frame header — always in sync with pixel data.
+  // Falls back to control state if no frame received yet.
+  let scopeMode = $derived(frameScopeMode ?? (radio.current?.scopeControls?.mode ?? 0));
+  // Always compute indicator proportionally — in CTR mode the scope may
+  // center on the filter midpoint (centerType=Filter), not the carrier,
+  // so hardcoding 50% would place the indicator at the wrong frequency.
   let tuneLinePct = $derived(
-    isFixedScope && spanHz > 0 && tuneHz > 0 && tuneHz >= startFreq && tuneHz <= endFreq
+    spanHz > 0 && tuneHz > 0 && tuneHz >= startFreq && tuneHz <= endFreq
       ? ((tuneHz - startFreq) / spanHz) * 100
       : 50
   );
   let filterConfig = $derived(resolveFilterModeConfig(getCapabilities(), rxMode, rx?.dataMode));
   let filterMaxHz = $derived(filterConfig?.maxHz ?? 10000);
   let filterStepHz = $derived(filterConfig?.stepHz ?? filterConfig?.segments?.[0]?.stepHz ?? 100);
+
+  // Combined ref level: local brightness (BRT) + radio scope REF.
+  // The radio REF command (0x27/0x19) may not affect LAN scope data,
+  // so the frontend must apply the refDb shift to the display.
+  let refLevel = $derived(brtLevel + (radio.current?.scopeControls?.refDb ?? 0));
 
   let spectrumOptions = $derived<SpectrumOptions>({
     ...defaultSpectrumOptions,
@@ -117,6 +128,7 @@
     tuneHz,
     passbandHz,
     passbandShiftHz,
+    refLevel,
     mode: rxMode,
     scopeMode,
   });
@@ -125,7 +137,7 @@
     ...defaultWaterfallOptions,
     spanHz,
     centerHz,
-    refLevel: brtLevel,
+    refLevel,
     colorScheme,
   });
 
@@ -156,8 +168,9 @@
   );
 
   // Passband overlay position derived from the same geometry as the spectrum renderer.
+  // Pass tuneLinePct as tunePx so passband follows the carrier indicator.
   let passbandOverlay = $derived(
-    getPassbandGeometry(rxMode, passbandHz, passbandShiftHz, spanHz, 100),
+    getPassbandGeometry(rxMode, passbandHz, passbandShiftHz, spanHz, 100, tuneLinePct),
   );
   let pbWidthPct = $derived(passbandOverlay?.widthPx ?? 0);
   let pbLeftPct = $derived(passbandOverlay?.leftPx ?? 0);
@@ -330,10 +343,11 @@
       }
       dragEndTime = performance.now();
     } else if (spanHz > 0 && dragPointerId !== null) {
-      // Tap (no drag threshold crossed): click-to-tune
+      // Tap (no drag threshold crossed): click-to-tune on WATERFALL only.
+      // Spectrum area taps are ignored so band plan overlay clicks work.
       const target = event.target as HTMLElement;
       if (!target.closest('button, .toolbar-btn, select, input')) {
-        const area = target.closest('.spectrum-area, .waterfall-content') as HTMLElement | null;
+        const area = target.closest('.waterfall-content') as HTMLElement | null;
         if (area) {
           const rect = area.getBoundingClientRect();
           const relX = event.clientX - rect.left;
@@ -361,6 +375,7 @@
       markScopeFrame();
       const frame = parseScopeFrame(buf);
       if (!frame) return;
+      if (frame.mode !== frameScopeMode) frameScopeMode = frame.mode;
       if (frame.startFreq !== startFreq || frame.endFreq !== endFreq) {
         startFreq = frame.startFreq;
         endFreq = frame.endFreq;
