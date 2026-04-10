@@ -104,7 +104,7 @@ class RadioState:
     main: ReceiverState = field(default_factory=ReceiverState)
     sub: ReceiverState = field(default_factory=ReceiverState)
     active: str = "MAIN"  # "MAIN" | "SUB"
-    power_on: bool = False  # Radio power status — default off until confirmed by CI-V 0x18
+    power_on: bool = True  # Radio power status (on/off)
     ptt: bool = False
     power_level: int = 0  # TX power 0-255
     split: bool = False

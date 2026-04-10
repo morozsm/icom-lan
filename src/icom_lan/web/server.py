@@ -1087,7 +1087,14 @@ class WebServer:
         try:
             await stop_event.wait()
         finally:
-            await self.stop()
+            # Shield stop() from CancelledError so server.close() always runs
+            try:
+                await asyncio.shield(self.stop())
+            except (asyncio.CancelledError, Exception):
+                # Last resort: close TCP listener directly
+                if self._server is not None:
+                    self._server.close()
+                    self._server = None
 
     async def __aenter__(self) -> WebServer:
         await self.start()
