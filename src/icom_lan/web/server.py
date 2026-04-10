@@ -1023,14 +1023,9 @@ class WebServer:
             self._radio_poller.stop()
             self._radio_poller = None
 
-        # Graceful radio disconnect — frees LAN slots immediately
-        if self._radio is not None:
-            try:
-                _disconnect = self._radio.disconnect
-                await asyncio.wait_for(_disconnect(), timeout=3.0)
-                logger.info("radio: graceful disconnect")
-            except Exception:
-                logger.warning("radio: disconnect failed", exc_info=True)
+        # Radio disconnect is handled by the caller's context manager
+        # (async with radio: in _run). Do NOT disconnect here — it causes
+        # double-disconnect hangs when the second attempt times out.
 
         if self._server is not None:
             self._server.close()
