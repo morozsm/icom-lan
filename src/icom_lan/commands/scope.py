@@ -117,17 +117,25 @@ def _resolve_scope_fixed_edge_range(start_hz: int) -> int:
 
 
 def _scope_ref_encode(ref: float) -> bytes:
-    """Encode scope reference level as 3-byte Icom BCD format."""
+    """Encode scope reference level as 3-byte Icom BCD format.
+
+    Wire format (IC-7610 CI-V Reference p.15, Command 27 19):
+      byte 0: high nibble = 10 dB digit (0-3), low nibble = 1 dB digit (0-9)
+      byte 1: high nibble = 0.1 dB digit (0 or 5), low nibble = 0 (fixed)
+      byte 2: 0x00 = positive, 0x01 = negative
+
+    Range: -30.0 to +10.0 dB in 0.5 dB steps.
+    Example: -5.0 dB → [0x05, 0x00, 0x01]
+    """
     if not -30.0 <= ref <= 10.0:
         raise ValueError(f"scope ref must be -30.0 to +10.0 dB, got {ref}")
     is_negative = ref < 0
-    val = int(round(abs(ref) * 10))
-    thousands = val // 1000
-    hundreds = (val % 1000) // 100
-    tens = (val % 100) // 10
-    units = val % 10
-    b0 = (thousands << 4) | hundreds
-    b1 = (tens << 4) | units
+    tenths = int(round(abs(ref) * 10))
+    tens_db = tenths // 100       # 10 dB digit (0-3)
+    ones_db = (tenths // 10) % 10 # 1 dB digit (0-9)
+    frac_db = tenths % 10         # 0.1 dB digit (0 or 5)
+    b0 = (tens_db << 4) | ones_db
+    b1 = (frac_db << 4)           # low nibble fixed 0
     sign = 0x01 if is_negative else 0x00
     return bytes([b0, b1, sign])
 
@@ -368,14 +376,22 @@ def parse_scope_span_response(frame: CivFrame) -> tuple[int | None, int]:
 
 
 def parse_scope_ref_response(frame: CivFrame) -> tuple[int | None, float]:
+    """Decode scope REF level from CI-V response.
+
+    Wire format (IC-7610 CI-V Reference p.15):
+      byte 0: high nibble = 10 dB digit, low nibble = 1 dB digit
+      byte 1: high nibble = 0.1 dB digit, low nibble = 0
+      byte 2: sign (0x00 = +, 0x01 = -)
+    """
     data = _parse_scope_frame(frame, _SUB_SCOPE_REF)
     receiver, payload = _split_scope_receiver_prefix(data, expected_lengths=(3,))
-    absolute_tenths = _bcd_decode_value(payload[:2])
-    ref = absolute_tenths / 10.0
+    b0, b1 = payload[0], payload[1]
+    tens_db = (b0 >> 4) & 0x0F
+    ones_db = b0 & 0x0F
+    frac_db = (b1 >> 4) & 0x0F
+    ref = tens_db * 10.0 + ones_db + frac_db * 0.1
     if payload[2]:
         ref *= -1
-    # Clamp to valid IC-7610 range; malformed BCD can produce wild values
-    ref = max(-30.0, min(10.0, ref))
     return receiver, ref
 
 

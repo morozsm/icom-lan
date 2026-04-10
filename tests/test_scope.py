@@ -628,10 +628,11 @@ class TestScopeCommandBuilders:
         assert frame[6] == 0x01
 
     def test_scope_set_ref(self) -> None:
+        # -10.5 dB → [10dB=1, 1dB=0] [0.1dB=5, 0] [sign=minus]
         frame = scope_set_ref(-10.5)
         assert frame[4] == 0x27
         assert frame[5] == 0x19
-        assert frame[6:9] == b"\x01\x05\x01"
+        assert frame[6:9] == b"\x10\x50\x01"
 
     def test_scope_set_speed(self) -> None:
         frame = scope_set_speed(1)

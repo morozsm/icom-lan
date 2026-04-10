@@ -1168,7 +1168,8 @@ class TestAdvancedScopeParsers:
     def test_parse_scope_ref_response(self) -> None:
         from icom_lan.commands import parse_scope_ref_response
 
-        frame = CivFrame(0xE0, 0x98, 0x27, 0x19, b"\x00\x01\x05\x01")
+        # -10.5 dB: 10dB=1, 1dB=0, 0.1dB=5 → byte0=0x10, byte1=0x50, sign=0x01
+        frame = CivFrame(0xE0, 0x98, 0x27, 0x19, b"\x00\x10\x50\x01")
         receiver, ref_db = parse_scope_ref_response(frame)
         assert receiver == 0
         assert ref_db == -10.5

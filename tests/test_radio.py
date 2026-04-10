@@ -775,7 +775,8 @@ class TestAdvancedScopeControls:
             ("get_scope_hold", _scope_response(0x17, b"\x00\x01"), "hold", True),
             (
                 "get_scope_ref",
-                _scope_response(0x19, b"\x00\x01\x05\x01"),
+                # -10.5 dB: 10dB=1, 1dB=0, 0.1dB=5 → [rx=0x00, 0x10, 0x50, sign=0x01]
+                _scope_response(0x19, b"\x00\x10\x50\x01"),
                 "ref_db",
                 -10.5,
             ),

@@ -1035,7 +1035,7 @@ def test_update_radio_state_advanced_scope_family(
         _make_frame(cmd=0x27, sub=0x15, data=b"\x00" + bcd_encode(250_000)),
         _make_frame(cmd=0x27, sub=0x16, data=b"\x00\x04"),
         _make_frame(cmd=0x27, sub=0x17, data=b"\x00\x01"),
-        _make_frame(cmd=0x27, sub=0x19, data=b"\x00\x01\x05\x01"),
+        _make_frame(cmd=0x27, sub=0x19, data=b"\x00\x10\x50\x01"),
         _make_frame(cmd=0x27, sub=0x1A, data=b"\x00\x02"),
         _make_frame(cmd=0x27, sub=0x1B, data=b"\x01"),
         _make_frame(cmd=0x27, sub=0x1C, data=b"\x00\x02"),
