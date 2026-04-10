@@ -40,17 +40,17 @@ describe('normalize', () => {
 // formatPowerWatts
 // ---------------------------------------------------------------------------
 
-describe('formatPowerWatts', () => {
+describe('formatPowerWatts (IC-7610 CI-V p.4: 00=0%, 143=50%, 212=100%)', () => {
   it('returns 0W for raw 0', () => {
     expect(formatPowerWatts(0)).toBe('0W');
   });
 
-  it('returns 100W for raw 255', () => {
-    expect(formatPowerWatts(255)).toBe('100W');
+  it('returns 50W for raw 143', () => {
+    expect(formatPowerWatts(143)).toBe('50W');
   });
 
-  it('returns 50W for raw 128', () => {
-    expect(formatPowerWatts(128)).toBe('50W');
+  it('returns 100W for raw 212', () => {
+    expect(formatPowerWatts(212)).toBe('100W');
   });
 
   it('clamps negative raw to 0W', () => {
@@ -62,29 +62,21 @@ describe('formatPowerWatts', () => {
 // formatSwr
 // ---------------------------------------------------------------------------
 
-describe('formatSwr', () => {
+describe('formatSwr (IC-7610 CI-V p.4: 0=1.0, 48=1.5, 80=2.0, 120=3.0)', () => {
   it('returns 1.0 for raw 0', () => {
     expect(formatSwr(0)).toBe('1.0');
   });
 
-  it('returns 1.5 for raw 49', () => {
-    expect(formatSwr(49)).toBe('1.5');
+  it('returns 1.5 for raw 48', () => {
+    expect(formatSwr(48)).toBe('1.5');
   });
 
-  it('returns 2.0 for raw 79', () => {
-    expect(formatSwr(79)).toBe('2.0');
+  it('returns 2.0 for raw 80', () => {
+    expect(formatSwr(80)).toBe('2.0');
   });
 
-  it('returns 3.0 for raw 112', () => {
-    expect(formatSwr(112)).toBe('3.0');
-  });
-
-  it('returns 5.0 for raw 143', () => {
-    expect(formatSwr(143)).toBe('5.0');
-  });
-
-  it('returns ∞ for raw 191', () => {
-    expect(formatSwr(191)).toBe('∞');
+  it('returns 3.0 for raw 120', () => {
+    expect(formatSwr(120)).toBe('3.0');
   });
 
   it('returns ∞ for raw 255', () => {
@@ -96,17 +88,17 @@ describe('formatSwr', () => {
 // formatAlc
 // ---------------------------------------------------------------------------
 
-describe('formatAlc', () => {
+describe('formatAlc (IC-7610 CI-V p.4: 0=Min, 120=Max)', () => {
   it('returns 0% for raw 0', () => {
     expect(formatAlc(0)).toBe('0%');
   });
 
-  it('returns 100% for raw 255', () => {
-    expect(formatAlc(255)).toBe('100%');
+  it('returns 100% for raw 120', () => {
+    expect(formatAlc(120)).toBe('100%');
   });
 
-  it('returns 50% for raw 128', () => {
-    expect(formatAlc(128)).toBe('50%');
+  it('returns 50% for raw 60', () => {
+    expect(formatAlc(60)).toBe('50%');
   });
 });
 
@@ -114,40 +106,38 @@ describe('formatAlc', () => {
 // getNeedleMarks
 // ---------------------------------------------------------------------------
 
-describe('getNeedleMarks S-meter', () => {
+describe('getNeedleMarks S-meter (IC-7610: 120=S9, 241=S9+60)', () => {
   it('returns 7 marks for S source', () => {
     expect(getNeedleMarks('S')).toHaveLength(7);
   });
 
-  it('first mark is S1 at 0.06', () => {
+  it('S9 mark at 120/255', () => {
     const marks = getNeedleMarks('S');
-    expect(marks[0]).toEqual({ pos: 0.06, label: 'S1' });
+    const s9 = marks.find((m) => m.label === 'S9');
+    expect(s9).toBeDefined();
+    expect(s9!.pos).toBeCloseTo(120 / 255, 3);
   });
 
-  it('last mark is +40 at 0.94', () => {
+  it('last mark is +40', () => {
     const marks = getNeedleMarks('S');
-    expect(marks[6]).toEqual({ pos: 0.94, label: '+40' });
-  });
-
-  it('includes S9 at 0.56', () => {
-    const marks = getNeedleMarks('S');
-    expect(marks.some((m) => m.label === 'S9' && m.pos === 0.56)).toBe(true);
+    expect(marks[6].label).toBe('+40');
   });
 });
 
-describe('getNeedleMarks SWR', () => {
-  it('returns 6 marks for SWR source', () => {
-    expect(getNeedleMarks('SWR')).toHaveLength(6);
+describe('getNeedleMarks SWR (IC-7610: 0=1.0, 48=1.5, 80=2.0, 120=3.0)', () => {
+  it('returns 4 marks for SWR source', () => {
+    expect(getNeedleMarks('SWR')).toHaveLength(4);
   });
 
-  it('first mark is 1.0 at 0.06', () => {
+  it('first mark is 1.0 at 0', () => {
     const marks = getNeedleMarks('SWR');
-    expect(marks[0]).toEqual({ pos: 0.06, label: '1.0' });
+    expect(marks[0]).toEqual({ pos: 0, label: '1.0' });
   });
 
-  it('last mark is ∞ at 0.75', () => {
+  it('last mark is 3.0 at 120/255', () => {
     const marks = getNeedleMarks('SWR');
-    expect(marks[5]).toEqual({ pos: 0.75, label: '∞' });
+    expect(marks[3].label).toBe('3.0');
+    expect(marks[3].pos).toBeCloseTo(120 / 255, 3);
   });
 });
 
