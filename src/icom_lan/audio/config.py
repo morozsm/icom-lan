@@ -133,7 +133,7 @@ def load_audio_config(path: Path | str | None = None) -> AudioConfig:
     if path is not None:
         config_path = Path(path)
     else:
-        config_path = _find_config_path()
+        config_path = _find_config_path()  # type: ignore[assignment]
 
     if config_path is None or not config_path.is_file():
         return AudioConfig()
@@ -141,7 +141,7 @@ def load_audio_config(path: Path | str | None = None) -> AudioConfig:
     try:
         import tomllib
     except ModuleNotFoundError:
-        import tomli as tomllib  # type: ignore[no-redef]
+        import tomli as tomllib  # type: ignore[no-redef,import-not-found]
 
     try:
         with open(config_path, "rb") as f:

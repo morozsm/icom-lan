@@ -24,6 +24,7 @@ from .transport import YaesuCatTransport
 if TYPE_CHECKING:
     from ...audio_bus import AudioBus
     from ...profiles import RadioProfile
+    from ...types import BandStackRegister, MemoryChannel
 
 __all__ = ["YaesuCatRadio"]
 
@@ -1283,9 +1284,6 @@ class YaesuCatRadio:
 
     async def get_dual_watch(self) -> bool:
         raise NotImplementedError("Dual watch query not supported on Yaesu radios")
-
-    async def set_dual_watch(self, on: bool) -> None:
-        raise NotImplementedError("Dual watch not supported on Yaesu radios")
 
     # -- APF / Twin Peak (not supported on Yaesu) -----------------------------
 

@@ -135,11 +135,11 @@ class PcmResampler:
         cutoff = self._ratio  # normalized cutoff (0..1 of Nyquist)
         n_taps = max(5, int(4.0 / cutoff)) | 1  # ensure odd
         half = n_taps // 2
-        n = np.arange(n_taps) - half  # type: ignore[union-attr]
+        n = np.arange(n_taps) - half  # type: ignore[attr-defined]
         # Sinc * Hann window
-        with np.errstate(divide="ignore", invalid="ignore"):  # type: ignore[union-attr]
-            h = np.sinc(n * cutoff) * cutoff  # type: ignore[union-attr]
-        window = 0.5 * (1 - np.cos(2 * np.pi * np.arange(n_taps) / (n_taps - 1)))  # type: ignore[union-attr]
+        with np.errstate(divide="ignore", invalid="ignore"):  # type: ignore[attr-defined]
+            h = np.sinc(n * cutoff) * cutoff  # type: ignore[attr-defined]
+        window = 0.5 * (1 - np.cos(2 * np.pi * np.arange(n_taps) / (n_taps - 1)))  # type: ignore[attr-defined]
         h = h * window
         h = h / h.sum()  # normalize
         self._aa_kernel = h
@@ -148,7 +148,7 @@ class PcmResampler:
     def _apply_aa_filter(self, samples: object, np: object) -> object:
         """Apply anti-aliasing low-pass filter before downsampling."""
         kernel = self._get_aa_kernel(np)
-        return np.convolve(samples, kernel, mode="same")  # type: ignore[union-attr]
+        return np.convolve(samples, kernel, mode="same")  # type: ignore[attr-defined]
 
     def process(self, pcm: bytes) -> bytes:
         """Resample a PCM s16le frame.
@@ -192,4 +192,4 @@ class PcmResampler:
                 samples = self._apply_aa_filter(samples, np)
             resampled = np.interp(x_out, x_in, samples)
 
-        return np.clip(resampled, -32768, 32767).astype(np.int16).tobytes()
+        return np.clip(resampled, -32768, 32767).astype(np.int16).tobytes()  # type: ignore[no-any-return]

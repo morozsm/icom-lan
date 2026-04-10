@@ -1,3 +1,4 @@
+# ruff: noqa: F401  — all imports are intentional re-exports
 """CI-V command encoding and decoding for Icom transceivers.
 
 CI-V frame format::
@@ -334,7 +335,7 @@ from .system import (
 )
 
 # --- tone.py ---
-from .tone import (
+from .tone import (  # type: ignore[attr-defined]  # _SUB_REPEATER_TONE/TSQL are private re-exports
     _decode_tone_freq,
     _encode_tone_freq,
     _SUB_REPEATER_TONE,
@@ -417,6 +418,32 @@ from .config import (
 
 
 __all__ = [
+    # Internal helpers re-exported for sibling modules
+    "_bcd_byte",
+    "_bcd_decode_value",
+    "_level_bcd_decode",
+    "_level_bcd_encode",
+    "_decode_tone_freq",
+    "_encode_tone_freq",
+    "_SUB_REPEATER_TONE",
+    "_SUB_REPEATER_TSQL",
+    "_CMD_ACK",
+    "_CMD_FREQ_GET",
+    "_CMD_FREQ_SET",
+    "_CMD_LEVEL",
+    "_CMD_METER",
+    "_CMD_MODE_GET",
+    "_CMD_MODE_SET",
+    "_CMD_PREAMP",
+    "_CMD_PTT",
+    "_CMD_SELECTED_FREQ",
+    "_CMD_SELECTED_MODE",
+    "_SUB_ALC_METER",
+    "_SUB_PTT",
+    "_SUB_RF_POWER",
+    "_SUB_S_METER",
+    "_SUB_SWR_METER",
+    # Public symbols
     "CONTROLLER_ADDR",
     "RECEIVER_MAIN",
     "RECEIVER_SUB",

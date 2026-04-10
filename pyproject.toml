@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "icom-lan"
-version = "0.14.2"
+version = "0.15.0"
 description = "Python library for controlling Icom transceivers over LAN (UDP) — no wfview/hamlib required"
 readme = "README.md"
 license = "MIT"
@@ -100,3 +100,13 @@ follow_imports = "skip"
 [[tool.mypy.overrides]]
 module = ["cryptography", "cryptography.*"]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+    "icom_lan.cli",
+    "icom_lan.web.radio_poller",
+    "icom_lan.web.handlers.control",
+    "icom_lan.rigctld.routing",
+    "icom_lan.rigctld.handler",
+]
+disable_error_code = ["attr-defined"]

@@ -6,7 +6,6 @@ import ssl
 from pathlib import Path
 from unittest.mock import patch
 
-import pytest
 
 from icom_lan.web.tls import build_ssl_context, generate_self_signed
 

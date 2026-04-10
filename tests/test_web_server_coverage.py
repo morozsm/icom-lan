@@ -851,7 +851,6 @@ class TestStateEtag:
     @pytest.mark.asyncio
     async def test_state_304_when_etag_matches(self) -> None:
         """GET /api/v1/state with matching If-None-Match returns 304 and empty body."""
-        import json as _json
 
         # First request — get the ETag
         srv = WebServer(None)
@@ -859,7 +858,7 @@ class TestStateEtag:
         await srv._serve_state(writer)
         text = writer.buffer.decode("ascii", errors="replace")
         header_block = text[: text.index("\r\n\r\n")]
-        etag_line = next(l for l in header_block.splitlines() if l.startswith("ETag:"))
+        etag_line = next(line for line in header_block.splitlines() if line.startswith("ETag:"))
         etag = etag_line.split(":", 1)[1].strip()
 
         # Second request — send If-None-Match with the same ETag

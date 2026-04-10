@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
-from typing import Callable
 
 import pytest
 
@@ -11,8 +9,6 @@ from icom_lan.audio.backend import (
     AudioDeviceId,
     AudioDeviceInfo,
     FakeAudioBackend,
-    FakeRxStream,
-    FakeTxStream,
 )
 from icom_lan.backends.icom7610.drivers.usb_audio import (
     AudioDeviceSelectionError,

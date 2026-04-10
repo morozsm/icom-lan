@@ -42,7 +42,6 @@ from ._bridge_metrics import BridgeMetrics
 from ._bridge_state import BridgeState, BridgeStateChange
 from .audio.backend import (
     AudioBackend,
-    AudioDeviceId,
     AudioDeviceInfo,
     PortAudioBackend,
     RxStream,

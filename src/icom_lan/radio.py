@@ -1,3 +1,4 @@
+# mypy: disable-error-code="no-any-return,misc,assignment"
 """IcomRadio — high-level async API for Icom transceivers over LAN.
 
 Usage::

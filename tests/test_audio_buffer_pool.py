@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-import pytest
 import threading
 import time
 
-from icom_lan._audio_buffer_pool import AudioBufferPool, BufferExhausted, ContextManagedBuffer
+from icom_lan._audio_buffer_pool import AudioBufferPool, ContextManagedBuffer
 
 
 class TestAudioBufferPool:
@@ -98,8 +97,8 @@ class TestAudioBufferPool:
         pool = AudioBufferPool(buffer_size=256, max_buffers=2)
 
         # Acquire all pre-allocated buffers
-        buf1 = pool.acquire()
-        buf2 = pool.acquire()
+        _buf1 = pool.acquire()
+        _buf2 = pool.acquire()
 
         # Next acquire should allocate temporary buffer
         buf3 = pool.acquire()

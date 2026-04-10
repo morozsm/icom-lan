@@ -14,7 +14,6 @@ from __future__ import annotations
 import ctypes
 import ctypes.util
 import logging
-from typing import Any
 
 logger = logging.getLogger(__name__)
 

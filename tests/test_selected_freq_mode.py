@@ -1,6 +1,5 @@
 """Tests for CI-V 0x25/0x26 selected/unselected freq & mode commands."""
 
-from unittest.mock import AsyncMock
 
 import pytest
 

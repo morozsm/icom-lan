@@ -1568,7 +1568,7 @@ async def test_send_raw_no_send_civ_raw_returns_enimpl(config: RigctldConfig) ->
 # Yaesu-specific level/func routing
 # ---------------------------------------------------------------------------
 
-from icom_lan.backends.yaesu_cat.radio import YaesuCatRadio
+from icom_lan.backends.yaesu_cat.radio import YaesuCatRadio  # noqa: E402
 
 
 class _FakeYaesuRadio(YaesuCatRadio):

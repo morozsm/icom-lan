@@ -11,7 +11,6 @@ from icom_lan.commands import (
     _CMD_FREQ_GET,
     _CMD_LEVEL,
     _CMD_METER,
-    _CMD_MODE_GET,
     _CMD_PTT,
     _SUB_ALC_METER,
     _SUB_PTT,

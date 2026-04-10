@@ -1,6 +1,7 @@
 """icom-lan: Python library for controlling Icom transceivers over LAN."""
+# ruff: noqa: F401  — all imports are intentional re-exports for public API
 
-__version__ = "0.14.2"
+__version__ = "0.15.0"
 
 from .auth import (
     AuthResponse,

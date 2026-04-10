@@ -10,17 +10,14 @@ Covers:
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from types import SimpleNamespace
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from icom_lan.commands import (
     CONTROLLER_ADDR,
     bcd_encode_value,
-    build_civ_frame,
     build_memory_clear,
     build_memory_contents_set,
     build_memory_mode_set,

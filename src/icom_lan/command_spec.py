@@ -6,7 +6,6 @@ Supports both CI-V (wire bytes) and Yaesu CAT (text templates) in a unified sche
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal
 
 __all__ = [
     "CivCommandSpec",

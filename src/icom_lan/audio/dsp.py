@@ -123,7 +123,7 @@ class RmsNormalizer:
         gain = min(gain, self._max_gain)
 
         result = samples * gain
-        return np.clip(result, _INT16_MIN, _INT16_MAX).astype(np.int16).tobytes()
+        return np.clip(result, _INT16_MIN, _INT16_MAX).astype(np.int16).tobytes()  # type: ignore[no-any-return]
 
 
 class Limiter:
@@ -142,14 +142,14 @@ class Limiter:
         import numpy as np
 
         samples = np.frombuffer(pcm, dtype=np.int16).astype(np.float64)
-        peak = np.max(np.abs(samples))
+        peak: float = np.max(np.abs(samples))
 
         if peak <= self._ceiling:
             return pcm
 
         gain = self._ceiling / peak
         result = samples * gain
-        return result.astype(np.int16).tobytes()
+        return result.astype(np.int16).tobytes()  # type: ignore[no-any-return]
 
 
 class DspPipeline:

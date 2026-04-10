@@ -1,11 +1,9 @@
 """Tests for IC-9700 backend initialization, profile routing, and dual-receiver support."""
 
-import pytest
 
 from icom_lan.backends.config import SerialBackendConfig
 from icom_lan.backends.factory import create_radio
 from icom_lan.backends.ic9700.serial import Ic9700SerialRadio
-from icom_lan.backends.icom7610.serial import Icom7610SerialRadio
 
 
 def test_ic9700_factory_creates_correct_backend():

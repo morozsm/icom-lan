@@ -215,7 +215,7 @@ class AudioBroadcaster:
         )
 
         try:
-            bus = self._radio.audio_bus
+            bus = self._radio.audio_bus  # type: ignore[attr-defined]
             self._subscription = cast(_AudioBus, bus).subscribe(name="web-audio")
             await self._subscription.start()
             self._relay_task = asyncio.create_task(self._relay_loop())
@@ -424,7 +424,7 @@ class AudioHandler:
                 await self._start_rx()
             elif direction == "tx":
                 if self._radio and CAP_AUDIO in self._radio.capabilities:
-                    await self._radio.start_audio_tx_opus()
+                    await self._radio.start_audio_tx_opus()  # type: ignore[attr-defined]
                 self._tx_active = True
                 logger.info("audio: TX active")
         elif msg_type == "audio_stop":
@@ -432,7 +432,7 @@ class AudioHandler:
                 await self._stop_rx()
             elif direction == "tx":
                 if self._radio and CAP_AUDIO in self._radio.capabilities:
-                    await self._radio.stop_audio_tx()
+                    await self._radio.stop_audio_tx()  # type: ignore[attr-defined]
                 self._tx_active = False
                 logger.info("audio: TX stopped")
 
@@ -486,7 +486,7 @@ class AudioHandler:
                         # Decode Opus → PCM16
                         pcm_data = self._transcoder.opus_to_pcm(opus_data)
                         # Send PCM via push_audio_tx_opus (method accepts any codec)
-                        await self._radio.push_audio_tx_opus(pcm_data)
+                        await self._radio.push_audio_tx_opus(pcm_data)  # type: ignore[attr-defined]
                         tx_data_desc = f"{len(pcm_data)} bytes pcm"
                     except Exception as e:
                         logger.warning(
@@ -495,7 +495,7 @@ class AudioHandler:
                         return
                 else:
                     # Radio uses Opus or PCM_1CH_8BIT/etc → send Opus as-is
-                    await self._radio.push_audio_tx_opus(opus_data)
+                    await self._radio.push_audio_tx_opus(opus_data)  # type: ignore[attr-defined]
                     tx_data_desc = f"{len(opus_data)} bytes opus"
 
                 # Log every 50th frame to avoid spam

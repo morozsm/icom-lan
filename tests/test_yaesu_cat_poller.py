@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from unittest.mock import AsyncMock, MagicMock, call, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -447,7 +447,7 @@ async def test_fast_polls_more_than_slow() -> None:
     fast_count = 0
     slow_count = 0
 
-    original_fast = radio.get_s_meter
+    _original_fast = radio.get_s_meter
 
     async def count_fast(receiver: int = 0) -> int:
         nonlocal fast_count

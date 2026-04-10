@@ -15,13 +15,11 @@ Operations profiled:
 from __future__ import annotations
 
 import time
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from icom_lan import IC_7610_ADDR
 from icom_lan.commands import (
-    _CMD_ACK,
     _CMD_FREQ_GET,
     _CMD_FREQ_SET,
     _CMD_MODE_GET,

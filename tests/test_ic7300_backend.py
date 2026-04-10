@@ -1,11 +1,9 @@
 """Tests for IC-7300 backend initialization and profile routing."""
 
-import pytest
 
 from icom_lan.backends.config import SerialBackendConfig
 from icom_lan.backends.factory import create_radio
 from icom_lan.backends.ic7300.serial import Ic7300SerialRadio
-from icom_lan.backends.icom7610.serial import Icom7610SerialRadio
 
 
 def test_ic7300_factory_creates_correct_backend():

@@ -13,6 +13,10 @@ from typing import TYPE_CHECKING, AsyncGenerator
 if TYPE_CHECKING:
     from typing import Callable
 
+    from .radio import CoreRadio as _MixinBase  # type: ignore[attr-defined]
+else:
+    _MixinBase = object
+
 from .commands import (
     parse_ack_nak,
     parse_civ_frame,
@@ -66,7 +70,7 @@ from .types import ScopeCompletionPolicy, ScopeFixedEdge
 logger = logging.getLogger(__name__)
 
 
-class ScopeRuntimeMixin:
+class ScopeRuntimeMixin(_MixinBase):  # type: ignore[misc]
     """Scope/waterfall methods for CoreRadio (mixin)."""
 
     # ------------------------------------------------------------------
@@ -83,7 +87,7 @@ class ScopeRuntimeMixin:
 
     def _scope_controls(self) -> ScopeControlsState:
         """Return the mutable scope-control state bucket."""
-        return self._radio_state.scope_controls
+        return self._radio_state.scope_controls  # type: ignore[no-any-return]
 
     def _apply_scope_receiver_hint(self, receiver: int | None) -> None:
         if receiver is not None:
@@ -210,7 +214,7 @@ class ScopeRuntimeMixin:
             _get_scope_single_dual_cmd(to_addr=self._radio_addr),
             label="get_scope_dual",
         )
-        dual = parse_scope_single_dual_response(resp)
+        dual: bool = parse_scope_single_dual_response(resp)
         self._scope_controls().dual = dual
         return dual
 

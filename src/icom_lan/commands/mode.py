@@ -11,7 +11,7 @@ from ._builders import (
     _build_function_get,
     _build_function_value_set,
 )
-from ._codec import _bcd_decode_value, bcd_encode_value
+from ._codec import bcd_encode_value
 from ._frame import (
     CONTROLLER_ADDR,
     RECEIVER_MAIN,
@@ -19,7 +19,6 @@ from ._frame import (
     _CMD_MODE_GET,
     _CMD_MODE_SET,
     _SUB_AGC_TIME_CONSTANT,
-    _SUB_CTL_MEM,
     _SUB_DATA_MODE,
     _SUB_FILTER_SHAPE,
     _SUB_FILTER_WIDTH,

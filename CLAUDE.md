@@ -10,7 +10,7 @@
 | | |
 |---|---|
 | **Name** | icom-lan |
-| **Version** | 0.14.2 |
+| **Version** | 0.15.0 |
 | **License** | MIT |
 | **Python** | 3.11+ |
 | **Primary radio** | Icom IC-7610 (LAN: `192.168.55.40`) |

@@ -163,6 +163,10 @@ class ControlPhaseHost(Protocol):
     _civ_send_seq: int
     _audio_send_seq: int
 
+    # Pre-bound sockets for CI-V and audio (set during connect, consumed by open)
+    _civ_sock_pending: Any  # socket.socket | None
+    _audio_sock_pending: Any  # socket.socket | None
+
     # Optional: audio stream and callbacks (for disconnect cleanup)
     _audio_stream: Any  # AudioStream | None
     _pcm_tx_fmt: Any  # tuple[int, int, int] | None
@@ -217,6 +221,8 @@ class ControlPhaseHost(Protocol):
     async def _stop_civ_worker(self) -> None: ...
 
     async def _stop_civ_rx_pump(self) -> None: ...
+
+    async def disconnect(self) -> None: ...
 
     def _start_civ_worker(self) -> None: ...
 

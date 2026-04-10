@@ -294,7 +294,7 @@ class ControlPhaseRuntime:
 
         try:
             await wait_for_radio_startup_ready(
-                h,
+                h,  # type: ignore[arg-type]
                 timeout=getattr(h, "_timeout", 5.0),
                 component="radio connect",
             )

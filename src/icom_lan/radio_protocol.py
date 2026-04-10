@@ -50,6 +50,7 @@ if TYPE_CHECKING:
     from ._state_cache import StateCache
     from .audio_bus import AudioBus
     from .scope import ScopeFrame
+    from .types import BandStackRegister, MemoryChannel
 
 __all__ = [
     "Radio",

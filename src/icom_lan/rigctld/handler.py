@@ -200,7 +200,7 @@ def _err(code: HamlibError) -> RigctldResponse:
 def _mode_to_hamlib_str(mode: object) -> str:
     """Normalize backend mode values to a hamlib-compatible string."""
     if isinstance(mode, Mode):
-        return CIV_TO_HAMLIB_MODE.get(mode.value, mode.name)
+        return str(CIV_TO_HAMLIB_MODE.get(mode.value, mode.name))
     if isinstance(mode, str):
         return mode.upper()
     name = getattr(mode, "name", None)
@@ -208,7 +208,7 @@ def _mode_to_hamlib_str(mode: object) -> str:
         return name.upper()
     value = getattr(mode, "value", None)
     if isinstance(value, int):
-        return CIV_TO_HAMLIB_MODE.get(value, "USB")
+        return str(CIV_TO_HAMLIB_MODE.get(value, "USB"))
     return str(mode).upper()
 
 
@@ -308,13 +308,13 @@ def _parse_raw_hex(args: tuple[str, ...]) -> bytes:
 
 def _civ_frame_to_bytes(frame: Any) -> bytes:
     """Reconstruct raw CI-V frame bytes from a parsed CivFrame."""
-    return build_civ_frame(
+    return bytes(build_civ_frame(
         frame.to_addr,
         frame.from_addr,
         frame.command,
         sub=frame.sub,
         data=frame.data if frame.data else None,
-    )
+    ))
 
 
 # ---------------------------------------------------------------------------

@@ -9,7 +9,6 @@ from ._builders import (
     _build_function_bool_set,
     _build_function_get,
     _build_function_value_set,
-    _build_meter_bool_get,
 )
 from ._codec import _bcd_byte
 from ._frame import (

@@ -365,7 +365,7 @@ class WebServer:
     def _set_scope_data_callback(self, callback: Any) -> None:
         """Set the scope data callback on the radio if it supports it."""
         if self._radio is not None and CAP_SCOPE in self._radio.capabilities:
-            self._radio.on_scope_data(callback)
+            self._radio.on_scope_data(callback)  # type: ignore[attr-defined]
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -965,7 +965,7 @@ class WebServer:
         label = derive_bridge_label(self._radio, label)
 
         self._audio_bridge = AudioBridge(
-            self._radio,
+            self._radio,  # type: ignore[arg-type]
             device_name=device_name,
             tx_device_name=tx_device_name,
             tx_enabled=tx_enabled,
@@ -1918,7 +1918,7 @@ class WebServer:
                         logger.warning("power-on: reconnect failed: %s", conn_err)
                         # Try anyway — some radios accept CI-V on stale transport
                 is_on = power_state == "on"
-                await radio.set_powerstat(is_on)
+                await radio.set_powerstat(is_on)  # type: ignore[attr-defined]
                 # Optimistic state update: radio won't respond to polls when off
                 if self._radio_state is not None:
                     self._radio_state.power_on = is_on

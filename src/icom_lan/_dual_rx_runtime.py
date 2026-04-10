@@ -12,6 +12,10 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Any, Awaitable, Callable
 
+    from .radio import CoreRadio as _MixinBase  # type: ignore[attr-defined]
+else:
+    _MixinBase = object
+
 from .commands import (
     RECEIVER_MAIN,
     get_freq,
@@ -33,7 +37,7 @@ from .types import Mode
 logger = logging.getLogger(__name__)
 
 
-class DualRxRuntimeMixin:
+class DualRxRuntimeMixin(_MixinBase):  # type: ignore[misc]
     """Dual-receiver routing methods for CoreRadio (mixin)."""
 
     def _require_receiver(self, receiver: int, *, operation: str) -> None:
@@ -150,7 +154,7 @@ class DualRxRuntimeMixin:
                     "get_frequency: timeout, returning cached %d Hz",
                     self._state_cache.freq,
                 )
-                return self._state_cache.freq
+                return self._state_cache.freq  # type: ignore[no-any-return]
             raise
 
     async def _set_frequency_main(

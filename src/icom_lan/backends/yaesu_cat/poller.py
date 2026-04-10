@@ -401,11 +401,11 @@ class YaesuCatPoller:
                     await radio.set_manual_notch_freq(level)
 
                 # ── Filters ──
-                case SetFilter(filter_num=num):
+                case SetFilter(filter_num=_num):
                     pass  # FTX-1 uses filter_width, not discrete filter numbers
                 case SetFilterWidth(width=width):
                     await radio.set_filter_width(self._hz_to_index(width))
-                case SetFilterShape(shape=shape):
+                case SetFilterShape(shape=_shape):
                     pass  # Not available on FTX-1
                 case SetPbtInner() | SetPbtOuter():
                     pass  # Not available on FTX-1

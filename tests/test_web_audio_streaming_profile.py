@@ -11,7 +11,7 @@ from __future__ import annotations
 import asyncio
 import statistics
 import time
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -138,7 +138,7 @@ class TestAudioBroadcasterPerformance:
         ulaw_frame = bytes([0x80] * 160)
 
         # Mock subscription
-        packets_sent = []
+        _packets_sent = []
 
         async def mock_subscription():
             for i in range(100):
@@ -262,7 +262,7 @@ class TestAudioStreamingEndToEnd:
             pcm_data = decode_ulaw_to_pcm16(ulaw_frame)
 
             # Encode frame
-            frame = encode_audio_frame(
+            _frame = encode_audio_frame(
                 MSG_TYPE_AUDIO_RX, AUDIO_CODEC_PCM16, i, 160, 1, 20, pcm_data
             )
 

@@ -7,7 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.0] — 2026-04-10
+
 ### Added
+- **Drag-and-drop panel reorder** — drag handles on right sidebar panels (#557).
+- **Complete CI-V command coverage** (Epic #535) — scope settings popover (#538), missing polling
+  entries (#539), VOX/CW/DSP panels (#540), TX band edge support (#541), memory channel
+  manager + scan modes (#542, #543), TX meters + scope toolbar controls (#536, #537).
+- **Center dead zone for RF/SQL dual slider** — prevents accidental threshold jumps.
+- **Poller deadlock regression tests** (#554) — state consistency + deadlock detection tests.
 - **Yaesu CAT backend and CLI factory routing** — `--backend yaesu-cat`, capability-based polling,
   rigctl routing strategy, Web ControlHandler support, meters/advanced-control conformance,
   and follow-up code review fixes for issues #427-#445.
@@ -30,10 +38,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   if the radio never becomes usable; Web UI and rigctld startup now perform instant guards only.
 - **Protocol/capability routing** — replaced several `isinstance(AdvancedControlCapable)` checks with
   capability tags and centralized capability constants.
+- **Spectrum/waterfall interaction architecture** — clean separation of gesture, drag, and tune layers.
 - **Frontend/test hygiene** — resolved Svelte/type issues, fixed frontend redesign regressions,
   refreshed API docs and badges, and updated test fixtures for stricter protocol mocks.
 
 ### Fixed
+- **Meter calibration** (#536) — corrected S-meter, RF power, SWR, ALC calibration tables per
+  IC-7610 CI-V Reference p.4; dimmed irrelevant meter rows.
+- **Scope REF BCD encode/decode** (#553) — fixed to match IC-7610 CI-V Reference p.15.
+- **CENTER Type polling** (#552) — fixed root cause: poller was overwriting scope CENTER Type
+  to Filter on every poll cycle; restored CTR mode indicator at center position.
+- **Tuning indicator** (#552) — proportional positioning + scope REF display.
+- **Deadlock: EnableScope** — EnableScope await blocked all commands during initial fetch.
+- **Click-to-tune** — only on waterfall, not spectrum area; via pointerup instead of click event.
+- **Reliable shutdown** — 3-tier signal handling, reuse_address for TIME_WAIT, force exit on
+  second Ctrl-C, proper audio relay shutdown order.
+- **AF scope** — bandwidth tracks actual filter width, crash fix when center_freq is 0.
+- **Power-off state** not detected on server restart.
 - **Startup fail-fast** — added pre-flight port check (#422), fail-fast on `civ_port=0` (#424),
   and eliminated half-working Web/rigctld startups when the radio transport is not actually ready.
 - **IC-705 Wi-Fi binding** — hardened routed local bind handling and validated LAN support.
@@ -42,8 +63,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Scope/UI correctness** — fixed scope dispatch capability checks, scope polling/state updates,
   step-control width, BCD span payloads, speed arrow direction, PTT TX wiring, and optimistic
   state sync for antenna/scope controls.
-- **Type-check/test regressions** — resolved web-boundary mypy/ruff issues and updated protocol mocks
-  (`ScopeCapable`, `DualReceiverCapable`, etc.) for Python 3.13 runtime-checkable Protocols.
+- **Type-check/lint cleanup** — resolved all 188 ruff lint errors and 499 mypy type errors:
+  file-level noqa for re-export modules, mixin TYPE_CHECKING base pattern, per-module mypy
+  overrides for duck-typing consumers, and ControlPhaseHost protocol expansion.
 
 ### Documentation
 - Added/updated Radio Profiles guide, web/rigctld API references, and test badges/documentation sync.
@@ -332,7 +354,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Transport layer, authentication, CI-V commands, meters, PTT, keep-alive.
 - Clean-room Icom LAN UDP protocol implementation.
 
-[Unreleased]: https://github.com/morozsm/icom-lan/compare/v0.12.0...HEAD
+[Unreleased]: https://github.com/morozsm/icom-lan/compare/v0.15.0...HEAD
+[0.15.0]: https://github.com/morozsm/icom-lan/compare/v0.14.2...v0.15.0
+[0.14.2]: https://github.com/morozsm/icom-lan/compare/v0.14.1...v0.14.2
+[0.14.1]: https://github.com/morozsm/icom-lan/compare/v0.14.0...v0.14.1
+[0.14.0]: https://github.com/morozsm/icom-lan/compare/v0.12.0...v0.14.0
 [0.12.0]: https://github.com/morozsm/icom-lan/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/morozsm/icom-lan/compare/v0.8.0...v0.11.0
 [0.8.0]: https://github.com/morozsm/icom-lan/compare/v0.7.0...v0.8.0

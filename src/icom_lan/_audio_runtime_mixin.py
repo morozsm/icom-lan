@@ -14,6 +14,9 @@ if TYPE_CHECKING:
     from typing import Callable
 
     from .audio import AudioPacket
+    from .radio import CoreRadio as _MixinBase  # type: ignore[attr-defined]
+else:
+    _MixinBase = object
 
 from ._audio_transcoder import PcmOpusTranscoder, create_pcm_opus_transcoder
 from .audio import AudioStats, AudioStream
@@ -24,8 +27,18 @@ from .types import AudioCapabilities, AudioCodec, get_audio_capabilities
 logger = logging.getLogger(__name__)
 
 
-class AudioRuntimeMixin:
+class AudioRuntimeMixin(_MixinBase):  # type: ignore[misc]
     """Audio streaming methods for CoreRadio (mixin)."""
+
+    # -- type stubs for attributes defined in CoreRadio.__init__ ---------
+    _audio_stream: AudioStream | None
+    _pcm_transcoder: PcmOpusTranscoder | None
+    _pcm_transcoder_fmt: tuple[int, int, int] | None
+    _pcm_tx_fmt: tuple[int, int, int] | None
+    _pcm_rx_user_callback: Callable[[bytes | None], None] | None
+    _opus_rx_user_callback: Callable[[AudioPacket | None], None] | None
+    _audio_codec: AudioCodec
+    _audio_sample_rate: int
 
     # ------------------------------------------------------------------
     # Audio streaming
@@ -459,14 +472,14 @@ class AudioRuntimeMixin:
         except OSError as exc:
             if audio_sock is not None:
                 audio_sock.close()
-                self._audio_sock_pending = None  # type: ignore[attr-defined]
-            self._audio_transport = None
+                self._audio_sock_pending = None
+            self._audio_transport = None  # type: ignore[assignment]
             raise ConnectionError(
                 f"Failed to connect audio port {self._audio_port}: {exc}"
             ) from exc
         else:
             if audio_sock is not None:
-                self._audio_sock_pending = None  # type: ignore[attr-defined]
+                self._audio_sock_pending = None
 
         self._audio_transport.start_ping_loop()
         self._audio_transport.start_retransmit_loop()

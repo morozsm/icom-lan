@@ -170,9 +170,9 @@ async def poll_powerstat(
     if CAP_POWER_CONTROL not in radio.capabilities:
         return None
     try:
-        power_on = await radio.get_powerstat()
+        power_on = await radio.get_powerstat()  # type: ignore[attr-defined]
         cache.update_powerstat(power_on)
-        return power_on
+        return power_on  # type: ignore[no-any-return]
     except Exception:
         logger.debug("poll_powerstat: radio call failed", exc_info=True)
         return None

@@ -7,7 +7,6 @@ from __future__ import annotations
 
 from typing import Any, Sequence
 
-from ..types import bcd_encode
 
 
 def _level_bcd_encode(value: int) -> bytes:

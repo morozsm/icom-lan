@@ -1251,7 +1251,7 @@ async def _run(args: argparse.Namespace) -> int:
                         file=sys.stderr,
                     )
                     return 1
-                await radio.set_powerstat(True)  # type: ignore[union-attr]
+                await radio.set_powerstat(True)
                 print("Power ON")
                 return 0
             elif args.command == "power-off":
@@ -1261,7 +1261,7 @@ async def _run(args: argparse.Namespace) -> int:
                         file=sys.stderr,
                     )
                     return 1
-                await radio.set_powerstat(False)  # type: ignore[union-attr]
+                await radio.set_powerstat(False)
                 print("Power OFF")
                 return 0
             else:
@@ -1344,8 +1344,8 @@ async def _cmd_status(radio: Radio, args: argparse.Namespace) -> int:
     s_meter: int | str = 0
     power: int | str = 0
     if CAP_METERS in radio.capabilities:
-        s_meter = await radio.get_s_meter()  # type: ignore[union-attr]
-        power = await radio.get_rf_power()  # type: ignore[union-attr]
+        s_meter = await radio.get_s_meter()
+        power = await radio.get_rf_power()
     else:
         s_meter = "n/a"
         power = "n/a"
@@ -1774,7 +1774,7 @@ async def _cmd_power(radio: Radio, args: argparse.Namespace) -> int:
                 file=sys.stderr,
             )
             return 1
-        await radio.set_rf_power(args.value)  # type: ignore[union-attr]
+        await radio.set_rf_power(args.value)
         print(f"Set: {args.value}")
     else:
         if CAP_METERS not in radio.capabilities:
@@ -1804,12 +1804,12 @@ async def _cmd_meter(radio: Radio, args: argparse.Namespace) -> int:
         return 1
     results: dict[str, int | str] = {}
     meter_getters: list[tuple[str, Any]] = [
-        ("s_meter", radio.get_s_meter),  # type: ignore[union-attr]
-        ("power", radio.get_rf_power),  # type: ignore[union-attr]
-        ("swr", radio.get_swr),  # type: ignore[union-attr]
+        ("s_meter", radio.get_s_meter),
+        ("power", radio.get_rf_power),
+        ("swr", radio.get_swr),
     ]
     if CAP_METERS in radio.capabilities:
-        meter_getters.append(("alc", radio.get_alc))  # type: ignore[union-attr]
+        meter_getters.append(("alc", radio.get_alc))
     for name, getter in meter_getters:
         try:
             results[name] = await getter()
@@ -2167,7 +2167,7 @@ async def _cmd_audio_bridge(radio: Radio, args: argparse.Namespace) -> int:
 
     try:
         bridge = AudioBridge(
-            radio,
+            radio,  # type: ignore[arg-type]
             device_name=args.device,
             tx_device_name=getattr(args, "tx_device", None),
             tx_enabled=not args.rx_only,

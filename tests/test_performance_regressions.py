@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import time
 
-import pytest
 
 from icom_lan import IC_7610_ADDR
 from icom_lan.commands import (
@@ -154,7 +153,7 @@ class TestPerformanceSloValidation:
 
         # Wrap in UDP
         start = time.perf_counter()
-        udp_pkt = _wrap_civ_in_udp(frame)
+        _udp_pkt = _wrap_civ_in_udp(frame)
         wrap_time = (time.perf_counter() - start) * 1000
 
         # Parse response

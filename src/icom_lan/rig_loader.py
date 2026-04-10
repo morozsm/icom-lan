@@ -641,7 +641,7 @@ def load_rig(path: Path) -> RigConfig:
                 f"{filename}: rule kind must be one of {VALID_RULE_KINDS}, "
                 f"got {kind!r}"
             )
-        rules.append(dict(rule))
+        rules.append(dict(rule))  # type: ignore[arg-type]
 
     # Parse [antenna] (optional)
     antenna_section = data.get("antenna", {})

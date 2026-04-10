@@ -6,8 +6,6 @@ import pytest
 
 from icom_lan.commands import (
     CONTROLLER_ADDR,
-    build_civ_frame,
-    parse_civ_frame,
 )
 from icom_lan.commands.tx_band import (
     get_tx_band_count,

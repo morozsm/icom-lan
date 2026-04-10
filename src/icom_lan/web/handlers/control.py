@@ -427,7 +427,7 @@ class ControlHandler:
         await self._ws.send_text(encode_json(msg))
 
     def _capabilities(self) -> set[str]:
-        return runtime_capabilities(self._radio)
+        return set(runtime_capabilities(self._radio))
 
     def _ensure_receiver_supported(self, receiver: int) -> None:
         if self._radio is None:
@@ -469,7 +469,7 @@ class ControlHandler:
 
     def _radio_ready(self) -> bool:
         """Return backend radio readiness (CI-V healthy), with fallback."""
-        return radio_ready(self._radio)
+        return bool(radio_ready(self._radio))
 
     def _backend_recovering(self) -> bool:
         """Whether backend is already managing a reconnect/recovery path."""
