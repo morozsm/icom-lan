@@ -742,6 +742,28 @@ class YaesuCatPoller:
         except Exception:
             logger.debug("YaesuCatPoller: get_narrow failed", exc_info=True)
 
+        # -- CW parameters --
+        if "cw" in caps:
+            try:
+                state.key_speed = await radio.get_keyer_speed()
+            except NotImplementedError:
+                pass
+            except Exception:
+                logger.debug("YaesuCatPoller: get_keyer_speed failed", exc_info=True)
+            try:
+                state.cw_pitch = await radio.get_key_pitch()
+            except NotImplementedError:
+                pass
+            except Exception:
+                logger.debug("YaesuCatPoller: get_key_pitch failed", exc_info=True)
+            try:
+                # FTX-1 CAT only has binary on/off — no semi/full distinction
+                state.break_in = 1 if await radio.get_break_in() else 0
+            except NotImplementedError:
+                pass
+            except Exception:
+                logger.debug("YaesuCatPoller: get_break_in failed", exc_info=True)
+
         # -- VFO select (always) --
         try:
             state.vfo_select = await radio.get_vfo_select()
