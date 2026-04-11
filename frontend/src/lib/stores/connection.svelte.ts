@@ -6,6 +6,9 @@ let scopeConnected = $state(false);
 let scopeLastFrame = $state(0);
 let radioStatus = $state<'connected' | 'connecting' | 'reconnecting' | 'disconnected'>('disconnected');
 let radioPowerOn = $state<boolean | null>(null);
+let rigConnected = $state(false);
+let radioReady = $state(false);
+let controlConnected = $state(false);
 let lastResponseTime = $state<number | null>(null);
 
 let lastStateUpdate = $state(0);
@@ -121,4 +124,28 @@ export function setRadioPowerOn(v: boolean | null): void {
 
 export function getRadioPowerOn(): boolean | null {
   return radioPowerOn;
+}
+
+export function setRigConnected(v: boolean): void {
+  rigConnected = v;
+}
+
+export function getRigConnected(): boolean {
+  return rigConnected;
+}
+
+export function setRadioReady(v: boolean): void {
+  radioReady = v;
+}
+
+export function getRadioReady(): boolean {
+  return radioReady;
+}
+
+export function setControlConnected(v: boolean): void {
+  controlConnected = v;
+}
+
+export function getControlConnected(): boolean {
+  return controlConnected;
 }
