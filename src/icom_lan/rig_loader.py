@@ -146,6 +146,7 @@ class RigConfig:
             protocol_type=self.protocol_type,
             controls=self.controls,
             meter_calibrations=self.meter_calibrations,
+            meter_redlines=self.meter_redlines,
             rules=self.rules,
             keyboard=self.keyboard,
             antenna_tx_count=self.antenna_tx_count,

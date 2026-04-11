@@ -165,6 +165,7 @@ class RadioProfile:
     protocol_type: str = "civ"
     controls: dict[str, ControlSpec] | None = None
     meter_calibrations: dict[str, list[MeterCalibrationPoint]] | None = None
+    meter_redlines: dict[str, int] | None = None
     rules: tuple[RuleSpec, ...] = ()
     keyboard: KeyboardConfig | None = None
     antenna_tx_count: int = 1
