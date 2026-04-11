@@ -84,6 +84,11 @@ export class RxPlayer {
 
   private playPcm16(payload: Uint8Array, sr: number, ch: number): void {
     if (!this.ctx || !this.gain) return;
+    // Wait for AudioContext to resume (browser autoplay policy)
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume();
+      return; // drop frame until context is running
+    }
     const channels = ch === 2 ? 2 : 1;
     const frameCount = Math.floor(payload.byteLength / (2 * channels));
     if (frameCount <= 0) return;
@@ -103,6 +108,10 @@ export class RxPlayer {
 
   private decodeOpus(payload: Uint8Array, sr: number, ch: number): void {
     if (!this.ctx || !this.gain) return;
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume();
+      return;
+    }
     if (typeof AudioDecoder === 'undefined') return;
 
     if (!this.decoder) {
