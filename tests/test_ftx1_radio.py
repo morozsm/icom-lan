@@ -771,6 +771,59 @@ async def test_set_clarifier_freq(connected_radio):
     connected_radio._transport.write.assert_called_once_with("CF001-0250;")
 
 
+@pytest.mark.asyncio
+async def test_reset_clarifier(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.reset_clarifier()
+    connected_radio._transport.write.assert_called_once_with("RC;")
+
+
+# ---------------------------------------------------------------------------
+# APF (Audio Peak Filter, CO02/CO03)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_get_apf_off(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="CO020000")
+    assert await connected_radio.get_apf() is False
+    connected_radio._transport.query.assert_called_once_with("CO02;")
+
+
+@pytest.mark.asyncio
+async def test_get_apf_on(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="CO020001")
+    assert await connected_radio.get_apf() is True
+
+
+@pytest.mark.asyncio
+async def test_set_apf_on(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_apf(True)
+    connected_radio._transport.write.assert_called_once_with("CO020001;")
+
+
+@pytest.mark.asyncio
+async def test_set_apf_off(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_apf(False)
+    connected_radio._transport.write.assert_called_once_with("CO020000;")
+
+
+@pytest.mark.asyncio
+async def test_get_apf_freq(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="CO030128")
+    assert await connected_radio.get_apf_freq() == 128
+    connected_radio._transport.query.assert_called_once_with("CO03;")
+
+
+@pytest.mark.asyncio
+async def test_set_apf_freq(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_apf_freq(200)
+    connected_radio._transport.write.assert_called_once_with("CO030200;")
+
+
 # ---------------------------------------------------------------------------
 # D9: Tone/TSQL
 # ---------------------------------------------------------------------------

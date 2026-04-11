@@ -241,6 +241,8 @@ def test_to_dict_main_keys() -> None:
         "digisel_shift",
         "af_mute",
         "contour",
+        "apf_on",
+        "apf_freq",
         "if_shift",
         "repeater_tone",
         "repeater_tsql",

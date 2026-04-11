@@ -1124,6 +1124,32 @@ class YaesuCatRadio:
         """Set contour (S-DX) on/off. 0=OFF, 1=ON."""
         await self._write("set_contour", val=val)
 
+    # -- APF (Audio Peak Filter, CO02/CO03) ------------------------------------
+
+    async def get_apf(self, receiver: int = 0) -> bool:
+        """Get APF on/off state (CO02). Returns True if APF is on."""
+        result = await self._query("get_apf")
+        return int(result["val"]) != 0
+
+    async def set_apf(self, on: bool, receiver: int = 0) -> None:
+        """Set APF on/off (CO02). 0=OFF, 1=ON."""
+        await self._write("set_apf", val=1 if on else 0)
+
+    async def get_apf_freq(self, receiver: int = 0) -> int:
+        """Get APF centre frequency (CO03)."""
+        result = await self._query("get_apf_freq")
+        return int(result["val"])
+
+    async def set_apf_freq(self, freq: int, receiver: int = 0) -> None:
+        """Set APF centre frequency (CO03)."""
+        await self._write("set_apf_freq", val=freq)
+
+    # -- Clarifier Reset (RC) --------------------------------------------------
+
+    async def reset_clarifier(self, receiver: int = 0) -> None:
+        """Reset clarifier offset to zero (RC). Fire-and-forget."""
+        await self._write("reset_clarifier")
+
     async def set_band(self, band: int, receiver: int = 0) -> None:
         """Set current band by index (BS, write-only on FTX-1).
 

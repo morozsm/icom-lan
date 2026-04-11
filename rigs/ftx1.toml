@@ -442,3 +442,10 @@ set_tuner      = { cat = { write = "AC{src}{type}{state};" } }
 # CO: Contour (S-DX) / APF — func: 0=contour on/off, 1=freq, 2=APF on/off, 3=APF freq
 get_contour    = { cat = { read = "CO00;", parse = "CO00{val:04d};" } }
 set_contour    = { cat = { write = "CO00{val:04d};" } }
+get_apf        = { cat = { read = "CO02;", parse = "CO02{val:04d};" } }
+set_apf        = { cat = { write = "CO02{val:04d};" } }
+get_apf_freq   = { cat = { read = "CO03;", parse = "CO03{val:04d};" } }
+set_apf_freq   = { cat = { write = "CO03{val:04d};" } }
+
+# ── Clarifier Reset ──
+reset_clarifier = { cat = { write = "RC;" } }
