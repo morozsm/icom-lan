@@ -33,6 +33,7 @@
     vfoLayoutStyleVars,
   } from './vfo-layout-tokens';
   import { getTxPermit } from '$lib/utils/tx-permit';
+  import { getStepsForMode, formatStep, formatSValue, formatDbm, formatPower } from './mobile-layout-logic';
   import {
     toVfoProps, toVfoOpsProps, toMeterProps,
     toRfFrontEndProps, toModeProps, toFilterProps, toAgcProps, toRitXitProps,
@@ -110,22 +111,6 @@
   let powerModalOpen = $state(false);
 
   // ── Tuning strip ──
-  // Mode-aware step presets
-  const SSB_STEPS = [10, 50, 100, 500, 1000];
-  const CW_STEPS  = [10, 50, 100, 500];
-  const AM_STEPS  = [1000, 5000, 9000, 10000];
-  const FM_STEPS  = [5000, 10000, 12500, 25000];
-  const DEFAULT_STEPS = [10, 50, 100, 500, 1000, 5000, 10000, 100000];
-
-  function getStepsForMode(m: string): number[] {
-    const upper = (m || '').toUpperCase();
-    if (upper === 'USB' || upper === 'LSB') return SSB_STEPS;
-    if (upper === 'CW' || upper === 'CW-R') return CW_STEPS;
-    if (upper === 'AM') return AM_STEPS;
-    if (upper === 'FM') return FM_STEPS;
-    return DEFAULT_STEPS;
-  }
-
   let availableSteps = $derived(getStepsForMode(mode.currentMode));
   let tuningStep = $state(1000); // Hz
   let stepPickerOpen = $state(false);
@@ -146,11 +131,6 @@
   function selectStep(hz: number) {
     tuningStep = hz;
     stepPickerOpen = false;
-  }
-
-  function formatStep(hz: number): string {
-    if (hz >= 1000) return `${hz / 1000} kHz`;
-    return `${hz} Hz`;
   }
 
   // ── Quick modes (SSB operation essentials) ──
@@ -375,30 +355,6 @@
     if (!atuDidLongPress) {
       txHandlers.onAtuToggle(); // Short press = toggle on/off
     }
-  }
-
-  // ── S-meter formatting ──
-  function formatSValue(raw: number): string {
-    if (raw <= 0) return 'S0';
-    if (raw <= 120) {
-      const s = Math.round(raw / 120 * 9);
-      return `S${Math.min(9, Math.max(0, s))}`;
-    }
-    const over = Math.round((raw - 120) / 120 * 60);
-    return `S9+${over}`;
-  }
-
-  function formatDbm(raw: number): string {
-    // S9 = -73 dBm, each S-unit = 6 dB
-    const dbm = -73 + (raw - 120) / 120 * 60;
-    return `${Math.round(dbm)} dBm`;
-  }
-
-  // ── RF Power display ──
-  function formatPower(raw: number): string {
-    // 0-255 → 0-100W (approx for IC-7610)
-    const watts = Math.round(raw / 255 * 100);
-    return `${watts}W`;
   }
 
   // ── ATU status ──
