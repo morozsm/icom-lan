@@ -62,6 +62,7 @@ def make_radio(
     radio.get_alc_meter = AsyncMock(return_value=0)
     radio.get_power_meter = AsyncMock(return_value=0)
     radio.get_comp_meter = AsyncMock(return_value=0)
+    radio.get_swr_meter = AsyncMock(return_value=0)
     radio._read_meter = AsyncMock(return_value=(0, 0))
     radio.get_keyer_speed = AsyncMock(return_value=20)
     radio.get_key_pitch = AsyncMock(return_value=600)
@@ -715,9 +716,10 @@ async def test_slow_poll_skips_sub_levels_without_dual_rx() -> None:
     await asyncio.sleep(0.05)
     await poller.stop()
 
-    # Only receiver=0 calls should exist
-    for call in radio.get_af_level.call_args_list:
-        assert call.args == (0,) or call.args == (), "SUB receiver was polled"
+    # Only receiver=0 calls should exist for all three SUB level methods
+    for method_name in ("get_af_level", "get_rf_gain", "get_squelch"):
+        for call in getattr(radio, method_name).call_args_list:
+            assert call.args == (0,) or call.args == (), f"SUB receiver was polled via {method_name}"
 
 
 # ---------------------------------------------------------------------------
