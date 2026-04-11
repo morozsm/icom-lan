@@ -13,6 +13,7 @@ from icom_lan.transport import (
     ConnectionState,
     IcomTransport,
     PACKET_QUEUE_MAXSIZE,
+    PRESSURE_THRESHOLD,
 )
 from icom_lan.types import HEADER_SIZE, PacketType
 
@@ -660,3 +661,31 @@ class TestDefaultRawSend:
     def test_no_transport_noop(self) -> None:
         t = IcomTransport()
         t._default_raw_send(b"test")  # should not raise
+
+
+# ---------------------------------------------------------------------------
+# Queue pressure
+# ---------------------------------------------------------------------------
+
+
+class TestQueuePressure:
+    def test_empty_queue_returns_zero(self) -> None:
+        t = IcomTransport()
+        assert t.queue_pressure == 0.0
+
+    def test_correct_ratio_after_adding_items(self) -> None:
+        t = IcomTransport()
+        count = 100
+        for _ in range(count):
+            t._packet_queue.put_nowait(b"\x00")
+        expected = count / PACKET_QUEUE_MAXSIZE
+        assert t.queue_pressure == pytest.approx(expected)
+
+    def test_full_queue_returns_one(self) -> None:
+        t = IcomTransport()
+        for _ in range(PACKET_QUEUE_MAXSIZE):
+            t._packet_queue.put_nowait(b"\x00")
+        assert t.queue_pressure == pytest.approx(1.0)
+
+    def test_pressure_threshold_value(self) -> None:
+        assert PRESSURE_THRESHOLD == 0.7

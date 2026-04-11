@@ -20,6 +20,7 @@ __all__ = [
     "ConnectionState",
     "IcomTransport",
     "PACKET_QUEUE_MAXSIZE",
+    "PRESSURE_THRESHOLD",
 ]
 
 logger = logging.getLogger(__name__)
@@ -34,6 +35,7 @@ DISCOVERY_TIMEOUT = 1.0  # seconds per attempt
 BUFSIZE = 500
 MAX_MISSING = 50
 PACKET_QUEUE_MAXSIZE = 4096
+PRESSURE_THRESHOLD = 0.7
 
 
 class ConnectionState(StrEnum):
@@ -121,6 +123,15 @@ class IcomTransport:
         # Without this flag the queue fills up in ~27 minutes (4096 / ~2.5 pkt/s)
         # causing a cascade of eviction warnings and watchdog reconnects.
         self._discard_data_packets: bool = False
+
+    @property
+    def queue_pressure(self) -> float:
+        """Return packet queue fill ratio (0.0 = empty, 1.0 = full)."""
+        q = self._packet_queue
+        maxsize = q.maxsize
+        if maxsize <= 0:
+            return 0.0
+        return q.qsize() / maxsize
 
     def _default_raw_send(self, data: bytes) -> None:
         """Send raw bytes via UDP transport."""
