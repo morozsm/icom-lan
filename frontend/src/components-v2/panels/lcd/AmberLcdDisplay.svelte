@@ -71,6 +71,7 @@
   let xitActive = $derived(radioState?.ritTx ?? false);
   let voxActive = $derived(radioState?.voxOn ?? false);
   let atuActive = $derived((radioState?.tunerStatus ?? 0) > 0);
+  let atuTuning = $derived((radioState?.tunerStatus ?? 0) === 2);
   let preamp = $derived(rx?.preamp ?? 0);
   let attActive = $derived((rx?.att ?? 0) > 0);
   // FTX-1: no separate NB/NR on/off — level > 0 means active
@@ -175,7 +176,7 @@
       {#if hasCapability('preamp')}<span class="lcd-ind active">{preamp === 0 ? 'IPO' : preamp === 1 ? 'AMP1' : 'AMP2'}</span>{/if}
       {#if hasCapability('digisel')}<span class="lcd-ind" class:active={digiSelActive}>DIGI-SEL</span>{/if}
       {#if hasCapability('ip_plus')}<span class="lcd-ind" class:active={ipPlusActive}>IP+</span>{/if}
-      {#if hasCapability('tuner')}<span class="lcd-ind" class:active={atuActive}>ATU</span>{/if}
+      {#if hasCapability('tuner')}<span class="lcd-ind" class:active={atuActive} class:ind-tuning={atuTuning}>{atuTuning ? 'TUNE' : 'ATU'}</span>{/if}
 
       <span class="ind-sep"></span>
 
@@ -351,6 +352,13 @@
     color: #5A0800;
     border-color: rgba(90, 8, 0, 0.5);
     font-size: 15px;
+  }
+  .lcd-ind.ind-tuning {
+    animation: lcd-blink 0.6s steps(1) infinite;
+  }
+  @keyframes lcd-blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0.15; }
   }
 
   /* ── VFO control buttons ── */

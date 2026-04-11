@@ -105,11 +105,13 @@ export function toVfoProps(
     'PRE': rx.preamp > 0,
     'RFG': (rx.rfGain ?? 255) < 255,  // RF Gain reduced from max
     'SQL': (rx.squelch ?? 0) > 0,     // Squelch active
+    'ATU': (state.tunerStatus ?? 0) > 0,  // Antenna tuner active
   };
   
   // Dynamic badges (only show when active)
   if (rx.dataMode) badges['DATA'] = true;
   if (state.split) badges['SPLIT'] = true;
+  if ((state.tunerStatus ?? 0) === 2) badges['TUNE'] = true;
 
   const filters = ['FIL1', 'FIL2', 'FIL3'];
   const fil = rx.filter ?? 1;
