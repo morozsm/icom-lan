@@ -55,27 +55,9 @@ function computeTunePx(
   return width / 2;
 }
 
-// ── Scope frame parsing (with mode byte) ────────────────────────────────────────
+// ── Scope frame parsing — imported from canonical module ──────────────────────
 
-interface ScopeFrame {
-  receiver: number;
-  mode: number;
-  startFreq: number;
-  endFreq: number;
-  pixels: Uint8Array;
-}
-
-function parseScopeFrame(buf: ArrayBuffer): ScopeFrame | null {
-  const view = new DataView(buf);
-  if (view.byteLength < 16 || view.getUint8(0) !== 0x01) return null;
-  const receiver = view.getUint8(1);
-  const mode = view.getUint8(2);
-  const startFreq = view.getUint32(3, true);
-  const endFreq = view.getUint32(7, true);
-  const pixelCount = view.getUint16(14, true);
-  if (16 + pixelCount > view.byteLength) return null;
-  return { receiver, mode, startFreq, endFreq, pixels: new Uint8Array(buf, 16, pixelCount) };
-}
+import { parseScopeFrame, type ScopeFrame } from '../spectrum-logic';
 
 function encodeFrame(
   receiver: number,

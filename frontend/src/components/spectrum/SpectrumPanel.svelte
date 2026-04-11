@@ -29,34 +29,14 @@
     getFilterWidthFromRightEdgePx,
     getPassbandGeometry,
   } from './passband-geometry';
-
-  // --- Scope frame binary protocol ---
-  interface ScopeFrame {
-    receiver: number;
-    mode: number;       // 0=CTR, 1=FIX, 2=SCROLL-C, 3=SCROLL-F
-    startFreq: number;
-    endFreq: number;
-    pixels: Uint8Array;
-  }
-
-  function parseScopeFrame(buf: ArrayBuffer): ScopeFrame | null {
-    const view = new DataView(buf);
-    // Magic byte 0x01, minimum 16-byte header
-    if (view.byteLength < 16 || view.getUint8(0) !== 0x01) return null;
-    const receiver = view.getUint8(1);
-    const mode = view.getUint8(2);
-    const startFreq = view.getUint32(3, true);
-    const endFreq = view.getUint32(7, true);
-    const pixelCount = view.getUint16(14, true);
-    if (16 + pixelCount > view.byteLength) return null;
-    return {
-      receiver,
-      mode,
-      startFreq,
-      endFreq,
-      pixels: new Uint8Array(buf, 16, pixelCount),
-    };
-  }
+  import {
+    parseScopeFrame,
+    formatFreqOffset,
+    deriveFreqTicks,
+    getDragInterval,
+    isFixedScope as isFixedScopeFn,
+    type ScopeFrame,
+  } from './spectrum-logic';
 
   // --- Component state ---
   let scopePixels = $state<Uint8Array | null>(null);
@@ -105,7 +85,7 @@
   // Falls back to control state if no frame received yet.
   let scopeMode = $derived(frameScopeMode ?? (radio.current?.scopeControls?.mode ?? 0));
   // Tuning indicator: center for CTR/SCROLL-C, proportional for FIX/SCROLL-F
-  let isFixedScope = $derived(scopeMode === 1 || scopeMode === 3);
+  let isFixedScope = $derived(isFixedScopeFn(scopeMode));
   let tuneLinePct = $derived(
     isFixedScope && spanHz > 0 && tuneHz > 0 && tuneHz >= startFreq && tuneHz <= endFreq
       ? ((tuneHz - startFreq) / spanHz) * 100
@@ -140,16 +120,6 @@
     colorScheme,
   });
 
-  // --- Scale helpers ---
-  function formatFreqOffset(hz: number): string {
-    if (hz === 0) return '0';
-    const absHz = Math.abs(hz);
-    const sign = hz < 0 ? '-' : '+';
-    if (absHz >= 1e6) return `${sign}${(absHz / 1e6).toFixed(1)}M`;
-    if (absHz >= 1e3) return `${sign}${(absHz / 1e3).toFixed(0)}k`;
-    return `${sign}${absHz}`;
-  }
-
   const DB_TICKS = [
     { position: 0, label: '0' },
     { position: 33, label: '-20' },
@@ -157,14 +127,7 @@
     { position: 100, label: '-60' },
   ];
 
-  let freqTicks = $derived(
-    spanHz > 0
-      ? [-1, -0.5, 0, 0.5, 1].map((ratio) => ({
-          position: (ratio + 1) * 50,
-          label: formatFreqOffset((spanHz * ratio) / 2),
-        }))
-      : [],
-  );
+  let freqTicks = $derived(deriveFreqTicks(spanHz));
 
   // Passband overlay position derived from the same geometry as the spectrum renderer.
   // In FIX mode pass tuneLinePct so passband follows the carrier indicator.
@@ -314,14 +277,7 @@
     dragFreq = newFreq;
 
     // Adaptive interval: slow = responsive, fast = coarse
-    let intervalMs: number;
-    if (dragSpeed > 600) {
-      intervalMs = 700;
-    } else if (dragSpeed > 200) {
-      intervalMs = 400;
-    } else {
-      intervalMs = 200;
-    }
+    const intervalMs = getDragInterval(dragSpeed);
 
     if (now - lastDragSendTime < intervalMs) return;
     if (newFreq === lastDragSendFreq) return;
