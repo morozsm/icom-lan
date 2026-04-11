@@ -2239,7 +2239,11 @@ def _print_startup_banner(
 ) -> None:
     """Print a structured startup summary."""
     model = getattr(radio, "model", "Unknown")
-    host = getattr(radio, "_host", None) or getattr(radio, "host", "?")
+    # LAN radios have _host; serial radios have _transport._device
+    host = getattr(radio, "_host", None) or getattr(radio, "host", None)
+    if not host:
+        transport = getattr(radio, "_transport", None)
+        host = getattr(transport, "_device", None) or "?"
 
     lines = [
         f"--- icom-lan v{__version__} ---",
