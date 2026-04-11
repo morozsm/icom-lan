@@ -63,8 +63,6 @@ class ReceiverState:
     digisel_shift: int = 0  # 0-255
     af_mute: bool = False
     contour: int = 0  # 0=off, >0=on (S-DX / contour DSP)
-    apf_on: bool = False  # APF (audio peak filter) on/off
-    apf_freq: int = 0  # APF centre frequency (0-255 or model-specific)
     if_shift: int = 0  # signed Hz, e.g. -1200..+1200
     narrow: bool = False
     manual_notch_freq: int = 0  # 0-255

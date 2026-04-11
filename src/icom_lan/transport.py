@@ -619,10 +619,10 @@ class IcomTransport:
 
         try:
             self._packet_queue.put_nowait(data)
-            # Proactive shedding: when queue fills past 75%, ask the scope
+            # Proactive shedding: when queue fills past threshold, ask the scope
             # assembler to drop incomplete frames before we hit hard overflow.
             cb = self._scope_shed_callback
-            if cb is not None and self.queue_pressure > 0.75:
+            if cb is not None and self.queue_pressure > PRESSURE_THRESHOLD:
                 shed = cb()
                 if shed:
                     logger.warning(

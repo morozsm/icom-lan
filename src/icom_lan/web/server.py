@@ -645,7 +645,7 @@ class WebServer:
         if self._radio is not None and hasattr(self._radio, "_fetch_initial_state"):
             coro = self._radio._fetch_initial_state()
             if coro is not None and asyncio.iscoroutine(coro):
-                asyncio.ensure_future(coro)
+                asyncio.create_task(coro)
         if (
             self._scope_handlers
             and self._radio is not None
