@@ -69,6 +69,7 @@ from ..capabilities import (
 )
 from .._state_queries import build_state_queries
 from ..profiles import RadioProfile, resolve_radio_profile
+from ..transport import PRESSURE_THRESHOLD
 
 if TYPE_CHECKING:
     from ..radio_protocol import Radio
@@ -361,6 +362,22 @@ class RadioPoller:
     def revision(self) -> int:
         """Monotonic counter incremented on every radio state change."""
         return self._revision
+
+    def _adaptive_gap(self) -> float:
+        """Return gap adjusted for queue pressure.
+
+        At pressure < 0.5: return base gap unchanged.
+        At pressure 0.5-0.7: linear interpolation from 1x to 2x gap.
+        At pressure > 0.7: return 2x gap.
+        """
+        pressure = self._radio.queue_pressure  # type: ignore[attr-defined]
+        if pressure < 0.5:
+            return self._gap
+        if pressure > PRESSURE_THRESHOLD:
+            return self._gap * 2.0
+        # Linear interpolation between 0.5 and threshold
+        t = (pressure - 0.5) / (PRESSURE_THRESHOLD - 0.5)
+        return self._gap * (1.0 + t)
 
     def bump_revision(self) -> None:
         """Increment the revision counter (called on each state change)."""
