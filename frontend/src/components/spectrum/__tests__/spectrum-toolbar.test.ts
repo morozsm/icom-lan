@@ -6,47 +6,12 @@
  * and verify it independently of DOM rendering.
  */
 import { describe, it, expect } from 'vitest';
-
-// ── Constants replicated from SpectrumToolbar.svelte ──
-
-const SPAN_LABELS: Record<number, string> = {
-  0: '±2.5k', 1: '±5k', 2: '±10k', 3: '±25k',
-  4: '±50k', 5: '±100k', 6: '±250k', 7: '±500k',
-};
-
-const SPEED_LABELS: Record<number, string> = { 0: 'FST', 1: 'MID', 2: 'SLO' };
-
-const MODE_BUTTONS: [number, string][] = [[0, 'CTR'], [1, 'FIX'], [2, 'S-C'], [3, 'S-F']];
-
-// ── Pure logic extracted from component ──
-
-function toggleLayer(hiddenLayers: string[], layer: string): string[] {
-  if (hiddenLayers.includes(layer)) {
-    return hiddenLayers.filter(l => l !== layer);
-  }
-  return [...hiddenLayers, layer];
-}
-
-function isLayerVisible(hiddenLayers: string[], layer: string): boolean {
-  return !hiddenLayers.includes(layer);
-}
-
-function isSpanApplicable(mode: number | undefined): boolean {
-  return mode === 0 || mode === 2;
-}
-
-function isEdgeApplicable(mode: number | undefined): boolean {
-  return mode === 1 || mode === 3;
-}
-
-function clampSpan(cur: number, delta: -1 | 1): number {
-  return Math.max(0, Math.min(7, cur + delta));
-}
-
-/** Speed cycling inverts delta: visual ▶ means decrease speed value */
-function clampSpeed(cur: number, delta: -1 | 1): number {
-  return Math.max(0, Math.min(2, cur - delta));
-}
+import {
+  SPAN_LABELS, SPEED_LABELS, MODE_BUTTONS,
+  toggleLayer, isLayerVisible,
+  isSpanApplicable, isEdgeApplicable,
+  clampSpan, clampSpeed, clampBrt, clampRef,
+} from '../spectrum-toolbar-logic';
 
 function nextReceiver(current: number): number {
   return current === 1 ? 0 : 1;
@@ -209,10 +174,6 @@ describe('Receiver switching', () => {
 });
 
 describe('BRT level clamping', () => {
-  function clampBrt(current: number, delta: number): number {
-    if (delta > 0) return Math.min(30, current + delta);
-    return Math.max(-30, current + delta);
-  }
 
   it('increases within range', () => {
     expect(clampBrt(0, 5)).toBe(5);
@@ -232,10 +193,6 @@ describe('BRT level clamping', () => {
 });
 
 describe('REF level clamping', () => {
-  function clampRef(current: number, delta: number): number {
-    if (delta > 0) return Math.min(10, current + delta);
-    return Math.max(-30, current + delta);
-  }
 
   it('REF range is -30 to +10 (asymmetric)', () => {
     expect(clampRef(10, 5)).toBe(10);

@@ -5,6 +5,12 @@
   import { sendCommand } from '../../lib/transport/ws-client';
   import { hasCapability, hasDualReceiver } from '../../lib/stores/capabilities.svelte';
   import ScopeSettingsPopover from './ScopeSettingsPopover.svelte';
+  import {
+    SPAN_LABELS, SPEED_LABELS, MODE_BUTTONS,
+    toggleLayer as toggleLayerFn, isLayerVisible,
+    isSpanApplicable, isEdgeApplicable,
+    clampSpan, clampSpeed, clampBrt, clampRef,
+  } from './spectrum-toolbar-logic';
 
   interface LayerInfo {
     name: string;
@@ -77,15 +83,7 @@
   }
 
   function toggleLayer(layer: string) {
-    if (hiddenLayers.includes(layer)) {
-      hiddenLayers = hiddenLayers.filter(l => l !== layer);
-    } else {
-      hiddenLayers = [...hiddenLayers, layer];
-    }
-  }
-
-  function isLayerVisible(layer: string): boolean {
-    return !hiddenLayers.includes(layer);
+    hiddenLayers = toggleLayerFn(hiddenLayers, layer);
   }
 
   let stepHz = $derived(getTuningStep());
@@ -102,33 +100,17 @@
     adjustTuningStep('down');
   }
 
-  const SPAN_LABELS: Record<number, string> = {
-    0: '±2.5k', 1: '±5k', 2: '±10k', 3: '±25k',
-    4: '±50k', 5: '±100k', 6: '±250k', 7: '±500k',
-  };
-  const SPEED_LABELS: Record<number, string> = { 0: 'FST', 1: 'MID', 2: 'SLO' };
-
   let scopeControls = $derived(radio.current?.scopeControls);
 
-  // Scope mode labels: 0=Center, 1=Fixed, 2=Scroll-Center, 3=Scroll-Fixed
-  const MODE_BUTTONS: [number, string][] = [[0, 'CTR'], [1, 'FIX'], [2, 'S-C'], [3, 'S-F']];
-
-  // SPAN is only meaningful in center modes (0=CTR, 2=S-C)
-  let spanApplicable = $derived(scopeControls?.mode === 0 || scopeControls?.mode === 2);
-
-  // EDGE selector is shown in FIX (1) and SCROLL-F (3) modes
-  let edgeApplicable = $derived(scopeControls?.mode === 1 || scopeControls?.mode === 3);
+  let spanApplicable = $derived(isSpanApplicable(scopeControls?.mode));
+  let edgeApplicable = $derived(isEdgeApplicable(scopeControls?.mode));
 
   function cycleSpan(delta: -1 | 1) {
-    const cur = scopeControls?.span ?? 3;
-    sendCommand('set_scope_span', { span: Math.max(0, Math.min(7, cur + delta)) });
+    sendCommand('set_scope_span', { span: clampSpan(scopeControls?.span ?? 3, delta) });
   }
 
   function cycleSpeed(delta: -1 | 1) {
-    // speed: 0=FST, 1=MID, 2=SLO — ◀ should speed up (decrease), ▶ slow down (increase)
-    // But visually ▶ means "more/faster", so invert: ▶ = decrease speed value
-    const cur = scopeControls?.speed ?? 1;
-    sendCommand('set_scope_speed', { speed: Math.max(0, Math.min(2, cur - delta)) });
+    sendCommand('set_scope_speed', { speed: clampSpeed(scopeControls?.speed ?? 1, delta) });
   }
 
   function toggleHold() {
@@ -176,17 +158,17 @@
   <div class="toolbar-separator"></div>
   <div class="toolbar-group">
     <span class="toolbar-label">BRT</span>
-    <button class="toolbar-btn small" onclick={() => (brtLevel = Math.max(-30, brtLevel - 5))}>−</button>
+    <button class="toolbar-btn small" onclick={() => (brtLevel = clampBrt(brtLevel, -5))}>−</button>
     <span class="toolbar-value ref-value">{brtLevel > 0 ? '+' : ''}{brtLevel}</span>
-    <button class="toolbar-btn small" onclick={() => (brtLevel = Math.min(30, brtLevel + 5))}>+</button>
+    <button class="toolbar-btn small" onclick={() => (brtLevel = clampBrt(brtLevel, 5))}>+</button>
   </div>
   {#if hasCapability('scope')}
     <div class="toolbar-separator"></div>
     <div class="toolbar-group">
       <span class="toolbar-label">REF</span>
-      <button class="toolbar-btn small" onclick={() => sendCommand('set_scope_ref', { ref: Math.max(-30, (scopeControls?.refDb ?? 0) - 5) })}>−</button>
+      <button class="toolbar-btn small" onclick={() => sendCommand('set_scope_ref', { ref: clampRef(scopeControls?.refDb ?? 0, -5) })}>−</button>
       <span class="toolbar-value ref-value">{(scopeControls?.refDb ?? 0) > 0 ? '+' : ''}{scopeControls?.refDb ?? 0}</span>
-      <button class="toolbar-btn small" onclick={() => sendCommand('set_scope_ref', { ref: Math.min(10, (scopeControls?.refDb ?? 0) + 5) })}>+</button>
+      <button class="toolbar-btn small" onclick={() => sendCommand('set_scope_ref', { ref: clampRef(scopeControls?.refDb ?? 0, 5) })}>+</button>
     </div>
     <div class="toolbar-separator"></div>
     <div class="toolbar-group">
@@ -293,7 +275,7 @@
             <label class="layer-option">
               <input
                 type="checkbox"
-                checked={isLayerVisible(layer.layer)}
+                checked={isLayerVisible(hiddenLayers, layer.layer)}
                 onchange={() => toggleLayer(layer.layer)}
               />
               <span class="layer-name">{layer.name}</span>
