@@ -197,17 +197,12 @@ class _PortAudioRxStream:
         self._task = asyncio.create_task(self._loop(), name="portaudio-rx")
 
     async def stop(self) -> None:
-        task = self._task
         stream = self._stream
-        self._task = None
+        task = self._task
         self._stream = None
+        self._task = None
         self._callback = None
-        if task is not None and not task.done():
-            task.cancel()
-            try:
-                await task
-            except asyncio.CancelledError:
-                pass
+        # Close stream FIRST — unblocks executor thread stuck in stream.read()
         if stream is not None:
             try:
                 stream.stop()
@@ -217,6 +212,13 @@ class _PortAudioRxStream:
                 stream.close()
             except Exception:
                 logger.debug("portaudio-rx: stream close failed", exc_info=True)
+        # Now cancel the task (thread is already unblocked)
+        if task is not None and not task.done():
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
 
     async def _loop(self) -> None:
         stream = self._stream
@@ -278,17 +280,12 @@ class _PortAudioTxStream:
         self._task = asyncio.create_task(self._loop(), name="portaudio-tx")
 
     async def stop(self) -> None:
-        task = self._task
         stream = self._stream
-        self._task = None
+        task = self._task
         self._stream = None
+        self._task = None
         self._queue = asyncio.Queue(maxsize=64)
-        if task is not None and not task.done():
-            task.cancel()
-            try:
-                await task
-            except asyncio.CancelledError:
-                pass
+        # Close stream FIRST — unblocks executor thread stuck in stream.write()
         if stream is not None:
             try:
                 stream.stop()
@@ -298,6 +295,13 @@ class _PortAudioTxStream:
                 stream.close()
             except Exception:
                 logger.debug("portaudio-tx: stream close failed", exc_info=True)
+        # Now cancel the task (thread is already unblocked)
+        if task is not None and not task.done():
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
 
     async def write(self, frame: bytes) -> None:
         if not self.running:
