@@ -6,6 +6,14 @@
     SEGMENT_LABEL_COLORS,
     type BandSegmentMode,
   } from '../../lib/data/arrl-band-plan';
+  import {
+    formatFreq,
+    hexToRgb,
+    computePosition,
+    filterOverlapping,
+    shouldSkipFetch,
+    type RemoteSegment,
+  } from './band-plan-logic';
 
   interface Props {
     startFreq: number;
@@ -17,25 +25,6 @@
   let { startFreq, endFreq, visible = true, hiddenLayers = [] }: Props = $props();
 
   let containerWidth = $state(0);
-
-  // Remote segments from REST API
-  interface RemoteSegment {
-    start: number;
-    end: number;
-    mode: string;
-    label: string;
-    color: string;
-    opacity: number;
-    band: string;
-    layer: string;
-    priority: number;
-    url?: string | null;
-    notes?: string | null;
-    station?: string | null;
-    language?: string | null;
-    schedule?: string | null;
-    license?: string | null;
-  }
 
   let remoteSegments = $state<RemoteSegment[]>([]);
   let lastFetchRange = $state({ start: 0, end: 0 });
@@ -61,18 +50,14 @@
 
   // Debounced fetch from REST API
   function fetchSegments(start: number, end: number) {
-    const span = end - start;
-    if (
-      lastFetchRange.start > 0 &&
-      Math.abs(start - lastFetchRange.start) < span * 0.01 &&
-      Math.abs(end - lastFetchRange.end) < span * 0.01
-    ) {
+    if (shouldSkipFetch(start, end, lastFetchRange.start, lastFetchRange.end)) {
       return;
     }
 
     if (fetchTimeout) clearTimeout(fetchTimeout);
     fetchTimeout = setTimeout(async () => {
       try {
+        const span = end - start;
         const margin = Math.round(span * 0.5);
         const fetchStart = Math.max(0, start - margin);
         const fetchEnd = end + margin;
@@ -104,39 +89,16 @@
     popupSegment = null;
   });
 
-  function formatFreq(hz: number): string {
-    if (hz >= 1_000_000) return `${(hz / 1_000_000).toFixed(3)} MHz`;
-    if (hz >= 1_000) return `${(hz / 1_000).toFixed(1)} kHz`;
-    return `${hz} Hz`;
-  }
-
   // Use remote segments if available, fall back to local
   let segments = $derived(() => {
     if (!visible || endFreq <= startFreq) return [];
     const span = endFreq - startFreq;
 
     if (remoteSegments.length > 0) {
-      // Filter: don't show broadcast/utility/eibi segments that overlap with ham segments
-      const visibleRemote = remoteSegments.filter((s) => s.end > startFreq && s.start < endFreq && !hiddenLayers.includes(s.layer));
-      const hamSegs = visibleRemote.filter((s) => s.layer === 'ham');
-      const filtered = visibleRemote.filter((s) => {
-        if (s.layer === 'ham') return true;
-        // Hide non-ham segment if it significantly overlaps any ham segment
-        return !hamSegs.some((h) => {
-          const overlapStart = Math.max(s.start, h.start);
-          const overlapEnd = Math.min(s.end, h.end);
-          if (overlapEnd <= overlapStart) return false;
-          const overlapRatio = (overlapEnd - overlapStart) / (s.end - s.start);
-          return overlapRatio > 0.3; // >30% overlap → suppress
-        });
-      });
+      const filtered = filterOverlapping(remoteSegments, startFreq, endFreq, hiddenLayers);
       return filtered
         .map((s) => {
-          const rawLeft = ((s.start - startFreq) / span) * 100;
-          const rawRight = ((s.end - startFreq) / span) * 100;
-          const leftPct = Math.max(0, Math.min(100, rawLeft));
-          const rightPct = Math.max(0, Math.min(100, rawRight));
-          const widthPct = rightPct - leftPct;
+          const { leftPct, widthPct } = computePosition(s.start, s.end, startFreq, endFreq);
           const widthPx = (widthPct / 100) * containerWidth;
           return {
             start: s.start,
@@ -163,11 +125,7 @@
 
     // Fallback to local hardcoded data
     return getVisibleSegments(startFreq, endFreq).map(({ segment }) => {
-      const rawLeft = ((segment.startHz - startFreq) / span) * 100;
-      const rawRight = ((segment.endHz - startFreq) / span) * 100;
-      const leftPct = Math.max(0, Math.min(100, rawLeft));
-      const rightPct = Math.max(0, Math.min(100, rawRight));
-      const widthPct = rightPct - leftPct;
+      const { leftPct, widthPct } = computePosition(segment.startHz, segment.endHz, startFreq, endFreq);
       const widthPx = (widthPct / 100) * containerWidth;
       return {
         start: segment.startHz,
@@ -231,14 +189,6 @@
     }
     return boundaries;
   });
-
-  function hexToRgb(hex: string): string {
-    const h = hex.replace('#', '');
-    const r = parseInt(h.substring(0, 2), 16);
-    const g = parseInt(h.substring(2, 4), 16);
-    const b = parseInt(h.substring(4, 6), 16);
-    return `${r},${g},${b}`;
-  }
 
   function handleSegmentClick(seg: typeof segments extends () => (infer T)[] ? T : never, e: MouseEvent) {
     e.stopPropagation();
