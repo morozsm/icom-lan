@@ -60,7 +60,7 @@
   });
 </script>
 
-<aside class="right-sidebar">
+<aside class="right-sidebar" class:cross-drop-target={drag.isDropTarget}>
   {#if showRx}
     <CollapsiblePanel title="RX AUDIO" panelId="rx-audio" draggable onDragStart={drag.handleDragStart} style={drag.dragStyle('rx-audio')}>
       <RxAudioPanel
@@ -164,5 +164,10 @@
     padding: 6px 6px 16px;
     width: 100%;
     box-sizing: border-box;
+  }
+
+  .right-sidebar.cross-drop-target {
+    outline: 2px solid var(--v2-accent, #4af);
+    outline-offset: -2px;
   }
 </style>

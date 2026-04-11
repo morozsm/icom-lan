@@ -1,5 +1,6 @@
 /**
- * Shared drag-to-reorder logic for sidebar panels.
+ * Shared drag-to-reorder logic for sidebar panels,
+ * with cross-sidebar drag support.
  *
  * Usage:
  *   const drag = createDragReorder({
@@ -7,6 +8,10 @@
  *     defaults: ['rf-front-end', 'mode', ...],
  *     containerSelector: '.left-sidebar',
  *   });
+ *
+ * Cross-sidebar linking happens automatically via module-level registry.
+ * When two instances exist, dragging a panel over the peer sidebar
+ * triggers cross-sidebar drop detection and panel transfer.
  */
 
 // --- Pure helpers (exported for testing) ---
@@ -39,6 +44,24 @@ export function reorderPanels(order: string[], fromId: string, toIndex: number):
   return newOrder;
 }
 
+// --- Module-level peer registry ---
+
+interface DragInstance {
+  readonly order: string[];
+  readonly isDropTarget: boolean;
+  readonly containerSelector: string;
+  readonly _incomingDropIndex: number;
+  orderOf(panelId: string): number;
+  dragStyle(panelId: string): string;
+  handleDragStart(panelId: string, event: PointerEvent): void;
+  reset(): void;
+  _setIncoming(panelId: string | null, index: number): void;
+  _acceptPanel(panelId: string, atIndex: number): void;
+  _removePanel(panelId: string): void;
+}
+
+const _registry: DragInstance[] = [];
+
 // --- Reactive factory ---
 
 export interface DragReorderOptions {
@@ -47,12 +70,16 @@ export interface DragReorderOptions {
   containerSelector: string;
 }
 
-export function createDragReorder(options: DragReorderOptions) {
+export function createDragReorder(options: DragReorderOptions): DragInstance {
   const { storageKey, defaults, containerSelector } = options;
 
   let order = $state(loadPanelOrder(storageKey, defaults));
   let dragPanelId = $state<string | null>(null);
   let dropTargetIndex = $state<number>(-1);
+
+  // Cross-sidebar state (set by peer during its drag)
+  let _incomingDragId = $state<string | null>(null);
+  let _incomingDropIdx = $state<number>(-1);
 
   // Persist order changes
   $effect(() => {
@@ -72,7 +99,43 @@ export function createDragReorder(options: DragReorderOptions) {
     if (dragPanelId === panelId) return idx + 'opacity:0.5;transform:scale(0.98);';
     if (dragPanelId && orderOf(panelId) === dropTargetIndex)
       return idx + 'border-top:2px solid var(--v2-accent, #4af);';
+    if (_incomingDragId && orderOf(panelId) === _incomingDropIdx)
+      return idx + 'border-top:2px solid var(--v2-accent, #4af);';
     return idx;
+  }
+
+  function _setIncoming(panelId: string | null, index: number) {
+    _incomingDragId = panelId;
+    _incomingDropIdx = index;
+  }
+
+  function _acceptPanel(panelId: string, atIndex: number) {
+    const newOrder = [...order];
+    newOrder.splice(Math.min(atIndex, newOrder.length), 0, panelId);
+    order = newOrder;
+  }
+
+  function _removePanel(panelId: string) {
+    order = order.filter((id) => id !== panelId);
+  }
+
+  function findDropIndex(
+    targetOrder: string[],
+    targetRects: Map<string, DOMRect>,
+    clientY: number,
+  ): number {
+    let closest = 0;
+    let minDist = Infinity;
+    for (let i = 0; i < targetOrder.length; i++) {
+      const rect = targetRects.get(targetOrder[i]);
+      if (!rect) continue;
+      const dist = Math.abs(clientY - (rect.top + rect.height / 2));
+      if (dist < minDist) {
+        minDist = dist;
+        closest = i;
+      }
+    }
+    return closest;
   }
 
   function handleDragStart(panelId: string, event: PointerEvent) {
@@ -84,29 +147,64 @@ export function createDragReorder(options: DragReorderOptions) {
     const sidebar = handle.closest(containerSelector) as HTMLElement;
     if (!sidebar) return;
 
-    const panels = Array.from(sidebar.querySelectorAll<HTMLElement>('[data-panel-id]'));
+    // Cache own panel rects
     const rects = new Map<string, DOMRect>();
-    for (const p of panels) {
+    for (const p of sidebar.querySelectorAll<HTMLElement>('[data-panel-id]')) {
       rects.set(p.dataset.panelId!, p.getBoundingClientRect());
     }
 
-    function onMove(e: PointerEvent) {
-      let closest = 0;
-      let minDist = Infinity;
-      for (let i = 0; i < order.length; i++) {
-        const rect = rects.get(order[i]);
-        if (!rect) continue;
-        const dist = Math.abs(e.clientY - (rect.top + rect.height / 2));
-        if (dist < minDist) {
-          minDist = dist;
-          closest = i;
+    // Find peer from registry and cache its rects
+    const peer = _registry.find((r) => r !== instance);
+    let peerRect: DOMRect | null = null;
+    let peerRects: Map<string, DOMRect> | null = null;
+    if (peer) {
+      const peerEl = document.querySelector(peer.containerSelector) as HTMLElement;
+      if (peerEl) {
+        peerRect = peerEl.getBoundingClientRect();
+        peerRects = new Map();
+        for (const p of peerEl.querySelectorAll<HTMLElement>('[data-panel-id]')) {
+          peerRects.set(p.dataset.panelId!, p.getBoundingClientRect());
         }
       }
-      dropTargetIndex = closest;
+    }
+
+    let isOverPeer = false;
+
+    function onMove(e: PointerEvent) {
+      if (
+        peer &&
+        peerRect &&
+        peerRects &&
+        e.clientX >= peerRect.left &&
+        e.clientX <= peerRect.right &&
+        e.clientY >= peerRect.top &&
+        e.clientY <= peerRect.bottom
+      ) {
+        // Cursor is over peer sidebar
+        if (!isOverPeer) {
+          dropTargetIndex = -1;
+        }
+        isOverPeer = true;
+        const peerOrder = peer.order;
+        const idx = peerOrder.length === 0 ? 0 : findDropIndex(peerOrder, peerRects, e.clientY);
+        peer._setIncoming(panelId, idx);
+      } else {
+        // Cursor is over own sidebar (or between)
+        if (isOverPeer && peer) {
+          peer._setIncoming(null, -1);
+        }
+        isOverPeer = false;
+        dropTargetIndex = findDropIndex(order, rects, e.clientY);
+      }
     }
 
     function onUp() {
-      if (dragPanelId && dropTargetIndex >= 0) {
+      if (isOverPeer && peer && dragPanelId) {
+        const targetIdx = peer._incomingDropIndex;
+        peer._acceptPanel(dragPanelId, targetIdx >= 0 ? targetIdx : 0);
+        _removePanel(dragPanelId);
+        peer._setIncoming(null, -1);
+      } else if (dragPanelId && dropTargetIndex >= 0) {
         const newOrder = reorderPanels(order, dragPanelId, dropTargetIndex);
         if (newOrder !== order) order = newOrder;
       }
@@ -131,13 +229,26 @@ export function createDragReorder(options: DragReorderOptions) {
     }
   }
 
-  return {
+  const instance: DragInstance = {
     get order() {
       return order;
     },
+    get isDropTarget() {
+      return _incomingDragId !== null;
+    },
+    get _incomingDropIndex() {
+      return _incomingDropIdx;
+    },
+    containerSelector,
     orderOf,
     dragStyle,
     handleDragStart,
     reset,
+    _setIncoming,
+    _acceptPanel,
+    _removePanel,
   };
+
+  _registry.push(instance);
+  return instance;
 }

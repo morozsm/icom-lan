@@ -65,7 +65,7 @@
   const scanHandlers = makeScanHandlers();
 </script>
 
-<aside class="left-sidebar">
+<aside class="left-sidebar" class:cross-drop-target={drag.isDropTarget}>
   <CollapsiblePanel title="RF FRONT END" panelId="rf-front-end" dataPanel="rf-frontend"
     draggable={true} onDragStart={drag.handleDragStart}
     style={drag.dragStyle('rf-front-end')}>
@@ -211,6 +211,11 @@
     padding: 6px 6px 16px;
     width: 100%;
     box-sizing: border-box;
+  }
+
+  .left-sidebar.cross-drop-target {
+    outline: 2px solid var(--v2-accent, #4af);
+    outline-offset: -2px;
   }
 
   .sidebar-footer {
