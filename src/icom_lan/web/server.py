@@ -640,7 +640,10 @@ class WebServer:
                 )
 
     def _on_radio_reconnect(self) -> None:
-        """Called after soft_reconnect — re-enable scope if clients are connected."""
+        """Called after soft_reconnect — refetch state and re-enable scope."""
+        # Re-fetch initial state so UI shows fresh values after reconnect
+        if self._radio is not None and hasattr(self._radio, "_fetch_initial_state"):
+            asyncio.ensure_future(self._radio._fetch_initial_state())
         if (
             self._scope_handlers
             and self._radio is not None
