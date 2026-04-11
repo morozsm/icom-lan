@@ -2566,10 +2566,28 @@ def main() -> None:
                 pid_file = None
 
         try:
-            sys.exit(asyncio.run(_run(args)))
+            loop = asyncio.new_event_loop()
+            try:
+                sys.exit(loop.run_until_complete(_run(args)))
+            except KeyboardInterrupt:
+                # Graceful Ctrl-C / SIGTERM path (radio/session cleanup happens in async context).
+                print("Interrupted, shutting down...", file=sys.stderr)
+                sys.exit(130)
+            finally:
+                # Cancel remaining tasks
+                for task in asyncio.all_tasks(loop):
+                    task.cancel()
+                # Shutdown executor with timeout — prevents hang on blocked threads
+                try:
+                    loop.run_until_complete(
+                        asyncio.wait_for(loop.shutdown_default_executor(), timeout=2.0)
+                    )
+                except (TimeoutError, KeyboardInterrupt, Exception):
+                    pass  # force exit regardless
+                loop.close()
+        except SystemExit:
+            raise
         except KeyboardInterrupt:
-            # Graceful Ctrl-C / SIGTERM path (radio/session cleanup happens in async context).
-            print("Interrupted, shutting down...", file=sys.stderr)
             sys.exit(130)
         finally:
             if pid_file is not None:
