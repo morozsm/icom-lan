@@ -27,6 +27,7 @@ from collections.abc import Awaitable
 from typing import TYPE_CHECKING, Any, Callable
 
 from ...commands import hz_to_table_index, table_index_to_hz
+from ...exceptions import ConnectionError as RadioConnectionError
 
 if TYPE_CHECKING:
     from ..._poller_types import CommandQueue
@@ -215,6 +216,8 @@ class YaesuCatPoller:
         interval: float,
     ) -> None:
         """Generic poll loop with auto-reconnect on persistent errors."""
+        _conn_backoff = 0.0
+        _MAX_CONN_BACKOFF = 10.0
         while True:
             await self._paused.wait()
             if self._reconnecting:
@@ -223,8 +226,17 @@ class YaesuCatPoller:
             try:
                 async with self._lock:
                     await coro_fn()
+                _conn_backoff = 0.0  # reset on success
             except asyncio.CancelledError:
                 raise
+            except (RadioConnectionError, ConnectionError, OSError):
+                # Radio off or connection lost — single-line log, backoff
+                _conn_backoff = min(_conn_backoff + 1.0, _MAX_CONN_BACKOFF)
+                if _conn_backoff <= 1.0:
+                    logger.warning("YaesuCatPoller: %s — radio not connected, retrying in %.0fs", name, _conn_backoff)
+                await self._try_reconnect()
+                await asyncio.sleep(_conn_backoff)
+                continue
             except Exception:
                 logger.warning("YaesuCatPoller: %s poll error", name, exc_info=True)
                 await self._try_reconnect()
