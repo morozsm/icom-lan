@@ -90,6 +90,9 @@ class RigConfig:
     keyboard: KeyboardConfig | None = None
     antenna_tx_count: int = 1
     antenna_has_rx_ant: bool = False
+    scope_ref_min_db: float | None = None
+    scope_ref_max_db: float | None = None
+    scope_ref_step_db: float | None = None
 
     def to_profile(self) -> RadioProfile:
         """Build a ``RadioProfile`` from this config."""
@@ -149,6 +152,9 @@ class RigConfig:
             rules=self.rules,
             keyboard=self.keyboard,
             antenna_tx_count=self.antenna_tx_count,
+            scope_ref_min_db=self.scope_ref_min_db,
+            scope_ref_max_db=self.scope_ref_max_db,
+            scope_ref_step_db=self.scope_ref_step_db,
         )
 
     def to_command_map(self) -> CommandMap:
@@ -569,6 +575,16 @@ def load_rig(path: Path) -> RigConfig:
     # Parse spectrum
     spectrum = data.get("spectrum")
 
+    # Parse [scope] (optional)
+    scope_section = data.get("scope", {})
+    scope_ref_min_db: float | None = None
+    scope_ref_max_db: float | None = None
+    scope_ref_step_db: float | None = None
+    if scope_section:
+        scope_ref_min_db = float(scope_section["ref_min_db"]) if "ref_min_db" in scope_section else None
+        scope_ref_max_db = float(scope_section["ref_max_db"]) if "ref_max_db" in scope_section else None
+        scope_ref_step_db = float(scope_section["ref_step_db"]) if "ref_step_db" in scope_section else None
+
     # Parse attenuator/preamp/agc (optional sections)
     att_section = data.get("attenuator", {})
     att_values = tuple(att_section["values"]) if "values" in att_section else None
@@ -702,6 +718,9 @@ def load_rig(path: Path) -> RigConfig:
         keyboard=keyboard,
         antenna_tx_count=antenna_tx_count,
         antenna_has_rx_ant=antenna_has_rx_ant,
+        scope_ref_min_db=scope_ref_min_db,
+        scope_ref_max_db=scope_ref_max_db,
+        scope_ref_step_db=scope_ref_step_db,
     )
 
 

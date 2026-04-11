@@ -20,6 +20,11 @@ seq_max = 15
 amp_max = 200
 data_len_max = 689
 
+[scope]
+ref_min_db = -30.0
+ref_max_db = 10.0
+ref_step_db = 0.5
+
 # ── Capabilities ─────────────────────────────────────────────────
 # Feature tags determine which UI panels and controls are rendered.
 # Grouped by functional area.

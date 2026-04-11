@@ -168,6 +168,9 @@ class RadioProfile:
     rules: tuple[RuleSpec, ...] = ()
     keyboard: KeyboardConfig | None = None
     antenna_tx_count: int = 1
+    scope_ref_min_db: float | None = None
+    scope_ref_max_db: float | None = None
+    scope_ref_step_db: float | None = None
 
     def supports_capability(self, capability: str) -> bool:
         return capability in self.capabilities
