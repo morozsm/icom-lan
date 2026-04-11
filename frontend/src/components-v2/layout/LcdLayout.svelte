@@ -24,6 +24,19 @@
 
   const keyboardHandlers = makeKeyboardHandlers();
 
+  async function handlePowerOn() {
+    try {
+      const resp = await fetch('/api/v1/radio/power', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ state: 'on' }),
+      });
+      if (!resp.ok) alert(`Failed to power on: ${await resp.text()}`);
+    } catch (err) {
+      alert(`Error: ${err}`);
+    }
+  }
+
   $effect(() => {
     if (activeMode) {
       applyModeDefault(activeMode);
@@ -64,7 +77,13 @@
         <line x1="12" y1="2" x2="12" y2="12" />
       </svg>
       <span class="power-off-label">Radio is powered off</span>
-      <span class="power-off-hint">Use the ON button in the status bar to power up</span>
+      <button class="power-on-btn" onclick={handlePowerOn}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
+          <line x1="12" y1="2" x2="12" y2="12" />
+        </svg>
+        Power ON
+      </button>
     </div>
   </div>
 {/if}
@@ -164,8 +183,25 @@
     letter-spacing: 0.1em;
   }
 
-  .power-off-hint {
-    font-size: 12px;
-    color: var(--v2-text-subdued);
+  .power-on-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    padding: 10px 24px;
+    font-family: 'Roboto Mono', monospace;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #fff;
+    background: rgba(40, 160, 40, 0.25);
+    border: 1.5px solid rgba(40, 160, 40, 0.6);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .power-on-btn:hover {
+    background: rgba(40, 160, 40, 0.4);
+    border-color: rgba(40, 160, 40, 0.8);
   }
 </style>
