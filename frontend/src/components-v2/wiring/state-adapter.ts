@@ -80,6 +80,17 @@ export function toVfoProps(
   }
 
   const rx = state[receiver];
+  if (!rx) {
+    return {
+      receiver,
+      freq: 14074000,
+      mode: 'USB',
+      filter: 'FIL1',
+      sValue: 0,
+      isActive: receiver === 'main',
+      badges: {},
+    };
+  }
   const isActive = (state.active === 'SUB') === (receiver === 'sub');
 
   // Always show all possible badges, active state determines if they light up

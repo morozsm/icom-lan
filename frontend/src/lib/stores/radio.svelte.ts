@@ -26,6 +26,7 @@ function applyOptimistic(state: ServerState): ServerState {
   for (const [map, key] of [[optimisticMain, 'main'], [optimisticSub, 'sub']] as const) {
     if (map.size === 0) continue;
     const serverRx = result[key];
+    if (!serverRx) continue;
     const rx = { ...serverRx };
     let changed = false;
     for (const [field, entry] of map) {
