@@ -426,6 +426,11 @@ set_clarifier_freq = { cat = { write = "CF001{sign}{offset:04d};" } }
 get_sql_type   = { cat = { read = "CT0;", parse = "CT0{type:02d};" } }
 set_sql_type   = { cat = { write = "CT0{type:02d};" } }
 
+# ── Bulk Status ──
+# IF; returns composite status: freq(9)+sign(1)+rit_offset(4)+rit(1)+xit(1)
+# +bank(1)+chan(2)+tx(1)+mode(1)+vfo(1)+scan(1)+split(1) — parsed in Python
+get_if_status  = { cat = { read = "IF;" } }
+
 # ── System ──
 get_powerstat  = { cat = { read = "PS;", parse = "PS{state};" } }
 set_powerstat  = { cat = { write = "PS{state};" } }

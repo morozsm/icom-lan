@@ -10,41 +10,48 @@ Process the issue specified in `$ARGUMENTS` (a GitHub issue number).
 3. Fetch issue: `gh issue view $ARGUMENTS --json number,title,body,labels,state`
 4. Write issue context to `.claude/workflow/task.md`
 
-## Pipeline: EXPLORE → PLAN → EXECUTE → REVIEW → TEST → PR
+## Pipeline: EXPLORE → PLAN → EXECUTE → REGCHECK → REVIEW → TEST → PR
 
 ### Phase 1: EXPLORE
-Use the researcher agent definition (`.claude/agents/researcher.md`).
+Use `.claude/agents/researcher.md`.
 - Read the issue, find affected files, check knowledge base
 - Write findings to `.claude/workflow/research.md`
 - **STOP if confidence < 0.6** — mark issue as SKIPPED in queue
 
 ### Phase 2: PLAN
-Use the planner agent definition (`.claude/agents/planner.md`).
+Use `.claude/agents/planner.md`.
 - Enter Plan Mode first — do NOT start coding
 - Design minimal fix based on research
 - Write plan to `.claude/workflow/plan.md`
 - **STOP if plan violates guardrails** (>3 files, >200 LOC, architecture change)
 
 ### Phase 3: EXECUTE
-Use the executor agent definition (`.claude/agents/executor.md`).
+Use `.claude/agents/executor.md`.
 - Implement plan exactly as specified
 - Write tests as specified
 - Update `.claude/workflow/progress.md`
 - Max 2 attempts per change
 
-### Phase 4: REVIEW
-Use the reviewer agent definition (`.claude/agents/reviewer.md`).
+### Phase 4: REGCHECK (mandatory)
+Run `/regression-check` (see `.claude/commands/regression-check.md`).
+- Compare test results against baseline
+- Write to `.claude/workflow/regression.md`
+- If regression detected → back to EXECUTE (counts toward retry limit)
+- Do NOT proceed to REVIEW with regressions
+
+### Phase 5: REVIEW
+Use `.claude/agents/reviewer.md`.
 - Review all changes against plan
 - Check for safety, correctness, layering
 - Write to `.claude/workflow/review.md`
 - If needs_changes → back to EXECUTE (max 2 review loops)
 
-### Phase 5: TEST
-Use the QA agent definition (`.claude/agents/qa.md`).
+### Phase 6: TEST
+Use `.claude/agents/qa.md`.
 - Full test suite, lint, format, type check
 - If fails → back to EXECUTE (max 2 fix cycles)
 
-### Phase 6: PR
+### Phase 7: PR
 - Create branch: `fix/$ARGUMENTS-<short-slug>` or `feat/$ARGUMENTS-<short-slug>`
 - Commit with conventional message: `fix(#$ARGUMENTS): ...` or `feat(#$ARGUMENTS): ...`
 - Push and create PR via `gh pr create`
@@ -55,9 +62,14 @@ Use the QA agent definition (`.claude/agents/qa.md`).
 1. Update `.claude/queue/history.json` with result
 2. Update `.claude/metrics.json`
 3. If success: update `.claude/knowledge/patterns.md` with what worked
-4. If failure: update `.claude/knowledge/failures.md` with what failed and why
+4. If failure: run `/analyze-failure` (mandatory), then update `.claude/knowledge/failures.md`
 5. Reset `.claude/workflow/` files to idle state
 6. Update `.claude/queue/active_issue.json` to idle
+7. **Cleanup workspace** (mandatory — runs on success, failure, and skip):
+   - `git worktree remove <path> --force` (if worktree was used)
+   - `git worktree prune` to clear any orphans
+   - Never `rm -rf` worktree directories — always use git commands
+   - Workspace may persist ONLY if explicitly marked for manual review
 
 ## Retry policy
 

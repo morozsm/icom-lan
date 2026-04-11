@@ -128,8 +128,12 @@ class YaesuCatRadio:
     # -- Lifecycle ----------------------------------------------------------
 
     async def connect(self) -> None:
-        """Open the serial port."""
+        """Open the serial port and seed state from IF bulk query."""
         await self._transport.connect()
+        try:
+            await self.get_if_status()
+        except (CommandError, Exception):
+            logger.debug("IF bulk query at connect failed (non-fatal)")
 
     async def disconnect(self) -> None:
         """Close the serial port."""
@@ -475,6 +479,59 @@ class YaesuCatRadio:
 
         cmd = format_command(spec.write, **kwargs)
         await self._transport.write(cmd)
+
+    # -- IF Bulk Query ------------------------------------------------------
+
+    async def get_if_status(self) -> dict[str, Any]:
+        """Send ``IF;`` and parse the composite response into state fields.
+
+        The Yaesu IF response is a fixed-width string (after the ``IF`` prefix):
+        freq(9) + sign(1) + rit_offset(4) + rit(1) + xit(1)
+        + bank(1) + chan(2) + tx(1) + mode(1) + vfo(1) + scan(1) + split(1)
+
+        Returns a dict with parsed fields and populates :attr:`radio_state`.
+        """
+        self._require_connected()
+        raw = await self._transport.query("IF;")
+        # Transport strips trailing ';'; raw starts with "IF" prefix.
+        if not raw.startswith("IF") or len(raw) < 26:
+            raise CommandError(f"Invalid IF response: {raw!r}")
+
+        body = raw[2:]  # strip "IF" prefix
+        freq = int(body[0:9])
+        sign = body[9]
+        rit_offset = int(body[10:14])
+        rit_on = body[14] == "1"
+        xit_on = body[15] == "1"
+        # body[16] = bank, body[17:19] = channel — skipped
+        tx = body[19] == "1"
+        mode_code = body[20]
+        vfo = int(body[21])
+        # body[22] = scan — skipped
+        split = body[23] == "1"
+
+        rit_hz = rit_offset if sign == "+" else -rit_offset
+        mode_name = self._code_to_mode.get(mode_code, f"UNKNOWN({mode_code})")
+
+        # Populate state atomically.
+        self._state.main.freq = freq
+        self._state.main.mode = mode_name
+        self._state.ptt = tx
+        self._state.rit_on = rit_on
+        self._state.rit_tx = xit_on
+        self._state.rit_freq = rit_hz
+        self._state.split = split
+
+        return {
+            "freq": freq,
+            "mode": mode_name,
+            "rit_offset": rit_hz,
+            "rit_on": rit_on,
+            "xit_on": xit_on,
+            "tx": tx,
+            "vfo": vfo,
+            "split": split,
+        }
 
     # -- Frequency ----------------------------------------------------------
 
