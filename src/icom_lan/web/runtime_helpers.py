@@ -158,6 +158,10 @@ def build_public_state_payload(
         raw_val = conn_state_val.value
         if isinstance(raw_val, str):
             radio_status = raw_val
+    elif raw_connected:
+        # Serial backends (Yaesu CAT) don't have conn_state enum;
+        # fall back to the connected boolean.
+        radio_status = "connected"
     state["radio_detail"] = {
         "status": radio_status,
     }
