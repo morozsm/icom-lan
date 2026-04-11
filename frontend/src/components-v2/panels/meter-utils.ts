@@ -94,7 +94,7 @@ export function formatPowerWatts(raw: number): string {
 export function normalizePower(raw: number): number {
   const knots = getKnots('power', PO_KNOTS);
   const maxWatts = knots[knots.length - 1][1];
-  return piecewise(raw, knots) / maxWatts;
+  return maxWatts > 0 ? piecewise(raw, knots) / maxWatts : 0;
 }
 
 /**
@@ -138,11 +138,12 @@ export function formatSMeter(raw: number): string {
   const [s9Raw, s9Plus60Raw] = getSmeterBounds();
   if (raw >= s9Raw) {
     // S9+ range
-    const db = Math.round(((raw - s9Raw) / (s9Plus60Raw - s9Raw)) * 60);
+    const span = s9Plus60Raw - s9Raw;
+    const db = span > 0 ? Math.round(((raw - s9Raw) / span) * 60) : 0;
     return db > 0 ? `S9+${db}` : 'S9';
   }
   // S0-S9 range
-  const s = Math.round((raw / s9Raw) * 9);
+  const s = s9Raw > 0 ? Math.round((raw / s9Raw) * 9) : 0;
   return `S${s}`;
 }
 

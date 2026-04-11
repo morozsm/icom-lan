@@ -119,11 +119,3 @@ export function getSmeterCalibration(): { raw: number; actual: number; label: st
 export function getSmeterRedline(): number | null {
   return getMeterRedline('s_meter');
 }
-
-export function getMeterCalibration(type: string): { raw: number; actual: number; label: string }[] | null {
-  return capabilities?.meterCalibrations?.[type] ?? null;
-}
-
-export function getMeterRedline(type: string): number | null {
-  return capabilities?.meterRedlines?.[type] ?? null;
-}
