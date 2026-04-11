@@ -83,6 +83,8 @@
   let compActive = $derived(radioState?.compressorOn ?? false);
   let compLevel = $derived(radioState?.compressorLevel ?? 0);
   let lockActive = $derived(radioState?.dialLock ?? false);
+  let isCwMode = $derived(mode === 'CW' || mode === 'CW-R');
+  let breakInMode = $derived(radioState?.breakIn ?? 0);  // 0=off, 1=semi, 2=full
   let contourActive = $derived((rx?.contour ?? 0) > 0);
   let contourLevel = $derived(rx?.contour ?? 0);
   let digiSelActive = $derived(rx?.digisel ?? false);
@@ -256,6 +258,15 @@
       {#if hasCapability('rit')}
         <button class="lcd-btn" class:active={xitActive} onclick={() => sendCommand('set_rit_tx_status', { on: !xitActive })}>XIT</button>
         <button class="lcd-btn" onclick={() => sendCommand('set_rit_frequency', { freq: 0 })}>CLR</button>
+      {/if}
+      {#if hasCapability('tuner')}
+        <button class="lcd-btn" onclick={() => sendCommand('atu_tune', {})}>TUNE</button>
+      {/if}
+      {#if isCwMode && hasCapability('cw')}
+        <button class="lcd-btn" onclick={() => sendCommand('cw_auto_tune', {})}>AUTO</button>
+        {#if hasCapability('break_in')}
+          <button class="lcd-btn" class:active={breakInMode > 0} onclick={() => sendCommand('set_break_in_mode', { mode: breakInMode === 0 ? 1 : breakInMode === 1 ? 2 : 0 })}>{breakInMode === 0 ? 'BK-OFF' : breakInMode === 1 ? 'SEMI' : 'FULL'}</button>
+        {/if}
       {/if}
     </div>
 
