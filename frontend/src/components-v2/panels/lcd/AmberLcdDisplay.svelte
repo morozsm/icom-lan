@@ -1,13 +1,21 @@
 <script lang="ts">
   import { radio } from '$lib/stores/radio.svelte';
-  import { isAudioFftScope, hasAudioFft, hasDualReceiver, getCapabilities, hasCapability } from '$lib/stores/capabilities.svelte';
-  import { resolveFilterModeConfig } from '../../wiring/state-adapter';
+  import { hasAudioFft, hasDualReceiver, getCapabilities, hasCapability } from '$lib/stores/capabilities.svelte';
+  import {
+    toTxProps, toRitXitProps, toVfoOpsProps, toMeterProps,
+    toRfFrontEndProps, toAgcProps, toDspProps, toFilterProps,
+  } from '../../wiring/state-adapter';
+  import { makeVfoHandlers, makeRitXitHandlers, makeCwPanelHandlers } from '../../wiring/command-bus';
   import AmberFrequency from './AmberFrequency.svelte';
   import AmberSmeter from './AmberSmeter.svelte';
   import AmberAfScope from './AmberAfScope.svelte';
   import { getChannel, sendCommand } from '$lib/transport/ws-client';
   import { markScopeFrame } from '$lib/stores/connection.svelte';
 
+  // Command-bus handlers (singleton, no reactive deps)
+  const vfoHandlers = makeVfoHandlers();
+  const ritXitHandlers = makeRitXitHandlers();
+  const cwHandlers = makeCwPanelHandlers();
 
   interface ScopeFrame {
     receiver: number;
@@ -27,7 +35,7 @@
     return { receiver, startFreq, endFreq, pixels: new Uint8Array(buf, 16, pixelCount) };
   }
 
-  // Band lookup by frequency
+  // Band lookup by frequency (LCD-specific)
   const BANDS: [string, number, number][] = [
     ['160m', 1800000, 2000000],
     ['80m',  3500000, 4000000],
@@ -56,18 +64,25 @@
   }
 
   let radioState = $derived(radio.current);
+  let caps = $derived(getCapabilities());
+
+  // ── Adapter-derived state ──
+  let tx = $derived(toTxProps(radioState, null));
+  let ritXit = $derived(toRitXitProps(radioState, null));
+  let vfoOps = $derived(toVfoOpsProps(radioState, null));
+  let meter = $derived(toMeterProps(radioState));
+  let rf = $derived(toRfFrontEndProps(radioState, null));
+  let agc = $derived(toAgcProps(radioState, null));
+  let dsp = $derived(toDspProps(radioState, null));
+  let filterProps = $derived(toFilterProps(radioState, caps));
+
+  // ── LCD-specific derivations (no adapter equivalent) ──
   let rx = $derived(radioState?.active === 'SUB' ? radioState?.sub : radioState?.main);
   let freqHz = $derived(rx?.freqHz ?? 0);
   let bandLabel = $derived(freqToBand(freqHz));
   let mode = $derived(rx?.mode ?? '---');
   let filter = $derived(rx?.filter ?? '');
-  let sValue = $derived(rx?.sMeter ?? 0);
   let subSValue = $derived(radioState?.sub?.sMeter ?? 0);
-  let txActive = $derived(radioState?.ptt ?? false);
-  let poValue = $derived(radioState?.powerMeter ?? 0);
-  let swrValue = $derived(radioState?.swrMeter ?? 0);
-  let alcValue = $derived(radioState?.alcMeter ?? 0);
-  let compMeterValue = $derived(radioState?.compMeter ?? 0);
 
   type MeterSource = 'S' | 'PO' | 'SWR' | 'ALC' | 'COMP';
   const METER_SOURCES: MeterSource[] = ['S', 'PO', 'SWR', 'ALC', 'COMP'];
@@ -75,16 +90,16 @@
 
   // Auto-switch to PO during TX if user hasn't selected a TX meter
   let activeMeterSource = $derived<MeterSource>(
-    txActive && userMeterSource === 'S' ? 'PO' : userMeterSource
+    tx.txActive && userMeterSource === 'S' ? 'PO' : userMeterSource
   );
 
   let meterValue = $derived.by(() => {
     switch (activeMeterSource) {
-      case 'PO': return poValue;
-      case 'SWR': return swrValue;
-      case 'ALC': return alcValue;
-      case 'COMP': return compMeterValue;
-      default: return sValue;
+      case 'PO': return meter.rfPower;
+      case 'SWR': return meter.swr;
+      case 'ALC': return meter.alc;
+      case 'COMP': return meter.comp;
+      default: return rx?.sMeter ?? 0;  // active receiver, not always main
     }
   });
 
@@ -92,47 +107,18 @@
     const idx = METER_SOURCES.indexOf(userMeterSource);
     userMeterSource = METER_SOURCES[(idx + 1) % METER_SOURCES.length];
   }
-  let ritActive = $derived(radioState?.ritOn ?? false);
-  let ritOffset = $derived(radioState?.ritFreq ?? 0);
-  let splitActive = $derived(radioState?.split ?? false);
-  let dualWatchActive = $derived(radioState?.dualWatch ?? false);
-  let xitActive = $derived(radioState?.ritTx ?? false);
-  let voxActive = $derived(radioState?.voxOn ?? false);
-  let atuActive = $derived((radioState?.tunerStatus ?? 0) > 0);
-  let atuTuning = $derived((radioState?.tunerStatus ?? 0) === 2);
-  let preamp = $derived(rx?.preamp ?? 0);
-  let attActive = $derived((rx?.att ?? 0) > 0);
-  // FTX-1: no separate NB/NR on/off — level > 0 means active
-  let nbLevel = $derived(rx?.nbLevel ?? 0);
-  let nrLevel = $derived(rx?.nrLevel ?? 0);
-  let nbActive = $derived((rx?.nb ?? false) || nbLevel > 0);
-  let nrActive = $derived((rx?.nr ?? false) || nrLevel > 0);
-  let agcMode = $derived(rx?.agc ?? 0);
-  let notchActive = $derived(rx?.manualNotch ?? false);
-  let compActive = $derived(radioState?.compressorOn ?? false);
-  let compLevel = $derived(radioState?.compressorLevel ?? 0);
+
+  // LCD-specific: NB/NR active includes level > 0
+  let nbActive = $derived(dsp.nbActive || dsp.nbLevel > 0);
+  let nrActive = $derived(dsp.nrMode > 0 || dsp.nrLevel > 0);
+  let notchActive = $derived(dsp.notchMode === 'manual');
   let lockActive = $derived(radioState?.dialLock ?? false);
   let isCwMode = $derived(mode === 'CW' || mode === 'CW-R');
   let breakInMode = $derived(radioState?.breakIn ?? 0);  // 0=off, 1=semi, 2=full
   let contourActive = $derived((rx?.contour ?? 0) > 0);
   let contourLevel = $derived(rx?.contour ?? 0);
-  let digiSelActive = $derived(rx?.digisel ?? false);
-  let ipPlusActive = $derived(rx?.ipplus ?? false);
   let anfActive = $derived(rx?.autoNotch ?? false);
-  let manualNotchActive = $derived(rx?.manualNotch ?? false);
-  let rfgReduced = $derived((rx?.rfGain ?? 255) < 255);
-  let sqlActive = $derived((rx?.squelch ?? 0) > 0);
   let dataActive = $derived(!!rx?.dataMode);
-  let filterWidthHz = $derived(rx?.filterWidth ?? 2400);
-  let filterWidthMax = $derived.by(() => {
-    const caps = getCapabilities();
-    const config = resolveFilterModeConfig(caps, rx?.mode, rx?.dataMode);
-    if (config?.table?.length) return config.table[config.table.length - 1];
-    return config?.maxHz ?? caps?.filterWidthMax ?? 4000;
-  });
-  let ifShiftHz = $derived(rx?.ifShift ?? 0);
-  let manualNotchOn = $derived(rx?.manualNotch ?? false);
-  let notchFreqRaw = $derived(radioState?.notchFilter ?? 0);
   let activeVfo = $derived(radioState?.active === 'SUB' ? 'B' : 'A');
 
   let subRx = $derived(radioState?.active === 'SUB' ? radioState?.main : radioState?.sub);
@@ -183,16 +169,16 @@
   });
 </script>
 
-<div class="amber-lcd" class:tx-active={txActive}>
+<div class="amber-lcd" class:tx-active={tx.txActive}>
   <div class="lcd-screen">
     <div class="lcd-scanlines"></div>
 
     <!-- ═══ S-Meter ═══ -->
     <div class="lcd-meter-row">
-      <AmberSmeter value={meterValue} {txActive} source={activeMeterSource} />
+      <AmberSmeter value={meterValue} txActive={tx.txActive} source={activeMeterSource} />
       <button class="lcd-meter-src-btn" onclick={cycleMeterSource}>{activeMeterSource}</button>
     </div>
-    {#if hasDualReceiver() && !txActive}
+    {#if hasDualReceiver() && !tx.txActive}
       <div class="lcd-meter-row lcd-meter-sub">
         <AmberSmeter value={subSValue} source="S" />
       </div>
@@ -201,36 +187,36 @@
     <!-- ═══ Indicators (below S-meter) — gated by capabilities ═══ -->
     <div class="lcd-ind-row">
       <!-- TX group (always shown) -->
-      <span class="lcd-ind" class:active={txActive} class:ind-tx={txActive}>TX</span>
-      {#if hasCapability('vox')}<span class="lcd-ind" class:active={voxActive}>VOX</span>{/if}
-      {#if hasCapability('compressor')}<span class="lcd-ind" class:active={compActive}>PROC{compActive ? ` ${compLevel}` : ''}</span>{/if}
+      <span class="lcd-ind" class:active={tx.txActive} class:ind-tx={tx.txActive}>TX</span>
+      {#if hasCapability('vox')}<span class="lcd-ind" class:active={tx.voxActive}>VOX</span>{/if}
+      {#if hasCapability('compressor')}<span class="lcd-ind" class:active={tx.compActive}>PROC{tx.compActive ? ` ${tx.compLevel}` : ''}</span>{/if}
 
       <span class="ind-sep"></span>
 
       <!-- RF front-end -->
-      {#if hasCapability('attenuator')}<span class="lcd-ind" class:active={attActive}>ATT</span>{/if}
-      {#if hasCapability('preamp')}<span class="lcd-ind active">{preamp === 0 ? 'IPO' : preamp === 1 ? 'AMP1' : 'AMP2'}</span>{/if}
-      {#if hasCapability('digisel')}<span class="lcd-ind" class:active={digiSelActive}>DIGI-SEL</span>{/if}
-      {#if hasCapability('ip_plus')}<span class="lcd-ind" class:active={ipPlusActive}>IP+</span>{/if}
-      {#if hasCapability('tuner')}<span class="lcd-ind" class:active={atuActive} class:ind-tuning={atuTuning}>{atuTuning ? 'TUNE' : 'ATU'}</span>{/if}
+      {#if hasCapability('attenuator')}<span class="lcd-ind" class:active={rf.att > 0}>ATT</span>{/if}
+      {#if hasCapability('preamp')}<span class="lcd-ind active">{rf.pre === 0 ? 'IPO' : rf.pre === 1 ? 'AMP1' : 'AMP2'}</span>{/if}
+      {#if hasCapability('digisel')}<span class="lcd-ind" class:active={rf.digiSel}>DIGI-SEL</span>{/if}
+      {#if hasCapability('ip_plus')}<span class="lcd-ind" class:active={rf.ipPlus}>IP+</span>{/if}
+      {#if hasCapability('tuner')}<span class="lcd-ind" class:active={tx.atuActive} class:ind-tuning={tx.atuTuning}>{tx.atuTuning ? 'TUNE' : 'ATU'}</span>{/if}
 
       <span class="ind-sep"></span>
 
       <!-- DSP / filters -->
-      {#if hasCapability('nb')}<span class="lcd-ind" class:active={nbActive}>NB{nbActive ? ` ${nbLevel}` : ''}</span>{/if}
-      {#if hasCapability('nr')}<span class="lcd-ind" class:active={nrActive}>NR{nrActive ? ` ${nrLevel}` : ''}</span>{/if}
+      {#if hasCapability('nb')}<span class="lcd-ind" class:active={nbActive}>NB{nbActive ? ` ${dsp.nbLevel}` : ''}</span>{/if}
+      {#if hasCapability('nr')}<span class="lcd-ind" class:active={nrActive}>NR{nrActive ? ` ${dsp.nrLevel}` : ''}</span>{/if}
       {#if hasCapability('contour')}<span class="lcd-ind" class:active={contourActive}>CONT</span>{/if}
       {#if hasCapability('notch')}<span class="lcd-ind" class:active={notchActive}>NOTCH</span>{/if}
       {#if hasCapability('notch')}<span class="lcd-ind" class:active={anfActive}>ANF</span>{/if}
-      <span class="lcd-ind active">AGC {agcLabel(agcMode)}</span>
+      <span class="lcd-ind active">AGC {agcLabel(agc.agcMode)}</span>
 
       <span class="ind-sep"></span>
 
       <!-- VFO / system -->
-      {#if hasCapability('rf_gain')}<span class="lcd-ind" class:active={rfgReduced}>RFG</span>{/if}
-      {#if hasCapability('squelch')}<span class="lcd-ind" class:active={sqlActive}>SQL</span>{/if}
-      {#if hasCapability('rit')}<span class="lcd-ind" class:active={ritActive}>RIT</span>{/if}
-      {#if hasCapability('split')}<span class="lcd-ind" class:active={splitActive}>SPLIT</span>{/if}
+      {#if hasCapability('rf_gain')}<span class="lcd-ind" class:active={rf.rfGain < 255}>RFG</span>{/if}
+      {#if hasCapability('squelch')}<span class="lcd-ind" class:active={rf.squelch > 0}>SQL</span>{/if}
+      {#if hasCapability('rit')}<span class="lcd-ind" class:active={ritXit.ritActive}>RIT</span>{/if}
+      {#if hasCapability('split')}<span class="lcd-ind" class:active={vfoOps.splitActive}>SPLIT</span>{/if}
       {#if dataActive}<span class="lcd-ind active">DATA</span>{/if}
       {#if hasCapability('dial_lock')}<span class="lcd-ind" class:active={lockActive}>LOCK</span>{/if}
     </div>
@@ -252,12 +238,12 @@
           <AmberAfScope
             data={fftPixels}
             onRegisterPush={(fn) => { fftPush = fn; }}
-            filterWidth={filterWidthHz}
-            filterWidthMax={filterWidthMax}
-            ifShift={ifShiftHz}
+            filterWidth={filterProps.filterWidth}
+            filterWidthMax={filterProps.filterWidthMax}
+            ifShift={filterProps.ifShift}
             contour={contourLevel}
-            manualNotch={manualNotchOn}
-            notchFreq={notchFreqRaw}
+            manualNotch={dsp.notchMode === 'manual'}
+            notchFreq={dsp.notchFreq}
             autoNotch={notchActive}
             bandwidth={fftBandwidth}
             {mode}
@@ -282,34 +268,34 @@
 
     <!-- ═══ VFO controls ═══ -->
     <div class="lcd-vfo-ctrl-row">
-      <button class="lcd-btn" onclick={() => sendCommand('vfo_swap', {})}>A↔B</button>
-      <button class="lcd-btn" onclick={() => sendCommand('vfo_equalize', {})}>A=B</button>
+      <button class="lcd-btn" onclick={vfoHandlers.onSwap}>A↔B</button>
+      <button class="lcd-btn" onclick={vfoHandlers.onEqual}>A=B</button>
       {#if hasCapability('dual_rx')}
-        <button class="lcd-btn" class:active={dualWatchActive} onclick={() => sendCommand('set_dual_watch', { on: !dualWatchActive })}>DW</button>
+        <button class="lcd-btn" class:active={vfoOps.dualWatch} onclick={() => vfoHandlers.onDualWatchToggle(!vfoOps.dualWatch)}>DW</button>
       {/if}
       {#if hasCapability('split')}
-        <button class="lcd-btn" class:active={splitActive} onclick={() => sendCommand('set_split', { on: !splitActive })}>SPLIT</button>
+        <button class="lcd-btn" class:active={vfoOps.splitActive} onclick={vfoHandlers.onSplitToggle}>SPLIT</button>
       {/if}
       {#if hasCapability('rit')}
-        <button class="lcd-btn" class:active={xitActive} onclick={() => sendCommand('set_rit_tx_status', { on: !xitActive })}>XIT</button>
-        <button class="lcd-btn" onclick={() => sendCommand('set_rit_frequency', { freq: 0 })}>CLR</button>
+        <button class="lcd-btn" class:active={ritXit.xitActive} onclick={ritXitHandlers.onXitToggle}>XIT</button>
+        <button class="lcd-btn" onclick={ritXitHandlers.onClear}>CLR</button>
       {/if}
       {#if hasCapability('tuner')}
-        <button class="lcd-btn" onclick={() => sendCommand('atu_tune', {})}>TUNE</button>
+        <button class="lcd-btn" onclick={() => sendCommand('set_tuner_status', { value: 2 })}>TUNE</button>
       {/if}
       {#if isCwMode && hasCapability('cw')}
-        <button class="lcd-btn" onclick={() => sendCommand('cw_auto_tune', {})}>AUTO</button>
+        <button class="lcd-btn" onclick={cwHandlers.onAutoTune}>AUTO</button>
         {#if hasCapability('break_in')}
-          <button class="lcd-btn" class:active={breakInMode > 0} onclick={() => sendCommand('set_break_in_mode', { mode: breakInMode === 0 ? 1 : breakInMode === 1 ? 2 : 0 })}>{breakInMode === 0 ? 'BK-OFF' : breakInMode === 1 ? 'SEMI' : 'FULL'}</button>
+          <button class="lcd-btn" class:active={breakInMode > 0} onclick={() => cwHandlers.onBreakInModeChange(breakInMode === 0 ? 1 : breakInMode === 1 ? 2 : 0)}>{breakInMode === 0 ? 'BK-OFF' : breakInMode === 1 ? 'SEMI' : 'FULL'}</button>
         {/if}
       {/if}
     </div>
 
     <!-- ═══ RIT / XIT offset (if active) ═══ -->
-    {#if ritActive || xitActive}
+    {#if ritXit.ritActive || ritXit.xitActive}
       <div class="lcd-rit-row">
-        <span class="rit-label">{ritActive ? 'RIT' : 'XIT'}</span>
-        <span class="rit-value">{ritOffset >= 0 ? '+' : ''}{ritOffset} Hz</span>
+        <span class="rit-label">{ritXit.ritActive ? 'RIT' : 'XIT'}</span>
+        <span class="rit-value">{ritXit.ritOffset >= 0 ? '+' : ''}{ritXit.ritOffset} Hz</span>
       </div>
     {/if}
 
