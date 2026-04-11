@@ -221,6 +221,37 @@ async def test_get_set_mode_roundtrip(connected_radio):
 
 
 # ---------------------------------------------------------------------------
+# Power switch (PS)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_get_powerstat_on(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="PS1")
+    assert await connected_radio.get_powerstat() is True
+
+
+@pytest.mark.asyncio
+async def test_get_powerstat_off(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="PS0")
+    assert await connected_radio.get_powerstat() is False
+
+
+@pytest.mark.asyncio
+async def test_set_powerstat_on(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_powerstat(True)
+    connected_radio._transport.write.assert_called_once_with("PS1;")
+
+
+@pytest.mark.asyncio
+async def test_set_powerstat_off(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_powerstat(False)
+    connected_radio._transport.write.assert_called_once_with("PS0;")
+
+
+# ---------------------------------------------------------------------------
 # PTT
 # ---------------------------------------------------------------------------
 

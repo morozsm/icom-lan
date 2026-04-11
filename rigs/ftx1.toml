@@ -427,6 +427,8 @@ get_sql_type   = { cat = { read = "CT0;", parse = "CT0{type:02d};" } }
 set_sql_type   = { cat = { write = "CT0{type:02d};" } }
 
 # ── System ──
+get_powerstat  = { cat = { read = "PS;", parse = "PS{state};" } }
+set_powerstat  = { cat = { write = "PS{state};" } }
 get_id         = { cat = { read = "ID;", parse = "ID{model:04d};" } }
 get_auto_info  = { cat = { read = "AI;", parse = "AI{state};" } }
 set_auto_info  = { cat = { write = "AI{state};" } }

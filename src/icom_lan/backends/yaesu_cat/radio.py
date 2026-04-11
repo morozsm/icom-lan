@@ -552,6 +552,25 @@ class YaesuCatRadio:
         else:
             self._state.sub.mode = mode
 
+    # -- Power switch (PS) -------------------------------------------------
+
+    async def get_powerstat(self) -> bool:
+        """Query the power switch state.
+
+        Returns:
+            ``True`` if the radio is powered on, ``False`` otherwise.
+        """
+        result = await self._query("get_powerstat")
+        return result["state"] == "1"
+
+    async def set_powerstat(self, on: bool) -> None:
+        """Set the power switch state.
+
+        Args:
+            on: ``True`` to power on, ``False`` to power off.
+        """
+        await self._write("set_powerstat", state="1" if on else "0")
+
     # -- PTT ----------------------------------------------------------------
 
     async def set_ptt(self, on: bool) -> None:
