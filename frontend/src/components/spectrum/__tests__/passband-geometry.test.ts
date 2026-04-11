@@ -20,8 +20,29 @@ describe('getPassbandEdgesHz', () => {
     expect(getPassbandEdgesHz('AM', 3000, 0)).toEqual({ leftHz: -1500, rightHz: 1500 });
   });
 
+  it('centers CW passband around carrier', () => {
+    expect(getPassbandEdgesHz('CW', 500, 0)).toEqual({ leftHz: -250, rightHz: 250 });
+  });
+
+  it('centers CW-R passband around carrier', () => {
+    expect(getPassbandEdgesHz('CW-R', 500, 0)).toEqual({ leftHz: -250, rightHz: 250 });
+  });
+
+  it('places FM passband above carrier (same as USB)', () => {
+    expect(getPassbandEdgesHz('FM', 15000, 0)).toEqual({ leftHz: 0, rightHz: 15000 });
+  });
+
   it('applies IF shift to both passband edges', () => {
     expect(getPassbandEdgesHz('USB', 2400, 300)).toEqual({ leftHz: 300, rightHz: 2700 });
+  });
+
+  it('handles zero passband width', () => {
+    expect(getPassbandEdgesHz('USB', 0, 0)).toEqual({ leftHz: 0, rightHz: 0 });
+  });
+
+  it('normalizes lowercase mode names', () => {
+    expect(getPassbandEdgesHz('usb', 2400, 0)).toEqual({ leftHz: 0, rightHz: 2400 });
+    expect(getPassbandEdgesHz('lsb', 2400, 0)).toEqual({ leftHz: -2400, rightHz: 0 });
   });
 });
 
@@ -48,6 +69,18 @@ describe('getPassbandGeometry', () => {
       rightPx: 600,
       widthPx: 0,
     });
+  });
+
+  it('returns null for zero passband width', () => {
+    expect(getPassbandGeometry('USB', 0, 0, 12000, 600)).toBeNull();
+  });
+
+  it('returns null for zero span', () => {
+    expect(getPassbandGeometry('USB', 2400, 0, 0, 600)).toBeNull();
+  });
+
+  it('returns null for zero canvas width', () => {
+    expect(getPassbandGeometry('USB', 2400, 0, 12000, 0)).toBeNull();
   });
 });
 
