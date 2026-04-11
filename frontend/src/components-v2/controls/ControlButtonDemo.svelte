@@ -5,6 +5,7 @@
   import { PRESET_MAPPINGS, type RoleMapping } from '$lib/Button/roleMapping';
   import { SegmentedControl } from '$lib/SegmentedControl';
   import { ValueControl } from './value-control';
+  import ValueControlLab from './ValueControlLab.svelte';
 
   const indicatorStyles = [
     { value: 'ring', label: 'Ring' },
@@ -1470,6 +1471,11 @@
         />
       </div>
   </section>
+
+  <hr style="margin: 32px 0; border: 0; border-top: 1px solid var(--v2-border-panel);">
+
+  <!-- ── Value Control Lab — real radio examples ─────────────────────────── -->
+  <ValueControlLab />
 
 </div>
 
