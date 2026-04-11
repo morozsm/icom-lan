@@ -5,8 +5,9 @@
   import AmberFrequency from './AmberFrequency.svelte';
   import AmberSmeter from './AmberSmeter.svelte';
   import AmberAfScope from './AmberAfScope.svelte';
-  import { getChannel } from '$lib/transport/ws-client';
+  import { getChannel, sendCommand } from '$lib/transport/ws-client';
   import { markScopeFrame } from '$lib/stores/connection.svelte';
+  import { hasCapability } from '$lib/stores/capabilities.svelte';
 
 
   interface ScopeFrame {
@@ -66,6 +67,8 @@
   let ritActive = $derived(radioState?.ritOn ?? false);
   let ritOffset = $derived(radioState?.ritFreq ?? 0);
   let splitActive = $derived(radioState?.split ?? false);
+  let dualWatchActive = $derived(radioState?.dualWatch ?? false);
+  let xitActive = $derived(radioState?.ritTx ?? false);
   let voxActive = $derived(radioState?.voxOn ?? false);
   let atuActive = $derived((radioState?.tunerStatus ?? 0) > 0);
   let preamp = $derived(rx?.preamp ?? 0);
@@ -227,10 +230,26 @@
       </div>
     {/if}
 
-    <!-- ═══ RIT offset (if active) ═══ -->
-    {#if ritActive}
+    <!-- ═══ VFO controls ═══ -->
+    <div class="lcd-vfo-ctrl-row">
+      <button class="lcd-btn" onclick={() => sendCommand('vfo_swap', {})}>A↔B</button>
+      <button class="lcd-btn" onclick={() => sendCommand('vfo_equalize', {})}>A=B</button>
+      {#if hasCapability('dual_rx')}
+        <button class="lcd-btn" class:active={dualWatchActive} onclick={() => sendCommand('set_dual_watch', { on: !dualWatchActive })}>DW</button>
+      {/if}
+      {#if hasCapability('split')}
+        <button class="lcd-btn" class:active={splitActive} onclick={() => sendCommand('set_split', { on: !splitActive })}>SPLIT</button>
+      {/if}
+      {#if hasCapability('rit')}
+        <button class="lcd-btn" class:active={xitActive} onclick={() => sendCommand('set_rit_tx_status', { on: !xitActive })}>XIT</button>
+        <button class="lcd-btn" onclick={() => sendCommand('set_rit_frequency', { freq: 0 })}>CLR</button>
+      {/if}
+    </div>
+
+    <!-- ═══ RIT / XIT offset (if active) ═══ -->
+    {#if ritActive || xitActive}
       <div class="lcd-rit-row">
-        <span class="rit-label">RIT</span>
+        <span class="rit-label">{ritActive ? 'RIT' : 'XIT'}</span>
         <span class="rit-value">{ritOffset >= 0 ? '+' : ''}{ritOffset} Hz</span>
       </div>
     {/if}
@@ -319,6 +338,40 @@
     color: #5A0800;
     border-color: rgba(90, 8, 0, 0.5);
     font-size: 15px;
+  }
+
+  /* ── VFO control buttons ── */
+  .lcd-vfo-ctrl-row {
+    display: flex;
+    gap: 6px;
+    padding: 2px 8px;
+    position: relative;
+    z-index: 2;
+  }
+  .lcd-btn {
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: rgba(0, 0, 0, 0.25);
+    background: transparent;
+    border: 1.5px solid rgba(0, 0, 0, 0.1);
+    border-radius: 3px;
+    padding: 1px 8px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .lcd-btn:hover {
+    color: rgba(26, 16, 0, 0.6);
+    border-color: rgba(26, 16, 0, 0.3);
+  }
+  .lcd-btn:active {
+    color: #1A1000;
+    border-color: rgba(26, 16, 0, 0.5);
+  }
+  .lcd-btn.active {
+    color: #1A1000;
+    border-color: rgba(26, 16, 0, 0.4);
   }
 
   /* ── VFO + Scope row ── */
