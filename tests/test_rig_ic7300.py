@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+from icom_lan.commands._codec import filter_hz_to_index, filter_index_to_hz
 from icom_lan.rig_loader import load_rig
 
 RIGS_DIR = Path(__file__).resolve().parent.parent / "rigs"
@@ -59,6 +60,68 @@ class TestProfileBasics:
 
     def test_filters(self, profile):
         assert profile.filters == ("FIL1", "FIL2", "FIL3")
+
+    def test_filter_encoding_is_segmented(self, profile):
+        assert profile.filter_width_encoding == "segmented_bcd_index"
+
+
+# ── Filter width segments ─────────────────────────────────────
+
+
+class TestFilterWidthSegments:
+    """IC-7300 filter width uses index table (CI-V Reference p.19)."""
+
+    def test_ssb_index_0_is_50hz(self, profile):
+        rule = profile.resolve_filter_rule("USB")
+        assert filter_index_to_hz(0, segments=rule.segments) == 50
+
+    def test_ssb_index_9_is_500hz(self, profile):
+        rule = profile.resolve_filter_rule("USB")
+        assert filter_index_to_hz(9, segments=rule.segments) == 500
+
+    def test_ssb_index_10_is_600hz(self, profile):
+        rule = profile.resolve_filter_rule("USB")
+        assert filter_index_to_hz(10, segments=rule.segments) == 600
+
+    def test_ssb_index_40_is_3600hz(self, profile):
+        rule = profile.resolve_filter_rule("USB")
+        assert filter_index_to_hz(40, segments=rule.segments) == 3600
+
+    def test_ssb_roundtrip(self, profile):
+        rule = profile.resolve_filter_rule("LSB")
+        assert filter_hz_to_index(1500, segments=rule.segments) == 19
+        assert filter_index_to_hz(19, segments=rule.segments) == 1500
+
+    def test_cw_same_as_ssb(self, profile):
+        rule = profile.resolve_filter_rule("CW")
+        assert filter_index_to_hz(40, segments=rule.segments) == 3600
+
+    def test_cw_r_falls_back_to_cw(self, profile):
+        rule = profile.resolve_filter_rule("CW-R")
+        assert rule is not None
+        assert filter_index_to_hz(0, segments=rule.segments) == 50
+
+    def test_rtty_index_31_is_2700hz(self, profile):
+        rule = profile.resolve_filter_rule("RTTY")
+        assert filter_index_to_hz(31, segments=rule.segments) == 2700
+
+    def test_rtty_max_is_2700_not_3600(self, profile):
+        rule = profile.resolve_filter_rule("RTTY")
+        with pytest.raises(ValueError):
+            filter_index_to_hz(32, segments=rule.segments)
+
+    def test_am_index_0_is_200hz(self, profile):
+        rule = profile.resolve_filter_rule("AM")
+        assert filter_index_to_hz(0, segments=rule.segments) == 200
+
+    def test_am_index_49_is_10000hz(self, profile):
+        rule = profile.resolve_filter_rule("AM")
+        assert filter_index_to_hz(49, segments=rule.segments) == 10000
+
+    def test_fm_is_fixed(self, profile):
+        rule = profile.resolve_filter_rule("FM")
+        assert rule is not None
+        assert rule.fixed is True
 
 
 # ── VFO scheme ─────────────────────────────────────────────────

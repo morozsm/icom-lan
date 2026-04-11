@@ -338,12 +338,18 @@ get_s_meter_sub = { cat = { read = "SM1;", parse = "SM1{raw:03d};" } }
 get_meter      = { cat = { read = "RM{type};", parse = "RM{type}{main:03d}{sub:03d};" } }
 
 # ── Audio / RF Controls ──
-get_af_level   = { cat = { read = "AG0;", parse = "AG0{level:03d};" } }
-set_af_level   = { cat = { write = "AG0{level:03d};" } }
-get_rf_gain    = { cat = { read = "RG0;", parse = "RG0{level:03d};" } }
-set_rf_gain    = { cat = { write = "RG0{level:03d};" } }
-get_squelch    = { cat = { read = "SQ0;", parse = "SQ0{level:03d};" } }
-set_squelch    = { cat = { write = "SQ0{level:03d};" } }
+get_af_level       = { cat = { read = "AG0;", parse = "AG0{level:03d};" } }
+set_af_level       = { cat = { write = "AG0{level:03d};" } }
+get_af_level_sub   = { cat = { read = "AG1;", parse = "AG1{level:03d};" } }
+set_af_level_sub   = { cat = { write = "AG1{level:03d};" } }
+get_rf_gain        = { cat = { read = "RG0;", parse = "RG0{level:03d};" } }
+set_rf_gain        = { cat = { write = "RG0{level:03d};" } }
+get_rf_gain_sub    = { cat = { read = "RG1;", parse = "RG1{level:03d};" } }
+set_rf_gain_sub    = { cat = { write = "RG1{level:03d};" } }
+get_squelch        = { cat = { read = "SQ0;", parse = "SQ0{level:03d};" } }
+set_squelch        = { cat = { write = "SQ0{level:03d};" } }
+get_squelch_sub    = { cat = { read = "SQ1;", parse = "SQ1{level:03d};" } }
+set_squelch_sub    = { cat = { write = "SQ1{level:03d};" } }
 # ML: P1=0 (MONI ON/OFF), P1=1 (MONI Level)
 # ML0; → ML0000 (OFF) or ML0001 (ON)
 # ML1; → ML1050 (level=50)

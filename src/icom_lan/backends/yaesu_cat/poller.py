@@ -2,7 +2,7 @@
 
 Three polling groups with different intervals share a single serial lock:
 
-- **Fast  (75 ms):**  S-meter (main + sub) for smooth UI animation.
+- **Fast  (75 ms):**  S-meter during RX; ALC/Power/COMP/SWR during TX.
 - **Medium (200 ms):** Frequency, mode, PTT — changes at human speed.
 - **Slow  (1000 ms):** AGC, AF/RF/squelch levels — rarely change.
 
@@ -478,22 +478,43 @@ class YaesuCatPoller:
     # ------------------------------------------------------------------
 
     async def _poll_fast(self) -> None:
-        """Fast group: S-meter for main and sub receivers."""
+        """Fast group: S-meter (RX) or ALC/Power/COMP/SWR meters (TX)."""
         state = self._radio.radio_state
 
-        raw_main = await self._radio.get_s_meter(0)
-        self._ema_s_main = self._apply_ema(raw_main, self._ema_s_main)
-        state.main.s_meter = int(round(self._ema_s_main))
-
-        if "dual_rx" in self._caps:
+        if state.ptt and "meters" in self._caps:
+            # TX meters — poll ALC, Power, COMP, SWR during transmit
             try:
-                raw_sub = await self._radio.get_s_meter(1)
-                self._ema_s_sub = self._apply_ema(raw_sub, self._ema_s_sub)
-                state.sub.s_meter = int(round(self._ema_s_sub))
-            except NotImplementedError:
-                pass
+                state.alc_meter = await self._radio.get_alc_meter()
             except Exception:
-                logger.debug("YaesuCatPoller: sub S-meter unavailable", exc_info=True)
+                logger.debug("YaesuCatPoller: get_alc_meter failed", exc_info=True)
+            try:
+                state.power_meter = await self._radio.get_power_meter()
+            except Exception:
+                logger.debug("YaesuCatPoller: get_power_meter failed", exc_info=True)
+            try:
+                state.comp_meter = await self._radio.get_comp_meter()
+            except Exception:
+                logger.debug("YaesuCatPoller: get_comp_meter failed", exc_info=True)
+            try:
+                raw_swr, _ = await self._radio._read_meter(6)
+                state.swr_meter = raw_swr
+            except Exception:
+                logger.debug("YaesuCatPoller: get_swr failed", exc_info=True)
+        else:
+            # RX meters — S-meter for main and sub receivers
+            raw_main = await self._radio.get_s_meter(0)
+            self._ema_s_main = self._apply_ema(raw_main, self._ema_s_main)
+            state.main.s_meter = int(round(self._ema_s_main))
+
+            if "dual_rx" in self._caps:
+                try:
+                    raw_sub = await self._radio.get_s_meter(1)
+                    self._ema_s_sub = self._apply_ema(raw_sub, self._ema_s_sub)
+                    state.sub.s_meter = int(round(self._ema_s_sub))
+                except NotImplementedError:
+                    pass
+                except Exception:
+                    logger.debug("YaesuCatPoller: sub S-meter unavailable", exc_info=True)
 
         self._callback(state)
 
@@ -561,6 +582,27 @@ class YaesuCatPoller:
                 pass
             except Exception:
                 logger.debug("YaesuCatPoller: get_squelch failed", exc_info=True)
+
+        # -- SUB receiver levels --
+        if "dual_rx" in caps:
+            try:
+                await radio.get_af_level(1)
+            except NotImplementedError:
+                pass
+            except Exception:
+                logger.debug("YaesuCatPoller: get_af_level(sub) failed", exc_info=True)
+            try:
+                await radio.get_rf_gain(1)
+            except NotImplementedError:
+                pass
+            except Exception:
+                logger.debug("YaesuCatPoller: get_rf_gain(sub) failed", exc_info=True)
+            try:
+                await radio.get_squelch(1)
+            except NotImplementedError:
+                pass
+            except Exception:
+                logger.debug("YaesuCatPoller: get_squelch(sub) failed", exc_info=True)
 
         # -- DSP: NB/NR levels, auto notch --
         if "nb" in caps:
@@ -720,6 +762,28 @@ class YaesuCatPoller:
             pass
         except Exception:
             logger.debug("YaesuCatPoller: get_narrow failed", exc_info=True)
+
+        # -- CW parameters --
+        if "cw" in caps:
+            try:
+                state.key_speed = await radio.get_keyer_speed()
+            except NotImplementedError:
+                pass
+            except Exception:
+                logger.debug("YaesuCatPoller: get_keyer_speed failed", exc_info=True)
+            try:
+                state.cw_pitch = await radio.get_key_pitch()
+            except NotImplementedError:
+                pass
+            except Exception:
+                logger.debug("YaesuCatPoller: get_key_pitch failed", exc_info=True)
+            try:
+                # FTX-1 CAT only has binary on/off — no semi/full distinction
+                state.break_in = 1 if await radio.get_break_in() else 0
+            except NotImplementedError:
+                pass
+            except Exception:
+                logger.debug("YaesuCatPoller: get_break_in failed", exc_info=True)
 
         # -- VFO select (always) --
         try:

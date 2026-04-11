@@ -10,6 +10,7 @@
   import ScanPanel from '../panels/ScanPanel.svelte';
   import BandSelector from '../controls/BandSelector.svelte';
   import CollapsiblePanel from '../controls/CollapsiblePanel.svelte';
+  import { createDragReorder } from '$lib/drag-reorder.svelte';
   import {
     toRfFrontEndProps,
     toModeProps,
@@ -36,103 +37,12 @@
   let radioState = $derived(radio.current);
   let caps = $derived(getCapabilities());
 
-  // --- Panel reorder ---
-  const PANEL_ORDER_KEY = 'icom-lan:panel-order';
-  const DEFAULT_ORDER = ['rf-front-end', 'mode', 'filter', 'agc', 'rit-xit', 'band', 'antenna', 'scan'];
-
-  function loadPanelOrder(): string[] {
-    try {
-      const stored = localStorage.getItem(PANEL_ORDER_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length === DEFAULT_ORDER.length &&
-            DEFAULT_ORDER.every((id) => parsed.includes(id))) {
-          return parsed;
-        }
-      }
-    } catch { /* ignore */ }
-    return [...DEFAULT_ORDER];
-  }
-
-  let panelOrder = $state(loadPanelOrder());
-
-  // Persist order changes
-  $effect(() => {
-    const order = panelOrder;
-    try {
-      localStorage.setItem(PANEL_ORDER_KEY, JSON.stringify(order));
-    } catch { /* ignore */ }
+  // --- Panel reorder (shared logic) ---
+  const drag = createDragReorder({
+    storageKey: 'icom-lan:panel-order',
+    defaults: ['rf-front-end', 'mode', 'filter', 'agc', 'rit-xit', 'band', 'antenna', 'scan'],
+    containerSelector: '.left-sidebar',
   });
-
-  function resetPanelOrder() {
-    panelOrder = [...DEFAULT_ORDER];
-    try { localStorage.removeItem(PANEL_ORDER_KEY); } catch { /* ignore */ }
-  }
-
-  function orderOf(panelId: string): number {
-    return panelOrder.indexOf(panelId);
-  }
-
-  // --- Drag state ---
-  let dragPanelId = $state<string | null>(null);
-  let dropTargetIndex = $state<number>(-1);
-
-  function handleDragStart(panelId: string, event: PointerEvent) {
-    const handle = event.currentTarget as HTMLElement;
-    handle.setPointerCapture(event.pointerId);
-    dragPanelId = panelId;
-    dropTargetIndex = panelOrder.indexOf(panelId);
-
-    const sidebar = handle.closest('.left-sidebar') as HTMLElement;
-    if (!sidebar) return;
-
-    const panels = Array.from(sidebar.querySelectorAll<HTMLElement>('[data-panel-id]'));
-    const rects = new Map<string, DOMRect>();
-    for (const p of panels) {
-      const id = p.dataset.panelId!;
-      rects.set(id, p.getBoundingClientRect());
-    }
-
-    function onMove(e: PointerEvent) {
-      const y = e.clientY;
-      // Find which slot the pointer is over
-      let closest = 0;
-      let minDist = Infinity;
-      for (let i = 0; i < panelOrder.length; i++) {
-        const id = panelOrder[i];
-        const rect = rects.get(id);
-        if (!rect) continue;
-        const mid = rect.top + rect.height / 2;
-        const dist = Math.abs(y - mid);
-        if (dist < minDist) {
-          minDist = dist;
-          closest = i;
-        }
-      }
-      dropTargetIndex = closest;
-    }
-
-    function onUp() {
-      if (dragPanelId && dropTargetIndex >= 0) {
-        const fromIndex = panelOrder.indexOf(dragPanelId);
-        if (fromIndex !== dropTargetIndex) {
-          const newOrder = [...panelOrder];
-          const [moved] = newOrder.splice(fromIndex, 1);
-          newOrder.splice(dropTargetIndex, 0, moved);
-          panelOrder = newOrder;
-        }
-      }
-      dragPanelId = null;
-      dropTargetIndex = -1;
-      handle.removeEventListener('pointermove', onMove);
-      handle.removeEventListener('pointerup', onUp);
-      handle.removeEventListener('pointercancel', onUp);
-    }
-
-    handle.addEventListener('pointermove', onMove);
-    handle.addEventListener('pointerup', onUp);
-    handle.addEventListener('pointercancel', onUp);
-  }
 
   // Derived props via state adapter
   let rfFrontEnd = $derived(toRfFrontEndProps(radioState, caps));
@@ -157,8 +67,8 @@
 
 <aside class="left-sidebar">
   <CollapsiblePanel title="RF FRONT END" panelId="rf-front-end" dataPanel="rf-frontend"
-    draggable={true} onDragStart={handleDragStart}
-    style="order:{orderOf('rf-front-end')}{dragPanelId === 'rf-front-end' ? ';opacity:0.5;transform:scale(0.98)' : ''}{dropTargetIndex === orderOf('rf-front-end') && dragPanelId && dragPanelId !== 'rf-front-end' ? ';border-top:2px solid var(--v2-accent, #4af)' : ''}">
+    draggable={true} onDragStart={drag.handleDragStart}
+    style={drag.dragStyle('rf-front-end')}>
     <RfFrontEnd
       rfGain={rfFrontEnd.rfGain}
       squelch={rfFrontEnd.squelch}
@@ -176,8 +86,8 @@
   </CollapsiblePanel>
 
   <CollapsiblePanel title="MODE" panelId="mode"
-    draggable={true} onDragStart={handleDragStart}
-    style="order:{orderOf('mode')}{dragPanelId === 'mode' ? ';opacity:0.5;transform:scale(0.98)' : ''}{dropTargetIndex === orderOf('mode') && dragPanelId && dragPanelId !== 'mode' ? ';border-top:2px solid var(--v2-accent, #4af)' : ''}">
+    draggable={true} onDragStart={drag.handleDragStart}
+    style={drag.dragStyle('mode')}>
     <ModePanel
       currentMode={mode.currentMode}
       modes={mode.modes}
@@ -191,8 +101,8 @@
   </CollapsiblePanel>
 
   <CollapsiblePanel title="FILTER" panelId="filter"
-    draggable={true} onDragStart={handleDragStart}
-    style="order:{orderOf('filter')}{dragPanelId === 'filter' ? ';opacity:0.5;transform:scale(0.98)' : ''}{dropTargetIndex === orderOf('filter') && dragPanelId && dragPanelId !== 'filter' ? ';border-top:2px solid var(--v2-accent, #4af)' : ''}">
+    draggable={true} onDragStart={drag.handleDragStart}
+    style={drag.dragStyle('filter')}>
     <FilterPanel
       currentMode={filter.currentMode}
       currentFilter={filter.currentFilter}
@@ -219,8 +129,8 @@
   </CollapsiblePanel>
 
   <CollapsiblePanel title="AGC" panelId="agc"
-    draggable={true} onDragStart={handleDragStart}
-    style="order:{orderOf('agc')}{dragPanelId === 'agc' ? ';opacity:0.5;transform:scale(0.98)' : ''}{dropTargetIndex === orderOf('agc') && dragPanelId && dragPanelId !== 'agc' ? ';border-top:2px solid var(--v2-accent, #4af)' : ''}">
+    draggable={true} onDragStart={drag.handleDragStart}
+    style={drag.dragStyle('agc')}>
     <AgcPanel
       agcMode={agc.agcMode}
       onAgcModeChange={agcHandlers.onAgcModeChange}
@@ -228,8 +138,8 @@
   </CollapsiblePanel>
 
   <CollapsiblePanel title="RIT / XIT" panelId="rit-xit"
-    draggable={true} onDragStart={handleDragStart}
-    style="order:{orderOf('rit-xit')}{dragPanelId === 'rit-xit' ? ';opacity:0.5;transform:scale(0.98)' : ''}{dropTargetIndex === orderOf('rit-xit') && dragPanelId && dragPanelId !== 'rit-xit' ? ';border-top:2px solid var(--v2-accent, #4af)' : ''}">
+    draggable={true} onDragStart={drag.handleDragStart}
+    style={drag.dragStyle('rit-xit')}>
     <RitXitPanel
       ritActive={ritXit.ritActive}
       ritOffset={ritXit.ritOffset}
@@ -246,8 +156,8 @@
   </CollapsiblePanel>
 
   <CollapsiblePanel title="BAND" panelId="band"
-    draggable={true} onDragStart={handleDragStart}
-    style="order:{orderOf('band')}{dragPanelId === 'band' ? ';opacity:0.5;transform:scale(0.98)' : ''}{dropTargetIndex === orderOf('band') && dragPanelId && dragPanelId !== 'band' ? ';border-top:2px solid var(--v2-accent, #4af)' : ''}">
+    draggable={true} onDragStart={drag.handleDragStart}
+    style={drag.dragStyle('band')}>
     <BandSelector
       currentFreq={band.currentFreq}
       onBandSelect={bandHandlers.onBandSelect}
@@ -257,8 +167,8 @@
 
   {#if antenna.antennaCount > 1}
     <CollapsiblePanel title="ANTENNA" panelId="antenna" dataPanel="antenna"
-      draggable={true} onDragStart={handleDragStart}
-      style="order:{orderOf('antenna')}{dragPanelId === 'antenna' ? ';opacity:0.5;transform:scale(0.98)' : ''}{dropTargetIndex === orderOf('antenna') && dragPanelId && dragPanelId !== 'antenna' ? ';border-top:2px solid var(--v2-accent, #4af)' : ''}">
+      draggable={true} onDragStart={drag.handleDragStart}
+      style={drag.dragStyle('antenna')}>
       <AntennaPanel
         txAntenna={antenna.txAntenna}
         rxAnt={antenna.rxAnt}
@@ -272,8 +182,8 @@
   {/if}
 
   <CollapsiblePanel title="SCAN" panelId="scan"
-    draggable={true} onDragStart={handleDragStart}
-    style="order:{orderOf('scan')}{dragPanelId === 'scan' ? ';opacity:0.5;transform:scale(0.98)' : ''}{dropTargetIndex === orderOf('scan') && dragPanelId && dragPanelId !== 'scan' ? ';border-top:2px solid var(--v2-accent, #4af)' : ''}">
+    draggable={true} onDragStart={drag.handleDragStart}
+    style={drag.dragStyle('scan')}>
     <ScanPanel
       scanning={scan.scanning}
       scanType={scan.scanType}
@@ -286,7 +196,7 @@
   </CollapsiblePanel>
 
   <div class="sidebar-footer" style="order:99">
-    <button type="button" class="reset-order-btn" onclick={resetPanelOrder}>
+    <button type="button" class="reset-order-btn" onclick={drag.reset}>
       Reset panel order
     </button>
   </div>
