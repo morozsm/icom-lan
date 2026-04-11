@@ -10,8 +10,10 @@ vi.mock('../../stores/connection.svelte', () => ({
 }));
 
 vi.mock('../../stores/radio.svelte', () => ({
+  getRadioState: vi.fn().mockReturnValue(null),
   patchActiveReceiver: vi.fn(),
   patchRadioState: vi.fn(),
+  resetRadioState: vi.fn(),
   setRadioState: vi.fn(),
 }));
 

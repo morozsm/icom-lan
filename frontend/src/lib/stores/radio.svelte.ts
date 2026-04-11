@@ -75,6 +75,15 @@ function applyOptimistic(state: ServerState): ServerState {
   return result;
 }
 
+/** Clear all radio state on disconnect. */
+export function resetRadioState(): void {
+  radio.current = null;
+  lastRevision = -1;
+  optimisticMain.clear();
+  optimisticSub.clear();
+  lockedFields.clear();
+}
+
 export function setRadioState(state: ServerState): void {
   const isReset = lastRevision > 10 && state.revision < lastRevision / 2;
   const isInitial = radio.current === null;

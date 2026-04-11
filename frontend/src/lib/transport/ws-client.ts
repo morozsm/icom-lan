@@ -1,7 +1,7 @@
 import type { WsCommand, WsIncoming } from '../types/protocol';
 import { makeCommandId } from '../types/protocol';
 import { setWsConnected, setHttpConnected, markStateUpdated, setReconnecting } from '../stores/connection.svelte';
-import { getRadioState, patchActiveReceiver, patchRadioState, setRadioState } from '../stores/radio.svelte';
+import { getRadioState, patchActiveReceiver, patchRadioState, resetRadioState, setRadioState } from '../stores/radio.svelte';
 
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'reconnecting';
 type MessageHandler = (msg: WsIncoming) => void;
@@ -223,9 +223,15 @@ const _ctrl = new WsChannel();
 _ctrl.onStateChange((s) => {
   setWsConnected(s === 'connected');
   setReconnecting(s === 'connecting' || s === 'reconnecting');
+  if (s === 'disconnected') {
+    _fullState = {};
+    _hasReceivedFullState = false;
+    resetRadioState();
+  }
 });
 // Delta state tracking for incremental updates
 let _fullState: Record<string, unknown> = {};
+let _hasReceivedFullState = false;
 
 function applyDeltaEnvelope(envelope: Record<string, unknown>): Record<string, unknown> | null {
   const deltaType = envelope.type as string;
@@ -235,10 +241,13 @@ function applyDeltaEnvelope(envelope: Record<string, unknown>): Record<string, u
     _fullState = { ...(envelope.data as Record<string, unknown>) };
     // Carry revision at top level for setRadioState
     _fullState.revision = envelope.revision as number;
+    _hasReceivedFullState = true;
     return _fullState;
   }
 
   if (deltaType === 'delta') {
+    // Reject delta if we haven't received a full state yet
+    if (!_hasReceivedFullState) return null;
     // Incremental update — apply changed fields, remove deleted keys
     const changed = (envelope.changed ?? {}) as Record<string, unknown>;
     const removed = (envelope.removed ?? []) as string[];
