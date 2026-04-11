@@ -15,6 +15,7 @@ import {
   debounce,
   formatBipolarValue,
   DUAL_PARAM_CENTER_NORM,
+  DUAL_PARAM_DEAD_ZONE,
   dualParamValuesFromNormX,
   dualParamNormXFromValues,
   dualParamThumbPercent,
@@ -23,6 +24,7 @@ import {
   calculateArcPath,
   calculateIndicatorPosition,
   generateTickPositions,
+  rawToPercentDisplay,
 } from '../value-control-core';
 
 describe('clamp', () => {
@@ -402,5 +404,75 @@ describe('generateTickPositions', () => {
       expect(tick.x2).toBeDefined();
       expect(tick.y2).toBeDefined();
     });
+  });
+});
+
+describe('calculateDragValue', () => {
+  it('increases value on rightward bar drag', () => {
+    expect(calculateDragValue(50, 50, 0, 100, 0, 100, 1)).toBe(100);
+  });
+
+  it('decreases value on leftward bar drag', () => {
+    expect(calculateDragValue(50, -25, 0, 100, 0, 100, 1)).toBe(25);
+  });
+
+  it('clamps to min on large negative drag', () => {
+    expect(calculateDragValue(50, -200, 0, 100, 0, 100, 1)).toBe(0);
+  });
+
+  it('clamps to max on large positive drag', () => {
+    expect(calculateDragValue(50, 200, 0, 100, 0, 100, 1)).toBe(100);
+  });
+
+  it('snaps to step', () => {
+    expect(calculateDragValue(50, 13, 0, 100, 0, 100, 10)).toBe(60);
+  });
+
+  it('uses vertical drag for knob mode (up = increase)', () => {
+    // Negative deltaY = drag up = increase
+    expect(calculateDragValue(50, 0, -50, 100, 0, 100, 1, true)).toBe(100);
+  });
+
+  it('uses vertical drag for knob mode (down = decrease)', () => {
+    // Positive deltaY = drag down = decrease
+    expect(calculateDragValue(50, 0, 25, 100, 0, 100, 1, true)).toBe(25);
+  });
+
+  it('ignores deltaX in knob mode', () => {
+    expect(calculateDragValue(50, 999, -10, 100, 0, 100, 1, true)).toBe(60);
+  });
+});
+
+describe('rawToPercentDisplay', () => {
+  it('returns 0% for min value', () => {
+    expect(rawToPercentDisplay(0)).toBe('0%');
+  });
+
+  it('returns 100% for max value (255)', () => {
+    expect(rawToPercentDisplay(255)).toBe('100%');
+  });
+
+  it('returns 50% for midpoint (128)', () => {
+    expect(rawToPercentDisplay(128)).toBe('50%');
+  });
+
+  it('rounds to nearest integer percent', () => {
+    expect(rawToPercentDisplay(1)).toBe('0%');
+    expect(rawToPercentDisplay(3)).toBe('1%');
+  });
+
+  it('handles custom min/max range', () => {
+    expect(rawToPercentDisplay(50, 0, 100)).toBe('50%');
+    expect(rawToPercentDisplay(100, 0, 100)).toBe('100%');
+  });
+
+  it('returns 0% when range is zero', () => {
+    expect(rawToPercentDisplay(5, 5, 5)).toBe('0%');
+  });
+});
+
+describe('DUAL_PARAM_DEAD_ZONE', () => {
+  it('is 0.04', () => {
+    expect(DUAL_PARAM_DEAD_ZONE).toBe(0.04);
   });
 });
