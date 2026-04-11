@@ -910,9 +910,11 @@ class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
     async def connect(self) -> None:
         """Open connection to the radio and authenticate.
 
-        Delegates to the composed ControlPhaseRuntime.
+        Delegates to the composed ControlPhaseRuntime, then fetches
+        initial radio state so RadioState is populated before consumers.
         """
         await self._control_phase.connect()
+        await self._fetch_initial_state()
 
     async def __aenter__(self) -> "CoreRadio":
         await self.connect()
