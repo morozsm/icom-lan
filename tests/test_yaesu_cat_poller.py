@@ -664,7 +664,7 @@ async def test_cw_partial_failure_does_not_block_others() -> None:
 
 @pytest.mark.asyncio
 async def test_slow_poll_reads_sub_levels_when_dual_rx() -> None:
-    """Slow poll should read SUB AF/RF/squelch when dual_rx capable."""
+    """Slow poll should read SUB AF/RF/squelch and assign to state."""
     radio = make_radio()
     radio.get_af_level = AsyncMock(side_effect=lambda r=0: 128 if r == 0 else 200)
     radio.get_rf_gain = AsyncMock(side_effect=lambda r=0: 180 if r == 0 else 160)
@@ -686,6 +686,12 @@ async def test_slow_poll_reads_sub_levels_when_dual_rx() -> None:
         call.args == (1,) or call.kwargs.get("receiver") == 1
         for call in radio.get_af_level.call_args_list
     ), "get_af_level(1) was never called"
+
+    # SUB receiver levels must be assigned to RadioState
+    state = radio.radio_state
+    assert state.sub.af_level == 200, f"sub.af_level={state.sub.af_level}, expected 200"
+    assert state.sub.rf_gain == 160, f"sub.rf_gain={state.sub.rf_gain}, expected 160"
+    assert state.sub.squelch == 30, f"sub.squelch={state.sub.squelch}, expected 30"
 
 
 @pytest.mark.asyncio
