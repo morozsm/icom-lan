@@ -2568,27 +2568,32 @@ def main() -> None:
         try:
             loop = asyncio.new_event_loop()
             try:
-                sys.exit(loop.run_until_complete(_run(args)))
+                exit_code = loop.run_until_complete(_run(args))
             except KeyboardInterrupt:
-                # Graceful Ctrl-C / SIGTERM path (radio/session cleanup happens in async context).
-                print("Interrupted, shutting down...", file=sys.stderr)
-                sys.exit(130)
+                exit_code = 130
             finally:
                 # Cancel remaining tasks
                 for task in asyncio.all_tasks(loop):
                     task.cancel()
-                # Shutdown executor with timeout — prevents hang on blocked threads
+                # Best-effort executor shutdown — don't let it hang
                 try:
                     loop.run_until_complete(
-                        asyncio.wait_for(loop.shutdown_default_executor(), timeout=2.0)
+                        asyncio.wait_for(loop.shutdown_default_executor(), timeout=1.0)
                     )
-                except (TimeoutError, KeyboardInterrupt, Exception):
-                    pass  # force exit regardless
+                except Exception:
+                    pass
                 loop.close()
-        except SystemExit:
-            raise
+            # Clean up PID file before force exit
+            if pid_file is not None:
+                try:
+                    pid_file.unlink(missing_ok=True)
+                except OSError:
+                    pass
+            # Force exit — prevents hang on orphaned executor threads
+            # (PortAudio stream.read/write blocked in thread pool)
+            os._exit(exit_code)
         except KeyboardInterrupt:
-            sys.exit(130)
+            os._exit(130)
         finally:
             if pid_file is not None:
                 try:
