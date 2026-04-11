@@ -378,7 +378,9 @@ async def test_scope_health_and_radio_state_event_paths() -> None:
 
     scope_handler = MagicMock()
     srv._scope_handlers.add(scope_handler)
+    radio._fetch_initial_state = AsyncMock()
     srv._on_radio_reconnect()  # noqa: SLF001
+    await asyncio.sleep(0.05)  # let the refetch task complete
     cmds = srv.command_queue.drain
     assert any(isinstance(c, EnableScope) for c in cmds())
 

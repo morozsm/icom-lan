@@ -501,7 +501,7 @@ async def test_fast_poll_reads_tx_meters_when_ptt_active() -> None:
     radio.get_alc_meter = AsyncMock(return_value=42)
     radio.get_power_meter = AsyncMock(return_value=180)
     radio.get_comp_meter = AsyncMock(return_value=30)
-    radio._read_meter = AsyncMock(return_value=(120, 0))
+    radio.get_swr_meter = AsyncMock(return_value=120)
 
     poller = YaesuCatPoller(
         radio,
@@ -518,7 +518,7 @@ async def test_fast_poll_reads_tx_meters_when_ptt_active() -> None:
     radio.get_alc_meter.assert_called()
     radio.get_power_meter.assert_called()
     radio.get_comp_meter.assert_called()
-    radio._read_meter.assert_called_with(6)
+    radio.get_swr_meter.assert_called()
     assert radio.radio_state.alc_meter == 42
     assert radio.radio_state.power_meter == 180
     assert radio.radio_state.comp_meter == 30
@@ -555,7 +555,7 @@ async def test_tx_meter_partial_failure_does_not_block_others() -> None:
     radio.get_alc_meter = AsyncMock(side_effect=RuntimeError("ALC timeout"))
     radio.get_power_meter = AsyncMock(return_value=200)
     radio.get_comp_meter = AsyncMock(return_value=15)
-    radio._read_meter = AsyncMock(return_value=(80, 0))
+    radio.get_swr_meter = AsyncMock(return_value=80)
 
     poller = YaesuCatPoller(
         radio,
@@ -572,7 +572,7 @@ async def test_tx_meter_partial_failure_does_not_block_others() -> None:
     # ALC failed, but power/comp/swr should still have been read
     radio.get_power_meter.assert_called()
     radio.get_comp_meter.assert_called()
-    radio._read_meter.assert_called()
+    radio.get_swr_meter.assert_called()
     assert radio.radio_state.power_meter == 200
     assert radio.radio_state.comp_meter == 15
     assert radio.radio_state.swr_meter == 80

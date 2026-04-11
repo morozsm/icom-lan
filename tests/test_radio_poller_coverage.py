@@ -698,3 +698,44 @@ def test_state_queries_include_scope_vbw_rbw_edge_for_ic7610() -> None:
     assert (0x27, 0x1C, None) in queries  # center type
     assert (0x27, 0x1D, None) in queries  # VBW
     assert (0x27, 0x1F, None) in queries  # RBW
+
+
+# ---------------------------------------------------------------------------
+# _adaptive_gap tests
+# ---------------------------------------------------------------------------
+
+
+class TestAdaptiveGap:
+    """Tests for RadioPoller._adaptive_gap backpressure method."""
+
+    def _make_poller(self, pressure: float) -> RadioPoller:
+        radio = _make_radio()
+        radio.queue_pressure = pressure
+        poller = RadioPoller(radio, StateCache(), CommandQueue())
+        return poller
+
+    def test_returns_base_gap_at_zero_pressure(self) -> None:
+        poller = self._make_poller(0.0)
+        base = poller._gap  # noqa: SLF001
+        assert poller._adaptive_gap() == base  # noqa: SLF001
+
+    def test_returns_base_gap_below_half(self) -> None:
+        poller = self._make_poller(0.4)
+        base = poller._gap  # noqa: SLF001
+        assert poller._adaptive_gap() == base  # noqa: SLF001
+
+    def test_interpolates_at_mid_pressure(self) -> None:
+        poller = self._make_poller(0.6)
+        base = poller._gap  # noqa: SLF001
+        result = poller._adaptive_gap()  # noqa: SLF001
+        assert result == pytest.approx(base * 1.5)
+
+    def test_returns_double_gap_above_threshold(self) -> None:
+        poller = self._make_poller(0.8)
+        base = poller._gap  # noqa: SLF001
+        assert poller._adaptive_gap() == base * 2.0  # noqa: SLF001
+
+    def test_returns_double_gap_at_full_pressure(self) -> None:
+        poller = self._make_poller(1.0)
+        base = poller._gap  # noqa: SLF001
+        assert poller._adaptive_gap() == base * 2.0  # noqa: SLF001

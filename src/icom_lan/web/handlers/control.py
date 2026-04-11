@@ -362,6 +362,9 @@ class ControlHandler:
     async def run(self) -> None:
         """Run the control channel lifecycle."""
         await self._send_hello()
+        # Wait for radio to populate initial state before sending snapshot.
+        # Fallback: send whatever we have after 2 s so the client isn't stuck.
+        await self._wait_radio_ready(timeout=2.0)
         # Send initial full state so this client has a baseline immediately.
         # Sent directly (not via event queue) so it arrives right after hello
         # and before the recv loop — no interleaving with command responses.
@@ -470,6 +473,26 @@ class ControlHandler:
     def _radio_ready(self) -> bool:
         """Return backend radio readiness (CI-V healthy), with fallback."""
         return bool(radio_ready(self._radio))
+
+    async def _wait_radio_ready(self, *, timeout: float = 2.0) -> None:
+        """Wait until radio reports ready, with *timeout* fallback.
+
+        If the radio is ``None`` (offline/test mode) or already ready,
+        returns immediately.  Otherwise polls every 100 ms up to
+        *timeout* seconds, then gives up silently so the client still
+        gets a (possibly incomplete) snapshot.
+        """
+        if self._radio is None or self._radio_ready():
+            return
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            await asyncio.sleep(0.1)
+            if self._radio_ready():
+                return
+        logger.debug(
+            "control: radio not ready after %.1fs, sending snapshot anyway",
+            timeout,
+        )
 
     def _backend_recovering(self) -> bool:
         """Whether backend is already managing a reconnect/recovery path."""

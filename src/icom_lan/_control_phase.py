@@ -231,6 +231,7 @@ class ControlPhaseRuntime:
         from .transport import IcomTransport
 
         h._civ_transport = IcomTransport()
+        h._civ_transport._scope_shed_callback = h._scope_assembler.shed_incomplete
         civ_sock = getattr(h, "_civ_sock_pending", None)
         try:
             await h._civ_transport.connect(

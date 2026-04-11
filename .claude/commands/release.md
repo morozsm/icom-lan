@@ -54,6 +54,16 @@ uv run mypy src/
 ```
 Failures → stop.
 
+```bash
+# 2f. Regression check
+```
+Run `/regression-check`. Any regression → stop. Write results to `.claude/workflow/regression.md`.
+
+```bash
+# 2g. No open FAILED issues
+```
+Check `.claude/queue/history.json` for recent FAILED entries with no resolution. Warn if found.
+
 Report "All pre-flight checks passed" and continue.
 
 ## Step 3 — Bump version
@@ -160,7 +170,16 @@ gh release create vNEW_VERSION --notes-file RELEASE_NOTES.md --title "NEW_VERSIO
 
 Ask for confirmation. Print the release URL on success.
 
-## Step 10 — Summary
+## Step 10 — Update metrics
+
+Update `.claude/metrics.json`:
+- Increment `releases_count`
+- Set `last_release_version` to `"NEW_VERSION"`
+
+Save release summary to `.claude/workflow/release-notes.md`:
+- Version, date, highlights, commit count
+
+## Step 11 — Summary
 
 ```
 Release vNEW_VERSION complete!

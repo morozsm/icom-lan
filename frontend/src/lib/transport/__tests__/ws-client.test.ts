@@ -294,4 +294,69 @@ describe('control channel singleton', () => {
     const b = getChannel('scope');
     expect(a).toBe(b);
   });
+
+});
+
+describe('WsChannel send queue', () => {
+  let originalWebSocket: typeof WebSocket;
+
+  beforeEach(() => {
+    instances.length = 0;
+    vi.useFakeTimers();
+    originalWebSocket = globalThis.WebSocket;
+    // @ts-expect-error mock
+    globalThis.WebSocket = MockWebSocket;
+  });
+
+  afterEach(() => {
+    globalThis.WebSocket = originalWebSocket;
+    vi.useRealTimers();
+    vi.resetModules();
+  });
+
+  it('deduplicates idempotent commands (set_freq) — keeps only latest', async () => {
+    const { WsChannel } = await import('../ws-client');
+    const ch = new WsChannel();
+
+    // Queue multiple set_freq while disconnected
+    ch.send({ type: 'cmd', name: 'set_freq', id: '1', params: { freq: 14000000 } });
+    ch.send({ type: 'cmd', name: 'set_freq', id: '2', params: { freq: 14074000 } });
+    ch.send({ type: 'cmd', name: 'set_freq', id: '3', params: { freq: 14100000 } });
+
+    ch.connect('ws://test');
+    instances[0].simulateOpen();
+
+    // Only the last set_freq should be sent
+    expect(instances[0].sent).toHaveLength(1);
+    expect(JSON.parse(instances[0].sent[0]).params.freq).toBe(14100000);
+  });
+
+  it('drops oldest commands when queue exceeds MAX_QUEUE_SIZE (20)', async () => {
+    const { WsChannel } = await import('../ws-client');
+    const ch = new WsChannel();
+
+    for (let i = 0; i < 25; i++) {
+      ch.send({ type: 'cmd', name: 'ptt', id: `cmd-${i}`, params: { i } });
+    }
+
+    ch.connect('ws://test');
+    instances[0].simulateOpen();
+
+    expect(instances[0].sent).toHaveLength(20);
+    expect(JSON.parse(instances[0].sent[0]).id).toBe('cmd-5');
+  });
+
+  it('handles error response with status field', async () => {
+    const { WsChannel } = await import('../ws-client');
+    const ch = new WsChannel();
+    const received: any[] = [];
+    ch.onMessage((m) => received.push(m));
+
+    ch.connect('ws://test');
+    instances[0].simulateOpen();
+    instances[0].simulateMessage(JSON.stringify({ status: 'error', message: 'Command failed' }));
+
+    expect(received).toHaveLength(1);
+    expect(received[0].level).toBe('error');
+  });
 });

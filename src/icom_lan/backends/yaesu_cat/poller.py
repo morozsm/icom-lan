@@ -496,8 +496,7 @@ class YaesuCatPoller:
             except Exception:
                 logger.debug("YaesuCatPoller: get_comp_meter failed", exc_info=True)
             try:
-                raw_swr, _ = await self._radio._read_meter(6)
-                state.swr_meter = raw_swr
+                state.swr_meter = await self._radio.get_swr_meter()
             except Exception:
                 logger.debug("YaesuCatPoller: get_swr failed", exc_info=True)
         else:
@@ -784,6 +783,33 @@ class YaesuCatPoller:
                 pass
             except Exception:
                 logger.debug("YaesuCatPoller: get_break_in failed", exc_info=True)
+            try:
+                state.break_in_delay = await radio.get_break_in_delay()
+            except NotImplementedError:
+                pass
+            except Exception:
+                logger.debug("YaesuCatPoller: get_break_in_delay failed", exc_info=True)
+            try:
+                state.cw_spot = await radio.get_cw_spot()
+            except NotImplementedError:
+                pass
+            except Exception:
+                logger.debug("YaesuCatPoller: get_cw_spot failed", exc_info=True)
+
+        # -- RX/TX function mode (FR/FT) --
+        if "dual_rx" in caps:
+            try:
+                state.rx_func_mode = await radio.get_rx_func()
+            except NotImplementedError:
+                pass
+            except Exception:
+                logger.debug("YaesuCatPoller: get_rx_func failed", exc_info=True)
+            try:
+                state.tx_func_mode = await radio.get_tx_func()
+            except NotImplementedError:
+                pass
+            except Exception:
+                logger.debug("YaesuCatPoller: get_tx_func failed", exc_info=True)
 
         # -- VFO select (always) --
         try:

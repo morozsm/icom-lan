@@ -255,4 +255,35 @@ describe('radio store', () => {
     store.patchRadioState({ ptt: true });
     expect(store.getRadioState()).toBeNull();
   });
+
+  it('patchActiveReceiver patches MAIN when active is MAIN', () => {
+    store.setRadioState(makeState({ active: 'MAIN' }));
+    store.patchActiveReceiver({ freqHz: 21074000 });
+    expect(store.getMainReceiver()?.freqHz).toBe(21074000);
+    // SUB should remain unchanged
+    expect(store.getSubReceiver()?.freqHz).toBe(7100000);
+  });
+
+  it('patchActiveReceiver patches SUB when active is SUB', () => {
+    store.setRadioState(makeState({ active: 'SUB' }));
+    store.patchActiveReceiver({ freqHz: 3500000 });
+    expect(store.getSubReceiver()?.freqHz).toBe(3500000);
+    // MAIN should remain unchanged
+    expect(store.getMainReceiver()?.freqHz).toBe(14074000);
+  });
+
+  it('patchActiveReceiver is no-op when state is null', () => {
+    expect(store.getRadioState()).toBeNull();
+    store.patchActiveReceiver({ freqHz: 7000000 });
+    expect(store.getRadioState()).toBeNull();
+  });
+
+  it('getActiveReceiver returns SUB when active is SUB', () => {
+    store.setRadioState(makeState({ active: 'SUB' }));
+    expect(store.getActiveReceiver()?.freqHz).toBe(7100000);
+  });
+
+  it('getActiveReceiver returns null when state is null', () => {
+    expect(store.getActiveReceiver()).toBeNull();
+  });
 });

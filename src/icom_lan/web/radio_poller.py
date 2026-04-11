@@ -67,7 +67,9 @@ from ..capabilities import (
     CAP_TUNER,
     CAP_VOX,
 )
+from .._state_queries import build_state_queries
 from ..profiles import RadioProfile, resolve_radio_profile
+from ..transport import PRESSURE_THRESHOLD
 
 if TYPE_CHECKING:
     from ..radio_protocol import Radio
@@ -361,6 +363,27 @@ class RadioPoller:
         """Monotonic counter incremented on every radio state change."""
         return self._revision
 
+    def _adaptive_gap(self) -> float:
+        """Return gap adjusted for queue pressure.
+
+        At pressure < 0.5: return base gap unchanged.
+        At pressure 0.5-0.7: linear interpolation from 1x to 2x gap.
+        At pressure > 0.7: return 2x gap.
+        """
+        try:
+            pressure = self._radio.queue_pressure  # type: ignore[attr-defined]
+            if not isinstance(pressure, (int, float)):
+                return self._gap
+        except (AttributeError, TypeError):
+            return self._gap
+        if pressure < 0.5:
+            return self._gap
+        if pressure > PRESSURE_THRESHOLD:
+            return self._gap * 2.0
+        # Linear interpolation between 0.5 and threshold
+        t = (pressure - 0.5) / (PRESSURE_THRESHOLD - 0.5)
+        return self._gap * (1.0 + t)
+
     def bump_revision(self) -> None:
         """Increment the revision counter (called on each state change)."""
         self._revision += 1
@@ -454,142 +477,11 @@ class RadioPoller:
         )
 
     def _build_state_queries(self) -> list[tuple[int, int | None, int | None]]:
-        receivers = [0]
-        if self._profile.receiver_count > 1:
-            receivers.append(1)
-        queries: list[tuple[int, int | None, int | None]] = []
-        for receiver in receivers:
-            # Freq/mode are needed even on serial — for initial state and
-            # to pick up filter/attenuator/preamp that don't come via
-            # transceive.  The slow cycle handles them at SLOW_INTERVAL.
-            queries.append((0x25, None, receiver))  # frequency
-            queries.append((0x26, None, receiver))  # mode
-            # Per-receiver state queries.  On dual-receiver radios these use
-            # cmd29 wrapping.  On single-receiver radios without cmd29 we send
-            # plain CI-V queries (receiver=None).
-            _PER_RX_QUERIES: list[tuple[str, int, int | None]] = [
-                ("attenuator", 0x11, None),
-                ("af_level", 0x14, 0x01),
-                ("rf_gain", 0x14, 0x02),
-                ("squelch", 0x14, 0x03),
-                ("preamp", 0x16, 0x02),
-                ("nb", 0x16, 0x22),
-                ("nr", 0x16, 0x40),
-                ("digisel", 0x16, 0x4E),
-                ("ip_plus", 0x16, 0x65),
-                ("repeater_tone", 0x16, 0x42),
-                ("tsql", 0x16, 0x43),
-                ("repeater_tone", 0x1B, 0x00),  # Tone frequency
-                ("tsql", 0x1B, 0x01),  # TSQL frequency
-                ("nr", 0x14, 0x06),  # NR Level
-                ("nb", 0x14, 0x12),  # NB Level
-                ("notch", 0x14, 0x0D),  # Notch position
-                ("filter_width", 0x1A, 0x03),
-                ("pbt", 0x14, 0x07),  # PBT Inner
-                ("pbt", 0x14, 0x08),  # PBT Outer
-                ("notch", 0x16, 0x57),  # Manual notch width
-                ("squelch", 0x15, 0x01),  # S-meter squelch status
-            ]
-            for cap, cmd_byte, sub_byte in _PER_RX_QUERIES:
-                if not self._supports_capability(cap):
-                    logger.debug(
-                        "Skipping %s: capability '%s' not supported by %s",
-                        f"query 0x{cmd_byte:02X}/0x{sub_byte:02X}" if sub_byte is not None else f"query 0x{cmd_byte:02X}",
-                        cap,
-                        self._profile.model,
-                    )
-                    continue
-                if self._profile.supports_cmd29(cmd_byte, sub_byte):
-                    # Dual-receiver: cmd29-wrapped with receiver byte
-                    queries.append((cmd_byte, sub_byte, receiver))
-                elif receiver == 0:
-                    # Single-receiver: plain CI-V query (only once, not per-rx)
-                    queries.append((cmd_byte, sub_byte, None))
-            if self._profile.model == "IC-7610":
-                for cmd_byte, sub_byte in (
-                    (0x16, 0x12),  # AGC mode
-                    (0x16, 0x32),  # Audio peak filter
-                    (0x16, 0x41),  # Auto notch
-                    (0x16, 0x48),  # Manual notch
-                    (0x16, 0x4F),  # Twin peak filter
-                    (0x16, 0x56),  # Filter shape
-                    (0x1A, 0x04),  # AGC time constant
-                ):
-                    if self._profile.supports_cmd29(cmd_byte, sub_byte):
-                        queries.append((cmd_byte, sub_byte, receiver))
-        queries.extend(
-            [
-                (0x18, None, None),  # Power status (on/off)
-                (0x1C, 0x00, None),  # PTT (global)
-                (0x1C, 0x01, None),  # Tuner/ATU status
-                (0x1C, 0x03, None),  # TX frequency monitor
-                (0x14, 0x0A, None),  # Power level (global)
-                (0x14, 0x0B, None),  # Mic gain (global)
-                (0x14, 0x0E, None),  # Compressor level (global)
-                (0x14, 0x15, None),  # Monitor gain (global)
-                (0x14, 0x09, None),  # CW pitch (global)
-                (0x14, 0x0C, None),  # Key speed (global)
-                (0x0F, None, None),  # Split (global)
-                (0x07, 0xD2, None),  # Active receiver
-                (0x07, 0xC2, None),  # Dual Watch status
-                (0x21, 0x00, None),  # RIT frequency
-                (0x21, 0x01, None),  # RIT status
-                (0x21, 0x02, None),  # RIT TX status
-            ]
+        return build_state_queries(
+            self._profile,
+            self._caps,
+            is_serial=self._is_serial,
         )
-        # Common feature queries (data-driven: if radio has the command, poll it)
-        _COMMON_FEATURE_QUERIES = [
-            (0x16, 0x44),  # Compressor status
-            (0x16, 0x45),  # Monitor status
-            (0x16, 0x46),  # VOX status
-            (0x16, 0x47),  # Break-in mode
-            (0x16, 0x50),  # Dial lock status
-            (0x14, 0x16),  # VOX gain
-            (0x14, 0x17),  # Anti-VOX gain
-            (0x14, 0x0F),  # Break-in delay
-        ]
-        # NOTE: Antenna status (0x12) is NOT polled.
-        # CI-V 0x12 sub-commands are SET-only on IC-7610 (0x12 0x00 = select
-        # ANT1, 0x12 0x01 = select ANT2).  Polling them would toggle the
-        # antenna every cycle.  State is tracked via:
-        #   1) CI-V Transceive broadcasts (radio pushes 0x12 on change)
-        #   2) Optimistic updates from our own SET commands
-        if not self._profile.supports_cmd29(0x16, 0x12):
-            _COMMON_FEATURE_QUERIES.insert(0, (0x16, 0x12))  # AGC mode
-        # For serial: ALC/comp/VD/Id meters move to slow state queries
-        # (they are NOT in _FAST_CMDS_SERIAL to keep S-meter responsive)
-        if self._is_serial:
-            _COMMON_FEATURE_QUERIES.extend(
-                [
-                    (0x15, 0x13),  # ALC meter
-                    (0x15, 0x14),  # Compressor meter
-                    (0x15, 0x15),  # VD (voltage)
-                    (0x15, 0x16),  # Id (PA drain current)
-                ]
-            )
-        for cmd, sub in _COMMON_FEATURE_QUERIES:
-            queries.append((cmd, sub, None))
-
-        if self._profile.model == "IC-7610":
-            queries.extend(
-                [
-                    (0x15, 0x07, None),  # Overflow status
-                    (0x16, 0x58, None),  # SSB TX bandwidth
-                    (0x27, 0x12, None),  # Scope receiver selection
-                    (0x27, 0x13, None),  # Scope single/dual mode
-                    (0x27, 0x14, None),  # Scope mode (center/fixed)
-                    (0x27, 0x15, None),  # Scope span
-                    (0x27, 0x16, None),  # Scope edge number
-                    (0x27, 0x17, None),  # Scope hold
-                    (0x27, 0x19, None),  # Scope REF level
-                    (0x27, 0x1A, None),  # Scope sweep speed
-                    (0x27, 0x1B, None),  # Scope during TX
-                    (0x27, 0x1C, None),  # Scope center type
-                    (0x27, 0x1D, None),  # Scope VBW
-                    (0x27, 0x1F, None),  # Scope RBW
-                ]
-            )
-        return queries
 
     # Scope sub-commands that require a receiver prefix byte in READ queries.
     # Without the prefix, IC-7610 silently ignores the query.
@@ -653,7 +545,7 @@ class RadioPoller:
                 await self._civ(0x27, sub=sub, data=b"")
             except Exception:
                 pass
-            await asyncio.sleep(self._gap)
+            await asyncio.sleep(self._adaptive_gap())
 
         # Queries that require receiver prefix byte
         rx_byte = bytes([scope_rx])
@@ -662,53 +554,16 @@ class RadioPoller:
                 await self._civ(0x27, sub=sub, data=rx_byte)
             except Exception:
                 pass
-            await asyncio.sleep(self._gap)
+            await asyncio.sleep(self._adaptive_gap())
         logger.info("radio-poller: scope controls fetched (receiver=%d)", scope_rx)
-
-    async def _initial_state_fetch(self) -> None:
-        """Fetch ALL state queries once at startup to populate RadioState.
-
-        Without this, the UI shows Python defaults (zeros) for controls
-        like SPAN, squelch, AF level, etc. until the slow poll rotation
-        reaches each query — which can take 10+ seconds for 60+ queries.
-
-        On LAN (~12ms gap) this takes ~0.7s for 60 queries.
-        Commands from the queue are drained between queries so that
-        user-initiated actions are not blocked.
-        """
-        if not self._STATE_QUERIES:
-            return
-        logger.info(
-            "radio-poller: initial state fetch (%d queries)...",
-            len(self._STATE_QUERIES),
-        )
-        ok = 0
-        for cmd_byte, sub_byte, receiver in self._STATE_QUERIES:
-            # Drain command queue between queries so commands aren't blocked
-            if self._queue.has_commands:
-                for cmd in self._queue.drain():
-                    try:
-                        await self._execute(cmd)
-                    except Exception:
-                        pass
-                    await asyncio.sleep(self._gap)
-            try:
-                await self._send_one_state_query(cmd_byte, sub_byte, receiver)
-                ok += 1
-            except Exception:
-                pass  # non-fatal; regular rotation will retry
-            await asyncio.sleep(self._gap)
-        logger.info("radio-poller: initial state fetch done (%d/%d ok)", ok, len(self._STATE_QUERIES))
 
     async def _run(self) -> None:
         _backoff = 0.0
         _MAX_BACKOFF = 5.0  # max pause when radio is disconnected
 
-        # Fetch ALL state queries once so the UI shows real values immediately
-        # instead of Python defaults (zeros) until the slow rotation reaches them.
-        self._initial_fetch_done.clear()
+        # Initial state is now fetched by CoreRadio._fetch_initial_state()
+        # during connect(). Just signal readiness immediately.
         self._scope_enable_deferred = False
-        await self._initial_state_fetch()
         self._initial_fetch_done.set()
 
         try:
@@ -727,7 +582,7 @@ class RadioPoller:
                                 type(cmd).__name__,
                                 exc_info=True,
                             )
-                        await asyncio.sleep(self._gap)
+                        await asyncio.sleep(self._adaptive_gap())
 
                 # If disconnected, back off to avoid log spam
                 if _backoff > 0:

@@ -3,6 +3,7 @@
   import BipolarRenderer from './BipolarRenderer.svelte';
   import KnobRenderer from './KnobRenderer.svelte';
   import DiscreteRenderer from './DiscreteRenderer.svelte';
+  import type { Skin } from './skin';
 
   interface Props {
     value: number;
@@ -40,6 +41,8 @@
     title?: string | null;
     // Legacy alias for onChange
     onchange?: (value: number) => void;
+    // Optional skin override
+    skin?: Skin;
   }
 
   let {
@@ -72,6 +75,7 @@
     shortcutHint = null,
     title = null,
     onchange,
+    skin,
   }: Props = $props();
 
   // Support both onChange and onchange (legacy)
@@ -117,9 +121,26 @@
     showAllTicks,
     tickStyle,
   });
+
+  // Resolve skin component for the current renderer type (undefined = use built-in)
+  let skinComponent = $derived(
+    skin
+      ? renderer === 'knob' ? skin.knob
+        : renderer === 'hbar' ? skin.hbar
+        : renderer === 'bipolar' ? skin.bipolar
+        : undefined
+      : undefined
+  );
 </script>
 
-{#if renderer === 'hbar'}
+{#if skinComponent}
+  {@const SkinRenderer = skinComponent}
+  {#if renderer === 'knob'}
+    <SkinRenderer {...knobProps} />
+  {:else}
+    <SkinRenderer {...commonProps} />
+  {/if}
+{:else if renderer === 'hbar'}
   <HBarRenderer {...commonProps} />
 {:else if renderer === 'bipolar'}
   <BipolarRenderer {...commonProps} />

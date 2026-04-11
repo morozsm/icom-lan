@@ -221,6 +221,37 @@ async def test_get_set_mode_roundtrip(connected_radio):
 
 
 # ---------------------------------------------------------------------------
+# Power switch (PS)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_get_powerstat_on(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="PS1")
+    assert await connected_radio.get_powerstat() is True
+
+
+@pytest.mark.asyncio
+async def test_get_powerstat_off(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="PS0")
+    assert await connected_radio.get_powerstat() is False
+
+
+@pytest.mark.asyncio
+async def test_set_powerstat_on(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_powerstat(True)
+    connected_radio._transport.write.assert_called_once_with("PS1;")
+
+
+@pytest.mark.asyncio
+async def test_set_powerstat_off(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_powerstat(False)
+    connected_radio._transport.write.assert_called_once_with("PS0;")
+
+
+# ---------------------------------------------------------------------------
 # PTT
 # ---------------------------------------------------------------------------
 
@@ -740,6 +771,59 @@ async def test_set_clarifier_freq(connected_radio):
     connected_radio._transport.write.assert_called_once_with("CF001-0250;")
 
 
+@pytest.mark.asyncio
+async def test_reset_clarifier(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.reset_clarifier()
+    connected_radio._transport.write.assert_called_once_with("RC;")
+
+
+# ---------------------------------------------------------------------------
+# APF (Audio Peak Filter, CO02/CO03)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_get_apf_off(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="CO020000")
+    assert await connected_radio.get_apf() is False
+    connected_radio._transport.query.assert_called_once_with("CO02;")
+
+
+@pytest.mark.asyncio
+async def test_get_apf_on(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="CO020001")
+    assert await connected_radio.get_apf() is True
+
+
+@pytest.mark.asyncio
+async def test_set_apf_on(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_apf(True)
+    connected_radio._transport.write.assert_called_once_with("CO020001;")
+
+
+@pytest.mark.asyncio
+async def test_set_apf_off(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_apf(False)
+    connected_radio._transport.write.assert_called_once_with("CO020000;")
+
+
+@pytest.mark.asyncio
+async def test_get_apf_freq(connected_radio):
+    connected_radio._transport.query = AsyncMock(return_value="CO030128")
+    assert await connected_radio.get_apf_freq() == 128
+    connected_radio._transport.query.assert_called_once_with("CO03;")
+
+
+@pytest.mark.asyncio
+async def test_set_apf_freq(connected_radio):
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_apf_freq(200)
+    connected_radio._transport.write.assert_called_once_with("CO030200;")
+
+
 # ---------------------------------------------------------------------------
 # D9: Tone/TSQL
 # ---------------------------------------------------------------------------
@@ -1232,3 +1316,92 @@ async def test_set_squelch_sub_sends_sq1(connected_radio):
     connected_radio._transport.write = AsyncMock()
     await connected_radio.set_squelch(50, receiver=1)
     connected_radio._transport.write.assert_called_once_with("SQ1050;")
+
+
+# ---------------------------------------------------------------------------
+# IF Bulk Query
+# ---------------------------------------------------------------------------
+
+
+class TestIFBulkQuery:
+    """Tests for get_if_status() — Yaesu IF; composite response."""
+
+    @pytest.mark.asyncio
+    async def test_get_if_status_parses_all_fields(self, connected_radio):
+        """IF response is parsed into freq, mode, RIT, PTT, split, VFO."""
+        # IF + freq(9) + sign(1) + offset(4) + rit(1) + xit(1)
+        # + bank(1) + chan(2) + tx(1) + mode(1) + vfo(1) + scan(1) + split(1)
+        #      014074000    +    0120    1    0    0    01    0    2    0    0    1
+        response = "IF014074000+01201000102001"
+        connected_radio._transport.query = AsyncMock(return_value=response)
+
+        result = await connected_radio.get_if_status()
+
+        assert result["freq"] == 14_074_000
+        assert result["mode"] == "USB"  # code "2"
+        assert result["rit_offset"] == 120
+        assert result["rit_on"] is True
+        assert result["xit_on"] is False
+        assert result["tx"] is False
+        assert result["vfo"] == 0
+        assert result["split"] is True
+
+    @pytest.mark.asyncio
+    async def test_get_if_status_populates_state(self, connected_radio):
+        """get_if_status() must update radio_state atomically."""
+        # body: freq=007074000, sign=-, offset=0050, rit=1, xit=0,
+        #       bank=0, chan=01, tx=0, mode=1(LSB), vfo=0, scan=0, split=0
+        response = "IF007074000-00501000101000"
+        connected_radio._transport.query = AsyncMock(return_value=response)
+
+        await connected_radio.get_if_status()
+
+        st = connected_radio.radio_state
+        assert st.main.freq == 7_074_000
+        assert st.main.mode == "LSB"  # code "1"
+        assert st.rit_freq == -50
+        assert st.rit_on is True
+        assert st.ptt is False
+        assert st.split is False
+
+    @pytest.mark.asyncio
+    async def test_get_if_status_tx_active(self, connected_radio):
+        """PTT=1 in IF response sets state.ptt = True."""
+        response = "IF014074000+000000001120000"
+        connected_radio._transport.query = AsyncMock(return_value=response)
+
+        result = await connected_radio.get_if_status()
+
+        assert result["tx"] is True
+        assert connected_radio.radio_state.ptt is True
+
+    @pytest.mark.asyncio
+    async def test_get_if_status_invalid_response_raises(self, connected_radio):
+        """Short or malformed IF response raises CommandError."""
+        connected_radio._transport.query = AsyncMock(return_value="IF00")
+
+        with pytest.raises(CommandError):
+            await connected_radio.get_if_status()
+
+    @pytest.mark.asyncio
+    async def test_connect_calls_if_status(self, radio):
+        """connect() should attempt IF bulk query to seed state."""
+        radio._transport.connect = AsyncMock()
+        radio._transport._connected = True
+        radio._transport.query = AsyncMock(return_value="IF014074000+000000001020000")
+
+        await radio.connect()
+
+        radio._transport.query.assert_called_once_with("IF;")
+        assert radio.radio_state.main.freq == 14_074_000
+
+    @pytest.mark.asyncio
+    async def test_connect_succeeds_if_if_query_fails(self, radio):
+        """connect() must not fail if IF; query times out or errors."""
+        radio._transport.connect = AsyncMock()
+        radio._transport._connected = True
+        radio._transport.query = AsyncMock(side_effect=Exception("timeout"))
+
+        await radio.connect()  # should not raise
+
+        assert radio.connected

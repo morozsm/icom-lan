@@ -20,6 +20,11 @@ seq_max = 15
 amp_max = 200
 data_len_max = 689
 
+[scope]
+ref_min_db = -30.0
+ref_max_db = 10.0
+ref_step_db = 0.5
+
 # ── Capabilities ─────────────────────────────────────────────────
 # Feature tags determine which UI panels and controls are rendered.
 # Grouped by functional area.
@@ -822,6 +827,61 @@ label = "S9+20"
 raw = 240
 actual = 40.0
 label = "S9+40"
+
+[meters.power]
+redline_raw = 212
+unit = "W"
+
+[[meters.power.calibration]]
+raw = 0
+actual = 0.0
+label = "0"
+
+[[meters.power.calibration]]
+raw = 143
+actual = 50.0
+label = "50"
+
+[[meters.power.calibration]]
+raw = 212
+actual = 100.0
+label = "100"
+
+[meters.swr]
+redline_raw = 120
+
+[[meters.swr.calibration]]
+raw = 0
+actual = 1.0
+label = "1.0"
+
+[[meters.swr.calibration]]
+raw = 48
+actual = 1.5
+label = "1.5"
+
+[[meters.swr.calibration]]
+raw = 80
+actual = 2.0
+label = "2.0"
+
+[[meters.swr.calibration]]
+raw = 120
+actual = 3.0
+label = "3.0"
+
+[meters.alc]
+redline_raw = 120
+
+[[meters.alc.calibration]]
+raw = 0
+actual = 0.0
+label = "0"
+
+[[meters.alc.calibration]]
+raw = 120
+actual = 100.0
+label = "100"
 
 [[rules]]
 kind = "mutex"

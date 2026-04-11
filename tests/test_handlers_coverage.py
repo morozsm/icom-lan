@@ -813,6 +813,54 @@ async def test_send_state_snapshot_builder_errors_are_ignored() -> None:
     assert "connection" in msg["data"]
 
 
+async def test_wait_radio_ready_returns_immediately_when_ready() -> None:
+    """Gate returns instantly when radio is already ready."""
+    handler = _control_handler(
+        radio=SimpleNamespace(connected=True, radio_ready=True),
+    )
+    t0 = asyncio.get_event_loop().time()
+    await handler._wait_radio_ready(timeout=2.0)
+    elapsed = asyncio.get_event_loop().time() - t0
+    assert elapsed < 0.05
+
+
+async def test_wait_radio_ready_returns_immediately_when_no_radio() -> None:
+    """Gate returns instantly when radio is None (offline mode)."""
+    handler = _control_handler(radio=None)
+    t0 = asyncio.get_event_loop().time()
+    await handler._wait_radio_ready(timeout=2.0)
+    elapsed = asyncio.get_event_loop().time() - t0
+    assert elapsed < 0.05
+
+
+async def test_wait_radio_ready_waits_then_succeeds() -> None:
+    """Gate waits until radio becomes ready mid-poll."""
+    radio = SimpleNamespace(connected=True, radio_ready=False)
+    handler = _control_handler(radio=radio)
+
+    async def _flip_ready() -> None:
+        await asyncio.sleep(0.25)
+        radio.radio_ready = True
+
+    task = asyncio.create_task(_flip_ready())
+    t0 = asyncio.get_event_loop().time()
+    await handler._wait_radio_ready(timeout=2.0)
+    elapsed = asyncio.get_event_loop().time() - t0
+    assert 0.2 < elapsed < 1.0
+    await task
+
+
+async def test_wait_radio_ready_times_out_gracefully() -> None:
+    """Gate gives up after timeout and does not raise."""
+    handler = _control_handler(
+        radio=SimpleNamespace(connected=True, radio_ready=False),
+    )
+    t0 = asyncio.get_event_loop().time()
+    await handler._wait_radio_ready(timeout=0.3)
+    elapsed = asyncio.get_event_loop().time() - t0
+    assert 0.25 < elapsed < 0.6
+
+
 async def test_handle_command_response_paths() -> None:
     ws = SimpleNamespace(send_text=AsyncMock())
     handler = _control_handler(

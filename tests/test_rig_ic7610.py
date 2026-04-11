@@ -305,3 +305,54 @@ class TestCmd29Detail:
 
     def test_af_mute(self, profile):
         assert (0x1A, 0x09) in profile.cmd29_routes
+
+
+# ── Meter calibration tables ─────────────────────────────────────
+
+
+class TestMeterCalibrations:
+    """Verify meter calibration tables parsed from ic7610.toml."""
+
+    def test_all_meter_keys_present(self, rig):
+        mc = rig.meter_calibrations
+        assert mc is not None
+        assert set(mc.keys()) == {"s_meter", "power", "swr", "alc"}
+
+    def test_s_meter_calibration_count(self, rig):
+        assert len(rig.meter_calibrations["s_meter"]) == 9
+
+    def test_power_calibration_count(self, rig):
+        assert len(rig.meter_calibrations["power"]) == 3
+
+    def test_swr_calibration_count(self, rig):
+        assert len(rig.meter_calibrations["swr"]) == 4
+
+    def test_alc_calibration_count(self, rig):
+        assert len(rig.meter_calibrations["alc"]) == 2
+
+    def test_power_redline(self, rig):
+        assert rig.meter_redlines["power"] == 212
+
+    def test_swr_redline(self, rig):
+        assert rig.meter_redlines["swr"] == 120
+
+    def test_alc_redline(self, rig):
+        assert rig.meter_redlines["alc"] == 120
+
+    def test_s_meter_redline(self, rig):
+        assert rig.meter_redlines["s_meter"] == 130
+
+    def test_power_endpoints(self, rig):
+        pts = rig.meter_calibrations["power"]
+        assert pts[0]["raw"] == 0 and pts[0]["actual"] == 0.0
+        assert pts[-1]["raw"] == 212 and pts[-1]["actual"] == 100.0
+
+    def test_swr_endpoints(self, rig):
+        pts = rig.meter_calibrations["swr"]
+        assert pts[0]["raw"] == 0 and pts[0]["actual"] == 1.0
+        assert pts[-1]["raw"] == 120 and pts[-1]["actual"] == 3.0
+
+    def test_alc_endpoints(self, rig):
+        pts = rig.meter_calibrations["alc"]
+        assert pts[0]["raw"] == 0 and pts[0]["actual"] == 0.0
+        assert pts[-1]["raw"] == 120 and pts[-1]["actual"] == 100.0

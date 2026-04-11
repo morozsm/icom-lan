@@ -1,0 +1,195 @@
+/**
+ * SpectrumPanel pure logic tests: frame parsing edge cases, frequency formatting,
+ * scale ticks, drag rate limiting, scope mode classification, click-to-tune.
+ */
+import { describe, it, expect } from 'vitest';
+
+// ── Re-implemented pure functions from SpectrumPanel.svelte ─────────────────
+
+interface ScopeFrame {
+  receiver: number;
+  mode: number;
+  startFreq: number;
+  endFreq: number;
+  pixels: Uint8Array;
+}
+
+function parseScopeFrame(buf: ArrayBuffer): ScopeFrame | null {
+  const view = new DataView(buf);
+  if (view.byteLength < 16 || view.getUint8(0) !== 0x01) return null;
+  const receiver = view.getUint8(1);
+  const mode = view.getUint8(2);
+  const startFreq = view.getUint32(3, true);
+  const endFreq = view.getUint32(7, true);
+  const pixelCount = view.getUint16(14, true);
+  if (16 + pixelCount > view.byteLength) return null;
+  return { receiver, mode, startFreq, endFreq, pixels: new Uint8Array(buf, 16, pixelCount) };
+}
+
+function encodeFrame(rx: number, mode: number, sf: number, ef: number, px: Uint8Array): ArrayBuffer {
+  const buf = new ArrayBuffer(16 + px.length);
+  const v = new DataView(buf);
+  v.setUint8(0, 0x01);
+  v.setUint8(1, rx);
+  v.setUint8(2, mode);
+  v.setUint32(3, sf, true);
+  v.setUint32(7, ef, true);
+  v.setUint16(14, px.length, true);
+  new Uint8Array(buf, 16).set(px);
+  return buf;
+}
+
+function formatFreqOffset(hz: number): string {
+  if (hz === 0) return '0';
+  const absHz = Math.abs(hz);
+  const sign = hz < 0 ? '-' : '+';
+  if (absHz >= 1e6) return `${sign}${(absHz / 1e6).toFixed(1)}M`;
+  if (absHz >= 1e3) return `${sign}${(absHz / 1e3).toFixed(0)}k`;
+  return `${sign}${absHz}`;
+}
+
+function deriveFreqTicks(spanHz: number): { position: number; label: string }[] {
+  if (spanHz <= 0) return [];
+  return [-1, -0.5, 0, 0.5, 1].map((ratio) => ({
+    position: (ratio + 1) * 50,
+    label: formatFreqOffset((spanHz * ratio) / 2),
+  }));
+}
+
+function getDragInterval(speed: number): number {
+  if (speed > 600) return 700;
+  if (speed > 200) return 400;
+  return 200;
+}
+
+function isFixedScope(mode: number): boolean { return mode === 1 || mode === 3; }
+
+function freqFromPixel(clientX: number, rectLeft: number, rectWidth: number,
+  startFreq: number, spanHz: number): number {
+  return startFreq + ((clientX - rectLeft) / rectWidth) * spanHz;
+}
+
+// ── Tests ───────────────────────────────────────────────────────────────────
+
+describe('parseScopeFrame — edge cases', () => {
+  it('parses zero-length pixel array', () => {
+    const frame = parseScopeFrame(encodeFrame(0, 0, 14_050_000, 14_098_000, new Uint8Array(0)));
+    expect(frame).not.toBeNull();
+    expect(frame!.pixels.length).toBe(0);
+  });
+
+  it('parses 475-pixel frame (typical IC-7610 scope)', () => {
+    const pixels = new Uint8Array(475).fill(42);
+    const frame = parseScopeFrame(encodeFrame(0, 1, 14_000_000, 14_350_000, pixels));
+    expect(frame!.pixels.length).toBe(475);
+    expect(frame!.pixels[0]).toBe(42);
+  });
+
+  it('rejects 16-byte buffer with pixelCount > 0', () => {
+    const buf = new ArrayBuffer(16);
+    const v = new DataView(buf);
+    v.setUint8(0, 0x01);
+    v.setUint16(14, 1, true);
+    expect(parseScopeFrame(buf)).toBeNull();
+  });
+
+  it('accepts 16-byte buffer with pixelCount = 0', () => {
+    const buf = new ArrayBuffer(16);
+    new DataView(buf).setUint8(0, 0x01);
+    expect(parseScopeFrame(buf)!.pixels.length).toBe(0);
+  });
+
+  it('handles large uint32 frequency (3 GHz)', () => {
+    const frame = parseScopeFrame(encodeFrame(0, 0, 0, 3_000_000_000, new Uint8Array(1)));
+    expect(frame!.endFreq).toBe(3_000_000_000);
+  });
+});
+
+describe('formatFreqOffset', () => {
+  it('formats zero', () => expect(formatFreqOffset(0)).toBe('0'));
+  it('formats sub-kHz', () => {
+    expect(formatFreqOffset(500)).toBe('+500');
+    expect(formatFreqOffset(-750)).toBe('-750');
+  });
+  it('formats kHz with rounding', () => {
+    expect(formatFreqOffset(12_500)).toBe('+13k');
+    expect(formatFreqOffset(-87_500)).toBe('-88k');
+  });
+  it('formats exact kHz', () => expect(formatFreqOffset(25_000)).toBe('+25k'));
+  it('formats MHz with one decimal', () => {
+    expect(formatFreqOffset(1_500_000)).toBe('+1.5M');
+    expect(formatFreqOffset(-2_000_000)).toBe('-2.0M');
+  });
+  it('boundary: 1000 Hz → kHz, 1 MHz → MHz', () => {
+    expect(formatFreqOffset(1000)).toBe('+1k');
+    expect(formatFreqOffset(1_000_000)).toBe('+1.0M');
+  });
+});
+
+describe('deriveFreqTicks', () => {
+  it('returns empty for spanHz <= 0', () => {
+    expect(deriveFreqTicks(0)).toEqual([]);
+    expect(deriveFreqTicks(-1000)).toEqual([]);
+  });
+
+  it('produces 5 ticks at correct positions', () => {
+    const ticks = deriveFreqTicks(100_000);
+    expect(ticks).toHaveLength(5);
+    expect(ticks.map((t) => t.position)).toEqual([0, 25, 50, 75, 100]);
+  });
+
+  it('center tick is "0", edges are symmetric', () => {
+    const ticks = deriveFreqTicks(350_000);
+    expect(ticks[2].label).toBe('0');
+    expect(ticks[0].label).toBe('-175k');
+    expect(ticks[4].label).toBe('+175k');
+  });
+
+  it('quarter ticks match half of edge offsets', () => {
+    const ticks = deriveFreqTicks(200_000);
+    expect(ticks[1].label).toBe('-50k');
+    expect(ticks[3].label).toBe('+50k');
+  });
+});
+
+describe('getDragInterval — adaptive rate limiting', () => {
+  it('slow (<= 200 px/s) → 200ms', () => {
+    expect(getDragInterval(0)).toBe(200);
+    expect(getDragInterval(200)).toBe(200);
+  });
+  it('medium (201-600 px/s) → 400ms', () => {
+    expect(getDragInterval(201)).toBe(400);
+    expect(getDragInterval(600)).toBe(400);
+  });
+  it('fast (> 600 px/s) → 700ms', () => {
+    expect(getDragInterval(601)).toBe(700);
+    expect(getDragInterval(1000)).toBe(700);
+  });
+});
+
+describe('isFixedScope', () => {
+  it('CTR=0 and SCROLL-C=2 are not fixed', () => {
+    expect(isFixedScope(0)).toBe(false);
+    expect(isFixedScope(2)).toBe(false);
+  });
+  it('FIX=1 and SCROLL-F=3 are fixed', () => {
+    expect(isFixedScope(1)).toBe(true);
+    expect(isFixedScope(3)).toBe(true);
+  });
+});
+
+describe('freqFromPixel — click-to-tune calculation', () => {
+  it('maps left/center/right to correct frequencies', () => {
+    expect(freqFromPixel(0, 0, 1000, 14_000_000, 350_000)).toBe(14_000_000);
+    expect(freqFromPixel(500, 0, 1000, 14_000_000, 350_000)).toBe(14_175_000);
+    expect(freqFromPixel(1000, 0, 1000, 14_000_000, 350_000)).toBe(14_350_000);
+  });
+  it('accounts for rect offset', () => {
+    expect(freqFromPixel(300, 200, 1000, 14_000_000, 350_000)).toBe(14_035_000);
+  });
+  it('narrow span → higher resolution per pixel', () => {
+    const f1 = freqFromPixel(500, 0, 1000, 14_000_000, 10_000);
+    const f2 = freqFromPixel(501, 0, 1000, 14_000_000, 10_000);
+    expect(f2 - f1).toBe(10);
+  });
+});

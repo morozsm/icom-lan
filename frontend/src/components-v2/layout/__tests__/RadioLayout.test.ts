@@ -170,6 +170,52 @@ describe('hasLiveAudioFromState', () => {
   it('returns false when capabilities.audio is false', () => {
     expect(hasLiveAudioFromState({ capabilities: { audio: false } })).toBe(false);
   });
+
+  it('returns false when capabilities object is empty', () => {
+    expect(hasLiveAudioFromState({ capabilities: {} })).toBe(false);
+  });
+
+  it('returns false when capabilities key is missing', () => {
+    expect(hasLiveAudioFromState({ other: true })).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// extractMeterState — sMeter fallback path
+// ---------------------------------------------------------------------------
+
+describe('extractMeterState sMeter fallback', () => {
+  it('prefers sValue over sMeter', () => {
+    const result = extractMeterState({ main: { sValue: 100, sMeter: 50 } });
+    expect(result.sValue).toBe(100);
+  });
+
+  it('falls back to sMeter when sValue is missing', () => {
+    const result = extractMeterState({ main: { sMeter: 75 } });
+    expect(result.sValue).toBe(75);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// extractVfoState — partial nested objects
+// ---------------------------------------------------------------------------
+
+describe('extractVfoState partial data', () => {
+  it('handles partial vfo data with some fields missing', () => {
+    const state = { main: { freq: 7000000 }, activeReceiver: 'main' };
+    const result = extractVfoState(state, 'main');
+    expect(result.freq).toBe(7000000);
+    expect(result.mode).toBe('USB');
+    expect(result.filter).toBe('FIL1');
+    expect(result.sValue).toBe(0);
+    expect(result.badges).toEqual({});
+  });
+
+  it('returns undefined rit when vfo has no rit', () => {
+    const state = { main: { freq: 14074000 } };
+    const result = extractVfoState(state, 'main');
+    expect(result.rit).toBeUndefined();
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -202,6 +248,8 @@ vi.mock('$lib/stores/capabilities.svelte', () => ({
   getAntennaCount: vi.fn(() => 1),
   getSmeterCalibration: vi.fn(() => null),
   getSmeterRedline: vi.fn(() => null),
+  getMeterCalibration: vi.fn(() => null),
+  getMeterRedline: vi.fn(() => null),
   getControlRange: vi.fn(() => ({ min: 0, max: 255 })),
 }));
 

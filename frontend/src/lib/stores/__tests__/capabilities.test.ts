@@ -124,4 +124,42 @@ describe('capabilities store', () => {
       expect(store.getSupportedFilters()).toEqual([]);
     });
   });
+
+  describe('getMeterCalibration / getMeterRedline', () => {
+    it('returns null before setCapabilities', () => {
+      expect(store.getMeterCalibration('s_meter')).toBeNull();
+      expect(store.getMeterRedline('s_meter')).toBeNull();
+    });
+
+    it('returns calibration for any meter type', () => {
+      const cal = [{ raw: 0, actual: 0, label: '0W' }, { raw: 255, actual: 100, label: '100W' }];
+      store.setCapabilities(makeCaps({
+        meterCalibrations: { power: cal, s_meter: [{ raw: 0, actual: 0, label: 'S0' }] },
+      }));
+      expect(store.getMeterCalibration('power')).toEqual(cal);
+      expect(store.getMeterCalibration('s_meter')).toEqual([{ raw: 0, actual: 0, label: 'S0' }]);
+      expect(store.getMeterCalibration('swr')).toBeNull();
+    });
+
+    it('returns redline for any meter type', () => {
+      store.setCapabilities(makeCaps({
+        meterRedlines: { s_meter: 120, power: 200, swr: 64 },
+      }));
+      expect(store.getMeterRedline('s_meter')).toBe(120);
+      expect(store.getMeterRedline('power')).toBe(200);
+      expect(store.getMeterRedline('swr')).toBe(64);
+      expect(store.getMeterRedline('alc')).toBeNull();
+    });
+
+    it('getSmeterCalibration delegates to getMeterCalibration', () => {
+      const cal = [{ raw: 0, actual: 0, label: 'S0' }];
+      store.setCapabilities(makeCaps({ meterCalibrations: { s_meter: cal } }));
+      expect(store.getSmeterCalibration()).toEqual(cal);
+    });
+
+    it('getSmeterRedline delegates to getMeterRedline', () => {
+      store.setCapabilities(makeCaps({ meterRedlines: { s_meter: 120 } }));
+      expect(store.getSmeterRedline()).toBe(120);
+    });
+  });
 });

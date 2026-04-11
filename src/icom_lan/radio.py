@@ -910,9 +910,11 @@ class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
     async def connect(self) -> None:
         """Open connection to the radio and authenticate.
 
-        Delegates to the composed ControlPhaseRuntime.
+        Delegates to the composed ControlPhaseRuntime, then fetches
+        initial radio state so RadioState is populated before consumers.
         """
         await self._control_phase.connect()
+        await self._fetch_initial_state()
 
     async def __aenter__(self) -> "CoreRadio":
         await self.connect()
@@ -1082,6 +1084,87 @@ class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
     async def _send_token(self, magic: int) -> None:
         """Delegate to control-phase runtime."""
         await self._control_phase._send_token(magic)
+
+    # ------------------------------------------------------------------
+    # Initial state fetch
+    # ------------------------------------------------------------------
+
+    _initial_state_fetched: bool = False
+
+    _INITIAL_STATE_GAP_LAN: float = 0.012
+    _INITIAL_STATE_GAP_SERIAL: float = 0.050
+
+    async def _fetch_initial_state(self) -> None:
+        """Fetch full radio state once to populate RadioState.
+
+        Iterates through all state queries built from the radio profile and
+        sends each as a fire-and-forget CI-V read.  On completion sets
+        ``_initial_state_fetched = True``.
+
+        This is non-fatal: failures are logged but do not raise.
+        """
+        from ._state_queries import build_state_queries
+
+        try:
+            is_serial = not self._profile.has_lan
+            gap = self._INITIAL_STATE_GAP_SERIAL if is_serial else self._INITIAL_STATE_GAP_LAN
+            queries = build_state_queries(
+                self._profile,
+                self.capabilities,
+                is_serial=is_serial,
+            )
+            if not queries:
+                self._initial_state_fetched = True
+                return
+
+            logger.info(
+                "initial state fetch (%d queries, gap=%.0fms)...",
+                len(queries),
+                gap * 1000,
+            )
+            ok = 0
+            for cmd_byte, sub_byte, receiver in queries:
+                try:
+                    if receiver is not None:
+                        if cmd_byte in (0x25, 0x26):
+                            # Freq/mode: receiver byte as data payload
+                            await self.send_civ(
+                                cmd_byte,
+                                data=bytes([receiver]),
+                                wait_response=False,
+                            )
+                        else:
+                            # cmd29-wrapped: 0x29 with [receiver, cmd, sub?]
+                            inner = bytes([receiver, cmd_byte])
+                            if sub_byte is not None:
+                                inner += bytes([sub_byte])
+                            await self.send_civ(
+                                0x29, data=inner, wait_response=False
+                            )
+                    else:
+                        await self.send_civ(
+                            cmd_byte,
+                            sub=sub_byte,
+                            data=b"",
+                            wait_response=False,
+                        )
+                    ok += 1
+                except Exception:
+                    pass  # non-fatal; regular polling will retry
+                await asyncio.sleep(gap)
+
+            logger.info(
+                "initial state fetch done (%d/%d ok)",
+                ok,
+                len(queries),
+            )
+        except Exception:
+            logger.warning(
+                "initial state fetch failed",
+                exc_info=True,
+            )
+        finally:
+            self._initial_state_fetched = True
 
     # ------------------------------------------------------------------
     # Watchdog & reconnect loops

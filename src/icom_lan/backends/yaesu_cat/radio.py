@@ -128,8 +128,12 @@ class YaesuCatRadio:
     # -- Lifecycle ----------------------------------------------------------
 
     async def connect(self) -> None:
-        """Open the serial port."""
+        """Open the serial port and seed state from IF bulk query."""
         await self._transport.connect()
+        try:
+            await self.get_if_status()
+        except (CommandError, Exception):
+            logger.debug("IF bulk query at connect failed (non-fatal)")
 
     async def disconnect(self) -> None:
         """Close the serial port."""
@@ -476,6 +480,59 @@ class YaesuCatRadio:
         cmd = format_command(spec.write, **kwargs)
         await self._transport.write(cmd)
 
+    # -- IF Bulk Query ------------------------------------------------------
+
+    async def get_if_status(self) -> dict[str, Any]:
+        """Send ``IF;`` and parse the composite response into state fields.
+
+        The Yaesu IF response is a fixed-width string (after the ``IF`` prefix):
+        freq(9) + sign(1) + rit_offset(4) + rit(1) + xit(1)
+        + bank(1) + chan(2) + tx(1) + mode(1) + vfo(1) + scan(1) + split(1)
+
+        Returns a dict with parsed fields and populates :attr:`radio_state`.
+        """
+        self._require_connected()
+        raw = await self._transport.query("IF;")
+        # Transport strips trailing ';'; raw starts with "IF" prefix.
+        if not raw.startswith("IF") or len(raw) < 26:
+            raise CommandError(f"Invalid IF response: {raw!r}")
+
+        body = raw[2:]  # strip "IF" prefix
+        freq = int(body[0:9])
+        sign = body[9]
+        rit_offset = int(body[10:14])
+        rit_on = body[14] == "1"
+        xit_on = body[15] == "1"
+        # body[16] = bank, body[17:19] = channel — skipped
+        tx = body[19] == "1"
+        mode_code = body[20]
+        vfo = int(body[21])
+        # body[22] = scan — skipped
+        split = body[23] == "1"
+
+        rit_hz = rit_offset if sign == "+" else -rit_offset
+        mode_name = self._code_to_mode.get(mode_code, f"UNKNOWN({mode_code})")
+
+        # Populate state atomically.
+        self._state.main.freq = freq
+        self._state.main.mode = mode_name
+        self._state.ptt = tx
+        self._state.rit_on = rit_on
+        self._state.rit_tx = xit_on
+        self._state.rit_freq = rit_hz
+        self._state.split = split
+
+        return {
+            "freq": freq,
+            "mode": mode_name,
+            "rit_offset": rit_hz,
+            "rit_on": rit_on,
+            "xit_on": xit_on,
+            "tx": tx,
+            "vfo": vfo,
+            "split": split,
+        }
+
     # -- Frequency ----------------------------------------------------------
 
     async def get_freq(self, receiver: int = 0) -> int:
@@ -552,6 +609,25 @@ class YaesuCatRadio:
         else:
             self._state.sub.mode = mode
 
+    # -- Power switch (PS) -------------------------------------------------
+
+    async def get_powerstat(self) -> bool:
+        """Query the power switch state.
+
+        Returns:
+            ``True`` if the radio is powered on, ``False`` otherwise.
+        """
+        result = await self._query("get_powerstat")
+        return result["state"] == "1"
+
+    async def set_powerstat(self, on: bool) -> None:
+        """Set the power switch state.
+
+        Args:
+            on: ``True`` to power on, ``False`` to power off.
+        """
+        await self._write("set_powerstat", state="1" if on else "0")
+
     # -- PTT ----------------------------------------------------------------
 
     async def set_ptt(self, on: bool) -> None:
@@ -621,6 +697,11 @@ class YaesuCatRadio:
     async def get_power_meter(self) -> int:
         """Get TX power meter reading (0–255)."""
         main, _ = await self._read_meter(5)
+        return main
+
+    async def get_swr_meter(self) -> int:
+        """Get SWR meter raw reading (0–255)."""
+        main, _ = await self._read_meter(6)
         return main
 
     async def get_swr(self) -> float:
@@ -1104,6 +1185,32 @@ class YaesuCatRadio:
     async def set_contour(self, val: int, receiver: int = 0) -> None:
         """Set contour (S-DX) on/off. 0=OFF, 1=ON."""
         await self._write("set_contour", val=val)
+
+    # -- APF (Audio Peak Filter, CO02/CO03) ------------------------------------
+
+    async def get_apf(self, receiver: int = 0) -> bool:
+        """Get APF on/off state (CO02). Returns True if APF is on."""
+        result = await self._query("get_apf")
+        return int(result["val"]) != 0
+
+    async def set_apf(self, on: bool, receiver: int = 0) -> None:
+        """Set APF on/off (CO02). 0=OFF, 1=ON."""
+        await self._write("set_apf", val=1 if on else 0)
+
+    async def get_apf_freq(self, receiver: int = 0) -> int:
+        """Get APF centre frequency (CO03)."""
+        result = await self._query("get_apf_freq")
+        return int(result["val"])
+
+    async def set_apf_freq(self, freq: int, receiver: int = 0) -> None:
+        """Set APF centre frequency (CO03)."""
+        await self._write("set_apf_freq", val=freq)
+
+    # -- Clarifier Reset (RC) --------------------------------------------------
+
+    async def reset_clarifier(self, receiver: int = 0) -> None:
+        """Reset clarifier offset to zero (RC). Fire-and-forget."""
+        await self._write("reset_clarifier")
 
     async def set_band(self, band: int, receiver: int = 0) -> None:
         """Set current band by index (BS, write-only on FTX-1).

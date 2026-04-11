@@ -640,22 +640,39 @@ class WebServer:
                 )
 
     def _on_radio_reconnect(self) -> None:
-        """Called after soft_reconnect — re-enable scope if clients are connected."""
-        if (
-            self._scope_handlers
-            and self._radio is not None
-            and _supports_scope(self._radio)
-        ):
-            if self._radio_ready():
-                self._set_scope_data_callback(self._broadcast_scope)
-                self._command_queue.put(EnableScope())
-                self._scope_enabled = True
-                logger.info(
-                    "scope: re-enable queued after reconnect (%d handlers)",
-                    len(self._scope_handlers),
-                )
-            else:
-                self._schedule_scope_enable_when_ready(reason="radio_reconnect")
+        """Called after soft_reconnect — refetch state and re-enable scope."""
+        # Clear poller readiness so scope waits for refetch to complete
+        if self._radio_poller is not None:
+            self._radio_poller._initial_fetch_done.clear()
+
+        async def _refetch_and_reenable() -> None:
+            """Refetch state, signal readiness, then re-enable scope."""
+            try:
+                if self._radio is not None and hasattr(self._radio, "_fetch_initial_state"):
+                    await self._radio._fetch_initial_state()
+            except Exception:
+                logger.warning("reconnect: refetch failed", exc_info=True)
+            finally:
+                if self._radio_poller is not None:
+                    self._radio_poller._initial_fetch_done.set()
+            # Re-enable scope after refetch completes
+            if (
+                self._scope_handlers
+                and self._radio is not None
+                and _supports_scope(self._radio)
+            ):
+                if self._radio_ready():
+                    self._set_scope_data_callback(self._broadcast_scope)
+                    self._command_queue.put(EnableScope())
+                    self._scope_enabled = True
+                    logger.info(
+                        "scope: re-enable queued after reconnect (%d handlers)",
+                        len(self._scope_handlers),
+                    )
+                else:
+                    self._schedule_scope_enable_when_ready(reason="radio_reconnect")
+
+        asyncio.create_task(_refetch_and_reenable())
 
     def _schedule_scope_enable_when_ready(self, *, reason: str) -> None:
         """Schedule delayed scope enable once radio becomes ready."""

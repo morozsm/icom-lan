@@ -76,6 +76,11 @@ class _ReceiverState:
         self._timeout: float = timeout
         self._start_time: float | None = None
 
+    @property
+    def has_incomplete(self) -> bool:
+        """True when a multi-packet frame is being assembled (seq 1 received, not yet complete)."""
+        return self._start_time is not None
+
     def _reset(self) -> None:
         self._chunks = []
         self._start_time = None
@@ -219,3 +224,26 @@ class ScopeAssembler:
         """
         state = self._sub if receiver else self._main
         return state.feed(raw_payload, receiver)
+
+    def shed_incomplete(self) -> int:
+        """Discard incomplete multi-packet scope frames for both receivers.
+
+        Only drops frames that are mid-assembly (seq 1 received but final
+        sequence not yet arrived). Complete single-packet frames are never
+        in-progress, so they are unaffected.
+
+        Returns:
+            Number of receiver channels whose partial frame was discarded
+            (0, 1, or 2).
+        """
+        shed_count = 0
+        for state in (self._main, self._sub):
+            if state.has_incomplete:
+                state._reset()
+                shed_count += 1
+        if shed_count:
+            _log.debug(
+                "Scope assembler: shed %d incomplete frame(s) under pressure",
+                shed_count,
+            )
+        return shed_count

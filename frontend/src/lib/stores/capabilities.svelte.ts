@@ -102,10 +102,20 @@ export function getControlRange(name: string): ControlRange | null {
   return capabilities?.controls?.[name] ?? null;
 }
 
+export function getMeterCalibration(
+  meterType: string,
+): { raw: number; actual: number; label: string }[] | null {
+  return capabilities?.meterCalibrations?.[meterType] ?? null;
+}
+
+export function getMeterRedline(meterType: string): number | null {
+  return capabilities?.meterRedlines?.[meterType] ?? null;
+}
+
 export function getSmeterCalibration(): { raw: number; actual: number; label: string }[] | null {
-  return capabilities?.meterCalibrations?.s_meter ?? null;
+  return getMeterCalibration('s_meter');
 }
 
 export function getSmeterRedline(): number | null {
-  return capabilities?.meterRedlines?.s_meter ?? null;
+  return getMeterRedline('s_meter');
 }

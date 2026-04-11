@@ -5,6 +5,7 @@
   import { PRESET_MAPPINGS, type RoleMapping } from '$lib/Button/roleMapping';
   import { SegmentedControl } from '$lib/SegmentedControl';
   import { ValueControl } from './value-control';
+  import ValueControlLab from './ValueControlLab.svelte';
 
   const indicatorStyles = [
     { value: 'ring', label: 'Ring' },
@@ -165,6 +166,23 @@
 
   // ── #350 — Modern Accent vs Hardware family comparison ───────────────────
 
+  // T1: Hardware variant showcase
+  let hwNrLevel = $state(64);
+  let hwRitOffset = $state(0);
+  let hwRfGainKnob = $state(200);
+
+  // T2: Side-by-side comparison
+  let cmpModernHbar = $state(128);
+  let cmpHwHbar = $state(128);
+  let cmpModernBipolar = $state(0);
+  let cmpHwBipolar = $state(0);
+  let cmpModernKnob = $state(150);
+  let cmpHwKnob = $state(150);
+
+  // T3: Hardware-illuminated preview
+  let illumHbar = $state(128);
+  let illumBipolar = $state(0);
+  let illumKnob = $state(150);
 
   // ── Hardware Illuminated demo (5-layer) ─────────────────────────────────
   let vcHwCurrentAf = $state(128);
@@ -1317,6 +1335,170 @@
     </div>
   </section>
 
+  <!-- ── #350 T1: Hardware Variant Showcase ──────────────────────────────── -->
+
+  <section class="demo-card vc-hw-panel">
+    <h2>Hardware Value Controls <span class="hint">(#350 T1 — variant="hardware" showcase)</span></h2>
+    <p class="lab-note">
+      Three renderer types with <code>variant="hardware"</code>: HBar, Bipolar, and Knob.
+      All use warm amber/olive accent colors matching the hardware surface theme.
+    </p>
+    <div class="vc-demo-grid">
+      <ValueControl
+        label="NR Level"
+        value={hwNrLevel}
+        min={0} max={255} step={1}
+        renderer="hbar"
+        variant="hardware"
+        accentColor="#c8a840"
+        fillColor="#b89030"
+        onChange={(v) => { hwNrLevel = v; }}
+      />
+      <ValueControl
+        label="RIT Offset"
+        value={hwRitOffset}
+        min={-9999} max={9999} step={1}
+        defaultValue={0}
+        renderer="bipolar"
+        variant="hardware"
+        accentColor="#c8a840"
+        fillColor="#a88030"
+        displayFn={(v) => (v >= 0 ? `+${v}` : `${v}`) + '\u00a0Hz'}
+        onChange={(v) => { hwRitOffset = v; }}
+      />
+    </div>
+    <div class="vc-knob-row" style="margin-top: 16px;">
+      <ValueControl
+        label="RF Gain"
+        value={hwRfGainKnob}
+        min={0} max={255} step={1}
+        renderer="knob"
+        variant="hardware"
+        accentColor="#7aaa60"
+        onChange={(v) => { hwRfGainKnob = v; }}
+      />
+    </div>
+  </section>
+
+  <!-- ── #350 T2: Side-by-side Modern vs Hardware ──────────────────────────── -->
+
+  <section class="demo-card">
+    <h2>Modern vs Hardware — Side by Side <span class="hint">(#350 T2 — same params, different variants)</span></h2>
+    <p class="lab-note">
+      Direct comparison: left column is <code>variant="modern"</code>,
+      right column is <code>variant="hardware"</code>. Same parameter ranges.
+    </p>
+    <div class="vc-family-compare">
+      <div>
+        <h3 class="vc-tickstyle-sub">Modern</h3>
+        <div style="display: grid; gap: 12px;">
+          <ValueControl
+            label="AF Level"
+            value={cmpModernHbar}
+            min={0} max={255} step={1}
+            renderer="hbar"
+            variant="modern"
+            onChange={(v) => { cmpModernHbar = v; }}
+          />
+          <ValueControl
+            label="RIT"
+            value={cmpModernBipolar}
+            min={-9999} max={9999} step={1}
+            defaultValue={0}
+            renderer="bipolar"
+            variant="modern"
+            displayFn={(v) => (v >= 0 ? `+${v}` : `${v}`) + '\u00a0Hz'}
+            onChange={(v) => { cmpModernBipolar = v; }}
+          />
+          <ValueControl
+            label="SQL"
+            value={cmpModernKnob}
+            min={0} max={255} step={1}
+            renderer="knob"
+            variant="modern"
+            onChange={(v) => { cmpModernKnob = v; }}
+          />
+        </div>
+      </div>
+      <div class="vc-hw-compare-right">
+        <h3 class="vc-tickstyle-sub">Hardware</h3>
+        <div style="display: grid; gap: 12px;">
+          <ValueControl
+            label="AF Level"
+            value={cmpHwHbar}
+            min={0} max={255} step={1}
+            renderer="hbar"
+            variant="hardware"
+            accentColor="#c8a840"
+            fillColor="#b89030"
+            onChange={(v) => { cmpHwHbar = v; }}
+          />
+          <ValueControl
+            label="RIT"
+            value={cmpHwBipolar}
+            min={-9999} max={9999} step={1}
+            defaultValue={0}
+            renderer="bipolar"
+            variant="hardware"
+            accentColor="#c8a840"
+            fillColor="#a88030"
+            displayFn={(v) => (v >= 0 ? `+${v}` : `${v}`) + '\u00a0Hz'}
+            onChange={(v) => { cmpHwBipolar = v; }}
+          />
+          <ValueControl
+            label="SQL"
+            value={cmpHwKnob}
+            min={0} max={255} step={1}
+            renderer="knob"
+            variant="hardware"
+            accentColor="#7aaa60"
+            onChange={(v) => { cmpHwKnob = v; }}
+          />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── #350 T3: Hardware-Illuminated Preview ─────────────────────────────── -->
+
+  <section class="demo-card vc-hw-panel">
+    <h2>Hardware-Illuminated Preview <span class="hint">(#350 T3 — experimental variant)</span></h2>
+    <p class="lab-note">
+      <code>variant="hardware-illuminated"</code> — experimental 5-layer illuminated styling.
+      HBar, Bipolar, and Knob renderers.
+    </p>
+    <div class="vc-demo-grid">
+      <ValueControl
+        label="AF Level"
+        value={illumHbar}
+        min={0} max={255} step={1}
+        renderer="hbar"
+        variant="hardware-illuminated"
+        onChange={(v) => { illumHbar = v; }}
+      />
+      <ValueControl
+        label="RIT"
+        value={illumBipolar}
+        min={-9999} max={9999} step={1}
+        defaultValue={0}
+        renderer="bipolar"
+        variant="hardware-illuminated"
+        displayFn={(v) => (v >= 0 ? `+${v}` : `${v}`) + '\u00a0Hz'}
+        onChange={(v) => { illumBipolar = v; }}
+      />
+    </div>
+    <div class="vc-knob-row" style="margin-top: 16px;">
+      <ValueControl
+        label="SQL"
+        value={illumKnob}
+        min={0} max={255} step={1}
+        renderer="knob"
+        variant="hardware-illuminated"
+        onChange={(v) => { illumKnob = v; }}
+      />
+    </div>
+  </section>
+
   <hr style="margin: 32px 0; border: 0; border-top: 1px solid var(--v2-border-panel);">
 
 
@@ -1471,6 +1653,11 @@
       </div>
   </section>
 
+  <hr style="margin: 32px 0; border: 0; border-top: 1px solid var(--v2-border-panel);">
+
+  <!-- ── Value Control Lab — real radio examples ─────────────────────────── -->
+  <ValueControlLab />
+
 </div>
 
 <style>
@@ -1595,6 +1782,18 @@
 
   /* Hardware panel h2 label — olive-green tint */
   .vc-hw-panel h2 {
+    color: #8a9e78;
+  }
+
+  /* T2 comparison: hardware-tinted right column */
+  .vc-hw-compare-right {
+    padding: 12px;
+    border-radius: 6px;
+    background: linear-gradient(180deg, #131610 0%, #0e1008 100%);
+    border: 1px solid #2a2e1a;
+  }
+
+  .vc-hw-compare-right h3 {
     color: #8a9e78;
   }
 

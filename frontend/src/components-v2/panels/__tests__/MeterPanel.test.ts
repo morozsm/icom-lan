@@ -158,6 +158,8 @@ describe('getNeedleMarks POWER', () => {
 
 vi.mock('$lib/stores/capabilities.svelte', () => ({
   hasTx: vi.fn(() => true),
+  getMeterCalibration: vi.fn(() => null),
+  getMeterRedline: vi.fn(() => null),
 }));
 
 import { hasTx } from '$lib/stores/capabilities.svelte';

@@ -426,7 +426,14 @@ set_clarifier_freq = { cat = { write = "CF001{sign}{offset:04d};" } }
 get_sql_type   = { cat = { read = "CT0;", parse = "CT0{type:02d};" } }
 set_sql_type   = { cat = { write = "CT0{type:02d};" } }
 
+# ── Bulk Status ──
+# IF; returns composite status: freq(9)+sign(1)+rit_offset(4)+rit(1)+xit(1)
+# +bank(1)+chan(2)+tx(1)+mode(1)+vfo(1)+scan(1)+split(1) — parsed in Python
+get_if_status  = { cat = { read = "IF;" } }
+
 # ── System ──
+get_powerstat  = { cat = { read = "PS;", parse = "PS{state};" } }
+set_powerstat  = { cat = { write = "PS{state};" } }
 get_id         = { cat = { read = "ID;", parse = "ID{model:04d};" } }
 get_auto_info  = { cat = { read = "AI;", parse = "AI{state};" } }
 set_auto_info  = { cat = { write = "AI{state};" } }
@@ -440,3 +447,10 @@ set_tuner      = { cat = { write = "AC{src}{type}{state};" } }
 # CO: Contour (S-DX) / APF — func: 0=contour on/off, 1=freq, 2=APF on/off, 3=APF freq
 get_contour    = { cat = { read = "CO00;", parse = "CO00{val:04d};" } }
 set_contour    = { cat = { write = "CO00{val:04d};" } }
+get_apf        = { cat = { read = "CO02;", parse = "CO02{val:04d};" } }
+set_apf        = { cat = { write = "CO02{val:04d};" } }
+get_apf_freq   = { cat = { read = "CO03;", parse = "CO03{val:04d};" } }
+set_apf_freq   = { cat = { write = "CO03{val:04d};" } }
+
+# ── Clarifier Reset ──
+reset_clarifier = { cat = { write = "RC;" } }

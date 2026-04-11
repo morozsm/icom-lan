@@ -60,6 +60,8 @@ vi.mock('$lib/stores/capabilities.svelte', () => ({
   getAntennaCount: vi.fn(() => 1),
   getSmeterCalibration: vi.fn(() => null),
   getSmeterRedline: vi.fn(() => null),
+  getMeterCalibration: vi.fn(() => null),
+  getMeterRedline: vi.fn(() => null),
   getControlRange: vi.fn(() => ({ min: 0, max: 255 })),
 }));
 

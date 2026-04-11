@@ -545,6 +545,95 @@ class TestScopeAssemblerReset:
 
 
 # ---------------------------------------------------------------------------
+# Tests for ScopeAssembler.shed_incomplete
+# ---------------------------------------------------------------------------
+
+
+class TestScopeAssemblerShedIncomplete:
+    """shed_incomplete() discards in-progress multi-packet frames."""
+
+    def test_no_incomplete_returns_zero(self) -> None:
+        """Fresh assembler has nothing to shed."""
+        asm = ScopeAssembler()
+        assert asm.shed_incomplete() == 0
+
+    def test_complete_single_packet_not_shed(self) -> None:
+        """A single-packet frame completes immediately and is not shed."""
+        asm = ScopeAssembler()
+        payload = _seq1_payload(
+            receiver=0, seq=1, seq_max=1, mode=1,
+            start_hz=14_000_000, end_hz=14_350_000, oor=False,
+            extra_pixels=bytes([0x80] * 10),
+        )
+        frame = asm.feed(payload, 0)
+        assert frame is not None  # completed
+        assert asm.shed_incomplete() == 0  # nothing left to shed
+
+    def test_incomplete_multi_packet_is_shed(self) -> None:
+        """An incomplete multi-packet frame is discarded by shed."""
+        asm = ScopeAssembler()
+        seq1 = _seq1_payload(
+            receiver=0, seq=1, seq_max=3, mode=1,
+            start_hz=14_000_000, end_hz=14_350_000, oor=False,
+        )
+        asm.feed(seq1, 0)  # starts assembly, not complete
+        assert asm.shed_incomplete() == 1
+
+    def test_shed_both_receivers(self) -> None:
+        """Incomplete frames on both receivers are shed independently."""
+        asm = ScopeAssembler()
+        seq1_main = _seq1_payload(
+            receiver=0, seq=1, seq_max=3, mode=1,
+            start_hz=14_000_000, end_hz=14_350_000, oor=False,
+        )
+        seq1_sub = _seq1_payload(
+            receiver=1, seq=1, seq_max=5, mode=1,
+            start_hz=7_000_000, end_hz=7_300_000, oor=False,
+        )
+        asm.feed(seq1_main, 0)
+        asm.feed(seq1_sub, 1)
+        assert asm.shed_incomplete() == 2
+
+    def test_shed_count_only_incomplete(self) -> None:
+        """Only the receiver with an incomplete frame is counted."""
+        asm = ScopeAssembler()
+        # Main: complete single-packet
+        complete = _seq1_payload(
+            receiver=0, seq=1, seq_max=1, mode=1,
+            start_hz=14_000_000, end_hz=14_350_000, oor=False,
+            extra_pixels=bytes([0x80] * 10),
+        )
+        asm.feed(complete, 0)
+        # Sub: incomplete multi-packet
+        incomplete = _seq1_payload(
+            receiver=1, seq=1, seq_max=3, mode=1,
+            start_hz=7_000_000, end_hz=7_300_000, oor=False,
+        )
+        asm.feed(incomplete, 1)
+        assert asm.shed_incomplete() == 1
+
+    def test_after_shed_new_frame_assembles(self) -> None:
+        """After shedding, assembler accepts new frames normally."""
+        asm = ScopeAssembler()
+        seq1 = _seq1_payload(
+            receiver=0, seq=1, seq_max=2, mode=1,
+            start_hz=14_000_000, end_hz=14_350_000, oor=False,
+        )
+        asm.feed(seq1, 0)
+        asm.shed_incomplete()
+        # Start a new frame and complete it
+        new_seq1 = _seq1_payload(
+            receiver=0, seq=1, seq_max=2, mode=1,
+            start_hz=7_000_000, end_hz=7_300_000, oor=False,
+        )
+        asm.feed(new_seq1, 0)
+        seq2 = _seq_n_payload(2, 2, bytes([0x42] * 5))
+        frame = asm.feed(seq2, 0)
+        assert frame is not None
+        assert frame.start_freq_hz == 7_000_000
+
+
+# ---------------------------------------------------------------------------
 # Tests for scope command builders
 # ---------------------------------------------------------------------------
 

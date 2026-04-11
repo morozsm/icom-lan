@@ -2788,3 +2788,48 @@ class TestGetProfileRouting:
 
         assert isinstance(profile, RadioProfile)
         assert "IC-7610" in profile.model
+
+
+class TestGetMeterCalPayload:
+    """Unit tests for WebServer._get_meter_cal_payload()."""
+
+    def _make_server(self, radio=None, radio_model="IC-7610"):
+        config = WebConfig(host="127.0.0.1", port=0, radio_model=radio_model)
+        return WebServer(radio, config)
+
+    def test_profile_fallback_includes_calibrations(self):
+        radio = SimpleNamespace(
+            model="IC-7610", capabilities=set(), radio_state=RadioState(),
+        )
+        srv = self._make_server(radio)
+        payload = srv._get_meter_cal_payload()
+        assert "meterCalibrations" in payload
+        assert "s_meter" in payload["meterCalibrations"]
+
+    def test_profile_fallback_includes_redlines(self):
+        radio = SimpleNamespace(
+            model="IC-7610", capabilities=set(), radio_state=RadioState(),
+        )
+        srv = self._make_server(radio)
+        payload = srv._get_meter_cal_payload()
+        assert "meterRedlines" in payload
+        assert "s_meter" in payload["meterRedlines"]
+        assert payload["meterRedlines"]["s_meter"] == 130
+
+    def test_radio_config_takes_precedence(self):
+        fake_config = SimpleNamespace(
+            meter_calibrations={"power": [{"raw": 0, "actual": 0.0, "label": "0W"}]},
+            meter_redlines={"power": 213},
+        )
+        radio = SimpleNamespace(
+            model="IC-7610", capabilities=set(),
+            radio_state=RadioState(), _config=fake_config,
+        )
+        srv = self._make_server(radio)
+        payload = srv._get_meter_cal_payload()
+        assert payload["meterRedlines"]["power"] == 213
+
+    def test_empty_when_no_radio(self):
+        srv = self._make_server(radio=None)
+        payload = srv._get_meter_cal_payload()
+        assert isinstance(payload, dict)

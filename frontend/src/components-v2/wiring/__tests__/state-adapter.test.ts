@@ -1,6 +1,13 @@
 import { describe, it, expect } from 'vitest';
 
-import { toFilterProps, toModeProps, toVfoProps } from '../state-adapter';
+import {
+  resolveFilterModeConfig,
+  toFilterProps,
+  toModeProps,
+  toVfoProps,
+  toVfoOpsProps,
+  toRxAudioProps,
+} from '../state-adapter';
 
 describe('toModeProps', () => {
   it('derives the active receiver mode and numeric data mode from state', () => {
@@ -99,5 +106,95 @@ describe('toFilterProps', () => {
     expect(props.filterConfig?.defaults).toEqual([3000, 1200, 500]);
     expect(props.filterWidthMin).toBe(50);
     expect(props.filterWidthMax).toBe(3600);
+  });
+
+  it('derives IF shift from PBT when if_shift capability is absent', () => {
+    // Both PBT values shifted positive → deriveIfShift = avg of both (non-zero)
+    const props = toFilterProps(
+      {
+        active: 'MAIN',
+        main: { mode: 'USB', dataMode: 0, filter: 1, filterWidth: 2400, pbtInner: 148, pbtOuter: 148 },
+        sub: { mode: 'LSB', dataMode: 0, filter: 1, filterWidth: 2400, pbtInner: 128, pbtOuter: 128 },
+      } as any,
+      { capabilities: ['pbt'], filterConfig: {} } as any,
+    );
+
+    // No if_shift cap → deriveIfShift is used; both PBT shifted by same amount
+    expect(props.hasPbt).toBe(true);
+    expect(props.ifShift).not.toBe(0);
+  });
+
+  it('uses table-based min/max when minHz/maxHz are absent', () => {
+    const props = toFilterProps(
+      {
+        active: 'MAIN',
+        main: { mode: 'CW', dataMode: 0, filter: 1, filterWidth: 500, pbtInner: 128, pbtOuter: 128 },
+        sub: { mode: 'LSB', dataMode: 0, filter: 1, filterWidth: 2400, pbtInner: 128, pbtOuter: 128 },
+      } as any,
+      {
+        capabilities: [],
+        filterConfig: {
+          'CW': { defaults: [500, 250, 100], fixed: false, table: [50, 100, 250, 500, 1200] },
+        },
+      } as any,
+    );
+
+    expect(props.filterWidthMin).toBe(50);   // table[0]
+    expect(props.filterWidthMax).toBe(1200);  // table[last]
+  });
+});
+
+describe('resolveFilterModeConfig', () => {
+  const filterConfig = {
+    'SSB': { defaults: [2400], fixed: false },
+    'SSB-D': { defaults: [3000], fixed: false },
+    'CW': { defaults: [500], fixed: false },
+    'RTTY': { defaults: [350], fixed: false },
+    'USB': { defaults: [2400], fixed: false },
+  } as any;
+
+  it('falls back CW-R → CW', () => {
+    const result = resolveFilterModeConfig({ filterConfig } as any, 'CW-R', 0);
+    expect(result?.defaults).toEqual([500]);
+  });
+
+  it('falls back RTTY-R → RTTY', () => {
+    const result = resolveFilterModeConfig({ filterConfig } as any, 'RTTY-R', 0);
+    expect(result?.defaults).toEqual([350]);
+  });
+
+  it('SSB data mode chain: USB-D → USB → SSB-D → SSB', () => {
+    const cfg = { 'SSB-D': { defaults: [3000], fixed: false }, 'SSB': { defaults: [2400], fixed: false } } as any;
+    const result = resolveFilterModeConfig({ filterConfig: cfg } as any, 'USB', 1);
+    expect(result?.defaults).toEqual([3000]);
+  });
+
+  it('returns null when no config matches or mode is undefined', () => {
+    expect(resolveFilterModeConfig({ filterConfig: {} } as any, 'AM', 0)).toBeNull();
+    expect(resolveFilterModeConfig({ filterConfig } as any, undefined, 0)).toBeNull();
+  });
+});
+
+describe('toVfoOpsProps', () => {
+  it('derives txVfo as opposite receiver when split is active', () => {
+    const mainActive = toVfoOpsProps(
+      { active: 'MAIN', split: true, dualWatch: false, mainSubTracking: false } as any, null);
+    expect(mainActive.txVfo).toBe('sub');
+
+    const subActive = toVfoOpsProps(
+      { active: 'SUB', split: true, dualWatch: false, mainSubTracking: false } as any, null);
+    expect(subActive.txVfo).toBe('main');
+  });
+});
+
+describe('toRxAudioProps', () => {
+  const state = { active: 'MAIN', main: { afLevel: 200 } } as any;
+  const caps = { capabilities: ['audio'] } as any;
+
+  it('returns mute when muted, live with browser volume otherwise', () => {
+    expect(toRxAudioProps(state, caps, { muted: true, rxEnabled: true, volume: 80 }).monitorMode).toBe('mute');
+    const live = toRxAudioProps(state, caps, { muted: false, rxEnabled: true, volume: 50 });
+    expect(live.monitorMode).toBe('live');
+    expect(live.afLevel).toBe(Math.round(50 / 100 * 255));
   });
 });

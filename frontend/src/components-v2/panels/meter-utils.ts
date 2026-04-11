@@ -1,3 +1,5 @@
+import { getMeterCalibration, getMeterRedline } from '$lib/stores/capabilities.svelte';
+
 export type MeterSource = 'S' | 'SWR' | 'POWER' | 'po';
 
 export interface Mark {
@@ -31,30 +33,34 @@ function piecewise(raw: number, knots: [number, number][]): number {
 }
 
 /**
- * Formats raw RF power (BCD 0-255) as watts string.
+ * Converts a capabilities MeterCalPoint[] to piecewise knots [raw, actual][].
+ * Returns null if calibration data is unavailable.
+ */
+function calToKnots(meterType: string): [number, number][] | null {
+  const cal = getMeterCalibration(meterType);
+  if (!cal || cal.length < 2) return null;
+  return cal.map((p) => [p.raw, p.actual] as [number, number]);
+}
+
+/**
+ * Returns knots from capabilities, falling back to hardcoded defaults.
+ */
+function getKnots(meterType: string, fallback: [number, number][]): [number, number][] {
+  return calToKnots(meterType) ?? fallback;
+}
+
+// ---- Hardcoded IC-7610 fallback constants ----
+
+/**
  * IC-7610 CI-V Reference p.4: 00 00=0%, 01 43=50%, 02 12=100%
  */
-// Knot points: [bcd_raw, watts]
 const PO_KNOTS: [number, number][] = [
   [0, 0],
   [143, 50],
   [212, 100],
 ];
 
-export function formatPowerWatts(raw: number): string {
-  const watts = Math.round(piecewise(raw, PO_KNOTS));
-  return `${watts}W`;
-}
-
 /**
- * Normalizes RF power for bar gauge (0-1 scale).
- */
-export function normalizePower(raw: number): number {
-  return piecewise(raw, PO_KNOTS) / 100;
-}
-
-/**
- * Formats raw SWR value (BCD 0-255) as SWR ratio string.
  * IC-7610 CI-V Reference p.4: 00 00=1.0, 00 48=1.5, 00 80=2.0, 01 20=3.0
  */
 const SWR_KNOTS: [number, number][] = [
@@ -64,62 +70,110 @@ const SWR_KNOTS: [number, number][] = [
   [120, 3.0],
 ];
 
+/** IC-7610 ALC max raw value */
+const ALC_MAX_DEFAULT = 120;
+
+/** IC-7610 S-meter: S9 = raw 120, S9+60 = raw 241 */
+const S9_RAW_DEFAULT = 120;
+const S9_PLUS60_RAW_DEFAULT = 241;
+
+// ---- Public formatters ----
+
+/**
+ * Formats raw RF power (BCD 0-255) as watts string.
+ */
+export function formatPowerWatts(raw: number): string {
+  const knots = getKnots('power', PO_KNOTS);
+  const watts = Math.round(piecewise(raw, knots));
+  return `${watts}W`;
+}
+
+/**
+ * Normalizes RF power for bar gauge (0-1 scale).
+ */
+export function normalizePower(raw: number): number {
+  const knots = getKnots('power', PO_KNOTS);
+  const maxWatts = knots[knots.length - 1][1];
+  return maxWatts > 0 ? piecewise(raw, knots) / maxWatts : 0;
+}
+
+/**
+ * Formats raw SWR value (BCD 0-255) as SWR ratio string.
+ */
 export function formatSwr(raw: number): string {
   if (raw >= 255) return '∞';
-  return piecewise(raw, SWR_KNOTS).toFixed(1);
+  const knots = getKnots('swr', SWR_KNOTS);
+  return piecewise(raw, knots).toFixed(1);
 }
 
 /**
  * Formats raw ALC value (BCD 0-255) as percentage string.
- * IC-7610 CI-V Reference p.4: 00 00=Min, 01 20=Max
  */
 export function formatAlc(raw: number): string {
-  const pct = Math.round((Math.max(0, Math.min(120, raw)) / 120) * 100);
+  const alcMax = getMeterRedline('alc') ?? ALC_MAX_DEFAULT;
+  const pct = Math.round((Math.max(0, Math.min(alcMax, raw)) / alcMax) * 100);
   return `${pct}%`;
 }
 
 /**
+ * Returns S-meter calibration boundaries: [s9Raw, s9Plus60Raw].
+ */
+function getSmeterBounds(): [number, number] {
+  const cal = getMeterCalibration('s_meter');
+  if (cal && cal.length >= 2) {
+    // Find S9 and S9+60 calibration points
+    const s9 = cal.find((p) => p.label === 'S9');
+    const s9p60 = cal.find((p) => p.label === 'S9+60dB' || p.label === 'S9+60');
+    if (s9 && s9p60) return [s9.raw, s9p60.raw];
+    // Fallback: last two points as S9 boundary and max
+    if (cal.length >= 2) return [cal[cal.length - 2].raw, cal[cal.length - 1].raw];
+  }
+  return [S9_RAW_DEFAULT, S9_PLUS60_RAW_DEFAULT];
+}
+
+/**
  * Formats raw S-meter value (BCD 0-255) as an S-unit string.
- * IC-7610 CI-V Reference p.4: 00 00=S0, 01 20=S9, 02 41=S9+60 dB
  */
 export function formatSMeter(raw: number): string {
-  if (raw >= 120) {
-    // S9+ range: 120–241 → 0–60 dB over S9
-    const db = Math.round(((raw - 120) / (241 - 120)) * 60);
+  const [s9Raw, s9Plus60Raw] = getSmeterBounds();
+  if (raw >= s9Raw) {
+    // S9+ range
+    const span = s9Plus60Raw - s9Raw;
+    const db = span > 0 ? Math.round(((raw - s9Raw) / span) * 60) : 0;
     return db > 0 ? `S9+${db}` : 'S9';
   }
-  // S0–S9 range: 0–120
-  const s = Math.round((raw / 120) * 9);
+  // S0-S9 range
+  const s = s9Raw > 0 ? Math.round((raw / s9Raw) * 9) : 0;
   return `S${s}`;
 }
 
 /**
  * Returns needle gauge mark positions and labels for the given meter source.
+ * Uses capabilities calibration data when available, IC-7610 defaults otherwise.
  */
 export function getNeedleMarks(source: MeterSource): Mark[] {
-  // Positions based on IC-7610 CI-V Reference p.4 BCD values / 255
   switch (source) {
-    case 'S':
-      // 00 00=S0, 01 20=S9 (120/255≈0.47), 02 41=S9+60 (241/255≈0.95)
+    case 'S': {
+      const [s9Raw, s9Plus60Raw] = getSmeterBounds();
       return [
-        { pos: 120 / 255 * (1 / 9), label: 'S1' },
-        { pos: 120 / 255 * (3 / 9), label: 'S3' },
-        { pos: 120 / 255 * (5 / 9), label: 'S5' },
-        { pos: 120 / 255 * (7 / 9), label: 'S7' },
-        { pos: 120 / 255, label: 'S9' },
-        { pos: (120 + (241 - 120) * (20 / 60)) / 255, label: '+20' },
-        { pos: (120 + (241 - 120) * (40 / 60)) / 255, label: '+40' },
+        { pos: (s9Raw * (1 / 9)) / 255, label: 'S1' },
+        { pos: (s9Raw * (3 / 9)) / 255, label: 'S3' },
+        { pos: (s9Raw * (5 / 9)) / 255, label: 'S5' },
+        { pos: (s9Raw * (7 / 9)) / 255, label: 'S7' },
+        { pos: s9Raw / 255, label: 'S9' },
+        { pos: (s9Raw + (s9Plus60Raw - s9Raw) * (20 / 60)) / 255, label: '+20' },
+        { pos: (s9Raw + (s9Plus60Raw - s9Raw) * (40 / 60)) / 255, label: '+40' },
       ];
-    case 'SWR':
-      // 00 00=1.0, 00 48=1.5, 00 80=2.0, 01 20=3.0
-      return [
-        { pos: 0 / 255, label: '1.0' },
-        { pos: 48 / 255, label: '1.5' },
-        { pos: 80 / 255, label: '2.0' },
-        { pos: 120 / 255, label: '3.0' },
-      ];
+    }
+    case 'SWR': {
+      const knots = getKnots('swr', SWR_KNOTS);
+      return knots.map(([rawVal, swrVal]) => ({
+        pos: rawVal / 255,
+        label: swrVal.toFixed(1),
+      }));
+    }
     case 'POWER':
-    case 'po':
+    case 'po': {
       return [
         { pos: 0.0, label: '0' },
         { pos: 0.25, label: '25' },
@@ -127,5 +181,6 @@ export function getNeedleMarks(source: MeterSource): Mark[] {
         { pos: 0.75, label: '75' },
         { pos: 1.0, label: '100' },
       ];
+    }
   }
 }

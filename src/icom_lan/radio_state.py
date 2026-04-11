@@ -54,6 +54,8 @@ class ReceiverState:
     squelch: int = 0  # 0-255
     s_meter: int = 0  # raw 0-241
     apf_type_level: int = 0  # 0-255
+    apf_on: bool = False  # Audio Peak Filter on/off (Yaesu CO02)
+    apf_freq: int = 0  # APF frequency (Yaesu CO03)
     nr_level: int = 0  # 0-255
     pbt_inner: int = 128  # 0-255, 128=center
     pbt_outer: int = 128  # 0-255, 128=center
@@ -134,11 +136,14 @@ class RadioState:
     compressor_level: int = 0  # 0-255
     monitor_on: bool = False
     break_in_delay: int = 0  # 0-255
+    cw_spot: bool = False
     break_in: int = 0  # 0=off, 1=semi, 2=full
     dial_lock: bool = False
     drive_gain: int = 0  # 0-255
     monitor_gain: int = 0  # 0-255
     vfo_select: int = 0  # 0=VFO-A/MAIN, 1=VFO-B/SUB
+    rx_func_mode: int = 0  # FR: 0=dual RX off, 1=single RX (Yaesu CAT)
+    tx_func_mode: int = 0  # FT: 0=MAIN TX, 1=SUB TX (Yaesu CAT)
     vox_on: bool = False
     vox_gain: int = 0  # 0-255
     anti_vox_gain: int = 0  # 0-255
@@ -188,11 +193,14 @@ class RadioState:
             "compressor_level": self.compressor_level,
             "monitor_on": self.monitor_on,
             "break_in_delay": self.break_in_delay,
+            "cw_spot": self.cw_spot,
             "break_in": self.break_in,
             "dial_lock": self.dial_lock,
             "drive_gain": self.drive_gain,
             "monitor_gain": self.monitor_gain,
             "vfo_select": self.vfo_select,
+            "rx_func_mode": self.rx_func_mode,
+            "tx_func_mode": self.tx_func_mode,
             "vox_on": self.vox_on,
             "vox_gain": self.vox_gain,
             "anti_vox_gain": self.anti_vox_gain,
