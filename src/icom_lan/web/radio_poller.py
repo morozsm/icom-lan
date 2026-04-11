@@ -557,50 +557,13 @@ class RadioPoller:
             await asyncio.sleep(self._adaptive_gap())
         logger.info("radio-poller: scope controls fetched (receiver=%d)", scope_rx)
 
-    async def _initial_state_fetch(self) -> None:
-        """Fetch ALL state queries once at startup to populate RadioState.
-
-        Without this, the UI shows Python defaults (zeros) for controls
-        like SPAN, squelch, AF level, etc. until the slow poll rotation
-        reaches each query — which can take 10+ seconds for 60+ queries.
-
-        On LAN (~12ms gap) this takes ~0.7s for 60 queries.
-        Commands from the queue are drained between queries so that
-        user-initiated actions are not blocked.
-        """
-        if not self._STATE_QUERIES:
-            return
-        logger.info(
-            "radio-poller: initial state fetch (%d queries)...",
-            len(self._STATE_QUERIES),
-        )
-        ok = 0
-        for cmd_byte, sub_byte, receiver in self._STATE_QUERIES:
-            # Drain command queue between queries so commands aren't blocked
-            if self._queue.has_commands:
-                for cmd in self._queue.drain():
-                    try:
-                        await self._execute(cmd)
-                    except Exception:
-                        pass
-                    await asyncio.sleep(self._adaptive_gap())
-            try:
-                await self._send_one_state_query(cmd_byte, sub_byte, receiver)
-                ok += 1
-            except Exception:
-                pass  # non-fatal; regular rotation will retry
-            await asyncio.sleep(self._adaptive_gap())
-        logger.info("radio-poller: initial state fetch done (%d/%d ok)", ok, len(self._STATE_QUERIES))
-
     async def _run(self) -> None:
         _backoff = 0.0
         _MAX_BACKOFF = 5.0  # max pause when radio is disconnected
 
-        # Fetch ALL state queries once so the UI shows real values immediately
-        # instead of Python defaults (zeros) until the slow rotation reaches them.
-        self._initial_fetch_done.clear()
+        # Initial state is now fetched by CoreRadio._fetch_initial_state()
+        # during connect(). Just signal readiness immediately.
         self._scope_enable_deferred = False
-        await self._initial_state_fetch()
         self._initial_fetch_done.set()
 
         try:
