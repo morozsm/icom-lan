@@ -43,6 +43,16 @@ describe('toModeProps', () => {
 });
 
 describe('toVfoProps', () => {
+  it('returns defaults when receiver state is missing from ServerState', () => {
+    // State exists but sub receiver is undefined — must not crash
+    const state = { active: 'SUB', main: { freqHz: 14074000, mode: 'USB', filter: 1, sMeter: 0, att: 0, preamp: 0, nb: false, nr: false, afLevel: 0, rfGain: 255, squelch: 0, dataMode: 0 } } as any;
+    const props = toVfoProps(state, 'sub');
+    expect(props.receiver).toBe('sub');
+    expect(props.freq).toBe(14074000);
+    expect(props.mode).toBe('USB');
+    expect(props.badges).toEqual({});
+  });
+
   it('adds a DATA badge when numeric data mode is active', () => {
     const props = toVfoProps(
       {
