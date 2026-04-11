@@ -101,14 +101,15 @@ export function toVfoProps(
   if (state.split) badges['SPLIT'] = true;
 
   const filters = ['FIL1', 'FIL2', 'FIL3'];
-  const filterLabel = filters[rx.filter - 1] ?? `FIL${rx.filter}`;
+  const fil = rx.filter ?? 1;
+  const filterLabel = filters[fil - 1] ?? `FIL${fil}`;
 
   return {
     receiver,
-    freq: rx.freqHz,
-    mode: rx.mode,
+    freq: rx.freqHz ?? 14074000,
+    mode: rx.mode ?? 'USB',
     filter: filterLabel,
-    sValue: rx.sMeter,
+    sValue: rx.sMeter ?? 0,
     isActive,
     badges,
     rit: state.ritOn
