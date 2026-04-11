@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+from unittest.mock import AsyncMock, patch
+
+import pytest
+
 from icom_lan._state_queries import build_state_queries
 from icom_lan.profiles import resolve_radio_profile
 
@@ -121,10 +125,6 @@ class TestBuildStateQueries:
 # ------------------------------------------------------------------
 # CoreRadio._fetch_initial_state tests
 # ------------------------------------------------------------------
-
-from unittest.mock import AsyncMock, patch
-
-import pytest
 
 
 class TestFetchInitialState:
