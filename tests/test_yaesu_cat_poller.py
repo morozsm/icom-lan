@@ -66,6 +66,10 @@ def make_radio(
     radio.get_keyer_speed = AsyncMock(return_value=20)
     radio.get_key_pitch = AsyncMock(return_value=600)
     radio.get_break_in = AsyncMock(return_value=False)
+    radio.get_break_in_delay = AsyncMock(return_value=0)
+    radio.get_cw_spot = AsyncMock(return_value=False)
+    radio.get_rx_func = AsyncMock(return_value=0)
+    radio.get_tx_func = AsyncMock(return_value=0)
     return radio
 
 
@@ -714,3 +718,105 @@ async def test_slow_poll_skips_sub_levels_without_dual_rx() -> None:
     # Only receiver=0 calls should exist
     for call in radio.get_af_level.call_args_list:
         assert call.args == (0,) or call.args == (), "SUB receiver was polled"
+
+
+# ---------------------------------------------------------------------------
+# New RadioState fields in to_dict() (#551)
+# ---------------------------------------------------------------------------
+
+
+def test_new_fields_in_to_dict() -> None:
+    """All #551 fields must appear in RadioState.to_dict() output."""
+    state = RadioState()
+    d = state.to_dict()
+    for key in ("cw_spot", "rx_func_mode", "tx_func_mode", "break_in_delay",
+                "key_speed", "cw_pitch", "break_in"):
+        assert key in d, f"{key} missing from to_dict()"
+    # ReceiverState fields live under main/sub
+    assert "apf_on" in d["main"]
+    assert "apf_freq" in d["main"]
+
+
+# ---------------------------------------------------------------------------
+# CW polling block populates all fields (#551)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_slow_poll_reads_full_cw_block() -> None:
+    """Slow poll populates key_speed, cw_pitch, break_in, break_in_delay, cw_spot."""
+    radio = make_radio()
+    radio.get_keyer_speed = AsyncMock(return_value=30)
+    radio.get_key_pitch = AsyncMock(return_value=750)
+    radio.get_break_in = AsyncMock(return_value=True)
+    radio.get_break_in_delay = AsyncMock(return_value=42)
+    radio.get_cw_spot = AsyncMock(return_value=True)
+
+    poller = YaesuCatPoller(
+        radio,
+        callback=lambda s: None,
+        fast_interval=10.0,
+        medium_interval=10.0,
+        slow_interval=0.01,
+    )
+    await poller.start()
+    await asyncio.sleep(0.05)
+    await poller.stop()
+
+    assert radio.radio_state.key_speed == 30
+    assert radio.radio_state.cw_pitch == 750
+    assert radio.radio_state.break_in == 1
+    assert radio.radio_state.break_in_delay == 42
+    assert radio.radio_state.cw_spot is True
+
+
+# ---------------------------------------------------------------------------
+# FR/FT polling populates rx_func_mode / tx_func_mode (#551)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_slow_poll_reads_rx_tx_func_mode() -> None:
+    """FR/FT polling populates rx_func_mode and tx_func_mode."""
+    radio = make_radio()
+    radio.get_rx_func = AsyncMock(return_value=1)
+    radio.get_tx_func = AsyncMock(return_value=1)
+
+    poller = YaesuCatPoller(
+        radio,
+        callback=lambda s: None,
+        fast_interval=10.0,
+        medium_interval=10.0,
+        slow_interval=0.01,
+    )
+    await poller.start()
+    await asyncio.sleep(0.05)
+    await poller.stop()
+
+    radio.get_rx_func.assert_called()
+    radio.get_tx_func.assert_called()
+    assert radio.radio_state.rx_func_mode == 1
+    assert radio.radio_state.tx_func_mode == 1
+
+
+@pytest.mark.asyncio
+async def test_slow_poll_skips_fr_ft_without_dual_rx() -> None:
+    """Without dual_rx capability, FR/FT should not be polled."""
+    radio = make_radio()
+    radio.capabilities.discard("dual_rx")
+    radio.get_rx_func = AsyncMock(return_value=1)
+    radio.get_tx_func = AsyncMock(return_value=1)
+
+    poller = YaesuCatPoller(
+        radio,
+        callback=lambda s: None,
+        fast_interval=10.0,
+        medium_interval=10.0,
+        slow_interval=0.01,
+    )
+    await poller.start()
+    await asyncio.sleep(0.05)
+    await poller.stop()
+
+    radio.get_rx_func.assert_not_called()
+    radio.get_tx_func.assert_not_called()
