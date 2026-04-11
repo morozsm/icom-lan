@@ -1015,7 +1015,10 @@ class WebServer:
             self._radio_poller.stop()
             self._radio_poller = None
         if self._yaesu_poller is not None:
-            await self._yaesu_poller.stop()
+            try:
+                await asyncio.wait_for(self._yaesu_poller.stop(), timeout=2.0)
+            except TimeoutError:
+                logger.warning("yaesu poller stop timed out")
             self._yaesu_poller = None
 
         # 2. Stop audio relay (stops AudioBus subscription → stop_audio_rx)
@@ -1055,7 +1058,10 @@ class WebServer:
         #    wait_closed() won't block on open connections)
         if self._server is not None:
             self._server.close()
-            await self._server.wait_closed()
+            try:
+                await asyncio.wait_for(self._server.wait_closed(), timeout=2.0)
+            except TimeoutError:
+                logger.warning("server.wait_closed() timed out after 2s")
             self._server = None
 
         # 7. Wait for cancelled tasks to finish (with timeout)
