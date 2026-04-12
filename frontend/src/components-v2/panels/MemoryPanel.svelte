@@ -6,7 +6,7 @@
    * so this panel tracks channel data locally (localStorage) and provides
    * controls for recall, store, clear, and channel selection.
    */
-  import { sendCommand } from '$lib/transport/ws-client';
+  import { runtime } from '$lib/runtime';
   import { radio } from '$lib/stores/radio.svelte';
   import { formatFrequencyString } from '../display/frequency-format';
 
@@ -54,8 +54,8 @@
   }
 
   function recallChannel(ch: number) {
-    sendCommand('set_memory_mode', { channel: ch });
-    sendCommand('memory_to_vfo', { channel: ch });
+    runtime.send('set_memory_mode', { channel: ch });
+    runtime.send('memory_to_vfo', { channel: ch });
     selectedChannel = ch;
   }
 
@@ -65,8 +65,8 @@
     const freq = rx?.freqHz ?? 0;
     const mode = rx?.mode ?? '';
 
-    sendCommand('set_memory_mode', { channel: ch });
-    sendCommand('memory_write', {});
+    runtime.send('set_memory_mode', { channel: ch });
+    runtime.send('memory_write', {});
 
     // Track locally
     const updated = new Map(channels);
@@ -77,7 +77,7 @@
   }
 
   function clearChannel(ch: number) {
-    sendCommand('memory_clear', { channel: ch });
+    runtime.send('memory_clear', { channel: ch });
 
     // Remove from local tracking
     const updated = new Map(channels);

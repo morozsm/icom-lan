@@ -9,31 +9,13 @@
   import AmberFrequency from './AmberFrequency.svelte';
   import AmberSmeter from './AmberSmeter.svelte';
   import AmberAfScope from './AmberAfScope.svelte';
-  import { getChannel, sendCommand } from '$lib/transport/ws-client';
-  import { markScopeFrame } from '$lib/stores/connection.svelte';
+  import { runtime } from '$lib/runtime';
+  import { createAudioScopeConnection } from '$lib/runtime/adapters/scope-adapter';
 
   // Command-bus handlers (singleton, no reactive deps)
   const vfoHandlers = makeVfoHandlers();
   const ritXitHandlers = makeRitXitHandlers();
   const cwHandlers = makeCwPanelHandlers();
-
-  interface ScopeFrame {
-    receiver: number;
-    startFreq: number;
-    endFreq: number;
-    pixels: Uint8Array;
-  }
-
-  function parseScopeFrame(buf: ArrayBuffer): ScopeFrame | null {
-    const view = new DataView(buf);
-    if (view.byteLength < 16 || view.getUint8(0) !== 0x01) return null;
-    const receiver = view.getUint8(1);
-    const startFreq = view.getUint32(3, true);
-    const endFreq = view.getUint32(7, true);
-    const pixelCount = view.getUint16(14, true);
-    if (16 + pixelCount > view.byteLength) return null;
-    return { receiver, startFreq, endFreq, pixels: new Uint8Array(buf, 16, pixelCount) };
-  }
 
   // Band lookup by frequency (LCD-specific)
   const BANDS: [string, number, number][] = [
@@ -140,32 +122,16 @@
   }
 
   // Scope WS connection — reactive to capabilities (may load after mount)
-  let scopeCleanup: (() => void) | null = null;
-
   $effect(() => {
-    const wantScope = hasAudioFft();
-    if (!wantScope) return;
+    if (!hasAudioFft()) return;
 
-    const scopeCh = getChannel('audio-scope');
-    scopeCh.connect('/api/v1/audio-scope');
-    const unsubBinary = scopeCh.onBinary((buf) => {
-      markScopeFrame();
-      const frame = parseScopeFrame(buf);
-      if (!frame) return;
+    const scope = createAudioScopeConnection((frame) => {
       fftPixels = frame.pixels;
       fftBandwidth = frame.endFreq > frame.startFreq ? frame.endFreq - frame.startFreq : undefined;
       fftPush?.(frame.pixels);
     });
 
-    scopeCleanup = () => {
-      unsubBinary();
-      scopeCh.disconnect();
-      scopeCleanup = null;
-    };
-
-    return () => {
-      scopeCleanup?.();
-    };
+    return () => scope.disconnect();
   });
 </script>
 
@@ -281,7 +247,7 @@
         <button class="lcd-btn" onclick={ritXitHandlers.onClear}>CLR</button>
       {/if}
       {#if hasCapability('tuner')}
-        <button class="lcd-btn" onclick={() => sendCommand('set_tuner_status', { value: 2 })}>TUNE</button>
+        <button class="lcd-btn" onclick={() => runtime.send('set_tuner_status', { value: 2 })}>TUNE</button>
       {/if}
       {#if isCwMode && hasCapability('cw')}
         <button class="lcd-btn" onclick={cwHandlers.onAutoTune}>AUTO</button>
