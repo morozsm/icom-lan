@@ -1,25 +1,18 @@
 <script lang="ts">
   import { HardwareButton } from '$lib/Button';
 
-  interface Props {
-    scanning: boolean;
-    scanType: number;
-    scanResumeMode: number;
-    onScanStart: (type: number) => void;
-    onScanStop: () => void;
-    onDfSpanChange: (span: number) => void;
-    onResumeChange: (mode: number) => void;
-  }
+  import { deriveScanProps, getScanHandlers } from '$lib/runtime/adapters/panel-adapters';
 
-  let {
-    scanning,
-    scanType,
-    scanResumeMode,
-    onScanStart,
-    onScanStop,
-    onDfSpanChange,
-    onResumeChange,
-  }: Props = $props();
+  const handlers = getScanHandlers();
+  let p = $derived(deriveScanProps());
+
+  let scanning = $derived(p.scanning);
+  let scanType = $derived(p.scanType);
+  let scanResumeMode = $derived(p.scanResumeMode);
+  const onScanStart = handlers.onScanStart;
+  const onScanStop = handlers.onScanStop;
+  const onDfSpanChange = handlers.onDfSpanChange;
+  const onResumeChange = handlers.onResumeChange;
 
   const scanTypes = [
     { value: 0x01, label: 'PROG' },

@@ -17,25 +17,17 @@
   import CollapsiblePanel from '../controls/CollapsiblePanel.svelte';
   import { createDragReorder } from '$lib/drag-reorder.svelte';
   import {
-    toRfFrontEndProps,
     toFilterProps,
-    toRitXitProps,
     toBandSelectorProps,
-    toScanProps,
     toDspProps,
     toTxProps,
-    toCwProps,
   } from '../wiring/state-adapter';
   import {
-    makeRfFrontEndHandlers,
     makeFilterHandlers,
-    makeRitXitHandlers,
     makeBandHandlers,
     makePresetHandlers,
-    makeScanHandlers,
     makeDspHandlers,
     makeTxHandlers,
-    makeCwPanelHandlers,
     makeSystemHandlers,
   } from '../wiring/command-bus';
 
@@ -51,24 +43,16 @@
   });
 
   // Derived props via state adapter — panels not yet self-wiring
-  let rfFrontEnd = $derived(toRfFrontEndProps(radioState, caps));
   let filter = $derived(toFilterProps(radioState, caps));
-  let ritXit = $derived(toRitXitProps(radioState, caps));
   let band = $derived(toBandSelectorProps(radioState));
-  let scan = $derived(toScanProps(radioState));
   let dsp = $derived(toDspProps(radioState, caps));
   let tx = $derived(toTxProps(radioState, caps));
-  let cw = $derived(toCwProps(radioState, caps));
   // Command handlers
-  const rfHandlers = makeRfFrontEndHandlers();
   const filterHandlers = makeFilterHandlers();
-  const ritXitHandlers = makeRitXitHandlers();
   const bandHandlers = makeBandHandlers();
   const presetHandlers = makePresetHandlers();
-  const scanHandlers = makeScanHandlers();
   const dspHandlers = makeDspHandlers();
   const txHandlers = makeTxHandlers();
-  const cwHandlers = makeCwPanelHandlers();
   const systemHandlers = makeSystemHandlers();
 </script>
 
@@ -77,20 +61,7 @@
     <CollapsiblePanel title="RF FRONT END" panelId="rf-front-end" dataPanel="rf-frontend"
       draggable={true} onDragStart={drag.handleDragStart}
       style={drag.dragStyle('rf-front-end')}>
-      <RfFrontEnd
-        rfGain={rfFrontEnd.rfGain}
-        squelch={rfFrontEnd.squelch}
-        att={rfFrontEnd.att}
-        pre={rfFrontEnd.pre}
-        digiSel={rfFrontEnd.digiSel}
-        ipPlus={rfFrontEnd.ipPlus}
-        onRfGainChange={rfHandlers.onRfGainChange}
-        onSquelchChange={rfHandlers.onSquelchChange}
-        onAttChange={rfHandlers.onAttChange}
-        onPreChange={rfHandlers.onPreChange}
-        onDigiSelToggle={rfHandlers.onDigiSelToggle}
-        onIpPlusToggle={rfHandlers.onIpPlusToggle}
-      />
+      <RfFrontEnd />
     </CollapsiblePanel>
   {/if}
 
@@ -144,19 +115,7 @@
     <CollapsiblePanel title="RIT / XIT" panelId="rit-xit"
       draggable={true} onDragStart={drag.handleDragStart}
       style={drag.dragStyle('rit-xit')}>
-      <RitXitPanel
-        ritActive={ritXit.ritActive}
-        ritOffset={ritXit.ritOffset}
-        xitActive={ritXit.xitActive}
-        xitOffset={ritXit.xitOffset}
-        hasRit={ritXit.hasRit}
-        hasXit={ritXit.hasXit}
-        onRitToggle={ritXitHandlers.onRitToggle}
-        onXitToggle={ritXitHandlers.onXitToggle}
-        onRitOffsetChange={ritXitHandlers.onRitOffsetChange}
-        onXitOffsetChange={ritXitHandlers.onXitOffsetChange}
-        onClear={ritXitHandlers.onClear}
-      />
+      <RitXitPanel />
     </CollapsiblePanel>
   {/if}
 
@@ -184,15 +143,7 @@
     <CollapsiblePanel title="SCAN" panelId="scan"
       draggable={true} onDragStart={drag.handleDragStart}
       style={drag.dragStyle('scan')}>
-      <ScanPanel
-        scanning={scan.scanning}
-        scanType={scan.scanType}
-        scanResumeMode={scan.scanResumeMode}
-        onScanStart={scanHandlers.onScanStart}
-        onScanStop={scanHandlers.onScanStop}
-        onDfSpanChange={scanHandlers.onDfSpanChange}
-        onResumeChange={scanHandlers.onResumeChange}
-      />
+      <ScanPanel />
     </CollapsiblePanel>
   {/if}
 
@@ -261,23 +212,7 @@
 
   {#if drag.order.includes('cw') && hasCapability('cw')}
     <CollapsiblePanel title="CW" panelId="cw" draggable onDragStart={drag.handleDragStart} style={drag.dragStyle('cw')}>
-      <CwPanel
-        cwPitch={cw.cwPitch}
-        keySpeed={cw.keySpeed}
-        breakIn={cw.breakIn}
-        breakInDelay={cw.breakInDelay}
-        apfMode={cw.apfMode}
-        twinPeak={cw.twinPeak}
-        currentMode={cw.currentMode}
-        onCwPitchChange={cwHandlers.onCwPitchChange}
-        onKeySpeedChange={cwHandlers.onKeySpeedChange}
-        onBreakInToggle={cwHandlers.onBreakInToggle}
-        onBreakInModeChange={cwHandlers.onBreakInModeChange}
-        onBreakInDelayChange={cwHandlers.onBreakInDelayChange}
-        onApfChange={cwHandlers.onApfChange}
-        onTwinPeakToggle={cwHandlers.onTwinPeakToggle}
-        onAutoTune={cwHandlers.onAutoTune}
-      />
+      <CwPanel />
     </CollapsiblePanel>
   {/if}
 

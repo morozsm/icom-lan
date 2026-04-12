@@ -7,35 +7,23 @@
   import { buildPreOptions, shouldShowPanel } from './rf-frontend-utils';
   import { getShortcutHint } from '../layout/shortcut-hints';
 
-  interface Props {
-    rfGain: number;
-    squelch: number;
-    att: number;
-    pre: number;
-    digiSel: boolean;
-    ipPlus: boolean;
-    onRfGainChange: (v: number) => void;
-    onSquelchChange: (v: number) => void;
-    onAttChange: (v: number) => void;
-    onPreChange: (v: number) => void;
-    onDigiSelToggle: (v: boolean) => void;
-    onIpPlusToggle: (v: boolean) => void;
-  }
+  import { deriveRfFrontEndProps, getRfFrontEndHandlers } from '$lib/runtime/adapters/panel-adapters';
 
-  let {
-    rfGain,
-    squelch,
-    att,
-    pre,
-    digiSel,
-    ipPlus,
-    onRfGainChange,
-    onSquelchChange,
-    onAttChange,
-    onPreChange,
-    onDigiSelToggle,
-    onIpPlusToggle,
-  }: Props = $props();
+  const handlers = getRfFrontEndHandlers();
+  let p = $derived(deriveRfFrontEndProps());
+
+  let rfGain = $derived(p.rfGain);
+  let squelch = $derived(p.squelch);
+  let att = $derived(p.att);
+  let pre = $derived(p.pre);
+  let digiSel = $derived(p.digiSel);
+  let ipPlus = $derived(p.ipPlus);
+  const onRfGainChange = handlers.onRfGainChange;
+  const onSquelchChange = handlers.onSquelchChange;
+  const onAttChange = handlers.onAttChange;
+  const onPreChange = handlers.onPreChange;
+  const onDigiSelToggle = handlers.onDigiSelToggle;
+  const onIpPlusToggle = handlers.onIpPlusToggle;
 
   let showRfGain = $derived(hasCapability('rf_gain'));
   let showSquelch = $derived(hasCapability('squelch'));

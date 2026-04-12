@@ -4,58 +4,26 @@
   import { ValueControl, rawToPercentDisplay } from '../controls/value-control';
   import { hasCapability } from '$lib/stores/capabilities.svelte';
 
-  interface Props {
-    cwPitch?: number;
-    keySpeed?: number;
-    breakIn?: number;
-    breakInDelay?: number;
-    apfMode?: number;
-    twinPeak?: boolean;
-    currentMode?: string;
-    // Mobile CW panel props
-    wpm?: number;
-    breakInActive?: boolean;
-    sidetonePitch?: number;
-    sidetoneLevel?: number;
-    reversePaddle?: boolean;
-    keyerType?: number;
-    hasCw?: boolean;
-    onCwPitchChange?: (v: number) => void;
-    onKeySpeedChange?: (v: number) => void;
-    onBreakInToggle?: () => void;
-    onBreakInModeChange?: (mode: number) => void;
-    onBreakInDelayChange?: (v: number) => void;
-    onApfChange?: (mode: number) => void;
-    onTwinPeakToggle?: () => void;
-    onAutoTune?: () => void;
-    // Mobile CW handlers
-    onWpmChange?: (v: number) => void;
-    onSidetonePitchChange?: (v: number) => void;
-    onSidetoneLevelChange?: (v: number) => void;
-    onReversePaddleToggle?: () => void;
-    onKeyerTypeChange?: (v: number) => void;
-  }
+  import { deriveCwProps, getCwHandlers } from '$lib/runtime/adapters/panel-adapters';
 
-  const noop = () => {};
-  const noopN = (_v: number) => {};
+  const handlers = getCwHandlers();
+  let p = $derived(deriveCwProps());
 
-  let {
-    cwPitch = 600,
-    keySpeed = 12,
-    breakIn = 0,
-    breakInDelay = 0,
-    apfMode = 0,
-    twinPeak = false,
-    currentMode = 'CW',
-    onCwPitchChange = noopN,
-    onKeySpeedChange = noopN,
-    onBreakInToggle = noop,
-    onBreakInModeChange = noopN,
-    onBreakInDelayChange = noopN,
-    onApfChange = noopN,
-    onTwinPeakToggle = noop,
-    onAutoTune = noop,
-  }: Props = $props();
+  let cwPitch = $derived(p.cwPitch ?? 600);
+  let keySpeed = $derived(p.keySpeed ?? 12);
+  let breakIn = $derived(p.breakIn ?? 0);
+  let breakInDelay = $derived(p.breakInDelay ?? 0);
+  let apfMode = $derived(p.apfMode ?? 0);
+  let twinPeak = $derived(p.twinPeak ?? false);
+  let currentMode = $derived(p.currentMode ?? 'CW');
+  const onCwPitchChange = handlers.onCwPitchChange;
+  const onKeySpeedChange = handlers.onKeySpeedChange;
+  const onBreakInToggle = handlers.onBreakInToggle;
+  const onBreakInModeChange = handlers.onBreakInModeChange;
+  const onBreakInDelayChange = handlers.onBreakInDelayChange;
+  const onApfChange = handlers.onApfChange;
+  const onTwinPeakToggle = handlers.onTwinPeakToggle;
+  const onAutoTune = handlers.onAutoTune;
 
   let showBreakIn = $derived(hasCapability('break_in'));
   let showApf = $derived(hasCapability('apf'));

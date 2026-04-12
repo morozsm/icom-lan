@@ -4,33 +4,22 @@
   import { formatOffset, shouldShowPanel } from './rit-utils';
   import { getShortcutHint } from '../layout/shortcut-hints';
 
-  interface Props {
-    ritActive: boolean;
-    ritOffset: number;
-    xitActive: boolean;
-    xitOffset: number;
-    hasRit: boolean;
-    hasXit: boolean;
-    onRitToggle: () => void;
-    onXitToggle: () => void;
-    onRitOffsetChange: (v: number) => void;
-    onXitOffsetChange: (v: number) => void;
-    onClear: () => void;
-  }
+  import { deriveRitXitProps, getRitXitHandlers } from '$lib/runtime/adapters/panel-adapters';
 
-  let {
-    ritActive,
-    ritOffset,
-    xitActive,
-    xitOffset,
-    hasRit,
-    hasXit,
-    onRitToggle,
-    onXitToggle,
-    onRitOffsetChange,
-    onXitOffsetChange,
-    onClear,
-  }: Props = $props();
+  const handlers = getRitXitHandlers();
+  let p = $derived(deriveRitXitProps());
+
+  let ritActive = $derived(p.ritActive);
+  let ritOffset = $derived(p.ritOffset);
+  let xitActive = $derived(p.xitActive);
+  let xitOffset = $derived(p.xitOffset);
+  let hasRit = $derived(p.hasRit);
+  let hasXit = $derived(p.hasXit);
+  const onRitToggle = handlers.onRitToggle;
+  const onXitToggle = handlers.onXitToggle;
+  const onRitOffsetChange = handlers.onRitOffsetChange;
+  const onXitOffsetChange = handlers.onXitOffsetChange;
+  const onClear = handlers.onClear;
 
   let visible = $derived(shouldShowPanel(hasRit, hasXit));
   let offsetValue = $derived(xitActive && !ritActive ? xitOffset : ritOffset);

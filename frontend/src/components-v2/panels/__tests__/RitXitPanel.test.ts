@@ -1,15 +1,38 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mount, unmount, flushSync } from 'svelte';
-import type { ComponentProps } from 'svelte';
-import RitXitPanel from '../RitXitPanel.svelte';
 import { formatOffset, shouldShowPanel } from '../rit-utils';
+
+const mockProps = {
+  ritActive: false,
+  ritOffset: 0,
+  xitActive: false,
+  xitOffset: 0,
+  hasRit: true,
+  hasXit: true,
+};
+
+const mockHandlers = {
+  onRitToggle: vi.fn(),
+  onXitToggle: vi.fn(),
+  onRitOffsetChange: vi.fn(),
+  onXitOffsetChange: vi.fn(),
+  onClear: vi.fn(),
+};
+
+vi.mock('$lib/runtime/adapters/panel-adapters', () => ({
+  deriveRitXitProps: () => mockProps,
+  getRitXitHandlers: () => mockHandlers,
+}));
+
+import RitXitPanel from '../RitXitPanel.svelte';
 
 let components: ReturnType<typeof mount>[] = [];
 
-function mountPanel(props: ComponentProps<typeof RitXitPanel>) {
+function mountPanel(overrides?: Partial<typeof mockProps>) {
+  if (overrides) Object.assign(mockProps, overrides);
   const target = document.createElement('div');
   document.body.appendChild(target);
-  const component = mount(RitXitPanel, { target, props });
+  const component = mount(RitXitPanel, { target });
   flushSync();
   components.push(component);
   return target;
@@ -17,26 +40,21 @@ function mountPanel(props: ComponentProps<typeof RitXitPanel>) {
 
 beforeEach(() => {
   components = [];
+  Object.assign(mockProps, {
+    ritActive: false, ritOffset: 0, xitActive: false, xitOffset: 0,
+    hasRit: true, hasXit: true,
+  });
+  mockHandlers.onRitToggle = vi.fn();
+  mockHandlers.onXitToggle = vi.fn();
+  mockHandlers.onRitOffsetChange = vi.fn();
+  mockHandlers.onXitOffsetChange = vi.fn();
+  mockHandlers.onClear = vi.fn();
 });
 
 afterEach(() => {
   components.forEach((component) => unmount(component));
   document.body.innerHTML = '';
 });
-
-const baseProps: ComponentProps<typeof RitXitPanel> = {
-  ritActive: false,
-  ritOffset: 0,
-  xitActive: false,
-  xitOffset: 0,
-  hasRit: true,
-  hasXit: true,
-  onRitToggle: vi.fn(),
-  onXitToggle: vi.fn(),
-  onRitOffsetChange: vi.fn(),
-  onXitOffsetChange: vi.fn(),
-  onClear: vi.fn(),
-};
 
 // ---------------------------------------------------------------------------
 // formatOffset
@@ -117,25 +135,24 @@ describe('shouldShowPanel', () => {
 
 describe('CLEAR button', () => {
   it('renders a CLEAR action button', () => {
-    const target = mountPanel(baseProps);
+    const target = mountPanel();
     const btn = target.querySelector<HTMLButtonElement>('.clear-row button');
     expect(btn).not.toBeNull();
     expect(btn?.textContent?.trim()).toBe('CLEAR');
   });
 
   it('CLEAR button is never data-active="true" (action-button, not a toggle)', () => {
-    const target = mountPanel(baseProps);
+    const target = mountPanel();
     const btn = target.querySelector<HTMLButtonElement>('.clear-row button');
     expect(btn?.dataset.active).not.toBe('true');
   });
 
   it('calls onClear when CLEAR button is clicked', () => {
-    const onClear = vi.fn();
-    const target = mountPanel({ ...baseProps, onClear });
+    const target = mountPanel();
     const btn = target.querySelector<HTMLButtonElement>('.clear-row button');
     btn?.click();
     flushSync();
-    expect(onClear).toHaveBeenCalledOnce();
+    expect(mockHandlers.onClear).toHaveBeenCalledOnce();
   });
 });
 
@@ -150,39 +167,33 @@ describe('RitXitPanel component', () => {
   });
 
   it('renders the Offset slider when visible', () => {
-    const target = mountPanel(baseProps);
+    const target = mountPanel();
     const labels = Array.from(target.querySelectorAll('.vc-label')).map((el) => el.textContent);
     expect(labels).toContain('Offset');
   });
 
   it('uses the shared offset constraints', () => {
-    const target = mountPanel(baseProps);
+    const target = mountPanel();
     const slider = target.querySelector<HTMLElement>('[role="slider"]');
     expect(slider?.getAttribute('aria-valuemin')).toBe('-9999');
     expect(slider?.getAttribute('aria-valuemax')).toBe('9999');
   });
 
   it('calls onRitOffsetChange when the offset slider changes by default', () => {
-    const onRitOffsetChange = vi.fn();
-    const target = mountPanel({ ...baseProps, onRitOffsetChange });
+    const target = mountPanel();
     const slider = target.querySelector<HTMLElement>('[role="slider"]');
     slider!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
     vi.advanceTimersByTime(60);
 
-    expect(onRitOffsetChange).toHaveBeenCalled();
+    expect(mockHandlers.onRitOffsetChange).toHaveBeenCalled();
   });
 
   it('calls onXitOffsetChange when only XIT is active', () => {
-    const onXitOffsetChange = vi.fn();
-    const target = mountPanel({
-      ...baseProps,
-      xitActive: true,
-      onXitOffsetChange,
-    });
+    const target = mountPanel({ xitActive: true });
     const slider = target.querySelector<HTMLElement>('[role="slider"]');
     slider!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
     vi.advanceTimersByTime(60);
 
-    expect(onXitOffsetChange).toHaveBeenCalled();
+    expect(mockHandlers.onXitOffsetChange).toHaveBeenCalled();
   });
 });
