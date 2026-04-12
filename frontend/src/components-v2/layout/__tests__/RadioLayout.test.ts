@@ -17,6 +17,16 @@ vi.mock('../../../skins/registry', () => ({
   resolveSkinId: vi.fn(() => 'desktop-v2'),
 }));
 
+vi.mock('$lib/runtime', () => ({
+  runtime: {
+    state: null,
+    caps: null,
+    connection: { status: 'disconnected', radioPowerOn: null },
+    audio: { rxEnabled: false, txEnabled: false, volume: 50, muted: false },
+    send: vi.fn(),
+  },
+}));
+
 vi.mock('$lib/stores/connection.svelte', () => ({
   getConnectionStatus: vi.fn(() => ({ connected: false })),
   getRadioPowerOn: vi.fn(() => null),

@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { radio } from '$lib/stores/radio.svelte';
-  import { getCapabilities, hasCapability } from '$lib/stores/capabilities.svelte';
+  import { runtime } from '$lib/runtime';
+  import { hasCapability } from '$lib/stores/capabilities.svelte';
   import RfFrontEnd from '../panels/RfFrontEnd.svelte';
   import ModePanel from '../panels/ModePanel.svelte';
   import FilterPanel from '../panels/FilterPanel.svelte';
@@ -45,9 +45,9 @@
     makeSystemHandlers,
   } from '../wiring/command-bus';
 
-  // Reactive state + capabilities
-  let radioState = $derived(radio.current);
-  let caps = $derived(getCapabilities());
+  // Reactive state + capabilities — via runtime
+  let radioState = $derived(runtime.state);
+  let caps = $derived(runtime.caps);
 
   // --- Panel reorder (shared logic) ---
   const drag = createDragReorder({

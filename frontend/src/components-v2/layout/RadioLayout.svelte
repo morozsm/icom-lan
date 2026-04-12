@@ -12,10 +12,9 @@
     }
   }
   
-  import { radio } from '$lib/stores/radio.svelte';
-  import { getConnectionStatus, getRadioPowerOn } from '$lib/stores/connection.svelte';
+  import { runtime } from '$lib/runtime';
   import { applyModeDefault } from '$lib/stores/tuning.svelte';
-  import { getCapabilities, getKeyboardConfig, hasDualReceiver, hasTx, hasAnyScope, hasSpectrum, hasAudioFft } from '$lib/stores/capabilities.svelte';
+  import { getKeyboardConfig, hasDualReceiver, hasTx, hasAnyScope, hasSpectrum, hasAudioFft } from '$lib/stores/capabilities.svelte';
   import { getLayoutMode } from '$lib/stores/layout.svelte';
   import { resolveSkinId, type SkinId } from '../../skins/registry';
   import SpectrumPanel from '../../components/spectrum/SpectrumPanel.svelte';
@@ -58,9 +57,9 @@
   import { HardwareButton } from '$lib/Button';
   import { Settings } from 'lucide-svelte';
 
-  // Reactive state + capabilities
-  let radioState = $derived(radio.current);
-  let caps = $derived(getCapabilities());
+  // Reactive state + capabilities — via runtime
+  let radioState = $derived(runtime.state);
+  let caps = $derived(runtime.caps);
   let keyboardConfig = $derived(getKeyboardConfig());
   let activeMode = $derived(radioState?.active === 'SUB' ? radioState?.sub?.mode : radioState?.main?.mode);
 
@@ -82,7 +81,7 @@
   let landscapeSpectrumDismissed = $state(false);
   let landscapeAutoLocked = $state(false);
   let spectrumLandscape = $derived(isMobile && isLandscape && !landscapeSpectrumDismissed && !landscapeAutoLocked);
-  let connectionStatus = $derived(getConnectionStatus());
+  let connectionStatus = $derived(runtime.connection.status);
 
   // Skin resolution — determines which layout to render
   let skinId = $derived<SkinId>(resolveSkinId({
@@ -300,7 +299,7 @@
 </div>
 {/if}
 
-{#if getRadioPowerOn() === false}
+{#if runtime.connection.radioPowerOn === false}
   <div class="power-off-overlay" aria-label="Radio is powered off">
     <div class="power-off-content">
       <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

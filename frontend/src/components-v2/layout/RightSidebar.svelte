@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { radio } from '$lib/stores/radio.svelte';
-  import { getCapabilities, hasCapability } from '$lib/stores/capabilities.svelte';
+  import { runtime } from '$lib/runtime';
+  import { hasCapability } from '$lib/stores/capabilities.svelte';
   import RxAudioPanel from '../panels/RxAudioPanel.svelte';
   import DspPanel from '../panels/DspPanel.svelte';
   import TxPanel from '../panels/TxPanel.svelte';
@@ -45,9 +45,9 @@
     makeScanHandlers,
   } from '../wiring/command-bus';
 
-  // Reactive state + capabilities
-  let radioState = $derived(radio.current);
-  let caps = $derived(getCapabilities());
+  // Reactive state + capabilities — via runtime
+  let radioState = $derived(runtime.state);
+  let caps = $derived(runtime.caps);
 
   // Derived props via state adapter — native panels
   let dsp = $derived(toDspProps(radioState, caps));
