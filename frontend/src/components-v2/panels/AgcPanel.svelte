@@ -1,26 +1,21 @@
 <script lang="ts">
   import { HardwareButton } from '$lib/Button';
-  import { getAgcModes, getAgcLabels } from '$lib/stores/capabilities.svelte';
   import { buildAgcOptions } from './agc-utils';
+  import { deriveAgcProps, getAgcHandlers } from '$lib/runtime/adapters/panel-adapters';
 
-  interface Props {
-    agcMode: number;
-    onAgcModeChange: (v: number) => void;
-  }
-
-  let { agcMode, onAgcModeChange }: Props = $props();
-
-  let options = $derived(buildAgcOptions(getAgcModes(), getAgcLabels()));
+  const handlers = getAgcHandlers();
+  let props = $derived(deriveAgcProps());
+  let options = $derived(buildAgcOptions(props.agcModes, props.agcLabels));
 </script>
 
 <div class="panel-body">
   <div class="button-grid">
     {#each options as option}
       <HardwareButton
-        active={agcMode === option.value}
+        active={props.agcMode === option.value}
         indicator="edge-left"
         color="cyan"
-        onclick={() => onAgcModeChange(option.value)}
+        onclick={() => handlers.onAgcModeChange(option.value)}
       >
         {option.label}
       </HardwareButton>

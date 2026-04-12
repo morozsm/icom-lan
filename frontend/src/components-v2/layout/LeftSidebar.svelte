@@ -18,12 +18,9 @@
   import { createDragReorder } from '$lib/drag-reorder.svelte';
   import {
     toRfFrontEndProps,
-    toModeProps,
     toFilterProps,
-    toAgcProps,
     toRitXitProps,
     toBandSelectorProps,
-    toAntennaProps,
     toScanProps,
     toDspProps,
     toTxProps,
@@ -31,13 +28,10 @@
   } from '../wiring/state-adapter';
   import {
     makeRfFrontEndHandlers,
-    makeModeHandlers,
     makeFilterHandlers,
-    makeAgcHandlers,
     makeRitXitHandlers,
     makeBandHandlers,
     makePresetHandlers,
-    makeAntennaHandlers,
     makeScanHandlers,
     makeDspHandlers,
     makeTxHandlers,
@@ -56,28 +50,21 @@
     containerSelector: '.left-sidebar',
   });
 
-  // Derived props via state adapter — native panels
+  // Derived props via state adapter — panels not yet self-wiring
   let rfFrontEnd = $derived(toRfFrontEndProps(radioState, caps));
-  let mode = $derived(toModeProps(radioState, caps));
   let filter = $derived(toFilterProps(radioState, caps));
-  let agc = $derived(toAgcProps(radioState, caps));
   let ritXit = $derived(toRitXitProps(radioState, caps));
   let band = $derived(toBandSelectorProps(radioState));
-  let antenna = $derived(toAntennaProps(radioState, caps));
   let scan = $derived(toScanProps(radioState));
-  // Derived props — panels from right sidebar (for cross-sidebar rendering)
   let dsp = $derived(toDspProps(radioState, caps));
   let tx = $derived(toTxProps(radioState, caps));
   let cw = $derived(toCwProps(radioState, caps));
-  // Command handlers via command-bus
+  // Command handlers
   const rfHandlers = makeRfFrontEndHandlers();
-  const modeHandlers = makeModeHandlers();
   const filterHandlers = makeFilterHandlers();
-  const agcHandlers = makeAgcHandlers();
   const ritXitHandlers = makeRitXitHandlers();
   const bandHandlers = makeBandHandlers();
   const presetHandlers = makePresetHandlers();
-  const antennaHandlers = makeAntennaHandlers();
   const scanHandlers = makeScanHandlers();
   const dspHandlers = makeDspHandlers();
   const txHandlers = makeTxHandlers();
@@ -111,16 +98,7 @@
     <CollapsiblePanel title="MODE" panelId="mode"
       draggable={true} onDragStart={drag.handleDragStart}
       style={drag.dragStyle('mode')}>
-      <ModePanel
-        currentMode={mode.currentMode}
-        modes={mode.modes}
-        dataMode={mode.dataMode}
-        hasDataMode={mode.hasDataMode}
-        dataModeCount={mode.dataModeCount}
-        dataModeLabels={mode.dataModeLabels}
-        onModeChange={modeHandlers.onModeChange}
-        onDataModeChange={modeHandlers.onDataModeChange}
-      />
+      <ModePanel />
     </CollapsiblePanel>
   {/if}
 
@@ -158,10 +136,7 @@
     <CollapsiblePanel title="AGC" panelId="agc"
       draggable={true} onDragStart={drag.handleDragStart}
       style={drag.dragStyle('agc')}>
-      <AgcPanel
-        agcMode={agc.agcMode}
-        onAgcModeChange={agcHandlers.onAgcModeChange}
-      />
+      <AgcPanel />
     </CollapsiblePanel>
   {/if}
 
@@ -197,19 +172,11 @@
     </CollapsiblePanel>
   {/if}
 
-  {#if drag.order.includes('antenna') && antenna.antennaCount > 1}
+  {#if drag.order.includes('antenna') && (caps?.antennas ?? 1) > 1}
     <CollapsiblePanel title="ANTENNA" panelId="antenna" dataPanel="antenna"
       draggable={true} onDragStart={drag.handleDragStart}
       style={drag.dragStyle('antenna')}>
-      <AntennaPanel
-        txAntenna={antenna.txAntenna}
-        rxAnt={antenna.rxAnt}
-        antennaCount={antenna.antennaCount}
-        hasRxAntenna={antenna.hasRxAntenna}
-        onSelectAnt1={antennaHandlers.onSelectAnt1}
-        onSelectAnt2={antennaHandlers.onSelectAnt2}
-        onToggleRxAnt={antennaHandlers.onToggleRxAnt}
-      />
+      <AntennaPanel />
     </CollapsiblePanel>
   {/if}
 

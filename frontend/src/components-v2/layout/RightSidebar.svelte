@@ -21,12 +21,9 @@
     toTxProps,
     toCwProps,
     toRfFrontEndProps,
-    toModeProps,
     toFilterProps,
-    toAgcProps,
     toRitXitProps,
     toBandSelectorProps,
-    toAntennaProps,
     toScanProps,
   } from '../wiring/state-adapter';
   import {
@@ -35,13 +32,10 @@
     makeCwPanelHandlers,
     makeSystemHandlers,
     makeRfFrontEndHandlers,
-    makeModeHandlers,
     makeFilterHandlers,
-    makeAgcHandlers,
     makeRitXitHandlers,
     makeBandHandlers,
     makePresetHandlers,
-    makeAntennaHandlers,
     makeScanHandlers,
   } from '../wiring/command-bus';
 
@@ -55,12 +49,9 @@
   let cw = $derived(toCwProps(radioState, caps));
   // Derived props — panels from left sidebar (for cross-sidebar rendering)
   let rfFrontEnd = $derived(toRfFrontEndProps(radioState, caps));
-  let modeProps = $derived(toModeProps(radioState, caps));
   let filter = $derived(toFilterProps(radioState, caps));
-  let agc = $derived(toAgcProps(radioState, caps));
   let ritXit = $derived(toRitXitProps(radioState, caps));
   let band = $derived(toBandSelectorProps(radioState));
-  let antenna = $derived(toAntennaProps(radioState, caps));
   let scan = $derived(toScanProps(radioState));
 
   // Command handlers via command-bus
@@ -69,13 +60,10 @@
   const cwHandlers = makeCwPanelHandlers();
   const systemHandlers = makeSystemHandlers();
   const rfHandlers = makeRfFrontEndHandlers();
-  const modeHandlers = makeModeHandlers();
   const filterHandlers = makeFilterHandlers();
-  const agcHandlers = makeAgcHandlers();
   const ritXitHandlers = makeRitXitHandlers();
   const bandHandlers = makeBandHandlers();
   const presetHandlers = makePresetHandlers();
-  const antennaHandlers = makeAntennaHandlers();
   const scanHandlers = makeScanHandlers();
 
   type RightSidebarMode = 'all' | 'rx' | 'tx';
@@ -212,16 +200,7 @@
   {#if drag.order.includes('mode')}
     <CollapsiblePanel title="MODE" panelId="mode"
       draggable onDragStart={drag.handleDragStart} style={drag.dragStyle('mode')}>
-      <ModePanel
-        currentMode={modeProps.currentMode}
-        modes={modeProps.modes}
-        dataMode={modeProps.dataMode}
-        hasDataMode={modeProps.hasDataMode}
-        dataModeCount={modeProps.dataModeCount}
-        dataModeLabels={modeProps.dataModeLabels}
-        onModeChange={modeHandlers.onModeChange}
-        onDataModeChange={modeHandlers.onDataModeChange}
-      />
+      <ModePanel />
     </CollapsiblePanel>
   {/if}
 
@@ -257,10 +236,7 @@
   {#if drag.order.includes('agc')}
     <CollapsiblePanel title="AGC" panelId="agc"
       draggable onDragStart={drag.handleDragStart} style={drag.dragStyle('agc')}>
-      <AgcPanel
-        agcMode={agc.agcMode}
-        onAgcModeChange={agcHandlers.onAgcModeChange}
-      />
+      <AgcPanel />
     </CollapsiblePanel>
   {/if}
 
@@ -294,18 +270,10 @@
     </CollapsiblePanel>
   {/if}
 
-  {#if drag.order.includes('antenna') && antenna.antennaCount > 1}
+  {#if drag.order.includes('antenna') && (caps?.antennas ?? 1) > 1}
     <CollapsiblePanel title="ANTENNA" panelId="antenna" dataPanel="antenna"
       draggable onDragStart={drag.handleDragStart} style={drag.dragStyle('antenna')}>
-      <AntennaPanel
-        txAntenna={antenna.txAntenna}
-        rxAnt={antenna.rxAnt}
-        antennaCount={antenna.antennaCount}
-        hasRxAntenna={antenna.hasRxAntenna}
-        onSelectAnt1={antennaHandlers.onSelectAnt1}
-        onSelectAnt2={antennaHandlers.onSelectAnt2}
-        onToggleRxAnt={antennaHandlers.onToggleRxAnt}
-      />
+      <AntennaPanel />
     </CollapsiblePanel>
   {/if}
 
