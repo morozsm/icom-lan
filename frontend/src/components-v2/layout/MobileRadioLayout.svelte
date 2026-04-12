@@ -1,8 +1,6 @@
 <script lang="ts">
-  import { radio } from '$lib/stores/radio.svelte';
-  import { getCapabilities, hasTx, hasDualReceiver, hasAnyScope, hasSpectrum } from '$lib/stores/capabilities.svelte';
-  import { getConnectionStatus, getRadioPowerOn } from '$lib/stores/connection.svelte';
-  import { getAudioState } from '$lib/stores/audio.svelte';
+  import { runtime } from '$lib/runtime';
+  import { hasTx, hasDualReceiver, hasAnyScope, hasSpectrum } from '$lib/stores/capabilities.svelte';
   import { HardwareButton } from '$lib/Button';
   import SpectrumPanel from '../../components/spectrum/SpectrumPanel.svelte';
   import AmberLcdDisplay from '../panels/lcd/AmberLcdDisplay.svelte';
@@ -51,11 +49,11 @@
   const txAudio = getTxAudioControl();
   import { onMount, onDestroy } from 'svelte';
 
-  // ── State ──
-  let radioState = $derived(radio.current);
-  let caps = $derived(getCapabilities());
+  // ── State — via runtime ──
+  let radioState = $derived(runtime.state);
+  let caps = $derived(runtime.caps);
   let keyboardConfig = $derived(getKeyboardConfig());
-  let audioState = $derived(getAudioState());
+  let audioState = $derived(runtime.audio);
   let txCapable = $derived(hasTx());
 
   // ── VFO props ──

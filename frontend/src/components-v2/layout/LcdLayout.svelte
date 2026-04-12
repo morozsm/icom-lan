@@ -7,9 +7,8 @@
     setTheme(getTheme());
   }
 
-  import { radio } from '$lib/stores/radio.svelte';
+  import { runtime } from '$lib/runtime';
   import { getKeyboardConfig } from '$lib/stores/capabilities.svelte';
-  import { getRadioPowerOn } from '$lib/stores/connection.svelte';
   import { applyModeDefault } from '$lib/stores/tuning.svelte';
   import AmberLcdDisplay from '../panels/lcd/AmberLcdDisplay.svelte';
   import LeftSidebar from './LeftSidebar.svelte';
@@ -18,13 +17,14 @@
   import StatusBar from './StatusBar.svelte';
   import { makeKeyboardHandlers } from '../wiring/command-bus';
 
-  let radioState = $derived(radio.current);
+  let radioState = $derived(runtime.state);
   let keyboardConfig = $derived(getKeyboardConfig());
   let activeMode = $derived(radioState?.active === 'SUB' ? radioState?.sub?.mode : radioState?.main?.mode);
 
   const keyboardHandlers = makeKeyboardHandlers();
 
   async function handlePowerOn() {
+    // TODO(#653): migrate to runtime.system.powerOn() when SystemController is implemented
     try {
       const resp = await fetch('/api/v1/radio/power', {
         method: 'POST',
@@ -69,7 +69,7 @@
 
 </div>
 
-{#if getRadioPowerOn() === false}
+{#if runtime.connection.radioPowerOn === false}
   <div class="power-off-overlay" aria-label="Radio is powered off">
     <div class="power-off-content">
       <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
