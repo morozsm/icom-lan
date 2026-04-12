@@ -13,7 +13,6 @@ import { TxMic } from './tx-mic';
 import { setAudioConnected } from '../stores/connection.svelte';
 import { getRadioState } from '../stores/radio.svelte';
 import { setRxEnabled, setTxEnabled } from '../stores/audio.svelte';
-import { CODEC_OPUS, CODEC_PCM16, parseRxHeader } from './constants';
 
 const BACKOFF_MIN = 500;
 const BACKOFF_MAX = 10000;
@@ -27,7 +26,6 @@ class AudioManager {
   private backoff = BACKOFF_MIN;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private _listeners: Set<() => void> = new Set();
-  private rxHeaderLogCount = 0;
 
   // Reactive state (read externally)
   get rxEnabled(): boolean { return this._rxEnabled; }
@@ -144,7 +142,6 @@ class AudioManager {
 
     ws.onopen = () => {
       this.backoff = BACKOFF_MIN;
-      this.rxHeaderLogCount = 0;
       setAudioConnected(true);
       console.log('[audio-ws] connected');
       if (this._rxEnabled) {
@@ -157,31 +154,9 @@ class AudioManager {
       this.notify();
     };
 
-    let frameCount = 0;
     ws.onmessage = (ev) => {
       if (ev.data instanceof ArrayBuffer) {
-        frameCount++;
-        if (this.rxHeaderLogCount < 5) {
-          const hdr = parseRxHeader(ev.data);
-          if (!hdr) {
-            console.warn(`[audio-ws] RX frame #${frameCount} has invalid header bytes=${ev.data.byteLength}`);
-          } else {
-            const codecName = hdr.codec === CODEC_PCM16
-              ? 'PCM16'
-              : hdr.codec === CODEC_OPUS
-                ? 'OPUS'
-                : `0x${hdr.codec.toString(16).padStart(2, '0')}`;
-            console.info(
-              `[audio-ws] RX frame #${frameCount} codec=${codecName} sr=${hdr.sampleRate} ch=${hdr.channels} payload=${hdr.payload.byteLength}`,
-            );
-          }
-          this.rxHeaderLogCount++;
-        }
-        try {
-          this.rxPlayer.feed(ev.data);
-        } catch (e) {
-          if (frameCount <= 3) console.error(`[audio-ws] feed error on frame #${frameCount}:`, e);
-        }
+        this.rxPlayer.feed(ev.data);
       }
     };
 
@@ -191,7 +166,7 @@ class AudioManager {
     };
 
     ws.onclose = (ev) => {
-      console.warn(`[audio-ws] closed code=${ev.code} reason=${ev.reason} frames=${frameCount} rxEnabled=${this._rxEnabled}`);
+      console.warn(`[audio-ws] closed code=${ev.code} reason=${ev.reason}`);
       this.ws = null;
       setAudioConnected(false);
       this.notify();

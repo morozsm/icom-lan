@@ -84,6 +84,64 @@ IOREG_THREE_RADIOS = textwrap.dedent("""\
 """)
 
 
+# Yaesu FTX-1 ("USB Audio Device") alongside Icom IC-7610 ("USB Audio CODEC")
+# FTX-1: audio @ 0x20132200, serial HRI @ 0x20131000 (same hub prefix 0x2013)
+IOREG_YAESU_AND_ICOM = textwrap.dedent("""\
+    | +-o USB Audio Device@20132200  <class IOUSBHostDevice, id 0x1000d4711>
+    | |   "locationID" = 538124800
+    | |   "USB Product Name" = "USB Audio Device"
+    | +-o YAESU HRI USB I/F@20131000  <class IOUSBHostDevice, id 0x1000d470e>
+    | |   "locationID" = 538120192
+    | |   "USB Vendor Name" = "YAESUMUSEN"
+    | | +-o AppleUSBSLCOM
+    | |   | "IOTTYSuffix" = "01AE340D0"
+    | |   | "IOCalloutDevice" = "/dev/cu.usbserial-01AE340D0"
+    | +-o USB Audio CODEC@01111400  <class IOUSBHostDevice, id 0x1000a9ab5>
+    | |   "locationID" = 17895424
+    | |   "USB Product Name" = "USB Audio CODEC"
+    | +-o CP2102 USB to UART Bridge Controller@01112000
+    | |   "locationID" = 17895936
+    | | +-o AppleUSBSLCOM
+    | |   | "IOTTYSuffix" = "111120"
+    | |   | "IOCalloutDevice" = "/dev/cu.usbserial-111120"
+""")
+
+# Yaesu FTX-1 only (no Icom)
+# audio @ 0x20132200, serial HRI @ 0x20131000 (same hub prefix 0x2013)
+IOREG_YAESU_ONLY = textwrap.dedent("""\
+    | +-o USB Audio Device@20132200  <class IOUSBHostDevice, id 0x1000d4711>
+    | |   "locationID" = 538124800
+    | |   "USB Product Name" = "USB Audio Device"
+    | +-o YAESU HRI USB I/F@20131000  <class IOUSBHostDevice, id 0x1000d470e>
+    | |   "locationID" = 538120192
+    | | +-o AppleUSBSLCOM
+    | |   | "IOTTYSuffix" = "01AE340D0"
+    | |   | "IOCalloutDevice" = "/dev/cu.usbserial-01AE340D0"
+""")
+
+
+def _make_mock_sd_mixed(
+    usb_codec_count: int = 1,
+    usb_device_count: int = 1,
+) -> MagicMock:
+    """Create a mock sounddevice with both "USB Audio CODEC" and "USB Audio Device" pairs."""
+    devices: list[dict[str, Any]] = [
+        {"name": "Built-in Speaker", "index": 0, "max_input_channels": 0, "max_output_channels": 2, "default_samplerate": 48000.0},
+    ]
+    for i in range(usb_device_count):
+        base_idx = len(devices)
+        devices.append({"name": "USB Audio Device", "index": base_idx, "max_input_channels": 0, "max_output_channels": 2, "default_samplerate": 48000.0})
+        devices.append({"name": "USB Audio Device", "index": base_idx + 1, "max_input_channels": 2, "max_output_channels": 0, "default_samplerate": 48000.0})
+    for i in range(usb_codec_count):
+        base_idx = len(devices)
+        devices.append({"name": "USB Audio CODEC", "index": base_idx, "max_input_channels": 0, "max_output_channels": 2, "default_samplerate": 48000.0})
+        devices.append({"name": "USB Audio CODEC", "index": base_idx + 1, "max_input_channels": 2, "max_output_channels": 0, "default_samplerate": 48000.0})
+    sd = MagicMock()
+    sd.query_devices.return_value = devices
+    sd.default.device = [-1, -1]
+    return sd
+
+
 def _make_mock_sd(
     usb_codec_count: int = 2,
 ) -> MagicMock:
@@ -165,6 +223,16 @@ class TestFindAudioCodecLocations:
     def test_three_radios(self) -> None:
         locs = _find_audio_codec_locations(IOREG_THREE_RADIOS)
         assert locs == [0x01111400, 0x20144000, 0x30144000]
+
+    def test_yaesu_usb_audio_device(self) -> None:
+        """Yaesu FTX-1 uses 'USB Audio Device' instead of 'USB Audio CODEC'."""
+        locs = _find_audio_codec_locations(IOREG_YAESU_ONLY)
+        assert locs == [0x20132200]
+
+    def test_mixed_yaesu_and_icom(self) -> None:
+        """Both Yaesu 'USB Audio Device' and Icom 'USB Audio CODEC' are found."""
+        locs = _find_audio_codec_locations(IOREG_YAESU_AND_ICOM)
+        assert locs == [0x01111400, 0x20132200]
 
 
 class TestFindSerialLocation:
@@ -296,6 +364,45 @@ class TestResolveMacos:
         assert result.location_prefix == 0x3014
         assert result.rx_device_index == 6  # input[2]
         assert result.tx_device_index == 5  # output[2]
+
+
+class TestResolveYaesu:
+    """Test resolution for Yaesu radios using 'USB Audio Device' naming."""
+
+    def test_yaesu_ftx1_alone(self) -> None:
+        sd = _make_mock_sd_mixed(usb_codec_count=0, usb_device_count=1)
+        result = _resolve_macos(
+            "/dev/cu.usbserial-01AE340D0",
+            sounddevice_module=sd,
+            ioreg_output=IOREG_YAESU_ONLY,
+        )
+        assert result is not None
+        assert result.location_prefix == 0x2013
+        assert result.serial_port == "/dev/cu.usbserial-01AE340D0"
+
+    def test_yaesu_alongside_icom(self) -> None:
+        """Yaesu FTX-1 + Icom IC-7610 both resolved correctly."""
+        sd = _make_mock_sd_mixed(usb_codec_count=1, usb_device_count=1)
+        # Resolve Yaesu
+        result_yaesu = _resolve_macos(
+            "/dev/cu.usbserial-01AE340D0",
+            sounddevice_module=sd,
+            ioreg_output=IOREG_YAESU_AND_ICOM,
+        )
+        assert result_yaesu is not None
+        assert result_yaesu.location_prefix == 0x2013
+
+        # Resolve Icom
+        result_icom = _resolve_macos(
+            "/dev/cu.usbserial-111120",
+            sounddevice_module=sd,
+            ioreg_output=IOREG_YAESU_AND_ICOM,
+        )
+        assert result_icom is not None
+        assert result_icom.location_prefix == 0x0111
+
+        # Different devices
+        assert result_yaesu.rx_device_index != result_icom.rx_device_index
 
 
 class TestResolvePlatformDispatch:

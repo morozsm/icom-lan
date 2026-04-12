@@ -18,10 +18,6 @@ export class RxPlayer {
   private nextPlayTime = 0;
   private opusTs = 0;
   private _volume = 1.0;
-  private loggedSuspendedPcm = false;
-  private loggedSuspendedOpus = false;
-  private loggedMissingDecoder = false;
-  private loggedDecoderInit = false;
 
   get volume(): number {
     return this._volume;
@@ -38,40 +34,20 @@ export class RxPlayer {
 
   start(): void {
     if (this.ctx) {
-      if (this.ctx.state === 'suspended') {
-        console.info('[rx-player] reusing suspended AudioContext; attempting resume');
-        this.ctx.resume()
-          .then(() => {
-            console.info(`[rx-player] AudioContext resumed (state=${this.ctx?.state ?? 'none'})`);
-          })
-          .catch((err) => {
-            console.warn('[rx-player] AudioContext resume failed', err);
-          });
-      }
+      if (this.ctx.state === 'suspended') this.ctx.resume();
       return;
     }
     const Ctx = globalThis.AudioContext ?? (globalThis as any).webkitAudioContext;
     if (!Ctx) return;
     this.ctx = new Ctx({ sampleRate: SAMPLE_RATE });
-    this.ctx.onstatechange = () => {
-      console.info(`[rx-player] AudioContext state=${this.ctx?.state ?? 'none'}`);
-    };
     this.gain = this.ctx.createGain();
     this.gain.gain.value = this._volume;
     this.gain.connect(this.ctx.destination);
     this.nextPlayTime = 0;
-    console.info(`[rx-player] AudioContext created sampleRate=${this.ctx.sampleRate} state=${this.ctx.state}`);
     // Resume suspended context. When it transitions to 'running',
     // playPcm16/decodeOpus will start scheduling buffers automatically.
     if (this.ctx.state === 'suspended') {
-      console.info('[rx-player] initial AudioContext is suspended; attempting resume');
-      this.ctx.resume()
-        .then(() => {
-          console.info(`[rx-player] initial resume resolved state=${this.ctx?.state ?? 'none'}`);
-        })
-        .catch((err) => {
-          console.warn('[rx-player] initial AudioContext resume failed', err);
-        });
+      this.ctx.resume().catch(() => {});
     }
   }
 
@@ -87,10 +63,6 @@ export class RxPlayer {
     }
     this.nextPlayTime = 0;
     this.opusTs = 0;
-    this.loggedSuspendedPcm = false;
-    this.loggedSuspendedOpus = false;
-    this.loggedMissingDecoder = false;
-    this.loggedDecoderInit = false;
   }
 
   /** Feed a raw binary frame from WS */
@@ -114,15 +86,7 @@ export class RxPlayer {
 
   private playPcm16(payload: Uint8Array, sr: number, ch: number): void {
     if (!this.ctx || !this.gain) return;
-    if (this.ctx.state === 'suspended') {
-      if (!this.loggedSuspendedPcm) {
-        this.loggedSuspendedPcm = true;
-        console.warn(
-          `[rx-player] skipping PCM16 playback while AudioContext is suspended payload=${payload.byteLength} sr=${sr} ch=${ch}`,
-        );
-      }
-      return; // wait for resume
-    }
+    if (this.ctx.state === 'suspended') return; // wait for resume
     const channels = ch === 2 ? 2 : 1;
     const frameCount = Math.floor(payload.byteLength / (2 * channels));
     if (frameCount <= 0) return;
@@ -142,32 +106,12 @@ export class RxPlayer {
 
   private decodeOpus(payload: Uint8Array, sr: number, ch: number): void {
     if (!this.ctx || !this.gain) return;
-    if (this.ctx.state === 'suspended') {
-      if (!this.loggedSuspendedOpus) {
-        this.loggedSuspendedOpus = true;
-        console.warn(
-          `[rx-player] skipping Opus decode while AudioContext is suspended payload=${payload.byteLength} sr=${sr} ch=${ch}`,
-        );
-      }
-      return;
-    }
-    if (typeof AudioDecoder === 'undefined') {
-      if (!this.loggedMissingDecoder) {
-        this.loggedMissingDecoder = true;
-        console.warn(
-          `[rx-player] AudioDecoder unavailable; cannot play Opus payload=${payload.byteLength} sr=${sr} ch=${ch}`,
-        );
-      }
-      return;
-    }
+    if (this.ctx.state === 'suspended') return;
+    if (typeof AudioDecoder === 'undefined') return;
 
     if (!this.decoder) {
       const ctx = this.ctx;
       this.opusTs = 0;
-      if (!this.loggedDecoderInit) {
-        this.loggedDecoderInit = true;
-        console.info(`[rx-player] creating AudioDecoder sr=${sr > 0 ? sr : SAMPLE_RATE} ch=${ch === 2 ? 2 : 1}`);
-      }
       this.decoder = new AudioDecoder({
         output: (audioData: AudioData) => {
           const frames = audioData.numberOfFrames;

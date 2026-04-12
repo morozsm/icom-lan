@@ -9,7 +9,8 @@ audio input/output device indices by correlating USB topology information.
 
 1. Parse the serial port's TTY suffix → find its ``locationID`` in IORegistry.
 2. Extract the upper 16 bits of ``locationID`` as the USB hub prefix.
-3. Find all ``USB Audio CODEC`` devices in IORegistry with their ``locationID``.
+3. Find all USB audio devices (``USB Audio CODEC``, ``USB Audio Device``) in
+   IORegistry with their ``locationID``.
 4. Match audio devices sharing the same hub prefix as the serial port.
 5. Map matched locations to ``sounddevice`` device indices by positional order.
 
@@ -230,11 +231,12 @@ def _run_ioreg() -> str | None:
         result = subprocess.run(
             ["/usr/sbin/ioreg", "-l"],
             capture_output=True,
-            text=True,
             timeout=10,
         )
         if result.returncode == 0:
-            return result.stdout
+            # ioreg may contain non-UTF-8 bytes (e.g. firmware blobs),
+            # decode leniently to avoid UnicodeDecodeError.
+            return result.stdout.decode("utf-8", errors="replace")
     except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as exc:
         logger.debug("usb-audio-resolve: ioreg failed: %s", exc)
     return None
@@ -258,14 +260,16 @@ def _find_serial_location(ioreg_text: str, tty_suffix: str) -> int | None:
 
 
 def _find_audio_codec_locations(ioreg_text: str) -> list[int]:
-    """Find all ``locationID`` values for ``USB Audio CODEC`` devices.
+    """Find all ``locationID`` values for USB audio devices.
 
-    Parses the IORegistry tree node addresses (e.g. ``USB Audio CODEC@20144000``)
-    to extract the location encoded in the node path, which is more reliable
-    than searching for nearby ``locationID`` properties.
+    Parses IORegistry tree node addresses to extract the location encoded
+    in the node path.  Supports multiple naming conventions:
+
+    - ``USB Audio CODEC@...`` — Icom (Burr-Brown/TI chip)
+    - ``USB Audio Device@...`` — Yaesu FTX-1 and similar
     """
     locations: list[int] = []
-    for m in re.finditer(r"USB Audio CODEC@([0-9a-fA-F]+)", ioreg_text):
+    for m in re.finditer(r"USB Audio (?:CODEC|Device)@([0-9a-fA-F]+)", ioreg_text):
         locations.append(int(m.group(1), 16))
     return sorted(locations)
 

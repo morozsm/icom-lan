@@ -296,48 +296,54 @@ class TestMainEntryPoint:
             assert exc_info.value.code == 0
 
 
+def _run_main_serve(env_overrides: dict[str, str] | None = None) -> int:
+    """Run main() for 'serve' command, intercepting os._exit and the event loop.
+
+    main() uses asyncio.new_event_loop() + loop.run_until_complete() for serve,
+    then calls os._exit(). We must intercept os._exit to capture the exit code
+    and prevent process termination.
+    """
+    exit_code = -1
+
+    def fake_exit(code: int) -> None:
+        nonlocal exit_code
+        exit_code = code
+        raise SystemExit(code)
+
+    env = {"ICOM_PID_FILE": "", **(env_overrides or {})}
+    with patch.dict("os.environ", env, clear=False):
+        with patch("sys.argv", ["icom-lan", "--host", "127.0.0.1", "serve"]):
+            with patch("icom_lan.cli._run", new_callable=AsyncMock, return_value=0):
+                with patch("icom_lan.cli.os._exit", side_effect=fake_exit):
+                    with pytest.raises(SystemExit):
+                        main()
+    return exit_code
+
+
 class TestPidFile:
     """PID file is optional and only used for daemon-like commands (web, serve)."""
 
     def test_pid_file_not_created_when_icom_pid_file_unset(self):
         """Without ICOM_PID_FILE, Path.write_text is not called for PID."""
-        real_run = asyncio.run
-        with patch.dict("os.environ", {"ICOM_PID_FILE": ""}, clear=False):
-            with patch("sys.argv", ["icom-lan", "--host", "127.0.0.1", "serve"]):
-                with patch("icom_lan.cli._run", new_callable=AsyncMock, return_value=0):
-                    with patch("icom_lan.cli.asyncio.run") as mock_run:
-                        mock_run.side_effect = lambda coro: real_run(coro)
-                        with pytest.raises(SystemExit) as exc:
-                            main()
-                        assert exc.value.code == 0
-        # No Path.write_text for PID when ICOM_PID_FILE is empty
-        # (we did not patch Path, so no direct assertion; behavior is "no file path set")
+        code = _run_main_serve({"ICOM_PID_FILE": ""})
+        assert code == 0
 
     def test_pid_file_created_for_serve_when_icom_pid_file_set(self, tmp_path):
         """With ICOM_PID_FILE set, serve writes PID to that path and removes it on exit."""
         pid_path = tmp_path / "icom.pid"
-        real_run = asyncio.run
-        with patch.dict("os.environ", {"ICOM_PID_FILE": str(pid_path)}, clear=False):
-            with patch("sys.argv", ["icom-lan", "--host", "127.0.0.1", "serve"]):
-                with patch("icom_lan.cli._run", new_callable=AsyncMock, return_value=0):
-                    with patch("icom_lan.cli.asyncio.run") as mock_run:
-                        mock_run.side_effect = lambda coro: real_run(coro)
-                        with pytest.raises(SystemExit) as exc:
-                            main()
-                        assert exc.value.code == 0
-        assert not pid_path.exists()  # removed in finally
+        code = _run_main_serve({"ICOM_PID_FILE": str(pid_path)})
+        assert code == 0
+        assert not pid_path.exists()  # removed before os._exit
 
     def test_pid_file_not_created_for_status_even_when_icom_pid_file_set(
         self, tmp_path
     ):
         """With ICOM_PID_FILE set, status (non-daemon) does not write a PID file."""
         pid_path = tmp_path / "icom.pid"
-        real_run = asyncio.run
         with patch.dict("os.environ", {"ICOM_PID_FILE": str(pid_path)}, clear=False):
             with patch("sys.argv", ["icom-lan", "--host", "127.0.0.1", "status"]):
                 with patch("icom_lan.cli._run", new_callable=AsyncMock, return_value=0):
-                    with patch("icom_lan.cli.asyncio.run") as mock_run:
-                        mock_run.side_effect = lambda coro: real_run(coro)
+                    with patch("icom_lan.cli.os._exit", side_effect=lambda c: (_ for _ in ()).throw(SystemExit(c))):
                         with pytest.raises(SystemExit) as exc:
                             main()
                         assert exc.value.code == 0
