@@ -1,28 +1,20 @@
 <script lang="ts">
   import { HardwareButton } from '$lib/Button';
   import { getShortcutHint } from '../layout/shortcut-hints';
+  import { deriveModeProps, getModeHandlers } from '$lib/runtime/adapters/panel-adapters';
 
-  interface Props {
-    currentMode: string;
-    modes: string[];
-    dataMode: number;
-    hasDataMode: boolean;
-    dataModeCount?: number;
-    dataModeLabels?: Record<string, string>;
-    onModeChange: (mode: string) => void;
-    onDataModeChange: (mode: number) => void;
-  }
+  const handlers = getModeHandlers();
+  let p = $derived(deriveModeProps());
 
-  let {
-    currentMode,
-    modes,
-    dataMode,
-    hasDataMode,
-    dataModeCount = 0,
-    dataModeLabels = { '0': 'OFF', '1': 'D1', '2': 'D2', '3': 'D3' },
-    onModeChange,
-    onDataModeChange,
-  }: Props = $props();
+  // Destructure for template readability
+  let currentMode = $derived(p.currentMode);
+  let modes = $derived(p.modes);
+  let dataMode = $derived(p.dataMode);
+  let hasDataMode = $derived(p.hasDataMode);
+  let dataModeCount = $derived(p.dataModeCount ?? 0);
+  let dataModeLabels = $derived(p.dataModeLabels ?? { '0': 'OFF', '1': 'D1', '2': 'D2', '3': 'D3' });
+  const onModeChange = handlers.onModeChange;
+  const onDataModeChange = handlers.onDataModeChange;
 
   // Canonical display order — covers both IC-7610 and Yaesu naming conventions.
   const modeOrder = [

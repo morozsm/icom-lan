@@ -1,25 +1,17 @@
 <script lang="ts">
   import { HardwareButton } from '$lib/Button';
+  import { deriveAntennaProps, getAntennaHandlers } from '$lib/runtime/adapters/panel-adapters';
 
-  interface Props {
-    txAntenna: number;
-    rxAnt: boolean;
-    antennaCount: number;
-    hasRxAntenna: boolean;
-    onSelectAnt1: () => void;
-    onSelectAnt2: () => void;
-    onToggleRxAnt: () => void;
-  }
+  const handlers = getAntennaHandlers();
+  let p = $derived(deriveAntennaProps());
 
-  let {
-    txAntenna,
-    rxAnt,
-    antennaCount,
-    hasRxAntenna,
-    onSelectAnt1,
-    onSelectAnt2,
-    onToggleRxAnt,
-  }: Props = $props();
+  let txAntenna = $derived(p.txAntenna);
+  let rxAnt = $derived(p.rxAnt);
+  let antennaCount = $derived(p.antennaCount);
+  let hasRxAntenna = $derived(p.hasRxAntenna);
+  const onSelectAnt1 = handlers.onSelectAnt1;
+  const onSelectAnt2 = handlers.onSelectAnt2;
+  const onToggleRxAnt = handlers.onToggleRxAnt;
 </script>
 
 {#if antennaCount > 1}
