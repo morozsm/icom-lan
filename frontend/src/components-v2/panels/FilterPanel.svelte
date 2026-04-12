@@ -5,53 +5,32 @@
   import { formatFilterWidth } from './filter-utils';
   import { getShortcutHint, joinShortcutHints } from '../layout/shortcut-hints';
 
-  interface Props {
-    currentMode: string;
-    currentFilter: number;
-    filterShape: number;
-    filterLabels?: string[];
-    filterWidth: number;
-    filterWidthMin?: number;
-    filterWidthMax?: number;
-    filterConfig?: FilterModeConfig | null;
-    ifShift: number;
-    pbtInner?: number;
-    pbtOuter?: number;
-    hasPbt?: boolean;
-    onFilterChange?: (filter: number) => void;
-    onFilterWidthChange: (v: number) => void;
-    onFilterShapeChange?: (shape: number) => void;
-    onFilterPresetChange?: (filter: number, width: number) => void;
-    onFilterDefaults?: (defaults: number[]) => void;
-    onIfShiftChange: (v: number) => void;
-    onPbtInnerChange?: (v: number) => void;
-    onPbtOuterChange?: (v: number) => void;
-    onPbtReset?: () => void;
-  }
+  import { deriveFilterProps, getFilterHandlers } from '$lib/runtime/adapters/panel-adapters';
 
-  let {
-    currentMode,
-    currentFilter,
-    filterShape,
-    filterLabels = ['FIL1', 'FIL2', 'FIL3'],
-    filterWidth,
-    filterWidthMin = 50,
-    filterWidthMax = 9999,
-    filterConfig = null,
-    ifShift,
-    pbtInner = 0,
-    pbtOuter = 0,
-    hasPbt = false,
-    onFilterChange,
-    onFilterWidthChange,
-    onFilterShapeChange,
-    onFilterPresetChange,
-    onFilterDefaults,
-    onIfShiftChange,
-    onPbtInnerChange,
-    onPbtOuterChange,
-    onPbtReset,
-  }: Props = $props();
+  const handlers = getFilterHandlers();
+  let p = $derived(deriveFilterProps());
+
+  let currentMode = $derived(p.currentMode);
+  let currentFilter = $derived(p.currentFilter);
+  let filterShape = $derived(p.filterShape);
+  let filterLabels = $derived(p.filterLabels ?? ['FIL1', 'FIL2', 'FIL3']);
+  let filterWidth = $derived(p.filterWidth);
+  let filterWidthMin = $derived(p.filterWidthMin ?? 50);
+  let filterWidthMax = $derived(p.filterWidthMax ?? 9999);
+  let filterConfig = $derived(p.filterConfig ?? null);
+  let ifShift = $derived(p.ifShift);
+  let pbtInner = $derived(p.pbtInner ?? 0);
+  let pbtOuter = $derived(p.pbtOuter ?? 0);
+  let hasPbt = $derived(p.hasPbt ?? false);
+  const onFilterChange = handlers.onFilterChange;
+  const onFilterWidthChange = handlers.onFilterWidthChange;
+  const onFilterShapeChange = handlers.onFilterShapeChange;
+  const onFilterPresetChange = handlers.onFilterPresetChange;
+  const onFilterDefaults = handlers.onFilterDefaults;
+  const onIfShiftChange = handlers.onIfShiftChange;
+  const onPbtInnerChange = handlers.onPbtInnerChange;
+  const onPbtOuterChange = handlers.onPbtOuterChange;
+  const onPbtReset = handlers.onPbtReset;
 
   let modalOpen = $state(false);
   let draftWidths = $state<number[]>([]);

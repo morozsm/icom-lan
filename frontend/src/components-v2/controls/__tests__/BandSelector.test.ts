@@ -1,37 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mount, unmount, flushSync } from 'svelte';
-import type { ComponentProps } from 'svelte';
-
-vi.mock('$lib/stores/capabilities.svelte', () => ({
-  getCapabilities: vi.fn(() => ({ freqRanges: HF_RANGES })),
-  getKeyboardConfig: vi.fn(() => null),
-}));
-
-import BandSelector from '../BandSelector.svelte';
 import { flattenBands, findActiveBand } from '../band-utils';
 import type { FreqRange } from '$lib/types/capabilities';
 
-let components: ReturnType<typeof mount>[] = [];
-
-function mountSelector(props: ComponentProps<typeof BandSelector>) {
-  const target = document.createElement('div');
-  document.body.appendChild(target);
-  const component = mount(BandSelector, { target, props });
-  flushSync();
-  components.push(component);
-  return target;
-}
-
-beforeEach(() => {
-  components = [];
-});
-
-afterEach(() => {
-  components.forEach((component) => unmount(component));
-  document.body.innerHTML = '';
-});
-
-// ── Fixtures ───────────────────────────────────────────────────────────────
+// ── Fixtures (must be declared before vi.mock factories) ──────────────────
 
 const HF_RANGES: FreqRange[] = [
   {
@@ -56,6 +28,57 @@ const HF_RANGES: FreqRange[] = [
     ],
   },
 ];
+
+const mockProps = {
+  currentFreq: 14_074_000,
+};
+
+const mockBandHandlers = {
+  onBandSelect: vi.fn(),
+};
+
+const mockPresetHandlers = {
+  onPresetSelect: vi.fn(),
+  onFreqPreset: vi.fn(),
+};
+
+vi.mock('$lib/stores/capabilities.svelte', () => ({
+  getCapabilities: vi.fn(() => ({ freqRanges: HF_RANGES })),
+  getKeyboardConfig: vi.fn(() => null),
+}));
+
+vi.mock('$lib/runtime/adapters/panel-adapters', () => ({
+  deriveBandSelectorProps: () => mockProps,
+  getBandHandlers: () => mockBandHandlers,
+  getPresetHandlers: () => mockPresetHandlers,
+}));
+
+import BandSelector from '../BandSelector.svelte';
+
+let components: ReturnType<typeof mount>[] = [];
+
+function mountPanel(overrides?: Partial<typeof mockProps>) {
+  if (overrides) Object.assign(mockProps, overrides);
+  const target = document.createElement('div');
+  document.body.appendChild(target);
+  const component = mount(BandSelector, { target });
+  flushSync();
+  components.push(component);
+  return target;
+}
+
+beforeEach(() => {
+  components = [];
+  mockProps.currentFreq = 14_074_000;
+  mockBandHandlers.onBandSelect = vi.fn();
+  mockPresetHandlers.onPresetSelect = vi.fn();
+  mockPresetHandlers.onFreqPreset = vi.fn();
+});
+
+afterEach(() => {
+  components.forEach((component) => unmount(component));
+  document.body.innerHTML = '';
+});
 
 const EMPTY_RANGES: FreqRange[] = [];
 
@@ -195,16 +218,12 @@ describe('BandSelector component', () => {
   }
 
   it('forwards bsrCode when a band is selected', () => {
-    const onBandSelect = vi.fn();
-    const target = mountSelector({
-      currentFreq: 14_074_000,
-      onBandSelect,
-    });
+    const target = mountPanel();
 
     const button = findButtonByText(target, '20m');
     button?.click();
     flushSync();
 
-    expect(onBandSelect).toHaveBeenCalledWith('20m', 14_225_000, 5);
+    expect(mockBandHandlers.onBandSelect).toHaveBeenCalledWith('20m', 14_225_000, 5);
   });
 });

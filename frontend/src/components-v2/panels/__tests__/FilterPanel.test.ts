@@ -1,16 +1,52 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mount, unmount, flushSync } from 'svelte';
-import type { ComponentProps } from 'svelte';
-import FilterPanel from '../FilterPanel.svelte';
 import { formatFilterWidth } from '../filter-utils';
 import { deriveIfShift } from '../filter-controls';
+
+const mockProps = {
+  currentMode: 'USB',
+  currentFilter: 2,
+  filterShape: 0,
+  filterLabels: ['FIL1', 'FIL2', 'FIL3'],
+  filterWidth: 2400,
+  filterConfig: {
+    defaults: [3000, 2400, 1800],
+    fixed: false,
+    minHz: 50,
+    maxHz: 3600,
+    stepHz: 50,
+  } as { defaults: number[]; fixed: boolean; minHz: number; maxHz: number; stepHz: number } | null,
+  ifShift: 0,
+  hasPbt: false,
+  pbtInner: 0,
+  pbtOuter: 0,
+};
+
+const mockHandlers = {
+  onFilterChange: vi.fn(),
+  onFilterWidthChange: vi.fn(),
+  onFilterShapeChange: vi.fn(),
+  onFilterPresetChange: vi.fn(),
+  onFilterDefaults: vi.fn(),
+  onIfShiftChange: vi.fn(),
+  onPbtInnerChange: vi.fn(),
+  onPbtOuterChange: vi.fn(),
+  onPbtReset: vi.fn(),
+};
+
+vi.mock('$lib/runtime/adapters/panel-adapters', () => ({
+  deriveFilterProps: () => mockProps,
+  getFilterHandlers: () => mockHandlers,
+}));
+
+import FilterPanel from '../FilterPanel.svelte';
 
 // ---------------------------------------------------------------------------
 // formatFilterWidth
 // ---------------------------------------------------------------------------
 
 describe('formatFilterWidth', () => {
-  
+
   beforeEach(() => {
     vi.useFakeTimers();
   });
@@ -58,10 +94,11 @@ it('returns raw number string for values below 1000', () => {
 
 let components: ReturnType<typeof mount>[] = [];
 
-function mountPanel(props: ComponentProps<typeof FilterPanel>) {
+function mountPanel(overrides?: Partial<typeof mockProps>) {
+  if (overrides) Object.assign(mockProps, overrides);
   const t = document.createElement('div');
   document.body.appendChild(t);
-  const component = mount(FilterPanel, { target: t, props });
+  const component = mount(FilterPanel, { target: t });
   flushSync();
   components.push(component);
   return t;
@@ -69,6 +106,33 @@ function mountPanel(props: ComponentProps<typeof FilterPanel>) {
 
 beforeEach(() => {
   components = [];
+  Object.assign(mockProps, {
+    currentMode: 'USB',
+    currentFilter: 2,
+    filterShape: 0,
+    filterLabels: ['FIL1', 'FIL2', 'FIL3'],
+    filterWidth: 2400,
+    filterConfig: {
+      defaults: [3000, 2400, 1800],
+      fixed: false,
+      minHz: 50,
+      maxHz: 3600,
+      stepHz: 50,
+    },
+    ifShift: 0,
+    hasPbt: false,
+    pbtInner: 0,
+    pbtOuter: 0,
+  });
+  mockHandlers.onFilterChange = vi.fn();
+  mockHandlers.onFilterWidthChange = vi.fn();
+  mockHandlers.onFilterShapeChange = vi.fn();
+  mockHandlers.onFilterPresetChange = vi.fn();
+  mockHandlers.onFilterDefaults = vi.fn();
+  mockHandlers.onIfShiftChange = vi.fn();
+  mockHandlers.onPbtInnerChange = vi.fn();
+  mockHandlers.onPbtOuterChange = vi.fn();
+  mockHandlers.onPbtReset = vi.fn();
 });
 
 afterEach(() => {
@@ -76,31 +140,9 @@ afterEach(() => {
   document.body.innerHTML = '';
 });
 
-const baseProps: ComponentProps<typeof FilterPanel> = {
-  currentMode: 'USB',
-  currentFilter: 2,
-  filterShape: 0,
-  filterLabels: ['FIL1', 'FIL2', 'FIL3'],
-  filterWidth: 2400,
-  filterConfig: {
-    defaults: [3000, 2400, 1800],
-    fixed: false,
-    minHz: 50,
-    maxHz: 3600,
-    stepHz: 50,
-  },
-  ifShift: 0,
-  onFilterChange: vi.fn(),
-  onFilterWidthChange: vi.fn(),
-  onFilterShapeChange: vi.fn(),
-  onFilterPresetChange: vi.fn(),
-  onFilterDefaults: vi.fn(),
-  onIfShiftChange: vi.fn(),
-};
-
 describe('panel structure', () => {
   it('renders filter selector buttons', () => {
-    const t = mountPanel(baseProps);
+    const t = mountPanel();
     const buttons = Array.from(t.querySelectorAll('button')).map((button) => button.textContent?.trim());
     expect(buttons).toContain('FIL1');
     expect(buttons).toContain('FIL2');
@@ -108,7 +150,7 @@ describe('panel structure', () => {
   });
 
   it('renders a read-only BW display instead of a Width slider', () => {
-    const t = mountPanel(baseProps);
+    const t = mountPanel();
     expect(t.querySelector('.bw-label')?.textContent).toBe('BW');
     expect(t.querySelector('.bw-value')?.textContent).toBe('2.4kHz');
     const labels = Array.from(t.querySelectorAll('.vc-label')).map((el) => el.textContent);
@@ -116,18 +158,18 @@ describe('panel structure', () => {
   });
 
   it('renders the IF Shift slider', () => {
-    const t = mountPanel(baseProps);
+    const t = mountPanel();
     const labels = Array.from(t.querySelectorAll('.vc-label'));
     expect(labels.some(el => el.textContent === 'IF Shift')).toBe(true);
   });
 
   it('renders the settings gear button', () => {
-    const t = mountPanel(baseProps);
+    const t = mountPanel();
     expect(t.querySelector('.settings-button')?.textContent?.trim()).toBe('⚙');
   });
 
   it('IF Shift slider has min=-1200, max=1200, step=25', () => {
-    const t = mountPanel(baseProps);
+    const t = mountPanel();
     const sliders = t.querySelectorAll<HTMLElement>('[role="slider"]');
     const ifShiftSlider = sliders[0];
     expect(ifShiftSlider.getAttribute('aria-valuemin')).toBe('-1200');
@@ -137,44 +179,44 @@ describe('panel structure', () => {
 
 describe('PBT sliders visibility', () => {
   it('does not render PBT sliders when hasPbt is false (default)', () => {
-    const t = mountPanel(baseProps);
+    const t = mountPanel();
     const labels = Array.from(t.querySelectorAll('.vc-label')).map(el => el.textContent);
     expect(labels).not.toContain('PBT Inner');
     expect(labels).not.toContain('PBT Outer');
   });
 
   it('does not render PBT sliders when hasPbt=false explicitly', () => {
-    const t = mountPanel({ ...baseProps, hasPbt: false });
+    const t = mountPanel({ hasPbt: false });
     const labels = Array.from(t.querySelectorAll('.vc-label')).map(el => el.textContent);
     expect(labels).not.toContain('PBT Inner');
     expect(labels).not.toContain('PBT Outer');
   });
 
   it('renders PBT Inner slider when hasPbt=true', () => {
-    const t = mountPanel({ ...baseProps, hasPbt: true, pbtInner: 100, pbtOuter: -50 });
+    const t = mountPanel({ hasPbt: true, pbtInner: 100, pbtOuter: -50 });
     const labels = Array.from(t.querySelectorAll('.vc-label')).map(el => el.textContent);
     expect(labels).toContain('PBT Inner');
   });
 
   it('renders PBT Outer slider when hasPbt=true', () => {
-    const t = mountPanel({ ...baseProps, hasPbt: true, pbtInner: 100, pbtOuter: -50 });
+    const t = mountPanel({ hasPbt: true, pbtInner: 100, pbtOuter: -50 });
     const labels = Array.from(t.querySelectorAll('.vc-label')).map(el => el.textContent);
     expect(labels).toContain('PBT Outer');
   });
 
   it('renders Reset PBT button when hasPbt=true', () => {
-    const t = mountPanel({ ...baseProps, hasPbt: true, pbtInner: 100, pbtOuter: -50, onPbtReset: vi.fn() });
+    const t = mountPanel({ hasPbt: true, pbtInner: 100, pbtOuter: -50 });
     const buttons = Array.from(t.querySelectorAll('button')).map(el => el.textContent?.trim());
     expect(buttons).toContain('Reset');
   });
 
   it('renders 3 sliders total when hasPbt=true', () => {
-    const t = mountPanel({ ...baseProps, hasPbt: true, pbtInner: 0, pbtOuter: 0 });
+    const t = mountPanel({ hasPbt: true, pbtInner: 0, pbtOuter: 0 });
     expect(t.querySelectorAll('[role="slider"]').length).toBe(3);
   });
 
   it('renders 1 slider total when hasPbt=false', () => {
-    const t = mountPanel(baseProps);
+    const t = mountPanel();
     expect(t.querySelectorAll('[role="slider"]').length).toBe(1);
   });
 });
@@ -190,54 +232,48 @@ describe('callbacks', () => {
   });
 
   it('calls onFilterChange when a filter button is clicked', () => {
-    const onFilterChange = vi.fn();
-    const t = mountPanel({ ...baseProps, onFilterChange });
+    const t = mountPanel();
     const button = Array.from(t.querySelectorAll('button')).find(el => el.textContent?.trim() === 'FIL3') as HTMLButtonElement;
     button.click();
-    expect(onFilterChange).toHaveBeenCalledWith(3);
+    expect(mockHandlers.onFilterChange).toHaveBeenCalledWith(3);
   });
 
   it('calls onIfShiftChange when IF Shift slider changes', () => {
-    const onIfShiftChange = vi.fn();
-    const t = mountPanel({ ...baseProps, onIfShiftChange });
+    const t = mountPanel();
     const slider = t.querySelectorAll<HTMLElement>('[role="slider"]')[0];
     slider.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
     vi.advanceTimersByTime(60);
 
-    expect(onIfShiftChange).toHaveBeenCalled();
+    expect(mockHandlers.onIfShiftChange).toHaveBeenCalled();
   });
 
   it('calls onPbtInnerChange when PBT Inner slider changes', () => {
-    const onPbtInnerChange = vi.fn();
-    const t = mountPanel({ ...baseProps, hasPbt: true, pbtInner: 0, pbtOuter: 0, onPbtInnerChange });
+    const t = mountPanel({ hasPbt: true, pbtInner: 0, pbtOuter: 0 });
     const sliders = t.querySelectorAll<HTMLElement>('[role="slider"]');
     sliders[1].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
     vi.advanceTimersByTime(60);
 
-    expect(onPbtInnerChange).toHaveBeenCalled();
+    expect(mockHandlers.onPbtInnerChange).toHaveBeenCalled();
   });
 
   it('calls onPbtOuterChange when PBT Outer slider changes', () => {
-    const onPbtOuterChange = vi.fn();
-    const t = mountPanel({ ...baseProps, hasPbt: true, pbtInner: 0, pbtOuter: 0, onPbtOuterChange });
+    const t = mountPanel({ hasPbt: true, pbtInner: 0, pbtOuter: 0 });
     const sliders = t.querySelectorAll<HTMLElement>('[role="slider"]');
     sliders[2].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
     vi.advanceTimersByTime(60);
 
-    expect(onPbtOuterChange).toHaveBeenCalled();
+    expect(mockHandlers.onPbtOuterChange).toHaveBeenCalled();
   });
 
   it('calls onPbtReset when the reset button is clicked', () => {
-    const onPbtReset = vi.fn();
-    const t = mountPanel({ ...baseProps, hasPbt: true, pbtInner: 100, pbtOuter: -100, onPbtReset });
+    const t = mountPanel({ hasPbt: true, pbtInner: 100, pbtOuter: -100 });
     const button = Array.from(t.querySelectorAll('button')).find(el => el.textContent?.trim() === 'Reset') as HTMLButtonElement;
     button.click();
-    expect(onPbtReset).toHaveBeenCalledOnce();
+    expect(mockHandlers.onPbtReset).toHaveBeenCalledOnce();
   });
 
   it('opens the settings modal and calls onFilterPresetChange from a modal slider', () => {
-    const onFilterPresetChange = vi.fn();
-    const t = mountPanel({ ...baseProps, onFilterPresetChange });
+    const t = mountPanel();
     const gear = t.querySelector('.settings-button') as HTMLButtonElement;
     gear.click();
     flushSync();
@@ -248,23 +284,22 @@ describe('callbacks', () => {
     const sliders = modal?.querySelectorAll<HTMLElement>('[role="slider"]') ?? [];
     sliders[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
     vi.advanceTimersByTime(60);
-    expect(onFilterPresetChange).toHaveBeenCalled();
+    expect(mockHandlers.onFilterPresetChange).toHaveBeenCalled();
   });
 
   it('calls onFilterDefaults when restore defaults is clicked in the modal', () => {
-    const onFilterDefaults = vi.fn();
-    const t = mountPanel({ ...baseProps, onFilterDefaults });
+    const t = mountPanel();
     const gear = t.querySelector('.settings-button') as HTMLButtonElement;
     gear.click();
     flushSync();
 
     const button = Array.from(document.querySelectorAll('button')).find(el => el.textContent?.trim() === 'Restore Defaults') as HTMLButtonElement;
     button.click();
-    expect(onFilterDefaults).toHaveBeenCalledWith([3000, 2400, 1800]);
+    expect(mockHandlers.onFilterDefaults).toHaveBeenCalledWith([3000, 2400, 1800]);
   });
 
   it('shows SHARP and SOFT shape buttons in the modal', () => {
-    const t = mountPanel(baseProps);
+    const t = mountPanel();
     const gear = t.querySelector('.settings-button') as HTMLButtonElement;
     gear.click();
     flushSync();
@@ -275,15 +310,14 @@ describe('callbacks', () => {
   });
 
   it('calls onFilterShapeChange when the SOFT button is clicked in the modal', () => {
-    const onFilterShapeChange = vi.fn();
-    const t = mountPanel({ ...baseProps, onFilterShapeChange });
+    const t = mountPanel();
     const gear = t.querySelector('.settings-button') as HTMLButtonElement;
     gear.click();
     flushSync();
 
     const button = Array.from(document.querySelectorAll('button')).find((el) => el.textContent?.trim() === 'SOFT') as HTMLButtonElement;
     button.click();
-    expect(onFilterShapeChange).toHaveBeenCalledWith(1);
+    expect(mockHandlers.onFilterShapeChange).toHaveBeenCalledWith(1);
   });
 });
 
