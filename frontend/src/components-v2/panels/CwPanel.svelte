@@ -36,9 +36,7 @@
     onKeyerTypeChange?: (v: number) => void;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
   const noop = () => {};
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
   const noopN = (_v: number) => {};
 
   let {
