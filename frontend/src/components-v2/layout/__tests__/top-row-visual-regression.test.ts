@@ -3,9 +3,13 @@ import { flushSync, mount, unmount } from 'svelte';
 
 vi.mock('$lib/stores/layout.svelte', () => ({
   useLcdLayout: vi.fn(() => false),
-  getLayoutMode: vi.fn(() => 'auto'),
+  getLayoutMode: vi.fn(() => 'standard'),
   cycleLayoutMode: vi.fn(),
   setLayoutMode: vi.fn(),
+}));
+
+vi.mock('../../../skins/registry', () => ({
+  resolveSkinId: vi.fn(() => 'desktop-v2'),
 }));
 
 vi.mock('$lib/stores/connection.svelte', () => ({

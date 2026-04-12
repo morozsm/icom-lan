@@ -16,7 +16,8 @@
   import { getConnectionStatus, getRadioPowerOn } from '$lib/stores/connection.svelte';
   import { applyModeDefault } from '$lib/stores/tuning.svelte';
   import { getCapabilities, getKeyboardConfig, hasDualReceiver, hasTx, hasAnyScope, hasSpectrum, hasAudioFft } from '$lib/stores/capabilities.svelte';
-  import { useLcdLayout } from '$lib/stores/layout.svelte';
+  import { getLayoutMode } from '$lib/stores/layout.svelte';
+  import { resolveSkinId, type SkinId } from '../../skins/registry';
   import SpectrumPanel from '../../components/spectrum/SpectrumPanel.svelte';
   import AudioSpectrumPanel from '../panels/audio-scope/AudioSpectrumPanel.svelte';
   import AmberLcdDisplay from '../panels/lcd/AmberLcdDisplay.svelte';
@@ -82,7 +83,14 @@
   let landscapeAutoLocked = $state(false);
   let spectrumLandscape = $derived(isMobile && isLandscape && !landscapeSpectrumDismissed && !landscapeAutoLocked);
   let connectionStatus = $derived(getConnectionStatus());
-  // (mobile activeTab removed — MobileRadioLayout handles its own state)
+
+  // Skin resolution — determines which layout to render
+  let skinId = $derived<SkinId>(resolveSkinId({
+    capabilities: caps,
+    layoutPreference: getLayoutMode(),
+    isMobile,
+    hasAnyScope: hasAnyScope(),
+  }));
 
   let isAudioFft = $derived(hasAudioFft());
   let activeReceiverLabel = $derived(radioState?.active === 'SUB' ? 'SUB' : 'MAIN');
@@ -188,9 +196,9 @@
   });
 </script>
 
-{#if isMobile}
+{#if skinId === 'mobile'}
   <MobileRadioLayout />
-{:else if useLcdLayout(hasAnyScope())}
+{:else if skinId === 'amber-lcd'}
   <LcdLayout />
 {:else}
 <div class="radio-layout">
