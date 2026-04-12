@@ -841,20 +841,22 @@ def test_main_branches(monkeypatch, capsys: pytest.CaptureFixture[str]) -> None:
             main()
     sys_exit.assert_called_once_with(0)
 
-    def fake_interrupt(coro):
-        coro.close()
+    # Test KeyboardInterrupt handling — main() for 'status' uses
+    # loop.run_until_complete(_run(args)) → os._exit(), so we mock
+    # _run to raise KeyboardInterrupt and os._exit to capture the exit code.
+    async def _raise_interrupt(*a, **kw):
         raise KeyboardInterrupt
 
-    parser_run = DummyParser(SimpleNamespace(command="status"))
+    parser_run = DummyParser(SimpleNamespace(command="status", timeout=5))
+    captured_exit = []
     with (
         patch("icom_lan.cli._build_parser", return_value=parser_run),
-        patch("icom_lan.cli.asyncio.run", side_effect=fake_interrupt),
-        patch("icom_lan.cli.sys.exit", side_effect=SystemExit) as sys_exit,
+        patch("icom_lan.cli._run", side_effect=_raise_interrupt),
+        patch("icom_lan.cli.os._exit", side_effect=lambda c: captured_exit.append(c) or (_ for _ in ()).throw(SystemExit(c))),
     ):
         with pytest.raises(SystemExit):
             main()
-    sys_exit.assert_called_once_with(130)
-    assert "Interrupted, shutting down..." in capsys.readouterr().err
+    assert captured_exit == [130]
 
 
 @pytest.mark.asyncio

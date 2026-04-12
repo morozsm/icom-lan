@@ -154,15 +154,9 @@ class AudioManager {
       this.notify();
     };
 
-    let frameCount = 0;
     ws.onmessage = (ev) => {
       if (ev.data instanceof ArrayBuffer) {
-        frameCount++;
-        try {
-          this.rxPlayer.feed(ev.data);
-        } catch (e) {
-          if (frameCount <= 3) console.error('[audio-ws] feed error:', e);
-        }
+        this.rxPlayer.feed(ev.data);
       }
     };
 
@@ -172,7 +166,7 @@ class AudioManager {
     };
 
     ws.onclose = (ev) => {
-      console.warn(`[audio-ws] closed code=${ev.code} reason=${ev.reason} frames=${frameCount} rxEnabled=${this._rxEnabled}`);
+      console.warn(`[audio-ws] closed code=${ev.code} reason=${ev.reason}`);
       this.ws = null;
       setAudioConnected(false);
       this.notify();
