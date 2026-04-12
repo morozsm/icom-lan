@@ -43,13 +43,4 @@ export function cycleLayoutMode(hasAnyScope: boolean): void {
   }
 }
 
-/**
- * Resolve whether to use LCD layout given scope capabilities.
- * @param hasAnyScope — true if hardware spectrum OR audio FFT is available
- */
-export function useLcdLayout(hasAnyScope: boolean): boolean {
-  if (mode === 'lcd') return true;
-  if (mode === 'standard') return false;
-  // auto: standard layout when any scope is available, LCD otherwise
-  return !hasAnyScope;
-}
+// useLcdLayout() removed — layout resolution now handled by skins/registry.ts resolveSkinId()

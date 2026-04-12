@@ -33,6 +33,15 @@ Never bare `python` or `pytest`. Worktrees: `uv sync --all-extras` first.
 - Keep-alive: ~500ms control, ~100ms audio — never weaken
 - MagicMock hides signature bugs — verify against real dataclasses
 
+**Frontend layering (enforce):**
+- `lib/runtime/` → singleton FrontendRuntime, wraps stores + transport + audio
+- `lib/runtime/adapters/` → pure functions mapping runtime state → component props
+- `components-v2/wiring/` → state-adapter + command-bus (adapter layer)
+- `components-v2/panels/` + `layout/` → presentation only, NO direct store/transport imports
+- `skins/` → skin registry + entry points (desktop-v2, amber-lcd, mobile)
+- eslint `no-restricted-imports` enforces: panels/layouts cannot import `$lib/transport/*` or `$lib/audio/audio-manager`
+- ADR: `docs/plans/2026-04-12-target-frontend-architecture.md`
+
 ---
 
 ## Testing
