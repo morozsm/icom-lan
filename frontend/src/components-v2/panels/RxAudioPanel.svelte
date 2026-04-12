@@ -1,38 +1,30 @@
 <script lang="ts">
   import { HardwareButton } from '$lib/Button';
   import { ValueControl, rawToPercentDisplay } from '../controls/value-control';
-  import { hasAudio } from '$lib/stores/capabilities.svelte';
+  import { deriveRxAudioProps, getRxAudioHandlers } from '$lib/runtime/adapters/audio-adapter';
   import { buildMonitorOptions, formatMonitorStatus } from './audio-utils';
   import { getShortcutHint } from '../layout/shortcut-hints';
 
-  interface Props {
-    monitorMode: 'local' | 'live' | 'mute';
-    afLevel: number;
-    hasLiveAudio: boolean;
-    onMonitorModeChange: (v: string) => void;
-    onAfLevelChange: (v: number) => void;
-  }
+  const handlers = getRxAudioHandlers();
+  let props = $derived(deriveRxAudioProps());
 
-  let { monitorMode, afLevel, hasLiveAudio, onMonitorModeChange, onAfLevelChange }: Props =
-    $props();
-
-  let options = $derived(buildMonitorOptions(hasLiveAudio));
-  let statusText = $derived(formatMonitorStatus(monitorMode));
+  let options = $derived(buildMonitorOptions(props.hasLiveAudio));
+  let statusText = $derived(formatMonitorStatus(props.monitorMode));
   const monitorShortcut = getShortcutHint('toggle_monitor');
   const afShortcut = getShortcutHint('adjust_af_level');
-  let isMuted = $derived(monitorMode === 'mute');
+  let isMuted = $derived(props.monitorMode === 'mute');
 </script>
 
-{#if hasAudio()}
+{#if props.hasLiveAudio}
     <div class="panel-body">
       <div class="button-group">
         {#each options as option}
           <HardwareButton
-            active={monitorMode === option.value}
+            active={props.monitorMode === option.value}
             indicator="edge-left"
             color="cyan"
             title={monitorShortcut}
-            onclick={() => onMonitorModeChange(option.value as string)}
+            onclick={() => handlers.onMonitorModeChange(option.value as string)}
           >
             {option.label}
           </HardwareButton>
@@ -40,7 +32,7 @@
       </div>
       <ValueControl
         label="AF Level"
-        value={afLevel}
+        value={props.afLevel}
         min={0}
         max={255}
         step={1}
@@ -50,7 +42,7 @@
         shortcutHint={afShortcut}
         title={afShortcut}
         disabled={isMuted}
-        onChange={onAfLevelChange}
+        onChange={handlers.onAfLevelChange}
       variant="hardware-illuminated"
       />
       <div class="output-indicator">{statusText}</div>
