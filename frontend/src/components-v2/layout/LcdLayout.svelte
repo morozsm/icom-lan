@@ -24,16 +24,10 @@
   const keyboardHandlers = makeKeyboardHandlers();
 
   async function handlePowerOn() {
-    // TODO(#653): migrate to runtime.system.powerOn() when SystemController is implemented
     try {
-      const resp = await fetch('/api/v1/radio/power', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ state: 'on' }),
-      });
-      if (!resp.ok) alert(`Failed to power on: ${await resp.text()}`);
+      await runtime.system.powerOn();
     } catch (err) {
-      alert(`Error: ${err}`);
+      alert(`Failed to power on: ${err}`);
     }
   }
 
