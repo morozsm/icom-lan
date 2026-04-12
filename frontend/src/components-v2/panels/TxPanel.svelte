@@ -4,44 +4,35 @@
   import { hasTx, hasCapability } from '$lib/stores/capabilities.svelte';
   import { txStatusColor } from './tx-utils';
   import { getTxAudioControl } from '$lib/runtime/adapters/tx-adapter';
+  import { deriveTxProps, getTxHandlers } from '$lib/runtime/adapters/panel-adapters';
+
   const txAudio = getTxAudioControl();
+  const handlers = getTxHandlers();
+  let p = $derived(deriveTxProps());
 
-  interface Props {
-    txActive: boolean;
-    rfPower: number;
-    micGain: number;
-    atuActive: boolean;
-    atuTuning: boolean;
-    voxActive: boolean;
-    compActive: boolean;
-    compLevel: number;
-    monActive: boolean;
-    monLevel: number;
-    driveGain: number;
-    onRfPowerChange: (v: number) => void;
-    onMicGainChange: (v: number) => void;
-    onAtuToggle: () => void;
-    onAtuTune: () => void;
-    onVoxToggle: () => void;
-    onCompToggle: () => void;
-    onCompLevelChange: (v: number) => void;
-    onMonToggle: () => void;
-    onMonLevelChange: (v: number) => void;
-    onDriveGainChange: (v: number) => void;
-    onPttOn?: () => void;
-    onPttOff?: () => void;
-  }
-
-  let {
-    txActive, rfPower, micGain,
-    atuActive, atuTuning, voxActive,
-    compActive, compLevel, monActive, monLevel, driveGain,
-    onRfPowerChange, onMicGainChange,
-    onAtuToggle, onAtuTune, onVoxToggle,
-    onCompToggle, onCompLevelChange,
-    onMonToggle, onMonLevelChange, onDriveGainChange,
-    onPttOn, onPttOff,
-  }: Props = $props();
+  let txActive = $derived(p.txActive);
+  let rfPower = $derived(p.rfPower);
+  let micGain = $derived(p.micGain);
+  let atuActive = $derived(p.atuActive);
+  let atuTuning = $derived(p.atuTuning);
+  let voxActive = $derived(p.voxActive);
+  let compActive = $derived(p.compActive);
+  let compLevel = $derived(p.compLevel);
+  let monActive = $derived(p.monActive);
+  let monLevel = $derived(p.monLevel);
+  let driveGain = $derived(p.driveGain);
+  const onRfPowerChange = handlers.onRfPowerChange;
+  const onMicGainChange = handlers.onMicGainChange;
+  const onAtuToggle = handlers.onAtuToggle;
+  const onAtuTune = handlers.onAtuTune;
+  const onVoxToggle = handlers.onVoxToggle;
+  const onCompToggle = handlers.onCompToggle;
+  const onCompLevelChange = handlers.onCompLevelChange;
+  const onMonToggle = handlers.onMonToggle;
+  const onMonLevelChange = handlers.onMonLevelChange;
+  const onDriveGainChange = handlers.onDriveGainChange;
+  const onPttOn = handlers.onPttOn;
+  const onPttOff = handlers.onPttOff;
 
   let tuneButtonColor = $derived(txStatusColor(atuActive, atuTuning));
   let showMon = $derived(hasCapability('monitor'));

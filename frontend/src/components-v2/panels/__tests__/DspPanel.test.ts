@@ -1,12 +1,43 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mount, unmount, flushSync } from 'svelte';
-import type { ComponentProps } from 'svelte';
-import DspPanel from '../DspPanel.svelte';
 import { buildNrOptions, buildNotchOptions } from '../dsp-utils';
+
+const mockProps = {
+  nrMode: 0,
+  nrLevel: 128,
+  nbActive: false,
+  nbLevel: 128,
+  notchMode: 'off' as string,
+  notchFreq: 1000,
+  nbDepth: 0,
+  nbWidth: 0,
+  manualNotchWidth: 0,
+  agcTimeConstant: 0,
+};
+
+const mockHandlers = {
+  onNrModeChange: vi.fn(),
+  onNrLevelChange: vi.fn(),
+  onNbToggle: vi.fn(),
+  onNbLevelChange: vi.fn(),
+  onNotchModeChange: vi.fn(),
+  onNotchFreqChange: vi.fn(),
+  onNbDepthChange: vi.fn(),
+  onNbWidthChange: vi.fn(),
+  onManualNotchWidthChange: vi.fn(),
+  onAgcTimeChange: vi.fn(),
+};
 
 vi.mock('$lib/stores/capabilities.svelte', () => ({
   hasCapability: vi.fn(() => true),
 }));
+
+vi.mock('$lib/runtime/adapters/panel-adapters', () => ({
+  deriveDspProps: () => mockProps,
+  getDspHandlers: () => mockHandlers,
+}));
+
+import DspPanel from '../DspPanel.svelte';
 
 // ---------------------------------------------------------------------------
 // buildNrOptions
@@ -58,10 +89,11 @@ describe('buildNotchOptions', () => {
 
 let components: ReturnType<typeof mount>[] = [];
 
-function mountPanel(props: ComponentProps<typeof DspPanel>) {
+function mountPanel(overrides?: Partial<typeof mockProps>) {
+  if (overrides) Object.assign(mockProps, overrides);
   const t = document.createElement('div');
   document.body.appendChild(t);
-  const component = mount(DspPanel, { target: t, props });
+  const component = mount(DspPanel, { target: t });
   flushSync();
   components.push(component);
   return t;
@@ -69,6 +101,21 @@ function mountPanel(props: ComponentProps<typeof DspPanel>) {
 
 beforeEach(() => {
   components = [];
+  Object.assign(mockProps, {
+    nrMode: 0, nrLevel: 128, nbActive: false, nbLevel: 128,
+    notchMode: 'off', notchFreq: 1000, nbDepth: 0, nbWidth: 0,
+    manualNotchWidth: 0, agcTimeConstant: 0,
+  });
+  mockHandlers.onNrModeChange = vi.fn();
+  mockHandlers.onNrLevelChange = vi.fn();
+  mockHandlers.onNbToggle = vi.fn();
+  mockHandlers.onNbLevelChange = vi.fn();
+  mockHandlers.onNotchModeChange = vi.fn();
+  mockHandlers.onNotchFreqChange = vi.fn();
+  mockHandlers.onNbDepthChange = vi.fn();
+  mockHandlers.onNbWidthChange = vi.fn();
+  mockHandlers.onManualNotchWidthChange = vi.fn();
+  mockHandlers.onAgcTimeChange = vi.fn();
 });
 
 afterEach(() => {
@@ -76,28 +123,13 @@ afterEach(() => {
   document.body.innerHTML = '';
 });
 
-const baseProps: ComponentProps<typeof DspPanel> = {
-  nrMode: 0,
-  nrLevel: 128,
-  nbActive: false,
-  nbLevel: 128,
-  notchMode: 'off',
-  notchFreq: 1000,
-  onNrModeChange: vi.fn(),
-  onNrLevelChange: vi.fn(),
-  onNbToggle: vi.fn(),
-  onNbLevelChange: vi.fn(),
-  onNotchModeChange: vi.fn(),
-  onNotchFreqChange: vi.fn(),
-};
-
 function getFillButtons(container: HTMLElement): HTMLButtonElement[] {
   return Array.from(container.querySelectorAll<HTMLButtonElement>('.dsp-btn-wrap button'));
 }
 
 describe('compact toggle row', () => {
   it('renders NR, NB, NOTCH labels in FillButtons', () => {
-    const t = mountPanel(baseProps);
+    const t = mountPanel();
     const texts = getFillButtons(t).map((b) => b.textContent?.trim());
     expect(texts).toContain('NR');
     expect(texts).toContain('NB');
@@ -107,96 +139,89 @@ describe('compact toggle row', () => {
 
 describe('NR toggle', () => {
   it('calls onNrModeChange(1) when NR is off and toggle is clicked', () => {
-    const onNrModeChange = vi.fn();
-    const t = mountPanel({ ...baseProps, nrMode: 0, onNrModeChange });
+    const t = mountPanel({ nrMode: 0 });
     const nrBtn = getFillButtons(t).find((b) => b.textContent?.trim().startsWith('NR'));
     nrBtn?.click();
     flushSync();
-    expect(onNrModeChange).toHaveBeenCalledWith(1);
+    expect(mockHandlers.onNrModeChange).toHaveBeenCalledWith(1);
   });
 
   it('calls onNrModeChange(0) when NR is on and toggle is clicked', () => {
-    const onNrModeChange = vi.fn();
-    const t = mountPanel({ ...baseProps, nrMode: 1, onNrModeChange });
+    const t = mountPanel({ nrMode: 1 });
     const nrBtn = getFillButtons(t).find((b) => b.textContent?.trim().startsWith('NR'));
     nrBtn?.click();
     flushSync();
-    expect(onNrModeChange).toHaveBeenCalledWith(0);
+    expect(mockHandlers.onNrModeChange).toHaveBeenCalledWith(0);
   });
 });
 
 describe('NB toggle', () => {
   it('calls onNbToggle(true) when NB is off and toggle is clicked', () => {
-    const onNbToggle = vi.fn();
-    const t = mountPanel({ ...baseProps, nbActive: false, onNbToggle });
+    const t = mountPanel({ nbActive: false });
     const nbBtn = getFillButtons(t).find((b) => b.textContent?.trim().startsWith('NB'));
     nbBtn?.click();
     flushSync();
-    expect(onNbToggle).toHaveBeenCalledWith(true);
+    expect(mockHandlers.onNbToggle).toHaveBeenCalledWith(true);
   });
 
   it('calls onNbToggle(false) when NB is on and toggle is clicked', () => {
-    const onNbToggle = vi.fn();
-    const t = mountPanel({ ...baseProps, nbActive: true, onNbToggle });
+    const t = mountPanel({ nbActive: true });
     const nbBtn = getFillButtons(t).find((b) => b.textContent?.trim().startsWith('NB'));
     nbBtn?.click();
     flushSync();
-    expect(onNbToggle).toHaveBeenCalledWith(false);
+    expect(mockHandlers.onNbToggle).toHaveBeenCalledWith(false);
   });
 });
 
 describe('Notch toggle', () => {
   it('calls onNotchModeChange("auto") when notch is off and toggle is clicked', () => {
-    const onNotchModeChange = vi.fn();
-    const t = mountPanel({ ...baseProps, notchMode: 'off', onNotchModeChange });
+    const t = mountPanel({ notchMode: 'off' });
     const notchBtn = getFillButtons(t).find((b) => b.textContent?.trim() === 'NOTCH');
     notchBtn?.click();
     flushSync();
-    expect(onNotchModeChange).toHaveBeenCalledWith('auto');
+    expect(mockHandlers.onNotchModeChange).toHaveBeenCalledWith('auto');
   });
 
   it('calls onNotchModeChange("off") when notch is auto and toggle is clicked', () => {
-    const onNotchModeChange = vi.fn();
-    const t = mountPanel({ ...baseProps, notchMode: 'auto', onNotchModeChange });
+    const t = mountPanel({ notchMode: 'auto' });
     const notchBtn = getFillButtons(t).find((b) => b.textContent?.trim() === 'NOTCH');
     notchBtn?.click();
     flushSync();
-    expect(onNotchModeChange).toHaveBeenCalledWith('off');
+    expect(mockHandlers.onNotchModeChange).toHaveBeenCalledWith('off');
   });
 
   it('calls onNotchModeChange("off") when notch is manual and toggle is clicked', () => {
-    const onNotchModeChange = vi.fn();
-    const t = mountPanel({ ...baseProps, notchMode: 'manual', onNotchModeChange });
+    const t = mountPanel({ notchMode: 'manual' });
     const notchBtn = getFillButtons(t).find((b) => b.textContent?.trim() === 'NOTCH');
     notchBtn?.click();
     flushSync();
-    expect(onNotchModeChange).toHaveBeenCalledWith('off');
+    expect(mockHandlers.onNotchModeChange).toHaveBeenCalledWith('off');
   });
 });
 
 describe('modal initial state', () => {
   it('no backdrop when no modal is open', () => {
-    const t = mountPanel(baseProps);
+    const t = mountPanel();
     expect(t.querySelector('.menu-backdrop')).toBeNull();
   });
 
   it('no NR modal when no modal is open', () => {
-    const t = mountPanel(baseProps);
+    const t = mountPanel();
     expect(t.querySelector('[aria-label="Noise reduction settings"]')).toBeNull();
   });
 
   it('no NB modal when no modal is open', () => {
-    const t = mountPanel(baseProps);
+    const t = mountPanel();
     expect(t.querySelector('[aria-label="Noise blanker settings"]')).toBeNull();
   });
 
   it('no Notch modal when no modal is open', () => {
-    const t = mountPanel(baseProps);
+    const t = mountPanel();
     expect(t.querySelector('[aria-label="Notch filter settings"]')).toBeNull();
   });
 
   it('renders the A-NOTCH button', () => {
-    const t = mountPanel(baseProps);
+    const t = mountPanel();
     const buttons = getFillButtons(t);
     expect(buttons.some((b) => b.textContent?.trim() === 'A-NOTCH')).toBe(true);
   });
@@ -204,11 +229,10 @@ describe('modal initial state', () => {
 
 describe('NR mode via short-click cycle', () => {
   it('cycles NR mode: off → 1 → off on successive clicks', () => {
-    const onNrModeChange = vi.fn();
-    const t = mountPanel({ ...baseProps, nrMode: 0, onNrModeChange });
+    const t = mountPanel({ nrMode: 0 });
     const nrBtn = getFillButtons(t).find((b) => b.textContent?.trim().startsWith('NR'));
     nrBtn?.click();
     flushSync();
-    expect(onNrModeChange).toHaveBeenLastCalledWith(1);
+    expect(mockHandlers.onNrModeChange).toHaveBeenLastCalledWith(1);
   });
 });

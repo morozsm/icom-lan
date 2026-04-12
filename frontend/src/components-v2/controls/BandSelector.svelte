@@ -5,14 +5,16 @@
   import { getShortcutHint } from '../layout/shortcut-hints';
   import { BROADCAST_SW_BANDS, BROADCAST_LW_MW_BANDS, findActiveBroadcastBand } from './broadcast-presets';
 
-  interface Props {
-    currentFreq: number;
-    onBandSelect: (bandName: string, freq: number, bsrCode?: number) => void;
-    onPresetSelect?: (freq: number, mode: string, filter?: number) => void;
-    onFreqPreset?: (freq: number, mode: string, filter?: number) => void;
-  }
+  import { deriveBandSelectorProps, getBandHandlers, getPresetHandlers } from '$lib/runtime/adapters/panel-adapters';
 
-  let { currentFreq, onBandSelect, onPresetSelect, onFreqPreset }: Props = $props();
+  const bandH = getBandHandlers();
+  const presetH = getPresetHandlers();
+  let bp = $derived(deriveBandSelectorProps());
+
+  let currentFreq = $derived(bp.currentFreq);
+  const onBandSelect = bandH.onBandSelect;
+  const onPresetSelect = presetH.onPresetSelect;
+  const onFreqPreset = presetH.onFreqPreset;
 
   let bandMode = $state<'ham' | 'broadcast' | 'lwmw'>('ham');
 

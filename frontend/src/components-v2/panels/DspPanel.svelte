@@ -4,51 +4,31 @@
   import { hasCapability } from '$lib/stores/capabilities.svelte';
   import { buildNrOptions, buildNotchOptions } from './dsp-utils';
 
-  interface Props {
-    nrMode: number;
-    nrLevel: number;
-    nbActive: boolean;
-    nbLevel: number;
-    nbDepth: number;
-    nbWidth: number;
-    notchMode: 'off' | 'auto' | 'manual';
-    notchFreq: number;
-    manualNotchWidth: number;
-    agcTimeConstant: number;
-    onNrModeChange: (v: number) => void;
-    onNrLevelChange: (v: number) => void;
-    onNbToggle: (v: boolean) => void;
-    onNbLevelChange: (v: number) => void;
-    onNbDepthChange: (v: number) => void;
-    onNbWidthChange: (v: number) => void;
-    onNotchModeChange: (v: string) => void;
-    onNotchFreqChange: (v: number) => void;
-    onManualNotchWidthChange: (v: number) => void;
-    onAgcTimeChange: (v: number) => void;
-  }
+  import { deriveDspProps, getDspHandlers } from '$lib/runtime/adapters/panel-adapters';
 
-  let {
-    nrMode,
-    nrLevel,
-    nbActive,
-    nbLevel,
-    nbDepth = 0,
-    nbWidth = 0,
-    notchMode,
-    notchFreq,
-    manualNotchWidth = 0,
-    agcTimeConstant = 0,
-    onNrModeChange,
-    onNrLevelChange,
-    onNbToggle,
-    onNbLevelChange,
-    onNbDepthChange = () => {},
-    onNbWidthChange = () => {},
-    onNotchModeChange,
-    onNotchFreqChange,
-    onManualNotchWidthChange = () => {},
-    onAgcTimeChange = () => {},
-  }: Props = $props();
+  const handlers = getDspHandlers();
+  let p = $derived(deriveDspProps());
+
+  let nrMode = $derived(p.nrMode);
+  let nrLevel = $derived(p.nrLevel);
+  let nbActive = $derived(p.nbActive);
+  let nbLevel = $derived(p.nbLevel);
+  let nbDepth = $derived(p.nbDepth ?? 0);
+  let nbWidth = $derived(p.nbWidth ?? 0);
+  let notchMode = $derived(p.notchMode);
+  let notchFreq = $derived(p.notchFreq);
+  let manualNotchWidth = $derived(p.manualNotchWidth ?? 0);
+  let agcTimeConstant = $derived(p.agcTimeConstant ?? 0);
+  const onNrModeChange = handlers.onNrModeChange;
+  const onNrLevelChange = handlers.onNrLevelChange;
+  const onNbToggle = handlers.onNbToggle;
+  const onNbLevelChange = handlers.onNbLevelChange;
+  const onNbDepthChange = handlers.onNbDepthChange ?? (() => {});
+  const onNbWidthChange = handlers.onNbWidthChange ?? (() => {});
+  const onNotchModeChange = handlers.onNotchModeChange;
+  const onNotchFreqChange = handlers.onNotchFreqChange;
+  const onManualNotchWidthChange = handlers.onManualNotchWidthChange ?? (() => {});
+  const onAgcTimeChange = handlers.onAgcTimeChange ?? (() => {});
 
   const NOTCH_WIDTH_LABELS: Record<number, string> = { 0: 'WIDE', 1: 'MID', 2: 'NARROW' };
   const AGC_TIME_LABELS: Record<number, string> = {

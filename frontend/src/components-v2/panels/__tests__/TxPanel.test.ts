@@ -1,7 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mount, unmount, flushSync } from 'svelte';
-import type { ComponentProps } from 'svelte';
-import TxPanel from '../TxPanel.svelte';
 import { txStatusColor } from '../tx-utils';
 
 // ---------------------------------------------------------------------------
@@ -45,20 +43,63 @@ it('returns danger red when tuning', () => {
 // TxPanel component
 // ---------------------------------------------------------------------------
 
+const mockProps = {
+  txActive: false,
+  rfPower: 128,
+  micGain: 128,
+  atuActive: false,
+  atuTuning: false,
+  voxActive: false,
+  compActive: false,
+  compLevel: 64,
+  monActive: false,
+  monLevel: 64,
+  driveGain: 128,
+};
+
+const mockHandlers = {
+  onRfPowerChange: vi.fn(),
+  onMicGainChange: vi.fn(),
+  onAtuToggle: vi.fn(),
+  onAtuTune: vi.fn(),
+  onVoxToggle: vi.fn(),
+  onCompToggle: vi.fn(),
+  onCompLevelChange: vi.fn(),
+  onMonToggle: vi.fn(),
+  onMonLevelChange: vi.fn(),
+  onDriveGainChange: vi.fn(),
+  onPttOn: vi.fn(),
+  onPttOff: vi.fn(),
+};
+
 // Mock hasTx so we can control its return value
 vi.mock('$lib/stores/capabilities.svelte', () => ({
   hasTx: vi.fn(() => true),
   hasCapability: vi.fn(() => true),
 }));
 
+vi.mock('$lib/runtime/adapters/panel-adapters', () => ({
+  deriveTxProps: () => mockProps,
+  getTxHandlers: () => mockHandlers,
+}));
+
+vi.mock('$lib/runtime/adapters/tx-adapter', () => ({
+  getTxAudioControl: () => ({
+    startTx: vi.fn(),
+    stopTx: vi.fn(),
+  }),
+}));
+
 import { hasTx } from '$lib/stores/capabilities.svelte';
+import TxPanel from '../TxPanel.svelte';
 
 let components: ReturnType<typeof mount>[] = [];
 
-function mountPanel(props: ComponentProps<typeof TxPanel>) {
+function mountPanel(overrides?: Partial<typeof mockProps>) {
+  if (overrides) Object.assign(mockProps, overrides);
   const t = document.createElement('div');
   document.body.appendChild(t);
-  const component = mount(TxPanel, { target: t, props });
+  const component = mount(TxPanel, { target: t });
   flushSync();
   components.push(component);
   return t;
@@ -74,6 +115,23 @@ function openTxSettings(container: HTMLElement) {
 beforeEach(() => {
   components = [];
   vi.mocked(hasTx).mockReturnValue(true);
+  Object.assign(mockProps, {
+    txActive: false, rfPower: 128, micGain: 128, atuActive: false,
+    atuTuning: false, voxActive: false, compActive: false, compLevel: 64,
+    monActive: false, monLevel: 64, driveGain: 128,
+  });
+  mockHandlers.onRfPowerChange = vi.fn();
+  mockHandlers.onMicGainChange = vi.fn();
+  mockHandlers.onAtuToggle = vi.fn();
+  mockHandlers.onAtuTune = vi.fn();
+  mockHandlers.onVoxToggle = vi.fn();
+  mockHandlers.onCompToggle = vi.fn();
+  mockHandlers.onCompLevelChange = vi.fn();
+  mockHandlers.onMonToggle = vi.fn();
+  mockHandlers.onMonLevelChange = vi.fn();
+  mockHandlers.onDriveGainChange = vi.fn();
+  mockHandlers.onPttOn = vi.fn();
+  mockHandlers.onPttOff = vi.fn();
 });
 
 afterEach(() => {
@@ -81,76 +139,52 @@ afterEach(() => {
   document.body.innerHTML = '';
 });
 
-const baseProps: ComponentProps<typeof TxPanel> = {
-  txActive: false,
-  rfPower: 128,
-  micGain: 128,
-  atuActive: false,
-  atuTuning: false,
-  voxActive: false,
-  compActive: false,
-  compLevel: 64,
-  monActive: false,
-  monLevel: 64,
-  driveGain: 128,
-  onRfPowerChange: vi.fn(),
-  onMicGainChange: vi.fn(),
-  onAtuToggle: vi.fn(),
-  onAtuTune: vi.fn(),
-  onVoxToggle: vi.fn(),
-  onCompToggle: vi.fn(),
-  onCompLevelChange: vi.fn(),
-  onMonToggle: vi.fn(),
-  onMonLevelChange: vi.fn(),
-  onDriveGainChange: vi.fn(),
-};
-
 describe('panel structure', () => {
   it('renders TX IDLE badge when txActive is false', () => {
-    const t = mountPanel(baseProps);
+    const t = mountPanel();
     const strip = t.querySelector('.tx-strip');
     expect(strip?.textContent?.trim()).toBe('○ RX');
   });
 
   it('renders TX ACTIVE badge when txActive is true', () => {
-    const t = mountPanel({ ...baseProps, txActive: true });
+    const t = mountPanel({ txActive: true });
     const strip = t.querySelector('.tx-strip');
     expect(strip?.textContent?.trim()).toBe('● TX');
   });
 
   it('renders Mic Gain slider', () => {
-    const t = mountPanel(baseProps);
+    const t = mountPanel();
     openTxSettings(t);
     const labels = Array.from(t.querySelectorAll('.vc-label'));
     expect(labels.some((el) => el.textContent === 'Mic Gain')).toBe(true);
   });
 
   it('renders ATU toggle', () => {
-    const t = mountPanel(baseProps);
+    const t = mountPanel();
     const buttons = Array.from(t.querySelectorAll('.v2-control-button'));
     expect(buttons.some((el) => el.textContent?.trim().startsWith('TUNE'))).toBe(true);
   });
 
   it('renders TUNE button', () => {
-    const t = mountPanel(baseProps);
+    const t = mountPanel();
     const buttons = Array.from(t.querySelectorAll('.v2-control-button'));
     expect(buttons.some((el) => el.textContent?.trim().startsWith('TUNE'))).toBe(true);
   });
 
   it('renders VOX toggle', () => {
-    const t = mountPanel(baseProps);
+    const t = mountPanel();
     const buttons = Array.from(t.querySelectorAll('.v2-control-button'));
     expect(buttons.some((el) => el.textContent?.trim() === 'VOX')).toBe(true);
   });
 
   it('renders COMP toggle', () => {
-    const t = mountPanel(baseProps);
+    const t = mountPanel();
     const buttons = Array.from(t.querySelectorAll('.v2-control-button'));
     expect(buttons.some((el) => el.textContent?.trim().startsWith('COMP'))).toBe(true);
   });
 
   it('renders MON toggle', () => {
-    const t = mountPanel(baseProps);
+    const t = mountPanel();
     const buttons = Array.from(t.querySelectorAll('.v2-control-button'));
     expect(buttons.some((el) => el.textContent?.trim().startsWith('MON'))).toBe(true);
   });
@@ -159,26 +193,26 @@ describe('panel structure', () => {
 describe('hasTx gating', () => {
   it('renders panel content when hasTx returns true', () => {
     vi.mocked(hasTx).mockReturnValue(true);
-    const t = mountPanel(baseProps);
+    const t = mountPanel();
     expect(t.querySelector('.tx-panel')).not.toBeNull();
   });
 
   it('hides panel content when hasTx returns false', () => {
     vi.mocked(hasTx).mockReturnValue(false);
-    const t = mountPanel(baseProps);
+    const t = mountPanel();
     expect(t.querySelector('.tx-panel')).toBeNull();
   });
 });
 
 describe('COMP slider visibility', () => {
   it('does not render Comp Level slider when compActive is false', () => {
-    const t = mountPanel(baseProps);
+    const t = mountPanel();
     const labels = Array.from(t.querySelectorAll('.vc-label')).map((el) => el.textContent);
     expect(labels).not.toContain('Comp Level');
   });
 
   it('renders Comp Level slider when compActive is true', () => {
-    const t = mountPanel({ ...baseProps, compActive: true });
+    const t = mountPanel({ compActive: true });
     openTxSettings(t);
     const labels = Array.from(t.querySelectorAll('.vc-label')).map((el) => el.textContent);
     expect(labels).toContain('Comp Level');
@@ -187,13 +221,13 @@ describe('COMP slider visibility', () => {
 
 describe('MON slider visibility', () => {
   it('does not render Mon Level slider when monActive is false', () => {
-    const t = mountPanel(baseProps);
+    const t = mountPanel();
     const labels = Array.from(t.querySelectorAll('.vc-label')).map((el) => el.textContent);
     expect(labels).not.toContain('Mon Level');
   });
 
   it('renders Mon Level slider when monActive is true', () => {
-    const t = mountPanel({ ...baseProps, monActive: true });
+    const t = mountPanel({ monActive: true });
     openTxSettings(t);
     const labels = Array.from(t.querySelectorAll('.vc-label')).map((el) => el.textContent);
     expect(labels).toContain('Mon Level');
@@ -202,13 +236,13 @@ describe('MON slider visibility', () => {
 
 describe('tuning state', () => {
   it('adds tuning class to TUNE button when atuTuning is true', () => {
-    const t = mountPanel({ ...baseProps, atuTuning: true });
+    const t = mountPanel({ atuTuning: true });
     const buttons = Array.from(t.querySelectorAll('.v2-control-button'));
     expect(buttons.some((el) => el.textContent?.trim().startsWith('TUNING'))).toBe(true);
   });
 
   it('does not add tuning class when atuTuning is false', () => {
-    const t = mountPanel(baseProps);
+    const t = mountPanel();
     const buttons = Array.from(t.querySelectorAll('.v2-control-button'));
     expect(buttons.some((el) => el.textContent?.trim() === 'TUNE')).toBe(true);
   });
@@ -225,17 +259,15 @@ describe('callbacks', () => {
   });
 
   it('calls onAtuTune when TUNE button is clicked', () => {
-    const onAtuTune = vi.fn();
-    const t = mountPanel({ ...baseProps, onAtuTune });
+    const t = mountPanel();
     const buttons = Array.from(t.querySelectorAll<HTMLElement>('.v2-control-button'));
     const tuneBtn = buttons.find((el) => el.textContent?.trim().startsWith('TUNE'));
     tuneBtn?.click();
-    expect(onAtuTune).toHaveBeenCalledOnce();
+    expect(mockHandlers.onAtuTune).toHaveBeenCalledOnce();
   });
 
   it('calls onMicGainChange when Mic Gain slider changes', () => {
-    const onMicGainChange = vi.fn();
-    const t = mountPanel({ ...baseProps, onMicGainChange });
+    const t = mountPanel();
     // Open the settings modal to reveal sliders
     const levelsBtn = Array.from(t.querySelectorAll<HTMLElement>('.v2-control-button'))
       .find((b) => b.textContent?.includes('LEVELS'));
@@ -249,6 +281,6 @@ describe('callbacks', () => {
     }
     vi.advanceTimersByTime(60);
 
-    expect(onMicGainChange).toHaveBeenCalled();
+    expect(mockHandlers.onMicGainChange).toHaveBeenCalled();
   });
 });

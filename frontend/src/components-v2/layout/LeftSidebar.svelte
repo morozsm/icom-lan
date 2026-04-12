@@ -16,23 +16,8 @@
   import MemoryPanel from '../panels/MemoryPanel.svelte';
   import CollapsiblePanel from '../controls/CollapsiblePanel.svelte';
   import { createDragReorder } from '$lib/drag-reorder.svelte';
-  import {
-    toFilterProps,
-    toBandSelectorProps,
-    toDspProps,
-    toTxProps,
-  } from '../wiring/state-adapter';
-  import {
-    makeFilterHandlers,
-    makeBandHandlers,
-    makePresetHandlers,
-    makeDspHandlers,
-    makeTxHandlers,
-    makeSystemHandlers,
-  } from '../wiring/command-bus';
 
   // Reactive state + capabilities — via runtime
-  let radioState = $derived(runtime.state);
   let caps = $derived(runtime.caps);
 
   // --- Panel reorder (shared logic) ---
@@ -41,19 +26,6 @@
     defaults: ['rf-front-end', 'mode', 'filter', 'agc', 'rit-xit', 'band', 'antenna', 'scan'],
     containerSelector: '.left-sidebar',
   });
-
-  // Derived props via state adapter — panels not yet self-wiring
-  let filter = $derived(toFilterProps(radioState, caps));
-  let band = $derived(toBandSelectorProps(radioState));
-  let dsp = $derived(toDspProps(radioState, caps));
-  let tx = $derived(toTxProps(radioState, caps));
-  // Command handlers
-  const filterHandlers = makeFilterHandlers();
-  const bandHandlers = makeBandHandlers();
-  const presetHandlers = makePresetHandlers();
-  const dspHandlers = makeDspHandlers();
-  const txHandlers = makeTxHandlers();
-  const systemHandlers = makeSystemHandlers();
 </script>
 
 <aside class="left-sidebar" class:cross-drop-target={drag.isDropTarget}>
@@ -77,29 +49,7 @@
     <CollapsiblePanel title="FILTER" panelId="filter"
       draggable={true} onDragStart={drag.handleDragStart}
       style={drag.dragStyle('filter')}>
-      <FilterPanel
-        currentMode={filter.currentMode}
-        currentFilter={filter.currentFilter}
-        filterShape={filter.filterShape}
-        filterLabels={filter.filterLabels}
-        filterWidth={filter.filterWidth}
-        filterWidthMin={filter.filterWidthMin}
-        filterWidthMax={filter.filterWidthMax}
-        filterConfig={filter.filterConfig}
-        ifShift={filter.ifShift}
-        hasPbt={filter.hasPbt}
-        pbtInner={filter.pbtInner}
-        pbtOuter={filter.pbtOuter}
-        onFilterChange={filterHandlers.onFilterChange}
-        onFilterWidthChange={filterHandlers.onFilterWidthChange}
-        onFilterShapeChange={filterHandlers.onFilterShapeChange}
-        onFilterPresetChange={filterHandlers.onFilterPresetChange}
-        onFilterDefaults={filterHandlers.onFilterDefaults}
-        onIfShiftChange={filterHandlers.onIfShiftChange}
-        onPbtInnerChange={filterHandlers.onPbtInnerChange}
-        onPbtOuterChange={filterHandlers.onPbtOuterChange}
-        onPbtReset={filterHandlers.onPbtReset}
-      />
+      <FilterPanel />
     </CollapsiblePanel>
   {/if}
 
@@ -123,11 +73,7 @@
     <CollapsiblePanel title="BAND" panelId="band"
       draggable={true} onDragStart={drag.handleDragStart}
       style={drag.dragStyle('band')}>
-      <BandSelector
-        currentFreq={band.currentFreq}
-        onBandSelect={bandHandlers.onBandSelect}
-        onPresetSelect={presetHandlers.onPresetSelect}
-      />
+      <BandSelector />
     </CollapsiblePanel>
   {/if}
 
@@ -155,58 +101,13 @@
 
   {#if drag.order.includes('dsp')}
     <CollapsiblePanel title="DSP" panelId="dsp" draggable onDragStart={drag.handleDragStart} style={drag.dragStyle('dsp')}>
-      <DspPanel
-        nrMode={dsp.nrMode}
-        nrLevel={dsp.nrLevel}
-        nbActive={dsp.nbActive}
-        nbLevel={dsp.nbLevel}
-        nbDepth={dsp.nbDepth}
-        nbWidth={dsp.nbWidth}
-        notchMode={dsp.notchMode}
-        notchFreq={dsp.notchFreq}
-        manualNotchWidth={dsp.manualNotchWidth}
-        agcTimeConstant={dsp.agcTimeConstant}
-        onNrModeChange={dspHandlers.onNrModeChange}
-        onNrLevelChange={dspHandlers.onNrLevelChange}
-        onNbToggle={dspHandlers.onNbToggle}
-        onNbLevelChange={dspHandlers.onNbLevelChange}
-        onNbDepthChange={dspHandlers.onNbDepthChange}
-        onNbWidthChange={dspHandlers.onNbWidthChange}
-        onNotchModeChange={dspHandlers.onNotchModeChange}
-        onNotchFreqChange={dspHandlers.onNotchFreqChange}
-        onManualNotchWidthChange={dspHandlers.onManualNotchWidthChange}
-        onAgcTimeChange={dspHandlers.onAgcTimeChange}
-      />
+      <DspPanel />
     </CollapsiblePanel>
   {/if}
 
   {#if drag.order.includes('tx')}
     <CollapsiblePanel title="TX" panelId="tx" draggable onDragStart={drag.handleDragStart} style={drag.dragStyle('tx')}>
-      <TxPanel
-        txActive={tx.txActive}
-        rfPower={tx.rfPower}
-        micGain={tx.micGain}
-        atuActive={tx.atuActive}
-        atuTuning={tx.atuTuning}
-        voxActive={tx.voxActive}
-        compActive={tx.compActive}
-        compLevel={tx.compLevel}
-        monActive={tx.monActive}
-        monLevel={tx.monLevel}
-        driveGain={tx.driveGain}
-        onRfPowerChange={txHandlers.onRfPowerChange}
-        onMicGainChange={txHandlers.onMicGainChange}
-        onAtuToggle={txHandlers.onAtuToggle}
-        onAtuTune={txHandlers.onAtuTune}
-        onVoxToggle={txHandlers.onVoxToggle}
-        onCompToggle={txHandlers.onCompToggle}
-        onCompLevelChange={txHandlers.onCompLevelChange}
-        onMonToggle={txHandlers.onMonToggle}
-        onMonLevelChange={txHandlers.onMonLevelChange}
-        onDriveGainChange={txHandlers.onDriveGainChange}
-        onPttOn={systemHandlers.onPttOn}
-        onPttOff={systemHandlers.onPttOff}
-      />
+      <TxPanel />
     </CollapsiblePanel>
   {/if}
 
