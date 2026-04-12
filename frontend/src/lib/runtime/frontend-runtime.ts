@@ -27,6 +27,7 @@ import {
 import { getAudioState, setVolume, setMuted, toggleMute } from '$lib/stores/audio.svelte';
 import { sendCommand } from '$lib/transport/ws-client';
 import { audioManager } from '$lib/audio/audio-manager';
+import { systemController } from './system-controller';
 
 import type { ServerState, ReceiverState } from '$lib/types/state';
 import type { Capabilities } from '$lib/types/capabilities';
@@ -90,6 +91,13 @@ class FrontendRuntime {
   /** Whether the runtime has a radio connection. */
   get connected(): boolean {
     return isConnected();
+  }
+
+  // ── System controller ──
+
+  /** System actions (power, connect/disconnect, frequency identification). */
+  get system() {
+    return systemController;
   }
 
   // ── Command dispatch ──

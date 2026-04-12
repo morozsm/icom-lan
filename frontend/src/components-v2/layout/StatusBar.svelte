@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Radio, Cable, Activity, Volume2, ArrowDownUp, Power, Unplug, Palette, Monitor, Tv } from 'lucide-svelte';
   import ThemePicker from '../controls/ThemePicker.svelte';
+  import { runtime } from '$lib/runtime';
   import {
     getRadioStatus,
     getConnectionStatus,
@@ -49,31 +50,22 @@
     const action = isConnected ? 'Disconnect from' : 'Connect to';
     if (!confirm(`${action} radio?`)) return;
     try {
-      const endpoint = isConnected ? '/api/v1/radio/disconnect' : '/api/v1/radio/connect';
-      const response = await fetch(endpoint, { method: 'POST' });
-      if (!response.ok) {
-        const error = await response.text();
-        alert(`Failed to ${action.toLowerCase()}: ${error}`);
+      if (isConnected) {
+        await runtime.system.disconnect();
+      } else {
+        await runtime.system.connect();
       }
     } catch (err) {
-      alert(`Error: ${err}`);
+      alert(`Failed to ${action.toLowerCase()}: ${err}`);
     }
   }
 
   async function handlePowerOn() {
     if (!confirm('Turn ON the radio?')) return;
     try {
-      const response = await fetch('/api/v1/radio/power', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ state: 'on' }),
-      });
-      if (!response.ok) {
-        const error = await response.text();
-        alert(`Failed to turn on radio: ${error}`);
-      }
+      await runtime.system.powerOn();
     } catch (err) {
-      alert(`Error: ${err}`);
+      alert(`Failed to turn on radio: ${err}`);
     }
   }
 
@@ -94,17 +86,8 @@
     identifyTimer = setTimeout(async () => {
       if (nowPlayingExpanded) return;
       lastIdentifiedFreq = freq;
-      try {
-        const resp = await fetch(`/api/v1/eibi/identify?freq=${freq}`);
-        if (resp.ok) {
-          const data = await resp.json();
-          nowPlaying = data.stations?.length > 0 ? data.stations[0] : null;
-        } else {
-          nowPlaying = null;
-        }
-      } catch {
-        nowPlaying = null;
-      }
+      const result = await runtime.system.identifyFrequency(freq);
+      nowPlaying = result?.stations?.length ? result.stations[0] : null;
     }, 800);
 
     return () => {
@@ -115,17 +98,9 @@
   async function handlePowerOff() {
     if (!confirm('Turn OFF the radio?')) return;
     try {
-      const response = await fetch('/api/v1/radio/power', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ state: 'off' }),
-      });
-      if (!response.ok) {
-        const error = await response.text();
-        alert(`Failed to turn off radio: ${error}`);
-      }
+      await runtime.system.powerOff();
     } catch (err) {
-      alert(`Error: ${err}`);
+      alert(`Failed to turn off radio: ${err}`);
     }
   }
 </script>
