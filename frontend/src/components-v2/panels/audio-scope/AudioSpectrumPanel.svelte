@@ -2,29 +2,8 @@
   import { radio } from '$lib/stores/radio.svelte';
   import { resolveFilterModeConfig } from '../../wiring/state-adapter';
   import { getCapabilities } from '$lib/stores/capabilities.svelte';
-  import { getChannel } from '$lib/transport/ws-client';
-  import { markScopeFrame } from '$lib/stores/connection.svelte';
+  import { createAudioScopeConnection } from '$lib/runtime/adapters/scope-adapter';
   import AudioSpectrumCanvas from './AudioSpectrumCanvas.svelte';
-
-  // ── Scope frame parser (same as AmberLcdDisplay) ──
-
-  interface ScopeFrame {
-    receiver: number;
-    startFreq: number;
-    endFreq: number;
-    pixels: Uint8Array;
-  }
-
-  function parseScopeFrame(buf: ArrayBuffer): ScopeFrame | null {
-    const view = new DataView(buf);
-    if (view.byteLength < 16 || view.getUint8(0) !== 0x01) return null;
-    const receiver = view.getUint8(1);
-    const startFreq = view.getUint32(3, true);
-    const endFreq = view.getUint32(7, true);
-    const pixelCount = view.getUint16(14, true);
-    if (16 + pixelCount > view.byteLength) return null;
-    return { receiver, startFreq, endFreq, pixels: new Uint8Array(buf, 16, pixelCount) };
-  }
 
   // ── Radio state extraction ──
 
@@ -53,23 +32,14 @@
   let fftPush: ((data: Uint8Array) => void) | null = null;
 
   $effect(() => {
-    const scopeCh = getChannel('audio-scope');
-    scopeCh.connect('/api/v1/audio-scope');
-    const unsubBinary = scopeCh.onBinary((buf) => {
-      markScopeFrame();
-      const frame = parseScopeFrame(buf);
-      if (!frame) return;
+    const scope = createAudioScopeConnection((frame) => {
       fftPixels = frame.pixels;
       if (frame.endFreq > frame.startFreq) {
         fftBandwidth = frame.endFreq - frame.startFreq;
       }
       fftPush?.(frame.pixels);
     });
-
-    return () => {
-      unsubBinary();
-      scopeCh.disconnect();
-    };
+    return () => scope.disconnect();
   });
 </script>
 

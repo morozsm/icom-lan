@@ -47,7 +47,8 @@
     makeSystemHandlers, makeAntennaHandlers, makeScanHandlers,
   } from '../wiring/command-bus';
   import { getKeyboardConfig } from '$lib/stores/capabilities.svelte';
-  import { audioManager } from '$lib/audio/audio-manager';
+  import { getTxAudioControl } from '$lib/runtime/adapters/tx-adapter';
+  const txAudio = getTxAudioControl();
   import { onMount, onDestroy } from 'svelte';
 
   // ── State ──
@@ -289,12 +290,12 @@
 
   async function engageTx() {
     systemHandlers.onPttOn();
-    await audioManager.startTx();
+    await txAudio.startTx();
   }
 
   function disengageTx() {
     systemHandlers.onPttOff();
-    audioManager.stopTx();
+    txAudio.stopTx();
   }
 
   function pttDown() {
