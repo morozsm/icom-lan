@@ -1,6 +1,5 @@
 <script lang="ts">
   import { radio } from '$lib/stores/radio.svelte';
-  import { getAudioState } from '$lib/stores/audio.svelte';
   import { getCapabilities, hasCapability } from '$lib/stores/capabilities.svelte';
   import RfFrontEnd from '../panels/RfFrontEnd.svelte';
   import ModePanel from '../panels/ModePanel.svelte';
@@ -26,7 +25,6 @@
     toBandSelectorProps,
     toAntennaProps,
     toScanProps,
-    toRxAudioProps,
     toDspProps,
     toTxProps,
     toCwProps,
@@ -41,7 +39,6 @@
     makePresetHandlers,
     makeAntennaHandlers,
     makeScanHandlers,
-    makeRxAudioHandlers,
     makeDspHandlers,
     makeTxHandlers,
     makeCwPanelHandlers,
@@ -50,7 +47,6 @@
 
   // Reactive state + capabilities
   let radioState = $derived(radio.current);
-  let audioState = $derived(getAudioState());
   let caps = $derived(getCapabilities());
 
   // --- Panel reorder (shared logic) ---
@@ -70,7 +66,6 @@
   let antenna = $derived(toAntennaProps(radioState, caps));
   let scan = $derived(toScanProps(radioState));
   // Derived props — panels from right sidebar (for cross-sidebar rendering)
-  let rxAudio = $derived(toRxAudioProps(radioState, caps, audioState));
   let dsp = $derived(toDspProps(radioState, caps));
   let tx = $derived(toTxProps(radioState, caps));
   let cw = $derived(toCwProps(radioState, caps));
@@ -84,7 +79,6 @@
   const presetHandlers = makePresetHandlers();
   const antennaHandlers = makeAntennaHandlers();
   const scanHandlers = makeScanHandlers();
-  const rxAudioHandlers = makeRxAudioHandlers();
   const dspHandlers = makeDspHandlers();
   const txHandlers = makeTxHandlers();
   const cwHandlers = makeCwPanelHandlers();
@@ -237,13 +231,7 @@
 
   {#if drag.order.includes('rx-audio')}
     <CollapsiblePanel title="RX AUDIO" panelId="rx-audio" draggable onDragStart={drag.handleDragStart} style={drag.dragStyle('rx-audio')}>
-      <RxAudioPanel
-        monitorMode={rxAudio.monitorMode}
-        afLevel={rxAudio.afLevel}
-        hasLiveAudio={rxAudio.hasLiveAudio}
-        onMonitorModeChange={rxAudioHandlers.onMonitorModeChange}
-        onAfLevelChange={rxAudioHandlers.onAfLevelChange}
-      />
+      <RxAudioPanel />
     </CollapsiblePanel>
   {/if}
 

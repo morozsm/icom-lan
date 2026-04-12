@@ -1,6 +1,5 @@
 <script lang="ts">
   import { radio } from '$lib/stores/radio.svelte';
-  import { getAudioState } from '$lib/stores/audio.svelte';
   import { getCapabilities, hasCapability } from '$lib/stores/capabilities.svelte';
   import RxAudioPanel from '../panels/RxAudioPanel.svelte';
   import DspPanel from '../panels/DspPanel.svelte';
@@ -18,7 +17,6 @@
   import CollapsiblePanel from '../controls/CollapsiblePanel.svelte';
   import { createDragReorder } from '$lib/drag-reorder.svelte';
   import {
-    toRxAudioProps,
     toDspProps,
     toTxProps,
     toCwProps,
@@ -32,7 +30,6 @@
     toScanProps,
   } from '../wiring/state-adapter';
   import {
-    makeRxAudioHandlers,
     makeDspHandlers,
     makeTxHandlers,
     makeCwPanelHandlers,
@@ -50,11 +47,9 @@
 
   // Reactive state + capabilities
   let radioState = $derived(radio.current);
-  let audioState = $derived(getAudioState());
   let caps = $derived(getCapabilities());
 
   // Derived props via state adapter — native panels
-  let rxAudio = $derived(toRxAudioProps(radioState, caps, audioState));
   let dsp = $derived(toDspProps(radioState, caps));
   let tx = $derived(toTxProps(radioState, caps));
   let cw = $derived(toCwProps(radioState, caps));
@@ -69,7 +64,6 @@
   let scan = $derived(toScanProps(radioState));
 
   // Command handlers via command-bus
-  const rxAudioHandlers = makeRxAudioHandlers();
   const dspHandlers = makeDspHandlers();
   const txHandlers = makeTxHandlers();
   const cwHandlers = makeCwPanelHandlers();
@@ -106,13 +100,7 @@
 <aside class="right-sidebar" class:cross-drop-target={drag.isDropTarget}>
   {#if showRx && drag.order.includes('rx-audio')}
     <CollapsiblePanel title="RX AUDIO" panelId="rx-audio" draggable onDragStart={drag.handleDragStart} style={drag.dragStyle('rx-audio')}>
-      <RxAudioPanel
-        monitorMode={rxAudio.monitorMode}
-        afLevel={rxAudio.afLevel}
-        hasLiveAudio={rxAudio.hasLiveAudio}
-        onMonitorModeChange={rxAudioHandlers.onMonitorModeChange}
-        onAfLevelChange={rxAudioHandlers.onAfLevelChange}
-      />
+      <RxAudioPanel />
     </CollapsiblePanel>
   {/if}
 
