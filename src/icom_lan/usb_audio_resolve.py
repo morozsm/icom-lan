@@ -281,7 +281,7 @@ def _is_usb_audio_codec(name: str) -> bool:
     expose USB Audio Class devices.
     """
     lowered = name.lower()
-    return any(p in lowered for p in ("usb audio codec", "usb audio", "yaesu", "kenwood"))
+    return any(p in lowered for p in ("usb audio codec", "usb audio device", "yaesu", "kenwood"))
 
 
 def _safe_int(value: object, default: int = 0) -> int:

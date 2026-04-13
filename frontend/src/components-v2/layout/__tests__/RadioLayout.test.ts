@@ -21,6 +21,8 @@ vi.mock('$lib/runtime', () => ({
   runtime: {
     state: null,
     caps: null,
+    connectionStatus: 'disconnected',
+    radioPowerOn: null,
     connection: { status: 'disconnected', radioPowerOn: null },
     audio: { rxEnabled: false, txEnabled: false, volume: 50, muted: false },
     send: vi.fn(),

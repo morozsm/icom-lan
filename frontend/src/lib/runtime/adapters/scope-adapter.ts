@@ -12,6 +12,8 @@
 import { getChannel } from '$lib/transport/ws-client';
 import { markScopeFrame } from '$lib/stores/connection.svelte';
 
+let _scopeInstanceId = 0;
+
 export interface ScopeFrame {
   receiver: number;
   startFreq: number;
@@ -41,7 +43,9 @@ export interface AudioScopeHandle {
 export function createAudioScopeConnection(
   onFrame: (frame: ScopeFrame) => void,
 ): AudioScopeHandle {
-  const ch = getChannel('audio-scope');
+  // Each caller gets its own channel to avoid lifecycle conflicts
+  // when multiple components mount/unmount independently.
+  const ch = getChannel(`audio-scope-${++_scopeInstanceId}`);
   ch.connect('/api/v1/audio-scope');
   const unsubBinary = ch.onBinary((buf) => {
     markScopeFrame();

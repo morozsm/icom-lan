@@ -1,24 +1,12 @@
 <script lang="ts">
-  import { runtime } from '$lib/runtime';
   import { hasCapability } from '$lib/stores/capabilities.svelte';
   import RxAudioPanel from '../panels/RxAudioPanel.svelte';
   import DspPanel from '../panels/DspPanel.svelte';
   import TxPanel from '../panels/TxPanel.svelte';
   import CwPanel from '../panels/CwPanel.svelte';
   import MemoryPanel from '../panels/MemoryPanel.svelte';
-  import RfFrontEnd from '../panels/RfFrontEnd.svelte';
-  import ModePanel from '../panels/ModePanel.svelte';
-  import FilterPanel from '../panels/FilterPanel.svelte';
-  import AgcPanel from '../panels/AgcPanel.svelte';
-  import RitXitPanel from '../panels/RitXitPanel.svelte';
-  import AntennaPanel from '../panels/AntennaPanel.svelte';
-  import ScanPanel from '../panels/ScanPanel.svelte';
-  import BandSelector from '../controls/BandSelector.svelte';
   import CollapsiblePanel from '../controls/CollapsiblePanel.svelte';
   import { createDragReorder } from '$lib/drag-reorder.svelte';
-
-  // Reactive state + capabilities — via runtime
-  let caps = $derived(runtime.caps);
 
   type RightSidebarMode = 'all' | 'rx' | 'tx';
 
@@ -70,61 +58,6 @@
     </CollapsiblePanel>
   {/if}
 
-  {#if drag.order.includes('rf-front-end')}
-    <CollapsiblePanel title="RF FRONT END" panelId="rf-front-end" dataPanel="rf-frontend"
-      draggable onDragStart={drag.handleDragStart} style={drag.dragStyle('rf-front-end')}>
-      <RfFrontEnd />
-    </CollapsiblePanel>
-  {/if}
-
-  {#if drag.order.includes('mode')}
-    <CollapsiblePanel title="MODE" panelId="mode"
-      draggable onDragStart={drag.handleDragStart} style={drag.dragStyle('mode')}>
-      <ModePanel />
-    </CollapsiblePanel>
-  {/if}
-
-  {#if drag.order.includes('filter')}
-    <CollapsiblePanel title="FILTER" panelId="filter"
-      draggable onDragStart={drag.handleDragStart} style={drag.dragStyle('filter')}>
-      <FilterPanel />
-    </CollapsiblePanel>
-  {/if}
-
-  {#if drag.order.includes('agc')}
-    <CollapsiblePanel title="AGC" panelId="agc"
-      draggable onDragStart={drag.handleDragStart} style={drag.dragStyle('agc')}>
-      <AgcPanel />
-    </CollapsiblePanel>
-  {/if}
-
-  {#if drag.order.includes('rit-xit')}
-    <CollapsiblePanel title="RIT / XIT" panelId="rit-xit"
-      draggable onDragStart={drag.handleDragStart} style={drag.dragStyle('rit-xit')}>
-      <RitXitPanel />
-    </CollapsiblePanel>
-  {/if}
-
-  {#if drag.order.includes('band')}
-    <CollapsiblePanel title="BAND" panelId="band"
-      draggable onDragStart={drag.handleDragStart} style={drag.dragStyle('band')}>
-      <BandSelector />
-    </CollapsiblePanel>
-  {/if}
-
-  {#if drag.order.includes('antenna') && (caps?.antennas ?? 1) > 1}
-    <CollapsiblePanel title="ANTENNA" panelId="antenna" dataPanel="antenna"
-      draggable onDragStart={drag.handleDragStart} style={drag.dragStyle('antenna')}>
-      <AntennaPanel />
-    </CollapsiblePanel>
-  {/if}
-
-  {#if drag.order.includes('scan')}
-    <CollapsiblePanel title="SCAN" panelId="scan"
-      draggable onDragStart={drag.handleDragStart} style={drag.dragStyle('scan')}>
-      <ScanPanel />
-    </CollapsiblePanel>
-  {/if}
 </aside>
 
 <style>

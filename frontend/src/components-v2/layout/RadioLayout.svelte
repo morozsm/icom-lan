@@ -81,7 +81,7 @@
   let landscapeSpectrumDismissed = $state(false);
   let landscapeAutoLocked = $state(false);
   let spectrumLandscape = $derived(isMobile && isLandscape && !landscapeSpectrumDismissed && !landscapeAutoLocked);
-  let connectionStatus = $derived(runtime.connection.status);
+  let connectionStatus = $derived(runtime.connectionStatus);
 
   // Skin resolution — determines which layout to render
   let skinId = $derived<SkinId>(resolveSkinId({
@@ -299,7 +299,7 @@
 </div>
 {/if}
 
-{#if runtime.connection.radioPowerOn === false}
+{#if runtime.radioPowerOn === false}
   <div class="power-off-overlay" aria-label="Radio is powered off">
     <div class="power-off-content">
       <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
