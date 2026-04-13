@@ -23,8 +23,6 @@
   const onBreakInDelayChange = handlers.onBreakInDelayChange;
   const onApfChange = handlers.onApfChange;
   const onTwinPeakToggle = handlers.onTwinPeakToggle;
-  const onAutoTune = handlers.onAutoTune;
-
   let showBreakIn = $derived(hasCapability('break_in'));
   let showApf = $derived(hasCapability('apf'));
   let showTwinPeak = $derived(hasCapability('twin_peak'));
@@ -105,13 +103,7 @@
       />
     {/if}
 
-    {#if hasCapability('cw_auto_tune')}
-    <div class="toggle-row">
-      <button type="button" class="auto-tune-btn v2-control-button" onclick={onAutoTune}>
-        AUTO TUNE
-      </button>
-    </div>
-    {/if}
+    <!-- AUTO TUNE: removed — see #671 for software implementation -->
   </div>
 {/if}
 
@@ -153,8 +145,4 @@
     gap: 8px;
   }
 
-  .auto-tune-btn {
-    flex: 1;
-    background: transparent;
-  }
 </style>

@@ -20,7 +20,6 @@ const mockHandlers = {
   onBreakInDelayChange: vi.fn(),
   onApfChange: vi.fn(),
   onTwinPeakToggle: vi.fn(),
-  onAutoTune: vi.fn(),
 };
 
 vi.mock('$lib/runtime/adapters/panel-adapters', () => ({
@@ -106,10 +105,10 @@ describe('CwPanel component rendering', () => {
     expect(buttons.some((b) => b.textContent?.trim() === 'TPF')).toBe(true);
   });
 
-  it('renders AUTO TUNE button', () => {
+  it('does NOT render AUTO TUNE button (removed, see #671)', () => {
     const t = mountPanel();
     const buttons = Array.from(t.querySelectorAll('button'));
-    expect(buttons.some((b) => b.textContent?.trim() === 'AUTO TUNE')).toBe(true);
+    expect(buttons.some((b) => b.textContent?.trim() === 'AUTO TUNE')).toBe(false);
   });
 
   it('unmounts cleanly', () => {
