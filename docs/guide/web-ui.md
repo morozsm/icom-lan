@@ -210,6 +210,21 @@ The browser app startup path is implemented in `frontend/src/App.svelte` and
 5. Fetch capabilities once from `/api/v1/capabilities`.
 6. Connect control WebSocket (`/api/v1/ws`) and subscribe to events.
 
+### v2 runtime ownership (actual code paths)
+
+v2 keeps one behavior path and splits responsibilities by module:
+
+| Responsibility | Current implementation path | Notes |
+|---|---|---|
+| Runtime read/write entry point | `frontend/src/lib/runtime/frontend-runtime.ts` | Exposes state, capabilities, connection snapshot, audio actions, and command send helpers. |
+| UI view-model mapping | `frontend/src/components-v2/wiring/state-adapter.ts` | Converts raw runtime state into panel props. |
+| WS command dispatch | `frontend/src/components-v2/wiring/command-bus.ts` | Maps UI callbacks to `sendCommand(...)` calls and optimistic state patches. |
+| HTTP system actions | `frontend/src/lib/runtime/system-controller.ts` via `runtime.system.*` | Owns radio connect/disconnect, power on/off, and EiBi identify calls. |
+
+Current skin files in `frontend/src/skins/*` are migration wrappers that delegate
+to `components-v2/layout/*`; behavior is still implemented in the v2 layout and
+wiring modules listed above.
+
 ### State polling and conditional requests
 
 - Polling uses `If-None-Match` with the previous `ETag`.
@@ -269,9 +284,24 @@ Mobile-first interaction logic is implemented in:
 `v2` can be selected with `?ui=v2` (or stored in localStorage by the app).
 Without selection, UI version defaults to `v1`.
 
-### Mobile layout switching
+### Layout and skin resolution in v2
 
-In v2, mobile layout is selected automatically for narrow/short viewports and touch-centric form factors.
+Skin/layout is resolved in `frontend/src/components-v2/layout/RadioLayout.svelte`
+using `resolveSkinId(...)` and `getLayoutMode()`:
+
+1. `isMobile` is true when:
+   - `min(window.innerWidth, window.innerHeight) < 640`, or
+   - touch device and `min(window.innerWidth, window.innerHeight) < 500`.
+2. If `isMobile` is true -> mobile skin.
+3. Otherwise, layout preference from localStorage key `icom-lan-layout` is used:
+   - `lcd` -> amber LCD skin
+   - `standard` -> desktop v2 skin
+   - `auto` -> desktop v2 when any scope is available, amber LCD when no scope is available.
+
+Status bar layout button behavior (`cycleLayoutMode(...)`):
+
+- if scope is available: `auto -> lcd -> standard -> auto`
+- if scope is not available: selecting layout forces `lcd`
 
 ### Bottom sheet gestures
 
@@ -319,6 +349,31 @@ icom-lan web --static-dir /opt/icom-ui/dist
 curl http://127.0.0.1:8080/api/v1/info
 curl http://127.0.0.1:8080/api/v1/state
 ```
+
+### Verify v2 StatusBar system actions
+
+These are the HTTP calls used by `runtime.system.*` in `StatusBar.svelte` and
+`LcdLayout.svelte`:
+
+```bash
+# Trigger backend reconnect/disconnect
+curl -X POST http://127.0.0.1:8080/api/v1/radio/connect
+curl -X POST http://127.0.0.1:8080/api/v1/radio/disconnect
+
+# Remote power control
+curl -X POST http://127.0.0.1:8080/api/v1/radio/power \
+  -H "Content-Type: application/json" \
+  -d '{"state":"on"}'
+curl -X POST http://127.0.0.1:8080/api/v1/radio/power \
+  -H "Content-Type: application/json" \
+  -d '{"state":"off"}'
+
+# Optional EiBi "now playing" lookup used by status bar
+curl "http://127.0.0.1:8080/api/v1/eibi/identify?freq=14074000"
+```
+
+If these endpoints return non-2xx, `runtime.system.*` raises the backend text
+as an error and UI actions show an alert with that message.
 
 ## Dynamic UI — Radio-Aware Controls
 
@@ -397,6 +452,10 @@ const sub = state.sub ?? null;
   all-zero scope frames trigger automatic re-enable attempts.
 - **UI version assumptions:** mobile v2 interactions (sheet/panel swipe, touch-first PTT flow)
   require `?ui=v2` or previously stored v2 selection; default is v1.
+- **Layout mode expectations:** v2 layout preference (`icom-lan-layout`) is capability-aware;
+  `auto` resolves to desktop only when any scope exists, otherwise LCD is selected.
+- **System action error surfacing:** connect/disconnect/power actions in v2 call
+  `runtime.system.*` and surface backend HTTP errors directly in the UI.
 - **Battery API availability:** polling slowdown on low battery is best-effort; browsers without
   `navigator.getBattery()` remain on normal polling cadence.
 - **MediaSession availability:** headset/lock-screen controls are enabled only when
