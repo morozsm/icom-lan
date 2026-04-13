@@ -45,12 +45,6 @@ export interface ConnectionSnapshot {
   radioPowerOn: boolean | null;
 }
 
-export interface AudioSnapshot {
-  rxEnabled: boolean;
-  txEnabled: boolean;
-  volume: number;
-  muted: boolean;
-}
 
 // ── Runtime class ──
 
@@ -68,7 +62,23 @@ class FrontendRuntime {
     return getCapabilities();
   }
 
-  /** Connection health snapshot. */
+  /** Connection health — individual reactive getters to avoid object allocation. */
+  get connectionStatus(): 'connected' | 'partial' | 'disconnected' {
+    return getConnectionStatus();
+  }
+
+  get connectionHttp(): boolean { return getHttpConnected(); }
+  get connectionWs(): boolean { return getWsConnected(); }
+  get connectionAudio(): boolean { return isAudioConnected(); }
+  get connectionStale(): boolean { return isStale(); }
+  get connectionReconnecting(): boolean { return isReconnecting(); }
+  get radioStatus(): string { return getRadioStatus(); }
+  get radioPowerOn(): boolean | null { return getRadioPowerOn(); }
+
+  /**
+   * Connection snapshot (for contexts that need all fields at once).
+   * Prefer individual getters in $derived for better Svelte 5 reactivity.
+   */
   get connection(): ConnectionSnapshot {
     return {
       status: getConnectionStatus(),
@@ -82,10 +92,9 @@ class FrontendRuntime {
     };
   }
 
-  /** Audio UI state (volume, mute, rx/tx enabled). */
-  get audio(): AudioSnapshot {
-    const s = getAudioState();
-    return { rxEnabled: s.rxEnabled, txEnabled: s.txEnabled, volume: s.volume, muted: s.muted };
+  /** Audio UI state — returns the live $state object directly. */
+  get audio() {
+    return getAudioState();
   }
 
   /** Whether the runtime has a radio connection. */
