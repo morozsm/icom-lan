@@ -23,7 +23,6 @@
   const onBreakInDelayChange = handlers.onBreakInDelayChange;
   const onApfChange = handlers.onApfChange;
   const onTwinPeakToggle = handlers.onTwinPeakToggle;
-  const onAutoTune = handlers.onAutoTune;
 
   let showBreakIn = $derived(hasCapability('break_in'));
   let showApf = $derived(hasCapability('apf'));
@@ -105,11 +104,8 @@
       />
     {/if}
 
-    <div class="toggle-row">
-      <button type="button" class="auto-tune-btn v2-control-button" onclick={onAutoTune}>
-        AUTO TUNE
-      </button>
-    </div>
+    <!-- AUTO TUNE: removed — was incorrectly triggering ATU.
+         Software CW auto-tune to be implemented in #671. -->
   </div>
 {/if}
 
@@ -151,8 +147,4 @@
     gap: 8px;
   }
 
-  .auto-tune-btn {
-    flex: 1;
-    background: transparent;
-  }
 </style>

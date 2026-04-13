@@ -423,10 +423,7 @@ export function makeCwPanelHandlers() {
       patchActiveReceiver({ twinPeakFilter: next }, true);
       cmd('set_twin_peak', { on: next, receiver });
     },
-    /** Same action as TX panel TUNE — starts ATU tuning when supported. */
-    onAutoTune: () => {
-      cmd('set_tuner_status', { value: 2 });
-    },
+    // onAutoTune: removed — was incorrectly triggering ATU. See #671.
     onWpmChange: (speed: number) => {
       patchRadioState({ keySpeed: speed });
       cmd('set_key_speed', { speed });
