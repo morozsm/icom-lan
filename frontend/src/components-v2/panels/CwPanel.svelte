@@ -105,11 +105,13 @@
       />
     {/if}
 
+    {#if hasCapability('cw_auto_tune')}
     <div class="toggle-row">
       <button type="button" class="auto-tune-btn v2-control-button" onclick={onAutoTune}>
         AUTO TUNE
       </button>
     </div>
+    {/if}
   </div>
 {/if}
 

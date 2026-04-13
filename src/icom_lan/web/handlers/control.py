@@ -35,6 +35,7 @@ from ..radio_poller import (
     SetCompressorLevel,
     SetBreakIn,
     SetCwPitch,
+    SetCwSyncTune,
     SetDataMode,
     SetKeySpeed,
     SetDialLock,
@@ -214,6 +215,7 @@ class ControlHandler:
             "set_cw_pitch",
             "set_key_speed",
             "set_break_in",
+            "set_cw_sync_tune",
             "set_apf",
             "set_twin_peak",
             "set_drive_gain",
@@ -1591,6 +1593,11 @@ class ControlHandler:
                 self._ensure_capability("cw", "set_key_speed")
                 q.put(SetKeySpeed(speed))
                 return {"speed": speed}
+            case "set_cw_sync_tune":
+                on = bool(params.get("on", False))
+                self._ensure_capability("cw_auto_tune", "set_cw_sync_tune")
+                q.put(SetCwSyncTune(on))
+                return {"on": on}
             case "set_break_in":
                 break_in_mode = int(params["mode"])
                 self._ensure_capability("break_in", "set_break_in")

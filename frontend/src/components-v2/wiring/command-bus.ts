@@ -423,9 +423,9 @@ export function makeCwPanelHandlers() {
       patchActiveReceiver({ twinPeakFilter: next }, true);
       cmd('set_twin_peak', { on: next, receiver });
     },
-    /** Same action as TX panel TUNE — starts ATU tuning when supported. */
+    /** Toggle SSB/CW Synchronous Tuning — auto-tunes receiver to CW/RTTY signal. */
     onAutoTune: () => {
-      cmd('set_tuner_status', { value: 2 });
+      cmd('set_cw_sync_tune', { on: true });
     },
     onWpmChange: (speed: number) => {
       patchRadioState({ keySpeed: speed });

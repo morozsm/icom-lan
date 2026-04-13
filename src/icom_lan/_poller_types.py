@@ -42,6 +42,7 @@ __all__ = [
     "SetAutoNotch",
     "SetBand",
     "SetBreakIn",
+    "SetCwSyncTune",
     "SetBreakInDelay",
     "SetBsr",
     "SetCivOutputAnt",
@@ -291,6 +292,11 @@ class SetCwPitch:
 @dataclass(frozen=True, slots=True)
 class SetKeySpeed:
     speed: int
+
+
+@dataclass(frozen=True, slots=True)
+class SetCwSyncTune:
+    on: bool
 
 
 @dataclass(frozen=True, slots=True)
@@ -807,6 +813,7 @@ Command = (
     | SetCwPitch
     | SetKeySpeed
     | SetBreakIn
+    | SetCwSyncTune
     | SetApf
     | SetTwinPeak
     | SetDriveGain
