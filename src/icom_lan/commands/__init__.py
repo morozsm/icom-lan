@@ -298,7 +298,7 @@ from .scope import (
 )
 
 # --- cw.py ---
-from .cw import send_cw, stop_cw, get_cw_sync_tune, set_cw_sync_tune
+from .cw import send_cw, stop_cw
 
 # --- power.py ---
 from .power import get_powerstat, parse_powerstat, power_off, power_on
@@ -481,8 +481,6 @@ __all__ = [
     "parse_ack_nak",
     "send_cw",
     "stop_cw",
-    "get_cw_sync_tune",
-    "set_cw_sync_tune",
     "power_on",
     "power_off",
     "get_attenuator",

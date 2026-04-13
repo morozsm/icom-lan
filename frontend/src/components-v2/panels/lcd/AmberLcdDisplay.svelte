@@ -250,7 +250,7 @@
         <button class="lcd-btn" onclick={() => runtime.send('set_tuner_status', { value: 2 })}>TUNE</button>
       {/if}
       {#if isCwMode && hasCapability('cw')}
-        <button class="lcd-btn" onclick={cwHandlers.onAutoTune}>AUTO</button>
+        <!-- AUTO TUNE: removed — see #671 for software implementation -->
         {#if hasCapability('break_in')}
           <button class="lcd-btn" class:active={breakInMode > 0} onclick={() => cwHandlers.onBreakInModeChange(breakInMode === 0 ? 1 : breakInMode === 1 ? 2 : 0)}>{breakInMode === 0 ? 'BK-OFF' : breakInMode === 1 ? 'SEMI' : 'FULL'}</button>
         {/if}

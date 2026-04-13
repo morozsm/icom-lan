@@ -425,7 +425,6 @@
             onBreakInToggle={cwHandlers.onBreakInToggle}
             onApfChange={cwHandlers.onApfChange}
             onTwinPeakToggle={cwHandlers.onTwinPeakToggle}
-            onAutoTune={cwHandlers.onAutoTune}
           />
         </CollapsiblePanel>
       </div>

@@ -198,7 +198,6 @@ from .._poller_types import (  # noqa: E402
     SetBand,
     SetBreakIn,
     SetBreakInDelay,
-    SetCwSyncTune,
     SetBsr,
     SetCivOutputAnt,
     SetCivTransceive,
@@ -1038,10 +1037,6 @@ class RadioPoller:
                 if self._radio_state:
                     self._radio_state.key_speed = speed
                     self.bump_revision()
-            case SetCwSyncTune(on=on):
-                from ..commands.cw import set_cw_sync_tune
-                frame = set_cw_sync_tune(on, to_addr=_r.civ_addr, cmd_map=getattr(_r, '_cmd_map', None))
-                await _r.send_civ(frame)
             case SetBreakIn(mode=mode):
                 await _r.set_break_in(mode)
                 if self._radio_state:
