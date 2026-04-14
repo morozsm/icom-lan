@@ -332,6 +332,8 @@ class ControlHandler:
             "set_quick_split",
             "get_quick_dual_watch",
             "set_quick_dual_watch",
+            # Issue #677 — CW auto-tune via FFT peak detection
+            "cw_auto_tune",
         ]
     )
 
@@ -1028,7 +1030,57 @@ class ControlHandler:
                 raise RuntimeError("radio does not support this command")
             on = await radio.get_tx_freq_monitor()
             return {"on": on}
+        if name == "cw_auto_tune":
+            return await self._cw_auto_tune()
         return None
+
+    async def _cw_auto_tune(self) -> dict[str, Any]:
+        """Detect CW tone via FFT and shift VFO to zero-beat."""
+        from ...cw_auto_tuner import CwAutoTuner
+
+        if self._server is None:
+            raise RuntimeError("server not available")
+
+        broadcaster = self._server._audio_broadcaster
+        tuner = CwAutoTuner()
+
+        done: asyncio.Event = asyncio.Event()
+        result: list[int | None] = []
+
+        def _on_detected(hz: int | None) -> None:
+            result.append(hz)
+            done.set()
+
+        tuner.start_collection(_on_detected)
+        tap_handle = broadcaster._tap_registry.register(
+            "cw_auto_tune", tuner.feed_audio,
+        )
+        await broadcaster.ensure_relay()
+
+        try:
+            await asyncio.wait_for(done.wait(), timeout=3.0)
+        except asyncio.TimeoutError:
+            tuner.cancel()
+            return {"detected": None, "applied": False}
+        finally:
+            broadcaster._tap_registry.unregister(tap_handle)
+
+        hz = result[0] if result else None
+        if hz is None:
+            return {"detected": None, "applied": False}
+
+        # Read current CW pitch from state, compute VFO shift
+        state = self._server._radio_state
+        cw_pitch = state.cw_pitch if state.cw_pitch else 600
+        delta = hz - cw_pitch
+
+        if abs(delta) > 5:
+            # Shift VFO frequency to zero-beat
+            freq = state.main.freq
+            q = self._server.command_queue
+            q.put(SetFreq(freq + delta))
+
+        return {"detected": hz, "cw_pitch": cw_pitch, "delta": delta, "applied": abs(delta) > 5}
 
     # ------------------------------------------------------------------
     # Frequency / mode / band / VFO / RIT / split
