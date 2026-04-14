@@ -3,6 +3,15 @@
   import { HardwareButton } from '$lib/Button';
   import { hasCapability } from '$lib/stores/capabilities.svelte';
   import { buildNrOptions, buildNotchOptions } from './dsp-utils';
+  import {
+    AGC_TIME_LABELS,
+    LONG_PRESS_MS,
+    formatAgcTime,
+    toggleNrMode,
+    toggleNotchMode,
+    isNrActive,
+    isNotchActive,
+  } from './dsp-panel-logic';
 
   import { deriveDspProps, getDspHandlers } from '$lib/runtime/adapters/panel-adapters';
 
@@ -30,11 +39,7 @@
   const onManualNotchWidthChange = handlers.onManualNotchWidthChange ?? (() => {});
   const onAgcTimeChange = handlers.onAgcTimeChange ?? (() => {});
 
-  const NOTCH_WIDTH_LABELS: Record<number, string> = { 0: 'WIDE', 1: 'MID', 2: 'NARROW' };
-  const AGC_TIME_LABELS: Record<number, string> = {
-    0: '0.1', 1: '0.3', 2: '0.6', 3: '1.0', 4: '1.5',
-    5: '2.0', 6: '3.0', 7: '4.0', 8: '5.0', 9: '6.0',
-  };
+  /* NOTCH_WIDTH_LABELS, AGC_TIME_LABELS imported from dsp-panel-logic */
 
   let showNr = $derived(hasCapability('nr'));
   let showNb = $derived(hasCapability('nb'));
@@ -42,8 +47,8 @@
   let nrOptions = $derived(buildNrOptions());
   let notchOptions = $derived(buildNotchOptions());
 
-  let nrActive = $derived(nrMode > 0);
-  let notchToggleActive = $derived(notchMode === 'auto' || notchMode === 'manual');
+  let nrActive = $derived(isNrActive(nrMode));
+  let notchToggleActive = $derived(isNotchActive(notchMode));
 
   type ModalId = 'nr' | 'nb' | 'notch' | 'agc';
   let openModal = $state<ModalId | null>(null);
@@ -98,19 +103,11 @@
   }
 
   function toggleNrShort(): void {
-    if (nrMode === 0) {
-      onNrModeChange(1);
-    } else {
-      onNrModeChange(0);
-    }
+    onNrModeChange(toggleNrMode(nrMode));
   }
 
   function toggleNotchShort(): void {
-    if (notchMode === 'off') {
-      onNotchModeChange('auto');
-    } else {
-      onNotchModeChange('off');
-    }
+    onNotchModeChange(toggleNotchMode(notchMode));
   }
 
   function handleNrModalMode(v: string | number): void {
@@ -137,7 +134,7 @@
     }
   });
 
-  const LONG_PRESS_MS = 500;
+  /* LONG_PRESS_MS imported from dsp-panel-logic */
   let longPressTimer: ReturnType<typeof setTimeout> | null = null;
   let suppressNextToggle: ModalId | null = null;
 
@@ -248,7 +245,7 @@
         color="gray"
         title="AGC Time — click for settings"
         onclick={() => openModalFor('agc')}
-      >AGC-T {AGC_TIME_LABELS[agcTimeConstant] ?? agcTimeConstant}s</HardwareButton>
+      >AGC-T {formatAgcTime(agcTimeConstant)}s</HardwareButton>
     </div>
   </div>
 </div>
@@ -393,7 +390,7 @@
       step={1}
       renderer="discrete"
       tickStyle="notch"
-      displayFn={(v: number) => AGC_TIME_LABELS[v] ?? String(v)}
+      displayFn={formatAgcTime}
       unit="s"
       accentColor="var(--v2-accent-cyan)"
       onChange={onAgcTimeChange}

@@ -4,6 +4,7 @@
   import { ValueControl, rawToPercentDisplay } from '../controls/value-control';
   import { hasCapability } from '$lib/stores/capabilities.svelte';
 
+  import { formatBreakIn, isBreakInActive, isApfActive } from './cw-panel-logic';
   import { deriveCwProps, getCwHandlers } from '$lib/runtime/adapters/panel-adapters';
 
   const handlers = getCwHandlers();
@@ -26,11 +27,9 @@
   let showBreakIn = $derived(hasCapability('break_in'));
   let showApf = $derived(hasCapability('apf'));
   let showTwinPeak = $derived(hasCapability('twin_peak'));
-  let breakInActive = $derived(breakIn > 0);
-  let apfActive = $derived(apfMode > 0);
-
-  const BREAK_IN_LABELS: Record<number, string> = { 0: 'OFF', 1: 'SEMI', 2: 'FULL' };
-  let breakInLabel = $derived(BREAK_IN_LABELS[breakIn] ?? 'OFF');
+  let breakInActive = $derived(isBreakInActive(breakIn));
+  let apfActive = $derived(isApfActive(apfMode));
+  let breakInLabel = $derived(formatBreakIn(breakIn));
 </script>
 
 {#if hasCapability('cw')}
