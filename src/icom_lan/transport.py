@@ -53,13 +53,9 @@ class _UdpProtocol(asyncio.DatagramProtocol):
         self._owner = transport_owner
 
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
-        # asyncio guarantees DatagramTransport for DatagramProtocol;
-        # avoid bare assert — it silently kills the callback in asyncio's error handler.
-        if not isinstance(transport, asyncio.DatagramTransport):
-            logger.warning(
-                "Unexpected transport type in connection_made: %s (expected DatagramTransport)",
-                type(transport).__name__,
-            )
+        # Note: on macOS/selector loop, _SelectorDatagramTransport does NOT
+        # inherit from asyncio.DatagramTransport (CPython quirk), but it
+        # has sendto() — so we skip the isinstance check.
         self._owner._udp_transport = transport  # type: ignore[assignment]
 
     def datagram_received(self, data: bytes, addr: tuple[str, int]) -> None:
@@ -68,12 +64,11 @@ class _UdpProtocol(asyncio.DatagramProtocol):
     def error_received(self, exc: Exception) -> None:
         owner = self._owner
         owner._udp_error_count += 1
-        if owner._udp_error_count <= 3 or owner._udp_error_count % 100 == 0:
-            logger.error(
-                "UDP error (#%d): %s",
-                owner._udp_error_count,
-                exc,
-            )
+        n = owner._udp_error_count
+        if n <= 3:
+            logger.warning("UDP error (#%d): %s", n, exc)
+        elif n % 100 == 0:
+            logger.warning("UDP error (#%d, suppressed 97): %s", n, exc)
 
     def connection_lost(self, exc: Exception | None) -> None:
         logger.info("UDP connection lost: %s", exc)
