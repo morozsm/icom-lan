@@ -29,6 +29,7 @@ from ..websocket import WS_OP_BINARY, WS_OP_TEXT, WebSocketConnection
 
 if TYPE_CHECKING:
     from ...capabilities import CAP_AUDIO as _CAP_AUDIO_TYPE  # noqa: F401
+    from ...dsp.pipeline import DSPPipeline
     from ...radio_protocol import Radio
 
 from ...capabilities import CAP_AUDIO
@@ -77,6 +78,8 @@ class AudioBroadcaster:
         self._sample_rate: int = 48000
         self._channels: int = 1
         self._lock = asyncio.Lock()
+        # Optional DSP pipeline (inserted between codec decode and tap/distribute)
+        self._dsp_pipeline: DSPPipeline | None = None
         # Multi-consumer PCM tap registry (replaces single _pcm_tap)
         self._tap_registry = TapRegistry()
         self._legacy_tap_handle: TapHandle | None = None
@@ -138,6 +141,15 @@ class AudioBroadcaster:
             self._legacy_tap_handle = None
         if callback is not None:
             self._legacy_tap_handle = self._tap_registry.register("legacy", callback)
+
+    def set_dsp_pipeline(self, pipeline: "DSPPipeline | None") -> None:
+        """Attach or detach a DSP processing pipeline.
+
+        When set, every decoded PCM16 frame is passed through
+        :meth:`DSPPipeline.process_bytes` before tap distribution and
+        client encoding.  Pass ``None`` to remove the pipeline.
+        """
+        self._dsp_pipeline = pipeline
 
     async def ensure_relay(self) -> None:
         """Ensure the relay loop is running (for PCM tap consumers like FFT scope).
@@ -257,6 +269,15 @@ class AudioBroadcaster:
                         )
                         # Fall back to original data
                         audio_data = pkt.data
+
+                # Apply DSP pipeline if configured (operates on s16le PCM)
+                if self._dsp_pipeline is not None and self._web_codec == AUDIO_CODEC_PCM16:
+                    try:
+                        audio_data = self._dsp_pipeline.process_bytes(
+                            audio_data, self._sample_rate
+                        )
+                    except Exception:
+                        logger.debug("audio: dsp pipeline error", exc_info=True)
 
                 # Fan out PCM data to all registered taps (FFT scope, analyzers, etc.)
                 if self._tap_registry.active and self._web_codec == AUDIO_CODEC_PCM16:
