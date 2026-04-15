@@ -1166,6 +1166,33 @@ async def test_audio_broadcaster_without_radio_noops() -> None:
     await broadcaster._stop_relay()
 
 
+async def test_audio_broadcaster_reap_dead_clients_removes_dead_ws() -> None:
+    """reap_dead_clients removes clients with dead WebSocket (#687)."""
+    broadcaster = AudioBroadcaster(None)
+    alive_ws = SimpleNamespace(is_alive=lambda: True)
+    dead_ws = SimpleNamespace(is_alive=lambda: False)
+    q1 = await broadcaster.subscribe(ws=alive_ws)
+    q2 = await broadcaster.subscribe(ws=dead_ws)
+    assert len(broadcaster._clients) == 2
+    reaped = await broadcaster.reap_dead_clients()
+    assert reaped == 1
+    assert id(q1) in broadcaster._clients
+    assert id(q2) not in broadcaster._clients
+
+
+async def test_audio_broadcaster_reap_dead_clients_detects_orphans() -> None:
+    """reap_dead_clients detects orphaned clients without ws ref (#687)."""
+    broadcaster = AudioBroadcaster(None)
+    q1 = await broadcaster.subscribe()  # no ws → orphan
+    q2 = await broadcaster.subscribe(ws=SimpleNamespace(is_alive=lambda: True))
+    assert len(broadcaster._clients) == 2
+    assert len(broadcaster._client_ws) == 1  # only q2 has ws
+    reaped = await broadcaster.reap_dead_clients()
+    assert reaped == 1  # q1 orphan reaped
+    assert id(q2) in broadcaster._clients
+    assert id(q1) not in broadcaster._clients
+
+
 async def test_audio_handler_reader_control_tx_and_sender_paths(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

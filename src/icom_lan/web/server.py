@@ -826,7 +826,7 @@ class WebServer:
                     )
 
                 # Reap dead audio clients
-                reaped_audio = self._audio_broadcaster.reap_dead_clients()
+                reaped_audio = await self._audio_broadcaster.reap_dead_clients()
                 if reaped_audio:
                     logger.info(
                         "zombie-reaper: reaped %d dead audio clients", reaped_audio
