@@ -169,31 +169,25 @@ class AudioBroadcaster:
     async def reap_dead_clients(self) -> int:
         """Remove clients whose WebSocket is no longer alive. Returns count removed."""
         async with self._lock:
-            # Reap clients with dead WebSocket
             dead_ids = [
                 cid
                 for cid, ws in list(self._client_ws.items())
                 if not ws.is_alive()
             ]
-            # Also reap orphaned clients (in _clients but not in _client_ws)
-            orphan_ids = [
-                cid for cid in self._clients if cid not in self._client_ws
-            ]
-            all_dead = set(dead_ids) | set(orphan_ids)
-            for cid in all_dead:
+            for cid in dead_ids:
                 self._clients.pop(cid, None)
                 self._client_ws.pop(cid, None)
             # Stop relay if no clients remain (and no PCM tap active)
             if not self._clients and self._subscription is not None and not self._tap_registry.active:
                 await self._stop_relay()
-        if all_dead:
+            remaining = len(self._clients)
+        if dead_ids:
             logger.info(
-                "audio-broadcaster: reaped %d dead + %d orphan clients (total=%d)",
+                "audio-broadcaster: reaped %d dead clients (total=%d)",
                 len(dead_ids),
-                len(orphan_ids),
-                len(self._clients),
+                remaining,
             )
-        return len(all_dead)
+        return len(dead_ids)
 
     async def _start_relay(self) -> None:
         if not self._radio or CAP_AUDIO not in self._radio.capabilities:
