@@ -2176,6 +2176,8 @@ async def _cmd_scope(radio: Radio, args: argparse.Namespace) -> int:
             print(f"Error: {exc}", file=sys.stderr)
             return 1
         # Validate output path before the expensive capture operation.
+        # Use os.access() instead of touch()/unlink() to avoid destroying an
+        # existing file when the user re-runs with the same output path.
         out_path = Path(args.output)
         if not out_path.parent.exists():
             print(
@@ -2183,11 +2185,11 @@ async def _cmd_scope(radio: Radio, args: argparse.Namespace) -> int:
                 file=sys.stderr,
             )
             return 1
-        try:
-            out_path.touch()
-            out_path.unlink()
-        except OSError as exc:
-            print(f"Error: cannot write to {args.output}: {exc}", file=sys.stderr)
+        if not os.access(out_path.parent, os.W_OK):
+            print(
+                f"Error: output directory is not writable: {out_path.parent}",
+                file=sys.stderr,
+            )
             return 1
 
     try:
