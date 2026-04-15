@@ -45,18 +45,14 @@
     }
   }
 
-  async function handleConnectionToggle() {
+  function handleConnectionToggle() {
     const isConnected = radioState === 'connected';
     const action = isConnected ? 'Disconnect from' : 'Connect to';
     if (!confirm(`${action} radio?`)) return;
-    try {
-      if (isConnected) {
-        await runtime.system.disconnect();
-      } else {
-        await runtime.system.connect();
-      }
-    } catch (err) {
-      alert(`Failed to ${action.toLowerCase()}: ${err}`);
+    if (isConnected) {
+      runtime.system.disconnect();
+    } else {
+      runtime.system.connect();
     }
   }
 
