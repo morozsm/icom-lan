@@ -280,6 +280,15 @@ _ctrl.onMessage((msg) => {
       markStateUpdated();
     }
   }
+  // Companion-injected state (RC-28 tuning step, etc.)
+  if (msg.type === 'companion_state') {
+    const raw = msg as unknown as Record<string, unknown>;
+    const stepHz = raw['tuning_step_hz'];
+    if (typeof stepHz === 'number' && stepHz > 0) {
+      // Lazy import to avoid circular dependency.
+      import('../stores/tuning.svelte').then((m) => m.setTuningStep(stepHz));
+    }
+  }
 });
 
 export function connect(url: string = '/api/v1/ws') {
