@@ -82,6 +82,18 @@ export function setTuningStep(hz: number): void {
   _persistState();
 }
 
+/** Update step from companion (RC-28) without affecting auto-step preference. */
+export function setTuningStepFromCompanion(hz: number): void {
+  if (!(TUNING_STEPS as readonly number[]).includes(hz)) {
+    return;
+  }
+  if (_step === hz) {
+    return; // no change — avoid redundant PUT back
+  }
+  _step = hz;
+  _persistState();
+}
+
 export function setAutoStep(on: boolean): void {
   _autoStep = on;
   if (on) {

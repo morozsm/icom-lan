@@ -286,7 +286,7 @@ _ctrl.onMessage((msg) => {
     const stepHz = raw['tuning_step_hz'];
     if (typeof stepHz === 'number' && stepHz > 0) {
       // Lazy import to avoid circular dependency.
-      import('../stores/tuning.svelte').then((m) => m.setTuningStep(stepHz));
+      import('../stores/tuning.svelte').then((m) => m.setTuningStepFromCompanion(stepHz));
     }
   }
 });
