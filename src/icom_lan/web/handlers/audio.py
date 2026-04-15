@@ -416,6 +416,9 @@ class AudioHandler:
         finally:
             self._done.set()
             await self._stop_rx()
+            if self._tx_active:
+                self._tx_active = False
+                logger.info("audio: TX cleanup on handler exit")
             logger.info("audio: handler finished")
 
     async def _reader_loop(self) -> None:
@@ -448,7 +451,13 @@ class AudioHandler:
                 await self._start_rx()
             elif direction == "tx":
                 if self._radio and CAP_AUDIO in self._radio.capabilities:
-                    await self._radio.start_audio_tx_opus()  # type: ignore[attr-defined]
+                    try:
+                        await self._radio.start_audio_tx_opus()  # type: ignore[attr-defined]
+                    except RuntimeError as exc:
+                        if "Already transmitting" in str(exc):
+                            logger.info("audio: TX already started by poller, reusing")
+                        else:
+                            raise
                 self._tx_active = True
                 logger.info("audio: TX active")
         elif msg_type == "audio_stop":
