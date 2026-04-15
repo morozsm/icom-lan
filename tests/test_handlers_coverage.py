@@ -1290,6 +1290,54 @@ async def test_audio_handler_control_and_tx_guard_paths() -> None:
     assert handler._tx_active is False
 
 
+async def test_audio_handler_tx_already_transmitting_is_tolerated() -> None:
+    """_handle_control tolerates 'Already transmitting' from start_audio_tx_opus (#684)."""
+    from icom_lan.radio_protocol import AudioCapable
+
+    radio = MagicMock(spec=AudioCapable)
+    radio.capabilities = {"audio"}
+    radio.start_audio_tx_opus = AsyncMock(
+        side_effect=RuntimeError("Already transmitting")
+    )
+
+    ws = SimpleNamespace(recv=AsyncMock(), send_binary=AsyncMock())
+    handler = AudioHandler(ws, radio, None)
+    await handler._handle_control({"type": "audio_start", "direction": "tx"})
+    # Handler must survive and set _tx_active = True
+    assert handler._tx_active is True
+    radio.start_audio_tx_opus.assert_awaited_once()
+
+
+async def test_audio_handler_tx_other_runtime_error_propagates() -> None:
+    """Non-'Already transmitting' RuntimeError still propagates."""
+    from icom_lan.radio_protocol import AudioCapable
+
+    radio = MagicMock(spec=AudioCapable)
+    radio.capabilities = {"audio"}
+    radio.start_audio_tx_opus = AsyncMock(
+        side_effect=RuntimeError("Something else")
+    )
+
+    ws = SimpleNamespace(recv=AsyncMock(), send_binary=AsyncMock())
+    handler = AudioHandler(ws, radio, None)
+    with pytest.raises(RuntimeError, match="Something else"):
+        await handler._handle_control({"type": "audio_start", "direction": "tx"})
+
+
+async def test_audio_handler_run_resets_tx_active_on_exit() -> None:
+    """run() finally block must reset _tx_active when TX was active (#684)."""
+    ws = SimpleNamespace(
+        recv=AsyncMock(side_effect=[EOFError()]),
+        send_binary=AsyncMock(),
+        close=AsyncMock(),
+    )
+    handler = AudioHandler(ws, SimpleNamespace(push_audio_tx_opus=AsyncMock()), None)
+    handler._tx_active = True
+    await handler.run()
+    assert handler._done.is_set()
+    assert handler._tx_active is False
+
+
 async def test_audio_handler_run_calls_stop_rx_on_exit() -> None:
     ws = SimpleNamespace(
         recv=AsyncMock(side_effect=[EOFError()]), send_binary=AsyncMock()

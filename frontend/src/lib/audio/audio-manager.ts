@@ -11,7 +11,6 @@
 import { RxPlayer } from './rx-player';
 import { TxMic } from './tx-mic';
 import { setAudioConnected } from '../stores/connection.svelte';
-import { getRadioState } from '../stores/radio.svelte';
 import { setRxEnabled, setTxEnabled } from '../stores/audio.svelte';
 
 const BACKOFF_MIN = 500;
@@ -37,14 +36,10 @@ class AudioManager {
     let txFrames = 0;
     let droppedFrames = 0;
     this.txMic = new TxMic((data) => {
-      // CRITICAL: Only send TX frames when PTT is active
-      // IC-7610 LAN audio cannot do full duplex (RX + TX simultaneously)
-      const ptt = getRadioState()?.ptt ?? false;
-      if (!ptt) {
-        droppedFrames++;
-        if (droppedFrames <= 3 || droppedFrames % 100 === 0) {
-          console.log(`[audio-ws] TX frame dropped (PTT OFF), total=${droppedFrames}`);
-        }
+      // Gate on local _txEnabled flag (set immediately on startTx) instead of
+      // getRadioState()?.ptt which requires a full round-trip before becoming true,
+      // causing all mic frames during that window to be silently dropped.
+      if (!this._txEnabled) {
         return;
       }
       
