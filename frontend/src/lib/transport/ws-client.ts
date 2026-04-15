@@ -120,6 +120,12 @@ export class WsChannel {
     };
   }
 
+  /** Reconnect using the last-known URL (no-op if never connected or already open). */
+  reconnect() {
+    if (!this.url) return;
+    this.connect(this.url);
+  }
+
   disconnect() {
     this.intentionalClose = true;
     this._clearTimers();
@@ -506,5 +512,13 @@ export function disconnectAll(): void {
   _ctrl.disconnect();
   for (const ch of _channels.values()) {
     ch.disconnect();
+  }
+}
+
+/** Reconnect the control channel and all previously-connected named channels. */
+export function reconnectAll(): void {
+  _ctrl.reconnect();
+  for (const ch of _channels.values()) {
+    ch.reconnect();
   }
 }

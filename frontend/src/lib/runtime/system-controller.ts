@@ -6,7 +6,7 @@
  * all WebSocket channels, HTTP polling, audio, and MediaSession.
  */
 
-import { connect as wsConnect, disconnectAll as wsDisconnectAll } from '$lib/transport/ws-client';
+import { disconnectAll as wsDisconnectAll, reconnectAll as wsReconnectAll } from '$lib/transport/ws-client';
 import { audioManager } from '$lib/audio/audio-manager';
 import { destroyMediaSession, initMediaSession } from '$lib/media/media-session';
 import { clearEtag } from '$lib/transport/http-client';
@@ -100,8 +100,8 @@ class SystemController {
       this._stopPolling = this._startPolling();
     }
 
-    // 3. Reconnect control WebSocket
-    wsConnect();
+    // 3. Reconnect all WebSocket channels (control + scope + any named)
+    wsReconnectAll();
   }
 
   async identifyFrequency(freqHz: number): Promise<EibiResult | null> {
