@@ -7,6 +7,89 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.1] — 2026-04-14
+
+### Fixed
+- **LAN discovery crash** — `OSError: [Errno 65] No route to host` when network
+  is unavailable no longer produces a raw traceback; CLI prints a clear message
+  and suggests using `--host` explicitly
+- **CI strict mypy** — resolved `no-any-return` in `radio_poller.py` for
+  `mypy --strict` boundary check
+- **Dynamic CI badges** — tests, version, and mypy badges in README now
+  auto-update from CI via gist-backed shields.io endpoints
+
+## [0.16.0] — 2026-04-14
+
+### Added
+- **DSP Pipeline** (Epic #682) — pluggable audio processing framework:
+  - `DSPNode` Protocol, `DSPPipeline` engine, `PassthroughNode`, `GainNode`
+  - `NRScipyNode` — spectral subtraction noise reduction (scipy FFT)
+  - `TapRegistry` — multi-consumer PCM analysis bus
+  - Inter-node resampling utility; `[dsp]` optional dependency group
+- **CW Auto Tuner** (#675, #677, #678) — FFT peak detection engine (`CwAutoTuner`),
+  backend `cw_auto_tune` command, restored AUTO TUNE button in Web UI
+- **AudioAnalyzer** (#679) — realtime SNR estimation from PCM stream
+- **UDP Discovery Responder** — companion apps can broadcast `ICOM_LAN_DISCOVER` on
+  UDP 8470 and receive server URL, version, and radio status via unicast;
+  `--no-discovery` CLI flag to opt out
+- **Unified frontend architecture** (Epics #647–#653, #662–#665) — `FrontendRuntime`
+  singleton, skin registry, runtime adapters, self-wired panels (AGC, Mode, Antenna,
+  RfFrontEnd, RIT/XIT, Scan, CW, DSP, TX, Filter, BandSelector), eslint import
+  boundary guardrails, LCD and mobile layout migration to unified runtime path
+- **SUB receiver polling** (#562, #563) — TOML commands, receiver routing, AF/RF/squelch
+  level polling in slow loop
+- **TX meters** (#559) — ALC, Power, COMP, SWR polling during transmit
+- **Scope backpressure** (#533) — adaptive poller gap, scope backlog shedding hook,
+  `queue_pressure` metric on `IcomTransport`
+- **Initial state fetch** (#532) — `_fetch_initial_state()` on connect and reconnect,
+  readiness-gated state snapshot in WebServer
+- **Cross-sidebar drag** (#566–#568) — move panels between left/right sidebars,
+  localStorage persistence, dynamic panel rendering
+- **Yaesu FTX-1 enhancements** (#551) — IF bulk query, clarifier clear, APF, CW spot,
+  break-in delay, power switch (PS), data mode methods
+- **IC-7300 improvements** (#545, #546, #564) — segmented BCD filter width encoding,
+  scope marker TOML entry, cleanup of NOT_IMPLEMENTED comments
+- **Meter calibration** (#556) — power/SWR/ALC tables in `ic7610.toml`, scope REF
+  range constraints, `meter_redlines` in RadioProfile, generic calibration accessors
+- **SystemController** (#665) — centralized HTTP system actions
+- **Skin abstraction** (#326) — `ProfessionalSkin` (Phase 1)
+- **Frontend test coverage** (#555) — component-level tests for LCD, Mobile, Spectrum,
+  BandPlan, DspPanel, CwPanel, SpectrumToolbar, DxOverlay, EiBi, state-adapter,
+  ws-client, radio store, audio subsystem
+- **FTX-1 polling tests** (#551) — integration test suite for Yaesu CAT poller
+
+### Changed
+- **Single version source** — `__version__` now reads from `pyproject.toml` via
+  `importlib.metadata` instead of being hardcoded in `__init__.py`
+- **Frontend panel architecture** — extracted DspPanel + CwPanel logic to dedicated
+  panel-logic modules (#594); extracted SpectrumToolbar, BandPlanOverlay,
+  MobileRadioLayout, SpectrumPanel inline logic to separate files (#590–#593)
+- **LCD layout** (#636) — adapts to reduced viewport height
+
+### Fixed
+- **CW auto tune** (#671) — reverted incorrect `cw_sync_tune`, removed broken
+  AUTO TUNE button before reimplementing correctly
+- **Shutdown reliability** (#634) — `os._exit()` for orphaned threads, manual loop
+  with executor timeout, PortAudio stream close before task cancel, shutdown step
+  timeouts
+- **Audio stability** — drop frames while `AudioContext` suspended, resume once in
+  `start()` instead of per-frame
+- **Yaesu serial** — report `disconnected` status correctly, show serial port in
+  startup banner, graceful poller disconnect handling
+- **Connection readiness** (#602) — expose readiness fields from backend state
+- **Frontend null guards** (#603–#605) — null receiver state, null numeric fields
+  coerced to defaults, encoder revision for initial state snapshot
+- **Disconnect cleanup** (#600) — clear stale state, reset delta and radio store
+- **Code review fixes** (#670, #576) — 5 findings from session audit, layering and
+  model guards, reconnect timing
+- **Drag-reorder** — unregister instances from registry on component destroy
+- **All mypy errors resolved** — `ControlPhaseHost` protocol gap, `YaesuCatRadio`
+  missing `get_data_mode`/`set_data_mode`, scipy stubs, `no-any-return` fixes
+- **All ruff errors resolved** — unused imports in test_cli.py
+
+### Documentation
+- Refreshed Web UI guide for v2 runtime and skin workflows (#681)
+
 ## [0.15.1] — 2026-04-10
 
 ### Changed
@@ -364,7 +447,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Transport layer, authentication, CI-V commands, meters, PTT, keep-alive.
 - Clean-room Icom LAN UDP protocol implementation.
 
-[Unreleased]: https://github.com/morozsm/icom-lan/compare/v0.15.1...HEAD
+[Unreleased]: https://github.com/morozsm/icom-lan/compare/v0.16.1...HEAD
+[0.16.1]: https://github.com/morozsm/icom-lan/compare/v0.16.0...v0.16.1
+[0.16.0]: https://github.com/morozsm/icom-lan/compare/v0.15.1...v0.16.0
 [0.15.1]: https://github.com/morozsm/icom-lan/compare/v0.15.0...v0.15.1
 [0.15.0]: https://github.com/morozsm/icom-lan/compare/v0.14.2...v0.15.0
 [0.14.2]: https://github.com/morozsm/icom-lan/compare/v0.14.1...v0.14.2

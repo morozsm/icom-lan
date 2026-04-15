@@ -5,6 +5,8 @@
  * All backend HTTP side effects go through this controller.
  */
 
+import { connect as wsConnect, disconnect as wsDisconnect } from '$lib/transport/ws-client';
+
 export interface EibiStation {
   name?: string;
   freq?: number;
@@ -36,14 +38,12 @@ class SystemController {
     if (!resp.ok) throw new Error(await resp.text());
   }
 
-  async connect(): Promise<void> {
-    const resp = await fetch('/api/v1/radio/connect', { method: 'POST' });
-    if (!resp.ok) throw new Error(await resp.text());
+  connect(): void {
+    wsConnect();
   }
 
-  async disconnect(): Promise<void> {
-    const resp = await fetch('/api/v1/radio/disconnect', { method: 'POST' });
-    if (!resp.ok) throw new Error(await resp.text());
+  disconnect(): void {
+    wsDisconnect();
   }
 
   async identifyFrequency(freqHz: number): Promise<EibiResult | null> {
