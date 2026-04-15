@@ -65,6 +65,18 @@ def _get_env(name: str, default: str = "") -> str:
     return os.environ.get(name, default)
 
 
+def _env_int(name: str, default: int) -> int:
+    """Read an integer from an environment variable; exit with a clear error if non-numeric."""
+    val = os.environ.get(name, "")
+    if not val:
+        return default
+    try:
+        return int(val)
+    except ValueError:
+        print(f"Error: ${name} must be an integer (got {val!r})", file=sys.stderr)
+        sys.exit(1)
+
+
 # ---------------------------------------------------------------------------
 # Auto-discovery helpers
 # ---------------------------------------------------------------------------
@@ -163,13 +175,23 @@ _PRESETS: dict[str, dict[str, object]] = {
 }
 
 
+_WEB_ONLY_PRESET_KEYS: frozenset[str] = frozenset({"web_bridge", "web_rigctld"})
+
+
 def _apply_preset(args: argparse.Namespace, preset_name: str) -> None:
-    """Apply a preset's defaults to args. User-explicit flags are NOT overridden."""
+    """Apply a preset's defaults to args. User-explicit flags are NOT overridden.
+
+    Web-only keys (web_bridge, web_rigctld) are silently skipped for non-web commands.
+    """
     if preset_name not in _PRESETS:
         avail = ", ".join(sorted(_PRESETS))
         print(f"Error: unknown preset {preset_name!r}. Available: {avail}", file=sys.stderr)
         sys.exit(1)
+    command = getattr(args, "command", None)
     for key, value in _PRESETS[preset_name].items():
+        # Skip web-specific preset keys when not running the web command.
+        if key in _WEB_ONLY_PRESET_KEYS and command != "web":
+            continue
         # Only set if the user did not explicitly provide the flag.
         # argparse sets defaults, so we can't distinguish perfectly —
         # but for store_true booleans the default is False, and for
@@ -225,7 +247,7 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--control-port",
         type=int,
-        default=int(_get_env("ICOM_PORT", "50001")),
+        default=_env_int("ICOM_PORT", 50001),
         dest="control_port",
         help="Radio control port (default: $ICOM_PORT or 50001)",
     )
@@ -252,7 +274,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--timeout",
         type=float,
         default=5.0,
-        help="Timeout in seconds (default: 5)",
+        help="Connection and auto-discovery timeout in seconds (default: 5)",
     )
     p.add_argument(
         "--json",
@@ -272,12 +294,11 @@ def _build_parser() -> argparse.ArgumentParser:
         metavar="PATH",
         help="Serial device path for --backend serial (default: $ICOM_SERIAL_DEVICE)",
     )
-    _baud_env = _get_env("ICOM_SERIAL_BAUDRATE", "")
     p.add_argument(
         "--serial-baud",
         dest="serial_baud",
         type=int,
-        default=int(_baud_env) if _baud_env else None,
+        default=_env_int("ICOM_SERIAL_BAUDRATE", 0) or None,
         metavar="BAUD",
         help="Serial baud rate (default: $ICOM_SERIAL_BAUDRATE, or 115200 for serial / 38400 for yaesu-cat)",
     )
@@ -918,15 +939,21 @@ def _build_parser() -> argparse.ArgumentParser:
 
 def _parse_frequency(value: str) -> int:
     """Parse frequency from string with optional k/m suffix."""
+    orig = value
     value = value.strip().lower()
-    if value.endswith("m") or value.endswith("mhz"):
-        num = value.rstrip("mhz").strip()
-        return int(float(num) * 1_000_000)
-    elif value.endswith("k") or value.endswith("khz"):
-        num = value.rstrip("khz").strip()
-        return int(float(num) * 1_000)
-    else:
-        return int(float(value))
+    try:
+        if value.endswith("m") or value.endswith("mhz"):
+            num = value.rstrip("mhz").strip()
+            return int(float(num) * 1_000_000)
+        elif value.endswith("k") or value.endswith("khz"):
+            num = value.rstrip("khz").strip()
+            return int(float(num) * 1_000)
+        else:
+            return int(float(value))
+    except (ValueError, ArithmeticError):
+        raise ValueError(
+            f"invalid frequency {orig!r} — use Hz (14074000), kHz (14074k), or MHz (14.074m)"
+        )
 
 
 def _rigs_dir() -> Path:
@@ -1056,6 +1083,9 @@ async def _build_backend_config(
             tx_device=getattr(args, "tx_device", None) or None,
         )
     if backend == "serial":
+        host = getattr(args, "host", _HOST_NOT_SET)
+        if host and host != _HOST_NOT_SET:
+            print("Warning: --host is ignored when --backend serial is used.", file=sys.stderr)
         device = serial_port
         if not device:
             device, discovered_baud = await _auto_discover_serial()
@@ -1072,6 +1102,8 @@ async def _build_backend_config(
             ptt_mode=getattr(args, "serial_ptt_mode", "civ"),
         )
     # LAN backend — auto-discover if host not set.
+    if serial_port:
+        print("Warning: --serial-port is ignored when --backend lan is used.", file=sys.stderr)
     host = getattr(args, "host", _HOST_NOT_SET)
     if not host or host == _HOST_NOT_SET:
         host = await _auto_discover_lan(timeout=args.timeout)
@@ -1159,6 +1191,12 @@ async def _run(args: argparse.Namespace) -> int:
             ports_to_check.append(getattr(args, "web_rigctld_port", 4532))
         try:
             check_ports_available(ports_to_check)
+        except RuntimeError as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            return 1
+    elif args.command == "serve":
+        try:
+            check_ports_available([args.serve_port])
         except RuntimeError as exc:
             print(f"Error: {exc}", file=sys.stderr)
             return 1
@@ -1805,6 +1843,9 @@ async def _cmd_power(radio: Radio, args: argparse.Namespace) -> int:
                 file=sys.stderr,
             )
             return 1
+        if not 0 <= args.value <= 255:
+            print(f"Error: power level must be 0-255 (got {args.value})", file=sys.stderr)
+            return 1
         await radio.set_rf_power(args.value)
         print(f"Set: {args.value}")
     else:
@@ -1986,10 +2027,13 @@ async def _cmd_antenna(radio: Radio, args: argparse.Namespace) -> int:
 async def _cmd_date(radio: Radio, args: argparse.Namespace) -> int:
     if args.date is not None:
         try:
-            year, month, day = map(int, args.date.split("-"))
+            parts = args.date.split("-")
+            if len(parts) != 3:
+                raise ValueError("expected 3 parts")
+            year, month, day = map(int, parts)
         except ValueError:
             print(
-                f"Error: invalid date format '{args.date}' (expected YYYY-MM-DD)",
+                f"Error: invalid date format '{args.date}' — expected YYYY-MM-DD (e.g. 2024-04-15)",
                 file=sys.stderr,
             )
             return 1
@@ -2004,10 +2048,19 @@ async def _cmd_date(radio: Radio, args: argparse.Namespace) -> int:
 async def _cmd_time(radio: Radio, args: argparse.Namespace) -> int:
     if args.time is not None:
         try:
-            hour, minute = map(int, args.time.split(":"))
+            parts = args.time.split(":")
+            if len(parts) != 2:
+                raise ValueError("expected 2 parts")
+            hour, minute = map(int, parts)
         except ValueError:
             print(
-                f"Error: invalid time format '{args.time}' (expected HH:MM)",
+                f"Error: invalid time format '{args.time}' — expected HH:MM (e.g. 14:30)",
+                file=sys.stderr,
+            )
+            return 1
+        if not (0 <= hour <= 23 and 0 <= minute <= 59):
+            print(
+                f"Error: invalid time '{args.time}' — hour must be 0-23, minute 0-59",
                 file=sys.stderr,
             )
             return 1
@@ -2122,6 +2175,22 @@ async def _cmd_scope(radio: Radio, args: argparse.Namespace) -> int:
         except ImportError as exc:
             print(f"Error: {exc}", file=sys.stderr)
             return 1
+        # Validate output path before the expensive capture operation.
+        # Use os.access() instead of touch()/unlink() to avoid destroying an
+        # existing file when the user re-runs with the same output path.
+        out_path = Path(args.output)
+        if not out_path.parent.exists():
+            print(
+                f"Error: output directory does not exist: {out_path.parent}",
+                file=sys.stderr,
+            )
+            return 1
+        if not os.access(out_path.parent, os.W_OK):
+            print(
+                f"Error: output directory is not writable: {out_path.parent}",
+                file=sys.stderr,
+            )
+            return 1
 
     try:
         if args.spectrum_only:
@@ -2193,7 +2262,15 @@ async def _cmd_scope(radio: Radio, args: argparse.Namespace) -> int:
 
 async def _cmd_audio_bridge(radio: Radio, args: argparse.Namespace) -> int:
     """Bridge radio audio to a virtual audio device."""
-    from .audio_bridge import AudioBridge, derive_bridge_label, list_audio_devices
+    try:
+        from .audio_bridge import AudioBridge, derive_bridge_label, list_audio_devices
+    except ImportError:
+        print(
+            "Error: audio bridge requires icom-lan[bridge].\n"
+            "  Install: pip install 'icom-lan[bridge]'",
+            file=sys.stderr,
+        )
+        return 1
 
     if not args.list_devices and CAP_AUDIO not in radio.capabilities:
         print(
@@ -2222,9 +2299,6 @@ async def _cmd_audio_bridge(radio: Radio, args: argparse.Namespace) -> int:
             print(f"  [{idx}] {name}  (in={max_in}, out={max_out}){marker}")
         return 0
 
-    if CAP_AUDIO not in radio.capabilities:
-        print("Error: audio bridge requires a radio that supports audio.", file=sys.stderr)
-        return 1
     bridge_label = derive_bridge_label(radio, getattr(args, "bridge_label", None))
 
     try:
@@ -2337,9 +2411,6 @@ async def _cmd_serve(radio: Radio, args: argparse.Namespace) -> int:
     log_level = getattr(args, "log_level", "INFO")
     _logging.getLogger("icom_lan").setLevel(getattr(_logging, log_level))
 
-    # Validate port is available before connecting to radio.
-    check_ports_available([args.serve_port])
-
     # Configure JSON audit log if a path was provided.
     audit_log_path: str | None = getattr(args, "audit_log", None)
     if audit_log_path:
@@ -2429,6 +2500,12 @@ async def _cmd_web(radio: Radio, args: argparse.Namespace) -> int:
             file=sys.stderr,
         )
         return 1
+    if tls_cert and not Path(tls_cert).is_file():
+        print(f"Error: --tls-cert file not found: {tls_cert}", file=sys.stderr)
+        return 1
+    if tls_key and not Path(tls_key).is_file():
+        print(f"Error: --tls-key file not found: {tls_key}", file=sys.stderr)
+        return 1
     if tls_cert:
         config_kwargs["tls_cert"] = tls_cert
     if tls_key:
@@ -2488,7 +2565,14 @@ async def _cmd_web(radio: Radio, args: argparse.Namespace) -> int:
             wsjtx_compat=getattr(args, "wsjtx_compat", False),
         )
         rigctld_server = RigctldServer(radio, rigctld_config)
-        await rigctld_server.start()
+        try:
+            await rigctld_server.start()
+        except Exception as exc:
+            print(
+                f"Error: failed to start rigctld on port {rigctld_port}: {exc}",
+                file=sys.stderr,
+            )
+            return 1
         rigctld_addr = f"0.0.0.0:{rigctld_port}"
 
     scheme = "https" if config_kwargs.get("tls") else "http"
@@ -2513,13 +2597,21 @@ async def _cmd_web(radio: Radio, args: argparse.Namespace) -> int:
     return 0
 
 
-async def _cmd_discover(_radio: Radio, args: argparse.Namespace) -> int:
+async def _cmd_discover(_radio: Radio | None, args: argparse.Namespace) -> int:
     """Discover Icom radios on LAN and/or serial ports."""
     from .discovery import dedupe_radios, discover_lan_radios, discover_serial_radios
 
     serial_only: bool = getattr(args, "serial_only", False)
     lan_only: bool = getattr(args, "lan_only", False)
     timeout: float = getattr(args, "timeout", 3.0)
+
+    if serial_only and lan_only:
+        print(
+            "Error: --serial-only and --lan-only are mutually exclusive.\n"
+            "  Use one filter, or omit both to scan everything.",
+            file=sys.stderr,
+        )
+        return 1
 
     tasks: list[Any] = []
     if not serial_only:
@@ -2640,7 +2732,11 @@ def main() -> None:
     elif args.command == "proxy":
         from .proxy import run_proxy
 
-        asyncio.run(run_proxy(args.radio, args.listen, args.port))
+        try:
+            asyncio.run(run_proxy(args.radio, args.listen, args.port))
+        except Exception as exc:
+            print(f"Error: proxy failed: {exc}", file=sys.stderr)
+            sys.exit(1)
         sys.exit(0)
     elif args.command is None:
         parser.print_help()

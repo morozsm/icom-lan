@@ -264,6 +264,7 @@ async def test_run_serve_uses_serial_backend_factory_config() -> None:
     _, radio = _mock_radio_ctx()
     with (
         patch("icom_lan.cli.create_radio", return_value=radio) as create_radio,
+        patch("icom_lan.cli.check_ports_available"),
         patch("icom_lan.cli._cmd_serve", new_callable=AsyncMock) as cmd_serve,
     ):
         cmd_serve.return_value = 0
