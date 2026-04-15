@@ -10,6 +10,7 @@
   import RadioLayoutV2 from './components-v2/layout/RadioLayout.svelte';
   import ControlButtonDemo from './components-v2/controls/ControlButtonDemo.svelte';
   import { initMediaSession, destroyMediaSession } from './lib/media/media-session';
+  import { systemController } from './lib/runtime/system-controller';
   import './app.css';
 
   let backendError = $state<string | null>(null);
@@ -31,9 +32,14 @@
 
     initMediaSession();
 
+    // Register polling lifecycle with SystemController for connect/disconnect
+    systemController.registerPolling(() =>
+      startPolling((state) => { setRadioState(state); }, 1000),
+    );
     const stopPolling = startPolling((state) => {
       setRadioState(state);
     }, 1000);
+    systemController.setStopPolling(stopPolling);
 
     let cleanupBattery: (() => void) | null = null;
     initBatteryMonitor((multiplier) => {

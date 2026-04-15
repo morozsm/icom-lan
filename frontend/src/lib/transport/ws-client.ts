@@ -500,3 +500,11 @@ export function getChannel(name: string): WsChannel {
   }
   return ch;
 }
+
+/** Disconnect the control channel and all named channels (scope, etc.). */
+export function disconnectAll(): void {
+  _ctrl.disconnect();
+  for (const ch of _channels.values()) {
+    ch.disconnect();
+  }
+}
