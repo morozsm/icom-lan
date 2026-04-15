@@ -36,9 +36,9 @@ class AudioManager {
     let txFrames = 0;
     let droppedFrames = 0;
     this.txMic = new TxMic((data) => {
-      // Gate on local _txEnabled flag (set immediately on startTx) instead of
-      // getRadioState()?.ptt which requires a full round-trip before becoming true,
-      // causing all mic frames during that window to be silently dropped.
+      // Gate on local _txEnabled (set immediately on startTx), not
+      // getRadioState()?.ptt which has a full round-trip delay.
+      // IC-7610 LAN audio: RX stops during TX (not full-duplex).
       if (!this._txEnabled) {
         return;
       }
