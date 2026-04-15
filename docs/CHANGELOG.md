@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.2] — 2026-04-15
+
+### Added
+- **Companion tuning step sync** — tuning step is now synced to the RC-28
+  companion dispatcher via `PUT /api/local/v1/rc28/tuning-step`; incoming
+  `companion_state` WS messages update the step in real time
+- **WsChannel.reconnect()** — reconnects a WebSocket channel using its
+  last-known URL, enabling full lifecycle restore after disconnect
+
+### Fixed
+- **Connect/Disconnect lifecycle** — the web UI button now controls the
+  entire frontend connection: all WebSocket channels (control, scope,
+  audio), HTTP polling, and MediaSession are torn down on Disconnect and
+  restored on Connect; the server↔radio connection is never affected
+- **Scope/audio channels survive reconnect** — `reconnectAll()` reopens
+  all named WS channels (scope, audio-scope) after a disconnect+connect
+  cycle; previously they stayed dead until page reload
+- **StatusBar state tracking** — connect button now tracks `controlState`
+  (WS+HTTP) instead of `radioState` (server↔radio), so the UI updates
+  immediately on disconnect/connect
+- **Transport warning noise** — suppressed misleading `_packet_pump`
+  warning and reduced UDP error log verbosity
+- **Companion auto-step preservation** — `setTuningStepFromCompanion()`
+  preserves the auto-step preference when syncing from companion
+
 ## [0.16.1] — 2026-04-14
 
 ### Fixed
@@ -447,7 +472,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Transport layer, authentication, CI-V commands, meters, PTT, keep-alive.
 - Clean-room Icom LAN UDP protocol implementation.
 
-[Unreleased]: https://github.com/morozsm/icom-lan/compare/v0.16.1...HEAD
+[Unreleased]: https://github.com/morozsm/icom-lan/compare/v0.16.2...HEAD
+[0.16.2]: https://github.com/morozsm/icom-lan/compare/v0.16.1...v0.16.2
 [0.16.1]: https://github.com/morozsm/icom-lan/compare/v0.16.0...v0.16.1
 [0.16.0]: https://github.com/morozsm/icom-lan/compare/v0.15.1...v0.16.0
 [0.15.1]: https://github.com/morozsm/icom-lan/compare/v0.15.0...v0.15.1
