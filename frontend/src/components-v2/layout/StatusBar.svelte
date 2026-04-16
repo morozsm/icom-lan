@@ -9,6 +9,7 @@
     isAudioConnected,
     getHttpConnected,
     getRadioPowerOn,
+    getRigConnected,
   } from '$lib/stores/connection.svelte';
   import { getFrequency } from '$lib/stores/radio.svelte';
   import { hasAnyScope, hasAudio, hasSpectrum } from '$lib/stores/capabilities.svelte';
@@ -28,6 +29,9 @@
   let scopeState = $derived(isPoweredOff ? 'disconnected' : (isScopeConnected() ? 'connected' : 'disconnected'));
   let audioState = $derived(isPoweredOff ? 'disconnected' : (isAudioConnected() ? 'connected' : 'disconnected'));
   let httpState = $derived(getHttpConnected() ? 'connected' : 'disconnected'); // server link — always real
+  let rigConnected = $derived(getRigConnected());
+  // Effective radio indicator: downgrade to 'disconnected' when rigCtld reports radio offline
+  let radioIndicatorState = $derived(radioState === 'connected' && !rigConnected ? 'degraded' : radioState);
 
   function stateColor(state: string): string {
     switch (state) {
@@ -101,9 +105,12 @@
   }
 </script>
 
+{#if controlState === 'disconnected'}
+  <div class="control-link-lost">Control link lost</div>
+{/if}
 <div class="status-bar">
   <div class="status-indicators">
-    <span class="indicator" title="Radio ↔ Server: {radioState}" style="--indicator-color: {stateColor(radioState)}">
+    <span class="indicator" title="Radio ↔ Server: {radioState}{!rigConnected && radioState === 'connected' ? ' (rig offline)' : ''}" style="--indicator-color: {stateColor(radioIndicatorState)}">
       <span class="indicator-dot"></span>
       <Radio size={12} color="currentColor" strokeWidth={2.5} />
     </span>
@@ -126,6 +133,9 @@
     <span class="indicator" title="State HTTP: {httpState}" style="--indicator-color: {stateColor(httpState)}">
       <span class="indicator-dot"></span>
       <ArrowDownUp size={12} color="currentColor" strokeWidth={2.5} />
+      {#if httpState === 'disconnected'}
+        <span class="http-lost-label">offline</span>
+      {/if}
     </span>
   </div>
 
@@ -222,6 +232,28 @@
 </div>
 
 <style>
+  .control-link-lost {
+    background: var(--v2-accent-red, #ef4444);
+    color: #fff;
+    font-family: 'Roboto Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    text-align: center;
+    padding: 2px 0;
+    user-select: none;
+  }
+
+  .http-lost-label {
+    font-size: 9px;
+    color: var(--v2-accent-red, #ef4444);
+    font-weight: 700;
+    margin-left: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
   .status-bar {
     display: flex;
     align-items: center;

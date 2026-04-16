@@ -118,6 +118,7 @@ vi.mock('$lib/transport/ws-client', () => ({
 vi.mock('$lib/stores/connection.svelte', () => ({
   setScopeConnected: vi.fn(),
   markScopeFrame: vi.fn(),
+  isScopeConnected: vi.fn(() => true),
 }));
 
 vi.mock('$lib/stores/radio.svelte', () => ({

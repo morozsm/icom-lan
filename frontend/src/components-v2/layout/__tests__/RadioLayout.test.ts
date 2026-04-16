@@ -36,6 +36,7 @@ vi.mock('$lib/stores/connection.svelte', () => ({
   isScopeConnected: vi.fn(() => false),
   isAudioConnected: vi.fn(() => false),
   getHttpConnected: vi.fn(() => false),
+  getRigConnected: vi.fn(() => false),
 }));
 
 vi.mock('$lib/stores/tuning.svelte', () => ({

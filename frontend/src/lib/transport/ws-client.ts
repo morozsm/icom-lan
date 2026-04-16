@@ -35,6 +35,12 @@ export class WsChannel {
   private stateHandlers = new Set<StateHandler>();
   private _state: ConnectionState = 'disconnected';
   private url = '';
+  private _subscribeMsg: Record<string, unknown> | null = null;
+
+  /** Register a message to re-send automatically on every (re)connect. */
+  setSubscribeMessage(msg: Record<string, unknown>) {
+    this._subscribeMsg = msg;
+  }
 
   get state(): ConnectionState {
     return this._state;
@@ -67,6 +73,8 @@ export class WsChannel {
       // drain send queue
       const queued = this.sendQueue.splice(0);
       for (const cmd of queued) ws.send(JSON.stringify(cmd));
+      // Re-send subscribe on every (re)connect so server pushes state immediately
+      if (this._subscribeMsg) ws.send(JSON.stringify(this._subscribeMsg));
     };
 
     ws.onmessage = (event: MessageEvent) => {
@@ -299,8 +307,11 @@ export function connect(url: string = '/api/v1/ws') {
   _ctrl.connect(wsUrl);
 }
 
-/** Send a raw JSON message (e.g. subscribe). */
+/** Send a raw JSON message (e.g. subscribe) and register it for re-send on reconnect. */
 export function sendRaw(msg: Record<string, unknown>): boolean {
+  if (msg.type === 'subscribe') {
+    _ctrl.setSubscribeMessage(msg);
+  }
   return _ctrl.send(msg as any);
 }
 
