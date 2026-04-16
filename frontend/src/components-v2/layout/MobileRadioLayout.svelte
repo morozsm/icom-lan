@@ -1039,6 +1039,7 @@
     font-size: 10px;
     font-weight: 700;
     padding: 3px 8px;
+    min-height: 44px;
     border-radius: 3px;
     border: 1px solid rgba(0, 212, 255, 0.3);
     background: transparent;
@@ -1101,7 +1102,7 @@
     border-radius: 4px;
     padding: 4px 8px;
     cursor: pointer;
-    min-height: 32px;
+    min-height: 44px;
     -webkit-tap-highlight-color: transparent;
   }
 
@@ -1109,8 +1110,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 36px;
-    height: 32px;
+    width: 44px;
+    min-height: 44px;
     border-radius: 4px;
     border: 1px solid rgba(255, 255, 255, 0.2);
     background: rgba(255, 255, 255, 0.08);
@@ -1128,7 +1129,7 @@
     font-size: 11px;
     font-weight: 700;
     min-width: 52px;
-    min-height: 32px;
+    min-height: 44px;
     padding: 4px 10px;
     border-radius: 4px;
     border: 2px solid var(--v2-accent-red, #ef4444);
@@ -1374,7 +1375,7 @@
   .m-audio-buttons > :global(button) {
     flex: 1 1 0;
     min-width: 0;
-    min-height: 36px;
+    min-height: 44px;
   }
 
   .m-dsp-toggles {
@@ -1385,7 +1386,7 @@
   .m-dsp-toggles > :global(button) {
     flex: 1 1 0;
     min-width: 0;
-    min-height: 36px;
+    min-height: 44px;
   }
 
   /* ── TX compact section ── */
@@ -1515,6 +1516,16 @@
   @keyframes atu-pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.5; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .m-ptt-latched,
+    .m-ls-ptt.m-ptt-latched {
+      animation: none;
+    }
+    .m-atu-tuning {
+      animation: none;
+    }
   }
 
   .m-tx-settings-btn {

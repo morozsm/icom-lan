@@ -304,7 +304,7 @@
 <Toast />
 
 {#if runtime.radioPowerOn === false}
-  <div class="power-off-overlay" aria-label="Radio is powered off">
+  <div class="power-off-overlay" role="dialog" aria-modal="true" aria-label="Radio is powered off">
     <div class="power-off-content">
       <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
@@ -319,9 +319,9 @@
 <!-- ═══ SETTINGS MODAL (outside power-off block so it works when radio is on) ═══ -->
 {#if settingsOpen}
   <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="settings-backdrop" onclick={() => (settingsOpen = false)}>
+  <div class="settings-backdrop" onclick={() => (settingsOpen = false)} onkeydown={(e) => { if (e.key === 'Escape') settingsOpen = false; }}>
     <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="settings-modal" onclick={(e) => e.stopPropagation()}>
+    <div class="settings-modal" role="dialog" aria-modal="true" aria-label="Settings" onclick={(e) => e.stopPropagation()} onkeydown={(e) => { if (e.key === 'Escape') settingsOpen = false; }}>
       <div class="settings-header">
         <span class="settings-title">SETTINGS</span>
         <button class="settings-close" onclick={() => (settingsOpen = false)}>✕</button>
@@ -633,6 +633,7 @@
 
     .content-row {
       grid-template-columns: 1fr;
+      overflow-y: auto;
     }
 
     .bottom-dock {
@@ -807,6 +808,12 @@
   @keyframes pulse-dim {
     0%, 100% { opacity: 0.6; }
     50% { opacity: 1; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .power-off-content {
+      animation: none;
+    }
   }
 
   /* ── Settings Button ── */
