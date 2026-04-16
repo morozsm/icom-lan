@@ -2007,12 +2007,12 @@ class TestRadioPoller:
         poller = RadioPoller(radio, cache, queue)
 
         poller.start()
-        # Initial state fetch runs ~60 queries × 12ms gap ≈ 0.7s before
-        # the main poll loop starts meter queries.
-        await asyncio.sleep(1.5)
+        # Initial state fetch is done by CoreRadio._fetch_initial_state() on
+        # connect; the poller just runs meter polls every _FAST_INTERVAL=25ms.
+        # 0.2s is plenty for ≥3 meter polls.
+        await asyncio.sleep(0.2)
         poller.stop()
 
-        # Initial fetch + interleaved meter/state queries.
         assert radio.send_civ.await_count >= 4
         meter_calls = [
             c for c in radio.send_civ.call_args_list if c[0][0] == 0x15
@@ -2047,7 +2047,7 @@ class TestRadioPoller:
 
         poller.start()
         queue.put(SetKeySpeed(24))
-        await asyncio.sleep(0.15)
+        await asyncio.sleep(0.03)
         poller.stop()
 
         radio.set_key_speed.assert_awaited_once_with(24)
@@ -2066,7 +2066,7 @@ class TestRadioPoller:
 
         poller.start()
         queue.put(SetBreakIn(1))
-        await asyncio.sleep(0.15)
+        await asyncio.sleep(0.03)
         poller.stop()
 
         radio.set_break_in.assert_awaited_once_with(1)
@@ -2127,7 +2127,7 @@ class TestSwitchScopeReceiver:
 
         poller.start()
         queue.put(SwitchScopeReceiver(0))
-        await asyncio.sleep(0.15)
+        await asyncio.sleep(0.03)
         poller.stop()
 
         scope_calls = [c for c in radio.send_civ.call_args_list if c[0][0] == 0x27]
@@ -2150,7 +2150,7 @@ class TestSwitchScopeReceiver:
 
         poller.start()
         queue.put(SwitchScopeReceiver(1))
-        await asyncio.sleep(0.15)
+        await asyncio.sleep(0.03)
         poller.stop()
 
         scope_calls = [c for c in radio.send_civ.call_args_list if c[0][0] == 0x27]
@@ -2173,7 +2173,7 @@ class TestSwitchScopeReceiver:
 
         poller.start()
         queue.put(SwitchScopeReceiver(0xFF))
-        await asyncio.sleep(0.15)
+        await asyncio.sleep(0.03)
         poller.stop()
 
         scope_calls = [c for c in radio.send_civ.call_args_list if c[0][0] == 0x27]
@@ -2191,7 +2191,7 @@ class TestSwitchScopeReceiver:
 
         poller.start()
         queue.put(SelectVfo("SUB"))
-        await asyncio.sleep(0.15)
+        await asyncio.sleep(0.03)
         poller.stop()
 
         swap_calls = [
@@ -2211,7 +2211,7 @@ class TestSwitchScopeReceiver:
 
         poller.start()
         queue.put(SelectVfo("MAIN"))
-        await asyncio.sleep(0.15)
+        await asyncio.sleep(0.03)
         poller.stop()
 
         swap_calls = [
@@ -2232,7 +2232,7 @@ class TestSwitchScopeReceiver:
 
         poller.start()
         queue.put(SetSplit(True))
-        await asyncio.sleep(0.15)
+        await asyncio.sleep(0.03)
         poller.stop()
 
         radio.set_split_mode.assert_awaited_once_with(True)
@@ -2251,7 +2251,7 @@ class TestSwitchScopeReceiver:
 
         poller.start()
         queue.put(SetRitStatus(True))
-        await asyncio.sleep(0.15)
+        await asyncio.sleep(0.03)
         poller.stop()
 
         radio.set_rit_status.assert_awaited_once_with(True)
@@ -2270,7 +2270,7 @@ class TestSwitchScopeReceiver:
 
         poller.start()
         queue.put(SetRitTxStatus(True))
-        await asyncio.sleep(0.15)
+        await asyncio.sleep(0.03)
         poller.stop()
 
         radio.set_rit_tx_status.assert_awaited_once_with(True)
@@ -2289,7 +2289,7 @@ class TestSwitchScopeReceiver:
 
         poller.start()
         queue.put(SetRitFrequency(-200))
-        await asyncio.sleep(0.15)
+        await asyncio.sleep(0.03)
         poller.stop()
 
         radio.set_rit_frequency.assert_awaited_once_with(-200)
@@ -2308,7 +2308,7 @@ class TestSwitchScopeReceiver:
 
         poller.start()
         queue.put(SetPbtInner(150, receiver=0))
-        await asyncio.sleep(0.15)
+        await asyncio.sleep(0.03)
         poller.stop()
 
         radio.set_pbt_inner.assert_awaited_once_with(150, receiver=0)
@@ -2327,7 +2327,7 @@ class TestSwitchScopeReceiver:
 
         poller.start()
         queue.put(SetPbtOuter(200, receiver=0))
-        await asyncio.sleep(0.15)
+        await asyncio.sleep(0.03)
         poller.stop()
 
         radio.set_pbt_outer.assert_awaited_once_with(200, receiver=0)
@@ -2346,7 +2346,7 @@ class TestSwitchScopeReceiver:
 
         poller.start()
         queue.put(SetNRLevel(42, receiver=0))
-        await asyncio.sleep(0.15)
+        await asyncio.sleep(0.03)
         poller.stop()
 
         radio.set_nr_level.assert_awaited_once_with(42, receiver=0)
@@ -2365,7 +2365,7 @@ class TestSwitchScopeReceiver:
 
         poller.start()
         queue.put(SetNBLevel(17, receiver=0))
-        await asyncio.sleep(0.15)
+        await asyncio.sleep(0.03)
         poller.stop()
 
         radio.set_nb_level.assert_awaited_once_with(17, receiver=0)
@@ -2384,7 +2384,7 @@ class TestSwitchScopeReceiver:
 
         poller.start()
         queue.put(SetAutoNotch(True, receiver=0))
-        await asyncio.sleep(0.15)
+        await asyncio.sleep(0.03)
         poller.stop()
 
         radio.set_auto_notch.assert_awaited_once_with(True, receiver=0)
@@ -2403,7 +2403,7 @@ class TestSwitchScopeReceiver:
 
         poller.start()
         queue.put(SetManualNotch(True, receiver=0))
-        await asyncio.sleep(0.15)
+        await asyncio.sleep(0.03)
         poller.stop()
 
         radio.set_manual_notch.assert_awaited_once_with(True, receiver=0)
@@ -2422,7 +2422,7 @@ class TestSwitchScopeReceiver:
 
         poller.start()
         queue.put(SetNotchFilter(91))
-        await asyncio.sleep(0.15)
+        await asyncio.sleep(0.03)
         poller.stop()
 
         radio.set_notch_filter.assert_awaited_once_with(91)
@@ -2445,7 +2445,7 @@ class TestSwitchScopeReceiver:
 
         poller.start()
         queue.put(SetAgcTimeConstant(9, receiver=0))
-        await asyncio.sleep(0.15)
+        await asyncio.sleep(0.03)
         poller.stop()
 
         radio.set_agc_time_constant.assert_awaited_once_with(9, receiver=0)
@@ -2464,7 +2464,7 @@ class TestSwitchScopeReceiver:
 
         poller.start()
         queue.put(SetCwPitch(600))
-        await asyncio.sleep(0.15)
+        await asyncio.sleep(0.03)
         poller.stop()
 
         radio.set_cw_pitch.assert_awaited_once_with(600)
@@ -2483,7 +2483,7 @@ class TestSwitchScopeReceiver:
 
         poller.start()
         queue.put(SetMicGain(123))
-        await asyncio.sleep(0.15)
+        await asyncio.sleep(0.03)
         poller.stop()
 
         radio.set_mic_gain.assert_awaited_once_with(123)
@@ -2502,7 +2502,7 @@ class TestSwitchScopeReceiver:
 
         poller.start()
         queue.put(SetVox(True))
-        await asyncio.sleep(0.15)
+        await asyncio.sleep(0.03)
         poller.stop()
 
         radio.set_vox.assert_awaited_once_with(True)
@@ -2525,7 +2525,7 @@ class TestSwitchScopeReceiver:
 
         poller.start()
         queue.put(SetCompressorLevel(88))
-        await asyncio.sleep(0.15)
+        await asyncio.sleep(0.03)
         poller.stop()
 
         radio.set_compressor_level.assert_awaited_once_with(88)
@@ -2544,7 +2544,7 @@ class TestSwitchScopeReceiver:
 
         poller.start()
         queue.put(SetMonitor(True))
-        await asyncio.sleep(0.15)
+        await asyncio.sleep(0.03)
         poller.stop()
 
         radio.set_monitor.assert_awaited_once_with(True)
@@ -2563,7 +2563,7 @@ class TestSwitchScopeReceiver:
 
         poller.start()
         queue.put(SetMonitorGain(55))
-        await asyncio.sleep(0.15)
+        await asyncio.sleep(0.03)
         poller.stop()
 
         radio.set_monitor_gain.assert_awaited_once_with(55)
@@ -2582,7 +2582,7 @@ class TestSwitchScopeReceiver:
 
         poller.start()
         queue.put(SetDialLock(True))
-        await asyncio.sleep(0.15)
+        await asyncio.sleep(0.03)
         poller.stop()
 
         radio.set_dial_lock.assert_awaited_once_with(True)
@@ -2619,7 +2619,7 @@ class TestSwitchScopeReceiverCommand:
             assert resp["result"]["receiver"] == 1
 
             # Allow poller to execute the queued command
-            await asyncio.sleep(0.15)
+            await asyncio.sleep(0.03)
 
             scope_calls = [
                 c for c in mock_radio.send_civ.call_args_list if c[0][0] == 0x27
@@ -2656,7 +2656,7 @@ class TestSwitchScopeReceiverCommand:
             assert resp["result"]["receiver"] == 0
 
             # Allow poller to execute the queued command
-            await asyncio.sleep(0.15)
+            await asyncio.sleep(0.03)
 
             scope_calls = [
                 c for c in mock_radio.send_civ.call_args_list if c[0][0] == 0x27
@@ -2696,7 +2696,7 @@ class TestScopeAdvancedCommands:
             assert resp["ok"] is True
             assert resp["result"]["on"] is True
 
-            await asyncio.sleep(0.15)
+            await asyncio.sleep(0.03)
             mock_radio.set_scope_during_tx.assert_called_once_with(True)
         finally:
             await _close_ws(writer)
@@ -2725,7 +2725,7 @@ class TestScopeAdvancedCommands:
             assert resp["ok"] is True
             assert resp["result"]["on"] is False
 
-            await asyncio.sleep(0.15)
+            await asyncio.sleep(0.03)
             mock_radio.set_scope_during_tx.assert_called_once_with(False)
         finally:
             await _close_ws(writer)
@@ -2754,7 +2754,7 @@ class TestScopeAdvancedCommands:
             assert resp["ok"] is True
             assert resp["result"]["center_type"] == 2
 
-            await asyncio.sleep(0.15)
+            await asyncio.sleep(0.03)
             mock_radio.set_scope_center_type.assert_called_once_with(2)
         finally:
             await _close_ws(writer)
@@ -2785,7 +2785,7 @@ class TestScopeAdvancedCommands:
             assert resp["result"]["start_hz"] == 14_000_000
             assert resp["result"]["end_hz"] == 15_000_000
 
-            await asyncio.sleep(0.15)
+            await asyncio.sleep(0.03)
             mock_radio.set_scope_fixed_edge.assert_called_once_with(
                 edge=1,
                 start_hz=14_000_000,
