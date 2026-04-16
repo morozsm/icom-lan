@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+from contextlib import ExitStack, contextmanager
+from functools import partial
 from unittest.mock import Mock, patch
 
 import pytest
@@ -20,6 +22,30 @@ from icom_lan.discovery import (
     probe_serial_civ,
     probe_serial_yaesu_cat,
 )
+
+
+@contextmanager
+def _fast_probes():
+    """Patch probe_serial_civ / probe_serial_yaesu_cat to use a single baud and
+    tiny timeout. Cuts ~4 s (4 bauds × 1.0 s) per miss path to milliseconds.
+
+    Used by ``TestDiscoverSerialRadios`` — those tests only care about the
+    probe outcome, not about baud sweeping or real timeout values.
+    """
+    with ExitStack() as stack:
+        stack.enter_context(
+            patch(
+                "icom_lan.discovery.probe_serial_civ",
+                partial(probe_serial_civ, baud_rates=[19200], timeout=0.01),
+            )
+        )
+        stack.enter_context(
+            patch(
+                "icom_lan.discovery.probe_serial_yaesu_cat",
+                partial(probe_serial_yaesu_cat, baud_rates=[38400], timeout=0.01),
+            )
+        )
+        yield
 
 
 # ---------------------------------------------------------------------------
@@ -615,7 +641,7 @@ class TestDiscoverSerialRadios:
         writer = _FakeWriter()
 
         port = _make_port("/dev/ttyUSB0", "USB Serial", "USB VID:PID=10C4:EA60")
-        with patch("serial.tools.list_ports.comports", return_value=[port]):
+        with _fast_probes(), patch("serial.tools.list_ports.comports", return_value=[port]):
             results = await discover_serial_radios(
                 _open_serial=_make_open(reader, writer),
             )
@@ -637,7 +663,7 @@ class TestDiscoverSerialRadios:
         yaesu_factory = _make_yaesu_factory("ID0840")
 
         port = _make_port("/dev/ttyUSB0", "USB Serial", "USB VID:PID=0403:6001")
-        with patch("serial.tools.list_ports.comports", return_value=[port]):
+        with _fast_probes(), patch("serial.tools.list_ports.comports", return_value=[port]):
             results = await discover_serial_radios(
                 _open_serial=_civ_open,
                 _yaesu_transport_factory=yaesu_factory,
@@ -657,7 +683,7 @@ class TestDiscoverSerialRadios:
         yaesu_factory = _make_yaesu_factory(None)
 
         port = _make_port("/dev/ttyUSB0", "USB Serial", "USB VID:PID=0403:6001")
-        with patch("serial.tools.list_ports.comports", return_value=[port]):
+        with _fast_probes(), patch("serial.tools.list_ports.comports", return_value=[port]):
             results = await discover_serial_radios(
                 _open_serial=_civ_open,
                 _yaesu_transport_factory=yaesu_factory,
@@ -687,7 +713,7 @@ class TestDiscoverSerialRadios:
             _make_port("/dev/ttyUSB0", "USB Serial"),
             _make_port("/dev/ttyUSB1", "USB Serial"),
         ]
-        with patch("serial.tools.list_ports.comports", return_value=ports):
+        with _fast_probes(), patch("serial.tools.list_ports.comports", return_value=ports):
             results = await discover_serial_radios(
                 _open_serial=_civ_open,
                 _yaesu_transport_factory=yaesu_factory,
