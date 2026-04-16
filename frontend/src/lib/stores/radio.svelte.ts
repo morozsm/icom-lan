@@ -150,6 +150,36 @@ export function patchActiveReceiver(patch: Partial<ReceiverState>, lock = false)
 }
 
 /**
+ * Optimistic update for a specific receiver (0 = MAIN, 1 = SUB).
+ * Unlike patchActiveReceiver, this always targets the given receiver
+ * regardless of which VFO is currently active.
+ */
+export function patchReceiver(receiver: 0 | 1, patch: Partial<ReceiverState>, lock = false): void {
+  const s = radio.current;
+  if (!s) return;
+  const key = receiver === 1 ? 'sub' : 'main';
+  const map = key === 'sub' ? optimisticSub : optimisticMain;
+  const expires = Date.now() + OPTIMISTIC_TTL;
+  const currentRx = s[key];
+
+  for (const [field, value] of Object.entries(patch)) {
+    const lockKey = `${key}.${field}`;
+    const lockExpires = lockedFields.get(lockKey);
+    if (lockExpires && Date.now() < lockExpires && !lock) {
+      continue;
+    }
+    if (lock) {
+      lockedFields.set(lockKey, Date.now() + INPUT_LOCK_TTL);
+    }
+    map.set(field, { value, expires, serverValueAtPatch: (currentRx as any)[field] });
+  }
+  radio.current = {
+    ...s,
+    [key]: { ...s[key], ...patch },
+  };
+}
+
+/**
  * Optimistic update for top-level state fields (ptt, split, etc.)
  */
 export function patchRadioState(patch: Partial<ServerState>): void {

@@ -10,7 +10,7 @@
  */
 
 import { sendCommand } from '$lib/transport/ws-client';
-import { getActiveReceiver, getRadioState, patchActiveReceiver, patchRadioState } from '$lib/stores/radio.svelte';
+import { getActiveReceiver, getRadioState, patchActiveReceiver, patchRadioState, patchReceiver } from '$lib/stores/radio.svelte';
 import { getCapabilities } from '$lib/stores/capabilities.svelte';
 import { adjustTuningStep, getTuningStep } from '$lib/stores/tuning.svelte';
 import { audioManager } from '$lib/audio/audio-manager';
@@ -80,11 +80,11 @@ export function makeVfoHandlers() {
     onMainModeClick: () => focusModePanel('MAIN'),
     onSubModeClick: () => focusModePanel('SUB'),
     onMainFreqChange: (freq: number) => {
-      patchActiveReceiver({ freqHz: freq }, true);
+      patchReceiver(0, { freqHz: freq }, true);
       cmd('set_freq', { freq, receiver: 0 });
     },
     onSubFreqChange: (freq: number) => {
-      patchActiveReceiver({ freqHz: freq }, true);
+      patchReceiver(1, { freqHz: freq }, true);
       cmd('set_freq', { freq, receiver: 1 });
     },
     onFreqChange: (freq: number, receiver: Receiver = 0) => {
@@ -873,6 +873,7 @@ export function makeKeyboardHandlers() {
           const state = getRadioState();
           const next = state?.active === 'SUB' ? 'MAIN' : 'SUB';
           patchRadioState({ active: next });
+          cmd('set_vfo', { vfo: next });
           return;
         }
         case 'focus_target': {
