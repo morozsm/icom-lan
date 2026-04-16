@@ -2728,7 +2728,7 @@ def main() -> None:
     if getattr(args, "list_audio_devices", False):
         sys.exit(asyncio.run(_cmd_list_audio_devices(args)))
     elif args.command == "discover":
-        sys.exit(asyncio.run(_cmd_discover(None, args)))  # type: ignore[arg-type]
+        sys.exit(asyncio.run(_cmd_discover(None, args)))
     elif args.command == "proxy":
         from .proxy import run_proxy
 
