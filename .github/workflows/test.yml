@@ -21,42 +21,47 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+          cache-dependency-glob: |
+            pyproject.toml
+            uv.lock
+
+      - name: Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[dev,bridge]"
+        run: uv sync --extra dev --extra bridge
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Build frontend
         run: |
           cd frontend
-          npm install
+          npm ci
           npm run build
           rm -f ../src/icom_lan/web/static
           mkdir -p ../src/icom_lan/web/static
           cp -r dist/* ../src/icom_lan/web/static/
 
       - name: Lint web boundary
-        run: ruff check src/icom_lan/web
+        run: uv run ruff check src/icom_lan/web
 
       - name: Type-check web boundary
-        run: mypy --strict src/icom_lan/web
+        run: uv run mypy --strict src/icom_lan/web
 
       - name: Run tests
         id: tests
         run: |
-          pytest tests/test_*.py -v --tb=short --timeout=300 --timeout-method=thread \
+          uv run pytest tests/test_*.py -v --tb=short --timeout=300 --timeout-method=thread \
             | tee pytest-output.txt
-          # Extract counts for badge
           SUMMARY=$(tail -1 pytest-output.txt)
           PASSED=$(echo "$SUMMARY" | grep -oP '\d+ passed' | grep -oP '\d+' || echo "0")
           echo "passed=$PASSED" >> "$GITHUB_OUTPUT"
@@ -65,7 +70,7 @@ jobs:
         if: matrix.python-version == '3.11' && github.ref == 'refs/heads/main'
         id: version
         run: |
-          VERSION=$(python -c "from importlib.metadata import version; print(version('icom-lan'))")
+          VERSION=$(uv run python -c "from importlib.metadata import version; print(version('icom-lan'))")
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Update tests badge
