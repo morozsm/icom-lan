@@ -18,14 +18,15 @@ async def _fast_sleep(delay: float, *args, **kwargs):  # type: ignore[no-untyped
 
 @contextmanager
 def fast_connect():  # noqa: D103
-    """Context manager that patches out 0.3s handshake sleeps and startup readiness
-    check for mock integration tests.
+    """Context manager that patches slow handshake steps for mock integration tests.
 
-    MockIcomRadio sends an unsolicited CI-V frame on OpenClose(open) to trigger
-    _civ_stream_ready, but the timing is not always reliable under asyncio test
-    conditions.  Patching wait_for_radio_startup_ready ensures we never hang 5s
-    waiting for radio_ready when the CI-V frame is processed slightly too late.
+    - 0.3s handshake sleeps in _control_phase → skipped.
+    - wait_for_radio_startup_ready → AsyncMock (avoids 5s fallback on flaky mock timing).
+    - CoreRadio._fetch_initial_state → AsyncMock. Otherwise connect issues ~290 CI-V GET
+      queries with 12ms gaps (~3.5s per connect); tests read state via direct GETs or
+      preset mock fields, so the pre-fetch adds no value.
     """
     with patch("asyncio.sleep", _fast_sleep), \
-         patch("icom_lan._control_phase.wait_for_radio_startup_ready", new=AsyncMock()):
+         patch("icom_lan._control_phase.wait_for_radio_startup_ready", new=AsyncMock()), \
+         patch("icom_lan.radio.CoreRadio._fetch_initial_state", new=AsyncMock()):
         yield
