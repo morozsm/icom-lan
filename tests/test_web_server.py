@@ -1351,6 +1351,60 @@ class TestAudioHandlerCodecDetection:
         assert frame[1] == AUDIO_CODEC_PCM16
 
 
+class TestAudioHandlerTxTranscoderRate:
+    """TX transcoder must use the radio's negotiated sample rate (issue #691).
+
+    Previously the transcoder was hard-coded to 48 kHz, which silently broke
+    TX on radios negotiated at a lower rate (e.g. 24 kHz) — PTT keyed up but
+    no RF power was emitted because the radio dropped the mismatched stream.
+    """
+
+    @staticmethod
+    def _make_handler(sample_rate: int | None) -> Any:
+        from icom_lan.radio_protocol import AudioCapable
+        from icom_lan.web.handlers import AudioBroadcaster, AudioHandler
+        from icom_lan.web.websocket import WebSocketConnection
+
+        mock_ws = MagicMock(spec=WebSocketConnection)
+        mock_radio = MagicMock(spec=AudioCapable)
+        mock_radio.capabilities = {"audio"}
+        if sample_rate is None:
+            # Simulate a radio that does not expose audio_sample_rate
+            del mock_radio.audio_sample_rate
+        else:
+            mock_radio.audio_sample_rate = sample_rate
+        mock_radio.start_audio_tx_opus = AsyncMock()
+
+        broadcaster = AudioBroadcaster(mock_radio)
+        handler = AudioHandler(mock_ws, mock_radio, broadcaster)
+        return handler
+
+    async def _start_tx(self, handler: Any) -> None:
+        await handler._handle_control({"type": "audio_start", "direction": "tx"})
+
+    async def test_tx_transcoder_uses_24khz_rate(self) -> None:
+        handler = self._make_handler(24000)
+        await self._start_tx(handler)
+        assert handler._transcoder is not None
+        assert handler._transcoder._fmt.sample_rate == 24000
+
+    async def test_tx_transcoder_uses_48khz_rate(self) -> None:
+        handler = self._make_handler(48000)
+        await self._start_tx(handler)
+        assert handler._transcoder is not None
+        assert handler._transcoder._fmt.sample_rate == 48000
+
+    async def test_tx_transcoder_falls_back_when_rate_missing(self) -> None:
+        handler = self._make_handler(None)
+        await self._start_tx(handler)
+        assert handler._transcoder is not None
+        assert handler._transcoder._fmt.sample_rate == 48000
+
+    async def test_tx_transcoder_not_created_before_tx_start(self) -> None:
+        handler = self._make_handler(24000)
+        assert handler._transcoder is None
+
+
 # ---------------------------------------------------------------------------
 # WebSocket keepalive (server-initiated pings)
 # ---------------------------------------------------------------------------
@@ -1385,9 +1439,9 @@ class TestWsKeepalive:
         # Ping frame: FIN|PING (0x89), payload len 2 ("ka")
         all_bytes = b"".join(written)
         ping_frame = make_frame(WS_OP_PING, b"ka")
-        assert (
-            ping_frame in all_bytes
-        ), f"Expected ping frame {ping_frame!r} in written data {all_bytes!r}"
+        assert ping_frame in all_bytes, (
+            f"Expected ping frame {ping_frame!r} in written data {all_bytes!r}"
+        )
 
     async def test_keepalive_cancels_cleanly(self) -> None:
         """Cancelling keepalive_loop raises no unhandled exceptions."""
@@ -1467,9 +1521,9 @@ class TestScopeLifecycle:
         from icom_lan.web.radio_poller import DisableScope
 
         cmds = server._command_queue.drain()
-        assert any(
-            isinstance(c, DisableScope) for c in cmds
-        ), "DisableScope should be in queue"
+        assert any(isinstance(c, DisableScope) for c in cmds), (
+            "DisableScope should be in queue"
+        )
         assert not server._scope_enabled
 
     async def test_scope_flag_reset_on_disable(self) -> None:
@@ -2123,9 +2177,9 @@ class TestSwitchScopeReceiver:
         poller.stop()
 
         scope_calls = [c for c in radio.send_civ.call_args_list if c[0][0] == 0x27]
-        assert not any(
-            c.kwargs.get("sub") == 0x12 for c in scope_calls
-        ), "Expected invalid receiver to be rejected without CI-V send"
+        assert not any(c.kwargs.get("sub") == 0x12 for c in scope_calls), (
+            "Expected invalid receiver to be rejected without CI-V send"
+        )
 
     async def test_select_vfo_sub_sends_swap(self) -> None:
         """SelectVfo("SUB") sends VFO swap (0x07 0xB0) when active=MAIN."""
@@ -2757,7 +2811,9 @@ class TestGetProfileRouting:
         """_get_profile() uses radio.model when radio has no .profile property."""
         from icom_lan.profiles import RadioProfile
 
-        radio = SimpleNamespace(model="FTX-1", capabilities={"audio", "scope"})  # no .profile attribute
+        radio = SimpleNamespace(
+            model="FTX-1", capabilities={"audio", "scope"}
+        )  # no .profile attribute
         srv = self._make_server(radio)
         profile = srv._get_profile()
 
@@ -2772,7 +2828,9 @@ class TestGetProfileRouting:
 
         ic7610_profile = resolve_radio_profile(model="IC-7610")
         # Simulate IcomRadio: has .profile (RadioProfile) but .model would differ
-        radio = SimpleNamespace(profile=ic7610_profile, model="WRONG", capabilities={"audio", "scope"})
+        radio = SimpleNamespace(
+            profile=ic7610_profile, model="WRONG", capabilities={"audio", "scope"}
+        )
         srv = self._make_server(radio)
         profile = srv._get_profile()
 
@@ -2799,7 +2857,9 @@ class TestGetMeterCalPayload:
 
     def test_profile_fallback_includes_calibrations(self):
         radio = SimpleNamespace(
-            model="IC-7610", capabilities=set(), radio_state=RadioState(),
+            model="IC-7610",
+            capabilities=set(),
+            radio_state=RadioState(),
         )
         srv = self._make_server(radio)
         payload = srv._get_meter_cal_payload()
@@ -2808,7 +2868,9 @@ class TestGetMeterCalPayload:
 
     def test_profile_fallback_includes_redlines(self):
         radio = SimpleNamespace(
-            model="IC-7610", capabilities=set(), radio_state=RadioState(),
+            model="IC-7610",
+            capabilities=set(),
+            radio_state=RadioState(),
         )
         srv = self._make_server(radio)
         payload = srv._get_meter_cal_payload()
@@ -2822,8 +2884,10 @@ class TestGetMeterCalPayload:
             meter_redlines={"power": 213},
         )
         radio = SimpleNamespace(
-            model="IC-7610", capabilities=set(),
-            radio_state=RadioState(), _config=fake_config,
+            model="IC-7610",
+            capabilities=set(),
+            radio_state=RadioState(),
+            _config=fake_config,
         )
         srv = self._make_server(radio)
         payload = srv._get_meter_cal_payload()

@@ -85,7 +85,11 @@ class AudioBroadcaster:
         self._legacy_tap_handle: TapHandle | None = None
         # Buffer pool for audio encoding/decoding operations
         # Pre-allocates buffers for common audio frame sizes (20ms @ 16kHz stereo = 1280 bytes)
-        self._buffer_pool = AudioBufferPool(buffer_size=1280, max_buffers=get_audio_buffer_pool_size(), name="audio-broadcaster")
+        self._buffer_pool = AudioBufferPool(
+            buffer_size=1280,
+            max_buffers=get_audio_buffer_pool_size(),
+            name="audio-broadcaster",
+        )
 
     async def subscribe(
         self, ws: WebSocketConnection | None = None
@@ -98,9 +102,7 @@ class AudioBroadcaster:
             if ws is not None:
                 self._client_ws[client_id] = ws
             # Start relay if no active subscription, or if relay task died
-            relay_alive = (
-                self._relay_task is not None and not self._relay_task.done()
-            )
+            relay_alive = self._relay_task is not None and not self._relay_task.done()
             if self._subscription is None or not relay_alive:
                 # Clean up stale subscription/task if needed
                 if self._subscription is not None and not relay_alive:
@@ -121,7 +123,11 @@ class AudioBroadcaster:
         async with self._lock:
             self._clients.pop(client_id, None)
             self._client_ws.pop(client_id, None)
-            if not self._clients and self._subscription is not None and not self._tap_registry.active:
+            if (
+                not self._clients
+                and self._subscription is not None
+                and not self._tap_registry.active
+            ):
                 await self._stop_relay()
         logger.info("audio-broadcaster: client removed (total=%d)", len(self._clients))
 
@@ -159,9 +165,7 @@ class AudioBroadcaster:
         that the PCM tap callback fires.
         """
         async with self._lock:
-            relay_alive = (
-                self._relay_task is not None and not self._relay_task.done()
-            )
+            relay_alive = self._relay_task is not None and not self._relay_task.done()
             if not relay_alive and self._radio:
                 await self._start_relay()
                 logger.info("audio-broadcaster: relay started for PCM tap")
@@ -170,15 +174,17 @@ class AudioBroadcaster:
         """Remove clients whose WebSocket is no longer alive. Returns count removed."""
         async with self._lock:
             dead_ids = [
-                cid
-                for cid, ws in list(self._client_ws.items())
-                if not ws.is_alive()
+                cid for cid, ws in list(self._client_ws.items()) if not ws.is_alive()
             ]
             for cid in dead_ids:
                 self._clients.pop(cid, None)
                 self._client_ws.pop(cid, None)
             # Stop relay if no clients remain (and no PCM tap active)
-            if not self._clients and self._subscription is not None and not self._tap_registry.active:
+            if (
+                not self._clients
+                and self._subscription is not None
+                and not self._tap_registry.active
+            ):
                 await self._stop_relay()
             remaining = len(self._clients)
         if dead_ids:
@@ -269,14 +275,15 @@ class AudioBroadcaster:
                     try:
                         audio_data = decode_ulaw_to_pcm16(audio_data)
                     except Exception as e:
-                        logger.warning(
-                            "audio: failed to decode ulaw data: %s", e
-                        )
+                        logger.warning("audio: failed to decode ulaw data: %s", e)
                         # Fall back to original data
                         audio_data = pkt.data
 
                 # Apply DSP pipeline if configured (operates on s16le PCM)
-                if self._dsp_pipeline is not None and self._web_codec == AUDIO_CODEC_PCM16:
+                if (
+                    self._dsp_pipeline is not None
+                    and self._web_codec == AUDIO_CODEC_PCM16
+                ):
                     try:
                         audio_data = self._dsp_pipeline.process_bytes(
                             audio_data, self._sample_rate
@@ -373,12 +380,11 @@ class AudioHandler:
             maxsize=self.HIGH_WATERMARK,
         )
         self._done = asyncio.Event()
-        # Opus decoder for TX when radio uses PCM codec
+        # Opus decoder for TX when radio uses PCM codec.
+        # Created lazily on TX start so we pass the radio's negotiated sample rate
+        # (otherwise a 24 kHz radio silently drops TX audio decoded at 48 kHz — #691).
         self._transcoder: PcmOpusTranscoder | None = None
-        try:
-            self._transcoder = create_pcm_opus_transcoder()
-        except Exception:
-            logger.debug("audio: TX transcoder unavailable (opus codec missing?)")
+        self._transcoder_rate: int = 0
 
     async def run(self) -> None:
         """Run the audio channel lifecycle.
@@ -398,7 +404,9 @@ class AudioHandler:
             for task in done:
                 exc = task.exception() if not task.cancelled() else None
                 if exc:
-                    logger.warning("audio: %s exited with error: %s", task.get_name(), exc)
+                    logger.warning(
+                        "audio: %s exited with error: %s", task.get_name(), exc
+                    )
                 else:
                     logger.debug("audio: %s exited normally", task.get_name())
             # Cancel the remaining task and close WS to unblock any stuck recv()
@@ -456,6 +464,7 @@ class AudioHandler:
                 await self._start_rx()
             elif direction == "tx":
                 if self._radio and CAP_AUDIO in self._radio.capabilities:
+                    self._ensure_tx_transcoder()
                     try:
                         await self._radio.start_audio_tx_opus()  # type: ignore[attr-defined]
                     except RuntimeError as exc:
@@ -473,6 +482,30 @@ class AudioHandler:
                     await self._radio.stop_audio_tx()  # type: ignore[attr-defined]
                 self._tx_active = False
                 logger.info("audio: TX stopped")
+
+    def _ensure_tx_transcoder(self) -> None:
+        """Create (or recreate) the TX Opus→PCM transcoder at the radio's rate.
+
+        TX-side fix for issue #691: previously the transcoder was constructed
+        in ``__init__`` before the radio's negotiated ``audio_sample_rate`` was
+        known, so the browser's 24 kHz Opus stream was decoded to 48 kHz PCM
+        and the radio silently dropped TX audio. Called on ``audio_start
+        direction=tx``, when the rate is guaranteed available.
+        """
+        sr = getattr(self._radio, "audio_sample_rate", None)
+        rate = (
+            sr if isinstance(sr, int) and not isinstance(sr, bool) and sr > 0 else 48000
+        )
+        if self._transcoder is not None and self._transcoder_rate == rate:
+            return
+        try:
+            self._transcoder = create_pcm_opus_transcoder(sample_rate=rate)
+            self._transcoder_rate = rate
+            logger.info("audio: TX transcoder ready at %d Hz", rate)
+        except Exception:
+            logger.debug("audio: TX transcoder unavailable (opus codec missing?)")
+            self._transcoder = None
+            self._transcoder_rate = 0
 
     async def _start_rx(self) -> None:
         """Subscribe to audio broadcaster for RX frames."""
