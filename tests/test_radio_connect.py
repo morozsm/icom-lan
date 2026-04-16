@@ -515,6 +515,7 @@ class TestWifiBindBehavior:
             patch.object(radio._civ_runtime, "start_data_watchdog"),
             patch.object(radio._civ_runtime, "start_worker"),
             patch("icom_lan.transport.IcomTransport", return_value=fake_civ_transport),
+            patch.object(radio, "_fetch_initial_state", new=AsyncMock()),
         ):
             await radio.connect()
 
