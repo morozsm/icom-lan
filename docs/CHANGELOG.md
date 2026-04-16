@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.4] — 2026-04-16
+
+### Fixed
+- **Web UI TX audio:** transcoder now uses the radio's negotiated sample rate
+  (was hard-coded to 48 kHz, silently dropped TX on radios negotiated at 24 kHz) (#691)
+
+### Changed
+- **Test suite performance:** backend 87.6s → 64s (−27%), frontend 10.6s → 5.8s (−45%);
+  CI per matrix job ~4m30s → ~2m00s (−55%) (#706, #707)
+
 ## [0.16.3] — 2026-04-16
 
 ### Fixed
@@ -486,7 +496,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Transport layer, authentication, CI-V commands, meters, PTT, keep-alive.
 - Clean-room Icom LAN UDP protocol implementation.
 
-[Unreleased]: https://github.com/morozsm/icom-lan/compare/v0.16.3...HEAD
+[Unreleased]: https://github.com/morozsm/icom-lan/compare/v0.16.4...HEAD
+[0.16.4]: https://github.com/morozsm/icom-lan/compare/v0.16.3...v0.16.4
 [0.16.3]: https://github.com/morozsm/icom-lan/compare/v0.16.2...v0.16.3
 [0.16.2]: https://github.com/morozsm/icom-lan/compare/v0.16.1...v0.16.2
 [0.16.1]: https://github.com/morozsm/icom-lan/compare/v0.16.0...v0.16.1

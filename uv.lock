@@ -742,7 +742,7 @@ wheels = [
 
 [[package]]
 name = "icom-lan"
-version = "0.16.3"
+version = "0.16.4"
 source = { editable = "." }
 dependencies = [
     { name = "pyserial" },
