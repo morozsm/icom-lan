@@ -203,6 +203,94 @@ class TestDSPPipelineConfig:
             DSPPipeline.from_config(config, {})
 
 
+class RateRecorderNode:
+    """Records the sample_rate it receives for verification."""
+
+    def __init__(self, name: str, required_rate: int | None = None) -> None:
+        self.name = name
+        self.enabled = True
+        self.required_sample_rate = required_rate
+        self.received_rate: int | None = None
+        self.received_len: int | None = None
+
+    def process(self, samples: np.ndarray, sample_rate: int) -> np.ndarray:
+        self.received_rate = sample_rate
+        self.received_len = len(samples)
+        return samples
+
+    def get_params(self) -> dict[str, Any]:
+        return {}
+
+    def set_params(self, **kwargs: Any) -> None:
+        pass
+
+    def reset(self) -> None:
+        self.received_rate = None
+        self.received_len = None
+
+
+class TestDSPPipelineResample:
+    """Pipeline resamples before/after nodes that require a specific rate."""
+
+    def test_node_receives_required_rate(self) -> None:
+        """Node with required_sample_rate=48000 receives 48000 even when
+        pipeline input is 8000 Hz."""
+        node = RateRecorderNode("rec", required_rate=48000)
+        pipe = DSPPipeline([node])
+        samples = np.zeros(80, dtype=np.float32)  # 10 ms at 8000 Hz
+        pipe.process(samples, 8000)
+        assert node.received_rate == 48000
+
+    def test_node_receives_resampled_length(self) -> None:
+        """Resampled buffer has the expected number of samples."""
+        node = RateRecorderNode("rec", required_rate=48000)
+        pipe = DSPPipeline([node])
+        samples = np.zeros(80, dtype=np.float32)  # 10 ms at 8000
+        pipe.process(samples, 8000)
+        # 80 samples at 8000 Hz -> 480 samples at 48000 Hz
+        assert node.received_len == 480
+
+    def test_output_length_matches_input(self) -> None:
+        """After resample-process-resample, output length equals input."""
+        node = RateRecorderNode("rec", required_rate=48000)
+        pipe = DSPPipeline([node])
+        samples = np.zeros(80, dtype=np.float32)
+        out = pipe.process(samples, 8000)
+        assert len(out) == 80
+
+    def test_no_resample_when_rates_match(self) -> None:
+        """No resampling when input rate equals required rate."""
+        node = RateRecorderNode("rec", required_rate=48000)
+        pipe = DSPPipeline([node])
+        samples = np.zeros(480, dtype=np.float32)
+        out = pipe.process(samples, 48000)
+        assert node.received_rate == 48000
+        assert len(out) == 480
+
+    def test_no_resample_when_required_is_none(self) -> None:
+        """Nodes with required_sample_rate=None get the pipeline rate."""
+        node = RateRecorderNode("rec", required_rate=None)
+        pipe = DSPPipeline([node])
+        samples = np.zeros(80, dtype=np.float32)
+        pipe.process(samples, 8000)
+        assert node.received_rate == 8000
+        assert node.received_len == 80
+
+    def test_mixed_nodes_resample_only_where_needed(self) -> None:
+        """Pipeline with mixed nodes only resamples around the node that
+        requires a different rate."""
+        any_rate_node = RateRecorderNode("any", required_rate=None)
+        fixed_rate_node = RateRecorderNode("fixed", required_rate=48000)
+        pipe = DSPPipeline([any_rate_node, fixed_rate_node])
+        samples = np.zeros(80, dtype=np.float32)
+        out = pipe.process(samples, 8000)
+        assert any_rate_node.received_rate == 8000
+        assert any_rate_node.received_len == 80
+        assert fixed_rate_node.received_rate == 48000
+        assert fixed_rate_node.received_len == 480
+        assert len(out) == 80
+
+
 class TestDSPExceptions:
     """Exception hierarchy."""
 

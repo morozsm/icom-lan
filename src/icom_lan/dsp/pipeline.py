@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 from icom_lan.dsp.exceptions import DSPBackendUnavailable, DSPConfigError
+from icom_lan.dsp.resample import resample_if_needed
 
 if TYPE_CHECKING:
     import numpy as np
@@ -126,7 +127,14 @@ class DSPPipeline:
         """
         result = samples
         for node in self._nodes:
-            if node.enabled:
+            if not node.enabled:
+                continue
+            node_rate = node.required_sample_rate
+            if node_rate is not None and node_rate != sample_rate:
+                result, _ = resample_if_needed(result, sample_rate, node_rate)
+                result = node.process(result, node_rate)
+                result, _ = resample_if_needed(result, node_rate, sample_rate)
+            else:
                 result = node.process(result, sample_rate)
         return result
 
