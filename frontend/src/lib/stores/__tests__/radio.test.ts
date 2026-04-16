@@ -256,6 +256,61 @@ describe('radio store', () => {
     expect(store.getRadioState()).toBeNull();
   });
 
+  // --- optimistic protection for top-level fields (#696) ---
+
+  it('patchRadioState: optimistic value is preserved when server sends stale state', () => {
+    store.setRadioState(makeState({ revision: 1, ptt: false }));
+    store.patchRadioState({ ptt: true });
+
+    // Server sends higher revision but with the old value (race: command not yet applied)
+    store.setRadioState(makeState({ revision: 2, ptt: false }));
+    expect(store.getRadioState()?.ptt).toBe(true); // optimistic must hold
+  });
+
+  it('patchRadioState: optimistic value is cleared once server confirms new value', () => {
+    store.setRadioState(makeState({ revision: 1, ptt: false }));
+    store.patchRadioState({ ptt: true });
+
+    // Server eventually confirms the new value
+    store.setRadioState(makeState({ revision: 2, ptt: true }));
+    expect(store.getRadioState()?.ptt).toBe(true); // confirmed — stays true
+  });
+
+  it('patchRadioState: optimistic value expires after TTL and server value is accepted', () => {
+    vi.useFakeTimers();
+    store.setRadioState(makeState({ revision: 1, ptt: false }));
+    store.patchRadioState({ ptt: true });
+
+    // Advance time past TTL (5000ms)
+    vi.advanceTimersByTime(6000);
+
+    // Server still says false — optimistic has expired, server wins
+    store.setRadioState(makeState({ revision: 2, ptt: false }));
+    expect(store.getRadioState()?.ptt).toBe(false);
+
+    vi.useRealTimers();
+  });
+
+  it('patchRadioState: optimistic for one field does not affect other top-level fields', () => {
+    store.setRadioState(makeState({ revision: 1, ptt: false, split: false }));
+    store.patchRadioState({ ptt: true });
+
+    // Server sends update with split changed but ptt still old
+    store.setRadioState(makeState({ revision: 2, ptt: false, split: true }));
+    expect(store.getRadioState()?.ptt).toBe(true);   // optimistic holds
+    expect(store.getRadioState()?.split).toBe(true); // server value applied
+  });
+
+  it('patchRadioState: resetRadioState clears optimistic top-level entries', () => {
+    store.setRadioState(makeState({ revision: 1, ptt: false }));
+    store.patchRadioState({ ptt: true });
+
+    store.resetRadioState();
+    store.setRadioState(makeState({ revision: 1, ptt: false }));
+    // After reset, no optimistic entries — server value wins
+    expect(store.getRadioState()?.ptt).toBe(false);
+  });
+
   it('patchActiveReceiver patches MAIN when active is MAIN', () => {
     store.setRadioState(makeState({ active: 'MAIN' }));
     store.patchActiveReceiver({ freqHz: 21074000 });

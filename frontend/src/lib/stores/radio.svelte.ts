@@ -19,6 +19,13 @@ let lastRevision = -1;
 const optimisticMain = new Map<string, { value: unknown; expires: number; serverValueAtPatch?: unknown }>();
 const optimisticSub = new Map<string, { value: unknown; expires: number; serverValueAtPatch?: unknown }>();
 
+// Optimistic patches for top-level fields (ptt, split, ritOn, compressorOn, etc.)
+// Kept until server confirms or TTL expires.
+const optimisticTopLevel = new Map<string, { value: unknown; expires: number }>();
+
+// Top-level structural keys that should never be held optimistically
+const STRUCTURAL_KEYS = new Set(['revision', 'main', 'sub', 'active', 'connection', 'updatedAt']);
+
 function applyOptimistic(state: ServerState): ServerState {
   const now = Date.now();
   let result = state;
@@ -42,7 +49,7 @@ function applyOptimistic(state: ServerState): ServerState {
         // Lock expired - clear it
         lockedFields.delete(lockKey);
       }
-      
+
       const serverVal = (serverRx as any)[field];
 
       // Clear condition: hard timeout OR server confirmed
@@ -73,6 +80,25 @@ function applyOptimistic(state: ServerState): ServerState {
     }
     if (changed) result = { ...result, [key]: rx };
   }
+
+  // Apply top-level optimistic overrides (ptt, split, ritOn, etc.)
+  if (optimisticTopLevel.size > 0) {
+    const overrides: Record<string, unknown> = {};
+    let changed = false;
+    for (const [field, entry] of optimisticTopLevel) {
+      const serverVal = (state as any)[field];
+      const confirmed = now >= entry.expires || serverVal === entry.value;
+      if (confirmed) {
+        optimisticTopLevel.delete(field);
+        continue;
+      }
+      // Server still has old value — keep optimistic override
+      overrides[field] = entry.value;
+      changed = true;
+    }
+    if (changed) result = { ...result, ...overrides };
+  }
+
   return result;
 }
 
@@ -82,6 +108,7 @@ export function resetRadioState(): void {
   lastRevision = -1;
   optimisticMain.clear();
   optimisticSub.clear();
+  optimisticTopLevel.clear();
   lockedFields.clear();
 }
 
@@ -181,10 +208,18 @@ export function patchReceiver(receiver: 0 | 1, patch: Partial<ReceiverState>, lo
 
 /**
  * Optimistic update for top-level state fields (ptt, split, etc.)
+ * Registers each patched field in the top-level optimistic map so that
+ * incoming server polls don't immediately revert the optimistic value.
  */
 export function patchRadioState(patch: Partial<ServerState>): void {
   const s = radio.current;
   if (!s) return;
+  const expires = Date.now() + OPTIMISTIC_TTL;
+  for (const [field, value] of Object.entries(patch)) {
+    if (!STRUCTURAL_KEYS.has(field)) {
+      optimisticTopLevel.set(field, { value, expires });
+    }
+  }
   radio.current = { ...s, ...patch };
 }
 
