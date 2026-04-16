@@ -338,7 +338,7 @@
         if (spot) dxSpots = [...dxSpots.slice(-49), spot];
       } else if (msg.type === 'dx_spots') {
         const list = (msg as unknown as { spots: DxSpot[] }).spots;
-        if (Array.isArray(list)) dxSpots = list;
+        if (Array.isArray(list)) dxSpots = list.slice(-50);
       }
     });
 
