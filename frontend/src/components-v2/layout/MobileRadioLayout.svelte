@@ -48,6 +48,7 @@
   import { getTxAudioControl } from '$lib/runtime/adapters/tx-adapter';
   const txAudio = getTxAudioControl();
   import { onMount, onDestroy } from 'svelte';
+  import Toast from '../../components/shared/Toast.svelte';
 
   // ── State — via runtime ──
   let radioState = $derived(runtime.state);
@@ -970,6 +971,9 @@
   </BottomSheet>
 </div>
 {/if}
+
+<!-- Toast notifications — rendered in fixed position overlay -->
+<Toast />
 
 <style>
   /* ── Landscape layout ── */

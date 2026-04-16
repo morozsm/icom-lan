@@ -56,6 +56,7 @@
   import CwPanel from '../panels/CwPanel.svelte';
   import { HardwareButton } from '$lib/Button';
   import { Settings } from 'lucide-svelte';
+  import Toast from '../../components/shared/Toast.svelte';
 
   // Reactive state + capabilities — via runtime
   let radioState = $derived(runtime.state);
@@ -298,6 +299,9 @@
   </section>
 </div>
 {/if}
+
+<!-- Toast notifications — rendered in fixed position overlay -->
+<Toast />
 
 {#if runtime.radioPowerOn === false}
   <div class="power-off-overlay" aria-label="Radio is powered off">
