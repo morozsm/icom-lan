@@ -252,9 +252,15 @@ class TestReceiveCivPort:
     def test_status_retry_pause_uses_reject_cooldown(self) -> None:
         radio = IcomRadio("192.168.1.100")
         radio._last_status_error = 0xFFFFFFFF
-        assert radio._control_phase._status_retry_pause() == radio._control_phase._STATUS_REJECT_COOLDOWN
+        assert (
+            radio._control_phase._status_retry_pause()
+            == radio._control_phase._STATUS_REJECT_COOLDOWN
+        )
         radio._last_status_error = 0
-        assert radio._control_phase._status_retry_pause() == radio._control_phase._STATUS_RETRY_PAUSE
+        assert (
+            radio._control_phase._status_retry_pause()
+            == radio._control_phase._STATUS_RETRY_PAUSE
+        )
 
 
 class TestSendOpenClose:
@@ -292,7 +298,9 @@ class TestWaitForPacket:
         mt = ConnectMockTransport()
         mt.queue_response(b"\x00" * 0x20)  # wrong size
         mt.queue_response(b"\x00" * 0x60)  # correct
-        result = await radio._control_phase._wait_for_packet(mt, size=0x60, label="test")
+        result = await radio._control_phase._wait_for_packet(
+            mt, size=0x60, label="test"
+        )
         assert len(result) == 0x60
 
     @pytest.mark.asyncio
@@ -316,7 +324,9 @@ class TestWaitForPacket:
         for _ in range(5):
             mt.queue_response(b"\x00" * 0x10)
         mt.queue_response(b"\xff" * 0x60)
-        result = await radio._control_phase._wait_for_packet(mt, size=0x60, label="test")
+        result = await radio._control_phase._wait_for_packet(
+            mt, size=0x60, label="test"
+        )
         assert result == b"\xff" * 0x60
 
 
@@ -393,7 +403,9 @@ class TestConnectReadiness:
                 "_receive_civ_port",
                 new=AsyncMock(return_value=50002),
             ),
-            patch.object(radio._control_phase, "_flush_queue", new=AsyncMock(return_value=0)),
+            patch.object(
+                radio._control_phase, "_flush_queue", new=AsyncMock(return_value=0)
+            ),
             patch.object(radio._control_phase, "_start_token_renewal"),
             patch.object(radio._control_phase, "_start_watchdog"),
             patch.object(radio._civ_runtime, "start_pump"),
@@ -467,7 +479,9 @@ class _FakeSocket:
 
 class TestWifiBindBehavior:
     @pytest.mark.asyncio
-    async def test_connect_uses_routed_local_bind_host_for_control_and_civ(self) -> None:
+    async def test_connect_uses_routed_local_bind_host_for_control_and_civ(
+        self,
+    ) -> None:
         radio = IcomRadio("192.168.2.1", username="u", password="p")
         mt = ConnectMockTransport()
         radio._ctrl_transport = mt
@@ -510,7 +524,11 @@ class TestWifiBindBehavior:
             patch.object(radio._control_phase, "_start_token_renewal"),
             patch.object(radio._control_phase, "_start_watchdog"),
             patch.object(radio._control_phase, "_send_open_close", new=AsyncMock()),
-            patch.object(radio._control_phase, "_flush_queue", new=AsyncMock(side_effect=_mark_ready)),
+            patch.object(
+                radio._control_phase,
+                "_flush_queue",
+                new=AsyncMock(side_effect=_mark_ready),
+            ),
             patch.object(radio._civ_runtime, "start_pump"),
             patch.object(radio._civ_runtime, "start_data_watchdog"),
             patch.object(radio._civ_runtime, "start_worker"),
@@ -531,7 +549,9 @@ class TestWifiBindBehavior:
         }
 
     @pytest.mark.asyncio
-    async def test_connect_raises_on_persistent_civ_port_zero_without_error_flag(self) -> None:
+    async def test_connect_raises_on_persistent_civ_port_zero_without_error_flag(
+        self,
+    ) -> None:
         """civ_port=0 after all retries (no 0xFFFFFFFF flag) also raises ConnectionError."""
         radio = IcomRadio("192.168.1.100", username="u", password="p")
         mt = ConnectMockTransport()
