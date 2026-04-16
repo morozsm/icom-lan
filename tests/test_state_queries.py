@@ -80,9 +80,7 @@ class TestBuildStateQueries:
         """Serial backends should include ALC/comp/VD/Id meter queries."""
         profile = resolve_radio_profile(model="IC-7610")
         lan_queries = build_state_queries(profile, _ic7610_caps(), is_serial=False)
-        serial_queries = build_state_queries(
-            profile, _ic7610_caps(), is_serial=True
-        )
+        serial_queries = build_state_queries(profile, _ic7610_caps(), is_serial=True)
         # Serial should have more queries (the extra meters)
         assert len(serial_queries) > len(lan_queries)
         serial_cmds = {(q[0], q[1]) for q in serial_queries}
@@ -101,9 +99,7 @@ class TestBuildStateQueries:
         reduced_queries = build_state_queries(profile, reduced_caps)
         # NB queries (0x16/0x22 and 0x14/0x12) should be missing
         nb_in_full = [q for q in full_queries if q[0] == 0x16 and q[1] == 0x22]
-        nb_in_reduced = [
-            q for q in reduced_queries if q[0] == 0x16 and q[1] == 0x22
-        ]
+        nb_in_reduced = [q for q in reduced_queries if q[0] == 0x16 and q[1] == 0x22]
         assert len(nb_in_full) > 0
         assert len(nb_in_reduced) == 0
 
@@ -133,6 +129,13 @@ class TestBuildStateQueries:
 class TestFetchInitialState:
     """Tests for CoreRadio._fetch_initial_state method."""
 
+    @pytest.fixture(autouse=True)
+    def _no_real_pacing(self):
+        """Skip the 12ms inter-query sleep (~1.2s per test) — tests assert
+        call counts and flag state, not real pacing."""
+        with patch("icom_lan.radio.asyncio.sleep", new=AsyncMock()):
+            yield
+
     @pytest.fixture
     def radio(self):
         from icom_lan.radio import CoreRadio
@@ -147,9 +150,7 @@ class TestFetchInitialState:
 
     @pytest.mark.asyncio
     async def test_dispatches_all_queries(self, radio) -> None:
-        queries = build_state_queries(
-            radio._profile, set(radio._profile.capabilities)
-        )
+        queries = build_state_queries(radio._profile, set(radio._profile.capabilities))
         await radio._fetch_initial_state()
         assert radio.send_civ.call_count == len(queries)
         assert radio._initial_state_fetched is True

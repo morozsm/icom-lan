@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+from contextlib import ExitStack, contextmanager
+from functools import partial
 from unittest.mock import Mock, patch
 
 import pytest
@@ -22,9 +24,34 @@ from icom_lan.discovery import (
 )
 
 
+@contextmanager
+def _fast_probes():
+    """Patch probe_serial_civ / probe_serial_yaesu_cat to use a single baud and
+    tiny timeout. Cuts ~4 s (4 bauds × 1.0 s) per miss path to milliseconds.
+
+    Used by ``TestDiscoverSerialRadios`` — those tests only care about the
+    probe outcome, not about baud sweeping or real timeout values.
+    """
+    with ExitStack() as stack:
+        stack.enter_context(
+            patch(
+                "icom_lan.discovery.probe_serial_civ",
+                partial(probe_serial_civ, baud_rates=[19200], timeout=0.01),
+            )
+        )
+        stack.enter_context(
+            patch(
+                "icom_lan.discovery.probe_serial_yaesu_cat",
+                partial(probe_serial_yaesu_cat, baud_rates=[38400], timeout=0.01),
+            )
+        )
+        yield
+
+
 # ---------------------------------------------------------------------------
 # Fake serial transport helpers for CI-V probe tests
 # ---------------------------------------------------------------------------
+
 
 class _FakeReader:
     def __init__(self, chunks: list[bytes]) -> None:
@@ -57,6 +84,7 @@ class _FakeWriter:
 def _make_open(reader: _FakeReader, writer: _FakeWriter):
     async def _open(*, url: str, baudrate: int, **_kw: object):
         return reader, writer
+
     return _open
 
 
@@ -67,6 +95,7 @@ _PROBE_CMD = bytes([0xFE, 0xFE, 0x00, 0xE0, 0x19, 0x00, 0xFD])
 # ---------------------------------------------------------------------------
 # CI-V probe tests
 # ---------------------------------------------------------------------------
+
 
 class TestProbeSerialCiv:
     @pytest.mark.asyncio
@@ -235,7 +264,9 @@ class TestIsCandidate:
 
     def test_usb_modem_included(self) -> None:
         # macOS USB CDC devices appear as /dev/tty.usbmodem*
-        port = _make_port("/dev/tty.usbmodem14101", "USB Modem", "USB VID:PID=0403:6001")
+        port = _make_port(
+            "/dev/tty.usbmodem14101", "USB Modem", "USB VID:PID=0403:6001"
+        )
         assert _is_candidate(port) is True
 
     def test_usb_upper_case_included(self) -> None:
@@ -325,7 +356,9 @@ class TestEnumerateSerialPorts:
 class TestDedupeRadios:
     def test_same_radio_lan_and_serial_grouped(self) -> None:
         lan = [{"model": "IC-7610", "address": 0x98, "host": "192.168.1.100"}]
-        serial = [{"model": "IC-7610", "address": 0x98, "port": "/dev/ttyUSB0", "baud": 19200}]
+        serial = [
+            {"model": "IC-7610", "address": 0x98, "port": "/dev/ttyUSB0", "baud": 19200}
+        ]
 
         result = dedupe_radios(lan, serial)
 
@@ -336,7 +369,9 @@ class TestDedupeRadios:
 
     def test_different_radios_stay_separate(self) -> None:
         lan = [{"model": "IC-7610", "address": 0x98, "host": "192.168.1.100"}]
-        serial = [{"model": "IC-705", "address": 0xA4, "port": "/dev/ttyUSB0", "baud": 19200}]
+        serial = [
+            {"model": "IC-705", "address": 0xA4, "port": "/dev/ttyUSB0", "baud": 19200}
+        ]
 
         result = dedupe_radios(lan, serial)
 
@@ -354,7 +389,9 @@ class TestDedupeRadios:
 
     def test_serial_only_no_lan_section(self) -> None:
         lan: list[dict] = []
-        serial = [{"model": "IC-705", "address": 0xA4, "port": "/dev/ttyUSB0", "baud": 19200}]
+        serial = [
+            {"model": "IC-705", "address": 0xA4, "port": "/dev/ttyUSB0", "baud": 19200}
+        ]
 
         result = dedupe_radios(lan, serial)
 
@@ -378,7 +415,9 @@ class TestDedupeRadios:
     def test_lan_without_model_not_merged_with_serial(self) -> None:
         # LAN entry has no model/address → cannot be deduped → stays separate
         lan = [{"host": "192.168.1.100"}]
-        serial = [{"model": "IC-7610", "address": 0x98, "port": "/dev/ttyUSB0", "baud": 19200}]
+        serial = [
+            {"model": "IC-7610", "address": 0x98, "port": "/dev/ttyUSB0", "baud": 19200}
+        ]
 
         result = dedupe_radios(lan, serial)
 
@@ -429,6 +468,7 @@ class _FakeCatTransport:
         self.queries.append(command)
         if self._response is None:
             from icom_lan.backends.yaesu_cat.transport import CatTimeoutError
+
             raise CatTimeoutError("timeout")
         return self._response
 
@@ -599,7 +639,9 @@ class TestProbeSerialYaesuCat:
             seen_bauds.append(int(str(kwargs["baudrate"])))
             return _FakeCatTransport(None)
 
-        await probe_serial_yaesu_cat("/dev/ttyUSB0", timeout=0.01, _transport_factory=factory)
+        await probe_serial_yaesu_cat(
+            "/dev/ttyUSB0", timeout=0.01, _transport_factory=factory
+        )
         assert seen_bauds == [38400, 9600, 115200]
 
 
@@ -615,7 +657,10 @@ class TestDiscoverSerialRadios:
         writer = _FakeWriter()
 
         port = _make_port("/dev/ttyUSB0", "USB Serial", "USB VID:PID=10C4:EA60")
-        with patch("serial.tools.list_ports.comports", return_value=[port]):
+        with (
+            _fast_probes(),
+            patch("serial.tools.list_ports.comports", return_value=[port]),
+        ):
             results = await discover_serial_radios(
                 _open_serial=_make_open(reader, writer),
             )
@@ -637,7 +682,10 @@ class TestDiscoverSerialRadios:
         yaesu_factory = _make_yaesu_factory("ID0840")
 
         port = _make_port("/dev/ttyUSB0", "USB Serial", "USB VID:PID=0403:6001")
-        with patch("serial.tools.list_ports.comports", return_value=[port]):
+        with (
+            _fast_probes(),
+            patch("serial.tools.list_ports.comports", return_value=[port]),
+        ):
             results = await discover_serial_radios(
                 _open_serial=_civ_open,
                 _yaesu_transport_factory=yaesu_factory,
@@ -657,7 +705,10 @@ class TestDiscoverSerialRadios:
         yaesu_factory = _make_yaesu_factory(None)
 
         port = _make_port("/dev/ttyUSB0", "USB Serial", "USB VID:PID=0403:6001")
-        with patch("serial.tools.list_ports.comports", return_value=[port]):
+        with (
+            _fast_probes(),
+            patch("serial.tools.list_ports.comports", return_value=[port]),
+        ):
             results = await discover_serial_radios(
                 _open_serial=_civ_open,
                 _yaesu_transport_factory=yaesu_factory,
@@ -687,7 +738,10 @@ class TestDiscoverSerialRadios:
             _make_port("/dev/ttyUSB0", "USB Serial"),
             _make_port("/dev/ttyUSB1", "USB Serial"),
         ]
-        with patch("serial.tools.list_ports.comports", return_value=ports):
+        with (
+            _fast_probes(),
+            patch("serial.tools.list_ports.comports", return_value=ports),
+        ):
             results = await discover_serial_radios(
                 _open_serial=_civ_open,
                 _yaesu_transport_factory=yaesu_factory,
