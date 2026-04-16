@@ -77,7 +77,7 @@
         </HardwareButton>
       {/if}
       {#if showApf}
-        <HardwareButton indicator="edge-left" active={apfActive} color="cyan" onclick={() => onApfChange(apfActive ? 0 : 2)}>
+        <HardwareButton indicator="edge-left" active={apfActive} color="cyan" onclick={() => onApfChange(apfMode > 0 ? 0 : 1)}>
           APF
         </HardwareButton>
       {/if}

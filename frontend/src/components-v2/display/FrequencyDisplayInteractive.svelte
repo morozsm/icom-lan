@@ -53,6 +53,21 @@
     selectedDigitIndex = digit.digitIndex;
   }
 
+  function handleKeyDown(event: KeyboardEvent) {
+    if (selectedDigitIndex === null) return;
+    const digit = allDigits.find(d => d.digitIndex === selectedDigitIndex);
+    if (!digit) return;
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      const newFreq = adjustFreqByDigit(freq, digit.multiplier, 1, minFreq, maxFreq);
+      if (newFreq !== freq && onFreqChange) onFreqChange(newFreq);
+    } else if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      const newFreq = adjustFreqByDigit(freq, digit.multiplier, -1, minFreq, maxFreq);
+      if (newFreq !== freq && onFreqChange) onFreqChange(newFreq);
+    }
+  }
+
   function handleDigitEnter(digit: DigitInfo) {
     hoveredDigitIndex = digit.digitIndex;
   }
@@ -70,7 +85,9 @@
   }
 </script>
 
-<div class="freq" class:compact class:inactive={!active} style={Object.entries(cssVars).map(([k, v]) => `${k}:${v}`).join(';')}>
+<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+<div class="freq" class:compact class:inactive={!active} style={Object.entries(cssVars).map(([k, v]) => `${k}:${v}`).join(';')} tabindex="0" role="group" aria-label="Frequency display" onkeydown={handleKeyDown}>
   {#each groups.mhz as digit}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <!-- svelte-ignore a11y_click_events_have_key_events -->
