@@ -133,6 +133,13 @@ class TestBuildStateQueries:
 class TestFetchInitialState:
     """Tests for CoreRadio._fetch_initial_state method."""
 
+    @pytest.fixture(autouse=True)
+    def _no_real_pacing(self):
+        """Skip the 12ms inter-query sleep (~1.2s per test) — tests assert
+        call counts and flag state, not real pacing."""
+        with patch("icom_lan.radio.asyncio.sleep", new=AsyncMock()):
+            yield
+
     @pytest.fixture
     def radio(self):
         from icom_lan.radio import CoreRadio
