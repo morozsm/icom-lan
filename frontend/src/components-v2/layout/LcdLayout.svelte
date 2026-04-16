@@ -16,6 +16,7 @@
   import KeyboardHandler from './KeyboardHandler.svelte';
   import StatusBar from './StatusBar.svelte';
   import { makeKeyboardHandlers } from '../wiring/command-bus';
+  import Toast from '../../components/shared/Toast.svelte';
 
   let radioState = $derived(runtime.state);
   let keyboardConfig = $derived(getKeyboardConfig());
@@ -62,6 +63,9 @@
 
 
 </div>
+
+<!-- Toast notifications — rendered in fixed position overlay -->
+<Toast />
 
 {#if runtime.radioPowerOn === false}
   <div class="power-off-overlay" aria-label="Radio is powered off">

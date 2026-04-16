@@ -53,7 +53,7 @@
     if (!visible) { rafId = 0; return; }
     const pixels = latestPixels ?? data;
 
-    if (canvas && cssWidth > 1 && cssHeight > 1) {
+    if (canvas && pixels && cssWidth > 1 && cssHeight > 1) {
       const ctx = canvas.getContext('2d');
       if (ctx) {
         const state: SpectrumState = {
@@ -71,7 +71,13 @@
         renderAudioSpectrum(ctx, cssWidth, cssHeight, state, rendererState);
       }
     }
-    rafId = requestAnimationFrame(draw);
+
+    // Only reschedule if there is data to render; the push callback will restart the loop
+    if (latestPixels ?? data) {
+      rafId = requestAnimationFrame(draw);
+    } else {
+      rafId = 0;
+    }
   }
 
   function onVisibilityChange() {
@@ -82,6 +88,8 @@
   onMount(() => {
     onRegisterPush?.((pixels: Uint8Array) => {
       latestPixels = pixels;
+      // Restart rAF loop if it stopped because there was no data
+      if (rafId === 0 && visible) rafId = requestAnimationFrame(draw);
     });
 
     document.addEventListener('visibilitychange', onVisibilityChange);

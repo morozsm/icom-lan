@@ -162,16 +162,39 @@ export class WaterfallRenderer {
     ctx.putImageData(this.rowBuf, 0, 0);
   }
 
-  /** Resize the waterfall canvas and reset buffer. Clears the display. */
+  /** Resize the waterfall canvas, preserving existing content scaled to new dimensions. */
   resize(width: number, height: number): void {
     if (this.destroyed) return;
+    // Capture current content before resize clears the canvas
+    let oldCanvas: HTMLCanvasElement | null = null;
+    const prevW = this.ctx.canvas.width;
+    const prevH = this.ctx.canvas.height;
+    if (prevW > 0 && prevH > 0) {
+      oldCanvas = document.createElement('canvas');
+      oldCanvas.width = prevW;
+      oldCanvas.height = prevH;
+      const offCtx = oldCanvas.getContext('2d');
+      if (offCtx) {
+        offCtx.drawImage(this.ctx.canvas, 0, 0);
+      } else {
+        oldCanvas = null;
+      }
+    }
+
     this.width = width;
     this.height = height;
     this.rowBuf = null;
     this.rowData = null;
     if (width > 0 && height > 0) {
+      this.ctx.canvas.width = width;
+      this.ctx.canvas.height = height;
       this._initBuffers();
-      this.clear();
+      if (oldCanvas) {
+        // Restore preserved content scaled to new dimensions
+        this.ctx.drawImage(oldCanvas, 0, 0, width, height);
+      } else {
+        this.clear();
+      }
     }
   }
 
@@ -180,6 +203,9 @@ export class WaterfallRenderer {
     this.options = { ...this.options, ...opts };
     if (opts.colorScheme !== undefined) {
       this.lut = buildColorLut(this.options.colorScheme);
+      // NOTE: Existing canvas pixels retain the old color mapping. A proper fix
+      // requires a ring buffer of raw amplitude rows to re-render with the new LUT.
+      // For now, new rows will use the new scheme and old rows will fade out naturally.
     }
   }
 

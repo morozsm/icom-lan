@@ -43,8 +43,7 @@ function clamp(v: number, lo: number, hi: number): number {
   return v < lo ? lo : v > hi ? hi : v;
 }
 
-// Cached gradient: recreated only when height or fillColor changes
-let _gradCache: { grad: CanvasGradient; height: number; fillColor: string } | null = null;
+type GradCache = { grad: CanvasGradient; height: number; fillColor: string };
 
 /**
  * Render a spectrum line chart onto an existing 2D canvas context.
@@ -55,6 +54,9 @@ let _gradCache: { grad: CanvasGradient; height: number; fillColor: string } | nu
  *
  * Optimization note: the $effect in SpectrumCanvas triggers on every data change;
  * for smoother perf consider throttling to requestAnimationFrame (already done via scheduleRender).
+ *
+ * @param gradCache - optional per-instance cache object; pass a {current: null} ref to avoid
+ *   cross-instance invalidation when multiple SpectrumCanvas components exist at different heights.
  */
 export function renderSpectrum(
   ctx: CanvasRenderingContext2D,
@@ -62,6 +64,7 @@ export function renderSpectrum(
   width: number,
   height: number,
   options: SpectrumOptions,
+  gradCache?: { current: GradCache | null },
 ): void {
   const n = data.length;
   if (!n || width <= 0 || height <= 0) return;
@@ -123,14 +126,15 @@ export function renderSpectrum(
     yPoints[x] = height * (1 - boosted);
   }
 
-  // Filled area under spectrum (gradient cached; recreated only when height or fillColor changes)
-  if (!_gradCache || _gradCache.height !== height || _gradCache.fillColor !== fillColor) {
+  // Filled area under spectrum (gradient cached per-instance; recreated only when height or fillColor changes)
+  const cache = gradCache ?? { current: null };
+  if (!cache.current || cache.current.height !== height || cache.current.fillColor !== fillColor) {
     const grad = ctx.createLinearGradient(0, 0, 0, height);
     grad.addColorStop(0, fillColor);
     grad.addColorStop(1, 'rgba(30,58,138,0.02)');
-    _gradCache = { grad, height, fillColor };
+    cache.current = { grad, height, fillColor };
   }
-  ctx.fillStyle = _gradCache.grad;
+  ctx.fillStyle = cache.current.grad;
   ctx.beginPath();
   ctx.moveTo(0, height);
   for (let x = 0; x < width; x++) {
@@ -205,6 +209,7 @@ export class SpectrumRenderer {
   private peakTimestamps: number[] = [];
   private avgEnabled = true;
   private peakHoldEnabled = true;
+  private readonly _gradCache: { current: GradCache | null } = { current: null };
 
   setAvgEnabled(enabled: boolean): void {
     this.avgEnabled = enabled;
@@ -261,7 +266,7 @@ export class SpectrumRenderer {
     }
 
     // Draw main spectrum first
-    renderSpectrum(ctx, displayData, width, height, options);
+    renderSpectrum(ctx, displayData, width, height, options, this._gradCache);
 
     // Draw peak hold fill on top (subtle overlay above spectrum)
     if (this.peakHoldEnabled) {

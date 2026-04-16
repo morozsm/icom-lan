@@ -9,6 +9,7 @@
     isAudioConnected,
     getHttpConnected,
     getRadioPowerOn,
+    getRigConnected,
   } from '$lib/stores/connection.svelte';
   import { getFrequency } from '$lib/stores/radio.svelte';
   import { hasAnyScope, hasAudio, hasSpectrum } from '$lib/stores/capabilities.svelte';
@@ -28,6 +29,9 @@
   let scopeState = $derived(isPoweredOff ? 'disconnected' : (isScopeConnected() ? 'connected' : 'disconnected'));
   let audioState = $derived(isPoweredOff ? 'disconnected' : (isAudioConnected() ? 'connected' : 'disconnected'));
   let httpState = $derived(getHttpConnected() ? 'connected' : 'disconnected'); // server link — always real
+  let rigConnected = $derived(getRigConnected());
+  // Effective radio indicator: downgrade to 'disconnected' when rigCtld reports radio offline
+  let radioIndicatorState = $derived(radioState === 'connected' && !rigConnected ? 'degraded' : radioState);
 
   function stateColor(state: string): string {
     switch (state) {
@@ -101,48 +105,53 @@
   }
 </script>
 
+{#if controlState === 'disconnected'}
+  <div class="control-link-lost">Control link lost</div>
+{/if}
 <div class="status-bar">
   <div class="status-indicators">
-    <span class="indicator" title="Radio ↔ Server: {radioState}" style="--indicator-color: {stateColor(radioState)}">
+    <span class="indicator" tabindex="0" role="status" title="Radio ↔ Server: {radioState}{!rigConnected && radioState === 'connected' ? ' (rig offline)' : ''}" style="--indicator-color: {stateColor(radioIndicatorState)}">
       <span class="indicator-dot"></span>
       <Radio size={12} color="currentColor" strokeWidth={2.5} />
     </span>
-    <span class="indicator" title="Control WebSocket: {controlState}" style="--indicator-color: {stateColor(controlState)}">
+    <span class="indicator" tabindex="0" role="status" title="Control WebSocket: {controlState}" style="--indicator-color: {stateColor(controlState)}">
       <span class="indicator-dot"></span>
       <Cable size={12} color="currentColor" strokeWidth={2.5} />
     </span>
     {#if hasAnyScope()}
-      <span class="indicator" title="Scope WebSocket: {scopeState}" style="--indicator-color: {stateColor(scopeState)}">
+      <span class="indicator" tabindex="0" role="status" title="Scope WebSocket: {scopeState}" style="--indicator-color: {stateColor(scopeState)}">
         <span class="indicator-dot"></span>
         <Activity size={12} color="currentColor" strokeWidth={2.5} />
       </span>
     {/if}
     {#if hasAudio()}
-      <span class="indicator" title="Audio WebSocket: {audioState}" style="--indicator-color: {stateColor(audioState)}">
+      <span class="indicator" tabindex="0" role="status" title="Audio WebSocket: {audioState}" style="--indicator-color: {stateColor(audioState)}">
         <span class="indicator-dot"></span>
         <Volume2 size={12} color="currentColor" strokeWidth={2.5} />
       </span>
     {/if}
-    <span class="indicator" title="State HTTP: {httpState}" style="--indicator-color: {stateColor(httpState)}">
+    <span class="indicator" tabindex="0" role="status" title="State HTTP: {httpState}" style="--indicator-color: {stateColor(httpState)}">
       <span class="indicator-dot"></span>
       <ArrowDownUp size={12} color="currentColor" strokeWidth={2.5} />
+      {#if httpState === 'disconnected'}
+        <span class="http-lost-label">offline</span>
+      {/if}
     </span>
   </div>
 
   <div class="status-info">
     {#if nowPlaying}
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <div class="now-playing" onclick={() => (nowPlayingExpanded = !nowPlayingExpanded)}>
+      <button type="button" class="now-playing" onclick={() => (nowPlayingExpanded = !nowPlayingExpanded)} onkeydown={(e) => { if (e.key === 'Escape') nowPlayingExpanded = false; }} aria-expanded={nowPlayingExpanded} aria-haspopup="dialog">
         <span class="np-icon">📻</span>
         <span class="np-station">{nowPlaying.station}</span>
         <span class="np-lang">{nowPlaying.city ? `${nowPlaying.city}, ${nowPlaying.state}` : nowPlaying.language_name}</span>
         {#if nowPlaying.on_air}<span class="np-live">LIVE</span>{/if}
-      </div>
+      </button>
       {#if nowPlayingExpanded}
         <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <div class="np-backdrop" onclick={() => (nowPlayingExpanded = false)}>
+        <div class="np-backdrop" onclick={() => (nowPlayingExpanded = false)} onkeydown={(e) => { if (e.key === 'Escape') nowPlayingExpanded = false; }}>
           <!-- svelte-ignore a11y_no_static_element_interactions -->
-          <div class="np-detail" onclick={(e) => e.stopPropagation()}>
+          <div class="np-detail" role="dialog" aria-modal="true" aria-label="Station details" onclick={(e) => e.stopPropagation()} onkeydown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); nowPlayingExpanded = false; } }}>
             <div class="np-detail-header">
               <span>📻 {nowPlaying.station}</span>
               <button class="np-close" onclick={() => (nowPlayingExpanded = false)}>✕</button>
@@ -222,6 +231,28 @@
 </div>
 
 <style>
+  .control-link-lost {
+    background: var(--v2-accent-red, #ef4444);
+    color: #fff;
+    font-family: 'Roboto Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    text-align: center;
+    padding: 2px 0;
+    user-select: none;
+  }
+
+  .http-lost-label {
+    font-size: 9px;
+    color: var(--v2-accent-red, #ef4444);
+    font-weight: 700;
+    margin-left: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
   .status-bar {
     display: flex;
     align-items: center;
@@ -343,6 +374,8 @@
     max-width: 350px;
     overflow: hidden;
     transition: background 0.15s;
+    font-family: 'Roboto Mono', monospace;
+    color: inherit;
   }
 
   .now-playing:hover {

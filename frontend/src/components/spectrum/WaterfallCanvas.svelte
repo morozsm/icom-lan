@@ -54,8 +54,6 @@
       const dpr = window.devicePixelRatio || 1;
       const w = Math.max(1, Math.floor(rect.width * dpr));
       const h = Math.max(1, Math.floor(rect.height * dpr));
-      canvas.width = w;
-      canvas.height = h;
       renderer?.resize(w, h);
     });
     ro.observe(canvas);

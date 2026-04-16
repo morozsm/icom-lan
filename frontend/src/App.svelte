@@ -16,6 +16,8 @@
   let backendError = $state<string | null>(null);
   let retrying = $state(false);
   let retryCount = 0;
+  let retryAttempt = $state(0);
+  let retryDelaySec = $state(0);
   const MAX_RETRIES = 5;
   const RETRY_DELAYS = [3000, 5000, 10000, 20000, 30000];
   const demoMode = typeof window !== 'undefined'
@@ -62,6 +64,8 @@
         if (retryCount < MAX_RETRIES) {
           const delay = RETRY_DELAYS[Math.min(retryCount, RETRY_DELAYS.length - 1)];
           retrying = true;
+          retryAttempt = retryCount + 1;
+          retryDelaySec = Math.round(delay / 1000);
           retryTimer = setTimeout(() => location.reload(), delay);
           retryCount++;
         } else {
@@ -93,7 +97,7 @@
       {#if retrying}
         <div class="retry-indicator">
           <span class="spinner"></span>
-          <span>Connecting…</span>
+          <span>Retry {retryAttempt}/{MAX_RETRIES}, next attempt in {retryDelaySec}s…</span>
         </div>
       {/if}
     </div>

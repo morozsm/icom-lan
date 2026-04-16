@@ -51,7 +51,7 @@
       class="bridge-button v2-control-button"
       data-active={dualWatchActive}
       data-color="green"
-      onclick={onDualWatchToggle}
+      onclick={() => onDualWatchToggle(!dualWatchActive)}
     >DW</button>
   {/if}
   <button type="button" class="bridge-button v2-control-button" data-active="false" data-color="muted" onclick={onEqual}>{equalLabel}</button>

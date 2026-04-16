@@ -133,7 +133,15 @@
         <HardwareButton
           active={atuActive}
           indicator="edge-left"
-          color={atuTuning ? 'red' : atuActive ? 'green' : 'gray'}
+          color={atuActive ? 'green' : 'gray'}
+          onclick={onAtuToggle}
+        >
+          ATU
+        </HardwareButton>
+        <HardwareButton
+          active={atuTuning}
+          indicator="edge-left"
+          color={atuTuning ? 'red' : 'gray'}
           onclick={onAtuTune}
         >
           {atuTuning ? 'TUNING…' : 'TUNE'}

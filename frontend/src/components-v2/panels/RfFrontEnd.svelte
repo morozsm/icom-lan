@@ -86,7 +86,7 @@
           color="amber"
           title={attShortcut}
           shortcutHint={attShortcut}
-          onclick={() => onAttChange(att > 0 ? 0 : 1)}
+          onclick={() => onAttChange(att > 0 ? 0 : attValues[attValues.length - 1])}
         >
           ATT
         </HardwareButton>

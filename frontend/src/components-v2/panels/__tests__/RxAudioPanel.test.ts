@@ -23,6 +23,10 @@ vi.mock('$lib/runtime/adapters/audio-adapter', () => ({
   getRxAudioHandlers: () => mockHandlers,
 }));
 
+vi.mock('$lib/stores/connection.svelte', () => ({
+  isAudioConnected: vi.fn(() => true),
+}));
+
 // ---------------------------------------------------------------------------
 // buildMonitorOptions
 // ---------------------------------------------------------------------------

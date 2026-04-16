@@ -13,7 +13,7 @@
     type ColorSchemeName,
   } from '../../lib/renderers/waterfall-renderer';
   import { getChannel, onMessage, sendCommand } from '../../lib/transport/ws-client';
-  import { setScopeConnected, markScopeFrame } from '../../lib/stores/connection.svelte';
+  import { setScopeConnected, markScopeFrame, isScopeConnected } from '../../lib/stores/connection.svelte';
   import { type DxSpot } from '../../lib/types/protocol';
   import { patchActiveReceiver, radio } from '../../lib/stores/radio.svelte';
   import { getFilterWidthHz } from '../../lib/utils/filter-width';
@@ -39,6 +39,7 @@
   } from './spectrum-logic';
 
   // --- Component state ---
+  let scopeConnected = $derived(isScopeConnected());
   let scopePixels = $state<Uint8Array | null>(null);
   let enableAvg = $state(true);
   let enablePeakHold = $state(true);
@@ -338,7 +339,7 @@
         if (spot) dxSpots = [...dxSpots.slice(-49), spot];
       } else if (msg.type === 'dx_spots') {
         const list = (msg as unknown as { spots: DxSpot[] }).spots;
-        if (Array.isArray(list)) dxSpots = list;
+        if (Array.isArray(list)) dxSpots = list.slice(-50);
       }
     });
 
@@ -366,6 +367,9 @@
       {/each}
     </div>
     <div class="spectrum-area" class:panning={dragging} bind:this={spectrumArea} onpointerdown={handleDragStart}>
+      {#if !scopeConnected}
+        <div class="scope-disconnected-overlay">Scope disconnected — reconnecting…</div>
+      {/if}
       <BandPlanOverlay {startFreq} {endFreq} visible={showBandPlan} {hiddenLayers} />
       <SpectrumCanvas data={scopePixels} options={spectrumOptions} {spanHz} {enableAvg} {enablePeakHold} onRegisterPush={(fn) => spectrumPush = fn} />
       {#if spanHz > 0 && pbWidthPct > 0 && canResizePassband}
@@ -565,6 +569,21 @@
 
   .passband-resize-zone:focus-visible {
     outline: none;
+  }
+
+  .scope-disconnected-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(10, 10, 15, 0.72);
+    color: var(--text-muted, #888);
+    font-size: 12px;
+    font-family: 'Roboto Mono', monospace;
+    letter-spacing: 0.05em;
+    pointer-events: none;
   }
 
   /* Mobile: hide dB scale and waterfall scale to maximize spectrum width */

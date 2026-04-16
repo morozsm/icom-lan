@@ -4,6 +4,7 @@
   import { deriveRxAudioProps, getRxAudioHandlers } from '$lib/runtime/adapters/audio-adapter';
   import { buildMonitorOptions, formatMonitorStatus } from './audio-utils';
   import { getShortcutHint } from '../layout/shortcut-hints';
+  import { isAudioConnected } from '$lib/stores/connection.svelte';
 
   const handlers = getRxAudioHandlers();
   let props = $derived(deriveRxAudioProps());
@@ -13,6 +14,8 @@
   const monitorShortcut = getShortcutHint('toggle_monitor');
   const afShortcut = getShortcutHint('adjust_af_level');
   let isMuted = $derived(props.monitorMode === 'mute');
+  let audioWsConnected = $derived(isAudioConnected());
+  let showDisconnected = $derived(props.hasLiveAudio && props.monitorMode === 'live' && !audioWsConnected);
 </script>
 
 {#if props.hasLiveAudio}
@@ -45,7 +48,9 @@
         onChange={handlers.onAfLevelChange}
       variant="hardware-illuminated"
       />
-      <div class="output-indicator">{statusText}</div>
+      <div class="output-indicator" class:audio-disconnected={showDisconnected}>
+        {#if showDisconnected}Audio link lost — reconnecting…{:else}{statusText}{/if}
+      </div>
     </div>
 {/if}
 
@@ -73,5 +78,9 @@
     font-size: 9px;
     letter-spacing: 0.04em;
     text-align: center;
+  }
+
+  .output-indicator.audio-disconnected {
+    color: var(--v2-accent-yellow, #facc15);
   }
 </style>

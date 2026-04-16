@@ -408,10 +408,10 @@ export interface MeterProps {
 }
 
 export function toMeterProps(state: ServerState | null): MeterProps {
-  const mainRx = state?.main;
+  const rx = state ? activeRx(state) : null;
   return {
-    sValue: mainRx?.sMeter ?? 0,
-    signal: mainRx?.sMeter ?? 0,
+    sValue: rx?.sMeter ?? 0,
+    signal: rx?.sMeter ?? 0,
     rfPower: state?.powerMeter ?? 0,
     swr: state?.swrMeter ?? 0,
     alc: state?.alcMeter ?? 0,
@@ -490,7 +490,7 @@ export function toBandSelectorProps(
   state: ServerState | null,
 ): BandSelectorProps {
   return {
-    currentFreq: state?.main?.freqHz ?? 14074000,
+    currentFreq: state ? activeRx(state).freqHz ?? 14074000 : 14074000,
   };
 }
 

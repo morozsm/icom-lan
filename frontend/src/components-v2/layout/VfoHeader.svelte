@@ -59,8 +59,22 @@
 
   let rxFrequency = $derived(formatBridgeFrequency(txVfo === 'main' ? subVfo.freq : mainVfo.freq));
   let txFrequency = $derived(formatBridgeFrequency(txVfo === 'main' ? mainVfo.freq : subVfo.freq));
+
+  // Debounced frequency announcement for screen readers
+  let announcedFrequency = $state('');
+  let announceTimer: ReturnType<typeof setTimeout> | null = null;
+  $effect(() => {
+    const freq = mainVfo.freq;
+    if (!freq) return;
+    if (announceTimer) clearTimeout(announceTimer);
+    announceTimer = setTimeout(() => {
+      announcedFrequency = formatBridgeFrequency(freq) + ' MHz';
+    }, 800);
+    return () => { if (announceTimer) clearTimeout(announceTimer); };
+  });
 </script>
 
+<span class="sr-only" aria-live="polite" aria-atomic="true">{announcedFrequency}</span>
 <div class="vfo-header" class:dual={dualReceiver}>
   <div class="vfo-main-panel">
     <VfoPanel
@@ -115,6 +129,18 @@
 </div>
 
 <style>
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
   .vfo-header {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
