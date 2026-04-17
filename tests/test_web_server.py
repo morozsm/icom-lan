@@ -19,7 +19,7 @@ import json
 import struct
 from types import SimpleNamespace
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -1440,6 +1440,90 @@ class TestBroadcasterFrameMsInvariant:
         expected = (payload_len * 1000) // (sr * ch * 2)
         assert frame_ms == expected
         assert frame_ms == 20
+
+
+class TestBroadcasterCodecInvalidation:
+    """Broadcaster picks up mid-stream codec/channel changes via
+    ``invalidate_codec_state`` (issue #766, unblocks #721 split-stereo)."""
+
+    @staticmethod
+    def _setup(audio_codec: object, sample_rate: int) -> tuple[Any, Any, Any]:
+        from types import SimpleNamespace
+
+        from icom_lan.audio_bus import AudioBus
+        from icom_lan.radio_protocol import AudioCapable
+        from icom_lan.web.handlers import AudioBroadcaster, AudioHandler
+        from icom_lan.web.websocket import WebSocketConnection
+
+        mock_ws = MagicMock(spec=WebSocketConnection)
+        mock_ws.send_text = AsyncMock()
+        mock_radio = MagicMock(spec=AudioCapable)
+        mock_radio.capabilities = {"audio"}
+        mock_radio.audio_codec = audio_codec
+        mock_radio.audio_sample_rate = sample_rate
+        mock_radio.start_audio_rx_opus = AsyncMock()
+        mock_radio.stop_audio_rx_opus = AsyncMock()
+        mock_radio.send_civ = AsyncMock()
+        mock_radio.profile = SimpleNamespace(receiver_count=2)
+
+        bus = AudioBus(mock_radio)
+        mock_radio.audio_bus = bus
+
+        broadcaster = AudioBroadcaster(mock_radio)
+        handler = AudioHandler(mock_ws, mock_radio, broadcaster)
+        return handler, broadcaster, mock_radio
+
+    async def test_invalidate_flag_triggers_refresh_on_next_packet(self) -> None:
+        from icom_lan.types import AudioCodec
+
+        handler, broadcaster, mock_radio = self._setup(AudioCodec.PCM_1CH_16BIT, 48000)
+        await handler._start_rx()
+
+        pkt_mono = MagicMock()
+        pkt_mono.data = b"\x00\x01" * 960
+        mock_radio.audio_bus._on_opus_packet(pkt_mono)
+        await asyncio.sleep(0.05)
+        handler._frame_queue.get_nowait()
+        assert broadcaster._channels == 1
+
+        mock_radio.audio_codec = AudioCodec.PCM_2CH_16BIT
+        broadcaster.invalidate_codec_state()
+        assert broadcaster._codec_stale is True
+
+        pkt_stereo = MagicMock()
+        pkt_stereo.data = b"\x00\x01" * 1920
+        mock_radio.audio_bus._on_opus_packet(pkt_stereo)
+        await asyncio.sleep(0.05)
+
+        assert broadcaster._channels == 2
+        assert broadcaster._codec_stale is False
+
+    async def test_handler_invalidates_on_audio_config(self) -> None:
+        from icom_lan.types import AudioCodec
+
+        handler, broadcaster, _ = self._setup(AudioCodec.PCM_1CH_16BIT, 48000)
+        assert broadcaster._codec_stale is False
+        await handler._handle_control(
+            {"type": "audio_config", "focus": "both", "split_stereo": True}
+        )
+        assert broadcaster._codec_stale is True
+
+    async def test_static_codec_refreshes_only_on_start(self) -> None:
+        from icom_lan.types import AudioCodec
+
+        handler, broadcaster, mock_radio = self._setup(AudioCodec.PCM_1CH_16BIT, 48000)
+        with patch.object(
+            broadcaster,
+            "_refresh_codec_state",
+            wraps=broadcaster._refresh_codec_state,
+        ) as spy:
+            await handler._start_rx()
+            for _ in range(5):
+                pkt = MagicMock()
+                pkt.data = b"\x00\x01" * 100
+                mock_radio.audio_bus._on_opus_packet(pkt)
+                await asyncio.sleep(0.02)
+            assert spy.call_count == 1
 
 
 class TestAudioHandlerTxTranscoderRate:

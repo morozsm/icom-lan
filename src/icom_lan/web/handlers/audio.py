@@ -82,6 +82,10 @@ class AudioBroadcaster:
         # Multi-consumer PCM tap registry (replaces single _pcm_tap)
         self._tap_registry = TapRegistry()
         self._legacy_tap_handle: TapHandle | None = None
+        # Flag raised by invalidate_codec_state(); checked at top of each
+        # _relay_loop iteration to pick up mid-stream mono↔stereo switches
+        # driven by the audio_config WS handler (issue #766, unblocks #721).
+        self._codec_stale: bool = False
 
     async def subscribe(
         self, ws: WebSocketConnection | None = None
@@ -187,45 +191,59 @@ class AudioBroadcaster:
             )
         return len(dead_ids)
 
-    async def _start_relay(self) -> None:
-        if not self._radio or CAP_AUDIO not in self._radio.capabilities:
-            return
+    def invalidate_codec_state(self) -> None:
+        """Mark broadcaster's cached codec state as stale.
 
+        The next ``_relay_loop`` iteration will call ``_refresh_codec_state``
+        to pick up any radio-side codec / channel / sample-rate changes.
+        Called by ``AudioHandler._handle_audio_config`` after a successful
+        CI-V Phones L/R Mix set, since that can flip the radio from mono
+        to stereo output (issue #766, unblocks #721).
+        """
+        self._codec_stale = True
+
+    def _refresh_codec_state(self, *, first: bool = False) -> None:
+        """Read radio's current codec / channels / sample rate into cache.
+
+        Called from ``_start_relay`` (``first=True``) and from ``_relay_loop``
+        whenever ``invalidate_codec_state`` has been called since the last
+        refresh. Behavior-preserving extraction of the block previously
+        inlined in ``_start_relay``.
+        """
         # Negotiate web codec from radio's actual audio codec
         _codec = getattr(self._radio, "audio_codec", None)
         if isinstance(_codec, AudioCodec):
-            # Map radio codec → web transport codec
-            # For ulaw codecs, we transcode to PCM16 in _relay_loop
-            # NOTE: PCM_1CH_8BIT / PCM_2CH_8BIT intentionally NOT mapped.  No
-            # tested backend negotiates 8-bit PCM; a speculative "upcast in
-            # future" map previously existed but the upcast was never wired,
-            # so any 8-bit payload was shipped under a 16-bit label and
-            # garbled by consumers.  Removed per #765; unknown codec falls
-            # through to the PCM16 default + logs the value.
+            # Map radio codec → web transport codec.
+            # For ulaw codecs, we transcode to PCM16 in _relay_loop.
+            # NOTE: PCM_1CH_8BIT / PCM_2CH_8BIT intentionally NOT mapped
+            # (see #765); unknown codec falls through to PCM16 default.
             _CODEC_MAP = {
                 AudioCodec.OPUS_1CH: AUDIO_CODEC_OPUS,
                 AudioCodec.OPUS_2CH: AUDIO_CODEC_OPUS,
                 AudioCodec.PCM_1CH_16BIT: AUDIO_CODEC_PCM16,
                 AudioCodec.PCM_2CH_16BIT: AUDIO_CODEC_PCM16,
-                AudioCodec.ULAW_1CH: AUDIO_CODEC_PCM16,  # decoded in _relay_loop
-                AudioCodec.ULAW_2CH: AUDIO_CODEC_PCM16,  # decoded in _relay_loop
+                AudioCodec.ULAW_1CH: AUDIO_CODEC_PCM16,
+                AudioCodec.ULAW_2CH: AUDIO_CODEC_PCM16,
             }
             self._web_codec = _CODEC_MAP.get(_codec, AUDIO_CODEC_PCM16)
-            # Store original codec for decoding logic
             self._radio_codec = _codec
-            if _codec in (
-                AudioCodec.PCM_2CH_16BIT,
-                AudioCodec.ULAW_2CH,
-                AudioCodec.OPUS_2CH,
-            ):
-                self._channels = 2
+            self._channels = (
+                2
+                if _codec
+                in (
+                    AudioCodec.PCM_2CH_16BIT,
+                    AudioCodec.ULAW_2CH,
+                    AudioCodec.OPUS_2CH,
+                )
+                else 1
+            )
             logger.info(
                 "audio-broadcaster: radio codec=%s (0x%02x) → web_codec=0x%02x",
                 _codec.name,
                 int(_codec),
                 self._web_codec,
             )
-        else:
+        elif first:
             logger.warning(
                 "audio-broadcaster: no radio codec info, defaulting to PCM16"
             )
@@ -233,11 +251,18 @@ class AudioBroadcaster:
         if isinstance(_sr, int) and not isinstance(_sr, bool) and _sr > 0:
             self._sample_rate = _sr
         logger.info(
-            "audio-broadcaster: starting relay codec=0x%02x sr=%d ch=%d",
+            "audio-broadcaster: %s codec=0x%02x sr=%d ch=%d",
+            "starting relay" if first else "codec state refreshed",
             self._web_codec,
             self._sample_rate,
             self._channels,
         )
+
+    async def _start_relay(self) -> None:
+        if not self._radio or CAP_AUDIO not in self._radio.capabilities:
+            return
+
+        self._refresh_codec_state(first=True)
 
         try:
             bus = self._radio.audio_bus  # type: ignore[attr-defined]
@@ -256,6 +281,9 @@ class AudioBroadcaster:
             async for pkt in self._subscription:
                 if pkt is None:
                     continue
+                if self._codec_stale:
+                    self._refresh_codec_state()
+                    self._codec_stale = False
                 if self._seq < 3 or self._seq % 500 == 0:
                     logger.info(
                         "audio: rx packet #%d, web_codec=0x%02x, data=%d bytes",
@@ -550,6 +578,11 @@ class AudioHandler:
             split_stereo,
             phones_byte,
         )
+        # Radio may switch mono↔stereo output after this CI-V; broadcaster's
+        # cached codec/channels must be refreshed on the next relay iteration
+        # (issue #766, unblocks #721 stereo toggle).
+        if self._broadcaster is not None:
+            self._broadcaster.invalidate_codec_state()
         await self._send_json(
             {
                 "type": "audio_config",
