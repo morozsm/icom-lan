@@ -863,12 +863,63 @@ class RigctldHandler:
         if set_split_mode is not None:
             await set_split_mode(on)
         # Dual-RX: when enabling split, ensure TX is routed to the requested
-        # receiver (WSJT-X sends VFOB as the split-TX source).
+        # receiver (WSJT-X sends VFOB as the split-TX source).  If the
+        # receiver-select call fails we must roll back the split-enable —
+        # otherwise the radio is left in a half-configured state (split on
+        # but TX not routed to SUB), silently diverging from WSJT-X's
+        # expectations.
         if on and info is not None and info[0] >= 2 and tx_vfo in ("VFOA", "VFOB"):
             set_vfo = getattr(self._radio, "set_vfo", None)
             if set_vfo is not None:
-                await set_vfo("SUB" if tx_vfo == "VFOB" else "MAIN")
+                target = "SUB" if tx_vfo == "VFOB" else "MAIN"
+                try:
+                    await set_vfo(target)
+                except ConnectionError as exc:
+                    logger.warning(
+                        "set_split_vfo: set_vfo(%s) failed with "
+                        "ConnectionError (%s); rolling back split",
+                        target,
+                        exc,
+                    )
+                    await self._rollback_split(set_split_mode)
+                    return _err(HamlibError.EIO)
+                except TimeoutError as exc:
+                    logger.warning(
+                        "set_split_vfo: set_vfo(%s) timed out (%s); "
+                        "rolling back split",
+                        target,
+                        exc,
+                    )
+                    await self._rollback_split(set_split_mode)
+                    return _err(HamlibError.ETIMEOUT)
+                except Exception:
+                    logger.exception(
+                        "set_split_vfo: set_vfo(%s) failed unexpectedly; "
+                        "rolling back split",
+                        target,
+                    )
+                    await self._rollback_split(set_split_mode)
+                    return _err(HamlibError.EINTERNAL)
         return _ok()
+
+    async def _rollback_split(self, set_split_mode: Any) -> None:
+        """Best-effort rollback: disable split that was just enabled.
+
+        Called when the follow-up ``set_vfo`` in ``set_split_vfo`` fails,
+        so the radio does not end up with split-enabled but TX not
+        routed to SUB.  Rollback errors are logged and swallowed — the
+        original failure takes precedence in the response.
+        """
+        if set_split_mode is None:
+            return
+        try:
+            await set_split_mode(False)
+            logger.info("set_split_vfo: rollback disabled split successfully")
+        except Exception:
+            logger.exception(
+                "set_split_vfo: rollback set_split_mode(False) also failed; "
+                "radio may be in inconsistent state"
+            )
 
     # ------------------------------------------------------------------
     # RIT
