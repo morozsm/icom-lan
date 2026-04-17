@@ -77,8 +77,18 @@ class AudioBroadcaster:
         self._sample_rate: int = 48000
         self._channels: int = 1
         self._lock = asyncio.Lock()
-        # Optional DSP pipeline (inserted between codec decode and tap/distribute)
+        # Optional DSP pipeline (inserted between codec decode and tap/distribute).
+        # NOTE: the DSP pipeline and the tap registry both operate on decoded
+        # PCM16.  When the radio's native codec is Opus (IC-705 and future
+        # Opus-only models) we pass the frame through un-decoded to preserve
+        # wire quality, so neither DSP nor taps run.  See ``_refresh_codec_state``
+        # for the one-shot warning that fires when this combination is detected,
+        # and ``docs/internals/rfc-audio-v1-mini.md`` for the user-facing note.
+        # Issue #762.
         self._dsp_pipeline: DSPPipeline | None = None
+        # One-shot flag so the Opus-DSP warning log fires at most once per
+        # broadcaster lifetime, regardless of whether DSP or codec is set first.
+        self._dsp_opus_warned: bool = False
         # Multi-consumer PCM tap registry (replaces single _pcm_tap)
         self._tap_registry = TapRegistry()
         self._legacy_tap_handle: TapHandle | None = None
@@ -150,8 +160,36 @@ class AudioBroadcaster:
         When set, every decoded PCM16 frame is passed through
         :meth:`DSPPipeline.process_bytes` before tap distribution and
         client encoding.  Pass ``None`` to remove the pipeline.
+
+        NOTE: DSP (and the PCM tap registry used by the FFT scope) are
+        silently skipped when the radio's native codec is Opus.  Issue
+        #762 — a one-shot WARNING is logged the first time this
+        combination is observed; see :meth:`_maybe_warn_dsp_opus_gate`.
         """
         self._dsp_pipeline = pipeline
+        if pipeline is not None:
+            self._maybe_warn_dsp_opus_gate()
+
+    def _maybe_warn_dsp_opus_gate(self) -> None:
+        """Fire a one-shot WARNING if DSP is active on an Opus-native radio.
+
+        Safe to call from either order: ``set_dsp_pipeline`` call site,
+        or from codec refresh when the codec flips to Opus mid-stream.
+        Issue #762.
+        """
+        if self._dsp_opus_warned:
+            return
+        if self._dsp_pipeline is None:
+            return
+        if self._web_codec != AUDIO_CODEC_OPUS:
+            return
+        logger.warning(
+            "audio-broadcaster: DSP pipeline is configured but the radio's "
+            "native codec is Opus — DSP and FFT-scope tap dispatch are "
+            "skipped to preserve wire quality.  See issue #762 / "
+            "docs/internals/rfc-audio-v1-mini.md."
+        )
+        self._dsp_opus_warned = True
 
     async def ensure_relay(self) -> None:
         """Ensure the relay loop is running (for PCM tap consumers like FFT scope).
@@ -257,6 +295,9 @@ class AudioBroadcaster:
             self._sample_rate,
             self._channels,
         )
+        # Re-check DSP-on-Opus after the codec may have just flipped.
+        # Issue #762.
+        self._maybe_warn_dsp_opus_gate()
 
     async def _start_relay(self) -> None:
         if not self._radio or CAP_AUDIO not in self._radio.capabilities:
@@ -302,7 +343,11 @@ class AudioBroadcaster:
                         # Fall back to original data
                         audio_data = pkt.data
 
-                # Apply DSP pipeline if configured (operates on s16le PCM)
+                # Apply DSP pipeline if configured (operates on s16le PCM).
+                # Opus-native radios bypass DSP to avoid decode + re-encode
+                # quality loss on the wire; see issue #762 for the design
+                # note and ``_maybe_warn_dsp_opus_gate`` for the one-shot
+                # warning that surfaces this asymmetry to the operator.
                 if (
                     self._dsp_pipeline is not None
                     and self._web_codec == AUDIO_CODEC_PCM16
@@ -314,7 +359,9 @@ class AudioBroadcaster:
                     except Exception:
                         logger.debug("audio: dsp pipeline error", exc_info=True)
 
-                # Fan out PCM data to all registered taps (FFT scope, analyzers, etc.)
+                # Fan out PCM data to all registered taps (FFT scope, analyzers, etc.).
+                # Opus-native radios do not feed taps — consumers get silence.
+                # Same rationale as the DSP gate above.  Issue #762.
                 if self._tap_registry.active and self._web_codec == AUDIO_CODEC_PCM16:
                     self._tap_registry.feed(audio_data)
 

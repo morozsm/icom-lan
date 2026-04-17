@@ -146,3 +146,29 @@ Mitigation:
 2. Keep current ambiguous names as low-level aliases or add hard warnings immediately?
 3. Should `--stats` print periodic stream stats (live) or end-of-run summary by default?
 4. Is `opuslib` optional dependency acceptable as the default high-level backend?
+
+## 10) DSP pipeline + PCM tap gate on Opus-native radios (issue #762)
+
+**Behavior:** the web audio broadcaster's DSP pipeline (noise gate,
+limiter, etc.) and the PCM tap registry (used by the FFT / waterfall
+scope and audio analyzers) both operate on decoded PCM16.  When the
+radio's native audio codec is Opus (IC-705 and any future Opus-only
+model), the broadcaster passes the Opus frame through without
+decoding, so DSP and taps **do not run**.
+
+**Why we don't decode + re-encode on the hot path:** Opus re-encode
+would introduce quality loss on every frame.  Users of IC-705 have
+not reported needing DSP or scope through the web UI, so the gate
+is documented rather than closed.
+
+**Observability:** the broadcaster emits a one-shot `WARNING` log
+entry when it detects an active DSP pipeline on an Opus-native
+codec — fires at `set_dsp_pipeline()` or at `_refresh_codec_state()`
+(in case the codec flips mid-stream), whichever happens first.
+
+**Upgrade path if demand arrives:** issue #762 §"Option A" — decode
+Opus once in `_relay_loop`, run DSP + feed taps on the PCM buffer,
+then re-encode before fan-out.  `_audio_transcoder.PcmOpusTranscoder`
+already exists and can be reused.  Quality loss is negligible for
+AM/FM ham audio but non-zero on SSB; flag behind a config toggle if
+implemented.
