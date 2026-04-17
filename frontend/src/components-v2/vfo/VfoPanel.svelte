@@ -2,7 +2,7 @@
   import LinearSMeter from '../meters/LinearSMeter.svelte';
   import FrequencyDisplayInteractive from '../display/FrequencyDisplayInteractive.svelte';
   import { StatusIndicator } from '$lib/Button';
-  import { getCapabilities, vfoLabel } from '$lib/stores/capabilities.svelte';
+  import { getCapabilities, receiverLabel, vfoSlotLabel } from '$lib/stores/capabilities.svelte';
   import { findActiveBand } from '../controls/band-utils';
   import { formatBadges, formatRitOffset } from './vfo-utils';
   import type { VfoLayoutProfile } from '../layout/vfo-layout-tokens';
@@ -38,8 +38,8 @@
   }: Props = $props();
 
   let slot = $derived<'A' | 'B'>(receiver === 'main' ? 'A' : 'B');
-  let label = $derived(vfoLabel(slot));
-  let slotTag = $derived(label.startsWith('VFO ') ? label.slice(4) : label);
+  let label = $derived(receiverLabel(receiver === 'main' ? 'MAIN' : 'SUB'));
+  let slotTag = $derived(vfoSlotLabel(slot).replace(/^VFO /, ''));
   let activeBand = $derived(findActiveBand(freq, getCapabilities()?.freqRanges ?? []));
   let badgeItems = $derived(formatBadges(badges, receiver));
   let meterVariant = $derived(layoutProfile === 'wide' ? 'vfo-wide' : 'vfo');

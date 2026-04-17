@@ -105,7 +105,8 @@ describe('formatRitOffset', () => {
 // ---------------------------------------------------------------------------
 
 vi.mock('$lib/stores/capabilities.svelte', () => ({
-  vfoLabel: vi.fn((slot: 'A' | 'B') => (slot === 'A' ? 'MAIN' : 'SUB')),
+  receiverLabel: vi.fn((id: 'MAIN' | 'SUB') => id),
+  vfoSlotLabel: vi.fn((slot: 'A' | 'B') => (slot === 'A' ? 'VFO A' : 'VFO B')),
   getCapabilities: vi.fn(() => ({
     freqRanges: [
       {
@@ -125,7 +126,7 @@ vi.mock('$lib/stores/capabilities.svelte', () => ({
   getSmeterRedline: vi.fn(() => null),
 }));
 
-import { getCapabilities, vfoLabel } from '$lib/stores/capabilities.svelte';
+import { getCapabilities, receiverLabel, vfoSlotLabel } from '$lib/stores/capabilities.svelte';
 
 let components: ReturnType<typeof mount>[] = [];
 
@@ -140,7 +141,8 @@ function mountPanel(props: ComponentProps<typeof VfoPanel>) {
 
 beforeEach(() => {
   components = [];
-  vi.mocked(vfoLabel).mockImplementation((slot: 'A' | 'B') => (slot === 'A' ? 'MAIN' : 'SUB'));
+  vi.mocked(receiverLabel).mockImplementation((id: 'MAIN' | 'SUB') => id);
+  vi.mocked(vfoSlotLabel).mockImplementation((slot: 'A' | 'B') => (slot === 'A' ? 'VFO A' : 'VFO B'));
 });
 
 afterEach(() => {
@@ -202,7 +204,7 @@ describe('panel structure', () => {
     const t = mountPanel(baseProps);
     const tags = Array.from(t.querySelectorAll('.header-tag')).map((node) => node.textContent?.trim());
     expect(tags).toContain('BAR');
-    expect(tags).toContain('MAIN');
+    expect(tags).toContain('A');
   });
 
   it('renders the control strip even when badges are empty', () => {
@@ -214,7 +216,7 @@ describe('panel structure', () => {
     const t = mountPanel(baseProps);
     const indicators = Array.from(t.querySelectorAll('.control-strip .v2-status-indicator'));
     const slotIndicator = indicators.find((el) => el.getAttribute('data-color') === 'muted');
-    expect(slotIndicator?.textContent?.trim()).toBe('MAIN');
+    expect(slotIndicator?.textContent?.trim()).toBe('A');
   });
 });
 
@@ -332,21 +334,31 @@ describe('callbacks', () => {
   });
 });
 
-describe('vfoLabel integration', () => {
-  it('uses vfoLabel("A") for receiver=main', () => {
+describe('receiverLabel / vfoSlotLabel integration', () => {
+  it('uses receiverLabel("MAIN") for receiver=main', () => {
     mountPanel({ ...baseProps, receiver: 'main' });
-    expect(vi.mocked(vfoLabel)).toHaveBeenCalledWith('A');
+    expect(vi.mocked(receiverLabel)).toHaveBeenCalledWith('MAIN');
   });
 
-  it('uses vfoLabel("B") for receiver=sub', () => {
+  it('uses receiverLabel("SUB") for receiver=sub', () => {
     mountPanel({ ...baseProps, receiver: 'sub' });
-    expect(vi.mocked(vfoLabel)).toHaveBeenCalledWith('B');
+    expect(vi.mocked(receiverLabel)).toHaveBeenCalledWith('SUB');
   });
 
-  it('shows "VFO A" label when vfoScheme returns "VFO A"', () => {
-    vi.mocked(vfoLabel).mockReturnValue('VFO A');
+  it('uses vfoSlotLabel("A") for receiver=main', () => {
+    mountPanel({ ...baseProps, receiver: 'main' });
+    expect(vi.mocked(vfoSlotLabel)).toHaveBeenCalledWith('A');
+  });
+
+  it('uses vfoSlotLabel("B") for receiver=sub', () => {
+    mountPanel({ ...baseProps, receiver: 'sub' });
+    expect(vi.mocked(vfoSlotLabel)).toHaveBeenCalledWith('B');
+  });
+
+  it('renders the receiver label in the header', () => {
+    vi.mocked(receiverLabel).mockReturnValue('MAIN');
     const t = mountPanel({ ...baseProps, receiver: 'main' });
-    expect(t.querySelector('.vfo-label')?.textContent?.trim()).toBe('VFO A');
+    expect(t.querySelector('.vfo-label')?.textContent?.trim()).toBe('MAIN');
   });
 
   it('reads band ranges through getCapabilities()', () => {

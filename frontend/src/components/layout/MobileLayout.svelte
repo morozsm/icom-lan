@@ -16,7 +16,7 @@
 
 
   import { radio } from '../../lib/stores/radio.svelte';
-  import { hasDualReceiver, getCapabilities, vfoLabel } from '../../lib/stores/capabilities.svelte';
+  import { hasDualReceiver, getCapabilities, receiverLabel } from '../../lib/stores/capabilities.svelte';
   import { getConnectionStatus } from '../../lib/stores/connection.svelte';
   import { sendCommand } from '../../lib/transport/ws-client';
   import { applyModeDefault } from '../../lib/stores/tuning.svelte';
@@ -26,8 +26,8 @@
   let active = $derived(radio.current?.active === 'SUB' ? (radio.current?.sub ?? null) : (radio.current?.main ?? null));
   let activeRx = $derived(radioState?.active ?? 'MAIN');
   let isDualRx = $derived(hasDualReceiver());
-  let labelA = $derived(vfoLabel('A'));
-  let labelB = $derived(vfoLabel('B'));
+  let labelA = $derived(receiverLabel('MAIN'));
+  let labelB = $derived(receiverLabel('SUB'));
 
   // Auto step based on mode
   let currentMode = $derived(active?.mode ?? '');
