@@ -2455,8 +2455,8 @@ class TestSwitchScopeReceiver:
             "Expected invalid receiver to be rejected without CI-V send"
         )
 
-    async def test_select_vfo_sub_sends_swap(self) -> None:
-        """SelectVfo("SUB") sends VFO swap (0x07 0xB0) when active=MAIN."""
+    async def test_select_vfo_sub_sends_receiver_select(self) -> None:
+        """SelectVfo("SUB") sends receiver-select (0x07 0xD1) when active=MAIN."""
         from icom_lan.web.radio_poller import CommandQueue, RadioPoller, SelectVfo
 
         radio = self._make_radio()
@@ -2468,15 +2468,23 @@ class TestSwitchScopeReceiver:
         await asyncio.sleep(0.03)
         poller.stop()
 
+        sub_select_calls = [
+            c
+            for c in radio.send_civ.call_args_list
+            if c[0][0] == 0x07 and c.kwargs.get("data") == bytes([0xD1])
+        ]
+        assert len(sub_select_calls) >= 1, (
+            "Expected SUB receiver-select (0x07 0xD1) on SelectVfo SUB"
+        )
         swap_calls = [
             c
             for c in radio.send_civ.call_args_list
             if c[0][0] == 0x07 and c.kwargs.get("data") == bytes([0xB0])
         ]
-        assert len(swap_calls) >= 1, "Expected VFO swap (0x07 0xB0) on SelectVfo SUB"
+        assert len(swap_calls) == 0, "Must NOT emit swap (0x07 0xB0) on SelectVfo"
 
-    async def test_select_vfo_main_no_swap_when_already_main(self) -> None:
-        """SelectVfo("MAIN") does NOT swap when already on MAIN."""
+    async def test_select_vfo_main_noop_when_already_main(self) -> None:
+        """SelectVfo("MAIN") emits no CI-V when already on MAIN."""
         from icom_lan.web.radio_poller import CommandQueue, RadioPoller, SelectVfo
 
         radio = self._make_radio()
@@ -2488,12 +2496,13 @@ class TestSwitchScopeReceiver:
         await asyncio.sleep(0.03)
         poller.stop()
 
-        swap_calls = [
+        select_calls = [
             c
             for c in radio.send_civ.call_args_list
-            if c[0][0] == 0x07 and c.kwargs.get("data") == bytes([0xB0])
+            if c[0][0] == 0x07
+            and c.kwargs.get("data") in (bytes([0xD0]), bytes([0xD1]), bytes([0xB0]))
         ]
-        assert len(swap_calls) == 0, "Should NOT swap when already on MAIN"
+        assert len(select_calls) == 0, "Should NOT emit 0x07 select when already MAIN"
 
     async def test_set_split_updates_radio_and_state(self) -> None:
         """SetSplit(on) calls radio.set_split_mode and updates RadioState.split."""
