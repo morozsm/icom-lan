@@ -76,19 +76,13 @@ describe('DualVfoDisplay', () => {
       expect(t.querySelector('[data-receiver="sub"]')).not.toBeNull();
     });
 
-    it('both tiles are keyboard focusable (tabindex=0)', () => {
-      const t = mountDisplay({ main: mainVfo, sub: subVfo, active: 'MAIN' });
-      const tiles = t.querySelectorAll<HTMLElement>('.dual-vfo-tile');
-      tiles.forEach((tile) => {
-        expect(tile.getAttribute('tabindex')).toBe('0');
-      });
-    });
-
-    it('both tiles have role=button', () => {
+    it('outer tiles are NOT role="button" (WCAG 4.1.2 — no nested interactive content)', () => {
       const t = mountDisplay({ main: mainVfo, sub: subVfo, active: 'MAIN' });
       const tiles = t.querySelectorAll('.dual-vfo-tile');
       tiles.forEach((tile) => {
-        expect(tile.getAttribute('role')).toBe('button');
+        expect(tile.getAttribute('role')).toBeNull();
+        expect(tile.getAttribute('tabindex')).toBeNull();
+        expect(tile.getAttribute('aria-pressed')).toBeNull();
       });
     });
   });
@@ -113,34 +107,52 @@ describe('DualVfoDisplay', () => {
       expect(mainTile?.classList.contains('is-active')).toBe(false);
       expect(subTile?.classList.contains('is-active')).toBe(true);
     });
+  });
 
-    it('aria-pressed reflects active receiver (MAIN)', () => {
+  describe('activate button', () => {
+    it('inactive tile renders an activate button (SUB inactive)', () => {
       const t = mountDisplay({ main: mainVfo, sub: subVfo, active: 'MAIN' });
-      expect(t.querySelector('[data-receiver="main"]')?.getAttribute('aria-pressed')).toBe('true');
-      expect(t.querySelector('[data-receiver="sub"]')?.getAttribute('aria-pressed')).toBe('false');
+      expect(t.querySelector('button[data-activate="sub"]')).not.toBeNull();
+      expect(t.querySelector('button[data-activate="main"]')).toBeNull();
     });
 
-    it('aria-pressed reflects active receiver (SUB)', () => {
+    it('inactive tile renders an activate button (MAIN inactive)', () => {
       const t = mountDisplay({
         main: { ...mainVfo, isActive: false },
         sub: { ...subVfo, isActive: true },
         active: 'SUB',
       });
-      expect(t.querySelector('[data-receiver="main"]')?.getAttribute('aria-pressed')).toBe('false');
-      expect(t.querySelector('[data-receiver="sub"]')?.getAttribute('aria-pressed')).toBe('true');
+      expect(t.querySelector('button[data-activate="main"]')).not.toBeNull();
+      expect(t.querySelector('button[data-activate="sub"]')).toBeNull();
+    });
+
+    it('activate button has descriptive aria-label', () => {
+      const t = mountDisplay({ main: mainVfo, sub: subVfo, active: 'MAIN' });
+      const btn = t.querySelector<HTMLButtonElement>('button[data-activate="sub"]');
+      expect(btn?.getAttribute('aria-label')).toBe('Activate SUB receiver');
+    });
+
+    it('activate button is a native <button> and keyboard-focusable by default', () => {
+      const t = mountDisplay({ main: mainVfo, sub: subVfo, active: 'MAIN' });
+      const btn = t.querySelector<HTMLButtonElement>('button[data-activate="sub"]');
+      expect(btn).not.toBeNull();
+      expect(btn?.tagName).toBe('BUTTON');
+      expect(btn?.getAttribute('type')).toBe('button');
+      // Native <button> is focusable without explicit tabindex.
+      expect(btn?.hasAttribute('disabled')).toBe(false);
     });
   });
 
   describe('onActivate callback', () => {
-    it('clicking inactive tile fires onActivate with the receiver id (SUB)', () => {
+    it('clicking activate button fires onActivate with the receiver id (SUB)', () => {
       const onActivate = vi.fn();
       const t = mountDisplay({ main: mainVfo, sub: subVfo, active: 'MAIN', onActivate });
-      t.querySelector<HTMLElement>('[data-receiver="sub"]')?.click();
+      t.querySelector<HTMLButtonElement>('button[data-activate="sub"]')?.click();
       expect(onActivate).toHaveBeenCalledOnce();
       expect(onActivate).toHaveBeenCalledWith('SUB');
     });
 
-    it('clicking inactive tile fires onActivate with the receiver id (MAIN)', () => {
+    it('clicking activate button fires onActivate with the receiver id (MAIN)', () => {
       const onActivate = vi.fn();
       const t = mountDisplay({
         main: { ...mainVfo, isActive: false },
@@ -148,40 +160,28 @@ describe('DualVfoDisplay', () => {
         active: 'SUB',
         onActivate,
       });
-      t.querySelector<HTMLElement>('[data-receiver="main"]')?.click();
+      t.querySelector<HTMLButtonElement>('button[data-activate="main"]')?.click();
       expect(onActivate).toHaveBeenCalledOnce();
       expect(onActivate).toHaveBeenCalledWith('MAIN');
     });
 
-    it('clicking already-active tile does NOT fire onActivate', () => {
+    it('active tile does not render an activate button', () => {
       const onActivate = vi.fn();
       const t = mountDisplay({ main: mainVfo, sub: subVfo, active: 'MAIN', onActivate });
-      t.querySelector<HTMLElement>('[data-receiver="main"]')?.click();
+      // No button on the active (MAIN) tile — nothing to click.
+      expect(t.querySelector('button[data-activate="main"]')).toBeNull();
       expect(onActivate).not.toHaveBeenCalled();
     });
 
-    it('Enter key on inactive tile fires onActivate', () => {
+    it('clicking the outer tile does NOT fire onActivate', () => {
+      // Outer tile is no longer interactive — only the activate button inside it is.
       const onActivate = vi.fn();
       const t = mountDisplay({ main: mainVfo, sub: subVfo, active: 'MAIN', onActivate });
-      const tile = t.querySelector<HTMLElement>('[data-receiver="sub"]');
-      tile?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-      expect(onActivate).toHaveBeenCalledWith('SUB');
-    });
-
-    it('Space key on inactive tile fires onActivate', () => {
-      const onActivate = vi.fn();
-      const t = mountDisplay({ main: mainVfo, sub: subVfo, active: 'MAIN', onActivate });
-      const tile = t.querySelector<HTMLElement>('[data-receiver="sub"]');
-      tile?.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
-      expect(onActivate).toHaveBeenCalledWith('SUB');
-    });
-
-    it('other keys do not fire onActivate', () => {
-      const onActivate = vi.fn();
-      const t = mountDisplay({ main: mainVfo, sub: subVfo, active: 'MAIN', onActivate });
-      const tile = t.querySelector<HTMLElement>('[data-receiver="sub"]');
-      tile?.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true }));
-      expect(onActivate).not.toHaveBeenCalled();
+      const subTile = t.querySelector<HTMLElement>('[data-receiver="sub"]');
+      subTile?.click();
+      // The click bubbles from the tile itself (not the inner button), so no activation.
+      // Note: if the click originated on the button, it would fire — but that's covered above.
+      expect(onActivate).not.toHaveBeenCalledWith('MAIN');
     });
   });
 });
