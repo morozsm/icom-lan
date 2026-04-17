@@ -191,13 +191,18 @@ fine = false
 
     def test_loads_default_keyboard_profile_with_file(self, tmp_path):
         import shutil
-        default_kb = Path(__file__).resolve().parent.parent / "rigs" / "_keyboard-default.toml"
+
+        default_kb = (
+            Path(__file__).resolve().parent.parent / "rigs" / "_keyboard-default.toml"
+        )
         if default_kb.exists():
             shutil.copy(default_kb, tmp_path / "_keyboard-default.toml")
             rig = load_rig(_write_toml(tmp_path, _MINIMAL_TOML))
             assert rig.keyboard is not None
             assert rig.keyboard.help_title == "Radio Keyboard"
-            assert any(binding.action == "toggle_help" for binding in rig.keyboard.bindings)
+            assert any(
+                binding.action == "toggle_help" for binding in rig.keyboard.bindings
+            )
 
 
 # ── RadioProfile building ───────────────────────────────────────
@@ -229,7 +234,11 @@ class TestToProfile:
         profile = load_rig(TEMPLATE_PATH).to_profile()
         assert profile.vfo_main_code == 0xD0
         assert profile.vfo_sub_code == 0xD1
+        # Legacy alias still works (issue #710)
         assert profile.vfo_swap_code == 0xB0
+        # IC-7610 template uses legacy [vfo].swap with scheme=main_sub
+        assert profile.swap_main_sub_code == 0xB0
+        assert profile.swap_ab_code is None
 
     def test_vfo_ab_codes(self, tmp_path):
         p = _write_toml(tmp_path, _MINIMAL_TOML)
@@ -298,6 +307,152 @@ class TestToProfile:
         assert any(
             binding.action == "toggle_help" for binding in profile.keyboard.bindings
         )
+
+
+# ── VFO scheme split (issue #710) ────────────────────────────────
+
+
+class TestVfoSchemeSplit:
+    """Explicit ``swap_ab`` / ``swap_main_sub`` fields + legacy mapping."""
+
+    _MAIN_SUB_SPLIT = """\
+    [radio]
+    id = "icom_ic7610_test"
+    model = "TEST-MAIN-SUB"
+    civ_addr = 0x98
+    receiver_count = 2
+    has_lan = true
+    has_wifi = false
+
+    [capabilities]
+    features = ["audio", "dual_rx"]
+
+    [modes]
+    list = ["USB"]
+
+    [filters]
+    list = ["FIL1"]
+
+    [vfo]
+    scheme = "main_sub"
+    main_select = [0xD0]
+    sub_select = [0xD1]
+    swap_main_sub = [0xB0]
+    equal_main_sub = [0xB1]
+    swap_ab = [0x07, 0xB0]
+    equal_ab = [0x07, 0xA0]
+
+    [[freq_ranges.ranges]]
+    label = "HF"
+    start_hz = 30000
+    end_hz = 60000000
+
+    [commands]
+    get_freq = [0x03]
+    """
+
+    def test_new_fields_loaded_into_profile(self, tmp_path):
+        p = _write_toml(tmp_path, self._MAIN_SUB_SPLIT)
+        profile = load_rig(p).to_profile()
+        assert profile.swap_main_sub_code == 0xB0
+        assert profile.equal_main_sub_code == 0xB1
+        assert profile.swap_ab_code == 0x07
+        assert profile.equal_ab_code == 0x07
+
+    def test_legacy_aliases_prefer_main_sub_when_dual(self, tmp_path):
+        p = _write_toml(tmp_path, self._MAIN_SUB_SPLIT)
+        profile = load_rig(p).to_profile()
+        # Legacy alias returns main_sub value when both are set
+        assert profile.vfo_swap_code == 0xB0
+        assert profile.vfo_equal_code == 0xB1
+
+    def test_legacy_swap_maps_to_main_sub_on_dual_scheme(self, tmp_path):
+        toml = """\
+        [radio]
+        id = "legacy_dual"
+        model = "LEGACY-DUAL"
+        civ_addr = 0x98
+        receiver_count = 2
+        has_lan = true
+        has_wifi = false
+
+        [capabilities]
+        features = ["audio", "dual_rx"]
+
+        [modes]
+        list = ["USB"]
+
+        [filters]
+        list = ["FIL1"]
+
+        [vfo]
+        scheme = "main_sub"
+        main_select = [0xD0]
+        sub_select = [0xD1]
+        swap = [0xB0]
+        equal = [0xB1]
+
+        [[freq_ranges.ranges]]
+        label = "HF"
+        start_hz = 30000
+        end_hz = 60000000
+        """
+        p = _write_toml(tmp_path, toml, name="legacy_dual.toml")
+        with pytest.warns(DeprecationWarning, match="issue #710"):
+            profile = load_rig(p).to_profile()
+        assert profile.swap_main_sub_code == 0xB0
+        assert profile.equal_main_sub_code == 0xB1
+        assert profile.swap_ab_code is None
+        assert profile.equal_ab_code is None
+        # Legacy alias still resolves
+        assert profile.vfo_swap_code == 0xB0
+
+    def test_legacy_swap_maps_to_ab_on_single_rx_scheme(self, tmp_path):
+        toml = """\
+        [radio]
+        id = "legacy_ab"
+        model = "LEGACY-AB"
+        civ_addr = 0x94
+        receiver_count = 1
+        has_lan = true
+        has_wifi = false
+
+        [capabilities]
+        features = ["audio"]
+
+        [modes]
+        list = ["USB"]
+
+        [filters]
+        list = ["FIL1"]
+
+        [vfo]
+        scheme = "ab"
+        swap = [0xB0]
+        equal = [0xA0]
+
+        [[freq_ranges.ranges]]
+        label = "HF"
+        start_hz = 30000
+        end_hz = 60000000
+        """
+        p = _write_toml(tmp_path, toml, name="legacy_ab.toml")
+        with pytest.warns(DeprecationWarning, match="issue #710"):
+            profile = load_rig(p).to_profile()
+        assert profile.swap_ab_code == 0xB0
+        assert profile.equal_ab_code == 0xA0
+        assert profile.swap_main_sub_code is None
+        assert profile.equal_main_sub_code is None
+        # Legacy alias still resolves to the ab code
+        assert profile.vfo_swap_code == 0xB0
+        assert profile.vfo_equal_code == 0xA0
+
+    def test_no_deprecation_when_only_new_keys(self, tmp_path, recwarn):
+        p = _write_toml(tmp_path, self._MAIN_SUB_SPLIT, name="new_only.toml")
+        load_rig(p)
+        assert not [
+            w for w in recwarn.list if issubclass(w.category, DeprecationWarning)
+        ]
 
 
 # ── CommandMap ───────────────────────────────────────────────────

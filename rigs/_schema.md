@@ -266,13 +266,22 @@ defaults = [15000, 10000, 7000]
 
 ## `[vfo]` — VFO Configuration
 
-| Field         | Type   | Required    | Description                                       |
-|---------------|--------|-------------|---------------------------------------------------|
-| `scheme`      | string | yes         | VFO scheme (see below)                            |
-| `main_select` | int[]  | if main_sub | Wire bytes to select Main VFO (e.g. `[0xD0]`)    |
-| `sub_select`  | int[]  | if main_sub | Wire bytes to select Sub VFO (e.g. `[0xD1]`)     |
-| `swap`        | int[]  | no          | Wire bytes for VFO swap (e.g. `[0xB0]`)          |
-| `equal`       | int[]  | no          | Wire bytes for VFO equalize (e.g. `[0xB1]`)      |
+| Field             | Type   | Required    | Description                                                  |
+|-------------------|--------|-------------|--------------------------------------------------------------|
+| `scheme`          | string | yes         | VFO scheme (see below)                                       |
+| `main_select`     | int[]  | if main_sub | Wire bytes to select Main VFO (e.g. `[0xD0]`)                |
+| `sub_select`      | int[]  | if main_sub | Wire bytes to select Sub VFO (e.g. `[0xD1]`)                 |
+| `swap_ab`         | int[]  | no          | A↔B swap within the selected receiver (e.g. `[0x07, 0xB0]`)  |
+| `equal_ab`        | int[]  | no          | A=B equalize within the selected receiver                    |
+| `swap_main_sub`   | int[]  | no          | MAIN↔SUB swap across receivers (dual-RX rigs, e.g. `[0xB0]`) |
+| `equal_main_sub`  | int[]  | no          | MAIN=SUB equalize across receivers                           |
+| `swap` *(legacy)* | int[]  | no          | **Deprecated.** Maps to `swap_main_sub` if `scheme = "main_sub"`, else `swap_ab`. Emits a `DeprecationWarning` per load. |
+| `equal` *(legacy)*| int[]  | no          | **Deprecated.** Same mapping as `swap`.                      |
+
+The A↔B vs MAIN↔SUB split was introduced in issue #710: on dual-receiver rigs
+(IC-7610) `0x07 0xB0` swaps MAIN/SUB, while on single-receiver rigs (IC-7300)
+the same nibble swaps VFO A/B. The legacy `swap`/`equal` keys overloaded both
+meanings; prefer the explicit fields for new rig files.
 
 Valid VFO schemes:
 - **`ab`** — 2 VFOs (A/B), 1 receiver (IC-7300, X6100, TX-500)

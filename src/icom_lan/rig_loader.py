@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import logging
 import tomllib
+import warnings
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -24,6 +26,8 @@ from .profiles import (
     RadioProfile,
     RuleSpec,
 )
+
+logger = logging.getLogger(__name__)
 
 VALID_VFO_SCHEMES = {"ab", "main_sub", "ab_shared", "single"}
 VALID_PROTOCOL_TYPES = {"civ", "kenwood_cat", "yaesu_cat"}
@@ -63,7 +67,10 @@ class RigConfig:
     vfo_scheme: str
     vfo_main_select: tuple[int, ...] | None
     vfo_sub_select: tuple[int, ...] | None
-    vfo_swap: tuple[int, ...] | None
+    vfo_swap_ab: tuple[int, ...] | None
+    vfo_equal_ab: tuple[int, ...] | None
+    vfo_swap_main_sub: tuple[int, ...] | None
+    vfo_equal_main_sub: tuple[int, ...] | None
     freq_ranges: tuple[dict[str, Any], ...]
     commands: dict[str, CommandSpec]
     cmd29_routes: tuple[tuple[int, int | None], ...]
@@ -98,7 +105,10 @@ class RigConfig:
         """Build a ``RadioProfile`` from this config."""
         vfo_main = self.vfo_main_select[0] if self.vfo_main_select else None
         vfo_sub = self.vfo_sub_select[0] if self.vfo_sub_select else None
-        vfo_swap = self.vfo_swap[0] if self.vfo_swap else None
+        swap_ab = self.vfo_swap_ab[0] if self.vfo_swap_ab else None
+        equal_ab = self.vfo_equal_ab[0] if self.vfo_equal_ab else None
+        swap_main_sub = self.vfo_swap_main_sub[0] if self.vfo_swap_main_sub else None
+        equal_main_sub = self.vfo_equal_main_sub[0] if self.vfo_equal_main_sub else None
 
         ranges = tuple(
             FreqRangeInfo(
@@ -128,7 +138,10 @@ class RigConfig:
             cmd29_routes=frozenset(self.cmd29_routes),
             vfo_main_code=vfo_main,
             vfo_sub_code=vfo_sub,
-            vfo_swap_code=vfo_swap,
+            swap_ab_code=swap_ab,
+            equal_ab_code=equal_ab,
+            swap_main_sub_code=swap_main_sub,
+            equal_main_sub_code=equal_main_sub,
             vfo_scheme=self.vfo_scheme,
             has_lan=self.has_lan,
             freq_ranges=ranges,
@@ -160,7 +173,7 @@ class RigConfig:
 
     def to_command_map(self) -> CommandMap:
         """Build a ``CommandMap`` from this config's CI-V commands.
-        
+
         Only CivCommandSpec entries are included; CatCommandSpec entries are ignored.
         """
         civ_commands: dict[str, tuple[int, ...]] = {}
@@ -291,19 +304,19 @@ def _parse_command_value(
     value: Any,
 ) -> CommandSpec:
     """Parse a single command value from TOML.
-    
+
     Supports two formats:
     1. CI-V wire bytes (list): [0x03] or [0x14, 0x01]
     2. CAT command spec (dict): { cat = { read = "FA;", parse = "FA{freq:09d};" } }
-    
+
     Args:
         filename: Source TOML filename (for error messages).
         command_name: Command name (for error messages).
         value: Raw TOML value to parse.
-    
+
     Returns:
         Parsed CommandSpec (either CivCommandSpec or CatCommandSpec).
-    
+
     Raises:
         RigLoadError: If the value format is invalid.
     """
@@ -324,7 +337,7 @@ def _parse_command_value(
                 f"got {value!r}"
             )
         return CivCommandSpec(bytes=tuple(value))
-    
+
     # Format 2: CAT command spec (dict with 'cat' key)
     if isinstance(value, dict):
         if "cat" not in value:
@@ -338,11 +351,11 @@ def _parse_command_value(
                 f"{filename}: [commands].{command_name}.cat must be a dict, "
                 f"got {type(cat_spec).__name__}"
             )
-        
+
         read_cmd = cat_spec.get("read")
         write_cmd = cat_spec.get("write")
         parse_template = cat_spec.get("parse")
-        
+
         # Validate types
         if read_cmd is not None and not isinstance(read_cmd, str):
             raise RigLoadError(
@@ -356,16 +369,16 @@ def _parse_command_value(
             raise RigLoadError(
                 f"{filename}: [commands].{command_name}.cat.parse must be a string"
             )
-        
+
         # At least one of read/write must be present
         if read_cmd is None and write_cmd is None:
             raise RigLoadError(
                 f"{filename}: [commands].{command_name}.cat must have "
                 f"at least one of 'read' or 'write'"
             )
-        
+
         return CatCommandSpec(read=read_cmd, write=write_cmd, parse=parse_template)
-    
+
     # Unknown format
     raise RigLoadError(
         f"{filename}: [commands].{command_name} must be a list (CI-V bytes) "
@@ -547,11 +560,11 @@ def load_rig(path: Path) -> RigConfig:
     if "commands" in data:
         commands_raw = dict(data["commands"])
         overrides = commands_raw.pop("overrides", {})
-        
+
         # Parse main commands
         for key, value in commands_raw.items():
             commands[key] = _parse_command_value(filename, key, value)
-        
+
         # Apply overrides
         for key, value in overrides.items():
             commands[key] = _parse_command_value(filename, key, value)
@@ -559,10 +572,38 @@ def load_rig(path: Path) -> RigConfig:
     # Parse freq_ranges
     freq_ranges_data = data.get("freq_ranges", {}).get("ranges", [])
 
-    # Parse VFO bytes
+    # Parse VFO bytes — explicit split (issue #710)
     vfo_main = tuple(vfo["main_select"]) if "main_select" in vfo else None
     vfo_sub = tuple(vfo["sub_select"]) if "sub_select" in vfo else None
-    vfo_swap_val = tuple(vfo["swap"]) if "swap" in vfo else None
+    vfo_swap_ab = tuple(vfo["swap_ab"]) if "swap_ab" in vfo else None
+    vfo_equal_ab = tuple(vfo["equal_ab"]) if "equal_ab" in vfo else None
+    vfo_swap_main_sub = tuple(vfo["swap_main_sub"]) if "swap_main_sub" in vfo else None
+    vfo_equal_main_sub = (
+        tuple(vfo["equal_main_sub"]) if "equal_main_sub" in vfo else None
+    )
+
+    # Legacy keys — map to new fields based on scheme; warn once per file.
+    has_legacy = "swap" in vfo or "equal" in vfo
+    if has_legacy:
+        legacy_swap = tuple(vfo["swap"]) if "swap" in vfo else None
+        legacy_equal = tuple(vfo["equal"]) if "equal" in vfo else None
+        if scheme == "main_sub":
+            if legacy_swap is not None and vfo_swap_main_sub is None:
+                vfo_swap_main_sub = legacy_swap
+            if legacy_equal is not None and vfo_equal_main_sub is None:
+                vfo_equal_main_sub = legacy_equal
+        else:
+            if legacy_swap is not None and vfo_swap_ab is None:
+                vfo_swap_ab = legacy_swap
+            if legacy_equal is not None and vfo_equal_ab is None:
+                vfo_equal_ab = legacy_equal
+        msg = (
+            f"{filename}: [vfo].swap/[vfo].equal are deprecated; "
+            "use swap_ab/equal_ab or swap_main_sub/equal_main_sub "
+            "(issue #710)."
+        )
+        warnings.warn(msg, DeprecationWarning, stacklevel=2)
+        logger.warning(msg)
 
     # Parse cmd29 routes
     cmd29_raw = data.get("cmd29", {}).get("routes", [])
@@ -582,9 +623,21 @@ def load_rig(path: Path) -> RigConfig:
     scope_ref_max_db: float | None = None
     scope_ref_step_db: float | None = None
     if scope_section:
-        scope_ref_min_db = float(scope_section["ref_min_db"]) if "ref_min_db" in scope_section else None
-        scope_ref_max_db = float(scope_section["ref_max_db"]) if "ref_max_db" in scope_section else None
-        scope_ref_step_db = float(scope_section["ref_step_db"]) if "ref_step_db" in scope_section else None
+        scope_ref_min_db = (
+            float(scope_section["ref_min_db"])
+            if "ref_min_db" in scope_section
+            else None
+        )
+        scope_ref_max_db = (
+            float(scope_section["ref_max_db"])
+            if "ref_max_db" in scope_section
+            else None
+        )
+        scope_ref_step_db = (
+            float(scope_section["ref_step_db"])
+            if "ref_step_db" in scope_section
+            else None
+        )
 
     # Parse attenuator/preamp/agc (optional sections)
     att_section = data.get("attenuator", {})
@@ -655,8 +708,7 @@ def load_rig(path: Path) -> RigConfig:
         kind = rule.get("kind")
         if kind not in VALID_RULE_KINDS:
             raise RigLoadError(
-                f"{filename}: rule kind must be one of {VALID_RULE_KINDS}, "
-                f"got {kind!r}"
+                f"{filename}: rule kind must be one of {VALID_RULE_KINDS}, got {kind!r}"
             )
         rules.append(dict(rule))  # type: ignore[arg-type]
 
@@ -696,7 +748,10 @@ def load_rig(path: Path) -> RigConfig:
         vfo_scheme=scheme,
         vfo_main_select=vfo_main,
         vfo_sub_select=vfo_sub,
-        vfo_swap=vfo_swap_val,
+        vfo_swap_ab=vfo_swap_ab,
+        vfo_equal_ab=vfo_equal_ab,
+        vfo_swap_main_sub=vfo_swap_main_sub,
+        vfo_equal_main_sub=vfo_equal_main_sub,
         freq_ranges=tuple(freq_ranges_data),
         commands=commands,
         cmd29_routes=tuple(cmd29_routes),

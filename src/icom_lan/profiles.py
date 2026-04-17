@@ -144,7 +144,13 @@ class RadioProfile:
     cmd29_routes: frozenset[tuple[int, int | None]]
     vfo_main_code: int | None = None
     vfo_sub_code: int | None = None
-    vfo_swap_code: int | None = None
+    # Explicit split (issue #710):
+    #   *_ab_code       → VFO A↔B within the currently-selected receiver
+    #   *_main_sub_code → MAIN↔SUB across receivers (dual-receiver rigs only)
+    swap_ab_code: int | None = None
+    equal_ab_code: int | None = None
+    swap_main_sub_code: int | None = None
+    equal_main_sub_code: int | None = None
     vfo_scheme: str = "main_sub"
     has_lan: bool = False
     freq_ranges: tuple[FreqRangeInfo, ...] = ()
@@ -172,6 +178,24 @@ class RadioProfile:
     scope_ref_min_db: float | None = None
     scope_ref_max_db: float | None = None
     scope_ref_step_db: float | None = None
+
+    @property
+    def vfo_swap_code(self) -> int | None:
+        """Legacy alias — prefers ``swap_main_sub_code`` for dual-RX rigs.
+
+        Deprecated: use :attr:`swap_ab_code` or :attr:`swap_main_sub_code`
+        directly (issue #710).
+        """
+        return self.swap_main_sub_code or self.swap_ab_code
+
+    @property
+    def vfo_equal_code(self) -> int | None:
+        """Legacy alias — prefers ``equal_main_sub_code`` for dual-RX rigs.
+
+        Deprecated: use :attr:`equal_ab_code` or :attr:`equal_main_sub_code`
+        directly (issue #710).
+        """
+        return self.equal_main_sub_code or self.equal_ab_code
 
     def supports_capability(self, capability: str) -> bool:
         return capability in self.capabilities
