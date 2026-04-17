@@ -1526,6 +1526,99 @@ class TestBroadcasterCodecInvalidation:
             assert spy.call_count == 1
 
 
+class TestDspOpusGateWarning:
+    """Issue #762: DSP pipeline + PCM tap registry are gated on PCM16.
+
+    When a radio's native codec is Opus (IC-705), DSP and tap dispatch
+    silently don't run.  The broadcaster logs a one-shot WARNING when
+    this combination is detected so operators aren't mystified.
+    """
+
+    def _pcm_broadcaster(self):
+        from icom_lan.types import AudioCodec
+        from icom_lan.web.handlers import AudioBroadcaster
+        from icom_lan.web.protocol import AUDIO_CODEC_PCM16
+        b = AudioBroadcaster(None)
+        b._radio_codec = AudioCodec.PCM_1CH_16BIT
+        b._web_codec = AUDIO_CODEC_PCM16
+        return b
+
+    def _opus_broadcaster(self):
+        from icom_lan.types import AudioCodec
+        from icom_lan.web.handlers import AudioBroadcaster
+        from icom_lan.web.protocol import AUDIO_CODEC_OPUS
+        b = AudioBroadcaster(None)
+        b._radio_codec = AudioCodec.OPUS_1CH
+        b._web_codec = AUDIO_CODEC_OPUS
+        return b
+
+    def test_no_warning_when_dsp_set_on_pcm_broadcaster(self, caplog) -> None:
+        import logging
+        b = self._pcm_broadcaster()
+        with caplog.at_level(logging.WARNING, logger="icom_lan.web.handlers.audio"):
+            b.set_dsp_pipeline(MagicMock())
+        assert not any(
+            "native codec is Opus" in r.message for r in caplog.records
+        )
+        assert b._dsp_opus_warned is False
+
+    def test_warning_fires_when_dsp_set_on_opus_broadcaster(self, caplog) -> None:
+        import logging
+        b = self._opus_broadcaster()
+        with caplog.at_level(logging.WARNING, logger="icom_lan.web.handlers.audio"):
+            b.set_dsp_pipeline(MagicMock())
+        matching = [r for r in caplog.records if "native codec is Opus" in r.message]
+        assert len(matching) == 1, (
+            f"Expected exactly one DSP-Opus warning; got {len(matching)}"
+        )
+        assert b._dsp_opus_warned is True
+
+    def test_warning_fires_at_most_once_per_lifetime(self, caplog) -> None:
+        import logging
+        b = self._opus_broadcaster()
+        with caplog.at_level(logging.WARNING, logger="icom_lan.web.handlers.audio"):
+            b.set_dsp_pipeline(MagicMock())
+            b.set_dsp_pipeline(MagicMock())
+            b._maybe_warn_dsp_opus_gate()
+        matching = [r for r in caplog.records if "native codec is Opus" in r.message]
+        assert len(matching) == 1
+
+    def test_warning_fires_when_codec_flips_to_opus_mid_stream(self, caplog) -> None:
+        """Operator sets DSP while radio is on PCM; radio later flips to Opus.
+
+        The warning must fire on the codec refresh, not stay silent because
+        the order was unfavourable.
+        """
+        import logging
+        from icom_lan.types import AudioCodec
+        from icom_lan.web.protocol import AUDIO_CODEC_OPUS
+
+        b = self._pcm_broadcaster()
+        b.set_dsp_pipeline(MagicMock())
+        # No warning yet — we're on PCM.
+        assert b._dsp_opus_warned is False
+
+        # Simulate a codec flip to Opus (e.g. config change mid-stream).
+        b._radio_codec = AudioCodec.OPUS_1CH
+        b._web_codec = AUDIO_CODEC_OPUS
+        with caplog.at_level(logging.WARNING, logger="icom_lan.web.handlers.audio"):
+            b._maybe_warn_dsp_opus_gate()
+        matching = [r for r in caplog.records if "native codec is Opus" in r.message]
+        assert len(matching) == 1
+        assert b._dsp_opus_warned is True
+
+    def test_no_warning_when_dsp_is_none(self, caplog) -> None:
+        import logging
+        b = self._opus_broadcaster()
+        with caplog.at_level(logging.WARNING, logger="icom_lan.web.handlers.audio"):
+            b.set_dsp_pipeline(None)
+            b._maybe_warn_dsp_opus_gate()
+        assert b._dsp_opus_warned is False
+        assert not any(
+            "native codec is Opus" in r.message for r in caplog.records
+        )
+
+
 class TestAudioHandlerTxTranscoderRate:
     """TX transcoder must use the radio's negotiated sample rate (issue #691).
 
