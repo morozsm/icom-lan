@@ -96,7 +96,12 @@ def encode_audio_frame(
         sequence: Wrapping sequence counter (uint16).
         sample_rate: Sample rate / 100 as uint16 (e.g. 480 for 48000).
         channels: 1 = mono, 2 = stereo.
-        frame_ms: Frame duration in ms (typically 20).
+        frame_ms: Frame duration in ms. **Advisory** — consumers MUST
+            compute buffer sizes from ``len(payload) / (sample_rate *
+            channels * bytes_per_sample)`` directly and not trust this
+            label for allocator decisions. The broadcaster derives the
+            value from the actual payload on emit (see epic #764 / #765);
+            packed as uint8 (1-255).
         payload: Codec-specific audio data.
 
     Returns:

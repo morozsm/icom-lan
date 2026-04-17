@@ -296,13 +296,23 @@ class AudioBroadcaster:
                 if self._tap_registry.active and self._web_codec == AUDIO_CODEC_PCM16:
                     self._tap_registry.feed(audio_data)
 
+                # frame_ms is derived from the actual payload size (issue #765).
+                # The hardcoded 20 ms here was the root cause of the 2026-04-16
+                # companion crash (epic #764): IC-7610 dispatches 1364-byte PCM16
+                # mono packets ~= 14.2 ms, not 20 ms, and downstream consumers
+                # trusted the label.  Browser ignores frame_ms (rx-player.ts
+                # sizes buffers from payload); companion + native clients need
+                # the header to match reality.  See protocol.py docstring.
+                _bytes_per_sample = 2
+                _denom = max(1, self._sample_rate * self._channels * _bytes_per_sample)
+                _frame_ms = max(1, min((len(audio_data) * 1000) // _denom, 255))
                 frame = encode_audio_frame(
                     MSG_TYPE_AUDIO_RX,
                     self._web_codec,
                     self._seq,
                     self._sample_rate // 100,
                     self._channels,
-                    20,
+                    _frame_ms,
                     audio_data,
                 )
                 self._seq = (self._seq + 1) & 0xFFFF
