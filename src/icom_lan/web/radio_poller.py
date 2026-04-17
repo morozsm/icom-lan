@@ -1715,8 +1715,11 @@ class RadioPoller:
             return False
         if not self._profile.supports_receiver(receiver):
             return False
-        # Need a swap primitive to exchange A/B within the receiver.
-        if (self._profile.swap_ab_code or self._profile.swap_main_sub_code) is None:
+        # Need a true A/B-within-receiver swap primitive. swap_main_sub_code
+        # is NOT a fallback — on IC-7610 the 0x07 0xB0 byte toggles MAIN↔SUB,
+        # not A↔B inside a receiver, which would flip the radio's active-RX
+        # state on every slow-poll cycle.
+        if self._profile.swap_ab_code is None:
             return False
         return True
 
@@ -1736,8 +1739,8 @@ class RadioPoller:
         rx_name = "MAIN" if receiver == 0 else "SUB"
         rx_state = rs.receiver(rx_name)
         target_slot = "B" if rx_state.active_slot == "A" else "A"
-        swap_code = self._profile.swap_ab_code or self._profile.swap_main_sub_code
-        assert swap_code is not None  # gate guarantees
+        swap_code = self._profile.swap_ab_code
+        assert swap_code is not None  # gate guarantees (see _unselected_slot_gate)
         # Pre-select MAIN/SUB on dual-RX rigs so the swap hits the intended
         # receiver.  Restore after the read.
         pre_switched = False
