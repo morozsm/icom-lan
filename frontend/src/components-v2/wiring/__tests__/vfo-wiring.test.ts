@@ -19,56 +19,40 @@ import { makeBandHandlers, makeFilterHandlers, makeModeHandlers, makeRitXitHandl
 const originalDocumentQuerySelector = document.querySelector.bind(document);
 
 describe('toVfoOpsProps', () => {
-  it('uses the active VFO as TX VFO when split is off', () => {
+  // TX follows split, not the active receiver.  IC-7610 manual p. 3-2:
+  // "you can transmit on only the Main band (except in Split
+  // Frequency operation)."  Under split RX=MAIN, TX=SUB.  This is
+  // independent of which receiver is currently "selected".
+  it('reports txVfo=main when split is off regardless of active receiver', () => {
     expect(
       toVfoOpsProps(
-        {
-          active: 'MAIN',
-          split: false,
-          dualWatch: false,
-          mainSubTracking: false,
-        } as any,
+        { active: 'MAIN', split: false, dualWatch: false, mainSubTracking: false } as any,
         null,
       ).txVfo,
     ).toBe('main');
 
     expect(
       toVfoOpsProps(
-        {
-          active: 'SUB',
-          split: false,
-          dualWatch: false,
-          mainSubTracking: false,
-        } as any,
+        { active: 'SUB', split: false, dualWatch: false, mainSubTracking: false } as any,
         null,
       ).txVfo,
-    ).toBe('sub');
+    ).toBe('main');
   });
 
-  it('uses the opposite VFO as TX VFO when split is on', () => {
+  it('reports txVfo=sub when split is on regardless of active receiver', () => {
     expect(
       toVfoOpsProps(
-        {
-          active: 'MAIN',
-          split: true,
-          dualWatch: false,
-          mainSubTracking: false,
-        } as any,
+        { active: 'MAIN', split: true, dualWatch: false, mainSubTracking: false } as any,
         null,
       ).txVfo,
     ).toBe('sub');
 
     expect(
       toVfoOpsProps(
-        {
-          active: 'SUB',
-          split: true,
-          dualWatch: false,
-          mainSubTracking: false,
-        } as any,
+        { active: 'SUB', split: true, dualWatch: false, mainSubTracking: false } as any,
         null,
       ).txVfo,
-    ).toBe('main');
+    ).toBe('sub');
   });
 });
 
@@ -80,33 +64,6 @@ describe('makeVfoHandlers', () => {
 
   afterEach(() => {
     document.querySelector = originalDocumentQuerySelector;
-  });
-
-  it('maps TX→MAIN to SUB active receiver when split is on', () => {
-    vi.mocked(getRadioState).mockReturnValue({ split: true } as any);
-
-    makeVfoHandlers().onTxVfoChange('main');
-
-    expect(patchRadioState).toHaveBeenCalledWith({ active: 'SUB' });
-    expect(sendCommand).toHaveBeenCalledWith('set_vfo', { vfo: 'SUB' });
-  });
-
-  it('maps TX→SUB to MAIN active receiver when split is on', () => {
-    vi.mocked(getRadioState).mockReturnValue({ split: true } as any);
-
-    makeVfoHandlers().onTxVfoChange('sub');
-
-    expect(patchRadioState).toHaveBeenCalledWith({ active: 'MAIN' });
-    expect(sendCommand).toHaveBeenCalledWith('set_vfo', { vfo: 'MAIN' });
-  });
-
-  it('maps TX target directly when split is off', () => {
-    vi.mocked(getRadioState).mockReturnValue({ split: false } as any);
-
-    makeVfoHandlers().onTxVfoChange('sub');
-
-    expect(patchRadioState).toHaveBeenCalledWith({ active: 'SUB' });
-    expect(sendCommand).toHaveBeenCalledWith('set_vfo', { vfo: 'SUB' });
   });
 
   it('sends explicit split=false when toggling from active split state', () => {

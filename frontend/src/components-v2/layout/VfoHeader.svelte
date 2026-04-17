@@ -14,13 +14,14 @@
     layoutProfile?: VfoLayoutProfile;
     splitActive: boolean;
     dualWatchActive: boolean;
+    /** Read-only indicator: which receiver currently transmits. */
     txVfo: 'main' | 'sub';
     onSwap?: () => void;
-    onCopy?: () => void;
     onEqual?: () => void;
     onSplitToggle?: () => void;
-    onDualWatchToggle?: () => void;
-    onTxVfoChange?: (v: string) => void;
+    onQuickSplit?: () => void;
+    onDualWatchToggle?: (on: boolean) => void;
+    onQuickDw?: () => void;
     onMainVfoClick?: () => void;
     onSubVfoClick?: () => void;
     onMainModeClick?: () => void;
@@ -38,11 +39,11 @@
     dualWatchActive,
     txVfo,
     onSwap = () => {},
-    onCopy = () => {},
     onEqual = () => {},
     onSplitToggle = () => {},
-    onDualWatchToggle = () => {},
-    onTxVfoChange = () => {},
+    onQuickSplit = () => {},
+    onDualWatchToggle = (_on: boolean) => {},
+    onQuickDw = () => {},
     onMainVfoClick,
     onSubVfoClick,
     onMainModeClick,
@@ -116,11 +117,11 @@
         {dualWatchActive}
         {txVfo}
         {onSwap}
-        {onCopy}
         {onEqual}
         {onSplitToggle}
-        {onDualWatchToggle}
-        {onTxVfoChange}
+        {onQuickSplit}
+        onDualWatchToggle={() => onDualWatchToggle(!dualWatchActive)}
+        {onQuickDw}
       />
 
       {#if dualReceiver}

@@ -79,26 +79,12 @@ function focusModePanel(vfo: 'MAIN' | 'SUB'): void {
 export function makeVfoHandlers() {
   return {
     onSwap: () => cmd('vfo_swap'),
-    // IC-7610: A→B and A=B are the same CI-V command (0x07 0xA0)
-    onCopy: () => cmd('vfo_equalize'),
+    // IC-7610: M→S (copy/equalize) = 0x07 0xB1.  One semantic, one handler.
     onEqual: () => cmd('vfo_equalize'),
     onSplitToggle: () => {
       const next = !(getRadioState()?.split ?? false);
       patchRadioState({ split: next });
       cmd('set_split', { on: next });
-    },
-    onTxVfoChange: (v: string) => {
-      const state = getRadioState();
-      const splitActive = state?.split ?? false;
-      const targetVfo = splitActive
-        ? v === 'main'
-          ? 'SUB'
-          : 'MAIN'
-        : v === 'main'
-          ? 'MAIN'
-          : 'SUB';
-      patchRadioState({ active: targetVfo });
-      cmd('set_vfo', { vfo: targetVfo });
     },
     onMainVfoClick: () => cmd('set_vfo', { vfo: 'MAIN' }),
     onSubVfoClick: () => cmd('set_vfo', { vfo: 'SUB' }),

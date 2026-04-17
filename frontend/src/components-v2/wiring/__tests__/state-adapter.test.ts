@@ -186,14 +186,25 @@ describe('resolveFilterModeConfig', () => {
 });
 
 describe('toVfoOpsProps', () => {
-  it('derives txVfo as opposite receiver when split is active', () => {
-    const mainActive = toVfoOpsProps(
+  // IC-7610: TX = MAIN always, except in Split where TX = SUB.
+  // See manual p. 3-2, 4-9 — TX does not follow the "active"
+  // (selected) receiver, only the split flag.  Epic #774.
+  it('derives txVfo purely from the split flag, ignoring active receiver', () => {
+    const mainActiveSplit = toVfoOpsProps(
       { active: 'MAIN', split: true, dualWatch: false, mainSubTracking: false } as any, null);
-    expect(mainActive.txVfo).toBe('sub');
+    expect(mainActiveSplit.txVfo).toBe('sub');
 
-    const subActive = toVfoOpsProps(
+    const subActiveSplit = toVfoOpsProps(
       { active: 'SUB', split: true, dualWatch: false, mainSubTracking: false } as any, null);
-    expect(subActive.txVfo).toBe('main');
+    expect(subActiveSplit.txVfo).toBe('sub');
+
+    const mainActiveNoSplit = toVfoOpsProps(
+      { active: 'MAIN', split: false, dualWatch: false, mainSubTracking: false } as any, null);
+    expect(mainActiveNoSplit.txVfo).toBe('main');
+
+    const subActiveNoSplit = toVfoOpsProps(
+      { active: 'SUB', split: false, dualWatch: false, mainSubTracking: false } as any, null);
+    expect(subActiveNoSplit.txVfo).toBe('main');
   });
 });
 

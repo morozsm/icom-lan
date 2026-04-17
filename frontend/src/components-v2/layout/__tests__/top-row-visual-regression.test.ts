@@ -230,21 +230,6 @@ describe('VfoHeader visual regression', () => {
           {
             "active": "false",
             "color": "muted",
-            "label": "M=S",
-          },
-          {
-            "active": "true",
-            "color": "orange",
-            "label": "TX→M",
-          },
-          {
-            "active": "false",
-            "color": "orange",
-            "label": "TX→S",
-          },
-          {
-            "active": "false",
-            "color": "muted",
             "label": "M↔S",
           },
         ],
@@ -303,21 +288,6 @@ describe('VfoHeader visual regression', () => {
             "active": "false",
             "color": "green",
             "label": "DW",
-          },
-          {
-            "active": "false",
-            "color": "muted",
-            "label": "M=S",
-          },
-          {
-            "active": "true",
-            "color": "orange",
-            "label": "TX→M",
-          },
-          {
-            "active": "false",
-            "color": "orange",
-            "label": "TX→S",
           },
           {
             "active": "false",
