@@ -8,10 +8,19 @@
  *   audioManager.stopTx()   → stops mic
  */
 
-import { RxPlayer } from './rx-player';
+import { RxPlayer, type RxAudioFocus } from './rx-player';
 import { TxMic } from './tx-mic';
 import { setAudioConnected } from '../stores/connection.svelte';
 import { setRxEnabled, setTxEnabled } from '../stores/audio.svelte';
+
+export type AudioFocus = RxAudioFocus;
+
+export interface AudioRoutingConfig {
+  focus: AudioFocus;
+  split_stereo: boolean;
+  main_gain_db: number;
+  sub_gain_db: number;
+}
 
 const BACKOFF_MIN = 500;
 const BACKOFF_MAX = 10000;
@@ -87,6 +96,41 @@ class AudioManager {
     this.rxPlayer.stop();
     this.maybeDisconnect();
     this.notify();
+  }
+
+  /** Apply MAIN/SUB focus + stereo split + per-channel gain (issue #753).
+   *
+   * Updates the local WebAudio graph and — when WS is open — sends the
+   * ``audio_config`` message to the backend so it can set CI-V Phones L/R
+   * Mix accordingly (handled server-side in #752/#755).  Gain values are
+   * applied locally only; the backend does not receive them.
+   */
+  setAudioConfig(cfg: Partial<AudioRoutingConfig>): void {
+    if (cfg.focus !== undefined) this.rxPlayer.setFocus(cfg.focus);
+    if (cfg.split_stereo !== undefined) this.rxPlayer.setSplitStereo(cfg.split_stereo);
+    if (cfg.main_gain_db !== undefined) this.rxPlayer.setChannelGainDb('main', cfg.main_gain_db);
+    if (cfg.sub_gain_db !== undefined) this.rxPlayer.setChannelGainDb('sub', cfg.sub_gain_db);
+    // Only the focus + split_stereo pair maps to CI-V; gain is local.
+    if (
+      (cfg.focus !== undefined || cfg.split_stereo !== undefined)
+      && this.ws?.readyState === WebSocket.OPEN
+    ) {
+      this.ws.send(JSON.stringify({
+        type: 'audio_config',
+        focus: this.rxPlayer.focus,
+        split_stereo: this.rxPlayer.splitStereo,
+      }));
+    }
+  }
+
+  /** Current config snapshot — useful for UI state rehydration. */
+  getAudioConfig(): AudioRoutingConfig {
+    return {
+      focus: this.rxPlayer.focus,
+      split_stereo: this.rxPlayer.splitStereo,
+      main_gain_db: this.rxPlayer.mainGainDb,
+      sub_gain_db: this.rxPlayer.subGainDb,
+    };
   }
 
   setRxVolume(v: number): void {

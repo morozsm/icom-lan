@@ -4,11 +4,27 @@ import { AUDIO_HEADER_SIZE, MSG_TYPE_RX, CODEC_PCM16, SAMPLE_RATE, FRAME_DURATIO
 
 let ctx: any;
 beforeEach(() => {
-  const gain = { gain: { value: 1 }, connect: vi.fn() };
+  const gains: any[] = [];
+  const panners: any[] = [];
+  const splitters: any[] = [];
   ctx = {
     state: 'running', currentTime: 0, destination: {},
     resume: vi.fn().mockResolvedValue(undefined), close: vi.fn().mockResolvedValue(undefined),
-    createGain: vi.fn(() => gain),
+    createGain: vi.fn(() => {
+      const g = { gain: { value: 1 }, connect: vi.fn() };
+      gains.push(g);
+      return g;
+    }),
+    createStereoPanner: vi.fn(() => {
+      const p = { pan: { value: 0 }, connect: vi.fn() };
+      panners.push(p);
+      return p;
+    }),
+    createChannelSplitter: vi.fn((_n: number = 2) => {
+      const s = { connect: vi.fn() };
+      splitters.push(s);
+      return s;
+    }),
     createBuffer: vi.fn((ch: number, n: number, sr: number) => ({
       duration: n / sr, getChannelData: () => new Float32Array(n),
     })),
@@ -18,7 +34,11 @@ beforeEach(() => {
       ctx._lastSrc = src;
       return src;
     }),
-    _gain: gain,
+    // Named accessors preserved for backward-compat with earlier tests.
+    get _gain() { return gains[0]; },  // preGain
+    _gains: gains,
+    _panners: panners,
+    _splitters: splitters,
   };
   (globalThis as any).AudioContext = function () { return ctx; } as any;
 });
@@ -33,10 +53,13 @@ function pcm16(n: number): ArrayBuffer {
 }
 
 describe('RxPlayer', () => {
-  it('creates AudioContext and GainNode on start', () => {
+  it('creates AudioContext and routing graph on start', () => {
     const p = new RxPlayer(); p.start();
-    expect(ctx.createGain).toHaveBeenCalled();
-    expect(ctx._gain.connect).toHaveBeenCalledWith(ctx.destination);
+    expect(ctx.createGain).toHaveBeenCalledTimes(3);  // preGain + mainGain + subGain
+    // Terminal nodes in the new graph are the two stereo panners.
+    const [mainP, subP] = ctx._panners;
+    expect(mainP.connect).toHaveBeenCalledWith(ctx.destination);
+    expect(subP.connect).toHaveBeenCalledWith(ctx.destination);
     expect(p.active).toBe(true); p.stop();
   });
   it('is inactive before start and after stop', () => {
@@ -71,5 +94,115 @@ describe('RxPlayer', () => {
   it('cleans up on stop', () => {
     const p = new RxPlayer(); p.start(); p.stop();
     expect(ctx.close).toHaveBeenCalled();
+  });
+});
+
+describe('RxPlayer audio routing (#753)', () => {
+  it('builds splitter + 2 gains + 2 panners graph on start', () => {
+    const p = new RxPlayer();
+    p.start();
+    // 3 gains: preGain + mainGain + subGain
+    expect(ctx._gains.length).toBe(3);
+    expect(ctx._panners.length).toBe(2);
+    expect(ctx._splitters.length).toBe(1);
+    p.stop();
+  });
+
+  it('default state: focus=both, split=off → both gains on unity, panners centred', () => {
+    const p = new RxPlayer();
+    p.start();
+    const [_pre, mainG, subG] = ctx._gains;
+    const [mainP, subP] = ctx._panners;
+    expect(mainG.gain.value).toBe(1);
+    expect(subG.gain.value).toBe(1);
+    expect(mainP.pan.value).toBe(0);
+    expect(subP.pan.value).toBe(0);
+    p.stop();
+  });
+
+  it("setFocus('main') silences SUB gain", () => {
+    const p = new RxPlayer();
+    p.start();
+    p.setFocus('main');
+    const [_pre, mainG, subG] = ctx._gains;
+    expect(mainG.gain.value).toBe(1);
+    expect(subG.gain.value).toBe(0);
+    p.stop();
+  });
+
+  it("setFocus('sub') silences MAIN gain", () => {
+    const p = new RxPlayer();
+    p.start();
+    p.setFocus('sub');
+    const [_pre, mainG, subG] = ctx._gains;
+    expect(mainG.gain.value).toBe(0);
+    expect(subG.gain.value).toBe(1);
+    p.stop();
+  });
+
+  it("setFocus('both') restores both gains to their dB settings", () => {
+    const p = new RxPlayer();
+    p.start();
+    p.setChannelGainDb('main', -6);
+    p.setChannelGainDb('sub', -12);
+    p.setFocus('main');
+    p.setFocus('both');
+    const [_pre, mainG, subG] = ctx._gains;
+    expect(mainG.gain.value).toBeCloseTo(0.5012, 3);  // -6 dB
+    expect(subG.gain.value).toBeCloseTo(0.2512, 3);   // -12 dB
+    p.stop();
+  });
+
+  it('setSplitStereo(true) puts MAIN pan left, SUB pan right', () => {
+    const p = new RxPlayer();
+    p.start();
+    p.setSplitStereo(true);
+    const [mainP, subP] = ctx._panners;
+    expect(mainP.pan.value).toBe(-1);
+    expect(subP.pan.value).toBe(+1);
+    p.stop();
+  });
+
+  it('setSplitStereo(false) centres both panners', () => {
+    const p = new RxPlayer();
+    p.start();
+    p.setSplitStereo(true);
+    p.setSplitStereo(false);
+    const [mainP, subP] = ctx._panners;
+    expect(mainP.pan.value).toBe(0);
+    expect(subP.pan.value).toBe(0);
+    p.stop();
+  });
+
+  it('setChannelGainDb clamps very negative dB to 0 linear', () => {
+    const p = new RxPlayer();
+    p.start();
+    p.setChannelGainDb('main', -999);
+    const [_pre, mainG] = ctx._gains;
+    expect(mainG.gain.value).toBe(0);
+    p.stop();
+  });
+
+  it('pre-start setFocus does not throw and persists to graph after start', () => {
+    const p = new RxPlayer();
+    p.setFocus('sub');
+    p.setSplitStereo(true);
+    p.start();
+    const [_pre, mainG, subG] = ctx._gains;
+    const [mainP, subP] = ctx._panners;
+    expect(mainG.gain.value).toBe(0);
+    expect(subG.gain.value).toBe(1);
+    expect(mainP.pan.value).toBe(-1);
+    expect(subP.pan.value).toBe(+1);
+    p.stop();
+  });
+
+  it('volume still sets preGain (backwards-compat)', () => {
+    const p = new RxPlayer();
+    p.start();
+    p.volume = 0.42;
+    const [preGain] = ctx._gains;
+    expect(preGain.gain.value).toBeCloseTo(0.42);
+    p.stop();
   });
 });
