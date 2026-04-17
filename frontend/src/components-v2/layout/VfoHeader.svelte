@@ -1,7 +1,9 @@
 <script lang="ts">
   import VfoPanel from '../vfo/VfoPanel.svelte';
   import VfoOps from '../vfo/VfoOps.svelte';
+  import DualVfoDisplay from '../panels/vfo/DualVfoDisplay.svelte';
   import { hasDualReceiver } from '$lib/stores/capabilities.svelte';
+  import { patchRadioState } from '$lib/stores/radio.svelte';
   import { formatFrequency } from '../display/frequency-format';
   import type { VfoLayoutProfile } from './vfo-layout-tokens';
   import type { VfoStateProps } from './layout-utils';
@@ -76,15 +78,36 @@
 
 <span class="sr-only" aria-live="polite" aria-atomic="true">{announcedFrequency}</span>
 <div class="vfo-header" class:dual={dualReceiver}>
-  <div class="vfo-main-panel">
-    <VfoPanel
-      {...mainVfo}
+  {#if dualReceiver}
+    <DualVfoDisplay
+      main={mainVfo}
+      sub={subVfo}
+      active={mainVfo.isActive ? 'MAIN' : 'SUB'}
       {layoutProfile}
-      onVfoClick={onMainVfoClick}
-      onModeClick={onMainModeClick}
-      onFreqChange={onMainFreqChange}
+      onActivate={(receiver) => {
+        patchRadioState({ active: receiver });
+        if (receiver === 'MAIN') {
+          onMainVfoClick?.();
+        } else {
+          onSubVfoClick?.();
+        }
+      }}
+      onMainModeClick={onMainModeClick}
+      onSubModeClick={onSubModeClick}
+      onMainFreqChange={onMainFreqChange}
+      onSubFreqChange={onSubFreqChange}
     />
-  </div>
+  {:else}
+    <div class="vfo-main-panel">
+      <VfoPanel
+        {...mainVfo}
+        {layoutProfile}
+        onVfoClick={onMainVfoClick}
+        onModeClick={onMainModeClick}
+        onFreqChange={onMainFreqChange}
+      />
+    </div>
+  {/if}
 
   <div class="vfo-bridge-panel">
     <div class="vfo-bridge-stack">
@@ -114,18 +137,6 @@
       {/if}
     </div>
   </div>
-
-  {#if dualReceiver}
-    <div class="vfo-sub-panel">
-      <VfoPanel
-        {...subVfo}
-        {layoutProfile}
-        onVfoClick={onSubVfoClick}
-        onModeClick={onSubModeClick}
-        onFreqChange={onSubFreqChange}
-      />
-    </div>
-  {/if}
 </div>
 
 <style>
@@ -157,8 +168,13 @@
     align-items: stretch;
   }
 
-  .vfo-main-panel {
+  .vfo-header :global(.vfo-main-panel) {
     grid-area: main;
+    min-width: 0;
+  }
+
+  .vfo-header :global(.vfo-sub-panel) {
+    grid-area: sub;
     min-width: 0;
   }
 
@@ -249,11 +265,6 @@
 
   .speak-btn:active {
     background: rgba(0, 200, 220, 0.1);
-  }
-
-  .vfo-sub-panel {
-    grid-area: sub;
-    min-width: 0;
   }
 
   @media (max-width: 1024px) {

@@ -131,6 +131,24 @@ export function toVfoProps(
   };
 }
 
+/**
+ * Dual-VFO props — groups MAIN+SUB VfoStateProps with the active receiver id.
+ * Reuses the existing toVfoProps helper; no new adapter logic.
+ */
+export interface DualVfoProps {
+  main: VfoStateProps;
+  sub: VfoStateProps;
+  active: 'MAIN' | 'SUB';
+}
+
+export function toDualVfoProps(state: ServerState | null): DualVfoProps {
+  return {
+    main: toVfoProps(state, 'main'),
+    sub: toVfoProps(state, 'sub'),
+    active: state?.active === 'SUB' ? 'SUB' : 'MAIN',
+  };
+}
+
 /* ── RF Front End ────────────────────────────────────────────── */
 
 export interface RfFrontEndProps {
