@@ -24,6 +24,7 @@ from ..protocol import (
     MSG_TYPE_AUDIO_RX,
     decode_json,
     encode_audio_frame,
+    encode_json,
 )
 from ..websocket import WS_OP_BINARY, WS_OP_TEXT, WebSocketConnection
 
@@ -482,6 +483,88 @@ class AudioHandler:
                     await self._radio.stop_audio_tx()  # type: ignore[attr-defined]
                 self._tx_active = False
                 logger.info("audio: TX stopped")
+        elif msg_type == "audio_config":
+            await self._handle_audio_config(msg)
+
+    # --------------------------------------------------------------
+    # audio_config — MAIN/SUB focus + stereo split (issue #752)
+    # --------------------------------------------------------------
+    #
+    # IC-7610 CI-V Menu 0072 "Phones L/R Mix" bytes. Mapping from
+    # (focus, split_stereo) to the CI-V byte that Phones L/R Mix expects.
+    # Exact byte values may need tuning against hardware.
+    _PHONES_LR_MIX: dict[tuple[str, bool], int] = {
+        ("main", False): 0x00,  # L=MAIN, R=MAIN
+        ("main", True): 0x00,  # split has no effect — SUB silenced
+        ("sub", False): 0x03,  # L=SUB, R=SUB
+        ("sub", True): 0x03,
+        ("both", False): 0x02,  # L=mix, R=mix
+        ("both", True): 0x01,  # L=MAIN, R=SUB (true stereo split)
+    }
+    _VALID_AUDIO_FOCUS: frozenset[str] = frozenset({"main", "sub", "both"})
+
+    async def _handle_audio_config(self, msg: dict[str, Any]) -> None:
+        """Apply MAIN/SUB audio focus + stereo split via CI-V Phones L/R Mix.
+
+        Fire-and-forget on dual-RX profiles. Echoes the applied config back on
+        the WS so the client can confirm persistence. No-op on 1-Rx profiles.
+        """
+        focus = msg.get("focus", "")
+        split_stereo = bool(msg.get("split_stereo", False))
+
+        if focus not in self._VALID_AUDIO_FOCUS:
+            await self._send_error(
+                f"audio_config: invalid focus {focus!r}; "
+                f"expected one of {sorted(self._VALID_AUDIO_FOCUS)}"
+            )
+            return
+
+        if not self._radio:
+            return  # no radio attached — cannot apply
+        profile = getattr(self._radio, "profile", None)
+        rx_count = getattr(profile, "receiver_count", 1)
+        if rx_count < 2:
+            logger.debug("audio_config: ignored on 1-Rx profile")
+            return
+
+        phones_byte = self._PHONES_LR_MIX[(focus, split_stereo)]
+        try:
+            await self._radio.send_civ(  # type: ignore[attr-defined]
+                0x1A,
+                sub=0x05,
+                data=bytes([0x00, 0x72, phones_byte]),
+                wait_response=False,
+            )
+        except Exception:
+            logger.warning("audio_config: CI-V send failed", exc_info=True)
+            await self._send_error("audio_config: CI-V send failed")
+            return
+
+        logger.info(
+            "audio_config: focus=%s split_stereo=%s → phones=0x%02X",
+            focus,
+            split_stereo,
+            phones_byte,
+        )
+        await self._send_json(
+            {
+                "type": "audio_config",
+                "focus": focus,
+                "split_stereo": split_stereo,
+                "applied": True,
+            }
+        )
+
+    async def _send_json(self, obj: dict[str, Any]) -> None:
+        """Send a JSON message to the WS client."""
+        try:
+            await self._ws.send_text(encode_json(obj))
+        except Exception:
+            logger.debug("audio: _send_json failed", exc_info=True)
+
+    async def _send_error(self, message: str) -> None:
+        """Send an error message envelope to the WS client."""
+        await self._send_json({"type": "error", "message": message})
 
     def _ensure_tx_transcoder(self) -> None:
         """Create (or recreate) the TX Opus→PCM transcoder at the radio's rate.

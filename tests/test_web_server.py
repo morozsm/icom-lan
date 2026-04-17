@@ -1405,6 +1405,105 @@ class TestAudioHandlerTxTranscoderRate:
         assert handler._transcoder is None
 
 
+class TestAudioConfigRouting:
+    """audio_config WS message → CI-V Phones L/R Mix (issue #752).
+
+    Each (focus, split_stereo) pair maps to a Menu 0072 byte emitted via
+    ``radio.send_civ(0x1A, sub=0x05, data=bytes([0x00, 0x72, byte]))``.
+    Gated on dual-RX profiles; 1-Rx radios silently no-op.
+    """
+
+    @staticmethod
+    def _make_handler(receiver_count: int = 2) -> Any:
+        from types import SimpleNamespace
+
+        from icom_lan.radio_protocol import AudioCapable
+        from icom_lan.web.handlers import AudioBroadcaster, AudioHandler
+        from icom_lan.web.websocket import WebSocketConnection
+
+        mock_ws = MagicMock(spec=WebSocketConnection)
+        mock_ws.send_text = AsyncMock()
+        mock_radio = MagicMock(spec=AudioCapable)
+        mock_radio.capabilities = {"audio"}
+        mock_radio.profile = SimpleNamespace(receiver_count=receiver_count)
+        mock_radio.send_civ = AsyncMock()
+
+        broadcaster = AudioBroadcaster(mock_radio)
+        handler = AudioHandler(mock_ws, mock_radio, broadcaster)
+        return handler, mock_radio, mock_ws
+
+    async def _apply(self, handler: Any, focus: str, split_stereo: bool) -> None:
+        await handler._handle_control(
+            {"type": "audio_config", "focus": focus, "split_stereo": split_stereo}
+        )
+
+    @staticmethod
+    def _expected_civ_call(phones_byte: int) -> dict[str, Any]:
+        return {
+            "args": (0x1A,),
+            "sub": 0x05,
+            "data": bytes([0x00, 0x72, phones_byte]),
+        }
+
+    async def test_focus_main_split_off_sends_phones_00(self) -> None:
+        handler, radio, _ = self._make_handler()
+        await self._apply(handler, "main", False)
+        radio.send_civ.assert_awaited_once_with(
+            0x1A, sub=0x05, data=bytes([0x00, 0x72, 0x00]), wait_response=False
+        )
+
+    async def test_focus_sub_split_off_sends_phones_03(self) -> None:
+        handler, radio, _ = self._make_handler()
+        await self._apply(handler, "sub", False)
+        radio.send_civ.assert_awaited_once_with(
+            0x1A, sub=0x05, data=bytes([0x00, 0x72, 0x03]), wait_response=False
+        )
+
+    async def test_focus_both_split_off_sends_phones_02(self) -> None:
+        handler, radio, _ = self._make_handler()
+        await self._apply(handler, "both", False)
+        radio.send_civ.assert_awaited_once_with(
+            0x1A, sub=0x05, data=bytes([0x00, 0x72, 0x02]), wait_response=False
+        )
+
+    async def test_focus_both_split_on_sends_phones_01(self) -> None:
+        """Stereo split: L=MAIN, R=SUB — the headline feature."""
+        handler, radio, _ = self._make_handler()
+        await self._apply(handler, "both", True)
+        radio.send_civ.assert_awaited_once_with(
+            0x1A, sub=0x05, data=bytes([0x00, 0x72, 0x01]), wait_response=False
+        )
+
+    async def test_invalid_focus_sends_error_no_civ(self) -> None:
+        handler, radio, ws = self._make_handler()
+        await self._apply(handler, "left", False)
+        radio.send_civ.assert_not_awaited()
+        assert ws.send_text.await_count >= 1
+        sent = ws.send_text.await_args_list[0].args[0]
+        assert "error" in sent
+        assert "invalid focus" in sent
+
+    async def test_single_rx_profile_noops(self) -> None:
+        handler, radio, ws = self._make_handler(receiver_count=1)
+        await self._apply(handler, "main", False)
+        radio.send_civ.assert_not_awaited()
+        ws.send_text.assert_not_awaited()
+
+    async def test_echo_includes_applied_true(self) -> None:
+        import json
+
+        handler, _, ws = self._make_handler()
+        await self._apply(handler, "both", True)
+        ws.send_text.assert_awaited_once()
+        echoed = json.loads(ws.send_text.await_args.args[0])
+        assert echoed == {
+            "type": "audio_config",
+            "focus": "both",
+            "split_stereo": True,
+            "applied": True,
+        }
+
+
 # ---------------------------------------------------------------------------
 # WebSocket keepalive (server-initiated pings)
 # ---------------------------------------------------------------------------
