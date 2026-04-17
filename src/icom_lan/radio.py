@@ -236,8 +236,6 @@ from .commands import (
     set_vox_gain,
     set_xfc_status,
     stop_cw,
-    vfo_a_equals_b,
-    vfo_swap,
 )
 from .commands import (
     get_attenuator as get_attenuator_cmd,  # Transceiver status family (#136); VFO / Dual Watch / Scanning (#132); Tone/TSQL (#134); System/Config commands (#135); Memory and band-stacking (#133)
@@ -2616,16 +2614,44 @@ class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
         self._last_vfo = vfo.upper()
 
     async def vfo_equalize(self) -> None:
-        """Copy VFO A to VFO B (A=B)."""
-        self._check_connected()
-        civ = vfo_a_equals_b(to_addr=self._radio_addr)
-        await self._send_civ_raw(civ)
+        """Copy VFO state (deprecated — use ``equalize_main_sub`` or ``equalize_vfo_ab``).
+
+        On dual-RX profiles this delegates to :meth:`equalize_main_sub`; on
+        single-RX profiles it delegates to :meth:`equalize_vfo_ab` with
+        ``receiver=0``.
+        """
+        import warnings
+
+        warnings.warn(
+            "vfo_equalize() is deprecated; use equalize_main_sub() or "
+            "equalize_vfo_ab() explicitly",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        if self._profile.receiver_count > 1:
+            await self.equalize_main_sub()
+        else:
+            await self.equalize_vfo_ab(0)
 
     async def vfo_exchange(self) -> None:
-        """Swap VFO A and B."""
-        self._check_connected()
-        civ = vfo_swap(to_addr=self._radio_addr)
-        await self._send_civ_raw(civ)
+        """Swap VFO state (deprecated — use ``swap_main_sub`` or ``swap_vfo_ab``).
+
+        On dual-RX profiles this delegates to :meth:`swap_main_sub`; on
+        single-RX profiles it delegates to :meth:`swap_vfo_ab` with
+        ``receiver=0``.
+        """
+        import warnings
+
+        warnings.warn(
+            "vfo_exchange() is deprecated; use swap_main_sub() or "
+            "swap_vfo_ab() explicitly",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        if self._profile.receiver_count > 1:
+            await self.swap_main_sub()
+        else:
+            await self.swap_vfo_ab(0)
 
     async def set_split_mode(self, on: bool) -> None:
         """Enable or disable split mode."""

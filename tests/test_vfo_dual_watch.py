@@ -1,5 +1,8 @@
 """Unit tests for VFO/dual-watch/scanning commands (Issue #132)."""
 
+import warnings
+from unittest.mock import patch
+
 import pytest
 
 from icom_lan import commands
@@ -9,6 +12,8 @@ from icom_lan.commands import (
     parse_bool_response,
     parse_level_response
 )
+from icom_lan.exceptions import CommandError
+from icom_lan.radio import IcomRadio
 from icom_lan.types import CivFrame
 from _command_test_helpers import bind_default_addr_globals
 
@@ -430,3 +435,147 @@ class TestCommandDistinctness:
     def test_scanning_distinct_from_tuning_step(self) -> None:
         """Scanning commands != tuning step commands."""
         assert commands.scan_start() != commands.get_tuning_step()
+
+
+# ---------------------------------------------------------------------------
+# swap_main_sub / swap_vfo_ab distinct methods (Issue #714)
+# ---------------------------------------------------------------------------
+
+
+def _make_radio(model: str) -> IcomRadio:
+    """Build a connected IcomRadio for ``model`` with a recording stub for sends."""
+    r = IcomRadio("127.0.0.1", model=model, timeout=0.05)
+    r._connected = True
+    r._check_connected = lambda: None  # type: ignore[method-assign]
+    return r
+
+
+class _RecordingSend:
+    """Stand-in for ``_send_civ_raw`` that captures CI-V payloads."""
+
+    def __init__(self) -> None:
+        self.frames: list[bytes] = []
+
+    async def __call__(self, civ: bytes, **_: object) -> None:
+        self.frames.append(civ)
+        return None
+
+
+class TestSwapMainSubVsSwapVfoAb:
+    """Issue #714 — distinct MAIN/SUB vs A/B swap/equalize methods."""
+
+    @pytest.mark.asyncio
+    async def test_ic7610_swap_main_sub_sends_0x07_0xb0(self) -> None:
+        r = _make_radio("IC-7610")
+        send = _RecordingSend()
+        with patch.object(r, "_send_civ_raw", send):
+            await r.swap_main_sub()
+        assert len(send.frames) == 1
+        # Frame tail is 07 B0 FD (command + data + terminator)
+        assert send.frames[0].endswith(b"\x07\xb0\xfd")
+
+    @pytest.mark.asyncio
+    async def test_ic7610_equalize_main_sub_sends_0x07_0xb1(self) -> None:
+        r = _make_radio("IC-7610")
+        send = _RecordingSend()
+        with patch.object(r, "_send_civ_raw", send):
+            await r.equalize_main_sub()
+        assert len(send.frames) == 1
+        assert send.frames[0].endswith(b"\x07\xb1\xfd")
+
+    @pytest.mark.asyncio
+    async def test_ic7610_swap_vfo_ab_selects_main_then_swaps(self) -> None:
+        """On dual-RX, swap_vfo_ab(0) first selects MAIN, then sends swap code."""
+        r = _make_radio("IC-7610")
+        set_vfo_calls: list[str] = []
+
+        async def _fake_set_vfo(vfo: str = "A") -> None:
+            set_vfo_calls.append(vfo.upper())
+
+        send = _RecordingSend()
+        with patch.object(r, "set_vfo", _fake_set_vfo), patch.object(
+            r, "_send_civ_raw", send
+        ):
+            await r.swap_vfo_ab(receiver=0)
+
+        assert set_vfo_calls == ["MAIN"]
+        # Falls back to swap_main_sub_code (0xB0) since ic7610.toml declares
+        # only the legacy ``swap`` key which maps to swap_main_sub_code.
+        assert len(send.frames) == 1
+        assert send.frames[0].endswith(b"\x07\xb0\xfd")
+
+    @pytest.mark.asyncio
+    async def test_ic7300_swap_main_sub_raises(self) -> None:
+        """Single-RX profile rejects swap_main_sub with CommandError."""
+        r = _make_radio("IC-7300")
+        with pytest.raises(CommandError, match="not dual-RX"):
+            await r.swap_main_sub()
+
+    @pytest.mark.asyncio
+    async def test_ic7300_equalize_main_sub_raises(self) -> None:
+        r = _make_radio("IC-7300")
+        with pytest.raises(CommandError, match="not dual-RX"):
+            await r.equalize_main_sub()
+
+    @pytest.mark.asyncio
+    async def test_ic7300_swap_vfo_ab_sends_directly(self) -> None:
+        """Single-RX: no receiver select, just the swap opcode."""
+        r = _make_radio("IC-7300")
+        set_vfo_calls: list[str] = []
+
+        async def _fake_set_vfo(vfo: str = "A") -> None:
+            set_vfo_calls.append(vfo.upper())
+
+        send = _RecordingSend()
+        with patch.object(r, "set_vfo", _fake_set_vfo), patch.object(
+            r, "_send_civ_raw", send
+        ):
+            await r.swap_vfo_ab(receiver=0)
+
+        # No receiver-select step on 1-Rx.
+        assert set_vfo_calls == []
+        assert len(send.frames) == 1
+        # IC-7300 profile declares swap_ab_code = 0xB0 via legacy mapping.
+        assert send.frames[0].endswith(b"\x07\xb0\xfd")
+
+    @pytest.mark.asyncio
+    async def test_ic7300_equalize_vfo_ab_sends_0x07_0xa0(self) -> None:
+        r = _make_radio("IC-7300")
+        send = _RecordingSend()
+        with patch.object(r, "_send_civ_raw", send):
+            await r.equalize_vfo_ab(receiver=0)
+        assert len(send.frames) == 1
+        # IC-7300 declares equal = [0xA0] in scheme=ab → equal_ab_code.
+        assert send.frames[0].endswith(b"\x07\xa0\xfd")
+
+    @pytest.mark.asyncio
+    async def test_vfo_exchange_alias_emits_deprecation_warning(self) -> None:
+        r = _make_radio("IC-7610")
+        send = _RecordingSend()
+        with patch.object(r, "_send_civ_raw", send):
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always")
+                await r.vfo_exchange()
+        # DeprecationWarning raised once, pointing to caller (this test file).
+        dep = [w for w in caught if issubclass(w.category, DeprecationWarning)]
+        assert len(dep) == 1
+        assert "vfo_exchange" in str(dep[0].message)
+        assert dep[0].filename.endswith("test_vfo_dual_watch.py")
+        # Still dispatches to swap_main_sub under the hood.
+        assert len(send.frames) == 1
+        assert send.frames[0].endswith(b"\x07\xb0\xfd")
+
+    @pytest.mark.asyncio
+    async def test_vfo_equalize_alias_emits_deprecation_warning(self) -> None:
+        r = _make_radio("IC-7300")
+        send = _RecordingSend()
+        with patch.object(r, "_send_civ_raw", send):
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always")
+                await r.vfo_equalize()
+        dep = [w for w in caught if issubclass(w.category, DeprecationWarning)]
+        assert len(dep) == 1
+        assert "vfo_equalize" in str(dep[0].message)
+        assert dep[0].filename.endswith("test_vfo_dual_watch.py")
+        assert len(send.frames) == 1
+        assert send.frames[0].endswith(b"\x07\xa0\xfd")
