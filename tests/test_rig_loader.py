@@ -224,6 +224,17 @@ class TestToProfile:
         profile = load_rig(TEMPLATE_PATH).to_profile()
         assert profile.receiver_count == 2
 
+    def test_transceiver_count_default(self):
+        """IC-7610 has no [radio].transceiver_count → defaults to 1."""
+        profile = load_rig(TEMPLATE_PATH).to_profile()
+        assert profile.transceiver_count == 1
+
+    def test_transceiver_count_ftx1(self):
+        """FTX-1 declares transceiver_count = 2 → must propagate to profile."""
+        ftx1_path = RIGS_DIR / "ftx1.toml"
+        profile = load_rig(ftx1_path).to_profile()
+        assert profile.transceiver_count == 2
+
     def test_capabilities_frozenset(self):
         profile = load_rig(TEMPLATE_PATH).to_profile()
         assert isinstance(profile.capabilities, frozenset)
