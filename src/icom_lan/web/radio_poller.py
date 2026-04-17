@@ -1274,29 +1274,41 @@ class RadioPoller:
                         logger.warning("set_band: unknown bsr_code=%d", band)
             case SelectVfo(vfo=vfo):
                 self._last_user_write_ts = time.monotonic()
-                # IC-7610 LAN audio is always from MAIN receiver (mono).
-                # To "switch" audio to SUB, we SWAP MAIN↔SUB (0x07 0xB0).
-                # This exchanges frequencies, modes, and all params between
-                # MAIN and SUB — audio, scope, everything follows MAIN.
+                # Select the target receiver via 0x07 0xD0 (MAIN) or 0xD1
+                # (SUB).  Pre-#771 this used a MAIN↔SUB swap (0x07 0xB0)
+                # as a hack so that LAN audio (MAIN-only at the time)
+                # would "follow" the selected receiver.  After #721/#755
+                # introduced Phones L/R Mix + audio_config, audio routing
+                # is independent of which receiver is selected, and the
+                # swap hack actively corrupted user state on every click
+                # (frequencies/modes traded places).  Now uses the proper
+                # CI-V receiver-select primitive.  Idempotent: re-clicking
+                # the active receiver emits no CI-V (the state event still
+                # fires so UI listeners can refresh).
                 vfo_upper = vfo.upper()
                 is_sub = vfo_upper in ("SUB", "B")
                 if is_sub:
                     self._ensure_receiver_supported(1, operation="select_vfo")
                 current = self._current_active()
-                need_swap = (is_sub and current == "MAIN") or (
-                    not is_sub and current == "SUB"
-                )
-                if need_swap:
-                    if self._profile.vfo_swap_code is None:
+                target = "SUB" if is_sub else "MAIN"
+                if target != current:
+                    code = (
+                        self._profile.vfo_sub_code
+                        if is_sub
+                        else self._profile.vfo_main_code
+                    )
+                    if code is None:
                         raise CommandError(
-                            f"select_vfo({vfo}) is unsupported by profile {self._profile.model}: "
-                            "no VFO swap code"
+                            f"select_vfo({vfo}) is unsupported by profile "
+                            f"{self._profile.model}: no MAIN/SUB select code"
                         )
-                    await self._civ(0x07, data=bytes([self._profile.vfo_swap_code]))
-                    logger.info("radio-poller: VFO swap (Main<>Sub)")
+                    await self._civ(0x07, data=bytes([code]))
+                    logger.info(
+                        "radio-poller: select VFO=%s (0x07 0x%02X)", target, code
+                    )
                     rs = getattr(self._radio, "_radio_state", None)
                     if rs is not None and hasattr(rs, "active"):
-                        rs.active = "SUB" if current == "MAIN" else "MAIN"
+                        rs.active = target
                 if self._on_state_event:
                     self._on_state_event("vfo_changed", {"vfo": vfo})
             case VfoSwap():
