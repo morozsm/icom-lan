@@ -162,6 +162,24 @@ describe('makeVfoHandlers', () => {
     expect(sendCommand).toHaveBeenCalledWith('set_vfo', { vfo: 'SUB' });
     expect(scrollIntoView).toHaveBeenCalled();
   });
+
+  it('sends quick_dualwatch on onQuickDw (backend composes equalize + DW ON)', () => {
+    makeVfoHandlers().onQuickDw();
+    expect(sendCommand).toHaveBeenCalledWith('quick_dualwatch', {});
+  });
+
+  it('sends quick_split on onQuickSplit (backend composes equalize + SPLIT ON)', () => {
+    makeVfoHandlers().onQuickSplit();
+    expect(sendCommand).toHaveBeenCalledWith('quick_split', {});
+  });
+
+  it('sends set_main_sub_tracking with the on flag', () => {
+    makeVfoHandlers().onTrackingToggle(true);
+    expect(sendCommand).toHaveBeenCalledWith('set_main_sub_tracking', { on: true });
+
+    makeVfoHandlers().onTrackingToggle(false);
+    expect(sendCommand).toHaveBeenCalledWith('set_main_sub_tracking', { on: false });
+  });
 });
 
 describe('makeModeHandlers', () => {

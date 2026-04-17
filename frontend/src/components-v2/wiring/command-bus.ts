@@ -124,6 +124,12 @@ export function makeVfoHandlers() {
       cmd('set_filter', { filter, receiver });
     },
     onDualWatchToggle: (on: boolean) => cmd('set_dual_watch', { on }),
+    // Epic #774 — composite triggers on the backend.  Double-click on the
+    // DW / SPLIT button fires these; backend emits equalize M→S then the
+    // corresponding toggle-on atomically.
+    onQuickDw: () => cmd('quick_dualwatch'),
+    onQuickSplit: () => cmd('quick_split'),
+    onTrackingToggle: (on: boolean) => cmd('set_main_sub_tracking', { on }),
   };
 }
 
