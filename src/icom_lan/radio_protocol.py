@@ -60,6 +60,8 @@ __all__ = [
     "ModeInfoCapable",
     "ScopeCapable",
     "DualReceiverCapable",
+    "ReceiverBankCapable",
+    "VfoSlotCapable",
     "StateCacheCapable",
     "RecoverableConnection",
     "AdvancedControlCapable",
@@ -543,6 +545,73 @@ class DualReceiverCapable(Protocol):
 
     async def get_main_sub_tracking(self) -> bool:
         """Get Main/Sub frequency tracking on/off state."""
+        ...
+
+
+@runtime_checkable
+class ReceiverBankCapable(Protocol):
+    """Radio exposes a bank of independent receivers.
+
+    Surfaces the ``Transceiver → Receiver → VFO`` hierarchy without breaking
+    the existing ``receiver: int = 0`` parameter convention used across the
+    codebase.  A *receiver* is a full signal chain (RF front-end, IF, demod)
+    that can be tuned independently; each receiver in turn owns a pair of
+    VFO slots (A/B) accessed via :class:`VfoSlotCapable`.
+
+    On a single-receiver radio ``receiver_count == 1`` and
+    :meth:`select_receiver` is a no-op for ``which == 0``.  On a dual-receiver
+    rig (e.g. IC-7610 Main/Sub) ``receiver_count == 2`` and the ``which``
+    argument accepts either the integer index (``0`` for Main, ``1`` for Sub)
+    or the case-insensitive name (``"main"`` / ``"sub"``).
+    """
+
+    @property
+    def receiver_count(self) -> int:
+        """Number of independent receivers exposed by this transceiver."""
+        ...
+
+    async def select_receiver(self, which: int | str) -> None:
+        """Make ``which`` the active receiver for subsequent commands.
+
+        Accepts an integer index (``0``-based) or a case-insensitive name
+        (``"main"`` / ``"sub"``).  Implementations may reject out-of-range
+        values with :class:`ValueError`.
+        """
+        ...
+
+    async def get_active_receiver(self) -> int:
+        """Return the index of the currently active receiver."""
+        ...
+
+
+@runtime_checkable
+class VfoSlotCapable(Protocol):
+    """Radio exposes VFO A/B slots per receiver.
+
+    Completes the ``Transceiver → Receiver → VFO`` hierarchy: each receiver
+    owns a pair of VFO slots (A and B) with independent state tracked by
+    :class:`~icom_lan.radio_state.VfoSlotState` (frequency, mode, filter,
+    etc.).  Operations take an explicit ``receiver`` index matching the
+    existing ``receiver: int = 0`` convention.
+
+    The slot parameter is always a single-character string (``"A"`` or
+    ``"B"``), case-insensitive on input and upper-case on output.
+    """
+
+    async def get_vfo_slot(self, receiver: int = 0) -> str:
+        """Return the active VFO slot (``"A"`` or ``"B"``) for ``receiver``."""
+        ...
+
+    async def set_vfo_slot(self, slot: str, receiver: int = 0) -> None:
+        """Make ``slot`` (``"A"`` or ``"B"``) the active VFO on ``receiver``."""
+        ...
+
+    async def swap_vfo_ab(self, receiver: int = 0) -> None:
+        """Swap VFO A and VFO B state on ``receiver`` (frequency, mode, …)."""
+        ...
+
+    async def equalize_vfo_ab(self, receiver: int = 0) -> None:
+        """Copy the active VFO's state to the inactive VFO on ``receiver``."""
         ...
 
 
