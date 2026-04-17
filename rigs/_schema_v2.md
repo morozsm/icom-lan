@@ -25,7 +25,9 @@ model = "IC-7610"            # Display name
 manufacturer = "Icom"        # "Icom" | "Yaesu" | "Kenwood" | "Xiegu" | "Lab599" | "SDRplay" | ...
 civ_addr = 0x98              # CI-V address (CI-V protocol only)
 default_baud = 115200        # Serial baud rate
-receiver_count = 2           # 1 or 2
+receiver_count = 2           # 1 or 2 — number of simultaneous receivers in one transceiver
+transceiver_count = 1        # 1 or 2 — number of independent transceivers (defaults to 1;
+                             # set to 2 for dual-transceiver rigs like Yaesu FTX-1)
 has_lan = true
 has_wifi = false
 has_ethernet = false
@@ -237,7 +239,7 @@ declares how per-receiver and per-slot operations are routed on the wire.
 
 | Scheme | Receivers | VFOs | Radios |
 |--------|-----------|------|--------|
-| `main_sub` | 2 | 2 (A/B each) | IC-7610 (cmd29), IC-9700 (receiver-select only) |
+| `main_sub` | 2 | 2 (A/B each) | IC-7610 (cmd29), IC-9700 (no cmd29; receiver-select via `0x07 0xD0/0xD1`) |
 | `ab` | 1 | 2 | IC-7300, IC-705, TX-500 (A/B, select+send) |
 | `ab_shared` | 2 | 1 | FTX-1 (2 rx share VFO set) |
 | `single` | 1 | 1 | RSPdx (SDR, tuner only) |
@@ -256,6 +258,8 @@ Parsed by `src/icom_lan/rig_loader.py:575-605` into
 | `equal_main_sub` | `list[int]` | `[0xB1]` | dual-RX rigs that support MAIN=SUB equalize |
 | `swap_ab`  | `list[int]` | `[0xB0]` (single byte) or `[0x07, 0xB0]` | rigs with per-receiver VFO A↔B swap |
 | `equal_ab` | `list[int]` | `[0xA0]` or `[0x07, 0xA0]` | rigs with per-receiver VFO A=B equalize |
+| `vfo_a_select` (planned — #712/#715) | `list[int]` | `[0x07, 0x00]` | per-receiver VFO-A slot-select byte codes; planned for rigs that need explicit slot routing in addition to receiver selection |
+| `vfo_b_select` (planned — #712/#715) | `list[int]` | `[0x07, 0x01]` | per-receiver VFO-B slot-select byte codes; not yet present in `RadioProfile` (parallel PR) |
 
 ### Example — dual-RX (IC-7610 / IC-9700 pattern)
 

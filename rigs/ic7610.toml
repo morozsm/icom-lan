@@ -286,8 +286,8 @@ defaults = [15000, 10000, 7000]
 scheme = "main_sub"
 main_select = [0xD0]
 sub_select = [0xD1]
-swap = [0xB0]
-equal = [0xB1]
+swap_main_sub = [0xB0]   # MAIN ↔ SUB receiver swap (issue #710)
+equal_main_sub = [0xB1]  # MAIN = SUB receiver equalize (issue #710)
 
 # ── Frequency Ranges ─────────────────────────────────────────────
 
@@ -385,8 +385,13 @@ bsr_code = 0x0A
 # Excluded — transceiver-global per PDF + wfview agreement:
 #   0x14 0x0B mic gain, 0x14 0x0C key speed, 0x14 0x0E comp level,
 #   0x14 0x0F break-in delay, 0x14 0x14-17 drive/moni/vox/anti-vox.
+# PDF-vs-wfview disagreement — PDF primary source wins (issue #708 review):
+#   0x14 0x0D notch filter — PDF p.3 shows the 29-glyph, wfview records
+#   Command29=false; PDF takes precedence as the primary IC-7610 reference.
+#   Without this route, both receivers would share a single notch position
+#   on dual-RX — a real functional limitation.
 # Ambiguous — PDF 29-glyph present, wfview disagrees or absent (left out):
-#   0x14 0x0D notch filter, 0x1A 0x0A per-Rx OVF status.
+#   0x1A 0x0A per-Rx OVF status.
 # See docs/parity/ic7610_command_matrix.json for per-row rationale (issue #725).
 
 [cmd29]
@@ -400,6 +405,8 @@ routes = [
     [0x14, 0x06],     # NR Level
     [0x14, 0x07],     # PBT Inner
     [0x14, 0x08],     # PBT Outer
+    [0x14, 0x0D],     # Notch Filter (PDF p.3 29-glyph; wfview Command29=false;
+                      #  PDF precedence — per-receiver notch position)
     [0x14, 0x12],     # NB Level
     [0x14, 0x13],     # DIGI-SEL Shift
     [0x15, 0x01],     # S-meter squelch status
