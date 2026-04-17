@@ -1351,6 +1351,97 @@ class TestAudioHandlerCodecDetection:
         assert frame[1] == AUDIO_CODEC_PCM16
 
 
+class TestBroadcasterFrameMsInvariant:
+    """Wire-header ``frame_ms`` must match the actual payload size (issue #765).
+
+    Regression guard for the 2026-04-16 companion crash (epic #764): the
+    broadcaster previously hardcoded ``frame_ms=20`` regardless of the radio's
+    real packet size, causing downstream consumers to allocate mis-sized
+    ring buffers. The fix derives the value from ``len(audio_data)`` on emit.
+    """
+
+    async def _capture_with_payload(
+        self, audio_codec: object, sample_rate: int, payload_size: int, channels: int
+    ) -> bytes:
+        from icom_lan.audio_bus import AudioBus
+        from icom_lan.radio_protocol import AudioCapable
+        from icom_lan.web.handlers import AudioBroadcaster, AudioHandler
+        from icom_lan.web.websocket import WebSocketConnection
+
+        mock_ws = MagicMock(spec=WebSocketConnection)
+        mock_radio = MagicMock(spec=AudioCapable)
+        mock_radio.capabilities = {"audio"}
+        mock_radio.audio_codec = audio_codec
+        mock_radio.audio_sample_rate = sample_rate
+        mock_radio.start_audio_rx_opus = AsyncMock()
+        mock_radio.stop_audio_rx_opus = AsyncMock()
+
+        bus = AudioBus(mock_radio)
+        mock_radio.audio_bus = bus
+
+        broadcaster = AudioBroadcaster(mock_radio)
+        handler = AudioHandler(mock_ws, mock_radio, broadcaster)
+        await handler._start_rx()
+
+        # Force the broadcaster's channel count — some codecs imply stereo,
+        # some mono; this test explicitly controls payload shape.
+        broadcaster._channels = channels
+
+        mock_pkt = MagicMock()
+        mock_pkt.data = b"\x00\x01" * (payload_size // 2)
+        bus._on_opus_packet(mock_pkt)
+        await asyncio.sleep(0.1)
+
+        return handler._frame_queue.get_nowait()
+
+    @staticmethod
+    def _parse_header(frame: bytes) -> tuple[int, int, int, int]:
+        """Return (sr_hz, channels, frame_ms, payload_len)."""
+        import struct
+
+        from icom_lan.web.protocol import AUDIO_HEADER_SIZE
+
+        _, _, _seq, sr100, ch, frame_ms = struct.unpack_from("<BBHHBB", frame, 0)
+        return sr100 * 100, ch, frame_ms, len(frame) - AUDIO_HEADER_SIZE
+
+    async def test_frame_ms_matches_1364_byte_ic7610_packet(self) -> None:
+        """IC-7610 real-world: 1364 B @ 48 kHz mono PCM16 → 14 ms (was 20)."""
+        from icom_lan.types import AudioCodec
+
+        frame = await self._capture_with_payload(
+            AudioCodec.PCM_1CH_16BIT, 48000, 1364, channels=1
+        )
+        sr, ch, frame_ms, payload_len = self._parse_header(frame)
+        expected = (payload_len * 1000) // (sr * ch * 2)
+        assert frame_ms == expected, (
+            f"header lies: declared {frame_ms}ms but payload={payload_len}B "
+            f"@ {sr}Hz × {ch}ch needs {expected}ms"
+        )
+        assert frame_ms == 14
+
+    async def test_frame_ms_matches_1920_byte_exact_20ms_packet(self) -> None:
+        """Exactly 20 ms @ 48 kHz mono PCM16 = 1920 B → frame_ms == 20."""
+        from icom_lan.types import AudioCodec
+
+        frame = await self._capture_with_payload(
+            AudioCodec.PCM_1CH_16BIT, 48000, 1920, channels=1
+        )
+        _, _, frame_ms, _ = self._parse_header(frame)
+        assert frame_ms == 20
+
+    async def test_frame_ms_matches_3840_byte_stereo_20ms_packet(self) -> None:
+        """Stereo: 3840 B @ 48 kHz × 2ch × 2bytes = 20 ms."""
+        from icom_lan.types import AudioCodec
+
+        frame = await self._capture_with_payload(
+            AudioCodec.PCM_2CH_16BIT, 48000, 3840, channels=2
+        )
+        sr, ch, frame_ms, payload_len = self._parse_header(frame)
+        expected = (payload_len * 1000) // (sr * ch * 2)
+        assert frame_ms == expected
+        assert frame_ms == 20
+
+
 class TestAudioHandlerTxTranscoderRate:
     """TX transcoder must use the radio's negotiated sample rate (issue #691).
 
