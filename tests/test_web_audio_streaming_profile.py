@@ -15,7 +15,6 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from icom_lan._audio_buffer_pool import AudioBufferPool
 from icom_lan._audio_codecs import decode_ulaw_to_pcm16
 from icom_lan.types import AudioCodec
 from icom_lan.web.handlers import AudioBroadcaster
@@ -213,37 +212,6 @@ class TestAudioBroadcasterPerformance:
         throughput = broadcaster._seq / elapsed
 
         print(f"relay loop throughput: {throughput:.0f} frames/sec")
-
-
-class TestAudioBufferPoolIntegration:
-    """Verify buffer pool reduces allocation pressure."""
-
-    def test_buffer_pool_allocation_savings(self) -> None:
-        """Compare allocation patterns with/without buffer pool."""
-        # Without pool: allocate new buffer each time
-        allocations_without = 0
-        for _ in range(1000):
-            _ = bytearray(1280)
-            allocations_without += 1
-
-        # With pool: acquire and release promptly (simulates streaming use)
-        pool = AudioBufferPool(buffer_size=1280, max_buffers=5)
-        allocations_with = 0
-        for i in range(1000):
-            buf = pool.acquire()
-            allocations_with += 1
-            # Simulate work and immediate release
-            buf[:] = b'\x00'
-            pool.release(buf)
-
-        stats = pool.stats()
-        print(f"\nBuffer pool: {stats['available']} available, {stats['in_use']} in_use")
-        print(f"Pre-allocated buffers: {stats['total_allocated']}")
-        print(f"Without pool: {allocations_without} allocations")
-        print(f"With pool: {allocations_with} acquire calls (but only 5 actual allocations)")
-        # Pool should have returned to initial state
-        assert stats['available'] <= 5, "Pool should have released buffers"
-        assert stats['in_use'] == 0, "No buffers should be in use"
 
 
 class TestAudioStreamingEndToEnd:

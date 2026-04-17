@@ -11,7 +11,6 @@ import sys
 
 __all__ = [
     "get_audio_sample_rate",
-    "get_audio_buffer_pool_size",
     "get_audio_broadcaster_high_watermark",
     "get_audio_client_high_watermark",
 ]
@@ -22,7 +21,6 @@ _SUPPORTED_SAMPLE_RATES = (8000, 16000, 24000, 48000)
 
 _DEFAULTS: dict[str, int] = {
     "ICOM_AUDIO_SAMPLE_RATE": 48000,
-    "ICOM_AUDIO_BUFFER_POOL_SIZE": 5,
     "ICOM_AUDIO_BROADCASTER_HIGH_WATERMARK": 10,
     "ICOM_AUDIO_CLIENT_HIGH_WATERMARK": 10,
 }
@@ -83,14 +81,6 @@ def get_audio_sample_rate() -> int:
         print(f"Warning: {msg}", file=sys.stderr)
         return default
     return value
-
-
-def get_audio_buffer_pool_size() -> int:
-    """Return the configured audio buffer pool size.
-
-    Reads ``ICOM_AUDIO_BUFFER_POOL_SIZE``.  Must be a positive integer.
-    """
-    return _read_positive_int("ICOM_AUDIO_BUFFER_POOL_SIZE")
 
 
 def get_audio_broadcaster_high_watermark() -> int:

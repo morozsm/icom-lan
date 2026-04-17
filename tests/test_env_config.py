@@ -49,45 +49,6 @@ class TestGetAudioSampleRate:
         assert "ICOM_AUDIO_SAMPLE_RATE" in caplog.text
 
 
-class TestGetAudioBufferPoolSize:
-    def test_default_when_unset(self, monkeypatch):
-        monkeypatch.delenv("ICOM_AUDIO_BUFFER_POOL_SIZE", raising=False)
-        from icom_lan.env_config import get_audio_buffer_pool_size
-
-        assert get_audio_buffer_pool_size() == 5
-
-    def test_valid_override(self, monkeypatch):
-        monkeypatch.setenv("ICOM_AUDIO_BUFFER_POOL_SIZE", "15")
-        from icom_lan.env_config import get_audio_buffer_pool_size
-
-        assert get_audio_buffer_pool_size() == 15
-
-    def test_invalid_string_falls_back(self, monkeypatch, caplog):
-        monkeypatch.setenv("ICOM_AUDIO_BUFFER_POOL_SIZE", "bad")
-        from icom_lan.env_config import get_audio_buffer_pool_size
-
-        with caplog.at_level(logging.WARNING, logger="icom_lan.env_config"):
-            result = get_audio_buffer_pool_size()
-        assert result == 5
-        assert "ICOM_AUDIO_BUFFER_POOL_SIZE" in caplog.text
-
-    def test_zero_falls_back(self, monkeypatch, caplog):
-        monkeypatch.setenv("ICOM_AUDIO_BUFFER_POOL_SIZE", "0")
-        from icom_lan.env_config import get_audio_buffer_pool_size
-
-        with caplog.at_level(logging.WARNING, logger="icom_lan.env_config"):
-            result = get_audio_buffer_pool_size()
-        assert result == 5
-
-    def test_negative_falls_back(self, monkeypatch, caplog):
-        monkeypatch.setenv("ICOM_AUDIO_BUFFER_POOL_SIZE", "-3")
-        from icom_lan.env_config import get_audio_buffer_pool_size
-
-        with caplog.at_level(logging.WARNING, logger="icom_lan.env_config"):
-            result = get_audio_buffer_pool_size()
-        assert result == 5
-
-
 class TestGetAudioBroadcasterHighWatermark:
     def test_default_when_unset(self, monkeypatch):
         monkeypatch.delenv("ICOM_AUDIO_BROADCASTER_HIGH_WATERMARK", raising=False)

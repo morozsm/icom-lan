@@ -7,13 +7,11 @@ import logging
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any, Callable, Protocol, cast
 
-from ..._audio_buffer_pool import AudioBufferPool
 from ..._audio_codecs import decode_ulaw_to_pcm16
 from ..._audio_transcoder import PcmOpusTranscoder, create_pcm_opus_transcoder
 from ...dsp.tap_registry import TapHandle, TapRegistry
 from ...env_config import (
     get_audio_broadcaster_high_watermark,
-    get_audio_buffer_pool_size,
     get_audio_client_high_watermark,
 )
 from ...types import AudioCodec
@@ -84,13 +82,6 @@ class AudioBroadcaster:
         # Multi-consumer PCM tap registry (replaces single _pcm_tap)
         self._tap_registry = TapRegistry()
         self._legacy_tap_handle: TapHandle | None = None
-        # Buffer pool for audio encoding/decoding operations
-        # Pre-allocates buffers for common audio frame sizes (20ms @ 16kHz stereo = 1280 bytes)
-        self._buffer_pool = AudioBufferPool(
-            buffer_size=1280,
-            max_buffers=get_audio_buffer_pool_size(),
-            name="audio-broadcaster",
-        )
 
     async def subscribe(
         self, ws: WebSocketConnection | None = None
@@ -205,13 +196,17 @@ class AudioBroadcaster:
         if isinstance(_codec, AudioCodec):
             # Map radio codec → web transport codec
             # For ulaw codecs, we transcode to PCM16 in _relay_loop
+            # NOTE: PCM_1CH_8BIT / PCM_2CH_8BIT intentionally NOT mapped.  No
+            # tested backend negotiates 8-bit PCM; a speculative "upcast in
+            # future" map previously existed but the upcast was never wired,
+            # so any 8-bit payload was shipped under a 16-bit label and
+            # garbled by consumers.  Removed per #765; unknown codec falls
+            # through to the PCM16 default + logs the value.
             _CODEC_MAP = {
                 AudioCodec.OPUS_1CH: AUDIO_CODEC_OPUS,
                 AudioCodec.OPUS_2CH: AUDIO_CODEC_OPUS,
                 AudioCodec.PCM_1CH_16BIT: AUDIO_CODEC_PCM16,
                 AudioCodec.PCM_2CH_16BIT: AUDIO_CODEC_PCM16,
-                AudioCodec.PCM_1CH_8BIT: AUDIO_CODEC_PCM16,  # upcast in future
-                AudioCodec.PCM_2CH_8BIT: AUDIO_CODEC_PCM16,
                 AudioCodec.ULAW_1CH: AUDIO_CODEC_PCM16,  # decoded in _relay_loop
                 AudioCodec.ULAW_2CH: AUDIO_CODEC_PCM16,  # decoded in _relay_loop
             }
@@ -219,7 +214,6 @@ class AudioBroadcaster:
             # Store original codec for decoding logic
             self._radio_codec = _codec
             if _codec in (
-                AudioCodec.PCM_2CH_8BIT,
                 AudioCodec.PCM_2CH_16BIT,
                 AudioCodec.ULAW_2CH,
                 AudioCodec.OPUS_2CH,
