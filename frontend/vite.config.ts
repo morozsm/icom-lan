@@ -49,9 +49,50 @@ export default defineConfig({
     target: ['es2020', 'safari14'],
   },
   test: {
-    environment: 'jsdom',
-    include: ['src/**/*.test.ts'],
-    pool: 'threads',
-    isolate: false,
+    // Split the test suite into two projects to contain the cost
+    // of test-file isolation.  Under ``isolate: false`` (PR #707 —
+    // ~10× faster) modules are cached across test files; any file
+    // that does module-scope ``vi.mock(...)`` is vulnerable to load
+    // ordering — a sibling file that imports the real module first
+    // pins it in the cache and the hoisted mock becomes a no-op.
+    // Rather than fixing each affected file (treadmill, and any
+    // new test file that uses ``vi.mock`` becomes a future flake),
+    // route the known-sensitive files through a small isolated pool
+    // and keep the rest fast.  Issue #771.
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: 'fast',
+          environment: 'jsdom',
+          include: ['src/**/*.test.ts'],
+          exclude: [
+            'src/components-v2/wiring/__tests__/keyboard-wiring.test.ts',
+            'src/components-v2/wiring/__tests__/vfo-wiring.test.ts',
+            'src/components-v2/wiring/__tests__/focus-mode-race.test.ts',
+            'src/components-v2/panels/__tests__/AudioRoutingControl.test.ts',
+            'src/lib/stores/radio.svelte.test.ts',
+          ],
+          pool: 'threads',
+          isolate: false,
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'isolated',
+          environment: 'jsdom',
+          include: [
+            'src/components-v2/wiring/__tests__/keyboard-wiring.test.ts',
+            'src/components-v2/wiring/__tests__/vfo-wiring.test.ts',
+            'src/components-v2/wiring/__tests__/focus-mode-race.test.ts',
+            'src/components-v2/panels/__tests__/AudioRoutingControl.test.ts',
+            'src/lib/stores/radio.svelte.test.ts',
+          ],
+          pool: 'threads',
+          isolate: true,
+        },
+      },
+    ],
   },
 })
