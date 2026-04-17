@@ -551,15 +551,15 @@ export function toVfoOpsProps(
   state: ServerState | null,
   caps: Capabilities | null,
 ): VfoOpsProps {
-  const activeVfo = state?.active === 'SUB' ? 'sub' : 'main';
-  const txVfo = state?.split
-    ? activeVfo === 'main'
-      ? 'sub'
-      : 'main'
-    : activeVfo;
+  // IC-7610: TX is always MAIN, except in Split where TX is SUB
+  // (cross-band: RX on MAIN, TX on SUB).  Manual p. 3-2, 4-9.
+  // The previously-active-receiver based derivation was wrong: TX
+  // does not follow the selected receiver, only the split flag.
+  const split = state?.split ?? false;
+  const txVfo: 'main' | 'sub' = split ? 'sub' : 'main';
 
   return {
-    splitActive: state?.split ?? false,
+    splitActive: split,
     txVfo,
     dualWatch: state?.dualWatch ?? false,
     mainSubTracking: state?.mainSubTracking ?? false,

@@ -217,11 +217,11 @@
       dualWatchActive={vfoOps.dualWatch}
       txVfo={vfoOps.txVfo}
       onSwap={vfoHandlers.onSwap}
-      onCopy={vfoHandlers.onCopy}
       onEqual={vfoHandlers.onEqual}
       onSplitToggle={vfoHandlers.onSplitToggle}
-      onDualWatchToggle={() => vfoHandlers.onDualWatchToggle(!vfoOps.dualWatch)}
-      onTxVfoChange={vfoHandlers.onTxVfoChange}
+      onQuickSplit={vfoHandlers.onQuickSplit}
+      onDualWatchToggle={vfoHandlers.onDualWatchToggle}
+      onQuickDw={vfoHandlers.onQuickDw}
       onMainVfoClick={vfoHandlers.onMainVfoClick}
       onSubVfoClick={vfoHandlers.onSubVfoClick}
       onMainModeClick={vfoHandlers.onMainModeClick}
