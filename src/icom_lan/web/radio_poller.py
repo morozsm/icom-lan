@@ -148,6 +148,8 @@ __all__ = [
     "SetUtcOffset",
     "QuickSplit",
     "QuickDualWatch",
+    "QuickDwTrigger",
+    "QuickSplitTrigger",
 ]
 
 logger = logging.getLogger(__name__)
@@ -177,7 +179,9 @@ from .._poller_types import (  # noqa: E402
     PttOff,
     PttOn,
     QuickDualWatch,
+    QuickDwTrigger,
     QuickSplit,
+    QuickSplitTrigger,
     ScanSetDfSpan,
     ScanSetResume,
     ScanStart,
@@ -1652,6 +1656,25 @@ class RadioPoller:
                 await _r.quick_split()
             case QuickDualWatch():
                 await _r.quick_dual_watch()
+            case QuickDwTrigger():
+                self._last_user_write_ts = time.monotonic()
+                if CAP_DUAL_RX in self._caps:
+                    await _r.equalize_main_sub()
+                    await _r.set_dual_watch(True)
+                    logger.info("radio-poller: quick DW (equalize + DW ON)")
+                    if self._on_state_event:
+                        self._on_state_event("dual_watch_changed", {"on": True})
+            case QuickSplitTrigger():
+                self._last_user_write_ts = time.monotonic()
+                if CAP_DUAL_RX in self._caps:
+                    await _r.equalize_main_sub()
+                    await _r.set_split_mode(True)
+                    logger.info("radio-poller: quick SPLIT (equalize + SPLIT ON)")
+                    if self._radio_state:
+                        self._radio_state.split = True
+                        self.bump_revision()
+                    if self._on_state_event:
+                        self._on_state_event("split_changed", {"on": True})
             case Speak(mode=what):
                 await _r.get_speech(what)
 

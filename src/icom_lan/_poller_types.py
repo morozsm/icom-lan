@@ -23,7 +23,9 @@ __all__ = [
     "PttOff",
     "PttOn",
     "QuickDualWatch",
+    "QuickDwTrigger",
     "QuickSplit",
+    "QuickSplitTrigger",
     "ScanSetDfSpan",
     "ScanSetResume",
     "ScanStart",
@@ -775,6 +777,22 @@ class QuickDualWatch:
 
 
 @dataclass(frozen=True, slots=True)
+class QuickDwTrigger:
+    """Emulate the physical [DUAL-W] long-press:
+    equalize MAIN→SUB, then enable Dual Watch.
+    Composite of `0x07 0xB1` + `0x07 0xC1`.
+    """
+
+
+@dataclass(frozen=True, slots=True)
+class QuickSplitTrigger:
+    """Emulate the physical [SPLIT] long-press:
+    equalize MAIN→SUB, then enable Split.
+    Composite of `0x07 0xB1` + `0x0F 0x01`.
+    """
+
+
+@dataclass(frozen=True, slots=True)
 class Speak:
     """Trigger voice synthesizer: 0=all, 1=freq+S, 2=mode."""
     mode: int = 0
@@ -896,6 +914,8 @@ Command = (
     | SetUtcOffset
     | QuickSplit
     | QuickDualWatch
+    | QuickDwTrigger
+    | QuickSplitTrigger
     | Speak
 )
 

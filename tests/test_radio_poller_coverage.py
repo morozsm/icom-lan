@@ -18,6 +18,8 @@ from icom_lan.web.radio_poller import (
     EnableScope,
     PttOff,
     PttOn,
+    QuickDwTrigger,
+    QuickSplitTrigger,
     RadioPoller,
     SelectVfo,
     SetAgc,
@@ -83,6 +85,9 @@ def _make_radio(active: str = "MAIN") -> MagicMock:
     radio.set_system_time = AsyncMock()
     radio.get_system_time = AsyncMock(return_value=(0, 0))
     radio.set_dual_watch = AsyncMock()
+    radio.set_split_mode = AsyncMock()
+    radio.equalize_main_sub = AsyncMock()
+    radio.swap_main_sub = AsyncMock()
     radio.get_dual_watch = AsyncMock(return_value=False)
     radio.set_tuner_status = AsyncMock()
     radio.get_tuner_status = AsyncMock(return_value=0)
@@ -531,6 +536,55 @@ def test_fast_cmds_include_comp_meter_for_ic7610() -> None:
     poller = RadioPoller(_make_radio(), StateCache(), CommandQueue())
 
     assert (0x15, 0x14) in poller._FAST_CMDS  # noqa: SLF001
+
+
+@pytest.mark.asyncio
+async def test_execute_quick_dw_trigger_equalizes_then_enables_dw() -> None:
+    """QuickDwTrigger: composite equalize_main_sub() then set_dual_watch(True).
+
+    Order matters — DW must enable on a state that already matches MAIN.
+    """
+    events: list[tuple[str, dict]] = []
+    radio = _make_radio(active="MAIN")
+    poller = RadioPoller(
+        radio,
+        StateCache(),
+        CommandQueue(),
+        on_state_event=lambda name, data: events.append((name, data)),
+    )
+
+    await poller._execute(QuickDwTrigger())  # noqa: SLF001
+
+    radio.equalize_main_sub.assert_awaited_once_with()
+    radio.set_dual_watch.assert_awaited_once_with(True)
+    # Event is fired so UI listeners can refresh.
+    assert ("dual_watch_changed", {"on": True}) in events
+
+
+@pytest.mark.asyncio
+async def test_execute_quick_split_trigger_equalizes_then_enables_split() -> None:
+    """QuickSplitTrigger: composite equalize_main_sub() then set_split_mode(True).
+
+    Also flips RadioState.split so the UI reflects the change immediately.
+    """
+    events: list[tuple[str, dict]] = []
+    radio = _make_radio(active="MAIN")
+    state = RadioState()
+    assert state.split is False
+    poller = RadioPoller(
+        radio,
+        StateCache(),
+        CommandQueue(),
+        on_state_event=lambda name, data: events.append((name, data)),
+        radio_state=state,
+    )
+
+    await poller._execute(QuickSplitTrigger())  # noqa: SLF001
+
+    radio.equalize_main_sub.assert_awaited_once_with()
+    radio.set_split_mode.assert_awaited_once_with(True)
+    assert state.split is True
+    assert ("split_changed", {"on": True}) in events
 
 
 @pytest.mark.asyncio

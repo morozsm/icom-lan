@@ -27,6 +27,8 @@ from icom_lan.web.protocol import (
 from icom_lan.web.radio_poller import (
     PttOff,
     PttOn,
+    QuickDwTrigger,
+    QuickSplitTrigger,
     SelectVfo,
     SetAfLevel,
     SetAgc,
@@ -568,6 +570,8 @@ def _scope_frame() -> ScopeFrame:
         ),
         ("set_dual_watch", {"on": True}, SetDualWatch, {"on": True}, {"on": True}),
         ("set_dual_watch", {"on": False}, SetDualWatch, {"on": False}, {"on": False}),
+        ("quick_dualwatch", {}, QuickDwTrigger, {}, {}),
+        ("quick_split", {}, QuickSplitTrigger, {}, {}),
         ("set_compressor", {"on": True}, SetCompressor, {"on": True}, {"on": True}),
         ("set_scope_edge", {"edge": 2}, SetScopeEdge, {"edge": 2}, {"edge": 2}),
         ("set_scope_vbw", {"narrow": True}, SetScopeVbw, {"narrow": True}, {"narrow": True}),

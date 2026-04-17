@@ -128,6 +128,8 @@ from ..radio_poller import (
     SetUtcOffset,
     QuickSplit,
     QuickDualWatch,
+    QuickDwTrigger,
+    QuickSplitTrigger,
     Speak,
 )
 from ..runtime_helpers import (
@@ -332,6 +334,13 @@ class ControlHandler:
             "set_quick_split",
             "get_quick_dual_watch",
             "set_quick_dual_watch",
+            # Epic #774 — Quick-DW / Quick-Split composite triggers
+            # (emulate the IC-7610 front-panel long-press: equalize M→S
+            # then enable DW/Split).  Distinct from the broken
+            # get_/set_quick_* aliases above, which send the config-flag
+            # read frame 0x1A 05 00 32/33.  See follow-up in epic #774.
+            "quick_dualwatch",
+            "quick_split",
             # Issue #677 — CW auto-tune via FFT peak detection
             "cw_auto_tune",
         ]
@@ -1861,6 +1870,14 @@ class ControlHandler:
                 return {}
             case "get_quick_dual_watch" | "set_quick_dual_watch":
                 q.put(QuickDualWatch())
+                return {}
+            case "quick_dualwatch":
+                self._ensure_capability("dual_rx", "quick_dualwatch")
+                q.put(QuickDwTrigger())
+                return {}
+            case "quick_split":
+                self._ensure_capability("dual_rx", "quick_split")
+                q.put(QuickSplitTrigger())
                 return {}
             case _:
                 return None
