@@ -231,21 +231,66 @@ unit = "dBFS"
 
 ## VFO Schemes
 
+The public contract models a radio as `Transceiver → Receiver → VFO` (see
+`.claude/architecture/protocol.md` "Receiver tier"). The TOML `[vfo]` block
+declares how per-receiver and per-slot operations are routed on the wire.
+
 | Scheme | Receivers | VFOs | Radios |
 |--------|-----------|------|--------|
-| `main_sub` | 2 | 2 | IC-7610 (MAIN/SUB, cmd29) |
-| `ab` | 1 | 2 | IC-7300, TX-500 (A/B, select+send) |
+| `main_sub` | 2 | 2 (A/B each) | IC-7610 (cmd29), IC-9700 (receiver-select only) |
+| `ab` | 1 | 2 | IC-7300, IC-705, TX-500 (A/B, select+send) |
 | `ab_shared` | 2 | 1 | FTX-1 (2 rx share VFO set) |
 | `single` | 1 | 1 | RSPdx (SDR, tuner only) |
+
+### Fields
+
+Parsed by `src/icom_lan/rig_loader.py:575-605` into
+`RadioProfile` (`src/icom_lan/profiles.py:150-198`). Landed in #710.
+
+| Field | Type | Example | When required |
+|-------|------|---------|---------------|
+| `scheme` | `str` | `"main_sub"`, `"ab"`, `"ab_shared"`, `"single"` | always |
+| `main_select` | `list[int]` (CI-V bytes) | `[0xD0]` | `scheme = "main_sub"` |
+| `sub_select`  | `list[int]` | `[0xD1]` | `scheme = "main_sub"` |
+| `swap_main_sub`  | `list[int]` | `[0xB0]` | dual-RX rigs that support MAIN↔SUB swap |
+| `equal_main_sub` | `list[int]` | `[0xB1]` | dual-RX rigs that support MAIN=SUB equalize |
+| `swap_ab`  | `list[int]` | `[0xB0]` (single byte) or `[0x07, 0xB0]` | rigs with per-receiver VFO A↔B swap |
+| `equal_ab` | `list[int]` | `[0xA0]` or `[0x07, 0xA0]` | rigs with per-receiver VFO A=B equalize |
+
+### Example — dual-RX (IC-7610 / IC-9700 pattern)
 
 ```toml
 [vfo]
 scheme = "main_sub"
-main_select = [0xD0]    # CI-V specific
-sub_select = [0xD1]
-swap = [0xB0]
-equal = [0xB1]
+main_select   = [0xD0]
+sub_select    = [0xD1]
+swap_main_sub = [0xB0]   # MAIN ↔ SUB
+equal_main_sub = [0xB1]  # MAIN = SUB
+# A/B within the currently-selected receiver (optional, add when wiring VfoSlotCapable):
+# swap_ab  = [0x07, 0xB0]
+# equal_ab = [0x07, 0xA0]
 ```
+
+### Example — single-RX (IC-7300 / IC-705 pattern)
+
+```toml
+[vfo]
+scheme = "ab"
+swap_ab  = [0xB0]   # VFO A ↔ B
+equal_ab = [0xA0]   # VFO A = B
+```
+
+### Deprecated legacy keys
+
+The flat keys `swap` and `equal` conflate MAIN↔SUB with VFO A↔B — the same
+`0xB0` byte means different things depending on `scheme`.  They are still
+accepted:
+
+- When `scheme = "main_sub"`: `swap` → `swap_main_sub`, `equal` → `equal_main_sub`.
+- Otherwise: `swap` → `swap_ab`, `equal` → `equal_ab`.
+
+Loading a rig that uses them emits a `DeprecationWarning` once per file
+(`src/icom_lan/rig_loader.py:600-606`). Migrate to the explicit keys.
 
 ---
 

@@ -311,6 +311,10 @@ IC-7610 parity matrix (issue #139, 2026-03-06): 134 implemented, 0 partial, 0 mi
   - **Documentation**: docs/AUDIO_STREAMING_PROFILE.md with detailed analysis
   - **Result:** Pipeline is production-ready; no optimizations needed
 
+### Phase 12 — Dual VFO / Dual Receiver architecture overhaul (#708) 🚧 IN PROGRESS
+
+**Goal:** Public `Radio` protocol expresses `Transceiver → Receiver → VFO` unambiguously across IC-7610, IC-9700, IC-7300, IC-705 and FTX-1, with no model-specific branches at call sites. Audit: `.claude/workflow/dual-vfo-audit.md`; architecture: `.claude/architecture/protocol.md` "Receiver tier"; schema: `rigs/_schema_v2.md`. Landed foundation: #709 (`VfoSlotState` + per-receiver `active_slot` on `ReceiverState`), #710 (split TOML `swap_ab`/`equal_ab` vs `swap_main_sub`/`equal_main_sub` with legacy `swap`/`equal` deprecation), #711 (`ReceiverBankCapable` + `VfoSlotCapable` runtime-checkable Protocols), #713 (IC-9700 profile rewritten as `scheme = "main_sub"` with empty `cmd29.routes` per wfview `HasCommand29=false`). Pending: #712 `TransceiverBankCapable` for FTX-1, plus the phase 2–4 backend, frontend and rigctld wiring tracked under epic #708.
+
 ### Reliability Test Expansion (2026-03-05)
 - Added extended integration coverage scaffolding for:
   - transport sequence wrap-around and ACK mixed stress,
