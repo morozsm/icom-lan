@@ -97,6 +97,7 @@ class RigConfig:
     keyboard: KeyboardConfig | None = None
     antenna_tx_count: int = 1
     antenna_has_rx_ant: bool = False
+    transceiver_count: int = 1
     scope_ref_min_db: float | None = None
     scope_ref_max_db: float | None = None
     scope_ref_step_db: float | None = None
@@ -166,6 +167,7 @@ class RigConfig:
             rules=self.rules,
             keyboard=self.keyboard,
             antenna_tx_count=self.antenna_tx_count,
+            transceiver_count=self.transceiver_count,
             scope_ref_min_db=self.scope_ref_min_db,
             scope_ref_max_db=self.scope_ref_max_db,
             scope_ref_step_db=self.scope_ref_step_db,
@@ -735,6 +737,7 @@ def load_rig(path: Path) -> RigConfig:
         model=radio["model"],
         civ_addr=civ_addr,
         receiver_count=radio["receiver_count"],
+        transceiver_count=int(radio.get("transceiver_count", 1)),
         has_lan=radio["has_lan"],
         has_wifi=radio["has_wifi"],
         default_baud=radio.get("default_baud", 19200),
