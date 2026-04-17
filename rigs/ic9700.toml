@@ -28,6 +28,8 @@ data_len_max = 475
 features = [
     # Receiver
     "audio",
+    "dual_rx",
+    "dual_watch",
     "af_level",
     "rf_gain",
     "squelch",
@@ -181,11 +183,18 @@ width_min_hz = 50
 width_max_hz = 9999
 
 [vfo]
-scheme = "ab"
-main_select = [0x00]  # VFO A
-sub_select = [0x01]   # VFO B
-swap = [0xB0]
-equal = [0xA0]
+# IC-9700 has two receivers (MAIN/SUB), not VFO A/B at the radio level.
+# CI-V 0x07 0xD0 = select MAIN receiver, 0x07 0xD1 = select SUB receiver.
+# CI-V 0x07 0xB0 = swap MAIN/SUB, 0x07 0xB1 = equal MAIN=SUB.
+# Bytes match the Icom CI-V dual-receiver convention also used by IC-7610.
+# (wfview IC-9700.rig exposes only "VFO Equal AB" = 0x07 0xA0; the 0x07 0xB1
+#  "Equal M/S" opcode is documented in the IC-9700 CI-V reference guide and
+#  mirrors IC-7610 behaviour — untested on hardware for this file.)
+scheme = "main_sub"
+main_select = [0xD0]
+sub_select = [0xD1]
+swap_main_sub = [0xB0]
+equal_main_sub = [0xB1]
 
 # ── Frequency Ranges ─────────────────────────────────────────────
 
@@ -275,11 +284,21 @@ end_hz = 54_000_000
 default_hz = 50_125_000
 bsr_code = 0x0A
 
+# ── Command 29 Routes ───────────────────────────────────────────
+# The IC-9700 uses the MAIN/SUB receiver-select scheme (0x07 0xD0/0xD1)
+# to target per-receiver commands, NOT the cmd29 prefix used by the
+# IC-7610 / IC-7760 / IC-785x. wfview's IC-9700.rig sets
+# `HasCommand29=false` at the file level and marks every individual
+# command `Command29=false`, matching the published CI-V reference
+# guide. Keep this list empty so supports_cmd29() returns False and
+# the command layer falls back to the MAIN/SUB receiver-switch path.
+
+[cmd29]
+routes = []
+
 # ── CI-V Commands ────────────────────────────────────────────────
 # Grouped by capability area. Wire bytes as integer arrays.
-# Source: IC-7300MK2 CI-V Reference Guide
-#
-# IC-7300 has NO Command29 support (single receiver).
+# Source: IC-9700 CI-V Reference Guide + wfview IC-9700.rig.
 
 [commands]
 
@@ -294,12 +313,19 @@ get_unselected_freq = [0x25, 0x01]        # Unselected VFO freq
 get_selected_mode = [0x26, 0x00]          # Selected VFO mode
 get_unselected_mode = [0x26, 0x01]        # Unselected VFO mode
 
-# ── VFO ──
+# ── VFO / Dual Receiver ──
 get_vfo = [0x07]
 set_vfo = [0x07]
 get_split = [0x0F]
 set_split = [0x0F]
-# NOTE: no dual_watch, no main/sub band select (single receiver)
+# Dual Watch on/off: 0x07 0xC2 = read state, 0x07 0xC1 = ON, 0x07 0xC0 = OFF.
+# (wfview IC-9700.rig exposes VFO Dual Watch via menu path 0x16 0x59;
+#  0x07 0xCx is the direct CI-V opcode per Icom CI-V reference guide.)
+get_dual_watch = [0x07, 0xC2]
+set_dual_watch_on = [0x07, 0xC1]
+set_dual_watch_off = [0x07, 0xC0]
+# 0x07 0xD2: read/write which band is bound to MAIN/SUB (0=MAIN, 1=SUB).
+get_main_sub_band = [0x07, 0xD2]
 
 # ── Tuning ──
 get_tuning_step = [0x10]
@@ -674,7 +700,8 @@ style = "toggle_and_level"
 style = "toggle_and_level"
 
 # Level control ranges — raw CI-V values and display mapping
-# IC-7300: single receiver, no cmd29, VFO A/B scheme
+# IC-9700: dual receiver (MAIN/SUB), no cmd29; receiver targeting via
+# 0x07 0xD0/0xD1 receiver-select before per-receiver commands.
 
 [controls.pbt_inner]
 raw_min = 0
