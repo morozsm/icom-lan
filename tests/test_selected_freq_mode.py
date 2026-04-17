@@ -267,3 +267,202 @@ class TestRadioSelectedMode:
         mode_name, filt = await radio.get_mode(receiver=1)
         assert mode_name == "CW"
         assert filt == 3
+
+
+# ---------------------------------------------------------------------------
+# Issue #715 — per-receiver VFO A/B state in poller
+# ---------------------------------------------------------------------------
+
+
+class TestVfoSlotOverrideCivRx:
+    """CivRuntime routes 0x03/0x04 responses to vfo_a or vfo_b when the
+    poller has installed a ``_vfo_slot_override`` entry for the target
+    receiver."""
+
+    def test_cmd03_routes_to_vfo_b_when_override_set(
+        self, radio: IcomRadio
+    ) -> None:
+        from icom_lan.radio_state import RadioState
+        from icom_lan.types import bcd_encode
+
+        radio._radio_state = RadioState()
+        rs = radio._radio_state
+        rs.main.active_slot = "A"
+        rs.main.vfo_a = rs.main.vfo_a.__class__(freq_hz=14_000_000, mode="USB")
+        radio._vfo_slot_override = {"MAIN": "B"}
+        frame = CivFrame(
+            to_addr=CONTROLLER_ADDR,
+            from_addr=IC_7610_ADDR,
+            command=0x03,
+            sub=None,
+            data=bcd_encode(21_000_000),
+        )
+        radio._civ_runtime._update_radio_state_from_frame(frame)
+        assert rs.main.vfo_a.freq_hz == 14_000_000  # active slot unchanged
+        assert rs.main.vfo_b.freq_hz == 21_000_000  # unselected slot populated
+
+    def test_cmd04_routes_to_vfo_b_when_override_set(
+        self, radio: IcomRadio
+    ) -> None:
+        from icom_lan.radio_state import RadioState
+
+        radio._radio_state = RadioState()
+        rs = radio._radio_state
+        rs.main.active_slot = "A"
+        radio._vfo_slot_override = {"MAIN": "B"}
+        frame = CivFrame(
+            to_addr=CONTROLLER_ADDR,
+            from_addr=IC_7610_ADDR,
+            command=0x04,
+            sub=None,
+            data=bytes([Mode.LSB, 2]),
+        )
+        radio._civ_runtime._update_radio_state_from_frame(frame)
+        assert rs.main.vfo_a.mode == "USB"  # default, unchanged
+        assert rs.main.vfo_b.mode == "LSB"
+        assert rs.main.vfo_b.filter_num == 2
+
+    def test_override_absent_falls_back_to_active_slot(
+        self, radio: IcomRadio
+    ) -> None:
+        """Without the override flag, 0x03 writes to the active slot as before."""
+        from icom_lan.radio_state import RadioState
+        from icom_lan.types import bcd_encode
+
+        radio._radio_state = RadioState()
+        rs = radio._radio_state
+        rs.main.active_slot = "A"
+        frame = CivFrame(
+            to_addr=CONTROLLER_ADDR,
+            from_addr=IC_7610_ADDR,
+            command=0x03,
+            sub=None,
+            data=bcd_encode(14_074_000),
+        )
+        radio._civ_runtime._update_radio_state_from_frame(frame)
+        assert rs.main.vfo_a.freq_hz == 14_074_000
+        assert rs.main.vfo_b.freq_hz == 0
+
+    def test_override_targets_sub_receiver(self, radio: IcomRadio) -> None:
+        """Override for SUB routes cmd29-wrapped responses to sub.vfo_b."""
+        from icom_lan.radio_state import RadioState
+        from icom_lan.types import bcd_encode
+
+        radio._radio_state = RadioState()
+        rs = radio._radio_state
+        rs.sub.active_slot = "A"
+        radio._vfo_slot_override = {"SUB": "B"}
+        frame = CivFrame(
+            to_addr=CONTROLLER_ADDR,
+            from_addr=IC_7610_ADDR,
+            command=0x03,
+            sub=None,
+            data=bcd_encode(7_074_000),
+            receiver=0x01,  # cmd29-wrapped response from SUB
+        )
+        radio._civ_runtime._update_radio_state_from_frame(frame)
+        assert rs.sub.vfo_a.freq_hz == 0
+        assert rs.sub.vfo_b.freq_hz == 7_074_000
+
+
+class TestPollerUnselectedSlotGate:
+    """Poller gates the unselected-slot read behind PTT, queue pressure,
+    recent user writes, and a per-receiver rate limit."""
+
+    def _make_poller(self, model: str, active: str = "MAIN"):
+        from types import SimpleNamespace
+        from unittest.mock import AsyncMock, MagicMock
+        from icom_lan.profiles import resolve_radio_profile
+        from icom_lan.radio_state import RadioState
+        from icom_lan.rigctld.state_cache import StateCache
+        from icom_lan.web.radio_poller import CommandQueue, RadioPoller
+
+        profile = resolve_radio_profile(model=model)
+        radio = MagicMock()
+        radio.profile = profile
+        radio.model = profile.model
+        radio.capabilities = set(profile.capabilities)
+        radio._radio_state = SimpleNamespace(active=active)
+        radio.send_civ = AsyncMock()
+        radio.set_freq = AsyncMock()
+        radio.set_mode = AsyncMock()
+        state = RadioState()
+        poller = RadioPoller(
+            radio, StateCache(), CommandQueue(), radio_state=state
+        )
+        return poller, radio, state
+
+    @pytest.mark.asyncio
+    async def test_ic7610_polls_unselected_slot_both_receivers(self) -> None:
+        poller, radio, state = self._make_poller("IC-7610")
+        await poller._poll_unselected_slot(0)
+        await poller._poll_unselected_slot(1)
+        # Each receiver: (optional rx select) + swap + 0x03 + 0x04 + swap-back
+        # MAIN (active): swap + 0x03 + 0x04 + swap-back = 4
+        # SUB (needs switch): select SUB + swap + 0x03 + 0x04 + swap-back + select MAIN = 6
+        assert radio.send_civ.await_count >= 10
+        # Expect at least one swap (0x07, 0xB0) and one 0x03/0x04 pair
+        calls = [
+            (c.args, c.kwargs)
+            for c in radio.send_civ.await_args_list
+        ]
+        opcodes = [
+            (call[1].get("sub"), call[1].get("data", b"")[0] if call[1].get("data") else None)
+            for call in calls
+            if call[0] and call[0][0] == 0x07
+        ]
+        assert any(byte == 0xB0 for _sub, byte in opcodes)
+        # Freq/mode reads were issued
+        read_cmds = [call[0][0] for call in calls if call[0]]
+        assert 0x03 in read_cmds
+        assert 0x04 in read_cmds
+
+    @pytest.mark.asyncio
+    async def test_ic7300_single_receiver_polls_vfo_b(self) -> None:
+        poller, radio, state = self._make_poller("IC-7300")
+        await poller._poll_unselected_slot(0)
+        # swap + 0x03 + 0x04 + swap-back = 4 sends
+        assert radio.send_civ.await_count == 4
+
+    @pytest.mark.asyncio
+    async def test_gate_skips_when_ptt_active(self) -> None:
+        poller, radio, state = self._make_poller("IC-7610")
+        state.ptt = True
+        await poller._poll_unselected_slot(0)
+        radio.send_civ.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_gate_skips_when_queue_has_commands(self) -> None:
+        from icom_lan.web.radio_poller import PttOn
+
+        poller, radio, state = self._make_poller("IC-7610")
+        poller._queue.put(PttOn())
+        await poller._poll_unselected_slot(0)
+        radio.send_civ.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_gate_skips_after_recent_user_write(self) -> None:
+        import time as _time
+
+        poller, radio, state = self._make_poller("IC-7610")
+        poller._last_user_write_ts = _time.monotonic()
+        await poller._poll_unselected_slot(0)
+        radio.send_civ.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_rate_limits_per_receiver(self) -> None:
+        poller, radio, state = self._make_poller("IC-7610")
+        await poller._poll_unselected_slot(0)
+        first = radio.send_civ.await_count
+        # Immediate re-poll should be gated by the per-receiver interval.
+        await poller._poll_unselected_slot(0)
+        assert radio.send_civ.await_count == first
+
+    @pytest.mark.asyncio
+    async def test_set_freq_updates_last_user_write_ts(self) -> None:
+        from icom_lan.web.radio_poller import SetFreq
+
+        poller, radio, state = self._make_poller("IC-7610")
+        assert poller._last_user_write_ts == 0.0
+        await poller._execute(SetFreq(14_074_000, receiver=0))
+        assert poller._last_user_write_ts > 0.0

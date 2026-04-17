@@ -712,16 +712,52 @@ class CivRuntime:
 
             cmd = frame.command
 
+            # Per-slot override: when the poller is actively reading the
+            # unselected VFO slot on a receiver (issue #715), it sets
+            # ``host._vfo_slot_override[rx_name]`` to "A" or "B" so that
+            # incoming 0x03/0x04 responses are routed to the correct slot
+            # instead of the currently-active one.
+            override_map = getattr(self._host, "_vfo_slot_override", None)
+            slot_override: str | None = None
+            if isinstance(override_map, dict):
+                _so = override_map.get(rx_name)
+                if _so in ("A", "B"):
+                    slot_override = _so
+
             if cmd in (0x03, 0x00):
-                rx.freq = parse_frequency_response(frame)
+                freq = parse_frequency_response(frame)
+                if slot_override is not None:
+                    from dataclasses import replace as _replace
+
+                    tgt_slot = rx.vfo_b if slot_override == "B" else rx.vfo_a
+                    new_slot = _replace(tgt_slot, freq_hz=freq)
+                    if slot_override == "B":
+                        rx.vfo_b = new_slot
+                    else:
+                        rx.vfo_a = new_slot
+                else:
+                    rx.freq = freq
 
             elif cmd in (0x04, 0x01):
                 from .types import Mode
 
                 mode_val, filt = parse_mode_response(frame)
-                rx.mode = mode_val.name
-                if filt is not None:
-                    rx.filter = filt
+                if slot_override is not None:
+                    from dataclasses import replace as _replace
+
+                    tgt_slot = rx.vfo_b if slot_override == "B" else rx.vfo_a
+                    kw: dict[str, Any] = {"mode": mode_val.name}
+                    if filt is not None:
+                        kw["filter_num"] = filt
+                    new_slot = _replace(tgt_slot, **kw)
+                    if slot_override == "B":
+                        rx.vfo_b = new_slot
+                    else:
+                        rx.vfo_a = new_slot
+                else:
+                    rx.mode = mode_val.name
+                    if filt is not None:
+                        rx.filter = filt
 
             elif cmd == 0x25:
                 if len(frame.data) >= 6:

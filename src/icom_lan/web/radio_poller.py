@@ -339,6 +339,12 @@ class RadioPoller:
         self._initial_fetch_done = asyncio.Event()
         self._initial_fetch_done.set()
         self._scope_enable_deferred = False
+        # Issue #715: track user-initiated freq/mode writes so the unselected-
+        # slot poll subroutine can debounce around them, and per-receiver
+        # timestamps so each receiver's unselected slot is refreshed no more
+        # than once per _UNSELECTED_SLOT_INTERVAL.
+        self._last_user_write_ts: float = 0.0
+        self._last_unselected_poll: dict[int, float] = {}
 
     def start(self) -> None:
         if self._task is not None and not self._task.done():
@@ -612,7 +618,22 @@ class RadioPoller:
                 except Exception:
                     logger.debug("radio-poller: query error", exc_info=True)
 
-                # 3. Wait for next cycle
+                # 3. Issue #715: opportunistically refresh the unselected
+                # VFO slot on each receiver.  Fully gated (PTT, queue
+                # pressure, debounce, per-rx interval) so it cannot
+                # regress fast-poll cadence.
+                for _rx in range(self._profile.receiver_count):
+                    try:
+                        await self._poll_unselected_slot(_rx)
+                    except (ConnectionError, RadioConnectionError):
+                        _backoff = min(_backoff + 0.5, _MAX_BACKOFF)
+                        break
+                    except Exception:
+                        logger.debug(
+                            "radio-poller: unselected-slot poll error", exc_info=True
+                        )
+
+                # 4. Wait for next cycle
                 await self._queue.wait(timeout=self._fast_interval)
         except asyncio.CancelledError:
             pass
@@ -663,6 +684,7 @@ class RadioPoller:
 
         match cmd:
             case SetFreq(freq=freq, receiver=rx):
+                self._last_user_write_ts = time.monotonic()
                 self._ensure_receiver_supported(rx, operation="set_freq")
                 current = self._current_active()
                 if rx != 0 and self._profile.supports_cmd29(0x05):
@@ -703,6 +725,7 @@ class RadioPoller:
                 if self._on_state_event:
                     self._on_state_event("freq_changed", {"freq": freq, "receiver": rx})
             case SetMode(mode=mode, filter_width=fw, receiver=rx):
+                self._last_user_write_ts = time.monotonic()
                 self._ensure_receiver_supported(rx, operation="set_mode")
                 current = self._current_active()
                 if rx != 0 and self._profile.supports_cmd29(0x06):
@@ -1173,6 +1196,7 @@ class RadioPoller:
                 if self._on_state_event:
                     self._on_state_event("split_changed", {"on": on})
             case SetBand(band=band):
+                self._last_user_write_ts = time.monotonic()
                 # Band Stack Register recall: 0x1A 0x01 <bsr_code> <register>
                 # Read stored freq/mode from register 01 (latest)
                 from ..commands import bcd_decode
@@ -1249,6 +1273,7 @@ class RadioPoller:
                     else:
                         logger.warning("set_band: unknown bsr_code=%d", band)
             case SelectVfo(vfo=vfo):
+                self._last_user_write_ts = time.monotonic()
                 # IC-7610 LAN audio is always from MAIN receiver (mono).
                 # To "switch" audio to SUB, we SWAP MAIN↔SUB (0x07 0xB0).
                 # This exchanges frequencies, modes, and all params between
@@ -1275,12 +1300,14 @@ class RadioPoller:
                 if self._on_state_event:
                     self._on_state_event("vfo_changed", {"vfo": vfo})
             case VfoSwap():
+                self._last_user_write_ts = time.monotonic()
                 if CAP_DUAL_RX in self._caps:
                     await radio.vfo_exchange()
                 # After swap, active VFO stays same but freqs are exchanged
                 if self._on_state_event:
                     self._on_state_event("vfo_swapped", {})
             case VfoEqualize():
+                self._last_user_write_ts = time.monotonic()
                 if CAP_DUAL_RX in self._caps:
                     await radio.vfo_equalize()
             case EnableScope(policy=policy):
@@ -1667,6 +1694,115 @@ class RadioPoller:
             cmd_byte, sub_byte, receiver = self._STATE_QUERIES[state_idx]
             await self._send_one_state_query(cmd_byte, sub_byte, receiver)
         self._poll_index += 1
+
+    # Issue #715: unselected-slot slow-poll cycle.
+    # Rate-limit and debounce thresholds are conservative — this cycle
+    # is a correctness feature (populate vfo_b) not a throughput one.
+    _UNSELECTED_SLOT_INTERVAL: float = 5.0  # sec between refreshes per rx
+    _UNSELECTED_SLOT_DEBOUNCE: float = 0.5  # sec after last user freq/mode write
+
+    def _unselected_slot_gate(self, receiver: int) -> bool:
+        """Return True iff it is safe to read the unselected slot on *receiver*."""
+        if self._radio_state is None or getattr(self._radio_state, "ptt", False):
+            return False
+        if self._queue.has_commands:
+            return False
+        now = time.monotonic()
+        if (now - self._last_user_write_ts) < self._UNSELECTED_SLOT_DEBOUNCE:
+            return False
+        last = self._last_unselected_poll.get(receiver, 0.0)
+        if (now - last) < self._UNSELECTED_SLOT_INTERVAL:
+            return False
+        if not self._profile.supports_receiver(receiver):
+            return False
+        # Need a swap primitive to exchange A/B within the receiver.
+        if (self._profile.swap_ab_code or self._profile.swap_main_sub_code) is None:
+            return False
+        return True
+
+    async def _poll_unselected_slot(self, receiver: int) -> None:
+        """Read freq+mode of the inactive VFO slot on *receiver*.
+
+        Uses a transient ``host._vfo_slot_override`` flag so ``_civ_rx.py``
+        routes the 0x03/0x04 responses to the opposite slot.  On dual-RX
+        profiles the target receiver is selected first via ``0x07`` and
+        restored after.  Swap → query → swap-back keeps the radio's
+        active-slot state unchanged for the user.
+        """
+        if not self._unselected_slot_gate(receiver):
+            return
+        rs = self._radio_state
+        assert rs is not None  # gate guarantees
+        rx_name = "MAIN" if receiver == 0 else "SUB"
+        rx_state = rs.receiver(rx_name)
+        target_slot = "B" if rx_state.active_slot == "A" else "A"
+        swap_code = self._profile.swap_ab_code or self._profile.swap_main_sub_code
+        assert swap_code is not None  # gate guarantees
+        # Pre-select MAIN/SUB on dual-RX rigs so the swap hits the intended
+        # receiver.  Restore after the read.
+        pre_switched = False
+        pre_code: int | None = None
+        post_code: int | None = None
+        if self._profile.receiver_count > 1:
+            current = self._current_active()
+            if rx_name != current:
+                if rx_name == "SUB" and self._profile.vfo_sub_code is not None:
+                    pre_code = self._profile.vfo_sub_code
+                    post_code = self._profile.vfo_main_code
+                elif rx_name == "MAIN" and self._profile.vfo_main_code is not None:
+                    pre_code = self._profile.vfo_main_code
+                    post_code = self._profile.vfo_sub_code
+                if pre_code is None or post_code is None:
+                    return  # profile cannot switch — skip
+        override_map = getattr(self._radio, "_vfo_slot_override", None)
+        if not isinstance(override_map, dict):
+            override_map = {}
+            try:
+                self._radio._vfo_slot_override = override_map  # type: ignore[attr-defined]
+            except AttributeError:
+                return  # host refuses attribute — skip silently
+        try:
+            if pre_code is not None:
+                await self._civ(0x07, data=bytes([pre_code]))
+                await asyncio.sleep(self._adaptive_gap())
+                pre_switched = True
+            # Swap A/B within the selected receiver.
+            await self._civ(0x07, data=bytes([swap_code]))
+            await asyncio.sleep(self._adaptive_gap())
+            # Responses for the queries below must route to the opposite slot.
+            override_map[rx_name] = target_slot
+            await self._civ(0x03, data=b"")
+            await asyncio.sleep(self._adaptive_gap())
+            await self._civ(0x04, data=b"")
+            # Give the CI-V RX pump a moment to drain responses before we
+            # swap back (the override stays set until *after* swap-back
+            # so any late 0x03/0x04 response still routes to the
+            # opposite slot rather than polluting vfo_a via the property
+            # setter).
+            await asyncio.sleep(self._adaptive_gap() * 2)
+        finally:
+            # Always try to swap back so the radio ends in the original
+            # slot even when a query errored.  Override is cleared after
+            # the swap-back send + a gap to cover in-flight responses.
+            try:
+                await self._civ(0x07, data=bytes([swap_code]))
+            except Exception:
+                logger.warning(
+                    "radio-poller: failed to restore VFO A/B on receiver=%d",
+                    receiver,
+                    exc_info=True,
+                )
+            await asyncio.sleep(self._adaptive_gap())
+            override_map.pop(rx_name, None)
+            if pre_switched and post_code is not None:
+                try:
+                    await self._civ(0x07, data=bytes([post_code]))
+                except Exception:
+                    logger.warning(
+                        "radio-poller: failed to restore MAIN/SUB selection",
+                        exc_info=True,
+                    )
+        self._last_unselected_poll[receiver] = time.monotonic()
 
     def _emit(self, name: str, data: dict[str, Any]) -> None:
         if self._on_state_event is not None:
