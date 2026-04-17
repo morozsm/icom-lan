@@ -51,6 +51,8 @@ vi.mock('$lib/stores/capabilities.svelte', () => ({
   getKeyboardConfig: vi.fn(() => null),
   getVfoScheme: vi.fn(() => 'main_sub'),
   vfoLabel: vi.fn((slot: 'A' | 'B') => (slot === 'A' ? 'MAIN' : 'SUB')),
+  receiverLabel: vi.fn((id: 'MAIN' | 'SUB') => id),
+  vfoSlotLabel: vi.fn((slot: 'A' | 'B') => (slot === 'A' ? 'VFO A' : 'VFO B')),
   getCapabilities: vi.fn(() => ({
     freqRanges: [
       {
