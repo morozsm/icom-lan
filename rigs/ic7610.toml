@@ -380,8 +380,14 @@ bsr_code = 0x0A
 # ── Command 29 Routes ───────────────────────────────────────────
 # Commands that use the Command29 prefix for dual-receiver targeting.
 # Each entry: [command_byte, sub_byte] or [command_byte] for cmd-only.
-# Source: wfview IC-7610.rig Command29=true entries
-# Excluded (wfview Command29=false): 0x14 0x0D Notch Filter, 0x1A 0x06 Data Mode — use plain CI-V / VFO select for sub-receiver.
+# Source: wfview IC-7610.rig Command29=true entries, cross-checked against
+# IC-7610 CI-V Reference Guide Rev.4 command table (pp.3-9).
+# Excluded — transceiver-global per PDF + wfview agreement:
+#   0x14 0x0B mic gain, 0x14 0x0C key speed, 0x14 0x0E comp level,
+#   0x14 0x0F break-in delay, 0x14 0x14-17 drive/moni/vox/anti-vox.
+# Ambiguous — PDF 29-glyph present, wfview disagrees or absent (left out):
+#   0x14 0x0D notch filter, 0x1A 0x0A per-Rx OVF status.
+# See docs/parity/ic7610_command_matrix.json for per-row rationale (issue #725).
 
 [cmd29]
 routes = [
