@@ -43,7 +43,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Protocol, runtime_checkable
 
-from .radio_state import RadioState
+from .radio_state import RadioState, VfoSlotState
 from .types import Mode
 
 if TYPE_CHECKING:
@@ -54,6 +54,7 @@ if TYPE_CHECKING:
 
 __all__ = [
     "Radio",
+    "VfoSlotState",
     "AudioCapable",
     "CivCommandCapable",
     "ModeInfoCapable",

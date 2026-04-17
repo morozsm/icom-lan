@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from icom_lan.radio_state import RadioState, ReceiverState
+from icom_lan.radio_state import RadioState, ReceiverState, VfoSlotState
 
 # ---------------------------------------------------------------------------
 # ReceiverState defaults
@@ -254,6 +254,9 @@ def test_to_dict_main_keys() -> None:
         "manual_notch_freq",
         "manual_notch_width",
         "narrow",
+        "vfo_a",
+        "vfo_b",
+        "active_slot",
     }
     assert set(main.keys()) == expected_keys
 
@@ -376,3 +379,74 @@ class TestTransceiverStatusState:
         assert d["comp_meter"] == 42
         assert d["vd_meter"] == 130
         assert d["id_meter"] == 55
+
+
+# --- VfoSlotState + per-receiver active_slot (#709) ------------------------
+
+
+class TestVfoSlotState:
+    """ReceiverState exposes per-VFO slot state with legacy-field fallback."""
+
+    def test_slot_defaults(self) -> None:
+        slot = VfoSlotState()
+        assert slot.freq_hz == 0
+        assert slot.mode == "USB"
+        assert slot.filter_num is None
+        assert slot.data_mode == 0
+
+    def test_legacy_freq_kwarg_populates_vfo_a(self) -> None:
+        rx = ReceiverState(freq=7_074_000)
+        assert rx.vfo_a.freq_hz == 7_074_000
+        assert rx.vfo_b.freq_hz == 0
+        assert rx.freq == 7_074_000  # property reads vfo_a (active by default)
+
+    def test_legacy_mode_filter_kwargs_populate_vfo_a(self) -> None:
+        rx = ReceiverState(freq=14_074_000, mode="CW", filter=2, data_mode=1)
+        assert rx.vfo_a.freq_hz == 14_074_000
+        assert rx.vfo_a.mode == "CW"
+        assert rx.vfo_a.filter_num == 2
+        assert rx.vfo_a.data_mode == 1
+        assert rx.mode == "CW"
+        assert rx.filter == 2
+        assert rx.data_mode == 1
+
+    def test_active_slot_b_reflects_vfo_b(self) -> None:
+        rx = ReceiverState(freq=14_074_000)
+        rx.vfo_b = VfoSlotState(freq_hz=7_000_000, mode="LSB")
+        rx.active_slot = "B"
+        assert rx.freq == 7_000_000
+        assert rx.mode == "LSB"
+        # Writing via property mutates vfo_b (the active slot), not vfo_a.
+        rx.freq = 3_573_000
+        assert rx.vfo_b.freq_hz == 3_573_000
+        assert rx.vfo_a.freq_hz == 14_074_000
+
+    def test_to_dict_from_dict_round_trip_preserves_both_slots(self) -> None:
+        rs = RadioState()
+        rs.main.vfo_a = VfoSlotState(freq_hz=14_074_000, mode="USB", filter_num=2)
+        rs.main.vfo_b = VfoSlotState(freq_hz=7_074_000, mode="CW", filter_num=1)
+        rs.main.active_slot = "B"
+        d = rs.to_dict()
+        assert d["main"]["vfo_a"]["freq_hz"] == 14_074_000
+        assert d["main"]["vfo_b"]["freq_hz"] == 7_074_000
+        assert d["main"]["active_slot"] == "B"
+        assert d["main"]["freq"] == 7_074_000  # legacy view = vfo_b
+
+        restored = RadioState._receiver_from_dict(d["main"])
+        assert restored.vfo_a.freq_hz == 14_074_000
+        assert restored.vfo_a.mode == "USB"
+        assert restored.vfo_a.filter_num == 2
+        assert restored.vfo_b.freq_hz == 7_074_000
+        assert restored.vfo_b.mode == "CW"
+        assert restored.vfo_b.filter_num == 1
+        assert restored.active_slot == "B"
+        assert restored.freq == 7_074_000
+
+    def test_from_dict_legacy_fallback_populates_vfo_a(self) -> None:
+        """A legacy dict without slot keys falls back to vfo_a via top-level freq/mode."""
+        legacy = {"freq": 7_074_000, "mode": "CW", "filter": 3, "data_mode": 0}
+        rx = RadioState._receiver_from_dict(legacy)
+        assert rx.vfo_a.freq_hz == 7_074_000
+        assert rx.vfo_a.mode == "CW"
+        assert rx.vfo_a.filter_num == 3
+        assert rx.active_slot == "A"

@@ -11,11 +11,28 @@ This is intentionally additive: it runs *alongside* the existing
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
+from typing import Any
 
 from .types import ScopeFixedEdge
 
-__all__ = ["ReceiverState", "ScopeControlsState", "TxBandEdge", "RadioState"]
+__all__ = [
+    "ReceiverState",
+    "ScopeControlsState",
+    "TxBandEdge",
+    "RadioState",
+    "VfoSlotState",
+]
+
+
+@dataclass(frozen=True, slots=True)
+class VfoSlotState:
+    """Immutable per-VFO-slot (A or B) state within a receiver."""
+
+    freq_hz: int = 0
+    mode: str = "USB"
+    filter_num: int | None = None
+    data_mode: int = 0
 
 
 @dataclass(slots=True)
@@ -28,13 +45,18 @@ class TxBandEdge:
 
 @dataclass(slots=True)
 class ReceiverState:
-    """Per-receiver (MAIN or SUB) state."""
+    """Per-receiver (MAIN or SUB) state.
 
-    freq: int = 0
-    mode: str = "USB"
-    filter: int | None = None
+    Frequency, mode, filter and data_mode are stored per VFO slot
+    (``vfo_a`` / ``vfo_b``); the legacy ``freq`` / ``mode`` / ``filter`` /
+    ``data_mode`` attributes are derived properties reading and writing
+    the slot selected by :attr:`active_slot` (``"A"`` or ``"B"``).
+    """
+
+    vfo_a: VfoSlotState = field(default_factory=VfoSlotState)
+    vfo_b: VfoSlotState = field(default_factory=VfoSlotState)
+    active_slot: str = "A"  # "A" or "B"
     filter_width: int | None = None
-    data_mode: int = 0
     att: int = 0  # dB: 0, 3, 6, …, 45
     preamp: int = 0  # 0=off, 1=P1, 2=P2
     nb: bool = False
@@ -71,6 +93,102 @@ class ReceiverState:
     repeater_tsql: bool = False
     tone_freq: int = 0  # centihz, e.g. 8850 = 88.50 Hz
     tsql_freq: int = 0  # centihz, e.g. 8850 = 88.50 Hz
+
+    # --- VFO-slot-derived properties (legacy compat) ---------------------
+
+    @property
+    def _active(self) -> VfoSlotState:
+        return self.vfo_b if self.active_slot == "B" else self.vfo_a
+
+    def _replace_active(self, **kw: Any) -> None:
+        new_slot = replace(self._active, **kw)
+        if self.active_slot == "B":
+            self.vfo_b = new_slot
+        else:
+            self.vfo_a = new_slot
+
+    @property
+    def freq(self) -> int:
+        return self._active.freq_hz
+
+    @freq.setter
+    def freq(self, value: int) -> None:
+        self._replace_active(freq_hz=value)
+
+    @property
+    def mode(self) -> str:
+        return self._active.mode
+
+    @mode.setter
+    def mode(self, value: str) -> None:
+        self._replace_active(mode=value)
+
+    @property
+    def filter(self) -> int | None:
+        return self._active.filter_num
+
+    @filter.setter
+    def filter(self, value: int | None) -> None:
+        self._replace_active(filter_num=value)
+
+    @property
+    def data_mode(self) -> int:
+        return self._active.data_mode
+
+    @data_mode.setter
+    def data_mode(self, value: int) -> None:
+        self._replace_active(data_mode=value)
+
+
+# Wrap ReceiverState.__init__ to accept legacy kwargs (freq/mode/filter/
+# data_mode) and route them into vfo_a.  The dataclass-generated __init__
+# doesn't know about the derived properties, so we intercept the kwargs
+# before delegating.
+_ReceiverState_orig_init = ReceiverState.__init__
+
+
+def _receiver_state_init(
+    self: ReceiverState,
+    *args: Any,
+    freq: int | None = None,
+    mode: str | None = None,
+    filter: int | None = None,  # noqa: A002  (match legacy kwarg name)
+    data_mode: int | None = None,
+    **kwargs: Any,
+) -> None:
+    _ReceiverState_orig_init(self, *args, **kwargs)
+    legacy: dict[str, Any] = {}
+    if freq is not None:
+        legacy["freq_hz"] = freq
+    if mode is not None:
+        legacy["mode"] = mode
+    if filter is not None:
+        legacy["filter_num"] = filter
+    if data_mode is not None:
+        legacy["data_mode"] = data_mode
+    if legacy:
+        # Legacy kwargs always populate vfo_a (the default slot).
+        self.vfo_a = replace(self.vfo_a, **legacy)
+
+
+ReceiverState.__init__ = _receiver_state_init  # type: ignore[method-assign]
+
+
+def _receiver_to_dict(rx: ReceiverState) -> dict[str, Any]:
+    """Serialise a ReceiverState to a dict that keeps both the slot-shaped
+    (``vfo_a``/``vfo_b``/``active_slot``) view and the legacy top-level
+    ``freq``/``mode``/``filter``/``data_mode`` keys for backward-compat
+    with existing JSON consumers.
+    """
+    d = asdict(rx)
+    d["vfo_a"] = asdict(rx.vfo_a)
+    d["vfo_b"] = asdict(rx.vfo_b)
+    d["active_slot"] = rx.active_slot
+    d["freq"] = rx.freq
+    d["mode"] = rx.mode
+    d["filter"] = rx.filter
+    d["data_mode"] = rx.data_mode
+    return d
 
 
 @dataclass(slots=True)
@@ -218,9 +336,45 @@ class RadioState:
                 for e in self.tx_band_edges
             ],
             "scope_controls": asdict(self.scope_controls),
-            "main": asdict(self.main),
-            "sub": asdict(self.sub),
+            "main": _receiver_to_dict(self.main),
+            "sub": _receiver_to_dict(self.sub),
         }
+
+    @staticmethod
+    def _receiver_from_dict(d: dict[str, Any]) -> ReceiverState:
+        """Construct a :class:`ReceiverState` from a ``to_dict()`` payload.
+
+        Accepts both the slot-shaped view (``vfo_a``/``vfo_b``/``active_slot``)
+        and the legacy top-level ``freq``/``mode``/``filter``/``data_mode``
+        fallback.
+        """
+        slot_keys = {"freq_hz", "mode", "filter_num", "data_mode"}
+        plain: dict[str, Any] = {
+            k: v
+            for k, v in d.items()
+            if k not in {"vfo_a", "vfo_b", "active_slot",
+                          "freq", "mode", "filter", "data_mode"}
+        }
+        rx = ReceiverState(**plain)
+        if "vfo_a" in d and isinstance(d["vfo_a"], dict):
+            rx.vfo_a = VfoSlotState(
+                **{k: v for k, v in d["vfo_a"].items() if k in slot_keys}
+            )
+        if "vfo_b" in d and isinstance(d["vfo_b"], dict):
+            rx.vfo_b = VfoSlotState(
+                **{k: v for k, v in d["vfo_b"].items() if k in slot_keys}
+            )
+        if "active_slot" in d:
+            rx.active_slot = str(d["active_slot"])
+        if "vfo_a" not in d:
+            # Legacy fallback: top-level freq/mode/filter/data_mode → vfo_a.
+            rx.vfo_a = VfoSlotState(
+                freq_hz=int(d.get("freq", 0)),
+                mode=str(d.get("mode", "USB")),
+                filter_num=d.get("filter"),
+                data_mode=int(d.get("data_mode", 0)),
+            )
+        return rx
 
     def receiver(self, which: str) -> ReceiverState:
         """Return the :class:`ReceiverState` for *which* (``"MAIN"`` or ``"SUB"``)."""
