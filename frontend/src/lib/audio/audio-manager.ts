@@ -104,6 +104,13 @@ class AudioManager {
    * ``audio_config`` message to the backend so it can set CI-V Phones L/R
    * Mix accordingly (handled server-side in #752/#755).  Gain values are
    * applied locally only; the backend does not receive them.
+   *
+   * WS-delivery semantics: if the audio WS is not yet open (user hasn't
+   * started RX audio in the browser) we eagerly open it and queue the
+   * pending focus/split pair; ``_flushPendingAudioConfig`` fires the
+   * message once the socket is open.  Without this, clicking ACTIVATE on
+   * MAIN/SUB was a no-op on the radio's own Phones L/R Mix because the
+   * CI-V command never left the browser.
    */
   setAudioConfig(cfg: Partial<AudioRoutingConfig>): void {
     if (cfg.focus !== undefined) this.rxPlayer.setFocus(cfg.focus);
@@ -111,16 +118,27 @@ class AudioManager {
     if (cfg.main_gain_db !== undefined) this.rxPlayer.setChannelGainDb('main', cfg.main_gain_db);
     if (cfg.sub_gain_db !== undefined) this.rxPlayer.setChannelGainDb('sub', cfg.sub_gain_db);
     // Only the focus + split_stereo pair maps to CI-V; gain is local.
-    if (
-      (cfg.focus !== undefined || cfg.split_stereo !== undefined)
-      && this.ws?.readyState === WebSocket.OPEN
-    ) {
-      this.ws.send(JSON.stringify({
-        type: 'audio_config',
-        focus: this.rxPlayer.focus,
-        split_stereo: this.rxPlayer.splitStereo,
-      }));
+    if (cfg.focus === undefined && cfg.split_stereo === undefined) return;
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      this._flushPendingAudioConfig();
+      return;
     }
+    // WS not open — remember that the next open should flush the config,
+    // and kick off the connect.  ``onopen`` will call the flush.
+    this._audioConfigPending = true;
+    this.connect();
+  }
+
+  private _audioConfigPending: boolean = false;
+
+  private _flushPendingAudioConfig(): void {
+    if (this.ws?.readyState !== WebSocket.OPEN) return;
+    this.ws.send(JSON.stringify({
+      type: 'audio_config',
+      focus: this.rxPlayer.focus,
+      split_stereo: this.rxPlayer.splitStereo,
+    }));
+    this._audioConfigPending = false;
   }
 
   /** Current config snapshot — useful for UI state rehydration. */
@@ -188,6 +206,13 @@ class AudioManager {
       }
       if (this._txEnabled) {
         ws.send(JSON.stringify({ type: 'audio_start', direction: 'tx' }));
+      }
+      // If setAudioConfig was called before the WS was open, push the
+      // cached focus/split pair now so the backend can update CI-V
+      // Phones L/R Mix.  Keeps ACTIVATE on MAIN/SUB consistent regardless
+      // of whether the user has started RX audio in the browser.
+      if (this._audioConfigPending) {
+        this._flushPendingAudioConfig();
       }
       this.rxPlayer.flush();
       this.notify();
