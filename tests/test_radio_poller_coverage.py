@@ -224,9 +224,12 @@ async def test_execute_event_emitting_commands_and_vfo_paths() -> None:
     await poller._execute(SelectVfo("SUB"))  # noqa: SLF001
     assert radio._radio_state.active == "SUB"
     radio.send_civ.assert_any_await(0x07, sub=None, data=bytes([0xD1]), wait_response=False)
+    # Scope follows the selected receiver (0x27 0x12 0x01 = SUB).
+    radio.send_civ.assert_any_await(0x27, sub=0x12, data=bytes([0x01]), wait_response=False)
     await poller._execute(SelectVfo("MAIN"))  # noqa: SLF001
     assert radio._radio_state.active == "MAIN"
     radio.send_civ.assert_any_await(0x07, sub=None, data=bytes([0xD0]), wait_response=False)
+    radio.send_civ.assert_any_await(0x27, sub=0x12, data=bytes([0x00]), wait_response=False)
     # Re-clicking the active receiver is a no-op CI-V-wise but still emits
     # the state event so UI listeners can refresh.
     civ_calls_before = radio.send_civ.await_count

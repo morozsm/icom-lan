@@ -1313,6 +1313,28 @@ class RadioPoller:
                     rs = getattr(self._radio, "_radio_state", None)
                     if rs is not None and hasattr(rs, "active"):
                         rs.active = target
+                    # Scope follows the selected receiver: emit 0x27 0x12 so
+                    # the spectrum/waterfall flips to the new band.  In
+                    # dual-scope mode this still updates the "selected"
+                    # receiver marker; in single-scope mode the displayed
+                    # band changes.  Capability-gated so single-RX profiles
+                    # (IC-7300/705) are unaffected.
+                    if CAP_SCOPE in self._caps and CAP_DUAL_RX in self._caps:
+                        scope_rx = 1 if is_sub else 0
+                        try:
+                            await self._civ(
+                                0x27, sub=0x12, data=bytes([scope_rx])
+                            )
+                            logger.info(
+                                "radio-poller: scope receiver → %s "
+                                "(follows select_vfo)",
+                                target,
+                            )
+                        except Exception:
+                            logger.debug(
+                                "radio-poller: scope follow failed",
+                                exc_info=True,
+                            )
                 if self._on_state_event:
                     self._on_state_event("vfo_changed", {"vfo": vfo})
             case VfoSwap():
