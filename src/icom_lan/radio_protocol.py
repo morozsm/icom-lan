@@ -61,6 +61,7 @@ __all__ = [
     "ScopeCapable",
     "DualReceiverCapable",
     "ReceiverBankCapable",
+    "TransceiverBankCapable",
     "VfoSlotCapable",
     "StateCacheCapable",
     "RecoverableConnection",
@@ -581,6 +582,42 @@ class ReceiverBankCapable(Protocol):
 
     async def get_active_receiver(self) -> int:
         """Return the index of the currently active receiver."""
+        ...
+
+
+@runtime_checkable
+class TransceiverBankCapable(Protocol):
+    """Radio exposes a bank of independent transceivers.
+
+    Sits at the top of the ``Transceiver → Receiver → VFO`` hierarchy: a
+    *transceiver* is a fully independent RF stage (its own TX PA, antenna
+    port, and receiver chain) addressable as a distinct unit.  Examples are
+    the Yaesu FTX-1 family, where HF+50 MHz and 144+430 MHz are wired as two
+    separate transceivers sharing a single control head.
+
+    On a single-transceiver radio ``transceiver_count == 1`` and
+    :meth:`set_tx_source` is a no-op for ``xcvr == 0``.  On a multi-
+    transceiver rig the ``xcvr`` argument is a 0-based integer index
+    identifying which transceiver the operator is driving on TX; the radio
+    may expose additional receivers per transceiver via
+    :class:`ReceiverBankCapable`.
+    """
+
+    @property
+    def transceiver_count(self) -> int:
+        """Number of independent transceivers exposed by this rig."""
+        ...
+
+    async def get_tx_source(self) -> int:
+        """Return the 0-based index of the currently active TX transceiver."""
+        ...
+
+    async def set_tx_source(self, xcvr: int) -> None:
+        """Make ``xcvr`` the active TX transceiver.
+
+        Implementations may reject out-of-range values with
+        :class:`ValueError`.
+        """
         ...
 
 

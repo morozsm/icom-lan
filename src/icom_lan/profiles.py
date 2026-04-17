@@ -175,6 +175,7 @@ class RadioProfile:
     rules: tuple[RuleSpec, ...] = ()
     keyboard: KeyboardConfig | None = None
     antenna_tx_count: int = 1
+    transceiver_count: int = 1
     scope_ref_min_db: float | None = None
     scope_ref_max_db: float | None = None
     scope_ref_step_db: float | None = None
