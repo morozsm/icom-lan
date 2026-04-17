@@ -301,18 +301,22 @@ class DualRxRuntimeMixin(_MixinBase):  # type: ignore[misc]
         On dual-RX profiles the target receiver (MAIN/SUB) is selected
         first so the swap opcode affects the intended receiver.  On
         single-RX profiles the swap is issued directly.
+
+        Raises ``CommandError`` when the profile does not declare a
+        dedicated ``swap_ab_code``.  We do NOT silently fall back to
+        ``swap_main_sub_code`` because on IC-7610 / IC-9700 that opcode
+        exchanges MAIN↔SUB — a different semantic than A↔B within a
+        single receiver.  Callers wanting MAIN↔SUB must use
+        ``swap_main_sub()`` explicitly.
         """
         self._check_connected()
         self._require_receiver(receiver, operation="swap_vfo_ab")
-        # On IC-7610-style dual-RX rigs the A/B opcode and the MAIN/SUB
-        # opcode are the same byte (0xB0); if only swap_main_sub_code is
-        # declared in the profile, fall back to it so swap_vfo_ab still
-        # works per the hardware contract.
-        code = self._profile.swap_ab_code or self._profile.swap_main_sub_code
+        code = self._profile.swap_ab_code
         if code is None:
             raise CommandError(
-                f"swap_vfo_ab not supported by profile {self._profile.model}: "
-                "no swap_ab_code"
+                f"swap_vfo_ab not supported by {self._profile.model}: "
+                "profile declares no swap_ab_code. "
+                "For MAIN↔SUB exchange use swap_main_sub()."
             )
         if self._profile.receiver_count > 1:
             target = "MAIN" if receiver == RECEIVER_MAIN else "SUB"
@@ -323,14 +327,21 @@ class DualRxRuntimeMixin(_MixinBase):  # type: ignore[misc]
         await self._send_civ_raw(civ, wait_response=False)
 
     async def equalize_vfo_ab(self, receiver: int = 0) -> None:
-        """Copy the active VFO's state to the inactive VFO on ``receiver``."""
+        """Copy the active VFO's state to the inactive VFO on ``receiver``.
+
+        Raises ``CommandError`` when the profile does not declare a
+        dedicated ``equal_ab_code``.  We do NOT silently fall back to
+        ``equal_main_sub_code``: on dual-RX rigs that opcode copies
+        MAIN→SUB, not A→B within a receiver.
+        """
         self._check_connected()
         self._require_receiver(receiver, operation="equalize_vfo_ab")
-        code = self._profile.equal_ab_code or self._profile.equal_main_sub_code
+        code = self._profile.equal_ab_code
         if code is None:
             raise CommandError(
-                f"equalize_vfo_ab not supported by profile {self._profile.model}: "
-                "no equal_ab_code"
+                f"equalize_vfo_ab not supported by {self._profile.model}: "
+                "profile declares no equal_ab_code. "
+                "For MAIN→SUB copy use equalize_main_sub()."
             )
         if self._profile.receiver_count > 1:
             target = "MAIN" if receiver == RECEIVER_MAIN else "SUB"

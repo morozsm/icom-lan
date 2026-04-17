@@ -484,8 +484,11 @@ class TestSwapMainSubVsSwapVfoAb:
         assert send.frames[0].endswith(b"\x07\xb1\xfd")
 
     @pytest.mark.asyncio
-    async def test_ic7610_swap_vfo_ab_selects_main_then_swaps(self) -> None:
-        """On dual-RX, swap_vfo_ab(0) first selects MAIN, then sends swap code."""
+    async def test_ic7610_swap_vfo_ab_raises_command_error(self) -> None:
+        """On IC-7610 ``swap_ab_code`` is ``None``; swap_vfo_ab must NOT
+        silently fall back to ``swap_main_sub_code`` — that would swap
+        MAIN↔SUB instead of A↔B within the receiver.  It must raise.
+        """
         r = _make_radio("IC-7610")
         set_vfo_calls: list[str] = []
 
@@ -496,13 +499,42 @@ class TestSwapMainSubVsSwapVfoAb:
         with patch.object(r, "set_vfo", _fake_set_vfo), patch.object(
             r, "_send_civ_raw", send
         ):
-            await r.swap_vfo_ab(receiver=0)
+            with pytest.raises(CommandError) as exc_info:
+                await r.swap_vfo_ab(receiver=0)
 
-        assert set_vfo_calls == ["MAIN"]
-        # Falls back to swap_main_sub_code (0xB0) since ic7610.toml declares
-        # only the legacy ``swap`` key which maps to swap_main_sub_code.
-        assert len(send.frames) == 1
-        assert send.frames[0].endswith(b"\x07\xb0\xfd")
+        msg = str(exc_info.value)
+        assert "swap_vfo_ab not supported" in msg
+        assert "IC-7610" in msg
+        assert "swap_ab_code" in msg
+        # Error message must point the caller at the correct alternative.
+        assert "swap_main_sub" in msg
+        # No receiver select or CI-V frame emitted on failure.
+        assert set_vfo_calls == []
+        assert send.frames == []
+
+    @pytest.mark.asyncio
+    async def test_ic7610_equalize_vfo_ab_raises_command_error(self) -> None:
+        """Same contract as swap_vfo_ab — no silent MAIN→SUB fallback."""
+        r = _make_radio("IC-7610")
+        set_vfo_calls: list[str] = []
+
+        async def _fake_set_vfo(vfo: str = "A") -> None:
+            set_vfo_calls.append(vfo.upper())
+
+        send = _RecordingSend()
+        with patch.object(r, "set_vfo", _fake_set_vfo), patch.object(
+            r, "_send_civ_raw", send
+        ):
+            with pytest.raises(CommandError) as exc_info:
+                await r.equalize_vfo_ab(receiver=0)
+
+        msg = str(exc_info.value)
+        assert "equalize_vfo_ab not supported" in msg
+        assert "IC-7610" in msg
+        assert "equal_ab_code" in msg
+        assert "equalize_main_sub" in msg
+        assert set_vfo_calls == []
+        assert send.frames == []
 
     @pytest.mark.asyncio
     async def test_ic7300_swap_main_sub_raises(self) -> None:
