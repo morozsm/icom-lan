@@ -17,7 +17,9 @@ else:
     _MixinBase = object
 
 from .commands import (
+    CONTROLLER_ADDR,
     RECEIVER_MAIN,
+    build_civ_frame,
     get_freq,
     get_mode,
     parse_frequency_response,
@@ -33,6 +35,9 @@ from .commands import parse_selected_freq_response as _parse_selected_freq_respo
 from .commands import parse_selected_mode_response as _parse_selected_mode_response
 from .exceptions import CommandError, TimeoutError
 from .types import Mode
+
+# CI-V command byte for VFO select / equal / swap (0x07).
+_CMD_VFO = 0x07
 
 logger = logging.getLogger(__name__)
 
@@ -247,3 +252,90 @@ class DualRxRuntimeMixin(_MixinBase):  # type: ignore[misc]
         resp = await self._send_civ_expect(civ, label="get_unselected_mode")
         _rcvr, mode, _data_mode, filt = _parse_selected_mode_response(resp)
         return mode, filt
+
+    # ------------------------------------------------------------------
+    # Explicit swap/equalize — MAIN/SUB vs A/B (issue #714)
+    # ------------------------------------------------------------------
+
+    async def swap_main_sub(self) -> None:
+        """Swap MAIN and SUB VFO frequencies. Requires a dual-RX profile."""
+        self._check_connected()
+        if self._profile.receiver_count < 2:
+            raise CommandError(
+                f"swap_main_sub not supported by profile {self._profile.model}: "
+                "not dual-RX"
+            )
+        code = self._profile.swap_main_sub_code
+        if code is None:
+            raise CommandError(
+                f"swap_main_sub not supported by profile {self._profile.model}: "
+                "no swap_main_sub_code"
+            )
+        civ = build_civ_frame(
+            self._radio_addr, CONTROLLER_ADDR, _CMD_VFO, data=bytes([code])
+        )
+        await self._send_civ_raw(civ, wait_response=False)
+
+    async def equalize_main_sub(self) -> None:
+        """Copy MAIN VFO state to SUB. Requires a dual-RX profile."""
+        self._check_connected()
+        if self._profile.receiver_count < 2:
+            raise CommandError(
+                f"equalize_main_sub not supported by profile "
+                f"{self._profile.model}: not dual-RX"
+            )
+        code = self._profile.equal_main_sub_code
+        if code is None:
+            raise CommandError(
+                f"equalize_main_sub not supported by profile "
+                f"{self._profile.model}: no equal_main_sub_code"
+            )
+        civ = build_civ_frame(
+            self._radio_addr, CONTROLLER_ADDR, _CMD_VFO, data=bytes([code])
+        )
+        await self._send_civ_raw(civ, wait_response=False)
+
+    async def swap_vfo_ab(self, receiver: int = 0) -> None:
+        """Swap VFO A and VFO B within ``receiver``.
+
+        On dual-RX profiles the target receiver (MAIN/SUB) is selected
+        first so the swap opcode affects the intended receiver.  On
+        single-RX profiles the swap is issued directly.
+        """
+        self._check_connected()
+        self._require_receiver(receiver, operation="swap_vfo_ab")
+        # On IC-7610-style dual-RX rigs the A/B opcode and the MAIN/SUB
+        # opcode are the same byte (0xB0); if only swap_main_sub_code is
+        # declared in the profile, fall back to it so swap_vfo_ab still
+        # works per the hardware contract.
+        code = self._profile.swap_ab_code or self._profile.swap_main_sub_code
+        if code is None:
+            raise CommandError(
+                f"swap_vfo_ab not supported by profile {self._profile.model}: "
+                "no swap_ab_code"
+            )
+        if self._profile.receiver_count > 1:
+            target = "MAIN" if receiver == RECEIVER_MAIN else "SUB"
+            await self.set_vfo(target)
+        civ = build_civ_frame(
+            self._radio_addr, CONTROLLER_ADDR, _CMD_VFO, data=bytes([code])
+        )
+        await self._send_civ_raw(civ, wait_response=False)
+
+    async def equalize_vfo_ab(self, receiver: int = 0) -> None:
+        """Copy the active VFO's state to the inactive VFO on ``receiver``."""
+        self._check_connected()
+        self._require_receiver(receiver, operation="equalize_vfo_ab")
+        code = self._profile.equal_ab_code or self._profile.equal_main_sub_code
+        if code is None:
+            raise CommandError(
+                f"equalize_vfo_ab not supported by profile {self._profile.model}: "
+                "no equal_ab_code"
+            )
+        if self._profile.receiver_count > 1:
+            target = "MAIN" if receiver == RECEIVER_MAIN else "SUB"
+            await self.set_vfo(target)
+        civ = build_civ_frame(
+            self._radio_addr, CONTROLLER_ADDR, _CMD_VFO, data=bytes([code])
+        )
+        await self._send_civ_raw(civ, wait_response=False)
