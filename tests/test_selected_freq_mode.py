@@ -192,12 +192,13 @@ def mock_transport() -> MockTransport:
 
 
 @pytest.fixture
-def radio(mock_transport: MockTransport) -> IcomRadio:
+def radio(mock_transport: MockTransport):
     r = IcomRadio("192.168.1.100", timeout=0.05)
     r._civ_transport = mock_transport
     r._ctrl_transport = mock_transport
     r._connected = True
-    return r
+    yield r
+    r._connected = False  # reset _conn_state so __del__ stays quiet
 
 
 class TestRadioSelectedFreq:
@@ -393,29 +394,18 @@ class TestPollerUnselectedSlotGate:
         return poller, radio, state
 
     @pytest.mark.asyncio
-    async def test_ic7610_polls_unselected_slot_both_receivers(self) -> None:
+    async def test_ic7610_skips_unselected_slot_poll_without_swap_ab(self) -> None:
+        """IC-7610 declares only swap_main_sub (0x07 0xB0 toggles MAIN↔SUB,
+        NOT A/B within a receiver). Without a true swap_ab_code, using the
+        MAIN↔SUB byte as a fallback would flip the radio's active-RX state
+        every slow-poll cycle — the bug reported against #743/#715. The gate
+        must skip the cycle entirely on such profiles.
+        """
         poller, radio, state = self._make_poller("IC-7610")
         await poller._poll_unselected_slot(0)
         await poller._poll_unselected_slot(1)
-        # Each receiver: (optional rx select) + swap + 0x03 + 0x04 + swap-back
-        # MAIN (active): swap + 0x03 + 0x04 + swap-back = 4
-        # SUB (needs switch): select SUB + swap + 0x03 + 0x04 + swap-back + select MAIN = 6
-        assert radio.send_civ.await_count >= 10
-        # Expect at least one swap (0x07, 0xB0) and one 0x03/0x04 pair
-        calls = [
-            (c.args, c.kwargs)
-            for c in radio.send_civ.await_args_list
-        ]
-        opcodes = [
-            (call[1].get("sub"), call[1].get("data", b"")[0] if call[1].get("data") else None)
-            for call in calls
-            if call[0] and call[0][0] == 0x07
-        ]
-        assert any(byte == 0xB0 for _sub, byte in opcodes)
-        # Freq/mode reads were issued
-        read_cmds = [call[0][0] for call in calls if call[0]]
-        assert 0x03 in read_cmds
-        assert 0x04 in read_cmds
+        # Gate rejects both: no CI-V traffic, no MAIN↔SUB flip.
+        assert radio.send_civ.await_count == 0
 
     @pytest.mark.asyncio
     async def test_ic7300_single_receiver_polls_vfo_b(self) -> None:

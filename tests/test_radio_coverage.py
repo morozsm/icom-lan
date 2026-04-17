@@ -107,12 +107,13 @@ def mock_transport() -> MockTransport:
 
 
 @pytest.fixture
-def radio(mock_transport: MockTransport) -> IcomRadio:
+def radio(mock_transport: MockTransport):
     r = IcomRadio("192.168.1.100", timeout=0.05)
     r._civ_transport = mock_transport
     r._ctrl_transport = mock_transport
     r._connected = True
-    return r
+    yield r
+    r._connected = False  # reset _conn_state so __del__ stays quiet
 
 
 # ---------------------------------------------------------------------------
