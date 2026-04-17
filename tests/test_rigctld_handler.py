@@ -2099,3 +2099,199 @@ async def test_icom_dump_state_unchanged(
     resp = await handler.execute(get_cmd("dump_state"))
     assert resp.ok
     assert resp.values[1] == "3078"  # IC-7610 model
+
+
+# ---------------------------------------------------------------------------
+# Profile-aware VFO protocol (issue #722)
+# ---------------------------------------------------------------------------
+
+
+class _FakeProfile:
+    """Minimal stand-in for ``icom_lan.profiles.RadioProfile`` for tests."""
+
+    def __init__(self, *, receiver_count: int, vfo_scheme: str) -> None:
+        self.receiver_count = receiver_count
+        self.vfo_scheme = vfo_scheme
+
+
+@pytest.fixture
+def dual_rx_radio() -> AsyncMock:
+    """IC-7610-style radio mock: dual-RX profile, main/sub VFO scheme."""
+    radio = AsyncMock()
+    radio.capabilities = set(FULL_ICOM_CAPS)
+    radio.profile = _FakeProfile(receiver_count=2, vfo_scheme="main_sub")
+    return radio
+
+
+@pytest.fixture
+def dual_rx_handler(
+    dual_rx_radio: AsyncMock, config: RigctldConfig
+) -> RigctldHandler:
+    return RigctldHandler(dual_rx_radio, config)
+
+
+@pytest.fixture
+def single_rx_radio() -> AsyncMock:
+    """IC-7300-style radio mock: single-RX profile, A/B VFO scheme."""
+    radio = AsyncMock()
+    radio.capabilities = set(FULL_ICOM_CAPS)
+    radio.profile = _FakeProfile(receiver_count=1, vfo_scheme="ab")
+    return radio
+
+
+@pytest.fixture
+def single_rx_handler(
+    single_rx_radio: AsyncMock, config: RigctldConfig
+) -> RigctldHandler:
+    return RigctldHandler(single_rx_radio, config)
+
+
+# -- chk_vfo ------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_chk_vfo_dual_rx_returns_1(dual_rx_handler: RigctldHandler) -> None:
+    resp = await dual_rx_handler.execute(get_cmd("chk_vfo"))
+    assert resp.ok
+    assert resp.values == ["1"]
+
+
+@pytest.mark.asyncio
+async def test_chk_vfo_single_rx_returns_0(
+    single_rx_handler: RigctldHandler,
+) -> None:
+    resp = await single_rx_handler.execute(get_cmd("chk_vfo"))
+    assert resp.ok
+    assert resp.values == ["0"]
+
+
+# -- get_vfo reflects radio state ---------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_get_vfo_dual_rx_main_is_vfoa(
+    dual_rx_handler: RigctldHandler, dual_rx_radio: AsyncMock
+) -> None:
+    state = RadioState()
+    state.active = "MAIN"
+    dual_rx_radio.radio_state = state
+    resp = await dual_rx_handler.execute(get_cmd("get_vfo"))
+    assert resp.values == ["VFOA"]
+
+
+@pytest.mark.asyncio
+async def test_get_vfo_dual_rx_sub_is_vfob(
+    dual_rx_handler: RigctldHandler, dual_rx_radio: AsyncMock
+) -> None:
+    state = RadioState()
+    state.active = "SUB"
+    dual_rx_radio.radio_state = state
+    resp = await dual_rx_handler.execute(get_cmd("get_vfo"))
+    assert resp.values == ["VFOB"]
+
+
+@pytest.mark.asyncio
+async def test_get_vfo_single_rx_reflects_slot_b(
+    single_rx_handler: RigctldHandler, single_rx_radio: AsyncMock
+) -> None:
+    state = RadioState()
+    state.main.active_slot = "B"
+    single_rx_radio.radio_state = state
+    resp = await single_rx_handler.execute(get_cmd("get_vfo"))
+    assert resp.values == ["VFOB"]
+
+
+# -- set_vfo sends correct CI-V selection -------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_set_vfo_dual_rx_vfob_selects_sub(
+    dual_rx_handler: RigctldHandler, dual_rx_radio: AsyncMock
+) -> None:
+    resp = await dual_rx_handler.execute(set_cmd("set_vfo", "VFOB"))
+    assert resp.ok
+    # SUB maps to CI-V 0x07 0xD1 via radio.set_vfo("SUB").
+    dual_rx_radio.set_vfo.assert_awaited_once_with("SUB")
+
+
+@pytest.mark.asyncio
+async def test_set_vfo_dual_rx_vfoa_selects_main(
+    dual_rx_handler: RigctldHandler, dual_rx_radio: AsyncMock
+) -> None:
+    resp = await dual_rx_handler.execute(set_cmd("set_vfo", "VFOA"))
+    assert resp.ok
+    dual_rx_radio.set_vfo.assert_awaited_once_with("MAIN")
+
+
+@pytest.mark.asyncio
+async def test_set_vfo_single_rx_vfob_selects_slot_b(
+    single_rx_handler: RigctldHandler, single_rx_radio: AsyncMock
+) -> None:
+    resp = await single_rx_handler.execute(set_cmd("set_vfo", "VFOB"))
+    assert resp.ok
+    # "B" maps to CI-V 0x07 0x01 via radio.set_vfo("B").
+    single_rx_radio.set_vfo.assert_awaited_once_with("B")
+
+
+@pytest.mark.asyncio
+async def test_set_vfo_single_rx_vfoa_selects_slot_a(
+    single_rx_handler: RigctldHandler, single_rx_radio: AsyncMock
+) -> None:
+    resp = await single_rx_handler.execute(set_cmd("set_vfo", "VFOA"))
+    assert resp.ok
+    single_rx_radio.set_vfo.assert_awaited_once_with("A")
+
+
+@pytest.mark.asyncio
+async def test_set_vfo_unknown_name_is_backward_compat_ok(
+    dual_rx_handler: RigctldHandler, dual_rx_radio: AsyncMock
+) -> None:
+    # Unknown VFO names from legacy clients should be silently accepted,
+    # never sent to the radio.
+    resp = await dual_rx_handler.execute(set_cmd("set_vfo", "VFO-C"))
+    assert resp.ok
+    dual_rx_radio.set_vfo.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_set_vfo_no_args_returns_einval(
+    dual_rx_handler: RigctldHandler,
+) -> None:
+    resp = await dual_rx_handler.execute(set_cmd("set_vfo"))
+    assert resp.error == HamlibError.EINVAL
+
+
+# -- set_split_vfo ------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_set_split_vfo_dual_rx_enables_and_routes_to_sub(
+    dual_rx_handler: RigctldHandler, dual_rx_radio: AsyncMock
+) -> None:
+    resp = await dual_rx_handler.execute(set_cmd("set_split_vfo", "1", "VFOB"))
+    assert resp.ok
+    dual_rx_radio.set_split_mode.assert_awaited_once_with(True)
+    dual_rx_radio.set_vfo.assert_awaited_once_with("SUB")
+
+
+@pytest.mark.asyncio
+async def test_set_split_vfo_dual_rx_disables_does_not_switch_receiver(
+    dual_rx_handler: RigctldHandler, dual_rx_radio: AsyncMock
+) -> None:
+    resp = await dual_rx_handler.execute(set_cmd("set_split_vfo", "0", "VFOA"))
+    assert resp.ok
+    dual_rx_radio.set_split_mode.assert_awaited_once_with(False)
+    dual_rx_radio.set_vfo.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_get_split_vfo_dual_rx_reflects_active_sub(
+    dual_rx_handler: RigctldHandler, dual_rx_radio: AsyncMock
+) -> None:
+    state = RadioState()
+    state.split = True
+    state.active = "SUB"
+    dual_rx_radio.radio_state = state
+    resp = await dual_rx_handler.execute(get_cmd("get_split_vfo"))
+    assert resp.ok
+    assert resp.values == ["1", "VFOB"]

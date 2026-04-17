@@ -610,11 +610,58 @@ class RigctldHandler:
     # VFO commands
     # ------------------------------------------------------------------
 
+    def _profile_vfo_info(self) -> tuple[int, str] | None:
+        """Return (receiver_count, vfo_scheme) when the radio exposes a
+        real profile, else ``None``.
+
+        Safely handles mocked radios: ``AsyncMock.profile`` auto-generates
+        sub-attributes which are not usable integers/strings.
+        """
+        profile = getattr(self._radio, "profile", None)
+        if profile is None:
+            return None
+        rc = getattr(profile, "receiver_count", None)
+        scheme = getattr(profile, "vfo_scheme", None)
+        if isinstance(rc, int) and isinstance(scheme, str):
+            return rc, scheme
+        return None
+
+    def _active_vfo_name(self) -> str:
+        """Return ``"VFOA"`` or ``"VFOB"`` reflecting current radio state.
+
+        Dual-RX: maps ``radio_state.active`` (``MAIN``/``SUB``) → VFOA/VFOB.
+        1-Rx: maps ``radio_state.main.active_slot`` (``A``/``B``) → VFOA/VFOB.
+        Falls back to ``VFOA`` when state is missing or profile is unknown.
+        """
+        info = self._profile_vfo_info()
+        state = self._radio_state()
+        if info is None or state is None:
+            return "VFOA"
+        rc, _ = info
+        if rc >= 2:
+            return "VFOB" if state.active == "SUB" else "VFOA"
+        return "VFOB" if state.main.active_slot == "B" else "VFOA"
+
     async def _cmd_get_vfo(self, cmd: RigctldCommand) -> RigctldResponse:
-        return RigctldResponse(values=["VFOA"])
+        return RigctldResponse(values=[self._active_vfo_name()])
 
     async def _cmd_set_vfo(self, cmd: RigctldCommand) -> RigctldResponse:
-        # Accept any VFO name; single-VFO operation always uses VFOA
+        if not cmd.args:
+            return _err(HamlibError.EINVAL)
+        vfo = cmd.args[0].upper()
+        info = self._profile_vfo_info()
+        # Backwards-compat: unknown VFO names or profile-less radios → no-op
+        if vfo not in ("VFOA", "VFOB") or info is None:
+            return _ok()
+        rc, _ = info
+        set_vfo = getattr(self._radio, "set_vfo", None)
+        if set_vfo is None:
+            return _ok()
+        if rc >= 2:
+            target = "MAIN" if vfo == "VFOA" else "SUB"
+        else:
+            target = "A" if vfo == "VFOA" else "B"
+        await set_vfo(target)
         return _ok()
 
     # ------------------------------------------------------------------
@@ -800,9 +847,27 @@ class RigctldHandler:
     async def _cmd_get_split_vfo(self, cmd: RigctldCommand) -> RigctldResponse:
         state = self._radio_state()
         split = state.split if state is not None else False
-        return RigctldResponse(values=[str(int(split)), "VFOA"])
+        return RigctldResponse(values=[str(int(split)), self._active_vfo_name()])
 
     async def _cmd_set_split_vfo(self, cmd: RigctldCommand) -> RigctldResponse:
+        # Args: <split 0|1> <tx_vfo>
+        if len(cmd.args) < 2:
+            return _ok()
+        try:
+            on = bool(int(cmd.args[0]))
+        except ValueError:
+            return _err(HamlibError.EINVAL)
+        tx_vfo = cmd.args[1].upper()
+        info = self._profile_vfo_info()
+        set_split_mode = getattr(self._radio, "set_split_mode", None)
+        if set_split_mode is not None:
+            await set_split_mode(on)
+        # Dual-RX: when enabling split, ensure TX is routed to the requested
+        # receiver (WSJT-X sends VFOB as the split-TX source).
+        if on and info is not None and info[0] >= 2 and tx_vfo in ("VFOA", "VFOB"):
+            set_vfo = getattr(self._radio, "set_vfo", None)
+            if set_vfo is not None:
+                await set_vfo("SUB" if tx_vfo == "VFOB" else "MAIN")
         return _ok()
 
     # ------------------------------------------------------------------
@@ -834,7 +899,10 @@ class RigctldHandler:
         return RigctldResponse(values=[f"Icom {model} (icom-lan)"])
 
     async def _cmd_chk_vfo(self, cmd: RigctldCommand) -> RigctldResponse:
-        return RigctldResponse(values=["0"])
+        info = self._profile_vfo_info()
+        # Dual-RX profiles advertise VFO-argument support to Hamlib.
+        dual = info is not None and info[0] >= 2
+        return RigctldResponse(values=["1" if dual else "0"])
 
     async def _cmd_get_powerstat(self, cmd: RigctldCommand) -> RigctldResponse:
         return RigctldResponse(values=["1"])
