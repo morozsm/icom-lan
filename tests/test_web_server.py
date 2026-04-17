@@ -2575,6 +2575,17 @@ class TestSwitchScopeReceiver:
             if c[0][0] == 0x07 and c.kwargs.get("data") == bytes([0xB0])
         ]
         assert len(swap_calls) == 0, "Must NOT emit swap (0x07 0xB0) on SelectVfo"
+        # Scope follows the selected receiver: 0x27 0x12 0x01 for SUB.
+        scope_calls = [
+            c
+            for c in radio.send_civ.call_args_list
+            if c[0][0] == 0x27
+            and c.kwargs.get("sub") == 0x12
+            and c.kwargs.get("data") == bytes([0x01])
+        ]
+        assert len(scope_calls) >= 1, (
+            "Expected scope to follow selected receiver (0x27 0x12 0x01)"
+        )
 
     async def test_select_vfo_main_noop_when_already_main(self) -> None:
         """SelectVfo("MAIN") emits no CI-V when already on MAIN."""
