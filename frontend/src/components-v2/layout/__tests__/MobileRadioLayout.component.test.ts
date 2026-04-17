@@ -39,7 +39,7 @@ vi.mock('./vfo-layout-tokens', () => ({
 }));
 
 // -- Store mocks --
-vi.mock('$lib/stores/radio.svelte', () => ({ radio: { current: null } }));
+vi.mock('$lib/stores/radio.svelte', () => ({ radio: { current: null as { active?: 'MAIN' | 'SUB' } | null } }));
 vi.mock('$lib/stores/connection.svelte', () => ({
   getConnectionStatus: vi.fn(() => ({ connected: false })),
   getRadioPowerOn: vi.fn(() => null),
@@ -56,7 +56,8 @@ vi.mock('$lib/stores/capabilities.svelte', () => ({
   hasTx: vi.fn(() => true), hasDualReceiver: vi.fn(() => false), hasAnyScope: vi.fn(() => false),
   hasSpectrum: vi.fn(() => false), getCapabilities: vi.fn(() => ({ freqRanges: [], modes: [], filters: [] })),
   getKeyboardConfig: vi.fn(() => null), setCapabilities: vi.fn(), hasCapability: vi.fn(() => false),
-  vfoLabel: vi.fn((s: string) => s === 'A' ? 'MAIN' : 'SUB'), isAudioFftScope: vi.fn(() => false),
+  vfoLabel: vi.fn((s: string) => s === 'A' ? 'MAIN' : 'SUB'),
+  receiverLabel: vi.fn((id: 'MAIN' | 'SUB') => id), isAudioFftScope: vi.fn(() => false),
   hasAudioFft: vi.fn(() => false), getScopeSource: vi.fn(() => null), hasAudio: vi.fn(() => false),
   getSmeterCalibration: vi.fn(() => null), getSmeterRedline: vi.fn(() => null),
   getMeterCalibration: vi.fn(() => null), getMeterRedline: vi.fn(() => null),
@@ -71,10 +72,17 @@ vi.mock('$lib/stores/capabilities.svelte', () => ({
 }));
 
 // -- Wiring mocks --
-vi.mock('../wiring/command-bus', () => {
+const { onMainVfoClickSpy, onSubVfoClickSpy } = vi.hoisted(() => ({
+  onMainVfoClickSpy: vi.fn(),
+  onSubVfoClickSpy: vi.fn(),
+}));
+vi.mock('../../wiring/command-bus', () => {
   const n = vi.fn();
   return {
-    makeVfoHandlers: () => ({ onMainFreqChange: n, onSubFreqChange: n, onVfoSwap: n, onVfoEqual: n, onReceiverSelect: n }),
+    makeVfoHandlers: () => ({
+      onMainFreqChange: n, onSubFreqChange: n, onVfoSwap: n, onVfoEqual: n, onReceiverSelect: n,
+      onMainVfoClick: onMainVfoClickSpy, onSubVfoClick: onSubVfoClickSpy,
+    }),
     makeMeterHandlers: () => ({ onMeterSourceChange: n }), makeKeyboardHandlers: () => ({ dispatch: n }),
     makeModeHandlers: () => ({ onModeChange: n, onDataModeChange: n }),
     makeFilterHandlers: () => ({ onFilterChange: n, onFilterWidthChange: n }),
@@ -110,7 +118,8 @@ vi.mock('../wiring/state-adapter', () => {
 });
 
 import MobileRadioLayout from '../MobileRadioLayout.svelte';
-import { hasTx } from '$lib/stores/capabilities.svelte';
+import { hasTx, hasDualReceiver } from '$lib/stores/capabilities.svelte';
+import { radio } from '$lib/stores/radio.svelte';
 
 let components: ReturnType<typeof mount>[] = [];
 
@@ -127,6 +136,10 @@ beforeEach(() => {
   Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 390 });
   Object.defineProperty(window, 'innerHeight', { writable: true, configurable: true, value: 844 });
   vi.mocked(hasTx).mockReturnValue(true);
+  vi.mocked(hasDualReceiver).mockReturnValue(false);
+  (radio as unknown as { current: { active?: 'MAIN' | 'SUB' } | null }).current = null;
+  onMainVfoClickSpy.mockClear();
+  onSubVfoClickSpy.mockClear();
 });
 
 afterEach(() => {
@@ -193,5 +206,93 @@ describe('MobileRadioLayout unmount', () => {
     const t = mountMobile();
     expect(t.querySelector('.m-layout')).not.toBeNull();
     expect(() => unmount(components.pop()!)).not.toThrow();
+  });
+});
+
+describe('MobileRadioLayout receiver selector (#719)', () => {
+  it('does not render selector on single-receiver radios', () => {
+    vi.mocked(hasDualReceiver).mockReturnValue(false);
+    expect(mountMobile().querySelector('.m-receiver-selector')).toBeNull();
+  });
+
+  it('renders MAIN/SUB pills when dual-RX', () => {
+    vi.mocked(hasDualReceiver).mockReturnValue(true);
+    const t = mountMobile();
+    const group = t.querySelector('.m-receiver-selector');
+    expect(group).not.toBeNull();
+    expect(group?.getAttribute('role')).toBe('group');
+    expect(group?.getAttribute('aria-label')).toBe('Receiver selector');
+    const pills = t.querySelectorAll<HTMLButtonElement>('.m-receiver-pill');
+    expect(pills.length).toBe(2);
+    expect(pills[0].textContent?.trim()).toBe('MAIN');
+    expect(pills[1].textContent?.trim()).toBe('SUB');
+  });
+
+  it('marks the active receiver with aria-pressed=true (MAIN default)', () => {
+    vi.mocked(hasDualReceiver).mockReturnValue(true);
+    const t = mountMobile();
+    const [mainPill, subPill] = Array.from(
+      t.querySelectorAll<HTMLButtonElement>('.m-receiver-pill'),
+    );
+    expect(mainPill.getAttribute('aria-pressed')).toBe('true');
+    expect(subPill.getAttribute('aria-pressed')).toBe('false');
+    expect(mainPill.classList.contains('m-receiver-pill-active')).toBe(true);
+  });
+
+  it('reflects SUB as active when radioState.active === SUB', () => {
+    vi.mocked(hasDualReceiver).mockReturnValue(true);
+    (radio as unknown as { current: { active?: 'MAIN' | 'SUB' } | null }).current = { active: 'SUB' };
+    const t = mountMobile();
+    const [mainPill, subPill] = Array.from(
+      t.querySelectorAll<HTMLButtonElement>('.m-receiver-pill'),
+    );
+    expect(mainPill.getAttribute('aria-pressed')).toBe('false');
+    expect(subPill.getAttribute('aria-pressed')).toBe('true');
+    expect(subPill.classList.contains('m-receiver-pill-active')).toBe(true);
+  });
+
+  it('pills are focusable buttons (keyboard a11y)', () => {
+    vi.mocked(hasDualReceiver).mockReturnValue(true);
+    const t = mountMobile();
+    const pills = t.querySelectorAll<HTMLButtonElement>('.m-receiver-pill');
+    pills.forEach((p) => {
+      expect(p.tagName).toBe('BUTTON');
+      expect(p.getAttribute('type')).toBe('button');
+    });
+    pills[0].focus();
+    expect(document.activeElement).toBe(pills[0]);
+    pills[1].focus();
+    expect(document.activeElement).toBe(pills[1]);
+  });
+
+  it('tapping MAIN pill dispatches onMainVfoClick', () => {
+    vi.mocked(hasDualReceiver).mockReturnValue(true);
+    const t = mountMobile();
+    const [mainPill] = Array.from(
+      t.querySelectorAll<HTMLButtonElement>('.m-receiver-pill'),
+    );
+    mainPill.click();
+    expect(onMainVfoClickSpy).toHaveBeenCalledTimes(1);
+    expect(onSubVfoClickSpy).not.toHaveBeenCalled();
+  });
+
+  it('tapping SUB pill dispatches onSubVfoClick and scrolls VFO display', () => {
+    vi.mocked(hasDualReceiver).mockReturnValue(true);
+    const scrollSpy = vi.fn();
+    // Patch Element.prototype.scrollIntoView for this test
+    const origScroll = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = scrollSpy as unknown as typeof Element.prototype.scrollIntoView;
+    try {
+      const t = mountMobile();
+      const pills = Array.from(t.querySelectorAll<HTMLButtonElement>('.m-receiver-pill'));
+      pills[1].click();
+      expect(onSubVfoClickSpy).toHaveBeenCalledTimes(1);
+      expect(onMainVfoClickSpy).not.toHaveBeenCalled();
+      expect(scrollSpy).toHaveBeenCalled();
+      const arg = scrollSpy.mock.calls[0]?.[0];
+      expect(arg).toMatchObject({ behavior: 'smooth', block: 'center' });
+    } finally {
+      Element.prototype.scrollIntoView = origScroll;
+    }
   });
 });
