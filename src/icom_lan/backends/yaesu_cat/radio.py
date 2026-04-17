@@ -960,6 +960,39 @@ class YaesuCatRadio:
         """Set TX function (0 = MAIN, 1 = SUB)."""
         await self._write("set_tx_func", vfo=str(vfo))
 
+    # -- TransceiverBankCapable --------------------------------------------
+
+    @property
+    def transceiver_count(self) -> int:
+        """Number of independent transceivers exposed by this rig.
+
+        FTX-1 is wired as two independent transceivers (HF+50 MHz and
+        144+430 MHz) sharing a single control head; other Yaesu CAT rigs
+        are single-transceiver.
+        """
+        return 2 if self._config.id == "yaesu_ftx1" else 1
+
+    async def set_tx_source(self, xcvr: int) -> None:
+        """Make ``xcvr`` the active TX transceiver (FTX-1 ``FT`` command).
+
+        Args:
+            xcvr: 0 = MAIN-side transmitter, 1 = SUB-side transmitter.
+        """
+        if xcvr not in (0, 1):
+            raise ValueError(
+                f"xcvr must be 0 or 1, got {xcvr!r} "
+                f"(transceiver_count={self.transceiver_count})"
+            )
+        await self._write("set_tx_func", vfo=str(xcvr))
+
+    async def get_tx_source(self) -> int:
+        """Return the 0-based index of the currently active TX transceiver.
+
+        Parses ``FT0;`` / ``FT1;`` from the radio (``FT`` command).
+        """
+        result = await self._query("get_tx_func")
+        return int(result["vfo"])
+
     async def get_split(self) -> bool:
         """Get split operation state."""
         result = await self._query("get_split")

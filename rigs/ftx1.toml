@@ -7,6 +7,7 @@
 id = "yaesu_ftx1"
 model = "FTX-1"
 receiver_count = 2
+transceiver_count = 2
 has_lan = false
 has_wifi = false
 default_baud = 38400

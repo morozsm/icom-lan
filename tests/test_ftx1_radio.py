@@ -592,6 +592,64 @@ async def test_get_tx_func(connected_radio):
     connected_radio._transport.query.assert_called_once_with("FT;")
 
 
+# ---------------------------------------------------------------------------
+# TransceiverBankCapable (FT command / tx_source)
+# ---------------------------------------------------------------------------
+
+
+def test_transceiver_count_ftx1(radio):
+    """FTX-1 exposes two independent transceivers (HF+50, 144+430)."""
+    assert radio.transceiver_count == 2
+
+
+def test_transceiver_count_non_ftx1(radio):
+    """Non-FTX-1 Yaesu CAT rigs default to a single transceiver."""
+    # FTX-1 is currently the only Yaesu CAT profile in-tree; simulate a
+    # non-FTX-1 rig by swapping the loaded config id.
+    object.__setattr__(radio._config, "id", "yaesu_other")
+    assert radio.transceiver_count == 1
+
+
+@pytest.mark.asyncio
+async def test_set_tx_source_main(connected_radio):
+    """set_tx_source(0) writes FT0; (MAIN-side transmitter)."""
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_tx_source(0)
+    connected_radio._transport.write.assert_called_once_with("FT0;")
+
+
+@pytest.mark.asyncio
+async def test_set_tx_source_sub(connected_radio):
+    """set_tx_source(1) writes FT1; (SUB-side transmitter)."""
+    connected_radio._transport.write = AsyncMock()
+    await connected_radio.set_tx_source(1)
+    connected_radio._transport.write.assert_called_once_with("FT1;")
+
+
+@pytest.mark.asyncio
+async def test_set_tx_source_rejects_out_of_range(connected_radio):
+    """set_tx_source rejects xcvr values other than 0 or 1."""
+    connected_radio._transport.write = AsyncMock()
+    with pytest.raises(ValueError):
+        await connected_radio.set_tx_source(2)
+    connected_radio._transport.write.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_get_tx_source_sub(connected_radio):
+    """get_tx_source parses FT1; and returns 1 (SUB-side active)."""
+    connected_radio._transport.query = AsyncMock(return_value="FT1")
+    assert await connected_radio.get_tx_source() == 1
+    connected_radio._transport.query.assert_called_once_with("FT;")
+
+
+@pytest.mark.asyncio
+async def test_get_tx_source_main(connected_radio):
+    """get_tx_source parses FT0; and returns 0 (MAIN-side active)."""
+    connected_radio._transport.query = AsyncMock(return_value="FT0")
+    assert await connected_radio.get_tx_source() == 0
+
+
 @pytest.mark.asyncio
 async def test_get_vfo_select(connected_radio):
     connected_radio._transport.query = AsyncMock(return_value="VS0")
