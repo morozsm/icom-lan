@@ -1,6 +1,6 @@
 <script lang="ts">
   import { runtime } from '$lib/runtime';
-  import { hasTx, hasDualReceiver, hasAnyScope, hasSpectrum } from '$lib/stores/capabilities.svelte';
+  import { hasTx, hasDualReceiver, hasAnyScope, hasSpectrum, receiverLabel } from '$lib/stores/capabilities.svelte';
   import { HardwareButton } from '$lib/Button';
   import SpectrumPanel from '../../components/spectrum/SpectrumPanel.svelte';
   import AmberLcdDisplay from '../panels/lcd/AmberLcdDisplay.svelte';
@@ -97,6 +97,20 @@
   // ── VFO layout ──
   let receiverDeckElement = $state<HTMLElement | null>(null);
   let receiverDeckWidth = $state<number | null>(null);
+  let vfoFreqElement = $state<HTMLElement | null>(null);
+  let activeReceiver = $derived((radioState?.active ?? 'MAIN') as 'MAIN' | 'SUB');
+
+  function selectReceiver(target: 'MAIN' | 'SUB') {
+    if (target === 'MAIN') {
+      vfoHandlers.onMainVfoClick?.();
+    } else {
+      vfoHandlers.onSubVfoClick?.();
+    }
+    // Scroll the VFO display into view so the selection is visible to the user.
+    if (vfoFreqElement && typeof vfoFreqElement.scrollIntoView === 'function') {
+      vfoFreqElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
   let vfoLayoutProfile = $derived(resolveVfoLayoutProfile(receiverDeckWidth));
   let receiverDeckStyle = $derived(vfoLayoutStyleVars(vfoLayoutProfile, {
     width: receiverDeckWidth,
@@ -438,9 +452,31 @@
 
   <!-- ═══ STICKY VFO HEADER ═══ -->
   <header class="m-vfo-bar" bind:this={receiverDeckElement} style={receiverDeckStyle}>
+    {#if hasDualReceiver()}
+      <div class="m-receiver-selector" role="group" aria-label="Receiver selector">
+        <button
+          type="button"
+          class="m-receiver-pill"
+          class:m-receiver-pill-active={activeReceiver === 'MAIN'}
+          aria-pressed={activeReceiver === 'MAIN'}
+          onclick={() => selectReceiver('MAIN')}
+        >
+          {receiverLabel('MAIN')}
+        </button>
+        <button
+          type="button"
+          class="m-receiver-pill"
+          class:m-receiver-pill-active={activeReceiver === 'SUB'}
+          aria-pressed={activeReceiver === 'SUB'}
+          onclick={() => selectReceiver('SUB')}
+        >
+          {receiverLabel('SUB')}
+        </button>
+      </div>
+    {/if}
     <div class="m-vfo-row">
       <span class="m-tx-indicator" style="background: {txIndicatorColor}" title={txPermit === 'allowed' ? 'TX allowed' : 'TX not allowed (out of band)'}></span>
-      <div class="m-vfo-freq">
+      <div class="m-vfo-freq" bind:this={vfoFreqElement}>
         <FrequencyDisplay freq={mainVfo.freq} compact active />
       </div>
       <button class="m-settings-btn" onclick={() => (settingsOpen = true)}>
@@ -1198,6 +1234,41 @@
     border-radius: 50%;
     flex-shrink: 0;
     transition: background 0.2s, box-shadow 0.2s;
+  }
+
+  .m-receiver-selector {
+    display: flex;
+    gap: 4px;
+    padding: 2px 0 4px;
+  }
+
+  .m-receiver-pill {
+    flex: 1 1 0;
+    min-height: 32px;
+    padding: 6px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--v2-border-darker, #333);
+    background: var(--v2-bg-input, #1a1a2e);
+    color: var(--v2-text-secondary, #aaa);
+    font-family: 'Roboto Mono', monospace;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+  }
+
+  .m-receiver-pill:focus-visible {
+    outline: 2px solid var(--v2-accent-cyan, #22d3ee);
+    outline-offset: 2px;
+  }
+
+  .m-receiver-pill-active {
+    background: var(--v2-accent-cyan, #22d3ee);
+    border-color: var(--v2-accent-cyan, #22d3ee);
+    color: var(--v2-bg-card, #111);
   }
 
   .m-vfo-row {
