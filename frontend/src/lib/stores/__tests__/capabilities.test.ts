@@ -162,4 +162,65 @@ describe('capabilities store', () => {
       expect(store.getSmeterRedline()).toBe(120);
     });
   });
+
+  describe('receiverLabel', () => {
+    it('returns "MAIN" for MAIN receiver id', () => {
+      expect(store.receiverLabel('MAIN')).toBe('MAIN');
+    });
+
+    it('returns "SUB" for SUB receiver id', () => {
+      expect(store.receiverLabel('SUB')).toBe('SUB');
+    });
+
+    it('is independent of vfoScheme', () => {
+      store.setCapabilities(makeCaps({ vfoScheme: 'ab' }));
+      expect(store.receiverLabel('MAIN')).toBe('MAIN');
+      expect(store.receiverLabel('SUB')).toBe('SUB');
+    });
+  });
+
+  describe('vfoSlotLabel', () => {
+    it('returns "VFO A" for slot A', () => {
+      expect(store.vfoSlotLabel('A')).toBe('VFO A');
+    });
+
+    it('returns "VFO B" for slot B', () => {
+      expect(store.vfoSlotLabel('B')).toBe('VFO B');
+    });
+
+    it('is independent of vfoScheme', () => {
+      store.setCapabilities(makeCaps({ vfoScheme: 'main_sub' }));
+      expect(store.vfoSlotLabel('A')).toBe('VFO A');
+      expect(store.vfoSlotLabel('B')).toBe('VFO B');
+    });
+  });
+
+  describe('vfoLabel (deprecated shim)', () => {
+    it('preserves legacy main_sub behaviour', () => {
+      store.setCapabilities(makeCaps({ vfoScheme: 'main_sub' }));
+      expect(store.vfoLabel('A')).toBe('MAIN');
+      expect(store.vfoLabel('B')).toBe('SUB');
+    });
+
+    it('preserves legacy ab-scheme behaviour', () => {
+      store.setCapabilities(makeCaps({ vfoScheme: 'ab' }));
+      expect(store.vfoLabel('A')).toBe('VFO A');
+      expect(store.vfoLabel('B')).toBe('VFO B');
+    });
+
+    it('emits exactly one console.warn on first call', () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      try {
+        store.vfoLabel('A');
+        store.vfoLabel('B');
+        store.vfoLabel('A');
+        expect(warn).toHaveBeenCalledTimes(1);
+        expect(warn).toHaveBeenCalledWith(
+          '[deprecated] vfoLabel(...) — use receiverLabel/vfoSlotLabel',
+        );
+      } finally {
+        warn.mockRestore();
+      }
+    });
+  });
 });

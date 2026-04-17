@@ -23,7 +23,7 @@
   import SettingsPanel from '../settings/SettingsPanel.svelte';
 
   import { radio, patchActiveReceiver } from '../../lib/stores/radio.svelte';
-  import { hasDualReceiver, hasTx, vfoLabel } from '../../lib/stores/capabilities.svelte';
+  import { hasDualReceiver, hasTx, receiverLabel } from '../../lib/stores/capabilities.svelte';
   import { getConnectionStatus } from '../../lib/stores/connection.svelte';
   import { sendCommand } from '../../lib/transport/ws-client';
   import { setupKeyboard } from '../../lib/actions/keyboard';
@@ -36,8 +36,11 @@
 
   let isDualRx = $derived(hasDualReceiver());
   let isTx = $derived(hasTx());
-  let labelA = $derived(vfoLabel('A'));
-  let labelB = $derived(vfoLabel('B'));
+  // Intent: the two VfoDisplay panels are labelled by *receiver* identity
+  // (MAIN / SUB), not by VFO slot — the pair shows the two receivers, and
+  // each receiver can independently tune VFO A or B on IC-7610/9700.
+  let labelA = $derived(receiverLabel('MAIN'));
+  let labelB = $derived(receiverLabel('SUB'));
   let connectionStatus = $derived(getConnectionStatus());
   let isDisconnected = $derived(connectionStatus === 'disconnected');
   let isReconnecting = $derived(connectionStatus === 'partial');
