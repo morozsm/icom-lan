@@ -76,18 +76,66 @@ function focusModePanel(vfo: 'MAIN' | 'SUB'): void {
 
 /* ── VFO Handlers ────────────────────────────────────────────── */
 
+/** Fields that ``0x07 0xB1`` (equalize) and ``0x07 0xB0`` (exchange)
+ *  propagate between MAIN and SUB on the radio.  Frequency + mode are
+ *  the two observable ones the user cares about; backend poll refreshes
+ *  the rest within one cycle.  Keep the list minimal. */
+const _MAIN_SUB_EQUALIZE_FIELDS = ['freqHz', 'mode', 'filter'] as const;
+
+function _activateReceiver(target: 'MAIN' | 'SUB'): void {
+  // Optimistic UI + WS command to select the receiver.
+  patchRadioState({ active: target });
+  cmd('set_vfo', { vfo: target });
+  // Couple audio focus to the selected receiver so operator hears the
+  // band they're now tuning.  In Dual-Watch mode the radio broadcasts
+  // both receivers' audio, and the web layer decides which channel to
+  // render via the Phones L/R Mix (#752/#755).  Without this coupling,
+  // clicking MAIN/SUB updated state + scope but left the audio focus
+  // untouched, so the user heard MAIN while tuning SUB.
+  audioManager.setAudioConfig({ focus: target === 'SUB' ? 'sub' : 'main' });
+}
+
 export function makeVfoHandlers() {
   return {
-    onSwap: () => cmd('vfo_swap'),
-    // IC-7610: M→S (copy/equalize) = 0x07 0xB1.  One semantic, one handler.
-    onEqual: () => cmd('vfo_equalize'),
+    onSwap: () => {
+      // IC-7610 ``0x07 0xB0`` swaps freq+mode+params between MAIN and SUB.
+      // Optimistically swap the two in the store so the UI reflects the
+      // change within one tick rather than waiting for the next poll.
+      const s = getRadioState();
+      if (s?.main && s?.sub) {
+        const mainSnap: Record<string, unknown> = {};
+        const subSnap: Record<string, unknown> = {};
+        for (const f of _MAIN_SUB_EQUALIZE_FIELDS) {
+          mainSnap[f] = (s.sub as any)[f];
+          subSnap[f] = (s.main as any)[f];
+        }
+        patchReceiver(0, mainSnap as any);
+        patchReceiver(1, subSnap as any);
+      }
+      cmd('vfo_swap');
+    },
+    onEqual: () => {
+      // IC-7610 ``0x07 0xB1`` copies MAIN state to SUB.  Optimistically
+      // mirror that in the store so the SUB readouts snap to MAIN's
+      // values immediately — previously users had to wait for the next
+      // poll cycle (~250ms) to see the change.
+      const s = getRadioState();
+      if (s?.main) {
+        const snap: Record<string, unknown> = {};
+        for (const f of _MAIN_SUB_EQUALIZE_FIELDS) {
+          snap[f] = (s.main as any)[f];
+        }
+        patchReceiver(1, snap as any);
+      }
+      cmd('vfo_equalize');
+    },
     onSplitToggle: () => {
       const next = !(getRadioState()?.split ?? false);
       patchRadioState({ split: next });
       cmd('set_split', { on: next });
     },
-    onMainVfoClick: () => cmd('set_vfo', { vfo: 'MAIN' }),
-    onSubVfoClick: () => cmd('set_vfo', { vfo: 'SUB' }),
+    onMainVfoClick: () => _activateReceiver('MAIN'),
+    onSubVfoClick: () => _activateReceiver('SUB'),
     onMainModeClick: () => focusModePanel('MAIN'),
     onSubModeClick: () => focusModePanel('SUB'),
     onMainFreqChange: (freq: number) => {

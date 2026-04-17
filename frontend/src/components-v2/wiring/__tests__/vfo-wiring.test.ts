@@ -9,10 +9,24 @@ vi.mock('$lib/stores/radio.svelte', () => ({
   getRadioState: vi.fn(() => null),
   patchActiveReceiver: vi.fn(),
   patchRadioState: vi.fn(),
+  patchReceiver: vi.fn(),
+}));
+
+vi.mock('$lib/audio/audio-manager', () => ({
+  audioManager: {
+    setAudioConfig: vi.fn(),
+    startRx: vi.fn(),
+    stopRx: vi.fn(),
+    setRxVolume: vi.fn(),
+    rxEnabled: false,
+  },
 }));
 
 import { sendCommand } from '$lib/transport/ws-client';
-import { getActiveReceiver, getRadioState, patchActiveReceiver, patchRadioState } from '$lib/stores/radio.svelte';
+import {
+  getActiveReceiver, getRadioState, patchActiveReceiver, patchRadioState, patchReceiver,
+} from '$lib/stores/radio.svelte';
+import { audioManager } from '$lib/audio/audio-manager';
 import { toVfoOpsProps } from '../state-adapter';
 import { makeBandHandlers, makeFilterHandlers, makeModeHandlers, makeRitXitHandlers, makeVfoHandlers } from '../command-bus';
 
@@ -136,6 +150,70 @@ describe('makeVfoHandlers', () => {
 
     makeVfoHandlers().onTrackingToggle(false);
     expect(sendCommand).toHaveBeenCalledWith('set_main_sub_tracking', { on: false });
+  });
+
+  // Optimistic updates + audio focus follow for live MAIN/SUB UX.
+  describe('optimistic updates + audio focus', () => {
+    beforeEach(() => {
+      vi.mocked(patchReceiver).mockClear();
+      vi.mocked(audioManager.setAudioConfig).mockClear();
+    });
+
+    it('onEqual optimistically copies MAIN freq/mode/filter to SUB before the poll', () => {
+      vi.mocked(getRadioState).mockReturnValue({
+        main: { freqHz: 14_074_000, mode: 'USB', filter: 2 },
+        sub: { freqHz: 28_500_000, mode: 'AM', filter: 3 },
+      } as any);
+
+      makeVfoHandlers().onEqual();
+
+      expect(patchReceiver).toHaveBeenCalledWith(
+        1,
+        { freqHz: 14_074_000, mode: 'USB', filter: 2 },
+      );
+      expect(sendCommand).toHaveBeenCalledWith('vfo_equalize', {});
+    });
+
+    it('onSwap optimistically exchanges freq/mode/filter between MAIN and SUB', () => {
+      vi.mocked(getRadioState).mockReturnValue({
+        main: { freqHz: 14_074_000, mode: 'USB', filter: 2 },
+        sub: { freqHz: 28_500_000, mode: 'AM', filter: 3 },
+      } as any);
+
+      makeVfoHandlers().onSwap();
+
+      // MAIN gets SUB's former values; SUB gets MAIN's former values.
+      expect(patchReceiver).toHaveBeenCalledWith(
+        0,
+        { freqHz: 28_500_000, mode: 'AM', filter: 3 },
+      );
+      expect(patchReceiver).toHaveBeenCalledWith(
+        1,
+        { freqHz: 14_074_000, mode: 'USB', filter: 2 },
+      );
+      expect(sendCommand).toHaveBeenCalledWith('vfo_swap', {});
+    });
+
+    it('onEqual without state does nothing optimistic but still fires command', () => {
+      vi.mocked(getRadioState).mockReturnValue(null);
+      makeVfoHandlers().onEqual();
+      expect(patchReceiver).not.toHaveBeenCalled();
+      expect(sendCommand).toHaveBeenCalledWith('vfo_equalize', {});
+    });
+
+    it('onMainVfoClick couples audio focus to MAIN', () => {
+      makeVfoHandlers().onMainVfoClick();
+      expect(patchRadioState).toHaveBeenCalledWith({ active: 'MAIN' });
+      expect(sendCommand).toHaveBeenCalledWith('set_vfo', { vfo: 'MAIN' });
+      expect(audioManager.setAudioConfig).toHaveBeenCalledWith({ focus: 'main' });
+    });
+
+    it('onSubVfoClick couples audio focus to SUB', () => {
+      makeVfoHandlers().onSubVfoClick();
+      expect(patchRadioState).toHaveBeenCalledWith({ active: 'SUB' });
+      expect(sendCommand).toHaveBeenCalledWith('set_vfo', { vfo: 'SUB' });
+      expect(audioManager.setAudioConfig).toHaveBeenCalledWith({ focus: 'sub' });
+    });
   });
 });
 
