@@ -394,5 +394,51 @@ describe('CollapsiblePanel', () => {
       // Should remain collapsed (click was suppressed by swipeHandled flag)
       expect(chevron?.textContent).toBe('▸');
     });
+
+    it('hover motion without pointerdown does not collapse the panel', () => {
+      // Regression for the phantom-swipe bug: pointermove fires during plain
+      // mouse-over, and the handler used to compute ``dy = clientY - 0`` on
+      // uninitialised swipe state, tripping the collapse threshold on the
+      // first frame.  Now pointermove is gated on ``swipeActive``.
+      const target = mountPanel({ title: 'Test', panelId: 'hover-test' });
+      const header = target.querySelector('.panel-header') as HTMLElement;
+      const chevron = target.querySelector('.chevron');
+
+      expect(chevron?.textContent).toBe('▾');
+
+      // Hover: several pointermove events at varying Y, no pointerdown.
+      for (const y of [100, 150, 200, 400, 600]) {
+        header.dispatchEvent(
+          new PointerEvent('pointermove', { clientX: 50, clientY: y, bubbles: true }),
+        );
+      }
+      flushSync();
+
+      // Must still be expanded — hover must not toggle.
+      expect(chevron?.textContent).toBe('▾');
+    });
+
+    it('pointerup clears swipe state so next hover is inert', () => {
+      const target = mountPanel({ title: 'Test', panelId: 'reset-test' });
+      const header = target.querySelector('.panel-header') as HTMLElement;
+      const chevron = target.querySelector('.chevron');
+
+      // Complete a successful swipe (down → collapse)
+      simulateSwipe(header, 40);
+      header.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+      flushSync();
+      expect(chevron?.textContent).toBe('▸');
+
+      // Now hover: moves should not expand the collapsed panel.
+      for (const y of [20, 60, 120, 300]) {
+        header.dispatchEvent(
+          new PointerEvent('pointermove', { clientX: 50, clientY: y, bubbles: true }),
+        );
+      }
+      flushSync();
+
+      // Still collapsed — hover did not re-toggle.
+      expect(chevron?.textContent).toBe('▸');
+    });
   });
 });
