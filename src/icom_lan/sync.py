@@ -21,7 +21,7 @@ from .ic705 import (
     prepare_ic705_data_profile as _prepare_ic705_data_profile,
     restore_ic705_data_profile as _restore_ic705_data_profile,
 )
-from .radio import IcomRadio as _AsyncIcomRadio  # noqa: TID251
+from .radio import IcomRadio as _AsyncIcomRadio, _DEFAULT_AUDIO_CODEC  # noqa: TID251
 from .capabilities import CAP_METERS, CAP_POWER_CONTROL
 from .types import AudioCapabilities, AudioCodec, Mode, ScopeCompletionPolicy
 
@@ -43,7 +43,9 @@ class IcomRadio:
         password: Authentication password.
         radio_addr: CI-V address of the radio (default IC-7610 = 0x98).
         timeout: Operation timeout in seconds.
-        audio_codec: Audio codec (default PCM 1ch 16-bit).
+        audio_codec: Audio codec (default: stereo PCM 2ch 16-bit on dual-RX
+            radios, auto-negotiated down to mono on single-RX firmware — see
+            ``_DEFAULT_CODEC_PREFERENCE`` in ``types.py``).
         audio_sample_rate: Audio sample rate in Hz.
     """
 
@@ -55,7 +57,7 @@ class IcomRadio:
         password: str = "",
         radio_addr: int = 0x98,
         timeout: float = 5.0,
-        audio_codec: AudioCodec | int = AudioCodec.PCM_1CH_16BIT,
+        audio_codec: AudioCodec | int = _DEFAULT_AUDIO_CODEC,
         audio_sample_rate: int = 48000,
     ) -> None:
         self._loop = asyncio.new_event_loop()

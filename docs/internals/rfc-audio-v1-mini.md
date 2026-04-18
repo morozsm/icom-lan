@@ -207,10 +207,20 @@ destination`:
 
 | `focus` | `split_stereo` | L gain | R gain | L pan | R pan |
 |---------|----------------|--------|--------|-------|-------|
-| main    | any            | 1.0    | 0.0    | 0     | 0     |
-| sub     | any            | 0.0    | 1.0    | 0     | 0     |
+| main    | false          | 1.0    | 0.0    | 0     | 0     |
+| main    | true           | 1.0    | 0.0    | −1    | +1    |
+| sub     | false          | 0.0    | 1.0    | 0     | 0     |
+| sub     | true           | 0.0    | 1.0    | −1    | +1    |
 | both    | false          | 1.0    | 1.0    | 0     | 0     |
 | both    | true           | 1.0    | 1.0    | −1    | +1    |
+
+Panning depends **only** on `split_stereo` (see
+`rx-player.ts::_applyGraphState`, lines 247-257) — when on,
+`mainPanner` hard-pans to −1 and `subPanner` to +1 regardless of
+`focus`.  For single-receiver focus (`focus=main` or `focus=sub`) the
+opposing gain is already 0 so the pan on the silenced channel is
+inaudible, but the setting still applies to the active channel — e.g.
+`focus=main` + `split_stereo=true` routes MAIN to the left ear only.
 
 Per-channel dB sliders (`mainGainDb` / `subGainDb`) multiply into the
 L/R gains respectively.
