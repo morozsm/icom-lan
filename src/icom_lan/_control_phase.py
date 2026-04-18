@@ -574,8 +574,8 @@ class ControlPhaseRuntime:
                 if len(d) != STATUS_SIZE:
                     continue
                 status = parse_status_response(d)
-                got_civ = status.civ_port
-                got_audio = status.audio_port
+                got_civ: int = status.civ_port
+                got_audio: int = status.audio_port
                 status_packets_seen += 1
                 h._last_status_error = status.error
                 h._last_status_disconnected = status.disconnected
@@ -659,7 +659,7 @@ class ControlPhaseRuntime:
             if remaining <= 0:
                 raise TimeoutError(f"{label} timed out")
             try:
-                data = await transport.receive_packet(timeout=remaining)
+                data: bytes = await transport.receive_packet(timeout=remaining)
             except asyncio.TimeoutError:
                 raise TimeoutError(f"{label} timed out")
             if len(data) == size:

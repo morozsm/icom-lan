@@ -39,7 +39,11 @@ logger = logging.getLogger(__name__)
 
 from . import __version__  # noqa: E402
 from .audio import AudioStats  # noqa: E402
-from .backends.config import LanBackendConfig, SerialBackendConfig, YaesuCatBackendConfig  # noqa: E402
+from .backends.config import (  # noqa: E402
+    LanBackendConfig,
+    SerialBackendConfig,
+    YaesuCatBackendConfig,
+)
 from .backends.factory import create_radio  # noqa: E402
 from .capabilities import (  # noqa: E402
     CAP_AF_LEVEL,
@@ -186,7 +190,10 @@ def _apply_preset(args: argparse.Namespace, preset_name: str) -> None:
     """
     if preset_name not in _PRESETS:
         avail = ", ".join(sorted(_PRESETS))
-        print(f"Error: unknown preset {preset_name!r}. Available: {avail}", file=sys.stderr)
+        print(
+            f"Error: unknown preset {preset_name!r}. Available: {avail}",
+            file=sys.stderr,
+        )
         sys.exit(1)
     command = getattr(args, "command", None)
     for key, value in _PRESETS[preset_name].items():
@@ -623,12 +630,26 @@ def _build_parser() -> argparse.ArgumentParser:
 
     # levels (M4 dsp_levels family)
     levels_p = sub.add_parser("levels", help="Get or set M4 DSP/audio levels")
-    levels_p.add_argument("--nr", type=int, metavar="0-255", help="Noise reduction level")
+    levels_p.add_argument(
+        "--nr", type=int, metavar="0-255", help="Noise reduction level"
+    )
     levels_p.add_argument("--nb", type=int, metavar="0-255", help="Noise blanker level")
-    levels_p.add_argument("--mic-gain", type=int, metavar="0-255", help="Microphone gain")
-    levels_p.add_argument("--drive-gain", type=int, metavar="0-255", help="Drive gain / TX power adjust")
-    levels_p.add_argument("--comp-level", type=int, metavar="0-255", help="Speech compressor level")
-    levels_p.add_argument("--receiver", type=int, default=0, choices=[0, 1], help="Receiver (0=main, 1=sub)")
+    levels_p.add_argument(
+        "--mic-gain", type=int, metavar="0-255", help="Microphone gain"
+    )
+    levels_p.add_argument(
+        "--drive-gain", type=int, metavar="0-255", help="Drive gain / TX power adjust"
+    )
+    levels_p.add_argument(
+        "--comp-level", type=int, metavar="0-255", help="Speech compressor level"
+    )
+    levels_p.add_argument(
+        "--receiver",
+        type=int,
+        default=0,
+        choices=[0, 1],
+        help="Receiver (0=main, 1=sub)",
+    )
     _add_json(levels_p)
 
     # discover
@@ -997,9 +1018,7 @@ def _resolve_model(
 
     if matched is None:
         available = ", ".join(sorted(rigs.keys()))
-        raise ValueError(
-            f"Unknown model {model_name!r}. Available: {available}"
-        )
+        raise ValueError(f"Unknown model {model_name!r}. Available: {available}")
 
     # --radio-addr overrides profile civ_addr
     if radio_addr is None:
@@ -1086,7 +1105,10 @@ async def _build_backend_config(
     if backend == "serial":
         host = getattr(args, "host", _HOST_NOT_SET)
         if host and host != _HOST_NOT_SET:
-            print("Warning: --host is ignored when --backend serial is used.", file=sys.stderr)
+            print(
+                "Warning: --host is ignored when --backend serial is used.",
+                file=sys.stderr,
+            )
         device = serial_port
         if not device:
             device, discovered_baud = await _auto_discover_serial()
@@ -1104,7 +1126,10 @@ async def _build_backend_config(
         )
     # LAN backend — auto-discover if host not set.
     if serial_port:
-        print("Warning: --serial-port is ignored when --backend lan is used.", file=sys.stderr)
+        print(
+            "Warning: --serial-port is ignored when --backend lan is used.",
+            file=sys.stderr,
+        )
     host = getattr(args, "host", _HOST_NOT_SET)
     if not host or host == _HOST_NOT_SET:
         host = await _auto_discover_lan(timeout=args.timeout)
@@ -1122,7 +1147,7 @@ async def _build_backend_config(
 async def _cmd_list_audio_devices(args: argparse.Namespace) -> int:
     """List available USB audio devices."""
     try:
-        import sounddevice as _sd  # type: ignore[import-untyped]  # noqa: F401
+        import sounddevice as _sd  # noqa: F401
     except ImportError:
         print(
             "Error: --list-audio-devices requires the sounddevice package.\n"
@@ -1214,6 +1239,7 @@ async def _run(args: argparse.Namespace) -> int:
                 runtime_stats: dict[str, bool | int | float | str] = (
                     AudioStats.inactive().to_dict()
                 )
+
                 async def _noop_pkt(_pkt: Any) -> None:
                     pass
 
@@ -1238,47 +1264,74 @@ async def _run(args: argparse.Namespace) -> int:
                 return await _cmd_ptt(radio, args)
             elif args.command == "cw":
                 if CAP_CW not in radio.capabilities:
-                    print("Error: this radio does not support CW control.", file=sys.stderr)
+                    print(
+                        "Error: this radio does not support CW control.",
+                        file=sys.stderr,
+                    )
                     return 1
                 return await _cmd_cw(radio, args)
             elif args.command == "att":
                 if CAP_ATTENUATOR not in radio.capabilities:
-                    print("Error: this radio does not support attenuator control.", file=sys.stderr)
+                    print(
+                        "Error: this radio does not support attenuator control.",
+                        file=sys.stderr,
+                    )
                     return 1
                 return await _cmd_att(radio, args)
             elif args.command == "preamp":
                 if CAP_PREAMP not in radio.capabilities:
-                    print("Error: this radio does not support preamp control.", file=sys.stderr)
+                    print(
+                        "Error: this radio does not support preamp control.",
+                        file=sys.stderr,
+                    )
                     return 1
                 return await _cmd_preamp(radio, args)
             elif args.command == "antenna":
                 if CAP_ANTENNA not in radio.capabilities:
-                    print("Error: this radio does not support antenna control.", file=sys.stderr)
+                    print(
+                        "Error: this radio does not support antenna control.",
+                        file=sys.stderr,
+                    )
                     return 1
                 return await _cmd_antenna(radio, args)
             elif args.command == "date":
                 if CAP_SYSTEM_SETTINGS not in radio.capabilities:
-                    print("Error: this radio does not support date control.", file=sys.stderr)
+                    print(
+                        "Error: this radio does not support date control.",
+                        file=sys.stderr,
+                    )
                     return 1
                 return await _cmd_date(radio, args)
             elif args.command == "time":
                 if CAP_SYSTEM_SETTINGS not in radio.capabilities:
-                    print("Error: this radio does not support time control.", file=sys.stderr)
+                    print(
+                        "Error: this radio does not support time control.",
+                        file=sys.stderr,
+                    )
                     return 1
                 return await _cmd_time(radio, args)
             elif args.command == "dualwatch":
                 if CAP_DUAL_WATCH not in radio.capabilities:
-                    print("Error: this radio does not support dual watch.", file=sys.stderr)
+                    print(
+                        "Error: this radio does not support dual watch.",
+                        file=sys.stderr,
+                    )
                     return 1
                 return await _cmd_dualwatch(radio, args)
             elif args.command == "tuner":
                 if CAP_TUNER not in radio.capabilities:
-                    print("Error: this radio does not support tuner control.", file=sys.stderr)
+                    print(
+                        "Error: this radio does not support tuner control.",
+                        file=sys.stderr,
+                    )
                     return 1
                 return await _cmd_tuner(radio, args)
             elif args.command == "levels":
                 if CAP_AF_LEVEL not in radio.capabilities:
-                    print("Error: this radio does not support level controls.", file=sys.stderr)
+                    print(
+                        "Error: this radio does not support level controls.",
+                        file=sys.stderr,
+                    )
                     return 1
                 return await _cmd_levels(radio, args)
             elif args.command == "web":
@@ -1845,7 +1898,9 @@ async def _cmd_power(radio: Radio, args: argparse.Namespace) -> int:
             )
             return 1
         if not 0 <= args.value <= 255:
-            print(f"Error: power level must be 0-255 (got {args.value})", file=sys.stderr)
+            print(
+                f"Error: power level must be 0-255 (got {args.value})", file=sys.stderr
+            )
             return 1
         await radio.set_rf_power(args.value)
         print(f"Set: {args.value}")
@@ -2110,8 +2165,11 @@ async def _cmd_levels(radio: Radio, args: argparse.Namespace) -> int:
 
     # Validate ranges
     for name, val in [
-        ("--nr", args.nr), ("--nb", args.nb), ("--mic-gain", args.mic_gain),
-        ("--drive-gain", args.drive_gain), ("--comp-level", args.comp_level),
+        ("--nr", args.nr),
+        ("--nb", args.nb),
+        ("--mic-gain", args.mic_gain),
+        ("--drive-gain", args.drive_gain),
+        ("--comp-level", args.comp_level),
     ]:
         if val is not None and not 0 <= val <= 255:
             print(f"Error: {name} must be 0-255 (got {val})", file=sys.stderr)
@@ -2638,10 +2696,14 @@ async def _cmd_discover(_radio: Radio | None, args: argparse.Namespace) -> int:
 
     import dataclasses
 
-    lan_radios: list[dict[str, Any]] = lan_result if not isinstance(lan_result, BaseException) else []
+    lan_radios: list[dict[str, Any]] = (
+        lan_result if not isinstance(lan_result, BaseException) else []
+    )
     _serial_raw = serial_result if not isinstance(serial_result, BaseException) else []
     serial_radios: list[dict[str, Any]] = [
-        dataclasses.asdict(r) if dataclasses.is_dataclass(r) and not isinstance(r, type) else r
+        dataclasses.asdict(r)
+        if dataclasses.is_dataclass(r) and not isinstance(r, type)
+        else r
         for r in _serial_raw
     ]
 
@@ -2687,28 +2749,37 @@ def main() -> None:
     # ICOM_LOG_FILE=/path/to/file.log — log to file (default: logs/icom-lan.log)
     # ICOM_LOG_MAX_BYTES=50000000 — rotate when file reaches this size (default: 50 MB)
     # ICOM_LOG_BACKUP_COUNT=5 — keep N rotated backups (default: 5; 0 disables rotation)
-    debug_mode = os.environ.get("ICOM_DEBUG", "").strip() not in ("", "0", "false", "no")
+    debug_mode = os.environ.get("ICOM_DEBUG", "").strip() not in (
+        "",
+        "0",
+        "false",
+        "no",
+    )
     log_file = os.environ.get("ICOM_LOG_FILE", "")
-    
+
     handlers: list[logging.Handler] = []
-    
+
     # Console handler (always present)
     console_handler = logging.StreamHandler()
     if debug_mode:
         console_handler.setFormatter(
-            logging.Formatter("%(asctime)s %(name)s %(levelname)s %(message)s", datefmt="%H:%M:%S")
+            logging.Formatter(
+                "%(asctime)s %(name)s %(levelname)s %(message)s", datefmt="%H:%M:%S"
+            )
         )
     else:
         console_handler.setFormatter(
-            logging.Formatter("%(asctime)s %(levelname)s %(message)s", datefmt="%H:%M:%S")
+            logging.Formatter(
+                "%(asctime)s %(levelname)s %(message)s", datefmt="%H:%M:%S"
+            )
         )
     handlers.append(console_handler)
-    
+
     # File handler (if log_file specified or debug mode)
     if debug_mode and not log_file:
         # Default log file in debug mode: logs/icom-lan.log
         log_file = "logs/icom-lan.log"
-    
+
     if log_file:
         log_path = Path(log_file).expanduser().resolve()
         log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -2716,20 +2787,23 @@ def main() -> None:
         backup_count = _env_int("ICOM_LOG_BACKUP_COUNT", 5)
         file_handler: logging.Handler = RotatingFileHandler(
             log_path,
-            mode='a',
+            mode="a",
             maxBytes=max_bytes if backup_count > 0 else 0,
             backupCount=backup_count,
-            encoding='utf-8',
+            encoding="utf-8",
         )
         file_handler.setFormatter(
             logging.Formatter(
                 "%(asctime)s %(name)s [%(levelname)s] %(message)s",
-                datefmt="%Y-%m-%d %H:%M:%S"
+                datefmt="%Y-%m-%d %H:%M:%S",
             )
         )
         handlers.append(file_handler)
-        print(f"Logging to {log_path} (rotate at {max_bytes} bytes, keep {backup_count} backups)", file=sys.stderr)
-    
+        print(
+            f"Logging to {log_path} (rotate at {max_bytes} bytes, keep {backup_count} backups)",
+            file=sys.stderr,
+        )
+
     logging.basicConfig(
         level=logging.DEBUG if debug_mode else logging.INFO,
         handlers=handlers,

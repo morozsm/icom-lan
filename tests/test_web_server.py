@@ -1538,6 +1538,7 @@ class TestDspOpusGateWarning:
         from icom_lan.types import AudioCodec
         from icom_lan.web.handlers import AudioBroadcaster
         from icom_lan.web.protocol import AUDIO_CODEC_PCM16
+
         b = AudioBroadcaster(None)
         b._radio_codec = AudioCodec.PCM_1CH_16BIT
         b._web_codec = AUDIO_CODEC_PCM16
@@ -1547,6 +1548,7 @@ class TestDspOpusGateWarning:
         from icom_lan.types import AudioCodec
         from icom_lan.web.handlers import AudioBroadcaster
         from icom_lan.web.protocol import AUDIO_CODEC_OPUS
+
         b = AudioBroadcaster(None)
         b._radio_codec = AudioCodec.OPUS_1CH
         b._web_codec = AUDIO_CODEC_OPUS
@@ -1554,16 +1556,16 @@ class TestDspOpusGateWarning:
 
     def test_no_warning_when_dsp_set_on_pcm_broadcaster(self, caplog) -> None:
         import logging
+
         b = self._pcm_broadcaster()
         with caplog.at_level(logging.WARNING, logger="icom_lan.web.handlers.audio"):
             b.set_dsp_pipeline(MagicMock())
-        assert not any(
-            "native codec is Opus" in r.message for r in caplog.records
-        )
+        assert not any("native codec is Opus" in r.message for r in caplog.records)
         assert b._dsp_opus_warned is False
 
     def test_warning_fires_when_dsp_set_on_opus_broadcaster(self, caplog) -> None:
         import logging
+
         b = self._opus_broadcaster()
         with caplog.at_level(logging.WARNING, logger="icom_lan.web.handlers.audio"):
             b.set_dsp_pipeline(MagicMock())
@@ -1575,6 +1577,7 @@ class TestDspOpusGateWarning:
 
     def test_warning_fires_at_most_once_per_lifetime(self, caplog) -> None:
         import logging
+
         b = self._opus_broadcaster()
         with caplog.at_level(logging.WARNING, logger="icom_lan.web.handlers.audio"):
             b.set_dsp_pipeline(MagicMock())
@@ -1609,14 +1612,13 @@ class TestDspOpusGateWarning:
 
     def test_no_warning_when_dsp_is_none(self, caplog) -> None:
         import logging
+
         b = self._opus_broadcaster()
         with caplog.at_level(logging.WARNING, logger="icom_lan.web.handlers.audio"):
             b.set_dsp_pipeline(None)
             b._maybe_warn_dsp_opus_gate()
         assert b._dsp_opus_warned is False
-        assert not any(
-            "native codec is Opus" in r.message for r in caplog.records
-        )
+        assert not any("native codec is Opus" in r.message for r in caplog.records)
 
 
 class TestAudioHandlerTxTranscoderRate:
@@ -1650,23 +1652,57 @@ class TestAudioHandlerTxTranscoderRate:
     async def _start_tx(self, handler: Any) -> None:
         await handler._handle_control({"type": "audio_start", "direction": "tx"})
 
+    @staticmethod
+    def _fake_transcoder_factory(captured: list[int]) -> Any:
+        """Return a fake ``create_pcm_opus_transcoder`` that records sample_rate.
+
+        Native libopus may be absent from the dev/CI environment; mock the
+        factory so the test verifies only the rate-plumbing contract.
+        """
+
+        def _factory(*, sample_rate: int, **_kwargs: Any) -> Any:
+            captured.append(sample_rate)
+            fake = MagicMock()
+            fake._fmt.sample_rate = sample_rate
+            return fake
+
+        return _factory
+
     async def test_tx_transcoder_uses_24khz_rate(self) -> None:
         handler = self._make_handler(24000)
-        await self._start_tx(handler)
+        captured: list[int] = []
+        with patch(
+            "icom_lan.web.handlers.audio.create_pcm_opus_transcoder",
+            new=self._fake_transcoder_factory(captured),
+        ):
+            await self._start_tx(handler)
         assert handler._transcoder is not None
         assert handler._transcoder._fmt.sample_rate == 24000
+        assert captured == [24000]
 
     async def test_tx_transcoder_uses_48khz_rate(self) -> None:
         handler = self._make_handler(48000)
-        await self._start_tx(handler)
+        captured: list[int] = []
+        with patch(
+            "icom_lan.web.handlers.audio.create_pcm_opus_transcoder",
+            new=self._fake_transcoder_factory(captured),
+        ):
+            await self._start_tx(handler)
         assert handler._transcoder is not None
         assert handler._transcoder._fmt.sample_rate == 48000
+        assert captured == [48000]
 
     async def test_tx_transcoder_falls_back_when_rate_missing(self) -> None:
         handler = self._make_handler(None)
-        await self._start_tx(handler)
+        captured: list[int] = []
+        with patch(
+            "icom_lan.web.handlers.audio.create_pcm_opus_transcoder",
+            new=self._fake_transcoder_factory(captured),
+        ):
+            await self._start_tx(handler)
         assert handler._transcoder is not None
         assert handler._transcoder._fmt.sample_rate == 48000
+        assert captured == [48000]
 
     async def test_tx_transcoder_not_created_before_tx_start(self) -> None:
         handler = self._make_handler(24000)
