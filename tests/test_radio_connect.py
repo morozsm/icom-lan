@@ -17,6 +17,7 @@ from icom_lan.radio import (
     TOKEN_ACK_SIZE,
 )
 from icom_lan.transport import ConnectionState
+from icom_lan.types import AudioCodec
 
 from test_radio import MockTransport
 
@@ -213,8 +214,7 @@ class TestSendConninfo:
             f"rxcodec should reflect requested codec 0x10, got 0x{packet[0x72]:02X}"
         )
         assert packet[0x73] == int(AudioCodec.PCM_1CH_16BIT), (
-            f"txcodec must be mono 0x04 even for stereo RX, "
-            f"got 0x{packet[0x73]:02X}"
+            f"txcodec must be mono 0x04 even for stereo RX, got 0x{packet[0x73]:02X}"
         )
 
 
@@ -487,6 +487,170 @@ class TestConnectSessionRejection:
             with pytest.raises(ConnectionError, match="rejected session allocation"):
                 await radio.connect()
 
+        assert mt.disconnected is True
+
+    @pytest.mark.asyncio
+    async def test_stereo_codec_fallback_succeeds(self) -> None:
+        """Stereo rx_codec + 0xFFFFFFFF → retry with mono → connection succeeds."""
+        radio = IcomRadio(
+            "192.168.1.100",
+            username="u",
+            password="p",
+            audio_codec=AudioCodec.PCM_2CH_16BIT,
+        )
+        mt = ConnectMockTransport()
+        radio._ctrl_transport = mt
+
+        civ_port_responses = [0, 50001]
+        status_errors = [0xFFFFFFFF, 0]
+
+        async def _status_flow() -> int:
+            radio._last_status_error = status_errors.pop(0)
+            return civ_port_responses.pop(0)
+
+        codec_per_call: list[AudioCodec] = []
+
+        async def _capture_codec(*_args: object, **_kwargs: object) -> None:
+            codec_per_call.append(radio._audio_codec)
+
+        with (
+            patch.object(radio._control_phase, "_status_retry_pause", return_value=0.0),
+            patch.object(
+                radio._control_phase,
+                "_wait_for_packet",
+                new=AsyncMock(return_value=_build_login_response()),
+            ),
+            patch.object(radio._control_phase, "_send_token_ack", new=AsyncMock()),
+            patch.object(
+                radio._control_phase,
+                "_receive_guid",
+                new=AsyncMock(return_value=b"\x00" * 16),
+            ),
+            patch.object(
+                radio._control_phase,
+                "_send_conninfo",
+                new=AsyncMock(side_effect=_capture_codec),
+            ),
+            patch.object(
+                radio._control_phase,
+                "_receive_civ_port",
+                new=AsyncMock(side_effect=_status_flow),
+            ),
+            patch.object(
+                radio._control_phase, "_flush_queue", new=AsyncMock(return_value=0)
+            ),
+            patch.object(radio._control_phase, "_start_token_renewal"),
+            patch.object(radio._control_phase, "_start_watchdog"),
+            patch.object(radio._civ_runtime, "start_pump"),
+            patch.object(radio._civ_runtime, "start_data_watchdog"),
+            patch.object(radio._civ_runtime, "start_worker"),
+            patch(
+                "icom_lan.transport.IcomTransport",
+                return_value=ConnectMockTransport(),
+            ),
+            patch("icom_lan._control_phase.asyncio.sleep", new=AsyncMock()),
+        ):
+            radio._civ_ready_idle_timeout = 0.0
+            # Not interested in the connect path after CIV transport; only
+            # whether fallback downgraded the codec before the second conninfo.
+            try:
+                await radio.connect()
+            except ConnectionError:
+                pass
+
+        assert codec_per_call == [
+            AudioCodec.PCM_2CH_16BIT,
+            AudioCodec.PCM_1CH_16BIT,
+        ], "Second conninfo must be sent with mono codec, before any later mutation"
+        assert radio._audio_codec == AudioCodec.PCM_1CH_16BIT
+        assert radio._civ_port == 50001
+
+    @pytest.mark.asyncio
+    async def test_stereo_codec_fallback_raises_on_second_rejection(self) -> None:
+        """Stereo rx_codec rejected twice → raise, no infinite loop."""
+        radio = IcomRadio(
+            "192.168.1.100",
+            username="u",
+            password="p",
+            audio_codec=AudioCodec.PCM_2CH_16BIT,
+        )
+        mt = ConnectMockTransport()
+        radio._ctrl_transport = mt
+
+        async def _always_reject() -> int:
+            radio._last_status_error = 0xFFFFFFFF
+            return 0
+
+        send_mock = AsyncMock()
+
+        with (
+            patch.object(radio._control_phase, "_status_retry_pause", return_value=0.0),
+            patch.object(
+                radio._control_phase,
+                "_wait_for_packet",
+                new=AsyncMock(return_value=_build_login_response()),
+            ),
+            patch.object(radio._control_phase, "_send_token_ack", new=AsyncMock()),
+            patch.object(
+                radio._control_phase,
+                "_receive_guid",
+                new=AsyncMock(return_value=b"\x00" * 16),
+            ),
+            patch.object(radio._control_phase, "_send_conninfo", new=send_mock),
+            patch.object(
+                radio._control_phase,
+                "_receive_civ_port",
+                new=AsyncMock(side_effect=_always_reject),
+            ),
+        ):
+            with pytest.raises(ConnectionError, match="both stereo and mono rx_codec"):
+                await radio.connect()
+
+        assert send_mock.await_count == 2, "Exactly one retry — no infinite loop"
+        assert mt.disconnected is True
+
+    @pytest.mark.asyncio
+    async def test_mono_codec_no_fallback_raises_immediately(self) -> None:
+        """Mono rx_codec + 0xFFFFFFFF → raise immediately, no retry attempted."""
+        radio = IcomRadio(
+            "192.168.1.100",
+            username="u",
+            password="p",
+            audio_codec=AudioCodec.PCM_1CH_16BIT,
+        )
+        mt = ConnectMockTransport()
+        radio._ctrl_transport = mt
+
+        async def _reject_status() -> int:
+            radio._last_status_error = 0xFFFFFFFF
+            return 0
+
+        send_mock = AsyncMock()
+
+        with (
+            patch.object(radio._control_phase, "_status_retry_pause", return_value=0.0),
+            patch.object(
+                radio._control_phase,
+                "_wait_for_packet",
+                new=AsyncMock(return_value=_build_login_response()),
+            ),
+            patch.object(radio._control_phase, "_send_token_ack", new=AsyncMock()),
+            patch.object(
+                radio._control_phase,
+                "_receive_guid",
+                new=AsyncMock(return_value=b"\x00" * 16),
+            ),
+            patch.object(radio._control_phase, "_send_conninfo", new=send_mock),
+            patch.object(
+                radio._control_phase,
+                "_receive_civ_port",
+                new=AsyncMock(side_effect=_reject_status),
+            ),
+        ):
+            with pytest.raises(ConnectionError, match="rejected session allocation"):
+                await radio.connect()
+
+        assert send_mock.await_count == 1, "No retry for mono codec"
         assert mt.disconnected is True
 
 
