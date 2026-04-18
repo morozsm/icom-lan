@@ -20,6 +20,14 @@ seq_max = 11
 amp_max = 160
 data_len_max = 475
 
+# Pin mono-first codec (#797). The global default is stereo-first, but single-RX
+# firmware has not been hardware-validated to accept stereo rx_codec at conninfo;
+# negotiating stereo risks immediate session rejection (error=0xFFFFFFFF).
+# ``_control_phase`` also retries with mono on rejection, so this is a secondary
+# safety belt plus an explicit intent marker.
+[audio]
+codec_preference = ["PCM_1CH_16BIT", "ULAW_1CH"]
+
 # ── Capabilities ─────────────────────────────────────────────────
 # Feature tags determine which UI panels and controls are rendered.
 # Grouped by functional area.

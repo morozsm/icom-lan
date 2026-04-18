@@ -566,3 +566,59 @@ class TestDiscoverRigs:
         assert rigs == {}
         assert rigs == {}
         assert rigs == {}
+
+
+class TestCodecPreference:
+    """Per-profile [audio] codec_preference override (#797)."""
+
+    def test_single_rx_rigs_pin_mono_first(self):
+        """IC-7300/IC-705/IC-9700 all carry mono-first codec preference."""
+        for name in ("ic7300.toml", "ic705.toml", "ic9700.toml"):
+            rig = load_rig(RIGS_DIR / name)
+            assert rig.codec_preference == ("PCM_1CH_16BIT", "ULAW_1CH"), (
+                f"{name} must pin mono-first codec_preference"
+            )
+            profile = rig.to_profile()
+            assert profile.codec_preference == ("PCM_1CH_16BIT", "ULAW_1CH")
+
+    def test_ic7610_has_no_override(self):
+        """IC-7610 stays on the global stereo-first default (no override)."""
+        rig = load_rig(TEMPLATE_PATH)
+        assert rig.codec_preference is None
+        assert rig.to_profile().codec_preference is None
+
+    def test_codec_preference_parses_list_of_strings(self, tmp_path):
+        toml = _MINIMAL_TOML + '\n[audio]\ncodec_preference = ["PCM_1CH_16BIT"]\n'
+        p = _write_toml(tmp_path, toml)
+        rig = load_rig(p)
+        assert rig.codec_preference == ("PCM_1CH_16BIT",)
+
+    def test_missing_audio_section_is_ok(self, tmp_path):
+        p = _write_toml(tmp_path, _MINIMAL_TOML)
+        rig = load_rig(p)
+        assert rig.codec_preference is None
+
+    def test_empty_codec_preference_rejected(self, tmp_path):
+        toml = _MINIMAL_TOML + "\n[audio]\ncodec_preference = []\n"
+        p = _write_toml(tmp_path, toml)
+        with pytest.raises(RigLoadError, match="must not be empty"):
+            load_rig(p)
+
+    def test_unknown_codec_name_rejected(self, tmp_path):
+        toml = _MINIMAL_TOML + '\n[audio]\ncodec_preference = ["BOGUS_CODEC"]\n'
+        p = _write_toml(tmp_path, toml)
+        with pytest.raises(RigLoadError, match="unknown codec"):
+            load_rig(p)
+
+    def test_non_string_codec_entry_rejected(self, tmp_path):
+        toml = _MINIMAL_TOML + "\n[audio]\ncodec_preference = [123]\n"
+        p = _write_toml(tmp_path, toml)
+        with pytest.raises(RigLoadError, match="list of strings"):
+            load_rig(p)
+
+    def test_non_table_audio_section_rejected(self, tmp_path):
+        # Insert ``audio = "..."`` before any TOML table so it lands at top level.
+        toml = 'audio = "not a table"\n' + _MINIMAL_TOML
+        p = _write_toml(tmp_path, toml)
+        with pytest.raises(RigLoadError, match=r"\[audio\] must be a table"):
+            load_rig(p)

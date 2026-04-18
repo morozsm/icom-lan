@@ -23,6 +23,13 @@ seq_max = 11
 amp_max = 160
 data_len_max = 475
 
+# Pin mono-first codec (#797). Single-RX firmware has not been hardware-validated
+# to accept stereo rx_codec at conninfo — negotiating stereo risks immediate
+# session rejection (error=0xFFFFFFFF). Pair with ``_control_phase`` retry-with-
+# mono fallback as belt-and-braces.
+[audio]
+codec_preference = ["PCM_1CH_16BIT", "ULAW_1CH"]
+
 # ── Capabilities ─────────────────────────────────────────────────
 
 [capabilities]
