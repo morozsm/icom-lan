@@ -429,7 +429,7 @@ class TestCliAudioCapsE2E:
         data = json.loads(capsys.readouterr().out)
         assert "supported_codecs" in data
         assert data["default_sample_rate_hz"] == 48000
-        assert data["default_channels"] == 1
+        assert data["default_channels"] == 2
 
     @pytest.mark.asyncio
     async def test_caps_text_format(self, capsys) -> None:

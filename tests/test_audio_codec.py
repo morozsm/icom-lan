@@ -32,7 +32,7 @@ class TestAudioCodecEnum:
 class TestRadioAudioConfig:
     def test_default_codec(self) -> None:
         r = IcomRadio("192.168.1.100")
-        assert r.audio_codec == AudioCodec.PCM_1CH_16BIT
+        assert r.audio_codec == AudioCodec.PCM_2CH_16BIT
         assert r.audio_sample_rate == 48000
 
     def test_custom_codec(self) -> None:
@@ -63,9 +63,9 @@ class TestAudioCapabilities:
 
     def test_default_selection_is_deterministic(self) -> None:
         caps = get_audio_capabilities()
-        assert caps.default_codec == AudioCodec.PCM_1CH_16BIT
+        assert caps.default_codec == AudioCodec.PCM_2CH_16BIT
         assert caps.default_sample_rate_hz == 48000
-        assert caps.default_channels == 1
+        assert caps.default_channels == 2
 
     def test_default_values_are_supported(self) -> None:
         caps = get_audio_capabilities()
@@ -82,6 +82,6 @@ class TestAudioCapabilities:
         assert "supported_codecs" in data
         assert "supported_sample_rates_hz" in data
         assert "supported_channels" in data
-        assert data["default_codec"] == {"name": "PCM_1CH_16BIT", "value": 0x04}
+        assert data["default_codec"] == {"name": "PCM_2CH_16BIT", "value": 0x10}
         assert data["default_sample_rate_hz"] == 48000
-        assert data["default_channels"] == 1
+        assert data["default_channels"] == 2

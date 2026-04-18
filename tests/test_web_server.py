@@ -1674,11 +1674,13 @@ class TestAudioHandlerTxTranscoderRate:
 
 
 class TestAudioConfigRouting:
-    """audio_config WS message → CI-V Phones L/R Mix (issue #752).
+    """audio_config WS message → CI-V Phones L/R Mix (issue #752 / #788 / #792).
 
-    Each (focus, split_stereo) pair maps to a Menu 0072 byte emitted via
-    ``radio.send_civ(0x1A, sub=0x05, data=bytes([0x00, 0x72, byte]))``.
-    Gated on dual-RX profiles; 1-Rx radios silently no-op.
+    Contract (#792): Phones L/R Mix is always kept OFF (0x00) on dual-RX
+    radios so the LAN stream stays separated L=MAIN / R=SUB.  ``focus``
+    and ``split_stereo`` travel on the WS payload for client-side
+    persistence but do not round-trip to CI-V.  Gated on dual-RX profiles;
+    1-Rx radios silently no-op.
     """
 
     @staticmethod
@@ -1713,34 +1715,51 @@ class TestAudioConfigRouting:
             "data": bytes([0x00, 0x72, phones_byte]),
         }
 
-    async def test_focus_main_split_off_sends_phones_00(self) -> None:
-        handler, radio, _ = self._make_handler()
-        await self._apply(handler, "main", False)
-        radio.send_civ.assert_awaited_once_with(
-            0x1A, sub=0x05, data=bytes([0x00, 0x72, 0x00]), wait_response=False
-        )
+    async def test_any_focus_split_combo_sends_phones_mix_off(self) -> None:
+        """Every (focus, split_stereo) combination → Phones L/R Mix OFF (0x00).
 
-    async def test_focus_sub_split_off_sends_phones_03(self) -> None:
-        handler, radio, _ = self._make_handler()
-        await self._apply(handler, "sub", False)
-        radio.send_civ.assert_awaited_once_with(
-            0x1A, sub=0x05, data=bytes([0x00, 0x72, 0x03]), wait_response=False
-        )
+        #792 contract: the backend must keep Mix OFF whenever a 2-channel
+        codec is active so the LAN stream stays separated L=MAIN/R=SUB.
+        If the radio pre-sums the receivers, the frontend can no longer
+        isolate MAIN or SUB via WebAudio gain — both channels would carry
+        the summed signal.  ``focus`` / ``split_stereo`` now round-trip
+        only as echo-back for client-side persistence.
+        """
+        for focus in ("main", "sub", "both"):
+            for split in (False, True):
+                handler, radio, _ = self._make_handler()
+                await self._apply(handler, focus, split)
+                radio.send_civ.assert_awaited_once_with(
+                    0x1A,
+                    sub=0x05,
+                    data=bytes([0x00, 0x72, 0x00]),
+                    wait_response=False,
+                )
 
-    async def test_focus_both_split_off_sends_phones_02(self) -> None:
-        handler, radio, _ = self._make_handler()
-        await self._apply(handler, "both", False)
-        radio.send_civ.assert_awaited_once_with(
-            0x1A, sub=0x05, data=bytes([0x00, 0x72, 0x02]), wait_response=False
-        )
+    async def test_only_valid_phones_bytes_are_emitted(self) -> None:
+        """Invariant: Phones L/R Mix only ever receives 0x00.
 
-    async def test_focus_both_split_on_sends_phones_01(self) -> None:
-        """Stereo split: L=MAIN, R=SUB — the headline feature."""
-        handler, radio, _ = self._make_handler()
-        await self._apply(handler, "both", True)
-        radio.send_civ.assert_awaited_once_with(
-            0x1A, sub=0x05, data=bytes([0x00, 0x72, 0x01]), wait_response=False
-        )
+        Per IC-7610 CI-V reference p. 5, command ``0x1A 05 00 72``
+        accepts only ``{0x00, 0x01}``.  Previous revisions sent
+        ``0x02`` and ``0x03`` (silently rejected by the radio — epic
+        #787) and the #788 pass briefly drove the byte from
+        ``split_stereo``.  Post-#792 the backend is locked to ``0x00``
+        so the frontend graph can always recover the per-receiver
+        channels it needs.
+        """
+        for focus in ("main", "sub", "both"):
+            for split in (False, True):
+                handler, radio, _ = self._make_handler()
+                await self._apply(handler, focus, split)
+                call = radio.send_civ.call_args
+                data = call.kwargs.get("data") or call.args[-1]
+                assert data[:2] == b"\x00\x72", (
+                    f"unexpected Phones sub-command: {data.hex()}"
+                )
+                assert data[2] == 0x00, (
+                    f"out-of-spec phones byte: 0x{data[2]:02X} for "
+                    f"focus={focus} split={split}"
+                )
 
     async def test_invalid_focus_sends_error_no_civ(self) -> None:
         handler, radio, ws = self._make_handler()
@@ -1770,6 +1789,47 @@ class TestAudioConfigRouting:
             "split_stereo": True,
             "applied": True,
         }
+
+
+class TestBroadcasterPhonesMixInit:
+    """AudioBroadcaster._apply_phones_mix_off — #792.
+
+    Broadcaster must force Phones L/R Mix = OFF on relay start so the LAN
+    stream begins in separated-stereo state regardless of prior radio
+    configuration.  Dual-RX only; no-op on 1-Rx profiles.
+    """
+
+    @staticmethod
+    def _make_broadcaster(receiver_count: int = 2) -> Any:
+        from types import SimpleNamespace
+
+        from icom_lan.radio_protocol import AudioCapable
+        from icom_lan.web.handlers import AudioBroadcaster
+
+        mock_radio = MagicMock(spec=AudioCapable)
+        mock_radio.capabilities = {"audio"}
+        mock_radio.profile = SimpleNamespace(receiver_count=receiver_count)
+        mock_radio.send_civ = AsyncMock()
+        return AudioBroadcaster(mock_radio), mock_radio
+
+    async def test_dual_rx_sends_mix_off(self) -> None:
+        broadcaster, radio = self._make_broadcaster(receiver_count=2)
+        await broadcaster._apply_phones_mix_off()
+        radio.send_civ.assert_awaited_once_with(
+            0x1A, sub=0x05, data=bytes([0x00, 0x72, 0x00]), wait_response=False
+        )
+
+    async def test_single_rx_is_noop(self) -> None:
+        broadcaster, radio = self._make_broadcaster(receiver_count=1)
+        await broadcaster._apply_phones_mix_off()
+        radio.send_civ.assert_not_awaited()
+
+    async def test_civ_error_is_swallowed(self) -> None:
+        broadcaster, radio = self._make_broadcaster(receiver_count=2)
+        radio.send_civ.side_effect = RuntimeError("boom")
+        # Must not raise — relay start-up continues even if the init fails.
+        await broadcaster._apply_phones_mix_off()
+        radio.send_civ.assert_awaited_once()
 
 
 # ---------------------------------------------------------------------------

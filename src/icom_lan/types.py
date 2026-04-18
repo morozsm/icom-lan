@@ -189,14 +189,18 @@ _AUDIO_CODEC_CHANNELS: dict[AudioCodec, int] = {
     AudioCodec.OPUS_2CH: 2,
 }
 _DEFAULT_CODEC_PREFERENCE: tuple[AudioCodec, ...] = (
-    AudioCodec.PCM_1CH_16BIT,
+    # Preferred: stereo PCM16 so dual-RX radios deliver L=MAIN + R=SUB in the
+    # LAN stream (epic #787).  Single-RX radios' firmware downgrades to mono
+    # during handshake; the broadcaster's ``_refresh_codec_state`` reads the
+    # actual negotiated codec back, so downstream logic tracks reality.
     AudioCodec.PCM_2CH_16BIT,
-    AudioCodec.ULAW_1CH,
+    AudioCodec.PCM_1CH_16BIT,
     AudioCodec.ULAW_2CH,
-    AudioCodec.PCM_1CH_8BIT,
+    AudioCodec.ULAW_1CH,
     AudioCodec.PCM_2CH_8BIT,
-    AudioCodec.OPUS_1CH,
+    AudioCodec.PCM_1CH_8BIT,
     AudioCodec.OPUS_2CH,
+    AudioCodec.OPUS_1CH,
 )
 
 
