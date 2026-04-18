@@ -7,6 +7,99 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.0] — 2026-04-18
+
+### Added
+
+- **Dual-RX stereo LAN audio (epic #787)** — IC-7610 now delivers true stereo
+  L=MAIN, R=SUB over LAN.  Backend negotiates `PCM_2CH_16BIT` in conninfo,
+  locks `Phones L/R Mix = OFF` at relay start, and gates the behaviour on a
+  new `lan_dual_rx_audio_routing` capability so IC-9700 / FTX-1 aren't
+  affected.  Frontend resolves `focus` × `split_stereo` via a WebAudio
+  ChannelSplitter + per-channel gain + panner graph — no CI-V round-trip
+  for routing. (#752, #753, #756, #757, #770, #775, #776, #777, #778, #779,
+  #781, #787, #788, #789, #790, #791, #792, #793, #794, #795, #798, #799,
+  #800)
+- **Dual VFO / dual receiver model (epic #708)** — new `ReceiverBankCapable`,
+  `VfoSlotCapable`, `TransceiverBankCapable` protocols; per-receiver A/B
+  `VfoSlotState`; split `swap_ab` / `swap_main_sub` command codes;
+  `DualVfoDisplay` showing both MAIN+SUB on the desktop skin; receiver
+  focus selector on the mobile skin. (#708, #709, #710, #711, #712, #714,
+  #715, #716, #717, #718, #719, #722)
+- **rigctld full VFOA/VFOB protocol** — implements the complete Hamlib
+  per-VFO command set so split-aware digital-mode clients (WSJT-X, fldigi,
+  JS8Call) round-trip cleanly. (#722, #723)
+- **Composite WS commands** — `quick_dualwatch` and `quick_split` batch the
+  radio side of the DW/split setup into single commands with
+  double-click / long-press affordances in the UI. (#775, #776, #778, #779)
+- **CLI log rotation** — `RotatingFileHandler` controlled by
+  `ICOM_LOG_MAX_BYTES` and `ICOM_LOG_BACKUP_COUNT` env vars; prevents
+  unbounded growth of `logs/icom-lan.log`.
+
+### Changed
+
+- **IC-7610 profile** declares `lan_dual_rx_audio_routing` capability and
+  migrates VFO codes to `swap_main_sub` / `equal_main_sub` plus a new
+  `0x14 0x0D` cmd29 route. (#748)
+- **IC-9700 profile** correctly declares the MAIN/SUB scheme with proper
+  byte codes. (#713)
+- **IC-705 / IC-7300** migrated from legacy `swap` / `equal` keys to
+  `swap_ab` / `equal_ab`.
+- **VfoPanel** now uses `receiverLabel` + `vfoSlotLabel` for correct
+  dual-VFO display naming. (#747, #728)
+- **RFC §11** documents the dual-RX LAN routing contract: wire format,
+  the Phones L/R Mix-OFF invariant, the focus × split_stereo gain/pan
+  table, and the historical context of the `0x02` / `0x03` trap.
+
+### Fixed
+
+- **IC-7610 LAN session allocation** — decoupled `tx_codec` from
+  `rx_codec` in conninfo; stock firmware rejected the session with
+  `error=0xFFFFFFFF` when `tx_codec` was a 2-channel value (mic path is
+  mono-only; wfview UI enforces the same constraint). (#794, #795)
+- **CollapsiblePanel phantom-collapse on hover** — left-sidebar panels
+  spontaneously toggled when the mouse passed over their headers.  Root
+  cause was an uninitialised swipe-tracking state that was updated on
+  plain `pointermove`; now gated on `swipeActive` set only by
+  `pointerdown`. (#796)
+- **Audio WebSocket queue** — `audio_config` WS send is queued when the
+  socket is not yet open and flushed on `onopen`, so ACTIVATE on
+  MAIN/SUB always reaches the radio. (#786)
+- **Optimistic UI state** — equalize / swap operations update the UI
+  immediately; audio focus follows ACTIVATE. (#785)
+- **Scope follows active receiver** — spectrum/waterfall switches to the
+  newly selected MAIN/SUB band on every `0x07 0xD0/0xD1`. (#784)
+- **Broadcaster mid-stream codec refresh** — picks up codec / channel /
+  sample-rate changes without reconnecting. (#766, #769)
+- **Broadcaster frame_ms** — derived from actual payload size, not
+  hard-coded 20 ms; fixes label mismatch on IC-7610 PCM16 packets. (#765)
+- **VFO MAIN/SUB buttons** now emit proper receiver-select
+  (`0x07 0xD0/0xD1`), not the MAIN↔SUB swap hack. (#773)
+- **MAIN↔SUB poller flip** on IC-7610 + silence `Radio.__del__` test
+  warnings. (#751)
+- **sync.py default codec** aligned with the async `IcomRadio` default —
+  both paths now return `PCM_2CH_16BIT` by default. (#798)
+- **vitest flakiness** — split into fast + isolated projects to stabilise
+  keyboard-wiring tests. (#771, #782)
+- **post-review P1** — `swap_vfo_ab` safety + rigctld split rollback. (#746)
+- **rig loader** parses `transceiver_count` from `[radio]` section. (#745)
+- **DualVfoDisplay** — dedicated activate button resolves WCAG 4.1.2. (#744)
+- **command-bus** — tighten focus→mode handoff race. (#720)
+
+### Docs
+
+- Dual-RX / transceiver / receiver / VFO model primer in
+  `docs/internals`. (#724)
+- IC-7610 cmd29 parity reconciled with wfview's `IC-7610.rig`. (#725)
+- Opus DSP/tap gate behavior + one-shot warning documented. (#762)
+
+### Chores
+
+- `chore: mypy cleanup` — zero errors on default install; `numpy` /
+  `sounddevice` / `opuslib` optional-dep imports now ignored via
+  `[[tool.mypy.overrides]]`.
+- Delete speculative `AudioBufferPool` + PCM-8 mapping. (#765, #768)
+
 ## [0.16.4] — 2026-04-16
 
 ### Fixed
@@ -496,7 +589,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Transport layer, authentication, CI-V commands, meters, PTT, keep-alive.
 - Clean-room Icom LAN UDP protocol implementation.
 
-[Unreleased]: https://github.com/morozsm/icom-lan/compare/v0.16.4...HEAD
+[Unreleased]: https://github.com/morozsm/icom-lan/compare/v0.17.0...HEAD
+[0.17.0]: https://github.com/morozsm/icom-lan/compare/v0.16.4...v0.17.0
 [0.16.4]: https://github.com/morozsm/icom-lan/compare/v0.16.3...v0.16.4
 [0.16.3]: https://github.com/morozsm/icom-lan/compare/v0.16.2...v0.16.3
 [0.16.2]: https://github.com/morozsm/icom-lan/compare/v0.16.1...v0.16.2
