@@ -299,10 +299,41 @@ class AudioBroadcaster:
         # Issue #762.
         self._maybe_warn_dsp_opus_gate()
 
+    async def _apply_phones_mix_off(self) -> None:
+        """Force Phones L/R Mix = OFF so the LAN stream is separated stereo.
+
+        Dual-RX routing contract (#792, epic #787): the frontend recovers
+        ``focus`` × ``split_stereo`` by gating the splitter's L=MAIN /
+        R=SUB outputs.  If the radio was left in Mix ON from a prior
+        session or from the physical menu, it pre-sums the receivers
+        before LAN transmission and the frontend can no longer isolate
+        a single receiver.  Send 0x1A 05 00 72 00 once per relay start
+        so new sessions always begin in a predictable state.  No-op on
+        single-RX profiles where the setting is irrelevant.
+        """
+        if not self._radio:
+            return
+        profile = getattr(self._radio, "profile", None)
+        rx_count = getattr(profile, "receiver_count", 1)
+        if rx_count < 2:
+            return
+        try:
+            await self._radio.send_civ(  # type: ignore[attr-defined]
+                0x1A,
+                sub=0x05,
+                data=bytes([0x00, 0x72, 0x00]),
+                wait_response=False,
+            )
+        except Exception:
+            logger.debug(
+                "audio-broadcaster: Phones L/R Mix init failed", exc_info=True
+            )
+
     async def _start_relay(self) -> None:
         if not self._radio or CAP_AUDIO not in self._radio.capabilities:
             return
 
+        await self._apply_phones_mix_off()
         self._refresh_codec_state(first=True)
 
         try:
@@ -571,21 +602,25 @@ class AudioHandler:
     #
     # IC-7610 CI-V ``0x1A 05 00 72`` "Connectors > Phones > L/R Mix" —
     # per official CI-V reference p. 5: **data is 00 or 01 only**.
-    # Earlier revisions of this mapping sent 0x02 / 0x03 which the
-    # radio silently ignored, leaving LAN audio on MAIN regardless of
-    # the web UI's focus choice.  Epic #787 corrects this:
     #
-    #   0x00 = Mix OFF → L=MAIN, R=SUB separated (true stereo split)
-    #   0x01 = Mix ON  → summed to both channels (mono on both L/R)
+    #   0x00 = Mix OFF → L=MAIN, R=SUB separated in the LAN stream.
+    #   0x01 = Mix ON  → radio pre-sums MAIN + SUB to both channels
+    #                    before transmission (LAN output becomes mono).
     #
-    # The UI flag ``split_stereo=True`` means "I want separated L/R
-    # channels", which is **Mix OFF = 0x00**.  ``split_stereo=False``
-    # accepts the summed/mono routing, which is **Mix ON = 0x01**.
+    # Contract for dual-RX routing (epic #787, #792): the backend must
+    # **always** keep Mix OFF while a 2-channel codec is active.  The
+    # frontend recovers ``focus`` × ``split_stereo`` purely via WebAudio
+    # gain/pan on the separated L=MAIN / R=SUB pair (#789).  If Mix is
+    # ON the radio has already mixed the receivers, so ``focus=main`` /
+    # ``focus=sub`` can no longer isolate a single receiver — the
+    # frontend would play the summed signal instead.
     #
-    # The ``focus`` selector is a pure frontend concern (part B / #789) —
-    # it routes the stereo L/R pair through WebAudio gain nodes, not
-    # through CI-V.  The handler still accepts + validates + echoes
-    # ``focus`` so the client can persist it.
+    # Both ``focus`` and ``split_stereo`` stay on the wire so the client
+    # can persist + echo them, but neither round-trips to CI-V anymore.
+    # Broadcaster start-up also forces Mix OFF once per session via
+    # :meth:`AudioBroadcaster._apply_phones_mix_off` so the LAN stream
+    # is separated from the first packet, independent of prior radio
+    # state.
     _VALID_AUDIO_FOCUS: frozenset[str] = frozenset({"main", "sub", "both"})
 
     async def _handle_audio_config(self, msg: dict[str, Any]) -> None:
@@ -612,7 +647,10 @@ class AudioHandler:
             logger.debug("audio_config: ignored on 1-Rx profile")
             return
 
-        phones_byte = 0x00 if split_stereo else 0x01
+        # Phones L/R Mix is always kept OFF (0x00) on dual-RX radios; see
+        # class-level comment above and #792.  ``focus`` / ``split_stereo``
+        # echo back for client-side persistence but don't drive CI-V.
+        phones_byte = 0x00
         try:
             await self._radio.send_civ(  # type: ignore[attr-defined]
                 0x1A,
