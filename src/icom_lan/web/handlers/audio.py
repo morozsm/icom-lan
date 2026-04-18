@@ -566,20 +566,26 @@ class AudioHandler:
             await self._handle_audio_config(msg)
 
     # --------------------------------------------------------------
-    # audio_config — MAIN/SUB focus + stereo split (issue #752)
+    # audio_config — MAIN/SUB focus + stereo split (issue #752, revised in #788)
     # --------------------------------------------------------------
     #
-    # IC-7610 CI-V Menu 0072 "Phones L/R Mix" bytes. Mapping from
-    # (focus, split_stereo) to the CI-V byte that Phones L/R Mix expects.
-    # Exact byte values may need tuning against hardware.
-    _PHONES_LR_MIX: dict[tuple[str, bool], int] = {
-        ("main", False): 0x00,  # L=MAIN, R=MAIN
-        ("main", True): 0x00,  # split has no effect — SUB silenced
-        ("sub", False): 0x03,  # L=SUB, R=SUB
-        ("sub", True): 0x03,
-        ("both", False): 0x02,  # L=mix, R=mix
-        ("both", True): 0x01,  # L=MAIN, R=SUB (true stereo split)
-    }
+    # IC-7610 CI-V ``0x1A 05 00 72`` "Connectors > Phones > L/R Mix" —
+    # per official CI-V reference p. 5: **data is 00 or 01 only**.
+    # Earlier revisions of this mapping sent 0x02 / 0x03 which the
+    # radio silently ignored, leaving LAN audio on MAIN regardless of
+    # the web UI's focus choice.  Epic #787 corrects this:
+    #
+    #   0x00 = Mix OFF → L=MAIN, R=SUB separated (true stereo split)
+    #   0x01 = Mix ON  → summed to both channels (mono on both L/R)
+    #
+    # The UI flag ``split_stereo=True`` means "I want separated L/R
+    # channels", which is **Mix OFF = 0x00**.  ``split_stereo=False``
+    # accepts the summed/mono routing, which is **Mix ON = 0x01**.
+    #
+    # The ``focus`` selector is a pure frontend concern (part B / #789) —
+    # it routes the stereo L/R pair through WebAudio gain nodes, not
+    # through CI-V.  The handler still accepts + validates + echoes
+    # ``focus`` so the client can persist it.
     _VALID_AUDIO_FOCUS: frozenset[str] = frozenset({"main", "sub", "both"})
 
     async def _handle_audio_config(self, msg: dict[str, Any]) -> None:
@@ -606,7 +612,7 @@ class AudioHandler:
             logger.debug("audio_config: ignored on 1-Rx profile")
             return
 
-        phones_byte = self._PHONES_LR_MIX[(focus, split_stereo)]
+        phones_byte = 0x00 if split_stereo else 0x01
         try:
             await self._radio.send_civ(  # type: ignore[attr-defined]
                 0x1A,

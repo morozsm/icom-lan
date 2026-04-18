@@ -1713,34 +1713,56 @@ class TestAudioConfigRouting:
             "data": bytes([0x00, 0x72, phones_byte]),
         }
 
-    async def test_focus_main_split_off_sends_phones_00(self) -> None:
-        handler, radio, _ = self._make_handler()
-        await self._apply(handler, "main", False)
-        radio.send_civ.assert_awaited_once_with(
-            0x1A, sub=0x05, data=bytes([0x00, 0x72, 0x00]), wait_response=False
-        )
+    async def test_split_stereo_off_sends_phones_mix_on(self) -> None:
+        """split_stereo=False → Phones L/R Mix ON (0x01 = summed), any focus.
 
-    async def test_focus_sub_split_off_sends_phones_03(self) -> None:
-        handler, radio, _ = self._make_handler()
-        await self._apply(handler, "sub", False)
-        radio.send_civ.assert_awaited_once_with(
-            0x1A, sub=0x05, data=bytes([0x00, 0x72, 0x03]), wait_response=False
-        )
+        Per IC-7610 CI-V reference, ``0x1A 05 00 72`` is a boolean toggle
+        (Mix OFF = 0x00 = separated L/R, Mix ON = 0x01 = summed to both).
+        When the user does NOT request stereo separation we enable the
+        radio's L/R mix so both ears hear the same summed signal.
+        Focus routing is a pure frontend concern (#789).  Issue #788.
+        """
+        for focus in ("main", "sub", "both"):
+            handler, radio, _ = self._make_handler()
+            await self._apply(handler, focus, False)
+            radio.send_civ.assert_awaited_once_with(
+                0x1A, sub=0x05, data=bytes([0x00, 0x72, 0x01]), wait_response=False
+            )
 
-    async def test_focus_both_split_off_sends_phones_02(self) -> None:
-        handler, radio, _ = self._make_handler()
-        await self._apply(handler, "both", False)
-        radio.send_civ.assert_awaited_once_with(
-            0x1A, sub=0x05, data=bytes([0x00, 0x72, 0x02]), wait_response=False
-        )
+    async def test_split_stereo_on_sends_phones_mix_off(self) -> None:
+        """split_stereo=True → Phones L/R Mix OFF (0x00 = separated), any focus.
 
-    async def test_focus_both_split_on_sends_phones_01(self) -> None:
-        """Stereo split: L=MAIN, R=SUB — the headline feature."""
-        handler, radio, _ = self._make_handler()
-        await self._apply(handler, "both", True)
-        radio.send_civ.assert_awaited_once_with(
-            0x1A, sub=0x05, data=bytes([0x00, 0x72, 0x01]), wait_response=False
-        )
+        True stereo split means L=MAIN, R=SUB kept independent, which is
+        Mix OFF = 0x00 on the IC-7610.  Issue #788.
+        """
+        for focus in ("main", "sub", "both"):
+            handler, radio, _ = self._make_handler()
+            await self._apply(handler, focus, True)
+            radio.send_civ.assert_awaited_once_with(
+                0x1A, sub=0x05, data=bytes([0x00, 0x72, 0x00]), wait_response=False
+            )
+
+    async def test_only_valid_phones_bytes_are_emitted(self) -> None:
+        """Invariant: Phones L/R Mix only ever receives 0x00 or 0x01.
+
+        Per IC-7610 CI-V reference p. 5, command ``0x1A 05 00 72``
+        accepts only ``{0x00, 0x01}``.  Previous revisions sent
+        ``0x02`` and ``0x03``, which the radio silently rejected
+        (epic #787).
+        """
+        for focus in ("main", "sub", "both"):
+            for split in (False, True):
+                handler, radio, _ = self._make_handler()
+                await self._apply(handler, focus, split)
+                call = radio.send_civ.call_args
+                data = call.kwargs.get("data") or call.args[-1]
+                assert data[:2] == b"\x00\x72", (
+                    f"unexpected Phones sub-command: {data.hex()}"
+                )
+                assert data[2] in (0x00, 0x01), (
+                    f"out-of-spec phones byte: 0x{data[2]:02X} for "
+                    f"focus={focus} split={split}"
+                )
 
     async def test_invalid_focus_sends_error_no_civ(self) -> None:
         handler, radio, ws = self._make_handler()

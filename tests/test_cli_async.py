@@ -171,7 +171,7 @@ class TestCmdAudioCaps:
         out = capsys.readouterr().out
         assert "Supported codecs:" in out
         assert "Defaults:" in out
-        assert "PCM_1CH_16BIT" in out
+        assert "PCM_2CH_16BIT" in out
         assert "48000" in out
 
     @pytest.mark.asyncio
@@ -180,9 +180,9 @@ class TestCmdAudioCaps:
         rc = await _cmd_audio_caps(args)
         assert rc == 0
         data = json.loads(capsys.readouterr().out)
-        assert data["default_codec"]["name"] == "PCM_1CH_16BIT"
+        assert data["default_codec"]["name"] == "PCM_2CH_16BIT"
         assert data["default_sample_rate_hz"] == 48000
-        assert data["default_channels"] == 1
+        assert data["default_channels"] == 2
         assert any(c["name"] == "OPUS_1CH" for c in data["supported_codecs"])
 
     @pytest.mark.asyncio
@@ -529,7 +529,7 @@ class TestRunErrorHandling:
         rc = await _run(args)
         assert rc == 0
         data = json.loads(capsys.readouterr().out)
-        assert data["default_channels"] == 1
+        assert data["default_channels"] == 2
 
     @pytest.mark.asyncio
     async def test_run_audio_caps_with_stats_connects(self, capsys) -> None:

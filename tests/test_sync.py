@@ -68,9 +68,9 @@ class TestSyncAudioNaming:
 
     def test_audio_capabilities(self) -> None:
         caps = IcomRadio.audio_capabilities()
-        assert caps.default_codec.name == "PCM_1CH_16BIT"
+        assert caps.default_codec.name == "PCM_2CH_16BIT"
         assert caps.default_sample_rate_hz == 48000
-        assert caps.default_channels == 1
+        assert caps.default_channels == 2
 
     def test_get_audio_stats_delegates(self) -> None:
         r = IcomRadio("192.168.1.100")
