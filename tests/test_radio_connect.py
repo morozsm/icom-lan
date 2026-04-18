@@ -610,6 +610,91 @@ class TestConnectSessionRejection:
         assert mt.disconnected is True
 
     @pytest.mark.asyncio
+    async def test_stereo_fallback_falls_into_busy_retry_when_mono_not_ready(
+        self,
+    ) -> None:
+        """Stereo rejected (0xFFFFFFFF) → mono accepted but civ_port=0 with no
+        error flag → enter busy-retry loop with mono; success on second try.
+
+        Regression guard for Codex review finding on PR #802: the initial
+        implementation of #797 treated any non-positive civ_port after the mono
+        retry as a hard failure, bypassing the existing busy-session retry
+        behaviour used when civ_port=0 without 0xFFFFFFFF.  That made real,
+        recoverable connects deterministically fail on radios that need a few
+        hundred ms of settle time after the conninfo downgrade.
+        """
+        radio = IcomRadio(
+            "192.168.1.100",
+            username="u",
+            password="p",
+            audio_codec=AudioCodec.PCM_2CH_16BIT,
+        )
+        mt = ConnectMockTransport()
+        radio._ctrl_transport = mt
+
+        # 1st call: stereo rejected (0xFFFFFFFF).
+        # 2nd call: mono accepted but still warming (civ_port=0, error=0 — no flag).
+        # 3rd call (busy-retry #1): now ready (civ_port > 0).
+        civ_port_responses = [0, 0, 50001]
+        status_errors = [0xFFFFFFFF, 0x00000000, 0x00000000]
+
+        async def _status_flow() -> int:
+            radio._last_status_error = status_errors.pop(0)
+            return civ_port_responses.pop(0)
+
+        send_mock = AsyncMock()
+
+        with (
+            patch.object(radio._control_phase, "_status_retry_pause", return_value=0.0),
+            patch.object(
+                radio._control_phase,
+                "_wait_for_packet",
+                new=AsyncMock(return_value=_build_login_response()),
+            ),
+            patch.object(radio._control_phase, "_send_token_ack", new=AsyncMock()),
+            patch.object(
+                radio._control_phase,
+                "_receive_guid",
+                new=AsyncMock(return_value=b"\x00" * 16),
+            ),
+            patch.object(radio._control_phase, "_send_conninfo", new=send_mock),
+            patch.object(
+                radio._control_phase,
+                "_receive_civ_port",
+                new=AsyncMock(side_effect=_status_flow),
+            ),
+            patch.object(
+                radio._control_phase, "_flush_queue", new=AsyncMock(return_value=0)
+            ),
+            patch.object(radio._control_phase, "_start_token_renewal"),
+            patch.object(radio._control_phase, "_start_watchdog"),
+            patch.object(radio._civ_runtime, "start_pump"),
+            patch.object(radio._civ_runtime, "start_data_watchdog"),
+            patch.object(radio._civ_runtime, "start_worker"),
+            patch(
+                "icom_lan.transport.IcomTransport",
+                return_value=ConnectMockTransport(),
+            ),
+            patch("icom_lan._control_phase.asyncio.sleep", new=AsyncMock()),
+        ):
+            radio._civ_ready_idle_timeout = 0.0
+            try:
+                await radio.connect()
+            except ConnectionError:
+                # Swallow downstream CIV transport failures — the test asserts
+                # on the control-phase invariants before CIV transport setup.
+                pass
+
+        # 1 initial + 1 mono fallback + 1 busy-retry = 3 total conninfo sends.
+        assert send_mock.await_count == 3, (
+            "Expected 3 conninfo sends (initial + mono fallback + busy-retry #1)"
+        )
+        assert radio._audio_codec == AudioCodec.PCM_1CH_16BIT, (
+            "Codec must stay on mono through busy-retry"
+        )
+        assert radio._civ_port == 50001
+
+    @pytest.mark.asyncio
     async def test_mono_codec_no_fallback_raises_immediately(self) -> None:
         """Mono rx_codec + 0xFFFFFFFF → raise immediately, no retry attempted."""
         radio = IcomRadio(

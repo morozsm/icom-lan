@@ -196,7 +196,9 @@ class ControlPhaseRuntime:
                 )
                 h._civ_port = civ_port
             elif civ_port == 0:
-                # Fail fast on immediate session rejection (no retries needed).
+                # Fail fast on immediate session rejection (error=0xFFFFFFFF).
+                # Stereo rejection: downgrade to mono and retry once (#797).
+                # Mono rejection: raise immediately.
                 if getattr(h, "_last_status_error", 0) == 0xFFFFFFFF:
                     if h._audio_codec in _STEREO_CODECS:
                         # Single-RX firmwares (IC-7300/IC-705, possibly IC-9700)
@@ -219,7 +221,8 @@ class ControlPhaseRuntime:
                                 civ_port,
                             )
                             h._civ_port = civ_port
-                        else:
+                        elif getattr(h, "_last_status_error", 0) == 0xFFFFFFFF:
+                            # Mono also rejected outright — no busy-retry will help.
                             self._close_pending_sockets()
                             await h._ctrl_transport.disconnect()
                             h._conn_state = RadioConnectionState.DISCONNECTED
@@ -231,6 +234,9 @@ class ControlPhaseRuntime:
                                 "A previous session may still be active. "
                                 "Wait 30-60s and retry."
                             )
+                        # else: civ_port=0 without 0xFFFFFFFF — session still
+                        # warming up after fallback. Fall through to the
+                        # busy-retry loop with the now-mono codec.
                     else:
                         self._close_pending_sockets()
                         await h._ctrl_transport.disconnect()
@@ -241,7 +247,11 @@ class ControlPhaseRuntime:
                             "A previous session may still be active. "
                             "Wait 30-60s and retry."
                         )
-                else:
+
+                # Busy-retry loop — runs when:
+                #   (a) first status was civ_port=0 without 0xFFFFFFFF, or
+                #   (b) mono fallback above produced civ_port=0 without 0xFFFFFFFF.
+                if civ_port == 0:
                     retry_pause = self._status_retry_pause()
                     logger.warning(
                         "Status returned civ_port=0 — radio session not ready. "
