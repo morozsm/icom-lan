@@ -26,6 +26,7 @@ import argparse
 import asyncio
 import json
 import logging
+from logging.handlers import RotatingFileHandler
 import os
 import signal
 import sys
@@ -2684,6 +2685,8 @@ def main() -> None:
 
     # Enable debug logging with ICOM_DEBUG=1 or any truthy value
     # ICOM_LOG_FILE=/path/to/file.log — log to file (default: logs/icom-lan.log)
+    # ICOM_LOG_MAX_BYTES=50000000 — rotate when file reaches this size (default: 50 MB)
+    # ICOM_LOG_BACKUP_COUNT=5 — keep N rotated backups (default: 5; 0 disables rotation)
     debug_mode = os.environ.get("ICOM_DEBUG", "").strip() not in ("", "0", "false", "no")
     log_file = os.environ.get("ICOM_LOG_FILE", "")
     
@@ -2709,7 +2712,15 @@ def main() -> None:
     if log_file:
         log_path = Path(log_file).expanduser().resolve()
         log_path.parent.mkdir(parents=True, exist_ok=True)
-        file_handler = logging.FileHandler(log_path, mode='a')
+        max_bytes = _env_int("ICOM_LOG_MAX_BYTES", 50_000_000)
+        backup_count = _env_int("ICOM_LOG_BACKUP_COUNT", 5)
+        file_handler: logging.Handler = RotatingFileHandler(
+            log_path,
+            mode='a',
+            maxBytes=max_bytes if backup_count > 0 else 0,
+            backupCount=backup_count,
+            encoding='utf-8',
+        )
         file_handler.setFormatter(
             logging.Formatter(
                 "%(asctime)s %(name)s [%(levelname)s] %(message)s",
@@ -2717,7 +2728,7 @@ def main() -> None:
             )
         )
         handlers.append(file_handler)
-        print(f"Logging to {log_path}", file=sys.stderr)
+        print(f"Logging to {log_path} (rotate at {max_bytes} bytes, keep {backup_count} backups)", file=sys.stderr)
     
     logging.basicConfig(
         level=logging.DEBUG if debug_mode else logging.INFO,
