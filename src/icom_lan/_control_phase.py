@@ -32,6 +32,15 @@ TOKEN_ACK_SIZE = 0x40
 CONNINFO_SIZE = 0x90
 STATUS_SIZE = 0x50
 
+# Stereo codec IDs — used to decide stereo→mono fallback on session rejection.
+# See #797.
+_STEREO_CODECS = (
+    AudioCodec.PCM_2CH_8BIT,
+    AudioCodec.PCM_2CH_16BIT,
+    AudioCodec.ULAW_2CH,
+    AudioCodec.OPUS_2CH,
+)
+
 __all__ = [
     "ControlPhaseRuntime",
     "OPENCLOSE_SIZE",
@@ -187,44 +196,93 @@ class ControlPhaseRuntime:
                 )
                 h._civ_port = civ_port
             elif civ_port == 0:
-                # Fail fast on immediate session rejection (no retries needed).
+                # Fail fast on immediate session rejection (error=0xFFFFFFFF).
+                # Stereo rejection: downgrade to mono and retry once (#797).
+                # Mono rejection: raise immediately.
                 if getattr(h, "_last_status_error", 0) == 0xFFFFFFFF:
-                    self._close_pending_sockets()
-                    await h._ctrl_transport.disconnect()
-                    h._conn_state = RadioConnectionState.DISCONNECTED
-                    raise ConnectionError(
-                        f"Radio rejected session allocation (civ_port=0, "
-                        f"error=0x{h._last_status_error:08X}). "
-                        "A previous session may still be active. Wait 30-60s and retry."
-                    )
-                retry_pause = self._status_retry_pause()
-                logger.warning(
-                    "Status returned civ_port=0 — radio session not ready. "
-                    "Retrying after %.0fs pause (previous session may still be held)...",
-                    retry_pause,
-                )
-                for _retry in range(3):
-                    await asyncio.sleep(retry_pause)
-                    logger.info("Retrying conninfo (attempt %d/3)...", _retry + 1)
-                    await self._send_conninfo(guid, _civ_local_port, _audio_local_port)
-                    try:
+                    if h._audio_codec in _STEREO_CODECS:
+                        # Single-RX firmwares (IC-7300/IC-705, possibly IC-9700)
+                        # may reject stereo rx_codec at conninfo. Retry once with
+                        # PCM_1CH_16BIT before failing. See issue #797.
+                        logger.warning(
+                            "Status rejected session (error=0xFFFFFFFF) with "
+                            "stereo rx_codec=%s; retrying with PCM_1CH_16BIT fallback",
+                            h._audio_codec.name,
+                        )
+                        h._audio_codec = AudioCodec.PCM_1CH_16BIT
+                        h._last_status_error = 0
+                        await self._send_conninfo(
+                            guid, _civ_local_port, _audio_local_port
+                        )
                         civ_port = await self._receive_civ_port()
                         if civ_port > 0:
-                            logger.info("Radio now reports civ_port=%d", civ_port)
+                            logger.info(
+                                "Stereo-to-mono fallback succeeded (civ_port=%d)",
+                                civ_port,
+                            )
                             h._civ_port = civ_port
-                            break
-                    except asyncio.TimeoutError:
-                        pass
-                else:
-                    self._close_pending_sockets()
-                    await h._ctrl_transport.disconnect()
-                    h._conn_state = RadioConnectionState.DISCONNECTED
-                    error_val = getattr(h, "_last_status_error", 0)
-                    raise ConnectionError(
-                        f"Radio rejected session allocation (civ_port=0, "
-                        f"error=0x{error_val:08X}) after retries. "
-                        "A previous session may still be active. Wait 30-60s and retry."
+                        elif getattr(h, "_last_status_error", 0) == 0xFFFFFFFF:
+                            # Mono also rejected outright — no busy-retry will help.
+                            self._close_pending_sockets()
+                            await h._ctrl_transport.disconnect()
+                            h._conn_state = RadioConnectionState.DISCONNECTED
+                            error_val = getattr(h, "_last_status_error", 0)
+                            raise ConnectionError(
+                                f"Radio rejected session allocation with both "
+                                f"stereo and mono rx_codec "
+                                f"(final error=0x{error_val:08X}). "
+                                "A previous session may still be active. "
+                                "Wait 30-60s and retry."
+                            )
+                        # else: civ_port=0 without 0xFFFFFFFF — session still
+                        # warming up after fallback. Fall through to the
+                        # busy-retry loop with the now-mono codec.
+                    else:
+                        self._close_pending_sockets()
+                        await h._ctrl_transport.disconnect()
+                        h._conn_state = RadioConnectionState.DISCONNECTED
+                        raise ConnectionError(
+                            f"Radio rejected session allocation (civ_port=0, "
+                            f"error=0x{h._last_status_error:08X}). "
+                            "A previous session may still be active. "
+                            "Wait 30-60s and retry."
+                        )
+
+                # Busy-retry loop — runs when:
+                #   (a) first status was civ_port=0 without 0xFFFFFFFF, or
+                #   (b) mono fallback above produced civ_port=0 without 0xFFFFFFFF.
+                if civ_port == 0:
+                    retry_pause = self._status_retry_pause()
+                    logger.warning(
+                        "Status returned civ_port=0 — radio session not ready. "
+                        "Retrying after %.0fs pause (previous session may still be held)...",
+                        retry_pause,
                     )
+                    for _retry in range(3):
+                        await asyncio.sleep(retry_pause)
+                        logger.info("Retrying conninfo (attempt %d/3)...", _retry + 1)
+                        await self._send_conninfo(
+                            guid, _civ_local_port, _audio_local_port
+                        )
+                        try:
+                            civ_port = await self._receive_civ_port()
+                            if civ_port > 0:
+                                logger.info("Radio now reports civ_port=%d", civ_port)
+                                h._civ_port = civ_port
+                                break
+                        except asyncio.TimeoutError:
+                            pass
+                    else:
+                        self._close_pending_sockets()
+                        await h._ctrl_transport.disconnect()
+                        h._conn_state = RadioConnectionState.DISCONNECTED
+                        error_val = getattr(h, "_last_status_error", 0)
+                        raise ConnectionError(
+                            f"Radio rejected session allocation (civ_port=0, "
+                            f"error=0x{error_val:08X}) after retries. "
+                            "A previous session may still be active. "
+                            "Wait 30-60s and retry."
+                        )
         except asyncio.TimeoutError:
             logger.debug("No status packet received, using default ports")
             logger.warning("Audio port not in status, using default %d", h._audio_port)
@@ -526,8 +584,8 @@ class ControlPhaseRuntime:
                 if len(d) != STATUS_SIZE:
                     continue
                 status = parse_status_response(d)
-                got_civ = status.civ_port
-                got_audio = status.audio_port
+                got_civ: int = status.civ_port
+                got_audio: int = status.audio_port
                 status_packets_seen += 1
                 h._last_status_error = status.error
                 h._last_status_disconnected = status.disconnected
@@ -611,7 +669,7 @@ class ControlPhaseRuntime:
             if remaining <= 0:
                 raise TimeoutError(f"{label} timed out")
             try:
-                data = await transport.receive_packet(timeout=remaining)
+                data: bytes = await transport.receive_packet(timeout=remaining)
             except asyncio.TimeoutError:
                 raise TimeoutError(f"{label} timed out")
             if len(data) == size:

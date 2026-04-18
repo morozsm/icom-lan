@@ -101,6 +101,7 @@ class RigConfig:
     scope_ref_min_db: float | None = None
     scope_ref_max_db: float | None = None
     scope_ref_step_db: float | None = None
+    codec_preference: tuple[str, ...] | None = None
 
     def to_profile(self) -> RadioProfile:
         """Build a ``RadioProfile`` from this config."""
@@ -171,6 +172,7 @@ class RigConfig:
             scope_ref_min_db=self.scope_ref_min_db,
             scope_ref_max_db=self.scope_ref_max_db,
             scope_ref_step_db=self.scope_ref_step_db,
+            codec_preference=self.codec_preference,
         )
 
     def to_command_map(self) -> CommandMap:
@@ -732,6 +734,36 @@ def load_rig(path: Path) -> RigConfig:
         filename=filename,
     )
 
+    # Parse optional [audio] codec_preference (#797).
+    codec_preference: tuple[str, ...] | None = None
+    audio_section = data.get("audio")
+    if audio_section is not None:
+        if not isinstance(audio_section, dict):
+            raise RigLoadError(f"{filename}: [audio] must be a table")
+        codec_raw = audio_section.get("codec_preference")
+        if codec_raw is not None:
+            if not isinstance(codec_raw, list) or not all(
+                isinstance(c, str) for c in codec_raw
+            ):
+                raise RigLoadError(
+                    f"{filename}: [audio].codec_preference must be a list of strings"
+                )
+            if not codec_raw:
+                raise RigLoadError(
+                    f"{filename}: [audio].codec_preference must not be empty"
+                )
+            # Validate entries against AudioCodec enum to fail fast on typos.
+            from .types import AudioCodec
+
+            valid_names = {c.name for c in AudioCodec}
+            unknown = [c for c in codec_raw if c not in valid_names]
+            if unknown:
+                raise RigLoadError(
+                    f"{filename}: [audio].codec_preference has unknown codec(s): "
+                    f"{unknown}. Valid names: {sorted(valid_names)}"
+                )
+            codec_preference = tuple(codec_raw)
+
     return RigConfig(
         id=radio["id"],
         model=radio["model"],
@@ -780,6 +812,7 @@ def load_rig(path: Path) -> RigConfig:
         scope_ref_min_db=scope_ref_min_db,
         scope_ref_max_db=scope_ref_max_db,
         scope_ref_step_db=scope_ref_step_db,
+        codec_preference=codec_preference,
     )
 
 

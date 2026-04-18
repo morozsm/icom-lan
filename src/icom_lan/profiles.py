@@ -179,6 +179,11 @@ class RadioProfile:
     scope_ref_min_db: float | None = None
     scope_ref_max_db: float | None = None
     scope_ref_step_db: float | None = None
+    # Per-profile RX codec preference override (#797). When non-None, the first
+    # entry is used as the initial ``audio_codec`` for radios created under this
+    # profile (unless the caller passes an explicit non-default value). Values
+    # are ``AudioCodec`` enum names (e.g. ``"PCM_1CH_16BIT"``).
+    codec_preference: tuple[str, ...] | None = None
 
     @property
     def vfo_swap_code(self) -> int | None:

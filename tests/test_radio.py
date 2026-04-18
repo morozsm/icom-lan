@@ -25,6 +25,7 @@ from icom_lan.exceptions import ConnectionError, TimeoutError
 from icom_lan.radio import IcomRadio
 from icom_lan.types import (
     AgcMode,
+    AudioCodec,
     AudioPeakFilter,
     BreakInMode,
     CivFrame,
@@ -1939,3 +1940,49 @@ class TestToneTsqlParity:
         assert mock_transport.sent_packets[-1].endswith(
             b"\x29\x01\x1b\x01\x01\x10\x09\xfd"
         )
+
+
+class TestCodecProfileOverride:
+    """Per-profile codec_preference overrides the global default (#797)."""
+
+    def test_single_rx_profile_downgrades_to_mono_on_default(self) -> None:
+        """IC-7300 profile pins mono → default audio_codec lands on mono."""
+        radio = IcomRadio("192.168.1.100", model="IC-7300")
+        assert radio._audio_codec == AudioCodec.PCM_1CH_16BIT
+
+    def test_ic705_profile_downgrades_to_mono_on_default(self) -> None:
+        radio = IcomRadio("192.168.1.100", model="IC-705")
+        assert radio._audio_codec == AudioCodec.PCM_1CH_16BIT
+
+    def test_ic9700_profile_downgrades_to_mono_on_default(self) -> None:
+        radio = IcomRadio("192.168.1.100", model="IC-9700")
+        assert radio._audio_codec == AudioCodec.PCM_1CH_16BIT
+
+    def test_ic7610_keeps_global_stereo_default(self) -> None:
+        """IC-7610 has no codec_preference pin → global default (stereo)."""
+        radio = IcomRadio("192.168.1.100", model="IC-7610")
+        assert radio._audio_codec == AudioCodec.PCM_2CH_16BIT
+
+    def test_explicit_audio_codec_wins_over_profile_preference(self) -> None:
+        """Caller's explicit non-default choice overrides the profile pin."""
+        radio = IcomRadio(
+            "192.168.1.100",
+            model="IC-7300",
+            audio_codec=AudioCodec.ULAW_2CH,
+        )
+        assert radio._audio_codec == AudioCodec.ULAW_2CH
+
+    def test_explicit_default_value_is_still_overridden(self) -> None:
+        """Passing the global-default value explicitly = accepting the default.
+
+        Callers who want to force stereo on a mono-pinned radio must pick a
+        different codec (stereo or otherwise).  Explicit ``PCM_2CH_16BIT`` is
+        indistinguishable from the unspecified default, so the profile pin wins.
+        This is a documented trade-off — see ``_resolve_profile_codec``.
+        """
+        radio = IcomRadio(
+            "192.168.1.100",
+            model="IC-7300",
+            audio_codec=AudioCodec.PCM_2CH_16BIT,
+        )
+        assert radio._audio_codec == AudioCodec.PCM_1CH_16BIT

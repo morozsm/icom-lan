@@ -20,6 +20,13 @@ seq_max = 11
 amp_max = 160
 data_len_max = 475
 
+# Pin mono-first codec (#797). IC-9700 is dual-receiver (receiver_count=2) but
+# no hardware has been available to validate stereo rx_codec negotiation;
+# default to mono until proven. ``_control_phase`` retry-with-mono fallback
+# provides a secondary safety net.
+[audio]
+codec_preference = ["PCM_1CH_16BIT", "ULAW_1CH"]
+
 # ── Capabilities ─────────────────────────────────────────────────
 # Feature tags determine which UI panels and controls are rendered.
 # Grouped by functional area.

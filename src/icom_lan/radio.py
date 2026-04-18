@@ -296,6 +296,30 @@ _DEFAULT_AUDIO_SAMPLE_RATE = _AUDIO_CAPABILITIES.default_sample_rate_hz
 _DEFAULT_CACHE_TTL: dict[str, float] = {"freq": 10.0, "mode": 10.0, "rf_power": 30.0}
 
 
+def _resolve_profile_codec(
+    profile: RadioProfile, explicit: "AudioCodec | int"
+) -> "AudioCodec":
+    """Pick the effective RX codec for a radio under ``profile`` (#797).
+
+    The caller passes the ``audio_codec`` argument value (which defaults to the
+    global stereo-first default). If the caller accepted the global default AND
+    the profile pins a per-rig ``codec_preference``, honor the profile. An
+    explicit non-default value always wins.
+    """
+    resolved = AudioCodec(explicit)
+    if resolved != _DEFAULT_AUDIO_CODEC or not profile.codec_preference:
+        return resolved
+    supported = _AUDIO_CAPABILITIES.supported_codecs
+    for name in profile.codec_preference:
+        try:
+            candidate = AudioCodec[name]
+        except KeyError:
+            continue
+        if candidate in supported:
+            return candidate
+    return resolved
+
+
 class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
     """High-level async interface for controlling an Icom transceiver over LAN.
 
@@ -712,6 +736,9 @@ class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
             model=model,
             radio_addr=radio_addr,
         )
+        # Apply per-profile codec preference override (#797) — only if caller
+        # accepted the global default. An explicit non-default value always wins.
+        self._audio_codec = _resolve_profile_codec(self._profile, audio_codec)
         self._radio_addr = self._profile.civ_addr if radio_addr is None else radio_addr
         # GET commands use a shorter timeout than the general connection timeout.
         # wfview-style: send once, short deadline, fall back to cache.
@@ -1105,7 +1132,11 @@ class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
 
         try:
             is_serial = not self._profile.has_lan
-            gap = self._INITIAL_STATE_GAP_SERIAL if is_serial else self._INITIAL_STATE_GAP_LAN
+            gap = (
+                self._INITIAL_STATE_GAP_SERIAL
+                if is_serial
+                else self._INITIAL_STATE_GAP_LAN
+            )
             queries = build_state_queries(
                 self._profile,
                 self.capabilities,
@@ -1136,9 +1167,7 @@ class CoreRadio(ScopeRuntimeMixin, AudioRuntimeMixin, DualRxRuntimeMixin):
                             inner = bytes([receiver, cmd_byte])
                             if sub_byte is not None:
                                 inner += bytes([sub_byte])
-                            await self.send_civ(
-                                0x29, data=inner, wait_response=False
-                            )
+                            await self.send_civ(0x29, data=inner, wait_response=False)
                     else:
                         await self.send_civ(
                             cmd_byte,
