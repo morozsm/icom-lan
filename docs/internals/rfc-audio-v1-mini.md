@@ -172,3 +172,61 @@ then re-encode before fan-out.  `_audio_transcoder.PcmOpusTranscoder`
 already exists and can be reused.  Quality loss is negligible for
 AM/FM ham audio but non-zero on SSB; flag behind a config toggle if
 implemented.
+
+## 11) LAN MAIN/SUB audio routing (epic #787)
+
+**Wire format.**  On dual-RX radios the LAN audio stream is **stereo
+PCM16 with L=MAIN and R=SUB** whenever a 2-channel codec is
+negotiated.  `_DEFAULT_CODEC_PREFERENCE` in `types.py` leads with
+`PCM_2CH_16BIT` (0x10); single-RX firmware downgrades to mono during
+handshake, and the broadcaster's `_refresh_codec_state` reads the
+negotiated codec back so downstream logic tracks reality rather than
+the requested codec.
+
+**Phones L/R Mix is always OFF.**  CI-V `0x1A 05 00 72` is a boolean
+toggle — `0x00` = Mix OFF (separated stereo), `0x01` = Mix ON (summed
+to both channels).  The backend keeps it locked at `0x00` via two
+paths:
+
+- `AudioHandler._handle_audio_config` — every `audio_config` WS
+  message emits `0x00`, independent of the `split_stereo` payload.
+- `AudioBroadcaster._apply_phones_mix_off` — fires once on every
+  relay start (guarded on `receiver_count >= 2`) so the LAN stream
+  begins in separated-stereo state regardless of the radio's prior
+  menu state.  Errors are swallowed so start-up continues on radios
+  where the command is unsupported.
+
+If Mix were ON the radio would pre-sum MAIN + SUB before transmission
+and the frontend graph could no longer isolate a single receiver —
+`focus=main` and `focus=sub` would both play the summed signal.
+
+**`focus` and `split_stereo` live on the frontend.**  The WebAudio
+graph in `frontend/src/lib/audio/rx-player.ts` routes the stereo
+pair through `ChannelSplitter(2) → GainNode×2 → StereoPanner×2 →
+destination`:
+
+| `focus` | `split_stereo` | L gain | R gain | L pan | R pan |
+|---------|----------------|--------|--------|-------|-------|
+| main    | any            | 1.0    | 0.0    | 0     | 0     |
+| sub     | any            | 0.0    | 1.0    | 0     | 0     |
+| both    | false          | 1.0    | 1.0    | 0     | 0     |
+| both    | true           | 1.0    | 1.0    | −1    | +1    |
+
+Per-channel dB sliders (`mainGainDb` / `subGainDb`) multiply into the
+L/R gains respectively.
+
+**Why the WS message still exists.**  `audio_config` is retained as
+a bidirectional echo channel so the client can persist its `focus` +
+`split_stereo` choice and the backend confirms via `applied: true`.
+The CI-V round-trip it used to drive (the broken `_PHONES_LR_MIX`
+dict pre-#788) is gone — the message now only raises the
+broadcaster's `_codec_stale` flag so a mid-stream codec/channel
+change triggers a fresh `_refresh_codec_state` pass (issue #766).
+
+**Historical context.**  Revisions before #788 sent `0x02` / `0x03`
+on this sub-command for `focus=sub` / `focus=both` — values the radio
+silently ignored per the CI-V reference (only `{0x00, 0x01}` valid).
+#788 briefly tied the byte to `split_stereo`; #792 corrected that to
+the lock-at-`0x00` contract above.  The dead-code mapping is
+documented here rather than in a deleted source comment so future
+contributors don't rediscover the same trap.

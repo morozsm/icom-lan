@@ -58,29 +58,41 @@ class TestAudioConfigEndToEnd:
     codec-cache invalidation."""
 
     @pytest.mark.parametrize(
-        "focus,split_stereo,expected_byte",
+        "focus,split_stereo",
         [
-            ("main", False, 0x00),
-            ("main", True, 0x00),
-            ("sub", False, 0x03),
-            ("sub", True, 0x03),
-            ("both", False, 0x02),
-            ("both", True, 0x01),
+            ("main", False),
+            ("main", True),
+            ("sub", False),
+            ("sub", True),
+            ("both", False),
+            ("both", True),
         ],
     )
-    async def test_focus_split_matrix_emits_correct_phones_lr_mix(
-        self, focus: str, split_stereo: bool, expected_byte: int
+    async def test_focus_split_matrix_emits_mix_off(
+        self, focus: str, split_stereo: bool
     ) -> None:
+        """Any (focus, split_stereo) → Phones L/R Mix OFF (0x00).
+
+        Post-#792 contract (epic #787): the radio always sends separated
+        L=MAIN/R=SUB stereo whenever a 2ch codec is active, so the backend
+        unconditionally keeps Mix OFF.  ``focus`` × ``split_stereo``
+        resolve on the frontend via WebAudio gain + pan (rx-player.ts).
+
+        Earlier revisions sent ``0x02`` / ``0x03`` for ``focus=sub`` /
+        ``focus=both`` — values the radio silently ignored per the CI-V
+        reference.  Those dead bytes are gone; this test pins the
+        replacement contract.
+        """
         handler, broadcaster, mock_radio = _build()
         await handler._handle_control(
             {"type": "audio_config", "focus": focus, "split_stereo": split_stereo}
         )
 
-        # CI-V byte correct.
+        # CI-V byte is always Mix OFF.
         mock_radio.send_civ.assert_awaited_once_with(
             0x1A,
             sub=0x05,
-            data=bytes([0x00, 0x72, expected_byte]),
+            data=bytes([0x00, 0x72, 0x00]),
             wait_response=False,
         )
 
