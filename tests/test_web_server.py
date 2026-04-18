@@ -1458,7 +1458,7 @@ class TestBroadcasterCodecInvalidation:
         mock_ws = MagicMock(spec=WebSocketConnection)
         mock_ws.send_text = AsyncMock()
         mock_radio = MagicMock(spec=AudioCapable)
-        mock_radio.capabilities = {"audio"}
+        mock_radio.capabilities = {"audio", "lan_dual_rx_audio_routing"}
         mock_radio.audio_codec = audio_codec
         mock_radio.audio_sample_rate = sample_rate
         mock_radio.start_audio_rx_opus = AsyncMock()
@@ -1684,7 +1684,11 @@ class TestAudioConfigRouting:
     """
 
     @staticmethod
-    def _make_handler(receiver_count: int = 2) -> Any:
+    def _make_handler(
+        receiver_count: int = 2,
+        *,
+        supports_routing: bool = True,
+    ) -> Any:
         from types import SimpleNamespace
 
         from icom_lan.radio_protocol import AudioCapable
@@ -1694,7 +1698,10 @@ class TestAudioConfigRouting:
         mock_ws = MagicMock(spec=WebSocketConnection)
         mock_ws.send_text = AsyncMock()
         mock_radio = MagicMock(spec=AudioCapable)
-        mock_radio.capabilities = {"audio"}
+        caps = {"audio"}
+        if supports_routing:
+            caps.add("lan_dual_rx_audio_routing")
+        mock_radio.capabilities = caps
         mock_radio.profile = SimpleNamespace(receiver_count=receiver_count)
         mock_radio.send_civ = AsyncMock()
 
@@ -1771,7 +1778,20 @@ class TestAudioConfigRouting:
         assert "invalid focus" in sent
 
     async def test_single_rx_profile_noops(self) -> None:
-        handler, radio, ws = self._make_handler(receiver_count=1)
+        # IC-7300 / IC-705 / X6100 shape: receiver_count=1, capability absent.
+        handler, radio, ws = self._make_handler(
+            receiver_count=1, supports_routing=False
+        )
+        await self._apply(handler, "main", False)
+        radio.send_civ.assert_not_awaited()
+        ws.send_text.assert_not_awaited()
+
+    async def test_dual_rx_without_routing_capability_is_noop(self) -> None:
+        # IC-9700 shape: receiver_count=2 but menu layout lacks Phones L/R Mix,
+        # so it must NOT receive 0x1A 05 00 72.  Issue #799.
+        handler, radio, ws = self._make_handler(
+            receiver_count=2, supports_routing=False
+        )
         await self._apply(handler, "main", False)
         radio.send_civ.assert_not_awaited()
         ws.send_text.assert_not_awaited()
@@ -1800,32 +1820,53 @@ class TestBroadcasterPhonesMixInit:
     """
 
     @staticmethod
-    def _make_broadcaster(receiver_count: int = 2) -> Any:
+    def _make_broadcaster(
+        receiver_count: int = 2,
+        *,
+        supports_routing: bool = True,
+    ) -> Any:
         from types import SimpleNamespace
 
         from icom_lan.radio_protocol import AudioCapable
         from icom_lan.web.handlers import AudioBroadcaster
 
         mock_radio = MagicMock(spec=AudioCapable)
-        mock_radio.capabilities = {"audio"}
+        caps = {"audio"}
+        if supports_routing:
+            caps.add("lan_dual_rx_audio_routing")
+        mock_radio.capabilities = caps
         mock_radio.profile = SimpleNamespace(receiver_count=receiver_count)
         mock_radio.send_civ = AsyncMock()
         return AudioBroadcaster(mock_radio), mock_radio
 
-    async def test_dual_rx_sends_mix_off(self) -> None:
-        broadcaster, radio = self._make_broadcaster(receiver_count=2)
+    async def test_routing_capable_sends_mix_off(self) -> None:
+        # IC-7610 shape: capability declared, Mix OFF CI-V emitted.
+        broadcaster, radio = self._make_broadcaster(supports_routing=True)
         await broadcaster._apply_phones_mix_off()
         radio.send_civ.assert_awaited_once_with(
             0x1A, sub=0x05, data=bytes([0x00, 0x72, 0x00]), wait_response=False
         )
 
     async def test_single_rx_is_noop(self) -> None:
-        broadcaster, radio = self._make_broadcaster(receiver_count=1)
+        # IC-7300 / IC-705 / X6100 shape: no routing capability, no CI-V.
+        broadcaster, radio = self._make_broadcaster(
+            receiver_count=1, supports_routing=False
+        )
+        await broadcaster._apply_phones_mix_off()
+        radio.send_civ.assert_not_awaited()
+
+    async def test_dual_rx_without_routing_capability_is_noop(self) -> None:
+        # IC-9700 shape: receiver_count=2 but the Phones L/R Mix menu item
+        # does NOT exist on that radio — we must not send 0x1A 05 00 72.
+        # Issue #799.
+        broadcaster, radio = self._make_broadcaster(
+            receiver_count=2, supports_routing=False
+        )
         await broadcaster._apply_phones_mix_off()
         radio.send_civ.assert_not_awaited()
 
     async def test_civ_error_is_swallowed(self) -> None:
-        broadcaster, radio = self._make_broadcaster(receiver_count=2)
+        broadcaster, radio = self._make_broadcaster(supports_routing=True)
         radio.send_civ.side_effect = RuntimeError("boom")
         # Must not raise — relay start-up continues even if the init fails.
         await broadcaster._apply_phones_mix_off()

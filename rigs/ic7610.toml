@@ -35,6 +35,10 @@ features = [
     "audio",
     "dual_rx",
     "dual_watch",
+    # LAN audio stereo routing via Phones L/R Mix (0x1A 05 00 72).
+    # IC-7610-only menu item — do NOT add to IC-9700 or FTX-1 even though
+    # they also have receiver_count=2 (#787 / #792 / #794).
+    "lan_dual_rx_audio_routing",
     "af_level",
     "rf_gain",
     "squelch",

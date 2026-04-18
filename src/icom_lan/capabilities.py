@@ -39,6 +39,18 @@ CAP_AF_LEVEL = "af_level"
 CAP_RF_GAIN = "rf_gain"
 CAP_SQUELCH = "squelch"
 
+# LAN audio stereo routing via the ``0x1A 05 00 72`` "Phones L/R Mix" CI-V
+# sub-command (IC-7610 menu path: Connectors → Phones → L/R Mix).  Declaring
+# this capability authorises the web audio broadcaster to (a) force Mix OFF
+# once per relay start so the LAN stream stays separated L=MAIN / R=SUB, and
+# (b) echo the frontend ``audio_config`` message's ``focus`` / ``split_stereo``
+# payload back to the client.  Both paths are dual-RX contract (#787 / #792 /
+# #794).  Do NOT add this tag to rigs that don't expose this menu item — IC-
+# 9700 also has ``receiver_count=2`` but its menu layout does not include
+# ``0x1A 05 00 72``, and FTX-1 runs on Yaesu CAT which has no ``send_civ``
+# at all.
+CAP_LAN_DUAL_RX_AUDIO_ROUTING = "lan_dual_rx_audio_routing"
+
 # RF front-end
 CAP_ATTENUATOR = "attenuator"
 CAP_PREAMP = "preamp"
@@ -126,6 +138,7 @@ KNOWN_CAPABILITIES: frozenset[str] = frozenset(
         CAP_AUDIO,
         CAP_DUAL_RX,
         CAP_DUAL_WATCH,
+        CAP_LAN_DUAL_RX_AUDIO_ROUTING,
         CAP_AF_LEVEL,
         CAP_RF_GAIN,
         CAP_SQUELCH,

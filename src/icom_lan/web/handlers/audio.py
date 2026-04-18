@@ -31,7 +31,7 @@ if TYPE_CHECKING:
     from ...dsp.pipeline import DSPPipeline
     from ...radio_protocol import Radio
 
-from ...capabilities import CAP_AUDIO
+from ...capabilities import CAP_AUDIO, CAP_LAN_DUAL_RX_AUDIO_ROUTING
 
 __all__ = ["AudioBroadcaster", "AudioHandler"]
 
@@ -308,18 +308,18 @@ class AudioBroadcaster:
         session or from the physical menu, it pre-sums the receivers
         before LAN transmission and the frontend can no longer isolate
         a single receiver.  Send 0x1A 05 00 72 00 once per relay start
-        so new sessions always begin in a predictable state.  No-op on
-        single-RX profiles where the setting is irrelevant.
+        so new sessions always begin in a predictable state.
+
+        Gated on the ``lan_dual_rx_audio_routing`` capability.  Declared
+        only on IC-7610 — IC-9700 also has ``receiver_count=2`` but its
+        menu layout does not include ``0x1A 05 00 72``, and FTX-1 runs
+        on Yaesu CAT which has no ``send_civ`` at all.  Sending this
+        CI-V on either would silent-NAK (IC-9700) or raise AttributeError
+        (FTX-1).  Issue #799.
         """
         if not self._radio:
             return
-        profile = getattr(self._radio, "profile", None)
-        rx_count = getattr(profile, "receiver_count", 1)
-        if rx_count < 2:
-            logger.info(
-                "audio-broadcaster: Phones L/R Mix skipped (rx_count=%d < 2)",
-                rx_count,
-            )
+        if CAP_LAN_DUAL_RX_AUDIO_ROUTING not in self._radio.capabilities:
             return
         try:
             await self._radio.send_civ(  # type: ignore[attr-defined]
@@ -633,8 +633,13 @@ class AudioHandler:
     async def _handle_audio_config(self, msg: dict[str, Any]) -> None:
         """Apply MAIN/SUB audio focus + stereo split via CI-V Phones L/R Mix.
 
-        Fire-and-forget on dual-RX profiles. Echoes the applied config back on
-        the WS so the client can confirm persistence. No-op on 1-Rx profiles.
+        Fire-and-forget on radios declaring the
+        ``lan_dual_rx_audio_routing`` capability (IC-7610 only today —
+        see ``capabilities.CAP_LAN_DUAL_RX_AUDIO_ROUTING``).  Echoes the
+        applied config back on the WS so the client can confirm
+        persistence.  Silent no-op on radios that don't declare the
+        capability — e.g. IC-9700 (dual-RX but different menu layout)
+        and FTX-1 (Yaesu CAT, no ``send_civ`` at all).  Issue #799.
         """
         focus = msg.get("focus", "")
         split_stereo = bool(msg.get("split_stereo", False))
@@ -648,10 +653,10 @@ class AudioHandler:
 
         if not self._radio:
             return  # no radio attached — cannot apply
-        profile = getattr(self._radio, "profile", None)
-        rx_count = getattr(profile, "receiver_count", 1)
-        if rx_count < 2:
-            logger.debug("audio_config: ignored on 1-Rx profile")
+        if CAP_LAN_DUAL_RX_AUDIO_ROUTING not in self._radio.capabilities:
+            logger.debug(
+                "audio_config: ignored — radio lacks lan_dual_rx_audio_routing"
+            )
             return
 
         # Phones L/R Mix is always kept OFF (0x00) on dual-RX radios; see

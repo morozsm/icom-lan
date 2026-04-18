@@ -59,6 +59,7 @@ class TestProfileParity:
                 "audio",
                 "dual_rx",
                 "dual_watch",
+                "lan_dual_rx_audio_routing",
                 "af_level",
                 "rf_gain",
                 "squelch",
@@ -121,7 +122,7 @@ class TestProfileParity:
         assert profile.capabilities == expected
 
     def test_capabilities_count(self, profile):
-        assert len(profile.capabilities) == 47
+        assert len(profile.capabilities) == 48
 
     def test_cmd29_routes_exact(self, profile):
         expected = frozenset(

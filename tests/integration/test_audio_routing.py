@@ -33,11 +33,19 @@ pytestmark = [pytest.mark.integration, pytest.mark.mock_integration]
 
 def _build(receiver_count: int = 2) -> tuple[AudioHandler, AudioBroadcaster, Any]:
     """Construct the full AudioHandler + AudioBroadcaster + AudioBus chain
-    against a MagicMock radio. Returns (handler, broadcaster, mock_radio)."""
+    against a MagicMock radio. Returns (handler, broadcaster, mock_radio).
+
+    Default shape is an IC-7610-like dual-RX profile: declares both the
+    ``audio`` and ``lan_dual_rx_audio_routing`` capabilities so the
+    handler actually exercises the Phones L/R Mix CI-V path.  Issue #799.
+    """
     mock_ws = MagicMock(spec=WebSocketConnection)
     mock_ws.send_text = AsyncMock()
     mock_radio = MagicMock(spec=AudioCapable)
-    mock_radio.capabilities = {"audio"}
+    caps = {"audio"}
+    if receiver_count >= 2:
+        caps.add("lan_dual_rx_audio_routing")
+    mock_radio.capabilities = caps
     mock_radio.audio_codec = AudioCodec.PCM_1CH_16BIT
     mock_radio.audio_sample_rate = 48000
     mock_radio.start_audio_rx_opus = AsyncMock()
