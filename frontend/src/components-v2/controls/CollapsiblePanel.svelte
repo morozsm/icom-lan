@@ -57,18 +57,24 @@
 
   // --- Swipe gesture tracking ---
   const SWIPE_THRESHOLD = 30;
+  let swipeActive = false;
   let swipeStartY = 0;
   let swipeStartX = 0;
   let swipeHandled = false;
 
   function onHeaderPointerDown(e: PointerEvent) {
+    swipeActive = true;
     swipeStartX = e.clientX;
     swipeStartY = e.clientY;
     swipeHandled = false;
   }
 
   function onHeaderPointerMove(e: PointerEvent) {
-    if (!collapsible || swipeHandled) return;
+    // Only track swipe distance while a pointer is actively held down.
+    // Without this gate, plain hover movement reads ``swipeStartY = 0`` and
+    // the first frame computes ``dy = e.clientY`` (hundreds of pixels),
+    // instantly tripping the swipe-to-collapse threshold on mouse-over.
+    if (!swipeActive || !collapsible || swipeHandled) return;
     const dy = e.clientY - swipeStartY;
     const dx = e.clientX - swipeStartX;
     const absDy = Math.abs(dy);
@@ -86,6 +92,15 @@
         toggle();
       }
     }
+  }
+
+  function onHeaderPointerUp() {
+    swipeActive = false;
+  }
+
+  function onHeaderPointerCancel() {
+    swipeActive = false;
+    swipeHandled = false;
   }
 
   function onHeaderClick(e: MouseEvent) {
@@ -114,6 +129,9 @@
       onclick={onHeaderClick}
       onpointerdown={onHeaderPointerDown}
       onpointermove={onHeaderPointerMove}
+      onpointerup={onHeaderPointerUp}
+      onpointercancel={onHeaderPointerCancel}
+      onpointerleave={onHeaderPointerUp}
       disabled={!collapsible}
     >
       {#if collapsible}
