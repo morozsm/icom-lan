@@ -192,7 +192,14 @@ _DEFAULT_CODEC_PREFERENCE: tuple[AudioCodec, ...] = (
     # Preferred: stereo PCM16 so dual-RX radios deliver L=MAIN + R=SUB in the
     # LAN stream (epic #787).  Single-RX radios' firmware downgrades to mono
     # during handshake; the broadcaster's ``_refresh_codec_state`` reads the
-    # actual negotiated codec back, so downstream logic tracks reality.
+    # actual negotiated codec back.
+    #
+    # NOTE: the stereo value (0x10) is safe in the conninfo ``rxcodec`` field
+    # *only* because ``_control_phase._send_conninfo`` explicitly forces the
+    # ``txcodec`` field to a mono value — IC-7610 stock firmware rejects the
+    # session with ``error=0xFFFFFFFF`` if ``txcodec`` itself is stereo (its
+    # mic path is mono-only, same constraint wfview enforces via its UI at
+    # ``settingswidget.cpp:118-124``).  Issue #794.
     AudioCodec.PCM_2CH_16BIT,
     AudioCodec.PCM_1CH_16BIT,
     AudioCodec.ULAW_2CH,

@@ -185,6 +185,38 @@ class TestSendConninfo:
         await radio._control_phase._send_conninfo(None)
         assert len(mt.sent_packets) == 1
 
+    @pytest.mark.asyncio
+    async def test_tx_codec_is_mono_even_when_rx_codec_is_stereo(self) -> None:
+        """Issue #794: IC-7610 stock firmware rejects conninfo with stereo
+        ``txcodec`` (mic path is mono-only).  Regardless of the requested RX
+        codec, the conninfo ``txcodec`` byte at offset 0x73 must be mono
+        (PCM_1CH_16BIT = 0x04).
+        """
+        from icom_lan.types import AudioCodec
+
+        radio = IcomRadio(
+            "192.168.1.100",
+            username="u",
+            password="p",
+            audio_codec=AudioCodec.PCM_2CH_16BIT,
+        )
+        mt = ConnectMockTransport()
+        radio._ctrl_transport = mt
+        radio._token = 0x12345678
+        radio._tok_request = 0xABCD
+        await radio._control_phase._send_conninfo(b"\x00" * 16)
+        assert len(mt.sent_packets) == 1
+        packet = mt.sent_packets[0]
+        # Conninfo layout: rxcodec at byte 0x72, txcodec at byte 0x73
+        # (see ``src/icom_lan/auth.py`` ``build_conninfo_packet``).
+        assert packet[0x72] == int(AudioCodec.PCM_2CH_16BIT), (
+            f"rxcodec should reflect requested codec 0x10, got 0x{packet[0x72]:02X}"
+        )
+        assert packet[0x73] == int(AudioCodec.PCM_1CH_16BIT), (
+            f"txcodec must be mono 0x04 even for stereo RX, "
+            f"got 0x{packet[0x73]:02X}"
+        )
+
 
 class TestReceiveCivPort:
     @pytest.mark.asyncio

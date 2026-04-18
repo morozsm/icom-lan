@@ -316,6 +316,10 @@ class AudioBroadcaster:
         profile = getattr(self._radio, "profile", None)
         rx_count = getattr(profile, "receiver_count", 1)
         if rx_count < 2:
+            logger.info(
+                "audio-broadcaster: Phones L/R Mix skipped (rx_count=%d < 2)",
+                rx_count,
+            )
             return
         try:
             await self._radio.send_civ(  # type: ignore[attr-defined]
@@ -324,8 +328,11 @@ class AudioBroadcaster:
                 data=bytes([0x00, 0x72, 0x00]),
                 wait_response=False,
             )
+            logger.info(
+                "audio-broadcaster: Phones L/R Mix = OFF sent (1A 05 00 72 00)"
+            )
         except Exception:
-            logger.debug(
+            logger.warning(
                 "audio-broadcaster: Phones L/R Mix init failed", exc_info=True
             )
 
