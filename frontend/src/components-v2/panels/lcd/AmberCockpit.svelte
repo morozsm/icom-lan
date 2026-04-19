@@ -53,7 +53,6 @@
 
   // ── LCD-specific derivations (no adapter equivalent) ──
   let rx = $derived(radioState?.active === 'SUB' ? radioState?.sub : radioState?.main);
-  let mode = $derived(rx?.mode ?? '---');
   let subSValue = $derived(radioState?.sub?.sMeter ?? 0);
 
   type MeterSource = 'S' | 'PO' | 'SWR' | 'ALC' | 'COMP';
@@ -370,8 +369,8 @@
             notchFreq={dsp.notchFreq}
             autoNotch={notchActive}
             bandwidth={fftBandwidth}
-            {mode}
             compact
+            mode="fill"
           />
         </div>
       {/if}
@@ -425,7 +424,7 @@
     grid-template-rows:
       auto               /* global indicator strip */
       auto               /* vfo-a cockpit */
-      minmax(0, 120px)   /* scope */
+      minmax(0, 1fr)     /* scope — fills remaining height */
       auto;              /* aux (reserved) */
     grid-template-areas:
       "global"
@@ -439,7 +438,7 @@
     grid-template-rows:
       auto               /* global indicator strip full-width */
       auto               /* vfo-a + vfo-b cockpits */
-      minmax(0, 120px)   /* scope full-width */
+      minmax(0, 1fr)     /* scope full-width — fills remaining height */
       auto;              /* aux (reserved) full-width */
     grid-template-areas:
       "global global"

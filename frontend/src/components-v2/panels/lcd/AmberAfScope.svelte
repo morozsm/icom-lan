@@ -22,8 +22,8 @@
     notchFreq?: number;
     /** Auto notch active */
     autoNotch?: boolean;
-    /** Current mode string (e.g. 'USB', 'CW') */
-    mode?: string;
+    /** Layout sizing mode: 'compact' = fixed strip height; 'fill' = stretch to container */
+    mode?: 'compact' | 'fill';
     /** Audio sample rate */
     sampleRate?: number;
     /** Actual Hz width of the received FFT data (defaults to sampleRate) */
@@ -44,6 +44,7 @@
     notchFreq = 128,
     sampleRate = 48000,
     bandwidth,
+    mode = 'compact',
   }: Props = $props();
 
   // Effective bandwidth: use provided bandwidth, fall back to sampleRate
