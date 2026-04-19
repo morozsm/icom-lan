@@ -64,6 +64,29 @@ describe('resolveAction', () => {
     expect(resolved?.action).toBe(action);
     expect(resolved?.params).toEqual(params);
   });
+
+  it('m toggles the active receiver', () => {
+    const action = resolveAction({ key: 'm' }, DEFAULT_KEYBOARD_CONFIG);
+    expect(action?.action).toBe('switch_active_vfo');
+  });
+
+  it('Shift+M activates MAIN', () => {
+    const action = resolveAction({ key: 'M', shiftKey: true }, DEFAULT_KEYBOARD_CONFIG);
+    expect(action?.action).toBe('set_active_vfo');
+    expect(action?.params).toEqual({ vfo: 'MAIN' });
+  });
+
+  it('Shift+S activates SUB', () => {
+    const action = resolveAction({ key: 'S', shiftKey: true }, DEFAULT_KEYBOARD_CONFIG);
+    expect(action?.action).toBe('set_active_vfo');
+    expect(action?.params).toEqual({ vfo: 'SUB' });
+  });
+
+  it('m without shift does not resolve to set_active_vfo', () => {
+    const action = resolveAction({ key: 'm', shiftKey: false }, DEFAULT_KEYBOARD_CONFIG);
+    expect(action?.action).not.toBe('set_active_vfo');
+    expect(action?.action).toBe('switch_active_vfo');
+  });
 });
 
 describe('shouldIgnoreEvent', () => {

@@ -306,9 +306,29 @@ action = "toggle_split"
 [[keyboard.bindings]]
 id = "switch-active-vfo"
 section = "VFO"
-label = "Switch active receiver"
-key = "v"
+label = "Toggle active receiver"
+key = "m"
 action = "switch_active_vfo"
+
+[[keyboard.bindings]]
+id = "activate-main"
+section = "VFO"
+label = "Activate MAIN receiver"
+key = "M"
+modifiers = ["SHIFT"]
+action = "set_active_vfo"
+[keyboard.bindings.params]
+vfo = "MAIN"
+
+[[keyboard.bindings]]
+id = "activate-sub"
+section = "VFO"
+label = "Activate SUB receiver"
+key = "S"
+modifiers = ["SHIFT"]
+action = "set_active_vfo"
+[keyboard.bindings.params]
+vfo = "SUB"
 
 [[keyboard.bindings]]
 id = "toggle-nr"
@@ -356,7 +376,7 @@ action = "toggle_auto_notch"
 id = "toggle-monitor"
 section = "TX"
 label = "Monitor"
-key = "m"
+key = "k"
 action = "toggle_monitor"
 
 [[keyboard.bindings]]
