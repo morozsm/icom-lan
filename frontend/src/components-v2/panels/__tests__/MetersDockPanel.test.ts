@@ -6,6 +6,9 @@ import {
   formatAmps,
   formatVolts,
   formatCompDb,
+  isAlcFault,
+  isSwrFault,
+  peakHoldDisplay,
   updatePeakHold,
 } from '../meter-utils';
 
@@ -58,29 +61,85 @@ describe('formatCompDb', () => {
   });
 });
 
+describe('isSwrFault', () => {
+  it('is false at SWR 1.0 (raw=0)', () => {
+    expect(isSwrFault(0)).toBe(false);
+  });
+  it('is false at SWR exactly 2.0 (raw=80)', () => {
+    expect(isSwrFault(80)).toBe(false);
+  });
+  it('is true above 2.0 (raw=120 -> 3.0)', () => {
+    expect(isSwrFault(120)).toBe(true);
+  });
+  it('is true at raw=255 (infinity)', () => {
+    expect(isSwrFault(255)).toBe(true);
+  });
+});
+
+describe('isAlcFault', () => {
+  it('is false at 0% ALC', () => {
+    expect(isAlcFault(0)).toBe(false);
+  });
+  it('is false at 90% ALC (raw=108, redline 120)', () => {
+    expect(isAlcFault(108)).toBe(false);
+  });
+  it('is true above 90% ALC (raw=115)', () => {
+    expect(isAlcFault(115)).toBe(true);
+  });
+});
+
 describe('updatePeakHold', () => {
   it('initializes state when undefined', () => {
     const s = updatePeakHold(undefined, 42, 1000);
-    expect(s).toEqual({ peak: 42, peakAt: 1000 });
+    expect(s).toEqual({ latchedPeak: 42, latchedAt: 1000 });
   });
-  it('latches a new higher peak and updates timestamp', () => {
-    const s = updatePeakHold({ peak: 10, peakAt: 1000 }, 20, 1500);
-    expect(s).toEqual({ peak: 20, peakAt: 1500 });
+  it('re-latches on a strictly higher current and bumps timestamp', () => {
+    const s = updatePeakHold({ latchedPeak: 100, latchedAt: 0 }, 120, 500);
+    expect(s).toEqual({ latchedPeak: 120, latchedAt: 500 });
   });
-  it('keeps peak unchanged when current is lower and decay not elapsed', () => {
-    const s = updatePeakHold({ peak: 100, peakAt: 1000 }, 50, 1000);
-    expect(s.peak).toBe(100);
-    expect(s.peakAt).toBe(1000);
+  it('keeps latched state unchanged when current is lower and decay not elapsed', () => {
+    const s0 = { latchedPeak: 100, latchedAt: 0 };
+    const s = updatePeakHold(s0, 0, 1000);
+    // Same reference — no state churn during the hold window.
+    expect(s).toBe(s0);
   });
-  it('linearly decays toward current mid-window', () => {
-    // halfway through 2s decay: peak 100, current 0 -> 50
-    const s = updatePeakHold({ peak: 100, peakAt: 0 }, 0, 1000);
-    expect(s.peak).toBeCloseTo(50, 5);
-    expect(s.peakAt).toBe(0);
+  it('re-anchors to current once decay window has elapsed', () => {
+    const s = updatePeakHold({ latchedPeak: 100, latchedAt: 0 }, 25, 2000);
+    expect(s).toEqual({ latchedPeak: 25, latchedAt: 2000 });
   });
-  it('collapses to current once decay window elapses', () => {
-    const s = updatePeakHold({ peak: 100, peakAt: 0 }, 25, 2000);
-    expect(s).toEqual({ peak: 25, peakAt: 2000 });
+  it('repeated ticks do not compound (linear, not exponential, decay)', () => {
+    // Simulate the 100ms ticker feeding (peak=100, current=0) over 1s.
+    let state = updatePeakHold(undefined, 100, 0);
+    for (let t = 100; t <= 1000; t += 100) {
+      state = updatePeakHold(state, 0, t);
+    }
+    // State is still the original latched peak — decay happens at render.
+    expect(state).toEqual({ latchedPeak: 100, latchedAt: 0 });
+    // Displayed value after 1s (half the 2s window) is ~50, not ~3 (compound).
+    expect(peakHoldDisplay(state, 0, 1000)).toBeCloseTo(50, 5);
+  });
+});
+
+describe('peakHoldDisplay', () => {
+  it('equals the latched peak at t=0', () => {
+    expect(peakHoldDisplay({ latchedPeak: 100, latchedAt: 0 }, 0, 0)).toBe(100);
+  });
+  it('is linear at t = decayMs/2 regardless of tick cadence', () => {
+    expect(peakHoldDisplay({ latchedPeak: 100, latchedAt: 0 }, 0, 1000, 2000)).toBeCloseTo(
+      50,
+      5,
+    );
+  });
+  it('clamps to current once the window elapses', () => {
+    expect(peakHoldDisplay({ latchedPeak: 100, latchedAt: 0 }, 0, 2000, 2000)).toBe(0);
+    expect(peakHoldDisplay({ latchedPeak: 100, latchedAt: 0 }, 7, 2500, 2000)).toBe(7);
+  });
+  it('never shows below the live current sample', () => {
+    // Rising signal mid-decay should dominate the decaying marker.
+    expect(peakHoldDisplay({ latchedPeak: 100, latchedAt: 0 }, 80, 1500, 2000)).toBe(80);
+  });
+  it('returns current when no latched state exists', () => {
+    expect(peakHoldDisplay(undefined, 42, 1000)).toBe(42);
   });
 });
 
@@ -284,6 +343,64 @@ describe('MetersDockPanel relevance dimming', () => {
   it('keeps Vd tile relevant during TX as well', () => {
     const t = mountPanel({ ...fullProps, vdMeter: 180, txActive: true });
     expect(t.querySelector('[data-meter="vd"]')?.getAttribute('data-relevant')).toBe('true');
+  });
+});
+
+describe('MetersDockPanel fault highlighting', () => {
+  it('flags SWR tile as fault when raw > 2.0 during TX', () => {
+    const t = mountPanel({ ...fullProps, swrMeter: 120, txActive: true });
+    expect(t.querySelector('[data-meter="swr"]')?.getAttribute('data-fault')).toBe('true');
+  });
+
+  it('does not flag SWR fault during RX', () => {
+    const t = mountPanel({ ...fullProps, swrMeter: 120, txActive: false });
+    expect(t.querySelector('[data-meter="swr"]')?.getAttribute('data-fault')).toBe('false');
+  });
+
+  it('flags ALC tile as fault when raw above 90% of redline during TX', () => {
+    const t = mountPanel({ ...fullProps, alcMeter: 115, txActive: true });
+    expect(t.querySelector('[data-meter="alc"]')?.getAttribute('data-fault')).toBe('true');
+  });
+
+  it('does not flag ALC fault at exactly 90%', () => {
+    const t = mountPanel({ ...fullProps, alcMeter: 108, txActive: true });
+    expect(t.querySelector('[data-meter="alc"]')?.getAttribute('data-fault')).toBe('false');
+  });
+
+  it('does not flag SWR fault at exactly 2.0', () => {
+    const t = mountPanel({ ...fullProps, swrMeter: 80, txActive: true });
+    expect(t.querySelector('[data-meter="swr"]')?.getAttribute('data-fault')).toBe('false');
+  });
+});
+
+describe('MetersDockPanel peak-hold', () => {
+  it('renders a peak marker on Po tile during TX', () => {
+    const t = mountPanel({ ...fullProps, txActive: true });
+    const marker = t.querySelector('[data-meter="po"] [data-testid="peak-marker"]');
+    expect(marker).not.toBeNull();
+  });
+
+  it('does not render peak marker on S tile', () => {
+    const t = mountPanel({ ...fullProps, txActive: false });
+    const marker = t.querySelector('[data-meter="s"] [data-testid="peak-marker"]');
+    expect(marker).toBeNull();
+  });
+
+  it('hides peak marker when tile is not relevant', () => {
+    // Po is not relevant during RX (txActive=false) -> no peak shown
+    const t = mountPanel({ ...fullProps, txActive: false });
+    const marker = t.querySelector('[data-meter="po"] [data-testid="peak-marker"]');
+    expect(marker).toBeNull();
+  });
+
+  it('dblclick reset handler runs on the tile without error', () => {
+    const t = mountPanel({ ...fullProps, txActive: true });
+    const tile = t.querySelector('[data-meter="po"]') as HTMLElement;
+    expect(tile.querySelector('[data-testid="peak-marker"]')).not.toBeNull();
+    expect(() => {
+      tile.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+      flushSync();
+    }).not.toThrow();
   });
 });
 

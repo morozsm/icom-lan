@@ -203,17 +203,48 @@ export function formatCompDb(raw: number): string {
 }
 
 /**
- * Peak-hold state tracker (stub for M-D / #823).
- * Retains the highest value seen within `decayMs`; decays linearly toward
- * `current` after the last peak update.
+ * Returns the interpolated SWR ratio for a raw BCD value. Pure numeric
+ * companion to `formatSwr` — used for threshold comparisons.
+ */
+export function swrRatio(raw: number): number {
+  if (raw >= 255) return Infinity;
+  const knots = getKnots('swr', SWR_KNOTS);
+  return piecewise(raw, knots);
+}
+
+/**
+ * Returns the normalized ALC level (0-1) for a raw BCD value, relative to
+ * the ALC redline from capabilities (fallback: IC-7610 default 120).
+ */
+export function alcLevel(raw: number): number {
+  const alcMax = getMeterRedline('alc') ?? ALC_MAX_DEFAULT;
+  return Math.max(0, Math.min(alcMax, raw)) / alcMax;
+}
+
+/** True when SWR exceeds the 2.0 TX-safety threshold. */
+export function isSwrFault(raw: number): boolean {
+  return swrRatio(raw) > 2.0;
+}
+
+/** True when ALC is driven past 90% of the redline. */
+export function isAlcFault(raw: number): boolean {
+  return alcLevel(raw) > 0.9;
+}
+
+/**
+ * Peak-hold state tracker (#823).
  *
- * This is a pure function over state and does not schedule timers. Callers
- * step it on each render tick. Full decay + double-click reset behavior
- * lands with issue #823.
+ * Holds the latched peak value and its timestamp. The decayed display value
+ * is computed per-render from the elapsed time (see `peakHoldDisplay`) so
+ * the decay is strictly linear across the `decayMs` window — storing a
+ * pre-decayed value and repeatedly decaying it would produce exponential
+ * (compounding) decay instead.
+ *
+ * Pure function over state — callers schedule the tick.
  */
 export interface PeakHoldState {
-  peak: number;
-  peakAt: number;
+  latchedPeak: number;
+  latchedAt: number;
 }
 
 export function updatePeakHold(
@@ -222,16 +253,36 @@ export function updatePeakHold(
   now: number,
   decayMs = 2000,
 ): PeakHoldState {
-  if (!state || current >= state.peak) {
-    return { peak: current, peakAt: now };
+  if (!state || current > state.latchedPeak) {
+    return { latchedPeak: current, latchedAt: now };
   }
-  const elapsed = now - state.peakAt;
-  if (elapsed >= decayMs) {
-    return { peak: current, peakAt: now };
+  // Once the decay window has fully elapsed the latched peak is no longer
+  // visible; re-seat the anchor to `current` so future samples decay from a
+  // fresh baseline.
+  if (now - state.latchedAt >= decayMs) {
+    return { latchedPeak: current, latchedAt: now };
   }
-  const t = elapsed / decayMs;
-  const decayed = state.peak + (current - state.peak) * t;
-  return { peak: decayed, peakAt: state.peakAt };
+  return state;
+}
+
+/**
+ * Computes the displayed peak value for the current render frame.
+ * The latched peak decays linearly to 0 across `decayMs`; the live
+ * `current` sample floors the result so a rising signal is never masked
+ * by the hold marker.
+ */
+export function peakHoldDisplay(
+  state: PeakHoldState | undefined,
+  current: number,
+  now: number,
+  decayMs = 2000,
+): number {
+  if (!state) return current;
+  const elapsed = now - state.latchedAt;
+  if (elapsed >= decayMs) return current;
+  const factor = 1 - elapsed / decayMs;
+  const decayed = state.latchedPeak * factor;
+  return Math.max(current, decayed);
 }
 
 export function getNeedleMarks(source: MeterSource): Mark[] {

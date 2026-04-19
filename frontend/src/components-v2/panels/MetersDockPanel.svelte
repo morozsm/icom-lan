@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import {
     formatAlc,
     formatAmps,
@@ -7,8 +8,13 @@
     formatSMeter,
     formatSwr,
     formatVolts,
+    isAlcFault,
+    isSwrFault,
     normalize,
     normalizePower,
+    peakHoldDisplay,
+    updatePeakHold,
+    type PeakHoldState,
   } from './meter-utils';
 
   /**
@@ -46,6 +52,8 @@
     txActive,
   }: Props = $props();
 
+  type PeakKey = 'po' | 'swr' | 'alc';
+
   interface Tile {
     key: 'po' | 'swr' | 'alc' | 's' | 'id' | 'vd' | 'comp';
     label: string;
@@ -54,6 +62,46 @@
     fill: string;
     track: string;
     relevant: boolean;
+    fault?: boolean;
+  }
+
+  // Peak-hold state for Po/SWR/ALC. Stores the latched peak + timestamp only;
+  // the displayed decay is computed per-render from `now` so it stays linear
+  // across the 2 s window instead of compounding tick-by-tick.
+  let peaks = $state<Partial<Record<PeakKey, PeakHoldState>>>({});
+  let now = $state(Date.now());
+
+  function steppeak(key: PeakKey, current: number | undefined, t: number) {
+    if (current === undefined) {
+      if (peaks[key] !== undefined) peaks[key] = undefined;
+      return;
+    }
+    const next = updatePeakHold(peaks[key], current, t);
+    // Only write back on a re-latch / anchor reset — otherwise skip to avoid
+    // flagging a reactive read-then-write cycle. The display recomputes from
+    // `now` regardless.
+    if (peaks[key] !== next) peaks[key] = next;
+  }
+
+  function stepAllPeaks() {
+    const t = Date.now();
+    now = t;
+    steppeak('po', powerMeter !== undefined ? normalizePower(powerMeter) * 100 : undefined, t);
+    steppeak('swr', swrMeter !== undefined ? normalize(swrMeter) * 100 : undefined, t);
+    steppeak('alc', alcMeter !== undefined ? normalize(alcMeter) * 100 : undefined, t);
+  }
+
+  // A 100ms interval drives both the decay and the latch from fresh
+  // prop samples. Driving everything off a timer (not a reactive $effect)
+  // avoids the read-then-write cycle on `peaks` that Svelte 5 flags.
+  $effect(() => {
+    untrack(() => stepAllPeaks());
+    const id = setInterval(() => untrack(() => stepAllPeaks()), 100);
+    return () => clearInterval(id);
+  });
+
+  function resetPeak(key: PeakKey) {
+    peaks[key] = undefined;
   }
 
   // Priority order (plan §3): Po → SWR → ALC → S. Tiles with undefined
@@ -80,6 +128,7 @@
         fill: 'var(--v2-meter-swr-fill)',
         track: 'var(--v2-meter-swr-track)',
         relevant: txActive,
+        fault: txActive && isSwrFault(swrMeter),
       });
     }
     if (alcMeter !== undefined) {
@@ -91,6 +140,7 @@
         fill: 'var(--v2-meter-alc-fill)',
         track: 'var(--v2-meter-alc-track)',
         relevant: txActive,
+        fault: txActive && isAlcFault(alcMeter),
       });
     }
     if (idMeter !== undefined) {
@@ -151,7 +201,25 @@
 
   <div class="dock-grid">
     {#each tiles as tile (tile.key)}
-      <div class="dock-tile" data-meter={tile.key} data-relevant={tile.relevant}>
+      {@const peakPct =
+        tile.key === 'po' || tile.key === 'swr' || tile.key === 'alc'
+          ? peaks[tile.key] !== undefined
+            ? peakHoldDisplay(peaks[tile.key], tile.fillPct, now)
+            : undefined
+          : undefined}
+      <div
+        class="dock-tile"
+        role="group"
+        aria-label={`${tile.label} meter`}
+        data-meter={tile.key}
+        data-relevant={tile.relevant}
+        data-fault={tile.fault ? 'true' : 'false'}
+        ondblclick={() => {
+          if (tile.key === 'po' || tile.key === 'swr' || tile.key === 'alc') {
+            resetPeak(tile.key);
+          }
+        }}
+      >
         <div class="tile-header">
           <span class="tile-label">{tile.label}</span>
         </div>
@@ -162,6 +230,13 @@
             style:width={`${Math.max(0, Math.min(100, tile.fillPct))}%`}
             style:background={tile.fill}
           ></div>
+          {#if peakPct !== undefined && tile.relevant}
+            <div
+              class="tile-bar-peak"
+              data-testid="peak-marker"
+              style:left={`${Math.max(0, Math.min(100, peakPct))}%`}
+            ></div>
+          {/if}
         </div>
       </div>
     {/each}
@@ -228,6 +303,15 @@
     opacity: 0.35;
   }
 
+  .dock-tile[data-fault='true'] {
+    border-color: var(--v2-accent-red);
+    box-shadow: 0 0 6px rgba(255, 32, 32, 0.45);
+  }
+
+  .dock-tile[data-fault='true'] .tile-value {
+    color: var(--v2-accent-red-alt);
+  }
+
   .tile-header {
     display: flex;
     align-items: center;
@@ -257,5 +341,15 @@
 
   .tile-bar-fill {
     height: 100%;
+  }
+
+  .tile-bar-peak {
+    position: absolute;
+    top: 0;
+    width: 2px;
+    height: 100%;
+    background: var(--v2-accent-yellow, #f2cf4a);
+    transform: translateX(-1px);
+    pointer-events: none;
   }
 </style>
