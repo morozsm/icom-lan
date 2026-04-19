@@ -89,7 +89,11 @@
     <div class="control-strip">
       <!-- svelte-ignore a11y_no_static_element_interactions -->
       <!-- svelte-ignore a11y_click_events_have_key_events -->
-      <div class="mode-badge-wrapper" onclick={(e) => { e.stopPropagation(); onModeClick?.(); }}>
+      <div
+        class="mode-badge-wrapper"
+        onclick={(e) => { e.stopPropagation(); onModeClick?.(); }}
+        title={`Change mode (current: ${mode})`}
+      >
         <StatusIndicator
           label={mode}
           active={true}
