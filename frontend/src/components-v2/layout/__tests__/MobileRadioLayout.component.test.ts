@@ -24,6 +24,8 @@ vi.mock('../panels/ScanPanel.svelte', () => ({ default: function S() { return {}
 vi.mock('../panels/CwPanel.svelte', () => ({ default: function S() { return {}; } }));
 vi.mock('../panels/DockMeterPanel.svelte', () => ({ default: function S() { return {}; } }));
 vi.mock('./KeyboardHandler.svelte', () => ({ default: function S() { return {}; } }));
+// Note: ../panels/EssentialsPanel.svelte and ./mobile-chip-bar.svelte are intentionally
+// NOT mocked — the chip-scroll IA contract (#839) is part of what these tests cover.
 vi.mock('$lib/Button', () => ({ HardwareButton: function S() { return {}; } }));
 vi.mock('lucide-svelte', () => {
   const S = function () { return {}; };
@@ -190,14 +192,45 @@ describe('MobileRadioLayout structure', () => {
 });
 
 describe('MobileRadioLayout TX gating', () => {
-  it('renders PTT button when hasTx is true', () => {
+  it('renders TX chip when hasTx is true (#839)', () => {
     vi.mocked(hasTx).mockReturnValue(true);
-    expect(mountMobile().querySelector('.m-ptt-btn')).not.toBeNull();
+    const t = mountMobile();
+    const chipBar = t.querySelector('.m-chip-bar');
+    expect(chipBar).not.toBeNull();
+    const labels = Array.from(chipBar?.querySelectorAll('.m-chip') ?? []).map(
+      (b) => b.textContent?.trim(),
+    );
+    expect(labels).toContain('TX');
   });
 
-  it('hides PTT button when hasTx is false', () => {
+  it('omits TX chip when hasTx is false (#839)', () => {
     vi.mocked(hasTx).mockReturnValue(false);
-    expect(mountMobile().querySelector('.m-ptt-btn')).toBeNull();
+    const t = mountMobile();
+    const chipBar = t.querySelector('.m-chip-bar');
+    expect(chipBar).not.toBeNull();
+    const labels = Array.from(chipBar?.querySelectorAll('.m-chip') ?? []).map(
+      (b) => b.textContent?.trim(),
+    );
+    expect(labels).not.toContain('TX');
+    // And the TX-only PTT is not mounted on cold-open (ESSENTIALS active by default).
+    expect(t.querySelector('.m-ptt-btn')).toBeNull();
+  });
+});
+
+describe('MobileRadioLayout chip-scroll IA (#839)', () => {
+  it('renders chip bar inside m-content with ESSENTIALS default-active', () => {
+    const t = mountMobile();
+    const bar = t.querySelector('.m-content .m-chip-bar');
+    expect(bar).not.toBeNull();
+    const active = bar?.querySelector('.m-chip-active');
+    expect(active?.textContent?.trim()).toBe('ESSENTIALS');
+    expect(t.querySelector('#m-chip-panel-essentials')).not.toBeNull();
+  });
+
+  it('renders exactly one active chip panel at a time', () => {
+    const t = mountMobile();
+    const panels = t.querySelectorAll('[id^="m-chip-panel-"]');
+    expect(panels.length).toBe(1);
   });
 });
 

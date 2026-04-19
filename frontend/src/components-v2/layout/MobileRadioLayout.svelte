@@ -21,6 +21,8 @@
   import CwPanel from '../panels/CwPanel.svelte';
   import DockMeterPanel from '../panels/DockMeterPanel.svelte';
   import KeyboardHandler from './KeyboardHandler.svelte';
+  import MobileChipBar from './mobile-chip-bar.svelte';
+  import EssentialsPanel from '../panels/EssentialsPanel.svelte';
   import { ValueControl, rawToPercentDisplay } from '../controls/value-control';
   import {
     Settings, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Mic, MicOff,
@@ -123,6 +125,16 @@
   let filterModalOpen = $state(false);
   let txSettingsOpen = $state(false);
   let powerModalOpen = $state(false);
+
+  // ── Chip-scroll IA (#839) ──
+  let activeChipId = $state('essentials');
+  const mobileChips = $derived([
+    { id: 'essentials', label: 'ESSENTIALS' },
+    { id: 'band', label: 'BAND' },
+    { id: 'scan', label: 'SCAN' },
+    { id: 'rf', label: 'RF' },
+    ...(txCapable ? [{ id: 'tx', label: 'TX' }] : []),
+  ]);
 
   // ── Tuning strip ──
   let availableSteps = $derived(getStepsForMode(mode.currentMode));
@@ -512,164 +524,83 @@
       </section>
     {/if}
 
-    <!-- Band -->
-    <section class="m-section">
-      <CollapsiblePanel title="BAND" panelId="m-band" collapsible={true}>
-        <BandSelector
-          currentFreq={band.currentFreq}
-          onBandSelect={bandHandlers.onBandSelect}
-          onPresetSelect={presetHandlers.onPresetSelect}
+    <!-- Chip-scroll IA nav (#839) -->
+    <MobileChipBar
+      chips={mobileChips}
+      activeId={activeChipId}
+      onSelect={(id) => (activeChipId = id)}
+    />
+
+    <!-- Active-chip content area (single panel mounted at a time) -->
+    {#if activeChipId === 'essentials'}
+      <section class="m-section" id="m-chip-panel-essentials" role="tabpanel">
+        <EssentialsPanel
+          vfoOps={vfoOps}
+          mode={mode}
+          filter={filter}
+          rxAudio={rxAudio}
+          dsp={dsp}
+          quickModes={QUICK_MODES}
+          onSplitToggle={vfoHandlers.onSplitToggle}
+          onSwap={vfoHandlers.onSwap}
+          onEqual={vfoHandlers.onEqual}
+          onModeChange={modeHandlers.onModeChange}
+          onModeMore={() => (modeModalOpen = true)}
+          onFilterChange={(n) => filterHandlers.onFilterChange?.(n)}
+          onFilterMore={() => (filterModalOpen = true)}
+          onMonitorModeChange={rxAudioHandlers.onMonitorModeChange}
+          onAfLevelChange={rxAudioHandlers.onAfLevelChange}
+          onNbToggle={dspHandlers.onNbToggle}
+          onNrModeChange={dspHandlers.onNrModeChange}
+          onNotchModeChange={dspHandlers.onNotchModeChange}
         />
-      </CollapsiblePanel>
-    </section>
-
-    <!-- Scan -->
-    <section class="m-section">
-      <CollapsiblePanel title="SCAN" panelId="m-scan" collapsible={true}>
-        <ScanPanel
-          scanning={scan.scanning}
-          scanType={scan.scanType}
-          scanResumeMode={scan.scanResumeMode}
-          onScanStart={scanHandlers.onScanStart}
-          onScanStop={scanHandlers.onScanStop}
-          onDfSpanChange={scanHandlers.onDfSpanChange}
-          onResumeChange={scanHandlers.onResumeChange}
-        />
-      </CollapsiblePanel>
-    </section>
-
-    <!-- Mode (quick: LSB USB CW AM + More) -->
-    <section class="m-section">
-      <CollapsiblePanel title="MODE" panelId="m-mode" collapsible={true}>
-        <div class="m-quick-grid">
-          {#each QUICK_MODES as m}
-            <HardwareButton
-              active={mode.currentMode === m}
-              indicator="edge-left"
-              color="cyan"
-              onclick={() => modeHandlers.onModeChange(m)}
-            >
-              {m}
-            </HardwareButton>
-          {/each}
-          <HardwareButton
-            indicator="edge-left"
-            color="muted"
-            onclick={() => (modeModalOpen = true)}
-          >
-            More…
-          </HardwareButton>
-        </div>
-      </CollapsiblePanel>
-    </section>
-
-    <!-- Filter (quick: FIL1 FIL2 FIL3 + More) -->
-    <section class="m-section">
-      <CollapsiblePanel title="FILTER" panelId="m-filter" collapsible={true}>
-        <div class="m-quick-grid">
-          {#each (filter.filterLabels ?? ['FIL1', 'FIL2', 'FIL3']) as label, idx}
-            <HardwareButton
-              active={filter.currentFilter === idx + 1}
-              indicator="edge-left"
-              color="cyan"
-              onclick={() => filterHandlers.onFilterChange?.(idx + 1)}
-            >
-              {label}
-            </HardwareButton>
-          {/each}
-          <HardwareButton
-            indicator="edge-left"
-            color="muted"
-            onclick={() => (filterModalOpen = true)}
-          >
-            More…
-          </HardwareButton>
-        </div>
-      </CollapsiblePanel>
-    </section>
-
-    <!-- Audio (AF + monitor mode + DSP toggles) -->
-    <section class="m-section">
-      <CollapsiblePanel title="AUDIO" panelId="m-audio" collapsible={true}>
-        <div class="m-audio-content">
-          <div class="m-audio-buttons">
-            {#each ['local', 'live', 'mute'] as opt}
-              <HardwareButton
-                active={rxAudio.monitorMode === opt}
-                indicator="edge-left"
-                color={opt === 'mute' ? 'red' : 'cyan'}
-                onclick={() => rxAudioHandlers.onMonitorModeChange(opt)}
-              >
-                {opt === 'local' ? 'LOCAL' : opt === 'live' ? 'LIVE' : 'MUTE'}
-              </HardwareButton>
-            {/each}
-          </div>
-          <ValueControl
-            label="AF Level"
-            value={rxAudio.afLevel}
-            min={0}
-            max={255}
-            step={1}
-            renderer="hbar"
-            displayFn={rawToPercentDisplay}
-            accentColor="var(--v2-accent-cyan-alt)"
-            onChange={rxAudioHandlers.onAfLevelChange}
-            variant="hardware-illuminated"
+      </section>
+    {:else if activeChipId === 'band'}
+      <section class="m-section" id="m-chip-panel-band" role="tabpanel">
+        <CollapsiblePanel title="BAND" panelId="m-band" collapsible={false}>
+          <BandSelector
+            currentFreq={band.currentFreq}
+            onBandSelect={bandHandlers.onBandSelect}
+            onPresetSelect={presetHandlers.onPresetSelect}
           />
-          <div class="m-dsp-toggles">
-            <HardwareButton
-              active={dsp.nbActive}
-              indicator="edge-left"
-              color={dsp.nbActive ? 'green' : 'muted'}
-              onclick={() => dspHandlers.onNbToggle(!dsp.nbActive)}
-            >
-              NB
-            </HardwareButton>
-            <HardwareButton
-              active={dsp.nrMode > 0}
-              indicator="edge-left"
-              color={dsp.nrMode > 0 ? 'green' : 'muted'}
-              onclick={() => dspHandlers.onNrModeChange(dsp.nrMode > 0 ? 0 : 1)}
-            >
-              NR
-            </HardwareButton>
-            <HardwareButton
-              active={dsp.notchMode !== 'off'}
-              indicator="edge-left"
-              color={dsp.notchMode !== 'off' ? 'green' : 'muted'}
-              onclick={() => dspHandlers.onNotchModeChange(dsp.notchMode !== 'off' ? 'off' : 'auto')}
-            >
-              NOTCH
-            </HardwareButton>
-          </div>
-        </div>
-      </CollapsiblePanel>
-    </section>
-
-    <!-- RF Front End (ATT / PRE / DIGI-SEL / IP+) -->
-    <section class="m-section">
-      <CollapsiblePanel title="RF" panelId="m-rf-quick" collapsible={true}>
-        <RfFrontEnd
-          rfGain={rfFrontEnd.rfGain}
-          squelch={rfFrontEnd.squelch}
-          att={rfFrontEnd.att}
-          pre={rfFrontEnd.pre}
-          digiSel={rfFrontEnd.digiSel}
-          ipPlus={rfFrontEnd.ipPlus}
-          onRfGainChange={rfHandlers.onRfGainChange}
-          onSquelchChange={rfHandlers.onSquelchChange}
-          onAttChange={rfHandlers.onAttChange}
-          onPreChange={rfHandlers.onPreChange}
-          onDigiSelToggle={rfHandlers.onDigiSelToggle}
-          onIpPlusToggle={rfHandlers.onIpPlusToggle}
-        />
-      </CollapsiblePanel>
-    </section>
-
-    <!-- TX (compact: PTT + Power readout + ATU) -->
-    {#if txCapable}
-      <section class="m-section">
-        <CollapsiblePanel title="TX" panelId="m-tx" collapsible={true}>
+        </CollapsiblePanel>
+      </section>
+    {:else if activeChipId === 'scan'}
+      <section class="m-section" id="m-chip-panel-scan" role="tabpanel">
+        <CollapsiblePanel title="SCAN" panelId="m-scan" collapsible={false}>
+          <ScanPanel
+            scanning={scan.scanning}
+            scanType={scan.scanType}
+            scanResumeMode={scan.scanResumeMode}
+            onScanStart={scanHandlers.onScanStart}
+            onScanStop={scanHandlers.onScanStop}
+            onDfSpanChange={scanHandlers.onDfSpanChange}
+            onResumeChange={scanHandlers.onResumeChange}
+          />
+        </CollapsiblePanel>
+      </section>
+    {:else if activeChipId === 'rf'}
+      <section class="m-section" id="m-chip-panel-rf" role="tabpanel">
+        <CollapsiblePanel title="RF" panelId="m-rf-quick" collapsible={false}>
+          <RfFrontEnd
+            rfGain={rfFrontEnd.rfGain}
+            squelch={rfFrontEnd.squelch}
+            att={rfFrontEnd.att}
+            pre={rfFrontEnd.pre}
+            digiSel={rfFrontEnd.digiSel}
+            ipPlus={rfFrontEnd.ipPlus}
+            onRfGainChange={rfHandlers.onRfGainChange}
+            onSquelchChange={rfHandlers.onSquelchChange}
+            onAttChange={rfHandlers.onAttChange}
+            onPreChange={rfHandlers.onPreChange}
+            onDigiSelToggle={rfHandlers.onDigiSelToggle}
+            onIpPlusToggle={rfHandlers.onIpPlusToggle}
+          />
+        </CollapsiblePanel>
+      </section>
+    {:else if activeChipId === 'tx' && txCapable}
+      <section class="m-section" id="m-chip-panel-tx" role="tabpanel">
+        <CollapsiblePanel title="TX" panelId="m-tx" collapsible={false}>
           <div class="m-tx-compact">
             <!-- Power readout (tap → power modal) -->
             <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -1414,50 +1345,6 @@
     border-radius: 0;
     border-left: none;
     border-right: none;
-  }
-
-  /* ── Quick grid (mode, filter quick buttons) ── */
-  .m-quick-grid {
-    display: flex;
-    gap: 4px;
-    padding: 7px 8px;
-    flex-wrap: wrap;
-  }
-
-  .m-quick-grid > :global(button) {
-    flex: 1 1 auto;
-    min-width: 52px;
-    min-height: 40px;
-  }
-
-  /* ── Audio content ── */
-  .m-audio-content {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    padding: 7px 8px;
-  }
-
-  .m-audio-buttons {
-    display: flex;
-    gap: 4px;
-  }
-
-  .m-audio-buttons > :global(button) {
-    flex: 1 1 0;
-    min-width: 0;
-    min-height: 44px;
-  }
-
-  .m-dsp-toggles {
-    display: flex;
-    gap: 4px;
-  }
-
-  .m-dsp-toggles > :global(button) {
-    flex: 1 1 0;
-    min-width: 0;
-    min-height: 44px;
   }
 
   /* ── TX compact section ── */
