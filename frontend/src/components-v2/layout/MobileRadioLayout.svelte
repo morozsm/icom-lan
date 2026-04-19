@@ -23,9 +23,10 @@
   import KeyboardHandler from './KeyboardHandler.svelte';
   import MobileChipBar from './mobile-chip-bar.svelte';
   import EssentialsPanel from '../panels/EssentialsPanel.svelte';
+  import PttFab from '../controls/PttFab.svelte';
   import { ValueControl, rawToPercentDisplay } from '../controls/value-control';
   import {
-    Settings, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Mic, MicOff,
+    Settings, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
     Sliders, Radio as RadioIcon,
   } from 'lucide-svelte';
   import {
@@ -672,28 +673,8 @@
               <Sliders size={14} />
             </button>
 
-            <!-- PTT (wider) -->
-            <button
-              class="m-ptt-btn"
-              class:m-ptt-held={pttMode === 'held'}
-              class:m-ptt-latched={pttMode === 'latched'}
-              ontouchstart={(e) => { e.preventDefault(); pttDown(); }}
-              ontouchend={(e) => { e.preventDefault(); pttUp(); }}
-              ontouchcancel={() => pttUp()}
-              onmousedown={pttDown}
-              onmouseup={pttUp}
-              onmouseleave={() => { if (pttMode === 'held') pttUp(); }}
-            >
-              {#if pttMode === 'latched'}
-                <MicOff size={18} />
-                TX LOCK
-              {:else if pttMode === 'held'}
-                TX
-              {:else}
-                <Mic size={18} />
-                PTT
-              {/if}
-            </button>
+            <!-- Inline PTT button removed (#840) — PttFab at bottom-right
+                 is the persistent, guarded TX affordance. -->
           </div>
           {#if tx.txActive || pttActive}
             <div class="m-tx-meter">
@@ -930,6 +911,19 @@
 
 <!-- Toast notifications — rendered in fixed position overlay -->
 <Toast />
+
+{#if txCapable}
+  <!-- Guarded sticky PTT FAB (#840) — persistent 1-tap TX from any screen.
+       Layered guards (50ms hold, 8px cancel, haptic, TX-permit two-step)
+       live in the FAB component. State machine stays in the parent
+       (pttMode + 3-min safety timer + double-tap latch). -->
+  <PttFab
+    mode={pttMode}
+    txPermit={txPermit}
+    onDown={pttDown}
+    onUp={pttUp}
+  />
+{/if}
 
 <style>
   /* ── Landscape layout ── */
