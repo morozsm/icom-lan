@@ -128,11 +128,15 @@
 
   // ── Chip-scroll IA (#839) ──
   let activeChipId = $state('essentials');
+  // Conditional chips are gated on capabilities so radios without the feature
+  // don't see a dead chip (e.g. RIT-capable rigs get the dedicated RIT chip
+  // per #842, TX-capable rigs get TX).
   const mobileChips = $derived([
     { id: 'essentials', label: 'ESSENTIALS' },
     { id: 'band', label: 'BAND' },
     { id: 'scan', label: 'SCAN' },
     { id: 'rf', label: 'RF' },
+    ...(ritXit.hasRit || ritXit.hasXit ? [{ id: 'rit', label: 'RIT/XIT' }] : []),
     ...(txCapable ? [{ id: 'tx', label: 'TX' }] : []),
   ]);
 
@@ -510,6 +514,15 @@
       {#if hasDualReceiver() && subVfo.freq > 0}
         <span class="m-vfo-sub">{(subVfo.freq / 1_000_000).toFixed(3)}</span>
       {/if}
+      {#if ritXit.ritActive}
+        <span class="m-vfo-rit" title="RIT offset">
+          RIT {ritXit.ritOffset >= 0 ? '+' : ''}{ritXit.ritOffset}
+        </span>
+      {:else if ritXit.xitActive}
+        <span class="m-vfo-rit" title="XIT offset">
+          XIT {ritXit.xitOffset >= 0 ? '+' : ''}{ritXit.xitOffset}
+        </span>
+      {/if}
     </div>
   </header>
 
@@ -603,6 +616,24 @@
             onPreChange={rfHandlers.onPreChange}
             onDigiSelToggle={rfHandlers.onDigiSelToggle}
             onIpPlusToggle={rfHandlers.onIpPlusToggle}
+          />
+        </CollapsiblePanel>
+      </section>
+    {:else if activeChipId === 'rit'}
+      <section class="m-section" id="m-chip-panel-rit" role="tabpanel">
+        <CollapsiblePanel title="RIT / XIT" panelId="m-rit-chip" collapsible={false}>
+          <RitXitPanel
+            ritActive={ritXit.ritActive}
+            ritOffset={ritXit.ritOffset}
+            xitActive={ritXit.xitActive}
+            xitOffset={ritXit.xitOffset}
+            hasRit={ritXit.hasRit}
+            hasXit={ritXit.hasXit}
+            onRitToggle={ritXitHandlers.onRitToggle}
+            onXitToggle={ritXitHandlers.onXitToggle}
+            onRitOffsetChange={ritXitHandlers.onRitOffsetChange}
+            onXitOffsetChange={ritXitHandlers.onXitOffsetChange}
+            onClear={ritXitHandlers.onClear}
           />
         </CollapsiblePanel>
       </section>
@@ -1293,6 +1324,19 @@
     font-weight: 700;
     color: var(--v2-text-dim, #555);
     letter-spacing: 0.08em;
+  }
+
+  /* RIT/XIT offset badge in sticky header meta row (#842). Only renders
+     when RIT or XIT is active so the header stays quiet most of the time. */
+  .m-vfo-rit {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--v2-accent-yellow, #facc15);
+    letter-spacing: 0.02em;
+    padding: 0 4px;
+    border: 1px solid rgba(250, 204, 21, 0.35);
+    border-radius: 3px;
   }
 
   /* ── S-meter bar (full width, below VFO) ── */
