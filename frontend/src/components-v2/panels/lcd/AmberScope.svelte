@@ -6,6 +6,7 @@
   } from '../../wiring/state-adapter';
   import AmberFrequency from './AmberFrequency.svelte';
   import AmberAfScope from './AmberAfScope.svelte';
+  import AmberFilterGhost from './AmberFilterGhost.svelte';
   import AmberIndStrip from './AmberIndStrip.svelte';
   import type { IndToken } from './AmberIndStrip.svelte';
   import { createAudioScopeConnection } from '$lib/runtime/adapters/scope-adapter';
@@ -200,6 +201,11 @@
           ifShift={filterProps.ifShift}
           bandwidth={fftBandwidth}
           mode="dominant"
+        />
+      {:else}
+        <AmberFilterGhost
+          filterWidth={filterProps.filterWidth}
+          filterWidthMax={filterProps.filterWidthMax}
         />
       {/if}
     </div>
