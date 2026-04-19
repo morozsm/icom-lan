@@ -9,15 +9,6 @@
   import AmberSmeter from './AmberSmeter.svelte';
   import AmberAfScope from './AmberAfScope.svelte';
   import { createAudioScopeConnection } from '$lib/runtime/adapters/scope-adapter';
-  import { onMount } from 'svelte';
-  import {
-    LCD_CONTRAST_PRESETS,
-    applyLcdContrast,
-    getLcdContrastPreset,
-    setLcdContrastPreset,
-    stepLcdContrast,
-    type LcdContrastPreset,
-  } from '$lib/stores/lcd-contrast.svelte';
 
   // Band lookup by frequency (LCD-specific)
   const BANDS: [string, number, number][] = [
@@ -120,38 +111,6 @@
   function agcLabel(m: number): string {
     return AGC_LABELS[m] ?? `${m}`;
   }
-
-  // ── LCD contrast (issue #833 / plan §2) ──
-  let contrastPreset = $state<LcdContrastPreset>(getLcdContrastPreset());
-
-  function selectContrast(p: LcdContrastPreset): void {
-    setLcdContrastPreset(p);
-    contrastPreset = p;
-  }
-
-  function handleContrastKey(event: KeyboardEvent): void {
-    if (!event.shiftKey) return;
-    // Ignore when focus is in a text field.
-    const tag = (document.activeElement?.tagName ?? '').toUpperCase();
-    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
-    // Shift+[ and Shift+] produce '{' and '}' on most US/EU layouts.
-    // Also accept the bare bracket keys in case the layout maps them directly.
-    const key = event.key;
-    let direction: 'up' | 'down' | null = null;
-    if (key === '{' || key === '[') direction = 'down';
-    else if (key === '}' || key === ']') direction = 'up';
-    if (!direction) return;
-    event.preventDefault();
-    contrastPreset = stepLcdContrast(direction);
-  }
-
-  onMount(() => {
-    applyLcdContrast();
-    window.addEventListener('keydown', handleContrastKey);
-    return () => {
-      window.removeEventListener('keydown', handleContrastKey);
-    };
-  });
 
   // Scope WS connection — reactive to capabilities (may load after mount)
   $effect(() => {
@@ -287,22 +246,6 @@
       {/if}
     </div>
 
-    <!-- ═══ Contrast preset row (segmented control) — plan §2.1 path 3 ═══ -->
-    <div class="lcd-contrast-row" role="radiogroup" aria-label="LCD contrast preset" style:grid-area="contrast">
-      <span class="lcd-contrast-label">CONTRAST</span>
-      {#each LCD_CONTRAST_PRESETS as p}
-        <button
-          type="button"
-          class="lcd-contrast-btn"
-          class:active={contrastPreset === p}
-          role="radio"
-          aria-checked={contrastPreset === p}
-          aria-label="Contrast preset {p}"
-          onclick={() => selectContrast(p)}
-        >{p}</button>
-      {/each}
-    </div>
-
   </div>
 </div>
 
@@ -354,15 +297,13 @@
       28px              /* meter */
       72px              /* vfo */
       auto              /* pb (RIT/XIT offset; collapses when inactive) */
-      minmax(0, 120px)  /* filter */
-      auto;             /* contrast */
+      minmax(0, 120px); /* filter */
     grid-template-areas:
       "indicators"
       "meter-a"
       "vfo-a"
       "pb"
-      "filter"
-      "contrast";
+      "filter";
   }
 
   .lcd-screen.dual {
@@ -372,8 +313,7 @@
       "meter-a    meter-b"
       "vfo-a      vfo-b"
       "pb         pb"
-      "filter     filter"
-      "contrast   contrast";
+      "filter     filter";
   }
 
   .lcd-scanlines {
@@ -591,38 +531,6 @@
     font-weight: bold;
     font-size: 16px;
     color: rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.6));
-  }
-
-  /* ── Contrast preset row ── */
-  .lcd-contrast-row {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    position: relative;
-    z-index: 2;
-    padding-top: 2px;
-    flex-wrap: wrap;
-  }
-  .lcd-contrast-label {
-    font: 700 9px/1 'JetBrains Mono', monospace;
-    letter-spacing: 0.1em;
-    color: rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.5));
-  }
-  .lcd-contrast-btn {
-    font: 700 10px/1 'JetBrains Mono', monospace;
-    color: rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.45));
-    background: transparent;
-    border: 1px solid rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.2));
-    border-radius: 2px;
-    padding: 1px 5px;
-    cursor: pointer;
-  }
-  .lcd-contrast-btn:hover {
-    border-color: rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.35));
-  }
-  .lcd-contrast-btn.active {
-    color: rgba(26, 16, 0, var(--lcd-alpha-active));
-    border-color: rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.5));
   }
 
   /* ── Filter / AF Scope row (full-width grid cell) ── */

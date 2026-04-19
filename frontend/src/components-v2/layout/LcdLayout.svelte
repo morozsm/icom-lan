@@ -17,6 +17,7 @@
   import { getKeyboardConfig } from '$lib/stores/capabilities.svelte';
   import { applyModeDefault } from '$lib/stores/tuning.svelte';
   import AmberLcdDisplay from '../panels/lcd/AmberLcdDisplay.svelte';
+  import LcdContrastControl from '../panels/lcd/LcdContrastControl.svelte';
   import VfoControlPanel from '../panels/lcd/VfoControlPanel.svelte';
   import LeftSidebar from './LeftSidebar.svelte';
   import RightSidebar from './RightSidebar.svelte';
@@ -60,6 +61,9 @@
         <div class="lcd-frame">
           <AmberLcdDisplay />
         </div>
+      </div>
+      <div class="lcd-control-strip">
+        <LcdContrastControl />
       </div>
     </main>
 
@@ -149,7 +153,25 @@
     min-height: 0;
     min-width: 0;
     display: flex;
-    align-items: start;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  /* Control strip beneath the amber LCD surface (issue #861). Houses the
+     contrast preset picker and any future non-touch controls that don't
+     belong on the amber display itself. */
+  .lcd-control-strip {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 6px;
+    border: 1px solid var(--v2-border-panel);
+    border-radius: 4px;
+    background:
+      linear-gradient(180deg, var(--v2-panel-bg-gradient-top) 0%, var(--v2-panel-bg-gradient-bottom) 100%);
+    box-shadow: var(--v2-shadow-sm);
   }
 
   .lcd-slot {
