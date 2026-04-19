@@ -6,6 +6,7 @@ export interface ThemeInfo {
 }
 
 const STORAGE_KEY = 'icom-lan:theme';
+const USER_CHOICE_KEY = 'icom-lan:theme-user-choice';
 const VFO_STORAGE_KEY = 'icom-lan:vfo-theme';
 
 const THEMES: ThemeInfo[] = [
@@ -158,16 +159,18 @@ export function getTheme(): string {
 }
 
 /**
- * True if the user has explicitly chosen a theme (stored in localStorage).
- * False when no preference exists yet — lets skins pick a sensible default
- * without stomping an explicit user choice.
+ * True if the user has explicitly chosen a theme via the picker UI.
+ * False when no user preference exists yet — lets skins pick a sensible
+ * default without stomping an explicit user choice. Note: the applied-theme
+ * key (STORAGE_KEY) may be written by framework startup code and is not a
+ * reliable indicator of user intent — hence the separate USER_CHOICE_KEY.
  */
 export function hasExplicitTheme(): boolean {
   if (typeof window === 'undefined') {
     return false;
   }
   try {
-    return localStorage.getItem(STORAGE_KEY) !== null;
+    return localStorage.getItem(USER_CHOICE_KEY) !== null;
   } catch {
     return false;
   }
@@ -184,7 +187,8 @@ export function setTheme(id: string): void {
     return;
   }
 
-  // Store preference
+  // Store preference (applied-theme key; may be written at startup even
+  // without explicit user intent — see setThemeUserChoice for explicit).
   try {
     localStorage.setItem(STORAGE_KEY, id);
   } catch (err) {
@@ -196,6 +200,24 @@ export function setTheme(id: string): void {
     delete document.documentElement.dataset.theme;
   } else {
     document.documentElement.dataset.theme = id;
+  }
+}
+
+/**
+ * Called by the theme picker UI when a user explicitly selects a theme.
+ * Applies the theme and records that the choice came from the user so
+ * skin auto-defaults (e.g. amber-lcd → lcd-warm) do not override it on
+ * subsequent loads.
+ */
+export function setThemeUserChoice(id: string): void {
+  setTheme(id);
+  if (typeof window === 'undefined') {
+    return;
+  }
+  try {
+    localStorage.setItem(USER_CHOICE_KEY, id);
+  } catch (err) {
+    console.warn('Failed to save user theme choice:', err);
   }
 }
 

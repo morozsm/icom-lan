@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { Palette } from 'lucide-svelte';
-  import { getAvailableThemes, getTheme, setTheme, getVfoTheme, setVfoTheme, type ThemeInfo } from '../theme/theme-switcher';
+  import { getAvailableThemes, getTheme, setThemeUserChoice, getVfoTheme, setVfoTheme, type ThemeInfo } from '../theme/theme-switcher';
 
   let isOpen = $state(false);
   let currentTheme = $state('default');
@@ -42,7 +42,7 @@
 
   function selectTheme(themeId: string) {
     currentTheme = themeId;
-    setTheme(themeId);
+    setThemeUserChoice(themeId);
     isOpen = false;
   }
 
