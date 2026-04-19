@@ -1,6 +1,6 @@
 <script lang="ts">
   import { radio } from '$lib/stores/radio.svelte';
-  import { hasAudioFft, getCapabilities, hasCapability } from '$lib/stores/capabilities.svelte';
+  import { hasAudioFft, hasDualReceiver, getCapabilities, hasCapability } from '$lib/stores/capabilities.svelte';
   import {
     toTxProps, toRitXitProps, toVfoOpsProps, toDspProps, toFilterProps,
   } from '../../wiring/state-adapter';
@@ -57,18 +57,29 @@
   let dsp = $derived(toDspProps(radioState, null));
   let filterProps = $derived(toFilterProps(radioState, caps));
 
-  // Active receiver data (single-RX — use active receiver; dual-RX handled in #897)
+  // Active receiver for indicator zone data (unchanged from pre-#897)
   let rx = $derived(radioState?.active === 'SUB' ? radioState?.sub : radioState?.main);
-  let mainFreqHz = $derived(rx?.freqHz ?? 0);
-  let rxMode = $derived(rx?.mode ?? '---');
-  let mainBand = $derived(freqToBand(mainFreqHz));
 
-  // Filter width label (e.g. "2.4 kHz")
-  let filterWidthLabel = $derived.by(() => {
-    const w = filterProps.filterWidth;
+  // ── VFO A (MAIN) — always top line ──
+  // Read directly from radioState.main so the tag is statically correct (fixes codex P2).
+  let mainFreqHz = $derived(radioState?.main?.freqHz ?? 0);
+  let mainMode = $derived(radioState?.main?.mode ?? '---');
+  let mainBand = $derived(freqToBand(mainFreqHz));
+  let mainFilterWidth = $derived(radioState?.main?.filterWidth ?? 0);
+  let mainFilterWidthLabel = $derived.by(() => {
+    const w = mainFilterWidth;
     if (!w || w <= 0) return '';
     return w >= 1000 ? `${(w / 1000).toFixed(1)} kHz` : `${w} Hz`;
   });
+
+  // ── VFO B (SUB) — compact second line on dual-RX only ──
+  let subFreqHz = $derived(radioState?.sub?.freqHz ?? 0);
+  let subMode = $derived(radioState?.sub?.mode ?? '---');
+  let subBand = $derived(freqToBand(subFreqHz));
+
+  // Active-state per VFO: A active when main is the active receiver
+  let isAActive = $derived(radioState?.active !== 'SUB');
+  let isBActive = $derived(radioState?.active === 'SUB');
 
   // Derived raw state helpers
   let lockActive = $derived(radioState?.dialLock ?? false);
@@ -156,29 +167,50 @@
 
 <!--
   AmberScope — IC-7300-style scope-dominant layout.
-  Grid: header (VFO) / ind-strips (3 zones) / scope (dominant AfScope).
+  Grid: header (VFO A always, VFO B on dual-RX) / ind-strips (3 zones) / scope (dominant AfScope).
   Issue #899 adds frontend/dsp/global indicator zones.
-  Issue #896 / epic #887 C-PR2 (single-RX only; dual-RX reserved for #897).
+  Issue #896 / epic #887 C-PR2 (single-RX).
+  Issue #897 / epic #887 C-PR3 (dual-RX compact sub-VFO line).
+  VFO A = always MAIN receiver; VFO B = always SUB receiver (fixes codex P2 tag semantics).
 -->
 <div class="amber-lcd amber-lcd-scope" class:tx-active={tx.txActive}>
   <div class="lcd-screen">
     <div class="lcd-scanlines"></div>
 
-    <!-- ═══ Header: compact VFO one-liner ═══ -->
+    <!-- ═══ Header: VFO A (always) + VFO B (dual-RX only) ═══ -->
     <div class="lcd-header" style:grid-area="header">
-      <span class="vfo-tag">►A</span>
-      <div class="vfo-freq">
-        <AmberFrequency freqHz={mainFreqHz} size="large" />
+      <!-- VFO A row (main receiver — always shown) -->
+      <div class="vfo-row" class:inactive={!isAActive}>
+        <span class="vfo-tag">►A</span>
+        <div class="vfo-freq">
+          <AmberFrequency freqHz={mainFreqHz} size="large" />
+        </div>
+        <div class="vfo-badges">
+          {#if mainBand}
+            <span class="vfo-band-box">{mainBand}</span>
+          {/if}
+          <span class="vfo-mode-box">{mainMode}</span>
+          {#if mainFilterWidthLabel}
+            <span class="vfo-filter-box">{mainFilterWidthLabel}</span>
+          {/if}
+        </div>
       </div>
-      <div class="vfo-badges">
-        {#if mainBand}
-          <span class="vfo-band-box">{mainBand}</span>
-        {/if}
-        <span class="vfo-mode-box">{rxMode}</span>
-        {#if filterWidthLabel}
-          <span class="vfo-filter-box">{filterWidthLabel}</span>
-        {/if}
-      </div>
+
+      <!-- VFO B row (sub receiver — compact, dual-RX only) -->
+      {#if hasDualReceiver()}
+        <div class="vfo-row vfo-row-b" class:inactive={!isBActive}>
+          <span class="vfo-tag vfo-tag-sub">►B</span>
+          <div class="vfo-freq">
+            <AmberFrequency freqHz={subFreqHz} size="small" />
+          </div>
+          <div class="vfo-badges">
+            {#if subBand}
+              <span class="vfo-band-box vfo-band-box-sub">{subBand}</span>
+            {/if}
+            <span class="vfo-mode-box vfo-mode-box-sub">{subMode}</span>
+          </div>
+        </div>
+      {/if}
     </div>
 
     <!-- ═══ Indicator zones: FRONT / DSP / global ═══ -->
@@ -266,15 +298,35 @@
     );
   }
 
-  /* ── Header: compact VFO one-liner ── */
+  /* ── Header: VFO rows ── */
   .lcd-header {
     display: flex;
-    align-items: center;
-    gap: 10px;
+    flex-direction: column;
+    gap: 3px;
     position: relative;
     z-index: 2;
     min-height: 0;
     overflow: hidden;
+  }
+
+  /* One VFO row (A or B): tag + freq + badges in a flex line */
+  .vfo-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /* Inactive row: demote ink alpha (mirrors AmberCockpit pattern) */
+  .vfo-row.inactive {
+    --lcd-alpha-active: var(--lcd-alpha-inactive);
+  }
+
+  /* Compact B row sits below A; separator line above it */
+  .vfo-row-b {
+    border-top: 1px solid rgba(26, 16, 0, calc(var(--lcd-alpha-ghost) * 2));
+    padding-top: 2px;
   }
 
   .vfo-tag {
@@ -287,6 +339,11 @@
     padding: 0 6px;
     line-height: 1.3;
     flex-shrink: 0;
+  }
+
+  /* Sub-VFO tag is slightly smaller to match the compact B row */
+  .vfo-tag-sub {
+    font-size: 14px;
   }
 
   .vfo-freq {
@@ -320,6 +377,13 @@
 
   .vfo-band-box {
     background: rgba(26, 16, 0, var(--lcd-alpha-ghost));
+  }
+
+  /* Compact badges for sub-VFO B row */
+  .vfo-band-box-sub,
+  .vfo-mode-box-sub {
+    font-size: 12px;
+    padding: 1px 6px;
   }
 
   .vfo-filter-box {
