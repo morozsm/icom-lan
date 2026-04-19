@@ -400,7 +400,11 @@
           />
         </CollapsiblePanel>
 
-        <CollapsiblePanel title="CW" panelId="desktop-cw">
+        <CollapsiblePanel
+          title="CW"
+          panelId="desktop-cw"
+          autoCollapseWhen={activeMode !== 'CW' && activeMode !== 'CW-R'}
+        >
           <CwPanel
             cwPitch={cw.cwPitch}
             keySpeed={cw.keySpeed}

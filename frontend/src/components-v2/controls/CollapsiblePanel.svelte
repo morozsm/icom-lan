@@ -10,13 +10,31 @@
     dataPanel?: string;
     /** Style attribute for CSS order (used during drag reorder). */
     style?: string;
+    /**
+     * When true, the panel is force-collapsed unless the user has manually
+     * expanded it during this session. Resets the sticky override each time
+     * the condition flips back to false so re-entering a compatible mode
+     * restores normal collapse behaviour.
+     */
+    autoCollapseWhen?: boolean;
     onDragStart?: (panelId: string, event: PointerEvent) => void;
     children?: any;
   }
 
-  let { title, panelId, collapsible = true, draggable = false, dataPanel, style, onDragStart, children }: Props = $props();
+  let { title, panelId, collapsible = true, draggable = false, dataPanel, style, autoCollapseWhen = false, onDragStart, children }: Props = $props();
 
   let collapsed = $state(false);
+  // Session-only sticky flag: once the user expands while autoCollapseWhen is
+  // true, keep the panel open until the condition flips back to false.
+  let userExpanded = $state(false);
+
+  $effect(() => {
+    if (!autoCollapseWhen) {
+      userExpanded = false;
+    }
+  });
+
+  let effectiveCollapsed = $derived(collapsed || (autoCollapseWhen && !userExpanded));
 
   const STORAGE_KEY = 'icom-lan:panel-collapsed';
 
@@ -42,7 +60,27 @@
       return;
     }
 
+    // When auto-collapse is active and the panel is currently showing as
+    // collapsed because of it (not because of persisted state), a click
+    // should expand it and mark it as user-expanded for this session.
+    if (autoCollapseWhen && effectiveCollapsed && !collapsed) {
+      userExpanded = true;
+      return;
+    }
+
     collapsed = !collapsed;
+    // Collapsing while auto-collapse is active clears the sticky override so
+    // the panel stays auto-collapsed until the user expands it again.
+    if (collapsed && autoCollapseWhen) {
+      userExpanded = false;
+    }
+    // Expanding (e.g. from a persisted-collapsed state) while auto-collapse
+    // is active must also set the sticky override, otherwise the derived
+    // ``effectiveCollapsed`` stays true and the panel wouldn't open until a
+    // second click.
+    if (!collapsed && autoCollapseWhen) {
+      userExpanded = true;
+    }
 
     // Save to localStorage
     try {
@@ -84,11 +122,11 @@
     if (absDy > SWIPE_THRESHOLD && absDy > absDx * 2) {
       swipeHandled = true;
       // Swipe down → collapse (only if expanded)
-      if (dy > 0 && !collapsed) {
+      if (dy > 0 && !effectiveCollapsed) {
         toggle();
       }
       // Swipe up → expand (only if collapsed)
-      if (dy < 0 && collapsed) {
+      if (dy < 0 && effectiveCollapsed) {
         toggle();
       }
     }
@@ -117,7 +155,7 @@
   class="collapsible-panel"
   data-panel-id={panelId}
   data-panel={dataPanel}
-  data-collapsed={collapsed}
+  data-collapsed={effectiveCollapsed}
   {style}
 >
   <div class="panel-header-row">
@@ -125,7 +163,7 @@
       type="button"
       class="panel-header"
       class:collapsible
-      aria-expanded={!collapsed}
+      aria-expanded={!effectiveCollapsed}
       onclick={onHeaderClick}
       onpointerdown={onHeaderPointerDown}
       onpointermove={onHeaderPointerMove}
@@ -135,7 +173,7 @@
       disabled={!collapsible}
     >
       {#if collapsible}
-        <span class="chevron" aria-hidden="true">{collapsed ? '▸' : '▾'}</span>
+        <span class="chevron" aria-hidden="true">{effectiveCollapsed ? '▸' : '▾'}</span>
       {/if}
       <span class="title">{title}</span>
     </button>
@@ -151,8 +189,8 @@
 
   <div
     class="panel-content"
-    class:collapsed
-    style:max-height={collapsed ? '0' : '2000px'}
+    class:collapsed={effectiveCollapsed}
+    style:max-height={effectiveCollapsed ? '0' : '2000px'}
   >
     <div class="panel-content-inner">
       {@render children?.()}

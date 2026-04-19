@@ -253,6 +253,110 @@ describe('CollapsiblePanel', () => {
     expect(panel?.style.order).toBe('3');
   });
 
+  describe('autoCollapseWhen', () => {
+    it('force-collapses when autoCollapseWhen=true', () => {
+      const target = document.createElement('div');
+      document.body.appendChild(target);
+      const component = mount(CollapsiblePanel, {
+        target,
+        props: { title: 'CW', panelId: 'auto-cw', autoCollapseWhen: true },
+      });
+      flushSync();
+      components.push(component);
+
+      const header = target.querySelector('.panel-header') as HTMLButtonElement;
+      const chevron = target.querySelector('.chevron');
+      expect(chevron?.textContent).toBe('▸');
+      expect(header?.getAttribute('aria-expanded')).toBe('false');
+    });
+
+    it('clicking while auto-collapsed expands (user override)', () => {
+      const target = document.createElement('div');
+      document.body.appendChild(target);
+      const component = mount(CollapsiblePanel, {
+        target,
+        props: { title: 'CW', panelId: 'auto-cw', autoCollapseWhen: true },
+      });
+      flushSync();
+      components.push(component);
+
+      const header = target.querySelector('.panel-header') as HTMLButtonElement;
+      header.click();
+      flushSync();
+
+      const chevron = target.querySelector('.chevron');
+      expect(chevron?.textContent).toBe('▾');
+      expect(header?.getAttribute('aria-expanded')).toBe('true');
+    });
+
+    it('clicking while expanded under auto-collapse re-collapses', () => {
+      const target = document.createElement('div');
+      document.body.appendChild(target);
+      const component = mount(CollapsiblePanel, {
+        target,
+        props: { title: 'CW', panelId: 'auto-cw', autoCollapseWhen: true },
+      });
+      flushSync();
+      components.push(component);
+
+      const header = target.querySelector('.panel-header') as HTMLButtonElement;
+      // Expand via user click
+      header.click();
+      flushSync();
+      expect(header?.getAttribute('aria-expanded')).toBe('true');
+
+      // Click again — should collapse (auto-collapse re-asserts)
+      header.click();
+      flushSync();
+      expect(header?.getAttribute('aria-expanded')).toBe('false');
+    });
+
+    it('expands on a single click when persisted-collapsed AND autoCollapseWhen=true', () => {
+      // Regression: previously, loading collapsed=true from localStorage while
+      // autoCollapseWhen=true required TWO clicks — the first flipped
+      // ``collapsed`` to false but left ``userExpanded`` false, so the derived
+      // ``effectiveCollapsed`` stayed true.
+      localStorage.setItem(
+        'icom-lan:panel-collapsed',
+        JSON.stringify({ 'auto-cw-persisted': true }),
+      );
+
+      const target = document.createElement('div');
+      document.body.appendChild(target);
+      const component = mount(CollapsiblePanel, {
+        target,
+        props: { title: 'CW', panelId: 'auto-cw-persisted', autoCollapseWhen: true },
+      });
+      flushSync();
+      components.push(component);
+
+      const header = target.querySelector('.panel-header') as HTMLButtonElement;
+      expect(header?.getAttribute('aria-expanded')).toBe('false');
+
+      // One click should expand it.
+      header.click();
+      flushSync();
+
+      expect(header?.getAttribute('aria-expanded')).toBe('true');
+      const chevron = target.querySelector('.chevron');
+      expect(chevron?.textContent).toBe('▾');
+    });
+
+    it('does not force-collapse when autoCollapseWhen=false', () => {
+      const target = document.createElement('div');
+      document.body.appendChild(target);
+      const component = mount(CollapsiblePanel, {
+        target,
+        props: { title: 'CW', panelId: 'auto-cw', autoCollapseWhen: false },
+      });
+      flushSync();
+      components.push(component);
+
+      const header = target.querySelector('.panel-header') as HTMLButtonElement;
+      expect(header?.getAttribute('aria-expanded')).toBe('true');
+    });
+  });
+
   describe('swipe gestures', () => {
     function simulateSwipe(header: HTMLElement, dy: number, dx = 0) {
       const startX = 100;

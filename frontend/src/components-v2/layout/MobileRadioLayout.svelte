@@ -823,7 +823,11 @@
             </CollapsiblePanel>
           {/if}
 
-          <CollapsiblePanel title="CW" panelId="m-cw">
+          <CollapsiblePanel
+            title="CW"
+            panelId="m-cw"
+            autoCollapseWhen={mode.currentMode !== 'CW' && mode.currentMode !== 'CW-R'}
+          >
             <CwPanel
               wpm={cw.wpm}
               breakInActive={cw.breakInActive}
