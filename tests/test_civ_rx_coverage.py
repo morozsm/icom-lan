@@ -280,16 +280,21 @@ async def test_watchdog_loop_phase1_open_close_exception_ignored(
         patch("asyncio.sleep", side_effect=mock_sleep),
         patch.object(radio, "_send_open_close", side_effect=failing_open_close),
     ):
-        await radio._civ_runtime._civ_data_watchdog_loop()  # should complete without raising
+        await (
+            radio._civ_runtime._civ_data_watchdog_loop()
+        )  # should complete without raising
 
 
 async def test_watchdog_loop_phase2_uses_long_reconnect_cooldown(
     radio: IcomRadio,
 ) -> None:
-    """Phase 2 uses a long cooldown before reconnect to avoid reconnect churn."""
+    """Phase 2 uses a long cooldown before reconnect to avoid reconnect churn.
+
+    After the OpenClose deadline, the watchdog spawns a detached reconnect
+    task that sleeps for the cooldown BEFORE calling soft_reconnect.
+    """
     radio._last_civ_data_received = 0.0
     radio._civ_recovering = False
-    radio._civ_runtime.stop_data_watchdog = AsyncMock()
     radio._force_cleanup_civ = AsyncMock()
     radio.soft_reconnect = AsyncMock()
 
@@ -297,16 +302,14 @@ async def test_watchdog_loop_phase2_uses_long_reconnect_cooldown(
 
     async def fake_sleep(delay: float) -> None:
         delays.append(delay)
-        if delay >= 10.0:
-            raise asyncio.CancelledError()
 
-    monotonic_values = iter([200.0, 200.0, 206.0, 206.1])
+    monotonic_values = iter([200.0, 200.0, 265.0, 265.1, 265.2])
 
     def _mono() -> float:
         try:
             return next(monotonic_values)
         except StopIteration:
-            return 206.1
+            return 265.2
 
     with (
         patch("asyncio.sleep", side_effect=fake_sleep),
@@ -314,8 +317,87 @@ async def test_watchdog_loop_phase2_uses_long_reconnect_cooldown(
         patch.object(radio, "_send_open_close", new=AsyncMock()),
     ):
         await radio._civ_runtime._civ_data_watchdog_loop()
+        # Await the spawned reconnect task explicitly so its cooldown sleep
+        # runs inside the patched scope.
+        spawned = [
+            t for t in asyncio.all_tasks() if t.get_name().startswith("civ-watchdog-")
+        ]
+        for task in spawned:
+            await task
 
+    # 45s cooldown was observed in the spawned task (first backoff entry).
     assert any(d >= 45.0 for d in delays)
+    radio.soft_reconnect.assert_awaited_once()
+
+
+async def test_watchdog_soft_reconnect_task_sleeps_before_reconnect(
+    radio: IcomRadio,
+) -> None:
+    """Detached soft_reconnect task sleeps for the cooldown BEFORE calling
+    soft_reconnect — regression guard for the self-cancel bug where the
+    watchdog cancelled itself and the cooldown sleep never ran.
+    """
+    order: list[str] = []
+
+    async def record_force_cleanup() -> None:
+        order.append("force_cleanup")
+
+    async def record_sleep(delay: float) -> None:
+        order.append(f"sleep({delay})")
+
+    async def record_soft_reconnect() -> None:
+        order.append("soft_reconnect")
+
+    radio._force_cleanup_civ = record_force_cleanup
+    radio.soft_reconnect = record_soft_reconnect
+
+    with patch("asyncio.sleep", side_effect=record_sleep):
+        await radio._civ_runtime._watchdog_soft_reconnect(cooldown=45.0)
+
+    assert order == ["force_cleanup", "sleep(45.0)", "soft_reconnect"]
+
+
+async def test_watchdog_patient_openclose_before_escalation(
+    radio: IcomRadio,
+) -> None:
+    """Watchdog sends open_close for a patient period before escalating to
+    soft_reconnect. Matches wfview's recovery pattern (icomudpcivdata.cpp:31):
+    persistent OpenClose every 100ms rather than aggressive escalation.
+    """
+    radio._last_civ_data_received = 0.0
+    radio._civ_recovering = False
+    radio.soft_reconnect = AsyncMock()
+    radio._force_cleanup_civ = AsyncMock()
+
+    # Monotonic advances 1 sec per call; recovery_start captured on 2nd call,
+    # then each elapsed_recovery check stays under the 60-sec deadline for
+    # well past the old 5-sec cutoff.
+    mono_time = [200.0]
+
+    def _mono() -> float:
+        mono_time[0] += 1.0
+        return mono_time[0]
+
+    sleep_count = [0]
+
+    async def fake_sleep(delay: float) -> None:
+        sleep_count[0] += 1
+        if sleep_count[0] >= 30:
+            raise asyncio.CancelledError()
+
+    oc_mock = AsyncMock()
+
+    with (
+        patch("asyncio.sleep", side_effect=fake_sleep),
+        patch("time.monotonic", side_effect=_mono),
+        patch.object(radio, "_send_open_close", new=oc_mock),
+    ):
+        await radio._civ_runtime._civ_data_watchdog_loop()
+
+    # Crossed the old 5-sec deadline many times but NOT escalated.
+    radio.soft_reconnect.assert_not_awaited()
+    # open_close called repeatedly during the patient period.
+    assert oc_mock.await_count >= 10
 
 
 # ---------------------------------------------------------------------------
@@ -835,7 +917,9 @@ def test_update_radio_state_cmd12_antenna_ant1(radio_with_state: IcomRadio) -> N
     assert rs.rx_antenna_1 is False
 
 
-def test_update_radio_state_cmd12_antenna_ant2_rx_on(radio_with_state: IcomRadio) -> None:
+def test_update_radio_state_cmd12_antenna_ant2_rx_on(
+    radio_with_state: IcomRadio,
+) -> None:
     """cmd 0x12 sub 0x01 selects ANT2 with RX ANT ON."""
     rs = radio_with_state._radio_state
     frame = _make_frame(cmd=0x12, sub=0x01, data=bytes([0x01]))

@@ -265,8 +265,15 @@ class CivRuntime:
     # ------------------------------------------------------------------
 
     async def _civ_data_watchdog_loop(self) -> None:
-        """Monitor CI-V data flow; recover with open_close then soft_reconnect."""
-        _OPENCLOSE_DEADLINE = 5.0
+        """Monitor CI-V data flow; recover with open_close then soft_reconnect.
+
+        OpenClose is retried patiently (wfview icomudpcivdata.cpp:31 pattern —
+        never escalates). icom-lan keeps a safety-net deadline at
+        _OPENCLOSE_DEADLINE before handing recovery off to a detached
+        reconnect task. The task is detached so its cooldown sleep survives
+        the watchdog loop exiting.
+        """
+        _OPENCLOSE_DEADLINE = 60.0
         _MAX_RECONNECTS = 3
         _RECONNECT_BACKOFF = (45.0, 60.0, 60.0)
         recovering = False
@@ -310,7 +317,8 @@ class CivRuntime:
                             await self._host._send_open_close(open_stream=True)
                         except (ConnectionError, TimeoutError, OSError) as exc:
                             logger.debug(
-                                "civ-data-watchdog: open_close failed: %s", exc,
+                                "civ-data-watchdog: open_close failed: %s",
+                                exc,
                             )
                         except Exception:
                             logger.warning(
@@ -322,28 +330,21 @@ class CivRuntime:
                         reconnect_pause = _RECONNECT_BACKOFF[
                             min(reconnect_count - 1, len(_RECONNECT_BACKOFF) - 1)
                         ]
+                        # Recovery runs in a detached task so its cooldown
+                        # sleep is honored even when this watchdog task
+                        # exits. The prior inline `await stop_data_watchdog()`
+                        # cancelled this task and caused the cooldown to be
+                        # skipped entirely (self-cancel bug).
                         if reconnect_count > _MAX_RECONNECTS:
                             logger.warning(
                                 "civ-data-watchdog: %d soft reconnects failed, "
                                 "attempting full reconnect",
                                 reconnect_count - 1,
                             )
-                            try:
-                                await self.stop_data_watchdog()
-                                await self._host._force_cleanup_civ()
-                                await self._host.disconnect()
-                                await asyncio.sleep(reconnect_pause)
-                                await self._host.connect()
-                            except (ConnectionError, TimeoutError, OSError):
-                                logger.error(
-                                    "civ-data-watchdog: full reconnect failed",
-                                    exc_info=True,
-                                )
-                            except Exception:
-                                logger.error(
-                                    "civ-data-watchdog: unexpected error in full reconnect",
-                                    exc_info=True,
-                                )
+                            asyncio.create_task(
+                                self._watchdog_full_reconnect(reconnect_pause),
+                                name="civ-watchdog-full-reconnect",
+                            )
                             return
                         logger.warning(
                             "civ-data-watchdog: OpenClose failed for %.1fs, "
@@ -353,36 +354,10 @@ class CivRuntime:
                             _MAX_RECONNECTS,
                             reconnect_pause,
                         )
-                        try:
-                            await self.stop_data_watchdog()
-                            await self._host._force_cleanup_civ()
-                            await asyncio.sleep(reconnect_pause)
-                            await self._host.soft_reconnect()
-                        except (ConnectionError, TimeoutError, OSError):
-                            logger.error(
-                                "civ-data-watchdog: soft_reconnect failed, "
-                                "falling back to full reconnect",
-                                exc_info=True,
-                            )
-                            try:
-                                await self._host.disconnect()
-                                await asyncio.sleep(reconnect_pause)
-                                await self._host.connect()
-                            except (ConnectionError, TimeoutError, OSError):
-                                logger.error(
-                                    "civ-data-watchdog: full reconnect also failed",
-                                    exc_info=True,
-                                )
-                            except Exception:
-                                logger.error(
-                                    "civ-data-watchdog: unexpected error in full reconnect fallback",
-                                    exc_info=True,
-                                )
-                        except Exception:
-                            logger.error(
-                                "civ-data-watchdog: unexpected error in soft_reconnect",
-                                exc_info=True,
-                            )
+                        asyncio.create_task(
+                            self._watchdog_soft_reconnect(reconnect_pause),
+                            name="civ-watchdog-soft-reconnect",
+                        )
                         return
                 else:
                     if recovering:
@@ -392,6 +367,60 @@ class CivRuntime:
                         self._host._civ_stream_ready = True
         except asyncio.CancelledError:
             pass
+
+    async def _watchdog_soft_reconnect(self, cooldown: float) -> None:
+        """Detached recovery: force_cleanup → sleep(cooldown) → soft_reconnect.
+
+        Runs outside the watchdog loop so the cooldown sleep survives the
+        watchdog task exiting. Falls back to full reconnect on failure.
+        """
+        try:
+            await self._host._force_cleanup_civ()
+            await asyncio.sleep(cooldown)
+            await self._host.soft_reconnect()
+        except (ConnectionError, TimeoutError, OSError):
+            logger.error(
+                "civ-data-watchdog: soft_reconnect failed, "
+                "falling back to full reconnect",
+                exc_info=True,
+            )
+            try:
+                await self._host.disconnect()
+                await asyncio.sleep(cooldown)
+                await self._host.connect()
+            except (ConnectionError, TimeoutError, OSError):
+                logger.error(
+                    "civ-data-watchdog: full reconnect also failed",
+                    exc_info=True,
+                )
+            except Exception:
+                logger.error(
+                    "civ-data-watchdog: unexpected error in full reconnect fallback",
+                    exc_info=True,
+                )
+        except Exception:
+            logger.error(
+                "civ-data-watchdog: unexpected error in soft_reconnect",
+                exc_info=True,
+            )
+
+    async def _watchdog_full_reconnect(self, cooldown: float) -> None:
+        """Detached full reconnect after max soft_reconnect attempts exceeded."""
+        try:
+            await self._host._force_cleanup_civ()
+            await self._host.disconnect()
+            await asyncio.sleep(cooldown)
+            await self._host.connect()
+        except (ConnectionError, TimeoutError, OSError):
+            logger.error(
+                "civ-data-watchdog: full reconnect failed",
+                exc_info=True,
+            )
+        except Exception:
+            logger.error(
+                "civ-data-watchdog: unexpected error in full reconnect",
+                exc_info=True,
+            )
 
     def _ensure_civ_runtime(self) -> None:
         """Ensure CI-V transport exists (tests may bypass connect())."""
@@ -1091,7 +1120,12 @@ class CivRuntime:
                         rs.tx_band_edges.append(tx_edge)
 
         except (ValueError, IndexError, KeyError, AttributeError, TypeError) as exc:
-            logger.debug("civ-rx: state update failed for cmd=0x%02x sub=0x%02x: %s", frame.command or 0, frame.sub or 0, exc)
+            logger.debug(
+                "civ-rx: state update failed for cmd=0x%02x sub=0x%02x: %s",
+                frame.command or 0,
+                frame.sub or 0,
+                exc,
+            )
         except Exception:
             logger.warning("civ-rx: unexpected error in state update", exc_info=True)
 
@@ -1177,7 +1211,8 @@ class CivRuntime:
                                 await self._host.soft_reconnect()
                             except (ConnectionError, TimeoutError, OSError) as exc:
                                 logger.debug(
-                                    "Fast CI-V soft_reconnect attempt failed: %s", exc,
+                                    "Fast CI-V soft_reconnect attempt failed: %s",
+                                    exc,
                                 )
                             except Exception:
                                 logger.warning(
@@ -1189,7 +1224,8 @@ class CivRuntime:
                         await self._host.soft_reconnect()
                     except (ConnectionError, TimeoutError, OSError) as exc:
                         logger.debug(
-                            "Fast CI-V soft_reconnect attempt failed: %s", exc,
+                            "Fast CI-V soft_reconnect attempt failed: %s",
+                            exc,
                         )
                     except Exception:
                         logger.warning(
