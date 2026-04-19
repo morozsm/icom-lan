@@ -6,7 +6,7 @@
   import { hasCapability, hasDualReceiver } from '../../lib/stores/capabilities.svelte';
   import ScopeSettingsPopover from './ScopeSettingsPopover.svelte';
   import {
-    SPAN_LABELS, SPEED_LABELS, MODE_BUTTONS,
+    SPAN_LABELS, SPEED_LABELS, SPEED_STATIC_LABEL, MODE_BUTTONS,
     toggleLayer as toggleLayerFn, isLayerVisible,
     isSpanApplicable, isEdgeApplicable,
     clampSpan, clampSpeed, clampBrt, clampRef,
@@ -128,6 +128,7 @@
 </script>
 
 <div class="spectrum-toolbar">
+  <!-- Group A: Tuning (no wash) -->
   <div class="toolbar-group step-group">
     <button
       class="toolbar-btn small step-arrow"
@@ -150,98 +151,102 @@
       title="Increase tuning step"
     >▶</button>
   </div>
-  <div class="toolbar-separator"></div>
-  <div class="toolbar-group">
-    <button class="toolbar-btn" class:active={enableAvg} onclick={() => (enableAvg = !enableAvg)}>AVG</button>
-    <button class="toolbar-btn" class:active={enablePeakHold} onclick={() => (enablePeakHold = !enablePeakHold)}>PEAK</button>
-  </div>
-  <div class="toolbar-separator"></div>
-  <div class="toolbar-group">
-    <span class="toolbar-label">BRT</span>
-    <button class="toolbar-btn small" onclick={() => (brtLevel = clampBrt(brtLevel, -5))}>−</button>
-    <span class="toolbar-value ref-value">{brtLevel > 0 ? '+' : ''}{brtLevel}</span>
-    <button class="toolbar-btn small" onclick={() => (brtLevel = clampBrt(brtLevel, 5))}>+</button>
-  </div>
   {#if hasCapability('scope')}
     <div class="toolbar-separator"></div>
-    <div class="toolbar-group">
-      <span class="toolbar-label">REF</span>
-      <button class="toolbar-btn small" onclick={() => sendCommand('set_scope_ref', { ref: clampRef(scopeControls?.refDb ?? 0, -5) })}>−</button>
-      <span class="toolbar-value ref-value">{(scopeControls?.refDb ?? 0) > 0 ? '+' : ''}{scopeControls?.refDb ?? 0}</span>
-      <button class="toolbar-btn small" onclick={() => sendCommand('set_scope_ref', { ref: clampRef(scopeControls?.refDb ?? 0, 5) })}>+</button>
-    </div>
-    <div class="toolbar-separator"></div>
-    <div class="toolbar-group">
-      {#each MODE_BUTTONS as [m, label]}
-        <button
-          class="toolbar-btn small"
-          class:active={scopeControls?.mode === m}
-          onclick={() => sendCommand('set_scope_mode', { mode: m })}
-          title="Scope mode: {label}"
-        >{label}</button>
-      {/each}
-    </div>
-    {#if edgeApplicable}
-      <div class="toolbar-separator"></div>
+    <!-- Group B: Scope mode (cyan wash) -->
+    <div class="toolbar-group-b">
       <div class="toolbar-group">
-        <span class="toolbar-label">EDGE</span>
-        {#each [1, 2, 3, 4] as e}
+        {#each MODE_BUTTONS as [m, label]}
           <button
             class="toolbar-btn small"
-            class:active={scopeControls?.edge === e}
-            onclick={() => sendCommand('set_scope_edge', { edge: e })}
-          >{e}</button>
+            class:active={scopeControls?.mode === m}
+            onclick={() => sendCommand('set_scope_mode', { mode: m })}
+            title="Scope mode: {label}"
+          >{label}</button>
         {/each}
       </div>
-    {/if}
-    {#if spanApplicable}
-      <div class="toolbar-separator"></div>
-      <div class="toolbar-group step-group">
-        <button class="toolbar-btn small step-arrow" onclick={() => cycleSpan(-1)} title="Decrease span">◀</button>
-        <button class="toolbar-btn step-control" onclick={() => cycleSpan(1)} title="Scope span">
-          <span class="toolbar-label">SPAN</span>
-          <span class="toolbar-value">{SPAN_LABELS[scopeControls?.span ?? 3] ?? '±25k'}</span>
-        </button>
-        <button class="toolbar-btn small step-arrow" onclick={() => cycleSpan(1)} title="Increase span">▶</button>
-      </div>
-    {/if}
-    <div class="toolbar-separator"></div>
-    <div class="toolbar-group step-group">
-      <button class="toolbar-btn small step-arrow" onclick={() => cycleSpeed(-1)} title="Decrease speed">◀</button>
-      <button class="toolbar-btn step-control" onclick={() => cycleSpeed(1)} title="Scope sweep speed">
-        <span class="toolbar-label">SPD</span>
-        <span class="toolbar-value">{SPEED_LABELS[scopeControls?.speed ?? 1] ?? 'MID'}</span>
-      </button>
-      <button class="toolbar-btn small step-arrow" onclick={() => cycleSpeed(1)} title="Increase speed">▶</button>
-      <button class="toolbar-btn" class:active={scopeControls?.hold ?? false} onclick={toggleHold} title="Scope hold">HOLD</button>
+      {#if edgeApplicable}
+        <div class="toolbar-sub-separator"></div>
+        <div class="toolbar-group">
+          <span class="toolbar-label">EDGE</span>
+          {#each [1, 2, 3, 4] as e}
+            <button
+              class="toolbar-btn small"
+              class:active={scopeControls?.edge === e}
+              onclick={() => sendCommand('set_scope_edge', { edge: e })}
+            >{e}</button>
+          {/each}
+        </div>
+      {/if}
     </div>
-    {#if hasDualReceiver()}
-      <div class="toolbar-separator"></div>
-      <div class="toolbar-group">
-        <button class="toolbar-btn" class:active={scopeControls?.dual ?? false} onclick={toggleDual} title="Dual scope">DUAL</button>
-        <button class="toolbar-btn" onclick={switchReceiver} title="Switch scope receiver">
-          {scopeControls?.receiver === 1 ? 'SUB' : 'MAIN'}
-        </button>
-      </div>
-    {/if}
     <div class="toolbar-separator"></div>
-    <div class="toolbar-group settings-group">
-      <button class="toolbar-btn small" onclick={() => showSettings = !showSettings} title="Scope settings">&#9881;</button>
-      {#if showSettings}
-        <ScopeSettingsPopover onClose={() => showSettings = false} />
+    <!-- Group C: Scope data (cyan wash) -->
+    <div class="toolbar-group-c">
+      {#if spanApplicable}
+        <div class="toolbar-group step-group">
+          <button class="toolbar-btn small step-arrow" onclick={() => cycleSpan(-1)} title="Decrease span">◀</button>
+          <button class="toolbar-btn step-control" onclick={() => cycleSpan(1)} title="Scope span">
+            <span class="toolbar-label">SPAN</span>
+            <span class="toolbar-value">{SPAN_LABELS[scopeControls?.span ?? 3] ?? '±25k'}</span>
+          </button>
+          <button class="toolbar-btn small step-arrow" onclick={() => cycleSpan(1)} title="Increase span">▶</button>
+        </div>
+        <div class="toolbar-sub-separator"></div>
+      {/if}
+      <div class="toolbar-group step-group">
+        <button class="toolbar-btn small step-arrow" onclick={() => cycleSpeed(-1)} title="Decrease speed">◀</button>
+        <button class="toolbar-btn step-control" onclick={() => cycleSpeed(1)} title="Scope sweep speed">
+          <span class="toolbar-label">{SPEED_STATIC_LABEL}</span>
+          <span class="toolbar-value">{SPEED_LABELS[scopeControls?.speed ?? 1] ?? 'MID'}</span>
+        </button>
+        <button class="toolbar-btn small step-arrow" onclick={() => cycleSpeed(1)} title="Increase speed">▶</button>
+      </div>
+      <div class="toolbar-sub-separator"></div>
+      <div class="toolbar-group">
+        <button class="toolbar-btn" class:active={scopeControls?.hold ?? false} onclick={toggleHold} title="Scope hold">HOLD</button>
+      </div>
+      <div class="toolbar-sub-separator"></div>
+      <div class="toolbar-group">
+        <span class="toolbar-label">REF</span>
+        <button class="toolbar-btn small" onclick={() => sendCommand('set_scope_ref', { ref: clampRef(scopeControls?.refDb ?? 0, -5) })}>−</button>
+        <span class="toolbar-value ref-value">{(scopeControls?.refDb ?? 0) > 0 ? '+' : ''}{scopeControls?.refDb ?? 0}</span>
+        <button class="toolbar-btn small" onclick={() => sendCommand('set_scope_ref', { ref: clampRef(scopeControls?.refDb ?? 0, 5) })}>+</button>
+      </div>
+      {#if hasDualReceiver()}
+        <div class="toolbar-sub-separator"></div>
+        <div class="toolbar-group">
+          <button class="toolbar-btn" class:active={scopeControls?.dual ?? false} onclick={toggleDual} title="Dual scope">DUAL</button>
+          <button class="toolbar-btn" onclick={switchReceiver} title="Switch scope receiver">
+            {scopeControls?.receiver === 1 ? 'SUB' : 'MAIN'}
+          </button>
+        </div>
       {/if}
     </div>
   {/if}
   <div class="toolbar-separator"></div>
-  <div class="toolbar-group">
-    <select class="toolbar-select" bind:value={colorScheme}>
-      <option value="classic">Classic</option>
-      <option value="thermal">Thermal</option>
-      <option value="grayscale">Gray</option>
-    </select>
-  </div>
-  <div class="toolbar-separator"></div>
-  <div class="toolbar-group bands-group">
+  <!-- Group D: Display (neutral wash) -->
+  <div class="toolbar-group-d">
+    <div class="toolbar-group">
+      <button class="toolbar-btn" class:active={enableAvg} onclick={() => (enableAvg = !enableAvg)}>AVG</button>
+      <button class="toolbar-btn" class:active={enablePeakHold} onclick={() => (enablePeakHold = !enablePeakHold)}>PEAK</button>
+    </div>
+    <div class="toolbar-sub-separator"></div>
+    <div class="toolbar-group">
+      <span class="toolbar-label">BRT</span>
+      <button class="toolbar-btn small" onclick={() => (brtLevel = clampBrt(brtLevel, -5))}>−</button>
+      <span class="toolbar-value ref-value">{brtLevel > 0 ? '+' : ''}{brtLevel}</span>
+      <button class="toolbar-btn small" onclick={() => (brtLevel = clampBrt(brtLevel, 5))}>+</button>
+    </div>
+    <div class="toolbar-sub-separator"></div>
+    <div class="toolbar-group">
+      <select class="toolbar-select" bind:value={colorScheme}>
+        <option value="classic">Classic</option>
+        <option value="thermal">Thermal</option>
+        <option value="grayscale">Gray</option>
+      </select>
+    </div>
+    <div class="toolbar-sub-separator"></div>
+    <div class="toolbar-group bands-group">
     <button class="toolbar-btn" class:active={showBandPlan} onclick={() => (showBandPlan = !showBandPlan)} title="Show/hide band plan overlay">
       BANDS
     </button>
@@ -289,8 +294,20 @@
         </div>
       {/if}
     {/if}
+    </div>
   </div>
+  {#if hasCapability('scope')}
+    <div class="toolbar-separator"></div>
+    <!-- Group E: Settings (no wash) -->
+    <div class="toolbar-group settings-group">
+      <button class="toolbar-btn small" onclick={() => showSettings = !showSettings} title="Scope settings">&#9881;</button>
+      {#if showSettings}
+        <ScopeSettingsPopover onClose={() => showSettings = false} />
+      {/if}
+    </div>
+  {/if}
   <div class="toolbar-spacer"></div>
+  <!-- Group F: Actions (no wash) -->
   <button class="toolbar-btn icon-btn" onclick={() => (fullscreen = !fullscreen)} title="Toggle fullscreen">
     {fullscreen ? '✕' : '⛶'}
   </button>
@@ -300,27 +317,58 @@
   .spectrum-toolbar {
     display: flex;
     align-items: center;
-    height: 28px;
+    height: 32px;
     padding: 0 8px;
     background: linear-gradient(180deg, #2a2a2a 0%, #1e1e1e 100%);
     border-bottom: 1px solid var(--panel-border);
     gap: 4px;
     flex-shrink: 0;
     font-family: 'Roboto Mono', monospace;
-    font-size: 10px;
+    font-size: 11px;
     user-select: none;
   }
 
   .toolbar-group {
     display: flex;
     align-items: center;
-    gap: 2px;
+    gap: 3px;
+  }
+
+  /* Group containers with wash backgrounds (visual grouping) */
+  .toolbar-group-b,
+  .toolbar-group-c,
+  .toolbar-group-d {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    padding: 0 4px;
+    border-radius: 3px;
+    height: 24px;
+  }
+
+  .toolbar-group-b,
+  .toolbar-group-c {
+    /* Scope state — cyan wash */
+    background: rgba(0, 212, 255, 0.03);
+  }
+
+  .toolbar-group-d {
+    /* Display only — neutral wash */
+    background: rgba(255, 255, 255, 0.02);
   }
 
   .toolbar-separator {
-    width: 1px;
-    height: 16px;
+    width: 2px;
+    height: 20px;
     background: var(--panel-border);
+    margin: 0 6px;
+  }
+
+  .toolbar-sub-separator {
+    width: 1px;
+    height: 14px;
+    background: var(--panel-border);
+    opacity: 0.5;
     margin: 0 4px;
   }
 
@@ -366,11 +414,13 @@
     color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    font-weight: 500;
   }
 
   .toolbar-value {
     color: var(--text);
     font-variant-numeric: tabular-nums;
+    font-weight: 600;
   }
 
   .ref-value {
