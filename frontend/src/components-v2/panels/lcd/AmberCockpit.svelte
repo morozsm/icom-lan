@@ -11,7 +11,10 @@
   import AmberFilterGhost from './AmberFilterGhost.svelte';
   import AmberIndStrip from './AmberIndStrip.svelte';
   import AmberTelemetryStrip from './AmberTelemetryStrip.svelte';
+  import AmberMemoryStrip from './AmberMemoryStrip.svelte';
   import type { IndToken } from './AmberIndStrip.svelte';
+  import { qsyHistory } from '$lib/stores/qsy-history.svelte';
+  import { runtime } from '$lib/runtime';
   import { createAudioScopeConnection } from '$lib/runtime/adapters/scope-adapter';
 
   // Band lookup by frequency (LCD-specific)
@@ -234,6 +237,21 @@
     return () => scope.disconnect();
   });
 
+  // Record active-receiver frequency changes into the local QSY history
+  // ring buffer (#836). `qsyHistory.record()` internally debounces +
+  // filters by Δ ≥ 500 Hz so dial-hunting doesn't pollute the buffer.
+  $effect(() => {
+    const freq = rx?.freqHz ?? 0;
+    const mode = rx?.mode ?? '';
+    if (freq > 0) qsyHistory.record(freq, mode);
+  });
+
+  function handleQsyRecall(freqHz: number, mode: string): void {
+    // Route through runtime — same CI-V path as other frequency changes.
+    runtime.send('set_freq', { freq: freqHz });
+    if (mode) runtime.send('set_mode', { mode });
+  }
+
   // ── Peer cockpit derivations ──
   // In the dual-cockpit peer layout, column A always = main VFO, column B always = sub VFO.
   // We derive main/sub data directly so each column has stable data regardless of active state.
@@ -393,10 +411,13 @@
       {/if}
     </div>
 
-    <!-- ═══ Aux row — telemetry strip (#837) ═══
-         Memory / recent-QSY (#836) will share this grid-area via a
-         parent wrapper once that lands. -->
+    <!-- ═══ Aux row — memory/QSY (#836) + telemetry (#837) ═══
+         Two compact rows stacked in the reserved aux grid-area. Memory
+         strip on top (user-initiated recalls), telemetry below (passive
+         sparklines). Each row is ~18px tall; the combined aux block
+         stays inside `auto` track without encroaching on scope. -->
     <div class="lcd-aux-row" style:grid-area="aux">
+      <AmberMemoryStrip onQsy={handleQsyRecall} />
       <AmberTelemetryStrip />
     </div>
 
@@ -661,6 +682,16 @@
     width: 100%;
     height: 100%;
     min-height: 0;
+  }
+
+  /* ── Aux row (#836 memory / #837 telemetry, stacked) ── */
+  .lcd-aux-row {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+    z-index: 2;
+    position: relative;
   }
 
   /* ── TX glow ── */
