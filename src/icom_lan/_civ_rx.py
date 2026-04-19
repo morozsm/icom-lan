@@ -142,6 +142,11 @@ class CivRuntime:
 
     def __init__(self, host: "CivRuntimeHost") -> None:
         self._host = host
+        # Detached reconnect task spawned from the watchdog escalation path.
+        # Tracked here so stop_data_watchdog() can cancel it and prevent a
+        # late soft_reconnect from firing after an explicit disconnect
+        # (Codex P1 on PR #851).
+        self._reconnect_task: asyncio.Task[None] | None = None
 
     # ------------------------------------------------------------------
     # Public API (design doc)
@@ -178,7 +183,13 @@ class CivRuntime:
         logger.info("civ-data-watchdog: started")
 
     async def stop_data_watchdog(self) -> None:
-        """Stop CI-V data watchdog."""
+        """Stop CI-V data watchdog and any in-flight detached reconnect task.
+
+        The reconnect helper (spawned from the escalation path as a detached
+        task) is cancelled alongside the watchdog loop so an explicit
+        disconnect during the cooldown cannot be undone by a late
+        soft_reconnect.
+        """
         task = getattr(self._host, "_civ_data_watchdog_task", None)
         if task is not None and not task.done():
             task.cancel()
@@ -187,6 +198,15 @@ class CivRuntime:
             except asyncio.CancelledError:
                 pass
         self._host._civ_data_watchdog_task = None
+
+        rc_task = self._reconnect_task
+        if rc_task is not None and not rc_task.done():
+            rc_task.cancel()
+            try:
+                await rc_task
+            except asyncio.CancelledError:
+                pass
+        self._reconnect_task = None
 
     def advance_generation(self, reason: str) -> None:
         """Advance CI-V request generation and fail stale waiters."""
@@ -341,7 +361,7 @@ class CivRuntime:
                                 "attempting full reconnect",
                                 reconnect_count - 1,
                             )
-                            asyncio.create_task(
+                            self._reconnect_task = asyncio.create_task(
                                 self._watchdog_full_reconnect(reconnect_pause),
                                 name="civ-watchdog-full-reconnect",
                             )
@@ -354,7 +374,7 @@ class CivRuntime:
                             _MAX_RECONNECTS,
                             reconnect_pause,
                         )
-                        asyncio.create_task(
+                        self._reconnect_task = asyncio.create_task(
                             self._watchdog_soft_reconnect(reconnect_pause),
                             name="civ-watchdog-soft-reconnect",
                         )

@@ -357,6 +357,36 @@ async def test_watchdog_soft_reconnect_task_sleeps_before_reconnect(
     assert order == ["force_cleanup", "sleep(45.0)", "soft_reconnect"]
 
 
+async def test_stop_data_watchdog_cancels_pending_reconnect_task(
+    radio: IcomRadio,
+) -> None:
+    """stop_data_watchdog() must cancel any pending detached reconnect task
+    spawned by watchdog escalation, so disconnect during cooldown does not
+    trigger a late soft_reconnect (Codex P1 on PR #851).
+    """
+    radio._force_cleanup_civ = AsyncMock()
+    radio.soft_reconnect = AsyncMock()
+
+    # Spawn the reconnect helper the same way the watchdog does, and
+    # register it on the runtime so stop_data_watchdog can find it.
+    task = asyncio.create_task(
+        radio._civ_runtime._watchdog_soft_reconnect(cooldown=5.0),
+        name="civ-watchdog-soft-reconnect",
+    )
+    radio._civ_runtime._reconnect_task = task
+
+    # Let the task enter its cooldown sleep.
+    await asyncio.sleep(0.01)
+    assert not task.done(), "task should still be sleeping in cooldown"
+
+    # Explicit disconnect during cooldown.
+    await radio._civ_runtime.stop_data_watchdog()
+
+    assert task.done()
+    radio.soft_reconnect.assert_not_awaited()
+    assert radio._civ_runtime._reconnect_task is None
+
+
 async def test_watchdog_patient_openclose_before_escalation(
     radio: IcomRadio,
 ) -> None:
