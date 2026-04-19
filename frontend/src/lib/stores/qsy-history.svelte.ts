@@ -67,6 +67,10 @@ export const qsyHistory = {
     if (last && Math.abs(last.freqHz - freqHz) < MIN_DELTA_HZ) {
       return;
     }
+    // Skip if the pending candidate already matches — otherwise a reactive
+    // effect that re-fires on every frame keeps restarting the debounce
+    // window and `commitPending()` never runs (codex P1 on PR #932).
+    if (freqHz === pendingFreqHz && mode === pendingMode) return;
     // Update the candidate; reset the debounce timer.
     pendingFreqHz = freqHz;
     pendingMode = mode;

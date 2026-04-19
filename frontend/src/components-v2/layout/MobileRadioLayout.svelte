@@ -381,6 +381,19 @@
     // If latched, don't turn off on release
   }
 
+  // Orientation-change safety net (codex P1 on PR #931).
+  // PttFab is conditionally mounted on `!isLandscape`; rotation removes
+  // the component so its `pointerup` never fires. Without this guard,
+  // an in-progress press would leave `pttMode === 'held'` and TX keyed
+  // until the 3-minute safety timer — a genuine TX hazard.
+  $effect(() => {
+    if (isLandscape && pttMode === 'held') {
+      pttMode = 'idle';
+      disengageTx();
+      clearPttSafety();
+    }
+  });
+
   // ── Landscape PTT guards (#843 parity with FAB) ──
   // Adds pointermove-8px cancel + haptic + TX-permit dim-state so the
   // landscape strip mirrors the guarded FAB (#840). Skips the 50ms hold
