@@ -138,11 +138,11 @@ At 1280 px center column (~800 px), ~110 px overflows — handled in §7.
 
 ### 5c. Keyboard shortcuts only (power users, no UI)
 
-- `[` / `]` — decrement/increment SPEED.
-- `-` / `=` — decrement/increment SPAN.
-- `H` — toggle HOLD.
-- `F` — toggle fullscreen.
-- `D` — toggle DUAL scope.
+- `[` / `]` — decrement/increment SPAN.
+- `-` / `+` — decrement/increment REF level (`+` chosen over `=` to avoid colliding with the existing VFO-equalize shortcut in the runtime keyboard profile).
+- `Shift+H` — toggle HOLD.
+- `Shift+F` — toggle fast scroll (FST).
+- `Shift+D` — toggle DUAL scope.
 These are registered through `KeyboardHandler.svelte`; document in `shortcut-hints.ts`.
 
 ### 5d. Stays on toolbar

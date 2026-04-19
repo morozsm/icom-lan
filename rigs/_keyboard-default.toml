@@ -507,3 +507,70 @@ sequence = ["g", "v"]
 action = "focus_target"
 [keyboard.bindings.params]
 target = "vfo"
+
+[[keyboard.bindings]]
+id = "scope-span-down"
+section = "Spectrum"
+label = "Decrease scope span"
+description = "Step the scope span to the next smaller value."
+key = "["
+action = "scope_span_step"
+[keyboard.bindings.params]
+direction = "down"
+
+[[keyboard.bindings]]
+id = "scope-span-up"
+section = "Spectrum"
+label = "Increase scope span"
+description = "Step the scope span to the next larger value."
+key = "]"
+action = "scope_span_step"
+[keyboard.bindings.params]
+direction = "up"
+
+[[keyboard.bindings]]
+id = "scope-ref-down"
+section = "Spectrum"
+label = "Decrease scope reference level"
+description = "Lower the scope reference level by one step."
+key = "-"
+action = "scope_ref_step"
+[keyboard.bindings.params]
+direction = "down"
+
+[[keyboard.bindings]]
+id = "scope-ref-up"
+section = "Spectrum"
+label = "Increase scope reference level"
+description = "Raise the scope reference level by one step."
+key = "+"
+action = "scope_ref_step"
+[keyboard.bindings.params]
+direction = "up"
+
+[[keyboard.bindings]]
+id = "scope-toggle-hold"
+section = "Spectrum"
+label = "Toggle scope hold"
+description = "Freeze or release the scope waterfall."
+key = "H"
+modifiers = ["SHIFT"]
+action = "scope_toggle_hold"
+
+[[keyboard.bindings]]
+id = "scope-toggle-dual"
+section = "Spectrum"
+label = "Toggle dual scope"
+description = "Enable or disable simultaneous MAIN+SUB scope rendering."
+key = "D"
+modifiers = ["SHIFT"]
+action = "scope_toggle_dual"
+
+[[keyboard.bindings]]
+id = "scope-toggle-fst"
+section = "Spectrum"
+label = "Toggle fast scroll (FST)"
+description = "Cycle the scope sweep speed (FST)."
+key = "F"
+modifiers = ["SHIFT"]
+action = "scope_toggle_fst"

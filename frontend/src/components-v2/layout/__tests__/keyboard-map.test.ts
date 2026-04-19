@@ -52,15 +52,15 @@ describe('resolveAction', () => {
   });
 
   it.each([
-    ['[', 'scope_span_step', { direction: 'down' }],
-    [']', 'scope_span_step', { direction: 'up' }],
-    ['-', 'scope_ref_step', { direction: 'down' }],
-    ['=', 'scope_ref_step', { direction: 'up' }],
-    ['h', 'scope_toggle_hold', undefined],
-    ['d', 'scope_toggle_dual', undefined],
-    ['f', 'scope_toggle_fst', undefined],
-  ])('binds %s to %s', (key, action, params) => {
-    const resolved = resolveAction({ key }, DEFAULT_KEYBOARD_CONFIG);
+    ['[', false, 'scope_span_step', { direction: 'down' }],
+    [']', false, 'scope_span_step', { direction: 'up' }],
+    ['-', false, 'scope_ref_step', { direction: 'down' }],
+    ['+', true, 'scope_ref_step', { direction: 'up' }],
+    ['H', true, 'scope_toggle_hold', undefined],
+    ['D', true, 'scope_toggle_dual', undefined],
+    ['F', true, 'scope_toggle_fst', undefined],
+  ] as const)('binds %s to %s', (key, shiftKey, action, params) => {
+    const resolved = resolveAction({ key, shiftKey }, DEFAULT_KEYBOARD_CONFIG);
     expect(resolved?.action).toBe(action);
     expect(resolved?.params).toEqual(params);
   });
