@@ -1,10 +1,16 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import '../theme/index';
-  import { setTheme, getTheme } from '../theme/theme-switcher';
+  import { setTheme, getTheme, hasExplicitTheme } from '../theme/theme-switcher';
 
   if (typeof window !== 'undefined') {
-    setTheme(getTheme());
+    // Auto-apply warm-dark theme as the amber-lcd skin default, but respect
+    // an explicit user override (if they picked another theme, don't stomp it).
+    if (hasExplicitTheme()) {
+      setTheme(getTheme());
+    } else {
+      document.documentElement.dataset.theme = 'lcd-warm';
+    }
   }
 
   import { runtime } from '$lib/runtime';
