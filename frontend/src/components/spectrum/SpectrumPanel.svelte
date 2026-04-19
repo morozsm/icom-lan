@@ -38,6 +38,14 @@
     type ScopeFrame,
   } from './spectrum-logic';
 
+  // --- Props ---
+  // `hideSourceControls` is forwarded to SpectrumToolbar so layouts that surface
+  // the DUAL + MAIN/SUB scope-source controls elsewhere (v2 desktop VfoHeader
+  // bridge, issue #832) can suppress the duplicate in the toolbar. Layouts that
+  // do not surface them (v1 desktop/mobile, v2 mobile chip view) omit the prop
+  // and keep the controls reachable (#832 mobile/v1 fallback).
+  let { hideSourceControls = false } = $props();
+
   // --- Component state ---
   let scopeConnected = $derived(isScopeConnected());
   let scopePixels = $state<Uint8Array | null>(null);
@@ -359,7 +367,7 @@
 />
 
 <div class="spectrum-panel" class:fullscreen onwheel={handleWheel}>
-  <SpectrumToolbar bind:enableAvg bind:enablePeakHold bind:brtLevel bind:colorScheme bind:fullscreen bind:showBandPlan bind:hiddenLayers bind:showEiBi />
+  <SpectrumToolbar bind:enableAvg bind:enablePeakHold bind:brtLevel bind:colorScheme bind:fullscreen bind:showBandPlan bind:hiddenLayers bind:showEiBi {hideSourceControls} />
   <div class="spectrum-with-scales">
     <div class="db-scale">
       {#each DB_TICKS as tick}

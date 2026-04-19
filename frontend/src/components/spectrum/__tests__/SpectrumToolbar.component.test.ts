@@ -151,12 +151,43 @@ describe('SpectrumToolbar component', () => {
     expect(holdBtn).toBeDefined();
   });
 
-  it('does not render DUAL/MAIN scope-source buttons (moved to VfoHeader bridge in #832)', () => {
+  it('renders DUAL + MAIN/SUB scope-source buttons by default (mobile/v1 fallback for #832)', () => {
     const target = mountToolbar();
+    const buttons = Array.from(target.querySelectorAll<HTMLButtonElement>('.toolbar-btn'));
+    const labels = buttons.map((b) => b.textContent?.trim());
+    expect(labels).toContain('DUAL');
+    // receiver starts at 0 → button label is 'MAIN'
+    expect(labels).toContain('MAIN');
+  });
+
+  it('hides DUAL + MAIN/SUB when hideSourceControls is true (v2 desktop; VfoHeader bridge owns them, #832)', () => {
+    const target = mountToolbar({ hideSourceControls: true });
     const buttons = Array.from(target.querySelectorAll<HTMLButtonElement>('.toolbar-btn'));
     const labels = buttons.map((b) => b.textContent?.trim());
     expect(labels).not.toContain('DUAL');
     expect(labels).not.toContain('MAIN');
+    expect(labels).not.toContain('SUB');
+  });
+
+  it('DUAL button click dispatches set_scope_dual', () => {
+    const target = mountToolbar();
+    const buttons = Array.from(target.querySelectorAll<HTMLButtonElement>('.toolbar-btn'));
+    const dualBtn = buttons.find((b) => b.textContent?.trim() === 'DUAL');
+    expect(dualBtn).toBeDefined();
+    dualBtn!.click();
+    flushSync();
+    expect(sendCommand).toHaveBeenCalledWith('set_scope_dual', { dual: true });
+  });
+
+  it('receiver-switch button click dispatches switch_scope_receiver', () => {
+    const target = mountToolbar();
+    const buttons = Array.from(target.querySelectorAll<HTMLButtonElement>('.toolbar-btn'));
+    // With receiver=0, the label is 'MAIN'; clicking flips to receiver=1.
+    const rxBtn = buttons.find((b) => b.textContent?.trim() === 'MAIN');
+    expect(rxBtn).toBeDefined();
+    rxBtn!.click();
+    flushSync();
+    expect(sendCommand).toHaveBeenCalledWith('switch_scope_receiver', { receiver: 1 });
   });
 
   it('renders color scheme selector', () => {

@@ -263,7 +263,10 @@
       {#if hasSpectrum()}
         <div class="spectrum-slot">
           <div class="spectrum-frame">
-            <SpectrumPanel />
+            <!-- Desktop: VfoHeader bridge owns DUAL + MAIN/SUB (#832); hide
+                 the toolbar duplicate. Mobile/v1 layouts omit the prop so
+                 the toolbar retains them (#832 fallback). -->
+            <SpectrumPanel hideSourceControls={true} />
           </div>
         </div>
       {/if}
