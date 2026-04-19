@@ -65,10 +65,13 @@
   let mainFreqHz = $derived(radioState?.main?.freqHz ?? 0);
   let mainMode = $derived(radioState?.main?.mode ?? '---');
   let mainBand = $derived(freqToBand(mainFreqHz));
-  let mainFilterWidth = $derived(radioState?.main?.filterWidth ?? 0);
+  // Fallback 2400 Hz matches `toFilterProps()` adapter default (codex P2 on
+  // PR #916): keeps the VFO A filter badge visible with a stable width when
+  // `main.filterWidth` is null (initial state or rig without filter reporting).
+  let mainFilterWidth = $derived(radioState?.main?.filterWidth ?? 2400);
   let mainFilterWidthLabel = $derived.by(() => {
     const w = mainFilterWidth;
-    if (!w || w <= 0) return '';
+    if (w <= 0) return '';
     return w >= 1000 ? `${(w / 1000).toFixed(1)} kHz` : `${w} Hz`;
   });
 
