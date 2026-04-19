@@ -10,6 +10,7 @@
   import AmberAfScope from './AmberAfScope.svelte';
   import AmberFilterGhost from './AmberFilterGhost.svelte';
   import AmberIndStrip from './AmberIndStrip.svelte';
+  import AmberTelemetryStrip from './AmberTelemetryStrip.svelte';
   import type { IndToken } from './AmberIndStrip.svelte';
   import { createAudioScopeConnection } from '$lib/runtime/adapters/scope-adapter';
 
@@ -392,8 +393,12 @@
       {/if}
     </div>
 
-    <!-- ═══ Aux row — reserved for future use (telemetry, memory) ═══ -->
-    <div style:grid-area="aux"></div>
+    <!-- ═══ Aux row — telemetry strip (#837) ═══
+         Memory / recent-QSY (#836) will share this grid-area via a
+         parent wrapper once that lands. -->
+    <div class="lcd-aux-row" style:grid-area="aux">
+      <AmberTelemetryStrip />
+    </div>
 
   </div>
 </div>
