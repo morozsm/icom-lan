@@ -30,6 +30,7 @@
   } = $props();
 
   let showSettings = $state(false);
+  let showDisplayGear = $state(false);
   let layerDropdownOpen = $state(false);
   let layerToggleBtn = $state<HTMLElement | null>(null);
   let dropdownStyle = $derived.by(() => {
@@ -196,8 +197,8 @@
       <div class="toolbar-group">
         <button class="toolbar-btn" class:active={scopeControls?.hold ?? false} onclick={toggleHold} title="Scope hold">HOLD</button>
       </div>
-      <div class="toolbar-sub-separator"></div>
-      <div class="toolbar-group">
+      <div class="toolbar-sub-separator hide-mobile"></div>
+      <div class="toolbar-group hide-mobile">
         <span class="toolbar-label">REF</span>
         <button class="toolbar-btn small" onclick={() => sendCommand('set_scope_ref', { ref: clampRef(scopeControls?.refDb ?? 0, -5) })}>−</button>
         <span class="toolbar-value ref-value">{(scopeControls?.refDb ?? 0) > 0 ? '+' : ''}{scopeControls?.refDb ?? 0}</span>
@@ -212,12 +213,46 @@
       <button class="toolbar-btn" class:active={enableAvg} onclick={() => (enableAvg = !enableAvg)}>AVG</button>
       <button class="toolbar-btn" class:active={enablePeakHold} onclick={() => (enablePeakHold = !enablePeakHold)}>PEAK</button>
     </div>
-    <div class="toolbar-sub-separator"></div>
-    <div class="toolbar-group">
+    <div class="toolbar-sub-separator hide-mobile"></div>
+    <div class="toolbar-group hide-mobile">
       <span class="toolbar-label">BRT</span>
       <button class="toolbar-btn small" onclick={() => (brtLevel = clampBrt(brtLevel, -5))}>−</button>
       <span class="toolbar-value ref-value">{brtLevel > 0 ? '+' : ''}{brtLevel}</span>
       <button class="toolbar-btn small" onclick={() => (brtLevel = clampBrt(brtLevel, 5))}>+</button>
+    </div>
+    <div class="toolbar-group display-gear-group show-mobile">
+      <button
+        class="toolbar-btn small"
+        onclick={() => (showDisplayGear = !showDisplayGear)}
+        title="Display settings (BRT / REF)"
+        aria-label="Display settings"
+      >&#9881;</button>
+      {#if showDisplayGear}
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <div class="popover-backdrop" onclick={() => (showDisplayGear = false)}></div>
+        <div class="display-gear-popover">
+          <div class="gear-header">
+            <span>Display</span>
+            <button class="gear-close" onclick={() => (showDisplayGear = false)} aria-label="Close">×</button>
+          </div>
+          <div class="gear-row">
+            <span class="gear-label">BRT</span>
+            <button class="gear-btn" onclick={() => (brtLevel = clampBrt(brtLevel, -5))} aria-label="Decrease brightness">−</button>
+            <span class="gear-value">{brtLevel > 0 ? '+' : ''}{brtLevel}</span>
+            <button class="gear-btn" onclick={() => (brtLevel = clampBrt(brtLevel, 5))} aria-label="Increase brightness">+</button>
+            <button class="gear-btn gear-btn-zero" onclick={() => (brtLevel = 0)} aria-label="Reset brightness">0</button>
+          </div>
+          {#if hasCapability('scope')}
+            <div class="gear-row">
+              <span class="gear-label">REF</span>
+              <button class="gear-btn" onclick={() => sendCommand('set_scope_ref', { ref: clampRef(scopeControls?.refDb ?? 0, -5) })} aria-label="Decrease reference">−</button>
+              <span class="gear-value">{(scopeControls?.refDb ?? 0) > 0 ? '+' : ''}{scopeControls?.refDb ?? 0}</span>
+              <button class="gear-btn" onclick={() => sendCommand('set_scope_ref', { ref: clampRef(scopeControls?.refDb ?? 0, 5) })} aria-label="Increase reference">+</button>
+              <button class="gear-btn gear-btn-zero" onclick={() => sendCommand('set_scope_ref', { ref: 0 })} aria-label="Reset reference">0</button>
+            </div>
+          {/if}
+        </div>
+      {/if}
     </div>
     <div class="toolbar-sub-separator"></div>
     <div class="toolbar-group">
@@ -589,5 +624,118 @@
 
   .eibi-browser-btn:hover {
     background: rgba(192, 132, 252, 0.2);
+  }
+
+  /* ── Mobile: collapse BRT/REF into gear popover (issue #812) ── */
+  .display-gear-group {
+    position: relative;
+  }
+
+  .show-mobile {
+    display: none;
+  }
+
+  @media (max-width: 640px) {
+    .hide-mobile {
+      display: none !important;
+    }
+    .show-mobile {
+      display: flex;
+    }
+  }
+
+  .popover-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+  }
+
+  .display-gear-popover {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    z-index: 1000;
+    min-width: 220px;
+    background: var(--v2-bg-darkest, #0a0a0f);
+    border: 1px solid var(--v2-border, #2a2a3e);
+    border-radius: 6px;
+    padding: 8px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .gear-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 2px 4px 6px;
+    border-bottom: 1px solid var(--v2-border, #2a2a3e);
+    color: var(--v2-text-primary, #e0e0e0);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .gear-close {
+    min-width: 44px;
+    min-height: 44px;
+    background: transparent;
+    border: none;
+    color: var(--v2-text-dim, #888);
+    font-size: 20px;
+    cursor: pointer;
+    line-height: 1;
+  }
+
+  .gear-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .gear-label {
+    flex: 0 0 40px;
+    color: var(--text-muted);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 500;
+  }
+
+  .gear-btn {
+    min-width: 44px;
+    min-height: 44px;
+    background: transparent;
+    border: 1px solid var(--v2-border, #2a2a3e);
+    border-radius: 4px;
+    color: var(--v2-text-primary, #e0e0e0);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .gear-btn:hover,
+  .gear-btn:active {
+    background: rgba(0, 212, 255, 0.1);
+    border-color: rgba(0, 212, 255, 0.4);
+    color: #00d4ff;
+  }
+
+  .gear-btn-zero {
+    font-size: 12px;
+    opacity: 0.75;
+  }
+
+  .gear-value {
+    flex: 1;
+    text-align: center;
+    color: var(--v2-text-primary, #e0e0e0);
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    font-size: 13px;
+    min-width: 36px;
   }
 </style>
