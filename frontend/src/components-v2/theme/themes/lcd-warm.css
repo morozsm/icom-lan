@@ -1,0 +1,36 @@
+/**
+ * LCD Warm Theme — Warm-dark chrome for amber-lcd skin
+ *
+ * The amber-lcd display has a warm orange/amber glow. Cold navy sidebars
+ * create jarring tonal contrast against it. This theme shifts chrome
+ * (sidebars, panels, borders) to warm neutrals (#2a2520 range) while
+ * leaving the amber LCD panel itself untouched.
+ *
+ * Applied automatically by LcdLayout.svelte when no explicit theme is set.
+ */
+
+[data-theme="lcd-warm"] {
+  /* ── Base backgrounds (warm dark neutrals) ─────────────── */
+  --v2-bg-app: #1f1a16;
+  --v2-bg-card: #241e19;
+  --v2-bg-panel: #2a2520;
+  --v2-bg-darker: #15110e;
+  --v2-bg-darkest: #0f0c0a;
+  --v2-bg-gradient-start: #1a1612;
+
+  /* ── Panel gradients (sidebars) ────────────────────────── */
+  --v2-panel-bg-gradient-top: rgba(46, 38, 32, 0.98);
+  --v2-panel-bg-gradient-bottom: rgba(34, 28, 23, 0.98);
+
+  /* ── Borders (warm brown-grey) ─────────────────────────── */
+  --v2-border: #3a312a;
+  --v2-border-panel: #362d26;
+  --v2-border-darker: #2a221d;
+
+  /* ── Text (warm off-white) ─────────────────────────────── */
+  --v2-text-primary: #f0e6dc;
+  --v2-text-muted: #8a7a6a;
+
+  /* ── Shadows (warmer) ──────────────────────────────────── */
+  --v2-shadow-sm: 0 6px 18px rgba(20, 12, 6, 0.42);
+}

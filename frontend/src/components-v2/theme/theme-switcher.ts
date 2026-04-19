@@ -129,6 +129,12 @@ const THEMES: ThemeInfo[] = [
     preview: ['#0a0f14', '#66ccff', '#3399cc', '#66ffcc', '#33cc99'],
   },
   {
+    id: 'lcd-warm',
+    name: 'LCD Warm',
+    category: 'special',
+    preview: ['#1f1a16', '#2a2520', '#3a312a', '#f0e6dc', '#8a7a6a'],
+  },
+  {
     id: 'crt-green',
     name: 'CRT Green',
     category: 'special',
@@ -148,6 +154,22 @@ export function getTheme(): string {
     return localStorage.getItem(STORAGE_KEY) || 'default';
   } catch {
     return 'default';
+  }
+}
+
+/**
+ * True if the user has explicitly chosen a theme (stored in localStorage).
+ * False when no preference exists yet — lets skins pick a sensible default
+ * without stomping an explicit user choice.
+ */
+export function hasExplicitTheme(): boolean {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+  try {
+    return localStorage.getItem(STORAGE_KEY) !== null;
+  } catch {
+    return false;
   }
 }
 
