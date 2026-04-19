@@ -63,6 +63,21 @@
   let rxFrequency = $derived(formatBridgeFrequency(txVfo === 'main' ? subVfo.freq : mainVfo.freq));
   let txFrequency = $derived(formatBridgeFrequency(txVfo === 'main' ? mainVfo.freq : subVfo.freq));
 
+  // Derived active-receiver identity for the segmented toggle in VfoOps.
+  let activeReceiver = $derived<'MAIN' | 'SUB'>(mainVfo.isActive ? 'MAIN' : 'SUB');
+
+  function handleActiveReceiverChange(next: 'MAIN' | 'SUB'): void {
+    // Optimistic local patch so the toggle reflects the change
+    // immediately; the click handlers below also fire the backend
+    // command via the command-bus wiring.
+    patchRadioState({ active: next });
+    if (next === 'MAIN') {
+      onMainVfoClick?.();
+    } else {
+      onSubVfoClick?.();
+    }
+  }
+
   // Debounced frequency announcement for screen readers
   let announcedFrequency = $state('');
   let announceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -116,6 +131,8 @@
         {splitActive}
         {dualWatchActive}
         {txVfo}
+        activeVfo={activeReceiver}
+        onActiveVfoChange={handleActiveReceiverChange}
         {onSwap}
         {onEqual}
         {onSplitToggle}
