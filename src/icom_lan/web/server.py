@@ -668,22 +668,29 @@ class WebServer:
             finally:
                 if self._radio_poller is not None:
                     self._radio_poller._initial_fetch_done.set()
-            # Re-enable scope after refetch completes
+            # Re-enable scope after refetch completes.
+            # Do NOT gate on self._radio_ready(): that property waits for
+            # CI-V broadcast data, but on IC-7610 in the "deaf" firmware
+            # state broadcast may only resume once a scope-enable command
+            # is sent — creating a deadlock where scope re-enable waits
+            # for the very signal it would itself trigger.  The session
+            # is already up at this point (soft_reconnect completed auth +
+            # discovery), so queue EnableScope unconditionally; if the
+            # radio is genuinely unreachable the command will fail on its
+            # own, which is strictly better than a silent 30-second wait
+            # every reconnect cycle.
             if (
                 self._scope_handlers
                 and self._radio is not None
                 and _supports_scope(self._radio)
             ):
-                if self._radio_ready():
-                    self._set_scope_data_callback(self._broadcast_scope)
-                    self._command_queue.put(EnableScope())
-                    self._scope_enabled = True
-                    logger.info(
-                        "scope: re-enable queued after reconnect (%d handlers)",
-                        len(self._scope_handlers),
-                    )
-                else:
-                    self._schedule_scope_enable_when_ready(reason="radio_reconnect")
+                self._set_scope_data_callback(self._broadcast_scope)
+                self._command_queue.put(EnableScope())
+                self._scope_enabled = True
+                logger.info(
+                    "scope: re-enable queued after reconnect (%d handlers)",
+                    len(self._scope_handlers),
+                )
 
         asyncio.create_task(_refetch_and_reenable())
 
