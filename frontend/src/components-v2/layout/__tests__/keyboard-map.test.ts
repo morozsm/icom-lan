@@ -50,6 +50,20 @@ describe('resolveAction', () => {
   it('returns null for an unbound key', () => {
     expect(resolveAction({ key: 'q' }, DEFAULT_KEYBOARD_CONFIG)).toBeNull();
   });
+
+  it.each([
+    ['[', 'scope_span_step', { direction: 'down' }],
+    [']', 'scope_span_step', { direction: 'up' }],
+    ['-', 'scope_ref_step', { direction: 'down' }],
+    ['=', 'scope_ref_step', { direction: 'up' }],
+    ['h', 'scope_toggle_hold', undefined],
+    ['d', 'scope_toggle_dual', undefined],
+    ['f', 'scope_toggle_fst', undefined],
+  ])('binds %s to %s', (key, action, params) => {
+    const resolved = resolveAction({ key }, DEFAULT_KEYBOARD_CONFIG);
+    expect(resolved?.action).toBe(action);
+    expect(resolved?.params).toEqual(params);
+  });
 });
 
 describe('shouldIgnoreEvent', () => {

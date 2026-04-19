@@ -17,6 +17,7 @@ import { audioManager } from '$lib/audio/audio-manager';
 import { setMuted, setVolume } from '$lib/stores/audio.svelte';
 import type { KeyboardActionConfig } from '../layout/keyboard-map';
 import { mapIfShiftToPbt, pbtHzToRaw } from '../panels/filter-controls';
+import { clampRef, clampSpan } from '../../components/spectrum/spectrum-toolbar-logic';
 
 /* ── Helpers ─────────────────────────────────────────────────── */
 
@@ -1043,6 +1044,42 @@ export function makeKeyboardHandlers() {
               el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
             }
           }
+          return;
+        }
+        case 'scope_span_step': {
+          const scope = (getRadioState() as any)?.scopeControls;
+          const current = scope?.span ?? 3;
+          const delta = action.params?.direction === 'down' ? -1 : 1;
+          const span = clampSpan(current, delta);
+          cmd('set_scope_span', { span });
+          return;
+        }
+        case 'scope_ref_step': {
+          const scope = (getRadioState() as any)?.scopeControls;
+          const current = scope?.refDb ?? 0;
+          const delta = action.params?.direction === 'down' ? -5 : 5;
+          const ref = clampRef(current, delta);
+          cmd('set_scope_ref', { ref });
+          return;
+        }
+        case 'scope_toggle_hold': {
+          const scope = (getRadioState() as any)?.scopeControls;
+          const on = !(scope?.hold ?? false);
+          cmd('set_scope_hold', { on });
+          return;
+        }
+        case 'scope_toggle_dual': {
+          const scope = (getRadioState() as any)?.scopeControls;
+          const dual = !(scope?.dual ?? false);
+          cmd('set_scope_dual', { dual });
+          return;
+        }
+        case 'scope_toggle_fst': {
+          const scope = (getRadioState() as any)?.scopeControls;
+          const currentSpeed = scope?.speed ?? 1;
+          // Toggle FST (speed=0) vs MID (speed=1).
+          const speed = currentSpeed === 0 ? 1 : 0;
+          cmd('set_scope_speed', { speed });
           return;
         }
         default:
