@@ -32,7 +32,20 @@ export function loadPanelOrder(storageKey: string, defaults: string[]): string[]
             unique.push(id);
           }
         }
-        if (unique.length > 0) return unique;
+        if (unique.length > 0) {
+          // Merge in any default panel ids that are missing from the stored
+          // order — otherwise newly added panels (e.g. 'audio-scope' in PR
+          // #821) never render for existing users whose localStorage was
+          // written before the default was introduced. Unknown (peer-owned
+          // or removed) ids stay untouched so cross-sidebar moves survive.
+          for (const id of defaults) {
+            if (!seen.has(id)) {
+              seen.add(id);
+              unique.push(id);
+            }
+          }
+          return unique;
+        }
       }
     }
   } catch {
