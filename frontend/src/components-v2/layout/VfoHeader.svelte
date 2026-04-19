@@ -177,14 +177,14 @@
                 class="scope-pill"
                 class:active={scopeStatus.receiver !== 1}
                 onclick={() => onScopeReceiverChange?.(0)}
-                title="Scope source: MAIN"
+                title={`Set scope source to MAIN (current: ${scopeStatus.receiver === 1 ? 'SUB' : 'MAIN'})`}
               >MAIN</button>
               <button
                 type="button"
                 class="scope-pill"
                 class:active={scopeStatus.receiver === 1}
                 onclick={() => onScopeReceiverChange?.(1)}
-                title="Scope source: SUB"
+                title={`Set scope source to SUB (current: ${scopeStatus.receiver === 1 ? 'SUB' : 'MAIN'})`}
               >SUB</button>
             </div>
             <button
@@ -192,7 +192,7 @@
               class="scope-dual"
               class:active={scopeStatus.dual}
               onclick={() => onScopeDualToggle?.()}
-              title="Dual scope"
+              title={`Toggle dual scope (currently ${scopeStatus.dual ? 'ON' : 'OFF'})`}
             >DUAL</button>
           {/if}
           <span class="scope-status-row scope-digest">
@@ -209,7 +209,7 @@
       {/if}
 
       {#if onSpeak}
-        <button type="button" class="speak-btn" title="Speak frequency" onclick={onSpeak}>
+        <button type="button" class="speak-btn" title="Speak current frequency aloud" onclick={onSpeak}>
           SPEAK
         </button>
       {/if}
