@@ -151,6 +151,89 @@ export function formatSMeter(raw: number): string {
  * Returns needle gauge mark positions and labels for the given meter source.
  * Uses capabilities calibration data when available, IC-7610 defaults otherwise.
  */
+/**
+ * Formats raw Id (drain current) value as amps string.
+ * IC-7610 CI-V Reference p.4: 00 00=0 A, 00 97=10 A, 01 43=15 A, 02 12=25 A.
+ * Falls back to capabilities calibration when present.
+ */
+const ID_KNOTS: [number, number][] = [
+  [0, 0],
+  [151, 10],
+  [195, 15],
+  [212, 25],
+];
+
+export function formatAmps(raw: number): string {
+  const knots = getKnots('id', ID_KNOTS);
+  const amps = piecewise(raw, knots);
+  return `${amps.toFixed(1)} A`;
+}
+
+/**
+ * Formats raw Vd (drain voltage) value as volts string.
+ * IC-7610 CI-V Reference p.4: 00 00=0 V, 00 13=10 V, 02 41=16 V.
+ * Nominal reading on-air is ~13.8 V.
+ */
+const VD_KNOTS: [number, number][] = [
+  [0, 0],
+  [13, 10],
+  [241, 16],
+];
+
+export function formatVolts(raw: number): string {
+  const knots = getKnots('vd', VD_KNOTS);
+  const volts = piecewise(raw, knots);
+  return `${volts.toFixed(1)} V`;
+}
+
+/**
+ * Formats raw COMP (speech compressor) value as dB string.
+ * IC-7610 CI-V Reference p.4: 00 00=0 dB, 00 75=15 dB, 01 50=30 dB.
+ */
+const COMP_KNOTS: [number, number][] = [
+  [0, 0],
+  [75, 15],
+  [150, 30],
+];
+
+export function formatCompDb(raw: number): string {
+  const knots = getKnots('comp', COMP_KNOTS);
+  const db = Math.round(piecewise(raw, knots));
+  return `${db} dB`;
+}
+
+/**
+ * Peak-hold state tracker (stub for M-D / #823).
+ * Retains the highest value seen within `decayMs`; decays linearly toward
+ * `current` after the last peak update.
+ *
+ * This is a pure function over state and does not schedule timers. Callers
+ * step it on each render tick. Full decay + double-click reset behavior
+ * lands with issue #823.
+ */
+export interface PeakHoldState {
+  peak: number;
+  peakAt: number;
+}
+
+export function updatePeakHold(
+  state: PeakHoldState | undefined,
+  current: number,
+  now: number,
+  decayMs = 2000,
+): PeakHoldState {
+  if (!state || current >= state.peak) {
+    return { peak: current, peakAt: now };
+  }
+  const elapsed = now - state.peakAt;
+  if (elapsed >= decayMs) {
+    return { peak: current, peakAt: now };
+  }
+  const t = elapsed / decayMs;
+  const decayed = state.peak + (current - state.peak) * t;
+  return { peak: decayed, peakAt: state.peakAt };
+}
+
 export function getNeedleMarks(source: MeterSource): Mark[] {
   switch (source) {
     case 'S': {
