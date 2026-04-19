@@ -2,14 +2,12 @@
   DualVfoDisplay — side-by-side MAIN + SUB VFO tiles for dual-RX radios.
 
   Presentation-only: renders two VfoPanel tiles. The active tile is visually
-  highlighted via the `.is-active` class. The inactive tile exposes a small
-  dedicated "Activate" button so screen-reader / keyboard users can switch
-  receivers without the tile container becoming a button that swallows its
-  interactive descendants (tuning digits, mode badge) — which would violate
-  WCAG 4.1.2 (no nested interactive content inside role="button").
+  highlighted via the `.is-active` class. Receiver activation is performed
+  via the segmented [M|S] toggle in VfoOps (see `ActiveReceiverToggle.svelte`,
+  issue #825 Option B) — a single primary affordance, no duplicate UX.
 
-  Wiring (set_vfo + optimistic patchRadioState) lives at the VfoHeader
-  call-site.
+  The `onActivate` prop is retained for API compatibility and is used by
+  tests, but is no longer wired to any in-tile control.
 -->
 <script lang="ts">
   import VfoPanel from '../../../components-v2/vfo/VfoPanel.svelte';
@@ -28,22 +26,19 @@
     onSubFreqChange?: (freq: number) => void;
   }
 
+  // `onActivate` is retained in the Props type for API compatibility
+  // but is no longer wired to any in-tile control. Receiver activation
+  // lives in the segmented [M|S] toggle (ActiveReceiverToggle) in VfoOps.
   let {
     main,
     sub,
     active,
     layoutProfile = 'baseline',
-    onActivate,
     onMainModeClick,
     onSubModeClick,
     onMainFreqChange,
     onSubFreqChange,
   }: Props = $props();
-
-  function activate(receiver: 'MAIN' | 'SUB'): void {
-    if (active === receiver) return;
-    onActivate?.(receiver);
-  }
 </script>
 
 <div
@@ -58,17 +53,6 @@
     onModeClick={onMainModeClick}
     onFreqChange={onMainFreqChange}
   />
-  {#if active !== 'MAIN'}
-    <button
-      type="button"
-      class="activate-chip"
-      aria-label="Activate MAIN receiver"
-      data-activate="main"
-      onclick={() => activate('MAIN')}
-    >
-      Activate MAIN
-    </button>
-  {/if}
 </div>
 
 <div
@@ -83,17 +67,6 @@
     onModeClick={onSubModeClick}
     onFreqChange={onSubFreqChange}
   />
-  {#if active !== 'SUB'}
-    <button
-      type="button"
-      class="activate-chip"
-      aria-label="Activate SUB receiver"
-      data-activate="sub"
-      onclick={() => activate('SUB')}
-    >
-      Activate SUB
-    </button>
-  {/if}
 </div>
 
 <style>
@@ -109,37 +82,5 @@
     /* Active highlight is rendered by the inner VfoPanel.active class.
        This selector exists so tests and external CSS can target the
        outer tile without reaching into the panel. */
-  }
-
-  .activate-chip {
-    position: absolute;
-    top: 4px;
-    right: 4px;
-    z-index: 2;
-    padding: 2px 8px;
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--v2-accent-cyan, #00d4ff);
-    background: rgba(0, 0, 0, 0.55);
-    border: 1px solid var(--v2-accent-cyan, #00d4ff);
-    border-radius: 999px;
-    cursor: pointer;
-    opacity: 0.75;
-    transition:
-      opacity 150ms ease,
-      background-color 150ms ease;
-  }
-
-  .activate-chip:hover {
-    opacity: 1;
-    background: rgba(0, 0, 0, 0.75);
-  }
-
-  .activate-chip:focus-visible {
-    outline: none;
-    opacity: 1;
-    box-shadow: 0 0 0 2px var(--v2-accent-cyan, #00d4ff);
   }
 </style>

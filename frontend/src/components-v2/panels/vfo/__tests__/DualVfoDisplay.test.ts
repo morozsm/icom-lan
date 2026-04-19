@@ -111,79 +111,32 @@ describe('DualVfoDisplay', () => {
     });
   });
 
-  describe('activate button', () => {
-    it('inactive tile renders an activate button (SUB inactive)', () => {
+  describe('activate-chip removal (issue #825 Option B)', () => {
+    it('no activate-chip button is rendered on either tile when MAIN is active', () => {
       const t = mountDisplay({ main: mainVfo, sub: subVfo, active: 'MAIN' });
-      expect(t.querySelector('button[data-activate="sub"]')).not.toBeNull();
       expect(t.querySelector('button[data-activate="main"]')).toBeNull();
-    });
-
-    it('inactive tile renders an activate button (MAIN inactive)', () => {
-      const t = mountDisplay({
-        main: { ...mainVfo, isActive: false },
-        sub: { ...subVfo, isActive: true },
-        active: 'SUB',
-      });
-      expect(t.querySelector('button[data-activate="main"]')).not.toBeNull();
       expect(t.querySelector('button[data-activate="sub"]')).toBeNull();
+      expect(t.querySelector('.activate-chip')).toBeNull();
     });
 
-    it('activate button has descriptive aria-label', () => {
-      const t = mountDisplay({ main: mainVfo, sub: subVfo, active: 'MAIN' });
-      const btn = t.querySelector<HTMLButtonElement>('button[data-activate="sub"]');
-      expect(btn?.getAttribute('aria-label')).toBe('Activate SUB receiver');
-    });
-
-    it('activate button is a native <button> and keyboard-focusable by default', () => {
-      const t = mountDisplay({ main: mainVfo, sub: subVfo, active: 'MAIN' });
-      const btn = t.querySelector<HTMLButtonElement>('button[data-activate="sub"]');
-      expect(btn).not.toBeNull();
-      expect(btn?.tagName).toBe('BUTTON');
-      expect(btn?.getAttribute('type')).toBe('button');
-      // Native <button> is focusable without explicit tabindex.
-      expect(btn?.hasAttribute('disabled')).toBe(false);
-    });
-  });
-
-  describe('onActivate callback', () => {
-    it('clicking activate button fires onActivate with the receiver id (SUB)', () => {
-      const onActivate = vi.fn();
-      const t = mountDisplay({ main: mainVfo, sub: subVfo, active: 'MAIN', onActivate });
-      t.querySelector<HTMLButtonElement>('button[data-activate="sub"]')?.click();
-      expect(onActivate).toHaveBeenCalledOnce();
-      expect(onActivate).toHaveBeenCalledWith('SUB');
-    });
-
-    it('clicking activate button fires onActivate with the receiver id (MAIN)', () => {
-      const onActivate = vi.fn();
+    it('no activate-chip button is rendered on either tile when SUB is active', () => {
       const t = mountDisplay({
         main: { ...mainVfo, isActive: false },
         sub: { ...subVfo, isActive: true },
         active: 'SUB',
-        onActivate,
       });
-      t.querySelector<HTMLButtonElement>('button[data-activate="main"]')?.click();
-      expect(onActivate).toHaveBeenCalledOnce();
-      expect(onActivate).toHaveBeenCalledWith('MAIN');
-    });
-
-    it('active tile does not render an activate button', () => {
-      const onActivate = vi.fn();
-      const t = mountDisplay({ main: mainVfo, sub: subVfo, active: 'MAIN', onActivate });
-      // No button on the active (MAIN) tile — nothing to click.
       expect(t.querySelector('button[data-activate="main"]')).toBeNull();
-      expect(onActivate).not.toHaveBeenCalled();
+      expect(t.querySelector('button[data-activate="sub"]')).toBeNull();
+      expect(t.querySelector('.activate-chip')).toBeNull();
     });
 
     it('clicking the outer tile does NOT fire onActivate', () => {
-      // Outer tile is no longer interactive — only the activate button inside it is.
+      // Outer tile has never been interactive, and the inner chip is gone.
       const onActivate = vi.fn();
       const t = mountDisplay({ main: mainVfo, sub: subVfo, active: 'MAIN', onActivate });
       const subTile = t.querySelector<HTMLElement>('[data-receiver="sub"]');
       subTile?.click();
-      // The click bubbles from the tile itself (not the inner button), so no activation.
-      // Note: if the click originated on the button, it would fire — but that's covered above.
-      expect(onActivate).not.toHaveBeenCalledWith('MAIN');
+      expect(onActivate).not.toHaveBeenCalled();
     });
   });
 });

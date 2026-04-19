@@ -149,6 +149,24 @@ export function toDualVfoProps(state: ServerState | null): DualVfoProps {
   };
 }
 
+/* ── Active Receiver ─────────────────────────────────────────── */
+
+export interface ActiveReceiverProps {
+  active: 'MAIN' | 'SUB';
+}
+
+/**
+ * Props for the segmented [M|S] ActiveReceiverToggle (issue #825).
+ * Reads `state.active` directly — no caps dependency.
+ */
+export function toActiveReceiverProps(
+  state: ServerState | null,
+): ActiveReceiverProps {
+  return {
+    active: state?.active === 'SUB' ? 'SUB' : 'MAIN',
+  };
+}
+
 /* ── RF Front End ────────────────────────────────────────────── */
 
 export interface RfFrontEndProps {
