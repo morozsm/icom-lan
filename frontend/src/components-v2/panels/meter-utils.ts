@@ -203,13 +203,40 @@ export function formatCompDb(raw: number): string {
 }
 
 /**
- * Peak-hold state tracker (stub for M-D / #823).
+ * Returns the interpolated SWR ratio for a raw BCD value. Pure numeric
+ * companion to `formatSwr` — used for threshold comparisons.
+ */
+export function swrRatio(raw: number): number {
+  if (raw >= 255) return Infinity;
+  const knots = getKnots('swr', SWR_KNOTS);
+  return piecewise(raw, knots);
+}
+
+/**
+ * Returns the normalized ALC level (0-1) for a raw BCD value, relative to
+ * the ALC redline from capabilities (fallback: IC-7610 default 120).
+ */
+export function alcLevel(raw: number): number {
+  const alcMax = getMeterRedline('alc') ?? ALC_MAX_DEFAULT;
+  return Math.max(0, Math.min(alcMax, raw)) / alcMax;
+}
+
+/** True when SWR exceeds the 2.0 TX-safety threshold. */
+export function isSwrFault(raw: number): boolean {
+  return swrRatio(raw) > 2.0;
+}
+
+/** True when ALC is driven past 90% of the redline. */
+export function isAlcFault(raw: number): boolean {
+  return alcLevel(raw) > 0.9;
+}
+
+/**
+ * Peak-hold state tracker (#823).
  * Retains the highest value seen within `decayMs`; decays linearly toward
  * `current` after the last peak update.
  *
- * This is a pure function over state and does not schedule timers. Callers
- * step it on each render tick. Full decay + double-click reset behavior
- * lands with issue #823.
+ * Pure function over state — callers schedule the tick.
  */
 export interface PeakHoldState {
   peak: number;

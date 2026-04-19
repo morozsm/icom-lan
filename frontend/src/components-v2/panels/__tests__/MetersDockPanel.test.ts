@@ -6,6 +6,8 @@ import {
   formatAmps,
   formatVolts,
   formatCompDb,
+  isAlcFault,
+  isSwrFault,
   updatePeakHold,
 } from '../meter-utils';
 
@@ -55,6 +57,33 @@ describe('formatCompDb', () => {
   });
   it('returns 30 dB at knot raw=150', () => {
     expect(formatCompDb(150)).toBe('30 dB');
+  });
+});
+
+describe('isSwrFault', () => {
+  it('is false at SWR 1.0 (raw=0)', () => {
+    expect(isSwrFault(0)).toBe(false);
+  });
+  it('is false at SWR exactly 2.0 (raw=80)', () => {
+    expect(isSwrFault(80)).toBe(false);
+  });
+  it('is true above 2.0 (raw=120 -> 3.0)', () => {
+    expect(isSwrFault(120)).toBe(true);
+  });
+  it('is true at raw=255 (infinity)', () => {
+    expect(isSwrFault(255)).toBe(true);
+  });
+});
+
+describe('isAlcFault', () => {
+  it('is false at 0% ALC', () => {
+    expect(isAlcFault(0)).toBe(false);
+  });
+  it('is false at 90% ALC (raw=108, redline 120)', () => {
+    expect(isAlcFault(108)).toBe(false);
+  });
+  it('is true above 90% ALC (raw=115)', () => {
+    expect(isAlcFault(115)).toBe(true);
   });
 });
 
@@ -284,6 +313,64 @@ describe('MetersDockPanel relevance dimming', () => {
   it('keeps Vd tile relevant during TX as well', () => {
     const t = mountPanel({ ...fullProps, vdMeter: 180, txActive: true });
     expect(t.querySelector('[data-meter="vd"]')?.getAttribute('data-relevant')).toBe('true');
+  });
+});
+
+describe('MetersDockPanel fault highlighting', () => {
+  it('flags SWR tile as fault when raw > 2.0 during TX', () => {
+    const t = mountPanel({ ...fullProps, swrMeter: 120, txActive: true });
+    expect(t.querySelector('[data-meter="swr"]')?.getAttribute('data-fault')).toBe('true');
+  });
+
+  it('does not flag SWR fault during RX', () => {
+    const t = mountPanel({ ...fullProps, swrMeter: 120, txActive: false });
+    expect(t.querySelector('[data-meter="swr"]')?.getAttribute('data-fault')).toBe('false');
+  });
+
+  it('flags ALC tile as fault when raw above 90% of redline during TX', () => {
+    const t = mountPanel({ ...fullProps, alcMeter: 115, txActive: true });
+    expect(t.querySelector('[data-meter="alc"]')?.getAttribute('data-fault')).toBe('true');
+  });
+
+  it('does not flag ALC fault at exactly 90%', () => {
+    const t = mountPanel({ ...fullProps, alcMeter: 108, txActive: true });
+    expect(t.querySelector('[data-meter="alc"]')?.getAttribute('data-fault')).toBe('false');
+  });
+
+  it('does not flag SWR fault at exactly 2.0', () => {
+    const t = mountPanel({ ...fullProps, swrMeter: 80, txActive: true });
+    expect(t.querySelector('[data-meter="swr"]')?.getAttribute('data-fault')).toBe('false');
+  });
+});
+
+describe('MetersDockPanel peak-hold', () => {
+  it('renders a peak marker on Po tile during TX', () => {
+    const t = mountPanel({ ...fullProps, txActive: true });
+    const marker = t.querySelector('[data-meter="po"] [data-testid="peak-marker"]');
+    expect(marker).not.toBeNull();
+  });
+
+  it('does not render peak marker on S tile', () => {
+    const t = mountPanel({ ...fullProps, txActive: false });
+    const marker = t.querySelector('[data-meter="s"] [data-testid="peak-marker"]');
+    expect(marker).toBeNull();
+  });
+
+  it('hides peak marker when tile is not relevant', () => {
+    // Po is not relevant during RX (txActive=false) -> no peak shown
+    const t = mountPanel({ ...fullProps, txActive: false });
+    const marker = t.querySelector('[data-meter="po"] [data-testid="peak-marker"]');
+    expect(marker).toBeNull();
+  });
+
+  it('dblclick reset handler runs on the tile without error', () => {
+    const t = mountPanel({ ...fullProps, txActive: true });
+    const tile = t.querySelector('[data-meter="po"]') as HTMLElement;
+    expect(tile.querySelector('[data-testid="peak-marker"]')).not.toBeNull();
+    expect(() => {
+      tile.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+      flushSync();
+    }).not.toThrow();
   });
 });
 

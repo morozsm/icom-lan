@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import {
     formatAlc,
     formatAmps,
@@ -7,8 +8,12 @@
     formatSMeter,
     formatSwr,
     formatVolts,
+    isAlcFault,
+    isSwrFault,
     normalize,
     normalizePower,
+    updatePeakHold,
+    type PeakHoldState,
   } from './meter-utils';
 
   /**
@@ -46,6 +51,8 @@
     txActive,
   }: Props = $props();
 
+  type PeakKey = 'po' | 'swr' | 'alc';
+
   interface Tile {
     key: 'po' | 'swr' | 'alc' | 's' | 'id' | 'vd' | 'comp';
     label: string;
@@ -54,6 +61,39 @@
     fill: string;
     track: string;
     relevant: boolean;
+    fault?: boolean;
+  }
+
+  // Peak-hold state for Po/SWR/ALC. Tracked as normalized 0-100 fill pct so
+  // the decayed marker maps directly onto the bar.
+  let peaks = $state<Partial<Record<PeakKey, PeakHoldState>>>({});
+
+  function steppeak(key: PeakKey, current: number | undefined, now: number) {
+    if (current === undefined) {
+      if (peaks[key] !== undefined) peaks[key] = undefined;
+      return;
+    }
+    peaks[key] = updatePeakHold(peaks[key], current, now);
+  }
+
+  function stepAllPeaks() {
+    const now = Date.now();
+    steppeak('po', powerMeter !== undefined ? normalizePower(powerMeter) * 100 : undefined, now);
+    steppeak('swr', swrMeter !== undefined ? normalize(swrMeter) * 100 : undefined, now);
+    steppeak('alc', alcMeter !== undefined ? normalize(alcMeter) * 100 : undefined, now);
+  }
+
+  // A 100ms interval drives both the decay and the latch from fresh
+  // prop samples. Driving everything off a timer (not a reactive $effect)
+  // avoids the read-then-write cycle on `peaks` that Svelte 5 flags.
+  $effect(() => {
+    untrack(() => stepAllPeaks());
+    const id = setInterval(() => untrack(() => stepAllPeaks()), 100);
+    return () => clearInterval(id);
+  });
+
+  function resetPeak(key: PeakKey) {
+    peaks[key] = undefined;
   }
 
   // Priority order (plan §3): Po → SWR → ALC → S. Tiles with undefined
@@ -80,6 +120,7 @@
         fill: 'var(--v2-meter-swr-fill)',
         track: 'var(--v2-meter-swr-track)',
         relevant: txActive,
+        fault: txActive && isSwrFault(swrMeter),
       });
     }
     if (alcMeter !== undefined) {
@@ -91,6 +132,7 @@
         fill: 'var(--v2-meter-alc-fill)',
         track: 'var(--v2-meter-alc-track)',
         relevant: txActive,
+        fault: txActive && isAlcFault(alcMeter),
       });
     }
     if (idMeter !== undefined) {
@@ -151,7 +193,23 @@
 
   <div class="dock-grid">
     {#each tiles as tile (tile.key)}
-      <div class="dock-tile" data-meter={tile.key} data-relevant={tile.relevant}>
+      {@const peakPct =
+        tile.key === 'po' || tile.key === 'swr' || tile.key === 'alc'
+          ? peaks[tile.key]?.peak
+          : undefined}
+      <div
+        class="dock-tile"
+        role="group"
+        aria-label={`${tile.label} meter`}
+        data-meter={tile.key}
+        data-relevant={tile.relevant}
+        data-fault={tile.fault ? 'true' : 'false'}
+        ondblclick={() => {
+          if (tile.key === 'po' || tile.key === 'swr' || tile.key === 'alc') {
+            resetPeak(tile.key);
+          }
+        }}
+      >
         <div class="tile-header">
           <span class="tile-label">{tile.label}</span>
         </div>
@@ -162,6 +220,13 @@
             style:width={`${Math.max(0, Math.min(100, tile.fillPct))}%`}
             style:background={tile.fill}
           ></div>
+          {#if peakPct !== undefined && tile.relevant}
+            <div
+              class="tile-bar-peak"
+              data-testid="peak-marker"
+              style:left={`${Math.max(0, Math.min(100, peakPct))}%`}
+            ></div>
+          {/if}
         </div>
       </div>
     {/each}
@@ -228,6 +293,15 @@
     opacity: 0.35;
   }
 
+  .dock-tile[data-fault='true'] {
+    border-color: var(--v2-accent-red);
+    box-shadow: 0 0 6px rgba(255, 32, 32, 0.45);
+  }
+
+  .dock-tile[data-fault='true'] .tile-value {
+    color: var(--v2-accent-red-alt);
+  }
+
   .tile-header {
     display: flex;
     align-items: center;
@@ -257,5 +331,15 @@
 
   .tile-bar-fill {
     height: 100%;
+  }
+
+  .tile-bar-peak {
+    position: absolute;
+    top: 0;
+    width: 2px;
+    height: 100%;
+    background: var(--v2-accent-yellow, #f2cf4a);
+    transform: translateX(-1px);
+    pointer-events: none;
   }
 </style>
