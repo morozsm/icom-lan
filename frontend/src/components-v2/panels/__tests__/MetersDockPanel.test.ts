@@ -198,6 +198,67 @@ describe('MetersDockPanel capability gating', () => {
     });
     expect(t.querySelector('.dock-title')?.textContent).toBe('STATION METERS');
   });
+
+  it('renders Id tile when idMeter is defined', () => {
+    const t = mountPanel({ ...fullProps, idMeter: 151 });
+    const tile = t.querySelector('[data-meter="id"]');
+    expect(tile).not.toBeNull();
+    expect(tile?.querySelector('.tile-value')?.textContent).toBe('10.0 A');
+  });
+
+  it('hides Id tile when idMeter is undefined', () => {
+    const t = mountPanel({ ...fullProps, idMeter: undefined });
+    expect(t.querySelector('[data-meter="id"]')).toBeNull();
+  });
+
+  it('renders Vd tile when vdMeter is defined', () => {
+    const t = mountPanel({ ...fullProps, vdMeter: 13 });
+    const tile = t.querySelector('[data-meter="vd"]');
+    expect(tile).not.toBeNull();
+    expect(tile?.querySelector('.tile-value')?.textContent).toBe('10.0 V');
+  });
+
+  it('hides Vd tile when vdMeter is undefined', () => {
+    const t = mountPanel({ ...fullProps, vdMeter: undefined });
+    expect(t.querySelector('[data-meter="vd"]')).toBeNull();
+  });
+
+  it('renders COMP tile when compMeter is defined and compressorOn=true', () => {
+    const t = mountPanel({ ...fullProps, compMeter: 75, compressorOn: true });
+    const tile = t.querySelector('[data-meter="comp"]');
+    expect(tile).not.toBeNull();
+    expect(tile?.querySelector('.tile-value')?.textContent).toBe('15 dB');
+  });
+
+  it('hides COMP tile when compressorOn is false', () => {
+    const t = mountPanel({ ...fullProps, compMeter: 75, compressorOn: false });
+    expect(t.querySelector('[data-meter="comp"]')).toBeNull();
+  });
+
+  it('hides COMP tile when compressorOn is undefined (gating)', () => {
+    const t = mountPanel({ ...fullProps, compMeter: 75 });
+    expect(t.querySelector('[data-meter="comp"]')).toBeNull();
+  });
+
+  it('hides COMP tile when compMeter is undefined even with compressorOn=true', () => {
+    const t = mountPanel({ ...fullProps, compMeter: undefined, compressorOn: true });
+    expect(t.querySelector('[data-meter="comp"]')).toBeNull();
+  });
+
+  it('renders all seven tiles when all state fields are defined', () => {
+    const t = mountPanel({
+      ...fullProps,
+      idMeter: 100,
+      vdMeter: 13,
+      compMeter: 75,
+      compressorOn: true,
+    });
+    expect(t.querySelectorAll('.dock-tile')).toHaveLength(7);
+    const keys = Array.from(t.querySelectorAll('.dock-tile')).map((el) =>
+      el.getAttribute('data-meter'),
+    );
+    expect(keys).toEqual(['po', 'swr', 'alc', 'id', 'vd', 'comp', 's']);
+  });
 });
 
 describe('MetersDockPanel relevance dimming', () => {

@@ -178,6 +178,12 @@
   --v2-meter-swr-track: linear-gradient(90deg, rgba(15, 90, 55, 0.35) 0%, rgba(24, 195, 111, 0.22) 52%, rgba(164, 135, 18, 0.16) 68%, rgba(126, 24, 15, 0.2) 100%);
   --v2-meter-alc-fill: linear-gradient(90deg, #0d4b31 0%, #3e8b29 32%, #e1b43c 58%, #9e2710 100%);
   --v2-meter-alc-track: linear-gradient(90deg, rgba(13, 75, 49, 0.34) 0%, rgba(62, 139, 41, 0.2) 32%, rgba(225, 180, 60, 0.17) 58%, rgba(158, 39, 16, 0.2) 100%);
+  --v2-meter-id-fill: linear-gradient(90deg, #5a2a08 0%, #d07a1a 55%, #f7c357 100%);
+  --v2-meter-id-track: linear-gradient(90deg, rgba(90, 42, 8, 0.32) 0%, rgba(208, 122, 26, 0.2) 55%, rgba(247, 195, 87, 0.14) 100%);
+  --v2-meter-vd-fill: linear-gradient(90deg, #0c4a6e 0%, #2fa5d6 55%, #8fe8ff 100%);
+  --v2-meter-vd-track: linear-gradient(90deg, rgba(12, 74, 110, 0.32) 0%, rgba(47, 165, 214, 0.2) 55%, rgba(143, 232, 255, 0.14) 100%);
+  --v2-meter-comp-fill: linear-gradient(90deg, #0f5a37 0%, #2fbd6b 55%, #b7f0a8 100%);
+  --v2-meter-comp-track: linear-gradient(90deg, rgba(15, 90, 55, 0.32) 0%, rgba(47, 189, 107, 0.2) 55%, rgba(183, 240, 168, 0.14) 100%);
 
   /* Meter Source Tags */
   --v2-meter-source-s-bg: rgba(12, 54, 76, 0.52);

@@ -1,9 +1,12 @@
 <script lang="ts">
   import {
     formatAlc,
+    formatAmps,
+    formatCompDb,
     formatPowerWatts,
     formatSMeter,
     formatSwr,
+    formatVolts,
     normalize,
     normalizePower,
   } from './meter-utils';
@@ -13,8 +16,9 @@
    * dock. Renders an auto-fit grid of tiles for each meter whose raw value
    * is defined on the runtime state (capability gating by `!== undefined`).
    *
-   * Scope: issue #820 ships Po / SWR / ALC / S tiles. Id / Vd / COMP land
-   * with #822; peak-hold and fault highlighting land with #823.
+   * Scope: issue #820 shipped Po / SWR / ALC / S tiles. Issue #822 adds
+   * Id / Vd / COMP (COMP additionally gated on `compressorOn === true`).
+   * Peak-hold and fault highlighting land with #823.
    *
    * The panel is pure presentation — no store / transport imports.
    */
@@ -23,13 +27,27 @@
     powerMeter?: number;
     swrMeter?: number;
     alcMeter?: number;
+    idMeter?: number;
+    vdMeter?: number;
+    compMeter?: number;
+    compressorOn?: boolean;
     txActive: boolean;
   }
 
-  let { sValue, powerMeter, swrMeter, alcMeter, txActive }: Props = $props();
+  let {
+    sValue,
+    powerMeter,
+    swrMeter,
+    alcMeter,
+    idMeter,
+    vdMeter,
+    compMeter,
+    compressorOn,
+    txActive,
+  }: Props = $props();
 
   interface Tile {
-    key: 'po' | 'swr' | 'alc' | 's';
+    key: 'po' | 'swr' | 'alc' | 's' | 'id' | 'vd' | 'comp';
     label: string;
     display: string;
     fillPct: number;
@@ -72,6 +90,39 @@
         fillPct: normalize(alcMeter) * 100,
         fill: 'var(--v2-meter-alc-fill)',
         track: 'var(--v2-meter-alc-track)',
+        relevant: txActive,
+      });
+    }
+    if (idMeter !== undefined) {
+      out.push({
+        key: 'id',
+        label: 'Id',
+        display: formatAmps(idMeter),
+        fillPct: normalize(idMeter) * 100,
+        fill: 'var(--v2-meter-id-fill)',
+        track: 'var(--v2-meter-id-track)',
+        relevant: txActive,
+      });
+    }
+    if (vdMeter !== undefined) {
+      out.push({
+        key: 'vd',
+        label: 'Vd',
+        display: formatVolts(vdMeter),
+        fillPct: normalize(vdMeter) * 100,
+        fill: 'var(--v2-meter-vd-fill)',
+        track: 'var(--v2-meter-vd-track)',
+        relevant: txActive,
+      });
+    }
+    if (compMeter !== undefined && compressorOn === true) {
+      out.push({
+        key: 'comp',
+        label: 'COMP',
+        display: formatCompDb(compMeter),
+        fillPct: normalize(compMeter) * 100,
+        fill: 'var(--v2-meter-comp-fill)',
+        track: 'var(--v2-meter-comp-track)',
         relevant: txActive,
       });
     }
