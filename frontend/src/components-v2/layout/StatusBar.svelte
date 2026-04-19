@@ -23,10 +23,22 @@
   let layoutMode = $derived(getLayoutMode());
   let hasAnyScopeAvail = $derived(hasAnyScope());
   const layoutLabels: Record<string, string> = { auto: 'AUTO', lcd: 'LCD', standard: 'STD' };
-  const layoutTitles: Record<string, string> = { auto: 'Auto layout', lcd: 'Force LCD layout', standard: 'Force standard layout' };
+  const layoutTitles: Record<string, string> = {
+    auto: 'Cycle layout (currently AUTO — click to force LCD)',
+    lcd: 'Cycle layout (currently LCD — click to force STANDARD)',
+    standard: 'Cycle layout (currently STANDARD — click to return to AUTO)',
+  };
 
   let radioPowerOn = $derived(getRadioPowerOn());
   let isPoweredOff = $derived(radioPowerOn === false);
+
+  let powerTooltip = $derived(
+    radioPowerOn === true
+      ? 'Toggle power (radio is ON — click to power off)'
+      : radioPowerOn === false
+        ? 'Toggle power (radio is OFF — click to power on)'
+        : 'Toggle power (radio state unknown — click to toggle)'
+  );
 
   // When radio is powered off, override statuses that depend on the radio
   let radioState = $derived(isPoweredOff ? 'disconnected' : getRadioStatus());
@@ -37,6 +49,12 @@
   let rigConnected = $derived(getRigConnected());
   // Effective radio indicator: downgrade to 'disconnected' when rigCtld reports radio offline
   let radioIndicatorState = $derived(radioState === 'connected' && !rigConnected ? 'degraded' : radioState);
+
+  let connectionTooltip = $derived(
+    controlState === 'connected'
+      ? 'Disconnect from radio (control link active)'
+      : 'Connect to radio (control link inactive)'
+  );
 
   function stateColor(state: string): string {
     switch (state) {
@@ -195,8 +213,8 @@
         type="button"
         class="control-btn settings-btn"
         onclick={onSettings}
-        title="Settings"
-        aria-label="Settings"
+        title="Show settings"
+        aria-label="Show settings"
       >
         <Settings size={14} strokeWidth={2} />
       </button>
@@ -219,7 +237,7 @@
       type="button"
       class="control-btn"
       onclick={handleConnectionToggle}
-      title={controlState === 'connected' ? 'Disconnect' : 'Connect'}
+      title={connectionTooltip}
     >
       <Unplug size={14} strokeWidth={2} />
       <span class="btn-label">{controlState === 'connected' ? 'Disconnect' : 'Connect'}</span>
@@ -229,7 +247,7 @@
       class="control-btn power-toggle-btn"
       class:is-on={radioPowerOn === true}
       onclick={handlePowerToggle}
-      title={radioPowerOn === true ? 'Power OFF radio' : 'Power ON radio'}
+      title={powerTooltip}
     >
       <Power size={14} strokeWidth={2} />
       <span class="btn-label">{radioPowerOn === true ? 'OFF' : 'ON'}</span>
