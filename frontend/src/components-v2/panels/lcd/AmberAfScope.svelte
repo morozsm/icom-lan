@@ -56,9 +56,21 @@
   let visible = true;
   let latestPixels: Uint8Array | null = null;
 
-  // LCD dark ink color
-  const INK = '#1A1000';
+  // LCD ink prefix — alpha is scaled by `--lcd-alpha-*` tokens read off
+  // the nearest `.lcd-screen` ancestor each frame (plan §2.4).
   const INK_A = 'rgba(26, 16, 0,';
+  let alphaActive = 1;
+  let alphaGhost = 0.06;
+
+  function refreshAlphas(): void {
+    const root = canvas?.closest<HTMLElement>('.lcd-screen') ?? canvas?.parentElement;
+    if (!root) return;
+    const style = getComputedStyle(root);
+    const a = parseFloat(style.getPropertyValue('--lcd-alpha-active'));
+    const g = parseFloat(style.getPropertyValue('--lcd-alpha-ghost'));
+    if (Number.isFinite(a)) alphaActive = a;
+    if (Number.isFinite(g)) alphaGhost = g;
+  }
 
   // FFT bar smoothing — fast attack shows transients, moderate decay avoids flicker
   let smoothed: Float32Array | null = null;
@@ -132,6 +144,9 @@
     // Clear to transparent (amber LCD shines through)
     ctx.clearRect(0, 0, w, h);
 
+    // Refresh resolved alphas from CSS tokens (cheap — one getComputedStyle).
+    refreshAlphas();
+
     // ── Trapezoid geometry ──
     // The total construct (whiskers + trapezoid) has FIXED outer width.
     // The trapezoid (filter passband) grows/shrinks inside.
@@ -170,8 +185,8 @@
     const anchorX = w / 2 - ctx.measureText('0000').width / 2; // digits roughly centered
 
     function drawRow(label: string, value: string, y: number, dimmed = false, ghost = false): void {
-      const alpha = ghost ? 0.12 : dimmed ? 0.7 : 1;
-      const hzAlpha = ghost ? 0.08 : 0.6;
+      const alpha = ghost ? alphaGhost * 2 : dimmed ? alphaActive * 0.7 : alphaActive;
+      const hzAlpha = ghost ? alphaGhost * 1.3 : alphaActive * 0.6;
       ctx.textAlign = 'right';
       ctx.font = monoFont;
       ctx.fillStyle = `${INK_A} ${alpha})`;
@@ -199,7 +214,7 @@
     drawRow('Filter: ', String(filterHz), labelH - 6);
 
     // ── Draw trapezoid + whiskers (thick LCD ink) ──
-    ctx.strokeStyle = INK;
+    ctx.strokeStyle = `${INK_A} ${alphaActive})`;
     ctx.lineWidth = 2.5;
     ctx.beginPath();
     ctx.moveTo(whiskerLeft, h);
@@ -216,7 +231,7 @@
       const depth = (contour / 255) * trapH * 0.4;
       const cWidth = (tr - tl) * 0.25;
 
-      ctx.strokeStyle = `${INK_A} 0.6)`;
+      ctx.strokeStyle = `${INK_A} ${alphaActive * 0.6})`;
       ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.moveTo(contourX - cWidth, trapTop);
@@ -230,7 +245,7 @@
       const depth = trapH * 0.55;
       const nHalfW = (tr - tl) * 0.06;
 
-      ctx.strokeStyle = `${INK_A} 0.75)`;
+      ctx.strokeStyle = `${INK_A} ${alphaActive * 0.75})`;
       ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.moveTo(notchX - nHalfW, trapTop);
@@ -326,7 +341,7 @@
       const snapY = Math.round(y / 2) * 2;
       const snapH = h - snapY;
 
-      const alpha = 0.35 + amp * 0.5;
+      const alpha = (0.35 + amp * 0.5) * alphaActive;
       ctx.fillStyle = `${INK_A} ${alpha})`;
       ctx.fillRect(x, snapY, barW, snapH);
     }

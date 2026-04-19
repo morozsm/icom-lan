@@ -55,24 +55,24 @@
   }
 
   .freq-ghost {
-    color: rgba(0, 0, 0, 0.06);
+    color: rgba(26, 16, 0, var(--lcd-alpha-ghost, 0.06));
   }
 
   .freq-active {
     position: absolute;
     inset: 0;
-    color: #1A1000;
+    color: rgba(26, 16, 0, var(--lcd-alpha-active, 1));
   }
 
   .seg-dot {
     font-family: 'JetBrains Mono', 'Courier New', monospace;
-    color: rgba(26, 16, 0, 0.7);
+    color: rgba(26, 16, 0, calc(var(--lcd-alpha-active, 1) * 0.7));
     font-weight: 700;
     margin: 0 1px;
   }
 
   .freq-ghost .seg-dot {
-    color: rgba(0, 0, 0, 0.04);
+    color: rgba(26, 16, 0, calc(var(--lcd-alpha-ghost, 0.06) * 0.7));
   }
 
   .seg-hz {
@@ -114,6 +114,6 @@
   }
 
   .lcd-freq-small .freq-active {
-    color: rgba(26, 16, 0, 0.5);
+    color: rgba(26, 16, 0, calc(var(--lcd-alpha-active, 1) * 0.5));
   }
 </style>
