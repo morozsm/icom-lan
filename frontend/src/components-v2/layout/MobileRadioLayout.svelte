@@ -140,6 +140,10 @@
     { id: 'band', label: 'BAND' },
     { id: 'scan', label: 'SCAN' },
     { id: 'rf', label: 'RF' },
+    // DSP chip carries the level/threshold controls that ESSENTIALS exposes
+    // only as on/off toggles (codex P2 on PR #925 — removing the SETUP
+    // DSP panel left no mobile path to tune NR level, NB level, notch freq).
+    { id: 'dsp', label: 'DSP' },
     ...(ritXit.hasRit || ritXit.hasXit ? [{ id: 'rit', label: 'RIT/XIT' }] : []),
     ...(txCapable ? [{ id: 'tx', label: 'TX' }] : []),
   ]);
@@ -508,6 +512,7 @@
           onpointermove={lsPttPointerMove}
           onpointerup={lsPttPointerUp}
           onpointercancel={lsPttPointerUp}
+          onlostpointercapture={lsPttPointerUp}
           oncontextmenu={(e) => e.preventDefault()}
           title={txPermit === 'denied' ? 'TX not allowed on this frequency' : 'Push to talk'}
         >
@@ -677,6 +682,25 @@
             onPreChange={rfHandlers.onPreChange}
             onDigiSelToggle={rfHandlers.onDigiSelToggle}
             onIpPlusToggle={rfHandlers.onIpPlusToggle}
+          />
+        </CollapsiblePanel>
+      </section>
+    {:else if activeChipId === 'dsp'}
+      <section class="m-section" id="m-chip-panel-dsp" role="tabpanel">
+        <CollapsiblePanel title="DSP" panelId="m-dsp-chip" collapsible={false}>
+          <DspPanel
+            nrMode={dsp.nrMode}
+            nrLevel={dsp.nrLevel}
+            nbActive={dsp.nbActive}
+            nbLevel={dsp.nbLevel}
+            notchMode={dsp.notchMode}
+            notchFreq={dsp.notchFreq}
+            onNrModeChange={dspHandlers.onNrModeChange}
+            onNrLevelChange={dspHandlers.onNrLevelChange}
+            onNbToggle={dspHandlers.onNbToggle}
+            onNbLevelChange={dspHandlers.onNbLevelChange}
+            onNotchModeChange={dspHandlers.onNotchModeChange}
+            onNotchFreqChange={dspHandlers.onNotchFreqChange}
           />
         </CollapsiblePanel>
       </section>
@@ -969,11 +993,12 @@
 <!-- Toast notifications — rendered in fixed position overlay -->
 <Toast />
 
-{#if txCapable}
-  <!-- Guarded sticky PTT FAB (#840) — persistent 1-tap TX from any screen.
-       Layered guards (50ms hold, 8px cancel, haptic, TX-permit two-step)
-       live in the FAB component. State machine stays in the parent
-       (pttMode + 3-min safety timer + double-tap latch). -->
+{#if txCapable && !isLandscape}
+  <!-- Guarded sticky PTT FAB (#840) — persistent 1-tap TX in portrait only.
+       Landscape has its own guarded `.m-ls-ptt` button (#843); mounting
+       FAB there would give two simultaneous TX controls (codex P1 on
+       PR #928). Layered guards live in the FAB component. State machine
+       stays in the parent (pttMode + 3-min safety timer + double-tap). -->
   <PttFab
     mode={pttMode}
     txPermit={txPermit}

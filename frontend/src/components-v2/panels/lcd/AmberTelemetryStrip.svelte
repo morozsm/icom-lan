@@ -19,7 +19,12 @@
   import AmberSparkline from './AmberSparkline.svelte';
 
   const BUFFER_SIZE = 30;
-  const PUSH_EPSILON = 1;    // ignore changes < 1 raw unit (stabilises sparklines)
+  // Minimum time between samples written to the ring buffer (codex P2 on
+  // PR #929). The previous epsilon-delta gate silently dropped stable
+  // values — rigs whose vdMeter rarely moves got blank sparklines. A time
+  // gate keeps lines drawing even for flat inputs while still decimating
+  // the incoming stream so every frame doesn't push through.
+  const PUSH_MIN_INTERVAL_MS = 1000;
 
   let radioState = $derived(radio.current);
 
@@ -37,24 +42,23 @@
   let tempHistory = $state<number[]>([]);
 
   function pushBuffer(buf: number[], value: number): number[] {
-    const last = buf.length ? buf[buf.length - 1] : null;
-    if (last !== null && Math.abs(value - last) < PUSH_EPSILON) return buf;
     const next = buf.length >= BUFFER_SIZE ? buf.slice(1) : [...buf];
     next.push(value);
     return next;
   }
 
+  // Interval-driven sampling instead of reactive-on-change (codex P2 on
+  // PR #929): if a meter value is stable (common for vdMeter), an effect
+  // keyed on `$derived` only fires once, leaving the sparkline blank.
+  // Reading the current raw values every PUSH_MIN_INTERVAL_MS guarantees
+  // a line is drawn even when input is flat.
   $effect(() => {
-    if (vdRaw === null) return;
-    vdHistory = pushBuffer(vdHistory, vdRaw);
-  });
-  $effect(() => {
-    if (idRaw === null) return;
-    idHistory = pushBuffer(idHistory, idRaw);
-  });
-  $effect(() => {
-    if (tempRaw === null) return;
-    tempHistory = pushBuffer(tempHistory, tempRaw);
+    const interval = setInterval(() => {
+      if (vdRaw !== null) vdHistory = pushBuffer(vdHistory, vdRaw);
+      if (idRaw !== null) idHistory = pushBuffer(idHistory, idRaw);
+      if (tempRaw !== null) tempHistory = pushBuffer(tempHistory, tempRaw);
+    }, PUSH_MIN_INTERVAL_MS);
+    return () => clearInterval(interval);
   });
 
   // Display conversions — rigs report raw 0..255; label text is best-effort.

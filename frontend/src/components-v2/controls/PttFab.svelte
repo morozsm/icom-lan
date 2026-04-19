@@ -53,8 +53,11 @@
   let startY = 0;
 
   // TX-permit two-step arm state. First press arms; second press within
-  // the window engages. Expires automatically.
+  // the window engages. A timer resets armedAt back to 0 when the window
+  // lapses so the visual "armed" styling doesn't stick after timeout
+  // (codex P2 on PR #928).
   let armedAt = $state(0);
+  let armedResetTimer: ReturnType<typeof setTimeout> | null = null;
 
   function vibrate(ms: number) {
     if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
@@ -90,10 +93,20 @@
       const now = Date.now();
       if (now - armedAt > PERMIT_ARM_WINDOW_MS) {
         armedAt = now;
+        if (armedResetTimer !== null) clearTimeout(armedResetTimer);
+        armedResetTimer = setTimeout(() => {
+          armedAt = 0;
+          armedResetTimer = null;
+        }, PERMIT_ARM_WINDOW_MS);
         onPermitWarning?.();
         return;
       }
-      // Within the arm window — fall through to engage logic below.
+      // Within the arm window — consume arm state and fall through to engage.
+      armedAt = 0;
+      if (armedResetTimer !== null) {
+        clearTimeout(armedResetTimer);
+        armedResetTimer = null;
+      }
     }
 
     // Capture so pointermove/pointerup still fire if the finger slides off.
