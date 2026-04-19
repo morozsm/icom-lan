@@ -151,12 +151,12 @@ describe('SpectrumToolbar component', () => {
     expect(holdBtn).toBeDefined();
   });
 
-  it('renders DUAL and receiver buttons when dual receiver available', () => {
+  it('does not render DUAL/MAIN scope-source buttons (moved to VfoHeader bridge in #832)', () => {
     const target = mountToolbar();
     const buttons = Array.from(target.querySelectorAll<HTMLButtonElement>('.toolbar-btn'));
     const labels = buttons.map((b) => b.textContent?.trim());
-    expect(labels).toContain('DUAL');
-    expect(labels).toContain('MAIN');
+    expect(labels).not.toContain('DUAL');
+    expect(labels).not.toContain('MAIN');
   });
 
   it('renders color scheme selector', () => {

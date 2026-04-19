@@ -3,7 +3,7 @@
   import { type ColorSchemeName } from '../../lib/renderers/waterfall-renderer';
   import { radio } from '../../lib/stores/radio.svelte';
   import { sendCommand } from '../../lib/transport/ws-client';
-  import { hasCapability, hasDualReceiver } from '../../lib/stores/capabilities.svelte';
+  import { hasCapability } from '../../lib/stores/capabilities.svelte';
   import ScopeSettingsPopover from './ScopeSettingsPopover.svelte';
   import {
     SPAN_LABELS, SPEED_LABELS, SPEED_STATIC_LABEL, MODE_BUTTONS,
@@ -116,15 +116,6 @@
   function toggleHold() {
     sendCommand('set_scope_hold', { on: !(scopeControls?.hold ?? false) });
   }
-
-  function toggleDual() {
-    sendCommand('set_scope_dual', { dual: !(scopeControls?.dual ?? false) });
-  }
-
-  function switchReceiver() {
-    const next = (scopeControls?.receiver ?? 0) === 1 ? 0 : 1;
-    sendCommand('switch_scope_receiver', { receiver: next });
-  }
 </script>
 
 <div class="spectrum-toolbar">
@@ -212,15 +203,6 @@
         <span class="toolbar-value ref-value">{(scopeControls?.refDb ?? 0) > 0 ? '+' : ''}{scopeControls?.refDb ?? 0}</span>
         <button class="toolbar-btn small" onclick={() => sendCommand('set_scope_ref', { ref: clampRef(scopeControls?.refDb ?? 0, 5) })}>+</button>
       </div>
-      {#if hasDualReceiver()}
-        <div class="toolbar-sub-separator"></div>
-        <div class="toolbar-group">
-          <button class="toolbar-btn" class:active={scopeControls?.dual ?? false} onclick={toggleDual} title="Dual scope">DUAL</button>
-          <button class="toolbar-btn" onclick={switchReceiver} title="Switch scope receiver">
-            {scopeControls?.receiver === 1 ? 'SUB' : 'MAIN'}
-          </button>
-        </div>
-      {/if}
     </div>
   {/if}
   <div class="toolbar-separator"></div>

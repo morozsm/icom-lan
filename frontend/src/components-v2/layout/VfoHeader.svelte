@@ -1,3 +1,13 @@
+<script module lang="ts">
+  /** Subset of ScopeControls consumed by the bridge SCOPE-status block (issue #832). */
+  export interface ScopeStatusProps {
+    dual: boolean;
+    receiver: number;
+    span: number;
+    speed: number;
+  }
+</script>
+
 <script lang="ts">
   import VfoPanel from '../vfo/VfoPanel.svelte';
   import VfoOps from '../vfo/VfoOps.svelte';
@@ -8,6 +18,15 @@
   import type { VfoLayoutProfile } from './vfo-layout-tokens';
   import type { VfoStateProps } from './layout-utils';
 
+  // Labels duplicated from spectrum-toolbar-logic.ts to avoid a reverse
+  // dependency from layout/ → components/spectrum/. These are small and
+  // stable (Icom IC-7610 scope constants).
+  const SPAN_LABELS: Record<number, string> = {
+    0: '\u00b12.5k', 1: '\u00b15k', 2: '\u00b110k', 3: '\u00b125k',
+    4: '\u00b150k', 5: '\u00b1100k', 6: '\u00b1250k', 7: '\u00b1500k',
+  };
+  const SPEED_LABELS: Record<number, string> = { 0: 'FST', 1: 'MID', 2: 'SLO' };
+
   interface Props {
     mainVfo: VfoStateProps;
     subVfo: VfoStateProps;
@@ -16,6 +35,8 @@
     dualWatchActive: boolean;
     /** Read-only indicator: which receiver currently transmits. */
     txVfo: 'main' | 'sub';
+    /** Scope digest shown in the bridge (issue #832). Omit to hide. */
+    scopeStatus?: ScopeStatusProps | null;
     onSwap?: () => void;
     onEqual?: () => void;
     onSplitToggle?: () => void;
@@ -29,6 +50,8 @@
     onMainFreqChange?: (freq: number) => void;
     onSubFreqChange?: (freq: number) => void;
     onSpeak?: () => void;
+    onScopeDualToggle?: () => void;
+    onScopeReceiverChange?: (receiver: 0 | 1) => void;
   }
 
   let {
@@ -38,6 +61,7 @@
     splitActive,
     dualWatchActive,
     txVfo,
+    scopeStatus = null,
     onSwap = () => {},
     onEqual = () => {},
     onSplitToggle = () => {},
@@ -51,6 +75,8 @@
     onMainFreqChange,
     onSubFreqChange,
     onSpeak,
+    onScopeDualToggle,
+    onScopeReceiverChange,
   }: Props = $props();
 
   let dualReceiver = $derived(hasDualReceiver());
@@ -140,6 +166,40 @@
         onDualWatchToggle={() => onDualWatchToggle(!dualWatchActive)}
         {onQuickDw}
       />
+
+      {#if scopeStatus}
+        <div class="scope-status" data-testid="scope-status">
+          <span class="scope-status-title">SCOPE</span>
+          {#if dualReceiver}
+            <div class="scope-status-row scope-pills" role="group" aria-label="Scope source">
+              <button
+                type="button"
+                class="scope-pill"
+                class:active={scopeStatus.receiver !== 1}
+                onclick={() => onScopeReceiverChange?.(0)}
+                title="Scope source: MAIN"
+              >MAIN</button>
+              <button
+                type="button"
+                class="scope-pill"
+                class:active={scopeStatus.receiver === 1}
+                onclick={() => onScopeReceiverChange?.(1)}
+                title="Scope source: SUB"
+              >SUB</button>
+            </div>
+            <button
+              type="button"
+              class="scope-dual"
+              class:active={scopeStatus.dual}
+              onclick={() => onScopeDualToggle?.()}
+              title="Dual scope"
+            >DUAL</button>
+          {/if}
+          <span class="scope-status-row scope-digest">
+            {SPAN_LABELS[scopeStatus.span] ?? '\u00b125k'} {SPEED_LABELS[scopeStatus.speed] ?? 'MID'}
+          </span>
+        </div>
+      {/if}
 
       {#if dualReceiver}
         <div class:inactive={!splitActive} class="split-status">
@@ -261,6 +321,71 @@
     letter-spacing: 0.08em;
   }
 
+  .scope-status {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-top: auto;
+    padding:
+      var(--vfo-ops-secondary-padding-top, 4px)
+      0
+      0;
+    border-top: 1px solid var(--v2-vfo-header-border);
+    font-family: 'Roboto Mono', monospace;
+    text-transform: uppercase;
+    align-items: center;
+  }
+
+  .scope-status-title {
+    color: var(--v2-text-muted);
+    font-size: 7px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+  }
+
+  .scope-status-row {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    color: var(--v2-text-secondary);
+    font-size: 7px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+  }
+
+  .scope-pill,
+  .scope-dual {
+    padding: 1px 6px;
+    border: 1px solid var(--v2-border, #2a2a3e);
+    border-radius: 3px;
+    background: transparent;
+    color: var(--v2-text-muted);
+    font-family: inherit;
+    font-size: 7px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    line-height: 1.2;
+  }
+
+  .scope-pill:hover,
+  .scope-dual:hover {
+    color: var(--v2-accent-cyan, #00d4ff);
+    border-color: var(--v2-accent-cyan, #00d4ff);
+  }
+
+  .scope-pill.active,
+  .scope-dual.active {
+    color: var(--v2-accent-cyan, #00d4ff);
+    border-color: rgba(0, 212, 255, 0.4);
+    background: rgba(0, 212, 255, 0.1);
+  }
+
+  .scope-digest {
+    font-variant-numeric: tabular-nums;
+  }
+
   .speak-btn {
     margin-top: 4px;
     padding: 3px 6px;
@@ -299,8 +424,15 @@
       flex-wrap: wrap;
     }
 
-    .split-status {
+    .split-status,
+    .scope-status {
       align-items: flex-start;
+    }
+
+    .scope-status {
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 6px;
     }
   }
 </style>

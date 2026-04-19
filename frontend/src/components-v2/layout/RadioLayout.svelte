@@ -14,7 +14,7 @@
   
   import { runtime } from '$lib/runtime';
   import { applyModeDefault } from '$lib/stores/tuning.svelte';
-  import { getKeyboardConfig, hasDualReceiver, hasTx, hasAnyScope, hasSpectrum, hasAudioFft } from '$lib/stores/capabilities.svelte';
+  import { getKeyboardConfig, hasCapability, hasDualReceiver, hasTx, hasAnyScope, hasSpectrum, hasAudioFft } from '$lib/stores/capabilities.svelte';
   import { getLayoutMode } from '$lib/stores/layout.svelte';
   import { resolveSkinId, type SkinId } from '../../skins/registry';
   import SpectrumPanel from '../../components/spectrum/SpectrumPanel.svelte';
@@ -61,6 +61,29 @@
   // Reactive state + capabilities — via runtime
   let radioState = $derived(runtime.state);
   let caps = $derived(runtime.caps);
+
+  // Scope digest for VfoHeader bridge (issue #832).  Gate on `scope` capability;
+  // VfoHeader treats null as "hide the block".
+  let scopeStatus = $derived.by(() => {
+    if (!hasCapability('scope')) return null;
+    const sc = (radioState as { scopeControls?: { dual?: boolean; receiver?: number; span?: number; speed?: number } } | null)?.scopeControls;
+    if (!sc) return null;
+    return {
+      dual: sc.dual ?? false,
+      receiver: sc.receiver ?? 0,
+      span: sc.span ?? 3,
+      speed: sc.speed ?? 1,
+    };
+  });
+
+  function handleScopeDualToggle(): void {
+    const current = (radioState as { scopeControls?: { dual?: boolean } } | null)?.scopeControls?.dual ?? false;
+    runtime.send('set_scope_dual', { dual: !current });
+  }
+
+  function handleScopeReceiverChange(receiver: 0 | 1): void {
+    runtime.send('switch_scope_receiver', { receiver });
+  }
   let keyboardConfig = $derived(getKeyboardConfig());
   let activeMode = $derived(radioState?.active === 'SUB' ? radioState?.sub?.mode : radioState?.main?.mode);
 
@@ -229,6 +252,9 @@
       onSubFreqChange={vfoHandlers.onSubFreqChange}
       onSubModeClick={vfoHandlers.onSubModeClick}
       onSpeak={systemHandlers.onSpeak}
+      {scopeStatus}
+      onScopeDualToggle={handleScopeDualToggle}
+      onScopeReceiverChange={handleScopeReceiverChange}
     />
   </section>
 
