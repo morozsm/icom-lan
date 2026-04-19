@@ -317,11 +317,11 @@ describe('badge rendering', () => {
 });
 
 describe('callbacks', () => {
-  it('calls onVfoClick when panel is clicked', () => {
+  it('does not call onVfoClick when panel is clicked (panel-wide activation removed)', () => {
     const onVfoClick = vi.fn();
     const t = mountPanel({ ...baseProps, onVfoClick });
     t.querySelector<HTMLElement>('.panel')?.click();
-    expect(onVfoClick).toHaveBeenCalledOnce();
+    expect(onVfoClick).not.toHaveBeenCalled();
   });
 
   it('calls onModeClick when mode badge is clicked', () => {

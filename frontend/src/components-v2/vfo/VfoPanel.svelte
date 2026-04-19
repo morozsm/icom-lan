@@ -50,20 +50,15 @@
   });
 </script>
 
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<!-- svelte-ignore a11y_click_events_have_key_events -->
 <div
   class="panel"
   class:active={isActive}
-  onclick={onVfoClick}
-  role={onVfoClick ? 'button' : undefined}
   data-layout-profile={layoutProfile}
   style={Object.entries(receiverChromeVars).map(([key, value]) => `${key}:${value}`).join(';')}
 >
   <div class="panel-header">
     <div class="header-title-group">
       <span class="vfo-label">{label}</span>
-      <span class="receiver-state" data-active={isActive}>{isActive ? 'ACTIVE' : 'STANDBY'}</span>
     </div>
 
     <div class="header-badges">
@@ -167,26 +162,6 @@
     font-weight: 700;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-  }
-
-  .receiver-state {
-    display: inline-flex;
-    align-items: center;
-    min-height: var(--vfo-header-badge-height, 12px);
-    padding: 0 var(--vfo-header-badge-padding-x, 5px);
-    border: 1px solid var(--v2-vfo-badge-active-border);
-    border-radius: var(--vfo-panel-badge-radius, 3px);
-    color: var(--v2-accent-green-bright);
-    background: var(--v2-vfo-badge-active-bg);
-    font-size: var(--vfo-header-badge-font-size, 7px);
-    font-weight: 700;
-    letter-spacing: 0.08em;
-  }
-
-  .receiver-state[data-active='false'] {
-    border-color: var(--v2-vfo-badge-standby-border);
-    color: var(--v2-text-subdued);
-    background: var(--v2-vfo-badge-standby-bg);
   }
 
   .header-badges {
