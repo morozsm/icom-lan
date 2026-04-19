@@ -1,20 +1,26 @@
 /**
  * Layout preference store.
- * 'auto'     = standard layout when any scope available (HW or audio FFT), LCD otherwise
- * 'lcd'      = force LCD layout
- * 'standard' = force standard layout
+ * 'auto'        = standard layout when any scope available (HW or audio FFT), LCD otherwise
+ * 'lcd'         = force LCD layout — cockpit variant (legacy alias for 'lcd-cockpit')
+ * 'lcd-cockpit' = force LCD cockpit (TS-990S-style dual-cockpit)
+ * 'lcd-scope'   = force LCD scope (IC-7300-style scope-dominant)
+ * 'standard'    = force standard layout
+ *
+ * Legacy 'lcd' persisted values are mapped to 'lcd-cockpit' by resolveSkinId().
  */
 
 const STORAGE_KEY = 'icom-lan-layout';
 
-export type LayoutMode = 'auto' | 'lcd' | 'standard';
+export type LayoutMode = 'auto' | 'lcd' | 'lcd-cockpit' | 'lcd-scope' | 'standard';
 
 let mode = $state<LayoutMode>(loadMode());
 
 function loadMode(): LayoutMode {
   if (typeof window === 'undefined') return 'auto';
   const saved = localStorage.getItem(STORAGE_KEY);
-  if (saved === 'lcd' || saved === 'standard') return saved;
+  if (saved === 'lcd' || saved === 'lcd-cockpit' || saved === 'lcd-scope' || saved === 'standard') {
+    return saved;
+  }
   // Migrate old 'spectrum' value to 'standard'
   if (saved === 'spectrum') return 'standard';
   return 'auto';

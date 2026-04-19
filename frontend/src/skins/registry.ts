@@ -32,13 +32,15 @@ export interface SkinResolutionContext {
  *
  * Rules:
  * - Mobile viewport → mobile skin
- * - User forced 'lcd' → lcd-cockpit (default LCD variant)
+ * - User forced 'lcd' or 'lcd-cockpit' → lcd-cockpit
+ * - User forced 'lcd-scope' → lcd-scope
  * - User forced 'standard' → desktop-v2
  * - Auto: use desktop-v2 if any scope is available, lcd-cockpit otherwise
  */
 export function resolveSkinId(ctx: SkinResolutionContext): SkinId {
   if (ctx.isMobile) return 'mobile';
-  if (ctx.layoutPreference === 'lcd') return 'lcd-cockpit';
+  if (ctx.layoutPreference === 'lcd' || ctx.layoutPreference === 'lcd-cockpit') return 'lcd-cockpit';
+  if (ctx.layoutPreference === 'lcd-scope') return 'lcd-scope';
   if (ctx.layoutPreference === 'standard') return 'desktop-v2';
   // auto: scope available → desktop, otherwise LCD
   return ctx.hasAnyScope ? 'desktop-v2' : 'lcd-cockpit';

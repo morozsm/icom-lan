@@ -21,12 +21,14 @@
   let { onSettings }: Props = $props();
 
   let layoutMode = $derived(getLayoutMode());
-  // Skin-switcher dropdown options. When #888 lands, this list can be sourced
-  // from the skin registry; for now it mirrors the LayoutMode preferences.
+  // Skin-switcher dropdown options. `lcd` is a legacy alias that maps to
+  // `lcd-cockpit` in resolveSkinId — not exposed separately here. Twin-skin
+  // variants (`lcd-cockpit`, `lcd-scope`) are selectable per #887 / #889.
   const skinOptions: Array<{ value: LayoutMode; label: string }> = [
     { value: 'auto', label: 'AUTO' },
     { value: 'standard', label: 'Standard' },
-    { value: 'lcd', label: 'LCD' },
+    { value: 'lcd-cockpit', label: 'LCD Cockpit' },
+    { value: 'lcd-scope', label: 'LCD Scope' },
   ];
 
   function handleSkinChange(ev: Event) {
