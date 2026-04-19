@@ -2050,11 +2050,24 @@ async def test_yaesu_set_func_unknown_returns_einval(
 
 @pytest.mark.asyncio
 async def test_yaesu_dump_state(
-    yaesu_handler: RigctldHandler,
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
 ) -> None:
+    # Rig model now comes from the radio's TOML config via
+    # `hamlib_model_id` (closes #441) — mock it explicitly.
+    yaesu_radio.hamlib_model_id = 2028
     resp = await yaesu_handler.execute(get_cmd("dump_state"))
     assert resp.ok
-    assert resp.values[1] == "2028"  # Yaesu rig model
+    assert resp.values[1] == "2028"  # Yaesu rig model (from TOML config)
+
+
+async def test_yaesu_dump_state_honors_toml_model_id(
+    yaesu_handler: RigctldHandler, yaesu_radio: AsyncMock
+) -> None:
+    """Non-default rig model from TOML appears in dump_state (closes #441)."""
+    yaesu_radio.hamlib_model_id = 1042  # RIG_MODEL_FTDX101D (example)
+    resp = await yaesu_handler.execute(get_cmd("dump_state"))
+    assert resp.ok
+    assert resp.values[1] == "1042"
 
 
 @pytest.mark.asyncio

@@ -98,6 +98,10 @@ class RigConfig:
     antenna_tx_count: int = 1
     antenna_has_rx_ant: bool = False
     transceiver_count: int = 1
+    # Hamlib rig_model integer (from rigs_list.h). Used by rigctld Yaesu
+    # dump_state responses. Default 2028 = RIG_MODEL_FTX1. Icom radios
+    # are served by the built-in Icom routing path and don't use this.
+    hamlib_model_id: int = 2028
     scope_ref_min_db: float | None = None
     scope_ref_max_db: float | None = None
     scope_ref_step_db: float | None = None
@@ -770,6 +774,7 @@ def load_rig(path: Path) -> RigConfig:
         civ_addr=civ_addr,
         receiver_count=radio["receiver_count"],
         transceiver_count=int(radio.get("transceiver_count", 1)),
+        hamlib_model_id=int(radio.get("hamlib_model_id", 2028)),
         has_lan=radio["has_lan"],
         has_wifi=radio["has_wifi"],
         default_baud=radio.get("default_baud", 19200),

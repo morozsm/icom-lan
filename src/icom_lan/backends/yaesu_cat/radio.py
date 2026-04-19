@@ -164,6 +164,16 @@ class YaesuCatRadio:
         return str(self._config.model)
 
     @property
+    def hamlib_model_id(self) -> int:
+        """Hamlib rig_model integer (e.g. ``2028`` for RIG_MODEL_FTX1).
+
+        Read from the rig's TOML ``[radio].hamlib_model_id`` field; used by
+        the rigctld Yaesu ``dump_state`` response so external clients see the
+        correct model (closes #441).
+        """
+        return int(self._config.hamlib_model_id)
+
+    @property
     def capabilities(self) -> set[str]:
         """Set of capability tags from the rig profile."""
         return set(self._config.capabilities)

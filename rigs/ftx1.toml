@@ -6,6 +6,8 @@
 [radio]
 id = "yaesu_ftx1"
 model = "FTX-1"
+# Hamlib rig_model integer (RIG_MODEL_FTX1). Used by rigctld dump_state.
+hamlib_model_id = 2028
 receiver_count = 2
 transceiver_count = 2
 has_lan = false

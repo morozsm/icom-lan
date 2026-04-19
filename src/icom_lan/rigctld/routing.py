@@ -62,7 +62,7 @@ class RigctldRouting(Protocol):
 
 _YAESU_DUMP_STATE: list[str] = [
     "0",  # protocol version
-    "2028",  # TODO(#441): read rig model from TOML config
+    "2028",  # rig model — overridden per-radio from TOML by YaesuRouting.dump_state
     "1",  # ITU region
     "30000.000000 56000000.000000 0x1ff -1 -1 0x3 0xf",
     "0 0 0 0 0 0 0",
@@ -265,7 +265,12 @@ class YaesuRouting:
     # -- dump / info ---------------------------------------------------------
 
     def dump_state(self) -> list[str]:
-        return list(_YAESU_DUMP_STATE)
+        state = list(_YAESU_DUMP_STATE)
+        # Substitute the rig model from the radio's TOML config (closes #441).
+        # Default 2028 (FTX-1) if the radio doesn't expose hamlib_model_id.
+        model_id = getattr(self._radio, "hamlib_model_id", 2028)
+        state[1] = str(int(model_id))
+        return state
 
     def get_info(self) -> str:
         raw_model = getattr(self._radio, "model", "Yaesu")
