@@ -11,6 +11,15 @@
   import AmberAfScope from './AmberAfScope.svelte';
   import { runtime } from '$lib/runtime';
   import { createAudioScopeConnection } from '$lib/runtime/adapters/scope-adapter';
+  import { onMount } from 'svelte';
+  import {
+    LCD_CONTRAST_PRESETS,
+    applyLcdContrast,
+    getLcdContrastPreset,
+    setLcdContrastPreset,
+    stepLcdContrast,
+    type LcdContrastPreset,
+  } from '$lib/stores/lcd-contrast.svelte';
 
   // Command-bus handlers (singleton, no reactive deps)
   const vfoHandlers = makeVfoHandlers();
@@ -120,6 +129,38 @@
   function agcLabel(m: number): string {
     return AGC_LABELS[m] ?? `${m}`;
   }
+
+  // ── LCD contrast (issue #833 / plan §2) ──
+  let contrastPreset = $state<LcdContrastPreset>(getLcdContrastPreset());
+
+  function selectContrast(p: LcdContrastPreset): void {
+    setLcdContrastPreset(p);
+    contrastPreset = p;
+  }
+
+  function handleContrastKey(event: KeyboardEvent): void {
+    if (!event.shiftKey) return;
+    // Ignore when focus is in a text field.
+    const tag = (document.activeElement?.tagName ?? '').toUpperCase();
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    // Shift+[ and Shift+] produce '{' and '}' on most US/EU layouts.
+    // Also accept the bare bracket keys in case the layout maps them directly.
+    const key = event.key;
+    let direction: 'up' | 'down' | null = null;
+    if (key === '{' || key === '[') direction = 'down';
+    else if (key === '}' || key === ']') direction = 'up';
+    if (!direction) return;
+    event.preventDefault();
+    contrastPreset = stepLcdContrast(direction);
+  }
+
+  onMount(() => {
+    applyLcdContrast();
+    window.addEventListener('keydown', handleContrastKey);
+    return () => {
+      window.removeEventListener('keydown', handleContrastKey);
+    };
+  });
 
   // Scope WS connection — reactive to capabilities (may load after mount)
   $effect(() => {
@@ -265,6 +306,21 @@
       </div>
     {/if}
 
+    <!-- ═══ Contrast preset row (segmented control) — plan §2.1 path 3 ═══ -->
+    <div class="lcd-contrast-row" role="radiogroup" aria-label="LCD contrast preset">
+      <span class="lcd-contrast-label">CONTRAST</span>
+      {#each LCD_CONTRAST_PRESETS as p}
+        <button
+          type="button"
+          class="lcd-contrast-btn"
+          class:active={contrastPreset === p}
+          role="radio"
+          aria-checked={contrastPreset === p}
+          aria-label="Contrast preset {p}"
+          onclick={() => selectContrast(p)}
+        >{p}</button>
+      {/each}
+    </div>
 
   </div>
 </div>
@@ -281,6 +337,13 @@
   }
 
   .lcd-screen {
+    /* Contrast tokens — see plan §2.4. Defaults match MID preset (today's
+       visual). `applyLcdContrast()` overrides these inline on mount and
+       on every preset change. */
+    --lcd-alpha-active: 1;
+    --lcd-alpha-inactive: 0.08;
+    --lcd-alpha-ghost: 0.06;
+
     position: relative;
     width: 100%;
     background: #C8A030;
@@ -327,7 +390,7 @@
   .ind-sep {
     width: 1px;
     height: 16px;
-    background: rgba(26, 16, 0, 0.15);
+    background: rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.15));
     margin: 0 4px;
     flex-shrink: 0;
   }
@@ -337,16 +400,16 @@
     font-size: 14px;
     font-weight: 700;
     letter-spacing: 0.5px;
-    color: rgba(0, 0, 0, 0.08);
-    border: 1.5px solid rgba(0, 0, 0, 0.06);
+    color: rgba(26, 16, 0, var(--lcd-alpha-inactive));
+    border: 1.5px solid rgba(26, 16, 0, var(--lcd-alpha-ghost));
     border-radius: 3px;
     padding: 1px 6px;
     user-select: none;
   }
 
   .lcd-ind.active {
-    color: #1A1000;
-    border-color: rgba(26, 16, 0, 0.4);
+    color: rgba(26, 16, 0, var(--lcd-alpha-active));
+    border-color: rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.4));
   }
 
   .lcd-ind.ind-tx {
@@ -378,25 +441,25 @@
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.5px;
-    color: rgba(0, 0, 0, 0.25);
+    color: rgba(26, 16, 0, calc(var(--lcd-alpha-inactive) * 3));
     background: transparent;
-    border: 1.5px solid rgba(0, 0, 0, 0.1);
+    border: 1.5px solid rgba(26, 16, 0, calc(var(--lcd-alpha-inactive) * 1.25));
     border-radius: 3px;
     padding: 1px 8px;
     cursor: pointer;
     user-select: none;
   }
   .lcd-btn:hover {
-    color: rgba(26, 16, 0, 0.6);
-    border-color: rgba(26, 16, 0, 0.3);
+    color: rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.6));
+    border-color: rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.3));
   }
   .lcd-btn:active {
-    color: #1A1000;
-    border-color: rgba(26, 16, 0, 0.5);
+    color: rgba(26, 16, 0, var(--lcd-alpha-active));
+    border-color: rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.5));
   }
   .lcd-btn.active {
-    color: #1A1000;
-    border-color: rgba(26, 16, 0, 0.4);
+    color: rgba(26, 16, 0, var(--lcd-alpha-active));
+    border-color: rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.4));
   }
 
   /* ── VFO + Scope row ── */
@@ -429,8 +492,8 @@
     font-family: 'JetBrains Mono', 'Courier New', monospace;
     font-size: 22px;
     font-weight: 700;
-    color: #1A1000;
-    border: 2px solid rgba(26, 16, 0, 0.4);
+    color: rgba(26, 16, 0, var(--lcd-alpha-active));
+    border: 2px solid rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.4));
     border-radius: 4px;
     padding: 0 6px;
     line-height: 1.3;
@@ -440,8 +503,8 @@
   .vfo-tag-sub {
     font-size: 16px;
     border-width: 1.5px;
-    color: rgba(26, 16, 0, 0.5);
-    border-color: rgba(26, 16, 0, 0.25);
+    color: rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.5));
+    border-color: rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.25));
     padding: 0 4px;
   }
 
@@ -457,13 +520,13 @@
     font-family: 'JetBrains Mono', 'Courier New', monospace;
     font-size: 18px;
     font-weight: 700;
-    color: #1A1000;
+    color: rgba(26, 16, 0, var(--lcd-alpha-active));
     letter-spacing: 1px;
-    border: 2px solid rgba(26, 16, 0, 0.4);
+    border: 2px solid rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.4));
     border-radius: 4px;
     padding: 2px 8px;
     margin-left: 6px;
-    background: rgba(26, 16, 0, 0.06);
+    background: rgba(26, 16, 0, var(--lcd-alpha-ghost));
   }
 
   .vfo-mode-box {
@@ -471,9 +534,9 @@
     font-family: 'JetBrains Mono', 'Courier New', monospace;
     font-size: 18px;
     font-weight: 700;
-    color: #1A1000;
+    color: rgba(26, 16, 0, var(--lcd-alpha-active));
     letter-spacing: 1px;
-    border: 2px solid rgba(26, 16, 0, 0.4);
+    border: 2px solid rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.4));
     border-radius: 4px;
     padding: 2px 8px;
     margin-left: 6px;
@@ -481,7 +544,7 @@
 
   .vfo-mode-sub {
     font-size: 13px;
-    color: rgba(26, 16, 0, 0.45);
+    color: rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.45));
   }
 
   /* ── S-Meter ── */
@@ -500,9 +563,9 @@
     font-family: 'JetBrains Mono', monospace;
     font-size: 10px;
     font-weight: 700;
-    color: #1A1000;
+    color: rgba(26, 16, 0, var(--lcd-alpha-active));
     background: transparent;
-    border: 1.5px solid rgba(26, 16, 0, 0.3);
+    border: 1.5px solid rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.3));
     border-radius: 3px;
     padding: 2px 6px;
     margin-right: 4px;
@@ -511,7 +574,7 @@
     text-align: center;
   }
   .lcd-meter-src-btn:hover {
-    border-color: rgba(26, 16, 0, 0.5);
+    border-color: rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.5));
   }
   .lcd-meter-sub {
     opacity: 0.6;
@@ -522,7 +585,7 @@
 
   /* ── Sub VFO ── */
   .lcd-vfo-sub {
-    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    border-top: 1px solid rgba(26, 16, 0, var(--lcd-alpha-inactive));
     padding-top: 4px;
   }
 
@@ -539,14 +602,46 @@
     font-family: 'JetBrains Mono', 'Courier New', monospace;
     font-size: 12px;
     font-weight: 700;
-    color: rgba(26, 16, 0, 0.5);
+    color: rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.5));
   }
 
   .rit-value {
     font-family: 'DSEG7 Classic', monospace;
     font-weight: bold;
     font-size: 16px;
-    color: rgba(26, 16, 0, 0.6);
+    color: rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.6));
+  }
+
+  /* ── Contrast preset row ── */
+  .lcd-contrast-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    position: relative;
+    z-index: 2;
+    padding-top: 2px;
+    flex-wrap: wrap;
+  }
+  .lcd-contrast-label {
+    font: 700 9px/1 'JetBrains Mono', monospace;
+    letter-spacing: 0.1em;
+    color: rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.5));
+  }
+  .lcd-contrast-btn {
+    font: 700 10px/1 'JetBrains Mono', monospace;
+    color: rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.45));
+    background: transparent;
+    border: 1px solid rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.2));
+    border-radius: 2px;
+    padding: 1px 5px;
+    cursor: pointer;
+  }
+  .lcd-contrast-btn:hover {
+    border-color: rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.35));
+  }
+  .lcd-contrast-btn.active {
+    color: rgba(26, 16, 0, var(--lcd-alpha-active));
+    border-color: rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.5));
   }
 
   /* ── AF Scope strip (next to VFO freq) ── */
