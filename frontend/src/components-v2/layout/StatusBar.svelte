@@ -20,9 +20,16 @@
   }
   let { onSettings }: Props = $props();
 
-  let layoutMode = $derived(getLayoutMode());
-  // Skin-switcher dropdown options. `lcd` is a legacy alias that maps to
-  // `lcd-cockpit` in resolveSkinId — not exposed separately here. Twin-skin
+  // Canonicalize legacy 'lcd' to 'lcd-cockpit' for UI binding — the persisted
+  // value may still be 'lcd' (from pre-#889 installs), but the dropdown only
+  // exposes 'lcd-cockpit' / 'lcd-scope'. Without normalization the <select>
+  // would show no highlighted option for legacy users (codex P2 on PR #913).
+  let layoutMode = $derived.by<LayoutMode>(() => {
+    const raw = getLayoutMode();
+    return raw === 'lcd' ? 'lcd-cockpit' : raw;
+  });
+  // Skin-switcher dropdown options. `lcd` is a legacy persisted value that
+  // normalizes to `lcd-cockpit` above (kept for backward compat). Twin-skin
   // variants (`lcd-cockpit`, `lcd-scope`) are selectable per #887 / #889.
   const skinOptions: Array<{ value: LayoutMode; label: string }> = [
     { value: 'auto', label: 'AUTO' },
@@ -227,7 +234,7 @@
       </button>
     {/if}
     <label class="skin-switcher" title="Select UI skin">
-      {#if layoutMode === 'lcd'}
+      {#if layoutMode === 'lcd-cockpit' || layoutMode === 'lcd-scope'}
         <Tv size={14} strokeWidth={2} aria-hidden="true" />
       {:else}
         <Monitor size={14} strokeWidth={2} aria-hidden="true" />

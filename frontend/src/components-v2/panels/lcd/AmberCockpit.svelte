@@ -119,7 +119,9 @@
     ...(hasCapability('dial_lock') ? [{ id: 'lock' as const, label: 'LOCK', active: lockActive }] : []),
     ...(dataActive ? [{ id: 'data' as const, label: 'DATA', active: true }] : []),
     ...(hasCapability('ip_plus') ? [{
-      id: 'ipPlus' as const, label: 'IP+', active: radioState?.main?.ipplus ?? false,
+      // IP+ is a per-receiver setting on IC-7610 (codex P2 on PR #906).
+      // Bind to the active RX so SUB's IP+ state is reflected when SUB is active.
+      id: 'ipPlus' as const, label: 'IP+', active: rx?.ipplus ?? false,
     }] : []),
   ]);
 
@@ -662,6 +664,15 @@
   @container (max-width: 640px) {
     .lcd-screen.dual {
       grid-template-columns: minmax(0, 1fr);
+      /* Explicit 5-track rows — adding vfo-b to the area list without updating
+         rows would leave scope on the default auto track and hand the flexible
+         minmax(0, 1fr) to vfo-b instead (codex P1 on PR #912). */
+      grid-template-rows:
+        auto               /* global indicator strip */
+        auto               /* vfo-a cockpit */
+        auto               /* vfo-b cockpit (stacked) */
+        minmax(0, 1fr)     /* scope — keeps the flexible track */
+        auto;              /* aux (reserved) */
       grid-template-areas:
         "global"
         "vfo-a"
