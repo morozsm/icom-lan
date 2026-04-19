@@ -16,7 +16,7 @@
   import { runtime } from '$lib/runtime';
   import { getKeyboardConfig } from '$lib/stores/capabilities.svelte';
   import { applyModeDefault } from '$lib/stores/tuning.svelte';
-  import AmberLcdDisplay from '../panels/lcd/AmberLcdDisplay.svelte';
+  import AmberCockpit from '../panels/lcd/AmberCockpit.svelte';
   import LcdContrastControl from '../panels/lcd/LcdContrastControl.svelte';
   import VfoControlPanel from '../panels/lcd/VfoControlPanel.svelte';
   import LeftSidebar from './LeftSidebar.svelte';
@@ -25,6 +25,11 @@
   import StatusBar from './StatusBar.svelte';
   import { makeKeyboardHandlers } from '../wiring/command-bus';
   import Toast from '../../components/shared/Toast.svelte';
+
+  // Twin-skin variant selector (#887). Default preserves today's behavior.
+  // `scope` currently falls through to cockpit until C-PR1 (#895) delivers
+  // a dedicated AmberScope component.
+  let { variant = 'cockpit' }: { variant?: 'cockpit' | 'scope' } = $props();
 
   let radioState = $derived(runtime.state);
   let keyboardConfig = $derived(getKeyboardConfig());
@@ -58,8 +63,8 @@
 
     <main class="content-center">
       <div class="lcd-slot">
-        <div class="lcd-frame">
-          <AmberLcdDisplay />
+        <div class="lcd-frame" data-lcd-variant={variant}>
+          <AmberCockpit />
         </div>
       </div>
       <div class="lcd-control-strip">
