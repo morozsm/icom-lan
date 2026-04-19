@@ -60,12 +60,21 @@
     }
   }
 
-  async function handlePowerOn() {
-    if (!confirm('Turn ON the radio?')) return;
-    try {
-      await runtime.system.powerOn();
-    } catch (err) {
-      alert(`Failed to turn on radio: ${err}`);
+  async function handlePowerToggle() {
+    if (radioPowerOn === true) {
+      if (!confirm('Turn OFF the radio?')) return;
+      try {
+        await runtime.system.powerOff();
+      } catch (err) {
+        alert(`Failed to turn off radio: ${err}`);
+      }
+    } else {
+      if (!confirm('Turn ON the radio?')) return;
+      try {
+        await runtime.system.powerOn();
+      } catch (err) {
+        alert(`Failed to turn on radio: ${err}`);
+      }
     }
   }
 
@@ -95,14 +104,6 @@
     };
   });
 
-  async function handlePowerOff() {
-    if (!confirm('Turn OFF the radio?')) return;
-    try {
-      await runtime.system.powerOff();
-    } catch (err) {
-      alert(`Failed to turn off radio: ${err}`);
-    }
-  }
 </script>
 
 {#if controlState === 'disconnected'}
@@ -209,23 +210,13 @@
     </button>
     <button
       type="button"
-      class="control-btn power-on-btn"
-      onclick={handlePowerOn}
-      title="Power ON radio"
-      disabled={radioPowerOn === true}
+      class="control-btn power-toggle-btn"
+      class:is-on={radioPowerOn === true}
+      onclick={handlePowerToggle}
+      title={radioPowerOn === true ? 'Power OFF radio' : 'Power ON radio'}
     >
       <Power size={14} strokeWidth={2} />
-      <span class="btn-label">ON</span>
-    </button>
-    <button
-      type="button"
-      class="control-btn power-off-btn"
-      onclick={handlePowerOff}
-      title="Power OFF radio"
-      disabled={radioPowerOn !== true}
-    >
-      <Power size={14} strokeWidth={2} />
-      <span class="btn-label">OFF</span>
+      <span class="btn-label">{radioPowerOn === true ? 'OFF' : 'ON'}</span>
     </button>
   </div>
 </div>
@@ -347,12 +338,22 @@
     pointer-events: none;
   }
 
-  .power-on-btn:hover {
+  .power-toggle-btn {
+    border-color: var(--v2-accent-green, #4ade80);
+    color: var(--v2-accent-green, #4ade80);
+  }
+
+  .power-toggle-btn:hover {
     border-color: var(--v2-accent-green, #4ade80);
     background: rgba(74, 222, 128, 0.1);
   }
 
-  .power-off-btn:hover:not(:disabled) {
+  .power-toggle-btn.is-on {
+    border-color: var(--v2-accent-red, #ef4444);
+    color: var(--v2-accent-red, #ef4444);
+  }
+
+  .power-toggle-btn.is-on:hover {
     border-color: var(--v2-accent-red, #ef4444);
     background: rgba(239, 68, 68, 0.1);
   }
