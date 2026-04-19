@@ -211,7 +211,7 @@
 
 {#if skinId === 'mobile'}
   <MobileRadioLayout />
-{:else if skinId === 'amber-lcd'}
+{:else if skinId === 'lcd-cockpit' || skinId === 'lcd-scope'}
   <LcdLayout />
 {:else}
 <div class="radio-layout">
