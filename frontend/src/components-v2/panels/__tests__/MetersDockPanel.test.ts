@@ -275,6 +275,16 @@ describe('MetersDockPanel relevance dimming', () => {
     expect(t.querySelector('[data-meter="s"]')?.getAttribute('data-relevant')).toBe('true');
     expect(t.querySelector('[data-meter="po"]')?.getAttribute('data-relevant')).toBe('false');
   });
+
+  it('keeps Vd tile relevant in RX idle (supply voltage is always readable)', () => {
+    const t = mountPanel({ ...fullProps, vdMeter: 180, txActive: false });
+    expect(t.querySelector('[data-meter="vd"]')?.getAttribute('data-relevant')).toBe('true');
+  });
+
+  it('keeps Vd tile relevant during TX as well', () => {
+    const t = mountPanel({ ...fullProps, vdMeter: 180, txActive: true });
+    expect(t.querySelector('[data-meter="vd"]')?.getAttribute('data-relevant')).toBe('true');
+  });
 });
 
 describe('MetersDockPanel formatted values', () => {

@@ -112,7 +112,9 @@
         fillPct: normalize(vdMeter) * 100,
         fill: 'var(--v2-meter-vd-fill)',
         track: 'var(--v2-meter-vd-track)',
-        relevant: txActive,
+        // Vd (drain voltage) is a continuous supply/PSU health metric,
+        // readable in both RX and TX — unlike TX-only Po/SWR/ALC/Id/COMP.
+        relevant: true,
       });
     }
     if (compMeter !== undefined && compressorOn === true) {
