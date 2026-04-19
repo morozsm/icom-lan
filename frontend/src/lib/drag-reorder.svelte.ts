@@ -16,7 +16,38 @@
 
 // --- Pure helpers (exported for testing) ---
 
+export const KNOWN_DEFAULTS_SUFFIX = ':known-defaults';
+
+export function loadKnownDefaults(storageKey: string): Set<string> {
+  try {
+    const raw = localStorage.getItem(storageKey + KNOWN_DEFAULTS_SUFFIX);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return new Set(parsed.filter((id): id is string => typeof id === 'string'));
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+  return new Set<string>();
+}
+
+export function saveKnownDefaults(storageKey: string, ids: Iterable<string>): void {
+  try {
+    localStorage.setItem(storageKey + KNOWN_DEFAULTS_SUFFIX, JSON.stringify([...ids]));
+  } catch {
+    /* ignore */
+  }
+}
+
 export function loadPanelOrder(storageKey: string, defaults: string[]): string[] {
+  const known = loadKnownDefaults(storageKey);
+  // Union known-defaults with the current defaults list so that future loads
+  // recognise today's defaults as "already presented".
+  const nextKnown = new Set<string>(known);
+  for (const id of defaults) nextKnown.add(id);
+
   try {
     const stored = localStorage.getItem(storageKey);
     if (stored) {
@@ -33,17 +64,19 @@ export function loadPanelOrder(storageKey: string, defaults: string[]): string[]
           }
         }
         if (unique.length > 0) {
-          // Merge in any default panel ids that are missing from the stored
-          // order — otherwise newly added panels (e.g. 'audio-scope' in PR
-          // #821) never render for existing users whose localStorage was
-          // written before the default was introduced. Unknown (peer-owned
-          // or removed) ids stay untouched so cross-sidebar moves survive.
+          // Append ONLY defaults that the app has never presented to this
+          // sidebar before (i.e. newly introduced panels). Defaults that are
+          // already in `known` but absent from the stored order were
+          // deliberately removed by the user (e.g. dragged to the peer
+          // sidebar) — re-adding them would duplicate the panel across both
+          // sidebars. Unknown (peer-owned) ids stay untouched.
           for (const id of defaults) {
-            if (!seen.has(id)) {
+            if (!seen.has(id) && !known.has(id)) {
               seen.add(id);
               unique.push(id);
             }
           }
+          saveKnownDefaults(storageKey, nextKnown);
           return unique;
         }
       }
@@ -51,6 +84,7 @@ export function loadPanelOrder(storageKey: string, defaults: string[]): string[]
   } catch {
     /* ignore */
   }
+  saveKnownDefaults(storageKey, nextKnown);
   return [...defaults];
 }
 
@@ -244,6 +278,7 @@ export function createDragReorder(options: DragReorderOptions): DragInstance {
     order = [...defaults];
     try {
       localStorage.removeItem(storageKey);
+      localStorage.removeItem(storageKey + KNOWN_DEFAULTS_SUFFIX);
     } catch {
       /* ignore */
     }
