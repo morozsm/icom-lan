@@ -11,6 +11,7 @@
   import { getKeyboardConfig } from '$lib/stores/capabilities.svelte';
   import { applyModeDefault } from '$lib/stores/tuning.svelte';
   import AmberLcdDisplay from '../panels/lcd/AmberLcdDisplay.svelte';
+  import VfoControlPanel from '../panels/lcd/VfoControlPanel.svelte';
   import LeftSidebar from './LeftSidebar.svelte';
   import RightSidebar from './RightSidebar.svelte';
   import KeyboardHandler from './KeyboardHandler.svelte';
@@ -57,6 +58,7 @@
     </main>
 
     <div class="content-right">
+      <VfoControlPanel />
       <RightSidebar />
     </div>
   </section>
@@ -129,6 +131,12 @@
   .content-left::-webkit-scrollbar,
   .content-right::-webkit-scrollbar {
     display: none;
+  }
+
+  .content-right {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
   }
 
   .content-center {
