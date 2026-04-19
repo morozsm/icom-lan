@@ -424,7 +424,7 @@
   .radio-layout {
     position: relative;
     display: grid;
-    grid-template-rows: 28px 156px minmax(0, 1fr) auto;
+    grid-template-rows: 28px 200px minmax(0, 1fr) auto;
     height: 100vh;
     background:
       linear-gradient(180deg, var(--v2-bg-gradient-start) 0%, var(--v2-bg-darkest) 100%),
