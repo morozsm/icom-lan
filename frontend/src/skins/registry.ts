@@ -50,14 +50,15 @@ export function resolveSkinId(ctx: SkinResolutionContext): SkinId {
  * Returns the default export of the skin's entry Svelte component.
  * Skins are code-split — only the active skin is loaded.
  *
- * Phase 0 of the twin-skin epic (#887): both `lcd-cockpit` and `lcd-scope`
- * point at the existing `LcdSkin.svelte` until dedicated wrappers land.
- * The legacy `amber-lcd` alias is accepted via `resolvePersistedSkinId()`.
+ * Each LCD variant has its own wrapper that mounts `LcdLayout` with the
+ * appropriate `variant` prop — this is how the cockpit/scope selection
+ * reaches LcdLayout (registry → skin wrapper → LcdLayout). The legacy
+ * `amber-lcd` alias is accepted via `resolvePersistedSkinId()`.
  */
 const SKIN_LOADERS: Record<SkinId, () => Promise<{ default: Component }>> = {
   'desktop-v2': () => import('./desktop-v2/DesktopSkin.svelte'),
-  'lcd-cockpit': () => import('./amber-lcd/LcdSkin.svelte'),
-  'lcd-scope': () => import('./amber-lcd/LcdSkin.svelte'),
+  'lcd-cockpit': () => import('./lcd-cockpit/LcdCockpitSkin.svelte'),
+  'lcd-scope': () => import('./lcd-scope/LcdScopeSkin.svelte'),
   'mobile': () => import('./mobile/MobileSkin.svelte'),
 };
 
