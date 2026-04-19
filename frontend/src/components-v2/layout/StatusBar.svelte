@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Radio, Cable, Activity, Volume2, ArrowDownUp, Power, Unplug, Palette, Monitor, Tv } from 'lucide-svelte';
+  import { Radio, Cable, Activity, Volume2, ArrowDownUp, Power, Unplug, Palette, Monitor, Tv, Settings } from 'lucide-svelte';
   import ThemePicker from '../controls/ThemePicker.svelte';
   import { runtime } from '$lib/runtime';
   import {
@@ -14,6 +14,11 @@
   import { getFrequency } from '$lib/stores/radio.svelte';
   import { hasAnyScope, hasAudio, hasSpectrum } from '$lib/stores/capabilities.svelte';
   import { getLayoutMode, cycleLayoutMode } from '$lib/stores/layout.svelte';
+
+  interface Props {
+    onSettings?: () => void;
+  }
+  let { onSettings }: Props = $props();
 
   let layoutMode = $derived(getLayoutMode());
   let hasAnyScopeAvail = $derived(hasAnyScope());
@@ -185,6 +190,17 @@
   </div>
 
   <div class="status-controls">
+    {#if onSettings}
+      <button
+        type="button"
+        class="control-btn settings-btn"
+        onclick={onSettings}
+        title="Settings"
+        aria-label="Settings"
+      >
+        <Settings size={14} strokeWidth={2} />
+      </button>
+    {/if}
     <button
       type="button"
       class="control-btn layout-btn"
