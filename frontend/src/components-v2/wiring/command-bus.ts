@@ -1023,6 +1023,15 @@ export function makeKeyboardHandlers() {
           cmd('set_vfo', { vfo: next });
           return;
         }
+        case 'set_active_vfo': {
+          const target = action.params?.vfo;
+          if (target !== 'MAIN' && target !== 'SUB') {
+            return;
+          }
+          patchRadioState({ active: target });
+          cmd('set_vfo', { vfo: target });
+          return;
+        }
         case 'focus_target': {
           const target = action.params?.target;
           if (typeof target === 'string') {
