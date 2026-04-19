@@ -377,6 +377,59 @@
     // If latched, don't turn off on release
   }
 
+  // ── Landscape PTT guards (#843 parity with FAB) ──
+  // Adds pointermove-8px cancel + haptic + TX-permit dim-state so the
+  // landscape strip mirrors the guarded FAB (#840). Skips the 50ms hold
+  // delay — in landscape the thumb is already poised on PTT, so an
+  // intentional press should engage immediately once TX permit allows.
+  let lsPttStartX = 0;
+  let lsPttStartY = 0;
+  let lsPttEngaged = false;
+  const LS_PTT_MOVE_CANCEL_PX = 8;
+
+  function lsPttPointerDown(event: PointerEvent) {
+    if (pttMode === 'latched') {
+      // Tap-to-unlatch — delegate to shared state machine.
+      pttDown();
+      return;
+    }
+    if (txPermit === 'denied' && pttMode === 'idle') {
+      // Refuse the first press on out-of-band frequency. Second press
+      // within ~2s bypasses (user insists). Reuse the FAB convention.
+      const now = Date.now();
+      if (!lsLastDeniedPressAt || now - lsLastDeniedPressAt > 2000) {
+        lsLastDeniedPressAt = now;
+        return;
+      }
+    }
+    (event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId);
+    lsPttStartX = event.clientX;
+    lsPttStartY = event.clientY;
+    lsPttEngaged = true;
+    if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+      try { navigator.vibrate(10); } catch { /* noop */ }
+    }
+    pttDown();
+  }
+
+  function lsPttPointerMove(event: PointerEvent) {
+    if (!lsPttEngaged) return;
+    const dx = event.clientX - lsPttStartX;
+    const dy = event.clientY - lsPttStartY;
+    if (dx * dx + dy * dy > LS_PTT_MOVE_CANCEL_PX * LS_PTT_MOVE_CANCEL_PX) {
+      lsPttEngaged = false;
+      pttUp();
+    }
+  }
+
+  function lsPttPointerUp() {
+    if (!lsPttEngaged) return;
+    lsPttEngaged = false;
+    pttUp();
+  }
+
+  let lsLastDeniedPressAt = 0;
+
   // ── ATU (long-press = tune) ──
   let atuTimer: ReturnType<typeof setTimeout> | null = null;
   let atuDidLongPress = false;
@@ -450,9 +503,13 @@
           class="m-ls-ptt"
           class:m-ptt-held={pttMode === 'held'}
           class:m-ptt-latched={pttMode === 'latched'}
-          ontouchstart={(e) => { e.preventDefault(); pttDown(); }}
-          ontouchend={(e) => { e.preventDefault(); pttUp(); }}
-          ontouchcancel={() => pttUp()}
+          class:m-ls-ptt-dim={txPermit === 'denied' && pttMode === 'idle'}
+          onpointerdown={lsPttPointerDown}
+          onpointermove={lsPttPointerMove}
+          onpointerup={lsPttPointerUp}
+          onpointercancel={lsPttPointerUp}
+          oncontextmenu={(e) => e.preventDefault()}
+          title={txPermit === 'denied' ? 'TX not allowed on this frequency' : 'Push to talk'}
         >
           {pttMode === 'latched' ? 'TX🔒' : pttMode === 'held' ? 'TX' : 'PTT'}
         </button>
@@ -1094,6 +1151,14 @@
     background: var(--v2-accent-red, #ef4444);
     color: #fff;
     box-shadow: 0 0 16px rgba(239, 68, 68, 0.5);
+  }
+
+  /* TX-permit denied (#843): dim border + text so the operator sees at a
+     glance that the current frequency is out-of-band before pressing. */
+  .m-ls-ptt.m-ls-ptt-dim {
+    border-color: rgba(239, 68, 68, 0.35);
+    background: rgba(239, 68, 68, 0.04);
+    color: rgba(239, 68, 68, 0.5);
   }
 
   .m-ls-ptt.m-ptt-latched {
