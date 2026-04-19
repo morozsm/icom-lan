@@ -115,6 +115,54 @@ describe('ActiveReceiverToggle', () => {
       expect(onChange).toHaveBeenCalledWith('MAIN');
     });
 
+    it('ArrowLeft on MAIN wraps selection to SUB', () => {
+      const onChange = vi.fn();
+      const t = mountToggle({ active: 'MAIN', onChange });
+      const main = t.querySelector<HTMLButtonElement>('[data-active-receiver-segment="MAIN"]')!;
+      main.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+      expect(onChange).toHaveBeenCalledWith('SUB');
+    });
+
+    it('ArrowRight on SUB wraps selection to MAIN', () => {
+      const onChange = vi.fn();
+      const t = mountToggle({ active: 'SUB', onChange });
+      const sub = t.querySelector<HTMLButtonElement>('[data-active-receiver-segment="SUB"]')!;
+      sub.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+      expect(onChange).toHaveBeenCalledWith('MAIN');
+    });
+
+    it('ArrowUp on MAIN wraps selection to SUB', () => {
+      const onChange = vi.fn();
+      const t = mountToggle({ active: 'MAIN', onChange });
+      const main = t.querySelector<HTMLButtonElement>('[data-active-receiver-segment="MAIN"]')!;
+      main.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+      expect(onChange).toHaveBeenCalledWith('SUB');
+    });
+
+    it('ArrowDown on SUB wraps selection to MAIN', () => {
+      const onChange = vi.fn();
+      const t = mountToggle({ active: 'SUB', onChange });
+      const sub = t.querySelector<HTMLButtonElement>('[data-active-receiver-segment="SUB"]')!;
+      sub.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+      expect(onChange).toHaveBeenCalledWith('MAIN');
+    });
+
+    it('Home selects first segment (MAIN)', () => {
+      const onChange = vi.fn();
+      const t = mountToggle({ active: 'SUB', onChange });
+      const sub = t.querySelector<HTMLButtonElement>('[data-active-receiver-segment="SUB"]')!;
+      sub.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
+      expect(onChange).toHaveBeenCalledWith('MAIN');
+    });
+
+    it('End selects last segment (SUB)', () => {
+      const onChange = vi.fn();
+      const t = mountToggle({ active: 'MAIN', onChange });
+      const main = t.querySelector<HTMLButtonElement>('[data-active-receiver-segment="MAIN"]')!;
+      main.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+      expect(onChange).toHaveBeenCalledWith('SUB');
+    });
+
     it('Enter on focused segment selects it', () => {
       const onChange = vi.fn();
       const t = mountToggle({ active: 'MAIN', onChange });

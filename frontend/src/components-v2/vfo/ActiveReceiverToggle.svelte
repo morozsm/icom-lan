@@ -32,16 +32,34 @@
     onChange(next);
   }
 
+  function move(current: Receiver, delta: 1 | -1): Receiver {
+    const idx = RECEIVERS.indexOf(current);
+    const nextIdx = (idx + delta + RECEIVERS.length) % RECEIVERS.length;
+    return RECEIVERS[nextIdx];
+  }
+
   function handleKeydown(event: KeyboardEvent, current: Receiver): void {
     const { key } = event;
     if (key === 'ArrowLeft' || key === 'ArrowUp') {
       event.preventDefault();
-      select('MAIN');
-      focusSegment('MAIN');
+      const next = move(current, -1);
+      select(next);
+      focusSegment(next);
     } else if (key === 'ArrowRight' || key === 'ArrowDown') {
       event.preventDefault();
-      select('SUB');
-      focusSegment('SUB');
+      const next = move(current, 1);
+      select(next);
+      focusSegment(next);
+    } else if (key === 'Home') {
+      event.preventDefault();
+      const next = RECEIVERS[0];
+      select(next);
+      focusSegment(next);
+    } else if (key === 'End') {
+      event.preventDefault();
+      const next = RECEIVERS[RECEIVERS.length - 1];
+      select(next);
+      focusSegment(next);
     } else if (key === 'Enter' || key === ' ') {
       event.preventDefault();
       select(current);
