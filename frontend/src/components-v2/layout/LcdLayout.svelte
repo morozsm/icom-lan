@@ -17,6 +17,7 @@
   import { getKeyboardConfig } from '$lib/stores/capabilities.svelte';
   import { applyModeDefault } from '$lib/stores/tuning.svelte';
   import AmberCockpit from '../panels/lcd/AmberCockpit.svelte';
+  import AmberScope from '../panels/lcd/AmberScope.svelte';
   import LcdContrastControl from '../panels/lcd/LcdContrastControl.svelte';
   import VfoControlPanel from '../panels/lcd/VfoControlPanel.svelte';
   import LeftSidebar from './LeftSidebar.svelte';
@@ -64,7 +65,11 @@
     <main class="content-center">
       <div class="lcd-slot">
         <div class="lcd-frame" data-lcd-variant={variant}>
-          <AmberCockpit />
+          {#if variant === 'scope'}
+            <AmberScope />
+          {:else}
+            <AmberCockpit />
+          {/if}
         </div>
       </div>
       <div class="lcd-control-strip">
