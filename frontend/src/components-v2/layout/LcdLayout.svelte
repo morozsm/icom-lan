@@ -19,6 +19,9 @@
   import AmberCockpit from '../panels/lcd/AmberCockpit.svelte';
   import AmberScope from '../panels/lcd/AmberScope.svelte';
   import LcdContrastControl from '../panels/lcd/LcdContrastControl.svelte';
+  import LcdDisplayModeControl from '../panels/lcd/LcdDisplayModeControl.svelte';
+  import { getLcdDisplayMode } from '$lib/stores/lcd-display-mode.svelte';
+  import '../panels/lcd/lcd-vintage.css';
   import VfoControlPanel from '../panels/lcd/VfoControlPanel.svelte';
   import LeftSidebar from './LeftSidebar.svelte';
   import RightSidebar from './RightSidebar.svelte';
@@ -34,6 +37,9 @@
 
   let radioState = $derived(runtime.state);
   let keyboardConfig = $derived(getKeyboardConfig());
+  // Reactive Display Mode (#838) — the class is applied to .lcd-frame
+  // so CSS effects in lcd-vintage.css can layer on top of the base render.
+  let displayMode = $derived(getLcdDisplayMode());
   let activeMode = $derived(radioState?.active === 'SUB' ? radioState?.sub?.mode : radioState?.main?.mode);
 
   const keyboardHandlers = makeKeyboardHandlers();
@@ -64,7 +70,11 @@
 
     <main class="content-center">
       <div class="lcd-slot">
-        <div class="lcd-frame" data-lcd-variant={variant}>
+        <div
+          class="lcd-frame lcd-mode-{displayMode}"
+          data-lcd-variant={variant}
+          data-lcd-mode={displayMode}
+        >
           {#if variant === 'scope'}
             <AmberScope />
           {:else}
@@ -74,6 +84,7 @@
       </div>
       <div class="lcd-control-strip">
         <LcdContrastControl />
+        <LcdDisplayModeControl />
       </div>
     </main>
 
@@ -176,6 +187,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
     padding: 4px 6px;
     border: 1px solid var(--v2-border-panel);
     border-radius: 4px;

@@ -1,0 +1,111 @@
+/**
+ * LCD Display Mode effects (#838).
+ *
+ * Applied by LcdLayout as a class on `.lcd-frame`. The base render
+ * (scanlines, warm amber background) lives in AmberCockpit/AmberScope
+ * and stays unchanged when `lcd-mode-clean` is active.
+ *
+ * CSS filters keep the effect layered and cheap — no extra DOM nodes,
+ * no JS animation loops. The `flicker` keyframe is intentionally short
+ * and low-amplitude so it reads as a CRT warm-up artifact, not a bug.
+ */
+
+/* Clean: no-op. Listed for documentation / CSS specificity symmetry. */
+.lcd-mode-clean {
+  /* default — no filter layer */
+}
+
+/* Vintage: slight sepia tint + gentle vignette. Warmth already baked
+   into the amber theme — this just compresses dynamic range a hair. */
+.lcd-mode-vintage {
+  filter: sepia(0.15) contrast(0.92) saturate(0.88);
+  position: relative;
+}
+.lcd-mode-vintage::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 55%,
+    rgba(0, 0, 0, 0.22) 100%
+  );
+  z-index: 3;
+  border-radius: inherit;
+}
+
+/* CRT: stronger vignette + slightly blurred + saturation boost,
+   mimicking a rounded phosphor tube. Scanlines come from the base
+   component, so we only thicken them via a compositional overlay. */
+.lcd-mode-crt {
+  filter: contrast(1.04) saturate(1.08);
+  position: relative;
+}
+.lcd-mode-crt::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      ellipse at center,
+      transparent 45%,
+      rgba(0, 0, 0, 0.32) 100%
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0px,
+      transparent 2px,
+      rgba(0, 0, 0, 0.035) 2px,
+      rgba(0, 0, 0, 0.035) 4px
+    );
+  z-index: 3;
+  border-radius: inherit;
+}
+
+/* Flicker: extends CRT with a subtle brightness oscillation. */
+.lcd-mode-flicker {
+  filter: contrast(1.04) saturate(1.08);
+  position: relative;
+  animation: lcd-flicker 5.5s infinite;
+}
+.lcd-mode-flicker::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      ellipse at center,
+      transparent 45%,
+      rgba(0, 0, 0, 0.32) 100%
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0px,
+      transparent 2px,
+      rgba(0, 0, 0, 0.035) 2px,
+      rgba(0, 0, 0, 0.035) 4px
+    );
+  z-index: 3;
+  border-radius: inherit;
+}
+
+@keyframes lcd-flicker {
+  0%, 100% { opacity: 1; }
+  16% { opacity: 0.985; }
+  17% { opacity: 1; }
+  48% { opacity: 0.99; }
+  49% { opacity: 1; }
+  82% { opacity: 0.975; }
+  83% { opacity: 1; }
+}
+
+/* Respect reduced-motion — flicker off when the user asks for no
+   animations. Base vignettes stay (they're static). */
+@media (prefers-reduced-motion: reduce) {
+  .lcd-mode-flicker {
+    animation: none;
+  }
+}
