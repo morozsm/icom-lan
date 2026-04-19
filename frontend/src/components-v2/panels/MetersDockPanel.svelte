@@ -12,6 +12,7 @@
     isSwrFault,
     normalize,
     normalizePower,
+    peakHoldDisplay,
     updatePeakHold,
     type PeakHoldState,
   } from './meter-utils';
@@ -64,23 +65,30 @@
     fault?: boolean;
   }
 
-  // Peak-hold state for Po/SWR/ALC. Tracked as normalized 0-100 fill pct so
-  // the decayed marker maps directly onto the bar.
+  // Peak-hold state for Po/SWR/ALC. Stores the latched peak + timestamp only;
+  // the displayed decay is computed per-render from `now` so it stays linear
+  // across the 2 s window instead of compounding tick-by-tick.
   let peaks = $state<Partial<Record<PeakKey, PeakHoldState>>>({});
+  let now = $state(Date.now());
 
-  function steppeak(key: PeakKey, current: number | undefined, now: number) {
+  function steppeak(key: PeakKey, current: number | undefined, t: number) {
     if (current === undefined) {
       if (peaks[key] !== undefined) peaks[key] = undefined;
       return;
     }
-    peaks[key] = updatePeakHold(peaks[key], current, now);
+    const next = updatePeakHold(peaks[key], current, t);
+    // Only write back on a re-latch / anchor reset — otherwise skip to avoid
+    // flagging a reactive read-then-write cycle. The display recomputes from
+    // `now` regardless.
+    if (peaks[key] !== next) peaks[key] = next;
   }
 
   function stepAllPeaks() {
-    const now = Date.now();
-    steppeak('po', powerMeter !== undefined ? normalizePower(powerMeter) * 100 : undefined, now);
-    steppeak('swr', swrMeter !== undefined ? normalize(swrMeter) * 100 : undefined, now);
-    steppeak('alc', alcMeter !== undefined ? normalize(alcMeter) * 100 : undefined, now);
+    const t = Date.now();
+    now = t;
+    steppeak('po', powerMeter !== undefined ? normalizePower(powerMeter) * 100 : undefined, t);
+    steppeak('swr', swrMeter !== undefined ? normalize(swrMeter) * 100 : undefined, t);
+    steppeak('alc', alcMeter !== undefined ? normalize(alcMeter) * 100 : undefined, t);
   }
 
   // A 100ms interval drives both the decay and the latch from fresh
@@ -195,7 +203,9 @@
     {#each tiles as tile (tile.key)}
       {@const peakPct =
         tile.key === 'po' || tile.key === 'swr' || tile.key === 'alc'
-          ? peaks[tile.key]?.peak
+          ? peaks[tile.key] !== undefined
+            ? peakHoldDisplay(peaks[tile.key], tile.fillPct, now)
+            : undefined
           : undefined}
       <div
         class="dock-tile"
