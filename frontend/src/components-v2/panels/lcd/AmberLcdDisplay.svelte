@@ -5,11 +5,9 @@
     toTxProps, toRitXitProps, toVfoOpsProps, toMeterProps,
     toRfFrontEndProps, toAgcProps, toDspProps, toFilterProps,
   } from '../../wiring/state-adapter';
-  import { makeVfoHandlers, makeRitXitHandlers, makeCwPanelHandlers } from '../../wiring/command-bus';
   import AmberFrequency from './AmberFrequency.svelte';
   import AmberSmeter from './AmberSmeter.svelte';
   import AmberAfScope from './AmberAfScope.svelte';
-  import { runtime } from '$lib/runtime';
   import { createAudioScopeConnection } from '$lib/runtime/adapters/scope-adapter';
   import { onMount } from 'svelte';
   import {
@@ -20,11 +18,6 @@
     stepLcdContrast,
     type LcdContrastPreset,
   } from '$lib/stores/lcd-contrast.svelte';
-
-  // Command-bus handlers (singleton, no reactive deps)
-  const vfoHandlers = makeVfoHandlers();
-  const ritXitHandlers = makeRitXitHandlers();
-  const cwHandlers = makeCwPanelHandlers();
 
   // Band lookup by frequency (LCD-specific)
   const BANDS: [string, number, number][] = [
@@ -104,8 +97,6 @@
   let nrActive = $derived(dsp.nrMode > 0 || dsp.nrLevel > 0);
   let notchActive = $derived(dsp.notchMode === 'manual');
   let lockActive = $derived(radioState?.dialLock ?? false);
-  let isCwMode = $derived(mode === 'CW' || mode === 'CW-R');
-  let breakInMode = $derived(radioState?.breakIn ?? 0);  // 0=off, 1=semi, 2=full
   let contourActive = $derived((rx?.contour ?? 0) > 0);
   let contourLevel = $derived(rx?.contour ?? 0);
   let anfActive = $derived(rx?.autoNotch ?? false);
@@ -176,31 +167,29 @@
   });
 </script>
 
+<!--
+  Grid scaffold (issue #844 / plan §9.1):
+  - Two column templates selected by `hasDualReceiver()`:
+    single-RX = 1 column (12u), dual-RX = 2 columns (6u + 6u).
+  - Shared row heights so capability collapse does NOT reflow peer cells.
+  - Dedicated full-width `filter` row at a consistent position.
+  - Soft buttons (A↔B, A=B, DW, SPLIT, XIT, CLR, TUNE, BK-OFF) evicted
+    to sidebar `VfoControlPanel` — display surfaces state, not commands.
+  - No content changes: VFO B stays compact, status tokens unchanged,
+    filter-viz keeps `compact` prop (wide mode is #835).
+-->
 <div class="amber-lcd" class:tx-active={tx.txActive}>
-  <div class="lcd-screen">
+  <div class="lcd-screen" class:dual={hasDualReceiver()}>
     <div class="lcd-scanlines"></div>
 
-    <!-- ═══ S-Meter ═══ -->
-    <div class="lcd-meter-row">
-      <AmberSmeter value={meterValue} txActive={tx.txActive} source={activeMeterSource} />
-      <button class="lcd-meter-src-btn" onclick={cycleMeterSource}>{activeMeterSource}</button>
-    </div>
-    {#if hasDualReceiver() && !tx.txActive}
-      <div class="lcd-meter-row lcd-meter-sub">
-        <AmberSmeter value={subSValue} source="S" />
-      </div>
-    {/if}
-
-    <!-- ═══ Indicators (below S-meter) — gated by capabilities ═══ -->
-    <div class="lcd-ind-row">
-      <!-- TX group (always shown) -->
+    <!-- ═══ Indicators (status row) ═══ -->
+    <div class="lcd-ind-row" style:grid-area="indicators">
       <span class="lcd-ind" class:active={tx.txActive} class:ind-tx={tx.txActive}>TX</span>
       {#if hasCapability('vox')}<span class="lcd-ind" class:active={tx.voxActive}>VOX</span>{/if}
       {#if hasCapability('compressor')}<span class="lcd-ind" class:active={tx.compActive}>PROC{tx.compActive ? ` ${tx.compLevel}` : ''}</span>{/if}
 
       <span class="ind-sep"></span>
 
-      <!-- RF front-end -->
       {#if hasCapability('attenuator')}<span class="lcd-ind" class:active={rf.att > 0}>ATT</span>{/if}
       {#if hasCapability('preamp')}<span class="lcd-ind active">{rf.pre === 0 ? 'IPO' : rf.pre === 1 ? 'AMP1' : 'AMP2'}</span>{/if}
       {#if hasCapability('digisel')}<span class="lcd-ind" class:active={rf.digiSel}>DIGI-SEL</span>{/if}
@@ -209,7 +198,6 @@
 
       <span class="ind-sep"></span>
 
-      <!-- DSP / filters -->
       {#if hasCapability('nb')}<span class="lcd-ind" class:active={nbActive}>NB{nbActive ? ` ${dsp.nbLevel}` : ''}</span>{/if}
       {#if hasCapability('nr')}<span class="lcd-ind" class:active={nrActive}>NR{nrActive ? ` ${dsp.nrLevel}` : ''}</span>{/if}
       {#if hasCapability('contour')}<span class="lcd-ind" class:active={contourActive}>CONT</span>{/if}
@@ -219,7 +207,6 @@
 
       <span class="ind-sep"></span>
 
-      <!-- VFO / system -->
       {#if hasCapability('rf_gain')}<span class="lcd-ind" class:active={rf.rfGain < 255}>RFG</span>{/if}
       {#if hasCapability('squelch')}<span class="lcd-ind" class:active={rf.squelch > 0}>SQL</span>{/if}
       {#if hasCapability('rit')}<span class="lcd-ind" class:active={ritXit.ritActive}>RIT</span>{/if}
@@ -228,18 +215,56 @@
       {#if hasCapability('dial_lock')}<span class="lcd-ind" class:active={lockActive}>LOCK</span>{/if}
     </div>
 
-    <!-- ═══ VFO A + AF Scope row ═══ -->
-    <div class="lcd-vfo-scope-row">
-      <div class="lcd-vfo-row lcd-vfo-main">
-        <span class="vfo-tag">{activeVfo}</span>
-        <div class="vfo-freq">
-          <AmberFrequency {freqHz} size="large" />
-        </div>
-        <span class="vfo-mode-box">{mode}{filter ? ` ${filter}` : ''}</span>
-        {#if bandLabel}
-          <span class="vfo-band-box">{bandLabel}</span>
+    <!-- ═══ Meter A (main / active RX) ═══ -->
+    <div class="lcd-meter-row" style:grid-area="meter-a">
+      <AmberSmeter value={meterValue} txActive={tx.txActive} source={activeMeterSource} />
+      <button class="lcd-meter-src-btn" onclick={cycleMeterSource}>{activeMeterSource}</button>
+    </div>
+
+    <!-- ═══ Meter B (sub RX, dual-RX only) — stays compact per #844 scope ═══ -->
+    {#if hasDualReceiver()}
+      <div class="lcd-meter-row lcd-meter-sub" style:grid-area="meter-b">
+        {#if !tx.txActive}
+          <AmberSmeter value={subSValue} source="S" />
         {/if}
       </div>
+    {/if}
+
+    <!-- ═══ VFO A ═══ -->
+    <div class="lcd-vfo-row lcd-vfo-main" style:grid-area="vfo-a">
+      <span class="vfo-tag">{activeVfo}</span>
+      <div class="vfo-freq">
+        <AmberFrequency {freqHz} size="large" />
+      </div>
+      <span class="vfo-mode-box">{mode}{filter ? ` ${filter}` : ''}</span>
+      {#if bandLabel}
+        <span class="vfo-band-box">{bandLabel}</span>
+      {/if}
+    </div>
+
+    <!-- ═══ VFO B — compact form preserved (peer promotion is #845) ═══ -->
+    {#if hasDualReceiver()}
+      <div class="lcd-vfo-row lcd-vfo-sub" style:grid-area="vfo-b">
+        <span class="vfo-tag vfo-tag-sub">{activeVfo === 'A' ? 'B' : 'A'}</span>
+        <div class="vfo-freq">
+          <AmberFrequency freqHz={subFreqHz} size="small" />
+        </div>
+        {#if subMode}
+          <span class="vfo-mode vfo-mode-sub">{subMode}</span>
+        {/if}
+      </div>
+    {/if}
+
+    <!-- ═══ RIT / XIT offset (pb row) ═══ -->
+    {#if ritXit.ritActive || ritXit.xitActive}
+      <div class="lcd-rit-row" style:grid-area="pb">
+        <span class="rit-label">{ritXit.ritActive ? 'RIT' : 'XIT'}</span>
+        <span class="rit-value">{ritXit.ritOffset >= 0 ? '+' : ''}{ritXit.ritOffset} Hz</span>
+      </div>
+    {/if}
+
+    <!-- ═══ Filter-viz (full-width row, compact prop preserved) ═══ -->
+    <div class="lcd-filter-row" style:grid-area="filter">
       {#if showFft}
         <div class="lcd-scope-strip">
           <AmberAfScope
@@ -260,54 +285,8 @@
       {/if}
     </div>
 
-    <!-- ═══ VFO B: sub frequency ═══ -->
-    {#if hasDualReceiver()}
-      <div class="lcd-vfo-row lcd-vfo-sub">
-        <span class="vfo-tag vfo-tag-sub">{activeVfo === 'A' ? 'B' : 'A'}</span>
-        <div class="vfo-freq">
-          <AmberFrequency freqHz={subFreqHz} size="small" />
-        </div>
-        {#if subMode}
-          <span class="vfo-mode vfo-mode-sub">{subMode}</span>
-        {/if}
-      </div>
-    {/if}
-
-    <!-- ═══ VFO controls ═══ -->
-    <div class="lcd-vfo-ctrl-row">
-      <button class="lcd-btn" onclick={vfoHandlers.onSwap}>A↔B</button>
-      <button class="lcd-btn" onclick={vfoHandlers.onEqual}>A=B</button>
-      {#if hasCapability('dual_rx')}
-        <button class="lcd-btn" class:active={vfoOps.dualWatch} onclick={() => vfoHandlers.onDualWatchToggle(!vfoOps.dualWatch)}>DW</button>
-      {/if}
-      {#if hasCapability('split')}
-        <button class="lcd-btn" class:active={vfoOps.splitActive} onclick={vfoHandlers.onSplitToggle}>SPLIT</button>
-      {/if}
-      {#if hasCapability('rit')}
-        <button class="lcd-btn" class:active={ritXit.xitActive} onclick={ritXitHandlers.onXitToggle}>XIT</button>
-        <button class="lcd-btn" onclick={ritXitHandlers.onClear}>CLR</button>
-      {/if}
-      {#if hasCapability('tuner')}
-        <button class="lcd-btn" onclick={() => runtime.send('set_tuner_status', { value: 2 })}>TUNE</button>
-      {/if}
-      {#if isCwMode && hasCapability('cw')}
-        <!-- AUTO TUNE: removed — see #671 for software implementation -->
-        {#if hasCapability('break_in')}
-          <button class="lcd-btn" class:active={breakInMode > 0} onclick={() => cwHandlers.onBreakInModeChange(breakInMode === 0 ? 1 : breakInMode === 1 ? 2 : 0)}>{breakInMode === 0 ? 'BK-OFF' : breakInMode === 1 ? 'SEMI' : 'FULL'}</button>
-        {/if}
-      {/if}
-    </div>
-
-    <!-- ═══ RIT / XIT offset (if active) ═══ -->
-    {#if ritXit.ritActive || ritXit.xitActive}
-      <div class="lcd-rit-row">
-        <span class="rit-label">{ritXit.ritActive ? 'RIT' : 'XIT'}</span>
-        <span class="rit-value">{ritXit.ritOffset >= 0 ? '+' : ''}{ritXit.ritOffset} Hz</span>
-      </div>
-    {/if}
-
     <!-- ═══ Contrast preset row (segmented control) — plan §2.1 path 3 ═══ -->
-    <div class="lcd-contrast-row" role="radiogroup" aria-label="LCD contrast preset">
+    <div class="lcd-contrast-row" role="radiogroup" aria-label="LCD contrast preset" style:grid-area="contrast">
       <span class="lcd-contrast-label">CONTRAST</span>
       {#each LCD_CONTRAST_PRESETS as p}
         <button
@@ -350,14 +329,45 @@
     border: 2px solid #8A7020;
     border-radius: 8px;
     padding: 12px 18px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
     overflow: hidden;
     box-shadow:
       inset 0 0 50px rgba(0, 0, 0, 0.06),
       0 0 8px rgba(0, 0, 0, 0.5);
     min-height: 0;
+
+    /* ── Grid scaffold (issue #844) ──
+       Two templates with IDENTICAL row heights — collapsing VFO-B / meter-B
+       does not reflow peer cells (plan §9.1 P2). A dedicated full-width
+       `filter` row (~120 px) sits at a consistent position regardless of
+       capability. */
+    display: grid;
+    gap: 6px;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows:
+      28px              /* indicators */
+      28px              /* meter */
+      72px              /* vfo */
+      auto              /* pb (RIT/XIT offset; collapses when inactive) */
+      minmax(0, 120px)  /* filter */
+      auto;             /* contrast */
+    grid-template-areas:
+      "indicators"
+      "meter-a"
+      "vfo-a"
+      "pb"
+      "filter"
+      "contrast";
+  }
+
+  .lcd-screen.dual {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "indicators indicators"
+      "meter-a    meter-b"
+      "vfo-a      vfo-b"
+      "pb         pb"
+      "filter     filter"
+      "contrast   contrast";
   }
 
   .lcd-scanlines {
@@ -423,54 +433,6 @@
   @keyframes lcd-blink {
     0%, 50% { opacity: 1; }
     51%, 100% { opacity: 0.15; }
-  }
-
-  /* ── VFO control buttons ── */
-  .lcd-vfo-ctrl-row {
-    display: flex;
-    gap: 6px;
-    padding: 2px 8px;
-    position: relative;
-    z-index: 2;
-    flex-shrink: 1;
-    flex-wrap: wrap;
-    min-height: 0;
-  }
-  .lcd-btn {
-    font-family: 'JetBrains Mono', 'Courier New', monospace;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    color: rgba(26, 16, 0, calc(var(--lcd-alpha-inactive) * 3));
-    background: transparent;
-    border: 1.5px solid rgba(26, 16, 0, calc(var(--lcd-alpha-inactive) * 1.25));
-    border-radius: 3px;
-    padding: 1px 8px;
-    cursor: pointer;
-    user-select: none;
-  }
-  .lcd-btn:hover {
-    color: rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.6));
-    border-color: rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.3));
-  }
-  .lcd-btn:active {
-    color: rgba(26, 16, 0, var(--lcd-alpha-active));
-    border-color: rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.5));
-  }
-  .lcd-btn.active {
-    color: rgba(26, 16, 0, var(--lcd-alpha-active));
-    border-color: rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.4));
-  }
-
-  /* ── VFO + Scope row ── */
-  .lcd-vfo-scope-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    position: relative;
-    z-index: 2;
-    flex-shrink: 0;
-    min-height: 0;
   }
 
   /* ── VFO rows ── */
@@ -644,13 +606,19 @@
     border-color: rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.5));
   }
 
-  /* ── AF Scope strip (next to VFO freq) ── */
+  /* ── Filter / AF Scope row (full-width grid cell) ── */
+  .lcd-filter-row {
+    position: relative;
+    z-index: 2;
+    min-height: 0;
+    min-width: 0;
+    overflow: hidden;
+  }
   .lcd-scope-strip {
     position: relative;
     z-index: 2;
-    flex: 0 0 30%;
-    height: 96px;
-    max-height: 100%;
+    width: 100%;
+    height: 100%;
     min-height: 0;
   }
 
