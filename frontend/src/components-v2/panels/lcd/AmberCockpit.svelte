@@ -396,6 +396,9 @@
     padding: 4px;
     box-sizing: border-box;
     min-height: 0;
+    /* Container for narrow-viewport collapse query (issue #894).
+       inline-size tracks width only — avoids height-dependency loops. */
+    container-type: inline-size;
   }
 
   .lcd-screen {
@@ -650,5 +653,28 @@
     box-shadow:
       inset 0 0 40px rgba(180, 30, 0, 0.08),
       0 0 10px rgba(180, 30, 0, 0.15);
+  }
+
+  /* ── Narrow-viewport collapse (issue #894) ──
+     When the .amber-lcd container is ≤ 640px wide, collapse the dual-cockpit
+     grid to a single column with VFO B stacked below VFO A.
+     Desktop (> 640px) is completely unaffected — the rule never fires. */
+  @container (max-width: 640px) {
+    .lcd-screen.dual {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-areas:
+        "global"
+        "vfo-a"
+        "vfo-b"
+        "scope"
+        "aux";
+    }
+
+    /* Remove the side-by-side column separator — it reads as an artifact
+       when VFO B is stacked below VFO A instead of beside it. */
+    .lcd-screen.dual .lcd-vfo-b {
+      border-left: none;
+      padding-left: 0;
+    }
   }
 </style>
