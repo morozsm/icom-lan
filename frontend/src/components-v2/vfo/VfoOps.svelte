@@ -3,6 +3,7 @@
   import { hasDualReceiver, getVfoScheme } from '$lib/stores/capabilities.svelte';
   import { vfoSwapLabel, vfoCopyLabel, vfoTxLabel } from './vfo-ops-utils';
   import { withDoubleClick } from '../wiring/double-click';
+  import ActiveReceiverToggle from './ActiveReceiverToggle.svelte';
 
   interface Props {
     splitActive: boolean;
@@ -10,6 +11,10 @@
     /** Read-only indicator: which receiver transmits right now.
      *  Derived from split flag — see `toVfoOpsProps`. */
     txVfo: 'main' | 'sub';
+    /** Currently active receiver (MAIN or SUB).  Drives segmented toggle. */
+    activeVfo?: 'MAIN' | 'SUB';
+    /** Fired when user selects a different receiver via the segmented toggle. */
+    onActiveVfoChange?: (next: 'MAIN' | 'SUB') => void;
     onSwap: () => void;
     /** Equalize MAIN→SUB (copy). Backend sends `0x07 0xB1`. */
     onEqual: () => void;
@@ -25,6 +30,8 @@
     splitActive,
     dualWatchActive,
     txVfo,
+    activeVfo = 'MAIN',
+    onActiveVfoChange,
     onSwap,
     onEqual,
     onSplitToggle,
@@ -47,9 +54,18 @@
 </script>
 
 <div class:dual={dualRx} class="vfo-ops">
+  {#if dualRx}
+    <div class="active-receiver-slot">
+      <ActiveReceiverToggle
+        active={activeVfo}
+        onChange={(next) => onActiveVfoChange?.(next)}
+      />
+    </div>
+  {/if}
   <button
     type="button"
     class="bridge-button v2-control-button"
+    data-op="copy"
     data-active="false"
     data-color="muted"
     onclick={onEqual}
@@ -58,6 +74,7 @@
   <button
     type="button"
     class="bridge-button v2-control-button"
+    data-op="split"
     data-active={splitActive}
     data-color="cyan"
     onclick={splitClick}
@@ -67,6 +84,7 @@
     <button
       type="button"
       class="bridge-button v2-control-button"
+      data-op="dw"
       data-active={dualWatchActive}
       data-color="green"
       onclick={dwClick}
@@ -76,6 +94,7 @@
   <button
     type="button"
     class="bridge-button v2-control-button"
+    data-op="swap"
     data-active="false"
     data-color="muted"
     onclick={onSwap}
@@ -146,12 +165,14 @@
   }
 
   /* Dual-rx layout:
-     Row 1: COPY   | SPLIT
-     Row 2: DW     | SWAP
-     Row 3: TX-indicator (span 2) */
-  .vfo-ops.dual .bridge-button:nth-child(1) { grid-column: 1; grid-row: 1; }  /* COPY  (M→S) */
-  .vfo-ops.dual .bridge-button:nth-child(2) { grid-column: 2; grid-row: 1; }  /* SPLIT */
-  .vfo-ops.dual .bridge-button:nth-child(3) { grid-column: 1; grid-row: 2; }  /* DW */
-  .vfo-ops.dual .bridge-button:nth-child(4) { grid-column: 2; grid-row: 2; }  /* SWAP (M↔S) */
-  .vfo-ops.dual .tx-indicator { grid-row: 3; }
+     Row 1: ACTIVE-RX toggle [M|S] (span 2)
+     Row 2: COPY   | SPLIT
+     Row 3: DW     | SWAP
+     Row 4: TX-indicator (span 2) */
+  .vfo-ops.dual .active-receiver-slot { grid-column: 1 / -1; grid-row: 1; }
+  .vfo-ops.dual .bridge-button[data-op='copy']  { grid-column: 1; grid-row: 2; }
+  .vfo-ops.dual .bridge-button[data-op='split'] { grid-column: 2; grid-row: 2; }
+  .vfo-ops.dual .bridge-button[data-op='dw']    { grid-column: 1; grid-row: 3; }
+  .vfo-ops.dual .bridge-button[data-op='swap']  { grid-column: 2; grid-row: 3; }
+  .vfo-ops.dual .tx-indicator { grid-row: 4; }
 </style>
