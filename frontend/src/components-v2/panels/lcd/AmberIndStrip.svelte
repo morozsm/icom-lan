@@ -2,30 +2,17 @@
   /**
    * AmberIndStrip — reusable indicator (status token) strip for LCD skins.
    *
-   * Indicator taxonomy (zone assignment):
+   * Zone is chosen by the consumer per-skin, not intrinsic to the token.
+   * The same token ID (e.g. 'tx', 'nb') may appear in different zones depending
+   * on which skin is using the strip.
    *
-   * | ID       | Zone    | Notes                                         |
-   * |----------|---------|-----------------------------------------------|
-   * | tx       | global  | PTT active — radio-wide                       |
-   * | vox      | global  | VOX mode — radio-wide                         |
-   * | proc     | global  | Compressor/speech proc — radio-wide            |
-   * | atu      | global  | Auto-tuner active/tuning — radio-wide         |
-   * | split    | global  | Split TX/RX — radio-wide                      |
-   * | lock     | global  | Dial lock — radio-wide                        |
-   * | data     | global  | Data mode — issue #892 lists as global        |
-   * | ipPlus   | global  | IP+ HW filter — radio-wide hardware option    |
-   * | nb       | perVfo  | Noise blanker — per-receiver                   |
-   * | nr       | perVfo  | Noise reduction — per-receiver                 |
-   * | notch    | perVfo  | Manual notch filter — per-receiver            |
-   * | anf      | perVfo  | Auto notch filter — per-receiver              |
-   * | cont     | perVfo  | Contour filter — per-receiver                 |
-   * | att      | perVfo  | Attenuator — per-receiver                     |
-   * | pre      | perVfo  | Preamp / IPO / AMP1 / AMP2 — per-receiver    |
-   * | digisel  | perVfo  | DIGI-SEL filter — per-receiver on IC-7610    |
-   * | rfg      | perVfo  | RF gain below max — per-receiver              |
-   * | sql      | perVfo  | Squelch active — per-receiver                 |
-   * | agc      | perVfo  | AGC mode label — always shown, per-receiver   |
-   * | rit      | perVfo  | RIT offset (global state, shown in VFO A)     |
+   * Zone values:
+   *   'global'   — radio-wide indicators (used by lcd-cockpit global strip)
+   *   'perVfo'   — per-receiver indicators (used by lcd-cockpit VFO columns)
+   *   'frontend' — TX-chain indicators: TX/VOX/PROC/ATT/PRE (used by lcd-scope)
+   *   'dsp'      — RX-DSP indicators: NB/NR/NOTCH/ANF/RFG (used by lcd-scope)
+   *
+   * Token IDs are defined below; labels and active state come from the consumer.
    */
 
   export type IndTokenId =
@@ -44,14 +31,29 @@
   }
 
   interface Props {
-    zone: 'global' | 'perVfo';
+    zone: 'global' | 'perVfo' | 'dsp' | 'frontend';
     tokens: IndToken[];
   }
 
   let { zone, tokens }: Props = $props();
+
+  let zoneLabel = $derived(
+    zone === 'frontend' ? 'FRONT' :
+    zone === 'dsp' ? 'DSP' :
+    null
+  );
 </script>
 
-<div class="lcd-ind-strip" class:zone-global={zone === 'global'} class:zone-per-vfo={zone === 'perVfo'}>
+<div
+  class="lcd-ind-strip"
+  class:zone-global={zone === 'global'}
+  class:zone-per-vfo={zone === 'perVfo'}
+  class:zone-frontend={zone === 'frontend'}
+  class:zone-dsp={zone === 'dsp'}
+>
+  {#if zoneLabel}
+    <span class="ind-zone-label">{zoneLabel}</span>
+  {/if}
   {#each tokens as token (token.id)}
     <span
       class="lcd-ind"
@@ -85,6 +87,32 @@
     flex-direction: row;
     flex-shrink: 1;
     gap: 5px;
+  }
+
+  /* Frontend strip: TX-chain indicators (TX/VOX/PROC/ATT/PRE) */
+  .zone-frontend {
+    flex-direction: row;
+    flex-shrink: 1;
+    gap: 5px;
+  }
+
+  /* DSP strip: RX-processing indicators (NB/NR/NOTCH/ANF/RFG) */
+  .zone-dsp {
+    flex-direction: row;
+    flex-shrink: 1;
+    gap: 5px;
+  }
+
+  /* Zone label: small ghost tag prefixing the zone's chips */
+  .ind-zone-label {
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: rgba(26, 16, 0, var(--lcd-alpha-ghost));
+    user-select: none;
+    white-space: nowrap;
+    padding-right: 2px;
   }
 
   .lcd-ind {

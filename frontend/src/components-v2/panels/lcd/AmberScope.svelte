@@ -1,9 +1,13 @@
 <script lang="ts">
   import { radio } from '$lib/stores/radio.svelte';
-  import { hasAudioFft, getCapabilities } from '$lib/stores/capabilities.svelte';
-  import { toTxProps, toFilterProps } from '../../wiring/state-adapter';
+  import { hasAudioFft, getCapabilities, hasCapability } from '$lib/stores/capabilities.svelte';
+  import {
+    toTxProps, toRitXitProps, toVfoOpsProps, toDspProps, toFilterProps,
+  } from '../../wiring/state-adapter';
   import AmberFrequency from './AmberFrequency.svelte';
   import AmberAfScope from './AmberAfScope.svelte';
+  import AmberIndStrip from './AmberIndStrip.svelte';
+  import type { IndToken } from './AmberIndStrip.svelte';
   import { createAudioScopeConnection } from '$lib/runtime/adapters/scope-adapter';
 
   // Band lookup by frequency (LCD-specific, mirrors AmberCockpit)
@@ -34,10 +38,22 @@
     return '';
   }
 
+  // AGC mode labels (mirrors AmberCockpit)
+  const AGC_LABELS: Record<number, string> = {
+    0: 'OFF', 1: 'FAST', 2: 'MID', 3: 'SLOW',
+    4: 'A-F', 5: 'A-M', 6: 'A-S',
+  };
+  function agcLabelFor(agcMode: number): string {
+    return AGC_LABELS[agcMode] ?? `${agcMode}`;
+  }
+
   let radioState = $derived(radio.current);
   let caps = $derived(getCapabilities());
 
   let tx = $derived(toTxProps(radioState, null));
+  let ritXit = $derived(toRitXitProps(radioState, null));
+  let vfoOps = $derived(toVfoOpsProps(radioState, null));
+  let dsp = $derived(toDspProps(radioState, null));
   let filterProps = $derived(toFilterProps(radioState, caps));
 
   // Active receiver data (single-RX — use active receiver; dual-RX handled in #897)
@@ -52,6 +68,71 @@
     if (!w || w <= 0) return '';
     return w >= 1000 ? `${(w / 1000).toFixed(1)} kHz` : `${w} Hz`;
   });
+
+  // Derived raw state helpers
+  let lockActive = $derived(radioState?.dialLock ?? false);
+  let notchActive = $derived(dsp.notchMode === 'manual');
+
+  // ── Indicator token arrays ──
+
+  // frontendTokens: TX-chain (TX/VOX/PROC/ATT/PRE)
+  let frontendTokens = $derived<IndToken[]>([
+    {
+      id: 'tx', label: 'TX', active: tx.txActive,
+      variant: tx.txActive ? 'tx' : undefined,
+    },
+    ...(hasCapability('vox') ? [{ id: 'vox' as const, label: 'VOX', active: tx.voxActive }] : []),
+    ...(hasCapability('compressor') ? [{
+      id: 'proc' as const,
+      label: tx.compActive ? `PROC ${tx.compLevel}` : 'PROC',
+      active: tx.compActive,
+    }] : []),
+    ...(hasCapability('attenuator') ? [{
+      id: 'att' as const, label: 'ATT', active: (rx?.att ?? 0) > 0,
+    }] : []),
+    ...(hasCapability('preamp') ? [{
+      id: 'pre' as const,
+      label: (rx?.preamp ?? 0) === 0 ? 'IPO'
+           : (rx?.preamp ?? 0) === 1 ? 'AMP1' : 'AMP2',
+      active: true,
+    }] : []),
+  ]);
+
+  // dspTokens: RX processing (NB/NR/NOTCH/ANF/RFG)
+  let dspTokens = $derived<IndToken[]>([
+    ...(hasCapability('nb') ? [{
+      id: 'nb' as const,
+      label: (rx?.nb ?? false) || (rx?.nbLevel ?? 0) > 0
+        ? `NB ${rx?.nbLevel ?? 0}` : 'NB',
+      active: (rx?.nb ?? false) || (rx?.nbLevel ?? 0) > 0,
+    }] : []),
+    ...(hasCapability('nr') ? [{
+      id: 'nr' as const,
+      label: (rx?.nr ?? false) || (rx?.nrLevel ?? 0) > 0
+        ? `NR ${rx?.nrLevel ?? 0}` : 'NR',
+      active: (rx?.nr ?? false) || (rx?.nrLevel ?? 0) > 0,
+    }] : []),
+    ...(hasCapability('notch') ? [
+      { id: 'notch' as const, label: 'NOTCH', active: rx?.manualNotch ?? false },
+      { id: 'anf' as const, label: 'ANF', active: rx?.autoNotch ?? false },
+    ] : []),
+    ...(hasCapability('rf_gain') ? [{
+      id: 'rfg' as const, label: 'RFG', active: (rx?.rfGain ?? 255) < 255,
+    }] : []),
+  ]);
+
+  // globalTokens: AGC/SQL/LOCK/SPLIT/RIT
+  let globalTokens = $derived<IndToken[]>([
+    { id: 'agc' as const, label: `AGC ${agcLabelFor(rx?.agc ?? 2)}`, active: true },
+    ...(hasCapability('squelch') ? [{
+      id: 'sql' as const, label: 'SQL', active: (rx?.squelch ?? 0) > 0,
+    }] : []),
+    ...(hasCapability('dial_lock') ? [{ id: 'lock' as const, label: 'LOCK', active: lockActive }] : []),
+    ...(hasCapability('split') ? [{ id: 'split' as const, label: 'SPLIT', active: vfoOps.splitActive }] : []),
+    ...(hasCapability('rit') ? [{
+      id: 'rit' as const, label: 'RIT', active: ritXit.ritActive,
+    }] : []),
+  ]);
 
   // FFT scope connection — reactive to capabilities
   let fftPixels = $state<Uint8Array | null>(null);
@@ -74,14 +155,15 @@
 
 <!--
   AmberScope — IC-7300-style scope-dominant layout.
-  60/40 grid: top 40% = compact VFO header, bottom 60% = dominant AfScope.
+  Grid: header (VFO) / ind-strips (3 zones) / scope (dominant AfScope).
+  Issue #899 adds frontend/dsp/global indicator zones.
   Issue #896 / epic #887 C-PR2 (single-RX only; dual-RX reserved for #897).
 -->
 <div class="amber-lcd amber-lcd-scope" class:tx-active={tx.txActive}>
   <div class="lcd-screen">
     <div class="lcd-scanlines"></div>
 
-    <!-- ═══ Header: compact VFO one-liner (40%) ═══ -->
+    <!-- ═══ Header: compact VFO one-liner ═══ -->
     <div class="lcd-header" style:grid-area="header">
       <span class="vfo-tag">►A</span>
       <div class="vfo-freq">
@@ -98,7 +180,16 @@
       </div>
     </div>
 
-    <!-- ═══ Scope: dominant AfScope (60%) ═══ -->
+    <!-- ═══ Indicator zones: FRONT / DSP / global ═══ -->
+    <div class="lcd-ind-zones" style:grid-area="ind-strips">
+      <AmberIndStrip zone="frontend" tokens={frontendTokens} />
+      <div class="zone-sep"></div>
+      <AmberIndStrip zone="dsp" tokens={dspTokens} />
+      <div class="zone-sep"></div>
+      <AmberIndStrip zone="global" tokens={globalTokens} />
+    </div>
+
+    <!-- ═══ Scope: dominant AfScope ═══ -->
     <div class="lcd-scope" style:grid-area="scope">
       {#if showFft}
         <AmberAfScope
@@ -144,14 +235,15 @@
       0 0 8px rgba(0, 0, 0, 0.5);
     min-height: 0;
 
-    /* 60/40 scope-dominant grid (issue #896) */
+    /* Grid: header / indicator-zones / scope (scope-dominant) */
     display: grid;
-    grid-template-rows: 40% 60%;
+    grid-template-rows: auto auto minmax(0, 1fr);
     grid-template-areas:
       "header"
+      "ind-strips"
       "scope";
     grid-template-columns: minmax(0, 1fr);
-    gap: 6px;
+    gap: 4px;
   }
 
   .lcd-scanlines {
@@ -230,7 +322,30 @@
     border-color: rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.25));
   }
 
-  /* ── Scope cell: fills 60% row ── */
+  /* ── Indicator zones row ── */
+  .lcd-ind-zones {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    position: relative;
+    z-index: 2;
+    min-height: 0;
+    overflow: hidden;
+    flex-wrap: wrap;
+    row-gap: 2px;
+  }
+
+  /* Vertical separator between zone strips */
+  .zone-sep {
+    width: 1px;
+    height: 16px;
+    background: rgba(26, 16, 0, calc(var(--lcd-alpha-ghost) * 2));
+    flex-shrink: 0;
+    margin: 0 6px;
+    align-self: center;
+  }
+
+  /* ── Scope cell: fills remaining height ── */
   .lcd-scope {
     position: relative;
     z-index: 2;
