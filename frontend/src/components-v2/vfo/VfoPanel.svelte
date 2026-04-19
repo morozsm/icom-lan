@@ -47,6 +47,7 @@
     '--receiver-accent': `var(--v2-receiver-${receiver}-accent)`,
     '--receiver-control-border': `var(--v2-vfo-${receiver}-control-border)`,
     '--receiver-control-glow': `var(--v2-vfo-${receiver}-control-glow)`,
+    '--receiver-panel-glow-outer': `var(--v2-vfo-${receiver}-panel-glow-outer)`,
   });
 </script>
 
@@ -130,12 +131,24 @@
     border-radius: 4px;
     overflow: hidden;
     font-family: 'Roboto Mono', monospace;
-    transition: border-color 150ms ease;
+    transition: border-color 150ms ease, box-shadow 150ms ease;
   }
 
   .panel.active {
     border-color: var(--receiver-control-border);
-    box-shadow: inset 0 0 0 1px var(--receiver-control-glow);
+    box-shadow:
+      inset 0 0 0 1px var(--receiver-control-glow),
+      0 0 12px 1px var(--receiver-panel-glow-outer);
+  }
+
+  .panel-meter,
+  .control-strip {
+    transition: filter 150ms ease;
+  }
+
+  .panel:not(.active) .panel-meter,
+  .panel:not(.active) .control-strip {
+    filter: saturate(0.4) brightness(0.85);
   }
 
   .panel-header {

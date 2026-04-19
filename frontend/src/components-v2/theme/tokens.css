@@ -146,8 +146,10 @@
   --v2-receiver-sub-accent: #FF6A00;    /* orange */
   --v2-vfo-main-control-border: rgba(0, 212, 255, 0.48);
   --v2-vfo-main-control-glow: rgba(0, 212, 255, 0.12);
+  --v2-vfo-main-panel-glow-outer: rgba(0, 212, 255, 0.35);
   --v2-vfo-sub-control-border: rgba(255, 106, 0, 0.48);
   --v2-vfo-sub-control-glow: rgba(255, 106, 0, 0.12);
+  --v2-vfo-sub-panel-glow-outer: rgba(255, 106, 0, 0.35);
 
   /* VFO Indicators */
   --v2-vfo-active-glow: rgba(0, 212, 255, 0.08);
