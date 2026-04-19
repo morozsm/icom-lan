@@ -342,6 +342,10 @@
        capability. */
     display: grid;
     gap: 6px;
+    /* Prevent auto-tracks (e.g. `pb` when RIT/XIT inactive) from stretching
+       to fill extra LCD height on taller viewports. Without this, the empty
+       `pb` row would grow and leave a blank gap before the filter row. */
+    align-content: start;
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows:
       28px              /* indicators */
