@@ -1240,17 +1240,36 @@ async def test_get_swr_zero_returns_one(connected_radio):
 
 @pytest.mark.asyncio
 async def test_get_swr_mid_value(connected_radio):
+    # Post-#440: interpolates the TOML calibration table.
+    # Calibration points: (96 → 2.0), (160 → 3.0); raw=120 interpolates
+    # linearly between them.
     connected_radio._transport.query = AsyncMock(return_value="RM6120000")
     swr = await connected_radio.get_swr()
-    expected = 1.0 + (120 / 255.0) * 8.9
+    t = (120 - 96) / (160 - 96)
+    expected = 2.0 + t * (3.0 - 2.0)
     assert abs(swr - expected) < 0.01
 
 
 @pytest.mark.asyncio
 async def test_get_swr_max(connected_radio):
+    # Post-#440: raw=255 pins to the last calibration point (5.0+),
+    # replacing the legacy linear endpoint of 9.9.
     connected_radio._transport.query = AsyncMock(return_value="RM6255000")
     swr = await connected_radio.get_swr()
-    assert abs(swr - 9.9) < 0.01
+    assert abs(swr - 5.0) < 0.01
+
+
+@pytest.mark.asyncio
+async def test_get_swr_calibration_endpoints(connected_radio):
+    """SWR calibration points from TOML are honored exactly (closes #440)."""
+    for raw_val, expected in [(48, 1.5), (96, 2.0), (160, 3.0)]:
+        connected_radio._transport.query = AsyncMock(
+            return_value=f"RM6{raw_val:03d}000"
+        )
+        swr = await connected_radio.get_swr()
+        assert abs(swr - expected) < 0.01, (
+            f"raw={raw_val} expected SWR {expected}, got {swr:.3f}"
+        )
 
 
 @pytest.mark.asyncio

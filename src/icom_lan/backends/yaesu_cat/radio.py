@@ -46,6 +46,38 @@ def _load_config(profile: Any) -> Any:
     raise TypeError(f"profile must be str or RigConfig, got {type(profile).__name__}")
 
 
+def _interpolate_swr(
+    raw: int, meter_calibrations: dict[str, list[Any]] | None
+) -> float:
+    """Convert raw SWR meter value (0-255) to an SWR ratio.
+
+    Uses the ``swr`` calibration table from TOML when available,
+    interpolating piecewise-linearly between points. Returns the
+    legacy linear approximation when no table is configured
+    (preserves backward compat for rigs that don't define
+    ``[meters.swr.calibration]``).
+    """
+    if raw <= 0:
+        return 1.0
+    points = (meter_calibrations or {}).get("swr")
+    if points:
+        # Points are already sorted by raw in typical TOMLs, but sort defensively.
+        sorted_pts = sorted(points, key=lambda p: p["raw"])
+        if raw <= sorted_pts[0]["raw"]:
+            return float(sorted_pts[0]["actual"])
+        if raw >= sorted_pts[-1]["raw"]:
+            return float(sorted_pts[-1]["actual"])
+        for lo, hi in zip(sorted_pts, sorted_pts[1:]):
+            if lo["raw"] <= raw <= hi["raw"]:
+                span = hi["raw"] - lo["raw"]
+                if span == 0:
+                    return float(lo["actual"])
+                t = (raw - lo["raw"]) / span
+                return float(lo["actual"]) + t * (float(hi["actual"]) - float(lo["actual"]))
+    # Legacy linear fallback (pre-#440 behavior).
+    return 1.0 + (raw / 255.0) * 8.9
+
+
 class YaesuCatRadio:
     """Radio backend for Yaesu FTX-1 (and compatible) transceivers.
 
@@ -727,16 +759,15 @@ class YaesuCatRadio:
         return main
 
     async def get_swr(self) -> float:
-        """Get SWR as a ratio (1.0–9.9).
+        """Get SWR as a ratio (>= 1.0).
 
-        TODO(#440): Replace linear mapping with calibration table from TOML.
-        Current mapping is approximate — needs hardware calibration.
-        Linear mapping: raw 0 → 1.0, raw 255 → 9.9.
+        Uses the piecewise-linear calibration table from
+        ``[meters.swr.calibration]`` in the rig TOML when present
+        (closes #440). Falls back to the legacy linear mapping
+        ``1.0 + raw/255 * 8.9`` when no table is configured.
         """
-        main, _ = await self._read_meter(6)
-        if main == 0:
-            return 1.0
-        return 1.0 + (main / 255.0) * 8.9
+        raw, _ = await self._read_meter(6)
+        return _interpolate_swr(raw, self._config.meter_calibrations)
 
     async def get_id_meter(self) -> int:
         """Get IDD (current drain) meter reading (0–255)."""

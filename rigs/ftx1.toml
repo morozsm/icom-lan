@@ -212,6 +212,36 @@ label = "Gen"
 start_hz = 100000
 end_hz = 470000000
 
+[meters.swr]
+# SWR calibration table (closes #440). Interpolated piecewise-linear by
+# `YaesuCatRadio.get_swr()`. Raw range 0-255 maps to SWR ratio.
+# Values below are best-effort approximations based on typical Yaesu meter
+# scaling; refine after bench calibration against a known reference load.
+[[meters.swr.calibration]]
+raw = 0
+actual = 1.0
+label = "1.0"
+
+[[meters.swr.calibration]]
+raw = 48
+actual = 1.5
+label = "1.5"
+
+[[meters.swr.calibration]]
+raw = 96
+actual = 2.0
+label = "2.0"
+
+[[meters.swr.calibration]]
+raw = 160
+actual = 3.0
+label = "3.0"
+
+[[meters.swr.calibration]]
+raw = 255
+actual = 5.0
+label = "5.0+"
+
 [meters.s_meter]
 redline_raw = 130
 
