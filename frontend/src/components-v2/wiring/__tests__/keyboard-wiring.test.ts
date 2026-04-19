@@ -37,9 +37,20 @@ vi.mock('$lib/stores/tuning.svelte', () => ({
   adjustTuningStep: vi.fn(),
 }));
 
+vi.mock('$lib/audio/audio-manager', () => ({
+  audioManager: {
+    setAudioConfig: vi.fn(),
+    startRx: vi.fn(),
+    stopRx: vi.fn(),
+    setRxVolume: vi.fn(),
+    rxEnabled: false,
+  },
+}));
+
 import { sendCommand } from '$lib/transport/ws-client';
 import { getRadioState, getActiveReceiver, patchActiveReceiver, patchRadioState } from '$lib/stores/radio.svelte';
 import { adjustTuningStep } from '$lib/stores/tuning.svelte';
+import { audioManager } from '$lib/audio/audio-manager';
 import { makeKeyboardHandlers } from '../command-bus';
 
 const makeAction = (action: string, params?: Record<string, unknown>) => ({
@@ -114,5 +125,26 @@ describe('makeKeyboardHandlers', () => {
     makeKeyboardHandlers().dispatch({ action: 'adjust_tuning_step', params: { direction: 'down' }, id: 'step-down', section: 'Tuning', sequence: ['ArrowDown'] });
 
     expect(adjustTuningStep).toHaveBeenCalledWith('down');
+  });
+
+  // Regression for #827: the keyboard path for switching the active
+  // receiver must route through the same helper as the VFO click so
+  // audio focus follows the new receiver.  Otherwise the operator
+  // tunes MAIN but keeps hearing SUB (or vice-versa) in Dual-Watch /
+  // browser-audio flows.
+  it('set_active_vfo couples audio focus to the requested receiver', () => {
+    vi.mocked(audioManager.setAudioConfig).mockClear();
+
+    makeKeyboardHandlers().dispatch(makeAction('set_active_vfo', { vfo: 'SUB' }));
+
+    expect(patchRadioState).toHaveBeenCalledWith({ active: 'SUB' });
+    expect(sendCommand).toHaveBeenCalledWith('set_vfo', { vfo: 'SUB' });
+    expect(audioManager.setAudioConfig).toHaveBeenCalledWith({ focus: 'sub' });
+
+    vi.mocked(audioManager.setAudioConfig).mockClear();
+
+    makeKeyboardHandlers().dispatch(makeAction('set_active_vfo', { vfo: 'MAIN' }));
+
+    expect(audioManager.setAudioConfig).toHaveBeenCalledWith({ focus: 'main' });
   });
 });
