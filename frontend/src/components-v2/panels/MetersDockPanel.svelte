@@ -1,0 +1,208 @@
+<script lang="ts">
+  import {
+    formatAlc,
+    formatPowerWatts,
+    formatSMeter,
+    formatSwr,
+    normalize,
+    normalizePower,
+  } from './meter-utils';
+
+  /**
+   * Unified TX / station-health meters dashboard for the desktop-v2 bottom
+   * dock. Renders an auto-fit grid of tiles for each meter whose raw value
+   * is defined on the runtime state (capability gating by `!== undefined`).
+   *
+   * Scope: issue #820 ships Po / SWR / ALC / S tiles. Id / Vd / COMP land
+   * with #822; peak-hold and fault highlighting land with #823.
+   *
+   * The panel is pure presentation — no store / transport imports.
+   */
+  interface Props {
+    sValue?: number;
+    powerMeter?: number;
+    swrMeter?: number;
+    alcMeter?: number;
+    txActive: boolean;
+  }
+
+  let { sValue, powerMeter, swrMeter, alcMeter, txActive }: Props = $props();
+
+  interface Tile {
+    key: 'po' | 'swr' | 'alc' | 's';
+    label: string;
+    display: string;
+    fillPct: number;
+    fill: string;
+    track: string;
+    relevant: boolean;
+  }
+
+  // Priority order (plan §3): Po → SWR → ALC → S. Tiles with undefined
+  // source values are omitted entirely so the grid re-flows.
+  let tiles = $derived.by<Tile[]>(() => {
+    const out: Tile[] = [];
+    if (powerMeter !== undefined) {
+      out.push({
+        key: 'po',
+        label: 'Po',
+        display: formatPowerWatts(powerMeter),
+        fillPct: normalizePower(powerMeter) * 100,
+        fill: 'var(--v2-meter-power-fill)',
+        track: 'var(--v2-meter-power-track)',
+        relevant: txActive,
+      });
+    }
+    if (swrMeter !== undefined) {
+      out.push({
+        key: 'swr',
+        label: 'SWR',
+        display: formatSwr(swrMeter),
+        fillPct: normalize(swrMeter) * 100,
+        fill: 'var(--v2-meter-swr-fill)',
+        track: 'var(--v2-meter-swr-track)',
+        relevant: txActive,
+      });
+    }
+    if (alcMeter !== undefined) {
+      out.push({
+        key: 'alc',
+        label: 'ALC',
+        display: formatAlc(alcMeter),
+        fillPct: normalize(alcMeter) * 100,
+        fill: 'var(--v2-meter-alc-fill)',
+        track: 'var(--v2-meter-alc-track)',
+        relevant: txActive,
+      });
+    }
+    if (sValue !== undefined) {
+      out.push({
+        key: 's',
+        label: 'S',
+        display: formatSMeter(sValue),
+        fillPct: normalize(sValue) * 100,
+        fill: 'var(--v2-meter-s-fill)',
+        track: 'var(--v2-meter-s-track)',
+        relevant: !txActive,
+      });
+    }
+    return out;
+  });
+</script>
+
+<article class="meters-dock-panel" data-testid="meters-dock-panel">
+  <header class="dock-header">
+    <span class="dock-title">STATION METERS</span>
+    <span class="dock-tx-state" data-active={txActive}>{txActive ? 'TX' : 'RX'}</span>
+  </header>
+
+  <div class="dock-grid">
+    {#each tiles as tile (tile.key)}
+      <div class="dock-tile" data-meter={tile.key} data-relevant={tile.relevant}>
+        <div class="tile-header">
+          <span class="tile-label">{tile.label}</span>
+        </div>
+        <div class="tile-value">{tile.display}</div>
+        <div class="tile-bar" style:background={tile.track}>
+          <div
+            class="tile-bar-fill"
+            style:width={`${Math.max(0, Math.min(100, tile.fillPct))}%`}
+            style:background={tile.fill}
+          ></div>
+        </div>
+      </div>
+    {/each}
+  </div>
+</article>
+
+<style>
+  .meters-dock-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px;
+    border: 1px solid var(--v2-border-darker);
+    border-radius: 4px;
+    background: linear-gradient(180deg, var(--v2-bg-gradient-start) 0%, var(--v2-bg-darkest) 100%);
+    box-sizing: border-box;
+    width: 100%;
+  }
+
+  .dock-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-family: 'Roboto Mono', monospace;
+  }
+
+  .dock-title {
+    color: var(--v2-text-light);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+  }
+
+  .dock-tx-state {
+    color: var(--v2-text-muted);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+  }
+
+  .dock-tx-state[data-active='true'] {
+    color: var(--v2-accent-red, #ff4040);
+  }
+
+  .dock-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+    gap: 8px;
+  }
+
+  .dock-tile {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px 12px;
+    border: 1px solid var(--v2-border);
+    border-radius: 4px;
+    background: var(--v2-bg-card, transparent);
+    font-family: 'Roboto Mono', monospace;
+    transition: opacity 200ms ease, border-color 150ms ease;
+  }
+
+  .dock-tile[data-relevant='false'] {
+    opacity: 0.35;
+  }
+
+  .tile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .tile-label {
+    color: var(--v2-text-light);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+  }
+
+  .tile-value {
+    color: var(--v2-text-white);
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.1;
+  }
+
+  .tile-bar {
+    position: relative;
+    height: 6px;
+    border-radius: 1px;
+    overflow: hidden;
+  }
+
+  .tile-bar-fill {
+    height: 100%;
+  }
+</style>
