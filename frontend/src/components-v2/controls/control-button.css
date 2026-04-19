@@ -12,7 +12,9 @@
   background: var(--btn-bg-idle);
   border: 1px solid var(--btn-border-idle);
   border-radius: var(--btn-border-radius);
-  color: var(--v2-text-dim);
+  /* Idle foreground: readable enough to signal "clickable". Do NOT use
+   * --v2-text-dim here — that reads as disabled (see issue #804). */
+  color: var(--v2-text-subdued);
   font-family: 'Roboto Mono', monospace;
   font-size: var(--btn-font-size);
   font-weight: var(--btn-font-weight);
@@ -41,11 +43,40 @@
 
 .v2-control-button:hover {
   background-color: var(--btn-bg-hover);
-  color: var(--v2-text-subdued);
+  color: var(--v2-text-bright);
 }
 
 .v2-control-button:focus {
   outline: none;
+}
+
+/* Truly disabled state — must be visually distinct from idle.
+ * Issue #804: idle was being confused with disabled because both looked
+ * muted. Disabled now gets reduced opacity + not-allowed cursor and
+ * suppresses hover/active feedback. */
+.v2-control-button:disabled,
+.v2-control-button[aria-disabled='true'] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  color: var(--v2-text-dim);
+}
+
+.v2-control-button:disabled:hover,
+.v2-control-button[aria-disabled='true']:hover {
+  background: var(--btn-bg-idle);
+  color: var(--v2-text-dim);
+}
+
+/* Muted accent variant (momentary ops like COPY/SWAP).
+ * Keeps a subtle cyan tint on border so the button reads as interactive
+ * even in idle state, without competing visually with toggle buttons. */
+.v2-control-button[data-color='muted'] {
+  --control-accent: var(--v2-accent-cyan);
+  border-color: color-mix(in srgb, var(--v2-accent-cyan) 22%, var(--btn-border-idle));
+}
+
+.v2-control-button[data-color='muted']:hover {
+  border-color: color-mix(in srgb, var(--v2-accent-cyan) 40%, var(--btn-border-idle));
 }
 
 .v2-control-button.active,
