@@ -50,7 +50,7 @@
   import { getKeyboardConfig } from '$lib/stores/capabilities.svelte';
   import { getTxAudioControl } from '$lib/runtime/adapters/tx-adapter';
   const txAudio = getTxAudioControl();
-  import { onMount, onDestroy } from 'svelte';
+  import { onMount, onDestroy, untrack } from 'svelte';
   import Toast from '../../components/shared/Toast.svelte';
 
   // ── State — via runtime ──
@@ -381,13 +381,25 @@
     // If latched, don't turn off on release
   }
 
-  // Orientation-change safety net (codex P1 on PR #931).
+  // Orientation-change safety net (codex P1 on PR #931 / #934 regression).
   // PttFab is conditionally mounted on `!isLandscape`; rotation removes
   // the component so its `pointerup` never fires. Without this guard,
   // an in-progress press would leave `pttMode === 'held'` and TX keyed
-  // until the 3-minute safety timer — a genuine TX hazard.
+  // until the 3-minute safety timer.
+  //
+  // Must fire ONLY on the transition `portrait → landscape`, not on
+  // every `pttMode` change — otherwise landscape hold-to-talk engages
+  // and is instantly released by this same effect (codex P1 on PR #934).
+  //
+  // Plain `let` for prevIsLandscape so it doesn't become a reactive
+  // dep; `untrack` on `pttMode` so only orientation changes re-run the
+  // effect body.
+  let prevIsLandscape = false;
   $effect(() => {
-    if (isLandscape && pttMode === 'held') {
+    const nowLandscape = isLandscape;
+    const enteredLandscape = !prevIsLandscape && nowLandscape;
+    prevIsLandscape = nowLandscape;
+    if (enteredLandscape && untrack(() => pttMode) === 'held') {
       pttMode = 'idle';
       disengageTx();
       clearPttSafety();
