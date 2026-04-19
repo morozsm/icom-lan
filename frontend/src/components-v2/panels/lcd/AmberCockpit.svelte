@@ -124,25 +124,144 @@
 
     return () => scope.disconnect();
   });
+
+  // ── Peer cockpit derivations ──
+  // In the dual-cockpit peer layout, column A always = main VFO, column B always = sub VFO.
+  // We derive main/sub data directly so each column has stable data regardless of active state.
+  let mainFreqHz = $derived(radioState?.main?.freqHz ?? 0);
+  let mainMode = $derived(radioState?.main?.mode ?? '---');
+  let mainFilter = $derived(radioState?.main?.filter ?? '');
+  let mainBand = $derived(freqToBand(mainFreqHz));
+  let mainSMeter = $derived(radioState?.main?.sMeter ?? 0);
+
+  let subVfoFreqHz = $derived(radioState?.sub?.freqHz ?? 0);
+  let subVfoMode = $derived(radioState?.sub?.mode ?? '');
+  let subVfoFilter = $derived(radioState?.sub?.filter ?? '');
+  let subVfoBand = $derived(freqToBand(subVfoFreqHz));
+
+  // Active state per column: A active when main is the active receiver
+  let vfoAActive = $derived(radioState?.active !== 'SUB');
+  let vfoBActive = $derived(radioState?.active === 'SUB');
+
+  // Meter for main VFO cockpit (always main, but source follows active-meter logic)
+  let mainMeterValue = $derived.by(() => {
+    if (vfoAActive) return meterValue;  // A is active — use the adapter-derived meter
+    // A is inactive — show main S-meter only
+    return mainSMeter;
+  });
+  let mainMeterSource = $derived<MeterSource>(vfoAActive ? activeMeterSource : 'S');
 </script>
 
 <!--
-  Grid scaffold (issue #844 / plan §9.1):
-  - Two column templates selected by `hasDualReceiver()`:
-    single-RX = 1 column (12u), dual-RX = 2 columns (6u + 6u).
-  - Shared row heights so capability collapse does NOT reflow peer cells.
-  - Dedicated full-width `filter` row at a consistent position.
-  - Soft buttons (A↔B, A=B, DW, SPLIT, XIT, CLR, TUNE, BK-OFF) evicted
-    to sidebar `VfoControlPanel` — display surfaces state, not commands.
-  - No content changes: VFO B stays compact, status tokens unchanged,
-    filter-viz keeps `compact` prop (wide mode is #835).
+  Grid scaffold (issue #891 / plan §3.2 Variant B):
+  - Dual-RX: two equal columns (vfo-a | vfo-b), full-width scope below, full-width aux below that.
+  - Single-RX: single column (vfo-a), scope, aux.
+  - VFO A = always MAIN receiver; VFO B = always SUB receiver.
+  - Active receiver indicated by --lcd-alpha-active tokens; inactive by --lcd-alpha-inactive.
+  - Font size identical for A and B — only ink alpha changes (no scaleY demotion).
+  - Indicators (status tokens) placed in aux row, full-width in both modes.
 -->
 <div class="amber-lcd" class:tx-active={tx.txActive}>
   <div class="lcd-screen" class:dual={hasDualReceiver()}>
     <div class="lcd-scanlines"></div>
 
-    <!-- ═══ Indicators (status row) ═══ -->
-    <div class="lcd-ind-row" style:grid-area="indicators">
+    <!-- ═══ VFO A cockpit (main receiver — always left/full column) ═══ -->
+    <div
+      class="lcd-vfo-col lcd-vfo-a"
+      class:inactive={!vfoAActive}
+      style:grid-area="vfo-a"
+    >
+      <!-- VFO tag + freq + badges (subgrid row 1) -->
+      <div class="lcd-vfo-row lcd-vfo-main">
+        <span class="vfo-tag">
+          [A]<span class="vfo-dot" class:active={vfoAActive}>●</span>
+        </span>
+        <div class="vfo-freq">
+          <AmberFrequency freqHz={mainFreqHz} size="large" />
+        </div>
+        <div class="vfo-badges">
+          <span class="vfo-mode-box">{mainMode}{mainFilter ? ` ${mainFilter}` : ''}</span>
+          {#if mainBand}
+            <span class="vfo-band-box">{mainBand}</span>
+          {/if}
+        </div>
+      </div>
+
+      <!-- Meter A (main receiver) -->
+      <div class="lcd-meter-row">
+        <AmberSmeter value={mainMeterValue} txActive={tx.txActive} source={mainMeterSource} />
+        {#if vfoAActive}
+          <button class="lcd-meter-src-btn" onclick={cycleMeterSource}>{mainMeterSource}</button>
+        {/if}
+      </div>
+
+      <!-- RIT / XIT offset (inline within cockpit, collapses when inactive) -->
+      {#if ritXit.ritActive || ritXit.xitActive}
+        <div class="lcd-rit-row">
+          <span class="rit-label">{ritXit.ritActive ? 'RIT' : 'XIT'}</span>
+          <span class="rit-value">{ritXit.ritOffset >= 0 ? '+' : ''}{ritXit.ritOffset} Hz</span>
+        </div>
+      {/if}
+    </div>
+
+    <!-- ═══ VFO B cockpit (sub receiver — equal peer on dual-RX) ═══ -->
+    {#if hasDualReceiver()}
+      <div
+        class="lcd-vfo-col lcd-vfo-b"
+        class:inactive={!vfoBActive}
+        style:grid-area="vfo-b"
+      >
+        <!-- VFO tag + freq + badges -->
+        <div class="lcd-vfo-row lcd-vfo-main">
+          <span class="vfo-tag">
+            [B]<span class="vfo-dot" class:active={vfoBActive}>●</span>
+          </span>
+          <div class="vfo-freq">
+            <AmberFrequency freqHz={subVfoFreqHz} size="large" />
+          </div>
+          <div class="vfo-badges">
+            {#if subVfoMode}
+              <span class="vfo-mode-box">{subVfoMode}{subVfoFilter ? ` ${subVfoFilter}` : ''}</span>
+            {/if}
+            {#if subVfoBand}
+              <span class="vfo-band-box">{subVfoBand}</span>
+            {/if}
+          </div>
+        </div>
+
+        <!-- Meter B (sub receiver — full-size, same as A) -->
+        <div class="lcd-meter-row">
+          {#if !tx.txActive}
+            <AmberSmeter value={subSValue} source="S" />
+          {/if}
+        </div>
+      </div>
+    {/if}
+
+    <!-- ═══ Scope / Filter-viz (full-width) ═══ -->
+    <div class="lcd-filter-row" style:grid-area="scope">
+      {#if showFft}
+        <div class="lcd-scope-strip">
+          <AmberAfScope
+            data={fftPixels}
+            onRegisterPush={(fn) => { fftPush = fn; }}
+            filterWidth={filterProps.filterWidth}
+            filterWidthMax={filterProps.filterWidthMax}
+            ifShift={filterProps.ifShift}
+            contour={contourLevel}
+            manualNotch={dsp.notchMode === 'manual'}
+            notchFreq={dsp.notchFreq}
+            autoNotch={notchActive}
+            bandwidth={fftBandwidth}
+            {mode}
+            compact
+          />
+        </div>
+      {/if}
+    </div>
+
+    <!-- ═══ Aux row: indicators (status tokens) — full-width ═══ -->
+    <div class="lcd-ind-row" style:grid-area="aux">
       <span class="lcd-ind" class:active={tx.txActive} class:ind-tx={tx.txActive}>TX</span>
       {#if hasCapability('vox')}<span class="lcd-ind" class:active={tx.voxActive}>VOX</span>{/if}
       {#if hasCapability('compressor')}<span class="lcd-ind" class:active={tx.compActive}>PROC{tx.compActive ? ` ${tx.compLevel}` : ''}</span>{/if}
@@ -172,78 +291,6 @@
       {#if hasCapability('split')}<span class="lcd-ind" class:active={vfoOps.splitActive}>SPLIT</span>{/if}
       {#if dataActive}<span class="lcd-ind active">DATA</span>{/if}
       {#if hasCapability('dial_lock')}<span class="lcd-ind" class:active={lockActive}>LOCK</span>{/if}
-    </div>
-
-    <!-- ═══ Meter A (main / active RX) ═══ -->
-    <div class="lcd-meter-row" style:grid-area="meter-a">
-      <AmberSmeter value={meterValue} txActive={tx.txActive} source={activeMeterSource} />
-      <button class="lcd-meter-src-btn" onclick={cycleMeterSource}>{activeMeterSource}</button>
-    </div>
-
-    <!-- ═══ Meter B (sub RX, dual-RX only) — stays compact per #844 scope ═══ -->
-    {#if hasDualReceiver()}
-      <div class="lcd-meter-row lcd-meter-sub" style:grid-area="meter-b">
-        {#if !tx.txActive}
-          <AmberSmeter value={subSValue} source="S" />
-        {/if}
-      </div>
-    {/if}
-
-    <!-- ═══ VFO A ═══ -->
-    <div class="lcd-vfo-row lcd-vfo-main" style:grid-area="vfo-a">
-      <span class="vfo-tag">{activeVfo}</span>
-      <div class="vfo-freq">
-        <AmberFrequency {freqHz} size="large" />
-      </div>
-      <div class="vfo-badges">
-        <span class="vfo-mode-box">{mode}{filter ? ` ${filter}` : ''}</span>
-        {#if bandLabel}
-          <span class="vfo-band-box">{bandLabel}</span>
-        {/if}
-      </div>
-    </div>
-
-    <!-- ═══ VFO B — compact form preserved (peer promotion is #845) ═══ -->
-    {#if hasDualReceiver()}
-      <div class="lcd-vfo-row lcd-vfo-sub" style:grid-area="vfo-b">
-        <span class="vfo-tag vfo-tag-sub">{activeVfo === 'A' ? 'B' : 'A'}</span>
-        <div class="vfo-freq">
-          <AmberFrequency freqHz={subFreqHz} size="small" />
-        </div>
-        {#if subMode}
-          <span class="vfo-mode vfo-mode-sub">{subMode}</span>
-        {/if}
-      </div>
-    {/if}
-
-    <!-- ═══ RIT / XIT offset (pb row) ═══ -->
-    {#if ritXit.ritActive || ritXit.xitActive}
-      <div class="lcd-rit-row" style:grid-area="pb">
-        <span class="rit-label">{ritXit.ritActive ? 'RIT' : 'XIT'}</span>
-        <span class="rit-value">{ritXit.ritOffset >= 0 ? '+' : ''}{ritXit.ritOffset} Hz</span>
-      </div>
-    {/if}
-
-    <!-- ═══ Filter-viz (full-width row, compact prop preserved) ═══ -->
-    <div class="lcd-filter-row" style:grid-area="filter">
-      {#if showFft}
-        <div class="lcd-scope-strip">
-          <AmberAfScope
-            data={fftPixels}
-            onRegisterPush={(fn) => { fftPush = fn; }}
-            filterWidth={filterProps.filterWidth}
-            filterWidthMax={filterProps.filterWidthMax}
-            ifShift={filterProps.ifShift}
-            contour={contourLevel}
-            manualNotch={dsp.notchMode === 'manual'}
-            notchFreq={dsp.notchFreq}
-            autoNotch={notchActive}
-            bandwidth={fftBandwidth}
-            {mode}
-            compact
-          />
-        </div>
-      {/if}
     </div>
 
   </div>
@@ -280,40 +327,34 @@
       0 0 8px rgba(0, 0, 0, 0.5);
     min-height: 0;
 
-    /* ── Grid scaffold (issue #844) ──
-       Two templates with IDENTICAL row heights — collapsing VFO-B / meter-B
-       does not reflow peer cells (plan §9.1 P2). A dedicated full-width
-       `filter` row (~120 px) sits at a consistent position regardless of
-       capability. */
+    /* ── Grid scaffold (issue #891 dual-cockpit) ──
+       Single-RX: 1 column, 3 rows (vfo-a / scope / aux).
+       Dual-RX: 2 equal columns, 3 rows (vfo-a vfo-b / scope scope / aux aux).
+       Indicators (status tokens) live in the full-width aux row. */
     display: grid;
     gap: 6px;
-    /* Prevent auto-tracks (e.g. `pb` when RIT/XIT inactive) from stretching
-       to fill extra LCD height on taller viewports. Without this, the empty
-       `pb` row would grow and leave a blank gap before the filter row. */
     align-content: start;
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows:
-      28px              /* indicators */
-      28px              /* meter */
-      72px              /* vfo */
-      auto              /* pb (RIT/XIT offset; collapses when inactive) */
-      minmax(0, 120px); /* filter */
+      auto               /* vfo-a cockpit */
+      minmax(0, 120px)   /* scope */
+      auto;              /* aux (indicators) */
     grid-template-areas:
-      "indicators"
-      "meter-a"
       "vfo-a"
-      "pb"
-      "filter";
+      "scope"
+      "aux";
   }
 
   .lcd-screen.dual {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows:
+      auto               /* vfo-a + vfo-b cockpits */
+      minmax(0, 120px)   /* scope full-width */
+      auto;              /* aux (indicators) full-width */
     grid-template-areas:
-      "indicators indicators"
-      "meter-a    meter-b"
-      "vfo-a      vfo-b"
-      "pb         pb"
-      "filter     filter";
+      "vfo-a vfo-b"
+      "scope scope"
+      "aux   aux";
   }
 
   .lcd-scanlines {
@@ -328,6 +369,168 @@
       rgba(0, 0, 0, 0.03) 3px,
       rgba(0, 0, 0, 0.03) 6px
     );
+  }
+
+  /* ── VFO cockpit column ── */
+  .lcd-vfo-col {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    position: relative;
+    z-index: 2;
+    min-height: 0;
+  }
+
+  /* Inactive column: override --lcd-alpha-active to inactive level.
+     Using a CSS class (not inline style) so applyLcdContrast() can
+     continue to write --lcd-alpha-active on .lcd-screen without being
+     stomped by a more-specific inline style on the column div. */
+  .lcd-vfo-col.inactive {
+    --lcd-alpha-active: var(--lcd-alpha-inactive);
+  }
+
+  /* Separator between A and B cockpits */
+  .lcd-screen.dual .lcd-vfo-b {
+    border-left: 1px solid rgba(26, 16, 0, calc(var(--lcd-alpha-inactive) * 2));
+    padding-left: 10px;
+  }
+
+  /* ── VFO rows (freq + badges) ── */
+  .lcd-vfo-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    position: relative;
+    z-index: 2;
+  }
+
+  .lcd-vfo-main {
+    /* issue #860 pattern: 3-col grid so freq digits cannot overflow into badges.
+       Applied to BOTH cockpit columns (A and B) — subgrid + overflow:hidden. */
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 10px;
+    flex: 1;
+    min-height: 0;
+    align-items: center;
+  }
+
+  .vfo-badges {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .vfo-tag {
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    font-size: 22px;
+    font-weight: 700;
+    color: rgba(26, 16, 0, var(--lcd-alpha-active));
+    border: 2px solid rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.4));
+    border-radius: 4px;
+    padding: 0 6px;
+    line-height: 1.3;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .vfo-dot {
+    font-size: 10px;
+    color: rgba(26, 16, 0, var(--lcd-alpha-inactive));
+    transition: color 0.1s;
+  }
+
+  .vfo-dot.active {
+    color: rgba(26, 16, 0, var(--lcd-alpha-active));
+  }
+
+  .vfo-freq {
+    flex: 0 1 auto;
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .vfo-band-box {
+    flex-shrink: 0;
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    font-size: 18px;
+    font-weight: 700;
+    color: rgba(26, 16, 0, var(--lcd-alpha-active));
+    letter-spacing: 1px;
+    border: 2px solid rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.4));
+    border-radius: 4px;
+    padding: 2px 8px;
+    background: rgba(26, 16, 0, var(--lcd-alpha-ghost));
+  }
+
+  .vfo-mode-box {
+    flex-shrink: 0;
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    font-size: 18px;
+    font-weight: 700;
+    color: rgba(26, 16, 0, var(--lcd-alpha-active));
+    letter-spacing: 1px;
+    border: 2px solid rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.4));
+    border-radius: 4px;
+    padding: 2px 8px;
+  }
+
+  /* ── S-Meter ── */
+  .lcd-meter-row {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    flex-shrink: 1;
+    min-height: 0;
+  }
+  .lcd-meter-row :global(.lcd-smeter) {
+    flex: 1;
+  }
+  .lcd-meter-src-btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    color: rgba(26, 16, 0, var(--lcd-alpha-active));
+    background: transparent;
+    border: 1.5px solid rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.3));
+    border-radius: 3px;
+    padding: 2px 6px;
+    margin-right: 4px;
+    cursor: pointer;
+    min-width: 36px;
+    text-align: center;
+  }
+  .lcd-meter-src-btn:hover {
+    border-color: rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.5));
+  }
+
+  /* ── RIT row (inline within cockpit) ── */
+  .lcd-rit-row {
+    display: flex;
+    gap: 6px;
+    align-items: baseline;
+    position: relative;
+    z-index: 2;
+  }
+
+  .rit-label {
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    color: rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.5));
+  }
+
+  .rit-value {
+    font-family: 'DSEG7 Classic', monospace;
+    font-weight: bold;
+    font-size: 16px;
+    color: rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.6));
   }
 
   /* ── Indicators ── */
@@ -379,158 +582,6 @@
   @keyframes lcd-blink {
     0%, 50% { opacity: 1; }
     51%, 100% { opacity: 0.15; }
-  }
-
-  /* ── VFO rows ── */
-  .lcd-vfo-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    position: relative;
-    z-index: 2;
-  }
-
-  .lcd-vfo-main {
-    /* issue #860: use explicit 3-col grid so freq digits (DSEG7 fixed metrics)
-       cannot overflow into mode/band badges. Column 2 `minmax(0,1fr)` lets the
-       freq cell shrink; `overflow:hidden` on `.vfo-freq` clips digits rather
-       than overlapping siblings. */
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    gap: 10px;
-    flex: 1;
-    min-height: 0;
-    align-items: center;
-  }
-
-  .vfo-badges {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-shrink: 0;
-  }
-
-  .vfo-tag {
-    font-family: 'JetBrains Mono', 'Courier New', monospace;
-    font-size: 22px;
-    font-weight: 700;
-    color: rgba(26, 16, 0, var(--lcd-alpha-active));
-    border: 2px solid rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.4));
-    border-radius: 4px;
-    padding: 0 6px;
-    line-height: 1.3;
-    flex-shrink: 0;
-  }
-
-  .vfo-tag-sub {
-    font-size: 16px;
-    border-width: 1.5px;
-    color: rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.5));
-    border-color: rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.25));
-    padding: 0 4px;
-  }
-
-  .vfo-freq {
-    flex: 0 1 auto;
-    display: flex;
-    align-items: center;
-    min-width: 0;
-    overflow: hidden;
-  }
-
-  .vfo-band-box {
-    flex-shrink: 0;
-    font-family: 'JetBrains Mono', 'Courier New', monospace;
-    font-size: 18px;
-    font-weight: 700;
-    color: rgba(26, 16, 0, var(--lcd-alpha-active));
-    letter-spacing: 1px;
-    border: 2px solid rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.4));
-    border-radius: 4px;
-    padding: 2px 8px;
-    background: rgba(26, 16, 0, var(--lcd-alpha-ghost));
-  }
-
-  .vfo-mode-box {
-    flex-shrink: 0;
-    font-family: 'JetBrains Mono', 'Courier New', monospace;
-    font-size: 18px;
-    font-weight: 700;
-    color: rgba(26, 16, 0, var(--lcd-alpha-active));
-    letter-spacing: 1px;
-    border: 2px solid rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.4));
-    border-radius: 4px;
-    padding: 2px 8px;
-  }
-
-  .vfo-mode-sub {
-    font-size: 13px;
-    color: rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.45));
-  }
-
-  /* ── S-Meter ── */
-  .lcd-meter-row {
-    position: relative;
-    z-index: 2;
-    display: flex;
-    align-items: center;
-    flex-shrink: 1;
-    min-height: 0;
-  }
-  .lcd-meter-row :global(.lcd-smeter) {
-    flex: 1;
-  }
-  .lcd-meter-src-btn {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
-    font-weight: 700;
-    color: rgba(26, 16, 0, var(--lcd-alpha-active));
-    background: transparent;
-    border: 1.5px solid rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.3));
-    border-radius: 3px;
-    padding: 2px 6px;
-    margin-right: 4px;
-    cursor: pointer;
-    min-width: 36px;
-    text-align: center;
-  }
-  .lcd-meter-src-btn:hover {
-    border-color: rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.5));
-  }
-  .lcd-meter-sub {
-    opacity: 0.6;
-    transform: scaleY(0.7);
-    transform-origin: top;
-    margin-top: -4px;
-  }
-
-  /* ── Sub VFO ── */
-  .lcd-vfo-sub {
-    border-top: 1px solid rgba(26, 16, 0, var(--lcd-alpha-inactive));
-    padding-top: 4px;
-  }
-
-  /* ── RIT row ── */
-  .lcd-rit-row {
-    display: flex;
-    gap: 6px;
-    align-items: baseline;
-    position: relative;
-    z-index: 2;
-  }
-
-  .rit-label {
-    font-family: 'JetBrains Mono', 'Courier New', monospace;
-    font-size: 12px;
-    font-weight: 700;
-    color: rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.5));
-  }
-
-  .rit-value {
-    font-family: 'DSEG7 Classic', monospace;
-    font-weight: bold;
-    font-size: 16px;
-    color: rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.6));
   }
 
   /* ── Filter / AF Scope row (full-width grid cell) ── */
