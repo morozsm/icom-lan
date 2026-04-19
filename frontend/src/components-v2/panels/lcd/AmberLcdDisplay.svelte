@@ -236,10 +236,12 @@
       <div class="vfo-freq">
         <AmberFrequency {freqHz} size="large" />
       </div>
-      <span class="vfo-mode-box">{mode}{filter ? ` ${filter}` : ''}</span>
-      {#if bandLabel}
-        <span class="vfo-band-box">{bandLabel}</span>
-      {/if}
+      <div class="vfo-badges">
+        <span class="vfo-mode-box">{mode}{filter ? ` ${filter}` : ''}</span>
+        {#if bandLabel}
+          <span class="vfo-band-box">{bandLabel}</span>
+        {/if}
+      </div>
     </div>
 
     <!-- ═══ VFO B — compact form preserved (peer promotion is #845) ═══ -->
@@ -449,9 +451,23 @@
   }
 
   .lcd-vfo-main {
+    /* issue #860: use explicit 3-col grid so freq digits (DSEG7 fixed metrics)
+       cannot overflow into mode/band badges. Column 2 `minmax(0,1fr)` lets the
+       freq cell shrink; `overflow:hidden` on `.vfo-freq` clips digits rather
+       than overlapping siblings. */
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 10px;
     flex: 1;
     min-height: 0;
     align-items: center;
+  }
+
+  .vfo-badges {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
   }
 
   .vfo-tag {
@@ -479,6 +495,7 @@
     display: flex;
     align-items: center;
     min-width: 0;
+    overflow: hidden;
   }
 
   .vfo-band-box {
@@ -491,7 +508,6 @@
     border: 2px solid rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.4));
     border-radius: 4px;
     padding: 2px 8px;
-    margin-left: 6px;
     background: rgba(26, 16, 0, var(--lcd-alpha-ghost));
   }
 
@@ -505,7 +521,6 @@
     border: 2px solid rgba(26, 16, 0, calc(var(--lcd-alpha-active) * 0.4));
     border-radius: 4px;
     padding: 2px 8px;
-    margin-left: 6px;
   }
 
   .vfo-mode-sub {
