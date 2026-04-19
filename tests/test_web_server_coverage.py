@@ -386,19 +386,30 @@ async def test_scope_health_and_radio_state_event_paths() -> None:
 
 
 @pytest.mark.asyncio
-async def test_on_radio_reconnect_waits_until_radio_ready() -> None:
+async def test_on_radio_reconnect_enables_scope_without_waiting_for_broadcast() -> None:
+    """Reconnect must queue EnableScope even while ``radio_ready`` is False.
+
+    Deadlock background: ``radio_ready`` waits for CI-V broadcast to resume,
+    but in the "deaf" firmware state observed on IC-7610 the broadcast may
+    not resume until a scope-enable CI-V command is sent.  Gating scope
+    re-enable behind ``radio_ready`` turned the two into a mutual wait
+    that timed out with "scope: radio not ready after 30s" every minute.
+
+    The reconnect path now trusts that ``soft_reconnect`` already brought
+    the session up (UDP + auth + discovery), and queues EnableScope
+    immediately.  If the radio is genuinely dead the command will fail
+    on its own — strictly better than a silent 30-second wait every cycle.
+    """
     radio = _scope_radio(ready=False)
+    radio._fetch_initial_state = AsyncMock()
     srv = WebServer(radio)
     srv._scope_handlers.add(MagicMock())
-    srv._scope_reenable_poll_interval = 0.01  # noqa: SLF001
-    srv._scope_reenable_timeout = 0.2  # noqa: SLF001
 
     srv._on_radio_reconnect()  # noqa: SLF001
-    assert not any(isinstance(c, EnableScope) for c in srv.command_queue.drain())
+    await asyncio.sleep(0.05)  # let the refetch task complete
 
-    radio.radio_ready = True
-    await asyncio.sleep(0.03)
     assert any(isinstance(c, EnableScope) for c in srv.command_queue.drain())
+    assert radio.radio_ready is False  # gate was bypassed, not flipped
 
 
 @pytest.mark.asyncio
