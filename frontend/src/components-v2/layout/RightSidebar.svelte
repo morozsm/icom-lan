@@ -1,10 +1,11 @@
 <script lang="ts">
-  import { hasCapability } from '$lib/stores/capabilities.svelte';
+  import { hasCapability, hasAudioFft } from '$lib/stores/capabilities.svelte';
   import RxAudioPanel from '../panels/RxAudioPanel.svelte';
   import DspPanel from '../panels/DspPanel.svelte';
   import TxPanel from '../panels/TxPanel.svelte';
   import CwPanel from '../panels/CwPanel.svelte';
   import MemoryPanel from '../panels/MemoryPanel.svelte';
+  import AudioSpectrumPanel from '../panels/audio-scope/AudioSpectrumPanel.svelte';
   import CollapsiblePanel from '../controls/CollapsiblePanel.svelte';
   import { createDragReorder } from '$lib/drag-reorder.svelte';
 
@@ -22,7 +23,7 @@
   // --- Panel reorder (shared logic) ---
   const drag = createDragReorder({
     storageKey: 'icom-lan:right-panel-order',
-    defaults: ['rx-audio', 'dsp', 'tx', 'cw', 'memory'],
+    defaults: ['rx-audio', 'audio-scope', 'dsp', 'tx', 'cw', 'memory'],
     containerSelector: '.right-sidebar',
   });
 </script>
@@ -31,6 +32,12 @@
   {#if showRx && drag.order.includes('rx-audio')}
     <CollapsiblePanel title="RX AUDIO" panelId="rx-audio" draggable onDragStart={drag.handleDragStart} style={drag.dragStyle('rx-audio')}>
       <RxAudioPanel />
+    </CollapsiblePanel>
+  {/if}
+
+  {#if showRx && drag.order.includes('audio-scope') && hasAudioFft()}
+    <CollapsiblePanel title="AUDIO SCOPE" panelId="audio-scope" draggable onDragStart={drag.handleDragStart} style={drag.dragStyle('audio-scope')}>
+      <AudioSpectrumPanel />
     </CollapsiblePanel>
   {/if}
 

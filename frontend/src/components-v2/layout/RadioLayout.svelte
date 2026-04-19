@@ -14,20 +14,16 @@
   
   import { runtime } from '$lib/runtime';
   import { applyModeDefault } from '$lib/stores/tuning.svelte';
-  import { getKeyboardConfig, hasCapability, hasDualReceiver, hasTx, hasAnyScope, hasSpectrum, hasAudioFft } from '$lib/stores/capabilities.svelte';
+  import { getKeyboardConfig, hasCapability, hasAnyScope, hasSpectrum } from '$lib/stores/capabilities.svelte';
   import { getLayoutMode } from '$lib/stores/layout.svelte';
   import { resolveSkinId, type SkinId } from '../../skins/registry';
   import SpectrumPanel from '../../components/spectrum/SpectrumPanel.svelte';
-  import AudioSpectrumPanel from '../panels/audio-scope/AudioSpectrumPanel.svelte';
-  import AmberLcdDisplay from '../panels/lcd/AmberLcdDisplay.svelte';
   import LeftSidebar from './LeftSidebar.svelte';
   import RightSidebar from './RightSidebar.svelte';
   import VfoHeader from './VfoHeader.svelte';
   import KeyboardHandler from './KeyboardHandler.svelte';
   import StatusBar from './StatusBar.svelte';
-  import DockMeterPanel from '../panels/DockMeterPanel.svelte';
-  import FrequencyDisplay from '../display/FrequencyDisplay.svelte';
-  import LinearSMeter from '../meters/LinearSMeter.svelte';
+  import MetersDockPanel from '../panels/MetersDockPanel.svelte';
   import {
     parseVfoLayoutScaleOverrides,
     resolveVfoLayoutProfile,
@@ -35,12 +31,12 @@
     type VfoLayoutScaleOverrides,
   } from './vfo-layout-tokens';
   import {
-    toVfoProps, toVfoOpsProps, toMeterProps,
+    toVfoProps, toVfoOpsProps,
     toRfFrontEndProps, toAgcProps, toRitXitProps,
     toBandSelectorProps, toDspProps, toCwProps,
   } from '../wiring/state-adapter';
   import {
-    makeKeyboardHandlers, makeMeterHandlers, makeVfoHandlers,
+    makeKeyboardHandlers, makeVfoHandlers,
     makeRfFrontEndHandlers, makeAgcHandlers, makeRitXitHandlers,
     makeBandHandlers, makePresetHandlers, makeDspHandlers, makeCwPanelHandlers,
     makeSystemHandlers,
@@ -90,9 +86,6 @@
   let mainVfo = $derived(toVfoProps(radioState, 'main'));
   let subVfo = $derived(toVfoProps(radioState, 'sub'));
   let vfoOps = $derived(toVfoOpsProps(radioState, caps));
-  let meter = $derived(toMeterProps(radioState));
-  let txCapable = $derived(hasTx());
-  let dualReceiver = $derived(hasDualReceiver());
   let windowWidth = $state(typeof window !== 'undefined' ? window.innerWidth : 1200);
   let windowHeight = $state(typeof window !== 'undefined' ? window.innerHeight : 800);
   // Mobile = narrow portrait OR short landscape (touch device rotated)
@@ -114,7 +107,6 @@
     hasAnyScope: hasAnyScope(),
   }));
 
-  let isAudioFft = $derived(hasAudioFft());
   let activeReceiverLabel = $derived(radioState?.active === 'SUB' ? 'SUB' : 'MAIN');
   let activeModeLabel = $derived(radioState?.active === 'SUB' ? (radioState?.sub?.mode ?? '') : (radioState?.main?.mode ?? ''));
   let activeFilterLabel = $derived(radioState?.active === 'SUB' ? (radioState?.sub?.filter ?? '') : (radioState?.main?.filter ?? ''));
@@ -138,7 +130,6 @@
 
   // Command handlers via command-bus
   const vfoHandlers = makeVfoHandlers();
-  const meterHandlers = makeMeterHandlers();
   const keyboardHandlers = makeKeyboardHandlers();
   const rfHandlers = makeRfFrontEndHandlers();
   const agcHandlers = makeAgcHandlers();
@@ -278,49 +269,17 @@
   </section>
 
   <section class="bottom-dock">
-    <article class="receiver-summary-card receiver-summary-card-main">
-      <div class="receiver-summary-header">
-        <span class="receiver-summary-label">RX 1</span>
-        <span class="receiver-summary-mode">{mainVfo.mode} / {mainVfo.filter}</span>
-      </div>
-      <div class="receiver-summary-frequency">
-        <FrequencyDisplay freq={mainVfo.freq} compact active={mainVfo.isActive} />
-      </div>
-      <div class="receiver-summary-meter">
-        <LinearSMeter value={mainVfo.sValue} compact label="MAIN" />
-      </div>
-    </article>
-
-    {#if isAudioFft}
-      <article class="receiver-summary-card audio-scope-dock-card">
-        <AudioSpectrumPanel />
-      </article>
-    {:else if dualReceiver}
-      <article class="receiver-summary-card receiver-summary-card-sub">
-        <div class="receiver-summary-header">
-          <span class="receiver-summary-label">RX 2</span>
-          <span class="receiver-summary-mode">{subVfo.mode} / {subVfo.filter}</span>
-        </div>
-        <div class="receiver-summary-frequency">
-          <FrequencyDisplay freq={subVfo.freq} compact active={subVfo.isActive} />
-        </div>
-        <div class="receiver-summary-meter">
-          <LinearSMeter value={subVfo.sValue} compact label="SUB" />
-        </div>
-      </article>
-    {/if}
-
-    {#if txCapable}
-      <DockMeterPanel
-        sValue={meter.sValue}
-        rfPower={meter.rfPower}
-        swr={meter.swr}
-        alc={meter.alc}
-        txActive={meter.txActive}
-        meterSource={meter.meterSource as 'S' | 'SWR' | 'POWER'}
-        onMeterSourceChange={meterHandlers.onMeterSourceChange}
-      />
-    {/if}
+    <MetersDockPanel
+      sValue={radioState?.active === 'SUB' ? radioState?.sub?.sMeter : radioState?.main?.sMeter}
+      powerMeter={radioState?.powerMeter}
+      swrMeter={radioState?.swrMeter}
+      alcMeter={radioState?.alcMeter}
+      idMeter={radioState?.idMeter}
+      vdMeter={radioState?.vdMeter}
+      compMeter={radioState?.compMeter}
+      compressorOn={radioState?.compressorOn}
+      txActive={radioState?.ptt ?? false}
+    />
   </section>
 </div>
 {/if}
@@ -478,8 +437,7 @@
   .receiver-deck,
   .content-left,
   .content-right,
-  .spectrum-frame,
-  .receiver-summary-card {
+  .spectrum-frame {
     border: 1px solid var(--v2-border-panel);
     border-radius: 4px;
     background:
@@ -542,12 +500,6 @@
     display: flex;
   }
 
-  .audio-scope-dock-card {
-    padding: 0 !important;
-    overflow: hidden;
-    max-height: 160px;
-  }
-
   .spectrum-frame {
     flex: 1;
     min-height: 0;
@@ -578,71 +530,6 @@
     min-height: 112px;
     padding: 6px 8px;
     box-sizing: border-box;
-  }
-
-  .receiver-summary-card {
-    flex: 1 1 0;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    min-width: 0;
-    padding: 6px 8px;
-    overflow: hidden;
-  }
-
-  .receiver-summary-card-main {
-    border-color: var(--v2-border-cyan);
-    background: linear-gradient(180deg, var(--v2-bg-input) 0%, var(--v2-bg-card) 100%);
-  }
-
-  .receiver-summary-card-sub {
-    border-color: var(--v2-border);
-    background: linear-gradient(180deg, var(--v2-bg-input) 0%, var(--v2-bg-card) 100%);
-  }
-
-  .receiver-summary-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 6px;
-    min-width: 0;
-  }
-
-  .receiver-summary-label,
-  .receiver-summary-mode {
-    font-family: 'Roboto Mono', monospace;
-  }
-
-  .receiver-summary-label {
-    color: var(--v2-text-subdued);
-    font-size: 8px;
-    font-weight: 700;
-    letter-spacing: 0.14em;
-  }
-
-  .receiver-summary-mode {
-    color: var(--v2-text-muted);
-    font-size: 8px;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    white-space: nowrap;
-  }
-
-  .receiver-summary-frequency {
-    min-width: 0;
-  }
-
-  .receiver-summary-frequency :global(.freq) {
-    max-width: 100%;
-  }
-
-  .receiver-summary-meter {
-    min-height: 0;
-  }
-
-  .receiver-summary-meter :global(svg) {
-    display: block;
   }
 
   @media (max-width: 1200px) {

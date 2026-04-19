@@ -272,7 +272,7 @@ vi.mock('$lib/stores/capabilities.svelte', () => ({
   getControlRange: vi.fn(() => ({ min: 0, max: 255 })),
 }));
 
-import { hasTx, hasDualReceiver } from '$lib/stores/capabilities.svelte';
+import { hasDualReceiver } from '$lib/stores/capabilities.svelte';
 
 let components: ReturnType<typeof mount>[] = [];
 
@@ -288,7 +288,6 @@ function mountLayout() {
 beforeEach(() => {
   components = [];
   radio.current = null;
-  vi.mocked(hasTx).mockReturnValue(true);
   vi.mocked(hasDualReceiver).mockReturnValue(false);
   // JSDOM defaults to 0x0 — force desktop dimensions so isMobile stays false
   Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 1440 });
@@ -349,23 +348,12 @@ describe('RadioLayout structure', () => {
   });
 });
 
-describe('Bottom dock meter gating', () => {
-  it('renders .dock-meter-card when hasTx is true', () => {
-    vi.mocked(hasTx).mockReturnValue(true);
+describe('Bottom dock MetersDockPanel', () => {
+  it('renders the unified meters dock panel inside .bottom-dock', () => {
     const t = mountLayout();
-    expect(t.querySelector('.dock-meter-card')).not.toBeNull();
-  });
-
-  it('does not render .dock-meter-card when hasTx is false', () => {
-    vi.mocked(hasTx).mockReturnValue(false);
-    const t = mountLayout();
-    expect(t.querySelector('.dock-meter-card')).toBeNull();
-  });
-
-  it('renders a meter source selector in the bottom dock when hasTx is true', () => {
-    vi.mocked(hasTx).mockReturnValue(true);
-    const t = mountLayout();
-    expect(t.querySelector('.meter-source-selector')).not.toBeNull();
+    const dock = t.querySelector('.bottom-dock');
+    expect(dock).not.toBeNull();
+    expect(dock?.querySelector('[data-testid="meters-dock-panel"]')).not.toBeNull();
   });
 });
 
@@ -433,10 +421,9 @@ describe('RadioLayout with radioState', () => {
     expect(t.querySelector('.radio-layout')).not.toBeNull();
   });
 
-  it('renders bottom receiver summary cards from the shell layout', () => {
+  it('renders MetersDockPanel in the bottom dock', () => {
     radio.current = sampleState as any;
     const t = mountLayout();
-    const cards = t.querySelectorAll('.receiver-summary-card');
-    expect(cards.length).toBeGreaterThan(0);
+    expect(t.querySelector('.bottom-dock [data-testid="meters-dock-panel"]')).not.toBeNull();
   });
 });
